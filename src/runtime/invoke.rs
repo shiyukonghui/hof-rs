@@ -1,0 +1,107 @@
+//! Single role invocation plumbing: environment variables, trajectory parent
+//! directory creation, and prompt rendering guards.
+
+use std::collections::BTreeMap;
+use std::path::Path;
+
+use crate::config::HohConfig;
+use crate::harness::Harness;
+use crate::model::Role;
+use crate::runtime::role::{RoleInvocation, RoleOutcome};
+
+/// Build the `HOH_*` environment handed to the agent's shell (§4.2.5).
+pub fn role_env(
+    cfg: &HohConfig,
+    run_id: &str,
+    role: Role,
+    iteration: u32,
+    cwd: &Path,
+) -> BTreeMap<String, String> {
+    let mut env: BTreeMap<String, String> = BTreeMap::new();
+    env.insert("HOH_ROLE".to_string(), role.as_str().to_string());
+    env.insert("HOH_RUN_ID".to_string(), run_id.to_string());
+    env.insert("HOH_ITERATION".to_string(), iteration.to_string());
+    env.insert(
+        "HOH_ARTIFACT_DIR".to_string(),
+        cwd.join(".hoh").to_string_lossy().into_owned(),
+    );
+    env.insert("HOH_TOOLS_ENDPOINT".to_string(), cfg.tools.endpoint.clone());
+    env.insert("HOH_TOOLS_POLICY".to_string(), role.as_str().to_string());
+    env.insert(
+        "HOH_HOH_BIN".to_string(),
+        std::env::current_exe()
+            .map(|path| path.to_string_lossy().into_owned())
+            .unwrap_or_default(),
+    );
+    env
+}
+
+/// Invoke the harness once, guaranteeing the trajectory directory exists first
+/// so a crash in step 1 still leaves a trajectory behind.
+pub async fn invoke_once(
+    harness: &dyn Harness,
+    inv: &RoleInvocation,
+) -> anyhow::Result<RoleOutcome> {
+    if let Some(parent) = inv.trajectory_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    harness.invoke(inv).await
+}
+
+/// Substitute the loop variables of a role prompt.
+pub fn render_prompt(template: &str, iteration: u32) -> String {
+    template
+        .replace("{{iteration}}", &iteration.to_string())
+        .replace("{{ plan.md }}", ".hoh/plan.md")
+}
+
+/// The harness only ever receives fully rendered text: leftover jinja syntax
+/// would be re-parsed as a template and silently change the prompt.
+pub fn assert_fully_rendered(label: &str, prompt: &str) -> anyhow::Result<()> {
+    if prompt.contains("{{") || prompt.contains("{%") {
+        anyhow::bail!(
+            "{label} still contains template syntax after rendering; role text must be passed as \
+             template variable values, never as template source"
+        );
+    }
+    Ok(())
+}
+
+/// Path of the attempt trajectory for one role.
+pub fn attempt_trajectory(traj_dir: &Path, role: Role, attempt: u32) -> std::path::PathBuf {
+    traj_dir.join(format!("{}.attempt{}.json", role.as_str(), attempt))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn render_prompt_replaces_iteration_and_leaves_no_jinja() {
+        let rendered = render_prompt("iteration {{iteration}} of the loop", 3);
+        assert_eq!(rendered, "iteration 3 of the loop");
+        assert!(assert_fully_rendered("system", &rendered).is_ok());
+        assert!(assert_fully_rendered("system", "{{oops}}").is_err());
+    }
+
+    #[test]
+    fn role_env_carries_every_required_variable() {
+        let cfg = crate::config::load_config(&[]).unwrap();
+        let cwd = std::path::PathBuf::from("F:/tmp/view");
+        let env = role_env(&cfg, "run-1", Role::Tester, 2, &cwd);
+        for key in [
+            "HOH_ROLE",
+            "HOH_RUN_ID",
+            "HOH_ITERATION",
+            "HOH_ARTIFACT_DIR",
+            "HOH_TOOLS_ENDPOINT",
+            "HOH_TOOLS_POLICY",
+            "HOH_HOH_BIN",
+        ] {
+            assert!(env.contains_key(key), "missing {key}");
+        }
+        assert_eq!(env.get("HOH_ROLE").unwrap(), "tester");
+        assert_eq!(env.get("HOH_ITERATION").unwrap(), "2");
+        assert!(env.get("HOH_ARTIFACT_DIR").unwrap().ends_with(".hoh"));
+    }
+}

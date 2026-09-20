@@ -9,6 +9,7 @@ pub mod cli;
 pub mod cli_impl;
 pub mod config;
 pub mod errors;
+pub mod harness;
 pub mod model;
 pub mod runtime;
 
