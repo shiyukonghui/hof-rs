@@ -465,15 +465,16 @@ pub async fn run(
             deterministic_dir.join("deterministic.json"),
             pretty(&deterministic),
         )?;
-        write_log(
-            &run_dir,
-            iteration,
-            "deterministic",
-            &format!(
-                "deterministic stage on the real workspace produced {} record(s)\n{}",
-                deterministic.len(),
-                pretty(&deterministic)
-            ),
+        let deterministic_log = format!(
+            "deterministic stage on the real workspace produced {} record(s)\n{}",
+            deterministic.len(),
+            pretty(&deterministic)
+        );
+        write_log(&run_dir, iteration, "deterministic", &deterministic_log)?;
+        // DR-1: the log travels into the frozen view together with the records.
+        std::fs::write(
+            deterministic_dir.join("deterministic.log"),
+            deterministic_log,
         )?;
         for (index, record) in deterministic.iter().enumerate() {
             std::fs::write(
