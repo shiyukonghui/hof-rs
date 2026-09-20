@@ -10,13 +10,55 @@ use std::path::Path;
 
 use crate::model::{is_absolute_like, resolve_record_path, EvidenceBundle, IssueCode, SchemaIssue};
 
+/// File-existence half of the contract, usable on its own (the `hoh submit`
+/// inner gate has no candidate identity yet, but it does have the view root).
+pub fn check_paths(bundle: &EvidenceBundle, view_root: &Path) -> Vec<SchemaIssue> {
+    let mut issues = Vec::new();
+    for record in bundle
+        .verified_records
+        .iter()
+        .chain(bundle.gap_records.iter())
+    {
+        for exec in &record.execution_records {
+            let Some(path) = exec.path.as_deref() else {
+                continue;
+            };
+            let normalized = path.replace('\\', "/");
+            if is_absolute_like(&normalized) {
+                issues.push(SchemaIssue::new(
+                    IssueCode::DanglingEvidence,
+                    format!(
+                        "execution record of claim `{}` uses the absolute path `{path}`; evidence \
+                         paths must be relative to the candidate view root",
+                        record.claim_id
+                    ),
+                ));
+                continue;
+            }
+            let resolved = resolve_record_path(view_root, path);
+            if !resolved.is_file() {
+                issues.push(SchemaIssue::new(
+                    IssueCode::DanglingEvidence,
+                    format!(
+                        "execution record of claim `{}` references `{path}` which does not exist \
+                         at {}",
+                        record.claim_id,
+                        resolved.display()
+                    ),
+                ));
+            }
+        }
+    }
+    issues
+}
+
 /// Validate + stamp every execution record against the candidate identity.
 pub fn bind(
     bundle: &mut EvidenceBundle,
     candidate_id: &str,
     view_root: &Path,
 ) -> Result<(), Vec<SchemaIssue>> {
-    let mut issues = Vec::new();
+    let mut issues = check_paths(bundle, view_root);
 
     for record in bundle
         .verified_records
@@ -24,33 +66,6 @@ pub fn bind(
         .chain(bundle.gap_records.iter_mut())
     {
         for exec in record.execution_records.iter_mut() {
-            if let Some(path) = exec.path.clone() {
-                let normalized = path.replace('\\', "/");
-                if is_absolute_like(&normalized) {
-                    issues.push(SchemaIssue::new(
-                        IssueCode::DanglingEvidence,
-                        format!(
-                            "execution record of claim `{}` uses the absolute path `{path}`; \
-                             evidence paths must be relative to the candidate view root",
-                            record.claim_id
-                        ),
-                    ));
-                } else {
-                    let resolved = resolve_record_path(view_root, &path);
-                    if !resolved.is_file() {
-                        issues.push(SchemaIssue::new(
-                            IssueCode::DanglingEvidence,
-                            format!(
-                                "execution record of claim `{}` references `{path}` which does not \
-                                 exist at {}",
-                                record.claim_id,
-                                resolved.display()
-                            ),
-                        ));
-                    }
-                }
-            }
-
             if exec.candidate_id.is_empty() {
                 exec.candidate_id = candidate_id.to_string();
             } else if exec.candidate_id != candidate_id {

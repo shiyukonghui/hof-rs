@@ -169,3 +169,83 @@ fn tools_call_denied_exit_code_two() {
     assert_eq!(output.status.code(), Some(2));
     assert!(String::from_utf8_lossy(&output.stdout).contains("tool_not_permitted"));
 }
+
+/// The Developer has no submittable artifact; `submit` must refuse it.
+#[test]
+fn submit_developer_is_refused() {
+    let temp = tempfile::tempdir().unwrap();
+    let file = temp.path().join("developer.md");
+    std::fs::write(&file, "anything").unwrap();
+
+    let output = Command::new(env!("CARGO_BIN_EXE_hoh"))
+        .args(["submit", "--role", "developer", "--file"])
+        .arg(&file)
+        .current_dir(PathBuf::from(env!("CARGO_MANIFEST_DIR")))
+        .output()
+        .expect("the hoh binary must be runnable");
+    assert_eq!(output.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&output.stdout).contains("tool_not_permitted"));
+}
+
+/// The inner gate of §4.3: `hoh submit` validates immediately, writes the
+/// canonical path on success, and reports precise issues (exit 3) on failure.
+#[test]
+fn submit_validates_and_writes_the_canonical_artifact() {
+    let temp = tempfile::tempdir().unwrap();
+    let artifact_dir = temp.path().join("view/.hoh");
+    std::fs::create_dir_all(&artifact_dir).unwrap();
+    let binary = env!("CARGO_BIN_EXE_hoh");
+    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+    // Valid plan -> written to the canonical path, exit 0.
+    let good = manifest.join("tests/fixtures/plan_ok.md");
+    let output = Command::new(binary)
+        .args(["submit", "--role", "planner", "--file"])
+        .arg(&good)
+        .env("HOH_ARTIFACT_DIR", &artifact_dir)
+        .current_dir(&manifest)
+        .output()
+        .unwrap();
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let written = artifact_dir.join("plan.md");
+    assert!(written.is_file());
+    assert_eq!(
+        std::fs::read_to_string(&written).unwrap(),
+        std::fs::read_to_string(&good).unwrap()
+    );
+
+    // The missing Preservation Gate -> precise issues, exit 3, nothing written.
+    let bad = manifest.join("tests/fixtures/plan_missing_gate.md");
+    let output = Command::new(binary)
+        .args(["submit", "--role", "planner", "--file"])
+        .arg(&bad)
+        .env("HOH_ARTIFACT_DIR", &artifact_dir)
+        .current_dir(&manifest)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(3));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("missing_section"), "stdout: {stdout}");
+    assert!(stdout.contains("\"ok\": false"));
+    assert_eq!(
+        std::fs::read_to_string(&written).unwrap(),
+        std::fs::read_to_string(&good).unwrap(),
+        "a rejected submission must not overwrite the previous artifact"
+    );
+
+    // The dangling-evidence fixture is rejected for the Tester as well.
+    let output = Command::new(binary)
+        .args(["submit", "--role", "tester", "--file"])
+        .arg(manifest.join("tests/fixtures/evidence_dangling.json"))
+        .env("HOH_ARTIFACT_DIR", &artifact_dir)
+        .current_dir(&manifest)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(3));
+    assert!(String::from_utf8_lossy(&output.stdout).contains("ok"));
+}

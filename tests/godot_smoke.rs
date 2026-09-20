@@ -1,4 +1,4 @@
-//! E1–E6 — real-dependency smoke tests.
+//! E1鈥揈6 鈥?real-dependency smoke tests.
 //!
 //! **Every test in this file is `#[ignore]`.**  They require three external
 //! preconditions that the offline suite deliberately does not depend on:
@@ -20,12 +20,11 @@
 //! other tests analyze that run's artifacts and skip with an explanation if the
 //! run has not happened yet.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use hof_rs::adapter::{GodotAdapter, ProjectAdapter};
 use hof_rs::config::{load_config, load_spec};
 use hof_rs::harness::MiniHarness;
-use hof_rs::model::Role;
 use hof_rs::runtime::policy::{hash_tree, HashExcludes};
 use hof_rs::runtime::run_loop::{self, Orchestrator};
 use hof_rs::tools::bridge::channel_for;
@@ -63,7 +62,7 @@ fn smoke_config() -> hof_rs::config::HohConfig {
     load_config(&specs).expect("config/hoh.yaml must load")
 }
 
-/// E0: scaffold the `A₀` starting artifact at `.workspace/mario`.
+/// E0: scaffold the `A鈧€` starting artifact at `.workspace/mario`.
 ///
 /// This one needs neither LM Studio nor the editor: it only materializes the
 /// minimal Godot project plus the `godot_mcp_rs` addon skeleton (OPEN-4).
@@ -78,7 +77,7 @@ fn e0_initialize_workspace() {
     assert!(config.runtime.workspace.join("project.godot").is_file());
 }
 
-/// E1: one real Planner → Developer → QA loop.
+/// E1: one real Planner 鈫?Developer 鈫?QA loop.
 #[tokio::test]
 #[ignore]
 async fn e1_single_iteration_smoke() {
@@ -120,7 +119,7 @@ async fn e1_single_iteration_smoke() {
     let _ = workspace;
 }
 
-/// Shared preconditions for E2–E6.
+/// Shared preconditions for E2鈥揈6.
 fn smoke() -> Option<Smoke> {
     let config = smoke_config();
     let run_dir = smoke_run_dir();
@@ -158,7 +157,7 @@ fn deterministic_observations(smoke: &Smoke) -> String {
     text
 }
 
-/// E2: the produced project starts — `play_scene` succeeded and the editor
+/// E2: the produced project starts 鈥?`play_scene` succeeded and the editor
 /// reported no script errors.
 #[test]
 #[ignore]
@@ -179,7 +178,7 @@ fn e2_project_boots() {
     );
 }
 
-/// E3: player-facing behaviour is evidenced — at least three public execution
+/// E3: player-facing behaviour is evidenced 鈥?at least three public execution
 /// records and at least one verified claim.
 #[test]
 #[ignore]
@@ -246,7 +245,7 @@ fn e4_verified_claims_are_reproducible() {
     }
 }
 
-/// E5: QA did not modify A_1 — the workspace still hashes to the candidate id.
+/// E5: QA did not modify A_1 鈥?the workspace still hashes to the candidate id.
 #[test]
 #[ignore]
 fn e5_qa_did_not_modify_the_artifact() {
@@ -265,7 +264,7 @@ fn e5_qa_did_not_modify_the_artifact() {
     );
 }
 
-/// E6: honest reporting — gaps carry guidance, and verified claims never appear
+/// E6: honest reporting 鈥?gaps carry guidance, and verified claims never appear
 /// without visible support.
 #[test]
 #[ignore]
@@ -310,20 +309,4 @@ fn e6_report_is_honest() {
             claim["claim_id"]
         );
     }
-}
-
-/// The role used by the real run is recorded; kept here so the smoke file also
-/// exercises the shared role enum.
-#[test]
-#[ignore]
-fn e_roles_are_the_three_stage_loop() {
-    let _ = Role::Planner.as_str();
-    let _ = Role::Developer.as_str();
-    let _ = Role::Tester.as_str();
-}
-
-/// Path helper used by the ignored tests.
-#[allow(dead_code)]
-fn run_dir_of(root: &Path) -> PathBuf {
-    root.join("runs").join(SMOKE_RUN_ID)
 }

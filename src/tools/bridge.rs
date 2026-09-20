@@ -105,7 +105,26 @@ pub fn submit(role: Role, file: &Path) -> anyhow::Result<i32> {
                             crate::model::IssueCode::Json,
                             format!("evidence does not match the required structure: {error}"),
                         )]),
-                        Ok(bundle) => validate_evidence(&bundle, "").err(),
+                        Ok(bundle) => {
+                            let mut issues =
+                                validate_evidence(&bundle, "").err().unwrap_or_default();
+                            // The inner gate also checks that every referenced
+                            // file exists under the view root (§4.3, §4.6).
+                            if let Ok(artifact_dir) = std::env::var("HOH_ARTIFACT_DIR") {
+                                let view_root = PathBuf::from(artifact_dir)
+                                    .parent()
+                                    .map(PathBuf::from)
+                                    .unwrap_or_else(|| PathBuf::from("."));
+                                issues.extend(crate::runtime::evidence::check_paths(
+                                    &bundle, &view_root,
+                                ));
+                            }
+                            if issues.is_empty() {
+                                None
+                            } else {
+                                Some(issues)
+                            }
+                        }
                     }
                 }
             }
