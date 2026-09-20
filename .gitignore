@@ -1,0 +1,17 @@
+# 论文原版 PDF（16MB 二进制、外部出版物）：仅保留 OCR 文本作为权威参考
+2609.01481v1.pdf
+
+# HoH 运行产物与工作区：不进版本控制
+.workspace/
+runs/
+
+# Rust
+target/
+**/*.rs.bk
+
+# 编辑器/OS
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+desktop.ini
