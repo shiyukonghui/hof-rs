@@ -2,7 +2,11 @@
 //! looks like, how to run a deterministic check, how to collect evidence)
 //! lives behind this trait, so Godot is just the first implementation (A3).
 
+pub mod godot;
 pub mod test_adapter;
+
+pub use godot::GodotAdapter;
+pub use test_adapter::TestAdapter;
 
 use std::path::Path;
 

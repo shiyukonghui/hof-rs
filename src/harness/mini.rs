@@ -14,7 +14,7 @@ use std::time::Instant;
 
 use mini_swe_agent::environments::{LocalEnvironment, LocalEnvironmentConfig};
 use mini_swe_agent::models::{ApiMode, LlmConnectorModel};
-use mini_swe_agent::{Agent, AgentConfig, AgentError, AgentMode, DefaultAgent, Environment, Model};
+use mini_swe_agent::{Agent, AgentConfig, AgentError, AgentMode, DefaultAgent};
 use serde_json::Value;
 
 use crate::harness::Harness;
@@ -36,14 +36,15 @@ impl Harness for MiniHarness {
         let model = LlmConnectorModel::from_value_with_mode(inv.model.clone(), ApiMode::ToolCalls)
             .map_err(|error| anyhow::anyhow!("could not build the model: {error}"))?;
 
-        let mut env_config = LocalEnvironmentConfig::default();
-        env_config.cwd = inv.cwd.to_string_lossy().into_owned();
-        env_config.timeout = inv.limits.command_timeout_seconds;
-        env_config.env = inv
-            .env
-            .iter()
-            .map(|(key, value)| (key.clone(), Value::String(value.clone())))
-            .collect();
+        let env_config = LocalEnvironmentConfig {
+            cwd: inv.cwd.to_string_lossy().into_owned(),
+            timeout: inv.limits.command_timeout_seconds,
+            env: inv
+                .env
+                .iter()
+                .map(|(key, value)| (key.clone(), Value::String(value.clone())))
+                .collect(),
+        };
         let environment = LocalEnvironment::new(env_config);
 
         let config = AgentConfig {

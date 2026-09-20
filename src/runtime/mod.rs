@@ -4,7 +4,9 @@
 pub mod evidence;
 pub mod invoke;
 pub mod policy;
+pub mod record;
 pub mod role;
+pub mod run_loop;
 pub mod schema;
 pub mod snapshot;
 pub mod usage;

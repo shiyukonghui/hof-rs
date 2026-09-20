@@ -21,30 +21,33 @@ fn accumulate(target: &mut Option<u64>, value: Option<u64>) {
     }
 }
 
+/// One provider usage block, normalized to the five token fields.
+struct UsageBlock {
+    prompt: Option<u64>,
+    completion: Option<u64>,
+    total: Option<u64>,
+    cache_hit: Option<u64>,
+    cache_miss: Option<u64>,
+}
+
 /// Read one usage block, refilling `total_tokens` from prompt+completion when
 /// the provider omitted it.
-fn read_usage_block(
-    usage: &Value,
-) -> (
-    Option<u64>,
-    Option<u64>,
-    Option<u64>,
-    Option<u64>,
-    Option<u64>,
-) {
+fn read_usage_block(usage: &Value) -> UsageBlock {
     let prompt = field(usage, "prompt_tokens");
     let completion = field(usage, "completion_tokens");
     let total = field(usage, "total_tokens").or_else(|| match (prompt, completion) {
         (Some(prompt), Some(completion)) => Some(prompt + completion),
         _ => None,
     });
-    (
+    UsageBlock {
         prompt,
         completion,
         total,
-        field(usage, "prompt_cache_hit_tokens").or_else(|| field(usage, "cache_hit_tokens")),
-        field(usage, "prompt_cache_miss_tokens").or_else(|| field(usage, "cache_miss_tokens")),
-    )
+        cache_hit: field(usage, "prompt_cache_hit_tokens")
+            .or_else(|| field(usage, "cache_hit_tokens")),
+        cache_miss: field(usage, "prompt_cache_miss_tokens")
+            .or_else(|| field(usage, "cache_miss_tokens")),
+    }
 }
 
 /// Extract aggregated usage from a mini trajectory file.
@@ -83,12 +86,12 @@ pub fn extract_usage(trajectory: &Path, role: Role, iteration: u32) -> anyhow::R
             continue;
         };
         usage.usage_known = true;
-        let (prompt, completion, total, cache_hit, cache_miss) = read_usage_block(block);
-        accumulate(&mut usage.prompt_tokens, prompt);
-        accumulate(&mut usage.completion_tokens, completion);
-        accumulate(&mut usage.total_tokens, total);
-        accumulate(&mut usage.cache_hit_tokens, cache_hit);
-        accumulate(&mut usage.cache_miss_tokens, cache_miss);
+        let block = read_usage_block(block);
+        accumulate(&mut usage.prompt_tokens, block.prompt);
+        accumulate(&mut usage.completion_tokens, block.completion);
+        accumulate(&mut usage.total_tokens, block.total);
+        accumulate(&mut usage.cache_hit_tokens, block.cache_hit);
+        accumulate(&mut usage.cache_miss_tokens, block.cache_miss);
     }
 
     if !usage.usage_known {
@@ -143,12 +146,13 @@ mod tests {
 
     #[test]
     fn total_is_refilled_only_when_both_parts_exist() {
-        let (_, _, total, _, _) = read_usage_block(&serde_json::json!({
+        let UsageBlock { total, .. } = read_usage_block(&serde_json::json!({
             "prompt_tokens": 10,
             "completion_tokens": 5
         }));
         assert_eq!(total, Some(15));
-        let (_, _, total, _, _) = read_usage_block(&serde_json::json!({ "prompt_tokens": 10 }));
+        let UsageBlock { total, .. } =
+            read_usage_block(&serde_json::json!({ "prompt_tokens": 10 }));
         assert_eq!(total, None);
     }
 }

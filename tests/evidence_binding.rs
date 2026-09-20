@@ -10,7 +10,8 @@ mod common;
 use std::path::Path;
 
 use common::*;
-use hof_rs::model::{EvidenceBundle, IssueCode, Role};
+use hof_rs::errors::{as_hof_error, HofError};
+use hof_rs::model::{Ablation, ContractViolation, EvidenceBundle, IssueCode, Role};
 use hof_rs::runtime::evidence::bind;
 use hof_rs::runtime::schema::gate_evidence;
 
@@ -157,5 +158,89 @@ async fn gate_evidence_accepts_a_bound_candidate() {
     assert_eq!(
         bundle.verified_records[0].execution_records[0].candidate_id,
         "cand-1"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// R4 at run-loop level: the QA candidate is frozen, and the real artifact is
+// checked around the QA stage as well (the copy alone cannot stop an absolute
+// path write).
+// ---------------------------------------------------------------------------
+
+fn result_json(root: &Path) -> serde_json::Value {
+    let path = root.join("runs/run-1/iter-1/result.json");
+    serde_json::from_str(&std::fs::read_to_string(path).expect("result.json")).expect("json")
+}
+
+fn assert_contract(error: &anyhow::Error, expected: ContractViolation) {
+    let hof = as_hof_error(error).expect("typed error");
+    match hof {
+        HofError::Contract { violation, .. } => assert_eq!(*violation, expected),
+        other => panic!("unexpected error: {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn rejects_contaminated_candidate() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let script = vec![
+        FakeStep::new(Role::Planner).writing(".hoh/plan.md", OK_PLAN),
+        FakeStep::new(Role::Developer).writing("project.godot", "config_version=5\n"),
+        FakeStep::new(Role::Tester)
+            .writing(".hoh/evidence/move.json", "{}\n")
+            .writing("scripts/cheat.gd", "extends Node\n")
+            .writing(".hoh/evidence.json", &ok_evidence(1, "")),
+    ];
+    let (result, _) = run_scenario(root, 1, script, Ablation::default(), FakeAdapter::new()).await;
+    let error = result.expect_err("QA must not modify the frozen candidate");
+    assert_contract(&error, ContractViolation::QaContaminatedCandidate);
+    assert_eq!(
+        result_json(root)["failed_role"],
+        serde_json::json!("tester")
+    );
+}
+
+#[tokio::test]
+async fn rejects_workspace_drift() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    // The deterministic stage simulates the editor (MCP) changing the real
+    // project after A_t was hashed.
+    let adapter = FakeAdapter::new().with_drift(
+        root.join("workspace"),
+        "drifted.gd",
+        "# the editor project moved under the QA candidate\n",
+    );
+    let (result, _) = run_scenario(root, 1, happy_script(), Ablation::default(), adapter).await;
+    let error = result.expect_err("QA must be rejected when the artifact drifted");
+    assert_contract(&error, ContractViolation::WorkspaceDriftBeforeQa);
+    assert_eq!(
+        result_json(root)["failed_role"],
+        serde_json::json!("tester")
+    );
+}
+
+#[tokio::test]
+async fn rejects_direct_real_workspace_write() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let script = vec![
+        FakeStep::new(Role::Planner).writing(".hoh/plan.md", OK_PLAN),
+        FakeStep::new(Role::Developer).writing("project.godot", "config_version=5\n"),
+        FakeStep::new(Role::Tester)
+            .writing(".hoh/evidence/move.json", "{}\n")
+            .writing(".hoh/evidence.json", &ok_evidence(1, ""))
+            .outside(
+                root.join("workspace/scripts/hacked_by_tester.gd"),
+                "extends Node\n",
+            ),
+    ];
+    let (result, _) = run_scenario(root, 1, script, Ablation::default(), FakeAdapter::new()).await;
+    let error = result.expect_err("QA must not write the real artifact through an absolute path");
+    assert_contract(&error, ContractViolation::ReadOnlyRoleWroteArtifact);
+    assert_eq!(
+        result_json(root)["failed_role"],
+        serde_json::json!("tester")
     );
 }

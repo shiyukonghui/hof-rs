@@ -12,6 +12,7 @@ pub mod config;
 pub mod errors;
 pub mod harness;
 pub mod model;
+pub mod prompts;
 pub mod runtime;
 pub mod tools;
 

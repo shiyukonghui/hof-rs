@@ -4,7 +4,7 @@
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use hof_rs::adapter::{DoctorItem, ProjectAdapter};
 use hof_rs::config::{AgentLimits, HohConfig};
@@ -101,19 +101,19 @@ impl InvocationRecord {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct FakeHarness {
-    pub script: Vec<FakeStep>,
-    pub log: Mutex<Vec<InvocationRecord>>,
-    cursor: Mutex<usize>,
+    pub script: Arc<Vec<FakeStep>>,
+    pub log: Arc<Mutex<Vec<InvocationRecord>>>,
+    cursor: Arc<Mutex<usize>>,
 }
 
 impl FakeHarness {
     pub fn new(script: Vec<FakeStep>) -> Self {
         Self {
-            script,
-            log: Mutex::new(Vec::new()),
-            cursor: Mutex::new(0),
+            script: Arc::new(script),
+            log: Arc::new(Mutex::new(Vec::new())),
+            cursor: Arc::new(Mutex::new(0)),
         }
     }
 
@@ -424,6 +424,56 @@ pub fn test_config(root: &Path, iterations: u32) -> HohConfig {
 
 pub fn limits() -> AgentLimits {
     AgentLimits::default()
+}
+
+/// The public specification text used by the offline scenarios.
+pub const SPEC_TEXT: &str =
+    "# Spec\n\nA Mario-like 2D platformer. The player must move and jump.\n";
+
+pub fn write_spec(root: &Path) -> hof_rs::model::Spec {
+    let path = root.join("spec.md");
+    write(&path, SPEC_TEXT);
+    hof_rs::config::load_spec(&path).expect("spec")
+}
+
+/// Run one complete offline scenario: `FakeHarness` + `FakeAdapter` +
+/// recording tool channel, no network, no Godot, no LM Studio.
+pub async fn run_scenario(
+    root: &Path,
+    iterations: u32,
+    script: Vec<FakeStep>,
+    ablation: hof_rs::model::Ablation,
+    adapter: FakeAdapter,
+) -> (
+    anyhow::Result<hof_rs::runtime::run_loop::RunSummary>,
+    Vec<InvocationRecord>,
+) {
+    let mut cfg = test_config(root, iterations);
+    cfg.runtime.spec = root.join("spec.md");
+    let spec = write_spec(root);
+    let harness = FakeHarness::new(script);
+    let observer = harness.clone();
+    let orchestrator = hof_rs::runtime::run_loop::Orchestrator {
+        harness: Box::new(harness),
+        adapter: Box::new(adapter),
+        tools: Arc::new(FakeToolChannel::new()),
+        cfg,
+        ablation,
+        force_init: true,
+    };
+    let result = hof_rs::runtime::run_loop::run(&orchestrator, &spec, "run-1").await;
+    (result, observer.records())
+}
+
+/// A one-iteration script for the common case.
+pub fn happy_script() -> Vec<FakeStep> {
+    vec![
+        FakeStep::new(Role::Planner).writing(".hoh/plan.md", OK_PLAN),
+        FakeStep::new(Role::Developer).writing("project.godot", "config_version=5\n"),
+        FakeStep::new(Role::Tester)
+            .writing(".hoh/evidence/move.json", "{\"moved\":true}\n")
+            .writing(".hoh/evidence.json", &ok_evidence(1, "")),
+    ]
 }
 
 /// Minimal `RoleInvocation` for gate-level tests.
