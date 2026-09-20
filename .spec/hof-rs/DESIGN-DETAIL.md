@@ -194,6 +194,7 @@ pub struct ArtifactState {
 pub enum ContractViolation {
     ReadOnlyRoleWroteArtifact,   // Planner/Tester 改动了真实 A
     QaContaminatedCandidate,     // Tester 改动了冻结副本
+    WorkspaceDriftBeforeQa,      // QA 开始前 真实 A 与 A_t.candidate_id 不一致
     CandidateIdMismatch,         // 证据自称的候选身份不符
     PlanUpdateForbidden,         // 本轮不允许更新 D（消融）
     NoProgress,                  // 仅告警，不作为失败
@@ -478,16 +479,27 @@ t=1..=T:
              snapshot(workspace) -> version_id == candidate_id
   [Deterministic] adapter.build_check(candidate_view) 产出 ExecRecord -> candidate/.hoh/deterministic/
   [Tester]  build candidate view (副本 of workspace) -> 注入确定性记录
-             h_cand_before = hash_tree(candidate)
+             # 前置断言：编辑器当前工程必须与本轮 A_t 逐字节一致
+             assert hash_tree(workspace) == A_t.candidate_id 否则 fail(WorkspaceDriftBeforeQa)
+             h_cand_before = hash_tree(candidate); h_ws_before = hash_tree(workspace)
              MiniHarness::invoke (cwd = candidate)
-             h_cand_after = hash_tree(candidate)
-             assert_unchanged("tester", before, after) 否则 fail(QaContaminatedCandidate)
+             h_cand_after = hash_tree(candidate); h_ws_after = hash_tree(workspace)
+             assert_unchanged("tester/candidate", h_cand_before, h_cand_after) 否则 fail(QaContaminatedCandidate)
+             assert_unchanged("tester/workspace", h_ws_before, h_ws_after)     否则 fail(ReadOnlyRoleWroteArtifact)
              SchemaGate(evidence, candidate_id) + EvidenceBinder
              物化为 iter-<t>/evidence.json 与 qa_report.md
   [Record]  iter-<t>/usage.json, result.json, versions/index.json 追加
 ```
 
 **检测与预防的分工（必须同时存在，缺一不可）**：副本隔离只能防止「相对路径写入」，无法防止 agent 用绝对路径写到真实工程；因此真实 A 的前后哈希断言是**强制项**，不是可选优化。
+
+**QA 阶段的额外约束（关键，勿省）**：由于 MCP 工具作用于「编辑器当前打开的工程」（=真实 workspace），
+Tester 能通过 MCP/shell 触达真实 A，**不只是副本**。因此 Tester 阶段必须做**三件**事：
+1. 调用前断言 `hash_tree(workspace) == A_t.candidate_id`（否则本轮 QA 作废，报 `WorkspaceDriftBeforeQa`）；
+2. 调用前后同时对**副本**与**真实 workspace** 做哈希断言，任一变化即判失败；
+3. 工具白名单禁掉全部 Tester 写类 MCP 工具（§5.4），作为第一道闸。
+
+新增错误变体：`ContractViolation::WorkspaceDriftBeforeQa`。
 
 ### 4.5 SchemaGate（`src/runtime/schema.rs`）
 
@@ -840,7 +852,7 @@ pub struct FakeToolChannel { pub calls: Mutex<Vec<(Role,String,Value)>> }
 | R1 | `runtime_semantics.rs::three_independent_invocations` | 恰好 3 次调用、顺序 planner→developer→tester、每次 `RoleInvocation.env` 含正确 role、FakeHarness 记录中无跨角色 messages 传递（不同 cwd） |
 | R2 | `runtime_semantics.rs::planner_cannot_write_artifact` | 让 FakeHarness 在 planner 步用 `write_outside_view` 改真实 workspace → `run` 返回 `ReadOnlyRoleWroteArtifact`，且 `result.json.ok=false`、`failed_role=planner` |
 | R3 | `runtime_semantics.rs::developer_is_only_writer` | developer 步后 workspace 哈希变化被记为 `A_t`；planner/tester 步后哈希必须不变 |
-| R4 | `evidence_binding.rs::rejects_contaminated_candidate` | tester 步内改 candidate 视图 → `QaContaminatedCandidate`；`candidate_id` 不符 → `CandidateMismatch` |
+| R4 | `evidence_binding.rs::{rejects_contaminated_candidate, rejects_workspace_drift, rejects_direct_real_workspace_write}` | tester 步内改 candidate 视图 → `QaContaminatedCandidate`；改**真实 workspace（绝对路径）** → `ReadOnlyRoleWroteArtifact`；QA 前 workspace 被外部改动 → `WorkspaceDriftBeforeQa`；`candidate_id` 不符 → `CandidateIdMismatch` |
 | R5 | `runtime_semantics.rs::no_third_state_channel` | 生成的第 2 轮 planner `task_prompt` 与 `planner-view` 中**不含** `D_1` 文本；且 `system_prompt` 含 `Do not request or reconstruct the previous development document` |
 | R6 | `schema_gate.rs::plan_retry_then_success` / `evidence_retry_exhausted` / `missing_artifact_counts_as_attempt` | 首次写非法 plan → 第二次合法 → `attempts==2`；两次非法 → `SchemaFailure` 且退出码 3；产物缺失也计入尝试 |
 | R7 | `evidence_binding.rs::verified_gap_partition` | verified∩gap 的 claim_id 交集为空；gap 缺 guidance → issue；verified 空 records → issue |
@@ -936,9 +948,14 @@ pub struct FakeToolChannel { pub calls: Mutex<Vec<(Role,String,Value)>> }
 
 ## 11. 已知限制与必须在回报中提出的风险
 
-1. **MCP 作用域限制**（§6.1）：Tester 在 `A_t` 副本上评估，但 MCP 只能操作编辑器当前打开的项目。
-   v1 靠「编辑器项目 == workspace」的运行前提 + candidate_id 盖章 + doctor 断言缓解，
-   若运行时检测到两者不一致，必须把该事实写入 `meta.json.warnings` 并在 `result.json` 标 warning。
+1. **MCP 作用域限制**（§6.1 + §4.4）：Tester 在 `A_t` 副本上评估，但 MCP 只能操作编辑器当前打开的项目，
+   而该项目在 v1 中就是真实 workspace。因此 v1 采用「**同一候选的两种访问路径**」：副本（读输入、写证据）
+   + 编辑器工程（执行与截图），并用「QA 前 workspace 哈希 == candidate_id」+「QA 前后 workspace 与副本双哈希断言」
+   把两者绑成同一候选身份。若运行时检测到不一致，必须把该事实写入 `meta.json.warnings` 并在 `result.json` 标 warning；
+   不允许把它当成「已解决」。
+   替代方案（更强但更重，v1 不采用）：为 QA 单独起第二个 Godot 编辑器实例并打开 candidate 副本、
+   把 `godot_mcp/port` 设为另一个端口（如 9878），从而让 Tester 真正只作用于副本。若用户要求端到端严格冻结，
+   这应作为 v1.1 的首选项。
 2. **副本成本**：每轮两个工程副本（排除缓存）。若单轮耗时或磁盘超预期，实现者必须实测并回报数据，
    不得擅自改成哈希检测替代。
 3. **快照为全量**（非增量）：大工程下会膨胀；实现者需回报实测体积。
