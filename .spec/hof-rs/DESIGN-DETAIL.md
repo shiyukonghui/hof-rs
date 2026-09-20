@@ -475,11 +475,14 @@ t=1..=T:
              h_dev_before = hash_tree(workspace)
              MiniHarness::invoke (cwd = workspace)
              h_dev_after  = hash_tree(workspace)
-             A_t.candidate_id = h_dev_after; 若相等 -> 记 NoProgress 告警（不失败）
+             若 h_dev_before == h_dev_after -> 记 NoProgress 告警（不失败）
+  [Deterministic]  # v0.2 修订 DR-1：确定性阶段提前到 A_t 冻结之前，且作用于【真实 workspace】
+             adapter.build_check(workspace) 产出 ExecRecord（含构建/启动/报错）
+             h_det = hash_tree(workspace)          # 确定性阶段允许改动工程（编辑器副产物）
+  [Freeze]   A_t.candidate_id = h_det
              snapshot(workspace) -> version_id == candidate_id
-  [Deterministic] adapter.build_check(candidate_view) 产出 ExecRecord -> candidate/.hoh/deterministic/
-  [Tester]  build candidate view (副本 of workspace) -> 注入确定性记录
-             # 前置断言：编辑器当前工程必须与本轮 A_t 逐字节一致
+  [Tester]  build candidate view (副本 of workspace/快照) -> 注入 .hoh/deterministic/*
+             # 前置断言（安全网，正常情况下必然成立）
              assert hash_tree(workspace) == A_t.candidate_id 否则 fail(WorkspaceDriftBeforeQa)
              h_cand_before = hash_tree(candidate); h_ws_before = hash_tree(workspace)
              MiniHarness::invoke (cwd = candidate)
@@ -961,3 +964,125 @@ pub struct FakeToolChannel { pub calls: Mutex<Vec<(Role,String,Value)>> }
 3. **快照为全量**（非增量）：大工程下会膨胀；实现者需回报实测体积。
 4. **`ureq` 无 TLS**：v1 只访问本地环回，若后续接入远程 MCP 必须换实现（并记决策）。
 5. **`resume` 未实现**：v1 明确报 `resume_not_implemented`（exit 2），不得假装支持。
+
+---
+
+## 12. 修订 v0.2（独立验收后，规范性；与本文件前文冲突处**以本节为准**）
+
+来源：阶段五第一次独立验收 verdict = `fail`（blocker A1、major A2、minor A3–A5、nit A6）+ 9 条风险。
+本节各项均为**规范性要求**，实现者必须逐条落地并给出测试证据。修订依据见 `DECISIONS.md` D11/D12。
+
+### DR-1（设计性修订，最重要）确定性阶段提前到 A_t 冻结之前，且作用于真实 workspace
+
+- 新顺序：`Developer → Deterministic(build/exec on workspace) → Freeze A_t(hash+snapshot) → candidate 副本 → Tester → Record`
+  （已同步改写 §4.4 伪码）。
+- `ProjectAdapter::build_check` 的入参由 `candidate_view` 改为 **`workspace`**（真实工程）。
+  理由：MCP 只能作用于编辑器当前打开的工程（= workspace，D7），让确定性阶段作用于 workspace 可**根除**
+  「工具自身改写工程 → QA 前漂移 `WorkspaceDriftBeforeQa`」这一整类误报；确定性记录与候选身份天然一致。
+- 确定性阶段产生的 `ExecRecord` 与日志在冻结后复制进 candidate 视图的 `.hoh/deterministic/`。
+- QA 前的 `hash_tree(workspace) == A_t.candidate_id` 断言**保留**，作为安全网（正常情况下必然成立）。
+- 语义澄清：构建/执行属于「产出候选」的一部分，不属于「评估候选」；评估仍只发生在冻结之后。
+- 接口签名相应改为 `async fn build_check(&self, workspace: &Path, tools: &dyn ToolChannel) -> Result<Vec<ExecRecord>>`。
+
+### DR-2 契约违约必须附具体差异清单（可诊断）
+
+任何 `ContractViolation` 判定失败时，`result.json` 必须新增 `evidence_diff` 字段：
+`{"added":[相对路径...],"modified":[...],"removed":[...]}`（相对 workspace 根，POSIX 分隔符，排序，最多各 50 条）。
+哈希比较必须能给出**具体差异**，不允许只报「哈希不同」。用途：把误报变成可定位事件、把越权变成可追责证据。
+测试：构造只改一个深层文件的越权写入，断言 `evidence_diff.modified` 恰好含该相对路径。
+
+### DR-3 新增 `runtime.private_excludes`（硬性补强 R11）
+
+- `config/hoh.yaml` 新增 `runtime.private_excludes: []`（默认空数组）。
+- 视图构建（`build_view`/`copy_tree`）在原排除项之外**再排除**这些相对路径/前缀；
+  它们**不**影响 artifact 哈希与快照（即不扩大 `hash_tree` 的排除集，避免削弱 R2/R3 检测）。
+- 测试：配置 `private_excludes: ["tests/secret.json"]` 后，断言该文件不出现于任何角色视图，
+  且 `hash_tree(workspace)` 仍覆盖该文件（即它仍在 artifact 身份内）。
+
+### DR-4 `GodotAdapter::initialize` 必须幂等写入插件启用段
+
+- 除创建 `project.godot` / `scenes/main.tscn` / `scripts/` 与拷贝 addon 外，还必须在 `project.godot` 中
+  保证存在 `[editor_plugins]` 段且 `enabled` 数组**包含** `"res://addons/godot_mcp_rs/plugin.cfg"`。
+- 幂等要求：重复调用不重复添加、**不得**覆盖其它已启用插件项；若 `enabled` 已含该项则完全不动文件内容。
+- 目的：使 A₀「打开即可用 MCP」，把「手工启用插件」这一易错步骤从用户前置条件中移除。
+- 测试：`initialize` 两次后 `project.godot` 中该条目恰好出现 1 次；预置 `enabled` 含另一插件时不丢失。
+
+### DR-5 `get_editor_errors` 判定改为解析 JSON，禁止子串启发式
+
+- 依据 `errors` 数组长度判断是否有错（兼容 `{"errors": []}` 带空格、以及 observation 内含 "error" 字样的合法字段）。
+- 无法解析为 JSON 时按「有错」记录并把原文写入 observation（保守）。
+- 测试：给假 MCP payload `{"errors": []}` 与 `{"errors":[{"message":"x"}]}` 分别断言无错/有错。
+
+### DR-6 `hoh doctor` 增加 `godot.editor_scope` 人工确认项；每轮 result.json 也带该 warning
+
+- `doctor` 输出新增一项 `godot.editor_scope`：`ok = true`，`detail` = `MCP_SCOPE_WARNING` 原文 +
+  明确要求用户人工确认「编辑器当前打开的工程就是该 workspace」。**不改变** exit 4 的放行语义
+  （即该项本身不会导致拒绝运行）。
+- D7 的限制除写入 `meta.json.warnings` 与 `warnings.log` 外，还必须在**每轮** `result.json.warnings` 中出现。
+- 测试：`doctor` 输出包含该行；成功轮的 `result.json.warnings` 含 `MCP_SCOPE_WARNING`。
+
+### DR-7 拒绝文案必须区分「未在允许名单内」
+
+- `runtime::policy` 的 `denial_reason` 必须对 Planner 与 Tester 都覆盖两种情况：
+  ①角色禁止此类操作（写类工具）→「This role may not mutate the artifact.」；
+  ②工具不在该角色允许名单内（含全部未知工具）→「Tool not in this role's allowlist.」。
+- Planner 对**全部** MCP 工具都属情况②（其 allowlist 为空）。
+- 测试：断言 Planner 调 `get_editor_errors` 的 hint 为情况②文案；Tester 调 `add_node` 为情况①文案。
+
+### DR-8 CLI 出口与展示纪律
+
+- `status` 的「runs 目录不存在 / run-id 不存在」与 `rollback` 的「版本不存在」必须返回类型化错误 → **exit 2**
+  （不得落 anyhow 兜底 exit 5；exit 5 专指 harness/model 错误）。
+- `status` 汇总 tokens 时：若存在 `usage_known == false` 的轮次，必须显示 `unknown`
+  （例如 `total tokens: 120 (1 iteration unknown)`），**不得**把缺失值当 0 累加后打印 `total tokens: 0`。
+- 新增 `tests/cli_status_rollback.rs`（tempfile 驱动、离线）：覆盖正常 status、run-id 不存在(exit 2)、
+  rollback 缺版本(exit 2)、unknown usage 的展示。
+
+### DR-9 `godot_smoke.rs` 前置条件缺失必须失败，且 e0 不得用 force_init
+
+- E2–E6 在真实 run 产物缺失时**必须 panic 并给出缺失路径**，不得 `eprintln` 后 `return`（当前是「零断言 + 绿色」）。
+  允许的替代：统一要求 `HOH_SMOKE=1` 环境变量，未设置时 panic（并同步修正文件头注释）。
+- `e0_initialize_workspace` 不得传 `force_init=true`；必须断言 `initialize` 对已初始化工作区**幂等**
+  （第二次调用为 no-op 且 `project.godot` 内容不变）。`force_init` 的破坏性语义需在 CLI 帮助文本中明确。
+- 测试：以「runs/ 不存在」为前提运行 `cargo test --test godot_smoke -- --ignored`，断言结果为**失败**而不是 passed。
+
+### DR-10 路径逃逸收紧（blocker A1）
+
+- `EvidenceBinder::check_paths`（以及 `hoh submit` 复用的同一函数）必须：
+  1. 拒绝任何含 `..`（`std::path::Component::ParentDir`）组件的 `path` → `DanglingEvidence`；
+  2. 在存在性检查之外，对 `canonicalize(view_root)` 与解析后的 `canonicalize(resolved)` 做**前缀断言**
+     （解析失败或不在前缀内 → `DanglingEvidence`）。
+- 同步收紧 `godot_smoke.rs::e4` 的包含性判定（禁止用 `candidate.join(path)` 的朴素拼接）。
+- 新增测试 `evidence_binding.rs::rejects_parent_dir_traversal`：
+  `path = "../outside_secret.txt"`（文件真实存在于视图根之外）必须得到 `DanglingEvidence`，`bind` 返回 `Err`；
+  绝对路径、符号链接逃逸（若可构造）同样必须被拒。
+
+### DR-11 `cache_excludes` 的防误用约束
+
+- `config/hoh.yaml` 中 `adapter.godot.cache_excludes` 必须带注释：**只允许缓存类目录**（如 `.godot`、`.import`）。
+  把真实产物路径加入排除集会**同时关闭** R2/R3 的越权检测能力。
+- `src/adapter/mod.rs` 的 `cache_excludes` trait 方法文档必须写明该约束；`GodotAdapter` 实现处同样注释。
+
+### DR-12 未声明偏离的补记（文档侧）
+
+以下实现期事实已被验收判为「可接受但未申报」，本修订一并承认并写入文档，后续不必再作为偏离申报：
+- `MiniHarness` 把 `Err(AgentError::Format(_))` 与 `Ok`/`Interrupt` 一并视为正常收尾（格式错误的失败由 SchemaGate 兜住）；
+- 新增 `src/cli_impl.rs`；`RunMeta` 新增 `warnings` 字段（§4.9 原缺，属设计缺口）；
+- `VersionStore::snapshot_role` 为附加 API；`validate_evidence_shape` 为附加纯函数；
+- 工具策略单一真源为 `runtime::policy::tool_matrix`，`src/tools/policy.rs` 仅 re-export。
+
+### DR-13 验收后仍未解决、需真实运行才能定论的事项（不属本节修复范围）
+
+- E1–E6 需 Godot 编辑器（9877）+ LM Studio 在线才能验证；
+- 真实运行中编辑器副产物（`*.uid`、`uid_cache`、存档、导出产物）是否会造成假失败；
+- 真实 27B 模型在 `1 + max_schema_retries` 次内产出合法 plan/evidence 的能力；
+- 副本耗时与全量快照体积的实测数据。
+
+---
+### 12.1 变更记录
+
+| 版本 | 日期 | 变更 | 触发 |
+|---|---|---|---|
+| v0.1 | 2026-09 | 初版（阶段三冻结） | 概要设计确认 |
+| v0.1a | 2026-09 | §4.4 补强 QA 三件套与 `WorkspaceDriftBeforeQa` | 自查发现绝对路径逃逸风险 |
+| v0.2 | 2026-09 | 追加 §12（DR-1..DR-13）并改写 §4.4 执行顺序 | 阶段五第一次独立验收 verdict=fail |
