@@ -1,0 +1,80 @@
+{
+  "info": {
+    "model_stats": {"instance_cost": 0.0, "api_calls": 2},
+    "exit_status": "Submitted",
+    "submission": "done",
+    "mini_version": "0.1.0"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "system prompt"
+    },
+    {
+      "role": "assistant",
+      "content": "step one",
+      "extra": {
+        "actions": [{"command": "ls"}],
+        "timestamp": 1.0,
+        "cost": 0.0,
+        "response": {
+          "id": "chatcmpl-1",
+          "object": "chat.completion",
+          "created": 1,
+          "model": "qwen/qwen3.8-27b",
+          "choices": [
+            {
+              "index": 0,
+              "message": {"role": "assistant", "content": "step one"},
+              "finish_reason": "tool_calls"
+            }
+          ],
+          "content": "step one",
+          "usage": {
+            "prompt_tokens": 100,
+            "completion_tokens": 20,
+            "total_tokens": 120,
+            "prompt_cache_hit_tokens": 40,
+            "prompt_cache_miss_tokens": 60
+          }
+        }
+      }
+    },
+    {
+      "role": "tool",
+      "content": "<returncode>0</returncode>",
+      "extra": {
+        "returncode": 0,
+        "timestamp": 2.0
+      }
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "extra": {
+        "actions": [{"command": "echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT"}],
+        "timestamp": 3.0,
+        "cost": 0.0,
+        "response": {
+          "id": "chatcmpl-2",
+          "object": "chat.completion",
+          "created": 3,
+          "model": "qwen/qwen3.8-27b",
+          "choices": [
+            {
+              "index": 0,
+              "message": {"role": "assistant", "content": ""},
+              "finish_reason": "tool_calls"
+            }
+          ],
+          "content": "",
+          "usage": {
+            "prompt_tokens": 50,
+            "completion_tokens": 10
+          }
+        }
+      }
+    }
+  ],
+  "trajectory_format": "mini-swe-agent-1.1"
+}
