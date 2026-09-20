@@ -273,3 +273,80 @@ gameplay behaviour.
         Ok(items)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn adapter(addon: &Path) -> GodotAdapter {
+        GodotAdapter::new(
+            GodotConfig {
+                addon_source: addon.to_path_buf(),
+                cache_excludes: vec![".godot".to_string(), ".import".to_string()],
+                main_scene: "res://scenes/main.tscn".to_string(),
+            },
+            false,
+        )
+    }
+
+    #[test]
+    fn initializes_a_minimal_project() {
+        let temp = tempfile::tempdir().unwrap();
+        let workspace = temp.path().join("mario");
+        let addon = temp.path().join("addon");
+        std::fs::create_dir_all(&addon).unwrap();
+        std::fs::write(addon.join("plugin.cfg"), "[plugin]\n").unwrap();
+
+        adapter(&addon).initialize(&workspace).unwrap();
+
+        let project = std::fs::read_to_string(workspace.join("project.godot")).unwrap();
+        for action in ["move_left", "move_right", "jump"] {
+            assert!(project.contains(action), "missing input action {action}");
+        }
+        assert!(workspace.join("scenes/main.tscn").is_file());
+        assert!(workspace.join("addons/godot_mcp_rs/plugin.cfg").is_file());
+    }
+
+    #[test]
+    fn initialization_is_idempotent_but_never_clobbers_a_foreign_directory() {
+        let temp = tempfile::tempdir().unwrap();
+        let addon = temp.path().join("addon");
+        let workspace = temp.path().join("mario");
+
+        adapter(&addon).initialize(&workspace).unwrap();
+        std::fs::write(workspace.join("scripts/player.gd"), "extends Node\n").unwrap();
+        // A second call on an existing Godot project is a no-op.
+        adapter(&addon).initialize(&workspace).unwrap();
+        assert!(workspace.join("scripts/player.gd").is_file());
+
+        // A non-empty directory that is not a Godot project is refused.
+        let foreign = temp.path().join("foreign");
+        std::fs::create_dir_all(&foreign).unwrap();
+        std::fs::write(foreign.join("notes.txt"), "hello\n").unwrap();
+        assert!(adapter(&addon).initialize(&foreign).is_err());
+    }
+
+    #[test]
+    fn cache_excludes_always_contain_the_runtime_paths() {
+        let temp = tempfile::tempdir().unwrap();
+        let excludes = adapter(&temp.path().join("addon")).cache_excludes();
+        assert!(excludes.contains(&".hoh".to_string()));
+        assert!(excludes.contains(&".git".to_string()));
+        assert!(excludes.contains(&".godot".to_string()));
+    }
+
+    #[test]
+    fn playbook_covers_the_four_evidence_kinds() {
+        let temp = tempfile::tempdir().unwrap();
+        let playbook = adapter(&temp.path().join("addon")).evidence_playbook();
+        for needle in [
+            "simulate_sequence",
+            "capture_frames",
+            "monitor_properties",
+            "assert_node_state",
+            ".hoh/evidence/",
+        ] {
+            assert!(playbook.contains(needle), "playbook is missing {needle}");
+        }
+    }
+}
