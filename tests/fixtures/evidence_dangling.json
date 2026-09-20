@@ -1,0 +1,25 @@
+{
+  "iteration": 1,
+  "qa_status": "partial",
+  "verified_records": [
+    {
+      "claim_id": "F1",
+      "claim": "the player moves right",
+      "execution_records": [
+        {
+          "type": "screenshot",
+          "path": ".hoh/evidence/missing_frame.png",
+          "observation": "the screenshot was never written to the candidate view",
+          "candidate_id": ""
+        }
+      ],
+      "status": "verified"
+    }
+  ],
+  "gap_records": [],
+  "planner_handoff": {
+    "preservation_constraints": [],
+    "update_targets": [],
+    "validation_requirements": []
+  }
+}

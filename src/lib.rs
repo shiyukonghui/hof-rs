@@ -5,6 +5,7 @@
 //! [`harness`] boundary; project specifics live behind the adapter boundary and
 //! tool access is funnelled through a role-scoped tool channel.
 
+pub mod adapter;
 pub mod cli;
 pub mod cli_impl;
 pub mod config;
@@ -12,5 +13,6 @@ pub mod errors;
 pub mod harness;
 pub mod model;
 pub mod runtime;
+pub mod tools;
 
 pub use mini_swe_agent;

@@ -1,0 +1,34 @@
+{
+  "iteration": 1,
+  "qa_status": "fail",
+  "verified_records": [
+    {
+      "claim_id": "F1",
+      "claim": "the player moves right",
+      "execution_records": [
+        {
+          "type": "assert",
+          "path": ".hoh/evidence/move.json",
+          "observation": "moved",
+          "candidate_id": ""
+        }
+      ],
+      "status": "verified"
+    }
+  ],
+  "gap_records": [
+    {
+      "claim_id": "F1",
+      "claim": "the same claim listed twice",
+      "execution_records": [],
+      "status": "gap",
+      "player_impact": "duplicate claim",
+      "recommended_update": "remove the duplicate"
+    }
+  ],
+  "planner_handoff": {
+    "preservation_constraints": [],
+    "update_targets": [],
+    "validation_requirements": []
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "iteration": 1,
+  "qa_status": "partial",
+  "verified_records": [
+    {
+      "claim_id": "F1",
+      "claim": "the player moves right when move_right is held",
+      "execution_records": [
+        {
+          "type": "assert",
+          "path": ".hoh/evidence/move.json",
+          "observation": "position.x went from 0 to 32",
+          "candidate_id": ""
+        }
+      ],
+      "status": "verified"
+    }
+  ],
+  "gap_records": [
+    {
+      "claim_id": "F2",
+      "claim": "the player jumps when jump is pressed",
+      "execution_records": [],
+      "status": "gap",
+      "player_impact": "the player cannot reach the upper platform",
+      "recommended_update": "handle the jump input action"
+    }
+  ],
+  "planner_handoff": {
+    "preservation_constraints": ["keep the project launchable"],
+    "update_targets": ["jump input"],
+    "validation_requirements": ["simulate jump and observe y displacement"]
+  }
+}
