@@ -1,0 +1,35 @@
+model:
+  model_name: openai/qwen/qwen3.8-27b     # D6：剥掉 openai/ 后上线恰好是 qwen/qwen3.8-27b
+  provider: openai_compatible             # C10：必须显式，否则被判为 aliyun
+  service_name: openai_compatible
+  base_url: http://127.0.0.1:1234/v1
+  api_key: lm-studio
+  use_tool_calls: true
+  request_timeout_secs: 900
+  max_retries: 3
+
+agent:
+  step_limit: 60
+  cost_limit: 0.0
+  wall_time_limit_seconds: 3600
+  max_consecutive_format_errors: 3
+  command_timeout_seconds: 180            # LocalEnvironment.timeout
+
+runtime:
+  iterations: 3
+  max_schema_retries: 2
+  workspace: .workspace/mario
+  runs_dir: runs
+  spec: .spec/hof-rs/PRD-mario.md
+
+adapter:
+  kind: godot                             # godot | test
+  godot:
+    addon_source: F:/RustProjects/godot-mcp-pro/addons/godot_mcp_rs
+    cache_excludes: [".godot", ".import"]
+    main_scene: res://scenes/main.tscn
+
+tools:
+  endpoint: http://127.0.0.1:9877/mcp
+  timeout_seconds: 120
+  max_retries: 2
