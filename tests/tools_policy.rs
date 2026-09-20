@@ -302,3 +302,56 @@ fn submit_validates_and_writes_the_canonical_artifact() {
     assert!(stdout.contains("\"ok\": false"), "stdout: {stdout}");
     assert!(stdout.contains("dangling_evidence"), "stdout: {stdout}");
 }
+
+/// DR-10 (A1): the *same* check runs inside `hoh submit` — the inner gate has
+/// no candidate identity, but it does have the view root, so an escaping path
+/// must be refused there too even though the target file really exists.
+#[test]
+fn submit_rejects_an_escaping_evidence_path() {
+    let temp = tempfile::tempdir().unwrap();
+    let view = temp.path().join("view");
+    let artifact_dir = view.join(".hoh");
+    std::fs::create_dir_all(&artifact_dir).unwrap();
+    // The file exists, one level above the view root.
+    std::fs::write(temp.path().join("outside_secret.txt"), "secret\n").unwrap();
+
+    let escaping = temp.path().join("escaping_evidence.json");
+    std::fs::write(
+        &escaping,
+        r#"{
+  "iteration": 1,
+  "qa_status": "partial",
+  "verified_records": [
+    {
+      "claim_id": "F1",
+      "claim": "player moves right",
+      "execution_records": [
+        {"type": "assert", "path": "../outside_secret.txt", "observation": "leaked"}
+      ],
+      "status": "verified"
+    }
+  ],
+  "gap_records": [],
+  "planner_handoff": {"preservation_constraints": [], "update_targets": [], "validation_requirements": []}
+}
+"#,
+    )
+    .unwrap();
+
+    let output = Command::new(env!("CARGO_BIN_EXE_hoh"))
+        .args(["submit", "--role", "tester", "--file"])
+        .arg(&escaping)
+        .env("HOH_ARTIFACT_DIR", &artifact_dir)
+        .current_dir(PathBuf::from(env!("CARGO_MANIFEST_DIR")))
+        .output()
+        .unwrap();
+    assert_eq!(
+        output.status.code(),
+        Some(3),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("dangling_evidence"), "stdout: {stdout}");
+    assert!(!artifact_dir.join("evidence.json").exists());
+}
