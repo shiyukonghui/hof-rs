@@ -1,9 +1,12 @@
-//! The Orchestrator: the deterministic main loop (搂4.4, 搂4.10).
+//! The Orchestrator: the deterministic main loop (§4.4, §4.10, DR-1).
 //!
-//! Per iteration: planner (read-only) 鈫?developer (single writer) 鈫?//! deterministic build check 鈫?tester (frozen candidate) 鈫?record.
+//! Per iteration: planner (read-only) → developer (single writer) →
+//! deterministic build/exec on the **real workspace** → freeze `A_t` (hash +
+//! snapshot) → candidate copy → tester (frozen candidate) → record.
 //!
 //! Every stage boundary is a hash assertion, because a copy can always be
-//! escaped with an absolute path.
+//! escaped with an absolute path; every violation also carries a concrete
+//! file-level difference list (DR-2).
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -14,13 +17,15 @@ use crate::config::HohConfig;
 use crate::errors::{as_hof_error, HofError};
 use crate::harness::Harness;
 use crate::model::{
-    empty_evidence, parse_plan, Ablation, ContractViolation, DevelopmentDoc, Role, SchemaIssue,
-    Spec, Usage,
+    empty_evidence, parse_plan, Ablation, ContractViolation, DevelopmentDoc, EvidenceDiff, Role,
+    SchemaIssue, Spec, Usage,
 };
 use crate::prompts;
 use crate::runtime::evidence::write_evidence;
 use crate::runtime::invoke::{attempt_trajectory, invoke_once, render_prompt, role_env};
-use crate::runtime::policy::{assert_unchanged, hash_tree, HashExcludes};
+use crate::runtime::policy::{
+    assert_unchanged, diff_manifests, hash_tree, tree_manifest, HashExcludes,
+};
 use crate::runtime::record::{
     append_warning, write_iter_result, write_log, write_run_meta, write_usage, IterResult, RunMeta,
 };
@@ -28,7 +33,7 @@ use crate::runtime::role::RoleInvocation;
 use crate::runtime::schema::{gate_evidence, gate_plan};
 use crate::runtime::snapshot::VersionStore;
 use crate::runtime::usage::{merge_usage, usage_from_attempts};
-use crate::runtime::view::{build_view, write_inputs, ViewSpec};
+use crate::runtime::view::{build_view, copy_tree, write_inputs, ViewSpec};
 use crate::tools::ToolChannel;
 
 /// The D7 scope limitation is recorded, never hidden.
@@ -140,6 +145,7 @@ fn finalize_failure(
     warnings: Vec<String>,
     usage: Vec<Usage>,
     durations: Vec<(String, u64)>,
+    evidence_diff: EvidenceDiff,
 ) -> anyhow::Result<()> {
     write_usage(run_dir, iteration, &usage)?;
     let result = IterResult {
@@ -152,8 +158,17 @@ fn finalize_failure(
         version_id: None,
         usage,
         durations_ms: durations,
+        evidence_diff,
     };
     write_iter_result(run_dir, iteration, &result)
+}
+
+/// A manifest that could not be produced must not mask the violation itself.
+fn manifest_or_empty(
+    root: &Path,
+    excludes: &[String],
+) -> std::collections::BTreeMap<String, String> {
+    tree_manifest(root, excludes).unwrap_or_default()
 }
 
 fn qa_report_fallback(bundle: &crate::model::EvidenceBundle) -> String {
@@ -229,10 +244,13 @@ pub async fn run(
 
         let mut iter_usage: Vec<Usage> = Vec::new();
         let mut durations: Vec<(String, u64)> = Vec::new();
-        let mut iter_warnings: Vec<String> = Vec::new();
+        // DR-6: the D7 scope limitation is restated in *every* iteration result,
+        // not only in `meta.json` and `warnings.log`.
+        let mut iter_warnings: Vec<String> = vec![MCP_SCOPE_WARNING.to_string()];
 
         // ---------------- Planner (read-only) ----------------
         let h_pre = hash_tree(&workspace, &excludes)?;
+        let m_pre = tree_manifest(&workspace, &excludes)?;
         let plan_path = iter_dir.join("plan.md");
         let planner_view = iter_dir.join("planner-view");
 
@@ -262,6 +280,7 @@ pub async fn run(
                 root: planner_view.clone(),
                 source: Some(source),
                 excludes: excludes.clone(),
+                private_excludes: cfg.runtime.private_excludes.clone(),
                 inputs,
             })?;
 
@@ -323,6 +342,7 @@ pub async fn run(
                         iter_warnings.clone(),
                         iter_usage.clone(),
                         durations.clone(),
+                        EvidenceDiff::default(),
                     )?;
                     return Err(error);
                 }
@@ -340,11 +360,17 @@ pub async fn run(
         // Planner must not have touched the real artifact (R2).
         let h_post = hash_tree(&workspace, &excludes)?;
         if let Err(violation) = assert_unchanged("planner", &h_pre, &h_post) {
+            let m_post = manifest_or_empty(&workspace, &excludes);
+            let diff = diff_manifests(&m_pre, &m_post);
             write_log(
                 &run_dir,
                 iteration,
                 "planner",
-                &format!("contract violation: {}", violation.code()),
+                &format!(
+                    "contract violation: {}\nevidence_diff: {}",
+                    violation.code(),
+                    pretty(&diff)
+                ),
             )?;
             finalize_failure(
                 &run_dir,
@@ -352,9 +378,14 @@ pub async fn run(
                 Role::Planner,
                 "contract_violation",
                 Vec::new(),
-                vec![violation.code().to_string()],
+                {
+                    let mut all = iter_warnings.clone();
+                    all.push(violation.code().to_string());
+                    all
+                },
                 iter_usage.clone(),
                 durations.clone(),
+                diff,
             )?;
             return Err(HofError::contract(violation).into());
         }
@@ -417,16 +448,53 @@ pub async fn run(
                 ),
             )?;
         }
+
+        // ---------------- Deterministic build check (DR-1) ----------------
+        // It runs on the *real workspace* (the project the editor has open,
+        // D7) and before `A_t` is frozen: whatever it produces — including
+        // editor side effects — is part of the candidate identity instead of
+        // surfacing later as pre-QA drift.
+        let deterministic_dir = workspace.join(".hoh/deterministic");
+        let _ = std::fs::remove_dir_all(&deterministic_dir);
+        std::fs::create_dir_all(&deterministic_dir)?;
+        let deterministic = orchestrator
+            .adapter
+            .build_check(&workspace, &*orchestrator.tools)
+            .await?;
+        std::fs::write(
+            deterministic_dir.join("deterministic.json"),
+            pretty(&deterministic),
+        )?;
+        write_log(
+            &run_dir,
+            iteration,
+            "deterministic",
+            &format!(
+                "deterministic stage on the real workspace produced {} record(s)\n{}",
+                deterministic.len(),
+                pretty(&deterministic)
+            ),
+        )?;
+        for (index, record) in deterministic.iter().enumerate() {
+            std::fs::write(
+                deterministic_dir.join(format!("record-{index:02}.json")),
+                pretty(record),
+            )?;
+        }
+
+        // ---------------- Freeze A_t ----------------
+        let h_det = hash_tree(&workspace, &excludes)?;
         let version = store.snapshot_role(
             &workspace,
             &excludes,
             iteration,
             "developer",
-            &format!("A{iteration} after the developer stage"),
+            &format!("A{iteration} after the developer and deterministic stages"),
         )?;
+        debug_assert_eq!(version.candidate_id, h_det);
         final_version_id = Some(version.version_id.clone());
 
-        // ---------------- Deterministic build check ----------------
+        // ---------------- Candidate view (from the frozen snapshot) --------
         let candidate = iter_dir.join("candidate");
         let mut candidate_inputs = vec![
             (".hoh/TASK.md".to_string(), total_text.clone()),
@@ -445,34 +513,35 @@ pub async fn run(
         candidate_inputs.extend(skill_inputs());
         build_view(&ViewSpec {
             root: candidate.clone(),
-            source: Some(workspace.clone()),
+            source: Some(store.root.join(&version.version_id)),
             excludes: excludes.clone(),
+            private_excludes: cfg.runtime.private_excludes.clone(),
             inputs: candidate_inputs,
         })?;
-
-        let deterministic = orchestrator
-            .adapter
-            .build_check(&candidate, &*orchestrator.tools)
-            .await?;
-        let deterministic_dir = candidate.join(".hoh/deterministic");
-        std::fs::create_dir_all(&deterministic_dir)?;
-        std::fs::write(
-            deterministic_dir.join("deterministic.json"),
-            pretty(&deterministic),
+        // DR-1: the deterministic records (and the adapter's own logs) are
+        // copied into the frozen view so the Tester can cite them relatively.
+        copy_tree(
+            &deterministic_dir,
+            &candidate.join(".hoh/deterministic"),
+            &[],
         )?;
 
         // ---------------- QA pre-check: the artifact must still be A_t -------
         let workspace_now = hash_tree(&workspace, &excludes)?;
         if workspace_now != version.candidate_id {
+            let m_ws = manifest_or_empty(&workspace, &excludes);
+            let m_frozen = manifest_or_empty(&store.root.join(&version.version_id), &excludes);
+            let diff = diff_manifests(&m_frozen, &m_ws);
             write_log(
                 &run_dir,
                 iteration,
                 "tester",
                 &format!(
-                    "contract violation: {} (workspace {} != candidate {})",
+                    "contract violation: {} (workspace {} != candidate {})\nevidence_diff: {}",
                     ContractViolation::WorkspaceDriftBeforeQa.code(),
                     workspace_now,
-                    version.candidate_id
+                    version.candidate_id,
+                    pretty(&diff)
                 ),
             )?;
             finalize_failure(
@@ -481,16 +550,23 @@ pub async fn run(
                 Role::Tester,
                 "contract_violation",
                 Vec::new(),
-                vec![ContractViolation::WorkspaceDriftBeforeQa.code().to_string()],
+                {
+                    let mut all = iter_warnings.clone();
+                    all.push(ContractViolation::WorkspaceDriftBeforeQa.code().to_string());
+                    all
+                },
                 iter_usage.clone(),
                 durations.clone(),
+                diff,
             )?;
             return Err(HofError::contract(ContractViolation::WorkspaceDriftBeforeQa).into());
         }
 
         // ---------------- Tester (frozen candidate) ----------------
         let h_cand_before = hash_tree(&candidate, &excludes)?;
+        let m_cand_before = tree_manifest(&candidate, &excludes)?;
         let h_ws_before = hash_tree(&workspace, &excludes)?;
+        let m_ws_before = tree_manifest(&workspace, &excludes)?;
         let tester_base = RoleInvocation {
             role: Role::Tester,
             iteration,
@@ -521,6 +597,7 @@ pub async fn run(
         let h_ws_after = hash_tree(&workspace, &excludes)?;
         if let Err(violation) = assert_unchanged("tester/candidate", &h_cand_before, &h_cand_after)
         {
+            let diff = diff_manifests(&m_cand_before, &manifest_or_empty(&candidate, &excludes));
             return fail_contract(
                 &run_dir,
                 iteration,
@@ -529,9 +606,11 @@ pub async fn run(
                 iter_usage,
                 durations,
                 iter_warnings,
+                diff,
             );
         }
         if let Err(violation) = assert_unchanged("tester/workspace", &h_ws_before, &h_ws_after) {
+            let diff = diff_manifests(&m_ws_before, &manifest_or_empty(&workspace, &excludes));
             return fail_contract(
                 &run_dir,
                 iteration,
@@ -540,6 +619,7 @@ pub async fn run(
                 iter_usage,
                 durations,
                 iter_warnings,
+                diff,
             );
         }
 
@@ -570,6 +650,7 @@ pub async fn run(
                     iter_warnings.clone(),
                     iter_usage.clone(),
                     durations.clone(),
+                    EvidenceDiff::default(),
                 )?;
                 return Err(error);
             }
@@ -620,6 +701,7 @@ pub async fn run(
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 fn fail_contract(
     run_dir: &Path,
     iteration: u32,
@@ -628,12 +710,17 @@ fn fail_contract(
     usage: Vec<Usage>,
     durations: Vec<(String, u64)>,
     warnings: Vec<String>,
+    evidence_diff: EvidenceDiff,
 ) -> anyhow::Result<RunSummary> {
     write_log(
         run_dir,
         iteration,
         role.as_str(),
-        &format!("contract violation: {}", violation.code()),
+        &format!(
+            "contract violation: {}\nevidence_diff: {}",
+            violation.code(),
+            pretty(&evidence_diff)
+        ),
     )?;
     finalize_failure(
         run_dir,
@@ -648,6 +735,7 @@ fn fail_contract(
         },
         usage,
         durations,
+        evidence_diff,
     )?;
     Err(HofError::contract(violation).into())
 }

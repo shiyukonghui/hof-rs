@@ -8,7 +8,9 @@ mod common;
 use common::*;
 use hof_rs::errors::{as_hof_error, HofError};
 use hof_rs::model::{Ablation, ContractViolation, Role};
-use hof_rs::runtime::policy::{hash_tree, tool_allowed};
+use hof_rs::runtime::policy::{hash_tree, tool_allowed, tree_manifest};
+use hof_rs::runtime::run_loop::MCP_SCOPE_WARNING;
+use hof_rs::runtime::view::list_tree;
 
 fn workspace_of(root: &std::path::Path) -> std::path::PathBuf {
     root.join("workspace")
@@ -86,6 +88,11 @@ async fn planner_cannot_write_artifact() {
         serde_json::from_str(&read(&run_dir(root).join("iter-1/result.json"))).unwrap();
     assert_eq!(result_json["ok"], serde_json::json!(false));
     assert_eq!(result_json["failed_role"], serde_json::json!("planner"));
+    // DR-2: the violation names the file the planner wrote.
+    assert_eq!(
+        result_json["evidence_diff"]["added"],
+        serde_json::json!(["scripts/hacked.gd"])
+    );
 }
 
 #[tokio::test]
@@ -312,4 +319,87 @@ async fn no_private_information_in_views() {
     assert!(!tool_allowed(Role::Tester, "add_node"));
     assert!(!tool_allowed(Role::Tester, "execute_editor_script"));
     assert!(!tool_allowed(Role::Planner, "get_editor_errors"));
+}
+
+/// DR-3: `runtime.private_excludes` removes a path from the copied role views
+/// only — the artifact identity (`hash_tree`) still covers it, so R2/R3
+/// write-detection is not weakened.
+#[tokio::test]
+async fn private_excludes_stay_out_of_views_but_inside_the_identity() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let workspace = workspace_of(root);
+    write(&workspace.join("tests/secret.json"), "{\"hidden\":true}\n");
+    write(&workspace.join("tests/public.json"), "{}\n");
+
+    let (result, records) = run_scenario_with_private_excludes(
+        root,
+        1,
+        happy_script(),
+        Ablation::default(),
+        FakeAdapter::new(),
+        vec!["tests/secret.json".to_string()],
+    )
+    .await;
+    result.expect("the happy path must complete with private excludes configured");
+
+    for view in ["planner-view", "candidate"] {
+        let files = list_tree(&run_dir(root).join(format!("iter-1/{view}"))).unwrap();
+        assert!(
+            !files.contains(&"tests/secret.json".to_string()),
+            "the private file leaked into the {view}: {files:?}"
+        );
+        assert!(
+            files.contains(&"tests/public.json".to_string()),
+            "only the configured path may be withheld from {view}: {files:?}"
+        );
+    }
+
+    // The Developer works on the real workspace, which is not a copy.
+    let developer = records
+        .iter()
+        .find(|record| record.role == Role::Developer)
+        .expect("the developer stage runs");
+    assert!(developer.files.contains_key("tests/secret.json"));
+
+    // The exclusion must not reach `hash_tree`: removing the file changes A_t.
+    let excludes = hof_rs::runtime::policy::HashExcludes::new(["cache".to_string()]).merged();
+    let manifest = tree_manifest(&workspace, &excludes).unwrap();
+    assert!(manifest.contains_key("tests/secret.json"));
+    let before = hash_tree(&workspace, &excludes).unwrap();
+    std::fs::remove_file(workspace.join("tests/secret.json")).unwrap();
+    let after = hash_tree(&workspace, &excludes).unwrap();
+    assert_ne!(
+        before, after,
+        "the private file must still be part of the artifact identity"
+    );
+}
+
+/// DR-6: the D7 scope limitation is restated in every iteration `result.json`.
+#[tokio::test]
+async fn every_result_json_carries_the_scope_warning() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let (result, _) = run_scenario(
+        root,
+        1,
+        happy_script(),
+        Ablation::default(),
+        FakeAdapter::new(),
+    )
+    .await;
+    result.expect("the happy path must complete");
+
+    let result_json: serde_json::Value =
+        serde_json::from_str(&read(&run_dir(root).join("iter-1/result.json"))).unwrap();
+    let warnings: Vec<String> = result_json["warnings"]
+        .as_array()
+        .expect("result.json warnings")
+        .iter()
+        .map(|value| value.as_str().unwrap_or_default().to_string())
+        .collect();
+    assert!(
+        warnings.iter().any(|warning| warning == MCP_SCOPE_WARNING),
+        "every result.json must repeat the MCP scope warning: {warnings:?}"
+    );
 }

@@ -8,7 +8,7 @@ use walkdir::WalkDir;
 use crate::runtime::policy::is_excluded;
 
 /// A directory tree handed to one role as its working directory.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ViewSpec {
     /// View root (becomes the role's `cwd`).
     pub root: PathBuf,
@@ -16,6 +16,10 @@ pub struct ViewSpec {
     pub source: Option<PathBuf>,
     /// Top-level path prefixes excluded while copying.
     pub excludes: Vec<String>,
+    /// DR-3: extra relative paths/prefixes excluded from the *view only*.
+    /// They never reach `hash_tree` or the snapshot exclude set, so excluding
+    /// something here does not hide it from the R2/R3 write-detection.
+    pub private_excludes: Vec<String>,
     /// `(relative path, content)` pairs written into `root` after copying.
     pub inputs: Vec<(String, String)>,
 }
@@ -30,7 +34,14 @@ pub fn build_view(spec: &ViewSpec) -> anyhow::Result<()> {
     }
     std::fs::create_dir_all(&spec.root)?;
     if let Some(source) = &spec.source {
-        copy_tree(source, &spec.root, &spec.excludes)?;
+        let mut excludes = spec.excludes.clone();
+        for item in &spec.private_excludes {
+            let normalized = item.replace('\\', "/");
+            if !normalized.is_empty() && !excludes.contains(&normalized) {
+                excludes.push(normalized);
+            }
+        }
+        copy_tree(source, &spec.root, &excludes)?;
     }
     write_inputs(&spec.root, &spec.inputs)
 }
@@ -126,6 +137,7 @@ mod tests {
             source: Some(source.clone()),
             excludes: vec!["cache".to_string(), ".hoh".to_string(), ".git".to_string()],
             inputs: vec![(".hoh/TASK.md".to_string(), "spec\n".to_string())],
+            ..ViewSpec::default()
         })
         .unwrap();
 
@@ -151,12 +163,45 @@ mod tests {
             source: Some(source),
             excludes: vec![],
             inputs: vec![(".hoh/TASK.md".to_string(), "spec\n".to_string())],
+            ..ViewSpec::default()
         };
         build_view(&spec).unwrap();
         write(&root.join("leftover.tmp"), "garbage\n");
         build_view(&spec).unwrap();
         assert!(!root.join("leftover.tmp").exists());
         assert_eq!(list_tree(&root).unwrap().len(), 2);
+    }
+
+    /// DR-3: `private_excludes` removes a path from every copied view, but the
+    /// file stays part of the artifact identity (`hash_tree`).
+    #[test]
+    fn private_excludes_are_not_copied_but_still_hashed() {
+        let temp = tempfile::tempdir().unwrap();
+        let source = temp.path().join("source");
+        write(&source.join("project.godot"), "config_version=5\n");
+        write(&source.join("tests/secret.json"), "{\"hidden\":true}\n");
+        write(&source.join("tests/public.json"), "{}\n");
+
+        let root = temp.path().join("view");
+        build_view(&ViewSpec {
+            root: root.clone(),
+            source: Some(source.clone()),
+            excludes: vec![],
+            private_excludes: vec!["tests/secret.json".to_string()],
+            inputs: vec![],
+        })
+        .unwrap();
+
+        let files = list_tree(&root).unwrap();
+        assert_eq!(
+            files,
+            vec!["project.godot".to_string(), "tests/public.json".to_string()],
+            "the private file must not be copied into the view"
+        );
+
+        // The exclusion is view-only: the hash still covers the private file.
+        let manifest = crate::runtime::policy::tree_manifest(&source, &[]).unwrap();
+        assert!(manifest.contains_key("tests/secret.json"));
     }
 
     #[test]
@@ -168,6 +213,7 @@ mod tests {
             source: None,
             excludes: vec![],
             inputs: vec![(".hoh/evidence.json".to_string(), "{}\n".to_string())],
+            ..ViewSpec::default()
         })
         .unwrap();
         assert_eq!(

@@ -42,6 +42,11 @@ pub struct RuntimeConfig {
     pub workspace: PathBuf,
     pub runs_dir: PathBuf,
     pub spec: PathBuf,
+    /// DR-3: relative paths/prefixes that must never be copied into a role view.
+    /// They deliberately do **not** extend the `hash_tree`/snapshot exclude set,
+    /// so R2/R3 write-detection is not weakened.
+    #[serde(default)]
+    pub private_excludes: Vec<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -202,6 +207,7 @@ mod tests {
         assert_eq!(config.provider(), REQUIRED_PROVIDER);
         assert_eq!(config.agent.cost_limit, 0.0);
         assert_eq!(config.runtime.iterations, 3);
+        assert!(config.runtime.private_excludes.is_empty());
     }
 
     #[test]

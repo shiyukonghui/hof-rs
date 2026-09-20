@@ -6,14 +6,31 @@
 //! claims, statuses or observations — the implementer is not allowed to grade
 //! its own work, and neither is the runtime.
 
-use std::path::Path;
+use std::path::{Component, Path};
 
 use crate::model::{is_absolute_like, resolve_record_path, EvidenceBundle, IssueCode, SchemaIssue};
 
+/// A record path must be a plain relative path inside the view root.  A `..`
+/// component is rejected outright: together with the canonicalize prefix
+/// assertion below it closes the blocker where `../outside_secret.txt` passed
+/// merely because the target file happened to exist (DR-10 / A1).
+fn has_parent_dir(path: &str) -> bool {
+    Path::new(&path.replace('\\', "/"))
+        .components()
+        .any(|component| component == Component::ParentDir)
+}
+
 /// File-existence half of the contract, usable on its own (the `hoh submit`
 /// inner gate has no candidate identity yet, but it does have the view root).
+///
+/// Three independent gates, all of which must pass (DR-10):
+/// 1. no absolute path (POSIX `/`, Windows drive letter);
+/// 2. no `..` component;
+/// 3. the resolved path must exist *and*, after `canonicalize`, still live under
+///    `canonicalize(view_root)` — which also rejects symlink escapes.
 pub fn check_paths(bundle: &EvidenceBundle, view_root: &Path) -> Vec<SchemaIssue> {
     let mut issues = Vec::new();
+    let canonical_root = view_root.canonicalize();
     for record in bundle
         .verified_records
         .iter()
@@ -35,6 +52,17 @@ pub fn check_paths(bundle: &EvidenceBundle, view_root: &Path) -> Vec<SchemaIssue
                 ));
                 continue;
             }
+            if has_parent_dir(path) {
+                issues.push(SchemaIssue::new(
+                    IssueCode::DanglingEvidence,
+                    format!(
+                        "execution record of claim `{}` uses `{path}`, which escapes the candidate \
+                         view root through a `..` component",
+                        record.claim_id
+                    ),
+                ));
+                continue;
+            }
             let resolved = resolve_record_path(view_root, path);
             if !resolved.is_file() {
                 issues.push(SchemaIssue::new(
@@ -44,6 +72,24 @@ pub fn check_paths(bundle: &EvidenceBundle, view_root: &Path) -> Vec<SchemaIssue
                          at {}",
                         record.claim_id,
                         resolved.display()
+                    ),
+                ));
+                continue;
+            }
+            // Existence is not enough: the file must resolve *inside* the view.
+            let inside = match (&canonical_root, resolved.canonicalize()) {
+                (Ok(root), Ok(target)) => target.starts_with(root),
+                _ => false,
+            };
+            if !inside {
+                issues.push(SchemaIssue::new(
+                    IssueCode::DanglingEvidence,
+                    format!(
+                        "execution record of claim `{}` references `{path}`, which resolves to {} \
+                         outside the candidate view root {}",
+                        record.claim_id,
+                        resolved.display(),
+                        view_root.display()
                     ),
                 ));
             }

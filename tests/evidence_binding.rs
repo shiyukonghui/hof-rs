@@ -13,6 +13,7 @@ use common::*;
 use hof_rs::errors::{as_hof_error, HofError};
 use hof_rs::model::{Ablation, ContractViolation, EvidenceBundle, IssueCode, Role};
 use hof_rs::runtime::evidence::bind;
+use hof_rs::runtime::policy::{hash_tree, tree_manifest, HashExcludes};
 use hof_rs::runtime::schema::gate_evidence;
 
 fn load_fixture(name: &str) -> EvidenceBundle {
@@ -133,6 +134,47 @@ fn rejects_absolute_path_evidence_outside_the_view() {
     assert!(codes(&issues).contains(&IssueCode::DanglingEvidence));
 }
 
+/// DR-10 (blocker A1): a `..` component is rejected even when the target file
+/// really exists, because it escapes the candidate view root.
+#[test]
+fn rejects_parent_dir_traversal() {
+    let temp = tempfile::tempdir().unwrap();
+    let view = fixture_view(temp.path(), true);
+    // The file exists, but outside the view root: existence alone must not pass.
+    std::fs::write(temp.path().join("outside_secret.txt"), "secret\n").unwrap();
+
+    for escaped in ["../outside_secret.txt", ".hoh/../../outside_secret.txt"] {
+        let mut bundle = load_fixture("evidence_ok.json");
+        bundle.verified_records[0].execution_records[0].path = Some(escaped.to_string());
+        let issues = bind(&mut bundle, "cand", &view)
+            .expect_err("a parent-dir traversal must never be accepted");
+        assert!(
+            codes(&issues).contains(&IssueCode::DanglingEvidence),
+            "expected DanglingEvidence for `{escaped}`, got {:?}",
+            codes(&issues)
+        );
+    }
+
+    // A symlink pointing outside the view root is rejected by the
+    // canonicalize prefix assertion (skipped when the OS refuses to create it).
+    #[cfg(windows)]
+    let link = std::os::windows::fs::symlink_file(
+        temp.path().join("outside_secret.txt"),
+        view.join("link.txt"),
+    );
+    #[cfg(not(windows))]
+    let link = std::os::unix::fs::symlink(
+        temp.path().join("outside_secret.txt"),
+        view.join("link.txt"),
+    );
+    if link.is_ok() {
+        let mut bundle = load_fixture("evidence_ok.json");
+        bundle.verified_records[0].execution_records[0].path = Some("link.txt".to_string());
+        let issues = bind(&mut bundle, "cand", &view).expect_err("a symlink escape must be denied");
+        assert!(codes(&issues).contains(&IssueCode::DanglingEvidence));
+    }
+}
+
 #[tokio::test]
 async fn gate_evidence_accepts_a_bound_candidate() {
     let temp = tempfile::tempdir().unwrap();
@@ -195,19 +237,68 @@ async fn rejects_contaminated_candidate() {
     let (result, _) = run_scenario(root, 1, script, Ablation::default(), FakeAdapter::new()).await;
     let error = result.expect_err("QA must not modify the frozen candidate");
     assert_contract(&error, ContractViolation::QaContaminatedCandidate);
+    let result_json = result_json(root);
+    assert_eq!(result_json["failed_role"], serde_json::json!("tester"));
+    // DR-2: contaminating the copy is reported with the file that did it.
     assert_eq!(
-        result_json(root)["failed_role"],
-        serde_json::json!("tester")
+        result_json["evidence_diff"]["added"],
+        serde_json::json!(["scripts/cheat.gd"])
     );
 }
 
+/// DR-1: the deterministic stage runs on the real workspace *before* the
+/// freeze, so anything it changes is part of `A_t` — and must not be reported
+/// as pre-QA drift.
+#[tokio::test]
+async fn deterministic_stage_changes_are_part_of_candidate_identity() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let workspace = root.join("workspace");
+    let adapter = FakeAdapter::new().with_drift(
+        workspace.clone(),
+        "scripts/deep/editor_side_effect.gd",
+        "# produced by the deterministic build/exec stage\n",
+    );
+    let (result, _) = run_scenario(root, 1, happy_script(), Ablation::default(), adapter).await;
+    let summary =
+        result.expect("DR-1: a deterministic-stage change is legitimate, not a violation");
+
+    let excludes = HashExcludes::new(["cache".to_string()]).merged();
+    let frozen = hash_tree(&workspace, &excludes).unwrap();
+    assert_eq!(
+        summary.final_version_id.as_deref(),
+        Some(frozen.as_str()),
+        "A_t must be the post-deterministic hash"
+    );
+
+    let result_json = result_json(root);
+    assert_eq!(result_json["ok"], serde_json::json!(true));
+    assert_eq!(result_json["candidate_id"], serde_json::json!(frozen));
+    let warnings = result_json["warnings"].as_array().unwrap().clone();
+    assert!(
+        !warnings
+            .iter()
+            .any(|warning| warning == "workspace_drift_before_qa"),
+        "the deterministic change must not be reported as drift: {warnings:?}"
+    );
+
+    // The change is inside the artifact identity and inside the frozen copy.
+    let manifest = tree_manifest(&workspace, &excludes).unwrap();
+    assert!(manifest.contains_key("scripts/deep/editor_side_effect.gd"));
+    assert!(root
+        .join("runs/run-1/iter-1/candidate/scripts/deep/editor_side_effect.gd")
+        .is_file());
+}
+
+/// The pre-QA safety net still exists: a change that happens *after* the freeze
+/// is a hard failure (DR-1 keeps the assertion).
 #[tokio::test]
 async fn rejects_workspace_drift() {
     let temp = tempfile::tempdir().unwrap();
     let root = temp.path();
-    // The deterministic stage simulates the editor (MCP) changing the real
-    // project after A_t was hashed.
-    let adapter = FakeAdapter::new().with_drift(
+    // `evidence_playbook` is read by the runtime after A_t was frozen, which is
+    // the only deterministic post-freeze window the loop exposes.
+    let adapter = FakeAdapter::new().with_post_freeze_drift(
         root.join("workspace"),
         "drifted.gd",
         "# the editor project moved under the QA candidate\n",
@@ -215,9 +306,53 @@ async fn rejects_workspace_drift() {
     let (result, _) = run_scenario(root, 1, happy_script(), Ablation::default(), adapter).await;
     let error = result.expect_err("QA must be rejected when the artifact drifted");
     assert_contract(&error, ContractViolation::WorkspaceDriftBeforeQa);
+
+    let result_json = result_json(root);
+    assert_eq!(result_json["failed_role"], serde_json::json!("tester"));
+    // DR-2: the violation names the file that changed.
     assert_eq!(
-        result_json(root)["failed_role"],
-        serde_json::json!("tester")
+        result_json["evidence_diff"]["added"],
+        serde_json::json!(["drifted.gd"])
+    );
+}
+
+/// DR-2 / FIX-4: a contract violation must carry a concrete difference list, not
+/// just "the hashes differ".
+#[tokio::test]
+async fn contract_violation_reports_a_concrete_diff() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let deep = root.join("workspace/scripts/deep/nested/player.gd");
+    write(&deep, "extends Node\n# baseline\n");
+
+    let script = vec![
+        FakeStep::new(Role::Planner).writing(".hoh/plan.md", OK_PLAN),
+        FakeStep::new(Role::Developer).writing("project.godot", "config_version=5\n"),
+        FakeStep::new(Role::Tester)
+            .writing(".hoh/evidence/move.json", "{}\n")
+            .writing(".hoh/evidence.json", &ok_evidence(1, ""))
+            // A single deep file is rewritten through an absolute path: the
+            // copy cannot stop this, the hash assertion must.
+            .outside(deep.clone(), "extends Node\n# hacked by the tester\n"),
+    ];
+    let (result, _) = run_scenario(root, 1, script, Ablation::default(), FakeAdapter::new()).await;
+    let error = result.expect_err("QA must not rewrite the real artifact");
+    assert_contract(&error, ContractViolation::ReadOnlyRoleWroteArtifact);
+
+    let result_json = result_json(root);
+    assert_eq!(
+        result_json["reason"],
+        serde_json::json!("contract_violation")
+    );
+    assert_eq!(
+        result_json["evidence_diff"]["modified"],
+        serde_json::json!(["scripts/deep/nested/player.gd"]),
+        "the diff must name exactly the deep file that was rewritten: {result_json}"
+    );
+    assert_eq!(result_json["evidence_diff"]["added"], serde_json::json!([]));
+    assert_eq!(
+        result_json["evidence_diff"]["removed"],
+        serde_json::json!([])
     );
 }
 

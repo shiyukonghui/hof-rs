@@ -7,7 +7,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::{Ablation, Role, SchemaIssue, Spec, Usage};
+use crate::model::{Ablation, EvidenceDiff, Role, SchemaIssue, Spec, Usage};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RunMeta {
@@ -34,6 +34,9 @@ pub struct IterResult {
     pub version_id: Option<String>,
     pub usage: Vec<Usage>,
     pub durations_ms: Vec<(String, u64)>,
+    /// DR-2: present on every result (empty unless a contract violation was
+    /// detected), so a failure always names the files that changed.
+    pub evidence_diff: EvidenceDiff,
 }
 
 impl IterResult {
@@ -48,6 +51,7 @@ impl IterResult {
             version_id: None,
             usage: Vec::new(),
             durations_ms: Vec::new(),
+            evidence_diff: EvidenceDiff::default(),
         }
     }
 }

@@ -21,11 +21,17 @@ runtime:
   workspace: .workspace/mario
   runs_dir: runs
   spec: .spec/hof-rs/PRD-mario.md
+  # DR-3：只从「角色视图副本」中排除的相对路径/前缀（例如私有测试夹具）。
+  # 这些路径**不**进入 hash_tree / 快照的排除集，因此不会削弱 R2/R3 的越权写入检测。
+  private_excludes: []
 
 adapter:
   kind: godot                             # godot | test
   godot:
     addon_source: F:/RustProjects/godot-mcp-pro/addons/godot_mcp_rs
+    # DR-11：只允许「缓存类」目录（如 .godot / .import）。
+    # 这些目录对 hash_tree 与快照同样不可见；把真实产物路径加进来会**同时关闭**
+    # R2/R3 的越权检测能力（只读角色改动被排除的文件将不再可见）。
     cache_excludes: [".godot", ".import"]
     main_scene: res://scenes/main.tscn
 

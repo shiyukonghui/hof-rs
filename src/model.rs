@@ -173,6 +173,24 @@ pub struct ArtifactState {
     pub parent_version_id: Option<String>,
 }
 
+/// DR-2: a diagnosable difference list attached to every contract violation.
+///
+/// Paths are relative to the root of the compared tree, POSIX-separated, sorted
+/// and capped at 50 entries per list.  "The hash differs" is not a report; this
+/// is.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EvidenceDiff {
+    pub added: Vec<String>,
+    pub modified: Vec<String>,
+    pub removed: Vec<String>,
+}
+
+impl EvidenceDiff {
+    pub fn is_empty(&self) -> bool {
+        self.added.is_empty() && self.modified.is_empty() && self.removed.is_empty()
+    }
+}
+
 /// Contract violations detected by the runtime (never silently ignored).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

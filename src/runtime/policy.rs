@@ -112,6 +112,66 @@ pub fn assert_unchanged(label: &str, before: &str, after: &str) -> Result<(), Co
     Err(violation)
 }
 
+/// Per-file content digest of a tree, keyed by POSIX relative path.
+///
+/// `hash_tree` answers "did anything change?"; this answers "what changed?".
+/// `hash_tree` is deliberately left untouched so `version_id` stays stable
+/// (R10) — this is an additional read-only projection, not a second hashing
+/// implementation.
+pub fn tree_manifest(
+    root: &Path,
+    excludes: &[String],
+) -> anyhow::Result<std::collections::BTreeMap<String, String>> {
+    let mut manifest = std::collections::BTreeMap::new();
+    if root.exists() {
+        for entry in WalkDir::new(root).follow_links(false) {
+            let entry = entry?;
+            if !entry.file_type().is_file() {
+                continue;
+            }
+            let rel = relativize(root, entry.path());
+            if is_excluded(&rel, excludes) {
+                continue;
+            }
+            let bytes = std::fs::read(entry.path()).map_err(|error| {
+                anyhow::anyhow!("could not read {}: {error}", entry.path().display())
+            })?;
+            manifest.insert(rel, sha256_hex(&bytes));
+        }
+    }
+    Ok(manifest)
+}
+
+/// The maximum number of paths reported per category (DR-2).
+pub const EVIDENCE_DIFF_LIMIT: usize = 50;
+
+/// DR-2: turn two manifests into a concrete, sorted difference report.
+pub fn diff_manifests(
+    before: &std::collections::BTreeMap<String, String>,
+    after: &std::collections::BTreeMap<String, String>,
+) -> crate::model::EvidenceDiff {
+    let mut diff = crate::model::EvidenceDiff::default();
+    for (path, digest) in after {
+        match before.get(path) {
+            None => diff.added.push(path.clone()),
+            Some(previous) if previous != digest => diff.modified.push(path.clone()),
+            Some(_) => {}
+        }
+    }
+    for path in before.keys() {
+        if !after.contains_key(path) {
+            diff.removed.push(path.clone());
+        }
+    }
+    diff.added.sort();
+    diff.modified.sort();
+    diff.removed.sort();
+    diff.added.truncate(EVIDENCE_DIFF_LIMIT);
+    diff.modified.truncate(EVIDENCE_DIFF_LIMIT);
+    diff.removed.truncate(EVIDENCE_DIFF_LIMIT);
+    diff
+}
+
 /// Canonical tool policy table (§5.4).  `crate::tools::policy` re-exports
 /// these so both the tool channel and the runtime agree by construction.
 pub mod tool_matrix {
@@ -209,16 +269,17 @@ pub mod tool_matrix {
     }
 
     /// Structured reason used by `hoh tools call` and by the tool channel.
+    ///
+    /// DR-7: the two situations are factually different and must not share a
+    /// message — a write-class tool that the role is forbidden to use is a
+    /// mutation denial, while anything outside the role's allowlist (including
+    /// every unknown tool, and every MCP tool for the Planner) is an allowlist
+    /// denial.
     pub fn denial_reason(role: Role, tool: &str) -> &'static str {
-        if tool_matrix_is_unknown(role, tool) {
-            "This tool is not on the role's allowed list (default deny)."
-        } else {
-            "This role may not mutate the artifact."
+        match role {
+            Role::Tester if is_mutating(tool) => "This role may not mutate the artifact.",
+            _ => "Tool not in this role's allowlist.",
         }
-    }
-
-    fn tool_matrix_is_unknown(role: Role, tool: &str) -> bool {
-        role == Role::Tester && !is_tester_allowed(tool) && !is_mutating(tool)
     }
 }
 

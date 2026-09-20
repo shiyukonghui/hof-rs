@@ -294,8 +294,13 @@ impl Harness for FakeHarness {
 pub struct FakeAdapter {
     pub build_records: Vec<ExecRecord>,
     /// `(workspace, relative path, content)` written during `build_check` to
-    /// simulate editor-side drift of the real project.
+    /// simulate editor-side changes to the real project (DR-1: these are part
+    /// of `A_t`, not drift).
     pub drift: Option<(PathBuf, String, String)>,
+    /// `(workspace, relative path, content)` written from `evidence_playbook`,
+    /// which the runtime calls *after* `A_t` was frozen: this is the only
+    /// deterministic way to exercise the `WorkspaceDriftBeforeQa` safety net.
+    pub drift_after_freeze: Option<(PathBuf, String, String)>,
     pub excludes: Vec<String>,
 }
 
@@ -304,12 +309,18 @@ impl FakeAdapter {
         Self {
             build_records: vec![fixed_build_record()],
             drift: None,
+            drift_after_freeze: None,
             excludes: vec!["cache".to_string()],
         }
     }
 
     pub fn with_drift(mut self, workspace: PathBuf, rel: &str, content: &str) -> Self {
         self.drift = Some((workspace, rel.to_string(), content.to_string()));
+        self
+    }
+
+    pub fn with_post_freeze_drift(mut self, workspace: PathBuf, rel: &str, content: &str) -> Self {
+        self.drift_after_freeze = Some((workspace, rel.to_string(), content.to_string()));
         self
     }
 }
@@ -336,7 +347,7 @@ impl ProjectAdapter for FakeAdapter {
 
     async fn build_check(
         &self,
-        candidate_view: &Path,
+        workspace: &Path,
         _tools: &dyn ToolChannel,
     ) -> anyhow::Result<Vec<ExecRecord>> {
         if let Some((workspace, rel, content)) = &self.drift {
@@ -346,7 +357,9 @@ impl ProjectAdapter for FakeAdapter {
             }
             std::fs::write(&target, content)?;
         }
-        let dir = candidate_view.join(".hoh/deterministic");
+        // DR-1: the deterministic stage writes into the real workspace; the
+        // runtime copies these records into the frozen candidate view.
+        let dir = workspace.join(".hoh/deterministic");
         std::fs::create_dir_all(&dir)?;
         std::fs::write(
             dir.join("build.json"),
@@ -356,6 +369,15 @@ impl ProjectAdapter for FakeAdapter {
     }
 
     fn evidence_playbook(&self) -> String {
+        // Called by the runtime *after* the freeze: the deterministic hook for
+        // the pre-QA drift safety net.
+        if let Some((workspace, rel, content)) = &self.drift_after_freeze {
+            let target = workspace.join(rel);
+            if let Some(parent) = target.parent() {
+                std::fs::create_dir_all(parent).expect("drift parent");
+            }
+            std::fs::write(&target, content).expect("drift write");
+        }
         "## Evidence playbook (fake)\n".to_string()
     }
 
@@ -448,8 +470,46 @@ pub async fn run_scenario(
     anyhow::Result<hof_rs::runtime::run_loop::RunSummary>,
     Vec<InvocationRecord>,
 ) {
+    run_scenario_inner(root, iterations, script, ablation, adapter, Vec::new()).await
+}
+
+/// Same scenario with DR-3 `runtime.private_excludes` configured.
+pub async fn run_scenario_with_private_excludes(
+    root: &Path,
+    iterations: u32,
+    script: Vec<FakeStep>,
+    ablation: hof_rs::model::Ablation,
+    adapter: FakeAdapter,
+    private_excludes: Vec<String>,
+) -> (
+    anyhow::Result<hof_rs::runtime::run_loop::RunSummary>,
+    Vec<InvocationRecord>,
+) {
+    run_scenario_inner(
+        root,
+        iterations,
+        script,
+        ablation,
+        adapter,
+        private_excludes,
+    )
+    .await
+}
+
+async fn run_scenario_inner(
+    root: &Path,
+    iterations: u32,
+    script: Vec<FakeStep>,
+    ablation: hof_rs::model::Ablation,
+    adapter: FakeAdapter,
+    private_excludes: Vec<String>,
+) -> (
+    anyhow::Result<hof_rs::runtime::run_loop::RunSummary>,
+    Vec<InvocationRecord>,
+) {
     let mut cfg = test_config(root, iterations);
     cfg.runtime.spec = root.join("spec.md");
+    cfg.runtime.private_excludes = private_excludes;
     let spec = write_spec(root);
     let harness = FakeHarness::new(script);
     let observer = harness.clone();
