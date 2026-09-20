@@ -167,17 +167,30 @@ prompt/completion/total/cache_hit/cache_miss，按角色与轮次落盘。usage 
 
 配置：`config/hoh.yaml`（模型/端点/上限/角色模板路径/工具端点）经 mini 的 `get_config_from_spec` + `recursive_merge` 加载，可被 CLI `-c key=value` 覆盖。
 
-**模型配置（已实测核对，必须在设计里写死）**：
+**模型配置（已实测核对，必须在设计里写死；违反任一条都会导致运行期故障或显存翻倍）**：
 ```yaml
 model:
-  model_name: qwen/qwen3.8-27b
-  provider: openai_compatible      # 不写会被推断为 aliyun（DashScope）→ 打不到 LM Studio
+  model_name: openai/qwen/qwen3.8-27b  # 关键：effective_model_name 剥掉 openai/ 前缀，
+                                       # 上线恰好是规范 id qwen/qwen3.8-27b（见下方实测）
+  provider: openai_compatible          # 必须显式写；否则 infer_provider("qwen/...") 判成 aliyun → 打不到 LM Studio
   service_name: openai_compatible
-  base_url: http://127.0.0.1:1234/v1   # 客户端直接拼 {base}/chat/completions
-  api_key: lm-studio               # 非空即可
+  base_url: http://127.0.0.1:1234/v1   # 客户端直接拼 {base}/chat/completions，故 /v1 必须自带
+  api_key: lm-studio                   # 非空即可（LM Studio 忽略 Bearer 值）
   use_tool_calls: true
 ```
-（`effective_model_name` 会把 `qwen/` 剥成 `qwen3.8-27b`；已实测 LM Studio 接受该裸 id 并归一化。）
+
+**为什么用 `openai/qwen/qwen3.8-27b` 这种「自剥前缀」写法（D6，实测驱动）**：
+mini 的 `effective_model_name()` 会按前缀表剥离 `qwen/`、`openai/`、`ollama/` 等。实测三种写法对 LM Studio 的影响：
+
+| 上线 model 字段 | LM Studio 响应 | `/api/v0/models` 加载状态 | 后果 |
+|---|---|---|---|
+| `qwen/qwen3.8-27b` | `qwen/qwen3.8-27b` | 1 个已加载实例 | 正确 |
+| `qwen3.8-27b`（裸 id） | `qwen3.8-27b` | **新增第二个已加载实例** | **显存翻倍**，且实例常驻 |
+| `Qwen/qwen3.8-27b` | 归一化为 `qwen/qwen3.8-27b` | 未新增 | 可用，但依赖大小写归一化，语义晦涩 |
+
+选择第一种字段名 + 自剥前缀，使**上线字符串恰好等于规范 id**，既不改 mini（D2），又不触发二次加载（C9）。
+验证方式：离线测试断言「配置解析后送往线路的 model 字符串 == `qwen/qwen3.8-27b`」；
+真实标记测试断言响应 `model` 字段等于规范 id，且运行前后 `/api/v0/models` 的 `state=loaded` 条目数不增加。
 
 ## 6. 模块划分（概要级）
 

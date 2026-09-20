@@ -58,6 +58,8 @@
 | C6 | 文档中文、代码与标识符英文；每个阶段结束 `git commit`，提交信息对应 `DECISIONS.md` 条目 |
 | C7 | 证据只来自**公开**信息：spec S、D_t、A_t、公开执行记录；私有评分永不进入 prompt 或 E_t |
 | C8 | token 统计必须从 `Message.extra["response"]["usage"]` 提取（mini 已持久化完整 ChatResponse）；不得依赖 `cost` 字段（本地模型无单价，cost 恒为 0） |
+| C9 | **上线模型标识必须逐字为 `qwen/qwen3.8-27b`**。实测：mini 的 `effective_model_name` 会剥掉 `qwen/` 前缀，若真发出裸 id `qwen3.8-27b`，LM Studio 会**额外加载第二个模型实例**（`/api/v0/models` 出现第二条 `state=loaded`）→ 显存翻倍。运行时**禁止**改变该字符串，且必须有测试锁定上线 id |
+| C10 | 真实运行的 `model` 配置必须显式写 `provider: openai_compatible`；否则 `infer_provider("qwen/...")` 判成 `aliyun`，请求不会打到 LM Studio |
 
 ---
 

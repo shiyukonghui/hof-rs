@@ -1,7 +1,7 @@
 # DECISIONS — hof-rs
 
 > 「代码为什么长这样」的权威来源。每个决策点追加一条：日期 / 触发问题 / 考虑的选项 / 最终选择 / 理由 / 预期影响与回滚点。
-> 提交信息应对应本文件的决策编号（如 `feat(runtime): ... (D5)`）。
+> 提交信息应对应本文件的决策编号（如 `feat(runtime): ... (D7)`）。
 
 ---
 
@@ -82,3 +82,30 @@
   统计时必须按 `completion_tokens` 全额计（不得只算可见输出）。
 - 回滚点：若某轮发现 tool call 解析频繁失败（`max_consecutive_format_errors` 触发），切
   `mini_textbased.yaml` + `action_regex`，无需改动 Runtime。
+
+## D6 — 上线模型标识用「自剥前缀」写法锁定为 `qwen/qwen3.8-27b`（用户指出 + 实测确认）
+
+- 日期：2026-09
+- 触发问题：用户指出「不要让 `effective_model_name` 剥掉 `qwen/` 前缀成 `qwen3.8-27b`，LM Studio 会重新启动模型，多占用显存」。
+- 实测证据（`GET /api/v0/models` 前后对比，请求 `/v1/chat/completions`）：
+
+  | 上线 model 字段 | 响应 `model` | 加载状态 |
+  |---|---|---|
+  | `qwen/qwen3.8-27b` | `qwen/qwen3.8-27b` | 1 个已加载实例 |
+  | `qwen3.8-27b`（剥后裸 id） | `qwen3.8-27b` | **新增第二条 `state=loaded`** → 显存翻倍且常驻 |
+  | `Qwen/qwen3.8-27b` | 归一化为 `qwen/qwen3.8-27b` | 未新增 |
+
+- 选项：
+  1. **`model_name: openai/qwen/qwen3.8-27b` + 显式 `provider: openai_compatible`**（选中）
+     —— mini 剥掉 `openai/` 后上线恰好是规范 id；
+  2. 大小写变体 `Qwen/...`（依赖 LM Studio 归一化，语义晦涩）；
+  3. 让用户在 LM Studio 把模型 id 改成裸 id（把架构约束转嫁给外部配置，脆弱）；
+  4. 给 mini 加 `wire_model_name` 配置项（需改 harness，D2 反对）。
+- 选择：选项 1。
+- 理由：零改动 mini、上线字符串精确等于规范 id、不触发二次加载；`provider` 显式指定同时绕开
+  `infer_provider("qwen/...") → aliyun` 的误判（若不显式指定，请求会走 DashScope 语义打不到 LM Studio）。
+- 影响与回滚点：`config/hoh.yaml` 的 `model_name` 与 `provider` 成为**不可随意改动**的两个字段（C9/C10）；
+  必须有离线测试断言「解析后送往线路的 model 字符串 == `qwen/qwen3.8-27b`」。
+  若上游 mini 改了前缀剥离表，该写法会失效 → 届时回退到选项 2 或选项 4。
+- 附带事项：本次实验在用户机器上留下了一个多余的常驻实例 `qwen3.8-27b`（`state=loaded`），
+  建议在 LM Studio 中手动卸载该条目以释放显存。
