@@ -133,7 +133,56 @@ fn default_deny_unknown() {
 
     let payload = denial_payload(Role::Tester, "totally_new_mcp_tool");
     assert_eq!(payload["error"], serde_json::json!("tool_not_permitted"));
-    assert!(payload["hint"].as_str().unwrap().contains("default deny"));
+    assert_eq!(
+        payload["hint"],
+        serde_json::json!("Tool not in this role's allowlist.")
+    );
+}
+
+/// DR-7: the rejection text must distinguish "this role may not mutate" from
+/// "not in this role's allowlist".  The Planner owns no MCP tool at all, so
+/// every MCP tool is an allowlist denial for it.
+#[test]
+fn denial_hints_distinguish_mutation_from_allowlist() {
+    assert_eq!(
+        denial_payload(Role::Tester, "add_node")["hint"],
+        serde_json::json!("This role may not mutate the artifact.")
+    );
+    assert_eq!(
+        denial_payload(Role::Tester, "execute_game_script")["hint"],
+        serde_json::json!("This role may not mutate the artifact.")
+    );
+    assert_eq!(
+        denial_payload(Role::Planner, "get_editor_errors")["hint"],
+        serde_json::json!("Tool not in this role's allowlist.")
+    );
+    assert_eq!(
+        denial_payload(Role::Planner, "add_node")["hint"],
+        serde_json::json!("Tool not in this role's allowlist.")
+    );
+    assert_eq!(
+        denial_payload(Role::Tester, "totally_unknown_mcp_tool")["hint"],
+        serde_json::json!("Tool not in this role's allowlist.")
+    );
+
+    // The CLI bridge must print the same distinct texts.
+    let binary = env!("CARGO_BIN_EXE_hoh");
+    for (role, tool, expected) in [
+        ("planner", "get_editor_errors", "allowlist"),
+        ("tester", "add_node", "may not mutate"),
+    ] {
+        let output = Command::new(binary)
+            .args(["tools", "call", tool, "--role", role])
+            .current_dir(PathBuf::from(env!("CARGO_MANIFEST_DIR")))
+            .output()
+            .expect("the hoh binary must be runnable");
+        assert_eq!(output.status.code(), Some(2));
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains(expected),
+            "`{role}` calling `{tool}` should say `{expected}`: {stdout}"
+        );
+    }
 }
 
 /// The CLI bridge must refuse before touching any network or configuration.
@@ -247,5 +296,9 @@ fn submit_validates_and_writes_the_canonical_artifact() {
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(3));
-    assert!(String::from_utf8_lossy(&output.stdout).contains("ok"));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    // A6/FIX-11: `"ok": false` must be asserted explicitly — the string `ok`
+    // alone also matches a successful `{"ok": true}` body.
+    assert!(stdout.contains("\"ok\": false"), "stdout: {stdout}");
+    assert!(stdout.contains("dangling_evidence"), "stdout: {stdout}");
 }

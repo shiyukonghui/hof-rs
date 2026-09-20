@@ -1,4 +1,4 @@
-//! E1鈥揈6 鈥?real-dependency smoke tests.
+//! E1-E6 -- real-dependency smoke tests.
 //!
 //! **Every test in this file is `#[ignore]`.**  They require three external
 //! preconditions that the offline suite deliberately does not depend on:
@@ -17,8 +17,25 @@
 //! ```
 //!
 //! `e1_...` performs the real run and materializes `runs/godot-smoke/`; the
-//! other tests analyze that run's artifacts and skip with an explanation if the
-//! run has not happened yet.
+//! other tests analyze that run's artifacts.
+//!
+//! **DR-9:** a missing precondition is a *failure*, never a silent skip.
+//!
+//! Two gates, both hard panics:
+//! 1. every test requires `HOH_SMOKE=1`; without it the whole `--ignored` run
+//!    fails immediately instead of reporting a green "0 assertions" suite;
+//! 2. E2-E6 additionally require the real run artifact and print its path when
+//!    it is missing.
+//!
+//! Real invocation:
+//!
+//! ```text
+//! set HOH_SMOKE=1   # then:
+//! cargo test --test godot_smoke -- --ignored --test-threads=1
+//! ```
+//!
+//! A reviewer who runs the command above *without* the environment variable (or
+//! without the run artifacts) must see failures, never `passed`.
 
 use std::path::PathBuf;
 
@@ -30,6 +47,19 @@ use hof_rs::runtime::run_loop::{self, Orchestrator};
 use hof_rs::tools::bridge::channel_for;
 
 const SMOKE_RUN_ID: &str = "godot-smoke";
+
+/// DR-9 gate 1: these tests drive real external services (LM Studio, the Godot
+/// editor).  Running them by accident — or expecting them to "skip" — must fail
+/// loudly rather than pass vacuously.
+fn require_smoke_mode() {
+    if std::env::var("HOH_SMOKE").ok().as_deref() != Some("1") {
+        panic!(
+            "SMOKE PRECONDITION MISSING: HOH_SMOKE=1 is not set. These tests drive LM Studio \
+             (127.0.0.1:1234) and the Godot editor MCP endpoint (127.0.0.1:9877); set \
+             HOH_SMOKE=1 explicitly when you really intend to run them."
+        );
+    }
+}
 
 fn manifest_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -62,25 +92,53 @@ fn smoke_config() -> hof_rs::config::HohConfig {
     load_config(&specs).expect("config/hoh.yaml must load")
 }
 
-/// E0: scaffold the `A鈧€` starting artifact at `.workspace/mario`.
+/// E0: scaffold the `A0` starting artifact at `.workspace/mario`.
 ///
 /// This one needs neither LM Studio nor the editor: it only materializes the
 /// minimal Godot project plus the `godot_mcp_rs` addon skeleton (OPEN-4).
+///
+/// DR-9: `force_init` is deliberately **not** passed -- it would destroy
+/// existing work.  Instead this test asserts the property that makes
+/// `force_init` unnecessary: `initialize` is idempotent on an already
+/// initialized workspace.
 #[test]
 #[ignore]
 fn e0_initialize_workspace() {
+    require_smoke_mode();
     let config = smoke_config();
-    let adapter = GodotAdapter::new(config.adapter.godot.clone(), true);
+    let workspace = config.runtime.workspace.clone();
+    let adapter = GodotAdapter::new(config.adapter.godot.clone(), false);
+
     adapter
-        .initialize(&config.runtime.workspace)
-        .expect("scaffolding A0 must succeed");
-    assert!(config.runtime.workspace.join("project.godot").is_file());
+        .initialize(&workspace)
+        .expect("scaffolding A0 must succeed without --force-init");
+    let project = workspace.join("project.godot");
+    assert!(project.is_file(), "{} is missing", project.display());
+    let first = std::fs::read_to_string(&project).expect("project.godot");
+    assert_eq!(
+        first
+            .matches("res://addons/godot_mcp_rs/plugin.cfg")
+            .count(),
+        1,
+        "the MCP plugin must be enabled exactly once (DR-4)"
+    );
+
+    // Second call: a no-op.  Same bytes, nothing added twice.
+    adapter
+        .initialize(&workspace)
+        .expect("initialize must be idempotent");
+    let second = std::fs::read_to_string(&project).expect("project.godot");
+    assert_eq!(
+        first, second,
+        "a second initialize must not modify project.godot"
+    );
 }
 
-/// E1: one real Planner 鈫?Developer 鈫?QA loop.
+/// E1: one real Planner -> Developer -> QA loop.
 #[tokio::test]
 #[ignore]
 async fn e1_single_iteration_smoke() {
+    require_smoke_mode();
     let config = smoke_config();
     let workspace = config.runtime.workspace.clone();
     let spec = load_spec(&config.runtime.spec).expect("spec");
@@ -119,21 +177,29 @@ async fn e1_single_iteration_smoke() {
     let _ = workspace;
 }
 
-/// Shared preconditions for E2鈥揈6.
-fn smoke() -> Option<Smoke> {
+/// Shared preconditions for E2-E6.
+///
+/// DR-9: a missing run artifact must **panic**, printing the path it needs.
+/// Returning early here is what produced five green "tests" that asserted
+/// nothing.
+fn smoke() -> Smoke {
+    require_smoke_mode();
     let config = smoke_config();
     let run_dir = smoke_run_dir();
-    if !run_dir.join("iter-1/evidence.json").is_file() {
-        eprintln!(
-            "SKIPPED: run the real loop first with \
-             `cargo test --test godot_smoke -- --ignored e1_single_iteration_smoke`"
+    let evidence = run_dir.join("iter-1/evidence.json");
+    if !evidence.is_file() {
+        panic!(
+            "SMOKE PRECONDITION MISSING: {} does not exist. Run the real loop first with \
+             `cargo test --test godot_smoke -- --ignored e1_single_iteration_smoke`, which \
+             requires LM Studio on 127.0.0.1:1234 and the Godot editor with the godot_mcp_rs \
+             addon listening on 127.0.0.1:9877.",
+            evidence.display()
         );
-        return None;
     }
-    Some(Smoke {
+    Smoke {
         run_dir,
         workspace: config.runtime.workspace,
-    })
+    }
 }
 
 fn iter_dir(smoke: &Smoke) -> PathBuf {
@@ -157,12 +223,12 @@ fn deterministic_observations(smoke: &Smoke) -> String {
     text
 }
 
-/// E2: the produced project starts 鈥?`play_scene` succeeded and the editor
+/// E2: the produced project starts -- `play_scene` succeeded and the editor
 /// reported no script errors.
 #[test]
 #[ignore]
 fn e2_project_boots() {
-    let Some(smoke) = smoke() else { return };
+    let smoke = smoke();
     let observations = deterministic_observations(&smoke);
     assert!(
         !observations.is_empty(),
@@ -178,12 +244,12 @@ fn e2_project_boots() {
     );
 }
 
-/// E3: player-facing behaviour is evidenced 鈥?at least three public execution
+/// E3: player-facing behaviour is evidenced -- at least three public execution
 /// records and at least one verified claim.
 #[test]
 #[ignore]
 fn e3_behaviour_is_evidenced() {
-    let Some(smoke) = smoke() else { return };
+    let smoke = smoke();
     let bundle = evidence(&smoke);
     let mut records = 0usize;
     for list in ["verified_records", "gap_records"] {
@@ -212,9 +278,12 @@ fn e3_behaviour_is_evidenced() {
 #[test]
 #[ignore]
 fn e4_verified_claims_are_reproducible() {
-    let Some(smoke) = smoke() else { return };
+    let smoke = smoke();
     let bundle = evidence(&smoke);
     let candidate = iter_dir(&smoke).join("candidate");
+    let root = candidate
+        .canonicalize()
+        .expect("the candidate view must exist");
     for claim in bundle["verified_records"]
         .as_array()
         .cloned()
@@ -236,20 +305,47 @@ fn e4_verified_claims_are_reproducible() {
                 "verified claim {} cites a record without a path",
                 claim["claim_id"]
             );
+            // DR-10: never `candidate.join(path)` naively -- an absolute path or
+            // a `..` component would silently resolve outside the view.
+            let normalized = path.replace('\\', "/");
             assert!(
-                candidate.join(path.replace('\\', "/")).exists(),
+                !normalized.starts_with('/')
+                    && !normalized
+                        .as_bytes()
+                        .get(1)
+                        .map(|byte| *byte == b':')
+                        .unwrap_or(false),
+                "verified claim {} cites the absolute path {path}",
+                claim["claim_id"]
+            );
+            assert!(
+                !normalized.split('/').any(|component| component == ".."),
+                "verified claim {} cites the escaping path {path}",
+                claim["claim_id"]
+            );
+            let resolved = candidate.join(&normalized);
+            assert!(
+                resolved.is_file(),
                 "verified claim {} cites the missing record {path}",
+                claim["claim_id"]
+            );
+            let target = resolved
+                .canonicalize()
+                .expect("the cited record must be canonicalizable");
+            assert!(
+                target.starts_with(&root),
+                "verified claim {} cites {path}, which resolves outside the candidate view",
                 claim["claim_id"]
             );
         }
     }
 }
 
-/// E5: QA did not modify A_1 鈥?the workspace still hashes to the candidate id.
+/// E5: QA did not modify A_1 -- the workspace still hashes to the candidate id.
 #[test]
 #[ignore]
 fn e5_qa_did_not_modify_the_artifact() {
-    let Some(smoke) = smoke() else { return };
+    let smoke = smoke();
     let result: serde_json::Value = serde_json::from_str(
         &std::fs::read_to_string(iter_dir(&smoke).join("result.json")).expect("result.json"),
     )
@@ -264,12 +360,12 @@ fn e5_qa_did_not_modify_the_artifact() {
     );
 }
 
-/// E6: honest reporting 鈥?gaps carry guidance, and verified claims never appear
+/// E6: honest reporting -- gaps carry guidance, and verified claims never appear
 /// without visible support.
 #[test]
 #[ignore]
 fn e6_report_is_honest() {
-    let Some(smoke) = smoke() else { return };
+    let smoke = smoke();
     let bundle = evidence(&smoke);
     for claim in bundle["gap_records"]
         .as_array()

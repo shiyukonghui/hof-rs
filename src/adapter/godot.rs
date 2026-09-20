@@ -52,7 +52,15 @@ jump={
 [rendering]
 
 renderer/rendering_method="gl_compatibility"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/godot_mcp_rs/plugin.cfg")
 "#;
+
+/// The plugin entry `initialize` must guarantee (DR-4).
+pub const MCP_PLUGIN_PATH: &str = "res://addons/godot_mcp_rs/plugin.cfg";
+const EDITOR_PLUGINS_HEADER: &str = "[editor_plugins]";
 
 const MAIN_SCENE: &str = r#"[gd_scene load_steps=2 format=3]
 
@@ -75,14 +83,83 @@ impl GodotAdapter {
     }
 }
 
+/// Write `lines` back as an LF-terminated file.
+fn write_lines(path: &Path, lines: &[String]) -> anyhow::Result<()> {
+    let mut text = lines.join("\n");
+    text.push('\n');
+    std::fs::write(path, text)?;
+    Ok(())
+}
+
+/// Guarantee `[editor_plugins]` + `enabled` contains the MCP plugin (DR-4).
+///
+/// Idempotent by construction: when the entry is already present the file is
+/// left byte-for-byte untouched, and an existing `enabled` list keeps every
+/// other plugin it names.
+fn ensure_plugin_enabled(project_file: &Path) -> anyhow::Result<()> {
+    let raw = std::fs::read_to_string(project_file)?;
+    let mut lines: Vec<String> = raw.lines().map(ToOwned::to_owned).collect();
+
+    let Some(header) = lines
+        .iter()
+        .position(|line| line.trim() == EDITOR_PLUGINS_HEADER)
+    else {
+        lines.push(String::new());
+        lines.push(EDITOR_PLUGINS_HEADER.to_string());
+        lines.push(String::new());
+        lines.push(format!("enabled=PackedStringArray(\"{MCP_PLUGIN_PATH}\")"));
+        return write_lines(project_file, &lines);
+    };
+
+    let end = (header + 1..lines.len())
+        .find(|&index| lines[index].trim_start().starts_with('['))
+        .unwrap_or(lines.len());
+    let enabled = (header + 1..end).find(|&index| lines[index].trim_start().starts_with("enabled"));
+    let Some(enabled) = enabled else {
+        lines.insert(
+            header + 1,
+            format!("enabled=PackedStringArray(\"{MCP_PLUGIN_PATH}\")"),
+        );
+        return write_lines(project_file, &lines);
+    };
+
+    if lines[enabled].contains(MCP_PLUGIN_PATH) {
+        // Already enabled: never touch the file.
+        return Ok(());
+    }
+
+    let line = lines[enabled].clone();
+    match (line.find('('), line.rfind(')')) {
+        (Some(open), Some(close)) if close > open => {
+            let inner = line[open + 1..close].trim();
+            let inner = if inner.is_empty() {
+                format!("\"{MCP_PLUGIN_PATH}\"")
+            } else {
+                format!("{inner}, \"{MCP_PLUGIN_PATH}\"")
+            };
+            lines[enabled] = format!(
+                "{}PackedStringArray({inner}){}",
+                &line[..open],
+                &line[close + 1..]
+            );
+        }
+        _ => {
+            lines[enabled] = format!("enabled=PackedStringArray(\"{MCP_PLUGIN_PATH}\")");
+        }
+    }
+    write_lines(project_file, &lines)
+}
+
 #[async_trait::async_trait]
 impl ProjectAdapter for GodotAdapter {
     fn initialize(&self, workspace: &Path) -> anyhow::Result<()> {
         std::fs::create_dir_all(workspace)?;
         let project_file = workspace.join("project.godot");
         if project_file.is_file() {
-            // Already a Godot project: initialization is idempotent.
-            return Ok(());
+            // Already a Godot project: scaffolding is a no-op, but the MCP
+            // plugin enablement is still enforced (DR-4), so an `A₀` that was
+            // created earlier can be repaired in place.
+            return ensure_plugin_enabled(&project_file);
         }
         let non_empty = std::fs::read_dir(workspace)?.next().is_some();
         if non_empty && !self.force_init {
@@ -115,9 +192,16 @@ impl ProjectAdapter for GodotAdapter {
                 ),
             )?;
         }
+        ensure_plugin_enabled(&project_file)?;
         Ok(())
     }
 
+    /// Cache directories only.
+    ///
+    /// DR-11: adding a *real* artifact path here silently disables the
+    /// `hash_tree` based write-detection of R2/R3 — the runtime excludes these
+    /// names from hashing and from snapshots, so an excluded file can no longer
+    /// be seen when a read-only role writes it.
     fn cache_excludes(&self) -> Vec<String> {
         let mut excludes = vec![".hoh".to_string(), ".git".to_string()];
         excludes.extend(self.config.cache_excludes.iter().cloned());
@@ -126,7 +210,7 @@ impl ProjectAdapter for GodotAdapter {
 
     async fn build_check(
         &self,
-        _candidate_view: &Path,
+        _workspace: &Path,
         tools: &dyn ToolChannel,
     ) -> anyhow::Result<Vec<ExecRecord>> {
         let mut records = Vec::new();
@@ -137,19 +221,14 @@ impl ProjectAdapter for GodotAdapter {
             .call(Role::Developer, "reload_project", serde_json::json!({}))
             .await;
 
-        // 2. Editor errors.
+        // 2. Editor errors.  DR-5: decide on the parsed `errors` array, never
+        //    on a substring heuristic — an observation may legally contain the
+        //    word "error" while the editor is clean, and vice versa.
         let errors = tools
             .call(Role::Tester, "get_editor_errors", serde_json::json!({}))
             .await;
         let observation = match errors {
-            Ok(result) => {
-                let payload = result.payload.to_string();
-                if payload.contains("error") && !payload.contains("\"errors\":[]") {
-                    format!("editor reported errors:\n{payload}")
-                } else {
-                    "editor has no errors".to_string()
-                }
-            }
+            Ok(result) => describe_editor_errors(&result.payload),
             Err(error) => format!("get_editor_errors failed: {error}"),
         };
         records.push(ExecRecord {
@@ -268,15 +347,47 @@ gameplay behaviour.
             ok: addon.is_dir(),
             detail: addon.display().to_string(),
         });
-        // The editor-scope limitation is published as a run warning (D7) rather
-        // than as a fake pass: it cannot be verified from the filesystem.
+        // DR-6: the editor-scope limitation cannot be verified from the
+        // filesystem, so it is published as an explicit human-confirmation item
+        // (ok = true: it never blocks a run, but it is never hidden either).
+        items.push(DoctorItem {
+            name: "godot.editor_scope".to_string(),
+            ok: true,
+            detail: format!(
+                "{} Confirm manually that the project currently open in the editor is exactly \
+                 this workspace ({}); the runtime cannot verify it.",
+                crate::runtime::run_loop::MCP_SCOPE_WARNING,
+                workspace.display()
+            ),
+        });
         Ok(items)
+    }
+}
+
+/// DR-5: turn a `get_editor_errors` payload into an observation.
+///
+/// The editor's answer is the authoritative signal.  A payload that is not an
+/// object carrying an `errors` array cannot be interpreted as "clean", so it is
+/// conservatively recorded as an error together with its verbatim text.
+fn describe_editor_errors(payload: &serde_json::Value) -> String {
+    let rendered = payload.to_string();
+    match payload.get("errors").and_then(serde_json::Value::as_array) {
+        Some(errors) if errors.is_empty() => "editor has no errors".to_string(),
+        Some(errors) => format!(
+            "editor reported {} error(s):\n{rendered}",
+            errors.len()
+        ),
+        None => format!(
+            "the get_editor_errors payload could not be parsed as JSON (treated as errors):\n{rendered}"
+        ),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tools::ToolResult;
+    use serde_json::Value;
 
     fn adapter(addon: &Path) -> GodotAdapter {
         GodotAdapter::new(
@@ -287,6 +398,46 @@ mod tests {
             },
             false,
         )
+    }
+
+    /// Minimal MCP stand-in: `get_editor_errors` returns a canned payload.
+    struct StubChannel {
+        errors: Value,
+    }
+
+    #[async_trait::async_trait]
+    impl ToolChannel for StubChannel {
+        fn allowed(&self, _role: Role, _tool: &str) -> bool {
+            true
+        }
+
+        fn index_markdown(&self, _role: Role) -> String {
+            String::new()
+        }
+
+        async fn call(&self, _role: Role, tool: &str, _args: Value) -> anyhow::Result<ToolResult> {
+            let payload = match tool {
+                "get_editor_errors" => self.errors.clone(),
+                "play_scene" => serde_json::json!({"ok": true}),
+                "get_game_scene_tree" => serde_json::json!({"tree": []}),
+                _ => serde_json::json!({}),
+            };
+            Ok(ToolResult { ok: true, payload })
+        }
+    }
+
+    async fn build_record(errors: Value) -> ExecRecord {
+        let temp = tempfile::tempdir().unwrap();
+        let workspace = temp.path().join("mario");
+        std::fs::create_dir_all(&workspace).unwrap();
+        let channel = StubChannel { errors };
+        adapter(&temp.path().join("addon"))
+            .build_check(&workspace, &channel)
+            .await
+            .unwrap()
+            .into_iter()
+            .next()
+            .expect("the build record is always produced")
     }
 
     #[test]
@@ -324,6 +475,124 @@ mod tests {
         std::fs::create_dir_all(&foreign).unwrap();
         std::fs::write(foreign.join("notes.txt"), "hello\n").unwrap();
         assert!(adapter(&addon).initialize(&foreign).is_err());
+    }
+
+    /// DR-4: `initialize` enables the MCP plugin exactly once and never
+    /// rewrites a project file that already lists it.
+    #[test]
+    fn initialize_enables_the_mcp_plugin_idempotently() {
+        let temp = tempfile::tempdir().unwrap();
+        let addon = temp.path().join("addon");
+        std::fs::create_dir_all(&addon).unwrap();
+        std::fs::write(addon.join("plugin.cfg"), "[plugin]\n").unwrap();
+        let workspace = temp.path().join("mario");
+
+        adapter(&addon).initialize(&workspace).unwrap();
+        let first = std::fs::read_to_string(workspace.join("project.godot")).unwrap();
+        assert!(first.contains("[editor_plugins]"), "project: {first}");
+        assert_eq!(
+            first.matches(MCP_PLUGIN_PATH).count(),
+            1,
+            "the plugin entry must appear exactly once: {first}"
+        );
+
+        adapter(&addon).initialize(&workspace).unwrap();
+        let second = std::fs::read_to_string(workspace.join("project.godot")).unwrap();
+        assert_eq!(first, second, "a second initialize must not touch the file");
+        assert_eq!(second.matches(MCP_PLUGIN_PATH).count(), 1);
+    }
+
+    /// DR-4: a pre-existing `enabled` list keeps its other entries.
+    #[test]
+    fn initialize_preserves_other_enabled_plugins() {
+        let temp = tempfile::tempdir().unwrap();
+        let addon = temp.path().join("addon");
+        let workspace = temp.path().join("mario");
+        std::fs::create_dir_all(&workspace).unwrap();
+        std::fs::write(
+            workspace.join("project.godot"),
+            "config_version=5\n\n[editor_plugins]\n\n\
+             enabled=PackedStringArray(\"res://addons/other/plugin.cfg\")\n",
+        )
+        .unwrap();
+
+        adapter(&addon).initialize(&workspace).unwrap();
+        let updated = std::fs::read_to_string(workspace.join("project.godot")).unwrap();
+        assert!(
+            updated.contains("res://addons/other/plugin.cfg"),
+            "{updated}"
+        );
+        assert_eq!(updated.matches(MCP_PLUGIN_PATH).count(), 1, "{updated}");
+
+        adapter(&addon).initialize(&workspace).unwrap();
+        assert_eq!(
+            updated,
+            std::fs::read_to_string(workspace.join("project.godot")).unwrap()
+        );
+    }
+
+    /// DR-5: editor errors are decided by the parsed `errors` array length, not
+    /// by a substring heuristic.
+    #[tokio::test]
+    async fn editor_errors_are_parsed_as_json() {
+        // No errors — including the whitespace variant and a payload that
+        // merely mentions the word "error".
+        for payload in [
+            serde_json::json!({"errors": []}),
+            serde_json::json!({"status": "ok", "errors": []}),
+            serde_json::json!({"errors": [], "note": "there is no error here"}),
+        ] {
+            let record = build_record(payload).await;
+            assert_eq!(
+                record.observation, "editor has no errors",
+                "payload treated as an error: {}",
+                record.observation
+            );
+        }
+
+        // One error.
+        let record = build_record(serde_json::json!({"errors": [{"message": "x"}]})).await;
+        assert!(
+            record.observation.contains("editor reported 1 error"),
+            "{}",
+            record.observation
+        );
+        assert!(record.observation.contains('x'));
+
+        // Not the expected JSON shape at all -> conservatively "has errors".
+        let record = build_record(serde_json::json!("exploded: not a json object")).await;
+        assert!(
+            record.observation.contains("treated as errors"),
+            "{}",
+            record.observation
+        );
+    }
+
+    /// DR-6: the editor-scope limitation is published as an explicit,
+    /// human-confirmation doctor item instead of being silently assumed.
+    #[test]
+    fn doctor_publishes_the_editor_scope_confirmation() {
+        let temp = tempfile::tempdir().unwrap();
+        let items = adapter(&temp.path().join("addon"))
+            .doctor(temp.path())
+            .unwrap();
+        let scope = items
+            .iter()
+            .find(|item| item.name == "godot.editor_scope")
+            .expect("godot.editor_scope must be reported");
+        assert!(scope.ok, "the confirmation item never blocks a run");
+        assert!(
+            scope
+                .detail
+                .contains(crate::runtime::run_loop::MCP_SCOPE_WARNING),
+            "detail: {}",
+            scope.detail
+        );
+        assert!(
+            scope.detail.to_lowercase().contains("confirm"),
+            "detail: {}",
+            scope.detail
+        );
     }
 
     #[test]

@@ -302,15 +302,23 @@ pub async fn doctor(args: DoctorArgs) -> anyhow::Result<i32> {
     }
 }
 
-fn print_doctor(items: &[DoctorItem]) {
+/// Render the doctor table.  Kept separate from printing so the exact report
+/// text is testable without touching the network (DR-6).
+pub fn format_doctor(items: &[DoctorItem]) -> String {
+    let mut text = String::new();
     for item in items {
-        println!(
-            "[{}] {}: {}",
+        text.push_str(&format!(
+            "[{}] {}: {}\n",
             if item.ok { "ok" } else { "FAIL" },
             item.name,
             item.detail
-        );
+        ));
     }
+    text
+}
+
+fn print_doctor(items: &[DoctorItem]) {
+    print!("{}", format_doctor(items));
 }
 
 // ---------------------------------------------------------------------------
@@ -449,18 +457,31 @@ pub async fn status(args: StatusArgs) -> anyhow::Result<i32> {
         .runs_dir
         .or_else(|| std::env::var("HOH_RUNS_DIR").ok().map(PathBuf::from))
         .unwrap_or_else(|| PathBuf::from("runs"));
+    if !runs_dir.is_dir() {
+        return Err(HofError::RunNotFound(format!(
+            "the runs directory {} does not exist",
+            runs_dir.display()
+        ))
+        .into());
+    }
     let run_id = match args.run_id {
         Some(run_id) => run_id,
         None => latest_run_id(&runs_dir)?,
     };
     let run_dir = runs_dir.join(&run_id);
     if !run_dir.is_dir() {
-        return Err(HofError::Config(format!("no such run: {}", run_dir.display())).into());
+        return Err(HofError::RunNotFound(format!("no such run: {}", run_dir.display())).into());
     }
 
-    let mut total_tokens: u64 = 0;
+    // DR-8: an iteration whose usage is unknown must never be summed as zero.
+    let mut known_tokens: u64 = 0;
+    let mut known_entries: usize = 0;
+    let mut unknown_iterations: usize = 0;
     println!("# run {run_id}");
-    let mut iterations: Vec<PathBuf> = std::fs::read_dir(&run_dir)?
+    let mut iterations: Vec<PathBuf> = std::fs::read_dir(&run_dir)
+        .map_err(|error| {
+            HofError::RunNotFound(format!("could not read {}: {error}", run_dir.display()))
+        })?
         .filter_map(|entry| entry.ok().map(|entry| entry.path()))
         .filter(|path| {
             path.file_name()
@@ -478,11 +499,22 @@ pub async fn status(args: StatusArgs) -> anyhow::Result<i32> {
             .ok()
             .and_then(|raw| serde_json::from_str(&raw).ok())
             .unwrap_or_default();
+        let mut iteration_unknown = false;
         for entry in &usage {
-            total_tokens += entry
-                .get("total_tokens")
-                .and_then(Value::as_u64)
-                .unwrap_or(0);
+            let known = entry
+                .get("usage_known")
+                .and_then(Value::as_bool)
+                .unwrap_or(true);
+            match entry.get("total_tokens").and_then(Value::as_u64) {
+                Some(tokens) if known => {
+                    known_tokens += tokens;
+                    known_entries += 1;
+                }
+                _ => iteration_unknown = true,
+            }
+        }
+        if iteration_unknown {
+            unknown_iterations += 1;
         }
         println!(
             "{:<8} ok={:<5} reason={:<20} candidate={} roles={}",
@@ -502,20 +534,32 @@ pub async fn status(args: StatusArgs) -> anyhow::Result<i32> {
             usage.len()
         );
     }
-    println!("total tokens: {total_tokens}");
+    if unknown_iterations == 0 {
+        println!("total tokens: {known_tokens}");
+    } else {
+        let base = if known_entries == 0 {
+            "unknown".to_string()
+        } else {
+            known_tokens.to_string()
+        };
+        println!("total tokens: {base} ({unknown_iterations} iteration unknown)");
+    }
     Ok(0)
 }
 
 fn latest_run_id(runs_dir: &Path) -> anyhow::Result<String> {
     let mut ids: Vec<String> = std::fs::read_dir(runs_dir)
-        .map_err(|error| anyhow::anyhow!("could not read {}: {error}", runs_dir.display()))?
+        .map_err(|error| {
+            HofError::RunNotFound(format!("could not read {}: {error}", runs_dir.display()))
+        })?
         .filter_map(|entry| entry.ok())
         .filter(|entry| entry.path().is_dir())
         .map(|entry| entry.file_name().to_string_lossy().into_owned())
         .collect();
     ids.sort();
-    ids.pop()
-        .ok_or_else(|| anyhow::anyhow!("no runs found under {}", runs_dir.display()))
+    ids.pop().ok_or_else(|| {
+        HofError::RunNotFound(format!("no runs found under {}", runs_dir.display())).into()
+    })
 }
 
 pub async fn rollback(args: RollbackArgs) -> anyhow::Result<i32> {
@@ -531,6 +575,16 @@ pub async fn rollback(args: RollbackArgs) -> anyhow::Result<i32> {
     let excludes = HashExcludes::new(config.adapter.godot.cache_excludes.clone()).merged();
 
     let store = VersionStore::new(runs_dir.join(&args.run_id).join("versions"));
+    if !store.root.join(&args.to).is_dir() {
+        // DR-8: a missing version is a usage error (exit 2), not a harness
+        // failure (exit 5).
+        return Err(HofError::VersionNotFound(format!(
+            "version `{}` has no snapshot under {}",
+            args.to,
+            store.root.display()
+        ))
+        .into());
+    }
     store.rollback(&workspace, &excludes, &args.to)?;
     let hash = hash_tree(&workspace, &excludes)?;
     println!("{hash}");
@@ -562,5 +616,39 @@ mod tests {
     fn unknown_adapter_is_rejected() {
         let config = load_config(&[]).unwrap();
         assert!(build_adapter_kind("nope", &config, false).is_err());
+    }
+
+    /// DR-6: `hoh doctor` must print the manual editor-scope confirmation, and
+    /// that item must never be the reason a run is refused (ok = true).
+    #[test]
+    fn doctor_report_contains_the_editor_scope_confirmation() {
+        let temp = tempfile::tempdir().unwrap();
+        let adapter = GodotAdapter::new(
+            crate::config::GodotConfig {
+                addon_source: temp.path().join("addon"),
+                cache_excludes: vec![],
+                main_scene: "res://scenes/main.tscn".to_string(),
+            },
+            false,
+        );
+        let items = adapter.doctor(temp.path()).unwrap();
+        let text = format_doctor(&items);
+        assert!(
+            text.contains("[ok] godot.editor_scope:"),
+            "doctor output: {text}"
+        );
+        assert!(
+            text.contains(crate::runtime::run_loop::MCP_SCOPE_WARNING),
+            "doctor output: {text}"
+        );
+        assert!(text.to_lowercase().contains("confirm manually"));
+        assert!(
+            items
+                .iter()
+                .find(|item| item.name == "godot.editor_scope")
+                .expect("item")
+                .ok,
+            "the confirmation item must not block a run (exit 4 semantics unchanged)"
+        );
     }
 }

@@ -45,6 +45,10 @@ pub struct RunArgs {
     /// Ablation switches, e.g. `--ablate plan_update=false`.
     #[arg(long)]
     pub ablate: Vec<String>,
+    /// Destructive: scaffold `A0` even when the workspace already contains a
+    /// non-empty, non-Godot directory (existing files can be overwritten).
+    /// Never needed for an already initialized Godot workspace: `initialize`
+    /// is idempotent (DR-9).
     #[arg(long)]
     pub force_init: bool,
     #[arg(long)]

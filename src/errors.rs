@@ -47,6 +47,15 @@ pub enum HofError {
     #[error("resume_not_implemented")]
     ResumeNotImplemented,
 
+    /// DR-8: `status` asked for a runs directory or run id that does not exist.
+    /// A usage error is exit 2; exit 5 is reserved for harness/model failures.
+    #[error("run not found: {0}")]
+    RunNotFound(String),
+
+    /// DR-8: `rollback` asked for a version that has no snapshot.  Exit 2.
+    #[error("version not found: {0}")]
+    VersionNotFound(String),
+
     #[error("tool_not_permitted: role={role} tool={tool}")]
     ToolNotPermitted { role: String, tool: String },
 }
@@ -65,6 +74,8 @@ impl HofError {
             | HofError::ModelIdentityViolation { .. }
             | HofError::Contract { .. }
             | HofError::ResumeNotImplemented
+            | HofError::RunNotFound(_)
+            | HofError::VersionNotFound(_)
             | HofError::ToolNotPermitted { .. }
             | HofError::Adapter(_) => 2,
             HofError::SchemaFailure { .. } => 3,
@@ -104,6 +115,8 @@ mod tests {
             2
         );
         assert_eq!(HofError::ResumeNotImplemented.exit_code(), 2);
+        assert_eq!(HofError::RunNotFound("runs".into()).exit_code(), 2);
+        assert_eq!(HofError::VersionNotFound("abc".into()).exit_code(), 2);
         assert_eq!(
             HofError::SchemaFailure {
                 role: Role::Planner,

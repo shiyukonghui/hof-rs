@@ -34,12 +34,20 @@ pub trait ProjectAdapter: Send + Sync {
     fn initialize(&self, workspace: &Path) -> anyhow::Result<()>;
 
     /// Cache directories that must never enter a view, a hash, or a snapshot.
+    ///
+    /// **Only caches.**  DR-11: everything listed here is invisible to
+    /// [`crate::runtime::policy::hash_tree`] and to the snapshot store, so
+    /// putting a real artifact path here silently disables the R2/R3
+    /// write-detection for that path.
     fn cache_excludes(&self) -> Vec<String>;
 
-    /// Deterministic build/boot check against the candidate view.
+    /// Deterministic build/boot check.  DR-1: it runs against the **real
+    /// workspace** (which is also the project the editor has open, D7) and
+    /// *before* `A_t` is frozen, so anything it produces is part of the
+    /// candidate identity instead of showing up later as pre-QA drift.
     async fn build_check(
         &self,
-        candidate_view: &Path,
+        workspace: &Path,
         tools: &dyn ToolChannel,
     ) -> anyhow::Result<Vec<ExecRecord>>;
 

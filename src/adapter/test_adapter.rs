@@ -36,12 +36,14 @@ impl ProjectAdapter for TestAdapter {
     }
 
     fn cache_excludes(&self) -> Vec<String> {
+        // Caches only (DR-11): anything listed here leaves the R2/R3 hash
+        // detection surface.
         vec!["cache".to_string()]
     }
 
     async fn build_check(
         &self,
-        candidate_view: &Path,
+        workspace: &Path,
         _tools: &dyn ToolChannel,
     ) -> anyhow::Result<Vec<ExecRecord>> {
         if let Some((workspace, rel, content)) = &self.drift {
@@ -51,9 +53,9 @@ impl ProjectAdapter for TestAdapter {
             }
             std::fs::write(&target, content)?;
         }
-        // Deterministic records are materialized under the candidate view so
-        // the Tester can reference them by relative path.
-        let dir = candidate_view.join(".hoh/deterministic");
+        // DR-1: the deterministic stage writes into the workspace; the runtime
+        // copies the records into the frozen candidate view afterwards.
+        let dir = workspace.join(".hoh/deterministic");
         std::fs::create_dir_all(&dir)?;
         let record = ExecRecord {
             kind: ExecKind::Build,
