@@ -3,8 +3,10 @@
 //! **Every test in this file is `#[ignore]`.**  They require three external
 //! preconditions that the offline suite deliberately does not depend on:
 //!
-//! 1. LM Studio is running at `http://127.0.0.1:1234` and serving
-//!    `qwen/qwen3.8-27b` (C5, D6).
+//! 1. The `model.base_url` endpoint declared in `config/hoh.yaml` answers
+//!    `/chat/completions` with the configured `wire_model_name`, and
+//!    `HOH_MODEL_API_KEY` (or `OPENAI_API_KEY`) holds its credential (C5, D6,
+//!    DR-14/DR-15/DR-16 — the endpoint and model are configuration, not code).
 //! 2. The Godot 4.7 editor has `.workspace/mario` open with the
 //!    `godot_mcp_rs` addon enabled, so `http://127.0.0.1:9877/mcp` answers
 //!    (C3/C4).
@@ -48,15 +50,16 @@ use hof_rs::tools::bridge::channel_for;
 
 const SMOKE_RUN_ID: &str = "godot-smoke";
 
-/// DR-9 gate 1: these tests drive real external services (LM Studio, the Godot
-/// editor).  Running them by accident — or expecting them to "skip" — must fail
-/// loudly rather than pass vacuously.
+/// DR-9 gate 1: these tests drive real external services (the configured model
+/// endpoint, the Godot editor).  Running them by accident — or expecting them
+/// to "skip" — must fail loudly rather than pass vacuously.
 fn require_smoke_mode() {
     if std::env::var("HOH_SMOKE").ok().as_deref() != Some("1") {
         panic!(
-            "SMOKE PRECONDITION MISSING: HOH_SMOKE=1 is not set. These tests drive LM Studio \
-             (127.0.0.1:1234) and the Godot editor MCP endpoint (127.0.0.1:9877); set \
-             HOH_SMOKE=1 explicitly when you really intend to run them."
+            "SMOKE PRECONDITION MISSING: HOH_SMOKE=1 is not set. These tests drive the model \
+             endpoint declared in config/hoh.yaml (with HOH_MODEL_API_KEY / OPENAI_API_KEY set) \
+             and the Godot editor MCP endpoint (127.0.0.1:9877); set HOH_SMOKE=1 explicitly when \
+             you really intend to run them."
         );
     }
 }
@@ -191,8 +194,8 @@ fn smoke() -> Smoke {
         panic!(
             "SMOKE PRECONDITION MISSING: {} does not exist. Run the real loop first with \
              `cargo test --test godot_smoke -- --ignored e1_single_iteration_smoke`, which \
-             requires LM Studio on 127.0.0.1:1234 and the Godot editor with the godot_mcp_rs \
-             addon listening on 127.0.0.1:9877.",
+             requires the configured model endpoint (plus HOH_MODEL_API_KEY / OPENAI_API_KEY) \
+             and the Godot editor with the godot_mcp_rs addon listening on 127.0.0.1:9877.",
             evidence.display()
         );
     }
