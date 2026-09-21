@@ -1536,6 +1536,42 @@
   - 保留例外：**涉及安全边界或基础契约的改动**（如 `register_tool` 可见性、路径归一、契约/映射本身）仍走即时独立验收。
 - 回滚点：D51 只改流程与手册；TASK-004/005 的代码改动各自可整提交回退。
 
+## D52 — TASK-005 交付；两起真实事故转化为纪律；`size` 单位裁决
+
+- 日期：2026-09
+- **TASK-005 交付**（第一部分框架清理 + 第二部分组 `project_read_files` 6 工具）：
+  - **助手去重**：4 个重复助手（`join_path`/`split_lines`/`serialize_variant`/`collect_files_by_extension`）
+    上提到新共享头 `tools/tool_helpers.{h,cpp}`，两个已有组改用共享实现；
+    **重构等价性有据**：验收方独立重建重构前后两个提交，13 条 `tools/list` 响应**逐字节相等**（sha `d94a75f3…`）。
+  - 五道门：门① 契约子集（`implemented_union=19`）**6/6 逐字**；门② 编辑器 21 例 + 游戏 21 例**逐字节相同**；
+    门③ doctest **73/73·726**（基线 65/607）；门④ 全引擎 **1499/1499·0 failed**（基线 1491/424888）；
+    门⑤ `accept_m1.ps1` **22/22 连跑两次**（`case20` tools=19 逐字节一致）。
+  - 该实现者**自带了一轮嵌套独立验收**：首轮判 `fail`（证据管道缺陷），勘误后第二轮 `pass`、defects 为空。
+- **两起真实事故 → 已写入 `PLAYBOOK` §7（纪律补强）**：
+  1. **证据采集禁止用 `Out-File`/管道承载响应体**：一版 `tools/list` 证据经 `Out-File -Encoding ascii` 被污染
+     （每个非 ASCII 字符塌成 `?`、字节数记为错值 3411），**直接导致独立验收判 fail**。
+     → 一律 `curl.exe -s -o <file>` 或用 `[IO.File]::WriteAllBytes`，比较前先算 sha256。
+  2. **实现者不得创建竞争性规范文档**：`docs/spec/TASK-005/`（37 KB 的 REQUIREMENTS/DESIGN-OVERVIEW/DESIGN-DETAIL）
+     与规范 `docs/DESIGN-DETAIL.md` 重复，**已删除**；规则入库：**规范由决策者维护，实现者只写报告**，
+     认为规范有误就在报告里报缺陷。
+  3. 附：**证据被证伪要显式撤回**（该实现者撤回了不可复现的「`--import` 崩溃」主张）——append-only 勘误是允许且被鼓励的。
+- **`size` 单位裁决（手册 §6 新增第 9 条）**：迁移源（Rust）用**字节数**（`String::len()`），
+  C++ 版用 `String::length()` 会得到**字符数** —— 属不必要的偏离。
+  → **除契约明确写字符数，一律返回 UTF-8 字节数**；已实现的 `project_read_script` /
+  `project_read_scene_file_content` 的 `size` 排行入 **TASK-006 顺带修**。
+- 其余偏差裁决（接受）：`$ToolNames` 13→19 同步、`tool-groups.json` 的 `implemented` 置位、
+  `project_validate_script` 增加 `ScriptServer::are_languages_initialized()` 守卫
+  （迁移源无守卫、实测对好脚本给**假阴性** `err 36`；doctest 退化为结构检查并**明确声明「未编译」**，
+  而非假通过）、`_error_identifier` 手写映射、`project_get_resource_preview` 三条语义收紧、
+  `project_list_scripts` 两类证据语义上不可构造（已显式声明）、红阶段临时 SPIKE 探针在绿阶段删除。
+- **B1 进度**：`project_read_template`(6) ✅ / `project_read_analysis`(7) ✅ / `project_read_files`(6) ✅ →
+  已实现 **19 / 41**；剩余 `editor_read_scene_inspector`(7)、`project_write_resource_scene`(4)、
+  `editor_write_scene_editor`(10)、`running_game_read_scene`(1)。
+- **TASK-006 的关键价值**：它是**第一个 `scope=editor` 的组**，因此可以补上一直被记为 unverifiable 的
+  「游戏进程不暴露编辑器工具」**端到端**证据（9889 的 `tools/list` 必须不含本组工具；
+  并构造一次「游戏进程调用编辑器工具」的请求，必须被拒且不执行）。
+- 回滚点：TASK-005 的代码改动可整提交回退；手册/裁决为文档。
+
 
 
 
