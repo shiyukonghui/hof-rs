@@ -11,9 +11,10 @@ use serde_json::{json, Value};
 use crate::adapter::{BatteryRecord, BatteryStep, DoctorItem, ProjectAdapter};
 use crate::config::GodotConfig;
 use crate::model::{ExecKind, ExecRecord, Role};
+use crate::tools::mcp::{RpcCorrelation, SessionSyncReport, PROBE_TOOL};
 use crate::tools::reliable::{
-    call_with_retries, wait_for_game_ready, McpErrorLog, McpFailure, ReadyOutcome,
-    READY_POLL_INTERVAL_MS, RETRY_INTERVAL_MS,
+    call_with_retries_traced, wait_for_game_ready, McpErrorLog, McpFailure, ReadyOutcome,
+    TracedCall, READY_POLL_INTERVAL_MS, RETRY_INTERVAL_MS,
 };
 use crate::tools::ToolChannel;
 
@@ -324,16 +325,54 @@ pub fn unwrap_mcp_payload(payload: &Value) -> Value {
     }
 }
 
-fn call_ok(tool: &str, args: &Value, payload: &Value) -> Value {
-    json!({"tool": tool, "args": args, "ok": true, "payload": payload})
+fn call_ok(tool: &str, args: &Value, payload: &Value, correlation: &RpcCorrelation) -> Value {
+    let mut entry = json!({"tool": tool, "args": args, "ok": true, "payload": payload});
+    apply_correlation(&mut entry, correlation);
+    entry
 }
 
 fn call_fail(tool: &str, args: &Value, failure: &McpFailure) -> Value {
-    json!({
+    let mut entry = json!({
         "tool": tool,
         "args": args,
         "ok": false,
         "error": {"code": failure.code, "message": failure.message, "attempts": failure.attempts},
+    });
+    apply_correlation(&mut entry, &failure.correlation);
+    entry
+}
+
+/// DR-29: every call entry carries the ids it was matched against.
+fn apply_correlation(entry: &mut Value, correlation: &RpcCorrelation) {
+    entry["request_id"] = json!(correlation.request_id);
+    entry["response_id"] = json!(correlation.response_id);
+    entry["sync_probes"] = json!(correlation.sync_probes);
+    if !correlation.mismatched_ids.is_empty() {
+        entry["mismatched_ids"] = json!(correlation.mismatched_ids);
+    }
+}
+
+/// DR-29: the step-level header written at the top of every raw payload file —
+/// `request_id` / `response_id` / `sync_probes` — so no response can ever be
+/// attributed to the wrong call again.
+fn rpc_header(calls: &[Value]) -> Value {
+    let first = calls
+        .iter()
+        .find(|call| call.get("request_id").map(|id| !id.is_null()).unwrap_or(false));
+    let probes: u64 = calls
+        .iter()
+        .filter_map(|call| call.get("sync_probes").and_then(Value::as_u64))
+        .sum();
+    let mismatched: Vec<Value> = calls
+        .iter()
+        .filter_map(|call| call.get("mismatched_ids"))
+        .flat_map(|ids| ids.as_array().cloned().unwrap_or_default())
+        .collect();
+    json!({
+        "request_id": first.and_then(|call| call.get("request_id")).cloned().unwrap_or(Value::Null),
+        "response_id": first.and_then(|call| call.get("response_id")).cloned().unwrap_or(Value::Null),
+        "sync_probes": probes,
+        "mismatched_ids": mismatched,
     })
 }
 
@@ -370,12 +409,12 @@ impl<'a> BatterySession<'a> {
         }
     }
 
-    async fn call(&self, tool: &str, args: Value) -> Result<Value, McpFailure> {
+    async fn call(&self, tool: &str, args: Value) -> Result<TracedCall, McpFailure> {
         // DR-24: the battery is the runtime's deterministic stage, not the
         // Tester.  It must be able to `reload_project`/`open_scene` (which the
         // Tester is forbidden to call) so the editor reflects the on-disk
         // scene before the errors are read.
-        call_with_retries(
+        call_with_retries_traced(
             self.tools,
             Role::Developer,
             tool,
@@ -411,8 +450,15 @@ impl<'a> BatterySession<'a> {
         calls: Vec<Value>,
     ) -> anyhow::Result<()> {
         let rel = format!(".hoh/deterministic/raw/{}.json", step.id);
+        // DR-29: the correlation header comes first, so a reader can tell which
+        // response belonged to which request before reading any payload.
+        let header = rpc_header(&calls);
         let doc = json!({
             "step": step.id,
+            "request_id": header["request_id"],
+            "response_id": header["response_id"],
+            "sync_probes": header["sync_probes"],
+            "mismatched_ids": header["mismatched_ids"],
             "supports": step.supports,
             "ok": ok,
             "calls": calls,
@@ -441,7 +487,27 @@ impl<'a> BatterySession<'a> {
         Ok(())
     }
 
+    /// DR-29: the session-start synchronization probe.  Its report is written to
+    /// `.hoh/deterministic/mcp-sync.json`, which the run loop turns into a
+    /// `mcp_desync_detected` warning on the iteration result.
+    async fn session_sync_probe(&self) {
+        let report = self.tools.session_sync_probe().await;
+        let target = self.workspace.join(SESSION_SYNC_FILE);
+        if let Some(parent) = target.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        if let Ok(mut serialized) = serde_json::to_string_pretty(&report) {
+            if !serialized.ends_with('\n') {
+                serialized.push('\n');
+            }
+            let _ = std::fs::write(&target, serialized);
+        }
+    }
+
     async fn run(mut self) -> anyhow::Result<Vec<BatteryRecord>> {
+        // DR-29: correlate before collecting anything: a desynchronized server
+        // mislabels every payload below.
+        self.session_sync_probe().await;
         // DR-24: the editor is forced onto the on-disk truth *before* anything
         // is asked about errors (smoke-t2 showed an in-memory scene that
         // disagreed with the `.tscn` on disk).
@@ -475,7 +541,12 @@ impl<'a> BatterySession<'a> {
 
         let reload_args = json!({});
         match self.call("reload_project", reload_args.clone()).await {
-            Ok(payload) => calls.push(call_ok("reload_project", &reload_args, &payload)),
+            Ok(call) => calls.push(call_ok(
+                "reload_project",
+                &reload_args,
+                &call.payload,
+                &call.correlation,
+            )),
             Err(failure) => {
                 notes.push(format!("FAILED reload_project: {}", failure.observation()));
                 calls.push(call_fail("reload_project", &reload_args, &failure));
@@ -484,7 +555,12 @@ impl<'a> BatterySession<'a> {
 
         let open_args = json!({"path": main_scene});
         match self.call("open_scene", open_args.clone()).await {
-            Ok(payload) => calls.push(call_ok("open_scene", &open_args, &payload)),
+            Ok(call) => calls.push(call_ok(
+                "open_scene",
+                &open_args,
+                &call.payload,
+                &call.correlation,
+            )),
             Err(failure) => {
                 notes.push(format!(
                     "FAILED open_scene({main_scene}): {}",
@@ -526,8 +602,8 @@ impl<'a> BatterySession<'a> {
         let args = json!({"path": scene});
         let (ok, observation, call) = match self.call("get_scene_file_content", args.clone()).await
         {
-            Ok(payload) => {
-                let parsed = unwrap_mcp_payload(&payload);
+            Ok(call) => {
+                let parsed = unwrap_mcp_payload(&call.payload);
                 match scene_text_of(&parsed) {
                     Some(text) => {
                         let report = validate_scene_structure_in(&text, Some(self.workspace));
@@ -547,7 +623,12 @@ impl<'a> BatterySession<'a> {
                         (
                             ok,
                             observation,
-                            call_ok("get_scene_file_content", &args, &payload),
+                            call_ok(
+                                "get_scene_file_content",
+                                &args,
+                                &call.payload,
+                                &call.correlation,
+                            ),
                         )
                     }
                     None => (
@@ -556,7 +637,12 @@ impl<'a> BatterySession<'a> {
                             "FAILED get_scene_file_content returned no scene text for {scene}: \
                              {parsed} (UNAVAILABLE: the scene cannot be checked)"
                         ),
-                        call_ok("get_scene_file_content", &args, &payload),
+                        call_ok(
+                            "get_scene_file_content",
+                            &args,
+                            &call.payload,
+                            &call.correlation,
+                        ),
                     ),
                 }
             }
@@ -580,23 +666,30 @@ impl<'a> BatterySession<'a> {
         };
         let args = json!({"max_lines": 50});
         let (ok, observation, call) = match self.call("get_editor_errors", args.clone()).await {
-            Ok(payload) => {
-                let parsed = unwrap_mcp_payload(&payload);
+            Ok(call) => {
+                let parsed = unwrap_mcp_payload(&call.payload);
                 let observation = describe_editor_errors(&parsed);
-                let ok = parsed
-                    .get("errors")
-                    .and_then(Value::as_array)
-                    .map(|errors| errors.is_empty())
-                    .unwrap_or(false);
-                let observation = if ok {
-                    observation
-                } else {
-                    format!("{observation} (UNAVAILABLE: the editor is not clean)")
+                // DR-30: an `errors` array is what makes this payload an editor
+                // report at all.  `smoke-t3` received the *scene text* here and
+                // the observation blamed the wrong thing.
+                let (ok, observation) = match parsed.get("errors").and_then(Value::as_array) {
+                    Some(errors) if errors.is_empty() => (true, observation),
+                    Some(_) => (
+                        false,
+                        format!("{observation} (UNAVAILABLE: the editor is not clean)"),
+                    ),
+                    None => (
+                        false,
+                        format!(
+                            "FAILED get_editor_errors returned no `errors` array: {parsed} \
+                             (UNAVAILABLE: the payload does not answer the question)"
+                        ),
+                    ),
                 };
                 (
                     ok,
                     observation,
-                    call_ok("get_editor_errors", &args, &payload),
+                    call_ok("get_editor_errors", &args, &call.payload, &call.correlation),
                 )
             }
             Err(failure) => (
@@ -620,10 +713,16 @@ impl<'a> BatterySession<'a> {
         let play_args = json!({"mode": "main"});
         let mut calls = Vec::new();
         let play = self.call("play_scene", play_args.clone()).await;
-        let play = match play {
-            Ok(payload) => {
-                calls.push(call_ok("play_scene", &play_args, &payload));
-                payload
+        match play {
+            Ok(call) => {
+                // DR-30: `play_scene`'s own reply is **not** readiness evidence.
+                // It is recorded, and then a scene tree is demanded.
+                calls.push(call_ok(
+                    "play_scene",
+                    &play_args,
+                    &call.payload,
+                    &call.correlation,
+                ));
             }
             Err(failure) => {
                 calls.push(call_fail("play_scene", &play_args, &failure));
@@ -640,8 +739,7 @@ impl<'a> BatterySession<'a> {
                 .await?;
                 return Ok(None);
             }
-        };
-        let _ = play;
+        }
 
         let tree_args = json!({"max_depth": -1});
         let ready = self.ready("get_game_scene_tree", tree_args.clone()).await;
@@ -650,18 +748,44 @@ impl<'a> BatterySession<'a> {
                 ok: true,
                 attempts,
                 payload,
+                correlation,
                 ..
             } => {
                 let payload = payload.expect("a successful readiness poll carries a payload");
-                calls.push(call_ok("get_game_scene_tree", &tree_args, &payload));
+                calls.push(call_ok(
+                    "get_game_scene_tree",
+                    &tree_args,
+                    &payload,
+                    &correlation,
+                ));
                 let tree = unwrap_mcp_payload(&payload);
-                let observation = format!(
-                    "main scene booted; the game answered get_game_scene_tree after {attempts} \
-                     poll(s); scene tree: {tree}"
-                );
-                self.finish(step, ExecKind::RuntimeTrace, None, observation, true, calls)
-                    .await?;
-                Ok(Some(tree))
+                match describe_scene_tree_shape(&tree) {
+                    Ok(nodes) => {
+                        let observation = format!(
+                            "main scene booted; the game answered get_game_scene_tree after \
+                             {attempts} poll(s) with {nodes} node(s) carrying a path and a type"
+                        );
+                        self.finish(step, ExecKind::RuntimeTrace, None, observation, true, calls)
+                            .await?;
+                        Ok(Some(tree))
+                    }
+                    Err(problem) => {
+                        let observation = format!(
+                            "FAILED the readiness reply is not a scene tree ({problem}): {tree} \
+                             (UNAVAILABLE: `play_scene`'s own reply is never readiness evidence)"
+                        );
+                        self.finish(
+                            step,
+                            ExecKind::RuntimeTrace,
+                            None,
+                            observation,
+                            false,
+                            calls,
+                        )
+                        .await?;
+                        Ok(None)
+                    }
+                }
             }
             ReadyOutcome {
                 ok: false,
@@ -702,9 +826,14 @@ impl<'a> BatterySession<'a> {
         let args = json!({"max_depth": -1});
         let mut calls = Vec::new();
         let tree: Option<Value> = match self.call("get_game_scene_tree", args.clone()).await {
-            Ok(payload) => {
-                calls.push(call_ok("get_game_scene_tree", &args, &payload));
-                Some(unwrap_mcp_payload(&payload))
+            Ok(call) => {
+                calls.push(call_ok(
+                    "get_game_scene_tree",
+                    &args,
+                    &call.payload,
+                    &call.correlation,
+                ));
+                Some(unwrap_mcp_payload(&call.payload))
             }
             Err(failure) => {
                 calls.push(call_fail("get_game_scene_tree", &args, &failure));
@@ -724,33 +853,38 @@ impl<'a> BatterySession<'a> {
                 }
             }
         };
-        let has_children = tree
+        // DR-30: node *paths and types* are the evidence; a list of names (or a
+        // payload that is not a tree at all) is not.
+        let shape = tree
             .as_ref()
-            .and_then(|tree| tree.get("tree"))
-            .and_then(|root| root.get("children"))
-            .and_then(Value::as_array)
-            .map(|children| !children.is_empty())
-            .unwrap_or(false);
-        let observation = match &tree {
-            Some(tree) if has_children => format!("scene tree: {tree}"),
-            Some(tree) => format!(
-                "FAILED the scene tree has no children: {tree} (UNAVAILABLE: no node evidence)"
+            .map(describe_scene_tree_shape)
+            .unwrap_or_else(|| Err("no scene tree was captured".to_string()));
+        let (ok, observation) = match &shape {
+            Ok(nodes) => (
+                true,
+                format!("scene tree: {nodes} node(s) with a path and a type"),
             ),
-            None => "FAILED no scene tree was captured (UNAVAILABLE)".to_string(),
+            Err(problem) => (
+                false,
+                format!(
+                    "FAILED the scene tree is unusable ({problem}): {} (UNAVAILABLE: no node \
+                     evidence)",
+                    tree.as_ref()
+                        .map(Value::to_string)
+                        .unwrap_or_else(|| "<none>".to_string())
+                ),
+            ),
         };
-        self.finish(
-            step,
-            ExecKind::RuntimeTrace,
-            None,
-            observation,
-            has_children,
-            calls,
-        )
-        .await?;
+        self.finish(step, ExecKind::RuntimeTrace, None, observation, ok, calls)
+            .await?;
         Ok(())
     }
 
     /// 4. Screenshot, stored under `.hoh/evidence/` and referenced relatively.
+    ///
+    /// DR-30: a `path` may only be written when the PNG **really exists**.  When
+    /// the server hands the image back inline as base64 (what `capture_frames`
+    /// does), the runtime materializes it first.
     async fn step_screenshot(&mut self) -> anyhow::Result<()> {
         let step = BatteryStep {
             id: "screenshot".to_string(),
@@ -771,47 +905,90 @@ impl<'a> BatterySession<'a> {
         let save_path = absolute.to_string_lossy().into_owned();
         let args = json!({"save_path": save_path});
         let mut calls = Vec::new();
+        let mut notes: Vec<String> = Vec::new();
+        let mut materialized = false;
 
-        let primary = self.call("get_game_screenshot", args.clone()).await;
-        let outcome = match primary {
-            Ok(payload) => {
-                calls.push(call_ok("get_game_screenshot", &args, &payload));
+        match self.call("get_game_screenshot", args.clone()).await {
+            Ok(call) => {
+                calls.push(call_ok(
+                    "get_game_screenshot",
+                    &args,
+                    &call.payload,
+                    &call.correlation,
+                ));
                 if absolute.is_file() {
-                    Ok(format!(
-                        "screenshot written to {relative}: {}",
-                        unwrap_mcp_payload(&payload)
-                    ))
+                    // The tool wrote it itself.
+                } else if let Some(bytes) = extract_inline_image(&unwrap_mcp_payload(&call.payload))
+                {
+                    write_png(&absolute, &bytes)?;
+                    materialized = true;
                 } else {
-                    Err(format!(
+                    notes.push(format!(
                         "FAILED get_game_screenshot reported success but no file exists at {} \
-                         (UNAVAILABLE)",
+                         and the payload carried no inline image",
                         absolute.display()
-                    ))
+                    ));
                 }
             }
             Err(failure) => {
                 calls.push(call_fail("get_game_screenshot", &args, &failure));
-                let frames_args = json!({"count": 1, "frame_interval": 10});
-                match self.call("capture_frames", frames_args.clone()).await {
-                    Ok(payload) => {
-                        calls.push(call_ok("capture_frames", &frames_args, &payload));
-                        Ok(format!(
-                            "get_game_screenshot failed ({}); capture_frames returned {}",
-                            failure.observation(),
-                            unwrap_mcp_payload(&payload)
-                        ))
+                notes.push(failure.observation());
+            }
+        }
+
+        if !absolute.is_file() {
+            let frames_args = json!({"count": 1, "frame_interval": 10});
+            match self.call("capture_frames", frames_args.clone()).await {
+                Ok(call) => {
+                    calls.push(call_ok(
+                        "capture_frames",
+                        &frames_args,
+                        &call.payload,
+                        &call.correlation,
+                    ));
+                    let parsed = unwrap_mcp_payload(&call.payload);
+                    match extract_inline_image(&parsed) {
+                        Some(bytes) => {
+                            write_png(&absolute, &bytes)?;
+                            materialized = true;
+                        }
+                        None => notes.push(format!(
+                            "FAILED capture_frames returned no inline image: {parsed}"
+                        )),
                     }
-                    Err(frames_failure) => Err(format!(
-                        "FAILED screenshot unavailable: {} / {} (UNAVAILABLE)",
-                        failure.observation(),
-                        frames_failure.observation()
-                    )),
+                }
+                Err(failure) => {
+                    calls.push(call_fail("capture_frames", &frames_args, &failure));
+                    notes.push(failure.observation());
                 }
             }
-        };
-        let (ok, observation, path) = match outcome {
-            Ok(observation) => (true, observation, Some(relative)),
-            Err(observation) => (false, observation, None),
+        }
+
+        // One decision point, and it is about the disk, not about a reply.
+        let (ok, path, observation) = if absolute.is_file() {
+            let size = std::fs::metadata(&absolute).map(|m| m.len()).unwrap_or(0);
+            (
+                true,
+                Some(relative.clone()),
+                format!(
+                    "screenshot written to {relative} ({size} byte(s)){}",
+                    if materialized {
+                        "; materialized from an inline base64 image"
+                    } else {
+                        ""
+                    }
+                ),
+            )
+        } else {
+            (
+                false,
+                None,
+                format!(
+                    "FAILED screenshot unavailable: {} (UNAVAILABLE: no PNG exists on disk, so no \
+                     path may be claimed)",
+                    notes.join(" / ")
+                ),
+            )
         };
         self.finish(step, ExecKind::Screenshot, path, observation, ok, calls)
             .await?;
@@ -820,8 +997,17 @@ impl<'a> BatterySession<'a> {
 
     /// 5. Input replay: drive `move_right` / `jump` / `move_left` and record
     ///    the `Player` position over time.
+    ///
+    /// DR-30: at least one frame **position sample** per recording is required,
+    /// and a delivered action that leaves the position untouched is
+    /// `INPUT_HAD_NO_EFFECT` (`ok = false`), not a success.
+    ///
+    /// DR-33: before anything is simulated, `get_input_actions` records whether
+    /// the action exists in the InputMap and which keys it is bound to, so the
+    /// Tester can tell "the input was never bound" (`ACTION_NOT_BOUND`) from
+    /// "the controller ignores the input" (`INPUT_HAD_NO_EFFECT`).
     async fn step_input_replay(&mut self) -> anyhow::Result<()> {
-        let step = BatteryStep {
+        let mut step = BatteryStep {
             id: "input_replay".to_string(),
             supports: vec!["F1".to_string(), "F2".to_string(), "F3".to_string()],
             timeout_secs: self.limits.timeout_seconds,
@@ -830,16 +1016,62 @@ impl<'a> BatterySession<'a> {
         let mut calls = Vec::new();
         let mut summaries: Vec<String> = Vec::new();
         let mut ok = true;
+        let mut needs_p3 = false;
 
-        for (label, action, frames) in [
-            ("move_right", "move_right", 60u64),
-            ("move_right_release", "move_right", 10),
-            ("jump", "jump", 30),
-            ("move_left", "move_left", 60),
+        // DR-33: action availability first (read-only, no side effects).
+        let probe_args = json!({});
+        let bindings = match self.call("get_input_actions", probe_args.clone()).await {
+            Ok(call) => {
+                calls.push(call_ok(
+                    "get_input_actions",
+                    &probe_args,
+                    &call.payload,
+                    &call.correlation,
+                ));
+                parse_input_actions(&unwrap_mcp_payload(&call.payload))
+            }
+            Err(failure) => {
+                calls.push(call_fail("get_input_actions", &probe_args, &failure));
+                summaries.push(format!(
+                    "ACTION_BINDING_UNKNOWN: get_input_actions failed: {}",
+                    failure.message
+                ));
+                None
+            }
+        };
+        let known = bindings.is_some();
+
+        // `(label, action, frames, expected to move the node)`.
+        for (label, action, frames, expect_movement) in [
+            ("move_right", "move_right", 60u64, true),
+            ("move_right_release", "move_right", 10, false),
+            ("jump", "jump", 30, true),
+            ("move_left", "move_left", 60, true),
         ] {
+            let keys = bindings
+                .as_ref()
+                .and_then(|bindings| bindings.get(action).cloned());
+            if known && keys.is_none() && expect_movement {
+                // DR-33: the project never declared this action (PRD P3).
+                needs_p3 = true;
+                ok = false;
+                summaries.push(format!(
+                    "{label}: ACTION_NOT_BOUND (the InputMap declares no `{action}`)"
+                ));
+                continue;
+            }
+            let binding = keys
+                .map(|keys| format!("keys={keys:?}"))
+                .unwrap_or_else(|| "keys=unknown".to_string());
+
             let press_args = json!({"action": action, "pressed": true});
             match self.call("simulate_action", press_args.clone()).await {
-                Ok(payload) => calls.push(call_ok("simulate_action", &press_args, &payload)),
+                Ok(call) => calls.push(call_ok(
+                    "simulate_action",
+                    &press_args,
+                    &call.payload,
+                    &call.correlation,
+                )),
                 Err(failure) => {
                     calls.push(call_fail("simulate_action", &press_args, &failure));
                     summaries.push(format!("{label}: FAILED {}", failure.message));
@@ -854,9 +1086,62 @@ impl<'a> BatterySession<'a> {
                 "frame_interval": 1,
             });
             match self.call("monitor_properties", monitor_args.clone()).await {
-                Ok(payload) => {
-                    calls.push(call_ok("monitor_properties", &monitor_args, &payload));
-                    summaries.push(describe_monitor(label, &unwrap_mcp_payload(&payload)));
+                Ok(call) => {
+                    let parsed = unwrap_mcp_payload(&call.payload);
+                    let quadruple = replay_quadruple(action, &parsed);
+                    let frames_seen = parsed
+                        .get("frame_count")
+                        .and_then(Value::as_u64)
+                        .or_else(|| {
+                            parsed
+                                .get("samples")
+                                .and_then(Value::as_array)
+                                .map(|samples| samples.len() as u64)
+                        })
+                        .unwrap_or(0);
+                    let mut entry = call_ok(
+                        "monitor_properties",
+                        &monitor_args,
+                        &call.payload,
+                        &call.correlation,
+                    );
+                    if let Some(quadruple) = &quadruple {
+                        entry["quadruple"] = quadruple.clone();
+                    }
+                    calls.push(entry);
+                    match quadruple {
+                        None => {
+                            ok = false;
+                            summaries.push(format!(
+                                "{label}: NO_FRAME_SAMPLES ({})",
+                                describe_monitor(label, &parsed)
+                            ));
+                        }
+                        Some(quadruple) => {
+                            let moved = quadruple["before_position"] != quadruple["after_position"];
+                            if expect_movement && !moved {
+                                ok = false;
+                                if !known {
+                                    // Without availability evidence both failure
+                                    // modes are still possible.
+                                    needs_p3 = true;
+                                    summaries.push(format!(
+                                        "{label}: {frames_seen} frame(s) ({binding}) \
+                                         ACTION_BINDING_UNKNOWN + INPUT_HAD_NO_EFFECT {quadruple}"
+                                    ));
+                                } else {
+                                    summaries.push(format!(
+                                        "{label}: {frames_seen} frame(s) ({binding}) \
+                                         INPUT_HAD_NO_EFFECT {quadruple}"
+                                    ));
+                                }
+                            } else {
+                                summaries.push(format!(
+                                    "{label}: {frames_seen} frame(s) ({binding}) {quadruple}"
+                                ));
+                            }
+                        }
+                    }
                 }
                 Err(failure) => {
                     calls.push(call_fail("monitor_properties", &monitor_args, &failure));
@@ -866,14 +1151,23 @@ impl<'a> BatterySession<'a> {
             }
             let release_args = json!({"action": action, "pressed": false});
             match self.call("simulate_action", release_args.clone()).await {
-                Ok(payload) => calls.push(call_ok("simulate_action", &release_args, &payload)),
+                Ok(call) => calls.push(call_ok(
+                    "simulate_action",
+                    &release_args,
+                    &call.payload,
+                    &call.correlation,
+                )),
                 Err(failure) => {
                     calls.push(call_fail("simulate_action", &release_args, &failure));
+                    summaries.push(format!("{label}: release FAILED {}", failure.message));
                     ok = false;
                 }
             }
         }
 
+        if needs_p3 {
+            step.supports.push("P3".to_string());
+        }
         let observation = if ok {
             format!("input replay: {}", summaries.join("; "))
         } else {
@@ -909,9 +1203,14 @@ impl<'a> BatterySession<'a> {
         for node in ["Player", "Goal", "HUD"] {
             let args = json!({"node_path": node});
             match self.call("get_game_node_properties", args.clone()).await {
-                Ok(payload) => {
-                    let parsed = unwrap_mcp_payload(&payload);
-                    calls.push(call_ok("get_game_node_properties", &args, &payload));
+                Ok(call) => {
+                    let parsed = unwrap_mcp_payload(&call.payload);
+                    calls.push(call_ok(
+                        "get_game_node_properties",
+                        &args,
+                        &call.payload,
+                        &call.correlation,
+                    ));
                     let present = parsed
                         .get("name")
                         .and_then(Value::as_str)
@@ -935,9 +1234,14 @@ impl<'a> BatterySession<'a> {
         for node in ["Ground", "Player", "Goal"] {
             let args = json!({"node_path": node});
             match self.call("get_collision_info", args.clone()).await {
-                Ok(payload) => {
-                    let parsed = unwrap_mcp_payload(&payload);
-                    calls.push(call_ok("get_collision_info", &args, &payload));
+                Ok(call) => {
+                    let parsed = unwrap_mcp_payload(&call.payload);
+                    calls.push(call_ok(
+                        "get_collision_info",
+                        &args,
+                        &call.payload,
+                        &call.correlation,
+                    ));
                     let shapes = parsed
                         .get("shape_count")
                         .and_then(Value::as_u64)
@@ -989,10 +1293,10 @@ impl<'a> BatterySession<'a> {
         };
         let args = json!({});
         let (ok, observation, call) = match self.call("stop_scene", args.clone()).await {
-            Ok(payload) => (
+            Ok(call) => (
                 true,
-                format!("stop_scene: {}", unwrap_mcp_payload(&payload)),
-                call_ok("stop_scene", &args, &payload),
+                format!("stop_scene: {}", unwrap_mcp_payload(&call.payload)),
+                call_ok("stop_scene", &args, &call.payload, &call.correlation),
             ),
             Err(failure) => (
                 false,
@@ -1012,9 +1316,284 @@ impl<'a> BatterySession<'a> {
     }
 }
 
+// ---------------------------------------------------------------------------
+// DR-29: the session synchronization report
+// ---------------------------------------------------------------------------
+
+/// DR-29: where a battery session records its `get_project_info` correlation
+/// probe, relative to the workspace.
+pub const SESSION_SYNC_FILE: &str = ".hoh/deterministic/mcp-sync.json";
+
+/// DR-29: the `result.json.warnings` entry for a desynchronized session.  It
+/// carries the observed id offset and the probe count, because "something was
+/// wrong" is not actionable.
+pub fn desync_warning(report: &SessionSyncReport) -> String {
+    let offset = report
+        .observed_offset
+        .map(|offset| offset.to_string())
+        .unwrap_or_else(|| "unknown".to_string());
+    format!(
+        "mcp_desync_detected: id_offset={offset} probes={} (the MCP server answered with a \
+         different request id; the client re-correlated with read-only `{PROBE_TOOL}` probes)",
+        report.probes
+    )
+}
+
+// ---------------------------------------------------------------------------
+// DR-30: payload shape helpers
+// ---------------------------------------------------------------------------
+
+/// DR-30: the nodes of a scene-tree payload, i.e. every object reachable from
+/// `tree`/`scene` that looks like a node.
+fn scene_tree_nodes(payload: &Value) -> Vec<&Value> {
+    let Some(root) = payload.get("tree").or_else(|| payload.get("scene")) else {
+        return Vec::new();
+    };
+    let mut nodes = Vec::new();
+    let mut stack = vec![root];
+    while let Some(node) = stack.pop() {
+        let Some(object) = node.as_object() else {
+            continue;
+        };
+        if object.contains_key("name") || object.contains_key("path") || object.contains_key("type")
+        {
+            nodes.push(node);
+        }
+        if let Some(children) = object.get("children").and_then(Value::as_array) {
+            stack.extend(children.iter());
+        }
+    }
+    nodes
+}
+
+/// DR-30: a payload is a scene tree only when its nodes carry both a `path` and
+/// a `type`.  Returns the node count, or the reason it is not usable.
+///
+/// `smoke-t3`'s `play_scene_ready` accepted `play_scene`'s reply here; the
+/// difference between the two payloads is exactly this shape.
+fn describe_scene_tree_shape(payload: &Value) -> Result<usize, String> {
+    let nodes = scene_tree_nodes(payload);
+    if nodes.is_empty() {
+        return Err(format!(
+            "the payload carries no node with a `path`/`type` under `tree`: {payload}"
+        ));
+    }
+    let mut untyped = 0usize;
+    for node in &nodes {
+        let path = node.get("path").and_then(Value::as_str).unwrap_or("");
+        let kind = node.get("type").and_then(Value::as_str).unwrap_or("");
+        if path.is_empty() || kind.is_empty() {
+            untyped += 1;
+        }
+    }
+    if untyped > 0 {
+        return Err(format!(
+            "{untyped} of {} node(s) have no `path`/`type`: {payload}",
+            nodes.len()
+        ));
+    }
+    Ok(nodes.len())
+}
+
+/// DR-30: the inline image of a `capture_frames`-style payload, decoded from
+/// base64.  Returns `None` when the payload carries no image or the bytes are
+/// not a PNG.
+fn extract_inline_image(payload: &Value) -> Option<Vec<u8>> {
+    fn walk(node: &Value, out: &mut Option<Vec<u8>>) {
+        if out.is_some() {
+            return;
+        }
+        match node {
+            Value::String(text) => {
+                if text.starts_with(BASE64_PNG_PREFIX) {
+                    *out = decode_base64(text).filter(|bytes| is_png(bytes));
+                }
+            }
+            Value::Array(items) => items.iter().for_each(|item| walk(item, out)),
+            Value::Object(fields) => {
+                for (key, value) in fields {
+                    let image_key = matches!(
+                        key.as_str(),
+                        "image_base64" | "png_base64" | "base64" | "image" | "data" | "screenshot"
+                    );
+                    if image_key {
+                        if let Value::String(text) = value {
+                            *out = decode_base64(text).filter(|bytes| is_png(bytes));
+                        }
+                    }
+                    if out.is_none() {
+                        walk(value, out);
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    let mut found = None;
+    walk(payload, &mut found);
+    found
+}
+
+const BASE64_PNG_PREFIX: &str = "iVBORw0KGgo";
+const PNG_SIGNATURE: &[u8] = b"\x89PNG\r\n\x1a\n";
+
+fn is_png(bytes: &[u8]) -> bool {
+    bytes.starts_with(PNG_SIGNATURE)
+}
+
+/// DR-30: writing the screenshot is the only thing that makes a `path` a fact.
+fn write_png(path: &Path, bytes: &[u8]) -> anyhow::Result<()> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(path, bytes)?;
+    Ok(())
+}
+
+/// Decode standard-alphabet base64 (padding optional).
+///
+/// Hand-rolled on purpose: the only job is to turn the MCP server's inline PNG
+/// into bytes, and the repository is built offline.
+fn decode_base64(input: &str) -> Option<Vec<u8>> {
+    let mut out = Vec::with_capacity(input.len() / 4 * 3);
+    let mut buffer: u32 = 0;
+    let mut bits: u32 = 0;
+    for byte in input.bytes() {
+        let value = match byte {
+            b'A'..=b'Z' => byte - b'A',
+            b'a'..=b'z' => byte - b'a' + 26,
+            b'0'..=b'9' => byte - b'0' + 52,
+            b'+' => 62,
+            b'/' => 63,
+            b'=' => break,
+            b'\r' | b'\n' | b' ' | b'\t' => continue,
+            _ => return None,
+        } as u32;
+        buffer = (buffer << 6) | value;
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            out.push(((buffer >> bits) & 0xFF) as u8);
+        }
+    }
+    if out.is_empty() {
+        None
+    } else {
+        Some(out)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// DR-33: InputMap bindings and the replay quadruple
+// ---------------------------------------------------------------------------
+
+/// DR-33: `action -> bound keys`, or `None` when the payload's shape is not a
+/// binding list at all (which must not be mistaken for "no such action").
+fn parse_input_actions(payload: &Value) -> Option<std::collections::BTreeMap<String, Vec<String>>>
+{
+    fn keys_of(value: &Value) -> Vec<String> {
+        match value {
+            Value::String(text) => vec![text.clone()],
+            Value::Array(items) => items.iter().flat_map(keys_of).collect(),
+            Value::Object(fields) => ["keys", "key", "events", "bindings", "bound_keys"]
+                .iter()
+                .filter_map(|key| fields.get(*key))
+                .flat_map(keys_of)
+                .collect(),
+            _ => Vec::new(),
+        }
+    }
+
+    let container = payload
+        .get("actions")
+        .or_else(|| payload.get("input_map"))
+        .or_else(|| payload.get("inputs"))?;
+    let mut bindings = std::collections::BTreeMap::new();
+    match container {
+        Value::Object(map) => {
+            for (name, value) in map {
+                bindings.insert(name.clone(), keys_of(value));
+            }
+        }
+        Value::Array(items) => {
+            for item in items {
+                let Some(name) = item
+                    .get("name")
+                    .or_else(|| item.get("action"))
+                    .and_then(Value::as_str)
+                else {
+                    continue;
+                };
+                bindings.insert(name.to_string(), keys_of(item));
+            }
+        }
+        _ => return None,
+    }
+    Some(bindings)
+}
+
+/// DR-30: `(action, before_position, after_position, velocity)`.
+///
+/// `None` means there was not a single frame carrying a `position` — the
+/// `0 frame(s), position unknown` case `smoke-t3` reported as `ok = true`.
+fn replay_quadruple(action: &str, payload: &Value) -> Option<Value> {
+    let samples = payload.get("samples").and_then(Value::as_array)?;
+    let positions: Vec<&Value> = samples
+        .iter()
+        .filter_map(|sample| sample.get("position"))
+        .collect();
+    let first = positions.first()?;
+    let last = positions.last()?;
+    let velocity = payload
+        .get("velocity")
+        .cloned()
+        .or_else(|| {
+            samples
+                .iter()
+                .rev()
+                .find_map(|sample| sample.get("velocity").cloned())
+        })
+        .unwrap_or_else(|| derived_velocity(&positions));
+    Some(json!({
+        "action": action,
+        "before_position": position_of(first),
+        "after_position": position_of(last),
+        "velocity": velocity_of(&velocity),
+    }))
+}
+
+fn position_of(value: &Value) -> Value {
+    json!({
+        "x": value.get("x").and_then(Value::as_f64).unwrap_or(0.0),
+        "y": value.get("y").and_then(Value::as_f64).unwrap_or(0.0),
+    })
+}
+
+fn velocity_of(value: &Value) -> Value {
+    json!({
+        "x": value.get("x").and_then(Value::as_f64).unwrap_or(0.0),
+        "y": value.get("y").and_then(Value::as_f64).unwrap_or(0.0),
+    })
+}
+
+/// The per-frame delta of the last two samples, so a constant recording yields
+/// a real `(0, 0)` instead of a missing field.
+fn derived_velocity(positions: &[&Value]) -> Value {
+    let (Some(previous), Some(last)) = (
+        positions.len().checked_sub(2).and_then(|i| positions.get(i)),
+        positions.last(),
+    ) else {
+        return json!({"x": 0.0, "y": 0.0});
+    };
+    let delta = |key: &str| {
+        last.get(key).and_then(Value::as_f64).unwrap_or(0.0)
+            - previous.get(key).and_then(Value::as_f64).unwrap_or(0.0)
+    };
+    json!({"x": delta("x"), "y": delta("y")})
+}
+
 /// DR-17 step 5: a compact, human-checkable summary of one recording.
-fn describe_monitor(label: &str, payload: &Value) -> String {
-    let frames = payload
+fn describe_monitor(label: &str, payload: &Value) -> String {    let frames = payload
         .get("frame_count")
         .and_then(Value::as_u64)
         .unwrap_or(0);

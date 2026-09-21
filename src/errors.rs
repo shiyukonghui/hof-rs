@@ -57,6 +57,20 @@ pub enum HofError {
     #[error("version not found: {0}")]
     VersionNotFound(String),
 
+    /// DR-29: the server answered, but never with the id we asked for.  The
+    /// payloads that did arrive were parked, never used; the caller must treat
+    /// the call as a failure (and may never silently substitute another id's
+    /// `result`).
+    #[error(
+        "MCP response desync: request id {expected_id} was never answered; received id(s) \
+         {got_ids:?} after {sync_probes} probe(s)"
+    )]
+    McpResponseDesync {
+        expected_id: u64,
+        got_ids: Vec<u64>,
+        sync_probes: u32,
+    },
+
     #[error("tool_not_permitted: role={role} tool={tool}")]
     ToolNotPermitted { role: String, tool: String },
 }
@@ -80,7 +94,9 @@ impl HofError {
             | HofError::ToolNotPermitted { .. }
             | HofError::Adapter(_) => 2,
             HofError::SchemaFailure { .. } => 3,
-            HofError::External(_) => 4,
+            // DR-29: a desynchronized MCP endpoint is an unavailable external
+            // dependency, not a harness bug.
+            HofError::External(_) | HofError::McpResponseDesync { .. } => 4,
             HofError::Harness(_) => 5,
         }
     }
@@ -129,6 +145,15 @@ mod tests {
             3
         );
         assert_eq!(HofError::External("godot".into()).exit_code(), 4);
+        assert_eq!(
+            HofError::McpResponseDesync {
+                expected_id: 2,
+                got_ids: vec![1],
+                sync_probes: 4
+            }
+            .exit_code(),
+            4
+        );
         assert_eq!(HofError::Harness("boom".into()).exit_code(), 5);
     }
 

@@ -225,6 +225,7 @@ pub fn channel_for(config: &HohConfig) -> McpChannel {
         config.tools.timeout_seconds,
         config.tools.max_retries,
     )
+    .with_max_sync_retries(config.tools.max_sync_retries)
 }
 
 /// `hoh tools call <tool>`: deny first, then call.

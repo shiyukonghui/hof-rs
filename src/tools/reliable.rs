@@ -16,7 +16,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use serde_json::Value;
 
 use crate::model::Role;
-use crate::tools::mcp::McpError;
+use crate::tools::mcp::{McpError, RpcCorrelation};
 use crate::tools::ToolChannel;
 
 /// The documented readiness poll interval (DR-20).
@@ -33,6 +33,9 @@ pub struct McpFailure {
     pub message: String,
     /// How many attempts had been made when this failure was recorded.
     pub attempts: u32,
+    /// DR-29: the request/response identity, when the failure carries one (a
+    /// `McpResponseDesync` knows which ids it saw).
+    pub correlation: RpcCorrelation,
 }
 
 impl McpFailure {
@@ -42,7 +45,13 @@ impl McpFailure {
             code,
             message: message.into(),
             attempts,
+            correlation: RpcCorrelation::default(),
         }
+    }
+
+    pub fn with_correlation(mut self, correlation: RpcCorrelation) -> Self {
+        self.correlation = correlation;
+        self
     }
 
     /// The failure text carried into `BatteryRecord.observation`.
@@ -108,12 +117,35 @@ impl McpErrorLog {
 }
 
 /// Turn an opaque channel error into a structured failure, recovering the
-/// JSON-RPC identity when the error carries one (DR-20).
+/// JSON-RPC identity when the error carries one (DR-20/DR-29).
 fn failure_from(tool: &str, error: &anyhow::Error, attempt: u32) -> McpFailure {
-    match error.downcast_ref::<McpError>() {
-        Some(mcp) => McpFailure::new(tool, Some(mcp.code), mcp.message.clone(), attempt),
-        None => McpFailure::new(tool, None, error.to_string(), attempt),
+    if let Some(mcp) = error.downcast_ref::<McpError>() {
+        return McpFailure::new(tool, Some(mcp.code), mcp.message.clone(), attempt);
     }
+    // DR-29: a desync knows exactly which ids it saw; keep them.
+    if let Some(crate::errors::HofError::McpResponseDesync {
+        expected_id,
+        got_ids,
+        sync_probes,
+    }) = crate::errors::as_hof_error(error)
+    {
+        return McpFailure::new(tool, None, error.to_string(), attempt).with_correlation(
+            RpcCorrelation {
+                request_id: Some(*expected_id),
+                response_id: None,
+                sync_probes: *sync_probes,
+                mismatched_ids: got_ids.clone(),
+            },
+        );
+    }
+    McpFailure::new(tool, None, error.to_string(), attempt)
+}
+
+/// DR-29: one successful MCP call together with its correlation facts.
+#[derive(Clone, Debug)]
+pub struct TracedCall {
+    pub payload: Value,
+    pub correlation: RpcCorrelation,
 }
 
 /// Call one MCP tool, retrying a failure up to `max_retries` extra times.
@@ -130,11 +162,41 @@ pub async fn call_with_retries(
     retry_delay_ms: u64,
     log: Option<&McpErrorLog>,
 ) -> Result<Value, McpFailure> {
+    Ok(call_with_retries_traced(
+        tools,
+        role,
+        tool,
+        args,
+        max_retries,
+        retry_delay_ms,
+        log,
+    )
+    .await?
+    .payload)
+}
+
+/// DR-29: [`call_with_retries`] plus the `request_id`/`response_id`/probe
+/// counts of the successful round trip.
+#[allow(clippy::too_many_arguments)]
+pub async fn call_with_retries_traced(
+    tools: &dyn ToolChannel,
+    role: Role,
+    tool: &str,
+    args: Value,
+    max_retries: u32,
+    retry_delay_ms: u64,
+    log: Option<&McpErrorLog>,
+) -> Result<TracedCall, McpFailure> {
     let total = 1 + max_retries;
     let mut last: Option<McpFailure> = None;
     for attempt in 1..=total {
-        match tools.call(role, tool, args.clone()).await {
-            Ok(result) => return Ok(result.payload),
+        match tools.call_with_meta(role, tool, args.clone()).await {
+            Ok((result, correlation)) => {
+                return Ok(TracedCall {
+                    payload: result.payload,
+                    correlation,
+                })
+            }
             Err(error) => {
                 let failure = failure_from(tool, &error, attempt);
                 if let Some(log) = log {
@@ -158,6 +220,8 @@ pub struct ReadyOutcome {
     pub attempts: u32,
     pub payload: Option<Value>,
     pub failure: Option<McpFailure>,
+    /// DR-29: the correlation facts of the poll that succeeded.
+    pub correlation: RpcCorrelation,
 }
 
 /// DR-20: after `play_scene`, poll `tool` (normally `get_game_scene_tree`) every
@@ -178,13 +242,14 @@ pub async fn wait_for_game_ready(
     let mut attempts = 0u32;
     loop {
         attempts += 1;
-        let failure = match tools.call(role, tool, args.clone()).await {
-            Ok(result) => {
+        let failure = match tools.call_with_meta(role, tool, args.clone()).await {
+            Ok((result, correlation)) => {
                 return ReadyOutcome {
                     ok: true,
                     attempts,
                     payload: Some(result.payload),
                     failure: None,
+                    correlation,
                 }
             }
             Err(error) => {
@@ -201,6 +266,7 @@ pub async fn wait_for_game_ready(
                 attempts,
                 payload: None,
                 failure: Some(failure),
+                correlation: RpcCorrelation::default(),
             };
         }
         if poll_interval_ms > 0 {

@@ -44,3 +44,4 @@ tools:
   timeout_seconds: 120
   max_retries: 2
   ready_timeout_seconds: 30               # DR-20：play_scene 后轮询游戏就绪的上限
+  max_sync_retries: 4                     # DR-29：JSON-RPC 响应错位时允许的只读探针次数上限

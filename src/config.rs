@@ -118,10 +118,19 @@ pub struct ToolsConfig {
     /// failure.  Defaults to 30 seconds when the key is absent.
     #[serde(default = "default_ready_timeout_seconds")]
     pub ready_timeout_seconds: u64,
+    /// DR-29: how many read-only `get_project_info` probes one call may spend
+    /// re-correlating a lagging JSON-RPC response before
+    /// `HofError::McpResponseDesync` is returned.  Defaults to 4.
+    #[serde(default = "default_max_sync_retries")]
+    pub max_sync_retries: u32,
 }
 
 fn default_ready_timeout_seconds() -> u64 {
     30
+}
+
+fn default_max_sync_retries() -> u32 {
+    crate::tools::mcp::DEFAULT_MAX_SYNC_RETRIES
 }
 
 /// The full runtime configuration.  `model` is passed through to mini

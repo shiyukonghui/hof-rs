@@ -10,7 +10,7 @@ pub mod policy;
 pub mod reliable;
 
 use crate::model::Role;
-use mcp::McpClient;
+use mcp::{McpClient, RpcCorrelation, SessionSyncReport};
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ToolResult {
@@ -32,6 +32,25 @@ pub trait ToolChannel: Send + Sync {
         tool: &str,
         args: serde_json::Value,
     ) -> anyhow::Result<ToolResult>;
+
+    /// DR-29: [`ToolChannel::call`] plus the JSON-RPC correlation facts, which
+    /// travel into the battery's raw payloads.  Channels without a JSON-RPC
+    /// transport simply report an empty correlation.
+    async fn call_with_meta(
+        &self,
+        role: Role,
+        tool: &str,
+        args: serde_json::Value,
+    ) -> anyhow::Result<(ToolResult, RpcCorrelation)> {
+        Ok((self.call(role, tool, args).await?, RpcCorrelation::default()))
+    }
+
+    /// DR-29: the session-start probe — two consecutive read-only calls whose
+    /// ids must match.  A channel that cannot do this says so explicitly
+    /// instead of reporting a healthy `false`.
+    async fn session_sync_probe(&self) -> SessionSyncReport {
+        SessionSyncReport::unavailable("this tool channel exposes no JSON-RPC correlation probe")
+    }
 }
 
 /// A channel that exposes no MCP tools at all (used for offline/dry runs).
@@ -72,6 +91,12 @@ impl McpChannel {
         }
     }
 
+    /// DR-29: set `tools.max_sync_retries`.
+    pub fn with_max_sync_retries(mut self, max_sync_retries: u32) -> Self {
+        self.client = self.client.with_max_sync_retries(max_sync_retries);
+        self
+    }
+
     pub fn client(&self) -> &McpClient {
         &self.client
     }
@@ -100,12 +125,29 @@ impl ToolChannel for McpChannel {
         tool: &str,
         args: serde_json::Value,
     ) -> anyhow::Result<ToolResult> {
+        Ok(self.call_with_meta(role, tool, args).await?.0)
+    }
+
+    async fn call_with_meta(
+        &self,
+        role: Role,
+        tool: &str,
+        args: serde_json::Value,
+    ) -> anyhow::Result<(ToolResult, RpcCorrelation)> {
         if !self.allowed(role, tool) {
             anyhow::bail!("tool_not_permitted: role={} tool={tool}", role.as_str());
         }
         let client = self.client.clone();
         let tool_name = tool.to_string();
-        let payload = tokio::task::spawn_blocking(move || client.call(&tool_name, args)).await??;
-        Ok(ToolResult { ok: true, payload })
+        let (payload, correlation) =
+            tokio::task::spawn_blocking(move || client.call_traced(&tool_name, args)).await??;
+        Ok((ToolResult { ok: true, payload }, correlation))
+    }
+
+    async fn session_sync_probe(&self) -> SessionSyncReport {
+        let client = self.client.clone();
+        tokio::task::spawn_blocking(move || client.session_sync_probe())
+            .await
+            .unwrap_or_else(|error| SessionSyncReport::unavailable(error.to_string()))
     }
 }
