@@ -617,6 +617,12 @@ pub async fn run(
         };
         let mut developer_outcome = invoke_once(&*orchestrator.harness, &developer).await?;
         let mut developer_limits = is_limits_exceeded(&developer_outcome.exit_status);
+        // DR-31: the per-role usage of this iteration, filed **as each attempt
+        // ends**.  `smoke-t3` lost the Developer's first attempt (7,134,952
+        // tokens / 799.8 s) because `developer_outcome.usage` was read *after*
+        // the wrap-up retry had replaced it.
+        let mut developer_usage = developer_outcome.usage.clone();
+        durations.push(("developer".to_string(), developer_outcome.duration_ms));
         let mut developer_attempts: Vec<AttemptOutcome> = vec![AttemptOutcome {
             role: Role::Developer,
             iteration,
@@ -643,6 +649,9 @@ pub async fn run(
             wrap_base.trajectory_path = attempt_trajectory(&traj_dir, Role::Developer, 2);
             developer_outcome = invoke_once(&*orchestrator.harness, &wrap_base).await?;
             developer_limits = is_limits_exceeded(&developer_outcome.exit_status);
+            // DR-31: immediately, before any later assignment can shadow it.
+            merge_usage(&mut developer_usage, &developer_outcome.usage);
+            durations.push(("developer_wrap_up".to_string(), developer_outcome.duration_ms));
             developer_attempts.push(AttemptOutcome {
                 role: Role::Developer,
                 iteration,
@@ -661,8 +670,10 @@ pub async fn run(
         record_attempts(&run_dir, iteration, &developer_attempts, None)?;
         iter_attempts.extend(developer_attempts.clone());
         note_source_reads(&mut iter_warnings, &developer_attempts);
-        durations.push(("developer".to_string(), developer_outcome.duration_ms));
-        iter_usage.push(developer_outcome.usage.clone());
+        // One summary entry per role, already carrying every attempt so far; the
+        // targeted repair below merges into the same entry (DR-31).
+        let developer_usage_index = iter_usage.len();
+        iter_usage.push(developer_usage);
         // DR-25: the Developer may only write inside the project.
         iter_out_of_tree.extend(out_of_tree_watch.observe());
         // DR-19: scrub after the developer (the only writer) too.
@@ -726,7 +737,9 @@ pub async fn run(
             });
             iter_attempts.push(developer_attempts.last().cloned().expect("just pushed"));
             note_source_reads(&mut iter_warnings, &developer_attempts);
-            iter_usage.push(repair_outcome.usage.clone());
+            // DR-31: the repair is still the Developer role, so it merges into
+            // the same per-role summary entry instead of adding a second one.
+            merge_usage(&mut iter_usage[developer_usage_index], &repair_outcome.usage);
             durations.push(("developer_repair".to_string(), repair_outcome.duration_ms));
             iter_out_of_tree.extend(out_of_tree_watch.observe());
             iter_secret_redactions += crate::runtime::secrets::redact_tree(&run_dir, &secrets)?;

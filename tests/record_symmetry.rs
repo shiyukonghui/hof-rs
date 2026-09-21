@@ -157,3 +157,114 @@ fn status_reads_both_usage_shapes() {
     assert_eq!(hof_rs::runtime::usage::usage_summary_of(&modern).len(), 1);
     assert!(hof_rs::runtime::usage::usage_summary_of(&serde_json::json!(null)).is_empty());
 }
+
+// ---------------------------------------------------------------------------
+// DR-31 — every attempt is counted exactly once
+// ---------------------------------------------------------------------------
+
+/// `null` (an unknown field) contributes zero, so the invariant can be stated
+/// over the raw JSON.
+fn sum_field(entries: &[Value], field: &str) -> u64 {
+    entries
+        .iter()
+        .map(|entry| entry[field].as_u64().unwrap_or(0))
+        .sum()
+}
+
+fn assert_summary_equals_attempts(usage: &Value) {
+    let summary = usage["summary"].as_array().expect("summary array");
+    let attempts = usage["attempts"].as_array().expect("attempts array");
+    for field in [
+        "calls",
+        "prompt_tokens",
+        "completion_tokens",
+        "total_tokens",
+        "cache_hit_tokens",
+        "cache_miss_tokens",
+    ] {
+        assert_eq!(
+            sum_field(summary, field),
+            sum_field(attempts, field),
+            "summary.{field} must be the exact sum of attempts.{field}: {usage}"
+        );
+    }
+}
+
+/// DR-31: `smoke-t3` reported 25,839,490 tokens while the attempts summed to
+/// 32,974,442 — the Developer's first attempt (7,134,952 tokens / 799.8 s) was
+/// overwritten by the wrap-up retry because the runtime pushed
+/// `developer_outcome.usage` *after* the retry had replaced it.
+#[tokio::test]
+async fn a_developer_wrap_up_retry_never_overwrites_the_first_attempt() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+
+    let mut exhausting = FakeStep::new(Role::Developer)
+        .writing("project.godot", "config_version=5\n")
+        .exiting("LimitsExceeded");
+    exhausting.usage = Some(UsageFixture::new(1000, 200));
+
+    let script = vec![
+        FakeStep::new(Role::Planner).writing(".hoh/plan.md", OK_PLAN),
+        exhausting,
+        FakeStep::new(Role::Developer).writing("scripts/player.gd", "extends CharacterBody2D\n"),
+        FakeStep::new(Role::Tester)
+            .writing(".hoh/evidence/move.json", "{}\n")
+            .writing(".hoh/evidence.json", &ok_evidence(1, "")),
+    ];
+    let (result, _) = run_scenario(root, 1, script, Ablation::default(), FakeAdapter::new()).await;
+    result.expect("the happy path must complete");
+
+    let usage: Value =
+        serde_json::from_str(&read(&root.join("runs/run-1/iter-1/usage.json"))).unwrap();
+    let attempts = usage["attempts"].as_array().unwrap();
+    assert_eq!(
+        attempts.len(),
+        4,
+        "planner, developer×2, tester: {attempts:?}"
+    );
+    let developer_attempts: Vec<&Value> = attempts
+        .iter()
+        .filter(|entry| entry["role"] == serde_json::json!("developer"))
+        .collect();
+    assert_eq!(
+        developer_attempts.len(),
+        2,
+        "both developer attempts must be recorded: {attempts:?}"
+    );
+    assert_eq!(
+        developer_attempts[0]["total_tokens"],
+        serde_json::json!(1200),
+        "attempt 1's usage must survive the retry"
+    );
+
+    let summary = usage["summary"].as_array().unwrap().clone();
+    assert_eq!(summary.len(), 3, "one summary entry per role: {usage}");
+    assert_summary_equals_attempts(&usage);
+    assert_eq!(
+        sum_field(&summary, "total_tokens"),
+        1245,
+        "3000 tokens must not be lost: {usage}"
+    );
+}
+
+/// DR-31 (invariant): whatever the retry shape, `summary == Σ attempts`.
+#[tokio::test]
+async fn the_usage_summary_is_always_the_sum_of_the_attempts() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let (result, _) = run_scenario(
+        root,
+        1,
+        retry_script(),
+        Ablation::default(),
+        FakeAdapter::new(),
+    )
+    .await;
+    result.expect("the retried happy path must complete");
+
+    let usage: Value =
+        serde_json::from_str(&read(&root.join("runs/run-1/iter-1/usage.json"))).unwrap();
+    assert_eq!(usage["attempts"].as_array().unwrap().len(), 5);
+    assert_summary_equals_attempts(&usage);
+}
