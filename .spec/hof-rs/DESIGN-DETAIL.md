@@ -1395,6 +1395,19 @@ Planner 在首次 `submit` 成功后仍循环提交约 20 次。单轮 T=1 烧�
 - 若动作**不存在** → 记录 `ACTION_NOT_BOUND` 且 `ok=false`，`supports` 含 F1/F2/P3。
 - 测试：①动作缺失 → `ACTION_NOT_BOUND`；②动作存在但位置不变 → `INPUT_HAD_NO_EFFECT`；③动作存在且位置变化 → `ok=true`。
 
+### DR-34 相对路径解析必须是「存在性优先的多基准回退」
+
+来源：`smoke-t3` 中仍出现 4 次 `os error 3`（文件找不到）。根因：DR-25 把相对路径基准统一改为
+`HOH_ARTIFACT_DIR`，但对 **Developer** 而言其 cwd 是**工程根**，而它习惯写 `.hoh/args/x.json`（工程根相对）→
+按 artifact dir 解析成 `<workspace>/.hoh/.hoh/args/x.json` → 不存在。
+
+- `hoh tools call --args-file` 与 `hoh submit --file` 的相对路径解析必须按顺序尝试并**取第一个存在的**：
+  ① 以当前 cwd 为基准；② 以 `HOH_ARTIFACT_DIR` 为基准；③ 以 `HOH_VIEW_DIR` 为基准。
+- 三者都不存在时，错误信息必须**同时列出全部候选绝对路径**（而不是只报一个），并保留 `os error` 的原始原因。
+- `hoh submit` 的**写入目标**仍恒为规范产物路径（DR-25 不变），本条规定只影响**来源解析**。
+- 测试：①Developer 视角传 `.hoh/args/x.json`（cwd 相对）→ 成功；②传 `args/x.json`（artifact dir 相对）→ 成功；
+  ③两者都不存在 → 错误信息含全部候选绝对路径。
+
 ---
 ### 12.1 变更记录
 
