@@ -576,6 +576,111 @@
     区分 `ACTION_NOT_BOUND` / `INPUT_HAD_NO_EFFECT` / 成功三态。
 - 回滚点：`DESIGN-DETAIL.md` 回退到 `b83245a`；代码回退到 `f373dba`。
 
+## D26 — 修复包 v0.6（DR-29..DR-34）的实现期裁决
+
+- 日期：2026-09（阶段四，修复包 v0.6 实现）
+- 触发问题：DR-29..DR-34 已冻结，但「错位修复的具体机制」「形状校验之外的第三态」「base64 落盘」
+  等实现取舍会改变既有契约或往代码里引入新依赖，必须显式记录。
+- 提交对应：`509fbfc`(DR-34) / `f3bb83d`(DR-32) / `1f36d1e`(DR-31) / `7e85f7b`(DR-30,DR-33) / `c1d94e6`(DR-29)。
+
+### 裁决 1：错位修复的机制（DR-29）
+- 选择：`McpClient::rpc` 对**所有** JSON-RPC 请求（含 `tools/list`）统一做 id 关联：
+  1. `resp.id == req.id` → 使用其 `result`（若是 `error` 仍按业务错误返回）；
+  2. 不等 → 把该响应按其自身 id 存入 `pending`（`Arc<Mutex<BTreeMap<u64,Value>>`，容量 32，超出丢最旧），
+     **绝不读取其 payload**；随后每轮：先查 `pending` 里是否有本请求的 id，再发**一个**只读探针
+     （`tools/call get_project_info`，id 自增），本轮响应同样按上述规则处理；
+  3. 探针数达到 `tools.max_sync_retries`（默认 4）仍无匹配 → `HofError::McpResponseDesync{expected_id,got_ids,sync_probes}`。
+- 迭代而非递归：整段是一个 `loop`，每轮最多一个探针，无栈增长。
+- 「探针自身也走同一套校验」的落实：探针的响应若不带**本请求**的 id，也不得被当作结果使用（只会被入表）。
+- 退出码：`McpResponseDesync` 归入 `External`（4）——错位的端点是「外部依赖不可用」，不是 harness 缺陷。
+- 严格性取舍：响应**没有 id** 视为错位（而不是宽容地当作匹配），因为无法归属的 payload 正是本缺陷的根源；
+  代价是「不返回 id 的非合规服务器」会得到 4 而不是静默成功，记入 known_risks。
+- 回滚点：`McpClient::rpc`/`matched`/`stash`/`claim` 四个函数。
+
+### 裁决 2：会话同步探针的介质与偏移语义（DR-29）
+- 选择：`BatterySession::run` 的**第一步**调用 `ToolChannel::session_sync_probe()`（默认实现返回
+  `available:false`，由 `McpChannel` 覆盖为两次连续 `get_project_info`）；报告落
+  `<workspace>/.hoh/deterministic/mcp-sync.json`，`run_loop` 在每次电池 pass 之后读它，
+  错位时把 `mcp_desync_detected: id_offset=<n> probes=<n> (...)` 追加进 `result.json.warnings`。
+- 理由：`result.json` 由 run_loop 写、探针由 adapter 执行，两者之间已有的通道就是 `.hoh/deterministic/**`
+  下的文件（`battery.json`/`mcp-errors.jsonl` 同例）；不引入新的 trait 返回值改造。
+- 偏移语义：取**首个**观测到的 `resp.id - req.id`。注意它不一定是 `smoke-t3` 的 `+703`：
+  `run_loop` 在电池之前会调 `index_markdown`（一次 `tools/list`），它可能已经消耗掉那条陈旧响应，
+  此时探针看到的是普通的「慢一拍」`-1`。报告同时给出 `probes`，测试按实际值断言。
+- 每次电池 pass 会重建 `.hoh/deterministic`，所以第 2 遍（定向修复后）的探针结论会覆盖第 1 遍，
+  与 D23 裁决 6 的「不留第 1 遍 payload 冒充最终证据」一致。
+
+### 裁决 3：内联 base64 PNG 的手写解码（DR-30）
+- 事实：`smoke-t3` 的 `capture_frames` 回包是 `frames[*].image_base64`（真实 base64 PNG），
+  而当时 Runtime 既不落盘也不校验，仍写了 `path`。
+- 选择：在 `src/adapter/godot.rs` 内实现最小标准字母表 base64 解码（约 30 行，带单元测试），
+  只接受解码结果以 PNG 签名 `\x89PNG\r\n\x1a\n` 开头；解码器内置在 adapter，不新增 crate。
+- 理由：仓库当前依赖树里没有 base64 实现，本机按「离线优先」构建（§9.3 要求断网可全绿），
+  引入新依赖需要联网拉取；而这里需要的只是「把服务器给的 PNG 变成字节」这一件事。
+- screenshot 的判定被收敛成**一个**判据：`fs::metadata(<workspace>/.hoh/evidence/frame-00.png)`。
+  主工具失败 → 回落 `capture_frames`；两者都拿不到真实 PNG → `ok=false` 且 `path=None`。
+
+### 裁决 4：`ACTION_BINDING_UNKNOWN` 第三态（DR-33）
+- 问题：DR-33 只定义了三态（不存在 / 存在但无效果 / 有效），但没规定 `get_input_actions`
+  **调用失败或 payload 形状不可识别**时的行为。
+- 选择：
+  - 可用性**已知**且动作缺失 → `ACTION_NOT_BOUND`，`ok=false`，`supports` 追加 `P3`（DR-33 明确要求）；
+  - 可用性**已知**且动作存在、已送达、位置不变 → `INPUT_HAD_NO_EFFECT`，`ok=false`，`supports` 含 F1/F2；
+  - 可用性**未知**但位置发生了变化 → 记录 `ACTION_BINDING_UNKNOWN` 于 observation，**不**判失败
+    （正向证据成立，输入确实送达且有效）；
+  - 可用性**未知**且位置不变 → 同时标 `ACTION_BINDING_UNKNOWN` 与 `INPUT_HAD_NO_EFFECT`，`ok=false`，
+    `supports` 追加 `P3`——不假装能区分两种失败模式。
+- 理由：诚实性优先；把「不知道」写成第三态，而不是塞进已有的两个状态里。
+
+### 裁决 5：`supports` 词表扩展到 P1..P6（DR-33）
+- 事实：`BatteryRecord.supports` 此前只用 `F1..F17`/`N1..N4`；DR-33 要求 `ACTION_NOT_BOUND` 的
+  `supports` 含 `P3`（PRD 第 2 节的工程约束「输入全部使用 InputMap 命名 action」）。
+- 选择：按 DR-33 输出 `P3`；`evidence_playbook` 的步骤表同步说明；`tests/evidence_battery.rs::valid_supports`
+  的白名单扩展为 `F1..F17 ∪ N1..N4 ∪ P1..P6`。
+- 理由：DR-33 是规范性条款，词表必须跟上，否则「动作不存在」无法被映射到 P3 这条约束。
+
+### 裁决 6：`harness_source_read` 的标记集与轨迹夹具（DR-32）
+- 选择：扫描范围限定 `messages[*].extra.actions[*]` 的**全部字符串值**（命令、内联参数、嵌套对象）；
+  标记集由「具体文件路径」放宽为目录级前缀 `src/`、`src\`、`.spec/`、`.spec\`、`.git/`、`.git\`、
+  `tests/fixtures`、`tests/common`、`tests\common`、`RustProjects`。
+- 理由：DR-32 的验收例子是 `cat src/config.rs`，原标记集（`src/runtime` 等）抓不到；
+  而 Godot 工程惯例用 `scripts/`/`scenes/`，`src/` 前缀不会误报正常开发命令。
+- 夹具配套：`FakeStep::trajectory_mentioning` 改为把文本写进 `extra.actions[*].command`
+  （原实现写在 exit 消息里，那是 prompt 侧文本，DR-32 后不该再触发）；新增
+  `trajectory_prompt_containing` 专门构造「只在 prompt 里出现」的反例。
+
+### 裁决 7：既有测试的必要调整（逐条）
+1. `tests/common/mod.rs::FakeStep::trajectory_mentioning` —— **必须改**：夹具把探针文本从
+   exit 消息移到 `extra.actions`，因为 DR-32 规定只有工具命令是证据。
+2. `tests/tool_discovery.rs::reading_harness_sources_is_recorded_as_a_warning` —— 断言不变
+   （仍要求出现 `harness_source_read`），夹具命令由 `grep -n play_scene src/runtime/run_loop.rs`
+   改为 DR-32 的验收例子 `cat src/config.rs`；同时新增 ①（prompt 含禁止清单 → 不产生留痕）
+   与 ②（工具命令 cat src/config.rs → 产生留痕）两例。
+3. `tests/evidence_battery.rs::green_battery_records_every_step_and_copies_into_the_candidate`
+   —— 原断言 `replay.observation.contains("120")`（真实 120 帧采样）改为
+   `contains("60 frame(s)")` + `before_position/after_position`。**必须改**：`smoke-t3` 的真实
+   hold-right 记录是**恒定坐标**（`(60.0, 283.999)` 全程不变），DR-30/DR-33 之后它必须判
+   `INPUT_HAD_NO_EFFECT`（该反例已另立新测试），因此不能再充当绿色夹具；绿路径改用
+   `FixtureChannel::with_moving(true)` 合成的、真正响应动作的记录。
+   同一用例的截图断言由「path 存在」**加强**为「文件真实存在且字节等于工具产出的 PNG」。
+4. `tests/evidence_battery.rs::FixtureChannel` —— **必须改**：新增
+   `with_moving` / `with_screenshot` / `with_input_actions` / `with_reply` 四个夹具开关，
+   `get_input_actions` 与 `monitor_properties`（按最后一次 `simulate_action` 合成）必须有答复，
+   否则 DR-33/DR-30 的用例无法构造；`green()` 默认 moving+bound+写文件。
+5. `tests/evidence_battery.rs::valid_supports` —— **必须改**：白名单加 `P1..P6`（见裁决 5）。
+6. `tests/role_paths.rs::submit` —— **必须改**：拆成 `submit`/`submit_in`，后者显式设置
+   `HOH_VIEW_DIR`（DR-34 的第三个基准）并对未设置的用例 `env_remove`，避免环境泄漏影响断言。
+7. `tests/record_symmetry.rs`、`tests/mcp_desync.rs` —— 仅新增用例，未改既有断言。
+- 结论：**没有任何断言被放宽**；除上述 2 处夹具驱动表达式外，既有断言逐字保留。
+
+### 裁决 8：`McpFailure.correlation` 装箱
+- 问题：加入 `RpcCorrelation` 后 `McpFailure` 超过 clippy `result_large_err` 阈值（>128B）。
+- 选择：`pub correlation: Box<RpcCorrelation>`；`&failure.correlation` 处由 deref 强制转换保持不变。
+- 理由：保持 `Result<_, McpFailure>` 的签名（`call_with_retries*` 的调用方不受影响）并让 clippy 全绿。
+
+- 回滚点：本包整体回退到 `f373dba`；Doc 回退到 `b83245a`。
+
+
 
 
 
