@@ -1323,6 +1323,50 @@
      → 需要**对象/scope 感知的豁免表**，不能只靠动词闭集。
 - 回滚点：映射与契约都是数据文件，恢复旧版即回退；本条不改任何引擎源码。
 
+## D46 — 映射 v1.1 通过独立验收；B1 采用「框架先行 + 按组并行」结构
+
+- 日期：2026-09
+- **验收结果（全新子代理，独立复算 + 自读源码 + 对抗性反例）：`pass`**
+  - D-1..D-8 **8/8 闭合**；**无新缺陷**（仅 2 个 nit）；
+  - 三件工件指纹自行重算全部相符（`70917 / 2f552719…`、`95060 / 96495bad…`、`98381 / 078b94e5…`）；
+  - 计数独立复算全对：`disposition` `rename 164 / fix 7 / merge_into 1 / unregister 2`、通道 `103/45/24/2`、
+    `mutating=true` **103**；契约 171 条；两个取消合并的新名各 1 条且不泄漏；
+  - 生成器**幂等**且逐字节复现落库件；`TOOL-NAMING.md` 174 行逐字段对账 **0 不一致**，无 v1.0 残留；
+  - 工程门自跑：doctest **39/39**、全引擎 **1465/1465（0 failed）**、`accept_m1.ps1` **连跑两次 20/20**；9877 全程 PID 36392 未受影响；
+  - 抽样 26 条（4/4 通道、7/7 fix、2/2 unregister）对回源码 **0 处失真**。
+- **纠正我自己的一处笔误（nit N-2）**：D45 里写 `mutating` 「共 101 条」是**改动前基线**，v1.1 实为 **103**
+  （101 + 两个截图工具按 GDR-18 改保守值）。
+- 处置验收提出的 2 个 nit 与 6 条风险：
+  - **N-1**：`TOOL-NAMING.md` 的 `disposition` 单元格被生成器渲染成「`merge_into`→目标」而非纯枚举值 →
+    改 `docs/scripts/gen_table.py` 输出纯枚举（或加列说明），重渲染并更新文档指纹。**归入 TASK-002**。
+  - **N-2**：本节已纠正。
+  - **R-1/R-2/R-3（消歧仍需一句话）**：`editor_analyze_signal_flow` ⇄ `editor_list_signal_connections`、
+    `project_search_file_names` ⇄ `project_search_file_contents`、`project_convert_uid_to_path` ⇄ `project_convert_path_to_uid`
+    这三对**光看名字仍不足以可靠二选一** → 必须在各自 **`description` 内联一句判别点**
+    （返回值形状 / 上限 / 大小写 / 过滤规则）。**归入 TASK-002（映射 v1.2）**。
+  - **R-4（全量门缺口）**：`accept_m1.ps1` 的逐字对等门**只比较已实现的 2 个工具**（`$ToolNames`），不是 171 条全量。
+    → ①立即在 SUMMARY 打印「已实现 N / 契约 171」并标 `known_deviation`，避免把批次门误读为全量门；
+      ②**171 条全量逐字对等门排进 B5 收口**（编辑器与游戏两端点各跑一次全量集合相等 + 逐工具逐字相等 + 无多余工具）。
+  - **R-5**：映射 `reason` 里的源码引用指向**迁移源**（`godot_mcp_gdext`/`addons/godot_mcp_rs`），随 C++ 重写会过期 →
+    每批移植时**同步刷新该批的 reason 引用为 `as-built` 位置**。
+  - **R-6**：映射 `mutating`（103，含状态副作用）与 hof-rs `is_mutating`（仅产物）口径不同，
+    hof-rs 侧的不变式测试**随暂停推迟**（解除暂停时按 D41 三层防御落地）。
+- **B1 架构决定（本条的实质内容）**：B1 = **42 个旧工具 → 41 个注册**
+  （`get_editor_performance` 已被无损合并进 `editor_get_performance_monitors`，不单独注册）。
+  41 个 C++ 实现超出单个子代理容量（且 TASK-001 已证明单代理做「大批量 + 多文档」会上下文耗尽），
+  因此 B1 采用**两阶段结构**：
+  1. **框架先行（TASK-002）**：①registry 按组分文件 + 每组一个 `register_<group>_tools(registry)`，
+     共享注册表只按组调用（消除并行改同一文件的冲突）；②统一的工具编写助手
+     （`ToolDef` 构建、参数校验、成功/缺参/底层失败三类错误封装、`scope` 过滤）；③移植**模板组**证明模式可行。
+  2. **按组并行（TASK-003a/b/c…）**：每个子代理只拥有自己的 `tools/<group>.{h,cpp}` 与**一行**注册调用。
+  - **模板组定义（机器可派生，避免歧义）**：`B1 ∩ channel=project ∩ mutating=false`（工程只读族）。
+  - **每批/每组对等门（四道，逐字）**：①该组的 `tools/list` 与该组在 `tools_list.renamed.json` 中的子集
+    **逐字相等**（name/description/inputSchema）；②每个工具**成功 / 缺参 / 底层失败**三类证据；
+    ③引擎 doctest 全绿；④全引擎 `--test` 零回归（基线 1465，仅允许因新测试而增加）。
+  - **禁令**：不得为让门变绿而提前注册未实现工具；不得注册 2 个 `unregister_until_implemented`；
+    7 个 `fix_implementation_first` 必须**先写红测试再修实现**（B1 内的 `clear_output` 适用此条）。
+- 回滚点：框架改动限于 `modules/mcp_server/tools/**` 与 `tool_registry.*`；模板组可单独回退。
+
 
 
 
