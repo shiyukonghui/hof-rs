@@ -352,6 +352,9 @@ pub struct FakeAdapter {
     /// deterministic way to exercise the `WorkspaceDriftBeforeQa` safety net.
     pub drift_after_freeze: Option<(PathBuf, String, String)>,
     pub excludes: Vec<String>,
+    /// DR-37: what [`ProjectAdapter::developer_artifact_valid`] answers.
+    /// `false` by default, so every pre-DR-37 scenario keeps its behaviour.
+    pub developer_artifact_valid: bool,
 }
 
 impl FakeAdapter {
@@ -361,6 +364,7 @@ impl FakeAdapter {
             drift: None,
             drift_after_freeze: None,
             excludes: vec!["cache".to_string()],
+            developer_artifact_valid: false,
         }
     }
 
@@ -371,6 +375,13 @@ impl FakeAdapter {
 
     pub fn with_post_freeze_drift(mut self, workspace: PathBuf, rel: &str, content: &str) -> Self {
         self.drift_after_freeze = Some((workspace, rel.to_string(), content.to_string()));
+        self
+    }
+
+    /// DR-37: declare the Developer's artifact usable, which must suppress the
+    /// wrap-up retry even when the budget ran out.
+    pub fn with_developer_artifact_valid(mut self, valid: bool) -> Self {
+        self.developer_artifact_valid = valid;
         self
     }
 }
@@ -393,6 +404,11 @@ impl ProjectAdapter for FakeAdapter {
 
     fn cache_excludes(&self) -> Vec<String> {
         self.excludes.clone()
+    }
+
+    /// DR-37: the scripted answer; `false` unless a test asks otherwise.
+    fn developer_artifact_valid(&self, _workspace: &Path) -> bool {
+        self.developer_artifact_valid
     }
 
     async fn build_check(

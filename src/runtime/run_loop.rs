@@ -180,6 +180,13 @@ fn finalize_failure(
         durations_ms: durations,
         evidence_diff,
         wrap_up_retry_used,
+        // DR-37: a wrap-up retry is only ever spent because the artifact was
+        // missing or invalid, so the reason follows from the flag.
+        wrap_up_retry_reason: if wrap_up_retry_used {
+            crate::runtime::record::WRAP_UP_ARTIFACT_MISSING.to_string()
+        } else {
+            crate::runtime::record::WRAP_UP_NOT_TRIGGERED.to_string()
+        },
         attempts,
         secret_redactions,
         out_of_tree_writes,
@@ -391,6 +398,9 @@ pub async fn run(
         let mut iter_attempts: Vec<AttemptOutcome> = Vec::new();
         // DR-18: whether this iteration spent a wrap-up retry.
         let mut iter_wrap_up_retry_used = false;
+        // DR-37: why it did (or did not) — `artifact_missing` | `not_triggered`.
+        let mut iter_wrap_up_retry_reason =
+            crate::runtime::record::WRAP_UP_NOT_TRIGGERED.to_string();
         // DR-19: files scrubbed of a known secret during this iteration.
         let mut iter_secret_redactions: u64 = 0;
         // DR-6: the D7 scope limitation is restated in *every* iteration result,
@@ -476,6 +486,8 @@ pub async fn run(
                     {
                         // DR-18: exactly one small wrap-up retry per role/round.
                         wrap_up_retry_used = true;
+                        iter_wrap_up_retry_reason =
+                            crate::runtime::record::WRAP_UP_ARTIFACT_MISSING.to_string();
                         let mut wrap_base = base.clone();
                         wrap_base.limits.step_limit =
                             cfg.agent.wrap_up_steps.min(WRAP_UP_RETRY_MAX_STEPS);
@@ -658,6 +670,10 @@ pub async fn run(
         // the wrap-up retry had replaced it.
         let mut developer_usage = developer_outcome.usage.clone();
         durations.push(("developer".to_string(), developer_outcome.duration_ms));
+        // DR-37: "is the project usable?" — the same question DR-18's wrap-up
+        // retry exists to answer.  `artifact_valid` is the adapter's real check
+        // (never `workspace.is_dir()`, which is always true).
+        let developer_artifact_valid = orchestrator.adapter.developer_artifact_valid(&workspace);
         let mut developer_attempts: Vec<AttemptOutcome> = vec![AttemptOutcome {
             role: Role::Developer,
             iteration,
@@ -667,15 +683,17 @@ pub async fn run(
             usage: developer_outcome.usage.clone(),
             trajectory_path: developer_outcome.trajectory_path.clone(),
             artifact_path: developer.cwd.clone(),
-            // The Developer's artifact is the project itself: it exists as long
-            // as the workspace directory does.
-            artifact_valid: workspace.is_dir(),
+            artifact_valid: developer_artifact_valid,
             exit_was_limits: developer_limits,
         }];
-        // DR-18: the Developer has no submitted artifact (the project is the
-        // artifact), so the wrap-up rule is triggered by the budget running out.
-        if developer_limits {
+        // DR-18/DR-37: the Developer has no submitted artifact (the project is
+        // the artifact), so the wrap-up rule triggers only when the budget ran
+        // out **and** the artifact is not usable.  `smoke-t5` spent 0.94M tokens
+        // / 3.1 minutes on a retry whose artifact was already valid.
+        if developer_limits && !developer_artifact_valid {
             iter_wrap_up_retry_used = true;
+            iter_wrap_up_retry_reason =
+                crate::runtime::record::WRAP_UP_ARTIFACT_MISSING.to_string();
             let mut wrap_base = developer.clone();
             wrap_base.limits.step_limit = cfg.agent.wrap_up_steps.min(WRAP_UP_RETRY_MAX_STEPS);
             wrap_base.system_prompt =
@@ -699,7 +717,7 @@ pub async fn run(
                 usage: developer_outcome.usage.clone(),
                 trajectory_path: developer_outcome.trajectory_path.clone(),
                 artifact_path: developer.cwd.clone(),
-                artifact_valid: workspace.is_dir(),
+                artifact_valid: developer_artifact_valid,
                 exit_was_limits: developer_limits,
             });
         }
@@ -982,6 +1000,8 @@ pub async fn run(
                     // DR-18: exactly one small wrap-up retry per role/round.
                     tester_wrap_up_retry_used = true;
                     iter_wrap_up_retry_used = true;
+                    iter_wrap_up_retry_reason =
+                        crate::runtime::record::WRAP_UP_ARTIFACT_MISSING.to_string();
                     let mut wrap_base = tester_base.clone();
                     wrap_base.limits.step_limit =
                         cfg.agent.wrap_up_steps.min(WRAP_UP_RETRY_MAX_STEPS);
@@ -1120,6 +1140,7 @@ pub async fn run(
         result.usage = iter_usage;
         result.durations_ms = durations;
         result.wrap_up_retry_used = iter_wrap_up_retry_used;
+        result.wrap_up_retry_reason = iter_wrap_up_retry_reason;
         result.attempts = iter_attempts;
         result.secret_redactions = iter_secret_redactions;
         // DR-24/DR-27: the gate verdict travels with the iteration result, so

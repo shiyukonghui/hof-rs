@@ -169,6 +169,21 @@ pub trait ProjectAdapter: Send + Sync {
             .collect())
     }
 
+    /// DR-37: is the Developer role's artifact (the project itself) at least
+    /// *usable*?
+    ///
+    /// DR-18's wrap-up retry exists to rescue a round whose artifact is missing;
+    /// `smoke-t5` showed it being spent on a Developer whose artifact was
+    /// already valid (0.94M tokens / 3.1 minutes, no change to the increment).
+    /// The retry is therefore gated on this answer.
+    ///
+    /// The default is **`false`** — the conservative answer DR-37 demands when
+    /// validity cannot be established, and the behaviour every adapter had
+    /// before this check existed.
+    fn developer_artifact_valid(&self, _workspace: &Path) -> bool {
+        false
+    }
+
     /// Markdown playbook injected into the Tester's view.
     fn evidence_playbook(&self) -> String;
 

@@ -290,6 +290,77 @@ pub fn validate_scene_structure_in(
     }
 }
 
+/// DR-37: is the Developer's artifact usable?
+///
+/// The criterion DR-37 pins down: the configured main scene must exist, pass the
+/// same DR-24 structure check the battery runs, and reference at least one
+/// existing, non-empty script.  Anything that cannot be established counts as
+/// **not** valid (conservative) — that only ever *enables* the wrap-up retry,
+/// never suppresses it.
+pub fn developer_artifact_valid_in(workspace: &Path, main_scene: &str) -> bool {
+    let Some(relative) = main_scene.strip_prefix("res://") else {
+        return false;
+    };
+    let Ok(text) = std::fs::read_to_string(workspace.join(relative)) else {
+        return false;
+    };
+    if text.trim().is_empty() || !validate_scene_structure_in(&text, Some(workspace)).ok {
+        return false;
+    }
+    let referenced = script_resource_ids(&text);
+    if referenced.is_empty() {
+        return false;
+    }
+    let resources = ext_resource_paths(&text);
+    referenced.iter().all(|id| {
+        let Some(path) = resources
+            .get(id)
+            .and_then(|path| path.strip_prefix("res://"))
+        else {
+            return false;
+        };
+        std::fs::metadata(workspace.join(path))
+            .map(|meta| meta.is_file() && meta.len() > 0)
+            .unwrap_or(false)
+    })
+}
+
+/// `id -> res:// path` of every `[ext_resource ...]` line.
+fn ext_resource_paths(text: &str) -> std::collections::BTreeMap<String, String> {
+    let mut resources = std::collections::BTreeMap::new();
+    for raw in text.lines() {
+        let trimmed = raw.trim();
+        let Some(rest) = trimmed.strip_prefix("[ext_resource ") else {
+            continue;
+        };
+        let body = rest.trim_end_matches(']');
+        if let (Some(id), Some(path)) = (node_attribute(body, "id"), node_attribute(body, "path")) {
+            resources.insert(id, path);
+        }
+    }
+    resources
+}
+
+/// The resource ids a scene uses as a `script` (`script = ExtResource("1")`).
+fn script_resource_ids(text: &str) -> Vec<String> {
+    let mut ids = Vec::new();
+    for raw in text.lines() {
+        let trimmed = raw.trim();
+        let Some(rest) = trimmed.strip_prefix("script") else {
+            continue;
+        };
+        let Some(start) = rest.find("ExtResource(\"") else {
+            continue;
+        };
+        let value = &rest[start + "ExtResource(\"".len()..];
+        let Some(end) = value.find('"') else {
+            continue;
+        };
+        ids.push(value[..end].to_string());
+    }
+    ids
+}
+
 /// The scene text out of a `get_scene_file_content` payload, whatever shape the
 /// server chose (a bare string, `content`, `text`, `scene.content`, ...).
 fn scene_text_of(payload: &Value) -> Option<String> {
@@ -1780,6 +1851,13 @@ impl ProjectAdapter for GodotAdapter {
         let mut excludes = vec![".hoh".to_string(), ".git".to_string()];
         excludes.extend(self.config.cache_excludes.iter().cloned());
         excludes
+    }
+
+    /// DR-37: the Developer's artifact is the project itself; it counts as valid
+    /// only when the main scene is structurally sound and names a non-empty
+    /// script.
+    fn developer_artifact_valid(&self, workspace: &Path) -> bool {
+        developer_artifact_valid_in(workspace, &self.config.main_scene)
     }
 
     /// DR-17: the deterministic evidence battery.
