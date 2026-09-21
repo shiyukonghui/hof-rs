@@ -1,6 +1,6 @@
 # DESIGN-DETAIL — hof-rs 详细设计
 
-- 状态：**v0.3（模型无关化修订，见 §12 DR-14..DR-16；用户已确认进入编码实现）**
+- 状态：**v0.4（真实冒烟后修订，见 §12 DR-17..DR-23；用户已知悉并同意继续）**
 - 输入：`REQUIREMENTS.md` v0.2（C1–C10 / R1–R13 / E1–E6）、`PRD-mario.md` v1、`DESIGN-OVERVIEW.md` v0.1（+D6 修订）
 - 纪律：本文精确到「实现者不需要再做任何设计决策」。凡本文未定之处，实现者应按本文的**裁决原则**就近推导，并在回报中列出，不得自行改变接口。
 
@@ -264,7 +264,8 @@ model:
   max_retries: 3
 
 agent:
-  step_limit: 60
+  step_limit: 150                         # DR-18：60 已被证明不够（5/5 次调用 LimitsExceeded）
+  wrap_up_steps: 25                       # DR-18：剩余步数进入该阈值时必须先写出产物骨架
   cost_limit: 0.0
   wall_time_limit_seconds: 3600
   max_consecutive_format_errors: 3
@@ -288,6 +289,7 @@ tools:
   endpoint: http://127.0.0.1:9877/mcp
   timeout_seconds: 120
   max_retries: 2
+  ready_timeout_seconds: 30               # DR-20：play_scene 后轮询游戏就绪的上限
 ```
 
 ### 3.2 加载契约
@@ -1122,6 +1124,117 @@ pub struct FakeToolChannel { pub calls: Mutex<Vec<(Role,String,Value)>> }
   ③密钥只来自环境时，`hoh doctor` 的 `model.chat` 探测仍能带鉴权成功（用假 HTTP 服务断言收到了
   `Authorization: Bearer <key>`）。
 
+### DR-17 确定性证据电池：Runtime/adapter 拥有证据采集，Tester 只做判定（设计性修订）
+
+来源：第一次真实 T=1 冒烟暴露的结构性冲突——Tester 三次尝试各 60 步**全部被证据采集吃掉**，
+从未走到写 claims，`E_1` 始终不存在（run 以 exit 3 收尾）。论文原分工本就是「Tester 拿到**确定性构建/执行结果**」
+后再判定，故把采集职责收回 Runtime/adapter。
+
+- `ProjectAdapter` 新增（或改写 `build_check` 为）**证据电池**：
+  ```rust
+  pub struct BatteryStep { pub id: String, pub supports: Vec<String>, pub timeout_secs: u64, pub retries: u32 }
+  pub struct BatteryRecord { pub step_id: String, pub supports: Vec<String>, pub record: ExecRecord, pub ok: bool, pub raw_path: Option<String> }
+  async fn evidence_battery(&self, workspace: &Path, tools: &dyn ToolChannel) -> Result<Vec<BatteryRecord>>;
+  ```
+- 电池在**冻结 A_t 之前**、作用于**真实 workspace**（与 DR-1 一致）；原始 payload 落
+  `<workspace>/.hoh/deterministic/raw/<step>.json`，汇总落 `<workspace>/.hoh/deterministic/battery.json`，
+  并整体复制进候选视图（`candidate/.hoh/deterministic/**`）。
+- `BatteryRecord.supports` 必须声明该步能为哪些 PRD 需求提供证据（映射 `F1..F17` 与 `N1..N4`），
+  使 Tester 的 claim 推导有可核对骨架。
+- **Godot 最小电池（顺序固定）**：
+  1. `get_editor_errors`（启动前基线）；
+  2. `play_scene`（主场景）+ **就绪等待**（见 DR-20）；
+  3. `get_game_scene_tree` → 节点树存在性；
+  4. 截图（`get_game_screenshot` 或 `capture_frames`）→ 存 `evidence/*.png`，必须与节点树**同一时刻**；
+  5. 输入回放：`simulate_action`/`simulate_sequence`（`move_right` 至少 1 秒）+ `monitor_properties` 记录
+     `Player` 的 `position`（起点/终点）→ 供 E3「坐标发生变化」判定；同法覆盖 `jump`、`move_left`；
+  6. 节点断言：对 PRD 点名的节点（`Player`、`Goal`、`HUD`、`Enemy*`、`Coin*`）取属性 +
+     `Goal`/实体必须有碰撞体（`get_collision_info`，`shape_count > 0`）；HUD 必须有可见文本节点；
+  7. `stop_scene`。
+- **失败必须如实记录**：某步失败时 `ok=false` 且 `record.observation` 写明失败原因（含 JSON-RPC code/message 原文），
+  并作为「证据不可用」交给 Tester——**不得**伪装成「无错误」或跳过。Tester 对该步所支撑的 claim 必须判 `gap`。
+- **Tester prompt 改写**：主职责从「采集每项证据」改为「**判定**——读取电池记录与原始文件，推导 checkable claims，
+  只把被可见证据支持的 claim 标 `verified`，其余标 `gap`」；仍可补充少量自己的只读/执行调用，但不得把证据采集
+  当作主要工作。证据文件引用一律使用**相对路径**。
+
+### DR-18 步数预算与「先收口」纪律
+
+现行 `step_limit=60` 已被证明不够（5/5 次调用全部 `LimitsExceeded`）。规范：
+- `agent.step_limit` 默认 **150**；`agent.wrap_up_steps` 默认 **25**。
+- 角色 prompt 末尾必须追加硬性说明：「你最多有 `step_limit` 步；当剩余步数 ≤ `wrap_up_steps` 时，
+  你必须**立即**写出符合契约的产物骨架，之后再补充完善。」
+- **顺序纪律**：Tester 必须在最开始的几步内先写一个**最小合法 `evidence.json`**（可只含 1 条 gap 记录），
+  再逐步充实；Planner/Developer 同理先保证「有可提交产物」。
+- **收口重试（wrap-up retry）**：若某角色以 `LimitsExceeded` 收尾**且**其产物缺失/不合法，
+  Runtime 允许**额外一次**该角色调用，预算较小（`min(wrap_up_steps, 30)` 步），
+  `retry_context` 说明「上一次因步数耗尽未收口，本次只许写产物、不得再做探索」。每轮每角色**至多一次**。
+- `result.json` 必须逐次记录 `exit_status`、`attempts`、`wrap_up_retry_used`。
+
+### DR-19 密钥不得进入角色子进程环境（C11 修正，安全）
+
+根因（第一次真跑实测）：mini 的 `LocalEnvironment` 把**父进程环境整体透传**给子 shell，而 Runtime 按 C11
+把密钥装在自身进程环境里，于是 Tester 一条 `cmd /c set HOH` 就让密钥明文进入轨迹与模型上下文。
+
+- 构造角色 `LocalEnvironmentConfig.env` 时，**必须显式覆盖**下列变量为空串，以阻断继承：
+  `HOH_MODEL_API_KEY`、`OPENAI_API_KEY`、`LITELLM_API_KEY`、`MSWEA_MODEL_API_KEY`（不存在也写入空串，代价为零）。
+- 运行结束时（以及每次角色调用结束后）对 `runs/<id>/**` 执行**已知密钥值扫描 + 擦除**：
+  命中处替换为 `<redacted>`，命中文件数写入 `result.json.secret_redactions`（**不得**打印密钥内容）。
+- `skills`/prompt 中明确禁止角色读取或回显环境变量中的密钥；`godot-dev.md` 的调用示例一律使用 `$HOH_ARTIFACT_DIR`。
+- 测试：①断言 role env 中上述变量均为空串；②构造「工具输出包含密钥」的场景，断言落盘后已被擦除且计数正确；
+  ③断言 meta.json 与全部 `traj/*.json` 中不含密钥字面量。
+- 已知并接受：用户判定当前密钥为局域网本地服务凭据、暂不轮换（D19 记录为已接受风险）；但本隔离仍必须实现。
+
+### DR-20 MCP 就绪等待、重试与错误诊断
+
+实测失败：`get_editor_errors` → `-32603 无法打开日志文件`；`get_game_scene_tree` → `等待游戏响应超时 (5秒)`；
+截图 → `-32603 截图文件不存在…MCPScreenshot autoload 未激活`；`--args-file` 相对路径解析失败。
+
+- **就绪等待**：`play_scene` 之后必须轮询 `get_game_scene_tree` 直到成功或超时
+  （间隔 500ms、上限 `tools.ready_timeout_seconds`，默认 30s），再做任何依赖运行时的调用。
+- **重试**：`get_editor_errors` 与截图调用失败时按 `tools.max_retries` 重试（间隔 1s）。
+- **错误原文**：所有 MCP 失败的 `code` 与 `message` 必须写入
+  `<workspace>/.hoh/deterministic/mcp-errors.jsonl`，并在对应 `BatteryRecord.observation` 里带上原文。
+- **`--args-file`**：工具桥必须接受绝对路径；文件不存在时错误信息必须含**期望的绝对路径**；
+  `skills` 中的示例必须使用 `$HOH_ARTIFACT_DIR` 展开后的绝对路径写法。
+- **不得**把失败静默当成「无错误」；失败步的观察文本必须显式含 `UNAVAILABLE`/`FAILED` 字样，供 Tester 判 gap。
+
+### DR-21 干净 A₀ 与可复现起点
+
+实测问题：`.workspace/mario` 已被前两次尝试污染（存在 Player/Goal/HUD 节点与 `mcp/` 临时文件），
+不再是 `OPEN-4` 约定的「空 Godot 工程 + 插件骨架」，跨轮不可比。
+
+- 新增 CLI 开关：`hoh run --fresh-workspace`：清空 workspace 内容并调用 `adapter.initialize` 重建 A₀；
+  另有 `--reset-workspace`：回滚到本次 run 的 A₀ 快照。
+- `meta.json` 必须新增 `start_state: { mode: "fresh" | "reset" | "as_is", version_id: Option<String> }`。
+- **真实冒烟的任务书必须使用 `--fresh-workspace`**（除非明确要续跑）。
+- 测试：①`--fresh-workspace` 后 workspace 等于 `initialize` 的产物（忽略 `.hoh`）；②A₀ 快照在任何角色调用前已存在。
+
+### DR-22 记录与日志对称性
+
+- 每个角色**每次尝试**都必须同时产出：`iter-<t>/traj/<role>.attempt<N>.json` 与
+  `iter-<t>/logs/<role>.attempt<N>.log`；两者都必须含 `exit_status`、`duration_ms`、`usage`、`artifact_path`。
+- 修复实测缺陷：`logs/planner.log` 缺失；developer 轨迹命名与其它角色不一致。
+- `usage.json` 增加**逐角色逐次尝试**明细（`attempts: [{role, attempt, calls, tokens...}]`），并保留原有汇总。
+- 测试：断言一轮 run 后 `traj/` 与 `logs/` 的文件名集合一一对应（attempt 级别）。
+
+### DR-23 Developer 产出定义与 skills 强化
+
+实测问题：本轮 A₀→A₁ 唯一新增脚本 `player.gd` 为 **0 字节**，玩家坐标恒 `(0,0)`、Goal 无碰撞体、HUD 无 Label。
+
+- `developer.md` 必须新增「**完成的定义**」：
+  - 本轮计划的每条可观察行为都必须能从**电池记录（回放/截图/节点属性）**中被观察到；
+  - 严禁留下空文件；写入脚本后必须回读自校验（`read_script` 或 shell 读回非空）；
+  - 必须保证 `N1`（任何轮次 A_t 可启动）与 `N2`（可观测性）。
+- `skills/godot-dev.md` 必须给出**可复制、经真实运行验证**的最小配方（≥4 条）：
+  ① `hoh tools call <tool> --args-file $HOH_ARTIFACT_DIR/args/<name>.json`（绝对路径）；
+  ② 用 `create_script`/`edit_script` 写出**非空** GDScript，并立刻 `read_script` 验证；
+  ③ 为 `CharacterBody2D`/`StaticBody2D` 添加 `CollisionShape2D` + `RectangleShape2D`（否则无碰撞）；
+  ④ 为 `Area2D`（如 `Goal`）添加碰撞体（否则 `shape_count=0`，胜负条件不可能触发）；
+  ⑤ HUD 使用 `Label` 并设置非空 `text`；
+  ⑥ 用 `simulate_action` + `monitor_properties` 自测「坐标发生变化」。
+- `skills/godot-testing.md` 必须说明：电池已提供哪些记录、如何在 `evidence.json` 中以相对路径引用、
+  以及「源码存在 ≠ 行为验证」。
+
 ---
 ### 12.1 变更记录
 
@@ -1131,3 +1244,4 @@ pub struct FakeToolChannel { pub calls: Mutex<Vec<(Role,String,Value)>> }
 | v0.1a | 2026-09 | §4.4 补强 QA 三件套与 `WorkspaceDriftBeforeQa` | 自查发现绝对路径逃逸风险 |
 | v0.2 | 2026-09 | 追加 §12（DR-1..DR-13）并改写 §4.4 执行顺序 | 阶段五第一次独立验收 verdict=fail |
 | v0.3 | 2026-09 | 追加 §12（DR-14..DR-16）并改写 §3.1 的 model 段：模型身份改为配置驱动、doctor 探测通用化、密钥卫生 | 用户更换为远端 `deepseek-v4.1-flash`（D15） |
+| v0.4 | 2026-09 | 追加 §12（DR-17..DR-23）：确定性证据电池、步数预算与先收口纪律、密钥不得进子进程环境、MCP 就绪等待与诊断、干净 A₀、记录对称性、Developer 产出定义与 skills 强化 | 第一次真实 T=1 冒烟（negative baseline：5/5 LimitsExceeded、QA 无 E_1、A_1 零功能增量、密钥经子进程环境泄漏）（D17/D18） |
