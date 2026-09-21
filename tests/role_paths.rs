@@ -112,10 +112,30 @@ fn plan_fixture() -> String {
 }
 
 fn submit(args: &[&str], cwd: &Path, artifact_dir: &Path) -> std::process::Output {
-    Command::new(binary())
+    submit_in(args, cwd, artifact_dir, None)
+}
+
+/// DR-34: the same, with `HOH_VIEW_DIR` set as the third resolution base.
+fn submit_in(
+    args: &[&str],
+    cwd: &Path,
+    artifact_dir: &Path,
+    view_dir: Option<&Path>,
+) -> std::process::Output {
+    let mut command = Command::new(binary());
+    command
         .args(args)
         .env("HOH_ARTIFACT_DIR", artifact_dir)
-        .current_dir(cwd)
+        .current_dir(cwd);
+    match view_dir {
+        Some(view) => {
+            command.env("HOH_VIEW_DIR", view);
+        }
+        None => {
+            command.env_remove("HOH_VIEW_DIR");
+        }
+    }
+    command
         .output()
         .expect("the hoh binary must be runnable")
 }
@@ -214,10 +234,97 @@ fn a_relative_artifact_dir_is_refused_instead_of_nesting() {
     );
 }
 
+/// DR-34 ①: the Developer habitually writes `.hoh/args/x.json` relative to the
+/// **project root**; `submit --file .hoh/plan.md` from that same cwd must now
+/// find the artefact instead of looking at `<view>/.hoh/.hoh/plan.md`.
+#[test]
+fn a_developer_style_relative_submit_finds_the_artifact() {
+    let temp = tempfile::tempdir().unwrap();
+    let view = temp.path().join("view");
+    let artifact_dir = view.join(".hoh");
+    std::fs::create_dir_all(&artifact_dir).unwrap();
+    std::fs::write(artifact_dir.join("plan.md"), plan_fixture()).unwrap();
+
+    let output = submit(
+        &["submit", "--role", "planner", "--file", ".hoh/plan.md"],
+        &view, // cwd == the project root, exactly like the Developer role
+        &artifact_dir,
+    );
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "stdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+/// DR-34 ②③: the view directory is the last base, and when nothing exists the
+/// refusal lists every candidate absolute path.
+#[test]
+fn a_relative_submit_falls_back_to_the_view_dir_then_reports_all_candidates() {
+    let temp = tempfile::tempdir().unwrap();
+    let view = temp.path().join("view");
+    let artifact_dir = view.join(".hoh");
+    std::fs::create_dir_all(&artifact_dir).unwrap();
+    std::fs::write(artifact_dir.join("plan.md"), plan_fixture()).unwrap();
+
+    // cwd is `temp` (nothing there), the artifact dir has no `.hoh/plan.md`, and
+    // only the view dir resolves the argument.
+    let output = submit_in(
+        &["submit", "--role", "planner", "--file", ".hoh/plan.md"],
+        temp.path(),
+        &artifact_dir,
+        Some(&view),
+    );
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "stdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let output = submit_in(
+        &["submit", "--role", "planner", "--file", "nowhere/plan.md"],
+        temp.path(),
+        &artifact_dir,
+        Some(&view),
+    );
+    assert_eq!(output.status.code(), Some(2));
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let payload: Value = serde_json::from_str(&stdout).expect("a structured refusal");
+    assert_eq!(payload["error"], serde_json::json!("source_not_found"));
+    let listed: Vec<String> = payload["candidates"]
+        .as_array()
+        .expect("the candidate list")
+        .iter()
+        .map(|entry| entry.as_str().unwrap().to_string())
+        .collect();
+    for candidate in [
+        temp.path().join("nowhere/plan.md"),
+        artifact_dir.join("nowhere/plan.md"),
+        view.join("nowhere/plan.md"),
+    ] {
+        assert!(
+            listed.contains(&candidate.to_string_lossy().to_string()),
+            "the refusal must list `{}`: {listed:?}",
+            candidate.display()
+        );
+    }
+    assert!(
+        payload["os_error"].as_str().unwrap_or("").contains("os error"),
+        "the operating system's reason must survive: {payload}"
+    );
+    assert!(
+        !artifact_dir.join("plan.md").join("plan.md").exists(),
+        "nothing may be written for a missing source"
+    );
+}
+
 // ---------------------------------------------------------------------------
 // ③ `--args-file` is resolved against the artifact dir, not the shell cwd
 // ---------------------------------------------------------------------------
-
 #[test]
 fn a_relative_args_file_is_resolved_against_the_artifact_dir() {
     let temp = tempfile::tempdir().unwrap();
@@ -238,6 +345,95 @@ fn a_relative_args_file_is_resolved_against_the_artifact_dir() {
     assert_eq!(
         bridge::resolve_args_file(&absolute, Some(&artifact_dir)),
         absolute
+    );
+}
+
+// ---------------------------------------------------------------------------
+// ③b DR-34: the resolution is "first existing" across three bases
+// ---------------------------------------------------------------------------
+
+/// DR-34: a relative source is resolved against the **first existing** of
+/// ① the current directory, ② `HOH_ARTIFACT_DIR`, ③ `HOH_VIEW_DIR`.
+///
+/// `smoke-t3` still produced four `os error 3`: DR-25 made the artifact dir the
+/// only base, but the Developer's cwd is the project root and it naturally wrote
+/// `.hoh/args/x.json` (project-root relative) — which DR-25 then looked for at
+/// `<workspace>/.hoh/.hoh/args/x.json`.
+#[test]
+fn a_relative_source_resolves_to_the_first_existing_base() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let cwd = root.join("project");
+    let view = root.join("view");
+    let artifact = view.join(".hoh");
+    std::fs::create_dir_all(&cwd).unwrap();
+    std::fs::create_dir_all(&artifact).unwrap();
+
+    let bases = bridge::source_bases(Some(&artifact), Some(&view), &cwd);
+    assert_eq!(
+        bases,
+        vec![cwd.clone(), artifact.clone(), view.clone()],
+        "the documented order is cwd → HOH_ARTIFACT_DIR → HOH_VIEW_DIR"
+    );
+
+    // ① the cwd (Developer's reading of `.hoh/args/x.json`)
+    write(&cwd.join(".hoh/args/x.json"), r#"{"from":"cwd"}"#);
+    let resolved = bridge::resolve_source(Path::new(".hoh/args/x.json"), &bases);
+    assert!(resolved.existed);
+    assert_eq!(resolved.path, cwd.join(".hoh/args/x.json"));
+
+    // ② the artifact dir (this is where the artefact actually lives)
+    write(&artifact.join("args/x.json"), r#"{"from":"artifact"}"#);
+    let resolved = bridge::resolve_source(Path::new("args/x.json"), &bases);
+    assert_eq!(resolved.path, artifact.join("args/x.json"));
+
+    // ③ the view dir (a role that thinks `.hoh` is implicit)
+    write(&view.join("plan.md"), "view plan\n");
+    let resolved = bridge::resolve_source(Path::new("plan.md"), &bases);
+    assert_eq!(resolved.path, view.join("plan.md"));
+
+    // ④ the artifact-dir candidate must still win when the cwd has no such file
+    assert_eq!(
+        bridge::resolve_args_file_with_view(Path::new("args/x.json"), Some(&artifact), Some(&view)),
+        artifact.join("args/x.json")
+    );
+}
+
+/// DR-34: when none of the candidates exists, the error names **all** of them
+/// and keeps the operating system's own message.
+#[test]
+fn a_missing_relative_source_lists_every_candidate() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let cwd = root.join("project");
+    let view = root.join("view");
+    let artifact = view.join(".hoh");
+    std::fs::create_dir_all(&cwd).unwrap();
+    std::fs::create_dir_all(&artifact).unwrap();
+
+    let error = bridge::parse_args_with_bases(
+        None,
+        Some(Path::new("args/missing.json")),
+        Some(&artifact),
+        Some(&view),
+        &cwd,
+    )
+    .expect_err("no candidate exists");
+    let text = error.to_string();
+    for candidate in [
+        cwd.join("args/missing.json"),
+        artifact.join("args/missing.json"),
+        view.join("args/missing.json"),
+    ] {
+        assert!(
+            text.contains(&candidate.to_string_lossy().to_string()),
+            "the error must list `{}`: {text}",
+            candidate.display()
+        );
+    }
+    assert!(
+        text.contains("os error") || text.contains("The system cannot find"),
+        "the operating system's own reason must survive: {text}"
     );
 }
 

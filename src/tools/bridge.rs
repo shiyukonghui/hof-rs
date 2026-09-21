@@ -39,16 +39,101 @@ pub fn absolutize(path: &Path) -> PathBuf {
     }
 }
 
+/// DR-34: the ordered bases a **relative** source is resolved against:
+/// ① the current directory, ② `HOH_ARTIFACT_DIR`, ③ `HOH_VIEW_DIR`.
+///
+/// DR-25 made `HOH_ARTIFACT_DIR` the only base, which is right for the Tester
+/// (whose cwd *is* the view root) but wrong for the Developer, whose cwd is the
+/// project root: `smoke-t3` still produced four `os error 3` because
+/// `.hoh/args/x.json` (project-root relative) was looked for at
+/// `<workspace>/.hoh/.hoh/args/x.json`.
+///
+/// `cwd` is a parameter rather than an ambient read so the order is testable.
+pub fn source_bases(
+    artifact_dir: Option<&Path>,
+    view_dir: Option<&Path>,
+    cwd: &Path,
+) -> Vec<PathBuf> {
+    let mut bases: Vec<PathBuf> = Vec::new();
+    for candidate in [Some(cwd), artifact_dir, view_dir].into_iter().flatten() {
+        if !bases.iter().any(|existing| existing == candidate) {
+            bases.push(candidate.to_path_buf());
+        }
+    }
+    bases
+}
+
+/// One relative source: every candidate that was tried, the one that exists
+/// (or the first candidate when none does) and whether it existed.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ResolvedSource {
+    pub candidates: Vec<PathBuf>,
+    pub path: PathBuf,
+    pub existed: bool,
+}
+
+/// DR-34: resolve `path` against `bases`, taking the **first existing**
+/// candidate.  An absolute path is its own single candidate and is never
+/// rewritten.
+pub fn resolve_source(path: &Path, bases: &[PathBuf]) -> ResolvedSource {
+    if path.is_absolute() {
+        let absolute = path.to_path_buf();
+        return ResolvedSource {
+            existed: absolute.exists(),
+            candidates: vec![absolute.clone()],
+            path: absolute,
+        };
+    }
+    let mut candidates: Vec<PathBuf> = bases.iter().map(|base| base.join(path)).collect();
+    if candidates.is_empty() {
+        candidates.push(absolutize(path));
+    }
+    match candidates.iter().find(|candidate| candidate.exists()) {
+        Some(found) => ResolvedSource {
+            path: found.clone(),
+            existed: true,
+            candidates,
+        },
+        None => ResolvedSource {
+            path: candidates[0].clone(),
+            existed: false,
+            candidates,
+        },
+    }
+}
+
+/// DR-34: the "none of the candidates exists" message.  It lists every absolute
+/// candidate **and** keeps the operating system's own reason (the `os error 3`
+/// of `smoke-t3` must never be replaced by a paraphrase).
+fn source_error(kind: &str, given: &Path, resolved: &ResolvedSource, error: &std::io::Error) -> anyhow::Error {
+    let tried = resolved
+        .candidates
+        .iter()
+        .map(|candidate| format!("`{}`", candidate.display()))
+        .collect::<Vec<_>>()
+        .join(", ");
+    anyhow::anyhow!(
+        "could not read {kind} {}: {error} (tried {tried})",
+        given.display()
+    )
+}
+
 /// Tool arguments: `--args` (inline JSON) or `--args-file` (preferred on
 /// Windows, where shell quoting mangles JSON).
 ///
-/// DR-25: a **relative** `--args-file` is resolved against
-/// `HOH_ARTIFACT_DIR`, not against the shell's working directory — the role
-/// shell may run from anywhere, and `smoke-t2` lost two Tester calls to
-/// `os error 3` because of exactly that mismatch.
+/// DR-34: a **relative** `--args-file` takes the first existing of
+/// cwd → `HOH_ARTIFACT_DIR` → `HOH_VIEW_DIR`.
 pub fn parse_args(inline: Option<&str>, args_file: Option<&Path>) -> anyhow::Result<Value> {
     let artifact_dir = std::env::var("HOH_ARTIFACT_DIR").ok().map(PathBuf::from);
-    parse_args_in(inline, args_file, artifact_dir.as_deref())
+    let view_dir = std::env::var("HOH_VIEW_DIR").ok().map(PathBuf::from);
+    let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    parse_args_with_bases(
+        inline,
+        args_file,
+        artifact_dir.as_deref(),
+        view_dir.as_deref(),
+        &cwd,
+    )
 }
 
 /// [`parse_args`] with an explicit artifact directory (pure, unit-testable).
@@ -57,26 +142,27 @@ pub fn parse_args_in(
     args_file: Option<&Path>,
     artifact_dir: Option<&Path>,
 ) -> anyhow::Result<Value> {
+    let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    parse_args_with_bases(inline, args_file, artifact_dir, None, &cwd)
+}
+
+/// DR-34: [`parse_args`] with every base explicit (pure, unit-testable).
+pub fn parse_args_with_bases(
+    inline: Option<&str>,
+    args_file: Option<&Path>,
+    artifact_dir: Option<&Path>,
+    view_dir: Option<&Path>,
+    cwd: &Path,
+) -> anyhow::Result<Value> {
     if let Some(path) = args_file {
-        let absolute = resolve_args_file(path, artifact_dir);
-        let raw = std::fs::read_to_string(&absolute).map_err(|error| {
-            anyhow::anyhow!(
-                "could not read --args-file {} (resolved against {}: `{}`): {error}",
-                path.display(),
-                if path.is_absolute() {
-                    "an absolute path"
-                } else if artifact_dir.is_some() {
-                    "HOH_ARTIFACT_DIR"
-                } else {
-                    "the current directory"
-                },
-                absolute.display()
-            )
-        })?;
+        let bases = source_bases(artifact_dir, view_dir, cwd);
+        let resolved = resolve_source(path, &bases);
+        let raw = std::fs::read_to_string(&resolved.path)
+            .map_err(|error| source_error("--args-file", path, &resolved, &error))?;
         return serde_json::from_str(&raw).map_err(|error| {
             anyhow::anyhow!(
                 "--args-file {} is not valid JSON: {error}",
-                absolute.display()
+                resolved.path.display()
             )
         });
     }
@@ -87,15 +173,21 @@ pub fn parse_args_in(
     }
 }
 
-/// DR-25: resolve a relative `--args-file` against `HOH_ARTIFACT_DIR`.
+/// DR-25/DR-34: resolve a relative `--args-file` against `HOH_ARTIFACT_DIR`
+/// (kept for the existing callers; the view directory is the third base).
 pub fn resolve_args_file(path: &Path, artifact_dir: Option<&Path>) -> PathBuf {
-    if path.is_absolute() {
-        return path.to_path_buf();
-    }
-    match artifact_dir {
-        Some(dir) => dir.join(path),
-        None => absolutize(path),
-    }
+    resolve_args_file_with_view(path, artifact_dir, None)
+}
+
+/// DR-34: [`resolve_args_file`] with the view directory as the last base.
+pub fn resolve_args_file_with_view(
+    path: &Path,
+    artifact_dir: Option<&Path>,
+    view_dir: Option<&Path>,
+) -> PathBuf {
+    let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    let bases = source_bases(artifact_dir, view_dir, &cwd);
+    resolve_source(path, &bases).path
 }
 
 /// Lexically normalize a path (`a/./b` -> `a/b`, `a/../b` -> `b`) so two
@@ -193,20 +285,43 @@ pub fn submit(role: Role, file: &Path) -> anyhow::Result<i32> {
         return Ok(2);
     }
 
-    // Resolve the source the same way every other path is resolved here.
-    let resolved = if file.is_absolute() {
-        normalize(file)
-    } else {
-        normalize(&artifact_dir.join(file))
-    };
+    // DR-34: resolve the source by **existence first** across cwd →
+    // `HOH_ARTIFACT_DIR` → `HOH_VIEW_DIR`.  The write target is still the
+    // canonical artifact path; only *where the bytes come from* is resolved here.
+    let view_dir = std::env::var("HOH_VIEW_DIR").ok().map(PathBuf::from);
+    let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    let bases = source_bases(Some(&artifact_dir), view_dir.as_deref(), &cwd);
+    let source = resolve_source(file, &bases);
+    if !source.existed {
+        let os_error = std::fs::read_to_string(&source.path)
+            .err()
+            .map(|error| error.to_string())
+            .unwrap_or_default();
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&json!({
+                "ok": false,
+                "error": "source_not_found",
+                "file": file.to_string_lossy(),
+                "candidates": source
+                    .candidates
+                    .iter()
+                    .map(|candidate| candidate.to_string_lossy().into_owned())
+                    .collect::<Vec<_>>(),
+                "os_error": os_error,
+            }))?
+        );
+        return Ok(2);
+    }
+    let resolved = normalize(&source.path);
     if !file.is_absolute() && resolved != normalize(&expected) {
         println!(
             "{}",
             serde_json::to_string_pretty(&json!({
                 "ok": false,
                 "error": "artifact_path_violation",
-                "reason": "a relative --file is resolved against HOH_ARTIFACT_DIR and must name \
-                           the role's canonical artifact",
+                "reason": "a relative --file must resolve (first existing of cwd, HOH_ARTIFACT_DIR, \
+                           HOH_VIEW_DIR) to the role's canonical artifact",
                 "expected": normalize(&expected).to_string_lossy(),
                 "actual": resolved.to_string_lossy(),
             }))?
