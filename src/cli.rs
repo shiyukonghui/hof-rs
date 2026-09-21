@@ -24,6 +24,7 @@ pub enum Command {
     Tools(ToolsArgs),
     Submit(SubmitArgs),
     SpecHash(SpecHashArgs),
+    Init(InitArgs),
 }
 
 #[derive(clap::Args, Debug, Clone)]
@@ -73,6 +74,30 @@ pub struct DoctorArgs {
     pub adapter: String,
     #[arg(short = 'c', long = "config")]
     pub config_spec: Vec<String>,
+}
+
+/// DR-40: prepare `A₀` **without** the editor or the model.
+///
+/// The circular dependency that made this necessary: emptying and rebuilding
+/// `A₀` requires the editor to be closed, but `hoh run` refuses to start until
+/// the doctor pre-check can reach the editor's MCP endpoint.
+///
+/// This subcommand therefore only ever calls `ProjectAdapter::initialize` (plus
+/// the optional purge): no model endpoint probe, no MCP probe, no API key.
+#[derive(clap::Args, Debug, Clone)]
+pub struct InitArgs {
+    #[arg(long)]
+    pub project: Option<PathBuf>,
+    #[arg(long, default_value = "godot")]
+    pub adapter: String,
+    #[arg(short = 'c', long = "config")]
+    pub config_spec: Vec<String>,
+    /// Empty the configured workspace before rebuilding `A₀` (DR-21 semantics).
+    #[arg(long)]
+    pub fresh_workspace: bool,
+    /// Allow scaffolding over a non-empty, non-Godot directory.
+    #[arg(long)]
+    pub force_init: bool,
 }
 
 #[derive(clap::Args, Debug, Clone)]
@@ -179,6 +204,7 @@ pub async fn dispatch(cli: Cli) -> anyhow::Result<i32> {
         Command::Tools(args) => crate::cli_impl::tools(args).await,
         Command::Submit(args) => crate::cli_impl::submit(args).await,
         Command::Doctor(args) => crate::cli_impl::doctor(args).await,
+        Command::Init(args) => crate::cli_impl::init(args).await,
         Command::Run(args) => crate::cli_impl::run(args).await,
         Command::Status(args) => crate::cli_impl::status(args).await,
         Command::Rollback(args) => crate::cli_impl::rollback(args).await,

@@ -8,8 +8,8 @@ use serde_json::{json, Value};
 
 use crate::adapter::{DoctorItem, GodotAdapter, ProjectAdapter, TestAdapter};
 use crate::cli::{
-    config_specs, parse_ablation, DoctorArgs, RollbackArgs, RunArgs, SpecHashArgs, StatusArgs,
-    SubmitArgs, ToolsArgs, ToolsCommand,
+    config_specs, parse_ablation, DoctorArgs, InitArgs, RollbackArgs, RunArgs, SpecHashArgs,
+    StatusArgs, SubmitArgs, ToolsArgs, ToolsCommand,
 };
 use crate::config::{load_config, load_spec, HohConfig};
 use crate::errors::HofError;
@@ -349,6 +349,60 @@ fn bare_model_name(wire_model_name: &str) -> Option<&str> {
         .filter(|bare| !bare.is_empty() && *bare != wire_model_name)
 }
 
+// ---------------------------------------------------------------------------
+// init (DR-40)
+// ---------------------------------------------------------------------------
+
+/// DR-40: what `hoh init` promises about its dependencies.
+pub const INIT_DETAIL: &str = "initialize ran; no MCP, no model endpoint and no key were required";
+
+/// DR-40: prepare `A₀` — and nothing else.
+///
+/// The `--fresh-workspace` + doctor circular dependency is resolved here: this
+/// path deliberately does **not** build a harness, does **not** create a tool
+/// channel, and does **not** resolve an API key, so it works with the editor
+/// closed and the model unreachable.  A workspace the adapter cannot initialize
+/// is reported as an unavailable external dependency (exit 4, §8).
+pub async fn init(args: InitArgs) -> anyhow::Result<i32> {
+    let mut specs = config_specs(&args.config_spec);
+    specs.push(format!("adapter.kind={}", args.adapter));
+    if let Some(project) = &args.project {
+        specs.push(format!("runtime.workspace={}", project.display()));
+    }
+    let config = load_config(&specs)?;
+    let adapter = build_adapter_kind(&args.adapter, &config, args.force_init)?;
+    let workspace = config.runtime.workspace.clone();
+
+    let outcome = if args.fresh_workspace {
+        crate::runtime::start_state::fresh_workspace(&workspace, &*adapter)
+    } else {
+        adapter.initialize(&workspace)
+    };
+    match outcome {
+        Ok(()) => {
+            println!(
+                "init: A0 ready at {} ({}{})",
+                workspace.display(),
+                if args.fresh_workspace {
+                    "workspace emptied, "
+                } else {
+                    ""
+                },
+                INIT_DETAIL
+            );
+            Ok(0)
+        }
+        Err(error) => {
+            // §8: "the adapter is not available" is exit 4, not a harness error.
+            Err(HofError::External(format!(
+                "could not initialize {}: {error}",
+                workspace.display()
+            ))
+            .into())
+        }
+    }
+}
+
 pub async fn doctor(args: DoctorArgs) -> anyhow::Result<i32> {
     let mut specs = config_specs(&args.config_spec);
     specs.push(format!("adapter.kind={}", args.adapter));
@@ -445,17 +499,42 @@ pub async fn run(args: RunArgs) -> anyhow::Result<i32> {
     let adapter = build_adapter_kind(&args.adapter, &config, args.force_init)?;
     let workspace = config.runtime.workspace.clone();
 
+    let spec = load_spec(&config.runtime.spec)?;
+    let run_id = args.run_id.clone().unwrap_or_else(default_run_id);
+    let run_dir = config.runtime.runs_dir.join(&run_id);
+    if args.fresh_workspace && args.reset_workspace {
+        return Err(HofError::Config(
+            "--fresh-workspace and --reset-workspace are mutually exclusive".to_string(),
+        )
+        .into());
+    }
+
+    // DR-40: `--fresh-workspace` first, doctor second.  Emptying and rebuilding
+    // `A₀` must be possible with the editor closed, so the doctor pre-check (which
+    // requires 9877) can no longer stand in front of it.  A doctor failure keeps
+    // the rebuilt `A₀`: it is *not* rolled back.
+    let fresh_prepared = if args.fresh_workspace {
+        crate::runtime::start_state::fresh_workspace(&workspace, &*adapter)?;
+        true
+    } else {
+        false
+    };
+
     // §8: the doctor pre-check is mandatory and must run before anything else.
     let items = doctor_checks(&config, &*adapter, &workspace).await?;
     print_doctor(&items);
     if !items.iter().all(|item| item.ok) {
-        eprintln!("hoh run: pre-flight checks failed; the run was not started");
+        eprintln!(
+            "hoh run: pre-flight checks failed; the run was not started{}",
+            if fresh_prepared {
+                " (the rebuilt A0 was kept)"
+            } else {
+                ""
+            }
+        );
         return Ok(4);
     }
 
-    let spec = load_spec(&config.runtime.spec)?;
-    let run_id = args.run_id.clone().unwrap_or_else(default_run_id);
-    let run_dir = config.runtime.runs_dir.join(&run_id);
     // DR-21: `--reset-workspace` needs this run's existing `A₀` snapshot, so an
     // existing run directory is expected for that mode only.
     if run_dir.exists() && !args.reset_workspace {
@@ -465,17 +544,10 @@ pub async fn run(args: RunArgs) -> anyhow::Result<i32> {
         ))
         .into());
     }
-    if args.fresh_workspace && args.reset_workspace {
-        return Err(HofError::Config(
-            "--fresh-workspace and --reset-workspace are mutually exclusive".to_string(),
-        )
-        .into());
-    }
 
     // DR-21: prepare the starting point.  Both modes validate before they
     // touch anything, and both are restricted to the configured workspace.
-    let start_state = if args.fresh_workspace {
-        crate::runtime::start_state::fresh_workspace(&workspace, &*adapter)?;
+    let start_state = if fresh_prepared {
         crate::runtime::start_state::StartState::fresh()
     } else if args.reset_workspace {
         let excludes = HashExcludes::new(adapter.cache_excludes()).merged();
