@@ -956,6 +956,8 @@
     `env_thirdparty.disable_warnings()` + `add_source_files(..., "#thirdparty/picohttpparser/picohttpparser.c")`），
     且**必须**登记 `thirdparty/README.md`（字母序 + 前后各两空行）与 `COPYRIGHT.txt`
     （`core/SCsub:270-272` 会把 `COPYRIGHT.txt` 编进 `core/license.gen.h`，出现在编辑器 License 界面）。
+    **【D39 更正】本条原文写的「无 `Content-Length` 时会 400」是错的：实测为 `411 Length Required`**
+    （TE 完全未被解析，落入 `MISSING_CONTENT_LENGTH`）。411 才是语义正确的状态码，已由独立验收确认并写进单测。
   - 触发条件 B：需要规范级 Streamable HTTP 会话（`Mcp-Session-Id`/GET SSE/DELETE）→ 重新评估（届时备选是
     `cpp-httplib` 单头 + `CPPHTTPLIB_NO_EXCEPTIONS`，代价是后台线程 + 主线程任务队列）。
   - **小加固（建议随 M1 收尾做）**：处理 `Expect: 100-continue`（20~30 LOC），避免 curl 调试与严格客户端异常。
@@ -1111,6 +1113,42 @@
   才进入 Phase 2 的原子切换。
 - 回滚点：两个工件冻结前，任何仓库代码都不动；改名落地时按 D34 的顺序（Phase 0 止血 → Phase 1 规范+lint →
   Phase 2 原子切换）执行，只是范围改为全量。
+
+## D39 — M1 独立验收：**PASS**；缺陷处置与 M1 修正加固包
+
+- 日期：2026-09（阶段五，M1 独立验收）
+- 验收方：全新独立子代理 `78058364-2395-453d-a3cc-60fffc69c65b`（未参与实施、未采信数字、自建 PowerShell+Python 客户端、
+  产物在 `%TEMP%\m1acc`、**未修改任何文件**）。
+- 结论：**pass**。14/14 验收行通过；**实施者可复跑的数字逐个精确复现**（模块 doctest 30/30=172 断言；
+  全引擎 `--test` **1456/1456=424453 断言**；`accept_m1.ps1` **17/17 连跑两次**）；未发现伪造。
+  独立反例全部通过：D24 响应归属（交错字符串/数字 id、12 个响应值与 JSON 类型全对、零跨连接泄漏）、
+  D35 死连接回收（16 条后新请求 28/29 ms）、D36 活连接未被误判 idle（相隔 4 s 的两批流水线 16/16）、
+  G4（100 流水线 100/100、mismatches 0）、游戏进程 9889 同一份工具、不带 `--mcp-port` 不监听、
+  `Expect: 100-continue` 87 ms 恰好一次、**9877/PID 36392 全程不变**。
+- **它抓出我方两个「测试放水」缺陷（产品行为正确）**：
+  - **D-1（major）**：`accept_m1.ps1` 的「413 后连接已关闭」断言**恒真**（把读超时当关闭）。它把该惯用法套在一条
+    **确定还活着**的 keep-alive 连接上得到 `closed=True`，而同一 socket 18 ms 后仍成功服务请求 → **可复制粘贴的假阴性制造器**。
+  - **D-2（major，影响所有后续批次的对等门）**：description 相等性**无法强制**——fixture 双重编码属实
+    （独立复核：326390 字节、含 BOM、174/174 复原且反向重编码逐字节相等），而「原始值或还原值任一命中」的兜底
+    **会放行一个输出乱码的实现**。
+- 其它发现：D-3 未知工具名返回 `-32601`（GDR-6 表述需澄清）；D-4 `HEADER_TOO_LARGE` 应为 **431**（当前 400、431 是死代码）；
+  D-5 非法 UTF-8 body 被静默替换并**接受**（边界此前未定义）；D-6 裸 LF 会让客户端静默 30 s；D-7 `id: true` 原样回显；
+  D-8「工作树干净」表述不准确（4 个 M0 期未跟踪物、无被跟踪改动）。
+  未验证项 U-1..U-5（含：D35/D36 的**反事实** A/B 需回退代码才能复现，已如实保留；「并发 100」实际是
+  **≤8 连接上的 100 条流水线**，因 `SocketServer::MAX_PENDING_CONNECTIONS = 8`）。
+- 处置（已写入 `DESIGN-DETAIL.md` §14 的 GDR-12..GDR-15）：
+  - **GDR-12**：①413 后的关闭必须**正向证明**（不接受读超时当关闭）；②`HEADER_TOO_LARGE → 431`；
+    ③裸 LF → **400**；④非法 UTF-8 保留宽松但**写入规范**并加 verbose 警告；`id` 非规范类型宽松回显也写入规范。
+  - **GDR-13**：**重采 fixture 为干净 UTF-8**（从 9877 取原始响应字节、正确 UTF-8 写盘、无 BOM），
+    对等门**去掉兜底、改为逐字相等**；重采后跑 hof-rs 离线测试确认无回归，并记录新 sha256。
+  - **GDR-14**：未知工具名 = `-32601`（与参照实现一致）；`-32001` 专用于**工具内部资源未找到**。GDR-6 表述据此澄清，**不改代码**。
+  - **GDR-15**：合入门措辞重述为「≤8 连接上 100 条流水线请求」；`max_requests_per_frame`（默认 8）是**全局每帧预算**，
+    **hof-rs 不得假设一请求一帧**；是否改为每连接预算列为 M2 开工前的开放项。
+- 选择：**接受 M1**，并在开启 B1/M2 之前派一个**小修正加固包**（范围见下），然后才进入 B1：
+  ①修 `case11` 的关闭断言为正向证明；②`HEADER_TOO_LARGE → 431`；③裸 LF → 400；④非法 UTF-8 的 verbose 警告；
+  ⑤`accept_m1.ps1` 去掉 description 兜底改为逐字相等；⑥重采 `F:\moonbit-hof-rs\tests\fixtures\mcp\tools_list.json` 为干净 UTF-8
+  （该项**授权**该包修改这一个 hof-rs 文件，其余 hof-rs 内容保持只读）。
+- 回滚点：修正包只动 `modules/mcp_server/**` 与上述**一个** fixture 文件；两者都可单独回退。
 
 
 

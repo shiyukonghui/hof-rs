@@ -48,50 +48,54 @@
 
 ---
 
-## M1 — 模块骨架 + HTTP/1.1 子集 + JSON-RPC 2.0 + 2 个工具：**实现完成，独立验收待办**
+## M1 — 模块骨架 + HTTP/1.1 子集 + JSON-RPC 2.0 + 2 个工具：**PASS（独立验收）**
 
-- 状态：**实施者自测通过；本文件此节的数字全部是「实施者声称」，尚未经独立复核**（按阶段五纪律，
-  必须由全新子代理重跑 `modules/mcp_server/scripts/accept_m1.ps1` 与全量 `--test` 后才能改写为「已验证」）。
-- 代码落点：fork 分支 `feature/mcp-server-module`，HEAD `95dcb24c76`；全部改动在 `modules/mcp_server/**`，工作树干净、未推送。
-- 提交：`fa747aed6b` 骨架与生命周期 / `29598d563a` 单测 / `a25f5e3a63` HTTP 传输 / `42657f863f` JSON-RPC+注册表+2 工具 /
-  `1b157503d2` 死连接回收 + idle 下溢修复 + Expect:100-continue / `1aa7a3010f` 连接计数 + 未挂载即退场 / `95dcb24c76` 验收脚本。
+- 验收方：全新独立子代理（`78058364-2395-453d-a3cc-60fffc69c65b`），未参与实施，未采信实施者数字；
+  全部证据由其自建 PowerShell/Python 客户端与独立命令产出，产物在 `%TEMP%\m1acc`，**未修改任何文件**。
+- 代码落点：fork 分支 `feature/mcp-server-module`，HEAD `95dcb24c761edbf0cbfc34cd86bdb95dbb83157e`；
+  `git diff --name-only 57277407e7..HEAD` = 17 个文件，**全部在 `modules/mcp_server/` 下**（过滤后 0 命中）；工作树无被跟踪改动。
+- 结论：**14/14 验收行通过；实施者可复跑的数字逐个精确复现；未发现伪造**。
 
-### 实施者声称的验收结果（**待独立复核**）
+### 独立复现的数字（验收方自己跑的）
 
-| 用例 | 结果 | 关键证据（实施者提供） |
-|---|---|---|
-| `GET /mcp` 200 | ✅ | 状态 JSON 含 `tools:2 / port:9888 / is_editor:true / frame_count` 递增 |
-| `initialize` | ✅ | `protocolVersion:"2025-03-26"`、`serverInfo.name:"godot-mcp-rs"` |
-| `tools/list` 契约 | ✅ | name 与 `inputSchema` **逐字相等**；description 见「已知偏差」 |
-| `tools/call get_project_info` | ✅ | `content[0].text` 可解析，含 `project_name` |
-| 缺参/非法参数 | ✅ | `-32602`（`Missing tool name` / `Invalid arguments: expected an object`） |
-| 未知 method | ✅ | `-32601` `Method not found: bogus/method` |
-| 非法 JSON | ✅ | `-32700`，`id=null`，HTTP 400 |
-| **并发 100 请求** | ✅ | `sent=100 received=100 unique_ids=100 mismatches=`；另加 6 轮×100 = **600/600 id 全匹配** |
-| keep-alive 两连请求 | ✅ | `ka-1` / `ka-2` 各自正确 |
-| 半包请求 | ✅ | 分两次（间隔 400 ms）写出后正确拼接 |
-| body 超限 | ✅ | HTTP 413 + 关闭连接 |
-| **游戏进程 9889** | ✅ | 同一份代码在游戏进程返回同一份 2 工具（`is_editor:false`），`inputSchema` 逐字相等 |
-| 游戏进程不带 `--mcp-port` | ✅ | `configured_port=0 listen=false`，9889 未监听 |
-| 端口占用 | ✅ | `bind failed on 127.0.0.1:9888 (error=22)` → `get_port()=0`，引擎不崩溃 |
-| 连接回收（新增） | ✅ | 第 17 条被拒；关闭后 live=1；新请求 28 ms 内被服务 |
-| Expect: 100-continue（新增） | ✅ | 22 ms 内回 `HTTP/1.1 100 Continue`，恰好一次，最终 200 |
-| **用户端口 9877 守卫** | ✅ | 三次验收运行前后 `PID 36392` 不变、9877 始终在 Listen |
+| 项 | 结果 |
+|---|---|
+| 构建 | `scons platform=windows target=editor tests=yes module_mono_enabled=no -j8` → exit 0（增量 31 s） |
+| 模块 doctest | **30 passed / 172 assertions / 0 failed**，exit 0 |
+| 全引擎 `--test` | **1456 passed / 424453 assertions / 0 failed / 3 skipped**，exit 0（不是 1455/1454） |
+| `accept_m1.ps1` | **17/17，exit 0，连跑两次**均通过 |
+| D24 防回归（响应归属） | 自建客户端，两条连接**交错写入字符串 id 与数字 id**（读之前全部写出）：12 个响应**值与 JSON 类型**全对，**零跨连接泄漏** |
+| D35 死连接回收 | 16 条「发完即关」连接后，新请求 **28 ms**（复测 29 ms）被服务；第 17 条超限连接无响应；`connections` 回到 1 |
+| D36 活连接未被误判 idle | 流水线 8 条（180 B 填充）→ 读完 → 等 4 s → 再 8 条：**16/16 全部服务，零问题**；30 s idle 回收另测正常 |
+| G4 并发 100 | 自建客户端，8 连接 × 100 流水线：**100/100，mismatches 0** |
+| chunked-only | **HTTP/1.1 411 Length Required**（**确认 D33 的「400」措辞错误**，TE 完全未解析） |
+| chunked + Content-Length 并存 | **Content-Length 生效，TE 被忽略** |
+| `Expect: foo-bar` | 200 + id 正确，**无 417**（静默忽略） |
+| `Expect: 100-continue` | 中断 body 请求：**87 ms** 内回 `HTTP/1.1 100 Continue`，**恰好一次**，随后 200 |
+| JSON-RPC 信封 | `initialize` 与 GDR-6 结构一致；`notifications/initialized` → **202 + Content-Length: 0 + 空 body**；`123`/缺 method → `-32600`；未知 method → `-32601`；坏 JSON → `-32700`；缺 name/非对象 arguments → `-32602`；id 保真：`9007199254740993`（无浮点丢失）、`1.5`、`null`、字符串 id 全部逐字回显 |
+| 畸形输入电池 | 无 CL 的 POST → 411；>8 KiB 头 → 400 + 关闭；三段半包 → 200；body 少 1 字节 → 不提前响应再 200；两条流水线且第一条不完整 → 均正确；`Connection: close` → 第二条不答；DELETE/PUT/PATCH/HEAD/OPTIONS → **405**；`GET /other` → **404** |
+| 游戏进程（自建二进制，9889） | `is_editor:false`、**同一份 2 工具**（名字/inputSchema/描述全同）；不带 `--mcp-port` → 9889 **未监听**、引擎存活 |
+| fixture 双重编码 | 独立原始字节分析：326390 字节、**有 UTF-8 BOM**、**174/174** 条描述 `latin-1→utf-8` 复原成功且**反向重编码逐字节相等** |
+| 9877 守卫 | 全部运行前后 `9877 Listen PID 36392` 不变，且 36392 是机器上唯一残留 godot 进程 |
 
-- 测试：模块 doctest **30 passed / 172 assertions**；**全引擎 `--test` 1456 passed / 424453 assertions / 0 failed**（修复前 1454/1455，多出一条 `Stray Node: MCPServer`）。
-- 本轮实际修掉的两个真实缺陷（详见 `DECISIONS.md` D35/D36）：①死连接不回收导致连接预算饥饿；
-  ②idle 超时的 uint64 下溢把活连接当空闲掐断（`case8` 的失败根因）。
+### 未验证项（验收方明确无法复现，需如实保留）
 
-### 已知偏差与限制（实施者登记，独立验收需复核）
+- **U-1/U-2**：D35/D36 的**反事实 A/B 数字**（「修前 8517 ms 不可用」「修前 case8 失败」）需回退代码并重建才能复现，
+  按只读约束未做；**修复后的正向行为已被独立确认**。
+- **U-3**：实施者所说的「第一次 16/17」无法复现（两次都是 17/17），属历史事实，不影响判定。
+- **U-4**：「6 轮×100 = 600/600」未复跑（只跑了 1 轮 100 + 若干单连接批次）。
+- **U-5**：§9 的「并发 100 请求」实际是**8 条连接上的 100 条流水线请求**（引擎 `SocketServer::MAX_PENDING_CONNECTIONS = 8`），
+  比「100 条同时连接」弱；**门的表述需在设计里重述**（已在 §14 GDR-15 处理）。
 
-1. **契约源 fixture 的描述是双重编码**：`tests/fixtures/mcp/tools_list.json` 的 **174/174** 条非 ASCII 描述
-   都是「UTF-8 字节被按 Latin-1 读出」的形态（含 BOM）。因此 description **不可能逐字相等**；
-   当前验收按「原始值或还原值任一命中」放行（实测还原值 `获取项目信息` 与实现一致）。
-   **影响所有批次的对等门**；建议要么重新采集该 fixture（UTF-8 干净），要么把该兜底写进契约说明。
-2. **`Transfer-Encoding: chunked` 不解码**（D33 判定为按需触发）：无 `Content-Length` 时返回 **411**（非 D33 措辞里的 400，
-   411 才是语义正确的状态码——**更正 D33 的措辞**），并已用单测把该取舍固定住。
-3. `Expect` 取其它值时静默忽略（无 417）。
-4. `console_output` 仍未实现（GDR-8，刻意）。
-5. `--test` 运行时模块会打印一行 `[MCP] SceneTree never became available; MCP server disabled.`（测试宿主无 SceneTree），
-   随后实例被正确退场；属噪声。
-6. 未验证边界：`editor_screen_size` 在 headless 下为 2×2（仅要求字段存在）；未做 mono / C# 相关验证（属 M3）。
+### 独立验收发现的产品/测试缺陷与处置
+
+| id | 级别 | 问题 | 处置 |
+|---|---|---|---|
+| D-1 | major（测试质量） | `accept_m1.ps1:651-658` 的「413 后连接已关闭」断言**恒真**：把读超时当关闭；同一 socket 18 ms 后还能服务请求 | **修正断言为正向证明**（再发一条请求要求无响应 / `Receive` 返回 0），见 §14 GDR-12 |
+| D-2 | major（对等门） | description 相等性无法强制，「原始或还原任一命中」会放行**输出乱码**的实现；影响 B1–B5 所有批次 | **重采 fixture 为干净 UTF-8** 并要求**逐字相等**（去掉兜底），见 §14 GDR-13 |
+| D-3 | minor（跨里程碑） | `tools/call` 未知工具名返回 `-32601`，而 GDR-6 原文写 `-32001` 用于 not-found | **判为设计表述需澄清**：参照实现 `commands/mod.rs:109` 对未知工具就是 `method_not_found`；`-32001` 专用于**工具内部找不到资源**（如 `no_scene`/文件不存在），见 §14 GDR-14 |
+| D-4 | minor | `ParseStatus::HEADER_TOO_LARGE` 映射 400，而 `reason_phrase()` 里 431 是死代码 | 采纳 **431**（语义正确），见 §14 GDR-12 |
+| D-5 | minor | 非法 UTF-8 body 被 `String::utf8` 静默替换为 U+FFFD 并**接受**（200），边界此前未定义 | 保留宽松行为但**写入规范**，并加 verbose 警告，见 §14 GDR-12 |
+| D-6 | nit | 裸 LF 结束头部不被识别（HTTP/1.1 要求 CRLF，合规但会给客户端 30 s 静默） | 明确回 **400**，见 §14 GDR-12 |
+| D-7 | nit | JSON-RPC `id: true` 被原样回显（规范仅允许 string/number/null） | 保留宽松行为，写入规范 |
+| D-8 | nit | 「工作树干净」表述不准确（有 4 个 M0 期未跟踪物，但无被跟踪改动） | 已在本文件与 M0 节如实登记 |
