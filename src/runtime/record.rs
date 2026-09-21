@@ -65,8 +65,14 @@ fn write_json(path: &Path, value: &impl Serialize) -> anyhow::Result<()> {
 }
 
 /// Write `runs/<id>/meta.json`.
+///
+/// DR-16: redaction happens at the sink, not at every call site, so a caller
+/// that accidentally hands over a secret-bearing model section still cannot
+/// persist it.
 pub fn write_run_meta(run_dir: &Path, meta: &RunMeta) -> anyhow::Result<()> {
-    write_json(&run_dir.join("meta.json"), meta)
+    let mut redacted = meta.clone();
+    redacted.config = crate::config::redact_model_value(&meta.config);
+    write_json(&run_dir.join("meta.json"), &redacted)
 }
 
 /// Write `runs/<id>/iter-<t>/result.json`.
