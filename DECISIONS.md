@@ -1367,6 +1367,63 @@
     7 个 `fix_implementation_first` 必须**先写红测试再修实现**（B1 内的 `clear_output` 适用此条）。
 - 回滚点：框架改动限于 `modules/mcp_server/tools/**` 与 `tool_registry.*`；模板组可单独回退。
 
+## D47 — TASK-002 交付（B1 框架 + 模板组 + 全 B1 分组 + 映射 v1.2）与 9 条偏差裁决
+
+- 日期：2026-09
+- **交付（4 部分全部完成，4 个引擎侧提交）**：
+  1. **预备**：映射 **v1.2** —— 为 R-1/R-2/R-3 的 7 个易混工具在契约 `description` 里**内联判别点**
+     （逐条从迁移源码读出，登记在 `gen_renamed_contract.py` 的 `DESCRIPTION_OVERRIDES`，`_meta.overrides` 可查）；
+     修掉生成器「一填 override 就 FATAL」的既有缺陷并加 append-only 自检；
+     **nit N-1**（`disposition` 改纯枚举 + 174 行回归护栏）、**nit R-4**（`accept_m1.ps1` SUMMARY 打印
+     「已实现 6 / 契约 171」并标 `known_deviation`）。
+  2. **框架**（已写入 `DESIGN-DETAIL.md` **§17 / GDR-19**）：`tools/` 按组分文件，共享入口只剩
+     `register_all_tools()`（每组一行）；`MCPTools::ToolBuilder` **强制显式声明** `channel/verb/scope/mutating`；
+     参数校验 `require_*`/`optional_*` → `-32602`；结构化 `MCPToolError`
+     （`-32602` / `-32001`（带 `data.suggestion`）/ `-32000` / `-32603`）；磁盘助手 `normalize_project_path`
+     （只允许 `res://`、禁 `..` 与空段）等。
+  3. **模板组（决策者指定的 6 个工具）**：`project_get_info`/`project_get_settings`（迁移，`tools/list` 逐字不变）
+     + `project_get_filesystem_tree`/`project_search_file_names`/`project_search_file_contents`/
+     `project_find_files_referencing_symbol`（新实现）。后两者是**取消合并后的两个不同实现**——
+     同一工程同一输入实测 **3 命中 vs 0 命中**，GDR-17 得到直接检验。
+  4. **全 B1 组清单** `docs/tool-groups.json`：**41 个工具 / 7 组**，机器校验「恰好各出现一次」PASS；
+     7 组是「一组一通道一读写 + 组 ≤10」约束下的算术下界（B1 = 23 project + 17 editor + 1 running_game）。
+- **工程门（实现方自跑，待 TASK-AUDIT-002 独立复核）**：doctest **53/53（410 断言）**（红阶段抓到 2 个真实缺陷）；
+  全引擎 **1479 passed / 0 failed / 3 skipped**（基线 1465 + 14）；
+  `accept_m1.ps1` **21/21 连跑两次**；`check_contract_subset.ps1 -Group project_read_template` 在
+  **9888 与 9889** 逐字 **6/6**；9877 全程 PID 36392 未受影响。
+- **9 条偏差的裁决（全部接受，理由如下）**：
+  1. path 不存在返回 **`-32001` 带 `data.suggestion`**（参照实现是**静默空结果**）→ 接受：
+     静默空结果会让智能体把「路径写错」误判为「没有命中」，符合 GDR-14 的语义。
+  2. `optional_*` 对「存在但类型错」返回 **`-32602`**（参照实现静默忽略）→ 接受：
+     静默忽略参数是误配置的主要来源。
+  3. `TOOL_ENABLED` → **`MCP_EDITOR_TOOLS_ENABLED`**（经全树 grep 确认本 fork 只有 `TOOLS_ENABLED`）→ 接受：
+     **是我任务书写错了宏名**，实现方的等价替换正确。
+  4. 新增 **GDR-19/§17** 到 `DESIGN-DETAIL.md` → 接受（框架落点需要成为规范，否则下一批会照着过期规范写）。
+  5. 组数 **7**（我建议 4–6）→ 接受：算术下界，非风格问题。
+  6. 三个工具「三类证据」中有一类**不可构造**（`project_get_info` 无参数、部分工具无底层失败路径）→ 接受，
+     但要求后续每组在报告里**显式声明哪一类不可构造及原因**（不得用「已覆盖」含糊过去）。
+  7. `DESIGN-DETAIL.md` 的 §1 布局与 §7 `ToolDef` 片段同步更新 → 接受。
+  8. 工作树里 `TASK-002` 任务书处于 modified（我在派发后又收窄了模板组）→ 由决策者提交（已提交 `74d565f24d`）。
+  9. 证据脚本首版因「JSON body 作为 Windows 命令行参数丢引号」全返回 `-32700`，改用 `--data-binary @file` →
+     接受，并作为**后续任务书的强制写法**（D48 起写入模板）。
+- 回滚点：框架与模板组可整组回退；`docs/tool-groups.json` 是数据文件。
+
+## D48 — 并行纪律修正：**实现组必须串行**（子代理共享同一工作树）
+
+- 日期：2026-09
+- 触发：D46 我曾写「按组并行（TASK-003a/b/c…）」。但本会话的子代理**共享同一个工作树**（无隔离），
+  而所有组都必须修改 **同一处** `tools/registration.cpp` 的 `register_all_tools()`；
+  两个子代理同时「读-改-写」同一文件会产生**丢失更新**，且中途不可编译的工作树会让任何一方的门失败。
+- 决定：**实现批次一律串行**（一次只有一个实现子代理在改树）。
+  - 「分组」的真正价值不变：它让**每个任务的范围明确、可独立验收、失败可精确回退**，
+    并让未来的真并行（独立工作树/分支）成为可能；
+  - 顺序按 `docs/tool-groups.json` 的风险与依赖排序（先只读、后写；`editor_write_scene_editor` 因含
+    `fix_implementation_first` 的 `editor_remove_output_log` 而必须**先写红测试**，排在最后处理）；
+  - 每组的收口固定为：`check_contract_subset.ps1 -Group <组名>`（9888+9889 逐字）→ doctest → 全引擎 → 三类证据。
+- 附：**任务书模板**新增两条强制项（源自本轮经验）：①证据采集一律用 `--data-binary @file`；
+  ②报告里必须显式声明「三类证据中哪一类不可构造及原因」。
+- 回滚点：纯流程决定，不涉代码。
+
 
 
 
