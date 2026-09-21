@@ -13,6 +13,7 @@ model:
 agent:
   step_limit: 150                         # DR-18：60 已被第一次真实冒烟证明不够（5/5 次调用 LimitsExceeded）
   wrap_up_steps: 25                       # DR-18：剩余步数进入该阈值时必须先写出产物骨架
+  repair_steps: 60                        # DR-24：冻结前「可启动闸门」失败时，一次性定向修复的步数预算
   cost_limit: 0.0
   wall_time_limit_seconds: 3600
   max_consecutive_format_errors: 3

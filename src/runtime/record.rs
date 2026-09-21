@@ -53,6 +53,22 @@ pub struct IterResult {
     /// replaced by `<redacted>`.  The value itself is never recorded.
     #[serde(default)]
     pub secret_redactions: u64,
+    /// DR-24/DR-27: "can the frozen `A_t` start?", kept separate from `ok`
+    /// ("did the loop complete?").
+    #[serde(default)]
+    pub artifact_gate: crate::model::ArtifactGate,
+    /// DR-24: whether this iteration spent its one allowed targeted repair.
+    #[serde(default)]
+    pub repair_retry_used: bool,
+    /// DR-24: the `ok` summary of every battery pass of this iteration.
+    #[serde(default)]
+    pub battery_passes: Vec<crate::model::BatteryPassSummary>,
+    /// DR-25: files created/modified outside the project tree by a role.
+    #[serde(default)]
+    pub out_of_tree_writes: Vec<String>,
+    /// DR-28: report-only artifact hygiene of the frozen `A_t`.
+    #[serde(default)]
+    pub artifact_hygiene: crate::model::ArtifactHygiene,
 }
 
 impl IterResult {
@@ -71,6 +87,11 @@ impl IterResult {
             wrap_up_retry_used: false,
             attempts: Vec::new(),
             secret_redactions: 0,
+            artifact_gate: crate::model::ArtifactGate::default(),
+            repair_retry_used: false,
+            battery_passes: Vec::new(),
+            out_of_tree_writes: Vec::new(),
+            artifact_hygiene: crate::model::ArtifactHygiene::default(),
         }
     }
 }

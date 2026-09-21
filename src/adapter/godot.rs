@@ -118,6 +118,194 @@ impl GodotAdapter {
     }
 }
 
+// ---------------------------------------------------------------------------
+// DR-24: scene-structure validation (the Developer's executable feedback)
+// ---------------------------------------------------------------------------
+
+/// The result of the `.tscn` structure check.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SceneStructureReport {
+    pub ok: bool,
+    /// One message per problem: offending line number, the current content and
+    /// the correct form.  Empty when `ok`.
+    pub problems: Vec<String>,
+}
+
+/// The root-node line quoted in every hint: the shape Godot accepts.
+const ROOT_EXAMPLE: &str = "[node name=\"Main\" type=\"Node2D\"]";
+
+/// Extract `key="value"` from a `[node ...]` body.
+fn node_attribute(body: &str, key: &str) -> Option<String> {
+    let needle = format!("{key}=\"");
+    let start = body.find(&needle)? + needle.len();
+    let end = body[start..].find('"')? + start;
+    Some(body[start..end].to_string())
+}
+
+/// DR-24: validate the `[node ...]` declarations of a `.tscn` text.
+///
+/// Rules (the ones Godot enforces at load time, and the ones `smoke-t2` broke):
+/// 1. exactly one root node — the first `[node ...]` line must have **no**
+///    `parent=` attribute (otherwise Godot reports
+///    `Invalid scene: root node X cannot specify a parent node`);
+/// 2. every other `[node ...]` line must declare `parent=`;
+/// 3. every path referenced by `parent=` must resolve to a declared node.
+///
+/// Every failure names the line number, quotes the current line and states the
+/// correct form, so the message is directly actionable.
+pub fn validate_scene_structure(text: &str) -> SceneStructureReport {
+    validate_scene_structure_in(text, None)
+}
+
+/// Same as [`validate_scene_structure`], with an optional `res://` root for the
+/// `[ext_resource ... path="res://..."]` existence check.
+pub fn validate_scene_structure_in(
+    text: &str,
+    project_root: Option<&Path>,
+) -> SceneStructureReport {
+    let mut problems = Vec::new();
+
+    // (line number, whole line, name, parent)
+    let mut nodes: Vec<(usize, String, String, Option<String>)> = Vec::new();
+    for (index, raw) in text.lines().enumerate() {
+        let line_no = index + 1;
+        let trimmed = raw.trim();
+        let Some(rest) = trimmed.strip_prefix("[node ") else {
+            continue;
+        };
+        let body = rest.trim_end_matches(']');
+        let name = node_attribute(body, "name").unwrap_or_default();
+        let parent = node_attribute(body, "parent");
+        nodes.push((line_no, trimmed.to_string(), name, parent));
+    }
+
+    if nodes.is_empty() {
+        problems.push(format!(
+            "no `[node ...]` declaration was found: a scene must declare exactly one root node. \
+             Correct form: {ROOT_EXAMPLE}"
+        ));
+        return SceneStructureReport {
+            ok: false,
+            problems,
+        };
+    }
+
+    let (root_line, root_text, root_name, root_parent) = &nodes[0];
+    if root_parent.is_some() {
+        problems.push(format!(
+            "line {root_line}: the FIRST `[node ...]` declaration is the scene root and must NOT \
+             carry a `parent=` attribute — Godot rejects this with `Invalid scene: root node \
+             {root_name} cannot specify a parent node`. Current line: {root_text}. Correct form: \
+             {ROOT_EXAMPLE} (no parent)."
+        ));
+    }
+
+    // Resolve the declared node paths.  `.` is the root; a child of the root
+    // declares `parent="."`, a grandchild declares `parent="Parent/Child"`.
+    let mut declared: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    declared.insert(".".to_string());
+    if root_parent.is_none() && !root_name.is_empty() {
+        declared.insert(root_name.clone());
+    }
+    let mut pending: Vec<&(usize, String, String, Option<String>)> = nodes.iter().skip(1).collect();
+    for entry in &pending {
+        if entry.3.is_none() {
+            problems.push(format!(
+                "line {}: this is not the root node, so it must declare a `parent=`. Current line: \
+                 {}. Correct form: [node name=\"{}\" type=\"...\" parent=\".\"] (use `parent=\".\"` \
+                 for a direct child of the root).",
+                entry.0, entry.1, entry.2
+            ));
+        }
+    }
+    loop {
+        let mut progressed = false;
+        let mut remaining = Vec::new();
+        for entry in pending {
+            let Some(parent) = &entry.3 else {
+                progressed = true; // already reported, do not repeat
+                continue;
+            };
+            if parent != "." && !declared.contains(parent.as_str()) {
+                remaining.push(entry);
+                continue;
+            }
+            if entry.2.is_empty() {
+                problems.push(format!(
+                    "line {}: the node has no `name=` attribute. Current line: {}. Correct form: \
+                     {ROOT_EXAMPLE}.",
+                    entry.0, entry.1
+                ));
+            } else if parent == "." {
+                declared.insert(entry.2.clone());
+            } else {
+                declared.insert(format!("{parent}/{}", entry.2));
+            }
+            progressed = true;
+        }
+        let done = remaining.is_empty();
+        pending = remaining;
+        if done || !progressed {
+            break;
+        }
+    }
+    for entry in pending {
+        let parent = entry.3.clone().unwrap_or_default();
+        problems.push(format!(
+            "line {}: `parent=\"{parent}\"` does not resolve to a declared node. Current line: {}. \
+             Declare the parent node before this line, or use `parent=\".\"` for a direct child of \
+             the root.",
+            entry.0, entry.1
+        ));
+    }
+
+    // `res://` references must exist when we know the project root.
+    if let Some(root) = project_root {
+        for (index, raw) in text.lines().enumerate() {
+            let line_no = index + 1;
+            let trimmed = raw.trim();
+            let Some(rest) = trimmed.strip_prefix("[ext_resource ") else {
+                continue;
+            };
+            let body = rest.trim_end_matches(']');
+            let Some(path) = node_attribute(body, "path") else {
+                continue;
+            };
+            if let Some(relative) = path.strip_prefix("res://") {
+                if !root.join(relative).exists() {
+                    problems.push(format!(
+                        "line {line_no}: the referenced resource `{path}` does not exist on disk. \
+                         Current line: {trimmed}. Correct form: create that file first, or remove \
+                         the `[ext_resource ...]` line that points at it."
+                    ));
+                }
+            }
+        }
+    }
+
+    SceneStructureReport {
+        ok: problems.is_empty(),
+        problems,
+    }
+}
+
+/// The scene text out of a `get_scene_file_content` payload, whatever shape the
+/// server chose (a bare string, `content`, `text`, `scene.content`, ...).
+fn scene_text_of(payload: &Value) -> Option<String> {
+    match payload {
+        Value::String(text) if !text.is_empty() => Some(text.clone()),
+        Value::Object(object) => {
+            for key in ["content", "text", "source", "file_content", "scene", "data"] {
+                if let Some(found) = object.get(key).and_then(scene_text_of) {
+                    return Some(found);
+                }
+            }
+            None
+        }
+        _ => None,
+    }
+}
+
 /// Unwrap the MCP `tools/call` envelope (`content[*].text`) into the payload the
 /// server actually reported.  Every real evidence fixture has this shape.
 pub fn unwrap_mcp_payload(payload: &Value) -> Value {
@@ -159,25 +347,37 @@ struct BatterySession<'a> {
     workspace: &'a Path,
     tools: &'a dyn ToolChannel,
     limits: &'a BatteryLimits,
+    /// DR-24: the main scene the battery reloads/opens/validates.
+    main_scene: String,
     log: McpErrorLog,
     records: Vec<BatteryRecord>,
 }
 
 impl<'a> BatterySession<'a> {
-    fn new(workspace: &'a Path, tools: &'a dyn ToolChannel, limits: &'a BatteryLimits) -> Self {
+    fn new(
+        workspace: &'a Path,
+        tools: &'a dyn ToolChannel,
+        limits: &'a BatteryLimits,
+        main_scene: String,
+    ) -> Self {
         Self {
             workspace,
             tools,
             limits,
+            main_scene,
             log: McpErrorLog::new(workspace),
             records: Vec::new(),
         }
     }
 
     async fn call(&self, tool: &str, args: Value) -> Result<Value, McpFailure> {
+        // DR-24: the battery is the runtime's deterministic stage, not the
+        // Tester.  It must be able to `reload_project`/`open_scene` (which the
+        // Tester is forbidden to call) so the editor reflects the on-disk
+        // scene before the errors are read.
         call_with_retries(
             self.tools,
-            Role::Tester,
+            Role::Developer,
             tool,
             args,
             self.limits.max_retries,
@@ -190,7 +390,7 @@ impl<'a> BatterySession<'a> {
     async fn ready(&self, tool: &str, args: Value) -> ReadyOutcome {
         wait_for_game_ready(
             self.tools,
-            Role::Tester,
+            Role::Developer,
             tool,
             args,
             self.limits.ready_timeout_seconds,
@@ -242,6 +442,11 @@ impl<'a> BatterySession<'a> {
     }
 
     async fn run(mut self) -> anyhow::Result<Vec<BatteryRecord>> {
+        // DR-24: the editor is forced onto the on-disk truth *before* anything
+        // is asked about errors (smoke-t2 showed an in-memory scene that
+        // disagreed with the `.tscn` on disk).
+        self.step_project_reload_and_open().await?;
+        self.step_scene_structure().await?;
         self.step_editor_errors().await?;
         let scene_tree = self.step_play_scene().await?;
         self.step_scene_tree(scene_tree.clone()).await?;
@@ -252,7 +457,120 @@ impl<'a> BatterySession<'a> {
         Ok(self.records)
     }
 
-    /// 1. Editor error baseline — taken *before* the project is started.
+    /// DR-24 (new 1). `reload_project` + `open_scene(<main>)`.
+    ///
+    /// Without this the editor keeps whatever scene it had in memory, so a
+    /// scene that is legal on disk can still report stale errors — and the
+    /// reverse, which is exactly how `play_scene` managed to lie in `smoke-t2`.
+    async fn step_project_reload_and_open(&mut self) -> anyhow::Result<()> {
+        let step = BatteryStep {
+            id: crate::adapter::PROJECT_RELOAD_STEP_ID.to_string(),
+            supports: vec!["N1".to_string()],
+            timeout_secs: self.limits.timeout_seconds,
+            retries: self.limits.max_retries,
+        };
+        let main_scene = self.main_scene.clone();
+        let mut calls = Vec::new();
+        let mut notes: Vec<String> = Vec::new();
+
+        let reload_args = json!({});
+        match self.call("reload_project", reload_args.clone()).await {
+            Ok(payload) => calls.push(call_ok("reload_project", &reload_args, &payload)),
+            Err(failure) => {
+                notes.push(format!("FAILED reload_project: {}", failure.observation()));
+                calls.push(call_fail("reload_project", &reload_args, &failure));
+            }
+        }
+
+        let open_args = json!({"path": main_scene});
+        match self.call("open_scene", open_args.clone()).await {
+            Ok(payload) => calls.push(call_ok("open_scene", &open_args, &payload)),
+            Err(failure) => {
+                notes.push(format!(
+                    "FAILED open_scene({main_scene}): {}",
+                    failure.observation()
+                ));
+                calls.push(call_fail("open_scene", &open_args, &failure));
+            }
+        }
+
+        let ok = notes.is_empty();
+        let observation = if ok {
+            format!(
+                "reloaded the project and opened {main_scene}; the editor now reflects the \
+                 on-disk scene"
+            )
+        } else {
+            format!(
+                "{} (UNAVAILABLE: the editor may still hold a stale in-memory scene)",
+                notes.join(" | ")
+            )
+        };
+        self.finish(step, ExecKind::Build, None, observation, ok, calls)
+            .await
+    }
+
+    /// DR-24 (new 2). Validate the `.tscn` text of the main scene.
+    ///
+    /// The observation is the *executable* hint: line number, current content,
+    /// correct form.
+    async fn step_scene_structure(&mut self) -> anyhow::Result<()> {
+        let step = BatteryStep {
+            id: crate::adapter::SCENE_STRUCTURE_STEP_ID.to_string(),
+            // F5 (main scene/nodes), F6 (player physics body), N1 (launchable).
+            supports: vec!["N1".to_string(), "F5".to_string(), "F6".to_string()],
+            timeout_secs: self.limits.timeout_seconds,
+            retries: self.limits.max_retries,
+        };
+        let scene = self.main_scene.clone();
+        let args = json!({"path": scene});
+        let (ok, observation, call) = match self.call("get_scene_file_content", args.clone()).await
+        {
+            Ok(payload) => {
+                let parsed = unwrap_mcp_payload(&payload);
+                match scene_text_of(&parsed) {
+                    Some(text) => {
+                        let report = validate_scene_structure_in(&text, Some(self.workspace));
+                        let ok = report.ok;
+                        let observation = if ok {
+                            format!(
+                                "scene structure ok: {scene} declares exactly one root node and \
+                                 every child's `parent=` resolves"
+                            )
+                        } else {
+                            format!(
+                                "FAILED scene structure for {scene}: {} (UNAVAILABLE: Godot cannot \
+                                 load this scene)",
+                                report.problems.join(" | ")
+                            )
+                        };
+                        (
+                            ok,
+                            observation,
+                            call_ok("get_scene_file_content", &args, &payload),
+                        )
+                    }
+                    None => (
+                        false,
+                        format!(
+                            "FAILED get_scene_file_content returned no scene text for {scene}: \
+                             {parsed} (UNAVAILABLE: the scene cannot be checked)"
+                        ),
+                        call_ok("get_scene_file_content", &args, &payload),
+                    ),
+                }
+            }
+            Err(failure) => (
+                false,
+                failure.observation(),
+                call_fail("get_scene_file_content", &args, &failure),
+            ),
+        };
+        self.finish(step, ExecKind::Assert, None, observation, ok, vec![call])
+            .await
+    }
+
+    /// 3. Editor error baseline — taken *before* the project is started.
     async fn step_editor_errors(&mut self) -> anyhow::Result<()> {
         let step = BatteryStep {
             id: "editor_errors_baseline".to_string(),
@@ -880,7 +1198,12 @@ impl ProjectAdapter for GodotAdapter {
         excludes
     }
 
-    /// DR-17: the seven-step deterministic evidence battery.
+    /// DR-17: the deterministic evidence battery.
+    ///
+    /// DR-24 adds two steps in front of the editor-error baseline:
+    /// `project_reload_and_open` (the editor is forced onto the on-disk scene)
+    /// and `scene_structure` (the `.tscn` root/parent check whose message is the
+    /// Developer's executable hint).
     ///
     /// Runs on the real workspace before `A_t` is frozen and hands the Tester a
     /// complete, honestly-failed record set instead of making it collect the
@@ -891,9 +1214,14 @@ impl ProjectAdapter for GodotAdapter {
         tools: &dyn ToolChannel,
     ) -> anyhow::Result<Vec<BatteryRecord>> {
         std::fs::create_dir_all(workspace.join(".hoh/deterministic/raw"))?;
-        BatterySession::new(workspace, tools, &self.battery)
-            .run()
-            .await
+        BatterySession::new(
+            workspace,
+            tools,
+            &self.battery,
+            self.config.main_scene.clone(),
+        )
+        .run()
+        .await
     }
 
     async fn build_check(
@@ -971,6 +1299,8 @@ supports must be `gap`.
 ## Battery steps and what they can support
 | step_id | supports | what it shows |
 |---|---|---|
+| `project_reload_and_open` | N1 | the editor was reloaded and the main scene opened (on-disk truth) |
+| `scene_structure` | N1, F5, F6 | the `.tscn` text has exactly one root node and resolvable `parent=` paths |
 | `editor_errors_baseline` | N1, N3 | the editor opens the project with no script errors |
 | `play_scene_ready` | N1 | `play_scene` succeeded and the game answered `get_game_scene_tree` |
 | `scene_tree` | N2, F5 | the running node tree exists |

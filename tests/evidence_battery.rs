@@ -32,6 +32,12 @@ use serde_json::{json, Value};
 // Fixture loading
 // ---------------------------------------------------------------------------
 
+/// DR-24: a scene that passes the structure check (exactly one root node).
+const VALID_SCENE: &str = "[gd_scene load_steps=2 format=3]\n\n\
+[node name=\"Main\" type=\"Node2D\"]\n\n\
+[node name=\"Ground\" type=\"StaticBody2D\" parent=\".\"]\n\n\
+[node name=\"Player\" type=\"CharacterBody2D\" parent=\".\"]\n";
+
 fn fixture_raw(name: &str) -> String {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests/fixtures/mcp")
@@ -183,6 +189,13 @@ impl ToolChannel for FixtureChannel {
         }
 
         let payload = match tool {
+            "reload_project" => {
+                json!({"content": [{"type": "text", "text": "{\"reloaded\": true}"}]})
+            }
+            "open_scene" => json!({"content": [{"type": "text", "text": "{\"opened\": true}"}]}),
+            "get_scene_file_content" => json!({
+                "content": [{"type": "text", "text": json!({"content": VALID_SCENE}).to_string()}]
+            }),
             "get_editor_errors" => fixture("editor_errors_clean.json"),
             "play_scene" => fixture("play_scene_ok.json"),
             "get_game_scene_tree" => node_tree_payload(self.hud_label),
@@ -264,10 +277,21 @@ async fn run_battery(
     channel: Arc<FixtureChannel>,
     ready_timeout_seconds: u64,
 ) -> BatteryRun {
+    run_battery_with_script(root, channel, ready_timeout_seconds, happy_script()).await
+}
+
+/// Same, with an explicit script: a failing gate consumes one extra Developer
+/// call (DR-24's targeted repair), so those cases need a fourth scripted step.
+async fn run_battery_with_script(
+    root: &Path,
+    channel: Arc<FixtureChannel>,
+    ready_timeout_seconds: u64,
+    script: Vec<FakeStep>,
+) -> BatteryRun {
     let mut cfg: HohConfig = test_config(root, 1);
     cfg.runtime.spec = root.join("spec.md");
     let spec = write_spec(root);
-    let harness = FakeHarness::new(happy_script());
+    let harness = FakeHarness::new(script);
     let adapter = godot_adapter(root, ready_timeout_seconds);
     let workspace = cfg.runtime.workspace.clone();
     let run_dir = cfg.runtime.runs_dir.join("run-1");
@@ -293,6 +317,19 @@ async fn run_battery(
         workspace,
         records,
     }
+}
+
+/// The happy path plus the one targeted repair call DR-24 issues when the gate
+/// closes (the scripted channel below fails a gate step on purpose).
+fn repairing_script() -> Vec<FakeStep> {
+    vec![
+        FakeStep::new(Role::Planner).writing(".hoh/plan.md", OK_PLAN),
+        FakeStep::new(Role::Developer).writing("project.godot", "config_version=5\n"),
+        FakeStep::new(Role::Developer),
+        FakeStep::new(Role::Tester)
+            .writing(".hoh/evidence/move.json", "{\"moved\":true}\n")
+            .writing(".hoh/evidence.json", &ok_evidence(1, "")),
+    ]
 }
 
 fn step<'a>(records: &'a [BatteryRecord], id: &str) -> &'a BatteryRecord {
@@ -331,6 +368,8 @@ async fn green_battery_records_every_step_and_copies_into_the_candidate() {
     assert_eq!(
         ids,
         vec![
+            "project_reload_and_open",
+            "scene_structure",
             "editor_errors_baseline",
             "play_scene_ready",
             "scene_tree",
@@ -339,7 +378,7 @@ async fn green_battery_records_every_step_and_copies_into_the_candidate() {
             "node_and_collision_assertions",
             "stop_scene",
         ],
-        "DR-17 fixes the step order"
+        "DR-24 inserts the reload/open and scene-structure steps before the editor errors"
     );
     for record in &run.records {
         assert!(
@@ -436,7 +475,7 @@ async fn editor_error_failure_is_recorded_verbatim() {
         "get_editor_errors",
         captured_error("editor_errors_failure.txt"),
     ));
-    let run = run_battery(root, channel, 30).await;
+    let run = run_battery_with_script(root, channel, 30, repairing_script()).await;
 
     let record = step(&run.records, "editor_errors_baseline");
     assert!(!record.ok, "a failed baseline must be `ok=false`");
@@ -506,7 +545,13 @@ async fn readiness_timeout_fails_the_step_and_is_journalled() {
         "get_game_scene_tree",
         McpError::new(-32603, "等待游戏响应超时 (5秒)"),
     ));
-    let run = run_battery(root, channel, /* ready timeout */ 0).await;
+    let run = run_battery_with_script(
+        root,
+        channel,
+        /* ready timeout */ 0,
+        repairing_script(),
+    )
+    .await;
 
     let record = step(&run.records, "play_scene_ready");
     assert!(!record.ok, "a timed-out readiness wait is a failure");

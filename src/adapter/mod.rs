@@ -10,8 +10,73 @@ pub use test_adapter::TestAdapter;
 
 use std::path::Path;
 
-use crate::model::{ExecKind, ExecRecord, Role};
+use crate::model::{ArtifactGate, ExecKind, ExecRecord, Role};
 use crate::tools::ToolChannel;
+
+/// DR-24: the two battery steps that decide `launchable`.
+pub const GATE_STEP_IDS: &[&str] = &["editor_errors_baseline", "play_scene_ready"];
+/// DR-24: the step that reloads the project and opens the main scene before the
+/// editor is asked for its errors.
+pub const PROJECT_RELOAD_STEP_ID: &str = "project_reload_and_open";
+/// DR-24: the `.tscn` structure validator step.
+pub const SCENE_STRUCTURE_STEP_ID: &str = "scene_structure";
+
+/// DR-24: evaluate the pre-freeze gate from one battery pass.
+///
+/// `launchable := editor_errors_baseline.ok && play_scene_ready.ok`.  When the
+/// battery declares neither step (an adapter without a gate), the gate is
+/// reported as *not applicable* rather than silently "open": a check that did
+/// not run must never be confused with a check that passed.
+pub fn evaluate_launchable(records: &[BatteryRecord]) -> ArtifactGate {
+    let find = |id: &str| records.iter().find(|record| record.step_id == id);
+    let (Some(editor), Some(play)) = (find(GATE_STEP_IDS[0]), find(GATE_STEP_IDS[1])) else {
+        return ArtifactGate::not_applicable(format!(
+            "gate_not_applicable: this adapter's battery declares no `{}`/`{}` step",
+            GATE_STEP_IDS[0], GATE_STEP_IDS[1]
+        ));
+    };
+
+    let mut reasons = Vec::new();
+    for record in [editor, play] {
+        if !record.ok {
+            reasons.push(format!("{}: {}", record.step_id, record.record.observation));
+        }
+    }
+    // DR-24: the scene-structure hint is the most actionable part of the
+    // failure; it belongs in the gate reasons as well as in the repair context.
+    if let Some(structure) = find(SCENE_STRUCTURE_STEP_ID).filter(|record| !record.ok) {
+        reasons.push(format!(
+            "{}: {}",
+            structure.step_id, structure.record.observation
+        ));
+    }
+
+    ArtifactGate {
+        applicable: true,
+        launchable: reasons.is_empty(),
+        reasons,
+    }
+}
+
+/// DR-24: the actionable text handed to a repair call.
+pub fn repair_context(records: &[BatteryRecord]) -> String {
+    let mut text = String::from(
+        "LAUNCH GATE FAILED. The deterministic evidence battery could not start the frozen \
+         candidate. Fix ONLY what is needed to make the project launchable: repair the main \
+         scene / scripts so that `get_editor_errors` is clean and the main scene boots. Do not \
+         add features, do not start new work, do not restructure the project.\n\nFailed battery \
+         evidence (verbatim):\n",
+    );
+    for record in records {
+        if !record.ok {
+            text.push_str(&format!(
+                "- {}: {}\n",
+                record.step_id, record.record.observation
+            ));
+        }
+    }
+    text
+}
 
 /// One deterministic build/boot observation produced by the adapter.
 #[derive(Clone, Debug)]

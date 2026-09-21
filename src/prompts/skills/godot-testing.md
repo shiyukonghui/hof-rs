@@ -16,6 +16,8 @@ candidate. Read these first — they are the primary input to every claim:
 ## What the battery can and cannot support
 | step_id | supports | a claim is supported only if… |
 |---|---|---|
+| `project_reload_and_open` | N1 | `ok`; the editor was reloaded onto the on-disk scene |
+| `scene_structure` | N1, F5, F6 | `ok`; the `.tscn` declares exactly one root node and every `parent=` resolves |
 | `editor_errors_baseline` | N1, N3 | `ok` and the observation says the editor has no errors |
 | `play_scene_ready` | N1 | `ok`; the scene booted and the game answered |
 | `scene_tree` | N2, F5 | `ok`; the named nodes exist in the tree |

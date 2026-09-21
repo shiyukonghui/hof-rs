@@ -69,6 +69,9 @@ pub struct RunSummary {
     pub final_version_id: Option<String>,
     pub total_usage: Usage,
     pub ok: bool,
+    /// DR-27: the gate verdict of the last completed iteration.  `ok` answers
+    /// "did the loop finish?"; this answers "is the artifact usable?".
+    pub artifact_gate: crate::model::ArtifactGate,
 }
 
 fn now_seconds() -> u64 {
@@ -175,6 +178,7 @@ fn finalize_failure(
         wrap_up_retry_used,
         attempts,
         secret_redactions,
+        ..IterResult::ok()
     };
     write_iter_result(run_dir, iteration, &result)
 }
@@ -185,6 +189,36 @@ fn manifest_or_empty(
     excludes: &[String],
 ) -> std::collections::BTreeMap<String, String> {
     tree_manifest(root, excludes).unwrap_or_default()
+}
+
+/// DR-24: one battery pass.  The directory is rebuilt from scratch so a
+/// second (post-repair) pass never leaves the first pass's raw payloads
+/// behind to be mistaken for the frozen `A_t` evidence.
+async fn run_battery_pass(
+    workspace: &Path,
+    adapter: &dyn ProjectAdapter,
+    tools: &dyn ToolChannel,
+) -> anyhow::Result<Vec<crate::adapter::BatteryRecord>> {
+    let deterministic_dir = workspace.join(".hoh/deterministic");
+    let _ = std::fs::remove_dir_all(&deterministic_dir);
+    std::fs::create_dir_all(&deterministic_dir)?;
+    adapter.evidence_battery(workspace, tools).await
+}
+
+/// DR-24: the recorded `ok` summary of one battery pass.
+fn battery_summary(
+    pass: u32,
+    battery: &[crate::adapter::BatteryRecord],
+    gate: &crate::model::ArtifactGate,
+) -> crate::model::BatteryPassSummary {
+    crate::model::BatteryPassSummary {
+        pass,
+        launchable: gate.launchable,
+        steps: battery
+            .iter()
+            .map(|record| (record.step_id.clone(), record.ok))
+            .collect(),
+    }
 }
 
 fn qa_report_fallback(bundle: &crate::model::EvidenceBundle) -> String {
@@ -255,6 +289,7 @@ pub async fn run(
     };
     let mut final_version_id: Option<String> = None;
     let mut first_plan: Option<PathBuf> = None;
+    let mut last_gate: Option<crate::model::ArtifactGate> = None;
 
     for iteration in 1..=cfg.runtime.iterations {
         let iter_dir = run_dir.join(format!("iter-{iteration}"));
@@ -575,12 +610,73 @@ pub async fn run(
         // editor side effects — is part of the candidate identity instead of
         // surfacing later as pre-QA drift.
         let deterministic_dir = workspace.join(".hoh/deterministic");
-        let _ = std::fs::remove_dir_all(&deterministic_dir);
-        std::fs::create_dir_all(&deterministic_dir)?;
-        let battery = orchestrator
-            .adapter
-            .evidence_battery(&workspace, &*orchestrator.tools)
-            .await?;
+        let mut battery =
+            run_battery_pass(&workspace, &*orchestrator.adapter, &*orchestrator.tools).await?;
+        // DR-24: the pre-freeze launchable gate.  The paper's "keep the
+        // project buildable and runnable" is checked here, not requested in a
+        // prompt: a battery that cannot open the main scene means `A_t` is not
+        // a usable artifact, however green the rest of the loop is.
+        let mut launch_gate = crate::adapter::evaluate_launchable(&battery);
+        let mut battery_passes = vec![battery_summary(1, &battery, &launch_gate)];
+        let mut iter_repair_retry_used = false;
+        if launch_gate.applicable && !launch_gate.launchable {
+            // DR-24: at most ONE targeted repair per iteration.  A false gate
+            // is never silently frozen as a success.
+            iter_repair_retry_used = true;
+            let mut context = crate::adapter::repair_context(&battery);
+            context.push_str("\nGate verdict:\n");
+            for reason in &launch_gate.reasons {
+                context.push_str(&format!("- {reason}\n"));
+            }
+            let repair_attempt = developer_attempts.len() as u32 + 1;
+            let mut repair = developer.clone();
+            repair.limits.step_limit = cfg.agent.repair_steps;
+            repair.system_prompt =
+                render_prompt_with_budget(prompts::DEVELOPER_PROMPT, iteration, &repair.limits);
+            repair.retry_context = Some(context);
+            repair.trajectory_path = attempt_trajectory(&traj_dir, Role::Developer, repair_attempt);
+            let repair_outcome = invoke_once(&*orchestrator.harness, &repair).await?;
+            developer_attempts.push(AttemptOutcome {
+                role: Role::Developer,
+                iteration,
+                attempt: repair_attempt,
+                exit_status: repair_outcome.exit_status.clone(),
+                duration_ms: repair_outcome.duration_ms,
+                usage: repair_outcome.usage.clone(),
+                trajectory_path: repair_outcome.trajectory_path.clone(),
+                artifact_path: workspace.clone(),
+                artifact_valid: workspace.is_dir(),
+                exit_was_limits: is_limits_exceeded(&repair_outcome.exit_status),
+            });
+            iter_attempts.push(developer_attempts.last().cloned().expect("just pushed"));
+            iter_usage.push(repair_outcome.usage.clone());
+            durations.push(("developer_repair".to_string(), repair_outcome.duration_ms));
+            iter_secret_redactions += crate::runtime::secrets::redact_tree(&run_dir, &secrets)?;
+            record_attempts(
+                &run_dir,
+                iteration,
+                &developer_attempts,
+                Some("launch_gate_repair: the pre-freeze launchable gate failed"),
+            )?;
+
+            // Re-run the battery on the repaired workspace and judge again.
+            battery =
+                run_battery_pass(&workspace, &*orchestrator.adapter, &*orchestrator.tools).await?;
+            launch_gate = crate::adapter::evaluate_launchable(&battery);
+            battery_passes.push(battery_summary(2, &battery, &launch_gate));
+        }
+        if launch_gate.applicable && !launch_gate.launchable {
+            // DR-24: the second failure is honest, not fatal — the round still
+            // advances, and `result.json.artifact_gate.launchable = false`
+            // makes the QA gap inevitable and visible.
+            append_warning(
+                &run_dir,
+                &format!(
+                    "iteration {iteration}: the artifact is not launchable after the one allowed \
+                     repair retry; freezing A{iteration} anyway (artifact_gate.launchable=false)"
+                ),
+            )?;
+        }
         // DR-17: the summary and the flat record list are both materialized so
         // the Tester (and a human reviewer) can read either shape.
         std::fs::write(deterministic_dir.join("battery.json"), pretty(&battery))?;
@@ -592,9 +688,12 @@ pub async fn run(
         )?;
         let deterministic_log = format!(
             "deterministic evidence battery on the real workspace produced {} step(s), {} of \
-             them ok\n{}",
+             them ok; launchable={} (battery pass(es): {}, repair_retry_used={})\n{}",
             battery.len(),
             battery.iter().filter(|entry| entry.ok).count(),
+            launch_gate.launchable,
+            battery_passes.len(),
+            iter_repair_retry_used,
             pretty(&battery)
         );
         // DR-1: the log travels into the frozen view together with the records.
@@ -865,6 +964,12 @@ pub async fn run(
         result.wrap_up_retry_used = iter_wrap_up_retry_used;
         result.attempts = iter_attempts;
         result.secret_redactions = iter_secret_redactions;
+        // DR-24/DR-27: the gate verdict travels with the iteration result, so
+        // a completed loop over an unlaunchable artifact can never look green.
+        result.artifact_gate = launch_gate.clone();
+        result.repair_retry_used = iter_repair_retry_used;
+        result.battery_passes = battery_passes.clone();
+        last_gate = Some(launch_gate);
         write_iter_result(&run_dir, iteration, &result)?;
     }
 
@@ -878,6 +983,8 @@ pub async fn run(
         final_version_id,
         total_usage,
         ok: true,
+        artifact_gate: last_gate
+            .unwrap_or_else(|| crate::model::ArtifactGate::not_applicable("no iteration ran")),
     })
 }
 

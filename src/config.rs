@@ -36,6 +36,10 @@ pub struct AgentLimits {
     /// improving it.  Also the budget ceiling of a wrap-up retry.
     #[serde(default = "default_wrap_up_steps")]
     pub wrap_up_steps: u64,
+    /// DR-24: the budget of the one-shot targeted repair call issued when the
+    /// pre-freeze launchable gate fails.
+    #[serde(default = "default_repair_steps")]
+    pub repair_steps: u64,
     pub cost_limit: f64,
     pub wall_time_limit_seconds: u64,
     pub max_consecutive_format_errors: u64,
@@ -46,6 +50,10 @@ fn default_wrap_up_steps() -> u64 {
     25
 }
 
+fn default_repair_steps() -> u64 {
+    60
+}
+
 impl Default for AgentLimits {
     fn default() -> Self {
         Self {
@@ -53,6 +61,7 @@ impl Default for AgentLimits {
             // (5/5 calls ended in `LimitsExceeded`).
             step_limit: 150,
             wrap_up_steps: default_wrap_up_steps(),
+            repair_steps: default_repair_steps(),
             cost_limit: 0.0,
             wall_time_limit_seconds: 3600,
             max_consecutive_format_errors: 3,

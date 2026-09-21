@@ -191,6 +191,62 @@ impl EvidenceDiff {
     }
 }
 
+/// DR-24/DR-27: the pre-freeze artifact gate.
+///
+/// `launchable` answers "can the frozen `A_t` actually start?", which is a
+/// different question from "did the loop complete?" (`result.ok`).  Keeping
+/// them separate is the whole point: a green loop over a project that cannot
+/// boot must never look like a success.
+///
+/// `applicable` is false for adapters whose battery declares no launchable gate
+/// steps (the offline `TestAdapter`/`FakeAdapter`); the gate then neither blocks
+/// nor triggers a repair, and says so instead of pretending to have checked.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ArtifactGate {
+    pub applicable: bool,
+    pub launchable: bool,
+    pub reasons: Vec<String>,
+}
+
+impl ArtifactGate {
+    /// The honest "this adapter has no gate" answer.
+    pub fn not_applicable(reason: impl Into<String>) -> Self {
+        Self {
+            applicable: false,
+            launchable: true,
+            reasons: vec![reason.into()],
+        }
+    }
+
+    pub fn is_open(&self) -> bool {
+        self.launchable
+    }
+}
+
+impl Default for ArtifactGate {
+    fn default() -> Self {
+        Self::not_applicable("no launchable gate was evaluated for this iteration")
+    }
+}
+
+/// DR-24: the `ok`/failure summary of one battery pass, kept in `result.json`
+/// so both passes of a repair round stay auditable.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BatteryPassSummary {
+    /// 1 = the battery that failed the gate, 2 = the battery after the repair.
+    pub pass: u32,
+    pub launchable: bool,
+    /// `step_id -> ok`, in battery order.
+    pub steps: Vec<(String, bool)>,
+}
+
+/// DR-28: the artifact-hygiene report for a frozen `A_t`.  Report-only: the
+/// runtime never deletes anything on the Developer's behalf.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ArtifactHygiene {
+    pub suspicious_files: Vec<String>,
+}
+
 /// Contract violations detected by the runtime (never silently ignored).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
