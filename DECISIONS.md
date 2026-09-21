@@ -1182,6 +1182,61 @@
   - fork 内 `__pycache__/` 已被 Godot 自身 `.gitignore:77` 覆盖，无需处理；模块受跟踪文件共 22 个。
 - 回滚点：文档搬迁只涉及文档路径；代码与构建不受影响。若要回退，把 4 个文件移回 `.spec/godot-mcp-engine/` 即可。
 
+## D41 — 174 项命名映射产出（数据层）；并纠正「30 条权限漏判」的说法
+
+- 日期：2026-09
+- 触发：D38 决定「一次做全 + 通道前缀」，需先产出机器可读映射（数据），再渲染规范文档（表述）。
+  D38 的第一次尝试因单代理上下文耗尽失败，**拆解为两步**后第一步完成。
+- 交付物：`modules/mcp_server/docs/tool-rename-map.json`（fork 提交 `906b23f16a`）
+  - `67826` 字节，sha256 `9f5a57e9201b5f7b0b4929c7562eca3345cc8fa280d63fe1079d4bfae302b91b`，174 条，每条 9 字段
+    （`old_name/new_name/channel/verb/object/mutating/scope/disposition/reason`），按 fixture 原始顺序排列。
+  - `disposition`：`rename 162 / fix_implementation_first 7 / merge_into 3 / unregister_until_implemented 2 / keep 0`；
+    `channel`：`editor 103 / project 45 / running_game 24 / os 2`；`scope`：`editor 103 / both 47 / game 24`。
+  - 5 项自检全 PASS（174 计数、与 fixture **双向差集为空**、未合并项名字唯一、lint 谓词、disposition 合法且 reason 非空）。
+  - 样例（可读性检验）：`simulate_action` → **`editor_simulate_input_action`**（把「它在编辑器进程注入」写进名字，正是 E3 根因）；
+    `monitor_properties` → `running_game_get_node_property_samples`；`move_node` → `editor_reparent_node`；
+    `search_files` → `project_search_file_names` vs `search_in_files` → `project_search_file_contents`；
+    `find_node_references` → 并入同一新名（merge）；`tilemap_set_cell` → `editor_set_tilemap_cell`（fix_implementation_first）；
+    `export_project` → `project_export_game`（unregister_until_implemented）。
+  - 语义来源全部为实现（`unconfirmed` 为空）；「24 个走游戏进程」被**精确证实**（19 runtime + 4 test + `get_game_screenshot`）。
+- **纠正一个我差点采信的错误说法**：映射生成方报告「现有 `is_mutating()` 漏判 30 条（语义=写但被判只读）」，
+  听上去像权限漏洞。决策者用**交集**复核后结论相反：
+  - 表结构实为四张：`TESTER_ALLOW_PREFIXES`（9 个前缀）、**`TESTER_ALLOW_EXACT`（16 个精确名，我先前漏看）**、
+    `MUTATING_PREFIXES`（7 个）、`MUTATING_EXACT`（22 个）；Tester 权限 = `(allow_prefix ∪ allow_exact) − mutating`。
+  - Tester 实际可调用的旧工具 **80 个**；其中「语义可写」的 **15 个**全部是
+    `play_scene`/`stop_scene`/`start_recording`/`stop_recording`/`replay_recording`/`click_button_by_text`/`navigate_to`/
+    `move_to`/`simulate_{key,mouse_click,mouse_move,action,sequence}`/`run_test_scenario`/`run_stress_test`——
+    **它们作用于运行中的游戏或编辑器输入状态，不修改产物**，且 `TESTER_ALLOW_EXACT` 的存在正是为了允许它们取证。
+  - 唯一会写 `.tscn` 的 `cross_scene_set_property` **已在 `MUTATING_EXACT` 中**，被拒。
+  - 结论：**当前不存在 Tester 权限缺口**。「30 条」是「命名分类器」的统计，不是可达权限；
+    `is_mutating` 的语义是「是否修改产物」（`policy.rs:280` 的文案即此），比映射里的 `mutating`（含游戏/编辑器状态）更窄，两者口径不同属正常。
+- **真正的风险是改名的后果，方向与「漏洞」相反**：新名字以通道前缀开头（`editor_*`/`running_game_*`/`project_*`/`os_*`），
+  `get_/list_/read_/search_/find_/analyze_/detect_/simulate_/assert_` 与 `add_/create_/delete_/remove_/set_/update_/edit_`
+  **都不会出现在首段** → 两张表**同时失效**。后果是：
+  ①若只更新 mutating 表而不更新 allow 表 → **Tester 被锁死（fail-closed，功能故障而非越权）**；
+  ②若为了让 Tester 能用而把 `editor_`/`running_game_` 加进 allow 前缀，而 mutating 侧没有同步改为「按 verb 段判定」，
+     **才会**变成真实越权（`editor_set_*` 不以 `set_` 开头）。
+  因此 D38 的三层防御必须**同时**落地（JSON 为唯一事实源 + 注册期 lint + 运行期不变式测试），
+  且**禁止**用「给 allow 表加通道前缀」这种局部补丁过桥。
+- 采纳映射生成方提出的开放项判定（写入本节，实现时照此执行）：
+  1. `project_` 与 `editor_` 的边界判据 = **「是否作用于编辑器实时状态」**（`save_scene`→editor；
+     `create_scene`/`delete_scene`/`get_scene_file_content`/`cross_scene_set_property`→project；`analyze_scene_complexity`
+     主契约是磁盘路径故→project，其「path 为空回退当前编辑场景」写入 reason）。
+  2. **merge 必须吸收被合并方的参数**（`find_signal_connections` 的 `signal_name` 过滤、
+     `find_node_references` 的扩展名白名单与 addons 跳过策略需被 `search_in_files` 参数化），否则是行为回退。
+  3. **7 个 `fix_implementation_first` 在修好前不得以新名注册**；其中 `tilemap_set_cell`/`tilemap_fill_rect`
+     **会擦除既有格子却报成功**（数据破坏），优先级最高，必须先写成红测试。
+  4. `simulate_*` 的 `mutating=true` 保留（非幂等副作用）；截图类带可选 `save_path` 的条件写保留 `false`，在 reason 中说明。
+- 回滚点：映射文件与文档同处 `docs/`，删除即回退；未改动任何代码或策略。
+
+## D42 — 引擎侧后续工件落点与命名工作的拆解教训
+
+- 日期：2026-09
+- 落点（承 D40）：`tool-rename-map.json` 已在 `fork modules/mcp_server/docs/`；下一步的 `TOOL-NAMING.md` 同样写进该目录。
+- 教训：**「174 项语义重推导 + 写两份大文档」超出单个子代理容量**（第一次尝试上下文耗尽、零产出）。
+  拆解为「①只产出 JSON 数据 ②据 JSON 渲染文档」后，第一步一次成功。
+  后续同类任务（全量契约变更）一律按「数据 → 表述」拆两步，且要求代理**分批落盘**而非把全表留在自己上下文里。
+
 
 
 
