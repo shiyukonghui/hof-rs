@@ -42,7 +42,10 @@ pub trait ToolChannel: Send + Sync {
         tool: &str,
         args: serde_json::Value,
     ) -> anyhow::Result<(ToolResult, RpcCorrelation)> {
-        Ok((self.call(role, tool, args).await?, RpcCorrelation::default()))
+        Ok((
+            self.call(role, tool, args).await?,
+            RpcCorrelation::default(),
+        ))
     }
 
     /// DR-29: the session-start probe — two consecutive read-only calls whose

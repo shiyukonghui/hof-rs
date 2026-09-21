@@ -365,7 +365,10 @@ impl ToolChannel for FixtureChannel {
             }
             "monitor_properties" => {
                 let action = self.last_action.lock().unwrap().clone();
-                let frames = args.get("frame_count").and_then(Value::as_u64).unwrap_or(60);
+                let frames = args
+                    .get("frame_count")
+                    .and_then(Value::as_u64)
+                    .unwrap_or(60);
                 monitor_payload(&action, frames, self.moving)
             }
             "get_game_node_properties" => match args["node_path"].as_str().unwrap_or("") {
@@ -609,7 +612,8 @@ async fn green_battery_records_every_step_and_copies_into_the_candidate() {
     let png = std::fs::read(run.workspace.join(".hoh/evidence/frame-00.png"))
         .expect("the reported screenshot must exist on disk");
     assert_eq!(
-        png, inline_png_bytes(),
+        png,
+        inline_png_bytes(),
         "the file must be the PNG the tool produced, byte for byte"
     );
     assert_eq!(&png[..8], b"\x89PNG\r\n\x1a\n", "a real PNG signature");
@@ -938,7 +942,10 @@ async fn input_replay_records_a_delivered_action_without_effect() {
     );
     let first = quadruples[0];
     for key in ["action", "before_position", "after_position", "velocity"] {
-        assert!(first.get(key).is_some(), "quadruple is missing {key}: {first}");
+        assert!(
+            first.get(key).is_some(),
+            "quadruple is missing {key}: {first}"
+        );
     }
     assert_eq!(first["action"], json!("move_right"));
     assert_eq!(first["before_position"], first["after_position"]);
@@ -995,9 +1002,8 @@ async fn input_replay_reports_an_action_that_is_not_bound() {
 async fn screenshot_never_claims_a_path_that_does_not_exist() {
     let temp = tempfile::tempdir().unwrap();
     let root = temp.path();
-    let channel = Arc::new(
-        FixtureChannel::green().with_screenshot(ScreenshotMode::ReportsSuccessButNoFile),
-    );
+    let channel =
+        Arc::new(FixtureChannel::green().with_screenshot(ScreenshotMode::ReportsSuccessButNoFile));
     let run = run_battery(root, channel, 30).await;
 
     let record = step(&run.records, "screenshot");
@@ -1026,9 +1032,8 @@ async fn screenshot_never_claims_a_path_that_does_not_exist() {
 async fn screenshot_materializes_an_inline_base64_png() {
     let temp = tempfile::tempdir().unwrap();
     let root = temp.path();
-    let channel = Arc::new(
-        FixtureChannel::green().with_screenshot(ScreenshotMode::InlineBase64Fallback),
-    );
+    let channel =
+        Arc::new(FixtureChannel::green().with_screenshot(ScreenshotMode::InlineBase64Fallback));
     let run = run_battery(root, channel, 30).await;
 
     let record = step(&run.records, "screenshot");

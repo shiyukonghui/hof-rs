@@ -356,9 +356,11 @@ fn apply_correlation(entry: &mut Value, correlation: &RpcCorrelation) {
 /// `request_id` / `response_id` / `sync_probes` — so no response can ever be
 /// attributed to the wrong call again.
 fn rpc_header(calls: &[Value]) -> Value {
-    let first = calls
-        .iter()
-        .find(|call| call.get("request_id").map(|id| !id.is_null()).unwrap_or(false));
+    let first = calls.iter().find(|call| {
+        call.get("request_id")
+            .map(|id| !id.is_null())
+            .unwrap_or(false)
+    });
     let probes: u64 = calls
         .iter()
         .filter_map(|call| call.get("sync_probes").and_then(Value::as_u64))
@@ -1489,8 +1491,7 @@ fn decode_base64(input: &str) -> Option<Vec<u8>> {
 
 /// DR-33: `action -> bound keys`, or `None` when the payload's shape is not a
 /// binding list at all (which must not be mistaken for "no such action").
-fn parse_input_actions(payload: &Value) -> Option<std::collections::BTreeMap<String, Vec<String>>>
-{
+fn parse_input_actions(payload: &Value) -> Option<std::collections::BTreeMap<String, Vec<String>>> {
     fn keys_of(value: &Value) -> Vec<String> {
         match value {
             Value::String(text) => vec![text.clone()],
@@ -1580,7 +1581,10 @@ fn velocity_of(value: &Value) -> Value {
 /// a real `(0, 0)` instead of a missing field.
 fn derived_velocity(positions: &[&Value]) -> Value {
     let (Some(previous), Some(last)) = (
-        positions.len().checked_sub(2).and_then(|i| positions.get(i)),
+        positions
+            .len()
+            .checked_sub(2)
+            .and_then(|i| positions.get(i)),
         positions.last(),
     ) else {
         return json!({"x": 0.0, "y": 0.0});
@@ -1593,7 +1597,8 @@ fn derived_velocity(positions: &[&Value]) -> Value {
 }
 
 /// DR-17 step 5: a compact, human-checkable summary of one recording.
-fn describe_monitor(label: &str, payload: &Value) -> String {    let frames = payload
+fn describe_monitor(label: &str, payload: &Value) -> String {
+    let frames = payload
         .get("frame_count")
         .and_then(Value::as_u64)
         .unwrap_or(0);
@@ -1875,16 +1880,24 @@ Reference every artifact by a **relative** path (`.hoh/deterministic/...` or
 `.hoh/evidence/...`). A step with `ok = false` is `UNAVAILABLE`: the claims it
 supports must be `gap`.
 
+Every `raw/<step>.json` starts with the JSON-RPC identity of the call its
+payload belongs to: `request_id`, `response_id` and `sync_probes`. A payload
+whose response carried another request's id is stored under that id and is
+**never** used as this step's result; a non-empty `mismatched_ids` lists what
+arrived for someone else. When `.hoh/deterministic/mcp-sync.json` reports
+`"desynced": true`, the endpoint answered with foreign ids and
+`result.json.warnings` carries `mcp_desync_detected`.
+
 ## Battery steps and what they can support
 | step_id | supports | what it shows |
 |---|---|---|
 | `project_reload_and_open` | N1 | the editor was reloaded and the main scene opened (on-disk truth) |
 | `scene_structure` | N1, F5, F6 | the `.tscn` text has exactly one root node and resolvable `parent=` paths |
 | `editor_errors_baseline` | N1, N3 | the editor opens the project with no script errors |
-| `play_scene_ready` | N1 | `play_scene` succeeded and the game answered `get_game_scene_tree` |
-| `scene_tree` | N2, F5 | the running node tree exists |
-| `screenshot` | N2, F4, F13, F16 | a frame was captured under `.hoh/evidence/` |
-| `input_replay` | F1, F2, F3 | `move_right`/`jump`/`move_left` recordings of `Player.position` |
+| `play_scene_ready` | N1 | `play_scene` succeeded and the game answered `get_game_scene_tree` **with a scene tree** (a reply of another shape is not readiness evidence) |
+| `scene_tree` | N2, F5 | the running node tree exists, with a `path` and a `type` on every node |
+| `screenshot` | N2, F4, F13, F16 | a PNG really exists under `.hoh/evidence/` (a reported path alone is not evidence) |
+| `input_replay` | F1, F2, F3 (+P3 when an InputMap action is missing) | `move_right`/`jump`/`move_left` recordings of `Player.position`. Each call in `raw/input_replay.json` carries the `(action, before_position, after_position, velocity)` quadruple and the InputMap binding; `INPUT_HAD_NO_EFFECT` means the action was delivered and the position did not change, `ACTION_NOT_BOUND` means the action does not exist |
 | `node_and_collision_assertions` | F5, F6, F10, F13, F14, F16 | node properties, `shape_count` per body, HUD text nodes |
 | `stop_scene` | N1 | the game stopped cleanly |
 

@@ -672,7 +672,10 @@ pub async fn run(
             developer_limits = is_limits_exceeded(&developer_outcome.exit_status);
             // DR-31: immediately, before any later assignment can shadow it.
             merge_usage(&mut developer_usage, &developer_outcome.usage);
-            durations.push(("developer_wrap_up".to_string(), developer_outcome.duration_ms));
+            durations.push((
+                "developer_wrap_up".to_string(),
+                developer_outcome.duration_ms,
+            ));
             developer_attempts.push(AttemptOutcome {
                 role: Role::Developer,
                 iteration,
@@ -762,7 +765,10 @@ pub async fn run(
             note_source_reads(&mut iter_warnings, &developer_attempts);
             // DR-31: the repair is still the Developer role, so it merges into
             // the same per-role summary entry instead of adding a second one.
-            merge_usage(&mut iter_usage[developer_usage_index], &repair_outcome.usage);
+            merge_usage(
+                &mut iter_usage[developer_usage_index],
+                &repair_outcome.usage,
+            );
             durations.push(("developer_repair".to_string(), repair_outcome.duration_ms));
             iter_out_of_tree.extend(out_of_tree_watch.observe());
             iter_secret_redactions += crate::runtime::secrets::redact_tree(&run_dir, &secrets)?;

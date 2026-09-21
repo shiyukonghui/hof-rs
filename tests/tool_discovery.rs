@@ -278,7 +278,9 @@ async fn a_prompt_that_lists_forbidden_paths_is_not_a_source_read() {
             ),
         FakeStep::new(Role::Developer)
             .writing("project.godot", "config_version=5\n")
-            .trajectory_prompt_containing("Do not read src/adapter/godot.rs or F:\\RustProjects\\** ."),
+            .trajectory_prompt_containing(
+                "Do not read src/adapter/godot.rs or F:\\RustProjects\\** .",
+            ),
         FakeStep::new(Role::Tester)
             .writing(".hoh/evidence/move.json", "{}\n")
             .trajectory_prompt_containing("Stay out of .spec/ and .git/ .")

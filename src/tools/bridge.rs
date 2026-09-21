@@ -105,7 +105,12 @@ pub fn resolve_source(path: &Path, bases: &[PathBuf]) -> ResolvedSource {
 /// DR-34: the "none of the candidates exists" message.  It lists every absolute
 /// candidate **and** keeps the operating system's own reason (the `os error 3`
 /// of `smoke-t3` must never be replaced by a paraphrase).
-fn source_error(kind: &str, given: &Path, resolved: &ResolvedSource, error: &std::io::Error) -> anyhow::Error {
+fn source_error(
+    kind: &str,
+    given: &Path,
+    resolved: &ResolvedSource,
+    error: &std::io::Error,
+) -> anyhow::Error {
     let tried = resolved
         .candidates
         .iter()

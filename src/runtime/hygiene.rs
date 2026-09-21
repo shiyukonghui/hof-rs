@@ -340,7 +340,8 @@ mod tests {
     }
 
     #[test]
-    fn suspicious_files_ignores_the_runtime_directories() {        let temp = tempfile::tempdir().unwrap();
+    fn suspicious_files_ignores_the_runtime_directories() {
+        let temp = tempfile::tempdir().unwrap();
         let root = temp.path();
         write(&root.join(".hoh/scratch/_probe.gd"), "x\n");
         write(&root.join(".godot/_tmp_cache"), "x\n");

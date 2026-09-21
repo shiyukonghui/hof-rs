@@ -34,8 +34,9 @@ pub struct McpFailure {
     /// How many attempts had been made when this failure was recorded.
     pub attempts: u32,
     /// DR-29: the request/response identity, when the failure carries one (a
-    /// `McpResponseDesync` knows which ids it saw).
-    pub correlation: RpcCorrelation,
+    /// `McpResponseDesync` knows which ids it saw).  Boxed so the failure stays
+    /// small enough to travel inside a `Result`.
+    pub correlation: Box<RpcCorrelation>,
 }
 
 impl McpFailure {
@@ -45,12 +46,12 @@ impl McpFailure {
             code,
             message: message.into(),
             attempts,
-            correlation: RpcCorrelation::default(),
+            correlation: Box::new(RpcCorrelation::default()),
         }
     }
 
     pub fn with_correlation(mut self, correlation: RpcCorrelation) -> Self {
-        self.correlation = correlation;
+        self.correlation = Box::new(correlation);
         self
     }
 
@@ -162,17 +163,11 @@ pub async fn call_with_retries(
     retry_delay_ms: u64,
     log: Option<&McpErrorLog>,
 ) -> Result<Value, McpFailure> {
-    Ok(call_with_retries_traced(
-        tools,
-        role,
-        tool,
-        args,
-        max_retries,
-        retry_delay_ms,
-        log,
+    Ok(
+        call_with_retries_traced(tools, role, tool, args, max_retries, retry_delay_ms, log)
+            .await?
+            .payload,
     )
-    .await?
-    .payload)
 }
 
 /// DR-29: [`call_with_retries`] plus the `request_id`/`response_id`/probe

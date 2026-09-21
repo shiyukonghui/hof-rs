@@ -277,19 +277,17 @@ impl McpClient {
                     }
                 }
                 Err(error) => {
-                    if let Some(desync) = error.downcast_ref::<HofError>() {
-                        if let HofError::McpResponseDesync {
-                            expected_id,
-                            got_ids,
-                            sync_probes,
-                        } = desync
-                        {
-                            report.desynced = true;
-                            report.probes += sync_probes;
-                            if report.observed_offset.is_none() {
-                                report.observed_offset =
-                                    got_ids.first().map(|id| *id as i64 - *expected_id as i64);
-                            }
+                    if let Some(HofError::McpResponseDesync {
+                        expected_id,
+                        got_ids,
+                        sync_probes,
+                    }) = error.downcast_ref::<HofError>()
+                    {
+                        report.desynced = true;
+                        report.probes += sync_probes;
+                        if report.observed_offset.is_none() {
+                            report.observed_offset =
+                                got_ids.first().map(|id| *id as i64 - *expected_id as i64);
                         }
                     }
                     report.detail = error.to_string();
@@ -333,15 +331,8 @@ impl McpClient {
     }
 
     /// DR-29: [`McpClient::call`] plus the correlation facts of the round trip.
-    pub fn call_traced(
-        &self,
-        tool: &str,
-        args: Value,
-    ) -> anyhow::Result<(Value, RpcCorrelation)> {
-        self.rpc(
-            "tools/call",
-            Some(json!({"name": tool, "arguments": args})),
-        )
+    pub fn call_traced(&self, tool: &str, args: Value) -> anyhow::Result<(Value, RpcCorrelation)> {
+        self.rpc("tools/call", Some(json!({"name": tool, "arguments": args})))
     }
 }
 

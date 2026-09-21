@@ -135,9 +135,7 @@ fn submit_in(
             command.env_remove("HOH_VIEW_DIR");
         }
     }
-    command
-        .output()
-        .expect("the hoh binary must be runnable")
+    command.output().expect("the hoh binary must be runnable")
 }
 
 #[test]
@@ -313,7 +311,10 @@ fn a_relative_submit_falls_back_to_the_view_dir_then_reports_all_candidates() {
         );
     }
     assert!(
-        payload["os_error"].as_str().unwrap_or("").contains("os error"),
+        payload["os_error"]
+            .as_str()
+            .unwrap_or("")
+            .contains("os error"),
         "the operating system's reason must survive: {payload}"
     );
     assert!(
