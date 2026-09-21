@@ -1,6 +1,6 @@
 # DESIGN-DETAIL — hof-rs 详细设计
 
-- 状态：**v0.6（第三轮真实冒烟后修订，见 §12 DR-29..DR-33；用户已知悉并同意继续）**
+- 状态：**v0.7（第四次真实冒烟后修订，见 §12 DR-35..DR-40；用户已知悉并同意继续）**
 - 输入：`REQUIREMENTS.md` v0.2（C1–C10 / R1–R13 / E1–E6）、`PRD-mario.md` v1、`DESIGN-OVERVIEW.md` v0.1（+D6 修订）
 - 纪律：本文精确到「实现者不需要再做任何设计决策」。凡本文未定之处，实现者应按本文的**裁决原则**就近推导，并在回报中列出，不得自行改变接口。
 
@@ -1408,6 +1408,92 @@ Planner 在首次 `submit` 成功后仍循环提交约 20 次。单轮 T=1 烧�
 - 测试：①Developer 视角传 `.hoh/args/x.json`（cwd 相对）→ 成功；②传 `args/x.json`（artifact dir 相对）→ 成功；
   ③两者都不存在 → 错误信息含全部候选绝对路径。
 
+### DR-35 输入证据必须走**游戏进程内**通道（E3 可判定性的根因修复）
+
+来源：`smoke-t5` 实测——电池用 `simulate_action`（`Input::parse_input_event`，**编辑器进程**）注入输入，
+而游戏是**独立进程**（`user://` 文件 IPC）；`get_input_actions` 读的是**编辑器**的 `InputMap::singleton()`。
+于是电池报 `ACTION_NOT_BOUND`，而 `A_1` 的 `project.godot` 明明声明了三个动作。
+
+- 电池的 `input_replay` 必须**优先使用游戏进程内工具**（`runtime.rs` 的 game-forwarded 列表：
+  `execute_game_script`、`start/stop/replay_recording`、`monitor_properties`、`get_scene_tree`、`set/get_node_properties` 等）。
+- **通道能力探针（必须先做）**：用 `execute_game_script` 在**游戏进程内**执行一小段脚本，
+  依次读回 `InputMap.has_action("move_right")`、`Input.is_action_pressed("move_right")`、
+  `Input.get_axis("move_left","move_right")` 与 `Player.position`，并在脚本内 `Input.action_press` 后**等待 → 帧**再读一次。
+  该探针的输出必须原样落盘（`raw/input_channel_probe.json`），并据此判定通道能力：
+  * 游戏进程内能读到动作且按下后 `get_axis != 0` → 通道可用；
+  * 动作在游戏进程内不存在 → `ACTION_NOT_BOUND`（此时才是真结论）；
+  * 探针自身失败/形状不可识别 → `ACTION_BINDING_UNKNOWN`（**绝不**降级成 `ACTION_NOT_BOUND`）。
+- `input_replay` 的最终判定必须基于**游戏进程内观测到的位置变化**；编辑器侧 `simulate_action` 只可作为补充记录，
+  **不得**作为 E3 的判据（其 observation 必须标注 `EDITOR_SIDE_INJECTION`）。
+- 每个四元组必须标注 `channel: game_process | editor_process`。
+- 测试：用脚本化 ToolChannel 覆盖 ①游戏进程内动作存在且按下后 `get_axis!=0` → 位置变化 → `ok=true`；
+  ②游戏进程内动作不存在 → `ACTION_NOT_BOUND`；③探针失败 → `ACTION_BINDING_UNKNOWN`；
+  ④编辑器侧 `simulate_action` 返回成功但游戏侧无变化 → `ok=false` 且标注 `EDITOR_SIDE_INJECTION`。
+
+### DR-36 证据可见性：`.hoh/evidence/**` 必须复制进冻结候选
+
+来源：`smoke-t5` 实测——电池把截图写进 `<workspace>/.hoh/evidence/frame-00.png`（4246 B，PNG 签名正确），
+但候选视图只复制 `.hoh/deterministic/**`，Tester 因此报「文件不存在」（gap G19），
+即**真实存在的证据被判为缺失**。
+
+- 候选视图必须复制 `.hoh/deterministic/**` **与** `.hoh/evidence/**`（截图、回放、录制）。
+- `ExecRecord.path` 的解析仍以候选根为基准（R4 不变）；Tester 引用的相对路径必须能落到真实文件。
+- 若某证据文件体积超过 `runtime.max_evidence_bytes`（新配置键，默认 8 MiB），
+  必须**复制并记录大小**，不得静默跳过（超限时在 `result.json.warnings` 记 `evidence_too_large`）。
+- 测试：①电池产出 PNG → 候选视图内存在同一文件且字节相等；②候选内 `ExecRecord` 的相对路径可解析；
+  ③超限文件被复制且产生 warning。
+
+### DR-37 DR-18 的 wrap-up retry 只在产物**确实缺失或不合法**时触发
+
+来源：`smoke-t5` 实测——Developer attempt1 的 `artifact_valid=true`，wrap-up retry 仍触发（25 calls / 0.94M tokens / 3.1 分钟），
+且未改变增量。
+
+- 触发条件收紧为 `exit_status == LimitsExceeded && artifact_valid == false`（与设计原文一致，
+  实现此前只看了前者）。
+- Developer 的「artifact_valid」定义沿用实现：工程可被 `scene_structure` 校验且入口脚本非空；
+  **若无法判定则视为 false**（保守）。
+- `result.json` 必须记录 `wrap_up_retry_reason`（`artifact_missing` | `not_triggered`）。
+- 测试：①`LimitsExceeded` + `artifact_valid=true` → **不**触发；②`LimitsExceeded` + 产物缺失 → 触发且理由正确；
+  ③正常收尾 + 产物缺失 → 触发（保持既有行为）。
+
+### DR-38 留痕范围补齐：harness 仓库根与 `config/**`
+
+来源：`smoke-t5` 实测——两个越界动作（`dir` 列出 `F:/moonbit-hof-rs` 根、`dir /b /s *.yaml | findstr hoh` 命中 `config/hoh.yaml`）
+没有产生 `harness_source_read`，因为标记集只有 `src/**`、`.spec/**`、`.git/**`、`tests/**`、`F:\RustProjects\**`。
+
+- 标记集补齐：`config/**`、`DECISIONS.md`、`Cargo.toml`、以及**harness 仓库根的绝对路径**（由 Runtime 在运行期注入，
+  不写死盘符）。
+- 命中判定放宽为「工具命令/参数中出现上述任一路径或出现 harness 仓库根路径的目录列举动作」。
+- 记入 `result.json.warnings`（report-only，不改变行为）。
+- 测试：①`dir F:/moonbit-hof-rs` → 命中；②`dir /b /s *.yaml | findstr hoh` → 命中（含 `config` 关键词）；
+  ③纯工程内命令 → 不命中。
+
+### DR-39 结果语义补强：gate ok 不等于产品达标
+
+来源：`smoke-t5` 实测——`exit 0` + `artifact_gate.launchable=true` 与「`F1..F17` 全部 gap、产品不可玩」并存，
+只看退出码会误判成功。
+
+- `result.json` 新增 PRD 覆盖度摘要：`prd_coverage: { verified: N, gap: M, verified_ids: [...], gap_ids: [...] }`
+  （由 E_t 的 `verified_records`/`gap_records` 派生，**不得**由 Runtime 自行判定 claim 是否成立）。
+- `hoh status` 每轮必须同时显示：`harness=`、`gate=`、`prd=<verified>/<total>`（例如 `prd=0/17`）。
+- **不改变**退出码语义（退出码反映运行时契约，不反映模型产出质量）；但 `hoh run` 结束时必须打印
+  一行明确摘要（`prd coverage: 0/17 verified`）。
+- 测试：①证据包 8 verified / 22 gap → `prd_coverage.verified==8` 且 `gap==22`；
+  ②`status` 输出含三列；③结束摘要含 `prd coverage`。
+
+### DR-40 `hoh init`：不依赖 MCP/模型的独立 A₀ 准备命令
+
+来源：`--fresh-workspace` 与 doctor 预检的**循环依赖**——清空并重建 A₀ 需要在编辑器关闭时进行，
+但 `hoh run` 会先做 doctor 预检（要求 9877 在线），导致「必须先开着编辑器才能清空它正在加载的工程」。
+
+- 新增子命令 `hoh init [--project <dir>] [--fresh-workspace] [--force-init]`：
+  **只**调用 `ProjectAdapter::initialize`（与 `--fresh-workspace` 的清空逻辑），
+  不检查模型端点、不检查 MCP、不要求密钥。
+- 退出码沿用 §8：`0` 成功、`2` 用法错误、`4` 适配器不可用（如工作区非空且未给 `--force-init`）。
+- `hoh run --fresh-workspace` 内部改为「先 `init`，再做 doctor，再跑」；若 doctor 失败则**保留**已重建的 A₀（不回滚）。
+- 测试：①`hoh init --fresh-workspace` 在无 MCP、无模型端点时可成功重建 A₀；
+  ②重建后 `project.godot` 含 `[editor_plugins] enabled` 条目；③非空且无 `--force-init` → exit 4 且不破坏现有内容。
+
 ---
 ### 12.1 变更记录
 
@@ -1420,3 +1506,5 @@ Planner 在首次 `submit` 成功后仍循环提交约 20 次。单轮 T=1 烧�
 | v0.4 | 2026-09 | 追加 §12（DR-17..DR-23）：确定性证据电池、步数预算与先收口纪律、密钥不得进子进程环境、MCP 就绪等待与诊断、干净 A₀、记录对称性、Developer 产出定义与 skills 强化 | 第一次真实 T=1 冒烟（negative baseline：5/5 LimitsExceeded、QA 无 E_1、A_1 零功能增量、密钥经子进程环境泄漏）（D17/D18） |
 | v0.5 | 2026-09 | 追加 §12（DR-24..DR-28）：冻结前可启动闸门与定向修复、角色环境绝对路径与 submit 规范路径、工具 schema 可发现性与已知良好骨架、结果语义区分循环/产物、产物卫生 | 第二次真实 T=1 冒烟（`smoke-t2`：全循环跑通、E_1 合法、E1/E4/E5/E6 met，但 `main.tscn` 无根节点致 E2/E3 失败；11.27M tokens）（D21/D22） |
 | v0.6 | 2026-09 | 追加 §12（DR-29..DR-33）：JSON-RPC 响应 id 关联与错位修复、电池 payload 形状校验、记录完整性、留痕误报修复、输入证据可判定性 | 第三次真实 T=1 冒烟（`smoke-t3`：exit 6；MCP 慢一拍导致闸门假阴性并触发无效修复；结构合规但 E3 不可判定）（D24/D25） |
+| v0.6a | 2026-09 | 补入 DR-34（相对路径存在性优先的多基准回退），原文本未随 v0.6 入库 | 独立验收发现设计工件与 git 历史不一致（DEF-2） |
+| v0.7 | 2026-09 | 追加 §12（DR-35..DR-40）：游戏进程内输入通道、证据可见性、wrap-up 触发收紧、留痕补齐、gate≠产品达标、`hoh init` | 第四次真实 T=1 冒烟（`smoke-t5`：exit 0，E2/E1/E4/E5/E6 met，E3 因编辑器侧输入注入无法到达游戏进程而不可判定；50.1M tokens）（D27/D28） |
