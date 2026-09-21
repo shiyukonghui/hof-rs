@@ -875,8 +875,8 @@ async fn editor_errors_baseline_requires_an_errors_array() {
         record.record.observation
     );
     assert!(
-        record.record.observation.contains("errors"),
-        "the missing `errors` array must be named: {}",
+        record.record.observation.contains("no `errors` array"),
+        "the missing `errors` array must be named explicitly: {}",
         record.record.observation
     );
 }
