@@ -6,6 +6,7 @@
 pub mod bridge;
 pub mod mcp;
 pub mod policy;
+pub mod reliable;
 
 use crate::model::Role;
 use mcp::McpClient;

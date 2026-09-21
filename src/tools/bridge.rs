@@ -25,15 +25,38 @@ pub fn resolve_role(explicit: Option<&str>) -> anyhow::Result<Role> {
     })
 }
 
+/// DR-20: resolve a path against the current directory without requiring it to
+/// exist (as `canonicalize` would).  The error message for a missing file must
+/// name the path the bridge actually looked for, so a relative `--args-file`
+/// from a different working directory is diagnosable.
+pub fn absolutize(path: &Path) -> PathBuf {
+    if path.is_absolute() {
+        return path.to_path_buf();
+    }
+    match std::env::current_dir() {
+        Ok(cwd) => cwd.join(path),
+        Err(_) => path.to_path_buf(),
+    }
+}
+
 /// Tool arguments: `--args` (inline JSON) or `--args-file` (preferred on
 /// Windows, where shell quoting mangles JSON).
 pub fn parse_args(inline: Option<&str>, args_file: Option<&Path>) -> anyhow::Result<Value> {
     if let Some(path) = args_file {
-        let raw = std::fs::read_to_string(path).map_err(|error| {
-            anyhow::anyhow!("could not read --args-file {}: {error}", path.display())
+        let absolute = absolutize(path);
+        let raw = std::fs::read_to_string(&absolute).map_err(|error| {
+            anyhow::anyhow!(
+                "could not read --args-file {} (absolute path `{}`): {error}",
+                path.display(),
+                absolute.display()
+            )
         })?;
-        return serde_json::from_str(&raw)
-            .map_err(|error| anyhow::anyhow!("--args-file is not valid JSON: {error}"));
+        return serde_json::from_str(&raw).map_err(|error| {
+            anyhow::anyhow!(
+                "--args-file {} is not valid JSON: {error}",
+                absolute.display()
+            )
+        });
     }
     match inline {
         Some(raw) => serde_json::from_str(raw)

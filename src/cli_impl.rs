@@ -400,10 +400,15 @@ fn build_adapter_kind(
     force_init: bool,
 ) -> anyhow::Result<Box<dyn ProjectAdapter>> {
     match kind {
-        "godot" | "godot_mcp" => Ok(Box::new(GodotAdapter::new(
-            config.adapter.godot.clone(),
-            force_init,
-        ))),
+        "godot" | "godot_mcp" => Ok(Box::new(
+            GodotAdapter::new(config.adapter.godot.clone(), force_init).with_battery_limits(
+                crate::adapter::godot::BatteryLimits {
+                    ready_timeout_seconds: config.tools.ready_timeout_seconds,
+                    max_retries: config.tools.max_retries,
+                    timeout_seconds: config.tools.timeout_seconds,
+                },
+            ),
+        )),
         "test" => Ok(Box::new(TestAdapter::new())),
         other => {
             Err(HofError::Config(format!("unknown adapter `{other}` (expected godot|test)")).into())

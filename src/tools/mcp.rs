@@ -10,6 +10,26 @@ use std::time::Duration;
 
 use serde_json::{json, Value};
 
+/// DR-20: a JSON-RPC business error, kept as a concrete type so callers can
+/// recover the `code`/`message` instead of parsing a formatted string.  The
+/// first real smoke run produced three distinct `-32603` failures that all had
+/// to stay verbatim in the evidence records.
+#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
+#[error("JSON-RPC error {code}: {message}")]
+pub struct McpError {
+    pub code: i64,
+    pub message: String,
+}
+
+impl McpError {
+    pub fn new(code: i64, message: impl Into<String>) -> Self {
+        Self {
+            code,
+            message: message.into(),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct McpClient {
     pub endpoint: String,
@@ -56,7 +76,7 @@ impl McpClient {
                             .get("message")
                             .and_then(Value::as_str)
                             .unwrap_or("unknown error");
-                        anyhow::bail!("JSON-RPC error {code}: {message}");
+                        return Err(McpError::new(code, message).into());
                     }
                     return Ok(value.get("result").cloned().unwrap_or(Value::Null));
                 }

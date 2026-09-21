@@ -287,8 +287,9 @@ fn validate_tester_artifact(
                             format!("evidence does not match the required structure: {error}"),
                         )],
                         Ok(mut bundle) => {
-                            let mut issues =
-                                validate_evidence(&bundle, candidate_id).err().unwrap_or_default();
+                            let mut issues = validate_evidence(&bundle, candidate_id)
+                                .err()
+                                .unwrap_or_default();
                             match bind(&mut bundle, candidate_id, &invocation.cwd) {
                                 Ok(()) if issues.is_empty() => return (Vec::new(), Some(bundle)),
                                 Ok(()) => {}
@@ -303,4 +304,3 @@ fn validate_tester_artifact(
     };
     (issues, None)
 }
-

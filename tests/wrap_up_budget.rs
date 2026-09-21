@@ -65,11 +65,8 @@ fn every_role_prompt_renders_the_budget_and_the_discipline() {
 /// DR-18 order discipline: the Tester must write a minimal artifact first.
 #[test]
 fn tester_prompt_requires_the_early_skeleton() {
-    let prompt = render_prompt_with_budget(
-        hof_rs::prompts::TESTER_PROMPT,
-        1,
-        &AgentLimits::default(),
-    );
+    let prompt =
+        render_prompt_with_budget(hof_rs::prompts::TESTER_PROMPT, 1, &AgentLimits::default());
     assert!(prompt.contains("first few steps"), "{prompt}");
     assert!(prompt.contains(".hoh/evidence.json"), "{prompt}");
     assert!(!prompt.contains("{{"), "{prompt}");

@@ -33,9 +33,7 @@ use crate::runtime::record::{
     append_warning, write_iter_result, write_log, write_run_meta, write_usage, IterResult, RunMeta,
 };
 use crate::runtime::role::RoleInvocation;
-use crate::runtime::schema::{
-    gate_evidence_traced, gate_plan_traced, AttemptOutcome,
-};
+use crate::runtime::schema::{gate_evidence_traced, gate_plan_traced, AttemptOutcome};
 use crate::runtime::snapshot::VersionStore;
 use crate::runtime::usage::{merge_usage, usage_from_attempts};
 use crate::runtime::view::{build_view, copy_tree, write_inputs, ViewSpec};
@@ -319,14 +317,22 @@ pub async fn run(
             };
 
             let started = Instant::now();
-            let (gate_result, mut planner_attempts) =
-                gate_plan_traced(&*orchestrator.harness, &base, cfg.runtime.max_schema_retries, 1)
-                    .await;
+            let (gate_result, mut planner_attempts) = gate_plan_traced(
+                &*orchestrator.harness,
+                &base,
+                cfg.runtime.max_schema_retries,
+                1,
+            )
+            .await;
             let mut wrap_up_retry_used = false;
             let outcome = match gate_result {
                 Ok(doc) => Ok(doc),
                 Err(error) => {
-                    if planner_attempts.last().map(|a| a.exit_was_limits).unwrap_or(false) {
+                    if planner_attempts
+                        .last()
+                        .map(|a| a.exit_was_limits)
+                        .unwrap_or(false)
+                    {
                         // DR-18: exactly one small wrap-up retry per role/round.
                         wrap_up_retry_used = true;
                         let mut wrap_base = base.clone();
@@ -488,11 +494,8 @@ pub async fn run(
             developer_attempt += 1;
             let mut wrap_base = developer.clone();
             wrap_base.limits.step_limit = cfg.agent.wrap_up_steps.min(WRAP_UP_RETRY_MAX_STEPS);
-            wrap_base.system_prompt = render_prompt_with_budget(
-                prompts::DEVELOPER_PROMPT,
-                iteration,
-                &wrap_base.limits,
-            );
+            wrap_base.system_prompt =
+                render_prompt_with_budget(prompts::DEVELOPER_PROMPT, iteration, &wrap_base.limits);
             wrap_base.retry_context = Some(WRAP_UP_RETRY_CONTEXT.to_string());
             wrap_base.trajectory_path =
                 attempt_trajectory(&traj_dir, Role::Developer, developer_attempt);
@@ -542,7 +545,7 @@ pub async fn run(
             )?;
         }
 
-        // ---------------- Deterministic build check (DR-1) ----------------
+        // ---------------- Deterministic evidence battery (DR-1/DR-17) ------
         // It runs on the *real workspace* (the project the editor has open,
         // D7) and before `A_t` is frozen: whatever it produces — including
         // editor side effects — is part of the candidate identity instead of
@@ -550,24 +553,30 @@ pub async fn run(
         let deterministic_dir = workspace.join(".hoh/deterministic");
         let _ = std::fs::remove_dir_all(&deterministic_dir);
         std::fs::create_dir_all(&deterministic_dir)?;
-        let deterministic = orchestrator
+        let battery = orchestrator
             .adapter
-            .build_check(&workspace, &*orchestrator.tools)
+            .evidence_battery(&workspace, &*orchestrator.tools)
             .await?;
+        // DR-17: the summary and the flat record list are both materialized so
+        // the Tester (and a human reviewer) can read either shape.
+        std::fs::write(deterministic_dir.join("battery.json"), pretty(&battery))?;
+        let deterministic: Vec<crate::model::ExecRecord> =
+            battery.iter().map(|entry| entry.record.clone()).collect();
         std::fs::write(
             deterministic_dir.join("deterministic.json"),
             pretty(&deterministic),
         )?;
         let deterministic_log = format!(
-            "deterministic stage on the real workspace produced {} record(s)\n{}",
-            deterministic.len(),
-            pretty(&deterministic)
+            "deterministic evidence battery on the real workspace produced {} step(s), {} of \
+             them ok\n{}",
+            battery.len(),
+            battery.iter().filter(|entry| entry.ok).count(),
+            pretty(&battery)
         );
-        write_log(&run_dir, iteration, "deterministic", &deterministic_log)?;
         // DR-1: the log travels into the frozen view together with the records.
         std::fs::write(
             deterministic_dir.join("deterministic.log"),
-            deterministic_log,
+            &deterministic_log,
         )?;
         for (index, record) in deterministic.iter().enumerate() {
             std::fs::write(
@@ -666,11 +675,7 @@ pub async fn run(
         let tester_base = RoleInvocation {
             role: Role::Tester,
             iteration,
-            system_prompt: render_prompt_with_budget(
-                prompts::TESTER_PROMPT,
-                iteration,
-                &cfg.agent,
-            ),
+            system_prompt: render_prompt_with_budget(prompts::TESTER_PROMPT, iteration, &cfg.agent),
             task_prompt: prompts::tester_task(iteration),
             cwd: candidate.clone(),
             env: role_env(cfg, run_id, Role::Tester, iteration, &candidate),
@@ -692,7 +697,11 @@ pub async fn run(
         let gate = match gate_result {
             Ok(bundle) => Ok(bundle),
             Err(error) => {
-                if tester_attempts.last().map(|a| a.exit_was_limits).unwrap_or(false) {
+                if tester_attempts
+                    .last()
+                    .map(|a| a.exit_was_limits)
+                    .unwrap_or(false)
+                {
                     // DR-18: exactly one small wrap-up retry per role/round.
                     tester_wrap_up_retry_used = true;
                     iter_wrap_up_retry_used = true;

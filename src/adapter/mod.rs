@@ -21,6 +21,33 @@ pub struct BuildRecord {
     pub observation: String,
 }
 
+/// DR-17: one declared step of the deterministic evidence battery.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct BatteryStep {
+    pub id: String,
+    /// The PRD requirements this step can produce evidence for (`F1..F17`,
+    /// `N1..N4`).  It is the skeleton a Tester claim is checked against.
+    pub supports: Vec<String>,
+    pub timeout_secs: u64,
+    pub retries: u32,
+}
+
+/// DR-17: the outcome of one battery step.
+///
+/// `ok = false` means **the evidence is unavailable**, not that the product
+/// failed: the observation carries the raw JSON-RPC code/message so the Tester
+/// records a `gap` for the steps this one supports instead of inventing proof.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct BatteryRecord {
+    pub step_id: String,
+    pub supports: Vec<String>,
+    pub record: ExecRecord,
+    pub ok: bool,
+    /// Relative (POSIX) path of the raw payload, under
+    /// `.hoh/deterministic/raw/`.
+    pub raw_path: Option<String>,
+}
+
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct DoctorItem {
     pub name: String,
@@ -50,6 +77,32 @@ pub trait ProjectAdapter: Send + Sync {
         workspace: &Path,
         tools: &dyn ToolChannel,
     ) -> anyhow::Result<Vec<ExecRecord>>;
+
+    /// DR-17: the deterministic **evidence battery**.
+    ///
+    /// Runs on the real workspace before the freeze, writes every raw payload
+    /// under `<workspace>/.hoh/deterministic/raw/`, and returns one record per
+    /// declared step.  The default implementation adapts [`Self::build_check`]
+    /// so an adapter that has no battery yet still works; `GodotAdapter`
+    /// overrides it with the real seven-step battery.
+    async fn evidence_battery(
+        &self,
+        workspace: &Path,
+        tools: &dyn ToolChannel,
+    ) -> anyhow::Result<Vec<BatteryRecord>> {
+        let records = self.build_check(workspace, tools).await?;
+        Ok(records
+            .into_iter()
+            .enumerate()
+            .map(|(index, record)| BatteryRecord {
+                step_id: format!("build_check_{index}"),
+                supports: Vec::new(),
+                ok: record.observation.contains("no errors") || record.path.is_some(),
+                record,
+                raw_path: None,
+            })
+            .collect())
+    }
 
     /// Markdown playbook injected into the Tester's view.
     fn evidence_playbook(&self) -> String;
