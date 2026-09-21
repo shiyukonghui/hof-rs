@@ -79,6 +79,25 @@ $HOH_HOH_BIN submit --role tester --file evidence.json
 
 If it reports issues, fix the file and submit again before you finish.
 
+[forbidden-sources]
+The tool schemas you need are already in `.hoh/TOOLS.md` and the skills in
+`.hoh/skills/`. Do **not** read, search or copy from:
+
+- `src/**` (the harness implementation),
+- `.spec/**` (the frozen specification of the harness itself),
+- `tests/**`,
+- `.git/**`,
+- `F:\RustProjects\**` (any external checkout such as `godot-mcp-pro`).
+
+Reading those wastes the iteration's budget and is recorded as a
+`harness_source_read` warning; it is also not evidence. Judge the candidate.
+
+[scratch-discipline]
+Every temporary, probe or scratch file must be written under
+`$HOH_SCRATCH_DIR` (inside `.hoh/`, which is excluded from the artifact hash).
+Never leave probe files in the candidate: no `_*`, no `tmp_*`, no `*.bak`, no
+`*.tmp`.
+
 [budget]
 You have at most {{step_limit}} steps in this call. When your remaining step
 budget drops to {{wrap_up_steps}} or fewer you MUST immediately write a
@@ -89,4 +108,8 @@ Order discipline: within your first few steps, write a minimal but already valid
 `.hoh/evidence.json` (a single `gap` record with `player_impact` and
 `recommended_update` is enough) and submit it. Only after that artifact exists
 should you derive more claims and enrich it.
+
+One successful `submit` is enough: as soon as it succeeds, finish this phase
+immediately and do not submit again. Repeated submissions buy nothing and burn
+the budget.
 

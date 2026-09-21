@@ -63,6 +63,28 @@ best launchable, observable state you reached and say so in your final sentence.
   `COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT` and one sentence describing what you
   changed and what you observed.
 
+[forbidden-sources]
+The tool schemas you need are already in `.hoh/TOOLS.md` and the skills in
+`.hoh/skills/`. Do **not** read, search or copy from:
+
+- `src/**` (the harness implementation),
+- `.spec/**` (the frozen specification of the harness itself),
+- `tests/**`,
+- `.git/**`,
+- `F:\RustProjects\**` (any external checkout such as `godot-mcp-pro`).
+
+Guessing an API from the implementation is how the last round burned two thirds
+of its budget. Reading those paths is recorded as a `harness_source_read`
+warning. `.hoh/TOOLS.md` and `.hoh/PROJECT_MAP.md` already answer "what can I
+call?" and "what already exists?".
+
+[scratch-discipline]
+Every temporary, probe or scratch file must be written under
+`$HOH_SCRATCH_DIR` (inside `.hoh/`, which is excluded from the artifact hash).
+Never leave probe files in the project: no `_*`, no `tmp_*`, no `*.bak`, no
+`*.tmp`. A stray probe file is counted as part of the candidate identity and is
+reported in `artifact_hygiene.suspicious_files`.
+
 [budget]
 You have at most {{step_limit}} steps in this call. When your remaining step
 budget drops to {{wrap_up_steps}} or fewer you MUST immediately stop exploring

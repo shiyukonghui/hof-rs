@@ -185,6 +185,27 @@ fn finalize_failure(
     write_iter_result(run_dir, iteration, &result)
 }
 
+/// DR-26: report-only trace of a role reading the harness sources or an
+/// external repository (both are forbidden by the prompts precisely because the
+/// tool schema is already in `TOOLS.md`).  Behaviour never changes.
+fn note_source_reads(warnings: &mut Vec<String>, attempts: &[AttemptOutcome]) {
+    if warnings
+        .iter()
+        .any(|warning| warning == "harness_source_read")
+    {
+        return;
+    }
+    for attempt in attempts {
+        let Ok(raw) = std::fs::read_to_string(&attempt.trajectory_path) else {
+            continue;
+        };
+        if crate::runtime::hygiene::mentions_forbidden_source(&raw) {
+            warnings.push("harness_source_read".to_string());
+            return;
+        }
+    }
+}
+
 /// A manifest that could not be produced must not mask the violation itself.
 fn manifest_or_empty(
     root: &Path,
@@ -280,6 +301,19 @@ pub async fn run(
     };
     write_run_meta(&run_dir, &meta)?;
     append_warning(&run_dir, MCP_SCOPE_WARNING)?;
+
+    // DR-26: the generated schema index is cached in the run directory.  Each
+    // role view gets its own role-scoped `.hoh/TOOLS.md`; this copy records the
+    // exact document the round was produced against.
+    let tools_index = orchestrator.tools.index_markdown(Role::Developer);
+    std::fs::write(
+        run_dir.join("TOOLS.md"),
+        format!(
+            "# Generated tool schema cache (DR-26, developer scope)\n\n\
+             A live `tools/list` wins; when the editor is offline the embedded schema snapshot \
+             is used. Role views receive their own scoped copy at `.hoh/TOOLS.md`.\n\n{tools_index}"
+        ),
+    )?;
 
     // A0 is snapshotted before anything else so warm_start=false can restore it.
     let a0 = store.snapshot_role(&workspace, &excludes, 0, "init", "A0 initial artifact")?;
@@ -432,6 +466,7 @@ pub async fn run(
                 iter_wrap_up_retry_used = true;
             }
             iter_attempts.extend(planner_attempts.clone());
+            note_source_reads(&mut iter_warnings, &planner_attempts);
             // DR-22: one symmetric trajectory/log pair per attempt.
             let planner_note = outcome
                 .as_ref()
@@ -543,6 +578,18 @@ pub async fn run(
                 ".hoh/EVIDENCE_HISTORY.md".to_string(),
                 evidence_history(&run_dir, iteration),
             ),
+            // DR-26: a concise index of what already exists, so the Developer
+            // does not have to explore the filesystem (or the harness sources)
+            // to orient itself.
+            (
+                ".hoh/PROJECT_MAP.md".to_string(),
+                crate::runtime::project_map::render_project_map(
+                    &workspace,
+                    &excludes,
+                    iteration,
+                    orchestrator.ablation.warm_start,
+                ),
+            ),
         ];
         developer_inputs.extend(skill_inputs());
         write_inputs(&workspace, &developer_inputs)?;
@@ -609,6 +656,7 @@ pub async fn run(
         // roles, so every attempt has a trajectory and a log.
         record_attempts(&run_dir, iteration, &developer_attempts, None)?;
         iter_attempts.extend(developer_attempts.clone());
+        note_source_reads(&mut iter_warnings, &developer_attempts);
         durations.push(("developer".to_string(), developer_outcome.duration_ms));
         iter_usage.push(developer_outcome.usage.clone());
         // DR-25: the Developer may only write inside the project.
@@ -673,6 +721,7 @@ pub async fn run(
                 exit_was_limits: is_limits_exceeded(&repair_outcome.exit_status),
             });
             iter_attempts.push(developer_attempts.last().cloned().expect("just pushed"));
+            note_source_reads(&mut iter_warnings, &developer_attempts);
             iter_usage.push(repair_outcome.usage.clone());
             durations.push(("developer_repair".to_string(), repair_outcome.duration_ms));
             iter_out_of_tree.extend(out_of_tree_watch.observe());
@@ -884,6 +933,7 @@ pub async fn run(
         let _ = tester_wrap_up_retry_used;
         durations.push(("tester".to_string(), started.elapsed().as_millis() as u64));
         iter_attempts.extend(tester_attempts.clone());
+        note_source_reads(&mut iter_warnings, &tester_attempts);
         // DR-25: the Tester is read-only; any write outside its view is reported.
         iter_out_of_tree.extend(out_of_tree_watch.observe());
         // DR-22: symmetric trajectory/log pair per tester attempt.

@@ -4,6 +4,7 @@
 //! code, never by prompt convention.
 
 pub mod bridge;
+pub mod index;
 pub mod mcp;
 pub mod policy;
 pub mod reliable;
@@ -74,33 +75,6 @@ impl McpChannel {
     pub fn client(&self) -> &McpClient {
         &self.client
     }
-
-    /// Group tool names into a compact markdown index (never the full 175
-    /// schemas: progressive disclosure, DESIGN-OVERVIEW §4.8).
-    fn index_from(&self, role: Role, tools: &[String]) -> String {
-        let mut visible: Vec<&String> = tools
-            .iter()
-            .filter(|tool| policy::tool_allowed(role, tool))
-            .collect();
-        visible.sort();
-        let mut markdown = format!(
-            "# Available tools for `{}`\n\n{} tool(s) visible. Call one with:\n\n```\n\
-             $HOH_HOH_BIN tools call <tool> --args-file <path>\n```\n\n\
-             Get the exact arguments with `$HOH_HOH_BIN tools describe <tool>`.\n\n",
-            role.as_str(),
-            visible.len()
-        );
-        if visible.is_empty() {
-            markdown.push_str(
-                "This role may not call any MCP tool. Use read-only shell commands only.\n",
-            );
-            return markdown;
-        }
-        for tool in visible {
-            markdown.push_str(&format!("- `{tool}`\n"));
-        }
-        markdown
-    }
 }
 
 #[async_trait::async_trait]
@@ -109,15 +83,14 @@ impl ToolChannel for McpChannel {
         policy::tool_allowed(role, tool)
     }
 
+    /// DR-26: the index carries the **real schemas** (parameter names, types and
+    /// required flags), generated from the live `tools/list` when the editor is
+    /// reachable and from the embedded snapshot otherwise.  A role that has the
+    /// schema never has to read the harness sources to guess an API.
     fn index_markdown(&self, role: Role) -> String {
-        match self.client.list_tools() {
-            Ok(tools) => self.index_from(role, &tools),
-            Err(error) => format!(
-                "# Available tools for `{}`\n\nWARNING: the MCP tool index is unavailable: \
-                 {error}\n\nDo not assume any tool exists; check with \
-                 `$HOH_HOH_BIN tools list`.\n",
-                role.as_str()
-            ),
+        match self.client.list_tool_schemas() {
+            Ok(schemas) if !schemas.is_empty() => index::render_tools_markdown(role, &schemas),
+            _ => index::render_tools_markdown(role, &index::embedded_tool_schemas()),
         }
     }
 

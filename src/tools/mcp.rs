@@ -95,17 +95,23 @@ impl McpClient {
     }
 
     pub fn list_tools(&self) -> anyhow::Result<Vec<String>> {
-        let result = self.request("tools/list", None)?;
-        let tools = result
-            .get("tools")
-            .and_then(Value::as_array)
-            .cloned()
-            .unwrap_or_default();
-        Ok(tools
+        Ok(self
+            .list_tool_schemas()?
             .iter()
             .filter_map(|tool| tool.get("name").and_then(Value::as_str))
             .map(ToOwned::to_owned)
             .collect())
+    }
+
+    /// DR-26: the full `tools/list` entries (name + description + inputSchema),
+    /// which is what `TOOLS.md` is generated from.
+    pub fn list_tool_schemas(&self) -> anyhow::Result<Vec<Value>> {
+        let result = self.request("tools/list", None)?;
+        Ok(result
+            .get("tools")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default())
     }
 
     pub fn describe(&self, tool: &str) -> anyhow::Result<Value> {

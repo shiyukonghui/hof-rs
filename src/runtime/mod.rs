@@ -5,6 +5,7 @@ pub mod evidence;
 pub mod hygiene;
 pub mod invoke;
 pub mod policy;
+pub mod project_map;
 pub mod record;
 pub mod role;
 pub mod run_loop;

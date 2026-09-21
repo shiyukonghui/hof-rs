@@ -91,6 +91,105 @@ $HOH_HOH_BIN tools call stop_scene --args-file $HOH_ARTIFACT_DIR/args/stop.json
 `{"errors": []}` and a running scene tree are the minimum bar (N1). Never end a
 turn with a script that does not compile.
 
+## 7. Known-good minimal platform game skeleton (copy this whole file)
+This is a **complete, already-valid** main scene. The runtime validates it with
+exactly this rule (DR-24): the **first** `[node ...]` line is the only root and
+must have **no** `parent=` attribute; every other node must declare `parent=`
+and that path must resolve. Getting this wrong is what made `smoke-t2`
+unlaunchable (`Invalid scene: root node Ground cannot specify a parent node`).
+
+```
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/player.gd" id="1_player"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ground"]
+size = Vector2(640, 32)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_player"]
+size = Vector2(24, 32)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_goal"]
+size = Vector2(32, 32)
+
+[node name="Main" type="Node2D"]
+
+[node name="Ground" type="StaticBody2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Ground"]
+shape = SubResource("RectangleShape2D_ground")
+
+[node name="Player" type="CharacterBody2D" parent="."]
+script = ExtResource("1_player")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Player"]
+shape = SubResource("RectangleShape2D_player")
+
+[node name="Goal" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Goal"]
+shape = SubResource("RectangleShape2D_goal")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="Score" type="Label" parent="HUD"]
+offset_left = 8.0
+offset_top = 8.0
+text = "Score: 0"
+```
+
+Notes that make the difference between "looks right" and "runs":
+
+- The root is `[node name="Main" type="Node2D"]` — no `parent=`. Children of the
+  root use `parent="."`; the `CollisionShape2D` under `Player` uses
+  `parent="Player"`.
+- `sub_resource` blocks are declared before the nodes that reference them, and
+  are referenced by id: `shape = SubResource("RectangleShape2D_player")`.
+- The script is referenced by id: `script = ExtResource("1_player")`, and the
+  matching `[ext_resource ... path="res://scripts/player.gd"]` must point at a
+  file that exists (write it first).
+
+The matching `scripts/player.gd` must be **non-empty**:
+
+```gdscript
+extends CharacterBody2D
+
+@export var speed: float = 220.0
+@export var jump_velocity: float = -420.0
+var gravity: float = 980.0
+
+func _physics_process(delta: float) -> void:
+	if not is_on_floor():
+		velocity.y += gravity * delta
+	if Input.is_action_pressed("jump") and is_on_floor():
+		velocity.y = jump_velocity
+	var direction := Input.get_axis("move_left", "move_right")
+	if direction:
+		velocity.x = direction * speed
+	else:
+		velocity.x = move_toward(velocity.x, 0.0, speed)
+	move_and_slide()
+```
+
+The HUD `Label` is the `Score` node above (`text = "Score: 0"`); keep it named
+and update it from GDScript (`$HUD/Score.text = "Score: %d" % coins`).
+
+## 8. Temporary files: `$HOH_SCRATCH_DIR` only
+`$HOH_SCRATCH_DIR` is `<view>/.hoh/scratch` and is excluded from the artifact
+hash (DR-28). Write every probe, argument file you do not need again, log and
+scratch script there:
+
+```
+# good
+echo '{"max_lines":50}' > "$HOH_SCRATCH_DIR/errors.json"
+# bad: leaves garbage inside the candidate identity
+echo '{}' > probe_tmp.json
+```
+
+Never leave `_*`, `tmp_*`, `*.bak`, `*.tmp` or a helper `*.py` in the project
+root: the runtime reports them in `artifact_hygiene.suspicious_files` and the
+Tester records a gap.
+
 ## GDScript 4 essentials
 - `func _ready() -> void:` / `func _physics_process(delta: float) -> void:`
 - Typed vars: `@export var speed: float = 220.0`

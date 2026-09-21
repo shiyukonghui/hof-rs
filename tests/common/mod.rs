@@ -43,6 +43,9 @@ pub struct FakeStep {
     /// counter-examples (R2/R4).
     pub write_outside_view: Option<(PathBuf, String)>,
     pub sleep_ms: u64,
+    /// DR-26: text planted in the trajectory, used to exercise the
+    /// `harness_source_read` warning detector.
+    pub trajectory_probe: Option<String>,
 }
 
 impl FakeStep {
@@ -55,11 +58,18 @@ impl FakeStep {
             usage: Some(UsageFixture::new(10, 5)),
             write_outside_view: None,
             sleep_ms: 0,
+            trajectory_probe: None,
         }
     }
 
     pub fn writing(mut self, rel: &str, content: &str) -> Self {
         self.writes.push((rel.to_string(), content.to_string()));
+        self
+    }
+
+    /// DR-26: make this trajectory look like the role read a forbidden path.
+    pub fn trajectory_mentioning(mut self, text: &str) -> Self {
+        self.trajectory_probe = Some(text.to_string());
         self
     }
 
@@ -162,7 +172,11 @@ fn read_files(root: &Path) -> BTreeMap<String, String> {
     files
 }
 
-fn trajectory_json(usage: Option<&UsageFixture>) -> String {
+fn trajectory_json(usage: Option<&UsageFixture>, probe: Option<&str>) -> String {
+    let exit_content = match probe {
+        Some(probe) => format!("done\n{probe}"),
+        None => "done".to_string(),
+    };
     let usage_block = match usage {
         Some(fixture) => serde_json::json!({
             "prompt_tokens": fixture.prompt,
@@ -193,7 +207,7 @@ fn trajectory_json(usage: Option<&UsageFixture>) -> String {
         "messages": [
             {"role": "system", "content": "sys"},
             {"role": "assistant", "content": "", "extra": {"actions": [], "response": response}},
-            {"role": "exit", "content": "done"}
+            {"role": "exit", "content": exit_content}
         ],
         "trajectory_format": "mini-swe-agent-1.1"
     })
@@ -257,7 +271,10 @@ impl Harness for FakeHarness {
         if let Some(parent) = inv.trajectory_path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        std::fs::write(&inv.trajectory_path, trajectory_json(step.usage.as_ref()))?;
+        std::fs::write(
+            &inv.trajectory_path,
+            trajectory_json(step.usage.as_ref(), step.trajectory_probe.as_deref()),
+        )?;
 
         let usage = match &step.usage {
             Some(fixture) => Usage {
