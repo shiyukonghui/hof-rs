@@ -33,6 +33,20 @@ impl MiniHarness {
 #[async_trait::async_trait]
 impl Harness for MiniHarness {
     async fn invoke(&self, inv: &RoleInvocation) -> anyhow::Result<RoleOutcome> {
+        // DR-14: fail fast on an undeclared wire identity.  `hoh doctor` and the
+        // offline double-lock test verify the *actual* traffic; this guard makes
+        // a missing declaration a configuration error instead of a silent run
+        // against an unspecified model.
+        let wire = crate::config::wire_model_name_of(&inv.model);
+        if wire.trim().is_empty() {
+            anyhow::bail!(
+                "model.wire_model_name is empty for role {} iteration {}; the on-the-wire model \
+                 id must be declared in configuration (DR-14)",
+                inv.role.as_str(),
+                inv.iteration
+            );
+        }
+
         let model = LlmConnectorModel::from_value_with_mode(inv.model.clone(), ApiMode::ToolCalls)
             .map_err(|error| anyhow::anyhow!("could not build the model: {error}"))?;
 

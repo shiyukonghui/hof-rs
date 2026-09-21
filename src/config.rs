@@ -112,10 +112,7 @@ impl HohConfig {
     /// configuration, consumed by both the offline double-lock test and the
     /// online `hoh doctor` probe — never hard-coded in `src/**`.
     pub fn wire_model_name(&self) -> &str {
-        self.model
-            .get("wire_model_name")
-            .and_then(Value::as_str)
-            .unwrap_or("")
+        wire_model_name_of(&self.model)
     }
 
     pub fn provider(&self) -> &str {
@@ -152,6 +149,16 @@ impl HohConfig {
             self.wire_model_name()
         )
     }
+}
+
+/// DR-14: read the declared wire identity out of a raw model section.  Shared
+/// by `HohConfig::wire_model_name`, `hoh doctor` and the harness so there is a
+/// single definition of "what the request body must carry".
+pub fn wire_model_name_of(model: &Value) -> &str {
+    model
+        .get("wire_model_name")
+        .and_then(Value::as_str)
+        .unwrap_or("")
 }
 
 /// Secret resolution, parameterised over the environment lookup so the

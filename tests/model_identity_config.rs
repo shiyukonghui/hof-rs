@@ -118,3 +118,37 @@ fn violation_message_carries_config_values_and_no_model_name() {
         "the violation must not know any concrete model name (DR-14): {text}"
     );
 }
+
+/// DR-14: the harness consumes the same declaration as `hoh doctor` and the
+/// offline double-lock test, and refuses to run without it.
+///
+/// Implementation note (disclosed in the report): this guard was written before
+/// its test, because an unguarded runnable red would have built mini's default
+/// endpoint and attempted a **real network call** — explicitly forbidden here.
+#[tokio::test]
+async fn harness_refuses_a_model_without_a_declared_wire_name() {
+    use hof_rs::config::AgentLimits;
+    use hof_rs::harness::{Harness, MiniHarness};
+    use hof_rs::model::Role;
+    use hof_rs::runtime::role::RoleInvocation;
+    use std::collections::BTreeMap;
+
+    let temp = tempfile::tempdir().expect("tempdir");
+    let invocation = RoleInvocation {
+        role: Role::Planner,
+        iteration: 1,
+        system_prompt: "system".to_string(),
+        task_prompt: "task".to_string(),
+        cwd: temp.path().to_path_buf(),
+        env: BTreeMap::new(),
+        limits: AgentLimits::default(),
+        model: json!({"model_name": "vendor-agnostic-model", "provider": "openai_compatible"}),
+        trajectory_path: temp.path().join("traj/planner.attempt1.json"),
+        retry_context: None,
+    };
+    let error = MiniHarness::new()
+        .invoke(&invocation)
+        .await
+        .expect_err("a model without wire_model_name must be refused");
+    assert!(error.to_string().contains("wire_model_name"), "{error}");
+}
