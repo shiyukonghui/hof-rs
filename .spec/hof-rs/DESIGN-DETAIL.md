@@ -1,6 +1,6 @@
 # DESIGN-DETAIL — hof-rs 详细设计
 
-- 状态：**v0.5（第二轮真实冒烟后修订，见 §12 DR-24..DR-28；用户已知悉并同意继续）**
+- 状态：**v0.6（第三轮真实冒烟后修订，见 §12 DR-29..DR-33；用户已知悉并同意继续）**
 - 输入：`REQUIREMENTS.md` v0.2（C1–C10 / R1–R13 / E1–E6）、`PRD-mario.md` v1、`DESIGN-OVERVIEW.md` v0.1（+D6 修订）
 - 纪律：本文精确到「实现者不需要再做任何设计决策」。凡本文未定之处，实现者应按本文的**裁决原则**就近推导，并在回报中列出，不得自行改变接口。
 
@@ -1325,6 +1325,76 @@ Planner 在首次 `submit` 成功后仍循环提交约 20 次。单轮 T=1 烧�
 - 测试：①构造含 `_probe.gd`/`tmp_x.json` 的 A_t → `suspicious_files` 报出；
   ②prompt 含 scratch 目录约束；③`HOH_SCRATCH_DIR` 落在 `.hoh` 下（因此不参与哈希）。
 
+### DR-29 JSON-RPC 响应必须按 `id` 关联；错位必须修复而不是被使用（最高优先级）
+
+来源：第三轮真实冒烟（`smoke-t3`）实测——9877 上的 MCP 服务**永远慢一拍且回带上一会话的陈旧 id**：
+决策者用原始 HTTP 客户端复核（发 id=1 → 收 resp.id=704；发 id=2 → 收 id=1 的响应；发 id=3 → 收 id=2 的响应）。
+后果：`get_scene_file_content` 收到 `open_scene` 的回复、`get_editor_errors` 收到场景文本，
+于是可启动闸门判 `false` 是**假阴性**，并触发一次追查不存在缺陷的「定向修复」（白烧 13.4 分钟 / 4.35M tokens）。
+
+- `McpClient` 每次调用**必须**断言 `response.id == request.id`：
+  - 相等 → 正常返回；
+  - 不相等 → **不得使用该 payload**；把该响应按 `resp.id` 存入一个短生命周期的**待取响应表**，
+    然后发一个**探针请求**（读取该表里尚未被认领的 id 对应的响应）并再次校验，直至取到本请求的响应
+    或超过 `tools.max_sync_retries`（默认 4）。
+  - 探针请求必须使用**只读且无副作用**的工具（`get_project_info`），不得使用会改动工程的工具。
+  - 超过重试上限 → 返回类型化错误 `HofError::McpResponseDesync { expected_id, got_ids }`，
+    由调用方按失败处理（电池步骤 `ok=false` 并写原文；**绝不**静默使用错位 payload）。
+- 必须记录：每个电池步骤的 raw payload 文件头写入 `request_id` / `response_id` / `sync_probes`，
+  供事后核对（`smoke-t3` 的教训：没有这层记录就无法判断 payload 属于哪次调用）。
+- 会话起始必须做一次**同步探针**：连续两次 `get_project_info` 并校验 id 关联；若错位则记录
+  `result.json.warnings` 一条 `mcp_desync_detected`（含观察到的 id 偏移与探针次数）。
+- 测试（假 HTTP 服务，可编程返回「慢一拍」行为）：①正常服务 → 0 次探针；②慢一拍服务 → 正确取回
+  本请求响应且 `sync_probes == 1`；③持续错位 → `McpResponseDesync` 且调用方记为失败；
+  ④断言错位 payload **从未**被当作成功结果使用（用一个「错位 payload 形状完全不同」的用例证明）。
+
+### DR-30 电池步骤必须校验 payload 形状，不得把「有响应」当「有证据」
+
+来源：实测——`input_replay` 在 `0 frame(s), position unknown` 时仍报 `ok=true`；
+`screenshot` 在 PNG 并不存在时仍写入 `path`；`play_scene_ready` 接受了 `play_scene` **自己的**回复。
+
+- `play_scene_ready`：必须由 `get_game_scene_tree` 的**场景树 payload**确认（含节点路径/类型），
+  不得以 `play_scene` 的回复作为就绪证据。
+- `get_editor_errors`：payload 必须含 `errors` 数组（否则 `ok=false`，observation 写原文）。
+- `input_replay`：必须至少解析出 1 帧**位置样本**；否则 `ok=false`，observation 含 `NO_FRAME_SAMPLES`。
+  同时必须记录 `(action, before_position, after_position, velocity)` 四元组：
+  若动作被确认送达且位置**不变**，该记录仍是 `ok=false` 并显式标注 `INPUT_HAD_NO_EFFECT`（供 Tester 判 F1/F2 gap）。
+- `screenshot`：仅当 PNG **真实存在于磁盘**时才写 `path`，否则 `ok=false`；
+  若工具返回的是内联 base64，必须由 Runtime **落盘为真实 PNG** 后再写 `path`。
+- `scene_tree`：必须含节点路径与类型，否则 `ok=false`。
+- 测试：为每个步骤构造「形状不符」的 payload，断言 `ok=false` 且 observation 含规定标记；
+  另断言截图成功路径下文件确实存在（用 tempdir 校验字节）。
+
+### DR-31 记录完整性：逐次尝试的 usage/duration 不得被覆盖
+
+来源：实测——`smoke-t3` 的 developer **attempt1**（7,134,952 tokens / 799.8s）被后续赋值覆盖，
+`usage.json` 汇总 25,839,490 而真实为 32,974,442。
+
+- `run_loop` 必须在**每次**尝试结束后立即把该次尝试的 `Usage`/`duration` 推送进尝试列表，再做后续可变赋值。
+- `usage.json.summary` 的 total 必须**逐字等于** `sum(attempts[*].total_tokens)`（其它字段同理）。
+- 测试：构造「角色两次尝试（第一次额度大、第二次被覆盖路径触发）」的脚本，断言汇总等于两次之和；
+  并新增一条不变量断言 `summary == Σ attempts`（对 token 与 calls 都做）。
+
+### DR-32 `harness_source_read` 留痕必须只看工具命令与参数
+
+来源：实测——该留痕在 `smoke-t3` 中**无条件误报**：它把系统提示里「禁止读取这些路径」的清单本身当成了证据。
+
+- 扫描范围仅限**工具调用的命令文本与参数**（shell 命令、`--args`、`--args-file` 内容），
+  **不得**扫描 system/user prompt 文本。
+- 测试：①prompt 含禁止路径清单但无任何读取命令 → **不**产生留痕；②轨迹里出现 `cat src/config.rs` → 产生留痕。
+
+### DR-33 输入证据的可判定性（把 E3 的歧义变成可行动记录）
+
+来源：实测——`smoke-t3` 在错位污染下无法判断「输入没送达」还是「控制器没读输入」。
+
+- 电池的 `input_replay` 除 DR-30 的四元组外，必须同时记录**动作可用性**证据：
+  用 `get_input_actions`（或等价只读工具）确认 `move_left`/`move_right`/`jump` 在 InputMap 中存在，
+  并记录其绑定键。
+- 若动作存在、`simulate_action` 返回确认、但前后位置不变 → 记录 `INPUT_HAD_NO_EFFECT` 且 `ok=false`，
+  `supports` 必须含 F1/F2；Tester 据此判 gap（这是「A_1 政策缺陷」的诚实呈现，而非环境噪声）。
+- 若动作**不存在** → 记录 `ACTION_NOT_BOUND` 且 `ok=false`，`supports` 含 F1/F2/P3。
+- 测试：①动作缺失 → `ACTION_NOT_BOUND`；②动作存在但位置不变 → `INPUT_HAD_NO_EFFECT`；③动作存在且位置变化 → `ok=true`。
+
 ---
 ### 12.1 变更记录
 
@@ -1336,3 +1406,4 @@ Planner 在首次 `submit` 成功后仍循环提交约 20 次。单轮 T=1 烧�
 | v0.3 | 2026-09 | 追加 §12（DR-14..DR-16）并改写 §3.1 的 model 段：模型身份改为配置驱动、doctor 探测通用化、密钥卫生 | 用户更换为远端 `deepseek-v4.1-flash`（D15） |
 | v0.4 | 2026-09 | 追加 §12（DR-17..DR-23）：确定性证据电池、步数预算与先收口纪律、密钥不得进子进程环境、MCP 就绪等待与诊断、干净 A₀、记录对称性、Developer 产出定义与 skills 强化 | 第一次真实 T=1 冒烟（negative baseline：5/5 LimitsExceeded、QA 无 E_1、A_1 零功能增量、密钥经子进程环境泄漏）（D17/D18） |
 | v0.5 | 2026-09 | 追加 §12（DR-24..DR-28）：冻结前可启动闸门与定向修复、角色环境绝对路径与 submit 规范路径、工具 schema 可发现性与已知良好骨架、结果语义区分循环/产物、产物卫生 | 第二次真实 T=1 冒烟（`smoke-t2`：全循环跑通、E_1 合法、E1/E4/E5/E6 met，但 `main.tscn` 无根节点致 E2/E3 失败；11.27M tokens）（D21/D22） |
+| v0.6 | 2026-09 | 追加 §12（DR-29..DR-33）：JSON-RPC 响应 id 关联与错位修复、电池 payload 形状校验、记录完整性、留痕误报修复、输入证据可判定性 | 第三次真实 T=1 冒烟（`smoke-t3`：exit 6；MCP 慢一拍导致闸门假阴性并触发无效修复；结构合规但 E3 不可判定）（D24/D25） |
