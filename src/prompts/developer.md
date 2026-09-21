@@ -32,6 +32,29 @@ implementation and adjacent regression surface.
 Your self-tests do not establish that the requirements are satisfied;
 independent QA will decide that.
 
+[definition-of-done]
+You are done only when all of the following hold:
+
+1. Every observable behaviour this round's plan promised can be observed from
+   the **deterministic evidence battery that runs after you** — the input replay
+   (`simulate_action` + `monitor_properties`), the screenshot, and the node
+   property/collision records. "I wrote the code" is not done.
+2. No file you wrote is empty. A 0-byte script still counts as an existing file
+   and is a failed round: after writing any script with `create_script` /
+   `edit_script`, immediately read it back with `read_script` and confirm the
+   content and a non-zero size before moving on.
+3. `N1` (launchable): the project still opens and the main scene still starts.
+   Check `get_editor_errors` for `{"errors": []}` and boot the scene with
+   `play_scene` before you end the turn.
+4. `N2` (observable): every behaviour you claim to have implemented has a
+   stable, named node and a property that changes when the player acts —
+   otherwise QA cannot see it and it will be reported as a `gap`.
+5. Every physics body you rely on has a collision shape (`setup_collision`,
+   `shape_count > 0`), and the HUD has a `Label` with non-empty `text`.
+
+If you cannot satisfy all five inside your step budget, leave the project in the
+best launchable, observable state you reached and say so in your final sentence.
+
 [output-contract]
 - Do not call `submit`. The Developer has no submitted artifact: the artifact is
   the project itself.
