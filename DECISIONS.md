@@ -1601,6 +1601,39 @@
     手册 §6.6 的规则（以「工具真的能用」为准并显式记录）已被两次实证验证。
 - 回滚点：契约描述改动可由生成器 revert（`DESCRIPTION_OVERRIDES` 单条）；组实现可整提交回退。
 
+## D54 — TASK-007 交付（首个写组）；契约描述已改对；第 3 例迁移源缺陷
+
+- 日期：2026-09（B1 进度 **30/41**；剩余 `editor_write_scene_editor`(10)、`running_game_read_scene`(1)）
+- **TASK-007 三部分全部完成**，五道门全绿（冻结 commit `7cb87e78cb`，引擎 console.exe sha `32436f6b…`）：
+  - 门① **3/3**（编辑器 30 / 游戏 23）；门③ doctest **89/89·1213**（红阶段 11/11 新用例全红）；
+    门④ 全引擎 **1515/1515·0 failed**；门⑤ `accept_m1.ps1` **22/22 连跑两次**（PASS 清单逐条一致）。
+  - **契约描述已改对**（用户最在意的一条）：生成器新增向后兼容的 **`mode="replace"`**
+    （默认仍是 append；replace 必须**在 reason 里逐字引用被替换文本**，未知 mode 报错），
+    `editor_analyze_signal_flow` 的描述改为「只收集持久连接（`CONNECT_PERSIST`，值为 2；注意 Godot 4 中
+    `flags & 1` 是 `CONNECT_DEFERRED`，不是持久连接）…」；契约仍 **171 条**、仅该行变化、`inputSchema` 与
+    `map_sha256` 不变；**C++ 字面量逐字同步**；`TOOL-NAMING.md` 重渲染字节相同。
+  - **第一个写组**（4 个 `mutating=true`）落地：写路径为「**临时文件 + 备份 + rename 发布**」，
+    失败不触碰目标文件；真实编辑器进程 + `%TEMP%` scratch 副本给出 before/after **逐文件 size+sha256**；
+    以**损坏 `.tres`** 为反例证明四次失败调用后该文件**逐字节不变**（`2800faaa…` 前后一致）；
+    工程内（`.godot/` 之外）残留临时文件 **0**。
+- **偏差裁决（全部接受）**：
+  1. 生成器新增 `mode="replace"` → 接受（append-only 会让描述里留下互相矛盾的两句）。
+  2. **`project_create_scene_file` 拒绝覆盖既有文件**（`-32000`+建议），迁移源会**静默覆盖**且契约无 `overwrite` 参数 →
+     接受（「不得破坏既有文件」优先；属第 4 例「迁移源行为不可取」）。
+  3. 临时文件命名为确定性的 `<base>.mcp-tmp.<ext>`（扩展名必须在最后一段——**实现者踩过这个坑并记录**）。
+  4. 新增共享工厂 `MCPToolError::tool_state(...)` → 接受（避免同一种错误长出两种形状）。
+  5. `accept_m1.ps1` 的 `$ToolNames` 追加 4 个写工具；**逐端点 scope 推导逻辑未动**。
+  6. `project_edit_resource` 对「存在但不可加载」返回 `-32001`（沿用「找不到具体东西」语义）→ 接受。
+  7. 报告 §8 的三条**自我纠错**（临时名 bug、`ResourceLoader` 缓存造成的「覆盖无效」假象已用
+     `CACHE_MODE_IGNORE` 推翻、`.import` sidecar 可观察性主张撤回）→ **接受并赞赏**：这正是手册 §7.3 要的行为。
+- **第 3 例迁移源缺陷写入 `PLAYBOOK` §6.6**：`editor_analyze_signal_flow` 的 `flags & 1` 在 Godot 4 是
+  `CONNECT_DEFERRED`（`CONNECT_PERSIST = 2`）。**映射 `reason` 里残留的措辞不再作为行为依据**——
+  行为以「工具真的能用」为准、描述以**契约（经 override 纠正）**为准、映射 reason 仅供参考。
+  这是对「映射 sha 不漂移」与我此前「reason 引用不改写」裁决的**收口**：不改映射，但明确其权威边界。
+- 未采纳（暂缓）：`find_signal_connections` 的 `_meta.overrides` 理由里仍引用旧描述措辞 —— 纯元数据文案，
+  与 TASK-008 一起顺手清理即可，不值得单独一轮。
+- 回滚点：写组实现可整提交回退；描述改动可由 `DESCRIPTION_OVERRIDES` 单条 revert。
+
 
 
 
