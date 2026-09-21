@@ -46,6 +46,10 @@ pub struct IterResult {
     /// duration, usage and artifact path.
     #[serde(default)]
     pub attempts: Vec<AttemptOutcome>,
+    /// DR-19: how many files under `runs/<id>` had a known secret value
+    /// replaced by `<redacted>`.  The value itself is never recorded.
+    #[serde(default)]
+    pub secret_redactions: u64,
 }
 
 impl IterResult {
@@ -63,6 +67,7 @@ impl IterResult {
             evidence_diff: EvidenceDiff::default(),
             wrap_up_retry_used: false,
             attempts: Vec::new(),
+            secret_redactions: 0,
         }
     }
 }

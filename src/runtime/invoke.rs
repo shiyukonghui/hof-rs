@@ -33,6 +33,14 @@ pub fn role_env(
             .map(|path| path.to_string_lossy().into_owned())
             .unwrap_or_default(),
     );
+    // DR-19: mini's `LocalEnvironment` inherits the parent environment and only
+    // overrides the keys it is handed, so a live credential in the HoH process
+    // would be readable from the child shell.  Writing an explicit empty string
+    // blocks the inheritance (the keys are written even when they do not exist,
+    // which costs nothing).
+    for (name, value) in crate::runtime::secrets::blocked_env() {
+        env.insert(name, value);
+    }
     env
 }
 

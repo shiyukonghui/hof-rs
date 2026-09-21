@@ -155,6 +155,7 @@ fn finalize_failure(
     evidence_diff: EvidenceDiff,
     wrap_up_retry_used: bool,
     attempts: Vec<AttemptOutcome>,
+    secret_redactions: u64,
 ) -> anyhow::Result<()> {
     write_usage(run_dir, iteration, &usage)?;
     let result = IterResult {
@@ -170,6 +171,7 @@ fn finalize_failure(
         evidence_diff,
         wrap_up_retry_used,
         attempts,
+        secret_redactions,
     };
     write_iter_result(run_dir, iteration, &result)
 }
@@ -221,6 +223,9 @@ pub async fn run(
     let excludes = HashExcludes::new(orchestrator.adapter.cache_excludes()).merged();
     let store = VersionStore::new(run_dir.join("versions"));
 
+    // DR-19: the values that must never survive anywhere under `runs/<id>`.
+    let secrets = crate::runtime::secrets::known_secrets(cfg);
+
     let warnings = vec![MCP_SCOPE_WARNING.to_string()];
     let meta = RunMeta {
         run_id: run_id.to_string(),
@@ -259,6 +264,8 @@ pub async fn run(
         let mut iter_attempts: Vec<AttemptOutcome> = Vec::new();
         // DR-18: whether this iteration spent a wrap-up retry.
         let mut iter_wrap_up_retry_used = false;
+        // DR-19: files scrubbed of a known secret during this iteration.
+        let mut iter_secret_redactions: u64 = 0;
         // DR-6: the D7 scope limitation is restated in *every* iteration result,
         // not only in `meta.json` and `warnings.log`.
         let mut iter_warnings: Vec<String> = vec![MCP_SCOPE_WARNING.to_string()];
@@ -355,6 +362,9 @@ pub async fn run(
                 }
             };
             durations.push(("planner".to_string(), started.elapsed().as_millis() as u64));
+            // DR-19: scrub the run directory after the role has run, before its
+            // output is recorded as an artifact.
+            iter_secret_redactions += crate::runtime::secrets::redact_tree(&run_dir, &secrets)?;
             if wrap_up_retry_used {
                 iter_wrap_up_retry_used = true;
             }
@@ -399,6 +409,7 @@ pub async fn run(
                         EvidenceDiff::default(),
                         iter_wrap_up_retry_used,
                         iter_attempts.clone(),
+                        iter_secret_redactions,
                     )?;
                     return Err(error);
                 }
@@ -444,6 +455,7 @@ pub async fn run(
                 diff,
                 iter_wrap_up_retry_used,
                 iter_attempts.clone(),
+                iter_secret_redactions,
             )?;
             return Err(HofError::contract(violation).into());
         }
@@ -521,6 +533,8 @@ pub async fn run(
         });
         durations.push(("developer".to_string(), developer_outcome.duration_ms));
         iter_usage.push(developer_outcome.usage.clone());
+        // DR-19: scrub after the developer (the only writer) too.
+        iter_secret_redactions += crate::runtime::secrets::redact_tree(&run_dir, &secrets)?;
         write_log(
             &run_dir,
             iteration,
@@ -663,6 +677,7 @@ pub async fn run(
                 diff,
                 iter_wrap_up_retry_used,
                 iter_attempts.clone(),
+                iter_secret_redactions,
             )?;
             return Err(HofError::contract(ContractViolation::WorkspaceDriftBeforeQa).into());
         }
@@ -735,6 +750,8 @@ pub async fn run(
         iter_attempts.extend(tester_attempts.clone());
         let tester_usage = usage_from_attempts(&traj_dir, Role::Tester, iteration)?;
         iter_usage.push(tester_usage);
+        // DR-19: scrub after the tester before any of its output is recorded.
+        iter_secret_redactions += crate::runtime::secrets::redact_tree(&run_dir, &secrets)?;
 
         // Detection comes first: a contaminated round is a failure no matter
         // how good the evidence looks.
@@ -753,6 +770,7 @@ pub async fn run(
                 iter_warnings,
                 diff,
                 iter_attempts,
+                iter_secret_redactions,
             );
         }
         if let Err(violation) = assert_unchanged("tester/workspace", &h_ws_before, &h_ws_after) {
@@ -767,6 +785,7 @@ pub async fn run(
                 iter_warnings,
                 diff,
                 iter_attempts,
+                iter_secret_redactions,
             );
         }
 
@@ -800,6 +819,7 @@ pub async fn run(
                     EvidenceDiff::default(),
                     iter_wrap_up_retry_used,
                     iter_attempts.clone(),
+                    iter_secret_redactions,
                 )?;
                 return Err(error);
             }
@@ -832,6 +852,9 @@ pub async fn run(
         }
         write_usage(&run_dir, iteration, &iter_usage)?;
 
+        // DR-19: one last sweep, so nothing written between the last stage and
+        // here can leave a credential behind.
+        iter_secret_redactions += crate::runtime::secrets::redact_tree(&run_dir, &secrets)?;
         let mut result = IterResult::ok();
         result.warnings = iter_warnings;
         result.candidate_id = Some(version.candidate_id.clone());
@@ -840,8 +863,13 @@ pub async fn run(
         result.durations_ms = durations;
         result.wrap_up_retry_used = iter_wrap_up_retry_used;
         result.attempts = iter_attempts;
+        result.secret_redactions = iter_secret_redactions;
         write_iter_result(&run_dir, iteration, &result)?;
     }
+
+    // DR-19: run-level sweep for anything written outside the per-iteration
+    // windows (warnings.log, meta.json, version snapshots).
+    crate::runtime::secrets::redact_tree(&run_dir, &secrets)?;
 
     Ok(RunSummary {
         run_id: run_id.to_string(),
@@ -863,6 +891,7 @@ fn fail_contract(
     warnings: Vec<String>,
     evidence_diff: EvidenceDiff,
     attempts: Vec<AttemptOutcome>,
+    secret_redactions: u64,
 ) -> anyhow::Result<RunSummary> {
     write_log(
         run_dir,
@@ -890,6 +919,7 @@ fn fail_contract(
         evidence_diff,
         false,
         attempts,
+        secret_redactions,
     )?;
     Err(HofError::contract(violation).into())
 }

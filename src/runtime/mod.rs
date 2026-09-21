@@ -8,6 +8,7 @@ pub mod record;
 pub mod role;
 pub mod run_loop;
 pub mod schema;
+pub mod secrets;
 pub mod snapshot;
 pub mod usage;
 pub mod view;
