@@ -2,6 +2,7 @@
 //! evidence binding, snapshots, records and the main loop.
 
 pub mod evidence;
+pub mod hygiene;
 pub mod invoke;
 pub mod policy;
 pub mod record;

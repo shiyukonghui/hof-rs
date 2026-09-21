@@ -41,13 +41,35 @@ pub fn absolutize(path: &Path) -> PathBuf {
 
 /// Tool arguments: `--args` (inline JSON) or `--args-file` (preferred on
 /// Windows, where shell quoting mangles JSON).
+///
+/// DR-25: a **relative** `--args-file` is resolved against
+/// `HOH_ARTIFACT_DIR`, not against the shell's working directory — the role
+/// shell may run from anywhere, and `smoke-t2` lost two Tester calls to
+/// `os error 3` because of exactly that mismatch.
 pub fn parse_args(inline: Option<&str>, args_file: Option<&Path>) -> anyhow::Result<Value> {
+    let artifact_dir = std::env::var("HOH_ARTIFACT_DIR").ok().map(PathBuf::from);
+    parse_args_in(inline, args_file, artifact_dir.as_deref())
+}
+
+/// [`parse_args`] with an explicit artifact directory (pure, unit-testable).
+pub fn parse_args_in(
+    inline: Option<&str>,
+    args_file: Option<&Path>,
+    artifact_dir: Option<&Path>,
+) -> anyhow::Result<Value> {
     if let Some(path) = args_file {
-        let absolute = absolutize(path);
+        let absolute = resolve_args_file(path, artifact_dir);
         let raw = std::fs::read_to_string(&absolute).map_err(|error| {
             anyhow::anyhow!(
-                "could not read --args-file {} (absolute path `{}`): {error}",
+                "could not read --args-file {} (resolved against {}: `{}`): {error}",
                 path.display(),
+                if path.is_absolute() {
+                    "an absolute path"
+                } else if artifact_dir.is_some() {
+                    "HOH_ARTIFACT_DIR"
+                } else {
+                    "the current directory"
+                },
                 absolute.display()
             )
         })?;
@@ -63,6 +85,45 @@ pub fn parse_args(inline: Option<&str>, args_file: Option<&Path>) -> anyhow::Res
             .map_err(|error| anyhow::anyhow!("--args is not valid JSON: {error}")),
         None => Ok(json!({})),
     }
+}
+
+/// DR-25: resolve a relative `--args-file` against `HOH_ARTIFACT_DIR`.
+pub fn resolve_args_file(path: &Path, artifact_dir: Option<&Path>) -> PathBuf {
+    if path.is_absolute() {
+        return path.to_path_buf();
+    }
+    match artifact_dir {
+        Some(dir) => dir.join(path),
+        None => absolutize(path),
+    }
+}
+
+/// Lexically normalize a path (`a/./b` -> `a/b`, `a/../b` -> `b`) so two
+/// spellings of the same target compare equal.
+pub fn normalize(path: &Path) -> PathBuf {
+    use std::path::Component;
+    let mut out = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                if !out.pop() {
+                    out.push("..");
+                }
+            }
+            other => out.push(other.as_os_str()),
+        }
+    }
+    out
+}
+
+/// DR-25: the canonical artifact path of a role (`<view>/.hoh/<name>`).
+pub fn canonical_artifact(role: Role, artifact_dir: &Path) -> PathBuf {
+    artifact_dir.join(match role {
+        Role::Planner => "plan.md",
+        Role::Tester => "evidence.json",
+        Role::Developer => "developer.md",
+    })
 }
 
 /// Build the MCP-backed tool channel for a config.
@@ -91,6 +152,12 @@ pub async fn tools_call(
 }
 
 /// `hoh submit --role <planner|tester> --file <path>`.
+///
+/// DR-25: `--file` is resolved against `HOH_ARTIFACT_DIR` when relative, and the
+/// resolved target must be **byte-for-byte** the role's canonical artifact path.
+/// A relative `HOH_ARTIFACT_DIR` (the `smoke-t2` bug: the plan landed in a
+/// nested `runs/<id>/iter-1/planner-view/runs/...` path) is refused outright
+/// instead of silently nesting.
 pub fn submit(role: Role, file: &Path) -> anyhow::Result<i32> {
     if role == Role::Developer {
         eprintln!("{}", denial_payload(role, "submit"));
@@ -105,12 +172,54 @@ pub fn submit(role: Role, file: &Path) -> anyhow::Result<i32> {
         return Ok(2);
     }
 
-    let raw = std::fs::read_to_string(file)
-        .map_err(|error| anyhow::anyhow!("could not read {}: {error}", file.display()))?;
+    let artifact_dir = artifact_dir()?;
+    let expected = canonical_artifact(role, &artifact_dir);
+    // The target of the write is always the canonical path; it must be an
+    // absolute, already-correct path or the whole "who wrote what" model is
+    // built on sand.
+    if !expected.is_absolute() {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&json!({
+                "ok": false,
+                "error": "artifact_path_violation",
+                "reason": "HOH_ARTIFACT_DIR must be an absolute path (DR-25)",
+                "expected": std::env::current_dir()
+                    .map(|cwd| normalize(&cwd.join(&expected)).to_string_lossy().into_owned())
+                    .unwrap_or_else(|_| expected.to_string_lossy().into_owned()),
+                "actual": expected.to_string_lossy(),
+            }))?
+        );
+        return Ok(2);
+    }
+
+    // Resolve the source the same way every other path is resolved here.
+    let resolved = if file.is_absolute() {
+        normalize(file)
+    } else {
+        normalize(&artifact_dir.join(file))
+    };
+    if !file.is_absolute() && resolved != normalize(&expected) {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&json!({
+                "ok": false,
+                "error": "artifact_path_violation",
+                "reason": "a relative --file is resolved against HOH_ARTIFACT_DIR and must name \
+                           the role's canonical artifact",
+                "expected": normalize(&expected).to_string_lossy(),
+                "actual": resolved.to_string_lossy(),
+            }))?
+        );
+        return Ok(2);
+    }
+
+    let raw = std::fs::read_to_string(&resolved)
+        .map_err(|error| anyhow::anyhow!("could not read {}: {error}", resolved.display()))?;
 
     let issues = match role {
         Role::Planner => {
-            let doc = parse_plan(&raw, 0, file.to_path_buf());
+            let doc = parse_plan(&raw, 0, resolved.clone());
             validate_plan(&doc).err()
         }
         Role::Tester => match serde_json::from_str::<Value>(&raw) {
@@ -133,15 +242,12 @@ pub fn submit(role: Role, file: &Path) -> anyhow::Result<i32> {
                                 validate_evidence(&bundle, "").err().unwrap_or_default();
                             // The inner gate also checks that every referenced
                             // file exists under the view root (§4.3, §4.6).
-                            if let Ok(artifact_dir) = std::env::var("HOH_ARTIFACT_DIR") {
-                                let view_root = PathBuf::from(artifact_dir)
-                                    .parent()
-                                    .map(PathBuf::from)
-                                    .unwrap_or_else(|| PathBuf::from("."));
-                                issues.extend(crate::runtime::evidence::check_paths(
-                                    &bundle, &view_root,
-                                ));
-                            }
+                            let view_root = artifact_dir
+                                .parent()
+                                .map(PathBuf::from)
+                                .unwrap_or_else(|| PathBuf::from("."));
+                            issues
+                                .extend(crate::runtime::evidence::check_paths(&bundle, &view_root));
                             if issues.is_empty() {
                                 None
                             } else {
@@ -163,17 +269,11 @@ pub fn submit(role: Role, file: &Path) -> anyhow::Result<i32> {
         return Ok(3);
     }
 
-    let artifact_dir = artifact_dir()?;
     std::fs::create_dir_all(&artifact_dir)?;
-    let target = artifact_dir.join(match role {
-        Role::Planner => "plan.md",
-        Role::Tester => "evidence.json",
-        Role::Developer => unreachable!(),
-    });
-    write_atomic(&target, raw.as_bytes())?;
+    write_atomic(&expected, raw.as_bytes())?;
     println!(
         "{}",
-        serde_json::to_string_pretty(&json!({"ok": true, "written": target.to_string_lossy()}))?
+        serde_json::to_string_pretty(&json!({"ok": true, "written": expected.to_string_lossy()}))?
     );
     Ok(0)
 }

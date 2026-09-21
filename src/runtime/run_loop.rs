@@ -162,6 +162,7 @@ fn finalize_failure(
     wrap_up_retry_used: bool,
     attempts: Vec<AttemptOutcome>,
     secret_redactions: u64,
+    out_of_tree_writes: Vec<String>,
 ) -> anyhow::Result<()> {
     write_usage(run_dir, iteration, &usage, &attempts)?;
     let result = IterResult {
@@ -178,6 +179,7 @@ fn finalize_failure(
         wrap_up_retry_used,
         attempts,
         secret_redactions,
+        out_of_tree_writes,
         ..IterResult::ok()
     };
     write_iter_result(run_dir, iteration, &result)
@@ -291,6 +293,19 @@ pub async fn run(
     let mut first_plan: Option<PathBuf> = None;
     let mut last_gate: Option<crate::model::ArtifactGate> = None;
 
+    // DR-25: watch HoH's own working directory (outside the project) for writes
+    // a role should never make.  Report-only; the baseline advances once per
+    // observation so a path is reported exactly once.
+    let out_of_tree_root = cfg
+        .runtime
+        .out_of_tree_root
+        .clone()
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
+    let mut out_of_tree_watch = crate::runtime::hygiene::OutOfTreeWatch::new(
+        out_of_tree_root,
+        Some(crate::runtime::invoke::absolute_path(&workspace)),
+    );
+
     for iteration in 1..=cfg.runtime.iterations {
         let iter_dir = run_dir.join(format!("iter-{iteration}"));
         let traj_dir = iter_dir.join("traj");
@@ -308,6 +323,9 @@ pub async fn run(
         // DR-6: the D7 scope limitation is restated in *every* iteration result,
         // not only in `meta.json` and `warnings.log`.
         let mut iter_warnings: Vec<String> = vec![MCP_SCOPE_WARNING.to_string()];
+        // DR-25: out-of-tree paths reported for this iteration.
+        let mut iter_out_of_tree: std::collections::BTreeSet<String> =
+            std::collections::BTreeSet::new();
 
         // ---------------- Planner (read-only) ----------------
         let h_pre = hash_tree(&workspace, &excludes)?;
@@ -405,6 +423,8 @@ pub async fn run(
                 }
             };
             durations.push(("planner".to_string(), started.elapsed().as_millis() as u64));
+            // DR-25: the Planner must not write anywhere but its own view.
+            iter_out_of_tree.extend(out_of_tree_watch.observe());
             // DR-19: scrub the run directory after the role has run, before its
             // output is recorded as an artifact.
             iter_secret_redactions += crate::runtime::secrets::redact_tree(&run_dir, &secrets)?;
@@ -455,6 +475,7 @@ pub async fn run(
                         iter_wrap_up_retry_used,
                         iter_attempts.clone(),
                         iter_secret_redactions,
+                        iter_out_of_tree.iter().cloned().collect(),
                     )?;
                     return Err(error);
                 }
@@ -502,6 +523,7 @@ pub async fn run(
                 iter_wrap_up_retry_used,
                 iter_attempts.clone(),
                 iter_secret_redactions,
+                iter_out_of_tree.iter().cloned().collect(),
             )?;
             return Err(HofError::contract(violation).into());
         }
@@ -589,6 +611,8 @@ pub async fn run(
         iter_attempts.extend(developer_attempts.clone());
         durations.push(("developer".to_string(), developer_outcome.duration_ms));
         iter_usage.push(developer_outcome.usage.clone());
+        // DR-25: the Developer may only write inside the project.
+        iter_out_of_tree.extend(out_of_tree_watch.observe());
         // DR-19: scrub after the developer (the only writer) too.
         iter_secret_redactions += crate::runtime::secrets::redact_tree(&run_dir, &secrets)?;
 
@@ -651,6 +675,7 @@ pub async fn run(
             iter_attempts.push(developer_attempts.last().cloned().expect("just pushed"));
             iter_usage.push(repair_outcome.usage.clone());
             durations.push(("developer_repair".to_string(), repair_outcome.duration_ms));
+            iter_out_of_tree.extend(out_of_tree_watch.observe());
             iter_secret_redactions += crate::runtime::secrets::redact_tree(&run_dir, &secrets)?;
             record_attempts(
                 &run_dir,
@@ -788,6 +813,7 @@ pub async fn run(
                 iter_wrap_up_retry_used,
                 iter_attempts.clone(),
                 iter_secret_redactions,
+                iter_out_of_tree.iter().cloned().collect(),
             )?;
             return Err(HofError::contract(ContractViolation::WorkspaceDriftBeforeQa).into());
         }
@@ -858,6 +884,8 @@ pub async fn run(
         let _ = tester_wrap_up_retry_used;
         durations.push(("tester".to_string(), started.elapsed().as_millis() as u64));
         iter_attempts.extend(tester_attempts.clone());
+        // DR-25: the Tester is read-only; any write outside its view is reported.
+        iter_out_of_tree.extend(out_of_tree_watch.observe());
         // DR-22: symmetric trajectory/log pair per tester attempt.
         let tester_note = gate
             .as_ref()
@@ -892,6 +920,7 @@ pub async fn run(
                 diff,
                 iter_attempts,
                 iter_secret_redactions,
+                iter_out_of_tree.iter().cloned().collect(),
             );
         }
         if let Err(violation) = assert_unchanged("tester/workspace", &h_ws_before, &h_ws_after) {
@@ -907,6 +936,7 @@ pub async fn run(
                 diff,
                 iter_attempts,
                 iter_secret_redactions,
+                iter_out_of_tree.iter().cloned().collect(),
             );
         }
 
@@ -932,6 +962,7 @@ pub async fn run(
                     iter_wrap_up_retry_used,
                     iter_attempts.clone(),
                     iter_secret_redactions,
+                    iter_out_of_tree.iter().cloned().collect(),
                 )?;
                 return Err(error);
             }
@@ -969,6 +1000,11 @@ pub async fn run(
         result.artifact_gate = launch_gate.clone();
         result.repair_retry_used = iter_repair_retry_used;
         result.battery_passes = battery_passes.clone();
+        result.out_of_tree_writes = iter_out_of_tree.iter().cloned().collect();
+        // DR-28: report-only hygiene of the frozen `A_t`.
+        result.artifact_hygiene = crate::model::ArtifactHygiene {
+            suspicious_files: crate::runtime::hygiene::suspicious_files(&workspace),
+        };
         last_gate = Some(launch_gate);
         write_iter_result(&run_dir, iteration, &result)?;
     }
@@ -1000,6 +1036,7 @@ fn fail_contract(
     evidence_diff: EvidenceDiff,
     attempts: Vec<AttemptOutcome>,
     secret_redactions: u64,
+    out_of_tree_writes: Vec<String>,
 ) -> anyhow::Result<RunSummary> {
     // DR-22: the violation is a note on the attempt log, not a side file.
     record_attempts(
@@ -1029,6 +1066,7 @@ fn fail_contract(
         false,
         attempts,
         secret_redactions,
+        out_of_tree_writes,
     )?;
     Err(HofError::contract(violation).into())
 }

@@ -9,7 +9,22 @@ use crate::harness::Harness;
 use crate::model::Role;
 use crate::runtime::role::{RoleInvocation, RoleOutcome};
 
+/// DR-25: resolve a path to an absolute one without requiring it to exist.
+/// `smoke-t2` handed a *relative* `HOH_ARTIFACT_DIR` to a shell whose cwd was
+/// already the view root, and `hoh submit` nested the whole run path inside it.
+pub fn absolute_path(path: &Path) -> std::path::PathBuf {
+    if path.is_absolute() {
+        return path.to_path_buf();
+    }
+    std::env::current_dir()
+        .map(|cwd| cwd.join(path))
+        .unwrap_or_else(|_| path.to_path_buf())
+}
+
 /// Build the `HOH_*` environment handed to the agent's shell (§4.2.5).
+///
+/// DR-25: **every path-shaped variable is absolute.**  A role may be started
+/// from any working directory, so a relative base silently changes meaning.
 pub fn role_env(
     cfg: &HohConfig,
     run_id: &str,
@@ -21,9 +36,35 @@ pub fn role_env(
     env.insert("HOH_ROLE".to_string(), role.as_str().to_string());
     env.insert("HOH_RUN_ID".to_string(), run_id.to_string());
     env.insert("HOH_ITERATION".to_string(), iteration.to_string());
+
+    let view = absolute_path(cwd);
+    let artifact_dir = view.join(".hoh");
+    // DR-28: scratch files live here and nowhere else; `.hoh` is excluded from
+    // hashing and snapshots, so probes can never enter the candidate identity.
+    let scratch_dir = artifact_dir.join("scratch");
+    env.insert(
+        "HOH_VIEW_DIR".to_string(),
+        view.to_string_lossy().into_owned(),
+    );
     env.insert(
         "HOH_ARTIFACT_DIR".to_string(),
-        cwd.join(".hoh").to_string_lossy().into_owned(),
+        artifact_dir.to_string_lossy().into_owned(),
+    );
+    env.insert(
+        "HOH_SCRATCH_DIR".to_string(),
+        scratch_dir.to_string_lossy().into_owned(),
+    );
+    env.insert(
+        "HOH_RUN_DIR".to_string(),
+        absolute_path(&cfg.runtime.runs_dir.join(run_id))
+            .to_string_lossy()
+            .into_owned(),
+    );
+    env.insert(
+        "HOH_WORKSPACE".to_string(),
+        absolute_path(&cfg.runtime.workspace)
+            .to_string_lossy()
+            .into_owned(),
     );
     env.insert("HOH_TOOLS_ENDPOINT".to_string(), cfg.tools.endpoint.clone());
     env.insert("HOH_TOOLS_POLICY".to_string(), role.as_str().to_string());
@@ -44,8 +85,9 @@ pub fn role_env(
     env
 }
 
-/// Invoke the harness once, guaranteeing the trajectory directory exists first
-/// so a crash in step 1 still leaves a trajectory behind.
+/// Invoke the harness once, guaranteeing the trajectory directory (and the
+/// DR-25/DR-28 scratch directory) exists first so a crash in step 1 still
+/// leaves a trajectory behind.
 pub async fn invoke_once(
     harness: &dyn Harness,
     inv: &RoleInvocation,
@@ -53,6 +95,7 @@ pub async fn invoke_once(
     if let Some(parent) = inv.trajectory_path.parent() {
         std::fs::create_dir_all(parent)?;
     }
+    std::fs::create_dir_all(inv.cwd.join(".hoh/scratch"))?;
     harness.invoke(inv).await
 }
 

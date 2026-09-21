@@ -74,7 +74,7 @@ Write exactly two files:
 Run:
 
 ```
-$HOH_HOH_BIN submit --role tester --file .hoh/evidence.json
+$HOH_HOH_BIN submit --role tester --file evidence.json
 ```
 
 If it reports issues, fix the file and submit again before you finish.

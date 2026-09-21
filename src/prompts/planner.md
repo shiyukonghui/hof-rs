@@ -56,7 +56,7 @@ Rules for the file:
 Write the file, then run:
 
 ```
-$HOH_HOH_BIN submit --role planner --file .hoh/plan.md
+$HOH_HOH_BIN submit --role planner --file plan.md
 ```
 
 If it reports issues, fix the file and submit again before you finish.

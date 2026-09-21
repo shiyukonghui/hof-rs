@@ -82,6 +82,11 @@ pub struct RuntimeConfig {
     /// so R2/R3 write-detection is not weakened.
     #[serde(default)]
     pub private_excludes: Vec<String>,
+    /// DR-25: the "HoH working directory" scanned for out-of-tree writes.  It
+    /// defaults to the process working directory (the repository root of a real
+    /// run); tests point it at a temporary directory.
+    #[serde(default)]
+    pub out_of_tree_root: Option<PathBuf>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

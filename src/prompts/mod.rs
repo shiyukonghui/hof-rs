@@ -29,7 +29,7 @@ pub fn planner_task(iteration: u32) -> String {
          3. Read the document scaffold at `.hoh/SCAFFOLD.md`.\n\
          4. Select at most three priorities: blockers and regressions first.\n\
          5. Write `.hoh/plan.md` and submit it with \
-         `$HOH_HOH_BIN submit --role planner --file .hoh/plan.md`.\n\n\
+         `$HOH_HOH_BIN submit --role planner --file plan.md`.\n\n\
          Do not implement, edit or test production code. Do not write any other file."
     )
 }
@@ -57,7 +57,7 @@ pub fn tester_task(iteration: u32) -> String {
          4. Read `.hoh/EVIDENCE_PLAYBOOK.md` and `.hoh/TOOLS.md`.\n\
          5. Derive checkable claims, collect public execution records, and write \
          `.hoh/evidence.json` plus `.hoh/qa_report.md`.\n\
-         6. Submit with `$HOH_HOH_BIN submit --role tester --file .hoh/evidence.json`.\n\n\
+         6. Submit with `$HOH_HOH_BIN submit --role tester --file evidence.json`.\n\n\
          Never modify production code or any file outside `.hoh/`. Unobservable behaviour is a \
          gap, not a pass."
     )
