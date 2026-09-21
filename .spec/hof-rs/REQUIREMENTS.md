@@ -58,8 +58,10 @@
 | C6 | 文档中文、代码与标识符英文；每个阶段结束 `git commit`，提交信息对应 `DECISIONS.md` 条目 |
 | C7 | 证据只来自**公开**信息：spec S、D_t、A_t、公开执行记录；私有评分永不进入 prompt 或 E_t |
 | C8 | token 统计必须从 `Message.extra["response"]["usage"]` 提取（mini 已持久化完整 ChatResponse）；不得依赖 `cost` 字段（本地模型无单价，cost 恒为 0） |
-| C9 | **上线模型标识必须逐字为 `qwen/qwen3.8-27b`**。实测：mini 的 `effective_model_name` 会剥掉 `qwen/` 前缀，若真发出裸 id `qwen3.8-27b`，LM Studio 会**额外加载第二个模型实例**（`/api/v0/models` 出现第二条 `state=loaded`）→ 显存翻倍。运行时**禁止**改变该字符串，且必须有测试锁定上线 id |
-| C10 | 真实运行的 `model` 配置必须显式写 `provider: openai_compatible`；否则 `infer_provider("qwen/...")` 判成 `aliyun`，请求不会打到 LM Studio |
+| C9 | **上线模型标识由配置显式声明（`model.wire_model_name`），且必须有双重锁定**：① 离线测试用假 HTTP 服务断言上线请求体里的 `model` 字段**逐字等于**它；② `hoh doctor` 的 chat 探测断言**响应里的 `model` 字段**等于它。**禁止**在代码里硬编码某个具体模型 id（换模型必须只改配置）。<br>历史教训（D6）：mini 的 `effective_model_name` 会按前缀表剥掉 `qwen/`，若上线 id 被悄悄改写，LM Studio 会额外加载第二个实例（显存翻倍）。该风险由上述双重锁定覆盖 |
+| C10 | `model.provider` 必须**显式**写 `openai_compatible`；否则 `infer_provider()` 可能误判（例如 `qwen/...` 被判成 `aliyun`），请求不会打到目标端点 |
+| C11 | **密钥不得入库**。`config/hoh.yaml` 中 `model.api_key` 必须为空；密钥通过进程环境变量提供（优先 `HOH_MODEL_API_KEY`，其次 `OPENAI_API_KEY`），由 Runtime 在加载配置时回填进传给 mini 的 model JSON 与 doctor 探测。<br>`.gitignore` 必须覆盖 `.env` / `*.env` / `config/*.secret*`。日志、轨迹、`meta.json`、`evidence.json` 与任何 prompt 中**禁止**出现密钥明文 |
+| C12 | 换模型/换端点属**配置变更**，不得要求改 `src/**`：凡与具体模型或厂商绑定的检查（如 LM Studio 专有的 `/api/v0/models` 常驻实例检查）必须**按端点能力条件化**，不适用时报告为 `skipped`（`ok=true` + detail 说明），**不得**阻断 run |
 
 ---
 
@@ -129,6 +131,19 @@
 | OPEN-8 | 离线测试**主用 FakeModel/FakeEnvironment**；另留 2~3 个「带真实依赖」的标记测试（真 Godot MCP / 真 LM Studio）；**v1 不自建 mock MCP 服务器**，避免 mock 与 175 个真实工具行为漂移导致假阳性 | 建议采纳 |
 
 ### 7.1 由 OPEN 结论派生的布局约定
+
+**当前固定配置 H（2026-09 变更，见 DECISIONS D15）**：
+
+| 项 | 值 |
+|---|---|
+| 端点 | `http://100.105.152.101:18080/v1`（OpenAI 兼容） |
+| 上线 model 字段 | `deepseek-v4.1-flash` |
+| `provider` | `openai_compatible`（显式） |
+| 密钥 | `HOH_MODEL_API_KEY` 环境变量（**不写入仓库**，C11） |
+| 实测 | tool calls 正常（`finish_reason=tool_calls`）；`usage` 完整（292/52/344，含 `reasoning_tokens`）；单次约 0.9s |
+
+> 本地 LM Studio（`qwen/qwen3.8-27b`）仍为受支持的备选配置（`model_name: openai/qwen/qwen3.8-27b` +
+> `wire_model_name: qwen/qwen3.8-27b` + `base_url: http://127.0.0.1:1234/v1`），换回只需改配置（C12）。
 
 ```text
 F:\moonbit-hof-rs\            <- HoH 代码仓（git；每阶段 commit 对应 DECISIONS.md 条目）

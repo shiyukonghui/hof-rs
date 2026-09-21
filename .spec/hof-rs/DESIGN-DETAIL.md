@@ -1,6 +1,6 @@
 # DESIGN-DETAIL — hof-rs 详细设计
 
-- 状态：**评审稿 v0.1，待用户确认**（未确认不得进入编码实现）
+- 状态：**v0.3（模型无关化修订，见 §12 DR-14..DR-16；用户已确认进入编码实现）**
 - 输入：`REQUIREMENTS.md` v0.2（C1–C10 / R1–R13 / E1–E6）、`PRD-mario.md` v1、`DESIGN-OVERVIEW.md` v0.1（+D6 修订）
 - 纪律：本文精确到「实现者不需要再做任何设计决策」。凡本文未定之处，实现者应按本文的**裁决原则**就近推导，并在回报中列出，不得自行改变接口。
 
@@ -253,11 +253,12 @@ plan 校验规则：
 
 ```yaml
 model:
-  model_name: openai/qwen/qwen3.8-27b     # D6：剥掉 openai/ 后上线恰好是 qwen/qwen3.8-27b
-  provider: openai_compatible             # C10：必须显式，否则被判为 aliyun
+  model_name: deepseek-v4.1-flash         # DR-14 取代此前的 qwen 配置；见 §12
+  provider: openai_compatible             # C10：必须显式
   service_name: openai_compatible
-  base_url: http://127.0.0.1:1234/v1
-  api_key: lm-studio
+  wire_model_name: deepseek-v4.1-flash    # DR-14 新增：上线必须逐字等于它（双重锁定）
+  base_url: http://100.105.152.101:18080/v1
+  # api_key 必须为空（C11）：密钥由环境变量 HOH_MODEL_API_KEY 提供，不入库
   use_tool_calls: true
   request_timeout_secs: 900
   max_retries: 3
@@ -1078,6 +1079,49 @@ pub struct FakeToolChannel { pub calls: Mutex<Vec<(Role,String,Value)>> }
 - 真实 27B 模型在 `1 + max_schema_retries` 次内产出合法 plan/evidence 的能力；
 - 副本耗时与全量快照体积的实测数据。
 
+### DR-14 模型身份「配置驱动 + 双重锁定」（取代 C9 的硬编码写法）
+
+- `config/hoh.yaml` 的 `model` 段新增必填项 **`wire_model_name`**：声明「上线请求体里的 `model` 字段必须逐字等于」的字符串。
+- **删除代码中的硬编码模型常量**：`config::REQUIRED_MODEL_NAME` / `config::WIRE_MODEL_NAME` 必须移除；
+  `assert_model_identity` 改为校验下列通用不变式（不再认识任何具体模型名）：
+  1. `model.provider` 显式存在且等于 `openai_compatible`（C10）；
+  2. `model.model_name` 与 `model.wire_model_name` 均非空；
+  3. `model.api_key` **必须为空**（C11）——密钥来自环境，不得写在配置里；
+  4. `HofError::ModelIdentityViolation` 的文案与字段改为携带 `expected` / `actual` 或配置值，不得再出现具体模型名。
+- **双重锁定（C9）**：
+  1. 离线：`tests/mini_wire_model.rs` 改为**从配置读取 `wire_model_name`**，用假 HTTP 服务断言服务端收到的
+     `model` 字段逐字等于它（换模型只改配置，测试自动跟随，无需改码）；
+  2. 在线：`hoh doctor` 的 `model.chat` 探测断言**响应里的 `model` 字段**等于 `wire_model_name`。
+- 配置解析后必须把 `wire_model_name` 保留在传给 mini 的 model JSON 中（mini 会忽略未知字段），
+  但**不得**用它替换 `model_name`（C9 的风险正是「上线 id 被悄悄改写」）。
+
+### DR-15 `hoh doctor` 的探测必须通用化（C12）
+
+- `model.chat` 探测**必须携带 `Authorization: Bearer <resolved api_key>`**（当前实现不带任何鉴权头，对远端端点会 401）。
+  api_key 的解析顺序（C11）：`model.api_key`（非空）→ `HOH_MODEL_API_KEY` → `OPENAI_API_KEY`；三者皆空时
+  该探测项 `ok=false`，detail 明确「no api key resolved」。
+- `model.resident` 探测是 **LM Studio 专有**（`/api/v0/models` + 裸 id 重复实例检查），必须条件化：
+  - 仅当 `base_url` 的 host 为 `127.0.0.1` / `localhost`（或配置显式开启）时才执行；
+  - 端点不提供该 API、或 host 为远端时，返回 `DoctorItem{ ok: true, detail: "skipped: ..." }`（**不得** `ok=false`，
+    否则会阻断 run，违反 C12）；
+  - 裸 id 检查改为通用规则：若存在 `state=loaded` 且 id 等于「`wire_model_name` 去掉厂商前缀后的形式」的条目，
+    才报告重复实例（保留 D6 的教训，但不硬编码 `qwen3.8-27b`）。
+- 端到端要求：**换模型/换端点后，`hoh doctor` 必须全绿，且不得需要改 `src/**`。**
+
+### DR-16 密钥卫生（C11）
+
+- `config/hoh.yaml`：`model.api_key` 留空（或整行不写）；文件中不得出现任何形如 `sk-...` 的字面量。
+- `.gitignore` 追加：`.env`、`*.env`、`config/*.secret*`。
+- 加载配置后把解析出的密钥回填到**内存中**传给 mini 的 model JSON；`meta.json`、轨迹、日志、
+  `evidence.json`、role prompt、`doctor` 输出中**禁止**出现密钥明文：
+  - `meta.json.config` 落盘前必须把 `model.api_key` 替换为 `null`（或 `"<redacted>"`）；
+  - 轨迹由 mini 写入，其中 `info.config.model.api_key` 可能含密钥 → **运行结束后必须对 `runs/<id>/**/traj/*.json`
+    做 redaction 后再视为验收产物**；更稳的做法是给 mini 传 `api_key` 为空并依赖其环境变量回退（若 mini 的
+    `resolve_api_key` 能从 `OPENAI_API_KEY` 取到值），实现者必须在两者中选择并给出证据。
+- 测试：①配置里出现 `api_key` 非空 → `ModelIdentityViolation`；②`meta.json` 与轨迹中不含 `sk-` 前缀串；
+  ③密钥只来自环境时，`hoh doctor` 的 `model.chat` 探测仍能带鉴权成功（用假 HTTP 服务断言收到了
+  `Authorization: Bearer <key>`）。
+
 ---
 ### 12.1 变更记录
 
@@ -1086,3 +1130,4 @@ pub struct FakeToolChannel { pub calls: Mutex<Vec<(Role,String,Value)>> }
 | v0.1 | 2026-09 | 初版（阶段三冻结） | 概要设计确认 |
 | v0.1a | 2026-09 | §4.4 补强 QA 三件套与 `WorkspaceDriftBeforeQa` | 自查发现绝对路径逃逸风险 |
 | v0.2 | 2026-09 | 追加 §12（DR-1..DR-13）并改写 §4.4 执行顺序 | 阶段五第一次独立验收 verdict=fail |
+| v0.3 | 2026-09 | 追加 §12（DR-14..DR-16）并改写 §3.1 的 model 段：模型身份改为配置驱动、doctor 探测通用化、密钥卫生 | 用户更换为远端 `deepseek-v4.1-flash`（D15） |

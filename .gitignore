@@ -1,6 +1,12 @@
 # 论文原版 PDF（16MB 二进制、外部出版物）：仅保留 OCR 文本作为权威参考
 2609.01481v1.pdf
 
+# 密钥：绝不入库（C11 / DR-16）
+.env
+*.env
+config/*.secret*
+config/*.key
+
 # HoH 运行产物与工作区：不进版本控制
 .workspace/
 runs/
