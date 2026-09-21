@@ -1263,6 +1263,66 @@
   D34 的「Phase 2 原子切换」被本条的引擎优先顺序取代（hof-rs 侧切换合并进将来的解除暂停时刻）。
 - 回滚点：本条只是**顺序与优先级**决定，不改任何代码；引擎侧仍只动 `modules/mcp_server/**`。
 
+## D44 — 协作协议变更：**文件化任务书 + 文件化报告**（用户指令）
+
+- 日期：2026-09
+- 用户指令：**「后续你与子代理之间的任务下发通过任务书（我给任务书地址）；子代理强制通过任务报告汇报，简洁总结 + 报告地址」**。
+- 规定：
+  1. **任务书是文件**：决策者把任务书写成 markdown 落到固定路径，**在委派提示里只给路径**（不再把长任务书塞进提示）；
+     子代理必须先读该文件再动手。
+  2. **报告是文件**：子代理**必须**把完整报告（含真实命令输出与证据）写到指定报告路径；
+     返回给决策者的内容**只允许**是「简洁总结（≤15 行）+ 报告路径」。
+  3. **落点**（承 D40：引擎侧工件与代码同居）：
+     - 引擎侧任务书 → fork `modules/mcp_server/docs/tasks/TASK-<编号>-<slug>.md`
+     - 引擎侧报告 → fork `modules/mcp_server/docs/reports/REPORT-<编号>-<slug>.md`
+     - 跨项目决策日志 → 仍是 hof-rs `DECISIONS.md`（本文件）
+  4. **理由**：①上下文卫生（长任务书与长报告不再占用对话上下文）；②审计链持久（报告随代码入库，可 git 追溯）；
+     ③「改动 → 提交 → 决策日志」三者可互查。
+- 回滚点：协议本身不涉及代码；若某次委派确实不适合落盘（例如极短的只读核对），可临时口头委派，但**报告仍须落盘**。
+
+## D45 — 命名映射 v1.1 修复决定（采纳独立审计的 D-1..D-8）
+
+- 日期：2026-09（独立审计判定 `fail`：机械层 178 项断言全过，缺陷集中在数据字段）
+- 背景：独立审计（全新子代理，自写脚本、未采信生成方结论）结论为
+  **机械层全对**（字节/sha256/条数/字段/双向差集/命名谓词/四组计数逐项精确复现，39 个函数体行号与映射引用全吻合），
+  但**数据正确性有 3 类缺陷**（2 major + 1 minor）+ 5 个 minor/nit。
+- 逐条裁决：
+  - **D-1（major，权限相关）采纳并取保守解**：`editor_capture_screenshot`（旧 `get_editor_screenshot`）与
+    `running_game_capture_screenshot`（旧 `get_game_screenshot`）声明 `mutating=false`，但 `save_path` 非空时**真的写 PNG 落盘**
+    （`editor.rs:327-343` / `:395-402`，schema 文案明确允许 `res://`）→ **两行改为 `mutating=true`**，
+    并在 `reason` 写明「条件写：save_path 非空即落盘」；`convention` 增加**条件写**条款
+    （凡「默认只读、参数可触发落盘」的工具一律按最保守语义记 `mutating=true`）。
+  - **D-2 / D-3（major，能力丢失）采纳其事实，但结论改为「取消这两对合并」**：
+    审计实测两对 merge **都不无损**——
+    `search_in_files ⇐ find_node_references`：输出形状（逐行 `{file,line,text}` vs 按文件聚合 `{file,lines[]}`）、
+    上限 **50 vs 100**、**大小写不敏感 vs 敏感** 三项不等价；且 D41 原先声称要吸收的「扩展名白名单/跳过 addons」**指错了**
+    （保留方扩展名是超集，两者都已跳过 addons）。
+    `analyze_signal_flow ⇐ find_signal_connections`：除已知的 `signal_name` 外，还差**4 项**——
+    返回形状（按节点嵌套 vs 扁平 `connections[]`）、**非持久连接过滤**（`flags & 1`）、
+    **编辑场景之外的 target**、`node_path` **子串 vs 精确**匹配。
+    → **决定取消这两对合并，两两保留为独立工具并给可区分的名字**（用户的诉求是**区分度**而非工具数少；
+    名字变长不是约束，能力丢失才是代价）。保留的唯一无损合并是
+    `get_performance_monitors ⇐ get_editor_performance`（审计逐字段核验其为子集，**成立**），
+    该对仍合并，但 reason 必须写明「形状由平铺改嵌套」。
+  - **D-4（minor）采纳**：`disposition` 改为**枚举**（`rename | keep | merge_into | unregister_until_implemented |
+    fix_implementation_first`），合并目标新增独立字段 **`merge_target`**（= 保留方的 `old_name`），
+    使「精确匹配」的消费者可判定。
+  - **D-5（minor）采纳**：`convention` 补齐值域声明 `disposition_enum`、`scope_enum`，并显式写明
+    **`mutating` 的口径**（含游戏/编辑器状态副作用，共 101 条）与 hof-rs `is_mutating`（仅「是否改产物」，`policy.rs:280`）
+    **不是同一谓词**——**禁止把前者直接灌进 `MUTATING_EXACT`**（会把 15 个合法取证工具一起拒掉，fail-closed 回归）。
+  - **D-6 / D-7 / D-8（nit）采纳**：修正三处引文失真（`navigate_to` 的 gd 实际文案、
+    `get_project_info` 的 reason 误提 DirAccess、`move_node` 未体现可选 `new_name` 副作用）。
+- **工具数变化**：`174 − 2（unregister） − 1（保留的无损合并） = **171**`；
+  因此 B0 生成的 `docs/tools_list.renamed.json`（原 169）与 `docs/TOOL-NAMING.md`（其头部硬编码了 JSON 的字节数与 sha256）
+  **必须一并重生成**，否则契约与文档失效。
+- 另记两条口径提醒（不属缺陷但必须在实现期遵守）：
+  1. `convention.verb_closed_set` 的 37 项**只有内部一致性**（上游 D38/D41 只点名 16 个），
+     其中 `evaluate` 用量为 0 → 下一版 convention 决定「移除」或「保留并说明」。
+  2. 若注册期 lint 用「verb 段推 mutating」，审计实测 **3 处误判**
+     （`project_convert_uid_to_path`/`project_convert_path_to_uid` 的 `convert` 非写、`editor_open_scene` 的 `open` 属写）
+     → 需要**对象/scope 感知的豁免表**，不能只靠动词闭集。
+- 回滚点：映射与契约都是数据文件，恢复旧版即回退；本条不改任何引擎源码。
+
 
 
 
