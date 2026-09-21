@@ -450,5 +450,79 @@
     `result.json.artifact_hygiene.suspicious_files` 留痕不自动删除。
 - 回滚点：`DESIGN-DETAIL.md` 回退到 `2a64277`；代码回退到 `11ef9b6`。
 
+## D23 — 修复包 v0.5 的实现期裁决（DR-24..DR-28）
+
+- 日期：2026-09（阶段四，修复包 v0.5 实现）
+- 触发问题：DR-24..DR-28 已冻结，但若干处「设计未细分」的实现取舍会改变既有契约，
+  必须显式记录而不是悄悄选一个。
+
+### 裁决 1：`ArtifactGate.applicable` 第三态（DR-24/DR-27）
+- 问题：`launchable := editor_errors_baseline.ok && play_scene_ready.ok` 对**没有这两个步骤**的适配器
+  （`TestAdapter`/`FakeAdapter`，其电池由 trait 默认实现派生）意味着 `launchable=false`，
+  会触发一次定向修复调用，进而打断既有 60+ 个离线场景（FakeHarness 脚本耗尽而 panic）。
+- 选择：`ArtifactGate` 增加 `applicable` 字段。电池未声明两个门步骤时
+  `{applicable:false, launchable:true, reasons:["gate_not_applicable: ..."]}`，既不触发修复也不返回 6；
+  只有 Godot 电池（声明了两个步骤）才是真门。
+- 理由：**「没检查」不允许伪装成「通过」**——用显式第三态表示，而不是把缺失当失败或当成功。
+- 影响：`hoh run` 对 `--adapter test` 永远返回 0；`result.json.artifact_gate.applicable=false` 可审计。
+
+### 裁决 2：`hoh submit` 的路径语义（DR-25）
+- 问题：DR-25 要求「相对 `--file` 以 `HOH_ARTIFACT_DIR` 为基准」且「写入前断言目标绝对路径逐字
+  等于规范产物路径」。字面最严读法（任何 `--file` 必须等于 `<view>/.hoh/<name>`）会让既有
+  `submit_validates_and_writes_the_canonical_artifact`（用 `tests/fixtures/plan_ok.md` 作为只读来源、
+  期望写入规范路径、exit 0）失效。
+- 选择：
+  1. 写入目标恒为规范路径 `<artifact_dir>/plan.md|evidence.json`；
+  2. `HOH_ARTIFACT_DIR` 必须是绝对路径，否则 `exit 2` 并报 expected/actual（这正是 smoke-t2 的嵌套 bug）；
+  3. 相对 `--file` 先按 `HOH_ARTIFACT_DIR` 解析，解析结果**必须逐字等于**规范路径，否则 `exit 2`
+     并报 expected/actual（`--file other.md` 被拒）；
+  4. 绝对 `--file` 保留既有「读取来源 → 校验 → 写规范路径」语义（测试与人工工具依赖它）。
+- 配套：三个 prompt 与 skills 里的提交命令由 `--file .hoh/plan.md` 改为 `--file plan.md`
+  （相对基准是 `HOH_ARTIFACT_DIR` 本身）。
+- 理由：真正的生产故障模式是「相对 artifact dir + 相对文件名」的笛卡尔积；绝对来源是人工/测试通道，
+  与角色运行时的失败模式无关。把两者区分开，既关掉 bug 又不误伤既有契约。
+
+### 裁决 3：电池以 `Role::Developer` 调用工具（DR-24）
+- 问题：新增的 `reload_project` 属于 `MUTATING_EXACT`，`open_scene` 也不在 Tester 允许名单里；
+  而电池此前用 `Role::Tester` 调用。
+- 选择：`BatterySession` 的 `call`/`ready` 改用 `Role::Developer`（唯一写者角色，全量工具）。
+- 理由：电池是 **runtime 的确定性阶段**（DR-1），不是 Tester；它必须能强制编辑器反映磁盘真值。
+  Tester 的写工具禁令（R13）不变。
+- 回滚点：若未来给电池单独的角色策略，只需改 `BatterySession::call`。
+
+### 裁决 4：`scene_structure` 步骤位置（DR-24）
+- 选择：顺序为 `project_reload_and_open` → `scene_structure` → `editor_errors_baseline` → `play_scene_ready`
+  → …（共 9 步）。门定义仍严格等于 `editor_errors_baseline.ok && play_scene_ready.ok`。
+- 理由：`scene_structure` 的可执行提示是定向修复的第一手材料，越早产出越好；把它纳入门会偏离冻结定义。
+
+### 裁决 5：越界写扫描用元数据而非内容哈希（DR-25）
+- 选择：`(len, mtime_nanos)` + `WalkDir::filter_entry` 跳过 `.git/.workspace/runs/target/node_modules/.hoh*`
+  与 `--project` 子树；上限 50，相对扫描根、排序、只报不删。
+- 新增配置键 `runtime.out_of_tree_root`（serde default 为 `None` → 进程 cwd），使离线测试可指向临时目录。
+- 理由：扫描发生在每次角色调用后，内容哈希代价不必要；`(len, mtime)` 足以回答「新增/修改」。
+
+### 裁决 6：两遍电池的落盘（DR-24）
+- 选择：第 2 遍电池**重建** `.hoh/deterministic`（不留第 1 遍的原始 payload 冒充最终证据）；
+  两遍的 `ok` 摘要都写入 `result.json.battery_passes`（pass/launchable/steps）。
+
+### 裁决 7：既有测试的必要调整（DR-24 引入的新步骤）
+- `tests/evidence_battery.rs`：
+  - 步骤顺序断言由 7 步改为 9 步（新增前两步）——**必须改**，因为电池步骤顺序是 DR-24 的规范行为；
+  - `FixtureChannel` 增加 `reload_project`/`open_scene`/`get_scene_file_content` 三个答复——**必须改**，
+    否则夹具对未知工具 panic；
+  - `editor_error_failure_is_recorded_verbatim` 与 `readiness_timeout_fails_the_step_and_is_journalled`
+    改用 `repairing_script()`（多一个 Developer 步骤）——**必须改**，因为这两例门为 false，
+    DR-24 必然发起一次定向修复。
+- 其余 160 条断言未改。
+
+### 裁决 8：DR-27 退出码 6 的离线可测边界
+- 事实：`hoh run` 的 doctor 预检需要模型端点与 MCP（离线必失败 → exit 4），因此**无法**在离线套件里
+  端到端跑出 6。
+- 选择：把退出码派生与落盘抽成纯函数 `run_exit_code(&ArtifactGate)` 与
+  `finalize_run(run_dir, &RunSummary)`，并另加一个真实 `run_loop` 回合（GodotAdapter + 全失败工具通道）
+  证明 `summary.artifact_gate.launchable=false` 且 `run_exit_code → 6`。
+- 遗留：真实 CLI 路径（doctor 通过 → 6）留待真实冒烟验证，记入 known_risks。
+
+
 
 

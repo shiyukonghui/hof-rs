@@ -510,7 +510,47 @@ pub async fn run(args: RunArgs) -> anyhow::Result<i32> {
         summary.final_version_id,
         summary.total_usage.total_tokens
     );
-    Ok(0)
+    // DR-27: 6 = the loop completed but the frozen artifact is not launchable.
+    finalize_run(&run_dir, &summary)
+}
+
+/// DR-27: the exit code of a completed run, derived from the artifact gate.
+///
+/// `0` means "the loop completed **and** the artifact is usable"; `6` means the
+/// loop completed but `artifact_gate.launchable == false`.  A gate that never
+/// applied (an adapter without gate steps) cannot produce `6`.
+pub fn run_exit_code(gate: &crate::model::ArtifactGate) -> i32 {
+    if gate.applicable && !gate.launchable {
+        6
+    } else {
+        0
+    }
+}
+
+/// DR-27: persist the run's exit code twice — as a bare number in
+/// `runs/<id>/exit_code` (launchers cannot rely on `Start-Process -PassThru`
+/// under redirection) and as `meta.json.exit_code`.
+pub fn finalize_run(run_dir: &Path, summary: &run_loop::RunSummary) -> anyhow::Result<i32> {
+    let code = run_exit_code(&summary.artifact_gate);
+    std::fs::write(run_dir.join("exit_code"), format!("{code}\n"))?;
+
+    let meta_path = run_dir.join("meta.json");
+    if let Ok(raw) = std::fs::read_to_string(&meta_path) {
+        if let Ok(mut meta) = serde_json::from_str::<Value>(&raw) {
+            if let Some(object) = meta.as_object_mut() {
+                object.insert("exit_code".to_string(), json!(code));
+                if let Ok(gate) = serde_json::to_value(&summary.artifact_gate) {
+                    object.insert("artifact_gate".to_string(), gate);
+                }
+                let mut serialized = serde_json::to_string_pretty(&meta)?;
+                if !serialized.ends_with('\n') {
+                    serialized.push('\n');
+                }
+                std::fs::write(&meta_path, serialized)?;
+            }
+        }
+    }
+    Ok(code)
 }
 
 /// `<UTC yyyymmdd-HHMMSS>-<uuid4 first 8>`.
@@ -616,12 +656,29 @@ pub async fn status(args: StatusArgs) -> anyhow::Result<i32> {
         if iteration_unknown {
             unknown_iterations += 1;
         }
+        // DR-27: "did the loop complete?" (harness) and "is the artifact
+        // usable?" (gate) are two different columns, never one green `ok`.
+        let harness = if result.get("ok").and_then(Value::as_bool).unwrap_or(false) {
+            "ok"
+        } else {
+            "fail"
+        };
+        let gate = match result
+            .pointer("/artifact_gate/launchable")
+            .and_then(Value::as_bool)
+        {
+            Some(true) => "ok",
+            Some(false) => "fail",
+            None => "unknown",
+        };
         println!(
-            "{:<8} ok={:<5} reason={:<20} candidate={} roles={}",
+            "{:<8} harness={:<5} gate={:<8} ok={:<5} reason={:<20} candidate={} roles={}",
             iter_dir
                 .file_name()
                 .map(|name| name.to_string_lossy().into_owned())
                 .unwrap_or_default(),
+            harness,
+            gate,
             result.get("ok").and_then(Value::as_bool).unwrap_or(false),
             result
                 .get("reason")
