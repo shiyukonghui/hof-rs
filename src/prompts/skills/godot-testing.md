@@ -22,7 +22,8 @@ candidate. Read these first — they are the primary input to every claim:
 | `play_scene_ready` | N1 | `ok`; the scene booted and the game answered |
 | `scene_tree` | N2, F5 | `ok`; the named nodes exist in the tree |
 | `screenshot` | N2, F4, F13, F16 | `ok` and the PNG really exists |
-| `input_replay` | F1, F2, F3 | `ok` **and** the recorded `position` actually changed |
+| `input_channel_probe` | F1, F2 (+P3 when the game really has no such action) | the observation says `GAME_INPUT_CHANNEL_OK`; `ACTION_NOT_BOUND` and `ACTION_BINDING_UNKNOWN` are both failures, but they are *different* facts |
+| `input_replay` | F1, F2, F3 | `ok` **and** a `game_process` quadruple whose `after_position` differs from `before_position` |
 | `node_and_collision_assertions` | F5, F6, F10, F13, F14, F16 | `ok`; every named body has `shape_count > 0` and the HUD has a text node |
 | `stop_scene` | N1 | `ok` |
 
@@ -31,6 +32,23 @@ that step is a `gap` with `player_impact` and `recommended_update` — never
 `verified`. A step that succeeded but shows a constant `position`, or a body
 with `shape_count = 0`, does not support a movement or collision claim either:
 the records give you the numbers, you supply the judgement.
+
+## The game process is not the editor
+The running game is a **separate process**; the editor can only talk to it
+through the addon's file IPC. Consequences you must respect:
+
+- Every quadruple and every replay record names its process (`channel`):
+  `game_process` for `monitor_properties` / `get_game_node_properties`, and
+  `editor_process` for `simulate_action` / `get_input_actions`.
+- Records labelled `EDITOR_SIDE_INJECTION` come from the **editor's** own
+  `InputMap`/`Input` and say nothing about the game. `get_input_actions` lists
+  the editor's built-in `ui_*` actions; it is not evidence that a project action
+  is missing.
+- `ACTION_BINDING_UNKNOWN` means the game-process channel could not be read.
+  Record a gap for F1/F2 and say the channel was unreadable — **never** write it
+  up as "the action is not bound". That false reading has already sent a round
+  off to fix a defect that did not exist.
+- `ACTION_NOT_BOUND` is only credible when it comes from the game-process probe.
 
 ## How to reference evidence
 `execution_records[*].path` must be **relative** to the candidate root and must

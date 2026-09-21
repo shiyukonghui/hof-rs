@@ -1,0 +1,125 @@
+{
+  "calls": [
+    {
+      "args": {},
+      "mismatched_ids": [
+        34
+      ],
+      "ok": true,
+      "payload": {
+        "content": [
+          {
+            "text": "{\"actions\":[\"ui_accept\",\"ui_select\",\"ui_cancel\",\"ui_close_dialog\",\"ui_focus_next\",\"ui_focus_prev\",\"ui_left\",\"ui_right\",\"ui_up\",\"ui_down\",\"ui_page_up\",\"ui_page_down\",\"ui_home\",\"ui_end\",\"ui_accessibility_drag_and_drop\",\"ui_cut\",\"ui_copy\",\"ui_focus_mode\",\"ui_paste\",\"ui_undo\",\"ui_redo\",\"ui_text_completion_query\",\"ui_text_completion_accept\",\"ui_text_completion_replace\",\"ui_text_newline\",\"ui_text_newline_blank\",\"ui_text_newline_above\",\"ui_text_indent\",\"ui_text_dedent\",\"ui_text_backspace\",\"ui_text_backspace_word\",\"ui_text_backspace_all_to_left\",\"ui_text_delete\",\"ui_text_delete_word\",\"ui_text_delete_all_to_right\",\"ui_text_caret_left\",\"ui_text_caret_word_left\",\"ui_text_caret_right\",\"ui_text_caret_word_right\",\"ui_text_caret_up\",\"ui_text_caret_down\",\"ui_text_caret_line_start\",\"ui_text_caret_line_end\",\"ui_text_caret_page_up\",\"ui_text_caret_page_down\",\"ui_text_caret_document_start\",\"ui_text_caret_document_end\",\"ui_text_caret_add_below\",\"ui_text_caret_add_above\",\"ui_text_scroll_up\",\"ui_text_scroll_down\",\"ui_text_select_all\",\"ui_text_select_word_under_caret\",\"ui_text_add_selection_for_next_occurrence\",\"ui_text_skip_selection_for_next_occurrence\",\"ui_text_clear_carets_and_selection\",\"ui_text_toggle_insert_mode\",\"ui_menu\",\"ui_text_submit\",\"ui_unicode_start\",\"ui_graph_duplicate\",\"ui_graph_delete\",\"ui_graph_follow_left\",\"ui_graph_follow_right\",\"ui_filedialog_delete\",\"ui_filedialog_up_one_level\",\"ui_filedialog_refresh\",\"ui_filedialog_show_hidden\",\"ui_filedialog_find\",\"ui_filedialog_focus_path\",\"ui_swap_input_direction\",\"ui_colorpicker_delete_preset\",\"spatial_editor/viewport_orbit_modifier_1\",\"spatial_editor/viewport_orbit_modifier_2\",\"spatial_editor/viewport_orbit_snap_modifier_1\",\"spatial_editor/viewport_orbit_snap_modifier_2\",\"spatial_editor/viewport_pan_modifier_1\",\"spatial_editor/viewport_pan_modifier_2\",\"spatial_editor/viewport_zoom_modifier_1\",\"spatial_editor/viewport_zoom_modifier_2\",\"spatial_editor/freelook_left\",\"spatial_editor/freelook_right\",\"spatial_editor/freelook_forward\",\"spatial_editor/freelook_backwards\",\"spatial_editor/freelook_up\",\"spatial_editor/freelook_down\",\"spatial_editor/freelook_speed_modifier\",\"spatial_editor/freelook_slow_modifier\"],\"count\":88}",
+            "type": "text"
+          }
+        ]
+      },
+      "request_id": 35,
+      "response_id": 35,
+      "sync_probes": 1,
+      "tool": "get_input_actions"
+    },
+    {
+      "args": {
+        "action": "move_right",
+        "pressed": true
+      },
+      "mismatched_ids": [
+        36
+      ],
+      "ok": true,
+      "payload": {
+        "content": [
+          {
+            "text": "{\"action\":\"move_right\",\"simulated\":\"action\"}",
+            "type": "text"
+          }
+        ]
+      },
+      "request_id": 37,
+      "response_id": 37,
+      "sync_probes": 1,
+      "tool": "simulate_action"
+    },
+    {
+      "args": {
+        "frame_count": 10,
+        "frame_interval": 1,
+        "node_path": "Player",
+        "properties": [
+          "position"
+        ]
+      },
+      "mismatched_ids": [
+        38
+      ],
+      "ok": true,
+      "payload": {
+        "content": [
+          {
+            "text": "{\"frame_count\":10,\"node_path\":\"Player\",\"samples\":[{\"frame\":0,\"position\":{\"x\":60.0,\"y\":283.998992919922}},{\"frame\":1,\"position\":{\"x\":60.0,\"y\":283.998992919922}},{\"frame\":2,\"position\":{\"x\":60.0,\"y\":283.998992919922}},{\"frame\":3,\"position\":{\"x\":60.0,\"y\":283.998992919922}},{\"frame\":4,\"position\":{\"x\":60.0,\"y\":283.998992919922}},{\"frame\":5,\"position\":{\"x\":60.0,\"y\":283.998992919922}},{\"frame\":6,\"position\":{\"x\":60.0,\"y\":283.998992919922}},{\"frame\":7,\"position\":{\"x\":60.0,\"y\":283.998992919922}},{\"frame\":8,\"position\":{\"x\":60.0,\"y\":283.998992919922}},{\"frame\":9,\"position\":{\"x\":60.0,\"y\":283.998992919922}}]}",
+            "type": "text"
+          }
+        ]
+      },
+      "quadruple": {
+        "action": "move_right",
+        "after_position": {
+          "x": 60.0,
+          "y": 283.998992919922
+        },
+        "before_position": {
+          "x": 60.0,
+          "y": 283.998992919922
+        },
+        "velocity": {
+          "x": 0.0,
+          "y": 0.0
+        }
+      },
+      "request_id": 39,
+      "response_id": 39,
+      "sync_probes": 1,
+      "tool": "monitor_properties"
+    },
+    {
+      "args": {
+        "action": "move_right",
+        "pressed": false
+      },
+      "mismatched_ids": [
+        40
+      ],
+      "ok": true,
+      "payload": {
+        "content": [
+          {
+            "text": "{\"action\":\"move_right\",\"simulated\":\"action\"}",
+            "type": "text"
+          }
+        ]
+      },
+      "request_id": 41,
+      "response_id": 41,
+      "sync_probes": 1,
+      "tool": "simulate_action"
+    }
+  ],
+  "mismatched_ids": [
+    34,
+    36,
+    38,
+    40
+  ],
+  "ok": false,
+  "request_id": 35,
+  "response_id": 35,
+  "step": "input_replay",
+  "supports": [
+    "F1",
+    "F2",
+    "F3",
+    "P3"
+  ],
+  "sync_probes": 4
+}

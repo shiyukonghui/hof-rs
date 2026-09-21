@@ -138,6 +138,21 @@ enum InputActionsMode {
     Bound,
     /// The InputMap has no such action.
     Missing,
+    /// The payload captured in `smoke-t5`: the **editor's** InputMap, which
+    /// lists only the engine's built-in `ui_*` actions.
+    RealEditorMap,
+}
+
+/// DR-35: what the **game process** answers to `execute_game_script`.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum GameInputMode {
+    /// The action exists in the game and the press is observable.
+    Ok,
+    /// The game's `InputMap` really has no such action.
+    ActionMissing,
+    /// `execute_game_script` fails the way it did in `smoke-t5`
+    /// (`Invalid named index 'Input' for base type Object`).
+    ProbeFails,
 }
 
 struct FixtureChannel {
@@ -153,6 +168,10 @@ struct FixtureChannel {
     moving: bool,
     screenshot: ScreenshotMode,
     input_actions: InputActionsMode,
+    /// DR-35: the game-process input channel.
+    game_input: GameInputMode,
+    /// DR-35: whether a game-side `action_press` is currently held.
+    pressed_in_game: Mutex<bool>,
     /// The action of the most recent `simulate_action`, so `monitor_properties`
     /// (which does not name an action) can answer plausibly.
     last_action: Mutex<String>,
@@ -170,6 +189,8 @@ impl FixtureChannel {
             moving: true,
             screenshot: ScreenshotMode::WritesFile,
             input_actions: InputActionsMode::Bound,
+            game_input: GameInputMode::Ok,
+            pressed_in_game: Mutex::new(false),
             last_action: Mutex::new("move_right".to_string()),
         }
     }
@@ -198,6 +219,12 @@ impl FixtureChannel {
 
     fn with_input_actions(mut self, mode: InputActionsMode) -> Self {
         self.input_actions = mode;
+        self
+    }
+
+    /// DR-35: choose what the **game process** answers.
+    fn with_game_input(mut self, mode: GameInputMode) -> Self {
+        self.game_input = mode;
         self
     }
 
@@ -286,6 +313,12 @@ fn monitor_payload(action: &str, frames: u64, moving: bool) -> Value {
 
 /// The `get_input_actions` reply for the requested mode.
 fn input_actions_payload(mode: InputActionsMode) -> Value {
+    if mode == InputActionsMode::RealEditorMap {
+        // The verbatim payload the battery collected in `smoke-t5`: the editor's
+        // own InputMap, listing only the engine's built-in `ui_*` actions.
+        let real: Value = fixture("input_replay_smoke_t5.json");
+        return real["calls"][0]["payload"].clone();
+    }
     let actions = match mode {
         InputActionsMode::Bound => json!([
             {"name": "move_left", "keys": ["A", "Left"]},
@@ -293,8 +326,16 @@ fn input_actions_payload(mode: InputActionsMode) -> Value {
             {"name": "jump", "keys": ["Space", "W"]},
         ]),
         InputActionsMode::Missing => json!([{"name": "ui_accept", "keys": ["Enter"]}]),
+        InputActionsMode::RealEditorMap => unreachable!("handled above"),
     };
     let inner = json!({"actions": actions});
+    json!({"content": [{"type": "text", "text": inner.to_string()}]})
+}
+
+/// DR-35: one `execute_game_script` reply, in the addon's
+/// `{"result": str(value)}` shape.
+fn game_script_payload(reading: &str) -> Value {
+    let inner = json!({"result": reading});
     json!({"content": [{"type": "text", "text": inner.to_string()}]})
 }
 
@@ -363,13 +404,54 @@ impl ToolChannel for FixtureChannel {
                 }
                 fixture("simulate_action_ok.json")
             }
+            // DR-35: the game-process input channel.  The probe scripts are the
+            // real ones (`str(InputMap.has_action(...))` and friends), so this
+            // branch keys on them.
+            "execute_game_script" => {
+                if self.game_input == GameInputMode::ProbeFails {
+                    return Err(captured_error("game_script_input_unreachable.txt").into());
+                }
+                let code = args.get("code").and_then(Value::as_str).unwrap_or("");
+                let bound = self.game_input == GameInputMode::Ok;
+                if code.contains("action_press") {
+                    *self.pressed_in_game.lock().unwrap() = true;
+                    game_script_payload("<null>")
+                } else if code.contains("action_release") {
+                    *self.pressed_in_game.lock().unwrap() = false;
+                    game_script_payload("<null>")
+                } else if code.contains("has_action") {
+                    game_script_payload(if bound { "true" } else { "false" })
+                } else if code.contains("get_axis") {
+                    let pressed = *self.pressed_in_game.lock().unwrap();
+                    let moving = bound && pressed && self.moving;
+                    game_script_payload(if moving { "1.0" } else { "0.0" })
+                } else if code.contains("is_action_pressed") {
+                    let pressed = *self.pressed_in_game.lock().unwrap();
+                    game_script_payload(if bound && pressed { "true" } else { "false" })
+                } else if code.contains("position") {
+                    let pressed = *self.pressed_in_game.lock().unwrap();
+                    let x = if bound && pressed && self.moving {
+                        80.0
+                    } else {
+                        60.0
+                    };
+                    game_script_payload(&format!("{x},283.999"))
+                } else {
+                    panic!("FixtureChannel got an unexpected game script: {code}")
+                }
+            }
             "monitor_properties" => {
                 let action = self.last_action.lock().unwrap().clone();
                 let frames = args
                     .get("frame_count")
                     .and_then(Value::as_u64)
                     .unwrap_or(60);
-                monitor_payload(&action, frames, self.moving)
+                // DR-35: the game moves only when the **game process** received
+                // the press.  An editor-side `simulate_action` cannot move it,
+                // which is exactly the `smoke-t5` finding.
+                let pressed_in_game = *self.pressed_in_game.lock().unwrap();
+                let moves = self.moving && self.game_input == GameInputMode::Ok && pressed_in_game;
+                monitor_payload(&action, frames, moves)
             }
             "get_game_node_properties" => match args["node_path"].as_str().unwrap_or("") {
                 "Player" => fixture("player_properties.json"),
@@ -561,6 +643,7 @@ async fn green_battery_records_every_step_and_copies_into_the_candidate() {
             "play_scene_ready",
             "scene_tree",
             "screenshot",
+            "input_channel_probe",
             "input_replay",
             "node_and_collision_assertions",
             "stop_scene",
@@ -982,8 +1065,9 @@ async fn input_replay_records_a_delivered_action_without_effect() {
     assert_eq!(first["velocity"], json!({"x": 0.0, "y": 0.0}));
 }
 
-/// DR-33 ①: the InputMap has no `move_right` at all — a different, and much
-/// more actionable, fact than "the input had no effect".
+/// DR-33 ①/DR-35 ②: the **game process** InputMap has no `move_right` at all —
+/// a different, and much more actionable, fact than "the input had no effect".
+/// Under DR-35 this verdict may only come from the game-process probe.
 #[tokio::test]
 async fn input_replay_reports_an_action_that_is_not_bound() {
     let temp = tempfile::tempdir().unwrap();
@@ -991,9 +1075,23 @@ async fn input_replay_reports_an_action_that_is_not_bound() {
     let channel = Arc::new(
         FixtureChannel::green()
             .with_input_actions(InputActionsMode::Missing)
+            .with_game_input(GameInputMode::ActionMissing)
             .with_moving(false),
     );
     let run = run_battery(root, channel, 30).await;
+
+    let probe = step(&run.records, "input_channel_probe");
+    assert!(!probe.ok);
+    assert!(
+        probe.record.observation.contains("ACTION_NOT_BOUND"),
+        "{}",
+        probe.record.observation
+    );
+    assert!(
+        probe.supports.iter().any(|id| id == "P3"),
+        "a missing InputMap action is P3 evidence: {:?}",
+        probe.supports
+    );
 
     let record = step(&run.records, "input_replay");
     assert!(!record.ok);
@@ -1023,6 +1121,273 @@ async fn input_replay_reports_an_action_that_is_not_bound() {
     assert!(
         !record.record.observation.contains("INPUT_HAD_NO_EFFECT"),
         "an unbound action was never delivered: {}",
+        record.record.observation
+    );
+}
+
+// ---------------------------------------------------------------------------
+// DR-35 — the input channel is the *game* process, not the editor
+// ---------------------------------------------------------------------------
+
+/// DR-35 ①: the game process reports the action, the press moves `get_axis` and
+/// the player: the channel is usable and the replay is green.
+#[tokio::test]
+async fn a_usable_game_channel_makes_the_replay_green() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel = Arc::new(FixtureChannel::green());
+    let run = run_battery(root, channel.clone(), 30).await;
+
+    let probe = step(&run.records, "input_channel_probe");
+    assert!(
+        probe.ok,
+        "the game channel works: {:?}",
+        probe.record.observation
+    );
+    assert!(
+        probe.record.observation.contains("GAME_INPUT_CHANNEL_OK"),
+        "{}",
+        probe.record.observation
+    );
+
+    let replay = step(&run.records, "input_replay");
+    assert!(
+        replay.ok,
+        "the replay is judged on game-process movement: {:?}",
+        replay.record.observation
+    );
+    assert!(
+        replay.record.observation.contains("GAME_INPUT_CHANNEL_OK"),
+        "{}",
+        replay.record.observation
+    );
+    assert!(
+        replay.record.observation.contains("game_process"),
+        "{}",
+        replay.record.observation
+    );
+    // The game-side injection really went through `execute_game_script`.
+    assert!(
+        channel.call_count("execute_game_script") >= 8,
+        "the probe and the replay must drive the game process directly"
+    );
+    // DR-35: the raw probe payload is persisted verbatim.
+    let raw: Value = serde_json::from_str(&read(
+        &run.run_dir
+            .join("iter-1/candidate/.hoh/deterministic/raw/input_channel_probe.json"),
+    ))
+    .unwrap();
+    assert_eq!(raw["step"], json!("input_channel_probe"));
+    assert_eq!(
+        raw["channel"]["capability"],
+        json!("GAME_INPUT_CHANNEL_OK"),
+        "{raw}"
+    );
+    assert_eq!(raw["channel"]["has_action"], json!(true));
+    assert!(
+        raw["calls"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|call| call["tool"] == json!("execute_game_script"))
+            .count()
+            >= 6,
+        "every probe reading must be recorded verbatim: {raw}"
+    );
+}
+
+/// DR-35 ③: the probe itself fails (exactly the `smoke-t5` error: the addon's
+/// `Expression` cannot see the `Input` singleton).  That is *unknown*, never
+/// `ACTION_NOT_BOUND`.
+#[tokio::test]
+async fn a_failed_probe_is_unknown_never_not_bound() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel = Arc::new(FixtureChannel::green().with_game_input(GameInputMode::ProbeFails));
+    let run = run_battery(root, channel, 30).await;
+
+    let probe = step(&run.records, "input_channel_probe");
+    assert!(!probe.ok, "an unreadable probe is not usable evidence");
+    assert!(
+        probe.record.observation.contains("ACTION_BINDING_UNKNOWN"),
+        "{}",
+        probe.record.observation
+    );
+    assert!(
+        !probe.record.observation.contains("ACTION_NOT_BOUND"),
+        "a failed probe must never be downgraded: {}",
+        probe.record.observation
+    );
+
+    let replay = step(&run.records, "input_replay");
+    assert!(!replay.ok);
+    assert!(
+        replay.record.observation.contains("ACTION_BINDING_UNKNOWN"),
+        "{}",
+        replay.record.observation
+    );
+    assert!(
+        !replay.record.observation.contains("ACTION_NOT_BOUND"),
+        "{}",
+        replay.record.observation
+    );
+
+    // The verbatim error text travelled into the raw payload.
+    let raw = read(
+        &run.run_dir
+            .join("iter-1/candidate/.hoh/deterministic/raw/input_channel_probe.json"),
+    );
+    assert!(
+        raw.contains("Invalid named index"),
+        "the real failure must be quoted: {raw}"
+    );
+}
+
+/// DR-35 — **the root-cause regression**: `smoke-t5`'s editor-side InputMap (the
+/// verbatim payload, which lists only the built-in `ui_*` actions) plus a
+/// game-process probe that cannot be read must NOT produce `ACTION_NOT_BOUND`.
+///
+/// That false negative went as far as the Planner's `update_targets`, i.e. the
+/// next round would have paid ~50M tokens to fix a defect that never existed.
+#[tokio::test]
+async fn the_editor_input_map_can_never_claim_an_action_is_not_bound() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel = Arc::new(
+        FixtureChannel::green()
+            .with_input_actions(InputActionsMode::RealEditorMap)
+            .with_game_input(GameInputMode::ProbeFails),
+    );
+    let run = run_battery(root, channel, 30).await;
+
+    for id in ["input_channel_probe", "input_replay"] {
+        let record = step(&run.records, id);
+        assert!(
+            !record.record.observation.contains("ACTION_NOT_BOUND"),
+            "step `{id}` took the editor's InputMap for the game's: {}",
+            record.record.observation
+        );
+        assert!(
+            record.record.observation.contains("ACTION_BINDING_UNKNOWN"),
+            "step `{id}` must report the honest unknown: {}",
+            record.record.observation
+        );
+    }
+    let replay = step(&run.records, "input_replay");
+    assert!(
+        replay.record.observation.contains("EDITOR_SIDE_INJECTION"),
+        "the editor-side record must be labelled: {}",
+        replay.record.observation
+    );
+
+    // The whole raw tree must be free of the false verdict.
+    for id in ["input_channel_probe", "input_replay"] {
+        let raw = read(
+            &run.run_dir
+                .join(format!("iter-1/candidate/.hoh/deterministic/raw/{id}.json")),
+        );
+        assert!(
+            !raw.contains("ACTION_NOT_BOUND"),
+            "nothing in `{id}` may say ACTION_NOT_BOUND: {raw}"
+        );
+    }
+}
+
+/// DR-35 ④: the editor accepts the injection but the game process never moves.
+/// The round must fail and the editor-side record must be labelled — an
+/// editor-side "success" is not evidence about the game.
+#[tokio::test]
+async fn an_editor_side_success_without_game_movement_is_labelled_and_fails() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel = Arc::new(FixtureChannel::green().with_moving(false));
+    let run = run_battery(root, channel, 30).await;
+
+    let replay = step(&run.records, "input_replay");
+    assert!(!replay.ok, "{}", replay.record.observation);
+    assert!(
+        replay.record.observation.contains("EDITOR_SIDE_INJECTION"),
+        "{}",
+        replay.record.observation
+    );
+    assert!(
+        replay.record.observation.contains("INPUT_HAD_NO_EFFECT"),
+        "{}",
+        replay.record.observation
+    );
+    assert!(
+        replay.record.observation.contains("editor_process"),
+        "the editor-side channel must be named: {}",
+        replay.record.observation
+    );
+}
+
+/// DR-35 ⑤: every quadruple names the process it was observed in; editor-side
+/// calls carry the editor channel and the injection marker.
+#[tokio::test]
+async fn every_quadruple_names_its_channel() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel = Arc::new(FixtureChannel::green());
+    let run = run_battery(root, channel, 30).await;
+
+    let raw: Value = serde_json::from_str(&read(
+        &run.run_dir
+            .join("iter-1/candidate/.hoh/deterministic/raw/input_replay.json"),
+    ))
+    .unwrap();
+    let quadruples: Vec<&Value> = raw["calls"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|call| call.get("quadruple"))
+        .collect();
+    assert!(!quadruples.is_empty(), "{raw}");
+    for quadruple in &quadruples {
+        assert_eq!(
+            quadruple["channel"],
+            json!("game_process"),
+            "the position samples are game-forwarded: {quadruple}"
+        );
+    }
+    let editor_calls: Vec<&Value> = raw["calls"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|call| call["tool"] == json!("simulate_action"))
+        .collect();
+    assert!(!editor_calls.is_empty());
+    for call in editor_calls {
+        assert!(
+            call["label"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("EDITOR_SIDE_INJECTION"),
+            "an editor-side injection must be labelled: {call}"
+        );
+    }
+}
+
+/// DR-35: the real 50-node game scene tree captured in `smoke-t5` is accepted by
+/// the `scene_tree` step (a real shape, not a synthesized one).
+#[tokio::test]
+async fn the_real_game_scene_tree_fixture_is_accepted() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let real: Value = fixture("game_scene_tree_real.json");
+    let payload = real["calls"][0]["payload"].clone();
+    let channel = Arc::new(FixtureChannel::green().with_reply("get_game_scene_tree", payload));
+    let run = run_battery(root, channel, 30).await;
+
+    let record = step(&run.records, "scene_tree");
+    assert!(
+        record.ok,
+        "the captured tree carries a path and a type on every node: {:?}",
+        record.record.observation
+    );
+    assert!(
+        record.record.observation.contains("50 node"),
+        "{}",
         record.record.observation
     );
 }

@@ -463,6 +463,8 @@ struct BatterySession<'a> {
     main_scene: String,
     log: McpErrorLog,
     records: Vec<BatteryRecord>,
+    /// DR-35: the channel probe's verdict, filled in before `input_replay`.
+    channel: InputChannelProbe,
 }
 
 impl<'a> BatterySession<'a> {
@@ -479,6 +481,7 @@ impl<'a> BatterySession<'a> {
             main_scene,
             log: McpErrorLog::new(workspace),
             records: Vec::new(),
+            channel: InputChannelProbe::default(),
         }
     }
 
@@ -522,11 +525,30 @@ impl<'a> BatterySession<'a> {
         ok: bool,
         calls: Vec<Value>,
     ) -> anyhow::Result<()> {
+        self.finish_with(step, kind, path, observation, ok, calls, Value::Null)
+            .await
+    }
+
+    /// Same, with one extra top-level object in the raw document.
+    ///
+    /// DR-35 uses it for the channel verdict, so `raw/input_channel_probe.json`
+    /// states the capability next to the verbatim payloads that produced it.
+    #[allow(clippy::too_many_arguments)]
+    async fn finish_with(
+        &mut self,
+        step: BatteryStep,
+        kind: ExecKind,
+        path: Option<String>,
+        observation: String,
+        ok: bool,
+        calls: Vec<Value>,
+        extra: Value,
+    ) -> anyhow::Result<()> {
         let rel = format!(".hoh/deterministic/raw/{}.json", step.id);
         // DR-29: the correlation header comes first, so a reader can tell which
         // response belonged to which request before reading any payload.
         let header = rpc_header(&calls);
-        let doc = json!({
+        let mut doc = json!({
             "step": step.id,
             "request_id": header["request_id"],
             "response_id": header["response_id"],
@@ -536,6 +558,11 @@ impl<'a> BatterySession<'a> {
             "ok": ok,
             "calls": calls,
         });
+        if !extra.is_null() {
+            if let Some(object) = doc.as_object_mut() {
+                object.insert("channel".to_string(), extra);
+            }
+        }
         let target = self.workspace.join(&rel);
         if let Some(parent) = target.parent() {
             std::fs::create_dir_all(parent)?;
@@ -590,6 +617,7 @@ impl<'a> BatterySession<'a> {
         let scene_tree = self.step_play_scene().await?;
         self.step_scene_tree(scene_tree.clone()).await?;
         self.step_screenshot().await?;
+        self.channel = self.step_input_channel_probe().await?;
         self.step_input_replay().await?;
         self.step_node_assertions(scene_tree).await?;
         self.step_stop_scene().await?;
@@ -1068,6 +1096,345 @@ impl<'a> BatterySession<'a> {
         Ok(())
     }
 
+    /// DR-35 — 4b. Channel capability probe, run in the **game process**.
+    ///
+    /// `smoke-t5` reported `ACTION_NOT_BOUND` for `move_right` even though
+    /// `A_1`'s `project.godot` declared it, because the availability probe
+    /// (`get_input_actions`) and the injection tool (`simulate_action`) both live
+    /// in the **editor** process while the game is a separate process behind a
+    /// `user://` file IPC.  The recorded verdict poisoned the round: the next
+    /// Planner would have gone off to "fix" a non-existent defect.
+    ///
+    /// This step asks the game process itself, through `execute_game_script`,
+    /// and distinguishes three states:
+    ///
+    /// * `GAME_INPUT_CHANNEL_OK` — the action exists in the game and pressing it
+    ///   moved `get_axis` away from 0;
+    /// * `ACTION_NOT_BOUND` — the game's `InputMap` really has no such action
+    ///   (the only honest way to reach this verdict);
+    /// * `ACTION_BINDING_UNKNOWN` — the probe failed or its shape is not
+    ///   readable.  Never downgraded to `ACTION_NOT_BOUND`.
+    ///
+    /// Note on "press, wait N frames, re-read": the addon evaluates a bare
+    /// GDScript *expression*, which cannot `await`.  The frames therefore elapse
+    /// inside the game process through the game-forwarded `monitor_properties`
+    /// call, and the axis is re-read afterwards — see D29 裁决 6.
+    async fn step_input_channel_probe(&mut self) -> anyhow::Result<InputChannelProbe> {
+        let mut step = BatteryStep {
+            id: INPUT_PROBE_STEP_ID.to_string(),
+            supports: vec!["F1".to_string(), "F2".to_string()],
+            timeout_secs: self.limits.timeout_seconds,
+            retries: self.limits.max_retries,
+        };
+        let mut calls = Vec::new();
+        let mut notes: Vec<String> = Vec::new();
+
+        let position_script = probe_scripts::player_position();
+        let has_action_script = probe_scripts::has_action(PROBE_ACTION);
+
+        // 1) Is the game process reachable at all?  This expression uses only
+        //    members of the addon's base node, so it answers a different
+        //    question from the `Input` readings below.
+        let position = self
+            .game_script(&position_script, "player_position", &mut calls)
+            .await;
+        let (position_before, position_before_raw) = position;
+        let mut game_process_reachable = position_before.is_some();
+        if position_before.is_none() {
+            notes.push(format!(
+                "the game process could not be read: {}",
+                position_before_raw.unwrap_or_else(|| "no reply".to_string())
+            ));
+        }
+
+        // 2) The design's channel readings.
+        let (has_action, has_action_raw) = self
+            .game_script_bool(&has_action_script, "move_right", &mut calls)
+            .await;
+        let pressed_script = probe_scripts::is_action_pressed(PROBE_ACTION);
+        let (is_pressed_before, _) = self
+            .game_script_bool(&pressed_script, "move_right", &mut calls)
+            .await;
+        let axis_script = probe_scripts::axis();
+        let (axis_before, _) = self
+            .game_script_f64(&axis_script, "move_right", &mut calls)
+            .await;
+
+        // 3) Press in the game process, let the game run frames while it samples
+        //    `Player.position`, then re-read the axis.
+        let press_script = probe_scripts::press(PROBE_ACTION);
+        let (pressed, _) = self
+            .game_script_present(&press_script, "move_right", &mut calls)
+            .await;
+        let monitor_args = json!({
+            "node_path": "Player",
+            "properties": ["position"],
+            "frame_count": PROBE_FRAME_COUNT,
+            "frame_interval": 1,
+        });
+        let mut moved_while_pressed = false;
+        match self.call("monitor_properties", monitor_args.clone()).await {
+            Ok(call) => {
+                let parsed = unwrap_mcp_payload(&call.payload);
+                let quadruple = replay_quadruple(PROBE_ACTION, &parsed, GAME_PROCESS_CHANNEL);
+                let mut entry = call_ok(
+                    "monitor_properties",
+                    &monitor_args,
+                    &call.payload,
+                    &call.correlation,
+                );
+                if let Some(quadruple) = &quadruple {
+                    entry["quadruple"] = quadruple.clone();
+                    moved_while_pressed =
+                        quadruple["before_position"] != quadruple["after_position"];
+                    game_process_reachable = true;
+                }
+                calls.push(entry);
+            }
+            Err(failure) => {
+                calls.push(call_fail("monitor_properties", &monitor_args, &failure));
+                notes.push(format!(
+                    "monitor_properties failed: {}",
+                    failure.observation()
+                ));
+            }
+        }
+        let (axis_after, axis_after_raw) = self
+            .game_script_f64(&axis_script, "move_right", &mut calls)
+            .await;
+        let position_script = probe_scripts::player_position();
+        let (position_after, _) = self
+            .game_script(&position_script, "player_position_after", &mut calls)
+            .await;
+        if let (Some(before), Some(after)) = (position_before, position_after) {
+            if before != after {
+                moved_while_pressed = true;
+            }
+        }
+        let release_script = probe_scripts::release(PROBE_ACTION);
+        let _ = self
+            .game_script_present(&release_script, "move_right", &mut calls)
+            .await;
+
+        // 4) Classify.  A missing action is only ever concluded from a readable
+        //    `has_action == false`; everything else is `UNKNOWN`.
+        let declared =
+            project_declared_actions(self.workspace, &["move_left", "move_right", "jump"]);
+        let declared_note = if declared.is_empty() {
+            "project.godot declares none of move_left/move_right/jump".to_string()
+        } else {
+            format!("project.godot declares {declared:?} (diagnostic only)")
+        };
+        let evidence_note = format!(
+            "game process: has_action={has_action:?}, is_action_pressed={is_pressed_before:?}, \
+             axis_before={axis_before:?}, press delivered={pressed}, axis_after={axis_after:?}, \
+             position moved={moved_while_pressed}"
+        );
+
+        // The action exists and the game process answered: the channel itself is
+        // usable.  Whether the press moved anything is `input_replay`'s job (and
+        // becomes `INPUT_HAD_NO_EFFECT` there when it did not).
+        let capability = match has_action {
+            Some(false) => InputChannelCapability::ActionNotBound,
+            Some(true) if game_process_reachable || axis_after.is_some() => {
+                InputChannelCapability::GameInputChannelOk
+            }
+            _ => InputChannelCapability::ActionBindingUnknown,
+        };
+        let detail = match capability {
+            InputChannelCapability::ActionNotBound => format!(
+                "the game process InputMap declares no `{PROBE_ACTION}`; {declared_note}; \
+                 {evidence_note}"
+            ),
+            InputChannelCapability::GameInputChannelOk => {
+                format!("{evidence_note}; {declared_note}")
+            }
+            InputChannelCapability::ActionBindingUnknown => format!(
+                "the game-process probe could not be read ({}); {declared_note}; {evidence_note}",
+                if notes.is_empty() {
+                    format!(
+                        "has_action reply: {}",
+                        has_action_raw
+                            .or(axis_after_raw)
+                            .unwrap_or_else(|| "no reply".to_string())
+                    )
+                } else {
+                    notes.join(" | ")
+                }
+            ),
+        };
+
+        let probe = InputChannelProbe {
+            capability,
+            game_process_reachable,
+            has_action,
+            is_pressed_before,
+            axis_before,
+            axis_after,
+            pressed,
+            moved_while_pressed,
+            declared_in_project_godot: declared,
+            detail,
+        };
+        let ok = capability == InputChannelCapability::GameInputChannelOk;
+        if capability == InputChannelCapability::ActionNotBound
+            && !step.supports.contains(&"P3".to_string())
+        {
+            step.supports.push("P3".to_string());
+        }
+        let observation = if ok {
+            format!("input channel probe: {}", probe.observation())
+        } else {
+            format!(
+                "FAILED input channel probe: {} (UNAVAILABLE: no usable game-process input \
+                 channel, so the replay below cannot judge F1/F2)",
+                probe.observation()
+            )
+        };
+        let extra = serde_json::to_value(&probe)?;
+        self.finish_with(step, ExecKind::Replay, None, observation, ok, calls, extra)
+            .await?;
+        Ok(probe)
+    }
+
+    /// Run one `execute_game_script` expression and record the call.
+    ///
+    /// The returned tuple is `(reading, verbatim failure text)`; the text is
+    /// what turns a failed probe into a diagnosable `ACTION_BINDING_UNKNOWN`
+    /// instead of a guessed `ACTION_NOT_BOUND`.
+    async fn game_script(
+        &self,
+        code: &str,
+        label: &str,
+        calls: &mut Vec<Value>,
+    ) -> (Option<(f64, f64)>, Option<String>) {
+        let args = json!({ "code": code });
+        match self.call("execute_game_script", args.clone()).await {
+            Ok(call) => {
+                let parsed = unwrap_mcp_payload(&call.payload);
+                let reading = game_script_position(&parsed);
+                calls.push(labeled(
+                    call_ok(
+                        "execute_game_script",
+                        &args,
+                        &call.payload,
+                        &call.correlation,
+                    ),
+                    label,
+                ));
+                let failure = (reading.is_none()).then(|| parsed.to_string());
+                (reading, failure)
+            }
+            Err(failure) => {
+                calls.push(labeled(
+                    call_fail("execute_game_script", &args, &failure),
+                    label,
+                ));
+                (None, Some(failure.observation()))
+            }
+        }
+    }
+
+    /// Same, for a boolean reading.
+    async fn game_script_bool(
+        &self,
+        code: &str,
+        label: &str,
+        calls: &mut Vec<Value>,
+    ) -> (Option<bool>, Option<String>) {
+        let args = json!({ "code": code });
+        match self.call("execute_game_script", args.clone()).await {
+            Ok(call) => {
+                let parsed = unwrap_mcp_payload(&call.payload);
+                let reading = game_script_bool(&parsed);
+                calls.push(labeled(
+                    call_ok(
+                        "execute_game_script",
+                        &args,
+                        &call.payload,
+                        &call.correlation,
+                    ),
+                    label,
+                ));
+                let failure = (reading.is_none()).then(|| parsed.to_string());
+                (reading, failure)
+            }
+            Err(failure) => {
+                calls.push(labeled(
+                    call_fail("execute_game_script", &args, &failure),
+                    label,
+                ));
+                (None, Some(failure.observation()))
+            }
+        }
+    }
+
+    /// Same, for a numeric reading.
+    async fn game_script_f64(
+        &self,
+        code: &str,
+        label: &str,
+        calls: &mut Vec<Value>,
+    ) -> (Option<f64>, Option<String>) {
+        let args = json!({ "code": code });
+        match self.call("execute_game_script", args.clone()).await {
+            Ok(call) => {
+                let parsed = unwrap_mcp_payload(&call.payload);
+                let reading = game_script_f64(&parsed);
+                calls.push(labeled(
+                    call_ok(
+                        "execute_game_script",
+                        &args,
+                        &call.payload,
+                        &call.correlation,
+                    ),
+                    label,
+                ));
+                let failure = (reading.is_none()).then(|| parsed.to_string());
+                (reading, failure)
+            }
+            Err(failure) => {
+                calls.push(labeled(
+                    call_fail("execute_game_script", &args, &failure),
+                    label,
+                ));
+                (None, Some(failure.observation()))
+            }
+        }
+    }
+
+    /// Same, for a side-effecting script whose value we do not use
+    /// (`Input.action_press`/`release`): success is "the call did not fail".
+    async fn game_script_present(
+        &self,
+        code: &str,
+        label: &str,
+        calls: &mut Vec<Value>,
+    ) -> (bool, Option<String>) {
+        let args = json!({ "code": code });
+        match self.call("execute_game_script", args.clone()).await {
+            Ok(call) => {
+                calls.push(labeled(
+                    call_ok(
+                        "execute_game_script",
+                        &args,
+                        &call.payload,
+                        &call.correlation,
+                    ),
+                    label,
+                ));
+                (true, None)
+            }
+            Err(failure) => {
+                calls.push(labeled(
+                    call_fail("execute_game_script", &args, &failure),
+                    label,
+                ));
+                (false, Some(failure.observation()))
+            }
+        }
+    }
+
     /// 5. Input replay: drive `move_right` / `jump` / `move_left` and record
     ///    the `Player` position over time.
     ///
@@ -1075,10 +1442,16 @@ impl<'a> BatterySession<'a> {
     /// and a delivered action that leaves the position untouched is
     /// `INPUT_HAD_NO_EFFECT` (`ok = false`), not a success.
     ///
-    /// DR-33: before anything is simulated, `get_input_actions` records whether
-    /// the action exists in the InputMap and which keys it is bound to, so the
-    /// Tester can tell "the input was never bound" (`ACTION_NOT_BOUND`) from
-    /// "the controller ignores the input" (`INPUT_HAD_NO_EFFECT`).
+    /// DR-33: the InputMap bindings and the
+    /// `(action, before_position, after_position, velocity)` quadruple are
+    /// recorded so "the input was never bound" can be told from "the controller
+    /// ignores the input".
+    ///
+    /// DR-35: the **game process** decides.  Injection happens through
+    /// `execute_game_script` and the position comes from the game-forwarded
+    /// `monitor_properties`; the editor-side `simulate_action` is kept only as a
+    /// supplementary record and is labelled `EDITOR_SIDE_INJECTION` everywhere it
+    /// appears, because it can never reach the game process.
     async fn step_input_replay(&mut self) -> anyhow::Result<()> {
         let mut step = BatteryStep {
             id: "input_replay".to_string(),
@@ -1090,29 +1463,60 @@ impl<'a> BatterySession<'a> {
         let mut summaries: Vec<String> = Vec::new();
         let mut ok = true;
         let mut needs_p3 = false;
+        let capability = self.channel.capability;
 
-        // DR-33: action availability first (read-only, no side effects).
+        // DR-33/DR-35: the editor-side InputMap is recorded as **supplementary**
+        // evidence only.  `smoke-t5` proved it cannot speak for the game process:
+        // it lists the editor's built-in `ui_*` actions and none of the project's
+        // `move_*` ones, which is how a working project got a false
+        // `ACTION_NOT_BOUND`.
         let probe_args = json!({});
-        let bindings = match self.call("get_input_actions", probe_args.clone()).await {
+        let editor_bindings = match self.call("get_input_actions", probe_args.clone()).await {
             Ok(call) => {
-                calls.push(call_ok(
-                    "get_input_actions",
-                    &probe_args,
-                    &call.payload,
-                    &call.correlation,
+                calls.push(labeled(
+                    call_ok(
+                        "get_input_actions",
+                        &probe_args,
+                        &call.payload,
+                        &call.correlation,
+                    ),
+                    "editor_side_injection",
                 ));
                 parse_input_actions(&unwrap_mcp_payload(&call.payload))
             }
             Err(failure) => {
-                calls.push(call_fail("get_input_actions", &probe_args, &failure));
-                summaries.push(format!(
-                    "ACTION_BINDING_UNKNOWN: get_input_actions failed: {}",
-                    failure.message
+                calls.push(labeled(
+                    call_fail("get_input_actions", &probe_args, &failure),
+                    "editor_side_injection",
                 ));
                 None
             }
         };
-        let known = bindings.is_some();
+        let editor_note = match &editor_bindings {
+            Some(bindings) => {
+                let missing: Vec<&str> = ["move_left", "move_right", "jump"]
+                    .into_iter()
+                    .filter(|action| !bindings.contains_key(*action))
+                    .collect();
+                if missing.is_empty() {
+                    "EDITOR_SIDE_INJECTION: the editor InputMap lists the three actions (this is \
+                     still not game-process evidence)"
+                        .to_string()
+                } else {
+                    format!(
+                        "EDITOR_SIDE_INJECTION: the editor InputMap does not list {missing:?} — \
+                         that is the editor's own map, not the game's (DR-35)"
+                    )
+                }
+            }
+            None => "EDITOR_SIDE_INJECTION: get_input_actions was unavailable".to_string(),
+        };
+        summaries.push(format!(
+            "channel={} ({})",
+            capability.code(),
+            self.channel.detail
+        ));
+        summaries.push(editor_note);
 
         // `(label, action, frames, expected to move the node)`.
         for (label, action, frames, expect_movement) in [
@@ -1121,37 +1525,69 @@ impl<'a> BatterySession<'a> {
             ("jump", "jump", 30, true),
             ("move_left", "move_left", 60, true),
         ] {
-            let keys = bindings
-                .as_ref()
-                .and_then(|bindings| bindings.get(action).cloned());
-            if known && keys.is_none() && expect_movement {
-                // DR-33: the project never declared this action (PRD P3).
+            if capability == InputChannelCapability::ActionNotBound {
+                // DR-35: only a *game-process* absence reaches this verdict.
                 needs_p3 = true;
                 ok = false;
                 summaries.push(format!(
-                    "{label}: ACTION_NOT_BOUND (the InputMap declares no `{action}`)"
+                    "{label}: ACTION_NOT_BOUND (the game-process InputMap declares no `{action}`)"
                 ));
                 continue;
             }
-            let binding = keys
-                .map(|keys| format!("keys={keys:?}"))
-                .unwrap_or_else(|| "keys=unknown".to_string());
 
+            // (a) Game-process injection.  With an unknown channel there is no
+            //     point pretending: the same tool that failed the probe fails
+            //     here, and the recording is an honest gap.
+            let game_injected = if capability == InputChannelCapability::GameInputChannelOk {
+                let script = probe_scripts::press(action);
+                self.game_script_present(&script, &format!("{label}:game_press"), &mut calls)
+                    .await
+                    .0
+            } else {
+                summaries.push(format!(
+                    "{label}: game-process injection unavailable ({}); recording the editor-side \
+                     attempt only",
+                    InputChannelCapability::ActionBindingUnknown.code()
+                ));
+                false
+            };
+
+            // (b) Editor-side injection: supplementary, never decisive.
             let press_args = json!({"action": action, "pressed": true});
-            match self.call("simulate_action", press_args.clone()).await {
-                Ok(call) => calls.push(call_ok(
-                    "simulate_action",
-                    &press_args,
-                    &call.payload,
-                    &call.correlation,
-                )),
-                Err(failure) => {
-                    calls.push(call_fail("simulate_action", &press_args, &failure));
-                    summaries.push(format!("{label}: FAILED {}", failure.message));
-                    ok = false;
-                    continue;
+            let editor_delivered = match self.call("simulate_action", press_args.clone()).await {
+                Ok(call) => {
+                    calls.push(labeled(
+                        call_ok(
+                            "simulate_action",
+                            &press_args,
+                            &call.payload,
+                            &call.correlation,
+                        ),
+                        &format!("{label}:{EDITOR_SIDE_INJECTION_MARKER}"),
+                    ));
+                    true
                 }
-            }
+                Err(failure) => {
+                    calls.push(labeled(
+                        call_fail("simulate_action", &press_args, &failure),
+                        &format!("{label}:{EDITOR_SIDE_INJECTION_MARKER}"),
+                    ));
+                    false
+                }
+            };
+            let editor_marker = if editor_delivered {
+                format!(
+                    "({EDITOR_SIDE_INJECTION_MARKER}: simulate_action acknowledged on the editor \
+                     side; channel={EDITOR_PROCESS_CHANNEL})"
+                )
+            } else {
+                format!(
+                    "({EDITOR_SIDE_INJECTION_MARKER}: simulate_action failed on the editor side; \
+                     channel={EDITOR_PROCESS_CHANNEL})"
+                )
+            };
+
+            // (c) The decisive observation: frames sampled inside the game.
             let monitor_args = json!({
                 "node_path": "Player",
                 "properties": ["position"],
@@ -1161,7 +1597,7 @@ impl<'a> BatterySession<'a> {
             match self.call("monitor_properties", monitor_args.clone()).await {
                 Ok(call) => {
                     let parsed = unwrap_mcp_payload(&call.payload);
-                    let quadruple = replay_quadruple(action, &parsed);
+                    let quadruple = replay_quadruple(action, &parsed, GAME_PROCESS_CHANNEL);
                     let frames_seen = parsed
                         .get("frame_count")
                         .and_then(Value::as_u64)
@@ -1186,7 +1622,7 @@ impl<'a> BatterySession<'a> {
                         None => {
                             ok = false;
                             summaries.push(format!(
-                                "{label}: NO_FRAME_SAMPLES ({})",
+                                "{label}: NO_FRAME_SAMPLES ({}) {editor_marker}",
                                 describe_monitor(label, &parsed)
                             ));
                         }
@@ -1194,23 +1630,26 @@ impl<'a> BatterySession<'a> {
                             let moved = quadruple["before_position"] != quadruple["after_position"];
                             if expect_movement && !moved {
                                 ok = false;
-                                if !known {
-                                    // Without availability evidence both failure
-                                    // modes are still possible.
-                                    needs_p3 = true;
+                                if capability == InputChannelCapability::GameInputChannelOk {
                                     summaries.push(format!(
-                                        "{label}: {frames_seen} frame(s) ({binding}) \
-                                         ACTION_BINDING_UNKNOWN + INPUT_HAD_NO_EFFECT {quadruple}"
+                                        "{label}: {frames_seen} frame(s) \
+                                         channel={GAME_PROCESS_CHANNEL} {quadruple} \
+                                         INPUT_HAD_NO_EFFECT {editor_marker}"
                                     ));
                                 } else {
+                                    // DR-35: both failure modes are still possible.
+                                    needs_p3 = true;
                                     summaries.push(format!(
-                                        "{label}: {frames_seen} frame(s) ({binding}) \
-                                         INPUT_HAD_NO_EFFECT {quadruple}"
+                                        "{label}: {frames_seen} frame(s) \
+                                         channel={GAME_PROCESS_CHANNEL} {quadruple} \
+                                         ACTION_BINDING_UNKNOWN + INPUT_HAD_NO_EFFECT \
+                                         {editor_marker}"
                                     ));
                                 }
                             } else {
                                 summaries.push(format!(
-                                    "{label}: {frames_seen} frame(s) ({binding}) {quadruple}"
+                                    "{label}: {frames_seen} frame(s) \
+                                     channel={GAME_PROCESS_CHANNEL} {quadruple} {editor_marker}"
                                 ));
                             }
                         }
@@ -1218,23 +1657,47 @@ impl<'a> BatterySession<'a> {
                 }
                 Err(failure) => {
                     calls.push(call_fail("monitor_properties", &monitor_args, &failure));
-                    summaries.push(format!("{label}: FAILED {}", failure.message));
+                    summaries.push(format!(
+                        "{label}: FAILED {} {editor_marker}",
+                        failure.observation()
+                    ));
                     ok = false;
                 }
             }
+
+            // (d) Re-read the axis inside the game process after the frames.
+            if game_injected {
+                let script = probe_scripts::axis();
+                let (axis, raw) = self
+                    .game_script_f64(&script, &format!("{label}:game_axis"), &mut calls)
+                    .await;
+                summaries.push(format!(
+                    "{label}: game-process get_axis after {frames} frame(s) = {axis:?}{}",
+                    raw.map(|text| format!(" (unreadable: {text})"))
+                        .unwrap_or_default()
+                ));
+                let release = probe_scripts::release(action);
+                let _ = self
+                    .game_script_present(&release, &format!("{label}:game_release"), &mut calls)
+                    .await;
+            }
+
+            // (e) Editor-side release, same supplementary status.
             let release_args = json!({"action": action, "pressed": false});
             match self.call("simulate_action", release_args.clone()).await {
-                Ok(call) => calls.push(call_ok(
-                    "simulate_action",
-                    &release_args,
-                    &call.payload,
-                    &call.correlation,
+                Ok(call) => calls.push(labeled(
+                    call_ok(
+                        "simulate_action",
+                        &release_args,
+                        &call.payload,
+                        &call.correlation,
+                    ),
+                    &format!("{label}:{EDITOR_SIDE_INJECTION_MARKER}:release"),
                 )),
-                Err(failure) => {
-                    calls.push(call_fail("simulate_action", &release_args, &failure));
-                    summaries.push(format!("{label}: release FAILED {}", failure.message));
-                    ok = false;
-                }
+                Err(failure) => calls.push(labeled(
+                    call_fail("simulate_action", &release_args, &failure),
+                    &format!("{label}:{EDITOR_SIDE_INJECTION_MARKER}:release"),
+                )),
             }
         }
 
@@ -1608,7 +2071,10 @@ fn parse_input_actions(payload: &Value) -> Option<std::collections::BTreeMap<Str
 ///
 /// `None` means there was not a single frame carrying a `position` — the
 /// `0 frame(s), position unknown` case `smoke-t3` reported as `ok = true`.
-fn replay_quadruple(action: &str, payload: &Value) -> Option<Value> {
+///
+/// DR-35: every quadruple also names the **process** it was observed in, so a
+/// reader can never mistake an editor-side reading for game-process evidence.
+fn replay_quadruple(action: &str, payload: &Value, channel: &str) -> Option<Value> {
     let samples = payload.get("samples").and_then(Value::as_array)?;
     let positions: Vec<&Value> = samples
         .iter()
@@ -1628,6 +2094,7 @@ fn replay_quadruple(action: &str, payload: &Value) -> Option<Value> {
         .unwrap_or_else(|| derived_velocity(&positions));
     Some(json!({
         "action": action,
+        "channel": channel,
         "before_position": position_of(first),
         "after_position": position_of(last),
         "velocity": velocity_of(&velocity),
@@ -1697,6 +2164,233 @@ fn describe_monitor(label: &str, payload: &Value) -> String {
         _ => "unknown".to_string(),
     };
     format!("{label}: {frames} frame(s), position {span}")
+}
+
+// ---------------------------------------------------------------------------
+// DR-35: the game-process input channel
+// ---------------------------------------------------------------------------
+
+/// DR-35: the battery step that probes the **game process** before any input
+/// evidence is collected.
+pub const INPUT_PROBE_STEP_ID: &str = "input_channel_probe";
+
+/// DR-35: the action the channel probe drives.
+pub const PROBE_ACTION: &str = "move_right";
+/// DR-35: how many frames the game gets between `action_press` and the re-read.
+pub const PROBE_FRAME_COUNT: u64 = 30;
+
+/// DR-35: the `execute_game_script` payloads, i.e. GDScript *expressions* run
+/// inside the **game** process by the addon's `mcp_runtime_agent.gd`.
+///
+/// They are wrapped in `str(...)` for two reasons: the addon answers
+/// `{"result": str(result)}` (a null result is not a usable shape), and the
+/// position read must arrive as one parseable string.
+///
+/// The shape of `mcp_runtime_agent.gd::_cmd_execute_script` is decisive here:
+/// it runs `Expression.execute([], self, false)` with the autoload node as the
+/// base instance, so **only members of that node are resolvable** — engine
+/// singletons (`Input`, `InputMap`, `Engine`, …) and global classes are not.
+/// See D29 裁决 6 for the measurement; that is exactly why a probe failure must
+/// be recorded as `ACTION_BINDING_UNKNOWN` instead of being read as
+/// `ACTION_NOT_BOUND`.
+pub mod probe_scripts {
+    use super::PROBE_ACTION;
+
+    /// `InputMap.has_action(<action>)` inside the game process.
+    pub fn has_action(action: &str) -> String {
+        format!("str(InputMap.has_action(\"{action}\"))")
+    }
+
+    /// `Input.is_action_pressed(<action>)` inside the game process.
+    pub fn is_action_pressed(action: &str) -> String {
+        format!("str(Input.is_action_pressed(\"{action}\"))")
+    }
+
+    /// `Input.get_axis("move_left", "move_right")` inside the game process.
+    pub fn axis() -> String {
+        "str(Input.get_axis(\"move_left\", \"move_right\"))".to_string()
+    }
+
+    /// `Input.action_press(<action>)` inside the game process.
+    pub fn press(action: &str) -> String {
+        format!("str(Input.action_press(\"{action}\"))")
+    }
+
+    /// `Input.action_release(<action>)` inside the game process.
+    pub fn release(action: &str) -> String {
+        format!("str(Input.action_release(\"{action}\"))")
+    }
+
+    /// `Player.position` inside the game process.
+    ///
+    /// This one deliberately uses no engine singleton: `get_tree()` is a member
+    /// of the base node, so it resolves.  It is the "is the game process
+    /// reachable at all?" half of the probe, kept apart from the
+    /// "is `Input` reachable?" half.
+    pub fn player_position() -> String {
+        "str(get_tree().current_scene.get_node_or_null(\"Player\").position.x) + \",\" + \
+         str(get_tree().current_scene.get_node_or_null(\"Player\").position.y)"
+            .to_string()
+    }
+
+    /// The default probe action, for callers that do not pick one.
+    pub fn default_action() -> &'static str {
+        PROBE_ACTION
+    }
+}
+
+/// DR-35: the three-state capability of the game-process input channel.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum InputChannelCapability {
+    /// The action exists in the game process and pressing it moved the axis
+    /// and/or the player: the channel is usable.
+    GameInputChannelOk,
+    /// The action really does not exist in the **game** `InputMap`.  This is the
+    /// only honest way to reach `ACTION_NOT_BOUND`.
+    ActionNotBound,
+    /// The probe itself failed or its shape could not be read.  Never downgrade
+    /// this to `ACTION_NOT_BOUND` (DR-35).
+    #[default]
+    ActionBindingUnknown,
+}
+
+impl InputChannelCapability {
+    pub fn code(self) -> &'static str {
+        match self {
+            InputChannelCapability::GameInputChannelOk => "GAME_INPUT_CHANNEL_OK",
+            InputChannelCapability::ActionNotBound => "ACTION_NOT_BOUND",
+            InputChannelCapability::ActionBindingUnknown => "ACTION_BINDING_UNKNOWN",
+        }
+    }
+
+    /// Every code a Tester may search for, in one place.
+    pub fn all_codes() -> [&'static str; 3] {
+        [
+            "GAME_INPUT_CHANNEL_OK",
+            "ACTION_NOT_BOUND",
+            "ACTION_BINDING_UNKNOWN",
+        ]
+    }
+}
+
+/// DR-35: the full outcome of the channel probe, carried into `input_replay` so
+/// both steps tell the same story.
+#[derive(Clone, Debug, Default, serde::Serialize)]
+pub struct InputChannelProbe {
+    pub capability: InputChannelCapability,
+    /// The game process answered a `Player.position` read.
+    pub game_process_reachable: bool,
+    pub has_action: Option<bool>,
+    pub is_pressed_before: Option<bool>,
+    pub axis_before: Option<f64>,
+    pub axis_after: Option<f64>,
+    pub pressed: bool,
+    pub moved_while_pressed: bool,
+    /// DR-35 diagnostic only: which of the three PRD actions `project.godot`
+    /// *declares*.  Never evidence of behaviour — a declaration is not a
+    /// running binding.
+    pub declared_in_project_godot: Vec<String>,
+    /// Why the capability came out the way it did.
+    pub detail: String,
+}
+
+impl InputChannelProbe {
+    /// The one-line marker every consumer can search for by literal.
+    pub fn observation(&self) -> String {
+        format!("{} ({})", self.capability.code(), self.detail)
+    }
+}
+
+/// DR-35: the game-process reading of one `execute_game_script` reply.
+///
+/// The addon answers `{"result": str(value)}`, so the value is normally a
+/// string; a raw boolean/number is accepted too, because an addon that stops
+/// double-`str()`-ing its result must not turn into `ACTION_BINDING_UNKNOWN`.
+fn game_script_result(payload: &Value) -> Option<Value> {
+    let inner = unwrap_mcp_payload(payload);
+    inner.get("result").cloned()
+}
+
+fn game_script_bool(payload: &Value) -> Option<bool> {
+    match game_script_result(payload)? {
+        Value::Bool(value) => Some(value),
+        Value::String(text) => match text.trim().to_ascii_lowercase().as_str() {
+            "true" => Some(true),
+            "false" => Some(false),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+fn game_script_f64(payload: &Value) -> Option<f64> {
+    match game_script_result(payload)? {
+        Value::Number(number) => number.as_f64(),
+        Value::String(text) => text.trim().parse::<f64>().ok(),
+        _ => None,
+    }
+}
+
+/// DR-35: `(x, y)` out of the `"x,y"` position script.
+fn game_script_position(payload: &Value) -> Option<(f64, f64)> {
+    let text = match game_script_result(payload)? {
+        Value::String(text) => text,
+        _ => return None,
+    };
+    let (x, y) = text.split_once(',')?;
+    Some((x.trim().parse().ok()?, y.trim().parse().ok()?))
+}
+
+/// DR-35: which of `actions` the project declares in `project.godot`.
+///
+/// Diagnostic only.  It exists to separate "the tool chain could not read the
+/// game's InputMap" from "the project never declared the action", which is the
+/// difference between a `ACTION_BINDING_UNKNOWN` and a real defect — the exact
+/// confusion that cost `smoke-t5` a whole round.
+pub fn project_declared_actions(workspace: &Path, actions: &[&str]) -> Vec<String> {
+    let Ok(text) = std::fs::read_to_string(workspace.join("project.godot")) else {
+        return Vec::new();
+    };
+    let mut in_input = false;
+    let mut declared: Vec<String> = Vec::new();
+    for raw in text.lines() {
+        let line = raw.trim();
+        if line.starts_with('[') {
+            in_input = line.starts_with("[input]");
+            continue;
+        }
+        if !in_input {
+            continue;
+        }
+        let Some(name) = line.split('=').next().map(str::trim) else {
+            continue;
+        };
+        if name.is_empty() {
+            continue;
+        }
+        if actions.contains(&name) && !declared.iter().any(|d| d == name) {
+            declared.push(name.to_string());
+        }
+    }
+    declared
+}
+
+/// DR-35: the two processes whose observations must never be conflated.  The
+/// editor can inject input into itself (`Input.parse_input_event`) and read its
+/// own `InputMap`, but it cannot reach the game process.
+pub const GAME_PROCESS_CHANNEL: &str = "game_process";
+pub const EDITOR_PROCESS_CHANNEL: &str = "editor_process";
+/// DR-35: the literal a Tester searches for to recognise an editor-side record.
+pub const EDITOR_SIDE_INJECTION_MARKER: &str = "EDITOR_SIDE_INJECTION";
+
+/// Attach a `label` to a recorded call, so one step's payload list stays
+/// readable when the same tool is called several times (DR-35).
+fn labeled(mut entry: Value, label: &str) -> Value {
+    if let Some(object) = entry.as_object_mut() {
+        object.insert("label".to_string(), Value::String(label.to_string()));
+    }
+    entry
 }
 
 /// Count visible text nodes (`Label`/`Button`/…) anywhere under `HUD`.
@@ -1958,6 +2652,14 @@ Reference every artifact by a **relative** path (`.hoh/deterministic/...` or
 `.hoh/evidence/...`). A step with `ok = false` is `UNAVAILABLE`: the claims it
 supports must be `gap`.
 
+`input_channel_probe` and `input_replay` are about the **game process**. Judge
+them from the game-process readings only (`channel = game_process`). Anything
+labelled `EDITOR_SIDE_INJECTION` comes from the editor process, which cannot
+reach the running game, and is recorded for completeness rather than as
+evidence. `ACTION_BINDING_UNKNOWN` means the channel could not be read: record a
+gap, and never write it up as "the action is missing" — that false conclusion
+already sent one round off to fix a defect that did not exist.
+
 Every `raw/<step>.json` starts with the JSON-RPC identity of the call its
 payload belongs to: `request_id`, `response_id` and `sync_probes`. A payload
 whose response carried another request's id is stored under that id and is
@@ -1975,7 +2677,8 @@ arrived for someone else. When `.hoh/deterministic/mcp-sync.json` reports
 | `play_scene_ready` | N1 | `play_scene` succeeded and the game answered `get_game_scene_tree` **with a scene tree** (a reply of another shape is not readiness evidence) |
 | `scene_tree` | N2, F5 | the running node tree exists, with a `path` and a `type` on every node |
 | `screenshot` | N2, F4, F13, F16 | a PNG really exists under `.hoh/evidence/` (a reported path alone is not evidence) |
-| `input_replay` | F1, F2, F3 (+P3 when an InputMap action is missing) | `move_right`/`jump`/`move_left` recordings of `Player.position`. Each call in `raw/input_replay.json` carries the `(action, before_position, after_position, velocity)` quadruple and the InputMap binding; `INPUT_HAD_NO_EFFECT` means the action was delivered and the position did not change, `ACTION_NOT_BOUND` means the action does not exist |
+| `input_channel_probe` | F1, F2 (+P3 when the game process really has no such action) | the **game process** answered `execute_game_script` and reports `GAME_INPUT_CHANNEL_OK`, `ACTION_NOT_BOUND` or `ACTION_BINDING_UNKNOWN`. The raw payload is `.hoh/deterministic/raw/input_channel_probe.json`; its `channel` object carries every reading verbatim |
+| `input_replay` | F1, F2, F3 (+P3 when an InputMap action is missing) | `move_right`/`jump`/`move_left` recordings of `Player.position`, sampled **inside the game process** (`monitor_properties`, game-forwarded). Each call in `raw/input_replay.json` carries the `(action, channel, before_position, after_position, velocity)` quadruple. The editor-side `simulate_action` is recorded for completeness only and is labelled `EDITOR_SIDE_INJECTION`: the editor is a different process and cannot drive the game. `INPUT_HAD_NO_EFFECT` means the action was delivered inside the game and the position did not change; `ACTION_NOT_BOUND` means the game's InputMap does not declare it; `ACTION_BINDING_UNKNOWN` means the channel could not be read and must **not** be read as a missing action |
 | `node_and_collision_assertions` | F5, F6, F10, F13, F14, F16 | node properties, `shape_count` per body, HUD text nodes |
 | `stop_scene` | N1 | the game stopped cleanly |
 
@@ -2311,5 +3014,173 @@ mod tests {
         ] {
             assert!(playbook.contains(needle), "playbook is missing {needle}");
         }
+    }
+
+    /// DR-35: `smoke-t5`'s real defect was that the battery judged the game with
+    /// editor-side tools.  The playbook must tell the Tester which process each
+    /// record came from.
+    #[test]
+    fn playbook_explains_the_game_process_channel() {
+        let temp = tempfile::tempdir().unwrap();
+        let playbook = adapter(&temp.path().join("addon")).evidence_playbook();
+        for needle in [
+            "input_channel_probe",
+            "game_process",
+            "EDITOR_SIDE_INJECTION",
+            "ACTION_BINDING_UNKNOWN",
+            "ACTION_NOT_BOUND",
+        ] {
+            assert!(playbook.contains(needle), "playbook is missing {needle}");
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // DR-35: the game-process probe
+    // -----------------------------------------------------------------------
+
+    /// Every probe script is one `str(...)`-wrapped GDScript expression, because
+    /// the addon evaluates it with `Expression::execute` and reports
+    /// `{"result": str(value)}`.
+    #[test]
+    fn the_probe_scripts_are_single_expression_readings() {
+        for script in [
+            probe_scripts::has_action("move_right"),
+            probe_scripts::is_action_pressed("move_right"),
+            probe_scripts::axis(),
+            probe_scripts::press("move_right"),
+            probe_scripts::release("move_right"),
+            probe_scripts::player_position(),
+        ] {
+            assert!(script.starts_with("str("), "{script}");
+            assert!(
+                !script.contains('\n'),
+                "an expression is one line: {script}"
+            );
+            assert!(!script.contains("return "), "{script}");
+        }
+        assert_eq!(
+            probe_scripts::has_action("jump"),
+            "str(InputMap.has_action(\"jump\"))"
+        );
+        // The position read must stay reachable: it uses `get_tree()` on the
+        // addon's base node, never an engine singleton.
+        let position = probe_scripts::player_position();
+        assert!(position.contains("get_tree()"), "{position}");
+        assert!(!position.contains("Engine"), "{position}");
+    }
+
+    /// The addon answers `{"result": str(value)}`; a raw boolean/number must keep
+    /// working, and anything else must be `None` (never a guessed reading).
+    #[test]
+    fn the_game_script_readings_are_parsed_strictly() {
+        let envelope = |text: &str| json!({"content": [{"type": "text", "text": text}]});
+        assert_eq!(
+            game_script_bool(&envelope(r#"{"result":"true"}"#)),
+            Some(true)
+        );
+        assert_eq!(
+            game_script_bool(&envelope(r#"{"result":"FALSE"}"#)),
+            Some(false)
+        );
+        assert_eq!(
+            game_script_bool(&envelope(r#"{"result":true}"#)),
+            Some(true)
+        );
+        assert_eq!(game_script_bool(&envelope(r#"{"result":"maybe"}"#)), None);
+        assert_eq!(game_script_f64(&envelope(r#"{"result":"1.0"}"#)), Some(1.0));
+        assert_eq!(game_script_f64(&envelope(r#"{"result":0.5}"#)), Some(0.5));
+        assert_eq!(
+            game_script_f64(&envelope(r#"{"result":"-0.5"}"#)),
+            Some(-0.5)
+        );
+        assert_eq!(game_script_f64(&envelope(r#"{"result":"<null>"}"#)), None);
+        assert_eq!(
+            game_script_position(&envelope(r#"{"result":"60.0,283.999"}"#)),
+            Some((60.0, 283.999))
+        );
+        // The real `smoke-t5` failure shape carries no `result` at all.
+        assert_eq!(game_script_bool(&envelope(r#"{"error":"Invalid"}"#)), None);
+        assert_eq!(
+            game_script_position(&envelope(r#"{"error":"Invalid"}"#)),
+            None
+        );
+    }
+
+    /// DR-35: `project.godot` is read only for the diagnosis — a declaration is
+    /// not a running binding.
+    #[test]
+    fn project_declared_actions_reads_only_the_input_section() {
+        let temp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            temp.path().join("project.godot"),
+            "config_version=5\n\n[move_right]\n\n[input]\nmove_left={\n}\n# move_right is a comment\n\
+             move_right={\n}\n\n[rendering]\njump={}\n",
+        )
+        .unwrap();
+        let declared = project_declared_actions(temp.path(), &["move_left", "move_right", "jump"]);
+        assert_eq!(
+            declared,
+            vec!["move_left".to_string(), "move_right".to_string()],
+            "jump is declared in another section, and a comment is not a declaration"
+        );
+        assert!(
+            project_declared_actions(&temp.path().join("missing"), &["move_right"]).is_empty(),
+            "a workspace without project.godot declares nothing"
+        );
+    }
+
+    /// DR-35: the three capability codes are the literals a Tester searches for,
+    /// and the default is the honest one (`UNKNOWN`, never `NOT_BOUND`).
+    #[test]
+    fn the_capability_codes_are_the_searchable_literals() {
+        assert_eq!(
+            InputChannelCapability::all_codes(),
+            [
+                "GAME_INPUT_CHANNEL_OK",
+                "ACTION_NOT_BOUND",
+                "ACTION_BINDING_UNKNOWN"
+            ]
+        );
+        assert_eq!(
+            InputChannelCapability::default().code(),
+            "ACTION_BINDING_UNKNOWN"
+        );
+        assert!(
+            InputChannelProbe::default()
+                .observation()
+                .starts_with("ACTION_BINDING_UNKNOWN"),
+            "an empty probe is not evidence of anything"
+        );
+    }
+
+    /// DR-35 ⑤: a quadruple always names the process it was observed in.
+    #[test]
+    fn the_quadruple_carries_its_channel() {
+        let payload = json!({
+            "frame_count": 2,
+            "samples": [
+                {"frame": 0, "position": {"x": 0.0, "y": 0.0}},
+                {"frame": 1, "position": {"x": 8.0, "y": 0.0}},
+            ],
+        });
+        let game = replay_quadruple("move_right", &payload, GAME_PROCESS_CHANNEL).unwrap();
+        assert_eq!(game["channel"], json!(GAME_PROCESS_CHANNEL));
+        assert_eq!(game["before_position"], json!({"x": 0.0, "y": 0.0}));
+        assert_eq!(game["after_position"], json!({"x": 8.0, "y": 0.0}));
+
+        let editor = replay_quadruple("move_right", &payload, EDITOR_PROCESS_CHANNEL).unwrap();
+        assert_eq!(editor["channel"], json!(EDITOR_PROCESS_CHANNEL));
+        assert_ne!(
+            game["channel"], editor["channel"],
+            "the two processes must stay distinguishable"
+        );
+
+        // No frame samples at all is still `None`, not a zeroed quadruple.
+        assert!(replay_quadruple(
+            "move_right",
+            &json!({"frame_count": 0, "samples": []}),
+            GAME_PROCESS_CHANNEL
+        )
+        .is_none());
     }
 }
