@@ -1162,6 +1162,26 @@
     校验脚本 21 项全过（174 工具、名字与顺序不变、描述为干净 UTF-8、无 U+FFFD、无 Latin-1 残留、191 条嵌套 inputSchema 描述一并修复）。
     hof-rs 离线测试 **261 passed / 0 failed / 7 ignored**（与改动前逐字相同，**无断言被放宽**）。
 
+## D40 — 引擎侧规范工件迁入 Godot fork（用户裁决：文档与代码同居）
+
+- 日期：2026-09
+- 用户指令：**「文档放到 godot 目录更合适」**（原位置是 hof-rs 的 `.spec/godot-mcp-engine/`）。
+- 先回答用户的核对问题：**M1 的提交确实在 `F:\RustProjects\godot-mcp-pro\code\godot`**——
+  分支 `feature/mcp-server-module`，`57277407e7..HEAD` 共 **10 个提交**，改动 **17 个文件且全部在 `modules/mcp_server/` 下（零越界）**，
+  工作区仅剩 4 个既有未跟踪物（`.graphifyignore`、`build-m0.cmd`、`graphify-out/`、`install-deps-m0.cmd`）。
+- 选择（新的文档归属约定）：
+  | 内容 | 位置 | 理由 |
+  |---|---|---|
+  | 引擎模块的规范与验收工件（需求/概要/详细设计/验收） | **fork `modules/mcp_server/docs/`** | 与代码同居，fork 内自洽；改码与改规范在同一提交里可见 |
+  | 跨项目决策日志 `DECISIONS.md` | **hof-rs 仓库** | 记录的是 hof-rs 与引擎模块**共同**的决策树（D30 起为引擎方向、D35–D39 为 M1 实现/验收裁决）；拆开会让「为什么长这样」失去单一来源 |
+  | 命名工件（`tool-rename-map.json`、`TOOL-NAMING.md`） | **fork `modules/mcp_server/docs/`** | 与工具实现同居，生成与消费都在引擎侧 |
+- 执行：
+  - fork 侧提交 `9b6ca0d314`：新增 `modules/mcp_server/docs/{REQUIREMENTS,DESIGN-OVERVIEW,DESIGN-DETAIL,ACCEPTANCE}.md`（逐字节相同，SHA256 已核对）
+    与 `modules/mcp_server/README.md`（模块说明、架构要点、构建/测试命令、文档索引、指向 hof-rs `DECISIONS.md` 的说明、当前状态）。
+  - hof-rs 侧：`git rm` 上述 4 个文件，`.spec/godot-mcp-engine/README.md` 改为**指针存根**（保留历史路径引用可解析）。
+  - fork 内 `__pycache__/` 已被 Godot 自身 `.gitignore:77` 覆盖，无需处理；模块受跟踪文件共 22 个。
+- 回滚点：文档搬迁只涉及文档路径；代码与构建不受影响。若要回退，把 4 个文件移回 `.spec/godot-mcp-engine/` 即可。
+
 
 
 
