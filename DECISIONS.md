@@ -922,6 +922,98 @@
   M1 的范围与验收脚本随之调整（验收用例不变，只是实现载体变）。
 - 回滚点：调研结论未落地前，引擎源码零改动（M0 的非 mono 基线构建产物可用）。
 
+## D33 — M1 传输层选型结论：**保留自研**（无合适的 C++ MCP 库），加固项按需触发（D32 的裁决）
+
+- 日期：2026-09（D32 调研回收后的裁决）
+- 调研结论（全部附来源并实测抓取，非搜索引擎摘要）：
+  1. **不存在官方 C++ MCP SDK**：`modelcontextprotocol` org 官方 SDK 只有
+     TS/Python/Kotlin/Java/Swift/Rust/Ruby/C#/Go/PHP；`anthropics` org 只有 python/ts/go/java/ruby/php/csharp。
+  2. 第三方 C++ MCP SDK 中可用的三个——**cpp-mcp**（325★, MIT, C++17, 2025-03-26 Streamable HTTP）、
+     **cxxmcp**（24★, MIT, 自称 RC）、**gopher-mcp**（147★, Apache-2.0, 80 open issues）——**全部与核心约束正面冲突**：
+     都自带 HTTP 服务器 + 自带线程模型 + 自带 nlohmann/json，而我们需要「单客户端 / 主线程执行工具 /
+     Godot `Variant` JSON / 单头文件级依赖」。
+  3. **最强否决性约束（实测）**：Godot 默认 `disable_exceptions=yes`（`SConstruct:277`），
+     MSVC 下定义 `_HAS_EXCEPTIONS=0` 且**不加 `/EHsc`**（`SConstruct:934-940`）；C++ 标准为 **C++17 + `/permissive-`**
+     （`SConstruct:924,928`）；`dev_mode` 下 `warnings=extra` + `werror=yes`（`/W4+/WX`）。
+     `cpp-mcp` 自有源码 27 处 `throw` + nlohmann 48 处 `throw`；nlohmann 的 `JSON_NOEXCEPTION` 走 **`std::abort()`**
+     ——在游戏引擎里对畸形客户端输入 abort 属崩溃风险。
+  4. **既成事实**：被中止的 M1 工作流已在 fork 里写出 `modules/mcp_server/{mcp_http_server,mcp_jsonrpc,tool_registry,
+     mcp_server,tools/project}.*` + 27 条 doctest + `scripts/accept_m1.ps1`，并已用它成功构建（20:55 的二进制）。
+     实测其设计已**结构性排除** D24 的 FIFO 错位（`mcp_http_server.h` 注释明写 no shared arrival-ordered queue，
+     响应写回发起它的连接）。
+  5. 已识别的真实缺口（实测逐行核对）：①**不支持 `Transfer-Encoding: chunked` 请求体**（只认 `Content-Length`，会 400）；
+     ②不处理 `Expect: 100-continue`（curl >1024B 会白等约 1s）；③`Request` 不暴露 header map
+     （未来若要 `Mcp-Session-Id` 才需要）；④`String::utf8()` 对非法 UTF-8 行为不明确。
+- 选择：**不引入任何 MCP SDK**；HTTP 传输保留 Godot `TCPServer`+`StreamPeerTCP` 自研子集，JSON 用引擎自带
+  `core/io/json.h`（`Variant`/`Dictionary` 零桥接）。**理由**：本场景被明确限定为「只服务我们自己的 harness、
+  单客户端、顺序请求、`POST /mcp` + `Content-Length`」，引入 SDK 是净负收益（线程模型冲突、异常体系冲突、
+  双层 JSON、且 SDK 的 SSE/`Mcp-Session-Id` 会强制 hof-rs 增加会话状态）。
+- **加固项按需触发**（不现在做）：
+  - 触发条件 A：harness 出现 chunked body（例如改用第三方 HTTP 客户端或流式 body）→
+    vendor **`picohttpparser`**（2 文件 32 KB，MIT/Perl 双许可取 MIT，无状态/无分配/无线程/无异常），
+    用它替换手写 framing 中「body 分帧」那一小块（`phr_parse_request` + `phr_decode_chunked`）。
+    vendor 步骤已核实（本 checkout 的 `thirdparty/` **没有** `SCsub`，须照 `modules/enet/SCsub` 模板：
+    `env_thirdparty.disable_warnings()` + `add_source_files(..., "#thirdparty/picohttpparser/picohttpparser.c")`），
+    且**必须**登记 `thirdparty/README.md`（字母序 + 前后各两空行）与 `COPYRIGHT.txt`
+    （`core/SCsub:270-272` 会把 `COPYRIGHT.txt` 编进 `core/license.gen.h`，出现在编辑器 License 界面）。
+  - 触发条件 B：需要规范级 Streamable HTTP 会话（`Mcp-Session-Id`/GET SSE/DELETE）→ 重新评估（届时备选是
+    `cpp-httplib` 单头 + `CPPHTTPLIB_NO_EXCEPTIONS`，代价是后台线程 + 主线程任务队列）。
+  - **小加固（建议随 M1 收尾做）**：处理 `Expect: 100-continue`（20~30 LOC），避免 curl 调试与严格客户端异常。
+- 契约固定：**hof-rs 只发带 `Content-Length` 的 `POST /mcp`**（写入 REQUIREMENTS 作为当前契约）；
+  任何引入 chunked 的改动必须先触发加固项 A。
+- 回滚点：不改任何既有代码；结论只影响后续选型。
+
+## D34 — 工具命名审计结论：**部分采纳 P0（48 项）+ 单向标记规范 + 先止血后改名**
+
+- 日期：2026-09（D31 调研回收后的裁决）
+- 调研结论（174/174 逐个对照实现，每条都有 `file:line` 依据）：
+  - **改名不是审美问题，是三类可复现事故源**：
+    ① **作用域不可见**：真正作用于运行中游戏的只有 **24 个**（19 个 runtime + 4 个 test + `get_game_screenshot`），
+       其中 20 个名字未说明进程；反向地，**`simulate_*`(5) 与 `get_input_actions`/`set_input_action` 注入的是
+       编辑器进程的 `Input`/`InputMap` 单例，根本到不了游戏**——这**独立复现了 D27 的 E3 根因**。
+    ② **谎报能力（6 个）**：`export_project`（TODO，硬编码 `export_started:true`）、`bake_navigation_mesh`（恒真）、
+       `get_test_report`（固定文案）、`clear_output`（只打换行）、`set_auto_dismiss`（写无人读取的 static）、
+       `navigate_to`（直接回「请自行实现」）；另 `tilemap_set_cell`/`tilemap_fill_rect` 用单参 `set_cell`
+       **把格子擦掉却报 set:true/filled:N**。
+    ③ **近重名语义相反/重复实现**：`search_files`(文件名) vs `search_in_files`(内容)；
+       `find_node_references` 与 `search_in_files` 是同一操作的两份实现；`move_node`(reparent) vs `move_to`(改坐标)；
+       `batch_get_properties`(GAME) vs `batch_set_property`(ED)。
+  - 规模：建议改名 **86 个（49%）**，其中**高风险 48 个**；明确不改 88 个。
+- 选择：**部分采纳**，具体：
+  1. **采纳命名规范**：`<verb>_<object>[_<qualifier>]`，动词闭集，**废除 `update_`**（单属性一律 `set_`），
+     `get_`/`read_`/`list_` 按「内存对象/文件内容/集合」切分。
+  2. **采纳「单向标记 + 单例强制」**（这是决策者初判的修正）：唯一后缀方向 = 游戏侧 `_in_running_game`（24 个），
+     **不带标记 = 编辑器/项目磁盘/OS 上下文**；只有「每进程各有一份实例的全局单例」的编辑器侧才加 `_in_editor`
+     （`simulate_*`、`*input_action*`、`*audio_server*`、`*performance_monitors`，约 12 个）。
+     理由：标记少数派比给 150 个编辑器工具都加标记便宜 7 倍，且能写成**注册期可机械校验的后缀谓词**。
+  3. **采纳 P0 的 48 项改名** + **5 项「未实现前不注册」**（`clear_output`/`set_auto_dismiss`/`export_project`/
+     `bake_navigation_mesh`/`get_test_report`）+ **4 项「不改名但必修实现」**（`disconnect_signal`、
+     Expression 多语句路径、`add_state_machine_transition` 枚举错位、`tilemap_*` 先修实现）。
+  4. **P1 的 38 项只做与 P0 同族的 9 项**，其余记为技术债（等引擎模块移植时顺手改）。
+  5. **不保留可见别名**：`MCPToolRegistry` 的 `tools` map（可调用）与 `order` Vector（决定 `tools/list`）天然分离，
+     旧名不 push 进 `order` 即可；保留别名会与「前缀式授权」叠加出绕过面。
+- **最高严重度的安全发现（必须写进实现任务书）**：hof-rs 的工具策略是**前缀匹配 + 精确名单**
+  （`src/runtime/policy.rs:184-245`：`MUTATING_PREFIXES` = add_/create_/delete_/remove_/set_/update_/edit_；
+  `MUTATING_EXACT` 含 `move_node`、`set_game_node_property`、`bake_navigation_mesh`）。
+  因此 **`move_node` → `reparent_node` 会掉出 `MUTATING_EXACT` 且不以任何 mutating 前缀开头
+  → Tester 会静默获得改名权**（`policy.rs:223`）。**必须加不变量测试 `is_mutating(new) == is_mutating(old)`**，
+  对该项显式豁免并另立安全断言。
+- 对 D31 假设的两处更正（审计实测）：工具名**不在** `config/hoh.yaml`（只有端点/超时/重试等），
+  也**不在** `src/runtime/evidence.rs`；真实落点是 `src/runtime/policy.rs`、`src/adapter/godot.rs`（含
+  `GAME_PROCESS_CHANNEL`/`EDITOR_PROCESS_CHANNEL` 两个既有通道常量，新名字应与它们对齐）、
+  `src/adapter/mod.rs`（电池步骤名）、`src/prompts/**`、`tests/**`、addon 的 `commands/**`。
+- **两个前置阻塞项（必须先做，否则改名没有验收闸门）**：
+  A. **复核 `MCPScreenshot` 机制**：`get_game_screenshot` 依赖游戏侧预写 `user://mcp_screenshot.png`，
+     但审计在 `addons/` 下**未找到生成该文件的 autoload**；若确实不存在，hof-rs 电池的 `play_scene_ready`
+     会稳定失败——这是独立缺陷，须优先确认（与 E2/E3 证据链直接相关）。
+  B. **把 `tools/list` 逐字一致性从 2 个工具扩展到全量 174**（当前只有 2 个工具受契约约束，
+     改名后契约源将没有验收闸门）。同时决定是否顺手修 `tools_list.json` 描述的双重编码
+     （`accept_m1.ps1` 已有「接受原始或还原值」的兜底，不修则该兜底会永久化）。
+- 落地顺序（采纳）：**Phase 0 止血（零改名）→ Phase 1 冻结规范 + registry lint 闸门 → Phase 2 P0 原子切换
+  （单提交全绿，含 `is_mutating` 不变式）→ Phase 3 P1 同族 9 项 → Phase 4 addon 按新名逐个移植（未移植即不注册）
+  → Phase 5 清理兜底**。
+- 回滚点：改名未落地前不影响任何既有代码；Phase 0 止血的每一项都是可单独回滚的小改动。
+
 
 
 
