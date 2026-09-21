@@ -1572,6 +1572,35 @@
   并构造一次「游戏进程调用编辑器工具」的请求，必须被拒且不执行）。
 - 回滚点：TASK-005 的代码改动可整提交回退；手册/裁决为文档。
 
+## D53 — TASK-006 交付（首个 editor-scope 组，补上端到端守卫证据）；契约描述缺陷裁决
+
+- 日期：2026-09
+- **TASK-006 交付**（组 `editor_read_scene_inspector`，7 个编辑器专有只读工具；B1 进度 **26/41**）：
+  - 五道门：门① **3/3**；门③ doctest **78/78·995**（红阶段 7 failed/62 断言有据）；门④ 全引擎
+    **1504/1504·0 failed**；门⑤ `accept_m1.ps1` **22/22 连跑两次**（PASS 清单逐字节相同）；
+    门② 双端点真实证据（4 个不可构造类已显式声明）。
+  - **补上了一路被记为 unverifiable 的端到端守卫证据**（本组是第一个 `scope=editor` 组）：
+    编辑器 9888 = **26** 个工具（本组 7 个逐字 True）；游戏 9889 = **19** 个工具且本组 7 个**全部缺席**；
+    **游戏进程调用 `editor_get_errors` → `-32601 Method not found` 且未执行**；
+    编译期守卫（所有编辑器 API 调用点都在 `MCP_EDITOR_TOOLS_ENABLED` 区间内）与
+    运行期守卫（`hint=true` 但无 `EditorNode` 时返回 `-32000` 而非 SIGSEGV）均有证据。
+  - 门脚本按端点语义修正（第二个组落地后原「单并集」语义必然误报）→ **接受**，并排入 TASK-007 §2 写进 `DESIGN-DETAIL` §17.3。
+  - 其余偏差接受：`inputSchema` 从契约字面量解析（Godot JSON 只有一种数字类型，整型默认值解析后需折回 `INT`——
+    **门① 真的抓到了这一点**，报告附录保留了抓到的过程）、红阶段退出码未采（用 `Status: FAILURE!` + 62 断言失败作证，
+    **不为凑数字重跑红树**——这是好习惯）、`editor_get_selection` 非空选区样本推迟到 B3、
+    `editor_get_scene_tree` 保留迁移源的编辑器内部路径怪癖（手册 §6.8）。
+- **⭐ 契约描述缺陷裁决（用户最在意的「描述必须与功能对应」）**：
+  - 问题：`editor_analyze_signal_flow` 的契约描述写「按 `flags & 1` 判持久连接」，
+    但 **Godot 4 里 `CONNECT_DEFERRED = 1`、`CONNECT_PERSIST = 2`** → 照字面实现会让普通场景**恒返回 `nodes: []`**。
+    TASK-006 的实现按**意图**用了 `CONNECT_PERSIST`，但**没有自行改契约**（正确做法），只报缺陷请决策者裁定。
+  - 裁决：**描述必须改对**（这正是 D38/D45 那条「名字与描述必须与功能对应」的延续）。
+    做法：走 `gen_renamed_contract.py` 的 **`DESCRIPTION_OVERRIDES`**（理由入 `_meta.overrides`），
+    **不改 `tool-rename-map.json`**（避免映射 sha 漂移），并**同步 C++ 侧描述字面量**（否则门①会失败——这正是门①的价值）。
+    排入 **TASK-007 第一部分**。
+  - 附注：这是**第 2 例**「迁移源本身有缺陷、必须偏离参照」的案例（第 1 例是 `project_get_scene_exports` 的恒 `count:0`），
+    手册 §6.6 的规则（以「工具真的能用」为准并显式记录）已被两次实证验证。
+- 回滚点：契约描述改动可由生成器 revert（`DESCRIPTION_OVERRIDES` 单条）；组实现可整提交回退。
+
 
 
 
