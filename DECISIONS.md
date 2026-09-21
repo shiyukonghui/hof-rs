@@ -733,6 +733,117 @@
   - **DR-40**：新增 `hoh init`（不依赖 MCP/模型）解决 `--fresh-workspace` 与 doctor 预检的循环依赖。
 - 回滚点：`DESIGN-DETAIL.md` 回退到 `294c35f`；代码回退到 `d7da254`。
 
+## D29 — 修复包 v0.7（DR-35..DR-40）的实现期裁决
+
+- 日期：2026-09（阶段四，修复包 v0.7 实现）
+- 触发问题：DR-35..DR-40 已冻结，但「Expression 能触达什么」「artifact_valid 怎么判定」「prd 总数怎么来」
+  「init 的退出码怎么映射」等取舍会改变既有契约或决定 DR 能否在真实运行中生效，必须显式记录。
+- 提交对应：见本包各提交信息（`(DR-38)` / `(DR-39)` / `(DR-36)` / `(DR-37)` / `(DR-40)` / `(DR-35)`）。
+
+### 裁决 1：DR-38 的命中规则分三层，且必须排除 `.hoh`
+- 事实（`smoke-t5`）：两个越界动作分别是 `dir`（cwd = harness 仓库根）与
+  `dir /b /s *.yaml | findstr hoh`；后者**不含任何路径**，只靠「按名字搜索整个树」这一语义构成越界。
+- 选择：命中判定拆成三个**纯函数**，任一为真即产生 `harness_source_read`：
+  1. `mentions_forbidden_source(text)`：标记集在 `src/`、`.spec/`、`tests/fixtures`、`tests/common`、
+     `RustProjects`、`.git/` 之外补齐 `config/`、`config\`、`DECISIONS.md`、`Cargo.toml`；
+  2. `enumerates_harness_tree(text)`：出现列举/搜索动词（`dir`/`ls`/`find`/`findstr`/`grep`/
+     `get-childitem`/`gci`/`tree`/`select-string`）**且**出现整树模式（`*.`、`**` 或 `/s`/`-r`/
+     `-recurse`）**且**出现 harness 自指词（`hoh`/`harness`/`hof-rs`/`decisions.md`/`cargo.toml`）；
+  3. `mentions_harness_root(text, root)`：命令文本（两种分隔符归一化后）包含**运行期注入**的
+     harness 仓库根路径（`runtime.out_of_tree_root`，默认进程 cwd），`src/**` 内不写死任何盘符。
+- 关键取舍：判定 2 之前先**剔除 `.hoh`**。`.hoh` 是运行期自己的产物目录，Tester/Developer 列举
+  `.hoh/deterministic/*.json` 是正常工作；不剔除就会把「hoh」当成 harness 自指词而误报。
+- 理由：三个判据各自独立可测（单元测试覆盖「命中/不命中」两侧），且 `dir F:/moonbit-hof-rs`
+  与 `dir /b /s *.yaml | findstr hoh` 两条真实越界都有唯一对应的判据。
+- 回滚点：`hygiene.rs` 的四个函数与 `run_loop::note_source_reads` 的签名。
+
+### 裁决 2：DR-36 的证据复制与体积阈值
+- 选择：`build_view` 之后，除 `.hoh/deterministic/**` 外再复制 `<workspace>/.hoh/evidence/**` 到
+  `<candidate>/.hoh/evidence/**`（`.hoh` 不参与 `hash_tree`/快照，因此不改变 `candidate_id`）。
+- 超限语义按 DR 字面：**仍复制**并记录体积，在 `result.json.warnings` 追加
+  `evidence_too_large: <相对路径> (<n> byte(s) > <limit>)`；绝不静默跳过、绝不改成「不复制只告警」。
+- 新配置键 `runtime.max_evidence_bytes`（默认 8388608 = 8 MiB），`serde(default)`，`config/hoh.yaml`
+  同步写入；除该键外未改任何配置。
+- 回滚点：`run_loop` 中 `copy_evidence` 调用点与 `RuntimeConfig::max_evidence_bytes`。
+
+### 裁决 3：DR-37 的 `artifact_valid` 与理由字段
+- 问题：实现里 Developer 的 `artifact_valid` 恒为 `workspace.is_dir()`（恒真），所以「收紧触发条件」
+  若不真正实现判定就等于没收紧。
+- 选择：
+  - `ProjectAdapter` 新增 `fn developer_artifact_valid(&self, workspace: &Path) -> bool`，**默认返回
+    `false`**（DR-37「无法判定则视为 false，保守」）；因此未实现该判定的 adapter 保持 DR-18 的既有行为。
+  - `GodotAdapter` 的实现 = 「主场景 `.tscn` 可被 `validate_scene_structure_in` 校验」**且**「主场景确实
+    引用了至少一个存在且非空的 GDScript 入口脚本」。
+  - 触发条件收紧为 `exit_status == LimitsExceeded && artifact_valid == false`。
+  - `result.json.wrap_up_retry_reason ∈ {artifact_missing, not_triggered}`：**任何**角色用了 wrap-up
+    重试（Planner/Tester 的 schema 路径与 Developer 的预算路径）都记 `artifact_missing`，否则
+    `not_triggered`。这就是 DR-37 测试③「正常收尾 + 产物缺失 → 触发（保持既有行为）」的落地口径：
+    「正常收尾但产物缺失」走的是既有的 **schema 重试**路径（`schema_gate.rs::missing_artifact_counts_as_attempt`），
+    该路径行为不变，并在结果里得到同一个 `artifact_missing` 理由。
+- 回滚点：`ProjectAdapter::developer_artifact_valid`、`GodotAdapter` 的实现、`run_loop` 开发者段落。
+
+### 裁决 4：DR-39 的 `prd_coverage` 与 total
+- 选择：`prd_coverage: {verified, gap, verified_ids[], gap_ids[]}` **逐字**按 DR 落地，不额外加 `total`
+  字段（避免与冻结文本不一致）；总数由推导函数给出：
+  - 若 `verified_ids ∪ gap_ids` 中出现任何 `F1..F17` 形态的 id → `total = 17`（PRD 的 F 需求总数）；
+  - 否则 `total = verified + gap`，并在 `status` 行尾标注 `(total=derived)`。
+- `status` 每轮打印 `harness=`、`gate=`、`prd=<verified>/<total>`；`hoh run` 结束打印
+  `prd coverage: <v>/<total> verified`。**退出码语义完全不变**（`run_exit_code` 只看 `artifact_gate`）。
+- Runtime 只做**派生**：`verified`/`gap` 直接来自 E_t 的 `verified_records`/`gap_records`，不判定 claim。
+- 代价：`RunSummary` 增加一个字段，`tests/result_semantics.rs` 的结构体字面量必须同步（已记入 regressions）。
+- 回滚点：`model::PrdCoverage`、`record::IterResult::prd_coverage`、`cli_impl::status`/`run`。
+
+### 裁决 5：DR-40 的退出码映射与执行顺序
+- 选择：`hoh init` 只做「（可选）清空 + `ProjectAdapter::initialize`」，不构造 harness、不建 MCP 通道、
+  不解析密钥；适配器失败统一映射为 `HofError::External` → 退出码 **4**（「适配器不可用」，符合 §8 的
+  「外部依赖不可用」）。`clap` 的用法错误本身就是退出码 2。
+- `hoh run --fresh-workspace` 改为「先 init/清空重建 A₀ → 再 doctor 预检 → 再跑」；doctor 失败时
+  **保留**已重建的 A₀ 直接返回 4，不回滚、不删除（DR-40 明确要求）。
+- 回滚点：`cli::Command::Init`、`cli_impl::init`、`cli_impl::run` 中 start_state 计算的位置。
+
+### 裁决 6（重要）：DR-35 的工具能力事实与实现口径
+- **实测事实（本机 Godot 4.7.1-stable-mono，`--headless --script`，`Expression.execute([], base, false)`）**：
+  `Expression` 在带 base instance 时**只能解析 base 的成员**，引擎单例与全局类**一律不可达**：
+  ```
+  Input.is_action_pressed("move_right") => failed=true | err=Invalid named index 'Input' for base type Object
+  InputMap.has_action("move_right")     => failed=true | err=Invalid named index 'InputMap' for base type Object
+  Input.action_press("move_right")      => failed=true | err=Invalid named index 'Input' for base type Object
+  Engine.get_singleton("Input")         => failed=true | err=Invalid named index 'Engine' for base type Object
+  InputEventAction.new()                => failed=true | err=Invalid named index 'InputEventAction' for base type Object
+  JSON.stringify(...) / OS.get_name()   => failed=true | err=Invalid named index '...' for base type Object
+  get_class() / get_tree() != null / str({...}) => failed=false（base 成员与全局工具函数可用）
+  ```
+  这把 `smoke-t5` 里 Developer 看到的
+  `hoh: JSON-RPC error -32603: Internal error: Execute error: Invalid named index 'Input' for base type Object`
+  从「偶发」确认为**工具通道的硬性限制**：`execute_game_script` 走的是
+  `addons/godot_mcp_rs/mcp_runtime_agent.gd` 的 `Expression`（base = 该 autoload 节点），
+  因此 DR-35 字面要求的裸 `Input`/`InputMap` 脚本**在任何项目里都不可能执行成功**。
+  另经实测：`root.push_input(str_to_var('Object(InputEventAction,...)'))` 可构造事件但**不会**更新
+  `Input.is_action_pressed`/`get_axis`；能更新 Input 状态的只有 `Input.parse_input_event`，而它必须先拿到
+  `Input` 单例（不可达）。A_0 的 addon 里唯一调用 `Input.parse_input_event` 的方法是
+  `_cmd_replay_recording`，其 action 被硬编码为 `"replay_event"`（不可参数化）。
+- 选择（**不越权改设计**，只把 DR-35 落到可实现的最大诚实范围）：
+  1. 仍然按 DR-35 的机制发**设计字面脚本**（`str(InputMap.has_action("move_right"))`、
+     `str(Input.is_action_pressed("move_right"))`、`str(Input.get_axis("move_left","move_right"))`、
+     `str(Input.action_press(..))` + 若干帧后复读），原始返回原样落
+     `.hoh/deterministic/raw/input_channel_probe.json`；**形状不可识别或调用失败 → `ACTION_BINDING_UNKNOWN`，
+     绝不降级为 `ACTION_NOT_BOUND`**（DR-35 的第三态正是为此存在）。
+  2. 同时用**可达**的表达式读游戏进程内的 `Player.position`（`get_tree().current_scene.get_node_or_null(
+     "Player").position`，`smoke-t5` 的 Developer 轨迹已证明该形态可用），把「游戏进程可达」与
+     「Input 单例不可达」两类事实分开落在 raw 里，供 Tester 与人工区分「工具不行」与「游戏不行」。
+  3. 「press 后等待→帧再复读」由**游戏进程内**的 `monitor_properties`（game-forwarded，按帧采样
+     Player.position）承担：`Expression` 无法 `await`，脚本内等待不可实现，这是对 DR 字面的最小偏离。
+  4. `input_replay` 的最终判定只看**游戏进程内观测到的位置变化**；编辑器侧 `simulate_action` 仅作补充记录
+     并标注 `EDITOR_SIDE_INJECTION`，四元组一律带 `channel: game_process|editor_process`。
+- 结论/风险：本机与当前 addon 下，探针会得到 `ACTION_BINDING_UNKNOWN`（而不是假阴性的
+  `ACTION_NOT_BOUND`）——这消除了 D27 里「假阴性渗入下一轮」的危险，但**E3 仍不可判定**。
+  要让 E3 真正可判定，必须给游戏进程装一个可参数化的输入桥（例如由 harness 在 `A₀` 注入一个 autoload
+  帮助脚本，或修 addon 的 `execute_game_script` 改成能访问引擎单例的 GDScript 执行方式）。
+  这两条都**超出 DR-35 授权**且会改动「被评估对象」（A_t 会多出 harness 自己的 autoload），
+  因此不在本包内擅自实施，作为 `known_risks` / `open_items` 上报，交决策者裁决。
+- 回滚点：`godot.rs` 的 `input_channel_probe` 步骤、`step_input_replay`、`replay_quadruple`。
+
+
 
 
 

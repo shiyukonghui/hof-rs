@@ -185,14 +185,23 @@ fn finalize_failure(
     write_iter_result(run_dir, iteration, &result)
 }
 
-/// DR-26/DR-32: report-only trace of a role reading the harness sources or an
-/// external repository (both are forbidden by the prompts precisely because the
-/// tool schema is already in `TOOLS.md`).  Behaviour never changes.
+/// DR-26/DR-32/DR-38: report-only trace of a role reading the harness sources,
+/// the harness repository root, or an external repository (all three are
+/// forbidden by the prompts precisely because the tool schema is already in
+/// `TOOLS.md`).  Behaviour never changes.
 ///
 /// DR-32: only the trajectory's **tool calls** are scanned.  `smoke-t3` scanned
 /// the whole trajectory text and therefore matched the system prompt's own list
 /// of forbidden paths — a permanent false positive.
-fn note_source_reads(warnings: &mut Vec<String>, attempts: &[AttemptOutcome]) {
+///
+/// DR-38: the harness repository root is injected at runtime (`harness_root`),
+/// never hard-coded, so `dir <repo root>` and `dir /b /s *.yaml | findstr hoh`
+/// are traced as well.
+fn note_source_reads(
+    warnings: &mut Vec<String>,
+    attempts: &[AttemptOutcome],
+    harness_root: &Path,
+) {
     if warnings
         .iter()
         .any(|warning| warning == "harness_source_read")
@@ -203,7 +212,10 @@ fn note_source_reads(warnings: &mut Vec<String>, attempts: &[AttemptOutcome]) {
         let Ok(raw) = std::fs::read_to_string(&attempt.trajectory_path) else {
             continue;
         };
-        if crate::runtime::hygiene::mentions_forbidden_source_in_actions(&raw) {
+        if crate::runtime::hygiene::mentions_forbidden_source_in_actions_with_root(
+            &raw,
+            Some(harness_root),
+        ) {
             warnings.push("harness_source_read".to_string());
             return;
         }
@@ -361,7 +373,9 @@ pub async fn run(
         .clone()
         .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
     let mut out_of_tree_watch = crate::runtime::hygiene::OutOfTreeWatch::new(
-        out_of_tree_root,
+        // DR-38: the same root doubles as the injected harness repository root
+        // for the `harness_source_read` trace, so the watch takes a copy.
+        out_of_tree_root.clone(),
         Some(crate::runtime::invoke::absolute_path(&workspace)),
     );
 
@@ -491,7 +505,7 @@ pub async fn run(
                 iter_wrap_up_retry_used = true;
             }
             iter_attempts.extend(planner_attempts.clone());
-            note_source_reads(&mut iter_warnings, &planner_attempts);
+            note_source_reads(&mut iter_warnings, &planner_attempts, &out_of_tree_root);
             // DR-22: one symmetric trajectory/log pair per attempt.
             let planner_note = outcome
                 .as_ref()
@@ -693,7 +707,7 @@ pub async fn run(
         // roles, so every attempt has a trajectory and a log.
         record_attempts(&run_dir, iteration, &developer_attempts, None)?;
         iter_attempts.extend(developer_attempts.clone());
-        note_source_reads(&mut iter_warnings, &developer_attempts);
+        note_source_reads(&mut iter_warnings, &developer_attempts, &out_of_tree_root);
         // One summary entry per role, already carrying every attempt so far; the
         // targeted repair below merges into the same entry (DR-31).
         let developer_usage_index = iter_usage.len();
@@ -762,7 +776,7 @@ pub async fn run(
                 exit_was_limits: is_limits_exceeded(&repair_outcome.exit_status),
             });
             iter_attempts.push(developer_attempts.last().cloned().expect("just pushed"));
-            note_source_reads(&mut iter_warnings, &developer_attempts);
+            note_source_reads(&mut iter_warnings, &developer_attempts, &out_of_tree_root);
             // DR-31: the repair is still the Developer role, so it merges into
             // the same per-role summary entry instead of adding a second one.
             merge_usage(
@@ -981,7 +995,7 @@ pub async fn run(
         let _ = tester_wrap_up_retry_used;
         durations.push(("tester".to_string(), started.elapsed().as_millis() as u64));
         iter_attempts.extend(tester_attempts.clone());
-        note_source_reads(&mut iter_warnings, &tester_attempts);
+        note_source_reads(&mut iter_warnings, &tester_attempts, &out_of_tree_root);
         // DR-25: the Tester is read-only; any write outside its view is reported.
         iter_out_of_tree.extend(out_of_tree_watch.observe());
         // DR-22: symmetric trajectory/log pair per tester attempt.

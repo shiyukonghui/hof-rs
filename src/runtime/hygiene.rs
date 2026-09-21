@@ -170,14 +170,18 @@ pub fn suspicious_files(root: &Path) -> Vec<String> {
     found.into_iter().take(SUSPICIOUS_LIMIT).collect()
 }
 
-/// DR-26/DR-32: does this **tool command or argument** mention the harness
-/// sources or an external repository checkout?  Report-only: behaviour never
-/// changes.
+/// DR-26/DR-32/DR-38: does this **tool command or argument** mention the harness
+/// sources, the harness repository root, or an external repository checkout?
+/// Report-only: behaviour never changes.
 ///
 /// DR-32: the marker set is only ever applied to tool text.  The whole-repo
 /// variants are deliberately broad (`src/`, `.spec/`) because the prompts
 /// themselves name those paths, so anything narrower would miss a real read —
 /// see [`mentions_forbidden_source_in_actions`].
+///
+/// DR-38: `smoke-t5` produced two detours the old set missed — `dir` over the
+/// repository root and `dir /b /s *.yaml | findstr hoh` — because the set named
+/// neither `config/**`, `DECISIONS.md`, `Cargo.toml` nor the repository root.
 pub fn mentions_forbidden_source(text: &str) -> bool {
     const MARKERS: &[&str] = &[
         "src/",
@@ -190,18 +194,86 @@ pub fn mentions_forbidden_source(text: &str) -> bool {
         "RustProjects",
         ".git/",
         ".git\\",
+        // DR-38: the rest of the harness repository.
+        "config/",
+        "config\\",
+        "DECISIONS.md",
+        "Cargo.toml",
     ];
     MARKERS.iter().any(|marker| text.contains(marker))
 }
 
-/// DR-32: scan **only** the tool calls of a trajectory (`messages[*].extra.
-/// actions[*]`, plus the arguments nested inside them).
+/// DR-38: verbs that walk or search a directory tree.
+const LISTING_VERBS: &[&str] = &[
+    "dir",
+    "ls",
+    "find",
+    "findstr",
+    "grep",
+    "get-childitem",
+    "gci",
+    "tree",
+    "select-string",
+];
+
+/// DR-38: is this text a *whole-tree* enumeration (a wildcard or an explicit
+/// recursive flag)?  A plain `dir scenes` names one directory and is not.
+fn has_enumerating_pattern(text: &str) -> bool {
+    if text.contains("*.") || text.contains("**") {
+        return true;
+    }
+    text.to_ascii_lowercase()
+        .split_whitespace()
+        .any(|token| matches!(token, "/s" | "-r" | "-recurse" | "--recursive"))
+}
+
+/// DR-38: does the command aim at the harness itself by name?
+///
+/// `.hoh` is the runtime's own artifact directory, so listing
+/// `.hoh/deterministic/*.json` is ordinary in-project work — the runtime's own
+/// name is removed before the harness token is looked for.
+fn contains_harness_token(text: &str) -> bool {
+    let lowered = text.to_ascii_lowercase().replace(".hoh", "");
+    ["harness", "hof-rs", "decisions.md", "cargo.toml"]
+        .iter()
+        .any(|token| lowered.contains(token))
+        || lowered.contains("hoh")
+}
+
+/// DR-38: a recursive listing/search aimed at the harness tree (the second
+/// `smoke-t5` detour: `dir /b /s *.yaml | findstr hoh`).
+pub fn enumerates_harness_tree(text: &str) -> bool {
+    LISTING_VERBS.iter().any(|verb| text.contains(verb))
+        && has_enumerating_pattern(text)
+        && contains_harness_token(text)
+}
+
+/// DR-38: the harness repository root is injected at runtime (never hard-coded
+/// into `src/**`), so a command that names it in either separator style counts.
+pub fn mentions_harness_root(text: &str, harness_root: &Path) -> bool {
+    fn normalize(value: &str) -> String {
+        value.replace('\\', "/").to_ascii_lowercase()
+    }
+    let root = normalize(&harness_root.to_string_lossy());
+    !root.is_empty() && normalize(text).contains(&root)
+}
+
+/// DR-32/DR-38: scan **only** the tool calls of a trajectory (`messages[*].
+/// extra.actions[*]`, plus the arguments nested inside them).
 ///
 /// `smoke-t3` produced an unconditional `harness_source_read` warning: the
 /// detector ran over the raw trajectory text, where the system prompt's own
 /// "never read `src/**`" sentence matched.  The prompt can never be evidence of
 /// what the role *did*.
 pub fn mentions_forbidden_source_in_actions(trajectory: &str) -> bool {
+    mentions_forbidden_source_in_actions_with_root(trajectory, None)
+}
+
+/// DR-38: the same scan with the harness repository root injected.
+pub fn mentions_forbidden_source_in_actions_with_root(
+    trajectory: &str,
+    harness_root: Option<&Path>,
+) -> bool {
     let Ok(value) = serde_json::from_str::<serde_json::Value>(trajectory) else {
         return false;
     };
@@ -221,7 +293,12 @@ pub fn mentions_forbidden_source_in_actions(trajectory: &str) -> bool {
             while let Some(node) = stack.pop() {
                 match node {
                     serde_json::Value::String(text) => {
-                        if mentions_forbidden_source(text) {
+                        let hit = mentions_forbidden_source(text)
+                            || enumerates_harness_tree(text)
+                            || harness_root
+                                .map(|root| mentions_harness_root(text, root))
+                                .unwrap_or(false);
+                        if hit {
                             return true;
                         }
                     }
@@ -347,5 +424,66 @@ mod tests {
         write(&root.join(".godot/_tmp_cache"), "x\n");
         write(&root.join("scenes/main.tscn"), "x\n");
         assert!(suspicious_files(root).is_empty());
+    }
+
+    /// DR-38: the marker set has to name the whole harness repository, not just
+    /// `src/**`, `.spec/**`, `tests/**` and the external checkout.
+    #[test]
+    fn the_marker_set_covers_config_decisions_and_the_manifest() {
+        for command in [
+            "dir config\\*.yaml",
+            "type config/hoh.yaml",
+            "Get-Content config\\hoh.yaml",
+            "cat DECISIONS.md",
+            "type Cargo.toml",
+        ] {
+            assert!(mentions_forbidden_source(command), "`{command}`");
+        }
+        assert!(!mentions_forbidden_source("godot --headless --check-only res://x.gd"));
+    }
+
+    /// DR-38: `dir /b /s *.yaml | findstr hoh` names no path, yet it is a
+    /// whole-tree search aimed at the harness by name.
+    #[test]
+    fn a_recursive_search_for_the_harness_is_a_harness_read() {
+        assert!(enumerates_harness_tree(
+            "dir /b /s *.yaml | findstr hoh"
+        ));
+        assert!(enumerates_harness_tree("grep -r hoh harness/"));
+        // In-project work is not a harness read.
+        assert!(!enumerates_harness_tree("dir scenes\\*.tscn"));
+        assert!(
+            !enumerates_harness_tree("ls .hoh/deterministic/*.json"),
+            "the runtime's own artifact directory is ordinary project work"
+        );
+        assert!(!enumerates_harness_tree("godot --headless --check-only res://x.gd"));
+    }
+
+    /// DR-38: the repository root is injected at runtime, never hard-coded, and
+    /// either separator style must match.
+    #[test]
+    fn the_injected_harness_root_is_matched_in_both_separator_styles() {
+        let root = std::path::Path::new("F:/harness/repo");
+        assert!(mentions_harness_root("dir F:/harness/repo", root));
+        assert!(mentions_harness_root(
+            "powershell -Command \"Set-Location 'F:\\\\harness\\\\repo'; dir F:\\harness\\repo\"",
+            root
+        ));
+        assert!(!mentions_harness_root("dir F:/other/repo", root));
+
+        let trajectory = serde_json::json!({
+            "messages": [{"role": "assistant", "extra": {"actions": [
+                {"command": "dir F:/harness/repo"}
+            ]}}]
+        })
+        .to_string();
+        assert!(mentions_forbidden_source_in_actions_with_root(
+            &trajectory,
+            Some(root)
+        ));
+        assert!(
+            !mentions_forbidden_source_in_actions(&trajectory),
+            "without the injected root the command names no marker"
+        );
     }
 }

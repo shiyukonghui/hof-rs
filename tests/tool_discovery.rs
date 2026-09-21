@@ -329,3 +329,79 @@ async fn only_a_tool_command_that_reads_a_source_is_recorded() {
         "the concrete read command must be traced: {warnings:?}"
     );
 }
+
+// ---------------------------------------------------------------------------
+// DR-38 — the marker set must cover the whole harness repository
+// ---------------------------------------------------------------------------
+
+/// Run one scenario whose Developer ran `command`, and return the iteration
+/// warnings.
+async fn warnings_for_developer_command(root: &std::path::Path, command: &str) -> Vec<Value> {
+    let script = vec![
+        FakeStep::new(Role::Planner).writing(".hoh/plan.md", OK_PLAN),
+        FakeStep::new(Role::Developer)
+            .writing("project.godot", "config_version=5\n")
+            .trajectory_mentioning(command),
+        FakeStep::new(Role::Tester)
+            .writing(".hoh/evidence/move.json", "{}\n")
+            .writing(".hoh/evidence.json", &ok_evidence(1, "")),
+    ];
+    let (result, _) = run_scenario(root, 1, script, Ablation::default(), FakeAdapter::new()).await;
+    result.expect("the trace is report-only, it never fails the round");
+    let json: Value =
+        serde_json::from_str(&read(&root.join("runs/run-1/iter-1/result.json"))).unwrap();
+    json["warnings"].as_array().cloned().unwrap_or_default()
+}
+
+/// DR-38 ①: `smoke-t5` listed the harness repository root without naming any
+/// marker file.  The root is injected at runtime (`out_of_tree_root`, which
+/// defaults to the process working directory), never hard-coded.
+#[tokio::test]
+async fn enumerating_the_harness_root_is_recorded_as_a_warning() {
+    let temp = tempfile::tempdir().unwrap();
+    let harness_root = std::env::current_dir().expect("the test process has a cwd");
+    let command = format!("dir {}", harness_root.display());
+    let warnings = warnings_for_developer_command(temp.path(), &command).await;
+    assert!(
+        warnings
+            .iter()
+            .any(|warning| warning == "harness_source_read"),
+        "listing the harness root ({command}) must be traced: {warnings:?}"
+    );
+}
+
+/// DR-38 ②: the second `smoke-t5` detour — a recursive YAML hunt piped into
+/// `findstr hoh` — is a directory-enumeration aimed at the harness, even though
+/// it names no path at all.
+#[tokio::test]
+async fn a_recursive_hoh_search_is_recorded_as_a_warning() {
+    let temp = tempfile::tempdir().unwrap();
+    let warnings =
+        warnings_for_developer_command(temp.path(), "dir /b /s *.yaml | findstr hoh").await;
+    assert!(
+        warnings
+            .iter()
+            .any(|warning| warning == "harness_source_read"),
+        "a recursive `*.yaml` hunt for `hoh` must be traced: {warnings:?}"
+    );
+}
+
+/// DR-38 ③: a command that stays inside the project is not a harness read —
+/// in particular the Tester's own `.hoh/...` evidence listings.
+#[tokio::test]
+async fn a_project_only_command_is_not_a_harness_read() {
+    let temp = tempfile::tempdir().unwrap();
+    for command in [
+        "dir scenes\\*.tscn",
+        "godot --headless --check-only res://scripts/player.gd",
+        "ls .hoh/deterministic/*.json",
+    ] {
+        let warnings = warnings_for_developer_command(temp.path(), command).await;
+        assert!(
+            !warnings
+                .iter()
+                .any(|warning| warning == "harness_source_read"),
+            "`{command}` stays inside the project: {warnings:?}"
+        );
+    }
+}
