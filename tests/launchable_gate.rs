@@ -345,6 +345,33 @@ async fn a_broken_scene_triggers_exactly_one_targeted_repair() {
         run.run_dir.join("iter-1/candidate").is_dir(),
         "the candidate view must still be built"
     );
+
+    // The scene-structure step is the actionable half of the failure: the
+    // battery record itself must carry the line number and the correct form.
+    let battery: Vec<Value> = serde_json::from_str(&read(
+        &run.run_dir
+            .join("iter-1/candidate/.hoh/deterministic/battery.json"),
+    ))
+    .unwrap();
+    let structure = battery
+        .iter()
+        .find(|record| record["step_id"] == json!("scene_structure"))
+        .expect("the scene_structure step must exist");
+    assert_eq!(structure["ok"], json!(false));
+    let observation = structure["record"]["observation"].as_str().unwrap();
+    assert!(observation.contains("line 3"), "{observation}");
+    assert!(
+        observation.to_lowercase().contains("correct form"),
+        "{observation}"
+    );
+    assert!(
+        structure["supports"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|id| id == "N1"),
+        "the structure step supports N1: {structure}"
+    );
 }
 
 // ---------------------------------------------------------------------------
