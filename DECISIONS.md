@@ -1149,6 +1149,18 @@
   ⑤`accept_m1.ps1` 去掉 description 兜底改为逐字相等；⑥重采 `F:\moonbit-hof-rs\tests\fixtures\mcp\tools_list.json` 为干净 UTF-8
   （该项**授权**该包修改这一个 hof-rs 文件，其余 hof-rs 内容保持只读）。
 - 回滚点：修正包只动 `modules/mcp_server/**` 与上述**一个** fixture 文件；两者都可单独回退。
+- **修正包已完成（引擎侧 `7d90ae32f4`、`455a08cc13`）**，关键结果：
+  - `case11` 的关闭断言改为**正向证明**（`Test-PeerClosed`：优先 FIN/reset，退化为「探针无响应」）；
+    修前在**确定活着**的连接上也返回 `closed=True`（原生复现），修后在活连接上 `False`、413/431/裸 LF 后 `TRUE(FIN)`。
+  - **431** 落地（含 reason phrase，不再是死代码）；**裸 LF → 400**（新增 `ParseStatus::BARE_LF_LINE_ENDING`，27 ms 内响应，旧行为是静默 30 s）；
+    **非法 UTF-8** 保留宽松但新增 `is_valid_utf8` 严格校验 + `print_verbose` 警告（带原始字节长度）。
+  - 对等门**删除 Latin-1 兜底**，并改用**大小写敏感**的逐字比较（PowerShell `-eq` 对字符串不区分大小写，原先的"逐字"其实没强制）；
+    脚本增至 20 用例（新增 431/裸 LF/非 UTF-8 三例），**连跑两次 20/20 exit 0**。
+  - 单测 **33/33（204 断言）**；全引擎 **1459/1459（424485 断言）0 failed**。
+  - **fixture 已重采**（GDR-13）：`326390 B / 含 BOM / sha256 be6e0526690cc2460a45b3623cea61667fddbb16d25778e0b85882261a8da6ba`
+    → **`48749 B / 无 BOM / sha256 8f8051c4c0f8941089f0b21a193cef7c51fa7c41d7e312b1463ea8593f313c54`**（取 9877 的原始 `tools/list` 响应字节）；
+    校验脚本 21 项全过（174 工具、名字与顺序不变、描述为干净 UTF-8、无 U+FFFD、无 Latin-1 残留、191 条嵌套 inputSchema 描述一并修复）。
+    hof-rs 离线测试 **261 passed / 0 failed / 7 ignored**（与改动前逐字相同，**无断言被放宽**）。
 
 
 
