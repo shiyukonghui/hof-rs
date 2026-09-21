@@ -843,6 +843,48 @@
   因此不在本包内擅自实施，作为 `known_risks` / `open_items` 上报，交决策者裁决。
 - 回滚点：`godot.rs` 的 `input_channel_probe` 步骤、`step_input_replay`、`replay_quadruple`。
 
+## D30 — 方向变更：把 MCP 工具逻辑集成进 Godot 本体（内置模块 `mcp_server`），以解锁 E3
+
+- 日期：2026-09（阶段三回炉后的**架构级方向决策**，由用户提出并批准计划）
+- 触发问题：D27/D29 已把 E3 失败的根因锁定在**工具链的进程边界**：
+  GDExtension 只存在于编辑器进程，`simulate_action`/`get_input_actions` 作用于**编辑器**的输入系统；
+  游戏是独立子进程，靠 `user://` 文件 IPC 转发；而 `execute_game_script` 走
+  `Expression.execute`，**访问不到任何引擎单例**（`Input`/`InputMap`/`Engine`/`OS` 全部
+  `Invalid named index`，D29 裁决 6 实测）。结论：**在现有 addon 架构下，无论模型多强，E3 都不可判定。**
+- 用户裁决（4 项，已确认）：
+  1. **基线** = 用户 fork 的 master（`code/godot`，`4.8.0.dev`，HEAD `57277407`，remote 是
+     `git@github.com:shiyukonghui/godot.git`），**不切 4.7.1-stable**；
+  2. **覆盖策略** = **分类分批 + 每批对等门**（不追求一次性 174 工具全量对等）；
+  3. **游戏进程归属** = **hof-rs Runtime 自己拉起游戏进程**（`--mcp-port=N`，捕获 stdout、掌控退出码与清理），
+     不打补丁让编辑器 run bar 代传端口；
+  4. **游戏开发语言** = 用户要求**使用 C#** → 因此引擎必须 **mono 构建**（`module_mono_enabled=yes`），
+     工程侧 `.csproj` 的目标框架是 `net8.0`；本机已具备 .NET SDK 9.0.100/9.0.300 + .NET 8 运行时。
+- 决策者补充的架构判断（写入计划）：
+  - 模块形态：**内置 module `modules/mcp_server/`**（非 GDExtension）。单例在
+    `MODULE_INITIALIZATION_LEVEL_SCENE` 注册 → 编辑器与游戏进程**同一份代码都可用**；
+    `Engine::is_editor_hint()` 决定暴露哪些工具；编辑器侧可选 `EditorPlugins::add_by_type<T>()`（EDITOR 级）。
+  - 传输与并发：**`TCPServer` + 主线程逐帧泵（`SceneTree::process_frame`）+ 按 JSON-RPC `id` 关联**。
+    **全程无跨线程队列**——这同时从构造上消灭了 D24 的「响应慢一拍/错位」缺陷类别
+    （其根因已定位为 `transport_http.rs` 用单一 FIFO `try_recv` 取响应、不按 id 关联）。
+  - 端口：`--mcp-port=N` > `ProjectSettings: godot_mcp/port` > 默认（编辑器 9877 / 游戏 9878）；
+    **游戏侧默认不开启**，必须显式传参，避免发行版开端口。
+  - 被否决的备选：①继续用 GDExtension 只修 `execute_game_script`（治标，不解决进程边界）；
+    ②给编辑器 run bar 传端口（生命周期/输出不可控）；③SSE/WebSocket 传输（hof-rs 只需 `POST /mcp`）；
+    ④编辑器↔游戏双端点 IPC（被「两进程各自独立端点」取代）。
+- 分两步构建以隔离最高风险：**先非 mono** 打通「SCons + 模块 + HTTP」，**再 mono 收口**并让 C# 版 Mario 跑起来。
+- 里程碑：M0 工具链与非 mono 基线构建 / M1 模块骨架+HTTP+JSON-RPC / M2 B1+B2 批次（**E3 解锁点**）/
+  M3 mono 构建 + C# 工程可跑 / M4 B3+B4 批次 / M5 B5 批次 + hof-rs 切端点 + 真实 T=1 冒烟收口。
+- 连带的需求变更（必须按阶段关卡显式回到阶段一更新，不得在实现里回填）：
+  `PRD-mario.md` 增加 **P7「全部游戏逻辑使用 C#」**、**P8「C# 编译零错误」**；
+  `skills/godot-dev.md` 重写为 C# 版；Tester 的编译证据改为 `dotnet build` 输出 + `get_editor_errors`；
+  `A₀` 脚手架需含 mono 生成的 `.csproj`；`hoh doctor` 增加「引擎是否 mono / dotnet 可用性 / 双端点探活」预检。
+- 本轮规划产生的分析产物（**非交付物，可删**）：
+  `F:\RustProjects\godot-mcp-pro\code\godot\.graphifyignore` 与 `graphify-out\`
+  （**131,616 节点 / 297,366 边 / 2,074 社区**，`--code-only` 纯本地 AST、**0 token**；含 `GRAPH_REPORT.md`）；
+  代码变更后用 `graphify update` 增量重建（无 API 成本）。
+- 回滚点：hof-rs 本仓库**未被本次规划修改**（仍为 v0.7 冻结态 `4b3e06f`）；引擎侧改动全部在 fork 的
+  本地分支 `feature/mcp-server-module` 上，**只本地提交、不推送**（除非用户明确要求）。
+
 
 
 
