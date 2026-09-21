@@ -45,3 +45,53 @@
 - 构建工具链固定为：SCons 4.11.1 / Python 3.9.7 / MSVC 14.42.34433 / WinSDK 10.0.26100.0。
 - 模块单元测试用引擎自带 doctest：`SCsub` 中 `if env["tests"]: env_mcp.add_source_files(env.modules_sources, "./tests/*.cpp")`，
   以 `tests=yes` 构建后用 `--test` 运行（范式见 `modules/jsonrpc/tests/test_jsonrpc.cpp` 与 `modules/jsonrpc/SCsub:10-11`）。
+
+---
+
+## M1 — 模块骨架 + HTTP/1.1 子集 + JSON-RPC 2.0 + 2 个工具：**实现完成，独立验收待办**
+
+- 状态：**实施者自测通过；本文件此节的数字全部是「实施者声称」，尚未经独立复核**（按阶段五纪律，
+  必须由全新子代理重跑 `modules/mcp_server/scripts/accept_m1.ps1` 与全量 `--test` 后才能改写为「已验证」）。
+- 代码落点：fork 分支 `feature/mcp-server-module`，HEAD `95dcb24c76`；全部改动在 `modules/mcp_server/**`，工作树干净、未推送。
+- 提交：`fa747aed6b` 骨架与生命周期 / `29598d563a` 单测 / `a25f5e3a63` HTTP 传输 / `42657f863f` JSON-RPC+注册表+2 工具 /
+  `1b157503d2` 死连接回收 + idle 下溢修复 + Expect:100-continue / `1aa7a3010f` 连接计数 + 未挂载即退场 / `95dcb24c76` 验收脚本。
+
+### 实施者声称的验收结果（**待独立复核**）
+
+| 用例 | 结果 | 关键证据（实施者提供） |
+|---|---|---|
+| `GET /mcp` 200 | ✅ | 状态 JSON 含 `tools:2 / port:9888 / is_editor:true / frame_count` 递增 |
+| `initialize` | ✅ | `protocolVersion:"2025-03-26"`、`serverInfo.name:"godot-mcp-rs"` |
+| `tools/list` 契约 | ✅ | name 与 `inputSchema` **逐字相等**；description 见「已知偏差」 |
+| `tools/call get_project_info` | ✅ | `content[0].text` 可解析，含 `project_name` |
+| 缺参/非法参数 | ✅ | `-32602`（`Missing tool name` / `Invalid arguments: expected an object`） |
+| 未知 method | ✅ | `-32601` `Method not found: bogus/method` |
+| 非法 JSON | ✅ | `-32700`，`id=null`，HTTP 400 |
+| **并发 100 请求** | ✅ | `sent=100 received=100 unique_ids=100 mismatches=`；另加 6 轮×100 = **600/600 id 全匹配** |
+| keep-alive 两连请求 | ✅ | `ka-1` / `ka-2` 各自正确 |
+| 半包请求 | ✅ | 分两次（间隔 400 ms）写出后正确拼接 |
+| body 超限 | ✅ | HTTP 413 + 关闭连接 |
+| **游戏进程 9889** | ✅ | 同一份代码在游戏进程返回同一份 2 工具（`is_editor:false`），`inputSchema` 逐字相等 |
+| 游戏进程不带 `--mcp-port` | ✅ | `configured_port=0 listen=false`，9889 未监听 |
+| 端口占用 | ✅ | `bind failed on 127.0.0.1:9888 (error=22)` → `get_port()=0`，引擎不崩溃 |
+| 连接回收（新增） | ✅ | 第 17 条被拒；关闭后 live=1；新请求 28 ms 内被服务 |
+| Expect: 100-continue（新增） | ✅ | 22 ms 内回 `HTTP/1.1 100 Continue`，恰好一次，最终 200 |
+| **用户端口 9877 守卫** | ✅ | 三次验收运行前后 `PID 36392` 不变、9877 始终在 Listen |
+
+- 测试：模块 doctest **30 passed / 172 assertions**；**全引擎 `--test` 1456 passed / 424453 assertions / 0 failed**（修复前 1454/1455，多出一条 `Stray Node: MCPServer`）。
+- 本轮实际修掉的两个真实缺陷（详见 `DECISIONS.md` D35/D36）：①死连接不回收导致连接预算饥饿；
+  ②idle 超时的 uint64 下溢把活连接当空闲掐断（`case8` 的失败根因）。
+
+### 已知偏差与限制（实施者登记，独立验收需复核）
+
+1. **契约源 fixture 的描述是双重编码**：`tests/fixtures/mcp/tools_list.json` 的 **174/174** 条非 ASCII 描述
+   都是「UTF-8 字节被按 Latin-1 读出」的形态（含 BOM）。因此 description **不可能逐字相等**；
+   当前验收按「原始值或还原值任一命中」放行（实测还原值 `获取项目信息` 与实现一致）。
+   **影响所有批次的对等门**；建议要么重新采集该 fixture（UTF-8 干净），要么把该兜底写进契约说明。
+2. **`Transfer-Encoding: chunked` 不解码**（D33 判定为按需触发）：无 `Content-Length` 时返回 **411**（非 D33 措辞里的 400，
+   411 才是语义正确的状态码——**更正 D33 的措辞**），并已用单测把该取舍固定住。
+3. `Expect` 取其它值时静默忽略（无 417）。
+4. `console_output` 仍未实现（GDR-8，刻意）。
+5. `--test` 运行时模块会打印一行 `[MCP] SceneTree never became available; MCP server disabled.`（测试宿主无 SceneTree），
+   随后实例被正确退场；属噪声。
+6. 未验证边界：`editor_screen_size` 在 headless 下为 2×2（仅要求字段存在）；未做 mono / C# 相关验证（属 M3）。

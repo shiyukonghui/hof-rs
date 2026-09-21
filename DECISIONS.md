@@ -1014,6 +1014,62 @@
   → Phase 5 清理兜底**。
 - 回滚点：改名未落地前不影响任何既有代码；Phase 0 止血的每一项都是可单独回滚的小改动。
 
+## D35 — M1 中断工作树的 triage：前任在途改动是**真实缺陷修复**，不是半成品
+
+- 日期：2026-09（M1 收尾）
+- 触发问题：D32 时我中止了 M1 工作流，但那个子代理**在取消前已把模块写进 fork**（4 个提交 + 27 条 doctest +
+  `accept_m1.ps1`），并留下**未提交的在途改动**（`mcp_http_server.{h,cpp}`、`mcp_server.cpp`）与一个
+  `m1-concurrency-repro.ps1`。必须由**全新子代理**独立 triage，不得采信前任结论。
+- 实测结论：
+  - 在途改动是**缺陷追查的中途**，不是半成品：其中 `_read()` 里新增的 `connection.peer->poll();` 是**真实修复**——
+    `StreamPeerSocket::get_status()` 只返回缓存状态，不调 `poll()` 就永远不会把对端 FIN 转成断开，
+    于是死连接会一直占到 30 s idle 超时，**永久吃掉 16 条连接预算**。
+  - **A/B 实测**（同一二进制路径，只回退这三个文件后重建，52 s）：无 `poll()` 时「fresh request served = False after 8517 ms」；
+    有它时「fresh request served = True after 30 ms」。**端点确实会在 16 条短连接后彻底不可用。**
+  - 另两处（`close_reason` + 两条 `print_verbose`）是**诊断**，被有意保留（verbose-only、有界，
+    且正是它们把下面那个缺陷从猜测变成一行日志可查）。
+  - `bin/` 里的二进制相对工作树是**陈旧**的（前任改完没重建）。前任留下的 `m1-concurrency-repro.ps1` 被**删除**
+    （它是**假阴性制造器**：读取循环非阻塞、会在服务端仍按每帧 8 条排水时提前放弃；实测同一二进制报 104/104、8/104、再崩溃），
+    其诊断意图转为**提交进仓库的确定性用例** `case15_connection_reaping`，并且它崩溃时泄漏的编辑器 PID 已被清理。
+- 选择：采纳该修复并继续收尾；不重复造轮子（模块的 HTTP/JSON-RPC 已可用，与 D33 的选型结论一致）。
+- 回滚点：`_read()` 的 `peer->poll()` 一行；诊断字段可独立移除。
+
+## D36 — M1 的里程碑门曾失败：**idle 超时的 uint64 下溢**把活连接当空闲掐断
+
+- 日期：2026-09（M1 收尾）
+- 触发问题：`case8_concurrent_100`（G4 的关键门）**先失败**：
+  `Unable to write data to the transport connection: An existing connection was forcibly closed by the remote host`。
+- 根因（由 verbose 日志定位，非猜测）：`poll()` 每帧只取一次 `now`，而 `_read()` 用
+  `OS::get_singleton()->get_ticks_msec()` **另取一次更晚的时间**打 `last_activity_ms`；
+  `now - last_activity_ms` 在 uint64 上**回绕成约 1.8e19 ms**，于是 idle 判定对**刚收到 1320 字节流水线请求的活连接**命中，
+  连接被以 `reason=5` 掐断、其输入缓冲未解析。这正是前任那个 repro 一直在撞的形状（它追对了子系统，但没走到算术）。
+- 选择：修复为 `_read(connection, now)` 使用**帧时钟**，并抽出带守卫的 `MCPHttp::is_idle_timeout()` 辅助函数，
+  用单测把边界钉住。修复后两次完整验收运行的日志里：43 次 `read_failed=true/reason=0` 的正常排水、
+  1 次刻意的 `reason=3`（413）、**0 次「有未解析数据的 idle 丢弃」**。
+- 影响：G4（并发 100 零错位）从失败转为通过，并额外跑 6 轮×100 = 600/600 id 全匹配。
+- 回滚点：`mcp_http_server.cpp` 的 `_read(Connection&, uint64_t)` 签名与 `is_idle_timeout()`。
+
+## D37 — M1 收尾的三项实现裁决（Expect:100-continue / chunked 状态码 / 孤儿节点）
+
+- 日期：2026-09（M1 收尾）
+- 1. **`Expect: 100-continue` 已按 D33 的小加固实现**（TDD：先有**行为级原生红**——发头不带 body 时 3 s 内收不到
+  `HTTP/1.1 100 Continue`；再有**编译级红**；实现后中间响应 22 ms 内到达、恰好一次、最终 200）。
+  实现要点：`ParseOutcome` 增 `expect_continue`（仅当头块完整、`Content-Length>0` 且存在该头时置位）；
+  `build_continue_response()` 返回逐字的 `HTTP/1.1 100 Continue\r\n\r\n`（1xx **不得**带 Content-Length/Content-Type，有单测钉住）；
+  中间响应排进**该连接自己的** out_buffer 以保序，且每请求恰好一次。
+- 2. **更正 D33 的措辞**：chunked-only 请求实际返回 **411 Length Required**（而非 D33 写的 400）。
+  411 才是「有 body 却无 Content-Length」的语义正确状态码；**采纳实现的真实行为并把它写进单测固定**，
+  不为了对齐我写错的一句话去改行为。
+- 3. **孤儿节点退场**：`bootstrap()` 在 SceneTree 始终不出现时（600 次后）**销毁实例并注销单例**
+  （新增 `_retire_unattached()`）。原因：不销毁会让**一条无关的引擎测试**失败——
+  `modules/gdscript/tests/.../call_native_static_method.out` 的期望输出里多出一行
+  `1526726744 - Stray Node: (Type: MCPServer) (Source:)`。修好后全引擎 `--test` 1456/1456 全绿。
+  这是对 GDR-3「报错并禁用」的补全（真正禁用），未改变注册时机（仍为 SCENE 级）。
+- 其它登记为**偏差**（不改行为）：`/mcp` 状态体新增 `connections` 字段（验收用例的可观测点，附加字段）；
+  `accept_m1.ps1` 由 14 行增至 17 行（新增连接回收与 Expect 两例 + 端口守卫，原行未改）；
+  继承来的诊断字段保留。
+- 回滚点：`mcp_http_server.cpp` 的 `expect_continue`/`_queue_continue`；`mcp_server.cpp` 的 `_retire_unattached()`。
+
 
 
 
