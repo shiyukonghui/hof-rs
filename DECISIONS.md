@@ -1070,6 +1070,48 @@
   继承来的诊断字段保留。
 - 回滚点：`mcp_http_server.cpp` 的 `expect_continue`/`_queue_continue`；`mcp_server.cpp` 的 `_retire_unattached()`。
 
+## D38 — 工具命名最终决定：**一次做全 + 名字更长更直观 + 通道前缀**，并因此**重做授权判定**（用户指令）
+
+- 日期：2026-09（D34 的用户裁决，覆盖 D34 的「部分采纳」）
+- 用户指令：**① 改名一次做全（不再分 P0/P1）；② 名字可以更长更直观——智能体调错一次工具浪费的 token 远超过名字本身的 token，不要怕长，区分度要更高。**
+- 由此对 D34 结论的三处**覆盖**：
+  1. **范围**：不再是「P0 48 项」或「P1 只做同族 9 项」，而是**对全部 174 个工具逐个给最终名**（含明确的「保留原名」判定）。
+     审计中标记的重复实现（`find_node_references` ≈ `search_in_files`、`analyze_signal_flow` ≈ `find_signal_connections`）
+     与谎报工具（`export_project`/`bake_navigation_mesh`/`get_test_report`/`clear_output`/`set_auto_dismiss`/`navigate_to`）
+     必须在最终表里给出处置（合并 / 下架 / 实现后再注册），不得继续以现在这种名字+行为存在。
+  2. **命名形态**：D34 的「单向标记」（只给 24 个游戏侧加 `_in_running_game` 后缀，150 个编辑器侧不加）**被取代**。
+     既然长度不是约束，采用**通道前缀**，让**每一个**工具都自证其作用进程/介质，使「这个工具作用在哪」在名字首段即可判定：
+     `editor_*`（编辑器进程/编辑场景）、`running_game_*`（运行中游戏进程，经 IPC/端口）、
+     `project_*`（项目磁盘：文件、资源、设置）、`os_*`（外部进程/设备）。
+     规范形态：**`<channel>_<verb>_<object>[_<qualifier>]`**，先通道后动词；动词取闭集并**废除 `update_`**
+     （单属性一律 `set_`；磁盘文件读改写才用 `edit_`）。名字长度以「不看文档即可确定通道+动词+对象」为准，不设软上限。
+     例：`simulate_action` → `editor_simulate_action`（因为它在编辑器进程注入，到不了游戏——这正是 D27 的 E3 根因）；
+     `monitor_properties` → `running_game_monitor_node_properties`；`search_files` → `project_search_file_names`；
+     `search_in_files` → `project_search_file_contents`；`move_node` → `editor_reparent_node`。
+  3. **代价必须显式承担——授权判定不能再靠名字前缀猜**（本次改名最重要的架构后果）：
+     hof-rs 现在用**名字前缀**判 `MUTATING_PREFIXES` = add_/create_/delete_/remove_/set_/update_/edit_（`src/runtime/policy.rs:184-245`）。
+     **一旦名字变成 `editor_add_node` 这种形态，前缀匹配会全面失效** → Tester 会在**大批工具**上静默获得写权限
+     （D34 只识别出 `move_node`→`reparent_node` 一个陷阱，通道前缀会让它变成系统性问题）。
+     选择（三层防御）：
+     - **单一事实源**：最终对照表以机器可读形式落盘（`.spec/godot-mcp-engine/tool-rename-map.json`），
+       每个工具带 `channel / verb / mutating / scope / intent / old_name / new_name`；
+       策略允许名单**由该表生成**，而不是从名字现场猜。
+     - **注册期 lint**（引擎模块 `tool_registry.cpp`）：名字必须匹配 `<channel>_<verb>_<object>...`，
+       且声明的 `mutating`/`channel` 必须与名字解析结果一致；不合规即注册失败（构建期就能发现）。
+     - **运行期不变式测试**（hof-rs）：对全部工具断言 `is_mutating(new) == declared_mutating`、
+       `channel(new) == declared_channel`；并保留 `is_mutating(old) == is_mutating(new)` 的迁移期断言，
+       任何权限边界变化必须显式豁免并给出理由（安全断言，不得静默通过）。
+- 交付物（缺一不可，落盘在 `.spec/godot-mcp-engine/`）：
+  - **`TOOL-NAMING.md`**：最终命名规范（通道/动词/对象/限定词、动词闭集、禁止项、lint 规则、长度判据与例子）
+    + **174 行完整对照表**（`old_name | channel | verb | object | new_name | mutating | scope | 处置(改名/保留/合并/下架) | 理由`）
+    + 易混淆分组在新名下的消歧说明 + 迁移与影响面清单。
+  - **`tool-rename-map.json`**：机器可读，供实现者机械改名与 hof-rs 生成策略使用。
+- 回答用户提问：**此前不存在「工具名称对照文档」工件**——174 项审计结果只存在于子代理回报文本中（含其 `rename_map`），
+  且其提案形态（单向标记、P0/P1 分批）已被本决策覆盖。因此必须**新产出**上述两个工件，并由决策者冻结后
+  才进入 Phase 2 的原子切换。
+- 回滚点：两个工件冻结前，任何仓库代码都不动；改名落地时按 D34 的顺序（Phase 0 止血 → Phase 1 规范+lint →
+  Phase 2 原子切换）执行，只是范围改为全量。
+
 
 
 
