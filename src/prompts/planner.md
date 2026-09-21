@@ -60,3 +60,11 @@ $HOH_HOH_BIN submit --role planner --file .hoh/plan.md
 ```
 
 If it reports issues, fix the file and submit again before you finish.
+
+[budget]
+You have at most {{step_limit}} steps in this call. When your remaining step
+budget drops to {{wrap_up_steps}} or fewer you MUST immediately write a
+contract-valid `.hoh/plan.md` skeleton (all three headings, one numbered
+priority, one bullet per gate) and submit it; only then may you refine it. A
+call that ends without a valid artifact is recorded as a failure.
+

@@ -55,6 +55,33 @@ pub fn render_prompt(template: &str, iteration: u32) -> String {
         .replace("{{ plan.md }}", ".hoh/plan.md")
 }
 
+/// DR-18: same substitution, plus the concrete step budget the role is running
+/// under.  The numbers are rendered into the prompt so the wrap-up discipline
+/// is never a vague instruction.
+pub fn render_prompt_with_budget(
+    template: &str,
+    iteration: u32,
+    limits: &crate::config::AgentLimits,
+) -> String {
+    render_prompt(template, iteration)
+        .replace("{{step_limit}}", &limits.step_limit.to_string())
+        .replace("{{wrap_up_steps}}", &limits.wrap_up_steps.to_string())
+}
+
+/// DR-18: the retry context handed to a wrap-up retry.  It forbids further
+/// exploration, because the previous call already proved it cannot finish
+/// inside its budget.
+pub const WRAP_UP_RETRY_CONTEXT: &str =
+    "STEP BUDGET EXHAUSTED. Your previous call ended with `LimitsExceeded` before it produced a \
+     valid artifact. This is a small, final call: write the required artifact NOW, in a valid \
+     form, and submit it. Do not explore, do not run experiments, do not start new work. A \
+     minimal contract-valid artifact is the only acceptable outcome.";
+
+/// Is this the exit status of a call that ran out of budget?
+pub fn is_limits_exceeded(exit_status: &str) -> bool {
+    exit_status.eq_ignore_ascii_case("LimitsExceeded")
+}
+
 /// The harness only ever receives fully rendered text: leftover jinja syntax
 /// would be re-parsed as a template and silently change the prompt.
 pub fn assert_fully_rendered(label: &str, prompt: &str) -> anyhow::Result<()> {

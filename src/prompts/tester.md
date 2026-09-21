@@ -67,3 +67,15 @@ $HOH_HOH_BIN submit --role tester --file .hoh/evidence.json
 ```
 
 If it reports issues, fix the file and submit again before you finish.
+
+[budget]
+You have at most {{step_limit}} steps in this call. When your remaining step
+budget drops to {{wrap_up_steps}} or fewer you MUST immediately write a
+contract-valid artifact skeleton and then keep improving it; a call that ends
+without a valid artifact is recorded as a failure.
+
+Order discipline: within your first few steps, write a minimal but already valid
+`.hoh/evidence.json` (a single `gap` record with `player_impact` and
+`recommended_update` is enough) and submit it. Only after that artifact exists
+should you derive more claims and enrich it.
+

@@ -1,0 +1,1 @@
+hoh: JSON-RPC error -32603: Internal error: 截图文件不存在。请确保游戏正在运行且 MCPScreenshot autoload 已激活。路径: C:/Users/wyl/AppData/Roaming/Godot/app_userdata/HoH Mario/mcp_screenshot.png

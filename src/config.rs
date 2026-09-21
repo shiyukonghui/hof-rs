@@ -31,16 +31,28 @@ pub const REDACTED: &str = "<redacted>";
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AgentLimits {
     pub step_limit: u64,
+    /// DR-18: when the remaining step budget drops to this threshold the role
+    /// must first write a contract-valid artifact skeleton and only then keep
+    /// improving it.  Also the budget ceiling of a wrap-up retry.
+    #[serde(default = "default_wrap_up_steps")]
+    pub wrap_up_steps: u64,
     pub cost_limit: f64,
     pub wall_time_limit_seconds: u64,
     pub max_consecutive_format_errors: u64,
     pub command_timeout_seconds: u64,
 }
 
+fn default_wrap_up_steps() -> u64 {
+    25
+}
+
 impl Default for AgentLimits {
     fn default() -> Self {
         Self {
-            step_limit: 60,
+            // DR-18: 60 was proven insufficient by the first real smoke run
+            // (5/5 calls ended in `LimitsExceeded`).
+            step_limit: 150,
+            wrap_up_steps: default_wrap_up_steps(),
             cost_limit: 0.0,
             wall_time_limit_seconds: 3600,
             max_consecutive_format_errors: 3,
@@ -87,6 +99,15 @@ pub struct ToolsConfig {
     pub endpoint: String,
     pub timeout_seconds: u64,
     pub max_retries: u32,
+    /// DR-20: how long `play_scene` may take to become observable (the
+    /// `get_game_scene_tree` readiness poll) before the step is recorded as a
+    /// failure.  Defaults to 30 seconds when the key is absent.
+    #[serde(default = "default_ready_timeout_seconds")]
+    pub ready_timeout_seconds: u64,
+}
+
+fn default_ready_timeout_seconds() -> u64 {
+    30
 }
 
 /// The full runtime configuration.  `model` is passed through to mini

@@ -1,0 +1,8 @@
+{
+  "content": [
+    {
+      "text": "{\"Auto Translate\":null,\"CanvasLayer\":null,\"Editor Description\":null,\"Follow Viewport\":null,\"Layer\":null,\"Node\":null,\"Physics Interpolation\":null,\"Process\":null,\"Thread Group\":null,\"Transform\":null,\"auto_translate_mode\":0,\"custom_viewport\":null,\"editor_description\":\"\",\"follow_viewport_enabled\":false,\"follow_viewport_scale\":1.0,\"layer\":1,\"multiplayer\":{\"class\":\"SceneMultiplayer\",\"instance_id\":-9223372009709238822},\"name\":\"HUD\",\"node_path\":\"HUD\",\"offset\":{\"x\":0.0,\"y\":0.0},\"owner\":{\"class\":\"Node2D\",\"instance_id\":28554823183},\"physics_interpolation_mode\":0,\"process_mode\":0,\"process_physics_priority\":0,\"process_priority\":0,\"process_thread_group\":0,\"process_thread_group_order\":0,\"process_thread_messages\":0,\"rotation\":0.0,\"scale\":{\"x\":1.0,\"y\":1.0},\"scene_file_path\":\"\",\"script\":null,\"transform\":{\"origin\":{\"x\":0.0,\"y\":0.0},\"x\":{\"x\":1.0,\"y\":0.0},\"y\":{\"x\":0.0,\"y\":1.0}},\"type\":\"CanvasLayer\",\"unique_name_in_owner\":false,\"visible\":true}",
+      "type": "text"
+    }
+  ]
+}

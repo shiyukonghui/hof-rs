@@ -1,0 +1,8 @@
+{
+  "content": [
+    {
+      "text": "{\"collision_shapes\":[{\"disabled\":false,\"has_shape\":false,\"node_path\":\"Ground/CollisionShape2D\",\"type\":\"CollisionShape2D\"}],\"node_path\":\"Ground\",\"node_type\":\"StaticBody2D\",\"shape_count\":1}",
+      "type": "text"
+    }
+  ]
+}

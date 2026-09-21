@@ -8,6 +8,7 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 use crate::model::{Ablation, EvidenceDiff, Role, SchemaIssue, Spec, Usage};
+use crate::runtime::schema::AttemptOutcome;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RunMeta {
@@ -37,6 +38,14 @@ pub struct IterResult {
     /// DR-2: present on every result (empty unless a contract violation was
     /// detected), so a failure always names the files that changed.
     pub evidence_diff: EvidenceDiff,
+    /// DR-18: true when this iteration spent its one allowed wrap-up retry on a
+    /// role that ended with `LimitsExceeded` before producing a valid artifact.
+    #[serde(default)]
+    pub wrap_up_retry_used: bool,
+    /// DR-22: every role attempt of this iteration, with its exit status,
+    /// duration, usage and artifact path.
+    #[serde(default)]
+    pub attempts: Vec<AttemptOutcome>,
 }
 
 impl IterResult {
@@ -52,6 +61,8 @@ impl IterResult {
             usage: Vec::new(),
             durations_ms: Vec::new(),
             evidence_diff: EvidenceDiff::default(),
+            wrap_up_retry_used: false,
+            attempts: Vec::new(),
         }
     }
 }

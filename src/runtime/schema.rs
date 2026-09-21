@@ -5,13 +5,16 @@
 //! never silently downgraded to "passed", and a previous iteration's artifact
 //! is never substituted.
 
+use std::path::PathBuf;
+
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::errors::HofError;
 use crate::harness::Harness;
 use crate::model::{
     parse_plan, validate_evidence, validate_evidence_shape, validate_plan, DevelopmentDoc,
-    EvidenceBundle, IssueCode, Role, SchemaIssue, EVIDENCE_SKELETON, PLAN_SKELETON,
+    EvidenceBundle, IssueCode, Role, SchemaIssue, Usage, EVIDENCE_SKELETON, PLAN_SKELETON,
 };
 use crate::runtime::evidence::bind;
 use crate::runtime::invoke::{assert_fully_rendered, attempt_trajectory, invoke_once};
@@ -22,6 +25,26 @@ use crate::runtime::role::RoleInvocation;
 pub struct GateOutcome {
     pub attempts: u32,
     pub issues: Vec<Vec<SchemaIssue>>,
+}
+
+/// DR-22: one role *attempt* as observed by the runtime.  Every attempt must
+/// leave both a trajectory and a symmetric log, and both must state this
+/// record's fields, so a failed round can always be attributed to one call.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AttemptOutcome {
+    pub role: Role,
+    pub iteration: u32,
+    pub attempt: u32,
+    pub exit_status: String,
+    pub duration_ms: u64,
+    pub usage: Usage,
+    /// Absolute path of the trajectory written by this attempt.
+    pub trajectory_path: PathBuf,
+    /// Absolute path of the artifact the attempt was supposed to produce.
+    pub artifact_path: PathBuf,
+    pub artifact_valid: bool,
+    /// DR-18: true when the call ended because its step budget ran out.
+    pub exit_was_limits: bool,
 }
 
 fn issue_list(issues: &[SchemaIssue]) -> String {
@@ -51,8 +74,28 @@ pub async fn gate_plan(
     base: &RoleInvocation,
     max_retries: u32,
 ) -> anyhow::Result<DevelopmentDoc> {
-    assert_fully_rendered("planner system prompt", &base.system_prompt)?;
-    assert_fully_rendered("planner task prompt", &base.task_prompt)?;
+    gate_plan_traced(harness, base, max_retries, 1).await.0
+}
+
+/// DR-18/DR-22: the traced Planner gate.
+///
+/// It also implements the "stop burning steps" rule: when an attempt ends with
+/// `LimitsExceeded` *and* its artifact is still missing or invalid, the
+/// remaining schema retries cannot succeed either (they would only exhaust the
+/// same budget again), so the loop stops and lets the runtime decide whether a
+/// small wrap-up retry is allowed.
+pub async fn gate_plan_traced(
+    harness: &dyn Harness,
+    base: &RoleInvocation,
+    max_retries: u32,
+    first_attempt: u32,
+) -> (anyhow::Result<DevelopmentDoc>, Vec<AttemptOutcome>) {
+    if let Err(error) = assert_fully_rendered("planner system prompt", &base.system_prompt) {
+        return (Err(error), Vec::new());
+    }
+    if let Err(error) = assert_fully_rendered("planner task prompt", &base.task_prompt) {
+        return (Err(error), Vec::new());
+    }
 
     let traj_dir = base
         .trajectory_path
@@ -61,41 +104,73 @@ pub async fn gate_plan(
         .unwrap_or_else(|| std::path::PathBuf::from("."));
     let expected = base.cwd.join(Role::Planner.artifact_rel_path());
     let total = 1 + max_retries;
+    let mut attempts: Vec<AttemptOutcome> = Vec::new();
     let mut issues_log: Vec<Vec<SchemaIssue>> = Vec::new();
     let mut context: Option<String> = base.retry_context.clone();
 
-    for attempt in 1..=total {
+    for index in 0..total {
+        let attempt = first_attempt + index;
         let mut invocation = base.clone();
         invocation.trajectory_path = attempt_trajectory(&traj_dir, Role::Planner, attempt);
         invocation.retry_context = context.clone();
-        invoke_once(harness, &invocation).await?;
+        let outcome = match invoke_once(harness, &invocation).await {
+            Ok(outcome) => outcome,
+            Err(error) => return (Err(error), attempts),
+        };
 
-        let issues = match std::fs::read_to_string(&expected) {
-            Err(error) => vec![SchemaIssue::new(
-                IssueCode::Json,
-                format!(
-                    "the planner artifact is missing: expected `{}` ({error})",
-                    expected.display()
-                ),
-            )],
+        let (issues, doc) = match std::fs::read_to_string(&expected) {
+            Err(error) => (
+                vec![SchemaIssue::new(
+                    IssueCode::Json,
+                    format!(
+                        "the planner artifact is missing: expected `{}` ({error})",
+                        expected.display()
+                    ),
+                )],
+                None,
+            ),
             Ok(raw) => {
                 let doc = parse_plan(&raw, invocation.iteration, expected.clone());
                 match validate_plan(&doc) {
-                    Ok(()) => return Ok(doc),
-                    Err(issues) => issues,
+                    Ok(()) => (Vec::new(), Some(doc)),
+                    Err(issues) => (issues, None),
                 }
             }
         };
+        let limits = crate::runtime::invoke::is_limits_exceeded(&outcome.exit_status);
+        attempts.push(AttemptOutcome {
+            role: Role::Planner,
+            iteration: invocation.iteration,
+            attempt,
+            exit_status: outcome.exit_status.clone(),
+            duration_ms: outcome.duration_ms,
+            usage: outcome.usage.clone(),
+            trajectory_path: invocation.trajectory_path.clone(),
+            artifact_path: expected.clone(),
+            artifact_valid: doc.is_some(),
+            exit_was_limits: limits,
+        });
+        if let Some(doc) = doc {
+            return (Ok(doc), attempts);
+        }
         context = Some(retry_context(&expected, &issues, PLAN_SKELETON));
         issues_log.push(issues);
+        if limits {
+            // DR-18: more schema retries would only exhaust the same budget.
+            break;
+        }
     }
 
-    Err(HofError::SchemaFailure {
-        role: Role::Planner,
-        attempts: total,
-        issues: issues_log,
-    }
-    .into())
+    let attempts_made = attempts.len() as u32;
+    (
+        Err(HofError::SchemaFailure {
+            role: Role::Planner,
+            attempts: attempts_made,
+            issues: issues_log,
+        }
+        .into()),
+        attempts,
+    )
 }
 
 /// Run the Tester until `E_t` validates and binds to the candidate, or fail.
@@ -105,8 +180,25 @@ pub async fn gate_evidence(
     candidate_id: &str,
     max_retries: u32,
 ) -> anyhow::Result<EvidenceBundle> {
-    assert_fully_rendered("tester system prompt", &base.system_prompt)?;
-    assert_fully_rendered("tester task prompt", &base.task_prompt)?;
+    gate_evidence_traced(harness, base, candidate_id, max_retries, 1)
+        .await
+        .0
+}
+
+/// DR-18/DR-22: the traced Tester gate (same wrap-up rule as the Planner gate).
+pub async fn gate_evidence_traced(
+    harness: &dyn Harness,
+    base: &RoleInvocation,
+    candidate_id: &str,
+    max_retries: u32,
+    first_attempt: u32,
+) -> (anyhow::Result<EvidenceBundle>, Vec<AttemptOutcome>) {
+    if let Err(error) = assert_fully_rendered("tester system prompt", &base.system_prompt) {
+        return (Err(error), Vec::new());
+    }
+    if let Err(error) = assert_fully_rendered("tester task prompt", &base.task_prompt) {
+        return (Err(error), Vec::new());
+    }
 
     let traj_dir = base
         .trajectory_path
@@ -115,62 +207,100 @@ pub async fn gate_evidence(
         .unwrap_or_else(|| std::path::PathBuf::from("."));
     let expected = base.cwd.join(Role::Tester.artifact_rel_path());
     let total = 1 + max_retries;
+    let mut attempts: Vec<AttemptOutcome> = Vec::new();
     let mut issues_log: Vec<Vec<SchemaIssue>> = Vec::new();
     let mut context: Option<String> = base.retry_context.clone();
 
-    for attempt in 1..=total {
+    for index in 0..total {
+        let attempt = first_attempt + index;
         let mut invocation = base.clone();
         invocation.trajectory_path = attempt_trajectory(&traj_dir, Role::Tester, attempt);
         invocation.retry_context = context.clone();
-        invoke_once(harness, &invocation).await?;
+        let outcome = match invoke_once(harness, &invocation).await {
+            Ok(outcome) => outcome,
+            Err(error) => return (Err(error), attempts),
+        };
 
-        let issues = match std::fs::read_to_string(&expected) {
+        let (issues, bundle) = validate_tester_artifact(&expected, candidate_id, &invocation);
+        let limits = crate::runtime::invoke::is_limits_exceeded(&outcome.exit_status);
+        attempts.push(AttemptOutcome {
+            role: Role::Tester,
+            iteration: invocation.iteration,
+            attempt,
+            exit_status: outcome.exit_status.clone(),
+            duration_ms: outcome.duration_ms,
+            usage: outcome.usage.clone(),
+            trajectory_path: invocation.trajectory_path.clone(),
+            artifact_path: expected.clone(),
+            artifact_valid: bundle.is_some(),
+            exit_was_limits: limits,
+        });
+        if let Some(bundle) = bundle {
+            return (Ok(bundle), attempts);
+        }
+        context = Some(retry_context(&expected, &issues, EVIDENCE_SKELETON));
+        issues_log.push(issues);
+        if limits {
+            break;
+        }
+    }
+
+    let attempts_made = attempts.len() as u32;
+    (
+        Err(HofError::SchemaFailure {
+            role: Role::Tester,
+            attempts: attempts_made,
+            issues: issues_log,
+        }
+        .into()),
+        attempts,
+    )
+}
+
+/// Validate + bind one Tester artifact.  `Ok` carries the bound bundle.
+fn validate_tester_artifact(
+    expected: &std::path::Path,
+    candidate_id: &str,
+    invocation: &RoleInvocation,
+) -> (Vec<SchemaIssue>, Option<EvidenceBundle>) {
+    let issues = match std::fs::read_to_string(expected) {
+        Err(error) => vec![SchemaIssue::new(
+            IssueCode::Json,
+            format!(
+                "the tester artifact is missing: expected `{}` ({error})",
+                expected.display()
+            ),
+        )],
+        Ok(raw) => match serde_json::from_str::<Value>(&raw) {
             Err(error) => vec![SchemaIssue::new(
                 IssueCode::Json,
-                format!(
-                    "the tester artifact is missing: expected `{}` ({error})",
-                    expected.display()
-                ),
+                format!("evidence is not valid JSON: {error}"),
             )],
-            Ok(raw) => match serde_json::from_str::<Value>(&raw) {
-                Err(error) => vec![SchemaIssue::new(
-                    IssueCode::Json,
-                    format!("evidence is not valid JSON: {error}"),
-                )],
-                Ok(value) => {
-                    let shape = validate_evidence_shape(&value);
-                    if !shape.is_empty() {
-                        shape
-                    } else {
-                        match serde_json::from_value::<EvidenceBundle>(value) {
-                            Err(error) => vec![SchemaIssue::new(
-                                IssueCode::Json,
-                                format!("evidence does not match the required structure: {error}"),
-                            )],
-                            Ok(mut bundle) => {
-                                let mut issues = validate_evidence(&bundle, candidate_id)
-                                    .err()
-                                    .unwrap_or_default();
-                                match bind(&mut bundle, candidate_id, &invocation.cwd) {
-                                    Ok(()) if issues.is_empty() => return Ok(bundle),
-                                    Ok(()) => {}
-                                    Err(bind_issues) => issues.extend(bind_issues),
-                                }
-                                issues
+            Ok(value) => {
+                let shape = validate_evidence_shape(&value);
+                if !shape.is_empty() {
+                    shape
+                } else {
+                    match serde_json::from_value::<EvidenceBundle>(value) {
+                        Err(error) => vec![SchemaIssue::new(
+                            IssueCode::Json,
+                            format!("evidence does not match the required structure: {error}"),
+                        )],
+                        Ok(mut bundle) => {
+                            let mut issues =
+                                validate_evidence(&bundle, candidate_id).err().unwrap_or_default();
+                            match bind(&mut bundle, candidate_id, &invocation.cwd) {
+                                Ok(()) if issues.is_empty() => return (Vec::new(), Some(bundle)),
+                                Ok(()) => {}
+                                Err(bind_issues) => issues.extend(bind_issues),
                             }
+                            issues
                         }
                     }
                 }
-            },
-        };
-        context = Some(retry_context(&expected, &issues, EVIDENCE_SKELETON));
-        issues_log.push(issues);
-    }
-
-    Err(HofError::SchemaFailure {
-        role: Role::Tester,
-        attempts: total,
-        issues: issues_log,
-    }
-    .into())
+            }
+        },
+    };
+    (issues, None)
 }
+

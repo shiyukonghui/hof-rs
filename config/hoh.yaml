@@ -11,7 +11,8 @@ model:
   max_retries: 3
 
 agent:
-  step_limit: 60
+  step_limit: 150                         # DR-18：60 已被第一次真实冒烟证明不够（5/5 次调用 LimitsExceeded）
+  wrap_up_steps: 25                       # DR-18：剩余步数进入该阈值时必须先写出产物骨架
   cost_limit: 0.0
   wall_time_limit_seconds: 3600
   max_consecutive_format_errors: 3
@@ -41,3 +42,4 @@ tools:
   endpoint: http://127.0.0.1:9877/mcp
   timeout_seconds: 120
   max_retries: 2
+  ready_timeout_seconds: 30               # DR-20：play_scene 后轮询游戏就绪的上限

@@ -72,6 +72,12 @@ impl FakeStep {
         self.usage = None;
         self
     }
+
+    /// DR-18: end this call with an explicit exit status (e.g. `LimitsExceeded`).
+    pub fn exiting(mut self, status: &str) -> Self {
+        self.exit_status = status.to_string();
+        self
+    }
 }
 
 /// Full record of one `Harness::invoke` call (R8 compares these byte-for-byte).

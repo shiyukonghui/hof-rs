@@ -39,3 +39,11 @@ independent QA will decide that.
 - When you are finished, end your run with the completion protocol
   `COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT` and one sentence describing what you
   changed and what you observed.
+
+[budget]
+You have at most {{step_limit}} steps in this call. When your remaining step
+budget drops to {{wrap_up_steps}} or fewer you MUST immediately stop exploring
+and make the project consistent and launchable (a written, non-empty script
+beats an unfinished experiment); a call that ends with a broken or half-written
+project is recorded as a failure.
+

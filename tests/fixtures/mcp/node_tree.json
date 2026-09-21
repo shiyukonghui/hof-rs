@@ -1,0 +1,8 @@
+{
+  "content": [
+    {
+      "text": "{\"tree\":{\"children\":[{\"children\":[{\"name\":\"CollisionShape2D\",\"path\":\"/root/Main/Ground/CollisionShape2D\",\"type\":\"CollisionShape2D\"}],\"name\":\"Ground\",\"path\":\"/root/Main/Ground\",\"type\":\"StaticBody2D\"},{\"name\":\"Player\",\"path\":\"/root/Main/Player\",\"type\":\"CharacterBody2D\"},{\"name\":\"Goal\",\"path\":\"/root/Main/Goal\",\"type\":\"Area2D\"},{\"name\":\"HUD\",\"path\":\"/root/Main/HUD\",\"type\":\"CanvasLayer\"}],\"name\":\"Main\",\"path\":\"/root/Main\",\"type\":\"Node2D\"}}",
+      "type": "text"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "content": [
+    {
+      "text": "{\"collision_shapes\":[],\"node_path\":\"Goal\",\"node_type\":\"Area2D\",\"shape_count\":0}",
+      "type": "text"
+    }
+  ]
+}

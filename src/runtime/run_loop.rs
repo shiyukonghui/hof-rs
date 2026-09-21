@@ -22,7 +22,10 @@ use crate::model::{
 };
 use crate::prompts;
 use crate::runtime::evidence::write_evidence;
-use crate::runtime::invoke::{attempt_trajectory, invoke_once, render_prompt, role_env};
+use crate::runtime::invoke::{
+    attempt_trajectory, invoke_once, is_limits_exceeded, render_prompt_with_budget, role_env,
+    WRAP_UP_RETRY_CONTEXT,
+};
 use crate::runtime::policy::{
     assert_unchanged, diff_manifests, hash_tree, tree_manifest, HashExcludes,
 };
@@ -30,11 +33,17 @@ use crate::runtime::record::{
     append_warning, write_iter_result, write_log, write_run_meta, write_usage, IterResult, RunMeta,
 };
 use crate::runtime::role::RoleInvocation;
-use crate::runtime::schema::{gate_evidence, gate_plan};
+use crate::runtime::schema::{
+    gate_evidence_traced, gate_plan_traced, AttemptOutcome,
+};
 use crate::runtime::snapshot::VersionStore;
 use crate::runtime::usage::{merge_usage, usage_from_attempts};
 use crate::runtime::view::{build_view, copy_tree, write_inputs, ViewSpec};
 use crate::tools::ToolChannel;
+
+/// DR-18: the wrap-up retry never gets more than this many steps, whatever
+/// `agent.wrap_up_steps` says.
+pub const WRAP_UP_RETRY_MAX_STEPS: u64 = 30;
 
 /// The D7 scope limitation is recorded, never hidden.
 pub const MCP_SCOPE_WARNING: &str =
@@ -146,6 +155,8 @@ fn finalize_failure(
     usage: Vec<Usage>,
     durations: Vec<(String, u64)>,
     evidence_diff: EvidenceDiff,
+    wrap_up_retry_used: bool,
+    attempts: Vec<AttemptOutcome>,
 ) -> anyhow::Result<()> {
     write_usage(run_dir, iteration, &usage)?;
     let result = IterResult {
@@ -159,6 +170,8 @@ fn finalize_failure(
         usage,
         durations_ms: durations,
         evidence_diff,
+        wrap_up_retry_used,
+        attempts,
     };
     write_iter_result(run_dir, iteration, &result)
 }
@@ -244,6 +257,10 @@ pub async fn run(
 
         let mut iter_usage: Vec<Usage> = Vec::new();
         let mut durations: Vec<(String, u64)> = Vec::new();
+        // DR-22: every role attempt of this iteration, in invocation order.
+        let mut iter_attempts: Vec<AttemptOutcome> = Vec::new();
+        // DR-18: whether this iteration spent a wrap-up retry.
+        let mut iter_wrap_up_retry_used = false;
         // DR-6: the D7 scope limitation is restated in *every* iteration result,
         // not only in `meta.json` and `warnings.log`.
         let mut iter_warnings: Vec<String> = vec![MCP_SCOPE_WARNING.to_string()];
@@ -287,7 +304,11 @@ pub async fn run(
             let base = RoleInvocation {
                 role: Role::Planner,
                 iteration,
-                system_prompt: render_prompt(prompts::PLANNER_PROMPT, iteration),
+                system_prompt: render_prompt_with_budget(
+                    prompts::PLANNER_PROMPT,
+                    iteration,
+                    &cfg.agent,
+                ),
                 task_prompt: prompts::planner_task(iteration),
                 cwd: planner_view.clone(),
                 env: role_env(cfg, run_id, Role::Planner, iteration, &planner_view),
@@ -298,13 +319,40 @@ pub async fn run(
             };
 
             let started = Instant::now();
-            let outcome = gate_plan(
-                &*orchestrator.harness,
-                &base,
-                cfg.runtime.max_schema_retries,
-            )
-            .await;
+            let (gate_result, mut planner_attempts) =
+                gate_plan_traced(&*orchestrator.harness, &base, cfg.runtime.max_schema_retries, 1)
+                    .await;
+            let mut wrap_up_retry_used = false;
+            let outcome = match gate_result {
+                Ok(doc) => Ok(doc),
+                Err(error) => {
+                    if planner_attempts.last().map(|a| a.exit_was_limits).unwrap_or(false) {
+                        // DR-18: exactly one small wrap-up retry per role/round.
+                        wrap_up_retry_used = true;
+                        let mut wrap_base = base.clone();
+                        wrap_base.limits.step_limit =
+                            cfg.agent.wrap_up_steps.min(WRAP_UP_RETRY_MAX_STEPS);
+                        wrap_base.system_prompt = render_prompt_with_budget(
+                            prompts::PLANNER_PROMPT,
+                            iteration,
+                            &wrap_base.limits,
+                        );
+                        wrap_base.retry_context = Some(WRAP_UP_RETRY_CONTEXT.to_string());
+                        let first = planner_attempts.len() as u32 + 1;
+                        let (retry_result, retry_attempts) =
+                            gate_plan_traced(&*orchestrator.harness, &wrap_base, 0, first).await;
+                        planner_attempts.extend(retry_attempts);
+                        retry_result
+                    } else {
+                        Err(error)
+                    }
+                }
+            };
             durations.push(("planner".to_string(), started.elapsed().as_millis() as u64));
+            if wrap_up_retry_used {
+                iter_wrap_up_retry_used = true;
+            }
+            iter_attempts.extend(planner_attempts.clone());
             let planner_usage = usage_from_attempts(&traj_dir, Role::Planner, iteration)?;
             iter_usage.push(planner_usage.clone());
 
@@ -329,8 +377,8 @@ pub async fn run(
                         iteration,
                         "planner",
                         &format!(
-                            "schema_failure after {} attempts: {error}",
-                            1 + cfg.runtime.max_schema_retries
+                            "schema_failure after {} attempt(s): {error}",
+                            planner_attempts.len()
                         ),
                     )?;
                     finalize_failure(
@@ -343,6 +391,8 @@ pub async fn run(
                         iter_usage.clone(),
                         durations.clone(),
                         EvidenceDiff::default(),
+                        iter_wrap_up_retry_used,
+                        iter_attempts.clone(),
                     )?;
                     return Err(error);
                 }
@@ -386,6 +436,8 @@ pub async fn run(
                 iter_usage.clone(),
                 durations.clone(),
                 diff,
+                iter_wrap_up_retry_used,
+                iter_attempts.clone(),
             )?;
             return Err(HofError::contract(violation).into());
         }
@@ -413,16 +465,57 @@ pub async fn run(
         let developer = RoleInvocation {
             role: Role::Developer,
             iteration,
-            system_prompt: render_prompt(prompts::DEVELOPER_PROMPT, iteration),
+            system_prompt: render_prompt_with_budget(
+                prompts::DEVELOPER_PROMPT,
+                iteration,
+                &cfg.agent,
+            ),
             task_prompt: prompts::developer_task(iteration),
             cwd: workspace.clone(),
             env: role_env(cfg, run_id, Role::Developer, iteration, &workspace),
             limits: cfg.agent.clone(),
             model: cfg.model.clone(),
-            trajectory_path: traj_dir.join("developer.json"),
+            trajectory_path: attempt_trajectory(&traj_dir, Role::Developer, 1),
             retry_context: None,
         };
-        let developer_outcome = invoke_once(&*orchestrator.harness, &developer).await?;
+        let mut developer_outcome = invoke_once(&*orchestrator.harness, &developer).await?;
+        let mut developer_attempt = 1;
+        let mut developer_limits = is_limits_exceeded(&developer_outcome.exit_status);
+        // DR-18: the Developer has no submitted artifact (the project is the
+        // artifact), so the wrap-up rule is triggered by the budget running out.
+        if developer_limits {
+            iter_wrap_up_retry_used = true;
+            developer_attempt += 1;
+            let mut wrap_base = developer.clone();
+            wrap_base.limits.step_limit = cfg.agent.wrap_up_steps.min(WRAP_UP_RETRY_MAX_STEPS);
+            wrap_base.system_prompt = render_prompt_with_budget(
+                prompts::DEVELOPER_PROMPT,
+                iteration,
+                &wrap_base.limits,
+            );
+            wrap_base.retry_context = Some(WRAP_UP_RETRY_CONTEXT.to_string());
+            wrap_base.trajectory_path =
+                attempt_trajectory(&traj_dir, Role::Developer, developer_attempt);
+            let mut total_duration = developer_outcome.duration_ms;
+            developer_outcome = invoke_once(&*orchestrator.harness, &wrap_base).await?;
+            total_duration += developer_outcome.duration_ms;
+            developer_outcome.duration_ms = total_duration;
+            developer_limits = is_limits_exceeded(&developer_outcome.exit_status);
+        }
+        iter_attempts.push(AttemptOutcome {
+            role: Role::Developer,
+            iteration,
+            attempt: developer_attempt,
+            exit_status: developer_outcome.exit_status.clone(),
+            duration_ms: developer_outcome.duration_ms,
+            usage: developer_outcome.usage.clone(),
+            trajectory_path: developer_outcome.trajectory_path.clone(),
+            artifact_path: developer.cwd.clone(),
+            // The Developer's artifact is the project itself: it exists as long
+            // as the workspace directory does.
+            artifact_valid: workspace.is_dir(),
+            exit_was_limits: developer_limits,
+        });
         durations.push(("developer".to_string(), developer_outcome.duration_ms));
         iter_usage.push(developer_outcome.usage.clone());
         write_log(
@@ -559,6 +652,8 @@ pub async fn run(
                 iter_usage.clone(),
                 durations.clone(),
                 diff,
+                iter_wrap_up_retry_used,
+                iter_attempts.clone(),
             )?;
             return Err(HofError::contract(ContractViolation::WorkspaceDriftBeforeQa).into());
         }
@@ -571,7 +666,11 @@ pub async fn run(
         let tester_base = RoleInvocation {
             role: Role::Tester,
             iteration,
-            system_prompt: render_prompt(prompts::TESTER_PROMPT, iteration),
+            system_prompt: render_prompt_with_budget(
+                prompts::TESTER_PROMPT,
+                iteration,
+                &cfg.agent,
+            ),
             task_prompt: prompts::tester_task(iteration),
             cwd: candidate.clone(),
             env: role_env(cfg, run_id, Role::Tester, iteration, &candidate),
@@ -581,14 +680,50 @@ pub async fn run(
             retry_context: None,
         };
         let started = Instant::now();
-        let gate = gate_evidence(
+        let (gate_result, mut tester_attempts) = gate_evidence_traced(
             &*orchestrator.harness,
             &tester_base,
             &version.candidate_id,
             cfg.runtime.max_schema_retries,
+            1,
         )
         .await;
+        let mut tester_wrap_up_retry_used = false;
+        let gate = match gate_result {
+            Ok(bundle) => Ok(bundle),
+            Err(error) => {
+                if tester_attempts.last().map(|a| a.exit_was_limits).unwrap_or(false) {
+                    // DR-18: exactly one small wrap-up retry per role/round.
+                    tester_wrap_up_retry_used = true;
+                    iter_wrap_up_retry_used = true;
+                    let mut wrap_base = tester_base.clone();
+                    wrap_base.limits.step_limit =
+                        cfg.agent.wrap_up_steps.min(WRAP_UP_RETRY_MAX_STEPS);
+                    wrap_base.system_prompt = render_prompt_with_budget(
+                        prompts::TESTER_PROMPT,
+                        iteration,
+                        &wrap_base.limits,
+                    );
+                    wrap_base.retry_context = Some(WRAP_UP_RETRY_CONTEXT.to_string());
+                    let first = tester_attempts.len() as u32 + 1;
+                    let (retry_result, retry_attempts) = gate_evidence_traced(
+                        &*orchestrator.harness,
+                        &wrap_base,
+                        &version.candidate_id,
+                        0,
+                        first,
+                    )
+                    .await;
+                    tester_attempts.extend(retry_attempts);
+                    retry_result
+                } else {
+                    Err(error)
+                }
+            }
+        };
+        let _ = tester_wrap_up_retry_used;
         durations.push(("tester".to_string(), started.elapsed().as_millis() as u64));
+        iter_attempts.extend(tester_attempts.clone());
         let tester_usage = usage_from_attempts(&traj_dir, Role::Tester, iteration)?;
         iter_usage.push(tester_usage);
 
@@ -608,6 +743,7 @@ pub async fn run(
                 durations,
                 iter_warnings,
                 diff,
+                iter_attempts,
             );
         }
         if let Err(violation) = assert_unchanged("tester/workspace", &h_ws_before, &h_ws_after) {
@@ -621,6 +757,7 @@ pub async fn run(
                 durations,
                 iter_warnings,
                 diff,
+                iter_attempts,
             );
         }
 
@@ -638,8 +775,8 @@ pub async fn run(
                     iteration,
                     "tester",
                     &format!(
-                        "schema_failure after {} attempts: {error}",
-                        1 + cfg.runtime.max_schema_retries
+                        "schema_failure after {} attempt(s): {error}",
+                        tester_attempts.len()
                     ),
                 )?;
                 finalize_failure(
@@ -652,6 +789,8 @@ pub async fn run(
                     iter_usage.clone(),
                     durations.clone(),
                     EvidenceDiff::default(),
+                    iter_wrap_up_retry_used,
+                    iter_attempts.clone(),
                 )?;
                 return Err(error);
             }
@@ -690,6 +829,8 @@ pub async fn run(
         result.version_id = Some(version.version_id.clone());
         result.usage = iter_usage;
         result.durations_ms = durations;
+        result.wrap_up_retry_used = iter_wrap_up_retry_used;
+        result.attempts = iter_attempts;
         write_iter_result(&run_dir, iteration, &result)?;
     }
 
@@ -712,6 +853,7 @@ fn fail_contract(
     durations: Vec<(String, u64)>,
     warnings: Vec<String>,
     evidence_diff: EvidenceDiff,
+    attempts: Vec<AttemptOutcome>,
 ) -> anyhow::Result<RunSummary> {
     write_log(
         run_dir,
@@ -737,6 +879,8 @@ fn fail_contract(
         usage,
         durations,
         evidence_diff,
+        false,
+        attempts,
     )?;
     Err(HofError::contract(violation).into())
 }
