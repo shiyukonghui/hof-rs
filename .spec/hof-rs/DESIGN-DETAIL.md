@@ -1,6 +1,6 @@
 # DESIGN-DETAIL — hof-rs 详细设计
 
-- 状态：**v0.4（真实冒烟后修订，见 §12 DR-17..DR-23；用户已知悉并同意继续）**
+- 状态：**v0.5（第二轮真实冒烟后修订，见 §12 DR-24..DR-28；用户已知悉并同意继续）**
 - 输入：`REQUIREMENTS.md` v0.2（C1–C10 / R1–R13 / E1–E6）、`PRD-mario.md` v1、`DESIGN-OVERVIEW.md` v0.1（+D6 修订）
 - 纪律：本文精确到「实现者不需要再做任何设计决策」。凡本文未定之处，实现者应按本文的**裁决原则**就近推导，并在回报中列出，不得自行改变接口。
 
@@ -809,7 +809,8 @@ pub struct RunArgs {
 行为契约：
 - `run`：`hoh doctor` 等价预检 **必须**先执行；任一项失败 → 打印逐项体检表并 exit 4（**不启动**）。
 - `run_id` 默认 `<UTC yyyymmdd-HHMMSS>-<uuid4 前 8 位>`；同 id 目录已存在 → 报错退出，除非 `--resume`（v1 允许不实现 resume，但必须明确报 `resume_not_implemented` 并 exit 2）。
-- 退出码：`0` 成功；`2` 契约违约/用法错误（含 resume 未实现）；`3` schema 重试耗尽；`4` 外部依赖不可用；`5` harness/模型错误。
+- 退出码：`0` 成功；`2` 契约违约/用法错误（含 resume 未实现）；`3` schema 重试耗尽；`4` 外部依赖不可用；`5` harness/模型错误；
+  **`6` 循环完成但 `artifact_gate.launchable == false`（DR-27，产物不可启动）**。
 - `status`：打印每轮 `ok/reason/candidate_id/usage` 表格 + 汇总 tokens；无需网络。
 - `rollback`：调用 `VersionStore::rollback` 并打印新哈希。
 - `spec-hash`：打印 S 的 sha256（用于人工核对冻结）。
@@ -1235,6 +1236,95 @@ pub struct FakeToolChannel { pub calls: Mutex<Vec<(Role,String,Value)>> }
 - `skills/godot-testing.md` 必须说明：电池已提供哪些记录、如何在 `evidence.json` 中以相对路径引用、
   以及「源码存在 ≠ 行为验证」。
 
+### DR-24 冻结点前置「可启动闸门」+ 定向修复重试（设计性修订，最高优先级）
+
+来源：第二轮真实冒烟（`smoke-t2`）中全循环跑通、`E_1` 合法，但 `A_1` 的 `scenes/main.tscn` **没有根节点**
+（每个节点都写 `parent="."`）→ Godot 报 `Invalid scene` / `Failed loading scene` → `play_scene` 谎报
+`playing:true` 而游戏实际起不来 → 6/7 条电池步骤失败、`E2/E3` 不成立。
+**论文的「keep the project buildable and runnable」必须是被检查的闸门，而不是 prompt 里的请求。**
+
+- 在**冻结 A_t 之前**新增闸门判定：`launchable := battery.editor_errors_baseline.ok && battery.play_scene_ready.ok`。
+- 若 `launchable == false`：**不冻结** A_t，而是用电池产出的失败原文作为 `retry_context`，
+  对 Developer 发起**一次**定向修复调用（预算 `agent.repair_steps`，默认 60），
+  `retry_context` 必须含：失败步骤 id、JSON-RPC/引擎错误原文、以及「只许修到可启动，不得扩大范围」。
+- 每轮**至多一次**修复重试；修复后仍不可启动 → 冻结当前 `A_t`（保持状态推进）但
+  `result.json.artifact_gate.launchable = false` 且 `reasons` 列出原文；本轮 QA 必然大面积 gap（这是诚实结果）。
+- 电池在 `get_editor_errors` 之前必须增加 **`reload_project` + `open_scene(<main>)`**，
+  使编辑器反映**磁盘真值**（实测出现「编辑器内存场景与磁盘 .tscn 不一致」：磁盘已声明 `CollisionShape2D`，
+  而 `get_collision_info` 报 `shape_count=0`）。
+- **场景结构校验（adapter 提供，输出给 Developer 作为可执行反馈）**：解析 `main.tscn` 的 `[node ...]` 行，
+  断言恰好一个**根节点**（无 `parent` 属性）、且除根外每个节点都有 `parent=`；
+  另有 `res://` 引用存在性检查。校验失败必须给出「第几行错、正确写法是什么」的可执行提示。
+- 测试：①场景无根节点 → 闸门失败且给出可执行提示；②闸门失败 → 恰好一次修复重试且 `retry_context` 含原文；
+  ③修复后成功 → 正常冻结且 `artifact_gate.launchable=true`；④两次都失败 → 冻结但 gate=false 且不再重试。
+
+### DR-25 角色环境必须使用绝对路径；`hoh submit` 只许写规范产物路径
+
+来源：实测缺陷——`HOH_ARTIFACT_DIR` 传了**相对路径**（`runs/<id>/iter-1/planner-view/.hoh`），
+而角色 shell 的 cwd 已是该视图根，于是 `hoh submit` 把计划写成了
+`runs/<id>/iter-1/planner-view/runs/<id>/iter-1/planner-view/.hoh/plan.md`（嵌套假路径）；
+Tester 也因相对 `--args-file` 两次报 `os error 3`。
+
+- 所有注入角色的路径型环境变量必须是**绝对路径**：`HOH_ARTIFACT_DIR`、`HOH_HOH_BIN`、
+  新增 `HOH_RUN_DIR`、`HOH_WORKSPACE`、`HOH_VIEW_DIR`、`HOH_SCRATCH_DIR`（= `<view>/.hoh/scratch`）。
+- `hoh submit` 必须把 `--file` 相对路径解析为「相对 `HOH_ARTIFACT_DIR`」，并在写入前断言
+  目标绝对路径**逐字等于**该角色的规范产物路径（planner→`<view>/.hoh/plan.md`，tester→`<view>/.hoh/evidence.json`）；
+  不等则拒绝（exit 2）并报出期望路径与实际路径。
+- `hoh tools call --args-file` 的相对路径必须以 `HOH_ARTIFACT_DIR`（而非 shell cwd）为基准解析。
+- **越界写检测**：每次角色调用后，扫描 **HoH 自身工作目录**（run 的 `--project` 之外）是否出现新增/修改文件，
+  结果写入 `result.json.out_of_tree_writes`（最多 50 条）。只检测与记录，不自动删除。
+- 测试：①断言全部路径型 env 为绝对路径；②`submit --file plan.md` 只可能落在规范路径，写偏则拒；
+  ③`--args-file` 相对路径基准正确；④角色在仓库根建目录 → `out_of_tree_writes` 能报出。
+
+### DR-26 工具 schema 可发现性 + 已知良好骨架 + 探索预算（治步数浪费）
+
+来源：实测——Developer 把 2/3 的 150 步用于阅读 HoH 自身 `src/**` 与外部 `godot-mcp-pro` 源码来猜工具 API；
+Planner 在首次 `submit` 成功后仍循环提交约 20 次。单轮 T=1 烧掉 **11.27M tokens、开发者单次 56.5 分钟**。
+
+- **`TOOLS.md` 必须由真实 `tools/list` schema 生成**：按类别列出该角色**允许**的工具名 + 参数名/类型/必填 +
+  一句话说明（而非只有名字）。生成源：`tests/fixtures/mcp/tools_list.json` 同源的 schema 快照
+  （运行时若 `tools/list` 可用则以其为准，并缓存到 run 目录）。
+- **`PROJECT_MAP.md`**：注入 Developer 视图，给出 A_{t-1} 的顶层文件树 + 文件大小 + 关键文件清单，
+  避免盲目探索（对应论文的「渐进披露：先给简洁分类索引」）。
+- **`skills/godot-dev.md` 必须含一份「已知良好的最小平台游戏骨架」**：合法的 `main.tscn`
+  （**含唯一根节点**，Ground/Player/Goal/HUD，Player/Goal 带 `CollisionShape2D` + 形状资源）、
+  非空 `player.gd`（移动/跳跃/重力）、HUD 的 `Label`。骨架必须是**可直接照抄并通过场景结构校验**的文本。
+- **禁止读取 harness 与外部仓库**：三个角色 prompt 必须明确禁止读取 `src/**`、`.spec/**`、`.git/**`、
+  `tests/**` 以及 `F:\RustProjects\**`（理由：所需工具 schema 已在 `TOOLS.md`）。
+  同时**检测**：若角色视图中的语义文件（`TOOLS.md`/`skills`）未被引用而轨迹里出现对上述路径的读取命令，
+  在 `result.json.warnings` 记一条 `harness_source_read`（不改行为，只留痕）。
+- **一次提交即足够**：prompt 明确「成功 `submit` 一次后立即结束该阶段，不要重复提交」。
+- 测试：①`TOOLS.md` 含参数名与类型（对若干工具断言）；②`PROJECT_MAP.md` 含顶层条目；
+  ③骨架文本通过 DR-24 的场景结构校验；④prompt 含禁止读取的路径清单与一次性提交纪律。
+
+### DR-27 结果语义必须区分「循环完成」与「产物可用」（诚实性）
+
+来源：`smoke-t2` 的 `result.json.ok=true`，而 `A_1` 不可启动、6/7 电池步骤失败——单看 `ok` 会误导。
+
+- `result.json` 新增：
+  ```json
+  "artifact_gate": { "launchable": false, "reasons": ["...引擎错误原文..."] }
+  ```
+- `hoh run` 退出码新增 **6 = 循环完成但 `artifact_gate.launchable == false`**（更新 §8 的退出码表）。
+- `hoh status` 必须同时展示 `harness` 与 `gate` 两列（例如 `harness=ok gate=fail`）。
+- `meta.json` 增记 `exit_code`（运行结束时写入 `runs/<id>/exit_code` 文件），
+  使启动器无需依赖 PowerShell 的 `Start-Process` 退出码（实测在 `-RedirectStandardOutput` 下返回 `$null`）。
+- 测试：①gate 失败 → 退出码 6 且 `artifact_gate.launchable=false`；②gate 成功 → 退出码 0；
+  ③`exit_code` 文件内容与返回值一致；④`status` 输出含两列。
+
+### DR-28 产物卫生：越界临时文件与 A_t 垃圾
+
+来源：实测——A_1 中混入 `scripts/_probe.gd`、`_t.txt`、`tmp_args.json`、`_pyout.txt` 等，
+被计入候选身份；Developer 还在**仓库根**建了 `.hoh_live_args/`（越界，哈希不可见）。
+
+- 角色 prompt 与 skills 必须规定：一切临时文件只能写在 `HOH_SCRATCH_DIR`（= `<view>/.hoh/scratch`，已被哈希排除），
+  **禁止**在工程里留 `_*`、`tmp_*`、`*.bak` 之类探针文件。
+- Runtime 产出 `result.json.artifact_hygiene.suspicious_files`（模式：`_*`、`tmp_*`、`*.bak`、`*.tmp`、
+  以及位于工程根的可疑脚本），供 Tester 判 gap 与 Planner 下轮清理；**不自动删除**。
+- 与 DR-25 的 `out_of_tree_writes` 联合构成「越界 + 垃圾」双重留痕。
+- 测试：①构造含 `_probe.gd`/`tmp_x.json` 的 A_t → `suspicious_files` 报出；
+  ②prompt 含 scratch 目录约束；③`HOH_SCRATCH_DIR` 落在 `.hoh` 下（因此不参与哈希）。
+
 ---
 ### 12.1 变更记录
 
@@ -1245,3 +1335,4 @@ pub struct FakeToolChannel { pub calls: Mutex<Vec<(Role,String,Value)>> }
 | v0.2 | 2026-09 | 追加 §12（DR-1..DR-13）并改写 §4.4 执行顺序 | 阶段五第一次独立验收 verdict=fail |
 | v0.3 | 2026-09 | 追加 §12（DR-14..DR-16）并改写 §3.1 的 model 段：模型身份改为配置驱动、doctor 探测通用化、密钥卫生 | 用户更换为远端 `deepseek-v4.1-flash`（D15） |
 | v0.4 | 2026-09 | 追加 §12（DR-17..DR-23）：确定性证据电池、步数预算与先收口纪律、密钥不得进子进程环境、MCP 就绪等待与诊断、干净 A₀、记录对称性、Developer 产出定义与 skills 强化 | 第一次真实 T=1 冒烟（negative baseline：5/5 LimitsExceeded、QA 无 E_1、A_1 零功能增量、密钥经子进程环境泄漏）（D17/D18） |
+| v0.5 | 2026-09 | 追加 §12（DR-24..DR-28）：冻结前可启动闸门与定向修复、角色环境绝对路径与 submit 规范路径、工具 schema 可发现性与已知良好骨架、结果语义区分循环/产物、产物卫生 | 第二次真实 T=1 冒烟（`smoke-t2`：全循环跑通、E_1 合法、E1/E4/E5/E6 met，但 `main.tscn` 无根节点致 E2/E3 失败；11.27M tokens）（D21/D22） |
