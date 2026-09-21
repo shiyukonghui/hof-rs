@@ -84,7 +84,8 @@ async fn result_json_publishes_the_prd_coverage() {
         serde_json::from_str(&read(&root.join("runs/run-1/iter-1/result.json"))).unwrap();
     let coverage = &json["prd_coverage"];
     assert_eq!(
-        coverage["verified"], json!(8),
+        coverage["verified"],
+        json!(8),
         "prd_coverage must be derived from E_t: {coverage}"
     );
     assert_eq!(coverage["gap"], json!(22), "{coverage}");
@@ -121,7 +122,11 @@ fn the_prd_total_is_seventeen_when_functional_ids_are_present() {
         verified_ids: vec!["alpha".to_string()],
         gap_ids: vec!["beta".to_string(), "gamma".to_string()],
     };
-    assert_eq!(ad_hoc.total(), 3, "verified + gap when nothing maps to F1..F17");
+    assert_eq!(
+        ad_hoc.total(),
+        3,
+        "verified + gap when nothing maps to F1..F17"
+    );
     assert!(!ad_hoc.total_is_known());
 }
 

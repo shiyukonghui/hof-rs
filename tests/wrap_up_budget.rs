@@ -30,6 +30,11 @@ fn config_carries_the_new_budget_and_readiness_keys() {
         config.tools.ready_timeout_seconds, 30,
         "DR-20 ready_timeout_seconds"
     );
+    assert_eq!(
+        config.runtime.max_evidence_bytes,
+        8 * 1024 * 1024,
+        "DR-36 max_evidence_bytes defaults to 8 MiB"
+    );
     // Defaults must agree with the file so a minimal config keeps working.
     let defaults = AgentLimits::default();
     assert_eq!(defaults.step_limit, 150);

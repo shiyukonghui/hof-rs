@@ -89,6 +89,52 @@ pub fn copy_tree(src: &Path, dst: &Path, excludes: &[String]) -> anyhow::Result<
     Ok(())
 }
 
+/// DR-36: copy an evidence tree into the frozen candidate view and report every
+/// file above `max_bytes`.
+///
+/// `smoke-t5` produced a real 4246-byte screenshot under
+/// `<workspace>/.hoh/evidence/` that the candidate view never copied, so the
+/// Tester recorded a **true** artifact as missing (gap G19).  The rule here is
+/// deliberately "copy first, report second": an oversized file is never
+/// silently skipped, it is copied and its size is published as
+/// `evidence_too_large`.
+///
+/// Returns `(relative path, byte size)` for every oversized file, sorted.
+pub fn copy_evidence(src: &Path, dst: &Path, max_bytes: u64) -> anyhow::Result<Vec<(String, u64)>> {
+    let mut oversized = Vec::new();
+    if !src.exists() {
+        return Ok(oversized);
+    }
+    for entry in WalkDir::new(src).follow_links(false) {
+        let entry = entry?;
+        if !entry.file_type().is_file() {
+            continue;
+        }
+        let rel = entry
+            .path()
+            .strip_prefix(src)
+            .unwrap_or(entry.path())
+            .components()
+            .map(|component| component.as_os_str().to_string_lossy().into_owned())
+            .collect::<Vec<_>>()
+            .join("/");
+        if rel.is_empty() {
+            continue;
+        }
+        let target = dst.join(&rel);
+        if let Some(parent) = target.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::copy(entry.path(), &target)?;
+        let size = entry.metadata().map(|meta| meta.len()).unwrap_or(0);
+        if size > max_bytes {
+            oversized.push((rel, size));
+        }
+    }
+    oversized.sort();
+    Ok(oversized)
+}
+
 /// Sorted list of relative paths present in a view (used by tests and logs).
 pub fn list_tree(root: &Path) -> anyhow::Result<Vec<String>> {
     let mut items = Vec::new();
@@ -220,5 +266,39 @@ mod tests {
             list_tree(&root).unwrap(),
             vec![".hoh/evidence.json".to_string()]
         );
+    }
+
+    /// DR-36: every evidence file is copied, and the oversized ones are
+    /// reported (sorted) instead of being skipped.
+    #[test]
+    fn copy_evidence_copies_everything_and_reports_the_oversized() {
+        let temp = tempfile::tempdir().unwrap();
+        let source = temp.path().join("evidence");
+        write(&source.join("frame-00.png"), "0123456789");
+        write(&source.join("replay/long.json"), "0123456789abcdef");
+        write(&source.join("small.json"), "01");
+
+        let destination = temp.path().join("candidate/.hoh/evidence");
+        let oversized = copy_evidence(&source, &destination, 4).unwrap();
+        assert_eq!(
+            oversized,
+            vec![
+                ("frame-00.png".to_string(), 10),
+                ("replay/long.json".to_string(), 16),
+            ],
+            "the oversized files are reported with their real size, sorted"
+        );
+        assert_eq!(
+            std::fs::read_to_string(destination.join("frame-00.png")).unwrap(),
+            "0123456789",
+            "an oversized file is still copied"
+        );
+        assert!(destination.join("replay/long.json").is_file());
+        assert!(destination.join("small.json").is_file());
+
+        // A workspace without evidence is not an error.
+        assert!(copy_evidence(&temp.path().join("missing"), &destination, 4)
+            .unwrap()
+            .is_empty());
     }
 }

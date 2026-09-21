@@ -28,6 +28,9 @@ runtime:
   # DR-3：只从「角色视图副本」中排除的相对路径/前缀（例如私有测试夹具）。
   # 这些路径**不**进入 hash_tree / 快照的排除集，因此不会削弱 R2/R3 的越权写入检测。
   private_excludes: []
+  # DR-36：候选视图复制 `.hoh/evidence/**` 时单文件体积阈值（默认 8 MiB）。
+  # 超限文件**仍会复制**并在 result.json.warnings 记 `evidence_too_large`，绝不静默跳过。
+  max_evidence_bytes: 8388608
 
 adapter:
   kind: godot                             # godot | test

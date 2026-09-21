@@ -87,6 +87,17 @@ pub struct RuntimeConfig {
     /// run); tests point it at a temporary directory.
     #[serde(default)]
     pub out_of_tree_root: Option<PathBuf>,
+    /// DR-36: the per-file size ceiling applied while copying
+    /// `.hoh/evidence/**` into the frozen candidate view.  A file above it is
+    /// **still copied** and reported (`evidence_too_large`), never dropped.
+    #[serde(default = "default_max_evidence_bytes")]
+    pub max_evidence_bytes: u64,
+}
+
+/// DR-36: 8 MiB — generous enough for a screenshot or a short replay, small
+/// enough that a runaway recording is still made visible in `warnings`.
+fn default_max_evidence_bytes() -> u64 {
+    8 * 1024 * 1024
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

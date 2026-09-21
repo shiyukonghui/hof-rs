@@ -439,16 +439,16 @@ mod tests {
         ] {
             assert!(mentions_forbidden_source(command), "`{command}`");
         }
-        assert!(!mentions_forbidden_source("godot --headless --check-only res://x.gd"));
+        assert!(!mentions_forbidden_source(
+            "godot --headless --check-only res://x.gd"
+        ));
     }
 
     /// DR-38: `dir /b /s *.yaml | findstr hoh` names no path, yet it is a
     /// whole-tree search aimed at the harness by name.
     #[test]
     fn a_recursive_search_for_the_harness_is_a_harness_read() {
-        assert!(enumerates_harness_tree(
-            "dir /b /s *.yaml | findstr hoh"
-        ));
+        assert!(enumerates_harness_tree("dir /b /s *.yaml | findstr hoh"));
         assert!(enumerates_harness_tree("grep -r hoh harness/"));
         // In-project work is not a harness read.
         assert!(!enumerates_harness_tree("dir scenes\\*.tscn"));
@@ -456,7 +456,9 @@ mod tests {
             !enumerates_harness_tree("ls .hoh/deterministic/*.json"),
             "the runtime's own artifact directory is ordinary project work"
         );
-        assert!(!enumerates_harness_tree("godot --headless --check-only res://x.gd"));
+        assert!(!enumerates_harness_tree(
+            "godot --headless --check-only res://x.gd"
+        ));
     }
 
     /// DR-38: the repository root is injected at runtime, never hard-coded, and

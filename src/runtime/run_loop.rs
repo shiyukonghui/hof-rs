@@ -200,11 +200,7 @@ fn finalize_failure(
 /// DR-38: the harness repository root is injected at runtime (`harness_root`),
 /// never hard-coded, so `dir <repo root>` and `dir /b /s *.yaml | findstr hoh`
 /// are traced as well.
-fn note_source_reads(
-    warnings: &mut Vec<String>,
-    attempts: &[AttemptOutcome],
-    harness_root: &Path,
-) {
+fn note_source_reads(warnings: &mut Vec<String>, attempts: &[AttemptOutcome], harness_root: &Path) {
     if warnings
         .iter()
         .any(|warning| warning == "harness_source_read")
@@ -891,6 +887,21 @@ pub async fn run(
             &candidate.join(".hoh/deterministic"),
             &[],
         )?;
+        // DR-36: the *evidence* the battery produced (screenshots, replays,
+        // recordings) must be visible to the Tester too.  `smoke-t5` lost a real
+        // 4246-byte PNG here and reported it as missing (gap G19).
+        for (relative, size) in crate::runtime::view::copy_evidence(
+            &workspace.join(".hoh/evidence"),
+            &candidate.join(".hoh/evidence"),
+            cfg.runtime.max_evidence_bytes,
+        )? {
+            let warning = format!(
+                "evidence_too_large: {} ({} byte(s) > {} byte(s)); the file was copied anyway",
+                relative, size, cfg.runtime.max_evidence_bytes
+            );
+            iter_warnings.push(warning.clone());
+            append_warning(&run_dir, &format!("iteration {iteration}: {warning}"))?;
+        }
 
         // ---------------- QA pre-check: the artifact must still be A_t -------
         let workspace_now = hash_tree(&workspace, &excludes)?;

@@ -442,8 +442,38 @@ async fn run_battery_with_script(
     ready_timeout_seconds: u64,
     script: Vec<FakeStep>,
 ) -> BatteryRun {
+    run_battery_opts(root, channel, ready_timeout_seconds, script, None).await
+}
+
+/// DR-36: the same run with an explicit `runtime.max_evidence_bytes`.
+async fn run_battery_with_evidence_limit(
+    root: &Path,
+    channel: Arc<FixtureChannel>,
+    ready_timeout_seconds: u64,
+    max_evidence_bytes: u64,
+) -> BatteryRun {
+    run_battery_opts(
+        root,
+        channel,
+        ready_timeout_seconds,
+        happy_script(),
+        Some(max_evidence_bytes),
+    )
+    .await
+}
+
+async fn run_battery_opts(
+    root: &Path,
+    channel: Arc<FixtureChannel>,
+    ready_timeout_seconds: u64,
+    script: Vec<FakeStep>,
+    max_evidence_bytes: Option<u64>,
+) -> BatteryRun {
     let mut cfg: HohConfig = test_config(root, 1);
     cfg.runtime.spec = root.join("spec.md");
+    if let Some(limit) = max_evidence_bytes {
+        cfg.runtime.max_evidence_bytes = limit;
+    }
     let spec = write_spec(root);
     let harness = FakeHarness::new(script);
     let adapter = godot_adapter(root, ready_timeout_seconds);
@@ -1079,5 +1109,89 @@ async fn scene_tree_requires_node_paths_and_types() {
         record.record.observation.contains("path") || record.record.observation.contains("type"),
         "the observation must name what was missing: {}",
         record.record.observation
+    );
+}
+
+// ---------------------------------------------------------------------------
+// DR-36 — the evidence has to be visible inside the frozen candidate
+// ---------------------------------------------------------------------------
+
+/// DR-36 ①/②: `smoke-t5` wrote a real 4246-byte PNG into
+/// `<workspace>/.hoh/evidence/` and the Tester reported "file does not exist"
+/// (gap G19) because the candidate view only copied `.hoh/deterministic/**`.
+/// The screenshot must be present in the candidate, byte for byte, and the
+/// `ExecRecord`'s relative path must resolve inside the candidate root.
+#[tokio::test]
+async fn the_battery_evidence_is_copied_into_the_frozen_candidate() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel = Arc::new(FixtureChannel::green());
+    let run = run_battery(root, channel, 30).await;
+
+    let workspace_png = run.workspace.join(".hoh/evidence/frame-00.png");
+    let candidate_png = run
+        .run_dir
+        .join("iter-1/candidate/.hoh/evidence/frame-00.png");
+    assert!(
+        workspace_png.is_file(),
+        "the battery must have produced the real PNG first"
+    );
+    assert!(
+        candidate_png.is_file(),
+        "the frozen candidate must carry the evidence (DR-36): {}",
+        candidate_png.display()
+    );
+    assert_eq!(
+        std::fs::read(&candidate_png).unwrap(),
+        std::fs::read(&workspace_png).unwrap(),
+        "the copy must be byte-identical"
+    );
+
+    let screenshot = step(&run.records, "screenshot");
+    let relative = screenshot
+        .record
+        .path
+        .as_deref()
+        .expect("the screenshot names its artifact");
+    assert!(
+        run.run_dir
+            .join("iter-1/candidate")
+            .join(relative)
+            .is_file(),
+        "the Tester resolves `{relative}` against the candidate root"
+    );
+}
+
+/// DR-36 ③: an oversized evidence file is **still copied** — it is reported, not
+/// dropped.  The threshold is a configuration knob (`runtime.max_evidence_bytes`).
+#[tokio::test]
+async fn an_oversized_evidence_file_is_copied_and_reported() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel = Arc::new(FixtureChannel::green());
+    // The PNG is 87 bytes; a 10-byte budget makes it oversized.
+    let run = run_battery_with_evidence_limit(root, channel, 30, 10).await;
+
+    let candidate_png = run
+        .run_dir
+        .join("iter-1/candidate/.hoh/evidence/frame-00.png");
+    assert!(
+        candidate_png.is_file(),
+        "an oversized file must still be copied, never silently skipped"
+    );
+    let size = std::fs::metadata(&candidate_png).unwrap().len();
+    assert!(size > 10, "the fixture must really exceed the limit");
+
+    let result: Value =
+        serde_json::from_str(&read(&run.run_dir.join("iter-1/result.json"))).unwrap();
+    let warnings = result["warnings"].as_array().expect("warnings");
+    assert!(
+        warnings
+            .iter()
+            .filter_map(Value::as_str)
+            .any(|warning| warning.starts_with("evidence_too_large")
+                && warning.contains("frame-00.png")
+                && warning.contains(&size.to_string())),
+        "the oversize must be reported with its size: {warnings:?}"
     );
 }
