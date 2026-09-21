@@ -128,7 +128,7 @@ pub async fn doctor_checks(
         }),
     }
 
-    // 2. Model identity (C9/C10).
+    // 2. Model identity (C9/C10/C11, DR-14).
     match crate::config::assert_model_identity(&config.model) {
         Ok(()) => items.push(DoctorItem {
             name: "model.identity".to_string(),
@@ -136,7 +136,7 @@ pub async fn doctor_checks(
             detail: format!(
                 "config `{}` -> wire `{}`",
                 config.model_name(),
-                crate::config::WIRE_MODEL_NAME
+                config.wire_model_name()
             ),
         }),
         Err(error) => items.push(DoctorItem {
@@ -188,13 +188,29 @@ pub async fn doctor_checks(
     Ok(items)
 }
 
+/// DR-15: the minimal chat request must be authenticated (`Authorization:
+/// Bearer <resolved api_key>`) and the **response** `model` field must equal
+/// the configured `wire_model_name` (C9 double-lock).  The key is never echoed
+/// into the detail text.
 fn chat_probe(config: &HohConfig) -> DoctorItem {
     let url = format!(
         "{}/chat/completions",
         config.base_url().trim_end_matches('/')
     );
+    let wire = config.wire_model_name();
+    let Some(api_key) = config.resolved_api_key() else {
+        // C11: a remote OpenAI-compatible endpoint is unusable without a key,
+        // so this is a real failure — unlike `model.resident` (C12).
+        return DoctorItem {
+            name: "model.chat".to_string(),
+            ok: false,
+            detail: format!(
+                "{url}: no api key resolved; set HOH_MODEL_API_KEY or OPENAI_API_KEY (C11)"
+            ),
+        };
+    };
     let body = json!({
-        "model": crate::config::WIRE_MODEL_NAME,
+        "model": wire,
         "messages": [{"role": "user", "content": "ping"}],
         "max_tokens": 1
     });
@@ -204,12 +220,13 @@ fn chat_probe(config: &HohConfig) -> DoctorItem {
     match agent
         .post(&url)
         .set("Content-Type", "application/json")
+        .set("Authorization", &format!("Bearer {api_key}"))
         .send_json(body)
     {
         Ok(response) => {
             let value: Value = response.into_json().unwrap_or(Value::Null);
             let model = value.get("model").and_then(Value::as_str).unwrap_or("");
-            if model == crate::config::WIRE_MODEL_NAME {
+            if model == wire {
                 DoctorItem {
                     name: "model.chat".to_string(),
                     ok: true,
@@ -219,10 +236,7 @@ fn chat_probe(config: &HohConfig) -> DoctorItem {
                 DoctorItem {
                     name: "model.chat".to_string(),
                     ok: false,
-                    detail: format!(
-                        "{url} answered with model `{model}` instead of `{}`",
-                        crate::config::WIRE_MODEL_NAME
-                    ),
+                    detail: format!("{url} answered with model `{model}` instead of `{wire}`"),
                 }
             }
         }
@@ -234,7 +248,22 @@ fn chat_probe(config: &HohConfig) -> DoctorItem {
     }
 }
 
+/// DR-15/C12: `model.resident` inspects LM Studio's `/api/v0/models`, which is
+/// vendor specific.  It therefore only runs against a loopback endpoint; every
+/// other case (remote host, missing API, unreachable endpoint) is reported as
+/// `ok = true` with an explicit `skipped:` detail, so it can never block a run.
 fn models_probe(config: &HohConfig) -> DoctorItem {
+    let host = base_url_host(config.base_url());
+    if !is_loopback_host(&host) {
+        return DoctorItem {
+            name: "model.resident".to_string(),
+            ok: true,
+            detail: format!(
+                "skipped: host `{host}` is not loopback; `/api/v0/models` is LM Studio specific (C12)"
+            ),
+        };
+    }
+
     let root = config
         .base_url()
         .trim_end_matches('/')
@@ -258,30 +287,66 @@ fn models_probe(config: &HohConfig) -> DoctorItem {
                 .filter_map(|entry| entry.get("id").and_then(Value::as_str))
                 .map(ToOwned::to_owned)
                 .collect();
-            let stripped = loaded.iter().any(|id| id == "qwen3.8-27b");
-            if stripped {
-                DoctorItem {
+            // DR-15: the duplicate rule is derived from configuration, not from
+            // a hard-coded vendor id: a loaded entry whose id equals the
+            // `wire_model_name` with its vendor prefix stripped is a second,
+            // VRAM-doubling instance (D6).  An unprefixed wire name has no
+            // distinct bare form, so no duplicate check applies.
+            match bare_model_name(config.wire_model_name()) {
+                Some(bare) if loaded.iter().any(|id| id == bare) => DoctorItem {
                     name: "model.resident".to_string(),
                     ok: false,
                     detail: format!(
-                        "a bare `qwen3.8-27b` instance is loaded ({loaded:?}); unload it in LM \
-                         Studio, it doubles VRAM (D6)"
+                        "a bare `{bare}` instance is loaded ({loaded:?}); unload it in LM Studio, \
+                         it doubles VRAM (D6)"
                     ),
-                }
-            } else {
-                DoctorItem {
+                },
+                _ => DoctorItem {
                     name: "model.resident".to_string(),
                     ok: true,
                     detail: format!("loaded: {loaded:?}"),
-                }
+                },
             }
         }
         Err(error) => DoctorItem {
             name: "model.resident".to_string(),
-            ok: false,
-            detail: format!("{url}: {error}"),
+            ok: true,
+            detail: format!("skipped: {url}: {error}"),
         },
     }
+}
+
+/// The host component of a base URL, lower-cased, without userinfo/port.
+fn base_url_host(base_url: &str) -> String {
+    let rest = base_url
+        .split_once("://")
+        .map(|(_, rest)| rest)
+        .unwrap_or(base_url);
+    let authority = rest
+        .split(['/', '?', '#'])
+        .next()
+        .unwrap_or("")
+        .rsplit('@')
+        .next()
+        .unwrap_or("");
+    let host = if let Some(inner) = authority.strip_prefix('[') {
+        inner.split_once(']').map(|(host, _)| host).unwrap_or(inner)
+    } else {
+        authority.split(':').next().unwrap_or("")
+    };
+    host.to_ascii_lowercase()
+}
+
+fn is_loopback_host(host: &str) -> bool {
+    matches!(host, "127.0.0.1" | "localhost" | "::1")
+}
+
+/// `vendor/model` -> `Some("model")`; an unprefixed name -> `None`.
+fn bare_model_name(wire_model_name: &str) -> Option<&str> {
+    wire_model_name
+        .rsplit_once('/')
+        .map(|(_, bare)| bare)
+        .filter(|bare| !bare.is_empty() && *bare != wire_model_name)
 }
 
 pub async fn doctor(args: DoctorArgs) -> anyhow::Result<i32> {
@@ -365,6 +430,12 @@ pub async fn run(args: RunArgs) -> anyhow::Result<i32> {
         specs.push(format!("runtime.workspace={}", project.display()));
     }
     let config = load_config(&specs)?;
+    // DR-16: resolve the secret and put it into the HoH process environment
+    // **before** any agent exists.  mini's `resolve_api_key` then picks it up
+    // through its own fallback, so the key never enters the model JSON nor a
+    // role's `LocalEnvironment` env map (mini serializes both into the
+    // trajectory).
+    let _ = crate::config::export_model_api_key(&config);
     let ablation = parse_ablation(&args.ablate)?;
     let adapter = build_adapter_kind(&args.adapter, &config, args.force_init)?;
     let workspace = config.runtime.workspace.clone();
@@ -616,6 +687,28 @@ mod tests {
     fn unknown_adapter_is_rejected() {
         let config = load_config(&[]).unwrap();
         assert!(build_adapter_kind("nope", &config, false).is_err());
+    }
+
+    #[test]
+    fn base_url_host_parsing_is_generic() {
+        assert_eq!(base_url_host("http://127.0.0.1:1234/v1"), "127.0.0.1");
+        assert_eq!(base_url_host("http://localhost/v1"), "localhost");
+        assert_eq!(base_url_host("http://[::1]:1234/v1"), "::1");
+        assert_eq!(
+            base_url_host("https://user:pass@Remote.Example.COM:8443/v1"),
+            "remote.example.com"
+        );
+        assert_eq!(base_url_host("https://api.example.com"), "api.example.com");
+        assert!(is_loopback_host("127.0.0.1") && is_loopback_host("localhost"));
+        assert!(!is_loopback_host("192.168.1.10"));
+        assert!(!is_loopback_host("remote.invalid"));
+    }
+
+    #[test]
+    fn bare_model_name_strips_only_a_vendor_prefix() {
+        assert_eq!(bare_model_name("vendor/some-model"), Some("some-model"));
+        assert_eq!(bare_model_name("deepseek-v4.1-flash"), None);
+        assert_eq!(bare_model_name("vendor/"), None);
     }
 
     /// DR-6: `hoh doctor` must print the manual editor-scope confirmation, and

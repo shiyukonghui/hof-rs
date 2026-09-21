@@ -1,4 +1,10 @@
-//! `hoh.yaml` loading, CLI overrides, and the C9/C10 model identity assertion.
+//! `hoh.yaml` loading, CLI overrides, and the config-driven model identity
+//! assertion (C9/C10/C11, DR-14/DR-16).
+//!
+//! Model identity is **configuration driven**: this module never knows a
+//! concrete model name.  `model.wire_model_name` declares the exact string the
+//! request body must carry, and the identity assertion only checks generic
+//! invariants (explicit provider, non-empty names, no secret in the file).
 
 use std::path::PathBuf;
 
@@ -9,10 +15,18 @@ use crate::errors::HofError;
 use crate::model::Spec;
 
 pub const DEFAULT_CONFIG_SPEC: &str = "config/hoh.yaml";
-/// The exact on-the-wire model id (C9) and the exact provider string (C10).
-pub const REQUIRED_MODEL_NAME: &str = "openai/qwen/qwen3.8-27b";
+/// The only provider string that is accepted (C10).
 pub const REQUIRED_PROVIDER: &str = "openai_compatible";
-pub const WIRE_MODEL_NAME: &str = "qwen/qwen3.8-27b";
+/// Environment variables consulted for the model secret, in priority order
+/// (C11/DR-15).  `HOH_MODEL_API_KEY` wins so the operator can point HoH at a
+/// separate credential without disturbing `OPENAI_API_KEY`.
+pub const API_KEY_ENV_VARS: &[&str] = &["HOH_MODEL_API_KEY", "OPENAI_API_KEY"];
+/// The variable mini's own `resolve_api_key` falls back to for
+/// `openai_compatible` models.  DR-16 exports the resolved secret here instead
+/// of ever writing it into a recorded structure.
+pub const MINI_API_KEY_ENV: &str = "OPENAI_API_KEY";
+/// Placeholder written wherever a secret would otherwise be serialized.
+pub const REDACTED: &str = "<redacted>";
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AgentLimits {
@@ -94,6 +108,16 @@ impl HohConfig {
             .unwrap_or("")
     }
 
+    /// DR-14: the exact string the request body must carry.  Declared in
+    /// configuration, consumed by both the offline double-lock test and the
+    /// online `hoh doctor` probe — never hard-coded in `src/**`.
+    pub fn wire_model_name(&self) -> &str {
+        self.model
+            .get("wire_model_name")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+    }
+
     pub fn provider(&self) -> &str {
         self.model
             .get("provider")
@@ -108,32 +132,140 @@ impl HohConfig {
             .unwrap_or("")
     }
 
+    /// C11: `model.api_key` (never non-empty after the identity assertion) →
+    /// `HOH_MODEL_API_KEY` → `OPENAI_API_KEY` → `None`.
+    pub fn resolved_api_key(&self) -> Option<String> {
+        resolve_api_key_with(&self.model, |name| std::env::var(name).ok())
+    }
+
+    /// The model section with every secret removed.  Used for `meta.json` and
+    /// anywhere else the configuration is persisted (DR-16).
+    pub fn redacted_model(&self) -> Value {
+        redact_model_value(&self.model)
+    }
+
     pub fn model_identity(&self) -> String {
         format!(
             "{}|{}|{}",
             self.model_name(),
             self.provider(),
-            WIRE_MODEL_NAME
+            self.wire_model_name()
         )
     }
 }
 
-/// Assert the frozen model identity (C9/C10).
+/// Secret resolution, parameterised over the environment lookup so the
+/// priority order is testable without touching process-global state.
+pub fn resolve_api_key_with<F>(model: &Value, get_env: F) -> Option<String>
+where
+    F: Fn(&str) -> Option<String>,
+{
+    let explicit = model
+        .get("api_key")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+    if let Some(explicit) = explicit {
+        return Some(explicit.to_string());
+    }
+    API_KEY_ENV_VARS
+        .iter()
+        .find_map(|name| get_env(name).map(|value| value.trim().to_string()))
+        .filter(|value| !value.is_empty())
+}
+
+/// DR-16: replace `api_key` with `null` in a model section (and in the
+/// `model` sub-object when a whole config object is handed in).  Pure: the
+/// caller keeps its own copy.
+pub fn redact_model_value(value: &Value) -> Value {
+    let mut redacted = value.clone();
+    if let Some(object) = redacted.as_object_mut() {
+        if object.contains_key("api_key") {
+            object.insert("api_key".to_string(), Value::Null);
+        }
+        if let Some(model) = object.get_mut("model").and_then(Value::as_object_mut) {
+            if model.contains_key("api_key") {
+                model.insert("api_key".to_string(), Value::Null);
+            }
+        }
+    }
+    redacted
+}
+
+/// DR-16 (recommended, zero-leak design): the secret lives **only** in the HoH
+/// process environment.  Before any agent is built, the resolved key is
+/// exported as `OPENAI_API_KEY` so mini's own `resolve_api_key` fallback picks
+/// it up.  It is never written into the model JSON nor into a role's
+/// `LocalEnvironment` env map, because mini serializes both into the
+/// trajectory.
+pub fn export_model_api_key(config: &HohConfig) -> Option<String> {
+    let resolved = config.resolved_api_key()?;
+    if std::env::var(MINI_API_KEY_ENV).ok().as_deref() != Some(resolved.as_str()) {
+        std::env::set_var(MINI_API_KEY_ENV, &resolved);
+    }
+    Some(resolved)
+}
+
+/// Assert the generic model identity invariants (C9/C10/C11, DR-14).
+///
+/// This function deliberately knows **no** concrete model name: `wire_model_name`
+/// is the declaration, and it is the offline/online probes that verify the
+/// actual wire traffic against it.
 pub fn assert_model_identity(model: &Value) -> Result<(), HofError> {
     let model_name = model
         .get("model_name")
         .and_then(Value::as_str)
         .unwrap_or("")
+        .trim()
         .to_string();
     let provider = model
         .get("provider")
         .and_then(Value::as_str)
+        .map(str::trim)
         .unwrap_or("")
         .to_string();
-    if model_name != REQUIRED_MODEL_NAME || provider != REQUIRED_PROVIDER {
+    let wire_model_name = model
+        .get("wire_model_name")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim()
+        .to_string();
+
+    if provider != REQUIRED_PROVIDER {
         return Err(HofError::ModelIdentityViolation {
-            model_name,
-            provider,
+            reason: "model.provider must be explicit (C10)".to_string(),
+            expected: REQUIRED_PROVIDER.to_string(),
+            actual: provider,
+        });
+    }
+    if model_name.is_empty() {
+        return Err(HofError::ModelIdentityViolation {
+            reason: "model.model_name must be non-empty (DR-14)".to_string(),
+            expected: "a non-empty model_name".to_string(),
+            actual: model_name,
+        });
+    }
+    if wire_model_name.is_empty() {
+        return Err(HofError::ModelIdentityViolation {
+            reason: "model.wire_model_name must be non-empty (DR-14)".to_string(),
+            expected: "a non-empty wire_model_name".to_string(),
+            actual: wire_model_name,
+        });
+    }
+    // C11: the secret must come from the environment.  A non-empty value here
+    // would be persisted into `meta.json` and the trajectory, so it is a hard
+    // configuration error rather than a warning.
+    if let Some(explicit) = model
+        .get("api_key")
+        .and_then(Value::as_str)
+        .filter(|value| !value.trim().is_empty())
+    {
+        return Err(HofError::ModelIdentityViolation {
+            reason: "model.api_key must be empty; keys are read from HOH_MODEL_API_KEY or \
+                     OPENAI_API_KEY and never stored in the configuration (C11/DR-16)"
+                .to_string(),
+            expected: format!("<empty> ({})", API_KEY_ENV_VARS.join(" | ")),
+            actual: format!("<redacted: {} char(s)>", explicit.trim().chars().count()),
         });
     }
     Ok(())
@@ -203,7 +335,13 @@ mod tests {
     #[test]
     fn loads_default_config() {
         let config = load_config(&[]).expect("default config must load");
-        assert_eq!(config.model_name(), REQUIRED_MODEL_NAME);
+        // DR-14: the expected wire name is whatever the configuration declares.
+        assert!(!config.model_name().is_empty());
+        assert!(!config.wire_model_name().is_empty());
+        assert_eq!(
+            config.model.get("wire_model_name").and_then(Value::as_str),
+            Some(config.wire_model_name())
+        );
         assert_eq!(config.provider(), REQUIRED_PROVIDER);
         assert_eq!(config.agent.cost_limit, 0.0);
         assert_eq!(config.runtime.iterations, 3);
@@ -212,10 +350,18 @@ mod tests {
 
     #[test]
     fn model_fields_are_passed_through_untouched() {
+        let file = mini_swe_agent::get_config_from_spec(DEFAULT_CONFIG_SPEC).expect("config file");
         let config = load_config(&[]).expect("default config must load");
+        // DR-14: `wire_model_name` must stay in the model JSON handed to mini
+        // (mini ignores the unknown field via `#[serde(flatten)] extra`) and
+        // must never be used to rewrite `model_name`.
+        assert_eq!(
+            config.model.get("wire_model_name").and_then(Value::as_str),
+            file["model"].get("wire_model_name").and_then(Value::as_str)
+        );
         assert_eq!(
             config.model.get("model_name").and_then(Value::as_str),
-            Some(REQUIRED_MODEL_NAME)
+            file["model"].get("model_name").and_then(Value::as_str)
         );
         assert_eq!(
             config.model.get("service_name").and_then(Value::as_str),
@@ -224,12 +370,23 @@ mod tests {
     }
 
     #[test]
-    fn rejects_model_name_without_prefix() {
-        let error = load_config(&overrides(&["model.model_name=qwen/qwen3.8-27b"]))
-            .expect_err("stripped model id must be rejected");
+    fn rejects_a_non_empty_config_api_key() {
+        let error = load_config(&overrides(&["model.api_key=should-not-be-here"]))
+            .expect_err("a config api_key must be rejected (C11)");
         let hof = crate::errors::as_hof_error(&error).expect("typed error");
         assert!(matches!(hof, HofError::ModelIdentityViolation { .. }));
         assert_eq!(hof.exit_code(), 2);
+        assert!(!error.to_string().contains("should-not-be-here"));
+    }
+
+    #[test]
+    fn rejects_a_blank_wire_model_name() {
+        let error = load_config(&overrides(&["model.wire_model_name="]))
+            .expect_err("an empty wire_model_name must be rejected (DR-14)");
+        assert!(matches!(
+            crate::errors::as_hof_error(&error),
+            Some(HofError::ModelIdentityViolation { .. })
+        ));
     }
 
     #[test]
@@ -251,5 +408,64 @@ mod tests {
         .expect("override config must load");
         assert_eq!(config.base_url(), "http://127.0.0.1:9999/v1");
         assert_eq!(config.runtime.iterations, 1);
+    }
+
+    /// C11/DR-15: `model.api_key` (non-empty) → `HOH_MODEL_API_KEY` →
+    /// `OPENAI_API_KEY` → `None`.  Parameterised so no process env is touched.
+    #[test]
+    fn api_key_resolution_follows_the_documented_priority() {
+        let env = |pairs: &[(&str, &str)]| {
+            let pairs: Vec<(String, String)> = pairs
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect();
+            move |name: &str| {
+                pairs
+                    .iter()
+                    .find(|(key, _)| key == name)
+                    .map(|(_, value)| value.clone())
+            }
+        };
+
+        let model = serde_json::json!({"model_name": "m", "api_key": "explicit"});
+        assert_eq!(
+            resolve_api_key_with(&model, env(&[("OPENAI_API_KEY", "env")])),
+            Some("explicit".to_string())
+        );
+
+        let model = serde_json::json!({"model_name": "m", "api_key": ""});
+        assert_eq!(
+            resolve_api_key_with(
+                &model,
+                env(&[("HOH_MODEL_API_KEY", "hoh"), ("OPENAI_API_KEY", "env")])
+            ),
+            Some("hoh".to_string())
+        );
+        assert_eq!(
+            resolve_api_key_with(&model, env(&[("OPENAI_API_KEY", "env")])),
+            Some("env".to_string())
+        );
+        assert_eq!(resolve_api_key_with(&model, env(&[])), None);
+        // Blank values never count as a resolved key.
+        assert_eq!(
+            resolve_api_key_with(
+                &model,
+                env(&[("HOH_MODEL_API_KEY", "   "), ("OPENAI_API_KEY", "")])
+            ),
+            None
+        );
+    }
+
+    /// DR-16: a redacted model section carries no secret, and redaction is pure.
+    #[test]
+    fn redaction_removes_the_secret_without_mutating_the_original() {
+        let model = serde_json::json!({"model_name": "m", "api_key": "leaky-secret"});
+        let redacted = redact_model_value(&model);
+        assert!(redacted.get("api_key").unwrap().is_null());
+        assert_eq!(
+            model.get("api_key").and_then(Value::as_str),
+            Some("leaky-secret"),
+            "redaction must not mutate the caller's value"
+        );
     }
 }

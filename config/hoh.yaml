@@ -1,9 +1,11 @@
 model:
-  model_name: openai/qwen/qwen3.8-27b     # D6：剥掉 openai/ 后上线恰好是 qwen/qwen3.8-27b
-  provider: openai_compatible             # C10：必须显式，否则被判为 aliyun
+  model_name: deepseek-v4.1-flash         # DR-14：模型身份全部来自配置，代码不再认识任何模型名
+  provider: openai_compatible             # C10：必须显式，否则会被推断成 aliyun
   service_name: openai_compatible
-  base_url: http://127.0.0.1:1234/v1
-  api_key: lm-studio
+  wire_model_name: deepseek-v4.1-flash    # DR-14 新增：上线请求体里的 model 必须逐字等于它（双重锁定）
+  base_url: http://100.105.152.101:18080/v1
+  # api_key 必须为空（C11/DR-16）：密钥只从环境变量 HOH_MODEL_API_KEY / OPENAI_API_KEY 读取，不入库。
+  # 这里故意不写 api_key 行：写任何值都会被 assert_model_identity 判为 ModelIdentityViolation。
   use_tool_calls: true
   request_timeout_secs: 900
   max_retries: 3

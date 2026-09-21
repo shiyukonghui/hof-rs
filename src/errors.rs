@@ -13,13 +13,14 @@ pub enum HofError {
     #[error("configuration error: {0}")]
     Config(String),
 
-    #[error(
-        "model identity violation: expected model_name `openai/qwen/qwen3.8-27b` and provider \
-         `openai_compatible`, got model_name `{model_name}` / provider `{provider}` (C9/C10)"
-    )]
+    /// DR-14: the violation carries the offending **configuration values**
+    /// rather than a hard-coded model name.  `actual` must never contain secret
+    /// material (C11).
+    #[error("model identity violation: {reason}; expected `{expected}`, got `{actual}`")]
     ModelIdentityViolation {
-        model_name: String,
-        provider: String,
+        reason: String,
+        expected: String,
+        actual: String,
     },
 
     #[error("contract violation: {violation:?} ({code})")]
@@ -104,8 +105,9 @@ mod tests {
         assert_eq!(HofError::Config("x".into()).exit_code(), 2);
         assert_eq!(
             HofError::ModelIdentityViolation {
-                model_name: "qwen/qwen3.8-27b".into(),
-                provider: "openai_compatible".into()
+                reason: "model.provider must be explicit (C10)".into(),
+                expected: "openai_compatible".into(),
+                actual: "aliyun".into()
             }
             .exit_code(),
             2

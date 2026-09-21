@@ -204,17 +204,25 @@ mod tests {
     use crate::errors::{as_hof_error, HofError};
 
     #[test]
-    fn doctor_rejects_stripped_id() {
-        // C9/C10: a config that strips the `openai/` prefix (or omits the
-        // explicit provider) must be rejected before any run starts.
-        let specs = config_specs(&["model.model_name=qwen/qwen3.8-27b".to_string()]);
-        let error = load_config(&specs).expect_err("stripped id must be rejected");
+    fn doctor_rejects_invalid_model_identity() {
+        // C9/C10/C11 + DR-14: a missing explicit provider, a blank
+        // `wire_model_name`, or a secret in the file must be rejected before
+        // any run starts.  The check knows no concrete model name.
+        let specs = config_specs(&["model.provider=aliyun".to_string()]);
+        let error = load_config(&specs).expect_err("implicit provider must be rejected");
         let hof = as_hof_error(&error).expect("typed error");
         assert!(matches!(hof, HofError::ModelIdentityViolation { .. }));
         assert_eq!(hof.exit_code(), 2);
 
-        let specs = config_specs(&["model.provider=aliyun".to_string()]);
-        let error = load_config(&specs).expect_err("implicit provider must be rejected");
+        let specs = config_specs(&["model.wire_model_name=".to_string()]);
+        let error = load_config(&specs).expect_err("blank wire id must be rejected");
+        assert!(matches!(
+            as_hof_error(&error),
+            Some(HofError::ModelIdentityViolation { .. })
+        ));
+
+        let specs = config_specs(&["model.api_key=must-not-be-stored".to_string()]);
+        let error = load_config(&specs).expect_err("a config secret must be rejected (C11)");
         assert!(matches!(
             as_hof_error(&error),
             Some(HofError::ModelIdentityViolation { .. })
