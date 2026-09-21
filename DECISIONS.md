@@ -1634,6 +1634,44 @@
   与 TASK-008 一起顺手清理即可，不值得单独一轮。
 - 回滚点：写组实现可整提交回退；描述改动可由 `DESCRIPTION_OVERRIDES` 单条 revert。
 
+## D55 — TASK-008 交付（B1 达 40/41）；fix-first 首次见效；第 5 例迁移源缺陷
+
+- 日期：2026-09（B1 = **40/41**；仅剩 `running_game_read_scene` 的 1 个 `scope=game` 工具）
+- **TASK-008 交付**（组 `editor_write_scene_editor`，10 个编辑器写工具；冻结 `7292af5930`，
+  引擎 sha `557a31da…`）：
+  - 门① **3/3**（编辑器 40 逐字 / 游戏 23 且十个工具**全部正确缺席**）；门③ doctest **94/94·1728**；
+    门④ 全引擎 **1520/1520·0 failed**；门⑤ `accept_m1.ps1` **22/22 连跑两次**；
+    门② 新建证据驱动器：主 41/41、GUI 7/7（**真实 3840×2054 PNG**）、无插件 3/3、游戏调用 14/14，**65/65**。
+  - **fix-first 首次见效（D45 的 7 个 `fix_implementation_first` 中第一个被真正修掉）**：
+    红阶段**线上实测**迁移源行为返回 `{"cleared":true,"log_was_empty":false,"log_is_empty":false}`
+    （面板实测**并未清空**），doctest 在 `CHECK_FALSE(result.cleared)` 上失败；
+    修法走 (a)：接 **`EditorNode::get_log()->clear()`**（正是 Output 面板 Clear 按钮的处理函数），
+    绿阶段返回 `{"cleared":true,"log_was_empty":false,"log_is_empty":true}`，
+    且**第二次调用**报 `log_was_empty:true`（只有第一次真清空才可能如此）；
+    外部对照：引擎日志文件里 3 条标记仍在 → 证明不是靠截断日志文件冒充清屏。
+  - **助手去重第二次**：原子发布助手上提到 `tools/tool_helpers.*`，等价性证明 **36/36 响应文件逐字节相同**（`85f4ca55…`）。
+  - 状态变化**证据链**（用另一个读工具观察）：`scene_path` main→second.tscn；选区 0→1→2→1→0；
+    相机位置 (1,2,3) 调用后可读；原子发布的反例（只读目标）保持**逐字节不变**且 `bad.txt` 未被创建、
+    无 `.mcp-tmp` 残留。
+- **偏差裁决（全部接受）**：
+  1. **`editor_reload_plugin` 被重新瞄准**：迁移源**硬编码 `godot_mcp` 插件名**并 disable+enable，
+     而我们的 MCP 服务是**内置模块、没有插件** → 照抄会变成**空操作却返回 `{"reloading":true}`**（又是一次谎报）。
+     实现者改为作用于**项目里真实启用的插件**，空列表则**诚实地**返回 `-32000`+建议。**接受**——
+     这是**第 5 例**「迁移源本身会谎报、必须偏离」。
+  2. `editor_open_scene` 校验「编辑器真的打开了该文件」，存在但不可加载 → `-32001`+建议（不返回假的 `opened:true`）→ 接受。
+  3. `editor_save_scene` 用 `PackedScene::pack` + `ResourceSaver::save(temp)` + 原子改名，而**不用**
+     `EditorInterface::save_scene_as`（后者会把编辑场景**重定向**到它写入的路径）→ 接受；
+     **但记录风险**：因此**不复制**编辑器保存管线的额外副作用（editor states、外部资源、folding、
+     PRE/POST_SAVE 通知）——这是一个**已知功能缺口**，留待后续需要时补。
+  4. `editor_capture_screenshot` 把 `save_path` 写入失败当**错误**（迁移源吞掉失败仍报成功）→ 接受。
+  5/6. 属性值强制转换的局部子集、`_require_editor_ui` 的第二份副本（组间不得互改文件所致）
+     → 接受，并排入 **TASK-009 §2 去重批次**（带同样的逐字节等价证明）。
+  7. 红阶段用「迁移源行为 + 只读测量仪」构造，因为**不这样谎言在线级根本不可观察** → 接受（这是必要手段）。
+- **环境陷阱已记录并要固化**（TASK-009 §3）：仓库根 `build-m0.cmd`（未跟踪）**没有 `tests=yes`**
+  → 容易在**无测试的二进制**上跑门；且**修改 `tests/test_mcp_server.h` 后不删过期 obj 不会重新编译测试 TU**。
+  → 在模块内提交**受跟踪**的 `scripts/build_local.cmd`，把这些写进脚本注释。
+- 回滚点：TASK-008 的代码改动可整提交回退。
+
 
 
 
