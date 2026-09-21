@@ -140,6 +140,22 @@ pub fn usage_from_attempts(traj_dir: &Path, role: Role, iteration: u32) -> anyho
     Ok(merged)
 }
 
+/// DR-22: read the per-role summary out of a `usage.json` value.
+///
+/// Accepts the legacy bare-array form and the current
+/// `{"schema":1,"summary":[...],"attempts":[...]}` object, so `hoh status`
+/// keeps working on runs produced before the format change.
+pub fn usage_summary_of(value: &Value) -> Vec<Value> {
+    if let Some(array) = value.as_array() {
+        return array.clone();
+    }
+    value
+        .get("summary")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -154,5 +170,15 @@ mod tests {
         let UsageBlock { total, .. } =
             read_usage_block(&serde_json::json!({ "prompt_tokens": 10 }));
         assert_eq!(total, None);
+    }
+
+    #[test]
+    fn usage_summary_reads_both_shapes() {
+        let legacy = serde_json::json!([{"role": "planner"}]);
+        assert_eq!(usage_summary_of(&legacy).len(), 1);
+        let modern =
+            serde_json::json!({"schema": 1, "summary": [{"role": "planner"}], "attempts": []});
+        assert_eq!(usage_summary_of(&modern).len(), 1);
+        assert!(usage_summary_of(&serde_json::json!(null)).is_empty());
     }
 }

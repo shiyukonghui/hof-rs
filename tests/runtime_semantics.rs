@@ -235,9 +235,15 @@ async fn records_all_artifacts() {
     let spec = hof_rs::config::load_spec(&root.join("spec.md")).unwrap();
     assert_eq!(meta["spec"]["sha256"], serde_json::json!(spec.sha256));
 
+    // DR-22: `usage.json` keeps the per-role summary under `summary` and adds
+    // the attempt-level detail under `attempts`.
     let usage: serde_json::Value =
         serde_json::from_str(&read(&iter_dir.join("usage.json"))).unwrap();
-    assert_eq!(usage.as_array().unwrap().len(), 3);
+    assert_eq!(usage["summary"].as_array().unwrap().len(), 3);
+    assert!(
+        !usage["attempts"].as_array().unwrap().is_empty(),
+        "usage.json must detail every attempt: {usage}"
+    );
 
     let result_json: serde_json::Value =
         serde_json::from_str(&read(&iter_dir.join("result.json"))).unwrap();

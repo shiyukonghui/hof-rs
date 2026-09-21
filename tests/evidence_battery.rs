@@ -278,6 +278,7 @@ async fn run_battery(
         cfg,
         ablation: Ablation::default(),
         force_init: true,
+        start_state: hof_rs::runtime::start_state::StartState::as_is(),
     };
     hof_rs::runtime::run_loop::run(&orchestrator, &spec, "run-1")
         .await

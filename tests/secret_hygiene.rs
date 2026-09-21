@@ -87,6 +87,7 @@ fn meta_json_is_redacted_at_the_sink() {
             "wire_model_name": "model",
             "api_key": FAKE_KEY
         }),
+        start_state: hof_rs::runtime::start_state::StartState::as_is(),
     };
     write_run_meta(&run_dir, &meta).expect("write meta");
 

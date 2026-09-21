@@ -162,6 +162,7 @@ async fn e1_single_iteration_smoke() {
         cfg: config,
         ablation: hof_rs::model::Ablation::default(),
         force_init: false,
+        start_state: hof_rs::runtime::start_state::StartState::as_is(),
     };
     let summary = run_loop::run(&orchestrator, &spec, SMOKE_RUN_ID)
         .await

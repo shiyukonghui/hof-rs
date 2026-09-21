@@ -30,7 +30,8 @@ use crate::runtime::policy::{
     assert_unchanged, diff_manifests, hash_tree, tree_manifest, HashExcludes,
 };
 use crate::runtime::record::{
-    append_warning, write_iter_result, write_log, write_run_meta, write_usage, IterResult, RunMeta,
+    append_warning, record_attempts, write_iter_result, write_run_meta, write_usage, IterResult,
+    RunMeta,
 };
 use crate::runtime::role::RoleInvocation;
 use crate::runtime::schema::{gate_evidence_traced, gate_plan_traced, AttemptOutcome};
@@ -57,6 +58,8 @@ pub struct Orchestrator {
     pub ablation: Ablation,
     /// Whether `initialize` may replace an existing non-empty workspace.
     pub force_init: bool,
+    /// DR-21: how the workspace was prepared before this run started.
+    pub start_state: crate::runtime::start_state::StartState,
 }
 
 #[derive(Clone, Debug)]
@@ -157,7 +160,7 @@ fn finalize_failure(
     attempts: Vec<AttemptOutcome>,
     secret_redactions: u64,
 ) -> anyhow::Result<()> {
-    write_usage(run_dir, iteration, &usage)?;
+    write_usage(run_dir, iteration, &usage, &attempts)?;
     let result = IterResult {
         ok: false,
         failed_role: Some(role),
@@ -237,6 +240,7 @@ pub async fn run(
         hoh_version: env!("CARGO_PKG_VERSION").to_string(),
         warnings: warnings.clone(),
         config: cfg.model.clone(),
+        start_state: orchestrator.start_state.clone(),
     };
     write_run_meta(&run_dir, &meta)?;
     append_warning(&run_dir, MCP_SCOPE_WARNING)?;
@@ -275,6 +279,9 @@ pub async fn run(
         let m_pre = tree_manifest(&workspace, &excludes)?;
         let plan_path = iter_dir.join("plan.md");
         let planner_view = iter_dir.join("planner-view");
+        // DR-22: hoisted so the post-planner contract check can annotate the
+        // attempt logs even when the Planner was skipped by the ablation.
+        let mut planner_attempts: Vec<AttemptOutcome> = Vec::new();
 
         let doc: DevelopmentDoc = if orchestrator.ablation.plan_update || iteration == 1 {
             let source = if iteration == 1 || orchestrator.ablation.warm_start {
@@ -324,13 +331,14 @@ pub async fn run(
             };
 
             let started = Instant::now();
-            let (gate_result, mut planner_attempts) = gate_plan_traced(
+            let (gate_result, gathered_attempts) = gate_plan_traced(
                 &*orchestrator.harness,
                 &base,
                 cfg.runtime.max_schema_retries,
                 1,
             )
             .await;
+            planner_attempts = gathered_attempts;
             let mut wrap_up_retry_used = false;
             let outcome = match gate_result {
                 Ok(doc) => Ok(doc),
@@ -369,6 +377,17 @@ pub async fn run(
                 iter_wrap_up_retry_used = true;
             }
             iter_attempts.extend(planner_attempts.clone());
+            // DR-22: one symmetric trajectory/log pair per attempt.
+            let planner_note = outcome
+                .as_ref()
+                .err()
+                .map(|error| format!("planner gate failed: {error}"));
+            record_attempts(
+                &run_dir,
+                iteration,
+                &planner_attempts,
+                planner_note.as_deref(),
+            )?;
             let planner_usage = usage_from_attempts(&traj_dir, Role::Planner, iteration)?;
             iter_usage.push(planner_usage.clone());
 
@@ -388,15 +407,6 @@ pub async fn run(
                         }
                         _ => Vec::new(),
                     };
-                    write_log(
-                        &run_dir,
-                        iteration,
-                        "planner",
-                        &format!(
-                            "schema_failure after {} attempt(s): {error}",
-                            planner_attempts.len()
-                        ),
-                    )?;
                     finalize_failure(
                         &run_dir,
                         iteration,
@@ -429,15 +439,16 @@ pub async fn run(
         if let Err(violation) = assert_unchanged("planner", &h_pre, &h_post) {
             let m_post = manifest_or_empty(&workspace, &excludes);
             let diff = diff_manifests(&m_pre, &m_post);
-            write_log(
+            // DR-22: the note lands on the attempt log instead of a side file.
+            record_attempts(
                 &run_dir,
                 iteration,
-                "planner",
-                &format!(
-                    "contract violation: {}\nevidence_diff: {}",
+                &planner_attempts,
+                Some(&format!(
+                    "contract_violation: {} (evidence_diff: {})",
                     violation.code(),
                     pretty(&diff)
-                ),
+                )),
             )?;
             finalize_failure(
                 &run_dir,
@@ -497,30 +508,11 @@ pub async fn run(
             retry_context: None,
         };
         let mut developer_outcome = invoke_once(&*orchestrator.harness, &developer).await?;
-        let mut developer_attempt = 1;
         let mut developer_limits = is_limits_exceeded(&developer_outcome.exit_status);
-        // DR-18: the Developer has no submitted artifact (the project is the
-        // artifact), so the wrap-up rule is triggered by the budget running out.
-        if developer_limits {
-            iter_wrap_up_retry_used = true;
-            developer_attempt += 1;
-            let mut wrap_base = developer.clone();
-            wrap_base.limits.step_limit = cfg.agent.wrap_up_steps.min(WRAP_UP_RETRY_MAX_STEPS);
-            wrap_base.system_prompt =
-                render_prompt_with_budget(prompts::DEVELOPER_PROMPT, iteration, &wrap_base.limits);
-            wrap_base.retry_context = Some(WRAP_UP_RETRY_CONTEXT.to_string());
-            wrap_base.trajectory_path =
-                attempt_trajectory(&traj_dir, Role::Developer, developer_attempt);
-            let mut total_duration = developer_outcome.duration_ms;
-            developer_outcome = invoke_once(&*orchestrator.harness, &wrap_base).await?;
-            total_duration += developer_outcome.duration_ms;
-            developer_outcome.duration_ms = total_duration;
-            developer_limits = is_limits_exceeded(&developer_outcome.exit_status);
-        }
-        iter_attempts.push(AttemptOutcome {
+        let mut developer_attempts: Vec<AttemptOutcome> = vec![AttemptOutcome {
             role: Role::Developer,
             iteration,
-            attempt: developer_attempt,
+            attempt: 1,
             exit_status: developer_outcome.exit_status.clone(),
             duration_ms: developer_outcome.duration_ms,
             usage: developer_outcome.usage.clone(),
@@ -530,22 +522,40 @@ pub async fn run(
             // as the workspace directory does.
             artifact_valid: workspace.is_dir(),
             exit_was_limits: developer_limits,
-        });
+        }];
+        // DR-18: the Developer has no submitted artifact (the project is the
+        // artifact), so the wrap-up rule is triggered by the budget running out.
+        if developer_limits {
+            iter_wrap_up_retry_used = true;
+            let mut wrap_base = developer.clone();
+            wrap_base.limits.step_limit = cfg.agent.wrap_up_steps.min(WRAP_UP_RETRY_MAX_STEPS);
+            wrap_base.system_prompt =
+                render_prompt_with_budget(prompts::DEVELOPER_PROMPT, iteration, &wrap_base.limits);
+            wrap_base.retry_context = Some(WRAP_UP_RETRY_CONTEXT.to_string());
+            wrap_base.trajectory_path = attempt_trajectory(&traj_dir, Role::Developer, 2);
+            developer_outcome = invoke_once(&*orchestrator.harness, &wrap_base).await?;
+            developer_limits = is_limits_exceeded(&developer_outcome.exit_status);
+            developer_attempts.push(AttemptOutcome {
+                role: Role::Developer,
+                iteration,
+                attempt: 2,
+                exit_status: developer_outcome.exit_status.clone(),
+                duration_ms: developer_outcome.duration_ms,
+                usage: developer_outcome.usage.clone(),
+                trajectory_path: developer_outcome.trajectory_path.clone(),
+                artifact_path: developer.cwd.clone(),
+                artifact_valid: workspace.is_dir(),
+                exit_was_limits: developer_limits,
+            });
+        }
+        // DR-22: the Developer now uses the same `attempt` naming as the other
+        // roles, so every attempt has a trajectory and a log.
+        record_attempts(&run_dir, iteration, &developer_attempts, None)?;
+        iter_attempts.extend(developer_attempts.clone());
         durations.push(("developer".to_string(), developer_outcome.duration_ms));
         iter_usage.push(developer_outcome.usage.clone());
         // DR-19: scrub after the developer (the only writer) too.
         iter_secret_redactions += crate::runtime::secrets::redact_tree(&run_dir, &secrets)?;
-        write_log(
-            &run_dir,
-            iteration,
-            "developer",
-            &format!(
-                "exit_status={} duration_ms={} submission={}\n",
-                developer_outcome.exit_status,
-                developer_outcome.duration_ms,
-                developer_outcome.submission
-            ),
-        )?;
 
         let h_dev_after = hash_tree(&workspace, &excludes)?;
         if h_dev_before == h_dev_after {
@@ -649,12 +659,13 @@ pub async fn run(
             let m_ws = manifest_or_empty(&workspace, &excludes);
             let m_frozen = manifest_or_empty(&store.root.join(&version.version_id), &excludes);
             let diff = diff_manifests(&m_frozen, &m_ws);
-            write_log(
+            // No tester attempt has run yet, so this cannot be an attempt-log
+            // note; it goes to the run-level warning log.
+            append_warning(
                 &run_dir,
-                iteration,
-                "tester",
                 &format!(
-                    "contract violation: {} (workspace {} != candidate {})\nevidence_diff: {}",
+                    "iteration {iteration}: contract violation {} (workspace {} != candidate {}) \
+                     evidence_diff: {}",
                     ContractViolation::WorkspaceDriftBeforeQa.code(),
                     workspace_now,
                     version.candidate_id,
@@ -748,6 +759,17 @@ pub async fn run(
         let _ = tester_wrap_up_retry_used;
         durations.push(("tester".to_string(), started.elapsed().as_millis() as u64));
         iter_attempts.extend(tester_attempts.clone());
+        // DR-22: symmetric trajectory/log pair per tester attempt.
+        let tester_note = gate
+            .as_ref()
+            .err()
+            .map(|error| format!("tester gate failed: {error}"));
+        record_attempts(
+            &run_dir,
+            iteration,
+            &tester_attempts,
+            tester_note.as_deref(),
+        )?;
         let tester_usage = usage_from_attempts(&traj_dir, Role::Tester, iteration)?;
         iter_usage.push(tester_usage);
         // DR-19: scrub after the tester before any of its output is recorded.
@@ -798,15 +820,6 @@ pub async fn run(
                     }
                     _ => Vec::new(),
                 };
-                write_log(
-                    &run_dir,
-                    iteration,
-                    "tester",
-                    &format!(
-                        "schema_failure after {} attempt(s): {error}",
-                        tester_attempts.len()
-                    ),
-                )?;
                 finalize_failure(
                     &run_dir,
                     iteration,
@@ -834,23 +847,11 @@ pub async fn run(
             qa_report_fallback(&bundle)
         };
         std::fs::write(iter_dir.join("qa_report.md"), report.replace("\r\n", "\n"))?;
-        write_log(
-            &run_dir,
-            iteration,
-            "tester",
-            &format!(
-                "qa_status={:?} verified={} gaps={} candidate_id={}\n",
-                bundle.qa_status,
-                bundle.verified_records.len(),
-                bundle.gap_records.len(),
-                version.candidate_id
-            ),
-        )?;
 
         for usage in &iter_usage {
             merge_usage(&mut total_usage, usage);
         }
-        write_usage(&run_dir, iteration, &iter_usage)?;
+        write_usage(&run_dir, iteration, &iter_usage, &iter_attempts)?;
 
         // DR-19: one last sweep, so nothing written between the last stage and
         // here can leave a credential behind.
@@ -893,15 +894,16 @@ fn fail_contract(
     attempts: Vec<AttemptOutcome>,
     secret_redactions: u64,
 ) -> anyhow::Result<RunSummary> {
-    write_log(
+    // DR-22: the violation is a note on the attempt log, not a side file.
+    record_attempts(
         run_dir,
         iteration,
-        role.as_str(),
-        &format!(
-            "contract violation: {}\nevidence_diff: {}",
+        &attempts,
+        Some(&format!(
+            "contract_violation: {} (evidence_diff: {})",
             violation.code(),
             pretty(&evidence_diff)
-        ),
+        )),
     )?;
     finalize_failure(
         run_dir,

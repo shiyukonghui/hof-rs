@@ -51,6 +51,16 @@ pub struct RunArgs {
     /// is idempotent (DR-9).
     #[arg(long)]
     pub force_init: bool,
+    /// DR-21: empty the configured workspace and rebuild `A₀` before running.
+    /// The workspace directory must already exist; it is never created or
+    /// guessed, and no path outside it is ever touched.
+    #[arg(long)]
+    pub fresh_workspace: bool,
+    /// DR-21: roll the workspace back to this run's `A₀` snapshot before
+    /// running.  Fails (without touching the workspace) when no such snapshot
+    /// exists.
+    #[arg(long)]
+    pub reset_workspace: bool,
     #[arg(long)]
     pub resume: bool,
 }

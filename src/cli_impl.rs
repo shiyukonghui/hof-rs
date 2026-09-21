@@ -456,13 +456,35 @@ pub async fn run(args: RunArgs) -> anyhow::Result<i32> {
     let spec = load_spec(&config.runtime.spec)?;
     let run_id = args.run_id.clone().unwrap_or_else(default_run_id);
     let run_dir = config.runtime.runs_dir.join(&run_id);
-    if run_dir.exists() {
+    // DR-21: `--reset-workspace` needs this run's existing `A₀` snapshot, so an
+    // existing run directory is expected for that mode only.
+    if run_dir.exists() && !args.reset_workspace {
         return Err(HofError::Config(format!(
             "run directory {} already exists; pass --resume (not implemented in v1)",
             run_dir.display()
         ))
         .into());
     }
+    if args.fresh_workspace && args.reset_workspace {
+        return Err(HofError::Config(
+            "--fresh-workspace and --reset-workspace are mutually exclusive".to_string(),
+        )
+        .into());
+    }
+
+    // DR-21: prepare the starting point.  Both modes validate before they
+    // touch anything, and both are restricted to the configured workspace.
+    let start_state = if args.fresh_workspace {
+        crate::runtime::start_state::fresh_workspace(&workspace, &*adapter)?;
+        crate::runtime::start_state::StartState::fresh()
+    } else if args.reset_workspace {
+        let excludes = HashExcludes::new(adapter.cache_excludes()).merged();
+        let version_id =
+            crate::runtime::start_state::reset_workspace(&workspace, &run_dir, &excludes)?;
+        crate::runtime::start_state::StartState::reset(version_id)
+    } else {
+        crate::runtime::start_state::StartState::as_is()
+    };
 
     let harness = crate::harness::MiniHarness::new();
     let tools: Arc<dyn ToolChannel> = if args.adapter == "test" {
@@ -477,6 +499,7 @@ pub async fn run(args: RunArgs) -> anyhow::Result<i32> {
         cfg: config,
         ablation,
         force_init: args.force_init,
+        start_state,
     };
 
     let summary = run_loop::run(&orchestrator, &spec, &run_id).await?;
@@ -573,7 +596,8 @@ pub async fn status(args: StatusArgs) -> anyhow::Result<i32> {
             .unwrap_or(Value::Null);
         let usage: Vec<Value> = std::fs::read_to_string(iter_dir.join("usage.json"))
             .ok()
-            .and_then(|raw| serde_json::from_str(&raw).ok())
+            .and_then(|raw| serde_json::from_str::<Value>(&raw).ok())
+            .map(|value| crate::runtime::usage::usage_summary_of(&value))
             .unwrap_or_default();
         let mut iteration_unknown = false;
         for entry in &usage {

@@ -22,6 +22,9 @@ pub struct RunMeta {
     pub warnings: Vec<String>,
     /// The model section exactly as it is passed to the harness.
     pub config: serde_json::Value,
+    /// DR-21: how the workspace was prepared for this run.
+    #[serde(default)]
+    pub start_state: crate::runtime::start_state::StartState,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -103,12 +106,143 @@ pub fn write_iter_result(
     )
 }
 
+/// DR-22: the attempt-level detail written into `usage.json` alongside the
+/// per-role summary.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AttemptUsage {
+    pub role: String,
+    pub iteration: u32,
+    pub attempt: u32,
+    pub exit_status: String,
+    pub duration_ms: u64,
+    pub artifact_path: String,
+    pub artifact_valid: bool,
+    pub calls: u64,
+    pub prompt_tokens: Option<u64>,
+    pub completion_tokens: Option<u64>,
+    pub total_tokens: Option<u64>,
+    pub cache_hit_tokens: Option<u64>,
+    pub cache_miss_tokens: Option<u64>,
+    pub usage_known: bool,
+}
+
+impl AttemptUsage {
+    pub fn from_attempt(attempt: &AttemptOutcome) -> Self {
+        let usage = &attempt.usage;
+        Self {
+            role: attempt.role.as_str().to_string(),
+            iteration: attempt.iteration,
+            attempt: attempt.attempt,
+            exit_status: attempt.exit_status.clone(),
+            duration_ms: attempt.duration_ms,
+            artifact_path: attempt.artifact_path.to_string_lossy().into_owned(),
+            artifact_valid: attempt.artifact_valid,
+            calls: usage.calls,
+            prompt_tokens: usage.prompt_tokens,
+            completion_tokens: usage.completion_tokens,
+            total_tokens: usage.total_tokens,
+            cache_hit_tokens: usage.cache_hit_tokens,
+            cache_miss_tokens: usage.cache_miss_tokens,
+            usage_known: usage.usage_known,
+        }
+    }
+}
+
 /// Write `runs/<id>/iter-<t>/usage.json`.
-pub fn write_usage(run_dir: &Path, iteration: u32, usage: &[Usage]) -> anyhow::Result<()> {
+///
+/// DR-22: the per-role summary is preserved under `summary`, and the
+/// attempt-level detail is added under `attempts`.
+pub fn write_usage(
+    run_dir: &Path,
+    iteration: u32,
+    summary: &[Usage],
+    attempts: &[AttemptOutcome],
+) -> anyhow::Result<()> {
+    let value = serde_json::json!({
+        "schema": 1,
+        "summary": summary,
+        "attempts": attempts.iter().map(AttemptUsage::from_attempt).collect::<Vec<_>>(),
+    });
     write_json(
         &run_dir.join(format!("iter-{iteration}/usage.json")),
-        &usage,
+        &value,
     )
+}
+
+/// DR-22: write the symmetric log for every attempt of a role and annotate the
+/// trajectory with the same facts.
+///
+/// The log and the trajectory both carry `exit_status`, `duration_ms`, `usage`
+/// and `artifact_path`, so a single failed call can always be identified.
+pub fn record_attempts(
+    run_dir: &Path,
+    iteration: u32,
+    attempts: &[AttemptOutcome],
+    note: Option<&str>,
+) -> anyhow::Result<()> {
+    for (index, attempt) in attempts.iter().enumerate() {
+        let last = index + 1 == attempts.len();
+        let enriched = enrich_trajectory(attempt).unwrap_or(false);
+        let log = serde_json::json!({
+            "role": attempt.role.as_str(),
+            "iteration": attempt.iteration,
+            "attempt": attempt.attempt,
+            "exit_status": attempt.exit_status,
+            "duration_ms": attempt.duration_ms,
+            "usage": attempt.usage,
+            "artifact_path": attempt.artifact_path.to_string_lossy(),
+            "artifact_valid": attempt.artifact_valid,
+            "exit_was_limits": attempt.exit_was_limits,
+            "trajectory_enriched": enriched,
+            // Only the final attempt of a batch carries the batch note (e.g.
+            // "schema_failure after 3 attempts").
+            "notes": if last { note.unwrap_or("") } else { "" },
+        });
+        let path = run_dir.join(format!(
+            "iter-{iteration}/logs/{}.attempt{}.log",
+            attempt.role.as_str(),
+            attempt.attempt
+        ));
+        write_json(&path, &log)?;
+    }
+    Ok(())
+}
+
+/// Add the `hoh` block to a trajectory so it states the same facts as its log.
+///
+/// Best effort: a trajectory that is missing or not a JSON object is left
+/// alone (the log still records `trajectory_enriched = false`), because an
+/// enrichment failure must never mask the actual round outcome.
+fn enrich_trajectory(attempt: &AttemptOutcome) -> anyhow::Result<bool> {
+    let Ok(raw) = std::fs::read_to_string(&attempt.trajectory_path) else {
+        return Ok(false);
+    };
+    let Ok(mut value) = serde_json::from_str::<serde_json::Value>(&raw) else {
+        return Ok(false);
+    };
+    let Some(object) = value.as_object_mut() else {
+        return Ok(false);
+    };
+    object.insert(
+        "hoh".to_string(),
+        serde_json::json!({
+            "role": attempt.role.as_str(),
+            "iteration": attempt.iteration,
+            "attempt": attempt.attempt,
+            "exit_status": attempt.exit_status,
+            "duration_ms": attempt.duration_ms,
+            "usage": attempt.usage,
+            "artifact_path": attempt.artifact_path.to_string_lossy(),
+            "artifact_valid": attempt.artifact_valid,
+            "exit_was_limits": attempt.exit_was_limits,
+        }),
+    );
+    write_atomic_shim(&attempt.trajectory_path, &value)?;
+    Ok(true)
+}
+
+fn write_atomic_shim(path: &Path, value: &serde_json::Value) -> anyhow::Result<()> {
+    crate::runtime::snapshot::write_atomic(path, serde_json::to_string_pretty(value)?.as_bytes())
 }
 
 /// Write `runs/<id>/iter-<t>/logs/<role>.log`.
