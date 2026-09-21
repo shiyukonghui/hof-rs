@@ -170,24 +170,69 @@ pub fn suspicious_files(root: &Path) -> Vec<String> {
     found.into_iter().take(SUSPICIOUS_LIMIT).collect()
 }
 
-/// DR-26: does this trajectory text look like it read the harness or an
-/// external repository?  Report-only: behaviour never changes.
+/// DR-26/DR-32: does this **tool command or argument** mention the harness
+/// sources or an external repository checkout?  Report-only: behaviour never
+/// changes.
+///
+/// DR-32: the marker set is only ever applied to tool text.  The whole-repo
+/// variants are deliberately broad (`src/`, `.spec/`) because the prompts
+/// themselves name those paths, so anything narrower would miss a real read —
+/// see [`mentions_forbidden_source_in_actions`].
 pub fn mentions_forbidden_source(text: &str) -> bool {
     const MARKERS: &[&str] = &[
-        "src/runtime",
-        "src/adapter",
-        "src/prompts",
+        "src/",
+        "src\\",
         ".spec/",
+        ".spec\\",
         "tests/fixtures",
         "tests/common",
+        "tests\\common",
         "RustProjects",
         ".git/",
-        "src\\runtime",
-        "src\\adapter",
-        "src\\prompts",
-        "tests\\common",
+        ".git\\",
     ];
     MARKERS.iter().any(|marker| text.contains(marker))
+}
+
+/// DR-32: scan **only** the tool calls of a trajectory (`messages[*].extra.
+/// actions[*]`, plus the arguments nested inside them).
+///
+/// `smoke-t3` produced an unconditional `harness_source_read` warning: the
+/// detector ran over the raw trajectory text, where the system prompt's own
+/// "never read `src/**`" sentence matched.  The prompt can never be evidence of
+/// what the role *did*.
+pub fn mentions_forbidden_source_in_actions(trajectory: &str) -> bool {
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(trajectory) else {
+        return false;
+    };
+    let Some(messages) = value.get("messages").and_then(serde_json::Value::as_array) else {
+        return false;
+    };
+    for message in messages {
+        let Some(actions) = message
+            .get("extra")
+            .and_then(|extra| extra.get("actions"))
+            .and_then(serde_json::Value::as_array)
+        else {
+            continue;
+        };
+        for action in actions {
+            let mut stack = vec![action];
+            while let Some(node) = stack.pop() {
+                match node {
+                    serde_json::Value::String(text) => {
+                        if mentions_forbidden_source(text) {
+                            return true;
+                        }
+                    }
+                    serde_json::Value::Array(items) => stack.extend(items.iter()),
+                    serde_json::Value::Object(fields) => stack.extend(fields.values()),
+                    _ => {}
+                }
+            }
+        }
+    }
+    false
 }
 
 #[cfg(test)]
@@ -254,9 +299,48 @@ mod tests {
         );
     }
 
+    /// DR-32: the prompt is not evidence; a tool command is.
     #[test]
-    fn suspicious_files_ignores_the_runtime_directories() {
-        let temp = tempfile::tempdir().unwrap();
+    fn the_source_read_scan_ignores_prompts_and_reads_tool_commands() {
+        let prompt_only = serde_json::json!({
+            "messages": [
+                {"role": "system", "content": "never read src/runtime/** or .spec/**",
+                 "extra": {"actions": []}},
+                {"role": "assistant", "content": "sure", "extra": {"actions": []}}
+            ]
+        })
+        .to_string();
+        assert!(
+            !mentions_forbidden_source_in_actions(&prompt_only),
+            "a prompt that names the forbidden paths is not a read"
+        );
+
+        let with_command = serde_json::json!({
+            "messages": [
+                {"role": "system", "content": "never read src/runtime/**"},
+                {"role": "assistant", "content": "",
+                 "extra": {"actions": [{"command": "cat src/config.rs"}]}}
+            ]
+        })
+        .to_string();
+        assert!(mentions_forbidden_source_in_actions(&with_command));
+
+        // The arguments nested inside an action count too.
+        let args_only = serde_json::json!({
+            "messages": [{"role": "assistant", "extra": {"actions": [
+                {"command": "hoh tools call read_script",
+                 "args": {"path": "F:\\RustProjects\\godot-mcp-pro\\x.gd"}}
+            ]}}]
+        })
+        .to_string();
+        assert!(mentions_forbidden_source_in_actions(&args_only));
+
+        // A trajectory that is not JSON yields no evidence (never a guess).
+        assert!(!mentions_forbidden_source_in_actions("not json"));
+    }
+
+    #[test]
+    fn suspicious_files_ignores_the_runtime_directories() {        let temp = tempfile::tempdir().unwrap();
         let root = temp.path();
         write(&root.join(".hoh/scratch/_probe.gd"), "x\n");
         write(&root.join(".godot/_tmp_cache"), "x\n");

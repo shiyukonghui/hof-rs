@@ -242,7 +242,7 @@ async fn reading_harness_sources_is_recorded_as_a_warning() {
     let script = vec![
         FakeStep::new(Role::Planner)
             .writing(".hoh/plan.md", OK_PLAN)
-            .trajectory_mentioning("grep -n play_scene src/runtime/run_loop.rs"),
+            .trajectory_mentioning("cat src/config.rs"),
         FakeStep::new(Role::Developer).writing("project.godot", "config_version=5\n"),
         FakeStep::new(Role::Tester)
             .writing(".hoh/evidence/move.json", "{}\n")
@@ -259,5 +259,71 @@ async fn reading_harness_sources_is_recorded_as_a_warning() {
             .iter()
             .any(|warning| warning == "harness_source_read"),
         "the source read must be traced: {warnings:?}"
+    );
+}
+
+/// DR-32 ①: the prompt itself lists the forbidden paths ("do not read
+/// `src/**`, `.spec/**`, ...").  `smoke-t3` reported `harness_source_read`
+/// **unconditionally** because that list was scanned as if it were evidence.
+/// A prompt without a read command must stay silent.
+#[tokio::test]
+async fn a_prompt_that_lists_forbidden_paths_is_not_a_source_read() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let script = vec![
+        FakeStep::new(Role::Planner)
+            .writing(".hoh/plan.md", OK_PLAN)
+            .trajectory_prompt_containing(
+                "Never read src/** , src/runtime/run_loop.rs, .spec/** or tests/common/** .",
+            ),
+        FakeStep::new(Role::Developer)
+            .writing("project.godot", "config_version=5\n")
+            .trajectory_prompt_containing("Do not read src/adapter/godot.rs or F:\\RustProjects\\** ."),
+        FakeStep::new(Role::Tester)
+            .writing(".hoh/evidence/move.json", "{}\n")
+            .trajectory_prompt_containing("Stay out of .spec/ and .git/ .")
+            .writing(".hoh/evidence.json", &ok_evidence(1, "")),
+    ];
+    let (result, _) = run_scenario(root, 1, script, Ablation::default(), FakeAdapter::new()).await;
+    result.expect("the happy path must complete");
+
+    let json: Value =
+        serde_json::from_str(&read(&root.join("runs/run-1/iter-1/result.json"))).unwrap();
+    let warnings = json["warnings"].as_array().expect("warnings");
+    assert!(
+        !warnings
+            .iter()
+            .any(|warning| warning == "harness_source_read"),
+        "a prompt that merely names the forbidden paths is not a source read: {warnings:?}"
+    );
+}
+
+/// DR-32 ②: a real read command in the action stream — and only that — is the
+/// evidence.
+#[tokio::test]
+async fn only_a_tool_command_that_reads_a_source_is_recorded() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let script = vec![
+        FakeStep::new(Role::Planner).writing(".hoh/plan.md", OK_PLAN),
+        FakeStep::new(Role::Developer)
+            .writing("project.godot", "config_version=5\n")
+            .trajectory_prompt_containing("never read src/runtime/**")
+            .trajectory_mentioning("grep -n play_scene src/runtime/run_loop.rs"),
+        FakeStep::new(Role::Tester)
+            .writing(".hoh/evidence/move.json", "{}\n")
+            .writing(".hoh/evidence.json", &ok_evidence(1, "")),
+    ];
+    let (result, _) = run_scenario(root, 1, script, Ablation::default(), FakeAdapter::new()).await;
+    result.expect("the happy path must complete");
+
+    let json: Value =
+        serde_json::from_str(&read(&root.join("runs/run-1/iter-1/result.json"))).unwrap();
+    let warnings = json["warnings"].as_array().expect("warnings");
+    assert!(
+        warnings
+            .iter()
+            .any(|warning| warning == "harness_source_read"),
+        "the concrete read command must be traced: {warnings:?}"
     );
 }

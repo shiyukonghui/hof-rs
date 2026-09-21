@@ -185,9 +185,13 @@ fn finalize_failure(
     write_iter_result(run_dir, iteration, &result)
 }
 
-/// DR-26: report-only trace of a role reading the harness sources or an
+/// DR-26/DR-32: report-only trace of a role reading the harness sources or an
 /// external repository (both are forbidden by the prompts precisely because the
 /// tool schema is already in `TOOLS.md`).  Behaviour never changes.
+///
+/// DR-32: only the trajectory's **tool calls** are scanned.  `smoke-t3` scanned
+/// the whole trajectory text and therefore matched the system prompt's own list
+/// of forbidden paths — a permanent false positive.
 fn note_source_reads(warnings: &mut Vec<String>, attempts: &[AttemptOutcome]) {
     if warnings
         .iter()
@@ -199,7 +203,7 @@ fn note_source_reads(warnings: &mut Vec<String>, attempts: &[AttemptOutcome]) {
         let Ok(raw) = std::fs::read_to_string(&attempt.trajectory_path) else {
             continue;
         };
-        if crate::runtime::hygiene::mentions_forbidden_source(&raw) {
+        if crate::runtime::hygiene::mentions_forbidden_source_in_actions(&raw) {
             warnings.push("harness_source_read".to_string());
             return;
         }

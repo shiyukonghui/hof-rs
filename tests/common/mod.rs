@@ -43,9 +43,13 @@ pub struct FakeStep {
     /// counter-examples (R2/R4).
     pub write_outside_view: Option<(PathBuf, String)>,
     pub sleep_ms: u64,
-    /// DR-26: text planted in the trajectory, used to exercise the
-    /// `harness_source_read` warning detector.
+    /// DR-26/DR-32: text planted in the trajectory's **tool calls**, used to
+    /// exercise the `harness_source_read` warning detector.
     pub trajectory_probe: Option<String>,
+    /// DR-32: text planted in the **system prompt** of the trajectory.  This is
+    /// exactly the false positive `smoke-t3` produced: the prompt's list of
+    /// forbidden paths was itself treated as evidence of a source read.
+    pub trajectory_prompt_probe: Option<String>,
 }
 
 impl FakeStep {
@@ -59,6 +63,7 @@ impl FakeStep {
             write_outside_view: None,
             sleep_ms: 0,
             trajectory_probe: None,
+            trajectory_prompt_probe: None,
         }
     }
 
@@ -67,9 +72,17 @@ impl FakeStep {
         self
     }
 
-    /// DR-26: make this trajectory look like the role read a forbidden path.
+    /// DR-26/DR-32: make this trajectory look like the role ran a shell command
+    /// that reads a forbidden path.
     pub fn trajectory_mentioning(mut self, text: &str) -> Self {
         self.trajectory_probe = Some(text.to_string());
+        self
+    }
+
+    /// DR-32: plant the same text in the system prompt instead — it must never
+    /// be counted as a source read.
+    pub fn trajectory_prompt_containing(mut self, text: &str) -> Self {
+        self.trajectory_prompt_probe = Some(text.to_string());
         self
     }
 
@@ -172,11 +185,11 @@ fn read_files(root: &Path) -> BTreeMap<String, String> {
     files
 }
 
-fn trajectory_json(usage: Option<&UsageFixture>, probe: Option<&str>) -> String {
-    let exit_content = match probe {
-        Some(probe) => format!("done\n{probe}"),
-        None => "done".to_string(),
-    };
+fn trajectory_json(
+    usage: Option<&UsageFixture>,
+    probe: Option<&str>,
+    prompt_probe: Option<&str>,
+) -> String {
     let usage_block = match usage {
         Some(fixture) => serde_json::json!({
             "prompt_tokens": fixture.prompt,
@@ -202,12 +215,22 @@ fn trajectory_json(usage: Option<&UsageFixture>, probe: Option<&str>) -> String 
     if !usage_block.is_null() {
         response["usage"] = usage_block;
     }
+    // DR-32: the shell command lives in `extra.actions[*].command` — the only
+    // place the source-read detector is allowed to look.
+    let actions = match probe {
+        Some(command) => serde_json::json!([{"command": command}]),
+        None => serde_json::json!([]),
+    };
+    let system = match prompt_probe {
+        Some(text) => format!("sys\n{text}"),
+        None => "sys".to_string(),
+    };
     serde_json::json!({
         "info": {"exit_status": "Submitted", "submission": "done"},
         "messages": [
-            {"role": "system", "content": "sys"},
-            {"role": "assistant", "content": "", "extra": {"actions": [], "response": response}},
-            {"role": "exit", "content": exit_content}
+            {"role": "system", "content": system},
+            {"role": "assistant", "content": "", "extra": {"actions": actions, "response": response}},
+            {"role": "exit", "content": "done"}
         ],
         "trajectory_format": "mini-swe-agent-1.1"
     })
@@ -273,7 +296,11 @@ impl Harness for FakeHarness {
         }
         std::fs::write(
             &inv.trajectory_path,
-            trajectory_json(step.usage.as_ref(), step.trajectory_probe.as_deref()),
+            trajectory_json(
+                step.usage.as_ref(),
+                step.trajectory_probe.as_deref(),
+                step.trajectory_prompt_probe.as_deref(),
+            ),
         )?;
 
         let usage = match &step.usage {
