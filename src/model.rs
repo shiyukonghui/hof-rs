@@ -138,6 +138,86 @@ pub struct EvidenceBundle {
     pub planner_handoff: PlannerHandoff,
 }
 
+/// DR-39: how much of the PRD the Tester's `E_t` actually accounts for.
+///
+/// This is a **derivation**, never a judgement: `verified` and `gap` are the
+/// lengths of the Tester's own record lists, and the ids are copied verbatim.
+/// `smoke-t5` showed why it must be published next to `artifact_gate`: a green
+/// loop with `F1..F17` all gaps looked exactly like a success from the exit code.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PrdCoverage {
+    pub verified: usize,
+    pub gap: usize,
+    pub verified_ids: Vec<String>,
+    pub gap_ids: Vec<String>,
+}
+
+/// The PRD's functional requirement ids are `F1..F17` (PRD §3).
+pub const PRD_FUNCTIONAL_REQUIREMENT_COUNT: usize = 17;
+
+/// Is this claim id one of the PRD's functional requirements (`F1..F17`)?
+pub fn is_prd_functional_id(id: &str) -> bool {
+    let Some(number) = id.strip_prefix('F') else {
+        return false;
+    };
+    number
+        .parse::<usize>()
+        .map(|number| (1..=PRD_FUNCTIONAL_REQUIREMENT_COUNT).contains(&number))
+        .unwrap_or(false)
+}
+
+impl PrdCoverage {
+    /// Derive the summary from one evidence bundle.
+    pub fn from_bundle(bundle: &EvidenceBundle) -> Self {
+        Self {
+            verified: bundle.verified_records.len(),
+            gap: bundle.gap_records.len(),
+            verified_ids: bundle
+                .verified_records
+                .iter()
+                .map(|record| record.claim_id.clone())
+                .collect(),
+            gap_ids: bundle
+                .gap_records
+                .iter()
+                .map(|record| record.claim_id.clone())
+                .collect(),
+        }
+    }
+
+    /// The denominator of `prd=<verified>/<total>`.
+    ///
+    /// The PRD declares 17 functional requirements, so a single `F<n>` claim id
+    /// pins the denominator to 17 — otherwise a Tester who writes two claims
+    /// would look like 100 % coverage.  With no `F<n>` id the total is the
+    /// number of claims the Tester actually wrote, and callers must say so
+    /// (`total_is_known == false`).
+    pub fn total(&self) -> usize {
+        if self.total_is_known() {
+            PRD_FUNCTIONAL_REQUIREMENT_COUNT
+        } else {
+            self.verified + self.gap
+        }
+    }
+
+    pub fn total_is_known(&self) -> bool {
+        self.verified_ids
+            .iter()
+            .chain(self.gap_ids.iter())
+            .any(|id| is_prd_functional_id(id))
+    }
+
+    /// `prd=<verified>/<total>` with an explicit `(total=derived)` marker when
+    /// the denominator is not the PRD's own count.
+    pub fn label(&self) -> String {
+        if self.total_is_known() {
+            format!("prd={}/{}", self.verified, self.total())
+        } else {
+            format!("prd={}/{} (total=derived)", self.verified, self.total())
+        }
+    }
+}
+
 /// `D_t`: the development document produced by the Planner.
 #[derive(Clone, Debug)]
 pub struct DevelopmentDoc {

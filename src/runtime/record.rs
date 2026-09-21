@@ -69,7 +69,25 @@ pub struct IterResult {
     /// DR-28: report-only artifact hygiene of the frozen `A_t`.
     #[serde(default)]
     pub artifact_hygiene: crate::model::ArtifactHygiene,
+    /// DR-39: how much of the PRD this iteration's `E_t` accounts for.  Derived
+    /// from the Tester's own claim lists; the runtime never judges a claim.
+    #[serde(default)]
+    pub prd_coverage: crate::model::PrdCoverage,
+    /// DR-37: why the wrap-up retry was (not) triggered —
+    /// `artifact_missing` | `not_triggered`.
+    #[serde(default = "default_wrap_up_retry_reason")]
+    pub wrap_up_retry_reason: String,
 }
+
+/// DR-37: the default is the honest one — the retry was not triggered.
+pub fn default_wrap_up_retry_reason() -> String {
+    WRAP_UP_NOT_TRIGGERED.to_string()
+}
+
+/// DR-37: the artifact really was missing/invalid when the retry was spent.
+pub const WRAP_UP_ARTIFACT_MISSING: &str = "artifact_missing";
+/// DR-37: no wrap-up retry was spent in this iteration.
+pub const WRAP_UP_NOT_TRIGGERED: &str = "not_triggered";
 
 impl IterResult {
     pub fn ok() -> Self {
@@ -92,6 +110,8 @@ impl IterResult {
             battery_passes: Vec::new(),
             out_of_tree_writes: Vec::new(),
             artifact_hygiene: crate::model::ArtifactHygiene::default(),
+            prd_coverage: crate::model::PrdCoverage::default(),
+            wrap_up_retry_reason: default_wrap_up_retry_reason(),
         }
     }
 }

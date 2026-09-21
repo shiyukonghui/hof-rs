@@ -510,8 +510,32 @@ pub async fn run(args: RunArgs) -> anyhow::Result<i32> {
         summary.final_version_id,
         summary.total_usage.total_tokens
     );
+    // DR-39: one unmistakable line, so "the loop was green" can never be read as
+    // "the product is done".
+    println!("{}", format_prd_coverage_line(&summary.prd_coverage));
     // DR-27: 6 = the loop completed but the frozen artifact is not launchable.
     finalize_run(&run_dir, &summary)
+}
+
+/// DR-39: the end-of-run summary line.  It states the two axes explicitly
+/// because they disagree exactly when it matters: `smoke-t5` finished with
+/// `gate ok` and `0/17` verified.
+pub fn format_prd_coverage_line(coverage: &crate::model::PrdCoverage) -> String {
+    if coverage.total_is_known() {
+        format!(
+            "prd coverage: {}/{} verified (harness/gate describe the runtime contract, not the \
+             product)",
+            coverage.verified,
+            coverage.total()
+        )
+    } else {
+        format!(
+            "prd coverage: {}/{} verified (total=derived from the Tester's claims; harness/gate \
+             describe the runtime contract, not the product)",
+            coverage.verified,
+            coverage.total()
+        )
+    }
 }
 
 /// DR-27: the exit code of a completed run, derived from the artifact gate.
@@ -671,14 +695,22 @@ pub async fn status(args: StatusArgs) -> anyhow::Result<i32> {
             Some(false) => "fail",
             None => "unknown",
         };
+        // DR-39: `gate ok` and `prd=…` are different claims.  The PRD column is
+        // derived from the Tester's own `E_t`, never judged by the runtime.
+        let coverage: crate::model::PrdCoverage = result
+            .get("prd_coverage")
+            .and_then(|value| serde_json::from_value(value.clone()).ok())
+            .unwrap_or_default();
+        let prd = coverage.label();
         println!(
-            "{:<8} harness={:<5} gate={:<8} ok={:<5} reason={:<20} candidate={} roles={}",
+            "{:<8} harness={:<5} gate={:<8} {} ok={:<5} reason={:<20} candidate={} roles={}",
             iter_dir
                 .file_name()
                 .map(|name| name.to_string_lossy().into_owned())
                 .unwrap_or_default(),
             harness,
             gate,
+            prd,
             result.get("ok").and_then(Value::as_bool).unwrap_or(false),
             result
                 .get("reason")

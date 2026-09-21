@@ -36,6 +36,8 @@ fn summary_with(gate: ArtifactGate) -> RunSummary {
         total_usage: Usage::default(),
         ok: true,
         artifact_gate: gate,
+        // DR-39: the summary carries a third axis; it never affects the exit code.
+        prd_coverage: hof_rs::model::PrdCoverage::default(),
     }
 }
 

@@ -35,7 +35,9 @@ fn fixture_runs_dir(root: &Path) -> PathBuf {
     write(
         &iter_one.join("result.json"),
         r#"{"ok":true,"failed_role":null,"reason":"ok","issues":[],"warnings":[],
-            "candidate_id":"cand-abc","version_id":"cand-abc","usage":[],"durations_ms":[]}"#,
+            "candidate_id":"cand-abc","version_id":"cand-abc","usage":[],"durations_ms":[],
+            "artifact_gate":{"applicable":true,"launchable":true,"reasons":[]},
+            "prd_coverage":{"verified":0,"gap":17,"verified_ids":[],"gap_ids":["F1"]}}"#,
     );
     write(
         &iter_one.join("usage.json"),
@@ -76,6 +78,12 @@ fn status_reports_the_iteration_and_marks_unknown_usage() {
     assert!(stdout.contains("# run demo-run"), "stdout: {stdout}");
     assert!(stdout.contains("iter-1"), "stdout: {stdout}");
     assert!(stdout.contains("cand-abc"), "stdout: {stdout}");
+    // DR-39: three columns per iteration — the loop completed, the artifact is
+    // usable, and how much of the PRD was actually verified.
+    assert!(
+        stdout.contains("harness=") && stdout.contains("gate=") && stdout.contains("prd=0/17"),
+        "the per-iteration line must carry harness=/gate=/prd=: {stdout}"
+    );
     // DR-8: a missing usage value must never be summed as zero.
     assert!(
         stdout.contains("total tokens: 120 (1 iteration unknown)"),

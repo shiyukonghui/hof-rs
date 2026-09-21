@@ -72,6 +72,9 @@ pub struct RunSummary {
     /// DR-27: the gate verdict of the last completed iteration.  `ok` answers
     /// "did the loop finish?"; this answers "is the artifact usable?".
     pub artifact_gate: crate::model::ArtifactGate,
+    /// DR-39: how much of the PRD the last completed iteration's `E_t` accounts
+    /// for.  A third, independent axis — `gate ok` is not "the product works".
+    pub prd_coverage: crate::model::PrdCoverage,
 }
 
 fn now_seconds() -> u64 {
@@ -363,6 +366,7 @@ pub async fn run(
     let mut final_version_id: Option<String> = None;
     let mut first_plan: Option<PathBuf> = None;
     let mut last_gate: Option<crate::model::ArtifactGate> = None;
+    let mut last_coverage = crate::model::PrdCoverage::default();
 
     // DR-25: watch HoH's own working directory (outside the project) for writes
     // a role should never make.  Report-only; the baseline advances once per
@@ -1117,7 +1121,11 @@ pub async fn run(
         result.artifact_hygiene = crate::model::ArtifactHygiene {
             suspicious_files: crate::runtime::hygiene::suspicious_files(&workspace),
         };
+        // DR-39: the PRD coverage travels with the gate, so `exit 0 + gate ok`
+        // can never be read as "the product is good" on its own.
+        result.prd_coverage = crate::model::PrdCoverage::from_bundle(&bundle);
         last_gate = Some(launch_gate);
+        last_coverage = result.prd_coverage.clone();
         write_iter_result(&run_dir, iteration, &result)?;
     }
 
@@ -1133,6 +1141,7 @@ pub async fn run(
         ok: true,
         artifact_gate: last_gate
             .unwrap_or_else(|| crate::model::ArtifactGate::not_applicable("no iteration ran")),
+        prd_coverage: last_coverage,
     })
 }
 
