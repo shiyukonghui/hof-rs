@@ -1935,6 +1935,62 @@
   若等到 B3–B5 之后再发现冲突，返工面会大得多。
 - 回滚点：M2 判决为文档；3 项修复由 TASK-014 承担，可整提交回退。
 
+## D62 — **M3 交付：mono 构建 + C# 工程真的能跑**；3 缺陷已修；C# 事实与并发构建隐患入库
+
+- 日期：2026-09（同一 commit 两个构建：非 mono `4.8.dev.custom_build.eb05a50ed` /
+  mono `4.8.dev.mono.custom_build.eb05a50ed`）
+- **mono 构建（M3 主体）**：
+  - `scons platform=windows target=editor module_mono_enabled=yes -j8` → exit 0，**112.8 s**，
+    产物 `bin\godot.windows.editor.x86_64.mono.exe`（178 MB）+ `.mono.console.exe`；
+    **因为 mono 用不同的文件名，非 mono（`tests=yes`）二进制不被覆盖**——两者并存在 `bin\`，
+    故无需备份/还原（仍另存了一份到 `%TEMP%`）。这正是后续批次要的行为（doctest 仍由非 mono 承担）。
+  - glue 生成：`--headless --generate-mono-glue modules/mono/glue` → exit 0（2.7 s，"The Godot API sources were successfully generated"）；
+    装配：`build_assemblies.py --godot-output-dir=bin --godot-platform=windows` → exit 0（80.7 s），
+    产出 `bin\GodotSharp\{Api\{Debug,Release},Tools}` 与 4 个 `4.8.0-dev` nupkg。
+  - **mono 构建不带 `tests=yes`**（任务书允许）→ **「mono 下的 doctest」未被测量，也不作任何声称**（诚实边界）。
+- **C# 工程真的能跑（M3 验收核心）**：
+  - 最小 C# 工程（`%TEMP%\mcp014-scratch\m3-csharp-proj`）：`project.godot` + `.csproj`（`Godot.NET.Sdk 4.8.0-dev`, `net8.0`）+ `Main.cs`；
+    **离线**构建（本机 `nuget.org` 不可达属正常，`NuGet.config` 只指向引擎自带的 `bin\GodotSharp\Tools\nupkgs`）
+    → `dotnet build -c Debug` **0 警告 0 错误**，产物落在 GodotSharpDirs 期望的位置。
+  - 直接证据（不是「文件存在」这类间接证据）：引擎 stdout `[MCP014-CS] Main._Ready ran; state=csharp-ready`；
+    从 **9889** 用 `running_game_execute_gdscript` 调 C# 方法得 `csharp: ticks=1423 state=csharp-ready`；
+    `[Export] CsharpTicks` 经 `get_node_properties` 两次读到 **1428 → 1564**；
+    **C++ 写入 `CsharpState` 后 C# 读回 `state=written-from-mcp`**（跨语言双向可见）。
+  - **模块共存**：mono 下编辑器端点 9888 = **49**、游戏端点 9889 = **40**，与非 mono 完全一致；
+    四项修复在 mono 下同样成立。
+- **M2 三项修复 + R-3 全部落地**：
+  - **D-1**：`write_node_property` 先**查属性表**再写（`property_type_of` 返回 `NIL` 也意味着「声明为 `Variant`」，
+    故以属性表判定）→ 未知属性 `-32001`+建议，**任何错误路径都产生不出成功形状**。
+  - **D-2**：`editor_capture_screenshot` 先判能力 → `-32000`+建议；`-32603` 只留给唯一的真内部错误。
+  - **D-3**：生成器 v1.5.0 引入 **`SCHEMA_OVERRIDES`**（首条：`events` 移出 `required` → `"required": []`），
+    配套 `DESCRIPTION_OVERRIDES` 写明**回退规则**；schema override 必须 `mode=replace` 且**理由里逐字引用被移除的 required**；
+    契约重生成、`TOOL-NAMING.md` 重渲染（逐字节相同）、C++ 字面量同步（再跑一次是 no-op）。
+  - **R-3**：`pending_timeout_ms<=0` → 落回 30000；启动日志同时报**配置值与生效值**；
+    实测工具自报 600 s 时 **30.0 s** 后以 `-32000`+`data.timeout_ms=30000` 收尾。
+  - 门（实现方自跑）：doctest 红 2 例/10 断言 → 绿 **124/124·3653**；全引擎 **1550/1550·427935 断言 0 failed**；
+    门① **3/3** 两端点；`accept_m1.ps1` **22/22 ×2**（PASS 清单逐字节相同）；
+    且**全部在 `--version == git rev-parse --short HEAD` 的重建二进制上**。
+- **两条 C# 实测事实入库（`PLAYBOOK` §3 与后续任务书）**：①`running_game_execute_gdscript` 编译到**裸 `RefCounted`**，
+  **没有 `get_node()`** → 要用 `Engine.get_main_loop()`；②**C# 的 `public` 字段不是 Godot 属性**，
+  只有 `[Export]` 成员在「游戏侧节点工具」的属性面里。**B3 的任务书必须带上这两条**，否则会在 C# 工程上踩坑。
+- **并发构建隐患入库（`PLAYBOOK` §3，与 R-1 同类）**：实现方自报**短暂并发跑了两个 scons**
+  （「杀死后台任务」**不保证**其 scons 子进程也停），两者同时重写生成头 `modules/modules_tests.gen.h`
+  → **一批与本批无关的假编译错误**；单进程重建后全部消失、源码未变。
+  → 规则：**构建一律串行**，且**不要抑制 scons 输出**。
+- **为 hof-rs 的 `hoh doctor` 预检准备（记录；hof-rs 仍暂停）**：需检查 `Microsoft.NETCore.App 8.x`、
+  `<engine>/GodotSharp/Api/{Debug,Release}`、`<engine>/GodotSharp/Tools/nupkgs` 下的 `Godot.NET.Sdk.<version>`，
+  以及**离线解析本地源**（本机无外网应当被视为**正常**而不是异常）。
+- 偏差裁决（接受）：未重建「修复前」的二进制（before 侧用 M2 验收**自己测到的**响应 + 修复前源码 + 本轮 doctest 红阶段）；
+  红阶段日志早于一次测试文本编辑（两处头条断言与最终版逐字节相同）；
+  `Variant::NIL` 类型的属性在本环境**不可构造**（`set_meta(name, Variant())` 会抹掉条目）→ 该分支以代码论证 + 两侧可构造子例夹逼，
+  **明确声明为覆盖缺口**；`write_node_property` 先判 `is_inside_tree()` 再 `get_path()`（孤儿节点返回 `""` 且不触发引擎错误）；
+  门②首轮跑在代码提交前的二进制上（`--version ca053e552`），提交后**重建并重跑全部门与门②**（报告只引用重绑后的结果）。
+- **下一步：M3 独立验收（TASK-AUDIT-M3）**，然后 **M4 = B3+B4**（B3 就是节点写族，`running_game_set_node_property`
+  已确立「先查属性表再写」的形状，本族应照此办理），最后 **M5 = B5 + hof-rs 切端点 + 真实 T=1 冒烟**。
+  注意 **hof-rs 仍处用户指令的暂停状态（D43）**：M5 里「hof-rs 切端点 + 真实冒烟」需在解除暂停后进行；
+  我会在推进到 M5 时就此向用户确认，而**不擅自恢复 hof-rs 的工作**。
+- 回滚点：mono 构建产物与 C# 工程都在 `bin/` 与 `%TEMP%`（不受版本控制）；3 项修复可整提交回退。
+
 
 
 
