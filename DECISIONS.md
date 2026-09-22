@@ -2579,6 +2579,51 @@
   重组任务时的经验值：**一个契约 schema override + 重生成 + 引擎新行为 + 证据，就应独占一个任务**。
 - 回滚点：本决策为流程；TASK-024a 的实现可整提交回退。
 
+## D78 — TASK-024a 交付（E-10）：**编辑器起的游戏现在可被 MCP 直接观察**（零字符串手术）
+
+- 日期：2026-09（已实现仍 **113/171**；本任务是顺手性改造）
+- **交付**（提交 `485353e8a8`/`76f78f82b9`/`a5d15f7464`，门在 `--version == HEAD`（`76f78f82b`）的绑定二进制上）：
+  - **实现**：`play_args = {"--mcp-port=" + itos(game_port)}` 交给
+    `EditorRunBar::play_main_scene(false, args)` / `play_current_scene(false, args)` / `play_custom_scene(path, args)`；
+    `EditorRun::run()` 原样附加到子进程命令行（`editor_run.cpp:157-161`）。
+    **关键引擎事实**：**`EditorInterface::play_*` 无法携带 run args**（`editor_interface.cpp:815-825`），
+    这正是原实现做不到的原因 —— 工具改为直接走 `EditorRunBar`。
+  - **端口选择（顺手且不冲突）**：`mcp_port` 指定 → 范围/占用/「等于编辑器自身端口」三重前置检查
+    （占用或等于编辑器端口 → `-32000` + 建议，**不做静默回退**，因为「`playing:true` 配一个连不上的端口」正是要消灭的假成功）；
+    缺省 → `TCPServer::listen(0)` 取空闲端口并排除编辑器端口（8 次尝试）。
+    Windows 上该探测可信，因为 `NetSocketWinSock::set_reuse_address_enabled()` 是**刻意的 no-op**（`net_socket_winsock.cpp:549-554`）。
+  - **响应**：`mcp_port` / `mcp_port_source`(`argument`|`auto_free_port`) / `endpoint` / `pid`；
+    且 `playing:true` 被**收紧**为「**读回** `is_playing()` 且**子进程 pid 变化**」，而不是「调用过 `play_*`」。
+- **⭐ 实测证据（不是推断）**：
+  - 子进程 cmdline 实测含 `--mcp-port=19890`（附完整命令行文本）；
+  - **该端口真的接上并跑了游戏侧工具**（`running_game_get_scene_tree` → `{"tree":{"name":"Main","path":"/root/Main"}}`）；
+  - 缺省自动端口 `57389 ≠ 9888` 同样闭环；`19891` 被真实 listener 占住 → `-32000` 且**游戏未启动**；`9888` → `-32000`；
+  - **零字符串手术链（4 步，调用方字符串操作 0 次）**：`editor_open_scene` → `editor_play_scene(mode=res://scenes/other.tscn, mcp_port=19893)`
+    → `running_game_get_scene_tree` → `running_game_get_node_properties(node_path=tree.path)`；
+  - 三种 `mode`（main/current/路径）各一次回归；`editor_stop_scene` 后子进程消失、**无孤儿**。
+- **契约只经 override**：生成器 **1.5.0 → 1.6.0**；`DESCRIPTION_OVERRIDES["play_scene"]`（**append**，原文「运行场景」在首，
+  生成器有前缀守卫）+ `SCHEMA_OVERRIDES["play_scene"]`（`mode=replace`，理由**逐字引用被移除的 `required` 成员 `[]`**）；
+  契约 diff **只有 `play_scene`（18+/2−）** + `_meta.generator_version` + 2 条 override（`overrides=11`）；
+  `TOOL-NAMING.md` **无需重渲染**（它由未变的映射渲染，用 `gen_table.py --check-only`（exit 0 + 两次渲染逐字节相同）**证明**而非断言）。
+- 门：①`editor_playback` 逐字 **3/3**；②**31/31**；③doctest **197/197·7861**；④全引擎 **1623/1623·432143 断言 0 failed**；
+  ⑤`accept_m1.ps1` **22/22 ×2**（PASS 清单一致）；⑥**门⑥ exit 0**；9877 全程 PID 36392 未动。
+- **半成品补丁的处置（逐项复核，纪律的执行）**：**采纳** override 机制/版本号/两条 doctest/`tcp_server.h` include；
+  **丢弃** 补丁里的 `DESIGN-DETAIL` GDR-25+§23（属整批且**执行者不写规范**）、`check_narrowing_points.py` 的
+  `851→1000` 重钉（本树里 851 是对的，门⑥ 通过）、以及 E-1/E-3/E-6/E-9 的全部 doctest。
+  并**改写了**补丁的契约文字：补丁声称响应「在游戏真的起来后给出」（**过度承诺**，工具并不等待子进程 bind），
+  且其理由引用了一个**不存在的 GDR-25 小节**。
+  → **注意**：补丁里的 `mcp_port:0` 校验 doctest **抓到了新实现的一个真缺陷**（显式 `mcp_port:0` 被静默接受）。
+  **这印证了「把半成品交给新人但要求复核」比「直接丢掉」更有价值。**
+- **诚实边界（登记，不声称）**：「**子进程没起来 → `-32000`**」这条分支**没有线上证据**（只能经恢复模式或缺失
+  `project.godot` 构造）→ 报告标为**推断**；一个**不可复现**的首次 `--import` 观察
+  （`ERROR: Parameter "singleton" is null`）按手册 §7.3 登记为**观察**，**不算缺陷**。
+- **待决策者执行的规范落笔（行动项）**：E-10 需要一个设计条款（「**编辑器起的游戏由工具注入端口；
+  契约必须说明端口来源**」）与「顺手性可执行判据（零字符串手术）」——
+  执行者**正确地拒绝**写规范（职责边界），所以这条由**我**在下一次 `DESIGN-DETAIL` 编辑中落笔（GDR-25）。
+- 下一步：`TASK-024b`（E-1/G-2、E-3、E-9、E-6/G-4 —— **继续拆小**，本单点任务已证明一项就能占满一个执行者）、
+  `TASK-025`（E-2/E-8、G-1、G-3），然后**第四次 M4 复核**，再开 B5。
+- 回滚点：TASK-024a 改动可整提交回退；契约 override 可移除并重生成。
+
 
 
 
