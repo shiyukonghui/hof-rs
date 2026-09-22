@@ -2145,6 +2145,44 @@
   「按契约描述能否可靠二选一」，并给出「方向搞反会**静默返回错映射**」的对照证据。
 - 回滚点：本批可整提交回退；manifest 为数据文件。
 
+## D67 — **B3 收官 40/40（已实现 106/171）**；门脚本去硬编码成功；P-1..P-4 裁决
+
+- 日期：2026-09（已实现 **106/171**；编辑器端点 89 / 游戏端点 48；剩 B4 7、B5 58）
+- **TASK-018 交付**（B3 最后 10 工具 + 静默错值修复 + 门脚本去硬编码），门在代码冻结 `37f8bcb0e1` 上全绿：
+  门① 六组各 **3/3**；门② **104/104**；门③ doctest **168/168·6610**；门④ 全引擎 **1594/1594·430892 断言 0 failed**；
+  门⑤ `accept_m1.ps1` **22/22 ×2**（PASS 清单 diff=0）。
+  - **静默错值已修**（D66 裁决落地）：`coerce_to_property_type` 增加 **`Variant::can_convert` 门**
+    （唯一一处、位于 `Object::set()` 之前）→ 布局不兼容值一律 `-32602`（消息含目标类型、值拼写、
+    以及**引擎本会写入的值**）；`write_node_property` 拆成**校验 + 写入 + 回读**；批量路径**在任何写入前**逐节点预校验。
+    线上证明：**场景 `.tscn` 前后 sha256 相同**；合法值回归覆盖 `Vector2`/`Vector3`/`float`/`int`/`Color`/`String`。
+    **受影响（行为被改变的既有已验收工具）**：`editor_set_node_property`、`editor_set_node_property_batch`、
+    `editor_add_nodes_batch`、`running_game_set_node_property`、`editor_add_resource_to_node_property`、
+    `project_create_resource`、`project_edit_resource` —— 全部由「静默错值」变为「`-32602`」。
+  - **门脚本去硬编码成功**：`$ToolNames` 从**5 个 manifest 的 `implemented=true` 组**派生；
+    证明用 `git show ddb585d888:` 取**基线提交**（不用工作树副本，避免自证）：基线字面量 96 与基线 manifest 派生 96
+    **逐名 diff 为空**，工作树派生 106 = 旧集 + 本任务 10 个；新脚本**引号工具名计数 0**（旧 96）；未削弱任何断言。
+    → **后续批次不再需要改门脚本**。
+  - **B3 = 40/40**：12/12 组 implemented、40/40 在线于 9888；9889 按 `scope` 恰好 8/8 且 **32 个 editor-scope 工具一个不漏**；
+    `check_tool_groups.py --batch B3` 与 `--check-completeness` 均 exit 0。
+  - **线上实测又抓到两个真问题**：①编辑器侧 `editor_execute_gdscript` **全部** `-32602 "does not compile: OK"`，
+    根因 `GDScript::can_instantiate()` 在编辑器运行时**拒绝非 `@tool` 脚本** → 生成源改带 `@tool`
+    （**游戏侧逐字节不变**），并把「编译失败」与「不可实例化」拆成两种诚实消息；
+    ②本 fork 的 **`Variant::construct_from_string` 是空壳** → `"Vector2(…)"` 字符串语法**从未生效**
+    （旧实现把它**静默写成零向量**，现为 `-32602`）。
+- **P-1..P-4 裁决**：
+  1. **P-1**：**不修引擎核心**（超范围且会让 fork 分叉）→ **删除** `property_value_from_json` 里**已死的字符串语法分支与注释**，
+     注明「字符串→Vector/Color 在此 fork 不可用，请传结构化对象」，补 doctest 断言其 `-32602`。排入 TASK-019 §2。
+  2. **P-2**：`project_set_setting` **允许新建键并报 `created:true`** —— 该报告是**诚实的**（确实创建了）；不视为缺陷。
+  3. **P-3**：代码上限保留；**无超时是已知限制** —— 模块单线程运行在主线程、**无法在主线程内中断 GDScript**，
+     **不引入伪超时**。记录为已知限制，不假装有超时。
+  4. **P-4**：`editor_set_node_script` **不需要 UndoRedo**（编辑器 UX 增强，非正确性；记为非目标）。
+- **下一步：TASK-019 = B4 全部 7 个工具 + P-1 清理** → 完成后 **M4 = B3+B4 = 47/47**。
+  B4 是「**游戏可玩性自动判定**」工具族（`assert_node_state`/`assert_screen_text`/`run_test_scenario`/`run_stress_test`/
+  `watch_signals`/`compare_screenshots`/`editor_get_test_report`）——**M2 解锁的 E3 在此完整**：
+  要求「从 9889 发起：启动 → 注入输入/等待 → 断言状态与屏幕文本 → 结构化 pass/fail 结论」，
+  且**必须含一个故意失败的场景**以证明它真会报 fail。`editor_get_test_report` 是 D45 fix-first 中**第 4 个**。
+- 回滚点：本批可整提交回退；manifest 为数据文件。
+
 
 
 
