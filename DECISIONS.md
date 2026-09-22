@@ -1799,6 +1799,54 @@
   若后续出现「单连接提交大量 pending」的现实风险再加。
 - 回滚点：延迟通道可整提交回退（但它已是 B4/B5 的前置依赖）；manifest 是数据文件。
 
+## D59 — TASK-012 交付（B2 19/25）；活证据链再抓 3 个真缺陷；输入边界条款入库
+
+- 日期：2026-09（B2 进度 **19/25**；已实现并集 52→**60**）
+- **TASK-012 交付**（8 工具：`running_game_input`(4) / `running_game_node_write`(1) /
+  `editor_playback`(2) / `editor_input_read`(1)）——该子代理**完成了全部工作与报告**，
+  但**未能返回结构化回报**（工作流返回 `null`）；决策者直接读报告取证，故本条的结论来自报告原文而非转述。
+  - 门：门① **四组各跑两次共 24/24**；门② 游戏相 **32/32** + 播放相 **18/18**；
+    门③ doctest **118/118·3288**；门④ 全引擎 **1544/1544·427570 断言 0 failed**；
+    门⑤ `accept_m1.ps1` **22/22 连跑两次**（PASS 清单 IDENTICAL）。
+  - **活证据链又抓到 3 个真缺陷（全部红→绿修好，且都是 doctest 抓不到的形态）**：
+    - **CR-1**：`running_game_set_node_property` 对「未给组件名的 JSON 对象」**静默写成零向量**；
+    - **CR-2**：录制把 `Vector2` **序列化成字符串**，导致**录完不能回放**（往返缺陷）；
+    - **CR-3**：**第二次 stop 把上一次的事件又发一遍**。
+  - **进程级证据**：`editor_play_scene` 拉起的游戏子进程在 `editor_stop_scene` 后**确已消失**
+    （`p08`–`p15`：9889 可连→不可连、pid 追踪其子树、`netstat` 无 LISTENING、脚本启动的 pid 全部退出）。
+    这是「不制造孤儿进程」的正面证明。
+- **裁决与处置**：
+  1. **`running_game_play_input_recording` 的 `events` 由 `required` 放宽为可缺省**（缺省时回退到本进程刚停止的录制）→
+     **接受**：`create → stop → play` 是该族的主用法，强制抄回事件既无益又易错（且正是 CR-2 那类往返缺陷的温床）；
+     这是一处**契约文本的放宽**（消费者按 `required` 用法仍然可用），须在 M2 验收时复核。
+  2. 新增 `tools/input_recorder.{h,cpp}` + `MCPInputRecorderNode`，**用引擎内 C++ 子类覆写的 `Node::input()`**
+     而非 `_input` GDVIRTUAL —— **接受，且这是重要技术发现**：GDVIRTUAL 只经 `ScriptInstance`/GDExtension 解析，
+     **引擎内的 C++ 子类永远收不到**。已写入 `DESIGN-DETAIL` §19.4。
+  3. `editor_stop_scene` 回读 `is_playing_scene()`（子进程拒绝退出 → `stopped:false`，不再无条件 `stopped:true`）→ 接受。
+  4. `editor_play_scene` 的 `mode` 走 `normalize_project_path`（只接受项目内路径，迁移源接受绝对路径）→ 接受（安全收紧）。
+  5. `vector_from_dictionary` 声明在头文件以便 doctest 断言**真函数** → 接受（CR-1 是静默错值，只有直接断言钉得住）。
+  6. `stop_input_recording` 新增 `event_types`/`duration_ms`（答案超集）、`actions` 升序（确定化）→ 接受。
+- **新规范条款 `DESIGN-DETAIL` §19 / GDR-21「输入通道边界」**（本模块存在的首要理由之一）：
+  ①`editor_*` 输入工具作用于编辑器进程、**永远不能驱动游戏**；②驱动游戏必须走 `scope=game` 工具且只在游戏端点可见
+  （双向缺席都有线上证据）；③**游戏子进程的端口来源**：harness 启动时传 `--mcp-port`，
+  而**编辑器经 `editor_play_scene` 启动时不会转发 `--mcp-port`**（`editor_run.cpp` 无端口参数），
+  此时端口来自 `ProjectSettings: godot_mcp/port`——**模块不为「别人启动的游戏」发明端口**，
+  这条写进规范以免后续被误判为缺陷；④录制用 `Node::input()` 而非 `_input` GDVIRTUAL；
+  ⑤录制必须有**长度上限**并报 `truncated: true`。
+- **两条引擎事实登记（不绕过、不伪装，记入报告与规范）**：编辑器不转发端口（上条③）；
+  编辑器**会另起自己的辅助子进程**，故「编辑器无子进程」**不是**无孤儿的判据
+  → 本批改为按游戏 child 的 pid **追踪其子树**。
+- **4 条勘误（全部接受）**，其中值得记住的是：
+  ①D56 的证据脚本第一版用了 DDScript 里不存在的常量（`DEVICE_ID_INTERNAL` 未 BIND）导致**看起来像工具全坏**
+     → 修法：改用 `DEVICE_ID_EMULATION` 并**新增前置检查断言游戏脚本确已加载**
+     （教训：**证据挂了先怀疑证据，而不是先怀疑被测物**）；
+  ②请求体由字符串拼接构造 → 含引号的坐标破坏 JSON，表现为 `-32700`/`-32602`（**看起来像被测工具的缺陷**）
+     → 一律用 `ConvertTo-Json` 生成（与 D52 的 `Out-File` 事故同类，手册 §7.1 的又一实例）；
+  ③一次被抑制输出的构建造成**构建竞态残留**（SCons `CommandNoCache` 生成 `modules_tests.gen.h` 失败，
+     该次构建**没真正进行**），日志里的编译错误**不是本批引入的缺陷**——教训：**不要抑制 scons 输出**；
+  ④门②的游戏相前三次运行失败，是 3 个真缺陷 + 2 个宿主问题共同所致，**失败记录全部保留**（append-only）。
+- 回滚点：本批实现可整提交回退；规范条款为文档。
+
 
 
 
