@@ -1718,6 +1718,56 @@
   - B2 需要**自己的组清单**（B1 的 `tool-groups.json` 只覆盖 B1）→ TASK-010 产出 B2 manifest 并移植第一组。
 - 回滚点：B1 各组实现均可整提交回退；本节的裁决为文档。
 
+## D57 — B2 第一刀：**E3 解锁点已钉死**；裁决新增「延迟响应通道」（GDR-20）
+
+- 日期：2026-09（B2 进度 **7/25**；head `56ca32d735`）
+- **`docs/tool-groups-b2.json` 产出**：B2 = 25 工具 / **9 组**，`check_tool_groups.py --batch B2` PASS
+  （每个恰好一次、无重复无遗漏、名字都在 171 契约内、每组单一 channel/scope/mutating）；
+  **跨 manifest 校验**：与 B1 无重叠、已实现并集 **48 = 17 editor-scope + 23 both + 8 game-scope**
+  → 编辑器端点 40、**游戏端点 31**；B1 的 manifest 字节未变。
+  组划分：`running_game_observation`(6,已实现)、`running_game_script_execution`(1,已实现)、
+  `running_game_frame_observation`(3)、`running_game_input`(4)、`running_game_node_write`(1)、
+  `running_game_capture`(1)、`editor_playback`(2)、`editor_input_simulation`(6)、`editor_input_read`(1)。
+- **⭐ E3 解锁点已用证据钉死（29/29 PASS，全部在 9889，无编辑器进程参与）**：
+  1. 从运行中的游戏读到场景树与属性（`Main` → `Player`+`Hud/Score`+`Start`，`baseline position.x=0`）；
+  2. `running_game_execute_gdscript` 在**游戏进程内**够到引擎单例：`OS.get_process_id()=50156`
+     （确实是引擎进程，而非控制台包装进程 53140）、`Engine.get_main_loop()` 拿到 `SceneTree`；
+     **并在同一调用里现场复现旧路径的失败**：`Expression.execute([], RefCounted.new(), false)`
+     → `has_execute_failed()=true`、`get_error_text()="Invalid named index 'Input' for base type Object"`；
+  3. **在游戏进程内注入输入**：`InputEventAction(mcp_test_jump)` 经 `Input.parse_input_event`
+     （`InputMap.has_action=true`，事件当帧入队、下一帧被 `DisplayServerHeadless` 冲刷）；
+  4. **可观测状态变化**：约 3 秒后 `position.x 0→445`、`moved_frames 0→445`、`injected_events=1`；
+  5. **因果性**：投递 `pressed=false` 后，间隔两秒的两次读取都停在 `position.x=451.0`。
+  → 这正好闭合了 E3 的原始根因（旧路径连 `Input` 单例都够不到；且旧 `simulate_*` 注入的是**编辑器**的 `Input`）。
+- **裁决 1：批准新增「延迟响应通道」（GDR-20）**——3 个跨帧工具在当前模型下**无法实现**（已给最小证明：
+  同一帧取 N 次样本得到 N 个相同的值），且 B4 的 `assert_*`/`run_test_scenario`/`watch_signals`
+  与 B5 的录制族同样需要跨帧。设计要求（写进 `DESIGN-DETAIL` GDR-20）：
+  1. **保持「无 FIFO」原则**：pending 请求按 **(连接, 请求 id)** 关联，响应仍写回发起它的那条连接；
+  2. **状态机归框架**：工具返回「已完成结果」或「pending 句柄（含 `tick()`）」，
+     由 `MCPHttpServer`/`MCPJsonRpc` 驱动逐帧推进，**工具实现本身保持简单**；
+  3. **不阻塞主线程**（禁止 sleep/等待）；每帧推进 pending 的预算要有上限（不得饿死常规请求）；
+  4. **超时**：默认 30 s 后以 **`-32000` + `data.suggestion` + `data.timeout_ms`** 收尾（不得静默丢弃）；
+  5. **连接断开要清理** pending，不得泄漏；
+  6. 帧时钟用 `SceneTree` 的帧计数；
+  7. 必须能用**受控的假 pending 工具**（doctest）证明状态机正确（含超时、断连、多 pending 交错），
+     再用真实跨帧工具端到端验证。
+- **裁决 2：把「活证据链」升级为每组强制**。本任务正是靠线上证据抓到**doctest 抓不到的真缺陷**
+  （属性过滤器只用 `PROPERTY_USAGE_EDITOR` 会**静默丢掉脚本变量**）→
+  `PLAYBOOK` §3 门② 升级为：「除每工具三类证据外，**每组必须给出一条跨工具的端到端活证据链**」。
+- **裁决 3：接受两处自我纠正**（延续手册 §7.3）：
+  ①我 Ruling 中的前提「越界 `1e20` 静默变 `0`」**不成立**——实现者实测该构建下 `_integral_value`
+  在修复前就已拒绝（UB 强转得到 `INT64_MIN`），**只保留「静默接受并写入错误整数」这半句**成立
+  （`coerce_to_property_type` 路径：`Curve.bake_resolution=1e20` 修复前会写出错误整数，现在返回 `-32602` 且不写文件）；
+  ②实现者自己的第一版生成器**不幂等**（第二次 `--in-place` 会重复生成块），已修并**重跑全部门**。
+- **其他偏差裁决（接受）**：实现两组而非一组（`execute_gdscript` 是 `mutating=true`，不能与只读组同组）；
+  观测组 6 个而非 7 个（2 个跨帧工具移入 frame 组）；`get_node_properties` 用嵌套形状而非迁移源的扁平 `_safe_get`
+  （避免属性键与 `node_path`/`type`/`name` 冲突）；`find_nodes_by_script` 用**精确**脚本路径匹配；
+  `execute_gdscript` 接受**函数体**而非单个表达式、返回值结构化 `{result, result_type}`、
+  并新增 `ScriptServer::are_languages_initialized()==false → -32000` 的守卫；
+  `script_filter`/`type_filter`/`named_only` **按其契约实现**而非像迁移源那样静默忽略（第 6 条手册 §6.6 精神）；
+  门脚本以最小改动支持 B2 manifest（**未削弱任何既有断言**，B1 断言逐字节不变）。
+- 回滚点：延迟响应通道与新组实现均可整提交回退；manifest 是数据文件。
+
 
 
 
