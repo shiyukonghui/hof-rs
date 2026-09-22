@@ -2457,6 +2457,60 @@
   上面的 E-1..E-9 就是**第一遍清账**。
 - 回滚点：GDR-23 与手册改动为文档；清账项分批修复，各自可回退。
 
+## D75 — M4 第三次验收仍 `fail`：**闸门未覆盖专用 setter 路径**（第 4 种形态）→ 转「结构性护栏」；E-10 推翻我的结论
+
+- 日期：2026-09（验收基准：验收方用 `build_local.cmd -Force` 自建的 HEAD 绑定二进制 `50aadecca`）
+- **结论**：`verdict = fail`。**六类中 pass**：全量对等（union 113 == manifest；9888=91/9889=53 与对称推导一致；
+  description+inputSchema+键集**逐字 0 差异**）、行为一致（抽样 25+；**4 个 fix-first 复验确认真做到**）、
+  安全与事务、延迟通道、工程门（doctest 190/190·7716；全引擎 1616/1616·431998；`accept_m1` 22/22 ×2；
+  `check_tool_groups` 四项 PASS）、端口纪律（9877 全程 PID 36392）。
+  **首轮/次轮的缺陷**：D-1/D-2/D-3（**真闭合**，6 反例 × 5 路径 × 四条证据形态全成立）、D-5（**真闭合**，
+  与独立 GDScript 回读逐条一致）、D-6（**真闭合**，含缺失/空/坏 JSON 三种诚实空）——**均已验证闭合**。
+- **⭐ D-7（high）：统一收窄闸门「覆盖全部写路径」的声明不成立 —— 同一类缺陷的第 4 种形态。**
+  闸门挂在 `coerce_to_property_type` 上，因此**只覆盖走 `Object::set()` 的属性写**；
+  凡「**先算出值、再调用专用 setter**」的路径**全部绕过**：
+  - `editor_set_viewport_3d_camera` 的 `position`/`rotation_degrees`（`editor_write_scene_editor.cpp:149`）→
+    `code=0`、回显 `"x":1e99999`、独立 GDScript 读到 `camera.global_position=(inf,0,0)`；
+  - `editor_setup_world_environment` 的 `bg_color`（`editor_node_setup.cpp:128` → `:339`）→ `code=0`（`setup:true`），
+    且 **`background_color = Color(inf, 0, 0, 1)` 已被 `editor_save_scene` 写进 `.tscn`**。
+  - 形态变迁史：**容器元素（A-2）→ 复合值分量（A-4）→ 标量成员（D-4）→ 专用 setter 路径（D-7）**。
+- **⭐ 因此本轮的处置不只是修实例，而是修「方法论」**：加**结构性护栏**（TASK-023 §3）——
+  ①**收窄点清单**（全模块 `(real_t)`/`(float)`/`Color(`/`Vector2(`/`Vector3(`/`Vector4(` 逐条标注是否经闸门）；
+  ②做成**可重复执行的检查脚本**（`check_narrowing_points.py`）→ **新增未标注的收窄点即失败**；
+  ③写入 `DESIGN-DETAIL`（**GDR-24**：槽位判定必须覆盖不经 `Object::set()` 的专用 setter 路径）；
+  ④**纳入门禁**（`PLAYBOOK` §3 新增**门⑥**），使后续批次自动生效。
+  **理由**：这个类已经证明「按形状/按工具名补丁」在结构上不可持续 —— 每次补完就换个形态再来一次。
+- **D-15（medium, latent）**：`value_fits_slot` 的 `REAL_T` 分支在 `#ifdef REAL_T_IS_DOUBLE` 下**无条件 `return true`**，
+  而 **`Color` 分量恒为 `float32`**、**`PackedFloat32Array` 元素恒为 `float32`** → **双精度构建下同类缺陷复活**。
+  → 裁决：**拆开 `FLOAT32` 与 `REAL_T` 两个槽位**（`Color` 分量与 `PackedFloat32Array` 元素恒按 32 位判）；
+  本机**无法**构造双精度二进制做端到端验证 → **必须显式声明为风险登记**，**不得**声称已验证。
+- **⭐ E-10：我的「模块内不可修」结论被推翻（第三次技术判断被纠正）。**
+  我此前判定 `editor_play_scene` 不转发 `--mcp-port` 属**引擎事实、模块内不可修**（D62 记录、§19.3）。
+  审计方找到反证：**`editor_run_bar.h:123-125`** 的 `play_*_scene(..., const Vector<String> &p_play_args)`
+  与 **`editor_plugin.h:218`** 的 `virtual void run_scene(const String&, Vector<String>&)` 钩子 ——
+  **编辑器启动的游戏子进程可以被注入 `--mcp-port`**。
+  → **E-10 从"记录"提升为"高优先级修复"**：它使 E3 的关键流程（**从编辑器起游戏并立刻用 MCP 观察**）
+  不再需要修改被测工程的 `godot_mcp/port` 设置，**直接改善 M5 的可用性**。
+- **顺手性审计结果（GDR-23 首次执行）**：E-1/E-2+E-8/E-3/E-6/E-9/E-10 **六项确认为缺陷**；
+  E-4/E-5 **判 N/A**（shader 工具属 B5，尚未上架；但**迁移源确有 E-4 描述的缺陷**——读了 `material_slot` 却不用、
+  硬编码 `set_surface_override_material(0, mat)` → **保留为 B5 的实现约束**）；
+  **E-7 前提不成立**（实现本来就用 `set_script()`，不存在泛写）。
+  审计方另**自找 G-1..G-4**：**G-1** 不支持子属性路径 `position:y`/`v4:x`（引擎有 `Object::set_indexed`，编辑器
+  Inspector 正用）→ medium；**G-2** `project_get_scene_dependencies` 的 `path` 是 `uid://` 而非 `res://`，
+  调用方必须多走一趟转换 → medium；G-3 `editor_get_test_report` 的 `clear` 默认删共享桥接文件（多客户端）；G-4 日志工具形状不一致。
+  审计方还给出**每条引擎正解 API 与行号**（`resource_format_text.cpp:919/960-968`、`node.h:573 get_path_to(root,true)`、
+  `object.h:697-698 set_indexed`、`editor_log.h:182` …）—— 这正是 GDR-23 要的证据形态。
+- **一条方法学建议（采纳）**：顺手性验收用「**一条链零字符串手术**」作为可执行判据 ——
+  即「从起游戏到断言」的整条链中，**调用方不需要做字符串手工处理**（不需要手动拼 `uid://`→`res://`、
+  不需要把 `Vector4` 字符串再解析、不需要在路径里剔 `@EditorNode@…`）。
+- **执行计划（我的安排）**：
+  1. **TASK-023**：D-7 + D-15 + **结构性护栏**（收窄点清单 + 检查脚本 + GDR-24 + 门⑥）+ 回归矩阵。
+  2. **TASK-024**：顺手性批次 1（**E-10 优先**，因为它改善 M5 流程；随后 E-1、E-3、E-9、E-6）。
+  3. **TASK-025**：顺手性批次 2（E-2/E-8、G-1、G-2、G-4、G-3）。
+  4. **第四次 M4 复核**（全新子代理）：用「零字符串手术链」+ 四条证据形态 + 收窄点清单检查。
+  5. 通过后开 **B5（58 工具）**，每批**引擎优先**设计；B5 里的 shader/material 族必须带上 E-4/E-5 的引擎约束。
+- 回滚点：TASK-023..025 各自可整提交回退；GDR-24 与门⑥ 为文档/脚本。
+
 
 
 
