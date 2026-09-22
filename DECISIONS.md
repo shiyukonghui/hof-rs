@@ -1768,6 +1768,37 @@
   门脚本以最小改动支持 B2 manifest（**未削弱任何既有断言**，B1 断言逐字节不变）。
 - 回滚点：延迟响应通道与新组实现均可整提交回退；manifest 是数据文件。
 
+## D58 — TASK-011 交付（延迟通道 GDR-20）；B2 进度 11/25；两条强化建议入库
+
+- 日期：2026-09（B2 进度 **11/25**；已实现并集 48→**52**，编辑器端点 40 / 游戏端点 **35**）
+- **TASK-011 交付**（延迟响应通道 + 4 个跨帧工具），门全绿：
+  - 框架：`mcp_deferred.{h,cpp}` 的 `Task`/`Queue` 按 **(连接, 请求 id)** 关联、**无 FIFO**；
+    `MCPHttpServer` 逐帧推进（**每帧预算 8**）；超时以 `-32000`+`data.suggestion`+`data.timeout_ms` 收尾；
+    `drop_connection()` 是**唯一清理点**；帧时钟 `SceneTree::get_frame()`。
+  - **5 类状态机**：doctest 6 用例 + 线上 21 项检查；多 pending 交错 `crossed=False`；断连后 pending `1→0`；
+    超时实测 **2046 ms**（自报 2000 ms，只能收紧）。
+    **红阶段抓到真缺陷**：`Queue::tick` 轮转扫描完成项时索引非升序 → `remove_at` 越界
+    （`FATAL: Index p_index = 2 is out of bounds (size() = 1)`），改为按 sequence 删除后全绿。
+  - **跨帧证据**：headless 采样 `moved_frames=[406,408,410,413,415,418]` **严格递增**；
+    窗口化 `capture_frames` 帧号 169/173/177、三个 **互不相同**的 PNG sha256；截图落盘 **4890 B 真 PNG**。
+  - **无回归证据（本批最重要）**：`accept_m1.ps1` ×2 各 22/22 且两次 PASS 清单**逐字节相同**
+    （并发 100 / keep-alive / 413 / 431 / 裸 LF / `Expect: 100-continue` 全过）；全引擎 **1538/1538·427192 断言 0 failed**。
+    两处新行为（空闲回收豁免有 pending 的连接、同连接响应顺序背压）**只在存在 pending 时生效**。
+- **两条强化建议已写入 `DESIGN-DETAIL` §18 / GDR-20 第 8、9 条**：每连接**请求背压**（HTTP/1.1 响应顺序）、
+  有 pending 的连接**豁免空闲回收**（否则 30 s 空闲回收会抢在框架超时前斩断连接）。
+  另记录第 10 条**能力不满足时诚实拒绝**（headless dummy renderer 无纹理存储 → 捕获类工具先判能力后拒绝，
+  成功证据改在窗口化进程采集，**不得把空白帧当成功**）。
+- **偏差裁决（全部接受）**：`capture_screenshot` 实现为即时而非 deferred（其跨帧依赖来自旧文件 IPC，
+  进程内消失）；`find_node_when_available` 超时返回 `-32000`（**不再出现 `{found:false}` 的假成功形态**）；
+  `count`/`frame_count`/`frame_interval` 为 0 时 `-32602`（0 会退回同帧重复观测，正是本任务要消灭的缺陷）；
+  **跨帧持 `ObjectID` 而非裸 `Node*`**（避免悬垂指针——这是 C++ 侧的硬性正确性要求）；
+  `capture_frames` 新增 `frame` 与 `sha256` 键（仅有 index 无法证明「多帧可区分」）；
+  `capture_screenshot` 的 `save_path` **只接受 `res://`/`user://`**（迁移源 `globalize_path` 接受任意绝对路径，
+  属**安全收紧**）；`get_status_body()` 新增 `pending`/`pending_connections`；hoist 三处既有助手（verbatim 移动）。
+- 未做的可选项（记录）：`Queue::add()` 的**每连接 pending 上限**加固——当前靠每帧预算与超时；
+  若后续出现「单连接提交大量 pending」的现实风险再加。
+- 回滚点：延迟通道可整提交回退（但它已是 B4/B5 的前置依赖）；manifest 是数据文件。
+
 
 
 
