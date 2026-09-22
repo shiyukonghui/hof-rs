@@ -1885,6 +1885,56 @@
   自己构造路径逃逸与参数滥用反例、自己证明**9877 未被占用**且无孤儿进程。
 - 回滚点：本批实现可整提交回退；manifest 与规范为文档/数据。
 
+## D61 — **M2 里程碑独立验收：`pass`**；3 缺陷裁决；进入 M3（mono + C#）
+
+- 日期：2026-09（66 工具；验收基准 HEAD `e843f46668`）
+- **M2 独立验收（全新子代理，六类判定全 pass）**：
+  - **全量对等 = pass**：验收方**自己**抓两端点，期望集合**只**由两个 manifest + 映射的 `scope` 推导
+    （`editor 26 / game 17 / both 23` ⇒ 编辑器 **49**、游戏 **40**）；并集**恰为 66**（missing 0 / extra 0）；
+    **89 个端点-工具对**的 `name`/`description`/`inputSchema` **0 不一致**；双向 scope 泄漏均为空，
+    跨端点调用 `-32601` 且**无 content 信封**（并用已知工具做对照，证明不是「注册表一律 `-32601`」）；
+    `tools/list` 同 id 三次 + **跨进程重启** sha 一致。
+  - **诚实性 = pass**：**6 个未修的 `fix_implementation_first`**（`editor_disconnect_signal`/`editor_set_auto_dismiss_dialogs`/
+    `editor_set_tilemap_cell`/`editor_set_tilemap_cells_in_rect`/`editor_bake_navigation_mesh`/`editor_get_test_report`）
+    与 **2 个 `unregister`** **全部未注册**（两 manifest 不含、两端点 16 次调用全 `-32601`、源码全文检索 0 命中）；
+    `editor_remove_output_log` 走 `EditorLog::clear()`（面板 Clear 同路径），**不写/不截断任何日志文件**，
+    无 `EditorLog` 时 `-32000` 且**绝不报 `cleared:true`**。
+  - **行为一致 = pass**：42 条抽样（跨 4 通道、含写工具与 deferred）最终 40 条为契约形状；
+    首版 8 条红**全为审计自身的期望错误**（同一参数名撞 PowerShell 自动变量等），已 append-only 更正；
+    唯一实质分歧为 D-1。跨工具落地性有独立读回（`set_node_property` 写入由 `execute_gdscript` 独立确认）。
+  - **安全边界 = pass**：写侧 8 种逃逸拼写 × 2 工具、读侧 5 种 × 4 工具**全 `-32602`**，
+    前后快照证明**工程外零文件落盘**；`1e20`/`NaN`(→`-32700`)/类型错/缺参全被拒；
+    deferred **9/9**：工具自报 2 s → `-32000`+`data.timeout_ms=2000`（证明只能**收紧** 30 s 上限）、
+    pending 期间 `ping` 35 ms、**两条连接同发 `id=5555` 各自收到自己的超时**（证明键是 `(连接, id)`、无全局 FIFO）、
+    硬断连后 pending 归零不崩、同连接响应保序。
+  - **工程门 = pass**：验收方**先重建**与 HEAD 一致的二进制（`--version` = `4.8.dev.custom_build.e843f4666`）才验收 →
+    doctest 122/122·3618、全引擎 1548/1548·427900 断言 0 failed、`accept_m1.ps1` 两次 22/22（清单 IDENTICAL）、
+    两个 manifest PASS；**9877 全程 PID 36392 未被触碰**、9888/9889 无 LISTENING、无孤儿进程。
+- **3 个缺陷 + 1 条加固的裁决**：
+  1. **D-1（minor）采纳**：`running_game_set_node_property` 对**不存在的属性**返回成功形状（`new_value:null`）→
+     改为 **`-32001`+`data.suggestion`**。**注意**：迁移源（`mcp_runtime_agent.gd:159-160`）同样无条件 `set:true`，
+     故这不是「与参照不一致」而是「工具真的能用」标准下的**诚实性缺口** → **手册 §6.6 的第 7 例**。
+  2. **D-2（nit）采纳**：headless 截图用 `-32603` → 统一为 GDR-20 第 10 条的 **`-32000`+建议**，
+     `-32603` 只留给真正的内部错误。
+  3. **D-3（nit）裁决：契约改成与行为一致**（而非把行为改回必填）。理由：契约的 `inputSchema` 是**智能体读取的**，
+     它必须描述真实可接受集（否则「描述与功能不对应」这一被用户反复强调的问题会重现）；
+     用 `SCHEMA_OVERRIDES` 把 `events` 移出 `required`，并把**回退规则写进 description**
+     （缺省 = 回放本进程最近一次 `stop_input_recording`；无可用录制 → `-32602`），
+     然后**重跑生成器 + 重渲染 `TOOL-NAMING.md` + 更新全部指纹 + 同步 C++ 字面量**。
+  4. **R-3 加固采纳**：`mcp_server/pending_timeout_ms` 配 `0` 会**关闭延迟任务的唯一兜底** →
+     改为「`<=0` 视为默认上限」或显式拒绝 + 启动警告。
+- **唯一流程风险 R-1 已写入 `PLAYBOOK` §3（重要）**：`bin/` 不受版本控制
+  （`.gitignore` 忽略 `[Bb]in/`）→ 门会在**陈旧二进制**上跑出**假红**（验收方开工时二进制落后 HEAD 一个任务，
+  会把 B2 误判为 **19/25**）。新增强制步骤：**门之前必须重建**，
+  并**校验 `--version` 的 hash 前缀 == `git rev-parse --short HEAD`**。
+- **U-1/U-2 未闭合但有据**：`editor_remove_output_log` 的**肉眼级**面板清空（U-1）与截图**成功路径**（U-2）
+  本环境未直接观测（U-2 的窗口化成功证据已在 TASK-008 的 gui 相拿到真实 PNG）；
+  当前证据水平足以判 pass，若需正式闭合，可在**不占用 9877** 的前提下开一次短命窗口化进程补证。
+- **下一步：M3**（TASK-014）——mono 构建 + **C# 工程真的能跑**，并把上述 3 缺陷 + R-3 一并修掉。
+  为什么现在做 M3 而不是继续 B3：用户要求 **C# 作为游戏开发语言**，mono 与内置模块是否冲突**越早验证越便宜**；
+  若等到 B3–B5 之后再发现冲突，返工面会大得多。
+- 回滚点：M2 判决为文档；3 项修复由 TASK-014 承担，可整提交回退。
+
 
 
 
