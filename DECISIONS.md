@@ -2183,6 +2183,41 @@
   且**必须含一个故意失败的场景**以证明它真会报 fail。`editor_get_test_report` 是 D45 fix-first 中**第 4 个**。
 - 回滚点：本批可整提交回退；manifest 为数据文件。
 
+## D68 — **M4 收官（B3+B4 = 47/47，已实现 113/171）**；门脚本陷阱入库；派 M4 独立验收
+
+- 日期：2026-09（已实现 **113/171**；剩 **B5 58**）
+- **TASK-019 交付**（B4 全部 7 个工具），三组门① 3/3；门② **66/66**；门③ doctest **175/175·7122**；
+  门④ 全引擎 **1601/1601·431404 断言 0 failed**；门⑤ `accept_m1.ps1` **22/22 ×2**（PASS 清单相同）；
+  9877 PID 36392 未动；`--version == HEAD`（`a63583c6a`）已校验。**B4 = 7/7、M4 = 47/47 机器校验通过。**
+- **第 4 个 `fix_implementation_first` 修掉（`editor_get_test_report`）**：迁移源**从未收集任何结果**、
+  恒返回固定文案 + `available_commands` + `note`。现在返回**真实累加器**
+  （`total/passed/failed/pass_rate/all_passed/no_results/details`），由两个断言工具与场景运行器**写入**；
+  `clear` 拼错 → `-32602`。红证据：空累加器契约 + 线上 `C1`（`no_results:true`）与 `C2`
+  （`message=False available_commands=False note=False`）；并证明**四个游戏进程的断言不会泄漏进编辑器进程的累加器**。
+- **场景运行器（E3 的自动化判定载体）**：从 **9889** 发起 →
+  ①应通过场景 `all_passed=true`、`total_steps=4`；②**故意失败场景** `all_passed=false`、`failed=2`，
+  **每个失败步骤带 `expected`/`actual`/`reason`/`resolved_node_path`**（这就是「判定是**算出来的**而非编造的」的线上证明）；
+  ③空步骤/未知步骤类型/`scene_path` 前置拒绝为 `-32602`。`run_stress_test` **刻意没有 `passed` 字段**（不给假判定）。
+- **又修了一个实测缺陷**：期望值归一化——`{"x":3,"y":4}` 与 `Vector2` 属性比较时**报 `passed=false` 却打印两个相同的值**。
+  另：`assert_screen_text` 现在读**真实 Control 树文本**（迁移源读的是它自己的收集器**从未写入过**的键）并支持 `case_sensitive`。
+- **两条门脚本陷阱写入 `PLAYBOOK` §7**（都造成过假 PASS/假红）：
+  1. **「工具是否在线」不得用 `-match`/文本包含判断** —— 契约 `description` **会互相按名引用**
+     （如「要扁平形态请用 `editor_list_signal_connections`」），必须**解析 `tools/list` 的 `name` 字段**做集合判断；
+  2. **断言/期望值必须先与引擎实际语义对齐**（上述 `Vector2` 表示形式缺陷）。
+- **三条引擎事实（待后续批次共用；暂记在报告与代码注释）**：
+  ①`Node::has_method("get_signal_list")` 为 `false`，而 `Object::get_signal_list()` 是**私有**；
+  ②`CallableCustom` 由 `Callable` 的引用计数持有；③`Array` 赋值是**引用**而非快照。
+- **计数订正（不是新增，而是修掉上一批的陈旧值）**：编辑器端点可见数 `97 → 91`、游戏进程的编辑器视图 `45 → 31`；
+  本批实测注册表总数 **113**（editor 60 / both 31 / game 22），游戏进程注册表 53。
+- **M4 独立验收已派发**（`TASK-AUDIT-M4`）：覆盖 B3+B4 共 **47** 个工具，分七类判定，
+  要求验收方**自己解析 `tools/list` 的 `name` 字段**（明令禁止 `-match`）、
+  自己核实「4 个已修 fix-first 真的做到、剩余 3 个 + 2 个 unregister 仍未注册」、
+  自己构造静默错值/批量事务/多场景/UUID 方向的反例，并证明 **9877 未被占用、门脚本确实已无需手工改**。
+- **下一步（M5 = B5 58 个工具 + hof-rs 切端点 + 真实 T=1 冒烟）**：B5 是最后一批（26 组/58 工具），
+  按 ~10 工具一批推进（约 5–6 批）。**注意：hof-rs 仍处用户指令的暂停状态（D43）** ——
+  「hof-rs 切端点 + 真实 T=1 冒烟」须在**解除暂停后**进行；我推进到该步时会**先向用户确认**，不擅自恢复。
+- 回滚点：本批可整提交回退；manifest 为数据文件。
+
 
 
 
