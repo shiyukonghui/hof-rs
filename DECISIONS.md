@@ -2372,6 +2372,43 @@
   fail 仍集中在**值转换的诚实性**这一条线上，故继续**只修这条线**，B5 开工时**必须沿用最新证据形态**。
 - 回滚点：TASK-022 改动可整提交回退；GDR-22 为文档。
 
+## D73 — TASK-022 交付：**统一收窄闸门**（D-4）+ D-5 回读 + D-6 文件桥接；待第三次复核
+
+- 日期：2026-09（已实现仍 **113/171**；本任务是修复）
+- **交付**（3 个提交；门在 HEAD 绑定二进制 `bb82ecc0…` 上全绿）：
+  - **D-4 统一收窄闸门**：`MCPTools::ValueSlot{ WIDE, REAL_T, INT32, UINT8 }` +
+    **唯一判定** `value_fits_slot(...)`；`coerce_to_property_type` 在**类型转换成功后、任何 `Object::set()` 之前**判定；
+    **TASK-021 的两处分散判定（元素、分量）函数体已删除、改为调用同一处**；5 条写路径全部复用。
+    覆盖 `double→float32` **溢出与非零下溢**、`int64→int32/uint8`、容器元素、向量/颜色分量、packed 元素、标量成员。
+    **诚实边界（GDR-22 §20.3，显式声明）**：标量 **INT 成员**的 C++ 宽度**在 `PropertyInfo` 里不可见**，
+    故保持 `WIDE`，由**写后读回真值**保诚实（不靠猜宽度）；这是**唯一未判的收窄面**。
+  - **D-5**：`project_create_resource` 改为**真回读** —— `changed:{<prop>:{old,new}}`，
+    `properties_set` **只含「回读值 = 请求值」**的属性，其余进 **`ignored`**（`requested`/`stored`/`reason`）。
+    实测 `Curve.min_value=5.0` → `properties_set=[]` + `ignored` 齐全；正例 `0.25/0.75` → 两项入 `properties_set`。
+  - **D-6 文件桥接**：`record_test_result` 每次更新后**原子写** `user://mcp_test_report.json`；
+    `editor_get_test_report` **优先读该文件**并回 `source=game_process_file` + 路径 + 写入时间戳；
+    缺失/空/坏 JSON → `source=editor_process`、`report_file_present=false`、`report_unavailable_reason`、
+    `no_results=true`（**绝不伪造 `total`**）；`clear` 同时清编辑器累加器并删除桥接文件，`cleared` 说明**真实范围**
+    （**不声称**清了游戏进程内存）。线上实测：游戏侧两个断言（一过一失败）→ **9888 读到 `total=2/passed=1/failed=1` 与明细**。
+  - **GDR-22** 写入 `DESIGN-DETAIL` §20（判据 / 落点与调用点 / 覆盖清单 + 诚实边界 / **不属该类的确定性转换** /
+    **四条证据形态** / 资源写后回读 / 跨进程可达性）；`build_local.cmd` 增加 **`-Force`**
+    （注释写明「改 `tests/*.h` 后不加 `-Force` 会跑旧用例产生**假绿**」）。
+- **证据形态四条（新）已落地并自证**：①`-32602`；②**拒绝响应无值回显**（旧缺陷形状 `code=0 + new_value=1e99999` 被明确排除；
+  诊断文本里点名「引擎实写 `inf`/`0`」**不算**回显）；③**显式保存后扫 `.tscn` 字节**：无 `inf`/`nan`/`1e99999` 且 sha256 相同；
+  ④**另一读工具双读**（模块读 + GDScript 求值）旧值未变。**89/89** 覆盖 **5 条写路径 × 反例矩阵**。
+- 门：①契约子集 3/3（9888=91 / 9889=53 / 契约 171 逐字）；②**89/89**；③doctest **190/190·7716**（红阶段 3 用例 71/103 断言失败）；
+  ④全引擎 **1616/1616·431998 断言 0 failed**；⑤`accept_m1.ps1` **22/22 ×2**（PASS 清单 diff=0）；
+  9877 全程 PID 36392 未触碰；未 push。
+- **接受的关键偏差**：跨场景路径 `project_set_node_property_across_scenes` 的**值级拒绝外层是 `-32000`**
+  （该工具契约的全成功/全回滚信封），`-32602` 语义在 `data.scenes.errors[].reason` 内 —— **四条证据形态仍成立**；
+  `project_set_setting` **显式传 `WIDE`**（`ProjectSettings` 以 `Variant` 存储，按成员规则会**误拒**可存储的大浮点）。
+- **下一步：第三次 M4 复核**（全新子代理），要求：用**同样的** 5 路径反例矩阵、
+  把「**落盘文件不得含 `inf`/`nan`**」作为**显式条款**、复核 D-5 的 `ignored` 判据与 D-6 的跨进程数字与诚实空，
+  并**自己再找**同族新面（尤其 `Vector4i`/`Rect2`/`Transform2D` 的分量宽度、窗口化截图分支）。
+  另建议下轮抽样**资源类型的 setter 归一化**（`Environment`/`CameraAttributes` 等），
+  检验 `ignored` 判据是否会把「故意归一化的 setter」误标。
+- 回滚点：TASK-022 改动可整提交回退；GDR-22 为文档。
+
 
 
 
