@@ -1672,6 +1672,52 @@
   → 在模块内提交**受跟踪**的 `scripts/build_local.cmd`，把这些写进脚本注释。
 - 回滚点：TASK-008 的代码改动可整提交回退。
 
+## D56 — **B1 收官（41/41）**；B2 规划与 E3 解锁路径；4 项裁决
+
+- 日期：2026-09（head `bc34e66029`；引擎 `0f7c0752…`，version `4.8.dev.custom_build.54a21edb3`）
+- **B1 = 41/41 全部落地**（7 组：6+7+6+4+7+10+1），`check_tool_groups.py` 报告 `distinct=41 == 42-1`。
+  按映射 `scope` 推导的端点数：**editor-only 17 / game-only 1 / both 23 → 编辑器端点 40、游戏端点 24**，
+  实况 `tools/list` 与推导**完全一致**——**「双向缺席」都拿到了端到端证据**（此前记为 unverifiable 的一项现已闭合）。
+  门：doctest **96/96·1844**、全引擎 **1522/1522·0 failed**、`accept_m1.ps1` **22/22 连跑两次**、契约子集 3/3、
+  `check_tool_groups` PASS、`build_local.cmd`（含 `tests=yes`）exit 0。
+- **助手去重第三批**：`require_editor_ui` / `property_value_from_json` / `coerce_to_property_type` / `property_type_of`
+  上提到 `tool_helpers.*`，各**恰好一处定义**；等价性用**线上逐字节**证明（35/38 行相同，
+  差异仅 `g01_tools_list`（新增工具，23→24）与两个含易变 `frame_count` 的状态快照）。
+- **裁决（4 项）**：
+  1. **`max_results` 语义 = 「最近的 k 个」**（实现方 collect→按距离排序→截断），
+     迁移源是「前序遍历发现的前 N 个」。**接受实现方的语义**——工具名是
+     `running_game_find_nearby_nodes`（**nearby**），「最近的 k 个」才与名字相符；
+     这是**第 6 例**「迁移源行为不可取」，记入 `PLAYBOOK` §6.6 的案例族。
+  2. **`MCPToolError::no_scene()` 的 `data.suggestion` 措辞**（从 game-only 工具里说「请先用 `editor_open_scene`」，
+     而游戏进程根本不提供该工具）→ **修**：措辞改为按 `scope` 自适应（或中立），
+     排入 **TASK-010** 的小修项。
+  3. **`--import` 会尝试绑定 9877**（今天只因用户编辑器占着端口而失败）→ **保持默认端口不变**
+     （GDR-4 的默认值是与 hof-rs 的集成契约），但要求**绑定成功时打印一条 INFO（端口 + 进程类型）**，
+     使意外绑定**可见**；排入 TASK-010。
+  4. **两处已存在的无守卫 `double→int64` 强转**（`tool_builder.cpp` 的 `_integral_value`、
+     以及 `coerce_to_property_type` 把越界 double 交给 `type_convert`；实测 `1e20` 静默变 `0`）
+     → **修**（越界拒绝并给出 `-32602`），排入 TASK-010。
+- **门脚本又需语义修正**（第二次）：`accept_m1.ps1` 现按
+  「union 减去 game-only」推导编辑器的期望集合并断言 `game_scope_leaked=[]`；
+  `check_contract_subset.ps1` 不再拿整个并集当编辑器端点的期望。**接受**——这正说明
+  「逐端点 scope 语义」不是可选的装饰，而是门脚本正确性的前提（已在 D53 写入 `DESIGN-DETAIL` §17.3）。
+- **B2 规划（M2 的 E3 解锁点）**：
+  - B2 = **25 个工具**（`DESIGN-DETAIL` §10），是**混合批次**：既有 `scope=game` 的观测/驱动类，
+    也有 `channel=editor` 的输入/编辑器播放类（`editor_play_scene`、`editor_simulate_*`、`editor_add_input_action` 等）。
+  - **E3 解锁的杠杆点识别**：内置模块**同时存在于游戏进程**，
+    因此 `scope=game` 的工具是**在游戏进程内直接执行**的（不再需要 GDExtension 时代的 `user://` 文件 IPC），
+    其中 **`running_game_execute_gdscript`（旧 `execute_game_script`）** 是在游戏进程内跑任意脚本的能力——
+    **它取代了迁移源里受 `Expression.execute([], base, false)` 限制的那条路径**（旧路径连 `Input` 单例都够不到），
+    从而让「在游戏内注入输入 + 读取观测」成为可能。**这就是 E3 的解锁点**，必须在报告中以证据钉死
+    （例：在游戏进程内通过该工具注入输入并观察到节点状态变化）。
+  - **注意映射的既有裁定**：`editor_simulate_*` 按**迁移源行为**被定为 `channel=editor`（它们当年注入的是
+    **编辑器进程**的 `Input`，正是 E3 根因）。因此**不得**把「驱动游戏」的希望寄托在它们身上；
+    游戏侧驱动必须走 `scope=game` 的工具（`running_game_execute_gdscript`、
+    `running_game_simulate_button_click_by_text`、`running_game_move_player_to_target` 等）。
+    **本批必须在报告里显式回答：在不启动编辑器的情况下，一条从 9889 发起的调用序列能否让游戏产生可观测的状态变化。**
+  - B2 需要**自己的组清单**（B1 的 `tool-groups.json` 只覆盖 B1）→ TASK-010 产出 B2 manifest 并移植第一组。
+- 回滚点：B1 各组实现均可整提交回退；本节的裁决为文档。
+
 
 
 
