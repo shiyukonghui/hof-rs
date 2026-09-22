@@ -2255,6 +2255,48 @@
   fail 集中在**值转换的诚实性**这一条线上；因此**不推倒重来**，只修这条线并让 B5 沿用新的证据形态。
 - 回滚点：修复本身可整提交回退；§17.3 为文档。
 
+## D70 — TASK-020 交付（D-1/D-2/D-3 已修 + 新证据形态）；同类残留面先补齐再复核
+
+- 日期：2026-09（已实现仍 **113/171**；本任务是**修复**而非新增）
+- **TASK-020 交付**，五道门在源码提交 `576e19c3fc` 绑定的二进制上全绿：
+  - ①契约子集 3/3；②证据 **67/67**（**修前同一脚本 29 pass / 32 fail**，对比强烈）；③doctest **179/179·7312**；
+    ④全引擎 **1605/1605·431594 断言 0 failed**；⑤`accept_m1.ps1` **22/22 ×2**（PASS 清单 diff=0）。
+- **三缺陷修法**：
+  - **D-1**：闸门落在**真正折叠分量**的 `shape_vector_from_json` —— 新增**分量表**
+    （`Vector2/3` 分量为 `FLOAT`、`Vector2i/3i` 为 `INT`、`Color.r/g/b/a` 为 `FLOAT`），
+    每个分量**先经同一道 `coerce` 判定**再折叠（参数名带 `value.x`），不合规 `-32602` **且写前拒绝**。
+    > **实现方纠正了我在任务书里写的根因**：我把它归到 `property_value_from_json` 的 DICTIONARY 递归，
+    > 但实测 **`can_convert(DICTIONARY, VECTOR2)` 是 `false`** —— 真正的折叠点在 `shape_vector_from_json`。
+    > 这是**第二次**由执行者纠正我的技术判断（第一次是 105 vs 103 的算术），记在案。
+  - **D-2**：`STRING→FLOAT/INT` 增加「**整串可解析 + 有限 + `int64` 范围**」判定；`#rrggbb` 的 `Color` 特例保留。
+    实现方**比字面更严**：`INT` 目标拒绝小数拼写 `"1.5"`（修前经 `String::to_int` 得 `1`）。
+  - **D-3**：整份断言 verdict 下沉为**共享字段集**（`node_state_assertion_fields` / `screen_text_assertion_fields`），
+    工具入口与场景运行器**共用**，失败字段集**逐键相同、`reason` 逐字节相同**。
+- **证据形态（新硬要求）已落地**：每个反例**三条同时**覆盖 —— ①`-32602` 且 `result` 为 null；
+  ②反例前后 `scenes/main.tscn` **sha256 相同**；③**另一个读工具**断言旧值未变（`9888` 与 `9889` 各一）。
+  批量路径另加 `batch.status=rolled_back`、节点未泄漏、sha 相同。
+- **两项补验通过**（M4 验收未能完成者）：①跨场景「**好文件 + 坏文件**」全或无 —— 坏文件在场时
+  `code=-32000`、`data.scenes.errors=[{scene, reason:"not a loadable PackedScene"}]`、
+  suggestion 含 `Nothing was written`、两个好文件 sha 前后相同；移除坏文件后两文件都写入并可读回；
+  ②`editor_analyze_screenshot_diff` —— 引擎自写 4×4 PNG：相同图 `identical=true/diff_percentage=0`、
+  不同图 `identical=false/changed=1/diff_percentage=6.25`、`threshold=255` 掩蔽、`=0` 保留、
+  `300`/`-1` → `-32602`、缺 `image_a` → `-32602`。
+- **`DESIGN-DETAIL` §17.3 措辞已修正**（只改措辞、不改规则；门脚本 sha256 未变）。
+- **受影响工具清单（9 个，行为从「静默错值」变为 `-32602`）**：`editor_set_node_property`、
+  `editor_set_node_property_batch`、`editor_add_nodes_batch`、`running_game_set_node_property`、
+  `editor_add_resource_to_node_property`、`project_create_resource`、`project_edit_resource`、`project_set_setting`
+  （以上 8 个**线上实测**）、`project_set_node_property_across_scenes`（共享点**推导**）。
+- **决策者裁决：同类残留面先补齐，再让全新子代理复核。**
+  实现方主动列出**同一缺陷类的残留面**：`STRING→BOOL` 的可解析性、**容器元素位宽**
+  （`PackedByteArray`/`PackedInt32Array` 等）、`PackedVector4Array` 的元素整形。
+  → 若直接派复核，复核只会把它们当**新缺陷**再报一遍、多花一轮；**先补齐同类面**（**TASK-021**）更省，也更彻底。
+  TASK-021 另要求：**通读并列出所有「转换失败 → 退化成默认值 → 报成功」的路径清单**，逐条判定修/不修 + 理由，
+  并断言「同类面已清零（含自查范围说明）」。
+  修完后**由全新的验收子代理按 M4 的同样对抗性反例复核**（尤其五种分量值与字符串值）。
+- `--import` 首次导入**偶发** `0xC0000005`（3 次重试、第 2 次成功）仍作为**风险**记录，
+  并要求证据脚本保留重试与退出码校验。
+- 回滚点：TASK-020/021 的改动各自可整提交回退。
+
 
 
 
