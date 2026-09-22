@@ -2034,6 +2034,45 @@
     **禁止假成功**）。节点写族照 TASK-014 确立的「**先查属性表再写**」形状做。
 - 回滚点：M3 判决为文档；TASK-015 的实现可整提交回退。
 
+## D64 — TASK-015：B3/B4/B5 分类完备（**105 而非 103**，我的算术错误被纠正）；两个 fix-first 真修
+
+- 日期：2026-09（已实现 **76/171**；`editor_node_write` 组 10 个工具落地）
+- **⭐ 决策者的算术错误被实现方纠正（记录在案）**：我在 D63/TASK-015 里写「剩余待移植 = 171 − 2 unregister − 66 = **103**」，
+  但**那 2 个 `unregister_until_implemented` 的名字并不在 171 条契约里**（它们已被剔除），
+  所以不能二次扣减 → **真实待移植 = 171 − 66 = 105**。实现方按真实集合分类并做成**机器断言**。
+  教训：**「契约条数」与「待移植集合」必须分别实时推导**，不要用过去某一步的残差做算术。
+- **B3/B4/B5 分类完备（可机器校验）**：`b3`(40 工具/12 组，sha `25a2d784…`) / `b4`(7/3，`21a5dd5e…`) / `b5`(58/26，`09dc64da…`)；
+  并集**恰好 105、各一次**、彼此及与 B1/B2 **无交集**；`check_tool_groups.py --check-completeness` 与
+  `--batch B3|B4|B5` 全部 exit 0，且 **B1/B2 旧路径输出 SHA 逐字节不变**（`0cfcac80…`/`14eba000…`）。
+- **B3 首组 `editor_node_write`（10 个工具）**：门① **3/3**；门② **43/43**；门③ doctest **130/130·4383**
+  （红阶段 128/130、14 断言失败、exit 1）；门④ 全引擎 **1556/1556·428665 断言 0 failed**；
+  门⑤ `accept_m1.ps1` **22/22 ×2**；全部在 `--version == HEAD`（`41267a006`）的绑定二进制上。
+- **两个 `fix_implementation_first` 真修（红→绿）**：
+  1. **`editor_disconnect_signal`**：红版忠实移植迁移源（**忽略 `target_path`**、用场景根构造 `Callable`、**无条件报成功**）
+     → 恰好在该用例上 **14 条断言失败**、exit 1，引擎日志留下 `Attempt to disconnect a nonexistent connection`；
+     修后**按调用者指定的 target 解析**，先 `has_signal` 再 `is_connected` 精确匹配才断开，否则 `-32001`+建议。
+     线上证明：`connect=0 / first disconnect=0(target=Renamed) / second disconnect=-32001`。
+  2. **`editor_set_auto_dismiss_dialogs`**：红版写**无人读取的 static** 并返回成功字典 → 修后**恒为
+     `-32000 Not implemented` + `data.suggestion`**，因为**已证明本引擎没有进程级弹窗自动关闭开关**
+     （29 处 `set_hide_on_ok` 都是**逐对话框硬编码**；唯一的编辑器级对话框设置 `accept_dialog_cancel_ok_buttons`
+     属顺序选择）。**该工具没有可构造的成功类，已显式声明**。
+     → 这是 D45 的 7 个 fix-first 中**第 3 个**被真正修掉（`editor_remove_output_log`、`editor_disconnect_signal`、
+     `editor_set_auto_dismiss_dialogs`）；剩余 4 个在 B4（`editor_get_test_report`）与 B5（tilemap×2、`bake_navigation_mesh`）。
+- 偏差裁决（接受）：`editor_set_node_property` 返回键集改 TASK-014 形状（去掉迁移源恒真的 `updated:true`）；
+  `editor_delete_node` **拒绝删除编辑场景根**（迁移源会把整棵打开场景 `queue_free`）并报 `deferred:true`；
+  `editor_rename_node` 报引擎**实际采用**的名字（`set_name` 是消毒而非失败）并加 `requested_name`/`name_sanitized`；
+  `editor_reparent_node` 新增「移到自己后代下」「移动编辑根」两条前置拒绝；`editor_connect_signal` 未知信号 `-32001`、
+  重复连接幂等成功并标 `already_connected`；`editor_set_node_groups` 非字符串元素 `-32602`、`removed` 排序 `added` 去重（确定性）；
+  `editor_add_node` 的属性走同一份 `write_node_property`，**未知属性时销毁半成品节点**；
+  证据脚本的 `--import` 传 `--mcp-port=0` 且**校验 `$LASTEXITCODE`**（`Start-Process` 的 `ExitCode` 在本机返回空，
+  前两次运行曾误报失败——与 D63 的「门必须校验 import 退出码」同源）。
+- **已知瑕疵（记录不改）**：未知属性的错误消息里节点名是**引擎绝对路径且含每次运行不同的节点 id**（非确定）；
+  改它会波及 B2 已验收的线上消息 → 留待有需要时统一。
+- **下一步（TASK-016）**：先**上提 `_find_node`**（TASK-015 因纪律在组内复制了一份；不清理会让每个编辑器写组再复制一遍）
+  并给出**逐字节等价证明**；再移植 B3 接下来 **2 组（≤20 个工具）**，优先 `editor_node_read`，
+  并要求**写族→读族互验的活证据链**（用写族改、用读族读回）。
+- 回滚点：本批可整提交回退；manifest 为数据文件。
+
 
 
 
