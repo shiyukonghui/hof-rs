@@ -1847,6 +1847,44 @@
   ④门②的游戏相前三次运行失败，是 3 个真缺陷 + 2 个宿主问题共同所致，**失败记录全部保留**（append-only）。
 - 回滚点：本批实现可整提交回退；规范条款为文档。
 
+## D60 — **B2 收官 25/25**（B1+B2 = 66 工具）；CR-4/CR-5；派 M2 里程碑验收
+
+- 日期：2026-09（已实现并集 60→**66**；编辑器端点 **49** / 游戏端点 **40**；引擎 `46e92359…`）
+- **TASK-013 交付**（B2 最后一组 `editor_input_simulation` 6 工具 + 录制上限 + GDR-21 边界实测）：
+  - 门：门① 3/3 ×2；门② 边界 **24/24**、上限 **11/11**、反例 **15/15**（50 组真实请求/响应，全部落盘 + sha256）；
+    门③ doctest **122/122·3618**；门④ 全引擎 **1548/1548·427900 断言 0 failed**；门⑤ `accept_m1.ps1` **22/22 ×2**（清单一致）；
+    `check_tool_groups.py --batch B2` → **25/25 PASS**（`implemented=true` 组 9 个、25 工具）。
+  - **GDR-21 边界实测（双进程同一次运行对照）**：编辑器侧 `editor_simulate_key` 后**编辑器进程自己**的
+    EditorPlugin 计数 `key=1`，而**游戏自己的计数保持 0**；点/移/加动作后编辑器 `mouse_button=1/mouse_motion=1/action=1`，
+    游戏仍 `0/0`；编辑器 `InputMap` 含新 action（count=90）而游戏 `InputMap.has_action=false`；
+    **对照**：同一按键**在游戏进程内**注入时游戏计数 `0→1`；9889 调用编辑器工具 → `-32601`；`tools/list` **49 vs 40**。
+    → 「为什么编辑器注入驱动不了游戏」现在**钉在实测上**。
+  - **录制上限**：事件数/时长双上限（默认 `100000` / `600000 ms`，可经 `godot_mcp/recording_max_events|recording_max_duration_ms`
+    或 `set_limits()` 覆盖，`<=0` = 无界）；达上限**停止采集**、计数丢弃并在结果里**无条件**报 `truncated/dropped/limits`；
+    实测：上限 3 录 5 → `event_count=3 dropped=2 truncated=true`；时长上限 500 ms → `event_count=1 dropped=1`。
+    `truncated` 的语义被钉死为「**至少真丢了一个事件**」（时钟越过上限但没有后续事件时**不**声称截断）。
+  - **又抓到两个真缺陷（红→绿）**：**CR-4** 鼠标事件未设 `global_position` → **鼠标实际没动**；
+    **CR-5** `button` 未做范围校验 → `mouse_button_to_mask()` 移位触发**引擎 UB**（现校验 1..9）。
+- **偏差裁决（全部接受）**：`editor_simulate_input_sequence` 注册为 deferred（`frame_delay` 是帧时钟，
+  其首个事件在请求的**下一帧**落地——延迟通道从不在到达帧内 tick）；
+  单个鼠标工具**只注入一个事件**（addon 的 `auto_release` 参数不在冻结契约里，映射引用的 `input.rs` 也是单事件）；
+  未知按键名 → `-32602`（而不是注入 `KEY_NONE`）；六个工具的答案新增透明键（`target:"editor"`、
+  `in_input_map`、`persisted:false`、`time_ms_ignored`）；上限走 `ProjectSettings` + `set_limits()`
+  （契约没有该参数、**不得改契约**）；`stop_input_recording` 增加三个无条件键；
+  三个旧 doctest 的编辑器表计数随工具数变化（`60→66`、`43→49`，**未削弱任何断言**）；
+  本 fork 的 `REQUIRE` **不回卷**（`tests/test_macros.h:44`）→ 新用例对每次读取都加守卫。
+- **两条引擎事实入库（供后续批次）**：①`InputEventMouse::set_position()` **不**派发 `global_position`
+  （`input_event.cpp:689` vs `input.cpp:926`）——这正是 CR-4 的成因；
+  ②`InputMap::action_add_event()` **会去重**（`input_map.cpp:205`）。
+- **已知未修（记录，不掩盖）**：`tools/editor_input_read.cpp` 解引用 `InputMap::get_singleton()` **无 null 检查**
+  （在活的编辑器端点上不可达，doctest 中可达）——按「不得改别组文件」纪律留给后续清理批次。
+  另记风险：**录制上限只约束采集，不约束随后交给 play/save 的快照**（可选加固）。
+- **⭐ M2 里程碑独立验收已派发**（任务书 `TASK-AUDIT-M2`）：覆盖 **B1+B2 全部 66 个工具**，
+  分五类判定（全量对等 / 诚实性 / 行为一致 / 安全边界 / 工程门），
+  并要求验收方**自己**复跑边界与上限相、自己核对「7 个 fix 中只有 1 个已修、其余 6 个必须未注册」、
+  自己构造路径逃逸与参数滥用反例、自己证明**9877 未被占用**且无孤儿进程。
+- 回滚点：本批实现可整提交回退；manifest 与规范为文档/数据。
+
 
 
 
