@@ -1991,6 +1991,49 @@
   我会在推进到 M5 时就此向用户确认，而**不擅自恢复 hof-rs 的工作**。
 - 回滚点：mono 构建产物与 C# 工程都在 `bin/` 与 `%TEMP%`（不受版本控制）；3 项修复可整提交回退。
 
+## D63 — **M3 独立验收：`pass`**；一处措辞被纠正；进入 M4（B3/B4/B5 分类 + B3 首组）
+
+- 日期：2026-09（验收方自建 HEAD 绑定二进制：mono `4.8.dev.mono.custom_build.6ea5de6e0` / 非 mono 同前缀）
+- **M3 独立验收（六类全 pass）**：
+  - **mono 构建 pass**：验收方**自己重建**两个构建（mono 113 s / 非 mono 45.8 s，exit 0）；
+    glue 重生成到 `%TEMP%` 与仓内 **1110 个 generated 文件逐字节相同**；
+    4 个 `4.8.0-dev` nupkg 被**离线 `dotnet build` 端到端消费**（未重跑 `build_assemblies.py`，**已显式声明取舍**）。
+  - **C# 可跑 pass**：验收方**自建工程副本**（robocopy 排除 `.godot`，另加 `public int PlainField` 与抛异常的 `Boom()`）→
+    离线 `dotnet build` exit 0、**0 警告 0 错误**；mono 引擎起游戏后 C# **真的在跑**（ticks 递增），
+    从 9889 读到 `csharp: ticks=944 state=written-from-mcp`；C++ 写 `CsharpState` 后 C# 读回（**反向也验证了**）。
+  - **模块共存 pass**：mono 下 9888=**49** / 9889=**40**，验收方**自己逐字比对零失配、零 scope 泄漏**。
+  - **三项修复 pass**：D-3 的**结构化 diff 自证**（171→171、名字集合不变、**只**动该工具 `description`+`required`、
+    `properties` 一字未改、`_meta` 仅 `generator_version 1.4.0→1.5.0` 与 2 条 override、`map_sha256` 与实际相符）；
+    D-1 → `-32001`+建议且真实写入由**另一工具独立读回**；D-2 → `-32000`+建议（参数错仍 `-32602`）；
+    R-3 配 `0` 时启动日志报 `pending_timeout_ms=30000 (configured=0)` + WARNING，**实测 30.022 s** 以
+    `-32000`+`data.timeout_ms=30000` 收尾（另补测配置 5000 保留为 5000）。
+  - **工程门 pass**（全在重绑定二进制上）：doctest 124/124·3653、全引擎 1550/1550·427935 断言 0 failed、
+    门① 3/3、`accept_m1.ps1` 22/22 ×2（PASS 清单逐字节相同）；**mono 与非 mono 同一请求 6/6 payload 逐字节相同**。
+  - **端口纪律 pass**：9877 全程 PID 36392 未被触碰；9888/9889 收尾无 LISTENING；无孤儿；无 git 写操作。
+- **缺陷 1 条（minor/文档）已采纳并已在手册修正**：我在 `PLAYBOOK` 里写的
+  「C# 的 `public` 字段**不是** Godot 属性，只有 `[Export]` 在属性面里」**措辞过强**——
+  准确事实是：**非 `[Export]` 的 `public` 字段不进 `get_property_list()`，但 `Object::get/set` 仍可按名读写**
+  （`csharp_script.cpp:1487-1521`；实测全量列举 29 键不含 `PlainField`，但按名 `set` 成功 `4242→7`）。
+  → **B3 的节点写族不得据「不可达」做设计**：属性表用于**校验/类型判定**，
+  「按名可写」这一事实要么显式允许、要么显式拒绝并在报告说明。手册 §3 已按此修正。
+- **另两条已入手册的隐性风险**：①**首次导入且 `.tscn` 带 BOM** 的 scratch 工程 `--import` 会以 `0xC0000005` 退出
+  （门脚本用 `Set-Content -Encoding UTF8` 容易引入 BOM）→ **门脚本必须显式校验 `--import` 退出码**、
+  scratch 的 `.tscn` **不要写 BOM**；②`godot_mcp` 启用但未传 `--mcp-port` 时会尝试 bind **9877**，
+  实测被 OS 拒绝并**优雅自禁**（`WARNING: [MCP] bind failed on 127.0.0.1:9877; MCP server disabled`），
+  用户进程未受影响（与 §19.3/GDR-4 的裁决一致）。
+  另记：`REPORT-014` §6 里 4 个二进制 sha256 **已因验收方重绑定 HEAD 而失效**（`bin/` 不受版本控制）——
+  下游引用这些指纹的证据需重取。
+- **进入 M4**（TASK-015）：
+  - **第一部分**：把剩余 **103** 个工具（171 契约 − 2 个 `unregister` − 已实现 66）**完整分类**成
+    `docs/tool-groups-b3.json` / `-b4.json` / `-b5.json`，要求**完备性可机器校验**
+    （三 manifest 并集恰为 103、恰好各一次、与 B1/B2 无交集、名字都在契约、channel/scope/mutating 与映射逐条一致），
+    且**不得削弱既有 manifest 检查**。
+  - **第二部分**：移植 B3 首组（编辑器节点写族，8–10 个），**含 2 个 `fix_implementation_first` 必须先红后修**：
+    **`editor_disconnect_signal`**（迁移源**忽略 `target_path`**、固定用场景根作 `Callable` → 断的可能不是目标那条却报成功）
+    与 **`editor_set_auto_dismiss_dialogs`**（只写**无人读取的 static** → 纯谎报，必须真实现或诚实 `-32000`，
+    **禁止假成功**）。节点写族照 TASK-014 确立的「**先查属性表再写**」形状做。
+- 回滚点：M3 判决为文档；TASK-015 的实现可整提交回退。
+
 
 
 
