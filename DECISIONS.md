@@ -2944,3 +2944,44 @@ B5 开工: TASK-033 = B5 批次 1(动画族 14 工具: animation_write 4 + anima
 B5 余下三批已规划: 批次 2(audio 6 + particle 5 + theme 2 + profiling 1 + scene_3d 1 = 15);
   批次 3(tilemap 6 + shader 4 + physics 3 + project_shader 2 = 15, 含 2 个 fix-first);
   批次 4(navigation 3 + running_game_navigation 1 + project_theme_write 5 + export 2 + android 2 = 13-14, 含 bake_navigation_mesh fix-first)
+
+## D87 — TASK-033 交付（B5 动画族 14 工具）+ 批准 4 个 schema 缺口 + 规范更新；B5 批次 2 派发
+
+TASK-033 交付(B5 动画族 14 工具) + 批准 4 个 schema 缺口 + 规范更新; B5 批次2 派发
+
+TASK-033(提交 613df1eda9/36510a32b7/c5bc94ac5d/7e9d00ddf2/4e71becf2d/355bff9538): 六门全绿
+  ① 3/3 x3 组(implemented_union 105 editor / 53 game, contract 171); ② 线上 75/75;
+  ③ 红 225/9 失败 -> 绿 229/229 (10714 断言); ④ 1655/1655 (434996 断言); ⑤ accept 22/22 x2 逐字节一致;
+  ⑥ 扫描 34/34 无漂移 + --coverage 17 拼写 + 探针 101/101; 回归 mcp030 22 / mcp032 39 全绿
+  14 工具全部 scope=editor, 9889 上 -32601; 21 步零字符串手术链每步字符串操作 0 次;
+  自捉并修掉三处自身缺陷(14 处 handler 成功响应**双层信封**、整数 default 被引擎 JSON 往返拉平为 0.0、
+  两处 doctest 期望与引擎语义不符[StateMachine 自带 Start/End、BlendTree 自带小写 output])
+  进度: B5 14/58; 模块 127 注册 / 105 编辑器可见 / 53 游戏可见
+
+★ 新纪律当场生效(TASK-033 主动对 REPORT-AUDIT-M4e 出勘误):
+  它指出 M4e 的 D-M4e-3 因果前提为假 —— 单个 .tscn 作 path_filter 之所以零命中, 不是因为'它匹配上了但类型零节点',
+  而是因为 walker 的 DirAccess::open 对**文件**失败; 并给出锚点(TASK-030 的 doctest 已钉)与 append-only 勘误
+  -> 说明 D86 的'结论须带提交锚点 + 引用前复测'这条纪律是有用的(第一轮就抓到一条错误的缺陷归因)
+
+裁决: 批准 4 个 schema 缺口走 override(TASK-033 上报, 已备好可直接粘贴的 SCHEMA_OVERRIDES):
+  editor_add_state_machine_state.animation / editor_set_blend_tree_node.animation /
+  editor_add_state_machine_transition 的 xfade_time / priority / advance_condition
+  理由: 这是'**工具真需要却没声明**'导致**能力结构性不可达**(与 D-6 同类) —— 不加 animation 就无法给新建状态指定动画,
+  动画链的一部分不可达; 契约是逐字门对象, 唯一合规出路就是 override + 重生成 + 更新指纹
+  -> 并入 TASK-034 §0(附'不可达 → 可达'的前后对照作为价值证明)
+
+规范更新(决策者落笔, 因执行者无权改 DESIGN-DETAIL):
+  §22.3b 第 6 条: 覆盖集合 16 -> **17 种拼写**(TASK-033 补入同文件别名类), 探针 101/101
+  §23.4 残留清单: **Quaternion 已由 TASK-033 补齐读/写对, 不再是残留**
+  (仍为残留: Transform2D/Transform3D, Basis, Plane, Projection, AABB)
+
+B5 剩余三批(44 工具)已按 manifest 精确切分并在 TASK-034/后续任务书中固定:
+  批次 2 (15): audio_write 4 + audio_read 2 + particle_write 4 + particle_read 1 + theme_write 1 + scene_3d_write 1
+    + profiling_read 1 + navigation_read 1, **外加 §0 的 4 个 schema override**;
+    注意引擎槽位约束(E-4): set_particle_material/set_material_3d 必须真正尊重 material_slot(迁移源读了却硬编码 0)
+  批次 3 (15): tilemap_write 3 + tilemap_read 3 + shader_write 2 + project_shader_write 2 + project_shader_read 2
+    + physics_write 1 + physics_read 2 (**含 2 个 fix-first**: tilemap 数据破坏族; 另 E-5: set_shader_param 必须用
+    ShaderMaterial::set_shader_parameter 而非复合属性路径直写)
+  批次 4 (14): navigation_write 2 (**含 bake_navigation_mesh 这个 fix-first**) + running_game_navigation_write 1
+    + project_theme_write 5 + project_theme_read 1 + project_export_read 2 + project_android_read 1
+    + os_android_read 1 + os_android_write 1
