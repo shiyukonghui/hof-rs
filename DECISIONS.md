@@ -3023,3 +3023,52 @@ TASK-034(提交 d744a100bc/f9a8797a1f/0eada018d6, 引擎锚点 fc724ce49a): 六�
 批次 4(剩余 14 工具)含第 3 个 fix-first(editor_bake_navigation_mesh)与 Android/export 组;
   Android/export 组需要 Android 导出环境 -> **预授权**: 无设备/无 SDK 时, 诚实的**能力感知拒绝**(-32000 + 建议)
   与「能力缺失」证据即为正确结果, **不得**伪造成功; 由 M5 验收决定该类是否记为已声明不可验证能力
+
+## D89 — TASK-035 交付（B5 批次 3，15 工具）：两个 fix-first 是数据破坏级；E-5 结论=拼写问题；派最后一批
+
+TASK-035 交付(B5 批次3 15 工具) —— 两个 fix-first 是数据破坏级; E-5 结论=拼写问题; 派最后一批
+
+TASK-035(提交 1e8b4075ee/de96b61b18/1ce26e58d0, 门时 --version de96b61b1 == HEAD): 六门全绿
+  ① 7/7 组 x 3/3(两端点); ② 线上 67/67; ③ 251/251 (13978 断言); ④ 1677/1677 (438260 断言);
+  ⑤ accept 22/22 x2(implemented 135 editor / 57 game); ⑥ 38/38 pins + coverage + 探针 101/101;
+  回归 mcp030 22/0、mcp032 39/0、mcp033 75/75、mcp034 109/114(5 条失败是该冻结脚本的 HEAD 相对 before 断言,
+    已核对 fc724ce49a 无 advance_condition/xfade_time 而 e6b50d9884 已含); 9877 未动; 未 push
+  进度: B5 44/58, 18/26 组
+
+★ 两个 fix-first 都是**数据破坏级**(红阶段 7 用例/53 断言失败):
+  editor_set_tilemap_cell: 迁移源调用单参 TileMapLayer::set_cell(coords) —— 那实际是**擦除**形状
+    (source 默认 TileSet::INVALID_SOURCE), 即**把格子清掉却回 set:true**;
+    修后按 (source_id, atlas_coords) 对 TileSet 解析校验, 未知 source/atlas 在碰格子之前 -32602,
+    写后读回核对(不一致报内部错)
+  editor_set_tilemap_cells_in_rect: 迁移源**完全丢弃 source_id/atlas_coords**; 修后先整体预校验(上限 65536)、
+    快照 get_used_cells()、写后逐个核对、任一步不符则**整块恢复**(restored)
+  editor_remove_all_tilemap_cells: 由**常量 0** 改为真实 removed/remaining/cell_count_before
+
+★ E-5 实测结论(三条可验证事实): 迁移源的裸 Object::set("slot:shader_parameter/<name>") 是**静默空操作**
+  (Object::set 不切 ':' , 落到 _setv 后参数仍为 NIL); 而引擎的 set_indexed 路径**是通的**
+  (本模块自己的 editor_set_node_property 走它, 线上把 albedo 真的改动了并被读回);
+  → 迁移源的缺陷是**那种单次 set 的拼写**(第三类: 报成功但没发生), **不是引擎能力缺失**
+  工具改用 ShaderMaterial::set_shader_parameter + 用 Shader::get_shader_uniform_list 校验名字 + 读回 +
+  在响应里给 write_path; 未知名字 -32001; editor_set_shader_material 真正替换指定槽(含 previous_material/material_slots)
+
+其余: material_slot 经 override 由 string 改 **integer**(生成器 1.10.0, overrides 17->18; 旧十进制字符串仍接受;
+  「索引声明成字符串」全量普查 = 171 条 / 255 个字符串参数中**恰好 1 例**, 已修);
+  门② 抓到并修掉两处 doctest 漏掉的缺陷(嵌套 JSON 整数以 double 到达 -> 统一走 integral_value;
+  vec3 uniform 需先 shape_vector_from_json 再过槽位闸门)
+
+裁决(两项, 执行方上报):
+  (a) docs/tool-groups-b5.json 中 editor_set_physics_layers 的注记与 schema/映射不一致 -> 修正注记文本(不改 schema/映射)
+  (b) 两个'枚举/索引声明成字符串'候选 -> **都保持 string**: editor_set_shader_material.material_slot 主要是**槽位名**
+      (引擎里材质槽就是属性名), 接受十进制索引是便利; editor_simulate_key.keycode 是**枚举名**(KEY_A 之类),
+      让智能体写名字比写魔法整数更顺手(GDR-23) -> 报告给理由 + 实测名字写法可用, 不改契约
+
+最后一批 TASK-036(14 工具): navigation_write 2(含**第 3 个 fix-first** editor_bake_navigation_mesh ——
+  迁移源未真正烘焙/未回读核实却可能报成功; 引擎侧 bake 是**异步**的, 必须走 GDR-20 延迟通道并用另一工具证明
+  真的产出; 不得因'异步难等'退化成假成功) + navigation_read 1 + running_game_navigation_write 1 +
+  project_theme_write 5 + project_theme_read 1 + project_export_read 2 + project_android_read 1 +
+  os_android_read 1 + os_android_write 1
+  **Android/export 预授权诚实边界**: 无 SDK/设备/预设时仍要实现工具, 但要检测'能力缺失'并**诚实拒绝**
+  (-32000 + 建议缺什么/怎么装), **不得伪造成功或回显假设备**; 能力缺失本身即有效证据; 报告必须把
+  '只拿到能力缺失证据'与'拿到真实成功证据'**分列**, 不得混为一谈
+  running_game_move_player_to_target: **不得**只是 position = target 的瞬移, 要按引擎语义(导航代理/寻路)实现,
+  并给'真的沿路径移动'的可观察证据(位置随帧变化)
