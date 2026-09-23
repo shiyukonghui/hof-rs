@@ -2864,3 +2864,43 @@ D6(minor) 游戏侧路径形态与描述不一致: running_game_get_scene_tree �
 风险: R1 门⑥ 假绿(已裁决修); R2 D1 静默数据丢失(已裁决修); R3 D3 大小写冲突致整包解析失败;
   R4 absolute_path 含布局 id; R5 Camera3D.rotation_degrees 派生属性有 1 ulp 漂移(将来若把三层等价做成严格位相等门会假红)
 下一步: TASK-030(D1+D5) -> TASK-031(D2 护栏) -> TASK-032(D3+D4+D6) -> 第五次 M4 复核 -> B5(58 工具)
+
+## D85 — TASK-030 交付：D1 改为真的写活节点（含 mode 语义表）+ D5 显式无匹配；mcp018 历史不变式过期
+
+TASK-030 交付 —— D1 改为真的写活节点(含 mode 语义表) + D5 显式无匹配; mcp018 历史不变式过期
+
+TASK-030(提交 545060f25e/b6203ba2b7/e7d0d218f1/9ef9c8f0fb): 门①3/3; ②22/22(红阶段 22 checks/7 failed);
+  ③220/220 (8481 断言); ④1646/1646 (432763 断言); ⑤accept 22/22 x2(清单逐条一致); ⑥30/30 exit0;
+  重跑 mcp028 27/0、mcp029 20/0; 9877 全程未动; 未 push; 最终 HEAD 9ef9c8f0fb, 二进制 --version == HEAD
+
+D1 裁决落地=方案①「真的写活节点」(理由: force=true 的契约语义本来就是允许改活动编辑场景;
+  本 fork 有唯一顺手答案 = edited_scene_root() 的编辑器同步活树 + mark_scene_as_unsaved();
+  方案②会让'整工程一次改完'主用例永久残废、把一次调用变成多步舞蹈; 且活节点写入可验证 -> 能验证就不该退化成拒绝)
+  根因复核: 验收方行号全为真(:309-317 加载游离副本 / :451-455 跳过落盘只标 unsaved / :81-86 注释自相矛盾);
+  执行方补充两条决定修法的事实: ①mode 在计划阶段 :361 已定死(工具自己也不知道改的是哪棵树) ->
+  修法必须把'写哪棵树'变成计划阶段的事实(plan.instance + plan.owns_instance);
+  ②instance 原来无条件释放(六处 memdelete), 若只把 instance 换成活树会删掉用户正在编辑的场景 ->
+  新增 owns_instance 与唯一释放入口 _release_planned_scenes()
+  写后逐节点读回验证, 不一致则整段回退并 -32000 + data.live_nodes_restored; 活节点排在所有文件之后提交, 保住 all-or-nothing
+  mode 语义表(三行穷尽互斥 + written/persisted 两布尔): dry_run(false/false) / offline_saved(true/true) /
+  live_open_scene_written(true/false); 不存在 written=true 而其实没写的组合(该值只有两条产生路径:
+  文件原子发布成功, 或活节点写后每节点读回都与写入值一致)
+  端到端链绿: 写活动场景 -> 另一工具读回 {3,4}(sha 7ae14eaf -> edd2622c) -> editor_save_scene ->
+  good.tscn 含 Vector2(3,4); 同一次调用里关闭的 side.tscn 真落盘含 Vector2(3,4)
+  红阶段字节级铁证: '调用后读回'与'调用前基线'响应 sha256 完全相同(7ae14eaf…, 166 字节); save 后文件仍是 Vector2(1, 2)
+D5 选择'显式说明没有场景匹配'而非 -32001(理由: 零命中是合法查询结果, dry_run 预览/按目录扫零命中很常见,
+  改错误会打断'先探测再决定'的正常流程; 且 total_scenes==0 与 scenes_affected==[] 本身是机器可判字段);
+  message 分四情形, 非 dry_run 零命中句明确提示 path_filter 是目录不是单个场景文件
+偏差接受: mode 词表变化(live_open_scene -> live_open_scene_written + written/persisted 两布尔) —— 响应形状不在契约文件里,
+  门① 逐字通过证明契约面零偏离, offline_saved/dry_run 未改名;
+  editor_rescan_triggered 语义收窄为'只在真的替换过文件时为 true'(活节点编辑不触碰资源文件系统);
+  新增公开函数 MCPTools::write_live_scene_property()(doctest 进程无 SceneTree, 与 prepare_node_property_value 公开同理);
+  doctest 第(4)段的红阶段用 #if 0 临时屏蔽(旧实现无该入口会整个 TU 编译失败), 最终提交无 #if 0(已核验 if0_count=0),
+  但该段因此没有'先红'执行记录 —— 如实声明
+
+mcp018 历史不变式过期(如实上报未自改): 该脚本断言 derivation_new_union_is_old_plus_exactly_ten(old=96 new=113),
+  随工具数增长必然失效; 输入只有 manifests 与冻结旧脚本、本次一字未改 -> 判定与 TASK-030 无关
+  裁决: 由后续批次收口(把该断言改成'相对当时清单'或标记为已被后续批次超越), 否则该脚本会持续红
+下一步: TASK-031(D2 门⑥ 拼写覆盖: static_cast/隐式初始化/限定构造/花括号/跨行, 或改编译器级 -Wconversion,
+  并用 5 个探针回归) -> TASK-032(D3 分组标签当属性 + Material/material 大小写冲突; D4 未知参数名 -32602;
+  D6 游戏侧路径描述 override; mcp018 断言收口) -> 第五次 M4 复核 -> B5(58 工具)
