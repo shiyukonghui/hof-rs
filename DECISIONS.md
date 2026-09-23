@@ -2904,3 +2904,43 @@ mcp018 历史不变式过期(如实上报未自改): 该脚本断言 derivation_
 下一步: TASK-031(D2 门⑥ 拼写覆盖: static_cast/隐式初始化/限定构造/花括号/跨行, 或改编译器级 -Wconversion,
   并用 5 个探针回归) -> TASK-032(D3 分组标签当属性 + Material/material 大小写冲突; D4 未知参数名 -32602;
   D6 游戏侧路径描述 override; mcp018 断言收口) -> 第五次 M4 复核 -> B5(58 工具)
+
+## D86 — **M4 里程碑独立验收通过**（第五次 pass）；报告陈旧结论的纪律；B5 开工
+
+**M4 里程碑独立验收通过**(第五次 pass); 报告陈旧结论的纪律; B5 开工
+
+M4e 第五次独立验收(验收方自建证据, 基准 HEAD 9f2b2e484e): **verdict = pass**
+  D1-D6 全部闭合(每条均为验收方自跑证据): D1 写活动场景 -> 另一工具读回新值(7,8) -> save -> 文件含 Vector2(7,8)
+    且不变量检查 0 条 code=0∧written=false; D2 门⑥ 三段 exit 0/0/85-85 + 自造 M4d 五探针全红 + 位移不假红 + 逐字节还原;
+    D3 编辑器 42 键==引擎值集/13 标签 0 泄漏/0 大小写冲突/ConvertFrom-Json 解析成功; D4 immediate 与 deferred 双入口 -32602
+    且已声明参数不被误拒; D5 零命中无 Applied 且文件 sha 不变; D6 描述与线上形态一致 + 原样喂回成功
+  **报告矛盾裁决**: REPORT-025 成立, REPORT-032 的'Vector4i/Rect2i 写侧缺口仍未修'为假(照抄 REPORT-024b 未经复测的陈旧结论,
+    且与它自己 §3 的 GAP_* 以 code=0 失败的观测自相矛盾); 三条证据(源码/线上 19x2 往返/doctest 断言)一致; 无并行分发表; 实现不需修
+  契约与 override: 14 条(11 description + 3 inputSchema)与生成器声明逐对相等; 用生成器重生成与跟踪文件逐字节相同 = 无手改;
+    清空 override 后的基线结构化 diff 只差这 14 对与 _meta.overrides
+  顺手性 pass(含 E-10 自抓 cmdline + 注入端口跑游戏工具; §23.4 19x2; §23.5 三形态; E-9/E-6/E-2/G-1/G-3 全复现; 自写零手术链 4 步 0 次);
+  静态错值 pass(mcp021/022/023 自跑 74/90/218 全 PASS; 抽 ≥25 例具四条件; 五形态全覆盖);
+  门 pass(①4 组、③222/222、④1648/1648、⑤22/22 x2 清单 diff=0、⑥三段); 9877 PID 36392 不变; 无孤儿; 无 git 写操作
+
+M4e 遗留(4 条, 均不阻塞收口):
+  D-M4e-1(medium, 覆盖缺口): 又找到 5 种可绕过门⑥ 的拼写(-1.0e300 / (1.0e300) / 0x1p1000f / typedef 别名 / 数组初始化),
+    均 exit 0 且不在 --coverage 已打印边界里(违 §22.3b 规则 6); 当前 tools/** 无此类拼写
+  D-M4e-2(low): running_game_get_node_properties 描述写'不传返回所有属性', 实现只答 EDITOR|SCRIPT_VARIABLE 子集(27/42)
+  D-M4e-3(low): 跨场景写工具在'单文件过滤 + 该类型零节点'时建议句不成立
+  D-M4e-4(documentation): REPORT-032 的陈旧结论 -> **已由我 append-only 勘误**(作废其 next_step 第 2 条 + 三条事实 + 教训)
+  -> D-M4e-1/2/3 并入 TASK-033 的三条小收口
+
+R1 风险登记(持续): 门⑥ 是**有限集合**保证且集合仍在被绕过(M4d 找到 5 种, M4e 又找到 5 种) ->
+  必须坚持 §22.3b 规则 2 的**三腿**(机器检查 + 代码审查 + 行为证据), 不得只靠门⑥ 变绿判定'没有新收窄'
+
+★ 新增纪律(D86, 本批起强制, 写入 TASK-033 §2 与后续任务书):
+  **任何从别的报告/任务书引用的结论, 必须①标明它测自哪个提交 ②在参考它开工前复测 ③发现过期就在报告里显式指出并 append-only 勘误**
+  背景: REPORT-032 的错误结论进入了'下一步建议', 若照它开工会做一批无用功(TASK-025 已修);
+  这是'报结论'与'报证据'之间的区别 —— 结论会随代码漂移, 证据不会(只要有提交锚点)
+  同时: 报告一旦有结论被推翻, 必须 append-only 勘误, 不得只在新报告里悄悄改口径
+
+B5 开工: TASK-033 = B5 批次 1(动画族 14 工具: animation_write 4 + animation_tree_write 7 + animation_read 3)
+  + 三条小收口; 引擎优先设计(GDR-23) + 每工具'引擎依据'列 + 零字符串手术链 + 门⑥ 三段 + §22.3b 规则 4
+B5 余下三批已规划: 批次 2(audio 6 + particle 5 + theme 2 + profiling 1 + scene_3d 1 = 15);
+  批次 3(tilemap 6 + shader 4 + physics 3 + project_shader 2 = 15, 含 2 个 fix-first);
+  批次 4(navigation 3 + running_game_navigation 1 + project_theme_write 5 + export 2 + android 2 = 13-14, 含 bake_navigation_mesh fix-first)
