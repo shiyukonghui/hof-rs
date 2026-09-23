@@ -3239,3 +3239,47 @@ TASK-038(提交 39a4e59b54 实现 + 05054426d4 报告): **可选服务端调用�
   汇总者**自己回追踪原文复算**每条结论(标注实测/推断), 产出四张表(异常/缺失工具/可合并/可优化, 每张都要证据)
   并按证据强度 x 影响面排序, 另单列**疑似缺陷**(最小复现 + 期望/实际 + 证据 sha256 + 严重度)
   四角色**都不得修改模块**(只记录发现; 修复是后续批次), 模块侧不因试测改变(以 git status + 契约 sha256 证明)
+
+## D94 — 实机赛车试测完成：抓到 3 条真缺陷（2 high）+ 缺失工具/可合并/可优化清单；派修复批次
+
+实机赛车试测完成 —— 抓到 3 条真缺陷(2 high) + 缺失工具/可合并/可优化清单; 派修复批次
+
+TASK-039 实机赛车游戏开发试测(4 子代理: 组织者 -> 开发者 ∥ 观察者 -> 汇总者; 观察者不阻塞开发者) **完成**
+  产物: docs/reports/RACING-TEST-PLAN.md(414 行, 12 条验收判据 AC-1..AC-12, 16 个工具族约 80 工具, rubric 阈值对齐
+    analyze_mcp_trace.py 的 1MiB/30%/12/2 与 mcp_server.h 的 30000ms/8MiB) / RACING-DEV-LOG.md / RACING-OBSERVATIONS.md /
+    RACING-FINDINGS.md(68 KB) ; 原始追踪 trace-editor.jsonl / trace-game.jsonl(%TEMP%)
+  游戏: 2D C# 赛车工程(%TEMP%/mcp-racing-test), 车/赛道/检查点/圈计时/HUD; AC 逐条有实测响应与 sha256
+  ★ 开发者发现**交付的 mono 二进制落后 137 个提交且没有 --mcp-trace** -> 自己串行重建(94s, exit 0)后才等于 HEAD
+    -> **教训(交付卫生)**: bin/ 不受版本控制 -> **每次试测/验收前必须重建对应构建**(R-1 的又一次实证;
+      且 mono 与 non-mono 是两个不同产物, 不能只重建其一)
+  ★ 汇总者**纠正了两份报告的错**(这正是试测该有的产出):
+    对开发者日志 7 处纠错(例: '20 次失败是给未挂脚本节点写脚本属性'错, 实际全是 Node 'X' not found;
+    §2 B 段行号错; trace sha 是过期快照; project_validate_script 的坏信号名反例不成立; 同时确认其 D-1/D-2 根因与行号逐字正确)
+    对观察者多处纠错(它自己的 205 行/28 失败是**窗口快照**, 全量为 298/37; OBS-009 证伪; OBS-018① 在窗口外找到了真 A5)
+    对方案 §A 的判据缺陷(AC-6'三工具答案一致'不可满足; 3.1 清单里的 running_game_get_test_report 不存在; A4/A8 用 result_bytes 会假阳性)
+
+★★ 3 条**真缺陷**(不是手感, 是正确性/诚实性; 每条都有可粘贴最小复现 + 源码行号 + 追踪行号 + 响应 sha256):
+  D-1(high) editor_add_resource_to_node_property 对**不存在的属性**报 ok 而什么都没发生:
+    editor_write_scene_editor.cpp:697 的 node->set(...) **无** object_has_property 检查 + :699-703 **无条件回显**;
+    对照 editor_set_node_property 写 no_such_property_zzq 正确回 -32001
+    -> 与 TASK-014 D-1 在 running_game_set_node_property 上修掉的是**同一类**, **编辑器写侧漏了**
+  D-2(high) editor_connect_signal **不持久化**: editor_node_write.cpp:257 的 connect() **未传 CONNECT_PERSIST**,
+    而 packed_scene.cpp:1238 **只序列化带该位的连接**(恢复侧 :760 正是用 CONNECT_PERSIST);
+    实测: 连接后 save_scene -> 读盘 .tscn **`[connection]` 块数 = 0**, 重开即消失; 响应里**连 persisted 字段都没有**
+    (对照 editor_add_input_action 老实回 persisted:false); grep CONNECT_PERSIST modules/mcp_server/tools/** = **0 命中** -> 系统性遗漏
+    **试测的真实后果: 一台不会开始计时的车**(脚本被迫自己 Connect) —— 这条正是'真实使用'才能撞出来的
+  D-3(medium) running_game_get_node_properties 对**根本不存在**的属性静默回 null, 而同端点写工具回 -32001 ->
+    **一个端点内自相矛盾**, 且契约未记载该 null 语义(running_game_observation.cpp:167-168 注释明文承认该行为)
+  另有一条**诚实性澄清**(汇总者主动排除误报): OBS-022 怀疑的'报成功后游戏读到旧值'**不成立** —— 那之间**没有任何 save_scene**,
+    游戏读的是未含这些写入的磁盘场景; **不要**把它当 A5 证据
+
+四张表(每张都在 RACING-FINDINGS.md, 带证据并已排序):
+  异常 10 条; **缺失工具 6 条**(建工程 / 编译 C# / headless 起游戏 / trace 路径 / 采样原子化 / InputMap 持久化,
+    每条都给建议的工具名与签名草案); 可合并 4 条建议 + **3 条明确不建议**(附理由); 可优化 13 条(含分析器与追踪本身的两条取证修复)
+
+裁决:
+  (a) **立即修 3 条缺陷**(TASK-040, 红先行 + **同类系统排查**): D-1 还要求**扫遍全部写工具**列出
+      '先 set() 再无条件回显成功'的模式并逐条修; D-2 还要求连信号带 CONNECT_PERSIST + 响应给 persisted 布尔 +
+      disconnect 能断持久连接 + 排查'其它应为持久/应落盘的写操作'; D-3 二选一(推荐与写侧一致回 -32001)并保证同端点口径一致
+  (b) **缺失工具/可合并/可优化不擅自实现**: 新增或合并工具会**改变契约面**(171 条是逐字对等门) ->
+      属**治理决策** -> 我把清单与推荐交给用户定夺, **不自行扩张契约**; 用户点头后再按 override/新条目机制立项
