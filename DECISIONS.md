@@ -2809,3 +2809,58 @@ D-1 --import 首次崩溃: 【推翻我此前的 BOM 归因】
 
 下一步: TASK-029(clear.default override + 重生成指纹) -> 第四次 M4 独立复核(覆盖 D-1..D-15、E-1..E-10、G-1/G-3/G-4
   的闭合 + 零字符串手术链 + 门①-⑥) -> B5(58 工具, 每批引擎优先)
+
+## D84 — 第四次 M4 复核仍 fail：D1 活动场景静默丢失写入（high）+ D2 门⑥ 拼写可绕过（high）
+
+第四次 M4 复核仍 fail —— D1 活动场景静默丢失写入(high) + D2 门⑥拼写可绕过(high)
+
+M4d(验收方自建证据, 基准 HEAD ac06a1cade): verdict=fail
+  pass: 全量对等(自解析 name, 编辑器 91/91、游戏 53/53 逐字相等; 13 条 override; 用生成器重生成契约与
+    被跟踪文件逐字节相同 = 证明无手改); 静默错值五形态(30+ 例全 -32602 + 无值回显 + 保存后文件无 inf/nan +
+    另一读工具读回旧值; 新增 10 条同族面全拒; FLOAT32/REAL_T 已分离且欠账登记诚实);
+    门⑥ 静止/插入/删标记/位移四类行为正确(证明索引是标记身份而非行号, 实验后逐字节还原);
+    顺手性八项(含 E-10 子进程 cmdline 真含 --mcp-port=9897 且响应 pid 即该进程; E-3 编辑器 12 项 + 游戏 4 项
+    三层往返; §23.5 OBJECT; E-9 截断; E-6 日志归属; E-2 两独立进程路径逐字一致; G-1 子属性; G-3 clear 缺省纯读);
+    零字符串手术链 2 条跨 6/5 工具调用方字符串处理 0 次(源码区间扫描证实);
+    六道门全绿(①5 组 15 例、③219/219、④1645/1645、⑤accept ×2 各 22/22 清单一致、⑥ exit0); 端口纪律 pass
+
+D1(high) project_set_node_property_across_scenes 对活动编辑场景报成功但未写入:
+  force=true -> code:0 + mode:"live_open_scene" + message "active open scene was edited in memory",
+  但另一工具读回旧值 {"x":1.0,"y":2.0}, 随后 editor_save_scene 落盘仍是旧值; 同一次调用里关闭的 side.tscn 确实写成 Vector2(3,4)
+  根因(验收方定位, 待复核): project_cross_scene_write.cpp:309-317 对活动场景也用 CACHE_MODE_IGNORE 加载并 instantiate 出
+  游离副本(匹配/校验都作用在副本上); :451-455 对 live_open_scene 跳过落盘只调 _mark_active_scene_unsaved();
+  :81-86 注释却声称 edits the live nodes
+  危险性: 报成功 + 什么都没发生, 而且把场景标为'已修改' -> 调用方按报告继续 editor_save_scene 会把旧值当成
+  '已保存的新值' 写下去 = 静默数据丢失。这正是本项目要消灭的那一类
+  裁决: TASK-030 —— 二选一(推荐真的写活节点并读回验证, 保留 mark_scene_as_unsaved; 或诚实拒绝并去掉'已写入'措辞),
+  无论哪种 scenes_affected[].mode 必须让调用方一眼看出'写没写', 不得出现'成功+未写入'组合;
+  必须新增端到端回归链: 写活动场景 -> 另一工具读回新值 -> editor_save_scene -> 文件含新值; 并覆盖活动+关闭混合时关闭者仍真落盘
+
+D2(high, 护栏强度) 门⑥ 可被常见拼写绕过: 扫描器只认 (real_t)/(float)/Color(/Vector2(/Vector3(/Vector4( 六种字面拼写;
+  const real_t x=1.0e300(隐式收窄)、static_cast<float>(1e300)、::Color(1e300,0,0,1)、Vector3{1e300,0,0}、
+  Color 与 ( 跨行 —— 五个探针插入后门⑥仍 exit0(扫描器 0 命中), 同一数值写成 (real_t) 则 exit1
+  -> DESIGN-DETAIL §22.3 与脚本 docstring 的'每个收窄点都必须标注'在拼写层面不成立;
+     R1: 门绿不等于覆盖面完整, 后续批次可用最常见写法静默引入第 5 种静默错值形态
+  裁决: TASK-031 —— 扩展扫描覆盖(static_cast/隐式初始化/限定构造/花括号/跨行)或改用编译器级检查(-Wconversion);
+  并把 §22.3 的'每个收窄点'表述收窄为'已覆盖的拼写集合'(若选扫描)或改为'由编译器保证'(若选 -Wconversion);
+  用这 5 个探针做回归(应 exit1)
+
+D3(medium) editor_get_node_properties 不带 properties 时把检查器分组/类别标签当属性输出:
+  12 个不存在的 null 属性(Node/Node2D/Material/Transform/Visibility/Ordering/Texture/Process/Thread Group/
+  Auto Translate/Editor Description/Physics Interpolation/CanvasItem), 且 Material 与真实属性 material 大小写冲突
+  -> 本机 PowerShell 5.1 直接报 duplicated keys 导致整包无法解析(大小写不敏感字典的客户端同样受影响)
+  位置 tools/editor_node_read.cpp:192-205(只跳过 _ 前缀与 script, 未按 PROPERTY_USAGE_GROUP/CATEGORY 过滤)
+  R3: 容易被误判为偶发坏响应 -> TASK-032 优先修
+D4(minor) 未知/多余参数名被静默忽略: project_get_settings 契约参数是 prefix, 用 filter 调用 code0 并返回 981 条
+  (既不拒绝也不过滤), 拼错的参数名得到'像样的错答案'; 对比 project_set_setting 用 name 时诚实 -32602
+  裁决: TASK-032 —— 未知参数名返回 -32602(可回显已忽略参数名)
+D5(minor) 零命中仍宣称已应用: path_filter 指文件而非目录 -> total_scenes=0/scenes_affected=[] 但 message 仍 'Applied'
+  裁决: TASK-030 —— total_scenes==0 时消息显式说明无匹配 或 -32001+建议(说明理由)
+D6(minor) 游戏侧路径形态与描述不一致: running_game_get_scene_tree 返回 /root/Main/Actor,
+  而同族 running_game_get_node_properties 描述写'node_path(相对于场景根节点)'; 实测两种写法都能喂回
+  裁决: TASK-032 —— 用 DESCRIPTION_OVERRIDES 说明实际返回形态并声明两种写法都接受(走 override + 重生成指纹)
+未确认: 符号链接逃逸(本机无开发者模式, 其余 8 读侧 + 3 写侧已实测拒绝); 双精度端到端(已声明欠账);
+  absolute_path 跨机器/跨编辑器布局的稳定性(内嵌 @EditorNode@<layout id>)
+风险: R1 门⑥ 假绿(已裁决修); R2 D1 静默数据丢失(已裁决修); R3 D3 大小写冲突致整包解析失败;
+  R4 absolute_path 含布局 id; R5 Camera3D.rotation_degrees 派生属性有 1 ulp 漂移(将来若把三层等价做成严格位相等门会假红)
+下一步: TASK-030(D1+D5) -> TASK-031(D2 护栏) -> TASK-032(D3+D4+D6) -> 第五次 M4 复核 -> B5(58 工具)
