@@ -1,4 +1,4 @@
-# DECISIONS — hof-rs
+﻿# DECISIONS — hof-rs
 
 > 「代码为什么长这样」的权威来源。每个决策点追加一条：日期 / 触发问题 / 考虑的选项 / 最终选择 / 理由 / 预期影响与回滚点。
 > 提交信息应对应本文件的决策编号（如 `feat(runtime): ... (D7)`）。
@@ -2624,8 +2624,34 @@
   `TASK-025`（E-2/E-8、G-1、G-3），然后**第四次 M4 复核**，再开 B5。
 - 回滚点：TASK-024a 改动可整提交回退；契约 override 可移除并重生成。
 
+## D79 — TASK-024b 交付（E-1/G-2 + E-3 读侧）+ **勘误：门⑥ 声称与实现不符**（已查证）
 
+TASK-024b 交付(E-1/G-2 + E-3 读侧) + 勘误: 门⑥ 声称与实现不符(已查证)
 
+TASK-024b(提交 2a1cb4a4e8/928af5d3d8/abffba1cc5/4e910f7c4d): 六门全绿
+  ① 契约子集 3/3(编辑器 91/游戏 53/本组 7 逐字 True); ② 证据 68/68; ③ doctest 201/201 (8021 断言, 基线 197/7861);
+  ④ 全引擎 1627/1627 (432303 断言); ⑤ accept 22/22 x2(PASS 清单逐字相同); ⑥ 29 点全部登记 PASS
+E-1+G-2: get_dependencies(p_add_types=true) + 按引擎布局 path::type[::fallback] 切分(resource_format_text.cpp:960-968);
+  type 为真实类型(loader 类优先、标签类型兜底, 因导入资源如 .png 的 get_resource_type 为空串),
+  path 恒为 res://, 另给 uid/declared_type/path_source; 改前 3 趟 -> 改后 2 趟, path 直接喂 project_read_resource 实测 code=0
+E-3 读侧: Vector4/Vector4i/Rect2i 加对象分支 + 全部 10 个 packed 加元素形状数组分支
+  (PackedByteArray=整数数组, 即写侧可接受的形态); 编辑器 9888 与游戏 9889 读回逐字一致
+零字符串手术链(六步, 逐步 string ops = 0): deps->path -> project_read_resource -> convert_path_to_uid ->
+  editor_get_node_properties(.v4/.pv4/.bytes) -> editor_set_node_property(value=读回 .v4, new_value 相同) ->
+  running_game_get_node_properties 两端一致
 
+【勘误】门⑥ 声称与实现不符(决策者已自行只读查证):
+  REPORT-023 声称 PINNED 按 (文件,标记 id,文件内出现序) 索引、行号只作说明;
+  实际脚本 PINNED 是 {file:{line:pin}} 按行号做键, 且'陈旧条目'是失败条件 ->
+  任何代码位移都会假红, 每批必须手工重钉(TASK-024b 把 851 改成 986)
+  影响: 假红是响亮失败不是静默错误, 但违反 GDR-24 的意图(位移不该导致失败), 且制造每批摩擦
+  处置: TASK-025 §1 真正改为按 (文件,标记id,出现序) 索引, 行号仅作注释/报告信息;
+  失败条件必须保留(未标注点/标记不在清单/陈旧条目)并用三组实验证明(位移不假红 + 新增未标注点仍 exit 1 +
+  陈旧条目仍 exit 1); 并要求执行者在报告里显式更正 REPORT-023 的该条声称(对已验收报告的勘误, 不得悄悄改代码了事)
 
-
+新残留缺口(实测披露, 非本批回归): E-3 写侧无 Vector4i/Rect2i 分量表 -> 读回对象原样写回被 -32602 拒绝,
+  违反 GDR-25 §23.1(1)/(4)(返回的标识不必转形就能喂回) -> TASK-025 §2 修复:
+  对读回形状矩阵每一项做写回测试, 不能写回的补齐写侧(经已有闸门, 不得新开绕过分支),
+  引擎本身不可写的逐项列引擎依据并给可读原因; 边界: 若引擎语义确为不可写, 按 GDR-23 以引擎为准
+下一步: TASK-025(门⑥索引 + E-3 写侧) -> TASK-026(E-9 + E-6/G-4) -> TASK-027(E-2/E-8 + G-1 + G-3)
+  -> 第四次 M4 复核 -> B5(58 工具)
