@@ -2693,3 +2693,43 @@ GDR-25 §23.4 双向闭合规则落笔(决策者): '读侧能答出对象形态�
   一旦有工具要读回必须对象形态读写, 不得用 stringify() 字符串形态;
   证据形态三层等价: code=0 + new_value 与读回值结构化相等(不是拼字符串比较) + 再读仍相等, 两端点各一遍
 下一步: TASK-026(E-9 + E-6/G-4) -> TASK-027(E-2/E-8 + G-1 + G-3) -> 第四次 M4 复核 -> B5(58 工具)
+
+## D81 — TASK-026 交付（E-9 + E-6/G-4）+ D-8 裁决与 §23.5 落笔 + 其余上报项裁决
+
+TASK-026 交付(E-9 + E-6/G-4) + D-8 裁决落笔(GDR-25 §23.5 OBJECT 形状) + 其余上报项裁决
+
+TASK-026(提交 48474b5a8d/d9db6a8a55): 未新增工具、未改名字、未动契约(契约/映射/组清单零改动)
+  ① 契约子集 3/3; ② 证据 37/37 + OBJECT 探针 11/11; ③ doctest 209/209 (8228 断言, 基线 205/8102);
+  ④ 全引擎 1635/1635 (432510 断言); ⑤ accept 22/22 x2; ⑥ exit 0; 9877(PID 36392) 全程未动
+E-9: project_read_resource 给 STORAGE 属性值(既有 serialize_variant, 形状按 §23.4) + total_properties/truncated/
+  dropped/limits{max_properties:64}/message; 实测 Gradient 7 条与引擎 GDScript STORAGE 列表逐项相等;
+  Environment 101 -> 64 返回/37 丢弃; 缺参 -32602、文件缺失 -32001+suggestion 未变
+E-6+G-4: 两个日志工具改为'本进程 EditorLog 优先、文件仅后备'(与 editor_remove_output_log 同侧),
+  共用 9 键来源块(source/in_process/available/editor/process/pid/port/log_path/note), 形状分裂消除;
+  不可用一律诚实空(source:none + available:false + note), 绝不 -32603
+  实测红: 旧码在编辑器端点 source=log_file 读到游戏进程的行; 游戏持有时两工具双双 -32603
+  实测绿: source=editor_log、in_process=true、本进程标记可见、游戏标记不可见、文件被独占时仍 code=0
+  D-7 边界已就地写明: editor_log_lines() 读的是面板渲染文本(含 ERROR:/WARNING: 前缀; 用户关掉的类型过滤器、
+  搜索框内容、进入树前的消息不在内; 面板 10000 行上限); 要全量需引擎公开 EditorLog 读取口
+
+D-8 裁决(新规范 GDR-25 §23.5, 决策者落笔): OBJECT 属性双向不闭合(读 {} / 写侧拒 {} / 写 null 读回仍 {}) 属缺陷
+  读回形状: 未设置 -> null(不得答 {}, 因为 {} 语义上是'有个对象但无信息'= 假信息);
+    已设置资源 -> {type,path}; 无路径资源 -> {type,path:""}(可加 local_to_scene); 非资源对象 -> {type,path} 不泄露指针/地址
+  写回形状: 必须接受读回形状本身(null / res:// 字符串 / 对象 {type,path}); {} -> -32602(信息不足, 不得当成清除);
+    加载失败 -32001+建议; type 不符 -32602(消息给期望与实际); 写回后必须读回验证且 null 写回后读回必须是 null
+  这正是'引擎为第一参考源'落到形状契约上的例子: 语义以引擎为准, JSON 形状由本规范定义, 目标是'读到的值能原样喂回'
+
+其余上报项裁决:
+  D-1(Curve.min_value 不是 STORAGE, 任务书示例有误): 保持 STORAGE-only —— 它才是引擎持久化的权威内容,
+    且可写回(§23.4 往返成立); EDITOR-usage 的派生视图(min_value/max_value 等)是 _limits 的视图,
+    不纳入读回往返契约; 任务书示例的错由我承担
+  D-2(为满足链式喂回而改 project_edit_resource/project_create_resource 补 shape_vector_from_json 分量整形步):
+    接受(同一模块、无契约变更; 不接受则分量形状读回值喂不回去)
+  D-3(source 取值改为 editor_log/log_file/none, 替代迁移源的 log_file/no_log_file): 接受(§23.3 指定的拼写;
+    none+available:false+note 是诚实空; 旧拼写不再保留)
+  D-4(二进制自报父提交 hash): 接受(git status 证明内容一致); 第四次 M4 复核会重建使二进制==HEAD
+  D-6(新 _editor_log_view() 与 editor_write_scene_editor.cpp 的文件私有 walker 重复): 登记为 hoist 候选, 后续批次清理
+  D-5(门⑥ pin 行号按提示更新): 接受(不更新也 exit 0, 仅留 drifted 提示)
+  裁决'不加 source 参数让编辑器端点读别的进程日志': 不加 —— 那正是 M4c 抓到的混淆源(把别的进程日志当自己的);
+    诚实行为就是读本进程日志, 跨进程需求由 hof-rs 侧自建通道解决
+下一步: TASK-027(D-8 闭合 + E-2/E-8 稳定路径) -> TASK-028(G-1 子属性路径 + G-3 clear 语义) -> 第四次 M4 复核
