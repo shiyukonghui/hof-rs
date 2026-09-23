@@ -1,0 +1,155 @@
+ERROR: [MCP] SceneTree never became available; MCP server disabled.
+   at: MCPServer::bootstrap (modules\mcp_server\mcp_server.cpp:200)
+Unicode parsing error, some characters were replaced with � (U+FFFD): Invalid UTF-8 leading byte (ff)
+ERROR: MCPToolRegistry: tool name 'project_update_registration_guard' contains the banned verb 'update_' (GDR-16 L4).
+   at: MCPTools::ToolBuilder::register_into (modules\mcp_server\tools\tool_builder.cpp:146)
+ERROR: MCPToolRegistry: tool name 'game_get_x' must match ^(editor|running_game|project|os)_[a-z0-9_]+$ (GDR-16 L1).
+   at: MCPTools::ToolBuilder::register_into (modules\mcp_server\tools\tool_builder.cpp:146)
+ERROR: MCPToolRegistry: tool name 'Editor_get_info' must match ^(editor|running_game|project|os)_[a-z0-9_]+$ (GDR-16 L1).
+   at: MCPTools::ToolBuilder::register_into (modules\mcp_server\tools\tool_builder.cpp:146)
+ERROR: MCPToolRegistry: tool name 'editor_navigate_to_node' has verb 'navigate', which is not in the closed verb set (GDR-16 L2).
+   at: MCPTools::ToolBuilder::register_into (modules\mcp_server\tools\tool_builder.cpp:146)
+ERROR: MCPToolRegistry: tool name 'editor_clear_output_panel' has verb 'clear', which is not in the closed verb set (GDR-16 L2).
+   at: MCPTools::ToolBuilder::register_into (modules\mcp_server\tools\tool_builder.cpp:146)
+ERROR: MCPToolRegistry: tool name 'editor_update_node_property' contains the banned verb 'update_' (GDR-16 L4).
+   at: MCPTools::ToolBuilder::register_into (modules\mcp_server\tools\tool_builder.cpp:146)
+ERROR: MCPToolRegistry: tool name 'editor_get_node_properties' declares channel 'project' but the name says 'editor' (GDR-16 L3).
+   at: MCPTools::ToolBuilder::register_into (modules\mcp_server\tools\tool_builder.cpp:146)
+ERROR: res://mcp_server_test_fixture/resources/corrupt.tres:5 - Parse Error: Unexpected end of file.
+   at: ResourceLoaderText::open (scene\resources\resource_format_text.cpp:1188)
+ERROR: Failed loading resource: res://mcp_server_test_fixture/resources/corrupt.tres.
+   at: ResourceLoader::_load (core\io\resource_loader.cpp:317)
+SCRIPT ERROR: Parse Error: Expected grouping expression.
+   at: GDScript::reload (gdscript://-9223371670473932283.gd:4)
+ERROR: MCPTools::ToolBuilder: tool 'project_get_two_halves' must declare exactly one of handler / pending_handler (GDR-20).
+   at: MCPTools::ToolBuilder::register_into (modules\mcp_server\tools\tool_builder.cpp:146)
+ERROR: MCPTools::ToolBuilder: tool 'project_get_no_half' must declare handler explicitly (GDR-16 / GDR-18).
+   at: MCPTools::ToolBuilder::register_into (modules\mcp_server\tools\tool_builder.cpp:146)
+ERROR: The InputMap action "mcp013_absent_action" doesn't exist. Did you mean "mcp013_probe_action"?
+   at: Input::is_action_pressed (core\input\input.cpp:416)
+ERROR: No path can be resolved between the nodes Root (not inside tree) and Outsider (not inside tree) as they share no common ancestor.
+   at: Node::get_path_to (scene\main\node.cpp:2398)
+ERROR: Cannot open file 'res://no_such_mesh_library_xyz.tres'.
+   at: ResourceFormatLoaderText::load (scene\resources\resource_format_text.cpp:1406)
+ERROR: Failed loading resource: res://no_such_mesh_library_xyz.tres.
+   at: ResourceLoader::_load (core\io\resource_loader.cpp:317)
+ERROR: No path can be resolved between the nodes Root (not inside tree) and Foreign (not inside tree) as they share no common ancestor.
+   at: Node::get_path_to (scene\main\node.cpp:2398)
+ERROR: No path can be resolved between the nodes Foreign (not inside tree) and Root (not inside tree) as they share no common ancestor.
+   at: Node::get_path_to (scene\main\node.cpp:2398)
+ERROR: Amount of hframes cannot be smaller than 1.
+   at: Sprite2D::set_hframes (scene\2d\sprite_2d.cpp:347)
+ERROR: Amount of hframes cannot be smaller than 1.
+   at: Sprite2D::set_hframes (scene\2d\sprite_2d.cpp:347)
+SCRIPT ERROR: Parse Error: Expected grouping expression.
+   at: GDScript::reload (gdscript://-9223371599858629709.gd:5)
+ERROR: Request for nonexistent project setting: 'autoload/Mcp018Probe'.
+   at: ProjectSettings::clear (core\config\project_settings.cpp:1080)
+ERROR: res://mcp_server_test_fixture/cross/two.tscn:4 - Parse Error: Unexpected end of file.
+   at: ResourceLoaderText::open (scene\resources\resource_format_text.cpp:1188)
+ERROR: Failed loading resource: res://mcp_server_test_fixture/cross/two.tscn.
+   at: ResourceLoader::_load (core\io\resource_loader.cpp:317)
+ERROR: Error opening file 'res://mcp_server_test_fixture_read_files/diff/does_not_exist.png'.
+   at: ImageLoader::load_image (core\io\image_loader.cpp:91)
+WARNING: Not a PNG file
+   at: PNGDriverCommon::check_error (drivers\png\png_driver_common.cpp:57)
+ERROR: Condition "!success" is true. Returning: ERR_FILE_CORRUPT
+   at: PNGDriverCommon::png_to_image (drivers\png\png_driver_common.cpp:70)
+ERROR: Condition "err" is true. Returning: Ref<Image>()
+   at: ImageLoaderPNG::load_mem_png (drivers\png\image_loader_png.cpp:57)
+ERROR: Condition "image.is_null()" is true. Returning: ERR_PARSE_ERROR
+   at: Image::_load_from_buffer (core\io\image.cpp:4772)
+ERROR: Cannot load shader: res://task035-no-such-shader.gdshader
+   at: ResourceFormatLoaderShader::load (scene\resources\shader_resource_format.cpp:43)
+ERROR: Failed loading resource: res://task035-no-such-shader.gdshader.
+   at: ResourceLoader::_load (core\io\resource_loader.cpp:317)
+ERROR: Cannot open file 'res://task036-no-such-theme.tres'.
+   at: ResourceFormatLoaderText::load (scene\resources\resource_format_text.cpp:1406)
+ERROR: Failed loading resource: res://task036-no-such-theme.tres.
+   at: ResourceLoader::_load (core\io\resource_loader.cpp:317)
+ERROR: Cannot open file 'res://task036-no-such-theme.tres'.
+   at: ResourceFormatLoaderText::load (scene\resources\resource_format_text.cpp:1406)
+ERROR: Failed loading resource: res://task036-no-such-theme.tres.
+   at: ResourceLoader::_load (core\io\resource_loader.cpp:317)
+ERROR: Cannot open file 'res://task036-no-such-theme.tres'.
+   at: ResourceFormatLoaderText::load (scene\resources\resource_format_text.cpp:1406)
+ERROR: Failed loading resource: res://task036-no-such-theme.tres.
+   at: ResourceLoader::_load (core\io\resource_loader.cpp:317)
+ERROR: Cannot open file 'res://task036-no-such-theme.tres'.
+   at: ResourceFormatLoaderText::load (scene\resources\resource_format_text.cpp:1406)
+ERROR: Failed loading resource: res://task036-no-such-theme.tres.
+   at: ResourceLoader::_load (core\io\resource_loader.cpp:317)
+ERROR: Cannot open file 'res://task036-no-such-theme.tres'.
+   at: ResourceFormatLoaderText::load (scene\resources\resource_format_text.cpp:1406)
+ERROR: Failed loading resource: res://task036-no-such-theme.tres.
+   at: ResourceLoader::_load (core\io\resource_loader.cpp:317)
+ERROR: Could not create child process: adb devices -l
+   at: OS_Windows::execute (platform\windows\os_windows.cpp:1493)
+WARNING: [MCP] call trace disabled: injected write fault after 2 line(s) (file=res://mcp_server_test_fixture_trace/fault.jsonl); tool calls are unaffected
+   at: MCPTrace::Recorder::_disable_after_failure (modules\mcp_server\mcp_trace.cpp:211)
+WARNING: [MCP] call trace disabled: cannot open 'res://mcp_server_test_fixture_trace/no_such_dir/deeper/trace.jsonl' for appending (file=res://mcp_server_test_fixture_trace/no_such_dir/deeper/trace.jsonl); tool calls are unaffected
+   at: MCPTrace::Recorder::_disable_after_failure (modules\mcp_server\mcp_trace.cpp:211)
+[doctest] doctest version is "2.4.12"
+[doctest] run with "--help" for options
+===============================================================================
+.\modules/mcp_server/tests/test_mcp_server.h(8479):
+TEST CASE:  [MCPServer] editor_add_resource_to_node_property refuses a property the node does not have
+
+.\modules/mcp_server/tests/test_mcp_server.h(8487): ERROR: CHECK_FALSE( MCPTools::assign_resource_to_property(node, StringName("physics_material_override"), resource, error) ) is NOT correct!
+  values: CHECK_FALSE( true )
+
+.\modules/mcp_server/tests/test_mcp_server.h(8488): ERROR: CHECK( error.code == -32001 ) is NOT correct!
+  values: CHECK( 0 == -32001 )
+
+.\modules/mcp_server/tests/test_mcp_server.h(8489): ERROR: CHECK( error.message.contains("physics_material_override") ) is NOT correct!
+  values: CHECK( false )
+
+===============================================================================
+.\modules/mcp_server/tests/test_mcp_server.h(8501):
+TEST CASE:  [MCPServer] editor_add_resource_to_node_property refuses a resource the property cannot hold
+
+.\modules/mcp_server/tests/test_mcp_server.h(8510): ERROR: CHECK_FALSE( MCPTools::assign_resource_to_property(node, StringName("material"), wrong, error) ) is NOT correct!
+  values: CHECK_FALSE( true )
+
+.\modules/mcp_server/tests/test_mcp_server.h(8511): ERROR: CHECK( error.code == -32602 ) is NOT correct!
+  values: CHECK( 0 == -32602 )
+
+.\modules/mcp_server/tests/test_mcp_server.h(8512): ERROR: CHECK( error.message.contains("CanvasItemMaterial") ) is NOT correct!
+  values: CHECK( false )
+
+.\modules/mcp_server/tests/test_mcp_server.h(8513): ERROR: CHECK( ((Dictionary)error.data).has("suggestion") ) is NOT correct!
+  values: CHECK( false )
+
+.\modules/mcp_server/tests/test_mcp_server.h(8514): ERROR: CHECK( node->get(StringName("material")).get_type() == Variant::NIL ) is NOT correct!
+  values: CHECK( 24 == 0 )
+
+===============================================================================
+.\modules/mcp_server/tests/test_mcp_server.h(8541):
+TEST CASE:  [MCPServer] editor_connect_signal makes a connection that a scene save can keep
+
+.\modules/mcp_server/tests/test_mcp_server.h(8558): ERROR: CHECK( (connection.flags & Object::CONNECT_PERSIST) != 0 ) is NOT correct!
+  values: CHECK( 0 != 0 )
+
+.\modules/mcp_server/tests/test_mcp_server.h(8559): ERROR: CHECK( connection.flags == Object::CONNECT_PERSIST ) is NOT correct!
+  values: CHECK( 0 == 2 )
+
+===============================================================================
+.\modules/mcp_server/tests/test_mcp_server.h(8585):
+TEST CASE:  [MCPServer] running_game_get_node_properties refuses a name the node does not have
+
+.\modules/mcp_server/tests/test_mcp_server.h(8593): ERROR: CHECK_FALSE( MCPTools::read_named_properties(node, missing, out, error) ) is NOT correct!
+  values: CHECK_FALSE( true )
+
+.\modules/mcp_server/tests/test_mcp_server.h(8594): ERROR: CHECK( error.code == -32001 ) is NOT correct!
+  values: CHECK( 0 == -32001 )
+
+.\modules/mcp_server/tests/test_mcp_server.h(8595): ERROR: CHECK( error.message.contains("physics_material_override") ) is NOT correct!
+  values: CHECK( false )
+
+.\modules/mcp_server/tests/test_mcp_server.h(8597): ERROR: CHECK_FALSE( out.has("physics_material_override") ) is NOT correct!
+  values: CHECK_FALSE( true )
+
+===============================================================================
+[doctest] test cases:   276 |   272 passed |  4 failed | 1429 skipped
+[doctest] assertions: 15864 | 15850 passed | 14 failed |
+[doctest] Status: FAILURE!
