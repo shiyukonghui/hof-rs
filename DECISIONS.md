@@ -2655,3 +2655,41 @@ E-3 读侧: Vector4/Vector4i/Rect2i 加对象分支 + 全部 10 个 packed 加�
   引擎本身不可写的逐项列引擎依据并给可读原因; 边界: 若引擎语义确为不可写, 按 GDR-23 以引擎为准
 下一步: TASK-025(门⑥索引 + E-3 写侧) -> TASK-026(E-9 + E-6/G-4) -> TASK-027(E-2/E-8 + G-1 + G-3)
   -> 第四次 M4 复核 -> B5(58 工具)
+
+## D80 — TASK-025 交付（门⑥ 索引真修 + E-3 写侧闭合）+ GDR-25 §23.4 双向闭合规则落笔
+
+TASK-025 交付(门⑥索引真修 + E-3 写侧闭合) + GDR-25 §23.4 双向闭合规则落笔
+
+TASK-025(提交 f9c0510194/a95b824053/6f77e987ad/dfda642459/1486febf8a): 门①-⑥ 全绿, --version == HEAD(dfda64245)
+  ① 契约子集 3/3(编辑器 91/游戏 53 不变, 本组逐字 True); ② 证据 110/110; ③ doctest 205/205 (8102 断言, 基线 201/8021);
+  ④ 全引擎 1631/1631 (432384 断言); ⑤ accept 22/22 x2(PASS 清单 identical); ⑥ 30 点/30 pins/0 moved + 三组实验 22/22
+门⑥ 索引真修: PINNED 由 {file:{line:pin}} 改为 {file:{marker id:[pins 按出现序]}}, 查表按 (file, marker id, occurrence),
+  line 仅作注释; 失败条件三条一字未减(unannotated/unlisted/stale); moved 从死代码变成可达真提示
+  四组实验: E1 位移不假红(插入 20 行注释不重钉 -> exit 0 且只报 moved 提示);
+  E2 新增未标注 -> exit 1; E3 陈旧条目(标记改名) -> exit 1; E4 还原后 sha 逐字节相同;
+  E0 新旧对照用 TASK-025 起点提交 0b120996ff 的 git archive 副本(不碰仓库): 改前脚本同一位移 exit 1(假红),
+  新脚本 exit 0 —— 两侧对照点是'同一个改动下的各自判定'
+  勘误(append-only, 未改 REPORT-023 原文): REPORT-023 §5 与 §11 deviations 第 4 条声称 pin 按
+  (文件,marker id,出现序) 索引、位移只产生 moved 提示且不 fail; 实际改前实现是 PINNED[file][point.line] 行号键、
+  moved 分支构造上恒不可达(死代码); TASK-024b 因此手工把 851 改成 986
+  结论: 核心不变式'新增未标注收窄点即 fail'仍然成立(那次红演示观测有效); 被否定的是'位移不失败'这条设计声称
+E-3 写侧闭合: vector_from_dictionary/vector_component_hint/_vector_components 各补 VECTOR4I/RECT2/RECT2I
+  (Rect2 分量 real_t -> REAL_T; Rect2i/Vector4i -> INT32; 分量名与读侧逐字一致); 每分量先经 _check_components ->
+  coerce_to_property_type + _component_fits_slot, 未新开绕过分支
+  读回->写回矩阵 19 项 x 两端点 = 19/19 全部往返(code=0 + new_value 结构化相等 + 再读相等), 证据 110/110;
+  矩阵内无引擎不可写项; 三条拒绝的可读消息实测(1e300 点名 value.x 与 32-bit float 槽并给出引擎会写的 inf 等)
+  回归: TASK-024b 证据脚本原文重跑 66/68, 2 条失败恰为被本批闭合的 GAP_v4i_*/GAP_rect_i_*(现 code=0),
+  其余 66 条不变 —— 未改历史证据脚本、未放宽断言(以'失败恰为被闭合项'作等价判据)
+  零字符串手术链扩展为读->写->再读 6 步两端点各一遍, 逐步 0 次字符串处理;
+  且'零'不是声称: 脚本读取自身源码在 # CHAIN-BEGIN/# CHAIN-END 区间检索 10 个禁用记号(Split/Replace/Substring/Trim/
+  -match/-replace/[double]/[int]/[regex]/ConvertTo-Json), 实测 <none>
+  如实登记 3 个脚手架自身缺陷(doctest 字面量+GodotString 无 operator+ 编译失败; 颜色形状判据误用 .x;
+  门⑥ E0 误从 HEAD 取旧脚本) 并已修
+
+GDR-25 §23.4 双向闭合规则落笔(决策者): '读侧能答出对象形态的类型集合'必须等于'写侧能接受对象形态的类型集合';
+  登记 19 项读回->写回形状表; 写侧分量表规则 = 读侧能答出对象的类型集合(新增读回类型必须同时加写侧, 否则算缺陷);
+  分量槽位(Rect2=REAL_T / Rect2i,Vector4i=INT32 / Color=FLOAT32)每分量必经 value_fits_slot;
+  已知残留欠账: Transform2D/3D, Basis, Quaternion, Plane, Projection, AABB 当前无工具读回,
+  一旦有工具要读回必须对象形态读写, 不得用 stringify() 字符串形态;
+  证据形态三层等价: code=0 + new_value 与读回值结构化相等(不是拼字符串比较) + 再读仍相等, 两端点各一遍
+下一步: TASK-026(E-9 + E-6/G-4) -> TASK-027(E-2/E-8 + G-1 + G-3) -> 第四次 M4 复核 -> B5(58 工具)
