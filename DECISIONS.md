@@ -3360,3 +3360,53 @@ TASK-041(提交 36c485834e/49a99fdf1a/96a2dc3331/6f5b981ac2/100d230673/9f99733f6
   (d) **O-4 只报告不实现**: 目前唯一输入映射读者只显示**编辑器进程**的映射, 看不到**工程级**真相;
       '新增读工程级输入映射的工具'属**扩张契约**(171 条逐字门) -> 本批只写待立项说明(能力缺口/建议名与签名草案/影响面),
       交用户定夺
+
+## D97 — TASK-042 交付（端口守卫七分类 + project.godot 重写实测 + O-6 诚实化）+ 三项裁决 + 待用户定夺的契约扩张清单
+
+TASK-042 交付(端口守卫七分类 + project.godot 重写实测 + O-6 诚实化) + 三项裁决 + 待用户定夺的契约扩张清单
+
+TASK-042(提交 b72c09a3ea/d5b98df19a/3b7a3c19b1/10dfe36a69/a502516976/8fb95f4208/fee8745aa9): 门批次 19 步全 exit 0
+  ① **端口守卫统一**: 抽出 scripts/mcp_port_guard.ps1(**七分类** = 门⑤ 的六类 + 更严的 user_editor_vanished_during_the_run)
+     + 探针脚本 21/21(证明每类可达、三类违规必 FAIL, 含 98770-vs-9877 前缀陷阱与 --import 命令行);
+     6 个回归脚本 + accept_m1.ps1 全部改用;**复跑** mcp032 38/0、mcp033 74/0、mcp034 113/0、mcp035 66/0、mcp036 58/0、
+     probe037 39/0、mcp040 两脚本 47/0 与 35/0 —— **全 exit 0, 旧失败类消失且无新失败**
+     (值得记: 只照抄六分类会**放松**旧断言, 故必须加第七类 —— 执行者主动指出并修, 判断正确)
+  ② **project.godot 重写影响实测**(带注释真实工程 modules/gdscript/tests/scripts/project.godot 的逐字节副本):
+     加一个动作后 407B -> 869B、sha 变; **整文件被 ProjectSettings::save_custom() 重写**, **4/4 手写注释丢失**,
+     引擎写入自己的固定 7 行头, 其余行逐字保留; 二次相同调用**逐字节相同**(幂等); 编辑器退出不再改文件;
+     源码结论: save_custom -> _save_settings_text 写头 + 所有已存设置(project_settings.cpp:1162-1210/1234-1341),
+     ConfigFile::save 也是整文件 -> **引擎写出口无局部发布 API => 重写不可避免**
+     **但**: spike 证实可行方案 —— 把引擎自己序列化的那一条 [input] 条目**纯文本拼进原文件**(原 407 字节是**精确前缀**),
+     真实游戏进程启动后 InputMap.has_action=true、事件 1 个、既有动作仍在、**注释与手写格式全保留**、游戏不改文件
+     -> 实现**故意未做**(绕过引擎写出口的风险面另议, 属用户裁决项)
+  ③ **O-6 诚实化已实现**(不新增参数, inputSchema/description **逐字未动**): 响应新增两个正交字段
+     action_state = created | pre_existing_modified | pre_existing_unchanged(按**写入前后事件数**判定, 因为
+       InputMap::_find_event 会去重同一事件) 与 project_entry = created | replaced | unchanged | none | unknown
+       (发布前用引擎 ConfigFile 读磁盘旧状态); persisted 仍严格来自**磁盘回读**
+     线上: 新动作 -> created/created; 再调一次 -> pre_existing_unchanged/unchanged; **内置名 ui_accept** ->
+       created=false + pre_existing_unchanged + event_count=3 + project_entry=created + persisted=true; 文件里确有 ui_accept=
+  ④ **O-4 只报告未实现**: 唯一输入映射读者 editor_get_input_actions 读的是**编辑器进程**的 InputMap
+     (main.cpp:2330-2333: 编辑器 load_default(), 只有游戏 load_from_project_settings()) -> 新编辑器进程看不到工程 [input]
+     (TASK-041 实测 count=89 且不含刚持久化的动作); 草案名 project_get_input_map, 契约 171 -> **172**
+  门: ①3/3; ②30/30 + 21/21 + 32/32; ③277/277 (15948 断言); ④1703/1703 (440230 断言); ⑤22/22 x2(清单一致);
+     ⑥ 73/73 + 17 拼写 + 101/101(11 个 pinned 行号漂移: 脚本自身声明非失败 -> 本批**不刷新**,
+     因为在门批次跑完后改门脚本会使'绑定的提交'失效 —— 判断正确)
+  契约/组清单/DESIGN-DETAIL **未动**(契约 sha C844EC8A… 与 REPORT-041 逐字相同); 9877 全程只观察; 收尾三端口全空
+
+裁决(本批我直接落):
+  (a) **副作用不得沉默 -> TASK-043**: 把「整文件重写 + 手写注释丢失 + 其余逐字保留 + 幂等 + 需要就自行备份」
+      写进**受影响的每个工具的描述**(DESCRIPTION_OVERRIDES append + 重生成 + 指纹), 并先**逐个从源码确认**哪些工具
+      真的会经引擎写出口保存 project.godot(不许猜); **不改实现**; 拼接方案**本批不实现**
+  (b) **O-6 接受现状**: 内置动作可被显式覆盖(引擎允许), 且已有 action_state/project_entry 两个诚实字段使之可见 ->
+      不改为拒绝; 记录
+  (c) **O-4/O-5 待用户定夺**(它们**扩张契约** 171 -> 172+): project_get_input_map(读工程级输入映射)与
+      '删除动作工具必须同时清除 input/<action>' 一起立项 —— 属治理决策, 我不自行扩张
+
+★ 交用户定夺的**契约扩张清单**(全部是'新增/合并工具会改变 171 条逐字对等门'):
+  A. 6 条缺失工具(试测发现): ①建工程 ②编译 C# ③headless 起游戏 ④trace 路径查询 ⑤采样原子化 ⑥InputMap 持久化[已做 M-6]
+     + O-4 project_get_input_map + O-5 删除动作清除磁盘条目
+  B. 4 条建议合并 + 3 条明确不建议(附理由) —— 见 RACING-FINDINGS §2.3/§3.2
+  C. 13 条可优化(参数/返回形状/错误消息/往返次数; 含分析器与追踪自身两条取证修复) —— 见 §2.4
+  D. 拼接发布方案(保住 project.godot 手写注释) —— 绕过引擎写出口, 风险面另议
+  另: 试测的**交付卫生**教训 —— bin/ 不受版本控制, mono 二进制曾落后 137 个提交且缺 --mcp-trace ->
+    每次试测/验收前**必须重建对应构建**(mono 与 non-mono 是两个产物)
