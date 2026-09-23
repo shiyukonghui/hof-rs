@@ -2765,3 +2765,47 @@ E-2/E-8 稳定路径: editor_get_scene_tree 的 path 改为相对编辑场景根
     界定最小复现与根因(排除 BOM/.godot 缺失/--mcp-port/文件内容), 若无法归因到模块就明说引擎侧缺陷并给上游材料;
     脚本加固(不写 BOM + 校验退出码 + 有界重试 + 可诊断输出); 并把该纪律补进 PLAYBOOK §3(运维纪律, 允许执行者直接改手册)
 下一步 TASK-028(三项收尾: G-1 子属性路径 / G-3 clear 破坏性 / D-1 import 加固) -> 第四次 M4 复核 -> B5(58 工具)
+
+## D83 — TASK-028 交付（G-1/G-3/D-1）+ 我的 BOM 归因被推翻 + clear.default 裁决（方案 A）
+
+TASK-028 交付(G-1/G-3/D-1) + 我的 BOM 归因被推翻 + clear.default 裁决(方案A)
+
+TASK-028(提交 bf051fc1a6/ba719d483d/dca9c82bcf): 门全绿, --version == HEAD(dca9c82bc)
+  ① 契约子集 3/3; ② 证据 27/27 + TASK-027 重跑 61/61 未回退; ③ doctest 217/217 (8415 断言);
+  ④ 全引擎 1643/1643 (432697 断言); ⑤ accept 22/22 x2(PASS 清单 IDENTICAL); ⑥ 30 点/30 pins exit 0;
+  9877 全程 PID 36392 未动; 未 push; 工作树干净
+
+G-1 子属性路径: 编辑器与游戏节点写族(含 add_node.properties、add_nodes_batch、set_property_batch、跨场景事务)
+  接受引擎语法 position:y / v4:x / material:shader_parameter/uv1_scale, 写动作是引擎 Object::set_indexed,
+  值仍走 property_value_from_json -> shape_vector_from_json -> coerce_to_property_type 同一道闸门(未新增收窄点, 门⑥ 30/30)
+  语义按引擎: 不存在子段 -32001 且消息指名哪一段 + 给该类型成员清单; 不可 index -32602; 写后读回(带 parent_property/
+  parent_old_value/parent_new_value, 仅多段路径); 前导冒号 ':y' 按畸形 -32602 拒绝(NodePath 会静默重解释为裸路径 y);
+  Dictionary 新键 d:new_key 拒绝为 -32001(引擎允许加键但无声明类型可过闸门), 已存在键可写
+  读侧结论(不越权): 不支持子路径 —— 一次读整属性就拿到全部分量, 信息更多、调用次数相同、零字符串手术;
+  加它要改契约描述而无收益(已用 doctest 钉住)
+G-3: clear 改为显式 opt-in(缺省/false = 纯读不删, 显式 clear:true 才清), 响应 cleared 列出真实范围;
+  双客户端实测两次纯读响应体 sha256 完全相同且桥接文件仍在; 显式清后为诚实空
+  待决策项: 已注册 inputSchema 仍写 "clear":{"default":true} 与实现不一致 —— 执行者按纪律未自行 override, 上报;
+  裁决: 方案 A —— default 改 false + 描述写明'显式 true 会删除共享桥接文件、影响其它客户端'
+  -> 需 SCHEMA_OVERRIDES(mode=replace, 理由逐字引用被替换的 "default": true) + 可能加 DESCRIPTION_OVERRIDES +
+  重生成契约与全部指纹 + 门① 重跑 -> 独占一个任务(TASK-029)
+
+D-1 --import 首次崩溃: 【推翻我此前的 BOM 归因】
+  84 次受控全新工程首导(7 变体 x 6, 首导+二导)全部 exit 0, Parse Error 0 次: 含/不含 .tscn、.tscn 带 BOM、
+  project.godot 带 BOM、.tscn 含 ext_resource、--mcp-port 缺省(=9877 已被占)/=0/=9888 均无差异;
+  另加 relink 后 32 次、TASK-027 复刻 16 次同样全 0(累计 132 次)
+  -> 「含 .tscn 首次必崩」「BOM 必崩」两条断言均不成立, 执行者按 PLAYBOOK §7.3 显式撤回并就地改写 PLAYBOOK §3 判据
+  -> 根因判定: 引擎侧间歇性进程级访问违例(0xC0000005 / exit -1073741819), 当前不可复现, 无法归因到本模块;
+     唯一可复现的引擎侧痕迹是 stderr 的 Parameter "singleton" is null. at: EditorNode::is_cmdline_mode
+     (editor_node.cpp:6732, 调用点 editor_file_system.cpp:2301, 模块里无调用者), 且它自身也是间歇的(84 次 0 次)
+  -> 上游最小复现材料已写进报告 §3.4(命令/最小工程/退出码/stderr/可跑探针 scripts/mcp028_import_crash_probe.ps1)
+  这一条是我第二次被纠正的技术判断(BOM 归因源自更早一轮的观察, 我把它写成了 PLAYBOOK 判据) —— 教训同 D74:
+  观察要被复现实验检验后才能成为规律; 单次观察不得升级为规范
+脚本加固(与根因无关但必要): 新增 scripts/mcp_import_guard.ps1 作为唯一实现
+  (无 BOM 且机器校验 first3 非 EF BB BF + 校验退出码 + 默认 3 次有界重试 + 每次失败打印命令行/退出码十进制与 0x/
+  工程路径/日志路径/日志尾部); accept_m1、check_contract_subset、mcp009–mcp027 全部改用; 失败路径用 stub 引擎真实演示;
+  scratch 不写 BOM 仍作为零成本纪律保留
+  PLAYBOOK §3 就地改写为四条纪律并撤回旧的 BOM 判据(运维纪律, 允许执行者直接改手册)
+
+下一步: TASK-029(clear.default override + 重生成指纹) -> 第四次 M4 独立复核(覆盖 D-1..D-15、E-1..E-10、G-1/G-3/G-4
+  的闭合 + 零字符串手术链 + 门①-⑥) -> B5(58 工具, 每批引擎优先)
