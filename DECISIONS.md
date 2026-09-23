@@ -2985,3 +2985,41 @@ B5 剩余三批(44 工具)已按 manifest 精确切分并在 TASK-034/后续任�
   批次 4 (14): navigation_write 2 (**含 bake_navigation_mesh 这个 fix-first**) + running_game_navigation_write 1
     + project_theme_write 5 + project_theme_read 1 + project_export_read 2 + project_android_read 1
     + os_android_read 1 + os_android_write 1
+
+## D88 — TASK-034 交付（B5 批次 2，15 工具 + 4 个 schema override）+ 三项裁决；派批次 3（含 2 个 fix-first + E-5）
+
+TASK-034 交付(B5 批次2 15 工具 + 4 个 schema override) + 三项裁决; 派批次3(含 2 fix-first + E-5)
+
+TASK-034(提交 d744a100bc/f9a8797a1f/0eada018d6, 引擎锚点 fc724ce49a): 六门全绿
+  ① 8/8 组(每组 3/3); ② 线上 114/114; ③ 239/239 (12198 断言); ④ 1665/1665 (436480 断言);
+  ⑤ accept 22/22 x2(派生并集 142, editor 120 / game 53); ⑥ 38/38 pins + --coverage 17 拼写 + 探针 101/101;
+  回归 mcp030 22 / mcp032 39 / mcp033 75 全绿; 9877 PID 36392 未动; 未 push
+  §0 四个 schema 缺口经 3 条 mode=replace override 收口(生成器 1.8.0 -> 1.9.0, overrides 14 -> 17):
+    add_state_machine_state.animation / set_blend_tree_node.animation / add_state_machine_transition 的
+    xfade_time + priority + advance_condition; 重生成契约(sha bc8c37a0…) 且 _meta.map_sha256 未变;
+    结构化 diff 证明只有 3 个工具的 inputSchema 变化
+    **不可达 → 可达**双重证明: 结构性(HEAD 契约缺该成员 / 线上调用答 animation='')+ 线上(声明后写入、读回、
+    并把 transition 自己的 advance_condition_parameter 原样喂进 editor_set_animation_tree_parameter)
+  §1 15 工具(8 组) + **E-4 槽位证据**(真实双面 MeshInstance3D: surface_material_override/0 = a.tres, /1 = b.tres
+    分别正确 —— 迁移源硬编码槽 0 会在这里失败; 槽 2 -> -32001 建议 0..1; 非数字拼写 -> -32602)
+  自捉并修的一处真缺陷: advance condition 必须在 AnimationNodeStateMachine::add_transition **之后**设置
+    (animation_node_state_machine.cpp:1581 的连接才让 AnimationTree 刷新其缓存的 parameters/... 列表) ——
+    修复前工具会答出一个它自己都喂不回去的参数名(零字符串手术链当场抓到)
+  两条零字符串手术链(audio 5 工具 / particles 5 工具), 脚本自断言 0 次字符串操作
+  进度: B5 29/58, 11/26 组
+
+裁决(三项):
+  (a) **批准** editor_set_material_3d.material_slot 由 string 改为 **integer**(SCHEMA_OVERRIDES + 重生成 + 指纹):
+      引擎 API 取 int 表面索引, 把索引声明成字符串是迁移源 GDScript `str()` 的历史包袱, 属 GDR-23 意义上的不顺手;
+      并要求顺带普查「其它把索引/序号声明成字符串」的参数(已实现 + 未实现 171 条), 列清单, 本批只修这一个
+  (b) **批准** editor_add_audio_bus.after_bus_index 越界 -> -32602(不做静默 append/clamp): 与'不得静默重解释'一致, 无需改动
+  (c) **门⑥ 的 PINNED.line 只是文档**: 位移不失败 -> **后续批次无需为对齐行号去改它**;
+      批次义务 = 新增收窄点必须标注 + 跑门⑥ 三段式(这条纠正了 TASK-034 每批手动重钉 34->38 的惯例, 属无谓工作)
+
+批次 3(TASK-035, 15 工具)含**两个 fix-first**(editor_set_tilemap_cell / editor_set_tilemap_cells_in_rect:
+迁移源未正确校验/使用 source/atlas 坐标 = **数据破坏类**; 批量必须全成功或全回滚, remove_all 给真实删除计数,
+读族必须能读回写族的内容)与 **E-5**(editor_set_shader_param: 实测'复合属性路径直写'是否真的生效;
+若静默失效即为第三类'报成功但没发生'; 仍应改用 ShaderMaterial::set_shader_parameter)
+批次 4(剩余 14 工具)含第 3 个 fix-first(editor_bake_navigation_mesh)与 Android/export 组;
+  Android/export 组需要 Android 导出环境 -> **预授权**: 无设备/无 SDK 时, 诚实的**能力感知拒绝**(-32000 + 建议)
+  与「能力缺失」证据即为正确结果, **不得**伪造成功; 由 M5 验收决定该类是否记为已声明不可验证能力
