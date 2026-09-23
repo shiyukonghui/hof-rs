@@ -3410,3 +3410,45 @@ TASK-042(提交 b72c09a3ea/d5b98df19a/3b7a3c19b1/10dfe36a69/a502516976/8fb95f420
   D. 拼接发布方案(保住 project.godot 手写注释) —— 绕过引擎写出口, 风险面另议
   另: 试测的**交付卫生**教训 —— bin/ 不受版本控制, mono 二进制曾落后 137 个提交且缺 --mcp-trace ->
     每次试测/验收前**必须重建对应构建**(mono 与 non-mono 是两个产物)
+
+## D98 — TASK-043 交付（5 个工具的「整文件重写」已入描述）+ 四项裁决（含我任务书措辞错误的自纠）
+
+TASK-043 交付(5 个工具的'整文件重写'已入描述) + 四项裁决(含我任务书措辞错误的自纠)
+
+TASK-043(提交 47b5008bac 描述+生成器 / d748214ffc 门批次 / 45076b352b+4b581c782c+82d1b53e6c 报告): 门批次 27 步全 exit 0
+  普查(**从源码逐个确认, 不猜**): **恰好 5 个**工具经引擎写出口保存 project.godot ——
+    project_set_setting(project_setting_write.cpp:217-218 -> tool_helpers.cpp:571-573 -> :558-566 save_custom 回调
+      -> project_settings.cpp:1234-1341 -> :1162-1210)
+    project_add_autoload / project_remove_autoload(project_autoload_write.cpp:149-150 / :180-181 -> 同一链)
+    editor_add_input_action(editor_input_simulation.cpp:665 -> tool_helpers.cpp:842-863 -> :788-838 -> :815 publish)
+    **外加未点名的第 5 个 editor_reload_plugin**(editor_write_scene_editor.cpp:396-397 -> editor_node.cpp:4543-4549/
+      :4623-4627 -> :4512-4531 _update_addon_config -> :4530 queue_save -> project_settings_editor.cpp:97-100
+      (**1.5s 一次性 Timer**) -> :102-106 save() -> save_custom; **不受 p_config_changed 门控**)
+    排除项逐条给理由(rescan/场景/脚本/主题/材质/音频/动画/文本资源写者/cross_scene/export 族/AutoloadSettings UI 等)
+  描述: DESCRIPTION_OVERRIDES mode=append 5 条(set_project_setting/add_autoload/remove_autoload/set_input_action/
+    reload_plugin), 原文逐字保留在句首, 句尾同一句英文事实; **用条件句 'when this call saves'**,
+    因为其中 3 个工具有'成功但不写文件'的路径(名字不存在/无 project.godot/已存在且相同)
+  生成器 1.10.0 -> 1.11.0; 契约 110770B c844ec8a… -> 118032B 443f1df2…, _meta.overrides 18 -> 23;
+    结构化 diff problems=0(只动这 5 条 description + _meta); 生成器两次同 sha(幂等); **未手改契约**
+  行为零改动; 线上核实 16/16(9888 tools/list 45186B sha 23f3bd6b…, 5 条 -ceq 相等且以新句结尾, 其余 143 条逐字未动)
+  第 5 个工具独立实测 14/14(带注释工程 + 已启用 addon: 编辑器启动与 --import **都不动文件**(对照),
+    一次 reload 后 504B -> 585B、注释 3/3 丢失、引擎固定头出现、其余逐字保留、二次字节不变)
+  门: ①x4 3/3(每归属组一次, 否则单跑只覆盖 5 个被改工具中的 1 个); ③277/277 (15948 断言); ④1703/1703 (440230 断言);
+    ⑤22/22 x2(清单一致); ⑥73/73 + 17 拼写 + 101/101 + 源码字节还原; 回归 mcp032 38/0、mcp033 74/0、mcp034 113/0、
+    mcp035 66/0、mcp036 58/0、mcp040 47/0 + 35/0、probe037 39/39、mcp042 30/0、mcp041 32/0、9877 探针 21/0
+  9877 全程 classification=environment_fact_no_listener_before_or_after
+
+★ 执行者指出**我的任务书措辞错误**(自纠): TASK-043 §1.4「实现文件 diff 为空」与 §1.3「只改描述与生成器」
+  **不可能同时字面成立** —— **线上描述本身就是 tools/*.cpp 里的注册字面量**, 契约改了字面量必须同步, 否则门①必红。
+  它守住'行为零改动', 把 diff 收成 4 文件 5 删 5 增并给机器形状断言(每条增删行都是
+  ToolBuilder builder('<5 个之一>', String::utf8(...) 且增行去掉新句后与删行逐字相同, problems=0), tests/ 零改动
+  -> 我的措辞错误, 不是它的偏差; 记此自纠以便后继任务书写得更准
+
+裁决(四项):
+  (a) **确认'描述字面量属于描述、允许改'**: 保持'契约与线上逐字同步'这一硬要求就必须改该字面量;
+      后继任务书不再写「实现文件 diff 为空」, 改写「**行为零改动 + 描述字面量 diff 须有机器形状断言**」
+  (b) **语言口径修正(小批次)**: 契约其余描述是中文, 本批 append 的是英文 -> 按'与该工具原描述同语种'改为中文,
+      语义不变, 重生成 + 指纹, 门① 逐字通过; 避免同一描述中英混杂
+  (c) **editor_reload_plugin 的 1.5s 延迟保存不改为可观测**(行为变更, 需单独立项); 已在描述里用条件句如实覆盖
+      'when this call saves' -> 记为**已知限制**
+  (d) 继承 D88: 门⑥ 的 11 条 pinned 行号漂移**只是文档**, 不刷新(改门脚本会使'绑定的提交'失效)
