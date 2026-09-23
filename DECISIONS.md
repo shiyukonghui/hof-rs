@@ -3072,3 +3072,40 @@ TASK-035(提交 1e8b4075ee/de96b61b18/1ce26e58d0, 门时 --version de96b61b1 == 
   '只拿到能力缺失证据'与'拿到真实成功证据'**分列**, 不得混为一谈
   running_game_move_player_to_target: **不得**只是 position = target 的瞬移, 要按引擎语义(导航代理/寻路)实现,
   并给'真的沿路径移动'的可观察证据(位置随帧变化)
+
+## D90 — **B5 收官 58/58，契约 171/171 全部 implemented**；派 B5/M5 引擎侧独立验收；待用户裁决 hof-rs 暂停
+
+**B5 收官 58/58, 契约 171/171 全部 implemented**; 派 B5/M5 引擎侧独立验收; 待用户裁决 hof-rs 暂停
+
+TASK-036(提交 6e18a00400/05d9bbce37/9d941492b5): 六门全绿(最终二进制 --version == HEAD b547d1a1df)
+  ① 9/9 组 x 3/3(implemented_union 148 editor / 69 game); ② 活证据 59/59; ③ 259/259 (15605 断言);
+  ④ 1685/1685 (439887 断言); ⑤ accept 22/22 x2(逐字节相同); ⑥ 三段 scanned==pinned==69 + 101/101 探针;
+  回归 mcp030 22/22、mcp032 39/39、mcp033 75/75、mcp034 109/114、mcp035 66/67
+  (6 条失败全为历史脚本 before 侧锚点随 HEAD 前进失效, 已逐条对齐并证明 TASK-036 未触碰契约文件)
+
+★ B5 收口机器校验: check_tool_groups.py --batch B5 exit 0(distinct 58, 每工具恰一次, 名字都在 171 契约内,
+  name 派生 channel/verb 与映射一致, 每组单渠道/单作用域/单 mutating, 组大小<=10, 26 组携带 58 工具);
+  --check-completeness exit 0(契约 171 = B1/B2 66 + B3+B4+B5 105, 两两不相交, missing=0, foreign=0)
+  -> **171/171 全部 implemented**
+
+第 3 个 fix-first 交付(editor_bake_navigation_mesh): 迁移源把烘焙当**可写属性** ->
+  实测 -32602 'value 不能写入 Callable 属性'(名字解析到引擎绑定方法), **零状态改变**;
+  修法: GDR-20 延迟通道 + 每帧轮询 is_baking()(上限 1800 帧/25000ms, 只压低框架上限)+ 进入前检查 map 有 region,
+  否则 -32000+建议(能力感知); 并用**另一工具** editor_get_navigation_info 复核 0->2 多边形;
+  0 多边形时回答带 message 说明'烘焙跑了但没有多边形', 不算成功
+running_game_move_player_to_target: **不是瞬移** —— 按引擎语义(NavigationAgent set_target_position/
+  get_next_path_position/is_navigation_finished; 否则 NavigationServer map_get_path; CharacterBody 走 velocity+
+  move_and_slide)逐帧采样; 实测 22 个互异采样点, 脚本用另一工具跨帧独立看到 5 个位置 92.9->177.4->258.5->343.0->356.2,
+  末值与工具自报 final_position 完全相同; 无导航 region 时 -32000 诚实拒绝(绝不退化成直线行走)
+主题 6 工具零字符串手术链(create->color->constant->font_size->stylebox->get_info, StringOps=0), 写入全部回读;
+  <=0 字号按 §20.6 进 ignored 并标 font_size_readable:false
+Android/export: 真实预设 + **引擎自己的 EditorExportPlatform::can_export** 作能力证据; 本机无 SDK/adb/设备/模板
+  -> -32000 并列出缺什么; os_list_android_devices 报 'Could not run adb' + missing[](不是 count:0);
+  「能力缺失」与「真实成功」分支在报告 §3.1/§3.2 **分列互不混同**; 实现期还修掉一个**假空**缺陷
+  (EditorExport 只在 NOTIFICATION_ENTER_TREE 读一次配置 -> 文件后写会被答成'0 个预设', 改为引擎列表非空才用它)
+§0 两项收口: editor_physics_write 注记修正(只改文本); material_slot 与 keycode **保持 string** 且名字写法实测可用
+
+待用户裁决(见 D43): M5 的另一半 = **hof-rs 切端点 + 真实 T=1 冒烟**, 而 hof-rs 仍处用户指令的**暂停**状态。
+  我已派 B5/M5 引擎侧独立验收(TASK-AUDIT-B5, 覆盖 171/171 对等、契约纪律(18 条 override 可核对)、
+  7 个 fix-first + 2 个 unregister、顺手性、门⑥ 对抗、工程门与端口、能力缺失声明),
+  并在本轮结束时就「是否解除 hof-rs 暂停」向用户提问; 未获答复前不恢复 hof-rs 侧工作
