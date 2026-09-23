@@ -3109,3 +3109,52 @@ Android/export: 真实预设 + **引擎自己的 EditorExportPlatform::can_expor
   我已派 B5/M5 引擎侧独立验收(TASK-AUDIT-B5, 覆盖 171/171 对等、契约纪律(18 条 override 可核对)、
   7 个 fix-first + 2 个 unregister、顺手性、门⑥ 对抗、工程门与端口、能力缺失声明),
   并在本轮结束时就「是否解除 hof-rs 暂停」向用户提问; 未获答复前不恢复 hof-rs 侧工作
+
+## D91 — **B5/171 独立验收通过（pass，八类全过）**：Godot 侧全部完成；M5 的 hof-rs 一半待用户解除暂停
+
+**B5/171 独立验收通过(pass, 八类全过)** —— Godot 侧全部完成; M5 的 hof-rs 一半待用户解除暂停
+
+TASK-AUDIT-B5(验收方自建证据, 基准 HEAD c7bb936e00): **verdict = pass**, 八类全过
+  ① 171/171 对等: 自解析 tools/list 的 name 字段(禁止文本包含判断) —— 9888=148(43186B)、9889=69(23359B),
+     并集**恰为 171**(missing 0/extra 0); 217 组 (name,description,inputSchema) 逐字比对 0 不符;
+     scope 双向差集空(editor 148/148、game 69/69; 共享 46/仅 editor 102/仅 game 23);
+     125 条跨端点调用全 -32601 且响应无 result; check_tool_groups 无参数/B2..B5/--check-completeness 全 exit 0
+  ② 契约纪律: AST 读生成器声明 11+7=18, 与 _meta.overrides 18 逐对相等; 生成器重生成 110770B **逐字节相同** = 无手改;
+     清空 override 后结构化 diff 仅差那 18 对字段 + _meta.overrides
+  ③ 诚实性: **7 个 fix-first 全部自建证据复验** ——
+     tilemap 写 (2,3) 被 editor_get_tilemap_cell/used_cells/info **三个读者读回**, 负坐标往返, source_id=-1 才是显式清除,
+     未知 source/atlas 各 -32602 且拒绝后计数不变; 矩形 3x4 filled=12/verified=12, 坏元素整调用拒绝且 used 仍 14;
+     烘焙 0->2 多边形由**另一工具**+**直问引擎**双见证, 非 region -32602/未知节点 -32001/无源几何时不认成功;
+     早期四个也各自复验(输出面板真清、只断命名目标、auto_dismiss 诚实 -32000、跨进程报告桥接 total=2/passed=1 且
+     clear 真的清两侧); **2 个 unregister 未注册**; 30 条探针覆盖 29 个不同 B5 工具全明确报错+建议
+  ④ 顺手性: 自跑主题链 6 步 + 移动链 3 步, 对其 22 个工具调用实参做 AST 遍历(禁止嵌套调用/f-string/BinOp/推导式)
+     -> offenders=0, STRING_OPS=0; 移动**跨帧 24 个互异位置, 最大单步 20.69 vs 总位移 426.17**(瞬移会是一次等于全程的跳变),
+     终点被独立读确认; 无导航 region 时 -32000 拒绝而非直线行走; §23.4 抽样 10/10 三层等价; §23.5 三形态
+  ⑤ 门⑥: 三段 + 自造对抗(插入 (real_t)/static_cast<float>/Color{...} 各 exit 1; 只插空行/空白/注释 exit 0 不假红;
+     标注未登记仍 exit 1; 逐字节还原且 git status 不变)
+  ⑥ 工程门: 门①5 组 x3/3; 门③ 259/259(15605 断言); 门④ 1685/1685(439887 断言); 门⑤ 22/22 x2 且 PASS 清单逐项同序一致;
+     门② mcp033/mcp036 exit 0, mcp034(109/114)+mcp035(66/67) 的 6 条失败经只读 git show 独立裁决为**脚本 before 锚点陈旧**
+     (HEAD 契约与工作树逐字节相同) 非实现回归
+  ⑦ 能力缺失声明: 真实成功分支(真预设/引擎 can_export 原文/export_platform_count=7)与能力缺失分支
+     (adb 不在 PATH、SDK 目录不存在 -> -32000 + 建议, **不是 count:0**, 无 APK 产出)分列互不混同, 原始响应均落盘+sha256
+  ⑧ 端口: 9877 前后同 PID 36392; 测试仅 9888/9889(另 9890 已释放); 收尾无监听残留、无孤儿; 未改被跟踪文件、无 git 写操作
+
+★ 结论: **Godot 侧 M0-M4 + B5 全部完成且独立验收通过; 契约 171/171 全部 implemented**
+  验收方明确声明: 本次 pass **只覆盖引擎侧 B5/171 收口, 不构成对 hof-rs(M5 另一半: 切端点 + 真实 T=1 冒烟)的背书**
+
+遗留(3 条, 均不阻塞收口):
+  D1(low): check_tool_groups.py 的 usage 写 [--batch B1|B2|...] 但 --batch B1 被判 unknown batch 并 exit 1
+    (B1 的不变式实际由无参数路径执行) -> 修 usage 措辞或让 --batch B1 等价于无参数路径
+  D2(low): project_edit_resource(非 B5 工具, 既有实现) 未按 §20.6 落地 ignored 语义: Curve.min_value=5.0 被引擎夹成
+    0.99 后列进 changed 而无 ignored 条目; **完全未知的属性名**回成功形状 {changed:{}, message:'No properties were changed'}
+    -> 调用方无法区分'没动这个参数'与'这个参数不存在'; 建议未知键 -32602 或进 ignored, 夹取值进 ignored{requested,stored,reason}
+  R4(medium, 历史脚本): mcp034/mcp035 各若干条 s0_head_* 断言读 git show HEAD: 并断言**旧形状** ->
+    随 HEAD 前进反转; 建议这类脚本**钉显式提交锚点**而不是 HEAD (这正是 D86 纪律的脚本实现)
+  风险登记继承: R3 门⑥ 仍是**有限拼写集合**保证(未覆盖边界已打印) -> 必须坚持 §22.3b 规则 2 的三腿;
+    R1 editor_set_shader_material 默认 material_slot='material' 依赖节点类型(3D mesh 上省略会 -32602, 属诚实可诊断);
+    R2 project_set_theme_font_size(size<=0) 的'写入器说读不回来'与'读者眼中 16 是被设置的'分散在两个工具里
+  未确认(继承): 双精度端到端(已登记欠账)、Android 成功分支(本机无 SDK/设备)、§23.4 完整 19x2、
+    B5 其余 29 个工具的不存在目标、editor_get_test_report 的编辑器内存累加器成功路径
+
+★ M5 的另一半(**hof-rs 切端点 + 真实 T=1 冒烟**)仍处**用户指令的暂停状态(D43)** ->
+  已在本轮向用户提问是否解除暂停; 未获答复前**不恢复 hof-rs 侧工作**(不碰 hof-rs 的 policy/adapter)
