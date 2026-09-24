@@ -4200,3 +4200,61 @@ TASK-057/TASK-058: TASK-057 **实现已提交但报告缺失**(写完代码即�
 派 TASK-059: D-4(行为+描述同批切换) + D-2(恒真断言普查) + D-1/D-5 顺手 + D-7/D-3 如实登记
 之后: **游戏测试循环第 2 轮**(在 175 条工具 + 两个引擎补丁 + 按节发布之上重跑; 章程见 D112)
 目标仍 active(hof-rs 一半按用户指令暂停; 用户本轮未解除)
+
+## D116 — TASK-059 交付（**按节发布已切换上线**：注释不再丢）+ 恒真断言固化为守卫 + 三项裁决 + 派发纪律
+
+docs(decisions): D116 TASK-059 交付(**按节发布已切换上线**: 注释不再丢) + 恒真断言固化为守卫 + 三项裁决 + 派发纪律
+
+TASK-059(提交 d569b58d28 D-4 实现+契约 v1.18.0+测试 / 60584b317e D-2/D-1/D-5+新证据与门脚本 /
+  739e0bb555 判定包原样保留 / cd7224274 D-8 / 4f99a4e37 报告(仅文档, 零编译字节); 二进制自报 cd7224274 == HEAD):
+  **D-4 行为与描述同批切换(已上线)**: 切到 save_custom_section() 的三个工具 —— project_set_setting(节=key 首个 '/' 之前)、
+    editor_add_input_action([input])、project_add_autoload([autoload]);
+    **保留整文件重写**并如实说明: project_remove_autoload(**节写只替换值、永不删键** project_settings.h:226-227)、
+    editor_reload_plugin(保存属编辑器自己的 ProjectSettingsEditor 定时器, 不在本模块)
+    **四条回退路径在 tools/tool_helpers.h 命名并逐条实现**: (1)键不归任何节(无 '/' 或前导 '/');
+    (2)目标文件不存在(save_custom_section 不创建文件 :1685-1689, 回退保持 TASK-059 之前'会创建'的行为);
+    (3)引擎拒绝节写; (4)名字已在无头全局块(ConfigFile 的空节) -> 节写会留陈旧重复
+  **证据**: 注释 4/4 保留 + 前缀/后缀逐字节相同 + 新键落进正确节 + **幂等** + **R1 场景 [input] 非末节正确** +
+    引擎侧 InputMap.has_action=True + --import 与游戏运行后 sha 不变 + 回退路径如实表现(注释丢/引擎头写入/error_code=0);
+    **契约 v1.18.0 仍 175 条, 名字与全部 175 个 inputSchema 逐字节不变**(只有 5 条描述移动);
+    红相位**当场保存**(3 用例 3 失败 20 断言 -> 绿 3/3 89 断言; 模块 335/335)
+  **D-2 恒真断言收口**(重要): 改成真检查(**真的 bind 那两个端口**, 不解析本地化 netstat 文本) +
+    **三态失败演示**(基线 exit0 -> 造真残留(复制 cmd.exe 为假 godot 并让命令行命中 scratch 根) -> 未改动的脚本 exit1 +
+    [FAIL] p2_no_scratch_engine_process_left :: swept 1 pid -> 清理 -> 还原 exit0) +
+    **新增 scripts/check_tautologies.py(门⑥ 形状)**: 14 种声明拼写(9 PS + 5 py)、18/18 探针(14 插入必命中 + 4 近似必不命中)、
+    --coverage 打印覆盖与未覆盖、一条钉住的引用 -> **让这一类无法静默复发**; 普查确认全库**仅此一处**
+  D-1 去重(删 :319 保留 :332 **未丢 survivor 断言**); D-5 scons 探测(%SCONS% -> PATH -> 已知绝对路径, 打印来源,
+    完全不可用时给可执行消息 + exit 3, 另有 --probe-only; **同一缺陷在 build_local.cmd 里也有, 一并修**) + 演示 9/9;
+  D-7 remove-then-rename 非原子: **接受现状并登记**(有 backup+rollback); D-3 无红相位: **接受声明**并把
+    '红相位输出必须当场保存、不得事后补造'写进报告
+  **新发现并修掉 D-8**: 三处把生成器版本钉成字面量 1.17.0 -> 本批升 1.18.0 后**假红**(其中一处正是 R-B2 的失败演示 ->
+    等于演示失效) -> 三处改为**运行时读** gen_renamed_contract.py; 另修一处自伤(--rev 默认 HEAD 会使'前'变成'后')
+  门(22 步全 exit 0, 二进制自报 cd7224274 == HEAD): ③**335/335 (23714 断言)** ④**1761/1761 (447949 断言, 0 failed)**
+    ⑥75/75 + 101/101 + --coverage; 恒真扫描 18/18; --check-completeness/--added **字节与 sha 一致**(33880d5c…);
+    --generator-version PASS(1.18.0); 契约 pre/post PASS; R-B2 失败演示 PASS; D-5 演示 9/9;
+    ①逐字 x5(默认 + 4 组)各 3/3(契约 175, union 152/72); section-switch 证据 **30/30**; patch2 23/23; D-2 演示三态
+  回归电池 **全 exit 0**: accept_m1 x2 22/22(differing_lines=0)、mcp041/042/043、mcp010 29/29、mcp019、mcp027 60/60、
+    mcp044 40/40、mcp045 15/15、mcp046 23/23、mcp052 53/53、mcp053 73/73、**66 个被跟踪证据文件已还原且 git diff --stat 为 0**;
+    另跑 mcp054 53/53 与 mcp056 -Phase both 22/22; mcp057_gates.ps1 **未跑**(其步骤是 mcp059_gates.ps1 的真子集,
+    每一步都已跑到) -> **声明而非冒充**
+  端口: 9877 全程未起/未杀/未重启(前后无监听, 每次 9877 guard pass=True); 只用 9888/9889; 未 push;
+    **模块外无引擎文件改动**(git diff 在 modules/mcp_server 之外为空); hof-rs 只读; DESIGN-DETAIL 未改
+
+裁决(三项, 执行者上报):
+  (a) **D-7 原子替换(remove-then-rename -> MoveFileEx(MOVEFILE_REPLACE_EXISTING)): 暂缓** —— 窗口极小且有 backup+rollback 兜底,
+      收益低于风险(改 core/io 或 core/config 需重跑并发矩阵)
+  (b) **project_remove_autoload 的注释丢失: 批准后续引擎补丁** —— 需要'枚举命名空间到 CustomMap + 删键'的节级能力
+      (与本轮同一类: 文本保全), 排在游戏试测轮之后或并行
+  (c) **editor_reload_plugin 的节级化: 暂缓** —— 其保存属 editor/settings/project_settingseditor.cpp 的定时器,
+      改动面更大且节奏由编辑器决定
+★ **派发纪律(本次真实教训)**: 第一次派 TASK-059 时, 子代理**把自己误判为'调度/决策'角色而拒绝执行**
+  (声称其范围不得亲自写实现), 于是**零改动 + 零门**但交出一份**高质量判定包**(全部源码调研);
+  我在重发时明写'**你就是实现会话, 有写权限, 现在就动手, 不要把活再委派出去**'后一次成功
+  -> **今后每次派发实现任务必须显式声明该会话的实现权限**, 不得依赖默认理解;
+  判定包也已按纪律**原样保留**为 REPORT-059-JUDGEMENT-PACK.md(并纠正其中两处猜测: 行 787 的工具是 editor_reload_plugin;
+  API 读法逐行复核) —— '不做但把调研做透'也是可用的产出
+
+进度: A/B/C/D 四档 + 两个引擎补丁(按节发布、C# 判定前置)已交付; 契约 175 条; 恒真断言已固化为守卫;
+  下一步 = **游戏测试循环第 2 轮**(在 175 工具 + 按节发布 + 更诚实的 C# 判定之上重跑; 章程 D112),
+  预期能暴露上一轮被掩盖的新问题(注释保全、C# 校验、批量工具、scope 收窄等新能力都值得被真实使用检验)
+目标仍 active(hof-rs 一半按用户指令暂停)
