@@ -3622,3 +3622,40 @@ TASK-046(提交 a7b8b5322f 代码 / 5a5fe039f2 测试与脚本 / 264f9564c5 报�
 
 阶段五: 派**独立验收子代理**(TASK-AUDIT-CAPTURE)覆盖捕获特性整体(存在理由 / 三档开关与三视口 / 诚实性与边界 /
   零行为变化 / 缩放一致性与代价 / 工程门与端口), 并要求它**自己**用同一对文件复核日志里的比率
+
+## D103 — **捕获特性独立验收通过（pass，零缺陷）**：用户要求的「操作前后截图 + 与操作日志同行记录」已交付
+
+docs(decisions): D103 **捕获特性独立验收通过(pass, 零缺陷)** —— 用户要求的'操作前后截图 + 与操作日志同行记录'已交付
+
+TASK-AUDIT-CAPTURE(独立验收, 基准 1c1895353f): **verdict = pass, defects = []**
+  验证方没有采信任何报告: 自己写了**纯 Python PNG 解码器**(zlib+filter 链+max(|dr|,|dg|,|db|)>10)作第三把尺子
+  ① **存在理由三路对齐**(自造同参同值重放): 编辑器与游戏端点两次同参写都 error_code=0,
+     第一次 changed:true(编辑器 106800/5339554 ratio 0.0200016705515105; 游戏 240000/746496 ratio 0.321502057613169),
+     第二次 changed:false/ratio 0; **日志 -> 模块 diff 工具 -> 独立解码器三路逐个整数相同**
+  ② 三档开关: off **连目录都不建**; on_error 只对失败调用产 1 对图; every_call 每次 done 恰好 2 个 .png(frames_waited 全 >=1)
+  ③ 三视口: 2d 2978x1793(113929B, 2 色, mean_luma 76.18) / 3d 2978x1790(1149064B, 2925 色) / editor 3840x2054(294280B, 432 色),
+     像素多样性合格(非 1x1 非全黑), 三者 sha 互异且都能被 diff 工具自比对解码
+  ④ 诚实性与边界: headless 3/3 status=unavailable + reason 与既有 -32000 消息**逐字相同** + **零文件** + total_bytes=0,
+     调用本身照常; 捕获**绝不进响应**(判定性写入响应体 255B x2 不含 capture/shots; 且 22 探针 on 与 pre 逐字节相同);
+     deferred 调用记 unavailable + reason='the call is answered across frames (deferred)...' 不静默 skip;
+     **无删除路径**(代码腿: mcp_capture.{h,cpp} 只有 make_dir_recursive_absolute, 无任何 remove*; 实跑腿: total_bytes 15 段严格递增),
+     阈值 WARN 的 doctest 19/19 并证明触发后两对 PNG 仍在盘上
+  ⑤ 零行为变化: 22 探针(initialize/全量 tools/list/ping/18 条 tools/call)在 pre(2f520cf90, 其父提交即引入捕获的父)/
+     off/on 三跑 deterministic=22 unstable=0 changed=0; tools/list 三跑同 sha 4f26919e… 同 45186B;
+     契约 sha 443f1df2… 与 git cat-file blob HEAD 同值且最后改动仍是 TASK-043 的 47b500bac
+  ⑥ 缩放一致性与代价: scale=2 日志(1489x896/26800/1334144/ratio 0.0200877866257316) == 喂落盘文件给 diff 工具 == Python 解码器, 三者逐值同;
+     scale=1 锚点仍 106800/5339554, 整包 payload sha 仍 51c69777…(33405B); 服务端 duration_ms off 中位 0 -> every_call 中位 8ms;
+     客户端背靠背 off 中位 18.3ms / every_call 中位 **99.2ms**(min 87.7 max 99.9), 间隔 2.5s 中位 33.5ms -> 与 §25 第14条同量级几乎逐值相同
+  门: ①3 组各 3/3; ②mcp010 28/29、mcp019 65/66、mcp027 59/61(**唯一失败类是 9877 环境门**); ③293/293 (21431 断言);
+    ④1719/1719 (445713 断言); ⑤22/22 x2(清单 diff 为空); ⑥三段 75/75 + 101/101
+  未确认 5 条(诚实): 未自己重建 pre 二进制(用的是既有产物, 仅核验 --version 与父提交等价); mcp027 D8 未在 pre 上复跑(故'无关'是推断);
+    自己的脚本缺陷改用直接清点复核; 最后一次调用因进程被杀而无捕获行(设计上晚一帧追加, 未验证优雅退出 flush); '写图失败只 WARN' 未构造真实写失败
+  风险 5 条: 捕获**硬依赖 --mcp-trace**(单独给 --mcp-capture 只在 stderr WARN, 客户端看不到 -> 使用方可能误以为'什么都没发生');
+    背靠背 ~99ms/次已如实记录; scale=4 欠采样; mcp_capture 不在门⑥ 扫描范围; **9877 无监听者时所有把'pid 不变且不为 -1'当断言的门脚本必然报红**
+    (mcp010/mcp019/mcp027 各有 1 条) -> '六道门字面全绿'在用户编辑器未运行时不可达
+
+★ 结论: 用户本次要求(**操作前后截图 + 与操作日志同行记录, 便于排查问题**)已交付且**独立验收通过**;
+  它把本项目核心命题('报成功但什么都没发生')从推断变成**机器可判事实**(changed:false)
+
+遗留(小, 后续批次): 把 mcp010/mcp019/mcp027 的 9877 前置断言也按 TASK-042 的七分类对齐(现在只有 7 个脚本对齐了);
+  以及若要'退出前 flush', 用优雅退出后再读 trace 验证
