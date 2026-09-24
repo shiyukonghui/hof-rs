@@ -4113,3 +4113,50 @@ docs(decisions): D113 新增工具验收 fail(D1 阻断) + **引擎补丁 1 成�
   ②D2/D3 顺手修; ③TASK-055 未跑的电池**补跑**; ④修完**再派全新验收子代理**复核(D112 循环: fail -> 新实现批次 -> 新验收)
 引擎补丁 2(project.godot 局部发布, 一次解决 R1-R9)排在其后; 之后进入**游戏测试循环第 2 轮**(章程见 D112)
 目标仍 active
+
+## D114 — D1 修复 + 新增工具**重验 pass**（新抓三条：mono 脏树锚点／版本漂移无机器校验／证据被静默覆写）+ 派 TASK-057
+
+docs(decisions): D114 D1 修复 + 新增工具**重验 pass**(新抓三条: mono 脏树锚点/版本漂移无机器校验/证据被静默覆写) + 派 TASK-057
+
+TASK-056(实现提交 75adcdcce8 / 报告提交 427fc79da2): D1/D2/D3 全修 + 补跑 15/15 exit0; 门 9 步全绿; **契约 175 与 sha 9c706054 未动**
+  D1: 批量工具三个'无结论'分类统一 **valid:null + reason**, 单数仍 -32000 **不声称**(响应 sha 62c37e40 与 TASK-055 同值);
+    前后对照 PRE_POST_COMPARE=PASS; 契约描述本就正确故未改契约/生成器
+  D2: source.entries v1.15.0 -> **v1.17.0**(偏离我任务书字面的 1.16.0, 理由: TASK-055 已升到 1.17.0, 写 1.16.0 会再造漂移) -> **判断正确**
+  D3: 新增可测纯函数 csharp_executable_path, command 由 C:\Program Files\dotnet\/dotnet.exe 变为 ...\dotnet.exe; 真实构建前后 exit_code 均 0
+  补跑: accept_m1 x2 22/22(清单 differ=0) + mcp041/042/043_gates + mcp010 29/29 + mcp019 + mcp027 60/60 + mcp044 40/40 +
+    mcp045 15/15 + mcp046 23/23 + mcp050 + mcp051 + mcp052 53/53 + mcp053 73/73 -> **15/15 exit0**
+  门: ③328/328(+1 用例) ④1754/1754 ⑥75/75 + 101/101 --check-completeness/--added exit0(175=171+4) ①editor152/game72
+
+TASK-AUDIT-ADDED **重验(全新验收子代理) = pass**(锚点 427fc79da):
+  自己重跑: 机制幂等 + 与跟踪契约**逐字节相同**(9c706054…); 171->175 且 4 条为**有序尾**;
+  实时 tools/list 9888=152 / 9889=72 **名字完全由契约派生、0 处 name/description/inputSchema 不符**; scope 双向零泄漏 + 跨端点 -32601;
+  门 328/328、1754/1754、①4 组、⑥三段 + 101/101、⑤22/22 x2 清单 0 差异; 四个新工具**成功/拒绝/回滚/能力缺失/超时杀进程/无孤儿全部复现**;
+  M-5 默认与**改动前基线逐字节相同**且与显式 stride=1 相同; 自造探针 62/62 pass;
+  **9877 全程未被监听或请求**; 无孤儿; 跟踪文件逐字节还原(git diff HEAD = 0)
+  **D1 复核(逐字节)**: "valid":false 在整个响应里**只出现一次** —— 在 res://scripts/broken.gd(category=invalid);
+    两个 language_unavailable 条目(legit.cs / note.gdshader)都带 **valid: null + category + reason + suggestion**;
+    **单数与批量对全部 5 个文件结论一致**; 代码腿 project_validate_scripts.cpp:154-176 强制 Variant(),
+    doctest test_mcp_server.h:25863-25890 钉 Variant::NIL; tool-groups-added.json 版本三处一致 1.17.0;
+    command 只有一种分隔符(PATH 条目带尾反斜杠正是 D3 的触发源)
+
+★ 新抓三条(全部值得修, 已派 TASK-057):
+  **D-B1(medium, 构建锚点)**: bin 里的 **mono 二进制是脏树构建**(自报 4e3de1090 != HEAD 427fc79da, mtime 早于提交)
+    -> 这正是 mcp052(52/53)与 mcp053(72/73)**唯一**失败项 engines_match_head;
+    **上一轮的'15/15 exit 0'在本树上不可复现** -> 修法: 在 HEAD **串行重建 mono** 并复跑到 53/53 与 73/73
+    (**又一次 R-5'陈旧二进制/对象导致假绿'的实例**; 这条与构建依赖缺陷同源)
+  **R-B2(low-medium, 潜在)**: tool-groups-added.json 的生成器版本是**自由文本**, check_tool_groups.py **完全不校验**
+    -> 漂移会**静默复发**(本类已复发两次) -> 加**机器断言**(三处必须相等) + **造一次失败演示**
+  **R-B3(low)**: 15 步回归里 **13 步会静默覆写被跟踪的证据文件**(mcp051 还会新建 task051/red/e20_child_status.json)
+    -> 重跑会改写历史取证(人工 git checkout 才补得回) -> 电池默认写 %TEMP% 或结束时自动还原并打印清单,
+    并给'重跑前后 git status/diff 为空'证据 (**N-6 的近亲: 证据完整性**)
+
+决策(我): 三条**都修**(D-B1 必做, 因为它使'跑过'不可复现; R-B2 把人工纪律变成机器约束; R-B3 保证据完整性);
+  并派 **引擎补丁 2**: ProjectSettings **局部发布** —— 现状 save_custom/_save_settings_text 只能整文件重写
+  (project_settings.cpp:1162-1210/1234-1341), 而文本拼接有 R1-R9 九条风险 ->
+  优先级: ①引擎侧提供'只更新某节/某组键'的写出口(**由引擎序列化目标节, 不让上层做文本手术**);
+  ②次优: 暴露分节序列化文本; ③保底: 都不行就**明确不做**并把整文件重写保持为**已声明行为**(现状), **不退回文本拼接**;
+  硬要求: 既有 175 工具行为**逐字节不变**(project_set_setting 等默认仍整文件重写),
+  注释与其余文本**逐字保留**的字节级证据(含 [input] **非末节**反例/幂等/--import 与运行后不变/BOM-CRLF/并发),
+  若要让 editor_add_input_action 用新路径, **必须单列'行为变更'一节**并说明安全性(否则本批只提供 API, 由我另批切换)
+之后: **游戏测试循环第 2 轮**(在 175 条 + 两个引擎补丁之上重跑; 章程见 D112)
+目标仍 active
