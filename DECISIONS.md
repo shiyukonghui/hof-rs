@@ -3987,3 +3987,43 @@ TASK-054(已派, 三块): ①**C# 校验不得说谎**(二选一: 找到真能�
 进度: A 档(O-1/N-7/N-2) + B 档(C-3/O-9/O-4/O-5/M-3) + C 档(新增 4 工具, 契约 171->175) 已交付;
   TASK-054(D 档 + C# 诚实性)在跑; 之后可对**新增的 4 个工具**做一次独立验收, 并复核 §26/GDR-28 的落地
 目标仍 active(hof-rs 一半按用户指令暂停)
+
+## D111 — TASK-054 交付（C# 校验下调为不可验证 + 追踪代次标记 + 分析器三处修复）+ 构建依赖缺陷登记
+
+docs(decisions): D111 TASK-054 交付(C# 校验下调为不可验证 + 追踪代次标记 + 分析器三处修复) + 构建依赖缺陷登记
+
+TASK-054(提交 7cafa46e05 实现 / 04d609f9c7 报告注记; 门跑在父树 bd88b1b41 上并注明):
+  ① **C# 校验诚实化(引擎级缺陷 D-053-3 收口)**: 读源码后判定方案 (a) **不成立** —— CSharpScript::reload() 恒 OK
+     (csharp_script.cpp:2588-2621), 而唯一的'真信号' valid 是**私有**(csharp_script.h:137)且语义是
+     '**这个类之前建过吗**'(ScriptManagerBridge.cs:436-463), 根本不是编译结论 => 按 (b) **下调声明**:
+     单数工具 -32000 'no compile verdict' + 建议(引 csharp_script.cpp:2588-2621 与 ScriptManagerBridge.cs:436-463);
+     批量工具该项 {category:'unverifiable', valid:null, reason, suggestion} + **unverifiable_count**;
+     **两个工具的 message+suggestion 逐字一致**(m07 True/True); **.gd 判定与非 mono 的 -32000 口径逐字节未动**
+     实测(mono 9888): broken.cs 由 valid:true/category=ok -> unverifiable; legit.cs 同形; valid.gd 仍 ok;
+     broken.gd 仍 invalid/ERR_PARSE_ERROR; 非 mono 路径 sha 与红相位相等(1cc98e60…/ba0bc23e…)
+  ② **O-12 代次标记**: 新增 MCPTrace::build_trace_opened_fields() + record_event_line(), 在端口解析后写一行
+     trace_opened(event,pid,ts_ms,uptime_ms,started_ts_ms,mcp_port,listen,version,role), **不占 seq、不改既有请求行字段**;
+     同一 --mcp-trace 文件跨 3 个进程实测: 红 9 行/0 标记/**3x seq==1** -> 绿 12 行/3 标记(pid 77376/81940/83236,
+     editor x3, 9888 x3, version==mono --version), 标记不带 seq, 每代仍从 seq==1 开始; 分析器按它切段
+  ③ **O-11 分析器三处修复(同迹前后对照)**: (1)摩擦需**同一会话且中间无其它工具调用** -> 编辑器迹 13->12 对
+     (被删那对中间夹了 5 个别的调用)、合成 3->2, 两段真摩擦保留; (2)n-gram **按代次分桶**(unigram 把 [gram]
+     拆成 21 个字符 -> 1 个名字; 编辑器 bigram 0 -> 10); (3)超大响应**排除 event:'capture' 与 tools/list**
+     -> 合成 2->1 + large_responses_excluded=1; 并显式声明'每请求一连接'的退化(<session_keys.degenerate_generations>)
+  契约: **175 条不变**(171 移植 + 4 新增); _meta.generator_version 1.15.0 -> **1.16.0**, overrides 29, added_count 4,
+    map_sha256 未动; 契约 sha 460004da…; **git diff 只有 4 行**(单数 description+reason、批量 description、generator_version);
+    生成器幂等; C++ 注册字面量与契约**程序化核对相等**
+  门: ①exit0(9888=152/9889=72, 契约 175, 两组逐字 True); ③**327/327 (23480 断言, 0 failed)**;
+    ④**1753/1753 (447703 断言, 0 failed)**; ⑤accept_m1 x2 22/22; ⑥三段 exit0(scanned 75==pinned 75 + 覆盖声明 + 101/101);
+    完备性 '171 + 4 = 66 + 105 + 4: PASS' + --added PASS; 门② 红 **44/44** + 绿 **53/53**;
+    plain 与 mono 二进制均自报 bd88b1b41; 9877 未占用; 未 push
+
+★ 登记一条**构建正确性**问题(执行者上报, 值得单独处理): **scons 不跟踪'生成的版本头'对 mcp_trace.o 的依赖**
+  -> 在 build_local.cmd -Force 里规避(它始终全量重建), 但 **mono 侧须手删该目标文件**;
+  这是 R-5('陈旧对象导致假绿')的一个**具体实例** -> 后续应把'生成头 -> 对象依赖'补进构建脚本,
+  或让门在跑之前校验'二进制 --version == HEAD'(已有该纪律, 但依赖人工) -> **待排期**
+
+进度: **A 档**(O-1/N-7/N-2) + **B 档**(C-3/O-9/O-4/O-5/M-3) + **C 档**(+4 工具, 契约 171->175) + **D 档**(O-11/O-12) 已交付;
+  引擎级 C# 诚实性缺陷已收口(下调声明而非假装能判定)
+下一步候选: (i)**对新增的 4 个工具做一次独立验收**(与移植批次同标准, 这是 §26/GDR-28 第 5 条的要求);
+  (ii) scons 生成头依赖修复; (iii) 试测清单里明确不做的 9 条保持不做
+目标仍 active(hof-rs 一半按用户指令暂停)
