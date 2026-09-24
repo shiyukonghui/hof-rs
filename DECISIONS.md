@@ -3704,3 +3704,70 @@ TASK-047(提交 05f8713a5d 脚本 / 019c4b0198 文档; 只改 scripts 与 docs/r
 
 目标状态: 目标里的 **Godot 侧(M0-M5 除 hof-rs 外)已完成且当前 HEAD 可复现**; **hof-rs 一半仍按用户指令(D43/D92)暂停**
   -> **目标保持 active**(未完成), 不标 blocked(那是用户明确的范围决定, 不是我被卡住), 继续做 Godot 侧收尾
+
+## D105 — 试测改进清单**独立确认**完成（19 确认／5 部分／3 未确认）+ 排期四档 + 第一批（A 档）开工
+
+docs(decisions): D105 试测改进清单**独立确认**完成(19 确认/5 部分/3 未确认) + 排期四档 + 第一批(A档)开工
+
+TASK-048(提交 cef846a418/f07352c9d1): ①mcp010 的 4 条硬编码不变式**改为派生**(五 manifest implemented 并集 +
+  rename map scope + 活端点集合相等) -> -Phase scope 12/13→15/15、count 4/7→12/12 均 exit0
+  (union 171 = 102 editor + 46 both + 23 game, 与 accept_m1 独立一致); ②mcp014:183 一行修好
+  (Write-McpUtf8NoBom), 按纪律串行重建 mono 后复跑 -Phase m3 -> 现在跑到底 18/20;
+  **新暴露两条红(旧缺陷被隐藏, 非回归)**: m09 冻结字面量 49/40(实测 148/69 恰等于该 HEAD 的派生期望)、
+  m23 的 pid -gt 0 环境前提(9877 无监听), 同源还有 gate2 的 g06/g26 -> 已登记待处置;
+  ③三个门批次聚合器全部 exit0(mcp041 17/17, mcp042 19/19, mcp043 28/28 步);
+  ④捕获/成本脚本全 exit0(mcp044 62/62, mcp045 15/15, mcp046 23/23); 五道门 + 门⑥ 三段全 EXIT 0;
+  MILESTONES-CLOSURE §4 的'未跑'已替换为真实结果
+TASK-049(提交 3193981897283b85a5b8851ff40548d32cdf85a0/5ee2c596a8) —— **mcp027 D8 真缺陷已修**:
+  根因: tools/project_write_resource_scene.cpp:147-149 的 _is_settable_property_name() =
+  String::is_valid_identifier()(:534-539) **先于**对象属性表判定, 于是把**读侧自己刚产出的**名字
+  (Environment.glow_levels/1..7 由 ADD_PROPERTYI 注册为字面属性名, environment.cpp:1464-1470) 拒掉 = -32602
+  => 直接违反 GDR-25 §23.4(读到的值必须能原样写回)
+  修法(选项 a): **让对象自己的属性表说话**, is_valid_identifier 降为表外名字的回退;
+  拒绝语义保留(空名/检查器标签/:路径/a.b/a[0]/空格 -> -32602; 未知标识符 -> -32001);
+  写后仍由**读回真值**决定(changed/properties_set/ignored); 红先行(3 用例 0 过/6 断言失败) -> 绿(4 用例 53/53)
+  同类普查(活体 ClassDB): **984 个非标识符属性名** / 189 标签, 形状 100% 为 /, 跨 9 个类; 逐形状处置已给
+  门: ①3/3; ②35/35; ③297/297 (+4 用例/+53 断言); ④1723/1723 (0 failed); ⑤22 PASS/0 FAIL x2;
+    ⑥75/75 + 101/101; 回归 mcp027 **60/60(D8 FAIL->PASS)**、mcp019 66/66、mcp010 29/15/12、mcp041/042/043 全 EXIT 0;
+    契约 sha 443f1df2… 未变
+  报了一条**相邻缺陷 F-1 未修**(需决策): 未设置的 shader uniform 读回 null(headless RenderingServer 无默认,
+  material.cpp:342-347), 而 null 对非 Object 属性被正确拒绝 -> 该对仍不可闭合; 已钉成机器可查边界, 建议
+  '读侧答声明默认值 + 显式 unset_properties 字段'(REPORT-049 §8.1)
+
+★ 用户授权: **先独立确认**试测改进清单, **确认存在的再安排开发与修复**
+TASK-AUDIT-RACING-BACKLOG(独立验证, 只读, 锚点 5ee2c596a; 对照试测锚点 f34ee937f 工具名集合逐字相同 171/171):
+  **30 个判定点: confirmed 19 / partially 5 / not confirmed 3 / 无需动作 3**
+  ★ **未确认(纠正清单)**: M-4 给工具起的游戏指定 trace 文件 -> project_set_setting{godot_mcp/trace_file} **已能覆盖**
+    (实测子进程写出 trace 并被分析器解析); M-6 InputMap 持久化 -> **TASK-041 已实现**(persisted/persisted_reason/
+    action_state/project_entry, 游戏进程 has_action=true); O-3 加 persist 参数 -> **TASK-040 已修行为**, 加开关反制造歧义
+  ★ **证伪/伪影**: O-6(a) 的'prefix 尾随斜杠改变结果集'是**测量伪影**(真实语义 begins_with:
+    godot_mcp ≡ godot_mcp/ ≡ godot_mcp/tr 逐字相同 234B, od_mcp=0); C-4① 的 editor_set_node_property_batch
+    **在试测锚点就已注册**(type-scoped); M-1 的'鸡生蛋'**证伪** —— 无 project.godot 时端点以 **game 角色**起(69 工具),
+    project_set_setting 能写出第一份 project.godot, 重启即得 148 条编辑器工具
+  ★ **project.godot 专项 4 点全 confirmed**: 整文件重写 + 注释 4/4 丢失**逐字节复现**; 拼接**确实可行**
+    (真游戏读到 has_action=true、注释保留、--import 与运行后 sha 不变、幂等);
+    **但构造出可复现静默失败 R1**: 当 [input] **不是最后一个节**时朴素追加会把键落进别的节 -> has_action=false;
+    另有 R2-R9(重复键/override 段/BOM-CRLF/转义与多行/并发写/与 project_set_setting 行为不一致/引擎格式漂移/无法安全处理须拒绝)
+  ★ **最该先做 3 条**: O-1(缺必填参数补 data.suggestion, 横切 171 条, 零契约成本, 集中在注册表两个入口);
+    C-3(editor_add_nodes_batch 同批父子: 源码 :251-258 父路径在构造前解析 + 失败全批回滚, 线上 -32001 全批回滚);
+    O-9(editor_list_signal_connections 加 scope: 5 节点小场景实测 **60/60 条编辑器内部连接、12659 B**, 按 source 过滤无效)
+  ★ **新发现 N-1..N-8**: N-1 无 project.godot 时的引导路径无任何 description 记载;
+    **N-2 非 Mono 构建下 project_validate_script 对合法 .cs 报 valid:false/ERR_PARSE_ERROR**(get_language_for_extension
+    为 null 时回退 GDScript, project_read_files.cpp:302-305) = **把'语言不可用'冒充'编译失败'**的诚实性缺口;
+    **N-3 没有任何工具能写 .csproj/NuGet.config/.cfg**(project_create_script 只收 .gd/.cs) = M-1 残余的最具体边界;
+    **N-4 editor_setup_collision_shape 不幂等**(对已有 CollisionShape2D 再调用会造出嵌套形状);
+    N-5 O-6 的斜杠归因是伪影; **N-6 试测原始 trace 根本不在仓库**(所以 C-1/C-2/C-6 的频次不可复测, 建议今后当场复制证据进仓库);
+    N-7 -32602 应一律附 accepted-parameters(含**嵌套路径**定位); N-8 trace 纯追加(3 个进程追加出 3 个 seq==1 且无代次标记)
+
+裁决: **排期四档**(用户已授权'确认存在则开发修复'):
+  **A 档·零契约成本(先做)**: O-1 + N-7 + N-2 + O-11/O-12 + O-7/O-8(仅描述指路)/O-10/O-13
+  **B 档·改 inputSchema、条目数不变**: C-3 + O-9 + O-2 + O-4 + O-5 + M-3
+  **C 档·新增工具(171 -> 172+, 需新契约条目, 由我方撰写条目)**: M-2 project_build_csharp(唯一'无工具也无组合'的真缺口)
+    + N-3 的工程文本写能力 + C-4③ project_validate_scripts + C-4④ editor_set_node_script_batch + M-5 采样步
+  **D 档·非契约**: O-11 分析器三处 + O-12 trace_opened 一行
+  **明确不做(9 条)**: M-4/M-6/O-3(已覆盖或已修)、C-5/C-6/C-7、激进版 O-8、C-2 合并、max_depth 默认值(归因错误已撤回)、
+    **现在做拼接器**(R1 未解决前不做; 仅当'保留注释'成为硬需求时立项, 且必须先解决 R1-R9)
+  **契约机制(需明确)**: C 档新增工具 = **在契约里新增我方撰写条目**(名/描述/inputSchema 由我定, 走生成器),
+    于是对等门的表述从'171 逐字'变为'**171 逐字 + N 条新增自撰条目**'; 我会在批次任务书里把这一点写清
+  立即开工: **TASK-050 = A 档**(O-1 横切 + N-7 含嵌套路径 + N-2 诚实性), 要求**错误码与既有消息文本不得变**
+    (只增补 data.suggestion), 并逐条归因受影响的证据脚本(不得为让脚本变绿而放宽断言)
