@@ -4067,3 +4067,49 @@ docs(decisions): D112 **授权引擎打补丁**(我决策并执行, 用户睡眠
   非 mono 口径不变 / 既有 175 工具响应逐字节不变(描述变更单独列出))
   下一批: project.godot **局部发布**引擎 API(补丁 2, 一次解决 R1-R9), 随后进入**游戏测试循环第 2 轮**
 目标仍 active(hof-rs 一半仍按用户此前指令暂停; 用户本次未解除该暂停)
+
+## D113 — 新增工具验收 fail（D1 阻断）+ **引擎补丁 1 成功（C# 拿到真结论）** + 派修复与重验（TASK-056）
+
+docs(decisions): D113 新增工具验收 fail(D1 阻断) + **引擎补丁 1 成功(C# 拿到真结论)** + 派修复与重验(TASK-056)
+
+★ TASK-AUDIT-ADDED(**verdict = fail**, 唯一阻断项 D1; 锚点 da657ea1f, 验收方自跑 181 断言/349 证据):
+  通过项: 机制自洽(重生成逐字节=跟踪文件、幂等、171 条移植逐字未变、新增恰 4 条、_meta 只动预期字段、
+    171+4=66+105+4 四桶互斥、--added exit0、五份批次清单 sha 未变);
+    对等门(实时 tools/list 解析 9888=152/9889=72、并集=175、逐条逐字相等、scope 双向零泄漏、跨端点 -32601);
+    四个新工具 3/4 pass(从零只用工具构建 C# 成功 exit_code=0 + DLL sha; 错 .cs exit_code=1 + CS1002/CS1513;
+      超时 1601ms 杀 dotnet:85220 且无孤儿; 无 C# 后端/无 SDK 均 -32000+建议; 写文件读回 sha 一致 + 四类拒绝 +
+      overwrite:false 字节未变 + 无删除路径; 批量全成功/keep_existing 跳过+skipped[]/tscn 读回/拒绝信封 rolled_back 且 tscn sha 未变);
+    M-5(默认==stride:1 逐字节、stride 语义与点数正确、0/负数/非整数 -32602);
+    顺手性(10 工具链、字符串手术 0 次、含建工程→写文件→写脚本→构建闭环); 工程门(13 步全 0; 门③327/0 门④1753/0
+      门⑤两跑一致 门⑥三腿 101/101); 端口(9877 全程 pid=-1、只用 9888/9889 并释放、无孤儿、无 git 写)
+  **D1(阻断)**: project_validate_scripts 对 category=language_unavailable 条目**发布了 'valid': false**
+    (project_read_files.cpp:364 + project_validate_scripts.cpp:168; 只有 unverifiable 走 null) ->
+    **违反 TASK-053 §2.1 与诚实性口径**, 且与 TASK-054 的处理**不对称**
+  D2(minor 文档漂移): docs/tool-groups-added.json 的 source.entries 仍写生成器 v1.15.0(实际 1.16.0)
+  D3(cosmetic): project_build_csharp 的 command 分隔符混用('C:\Program Files\dotnet\/dotnet.exe')
+  未确认 3 条(诚实): U1 批量挂脚本的取回腿线上不可达(Object::set_script 唯一拒绝是 is_abstract(), 取回代码已代码审查);
+    U2 M-5'默认与改动前逐字节相同'无法独立复现(盘上无改动前二进制, bin/ 不受版本控制) -> 已给同构建等价证明;
+    U4 9877 全程无监听 -> '未占用'是真空成立
+
+★ TASK-055(**引擎补丁 1 成功**, commit 5f3e7fb441; scons 严格串行; 9877 全程 guard PASS):
+  **调研结论(重要)**: **文件级编译诊断在引擎里根本不存在** —— 只活在 GodotTools 的 MSBuild 管道里
+    (GodotBuildLogger.cs:82,89 -> msbuild_issues.csv), 引擎侧从未持有
+  **补丁面选择 (c)+(b)**: 引擎侧只加**一个只读访问器** CSharpScript::is_source_newer_than_assembly()
+    (csharp_script.h:276-294, cpp:2621, **复用 _update_exports() 已有的比较** at cpp:2174);
+    **reload() 的签名与返回值逐字节未动**(D-2) -> 补丁满足'最小/朝上游形状/单一真值来源'
+  模块侧: 新增 tools/csharp_verdict.{h,cpp}; project_build_csharp 记下**逐文件诊断 + 构建时 mtime**
+    (user://mcp_csharp_build_state.json, **响应字段不变**); 两个校验工具回答
+    **ok / invalid + 编译器原文 / not_compiled**(绝不对'没人编译过'答 invalid)
+  **真真值证据**: 真 Godot.NET.Sdk 构建 -> 语法错误 = invalid + **CS1519/CS1002 文本**; 合法 = ok;
+    **改过未编译 = not_compiled, 且与'编译失败'在同一份响应里区分**; 非 mono 的 -32000 逐字节不变;
+    pre/post 35 探针 = 23 相同 + **12 处已声明差异**(10 个 C# 探针 + 2 个 tools/list), 移动条目**恰好是两个校验工具**
+  门: ①x2 exit0(9888=152/9889=72/契约 175 逐字); ③**327/327 (23521 断言)**; ④**1753/1753 (447744 断言)**;
+    ⑥x3(101/101); 完备性 171+4=66+105+4 exit0; 回归 mcp053 73/73 + mcp054 green 53/53
+  **声明未跑(D-1)**: accept_m1 x2 与 mcp041/042/043、mcp010/019/027、mcp044/045/046、mcp050/051/052 ->
+    我派 TASK-056 补跑
+  残余(已声明): 单数 error_text 无上限 vs 批量 400B 标记; MSBuild 诊断可能重复; mtime 守卫是秒级分辨率
+
+裁决: ①D1 必修(语言不可用**不得**声称 valid:false; 与 unverifiable 一致用 null + category + reason; 两工具口径一致);
+  ②D2/D3 顺手修; ③TASK-055 未跑的电池**补跑**; ④修完**再派全新验收子代理**复核(D112 循环: fail -> 新实现批次 -> 新验收)
+引擎补丁 2(project.godot 局部发布, 一次解决 R1-R9)排在其后; 之后进入**游戏测试循环第 2 轮**(章程见 D112)
+目标仍 active
