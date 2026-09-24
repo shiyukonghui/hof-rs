@@ -3771,3 +3771,41 @@ TASK-AUDIT-RACING-BACKLOG(独立验证, 只读, 锚点 5ee2c596a; 对照试测�
     于是对等门的表述从'171 逐字'变为'**171 逐字 + N 条新增自撰条目**'; 我会在批次任务书里把这一点写清
   立即开工: **TASK-050 = A 档**(O-1 横切 + N-7 含嵌套路径 + N-2 诚实性), 要求**错误码与既有消息文本不得变**
     (只增补 data.suggestion), 并逐条归因受影响的证据脚本(不得为让脚本变绿而放宽断言)
+
+## D106 — A 档交付（O-1 横切 171 条补建议 + N-7 可接受参数含嵌套路径 + N-2 跨语言诚实性）+ 采纳其 -32000 选择
+
+docs(decisions): D106 A 档交付(O-1 横切 171 条补建议 + N-7 可接受参数含嵌套路径 + N-2 跨语言诚实性) + 采纳其 -32000 选择
+
+TASK-050(提交 b8b6553d90 实现+测试+生成器+契约+3 新脚本 / a95c0bf1e8 报告+证据 / 及 5 条仅文档跟进; 最终 HEAD 588f74994 重建后 --version == HEAD):
+  **O-1(横切 171 条, 零契约成本)**: 两个注册表入口(call_tool / call_deferred_tool)**统一**补 data.suggestion ->
+    点名缺失参数 + **按契约 inputSchema 键序**列出可接受参数名(与 TASK-032 的未知参数门共用同一 helper, 二者不会漂移);
+    覆盖 immediate + deferred 两条入口 x 必填「省略」与「为空」两种情形;
+    实测 e06/e08/e09(immediate)、e10/e11(deferred)、e16(必填为空)、g01-g03(游戏侧): **96-100 B -> 219-367 B, 消息文本逐字节不变**
+  **N-7**: **任何** -32602 都附可接受形态(schema 驱动): 嵌套路径可定位(events[0].type / events[0].keycode / steps[0].type,
+    含步解析器的 Parameter 'steps[0]'.type 拼法重组), 形态含 type/enum/requiredness/default;
+    契约无法确定性生成时(裸 array 无 items)**说明原因且仍打印可接受清单**; **从不为空**(151 次调用扫描两端口清单 + 活探针证明)
+  **N-2(诚实性缺口已修)**: 删除 GDScript 回退; classify_validate_script_mode() 分三态 —— STRUCTURAL(无语言服务器, 语义未变) /
+    LANGUAGE_UNAVAILABLE(**-32000 + data.suggestion, 不给 valid 字段**) / COMPILE(该文件自己的语言); 2x2 判定表有单元测试;
+    实测合法 res://scripts/legit.cs 由 {valid:false, error_text:ERR_PARSE_ERROR, message:'Compilation failed...'} 变为
+    -32000 'this build has no script backend for .cs, so the file was not parsed or compiled' + 指向 module_mono_enabled=yes 的建议;
+    valid 语义写进契约描述(DESCRIPTION_OVERRIDES append, 生成器 1.11.0 -> 1.12.0; 契约 118032B/443f1df2 -> 119598B/713d486a), 门① 逐字 True(双端点)
+  **横切纪律遵守**: 错误码与既有消息文本**冻结**, 只增补 data 且**不覆盖已有建议**;
+    实测 e06 消息仍逐字 'Missing required parameter: path'(96->219B), e15 既有建议 215->215B, e17b 批量信封 582->582B,
+    e07 -32001 207->207B, e04/e05 真 .gd 编译 173/230B 不变, e19 transport -32601 102B 不变, 成功链调用逐字节相同
+  受影响脚本(逐条归因, **未放松任何断言**): (1)tests/test_mcp_server.h 的 expect_invalid lambda —— 旧行断言
+    '-32602 不带 data'(**它把 O-1 缺陷编码成了断言**), 已加强为要求非空建议且含工具名, 其 code+message 检查未动;
+    (2)mcp043_gates.ps1 的 gate2g **只挪调用点**(右侧改为与自己同一修订对+sha 钉住, 因为原来指向**活契约**并硬编码生成器 1.11.0),
+    mcp043_contract_diff.py 逐字节未动, 复跑 problems=0; (3)mcp044_zero_change.ps1 需要 TASK-044 之前的二进制(本修订无法重建)
+    -> **明说未跑**而非用替身; (4)scripts/** 里 250+ 条既有 -32602 断言只查 code + 消息片段(已核对只有那一条查 data 缺失)
+  门: ①3/3(双端点逐字, project_validate_script description=True); ②29 条真实请求 + 跨工具链; ③**301/301 (22367 断言)**;
+    ④**1727/1727 (446649 断言, 0 failed, 3 skipped)**; ⑤22/22 x2(清单逐字节相同); ⑥75/75 + 101/101(**探针 log sha 与 REPORT-049 同一 sha**);
+    契约 diff mcp050 problems=0、mcp043 钉住对 problems=0; 回归 mcp010/019/027 + mcp044 62/62 + mcp045 15/15 + mcp046 23/23 全 exit0
+  一处如实归因: mcp041 首跑 gate4 出现引擎侧 [Image] SIGSEGV 但 0 断言失败 -> 用 6 次 A/B 复跑归因并全绿
+
+裁决: **采纳执行者对 N-2 的选择** —— 用 **-32000 + data.suggestion**(而非审计建议的 valid:null):
+  null 对客户端是 falsy(易被当成'通过'或'未执行'), 而'**能力缺失 -> -32000**'是 DESIGN-DETAIL §16-10 已确立的规则;
+  执行者给了选项与理由(报告 §5.2 / D3) -> 以项目既有规则为准
+
+A 档完成; **B 档(C-3 editor_add_nodes_batch 同批父子 + O-9 editor_list_signal_connections 加 scope + O-2/O-4/O-5 + M-3)为下一批**;
+C 档(新增工具 171->172+, 含 M-2 project_build_csharp 与 N-3 的工程文本写能力)与 D 档(O-11/O-12)排队;
+目标仍保持 active(hof-rs 一半按用户指令暂停)
