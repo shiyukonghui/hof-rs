@@ -3809,3 +3809,49 @@ TASK-050(提交 b8b6553d90 实现+测试+生成器+契约+3 新脚本 / a95c0bf1
 A 档完成; **B 档(C-3 editor_add_nodes_batch 同批父子 + O-9 editor_list_signal_connections 加 scope + O-2/O-4/O-5 + M-3)为下一批**;
 C 档(新增工具 171->172+, 含 M-2 project_build_csharp 与 N-3 的工程文本写能力)与 D 档(O-11/O-12)排队;
 目标仍保持 active(hof-rs 一半按用户指令暂停)
+
+## D107 — B 档交付（C-3 同批父子 / O-9 连接 scope / O-4+O-5 schema 补全 / M-3 play 参数）+ 采纳 signal_name 解读 + 措辞教训
+
+docs(decisions): D107 B 档交付(C-3 同批父子 / O-9 连接 scope / O-4+O-5 schema 补全 / M-3 play 参数) + 采纳 signal_name 解读 + 措辞教训
+
+TASK-051(提交 d652a43a35 契约+生成器 / 8b4a65a54f 实现 / 0408da76a9 测试 / b34169d634 证据 / 06abd44ce4 + 9d5e409ae0 报告):
+  五项全部落地(红/绿各 25 真实请求 + 8 facts), **契约条目数不变、只改 inputSchema**
+  **C-3**: editor_add_nodes_batch 新增可选布尔 resolve_within_batch(**默认 false = 旧语义逐字保留**:
+    默认模式拒绝响应与改动前**逐字相同, -32001 / 588 B**); 为真时父路径可引用**本批更早元素**创建的节点
+    (e09 单请求建成 P1 与 P1/C1, created[] 给 parent_source=scene/batch, 跨工具链读回属性成功);
+    **三类明确拒绝**: 前向引用(e12, -32001 'is created later in this batch (nodes[1])' + 重排建议)、
+    同批重名(e13, -32602 + 歧义说明)、无人提供的父(e14, 原文不变) —— **三条都仍整批回滚**
+  **O-9**: editor_list_signal_connections 新增 scope=all|user|internal(默认 all = 旧答案);
+    判别口径是 callable 方法拼写(含 :: 为引擎/编辑器绑定); 同一 5 节点场景 默认 **59 条 12 412 B** ->
+    scope=user **0 条 178 B**、scope=internal 59 条 12 486 B; signal_name=script_changed 两相位同为 15 条(子串语义未改);
+    **机器检查证明 connections 数组红绿逐元素相同**(收窄只加过滤, 不改内容)
+  **O-4/O-5**(纯声明补全, 行为未改): editor_simulate_input_sequence 补 events[].items(17 成员 + required + enum + 可粘贴样例),
+    实测收益当场可见: 同一请求的建议文本由 'the schema declares events as an array with no item shape' 变为
+    '(a string, one of: key|mouse_click|mouse_button|mouse_move|mouse_motion|action)';
+    running_game_run_test_scenario 的 steps[].properties 由 9 增至 11(+pressed/+strength), 响应逐字相同(行为一直在, 缺的只是声明)
+  **M-3**: editor_play_scene 新增 headless(bool, 默认 false)与 extra_args(string 数组, 默认 []);
+    默认行为不变(纯函数 build_play_args(p,false,[]) 恰好返回 ['--mcp-port=<p>'], doctest 钉死);
+    实测 headless 启动成功 + 子进程命令行 mcp_port_occurrences=1 / headless_occurrences=1 + 游戏端点 9889 直连可用(is_editor=false, tools=69);
+    extra_args 里重复的 --headless **去重并在 args_deduplicated 回报**; extra_args 含 --mcp-port(两种拼写) -> **-32602 + 理由**
+    (引擎取最后一次出现, 会让 endpoint 说谎)
+  契约: 5 条 SCHEMA_OVERRIDES(全 mode=replace, 理由**逐字引用被替换的 required 成员**) + 生成器 1.12.0 -> 1.13.0
+    -> 132 684 B / 171 条 / **28 overrides**; 重生成**幂等**(连跑两次同 sha c92b9fd2…); **契约从未手改**;
+    mcp051_contract_diff.py 断言 problems=0(只动这 5 条 inputSchema、每条**纯新增**成员 +3/+6/+7/+53/+6、旧成员逐字保留、
+    _meta 只动 generator_version 与 overrides、map_sha256/generated_from_sha256 未动); 门① 5 组各 3/3 逐字 True
+  门: ①6 次 exit0; ②红绿各 25 请求 + 8 facts(含子进程命令行取证); ③**307/307 (22536 断言)**;
+    ④**1733/1733 (446818 断言, 0 failed, 3 skipped)**; ⑤22/22 x2(清单逐行一致); ⑥75/75 + 101/101;
+    回归三批全 exit0(mcp010/019/027、mcp041/042/043 398/427/504s、mcp044x4/045/046、TASK-050 证据与 diff problems=0);
+    副作用已回滚(task050 历史证据先复制留档再 git checkout 还原)
+
+裁决: **采纳执行者对 O-9 'signal_name' 的解读** —— **保留该过滤能力、不改子串语义**
+  (理由: 冻结契约描述 + GDR-17/R-1 判别点; 改成精确匹配属**行为变更**, 不在本批授权内)
+★ **我的措辞教训(同类第三次)**: 任务书写 '保留 signal_name 的精确过滤' 容易读成'把它改成精确匹配' ->
+  今后写这类要求必须写成 '**行为不变; 该参数的现有语义(子串匹配)保持现状**', 而不是用一个可能被读作变更的动词短语;
+  三次同类(D-1 前提错、D-2 scale=1 措辞、本条的'保留…精确匹配')都源于**用简短描述代替确切规格** ->
+  规则: 涉及既有行为的要求, 一律写'**现状是什么 + 必须保持什么**, 附现状证据(文件:行或实测)' 
+
+进度: A 档(O-1/N-7/N-2 等)与 B 档(C-3/O-9/O-4/O-5/M-3)已交付;
+  下一批 = **C 档**(新增工具, 契约 171 -> 172+ 且条目由我撰写): M-2 project_build_csharp(唯一'无工具也无组合'的真缺口)
+  + N-3 的工程文本写能力(.csproj/NuGet.config) + C-4③ project_validate_scripts + C-4④ editor_set_node_script_batch + M-5 采样步;
+  之后 D 档(O-11 分析器三处 + O-12 trace_opened 一行); 明确不做 9 条见 D105
+目标仍 active(hof-rs 一半按用户指令暂停)
