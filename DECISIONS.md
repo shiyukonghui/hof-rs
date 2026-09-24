@@ -3659,3 +3659,48 @@ TASK-AUDIT-CAPTURE(独立验收, 基准 1c1895353f): **verdict = pass, defects =
 
 遗留(小, 后续批次): 把 mcp010/mcp019/mcp027 的 9877 前置断言也按 TASK-042 的七分类对齐(现在只有 7 个脚本对齐了);
   以及若要'退出前 flush', 用优雅退出后再读 trace 验证
+
+## D104 — TASK-047 交付（M0–M5 里程碑闭合清单，当前 HEAD 可复现）+ 3 脚本 9877 对齐 + 优雅退出 flush 收口 + 四项裁决
+
+docs(decisions): D104 TASK-047 交付(M0-M5 里程碑闭合清单, 当前 HEAD 可复现) + 3 脚本 9877 对齐 + 优雅退出 flush 收口 + 四项裁决
+
+TASK-047(提交 05f8713a5d 脚本 / 019c4b0198 文档; 只改 scripts 与 docs/reports, 未动任何 .cpp/.h/契约):
+  ① **3 脚本 9877 前置对齐**(mcp010 4 处 / mcp019 3 处 / mcp027 3 处): 旧谓词
+     (( -eq ) -and ( -ne -1)) 在本环境(9877 无监听, pid=-1)下**机器求值为 False** =>
+     **必然假红并掩盖真回归**; 改走 mcp_port_guard.ps1 七分类并登记自己启动的 pid+命令行;
+     真不变式'我们没占用 9877'**保留且加强**(新增 our_pids/our_ports/asked_by_us 三条事实);
+     复跑: mcp010 -Phase game **29/29** exit0、mcp019 **66/66** exit0、mcp027 **59/60** exit1(port guard PASS)
+     剩余红逐条归因: mcp010 scope/count 的 4 条是 TASK-010 期**硬编码不变式**(48 union / 17-23-8 split / 编辑器端点 40 /
+       editor-only 17 game-only 8), 而 accept_m1 独立给出正确的 148/69 与 102/23, completeness 给出 171=66+105;
+       mcp027 唯一红 D8 = REPORT-AUDIT-CAPTURE §9.1 已登记的**预先存在** TASK-027 缺陷
+  ② **优雅退出 flush 收口**(12/12 PASS): 优雅退出(退出码 0, 非 kill)**不丢已写下的行**(trace 1223B 以 LF 收尾、3 行全可解析),
+     **但在飞的捕获行确实被丢弃**(在第 2 次调用内 quit 使'下一帧'永不发生 -> 在飞边界是确定事件而非竞态);
+     代码依据: mcp_trace.cpp:235/240-247/194-203 vs mcp_server.cpp:259-283(先 trace close 再 capture stop)
+     与 mcp_capture.cpp:406-416(显式 drop)/721-723(_complete 是唯一写入者)/726-755(tick 需 frame>=finish+1)
+     => CAPTURE 验收的未确认项收口为'**确认丢弃, 与 kill 无关**'
+  ③ **MILESTONES-CLOSURE.md**(主要产出, 全部在当前 HEAD 595607336d 重跑): M0 build_local -Force exit0 + --version==HEAD;
+     M1 accept_m1 x2 22/22 且清单逐行相同 + 契约子集 3/3 x2(171/171, editor 148 / game 69);
+     M2 groups 无参数(B1, 41 工具)+B2(9 组 25 工具) exit0 + mcp010 game 29/29;
+     **M3 重建 mono 构建**(唯一允许的第二次构建, 串行无并发, exit0, mono --version==HEAD) + C# 工程检查 11/11
+       (程序集 9728B、游戏端点 tools/list=69 由契约 171-102 机器推导、[MCP014-CS] Main._Ready ran、
+        CsharpReport()='csharp: ticks=352 state=csharp-ready'、**C++ 写 CsharpState 后 C# 读回**),
+       随后 build_local -Force **恢复非 mono**(1m46s)并复验 --version==HEAD;
+     M4 B3(12 组 40 工具)+B4(3 组 7 工具) exit0 + mcp019 66/66;
+     M5 B5(26 组 58 工具) exit0 + --check-completeness exit0(**171 = 66 + 105 恰好各一次, missing=0 foreign=0**)
+  门: ①3/3 x2; ②29/29 + 66/66 + 59/60; ③293/293 (21431 断言); ④1719/1719 (445713 断言, 0 failed, 3 skipped);
+    ⑤22/22 x2(清单一致); ⑥75/75 + 101/101(**探针 log sha 与 REPORT-046 同一 sha = 跨批次可复现**)
+  诚实登记: mcp041/042/043 三个门批次聚合器与 mcp044/045/046 证据脚本**本批未跑**, 已在闭合清单 §4 与报告 §4
+    **显式写成未跑(不写成通过)**; 未跑就留位置待补
+
+裁决(四项):
+  (a) **mcp010 的 4 条 TASK-010 期硬编码不变式**: 不'更新数字'了事, 而是**改为派生**(与 accept_m1 同法:
+      从 manifest/契约推导 union 与 scope 集合) -> 这样它随时间自动正确; 若某条在历史上**有意**是快照,
+      则在脚本头部**显式标注为历史视角**并**移出 exit 判据**(不得让它持续红而掩盖真回归)
+  (b) **mcp014_m3_evidence.ps1:183 的一行缺陷**(Write-Utf8NoBom 未定义, 应为 Write-McpUtf8NoBom): 一行修掉,
+      修后在 mono 二进制上完整复跑 -Phase m3(现在只有新增的 mcp047_m3_mono_check.ps1 的 11/11 接续证据)
+  (c) **mcp027 D8**(glow_levels/1 is not a settable property name, -32602): 属 TASK-027 议题的**真缺陷** ->
+      单独立项修复(OBJECT/数组**子路径**写侧与读侧形状不一致; 与本项目'读回必须能写回'的 GDR-25 直接相关)
+  (d) **补跑三个门批次聚合器**(mcp041/042/043)与 mcp044/045/046 证据脚本, 使闭合清单的'逐批次门证据'一栏不留空
+
+目标状态: 目标里的 **Godot 侧(M0-M5 除 hof-rs 外)已完成且当前 HEAD 可复现**; **hof-rs 一半仍按用户指令(D43/D92)暂停**
+  -> **目标保持 active**(未完成), 不标 blocked(那是用户明确的范围决定, 不是我被卡住), 继续做 Godot 侧收尾
