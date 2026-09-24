@@ -3895,3 +3895,50 @@ TASK-052(本批): ①机制(上条) ②两个新增工具, **条目原文由我�
 
 C 档余下(下一批): C-4③ project_validate_scripts、C-4④ editor_set_node_script_batch、M-5 采样步; A/B 档已完成
 目标仍 active(hof-rs 一半按用户指令暂停)
+
+## D109 — C 档 1 交付（**契约 171→173** + 只用工具的 C# 工程闭环成立）+ 错误码改判 + 派 C 档 2（TASK-053）
+
+docs(decisions): D109 C 档 1 交付(**契约 171->173** + 只用工具的 C# 工程闭环成立) + 错误码改判 + 派 C 档 2(TASK-053)
+
+TASK-052(提交 c1f3385daf 机制 / 2b2cbdeec2 两工具 / f38d240abb doctest / 2218613a33 证据与报告; 两个二进制自报 f38d240ab):
+  **① 机制落地**: 生成器 v1.14.0 新增 **ADDED_TOOLS**(与两张 override 表**分离**), 在 rename+override 之后确定性追加;
+    _meta 加 added_tools/added_count; 契约 **171 -> 173**, 连跑两次同 sha(1cb68de8…); 结构化 diff **34 checks/0 problems**
+    (171 条移植条目**逐字不变**、新增恰为末两条、_meta 只动 count/generator_version/added_tools/added_count、map_sha256 未动);
+    --check-completeness 证 **171+2 = 66+105+2**(四桶互斥); --added 校验**新**清单 docs/tool-groups-added.json(3467B),
+    **既有五份批次清单与 tool-rename-map.json 一个字节都没变**;
+    注册表为新增动词保留**一个显式扩展**(MCP_ADDED_TOOL_VERBS = {build, write}), **与映射自带的 37 词表分开**, 使后者逐字不变
+  **② project_build_csharp**: 跨进程 dotnet build(**可轮询 pid + PIPE_NOWAIT, tick 不阻塞**); 一次调用处理找到的每个 .csproj;
+    **超时真的杀子进程**(把传输层上限算进去: effective=min(requested, pending_timeout_ms), 提前 400ms, OS::kill),
+    如实回 timed_out/killed/exit_code:-1; **失败绝不伪造成 0**(实测 exit_code=1 + 1729B stdout);
+    输出按流按项目 64KiB 上限 + **显式 truncated 标记**; 能力缺失 -> -32000 + 建议(装 SDK/用 C# 构建)
+  **③ project_write_text_file**: 经既有 publish_text_atomically 原子发布 + **写后从盘上读回**(返回 sha 与 Get-FileHash 相符);
+    拒 project.godot(大小写不敏感, 指向 project_set_setting)与 .tscn/.tres/.gd/.cs 家族(各指向专用工具)与
+    res:// 外/含 .. 段/只给目录 -> -32602 + data.suggestion; **完全没有删除路径**(schema 恰三个成员, 删除形状的参数被注册表当未知参数拒绝);
+    overwrite:false 命中已存在 -> 拒绝且**文件 sha 未变**(绝不静默覆盖)
+  **④ 闭环(本批价值证明)**: **只用工具从零**建最小 C# 工程 ——
+    c1 project_set_setting{application/config/name} -> saved=true; c2/c3 project_write_text_file 写 .csproj/NuGet.config(sha 与盘上相符);
+    c4 project_create_script 写 .cs; c5 project_build_csharp -> **exit_code=0, duration_ms=2505,
+    command='...dotnet.exe build ...Mcp052Loop.csproj -c Debug', dll 4096B sha256 707db412…**;
+    c6/c7 故意写错的 .cs -> exit_code=1(**失败没被伪装**); c9/c10 挂住的 MSBuild + timeout_ms=2000 ->
+    **timed_out=true/exit_code=-1/killed=true/duration_ms=1600**(正是 2000-400); c11 事后无遗留 dotnet pid;
+    c12/c13 工具写的 .cfg 被**另一个工具**读回(零字符串手术链)
+  线上: 契约 173; **9888=150 / 9889=71**(由映射 + 新增清单**派生**, 非硬编码); 两个新增条目在**两端点逐字 True**
+  门: ①3/3 x2 组; ②53/53; ③**315/315 (22935 断言)**; ④**1741/1741 (447217 断言, 0 failed)**; ⑤22/22 x2(清单一致);
+    ⑥75/75 + 101/101; 回归 mcp041/042/043 + mcp010/019/027 + mcp044/045/046 + mcp047(mono 11/11, 独立确认游戏端点 71)
+    + mcp050/051/052 全 exit0(逐条归因); 9877 未占用; 未 push
+
+裁决(错误码改判, 已落 §26/GDR-28 第 10 条): project_write_text_file 在'**目标已存在且 overwrite:false**'时
+  **不用 -32001**(GDR-14 的 -32001 = **你要找的东西不存在**, 此处它**存在**), 也**不用 -32602**
+  (该参数**已声明且取值合法**) -> 用 **-32000 + data.suggestion**(点名 overwrite:true), 因为**是状态**不允许该调用;
+  并**必须**同时证明拒绝后**文件字节未变**。执行者按我任务书字面用了 -32001 并**主动指出该冲突** -> 我改判, 它没错
+
+★ 又一次措辞教训的印证(D107 立的规则生效): 执行者在我没写清'错误码语义'的地方**主动上报冲突**而不是硬套,
+  这正是'涉及既有语义的要求要写现状 + 必须保持什么'的价值
+
+TASK-053(C 档 2, 已派): ①错误码改判落地 + 更新受影响的 doctest/证据期望; ②新增三个:
+  **project_validate_scripts**(批量校验, **语言不可用必须与校验失败区分**, 沿用 TASK-050 的 -32000 口径);
+  **editor_set_node_script_batch**(批量挂脚本, **全成功或全回滚**, keep_existing 跳过并计入 skipped, 逐节点读回核实);
+  **M-5 采样步**(给既有采样读取工具加步长参数, **默认保持现语义** + 逐字节对照)
+  契约 173 -> **176**; 机制沿用 ADDED_TOOLS; 回归逐条归因
+C 档之后: D 档(O-11 分析器三处 + O-12 trace_opened 一行); A/B/C 档完成后可考虑对新增工具做一次独立验收
+目标仍 active(hof-rs 一半按用户指令暂停)
