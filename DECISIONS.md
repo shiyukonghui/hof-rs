@@ -3495,3 +3495,45 @@ docs(decisions): D99 用户要求「操作前后截图 + 与操作日志同行�
     changed:true + changed_pixel_ratio>0 —— 这正是本功能存在的意义(D-1/D-2 家族会被它一眼照出来)
 
 阶段纪律: 需求(用户四项选择)已确认 -> 详细设计已落 §25/GDR-27 + TASK-044; **待用户确认设计后**再派实现子代理(阶段四)
+
+## D100 — TASK-044 交付（操作前后捕获，零契约变更）+ 规范补实测事实与边界 + 批准代价优化（TASK-045）
+
+docs(decisions): D100 TASK-044 交付(操作前后捕获, 零契约变更) + 规范补实测事实与边界 + 批准代价优化(TASK-045)
+
+TASK-044(提交 39fc7179e7 实现 / 57d19f084a 测试与证据 / 0d405fa2a9 + 1dd26a37f8 报告; 最终锚点重建后 --version == HEAD):
+  形态: **§24/GDR-26 追踪的可选扩展, 零契约变更**(未新增工具、未改任何 inputSchema/description; DESIGN-DETAIL 一字未改);
+    新增 mcp_capture.{h,cpp}(配置解析/三视口取景/帧状态机/落盘/判定/事件行); mcp_trace 增 capture 字段与
+    **不占请求 seq 的事件行**; MCPServer 在 poll 之前 begin_frame、之后 tick;
+    GDR-25: 把像素比对从 editor_testing_read.cpp 提升到 tool_helpers 供两者共用
+  用户四项选择照办: 三档开关(默认 off) / viewport=editor|2d|3d(默认 editor, 游戏侧 viewport=game) /
+    **存原图不设上限且绝不删文件** / 自动 diff 出 changed + changed_pixel_ratio
+  ★ **存在理由实验当场成立**: 同一 editor_set_node_property 同参调用两次, **两次 error_code 都为 0**,
+    而日志第一次 changed:true ratio 0.0200016705515105(106800/5339554)、第二次 **changed:false 且前后 sha256 相同**;
+    游戏端点同型(true 0.321502057613169 -> false) -> **'报成功但什么都没发生'从推断变成机器可判事实**
+    (这正是 D-1/D-2 家族缺陷的照妖镜)
+  视口实测: 2d 2978x1793 / 3d 2978x1790 / editor 3840x2054(整窗) / game 1152x648; 引擎依据 editor_interface.h:125/130/131
+  零行为变化: pre(on=改动前二进制重建)/off/on 三跑 22/22 探针(含**全量 tools/list**)逐字节相同, 0 不稳定
+  headless: status:unavailable + reason(与既有报错逐字相同), **零文件**, 调用本身不受影响(编辑器调用仍 0/-32001)
+  可见性: 15 次捕获后**恰好 30 张图、一张没删**; total_bytes 严格递增; 超阈值**只 WARN 一次**
+    (真实 1GB 阈值未活测, 由 doctest 在生产路径上压低阈值验证 —— 如实声明)
+  门: ①3/3; ②62/62(editor 40/headless 8/game 9/diff-image 5); ③285/285 (16187 断言); ④1711/1711 (440469 断言);
+    ⑤22/22 x2(清单逐行相同); ⑥73/73 + 17 拼写 + 101/101(字节还原)
+  回归: mcp043 28 步 / mcp042 19 步 / mcp041 17 步全 EXIT 0, mcp038 zero_change 7/7 + trace_evidence 12/12
+  偏差(已报, 诚实): D1 延迟通道的 tools/call 记 unavailable+reason(不静默 skip);
+    D3 捕获依赖 --mcp-trace(无追踪时给一次 WARN); D6 真实 1GB 阈值未活测; D8 mcp_capture.cpp 在门⑥ 扫描范围之外
+
+★ D4(**必须记入规范的实测代价**): 响应路径只多**一次 framebuffer 拷贝**(同调用服务端 off 中位 0-1ms ->
+  every_call 中位 7-8ms), **但**应答之后的 PNG 编码 + 533 万像素比对占住主线程 ~400ms ->
+  **背靠背**往返 18.5ms -> 453.6ms(请求间有空隙时 30.7ms, 说明代价集中在读回来那一刻)
+  -> 裁决: 规范**不得**写成'无代价'; 已落 DESIGN-DETAIL §25 第 12 条为**已知代价**
+
+规范落笔(决策者, 依 TASK-044 §16 的 5 项请求): DESIGN-DETAIL §25 增第 11-13 条 ——
+  实测事实(三视口尺寸 + 存在理由实验数字) / '零延迟'的准确含义=响应路径 + 背靠背排队代价 /
+  边界(捕获依赖 --mcp-trace; 延迟通道记 unavailable; headless 目录空建; **mcp_capture.cpp 在门⑥ 声明范围之外
+    => 扫描数不变不能当作'未引入新收窄拼写'的证据**, 该文件须走代码审查 + 行为证据两腿)
+
+裁决: **批准代价优化 TASK-045** —— 把 MCPTools::compare_screenshot_pixels 的 Image::get_pixel() 逐像素读
+  改为 Image::get_data() 原始字节遍历(先读引擎源码确认格式/行距/通道语义), 要求**行为逐位等价**
+  (threshold 语义/每通道比较/两种差异色/snapped 0.01/尺寸不一致的报错顺序都不变),
+  **两个调用方都复测**(editor_analyze_screenshot_diff 的 doctest 与线上证据不变; 捕获对同一对 PNG 给同样的
+  106800/5339554), 并给**优化前后耗时与新的背靠背往返数字**; 完成后由**独立验收**覆盖捕获特性整体(TASK-044+045)
