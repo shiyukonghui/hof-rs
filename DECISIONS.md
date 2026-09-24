@@ -3942,3 +3942,48 @@ TASK-053(C 档 2, 已派): ①错误码改判落地 + 更新受影响的 doctest
   契约 173 -> **176**; 机制沿用 ADDED_TOOLS; 回归逐条归因
 C 档之后: D 档(O-11 分析器三处 + O-12 trace_opened 一行); A/B/C 档完成后可考虑对新增工具做一次独立验收
 目标仍 active(hof-rs 一半按用户指令暂停)
+
+## D110 — C 档 2 交付（**契约 173→175**）+ 两处我的任务书纠错 + 发现引擎级诚实性缺陷（D-053-3）+ 派 TASK-054
+
+docs(decisions): D110 C 档 2 交付(**契约 173->175**) + 两处我的任务书纠错 + 发现引擎级诚实性缺陷(D-053-3) + 派 TASK-054
+
+TASK-053(提交 96c1693d3d/db0566242b/e33c5b4dc9; plain 与 mono 二进制均自报基准 c4823798a):
+  §1 错误码改判**已落地**: 占用目标 + overwrite:false -> **-32000 + data.suggestion 点名 overwrite:true**,
+    且**拒绝前后文件逐字节相同**(a07); 受影响的 doctest/证据期望已同步更新(未只改实现尺寸)
+  新增 **project_validate_scripts**(both/只读): 逐文件 path/language/valid/分类(ok|invalid|language_unavailable)/error_text(截断标明),
+    **语言不可用与校验失败分开**(沿用 TASK-050 口径), 返回 count/valid_count/invalid_count/unavailable_count
+  新增 **editor_set_node_script_batch**(editor/写): **全成功或全回滚**; keep_existing:true 时已挂脚本的节点
+    **跳过并计入 skipped[] + 原因**(不静默覆盖); 逐节点**读回核实**; 失败给 rolled_back:true + 失败项
+  **M-5**: 目标工具 = **running_game_get_node_property_samples**(它原本已有管时间的 frame_interval, 新参数是**载荷网格**);
+    定名 **sample_stride**(integer, 默认 1, >=1), 走 SCHEMA_OVERRIDES[mode=replace] + 重生成注册段;
+    **默认路径逐字节不变**: 295 B sha eef36e62… == 改动前在 c4823798a 上的基线(连跑 3 次同 sha);
+    **显式步长**: 180 点 6147 B >> sample_stride=10 得 18 帧/observed 180/**781 B**(-87%);
+    sample_stride=0 -> -32602 'must be at least 1'; 规则导出为 MCPTools::sample_is_returned(index, stride) 便于无 SceneTree 单测
+  契约: **175 条**(137749 B, sha 65c83ab8…, 生成器 **1.15.0**, added_count **4**), 幂等两次同 sha;
+    tool-groups-added.json **4 组**; 线上 **9888=152 / 9889=72**; --check-completeness 打印 **171+4 = 66+105+4**; --added exit0
+  门: ①3/3(152/72 逐字); ②**72/72**; ③**325/325 (23430 断言)**; ④**1751/1751 (447653 断言, 0 failed)**; ⑤22/22 x2;
+    ⑥ 75/75 + --coverage + **探针 101/101**; 回归 **21 步全 exit0**(含 mcp041 电池内部重跑门①③④⑤x2⑥);
+    9877 全程未被占用; 未 push
+
+★ **它纠了我两处(都是我的错)**:
+  (1) 我在 §3 写'契约 173 -> **176**', 而 §2 只给出**两条**新增条目、§2.3 又明写 M-5 不改数量 -> 实际 **175**;
+      它**没有替我编第三条条目**(按 GDR-28 第 1 条, 条目须由决策者撰写) —— 这是**正确**的做法
+      -> 教训: **手写条数 = 又一次'用简短描述代替确切规格'**; 已落 §26 第 11 条: 条数必须从清单**派生**
+  (2) 我写'**不改已有条目**'与 M-5'给既有工具加参数'**字面互斥** -> 它按既有 SCHEMA_OVERRIDES(有 _meta.overrides 留痕)处理,
+      **其余 172 条逐字不变** -> 已落 §26 第 12 条: 给既有工具加参数走 SCHEMA_OVERRIDES, 新增条目走 ADDED_TOOLS, **两条通道不得混用**
+
+★ **新发现的引擎级诚实性缺陷(D-053-3, 已落 §26 第 13 条)**: CSharpScript::reload() **恒返回 OK**
+  (modules/mono/csharp_script.cpp:2593-2620) -> **mono 构建里语法错误的 .cs 也报 valid:true**,
+  **单数与批量校验工具都受影响**(同一共享判定); 它**没有单方面改**, 建议单独立项 -> 我立 TASK-054 §1
+
+TASK-054(已派, 三块): ①**C# 校验不得说谎**(二选一: 找到真能区分的引擎信号并给'语法错误 .cs -> valid:false'的线上证据;
+  找不到就**下调声明**为 unverifiable + reason + 引擎依据(文件:行), **两个工具口径必须一致**, 描述同步澄清);
+  ②**O-12** 追踪**代次标记**(打开文件时写一行 trace_opened: pid/启动时刻/--mcp-port/--version/role, **不占请求 seq**;
+  analyze_mcp_trace.py 按它**切段**, 跨运行不再拼接; 不改既有请求行字段);
+  ③**O-11** 分析器三处取证修复(摩擦窗口排除'两次之间夹了别的调用'的伪摩擦; n-gram 不跨连接/代次混统计;
+  单工具占比/超大响应**排除捕获事件行与 tools/list**, 否则诊断旁路污染自己的统计) 各给修复前后同一份追踪的对照
+  **契约条数不变**(本批不新增条目); 回归逐条归因
+
+进度: A 档(O-1/N-7/N-2) + B 档(C-3/O-9/O-4/O-5/M-3) + C 档(新增 4 工具, 契约 171->175) 已交付;
+  TASK-054(D 档 + C# 诚实性)在跑; 之后可对**新增的 4 个工具**做一次独立验收, 并复核 §26/GDR-28 的落地
+目标仍 active(hof-rs 一半按用户指令暂停)
