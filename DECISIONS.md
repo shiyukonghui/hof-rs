@@ -3452,3 +3452,46 @@ TASK-043(提交 47b5008bac 描述+生成器 / d748214ffc 门批次 / 45076b352b+
   (c) **editor_reload_plugin 的 1.5s 延迟保存不改为可观测**(行为变更, 需单独立项); 已在描述里用条件句如实覆盖
       'when this call saves' -> 记为**已知限制**
   (d) 继承 D88: 门⑥ 的 11 条 pinned 行号漂移**只是文档**, 不刷新(改门脚本会使'绑定的提交'失效)
+
+## D99 — 用户要求「操作前后截图 + 与操作日志同行记录」：需求确认与设计定型（§25/GDR-27 + TASK-044）
+
+docs(decisions): D99 用户要求「操作前后截图 + 与操作日志同行记录」—— 需求确认与设计定型(§25/GDR-27 + TASK-044)
+
+用户提问/要求: MCP 有截图工具吗? 能否在一次操作时做操作前后的截图, 并与操作日志一起记录, 便于排查问题
+
+事实核查(只读调查, 决策者):
+  现有契约里**已有 6 个**相关工具: editor_capture_screenshot{save_path} / running_game_capture_screenshot{save_path} /
+    editor_analyze_screenshot_diff{image_a,image_b,threshold}(像素级 a->b 差异图) / running_game_capture_frames /
+    running_game_assert_screen_text / project_get_resource_preview
+  -> 手工链路今天已能拼出来(截图->操作->截图->diff); 缺的正是**自动化 + 与操作日志绑定**
+  editor_capture_screenshot 实现事实(e 1908-1911 行区间读过): 抓 get_base_control()->get_viewport()(**整个编辑器窗口**),
+    save_path 支持 res://|user:// 且拒绝 ..; 与 running_game_capture_screenshot 共用
+    normalize_screenshot_path / screenshot_png_writer / game_framebuffer_available(均在 tool_helpers);
+    **headless 是诚实拒绝**: 先问 display server, 无纹理存储 -> -32000 + 建议(不回空白图); 视口未绘制过帧同 -32000 + 建议
+  2D/3D 视口可用性: editor/editor_interface.h:130 get_editor_viewport_2d() 与 :131 get_editor_viewport_3d(int p_idx=0)
+    **都存在**(模块里 editor_read_scene_inspector.cpp:492 与 editor_write_scene_editor.cpp:762 已在用 3D 那个)
+  -> viewport=editor|2d|3d 可实现
+
+用户四项选择(已答, 必须照办):
+  ① 三档开关 --mcp-capture=off|on_error|every_call(**默认 off**)
+  ② 取景 viewport=editor|2d|3d(默认 editor)
+  ③ **存原图且不设上限**
+  ④ 自动跑像素 diff, 把 changed / changed_pixel_ratio 写进日志行
+
+设计定型(决策者, 已写入 DESIGN-DETAIL §25/GDR-27 与 TASK-044):
+  **形态 = §24/GDR-26 追踪的可选扩展 => 零契约变更**(不新增工具、不改任何 inputSchema/description, 171 条逐字门不动;
+    截图与结论**只进日志与文件, 绝不进响应**)
+  时序(诚实 + 零延迟): 收到请求只做**一次 framebuffer 图像拷贝**, **随后照常应答(不等帧)**;
+    编码/落盘/diff 全在**应答之后**执行 -> 不改变任何工具的响应内容与时序;
+    「前」= 请求到达时最近渲染的帧; 「后」= 生效并**再渲染至少 1 帧**之后(用既有帧计数 + 延迟通道, 与 bake 轮询同法),
+    日志带 frames_waited 自证; 应答后**追加一行** {"event":"capture","seq":<同一 seq>,...} 与调用行**同 seq 关联**
+  headless 不得静默: status:"unavailable" + reason(不写空白图); 写失败 status:"failed" + reason 且**绝不影响**工具调用
+  **不设上限但必须可见**(对用户选择③的保护, 不是偷偷限额): 不设上限、**绝不自动删除任何文件**;
+    每行带 total_bytes(累计); 启动日志打印捕获目录与模式; 累计超 1 GB **只 WARN 一次**
+  复用而非重写(GDR-25): 把 editor_analyze_screenshot_diff 的像素比对算法从 tools/editor_testing_read.cpp
+    **提升到 tool_helpers**, 使捕获与该工具**共用同一实现**(与 TASK-011 提升 PNG 写入器同法), 并证明后者行为不变
+  零行为变化: off 时与改动前二进制响应逐字节相同; on 时 171 工具响应逐字节相同(沿用 §24 三条对照模板)
+  验收的**存在理由**: 必须构造一个'报成功但什么都没发生'的实验得到 changed:false, 以及一个真实改变得到
+    changed:true + changed_pixel_ratio>0 —— 这正是本功能存在的意义(D-1/D-2 家族会被它一眼照出来)
+
+阶段纪律: 需求(用户四项选择)已确认 -> 详细设计已落 §25/GDR-27 + TASK-044; **待用户确认设计后**再派实现子代理(阶段四)
