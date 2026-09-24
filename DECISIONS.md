@@ -3855,3 +3855,43 @@ TASK-051(提交 d652a43a35 契约+生成器 / 8b4a65a54f 实现 / 0408da76a9 测
   + N-3 的工程文本写能力(.csproj/NuGet.config) + C-4③ project_validate_scripts + C-4④ editor_set_node_script_batch + M-5 采样步;
   之后 D 档(O-11 分析器三处 + O-12 trace_opened 一行); 明确不做 9 条见 D105
 目标仍 active(hof-rs 一半按用户指令暂停)
+
+## D108 — 契约扩张机制立法（§26/GDR-28）+ C 档第一批（TASK-052：project_build_csharp + project_write_text_file，171→173）
+
+docs(decisions): D108 契约扩张机制立法(§26/GDR-28) + C 档第一批(TASK-052: project_build_csharp + project_write_text_file, 171->173)
+
+背景: A/B 档已交付; C 档需要**新增工具**, 而此前生成器只做'重命名 + override 既有 174 条'(契约恰好 171 条移植工具) ->
+  必须先把**新增机制**写成规范, 否则无法诚实扩张
+
+规范落笔(决策者): DESIGN-DETAIL 新增 **§26 / GDR-28「契约扩张: 新增工具」**:
+  1 新增条目**由决策者撰写**(名/描述/inputSchema), 落在生成器 **ADDED_TOOLS** 列表(与两张 override 表**分离**),
+    在重命名+override 之后**确定性追加**; _meta 增 added_tools(有序) + added_count; **幂等**
+  2 对等门表述随之改变: 门① = '**171 条移植工具逐字 + N 条新增自撰条目逐字**';
+    check_tool_groups.py --check-completeness 由 '171 = 66+105' 改为 '**171+N = 66+105+N**', 新增**恰好一次**
+    (missing=0 / foreign=0 / duplicated=0)
+  3 新增工具也必须进组清单: 落在**新的** docs/tool-groups-added.json(**不改**既有批次清单), 受**同样的组规则**
+    (单渠道/单作用域/单 mutating/组大小<=10/名字派生一致); check_tool_groups.py 增 --added 并计入完备性
+  4 命名同规(GDR-16/D38): <channel>_<verb>_<object>[_<qualifier>], 渠道限 4 个, 不用 update_, 可判别性优先
+  5 新增工具与移植工具**同标准**(三类证据/错误码与建议/写后读回/scope 隔离/门① 逐字/组规则/契约指纹) —— 新增**不是降级通道**
+  6 **capability-aware 拒绝**: 依赖外部能力(如 .NET SDK/MSBuild)时缺能力必须 -32000 + data.suggestion(说缺什么怎么装),
+    **不得**伪造成功或回显假数据
+  7 **不可手改契约**: 一切改动经生成器 + 结构化 diff(只动新增条目与 _meta) + 幂等证明
+
+TASK-052(本批): ①机制(上条) ②两个新增工具, **条目原文由我给定**(见任务书 §1, 实现须与契约字面一致):
+  **project_build_csharp**(project/build/csharp; timeout_ms 默认 120000/范围 1000..600000, configuration Debug|Release,
+    extra_args[], rescan 默认 true): 跨进程跑 .NET SDK 构建 .csproj, **超时必须真的杀子进程**并如实报 timed_out,
+    捕获 stdout/stderr(**截断要标明**), 返回 exit_code/stdout/stderr/duration_ms/command(真实命令行)/project_files/rescanned;
+    **失败不得伪造成 exit_code:0**; 无 C# 支持或无 SDK -> **-32000 + 建议**(缺什么/怎么装)
+  **project_write_text_file**(project/write/text_file; path/content 必填, overwrite 默认 false):
+    **拒绝** project.godot(指向 project_set_setting)与 .tscn/.tres/.gd/.cs(指向专用工具)与 res:// 外/..;
+    **没有任何删除路径**; overwrite:false 且已存在 -> 拒绝(不得静默覆盖); 写后**读回核实**返回 path/bytes/sha256/created;
+    **原子发布**并说明依据
+  价值证明(闭环): **从零只用工具**建最小 C# 工程(project_set_setting 写工程名 -> project_write_text_file 写 .csproj/NuGet.config
+    -> project_create_script 写 .cs -> project_build_csharp 构建成功), 逐步给响应与 sha256
+  证据要求: 成功构建 + 故意写错 .cs 的非零退出 + 无 SDK/无 C# 的诚实拒绝 + 超时杀子进程;
+    四类拒绝 + overwrite:false 命中已存在且**文件字节未变** + 写后另一工具读回
+  门: 五道门 + 门⑥ 三段式 + --check-completeness/--added exit0; 回归 mcp041/042/043 + mcp010/019/027 + mcp044/045/046
+    + TASK-050/051 证据脚本逐条归因; 不可构造项显式声明
+
+C 档余下(下一批): C-4③ project_validate_scripts、C-4④ editor_set_node_script_batch、M-5 采样步; A/B 档已完成
+目标仍 active(hof-rs 一半按用户指令暂停)
