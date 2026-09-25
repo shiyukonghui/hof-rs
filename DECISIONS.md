@@ -4741,3 +4741,52 @@ ot-evidence/a.json 不被认成已声明)
 下一步: ①对**三个引擎补丁 + 5 个新增工具**做**独立验收**(GDR-28 第 5 条; 目前只有实现方自证的门);
   ②此后可回到试测循环或按用户指令收口; ③hof-rs 一半仍按用户指令**暂停**
 目标仍 active
+
+## D128 — **独立验收 pass（零阻塞缺陷）**：三个引擎补丁非侵入性 + 5 个新增工具拒绝面 + **门完整性五条绕过尝试全部失败**
+
+docs(decisions): D128 **独立验收 pass(零阻塞缺陷)** —— 三个引擎补丁非侵入性 + 5 个新增工具拒绝面 + **门完整性五条绕过尝试全部失败**
+
+TASK-AUDIT-ENGINE(**verdict = pass**; 全新验收子代理, **未采信任何 REPORT-* 与我的摘要**; 锚点 e45ad638e6):
+  开工: build_local.cmd -Force exit0; 模块 doctest **345/23971/0**; 全引擎 **1771/448218/0**; accept_m1 **23/23 x2 清单逐字节一致**
+ ① **补丁非侵入性 = pass**: 净改动仅 **5 个引擎文件 752+/7-**;
+    **把 7 行被删既有行逐行列出并判定**(project_settings.cpp save_custom 头行+ERR_FAIL+空行=**纯搬家**;
+    editor_node.cpp:1071 save() 改为 :1085-1088 的 if/else=**有意改进调用点**; csharp_script.cpp:2174-2176 三行 ->
+    :2174 if(is_source_newer_than_assembly()) 且**对任意 mtime 等价**(空路径/mtime==0 旧式也是 0>x=false));
+    **reload()(csharp_script.cpp:2586)/save()(project_settings.cpp:1085) 完全未动**; save_custom 签名/Error 返回未变;
+    save_custom_section 补丁②与③签名逐字相同; **editor/ 下 26 处 save() 调用点字节不变**(第 27 处是注释);
+    新 API 仅 save_preserving_text(editor_node.cpp:1088)/publish_settings_sections_text(project_settings.cpp:1922)/
+    save_custom_section(tool_helpers.cpp:651) 被用
+    **行为实测(自造工程 3 行手写注释)**: add_autoload 节写入 sha 32209af4->8b92f419 **注释 3->3**, 重复调用 sha 不变;
+    **反向探测** remove_autoload(声明整文件) sha->a7d9e7ff **注释 3->0** 且换成引擎 7 行抬头;
+    project_set_setting 无节名->整文件(3->0), 有节名->只多 [audit_probe]/value=5.0 三行(**3->3**)
+ ② **5 个新增工具拒绝面 = pass**: **20 条反例**(glow_levels/1 非标识符、未知属性、越界路径、project.godot、.tscn/.gd/.cs 覆盖)
+    **全部同族拒绝 -32602/-32001/-32000 + data.suggestion, 无悄悄成功**;
+    **stop_on_error 两种语义含回滚后读回证明**(先写 position 11.5 读回 11.5; 再以 99.5+坏条目在 true 下批量 ->
+    rolled_back + **读回仍是 11.5** = 真的取回);
+    ★ **代码腿 ValueSlot 链条**: editor_set_node_property_updates -> write_node_property(editor_node_property_updates.cpp:276)
+      -> prepare_node_property_value(running_game_node_write.cpp:1009) -> **value_fits_slot(tool_helpers.cpp:2410, 实现 :1789)**
+      => **收窄闸门没有被绕**; 其余 4 个工具无 Variant->类型化槽写入, 故闸门命题**不适用而非被绕过**(区分得很清楚)
+ ③ **契约对等 = pass**: 实时 tools/list(落盘后 ConvertFrom-Json **非文本包含判断**): 9888=153 / 9889=72, **并集=176**,
+    missing=0 foreign=0; 153+72 条 canonical **逐字**(mismatches=0); scope **双向零泄漏**; 跨端点 -32601;
+    唯一差异 = 1 条 inputSchema 的**成员顺序**(order_normative=false) -> **判为非缺陷并给引证**
+ ④ ★ **门完整性五条绕过尝试全部失败(本次最重要产物, 证明门不是摆设)**:
+    (i) 植入 -or True -> **exit 1 并点名** scripts\zz_audit_tautology_probe.ps1 第 3 行;
+    (ii) 植入'有打印器但无 guard' -> **exit 1 点名**; 自带演示 unguarded exit0 且 summary 带 EXIT 3 / guarded_red exit1 / guarded_green exit0;
+    (iii) 假等待: 开发进行中->**timeout**、卡住->**stale**、marker 叶子存在->marker、
+      **marker 路径为目录 -> timeout 且 marker_seen=False**(**冒充被挡**), 未结束时**永不为 marker**;
+    (iv) 删证据/静默覆写: 未声明 REPORT-planted.md **原样存活**、声明外已跟踪文件不 revert、**默认拒绝 restored=0 removed=0 untouched=3**、
+      **blanket './' 声明抛异常**、子串 not-evidence 不误判;
+    (v) accept_m1 case0_repo_exit_code_propagation **两次 PASS**
+    它同时给出**门调用事实**与**边界**(恒真/退出传播检查是**拼写可见的有限集合**——集合外写法实测能逃, docstring 已声明;
+      marker 不校验写入者) -> **诚实标注保证范围**
+  defects: **无阻塞项**!
+  unconfirmed(诚实列 5 条): mono/C# 成功腿未独立复测(mono 二进制 48a3c2e33=HEAD~1, 但 diff 只含 scripts/** 与 docs/** ->
+    结构性等同; 未重建也未实测); editor_node.cpp:1071 的开窗保存带 !cmdline_mode 守卫, save_preserving_text()
+    只做了源码级核对(**未在窗口化编辑器里真跑并比对 project.godot**); mcp059_gates/mcp056_regression_battery
+    未整脚本重跑(以 git grep 行号 + 单独执行被调命令证明); 双精度 precision=double 构建未验; 证据守卫**只约束自身还原函数**
+  clean: 审计后 git diff 空; 只剩 4 个既有未跟踪物 + 任务书 + 报告; 9877/9888/9889 无 LISTENING; 无孤儿; 未 push; HEAD 未变
+
+★ 结论: **Godot 侧至此完整闭环** —— 176 条工具 + 三个引擎补丁 + 试测 4 轮 + 门完整性五条纪律,
+  且**关键部分已被一个不继承任何结论的独立验收方复核为 pass**(含对门的**主动绕过尝试全部失败**)
+目标: **仍 active** —— 唯一未完成的原始目标是 hof-rs 切换端点与真实 T=1 冒烟, 而用户明确指令**暂停**该半;
+  Godot 侧已交付完毕, 不应在用户未解除暂停前推进 hof-rs
