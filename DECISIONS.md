@@ -4955,3 +4955,47 @@ TASK-072(提交 e0534f5b59 / ff796dbf9 / 1cd6408403 / 37cc835898 / 8ffb92b4b2; �
 下一步: Godot 侧已达'可移交'状态; 剩余可选项 = 把 **precision=double** 纳入门③的**可选变体**(命令已固化, 本机 345/345);
   以及 hof-rs 一半(**用户明确指令暂停**) -> 故**目标仍 active**, 不标完成
 目标仍 active
+
+## D132 — TASK-073 交付：双精度成为门③**可选变体**（默认不变，四种方式证明）+ **移交文档 578 行/21 条已知边界**
+
+docs(decisions): D132 TASK-073 交付 —— 双精度成为门③**可选变体**(默认不变, 四种方式证明) + **移交文档 578 行/21 条已知边界**
+
+TASK-073A(提交 9c12c23834 / 1ab3c14831 / b6fbb917b8; 锚点 9c12c2383; 契约 176 不变; tools/** 未动;
+  DESIGN-DETAIL **未改**(提案文本在报告 §6); 9877 从未碰 pid=-1; 未 push):
+  precision=double 现为门③**显式可选变体**: mcp059_gates.ps1 新增 -PrecisionVariant single|double(默认 single) +
+  -WithDouble 别名 + 矛盾时 exit 3; 唯一新增步骤(标记 MCP073-ONLY-IN-DOUBLE-MODE)跑 scripts/mcp073_gate3_double.ps1:
+  拒绝在 scons 存活时构建 -> 经 mcp070_build_double.cmd **串行**构建 -> 用 **TASK-072 的 check_engine_anchor.ps1** 判锚点
+  (EQUAL/STRUCTURAL_EQUIVALENT 通过, **STALE_COMPILED 必须红**) -> 在 .double 二进制上跑**同一套** [MCPServer]* 并要求全绿
+  ★ **默认不变四种证明**: ①mcp073_default_plan_compare.ps1 6/6 —— 在**完整 Invoke-Step 行**(参数/引擎 flag/用例集)上
+    基线(git show 8ffb92b4b)22 步 == 工作树 22 步, 双精度模式 = 那 22 步 + gate3_double_variant;
+    ②插入探针 4/4(插一步->exit1; 删标记步->exit1; 真实驱动保持字节不变);
+    ③两次完整电池(锚点 9c12c2383): 默认 **22 步 ALL GATE STEPS EXIT 0** vs 开关 **23 步 ALL GATE STEPS EXIT 0**,
+      22 个共享步骤的 name/exit 差异 **0**; 22 条尾巴 17 条字节相同, 5 条差异仅在 %TEMP% 证据根戳(逐行记录);
+      gate3 单精度 345|345 与 gate4 1771|1771/448218 两边一致;
+    ④**最强对照**: 5 个双精度产物(exe + 3 个 .double.obj)在默认运行前后 **LastWriteTimeUtc/Length identical(differing=0)**,
+      且默认运行**未创建** mcp070_build_double.log、**未创建** gate3_double 证据目录
+    它**明确不主张**什么: 电池 stdout 逐字节相同(时间戳/日志路径必然不同)
+  双精度(开关): 电池 23 步全 exit0, gate3_double_variant exit0(8/8); 单跑最终脚本 **9/9 PASS**:
+    构建 exit0; 双精度 doctest **345|345 passed, 23956|23956 断言**; 锚点 **ANCHOR_EQUAL**;
+    同用例单精度对照 345/345、23971|23971(差 15 = if/else 分支固有); **未放宽任何断言**(同一用例集/同一判据, 绿=0 failed 用例与断言)
+  ★ **红相位是构造出来的**: 回放 4512d14c7e 的 F-1 前测试文件(raw blob, git hash-object 验证) ->
+    **与记录完全一致的 345|338|7 与 23961|23862|99**(0 条 ERROR 点名 FLOAT32、0 条越类失败),
+    再 git checkout **逐字节还原**(sha256/blob/porcelain 断言) -> 重建转绿 345/345、23956 断言(13/13)
+  ★ **'必须红'那条腿在真实状态上演示**: 本任务开始时双精度二进制自报 **4512d14c7e** -> 判官返回
+    **ANCHOR_STALE_COMPILED**, ancestor=yes, diff=79 safe=78 **red=1**, 红清单 = modules/mcp_server/tests/test_mcp_server.h,
+    RESULT FAIL 非零退出; 单精度二进制 sha 4b269370… **与 REPORT-072 记录字节相同**(本批从未碰它)
+  时长(4 次严格串行, START-END 不重叠, 从 cmd, 不抑制, 同时只有 1 个 scons): 63.6 s / 70.2 s / 65.4 s / 62.5 s;
+    双精度 doctest 14.4-14.5 s; 单精度对照 14.1 s -> **冷构建 ~15 min(REPORT-071), 热缓存开关 +~77 s, 默认路径 +0 s**
+TASK-073B(**只写文档, 0 处代码/脚本/契约改动**): 产出 modules/mcp_server/docs/MCP-SERVER-HANDOVER.md(**578 行**)
+  六节齐: ①交付物清单 ②门与**门完整性六条纪律** ③**已知边界与已声明限制** ④复现步骤 ⑤仍未做/被否决项 ⑥自检
+  **21 条已知边界**(任务书点名 10 条 + 补充 11 条) **每条带锚点**(提交 sha / 契约 sha / 证据路径), 含:
+    门③默认单精度+双精度为可选变体 / 证据守卫**只发现不能还原** / 恒真与退出传播检查是**拼写可见有限集合**(集合外能逃) /
+    watcher **不校验 marker 写入者** / unverifiable/language_unavailable/not_compiled 三类语义区别 /
+    project_list_scripts 会列 .godot 生成脚本 / **一次未归因的间歇 0xC0000005**(首次 --import) / 双精度未被默认门覆盖 ...
+  复现步骤**自洽**: 脚本逐条在仓库内存在; 不需端口/构建的 **10 组只读检查当场实跑**, 数字与文档逐条一致(门类数字均标采集锚点)
+  未 push; 未启动引擎 -> 未占用 9888/9889、未碰 9877
+
+★ 结论: **Godot 侧已到'可移交'状态** —— 工具/引擎补丁/试测/门纪律/口径声明/边界清单/**复现步骤**齐备,
+  且'门③是单精度门'这一**已声明口径**现已**可强制执行**(可选变体), 默认行为分毫不改
+目标: **仍 active** —— 唯一未完成的原始目标项 = **hof-rs 切端点 + 真实 T=1 冒烟**, 而用户明确指令**暂停**该半;
+  Godot 侧无剩余必做项(可选: 第 5 轮试测以继续发掘改进点)
