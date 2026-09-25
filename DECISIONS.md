@@ -4790,3 +4790,64 @@ TASK-AUDIT-ENGINE(**verdict = pass**; 全新验收子代理, **未采信任何 R
   且**关键部分已被一个不继承任何结论的独立验收方复核为 pass**(含对门的**主动绕过尝试全部失败**)
 目标: **仍 active** —— 唯一未完成的原始目标是 hof-rs 切换端点与真实 T=1 冒烟, 而用户明确指令**暂停**该半;
   Godot 侧已交付完毕, 不应在用户未解除暂停前推进 hof-rs
+
+## D129 — TASK-070 交付：独立验收的 5 条未确认**全部关闭**（含**窗口化实测补丁 3**）+ 三条新发现
+
+docs(decisions): D129 TASK-070 交付 —— 独立验收的 5 条未确认**全部关闭**(含**窗口化实测补丁 3**) + 三条新发现(F-1 测试缺配置独立性 / 守卫盲区已构造 / 本地化假 FAIL)
+
+TASK-070(锚点 3cbaacd6b; 契约 **176 未变**; 已跟踪文件 0 改动; 未 push; 9877 全程无监听且**从未被请求**):
+ ① **mono/C# 成功腿(关闭)**: mono 串行重建到 HEAD(108 s, --version == HEAD) ->
+    成功腿 exit0 + 产物 **sha cf88da4f…(5632 B)**; 非 mono 能力缺失腿 **-32000 + 建议**;
+    **三态在 mono 构建上实测**(ok / **invalid + 编译器自己的 CS1519/CS1002/CS1040** / not_compiled),
+    且**同一 payload 内 count=3=sum**; 失败构建后产物 sha 未变
+    副产品(如实登记): (a) **.NET SDK 输出是本地化的** -> 'Build succeeded' 曾是**假 FAIL**,
+      判据改为'退出码 + SDK 自己的 <Asm> -> <path> 行 + 产物指纹'; (b) 首次 --import 出现**一次间歇性 0xC0000005**
+      (第二次成功, 日志尾部指向 EditorNode::is_cmdline_mode) -> **只登记、不归因**
+ ② ★ **窗口化补丁 3 实测(关闭, 且补上了上游缺的维度)**: **真的开窗口**(-e --path <proj> --mcp-port=9888, **无 --headless**),
+    其自身日志: 'OpenGL API 3.3.0 NVIDIA 616.56 … Using Device: **NVIDIA GeForce RTX 4090**' +
+    '[MCP] listening on 127.0.0.1:9888 (editor=true, tools=153)';
+    fixture: **5 条手写注释(2 条在 [input] 内)**、[input] **非末节**、含引擎从未听过的键、无 BOM;
+    **实测结果**: 开窗后文件**逐字节不变**(sha b6a07dc1…)而 **mtime 前进**(639259222579937631 -> 639259222967615149)
+      -> **证明'真的写了、且写出来一模一样'** —— **字节相同本身无法区分'写了没变'与'根本没写'**,
+      这正是上游源码级核对**缺的维度**(只有 !cmdline_mode 分支会写);
+    幂等: 第二次开窗 sha 不变 + mtime 再前进(与声明的'总是写'一致);
+    对照: --import 与 --headless 均 sha **且 mtime** 不变;
+    **反向**: ProjectSettings.save() 经 --script 探针**仍整文件重写**(5 条注释消失 + 引擎头);
+    ★ 调用点集合与补丁前修订**逐文件逐数一致**(28 行/16 文件, added=∅ removed=∅);
+    ★ 它**纠正了自己一个判断错误**: 比较 file:LINE 是错的, 因为补丁 3 让 6 个调用点行号移位(应比 file:count 集合)
+ ③ **两个门驱动器整脚本重跑(关闭)**: mcp059_gates **21 步全 0**(ALL GATE STEPS EXIT 0); mcp056 电池 **15 步全 0** +
+    accept_m1 x2 **23/23 differing_lines=0** + 还原清单 RESTORED 56 / RESTORED-NEW 1 / UNTOUCHED 1 / git diff --stat 0 行
+    ★ **纠正了一个流传的认知**: 电池**根本不会**因'工作树脏'而非零 —— 它只是**打印**(实测: mcp041/042/043 用 Add-Content 记录,
+      rb2 打印); 本轮活证: 运行中写入的报告以 **UNTOUCHED** 出现而电池仍 exit 0 -> 任何此类失败都只是自检读数, 不是回归
+ ④ **双精度(关闭, 本机能构建就真建了)**: precision=double 冷构建 **14 min 51 s exit 0**,
+    独立变体 bin\godot.windows.editor.double.x86_64.console.exe(sha ab4835e8…), **与 plain/mono 并存不需回建**;
+    探针证明真是双精度(Vector2(1e300,0).x 打印 301 位小数且有限 vs 单精度 'x=inf is_finite=false');
+    ★ **ValueSlot::FLOAT32 在真双精度二进制上实测 2/2 PASS**(其 FLOAT32 半段无条件编译 tool_helpers.cpp:1801-1807,
+      若 FLOAT32 委托给 REAL_T 则任何构建都会失败) -> **主张从'源码级+单测级'升为'真机实测'**
+    ★ **新发现 F-1(非阻塞)**: 同一套 345 用例在双精度二进制上是 **338 过 / 7 红**, 7 条全是
+      '标量 real_t 成员 / Vector2/Rect2/Vector4/Quaternion 分量拒绝 1e300' 这类**单精度期望**
+      (失败输出里 **0 条断言涉及 FLOAT32**、20 条涉及 REAL_T) -> **是测试缺配置独立性, 不是门错**;
+      正确写法已存在于 test_mcp_server.h:15043(if (sizeof(real_t) == 4));
+      **不影响今天的单精度交付(门③ 345/345), 但若哪天把双精度纳入门, 门③会红**
+ ⑤ ★ **守卫盲区被构造并承认(关闭)**: (A) **快照前就存在的未跟踪文件**被别处删除 -> **manifest 零行**且文件真没了;
+    (B) **未跟踪目录内部**的活动(改写+新建) -> 零行;
+    机制: Get-McpEvidenceState 只产生 Modified(tracked) 与 Untracked(**目录级**), Restore-McpEvidence 只遍历
+      '新出现的 modified / 新出现的 untracked' -> **没有'existed before, gone now'这一支**
+    **更糟**: 电池**自己的裁决也瞎** —— 重算的 declared-leftover 会是 0, 即真实静默删除后仍会打印 	racked_evidence_restored
+    **建议(带可工作原型 + 实测成本)**: 用 git status --porcelain -uall 的**文件级清单**(path -> length:mtime ticks)
+      替换目录级 Untracked, 新增 MISSING-UNTRACKED / APPEARED-UNTRACKED / CHANGED-UNTRACKED 三类 manifest 行;
+      实测本仓 4029 个未跟踪文件: **2304 ms/次(不哈希)**, 6445 ms 含 sha256; 原型**三类差异全抓到**(10/10),
+      且哈希模式**没有多抓到**长度+mtime 能抓的
+    **三条边界**: 只能**发现**不能还原被删的未跟踪文件(价值是把静默成功换成显式告警); 受 git status 视野限制(ignored 仍在视野外);
+      长度+mtime 可被**同秒等长改写**绕过 -> -HashUntracked 作为可选
+    探针离开时仓库逐字节不变(porcelain -uall 前后各 4026 行, 0 差异)
+ 门: ①逐字 5 个调用点各 3/3(contract=176, union 153/72); ③**345/23971/0**; ④**1771/448218/0**; ⑤accept_m1 x2 **23/23**;
+    ⑥三段式 exit0 + 探针 **101/101** + 本批新增收窄点 0; --check-completeness/--added/--generator-version exit0(1.20.0);
+    构建严格串行且 START-END 互不重叠(plain 51 s / mono 108 s / double 14m51s); 6 个新脚本纯 ASCII; 三次红相位原样保存
+
+裁决/下一步: ①**采纳守卫的文件级清单改进**(原型已可用, 成本可接受) -> 排为下一批(A 项);
+  ②**F-1 修测试的配置独立性**(照 test_mcp_server.h:15043 的 if (sizeof(real_t) == 4) 写法包住 7 条) -> 同批(B 项),
+    并在报告里写明'门③是单精度门'这一**已声明口径**;
+  ③0xC0000005 保留为**已登记的未归因间歇**(下次窗口化运行前留意, 若复现则立项);
+  ④hof-rs 一半仍按用户指令**暂停**
+目标仍 active
