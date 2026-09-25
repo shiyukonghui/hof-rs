@@ -4415,3 +4415,43 @@ TASK-062(提交 f6f2ff3376 + 文档收尾; 只动 modules/mcp_server/docs/** 537
       **并用 TASK-061 的 watcher 保证观察覆盖完整**(stop_reason 必须是 marker)
   (e) 试测流程修复: 证据文件**按 id 唯一命名**(禁同名复用) + 快照时序(**先写 before 再写 after** 且断言 sha 不同)
 目标仍 active(hof-rs 一半按用户指令暂停)
+
+## D121 — TASK-063 交付（4 条产品缺陷全修，契约 175→176）+ 新工具不是后门 + 下一轮重测计划
+
+docs(decisions): D121 TASK-063 交付(4 条产品缺陷全修, 契约 175->176) + 新工具不是后门 + 下一轮重测计划
+
+TASK-063(提交 92a260b682 实现 / 4e31df769d + c589eae24e 报告与证据; 二进制 --version = 92a260b68 == 实现提交):
+  **(a) 端点静默失能(修)**: **根因 = error=22 实为 ERR_ALREADY_IN_USE** ——
+    SocketServer::_listen 把**所有** bind 失败压成同一个码(core/io/socket_server.cpp:47-52), 不是 EINVAL;
+    修: **ERROR 级日志**(请求端口 / 诊断原因 / **端点已禁用**) + **进程内可查状态**(3 态枚举 + 5 访问器 +
+    debug_endpoint_state) + **端到端可机器读的 endpoint_disabled 追踪事件**; 空闲端口实测绑上且 tools/list=72;
+    53/53 活检查;**未改引擎文件**(候选引擎改动已上报我)
+  **(b) 参数面(修, 契约条数不变)**: 参数名**保留**(改名会破坏既有调用方与证据);
+    2 条 DESCRIPTION_OVERRIDES + 1 条 ADDED_TOOLS 描述**共用同一条规则句**(声明'场景根相对 + 单数 vs 复数'), 不会漂移;
+    -32001 与 -32602 的 data.suggestion 指路(显式工具表驱动的 MCPTools::node_path_guidance(); **res:// 类工具不收场景根建议**)
+  **(c) 新增工具 editor_set_node_property_updates**(ADDED_TOOLS, 契约 **175 -> 176 = 171 + 5**):
+    一次调用给 4 节点写 **4 个不同值**; 越界那条 -32602 **其余成功**; **逐条读回 old/new/changed**;
+    stop_on_error=false 逐条报告 / true 首错即停且**真实回滚**;
+    ★ **写入全程走 MCPTools::write_node_property** -> **同一道 ValueSlot 闸门 + 同一道属性存在性拒绝**
+      => **新工具不是绕过 §20/§22 收窄闸门的后门**(这条是我在任务书里点名的硬要求, 已达成)
+  **(d) parse 行列(部分修)**: **行可得**(临时引擎错误处理器 + 生成源的 body offset 映射回**调用方自己的行序**);
+    **列不可得**(调用点丢弃 ParserError.start_column) -> **如实发布 data.parse_error_column = null 且键存在**,
+    边界声明 + 实测对照; 两个 execute 工具共用
+  线上: 契约 **176**; **9888 = 153 / 9889 = 72**; 9889 **不含** editor_set_node_property_updates 且对它回 -32601
+  门: ①3/3; ②53/53; ③**342/342**; ④**1768/1768 (448171 断言)**; ⑤22/22 x2 清单一致;
+    ⑥三段 exit0 + 101/101; --check-completeness/--added/--generator-version(1.19.0) exit0; 构建从 cmd 串行
+  偏差(如实上报): **4 个他任务的证据脚本把契约条数钉成旧值(152/175)** -> 红; 因本会话无 HEAD 锚点的 mono 二进制未重跑;
+    已逐条点名并给最小修法 -> 下一批修
+  纪律: 9877 未占用/杀/重启; 未 push; **未改引擎文件**; 102 文件证据树 SHA256SUMS 复核 exit0
+
+裁决: ①(d) 的列缺失**接受为已声明边界**(引擎调用点丢弃, 要让列可得须改引擎 -> 价值低, 暂不做);
+  ②(b) 的**参数名不改**为最终口径(改名属破坏性变更, 收益低于成本); 若将来要统一, 必须**新增别名并保留旧名**;
+  ③下一批(**TASK-064**): (i)修那 4 个钉旧契约条数的证据脚本(**只更新期望值, 不得放松断言**);
+    (ii)**重测第 2 轮未构造的 ⑤⑥**(窗口化进程 + **真实调用** editor_list_signal_connections{scope:user} + 至少一次 changed:false),
+    并且**必须用 TASK-061 的 watcher 保证 stop_reason=marker**(否则观察环节不合格);
+    (iii)补测**游戏侧活链**(第 2 轮仍空白: 输入->位置回读 / 砖块消失 / 计分变化);
+    (iv)试测流程修复: 证据文件**按 id 唯一命名**(禁同名复用) + 快照**先 before 后 after 且断言 sha 不同**
+
+进度: Godot 侧 176 条工具; 两条引擎补丁(按节发布 / C# 判定) + 4 条第 2 轮产品缺陷全部交付;
+  下一轮是**第 3 轮试测**(打砖块或新的小游戏), 必须把 ⑤⑥ 与游戏侧活链**真正跑到**
+目标仍 active(hof-rs 一半按用户指令暂停)
