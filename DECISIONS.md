@@ -4901,3 +4901,57 @@ TASK-071(提交 4c2532c178 实现/测试/证据 + 7b8478a7da 报告; 锚点 4512
 下一步: ①修上述'锚点假红'(A 项, 优先) + 重建 mono 并复跑到 53/53、73/73; ②可选把双精度纳入门③变体;
   ③hof-rs 一半仍按用户指令**暂停**
 目标仍 active
+
+## D131 — TASK-072 交付：**「锚点假红」机械化消除**（结构性等价证明，保留真陈旧必红）+ mono 重建复跑 53/53、73/73
+
+docs(decisions): D131 TASK-072 交付 —— **「锚点假红」机械化消除**(结构性等价证明, 保留真陈旧必红) + mono 重建复跑 53/53、73/73
+
+TASK-072(提交 e0534f5b59 / ff796dbf9 / 1cd6408403 / 37cc835898 / 8ffb92b4b2; 锚点 ff796dbf9; 契约 **176 不变**;
+  未 push; 9877 全程未占用未杀 pid_before=pid_after=-1 asked_by_us=False; 工作树只剩 4 个既有未跟踪物):
+ ① **单一判据**: modules/mcp_server/scripts/check_engine_anchor.ps1(sha 94cd937a…)
+    Get-McpEngineAnchorVerdict 返回 {Verdict,Ok,Anchor,AnchorReported,Head,Ancestor,DiffCount,SafeFiles,RedFiles,Criterion,Reason,Summary};
+    命令模式 -VersionText/-Anchor/-HeadSha/-RepoRoot/-Json, exit 0=PASS / 1=FAIL / 3=usage
+    **四种可区分结论**: A==H -> **ANCHOR_EQUAL**; merge-base --is-ancestor 失败 -> **ANCHOR_NOT_ANCESTOR**;
+    git diff --name-only --no-renames A..H 全落在非编译白名单 -> **ANCHOR_STRUCTURAL_EQUIVALENT**(打印安全差异清单与计数);
+    出现任何编译输入或 **UNCLASSIFIED** -> **ANCHOR_STALE_COMPILED**(红)
+    **fail-closed 细节(值得记)**: SAFE 白名单显式枚举(.md/.json/.txt/.ps1/.py/.cmd/.sh/.bat/.psm1/.psd1/.yml/.yaml/.toml/.cfg/.ini/
+      .csv/.rst/.adoc/.html/.css/.svg/图片/.log + .gitignore/.gitattributes/.gitmodules/.editorconfig/LICENSE/COPYING/AUTHORS/NOTICE);
+      **config.py 被显式从 .py 白名单挖出**判红; **--no-renames** 使重命名藏不住编译输入; A 不可解析/无 token/非祖先一律红
+    **15 个锚点脚本 + 2 个探针统一 dot-source 调用**(mcp016/024b/025/026/047/052/053/057_gates/057_settings/059_gates/
+      059_section/063/070_double/070_mono/070_windowed), **无第二份判据**; mcp052/053 检查条数仍 53/73
+    探针: mcp072_anchor_judge_probe.ps1(**13/13**, A1-A10 决策表 + B1 26 行分类表 + C 真实二进制) +
+      mcp072_anchor_counterexample_probe.ps1(**10/10**); 探针自带还原断言 S0 PASS(HEAD 回位/porcelain -uno 空/两文件 sha 逐字节相同)
+ ② ★ **四个反例在真实仓库上演示**(临时提交 + finally reset --hard, 全部回位):
+    ①只改 .md 不重建 -> plain 与 mono 均 **ANCHOR_STRUCTURAL_EQUIVALENT**, diff=1 safe=1 red=0, 清单 [S:...PLAYBOOK-group-port.md], **exit 0 不红**;
+    ②改 .cpp 不重建 -> 均 **ANCHOR_STALE_COMPILED**, red=1, 清单 [R:modules/mcp_server/tools/registration.cpp(COMPILE_INPUT)], **exit 1 红**;
+    ③非祖先: (a) 真实但不在历史的 commit -> ANCHOR_NOT_ANCESTOR ancestor=no; (b) **伪造 4.8.dev.custom_build.deadbeefc** ->
+      'does not resolve to a commit'; (c) 无 hex token 的 4.8.dev -> 非祖先; **均红**;
+    ④真重建 -> 两二进制 **ANCHOR_EQUAL**, diff=0, exit 0
+    另 1b: 命令行入口在同一 docs-only 情形返回 ANCHOR_JUDGE VERDICT=ANCHOR_STRUCTURAL_EQUIVALENT / RESULT PASS exit 0(**库模式与命令模式一致**)
+ ③ **没有削弱**: 输出里逐字写 '**the binary is NOT equal to HEAD, it is structurally equivalent to it**';
+    每份证据保留 anchor/anchor_reported/head/verdict/ancestor/diff_count/safe_count/red_count/criterion 原文/完整差异清单/reason;
+    mcp052/053 的 Check 证据行同时保留**两个 --version 原文(含 .mono. 变体标记)**与两个 verdict 摘要 -> 后来者可自行判断
+ ④ **重建 mono(4 段严格串行, START-END 不重叠)**: plain@H1 18:41:46-18:42:37 / mono@H1 18:42:44-18:44:38 /
+    plain@H2 18:49:37-18:51:29 / mono@H2 18:51:40-18:53:32, 全 exit0;
+    --version = 4.8.dev[.mono].custom_build.ff796dbf9 与 git rev-parse --short=9 HEAD 逐字一致;
+    二进制 sha: plain 4b269370… / mono 225198b3…
+    复跑: **mcp052 53/53 exit0**(engines_match_head [PASS], verdict=ANCHOR_EQUAL, diff=0); **mcp053 73/73 exit0**;
+    **回归电池 ALL REGRESSION STEPS EXIT 0**(REPORT-071 的 FAILED STEPS: 2 **消失**; accept_m1 x2 23/23 differing_lines=0;
+      mcp041/042/043 gates 17/19/29 步全 0; mcp010 29/29、mcp019、mcp027 60/60、mcp044 40/40、mcp045 15/15、mcp046 23/23;
+      tracked_evidence_restored declared leftovers=0)
+    ★ **追加端到端证明**: **报告提交 1cd6408403 之后不重建**(二进制仍 ff796dbf9) -> mcp052 53/53 与 mcp053 73/73 **仍 exit 0**,
+      判据 **ANCHOR_STRUCTURAL_EQUIVALENT**(diff=23 safe=23 red=0) => **'只改文档/脚本的提交不再造成假红'已闭环**
+ ⑤ 门(锚点 ff796dbf9): ①3/3(176, 153/72, 9877 pid_before=pid_after=-1); ②**14/14**(mcp071_gate2_live_evidence.ps1:
+    编辑器 153/61863B sha 333b4a68…、游戏 72/32973B sha 0ed732af…、并集 176、三类 + 跨工具链 create->read->validate、
+    porcelain -uall 前后 sha 相同); ③**345/345 (23971)**; ④**1771/1771 (448218)**; ⑤accept_m1 x2 **23/23 differing_lines=0**;
+    ⑥三段 exit0(**101/101** 探针后逐字节还原, tools/** 零改动); check_tool_groups 三连 exit0(1.20.0);
+    **check_exit_propagation.py exit0**(它自己的探针曾出现 UNDISCHARGED **当场发现并修**: 失败计数改名为扫描器声明的
+      $script:Failures, **未改扫描器**)
+
+★ 纪律累计(第六条, 与五条同族): **门不得因'与判断无关的变化'而假红** ——
+  判据要区分'**结构性等价**'与'**真的陈旧**', 且必须**同时证明两条腿**(docs-only 不红 / .cpp 变更仍红),
+  否则就会用'放宽'换'不吵', 那是另一个方向的失败。
+  另: 本次**修复方式**本身值得记 —— 单一判据 + 15 个调用方统一 dot-source, **杜绝判据复制带来的漂移**
+下一步: Godot 侧已达'可移交'状态; 剩余可选项 = 把 **precision=double** 纳入门③的**可选变体**(命令已固化, 本机 345/345);
+  以及 hof-rs 一半(**用户明确指令暂停**) -> 故**目标仍 active**, 不标完成
+目标仍 active
