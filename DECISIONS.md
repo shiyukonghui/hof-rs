@@ -4851,3 +4851,53 @@ TASK-070(锚点 3cbaacd6b; 契约 **176 未变**; 已跟踪文件 0 改动; 未 
   ③0xC0000005 保留为**已登记的未归因间歇**(下次窗口化运行前留意, 若复现则立项);
   ④hof-rs 一半仍按用户指令**暂停**
 目标仍 active
+
+## D130 — TASK-071 交付（守卫文件级清单：盲区被点名／F-1 修好：单精度 345、双精度 345／**声明门③是单精度门**）+ 发现「锚点假红」流程缺口
+
+docs(decisions): D130 TASK-071 交付(守卫文件级清单: 盲区被点名 / F-1 修好: 单精度345 双精度345 / **声明门③是单精度门**) + 发现'锚点假红'流程缺口
+
+TASK-071(提交 4c2532c178 实现/测试/证据 + 7b8478a7da 报告; 锚点 4512d14c7e; 契约 **176 未变**; 未 push; 9877 全程 pid=-1 且从未请求):
+ A **守卫改文件级清单(盲区消除)**: Get-McpEvidenceState 改用 git status --porcelain -uall -> **文件级** UntrackedInventory
+   (path -> 'length:mtime_ticks', -HashUntracked 时追加 ':sha256'); 新增 Get-McpUntrackedInventory / Compare-McpUntrackedInventory;
+   Restore-McpEvidence 新增 **MISSING-UNTRACKED / APPEARED-UNTRACKED / CHANGED-UNTRACKED**(未声明时为 UNTOUCHED-*)、PRUNED-EMPTY-DIR;
+   SUMMARY 旧四字段**逐字保留**、尾部追加 missing/changed/appeared/pruned/inventory-hashed;
+   **mcp056 电池裁决把 Missing+Changed 并入 leftoverCandidates**;
+   加固: 哈希模式对锁定文件记 'unreadable' 而非中止; 快照/还原哈希模式不一致时抛错
+   证据: ①盲区A(快照前已存在的未跟踪文件被别处删除): **第一版 0 行 -> 现 1 行 UNTOUCHED-MISSING-UNTRACKED 且无任何 RESTORED***;
+     ②盲区B(已存在未跟踪目录内改写+新建): 第一版 0 行 -> 新建 2 行 + 改写 1 行;
+     ③**电池裁决**: 同场景声明后 declared-leftover **由 0 变 4** -> 真删除**不再被报成 tracked_evidence_restored**;
+     ④**明确声明并实测'只发现不还原'**(文件仍不在/仍是新字节); ⑤porcelain -uall 前后**逐字节(sha256)相同**;
+     ⑥成本 **2336 ms / 6587 ms**(4026 文件, 复测 REPORT-070 的 2304/6445)
+ B **F-1 修好(测试配置独立性)**: 按**已存在的** D-15 写法 if (sizeof(real_t) == 4) 给 7 条加配置条件 ——
+   **单精度分支原断言逐字保留**(345/23971 与 TASK-070 基线一致, **未减少**);
+   64 位分支改为'**real_t 槽能表示 1e300 就应当接受**'这一等价且更贴命题的断言, **并追加 ValueSlot::FLOAT32 的拒绝断言**
+   (Color 分量 / PackedFloat32Array 元素; tool_helpers.cpp:1801-1807 的 FLOAT32 半段无条件编译)
+   -> 使'**32 位收窄必须被拒**'在**两种构建下都存在**
+   理由(它讲清了): 这 7 条的命题是'**同一闸门按槽位宽度判定**', 1e300 是否被拒是**该构建下槽位的取值**, 不是命题本身;
+   没有整体改指 FLOAT32 槽, 因为那会**删掉标量 real_t 与 Vector2/Rect2/Vector4/Quaternion 分量这些真实写路径的覆盖**
+   证据: 红相位当场保存(double 345|**338|7 failed**, 23961|99 failed, 失败断言点名 FLOAT32 = **0 条**、REAL_T 文本 22 处);
+   **单精度 345|345 passed, 23971 断言(= 基线)**; **双精度 345|345 passed, 23956 断言**(差 15 是 if/else 分支固有差异, 改前差 10)
+ ★ **口径声明**: **门③(--test-case=[MCPServer]*) 是单精度门**(跑 bin\godot.windows.editor.x86_64.console.exe, precision 缺省 float);
+   **双精度当前未被任何门覆盖** —— 门①②④⑤⑥ 全是单精度/脚本级门, **'未纳入门'**明说;
+   本批双精度 345/345 是**手工构建+手工跑**的证据, **不是门③的一部分**; 建议把 precision=double 做成门③**可选变体**(命令已固化)
+ 门: ①3/3(176/153/72, 9877 pid_before=pid_after=-1); ②**14/14**(为**非工具批次**新增了活证据脚本 mcp071_gate2_live_evidence.ps1:
+   编辑器 tools/list 61863B/153、游戏 32973B/72、并集=176; 成功类/缺参类 -32602 'Missing required parameter: path'/底层失败类 -32001+建议/
+   跨工具链 create->read->validate 闭合); ③**345/23971/0**; ④**1771/448218/0**(=基线); ⑤accept_m1 x2 **23/23 differing_lines=0**;
+   ⑥三段 exit0(scanned=pinned=75, 18 条行号漂移提示为既有且全在 tools/**, 本批零改) + 探针 **101/101**;
+   check_tool_groups 三模式 exit0(1.20.0); 另 mcp069 白名单 13/13、mcp070 第二版 10/10、mcp071 17/17;
+   三次构建 START/END 互不重叠(单精度 17:50:22-17:52:07; 双精度 17:53:58-17:54:51)
+
+★ **唯一非零(它如实归因, 且暴露一个流程缺口)**: 回归电池 exit 1, FAILED STEPS: 2 —— **只有 mcp052/mcp053 的 engines_match_head**,
+  原因: **mono 二进制自报 3cbaacd6b 而 HEAD = 4512d14c7**(TASK-070 的提交只增 docs/scripts、**无引擎 C++**),
+  REPORT-070 §4.2 在锚点 3cbaacd6b 上这两步是 **53/53 与 73/73**; 本批未重建 mono(范围外) -> 建议下一步重建
+  **我的判读**: 这不是回归, 而是**'锚点假红'** —— **每次提交都会移动 HEAD, 从而让二进制锚点检查失效**;
+  若照此下去**每批都会假红**, 而**假红会腐蚀对门的信任**(正是我们一直在消灭的那类问题)
+  -> 下一批必须把它**机械化**, 而不是靠'记得重建 mono':
+  改法(择一或并用): (a) engines_match_head 从'**精确 sha 相等**'升级为'**结构性等价证明**'
+     —— 二进制锚点是 HEAD 的**祖先**, 且 git diff --name-only <anchor>..HEAD **不含编译输入**
+     (即只含 *.md/*.json/*.ps1/*.py/*.txt 之类; 任何 *.cpp/*.h/*.cs/*.tscn 出现则**仍然红**);
+   (b) 或者在门里**显式区分两种红**: BINARY_STALE_DOCS_ONLY(警告, 非零与否按口径) vs BINARY_STALE_COMPILED(真红)
+   **必须**同时保留'真陈旧必须红'的能力(反例演示: 改一个 .cpp 但不重建 -> 必须红)
+下一步: ①修上述'锚点假红'(A 项, 优先) + 重建 mono 并复跑到 53/53、73/73; ②可选把双精度纳入门③变体;
+  ③hof-rs 一半仍按用户指令**暂停**
+目标仍 active
