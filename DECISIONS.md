@@ -4294,3 +4294,35 @@ docs(decisions): D117 **修「观察者提前结束」** —— 缺陷定位为�
 
 执行: TASK-061(实现 watcher + 改写 TASK-060 协议 + 三种停止演示 + 反例演示), 完成后**重发 TASK-060 第 2 轮**
 目标仍 active(hof-rs 一半按用户指令暂停)
+
+## D118 — TASK-061 交付（确定性 watcher + 协议修订）：观察者早退已从协议层修掉；重发第 2 轮试测
+
+docs(decisions): D118 TASK-061 交付(确定性 watcher + 协议修订) —— 观察者早退已从协议层修掉; 重发第 2 轮试测
+
+TASK-061(提交 A=ea345b51df 实现 / B=fcbeb90840 回填锚点; 基线 0a9fc1d466):
+  新增 **scripts/mcp_watch_run.ps1**(15880B, sha 9e1d595c…, 纯 ASCII, parse-errors=0):
+    阻塞等待; 每 -IntervalSec(默认30) 检查 marker 与**每个追踪文件的新增行数 + 最后 seq**(**按行道数**, 不解析本地化文本);
+    每次检查往 -OutDir/watch.log **追加**一行; **机器可读 stop_reason**(优先级 marker>timeout>stale, 三者均 exit 0, usage 错 exit 2);
+    结束打印并写 stop_reason/耗时/最后 seq/追踪总行数/轮询次数(watch-summary.json/.txt + 一行 WATCH_STOP);
+    **不含 netstat、不杀进程、只读输入、只写 OutDir**; 另支持 -f 心跳(PROGRESS.md)
+  **三种停止实测**: marker(10s/6 polls/exit0) / timeout(12s/7 polls/exit0) / stale(10s/6 polls/exit0); 证据生成器一条命令可复跑(EVIDENCE_OK scenarios=5)
+  **反例演示(关键)**: S4 = marker 缺失且追踪持续增长(l=2->8, seq=2->8) + 预算耗尽 ->
+    新 watcher 明确 **reason=timeout + observation_stopped_before_development_ended=1**;
+    S5 = 旧协议脚本同状态 -> 末行仅 **BUDGET_REACHED**, stdout 1 字节, **全文无 stop_reason(静默结束)**, 改动逐行留档
+  **取值依据**: 开发者 **2700s** < 观察者 **4500s**(余量 1800s, 最迟 4530s 返回);
+    -StaleSec **300** = 第 1 轮 400 条调用中**最大运行内间隔 92.235s 的 3.2 倍**
+  **TASK-060 协议改写**(+56/-15): §0 第 8 条(观测者预算严格大于开发者; 观察者**必须阻塞在 watcher 上**, **禁止**自己 sleep 轮询决定收工;
+    产物与返回值必须含 stop_reason/polls/last_seq/trace_lines/watch 日志路径; reason != marker 必须显式声明'观察在开发结束前停止'),
+    §0 第 9 条 + §B(开发者每里程碑追加 PROGRESS.md = stale 的第二信号),
+    §C(完整命令行 + *.log 陷阱注记), §D(**逐项对账**: 缺字段或提前收尾 = 观察环节**不合格**)
+    **机器自查**: 改后关键词命中全是否定/禁止句式, 不存在'由智能体自行决定结束'的许可措辞
+  顺手修/报: 它自己的 **seek 缺陷**(增量读未定位偏移 -> last_seq 恒为首行值, 已修+前后证据);
+    根 docs/ 是第 2 轮**未跟踪遗留**(无锚点); .gitignore *.log + .gitattributes eol=lf 会**静默让证据进不了提交**
+    (已 git add -f 且证据改 LF, work==blob 33/33) —— 又一条'证据完整性'陷阱, 已登记
+  纪律: git diff --stat -- tools tests **为空**(工作区与提交 A 均空); 契约零改动; 未起引擎; 9877 未碰; 未 push
+
+★ 一般化(已入 D117): **凡'等待某外部事件'的委派, 停止条件不得留给智能体判断** -> 必须(a)交给确定性进程;
+  (b)给出机器可读停止理由; (c)预算严格覆盖被等待对象。与 D116 的 check_tautologies.py 一起构成'**门/等待不能是摆设**'两条纪律
+
+执行: **重发 TASK-060 第 2 轮**(打砖块 C#, 六条新能力专项压测), 协议已按上条修订
+目标仍 active(hof-rs 一半按用户指令暂停)
