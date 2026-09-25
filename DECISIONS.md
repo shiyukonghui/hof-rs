@@ -4696,3 +4696,48 @@ TASK-068(HEAD eff591a14; plain+mono 二进制均 == HEAD; 报告时**未提交**
   ②对**三个引擎补丁 + 新增 5 个工具**做一次**独立验收**(GDR-28 第 5 条; 目前只有实现方自证的门);
   ③hof-rs 一半仍按用户指令暂停
 目标仍 active
+
+## D127 — TASK-069 交付：两条门缺陷已修（电池删证据／内红被吞两层）+ 新增 check_exit_propagation.py 并入 accept_m1 case0
+
+docs(decisions): D127 TASK-069 交付 —— 两条门缺陷已修(电池删证据 / 内红被吞两层) + 新增 check_exit_propagation.py 并入 accept_m1 case0
+
+TASK-069(HEAD 48a3c2e33; 契约 **176 条未动**, sha 70153982… 与 TASK-068 逐字节相同; 未 push; 未碰 9877; 未改引擎/DESIGN-DETAIL):
+ ① **电池删证据 -> 复现并修复**: 改动前清单逐字自相矛盾(REMOVED …REPORT-069-planted-untracked-during-PRE.md
+    而收口宣布 
+ewly untracked=0), 运行后植入文件 Test-Path False;
+    修法 = -AllowedPaths/-AllowedRoots **路径白名单 + 默认拒绝**(空串/'.'/'/' 归一为空 -> throw 'would declare every path';
+    两列表皆空 = 默认拒绝); tracked 还原与 untracked 删除**两半都过判定**; 未声明一律 UNTOUCHED/UNTOUCHED-MODIFIED 原样保留;
+    清单细分为 RESTORED/RESTORED-NEW/UNTOUCHED/UNTOUCHED-MODIFIED/KEPT-DIRTY-BEFORE-THE-RUN/RESTORE-FAILED/SUMMARY;
+    判定改为'**声明范围内** leftover 必须 0'
+    修后: battery_post 清单 RESTORED-NEW 1 / REMOVED 0 / UNTOUCHED 1, 植入件 Test-Path=True 且 sha256 **与植入值逐字相同**;
+    探针 mcp069_guard_whitelist_probe.ps1 **19/19**(临时 git 仓库四路径: 声明内两半被还原/删除, 声明外两半原样;
+    默认拒绝场景四项零改动; -AllowedRoots ./ 抛错; 
+ot-evidence/a.json 不被认成已声明)
+ ② **门内红却 exit 0 -> 复现两层并修复**: 改动前 mcp042_gates|0/mcp043_gates|0, 而其 summary 内写着
+    STEP gate2_rewrite_and_honesty_evidence EXIT 1 等; 更底层 **mcp040_defect_probes / mcp040_racing_regression
+    打印 FAIL 却不设退出码**(红被吞**两层**);
+    修法 = 三个 mcp*_gates.ps1 末尾**同一段收口**(把 summary 打印移到收口之前使其成为最后语句):
+    Select-String -Pattern 'EXIT [1-9]' -> 非空则逐条打印并 **exit 1**, 否则打印 ALL STEPS EXIT 0
+    验证: 人为制造一红 -> FAILED STEPS: 1 / GATES_EXIT=1 -> 删除注入并 **sha256 证明逐字节还原**;
+    机制级演示 mcp069_exit_propagation_demo.ps1 **10/10**(逐字抽取真实驱动的 Invoke-Step 与收口, 断言是真实文件 byte-exact 后缀)
+    **普查**: scripts/** 与 docs/scripts/** 中 14 个'能报红'脚本 -> **12 个此前会吞红(全部已修)** + 2 个 dot-source 库(pin 带理由);
+    已修含 7 个 step 电池 + 4 个 check 聚合器(mcp022/mcp023 写 failed 数却无 exit; mcp040 两个打印 FAIL 后无 exit;
+    **docs/scripts/selfcheck.py 打印 FAIL 后 sys.exit(0)**)
+    ★ **新增 scripts/check_exit_propagation.py(门⑥ 形状)**: 3 种已声明形状 + 16 种已声明 guard 拼写 + SHAPE_GUARDS 映射 +
+    **双向核对 PINNED**(未 pin 而命中=失败; pin 了不命中=STALE PIN) + --probes **10/10** + --coverage
+    (诚实声明不保证的部分: sys.exit(main()) 不跟踪返回值 / 拼写对但不可达的 guard / .cmd 不扫)
+    **并接进 accept_m1.ps1 的 case0_repo_exit_code_propagation** -> **每批必跑两次, 无法静默复发**(例数 22->23)
+  陈旧期望改派生: A22/A23/A26b 从'整文件重写'改为**由标本字节算出**的前导/节边界断言;
+    L21x5 从钉死一句改为**按 DESCRIPTION_OVERRIDES 声明的 mode 派生**(replace=逐字节相等); **反向探针 44/44**
+  门: 最终锚点电池 **17/17 步 exit 0**(ALL REGRESSION STEPS EXIT 0); 三个 gates 全部 ALL STEPS EXIT 0;
+    ⑤ accept_m1 x2 **23/23 differing_lines=0**; ③**345/23971**; ④**1771/448218**; ⑥ 75/75 + 101/101 + §22.3b 规则4 新增收窄点 0;
+    --check-completeness/--added/--generator-version/check_rename_map/check_tautologies 全 exit 0;
+    端口收尾无 LISTENING(仅 TIME_WAIT); 工作树 17 个 M(+499/-42) + 5 新脚本 + 报告 + evidence/task069(46 文件)
+
+★ 纪律沉淀(第五条, 与 D116/D117/D122/D126 同族): **'能报红的脚本必须在红时真的非零'** ——
+  红被吞有两层(聚合器 + 底层脚本), 所以既要**修个案**又要**仓库内断言 + 每批必跑**(内置进 accept_m1 case0)。
+  这条与'恒真断言/假等待/静默覆写/删证据+内红放行'共同构成**门不能是摆设**的一族。
+  一般化: 任何'多层封装的门', 其**退出码必须逐层向上传播并且有机器断言在核**
+下一步: ①对**三个引擎补丁 + 5 个新增工具**做**独立验收**(GDR-28 第 5 条; 目前只有实现方自证的门);
+  ②此后可回到试测循环或按用户指令收口; ③hof-rs 一半仍按用户指令**暂停**
+目标仍 active
