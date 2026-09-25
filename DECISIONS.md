@@ -5099,3 +5099,59 @@ TASK-075(锚点 077694816 / 35ae10422; **契约 177 = 171 + 6**(generator 1.21.0
   (b)清掉那 2 行预先存在的 UNCLASSIFIED(mcp071 的 176 字面量改为派生);
   (c)进入**第 6 轮试测**(继续试测-改进循环) ③hof-rs 一半仍按用户指令**暂停**
 目标仍 active
+
+## D135 — **独立验收 fail**：抓到阻塞 D-B1（res 围栏被链接穿透，模块级）+ D-B2（编译不过仍报 readable）+ D-B3（分析器误报）+ 我的裁决
+
+docs(decisions): D135 **独立验收 fail** —— 抓到阻塞 D-B1(res 围栏被链接穿透, 模块级) + D-B2(编译不过仍报 readable) + D-B3(分析器误报) + 我的裁决
+
+TASK-076A(提交 e8c2ed5993 实现 / e83de65d98 报告+门证据 / b13f3197b5 锚点; **契约 177 不变**, sha 6f654b64… -> a5c59853…, overrides 33->36):
+  ①**三条已定性边界写入契约描述**(append-only, 逐字门证明: 条数 177 不变/name 顺序不变/**每个 inputSchema 逐字节相同**/只有三条 description 变;
+    git diff --stat 仅两个 tools/*.cpp 且只改 ToolBuilder 描述字面量):
+    editor_get_scene_tree(编辑器侧可寻址性权威 + PackedScene 实例快照 + **先改子场景后改实例** + 明确'**不是各工具不一致, 差别在编辑器缓存**');
+    editor_set_tilemap_cell / _cells_in_rect(TileSetAtlasSource 能力缺口, 如实声明)
+  ②**清掉 2 行预先存在的 UNCLASSIFIED**: mcp071_gate2_live_evidence.ps1 :192/:266 的 176 字面量改为**派生**(.Count);
+    新增反向探针(9/9: 旧字面量假/新派生真/变异输入假/检查器仍能抓裸字面量); check_hardcoded_counts exit 0(BUCKET UNCLASSIFIED = 0, total 157);
+    红相位(改动前字节重放 -> :192 [176] / :266 [176] 两条 UNCLASSIFIED + RESULT FAIL)当场保存
+  ③门全绿且**绑定最终二进制**(commit 后重做 build_local -Force 使 --version == HEAD e8c2ed599, **避免 D86 的 ANCHOR_STALE_COMPILED 假红**):
+    ①两组各 3/3; ②26/26; ③348/348(24223); ④1774/1774(448470); ⑤accept_m1 x2 23/23 且 **177 名字清单 sha 276f162c… 逐字一致**;
+    ⑥三段绿(75==75 + 101/101); 四检查脚本全 exit0; mcp068_contract_cpp_diff 5/5 MATCH
+  它另登记(**未修**): mcp071 的 G204/G207 仍是 153/72(实测端点 154/73), 被普查归入 LIVE 桶故非本批 UNCLASSIFIED;
+    **端点数无法从契约派生(需 scope)** -> 建议下一批一并派生
+
+TASK-076B(**独立验收 = fail**; 锚点 b13f3197b; 提交 d1a2c031f5; 证据 62 份原始响应 + 6 个可重跑脚本 + MANIFEST):
+  通过: **parsed:false 诚实性** / ★**D9 = 2(撤回成立)** / 分析器修复机制本身 / A 的两处描述改动与派生
+  ★ **D9 撤回被三份互不相关的冻结记录证实**: CALLS.jsonl(sha 56d95094…, 232 行) -> 9888=28(-32602x9/-32001x12/-32000x4/-32601x3)、9889=2、合计 30;
+    raw/**(232 目录)与 CALLS 按 response_file 1:1 关联 232/232 0 mismatch; traces(editor 28/game3 1/game4 1) -> 28/2;
+    '14' = 两个端口 -32001 的总数(12+2) 被第 5 轮汇总**误当游戏侧数**(且与其自报'非 ok 30'自相矛盾);
+    它还**逐字引用第 5 轮汇总者自己的产物** aggregate/c_calls2.stdout.txt 第 6 行: 'port 9889 calls 34 ok 32 non-ok 2'
+  ★ **D-B1(阻塞, 围栏被链接穿透)**: **语法型越界 40 条探针全被拦住**(..、res:/..、a/../../、....//、%2e%2e/%2f/%5c、
+    user://、C:/ 与 C:\、\\?\ 与 \\localhost\C$、F:、RES:///Res://、res://\\?\C:\、res://CON、NUL、目录、缺文件、
+    非 UTF-8、max_bytes 0/-1/1.5/'abc'/16777217/16777216/1);
+    但**链接穿透成立**: mklink /J proj\link <工程外目录> 后 project_read_text_file{res://link/secret.txt}
+      **返回工程外文件全部字节**(响应 sha 8a60ea9d… == OS 哈希 a41903ea…), 9889 逐字节同结果;
+      **project_read_script 与 project_get_filesystem_tree 同样穿透 -> 模块级洞**, 新工具继承
+  ★ **D-B2(高)**: D2 只修了**根类型不兼容**; **编译不过的脚本** broken.gd(unc broken(:)仍被批量报
+    **attached:true + readable:true**(响应 sha 609c6d82…)并写进 .tscn, 而**引擎载入场景时丢弃**
+    (游戏侧 /root/Main/Sprite **无 script 字段**, H01 sha 791cb88c…; stderr 有 GDScript::reload(res://scripts/broken.gd:2) Parse Error),
+    **同进程 project_validate_script 已答 valid:false/ERR_PARSE_ERROR**(sha c2f52f47…)
+    -> **正是 D2 要关掉的那类谎报**(它据此判缺陷: 落在实现自己写下的承诺里)
+    同时确认 D2 的四点要求实测通过: 不兼容必拒 + **盘上零写入**(main.tscn 前后逐字节相同) + 合法绑定 attached:true/readable:true;
+    **防假修复通过**: 判据是引擎的 get_instance_base_type()+is_class(), 对基类方向/类不匹配/脚本继承脚本/RefCounted 全部正确, **非类型名硬编码**
+  ★ **D-B3(中)**: probed_argument_names 不与'名字是否在该工具 inputSchema 里'挂钩 -> 冻结追踪上 6 条里
+    **4 条**(source_id/resource_properties/resource_type/atlas_coords)是**契约确有且拼写正确**、只因**无 TileSet/枚举不认识 Vector2/类型不可写**
+    而失败, 被读成'缺参数'; 真阳性只有 atlas_x/atlas_y
+  它另如实声明 4 条 unconfirmed(其中: D-B1 是否按越界计**交由我裁决**; D-B2 是否属本轮范围;
+    门③④ 只核对 0 failed 与 exit 0 **未与上轮 passed 基线逐一对比**(那需采信实现方历史数字);
+    9877 未碰由'全程无 listener + 未发一字节'证明; **D-B1/D-B2 修复后本报告全部结论作废, 需新锚点 + 新验收会话**)
+
+★ 我的裁决:
+  (1) **D-B1 按缺陷修**(阻塞) —— **不是因为'提权'**(调用方本就能执行任意 GDScript, 那不成立),
+      而是因为**工具描述承诺了 res:// 约束却返回工程外字节** = **声明与行为不一致**, 与前面七条纪律同族;
+      修法: 解析真实路径(处理 ..、链接、junction、盘符、UNC)并校验在工程根内 -> 明确拒绝 + 建议; **一处修好覆盖三个工具**;
+      若引擎 API 无法可靠判定 -> **如实声明 + 给出可被调用方自行校验的字段**(如 resolved_path), **不得保持沉默的穿透**
+  (2) **D-B2 必修**: readable 必须意味着**引擎真的能载入/编译**(GDScript 走解析检查且与 project_validate_script **同源**;
+      C# 走 invalid/not_compiled 口径); 不满足 -> 拒绝 + 回滚; **必须带合法对照**防过度拒绝
+  (3) **D-B3**: 与契约 inputSchema **交叉核对**, **分两桶报告**(契约外参数 vs 拼写正确但别的原因失败), 命名不得暗示因果 + 加自测
+  (4) 采纳验收方的纪律: **D-B1/D-B2 修复后必须派新的独立验收会话**(原结论作废)
+下一批 = TASK-077(三条一起修); 之后 = 新的独立验收; hof-rs 一半仍按用户指令**暂停**
+目标仍 active
