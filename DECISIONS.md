@@ -4999,3 +4999,48 @@ TASK-073B(**只写文档, 0 处代码/脚本/契约改动**): 产出 modules/mcp
   且'门③是单精度门'这一**已声明口径**现已**可强制执行**(可选变体), 默认行为分毫不改
 目标: **仍 active** —— 唯一未完成的原始目标项 = **hof-rs 切端点 + 真实 T=1 冒烟**, 而用户明确指令**暂停**该半;
   Godot 侧无剩余必做项(可选: 第 5 轮试测以继续发掘改进点)
+
+## D133 — **试测第 5 轮**（2D 平台跳跃，232 次调用）：观察完整（stop_reason=marker）+ 汇总者纠正 4 处主张 + 4 条真缺陷
+
+docs(decisions): D133 **试测第 5 轮**(2D 平台跳跃, 232 次调用) —— 观察完整(stop_reason=marker) + 汇总者纠正 4 处主张 + 4 条真缺陷(D2 契约违约且静默 / D3 有写无读 / D4 实例子节点不可寻址 / D9 错误计数低估)
+
+TASK-074(三角色: 开发者 232 次调用 ok202/非ok30 + 回退 33; 观察者 watcher; 汇总者自建 10 个只读复算脚本;
+  HEAD 58becb2f33; 未改 modules/mcp_server/** 与 modules/mono/**; 9877 未动; 未 push):
+  **观察覆盖完整**: stop_reason=**marker**, polls=29, last_seq=199, trace_lines=505, elapsed=841s(**预算 4800s 未到顶**)
+    -> 用户在 D117 报的'观察者提前结束'**本轮未再发生**(watcher + 协议修订生效)
+  §0.6 **十一条判据**: **8 通过 / 1 部分通过 / 2 偷换 / 0 不通过**
+    通过: ①多场景+实例化 ③动画关键帧(12 帧) ④Theme+UI+override ⑥粒子+视差 ⑦C#/GDScript 混用(build exit0, 运行期两种同现)
+      ⑨大批量(一次 100 节点 71ms; 一次 12 个不同值) ⑩用户信号 5 条(scope:user 只列这 5 条 vs all 1355) ⑪运行期注入(逐帧跳跃弧线, y 20 个不同值)
+    **部分通过**: ②TileMapLayer —— **无任何入口能给 TileSet 加 source/atlas**(source_count 0), cell 写入**永不可达** -> 能力边界(不可构造)
+    ★ **偷换(被点名)**: ⑤ 建的是 **AudioStreamPlayer2D** 而非任务书要求的 AudioStreamPlayer **且未声明**;
+      ⑧ 声称'用工具读回'而 **project_read_file/_text_file 双 -32601** -> 只能用 OS 级 sha256 验证
+  ★ **汇总者纠正 4 处**(自建 10 个只读复算脚本, 从 trace-editor.jsonl 398 行/247681B、5 份追踪、CALLS.jsonl 232 行、raw/** 232 目录独立复算):
+    ①**证伪开发者的 D1**('批量挂脚本不落盘'): 磁盘 main.tscn sha f82264933b54… 里 **Coin000…Coin029 恰 30 个 script = ExtResource**,
+      路径唯一性排除单点补救 -> 采纳观察者结论(三路证据)
+    ②**纠错**: 游戏侧非 ok **实为 14 条**(A/B 均记 2; B 靠两个相反口径误差相抵才凑出 30)
+    ③⑩ 的 4 vs 5 条是**时序**(M6 早于 Coin002 补连 seq156)
+    ④**D6 补强**: 写入类响应也**不确定**(save_scene 9 次 **7 个 sha**)
+    另 §C **自纠 1 处**(曾误把 body/envelope 双尺寸读成副本漂移)
+  ★ **4 条真缺陷(下一批要修)**:
+    **D2(S1, 契约违约 + 静默失败)**: editor_set_node_script(_batch) 在**根类型 <-> extends 不兼容**时回 **attached:true**,
+      而引擎**静默丢弃**脚本; **契约明文承诺的 eadable 字段在响应全文不存在**(sha ef8db75df33ab89b);
+      证据: 编辑器日志 Area2D **0** 次、游戏日志 **30** 次
+    **D9(S1)**: 错误计数低估(见上 14 vs 2)
+    **D3(S2, 有写无读)**: 契约 176 条**无'读工程文本文件'**, project_write_text_file 有写无读 -> 写读闭环无法用工具完成
+    **D4(S2)**: **实例子场景内部节点在编辑器侧不可寻址**(属性写工具能到 Anim, **信号工具不能**, 且 editor_get_scene_tree 也看不到),
+      而**运行期完全正常**(4 份转储 World/Player children=0 而运行期 Anim 齐全)
+    D5(S2, 未定性): TileSet 无 atlas source 致 tile 写入不可达; 终态 has_tile_set:false, 需最小复现
+    D6/D7/D8/D10/D11(S3): 同参同响应不成立(写入类也不稳) / body-envelope 双尺寸落盘 / D2 的运行时证据只在 %TEMP% 未进仓库 /
+      _property_batch 与 _updates 难分辨且 -32601 无提示 / **analyze_mcp_trace.py 因 args 恒为 str 结构性漏报一整类信号**
+  开发者如实声明的两个不可构造: 100 枚金币**运行期拾取不生效**(裸 Node2D 无碰撞体 + coin.gd extends Area2D 被静默丢弃;
+    修它要实例化 100 个子场景, 与'一次 100 节点'判据冲突 -> 声明而非伪造); TileMapLayer 同上
+  **汇总者的两条'最该先做'**: ①给脚本写族补**根类型<->extends 兼容性判定**并**真的回出契约已承诺的 readable 字段**
+    (D2+E3+M3 三合一; 验收**必须含合法绑定对照以防假修复**; 且**切勿按已被证伪的 D1 开工**);
+    ②补 **project_read_text_file**(有写无读的不对称; 纯函数/无编辑器状态/回归成本最低; 可直接复用本轮现成对账 d39c679f9561… 逐字相等)
+ 待复现声明: D5 需一次活体最小复现; R4 的 '--import 默认 9877 副作用'未能独立复核
+
+裁决(下一批 = TASK-075): ①修 **D2**(含**真的回 eadable** + 兼容性判定 + 合法绑定对照);
+  ②新增 **project_read_text_file**(走 ADDED_TOOLS, 契约 176 -> 177; 与 project_write_text_file 对称, 同样拒绝 project.godot/场景/脚本? **不** ——
+    读是只读操作, 应允许读任意工程内文本但**必须**限制在 res:// 内、拒绝越界与 .., 并**如实声明**它不解析语义);
+  ③修 **D9**(错误计数); ④**D4** 与 **D5** 先做**最小复现**再决定修法(可能涉及引擎侧寻址); ⑤S3 择要(尤其 analyze_mcp_trace.py 的 args 恒 str 结构性漏报)
+目标仍 active(hof-rs 一半按用户指令暂停; 本轮用户指令='工具可用后继续进行试测--改进的循环' -> 循环继续)
