@@ -4595,3 +4595,60 @@ TASK-066B(验证者; 88/88 运行判据 + 8/8 收尾判据, **B066 RESULT checks
   (c) 其余 6 条发现(见 REPORT-066)按证据强度排序, 择要修
   (d) B5 的 provenance 边界(两种来源键集相同)记为**已声明能力边界**, 不修(除非有低成本办法)
 目标仍 active(hof-rs 一半按用户指令暂停)
+
+## D125 — TASK-067 交付：**.cs 失明已修** + **窗口化编辑器启动吃注释的根因定位到行** + **第三个引擎补丁（save_preserving_text）**
+
+docs(decisions): D125 TASK-067 交付 —— **.cs 失明已修** + **窗口化编辑器启动吃注释的根因定位到行** + **第三个引擎补丁(save_preserving_text)**
+
+TASK-067(提交 2f85141a74 实现 / 82c8313a5e 报告+证据 / adf87b7090 / eff591a140; 未 push; 9877 全程无监听; 收尾无残留进程):
+ ① **project_list_scripts 对 .cs 失明 -> 已修**(**独立复核成立**): 改动前二进制 count=2, 而同进程
+    project_read_script{res://scripts/Main.cs} 返回 size=2389、fs_tree 17 条含 Main.cs、磁盘 res://scripts 有 6 个 .cs;
+    修法: **扩展名集合改由 ScriptServer 派生**(GDScript->gd, **mono 编译进来时**->cs; script_language.cpp:239/:221/:227,
+    gdscript.cpp:2215-2217, register_types.cpp:57 -> csharp_script.cpp:98) + 保留 .gdshader(**它是 Shader 不是 ScriptLanguage**);
+    **walk 一字未改**; 改动后 **count=10**(6 .cs + 2 .gd + 2 生成 .cs), 10/10 都是路径字符串、**两种语言形状一致**;
+    契约 **176 / sha d4e53b43… 前后同值**, 未加 override
+    **如实声明副作用**: walk 仍下探 .godot, 故真实 Mono 工程里 2 个生成 .cs(res://.godot/mono/temp/obj/Debug/)也会被列出;
+    收窄 walk 会撞到钉住的 .hiddendir/secret.gd 断言 -> **需我另裁**
+ ② **窗口化编辑器启动吃注释 -> 根因定位到行**: editor/editor_node.cpp:**1062-1072** 的 **!cmdline_mode** 分支在 **:1071**
+    调 ProjectSettings::save()(core/config/project_settings.cpp:1086 -> _save_settings_text :1162 整文件重写);
+    而 **cmdline_mode 由 editor_node.cpp:8479 从 headless 得出** -> **这就是 '--import/--headless 从不丢注释、
+    窗口化启动必丢' 的全部原因**; 最小复现(改动前 mono 二进制): 541 B / 4 条探针注释 / sha cca8e45d… ->
+    --import **逐字节不变** -> 窗口化启动 sha cd4ebe43…, **4 条探针注释全丢**(只剩引擎 7 行头注释);
+    **工具写入路径**(editor_add_input_action/project_set_setting, TASK-059 按节发布)**一条注释行都没动** -> 两条路径分开陈述
+ ③ **引擎第三个补丁**: 新增 **ProjectSettings::save_preserving_text()** + public static publish_settings_sections_text();
+    把三段**抽出共享**(save_custom 的'收集设置'半 = _collect_settings_for_save; save_custom_section 的读半/写半 =
+    _read_settings_text_file / _publish_settings_text_file), **只切换 editor_node.cpp:1071 一个调用点**;
+    save_preserving_text 发布的**正是 save() 会发布的那一组**(逐节走补丁 2 的 update_settings_section_text),
+    **其余字节原样搬**, 且**总是写**(该调用点的既定用途是把工程标为最近修改: project_list.cpp:866-869 读该 mtime),
+    并刷新 last_save_time 以免 editor_node.cpp:1627 的外部变更检查被自己的写触发;
+    project.godot **不存在**时仍调 save()(创建工程靠它);
+    **save()/save_custom()/save_custom_section() 可观测行为逐字不变**; 另外 27 个编辑器 save() 调用点未动;
+    **D112 纪律全都满足**(最小/朝上游形状/可被门覆盖: 17 断言模块 doctest + 窗口化实测; 零新增收窄点, 门⑥ scanned==pinned==75)
+    修后证据: 带注释 project.godot 经窗口化启动 **cca8e45d… -> dcc50cbd…**, **4 条注释逐字保留、顺序不变、
+    [input] 里那条仍在 [input] 内**; 工具写入路径 D=4->F=4(一条注释行都没动)
+ ④ 红/绿: mono 红 3 条(含 has(probe.cs) false==true) / plain 红 2 条, **均当场落盘入库**; 两变体最终全绿;
+    ★ 它留了一条重要观察: **mono 绿与 plain 绿的文本 sha8 相同 -> 绿灯不能证明是哪个变体**(已留档)
+ ⑤ 门: mcp059_gates.ps1 **21/21 步 exit0**; ③**344/23953**; ④**1770/448200**;
+    ⑥三段式 scanned==pinned==75 + **101/101** + --coverage; --check-completeness/--added/--generator-version(1.19.0) PASS;
+    契约前后同 sha; 门① -Group project_read_files **3/3**(9888+9889 各 6 条 name/description/inputSchema=True, 并集 153/72);
+    门⑤ accept_m1 x2 **22/22 且 differing_lines=0**; 构建 plain/mono 严格串行, 两二进制 == HEAD 716957c26
+ ⑥ 15 步回归电池 **14/15 exit0**(mcp010 29/29, mcp027 60/60, mcp044 40/40, mcp045 15/15, mcp046 23/23,
+    mcp052 53/53, mcp053 73/73, mcp041/042/043 各含 5 回归); 唯一非零是**电池自检'工作树必须干净'**
+    (manifest 证明 newly modified=0/newly untracked=0/restore failures=0, 5 个源文件 KEPT-DIRTY-BEFORE-THE-RUN -> **非回归**)
+ ⑦ 其余 5 条发现**不修且各有依据**: F-066-3 单复数校验形状(契约已逐字声明两种读法, 统一是**破坏性 API 变更**);
+    F-066-4 游戏视口恒为 game(mcp_capture.cpp:375-376 声明游戏进程只有一个窗口 -> 该字段是**有效值**而非被忽略的请求);
+    **F-066-5 all_passed:false 且无断言 —— 刻意如此**(running_game_test_execution.cpp:596-599/:243-246:
+    '什么都没断言就不该被报成全部通过' —— **我完全同意**); F-066-6 .tscn 字面量计数(判据设计缺陷, 模块不依赖);
+    F-066-7 already_connected:true(已声明为正向); 另登记: R4 的 waited_seconds 入/出参命名(修它要动契约 sha,
+    而本批整条证据链锚在该 sha 上) + R4 的 .dll 字节数陈旧(报告引用缺陷, 应 append-only 勘误到 R4)
+
+裁决/下一步候选(均已登记, 择要排期):
+  (a) **.godot walk 是否收窄**(现会把 res://.godot/mono/temp/obj/Debug/ 下 2 个生成 .cs 列出) -> 我倾向**不收窄但声明**
+      (收窄会撞钉住断言, 且'列出生成文件'对使用者是**诚实**的; 若要收窄须同时更新那条断言并说明)
+  (b) waited_seconds 命名统一 -> 走 override, **单独一批**(避免与证据链 sha 冲突)
+  (c) **check_rename_map.py 仍硬编码 171**(既有陈旧期望) -> 与 TASK-064 同类, 改为派生
+  (d) R4 的 .dll 字节数勘误 -> append-only 修 R4
+目标仍 active(hof-rs 一半按用户指令暂停)
+
+累计: Godot 侧 176 条工具; **三个引擎补丁**(C# 判定前置 / 按节发布 / 编辑器自身保存保全文本); 试测 4 轮;
+  第 4 轮六判据全通过 + 8 条空白全收; 观察连续两轮 stop_reason=marker
