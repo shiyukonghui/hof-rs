@@ -4357,3 +4357,61 @@ docs(decisions): D119 **第 2 轮产物其实存在但落错目录**(我的任�
   所以'取消'之后**必须核对工作树**(本次正是靠 git status 才发现 445 个文件)
 
 目标仍 active(hof-rs 一半按用户指令暂停)
+
+## D120 — 第 2 轮回收+汇总完成（六判据：②③通过，①④不通过，⑤⑥未构造）+ 抓到产品缺陷（含**端点静默失能**）+ 观察者问题已量化
+
+docs(decisions): D120 第 2 轮回收+汇总完成(六判据: ②③通过, ①④不通过, ⑤⑥未构造) + 抓到产品缺陷(含**端点静默失能**) + 观察者问题已量化
+
+TASK-062(提交 f6f2ff3376 + 文档收尾; 只动 modules/mcp_server/docs/** 537 文件):
+  回收: 根 docs/reports/** 445 文件/658190 B 搬入模块目录, **搬前搬后 sha256 逐字节相同(Compare-Object 0 差异)**,
+    空根 docs/ 已删; 路径引用修正 6 文件(每处恰 +19 字节 = modules/mcp_server/, JSON 重新校验, 一次 JSON 转义写坏当场修复并记录);
+    三份产物头部**前插状态声明**(原正文一字未改);
+    **额外只读回收 78 个从未入库的原始追踪/日志/脚本**(含 §B 承诺却没入库的 run.log) -> '以原文为准'的前提
+  **六条新能力判据**(以 evidence/task060/** 原文为准, 每条带证据路径+sha256):
+    ② **C# 真结论 = 通过**: ok(c2_v5 sha b18ac829…) / invalid(c2_v2 sha c088002b…, error_text 含 **Broken.cs(5,5) CS1519** 与 (5,23) CS1002) /
+      **not_compiled(c2_v1 与 c2_v3 响应 sha 同为 a631ecb2…, valid=null)** -> '改过未构建'与'编译失败'**被区分**;
+      同一响应并存(c2_v4 count=2: CS0103 的 invalid + valid=null 的 not_compiled); 单数拒绝明说'not compiled != does not compile'
+    ③ **批量父子 = 通过**: 单次调用 count=26(c3_a1 sha c841696c…), parent_source scene=5/batch=21/missing=0,
+      **另一工具读回 18/18 砖**(c3_a2 sha 8de6cff3…), 前向引用 -32001 + **整批回滚**(c3_d1), 同批重名 -32602 + 回滚(c3_e1),
+      默认 false 回归 -32001(c3_f1), errors[].index 可定位
+    ① 注释保全 = **不通过**: P1a/b/d/e/g 通过(**注释 4/4 逐字保留**, 三探针键均落 [input] 内, S2==S1,
+      对照组 project_remove_autoload 丢注释并出现引擎 7 行头), **但** P1c 判据**自相矛盾**(要求 [input] 之外逐字节不变,
+      同时方案又要求写 physics/...(必然新增 [physics] 46B)) = **判据无解**; **P1f 断言与其引用证据相反**
+      (称 InputMap 有 mcp060_probe_action, 而其引用的 c1_a6 响应 sha 1a5da0e4… 里没有该键)
+    ④ 批量挂脚本 = **不通过**: P4a/P4c/P4e/P4g/P4h 通过(count=18 attached=18; skipped=18 每项带 reason 与 previous_script_path;
+      rolled_back:true 且 Ball.cs 出现 0 次; 9889 上 editor_* 0 条且 -32601), **但 P4b 不可归因** ——
+      main.tscn.before_attach 与 after_attach **同 sha a423d468…**(before 已含 18 行 script = ExtResource) -> **快照时序错误**;
+      P4d 退化(5 份快照同 sha); P4f 未构造
+    ⑤ scope 收窄 = **未构造**: **对该工具调用数 0**; 追踪里 6 次命中**全在 SignalRegistry.cs 的源码注释里**(正是我们禁止的文本包含式判断)
+    ⑥ 捕获 changed:false = **未构造**: **307/307 捕获行 status=unavailable**(全程 headless, 无窗口化追踪, 游戏侧 --mcp-capture=off);
+      §A 明令不得用 headless 边界顶替 ⑥ 的通过
+  四张表: 异常 7 / 缺失工具 5 / 可合并 5 / 可优化 6 + **疑似缺陷 10 条**(分[产品]与[试测产物/流程]) + 对 §A/§B/§C 的纠错 10 条
+  ★ **产品侧真缺陷(下一批要修)**:
+    (i) **游戏端点静默失能**(major): bind failed on 127.0.0.1:9889 (error=22) -> get_port()=0(MCP server disabled),
+        **响应里没有任何迹象** -> 又是'报成功但什么都没发生'家族, 且发生在**端点本身**
+    (ii) **node_path 参数面不一致**(minor-major): editor_set_node_property/editor_get_node_properties 用 **path**,
+        editor_set_node_script_batch 用 **node_paths**; 三者都要求**场景根相对**路径但**描述未声明**、-32001 **不指路**
+        -> 第 1 轮 DEV-LOG 报的那条'缺陷'实为**误报**, 根因即此
+    (iii) editor_set_node_property_batch 无法按路径列表**批量写不同值**(updates -> -32602; 几何只能 20 次单点写)
+    (iv) editor_execute_gdscript 的 parse 错误**不带行列**(26 次调用, 7 对失败->成功)
+  ★ 试测产物/流程缺陷: 证据文件**同名复用被覆盖**(run.log 里 c2_b0_build 复用 4 次; 磁盘可比的 200 条中 163 相符 **37 不符**);
+    P1c 判据无解; P4d 退化对照
+  ★ 观察者问题**已量化**(用户报告的那条): 观察窗口 05:34:40-06:00:25 由**自建 watchdog**以 **BUDGET_REACHED** 收口
+    (无 watch-summary.json, watch.log sha a584bc61…), 而 §B 首次工具调用在 06:26:28、开发最后证据 08:01:15 ->
+    **观察在开发开始调用前 26 分钟结束、距开发结束约 2 小时**; §C 的四类计数(0/0/0/2)全是**时间错位产物**,
+    '单工具占比 100%'等分母=1 无统计意义 -> 汇总者**逐条列清**: 受影响 / 不受影响 / 仍空白 三类
+    (不受影响: ①②③④ 判据结论与四张表; 仍空白: ⑤⑥ 之外还有**游戏侧活链**(输入->位置回读/砖块消失/计分)
+     与'打砖块工程本身是否真能跑')
+  untouched: git diff --stat -- tools tests = 空(提交前后各一次); 更强口径 97144b5afb..HEAD 中
+    tools/tests/scripts/契约/modules/mono 零改动, 537 个入库文件全在 modules/mcp_server/docs/**;
+    8 个被 .gitignore 挡住的 *.log 已 git add -f; 未 push; 未启动任何 Godot 进程
+
+裁决(下一批 = TASK-063):
+  (a) 修 (i) 端点静默失能:**bind 失败必须可见** —— 至少启动日志 ERROR + 一个可查询的状态/工具字段;
+      并查 error=22(EINVAL) 的成因(可能与 headless/监听参数有关)并给最小复现; **不得**静默 get_port()=0
+  (b) 修 (ii) 参数面一致性: **统一或至少描述声明 + -32001 指路**(走 override 描述 + 错误建议; 是否改参数名需我另裁)
+  (c) (iii)(iv) 排入同一批(批量写不同值 = 新参数或新工具; parse 错误补行列)
+  (d) **重测 ⑤/⑥**(必须): 窗口化进程 + 真实调用 editor_list_signal_connections{scope:user} + 至少一次 changed:false;
+      **并用 TASK-061 的 watcher 保证观察覆盖完整**(stop_reason 必须是 marker)
+  (e) 试测流程修复: 证据文件**按 id 唯一命名**(禁同名复用) + 快照时序(**先写 before 再写 after** 且断言 sha 不同)
+目标仍 active(hof-rs 一半按用户指令暂停)
