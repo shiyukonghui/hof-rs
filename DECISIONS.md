@@ -4534,3 +4534,64 @@ TASK-065B(**缺口专项第 3 轮, 71/71 判据 PASS, exit0; 证据 127 文件 c
 裁决/下一步: ①8 条空白中 **B7(C# 工程活链)** 优先(第 2 轮的 C# 工程本身不完整, 需先补齐工程);
   ②B6(diff 工具拒绝路径)与 B1/B2/B3 属取证面, 排其后; ③B4/B5/B8 属组合面, 可并入下一轮;
   ④hof-rs 一半仍按用户指令暂停 -> 目标**保持 active**, 不标完成
+
+## D124 — TASK-066 交付：**C# 打砖块补齐 + B7 收口 + 前 8 条空白 8/8 全收**（六判据全通过，stop_reason=marker）+ 抓到两条新缺陷
+
+docs(decisions): D124 TASK-066 交付 —— **C# 打砖块补齐 + B7 收口 + 前 8 条空白 8/8 全收**(六判据全通过, stop_reason=marker) + 抓到两条新缺陷
+
+TASK-066A(开发者; 证据 40dad5a6df / 报告 a27d7d7ba1; 二进制 7708729982; **未改模块实现**; 9877 无监听):
+  C# 打砖块**补成完整可跑**(16 节点 / 5 个 _Process 驱动的 C# 脚本 / 4 个 [input] 动作 / project_build_csharp exit 0),
+    全部**经 9888/9889 MCP 端点**建成; 活链在**窗口化**游戏进程跑通; **146/146 断言**(session1 59/session2 41/session3 46);
+    MCP 请求 **99 次**(tools/call 97 + tools/list 2); **回退 9 条**
+  **六条新能力判据全部通过**:
+    ①注释保全: 分段写 **4/4 注释逐字存活**(E0->E1), 对照组 project_remove_autoload 整文件写**抹光 4/4**
+    ②C# 真结论: ok(valid=true) / 不构建->**not_compiled**(-32000) / 构建失败->**invalid + error CS1040,CS1002 带(行,列)**,
+      且**同响应内 invalid + not_compiled 并存**
+    ③批量父子: 一次 editor_add_nodes_batch(resolve_within_batch) 建 16 节点(scene=8/batch=8/missing=0)
+    ④批量挂脚本: 一次把 Brick.cs 挂到 3 砖(count=3 errors=[] previous_script_path 全空), .tscn 落盘可回读
+    ⑤scope: all=207 / **user=1** / internal=206, 交集 0, 并集=default, 每 scope 3 次响应体**逐字节稳定**
+    ⑥changed: **窗口化**编辑器 changed:true 2660px / 同参重放 changed:false; 游戏进程同样 true 4544px / false;
+      两路与工具 diff **逐位一致**
+  **7 条新发现**, 最重两条: (i) **project_list_scripts 对 .cs 失明**(C# 工程的脚本列不出来; **一条调用即可复现**);
+    (ii) **窗口化编辑器启动会重写 project.godot 并丢掉注释**(与已知'ProjectSettingsEditor 定时器保存'同源 ->
+    若确属**引擎自身**行为, 则**启动时**就会吃掉用户注释, 比工具误用更严重 -> 需确认后考虑**第三个引擎补丁**)
+TASK-066B(验证者; 88/88 运行判据 + 8/8 收尾判据, **B066 RESULT checks_passed=88 checks_failed=0 exit0**;
+  证据树 358 文件 collisions=0; **未改实现/契约**, 契约 sha d4e53b43… 前后同值; 9877 无监听; 端口已释放; 未 push; 未跑 scons):
+  **活链(C# 工程, mono 窗口化游戏进程 9889, 5 个 .cs)**:
+    ①paddle_right -> **另一工具**读回挡板 **24 帧 24 个不同 x, 严格单调 313.98->475.03(+7.0 px/帧 = 420/60)**,
+      Paddle.position.x 300.0->487.98, Moves=1325, LastDir=right, 进程内断言 Moves gt 0 actual=1434 passed;
+      球 18 帧 18 个不同 y 严格递减 311.38->237.74(每帧 -4.3 px = 260/60)
+    ②running_game_find_nodes_by_script{res://scripts/Brick.cs} **3->2**(存活 Brick1,Brick2; 解析后整棵树 Brick0 前 true 后 false)
+    ③HUD/ScoreLabel.properties.text **"Score: 0" -> "Score: 10"**, Main{Score=10,BricksHit=1,State=playing,Lives=3},
+      进程内断言 Main.Score gt 0 actual=10 passed; 三步对的两步响应 sha256 **两两不同**
+  **⑤(4 个独立进程)**: 默认 207/44751 B, user **1 条/275 B**, internal **206/44658 B**;
+    **user 并 internal = default(双向差集皆 0)**、**user 交 internal = 空(0)**、default-user=206=internal、
+    default-internal=1(正是场景文件第 89 行那条 ProbeTimer|timeout|.|OnTimerTimeout);
+    同 scope 三次逐字节相同(all f21a9805/user b96f6af2/internal 95487469); 显式 all == 默认;
+    user 的 method 全不含 "::", internal 206/206 全含 "::"; bogus -> -32602 并列全三种口径;
+    B4: node_path ProbeTimer x scope -> 11/1/10 仍划分; **B8: 4 进程 internal 全 206/user 全 1/default 全 207**(与 A 逐项相同)
+  **⑥(窗口化, status=done, viewport=2d/game, scale=2)**: 编辑器只读重放两次 false/0px; 真实变化
+    editor_set_node_property{WallTop.position -> (0,60)} -> changed:true 2660/1334144 ratio 0.00199378777703156;
+    同参同值(arguments_sha256 两次相同)重放 -> 工具仍报成功但 **changed:false/0px**, before==after sha 37062f00;
+    **三路一致**: trace 2660/1334144 == editor_analyze_screenshot_diff 2660/1334144 == **PIL 独立复算** 2660/1334144
+    (all_three_routes_agree=true, 4 对, 含游戏侧 4224/186624); 游戏侧同样 true 4224/186624 / 重放 false 0px;
+    证据守卫快照 p1_main_tscn: before d33b8931…(2890 B) -> between(set+save) -> after ec0b9826…(2910 B), **两 sha 断言不同**
+  **前 8 条空白 8/8 全部收口**: B1 游戏端窗口化捕获族(screenshot 1152x648 PNG 8107 B, save_path,
+    capture_frames 半分辨率 3x576x324 engine frames 592/602/612 间隔 10, 全分辨率 2x1152x648, 移动可见节点后帧 sha 3aaa17cb->8f0a0546);
+    B2 on_error 成功调用 0 条捕获行/失败调用 1 条且全会话捕获行数=失败数, diff_image=on 的 diff.path/bytes/sha256 齐备 118122 B;
+    B3 scale1 2978x1793=5339554, scale2 1489x896=1334144=逐轴 floor/2, scale4 744x448=333312=逐轴 floor/4;
+    B4 scope x node_path 11/1/10 仍划分; B5 运行期 connect() 的 ProbeTimer|timeout|Ball|queue_free 进 user(1->2)、
+      **不在 .tscn 里**, 但两种来源键集相同 -> **工具不暴露 provenance**(如实的边界);
+    B6 四拒绝路径 -32001/-32602/-32602/-32602; B7 C# 活链主目标全通过; B8 四进程 206/1/207 稳定
+  对 A 的纠错 2 条(waited_seconds 系回显名; dll 19968 B 已过期应为 20992 B), 独立确认其 3 条主张;
+  **如实声明 4 条不可构造**(含'on_error 与 diff_image 同时生效'为何构造不出的完整推理 + 已分别构造两个开关)
+  ★ **stop_reason = marker**(连续第二轮观察完整覆盖)
+
+裁决/下一步(下一批 = TASK-067):
+  (a) **project_list_scripts 对 .cs 失明**: 先**独立复核**(一条调用即可), 确认后修(应能列出 C# 脚本; 若属引擎 API 边界则如实声明);
+  (b) **窗口化编辑器启动重写 project.godot 丢注释**: **优先确认根因**(是否引擎自身的 ProjectSettingsEditor 定时器保存);
+      若确认 -> **第三个引擎补丁**: 让编辑器自己的保存也走**按节发布**(与补丁 2 同一能力), 使**启动/保存都不再吃注释**;
+      必要时在报告里区分'工具写入'与'编辑器自身写入'两条路径
+  (c) 其余 6 条发现(见 REPORT-066)按证据强度排序, 择要修
+  (d) B5 的 provenance 边界(两种来源键集相同)记为**已声明能力边界**, 不修(除非有低成本办法)
+目标仍 active(hof-rs 一半按用户指令暂停)
