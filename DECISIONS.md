@@ -4489,3 +4489,48 @@ TASK-064: ①**6 处陈旧契约条数期望**(我点名的 4 个 + 它自己多
   (iv)**观察必须用 TASK-061 的 watcher**, stop_reason 必须是 marker, 否则该轮观察环节**判不合格**
   (v)试测脚本必须用 TASK-064 的 mcp_evidence_guard.ps1(唯一命名 + 快照时序断言)
 目标仍 active(hof-rs 一半按用户指令暂停)
+
+## D123 — TASK-065 交付：**mono 锚点缺口关闭** + **缺口专项第 3 轮：⑤⑥ 与游戏侧活链全部构造成功**（stop_reason=marker）
+
+docs(decisions): D123 TASK-065 交付 —— **mono 锚点缺口关闭** + **缺口专项第 3 轮: ⑤⑥ 与游戏侧活链全部构造成功**(stop_reason=marker)
+
+TASK-065A(提交 6b46ff363e 报告+197 证据文件 / 3daa41591a / 08691fd21e; 未 push; 9877 全程无监听):
+  **串行重建两个引擎到 HEAD 770872998**(mono 与 plain **都必须**, 因 engines_match_head 要求二者同时含 HEAD 短 sha):
+    mono=4.8.dev.mono.custom_build.770872998 (10:05:05, exit0, 1:42.06); plain=4.8.dev.custom_build.770872998 (10:07:03, exit0, 1:38.76);
+    修复前 mono=cd7224274 / plain=92a260b68
+  **三个脚本复跑到 exit 0**: mcp052 **53/53**(log sha 931d5db2…) / mcp053 **73/73**(c6f7bb5a…) / mcp054 **53/53**(882cf084…);
+    修复前的红有**两条独立原因**且逐条归因: (A)陈旧字面期望 152/175/4(TASK-064 ea05a19d4b 修, 本批重跑 mcp064 反例探针 13/13 佐证);
+    (B)**陈旧二进制锚点**(本批修, 锚点谓词 PRE=False -> POST=True); 受版本控制证据就地更新 40 文件, 最强单点 task054/green/status.json "tools":152->153
+  门全 exit0: ①契约 5 步(实况并集 153/72, 契约 176, 逐字 True); ③**342/342 (23924 断言)**; ④**1768/1768 (448171, 与 REPORT-063 逐字一致, 0 failed)**;
+    ⑤accept_m1 x2 22/22 清单 Compare-Object 为空; ⑥三段式 75==75 + 17 拼写 + 101/101 且字节还原;
+    --check-completeness("171 + 5 = 66 + 105 + 5" PASS)/--added(双向 missing=0 foreign=0)/--generator-version(1.19.0) PASS;
+    tools/tests/契约空 diff, 契约 sha d4e53b43… 未变
+TASK-065B(**缺口专项第 3 轮, 71/71 判据 PASS, exit0; 证据 127 文件 collisions=0; 未改实现; 契约 sha 未变; 9877 无监听; 端口已释放; 未 push**):
+  **⑤ scope 收窄(第 2 轮'未构造') -> 构造成功**: 编辑器端点真实调用 editor_list_signal_connections **20 次**;
+    默认 **47 条/9756 B**、scope:"user" **2 条/371 B**、scope:"internal" **45 条/9565 B**;
+    user 的 method **只含** _on_timer_timeout/_on_timer_two_timeout(**无 "::"**), internal 45 条**全含 "::"**;
+    **user 并 internal = default 且 user 交 internal = 空**(default-user=45=internal, default-internal=2=那两条 fixture 连接) —— **集合代数逐项核对**;
+    signal_name x scope 组合正确(timeout: default 2 = user 2 并 internal 0); 显式 scope:"all" 结果体 sha256 与默认**逐字节相同**(249ea832…);
+    scope:"bogus" -> -32602 且**列出枚举**
+  **⑥ 窗口化 changed:false(第 2 轮'未构造') -> 构造成功**: **窗口化进程**(无 --headless, --mcp-capture=every_call viewport=2d scale=2, **status=done 而非 unavailable**);
+    真实变化 editor_set_node_property(Box.position->200,120) -> **changed:true** 10232/1334144 px ratio 0.00766933704307781 frames_waited=1;
+    **同参同值重放**(参数 sha 257fbd0b…, 工具仍报成功 old/new 都=200,120) -> **changed:false** 0 px ratio 0.0; 只读重放同样 false;
+    **三路一致**: 日志 10232/1334144 = 工具 editor_analyze_screenshot_diff 10232/1334144(响应 sha 3995d85a…) = **PIL 独立复算** 10232/1334144(all_three_routes_agree=true);
+    幂等对三路都 0/1334144 且 identical=true; 证据守卫快照 main.tscn before 3cad0f2d… -> after 36af27ad…(不同, between=改属性+editor_save_scene)
+  **游戏侧活链(第 2 轮仍空白) -> 全部构造**: 9889/headless/15 次调用 **0 错误**:
+    ①输入注入 paddle_right -> **另一工具**读回 **24 帧 x=321->482**(24 个不同值, **逐帧单调 +7.0 px/帧, 非瞬移**), 另一读回 300->496 moves=28;
+      球 launch 后 18 帧 y=312->244(每帧 -4 px); ②running_game_find_nodes_by_script{brick.gd} **3->2**(Brick0 从解析后的场景树消失);
+    ③HUD/ScoreLabel.text **"Score: 0" -> "Score: 10"** + 进程内断言 Main.score>0 通过(actual=10)
+  ★ **stop_reason = marker** —— **TASK-061 的 watcher 生效, 观察完整覆盖整轮运行**(用户报告的'观察者提前结束'现已有机械闸门)
+  仍空白 8 条(如实列出, 未含糊): B1 游戏端窗口化捕获族 / B2 --mcp-capture=on_error 与 diff_image / B3 scale 1/4 /
+    B4 scope x node_path 组合 / B5 连接来源(场景文件 [connection] vs 运行期 connect())区分 /
+    B6 editor_analyze_screenshot_diff 的拒绝路径 / **B7 C# 工程上的同一套活链**(第 2 轮 C# 工程缺脚本/碰撞/分数 Label, 见报告 F1) /
+    B8 多进程多会话的 scope 稳定性
+
+★ 里程碑意义: 第 2 轮的三处缺口(⑤⑥ 与游戏侧活链)**这一轮全部变成有证据的事实** ——
+  scope 收窄的集合代数(并=默认, 交=空)是**最强形式**的收窄证明; 捕获的 changed:false 有**三路一致**的像素账;
+  游戏侧活链证明**输入->世界状态->UI** 三段都能被工具读到。**工具在真实游戏开发上的可用性已被闭环验证**
+
+裁决/下一步: ①8 条空白中 **B7(C# 工程活链)** 优先(第 2 轮的 C# 工程本身不完整, 需先补齐工程);
+  ②B6(diff 工具拒绝路径)与 B1/B2/B3 属取证面, 排其后; ③B4/B5/B8 属组合面, 可并入下一轮;
+  ④hof-rs 一半仍按用户指令暂停 -> 目标**保持 active**, 不标完成
