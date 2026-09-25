@@ -5044,3 +5044,58 @@ TASK-074(三角色: 开发者 232 次调用 ok202/非ok30 + 回退 33; 观察者
     读是只读操作, 应允许读任意工程内文本但**必须**限制在 res:// 内、拒绝越界与 .., 并**如实声明**它不解析语义);
   ③修 **D9**(错误计数); ④**D4** 与 **D5** 先做**最小复现**再决定修法(可能涉及引擎侧寻址); ⑤S3 择要(尤其 analyze_mcp_trace.py 的 args 恒 str 结构性漏报)
 目标仍 active(hof-rs 一半按用户指令暂停; 本轮用户指令='工具可用后继续进行试测--改进的循环' -> 循环继续)
+
+## D134 — TASK-075 交付：D2 契约违约+静默已修（含防假修复对照）／**新增 project_read_text_file（契约 176→177）**／D9 根因修且**撤回上轮错误结论**／D4·D5 定性／分析器漏报修
+
+docs(decisions): D134 TASK-075 交付 —— D2 契约违约+静默已修(含防假修复对照) / **新增 project_read_text_file(契约 176->177)** / D9 根因修且**撤回上轮错误结论** / D4·D5 定性 / 分析器漏报修
+
+TASK-075(锚点 077694816 / 35ae10422; **契约 177 = 171 + 6**(generator 1.21.0); 线上 **9888=154 / 9889=73**;
+  未 push; 9877 从未碰; **modules/mcp_server 之外零改动**):
+ ① **D2(S1) 修好**: 改前(bf9518c2b3, sha 4cff9d54…) 四个节点全回 ttached:true 而引擎**丢了 3 个**(编辑器 err 0 / 游戏 err 3),
+    且**逐节点 readable 字段到处都不存在**;
+    改后(35ae10422/077694816, sha a788caa9…): 不兼容 -> **前置拒绝 -32000 + data.suggestion**(点名 GDScript::instance_create()/
+    CSharpScript::instance_create() 与 Area2D vs Node2D), errors[0].readable=false, **rolled_back=true, 什么都没写**;
+    **合法绑定对照** -> attached:true + **readable:true**(sha 618d3ba4…); **防假修复对照通过**(合法绑定在运行游戏里 Good.marker=75 可读,
+    非法被拒, 两处日志引擎丢弃消息 **0**);
+    红相位: 写回基线字节重放 -> 红 3 例|2 失败|54 断言 -> 绿 3/3|137 断言
+ ② ★ **新增 project_read_text_file**(ADDED_TOOLS, **契约 177 = 171 + 6**): 描述与 inputSchema **逐字**; 只读; scope=both;
+    **限制在 res://**(拒 user://、res://../、C:/Windows/、目录 -> -32602; 缺文件 -32001; max_bytes 边界 -32602);
+    **每个响应都声明 parsed:false 与 'does not parse, validate or interpret'**;
+    证据: (1)**写回执 sha = 读回 sha = 磁盘 sha = c824cf30d46289d3…**(size 20, text 相符);
+      (2)四类拒绝各一条; (3)4096 B 文件上 max_bytes=16 -> 	ext_omitted:true + reason **而 size/sha256 仍描述整个文件**;
+        max_bytes=8192 -> text_omitted:false; (4)非 UTF-8 -> -32000 + 建议;
+    门① 逐字比对 name/description/inputSchema = True(它**先 FAIL 于 1048576.0 vs 1048576**, 靠'整数折叠回 INT'修好)
+ ③ **D9 根因修好 + 撤回上轮错误结论**: 根因 = obs_digest.py:78 只在**编辑器**追踪列表上计数(:47 构造), 游戏侧段落**根本没有计数器**,
+    且'按追踪计数只是下界'从未声明;
+    修法: 从**权威 CALLS.jsonl(232 行)按端口计数** + 交叉核对 raw/**(30 条 error 响应 -> MATCH) + **无条件打印 COVERAGE 行**
+    ★ **撤回**: 第 5 轮'游戏侧实为 14'**是错的** —— 权威记录/追踪/§C 自己的 aggregate 全说 **9889 非 ok = 2**(编辑器 28 / 游戏 2 / 合计 30);
+      14 是两个端口的 **-32001 合计(12+2)被误归因**给游戏侧; 已用机器断言 D904 钉住这次撤回
+ ④ **D4 定性(最小复现 9/9)**: **不是工具分裂**(三个工具共用 MCPTools::find_node, 彼此一致) —— 是**编辑器缓存了旧 PackedScene**:
+    改完 player.tscn 并保存(磁盘已验证)后**活的实例仍 0 个子节点**、**同一会话新建实例也仍是旧的**、
+    **游戏进程加载文件后有**该子节点; 会话内办法: 在**外层场景的实例下**加子节点 -> Player/Anim 可解析且连接(connected:true persisted:true);
+    **声明边界**: editor_get_scene_tree 才是'可寻址性'的权威, 先改子场景
+    (并查明第 5 轮那次属性写是在 **player.tscn 打开**时用 path 'Anim' 做的)
+ ⑤ **D5 定性**: **能力缺口而非缺陷** —— project_create_resource{TileSet} 得 properties_set:[](无 atlas source);
+    但 tile_set **赋值是生效的**(has_tile_set:true, source_count:0), 且 editor_set_tilemap_cell **明确拒绝** -32602
+    'no source 0 … (add a TileSetAtlasSource first)' -> **推翻 E8 的'赋值未生效'**
+ ⑥ **分析器结构性漏报修好**: missing_tools() 里 rgs = record.get('args') 后 isinstance(args, dict),
+    而追踪在 **198/198** 行把 args 存成 **JSON 字符串** -> 整个'探过的参数'信号**结构性为空**('probed args none');
+    修法: call_args() 接受两种拼写; '不可读(0)'与'录制截断(1: seq 128 editor_add_nodes_batch, args_truncated)'**分开计数**;
+    新增 **--self-test**(合成用例 atlas_x/atlas_y/bogus 命中, node_path/source_id 从未探过, counts 2/0; exit 0/1) +
+    **变异探针**(让 call_args() 恒返回 None -> 4 problems exit 1);
+    同一份冻结追踪: probed args none -> **六个名字**(source_id x4, atlas_x x2, atlas_y x2, resource_properties x2, resource_type x2, atlas_coords x2);
+    并**如实声明**该信号是'摩擦'而非判决(拼写正确但因别的原因失败的调用也会出现)
+ 门: ①3/3(project_text_read 组; 177 / 154 / 73 逐字 True); ②**26/26**(改前 18/18); ③**348/348 (24223)**; ④**1774/1774 (448470)**;
+    ⑤accept_m1 x2 **23/23** 且 **177 名字清单逐字节相同**(names_sha256 276f162c…);
+    ⑥三段全绿(scanned==pinned==75 + 101/101 且字节还原); --check-completeness/--added/--generator-version exit0(**171+6 = 66+105+6**);
+    check_exit_propagation / check_tautologies / check_engine_anchor 均 exit0(ANCHOR_EQUAL 077694816;
+    最后文档提交后 STRUCTURAL_EQUIVALENT **RED_COUNT=0**); §22.3b 规则4: 新增收窄点 0
+ 一处**预先存在**的非零(如实上报): check_hardcoded_counts.py 在 **未被他触碰**的 scripts/mcp071_gate2_live_evidence.ps1:192/:266
+    报 2 行 UNCLASSIFIED; 已用'对该文件的基线树(git archive bf9518c2b3)跑同一检查器'证明**非本批引入** -> 留给后续
+ 契约数字同步: 49->50、152/153->154、72->73、35->36 全部重派生; 仍**故意不动**的他任务冻结证据脚本(mcp063/mcp066b/mcp071)已登记
+
+裁决/下一步: ①Godot 侧工具数 177; 第 5 轮的 4 条真缺陷中 **D2/D9 已修、D3(有写无读)已消除、D4/D5 已定性为边界**;
+  ②下一批可: (a)把 'editor_get_scene_tree 是可寻址性权威' 与 'TileSetAtlasSource 能力缺口' 写进**相关工具描述**(契约 sha 移动一次);
+  (b)清掉那 2 行预先存在的 UNCLASSIFIED(mcp071 的 176 字面量改为派生);
+  (c)进入**第 6 轮试测**(继续试测-改进循环) ③hof-rs 一半仍按用户指令**暂停**
+目标仍 active
