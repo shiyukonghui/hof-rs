@@ -1,0 +1,11 @@
+[master e84fa65] ﻿docs(godot-mcp): TASK-104 - the closing summary names the report's own commit so the HEAD it quotes is not one commit stale
+ 7 files changed, 31 insertions(+), 1 deletion(-)
+ create mode 100644 godot-mcp/recovery/work/task104/commit-message-head.txt
+ create mode 100644 godot-mcp/recovery/work/task104/logs/git-head.cmd
+ create mode 100644 godot-mcp/recovery/work/task104/logs/git-head.err.txt
+ create mode 100644 godot-mcp/recovery/work/task104/logs/git-head.out.txt
+GIT_EXIT=0
+e84fa65 ﻿docs(godot-mcp): TASK-104 - the closing summary names the report's own commit so the HEAD it quotes is not one commit stale
+e5caf63 docs(godot-mcp): TASK-104 - the report gains F4, the three self-correction commits it took to make its own numbers survive a re-derivation
+e3b8b57 docs(godot-mcp): TASK-104 - the final audit script re-derives every headline number from the run products and the ledger, and one wording fix
+ M godot-mcp/recovery/work/task104/logs/git-head.err.txt

@@ -1,3 +1,5 @@
-﻿docs(godot-mcp): TASK-104 - the closing summary names the report's own commit so the HEAD it quotes is not one commit stale
+docs(godot-mcp): TASK-104 - the closing summary names the report's own commits so the HEAD it quotes is not one commit stale
 
-The report's G-8 line and F4 both now carry the four self-correction commits and the final HEAD e5caf63, with the note that this commit's own hash can only be read after it exists (logs/git-f4.out.txt), because a report cannot contain the hash of the commit that creates it.
+The report's G-8 line now carries all four self-correction commits (4ea0da5, 8cf0227, e3b8b57, e5caf63) and the closing HEAD, with the note that the hash of the commit that finalises a report can only be read after that commit exists (logs/git-f4.out.txt) -- a report cannot contain the hash of the commit that creates it.
+
+This message is written by the write tool rather than PowerShell 5.1's Set-Content -Encoding UTF8, which prefixes a BOM; the first attempt at it carried one, so the commit is amended to keep the subject clean. Writing text through a Python or UTF-8-exact writer instead of a PowerShell redirect is the rule this task follows everywhere else.

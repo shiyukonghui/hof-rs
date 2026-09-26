@@ -1,0 +1,4 @@
+warning: in the working copy of 'godot-mcp/recovery/reports/TASK-104-REPORT.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'godot-mcp/recovery/work/task104/logs/git-f4.err.txt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'godot-mcp/recovery/work/task104/logs/git-f4.out.txt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'godot-mcp/recovery/work/task104/commit-message-head.txt', LF will be replaced by CRLF the next time Git touches it
