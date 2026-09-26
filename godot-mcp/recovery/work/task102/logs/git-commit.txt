@@ -1,0 +1,19 @@
+[master 3b2958e] docs(godot-mcp): TASK-102 - the report: the two new C# games with their real call counts, verdict distributions, assertion tallies and independently recomputed pixel columns, the seven defects their first runs caught (a payload whose world-edge collision reused a tile-relative formula that C# integer truncation turns into a two-tile bounce, a payload whose jump did not clear OnGround, a session whose pinned goal made the expected hash describe a different state than the one it asserted, a session that guessed the default board's cell value instead of recomputing the LCG that generates it, a session that modelled three refusals on three fresh boards while the run accumulated them on one, a session whose positive-control GDScript used the C# method name addChild, and a session whose auto-clock board had exactly one legal swap so thirty frames of sampling watched a frozen board while every assertion still passed), each with its fix and re-run, the tool observation that a script error inside running_game_execute_gdscript returns ok with a null result and reaches only the engine's stderr (recorded, not fixed, because fixing it would change the module and force a rebuild plus the ten gates), and the gate runner's doc-only preflight that skipped the ten gates because not one module byte changed
+ 17 files changed, 788 insertions(+), 1 deletion(-)
+ create mode 100644 godot-mcp/recovery/reports/TASK-102-REPORT.md
+ create mode 100644 godot-mcp/recovery/work/task102/commit-message-report.txt
+ create mode 100644 godot-mcp/recovery/work/task102/commit_stat.ps1
+ create mode 100644 godot-mcp/recovery/work/task102/git_two_repos.ps1
+ create mode 100644 godot-mcp/recovery/work/task102/logs/check-session-match3-final.txt
+ create mode 100644 godot-mcp/recovery/work/task102/logs/check-session-match3-final.txt.err.txt
+ create mode 100644 godot-mcp/recovery/work/task102/logs/check-session-platformer-final.txt
+ create mode 100644 godot-mcp/recovery/work/task102/logs/check-session-platformer-final.txt.err.txt
+ create mode 100644 godot-mcp/recovery/work/task102/logs/check-session-ps-match3-final.txt
+ create mode 100644 godot-mcp/recovery/work/task102/logs/check-session-ps-platformer-final.txt
+ create mode 100644 godot-mcp/recovery/work/task102/logs/commit-stat.txt
+ create mode 100644 godot-mcp/recovery/work/task102/logs/commit-stat.txt.cmd
+ create mode 100644 godot-mcp/recovery/work/task102/logs/commit-stat.txt.err.txt
+ create mode 100644 godot-mcp/recovery/work/task102/logs/git-two-repos.txt
+ create mode 100644 godot-mcp/recovery/work/task102/logs/git-two-repos.txt.cmd
+ create mode 100644 godot-mcp/recovery/work/task102/logs/git-two-repos.txt.err.txt
+COMMIT_EXIT=0

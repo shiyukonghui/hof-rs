@@ -1,0 +1,6 @@
+warning: in the working copy of 'godot-mcp/recovery/reports/TASK-102-REPORT.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'godot-mcp/recovery/work/task102/commit-message-report.txt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'godot-mcp/recovery/work/task102/commit_stat.ps1', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'godot-mcp/recovery/work/task102/git_two_repos.ps1', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'godot-mcp/recovery/work/task102/logs/commit-stat.txt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'godot-mcp/recovery/work/task102/logs/git-two-repos.txt', LF will be replaced by CRLF the next time Git touches it
