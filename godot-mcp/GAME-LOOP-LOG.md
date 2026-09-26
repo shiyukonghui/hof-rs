@@ -23,6 +23,8 @@
 | 7 | Pac-Man | C# | 80（编辑器 16 / 游戏 64） | **80/80（100%）**（编辑器 16/16、游戏 64/64） | 编辑器：`failed=1`（**声明的同名拒绝**）、`ok_effect=1`、`ok_file_effect=7`、`ok_no_effect=7`；游戏：`failed=1`（**声明的边界调用**，`-32001`）、`ok_effect=13`、`ok_file_effect=32`、`ok_no_effect=18` | **0 / 1**（**P-1**：会话把 `GhostSteps` 的**累计总数**当成一次 `StepGhosts` 的**增量**，`g15` 期望 12 实得 16；已把增量做成真导出属性 `LastPatrolSteps` 并重跑 r2） | `runs\pacman\pac-task098-r2\`（首轮 `pac-task098-r1`） | 第 7 个游戏。**像素差 15/80 非零**（编辑器 1/16、游戏 14/64），`user://` 五帧逐对：`pac-t0`→`t1` **18888 px**、`t1`→`t2` **1853 px**、`t2`→`t3` **18546 px**、`t3`→`t4` **9586 px**；独立复算与 `report.json` **0 处不符**。19×13 的网格迷宫、**125 颗豆子**、4 个幽灵与吃豆人**全部运行期新建**（`e06` 同名批量被 `-32000` 拒绝）。断言把规则逐条钉住：`TotalPellets=125`、`PelletsRemaining` 125→2→1→0、`PelletsEaten` 0→1、`Score` 0→10、`PacCol` 9→10、撞墙**不移动**（`blocked at=9,8 from=9,9`）、幽灵抓捕 `Lives` 3→**2**→**0**、`Won` true（豆子清空）/ false（被抓）；幽灵巡逻由 `LastPatrolSteps` 的**增量**（末轮 =5）与 30 帧移动采样两路钉住（`Ghost0Col` 30 个不同值）；`running_game_run_test_scenario` 用声明的 `pac_right` 动作真的把 `PacCol` 推过 9（`all_passed=true`、`passed=1`）。**一处游戏侧的自保**：重建棋盘时先 `RemoveChild` 再 `QueueFree`，否则同一帧里重建的 `Wall_r2_c3` 会因为名字还被占着而被引擎改名成 `@ColorRect@N` —— 与 D-3 同一个陷阱；`g64` 的 248 个节点里 **0 个 `@` 开头的名字** |
 | 8 | Frogger | C# | 90（编辑器 16 / 游戏 74） | **90/90（100%）**（编辑器 16/16、游戏 74/74） | 编辑器：`failed=1`（**声明的同名拒绝**）、`ok_effect=1`、`ok_file_effect=7`、`ok_no_effect=7`；游戏：`failed=1`（**声明的边界调用**，`-32001`）、`ok_effect=16`、`ok_file_effect=42`、`ok_no_effect=15` | **0 / 0**（首轮一次通过，没有发现工具缺陷或游戏/驱动缺陷） | `runs\frogger\frog-task099-r1\` | 第 8 个游戏。**像素差 17/90 非零**（编辑器 1/16、游戏 16/74），`user://` 五帧逐对：`frog-t0`→`t1` **8864 px**、`t1`→`t2` **9178 px**、`t2`→`t3` **9291 px**、`t3`→`t4` **9943 px**，五个帧 sha 互不相同；独立复算（`pixel_recompute.py` 逐调用对 + `frames_recompute.py` 保存帧）与 `report.json` **0 处不符**。13×15 的格点：5 条车道（row 9–13）各一辆车、row 8 是隔离带、5 行河（row 3–7）各一根两格浮木、row 0 是终点线、row 14 是出发点；**地形条、5 辆车、5 根浮木与青蛙全部运行期新建**，场景只有 3 个静态节点（`Background`/`Hud`/`Status`）。断言把规则逐条钉住：`FrogCol`/`FrogRow`（起点 6,14）、出界**不移动**（`blocked at=-1,14`）、空车道可走（13→12）、车撞 `Lives` 3→2 并回到起点、落水 `Lives` 3→2、浮木**载着青蛙走**（`FrogCol` 6→5 且仍在 row 4）、第五个家 `HomesReached` 4→5 + `Score`=50 + `Won`/`GameOver`=true、最后一命被撞后 `Lives`=0 + `Won`=false、屏幕文本 `ALL HOMES FILLED` / `GAME OVER`。确定性：`CarSpeed` 默认 0、`PollInput` 默认 false，运动只经固定步长钩子（`StepTraffic(5)` 的**增量** `LastTrafficSteps=5`，总数 `TrafficSteps=9` 含 30 帧巡逻采样让时钟推进的 4 步 —— 与 P-1 同一条教训，本轮一开始就用增量断言）；冻结基线（12 帧 `FrogCol`/`FrogRow`/`Car0Col`/`Log0Col` 各 1 个值、`Ticks` 12 个不同值）对移动采样（30 帧 `Car0Col`/`Log0Col` 逐帧变化）。`e06` 的**同名批量被 `-32000` 拒绝**且 `e05`/`e09` 文件 sha 一字未变；声明的 `frog_up` 动作真的把 `FrogRow` 推过 14（`all_passed=true`） |
 | 9 | Flappy Bird | C# | 92（编辑器 14 / 游戏 78） | **92/92（100%）**（编辑器 14/14、游戏 78/78） | 编辑器：`failed=1`（**声明的同名拒绝**）、`ok_effect=1`、`ok_file_effect=5`、`ok_no_effect=7`；游戏：`failed=1`（**声明的边界调用**，`-32001`）、`ok_effect=21`、`ok_file_effect=41`、`ok_no_effect=15` | **0 / 1**（**F-1**：`AutoRun` 把 `delta*60` 截断成 0，高帧率下自重跑时钟一格都不走；`g44` 的 30 帧采样抓到 —— `Ticks` 在走而 `Pipe0X` 恒定；已改成累加器并重跑 r2） | `runs\flappy\flappy-task099-r2\`（首轮 `runs\flappy\flappy-task099-r1\`） | 第 9 个游戏。**像素差 22/92 非零**（编辑器 1/14、游戏 21/78），`user://` 五帧逐对：`flappy-t0`→`t1` **34326 px**、`t1`→`t2` **98611 px**、`t2`→`t3` **1699 px**、`t3`→`t4` **99094 px**，五个帧 sha 互不相同；独立复算与 `report.json` **0 处不符**。r2 的五个帧与 r1 **逐字节相同**（同一条会话、同一台机器、确定性状态机 —— 「同一个被钉住的状态画出同一张图」）。**一个固定帧 = 1/60 s**：`AutoRun` 默认 false，世界只经 `Flap()` / `StepFrames(n)` / `StepUntilPass(n)` 前进，于是「一帧重力 = 23.33 px/s」「天花板钳到 y=0 且速度归零」「落地停在 y=564」都是确切值；通过管子是最强的一条确定性证据：`StepUntilPass(400)` 依次给出 **164 / 100 / 100 / 100 / 100 帧**、`LastPassDelta=1`、`Score` 10/20/…/50，第五根通过时 `Won`/`GameOver`=true（`PipesToClear=5`），期间 `PipesRecycled>0` 证明管子真的回到右边缘。多帧采样：冻结基线（12 帧 `BirdY`/`Pipe0X` 各 1 个值、`Ticks` 12 个不同值）对滚动采样（`SetAutoRun(true)` + 30 帧，**r2 里 `Pipe0X` 17 个不同值 576→492** 而 `BirdY` 恒定）；另有 `StepFrames(5)` 使 `Pipe0X` 600→**585**（180 px/s × 5/60 s = 15 px）。失败路径也被钉住：撞管 `GameOver`=true 且 `Score`=0、落地 `GameOver`=true + `BirdY`=564、屏幕文本 `COURSE CLEARED` / `GAME OVER`。`e06` 同名批量被 `-32000` 拒绝且文件 sha 未变；两个声明动作 `flap` / `flappy_restart` 都接到载荷的真路径上（后者触发 `BuildWorld()` 重开） |
+| 10 | 2048 | C# | 129（编辑器 16 / 游戏 113） | **129/129（100%）**（编辑器 16/16、游戏 113/113） | 编辑器：`failed=1`（**声明的同名拒绝**）、`ok_effect_observed=1`、`ok_file_effect_observed=7`、`ok_no_effect_observed=7`；游戏：`failed=1`（**声明的边界调用**，`-32001`）、`ok_effect_observed=22`、`ok_file_effect_observed=74`、`ok_no_effect_observed=16` | **0 / 1**（**G1**：`LastAutoSteps` 一个属性两个写者 —— `AutoStep` 钩子刚写完，下一帧的时钟又把它写回 0；r1 的两条增量断言实得 0。已拆成 `LastHookSteps`（钩子）与 `LastAutoSteps`（每帧时钟）两个属性并重跑 r2） | `runs\game2048\2048-task100-r2`（首轮 `runs\game2048\2048-task100-r1`） | 第 10 个游戏。4×4 未知数网格、四向滑动合并、计分、2048 取胜、无路可走判负、**非法移动被拒**（棋盘一字不变 + `MovesRejected` 计数）。**像素差 26/129 非零**（编辑器 1/16、游戏 25/113），`user://` 六帧逐对 **13055 / 15543 / 171792 / 148841 / 26181 px**，六个 sha 互不相同；独立复算（`pixel_recompute.py` 逐调用对 + `frames_recompute.py` 保存帧）与 `report.json` **0 处不符**。断言 **70 PASS + 1 条声明的边界失败**（node-state）＋ **2 条屏幕文本 PASS** ＋ **1 条场景断言 PASS** = **73 PASS**。四向都钉过确切棋盘（左 `2,2,4,0`→`4,4,0,0`、右 →`0,0,4,4`、上 →`4,4`、下 →底两格），合并得分 4→12→2048；赢局 `MaxTile=2048`、`Won=true`、`GameOver=false`；满盘无解 `CanMoveAny=false`、`GameOver=true`、`Won=false`、一动手即被拒；满盘但有一对相等**不算输**。**与帧率无关的增量属性**：`AutoStep(2)`→`LastHookSteps=2`、`AutoStep(3)`→3，而 `LastAutoSteps` 在时钟关闭时为 0；时钟用浮点累加器 `_autoAccum += delta*rate`，`Elapsed` 是每帧 `+= delta` 的浮点秒表（无截断）。多帧采样：冻结基线 12 帧（`GridHash`/`TilesInUse`/`MoveCount` 各 1 个值，`Elapsed`/`Ticks` 各 12 个不同值）对自动时钟 30 帧（`MoveCount` **30 个不同值 6→65**、`AutoSteps` 30 个、`GridHash` 4 个、`LastAutoSteps` {0,1}、`Elapsed`/`Ticks` 各 30 个）。`e06` 同名批量被 `-32000` 拒绝（`conflicts` 3 条），`e05`/`e09` 的 sha `7e7fb1d9…`（813 B）**逐字节相同**；`project_build_csharp` exit 0（3732 ms）、`invalid_count=0`、`editor_get_errors count=0`；三次 `running_game_get_scene_tree` 共 75 个节点名 **0 个 `@` 开头**。声明的 `m2048_left` 动作**按按下沿**只走一步（`InputMoves=1`） |
+| 11 | Minesweeper | C# | 155（编辑器 14 / 游戏 141） | **155/155（100%）**（编辑器 14/14、游戏 141/141） | 编辑器：`failed=1`（**声明的同名拒绝**）、`ok_effect_observed=1`、`ok_file_effect_observed=5`、`ok_no_effect_observed=7`；游戏：`failed=1`（**声明的边界调用**，`-32001`）、`ok_effect_observed=19`、`ok_file_effect_observed=96`、`ok_no_effect_observed=25` | **0 / 1**（**M1**：会话把 `ForceTestState` 会归零的计数器当成会保留 —— r1 的收尾断言 `LastHookSteps eq 2` 实得 0；已改成「钩子、时钟、两条增量断言落在同一块被钉住的盘面上」并加一条显式断言，重跑 r2） | `runs\minesweeper\mine-task100-r2`（首轮 `runs\minesweeper\mine-task100-r1`） | 第 11 个游戏。9×9、10 雷、布雷（种子 LCG，**Python 用同一规则独立复算**出 `0,4\|0,5\|1,6\|2,4\|4,0\|6,0\|7,4\|7,7\|7,8\|8,0` 并作为断言字面量）、翻开、数字提示、标旗、首翻安全、失败与胜利判定、**非法操作被拒**。**像素差 21/155 非零**（编辑器 1/14、游戏 20/141），`user://` 五帧逐对 **194130 / 196947 / 196939 / 195563 px**，五个 sha 互不相同；独立复算 **0 处不符**；r2 的五个帧与 r1 **逐字节相同**（同一个被钉住的状态画出同一张图）。断言 **93 PASS + 1 条声明的边界失败** ＋ **2 条屏幕文本 PASS** ＋ **1 条场景断言 PASS** = **96 PASS**。规则逐条钉住：`MineList` 与复算一致、`SafeCells=71`；**首翻安全**（唯一那颗雷正在点击处 → `MinesRelocated=1`、`Exploded=false`、`MineList` 变成 `0,1`、点中的格子 `ProbeHint=1`）；数字提示（3 雷邻域 `ProbeHint=3`，雷自己 `hint=2`）；标旗与取消（`FlaggedCount` 1→0、`ProbeState` flagged→mine）；三种非法操作（翻已开的、标已开的、翻被标的）全部被拒且盘面不变（`Moves` 不动、`RejectedMoves` 1→2→3、`LastEvent` 含 `reason=already_revealed` / `reason=flagged`）；一次零提示翻开的**泛洪**开出 71 格 → `Won=true`、`GameOver=true`、`Exploded=false`；踩雷 `Exploded=true`、`ExplodedRow/Col=4,4`、`RevealedCount=0`、`Won=false`。与帧率无关的增量 `LastHookSteps`（`AutoStep(2)`→2）在时钟跑过 30 帧后仍是 2，而 `LastAutoSteps` 归 0；`ForceTestState` 把两条都归零（也是一条显式断言）。多帧采样：冻结基线 12 帧（`RevealHash`/`RevealedCount`/`FlaggedCount` 各 1 个值，`Elapsed`/`Ticks` 12 个不同值）对自动扫雷 30 帧（`RevealedCount` **7 个不同值 16→71**、`RevealHash` 7 个、`AutoSteps` 7 个、`Elapsed`/`Ticks` 各 30 个）。`e06` 同名批量被 `-32000` 拒绝，`e05`/`e09` 的 sha `1fcc873e…`（826 B）**逐字节相同**；`project_build_csharp` exit 0（3678 ms）、`invalid_count=0`、`errors count=0`；树里 333 个节点名 **0 个 `@` 开头**；声明的 `mine_reveal_next` 动作按按下沿只翻一格（`InputReveals=1`） |
 
 ---
 
@@ -151,7 +153,41 @@ TASK-098 把台账每一行引用的数字**从它自己引用的那份产物里
    但预检的「有编译输入」那一情形把十道门**真实跑完**（全 `exit=0`，`accept_m1 22/22`），
    作为「跳过逻辑没有把门跑坏」的证据。
 
-### 游戏或驱动缺陷
+### TASK-100 记录（2026-09-27）
+
+1. **第 10、11 款（2048 / Minesweeper）交付**：台账第 10、11 行来自它们自己那一轮的产物
+   （`runs\game2048\2048-task100-r2\report.json`、`runs\minesweeper\mine-task100-r2\report.json`）。
+   **工具缺陷 0 条**；「游戏或驱动缺陷」新增两条 **G1**（载荷：一个属性两个写者，r1 照出来、r2 修好）
+   与 **M1**（会话：把 `ForceTestState` 会归零的计数器当成会保留，r1 照出来、r2 修好）。
+   每一轮的两条非 `ok` 判定都是**声明过的**：`e06` 的同名批量拒绝（`-32000`）与一条故意打在不存在
+   属性上的边界断言（`-32001`）。
+   像素差 26/129（2048 r2）与 21/155（Minesweeper r2）逐对独立复算，**0 处不符**；
+   `user://` 帧链（2048 六帧、Minesweeper 五帧）与 `report.json` 逐值一致、每个 sha 互不相同；
+   Minesweeper r2 的五个帧与 r1 **逐字节相同**（同一个被钉住的状态画出同一张图），
+   2048 r2 的 t0/t1/t2/t3/t5 也与 r1 逐字节相同、只有 t4 不同（自动时钟的帧时序）。
+2. **「会动的证据」两路都有**：①**多帧属性采样**（先冻结基线、再自动时钟 30 帧）——
+   2048 的 `MoveCount` 30 个不同值 6→65、`AutoSteps` 30 个、`Elapsed`/`Ticks` 各 30 个；
+   Minesweeper 的 `RevealedCount` 7 个不同值 16→71、`RevealHash` 7 个、`Elapsed`/`Ticks` 各 30 个。
+   ②**像素差 + 独立复算**（逐调用对 + 保存帧），两款的 `recomputed-vs-trace mismatches = none`。
+3. **时钟全部与帧率无关**：两款都是浮点累加器 `_autoAccum += delta*rate`（不用 `(int)(delta*rate)`，
+   即 F-1 的修法），`Elapsed` 是每帧 `+= delta` 的浮点秒表；每款另有**两个**独立增量属性
+   （`LastHookSteps` = 钩子这次调用走了几步、`LastAutoSteps` = 这一帧的时钟走了几步）。
+   **G1 就是这条纪律的产物**：两个生产者共用一个属性时，采样/断言读到的不再是它要证的那个事实。
+4. **D-3 的拒绝在每一轮证据里**：两款都在建场景那一步**故意再跑一次同名批量**，`e06` 被判 `-32000`
+   并给出 3 条 `conflicts`；`e05`/`e09` 的 `project_read_text_file` sha **逐字节相同**
+   （2048 `7e7fb1d9…`/813 B，Minesweeper `1fcc873e…`/826 B）；两次运行的 `running_game_get_scene_tree`
+   共 75 / 333 个节点名里 **0 个 `@` 开头**。
+5. **确定性布雷可独立复算**：Minesweeper 的默认雷区是种子 LCG 的纯函数，会话生成器**用同一条规则
+   在 Python 里重算**出 `0,4|0,5|1,6|2,4|4,0|6,0|7,4|7,7|7,8|8,0` 并把它作为断言字面量 ——
+   `g07` 与收尾的 `g136` 两条 PASS 都是「实现与独立复算相符」，不是转述。
+6. **`--import` 的关机期访问违例本轮 0 次**：四次导入（2048 r1/r2、Minesweeper r1/r2）全部
+   `IMPORT_EXIT=0`、`import.stderr.txt` 0 字节。累计口径由 3/13 变成 **3/17**（待办 2 不变）。
+7. **门跑器**：本轮**没有模块字节改动**（引擎仓 `git status` 空、`git diff 2385fe2fb..HEAD` 只有两份
+   `.md`），因此按 TASK-099 的预检直接判 `ANCHOR_STRUCTURAL_EQUIVALENT` + `RESULT=SKIP_REBUILD` +
+   `GATES_SKIPPED=1`（exit 0，`runs\gates\task100-doconly\summary.txt`）—— **如实说明：十道门本轮
+   一门未跑**，没有重建、没有 push 代码。理由与 TASK-099 相同：没有编译输入，跑门只会把同一份
+   已经通过的二进制再跑一遍。
+
 
 | id | 游戏 | 现象（证据） | 根因 | 处置 → 重跑结果 |
 |---|---|---|---|---|
@@ -170,6 +206,8 @@ TASK-098 把台账每一行引用的数字**从它自己引用的那份产物里
 | **A-1** | Asteroids（会话） | 首轮 `g36-assert-score-120` 期望 `Score=120`、**实得 100**（`runs\asteroids\ast-task098-r1`）；`assertions.py` 把它列为 PASS 之外的唯一非声明失败 | 会话假设 `ForceTestState` 只换棋盘、**保留**计数器；而它按前五款游戏的确定性规则把**整个状态**钉死（`Score=0`、`AsteroidsSplit=0`、`AsteroidsDestroyed=0`），所以赢局那 100 分**只属于最后一颗小行星**，分列那一步的 20 分已经被重置 | **改**：期望值改成 **100**，并把「20 分钉在 `g19`」写进 `g36` 的注。r2：`g36` PASS（`actual=100`）；`runs\asteroids\ast-task098-r2` 的 25 条断言 = **24 PASS + 1 条声明的边界失败（`-32001`）** |
 | **P-1** | Pac-Man（会话 / 载荷） | 首轮 `g15-assert-patrol-12` 期望 `GhostSteps=12`、**实得 16**（`runs\pacman\pac-task098-r1`） | 会话把 `GhostSteps`（**累计总数**）当成一次 `StepGhosts(12)` 的**增量**；前面那次 30 帧巡逻采样在 `GhostSpeed=8` 下已经让时钟推进了 **4** 步，而**帧率决定它是 3 还是 5** —— 也就是说这条断言就算写对总数也会抖 | **改**：载荷新增真导出属性 **`LastPatrolSteps`**（一次 `StepGhosts` 的增量，被 `GameOver` 截断时也如实记），会话改成「增量 `eq 12`」+「总数 `gt 12`」，断言因此与帧率无关。r2：`g15`/`g16` 双双 PASS；`runs\pacman\pac-task098-r2` 的 30 条断言 = **29 PASS + 1 条声明的边界失败（`-32001`）** |
 | **F-1** | Flappy Bird（载荷） | 首轮 `runs\flappy\flappy-task099-r1` 的 `g44-samples-scroll`：30 帧采样里 `Ticks` 从 31 走到 101（引擎在跑），而 `Pipe0X` **恒定 582**、`BirdY` 恒定 300 —— 「自重跑时钟」一格都没推进世界。**所有断言仍然 PASS**（没有一条断言要求它动），是**多帧采样**把这条缺陷照出来的 | `FlappyBirdGame._Process` 写的是 `frames = (int)((float)delta * FixedFps)`：这台机器上窗口游戏进程跑在 60 fps 以上（采样显示约 144 fps），单帧 `delta*60 < 1`，截断成 0，于是 `StepFrames(0)` 永远不发生。会话里 `SetAutoRun(true)` 的响应本身诚实（`auto_run=True`），**缺陷在载荷的时钟，不在工具** | **改**：改成**累加器** `_autoAccum += delta * FixedFps; frames = (int)_autoAccum; _autoAccum -= frames;`（`SetAutoRun` / `ForceTestState` / 声明动作的重开路径都清零），并在源码注释里写明是这次采样发现的。**重跑 r2**：`g44` 的 `Pipe0X` 变成 **17 个不同值（576→492）**，`BirdY` 仍恒定；`g13` 冻结基线不变（`Pipe0X` 仍 1 个值）；断言仍 **38 PASS + 1 条声明的边界失败**；像素差 21/92 → **22/92**（多出来的那一对正是滚动采样后的那一帧） |
+| **G1** | 2048（载荷） | 首轮 `runs\game2048\2048-task100-r1` 的 `g88-assert-last-auto-2` 期望 `LastAutoSteps=2` 实得 **0**、`g110-assert-last-3` 期望 3 实得 **0**；而同一刻 `AutoSteps=2`、`MoveCount=2` 双双 PASS —— 钩子确实走了两步，只是**读到的是别人写的值** | `LastAutoSteps` 有**两个写者**：`AutoStep(n)` 钩子写「这次调用走了几步」，`_Process` 每帧结尾写「这一帧的时钟走了几步」（时钟关闭时写 0）。断言在钩子返回之后、下一帧之后才执行，于是读到 0。**这是 P-1 的同一条教训换了个形态**：一个属性两个生产者，读回就不再是那个生产者的事实 | **改**：拆成两个属性 —— `LastHookSteps`（只有 `AutoStep` 写，时钟一个字节都不碰）与 `LastAutoSteps`（只有每帧时钟写）。r2：`g88-assert-last-hook-2`=2、`g88b-assert-last-auto-0`=0、`g110-assert-last-hook-3`=3 **三条同时 PASS**；r1 的两条失败帧保留为对照 |
+| **M1** | Minesweeper（会话） | 首轮 `runs\minesweeper\mine-task100-r1` 的 `g124b-assert-hook-intact` 期望 `LastHookSteps=2` 实得 **0**，而 `g113-assert-last-hook-2`（同一事实、早 11 次调用）**PASS** | 会话在这两条断言之间插了一次 `ForceTestState`，而它按前 11 款游戏的确定性规则把**整个状态**钉死 —— 包括这条增量。**载荷是对的，是会话的假设错了**，与 A-1 / T-3 同一类 | **改**：让「钩子 → 开时钟 → 30 帧采样 → 关时钟 → 两条增量断言」落在**同一块被钉住的盘面**上（删掉中间那次 `ForceTestState`），并**新增一条显式断言** `ForceTestState` 之后 `LastHookSteps=0`（把 A-1 的教训写成断言而不是假设）。r2：`g113`/`g113b`/`g118b`/`g124`/`g126b` 全 PASS；r1 的失败帧保留为对照 |
 
 ---
 
@@ -201,6 +239,14 @@ TASK-098 把台账每一行引用的数字**从它自己引用的那份产物里
    下一款建议继续复制同一套模板（静态节点用批量工具一次建好、动态对象在运行期新建、`ForceTestState` 一个调用
    钉死状态、**多帧采样先于会改变状态的那一步**、**任何「钩子做了多少」都做成与帧率无关的增量属性**），
    并在建场景的那一步**故意再跑一次同名批量**，让 D-3 的拒绝在每一轮的证据里都留下一条。
+   **（TASK-100 续）** 台账已到第 11 行（第 10 款 2048 `runs\game2048\2048-task100-r2`，129/129 facts、
+   像素差 26/129 非零；第 11 款 Minesweeper `runs\minesweeper\mine-task100-r2`，155/155 facts、
+   像素差 21/155 非零）。模板再加一条：**一个属性只能有一个写者** —— 同一个「做了多少」的量若既被
+   固定步长钩子写、又被每帧时钟写，断言读到的就不是它要证的那个生产者的事实（**G1**）；两款因此各有
+   `LastHookSteps`（钩子）与 `LastAutoSteps`（每帧时钟）两个属性，且都在采样里出现过。
+   下一款（第 12 款）继续复制同一套模板：静态节点一次批量建好、动态对象运行期新建、`ForceTestState`
+   一次钉死、**多帧采样先于会改变状态的那一步**、**增量属性与帧率无关且单一写者**、建场景那一步故意
+   重跑同名批量、任何时钟都用浮点累加器。
 5. **门跑器 G-1 已修（TASK-099）**：`tools\run_gates.ps1` 的锚点默认取二进制自己的 `--version`，
    纯非编译（文档）提交直接判 `ANCHOR_STRUCTURAL_EQUIVALENT` + 跳过十道门并打印非编译文件清单；
    有编译输入（committed 或工作树）仍照常跑门。复现两情形：

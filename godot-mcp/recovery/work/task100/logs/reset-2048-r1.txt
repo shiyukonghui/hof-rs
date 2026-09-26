@@ -1,0 +1,23 @@
+manifest : F:\moonbit-hof-rs\godot-mcp\recovery\work\task100\archive\game2048-r1.manifest.json (129 files, 8399363 bytes)
+moved    : F:\moonbit-hof-rs\godot-mcp\projects\game2048 -> F:\moonbit-hof-rs\godot-mcp\recovery\work\task100\archive\game2048-r1
+new_game : process exit 0
+  | template : F:\moonbit-hof-rs\godot-mcp\projects\_template
+  | dest     : F:\moonbit-hof-rs\godot-mcp\projects\game2048
+  | name     : game2048
+  | class    : Game2048Game
+  |   substituted: project.godot
+  |   substituted: __NAME__.csproj
+  |   substituted: scenes\main.tscn
+  |   substituted: src\__CLASS__.cs
+  |   generated : README.md (from _template\README.game.md)
+  | placeholder files left: 0
+  |   .gitignore
+  |   game2048.csproj
+  |   NuGet.config
+  |   project.godot
+  |   README.md
+  |   scenes\main.tscn
+  |   src\Game2048Game.cs
+  | created  : F:\moonbit-hof-rs\godot-mcp\projects\game2048
+  | NEWGAME_EXIT=0
+ready    : F:\moonbit-hof-rs\godot-mcp\projects\game2048

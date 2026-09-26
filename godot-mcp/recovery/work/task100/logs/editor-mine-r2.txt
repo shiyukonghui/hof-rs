@@ -1,0 +1,14 @@
+run: F:\moonbit-hof-rs\godot-mcp\runs\minesweeper\mine-task100-r2
+e03-batch-add-static           count=3 available=None
+e05-read-1                     path=res://scenes/main.tscn sha256=1fcc873e8ce5b7f66ee13c09a8c18bb7f24098d6a5556bd88dd3e115e34b3845 size=826
+e06-batch-add-static-again     ERROR code=-32000 conflicts=3
+      conflict name=Background existing=Background node_path=Background
+      conflict name=Hud existing=Hud node_path=Hud
+      conflict name=Status existing=Status node_path=Status
+e09-read-2                     path=res://scenes/main.tscn sha256=1fcc873e8ce5b7f66ee13c09a8c18bb7f24098d6a5556bd88dd3e115e34b3845 size=826
+e12-build-csharp               exit_code=0 duration_ms=3678
+e13-validate-scripts           invalid_count=0 count=1 not_compiled=1
+e14-errors                     count=0 available=True
+tree node names seen : 333 (across every scene-tree call)
+engine-renamed @names: 0 []
+last tree call: g138-final-tree

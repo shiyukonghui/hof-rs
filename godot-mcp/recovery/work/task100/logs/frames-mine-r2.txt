@@ -1,0 +1,14 @@
+== minesweeper : 5 frame(s) in C:\Users\wyl\AppData\Roaming\Godot\app_userdata\minesweeper
+  frame        size         bytes  sha256[0:16]     vs report
+  mine-t0.png  800x600       9857  9B14CAF196AB86F3 same
+  mine-t1.png  800x600      10707  6876CBB6227EFB3C same
+  mine-t2.png  800x600      11555  23980F338D478588 same
+  mine-t3.png  800x600      12173  8C7F1F10674F2221 same
+  mine-t4.png  800x600      10440  426BB7D7890E1B12 same
+  distinct sha256 among the frames: 5/5
+  pair diffs (recomputed here):
+    mine-t0.png  -> mine-t1.png  engine=194130  any=194229  total=480000  (report.json agrees)
+    mine-t1.png  -> mine-t2.png  engine=196947  any=197216  total=480000  (report.json agrees)
+    mine-t2.png  -> mine-t3.png  engine=196939  any=197216  total=480000  (report.json agrees)
+    mine-t3.png  -> mine-t4.png  engine=195563  any=195672  total=480000  (report.json agrees)
+  pairs where the report and this recomputation disagree: 0

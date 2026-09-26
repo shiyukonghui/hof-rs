@@ -1,0 +1,23 @@
+manifest : F:\moonbit-hof-rs\godot-mcp\recovery\work\task100\archive\minesweeper-r1.manifest.json (129 files, 8417591 bytes)
+moved    : F:\moonbit-hof-rs\godot-mcp\projects\minesweeper -> F:\moonbit-hof-rs\godot-mcp\recovery\work\task100\archive\minesweeper-r1
+new_game : process exit 0
+  | template : F:\moonbit-hof-rs\godot-mcp\projects\_template
+  | dest     : F:\moonbit-hof-rs\godot-mcp\projects\minesweeper
+  | name     : minesweeper
+  | class    : MinesweeperGame
+  |   substituted: project.godot
+  |   substituted: __NAME__.csproj
+  |   substituted: scenes\main.tscn
+  |   substituted: src\__CLASS__.cs
+  |   generated : README.md (from _template\README.game.md)
+  | placeholder files left: 0
+  |   .gitignore
+  |   minesweeper.csproj
+  |   NuGet.config
+  |   project.godot
+  |   README.md
+  |   scenes\main.tscn
+  |   src\MinesweeperGame.cs
+  | created  : F:\moonbit-hof-rs\godot-mcp\projects\minesweeper
+  | NEWGAME_EXIT=0
+ready    : F:\moonbit-hof-rs\godot-mcp\projects\minesweeper

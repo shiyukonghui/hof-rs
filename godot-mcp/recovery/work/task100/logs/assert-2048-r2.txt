@@ -1,0 +1,75 @@
+g03-assert-cols                    PASS  /root/Main eq 4.0                              actual=4
+g04-assert-rows                    PASS  /root/Main eq 4.0                              actual=4
+g05-assert-target                  PASS  /root/Main eq 2048.0                           actual=2048
+g06-assert-used-0                  PASS  /root/Main eq 0.0                              actual=0
+g07-assert-empty-16                PASS  /root/Main eq 16.0                             actual=16
+g08-assert-max-0                   PASS  /root/Main eq 0.0                              actual=0
+g09-assert-score-0                 PASS  /root/Main eq 0.0                              actual=0
+g10-assert-moves-0                 PASS  /root/Main eq 0.0                              actual=0
+g103-assert-input-moves-1          PASS  /root/Main eq 1.0                              actual=1
+g106-assert-unknown-property       ERROR -32001                                         Property 'NoSuchProperty' on node '/root
+g11-assert-can-move                PASS  /root/Main eq True                             actual=True
+g110-assert-last-hook-3            PASS  /root/Main eq 3.0                              actual=3
+g12-assert-over-0                  PASS  /root/Main eq False                            actual=False
+g13-assert-won-0                   PASS  /root/Main eq False                            actual=False
+g16-assert-last-auto-0             PASS  /root/Main eq 0.0                              actual=0
+g18-assert-grid-before             PASS  /root/Main eq 2,2,4,0/0,0,0,0/0,0,0,0/0,0,0,0  actual=2,2,4,0/0,0,0,0/0,0,0,0/0,0,0,0
+g19-assert-used-3                  PASS  /root/Main eq 3.0                              actual=3
+g21-assert-grid-after              PASS  /root/Main eq 4,4,0,0/0,0,0,0/0,0,0,0/0,0,0,0  actual=4,4,0,0/0,0,0,0/0,0,0,0/0,0,0,0
+g22-assert-score-4                 PASS  /root/Main eq 4.0                              actual=4
+g23-assert-last-gain               PASS  /root/Main eq 4.0                              actual=4
+g24-assert-last-merges             PASS  /root/Main eq 1.0                              actual=1
+g25-assert-moves-1                 PASS  /root/Main eq 1.0                              actual=1
+g26-assert-rejected-0              PASS  /root/Main eq 0.0                              actual=0
+g27-assert-max-4                   PASS  /root/Main eq 4.0                              actual=4
+g28-assert-moved-true              PASS  /root/Main eq True                             actual=True
+g30-assert-grid-8                  PASS  /root/Main eq 8,0,0,0/0,0,0,0/0,0,0,0/0,0,0,0  actual=8,0,0,0/0,0,0,0/0,0,0,0/0,0,0,0
+g31-assert-score-12                PASS  /root/Main eq 12.0                             actual=12
+g32-assert-merges-2                PASS  /root/Main eq 2.0                              actual=2
+g33-assert-moves-2                 PASS  /root/Main eq 2.0                              actual=2
+g36-assert-moves-still-2           PASS  /root/Main eq 2.0                              actual=2
+g37-assert-rejected-1              PASS  /root/Main eq 1.0                              actual=1
+g38-assert-moved-false             PASS  /root/Main eq False                            actual=False
+g39-assert-grid-unchanged          PASS  /root/Main eq 8,0,0,0/0,0,0,0/0,0,0,0/0,0,0,0  actual=8,0,0,0/0,0,0,0/0,0,0,0/0,0,0,0
+g40-assert-reason                  PASS  /root/Main contains rejected reason=no_change  actual=rejected reason=no_change dir=3 h
+g42-assert-rejected-2              PASS  /root/Main eq 2.0                              actual=2
+g43-assert-grid-still              PASS  /root/Main eq 8,0,0,0/0,0,0,0/0,0,0,0/0,0,0,0  actual=8,0,0,0/0,0,0,0/0,0,0,0/0,0,0,0
+g46-assert-grid-right              PASS  /root/Main eq 0,0,4,4/0,0,0,0/0,0,0,0/0,0,0,0  actual=0,0,4,4/0,0,0,0/0,0,0,0/0,0,0,0
+g47-assert-score-right             PASS  /root/Main eq 4.0                              actual=4
+g50-assert-grid-up                 PASS  /root/Main eq 4,0,0,0/4,0,0,0/0,0,0,0/0,0,0,0  actual=4,0,0,0/4,0,0,0/0,0,0,0/0,0,0,0
+g51-assert-score-up                PASS  /root/Main eq 4.0                              actual=4
+g52-assert-merges-up               PASS  /root/Main eq 1.0                              actual=1
+g55-assert-grid-down               PASS  /root/Main eq 0,0,0,0/0,0,0,0/4,0,0,0/4,0,0,0  actual=0,0,0,0/0,0,0,0/4,0,0,0/4,0,0,0
+g56-assert-score-down              PASS  /root/Main eq 4.0                              actual=4
+g58-assert-max-before              PASS  /root/Main eq 1024.0                           actual=1024
+g59-assert-not-won-yet             PASS  /root/Main eq False                            actual=False
+g61-assert-max-2048                PASS  /root/Main eq 2048.0                           actual=2048
+g62-assert-won                     PASS  /root/Main eq True                             actual=True
+g63-assert-not-over-yet            PASS  /root/Main eq False                            actual=False
+g64-assert-gain-2048               PASS  /root/Main eq 2048.0                           actual=2048
+g65-assert-score-2048              PASS  /root/Main eq 2048.0                           actual=2048
+g69-assert-full                    PASS  /root/Main eq 16.0                             actual=16
+g70-assert-empty-0                 PASS  /root/Main eq 0.0                              actual=0
+g71-assert-cannot-move             PASS  /root/Main eq False                            actual=False
+g72-assert-over                    PASS  /root/Main eq True                             actual=True
+g73-assert-not-won                 PASS  /root/Main eq False                            actual=False
+g75-assert-rejected-1              PASS  /root/Main eq 1.0                              actual=1
+g76-assert-moves-0                 PASS  /root/Main eq 0.0                              actual=0
+g77-assert-grid-loss               PASS  /root/Main eq 2,4,2,4/4,2,4,2/2,4,2,4/4,2,4,2  actual=2,4,2,4/4,2,4,2/2,4,2,4/4,2,4,2
+g78-assert-reason-over             PASS  /root/Main contains reason=game_over           actual=rejected reason=game_over dir=3 m
+g82-assert-full-2                  PASS  /root/Main eq 16.0                             actual=16
+g83-assert-can-still-move          PASS  /root/Main eq True                             actual=True
+g84-assert-not-over-2              PASS  /root/Main eq False                            actual=False
+g86-assert-moves-0                 PASS  /root/Main eq 0.0                              actual=0
+g88-assert-last-hook-2             PASS  /root/Main eq 2.0                              actual=2
+g88b-assert-last-auto-0            PASS  /root/Main eq 0.0                              actual=0
+g89-assert-auto-total-2            PASS  /root/Main eq 2.0                              actual=2
+g90-assert-moves-2                 PASS  /root/Main eq 2.0                              actual=2
+g91-assert-no-merge                PASS  /root/Main eq 0.0                              actual=0
+g95-assert-moves-grew              PASS  /root/Main gt 2.0                              actual=70
+g96-assert-grid-changed            PASS  /root/Main gt 2.0                              actual=78
+g98-assert-last-auto-0             PASS  /root/Main eq 0.0                              actual=0
+------------------------------------------------------------------------------
+assertions found: 71  ->  ERROR=1, PASS=70
+non-passing: 0 FAIL, 1 ERROR
+   g106-assert-unknown-property | -32001 | Property 'NoSuchProperty' on node '/root/Main' not found

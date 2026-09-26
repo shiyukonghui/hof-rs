@@ -1,0 +1,1496 @@
+{
+ "import": true,
+ "calls": [
+  {
+   "tag": "e01-edit-game",
+   "port": "editor",
+   "tool": "project_edit_script",
+   "arguments": {
+    "path": "res://src/Game2048Game.cs",
+    "content_file": "payload/Game2048Game.cs"
+   },
+   "note": "the whole game is written through the MCP script writer (the template stub is replaced)"
+  },
+  {
+   "tag": "e02-open-scene",
+   "port": "editor",
+   "tool": "editor_open_scene",
+   "arguments": {
+    "path": "res://scenes/main.tscn"
+   },
+   "note": "the template scene carries the root Main (Node2D) the script is attached to"
+  },
+  {
+   "tag": "e03-batch-add-static",
+   "port": "editor",
+   "tool": "editor_add_nodes_batch",
+   "arguments": {
+    "nodes": [
+     {
+      "type": "ColorRect",
+      "name": "Background",
+      "parent_path": ".",
+      "properties": {
+       "offset_left": 0,
+       "offset_top": 0,
+       "offset_right": 800,
+       "offset_bottom": 600,
+       "color": {
+        "r": 0.04,
+        "g": 0.04,
+        "b": 0.06,
+        "a": 1
+       }
+      }
+     },
+     {
+      "type": "Label",
+      "name": "Hud",
+      "parent_path": ".",
+      "properties": {
+       "offset_left": 20,
+       "offset_top": 8,
+       "offset_right": 560,
+       "offset_bottom": 46,
+       "text": "SCORE 0  MOVES 0  MAX 0",
+       "theme_override_font_sizes/font_size": 26
+      }
+     },
+     {
+      "type": "Label",
+      "name": "Status",
+      "parent_path": ".",
+      "properties": {
+       "offset_left": 560,
+       "offset_top": 8,
+       "offset_right": 795,
+       "offset_bottom": 46,
+       "text": "JOIN THE TILES",
+       "theme_override_font_sizes/font_size": 24
+      }
+     }
+    ]
+   },
+   "note": "the three static nodes of the scene, through the batch tool: a background and two labels; the board frame and all sixteen tiles are created at run time"
+  },
+  {
+   "tag": "e04-save-1",
+   "port": "editor",
+   "tool": "editor_save_scene",
+   "arguments": {},
+   "note": "the scene with the three static nodes on disk: sha A"
+  },
+  {
+   "tag": "e05-read-1",
+   "port": "editor",
+   "tool": "project_read_text_file",
+   "arguments": {
+    "path": "res://scenes/main.tscn"
+   },
+   "note": "sha A and the exact bytes"
+  },
+  {
+   "tag": "e06-batch-add-static-again",
+   "port": "editor",
+   "tool": "editor_add_nodes_batch",
+   "arguments": {
+    "nodes": [
+     {
+      "type": "ColorRect",
+      "name": "Background",
+      "parent_path": ".",
+      "properties": {
+       "offset_left": 0,
+       "offset_top": 0,
+       "offset_right": 800,
+       "offset_bottom": 600,
+       "color": {
+        "r": 0.04,
+        "g": 0.04,
+        "b": 0.06,
+        "a": 1
+       }
+      }
+     },
+     {
+      "type": "Label",
+      "name": "Hud",
+      "parent_path": ".",
+      "properties": {
+       "offset_left": 20,
+       "offset_top": 8,
+       "offset_right": 560,
+       "offset_bottom": 46,
+       "text": "SCORE 0  MOVES 0  MAX 0",
+       "theme_override_font_sizes/font_size": 26
+      }
+     },
+     {
+      "type": "Label",
+      "name": "Status",
+      "parent_path": ".",
+      "properties": {
+       "offset_left": 560,
+       "offset_top": 8,
+       "offset_right": 795,
+       "offset_bottom": 46,
+       "text": "JOIN THE TILES",
+       "theme_override_font_sizes/font_size": 24
+      }
+     }
+    ]
+   },
+   "note": "REAL-DEVELOPMENT PROOF of the TASK-097 fix: the same batch a second time must be REFUSED (-32000, one conflict per node) instead of the engine renaming it into a duplicate layer"
+  },
+  {
+   "tag": "e07-tree-after-refusal",
+   "port": "editor",
+   "tool": "editor_get_scene_tree",
+   "arguments": {},
+   "note": "the tree after the refusal: Main + the three named nodes, no @Type@N automatic name"
+  },
+  {
+   "tag": "e08-save-2",
+   "port": "editor",
+   "tool": "editor_save_scene",
+   "arguments": {},
+   "note": "saving after the refusal must reproduce the same file"
+  },
+  {
+   "tag": "e09-read-2",
+   "port": "editor",
+   "tool": "project_read_text_file",
+   "arguments": {
+    "path": "res://scenes/main.tscn"
+   },
+   "note": "sha B; A == B is the proof that the refused batch wrote nothing"
+  },
+  {
+   "tag": "e10-action-up",
+   "port": "editor",
+   "tool": "editor_add_input_action",
+   "arguments": {
+    "action": "m2048_up",
+    "key": "W"
+   },
+   "note": "the four directions"
+  },
+  {
+   "tag": "e11-action-right",
+   "port": "editor",
+   "tool": "editor_add_input_action",
+   "arguments": {
+    "action": "m2048_right",
+    "key": "D"
+   },
+   "note": "right"
+  },
+  {
+   "tag": "e12-action-down",
+   "port": "editor",
+   "tool": "editor_add_input_action",
+   "arguments": {
+    "action": "m2048_down",
+    "key": "S"
+   },
+   "note": "down"
+  },
+  {
+   "tag": "e13-action-left",
+   "port": "editor",
+   "tool": "editor_add_input_action",
+   "arguments": {
+    "action": "m2048_left",
+    "key": "A"
+   },
+   "note": "left"
+  },
+  {
+   "tag": "e14-build-csharp",
+   "port": "editor",
+   "tool": "project_build_csharp",
+   "arguments": {
+    "configuration": "Debug",
+    "timeout_ms": 300000,
+    "rescan": true
+   },
+   "note": "compile the game the MCP script writer just wrote"
+  },
+  {
+   "tag": "e15-validate-scripts",
+   "port": "editor",
+   "tool": "project_validate_scripts",
+   "arguments": {},
+   "note": "the engine's own per-file verdict"
+  },
+  {
+   "tag": "e16-errors",
+   "port": "editor",
+   "tool": "editor_get_errors",
+   "arguments": {},
+   "note": "the editor log's ERROR lines after the build"
+  },
+  {
+   "tag": "g01-scene-tree",
+   "port": "game",
+   "tool": "running_game_get_scene_tree",
+   "arguments": {},
+   "note": "the running tree: the three static nodes plus the board frame and the sixteen tiles created at run time"
+  },
+  {
+   "tag": "g02-readback-t0",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().Dump()"
+   },
+   "note": "the whole board as one line"
+  },
+  {
+   "tag": "g03-assert-cols",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Cols",
+    "operator": "eq",
+    "expected": 4
+   },
+   "note": "the board is four columns wide"
+  },
+  {
+   "tag": "g04-assert-rows",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Rows",
+    "operator": "eq",
+    "expected": 4
+   },
+   "note": "and four rows tall"
+  },
+  {
+   "tag": "g05-assert-target",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "TargetTile",
+    "operator": "eq",
+    "expected": 2048
+   },
+   "note": "2048 is the winning tile"
+  },
+  {
+   "tag": "g06-assert-used-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "TilesInUse",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "the board starts empty"
+  },
+  {
+   "tag": "g07-assert-empty-16",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "EmptyCells",
+    "operator": "eq",
+    "expected": 16
+   },
+   "note": "so all sixteen cells are free"
+  },
+  {
+   "tag": "g08-assert-max-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "MaxTile",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "no tile yet"
+  },
+  {
+   "tag": "g09-assert-score-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Score",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "nothing has been scored yet"
+  },
+  {
+   "tag": "g10-assert-moves-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "MoveCount",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "no move has been made"
+  },
+  {
+   "tag": "g11-assert-can-move",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "CanMoveAny",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "an empty board always has a move"
+  },
+  {
+   "tag": "g12-assert-over-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GameOver",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "the game starts alive"
+  },
+  {
+   "tag": "g13-assert-won-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Won",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "and unwon"
+  },
+  {
+   "tag": "g14-shot-t0",
+   "port": "game",
+   "tool": "running_game_capture_screenshot",
+   "arguments": {
+    "save_path": "user://g2048-t0.png"
+   },
+   "note": "the first frame: the empty 4x4 board, the HUD and the status label"
+  },
+  {
+   "tag": "g15-samples-frozen",
+   "port": "game",
+   "tool": "running_game_get_node_property_samples",
+   "arguments": {
+    "node_path": "Main",
+    "properties": [
+     "GridHash",
+     "TilesInUse",
+     "MoveCount",
+     "Elapsed",
+     "Ticks"
+    ],
+    "frame_count": 12,
+    "frame_interval": 1
+   },
+   "note": "determinism baseline: with AutoPlay 0 nothing on the board moves while the clock runs (grid hash and move count constant, Elapsed and Ticks both increasing)"
+  },
+  {
+   "tag": "g16-assert-last-auto-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastAutoSteps",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "the auto-play delta is zero while the clock is off"
+  },
+  {
+   "tag": "g17-left-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().ForceTestState(\"grid=2,2,4,0|0,0,0,0|0,0,0,0|0,0,0,0\")"
+   },
+   "note": "pin one row with a mergeable pair and a lone 4"
+  },
+  {
+   "tag": "g18-assert-grid-before",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GridString",
+    "operator": "eq",
+    "expected": "2,2,4,0/0,0,0,0/0,0,0,0/0,0,0,0"
+   },
+   "note": "the forced row really is on the board"
+  },
+  {
+   "tag": "g19-assert-used-3",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "TilesInUse",
+    "operator": "eq",
+    "expected": 3
+   },
+   "note": "three tiles"
+  },
+  {
+   "tag": "g20-move-left",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().Move(3)"
+   },
+   "note": "one left move"
+  },
+  {
+   "tag": "g21-assert-grid-after",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GridString",
+    "operator": "eq",
+    "expected": "4,4,0,0/0,0,0,0/0,0,0,0/0,0,0,0"
+   },
+   "note": "the pair merged into a 4 at the left edge and the lone 4 slid next to it"
+  },
+  {
+   "tag": "g22-assert-score-4",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Score",
+    "operator": "eq",
+    "expected": 4
+   },
+   "note": "the merge scored its own value"
+  },
+  {
+   "tag": "g23-assert-last-gain",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastMoveGain",
+    "operator": "eq",
+    "expected": 4
+   },
+   "note": "the delta of that call is exact"
+  },
+  {
+   "tag": "g24-assert-last-merges",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastMoveMerges",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "exactly one merge"
+  },
+  {
+   "tag": "g25-assert-moves-1",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "MoveCount",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "one accepted move"
+  },
+  {
+   "tag": "g26-assert-rejected-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "MovesRejected",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "and nothing refused"
+  },
+  {
+   "tag": "g27-assert-max-4",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "MaxTile",
+    "operator": "eq",
+    "expected": 4
+   },
+   "note": "the largest tile is the new 4"
+  },
+  {
+   "tag": "g28-assert-moved-true",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastMoveMoved",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "the move really changed the board"
+  },
+  {
+   "tag": "g29-move-left-2",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().Move(3)"
+   },
+   "note": "a second left move"
+  },
+  {
+   "tag": "g30-assert-grid-8",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GridString",
+    "operator": "eq",
+    "expected": "8,0,0,0/0,0,0,0/0,0,0,0/0,0,0,0"
+   },
+   "note": "the two 4s merged into an 8"
+  },
+  {
+   "tag": "g31-assert-score-12",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Score",
+    "operator": "eq",
+    "expected": 12
+   },
+   "note": "4 + 8"
+  },
+  {
+   "tag": "g32-assert-merges-2",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "TotalMerges",
+    "operator": "eq",
+    "expected": 2
+   },
+   "note": "two merges over the game"
+  },
+  {
+   "tag": "g33-assert-moves-2",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "MoveCount",
+    "operator": "eq",
+    "expected": 2
+   },
+   "note": "two accepted moves"
+  },
+  {
+   "tag": "g34-shot-t1",
+   "port": "game",
+   "tool": "running_game_capture_screenshot",
+   "arguments": {
+    "save_path": "user://g2048-t1.png"
+   },
+   "note": "after two merges: one 8 at the top left corner"
+  },
+  {
+   "tag": "g35-move-left-3",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().Move(3)"
+   },
+   "note": "a third left move changes nothing"
+  },
+  {
+   "tag": "g36-assert-moves-still-2",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "MoveCount",
+    "operator": "eq",
+    "expected": 2
+   },
+   "note": "the illegal move was refused: the move count did not grow"
+  },
+  {
+   "tag": "g37-assert-rejected-1",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "MovesRejected",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "it is counted as one refusal"
+  },
+  {
+   "tag": "g38-assert-moved-false",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastMoveMoved",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "and reported as not moving"
+  },
+  {
+   "tag": "g39-assert-grid-unchanged",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GridString",
+    "operator": "eq",
+    "expected": "8,0,0,0/0,0,0,0/0,0,0,0/0,0,0,0"
+   },
+   "note": "the board is exactly as it was"
+  },
+  {
+   "tag": "g40-assert-reason",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastEvent",
+    "operator": "contains",
+    "expected": "rejected reason=no_change"
+   },
+   "note": "and the refusal says why"
+  },
+  {
+   "tag": "g41-move-up",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().Move(0)"
+   },
+   "note": "an up move on the same left-packed board is refused too"
+  },
+  {
+   "tag": "g42-assert-rejected-2",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "MovesRejected",
+    "operator": "eq",
+    "expected": 2
+   },
+   "note": "a second refusal"
+  },
+  {
+   "tag": "g43-assert-grid-still",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GridString",
+    "operator": "eq",
+    "expected": "8,0,0,0/0,0,0,0/0,0,0,0/0,0,0,0"
+   },
+   "note": "still byte-for-byte the same board"
+  },
+  {
+   "tag": "g44-right-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().ForceTestState(\"grid=2,2,4,0|0,0,0,0|0,0,0,0|0,0,0,0\")"
+   },
+   "note": "the same row again"
+  },
+  {
+   "tag": "g45-move-right",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().Move(1)"
+   },
+   "note": "one right move"
+  },
+  {
+   "tag": "g46-assert-grid-right",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GridString",
+    "operator": "eq",
+    "expected": "0,0,4,4/0,0,0,0/0,0,0,0/0,0,0,0"
+   },
+   "note": "the pair merged at the right edge, so right is a real second direction"
+  },
+  {
+   "tag": "g47-assert-score-right",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Score",
+    "operator": "eq",
+    "expected": 4
+   },
+   "note": "the merge scored once"
+  },
+  {
+   "tag": "g48-up-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().ForceTestState(\"grid=2,0,0,0|2,0,0,0|4,0,0,0|0,0,0,0\")"
+   },
+   "note": "a column with a mergeable pair"
+  },
+  {
+   "tag": "g49-move-up",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().Move(0)"
+   },
+   "note": "one up move"
+  },
+  {
+   "tag": "g50-assert-grid-up",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GridString",
+    "operator": "eq",
+    "expected": "4,0,0,0/4,0,0,0/0,0,0,0/0,0,0,0"
+   },
+   "note": "the column packed upward and merged"
+  },
+  {
+   "tag": "g51-assert-score-up",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Score",
+    "operator": "eq",
+    "expected": 4
+   },
+   "note": "the merge scored once"
+  },
+  {
+   "tag": "g52-assert-merges-up",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastMoveMerges",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "one merge"
+  },
+  {
+   "tag": "g53-down-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().ForceTestState(\"grid=2,0,0,0|2,0,0,0|4,0,0,0|0,0,0,0\")"
+   },
+   "note": "the same column again"
+  },
+  {
+   "tag": "g54-move-down",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().Move(2)"
+   },
+   "note": "one down move"
+  },
+  {
+   "tag": "g55-assert-grid-down",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GridString",
+    "operator": "eq",
+    "expected": "0,0,0,0/0,0,0,0/4,0,0,0/4,0,0,0"
+   },
+   "note": "the column packed downward and merged"
+  },
+  {
+   "tag": "g56-assert-score-down",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Score",
+    "operator": "eq",
+    "expected": 4
+   },
+   "note": "the merge scored once"
+  },
+  {
+   "tag": "g57-win-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().ForceTestState(\"grid=1024,1024,0,0|0,0,0,0|0,0,0,0|0,0,0,0\")"
+   },
+   "note": "two 1024 tiles are one left move away from the target"
+  },
+  {
+   "tag": "g58-assert-max-before",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "MaxTile",
+    "operator": "eq",
+    "expected": 1024
+   },
+   "note": "1024 is the largest tile"
+  },
+  {
+   "tag": "g59-assert-not-won-yet",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Won",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "and the target is not reached"
+  },
+  {
+   "tag": "g60-move-into-2048",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().Move(3)"
+   },
+   "note": "merge them"
+  },
+  {
+   "tag": "g61-assert-max-2048",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "MaxTile",
+    "operator": "eq",
+    "expected": 2048
+   },
+   "note": "the merged tile is the target"
+  },
+  {
+   "tag": "g62-assert-won",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Won",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "reaching the target is the win"
+  },
+  {
+   "tag": "g63-assert-not-over-yet",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GameOver",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "a win alone does not end the game: there are still empty cells to move into"
+  },
+  {
+   "tag": "g64-assert-gain-2048",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastMoveGain",
+    "operator": "eq",
+    "expected": 2048
+   },
+   "note": "the merge scored its own value"
+  },
+  {
+   "tag": "g65-assert-score-2048",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Score",
+    "operator": "eq",
+    "expected": 2048
+   },
+   "note": "and that is the whole score"
+  },
+  {
+   "tag": "g66-shot-t2",
+   "port": "game",
+   "tool": "running_game_capture_screenshot",
+   "arguments": {
+    "save_path": "user://g2048-t2.png"
+   },
+   "note": "the win screen: one 2048 tile and the status label on 2048 REACHED"
+  },
+  {
+   "tag": "g67-assert-screen-text-win",
+   "port": "game",
+   "tool": "running_game_assert_screen_text",
+   "arguments": {
+    "text": "2048 REACHED"
+   },
+   "note": "the status label really is on the captured screen"
+  },
+  {
+   "tag": "g68-loss-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().ForceTestState(\"grid=2,4,2,4|4,2,4,2|2,4,2,4|4,2,4,2\")"
+   },
+   "note": "a full checkerboard: no two orthogonal neighbours are equal"
+  },
+  {
+   "tag": "g69-assert-full",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "TilesInUse",
+    "operator": "eq",
+    "expected": 16
+   },
+   "note": "all sixteen cells carry a tile"
+  },
+  {
+   "tag": "g70-assert-empty-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "EmptyCells",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "none is free"
+  },
+  {
+   "tag": "g71-assert-cannot-move",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "CanMoveAny",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "and no direction would change it"
+  },
+  {
+   "tag": "g72-assert-over",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GameOver",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "so the game is over"
+  },
+  {
+   "tag": "g73-assert-not-won",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Won",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "a loss is not a win"
+  },
+  {
+   "tag": "g74-move-when-over",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().Move(3)"
+   },
+   "note": "every move is refused once the game is over"
+  },
+  {
+   "tag": "g75-assert-rejected-1",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "MovesRejected",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "the refusal is counted"
+  },
+  {
+   "tag": "g76-assert-moves-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "MoveCount",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "no move was accepted"
+  },
+  {
+   "tag": "g77-assert-grid-loss",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GridString",
+    "operator": "eq",
+    "expected": "2,4,2,4/4,2,4,2/2,4,2,4/4,2,4,2"
+   },
+   "note": "and the board did not change"
+  },
+  {
+   "tag": "g78-assert-reason-over",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastEvent",
+    "operator": "contains",
+    "expected": "reason=game_over"
+   },
+   "note": "the refusal names the game-over rule"
+  },
+  {
+   "tag": "g79-shot-t3",
+   "port": "game",
+   "tool": "running_game_capture_screenshot",
+   "arguments": {
+    "save_path": "user://g2048-t3.png"
+   },
+   "note": "the loss screen: a full checkerboard and NO MOVES LEFT"
+  },
+  {
+   "tag": "g80-assert-screen-text-loss",
+   "port": "game",
+   "tool": "running_game_assert_screen_text",
+   "arguments": {
+    "text": "NO MOVES LEFT"
+   },
+   "note": "the status label really is on the captured screen"
+  },
+  {
+   "tag": "g81-merge-full-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().ForceTestState(\"grid=2,2,4,8|4,8,16,32|2,4,8,16|4,8,16,32\")"
+   },
+   "note": "a full board whose only legal move is the merge on the top row"
+  },
+  {
+   "tag": "g82-assert-full-2",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "TilesInUse",
+    "operator": "eq",
+    "expected": 16
+   },
+   "note": "sixteen tiles"
+  },
+  {
+   "tag": "g83-assert-can-still-move",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "CanMoveAny",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "a full board with an equal neighbour is not stuck"
+  },
+  {
+   "tag": "g84-assert-not-over-2",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GameOver",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "so it is not a loss"
+  },
+  {
+   "tag": "g85-autostep-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().ForceTestState(\"grid=0,0,0,2|0,0,0,0|0,0,0,0|4,0,0,0\")"
+   },
+   "note": "two tiles in opposite corners, so the deterministic policy has two legal moves in a row"
+  },
+  {
+   "tag": "g86-assert-moves-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "MoveCount",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "a clean counter"
+  },
+  {
+   "tag": "g87-autostep-2",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().AutoStep(2)"
+   },
+   "note": "exactly two deterministic auto-play moves"
+  },
+  {
+   "tag": "g88-assert-last-hook-2",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastHookSteps",
+    "operator": "eq",
+    "expected": 2
+   },
+   "note": "the DELTA of that call is exact -- this is the frame-rate independent quantity"
+  },
+  {
+   "tag": "g88b-assert-last-auto-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastAutoSteps",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "and it is a DIFFERENT property from the clock's own per-frame delta, which is 0 while the clock is off: r1 of this game read 0 here because one property had two writers"
+  },
+  {
+   "tag": "g89-assert-auto-total-2",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "AutoSteps",
+    "operator": "eq",
+    "expected": 2
+   },
+   "note": "and the total agrees"
+  },
+  {
+   "tag": "g90-assert-moves-2",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "MoveCount",
+    "operator": "eq",
+    "expected": 2
+   },
+   "note": "the board really moved twice"
+  },
+  {
+   "tag": "g91-assert-no-merge",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Score",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "neither of those two moves merged anything"
+  },
+  {
+   "tag": "g92-autoclock-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().ForceTestState(\"grid=0,0,0,2|0,0,0,0|0,0,0,0|4,0,0,0\")"
+   },
+   "note": "the same two-corner board again"
+  },
+  {
+   "tag": "g93-autoplay-on",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().SetAutoPlay(120.0)"
+   },
+   "note": "the one sample that watches the board move asks for motion explicitly"
+  },
+  {
+   "tag": "g94-samples-autoplay",
+   "port": "game",
+   "tool": "running_game_get_node_property_samples",
+   "arguments": {
+    "node_path": "Main",
+    "properties": [
+     "MoveCount",
+     "GridHash",
+     "AutoSteps",
+     "LastAutoSteps",
+     "Elapsed",
+     "Ticks"
+    ],
+    "frame_count": 30,
+    "frame_interval": 1
+   },
+   "note": "multi-frame property sample of the auto-play clock: the move count and the grid hash change frame by frame while Elapsed and Ticks advance -- 'the board moves' as a sequence of values, not as an adjective"
+  },
+  {
+   "tag": "g95-assert-moves-grew",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "MoveCount",
+    "operator": "gt",
+    "expected": 2
+   },
+   "note": "the clock pushed the board past the two moves the hook made"
+  },
+  {
+   "tag": "g96-assert-grid-changed",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "AutoSteps",
+    "operator": "gt",
+    "expected": 2
+   },
+   "note": "and the clock's own total grew"
+  },
+  {
+   "tag": "g97-autoplay-off",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().SetAutoPlay(0.0)"
+   },
+   "note": "back to frozen"
+  },
+  {
+   "tag": "g98-assert-last-auto-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastAutoSteps",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "the per-frame delta is zero again"
+  },
+  {
+   "tag": "g99-shot-t4",
+   "port": "game",
+   "tool": "running_game_capture_screenshot",
+   "arguments": {
+    "save_path": "user://g2048-t4.png"
+   },
+   "note": "the board after the auto-play sample: the two tiles have moved"
+  },
+  {
+   "tag": "g100-input-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().ForceTestState(\"grid=0,0,0,2|0,0,0,0|0,0,0,0|4,0,0,0\")"
+   },
+   "note": "a clean board for the input test"
+  },
+  {
+   "tag": "g101-poll-on",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().SetPollInput(true)"
+   },
+   "note": "the input path is off by default; the test switches it on explicitly"
+  },
+  {
+   "tag": "g102-input-left",
+   "port": "game",
+   "tool": "running_game_run_test_scenario",
+   "arguments": {
+    "steps": [
+     {
+      "type": "input",
+      "action": "m2048_left",
+      "pressed": true
+     },
+     {
+      "type": "wait",
+      "seconds": 0.45
+     },
+     {
+      "type": "assert",
+      "node_path": "Main",
+      "property": "MoveCount",
+      "operator": "gt",
+      "expected": 0
+     }
+    ]
+   },
+   "note": "the declared action really moves the board"
+  },
+  {
+   "tag": "g103-assert-input-moves-1",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "InputMoves",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "the declared action fires on the PRESS EDGE, so a scenario's never-released key performs exactly one move instead of repeating at the frame rate"
+  },
+  {
+   "tag": "g104-poll-off",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().SetPollInput(false)"
+   },
+   "note": "polling off again: nothing after this can drift because a key is still marked held"
+  },
+  {
+   "tag": "g105-runtime-overlay",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var main = get_parent()\nvar c = ColorRect.new()\nc.name = StringName(\"ProbeOverlay\")\nc.position = Vector2(20, 552)\nc.size = Vector2(120, 34)\nc.color = Color(0.95, 0.35, 0.95, 1.0)\nmain.add_child(c)\nreturn \"overlay added\""
+   },
+   "note": "a node created at run time, in the same session, as the positive control for 'a run-time node is drawn' (and the sixteen tiles are sixteen more of those)"
+  },
+  {
+   "tag": "g106-assert-unknown-property",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "NoSuchProperty",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "DECLARED FAILURE: a boundary call asking for a property that does not exist (-32001), so the error path of the assertion tool is on the record too"
+  },
+  {
+   "tag": "g107-shot-t5",
+   "port": "game",
+   "tool": "running_game_capture_screenshot",
+   "arguments": {
+    "save_path": "user://g2048-t5.png"
+   },
+   "note": "the overlay is visible in this frame and not in t4"
+  },
+  {
+   "tag": "g108-final-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().ForceTestState(\"grid=0,0,0,2|0,0,0,0|0,0,0,0|4,0,0,0\")"
+   },
+   "note": "a clean board for the final readback"
+  },
+  {
+   "tag": "g109-autostep-3",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().AutoStep(3)"
+   },
+   "note": "three more deterministic auto-play moves"
+  },
+  {
+   "tag": "g110-assert-last-hook-3",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastHookSteps",
+    "operator": "eq",
+    "expected": 3
+   },
+   "note": "the delta of that hook call is exact"
+  },
+  {
+   "tag": "g111-final-readback",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().Dump()"
+   },
+   "note": "the final board as one line"
+  },
+  {
+   "tag": "g112-final-tree",
+   "port": "game",
+   "tool": "running_game_get_scene_tree",
+   "arguments": {},
+   "note": "the final tree, including the run-time overlay"
+  }
+ ]
+}

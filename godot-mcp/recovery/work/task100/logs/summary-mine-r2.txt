@@ -1,0 +1,21 @@
+run        : F:\moonbit-hof-rs\godot-mcp\runs\minesweeper\mine-task100-r2
+game       : minesweeper  tag: mine-task100-r2  pillow: True
+editor : calls=14  facts=14/14  args=inline_complete=13, sidecar_verified=1
+         verdicts=failed=1, ok_effect_observed=1, ok_file_effect_observed=5, ok_no_effect_observed=7
+game   : calls=141 facts=141/141  args=inline_complete=141
+         verdicts=failed=1, ok_effect_observed=19, ok_file_effect_observed=96, ok_no_effect_observed=25
+------------------------------------------------------------------------------
+TOTAL  : calls=155  facts_complete=155/155 (100.0%)
+         verdicts=failed=2, ok_effect_observed=20, ok_file_effect_observed=101, ok_no_effect_observed=32
+pixels : 155 capture pairs, 21 recomputed non-zero (editor 1/14, game 20/141)
+         pixel_evidence verdict=available
+frames : 5 in C:\Users\wyl\AppData\Roaming\Godot\app_userdata\minesweeper
+         mine-t0.png  800x600     9857 B  9B14CAF196AB  px_vs_prev=-
+         mine-t1.png  800x600    10707 B  6876CBB6227E  px_vs_prev=194130
+         mine-t2.png  800x600    11555 B  23980F338D47  px_vs_prev=196947
+         mine-t3.png  800x600    12173 B  8C7F1F10674F  px_vs_prev=196939
+         mine-t4.png  800x600    10440 B  426BB7D7890E  px_vs_prev=195563
+defects: 2 (auto)
+         [medium] call 6 (editor_add_nodes_batch) failed with error -32000 | declared failure
+         [medium] call 135 (running_game_assert_node_state) failed with error -32001 | declared failure
+recomputed-vs-trace mismatches: none

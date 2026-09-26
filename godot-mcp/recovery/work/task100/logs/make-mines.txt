@@ -1,0 +1,1 @@
+wrote F:\moonbit-hof-rs\godot-mcp\tools\sessions\minesweeper\session.json calls=155 seed_mine_list=0,4|0,5|1,6|2,4|4,0|6,0|7,4|7,7|7,8|8,0

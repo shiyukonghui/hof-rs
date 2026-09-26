@@ -1,0 +1,2 @@
+PS_PARSE OK: F:\moonbit-hof-rs\godot-mcp\tools\sessions\game2048\session.json
+PS_PARSE calls=129 editor=16 game=113 import=True
