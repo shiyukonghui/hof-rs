@@ -23,7 +23,7 @@
 | **C②** | 游戏或驱动缺陷：就地修工程/驱动 | **达成**。Breakout 3 条 + 会话 2 条；Snake 3 条 + 会话 1 条；每条都有「改前失败 → 改后通过」的实测（§C） | 各轮中间产物 `runs\breakout\breakout-task093-r{2..7}\`、`runs\snake\snake-task093-r{1..6}\` |
 | **C③** | 根因不清楚的只记录不猜改 | **达成**：D-1、D-2 只登记 | `GAME-LOOP-LOG.md` 缺陷登记 |
 | **C** | 改了模块才要十道门全绿 + push 新引擎 HEAD | **没改模块**，门仍全绿：g01–g10 **全部 `exit=0`**、`accept_m1 22/22`、门 9 `ANCHOR_EQUAL`（§E1）。引擎仓零改动，故无 push | `runs\gates\task093c\` |
-| **D** | 收尾：主仓提交（含 GAME-LOOP-LOG.md 与游戏工程）、两仓 log/status、如实报告 | **达成** | §E |
+| **D** | 收尾：主仓提交（含 GAME-LOOP-LOG.md 与游戏工程）、两仓 log/status、如实报告 | **达成**。主仓 2 个逻辑提交（`97167e4` 游戏+台账、`ae0b791` 报告+证据），`git status --short` 空；引擎仓零改动（HEAD == origin == `cf554ef58`） | §E2 |
 
 ---
 
@@ -247,7 +247,36 @@ WARNING: the pump never looked steady, running the cases anyway
 
 ### E2 提交与 push
 
-见 `git log --oneline -8`（两仓）与 `git status --short`（主仓）。
+**主仓 `F:\moonbit-hof-rs`**（分支 `master`，无远程）—— **2 个逻辑提交**：
+
+```
+ae0b791 docs(godot-mcp): TASK-093 - the report and its evidence: eight game-side defects with before/after runs, the ten gates green, and the one environment defect that blocks pixel evidence
+97167e4 feat(godot-mcp): TASK-093 - the 2nd and 3rd C# games (Breakout, Snake), every byte of them written by MCP calls, plus the cross-round GAME-LOOP-LOG
+fed0135 docs(godot-mcp): TASK-092 - the summary table carries the same two measurement points as the body, so the report cannot be read two ways
+64df60b docs(godot-mcp): TASK-092 - the report's main-repo log is a snapshot with an explicit boundary, so a doc-only follow-up cannot make it stale
+9a9b1f3 docs(godot-mcp): TASK-092 - the tracked/ignored numbers are stated for both measurement points, and the largest tracked artifact is named instead of hiding inside a total
+0516f4c chore(godot-mcp): TASK-092 - the gate 9 re-run's stderr stub lands with its stdout
+3e4aa99 docs(godot-mcp): TASK-092 report self-correction - gate 9 stays ANCHOR_EQUAL after the report commit (it judges the engine repo, which has not moved), and the editor phase is 24 requests of which 23 are tools/call
+4e74537 docs(godot-mcp): TASK-092 B/C - the three traceability gaps are closed (args sidecar, deferred file+screen evidence, the two missing doctests, a stable frame-cost estimate), the gates and accept_m1 are green, and Pong reaches facts_complete 100%
+```
+
+`git status --short`：**空（0 行）**。
+
+**引擎仓 `F:\moonbit-hof-rs\godot-mcp\godot`** —— 本轮**零改动、零提交、无 push**（没改模块）：
+
+```
+cf554ef58c modules/mcp_server: task092 (B2/B3/B4) step2 - a deferred call's file effects and its capture are collected at completion, the two missing doctests exist, and the frame cost is a clamped median of a window
+87fbf82f4b modules/mcp_server: task092 (B1) step1 - an over-bound payload is written whole to a sidecar the line can be checked against, and the ledger re-hashes it
+382549f63e modules/mcp_server: task090 (2c-9) step6 - the round-8 record: the traceability section and the gate ledger
+8604fcf9e2 modules/mcp_server: task090 (2c-9) step5 - the description change is declared in the generator, so the contract stays reproducible
+eee58538a1 modules/mcp_server: task090 (2c-9) step4 - a deferred call's own body reaches its trace line too
+cac01b5f9f modules/mcp_server: task090 (2c-9) step3 - the round-8 fixes: the InputMap fact, the scenario flags, the frame-based deadline
+a455a87bea modules/mcp_server: task090 (2c-9) step2 - D-3: the game executor reaches the running scene tree
+4b8625bedc modules/mcp_server: task090 (2c-9) step1 - the failure answer's data payload reaches the call line
+```
+
+`git status --short`：**空**；`git rev-parse HEAD` == `refs/remotes/origin/feature/mcp-server-module-rebuild`
+== `cf554ef58cae2721dd2e6c3187e25d7fb9893164`（本地与远端本来就一致，无新提交可 push）。
 
 ---
 
