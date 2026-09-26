@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://fnmffsesq5l1"]
+[gd_scene format=3 uid="uid://ixht802r4ld6"]
 
 [ext_resource type="Script" uid="uid://dhfj67vumndol" path="res://src/PongGame.cs" id="1_o3k07"]
 [ext_resource type="Script" uid="uid://bo6p3rkt7rbe7" path="res://src/Ball.cs" id="2_r3l7o"]

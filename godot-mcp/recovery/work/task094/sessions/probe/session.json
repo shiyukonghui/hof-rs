@@ -1,0 +1,31 @@
+{
+  "import": false,
+  "calls": [
+    {"tag": "p01-who", "port": "game", "tool": "running_game_execute_gdscript",
+     "arguments": {"code": "var vp = get_viewport()\nvar img = vp.get_texture().get_image()\nvar m = get_parent()\nvar greens = 0\nfor y in range(0, img.get_height(), 4):\n\tfor x in range(0, img.get_width(), 4):\n\t\tif img.get_pixel(x, y).g > 0.5:\n\t\t\tgreens += 1\nreturn \"pf=\" + str(Engine.get_process_frames()) + \" fd=\" + str(Engine.get_frames_drawn()) + \" fps=\" + str(Engine.get_frames_per_second()) + \" engine_fps=\" + str(Engine.get_frames_per_second()) + \" wm=\" + str(DisplayServer.window_get_mode()) + \" vp=\" + str(vp.size) + \" imgsize=\" + str(img.get_size()) + \" px44=\" + str(img.get_pixel(4, 4)) + \" greens=\" + str(greens) + \" head=\" + str(m.HeadX) + \",\" + str(m.HeadY) + \" over=\" + str(m.GameOver) + \" ticks=\" + str(m.Ticks)"},
+     "note": "the frame counters, the window mode and one readback in the same instant"},
+
+    {"tag": "p02-shot-1", "port": "game", "tool": "running_game_capture_screenshot",
+     "arguments": {"save_path": "user://probe-1.png"}, "note": "readback #1"},
+
+    {"sleep_ms": 2500, "port": "game", "note": "let the game tick for 2.5 s"},
+
+    {"tag": "p03-who2", "port": "game", "tool": "running_game_execute_gdscript",
+     "arguments": {"code": "var vp = get_viewport()\nvar img = vp.get_texture().get_image()\nvar m = get_parent()\nvar greens = 0\nfor y in range(0, img.get_height(), 4):\n\tfor x in range(0, img.get_width(), 4):\n\t\tif img.get_pixel(x, y).g > 0.5:\n\t\t\tgreens += 1\nreturn \"pf=\" + str(Engine.get_process_frames()) + \" fd=\" + str(Engine.get_frames_drawn()) + \" fps=\" + str(Engine.get_frames_per_second()) + \" imgsize=\" + str(img.get_size()) + \" px44=\" + str(img.get_pixel(4, 4)) + \" greens=\" + str(greens) + \" head=\" + str(m.HeadX) + \",\" + str(m.HeadY) + \" over=\" + str(m.GameOver) + \" ticks=\" + str(m.Ticks)"},
+     "note": "the same counters 2.5 s later"},
+
+    {"tag": "p04-shot-2", "port": "game", "tool": "running_game_capture_screenshot",
+     "arguments": {"save_path": "user://probe-2.png"}, "note": "readback #2"},
+
+    {"tag": "p05-forced", "port": "game", "tool": "running_game_execute_gdscript",
+     "arguments": {"code": "RenderingServer.force_draw(true, 0.0)\nvar vp = get_viewport()\nvar img = vp.get_texture().get_image()\nvar greens = 0\nfor y in range(0, img.get_height(), 4):\n\tfor x in range(0, img.get_width(), 4):\n\t\tif img.get_pixel(x, y).g > 0.5:\n\t\t\tgreens += 1\nreturn \"after_force_draw greens=\" + str(greens) + \" px44=\" + str(img.get_pixel(4, 4)) + \" fd=\" + str(Engine.get_frames_drawn())"},
+     "note": "force one drawing frame from inside the call and read back again"},
+
+    {"tag": "p06-shot-3", "port": "game", "tool": "running_game_capture_screenshot",
+     "arguments": {"save_path": "user://probe-3.png"}, "note": "readback #3, right after the forced draw"},
+
+    {"tag": "p07-fresh", "port": "game", "tool": "running_game_execute_gdscript",
+     "arguments": {"code": "var img = get_viewport().get_texture().get_image()\nvar rs = RenderingServer\nvar rid = get_viewport().get_viewport_rid()\nreturn \"rid=\" + str(rid) + \" img_instance=\" + str(img.get_instance_id()) + \" fd=\" + str(Engine.get_frames_drawn()) + \" pf=\" + str(Engine.get_process_frames())"},
+     "note": "the viewport RID and the drawn-frame counter"}
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "import": false,
+  "calls": [
+    {"tag": "z01-set-blue", "port": "game", "tool": "running_game_set_node_property",
+     "arguments": {"node_path": "Background", "property": "color", "value": {"a": 1.0, "b": 1.0, "g": 0.0, "r": 0.0}},
+     "note": "the background goes blue"},
+    {"tag": "z02-read-plain", "port": "game", "tool": "running_game_execute_gdscript",
+     "arguments": {"code": "var img = get_viewport().get_texture().get_image()\nreturn \"plain px(10,10)=\" + str(img.get_pixel(10, 10)) + \" px(400,300)=\" + str(img.get_pixel(400, 300)) + \" actual=\" + str(get_parent().get_node(\"Background\").color)"},
+     "note": "read without forcing anything"},
+    {"tag": "z03-read-forced", "port": "game", "tool": "running_game_execute_gdscript",
+     "arguments": {"code": "RenderingServer.force_sync()\nRenderingServer.force_draw(true, 0.0)\nvar img = get_viewport().get_texture().get_image()\nreturn \"forced px(10,10)=\" + str(img.get_pixel(10, 10)) + \" px(400,300)=\" + str(img.get_pixel(400, 300)) + \" fd=\" + str(Engine.get_frames_drawn())"},
+     "note": "force a sync and a whole drawing frame, then read"},
+    {"tag": "z04-set-green", "port": "game", "tool": "running_game_set_node_property",
+     "arguments": {"node_path": "Background", "property": "color", "value": {"a": 1.0, "b": 0.0, "g": 1.0, "r": 0.0}},
+     "note": "and green"},
+    {"tag": "z05-read-forced-again", "port": "game", "tool": "running_game_execute_gdscript",
+     "arguments": {"code": "RenderingServer.force_sync()\nRenderingServer.force_draw(true, 0.0)\nvar img = get_viewport().get_texture().get_image()\nreturn \"forced2 px(10,10)=\" + str(img.get_pixel(10, 10)) + \" actual=\" + str(get_parent().get_node(\"Background\").color) + \" fd=\" + str(Engine.get_frames_drawn())"},
+     "note": "does the forced read follow the second change?"},
+    {"tag": "z06-read-plain-again", "port": "game", "tool": "running_game_execute_gdscript",
+     "arguments": {"code": "var img = get_viewport().get_texture().get_image()\nreturn \"plain2 px(10,10)=\" + str(img.get_pixel(10, 10)) + \" actual=\" + str(get_parent().get_node(\"Background\").color)"},
+     "note": "and the same read one call later, without forcing"}
+  ]
+}

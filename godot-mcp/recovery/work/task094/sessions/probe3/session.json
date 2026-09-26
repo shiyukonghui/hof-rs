@@ -1,0 +1,50 @@
+{
+  "import": false,
+  "calls": [
+    {"tag": "r01-board-a", "port": "game", "tool": "running_game_execute_gdscript",
+     "arguments": {"code": "var m = get_parent()\nm.ForceTestState(\"8,10|7,10|6,10;dir=1,0;food=20,2\")\nm.Paused = true\nreturn \"A head=\" + str(m.HeadX) + \",\" + str(m.HeadY) + \" paused=\" + str(m.Paused) + \" over=\" + str(m.GameOver)"},
+     "note": "row 10, cell 8 -- paused so the board cannot move"},
+
+    {"sleep_ms": 800, "port": "game", "note": "let at least one frame be drawn"},
+
+    {"tag": "r02-fp-a", "port": "game", "tool": "running_game_execute_gdscript",
+     "arguments": {"code": "var m = get_parent()\nvar d = get_viewport().get_texture().get_image().get_data()\nvar s = 0\nfor i in range(0, d.size(), 97):\n\ts = (s * 31 + d[i]) % 1000000007\nreturn \"fp_A sum=\" + str(s) + \" head=\" + str(m.HeadX) + \",\" + str(m.HeadY) + \" paused=\" + str(m.Paused) + \" over=\" + str(m.GameOver)"},
+     "note": "fingerprint with the head on cell 8"},
+
+    {"tag": "r03-board-b", "port": "game", "tool": "running_game_execute_gdscript",
+     "arguments": {"code": "var m = get_parent()\nm.ForceTestState(\"20,10|19,10|18,10;dir=1,0;food=3,2\")\nm.Paused = true\nreturn \"B head=\" + str(m.HeadX) + \",\" + str(m.HeadY) + \" paused=\" + str(m.Paused)"},
+     "note": "same row, cell 20"},
+
+    {"sleep_ms": 800, "port": "game", "note": "let at least one frame be drawn"},
+
+    {"tag": "r04-fp-b", "port": "game", "tool": "running_game_execute_gdscript",
+     "arguments": {"code": "var m = get_parent()\nvar d = get_viewport().get_texture().get_image().get_data()\nvar s = 0\nfor i in range(0, d.size(), 97):\n\ts = (s * 31 + d[i]) % 1000000007\nreturn \"fp_B sum=\" + str(s) + \" head=\" + str(m.HeadX) + \",\" + str(m.HeadY) + \" paused=\" + str(m.Paused) + \" over=\" + str(m.GameOver)"},
+     "note": "fingerprint with the head on cell 20 (must differ from fp_A if the readback is fresh)"},
+
+    {"tag": "r05-board-c", "port": "game", "tool": "running_game_execute_gdscript",
+     "arguments": {"code": "var m = get_parent()\nm.ForceTestState(\"20,3|19,3|18,3;dir=1,0;food=3,2\")\nm.Paused = true\nreturn \"C head=\" + str(m.HeadX) + \",\" + str(m.HeadY) + \" paused=\" + str(m.Paused)"},
+     "note": "same column, row 3"},
+
+    {"sleep_ms": 800, "port": "game", "note": "let at least one frame be drawn"},
+
+    {"tag": "r06-fp-c", "port": "game", "tool": "running_game_execute_gdscript",
+     "arguments": {"code": "var m = get_parent()\nvar d = get_viewport().get_texture().get_image().get_data()\nvar s = 0\nfor i in range(0, d.size(), 97):\n\ts = (s * 31 + d[i]) % 1000000007\nreturn \"fp_C sum=\" + str(s) + \" head=\" + str(m.HeadX) + \",\" + str(m.HeadY) + \" paused=\" + str(m.Paused) + \" fd=\" + str(Engine.get_frames_drawn())"},
+     "note": "fingerprint with the head on row 3"},
+
+    {"tag": "r07-fp-c2", "port": "game", "tool": "running_game_execute_gdscript",
+     "arguments": {"code": "var m = get_parent()\nvar d = get_viewport().get_texture().get_image().get_data()\nvar s = 0\nfor i in range(0, d.size(), 97):\n\ts = (s * 31 + d[i]) % 1000000007\nreturn \"fp_C2 sum=\" + str(s) + \" head=\" + str(m.HeadX) + \",\" + str(m.HeadY) + \" fd=\" + str(Engine.get_frames_drawn())"},
+     "note": "immediately after fp_C: the noise floor of the fingerprint (must equal fp_C)"},
+
+    {"tag": "r08-shot-c", "port": "game", "tool": "running_game_capture_screenshot",
+     "arguments": {"save_path": "user://probe3-c.png"}, "note": "the tool's own screenshot on board C"},
+
+    {"tag": "r09-board-d", "port": "game", "tool": "running_game_execute_gdscript",
+     "arguments": {"code": "var m = get_parent()\nm.ForceTestState(\"20,7|19,7|18,7;dir=1,0;food=3,2\")\nm.Paused = true\nreturn \"D head=\" + str(m.HeadX) + \",\" + str(m.HeadY)"},
+     "note": "row 7"},
+
+    {"sleep_ms": 800, "port": "game", "note": "let at least one frame be drawn"},
+
+    {"tag": "r10-shot-d", "port": "game", "tool": "running_game_capture_screenshot",
+     "arguments": {"save_path": "user://probe3-d.png"}, "note": "the tool's own screenshot on board D"}
+  ]
+}

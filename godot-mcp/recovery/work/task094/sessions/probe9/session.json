@@ -1,0 +1,20 @@
+{
+  "import": false,
+  "calls": [
+    {"tag": "v01-counters-before", "port": "game", "tool": "running_game_execute_gdscript",
+     "arguments": {"code": "return \"objects=\" + str(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)) + \" prims=\" + str(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)) + \" drawcalls=\" + str(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)) + \" children=\" + str(get_parent().get_child_count())"},
+     "note": "the renderer's per-frame counters and the real child count"},
+
+    {"tag": "v02-add-100", "port": "game", "tool": "running_game_execute_gdscript",
+     "arguments": {"code": "var m = get_parent()\nfor i in range(100):\n\tvar r = ColorRect.new()\n\tr.position = Vector2(4 + (i % 20) * 3, 4 + (i / 20) * 3)\n\tr.size = Vector2(3, 3)\n\tr.color = Color(1.0, 1.0, 1.0, 1.0)\n\tm.add_child(r)\nreturn \"children=\" + str(m.get_child_count())"},
+     "note": "100 new ColorRects -- the renderer has to see them next frame if it is alive"},
+
+    {"sleep_ms": 700, "port": "game", "note": "several frames"},
+
+    {"tag": "v03-counters-after", "port": "game", "tool": "running_game_execute_gdscript",
+     "arguments": {"code": "return \"objects=\" + str(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)) + \" prims=\" + str(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)) + \" drawcalls=\" + str(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)) + \" children=\" + str(get_parent().get_child_count()) + \" fd=\" + str(Engine.get_frames_drawn())"},
+     "note": "the same counters after the scene really grew"},
+    {"tag": "v04-shot", "port": "game", "tool": "running_game_capture_screenshot",
+     "arguments": {"save_path": "user://probe9.png"}, "note": "did the 100 white squares reach the readback?"}
+  ]
+}

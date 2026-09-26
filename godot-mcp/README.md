@@ -153,14 +153,31 @@ powershell -NoProfile -ExecutionPolicy Bypass -File F:\moonbit-hof-rs\godot-mcp\
 `user://` 跨越 8 秒的两次截图同 sha。**游戏逻辑本身在动**（逐帧采样的 `position` 与
 `execute_gdscript` 都给出变化，`frames_waited` 单调递增），所以这是**画面侧证据链**的问题，
 不是游戏的问题；同一批代码在 TASK-092 的 Pong 会话里 10/29 组像素差非零、今天仍能复算出来。
-复现：`powershell -File recovery\work\task093\diag_render.ps1` → 看 `IDENTICAL_BYTES=True` /
-`DEFECT_D1=PRESENT`。
 
-**D-2：`accept_m1.ps1` 会被并行负载打成假失败** —— `task093` / `task093b` 两轮里它是 `5/22`，
-头部写着 `WARNING: the pump never looked steady`；同一脚本在同一台机器、同一引擎字节上**单独重跑**
-（`task093c`）是 **`22/22`、`GATE_EXIT=0`**。三轮里 `case12/13/14` 与 `guard_user_port_9877`
-**都 PASS**（含 `case14` 期望的 `bind failed ... error=22`），所以绑定与端口逻辑本身正常。
-**读法：跑 `accept_m1` 时机器上不要并行跑会话或构建。**
+> **TASK-094 的更新（先读这一段再读上面）**：D-1 已定位于**这台机器的画面管线**，不是
+> `modules\mcp_server`，本模块也改不动它。最小反例：把 `Background.color` 依次设成蓝→红→绿
+> （同一调用内读回确认真的变绿），三次截图得到**三张逐字节相同、且都还是最初深色背景**的 PNG；
+> `--mcp-capture=off` 同样复现。同一刻蛇的 `SnakeSeg00.position` 从 `(144,240)` 走到 `(384,240)`；
+> 渲染器自己在动（加 100 个 `ColorRect` 后 `RENDER_TOTAL_OBJECTS_IN_FRAME` 57 → 157，
+> `get_frames_drawn()` 以 ≈144/s 递增）；窗口未最小化；vulkan / opengl3 / d3d12 三者同样冻结；
+> `force_draw` 无效。**A/B 是关键**：同一份二进制字节、同一个 `tools\sessions\pong\session.json`，
+> 00:14:47 得 10/29 非零、02:00 重放得 0/29。
+> 另外，原复现脚本 `diag_render.ps1` 拍的是**已经撞墙死掉的蛇**（1.5 秒就 `ticks=19`），
+> 那条脚本里的「两张同 sha」本来就该出现 —— 新反例不依赖对象是否存活。
+> 复现：`powershell -File recovery\work\task094\diag_freshness.ps1 -Game snake -Capture off -Port 9891`
+> → `D1_VERDICT=PRESENT`。进程外窗口抓取（`CopyFromScreen` / `PrintWindow`）在本会话**不可信**
+> （两个不同引擎给出同一份抓取字节）。
+
+**D-2：`accept_m1.ps1` 的主循环就绪判据曾经对负载敏感（TASK-094 已修）** —— `task093` /
+`task093b` 两轮里它是 `5/22`，头部写着 `WARNING: the pump never looked steady`。原判据要求
+「相隔 1000 ms 的两次采样之间 `frame_count` 至少 +20，连续 3 次」，也就是**至少 20 fps**：这是
+吞吐要求，不是就绪要求，有负载时主循环活着但更慢，判据永远不成立，于是用例在尚未稳定的泵上跑。
+现在判据是「`frame_count` 连续 6 次严格递增，采样间隔 250 ms」（≈1.5 秒不间断推进，与帧率无关），
+死线仍 180 s。实测：**单独跑 wall=50.8s → `22/22`、`GATE_EXIT=0`**；
+**同机 8 个 CPU 烧机进程（16 逻辑核）并跑 wall=55.3s → `22/22`、`GATE_EXIT=0`**。
+三轮里 `case12/13/14` 与 `guard_user_port_9877` **都 PASS**（含 `case14` 期望的
+`bind failed ... error=22`），绑定与端口逻辑本身一直正常。
+**读法：不再需要「跑 `accept_m1` 时不要并行跑会话或构建」这条规矩。**
 
 ---
 

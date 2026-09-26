@@ -1,0 +1,23 @@
+{
+  "import": false,
+  "calls": [
+    {"tag": "n01-make", "port": "game", "tool": "running_game_execute_gdscript",
+     "arguments": {"code": "var m = get_parent()\nvar sv = SubViewport.new()\nsv.name = StringName(\"ProbeViewport\")\nsv.size = Vector2i(64, 64)\nsv.render_target_update_mode = SubViewport.UPDATE_ALWAYS\nm.add_child(sv)\nvar cr = ColorRect.new()\ncr.size = Vector2i(64, 64)\ncr.color = Color(1.0, 0.0, 0.0, 1.0)\nsv.add_child(cr)\nreturn \"made \" + str(sv.get_path())"},
+
+    {"sleep_ms": 800, "port": "game", "note": "let it render"},
+
+    {"tag": "n02-read-red", "port": "game", "tool": "running_game_execute_gdscript",
+     "arguments": {"code": "var sv = null\nfor c in get_parent().get_children():\n\tif c is SubViewport:\n\t\tsv = c\nvar img = sv.get_texture().get_image()\nreturn \"sub size=\" + str(img.get_size()) + \" px(32,32)=\" + str(img.get_pixel(32, 32))"},
+
+    {"tag": "n03-recolour", "port": "game", "tool": "running_game_execute_gdscript",
+     "arguments": {"code": "var sv = null\nfor c in get_parent().get_children():\n\tif c is SubViewport:\n\t\tsv = c\nsv.get_child(0).color = Color(0.0, 1.0, 0.0, 1.0)\nreturn \"recoloured\" "},
+
+    {"sleep_ms": 800, "port": "game", "note": "let it render"},
+
+    {"tag": "n04-read-green", "port": "game", "tool": "running_game_execute_gdscript",
+     "arguments": {"code": "var sv = null\nfor c in get_parent().get_children():\n\tif c is SubViewport:\n\t\tsv = c\nvar img = sv.get_texture().get_image()\nreturn \"sub px(32,32)=\" + str(img.get_pixel(32, 32)) + \" actual=\" + str(sv.get_child(0).color)"},
+
+    {"tag": "n05-root-again", "port": "game", "tool": "running_game_execute_gdscript",
+     "arguments": {"code": "var img = get_viewport().get_texture().get_image()\nreturn \"root px(400,300)=\" + str(img.get_pixel(400, 300))"}
+  ]
+}
