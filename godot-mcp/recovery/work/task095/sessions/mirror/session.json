@@ -1,0 +1,81 @@
+{
+  "import": false,
+  "note": "TASK-095 B2: can a self-owned offscreen SubViewport capture the RUNNING GAME's own scene (shared world_2d), and does its readback follow a real scene change?",
+  "calls": [
+    {
+      "tag": "m01-make-mirror",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var root = get_viewport()\nvar sv = SubViewport.new()\nsv.name = StringName(\"MirrorProbe\")\nsv.size = root.get_visible_rect().size\nsv.render_target_update_mode = SubViewport.UPDATE_ALWAYS\nsv.world_2d = root.world_2d\nsv.canvas_transform = root.canvas_transform\nsv.transparent_bg = false\nsv.render_target_clear_mode = SubViewport.CLEAR_MODE_ALWAYS\nget_parent().add_child(sv)\nreturn \"mirror size=\" + str(sv.size) + \" root_visible=\" + str(root.get_visible_rect().size) + \" shared_world=\" + str(sv.world_2d == root.world_2d) + \" scene=\" + str(get_parent().get_path())"
+      }
+    },
+    {
+      "sleep_ms": 1200,
+      "port": "game",
+      "note": "let the mirror render the shared 2D world"
+    },
+    {
+      "tag": "m02-read-t1",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var sv = get_parent().get_node(\"MirrorProbe\")\nvar img = sv.get_texture().get_image()\nvar w = img.get_width()\nvar h = img.get_height()\nvar sum = 0\nvar lit = 0\nfor y in range(0, h, 4):\n\tfor x in range(0, w, 4):\n\t\tvar c = img.get_pixel(x, y)\n\t\tvar v = int(c.r * 255.0) + int(c.g * 255.0) * 3 + int(c.b * 255.0) * 7\n\t\tsum += v\n\t\tif v > 12:\n\t\t\tlit += 1\nimg.save_png(\"user://mirror-t1.png\")\nvar rootimg = get_viewport().get_texture().get_image()\nreturn \"mirror \" + str(w) + \"x\" + str(h) + \" sum=\" + str(sum) + \" lit=\" + str(lit) + \" px(0,0)=\" + str(img.get_pixel(0, 0)) + \" px(750,60)=\" + str(img.get_pixel(750, 60)) + \" | ROOT sum_px(0,0)=\" + str(rootimg.get_pixel(0, 0)) + \" bg=\" + str(get_parent().get_node(\"Background\").color)"
+      }
+    },
+    {
+      "tag": "m03-paint-blue",
+      "port": "game",
+      "tool": "running_game_set_node_property",
+      "arguments": {
+        "path": "/root/Main/Background",
+        "property": "color",
+        "value": [0.0, 0.0, 1.0, 1.0]
+      }
+    },
+    {
+      "sleep_ms": 1200,
+      "port": "game",
+      "note": "let the mirror render the change"
+    },
+    {
+      "tag": "m04-read-t2",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var sv = get_parent().get_node(\"MirrorProbe\")\nvar img = sv.get_texture().get_image()\nvar w = img.get_width()\nvar h = img.get_height()\nvar sum = 0\nvar lit = 0\nfor y in range(0, h, 4):\n\tfor x in range(0, w, 4):\n\t\tvar c = img.get_pixel(x, y)\n\t\tvar v = int(c.r * 255.0) + int(c.g * 255.0) * 3 + int(c.b * 255.0) * 7\n\t\tsum += v\n\t\tif v > 12:\n\t\t\tlit += 1\nimg.save_png(\"user://mirror-t2.png\")\nvar rootimg = get_viewport().get_texture().get_image()\nreturn \"mirror sum=\" + str(sum) + \" lit=\" + str(lit) + \" px(0,0)=\" + str(img.get_pixel(0, 0)) + \" px(750,60)=\" + str(img.get_pixel(750, 60)) + \" | ROOT sum_px(0,0)=\" + str(rootimg.get_pixel(0, 0)) + \" bg=\" + str(get_parent().get_node(\"Background\").color)"
+      }
+    },
+    {
+      "tag": "m05-paint-green",
+      "port": "game",
+      "tool": "running_game_set_node_property",
+      "arguments": {
+        "path": "/root/Main/Background",
+        "property": "color",
+        "value": [0.0, 1.0, 0.0, 1.0]
+      }
+    },
+    {
+      "sleep_ms": 1200,
+      "port": "game",
+      "note": "let the mirror render the second change"
+    },
+    {
+      "tag": "m06-read-t3",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var sv = get_parent().get_node(\"MirrorProbe\")\nvar img = sv.get_texture().get_image()\nvar w = img.get_width()\nvar h = img.get_height()\nvar sum = 0\nvar lit = 0\nfor y in range(0, h, 4):\n\tfor x in range(0, w, 4):\n\t\tvar c = img.get_pixel(x, y)\n\t\tvar v = int(c.r * 255.0) + int(c.g * 255.0) * 3 + int(c.b * 255.0) * 7\n\t\tsum += v\n\t\tif v > 12:\n\t\t\tlit += 1\nimg.save_png(\"user://mirror-t3.png\")\nvar rootimg = get_viewport().get_texture().get_image()\nreturn \"mirror sum=\" + str(sum) + \" lit=\" + str(lit) + \" px(0,0)=\" + str(img.get_pixel(0, 0)) + \" px(750,60)=\" + str(img.get_pixel(750, 60)) + \" | ROOT sum_px(0,0)=\" + str(rootimg.get_pixel(0, 0)) + \" bg=\" + str(get_parent().get_node(\"Background\").color)"
+      }
+    },
+    {
+      "tag": "m07-engine-truth",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "return \"fd=\" + str(Engine.get_frames_drawn()) + \" objects=\" + str(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)) + \" draw_calls=\" + str(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)) + \" bg=\" + str(get_parent().get_node(\"Background\").color) + \" mirror_exists=\" + str(get_parent().get_node_or_null(\"MirrorProbe\") != null)"
+      }
+    }
+  ]
+}

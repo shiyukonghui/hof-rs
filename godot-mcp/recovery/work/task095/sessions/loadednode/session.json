@@ -1,0 +1,77 @@
+{
+  "import": false,
+  "note": "TASK-095 B6: is the freeze attached to the LOADED scene's canvas items (vs runtime-created ones)? Sample a pixel that only Background covers, change the loaded Background, then cover the same pixel with a runtime-created ColorRect, then force-redraw the loaded item.",
+  "calls": [
+    {
+      "tag": "p01-baseline",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var r = get_viewport().get_texture().get_image()\nreturn \"P1(10,580)=\" + str(r.get_pixel(10, 580)) + \" P2(400,580)=\" + str(r.get_pixel(400, 580)) + \" P3(5,5)=\" + str(r.get_pixel(5, 5)) + \" bg=\" + str(get_parent().get_node(\"Background\").color) + \" bg_size=\" + str(get_parent().get_node(\"Background\").size)"
+      }
+    },
+    {
+      "tag": "p02-loaded-magenta",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "get_parent().get_node(\"Background\").color = Color(1, 0, 1, 1)\nreturn \"bg=\" + str(get_parent().get_node(\"Background\").color)"
+      }
+    },
+    {
+      "sleep_ms": 1000,
+      "port": "game",
+      "note": "frame"
+    },
+    {
+      "tag": "p03-read-loaded",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var r = get_viewport().get_texture().get_image()\nreturn \"P1(10,580)=\" + str(r.get_pixel(10, 580)) + \" P2(400,580)=\" + str(r.get_pixel(400, 580)) + \" bg=\" + str(get_parent().get_node(\"Background\").color)"
+      }
+    },
+    {
+      "tag": "p04-runtime-cover",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var c = ColorRect.new()\nc.name = StringName(\"C9\")\nc.size = Vector2(800, 600)\nc.position = Vector2(0, 0)\nc.color = Color(1, 1, 0, 1)\nget_parent().add_child(c)\nreturn \"C9 added \" + str(c.get_path())"
+      }
+    },
+    {
+      "sleep_ms": 1000,
+      "port": "game",
+      "note": "frame"
+    },
+    {
+      "tag": "p05-read-runtime",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var r = get_viewport().get_texture().get_image()\nreturn \"P1(10,580)=\" + str(r.get_pixel(10, 580)) + \" P2(400,580)=\" + str(r.get_pixel(400, 580)) + \" C9=\" + str(get_parent().get_node(\"C9\").color)"
+      }
+    },
+    {
+      "tag": "p06-force-redraw-loaded",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "get_parent().get_node(\"C9\").queue_free()\nvar bg = get_parent().get_node(\"Background\")\nbg.color = Color(0, 1, 0, 1)\nbg.queue_redraw()\nbg.hide()\nbg.show()\nbg.size = Vector2(800, 600)\nreturn \"forced: bg=\" + str(bg.color) + \" visible=\" + str(bg.visible) + \" size=\" + str(bg.size)"
+      }
+    },
+    {
+      "sleep_ms": 1200,
+      "port": "game",
+      "note": "frame"
+    },
+    {
+      "tag": "p07-read-forced",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var r = get_viewport().get_texture().get_image()\nvar bg = get_parent().get_node(\"Background\")\nreturn \"P1(10,580)=\" + str(r.get_pixel(10, 580)) + \" P2(400,580)=\" + str(r.get_pixel(400, 580)) + \" P3(5,5)=\" + str(r.get_pixel(5, 5)) + \" bg=\" + str(bg.color) + \" c9=\" + str(get_parent().get_node_or_null(\"C9\")) + \" fd=\" + str(Engine.get_frames_drawn())"
+      }
+    }
+  ]
+}

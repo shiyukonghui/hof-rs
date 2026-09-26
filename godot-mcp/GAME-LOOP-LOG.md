@@ -27,9 +27,30 @@
 | id | 层 | 现象（证据） | 根因 | 状态 |
 |---|---|---|---|---|
 | — | — | TASK-091..093 期间**没有发现新的工具缺陷**；TASK-092 的三条溯源缺口已在上一轮关闭 | — | — |
-| **D-1** | 运行期 / 画面侧（**TASK-094 已定位：机器画面管线，不是 `modules\mcp_server`**） | 进程的视口回读**恒返回本进程渲染的第一帧**：TASK-093 现场 62/40（snake）、68/42（breakout）个 PNG 各 1 个 sha；`running_game_capture_frames` 12 帧同一 sha；`user://` 截图跨 8 秒同 sha `D5C3A72ABA6F525C`。**TASK-094 的最小反例**：把 `Background.color` 依次设成蓝→红→绿（同一调用内读回 `background_color=(0.0,1.0,0.0,1.0)`，确实变绿），三次 `running_game_capture_screenshot` 得到**三张逐字节相同、且都还是最初深色背景**的 PNG；`--mcp-capture=off`（进程里根本没有 capture engine）同样复现。**同一时刻**蛇的 `SnakeSeg00.position` 从 `(144,240)` 走到 `(384,240)`（240 px），回读指纹恒为 `558211402` | **机器画面管线**，不是模块：①同一份二进制字节、同一个 `tools\sessions\pong\session.json`，00:14:47 得 **10/29 非零**（`pong-task092`，16 个不同 sha），02:00 重放得 **0/29**（`task094-pong-ab`，1 个 sha）；②渲染器本身在动——加 100 个 `ColorRect` 后 `Performance.RENDER_TOTAL_OBJECTS_IN_FRAME` **57 → 157**、prims 114 → 314，`Engine.get_frames_drawn()` 以 ≈144/s 递增；③窗口未最小化（`IsIconic=False`、`window_get_mode()=0`），故 `Main::iteration` 确实调用 `RenderingServer::draw()`；④读的 RID 就是渲染目标当前纹理（`RenderingServer.viewport_get_texture(vp_rid)` 与缓存值同 RID、同字节）；⑤vulkan / opengl3 / d3d12 **三者同样冻结**；⑥`RenderingServer.force_sync()` + `force_draw(true, 0.0)` 无效；⑦GPU 无 TDR/掉卡（`nvidia-smi` 正常、System 日志 8 小时内无 `nvlddmkm`）。**TASK-093 那条复现脚本本身有陷阱**：它拍的是**已经死了的蛇**（`SNAKE_WALL ... ticks=19`，1.5 秒就撞墙），所以「两张同 sha」在那条脚本里本来就该出现；TASK-094 的最小反例改用不被游戏脚本写、且不依赖存活的对象 | **未修（不在本模块内，本模块改不动）**。复现：`recovery\work\task094\diag_freshness.ps1` + `recovery\work\task094\sessions\repro2\session.json`（`D1_VERDICT=PRESENT`）；同刻证据：`runs\snake\task094-probe3/4/5`、`runs\snake\task094-probe9`；A/B：`runs\pong\pong-task092` vs `runs\pong\task094-pong-ab`。**已试无效的绕过**：opengl3 / d3d12 / `force_draw` / 进程外窗口抓取（`CopyFromScreen`、`PrintWindow` —— 两个不同引擎给出同一份抓取字节，说明会话的桌面合成面本身是冻结的，进程外抓取在本机不可信） |
+| **D-1** | 运行期 / 画面侧（**TASK-094 定位：机器画面管线，不是 `modules\mcp_server`；TASK-095 更正根因表述与 A/B 时间戳 —— 见下表后的「D-1 定域更正」**） | 进程的视口回读**恒返回本进程渲染的第一帧**：TASK-093 现场 62/40（snake）、68/42（breakout）个 PNG 各 1 个 sha；`running_game_capture_frames` 12 帧同一 sha；`user://` 截图跨 8 秒同 sha `D5C3A72ABA6F525C`。**TASK-094 的最小反例**：把 `Background.color` 依次设成蓝→红→绿（同一调用内读回 `background_color=(0.0,1.0,0.0,1.0)`，确实变绿），三次 `running_game_capture_screenshot` 得到**三张逐字节相同、且都还是最初深色背景**的 PNG；`--mcp-capture=off`（进程里根本没有 capture engine）同样复现。**同一时刻**蛇的 `SnakeSeg00.position` 从 `(144,240)` 走到 `(384,240)`（240 px），回读指纹恒为 `558211402` | **机器画面管线**，不是模块：①同一份二进制字节、同一个 `tools\sessions\pong\session.json`，00:14:47 得 **10/29 非零**（`pong-task092`，16 个不同 sha），02:00 重放得 **0/29**（`task094-pong-ab`，1 个 sha）；②渲染器本身在动——加 100 个 `ColorRect` 后 `Performance.RENDER_TOTAL_OBJECTS_IN_FRAME` **57 → 157**、prims 114 → 314，`Engine.get_frames_drawn()` 以 ≈144/s 递增；③窗口未最小化（`IsIconic=False`、`window_get_mode()=0`），故 `Main::iteration` 确实调用 `RenderingServer::draw()`；④读的 RID 就是渲染目标当前纹理（`RenderingServer.viewport_get_texture(vp_rid)` 与缓存值同 RID、同字节）；⑤vulkan / opengl3 / d3d12 **三者同样冻结**；⑥`RenderingServer.force_sync()` + `force_draw(true, 0.0)` 无效；⑦GPU 无 TDR/掉卡（`nvidia-smi` 正常、System 日志 8 小时内无 `nvlddmkm`）。**TASK-093 那条复现脚本本身有陷阱**：它拍的是**已经死了的蛇**（`SNAKE_WALL ... ticks=19`，1.5 秒就撞墙），所以「两张同 sha」在那条脚本里本来就该出现；TASK-094 的最小反例改用不被游戏脚本写、且不依赖存活的对象 | **未修（不在本模块内，本模块改不动）**。复现：`recovery\work\task094\diag_freshness.ps1` + `recovery\work\task094\sessions\repro2\session.json`（`D1_VERDICT=PRESENT`）；同刻证据：`runs\snake\task094-probe3/4/5`、`runs\snake\task094-probe9`；A/B：`runs\pong\pong-task092` vs `runs\pong\task094-pong-ab`。**已试无效的绕过**：opengl3 / d3d12 / `force_draw` / 进程外窗口抓取（`CopyFromScreen`、`PrintWindow` —— 两个不同引擎给出同一份抓取字节，说明会话的桌面合成面本身是冻结的，进程外抓取在本机不可信） |
 | **D-2** | 运行期 / 主循环健康度（**TASK-094 已修：测试判据对负载敏感**） | `accept_m1.ps1` 在 `task093` / `task093b` 两轮里失败（`5/22`）：输出头部 `WARNING: the pump never looked steady, running the cases anyway`，随后 `case1_GET_mcp_200 status=0`、`case2..11/15..20` 抛 `Wait` 异常；同一脚本在同一台机器、同一引擎字节上单独重跑（`task093c`，wall=50.7s）→ `22/22`、`GATE_EXIT=0` | **判据是吞吐而不是就绪**：`Wait-ForStablePump` 原来要求「相隔 1000 ms 的两次采样之间 `frame_count` 至少 +20，连续 3 次」——即**至少 20 fps**。有负载时主循环活着但慢于 20 fps，判据永不成立，函数耗尽 180 s 死线后打印 WARNING 继续跑，用例于是在尚未稳定的泵上执行 → `status=0` / `Wait` 异常。绑定与端口逻辑无辜（`case12/13/14`、`guard_user_port_9877` 在失败轮里也全 PASS） | **改**（`modules\mcp_server\scripts\accept_m1.ps1`）：判据改为「`frame_count` 连续 6 次严格递增，采样间隔 250 ms」＝**约 1.5 秒不间断推进，与帧率无关**（1 fps 也能满足），死线仍 180 s，未满足时仍照旧响亮报警。实测：**单跑 wall=50.8s → 22/22、`GATE_EXIT=0`**（`runs\gates\task094-alone\`）；**同机 8 个 CPU 烧机进程（16 逻辑核）并跑 wall=55.3s → 22/22、`GATE_EXIT=0`**（`runs\gates\task094-load2\`）；另有一次短重叠负载（`dotnet build`）wall=41.5s → 22/22（`runs\gates\task094-load\`）。三次都没有出现 WARNING 行 |
 | **G-1** | 门跑器 / 参数（**已定位，未改**） | `run_gates.ps1` 的 `-VersionText` 默认值是 `4.8.dev.mono.custom_build.8604fcf9e`（TASK-090 的锚点），对当前 HEAD `cf554ef58` 判 `ANCHOR_STALE_COMPILED`（`diff_count=22 safe_count=3 red_count=19`）→ 门 9 FAIL | 参数默认值落后于引擎仓 HEAD；**不是模块回归** | TASK-093 用 `-VersionText 4.8.dev.mono.custom_build.cf554ef58` 重跑（`runs\gates\task093c\`）；TASK-094 沿用同一锚点（`runs\gates\task094\`） |
+
+### D-1 定域更正（TASK-095，2026-09-27）
+
+TASK-094 写的根因「进程的视口回读**恒返回本进程渲染的第一帧**」**已被现场实验否证**。更正如下。
+
+1. **不是回读通道坏了。** 同一次进程内、同一时刻，根视口的回读会跟着画面变：
+   在根画布上**运行期新建**一个 `ColorRect C4` 并改色，`ROOT px(750,550)` 由**红 `(1,0,0,1)` 变黄 `(1,1,0,1)`**（`runs\snake\task095-discriminate` z02/z04）。
+2. **也不是"离屏 SubViewport 不可用"。** 一个**自有** SubViewport 的回读完全新鲜：红→绿→蓝→黄四张不同画面，缓存 RID 与现场 `RenderingServer.viewport_get_texture` 两种路径答案一致（`runs\snake\task095-offscreen` o03/o05/o07/o10）。
+3. **真正被冻结的是「加载期画布项」。** 判据（`runs\snake\task095-loadednode` p01–p07）：
+   采样像素 `P1(10,580)` 只被 `Background` 覆盖。
+   * 改**加载期**节点 `Background.color` → 品红：`P1` **一字未变**（仍 `(0.051,0.0902,0.0706)`），而属性读回是 `(1,0,1,1)`；
+     对同一节点连做 `queue_redraw()` + `hide()` + `show()` + 重设 `size` + 改绿，`P1` **仍然一字未变**。
+   * 用**运行期新建**、铺满全屏的 `ColorRect` 盖住同一像素：`P1` 立刻变黄。改它的色，`P1` 跟着变。
+   → **加载期入树的 `CanvasItem` 不再重录绘制命令；运行期新建的项正常重录。** 与视口、与世界（共享/自有）、与渲染驱动、与 capture engine 都无关。
+   snake 上场内容几乎全是加载期节点（`main.tscn` 里 `Background`、16 条 `GridLine`、**`SnakeSeg00..19`**、`Food`、`Status` 全是声明节点），所以"蛇走 240 px 画面不动"是**这条规律的必然结果**。
+4. **把目标场景搬进自有 SubViewport 也不解决**（两条搬法都实测）：
+   镜像 `world_2d`（`task095-mirror2`）与把 `current_scene` 搬进 `/root/CaptureHost`（`task095-rehost`，且 `world_shared=false`）**都仍然冻结**，且搬迁会把 `SceneTree.current_scene` 变成 `null`。
+5. **A/B 时间戳更正**：不是 `00:14:47` vs `02:00`，而是 **`00:14:53`**（`runs\pong\pong-task092\trace-game.jsonl`）vs **`01:18:26`**（`runs\pong\task094-pong-ab\trace-game.jsonl`），相隔约 **1 小时 3 分**。同一二进制字节前后答案不同这个事实不受影响。
+6. **TASK-094 的探针之所以"没跑起来"，不是 PowerShell 的限制**：`recovery\work\task094\sessions\probe10\session.json` 是**语法非法的 JSON**（每个 call 对象少一个 `}`，只闭合了 `arguments`），Python 与 PS 5.1 报的**位置几乎相同**（char 493/494）。
+7. **桌面侧**：本会话是 session 1、console、Active、未锁屏、非 RDP 的真实桌面；但 **`nvidia-smi --query-gpu=display_active` = `Disabled`**（`display_attached=Yes`），两条 `Win32_DesktopMonitor` 与 GameViewer 虚拟显示器适配器都 off-line。**共存，未证明因果**；要判因果必须改变机器状态后重测（接上物理输出 / 暂停 GameViewer），本轮未做。
+8. **本轮未改 `modules\mcp_server` 一个字节**，因此未重建、未跑门、未 push；理由见 `recovery\reports\TASK-095-REPORT.md` §C/§F1。
 
 ### 游戏或驱动缺陷
 
@@ -50,6 +71,8 @@
 ## 待办
 
 1. **D-1（像素回读陈旧）必须先解决**，否则 D138 的「像素差」这一条证据在本机持续不可得。
-   复现：`powershell -File recovery\work\task093\diag_render.ps1` → 看 `IDENTICAL_BYTES`。
+   复现（TASK-095 的更强反例，两条一起看才有判别力）：`powershell -File tools\run_game_session.ps1 -Game snake -Session recovery\work\task095\sessions\loadednode\session.json -RunTag x -GamePort 9892 -SkipReport`
+   → `p03` 的 `P1(10,580)` 与 `p01` 一字不差（加载期项冻结），`p05` 的 `P1` 变黄（运行期项正常）；`p07` 在 `queue_redraw()+hide()+show()` 之后仍然一字不差。
+   **下一步（需要用户授权，属于机器状态变更）**：接上/唤醒一个物理输出，或暂停/断开 `GameViewer`（网易远程串流，正在 session 1 运行且其虚拟显示器适配器 off-line），然后重跑上面这条会话。若 `p03`/`p07` 开始跟着变，则 D-1 判**机器画面管线**，像素差列自然回填；若不变，则 §C 的选项 2（影子渲染）才需要立项。
 2. D-1 解决后重跑 Breakout / Snake / Pong 三段会话，把像素差列补齐（引擎侧零改动，会话与工程可直接重放）。
 3. 台账每轮续行；下一款建议在 Breakout/Snake 的会话模板上直接复制。

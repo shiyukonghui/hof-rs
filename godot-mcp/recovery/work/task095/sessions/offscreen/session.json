@@ -1,0 +1,106 @@
+{
+  "import": false,
+  "note": "TASK-095 B: can a self-owned offscreen SubViewport readback see a changing picture on this machine?",
+  "calls": [
+    {
+      "tag": "o01-control",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var r = Image.create(32, 32, false, Image.FORMAT_RGBA8)\nr.fill(Color(1, 0, 0, 1))\nvar b = Image.create(32, 32, false, Image.FORMAT_RGBA8)\nb.fill(Color(0, 0, 1, 1))\nreturn \"control red=\" + str(r.get_pixel(16, 16)) + \" blue=\" + str(b.get_pixel(16, 16)) + \" fd=\" + str(Engine.get_frames_drawn())"
+      }
+    },
+    {
+      "tag": "o02-make",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var sv = SubViewport.new()\nsv.name = StringName(\"OffscreenProbe\")\nsv.size = Vector2i(128, 128)\nsv.render_target_update_mode = SubViewport.UPDATE_ALWAYS\nsv.transparent_bg = false\nget_parent().add_child(sv)\nvar cr = ColorRect.new()\ncr.name = StringName(\"Fill\")\ncr.size = Vector2i(128, 128)\ncr.color = Color(1, 0, 0, 1)\nsv.add_child(cr)\nreturn \"made \" + str(sv.get_path()) + \" vprid=\" + str(sv.get_viewport_rid()) + \" parent=\" + str(get_parent().get_path())"
+      }
+    },
+    {
+      "sleep_ms": 1200,
+      "port": "game",
+      "note": "let the offscreen viewport render"
+    },
+    {
+      "tag": "o03-read-red",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var sv = get_parent().get_node_or_null(\"OffscreenProbe\")\nif sv == null:\n\treturn \"NO SUBVIEWPORT\"\nvar img = sv.get_texture().get_image()\nvar img2 = RenderingServer.texture_2d_get(RenderingServer.viewport_get_texture(sv.get_viewport_rid()))\nreturn \"A size=\" + str(img.get_size()) + \" fmt=\" + str(img.get_format()) + \" px(64,64)=\" + str(img.get_pixel(64, 64)) + \" | Bsize=\" + str(img2.get_size()) + \" Bpx=\" + str(img2.get_pixel(64, 64)) + \" | node.color=\" + str(sv.get_node(\"Fill\").color) + \" | fd=\" + str(Engine.get_frames_drawn())"
+      }
+    },
+    {
+      "tag": "o04-recolour-green",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var sv = get_parent().get_node_or_null(\"OffscreenProbe\")\nsv.get_node(\"Fill\").color = Color(0, 1, 0, 1)\nreturn \"recoloured to green, node.color=\" + str(sv.get_node(\"Fill\").color)"
+      }
+    },
+    {
+      "sleep_ms": 1200,
+      "port": "game",
+      "note": "let the offscreen viewport render again"
+    },
+    {
+      "tag": "o05-read-green",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var sv = get_parent().get_node_or_null(\"OffscreenProbe\")\nvar img = sv.get_texture().get_image()\nvar img2 = RenderingServer.texture_2d_get(RenderingServer.viewport_get_texture(sv.get_viewport_rid()))\nreturn \"A px(64,64)=\" + str(img.get_pixel(64, 64)) + \" | Bpx=\" + str(img2.get_pixel(64, 64)) + \" | node.color=\" + str(sv.get_node(\"Fill\").color) + \" | fd=\" + str(Engine.get_frames_drawn())"
+      }
+    },
+    {
+      "tag": "o06-recolour-blue",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var sv = get_parent().get_node_or_null(\"OffscreenProbe\")\nsv.get_node(\"Fill\").color = Color(0, 0, 1, 1)\nreturn \"recoloured to blue\""
+      }
+    },
+    {
+      "sleep_ms": 1200,
+      "port": "game",
+      "note": "let the offscreen viewport render a third time"
+    },
+    {
+      "tag": "o07-read-blue",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var sv = get_parent().get_node_or_null(\"OffscreenProbe\")\nvar img = sv.get_texture().get_image()\nreturn \"A px(64,64)=\" + str(img.get_pixel(64, 64)) + \" | node.color=\" + str(sv.get_node(\"Fill\").color) + \" | fd=\" + str(Engine.get_frames_drawn())"
+      }
+    },
+    {
+      "tag": "o08-root-compare",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var root = get_viewport()\nvar img = root.get_texture().get_image()\nreturn \"root size=\" + str(img.get_size()) + \" px(400,300)=\" + str(img.get_pixel(400, 300)) + \" | rs_objects=\" + str(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)) + \" | fd=\" + str(Engine.get_frames_drawn())"
+      }
+    },
+    {
+      "tag": "o09-recolour-yellow",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var sv = get_parent().get_node_or_null(\"OffscreenProbe\")\nsv.get_node(\"Fill\").color = Color(1, 1, 0, 1)\nsv.render_target_update_mode = SubViewport.UPDATE_ONCE\nreturn \"recoloured to yellow, update_mode=UPDATE_ONCE\""
+      }
+    },
+    {
+      "sleep_ms": 1200,
+      "port": "game",
+      "note": "one-shot update window"
+    },
+    {
+      "tag": "o10-read-yellow",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var sv = get_parent().get_node_or_null(\"OffscreenProbe\")\nvar img = sv.get_texture().get_image()\nreturn \"A px(64,64)=\" + str(img.get_pixel(64, 64)) + \" | node.color=\" + str(sv.get_node(\"Fill\").color) + \" | fd=\" + str(Engine.get_frames_drawn())"
+      }
+    }
+  ]
+}
