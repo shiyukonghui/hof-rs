@@ -236,27 +236,81 @@ check afterwards). With the pixel-evidence path still broken, a fourth game woul
 
 ## E. Gates, commits, both repositories
 
-### E1 The ten gates (`runs\gates\task094\`)
+### E1 The ten gates (`runs\gates\task094\`) — g01..g10 **all `exit=0`**
 
 Run with `tools\run_gates.ps1 -Tag task094 -VersionText 4.8.dev.mono.custom_build.cf554ef58`
-(engine HEAD is still `cf554ef58c` at the time of the run; gate 9 needs the *compiled* anchor, see
-G-1 in TASK-093's report). Per-gate `exit=` lines and the tails are in `summary.txt`; see §E3 for
-what actually came back.
+(engine HEAD was still `cf554ef58c` at the time of the run; gate 9 needs the *compiled* anchor, see
+G-1 in TASK-093's report). Per-gate `exit=` lines and the tails are in `summary.txt`:
+
+| # | gate | verdict (`exit=0`) |
+|---|---|---|
+| 1 | module doctests `--test-case=[MCPServer]*` | `155/155 passed`, `6613/6613 assertions`, `SUCCESS!` |
+| 2 | full doctests `--headless --test` | `1581/1581 passed / 3 skipped`, `430926/430926 assertions`, `SUCCESS!` |
+| 3 | group manifest | `TOOL-GROUPS CHECK PASS` |
+| 4 | contract subset (live) | `3/3 checks passed` (editor 9888, game 9889, `guard_user_port_9877`) |
+| 5 | rename map | `RESULT: PASS (all checks green)` |
+| 6 | tautologies | `TAUTOLOGY CHECK PASS` |
+| 7 | exit-code propagation | `PROBES: 10/10` |
+| 8 | hardcoded counts | `RESULT: PASS`（`UNCLASSIFIED = 0`） |
+| 9 | engine anchor | `ANCHOR_JUDGE VERDICT=ANCHOR_EQUAL`; `diff_count=0 safe_count=0 red_count=0`; `RESULT PASS` |
+| 10 | `accept_m1` | `22/22 cases passed` (wall 46.7 s) |
 
 **On the rebuild question.** The only engine-repo change in this task is
 `modules/mcp_server/scripts/accept_m1.ps1` — a PowerShell script that is not compiled into either
-variant (`git status --short` in the engine repo lists exactly that one file). No object file
-depends on it, so a rebuild would reproduce byte-identical binaries and prove nothing; it was
-deliberately not run, and that is stated here rather than presented as "rebuilt and green". The
-consequence is the known gate-9 behaviour: the compiled version string stays `cf554ef58` while the
-engine HEAD moves to the new commit, so gate 9 is `ANCHOR_EQUAL` for the anchor `cf554ef58` before
-the commit and `ANCHOR_STALE_COMPILED` after it — the same self-correction TASK-092 recorded.
+variant (`git status --short` in the engine repo lists exactly that one file, before the commit). No
+object file depends on it, so a rebuild would reproduce byte-identical binaries and prove nothing;
+it was deliberately not run, and that is stated here rather than presented as "rebuilt and green".
+The consequence is the known gate-9 behaviour: the compiled version string stays `cf554ef58` while
+the engine HEAD moves to `8b9dd9a72b`, so gate 9 is `ANCHOR_EQUAL` for the anchor `cf554ef58`
+*before* the commit (which is what was measured) and `ANCHOR_STALE_COMPILED` after it — the same
+self-correction TASK-092 recorded.
 
-### E2 Commits — see §E3 (filled in after the gate run and the commits)
+### E2 Commits
 
-### E3 Filled in below by the completion note of this turn
+**Engine repo `F:\moonbit-hof-rs\godot-mcp\godot`** — one commit, **pushed to the fork**:
 
-See the "final numbers" block appended at the end of this file.
+```
+8b9dd9a72b modules/mcp_server: task094 - D-2 is a load-sensitive readiness predicate, not a defect: the accept_m1 wait now asks the main loop to advance (frame_count strictly increasing six samples in a row) instead of asking it to be faster than 20 fps, so the suite is 22/22 solo and 22/22 under eight CPU burners
+cf554ef58c modules/mcp_server: task092 (B2/B3/B4) step2 - a deferred call's file effects and its capture are collected at completion, the two missing doctests exist, and the frame cost is a clamped median of a window
+87fbf82f4b modules/mcp_server: task092 (B1) step1 - an over-bound payload is written whole to a sidecar the line can be checked against, and the ledger re-hashes it
+382549f63e modules/mcp_server: task090 (2c-9) step6 - the round-8 record: the traceability section and the gate ledger
+8604fcf9e2 modules/mcp_server: task090 (2c-9) step5 - the description change is declared in the generator, so the contract stays reproducible
+eee58538a1 modules/mcp_server: task090 (2c-9) step4 - a deferred call's own body reaches its trace line too
+cac01b5f9f modules/mcp_server: task090 (2c-9) step3 - the round-8 fixes: the InputMap fact, the scenario flags, the frame-based deadline
+a455a87bea modules/mcp_server: task090 (2c-9) step2 - D-3: the game executor reaches the running scene tree
+```
+
+`git status --short`: **empty**.
+`git rev-parse HEAD` == `refs/remotes/origin/feature/mcp-server-module-rebuild`
+== `8b9dd9a72be43c90e875d2c765ca673ba59a9492` (`cf554ef58c..8b9dd9a72b HEAD -> feature/mcp-server-module-rebuild`).
+
+**Main repo `F:\moonbit-hof-rs`** (branch `master`, no remote) — two commits:
+
+```
+b42e233 docs(godot-mcp): TASK-094 - D142 in the decision log (D-1 attributed to the machine's picture pipeline and the twelve hypotheses eliminated, D-2 judged as test brittleness and its readiness predicate fixed), with the ten gate exit codes and the three accept_m1 measurements
+f65fe78 docs(godot-mcp): TASK-094 - D-1 is the machine's picture pipeline, not the module: the minimal counter-example (blue/red/green background, three identical PNGs that still show the dark background, with the property read back as green), the twelve eliminated hypotheses, the same-session A/B that answers 10/29 non-zero at 00:14 and 0/29 at 02:00 on unchanged binary bytes, and the four bypasses that all fail; the pixel-diff column stays at its real 0 because no fix can be produced from inside this process
+5f47949 docs(godot-mcp): TASK-093 - the report carries the two commit ids of this task and the final gate ledger
+ae0b791 docs(godot-mcp): TASK-093 - the report and its evidence: eight game-side defects with before/after runs, the ten gates green, and the one environment defect that blocks pixel evidence
+97167e4 feat(godot-mcp): TASK-093 - the 2nd and 3rd C# games (Breakout, Snake), every byte of them written by MCP calls, plus the cross-round GAME-LOOP-LOG
+fed0135 docs(godot-mcp): TASK-092 - the summary table carries the same two measurement points as the body, so the report cannot be read two ways
+64df60b docs(godot-mcp): TASK-092 - the report's main-repo log is a snapshot with an explicit boundary, so a doc-only follow-up cannot make it stale
+9a9b1f3 docs(godot-mcp): TASK-092 - the tracked/ignored numbers are stated for both measurement points, and the largest tracked artifact is named instead of hiding inside a total
+```
+
+`git status --short`: **empty (0 lines)**. `f65fe78` carries `GAME-LOOP-LOG.md` (D-1 re-attributed,
+D-2 marked fixed with both measurements), `README.md` (both defects rewritten), the report and the
+239-file / 1.7 MB `recovery\work\task094\` evidence set. It also contains the one incidental file the
+Pong replay touched, `projects\pong\scenes\main.tscn` (the engine rewrites `unique_id`s when a scene
+is re-saved; semantics identical — same note as TASK-092's).
+
+### E3 Where this task stopped — stated plainly
+
+* **A** located and bounded; **no fix exists that can be made from inside `modules/mcp_server`**.
+* **B** blocked by A; the pixel-diff columns keep their real `0` and point at D-1.
+* **C** fixed and measured solo *and* under load.
+* **D** not started (Tetris is not in the ledger).
+* **E** ten gates green with real exit codes; engine repo committed and pushed; main repo committed;
+  both `git status` empty. The rebuild was deliberately skipped and why is written down above.
 
 ---
 
