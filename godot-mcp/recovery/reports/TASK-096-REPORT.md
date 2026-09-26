@@ -347,3 +347,12 @@ cf554ef58c modules/mcp_server: task092 (B2/B3/B4) step2 - a deferred call's file
 
 `git status --short`：**空**；`HEAD == origin/feature/mcp-server-module-rebuild == 95aa1d8984fc88aa0415a3b823811fd76d76a2ad`。
 
+**快照的边界（把话说死）**：§G 的这两段 log 写于主仓 `b84bc87`（本报告正文）之后。此后本任务只再落**一个纯文本次提交**，它就是携带本句话的那一个，提交信息逐字为：
+
+```
+docs(godot-mcp): TASK-096 - the report's boundary note: the closing snapshot describes the state before this doc-only follow-up, and the follow-up carries this very sentence
+```
+
+所以 §G 的两段 log 描述的是**这个纯文本次提交之前**的仓库状态；该提交之后，主仓的已跟踪工作树仍是空的，唯一变化是 `git log` 顶端多出这一行。**任何只读仓库的人都能用 `git log -1` 与上面这行消息逐字对上。**
+
+
