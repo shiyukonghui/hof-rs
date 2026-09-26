@@ -282,16 +282,23 @@ a455a87bea modules/mcp_server: task090 (2c-9) step2 - D-3: the game executor rea
 
 ### 主仓 `F:\moonbit-hof-rs`
 
+`git log --oneline` 快照（**截至 `9a9b1f3`**；本报告的这一处收尾编辑是它之后的一个纯文档提交，
+不会再改变下面任何一条结论）：
+
 ```
+9a9b1f3 docs(godot-mcp): TASK-092 - the tracked/ignored numbers are stated for both measurement points, and the largest tracked artifact is named instead of hiding inside a total
+0516f4c chore(godot-mcp): TASK-092 - the gate 9 re-run's stderr stub lands with its stdout
+3e4aa99 docs(godot-mcp): TASK-092 report self-correction - gate 9 stays ANCHOR_EQUAL after the report commit (it judges the engine repo, which has not moved), and the editor phase is 24 requests of which 23 are tools/call
 4e74537 docs(godot-mcp): TASK-092 B/C - the three traceability gaps are closed (args sidecar, deferred file+screen evidence, the two missing doctests, a stable frame-cost estimate), the gates and accept_m1 are green, and Pong reaches facts_complete 100%
 d043fd3 chore(godot-mcp): TASK-092 A - the recovery archive moves into the project (per-file sha256 verified) and its ignore policy is split by size and reproducibility
 f523904 docs(godot-mcp): 更正 Pong 缺陷记录里的一个数字 —— run-4 里「注定失败的断言」是 2 条不是 3 条
 9f87061 docs(decisions): D139 TASK-091 D 段交付 —— 脚手架 + 试测驱动 + Pong + 6 条缺陷的重跑对比
 df02ccb feat(godot-mcp): 可复用 C# 游戏模板 + 统一试测驱动 + 第 1 个游戏 Pong
-355eefc chore(godot-mcp): 迁移入主仓 + 嵌套 git 忽略策略 + D136/D137/D138
-fef32a3 docs(decisions): D135 **独立验收 fail** —— 抓到阻塞 D-B1(res 围栏被链接穿透，模块级) + D-B2(编译不过仍报 readable) + D-B3(分析器误报) + 我的裁决
-96249df docs(decisions): D134 TASK-075 交付 —— D2 契约违约+静默已修（含防假修复对照）／**新增 project_read_text_file（契约 176→177）**／D9 根因修且**撤回上轮错误结论**／D4·D5 定性／分析器漏报修
 ```
+
+三个逻辑步骤对应 **`d043fd3`（A）** 与 **`4e74537`（B+C）**；其余三条是**自我更正与数字澄清**
+（门 9 判的是引擎仓、编辑器相是 24 条请求、两个测点的入库数字与最大单个文件），
+按本项目的既有做法**另开提交而不是重写历史**。
 
 `git status --short`：**空**（收尾核验）。本次主仓改动：`recovery\`（迁移 + task092 证据）、
 `.gitignore`、`README.md`（§8 + §4.3）、`tools\run_gates.ps1`（退出码标记 + 轮询）、
