@@ -1,0 +1,8 @@
+== runs\platformer\plat-task102-r2
+  e05-read-1     sha256=0dd8bf57022b7967a9cd590041b442f1972e4e969294b27b8558104b7c6e0ed5 bytes=834
+  e09-read-2     sha256=0dd8bf57022b7967a9cd590041b442f1972e4e969294b27b8558104b7c6e0ed5 bytes=834
+  scene file unchanged by the refused batch: True
+  e06 refusal code=-32000 conflicts=3 paths=Background,Hud,Status
+  e07-tree-after-refusal   nodes=4 auto_named=0 []
+  g01-scene-tree           nodes=114 auto_named=0 []
+  g214-final-tree          nodes=115 auto_named=0 []

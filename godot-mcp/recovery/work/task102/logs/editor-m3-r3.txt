@@ -1,0 +1,8 @@
+== runs\match3\m3-task102-r3
+  e05-read-1     sha256=7772574ad82a8a096758158900beaad9cb6833037fe7ca09d988500d92231617 bytes=842
+  e09-read-2     sha256=7772574ad82a8a096758158900beaad9cb6833037fe7ca09d988500d92231617 bytes=842
+  scene file unchanged by the refused batch: True
+  e06 refusal code=-32000 conflicts=3 paths=Background,Hud,Status
+  e07-tree-after-refusal   nodes=4 auto_named=0 []
+  g01-scene-tree           nodes=68 auto_named=0 []
+  g122-final-tree          nodes=69 auto_named=0 []

@@ -1,0 +1,23 @@
+run        : runs\platformer\plat-task102-r1
+game       : platformer  tag: plat-task102-r1  pillow: True
+editor : calls=14  facts=14/14  args=inline_complete=13, sidecar_verified=1
+         verdicts=failed=1, ok_effect_observed=1, ok_file_effect_observed=6, ok_no_effect_observed=6
+game   : calls=214 facts=214/214  args=inline_complete=214
+         verdicts=failed=1, ok_effect_observed=31, ok_file_effect_observed=150, ok_no_effect_observed=32
+------------------------------------------------------------------------------
+TOTAL  : calls=228  facts_complete=228/228 (100.0%)
+         verdicts=failed=2, ok_effect_observed=32, ok_file_effect_observed=156, ok_no_effect_observed=38
+pixels : 228 capture pairs, 39 recomputed non-zero (editor 1/14, game 38/214)
+         pixel_evidence verdict=available
+frames : 7 in C:\Users\wyl\AppData\Roaming\Godot\app_userdata\platformer
+         plat-t0.png  800x600    10819 B  B56353E440E9  px_vs_prev=-
+         plat-t1.png  800x600    10839 B  3B253B25AEA5  px_vs_prev=628
+         plat-t2.png  800x600    10500 B  22C87745F549  px_vs_prev=22774
+         plat-t3.png  800x600    10209 B  939FBF85ABDF  px_vs_prev=24693
+         plat-t4.png  800x600     9549 B  F71D8A4812BA  px_vs_prev=2445
+         plat-t5.png  800x600    10743 B  09FEFD8AAE08  px_vs_prev=24442
+         plat-t6.png  800x600    10304 B  AA725DDFA3CF  px_vs_prev=4324
+defects: 2 (auto)
+         [medium] call 6 (editor_add_nodes_batch) failed with error -32000 | declared failure
+         [medium] call 208 (running_game_assert_node_state) failed with error -32001 | declared failure
+recomputed-vs-trace mismatches: none

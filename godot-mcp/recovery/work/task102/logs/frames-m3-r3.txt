@@ -1,0 +1,18 @@
+== match3 : 7 frame(s) in C:\Users\wyl\AppData\Roaming\Godot\app_userdata\match3
+  frame        size         bytes  sha256[0:16]     vs report
+  m3-t0.png    800x600      10216  04B5CBCB04B7A041 same
+  m3-t1.png    800x600      10643  312E7AD5CC308B82 same
+  m3-t2.png    800x600      11099  14DB9CCB6F7A926D same
+  m3-t3.png    800x600      10687  E1F605108B26D7AC same
+  m3-t4.png    800x600      10204  C813667188065E3E same
+  m3-t5.png    800x600      11776  5A4453CA9AEEFAD9 same
+  m3-t6.png    800x600      10675  17B181CCE04394E8 same
+  distinct sha256 among the frames: 7/7
+  pair diffs (recomputed here):
+    m3-t0.png    -> m3-t1.png    engine=140015  any=140332  total=480000  (report.json agrees)
+    m3-t1.png    -> m3-t2.png    engine=17813   any=17865   total=480000  (report.json agrees)
+    m3-t2.png    -> m3-t3.png    engine=24265   any=24658   total=480000  (report.json agrees)
+    m3-t3.png    -> m3-t4.png    engine=6892    any=7228    total=480000  (report.json agrees)
+    m3-t4.png    -> m3-t5.png    engine=132911  any=133177  total=480000  (report.json agrees)
+    m3-t5.png    -> m3-t6.png    engine=135425  any=135693  total=480000  (report.json agrees)
+  pairs where the report and this recomputation disagree: 0

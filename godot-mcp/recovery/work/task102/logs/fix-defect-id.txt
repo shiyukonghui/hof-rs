@@ -1,0 +1,3 @@
+renamed T-1 -> X-1 in F:\moonbit-hof-rs\godot-mcp\GAME-LOOP-LOG.md (65033 bytes)
+  occurrences of X-1      : 5
+  occurrences of **T-1**  : 1

@@ -1,0 +1,23 @@
+run        : runs\match3\m3-task102-r2
+game       : match3  tag: m3-task102-r2  pillow: True
+editor : calls=14  facts=14/14  args=inline_complete=13, sidecar_verified=1
+         verdicts=failed=1, ok_effect_observed=1, ok_file_effect_observed=6, ok_no_effect_observed=6
+game   : calls=125 facts=125/125  args=inline_complete=125
+         verdicts=failed=1, ok_effect_observed=15, ok_file_effect_observed=83, ok_no_effect_observed=26
+------------------------------------------------------------------------------
+TOTAL  : calls=139  facts_complete=139/139 (100.0%)
+         verdicts=failed=2, ok_effect_observed=16, ok_file_effect_observed=89, ok_no_effect_observed=32
+pixels : 139 capture pairs, 17 recomputed non-zero (editor 1/14, game 16/125)
+         pixel_evidence verdict=available
+frames : 7 in C:\Users\wyl\AppData\Roaming\Godot\app_userdata\match3
+         m3-t0.png    800x600    10216 B  04B5CBCB04B7  px_vs_prev=-
+         m3-t1.png    800x600    10643 B  312E7AD5CC30  px_vs_prev=140015
+         m3-t2.png    800x600    11099 B  14DB9CCB6F7A  px_vs_prev=17813
+         m3-t3.png    800x600    10687 B  E1F605108B26  px_vs_prev=24265
+         m3-t4.png    800x600    10204 B  C81366718806  px_vs_prev=6892
+         m3-t5.png    800x600    10652 B  2C4572B6CA1C  px_vs_prev=8672
+         m3-t6.png    800x600    10675 B  17B181CCE043  px_vs_prev=3600
+defects: 2 (auto)
+         [medium] call 6 (editor_add_nodes_batch) failed with error -32000 | declared failure
+         [medium] call 119 (running_game_assert_node_state) failed with error -32001 | declared failure
+recomputed-vs-trace mismatches: none

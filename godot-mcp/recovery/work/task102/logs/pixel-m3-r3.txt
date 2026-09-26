@@ -1,0 +1,19 @@
+== runs\match3\m3-task102-r3
+   trace-editor.jsonl: pairs=14 comparable=14 nondistinct_digests=2
+      non-zero by engine rule (>10): 1/14 ; by any-difference rule: 1/14
+      pairs whose reported changed_pixels != the recomputed engine number: 0
+        seq=1    project_edit_script                        any=0       engine=0       reported=0
+        seq=2    editor_open_scene                          any=0       engine=0       reported=0
+        seq=3    editor_add_nodes_batch                     any=213322  engine=213112  reported=213112
+        seq=4    editor_save_scene                          any=0       engine=0       reported=0
+        seq=5    project_read_text_file                     any=0       engine=0       reported=0
+        seq=6    editor_add_nodes_batch                     any=0       engine=0       reported=0
+   trace-game.jsonl: pairs=131 comparable=131 nondistinct_digests=27
+      non-zero by engine rule (>10): 21/131 ; by any-difference rule: 21/131
+      pairs whose reported changed_pixels != the recomputed engine number: 0
+        seq=1    running_game_get_scene_tree                any=0       engine=0       reported=0
+        seq=2    running_game_execute_gdscript              any=0       engine=0       reported=0
+        seq=3    running_game_assert_node_state             any=0       engine=0       reported=0
+        seq=4    running_game_assert_node_state             any=0       engine=0       reported=0
+        seq=5    running_game_assert_node_state             any=0       engine=0       reported=0
+        seq=6    running_game_assert_node_state             any=0       engine=0       reported=0

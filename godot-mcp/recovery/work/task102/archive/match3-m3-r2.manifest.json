@@ -1,0 +1,657 @@
+{
+    "task":  "TASK-102",
+    "game":  "match3",
+    "class":  "Match3Game",
+    "tag":  "m3-r2",
+    "project":  "F:\\moonbit-hof-rs\\godot-mcp\\projects\\match3",
+    "archived_to":  "F:\\moonbit-hof-rs\\godot-mcp\\recovery\\work\\task102\\archive\\match3-m3-r2",
+    "file_count":  129,
+    "total_bytes":  8396754,
+    "files":  [
+                  {
+                      "path":  ".gitignore",
+                      "bytes":  87,
+                      "sha256":  "0D2A76F040DF20FED3E84EB6616E1133AD4BB203915D3280A953A3243E9A029B"
+                  },
+                  {
+                      "path":  "match3.csproj",
+                      "bytes":  341,
+                      "sha256":  "85001FDCB7E8E32FC85CC06C2F27AAC4AEEAB9E3DC1B421CFC0312A2CE782D34"
+                  },
+                  {
+                      "path":  "NuGet.config",
+                      "bytes":  464,
+                      "sha256":  "A7A216422A8736832982A5A31EFD6B653C68FF19994577054A28831C155F6589"
+                  },
+                  {
+                      "path":  "project.godot",
+                      "bytes":  1706,
+                      "sha256":  "3FB422EB02BE710437E3293E1C5D0F074F9302AD8A11FFD4BACD233942615E23"
+                  },
+                  {
+                      "path":  "README.md",
+                      "bytes":  1955,
+                      "sha256":  "B917792E5B12A5EA8B6ADB1406C2E7F7A2B59D763B6E7BEC7A077C626DF57CCD"
+                  },
+                  {
+                      "path":  ".godot\\.gdignore",
+                      "bytes":  1,
+                      "sha256":  "01BA4719C80B6FE911B091A7C05124B64EEECE964E09C058EF8F9805DACA546B"
+                  },
+                  {
+                      "path":  ".godot\\global_script_class_cache.cfg",
+                      "bytes":  8,
+                      "sha256":  "F61AA7AD3097022D6A9D110CA3F73FA7BB348EC2CF9A6E7C9523574DC75F5A16"
+                  },
+                  {
+                      "path":  ".godot\\scene_groups_cache.cfg",
+                      "bytes":  0,
+                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+                  },
+                  {
+                      "path":  ".godot\\uid_cache.bin",
+                      "bytes":  115,
+                      "sha256":  "D349C98B08A512A2442B02DE3F0407E25F4735BB5DE7B0DC3BD14446B8CEDC0A"
+                  },
+                  {
+                      "path":  ".godot\\editor\\editor_layout.cfg",
+                      "bytes":  1530,
+                      "sha256":  "25D66F59AECB1FF183A451334EBA4205FD97A1313B534ED64BB4AC244D689A40"
+                  },
+                  {
+                      "path":  ".godot\\editor\\filesystem_cache10",
+                      "bytes":  480,
+                      "sha256":  "51BC98B0E3CE6CEEE20AB95AEBAA436E3A302C9A77816C47A9D59364ED7AB7DB"
+                  },
+                  {
+                      "path":  ".godot\\editor\\filesystem_update4",
+                      "bytes":  31,
+                      "sha256":  "6D999CA68E177E7429DC3E9D8C875CE723EC7EB8FBCA6D276E75F47205EBB64A"
+                  },
+                  {
+                      "path":  ".godot\\editor\\main.mcp-tmp.tscn-folding-82c1904bfdea32b6497dfb01094960f9.cfg",
+                      "bytes":  49,
+                      "sha256":  "FA44DFBAE9B3B64980C44D9922ACDAD9B34EA46C85CCE8A917708577229C27F6"
+                  },
+                  {
+                      "path":  ".godot\\editor\\main.tscn-folding-3ad5c15c4f3250da0cc7c1af1770d85f.cfg",
+                      "bytes":  135,
+                      "sha256":  "2A6EA00109F698C6A7974DC37B4E24CF14432AF5870A71FFD69F7D46AC9E9FE4"
+                  },
+                  {
+                      "path":  ".godot\\editor\\project_metadata.cfg",
+                      "bytes":  191,
+                      "sha256":  "DAE8E10D044298E2FBB291B23464F27F2318B58FC29E41DC8F0E9EDB29E8BC19"
+                  },
+                  {
+                      "path":  ".godot\\editor\\script_editor_cache.cfg",
+                      "bytes":  0,
+                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+                  },
+                  {
+                      "path":  ".godot\\editor\\shader_editor_cache.cfg",
+                      "bytes":  0,
+                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+                  },
+                  {
+                      "path":  ".godot\\mono\\metadata\\ide_messaging_meta.txt",
+                      "bytes":  86,
+                      "sha256":  "6FB5B93F865AFF81E33C0068CB66F7DD7F6A7C8AA7EDC80D12B525117C1C28CD"
+                  },
+                  {
+                      "path":  ".godot\\mono\\temp\\bin\\Debug\\GodotSharp.dll",
+                      "bytes":  6029312,
+                      "sha256":  "8F6F26758762B41742F5FFBFD11A39B9CEFAD988FB7B7B61099799447D5D2153"
+                  },
+                  {
+                      "path":  ".godot\\mono\\temp\\bin\\Debug\\GodotSharpEditor.dll",
+                      "bytes":  309760,
+                      "sha256":  "F815C75579BD73177008F737E5964DBC36A07CA9C552978A82D58738B68CBC02"
+                  },
+                  {
+                      "path":  ".godot\\mono\\temp\\bin\\Debug\\match3.deps.json",
+                      "bytes":  1666,
+                      "sha256":  "483A43D99B79381CB03AA308E142911F5536DA71BD0EFF24FEAB15CB0356C3B6"
+                  },
+                  {
+                      "path":  ".godot\\mono\\temp\\bin\\Debug\\match3.dll",
+                      "bytes":  36352,
+                      "sha256":  "41403775F661FBC6AA5A86D09EE764ADE3C4F04DBC16702E11A4CDFDAAB6E5F4"
+                  },
+                  {
+                      "path":  ".godot\\mono\\temp\\bin\\Debug\\match3.pdb",
+                      "bytes":  35884,
+                      "sha256":  "E4D62065A47223C01280B7F7CE13E58536F6AFDB1F72A7050F5E1ACDCAFEEDF7"
+                  },
+                  {
+                      "path":  ".godot\\mono\\temp\\bin\\Debug\\match3.runtimeconfig.json",
+                      "bytes":  303,
+                      "sha256":  "0B539CD55C434F10C9E5913DB2D3A936CD8364449499F28EF21A1108F828E7E9"
+                  },
+                  {
+                      "path":  ".godot\\mono\\temp\\obj\\match3.csproj.nuget.dgspec.json",
+                      "bytes":  3202,
+                      "sha256":  "8CB25F16B0FEF121D698E930AD6A3A95B19EDFA2B621BE6A478338670903E08C"
+                  },
+                  {
+                      "path":  ".godot\\mono\\temp\\obj\\match3.csproj.nuget.g.props",
+                      "bytes":  1613,
+                      "sha256":  "56A8B70BD9BA6C141970D1B2C8D63FDAC746AEBA1C98AC45A41355115D3CA3FB"
+                  },
+                  {
+                      "path":  ".godot\\mono\\temp\\obj\\match3.csproj.nuget.g.targets",
+                      "bytes":  150,
+                      "sha256":  "971CC9B535384849B5C661D776CD7A80833A416265E32E8968E06C367368B8B5"
+                  },
+                  {
+                      "path":  ".godot\\mono\\temp\\obj\\project.assets.json",
+                      "bytes":  5521,
+                      "sha256":  "F652639BDD6CB26D654A7FC7676DE1A77D2875AB772FC79133DC15BDAF67C38E"
+                  },
+                  {
+                      "path":  ".godot\\mono\\temp\\obj\\project.nuget.cache",
+                      "bytes":  543,
+                      "sha256":  "D0AFB7576B8BC8623549C02024FAD51940A9F95A69D97AEA2E944A6887D37082"
+                  },
+                  {
+                      "path":  ".godot\\mono\\temp\\obj\\Debug\\.NETCoreApp,Version=v8.0.AssemblyAttributes.cs",
+                      "bytes":  198,
+                      "sha256":  "F7A5D9789C863625E139FF99E1113A503830F6B85A88F6129916DF83AC76B49E"
+                  },
+                  {
+                      "path":  ".godot\\mono\\temp\\obj\\Debug\\match3.AssemblyInfo.cs",
+                      "bytes":  992,
+                      "sha256":  "05BFD07288A95B226FD0A88AE29E3AB5973D60227D399A15D1D676855AD05E79"
+                  },
+                  {
+                      "path":  ".godot\\mono\\temp\\obj\\Debug\\match3.AssemblyInfoInputs.cache",
+                      "bytes":  66,
+                      "sha256":  "CA9F1E99DA4AAA8AC56F6A723A47FE5B1F6F1D3C4F25892EF358ADDE529A362E"
+                  },
+                  {
+                      "path":  ".godot\\mono\\temp\\obj\\Debug\\match3.assets.cache",
+                      "bytes":  1805,
+                      "sha256":  "E2007C47C11FD98A188E98C75C9E7861FB90C3307E8A06FD37B376A806453393"
+                  },
+                  {
+                      "path":  ".godot\\mono\\temp\\obj\\Debug\\match3.csproj.AssemblyReference.cache",
+                      "bytes":  500,
+                      "sha256":  "F0CF53E5862AD88CDA8BFE6B23B7A420F26E3F80A8AE8DA8C9054400833B8831"
+                  },
+                  {
+                      "path":  ".godot\\mono\\temp\\obj\\Debug\\match3.csproj.CoreCompileInputs.cache",
+                      "bytes":  66,
+                      "sha256":  "8DD9C7439D3D98490D81F5B0AFFF0551E95FED5D49254D81AEC377E17CF5D540"
+                  },
+                  {
+                      "path":  ".godot\\mono\\temp\\obj\\Debug\\match3.csproj.FileListAbsolute.txt",
+                      "bytes":  1612,
+                      "sha256":  "E58FA0A5B188DEB102022D8A2A69790251DBF2D64550D9AB545AA1F50B81E4E8"
+                  },
+                  {
+                      "path":  ".godot\\mono\\temp\\obj\\Debug\\match3.csproj.Up2Date",
+                      "bytes":  0,
+                      "sha256":  "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+                  },
+                  {
+                      "path":  ".godot\\mono\\temp\\obj\\Debug\\match3.dll",
+                      "bytes":  36352,
+                      "sha256":  "41403775F661FBC6AA5A86D09EE764ADE3C4F04DBC16702E11A4CDFDAAB6E5F4"
+                  },
+                  {
+                      "path":  ".godot\\mono\\temp\\obj\\Debug\\match3.GeneratedMSBuildEditorConfig.editorconfig",
+                      "bytes":  1092,
+                      "sha256":  "40FBE18A9528AECA2665E740A6AA6EF017C3338208BE3CA537C80554E0701BCE"
+                  },
+                  {
+                      "path":  ".godot\\mono\\temp\\obj\\Debug\\match3.genruntimeconfig.cache",
+                      "bytes":  66,
+                      "sha256":  "0208795E1EA753F4E0D9CB4A76186347E6E1EE3FCDC035F9FF9BB76262FCA936"
+                  },
+                  {
+                      "path":  ".godot\\mono\\temp\\obj\\Debug\\match3.pdb",
+                      "bytes":  35884,
+                      "sha256":  "E4D62065A47223C01280B7F7CE13E58536F6AFDB1F72A7050F5E1ACDCAFEEDF7"
+                  },
+                  {
+                      "path":  ".godot\\mono\\temp\\obj\\Debug\\ref\\match3.dll",
+                      "bytes":  7680,
+                      "sha256":  "D1D14CDD6EFF77CBFAE7C38C55F9D88C83E032BF344FF16A235F7BB263646420"
+                  },
+                  {
+                      "path":  ".godot\\mono\\temp\\obj\\Debug\\refint\\match3.dll",
+                      "bytes":  7680,
+                      "sha256":  "D1D14CDD6EFF77CBFAE7C38C55F9D88C83E032BF344FF16A235F7BB263646420"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\BestFitNormalShaderRD\\6706eb86a1ee733e268faa658cdeab3ce21f03b01347a1393763d7f29cf926f9\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  860,
+                      "sha256":  "32D7AA2EE4319DA7877921F98AFBB65171F7222338A3FEB49EDFCF7B5D1A9A90"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\BlitShaderRD\\db21ecf9b12dd366dbd6aea32e39b528e1d5a5e9d8c77524e476c352b4d96c2d\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  6516,
+                      "sha256":  "144FFC10D372CFCC9882E216696AFB379EBB8BFEBC3ED1C5A1607574B297586E"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\BokehDofShaderRD\\9c45a445838be83a7df9af71a2fd3e5483c649c17450478f37feaec971de2c8d\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  5956,
+                      "sha256":  "FD8D96D85EC1CE686EE4403E766236EBE4F07230D800FA5684282F37F59E3384"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\CanvasOcclusionShaderRD\\35768792222adab5d25767f49bb0dad5e6a1fe9f0a0c7566262d5cbf0f5c33f9\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  2928,
+                      "sha256":  "3441B097B0F30BC4F35ABC7A1991FC26AD3E4F684B1CF8A6F4BACF629F72B809"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\CanvasSdfShaderRD\\8f83c77a50eb0484e49d0ea40df2ed225b7d45f5cb8612ac7771269b57c18a33\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  4968,
+                      "sha256":  "58E6519CF1566D35E0928F874AB5D8970C88A8E5D413C845DB51FA19A5FBD904"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\CanvasShaderRD\\924dc7f3c79289cd7cf94a994c01e83872253f4d6d7e770dfbfda607df1aa373\\56a67896f3c107eaf9e88e8612864458461c38a0.vulkan.cache",
+                      "bytes":  42876,
+                      "sha256":  "9D39820CB647D00EB96C410BCFC9AACBDE071DCC93A543FCF3B1EFEFD04126E6"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\CanvasShaderRD\\924dc7f3c79289cd7cf94a994c01e83872253f4d6d7e770dfbfda607df1aa373\\717daeb6b486ee5cab5dcc2b51c7658a6eacb9c7.vulkan.cache",
+                      "bytes":  41812,
+                      "sha256":  "56B93B0CE4376763EB53F255FFDB0D823EC4697A8B97CE2E1B0E0B358A39266C"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\CanvasShaderRD\\924dc7f3c79289cd7cf94a994c01e83872253f4d6d7e770dfbfda607df1aa373\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  40624,
+                      "sha256":  "D76ACDC27679AB636883FC412F0A0B632437EDB8CD36A10A797B9499A4D4C2ED"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\CanvasShaderRD\\924dc7f3c79289cd7cf94a994c01e83872253f4d6d7e770dfbfda607df1aa373\\8f9335de72e837eeead40640cc01fddc5baf5a7c.vulkan.cache",
+                      "bytes":  24784,
+                      "sha256":  "B6098956A0828DCD071F4D2C0AE1D4753C973FCED578FADAFC2F5851FF9ABF4C"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\CanvasShaderRD\\924dc7f3c79289cd7cf94a994c01e83872253f4d6d7e770dfbfda607df1aa373\\90b96afad25c311837b639f3c9d81d610d9b7ee9.vulkan.cache",
+                      "bytes":  25100,
+                      "sha256":  "E275EE588ACAABB1D39D162B40FF97F08CF5F40BEC1A1C22E916A2F98F79B155"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\ClusterDebugShaderRD\\ec9e8478cb56c5fb5d682c72a42f7eee686aa2b632b15a7babb0d492c9fc169c\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  1752,
+                      "sha256":  "E6B78DC0399FD10B337D3FAAF0B66B1A7716EB2DF76E8D58B7EEB517F5E38F09"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\ClusterRenderShaderRD\\c27b3fd7a3d07605f8b62c26283b3a97ed4396354ae109bd123799bacb751441\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  3092,
+                      "sha256":  "D9B1D48160BD86EB25EA899C3E2EE4A1D4A64DACC5CBF5ACED07777389EFA053"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\ClusterStoreShaderRD\\fb8e9e1c90580e9207e17c0f9ee734d2ee99e8cc24737f0b11b193534c14ea71\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  1220,
+                      "sha256":  "9B1F251A49971F6F3113559AD87F44E661217D5C706E454AECEE894E32D044C9"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\CopyShaderRD\\9b4edaadc747b0adf047877290994a723c3742d882d2d400823c4219a29e3aa5\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  14148,
+                      "sha256":  "8A2C8D518919DD1A085A6ED729D9546EBD4E4F42F8B9E6B0F0EDF5B20AF5E76E"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\CopyToFbShaderRD\\f23f03b54516dea64e754a0b72c66a549e98888884f1d8a3c1d3c7fd43982ed9\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  5496,
+                      "sha256":  "FD97A86CD9E07F7B00B4FA86ED9C0D53CB5B45F80A6478998EB2F3617F069DCD"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\CubeToDpShaderRD\\91651e078a5cb539061e4b8d98cd74cc198fe8c31b42372bf60f2fc60f5eda45\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  1320,
+                      "sha256":  "75E9C782242633CBF85BAA7BE191B9ED4DE1176D7B8885D351F9D9DBE6256092"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\CubeToOctmapShaderRD\\ff43752aec23450c613b86ac23d65a9b56d6bf17d6f0e9b2065f279b6a0c79b2\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  1088,
+                      "sha256":  "910221B1518CB17B363CC7A3B24D173E27A3B18F4E767CAC422B15B86CE487E7"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\FsrUpscaleShaderRD\\32a3bb1db6e93316fdc538c7b4d656c97b849780c0a9c6d1d095a77a32ba0987\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  11532,
+                      "sha256":  "5510F1F0FBDB4817D08A78A10BA87ECF878016333CC3174514C411C0EFA7CABE"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\GiShaderRD\\1e11bd7d63567d651244492ae575de144513ab9866f24224088ded6ffa9a7b13\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  34612,
+                      "sha256":  "0C285A9195F6B8AC8A8FF14CEA6235668AE814D158E8D7D88B92D27341809245"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\IntegrateDfgShaderRD\\cd5627572ddee1240dbabfc7fb69790b3a2840c86f2362e3bd8ac415a8d0b5d7\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  1644,
+                      "sha256":  "94F1B179F96BECEA1216055D16DB72E9EF5FAAE9017D682CC86FEA63B5566297"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\LuminanceReduceShaderRD\\b9037b29c281d715512e7b7dd2e258a7d9e6227b3b5b6b043d7bb661e28c9092\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  2836,
+                      "sha256":  "181E9FA4A0E86ABDB8A3329BAB7B6287A22401C9C7D5111ACDE1DE596E46F2FD"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\MotionVectorsShaderRD\\40f8978d9d1f5bb35739794fa59b60b41aa4f3c6e0e4a45623eaea49535cd522\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  1644,
+                      "sha256":  "2D6A1514DE5E1A10ADCCBFAFF5A96F99A7C141FB2D85CD4303444F015157DE2E"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\OctmapDownsamplerShaderRD\\2842cabb2c9a014a91e652e1176e99e50c74c903b51b3ff6e58450a41cead6d7\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  2928,
+                      "sha256":  "082E47181FC10B89C7929EA36FAC97CB87E6C48EB7A1EB8A3C2D6232C3303277"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\OctmapFilterShaderRD\\19420dd4dd4d53df71250e09843b04577db711bc5bae83038510cc758b653c7d\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  23616,
+                      "sha256":  "F7E810A5FC895DFA9B26C2172B56AB3E305C9CF521EE09D3E1DDFD5C13D54197"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\OctmapRoughnessShaderRD\\e67efec656584aa27b496ae4b614e1c2c7b41282cc0fd866e15b132fa8abe94f\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  5248,
+                      "sha256":  "F1D348FAB9B7FF2A668A359988EB45781A96D3BA3D99347A915334A89CC36248"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\ParticlesCopyShaderRD\\3d0930b4a7e129e16a4166d923a6411ee60b6ac695a0f248886786a446193602\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  45216,
+                      "sha256":  "D5B5CFA4580BC308EF8E78FE97AC8265509DAB6DAAC1EA09879D7D9337BB0FDB"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\ParticlesShaderRD\\3dfac92cb39749e51c1898a8666c9eb143e2c81d44f9d71e135ae7028f6b0e0b\\07b5904b662900d90454c39c46885098de79aa4c.vulkan.cache",
+                      "bytes":  6408,
+                      "sha256":  "76DC56F3CF26EF7017DD62C84642E60A57C545B5591123711958CBC69376E8BD"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\ResolveShaderRD\\d200d01038059b6ba4f11a19f728774f891ebeef7210b5c27168eef10c37c43d\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  4000,
+                      "sha256":  "3A4B055F32FCBF7AEDA54E3E06D0028D11A25DB1171A5A78AA02EA5383FA363D"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SceneForwardClusteredShaderRD\\4c511823ee8b5b36154e8a0c46192982ca4d55a33538a27e56212b1852ce5d31\\166f29b7efce47a62ab4558d019ba003f152d0a3.vulkan.cache",
+                      "bytes":  68380,
+                      "sha256":  "D387E0CA836747D61FA14E5A48988E6199B3F987FA5A0B8E6E6B0424834F3ED5"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SceneForwardClusteredShaderRD\\4c511823ee8b5b36154e8a0c46192982ca4d55a33538a27e56212b1852ce5d31\\188dbcfbda6d0e9c5ff65997ed836295ddd8b63b.vulkan.cache",
+                      "bytes":  113116,
+                      "sha256":  "D1A3CA7FCA45823B10D55C5AD0F799D6FE51D282FFE65B965843D4ED8F592D5A"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SceneForwardClusteredShaderRD\\4c511823ee8b5b36154e8a0c46192982ca4d55a33538a27e56212b1852ce5d31\\3cbe07e060845e6f3b9d04bfbca6611c68dd7473.vulkan.cache",
+                      "bytes":  69920,
+                      "sha256":  "E399AA085F386FCEE51487A1B1700123F5B0BCCCD0E8E0A87CE2505D263ABCA8"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SceneForwardClusteredShaderRD\\4c511823ee8b5b36154e8a0c46192982ca4d55a33538a27e56212b1852ce5d31\\4d161e027d36dae3228a2fd069c9016607e1d80e.vulkan.cache",
+                      "bytes":  66792,
+                      "sha256":  "B4ACE4FBC115C5A36C53FA3883CA1D278C84672B5003703C8CD7D5E2BAD4BC18"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SceneForwardClusteredShaderRD\\4c511823ee8b5b36154e8a0c46192982ca4d55a33538a27e56212b1852ce5d31\\5a9465a6f80f297e012b68fdf20fd61ebbb13317.vulkan.cache",
+                      "bytes":  66592,
+                      "sha256":  "65180B849F43C525C99115DEDD6B52C81B726E0D365EA502466AB6F9EFA25713"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SceneForwardClusteredShaderRD\\4c511823ee8b5b36154e8a0c46192982ca4d55a33538a27e56212b1852ce5d31\\6151eec230aed1db05f6345da4cd0467316a60b8.vulkan.cache",
+                      "bytes":  66884,
+                      "sha256":  "788F898532393E55DBC7026A31ED704FAF2DB418C90B2FF3A4DEC2617002979D"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SceneForwardClusteredShaderRD\\4c511823ee8b5b36154e8a0c46192982ca4d55a33538a27e56212b1852ce5d31\\6c12f6b53a6e64c7cb16c3a593db235f5bb43e3b.vulkan.cache",
+                      "bytes":  67252,
+                      "sha256":  "209AC27A02AF7650EA938CD3B30AA6ED860072A3D041213C1B5F2043BBB30AC7"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SceneForwardClusteredShaderRD\\4c511823ee8b5b36154e8a0c46192982ca4d55a33538a27e56212b1852ce5d31\\7458bae28dc5e86e5080765c3ace30044eef9c81.vulkan.cache",
+                      "bytes":  66592,
+                      "sha256":  "65180B849F43C525C99115DEDD6B52C81B726E0D365EA502466AB6F9EFA25713"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SceneForwardClusteredShaderRD\\4c511823ee8b5b36154e8a0c46192982ca4d55a33538a27e56212b1852ce5d31\\766562d5bd8d8fe8f82fbed546ecf33e95f688ff.vulkan.cache",
+                      "bytes":  66592,
+                      "sha256":  "65180B849F43C525C99115DEDD6B52C81B726E0D365EA502466AB6F9EFA25713"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SceneForwardClusteredShaderRD\\4c511823ee8b5b36154e8a0c46192982ca4d55a33538a27e56212b1852ce5d31\\a784797763b72ce058effad41b273eb697df9814.vulkan.cache",
+                      "bytes":  110360,
+                      "sha256":  "732FA255EF9D066997EB547139C60FADEB764E6A9C851CB68EDACAC60BEBBD87"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SceneForwardClusteredShaderRD\\4c511823ee8b5b36154e8a0c46192982ca4d55a33538a27e56212b1852ce5d31\\bd7cdfb6ebe93637904ddc8acf4a9922b99f08b8.vulkan.cache",
+                      "bytes":  68900,
+                      "sha256":  "703623580747323B4F52C4678E4751F6C06B7DDFF07189D14F26BCF1A1DC813F"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SceneForwardClusteredShaderRD\\4c511823ee8b5b36154e8a0c46192982ca4d55a33538a27e56212b1852ce5d31\\bfcdf8b15d169a0dd0a1f259be1b0016d22b02c0.vulkan.cache",
+                      "bytes":  67056,
+                      "sha256":  "9F7DAAB88D69DBE06A66BDDBD8BF6782EFB234DFB3A49B3B772E6E1A60B7CA6A"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SceneForwardClusteredShaderRD\\4c511823ee8b5b36154e8a0c46192982ca4d55a33538a27e56212b1852ce5d31\\c01d76f20128e3693ef07bb58508488af1d837fd.vulkan.cache",
+                      "bytes":  68584,
+                      "sha256":  "08B895E27379F94B9668F6A76783923389BF23E6EC74E6D6413770F7D51EF5EF"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SceneForwardClusteredShaderRD\\4c511823ee8b5b36154e8a0c46192982ca4d55a33538a27e56212b1852ce5d31\\cb49d0ec89c580026bd929acb60112d53950c946.vulkan.cache",
+                      "bytes":  66792,
+                      "sha256":  "B4ACE4FBC115C5A36C53FA3883CA1D278C84672B5003703C8CD7D5E2BAD4BC18"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SceneForwardClusteredShaderRD\\4c511823ee8b5b36154e8a0c46192982ca4d55a33538a27e56212b1852ce5d31\\cc8f88974db93622b7e6ae8e1ac22e58c8fdbaed.vulkan.cache",
+                      "bytes":  67936,
+                      "sha256":  "82B669005D8FF1D6BC433C47A6D3273B184CF2E870BA300BA1FF4646562775FD"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SceneForwardClusteredShaderRD\\4c511823ee8b5b36154e8a0c46192982ca4d55a33538a27e56212b1852ce5d31\\d405ec8e1b0a93aaa83ff5c0c8a469c932974132.vulkan.cache",
+                      "bytes":  62536,
+                      "sha256":  "4973426BD517381620FD650A99ABF069C7B63929F20F2BB5ED90A5E9F4B7CB61"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\ScreenSpaceContactShadowsShaderRD\\0b33612b058e9b7310999829e71639ceaa4540b8b41a00997962c83f08231da2\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  8988,
+                      "sha256":  "EC6DA81A731671365167E2EBA6A9FDB68B08F62E0AFC898F3F011AADEDD80867"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\ScreenSpaceReflectionDownsampleShaderRD\\87c350557016f7e4168a176177edc3a7137f8fc86d1e58744d54fd15345c368e\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  3852,
+                      "sha256":  "23F26B9CCF558C94586DC5F840FB835DEB4D40B6B769E7B7C8DE03379CD7B0DD"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\ScreenSpaceReflectionFilterShaderRD\\48497ac93092f1afe108ee9a59e5f22e9b4d66a3d558bdc4a010d13c7537d1c8\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  1640,
+                      "sha256":  "97E03F0A9781B942AA05490695B9B0CEC185AC4853C5B6E4740BE8B1B3F51827"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\ScreenSpaceReflectionHizShaderRD\\634ea72a66bc5b24b3d3c28b02f716f41a7923bbaa4d928eded4adade0d2c694\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  2976,
+                      "sha256":  "BB92F38683B5E59A575A98EAA0E8B2F60E5B3F7CFD62CBBBA58C7752FFDA41CA"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\ScreenSpaceReflectionResolveShaderRD\\b92d6735270c5c080badd6ea82a631d2229685d4bbd191d95a0053671a9146ea\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  1672,
+                      "sha256":  "25DDB4FA83905A9BAB5817C4CAB564461E5F77848BAECAB572DD31465E12C9F6"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\ScreenSpaceReflectionShaderRD\\d644d55fc8eb70b02a822c5058455f6e42134f67bd4e95e1cae0d3643004537d\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  3916,
+                      "sha256":  "F5274013FB319DE9CEFF0A66087B19E374E36B4CA541E83C598EA2ED5085C1BA"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SdfgiDebugProbesShaderRD\\fa1d8957e40f48777c86b9f4d38f4bd4a1773f1b7d905ff9a7d6ef094ac51d2b\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  7916,
+                      "sha256":  "745C64B561C6AE3B9E305E156D9D38767B712407896807DDD6962A5083E14DBF"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SdfgiDebugShaderRD\\428a1669a440f730d93385073b36088c99ed232378f048bf18494f196c5cd0ef\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  2328,
+                      "sha256":  "94FB14EE61099776C613E8311CE2F0730CD8DB974EF32DE90FBA4F277D03AE32"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SdfgiDirectLightShaderRD\\e669c4a849b5b02873e7f495d173ed4a1c071e4e947fbde8e2061cbf08448b37\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  16844,
+                      "sha256":  "56C14F27D97BC64C3F6728E50FA45DF4EF3B9F458E0E6BCB8C816B3789E16AC8"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SdfgiIntegrateShaderRD\\b56ca793205911293bac7ed9a3e84a8a969226c9691cea99668285e190afdfdd\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  12568,
+                      "sha256":  "44AEA57FC01300A80E065394E18397B206B8F91DA4382FA5EE8C528FD0B72E31"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SdfgiPreprocessShaderRD\\da1bac1d3c76ca20cda61ca58dccee1b08836083261f87097e0469384d98a851\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  14560,
+                      "sha256":  "BF8BF2876D4307AD75592A9D00C64525A1F9E8D328372B41B2AD68F78F70D9B0"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\ShadowFrustumShaderRD\\bd63049c1839241bf30a490b92af6313b63a4f0a3a0582fe652adbd7d4533975\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  696,
+                      "sha256":  "7A1274B9B3096192AAF38FABF41D8F25E946D8EEC08628931499320FF726CA8C"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SkeletonShaderRD\\0890b13b2ea5a93efbb0db89d9b5c0b0eb5acce2c6319e84bc2a3a99239084e7\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  5236,
+                      "sha256":  "0A7794B1CFD0E44974EE453BE9227342F3895B13526BF81E1319CF4C4CA08777"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SkyShaderRD\\b63cd0107c671906c20890ca2364ceadf8480839e342643a4c82d5beba17b561\\0fa1946a11e1cca806ebfe4b3b4ac7f723d8b701.vulkan.cache",
+                      "bytes":  17688,
+                      "sha256":  "45B19CB9ED437A4CA42B1015670D547A2DEBA420B7411DAEC7C1100ECD49CD3F"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SkyShaderRD\\b63cd0107c671906c20890ca2364ceadf8480839e342643a4c82d5beba17b561\\9247dd7bf98483a15ebb05f8c580a398614a07d8.vulkan.cache",
+                      "bytes":  22272,
+                      "sha256":  "B62EDC763D10F021470984742D9BF56D48396EFD17B301FEE107DED6A9964F12"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SkyShaderRD\\b63cd0107c671906c20890ca2364ceadf8480839e342643a4c82d5beba17b561\\ff1961ca0c4c55a79eb12f819a7b6345801bbbaf.vulkan.cache",
+                      "bytes":  18048,
+                      "sha256":  "4406E1D76475589C52835618E43A7F89956A169EAB84E7FA86FD3497E1AE608B"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SmaaBlendingShaderRD\\1635a470f168e64644bc95550afa052944a117dfff34c4126256f7afe3b3fe07\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  1956,
+                      "sha256":  "A4E4B0F8E94F9EEF8FB1098A3211007EAD869AFFE5058A1281F62AE8ACF4CE96"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SmaaEdgeDetectionShaderRD\\b77ed6b11db16f7d7dd77c2eeedd8766b36478c079d767a225df2dfe36ab730f\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  1408,
+                      "sha256":  "02AB0777C2CDDEC778106D8FCBBEFE2E6A939D40FFA71308B5B6063BAABA6B42"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SmaaWeightCalculationShaderRD\\8908e0bb3e12d2d153ab81701a589a72dc1c31c83205ab07e5e82ffd81692c14\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  4520,
+                      "sha256":  "CD76DFE84CBB970AF8FC961FC1A8C1DAFDC4B9B3D2B33BD92DD51EA6BE3FB3D7"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SortShaderRD\\a84e4d11680c7987d1366c226bc03215922bb1f68785295deab2bf464a94f1fe\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  3044,
+                      "sha256":  "47CEABF0DD3BDAD129A0B96904F077A08B7B0BB9E71E9AF0D0744FB8445B1613"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SpecularMergeShaderRD\\576b9a2a8f60f6013a6eb9e89202a6e9cb50cc5badeb778920f885a7bf157128\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  3332,
+                      "sha256":  "59785255BCFD4943583898F0915E9453D2294E3BCFE4BB358323CAD1F5B96DB6"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SsaoBlurShaderRD\\a08315b8c9c1cea1fa520d6256b1e3c8d396b7f94d3d20ed53e9c51981718156\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  3084,
+                      "sha256":  "7A552A418FA4F1CC8A745A1CF688C1C5659EEA1D8ED127BF98E04127B0F35648"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SsaoImportanceMapShaderRD\\2be144f657aeab5d3e1415878f2363a1f8994010154027a47e94c33dd1b567f1\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  2592,
+                      "sha256":  "85BD4813586DCE20A85E7217F630D79F0B928E2A90704AC516818E8F8D2E2C55"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SsaoInterleaveShaderRD\\6d5756043e71190233f5b2c31fb22308bb9acd406d94e4ab91ad1c88b89ca42c\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  2756,
+                      "sha256":  "4DCE49C8BF7D4EE09430F0D802F495ACFD48DEE903205EF13478482BC23D69CF"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SsaoShaderRD\\09f525d1c43c56ac65c90b5da7d02a719d400bc3fffc4f84c4d5044874725294\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  14484,
+                      "sha256":  "BB9C1C1D1EBF8FF41DF41420954ACC846C4F6F46E1A93C5376CEE3539B868219"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SsEffectsDownsampleShaderRD\\686bd8301af7a17588e4891d61da5716c275ad073961ea7a7e3346756dd0d858\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  9796,
+                      "sha256":  "06E9C5A766A54405ECF0190C9BEAA2852897AF7F06AB5C133805D695CFCE6A8B"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SsilBlurShaderRD\\6f5df545aa257396e8762dc1019da3de05e3a8980cccf91c73512bd58444c2d3\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  3180,
+                      "sha256":  "F58C2F3A48A4EB0D931B6F2AAF6703B67896561295A7709684308CFFF353E098"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SsilImportanceMapShaderRD\\fc0a321255560ab89095e9235fe754f0bbac0da0192bfc0a07d2ce5b86438de2\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  2636,
+                      "sha256":  "81EC15B63E6312A6491C39D3068B79C9BEABCD490CED57970362A6D4B3ECB56B"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SsilInterleaveShaderRD\\3f57f81709f456793d06a1fe11475eefb3ecb8b0ec2900552cf0abea3b1591f5\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  2912,
+                      "sha256":  "A28856C0D62BDBF1826CDE1452339D6181BAA6192C7EA8D76E911B14B9F3B551"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SsilShaderRD\\0e4a7544c6e01fcb34ef7af4b4ffcedce40b1e839e14e1dd1794740184b956a0\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  14372,
+                      "sha256":  "F8715261F2D0824F18F1F2B31147D550718DA7CA8FC69295B2D34488A9CAF194"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\SubsurfaceScatteringShaderRD\\9bbecde040856adfd7c6ae9ba109af5b940de83d4ba23dd40d58bdfd6db72e14\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  5192,
+                      "sha256":  "DDF2542786039B1048A2EEC748C3CBA601509375E71B32BC0A33A7D8AEAE4810"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\TaaResolveShaderRD\\8abacbc94e75f937e04f65cb52ba01e8ea1a7047af61a6bd6439f5a8416b9405\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  3712,
+                      "sha256":  "0CF9BED586B834FE976A051F7D5A01B241F150EF922ECDBBE48FB5BFBC47191E"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\TexBlitShaderRD\\d2fe5fb8596131e638b0adbc3f36333bd36dc962d6e7e0939c2acdde4c0b1aa8\\1e8995c9eb0e9b0b053035999de68595c521a33e.vulkan.cache",
+                      "bytes":  6760,
+                      "sha256":  "5E45EDE135AB7B89589AC62E39287550A763180BA0EDF1B3E77E61A9944417D9"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\TonemapShaderRD\\e9e0d39e09bae578699c9e2a47a9396a8f3d6eb5fbb169b4431afb7b81128cd6\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  23596,
+                      "sha256":  "7917F2A98FCFBDDBBC97A308D26A80E6414A9A029AFED37697E859722515AEF7"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\VolumetricFogProcessShaderRD\\4425f6b38a47dfd5b86b80e90333a1616a50e0a253b642f948fc7f9a0a01f367\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  29168,
+                      "sha256":  "316088014FBCE49CB44FE17FBF5C30F9DD3B43CF9D8610425CBB7F2FC49F3E03"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\VolumetricFogShaderRD\\25cddf2d437b245c1a584cd084c0b48e3ed749f3353bfb0b3a3045079b2113c6\\3377d4ca9d0fc2e16f62596ee37d619e8e7e3f54.vulkan.cache",
+                      "bytes":  3308,
+                      "sha256":  "276A5C97B778B2E398D6CCB47A242893B0B55E140CC05127354D36340080F1E6"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\VoxelGiDebugShaderRD\\c264e7ed2e7156dc9e20551e476b591ae63a89c474cff7c232a87da0b5a98daa\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  4904,
+                      "sha256":  "C1F860060A549515AC4CADACAA8F7A7E54C9202D584AD77623CAA5597C604583"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\VoxelGiShaderRD\\4f81a4fc5fa0969cb9dbc0666e16758800b6d72fa1365120a276d71cede208ec\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  22376,
+                      "sha256":  "9E6755EA6A3A761B21D2AA1F17EDF25AAB56744CD44F7A319C203890C38466BB"
+                  },
+                  {
+                      "path":  ".godot\\shader_cache\\VrsShaderRD\\5baaee6e51e52d7acf04eb410ae0a08e8c22e558be3eaac8e23eed37a7ed4dfa\\8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+                      "bytes":  2584,
+                      "sha256":  "F1AB8968F186E6767C24153EA8082A3768685315F576A7C31AD76C33EF4B109B"
+                  },
+                  {
+                      "path":  "scenes\\main.tscn",
+                      "bytes":  839,
+                      "sha256":  "27F53AC01924F7EACA401D869E39C7C31FB111EE8596DFB6761504EFAAC1280A"
+                  },
+                  {
+                      "path":  "src\\Match3Game.cs",
+                      "bytes":  29037,
+                      "sha256":  "3B9F52045FDED22B51925731469C779BABB2909C0F937D353442E5A47990003B"
+                  },
+                  {
+                      "path":  "src\\Match3Game.cs.uid",
+                      "bytes":  20,
+                      "sha256":  "490A88FEA896B8816E151A0FD7D36C51D7208976D076925224BC869EDC6AA6FE"
+                  }
+              ]
+}

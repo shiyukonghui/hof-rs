@@ -1,0 +1,18 @@
+== platformer : 7 frame(s) in C:\Users\wyl\AppData\Roaming\Godot\app_userdata\platformer
+  frame        size         bytes  sha256[0:16]     vs report
+  plat-t0.png  800x600      10819  B56353E440E95347 same
+  plat-t1.png  800x600      10764  1DF0A26193CECA5C same
+  plat-t2.png  800x600      10474  28CF8D7B4ED51B84 same
+  plat-t3.png  800x600      10209  939FBF85ABDF2B36 same
+  plat-t4.png  800x600       9549  F71D8A4812BA6B6D same
+  plat-t5.png  800x600      10596  0785D5B709649E95 same
+  plat-t6.png  800x600      10299  C7A13CFD2A190B2F same
+  distinct sha256 among the frames: 7/7
+  pair diffs (recomputed here):
+    plat-t0.png  -> plat-t1.png  engine=631     any=648     total=480000  (report.json agrees)
+    plat-t1.png  -> plat-t2.png  engine=22530   any=22712   total=480000  (report.json agrees)
+    plat-t2.png  -> plat-t3.png  engine=24437   any=24697   total=480000  (report.json agrees)
+    plat-t3.png  -> plat-t4.png  engine=2445    any=2584    total=480000  (report.json agrees)
+    plat-t4.png  -> plat-t5.png  engine=24178   any=24441   total=480000  (report.json agrees)
+    plat-t5.png  -> plat-t6.png  engine=4349    any=4363    total=480000  (report.json agrees)
+  pairs where the report and this recomputation disagree: 0

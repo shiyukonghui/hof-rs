@@ -1,0 +1,42 @@
+=== g36-samples-frozen (12 frames) ===
+  Elapsed                distinct=12   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+      first=8.36690235137939  last=8.55384826660156
+  GemsRemaining          distinct=1    changes@=[]
+      first=14  last=14
+  MapHash                distinct=1    changes@=[]
+      first=1272615768  last=1272615768
+  OnGround               distinct=1    changes@=[]
+      first=False  last=False
+  PlayerX                distinct=1    changes@=[]
+      first=42  last=42
+  PlayerY                distinct=1    changes@=[]
+      first=542  last=542
+  Ticks                  distinct=12   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+      first=1145  last=1174
+  frame                  distinct=12   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+      first=0  last=11
+
+=== g188-samples-clock (30 frames) ===
+  AutoTicks              distinct=29   changes@=[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+      first=7  last=35
+  Elapsed                distinct=30   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      first=17.5249614715576  last=18.0018730163574
+  GemsRemaining          distinct=1    changes@=[]
+      first=0  last=0
+  Landings               distinct=29   changes@=[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+      first=10  last=38
+  LastAutoSteps          distinct=2    changes@=[1]
+      first=1  last=0
+  OnGround               distinct=1    changes@=[]
+      first=True  last=True
+  PlayerX                distinct=29   changes@=[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+      first=140  last=252
+  PlayerY                distinct=1    changes@=[]
+      first=544  last=544
+  Ticks                  distinct=30   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      first=59  last=128
+  VelY                   distinct=1    changes@=[]
+      first=0  last=0
+  frame                  distinct=30   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      first=0  last=29
+

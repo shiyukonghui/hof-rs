@@ -1,0 +1,10 @@
+ M DECISIONS.md
+ M godot-mcp/GAME-LOOP-LOG.md
+?? godot-mcp/projects/match3/
+?? godot-mcp/projects/platformer/
+?? godot-mcp/recovery/work/task102/
+?? godot-mcp/tools/sessions/match3/
+?? godot-mcp/tools/sessions/platformer/
+STATUS_EXIT=0
+---COUNT---
+7

@@ -1,0 +1,2618 @@
+{
+ "import": true,
+ "calls": [
+  {
+   "tag": "e01-edit-game",
+   "port": "editor",
+   "tool": "project_edit_script",
+   "arguments": {
+    "path": "res://src/PlatformerGame.cs",
+    "content_file": "payload/PlatformerGame.cs"
+   },
+   "note": "the whole game is written through the MCP script writer (the template stub is replaced)"
+  },
+  {
+   "tag": "e02-open-scene",
+   "port": "editor",
+   "tool": "editor_open_scene",
+   "arguments": {
+    "path": "res://scenes/main.tscn"
+   },
+   "note": "the template scene carries the root Main (Node2D) the script is attached to"
+  },
+  {
+   "tag": "e03-batch-add-static",
+   "port": "editor",
+   "tool": "editor_add_nodes_batch",
+   "arguments": {
+    "nodes": [
+     {
+      "type": "ColorRect",
+      "name": "Background",
+      "parent_path": ".",
+      "properties": {
+       "offset_left": 0,
+       "offset_top": 0,
+       "offset_right": 800,
+       "offset_bottom": 600,
+       "color": {
+        "r": 0.04,
+        "g": 0.05,
+        "b": 0.08,
+        "a": 1
+       }
+      }
+     },
+     {
+      "type": "Label",
+      "name": "Hud",
+      "parent_path": ".",
+      "properties": {
+       "offset_left": 14,
+       "offset_top": 8,
+       "offset_right": 640,
+       "offset_bottom": 42,
+       "text": "GEMS 0/14  SCORE 0  LIVES 3  AIR 0  TILE 2,27",
+       "theme_override_font_sizes/font_size": 22
+      }
+     },
+     {
+      "type": "Label",
+      "name": "Status",
+      "parent_path": ".",
+      "properties": {
+       "offset_left": 632,
+       "offset_top": 8,
+       "offset_right": 795,
+       "offset_bottom": 42,
+       "text": "RUN AND JUMP",
+       "theme_override_font_sizes/font_size": 22
+      }
+     }
+    ]
+   },
+   "note": "the three static nodes of the scene, through the batch tool: a background and two labels; every tile, every collectible, the goal and the player are created at run time"
+  },
+  {
+   "tag": "e04-save-1",
+   "port": "editor",
+   "tool": "editor_save_scene",
+   "arguments": {},
+   "note": "the scene with the three static nodes on disk: sha A"
+  },
+  {
+   "tag": "e05-read-1",
+   "port": "editor",
+   "tool": "project_read_text_file",
+   "arguments": {
+    "path": "res://scenes/main.tscn"
+   },
+   "note": "sha A and the exact bytes"
+  },
+  {
+   "tag": "e06-batch-add-static-again",
+   "port": "editor",
+   "tool": "editor_add_nodes_batch",
+   "arguments": {
+    "nodes": [
+     {
+      "type": "ColorRect",
+      "name": "Background",
+      "parent_path": ".",
+      "properties": {
+       "offset_left": 0,
+       "offset_top": 0,
+       "offset_right": 800,
+       "offset_bottom": 600,
+       "color": {
+        "r": 0.04,
+        "g": 0.05,
+        "b": 0.08,
+        "a": 1
+       }
+      }
+     },
+     {
+      "type": "Label",
+      "name": "Hud",
+      "parent_path": ".",
+      "properties": {
+       "offset_left": 14,
+       "offset_top": 8,
+       "offset_right": 640,
+       "offset_bottom": 42,
+       "text": "GEMS 0/14  SCORE 0  LIVES 3  AIR 0  TILE 2,27",
+       "theme_override_font_sizes/font_size": 22
+      }
+     },
+     {
+      "type": "Label",
+      "name": "Status",
+      "parent_path": ".",
+      "properties": {
+       "offset_left": 632,
+       "offset_top": 8,
+       "offset_right": 795,
+       "offset_bottom": 42,
+       "text": "RUN AND JUMP",
+       "theme_override_font_sizes/font_size": 22
+      }
+     }
+    ]
+   },
+   "note": "REAL-DEVELOPMENT PROOF of the TASK-097 fix: the same batch a second time must be REFUSED (-32000, one conflict per node) instead of the engine renaming it into a duplicate layer"
+  },
+  {
+   "tag": "e07-tree-after-refusal",
+   "port": "editor",
+   "tool": "editor_get_scene_tree",
+   "arguments": {},
+   "note": "the tree after the refusal: Main + the three named nodes, no @Type@N automatic name"
+  },
+  {
+   "tag": "e08-save-2",
+   "port": "editor",
+   "tool": "editor_save_scene",
+   "arguments": {},
+   "note": "saving after the refusal must reproduce the same file"
+  },
+  {
+   "tag": "e09-read-2",
+   "port": "editor",
+   "tool": "project_read_text_file",
+   "arguments": {
+    "path": "res://scenes/main.tscn"
+   },
+   "note": "sha B; A == B is the proof that the refused batch wrote nothing"
+  },
+  {
+   "tag": "e10-action-left",
+   "port": "editor",
+   "tool": "editor_add_input_action",
+   "arguments": {
+    "action": "plat_left",
+    "key": "A"
+   },
+   "note": "run left"
+  },
+  {
+   "tag": "e11-action-right",
+   "port": "editor",
+   "tool": "editor_add_input_action",
+   "arguments": {
+    "action": "plat_right",
+    "key": "D"
+   },
+   "note": "run right"
+  },
+  {
+   "tag": "e12-action-jump",
+   "port": "editor",
+   "tool": "editor_add_input_action",
+   "arguments": {
+    "action": "plat_jump",
+    "key": "Space"
+   },
+   "note": "jump"
+  },
+  {
+   "tag": "e13-build-csharp",
+   "port": "editor",
+   "tool": "project_build_csharp",
+   "arguments": {
+    "configuration": "Debug",
+    "timeout_ms": 300000,
+    "rescan": true
+   },
+   "note": "compile the game the MCP script writer just wrote"
+  },
+  {
+   "tag": "e14-validate-scripts",
+   "port": "editor",
+   "tool": "project_validate_scripts",
+   "arguments": {},
+   "note": "the engine's own per-file verdict"
+  },
+  {
+   "tag": "g01-scene-tree",
+   "port": "game",
+   "tool": "running_game_get_scene_tree",
+   "arguments": {},
+   "note": "the running tree: the three static nodes plus the solid tiles, the gems, the goal and the player created at run time"
+  },
+  {
+   "tag": "g02-readback-t0",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().Dump()"
+   },
+   "note": "the whole map as one line plus every fact"
+  },
+  {
+   "tag": "g03-assert-cols",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Cols",
+    "operator": "eq",
+    "expected": 40
+   },
+   "note": "the course is forty tiles wide"
+  },
+  {
+   "tag": "g04-assert-rows",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Rows",
+    "operator": "eq",
+    "expected": 30
+   },
+   "note": "and thirty tiles tall"
+  },
+  {
+   "tag": "g05-assert-tile",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Tile",
+    "operator": "eq",
+    "expected": 20
+   },
+   "note": "twenty pixels a tile"
+  },
+  {
+   "tag": "g06-assert-level",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LevelIndex",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "the default level is the full course"
+  },
+  {
+   "tag": "g07-assert-gems-total",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GemsTotal",
+    "operator": "eq",
+    "expected": 14
+   },
+   "note": "fourteen collectibles"
+  },
+  {
+   "tag": "g08-assert-gems-left",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GemsRemaining",
+    "operator": "eq",
+    "expected": 14
+   },
+   "note": "all fourteen still on the map"
+  },
+  {
+   "tag": "g09-assert-collected-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Collected",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "none taken yet"
+  },
+  {
+   "tag": "g10-assert-score-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Score",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "and no points"
+  },
+  {
+   "tag": "g11-assert-map-hash",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "MapHash",
+    "operator": "eq",
+    "expected": 1272615768
+   },
+   "note": "the map hash is the one the Python re-implementation computes from the same rule"
+  },
+  {
+   "tag": "g12-assert-spawn-row",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "SpawnRow",
+    "operator": "eq",
+    "expected": 27
+   },
+   "note": "the spawn tile from the '@'"
+  },
+  {
+   "tag": "g13-assert-spawn-col",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "SpawnCol",
+    "operator": "eq",
+    "expected": 2
+   },
+   "note": "and the spawn column"
+  },
+  {
+   "tag": "g14-assert-spawn-x",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "SpawnX",
+    "operator": "eq",
+    "expected": 42
+   },
+   "note": "the spawn pixel, centred in the tile"
+  },
+  {
+   "tag": "g15-assert-spawn-y",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "SpawnY",
+    "operator": "eq",
+    "expected": 542
+   },
+   "note": "in both axes"
+  },
+  {
+   "tag": "g16-assert-player-x",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerX",
+    "operator": "eq",
+    "expected": 42
+   },
+   "note": "the player starts here"
+  },
+  {
+   "tag": "g17-assert-player-y",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerY",
+    "operator": "eq",
+    "expected": 542
+   },
+   "note": "in both axes"
+  },
+  {
+   "tag": "g18-assert-vel",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "VelY",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "at rest"
+  },
+  {
+   "tag": "g19-assert-not-ground",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "OnGround",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "the spawn sits two pixels above the ground, so the player is not standing yet"
+  },
+  {
+   "tag": "g20-assert-goal-row",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GoalRow",
+    "operator": "eq",
+    "expected": 27
+   },
+   "note": "the goal tile was read from the 'G'"
+  },
+  {
+   "tag": "g21-assert-goal-col",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GoalCol",
+    "operator": "eq",
+    "expected": 38
+   },
+   "note": "and its column"
+  },
+  {
+   "tag": "g22-assert-lives",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Lives",
+    "operator": "eq",
+    "expected": 3
+   },
+   "note": "three lives"
+  },
+  {
+   "tag": "g23-assert-not-won",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Won",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "the goal is not reached"
+  },
+  {
+   "tag": "g24-assert-not-over",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GameOver",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "and the game is running"
+  },
+  {
+   "tag": "g25-probe-solid",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().ProbeCell(28, 0)"
+   },
+   "note": "the ground"
+  },
+  {
+   "tag": "g26-assert-probe-solid",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "ProbeState",
+    "operator": "eq",
+    "expected": "solid"
+   },
+   "note": "it reads as solid"
+  },
+  {
+   "tag": "g27-probe-empty",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().ProbeCell(27, 5)"
+   },
+   "note": "an open tile"
+  },
+  {
+   "tag": "g28-assert-probe-empty",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "ProbeState",
+    "operator": "eq",
+    "expected": "empty"
+   },
+   "note": "it reads as empty"
+  },
+  {
+   "tag": "g29-probe-gem",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().ProbeCell(27, 20)"
+   },
+   "note": "one of the ground-level collectibles"
+  },
+  {
+   "tag": "g30-assert-probe-gem",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "ProbeState",
+    "operator": "eq",
+    "expected": "gem"
+   },
+   "note": "it reads as a gem"
+  },
+  {
+   "tag": "g31-probe-goal",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().ProbeCell(27, 38)"
+   },
+   "note": "the goal tile"
+  },
+  {
+   "tag": "g32-assert-probe-goal",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "ProbeState",
+    "operator": "eq",
+    "expected": "goal"
+   },
+   "note": "it reads as the goal"
+  },
+  {
+   "tag": "g33-probe-player",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().ProbeCell(27, 2)"
+   },
+   "note": "the tile the player occupies"
+  },
+  {
+   "tag": "g34-assert-probe-player",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "ProbeState",
+    "operator": "eq",
+    "expected": "player"
+   },
+   "note": "it reads as the player"
+  },
+  {
+   "tag": "g35-shot-t0",
+   "port": "game",
+   "tool": "running_game_capture_screenshot",
+   "arguments": {
+    "save_path": "user://plat-t0.png"
+   },
+   "note": "the first frame: the full course with fourteen gems and the goal"
+  },
+  {
+   "tag": "g36-samples-frozen",
+   "port": "game",
+   "tool": "running_game_get_node_property_samples",
+   "arguments": {
+    "node_path": "Main",
+    "properties": [
+     "MapHash",
+     "GemsRemaining",
+     "PlayerX",
+     "PlayerY",
+     "OnGround",
+     "Elapsed",
+     "Ticks"
+    ],
+    "frame_count": 12,
+    "frame_interval": 1
+   },
+   "note": "determinism baseline: with AutoClock 0 nothing in the world moves while the clock runs (map hash / gems / player position / ground flag constant, Elapsed and Ticks both increasing)"
+  },
+  {
+   "tag": "g37-assert-last-auto-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastAutoSteps",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "the clock's per-frame delta is zero while the clock is off"
+  },
+  {
+   "tag": "g38-step-4",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().StepFrames(4)"
+   },
+   "note": "four fixed frames: the player falls the two pixels to the ground"
+  },
+  {
+   "tag": "g39-assert-drop-x",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerX",
+    "operator": "eq",
+    "expected": 42
+   },
+   "note": "no horizontal motion"
+  },
+  {
+   "tag": "g40-assert-drop-y",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerY",
+    "operator": "eq",
+    "expected": 544
+   },
+   "note": "exactly the ground row the re-implementation lands on"
+  },
+  {
+   "tag": "g41-assert-drop-ground",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "OnGround",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "and the player is standing"
+  },
+  {
+   "tag": "g42-assert-drop-vy",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "VelY",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "with the vertical speed cleared"
+  },
+  {
+   "tag": "g43-assert-landings",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Landings",
+    "operator": "eq",
+    "expected": 3
+   },
+   "note": "the landing count is the re-implementation's"
+  },
+  {
+   "tag": "g44-assert-last-hook",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastHookSteps",
+    "operator": "eq",
+    "expected": 4
+   },
+   "note": "the hook reports the frames it actually applied"
+  },
+  {
+   "tag": "g45-assert-state-hash",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "StateHash",
+    "operator": "eq",
+    "expected": 541689754
+   },
+   "note": "the kinematic state hash agrees with the re-implementation"
+  },
+  {
+   "tag": "g46-run-left",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().SetRun(-1)"
+   },
+   "note": "hold left"
+  },
+  {
+   "tag": "g47-step-30",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().StepFrames(30)"
+   },
+   "note": "thirty frames: the player crosses to the left wall"
+  },
+  {
+   "tag": "g48-assert-x",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerX",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "the wall stops the box at the map edge, at exactly the re-implementation's pixel"
+  },
+  {
+   "tag": "g49-assert-wall-hits",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "WallHits",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "one wall stop"
+  },
+  {
+   "tag": "g50-assert-vx-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "VelX",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "and the horizontal speed is cleared"
+  },
+  {
+   "tag": "g51-assert-facing",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Facing",
+    "operator": "eq",
+    "expected": -1
+   },
+   "note": "the player was facing left"
+  },
+  {
+   "tag": "g52-assert-ground",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "OnGround",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "and is still standing on the ground"
+  },
+  {
+   "tag": "g53-shot-t1",
+   "port": "game",
+   "tool": "running_game_capture_screenshot",
+   "arguments": {
+    "save_path": "user://plat-t1.png"
+   },
+   "note": "the player is against the left wall"
+  },
+  {
+   "tag": "g54-arc-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().ForceTestState(\"level=......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../..@...................................../########################################/########################################;player=100,544;gems=;vel=0,0;ground=1\")"
+   },
+   "note": "a flat strip, the player standing on the ground, everything else switched off"
+  },
+  {
+   "tag": "g55-assert-ground",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "OnGround",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "pinned standing"
+  },
+  {
+   "tag": "g56-assert-y",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerY",
+    "operator": "eq",
+    "expected": 544
+   },
+   "note": "at the pinned height"
+  },
+  {
+   "tag": "g57-jump",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().Jump()"
+   },
+   "note": "the ground jump"
+  },
+  {
+   "tag": "g58-assert-vy",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "VelY",
+    "operator": "eq",
+    "expected": -12
+   },
+   "note": "the jump's exact launch speed"
+  },
+  {
+   "tag": "g59-assert-jumps",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Jumps",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "one jump on the record"
+  },
+  {
+   "tag": "g60-assert-air-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "AirJumps",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "and no mid-air jump yet"
+  },
+  {
+   "tag": "g61-assert-not-ground",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "OnGround",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "the player is airborne"
+  },
+  {
+   "tag": "g62-step",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().StepFrames(1)"
+   },
+   "note": "advance the arc to frame 1"
+  },
+  {
+   "tag": "g62a-assert-y",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerY",
+    "operator": "eq",
+    "expected": 533
+   },
+   "note": "frame 1: y = 533, the value the Python integration of the same integer kinematics predicts"
+  },
+  {
+   "tag": "g62b-assert-vy",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "VelY",
+    "operator": "eq",
+    "expected": -11
+   },
+   "note": "frame 1: the vertical speed the re-implementation predicts at that frame"
+  },
+  {
+   "tag": "g62c-assert-ground",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "OnGround",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "frame 1: still airborne, or landed -- the re-implementation decides"
+  },
+  {
+   "tag": "g62d-assert-x",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerX",
+    "operator": "eq",
+    "expected": 100
+   },
+   "note": "no horizontal input, so x never moves"
+  },
+  {
+   "tag": "g67-step",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().StepFrames(5)"
+   },
+   "note": "advance the arc to frame 6"
+  },
+  {
+   "tag": "g67a-assert-y",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerY",
+    "operator": "eq",
+    "expected": 493
+   },
+   "note": "frame 6: y = 493, the value the Python integration of the same integer kinematics predicts"
+  },
+  {
+   "tag": "g67b-assert-vy",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "VelY",
+    "operator": "eq",
+    "expected": -6
+   },
+   "note": "frame 6: the vertical speed the re-implementation predicts at that frame"
+  },
+  {
+   "tag": "g67c-assert-ground",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "OnGround",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "frame 6: still airborne, or landed -- the re-implementation decides"
+  },
+  {
+   "tag": "g67d-assert-x",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerX",
+    "operator": "eq",
+    "expected": 100
+   },
+   "note": "no horizontal input, so x never moves"
+  },
+  {
+   "tag": "g72-step",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().StepFrames(5)"
+   },
+   "note": "advance the arc to frame 11 (apex)"
+  },
+  {
+   "tag": "g72a-assert-y",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerY",
+    "operator": "eq",
+    "expected": 478
+   },
+   "note": "frame 11 (apex): y = 478, the value the Python integration of the same integer kinematics predicts"
+  },
+  {
+   "tag": "g72b-assert-vy",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "VelY",
+    "operator": "eq",
+    "expected": -1
+   },
+   "note": "frame 11 (apex): the vertical speed the re-implementation predicts at that frame"
+  },
+  {
+   "tag": "g72c-assert-ground",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "OnGround",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "frame 11 (apex): still airborne, or landed -- the re-implementation decides"
+  },
+  {
+   "tag": "g72d-assert-x",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerX",
+    "operator": "eq",
+    "expected": 100
+   },
+   "note": "no horizontal input, so x never moves"
+  },
+  {
+   "tag": "g77-step",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().StepFrames(1)"
+   },
+   "note": "advance the arc to frame 12 (apex, vy flips sign)"
+  },
+  {
+   "tag": "g77a-assert-y",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerY",
+    "operator": "eq",
+    "expected": 478
+   },
+   "note": "frame 12 (apex, vy flips sign): y = 478, the value the Python integration of the same integer kinematics predicts"
+  },
+  {
+   "tag": "g77b-assert-vy",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "VelY",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "frame 12 (apex, vy flips sign): the vertical speed the re-implementation predicts at that frame"
+  },
+  {
+   "tag": "g77c-assert-ground",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "OnGround",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "frame 12 (apex, vy flips sign): still airborne, or landed -- the re-implementation decides"
+  },
+  {
+   "tag": "g77d-assert-x",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerX",
+    "operator": "eq",
+    "expected": 100
+   },
+   "note": "no horizontal input, so x never moves"
+  },
+  {
+   "tag": "g82-step",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().StepFrames(1)"
+   },
+   "note": "advance the arc to frame 13"
+  },
+  {
+   "tag": "g82a-assert-y",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerY",
+    "operator": "eq",
+    "expected": 479
+   },
+   "note": "frame 13: y = 479, the value the Python integration of the same integer kinematics predicts"
+  },
+  {
+   "tag": "g82b-assert-vy",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "VelY",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "frame 13: the vertical speed the re-implementation predicts at that frame"
+  },
+  {
+   "tag": "g82c-assert-ground",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "OnGround",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "frame 13: still airborne, or landed -- the re-implementation decides"
+  },
+  {
+   "tag": "g82d-assert-x",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerX",
+    "operator": "eq",
+    "expected": 100
+   },
+   "note": "no horizontal input, so x never moves"
+  },
+  {
+   "tag": "g87-step",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().StepFrames(5)"
+   },
+   "note": "advance the arc to frame 18"
+  },
+  {
+   "tag": "g87a-assert-y",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerY",
+    "operator": "eq",
+    "expected": 499
+   },
+   "note": "frame 18: y = 499, the value the Python integration of the same integer kinematics predicts"
+  },
+  {
+   "tag": "g87b-assert-vy",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "VelY",
+    "operator": "eq",
+    "expected": 6
+   },
+   "note": "frame 18: the vertical speed the re-implementation predicts at that frame"
+  },
+  {
+   "tag": "g87c-assert-ground",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "OnGround",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "frame 18: still airborne, or landed -- the re-implementation decides"
+  },
+  {
+   "tag": "g87d-assert-x",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerX",
+    "operator": "eq",
+    "expected": 100
+   },
+   "note": "no horizontal input, so x never moves"
+  },
+  {
+   "tag": "g92-step",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().StepFrames(5)"
+   },
+   "note": "advance the arc to frame 23 (back at ground height but still airborne)"
+  },
+  {
+   "tag": "g92a-assert-y",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerY",
+    "operator": "eq",
+    "expected": 544
+   },
+   "note": "frame 23 (back at ground height but still airborne): y = 544, the value the Python integration of the same integer kinematics predicts"
+  },
+  {
+   "tag": "g92b-assert-vy",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "VelY",
+    "operator": "eq",
+    "expected": 11
+   },
+   "note": "frame 23 (back at ground height but still airborne): the vertical speed the re-implementation predicts at that frame"
+  },
+  {
+   "tag": "g92c-assert-ground",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "OnGround",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "frame 23 (back at ground height but still airborne): still airborne, or landed -- the re-implementation decides"
+  },
+  {
+   "tag": "g92d-assert-x",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerX",
+    "operator": "eq",
+    "expected": 100
+   },
+   "note": "no horizontal input, so x never moves"
+  },
+  {
+   "tag": "g97-step",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().StepFrames(1)"
+   },
+   "note": "advance the arc to frame 24 (the landing frame)"
+  },
+  {
+   "tag": "g97a-assert-y",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerY",
+    "operator": "eq",
+    "expected": 544
+   },
+   "note": "frame 24 (the landing frame): y = 544, the value the Python integration of the same integer kinematics predicts"
+  },
+  {
+   "tag": "g97b-assert-vy",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "VelY",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "frame 24 (the landing frame): the vertical speed the re-implementation predicts at that frame"
+  },
+  {
+   "tag": "g97c-assert-ground",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "OnGround",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "frame 24 (the landing frame): still airborne, or landed -- the re-implementation decides"
+  },
+  {
+   "tag": "g97d-assert-x",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerX",
+    "operator": "eq",
+    "expected": 100
+   },
+   "note": "no horizontal input, so x never moves"
+  },
+  {
+   "tag": "g102-assert-landed-y",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerY",
+    "operator": "eq",
+    "expected": 544
+   },
+   "note": "the landing frame snapped the box exactly onto the platform top"
+  },
+  {
+   "tag": "g103-assert-landed-ground",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "OnGround",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "and the player is standing"
+  },
+  {
+   "tag": "g104-assert-landed-vy",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "VelY",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "with the vertical speed cleared"
+  },
+  {
+   "tag": "g105-assert-frame23-y",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerY",
+    "operator": "eq",
+    "expected": 544
+   },
+   "note": "one frame earlier the box was ALREADY at the ground height but still in the air -- the y alone does not decide a landing, the resolution does"
+  },
+  {
+   "tag": "g106-assert-jumps-1",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Jumps",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "still exactly one jump"
+  },
+  {
+   "tag": "g107-shot-t2",
+   "port": "game",
+   "tool": "running_game_capture_screenshot",
+   "arguments": {
+    "save_path": "user://plat-t2.png"
+   },
+   "note": "the player is back on the ground after the arc"
+  },
+  {
+   "tag": "g108-dj-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().ForceTestState(\"level=......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../..@...................................../########################################/########################################;player=100,544;gems=;vel=0,0;ground=1\")"
+   },
+   "note": "the same flat strip for the double-jump test"
+  },
+  {
+   "tag": "g109-dj-ground",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().Jump()"
+   },
+   "note": "the ground jump"
+  },
+  {
+   "tag": "g110-dj-step3",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().StepFrames(3)"
+   },
+   "note": "three frames of the first arc"
+  },
+  {
+   "tag": "g111-assert-dj-vy",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "VelY",
+    "operator": "eq",
+    "expected": -9
+   },
+   "note": "the ascent is well under way, at the re-implementation's speed"
+  },
+  {
+   "tag": "g112-assert-dj-x",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerX",
+    "operator": "eq",
+    "expected": 100
+   },
+   "note": "and the horizontal position agrees"
+  },
+  {
+   "tag": "g113-assert-dj-air-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "AirJumps",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "no mid-air jump used yet"
+  },
+  {
+   "tag": "g114-dj-air",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().Jump()"
+   },
+   "note": "the optional SECOND, mid-air jump"
+  },
+  {
+   "tag": "g115-assert-dj-air-1",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "AirJumps",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "one mid-air jump used"
+  },
+  {
+   "tag": "g116-assert-dj-jumps-2",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Jumps",
+    "operator": "eq",
+    "expected": 2
+   },
+   "note": "two jumps on the record"
+  },
+  {
+   "tag": "g117-assert-dj-vy-air",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "VelY",
+    "operator": "eq",
+    "expected": -10
+   },
+   "note": "the mid-air jump relaunches at its own, smaller speed"
+  },
+  {
+   "tag": "g118-dj-step1",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().StepFrames(1)"
+   },
+   "note": "one frame of the second arc"
+  },
+  {
+   "tag": "g119-assert-dj-y",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerY",
+    "operator": "eq",
+    "expected": 505
+   },
+   "note": "the re-implementation's height"
+  },
+  {
+   "tag": "g120-dj-third",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().Jump()"
+   },
+   "note": "a third jump in the air is refused -- there is only one"
+  },
+  {
+   "tag": "g121-assert-dj-rejected",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "JumpsRejected",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "the refusal is counted"
+  },
+  {
+   "tag": "g122-assert-dj-air-still-1",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "AirJumps",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "and the air-jump count did not move"
+  },
+  {
+   "tag": "g123-assert-dj-vy-intact",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "VelY",
+    "operator": "eq",
+    "expected": -9
+   },
+   "note": "the refused jump left the speed alone"
+  },
+  {
+   "tag": "g124-dj-off-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().ForceTestState(\"level=......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../..@...................................../########################################/########################################;player=100,544;gems=;vel=0,0;ground=1\")"
+   },
+   "note": "the same strip again"
+  },
+  {
+   "tag": "g125-dj-off",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().SetDoubleJump(false)"
+   },
+   "note": "switch the optional second jump off"
+  },
+  {
+   "tag": "g126-dj-ground2",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().Jump()"
+   },
+   "note": "the ground jump still works"
+  },
+  {
+   "tag": "g127-dj-step3b",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().StepFrames(3)"
+   },
+   "note": "three frames"
+  },
+  {
+   "tag": "g128-dj-air-refused",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().Jump()"
+   },
+   "note": "and now the mid-air jump is refused"
+  },
+  {
+   "tag": "g129-assert-dj-off-rejected",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "JumpsRejected",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "the refusal is counted"
+  },
+  {
+   "tag": "g130-assert-dj-off-air-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "AirJumps",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "and no mid-air jump happened"
+  },
+  {
+   "tag": "g131-assert-dj-off-y",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerY",
+    "operator": "eq",
+    "expected": 514
+   },
+   "note": "the arc is the same as the single-jump one"
+  },
+  {
+   "tag": "g132-dj-on-again",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().SetDoubleJump(true)"
+   },
+   "note": "back on"
+  },
+  {
+   "tag": "g133-gem-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().ForceTestState(\"level=......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../..@...................................../########################################/########################################;player=40,544;gems=27,3|27,4;vel=0,0;ground=1\")"
+   },
+   "note": "two collectibles on the flat strip, one run to the right"
+  },
+  {
+   "tag": "g134-run-right",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().SetRun(1)"
+   },
+   "note": "hold right"
+  },
+  {
+   "tag": "g135-step-5",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().StepFrames(5)"
+   },
+   "note": "five frames: the player's box reaches the first gem"
+  },
+  {
+   "tag": "g136-assert-collected-1",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Collected",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "one gem taken"
+  },
+  {
+   "tag": "g137-assert-score-10",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Score",
+    "operator": "eq",
+    "expected": 10
+   },
+   "note": "ten points"
+  },
+  {
+   "tag": "g138-assert-left-1",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GemsRemaining",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "one left"
+  },
+  {
+   "tag": "g139-assert-x-5",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerX",
+    "operator": "eq",
+    "expected": 60
+   },
+   "note": "at the re-implementation's pixel"
+  },
+  {
+   "tag": "g140-step-5b",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().StepFrames(5)"
+   },
+   "note": "five more frames: the second gem"
+  },
+  {
+   "tag": "g141-assert-collected-2",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Collected",
+    "operator": "eq",
+    "expected": 2
+   },
+   "note": "two gems taken"
+  },
+  {
+   "tag": "g142-assert-score-20",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Score",
+    "operator": "eq",
+    "expected": 20
+   },
+   "note": "twenty points"
+  },
+  {
+   "tag": "g143-assert-left-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GemsRemaining",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "and none left"
+  },
+  {
+   "tag": "g144-assert-gem-hash",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "MapHash",
+    "operator": "eq",
+    "expected": -1950852335
+   },
+   "note": "the map hash moved to the re-implementation's post-collection value"
+  },
+  {
+   "tag": "g145-step-5c",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().StepFrames(5)"
+   },
+   "note": "five more frames over the empty tiles"
+  },
+  {
+   "tag": "g146-assert-collected-still-2",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Collected",
+    "operator": "eq",
+    "expected": 2
+   },
+   "note": "a gem is only ever taken once"
+  },
+  {
+   "tag": "g147-assert-score-still-20",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Score",
+    "operator": "eq",
+    "expected": 20
+   },
+   "note": "so the score stands"
+  },
+  {
+   "tag": "g148-goal-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().ForceTestState(\"level=......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../...............................C.C.C..../..............................#######.../......................................../......................................../.......................C.C.C............/......................#######.........../......................................../......................................../...............C.C.C..................../..............########................../......................................../......................................../.......C.C............................../......######............................/......................................../......................................../......................................../......................................../..@.................C....C....C.......G./############...##################....###/############...##################....###;player=740,544;vel=0,0;ground=1\")"
+   },
+   "note": "the player two tiles short of the goal on the full course"
+  },
+  {
+   "tag": "g149-run-right",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().SetRun(1)"
+   },
+   "note": "hold right"
+  },
+  {
+   "tag": "g150-step-5",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().StepFrames(5)"
+   },
+   "note": "five frames: the box reaches the goal tile"
+  },
+  {
+   "tag": "g151-assert-won",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Won",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "the goal tile ends the level in a win"
+  },
+  {
+   "tag": "g152-assert-over",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GameOver",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "and the game is over"
+  },
+  {
+   "tag": "g153-assert-x-goal",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerX",
+    "operator": "eq",
+    "expected": 748
+   },
+   "note": "at the re-implementation's pixel"
+  },
+  {
+   "tag": "g154-run-after-over",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().SetRun(-1)"
+   },
+   "note": "a direction after the game is over is refused"
+  },
+  {
+   "tag": "g155-assert-reason-over",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastEvent",
+    "operator": "contains",
+    "expected": "reason=game_over"
+   },
+   "note": "the refusal names the rule"
+  },
+  {
+   "tag": "g156-step-after-over",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().StepFrames(3)"
+   },
+   "note": "and the frame hook applies nothing"
+  },
+  {
+   "tag": "g157-assert-hook-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastHookSteps",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "the hook reports zero frames applied because the level is finished"
+  },
+  {
+   "tag": "g158-shot-t3",
+   "port": "game",
+   "tool": "running_game_capture_screenshot",
+   "arguments": {
+    "save_path": "user://plat-t3.png"
+   },
+   "note": "the goal frame: GOAL REACHED on the status label"
+  },
+  {
+   "tag": "g159-assert-screen-win",
+   "port": "game",
+   "tool": "running_game_assert_screen_text",
+   "arguments": {
+    "text": "GOAL REACHED"
+   },
+   "note": "the status label really is on the captured screen"
+  },
+  {
+   "tag": "g160-pit-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().ForceTestState(\"level=......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../...............................C.C.C..../..............................#######.../......................................../......................................../.......................C.C.C............/......................#######.........../......................................../......................................../...............C.C.C..................../..............########................../......................................../......................................../.......C.C............................../......######............................/......................................../......................................../......................................../......................................../..@.................C....C....C.......G./############...##################....###/############...##################....###;player=244,544;vel=0,0\")"
+   },
+   "note": "the player standing over the first pit, with no input at all"
+  },
+  {
+   "tag": "g161-step-10",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().StepFrames(10)"
+   },
+   "note": "ten frames of free fall: still above the map's bottom"
+  },
+  {
+   "tag": "g162-assert-pit-y",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerY",
+    "operator": "eq",
+    "expected": 599
+   },
+   "note": "the fall is exactly the integer sum of 1+2+...+10 the re-implementation predicts"
+  },
+  {
+   "tag": "g163-assert-pit-lives",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Lives",
+    "operator": "eq",
+    "expected": 3
+   },
+   "note": "no life lost yet"
+  },
+  {
+   "tag": "g164-assert-pit-falls",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Falls",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "and no fall on the record"
+  },
+  {
+   "tag": "g165-step-11",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().StepFrames(1)"
+   },
+   "note": "one more frame: the box is past the bottom"
+  },
+  {
+   "tag": "g166-assert-fell",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Falls",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "the fall is counted"
+  },
+  {
+   "tag": "g167-assert-pit-lives-2",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Lives",
+    "operator": "eq",
+    "expected": 2
+   },
+   "note": "one life gone"
+  },
+  {
+   "tag": "g168-assert-respawn-x",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerX",
+    "operator": "eq",
+    "expected": 42
+   },
+   "note": "the player is back at the spawn"
+  },
+  {
+   "tag": "g169-assert-respawn-y",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerY",
+    "operator": "eq",
+    "expected": 542
+   },
+   "note": "in both axes"
+  },
+  {
+   "tag": "g170-assert-not-over",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GameOver",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "two lives are left, so the game goes on"
+  },
+  {
+   "tag": "g171-last-life",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().ForceTestState(\"level=......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../...............................C.C.C..../..............................#######.../......................................../......................................../.......................C.C.C............/......................#######.........../......................................../......................................../...............C.C.C..................../..............########................../......................................../......................................../.......C.C............................../......######............................/......................................../......................................../......................................../......................................../..@.................C....C....C.......G./############...##################....###/############...##################....###;player=244,544;lives=1;vel=0,0\")"
+   },
+   "note": "the same pit with a single life"
+  },
+  {
+   "tag": "g172-step-11",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().StepFrames(11)"
+   },
+   "note": "fall again, with the last life"
+  },
+  {
+   "tag": "g173-assert-lives-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Lives",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "no life is left"
+  },
+  {
+   "tag": "g174-assert-over",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GameOver",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "and the game is over"
+  },
+  {
+   "tag": "g175-assert-not-won",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Won",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "a fall is not a win"
+  },
+  {
+   "tag": "g176-assert-falls",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Falls",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "one fall on the record"
+  },
+  {
+   "tag": "g177-shot-t4",
+   "port": "game",
+   "tool": "running_game_capture_screenshot",
+   "arguments": {
+    "save_path": "user://plat-t4.png"
+   },
+   "note": "the game-over frame: ALL LIVES LOST on the status label"
+  },
+  {
+   "tag": "g178-assert-screen-over",
+   "port": "game",
+   "tool": "running_game_assert_screen_text",
+   "arguments": {
+    "text": "ALL LIVES LOST"
+   },
+   "note": "the status label really is on the captured screen"
+  },
+  {
+   "tag": "g179-inc-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().ForceTestState(\"level=......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../..@...................................../########################################/########################################;player=100,544;gems=;vel=0,0;ground=1\")"
+   },
+   "note": "the flat strip once more, for the increment test"
+  },
+  {
+   "tag": "g180-inc-run",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().SetRun(1)"
+   },
+   "note": "hold right"
+  },
+  {
+   "tag": "g181-inc-step3",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().StepFrames(3)"
+   },
+   "note": "exactly three fixed frames"
+  },
+  {
+   "tag": "g182-assert-inc-hook-3",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastHookSteps",
+    "operator": "eq",
+    "expected": 3
+   },
+   "note": "the DELTA of that call is exact -- this is the frame-rate independent quantity"
+  },
+  {
+   "tag": "g183-assert-inc-x",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerX",
+    "operator": "eq",
+    "expected": 112
+   },
+   "note": "and the position agrees with the re-implementation"
+  },
+  {
+   "tag": "g184-assert-inc-ground",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "OnGround",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "still on the ground"
+  },
+  {
+   "tag": "g185-assert-inc-auto-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastAutoSteps",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "and it is a DIFFERENT property from the clock's own per-frame delta, which is 0 while the clock is off"
+  },
+  {
+   "tag": "g186-clock-on",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().SetAutoClock(60.0)"
+   },
+   "note": "the one sample that watches the world move asks for motion explicitly"
+  },
+  {
+   "tag": "g187-assert-hook-intact",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastHookSteps",
+    "operator": "eq",
+    "expected": 3
+   },
+   "note": "the clock has been running for several frames and the hook's own delta is still exactly what the hook wrote -- two producers, two properties"
+  },
+  {
+   "tag": "g188-samples-clock",
+   "port": "game",
+   "tool": "running_game_get_node_property_samples",
+   "arguments": {
+    "node_path": "Main",
+    "properties": [
+     "PlayerX",
+     "PlayerY",
+     "OnGround",
+     "VelY",
+     "Landings",
+     "GemsRemaining",
+     "AutoTicks",
+     "LastAutoSteps",
+     "Elapsed",
+     "Ticks"
+    ],
+    "frame_count": 30,
+    "frame_interval": 1
+   },
+   "note": "multi-frame property sample of the auto clock: the player runs right frame by frame (PlayerX changes every frame, Landings counts up) while Elapsed and Ticks advance -- 'the game moves' as a sequence of values, not as an adjective"
+  },
+  {
+   "tag": "g189-assert-moved",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerX",
+    "operator": "gt",
+    "expected": 112
+   },
+   "note": "the clock really carried the player past the position the hook left them at"
+  },
+  {
+   "tag": "g190-assert-auto-ticks",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "AutoTicks",
+    "operator": "gt",
+    "expected": 2
+   },
+   "note": "and it kept stepping after the sample began"
+  },
+  {
+   "tag": "g191-assert-still-ground",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "OnGround",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "on the flat strip the run never leaves the ground"
+  },
+  {
+   "tag": "g192-clock-off",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().SetAutoClock(0.0)"
+   },
+   "note": "back to frozen"
+  },
+  {
+   "tag": "g193-assert-auto-0-again",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastAutoSteps",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "the per-frame delta is zero again"
+  },
+  {
+   "tag": "g194-assert-hook-intact-2",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastHookSteps",
+    "operator": "eq",
+    "expected": 3
+   },
+   "note": "while the hook's own delta is untouched by the clock, before or after it runs"
+  },
+  {
+   "tag": "g195-shot-t5",
+   "port": "game",
+   "tool": "running_game_capture_screenshot",
+   "arguments": {
+    "save_path": "user://plat-t5.png"
+   },
+   "note": "the frame after the clock carried the player east"
+  },
+  {
+   "tag": "g196-input-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().ForceTestState(\"level=......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../......................................../..@...................................../########################################/########################################;player=100,544;gems=;vel=0,0;ground=1\")"
+   },
+   "note": "a flat strip for the input test"
+  },
+  {
+   "tag": "g197-poll-on",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().SetPollInput(true)"
+   },
+   "note": "the input path is off by default; the test switches it on explicitly"
+  },
+  {
+   "tag": "g198-clock-on-input",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().SetAutoClock(60.0)"
+   },
+   "note": "the world has to advance for the key to matter"
+  },
+  {
+   "tag": "g199-input-right",
+   "port": "game",
+   "tool": "running_game_run_test_scenario",
+   "arguments": {
+    "steps": [
+     {
+      "type": "input",
+      "action": "plat_right",
+      "pressed": true
+     },
+     {
+      "type": "wait",
+      "seconds": 0.45
+     },
+     {
+      "type": "assert",
+      "node_path": "Main",
+      "property": "PlayerX",
+      "operator": "gt",
+      "expected": 100
+     }
+    ]
+   },
+   "note": "the declared action really runs the player east"
+  },
+  {
+   "tag": "g200-assert-input-moves-1",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "InputMoves",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "the declared action fires on the PRESS EDGE, so a scenario's never-released key performs exactly one action instead of repeating at the frame rate"
+  },
+  {
+   "tag": "g201-assert-player-moved",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PlayerX",
+    "operator": "gt",
+    "expected": 100
+   },
+   "note": "and the player is east of where the strip pinned them"
+  },
+  {
+   "tag": "g202-input-jump",
+   "port": "game",
+   "tool": "running_game_run_test_scenario",
+   "arguments": {
+    "steps": [
+     {
+      "type": "input",
+      "action": "plat_jump",
+      "pressed": true
+     },
+     {
+      "type": "wait",
+      "seconds": 0.45
+     },
+     {
+      "type": "assert",
+      "node_path": "Main",
+      "property": "Jumps",
+      "operator": "gte",
+      "expected": 1
+     }
+    ]
+   },
+   "note": "the declared jump action really launches the player"
+  },
+  {
+   "tag": "g203-assert-input-jumps-1",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "InputJumps",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "one jump arrived by input"
+  },
+  {
+   "tag": "g204-assert-jumps-1",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Jumps",
+    "operator": "gte",
+    "expected": 1
+   },
+   "note": "and it is on the record"
+  },
+  {
+   "tag": "g205-poll-off",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().SetPollInput(false)"
+   },
+   "note": "polling off again: nothing after this can drift because a key is still marked held"
+  },
+  {
+   "tag": "g206-clock-off-input",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().SetAutoClock(0.0)"
+   },
+   "note": "and the world stops again"
+  },
+  {
+   "tag": "g207-runtime-overlay",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var main = get_parent()\nvar c = ColorRect.new()\nc.name = StringName(\"ProbeOverlay\")\nc.position = Vector2(20, 556)\nc.size = Vector2(120, 30)\nc.color = Color(0.95, 0.35, 0.95, 1.0)\nmain.add_child(c)\nreturn \"overlay added\""
+   },
+   "note": "a node created at run time, in the same session, as the positive control for 'a run-time node is drawn'"
+  },
+  {
+   "tag": "g208-assert-unknown-property",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "NoSuchProperty",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "DECLARED FAILURE: a boundary call asking for a property that does not exist (-32001), so the error path of the assertion tool is on the record too"
+  },
+  {
+   "tag": "g209-shot-t6",
+   "port": "game",
+   "tool": "running_game_capture_screenshot",
+   "arguments": {
+    "save_path": "user://plat-t6.png"
+   },
+   "note": "the overlay is visible in this frame and not in t5"
+  },
+  {
+   "tag": "g210-final-level",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().ForceTestState(\"level=0\")"
+   },
+   "note": "ask for the full course once more"
+  },
+  {
+   "tag": "g211-assert-gems",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GemsTotal",
+    "operator": "eq",
+    "expected": 14
+   },
+   "note": "the course is back"
+  },
+  {
+   "tag": "g212-assert-hash",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "MapHash",
+    "operator": "eq",
+    "expected": 1272615768
+   },
+   "note": "and it reproduces the very same hash the Python re-implementation predicted"
+  },
+  {
+   "tag": "g213-final-readback",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return get_parent().Dump()"
+   },
+   "note": "the final map as one line"
+  },
+  {
+   "tag": "g214-final-tree",
+   "port": "game",
+   "tool": "running_game_get_scene_tree",
+   "arguments": {},
+   "note": "the final tree, including the run-time overlay"
+  }
+ ]
+}

@@ -1,0 +1,8 @@
+g199-input-right           all_passed=True  steps=3 passed=1 failed=0 errors=0 duration_ms=463
+g202-input-jump            all_passed=True  steps=3 passed=1 failed=0 errors=0 duration_ms=463
+g159-assert-screen-win     PASS  screen_text 'GOAL REACHED'                   matched='GOAL REACHED' source=control_tree
+g178-assert-screen-over    PASS  screen_text 'ALL LIVES LOST'                 matched='ALL LIVES LOST' source=control_tree
+g199-input-right/step2     PASS  scenario PlayerX gt 100.0                    actual=208
+g202-input-jump/step2      PASS  scenario Jumps gte 1.0                       actual=1
+------------------------------------------------------------------------------
+extra assertions found: 4  ->  PASS=4

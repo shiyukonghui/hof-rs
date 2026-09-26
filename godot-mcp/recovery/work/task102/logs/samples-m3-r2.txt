@@ -1,0 +1,42 @@
+=== g13-samples-frozen (12 frames) ===
+  BoardHash              distinct=1    changes@=[]
+      first=-640805625  last=-640805625
+  Elapsed                distinct=12   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+      first=7.25005531311035  last=7.43699979782104
+  Moves                  distinct=1    changes@=[]
+      first=0  last=0
+  Score                  distinct=1    changes@=[]
+      first=0  last=0
+  Ticks                  distinct=12   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+      first=998  last=1026
+  TotalCleared           distinct=1    changes@=[]
+      first=0  last=0
+  frame                  distinct=12   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+      first=0  last=11
+
+=== g101-samples-clock (30 frames) ===
+  AutoTicks              distinct=30   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      first=4  last=33
+  BoardHash              distinct=1    changes@=[]
+      first=-541359188  last=-541359188
+  Elapsed                distinct=30   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      first=12.6220207214355  last=13.1018047332764
+  LastAutoSteps          distinct=2    changes@=[7, 8, 12, 13, 17, 18, 22, 23, 27, 28]
+      first=0  last=0
+  LastChain              distinct=1    changes@=[]
+      first=1  last=1
+  MaxChain               distinct=1    changes@=[]
+      first=1  last=1
+  Moves                  distinct=1    changes@=[]
+      first=1  last=1
+  Refills                distinct=1    changes@=[]
+      first=3  last=3
+  Score                  distinct=1    changes@=[]
+      first=30  last=30
+  Ticks                  distinct=30   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      first=15  last=84
+  TotalCleared           distinct=1    changes@=[]
+      first=3  last=3
+  frame                  distinct=30   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      first=0  last=29
+

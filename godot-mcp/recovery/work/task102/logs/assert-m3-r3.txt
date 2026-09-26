@@ -1,0 +1,90 @@
+g03-assert-cols                    PASS  /root/Main eq 8.0                              actual=8
+g04-assert-rows                    PASS  /root/Main eq 8.0                              actual=8
+g05-assert-colors                  PASS  /root/Main eq 6.0                              actual=6
+g06-assert-cell                    PASS  /root/Main eq 56.0                             actual=56
+g07a-assert-default-board          PASS  /root/Main eq 01045002/44145334/13402252/52314 actual=01045002/44145334/13402252/523141
+g07b-assert-default-hash           PASS  /root/Main eq -640805625.0                     actual=-640805625
+g07c-assert-default-seed           PASS  /root/Main eq 749508457.0                      actual=749508457
+g09-assert-probe-state             PASS  /root/Main eq gem0                             actual=gem0
+g102-assert-clock-moves            PASS  /root/Main gt 1.0                              actual=34
+g103-assert-clock-cleared          PASS  /root/Main gt 0.0                              actual=140
+g104-assert-clock-auto-ticks       PASS  /root/Main gt 2.0                              actual=41
+g104a-assert-clock-board-moved     PASS  /root/Main neq -640805625.0                    actual=1174431238
+g104b-assert-clock-score           PASS  /root/Main gt 0.0                              actual=2550
+g105-assert-clock-not-over         PASS  /root/Main eq False                            actual=False
+g107-assert-clock-off-auto         PASS  /root/Main eq 0.0                              actual=0
+g11-assert-probe-value             PASS  /root/Main eq 1.0                              actual=1
+g112-assert-input-moves-1          PASS  /root/Main eq 1.0                              actual=1
+g113-assert-moves-ge-1             PASS  /root/Main gte 1.0                             actual=1
+g116-assert-unknown-property       ERROR -32001                                         Property 'NoSuchProperty' on node '/root
+g119-assert-final-board            PASS  /root/Main eq 01234501/23455123/45015345/01234 actual=01234501/23455123/45015345/012345
+g120-assert-final-hash             PASS  /root/Main eq 1060788201.0                     actual=1060788201
+g14-assert-frozen-auto-0           PASS  /root/Main eq 0.0                              actual=0
+g16-assert-plain-board             PASS  /root/Main eq 01234501/23450123/45012345/01234 actual=01234501/23450123/45012345/012345
+g17-assert-plain-hash              PASS  /root/Main eq 289019889.0                      actual=289019889
+g18-assert-moves-0                 PASS  /root/Main eq 0.0                              actual=0
+g19-assert-rejected-0              PASS  /root/Main eq 0.0                              actual=0
+g21-assert-plain-applied-0         PASS  /root/Main eq 0.0                              actual=0
+g22-assert-plain-moves-0           PASS  /root/Main eq 0.0                              actual=0
+g23-assert-last-auto-0             PASS  /root/Main eq 0.0                              actual=0
+g25-assert-setup-board             PASS  /root/Main eq 01234501/23455123/45015345/01234 actual=01234501/23455123/45015345/012345
+g26-assert-setup-hash              PASS  /root/Main eq 1060788201.0                     actual=1060788201
+g28-assert-reason-nomatch          PASS  /root/Main contains reason=no_match            actual=rejected reason=no_match from=3,0
+g29-assert-rejected-1              PASS  /root/Main eq 1.0                              actual=1
+g30-assert-board-unchanged         PASS  /root/Main eq 01234501/23455123/45015345/01234 actual=01234501/23455123/45015345/012345
+g31-assert-hash-unchanged          PASS  /root/Main eq 1060788201.0                     actual=1060788201
+g32-assert-moves-still-0           PASS  /root/Main eq 0.0                              actual=0
+g34-assert-reason-nonadj           PASS  /root/Main contains reason=not_adjacent        actual=rejected reason=not_adjacent from
+g35-assert-rejected-2              PASS  /root/Main eq 2.0                              actual=2
+g37-assert-reason-oob              PASS  /root/Main contains reason=out_of_bounds       actual=rejected reason=out_of_bounds fro
+g38-assert-rejected-3              PASS  /root/Main eq 3.0                              actual=3
+g39-assert-board-still             PASS  /root/Main eq 01234501/23455123/45015345/01234 actual=01234501/23455123/45015345/012345
+g41-assert-seed                    PASS  /root/Main eq 1000.0                           actual=1000
+g43-assert-kind                    PASS  /root/Main contains chain=                     actual=swap from=3,4 to=3,5 chain=1 clea
+g44-assert-moves-1                 PASS  /root/Main eq 1.0                              actual=1
+g45-assert-last-swap               PASS  /root/Main eq 3,4>3,5                          actual=3,4>3,5
+g46-assert-cleared                 PASS  /root/Main eq 3.0                              actual=3
+g47-assert-chain                   PASS  /root/Main eq 1.0                              actual=1
+g48-assert-score                   PASS  /root/Main eq 30.0                             actual=30
+g49-assert-total                   PASS  /root/Main eq 3.0                              actual=3
+g50-assert-cascades                PASS  /root/Main eq 1.0                              actual=1
+g51-assert-max-chain               PASS  /root/Main eq 1.0                              actual=1
+g52-assert-board-after             PASS  /root/Main eq 01233501/23455123/45012345/01234 actual=01233501/23455123/45012345/012344
+g53-assert-hash-after              PASS  /root/Main eq -1986490196.0                    actual=-1986490196
+g54-assert-seed-after              PASS  /root/Main eq 304958183.0                      actual=304958183
+g55-assert-refills                 PASS  /root/Main eq 3.0                              actual=3
+g59-assert-auto-applied-1          PASS  /root/Main eq 1.0                              actual=1
+g60-assert-auto-moves-1            PASS  /root/Main eq 1.0                              actual=1
+g61-assert-auto-swap               PASS  /root/Main eq 0,4>0,5                          actual=0,4>0,5
+g62-assert-auto-score              PASS  /root/Main eq 30.0                             actual=30
+g63-assert-auto-board              PASS  /root/Main eq 01233401/23455123/45012345/01234 actual=01233401/23455123/45012345/012345
+g64-assert-auto-hash               PASS  /root/Main eq -541359188.0                     actual=-541359188
+g65-assert-auto-seed               PASS  /root/Main eq 304958183.0                      actual=304958183
+g66-assert-auto-refills            PASS  /root/Main eq 3.0                              actual=3
+g69-assert-chain-len               PASS  /root/Main eq 2.0                              actual=2
+g70-assert-chain-len-gt1           PASS  /root/Main gt 1.0                              actual=2
+g71-assert-chain-cleared           PASS  /root/Main eq 6.0                              actual=6
+g72-assert-chain-score             PASS  /root/Main eq 90.0                             actual=90
+g73-assert-chain-board             PASS  /root/Main eq 01234501/43450123/35012345/31234 actual=01234501/43450123/35012345/312345
+g74-assert-chain-hash              PASS  /root/Main eq 2009509386.0                     actual=2009509386
+g75-assert-chain-seed              PASS  /root/Main eq 1456914738.0                     actual=1456914738
+g76-assert-chain-max               PASS  /root/Main eq 2.0                              actual=2
+g79-assert-not-won-yet             PASS  /root/Main eq False                            actual=False
+g80-assert-score-pinned            PASS  /root/Main eq 490.0                            actual=490
+g82-assert-score-win               PASS  /root/Main eq 520.0                            actual=520
+g83-assert-won                     PASS  /root/Main eq True                             actual=True
+g84-assert-over                    PASS  /root/Main eq True                             actual=True
+g86-assert-reason-over             PASS  /root/Main contains reason=game_over           actual=rejected reason=game_over from=0,
+g91-assert-loss-moves              PASS  /root/Main eq 1.0                              actual=1
+g92-assert-loss-over               PASS  /root/Main eq True                             actual=True
+g93-assert-loss-not-won            PASS  /root/Main eq False                            actual=False
+g95-assert-loss-reason             PASS  /root/Main contains reason=game_over           actual=rejected reason=game_over from=0,
+g96-assert-loss-rejected           PASS  /root/Main eq 1.0                              actual=1
+g99a-assert-clock-board            PASS  /root/Main eq 01045002/44145334/13402252/52314 actual=01045002/44145334/13402252/523141
+g99b-assert-clock-board-hash       PASS  /root/Main eq -640805625.0                     actual=-640805625
+g99c-assert-clock-moves-0          PASS  /root/Main eq 0.0                              actual=0
+g99d-assert-clock-cleared-0        PASS  /root/Main eq 0.0                              actual=0
+------------------------------------------------------------------------------
+assertions found: 86  ->  ERROR=1, PASS=85
+non-passing: 0 FAIL, 1 ERROR
+   g116-assert-unknown-property | -32001 | Property 'NoSuchProperty' on node '/root/Main' not found

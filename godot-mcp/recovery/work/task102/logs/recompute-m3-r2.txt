@@ -1,0 +1,51 @@
+wrote F:\moonbit-hof-rs\godot-mcp\tools\sessions\match3\session.json calls=139
+GEN    board=01045002/44145334/13402252/52314150/45001041/23344314/15231152/44210431
+       hash=-640805625 seed=749508457 quiet_waves=3 cell(0,0)=0 cell(3,5)=1
+PLAIN  hash=289019889 legal_swaps=0
+Q      board=01234501/23455123/45015345/01234501/23450123/45012345/01234501/23450123 hash=1060788201
+APPLY  kind=applied moves=1 chain=1 cleared=3 score=30 total=3 cascades=1 max=1 seed=304958183 refills=3
+       board_after=01233501/23455123/45012345/01234401/23450123/45012345/01234501/23450123 hash=-1986490196
+HAND   first_wave=[(1, 4), (2, 4), (3, 4)] score_after_first=30 board_after_first=01233501/23455123/45012345/01234401/23450123/45012345/01234501/23450123 seed_after_first=304958183
+SHAPE  kind1=no_match rej=1 kind2=not_adjacent rej=2 kind3=out_of_bounds rej=3 board=01234501/23455123/45015345/01234501/23450123/45012345/01234501/23450123
+REFUSE kind=no_match board=01234501/23455123/45015345/01234501/23450123/45012345/01234501/23450123
+P_AUTO applied=0  Q_AUTO applied=1 swap=0,4>0,5 moves=1 score=30 board=01233401/23455123/45012345/01234501/23450123/45012345/01234501/23450123 seed=304958183
+WIN    kind=applied score=520 won=True over=True
+LOSS   kind=applied moves=1 won=False over=True after=game_over rejected=1
+CHAIN  change=(2, 0, 0) board=01234501/23450123/05012345/01234501/23450123/45012345/01234501/23450123
+       swap=(0, 0, 1, 0) chain=2 cleared=6 score=90 board_after=01234501/43450123/35012345/31234501/53450123/45012345/01234501/23450123 seed=1456914738 max=2
+== Match-3: the printed board
+   g02-readback-t0          reported=-640805625   recomputed=-640805625   OK
+      board=01045002/44145334/13402252/52314150/45001041/23344314/15231152/44210431
+   g07-assert-default-board reported=-640805625   recomputed=-640805625   OK
+      board=01045002/44145334/13402252/52314150/45001041/23344314/15231152/44210431
+   g121-final-readback      reported=1060788201   recomputed=1060788201   OK
+      board=01234501/23455123/45015345/01234501/23450123/45012345/01234501/23450123
+   readbacks found=3 mismatches=0
+== Match-3: the recomputed literals the payload actually reported
+   g07a-assert-default-board      Board          expected='01045002/44145334/13402252/52314150/45001041/23344314/15231152/44210431' actual='01045002/44145334/13402252/52314150/45001041/23344314/15231152/44210431' OK
+   g07b-assert-default-hash       BoardHash      expected=-640805625                                   actual=-640805625                                   OK
+   g07c-assert-default-seed       Seed           expected=749508457                                    actual=749508457                                    OK
+   g11-assert-probe-value         ProbeValue     expected=1                                            actual=1                                            OK
+   g16-assert-plain-board         Board          expected='01234501/23450123/45012345/01234501/23450123/45012345/01234501/23450123' actual='01234501/23450123/45012345/01234501/23450123/45012345/01234501/23450123' OK
+   g17-assert-plain-hash          BoardHash      expected=289019889                                    actual=289019889                                    OK
+   g21-assert-plain-applied-0     LastHookSteps  expected=0                                            actual=0                                            OK
+   g26-assert-setup-hash          BoardHash      expected=1060788201                                   actual=1060788201                                   OK
+   g29-assert-rejected-1          RejectedMoves  expected=1                                            actual=1                                            OK
+   g35-assert-rejected-2          RejectedMoves  expected=2                                            actual=2                                            OK
+   g38-assert-rejected-3          RejectedMoves  expected=3                                            actual=3                                            OK
+   g52-assert-board-after         Board          expected='01233501/23455123/45012345/01234401/23450123/45012345/01234501/23450123' actual='01233501/23455123/45012345/01234401/23450123/45012345/01234501/23450123' OK
+   g53-assert-hash-after          BoardHash      expected=-1986490196                                  actual=-1986490196                                  OK
+   g54-assert-seed-after          Seed           expected=304958183                                    actual=304958183                                    OK
+   g55-assert-refills             Refills        expected=3                                            actual=3                                            OK
+   g61-assert-auto-swap           LastSwap       expected='0,4>0,5'                                    actual='0,4>0,5'                                    OK
+   g63-assert-auto-board          Board          expected='01233401/23455123/45012345/01234501/23450123/45012345/01234501/23450123' actual='01233401/23455123/45012345/01234501/23450123/45012345/01234501/23450123' OK
+   g69-assert-chain-len           LastChain      expected=2                                            actual=2                                            OK
+   g71-assert-chain-cleared       LastCleared    expected=6                                            actual=6                                            OK
+   g72-assert-chain-score         Score          expected=90                                           actual=90                                           OK
+   g73-assert-chain-board         Board          expected='01234501/43450123/35012345/31234501/53450123/45012345/01234501/23450123' actual='01234501/43450123/35012345/31234501/53450123/45012345/01234501/23450123' OK
+   g75-assert-chain-seed          Seed           expected=1456914738                                   actual=1456914738                                   OK
+   g82-assert-score-win           Score          expected=520                                          actual=520                                          OK
+   g119-assert-final-board        Board          expected='01234501/23455123/45015345/01234501/23450123/45012345/01234501/23450123' actual='01234501/23455123/45015345/01234501/23450123/45012345/01234501/23450123' OK
+   g120-assert-final-hash         BoardHash      expected=1060788201                                   actual=1060788201                                   OK
+   literal mismatches: 0
+TOTAL RECOMPUTATION MISMATCHES: 0

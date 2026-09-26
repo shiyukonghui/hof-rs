@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "F:\moonbit-hof-rs\godot-mcp\recovery\work\task102\peek.py", line 2, in <module>
+    d = json.load(io.open(sys.argv[1], encoding='utf-8-sig'))
+PermissionError: [Errno 13] Permission denied: 'runs\\match3\\m3-task102-r1'
