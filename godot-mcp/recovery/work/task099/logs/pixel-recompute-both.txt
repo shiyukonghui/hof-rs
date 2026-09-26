@@ -1,0 +1,38 @@
+== runs\frogger\frog-task099-r1
+   trace-editor.jsonl: pairs=16 comparable=16 nondistinct_digests=2
+      non-zero by engine rule (>10): 1/16 ; by any-difference rule: 1/16
+      pairs whose reported changed_pixels != the recomputed engine number: 0
+        seq=1    project_edit_script                        any=0       engine=0       reported=0
+        seq=2    editor_open_scene                          any=0       engine=0       reported=0
+        seq=3    editor_add_nodes_batch                     any=213200  engine=213030  reported=213030
+        seq=4    editor_save_scene                          any=0       engine=0       reported=0
+        seq=5    project_read_text_file                     any=0       engine=0       reported=0
+        seq=6    editor_add_nodes_batch                     any=0       engine=0       reported=0
+   trace-game.jsonl: pairs=74 comparable=74 nondistinct_digests=15
+      non-zero by engine rule (>10): 16/74 ; by any-difference rule: 16/74
+      pairs whose reported changed_pixels != the recomputed engine number: 0
+        seq=1    running_game_get_scene_tree                any=0       engine=0       reported=0
+        seq=2    running_game_execute_gdscript              any=0       engine=0       reported=0
+        seq=3    running_game_assert_node_state             any=0       engine=0       reported=0
+        seq=4    running_game_assert_node_state             any=0       engine=0       reported=0
+        seq=5    running_game_assert_node_state             any=0       engine=0       reported=0
+        seq=6    running_game_assert_node_state             any=0       engine=0       reported=0
+== runs\flappy\flappy-task099-r2
+   trace-editor.jsonl: pairs=14 comparable=14 nondistinct_digests=2
+      non-zero by engine rule (>10): 1/14 ; by any-difference rule: 1/14
+      pairs whose reported changed_pixels != the recomputed engine number: 0
+        seq=1    project_edit_script                        any=0       engine=0       reported=0
+        seq=2    editor_open_scene                          any=0       engine=0       reported=0
+        seq=3    editor_add_nodes_batch                     any=213200  engine=213200  reported=213200
+        seq=4    editor_save_scene                          any=0       engine=0       reported=0
+        seq=5    project_read_text_file                     any=0       engine=0       reported=0
+        seq=6    editor_add_nodes_batch                     any=0       engine=0       reported=0
+   trace-game.jsonl: pairs=78 comparable=78 nondistinct_digests=22
+      non-zero by engine rule (>10): 21/78 ; by any-difference rule: 21/78
+      pairs whose reported changed_pixels != the recomputed engine number: 0
+        seq=1    running_game_get_scene_tree                any=0       engine=0       reported=0
+        seq=2    running_game_execute_gdscript              any=0       engine=0       reported=0
+        seq=3    running_game_assert_node_state             any=0       engine=0       reported=0
+        seq=4    running_game_assert_node_state             any=0       engine=0       reported=0
+        seq=5    running_game_assert_node_state             any=0       engine=0       reported=0
+        seq=6    running_game_assert_node_state             any=0       engine=0       reported=0

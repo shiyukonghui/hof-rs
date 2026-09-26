@@ -1,0 +1,21 @@
+run        : runs\flappy\flappy-task099-r2
+game       : flappy  tag: flappy-task099-r2  pillow: True
+editor : calls=14  facts=14/14  args=inline_complete=13, sidecar_verified=1
+         verdicts=failed=1, ok_effect_observed=1, ok_file_effect_observed=5, ok_no_effect_observed=7
+game   : calls=78  facts=78/78  args=inline_complete=78
+         verdicts=failed=1, ok_effect_observed=21, ok_file_effect_observed=41, ok_no_effect_observed=15
+------------------------------------------------------------------------------
+TOTAL  : calls=92  facts_complete=92/92 (100.0%)
+         verdicts=failed=2, ok_effect_observed=22, ok_file_effect_observed=46, ok_no_effect_observed=22
+pixels : 92 capture pairs, 22 recomputed non-zero (editor 1/14, game 21/78)
+         pixel_evidence verdict=available
+frames : 5 in C:\Users\wyl\AppData\Roaming\Godot\app_userdata\flappy
+         flappy-t0.png 800x600     8895 B  0F53A0D32CEB  px_vs_prev=-
+         flappy-t1.png 800x600    11430 B  F2B8AC485506  px_vs_prev=34326
+         flappy-t2.png 800x600    10108 B  F5BBDD4D6729  px_vs_prev=98611
+         flappy-t3.png 800x600    10380 B  B7B43BC9A333  px_vs_prev=1699
+         flappy-t4.png 800x600    10473 B  C1BDDCA86A7E  px_vs_prev=99094
+defects: 2 (auto)
+         [medium] call 6 (editor_add_nodes_batch) failed with error -32000 | declared failure
+         [medium] call 70 (running_game_assert_node_state) failed with error -32001 | declared failure
+recomputed-vs-trace mismatches: none

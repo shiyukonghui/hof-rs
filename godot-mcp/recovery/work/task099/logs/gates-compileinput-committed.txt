@@ -1,0 +1,22 @@
+GATES_PREFLIGHT RUNNER=tools\run_gates.ps1 tag=task099-committed-compile
+GATES_PREFLIGHT VERSION_TEXT=4.8.dev.mono.custom_build.95aa1d8984
+GATES_PREFLIGHT ANCHOR=95aa1d8984 HEAD=0fbd5ec4c ANCHOR_REPORTED=95aa1d8984
+GATES_PREFLIGHT WORKING_TREE_RED=0 WORKING_TREE_SAFE=0 COMMITTED_DIFF_SAFE=4
+GATES_PREFLIGHT VERDICT=RUN_GATES
+GATES_PREFLIGHT REASON="the anchor judge returned ANCHOR_STALE_COMPILED: 95aa1d8984 is an ancestor of 0fbd5ec4c but the diff contains 4 file(s) that can change the compiled binary: COMPILE_INPUT:modules/mcp_server/tests/test_mcp_server.h, COMPILE_INPUT:modules/mcp_server/tools/editor_node_batch_write.cpp, COMPILE_INPUT:modules/mcp_server/tools/editor_node_batch_write.h, COMPILE_INPUT:modules/mcp_server/tools/editor_write_scene_editor.cpp"
+GATES_PREFLIGHT RED_COUNT=0
+GATES_PREFLIGHT SAFE_COUNT=4
+GATES_PREFLIGHT ANCHOR_SUMMARY anchor=95aa1d8984 anchor_reported=95aa1d8984 head=0fbd5ec4c verdict=ANCHOR_STALE_COMPILED ancestor=yes diff_count=8 safe_count=4 red_count=4 criterion="A is an ancestor of H (A == H counts) and git diff --name-only A..H contains no compile input (safe = declared non-compiling whitelist, everything else red)" reason="95aa1d8984 is an ancestor of 0fbd5ec4c but the diff contains 4 file(s) that can change the compiled binary: COMPILE_INPUT:modules/mcp_server/tests/test_mcp_server.h, COMPILE_INPUT:modules/mcp_server/tools/editor_node_batch_write.cpp, COMPILE_INPUT:modules/mcp_server/tools/editor_node_batch_write.h, COMPILE_INPUT:modules/mcp_server/tools/editor_write_scene_editor.cpp" diff=[S:modules/mcp_server/docs/reports/MCP-TRACEABILITY.md S:modules/mcp_server/docs/reports/REBUILT-2C-MANIFEST.md S:modules/mcp_server/docs/tools_list.renamed.json S:modules/mcp_server/scripts/gen_renamed_contract.py R:modules/mcp_server/tests/test_mcp_server.h(COMPILE_INPUT) R:modules/mcp_server/tools/editor_node_batch_write.cpp(COMPILE_INPUT) R:modules/mcp_server/tools/editor_node_batch_write.h(COMPILE_INPUT) R:modules/mcp_server/tools/editor_write_scene_editor.cpp(COMPILE_INPUT)]
+GATES_SKIPPED=0
+GATES_PREFLIGHT RUNNER=tools\run_gates.ps1 tag=task099-committed-compile
+GATES_PREFLIGHT VERSION_TEXT=4.8.dev.mono.custom_build.95aa1d8984
+GATES_PREFLIGHT ANCHOR=95aa1d8984 HEAD=0fbd5ec4c ANCHOR_REPORTED=95aa1d8984
+GATES_PREFLIGHT WORKING_TREE_RED=0 WORKING_TREE_SAFE=0 COMMITTED_DIFF_SAFE=4
+GATES_PREFLIGHT VERDICT=RUN_GATES
+GATES_PREFLIGHT REASON="the anchor judge returned ANCHOR_STALE_COMPILED: 95aa1d8984 is an ancestor of 0fbd5ec4c but the diff contains 4 file(s) that can change the compiled binary: COMPILE_INPUT:modules/mcp_server/tests/test_mcp_server.h, COMPILE_INPUT:modules/mcp_server/tools/editor_node_batch_write.cpp, COMPILE_INPUT:modules/mcp_server/tools/editor_node_batch_write.h, COMPILE_INPUT:modules/mcp_server/tools/editor_write_scene_editor.cpp"
+GATES_PREFLIGHT RED_COUNT=0
+GATES_PREFLIGHT SAFE_COUNT=4
+GATES_PREFLIGHT ANCHOR_SUMMARY anchor=95aa1d8984 anchor_reported=95aa1d8984 head=0fbd5ec4c verdict=ANCHOR_STALE_COMPILED ancestor=yes diff_count=8 safe_count=4 red_count=4 criterion="A is an ancestor of H (A == H counts) and git diff --name-only A..H contains no compile input (safe = declared non-compiling whitelist, everything else red)" reason="95aa1d8984 is an ancestor of 0fbd5ec4c but the diff contains 4 file(s) that can change the compiled binary: COMPILE_INPUT:modules/mcp_server/tests/test_mcp_server.h, COMPILE_INPUT:modules/mcp_server/tools/editor_node_batch_write.cpp, COMPILE_INPUT:modules/mcp_server/tools/editor_node_batch_write.h, COMPILE_INPUT:modules/mcp_server/tools/editor_write_scene_editor.cpp" diff=[S:modules/mcp_server/docs/reports/MCP-TRACEABILITY.md S:modules/mcp_server/docs/reports/REBUILT-2C-MANIFEST.md S:modules/mcp_server/docs/tools_list.renamed.json S:modules/mcp_server/scripts/gen_renamed_contract.py R:modules/mcp_server/tests/test_mcp_server.h(COMPILE_INPUT) R:modules/mcp_server/tools/editor_node_batch_write.cpp(COMPILE_INPUT) R:modules/mcp_server/tools/editor_node_batch_write.h(COMPILE_INPUT) R:modules/mcp_server/tools/editor_write_scene_editor.cpp(COMPILE_INPUT)]
+GATES_SKIPPED=0
+GATES_PREFLIGHT RESULT=PREFLIGHT_ONLY
+summary=F:\moonbit-hof-rs\godot-mcp\runs\gates\task099-committed-compile\summary.txt

@@ -1,0 +1,2 @@
+wrote F:\moonbit-hof-rs\godot-mcp\tools\sessions\frogger\session.json calls=90
+wrote F:\moonbit-hof-rs\godot-mcp\tools\sessions\flappy\session.json calls=92

@@ -21,6 +21,8 @@
 | 5 | Space Invaders | C# | 59（编辑器 15 / 游戏 44，另 2 条 `sleep`） | **59/59（100%）**（编辑器 15/15、游戏 44/44） | 编辑器：`failed=1`（**声明的边界调用**：同名批量被 D-3 策略拒绝）、`ok_effect=1`、`ok_file_effect=6`、`ok_no_effect=7`；游戏：`ok_effect=9`、`ok_file_effect=22`、`ok_no_effect=13` | **0 / 0**（首轮一次通过，没有发现工具缺陷或游戏/驱动缺陷） | `runs\spaceinvaders\si-task097-r1\` | 第 5 个游戏。**像素差 12/59 非零**（编辑器 1/15、游戏 11/44），`user://` 逐对：`si-t0`→`t1` **1576 px**、`t1`→`t2` **38127 px**、`t2`→`t3` **16990 px**、`t3`→`t4` **4800 px**；独立复算逐对一致。场景只建一次：`e03` 批量加 5 个静态节点，`e06` **同一批再跑一次被 `-32000` 拒绝**（`data.conflicts` 列出 5 条路径），前后文件 sha `db5939a5…` **一字未变**；40 个入侵者是**运行期新建**的节点（`g46` 树里 `Invader_*` 恰好 40 个），另加一个运行期 `ProbeOverlay` 做视觉对照。断言：`Score` 0→10、`InvadersRemaining` 40→39→1→0、`InvadersKilled` 1、`WaveSteps` 0→11、`Won` true、`GameOver` true（胜）/ true（负）、屏幕文本 `WAVE CLEARED` 与 `GAME OVER`；`g07` 冻结基线（12 帧 `WaveX` 恒 140）对 `g09` 移动采样（`WaveX` 152→260，10 个不同值）。`project_build_csharp` exit 0（3533 ms）、`project_validate_scripts` `invalid_count=0`。**声明的一处采样局限**：`g14` 的子弹飞行采样开始得太晚（0.09 s 的飞行在两帧之间就结束了），它记到的是击杀后的状态；子弹确实飞过由 `t0`→`t1` 的 1576 px 与 `g13`/`g15`/`g16`/`g17` 的断言共同钉住 |
 | 6 | Asteroids | C# | 71（编辑器 16 / 游戏 55） | **71/71（100%）**（编辑器 16/16、游戏 55/55） | 编辑器：`failed=1`（**声明的同名拒绝**）、`ok_effect=1`、`ok_file_effect=7`、`ok_no_effect=7`；游戏：`failed=1`（**声明的边界调用**：断言一个不存在的属性，`-32001`）、`ok_effect=14`、`ok_file_effect=32`、`ok_no_effect=8` | **0 / 1**（**A-1**：会话把 `ForceTestState` 会归零的计数器当成会保留，`g36` 期望 120 实得 100；已修期望并重跑 r2） | `runs\asteroids\ast-task098-r2\`（首轮 `ast-task098-r1`） | 第 6 个游戏。**像素差 16/71 非零**（编辑器 1/16、游戏 15/55），`user://` 六帧逐对：`ast-t0`→`t1` **14774 px**、`t1`→`t2` **996 px**、`t2`→`t3` **6346 px**、`t3`→`t4` **7072 px**、`t4`→`t5` **8960 px**；独立复算（`pixel_recompute.py` 的逐调用对 + `frames_recompute.py` 的保存帧）与 `report.json` **0 处不符**。场景只有 3 个静态节点（`Background`/`Hud`/`Status`），飞船、子弹与**每一颗岩石**都是 `_Ready()` 里**运行期新建**的 `ColorRect`；`e03` 批量加静态节点，`e06` **同一批再跑一次被 `-32000` 拒绝**，保存后的文件与拒绝前**逐字节相同**。飞船旋转/推进由固定步长钩子钉住（`ShipAngle` 0→-45、`ShipX` 400→**452**、`ShipVelX`=**104**）；小行星分裂四路同时成立（`AsteroidsSplit=1`、`AsteroidsRemaining` 1→2、`FirstRockSize`=2、`RockList()`=`0:s2@200,150\|1:s2@200,150`）；计分 20（大）→ 100（小，清场）、生命 `Lives` 3→**2**→**0**、`Won` true（清场）/ false（阵亡）。**多帧采样改正了 TASK-097 的采样时机局限**：`g15` 先把子弹放在 150 px 之外再采 40 帧，`BulletActive` 在前 14 帧为 true、**第 14 帧**同时发生 `Score` 0→20 与 `AsteroidsRemaining` 1→2 —— 飞行与击杀落在同一采样窗口内 |
 | 7 | Pac-Man | C# | 80（编辑器 16 / 游戏 64） | **80/80（100%）**（编辑器 16/16、游戏 64/64） | 编辑器：`failed=1`（**声明的同名拒绝**）、`ok_effect=1`、`ok_file_effect=7`、`ok_no_effect=7`；游戏：`failed=1`（**声明的边界调用**，`-32001`）、`ok_effect=13`、`ok_file_effect=32`、`ok_no_effect=18` | **0 / 1**（**P-1**：会话把 `GhostSteps` 的**累计总数**当成一次 `StepGhosts` 的**增量**，`g15` 期望 12 实得 16；已把增量做成真导出属性 `LastPatrolSteps` 并重跑 r2） | `runs\pacman\pac-task098-r2\`（首轮 `pac-task098-r1`） | 第 7 个游戏。**像素差 15/80 非零**（编辑器 1/16、游戏 14/64），`user://` 五帧逐对：`pac-t0`→`t1` **18888 px**、`t1`→`t2` **1853 px**、`t2`→`t3` **18546 px**、`t3`→`t4` **9586 px**；独立复算与 `report.json` **0 处不符**。19×13 的网格迷宫、**125 颗豆子**、4 个幽灵与吃豆人**全部运行期新建**（`e06` 同名批量被 `-32000` 拒绝）。断言把规则逐条钉住：`TotalPellets=125`、`PelletsRemaining` 125→2→1→0、`PelletsEaten` 0→1、`Score` 0→10、`PacCol` 9→10、撞墙**不移动**（`blocked at=9,8 from=9,9`）、幽灵抓捕 `Lives` 3→**2**→**0**、`Won` true（豆子清空）/ false（被抓）；幽灵巡逻由 `LastPatrolSteps` 的**增量**（末轮 =5）与 30 帧移动采样两路钉住（`Ghost0Col` 30 个不同值）；`running_game_run_test_scenario` 用声明的 `pac_right` 动作真的把 `PacCol` 推过 9（`all_passed=true`、`passed=1`）。**一处游戏侧的自保**：重建棋盘时先 `RemoveChild` 再 `QueueFree`，否则同一帧里重建的 `Wall_r2_c3` 会因为名字还被占着而被引擎改名成 `@ColorRect@N` —— 与 D-3 同一个陷阱；`g64` 的 248 个节点里 **0 个 `@` 开头的名字** |
+| 8 | Frogger | C# | 90（编辑器 16 / 游戏 74） | **90/90（100%）**（编辑器 16/16、游戏 74/74） | 编辑器：`failed=1`（**声明的同名拒绝**）、`ok_effect=1`、`ok_file_effect=7`、`ok_no_effect=7`；游戏：`failed=1`（**声明的边界调用**，`-32001`）、`ok_effect=16`、`ok_file_effect=42`、`ok_no_effect=15` | **0 / 0**（首轮一次通过，没有发现工具缺陷或游戏/驱动缺陷） | `runs\frogger\frog-task099-r1\` | 第 8 个游戏。**像素差 17/90 非零**（编辑器 1/16、游戏 16/74），`user://` 五帧逐对：`frog-t0`→`t1` **8864 px**、`t1`→`t2` **9178 px**、`t2`→`t3` **9291 px**、`t3`→`t4` **9943 px**，五个帧 sha 互不相同；独立复算（`pixel_recompute.py` 逐调用对 + `frames_recompute.py` 保存帧）与 `report.json` **0 处不符**。13×15 的格点：5 条车道（row 9–13）各一辆车、row 8 是隔离带、5 行河（row 3–7）各一根两格浮木、row 0 是终点线、row 14 是出发点；**地形条、5 辆车、5 根浮木与青蛙全部运行期新建**，场景只有 3 个静态节点（`Background`/`Hud`/`Status`）。断言把规则逐条钉住：`FrogCol`/`FrogRow`（起点 6,14）、出界**不移动**（`blocked at=-1,14`）、空车道可走（13→12）、车撞 `Lives` 3→2 并回到起点、落水 `Lives` 3→2、浮木**载着青蛙走**（`FrogCol` 6→5 且仍在 row 4）、第五个家 `HomesReached` 4→5 + `Score`=50 + `Won`/`GameOver`=true、最后一命被撞后 `Lives`=0 + `Won`=false、屏幕文本 `ALL HOMES FILLED` / `GAME OVER`。确定性：`CarSpeed` 默认 0、`PollInput` 默认 false，运动只经固定步长钩子（`StepTraffic(5)` 的**增量** `LastTrafficSteps=5`，总数 `TrafficSteps=9` 含 30 帧巡逻采样让时钟推进的 4 步 —— 与 P-1 同一条教训，本轮一开始就用增量断言）；冻结基线（12 帧 `FrogCol`/`FrogRow`/`Car0Col`/`Log0Col` 各 1 个值、`Ticks` 12 个不同值）对移动采样（30 帧 `Car0Col`/`Log0Col` 逐帧变化）。`e06` 的**同名批量被 `-32000` 拒绝**且 `e05`/`e09` 文件 sha 一字未变；声明的 `frog_up` 动作真的把 `FrogRow` 推过 14（`all_passed=true`） |
+| 9 | Flappy Bird | C# | 92（编辑器 14 / 游戏 78） | **92/92（100%）**（编辑器 14/14、游戏 78/78） | 编辑器：`failed=1`（**声明的同名拒绝**）、`ok_effect=1`、`ok_file_effect=5`、`ok_no_effect=7`；游戏：`failed=1`（**声明的边界调用**，`-32001`）、`ok_effect=21`、`ok_file_effect=41`、`ok_no_effect=15` | **0 / 1**（**F-1**：`AutoRun` 把 `delta*60` 截断成 0，高帧率下自重跑时钟一格都不走；`g44` 的 30 帧采样抓到 —— `Ticks` 在走而 `Pipe0X` 恒定；已改成累加器并重跑 r2） | `runs\flappy\flappy-task099-r2\`（首轮 `runs\flappy\flappy-task099-r1\`） | 第 9 个游戏。**像素差 22/92 非零**（编辑器 1/14、游戏 21/78），`user://` 五帧逐对：`flappy-t0`→`t1` **34326 px**、`t1`→`t2` **98611 px**、`t2`→`t3` **1699 px**、`t3`→`t4` **99094 px**，五个帧 sha 互不相同；独立复算与 `report.json` **0 处不符**。r2 的五个帧与 r1 **逐字节相同**（同一条会话、同一台机器、确定性状态机 —— 「同一个被钉住的状态画出同一张图」）。**一个固定帧 = 1/60 s**：`AutoRun` 默认 false，世界只经 `Flap()` / `StepFrames(n)` / `StepUntilPass(n)` 前进，于是「一帧重力 = 23.33 px/s」「天花板钳到 y=0 且速度归零」「落地停在 y=564」都是确切值；通过管子是最强的一条确定性证据：`StepUntilPass(400)` 依次给出 **164 / 100 / 100 / 100 / 100 帧**、`LastPassDelta=1`、`Score` 10/20/…/50，第五根通过时 `Won`/`GameOver`=true（`PipesToClear=5`），期间 `PipesRecycled>0` 证明管子真的回到右边缘。多帧采样：冻结基线（12 帧 `BirdY`/`Pipe0X` 各 1 个值、`Ticks` 12 个不同值）对滚动采样（`SetAutoRun(true)` + 30 帧，**r2 里 `Pipe0X` 17 个不同值 576→492** 而 `BirdY` 恒定）；另有 `StepFrames(5)` 使 `Pipe0X` 600→**585**（180 px/s × 5/60 s = 15 px）。失败路径也被钉住：撞管 `GameOver`=true 且 `Score`=0、落地 `GameOver`=true + `BirdY`=564、屏幕文本 `COURSE CLEARED` / `GAME OVER`。`e06` 同名批量被 `-32000` 拒绝且文件 sha 未变；两个声明动作 `flap` / `flappy_restart` 都接到载荷的真路径上（后者触发 `BuildWorld()` 重开） |
 
 ---
 
@@ -33,7 +35,7 @@
 | — | — | TASK-091..093 期间**没有发现新的工具缺陷**；TASK-092 的三条溯源缺口已在上一轮关闭 | — | — |
 | **D-1** | 运行期 / 画面侧（**TASK-094 定位：机器画面管线；TASK-095 更正为「加载期画布项不再重录」；TASK-096 再定域：上面两条都不成立，真因是场景文件里的 `@ColorRect@*` 副本层 —— 见下表后的三节**） | 进程的视口回读**恒返回本进程渲染的第一帧**：TASK-093 现场 62/40（snake）、68/42（breakout）个 PNG 各 1 个 sha；`running_game_capture_frames` 12 帧同一 sha；`user://` 截图跨 8 秒同 sha `D5C3A72ABA6F525C`。**TASK-094 的最小反例**：把 `Background.color` 依次设成蓝→红→绿（同一调用内读回 `background_color=(0.0,1.0,0.0,1.0)`，确实变绿），三次 `running_game_capture_screenshot` 得到**三张逐字节相同、且都还是最初深色背景**的 PNG；`--mcp-capture=off`（进程里根本没有 capture engine）同样复现。**同一时刻**蛇的 `SnakeSeg00.position` 从 `(144,240)` 走到 `(384,240)`（240 px），回读指纹恒为 `558211402` | **机器画面管线**，不是模块：①同一份二进制字节、同一个 `tools\sessions\pong\session.json`，00:14:53 得 **10/29 非零**（`pong-task092`，16 个不同 sha），01:18:26 重放得 **0/29**（`task094-pong-ab`，1 个 sha）；②渲染器本身在动——加 100 个 `ColorRect` 后 `Performance.RENDER_TOTAL_OBJECTS_IN_FRAME` **57 → 157**、prims 114 → 314，`Engine.get_frames_drawn()` 以 ≈144/s 递增；③窗口未最小化（`IsIconic=False`、`window_get_mode()=0`），故 `Main::iteration` 确实调用 `RenderingServer::draw()`；④读的 RID 就是渲染目标当前纹理（`RenderingServer.viewport_get_texture(vp_rid)` 与缓存值同 RID、同字节）；⑤vulkan / opengl3 / d3d12 **三者同样冻结**；⑥`RenderingServer.force_sync()` + `force_draw(true, 0.0)` 无效；⑦GPU 无 TDR/掉卡（`nvidia-smi` 正常、System 日志 8 小时内无 `nvlddmkm`）。**TASK-093 那条复现脚本本身有陷阱**：它拍的是**已经死了的蛇**（`SNAKE_WALL ... ticks=19`，1.5 秒就撞墙），所以「两张同 sha」在那条脚本里本来就该出现；TASK-094 的最小反例改用不被游戏脚本写、且不依赖存活的对象 | **TASK-097 已结案：真因 D-3 已修（同名默认拒绝）、副本层已删、像素差列已回填真实数值 —— 见本表后的「D-1 结案与副本层清理存证（TASK-097）」。** TASK-096 再定域（见「D-1 再定域（TASK-096）」）：引擎无辜（同一批操作在两个引擎上都正常）、回读无辜、机器画面管线无辜；真因是三个老游戏的场景文件里被写进了整份节点副本，副本绘制在上层，屏幕上是**副本的初值**。三个场景当时仍带着副本（**TASK-097 已用 `editor_delete_node` 删除并复核，见「D-1 结案」节**）**。复现（TASK-095 的更强反例，两条一起看才有判别力）：`powershell -File tools\run_game_session.ps1 -Game snake -Session recovery\work\task095\sessions\loadednode\session.json -RunTag x -GamePort 9892 -SkipReport`；**TASK-096 的判别证据**：`recovery\work\task096\sessions\occ\session.json`（`runs\snake\task096-occ`，隐藏 `@ColorRect@20995` 后同一像素立刻跟着 `Background.color` 走）、探针工程 A/B（`recovery\work\task096\probe`，我方引擎与 stock 4.7.1 逐行相同，加载期 Background 改色立刻上屏）、第 4 个游戏 Tetris（场景干净 → 像素差 11/42 非零，`runs\tetris\tetris-task096-r2`）；TASK-094 当时的证据仍在盘上（`recovery\work\task094\diag_freshness.ps1` + `sessions\repro2\session.json`（`D1_VERDICT=PRESENT`）、`runs\snake\task094-probe3/4/5`、`runs\snake\task094-probe9`；A/B `runs\pong\pong-task092` vs `runs\pong\task094-pong-ab`），当时**已试无效的绕过**（opengl3 / d3d12 / `force_draw` / 进程外窗口抓取 `CopyFromScreen`、`PrintWindow`）在「画面本来是静止的副本层」这条真因下不再需要别的解释 | |
 | **D-2** | 运行期 / 主循环健康度（**TASK-094 已修：测试判据对负载敏感**） | `accept_m1.ps1` 在 `task093` / `task093b` 两轮里失败（`5/22`）：输出头部 `WARNING: the pump never looked steady, running the cases anyway`，随后 `case1_GET_mcp_200 status=0`、`case2..11/15..20` 抛 `Wait` 异常；同一脚本在同一台机器、同一引擎字节上单独重跑（`task093c`，wall=50.7s）→ `22/22`、`GATE_EXIT=0` | **判据是吞吐而不是就绪**：`Wait-ForStablePump` 原来要求「相隔 1000 ms 的两次采样之间 `frame_count` 至少 +20，连续 3 次」——即**至少 20 fps**。有负载时主循环活着但慢于 20 fps，判据永不成立，函数耗尽 180 s 死线后打印 WARNING 继续跑，用例于是在尚未稳定的泵上执行 → `status=0` / `Wait` 异常。绑定与端口逻辑无辜（`case12/13/14`、`guard_user_port_9877` 在失败轮里也全 PASS） | **改**（`modules\mcp_server\scripts\accept_m1.ps1`）：判据改为「`frame_count` 连续 6 次严格递增，采样间隔 250 ms」＝**约 1.5 秒不间断推进，与帧率无关**（1 fps 也能满足），死线仍 180 s，未满足时仍照旧响亮报警。实测：**单跑 wall=50.8s → 22/22、`GATE_EXIT=0`**（`runs\gates\task094-alone\`）；**同机 8 个 CPU 烧机进程（16 逻辑核）并跑 wall=55.3s → 22/22、`GATE_EXIT=0`**（`runs\gates\task094-load2\`）；另有一次短重叠负载（`dotnet build`）wall=41.5s → 22/22（`runs\gates\task094-load\`）。三次都没有出现 WARNING 行 |
-| **G-1** | 门跑器 / 参数（**已定位，未改**） | `run_gates.ps1` 的 `-VersionText` 默认值是 `4.8.dev.mono.custom_build.8604fcf9e`（TASK-090 的锚点），对当前 HEAD `cf554ef58` 判 `ANCHOR_STALE_COMPILED`（`diff_count=22 safe_count=3 red_count=19`）→ 门 9 FAIL | 参数默认值落后于引擎仓 HEAD；**不是模块回归** | TASK-093 用 `-VersionText 4.8.dev.mono.custom_build.cf554ef58` 重跑（`runs\gates\task093c\`）；TASK-094 沿用同一锚点（`runs\gates\task094\`）；TASK-096 同样用它（`runs\gates\task096\`） |
+| **G-1** | 门跑器 / 参数（**已定位，TASK-099 已修**） | `run_gates.ps1` 的 `-VersionText` 默认值是 `4.8.dev.mono.custom_build.8604fcf9e`（TASK-090 的锚点），对当前 HEAD `cf554ef58` 判 `ANCHOR_STALE_COMPILED`（`diff_count=22 safe_count=3 red_count=19`）→ 门 9 FAIL | 参数默认值落后于引擎仓 HEAD；**不是模块回归** | TASK-093 用 `-VersionText 4.8.dev.mono.custom_build.cf554ef58` 重跑（`runs\gates\task093c\`）；TASK-094 沿用同一锚点（`runs\gates\task094\`）；TASK-096 同样用它（`runs\gates\task096\`）。**TASK-099 修在根上**：`-VersionText` 默认改为空，锚点默认取**磁盘上那个二进制自己的 `--version`**（`-Anchor` / `-VersionText` 仍可显式覆盖），并新增**纯文档预检**：committed diff 与工作树里都没有编译输入时直接判 `ANCHOR_STRUCTURAL_EQUIVALENT` + `SKIP_REBUILD`、打印非编译文件清单、不跑十道门（`-RunGates` 可强制）；有编译输入时照常跑门。实测两情形：纯文档提交（anchor `2385fe2fb` → HEAD `0fbd5ec4c`，diff 两份 `.md`）`exit 0` + `GATES_SKIPPED=1`（`runs\gates\task099-doconly\`）；工作树里放一个未跟踪 `.cpp` 时 `VERDICT=RUN_GATES` 且 **`g01`..`g10` 全部 `exit=0`**（`runs\gates\task099-compileinput\summary.txt`） |
 | **D-3** | 编辑器 / 场景写入（**TASK-096 发现，根因明确，未修：属画布项缺陷，按 §C 口径先只记录**） | 把 `editor_open_scene` + `editor_add_nodes_batch` + `editor_save_scene` 这一套在一个**已经有这些名字的节点**的场景上再跑一遍，会得到**整份副本**：pong 5、breakout 18、snake 37 个自动名节点（`@ColorRect@20995`…、`@Label@21000`…），它们排在场景树最后、**绘制在最上层**。提交级证据：`projects\pong\scenes\main.tscn` 在 `df02ccb`（TASK-092 之前）**0** 个副本，在 `97167e4`（TASK-093）**5** 个；`runs\pong\pong-run1..run4` 的 `e20-scene-tree` 都没有副本，`runs\pong\pong-control-task093` 的**有**。**数字口径（TASK-098 复核时补注）**：这里的 5 / 18 / 37 是**只数 `@ColorRect@*`** 的结果（当时的现场照片就是那一类）；把 `@Label@*` 也算进来是 **8 / 20 / 37**（Pong 5+3、Breakout 18+2、Snake 37+0）。两个数都对，差别只在口径；`recovery\work\task098\copy_count_evidence.py` 从清理会话自己读回来的清理前场景原文重新数过（`@...@` 逐个列出），与 TASK-097 删掉的 8 / 20 / 37 一致 | `editor_add_nodes_batch` 对「同名节点已存在」既不拒绝也不报告，Godot 按既有规则把新节点自动改名（`@ColorRect@NNNN`）；`editor_save_scene` 随后把**两份**都写进 `.tscn`。TASK-093 的编辑器相被重跑过（pong 的 control 轮、breakout/snake 的 r2..r7），污染就是这样进去的 | **已修（TASK-097，两半都做）**。①**根因动作**：`editor_add_nodes_batch` 新增 `on_name_conflict`（默认 `"refuse"`），目标父节点下已有同名子节点（或本批内同父同名）时**整批拒绝、一个节点都不写**，回 `-32000` + `data.conflicts`（含 `node_path` 与 `existing_node_path`）+ `data.suggestion`；显式开关 `"rename"` 保留引擎改名并在 `renamed_count` / `renamed[]` / `created[i].name_conflict` 里说明。②`editor_save_scene` 侧：对**本模块批量添加产生的同名重复**给出 `duplicates` / `duplicates_count` / `note`，不再静默保存。③**三个场景的副本层已按最小动作删除**（用 `editor_delete_node` 逐个删，存证与复核见下），像素差列已回填。**最小同批复现修前/修后**：`runs\pong\d3-before`（旧二进制：第二次同名批量返回 `ok` 并造出 `@ColorRect@20956`，文件 sha `851ff76b…`(240 B) → `166e0221…`(388 B)，副本进了 `.tscn`）对 `runs\pong\d3-after-r2`（新二进制：同一步 `-32000`，文件 sha `8f7d1768…`(241 B) **前后一字未变**）。**真项目里的复核**：三款游戏与 Space Invaders 重放时，会话里那一次 `editor_add_nodes_batch` 全部被判 `-32000`，重放后的场景树**没有任何 `@Type@N` 自动名节点**。**D-1 的真因就是本条** |
 
 ### D-1 定域更正（TASK-095，2026-09-27）
@@ -116,6 +118,39 @@ TASK-098 把台账每一行引用的数字**从它自己引用的那份产物里
 `recovery\work\task098\frames_recompute.py` 独立按 mtime 重算三个老游戏的帧链，与 `report.json`
 **0 处不符**（`snake`：t0→t1 480000、t1→t2 4032、t2→final 480000）。
 
+### TASK-099 记录（2026-09-27）
+
+1. **第 8、9 款（Frogger / Flappy Bird）交付**：台账第 8、9 行来自它们自己那一轮的产物
+   （`runs\frogger\frog-task099-r1\report.json`、`runs\flappy\flappy-task099-r2\report.json`）。
+   **工具缺陷 0 条**（上面「游戏或驱动缺陷」表新增的一条 **F-1** 是载荷缺陷：Flappy 的自重跑时钟
+   把 `delta*60` 截断成 0，高帧率下一格都不走 —— 由 `g44` 的 30 帧采样照出来，改成累加器后重跑 r2）。
+   Frogger 首轮零缺陷。两条非 `ok` 判定在每一轮里都是**声明过的**：`e06` 的同名批量拒绝
+   （`-32000`，D-3 的证据）与一条故意打在不存在属性上的边界断言（`-32001`）。
+   像素差 17/90（Frogger，首轮）与 22/92（Flappy，r2）逐对独立复算，**0 处不符**；
+   `user://` 五帧的 sha 全部互不相同，帧链与 `report.json` 逐值一致；Flappy 的 r2 五个帧与 r1
+   **逐字节相同**（同一个被钉住的状态画出同一张图）。
+   两款都把「多帧采样先于会改变状态的那一步」与「先钉状态再断言」照做：Frogger 的冻结基线
+   （12 帧 4 个属性各 1 个值）对 30 帧交通采样；Flappy 的冻结基线对 `SetAutoRun(true)` + 30 帧滚动采样
+   （r2 里 `Pipe0X` 17 个不同值 576→492、`BirdY` 恒定）。两款都新增了**与帧率无关的增量属性**
+   （Frogger 的 `LastTrafficSteps`、Flappy 的 `LastPassFrames` / `LastPassDelta`），P-1 的教训被写进载荷本身。
+2. **门跑器 G-1 已修**（见工具缺陷表）：`run_gates.ps1` 现在默认读二进制的 `--version` 当锚点，
+   并在 committed diff 与工作树都没有编译输入时判 `ANCHOR_STRUCTURAL_EQUIVALENT` + 跳过十道门
+   （打印非编译文件清单）；有编译输入仍照常跑门。两情形实测见
+   `runs\gates\task099-doconly\summary.txt` 与 `runs\gates\task099-compileinput\summary.txt`
+   （后者 `g01`..`g10` 全 `exit=0`、`accept_m1 22/22`）。**该脚本在主仓 `tools\` 下，不在引擎仓里，
+   因此不改变两个变体的任何一个字节**（引擎仓 `git status` 前后均为空）。
+3. **`--import` 的关机期访问违例第 3 次现场复现**：`runs\frogger\frog-task099-r1\import.stderr.txt`
+   与 TASK-097/098 一字不差（`0xC0000005`、`Parameter "singleton" is null.` @ `editor_node.cpp:6750`、
+   日志已到 `[ DONE ] loading_editor_layout`）；同轮 `flappy` 的首次导入 `exit=0`（对照组，同样是全新工程）。
+   受控探针 `recovery\work\task099\import_crash_probe2.ps1`（fresh/warm × 默认端口 9877 × 是否加压）
+   的结果记在 `recovery\work\task099\logs\importprobe*`。**本轮未改引擎、未加埋点**：台账自己的口径是
+   「根因不清楚的只记录、不猜改」，而三个判别器都要动引擎源码 + 重建两变体 —— 在一个探针无法按需
+   复现的假设上重建，不符合这条口径。**对跑测试的实际影响不变**：它不影响导入结果，`IMPORT_EXIT`
+   不能当健康信号（`run_game_session.ps1` 只记一行、不据此判失败）。
+4. **十道门与验收**：本轮**没有模块字节改动**（引擎仓 diff 只有文档），因此没重建、没 push 代码；
+   但预检的「有编译输入」那一情形把十道门**真实跑完**（全 `exit=0`，`accept_m1 22/22`），
+   作为「跳过逻辑没有把门跑坏」的证据。
+
 ### 游戏或驱动缺陷
 
 | id | 游戏 | 现象（证据） | 根因 | 处置 → 重跑结果 |
@@ -134,6 +169,7 @@ TASK-098 把台账每一行引用的数字**从它自己引用的那份产物里
 | **T-3** | Tetris（会话 / 测试设计） | 首轮 `g26` 用「出生行整行填满」造 GameOver，结果 `g28`（`GameOver=true`）失败，而同刻 `Lines=1`、`Score=100` —— 消行反而发生了 | `LockPiece()` 的顺序是「落锁 → 消行 → 出生」，整行会在出生检查之前被消掉，棋盘因此永远不满足结束条件。**游戏是对的，测试设计错了** | **改**：改用「出生格 `(4,0)`、`(5,0)` 被占、而这一行不是满行」（`....##....`）。r2：`g27` 返回 `over=True`、`g28` 实得 **true**、`g29` `filled=6` |
 | **A-1** | Asteroids（会话） | 首轮 `g36-assert-score-120` 期望 `Score=120`、**实得 100**（`runs\asteroids\ast-task098-r1`）；`assertions.py` 把它列为 PASS 之外的唯一非声明失败 | 会话假设 `ForceTestState` 只换棋盘、**保留**计数器；而它按前五款游戏的确定性规则把**整个状态**钉死（`Score=0`、`AsteroidsSplit=0`、`AsteroidsDestroyed=0`），所以赢局那 100 分**只属于最后一颗小行星**，分列那一步的 20 分已经被重置 | **改**：期望值改成 **100**，并把「20 分钉在 `g19`」写进 `g36` 的注。r2：`g36` PASS（`actual=100`）；`runs\asteroids\ast-task098-r2` 的 25 条断言 = **24 PASS + 1 条声明的边界失败（`-32001`）** |
 | **P-1** | Pac-Man（会话 / 载荷） | 首轮 `g15-assert-patrol-12` 期望 `GhostSteps=12`、**实得 16**（`runs\pacman\pac-task098-r1`） | 会话把 `GhostSteps`（**累计总数**）当成一次 `StepGhosts(12)` 的**增量**；前面那次 30 帧巡逻采样在 `GhostSpeed=8` 下已经让时钟推进了 **4** 步，而**帧率决定它是 3 还是 5** —— 也就是说这条断言就算写对总数也会抖 | **改**：载荷新增真导出属性 **`LastPatrolSteps`**（一次 `StepGhosts` 的增量，被 `GameOver` 截断时也如实记），会话改成「增量 `eq 12`」+「总数 `gt 12`」，断言因此与帧率无关。r2：`g15`/`g16` 双双 PASS；`runs\pacman\pac-task098-r2` 的 30 条断言 = **29 PASS + 1 条声明的边界失败（`-32001`）** |
+| **F-1** | Flappy Bird（载荷） | 首轮 `runs\flappy\flappy-task099-r1` 的 `g44-samples-scroll`：30 帧采样里 `Ticks` 从 31 走到 101（引擎在跑），而 `Pipe0X` **恒定 582**、`BirdY` 恒定 300 —— 「自重跑时钟」一格都没推进世界。**所有断言仍然 PASS**（没有一条断言要求它动），是**多帧采样**把这条缺陷照出来的 | `FlappyBirdGame._Process` 写的是 `frames = (int)((float)delta * FixedFps)`：这台机器上窗口游戏进程跑在 60 fps 以上（采样显示约 144 fps），单帧 `delta*60 < 1`，截断成 0，于是 `StepFrames(0)` 永远不发生。会话里 `SetAutoRun(true)` 的响应本身诚实（`auto_run=True`），**缺陷在载荷的时钟，不在工具** | **改**：改成**累加器** `_autoAccum += delta * FixedFps; frames = (int)_autoAccum; _autoAccum -= frames;`（`SetAutoRun` / `ForceTestState` / 声明动作的重开路径都清零），并在源码注释里写明是这次采样发现的。**重跑 r2**：`g44` 的 `Pipe0X` 变成 **17 个不同值（576→492）**，`BirdY` 仍恒定；`g13` 冻结基线不变（`Pipe0X` 仍 1 个值）；断言仍 **38 PASS + 1 条声明的边界失败**；像素差 21/92 → **22/92**（多出来的那一对正是滚动采样后的那一帧） |
 
 ---
 
@@ -141,17 +177,32 @@ TASK-098 把台账每一行引用的数字**从它自己引用的那份产物里
 
 1. **D-1 结案（TASK-097）**：D-3 的根因动作已落进模块（`editor_add_nodes_batch` 默认拒绝同名，`on_name_conflict: "rename"` 才改名且 `editor_save_scene` 会报告），三个老游戏的副本层已用 `editor_delete_node` 逐个删除并复核，像素差列已回填真实数值（Pong 14/74、Breakout 14/89、Snake 13/102，逐对独立复算一致）。复现命令：`powershell -File tools\run_game_session.ps1 -Game pong -Session tools\sessions\pong\session-clean-task097.json -RunTag x -EditorPort 9916 -GamePort 9917`（breakout / snake 同理，会话名同款）。
    最小同批复现的修前/修后：`runs\pong\d3-before`（副本进 `.tscn`）对 `runs\pong\d3-after-r2`（`-32000` + 文件 sha 不变）。
-2. **`--import` 的间歇性退出码（TASK-098 未结案，如实留档）**：`--import` 偶发以 `exit=-1073741819`（`0xC0000005`）退出，stderr 只有
+2. **`--import` 的间歇性退出码（TASK-099 仍**未**结案，如实留档）**：`--import` 偶发以 `exit=-1073741819`（`0xC0000005`）退出，stderr 只有
    `ERROR: Parameter "singleton" is null.` / `at: EditorNode::is_cmdline_mode (editor\editor_node.cpp:6750)`，
-   而且**导入本身已经跑完**（日志已到 `[ DONE ] loading_editor_layout`），即**关机期崩溃、不是导入失败**。
-   累计 2 次（TASK-097 的 `d3-after` 首轮、TASK-098 的 `ast-task098-r1`），对照样本 11 次会话导入 + 24 次受控探针导入全部 `exit=0`。
-   已排除/未复现：项目语言（C# 与 GDScript 各 12 次全 0）、冷热（首次扫描与热导入各 12 次全 0）、唯一端口（24 次全 0）。
+   而且**导入本身已经跑完**（日志已到 `[ DONE ] loading_editor_layout`，23 行 stdout），即**关机期崩溃、不是导入失败**。
+   累计 **3 次 / 13 次会话导入**（TASK-097 的 `d3-after` 首轮、TASK-098 的 `ast-task098-r1`、TASK-099 的 `frog-task099-r1` 首轮）；
+   同一轮的对照组 `flappy-task099-r1` 首次导入 `exit=0`（**同样是全新工程**，所以「全新工程」本身不是判别器）。
+   已排除/未复现：项目语言（C# 与 GDScript 各 12 次全 0）、冷热（首次扫描与热导入各 12 次全 0）、唯一端口（24 次全 0）、
+   stock 4.7.1 mono（24 次全 0）；TASK-099 又加上：**默认端口 9877**（真实会话的做法，TASK-098 16 次全 0）、
+   全新副本的 fresh/warm（TASK-099 12 次全 0）、**8 个 CPU 烧机进程加压**（TASK-099 12 次全 0）—— 见
+   `recovery\work\task099\logs\importprobe\probe2-frog-load0.json` 与 `probe2-frogload-load8.json`。
    静态定位方向：`EditorNode::is_cmdline_mode()` 在引擎里**只有一个调用者** ——
    `EditorFileSystem::_process_update_pending()`（`editor\file_system\editor_file_system.cpp:2301`），
    而它是 `call_deferred` 排上来的脚本类信息更新；这条路径在编辑器析构之后再跑就会撞上 `singleton == null`。
-   下一步该做的判别：①用**默认端口 9877**（真实会话的做法）多跑几次；②用 stock Godot 4.7.1 mono 对同一个工程
-   跑同一命令，看它是否也崩（分「上游行为」与「本模块关机路径」）。探针：`recovery\work\task098\import_crash_probe.ps1`，
-   结果在 `recovery\work\task098\logs\importprobe\`。**对跑测试的实际影响**：它不影响导入结果，但意味着
-   `IMPORT_EXIT` **不能**当健康信号用（`run_game_session.ps1` 现在只在日志里记一行，不据此判失败）。
+   **下一步该做的判别（TASK-099 未做，按要求留档不猜改）**：三个判别器（在该调用点埋点 / 把 `ERR_FAIL_NULL_V`
+   换成静默空检查以区分「只是警告」与「同帧其它空解引用」/ 仍崩则用 procdump 拿真实栈）**都要动引擎源码并重建两变体**；
+   本轮把「现场记录 + 受控统计」这两件不动引擎的事做完了（见上），而按需复现仍不成立，因此在拿到可复现配方之前
+   **不改引擎、不重建**。探针：`recovery\work\task099\import_crash_probe2.ps1`。
+   **对跑测试的实际影响**：它不影响导入结果，但意味着 `IMPORT_EXIT` **不能**当健康信号用
+   （`run_game_session.ps1` 现在只在日志里记一行，不据此判失败）。
 3. **残留（不阻塞）**：①`editor_add_node`（单个）仍保留引擎改名语义，但它在自己的响应里明确回报 `name`，TASK-097 **故意未改**（改动会再动一份契约）；②`editor_save_scene` 每编辑器会话重发场景 `uid` 的行为**未修**（已在 D-1 结案节登记，项目内无 uid 引用）；③TASK-097 记的「`g14` 那种飞行采样开始太晚」的会话设计局限**已在 TASK-098 改正**（Asteroids 的 `g15` 先布置 150 px 外的子弹再采 40 帧，飞行与击杀落在同一窗口内），本条可以关掉。
-4. 台账已续到第 7 行（Pac-Man，`runs\pacman\pac-task098-r2`，80/80 facts、像素差 15/80 非零、1 条会话缺陷已修）；下一款建议继续复制 Space Invaders / Asteroids 的会话模板（静态节点用批量工具一次建好、动态对象在运行期新建、`ForceTestState` 一个调用钉死状态、**多帧采样先于会改变状态的那一步**），并在建场景的那一步**故意再跑一次同名批量**，让 D-3 的拒绝在每一轮的证据里都留下一条。
+4. 台账已续到第 9 行（第 8 款 Frogger `runs\frogger\frog-task099-r1`，90/90 facts、像素差 17/90 非零；
+   第 9 款 Flappy Bird `runs\flappy\flappy-task099-r1`，92/92 facts、像素差 21/92 非零；两款首轮零缺陷）；
+   下一款建议继续复制同一套模板（静态节点用批量工具一次建好、动态对象在运行期新建、`ForceTestState` 一个调用
+   钉死状态、**多帧采样先于会改变状态的那一步**、**任何「钩子做了多少」都做成与帧率无关的增量属性**），
+   并在建场景的那一步**故意再跑一次同名批量**，让 D-3 的拒绝在每一轮的证据里都留下一条。
+5. **门跑器 G-1 已修（TASK-099）**：`tools\run_gates.ps1` 的锚点默认取二进制自己的 `--version`，
+   纯非编译（文档）提交直接判 `ANCHOR_STRUCTURAL_EQUIVALENT` + 跳过十道门并打印非编译文件清单；
+   有编译输入（committed 或工作树）仍照常跑门。复现两情形：
+   `powershell -File tools\run_gates.ps1 -Tag x`（跳过）与在引擎工作树放一个未跟踪 `.cpp` 后再跑（照常跑门）；
+   `-RunGates` 强制跑门，`-PreflightOnly` 只看判定。

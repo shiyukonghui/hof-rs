@@ -1,0 +1,19 @@
+load: 8 burner(s) started
+frogload-01    fresh  port=9877(default)  exit=0            OK       6084 ms done=True 
+frogload-01    warm   port=9877(default)  exit=0            OK       6072 ms done=True 
+frogload-02    fresh  port=9877(default)  exit=0            OK       6054 ms done=True 
+frogload-02    warm   port=9877(default)  exit=0            OK       6067 ms done=True 
+frogload-03    fresh  port=9877(default)  exit=0            OK       6087 ms done=True 
+frogload-03    warm   port=9877(default)  exit=0            OK       6075 ms done=True 
+frogload-04    fresh  port=9877(default)  exit=0            OK       6063 ms done=True 
+frogload-04    warm   port=9877(default)  exit=0            OK       6041 ms done=True 
+frogload-05    fresh  port=9877(default)  exit=0            OK       6081 ms done=True 
+frogload-05    warm   port=9877(default)  exit=0            OK       6084 ms done=True 
+frogload-06    fresh  port=9877(default)  exit=0            OK       6054 ms done=True 
+frogload-06    warm   port=9877(default)  exit=0            OK       6070 ms done=True 
+
+=== 12 import(s): 12 OK, 0 CRASH ===
+   round fresh  0/6 crashed
+   round warm   0/6 crashed
+   port  9877(default)  0/12 crashed
+results: F:\moonbit-hof-rs\godot-mcp\recovery\work\task099\logs\importprobe\probe2-frogload-load8.json

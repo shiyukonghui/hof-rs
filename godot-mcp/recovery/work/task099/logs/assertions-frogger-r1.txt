@@ -1,0 +1,39 @@
+g03-assert-frog-col                PASS  /root/Main eq 6.0                              actual=6
+g04-assert-frog-row                PASS  /root/Main eq 14.0                             actual=14
+g05-assert-score-0                 PASS  /root/Main eq 0.0                              actual=0
+g06-assert-lives-3                 PASS  /root/Main eq 3.0                              actual=3
+g07-assert-homes-0                 PASS  /root/Main eq 0.0                              actual=0
+g08-assert-total-homes             PASS  /root/Main eq 5.0                              actual=5
+g09-assert-cars                    PASS  /root/Main eq 5.0                              actual=5
+g10-assert-logs                    PASS  /root/Main eq 5.0                              actual=5
+g11-assert-not-over                PASS  /root/Main eq False                            actual=False
+g18-assert-hook-took-5             PASS  /root/Main eq 5.0                              actual=5
+g19-assert-total-grew              PASS  /root/Main gt 5.0                              actual=9
+g22-assert-not-moved-col           PASS  /root/Main eq 0.0                              actual=0
+g23-assert-not-moved-row           PASS  /root/Main eq 14.0                             actual=14
+g25-assert-on-road                 PASS  /root/Main eq 13.0                             actual=13
+g27-assert-road-moved              PASS  /root/Main eq 12.0                             actual=12
+g29-assert-lives-3                 PASS  /root/Main eq 3.0                              actual=3
+g31-assert-lives-2                 PASS  /root/Main eq 2.0                              actual=2
+g32-assert-reset-row               PASS  /root/Main eq 14.0                             actual=14
+g33-assert-not-over                PASS  /root/Main eq False                            actual=False
+g36-assert-lives-3                 PASS  /root/Main eq 3.0                              actual=3
+g38-assert-lives-2                 PASS  /root/Main eq 2.0                              actual=2
+g39-assert-reset-row               PASS  /root/Main eq 14.0                             actual=14
+g41-assert-on-log                  PASS  /root/Main eq 6.0                              actual=6
+g43-assert-carried                 PASS  /root/Main eq 5.0                              actual=5
+g44-assert-still-river             PASS  /root/Main eq 4.0                              actual=4
+g46-assert-homes-4                 PASS  /root/Main eq 4.0                              actual=4
+g48-assert-homes-5                 PASS  /root/Main eq 5.0                              actual=5
+g49-assert-score-50                PASS  /root/Main eq 50.0                             actual=50
+g50-assert-won                     PASS  /root/Main eq True                             actual=True
+g51-assert-over-by-win             PASS  /root/Main eq True                             actual=True
+g57-assert-lives-0                 PASS  /root/Main eq 0.0                              actual=0
+g58-assert-over-by-loss            PASS  /root/Main eq True                             actual=True
+g59-assert-not-won                 PASS  /root/Main eq False                            actual=False
+g68-assert-unknown-property        ERROR -32001                                         Property 'NoSuchProperty' on node '/root
+g72-assert-last-3                  PASS  /root/Main eq 3.0                              actual=3
+------------------------------------------------------------------------------
+assertions found: 35  ->  ERROR=1, PASS=34
+non-passing: 0 FAIL, 1 ERROR
+   g68-assert-unknown-property | -32001 | Property 'NoSuchProperty' on node '/root/Main' not found

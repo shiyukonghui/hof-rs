@@ -1,0 +1,18 @@
+template : F:\moonbit-hof-rs\godot-mcp\projects\_template
+dest     : F:\moonbit-hof-rs\godot-mcp\projects\frogger
+name     : frogger
+class    : FroggerGame
+  substituted: project.godot
+  substituted: __NAME__.csproj
+  substituted: scenes\main.tscn
+  substituted: src\__CLASS__.cs
+  generated : README.md (from _template\README.game.md)
+placeholder files left: 0
+  .gitignore
+  frogger.csproj
+  NuGet.config
+  project.godot
+  README.md
+  scenes\main.tscn
+  src\FroggerGame.cs
+created  : F:\moonbit-hof-rs\godot-mcp\projects\frogger

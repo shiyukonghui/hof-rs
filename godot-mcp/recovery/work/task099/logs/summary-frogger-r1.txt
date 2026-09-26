@@ -1,0 +1,21 @@
+run        : runs\frogger\frog-task099-r1
+game       : frogger  tag: frog-task099-r1  pillow: True
+editor : calls=16  facts=16/16  args=inline_complete=15, sidecar_verified=1
+         verdicts=failed=1, ok_effect_observed=1, ok_file_effect_observed=7, ok_no_effect_observed=7
+game   : calls=74  facts=74/74  args=inline_complete=74
+         verdicts=failed=1, ok_effect_observed=16, ok_file_effect_observed=42, ok_no_effect_observed=15
+------------------------------------------------------------------------------
+TOTAL  : calls=90  facts_complete=90/90 (100.0%)
+         verdicts=failed=2, ok_effect_observed=17, ok_file_effect_observed=49, ok_no_effect_observed=22
+pixels : 90 capture pairs, 17 recomputed non-zero (editor 1/16, game 16/74)
+         pixel_evidence verdict=available
+frames : 5 in C:\Users\wyl\AppData\Roaming\Godot\app_userdata\frogger
+         frog-t0.png  800x600    11328 B  15016BAC814E  px_vs_prev=-
+         frog-t1.png  800x600    11071 B  62D1D537895E  px_vs_prev=8864
+         frog-t2.png  800x600    11066 B  328258AB6FD8  px_vs_prev=9178
+         frog-t3.png  800x600    10843 B  1D251DF82C8A  px_vs_prev=9291
+         frog-t4.png  800x600    11034 B  D3D57CEEC457  px_vs_prev=9943
+defects: 2 (auto)
+         [medium] call 6 (editor_add_nodes_batch) failed with error -32000 | declared failure
+         [medium] call 68 (running_game_assert_node_state) failed with error -32001 | declared failure
+recomputed-vs-trace mismatches: none

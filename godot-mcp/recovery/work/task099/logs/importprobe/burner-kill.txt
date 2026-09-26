@@ -1,0 +1,1 @@
+SUCCESS: The process with PID 92892 (child process of PID 93880) has been terminated.

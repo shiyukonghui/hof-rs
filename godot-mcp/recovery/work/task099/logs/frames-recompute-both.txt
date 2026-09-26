@@ -1,0 +1,28 @@
+== frogger : 5 frame(s) in C:\Users\wyl\AppData\Roaming\Godot\app_userdata\frogger
+  frame        size         bytes  sha256[0:16]     vs report
+  frog-t0.png  800x600      11328  15016BAC814EDF9A same
+  frog-t1.png  800x600      11071  62D1D537895E98B0 same
+  frog-t2.png  800x600      11066  328258AB6FD835F9 same
+  frog-t3.png  800x600      10843  1D251DF82C8A3E7D same
+  frog-t4.png  800x600      11034  D3D57CEEC457BCA8 same
+  distinct sha256 among the frames: 5/5
+  pair diffs (recomputed here):
+    frog-t0.png  -> frog-t1.png  engine=8864    any=8889    total=480000  (report.json agrees)
+    frog-t1.png  -> frog-t2.png  engine=9178    any=9420    total=480000  (report.json agrees)
+    frog-t2.png  -> frog-t3.png  engine=9291    any=9531    total=480000  (report.json agrees)
+    frog-t3.png  -> frog-t4.png  engine=9943    any=10034   total=480000  (report.json agrees)
+  pairs where the report and this recomputation disagree: 0
+== flappy : 5 frame(s) in C:\Users\wyl\AppData\Roaming\Godot\app_userdata\flappy
+  frame        size         bytes  sha256[0:16]     vs report
+  flappy-t0.png 800x600       8895  0F53A0D32CEB9AD2 same
+  flappy-t1.png 800x600      11430  F2B8AC48550606D5 same
+  flappy-t2.png 800x600      10108  F5BBDD4D67296F6C same
+  flappy-t3.png 800x600      10380  B7B43BC9A3330D42 same
+  flappy-t4.png 800x600      10473  C1BDDCA86A7EC9D8 same
+  distinct sha256 among the frames: 5/5
+  pair diffs (recomputed here):
+    flappy-t0.png -> flappy-t1.png engine=34326   any=34365   total=480000  (report.json agrees)
+    flappy-t1.png -> flappy-t2.png engine=98611   any=98800   total=480000  (report.json agrees)
+    flappy-t2.png -> flappy-t3.png engine=1699    any=1787    total=480000  (report.json agrees)
+    flappy-t3.png -> flappy-t4.png engine=99094   any=99284   total=480000  (report.json agrees)
+  pairs where the report and this recomputation disagree: 0

@@ -1,0 +1,43 @@
+g03-assert-bird-y                  PASS  /root/Main eq 300.0                            actual=300.0
+g04-assert-velocity                PASS  /root/Main eq 0.0                              actual=0.0
+g05-assert-score-0                 PASS  /root/Main eq 0.0                              actual=0
+g06-assert-passed-0                PASS  /root/Main eq 0.0                              actual=0
+g07-assert-pipes                   PASS  /root/Main eq 3.0                              actual=3
+g08-assert-to-clear                PASS  /root/Main eq 5.0                              actual=5
+g09-assert-gravity                 PASS  /root/Main eq 1400.0                           actual=1400.0
+g10-assert-frames-0                PASS  /root/Main eq 0.0                              actual=0
+g11-assert-not-over                PASS  /root/Main eq False                            actual=False
+g15-assert-flap-velocity           PASS  /root/Main eq -420.0                           actual=-420.0
+g17-assert-rose                    PASS  /root/Main lt 300.0                            actual=251.388885498047
+g18-assert-velocity-spent          PASS  /root/Main lt 0.0                              actual=-186.666610717773
+g21-assert-velocity                PASS  /root/Main gt 23.0                             actual=23.3333339691162
+g22-assert-fell                    PASS  /root/Main gt 100.0                            actual=100.388885498047
+g25-assert-clamped                 PASS  /root/Main eq 0.0                              actual=0.0
+g26-assert-velocity-zero           PASS  /root/Main eq 0.0                              actual=0.0
+g29-assert-over                    PASS  /root/Main eq True                             actual=True
+g30-assert-not-won                 PASS  /root/Main eq False                            actual=False
+g31-assert-resting                 PASS  /root/Main eq 564.0                            actual=564.0
+g36-assert-over                    PASS  /root/Main eq True                             actual=True
+g37-assert-not-won                 PASS  /root/Main eq False                            actual=False
+g38-assert-no-score                PASS  /root/Main eq 0.0                              actual=0
+g40-assert-pipe0-x                 PASS  /root/Main eq 600.0                            actual=600.0
+g42-assert-scrolled                PASS  /root/Main eq 585.0                            actual=585.0
+g47-assert-pipe0-x                 PASS  /root/Main eq 600.0                            actual=600.0
+g49-assert-delta-1                 PASS  /root/Main eq 1.0                              actual=1
+g50-assert-frames-164              PASS  /root/Main eq 164.0                            actual=164
+g51-assert-passed-1                PASS  /root/Main eq 1.0                              actual=1
+g52-assert-score-10                PASS  /root/Main eq 10.0                             actual=10
+g54-assert-frames-100              PASS  /root/Main eq 100.0                            actual=100
+g55-assert-score-20                PASS  /root/Main eq 20.0                             actual=20
+g58-assert-passed-3                PASS  /root/Main eq 3.0                              actual=3
+g60-assert-passed-4                PASS  /root/Main eq 4.0                              actual=4
+g61-assert-recycled                PASS  /root/Main gt 0.0                              actual=3
+g63-assert-passed-5                PASS  /root/Main eq 5.0                              actual=5
+g64-assert-score-50                PASS  /root/Main eq 50.0                             actual=50
+g65-assert-won                     PASS  /root/Main eq True                             actual=True
+g66-assert-over-by-win             PASS  /root/Main eq True                             actual=True
+g70-assert-unknown-property        ERROR -32001                                         Property 'NoSuchProperty' on node '/root
+------------------------------------------------------------------------------
+assertions found: 39  ->  ERROR=1, PASS=38
+non-passing: 0 FAIL, 1 ERROR
+   g70-assert-unknown-property | -32001 | Property 'NoSuchProperty' on node '/root/Main' not found

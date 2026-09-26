@@ -1,0 +1,22 @@
+manifest : F:\moonbit-hof-rs\godot-mcp\recovery\work\task099\archive\flappy-r1.manifest.json (129 files, 8369613 bytes)
+moved    : F:\moonbit-hof-rs\godot-mcp\projects\flappy -> F:\moonbit-hof-rs\godot-mcp\recovery\work\task099\archive\flappy-r1
+new_game : process exit 0
+  | template : F:\moonbit-hof-rs\godot-mcp\projects\_template
+  | dest     : F:\moonbit-hof-rs\godot-mcp\projects\flappy
+  | name     : flappy
+  | class    : FlappyBirdGame
+  |   substituted: project.godot
+  |   substituted: __NAME__.csproj
+  |   substituted: scenes\main.tscn
+  |   substituted: src\__CLASS__.cs
+  |   generated : README.md (from _template\README.game.md)
+  | placeholder files left: 0
+  |   .gitignore
+  |   flappy.csproj
+  |   NuGet.config
+  |   project.godot
+  |   README.md
+  |   scenes\main.tscn
+  |   src\FlappyBirdGame.cs
+  | created  : F:\moonbit-hof-rs\godot-mcp\projects\flappy
+  | NEWGAME_EXIT=0

@@ -1,0 +1,44 @@
+=== g13-samples-frozen (12 frames) ===
+  Car0Col                distinct=1    changes@=[]
+      first=0  last=0
+  FrogCol                distinct=1    changes@=[]
+      first=6  last=6
+  FrogRow                distinct=1    changes@=[]
+      first=14  last=14
+  Log0Col                distinct=1    changes@=[]
+      first=0  last=0
+  Ticks                  distinct=12   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+      first=977  last=1006
+  frame                  distinct=12   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+      first=0  last=11
+
+=== g15-samples-traffic (30 frames) ===
+  Car0Col                distinct=5    changes@=[4, 11, 19, 27]
+      first=0  last=4
+  Log0Col                distinct=5    changes@=[4, 11, 19, 27]
+      first=0  last=4
+  Ticks                  distinct=30   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      first=1017  last=1088
+  frame                  distinct=30   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      first=0  last=29
+
+=== g13-samples-frozen (12 frames) ===
+  BirdY                  distinct=1    changes@=[]
+      first=300.0  last=300.0
+  Pipe0X                 distinct=1    changes@=[]
+      first=600.0  last=600.0
+  Ticks                  distinct=12   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+      first=984  last=1012
+  frame                  distinct=12   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+      first=0  last=11
+
+=== g44-samples-scroll (30 frames) ===
+  BirdY                  distinct=1    changes@=[]
+      first=300.0  last=300.0
+  Pipe0X                 distinct=1    changes@=[]
+      first=582.0  last=582.0
+  Ticks                  distinct=30   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      first=31  last=101
+  frame                  distinct=30   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      first=0  last=29
+
