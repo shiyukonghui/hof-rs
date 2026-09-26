@@ -54,7 +54,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File F:\moonbit-hof-rs\godot-mcp\
 | 板真的动了 | 注入 `pong_left_up` 两次再 `pong_left_down` 一次，`PONG_NUDGE` 给出 y=96 → 8 → 138（= `Speed 520 × InjectedStepSeconds 0.25`） |
 | 比分真的变了 | `running_game_assert_node_state{ScoreRight.text == "1"}` → `"2"`，`PONG_SCORE` 同刻打印 |
 | 胜负真的判了 | `WinLabel.text = "GAME OVER - RIGHT WINS 0:2"`，`PONG_OVER winner=RIGHT` |
-| 断言不是橡皮图章 | 同一批里有 3 条**注定失败**的断言（板位置 eq、比分、屏幕文本），台账都给出 `assertion_failed` |
+| 断言不是橡皮图章 | 同一批里有 2 条**注定失败**的断言（板位置 `eq` → `scenario_assertion_failed`、屏幕文本不存在 → `assertion_failed`），另有 3 条场景断言作正对照 |
 | 空转也看得见 | 球停住后 `PONG_TICK` 连续 6 次 `v=(0,0)`、位置不动；`running_game_get_node_property_samples` 的 30 帧同样不动 |
 
 ## 设计约定（每个游戏都要遵守）

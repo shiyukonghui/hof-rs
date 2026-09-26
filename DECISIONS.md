@@ -1,4 +1,4 @@
-﻿# DECISIONS — hof-rs
+# DECISIONS — hof-rs
 
 > 「代码为什么长这样」的权威来源。每个决策点追加一条：日期 / 触发问题 / 考虑的选项 / 最终选择 / 理由 / 预期影响与回滚点。
 > 提交信息应对应本文件的决策编号（如 `feat(runtime): ... (D7)`）。
@@ -5283,7 +5283,7 @@ TASK-076B(**独立验收 = fail**; 锚点 b13f3197b; 提交 d1a2c031f5; 证据 6
 * 板动了：注入 `pong_left_up` ×2 再 `pong_left_down` ×1，`PONG_NUDGE y=96 → 8 → 138`（= `Speed 520 × InjectedStepSeconds 0.25`，两次都被 `MinY=8` 夹住的那次也如实反映）；
 * 比分变了：`assert_node_state{ScoreRight.text == "1"} → "2"`，同刻 `PONG_SCORE scored_by=RIGHT … right=1/2`；
 * 胜负判了：`WinLabel.text = "GAME OVER - RIGHT WINS 0:2"`，`PONG_OVER winner=RIGHT`，并按该**逐字字符串**断言通过；
-* 断言不是橡皮图章：同一批里 3 条**注定失败**的断言（板位置 `eq`、比分、屏幕文本）在台账上都给出 `scenario_assertion_failed` / `assertion_failed`；
+* 断言不是橡皮图章：同一批里 **2 条注定失败**的断言（板位置 `eq` → `scenario_assertion_failed`、屏幕文本不存在 → `assertion_failed`）都被台账抓住，另有 3 条场景断言 `scenario_passed` 作正对照（更正：初稿写「3 条」把 run-1 里那两条因 P-1 而偶然失败的比分断言算了进来，run-4 它们是正确的正例）；
 * 空转看得见：停球后 `PONG_TICK` 连续 6 次 `v=(0,0)` 位置不动，`running_game_get_node_property_samples` 的 30 帧同样不动。
 
 ### 缺陷清单（根因明确的才改）
