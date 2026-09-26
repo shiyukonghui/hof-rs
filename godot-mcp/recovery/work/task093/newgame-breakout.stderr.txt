@@ -1,0 +1,8 @@
+REFUSED: 'F:\moonbit-hof-rs\godot-mcp\projects\breakout' already exists (nothing is ever overwritten)
+At F:\moonbit-hof-rs\godot-mcp\tools\new_game.ps1:27 char:3
++   throw "REFUSED: '$dest' already exists (nothing is ever overwritten ...
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (REFUSED: 'F:\mo...er overwritten):String) [], RuntimeException
+    + FullyQualifiedErrorId : REFUSED: 'F:\moonbit-hof-rs\godot-mcp\projects\breakout' already exists (nothing is ever 
+    overwritten)
+ 

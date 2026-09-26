@@ -1,0 +1,1 @@
+﻿{"jsonrpc":"2.0","id":202,"method":"tools/call","params":{"name":"running_game_capture_frames","arguments":{"count":4,"interval_frames":30}}}

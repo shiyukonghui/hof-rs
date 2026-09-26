@@ -1,0 +1,1 @@
+﻿{"method":"tools/call","params":{"arguments":{"code":"return get_parent().PaddleTest()"},"name":"running_game_execute_gdscript"},"id":1,"jsonrpc":"2.0"}

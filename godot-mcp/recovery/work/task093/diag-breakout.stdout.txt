@@ -1,0 +1,30 @@
+[p01-brick] {"id":1,"jsonrpc":"2.0","result":{"content":[{"text":"{\"bytes\":1205,\"changes_made\":1,\"editor_rescan_triggered\":true,\"mode\":\"content\",\"path\":\"res://src/Brick.cs\",\"replacements\":1}","type":"text"}]}}
+[p02-paddle] {"id":1,"jsonrpc":"2.0","result":{"content":[{"text":"{\"bytes\":1307,\"changes_made\":1,\"editor_rescan_triggered\":true,\"mode\":\"content\",\"path\":\"res://src/Paddle.cs\",\"replacements\":1}","type":"text"}]}}
+[p03-game] {"id":1,"jsonrpc":"2.0","result":{"content":[{"text":"{\"bytes\":16108,\"changes_made\":1,\"editor_rescan_triggered\":true,\"mode\":\"content\",\"path\":\"res://src/BreakoutGame.cs\",\"replacements\":1}","type":"text"}]}}
+[p04-build] {"id":1,"jsonrpc":"2.0","result":{"content":[{"text":"{\"command\":\"C:\\\\Program Files\\\\dotnet\\\\dotnet.exe build F:/moonbit-hof-rs/godot-mcp/projects/breakout/breakout.csproj -c Debug\",\"commands\":[\"C:\\\\Program Files\\\\dotnet\\\\dotnet.exe build F:/moonbit-hof-rs/godot-mcp/projects/breakout/breakout.csproj -c Debug\"],\"duration_ms\":3421,\"effective_timeout_ms\":30000,\"exit_code\":0,\"exit_codes\":[0],\
+SUCCESS: The process with PID 99280 (child process of PID 82888) has been terminated.
+SUCCESS: The process with PID 82888 (child process of PID 98868) has been terminated.
+SUCCESS: The process with PID 98868 (child process of PID 32312) has been terminated.
+[p05-shot-a] {"id":1,"jsonrpc":"2.0","result":{"content":[{"text":"{\"format\":\"png\",\"height\":600,\"saved_path\":\"user://bk-a.png\",\"width\":800}","type":"text"}]}}
+[p06-aim] {"id":1,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":\"aimed ball=8,-30 speed=0,276 launched=True\",\"result_type\":\"String\"}","type":"text"}]}}
+[p07-test-0] {"id":1,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":\"ball_field=8,8 step=8,13.52 ball_screen=(400, 508) paddle_screen=(352, 540) paddle_rect=x[352,448] y[540,556] hits=False vdown=True over=False launched=True\",\"result_type\":\"String\"}","type":"text"}]}}
+[p08-aim2] {"id":1,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":\"aimed ball=8,20 speed=0,276 launched=True\",\"result_type\":\"String\"}","type":"text"}]}}
+[p09-test-1] {"id":1,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":\"ball_field=8,25.52 step=8,31.04 ball_screen=(400, 526) paddle_screen=(352, 540) paddle_rect=x[352,448] y[540,556] hits=False vdown=True over=False launched=True\",\"result_type\":\"String\"}","type":"text"}]}}
+[p10-test-2] {"id":1,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":\"ball_field=8,124.87997 step=8,130.39996 ball_screen=(400, 625) paddle_screen=(352, 540) paddle_rect=x[352,448] y[540,556] hits=False vdown=True over=False launched=True\",\"result_type\":\"String\"}","type":"text"}]}}
+[p11-shot-b] {"id":1,"jsonrpc":"2.0","result":{"content":[{"text":"{\"format\":\"png\",\"height\":600,\"saved_path\":\"user://bk-b.png\",\"width\":800}","type":"text"}]}}
+SUCCESS: The process with PID 99332 (child process of PID 34260) has been terminated.
+SUCCESS: The process with PID 34260 (child process of PID 99120) has been terminated.
+SUCCESS: The process with PID 99120 (child process of PID 32312) has been terminated.
+--- game stdout ---
+BREAKOUT_READY name=Main bricks=15 score=0 ball=0,0 launched=False
+BREAKOUT_TICK ball=0,0 speed=184,-276 paddle=352 score=0 remaining=15 launched=False
+BREAKOUT_TICK ball=0,0 speed=184,-276 paddle=352 score=0 remaining=15 launched=False
+BREAKOUT_TICK ball=0,0 speed=184,-276 paddle=352 score=0 remaining=15 launched=False
+BREAKOUT_TICK ball=0,0 speed=184,-276 paddle=352 score=0 remaining=15 launched=False
+BREAKOUT_TICK ball=0,0 speed=184,-276 paddle=352 score=0 remaining=15 launched=False
+BREAKOUT_TICK ball=0,0 speed=184,-276 paddle=352 score=0 remaining=15 launched=False
+BREAKOUT_TICK ball=0,0 speed=184,-276 paddle=352 score=0 remaining=15 launched=False
+BREAKOUT_TICK ball=0,0 speed=184,-276 paddle=352 score=0 remaining=15 launched=False
+BREAKOUT_TICK ball=8,13.52 speed=0,276 paddle=352 score=0 remaining=15 launched=True
+BREAKOUT_TICK ball=8,152.47998 speed=0,276 paddle=352 score=0 remaining=15 launched=True
+done

@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://ixht802r4ld6"]
+[gd_scene format=3 uid="uid://fnmffsesq5l1"]
 
 [ext_resource type="Script" uid="uid://dhfj67vumndol" path="res://src/PongGame.cs" id="1_o3k07"]
 [ext_resource type="Script" uid="uid://bo6p3rkt7rbe7" path="res://src/Ball.cs" id="2_r3l7o"]
@@ -64,3 +64,55 @@ offset_top = 500.0
 offset_right = 700.0
 offset_bottom = 545.0
 theme_override_font_sizes/font_size = 28
+
+[node name="@ColorRect@20995" type="ColorRect" parent="." unique_id=1527342528]
+offset_right = 800.0
+offset_bottom = 600.0
+color = Color(0.06, 0.07, 0.12, 1)
+
+[node name="@ColorRect@20996" type="ColorRect" parent="." unique_id=1694462982]
+offset_left = 396.0
+offset_right = 404.0
+offset_bottom = 552.0
+color = Color(0.22, 0.24, 0.3, 1)
+
+[node name="@ColorRect@20997" type="ColorRect" parent="." unique_id=468476986]
+offset_left = 392.0
+offset_top = 268.0
+offset_right = 408.0
+offset_bottom = 284.0
+color = Color(0.95, 0.95, 0.55, 1)
+
+[node name="@ColorRect@20998" type="ColorRect" parent="." unique_id=1386994174]
+offset_left = 24.0
+offset_top = 226.0
+offset_right = 40.0
+offset_bottom = 326.0
+color = Color(0.35, 0.8, 1, 1)
+
+[node name="@ColorRect@20999" type="ColorRect" parent="." unique_id=1398097766]
+offset_left = 760.0
+offset_top = 226.0
+offset_right = 776.0
+offset_bottom = 326.0
+color = Color(1, 0.45, 0.45, 1)
+
+[node name="@Label@21000" type="Label" parent="." unique_id=1052989144]
+offset_left = 300.0
+offset_top = 20.0
+offset_right = 400.0
+offset_bottom = 80.0
+text = "0"
+
+[node name="@Label@21001" type="Label" parent="." unique_id=738855921]
+offset_left = 470.0
+offset_top = 20.0
+offset_right = 570.0
+offset_bottom = 80.0
+text = "0"
+
+[node name="@Label@21002" type="Label" parent="." unique_id=1619413150]
+offset_left = 180.0
+offset_top = 500.0
+offset_right = 700.0
+offset_bottom = 545.0

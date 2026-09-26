@@ -18,7 +18,10 @@ godot-mcp/
 ├── projects/                     ← 游戏工程（每个子目录一个 Godot 工程）
 │   ├── _template/                ←   可复用的 C# 游戏工程模板（dotnet build 可离线成功）
 │   ├── pong/                     ←   第 1 个游戏：C# 版 Pong
-│   ├── mcpplay/  mcpplay8/       ←   重建期的 GDScript 试测工程（原样迁入，留档）
+│   ├── breakout/                 ←   第 2 个游戏：C# 版 Breakout
+│   ├── snake/                    ←   第 3 个游戏：C# 版 Snake
+│   └── mcpplay/  mcpplay8/       ←   重建期的 GDScript 试测工程（原样迁入，留档）
+├── GAME-LOOP-LOG.md              ←   ★ 跨轮进度台账：每个游戏一行（调用数 / facts / 判定 / 缺陷 / 证据路径）
 ├── tools/                        ← 驱动与报告工具
 │   ├── new_game.ps1              ←   从 _template 生成一个新游戏工程
 │   ├── reset_game.ps1            ←   把一个游戏工程恢复成刚生成的状态（唯一带删除的工具）
@@ -138,6 +141,26 @@ powershell -NoProfile -ExecutionPolicy Bypass -File F:\moonbit-hof-rs\godot-mcp\
 
 **目标口径（D138）**：轮次不设限，**至少 20 个经典小游戏、全部 C#**，每款都要有可复算的
 「操作有效性」证据 —— 像素差 / 文件 sha / 断言 / 场景树快照，不接受「应该动了」。
+**跨轮进度与缺陷登记看 `GAME-LOOP-LOG.md`**（每个游戏一行；工具缺陷与游戏/驱动缺陷分栏）。
+
+---
+
+## 5.1 已知环境缺陷（TASK-093 记录，未修）
+
+**D-1：视口回读陈旧** —— 引擎进程的 `--mcp-capture=every_call` 截图与
+`running_game_capture_screenshot` / `running_game_capture_frames` 都返回**同一帧**：
+同一轮里 `shots-editor\` / `shots-game\` 的每个 PNG 逐字节相同（实测 42/68、40/62 个各 1 个 sha），
+`user://` 跨越 8 秒的两次截图同 sha。**游戏逻辑本身在动**（逐帧采样的 `position` 与
+`execute_gdscript` 都给出变化，`frames_waited` 单调递增），所以这是**画面侧证据链**的问题，
+不是游戏的问题；同一批代码在 TASK-092 的 Pong 会话里 10/29 组像素差非零、今天仍能复算出来。
+复现：`powershell -File recovery\work\task093\diag_render.ps1` → 看 `IDENTICAL_BYTES=True` /
+`DEFECT_D1=PRESENT`。
+
+**D-2：`accept_m1.ps1` 会被并行负载打成假失败** —— `task093` / `task093b` 两轮里它是 `5/22`，
+头部写着 `WARNING: the pump never looked steady`；同一脚本在同一台机器、同一引擎字节上**单独重跑**
+（`task093c`）是 **`22/22`、`GATE_EXIT=0`**。三轮里 `case12/13/14` 与 `guard_user_port_9877`
+**都 PASS**（含 `case14` 期望的 `bind failed ... error=22`），所以绑定与端口逻辑本身正常。
+**读法：跑 `accept_m1` 时机器上不要并行跑会话或构建。**
 
 ---
 

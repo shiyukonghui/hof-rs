@@ -1,0 +1,219 @@
+=== godot-mcp game session ===
+game     : breakout
+project  : F:\moonbit-hof-rs\godot-mcp\projects\breakout
+session  : F:\moonbit-hof-rs\godot-mcp\tools\sessions\breakout\session.json
+run      : F:\moonbit-hof-rs\godot-mcp\runs\breakout\breakout-task093-r4
+engine   : F:\moonbit-hof-rs\godot-mcp\godot\bin\godot.windows.editor.x86_64.mono.console.exe
+import   : exit 0 (echoed) / 0 (process)  (F:\moonbit-hof-rs\godot-mcp\runs\breakout\breakout-task093-r4\import.stdout.txt)
+editor   : "F:\moonbit-hof-rs\godot-mcp\godot\bin\godot.windows.editor.x86_64.mono.console.exe" -e --path F:\moonbit-hof-rs\godot-mcp\projects\breakout --mcp-port=9888 --mcp-trace=F:\moonbit-hof-rs\godot-mcp\runs\breakout\breakout-task093-r4\trace-editor.jsonl --mcp-capture=every_call --mcp-capture-dir=F:\moonbit-hof-rs\godot-mcp\runs\breakout\breakout-task093-r4\shots-editor --mcp-capture-viewport=2d
+--- editor side (9888) ---
+  [e01-tools-list] port=9888 bytes=46810 :: {"id":100,"jsonrpc":"2.0","result":{"tools":[{"description":"获取项目信息","inputSchema":{"properties":{},"required":[],"type":"object"},"name":"project_get_info"},{"...
+  [e02-create-brick] port=9888 bytes=216 :: {"id":101,"jsonrpc":"2.0","result":{"content":[{"text":"{\"bytes\":1205,\"created\":false,\"editor_rescan_triggered\":true,\"existed_before\":true,\"path\":\"re...
+  [e03-create-paddle] port=9888 bytes=217 :: {"id":102,"jsonrpc":"2.0","result":{"content":[{"text":"{\"bytes\":1307,\"created\":false,\"editor_rescan_triggered\":true,\"existed_before\":true,\"path\":\"re...
+  [e04-edit-game] port=9888 bytes=223 :: {"id":103,"jsonrpc":"2.0","result":{"content":[{"text":"{\"bytes\":15197,\"changes_made\":1,\"editor_rescan_triggered\":true,\"mode\":\"content\",\"path\":\"res...
+  [e05-build-csharp] port=9888 bytes=1282 :: {"id":104,"jsonrpc":"2.0","result":{"content":[{"text":"{\"command\":\"C:\\\\Program Files\\\\dotnet\\\\dotnet.exe build F:/moonbit-hof-rs/godot-mcp/projects/br...
+  [e06-validate-scripts] port=9888 bytes=4677 :: {"id":105,"jsonrpc":"2.0","result":{"content":[{"text":"{\"count\":3,\"dropped\":0,\"errors_only\":false,\"invalid_count\":0,\"limits\":{\"max_scripts\":64},\"n...
+  [e07-open-scene] port=9888 bytes=128 :: {"id":106,"jsonrpc":"2.0","result":{"content":[{"text":"{\"opened\":true,\"path\":\"res://scenes/main.tscn\"}","type":"text"}]}}
+  [e08-add-nodes] port=9888 bytes=3192 :: {"id":107,"jsonrpc":"2.0","result":{"content":[{"text":"{\"count\":20,\"created\":[{\"index\":0,\"name\":\"@ColorRect@20995\",\"node_path\":\"@ColorRect@20995\"...
+  [e09-script-ball-brick] port=9888 bytes=2724 :: {"id":108,"jsonrpc":"2.0","result":{"content":[{"text":"{\"attached\":[{\"attached\":true,\"index\":0,\"node_path\":\"Brick_r0_c0\",\"previous_script_path\":\"r...
+  [e10-script-paddle] port=9888 bytes=378 :: {"id":109,"jsonrpc":"2.0","result":{"content":[{"text":"{\"attached\":[{\"attached\":true,\"index\":0,\"node_path\":\"Paddle\",\"previous_script_path\":\"res://...
+  [e11-font-score] port=9888 bytes=205 :: {"id":110,"jsonrpc":"2.0","result":{"content":[{"text":"{\"ignored\":{},\"new_value\":28,\"node_path\":\"HudScore\",\"old_value\":28,\"property\":\"theme_overri...
+  [e12-font-status] port=9888 bytes=206 :: {"id":111,"jsonrpc":"2.0","result":{"content":[{"text":"{\"ignored\":{},\"new_value\":20,\"node_path\":\"HudStatus\",\"old_value\":20,\"property\":\"theme_overr...
+  [e13-action-left] port=9888 bytes=282 :: {"id":112,"jsonrpc":"2.0","result":{"content":[{"text":"{\"action\":\"breakout_left\",\"action_state\":\"created\",\"created\":true,\"event_count\":1,\"key\":\"...
+  [e14-action-right] port=9888 bytes=283 :: {"id":113,"jsonrpc":"2.0","result":{"content":[{"text":"{\"action\":\"breakout_right\",\"action_state\":\"created\",\"created\":true,\"event_count\":1,\"key\":\...
+  [e15-action-launch] port=9888 bytes=288 :: {"id":114,"jsonrpc":"2.0","result":{"content":[{"text":"{\"action\":\"breakout_launch\",\"action_state\":\"created\",\"created\":true,\"event_count\":1,\"key\":...
+  [e16-save-scene] port=9888 bytes=127 :: {"id":115,"jsonrpc":"2.0","result":{"content":[{"text":"{\"path\":\"res://scenes/main.tscn\",\"saved\":true}","type":"text"}]}}
+  [e17-scene-tree] port=9888 bytes=16939 :: {"id":116,"jsonrpc":"2.0","result":{"content":[{"text":"{\"scene_path\":\"res://scenes/main.tscn\",\"tree\":{\"children\":[{\"name\":\"Background\",\"path\":\"/...
+  [e18-brick-properties] port=9888 bytes=327 :: {"id":117,"jsonrpc":"2.0","result":{"content":[{"text":"{\"node_path\":\"Brick_r2_c4\",\"properties\":{\"Alive\":true,\"color\":{\"a\":1.0,\"b\":0.5500000119209...
+  [e19-validate-after] port=9888 bytes=1000 :: {"id":118,"jsonrpc":"2.0","result":{"content":[{"text":"{\"count\":3,\"dropped\":0,\"errors_only\":false,\"invalid_count\":0,\"limits\":{\"max_scripts\":64},\"n...
+  [e20-screenshot] port=9888 bytes=153 :: {"id":119,"jsonrpc":"2.0","result":{"content":[{"text":"{\"height\":2054,\"saved_path\":\"user://breakout-editor.png\",\"width\":3840}","type":"text"}]}}
+  [e21-errors] port=9888 bytes=288 :: {"id":120,"jsonrpc":"2.0","result":{"content":[{"text":"{\"available\":true,\"count\":0,\"editor\":true,\"errors\":[],\"in_process\":true,\"log_path\":\"user://...
+  [e22-node-missing] port=9888 bytes=178 :: {"error":{"code":-32001,"data":{"suggestion":"Use editor_get_scene_tree to list the nodes of the edited scene"},"message":"Node 'NoSuchNode' not found"},"id":12...
+game     : "F:\moonbit-hof-rs\godot-mcp\godot\bin\godot.windows.editor.x86_64.mono.console.exe" --path F:\moonbit-hof-rs\godot-mcp\projects\breakout --mcp-port=9889 --mcp-trace=F:\moonbit-hof-rs\godot-mcp\runs\breakout\breakout-task093-r4\trace-game.jsonl --mcp-capture=every_call --mcp-capture-dir=F:\moonbit-hof-rs\godot-mcp\runs\breakout\breakout-task093-r4\shots-game --mcp-capture-viewport=2d
+--- game side (9889) ---
+  [g01-scene-tree] port=9889 bytes=4322 :: {"id":122,"jsonrpc":"2.0","result":{"content":[{"text":"{\"tree\":{\"children\":[{\"name\":\"Background\",\"path\":\"/root/Main/Background\",\"type\":\"ColorRec...
+  [g02-state-t0] port=9889 bytes=191 :: {"id":123,"jsonrpc":"2.0","result":{"content":[{"text":"{\"node_path\":\"/root/Main/Paddle\",\"properties\":{\"position\":{\"x\":352.0,\"y\":540.0}},\"type\":\"...
+  [g03-ball-t0] port=9889 bytes=189 :: {"id":124,"jsonrpc":"2.0","result":{"content":[{"text":"{\"node_path\":\"/root/Main/Ball\",\"properties\":{\"position\":{\"x\":392.0,\"y\":500.0}},\"type\":\"Co...
+  [g04-shot-t0] port=9889 bytes=166 :: {"id":125,"jsonrpc":"2.0","result":{"content":[{"text":"{\"format\":\"png\",\"height\":600,\"saved_path\":\"user://breakout-t0.png\",\"width\":800}","type":"tex...
+  [g05-assert-ball-parked] port=9889 bytes=320 :: {"id":126,"jsonrpc":"2.0","result":{"content":[{"text":"{\"actual\":{\"x\":392.0,\"y\":500.0},\"assertion\":\"node_state\",\"expected\":{\"x\":392.0,\"y\":500.0...
+  [g06-left-nudge-1] port=9889 bytes=643 :: {"id":127,"jsonrpc":"2.0","result":{"content":[{"text":"{\"all_passed\":true,\"completed_steps\":3,\"duration_ms\":317,\"errors\":0,\"failed\":0,\"passed\":1,\"...
+  [g07-paddle-readback-1] port=9889 bytes=143 :: {"id":128,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":\"paddle_x=148.56950378418\",\"result_type\":\"String\"}","type":"text"}]}}
+  [g08-left-nudge-2] port=9889 bytes=362 :: {"id":129,"jsonrpc":"2.0","result":{"content":[{"text":"{\"all_passed\":false,\"completed_steps\":2,\"duration_ms\":311,\"errors\":0,\"failed\":0,\"passed\":0,\...
+  [g09-assert-paddle-original-must-fail] port=9889 bytes=432 :: {"id":130,"jsonrpc":"2.0","result":{"content":[{"text":"{\"actual\":{\"x\":8.0,\"y\":540.0},\"assertion\":\"node_state\",\"expected\":{\"x\":352.0,\"y\":540.0},...
+  [g10-right-driven-back] port=9889 bytes=644 :: {"id":131,"jsonrpc":"2.0","result":{"content":[{"text":"{\"all_passed\":true,\"completed_steps\":3,\"duration_ms\":623,\"errors\":0,\"failed\":0,\"passed\":1,\"...
+  [g11-paddle-readback-2] port=9889 bytes=162 :: {"id":132,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":\"paddle_x=18.3999996185303 min=8.0 max=696.0\",\"result_type\":\"String\"}","type":"text"}]...
+  [g12-shot-paddle-moved] port=9889 bytes=166 :: {"id":133,"jsonrpc":"2.0","result":{"content":[{"text":"{\"format\":\"png\",\"height\":600,\"saved_path\":\"user://breakout-t1.png\",\"width\":800}","type":"tex...
+  [g12b-put-paddle-under-ball] port=9889 bytes=244 :: {"id":134,"jsonrpc":"2.0","result":{"content":[{"text":"{\"ignored\":{},\"new_value\":{\"x\":352.0,\"y\":540.0},\"node_path\":\"/root/Main/Paddle\",\"old_value\...
+  [g12c-aim-at-paddle] port=9889 bytes=161 :: {"id":135,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":\"aimed ball=8,-30 speed=0,276 launched=True\",\"result_type\":\"String\"}","type":"text"}]}...
+  [g12d-bounce] port=9889 bytes=801 :: {"id":136,"jsonrpc":"2.0","result":{"content":[{"text":"{\"all_passed\":false,\"completed_steps\":3,\"duration_ms\":2436,\"errors\":0,\"failed\":2,\"passed\":0,...
+  [g12e-bounce-readback] port=9889 bytes=205 :: {"id":137,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":\"field=8.0,582.079772949219 screen=(400.0, 1082.0) speed=0.0,0.0 paddle=352.0 over=true\",\...
+  [g13-launch] port=9889 bytes=631 :: {"id":138,"jsonrpc":"2.0","result":{"content":[{"text":"{\"all_passed\":true,\"completed_steps\":3,\"duration_ms\":324,\"errors\":0,\"failed\":0,\"passed\":1,\"...
+  [g14-motion-samples] port=9889 bytes=2333 :: {"id":139,"jsonrpc":"2.0","result":{"content":[{"text":"{\"frame_count\":40,\"node_path\":\"/root/Main/Ball\",\"samples\":[{\"frame\":0,\"position\":{\"x\":400....
+  [g15-shot-t2-motion] port=9889 bytes=166 :: {"id":140,"jsonrpc":"2.0","result":{"content":[{"text":"{\"format\":\"png\",\"height\":600,\"saved_path\":\"user://breakout-t2.png\",\"width\":800}","type":"tex...
+  [g16-aim-at-brick] port=9889 bytes=163 :: {"id":141,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":\"aimed ball=35,160 speed=0,-276 launched=True\",\"result_type\":\"String\"}","type":"text"}...
+  [g17-assert-brick-alive-before] port=9889 bytes=289 :: {"id":142,"jsonrpc":"2.0","result":{"content":[{"text":"{\"actual\":true,\"assertion\":\"node_state\",\"expected\":true,\"node_path\":\"/root/Main/Brick_r2_c0\"...
+  [g18-brick-destroyed] port=9889 bytes=553 :: {"id":143,"jsonrpc":"2.0","result":{"content":[{"text":"{\"all_passed\":false,\"completed_steps\":2,\"duration_ms\":1214,\"errors\":0,\"failed\":1,\"passed\":0,...
+  [g19-score-readback] port=9889 bytes=158 :: {"id":144,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":\"score=0 broken=0 remaining=15 ticks=645\",\"result_type\":\"String\"}","type":"text"}]}}
+  [g20-assert-score-label-10] port=9889 bytes=354 :: {"id":145,"jsonrpc":"2.0","result":{"content":[{"text":"{\"actual\":\"SCORE 0\",\"assertion\":\"node_state\",\"expected\":\"SCORE 10\",\"node_path\":\"/root/Mai...
+  [g21-assert-remaining-14] port=9889 bytes=330 :: {"id":146,"jsonrpc":"2.0","result":{"content":[{"text":"{\"actual\":15,\"assertion\":\"node_state\",\"expected\":14.0,\"node_path\":\"/root/Main\",\"operator\":...
+  [g22-screen-text-score] port=9889 bytes=725 :: {"id":147,"jsonrpc":"2.0","result":{"content":[{"text":"{\"case_sensitive\":true,\"expected_text\":\"SCORE 10\",\"partial\":true,\"passed\":false,\"reason\":\"s...
+  [g23-shot-t3-brick-gone] port=9889 bytes=166 :: {"id":148,"jsonrpc":"2.0","result":{"content":[{"text":"{\"format\":\"png\",\"height\":600,\"saved_path\":\"user://breakout-t3.png\",\"width\":800}","type":"tex...
+  [g24-assert-win-must-fail] port=9889 bytes=418 :: {"id":149,"jsonrpc":"2.0","result":{"content":[{"text":"{\"actual\":\"GAME OVER - BALL LOST SCORE 0\",\"assertion\":\"node_state\",\"expected\":\"YOU CLEARED\",...
+  [g25-boundary-missing-node] port=9889 bytes=288 :: {"error":{"code":-32000,"data":{"suggestion":"Make the awaited state happen earlier, or call the tool again (the wait started at the frame the request was read)...
+  [g26-scene-tree-final] port=9889 bytes=4322 :: {"id":151,"jsonrpc":"2.0","result":{"content":[{"text":"{\"tree\":{\"children\":[{\"name\":\"Background\",\"path\":\"/root/Main/Background\",\"type\":\"ColorRec...
+  [g27-shot-final] port=9889 bytes=169 :: {"id":152,"jsonrpc":"2.0","result":{"content":[{"text":"{\"format\":\"png\",\"height\":600,\"saved_path\":\"user://breakout-final.png\",\"width\":800}","type":"...
+  [g28-stress] port=9889 bytes=286 :: {"id":153,"jsonrpc":"2.0","result":{"content":[{"text":"{\"actions\":[\"breakout_right\"],\"average_iteration_ms\":0.0,\"completed\":true,\"crashed\":false,\"el...
+  [g29-final-readback] port=9889 bytes=178 :: {"id":154,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":\"score=0 broken=0 remaining=15 over=true won=false ticks=645\",\"result_type\":\"String\"}"...
+  taskkill exit 255 (the tree may already be gone)
+  taskkill exit 1 (the tree may already be gone)
+  taskkill exit 1 (the tree may already be gone)
+--- ledger ---
+editor: ledger exit 0 -> F:\moonbit-hof-rs\godot-mcp\runs\breakout\breakout-task093-r4\ledger-editor.txt
+    | TRACE LEDGER F:\moonbit-hof-rs\godot-mcp\runs\breakout\breakout-task093-r4\trace-editor.jsonl
+    | calls=21 malformed_lines=0
+    | verdicts: failed=1, ok_file_effect_observed=3, ok_no_effect_observed=17
+    | file_effects: changed=3, none=12, unchanged=6
+    | 
+    | seq    req_id   tool                                   dur_ms    ok       err      scene_effect   file_effect     flags                      verdict
+game: ledger exit 0 -> F:\moonbit-hof-rs\godot-mcp\runs\breakout\breakout-task093-r4\ledger-game.txt
+    | TRACE LEDGER F:\moonbit-hof-rs\godot-mcp\runs\breakout\breakout-task093-r4\trace-game.jsonl
+    | calls=33 malformed_lines=0
+    | verdicts: failed=1, ok_file_effect_observed=12, ok_no_effect_observed=20
+    | file_effects: changed=12, none=16, unchanged=5
+    | 
+    | seq    req_id   tool                                   dur_ms    ok       err      scene_effect   file_effect     flags                      verdict
+--- per-game report ---
+report: exit 0
+    | # Per-game report 鈥?`breakout`
+    | 
+    | * run tag: `breakout-task093-r4`
+    | * run dir: `F:\moonbit-hof-rs\godot-mcp\runs\breakout\breakout-task093-r4`
+    | * Pillow/numpy available for the independent pixel recomputation: **True**
+    | 
+    | ## editor endpoint (9888)
+    | 
+    | * calls: **21** (malformed trace lines: 0)
+    | * verdicts: failed=1, ok_file_effect_observed=3, ok_no_effect_observed=17
+    | * `facts_complete`: **21/21**
+    | * `args_evidence`: inline_complete=20, sidecar_verified=1
+    | * failed: 1, no-effect observed: 17
+    | 
+    | ## game endpoint (9889)
+    | 
+    | * calls: **33** (malformed trace lines: 0)
+    | * verdicts: failed=1, ok_file_effect_observed=12, ok_no_effect_observed=20
+    | * `facts_complete`: **33/33**
+    | * `args_evidence`: inline_complete=33
+    | * failed: 1, no-effect observed: 20
+    | 
+    | ## Pixel proof (recomputed, not taken on trust)
+    | 
+    | ### editor
+    | 
+    | | seq | tool | trace changed | trace px | **recomputed px** | PNG sha equal |
+    | |---|---|---|---|---|---|
+    | | 2 | `project_create_script` | False | 0 | **0** | True |
+    | | 3 | `project_create_script` | False | 0 | **0** | True |
+    | | 4 | `project_edit_script` | False | 0 | **0** | True |
+    | | 5 | `project_build_csharp` | False | 0 | **0** | True |
+    | | 6 | `project_validate_scripts` | False | 0 | **0** | True |
+    | | 7 | `editor_open_scene` | False | 0 | **0** | True |
+    | | 8 | `editor_add_nodes_batch` | False | 0 | **0** | True |
+    | | 9 | `editor_set_node_script_batch` | False | 0 | **0** | True |
+    | | 10 | `editor_set_node_script_batch` | False | 0 | **0** | True |
+    | | 11 | `editor_set_node_property` | False | 0 | **0** | True |
+    | | 12 | `editor_set_node_property` | False | 0 | **0** | True |
+    | | 13 | `editor_add_input_action` | False | 0 | **0** | True |
+    | | 14 | `editor_add_input_action` | False | 0 | **0** | True |
+    | | 15 | `editor_add_input_action` | False | 0 | **0** | True |
+    | | 16 | `editor_save_scene` | False | 0 | **0** | True |
+    | | 17 | `editor_get_scene_tree` | False | 0 | **0** | True |
+    | | 18 | `editor_get_node_properties` | False | 0 | **0** | True |
+    | | 19 | `project_validate_scripts` | False | 0 | **0** | True |
+    | | 20 | `editor_capture_screenshot` | False | 0 | **0** | True |
+    | | 21 | `editor_get_errors` | False | 0 | **0** | True |
+    | | 22 | `editor_get_node_properties` | False | 0 | **0** | True |
+    | 
+    | ### game
+    | 
+    | | seq | tool | trace changed | trace px | **recomputed px** | PNG sha equal |
+    | |---|---|---|---|---|---|
+    | | 1 | `running_game_get_scene_tree` | False | 0 | **0** | True |
+    | | 2 | `running_game_get_node_properties` | False | 0 | **0** | True |
+    | | 3 | `running_game_get_node_properties` | False | 0 | **0** | True |
+    | | 4 | `running_game_capture_screenshot` | False | 0 | **0** | True |
+    | | 5 | `running_game_assert_node_state` | False | 0 | **0** | True |
+    | | 6 | `running_game_run_test_scenario` | False | 0 | **0** | True |
+    | | 7 | `running_game_execute_gdscript` | False | 0 | **0** | True |
+    | | 8 | `running_game_run_test_scenario` | False | 0 | **0** | True |
+    | | 9 | `running_game_assert_node_state` | False | 0 | **0** | True |
+    | | 10 | `running_game_run_test_scenario` | False | 0 | **0** | True |
+    | | 11 | `running_game_execute_gdscript` | False | 0 | **0** | True |
+    | | 12 | `running_game_capture_screenshot` | False | 0 | **0** | True |
+    | | 13 | `running_game_set_node_property` | False | 0 | **0** | True |
+    | | 14 | `running_game_execute_gdscript` | False | 0 | **0** | True |
+    | | 15 | `running_game_run_test_scenario` | False | 0 | **0** | True |
+    | | 16 | `running_game_execute_gdscript` | False | 0 | **0** | True |
+    | | 17 | `running_game_run_test_scenario` | False | 0 | **0** | True |
+    | | 18 | `running_game_get_node_property_samples` | False | 0 | **0** | True |
+    | | 19 | `running_game_capture_screenshot` | False | 0 | **0** | True |
+    | | 20 | `running_game_execute_gdscript` | False | 0 | **0** | True |
+    | | 21 | `running_game_assert_node_state` | False | 0 | **0** | True |
+    | | 22 | `running_game_run_test_scenario` | False | 0 | **0** | True |
+    | | 23 | `running_game_execute_gdscript` | False | 0 | **0** | True |
+    | | 24 | `running_game_assert_node_state` | False | 0 | **0** | True |
+    | | 25 | `running_game_assert_node_state` | False | 0 | **0** | True |
+    | | 26 | `running_game_assert_screen_text` | False | 0 | **0** | True |
+    | | 27 | `running_game_capture_screenshot` | False | 0 | **0** | True |
+    | | 28 | `running_game_assert_node_state` | False | 0 | **0** | True |
+    | | 29 | `running_game_find_node_when_available` | False | 0 | **0** | True |
+    | | 30 | `running_game_get_scene_tree` | False | 0 | **0** | True |
+    | | 31 | `running_game_capture_screenshot` | False | 0 | **0** | True |
+    | | 32 | `running_game_run_stress_test` | False | 0 | **0** | True |
+    | | 33 | `running_game_execute_gdscript` | False | 0 | **0** | True |
+    | 
+    | **capture pairs with a recomputed non-zero pixel diff: 0/54**
+    | 
+    | ### Saved frames (`user://`, `running_game_capture_screenshot`)
+    | 
+    | Directory: `C:\Users\wyl\AppData\Roaming\Godot\app_userdata\breakout`
+    | 
+    | | frame | size | bytes | sha256 (first 12) | previous same-size frame | **recomputed px vs it** |
+    | |---|---|---|---|---|---|
+    | | `diag-a.png` | 800x600 | 4752 | `FF91085B5BFC` | - | **-** |
+    | | `diag-b.png` | 800x600 | 4752 | `FF91085B5BFC` | `diag-a.png` | **0** |
+    | | `diag2-a.png` | 800x600 | 5398 | `2F8F6FF10AFF` | `diag-b.png` | **0** |
+    | | `diag2-b.png` | 800x600 | 5398 | `2F8F6FF10AFF` | `diag2-a.png` | **0** |
+    | | `diag3-a.png` | 800x600 | 4752 | `FF91085B5BFC` | `diag2-b.png` | **0** |
+    | | `diag3-b.png` | 800x600 | 4752 | `FF91085B5BFC` | `diag3-a.png` | **0** |
+    | | `diag4-a.png` | 2880x2160 | 32252 | `0F01BB58E402` | - | **-** |
+    | | `diag4-b.png` | 2880x2160 | 32252 | `0F01BB58E402` | `diag4-a.png` | **0** |
+    | | `breakout-editor.png` | 3840x2054 | 197389 | `2788868F0059` | - | **-** |
+    | | `breakout-t0.png` | 800x600 | 4752 | `FF91085B5BFC` | `diag3-b.png` | **0** |
+    | | `breakout-t1.png` | 800x600 | 4752 | `FF91085B5BFC` | `breakout-t0.png` | **0** |
+    | | `breakout-t2.png` | 800x600 | 4752 | `FF91085B5BFC` | `breakout-t1.png` | **0** |
+    | | `breakout-t3.png` | 800x600 | 4752 | `FF91085B5BFC` | `breakout-t2.png` | **0** |
+    | | `breakout-final.png` | 800x600 | 4752 | `FF91085B5BFC` | `breakout-t3.png` | **0** |
+    | 
+    | > `user://` survives between runs, so the same names are rewritten by each run; the byte count, the sha256 and the diff above are recomputed from the files on disk at report time.
+    | 
+    | ## The game's own stdout (causal chain)
+    | 
+    | ### editor (0 line(s))
+    | 
+    | ```
+    | ```
+    | 
+    | ### game (0 line(s))
+    | 
+    | ```
+    | ```
+    | 
+    | ## Defect list
+    | 
+    | | id | severity | claim | evidence | root cause |
+    | |---|---|---|---|---|
+    | | `editor-failed-22` | medium | call 22 (editor_get_node_properties) failed with error -32001 | `{"suggestion":"Use editor_get_scene_tree to list the nodes of the edited scene"}` | declared failure |
+    | | `game-failed-29` | medium | call 29 (running_game_find_node_when_available) failed with error -32000 | `{"suggestion":"Make the awaited state happen earlier, or call the tool again (the wait started at the frame the request was read)","timeout_ms":1000}` | declared failure |
+    | 
+run root : F:\moonbit-hof-rs\godot-mcp\runs\breakout\breakout-task093-r4
