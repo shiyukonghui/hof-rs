@@ -250,18 +250,22 @@ fbf4bf1 docs(godot-mcp): TASK-099 - the report: ...
 7b5fa56 feat(godot-mcp): TASK-099 - the 8th and 9th C# games are delivered through MCP calls only (Frogger: ...
 ```
 
-`git status --short`：
+`git status --short`（**本报告与随后那次 housekeeping 提交之后**）：
 
 ```
- M godot-mcp/recovery/work/task102/logs/git-commit.err.txt
- M godot-mcp/recovery/work/task102/logs/git-commit.txt
-?? godot-mcp/recovery/work/task102/git_two_repos.ps1
-?? godot-mcp/recovery/work/task102/logs/git-two-repos.txt
-?? godot-mcp/recovery/work/task102/logs/git-two-repos.txt.cmd
-?? godot-mcp/recovery/work/task102/logs/git-two-repos.txt.err.txt
+（空）
 ```
 
-这六条都是本报告的取证工具自己写的（`commit.ps1` 与 `git_two_repos.ps1` 的日志，在 `git add -A` 之后又被 `Start-Process` 的句柄追加/新建过），会随本报告的提交一并入库；本任务的新增与改动全部随 `3b9d55c` 入库（`git show --stat` 给出 **202 files changed, 21862 insertions(+)**）。
+**边界与更正**：`3b9d55c` 提交之后、本报告提交之前，`git status --short` 有六条——都是本报告的取证工具自己写的（`commit.ps1` 与 `git_two_repos.ps1` 的日志，在 `git add -A` 之后又被 `Start-Process` 的句柄追加/新建过）。它们随**本报告的提交 `3b2958e`** 一并入库，再由 **`b365654`**（housekeeping，`3 files changed, 26 insertions(+)`）把提交助手自己最后写下的那两行日志收干净，此后工作树为空。因此**「主仓新增 202 个文件、引擎仓 `git status --short` 为空、引擎仓与远端同级」**三点不变，唯一变旧的是 `git log` 的顶部三行。
+
+本报告自身提交之后紧随的两个提交（都在 TASK-102 名下，内容只是本报告的取证工具的日志）：
+
+```
+b365654 docs(godot-mcp): TASK-102 - the helper-owned logs of the commit and two-repo capture scripts are committed after the fact so the working tree is clean; no content change
+3b2958e docs(godot-mcp): TASK-102 - the report: ...（本报告）
+```
+
+本任务的新增与改动全部随 `3b9d55c` 入库（`git show --stat` 给出 **202 files changed, 21862 insertions(+)**）。
 
 ### F2 引擎仓 `F:\moonbit-hof-rs\godot-mcp\godot`（分支 `feature/mcp-server-module-rebuild`）
 
