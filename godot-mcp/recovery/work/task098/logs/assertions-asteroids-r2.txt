@@ -1,0 +1,29 @@
+g03-assert-score-0                 PASS  /root/Main eq 0.0                              actual=0
+g04-assert-lives-3                 PASS  /root/Main eq 3.0                              actual=3
+g05-assert-rocks-4                 PASS  /root/Main eq 4.0                              actual=4
+g06-assert-not-over                PASS  /root/Main eq False                            actual=False
+g13-assert-rocks-1                 PASS  /root/Main eq 1.0                              actual=1
+g16-assert-split-1                 PASS  /root/Main eq 1.0                              actual=1
+g17-assert-destroyed-1             PASS  /root/Main eq 1.0                              actual=1
+g18-assert-rocks-2                 PASS  /root/Main eq 2.0                              actual=2
+g19-assert-score-20                PASS  /root/Main eq 20.0                             actual=20
+g20-assert-size-2                  PASS  /root/Main eq 2.0                              actual=2
+g24-assert-ship-moved              PASS  /root/Main gt 420.0                            actual=452.0
+g25-assert-velocity                PASS  /root/Main gt 0.0                              actual=104.0
+g27-assert-angle                   PASS  /root/Main eq -45.0                            actual=-45.0
+g31-assert-rocks-1                 PASS  /root/Main eq 1.0                              actual=1
+g33-assert-in-flight               PASS  /root/Main eq True                             actual=True
+g34-assert-won                     PASS  /root/Main eq True                             actual=True
+g35-assert-over-by-win             PASS  /root/Main eq True                             actual=True
+g36-assert-score-100               PASS  /root/Main eq 100.0                            actual=100
+g41-assert-lives-2                 PASS  /root/Main eq 2.0                              actual=2
+g42-assert-ship-dead               PASS  /root/Main eq False                            actual=False
+g43-assert-not-over-yet            PASS  /root/Main eq False                            actual=False
+g45-assert-lives-0                 PASS  /root/Main eq 0.0                              actual=0
+g46-assert-over-by-loss            PASS  /root/Main eq True                             actual=True
+g47-assert-not-won                 PASS  /root/Main eq False                            actual=False
+g53-assert-unknown-property        ERROR -32001                                         Property 'NoSuchProperty' on node '/root
+------------------------------------------------------------------------------
+assertions found: 25  ->  ERROR=1, PASS=24
+non-passing: 0 FAIL, 1 ERROR
+   g53-assert-unknown-property | -32001 | Property 'NoSuchProperty' on node '/root/Main' not found

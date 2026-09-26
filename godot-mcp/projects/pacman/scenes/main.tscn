@@ -1,0 +1,27 @@
+[gd_scene format=3 uid="uid://6h42fofsvmba"]
+
+[ext_resource type="Script" uid="uid://cq43hebwp2p4y" path="res://src/PacManGame.cs" id="1_t6lrv"]
+
+[node name="Main" type="Node2D" unique_id=1558175294]
+script = ExtResource("1_t6lrv")
+
+[node name="Background" type="ColorRect" parent="." unique_id=846261766]
+offset_right = 800.0
+offset_bottom = 600.0
+color = Color(0.02, 0.02, 0.03, 1)
+
+[node name="Hud" type="Label" parent="." unique_id=1604973766]
+offset_left = 20.0
+offset_top = 10.0
+offset_right = 560.0
+offset_bottom = 50.0
+theme_override_font_sizes/font_size = 26
+text = "SCORE 0  LIVES 3  PELLETS 125"
+
+[node name="Status" type="Label" parent="." unique_id=532353308]
+offset_left = 570.0
+offset_top = 10.0
+offset_right = 790.0
+offset_bottom = 50.0
+theme_override_font_sizes/font_size = 24
+text = "PELLETS 125"

@@ -1,0 +1,49 @@
+{
+    "task":  "TASK-098",
+    "game":  "asteroids",
+    "archived_from":  "F:\\moonbit-hof-rs\\godot-mcp\\projects\\asteroids",
+    "archived_to":  "F:\\moonbit-hof-rs\\godot-mcp\\recovery\\work\\task098\\archive\\asteroids-ast-task098-r1",
+    "archived_at":  "2026-09-27T03:06:46",
+    "files":  [
+                  {
+                      "rel":  ".gitignore",
+                      "bytes":  87,
+                      "sha256":  "0d2a76f040df20fed3e84eb6616e1133ad4bb203915d3280a953a3243e9a029b"
+                  },
+                  {
+                      "rel":  "asteroids.csproj",
+                      "bytes":  347,
+                      "sha256":  "ad69db0b4293ce27825018cf0e164fa5e1c7ef390b9ee4f01a8008fd18394b22"
+                  },
+                  {
+                      "rel":  "NuGet.config",
+                      "bytes":  464,
+                      "sha256":  "a7a216422a8736832982a5a31efd6b653c68ff19994577054a28831c155f6589"
+                  },
+                  {
+                      "rel":  "project.godot",
+                      "bytes":  2094,
+                      "sha256":  "3e8f8db4ff38ecbc4874b68a18c96bab7b4ae13af783d25945a99100a00fa575"
+                  },
+                  {
+                      "rel":  "README.md",
+                      "bytes":  1985,
+                      "sha256":  "33a2dc52094ffc77e2fc446dae9fd1a9c31a1401b428c728664fa4dea5d1c231"
+                  },
+                  {
+                      "rel":  "scenes\\main.tscn",
+                      "bytes":  813,
+                      "sha256":  "a6e6736d66b452edd0a4a690b732cbc2bd4aca617a39b257c3e2043f22041fa2"
+                  },
+                  {
+                      "rel":  "src\\AsteroidsGame.cs",
+                      "bytes":  28473,
+                      "sha256":  "c861a35e32d01087fad34b83a2e3264e7398a43a3333df30aed57a4ef0671b83"
+                  },
+                  {
+                      "rel":  "src\\AsteroidsGame.cs.uid",
+                      "bytes":  18,
+                      "sha256":  "0c46bd9cf9d6695613978c128dca1c3edffbbbf31eed56bcc594ba4da2899099"
+                  }
+              ]
+}

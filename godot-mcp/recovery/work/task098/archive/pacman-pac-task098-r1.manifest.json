@@ -1,0 +1,49 @@
+{
+    "task":  "TASK-098",
+    "game":  "pacman",
+    "archived_from":  "F:\\moonbit-hof-rs\\godot-mcp\\projects\\pacman",
+    "archived_to":  "F:\\moonbit-hof-rs\\godot-mcp\\recovery\\work\\task098\\archive\\pacman-pac-task098-r1",
+    "archived_at":  "2026-09-27T03:11:24",
+    "files":  [
+                  {
+                      "rel":  ".gitignore",
+                      "bytes":  87,
+                      "sha256":  "0d2a76f040df20fed3e84eb6616e1133ad4bb203915d3280a953a3243e9a029b"
+                  },
+                  {
+                      "rel":  "NuGet.config",
+                      "bytes":  464,
+                      "sha256":  "a7a216422a8736832982a5a31efd6b653c68ff19994577054a28831c155f6589"
+                  },
+                  {
+                      "rel":  "pacman.csproj",
+                      "bytes":  341,
+                      "sha256":  "57a1efadcad7b777203d94685d718f2ffcd62398da635fa7038feda297c74886"
+                  },
+                  {
+                      "rel":  "project.godot",
+                      "bytes":  2075,
+                      "sha256":  "3652e54d9dd46ed98398426ddd8c033ee7f8f7bbf3569bb1095f1f9fdde25c4d"
+                  },
+                  {
+                      "rel":  "README.md",
+                      "bytes":  1955,
+                      "sha256":  "f9aeb3d89d7440bb7ba58eeacdb1e5e55f0ec21c820fa6a4da80bea7d2a2f239"
+                  },
+                  {
+                      "rel":  "scenes\\main.tscn",
+                      "bytes":  814,
+                      "sha256":  "a072e964b33a8b79846e1ff7c462c5498f6d7b4cbc9cb1905f1208bf35dfe3ce"
+                  },
+                  {
+                      "rel":  "src\\PacManGame.cs",
+                      "bytes":  28165,
+                      "sha256":  "2b4400b2586dd10b93e1c8b21bd119b9a617b7630945667858c803efa721241d"
+                  },
+                  {
+                      "rel":  "src\\PacManGame.cs.uid",
+                      "bytes":  20,
+                      "sha256":  "c313dad29579c4245c593b39480e51adc29de1765008ec748f4a40b9e16b8a0a"
+                  }
+              ]
+}

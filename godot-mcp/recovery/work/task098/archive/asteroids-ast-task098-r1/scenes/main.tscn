@@ -1,0 +1,27 @@
+[gd_scene format=3 uid="uid://brkfsd37a7jql"]
+
+[ext_resource type="Script" uid="uid://lgyf0xwlexm" path="res://src/AsteroidsGame.cs" id="1_t6lrv"]
+
+[node name="Main" type="Node2D" unique_id=1009495449]
+script = ExtResource("1_t6lrv")
+
+[node name="Background" type="ColorRect" parent="." unique_id=551727495]
+offset_right = 800.0
+offset_bottom = 600.0
+color = Color(0.02, 0.02, 0.06, 1)
+
+[node name="Hud" type="Label" parent="." unique_id=1009778759]
+offset_left = 20.0
+offset_top = 12.0
+offset_right = 620.0
+offset_bottom = 56.0
+theme_override_font_sizes/font_size = 26
+text = "SCORE 0  LIVES 3  ROCKS 4"
+
+[node name="Status" type="Label" parent="." unique_id=484165014]
+offset_left = 560.0
+offset_top = 12.0
+offset_right = 790.0
+offset_bottom = 56.0
+theme_override_font_sizes/font_size = 22
+text = "ASTEROIDS 4"

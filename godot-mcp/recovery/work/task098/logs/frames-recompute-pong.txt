@@ -1,0 +1,14 @@
+== pong : 5 frame(s) in C:\Users\wyl\AppData\Roaming\Godot\app_userdata\pong
+  frame        size         bytes  sha256[0:16]     vs report
+  pong-editor.png 3840x2054   150605  2D4FF2A8BD261B05 same
+  pong-t0.png  800x600       4381  7B516A5CA40266A0 same
+  pong-t1.png  800x600       4364  A04A53008221E5DC same
+  pong-t2.png  800x600       4369  BCD0F2E1831170B6 same
+  pong-final.png 800x600      12292  AE6D02B7C56C833C same
+  distinct sha256 among the frames: 5/5
+  pair diffs (recomputed here):
+    pong-editor.png  -> pong-t0.png      NOT COMPARABLE (size [3840, 2054] vs [800, 600])
+    pong-t0.png  -> pong-t1.png  engine=512     any=512     total=480000  (report.json agrees)
+    pong-t1.png  -> pong-t2.png  engine=512     any=512     total=480000  (report.json agrees)
+    pong-t2.png  -> pong-final.png engine=7175    any=7343    total=480000  (report.json agrees)
+  pairs where the report and this recomputation disagree: 0

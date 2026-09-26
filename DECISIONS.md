@@ -5554,6 +5554,40 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 
 **遗留（不阻塞）**：①`editor_add_node`（单个）仍保留引擎改名（见③）；②`editor_save_scene` 重发场景 `uid` 的行为未修（已登记）；③`g14` 的采样时机局限；④本轮有**三处铁律滑手**（都是本任务自己工作目录里的 `>` 重定向：`NUL_TMP.txt` 立即删除、`tool-before.txt` / `tool-after.txt` 因落到控制台代码页而作废并改用 Python 写入），已记入 `REBUILT-2C-MANIFEST.md` §K-4 与报告；⑤一次 `--import` 以访问违例退出（d3-after 首轮，`import exit=-1073741819`），同一二进制随后手动重跑与其余六次会话全部 `exit 0`，登记为一次性环境抖动。
 
+---
+
+## D146 — TASK-098：第 6、7 个游戏（Asteroids / Pac-Man）交付；D-1 结案口径写进 `MCP-TRACEABILITY.md` §7；136 条未跟踪遗留按 TASK-096 已声明的口径落成 `.gitignore`；副本数「5/18/37 对 8/20/37」查清是口径差而非数字冲突；`--import` 访问违例 64 次受控复现失败，如实留档不改模块
+
+**日期**：2026-09-27　**触发问题**：D145（TASK-097）把 D-1 结案并回填了像素列，留下四件事：①台账只到第 5 个游戏，D138 的目标是至少 20 个 C# 游戏；②`MCP-TRACEABILITY.md` §7 仍用**条件式**措辞描述一个已经结案的缺陷，读者会把「不可得（D-1）」读成当前状态；③主仓长期挂着 136 条未跟踪文件（TASK-096 的 `reporttest-pong\` 原始运行产物 + 4 个 0 字节 `tmp_*.tscn`）；④TASK-097 记下的 `--import` 访问违例（`exit=-1073741819`）只出现一次，未定性。另有一处任务书自带的疑点：D-3/§7.1 写副本数 **5 / 18 / 37**，而 TASK-097 的清理表写 **8 / 20 / 37**。
+
+**考虑过的选项**
+
+| 决策点 | 选项 | 选择 | 理由 |
+|---|---|---|---|
+| ① 两款新游戏怎么建场景 | (a) 把飞船/岩石/迷宫/豆子/幽灵都摆进 `.tscn`（靠批量工具）；(b) **只摆 3 个静态节点，主体全部 `_Ready()` 运行期新建** | **(b)** | 继续 Space Invaders 的形态：场景小而干净（编辑相各 16 次调用），不会被 D-3 的同名陷阱咬到，而且「运行期新建的节点确实被画出来」本身就是这两款游戏自己的证据 |
+| ② 采样时机 | (a) 沿用 TASK-097 的做法（先击杀再采飞行）；(b) **先布置一个远在 150 px 外的子弹，再开 40 帧采样** | **(b)** | TASK-097 的 `g14` 记到的是击杀**之后**的状态（0.09 s 的飞行在两帧之间就走完了）。把子弹放远，飞行与击杀就落在**同一个采样窗口**内：Asteroids 的 `g15` 里 `BulletActive` 前 14 帧为 true、**第 14 帧**同时发生 `Score` 0→20 与 `AsteroidsRemaining` 1→2 |
+| ③ 断言读到的是总数还是增量 | (a) 断言 `GhostSteps` 总数；(b) **新增真导出属性 `LastPatrolSteps`，断言增量** | **(b)** | P-1 实测：`GhostSteps` 在断言之前已经被 30 帧巡逻采样推进了 4 步，而**帧率决定它是 3 还是 5** —— 写对总数也仍然会抖。增量是确定性的，与帧率无关 |
+| ④ 游戏侧重建棋盘怎么释放节点 | (a) 直接 `QueueFree()`；(b) **先 `RemoveChild()` 再 `QueueFree()`** | **(b)** | 与 D-3 **同一个陷阱**：`QueueFree` 到帧末才生效，同帧重建的 `Wall_r2_c3` 会发现名字还被占着，引擎就把新节点改名成 `@ColorRect@N`。实测过：不改的话 Pac-Man 的 248 个节点里会出现一堆 `@` 名；改后 **0 个** |
+| ⑤ 136 条未跟踪遗留怎么处置 | (a) 入库；(b) **删掉**；(c) **按 TASK-096 已经声明的口径加 `.gitignore`，并把 4 个 0 字节空文件删掉** | **(c)** | TASK-096-REPORT.md §D4 白纸黑字写过「不入库：前者是 `runs\` 的临时副本…；后者是两处重定向滑手的空文件」。136 条挂着只是因为那条判定**只停在报告措辞里**，没变成机器可执行的规则。本轮把判定落成规则（结论两份 `report.json`/`report.md` 早已入库，不受影响），空文件按「先打印清单再删」删除 |
+| ⑥ 副本数 5/18/37 与 8/20/37 | (a) 以新数为准改旧记录；(b) **判定为口径差，两处都加注** | **(b)** | 从清理会话自己读回来的**清理前场景原文**（`c03-read-before.json`，场景字节 3391 / 8553 / 13284 B 与 TASK-097 报告逐一吻合）里逐个数：Pong 5 个 `@ColorRect@` + 3 个 `@Label@` = 8，Breakout 18+2 = 20，Snake 37+0 = 37。**两个数都对**，差别只在「数不数 Label」；改掉旧数会抹掉一段真实记录，加注才既准确又可追溯 |
+| ⑦ `--import` 访问违例怎么处置 | (a) 顺手改模块（例如让 MCP server 关机时不去碰编辑器）；(b) **不改，只留档 + 给定位方向** | **(b)** | 台账自己的口径是「根因不清楚的只记录、不猜改」。64 次受控导入（我方引擎唯一端口 24 次、我方引擎默认端口 16 次、stock 4.7.1 mono 24 次）**全部 `exit=0`**，无法按需复现；没有可证的根因就没有可回滚的改动。留档的是：症状、累计 2/11、已排除的变量、以及静态定位方向 |
+| ⑧ 没有模块字节改动还要不要跑十道门 | (a) 照跑一遍；(b) **不跑，并在报告里说明为什么** | **(b)** | 门账的意义是「这次改动没有破坏什么」。本轮 `modules\mcp_server` 的**代码一个字节没动**（只有 `docs\reports\MCP-TRACEABILITY.md` 一份文档），两变体的二进制仍是 TASK-097 在 `2385fe2fb5` 之后重建的那两份。跑门只会把锚点差集从「0」变成「1 个声明过的非编译文件」（TASK-097 §D1 已经预告过这一点），得不到新信息。**这是本轮的显式取舍，写在报告里** |
+
+**最终选择与理由**：交付 **Asteroids**（第 6 个）与 **Pac-Man**（第 7 个）两款 C# 游戏，场景各只有 3 个静态节点，主体全部运行期新建，全程只用 MCP 调用写成（`project_edit_script` / `editor_add_nodes_batch` / `editor_save_scene` / `editor_add_input_action` / `project_build_csharp`）；两款都在建场景的那一步**故意把同一批节点再跑一次**，让 D-3 的 `-32000` 拒绝成为每一轮证据里的一条。把 `MCP-TRACEABILITY.md` §7 的措辞与结案状态对齐：加结案横幅、把 §7.1 的副本表改成 8/20/37 并注明 5/18/37 的历史口径、**新增 §7.3** 写明结案后这一节仍然生效的**四条条件与三条边界**。把 TASK-096 已声明的「不入库」落成 `.gitignore` 规则并删除 4 个 0 字节空文件。对台账每一行引用的数字做了一次「从它自己引用的产物里重读」的一致性复核。`--import` 访问违例按「根因不明确只记录」处置。
+
+**预期影响与回滚点**：主仓新增 `projects\asteroids\`、`projects\pacman\`、`tools\sessions\{asteroids,pacman}\`、`recovery\work\task098\`（含 4 个归档的 r1 工程与 checkpoint 清单），并新增一条 `.gitignore` 规则；引擎仓只改一份文档。回滚 = `git revert` 对应提交；`.gitignore` 规则的回滚是**非破坏性**的（被忽略的文件仍在盘上，属 TASK-096 的原始产物）。风险敞口：①`--import` 的间歇性退出码仍然存在，`IMPORT_EXIT` 因此**不能**当健康信号（`run_game_session.ps1` 只记一行、不据此判失败）；②`recovery\work\task098\importprobe\` 与 `archive\` 是盘上产物，后者入库（含 checkpoint 清单）、前者按 `recovery\work\**\build` 类规则处置；③两款游戏各有一条**会话设计缺陷**（A-1 / P-1）已修并重跑，r1 的失败帧保留为对照。
+
+**验证（真实输出）**：
+* **Asteroids**（`runs\asteroids\ast-task098-r2`）：71 次调用（编辑器 16 / 游戏 55），`facts_complete` **71/71（100%）**，判定分布 `failed=2`（两条**都是声明的**：`e06` 同名批量被 `-32000` 拒绝、`g53` 断言不存在的属性 `-32001`）+ `ok_effect=15` + `ok_file_effect=39` + `ok_no_effect=15`；断言 **24 PASS + 1 条声明的边界失败**（`assertions-asteroids-r2.txt`）；像素差 **16/71 非零**（编辑器 1/16、游戏 15/55），`user://` 六帧逐对 **14774 / 996 / 6346 / 7072 / 8960 px**；独立复算（`pixel_recompute.py` 逐调用对 + `frames_recompute.py` 保存帧）与 `report.json` **0 处不符**；`project_build_csharp` **exit 0**（3808 ms）、`invalid_count=0`；`e05`/`e09` 的 `project_read_text_file` sha 与拒绝前**逐字节相同**。
+* **Pac-Man**（`runs\pacman\pac-task098-r2`）：80 次调用（编辑器 16 / 游戏 64），`facts_complete` **80/80（100%）**，判定分布 `failed=2`（同样两条声明的）+ `ok_effect=14` + `ok_file_effect=39` + `ok_no_effect=25`；断言 **29 PASS + 1 条声明的边界失败**；像素差 **15/80 非零**（编辑器 1/16、游戏 14/64），`user://` 五帧逐对 **18888 / 1853 / 18546 / 9586 px**；独立复算 **0 处不符**；`g64` 最终树 248 个节点里 **0 个 `@` 开头的名字**；`running_game_run_test_scenario` 用声明的 `pac_right` 真的把 `PacCol` 推过 9（`all_passed=true`）。
+* **两条会话缺陷的修前/修后**：`runs\asteroids\ast-task098-r1` 的 `g36-assert-score-120` **FAIL（actual=100）** → r2 的 `g36-assert-score-100` **PASS**；`runs\pacman\pac-task098-r1` 的 `g15-assert-patrol-12` **FAIL（actual=16）** → r2 的 `g15-assert-patrol-took-12` + `g16-assert-patrol-total-grew` **双 PASS**。两次重跑都先把旧工程**移动归档**（`reset_game_project.ps1`，先写 sha 清单再 move，不删除）并重新实例化，r1 的失败帧保留为对照。
+* **台账数字一致性**（`log-consistency.txt`）：7 行的调用数 / `facts_complete` / 像素列 / 帧链**全部与产物一致**；帧链读法的一个易错点（`diff_vs_prev` 记在**目标帧**上、配对是「上一个同尺寸帧」）也在 `frames_recompute.py` 的重算里核过（pong / breakout / snake 均 **0 处不符**）。
+* **副本数口径**（`copy-count-evidence*.txt`）：清理前场景原文里 `@` 名逐个列出 —— Pong **8**（5 `@ColorRect@` + 3 `@Label@`，场景 3391 B）、Breakout **20**（18+2，8553 B）、Snake **37**（37+0，13284 B）；与 TASK-097 报告的清理前尺寸逐一吻合。
+* **`--import` 访问违例**：累计 **2 次 / 11 次会话导入**（TASK-097 `d3-after`、TASK-098 `ast-task098-r1`），症状一致（`0xC0000005` + stderr 只有 `Parameter "singleton" is null.` @ `editor_node.cpp:6750`），且**导入本身已跑完**（日志已到 `[ DONE ] loading_editor_layout`）。受控复现 **64 次全部 `exit=0`**：我方引擎唯一端口 24 次、我方引擎默认端口 16 次、stock 4.7.1 mono 24 次（C# 与 GDScript 各半、冷/热各半）。静态定位方向：`EditorNode::is_cmdline_mode()` 在引擎里只有一个调用者 `EditorFileSystem::_process_update_pending()`（`editor\file_system\editor_file_system.cpp:2301`），它是 `call_deferred` 排上来的脚本类信息更新，编辑器析构后再跑就撞上 `singleton == null`。**不做结论、不改模块**。
+* **136 条未跟踪遗留**：`cleanup_task096_leftovers.ps1` 先打印 4 个 0 字节清单再删除；`.gitignore` 新增 `reporttest-pong/*` 并显式 `!report.json` `!report.md`（两份结论早已入库）。主仓 `git status --short` 在 TASK-098 自己的新增项之外**为空**。
+
+**遗留（不阻塞）**：①`--import` 的访问违例仍未定性（见上，下一批该做的判别已写进 `GAME-LOOP-LOG.md` 待办 2）；②本轮**没有改动 `modules\mcp_server` 的任何代码**，因此**未重建两变体、未跑十道门、未 push 代码**——引擎仓只有一份文档提交需要 push；③`editor_add_node`（单个）仍保留引擎改名语义、`editor_save_scene` 每会话重发 `uid` 的行为仍未修（均沿用 TASK-097 的声明边界）；④Pac-Man 的 `GhostSteps` 在 `GhostSpeed > 0` 时仍是帧率相关的量，会话已改成只断言**增量**与**下界**，若将来要断言总数需再引入一个与帧率无关的钩子。
+
 
 
 

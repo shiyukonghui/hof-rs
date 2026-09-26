@@ -1,0 +1,14 @@
+== pacman : 5 frame(s) in C:\Users\wyl\AppData\Roaming\Godot\app_userdata\pacman
+  frame        size         bytes  sha256[0:16]     vs report
+  pac-t0.png   800x600      11278  1A517125F6319083 same
+  pac-t1.png   800x600       9033  0B8DB30EA92D0771 same
+  pac-t2.png   800x600      10475  5952EEB37C577004 same
+  pac-t3.png   800x600      11623  BE7ED5B580BA5692 same
+  pac-t4.png   800x600       9854  24407DBD0D80D160 same
+  distinct sha256 among the frames: 5/5
+  pair diffs (recomputed here):
+    pac-t0.png   -> pac-t1.png   engine=18888   any=19038   total=480000  (report.json agrees)
+    pac-t1.png   -> pac-t2.png   engine=1853    any=1927    total=480000  (report.json agrees)
+    pac-t2.png   -> pac-t3.png   engine=18546   any=18666   total=480000  (report.json agrees)
+    pac-t3.png   -> pac-t4.png   engine=9586    any=9650    total=480000  (report.json agrees)
+  pairs where the report and this recomputation disagree: 0

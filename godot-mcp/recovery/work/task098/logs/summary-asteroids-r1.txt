@@ -1,0 +1,16 @@
+run        : F:\moonbit-hof-rs\godot-mcp\runs\asteroids\ast-task098-r1
+game       : asteroids  tag: ast-task098-r1  pillow: True
+editor : calls=16  facts=16/16  args=inline_complete=15, sidecar_verified=1
+         verdicts=failed=1, ok_effect_observed=1, ok_file_effect_observed=7, ok_no_effect_observed=7
+game   : calls=55  facts=55/55  args=inline_complete=55
+         verdicts=failed=1, ok_effect_observed=14, ok_file_effect_observed=26, ok_no_effect_observed=14
+------------------------------------------------------------------------------
+TOTAL  : calls=71  facts_complete=71/71 (100.0%)
+         verdicts=failed=2, ok_effect_observed=15, ok_file_effect_observed=33, ok_no_effect_observed=21
+pixels : 71 capture pairs, 15 recomputed non-zero (editor 1/16, game 14/55)
+         pixel_evidence verdict=available
+frames : 0 in C:\Users\wyl\AppData\Roaming\Godot\app_userdata\asteroids
+defects: 2 (auto)
+         [medium] call 6 (editor_add_nodes_batch) failed with error -32000 | declared failure
+         [medium] call 53 (running_game_assert_node_state) failed with error -32001 | declared failure
+recomputed-vs-trace mismatches: none

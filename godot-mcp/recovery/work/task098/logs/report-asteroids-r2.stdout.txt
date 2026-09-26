@@ -1,0 +1,146 @@
+# Per-game report ¡ª `asteroids`
+
+* run tag: `ast-task098-r2`
+* run dir: `F:\moonbit-hof-rs\godot-mcp\runs\asteroids\ast-task098-r2`
+* Pillow/numpy available for the independent pixel recomputation: **True**
+
+## editor endpoint (9888)
+
+* calls: **16** (malformed trace lines: 0)
+* verdicts: failed=1, ok_effect_observed=1, ok_file_effect_observed=7, ok_no_effect_observed=7
+* `facts_complete`: **16/16**
+* `args_evidence`: inline_complete=15, sidecar_verified=1
+* failed: 1, no-effect observed: 7
+
+## game endpoint (9889)
+
+* calls: **55** (malformed trace lines: 0)
+* verdicts: failed=1, ok_effect_observed=14, ok_file_effect_observed=32, ok_no_effect_observed=8
+* `facts_complete`: **55/55**
+* `args_evidence`: inline_complete=55
+* failed: 1, no-effect observed: 8
+
+## Pixel proof (recomputed, not taken on trust)
+
+### editor
+
+| seq | tool | trace changed | trace px | **recomputed px** | PNG sha equal |
+|---|---|---|---|---|---|
+| 1 | `project_edit_script` | False | 0 | **0** | True |
+| 2 | `editor_open_scene` | False | 0 | **0** | True |
+| 3 | `editor_add_nodes_batch` | True | 213070 | **213070** | False |
+| 4 | `editor_save_scene` | False | 0 | **0** | True |
+| 5 | `project_read_text_file` | False | 0 | **0** | True |
+| 6 | `editor_add_nodes_batch` | False | 0 | **0** | True |
+| 7 | `editor_get_scene_tree` | False | 0 | **0** | True |
+| 8 | `editor_save_scene` | False | 0 | **0** | True |
+| 9 | `project_read_text_file` | False | 0 | **0** | True |
+| 10 | `editor_add_input_action` | False | 0 | **0** | True |
+| 11 | `editor_add_input_action` | False | 0 | **0** | True |
+| 12 | `editor_add_input_action` | False | 0 | **0** | True |
+| 13 | `editor_add_input_action` | False | 0 | **0** | True |
+| 14 | `project_build_csharp` | False | 0 | **0** | True |
+| 15 | `project_validate_scripts` | False | 0 | **0** | True |
+| 16 | `editor_get_errors` | False | 0 | **0** | True |
+
+### game
+
+| seq | tool | trace changed | trace px | **recomputed px** | PNG sha equal |
+|---|---|---|---|---|---|
+| 1 | `running_game_get_scene_tree` | False | 0 | **0** | True |
+| 2 | `running_game_execute_gdscript` | False | 0 | **0** | True |
+| 3 | `running_game_assert_node_state` | False | 0 | **0** | True |
+| 4 | `running_game_assert_node_state` | False | 0 | **0** | True |
+| 5 | `running_game_assert_node_state` | False | 0 | **0** | True |
+| 6 | `running_game_assert_node_state` | False | 0 | **0** | True |
+| 7 | `running_game_capture_screenshot` | False | 0 | **0** | True |
+| 8 | `running_game_get_node_property_samples` | False | 0 | **0** | True |
+| 9 | `running_game_execute_gdscript` | True | 620 | **620** | False |
+| 10 | `running_game_get_node_property_samples` | True | 20636 | **20636** | False |
+| 11 | `running_game_execute_gdscript` | True | 620 | **620** | False |
+| 12 | `running_game_execute_gdscript` | True | 10710 | **10710** | False |
+| 13 | `running_game_assert_node_state` | False | 0 | **0** | True |
+| 14 | `running_game_execute_gdscript` | True | 16 | **16** | False |
+| 15 | `running_game_get_node_property_samples` | True | 5472 | **5472** | False |
+| 16 | `running_game_assert_node_state` | False | 0 | **0** | True |
+| 17 | `running_game_assert_node_state` | False | 0 | **0** | True |
+| 18 | `running_game_assert_node_state` | False | 0 | **0** | True |
+| 19 | `running_game_assert_node_state` | False | 0 | **0** | True |
+| 20 | `running_game_assert_node_state` | False | 0 | **0** | True |
+| 21 | `running_game_execute_gdscript` | False | 0 | **0** | True |
+| 22 | `running_game_capture_screenshot` | False | 0 | **0** | True |
+| 23 | `running_game_execute_gdscript` | True | 968 | **968** | False |
+| 24 | `running_game_assert_node_state` | False | 0 | **0** | True |
+| 25 | `running_game_assert_node_state` | False | 0 | **0** | True |
+| 26 | `running_game_execute_gdscript` | True | 172 | **172** | False |
+| 27 | `running_game_assert_node_state` | False | 0 | **0** | True |
+| 28 | `running_game_capture_screenshot` | False | 0 | **0** | True |
+| 29 | `running_game_execute_gdscript` | True | 996 | **996** | False |
+| 30 | `running_game_execute_gdscript` | True | 3908 | **3908** | False |
+| 31 | `running_game_assert_node_state` | False | 0 | **0** | True |
+| 32 | `running_game_execute_gdscript` | True | 16 | **16** | False |
+| 33 | `running_game_assert_node_state` | True | 16 | **16** | False |
+| 34 | `running_game_assert_node_state` | False | 0 | **0** | True |
+| 35 | `running_game_assert_node_state` | False | 0 | **0** | True |
+| 36 | `running_game_assert_node_state` | False | 0 | **0** | True |
+| 37 | `running_game_execute_gdscript` | False | 0 | **0** | True |
+| 38 | `running_game_capture_screenshot` | False | 0 | **0** | True |
+| 39 | `running_game_assert_screen_text` | False | 0 | **0** | True |
+| 40 | `running_game_execute_gdscript` | True | 7045 | **7045** | False |
+| 41 | `running_game_assert_node_state` | False | 0 | **0** | True |
+| 42 | `running_game_assert_node_state` | False | 0 | **0** | True |
+| 43 | `running_game_assert_node_state` | False | 0 | **0** | True |
+| 44 | `running_game_execute_gdscript` | True | 145 | **145** | False |
+| 45 | `running_game_assert_node_state` | False | 0 | **0** | True |
+| 46 | `running_game_assert_node_state` | False | 0 | **0** | True |
+| 47 | `running_game_assert_node_state` | False | 0 | **0** | True |
+| 48 | `running_game_execute_gdscript` | False | 0 | **0** | True |
+| 49 | `running_game_capture_screenshot` | False | 0 | **0** | True |
+| 50 | `running_game_assert_screen_text` | False | 0 | **0** | True |
+| 51 | `running_game_execute_gdscript` | True | 8960 | **8960** | False |
+| 52 | `running_game_capture_screenshot` | False | 0 | **0** | True |
+| 53 | `running_game_assert_node_state` | False | 0 | **0** | True |
+| 54 | `running_game_execute_gdscript` | False | 0 | **0** | True |
+| 55 | `running_game_get_scene_tree` | False | 0 | **0** | True |
+
+**capture pairs with a recomputed non-zero pixel diff: 16/71**
+
+### Saved frames (`user://`, `running_game_capture_screenshot`)
+
+Directory: `C:\Users\wyl\AppData\Roaming\Godot\app_userdata\asteroids`
+
+| frame | size | bytes | sha256 (first 12) | previous same-size frame | **recomputed px vs it** |
+|---|---|---|---|---|---|
+| `ast-t0.png` | 800x600 | 10352 | `F1F195814A5C` | - | **-** |
+| `ast-t1.png` | 800x600 | 10361 | `045F6E3A3DA3` | `ast-t0.png` | **14774** |
+| `ast-t2.png` | 800x600 | 10534 | `FAC16F50F4FC` | `ast-t1.png` | **996** |
+| `ast-t3.png` | 800x600 | 9319 | `6526E6F1C029` | `ast-t2.png` | **6346** |
+| `ast-t4.png` | 800x600 | 9785 | `0D3B9157B8F9` | `ast-t3.png` | **7072** |
+| `ast-t5.png` | 800x600 | 9811 | `7C1DE83A7F90` | `ast-t4.png` | **8960** |
+
+> `user://` survives between runs, so the same names are rewritten by each run; the byte count, the sha256 and the diff above are recomputed from the files on disk at report time.
+
+## The game's own stdout (causal chain)
+
+### editor (0 line(s))
+
+```
+```
+
+### game (3 line(s))
+
+```
+AST_READY rocks=4 lives=3 ship=400,300 angle=0 drift=0 poll=False
+AST_DRIFT speed=90
+AST_DRIFT speed=0
+```
+
+## Defect list
+
+| id | severity | claim | evidence | root cause |
+|---|---|---|---|---|
+| `editor-failed-6` | medium | call 6 (editor_add_nodes_batch) failed with error -32000 | `{"batch":{"count":0,"created":[],"errors":[{"index":0,"parent_path":".","property":"","reason":"nodes[0] asks for the name 'Background' under '.', and 'Background' already answers to it","type":"Color` | declared failure |
+| `game-failed-53` | medium | call 53 (running_game_assert_node_state) failed with error -32001 | `{"suggestion":"Use running_game_get_node_properties to list the properties the node really has"}` | declared failure |
+
+
+TASK098_EXIT=0 

@@ -1,0 +1,7 @@
+== F:\moonbit-hof-rs\godot-mcp\runs\breakout\breakout-clean-task097 / c03-read-before
+   scene bytes: 8553   total [node] entries: 41
+   automatic names (@Type@N): 20
+     @ColorRect@ -> 18
+     @Label@ -> 2
+   named nodes: 21
+   first automatic names: ['@ColorRect@20995', '@Label@20996', '@Label@20997', '@ColorRect@20998', '@ColorRect@20999', '@ColorRect@21000']

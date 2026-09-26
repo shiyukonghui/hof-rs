@@ -1,0 +1,63 @@
+feat(godot-mcp): TASK-098 - the 6th and 7th C# games are delivered through MCP calls only, MCP-TRACEABILITY section 7 is aligned with the D-1 closure, and the TASK-096 leftovers are resolved by enforcing the verdict TASK-096 had already recorded
+
+A. Two more C# games, both written entirely through MCP calls (project_edit_script,
+   editor_add_nodes_batch, editor_save_scene, editor_add_input_action,
+   project_build_csharp), both with only three static scene nodes and everything else
+   created at run time, and both running the same node batch a second time on purpose so
+   the D-3 refusal is part of their own evidence.
+
+   * Asteroids: runs\asteroids\ast-task098-r2, 71 calls (16 editor / 55 game),
+     facts_complete 71/71, verdicts failed=2 (both declared: the name-conflict refusal
+     and an assertion against a property that does not exist), 24 assertions pass plus
+     the one declared boundary failure, pixel diffs 16/71 non-zero (editor 1/16, game
+     15/55) and 14774/996/6346/7072/8960 px across the six saved frames, build exit 0,
+     and the scene file byte-identical before and after the refused batch. Rotation and
+     thrust are pinned by fixed-step hooks (ShipAngle 0 -> -45, ShipX 400 -> 452); the
+     split is pinned four ways at once (AsteroidsSplit=1, AsteroidsRemaining 1 -> 2,
+     FirstRockSize=2, RockList() = 0:s2@200,150|1:s2@200,150); Lives go 3 -> 2 -> 0 and
+     Won is true on the clear and false on the loss.
+   * Pac-Man: runs\pacman\pac-task098-r2, 80 calls (16 editor / 64 game), facts_complete
+     80/80, verdicts failed=2 (both declared), 29 assertions pass plus the one declared
+     boundary failure, pixel diffs 15/80 non-zero and 18888/1853/18546/9586 px across
+     the five saved frames, 125 pellets and four ghosts and Pac-Man all created at run
+     time, the 248-node final tree carrying zero automatically-named nodes, and the
+     declared pac_right action really driving PacCol past 9 in a scenario.
+
+   The TASK-097 sampling limitation is corrected: the flight sample now starts while the
+   bullet is still far away, so the flight and the kill land in the same 40-frame window
+   (BulletActive true for the first 14 frames, Score 0 -> 20 and AsteroidsRemaining 1 -> 2
+   on frame 14).
+
+   Two session-design defects were found by the assertion scan and fixed with a re-run:
+   A-1 (Asteroids expected Score 120 at the win, got 100, because ForceTestState pins the
+   counters too) and P-1 (Pac-Man expected GhostSteps 12, got 16, because that is the
+   running total and the clock had already contributed frame-dependent steps; the delta
+   is now a real exported property, LastPatrolSteps). Both re-runs archived the old
+   project first (sha manifest, then a move) and reinstantiated it, so the r1 failure
+   frames stay as the before/after.
+
+B. Documentation and leftovers.
+
+   * MCP-TRACEABILITY section 7 is aligned with the D-1 closure: a closure banner, the
+     duplicate-count table at 8/20/37 with the reason TASK-096's 5/18/37 were the
+     @ColorRect@-only counts, and a new section 7.3 spelling out the four conditions and
+     three boundaries under which the section still applies.
+   * The 136 untracked TASK-096 leftovers are resolved by enforcing the verdict
+     TASK-096-REPORT.md section D4 had already recorded in prose: the report-test run's
+     raw artifacts (trace, per-call JSON, PNG shots, ledger, engine logs) join the rules
+     that already cover godot-mcp/runs/, while the two verdict files stay tracked, and
+     the four zero-byte tmp_*.tscn redirect slips are deleted after printing the manifest
+     (recovery\work\task098\cleanup_task096_leftovers.ps1).
+   * Every number GAME-LOOP-LOG.md quotes was re-read from the run it cites
+     (recovery\work\task098\log_consistency.py): all seven rows agree. The one difference
+     was a counting convention, not a conflict, and it is now annotated in both places.
+
+C. The intermittent --import access violation (exit=-1073741819, stderr "Parameter
+   \"singleton\" is null." at EditorNode::is_cmdline_mode) was seen twice in 11 session
+   imports and reproduced zero times in 64 controlled imports (our engine on a unique port
+   24x, our engine on the default port 16x, stock 4.7.1 mono 24x, C# and GDScript, cold
+   and warm). Per the ledger's own rule it is recorded with its static localisation
+   (is_cmdline_mode has exactly one caller, a deferred script-class update that runs
+   during editor teardown) and not guessed at. No module code changed, so the two
+   variants were not rebuilt and the ten gates were not re-run; that trade-off is stated
+   in the report rather than hidden.

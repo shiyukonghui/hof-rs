@@ -1,0 +1,22 @@
+run        : F:\moonbit-hof-rs\godot-mcp\runs\asteroids\ast-task098-r2
+game       : asteroids  tag: ast-task098-r2  pillow: True
+editor : calls=16  facts=16/16  args=inline_complete=15, sidecar_verified=1
+         verdicts=failed=1, ok_effect_observed=1, ok_file_effect_observed=7, ok_no_effect_observed=7
+game   : calls=55  facts=55/55  args=inline_complete=55
+         verdicts=failed=1, ok_effect_observed=14, ok_file_effect_observed=32, ok_no_effect_observed=8
+------------------------------------------------------------------------------
+TOTAL  : calls=71  facts_complete=71/71 (100.0%)
+         verdicts=failed=2, ok_effect_observed=15, ok_file_effect_observed=39, ok_no_effect_observed=15
+pixels : 71 capture pairs, 16 recomputed non-zero (editor 1/16, game 15/55)
+         pixel_evidence verdict=available
+frames : 6 in C:\Users\wyl\AppData\Roaming\Godot\app_userdata\asteroids
+         ast-t0.png   800x600    10352 B  F1F195814A5C  px_vs_prev=-
+         ast-t1.png   800x600    10361 B  045F6E3A3DA3  px_vs_prev=14774
+         ast-t2.png   800x600    10534 B  FAC16F50F4FC  px_vs_prev=996
+         ast-t3.png   800x600     9319 B  6526E6F1C029  px_vs_prev=6346
+         ast-t4.png   800x600     9785 B  0D3B9157B8F9  px_vs_prev=7072
+         ast-t5.png   800x600     9811 B  7C1DE83A7F90  px_vs_prev=8960
+defects: 2 (auto)
+         [medium] call 6 (editor_add_nodes_batch) failed with error -32000 | declared failure
+         [medium] call 53 (running_game_assert_node_state) failed with error -32001 | declared failure
+recomputed-vs-trace mismatches: none
