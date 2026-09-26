@@ -307,10 +307,15 @@ e041cae270 modules/mcp_server: task099 - REBUILT-2C-MANIFEST gains the 2c-11 sec
 快照记录的是「第一次提交完成、housekeeping 尚未发生」的那一瞬（主仓 `5a36457564…`）。§F2 列出的那 6 条助手自有文件
 由 housekeeping 提交 `85fe8ca` 收尾。
 
-**收尾之后，主仓工作树里剩下的只有一个文件**：**最后一次提交的提交助手自己写的那一个 `.err.txt`**
-（文件名形如 `logs/git-main-<tag>.err.txt`，内容是 git 关于 CRLF 的警告文字，不是错误）。
-为什么是**一个**而不是一对：`git_commit.ps1` 先写自己的 stdout/stderr、再 `git add -A`，
-所以它刚写下的 `.out.txt` 被那次提交**收进去了**，而 `.err.txt` 是提交**执行期间**写的、落在索引之后，因此留在工作树里。
+**收尾之后，主仓工作树里剩下的是「最后一次提交的提交助手自己写的那一对日志」**：
+文件名形如 `logs/git-main-<tag>.out.txt` 与 `logs/git-main-<tag>.err.txt`
+（`git status --short` 会把它们报成 ` M`；`.err.txt` 的内容是 git 关于 CRLF 的警告文字，不是错误）。
+
+为什么必然是**一对**、而且必然落在它们所属那次提交**之后**（本轮实测，不是推理）：
+`git_commit.ps1` 先写自己的 stdout/stderr，再 `git add -A` + `git commit`，提交之后**又往同一个 stdout 句柄里**
+写 `GIT_EXIT`、`git log --oneline -3` 与 `git status --short` —— 于是 `.out.txt` 因为这几行而变、`.err.txt` 因为那条
+`git status` 触发的 CRLF 警告而变。改名不做提交助手就不成立；改名做第 N 次 housekeeping 只会换出第 N+1 对同名新文件。
+TASK-102 遇到过同一个循环并同样如实记录。**故到此为止，不再提交。**
 
 这是**收尾自身的边界**，不是漏提交：`git_commit.ps1` 按铁律 1 用
 `Start-Process -RedirectStandardOutput/-RedirectStandardError` 拥有自己的输出，所以它写的每个日志都必然落在它所属的那次提交**之后**；
