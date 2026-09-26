@@ -278,4 +278,43 @@ godot\modules\mcp_server\docs\reports\REBUILT-2C-MANIFEST.md   2c-10 节
 
 ## G. 提交后的逐字复核（本报告自身的提交之后）
 
-（本节在报告提交之后由一次**纯文档**追加提交写入，使 §D2 的快照不可能被本报告自己的提交改旧；两仓的 `git log --oneline -8` 与 `git status --short` 逐字见该追加提交的内容。）
+**边界说明（把话说死）**：本节由一次**纯文档**追加提交写入，它描述的是**本报告那次提交（主仓 `4e2b85b`、引擎仓 `094b071f9b`）之后**的两仓状态；携带本句话的追加提交是主仓上唯一的后续改动，因此「`git log` 顶端再多一行」是它唯一的差别。§D1 的门账快照描述的是 `2385fe2fb5` 这一编译锚点（两变体都是在它之后重建的）。
+
+### G1 主仓 `F:\moonbit-hof-rs`（分支 `master`，无远端）
+
+`git log --oneline -8`：
+
+```
+4e2b85b feat(godot-mcp): TASK-097 - D-3 is fixed at the root: editor_add_nodes_batch refuses a requested name the target parent already carries instead of letting the engine rename it into a duplicate, editor_save_scene reports the duplicates an explicit rename leaves behind, the duplicate layer is removed from the three older scenes and their pixel-diff column is refilled with real numbers (Pong 14/74, Breakout 14/89, Snake 13/102, independently recomputed), and the fifth C# game Space Invaders is delivered through MCP calls only (59/59 facts, 12/59 non-zero pixel diffs, first-run green)
+aa64293 docs(godot-mcp): TASK-096 - the report's boundary note: the closing snapshot describes the state before this doc-only follow-up, and the follow-up carries this very sentence
+4173162 docs(godot-mcp): TASK-096 - the report's closing section carries the post-commit git logs of both repositories verbatim, so the snapshot in its body cannot be made stale by the report's own commit
+b84bc87 docs(godot-mcp): TASK-096 - the report: the ownership A/B (the same operation batch is normal on both engines and on a clean probe project, so the answer is neither our regression nor an upstream behaviour nor the presentation layer but the duplicate node layer a replayed editor phase writes into a scene), the occlusion proof with its recomputable colours, the pixel column becoming unavailable (D-1) with the replacement evidence chain, and the 4th C# game Tetris with its three fixed defects and their before/after runs
+1b5b108 feat(godot-mcp): TASK-096 - D-1 is neither the machine picture pipeline nor the loaded canvas items: a replayed editor phase writes a whole duplicate node layer into the scene, drawn on top, so the screen really is still; the same batch of operations is normal on a clean probe project on both engines; the pixel column becomes 'unavailable (D-1)' with the replacement evidence chain in MCP-TRACEABILITY.md section 7; and the 4th C# game Tetris is delivered through MCP calls (42/42 facts, 11/42 non-zero pixel diffs on a clean scene), with three defects fixed and re-run
+813f0d0 docs(godot-mcp): TASK-095 - the report's closing section carries both repositories' real git logs and status lines, the tracked-versus-ignored accounting of the evidence set, and the post-run process and port cleanup check
+9fbe917 docs(godot-mcp): TASK-095 - D-1 re-localised: the canvas items the loaded scene brings in stop re-recording their draw commands
+63e0749 docs(godot-mcp): TASK-094 - the report's closing section carries the real per-gate exit codes, both repositories' logs and the reason the rebuild was deliberately not run
+```
+
+`git status --short`：**已跟踪改动 0 条**（`git status --porcelain | grep -v '^??' | wc -l` = 0）；未跟踪 **136** 条，**全部**落在 `godot-mcp/recovery/work/task096/`（TASK-096 的 `reporttest-pong\` 证据与 `tmp_*.tscn`，上轮遗留，**本任务未动、也未纳入本次提交**）。`runs\` 按 `.gitignore` 不入库。
+
+### G2 引擎仓 `F:\moonbit-hof-rs\godot-mcp\godot`（分支 `feature/mcp-server-module-rebuild`）
+
+`git log --oneline -4`：
+
+```
+094b071f9b modules/mcp_server: task097 - REBUILT-2C-MANIFEST gains the 2c-10 section: the name-conflict policy the section registers (the default refusal with its complete conflict list, its error code and its opt-in rename), the contract's six shape quantities after the append-only override (177/6/1.22.0/154/73/idempotent, sha 64ddce9f), the ten gates and accept_m1 22/22 with their real exit codes, and the three iron-rule deviations of this task recorded rather than hidden
+2385fe2fb5 modules/mcp_server: task097 (D-3) - a requested node name the target parent already carries is now refused instead of silently renamed, so a replayed editor phase can no longer write a whole duplicate node layer into a scene; editor_save_scene reports the duplicates a batch made under an explicit rename instead of saving them silently
+95aa1d8984 modules/mcp_server: task096 - MCP-TRACEABILITY gains section 7: what the evidence chain is when the pixel diff is unavailable, and how the ledger is to be read then; the section also carries the re-localisation of D-1 (the duplicate node layer a replayed editor phase writes into a scene), which is why the three older games' pixel column says unavailable rather than 0
+8b9dd9a72b modules/mcp_server: task094 - D-2 is a load-sensitive readiness predicate, not a defect: the accept_m1 wait now asks the main loop to advance (frame_count strictly increasing six samples in a row) instead of asking it to be faster than 20 fps, so the suite is 22/22 solo and 22/22 under eight CPU burners
+```
+
+`git status --short`：**空**；`git rev-parse HEAD` = `git rev-parse refs/remotes/origin/feature/mcp-server-module-rebuild` = **`094b071f9b5cc62b55995316fc967a59fbe94c21`**。push 的真实输出：
+
+```
+To github.com:shiyukonghui/godot.git
+   95aa1d8984..094b071f9b  feature/mcp-server-module-rebuild -> feature/mcp-server-module-rebuild
+```
+
+### G3 收尾后的进程与端口
+
+最后一轮（门 10）之后的检查：无残留 `Godot*` 进程、`9888/9889` 与本次用过的 `9910`–`9923` 均无监听（`netstat`/`tasklist`，见 `runs\gates\task097\summary.txt` 与各 run 的 `taskkill.*` 记录）。**未改变机器显示或串流状态**（未停 `GameViewer`、未动设备/注册表/电源）。
