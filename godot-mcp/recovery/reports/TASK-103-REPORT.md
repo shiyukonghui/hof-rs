@@ -302,8 +302,23 @@ e041cae270 modules/mcp_server: task099 - REBUILT-2C-MANIFEST gains the 2c-11 sec
 
 `git status --short`（引擎仓）：**--- status --short **
 
-### F4 快照之后
+### F4 快照之后，以及收尾边界的如实说明
 
-快照记录的是「提交完成、housekeeping 尚未发生」的那一瞬。§F2 列出的那 6 条助手自有文件由 housekeeping 提交收尾；
-之后两仓的工作树都为空，两仓 HEAD 分别是主仓 `5a364575641a6eff7422fbc990348ca8ca781dee` 与引擎仓
-`1f9d0cb1c983301d4efa575c16986c551df23600`（= 远端）。
+快照记录的是「第一次提交完成、housekeeping 尚未发生」的那一瞬（主仓 `5a36457564…`）。§F2 列出的那 6 条助手自有文件
+由 housekeeping 提交 `85fe8ca` 收尾。
+
+**收尾之后，主仓工作树里剩下的只有「最后一次提交的提交助手自己在提交之后写的那一对日志」**：
+先出现的是 housekeeping 提交 `85fe8ca` 留下的 `logs/git-main-housekeeping.{out,err}.txt`，
+最后一次是**本报告这一版所在的提交**留下的 `logs/git-main-final.{out,err}.txt`
+（`.err.txt` 里是 git 关于 CRLF 的警告文字，不是错误）。
+
+这是**收尾自身的边界**，不是漏提交：`git_commit.ps1` 按铁律 1 用
+`Start-Process -RedirectStandardOutput/-RedirectStandardError` 拥有自己的输出，所以它写的每个日志都必然落在它所属的那次提交**之后**；
+再做一次 housekeeping 只会产生同样的一对新文件。TASK-102 遇到过同一个循环并同样如实记录。**故到此为止，不再提交。**
+
+两仓的最终 HEAD：
+
+| 仓 | HEAD | 工作树 |
+|---|---|---|
+| 主仓 `F:\moonbit-hof-rs`（`master`） | `85fe8ca`（housekeeping）→ 之后是**报告修订提交**（`docs(godot-mcp): TASK-103 - …`，即本文件这一版所在的提交）。它自己的哈希在提交之后才存在，逐字记在 `logs/git-main-final.out.txt` 的 `git log --oneline -3` 段里 | 只剩该提交的助手自有日志一对 |
+| 引擎仓 `godot\`（`feature/mcp-server-module-rebuild`） | `1f9d0cb1c983301d4efa575c16986c551df23600` | **空**，且 HEAD == `refs/remotes/origin/feature/mcp-server-module-rebuild`（push 已生效） |

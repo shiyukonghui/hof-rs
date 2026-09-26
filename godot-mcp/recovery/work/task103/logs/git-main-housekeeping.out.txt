@@ -1,0 +1,18 @@
+[master 85fe8ca] docs(godot-mcp): TASK-103 - the helper-owned logs of the commit and snapshot scripts are committed after the fact so the working tree is clean, and the report's closing section is filled from that snapshot verbatim
+ 14 files changed, 622 insertions(+), 4 deletions(-)
+ create mode 100644 godot-mcp/recovery/work/task103/close_report.py
+ create mode 100644 godot-mcp/recovery/work/task103/commit-message-housekeeping.txt
+ create mode 100644 godot-mcp/recovery/work/task103/final_snapshot.ps1
+ create mode 100644 godot-mcp/recovery/work/task103/logs/close-report.txt
+ create mode 100644 godot-mcp/recovery/work/task103/logs/close-report.txt.err.txt
+ create mode 100644 godot-mcp/recovery/work/task103/logs/git-final-main.cmd
+ create mode 100644 godot-mcp/recovery/work/task103/logs/git-final-main.err.txt
+ create mode 100644 godot-mcp/recovery/work/task103/logs/git-final-main.txt
+ create mode 100644 godot-mcp/recovery/work/task103/logs/git-main-housekeeping.cmd
+ create mode 100644 godot-mcp/recovery/work/task103/logs/git-main-housekeeping.err.txt
+ create mode 100644 godot-mcp/recovery/work/task103/logs/git-main-housekeeping.out.txt
+GIT_EXIT=0
+85fe8ca docs(godot-mcp): TASK-103 - the helper-owned logs of the commit and snapshot scripts are committed after the fact so the working tree is clean, and the report's closing section is filled from that snapshot verbatim
+5a36457 feat(godot-mcp): TASK-103 (D151) - tool defect X-1 is fixed at its root and both engine variants are rebuilt at the module commit, and the 16th and 17th C# games are delivered through MCP calls only
+9733cae docs(godot-mcp): TASK-102 - the report's closing boundary is restated so it cannot be made stale by the task's own doc-only follow-ups: the snapshot right after the report commit still has the six helper-owned log entries, they are committed by the report commit itself, the housekeeping commit that follows cleans the two lines the commit helper writes after its own commit, and the working tree is empty from then on
+ M godot-mcp/recovery/work/task103/logs/git-main-housekeeping.err.txt
