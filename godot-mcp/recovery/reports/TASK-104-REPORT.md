@@ -220,7 +220,8 @@ GATES_PREFLIGHT EXPLAIN=the diff between the built binary anchor and HEAD contai
    **非崩溃形态**出现 **1 次**（`runs\rtype\rt-task104-r1\import.stderr.txt`，307 B：同样的
    `Parameter "singleton" is null.` 加一条 `Thread::~Thread` 警告），其余 3 次 stderr **0 字节**。
    这印证 TASK-099 的定位：这条消息是**关机期**的，导入本身已跑完（`IMPORT_EXIT=0`），
-   `IMPORT_EXIT` 仍然**不能**当健康信号用。**崩溃形态累计 3/48**（TASK-099 之后 25 次导入 0 次复现）。
+   `IMPORT_EXIT` 仍然**不能**当健康信号用。**崩溃形态台账口径**：TASK-099 留档 **3/23**，此后按轮推进 3/28（TASK-102）→ 3/34（TASK-103）→
+   **本轮 3/38**（本轮 4 次导入全部 `IMPORT_EXIT=0`）；即 3/23 这个标记之后共 **15 次导入、0 次复现**。
 2. 三款都是各自经典规则的**最小完整子集**：R-Type 没有道具/地形/母舰，Puzzle Bobble 没有顶部下压与瞄准线，
    Lunar Lander 没有地形起伏与侧风。
 3. `ForceTestState` 仍允许钉出游戏本身到不了的状态（B-3 的成因），本轮以「会话不这么钉」处置，未在载荷里加防护。
@@ -311,7 +312,7 @@ INFO: No tasks are running which match the specified criteria.
 3. Puzzle Bobble `pb-task104-r1`：157 调用（14/143）、87 PASS/0 FAIL、像素 29/157、复算 0 处不符（含初始棋盘由 LCG 重算）；零缺陷。
 4. Lunar Lander `ll-task104-r1`：230 调用（14/216）、150 PASS/0 FAIL、像素 41/230、复算 0 处不符（含 **35 步积分轨迹 17 个检查点独立重放**）；零缺陷。
 5. 缺陷分栏：**工具缺陷 0 条**（未改模块一个字节）+ **游戏或驱动缺陷 1 条**（RT-1）+ 取证工具自身 2 条（E-1a/1b，均已修）；X-2 只登记。
-6. 里程碑小结（20 款一览、**合计 2 554 次调用 = 编辑器 303 / 游戏 2 251**、工具缺陷累计与修复轮次、像素/复算覆盖率 20/20、`--import` 累计 3/48）与**独立验收入口**已写进 `GAME-LOOP-LOG.md`。
+6. 里程碑小结（20 款一览、**合计 2 554 次调用 = 编辑器 303 / 游戏 2 251**、工具缺陷累计与修复轮次、像素/复算覆盖率 20/20、`--import` 累计 3/38）与**独立验收入口**已写进 `GAME-LOOP-LOG.md`。
 7. 收尾：**未改模块 → 走免跑判定**，`run_gates.ps1` 自判 `ANCHOR_STRUCTURAL_EQUIVALENT` + `SKIP_REBUILD`；**十道门与 `accept_m1` 本轮未重跑（如实说明，不做「应该可以」的转述）**。
 8. 主仓提交 `a8e0e56`（139 文件 / 24 875 增）；引擎仓**工作树空、HEAD 未动、无 push**（fork 已是 `1f9d0cb1c9`）。
 9. 报告：`F:\moonbit-hof-rs\godot-mcp\recovery\reports\TASK-104-REPORT.md`；决策 **D152** 已入 `DECISIONS.md`。

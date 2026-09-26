@@ -1,0 +1,5 @@
+docs(godot-mcp): TASK-104 - the --import cumulative denominator is corrected to 3/38 (it was written as 3/48 from a mis-read base)
+
+The milestone said the crash-form --import tally was 3/48 with "25 imports since TASK-099 with 0 recurrences", which was derived by treating TASK-099's own 3/23 mark as the count BEFORE TASK-100. That is not what the ledger says: the running mark is 3/13 -> 3/17 -> 3/23 -> 3/28 (TASK-102) -> 3/34 (TASK-103), so TASK-099's 3/23 is the mark AT THE END of TASK-099, and four TASK-104 imports (all IMPORT_EXIT=0) take it to 3/38. The corrected text states the chain 23 -> 28 -> 34 -> 38, i.e. fifteen imports after the 3/23 mark with zero recurrences, and says explicitly that the 3/23 mark is not a pre-TASK-100 base. The report's milestone row and closing summary carry the same corrected number.
+
+This is the second self-correction of this report, and both were found by re-deriving the number from the run products and the ledger rows instead of trusting the first draft.
