@@ -1,0 +1,12 @@
+[master 8cf0227] docs(godot-mcp): TASK-104 - the --import cumulative denominator is corrected to 3/38 (it was written as 3/48 from a mis-read base)
+ 9 files changed, 115 insertions(+), 4 deletions(-)
+ create mode 100644 godot-mcp/recovery/work/task104/commit-message-fix-import.txt
+ create mode 100644 godot-mcp/recovery/work/task104/fix_import_tally.py
+ create mode 100644 godot-mcp/recovery/work/task104/logs/git-fiximport.cmd
+ create mode 100644 godot-mcp/recovery/work/task104/logs/git-fiximport.err.txt
+ create mode 100644 godot-mcp/recovery/work/task104/logs/git-fiximport.out.txt
+GIT_EXIT=0
+8cf0227 docs(godot-mcp): TASK-104 - the --import cumulative denominator is corrected to 3/38 (it was written as 3/48 from a mis-read base)
+4ea0da5 docs(godot-mcp): TASK-104 - the assertion tallies and the twenty-game call total are corrected against the run products instead of left as first written
+60bc9fb docs(godot-mcp): TASK-104 - the report: the three new C# games with their real call counts, verdict distributions, assertion tallies and independently recomputed pixel columns, the one session defect their first runs caught, the two defects of the evidence tool itself, the twenty-game milestone, and the honest statement that no module byte changed so the ten gates and accept_m1 were NOT re-run
+ M godot-mcp/recovery/work/task104/logs/git-fiximport.err.txt
