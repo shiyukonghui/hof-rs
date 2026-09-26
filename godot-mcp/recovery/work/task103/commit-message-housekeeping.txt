@@ -1,0 +1,9 @@
+docs(godot-mcp): TASK-103 - the helper-owned logs of the commit and snapshot scripts are committed after the fact so the working tree is clean, and the report's closing section is filled from that snapshot verbatim
+
+The two files the commit helper writes after its own commit (`git-main.out.txt` /
+`git-main.err.txt`) plus the four files the snapshot helper owns
+(`final_snapshot.ps1`, `git-final-main.cmd`, `git-final-main.txt`,
+`git-final-main.err.txt`) are collected here; §F2/§F3 of TASK-103-REPORT.md now quote
+the snapshot file's own head/log/status blocks verbatim instead of restating them, so
+the report cannot carry a line the log does not have. No content change to any
+evidence file.
