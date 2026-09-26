@@ -1,0 +1,27 @@
+[gd_scene format=3 uid="uid://btbvliwxcdtn5"]
+
+[ext_resource type="Script" uid="uid://c8yeytfv7esnk" path="res://main.gd" id="1_v37ud"]
+[ext_resource type="Theme" uid="uid://cmcp1aatheme" path="res://ui_theme.tres" id="2_5mnmu"]
+
+[node name="Main" type="Node2D" unique_id=390207935]
+script = ExtResource("1_v37ud")
+
+[node name="Sky" type="ColorRect" parent="." unique_id=1425981278]
+offset_right = 800.0
+offset_bottom = 600.0
+color = Color(0.1, 0.12, 0.2, 1)
+
+[node name="Player" type="ColorRect" parent="." unique_id=1897509973]
+offset_left = 100.0
+offset_top = 220.0
+offset_right = 180.0
+offset_bottom = 300.0
+color = Color(0.9, 0.1, 0.9, 1)
+
+[node name="HUD" type="Label" parent="." unique_id=1071949523]
+offset_left = 24.0
+offset_top = 20.0
+offset_right = 500.0
+offset_bottom = 64.0
+theme = ExtResource("2_5mnmu")
+text = "MCP round-7 mini game"

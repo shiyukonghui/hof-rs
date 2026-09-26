@@ -21,3 +21,30 @@ target/
 *.swp
 Thumbs.db
 desktop.ini
+
+# ---------------------------------------------------------------------------
+# godot-mcp：Godot 引擎克隆 + MCP 试测游戏工程（TASK-091 / DECISIONS.md D137）
+# ---------------------------------------------------------------------------
+# 引擎树是**独立克隆**：它带自己的 .git 和自己的远程
+# (github.com:shiyukonghui/godot.git)，21,793 个文件 / 4.7 GB。
+# 它绝不进入本仓历史——内核补丁的版本由它自己的 fork 分支承担。
+godot-mcp/godot/
+
+# 游戏工程：源码入库，构建产物不入库。
+# 注意 *.import **故意不忽略**：它是 Godot 的资源 UID 映射，属于工程源码，
+# 丢了工程就打不开（任务书里写的「视情况」在这里的结论是不忽略）。
+godot-mcp/projects/*/.godot/
+godot-mcp/projects/*/bin/
+godot-mcp/projects/*/obj/
+godot-mcp/projects/*/.mono/
+godot-mcp/projects/*/export_presets.cfg
+
+# 试测会话产物（trace / ledger / 截图 / 每游戏报告）
+godot-mcp/runs/
+
+# TASK-085/086 期的重定向残留（见 DECISIONS.md D136）：cmd 下 `*>` 被当字面
+# 参数，写出了名为 `$null`、`$l`、`%DST%` 的文件/目录。留档不删（破坏性命令
+# 默认拒绝），也绝不入库。
+$null
+$l
+%DST%/

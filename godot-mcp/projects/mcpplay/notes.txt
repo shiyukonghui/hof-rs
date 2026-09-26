@@ -1,0 +1,3 @@
+MCP round-7 session text (after-run).
+Second line.
+Third line.

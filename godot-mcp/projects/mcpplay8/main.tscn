@@ -1,0 +1,32 @@
+[gd_scene format=3 uid="uid://c2rpj3o7hq1q3"]
+
+[ext_resource type="Script" uid="uid://bvf34nnnr7fcn" path="res://main.gd" id="1_6lpdw"]
+
+[node name="Main" type="Node2D" unique_id=869737451]
+script = ExtResource("1_6lpdw")
+
+[node name="Sky" type="ColorRect" parent="." unique_id=1381133108]
+offset_right = 800.0
+offset_bottom = 600.0
+color = Color(0.05, 0.05, 0.1, 1)
+
+[node name="Player" type="ColorRect" parent="." unique_id=1728459699]
+offset_left = 100.0
+offset_top = 220.0
+offset_right = 180.0
+offset_bottom = 300.0
+color = Color(0.9, 0.1, 0.9, 1)
+
+[node name="HUD" type="Label" parent="." unique_id=1300402031]
+offset_left = 24.0
+offset_top = 20.0
+offset_right = 620.0
+offset_bottom = 64.0
+text = "MCP round-8 mini game"
+
+[node name="MoveButton" type="Button" parent="." unique_id=2120163129]
+offset_left = 24.0
+offset_top = 500.0
+offset_right = 160.0
+offset_bottom = 540.0
+text = "Move"
