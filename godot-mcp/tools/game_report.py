@@ -18,6 +18,11 @@ The report answers, for one game, exactly the four questions the goal口径 asks
 Nothing here trusts the trace's own summary: the PNG pairs the capture lines name
 are hashed and re-diffed with Pillow, and the ledger flags are read back from the
 ledger's own JSON.
+
+TASK-096 (D-1): a pixel column that reads `0` is a *claim* that the picture did not
+change. When the pixel-evidence chain itself is broken, that claim cannot be made and
+the report says `不可得（D-1）` instead. The rule and the replacement evidence chain are
+in `modules/mcp_server/docs/reports/MCP-TRACEABILITY.md` §7.
 """
 import argparse
 import hashlib
@@ -33,6 +38,16 @@ try:
     HAVE_PIL = True
 except Exception:
     HAVE_PIL = False
+
+# TASK-096 (D-1): the wording the pixel column uses when the chain is broken.
+D1_CELL = "不可得（D-1）"
+D1_NOTE = (
+    "不可得（D-1）: 像素证据链当时不可用 -- 场景文件里多出一整份节点副本"
+    "（`@ColorRect@*` / `@Label@*`，排在场景树最后、绘制在最上层），真实节点的移动被副本挡住，"
+    "画面确实是静止的；这不是「操作无效」的证据，也不是回读通道坏了。"
+    "定域与判别见 `recovery/reports/TASK-096-REPORT.md`，替代证据链见 "
+    "`modules/mcp_server/docs/reports/MCP-TRACEABILITY.md` §7。"
+)
 
 
 def read_text(path):
@@ -180,6 +195,10 @@ def main():
     parser.add_argument("--stdout-pattern", action="append", default=None)
     parser.add_argument("--user-dir", default=None,
                         help="the game's user:// directory; its PNGs are diffed against each other")
+    parser.add_argument("--pixel-evidence", default="auto",
+                        choices=("auto", "available", "unavailable"),
+                        help="TASK-096 (D-1): whether the pixel-diff column may be read as a claim. "
+                             "auto = a run whose every recomputed diff is 0 is reported as 不可得（D-1）")
     args = parser.parse_args()
 
     run = os.path.abspath(args.run)
@@ -198,6 +217,33 @@ def main():
         summary = ledger_summary(read_json(os.path.join(run, "ledger-%s.json" % name)))
         pairs = capture_pairs(os.path.join(run, "trace-%s.jsonl" % name))
         report["endpoints"][name] = {"ledger": summary, "captures": pairs}
+
+    # --- may this run's pixel column be read as a claim? (TASK-096, D-1) --------
+    all_pairs = []
+    for name in ("editor", "game"):
+        all_pairs.extend(report["endpoints"][name]["captures"])
+    comparable = [p.get("recomputed", {}).get("changed_pixels") for p in all_pairs]
+    comparable = [v for v in comparable if v is not None]
+    non_zero = [v for v in comparable if v]
+    if args.pixel_evidence == "available":
+        verdict = "available"
+    elif args.pixel_evidence == "unavailable":
+        verdict = "unavailable"
+    else:
+        verdict = "available" if non_zero else ("unavailable" if comparable else "none")
+    report["pixel_evidence"] = {
+        "verdict": verdict,
+        "reason": "D-1" if verdict == "unavailable" else "",
+        "note": D1_NOTE if verdict == "unavailable" else "",
+        "capture_pairs": len(all_pairs),
+        "comparable_pairs": len(comparable),
+        "non_zero_pairs": len(non_zero),
+    }
+    # A zero that must not be read as a claim is printed as the marked string.
+    def px(value):
+        if value == 0 and verdict == "unavailable":
+            return D1_CELL
+        return value
 
     report["observable"] = {
         "editor": observable_lines(os.path.join(run, "engine-editor.stdout.txt"), patterns),
@@ -372,11 +418,18 @@ def main():
                 moved += 1
             lines.append("| %s | `%s` | %s | %s | **%s** | %s |" % (
                 pair.get("seq"), pair.get("tool"), pair.get("changed"),
-                pair.get("changed_pixels_reported"), recomputed,
+                pair.get("changed_pixels_reported"), px(recomputed),
                 pair.get("before_sha256") == pair.get("after_sha256")))
         lines.append("")
-    lines.append("**capture pairs with a recomputed non-zero pixel diff: %d/%d**" % (moved, total_pairs))
+    lines.append("**capture pairs with a recomputed non-zero pixel diff: %d/%d%s**" % (
+        moved, total_pairs, (" — %s" % D1_CELL) if (moved == 0 and verdict == "unavailable") else ""))
     lines.append("")
+    if verdict == "unavailable":
+        lines.append("> **PIXEL EVIDENCE UNAVAILABLE (%s).** %s" % (report["pixel_evidence"]["reason"], D1_NOTE))
+        lines.append(">")
+        lines.append("> 读法：本表的 `0` **不是**「画面确实没有变化」。判这次调用有没有做事，看 `file_effect`、"
+                     "多帧属性采样、断言与场景树快照；替代证据链见 `MCP-TRACEABILITY.md` §7。")
+        lines.append("")
 
     # the frames the session saved by name
     sf = report["saved_frames"]
@@ -396,7 +449,7 @@ def main():
             lines.append("| `%s` | %s | %d | `%s` | %s | **%s** |" % (
                 frame["name"], size, frame["bytes"], frame["sha256"][:12],
                 ("`%s`" % frame["diff_prev_name"]) if frame.get("diff_prev_name") else "-",
-                diff.get("changed_pixels", "-")))
+                px(diff.get("changed_pixels", "-"))))
         lines.append("")
         lines.append("> `user://` survives between runs, so the same names are rewritten by each run; "
                      "the byte count, the sha256 and the diff above are recomputed from the files on "

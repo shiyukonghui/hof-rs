@@ -1,0 +1,106 @@
+{
+  "import": false,
+  "note": "TASK-096 A: is the 'frozen loaded canvas item' actually occluded? snake's main.tscn carries 37 unnamed @ColorRect@ nodes (auto-named runtime additions serialized into the scene) drawn AFTER the named nodes, i.e. ON TOP of Background / GridLine* / SnakeSeg*. This session reads the tree order, then proves which node owns the sampled pixel by hiding the cover, and finally re-runs the loaded-node change with the cover hidden.",
+  "calls": [
+    {
+      "tag": "o01-tree-order",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var main = get_parent()\nvar parts = []\nfor i in range(main.get_child_count()):\n\tvar c = main.get_child(i)\n\tvar rect = \"-\"\n\tif c is Control:\n\t\trect = str(c.get_rect())\n\tparts.append(\"%d:%s(%s vis=%s z=%d rect=%s)\" % [i, c.name, c.get_class(), str(c.visible), c.z_index, rect])\nreturn \"children=%d | %s\" % [main.get_child_count(), \" ; \".join(parts)]"
+      }
+    },
+    {
+      "tag": "o02-baseline-p1",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var img = get_viewport().get_texture().get_image()\nvar main = get_parent()\nreturn \"P1(10,580)=\" + str(img.get_pixel(10, 580)) + \" bg=\" + str(main.get_node(\"Background\").color)"
+      }
+    },
+    {
+      "tag": "o03-who-covers-p1",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var main = get_parent()\nvar over = []\nvar pt = Vector2(10, 580)\nfor i in range(main.get_child_count()):\n\tvar c = main.get_child(i)\n\tif c is Control and c.visible and c.get_global_rect().has_point(pt):\n\t\tover.append(\"%d:%s color=%s\" % [i, c.name, str(c.color)])\nreturn \"covering P1 in draw order (last is on top): \" + \" | \".join(over)"
+      }
+    },
+    {
+      "tag": "o04-loaded-magenta-again",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var main = get_parent()\nmain.get_node(\"Background\").color = Color(1, 0, 1, 1)\nvar img = get_viewport().get_texture().get_image()\nreturn \"P1(10,580)=\" + str(img.get_pixel(10, 580)) + \" bg=\" + str(main.get_node(\"Background\").color)"
+      }
+    },
+    {
+      "sleep_ms": 800,
+      "port": "game",
+      "note": "frame"
+    },
+    {
+      "tag": "o05-hide-covers",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var main = get_parent()\nvar hidden = []\nvar pt = Vector2(10, 580)\nfor c in main.get_children():\n\tif c is Control and c.visible and c.name.begins_with(\"@ColorRect@\") and c.get_global_rect().has_point(pt):\n\t\tc.visible = false\n\t\thidden.append(str(c.name))\nvar img = get_viewport().get_texture().get_image()\nreturn \"hidden=\" + str(hidden) + \" P1(10,580)=\" + str(img.get_pixel(10, 580)) + \" bg=\" + str(main.get_node(\"Background\").color)"
+      }
+    },
+    {
+      "sleep_ms": 800,
+      "port": "game",
+      "note": "frame"
+    },
+    {
+      "tag": "o06-read-after-hide",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var img = get_viewport().get_texture().get_image()\nvar main = get_parent()\nreturn \"P1(10,580)=\" + str(img.get_pixel(10, 580)) + \" P2(400,580)=\" + str(img.get_pixel(400, 580)) + \" bg=\" + str(main.get_node(\"Background\").color)"
+      }
+    },
+    {
+      "tag": "o07-recursive-hide-all-unnamed",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var main = get_parent()\nvar n = 0\nfor c in main.get_children():\n\tif c is Control and c.name.begins_with(\"@ColorRect@\"):\n\t\tc.visible = false\n\t\tn += 1\nreturn \"hiden=%d\" % n"
+      }
+    },
+    {
+      "sleep_ms": 800,
+      "port": "game",
+      "note": "frame"
+    },
+    {
+      "tag": "o08-read-all-hidden",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var img = get_viewport().get_texture().get_image()\nvar main = get_parent()\nreturn \"P1(10,580)=\" + str(img.get_pixel(10, 580)) + \" P2(400,580)=\" + str(img.get_pixel(400, 580)) + \" P3(288,240)=\" + str(img.get_pixel(288, 240)) + \" bg=\" + str(main.get_node(\"Background\").color) + \" food=\" + str(main.get_node(\"Food\").color)"
+      }
+    },
+    {
+      "tag": "o09-move-real-segment",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var main = get_parent()\nvar seg = main.get_node(\"SnakeSeg00\")\nseg.position = Vector2(300, 300)\nvar img = get_viewport().get_texture().get_image()\nreturn \"seg00.position=\" + str(seg.position) + \" px(300,300)=\" + str(img.get_pixel(300, 300)) + \" px(120,240)=\" + str(img.get_pixel(120, 240))"
+      }
+    },
+    {
+      "sleep_ms": 800,
+      "port": "game",
+      "note": "frame"
+    },
+    {
+      "tag": "o10-read-moved-segment",
+      "port": "game",
+      "tool": "running_game_execute_gdscript",
+      "arguments": {
+        "code": "var img = get_viewport().get_texture().get_image()\nvar main = get_parent()\nreturn \"px(300,300)=\" + str(img.get_pixel(300, 300)) + \" px(120,240)=\" + str(img.get_pixel(120, 240)) + \" px(310,310)=\" + str(img.get_pixel(310, 310)) + \" seg00=\" + str(main.get_node(\"SnakeSeg00\").position)"
+      }
+    }
+  ]
+}

@@ -1,0 +1,143 @@
+# Per-game report — `pong`
+
+* run tag: `task094-pong-ab`
+* run dir: `F:\moonbit-hof-rs\godot-mcp\recovery\work\task096\reporttest-pong`
+* Pillow/numpy available for the independent pixel recomputation: **True**
+
+## editor endpoint (9888)
+
+* calls: **23** (malformed trace lines: 0)
+* verdicts: ok_file_effect_observed=3, ok_no_effect_observed=20
+* `facts_complete`: **23/23**
+* `args_evidence`: inline_complete=22, sidecar_verified=1
+* failed: 0, no-effect observed: 20
+
+## game endpoint (9889)
+
+* calls: **29** (malformed trace lines: 0)
+* verdicts: ok_file_effect_observed=10, ok_no_effect_observed=19
+* `facts_complete`: **29/29**
+* `args_evidence`: inline_complete=29
+* failed: 0, no-effect observed: 19
+
+## Pixel proof (recomputed, not taken on trust)
+
+### editor
+
+| seq | tool | trace changed | trace px | **recomputed px** | PNG sha equal |
+|---|---|---|---|---|---|
+| 2 | `project_create_script` | False | 0 | **不可得（D-1）** | True |
+| 3 | `project_create_script` | False | 0 | **不可得（D-1）** | True |
+| 4 | `project_edit_script` | False | 0 | **不可得（D-1）** | True |
+| 5 | `project_build_csharp` | False | 0 | **不可得（D-1）** | True |
+| 6 | `project_validate_scripts` | False | 0 | **不可得（D-1）** | True |
+| 7 | `editor_open_scene` | False | 0 | **不可得（D-1）** | True |
+| 8 | `editor_add_nodes_batch` | False | 0 | **不可得（D-1）** | True |
+| 9 | `editor_set_node_script_batch` | False | 0 | **不可得（D-1）** | True |
+| 10 | `editor_set_node_script_batch` | False | 0 | **不可得（D-1）** | True |
+| 11 | `editor_set_node_property` | False | 0 | **不可得（D-1）** | True |
+| 12 | `editor_set_node_property` | False | 0 | **不可得（D-1）** | True |
+| 13 | `editor_set_node_property` | False | 0 | **不可得（D-1）** | True |
+| 14 | `editor_add_input_action` | False | 0 | **不可得（D-1）** | True |
+| 15 | `editor_add_input_action` | False | 0 | **不可得（D-1）** | True |
+| 16 | `editor_add_input_action` | False | 0 | **不可得（D-1）** | True |
+| 17 | `editor_add_input_action` | False | 0 | **不可得（D-1）** | True |
+| 18 | `editor_add_input_action` | False | 0 | **不可得（D-1）** | True |
+| 19 | `editor_save_scene` | False | 0 | **不可得（D-1）** | True |
+| 20 | `editor_get_scene_tree` | False | 0 | **不可得（D-1）** | True |
+| 21 | `editor_get_node_properties` | False | 0 | **不可得（D-1）** | True |
+| 22 | `project_validate_scripts` | False | 0 | **不可得（D-1）** | True |
+| 23 | `editor_capture_screenshot` | False | 0 | **不可得（D-1）** | True |
+| 24 | `editor_get_errors` | False | 0 | **不可得（D-1）** | True |
+
+### game
+
+| seq | tool | trace changed | trace px | **recomputed px** | PNG sha equal |
+|---|---|---|---|---|---|
+| 1 | `running_game_get_scene_tree` | False | 0 | **不可得（D-1）** | True |
+| 2 | `running_game_get_node_properties` | False | 0 | **不可得（D-1）** | True |
+| 3 | `running_game_get_node_properties` | False | 0 | **不可得（D-1）** | True |
+| 4 | `running_game_capture_screenshot` | False | 0 | **不可得（D-1）** | True |
+| 5 | `running_game_assert_node_state` | False | 0 | **不可得（D-1）** | True |
+| 6 | `running_game_run_test_scenario` | False | 0 | **不可得（D-1）** | True |
+| 7 | `running_game_get_node_properties` | False | 0 | **不可得（D-1）** | True |
+| 8 | `running_game_capture_screenshot` | False | 0 | **不可得（D-1）** | True |
+| 9 | `running_game_set_node_property` | False | 0 | **不可得（D-1）** | True |
+| 10 | `running_game_capture_screenshot` | False | 0 | **不可得（D-1）** | True |
+| 11 | `running_game_run_test_scenario` | False | 0 | **不可得（D-1）** | True |
+| 12 | `running_game_run_test_scenario` | False | 0 | **不可得（D-1）** | True |
+| 13 | `running_game_run_test_scenario` | False | 0 | **不可得（D-1）** | True |
+| 14 | `running_game_execute_gdscript` | False | 0 | **不可得（D-1）** | True |
+| 15 | `running_game_execute_gdscript` | False | 0 | **不可得（D-1）** | True |
+| 16 | `running_game_set_node_property` | False | 0 | **不可得（D-1）** | True |
+| 17 | `running_game_set_node_property` | False | 0 | **不可得（D-1）** | True |
+| 18 | `running_game_assert_node_state` | False | 0 | **不可得（D-1）** | True |
+| 19 | `running_game_set_node_property` | False | 0 | **不可得（D-1）** | True |
+| 20 | `running_game_set_node_property` | False | 0 | **不可得（D-1）** | True |
+| 21 | `running_game_assert_node_state` | False | 0 | **不可得（D-1）** | True |
+| 22 | `running_game_assert_node_state` | False | 0 | **不可得（D-1）** | True |
+| 23 | `running_game_capture_screenshot` | False | 0 | **不可得（D-1）** | True |
+| 24 | `running_game_get_scene_tree` | False | 0 | **不可得（D-1）** | True |
+| 25 | `running_game_execute_gdscript` | False | 0 | **不可得（D-1）** | True |
+| 26 | `running_game_assert_screen_text` | False | 0 | **不可得（D-1）** | True |
+| 27 | `running_game_assert_screen_text` | False | 0 | **不可得（D-1）** | True |
+| 28 | `running_game_run_stress_test` | False | 0 | **不可得（D-1）** | True |
+| 29 | `running_game_get_node_property_samples` | False | 0 | **不可得（D-1）** | True |
+
+**capture pairs with a recomputed non-zero pixel diff: 0/52 — 不可得（D-1）**
+
+> **PIXEL EVIDENCE UNAVAILABLE (D-1).** 不可得（D-1）: 像素证据链当时不可用 -- 场景文件里多出一整份节点副本（`@ColorRect@*` / `@Label@*`，排在场景树最后、绘制在最上层），真实节点的移动被副本挡住，画面确实是静止的；这不是「操作无效」的证据，也不是回读通道坏了。定域与判别见 `recovery/reports/TASK-096-REPORT.md`，替代证据链见 `modules/mcp_server/docs/reports/MCP-TRACEABILITY.md` §7。
+>
+> 读法：本表的 `0` **不是**「画面确实没有变化」。判这次调用有没有做事，看 `file_effect`、多帧属性采样、断言与场景树快照；替代证据链见 `MCP-TRACEABILITY.md` §7。
+
+### Saved frames (`user://`, `running_game_capture_screenshot`)
+
+Directory: `recovery\work\task096\reporttest-pong-user`
+
+*no saved frame found.*
+
+## The game's own stdout (causal chain)
+
+### editor (0 line(s))
+
+```
+```
+
+### game (29 line(s))
+
+```
+PONG_READY name=Main ball=(392, 268) ball_v=(0, 0) win_score=5 auto_serve=True
+PONG_TICK ball=(392, 268) v=(0, 0) left=226 right=226 score=0-0
+PONG_TICK ball=(392, 268) v=(0, 0) left=226 right=226 score=0-0
+PONG_TICK ball=(392, 268) v=(0, 0) left=226 right=226 score=0-0
+PONG_TICK ball=(392, 268) v=(0, 0) left=226 right=226 score=0-0
+PONG_TICK ball=(392, 268) v=(0, 0) left=226 right=226 score=0-0
+PONG_TICK ball=(392, 268) v=(0, 0) left=226 right=226 score=0-0
+PONG_SERVE ball=(392, 268) v=(280, 180)
+PONG_TICK ball=(457.44913, 310.07465) v=(280, 180) left=226 right=226 score=0-0
+PONG_TICK ball=(668.6456, 445.84314) v=(0, 0) left=226 right=226 score=0-0
+PONG_NUDGE who=left_up y=96
+PONG_NUDGE who=left_up y=8
+PONG_NUDGE who=left_down y=138
+PONG_TICK ball=(668.6456, 445.84314) v=(0, 0) left=138 right=226 score=0-0
+PONG_SCORE scored_by=RIGHT left=0 right=1 win_score=2
+PONG_PARKED ball=(392, 268) next_serve_dir=-1
+PONG_TICK ball=(392, 268) v=(0, 0) left=138 right=226 score=0-1
+PONG_SCORE scored_by=RIGHT left=0 right=2 win_score=2
+PONG_OVER winner=RIGHT left=0 right=2
+PONG_NUDGE who=left_up y=8
+PONG_NUDGE who=left_up y=8
+PONG_NUDGE who=left_up y=8
+PONG_NUDGE who=left_up y=8
+PONG_NUDGE who=left_up y=8
+PONG_NUDGE who=left_up y=8
+PONG_NUDGE who=left_up y=8
+PONG_NUDGE who=left_up y=8
+PONG_NUDGE who=left_up y=8
+PONG_NUDGE who=left_up y=8
+```
+
+## Defect list
+
+**no defect supported by the evidence of this run.**
+

@@ -1,0 +1,8 @@
+﻿{"id":100,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":null,\"result_type\":\"Nil\"}","type":"text"}]}}
+
+{"id":102,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":\"covering P1 in draw order (last is on top): 0:Background color=(0.05, 0.09, 0.07, 1.0) | 36:Status color=(0.85, 0.1, 0.1, 0.35) | 37:@ColorRect@20995 color=(0.05, 0.09, 0.07, 1.0)\",\"result_type\":\"String\"}","type":"text"}]}}
+
+{"id":107,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":\"P1(10,580)=(0.949, 0.0353, 0.6863, 1.0) P2(400,580)=(0.3608, 0.1451, 0.1255, 1.0) P3(288,240)=(0.949, 0.0353, 0.6863, 1.0) bg=(1.0, 0.0, 1.0, 1.0) food=(0.98, 0.3, 0.3, 1.0)\",\"result_type\":\"String\"}","type":"text"}]}}
+
+{"id":109,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":\"px(300,300)=(0.5255, 0.651, 0.3294, 1.0) px(120,240)=(0.949, 0.0353, 0.6863, 1.0) px(310,310)=(0.5255, 0.651, 0.3294, 1.0) seg00=(300.0, 300.0)\",\"result_type\":\"String\"}","type":"text"}]}}
+
