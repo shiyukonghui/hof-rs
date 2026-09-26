@@ -1,0 +1,36 @@
+=== g37-samples-frozen (12 frames) ===
+  BricksRemaining        distinct=1    changes@=[]
+      first=10  last=10
+  Elapsed                distinct=12   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+      first=8.40345859527588  last=8.58674144744873
+  GridHash               distinct=1    changes@=[]
+      first=1308694269  last=1308694269
+  PlayerRow              distinct=1    changes@=[]
+      first=1  last=1
+  Ticks                  distinct=12   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+      first=1151  last=1179
+  frame                  distinct=12   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+      first=0  last=11
+
+=== g178-samples-clock (30 frames) ===
+  AutoTicks              distinct=1    changes@=[]
+      first=4  last=4
+  BombList               distinct=1    changes@=[]
+      first=''  last=''
+  BombsActive            distinct=1    changes@=[]
+      first=0  last=0
+  BricksRemaining        distinct=1    changes@=[]
+      first=0  last=0
+  Elapsed                distinct=30   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      first=16.5677547454834  last=17.0564441680908
+  GridHash               distinct=1    changes@=[]
+      first=-1456456111  last=-1456456111
+  LastAutoSteps          distinct=1    changes@=[]
+      first=0  last=0
+  LastBlastCount         distinct=1    changes@=[]
+      first=8  last=8
+  Ticks                  distinct=30   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      first=54  last=127
+  frame                  distinct=30   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      first=0  last=29
+

@@ -1,0 +1,29 @@
+wrote F:\moonbit-hof-rs\godot-mcp\tools\sessions\sokoban\session.json calls=190
+L0 hash=-2012179436 box_list=2,3 goal_list=2,2
+PUSH_WIN hash=423085519 box_list=2,2 player=2,3 pushes=1
+L1 hash=-1868747384 box_list=2,3|3,3 player=3,5
+L1_WIN hash=-1022166962 box_list=1,3|3,1 steps=5 pushes=3
+CORNER_AFTER hash=-145953106 dead=2,1 pushes=1 player=2,2
+BLOCKED rejected=1 steps=1 player=2,2 hash=616505289
+AUTO2 accepted2=2 accepted3=3 steps=5 player=2,3
+== Sokoban: board readbacks
+   g02-readback-t0            reported=-2012179436  recomputed=-2012179436  OK
+      board=#######/#     #/# .$@ #/#     #/#######
+   g175-final-readback        reported=-2012179436  recomputed=-2012179436  OK
+      board=#######/#     #/# .$@ #/#     #/#######
+   readbacks found=2 mismatches=0
+== Sokoban: the recomputed literals the payload actually reported
+   g46-assert-box-list      BoxList      expected='2,2'                                    actual='2,2'                                    OK
+   g47-assert-hash          BoardHash    expected=423085519                                actual=423085519                                OK
+   g89-assert-box-list      BoxList      expected='1,3|3,1'                                actual='1,3|3,1'                                OK
+   g90-assert-hash          BoardHash    expected=-1022166962                              actual=-1022166962                              OK
+   g97-assert-box-list      BoxList      expected='2,3|3,1'                                actual='2,3|3,1'                                OK
+   g98-assert-hash          BoardHash    expected=-2127869655                              actual=-2127869655                              OK
+   g127-assert-dead-list    DeadlockList expected='2,1'                                    actual='2,1'                                    OK
+   g131-assert-hash         BoardHash    expected=-145953106                               actual=-145953106                               OK
+   g115-assert-hash         BoardHash    expected=616505289                                actual=616505289                                OK
+   g142-assert-last-hook    LastHookSteps expected=2                                        actual=2                                        OK
+   g149-assert-last-hook-3  LastHookSteps expected=3                                        actual=3                                        OK
+   g150-assert-steps-5      Steps        expected=5                                        actual=5                                        OK
+   literal mismatches: 0
+TOTAL RECOMPUTATION MISMATCHES: 0

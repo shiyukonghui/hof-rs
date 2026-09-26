@@ -1,0 +1,27 @@
+[gd_scene format=3 uid="uid://bi4vlife0s65i"]
+
+[ext_resource type="Script" uid="uid://3mmgp0fp06yv" path="res://src/SokobanGame.cs" id="1_t6lrv"]
+
+[node name="Main" type="Node2D" unique_id=707960093]
+script = ExtResource("1_t6lrv")
+
+[node name="Background" type="ColorRect" parent="." unique_id=1296282963]
+offset_right = 800.0
+offset_bottom = 600.0
+color = Color(0.05, 0.06, 0.08, 1)
+
+[node name="Hud" type="Label" parent="." unique_id=44127812]
+offset_left = 16.0
+offset_top = 8.0
+offset_right = 620.0
+offset_bottom = 44.0
+theme_override_font_sizes/font_size = 24
+text = "LEVEL 1  BOXES 0/1  STEPS 0  PUSHES 0  UNDO 0"
+
+[node name="Status" type="Label" parent="." unique_id=377987191]
+offset_left = 620.0
+offset_top = 8.0
+offset_right = 795.0
+offset_bottom = 44.0
+theme_override_font_sizes/font_size = 22
+text = "PUSH THE BOXES"

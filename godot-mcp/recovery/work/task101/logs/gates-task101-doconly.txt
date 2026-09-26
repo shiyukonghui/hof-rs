@@ -1,0 +1,12 @@
+GATES_PREFLIGHT RUNNER=tools\run_gates.ps1 tag=task101-doconly
+GATES_PREFLIGHT VERSION_TEXT=4.8.dev.mono.custom_build.2385fe2fb
+GATES_PREFLIGHT ANCHOR=2385fe2fb HEAD=e041cae27 ANCHOR_REPORTED=2385fe2fb
+GATES_PREFLIGHT WORKING_TREE_RED=0 WORKING_TREE_SAFE=0 COMMITTED_DIFF_SAFE=2
+GATES_PREFLIGHT VERDICT=ANCHOR_STRUCTURAL_EQUIVALENT
+GATES_PREFLIGHT REASON="2385fe2fb is an ancestor of e041cae27 and all 2 file(s) in the diff are non-compiling; the binary is NOT equal to HEAD, it is structurally equivalent to it"
+GATES_PREFLIGHT NONCOMPILING_COUNT=2
+GATES_PREFLIGHT NONCOMPILING modules/mcp_server/docs/reports/MCP-TRACEABILITY.md
+GATES_PREFLIGHT NONCOMPILING modules/mcp_server/docs/reports/REBUILT-2C-MANIFEST.md
+GATES_PREFLIGHT RESULT=SKIP_REBUILD
+GATES_SKIPPED=1
+GATES_PREFLIGHT EXPLAIN=the diff between the built binary anchor and HEAD contains no compile input, so no compiled behaviour can have changed; the ten gates would report on the same binary that already passed

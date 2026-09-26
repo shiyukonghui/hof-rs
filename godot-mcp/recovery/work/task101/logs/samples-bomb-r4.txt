@@ -1,0 +1,24 @@
+=== g178-samples-clock (30 frames) ===
+  AutoTicks              distinct=29   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      first=6  last=35
+  BombList               distinct=17   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      first='4,4,16'  last=''
+  BombsActive            distinct=2    changes@=[16]
+      first=1  last=0
+  BricksRemaining        distinct=2    changes@=[16]
+      first=3  last=1
+  Detonations            distinct=2    changes@=[16]
+      first=0  last=1
+  Elapsed                distinct=30   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      first=16.5191860198975  last=17.0014934539795
+  GridHash               distinct=2    changes@=[16]
+      first=4272848  last=1994039314
+  LastAutoSteps          distinct=2    changes@=[27, 28]
+      first=0  last=0
+  LastBlastCount         distinct=2    changes@=[16]
+      first=0  last=7
+  Ticks                  distinct=30   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      first=60  last=132
+  frame                  distinct=30   changes@=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      first=0  last=29
+

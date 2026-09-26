@@ -1,0 +1,8 @@
+g188-input-right           all_passed=True  steps=3 passed=1 failed=0 errors=0 duration_ms=498
+g191-input-place           all_passed=True  steps=3 passed=1 failed=0 errors=0 duration_ms=493
+g140-assert-screen-over    PASS  screen_text 'GAME OVER'                      matched='GAME OVER' source=control_tree
+g169-assert-screen-win     PASS  screen_text 'FIELD CLEARED'                  matched='FIELD CLEARED' source=control_tree
+g188-input-right/step2     PASS  scenario PlayerCol gt 1.0                    actual=2
+g191-input-place/step2     PASS  scenario BombsActive gt 0.0                  actual=1
+------------------------------------------------------------------------------
+extra assertions found: 4  ->  PASS=4

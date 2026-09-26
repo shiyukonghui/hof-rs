@@ -1,0 +1,16 @@
+== bomberman : 6 frame(s) in C:\Users\wyl\AppData\Roaming\Godot\app_userdata\bomberman
+  frame        size         bytes  sha256[0:16]     vs report
+  bomb-t0.png  800x600       9653  068A055E4FA10F51 same
+  bomb-t1.png  800x600      10065  03A201463930A990 same
+  bomb-t2.png  800x600       9333  32A41A677977A38F same
+  bomb-t3.png  800x600       9964  D31DD4445C076DA3 same
+  bomb-t4.png  800x600       9534  C86EE8748F0E99DF same
+  bomb-t5.png  800x600       9657  E4BF70FA22CD15E5 same
+  distinct sha256 among the frames: 6/6
+  pair diffs (recomputed here):
+    bomb-t0.png  -> bomb-t1.png  engine=7541    any=7769    total=480000  (report.json agrees)
+    bomb-t1.png  -> bomb-t2.png  engine=176025  any=176371  total=480000  (report.json agrees)
+    bomb-t2.png  -> bomb-t3.png  engine=168478  any=168664  total=480000  (report.json agrees)
+    bomb-t3.png  -> bomb-t4.png  engine=74786   any=74987   total=480000  (report.json agrees)
+    bomb-t4.png  -> bomb-t5.png  engine=114995  any=115272  total=480000  (report.json agrees)
+  pairs where the report and this recomputation disagree: 0

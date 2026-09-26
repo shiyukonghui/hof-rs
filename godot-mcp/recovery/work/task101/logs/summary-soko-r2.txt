@@ -1,0 +1,22 @@
+run        : runs\sokoban\soko-task101-r2
+game       : sokoban  tag: soko-task101-r2  pillow: True
+editor : calls=14  facts=14/14  args=inline_complete=13, sidecar_verified=1
+         verdicts=failed=1, ok_effect_observed=1, ok_file_effect_observed=5, ok_no_effect_observed=7
+game   : calls=176 facts=176/176  args=inline_complete=176
+         verdicts=failed=1, ok_effect_observed=24, ok_file_effect_observed=128, ok_no_effect_observed=23
+------------------------------------------------------------------------------
+TOTAL  : calls=190  facts_complete=190/190 (100.0%)
+         verdicts=failed=2, ok_effect_observed=25, ok_file_effect_observed=133, ok_no_effect_observed=30
+pixels : 190 capture pairs, 29 recomputed non-zero (editor 1/14, game 28/176)
+         pixel_evidence verdict=available
+frames : 6 in C:\Users\wyl\AppData\Roaming\Godot\app_userdata\sokoban
+         soko-t0.png  800x600    12075 B  D94D38213BD8  px_vs_prev=-
+         soko-t1.png  800x600    12075 B  D94D38213BD8  px_vs_prev=0
+         soko-t2.png  800x600    13022 B  581B4EDA75E0  px_vs_prev=61371
+         soko-t3.png  800x600    12736 B  A78A7161FB7B  px_vs_prev=95473
+         soko-t4.png  800x600    11915 B  C8DC084AC4C2  px_vs_prev=90574
+         soko-t5.png  800x600    11251 B  C2B4B0EDFD61  px_vs_prev=9796
+defects: 2 (auto)
+         [medium] call 6 (editor_add_nodes_batch) failed with error -32000 | declared failure
+         [medium] call 170 (running_game_assert_node_state) failed with error -32001 | declared failure
+recomputed-vs-trace mismatches: none

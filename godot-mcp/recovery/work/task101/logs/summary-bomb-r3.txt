@@ -1,0 +1,22 @@
+run        : runs\bomberman\bomb-task101-r3
+game       : bomberman  tag: bomb-task101-r3  pillow: True
+editor : calls=14  facts=14/14  args=inline_complete=13, sidecar_verified=1
+         verdicts=failed=1, ok_effect_observed=1, ok_file_effect_observed=6, ok_no_effect_observed=6
+game   : calls=217 facts=217/217  args=inline_complete=217
+         verdicts=failed=1, ok_effect_observed=42, ok_file_effect_observed=146, ok_no_effect_observed=28
+------------------------------------------------------------------------------
+TOTAL  : calls=231  facts_complete=231/231 (100.0%)
+         verdicts=failed=2, ok_effect_observed=43, ok_file_effect_observed=152, ok_no_effect_observed=34
+pixels : 231 capture pairs, 45 recomputed non-zero (editor 1/14, game 44/217)
+         pixel_evidence verdict=available
+frames : 6 in C:\Users\wyl\AppData\Roaming\Godot\app_userdata\bomberman
+         bomb-t0.png  800x600     9653 B  068A055E4FA1  px_vs_prev=-
+         bomb-t1.png  800x600    10065 B  03A201463930  px_vs_prev=7541
+         bomb-t2.png  800x600     9333 B  32A41A677977  px_vs_prev=176025
+         bomb-t3.png  800x600     9964 B  D31DD4445C07  px_vs_prev=168478
+         bomb-t4.png  800x600     9534 B  C86EE8748F0E  px_vs_prev=74786
+         bomb-t5.png  800x600     9657 B  E4BF70FA22CD  px_vs_prev=114995
+defects: 2 (auto)
+         [medium] call 6 (editor_add_nodes_batch) failed with error -32000 | declared failure
+         [medium] call 211 (running_game_assert_node_state) failed with error -32001 | declared failure
+recomputed-vs-trace mismatches: none
