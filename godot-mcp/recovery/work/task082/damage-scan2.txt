@@ -1,0 +1,92 @@
+scanned=172
+
+=== A. HEAD does not start with license/include/pragma (unambiguous head truncation) ===
+  mcp_server.cpp                                   20934 B  first='static const int DEFAULT_EDITOR_PORT = 9877;'
+  tools/editor_node_read.cpp                       21233 B  first='// ---------------------------------------------------------------------------'
+  tools/running_game_read_scene.cpp                 7665 B  first='if (p_a.distance != p_b.distance) {'
+
+=== B. lexer found an UNTERMINATED literal/comment (unambiguous truncation) ===
+  tools/project_validate_scripts.cpp               14255 B  last='}'
+
+=== C. TAIL is not a balanced closer (unambiguous tail truncation) ===
+  register_types.h                                  2434 B  bd=0    pd=0    last='void uninitialize_mcp_server_module(ModuleInitializationLevel p_level);'
+  tool_registry.cpp                                25026 B  bd=3    pd=0    last='return Variant();'
+  tools/editor_animation_read.h                     6023 B  bd=0    pd=0    last='void register_editor_animation_read_tools(MCPToolRegistry &r_registry);'
+  tools/editor_animation_tree_write.h               8262 B  bd=0    pd=0    last='void register_editor_animation_tree_write_tools(MCPToolRegistry &r_registry);'
+  tools/editor_animation_write.h                    5524 B  bd=0    pd=0    last='void register_editor_animation_write_tools(MCPToolRegistry &r_registry);'
+  tools/editor_audio_read.h                         4612 B  bd=0    pd=0    last='void register_editor_audio_read_tools(MCPToolRegistry &r_registry);'
+  tools/editor_audio_write.h                        5285 B  bd=0    pd=0    last='void register_editor_audio_write_tools(MCPToolRegistry &r_registry);'
+  tools/editor_control_layout_write.h               4799 B  bd=0    pd=0    last='void register_editor_control_layout_write_tools(MCPToolRegistry &r_registry);'
+  tools/editor_input_read.h                         2952 B  bd=0    pd=0    last='void register_editor_input_read_tools(MCPToolRegistry &r_registry);'
+  tools/editor_input_simulation.cpp                46403 B  bd=2    pd=2    last='v1[String::utf8("type")] = String::utf8("string");'
+  tools/editor_input_simulation.h                   2596 B  bd=0    pd=0    last='void register_editor_input_simulation_tools(MCPToolRegistry &r_registry);'
+  tools/editor_navigation_read.h                    4881 B  bd=0    pd=0    last='void register_editor_navigation_read_tools(MCPToolRegistry &r_registry);'
+  tools/editor_navigation_write.h                   7391 B  bd=0    pd=0    last='void register_editor_navigation_write_tools(MCPToolRegistry &r_registry);'
+  tools/editor_node_batch_write.h                   8475 B  bd=0    pd=0    last='void register_editor_node_batch_write_tools(MCPToolRegistry &r_registry);'
+  tools/editor_node_instantiate.h                   5539 B  bd=0    pd=0    last='void register_editor_node_instantiate_tools(MCPToolRegistry &r_registry);'
+  tools/editor_node_property_updates.h              6646 B  bd=0    pd=0    last='void register_editor_node_property_updates_tools(MCPToolRegistry &r_registry);'
+  tools/editor_node_read.h                         11520 B  bd=0    pd=0    last='void register_editor_node_read_tools(MCPToolRegistry &r_registry);'
+  tools/editor_node_setup.h                         8671 B  bd=0    pd=0    last='void register_editor_node_setup_tools(MCPToolRegistry &r_registry);'
+  tools/editor_node_write.h                         9170 B  bd=0    pd=0    last='void register_editor_node_write_tools(MCPToolRegistry &r_registry);'
+  tools/editor_particle_read.h                      3723 B  bd=0    pd=0    last='void register_editor_particle_read_tools(MCPToolRegistry &r_registry);'
+  tools/editor_particle_write.h                     5477 B  bd=0    pd=0    last='void register_editor_particle_write_tools(MCPToolRegistry &r_registry);'
+  tools/editor_physics_read.h                       3745 B  bd=0    pd=0    last='void register_editor_physics_read_tools(MCPToolRegistry &r_registry);'
+  tools/editor_physics_write.h                      3751 B  bd=0    pd=0    last='void register_editor_physics_write_tools(MCPToolRegistry &r_registry);'
+  tools/editor_profiling_read.h                     4076 B  bd=0    pd=0    last='void register_editor_profiling_read_tools(MCPToolRegistry &r_registry);'
+  tools/editor_scene_3d_write.h                     4696 B  bd=0    pd=0    last='void register_editor_scene_3d_write_tools(MCPToolRegistry &r_registry);'
+  tools/editor_script_write.h                       6079 B  bd=0    pd=0    last='void register_editor_script_write_tools(MCPToolRegistry &r_registry);'
+  tools/editor_shader_write.h                       4940 B  bd=0    pd=0    last='void register_editor_shader_write_tools(MCPToolRegistry &r_registry);'
+  tools/editor_testing_read.cpp                    16931 B  bd=0    pd=0    last='schema[String::utf8("type")] = String::utf8("object");'
+  tools/editor_testing_read.h                       3923 B  bd=0    pd=0    last='void register_editor_testing_read_tools(MCPToolRegistry &r_registry);'
+  tools/editor_theme_write.h                        4222 B  bd=0    pd=0    last='void register_editor_theme_write_tools(MCPToolRegistry &r_registry);'
+  tools/editor_tilemap_read.h                       3970 B  bd=0    pd=0    last='void register_editor_tilemap_read_tools(MCPToolRegistry &r_registry);'
+  tools/editor_tilemap_write.h                      4927 B  bd=0    pd=0    last='void register_editor_tilemap_write_tools(MCPToolRegistry &r_registry);'
+  tools/editor_write_scene_editor.cpp              31738 B  bd=5    pd=0    last='builder.schema(_schema_from_json(R"schema({"properties":{"path":{"description":"'
+  tools/os_android_read.h                           3131 B  bd=0    pd=0    last='void register_os_android_read_tools(MCPToolRegistry &r_registry);'
+  tools/os_android_write.h                          3685 B  bd=0    pd=0    last='void register_os_android_write_tools(MCPToolRegistry &r_registry);'
+  tools/project.h                                   2405 B  bd=0    pd=0    last='void register_project_tools(MCPToolRegistry *p_registry);'
+  tools/project_android_read.h                      3236 B  bd=0    pd=0    last='void register_project_android_read_tools(MCPToolRegistry &r_registry);'
+  tools/project_autoload_write.h                    6019 B  bd=0    pd=0    last='void register_project_autoload_write_tools(MCPToolRegistry &r_registry);'
+  tools/project_cross_scene_write.h                 8995 B  bd=0    pd=0    last='void register_project_cross_scene_write_tools(MCPToolRegistry &r_registry);'
+  tools/project_csharp_build.h                     10389 B  bd=0    pd=0    last='void register_project_csharp_build_tools(MCPToolRegistry &r_registry);'
+  tools/project_export_read.h                       3132 B  bd=0    pd=0    last='void register_project_export_read_tools(MCPToolRegistry &r_registry);'
+  tools/project_read_analysis.h                     3488 B  bd=0    pd=0    last='void register_project_read_analysis_tools(MCPToolRegistry &r_registry);'
+  tools/project_read_template.h                     3175 B  bd=0    pd=0    last='void register_project_read_template_tools(MCPToolRegistry &r_registry);'
+  tools/project_resource_uid_read.h                 4233 B  bd=0    pd=0    last='void register_project_resource_uid_read_tools(MCPToolRegistry &r_registry);'
+  tools/project_script_write.h                      5702 B  bd=0    pd=0    last='void register_project_script_write_tools(MCPToolRegistry &r_registry);'
+  tools/project_setting_write.h                     5044 B  bd=0    pd=0    last='void register_project_setting_write_tools(MCPToolRegistry &r_registry);'
+  tools/project_shader_read.h                       3981 B  bd=0    pd=0    last='void register_project_shader_read_tools(MCPToolRegistry &r_registry);'
+  tools/project_shader_write.h                      4961 B  bd=0    pd=0    last='void register_project_shader_write_tools(MCPToolRegistry &r_registry);'
+  tools/project_text_write.h                        5297 B  bd=0    pd=0    last='void register_project_text_write_tools(MCPToolRegistry &r_registry);'
+  tools/project_theme_read.h                        2970 B  bd=0    pd=0    last='void register_project_theme_read_tools(MCPToolRegistry &r_registry);'
+  tools/project_theme_write.h                       6934 B  bd=0    pd=0    last='void register_project_theme_write_tools(MCPToolRegistry &r_registry);'
+  tools/project_write_resource_scene.cpp           24324 B  bd=0    pd=2    last='// two apart.'
+  tools/project_write_resource_scene.h              6537 B  bd=0    pd=0    last='void register_project_write_resource_scene_tools(MCPToolRegistry &r_registry);'
+  tools/registration.h                              2688 B  bd=0    pd=0    last='void register_all_tools(MCPToolRegistry &r_registry);'
+  tools/running_game_capture.h                      3452 B  bd=0    pd=0    last='void register_running_game_capture_tools(MCPToolRegistry &r_registry);'
+  tools/running_game_frame_observation.cpp         24265 B  bd=4    pd=0    last='if (!game_framebuffer_available()) {'
+  tools/running_game_input.h                        3481 B  bd=0    pd=0    last='void register_running_game_input_tools(MCPToolRegistry &r_registry);'
+  tools/running_game_navigation_write.h             6753 B  bd=0    pd=0    last='void register_running_game_navigation_write_tools(MCPToolRegistry &r_registry);'
+  tools/running_game_node_write.cpp                55362 B  bd=4    pd=0    last='// END generated'
+  tools/running_game_node_write.h                  13214 B  bd=0    pd=0    last='void register_running_game_node_write_tools(MCPToolRegistry &r_registry);'
+  tools/running_game_observation.h                  5247 B  bd=0    pd=0    last='void register_running_game_observation_tools(MCPToolRegistry &r_registry);'
+  tools/running_game_read_scene.cpp                 7665 B  bd=-1   pd=0    last='for (int i = 0; i < keep; i++) {'
+  tools/running_game_read_scene.h                   3501 B  bd=0    pd=0    last='void register_running_game_read_scene_tools(MCPToolRegistry &r_registry);'
+  tools/running_game_script_execution.h             3108 B  bd=0    pd=0    last='void register_running_game_script_execution_tools(MCPToolRegistry &r_registry);'
+  tools/running_game_test_execution.cpp            31267 B  bd=8    pd=0    last='ToolBuilder builder("running_game_run_test_scenario", String::utf8("运行测试场景并执行一系列'
+  tools/tool_helpers.h                             67121 B  bd=0    pd=0    last='//'
+
+=== D. balanced tail but brace/paren delta != 0 (interior block dropped) ===
+  tools/editor_node_batch_write.cpp                34848 B  bd=1    pd=0   
+  tools/editor_node_setup.cpp                      27389 B  bd=-1   pd=0   
+  tools/editor_node_write.cpp                      34020 B  bd=6    pd=0   
+  tools/project_read_files.h                       11846 B  bd=-1   pd=0   
+  tools/project_validate_scripts.cpp               14255 B  bd=2    pd=2   
+  tools/running_game_script_execution.cpp          11581 B  bd=-1   pd=0   
+
+=== E. summary ===
+  head-bad   : 3
+  unterminated: 1
+  tail-bad   : 66
+  delta-only : 6
+  fully clean: 98

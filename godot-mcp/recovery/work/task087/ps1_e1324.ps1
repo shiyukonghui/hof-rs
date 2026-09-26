@@ -1,0 +1,1313 @@
+# =============================================================================
+#  accept_m1.ps1 -- independent acceptance run for M1 of modules/mcp_server
+#
+#  Covers every row of DESIGN-DETAIL.md §9 (14 rows), plus hardening cases that
+#  are not part of §9 (connection reaping, `Expect: 100-continue`, 431 for an
+#  oversized header, 400 for a bare LF header terminator, and the verbose
+#  warning for a non-UTF-8 body), plus a guard that the user's own editor on
+#  port 9877 is left untouched.
+#
+#  TASK-004 §3.1 adds `case20_tools_list_cross_process_restart`: the *same*
+#  build served by two *independent* engine processes (the editor is stopped and
+#  started again on the same port/project) must answer `tools/list` with
+#  byte-identical response bodies. The pre-existing determinism cases only
+#  compare calls made to one running process (§17.4), so a build whose listing
+#  order depended on, say, a hash seed used at startup would have slipped
+#  through.
+#
+#  Port discipline (see ACCEPTANCE.md "environment facts"):
+#    * the editor owned by the user listens on 9877 and must never be touched;
+#    * this script therefore uses 9888 (editor side) / 9889 (game side) only;
+#    * the default-port logic (9877) is covered by unit tests, never by binding.
+#
+#  The script only ever kills the PIDs it started itself.
+#
+#  Reference contract: the equality gate compares against
+#  `modules/mcp_server/docs/tools_list.renamed.json`. That file is generated
+#  mechanically from the old hof-rs fixture
+#  `F:\moonbit-hof-rs\tests\fixtures\mcp\tools_list.json` by
+#  `modules/mcp_server/scripts/gen_renamed_contract.py`. The v1.2 generator is
+#  still a name-only rewrite plus **7 append-only description discriminators**
+#  (R-1/R-2/R-3, TASK-002 section 2.1); inputSchema is carried over character for
+#  character everywhere and every description is still compared verbatim, so the
+#  strictness of the gate is unchanged. The old fixture stays on the provenance
+#  chain as `_meta.generated_from` and `_meta.overrides` lists the 7 reasons.
+#
+#  Gate scope (R-4): the verbatim comparison covers the tools listed in
+#  `$ToolNames` (the implemented ones), never the whole 171 entry contract. The
+#  SUMMARY prints "implemented tools N / contract 171" and marks the deviation
+#  explicitly, so a per-batch green can never be read as a full-contract green.
+#
+#  TASK-006 §2 adds the process dimension: `$ToolNames` is the *editor*
+#  endpoint's union, `$GameToolNames` is the same union minus the tools whose
+#  `scope` is `editor` (docs/tool-rename-map.json is the authority for scope).
+#  `case12_game_process_endpoint` compares the game `tools/list` against
+#  `$GameToolNames`, asserts that no editor-scope tool leaked into it, and calls
+#  one of them to prove the refusal is -32601 rather than execution.
+#
+#  TASK-010 §1/§4 - B2 opened with the game-side observation group plus the E3
+#  lever `running_game_execute_gdscript`. Those tools are all `scope = game`, so
+#  they are absent from the editor endpoint's listing and present on the game
+#  endpoint's; the derived expectations (`$EditorToolNames` / `$GameToolNames` /
+#  the two only-lists) follow from the rename map, so every comparison case keeps
+#  working unchanged and no assertion is weakened.
+#
+#  TASK-018 §2 removed the hand-maintained literal this paragraph used to point
+#  at: `$ToolNames` is derived from the group manifests (see the block where it
+#  is built), so a new batch no longer edits this file at all. The per-batch
+#  manifests are `docs/tool-groups.json` and its `-b2`/`-b3`/`-b4`/`-b5` sisters;
+#  this script still does not *decode* them beyond the tools of the groups marked
+#  `implemented: true`, and the rename map remains the authority for `scope`.
+#
+#  Known engine facts this script works around (documented, not hidden):
+#    * `SocketServer::MAX_PENDING_CONNECTIONS` is 8, so more than 8 connections
+#      that are simultaneously pending while a frame is busy get reset by
+#      Windows. The concurrency case therefore uses 8 parallel connections with
+#      pipelined requests (100 requests in flight at once), and waits for the
+#      editor's main loop to pump steadily before starting.
+#    * the captured snapshot in hof-rs is the authoritative fixture and is
+#      compared *verbatim*: name, description and inputSchema must match
+#      character for character (case included).  An earlier revision of this
+#      script also accepted the Latin-1 recovery of a description double
+#      encoded by a PowerShell round trip; that fallback made the gate unable
+#      to reject a server emitting mojibake, and it also silently covered the
+#      nested descriptions inside `inputSchema`.  The fixture has since been
+#      re-captured as clean UTF-8 (GDR-13), so both the fallback and the
+#      double encoding are gone.
+#    * "the connection is closed after 413" is proven *positively*: a read
+#      timeout is not evidence of closure - the same idiom reports "closed" on a
+#      keep-alive connection that is demonstrably alive (GDR-12.1).  The check
+#      therefore requires a zero length read (FIN), a reset, a failed write, or
+#      a probe request that is never answered.
+#
+#  Usage:  powershell -NoProfile -ExecutionPolicy Bypass -File accept_m1.ps1
+# =============================================================================
+
+$ErrorActionPreference = 'Stop'
+
+$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
+$Engine = Join-Path $RepoRoot 'bin\godot.windows.editor.x86_64.console.exe'
+$RenamedContract = Join-Path $RepoRoot 'modules\mcp_server\docs\tools_list.renamed.json'
+$EditorPort = 9888
+$GamePort = 9889
+$UserPort = 9877
+$ScratchRoot = Join-Path $env:TEMP 'godot-mcp-m1-scratch'
+$LogRoot = Join-Path $env:TEMP 'godot-mcp-m1-logs'
+
+# TASK-028 D-1: the one hardened scratch-project writer + `--import` runner. Two
+# rules of the PLAYBOOK's section 3 are implemented there and used below: a
+# scratch file is never written with a BOM (`Set-Content -Encoding UTF8` on
+# Windows PowerShell 5.1 prepends one), and `--import`'s exit code is checked
+# with a bounded retry and a diagnosis printed on every failure. This acceptance
+# gate used to do neither.
+. (Join-Path $PSScriptRoot 'mcp_import_guard.ps1')
+# TASK-018 section 2: `$ToolNames` is **derived from the manifests** instead of
+# being a hand-maintained literal.
+#
+# Until TASK-018 this was a literal array that every batch had to append to by
+# hand (TASK-014/015/016/017 each did, and each recorded it as a declared
+# deviation), which is exactly the kind of list that drifts: a tool can be
+# implemented and registered while this file still does not know about it, and
+# the equality gate then silently keeps testing the previous batch's set.
+#
+# The single source of truth is now the per-batch group manifests
+# (`docs/tool-groups.json`, `-b2`, `-b3`, `-b4`, `-b5`): the expected set is the
+# union of the `tools` of every group marked `implemented: true`, in manifest
+# order, de-duplicated. Every assertion below keeps its exact form and strength -
+# `$EditorToolNames` / `$GameToolNames` / `$EditorOnlyToolNames` /
+# `$GameOnlyToolNames` are still derived from `$ToolNames` through the rename
+# map, `case3` and `case12` still compare every name/description/inputSchema
+# verbatim, and `gate_scope_declared` still checks the implemented count against
+# the 171 entry contract. Nothing is weakened; adding a batch now needs no edit
+# to this file at all.
+#
+# A missing manifest is fatal on purpose: skipping one would silently shrink the
+# expected set, which is the failure mode this derivation exists to prevent.
+$ManifestFileNames = @(
+    'tool-groups.json',
+    'tool-groups-b2.json',
+    'tool-groups-b3.json',
+    'tool-groups-b4.json',
+    'tool-groups-b5.json',
+    'tool-groups-added.json'
+)
+$ToolNames = @()
+foreach ($manifestFileName in $ManifestFileNames) {
+    $manifestPath = Join-Path $RepoRoot ('modules\mcp_server\docs\' + $manifestFileName)
+    if (-not (Test-Path $manifestPath)) { throw ("group manifest not found: {0}" -f $manifestPath) }
+    $manifestJson = ConvertFrom-Json (Get-Content -Raw -Encoding UTF8 $manifestPath)
+    foreach ($manifestGroup in @($manifestJson.groups)) {
+        if ($manifestGroup.implemented -ne $true) { continue }
+        foreach ($manifestTool in @($manifestGroup.tools)) {
+            if ($ToolNames -notcontains $manifestTool) { $ToolNames += [string]$manifestTool }
+        }
+    }
+}
+if ($ToolNames.Count -eq 0) { throw 'no implemented tool found in any group manifest' }
+Write-Host ("derived tool union : {0} tool(s) from groups marked implemented in {1}" -f `
+    $ToolNames.Count, ($ManifestFileNames -join ', '))
+# TASK-006 §2: `$ToolNames` is the union of every implemented tool. The *editor*
+# endpoint serves that union minus every tool whose `scope` is `game`, and the
+# game endpoint serves it minus every tool whose `scope` is `editor`
+# (docs/tool-rename-map.json is the authority for scope). TASK-009 added the
+# first `scope = game` tool, so the editor-side expectation needs its own
+# derived list; before that "every implemented tool" and "the editor endpoint"
+# happened to be the same set.
+$RenameMap = Join-Path $RepoRoot 'modules\mcp_server\docs\tool-rename-map.json'
+$Script:MapJson = $null
+$Script:AddedScopeOf = $null
+function Get-ToolScope {
+    param([string]$Name)
+    if ($null -eq $Script:MapJson) {
+        if (-not (Test-Path $RenameMap)) { throw "rename map not found: $RenameMap" }
+        $Script:MapJson = ConvertFrom-Json (Get-Content -Raw -Encoding UTF8 $RenameMap)
+    }
+    foreach ($entry in @($Script:MapJson.tools)) {
+        if ([string]$entry.new_name -ceq $Name) { return [string]$entry.scope }
+    }
+    # TASK-052: an added tool has no rename-map row; its group in
+    # docs/tool-groups-added.json declares the scope instead (the same source
+    # check_contract_subset.ps1 reads, so gate 1 and this gate cannot disagree).
+    if ($null -eq $Script:AddedScopeOf) {
+        $Script:AddedScopeOf = @{}
+        $addedManifest = Join-Path $RepoRoot 'modules\mcp_server\docs\tool-groups-added.json'
+        if (Test-Path $addedManifest) {
+            $addedDoc = ConvertFrom-Json (Get-Content -Raw -Encoding UTF8 $addedManifest)
+            foreach ($addedGroup in @($addedDoc.groups)) {
+                foreach ($addedTool in @($addedGroup.tools)) {
+                    $Script:AddedScopeOf[[string]$addedTool] = [string]$addedGroup.scope
+                }
+            }
+        }
+    }
+    if ($Script:AddedScopeOf.ContainsKey($Name)) { return [string]$Script:AddedScopeOf[$Name] }
+    return ''
+}
+$EditorOnlyToolNames = @($ToolNames | Where-Object { (Get-ToolScope $_) -eq 'editor' })
+$GameOnlyToolNames = @($ToolNames | Where-Object { (Get-ToolScope $_) -eq 'game' })
+$GameToolNames = @($ToolNames | Where-Object { (Get-ToolScope $_) -ne 'editor' })
+# What the editor endpoint (9888) serves: the union minus the game-only tools.
+$EditorToolNames = @($ToolNames | Where-Object { (Get-ToolScope $_) -ne 'game' })
+# R-4 (audit REPORT-AUDIT-001 rename-map v1.1): the verbatim equality gate covers
+# the tools that are *implemented*, not the whole contract. Anything less than the
+# full contract is a batch gate, not a full-contract gate, and the SUMMARY says so
+# explicitly. Registering an unimplemented tool to make the count look complete is
+# forbidden (GDR-7).
+#
+# TASK-052 section 0 (GDR-28 point 2): this used to be the literal 171. The
+# contract is `171 + N` now, so the size is derived from the contract's own
+# `_meta`: `count` is `len(result.tools)` and `added_count` is how many of those
+# the generator's ADDED_TOOLS table authored. The 171 half stays a checked
+# literal on purpose - if the contract ever silently lost a ported entry, the two
+# numbers would still agree and this guard is what catches it.
+if (-not (Test-Path $RenamedContract)) { throw ("renamed contract not found: {0}" -f $RenamedContract) }
+$ContractDocForSize = ConvertFrom-Json (Get-Content -Raw -Encoding UTF8 $RenamedContract)
+$ExpectedAddedCount = [int]$ContractDocForSize._meta.added_count
+$ExpectedContractSize = [int]@($ContractDocForSize.result.tools).Count
+if ($ExpectedContractSize -ne (171 + $ExpectedAddedCount)) {
+    throw ("contract size {0} is not 171 + added_count {1}" -f $ExpectedContractSize, $ExpectedAddedCount)
+}
+Write-Host ("contract size      : {0} = 171 ported + {1} added (GDR-28)" -f `
+    $ExpectedContractSize, $ExpectedAddedCount)
+
+$script:StartedPids = New-Object System.Collections.Generic.List[int]
+# TASK-041 section 1.3: the *arguments* of every engine this script started, keyed
+# by pid. The 9877 guard below proves two things about the user port - that no
+# process this script started owns it, and that none of them was even asked for it
+# - and the second one needs the real command lines, not an inference.
+$script:StartedArguments = @{}
+$script:Results = New-Object System.Collections.Generic.List[object]
+
+# -----------------------------------------------------------------------------
+# Reporting helpers
+# -----------------------------------------------------------------------------
+
+function Record-Result {
+    param([string]$Id, [bool]$Pass, [string]$Evidence)
+    $script:Results.Add([pscustomobject]@{ id = $Id; pass = $Pass; evidence = $Evidence })
+    $tag = if ($Pass) { 'PASS' } else { 'FAIL' }
+    Write-Host ("[{0}] {1}" -f $tag, $Id)
+    Write-Host ("       {0}" -f $Evidence)
+}
+
+function Invoke-Case {
+    param([string]$Id, [scriptblock]$Body)
+    try {
+        $result = & $Body
+        Record-Result -Id $Id -Pass ([bool]$result.pass) -Evidence ([string]$result.evidence)
+    } catch {
+        Record-Result -Id $Id -Pass $false -Evidence ("exception: " + $_.Exception.Message)
+    }
+}
+
+# -----------------------------------------------------------------------------
+# Small utilities
+# -----------------------------------------------------------------------------
+
+function Get-CanonicalJson {
+    param($Value)
+    if ($null -eq $Value) { return 'null' }
+    if ($Value -is [bool]) { if ($Value) { return 'true' } else { return 'false' } }
+    if ($Value -is [string]) { return (ConvertTo-Json $Value -Compress) }
+    if ($Value -is [System.Management.Automation.PSCustomObject]) {
+        $parts = @()
+        foreach ($p in ($Value.PSObject.Properties | Sort-Object Name)) {
+            $parts += ('"' + $p.Name + '":' + (Get-CanonicalJson $p.Value))
+        }
+        return '{' + ($parts -join ',') + '}'
+    }
+    if ($Value -is [System.Collections.IEnumerable]) {
+        $parts = @()
+        foreach ($item in $Value) { $parts += (Get-CanonicalJson $item) }
+        return '[' + ($parts -join ',') + ']'
+    }
+    return (ConvertTo-Json $Value -Compress)
+}
+
+# Compares a `tools/list` payload against the authoritative snapshot. Every
+# field is compared verbatim (case sensitive): name, description and
+# inputSchema. There is deliberately no tolerance for a Latin-1 recovery of a
+# description - that fallback used to make this gate unable to reject a server
+# that emits mojibake (GDR-13).
+function Compare-ToolListToFixture {
+    param($ActualTools, [string[]]$Names = $null)
+    if ($null -eq $Names) { $Names = $EditorToolNames }
+    if (-not (Test-Path $RenamedContract)) {
+        Write-Host ("FATAL: renamed contract not found: {0}" -f $RenamedContract)
+        Write-Host '        regenerate it with modules\mcp_server\scripts\gen_renamed_contract.py'
+        exit 2
+    }
+    $fixtureJson = ConvertFrom-Json (Get-Content -Raw -Encoding UTF8 $RenamedContract)
+    $fixtureTools = @($fixtureJson.result.tools | Where-Object { $Names -ccontains $_.name })
+    $ok = ($ActualTools.Count -eq $Names.Count) -and ($fixtureTools.Count -eq $Names.Count)
+    $notes = @()
+    foreach ($name in $Names) {
+        $actual = @($ActualTools | Where-Object { $_.name -ceq $name })
+        $expected = @($fixtureTools | Where-Object { $_.name -ceq $name })
+        if ($actual.Count -ne 1 -or $expected.Count -ne 1) {
+            $ok = $false
+            $notes += ("{0}: count actual={1} fixture={2}" -f $name, $actual.Count, $expected.Count)
+            continue
+        }
+        $nameEqual = ([string]$actual[0].name -ceq [string]$expected[0].name)
+        if (-not $nameEqual) { $ok = $false; $notes += ("{0}: name differs ('{1}' vs '{2}')" -f $name, $actual[0].name, $expected[0].name) }
+
+        $schemaEqual = (Get-CanonicalJson $actual[0].inputSchema) -ceq (Get-CanonicalJson $expected[0].inputSchema)
+        if (-not $schemaEqual) { $ok = $false; $notes += ("{0}: inputSchema differs" -f $name) }
+
+        $descriptionEqual = ([string]$actual[0].description -ceq [string]$expected[0].description)
+        if (-not $descriptionEqual) { $ok = $false; $notes += ("{0}: description differs" -f $name) }
+
+        $notes += ("{0}: name_verbatim={1} inputSchema_verbatim={2} description_verbatim={3} fixture_description='{4}' actual_description='{5}'" -f `
+            $name, $nameEqual, $schemaEqual, $descriptionEqual, $expected[0].description, $actual[0].description)
+    }
+    return @{ ok = $ok; notes = ($notes -join ' | ') }
+}
+
+function Test-Listener {
+    param([int]$Port)
+    $lines = & netstat -ano -p TCP 2>$null
+    foreach ($line in $lines) {
+        if ($line -match 'LISTENING' -and $line -match ("[:\]]" + $Port + "\s")) { return $true }
+    }
+    return $false
+}
+
+function Get-ListenerPid {
+    param([int]$Port)
+    $lines = & netstat -ano -p TCP 2>$null
+    foreach ($line in $lines) {
+        if ($line -match 'LISTENING' -and $line -match ("[:\]]" + $Port + "\s")) {
+            $fields = ($line.Trim() -split '\s+')
+            return [int]$fields[-1]
+        }
+    }
+    return -1
+}
+
+function Test-TcpConnect {
+    param([int]$Port, [int]$TimeoutMs = 800)
+    $client = New-Object System.Net.Sockets.TcpClient
+    try {
+        $task = $client.ConnectAsync('127.0.0.1', $Port)
+        if (-not $task.Wait($TimeoutMs)) { return $false }
+        return $client.Connected
+    } catch {
+        return $false
+    } finally {
+        $client.Close()
+    }
+}
+
+function Wait-ForTcp {
+    param([int]$Port, [int]$TimeoutMs = 120000)
+    $deadline = [DateTime]::UtcNow.AddMilliseconds($TimeoutMs)
+    while ([DateTime]::UtcNow -lt $deadline) {
+        if (Test-TcpConnect -Port $Port -TimeoutMs 500) { return $true }
+        Start-Sleep -Milliseconds 500
+    }
+    return $false
+}
+
+function Wait-ForLogLine {
+    param([string]$Path, [string]$Pattern, [int]$TimeoutMs = 90000)
+    $deadline = [DateTime]::UtcNow.AddMilliseconds($TimeoutMs)
+    while ([DateTime]::UtcNow -lt $deadline) {
+        if (Test-Path $Path) {
+            $text = Get-Content -Raw -Path $Path -ErrorAction SilentlyContinue
+            if ($text -and $text -match $Pattern) { return $true }
+        }
+        Start-Sleep -Milliseconds 500
+    }
+    return $false
+}
+
+function Get-LogText {
+    param([string]$Path)
+    if (Test-Path $Path) { return (Get-Content -Raw -Path $Path -ErrorAction SilentlyContinue) }
+    return ''
+}
+
+function Get-McpLogLines {
+    param([string]$Path)
+    return (((Get-LogText -Path $Path) -split "`n" | Where-Object { $_ -match '\[MCP\]' }) -join ' | ')
+}
+
+# -----------------------------------------------------------------------------
+# Raw HTTP client (the server speaks a hand rolled HTTP/1.1 subset)
+# -----------------------------------------------------------------------------
+
+function New-Reader {
+    param($Stream)
+    return [pscustomobject]@{
+        Stream = $Stream
+        Buffer = (New-Object System.Collections.Generic.List[byte])
+    }
+}
+
+function Find-HeaderEnd {
+    param([byte[]]$Bytes)
+    for ($i = 0; $i -le $Bytes.Length - 4; $i++) {
+        if ($Bytes[$i] -eq 13 -and $Bytes[$i + 1] -eq 10 -and $Bytes[$i + 2] -eq 13 -and $Bytes[$i + 3] -eq 10) {
+            return $i
+        }
+    }
+    return -1
+}
+
+function Read-Message {
+    param($Reader, [int]$TimeoutMs = 10000)
+    $deadline = [DateTime]::UtcNow.AddMilliseconds($TimeoutMs)
+    $buf = New-Object byte[] 16384
+    while ([DateTime]::UtcNow -lt $deadline) {
+        $data = $Reader.Buffer.ToArray()
+        $he = Find-HeaderEnd -Bytes $data
+        if ($he -ge 0) {
+            $headerText = [Text.Encoding]::ASCII.GetString($data, 0, $he)
+            $cl = 0
+            foreach ($line in ($headerText -split "`r`n")) {
+                if ($line -match '^(?i)content-length:\s*(\d+)\s*$') { $cl = [int]$Matches[1] }
+            }
+            if (($data.Length - ($he + 4)) -ge $cl) {
+                $body = [Text.Encoding]::UTF8.GetString($data, $he + 4, $cl)
+                $status = 0
+                if ($headerText -match '^HTTP/1\.1\s+(\d+)') { $status = [int]$Matches[1] }
+                $Reader.Buffer.RemoveRange(0, $he + 4 + $cl)
+                return [pscustomobject]@{ Complete = $true; Status = $status; Header = $headerText; Body = $body }
+            }
+        }
+        if ($Reader.Stream.DataAvailable) {
+            $n = $Reader.Stream.Read($buf, 0, $buf.Length)
+            if ($n -gt 0) {
+                $chunk = New-Object byte[] $n
+                [Array]::Copy($buf, 0, $chunk, 0, $n)
+                $Reader.Buffer.AddRange($chunk)
+            } else {
+                Start-Sleep -Milliseconds 15
+            }
+        } else {
+            Start-Sleep -Milliseconds 15
+        }
+    }
+    return [pscustomobject]@{ Complete = $false; Status = 0; Header = ''; Body = '' }
+}
+
+# PowerShell wraps a failed NetworkStream.Read twice (MethodInvocationException
+# -> IOException -> SocketException), so the socket error code has to be dug out
+# of the inner exception chain.
+function Get-SocketErrorCode {
+    param($ErrorRecord)
+    $ex = $ErrorRecord.Exception
+    $depth = 0
+    while ($null -ne $ex -and $depth -lt 8) {
+        if ($ex.GetType().FullName -eq 'System.Net.Sockets.SocketException') { return [string]$ex.SocketErrorCode }
+        $ex = $ex.InnerException
+        $depth++
+    }
+    return ''
+}
+
+# Positive proof that the peer closed the connection (GDR-12.1 / D-1).
+#
+# A read timeout alone is NOT proof of closure: on a keep-alive connection that
+# is demonstrably alive, "read one byte and call the timeout closed" reports
+# closed=True (measured: it returns after the timeout and the same socket then
+# serves another request in ~20 ms). One of these positive outcomes is required
+# instead:
+#   * FIN   - a zero length read, i.e. the peer sent FIN;
+#   * RESET - a socket error other than a timeout (e.g. connection reset);
+#   * WRITE_FAILED - the probe request could not even be written;
+#   * NO_RESPONSE - the probe was written and never answered within the timeout
+#     (a live server answers `ping` in milliseconds).
+# `kind` is returned so the evidence string states which proof fired.
+function Test-PeerClosed {
+    param($Conn, [string]$ProbeBody, [string]$ProbeId, [int]$TimeoutMs = 3000, [int]$FinWaitMs = 300)
+
+    # Step 1: has the peer already closed? A graceful close is a zero length
+    # read; a timeout here only means "no FIN yet", not "closed".
+    $data = New-Object System.Collections.Generic.List[byte]
+    $buf = New-Object byte[] 8192
+    try {
+        $Conn.Stream.ReadTimeout = $FinWaitMs
+        $n = $Conn.Stream.Read($buf, 0, $buf.Length)
+        if ($n -eq 0) {
+            return [pscustomobject]@{ closed = $true; kind = 'FIN'; detail = ("zero-length read (peer FIN) within {0} ms of the last response" -f $FinWaitMs) }
+        }
+        $chunk = New-Object byte[] $n
+        [Array]::Copy($buf, 0, $chunk, 0, $n)
+        $data.AddRange($chunk)
+    } catch {
+        $code = Get-SocketErrorCode -ErrorRecord $_
+        if ($code -ne 'TimedOut') {
+            return [pscustomobject]@{ closed = $true; kind = 'RESET'; detail = ("socket error {0}: {1}" -f $code, $_.Exception.Message) }
+        }
+    }
+
+    # Step 2: the probe. A live server answers `ping` in milliseconds.
+    try {
+        Send-McpRequest -Conn $Conn -Body $ProbeBody
+    } catch {
+        return [pscustomobject]@{ closed = $true; kind = 'WRITE_FAILED'; detail = ("write to the socket failed: {0}" -f $_.Exception.Message) }
+    }
+    $clock = [Diagnostics.Stopwatch]::StartNew()
+    try {
+        $Conn.Stream.ReadTimeout = $TimeoutMs
+        while ($true) {
+            $n = $Conn.Stream.Read($buf, 0, $buf.Length)
+            if ($n -eq 0) {
+                $clock.Stop()
+                return [pscustomobject]@{ closed = $true; kind = 'FIN'; detail = ("zero-length read (peer FIN) {0} ms after the probe" -f $clock.ElapsedMilliseconds) }
+            }
+            $chunk = New-Object byte[] $n
+            [Array]::Copy($buf, 0, $chunk, 0, $n)
+            $data.AddRange($chunk)
+            $text = [Text.Encoding]::UTF8.GetString($data.ToArray())
+            if ($text -match [regex]::Escape(('"' + $ProbeId + '"'))) {
+                $clock.Stop()
+                return [pscustomobject]@{ closed = $false; kind = 'ANSWERED'; detail = ("probe answered after {0} ms: {1}" -f $clock.ElapsedMilliseconds, (($text -replace "`r`n", ' ').Trim())) }
+            }
+        }
+    } catch {
+        $clock.Stop()
+        $code = Get-SocketErrorCode -ErrorRecord $_
+        if ($code -eq 'TimedOut') {
+            return [pscustomobject]@{ closed = $true; kind = 'NO_RESPONSE'; detail = ("probe written, no response within {0} ms (read timed out)" -f $TimeoutMs) }
+        }
+        return [pscustomobject]@{ closed = $true; kind = 'RESET'; detail = ("socket error {0}: {1}" -f $code, $_.Exception.Message) }
+    }
+}
+
+function Open-Connection {
+    param([int]$Port, [int]$TimeoutMs = 5000)
+    $client = New-Object System.Net.Sockets.TcpClient
+    $task = $client.ConnectAsync('127.0.0.1', $Port)
+    if (-not $task.Wait($TimeoutMs)) { throw "connect to 127.0.0.1:$Port timed out" }
+    $client.NoDelay = $true
+    return [pscustomobject]@{ Client = $client; Stream = $client.GetStream() }
+}
+
+function Send-Bytes {
+    param($Conn, [byte[]]$Bytes)
+    $Conn.Stream.Write($Bytes, 0, $Bytes.Length)
+    $Conn.Stream.Flush()
+}
+
+function Send-Text {
+    param($Conn, [string]$Text)
+    Send-Bytes -Conn $Conn -Bytes ([Text.Encoding]::UTF8.GetBytes($Text))
+}
+
+function Send-McpRequest {
+    param($Conn, [string]$Body)
+    $bytes = [Text.Encoding]::UTF8.GetBytes($Body)
+    $head = "POST /mcp HTTP/1.1`r`nHost: 127.0.0.1`r`nContent-Type: application/json`r`nContent-Length: $($bytes.Length)`r`n`r`n"
+    Send-Text -Conn $Conn -Text $head
+    Send-Bytes -Conn $Conn -Bytes $bytes
+}
+
+function Invoke-Mcp {
+    param([int]$Port, [string]$Body, [int]$TimeoutMs = 15000)
+    $Conn = Open-Connection -Port $Port
+    try {
+        Send-McpRequest -Conn $Conn -Body $Body
+        return Read-Message -Reader (New-Reader -Stream $Conn.Stream) -TimeoutMs $TimeoutMs
+    } finally {
+        $Conn.Client.Close()
+    }
+}
+
+function Invoke-StatusProbe {
+    param([int]$Port)
+    try {
+        $Conn = Open-Connection -Port $Port -TimeoutMs 3000
+        try {
+            Send-Text -Conn $Conn -Text ("GET /mcp HTTP/1.1`r`nHost: 127.0.0.1`r`n`r`n")
+            return (Read-Message -Reader (New-Reader -Stream $Conn.Stream) -TimeoutMs 8000)
+        } finally { $Conn.Client.Close() }
+    } catch {
+        return [pscustomobject]@{ Complete = $false; Status = 0; Header = ''; Body = '' }
+    }
+}
+
+function ConvertFrom-JsonSafe {
+    param([string]$Text)
+    try { return ($Text | ConvertFrom-Json) } catch { return $null }
+}
+
+# The editor spends a while on its first filesystem scan and layout load. If a
+# frame takes long, connections pending beyond the listen backlog are reset by
+# the OS, so every case waits until the pump runs steadily first.
+function Wait-ForStablePump {
+    param([int]$Port, [int]$TimeoutMs = 180000)
+    $deadline = [DateTime]::UtcNow.AddMilliseconds($TimeoutMs)
+    $consecutive = 0
+    $previous = $null
+    while ([DateTime]::UtcNow -lt $deadline) {
+        $probe = Invoke-StatusProbe -Port $Port
+        $json = ConvertFrom-JsonSafe -Text $probe.Body
+        if ($null -ne $json) {
+            $frames = [int]$json.frame_count
+            if ($null -ne $previous -and ($frames - $previous) -ge 20) { $consecutive++ } else { $consecutive = 0 }
+            if ($consecutive -ge 3) { return $true }
+            $previous = $frames
+        }
+        Start-Sleep -Milliseconds 1000
+    }
+    return $false
+}
+
+# -----------------------------------------------------------------------------
+# Engine process management
+# -----------------------------------------------------------------------------
+
+function Start-Engine {
+    param([string[]]$Arguments, [string]$LogName)
+    $out = Join-Path $LogRoot ($LogName + '.out.log')
+    $err = Join-Path $LogRoot ($LogName + '.err.log')
+    Remove-Item -Path $out, $err -ErrorAction SilentlyContinue
+    $proc = Start-Process -FilePath $Engine -ArgumentList $Arguments -PassThru `
+        -RedirectStandardOutput $out -RedirectStandardError $err -WindowStyle Hidden
+    $script:StartedPids.Add($proc.Id)
+    $script:StartedArguments[[int]$proc.Id] = ($Arguments -join ' ')
+    return [pscustomobject]@{ Process = $proc; Out = $out; Err = $err }
+}
+
+function Stop-Engine {
+    param($Handle)
+    if ($null -eq $Handle) { return }
+    try {
+        if (-not $Handle.Process.HasExited) {
+            Stop-Process -Id $Handle.Process.Id -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Milliseconds 800
+        }
+    } catch { }
+}
+
+function Ensure-ScratchProject {
+    param([string]$Path, [string]$Name, [bool]$WithMainScene)
+    New-Item -ItemType Directory -Force -Path $Path | Out-Null
+    $lines = @(
+        'config_version=5',
+        '',
+        '[application]',
+        ('config/name="' + $Name + '"'),
+        'config/features=PackedStringArray("4.8")'
+    )
+    if ($WithMainScene) {
+        $lines += 'run/main_scene="res://scenes/main.tscn"'
+    }
+    $lines += @(
+        '',
+        '[rendering]',
+        'renderer/rendering_method="gl_compatibility"',
+        'renderer/rendering_method.mobile="gl_compatibility"'
+    )
+    # TASK-028 D-1: no BOM. `Set-Content -Encoding UTF8` writes one on Windows
+    # PowerShell 5.1, which is what the scratch project's text files used to get.
+    Write-McpUtf8NoBom -Path (Join-Path $Path 'project.godot') -Text (($lines -join "`n") + "`n")
+
+    if ($WithMainScene) {
+        $sceneDir = Join-Path $Path 'scenes'
+        New-Item -ItemType Directory -Force -Path $sceneDir | Out-Null
+        Write-McpUtf8NoBom -Path (Join-Path $sceneDir 'main.tscn') -Text ("[gd_scene format=3]`n`n[node name=`"Main`" type=`"Node`"]`n")
+    }
+}
+
+function Import-Project {
+    param([string]$Path, [string]$LogName)
+    # TASK-028 D-1: the exit code is checked, a failure is retried a bounded
+    # number of times, and every failure prints the command, the code, the log
+    # path and the log's tail. The old body ignored the result entirely.
+    $result = Import-McpProject -Engine $Engine -Path $Path -LogDirectory $LogRoot -Name $LogName
+    $script:LastImportAttempts = $result.attempts
+    Write-Host ("import {0}: exit 0 on attempt {1}" -f $Path, $result.attempts)
+    return $result.attempts
+}
+# =============================================================================
+#  Main
+# =============================================================================
+
+Write-Host '============================================================='
+Write-Host ' M1 acceptance -- modules/mcp_server'
+Write-Host '============================================================='
+
+if (-not (Test-Path $Engine)) {
+    Write-Host "FATAL: engine binary not found: $Engine"
+    exit 2
+}
+
+New-Item -ItemType Directory -Force -Path $ScratchRoot, $LogRoot | Out-Null
+$EditorProject = Join-Path $ScratchRoot 'editor'
+$GameProject = Join-Path $ScratchRoot 'game'
+
+$userPortPidBefore = Get-ListenerPid -Port $UserPort
+Write-Host ("user editor on {0} before run: pid={1}" -f $UserPort, $userPortPidBefore)
+
+$script:editorHandle = $null
+$script:gameHandle = $null
+$script:gameNoPortHandle = $null
+$script:occupiedHandle = $null
+$script:blocker = $null
+
+try {
+    # ------------------------------------------------------------------
+    # Setup
+    # ------------------------------------------------------------------
+    Ensure-ScratchProject -Path $EditorProject -Name 'M1 Editor Scratch' -WithMainScene $false
+    Ensure-ScratchProject -Path $GameProject -Name 'M1 Game Scratch' -WithMainScene $true
+
+    Write-Host 'importing scratch projects ...'
+    Import-Project -Path $EditorProject -LogName 'import-editor'
+    Import-Project -Path $GameProject -LogName 'import-game'
+
+    $script:editorHandle = Start-Engine -Arguments @('--headless', '--verbose', '-e', '--path', $EditorProject, "--mcp-port=$EditorPort") -LogName 'editor'
+    if (-not (Wait-ForTcp -Port $EditorPort -TimeoutMs 180000)) {
+        Write-Host 'FATAL: editor endpoint never came up'
+        Write-Host (Get-LogText -Path $script:editorHandle.Out)
+        Write-Host (Get-LogText -Path $script:editorHandle.Err)
+        throw 'editor endpoint not reachable'
+    }
+    Write-Host 'waiting for a steadily pumping main loop ...'
+    if (-not (Wait-ForStablePump -Port $EditorPort -TimeoutMs 180000)) {
+        Write-Host 'WARNING: the pump never looked steady, running the cases anyway'
+    }
+
+    # --- case 1: GET /mcp --------------------------------------------------
+    Invoke-Case 'case1_GET_mcp_200' {
+        $first = Invoke-StatusProbe -Port $EditorPort
+        $firstJson = ConvertFrom-JsonSafe -Text $first.Body
+        Start-Sleep -Milliseconds 1500
+        $second = Invoke-StatusProbe -Port $EditorPort
+        $secondJson = ConvertFrom-JsonSafe -Text $second.Body
+        $ok = ($first.Status -eq 200) -and ($null -ne $firstJson) -and
+              ($firstJson.port -eq $EditorPort) -and ($firstJson.is_editor -eq $true) -and
+              ($firstJson.tools -eq $EditorToolNames.Count) -and ($null -ne $secondJson) -and
+              ($secondJson.frame_count -gt $firstJson.frame_count)
+        return @{
+            pass = $ok
+            evidence = ("status={0} body={1}; pump frame_count {2} -> {3}" -f $first.Status, $first.Body, $firstJson.frame_count, $secondJson.frame_count)
+        }
+    }
+
+    # --- case 2: initialize ------------------------------------------------
+    Invoke-Case 'case2_initialize' {
+        $init = Invoke-Mcp -Port $EditorPort -Body '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}'
+        $json = ConvertFrom-JsonSafe -Text $init.Body
+        $ok = ($init.Status -eq 200) -and ($null -ne $json) -and
+              ($json.result.protocolVersion -eq '2025-03-26') -and ($json.result.serverInfo.name -eq 'godot-mcp-rs')
+        return @{ pass = $ok; evidence = ("status={0} body={1}" -f $init.Status, $init.Body) }
+    }
+
+    # --- case 3: tools/list vs the authoritative fixture --------------------
+    Invoke-Case 'case3_tools_list_fixture' {
+        $list = Invoke-Mcp -Port $EditorPort -Body '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}'
+        $listJson = ConvertFrom-JsonSafe -Text $list.Body
+        if ($null -eq $listJson -or $null -eq $listJson.result) {
+            return @{ pass = $false; evidence = ("no result: {0}" -f $list.Body) }
+        }
+        if ((Test-Path $RenamedContract) -eq $false) {
+            return @{ pass = $false; evidence = ("renamed contract missing: {0}" -f $RenamedContract) }
+        }
+        $actualTools = @($listJson.result.tools)
+        $comparison = Compare-ToolListToFixture -ActualTools $actualTools
+        # TASK-009: the first game-only tool must not leak into the editor
+        # endpoint's listing (the mirror of case12's editor-scope leak check).
+        $actualNames = @($actualTools | ForEach-Object { [string]$_.name })
+        $gameLeaked = @($actualNames | Where-Object { $GameOnlyToolNames -contains $_ })
+        return @{
+            pass = ($comparison.ok -and ($gameLeaked.Count -eq 0))
+            evidence = ("tools={0}; game_scope_leaked=[{1}]; {2}" -f $actualTools.Count, ($gameLeaked -join ','), $comparison.notes)
+        }
+    }
+
+    # --- case 4: tools/call project_get_info success ------------------------
+    Invoke-Case 'case4_tools_call_project_info' {
+        $call = Invoke-Mcp -Port $EditorPort -Body '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"project_get_info","arguments":{}}}'
+        $json = ConvertFrom-JsonSafe -Text $call.Body
+        $payload = $null
+        $ok = $false
+        if ($null -ne $json -and $null -ne $json.result) {
+            $payload = ConvertFrom-JsonSafe -Text ([string]$json.result.content[0].text)
+            $ok = ($json.result.content[0].type -eq 'text') -and ($null -ne $payload) -and
+                  ($payload.project_name -eq 'M1 Editor Scratch') -and ($null -ne $payload.editor_screen_size)
+        }
+        return @{ pass = $ok; evidence = ("status={0} body={1}" -f $call.Status, $call.Body) }
+    }
+
+    # --- case 5: tools/call missing / mistyped params -> -32602 -------------
+    Invoke-Case 'case5_tools_call_invalid_params' {
+        $missingName = Invoke-Mcp -Port $EditorPort -Body '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{}}'
+        $missingJson = ConvertFrom-JsonSafe -Text $missingName.Body
+        $badArgs = Invoke-Mcp -Port $EditorPort -Body '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"project_get_info","arguments":"not-an-object"}}'
+        $badArgsJson = ConvertFrom-JsonSafe -Text $badArgs.Body
+        $ok = ($null -ne $missingJson) -and ($null -ne $badArgsJson) -and
+              ($missingJson.error.code -eq -32602) -and ($badArgsJson.error.code -eq -32602)
+        return @{ pass = $ok; evidence = ("missing-name={0} bad-arguments={1}" -f $missingName.Body, $badArgs.Body) }
+    }
+
+    # --- case 6: unknown method -> -32601 ----------------------------------
+    Invoke-Case 'case6_unknown_method' {
+        $unknown = Invoke-Mcp -Port $EditorPort -Body '{"jsonrpc":"2.0","id":7,"method":"bogus/method","params":{}}'
+        $json = ConvertFrom-JsonSafe -Text $unknown.Body
+        $ok = ($null -ne $json) -and ($json.error.code -eq -32601) -and ($json.error.message -eq 'Method not found: bogus/method')
+        return @{ pass = $ok; evidence = ("body={0}" -f $unknown.Body) }
+    }
+
+    # --- case 7: invalid JSON -> -32700 with null id -----------------------
+    Invoke-Case 'case7_parse_error' {
+        $bad = Invoke-Mcp -Port $EditorPort -Body '{not json at all'
+        $json = ConvertFrom-JsonSafe -Text $bad.Body
+        $id = $null
+        if ($null -ne $json) { $id = $json.PSObject.Properties['id'].Value }
+        $ok = ($null -ne $json) -and ($json.error.code -eq -32700) -and ($null -eq $id)
+        return @{ pass = $ok; evidence = ("status={0} body={1}" -f $bad.Status, $bad.Body) }
+    }
+
+    # --- case 8: 100 concurrent requests, ids must not be crossed -----------
+    # 8 parallel connections (the engine's listen backlog), 100 pipelined
+    # requests in flight at the same time, ids interleaved across connections so
+    # that any arrival-ordered sharing would be visible immediately.
+    Invoke-Case 'case8_concurrent_100' {
+        $connectionCount = 8
+        $total = 100
+        $perConnection = @()
+        $remaining = $total
+        for ($c = 0; $c -lt $connectionCount; $c++) {
+            $take = [Math]::Ceiling($remaining / ($connectionCount - $c))
+            $perConnection += [int]$take
+            $remaining -= $take
+        }
+        $conns = @()
+        $expectedIds = @()
+        $sent = 0
+        $received = 0
+        $mismatches = @()
+        try {
+            for ($c = 0; $c -lt $connectionCount; $c++) {
+                $conns += (Open-Connection -Port $EditorPort)
+            }
+            for ($c = 0; $c -lt $connectionCount; $c++) {
+                $ids = @()
+                for ($j = 0; $j -lt $perConnection[$c]; $j++) {
+                    $ids += ($c + 1 + $j * $connectionCount)
+                }
+                $expectedIds += , $ids
+            }
+            # Everything is put on the wire before a single response is read.
+            for ($c = 0; $c -lt $connectionCount; $c++) {
+                foreach ($id in $expectedIds[$c]) {
+                    Send-McpRequest -Conn $conns[$c] -Body ('{"jsonrpc":"2.0","id":' + $id + ',"method":"ping"}')
+                    $sent++
+                }
+            }
+            for ($c = 0; $c -lt $connectionCount; $c++) {
+                $reader = New-Reader -Stream $conns[$c].Stream
+                for ($j = 0; $j -lt $perConnection[$c]; $j++) {
+                    $msg = Read-Message -Reader $reader -TimeoutMs 30000
+                    if (-not $msg.Complete) { $mismatches += ("conn{0}: missing response #{1}" -f $c, $j); break }
+                    $json = ConvertFrom-JsonSafe -Text $msg.Body
+                    $got = $null
+                    if ($null -ne $json) { $got = $json.id }
+                    if ($got -ne $expectedIds[$c][$j]) {
+                        $mismatches += ("conn{0}: expected id {1} got {2}" -f $c, $expectedIds[$c][$j], $got)
+                    }
+                    $received++
+                }
+            }
+        } finally {
+            foreach ($c in $conns) { $c.Client.Close() }
+        }
+        $uniqueIds = ($expectedIds | ForEach-Object { $_ } | Sort-Object -Unique).Count
+        $ok = ($mismatches.Count -eq 0) -and ($received -eq $total) -and ($sent -eq $total) -and ($uniqueIds -eq $total)
+        return @{
+            pass = $ok
+            evidence = ("connections={0} sent={1} received={2} unique_ids={3} mismatches={4}" -f $connectionCount, $sent, $received, $uniqueIds, ($mismatches -join '; '))
+        }
+    }
+
+    # --- case 9: keep-alive, two requests on one connection -----------------
+    Invoke-Case 'case9_keep_alive_two_requests' {
+        $Conn = Open-Connection -Port $EditorPort
+        try {
+            $reader = New-Reader -Stream $Conn.Stream
+            Send-McpRequest -Conn $Conn -Body '{"jsonrpc":"2.0","id":"ka-1","method":"ping"}'
+            $r1 = Read-Message -Reader $reader
+            Send-McpRequest -Conn $Conn -Body '{"jsonrpc":"2.0","id":"ka-2","method":"ping"}'
+            $r2 = Read-Message -Reader $reader
+        } finally { $Conn.Client.Close() }
+        $j1 = ConvertFrom-JsonSafe -Text $r1.Body
+        $j2 = ConvertFrom-JsonSafe -Text $r2.Body
+        $ok = ($r1.Status -eq 200) -and ($r2.Status -eq 200) -and ($j1.id -eq 'ka-1') -and ($j2.id -eq 'ka-2')
+        return @{ pass = $ok; evidence = ("first={0} second={1}" -f $r1.Body, $r2.Body) }
+    }
+
+    # --- case 10: half packet ----------------------------------------------
+    Invoke-Case 'case10_half_packet' {
+        $Conn = Open-Connection -Port $EditorPort
+        try {
+            $reader = New-Reader -Stream $Conn.Stream
+            $body = '{"jsonrpc":"2.0","id":"half","method":"ping"}'
+            $bodyBytes = [Text.Encoding]::UTF8.GetBytes($body)
+            $head = "POST /mcp HTTP/1.1`r`nHost: 127.0.0.1`r`nContent-Length: $($bodyBytes.Length)`r`n`r`n"
+            $whole = [Text.Encoding]::UTF8.GetBytes($head + $body)
+            $split = [int]($whole.Length / 2)
+            Send-Bytes -Conn $Conn -Bytes $whole[0..($split - 1)]
+            Start-Sleep -Milliseconds 400
+            Send-Bytes -Conn $Conn -Bytes $whole[$split..($whole.Length - 1)]
+            $half = Read-Message -Reader $reader
+        } finally { $Conn.Client.Close() }
+        $json = ConvertFrom-JsonSafe -Text $half.Body
+        $ok = ($half.Status -eq 200) -and ($null -ne $json) -and ($json.id -eq 'half')
+        return @{ pass = $ok; evidence = ("status={0} body={1}" -f $half.Status, $half.Body) }
+    }
+
+    # --- case 11: body over max_body_bytes -> 413 + closed ------------------
+    # The closure is proven positively (GDR-12.1): a probe request is written on
+    # the same socket and must not be answered, or the peer is already gone
+    # (FIN / reset / failed write). A read timeout on its own is explicitly not
+    # accepted - that idiom is also true on a live connection.
+    Invoke-Case 'case11_body_too_large' {
+        $Conn = Open-Connection -Port $EditorPort
+        try {
+            Send-Text -Conn $Conn -Text ("POST /mcp HTTP/1.1`r`nHost: 127.0.0.1`r`nContent-Length: 9000000`r`n`r`n")
+            $tooBig = Read-Message -Reader (New-Reader -Stream $Conn.Stream) -TimeoutMs 10000
+            $probe = Test-PeerClosed -Conn $Conn -ProbeBody '{"jsonrpc":"2.0","id":"after-413","method":"ping"}' -ProbeId 'after-413'
+        } finally { $Conn.Client.Close() }
+        $ok = ($tooBig.Status -eq 413) -and $probe.closed -and ($probe.kind -ne 'ANSWERED')
+        return @{
+            pass = $ok
+            evidence = ("status={0} closed_after={1} proof={2} ({3}) body={4}" -f $tooBig.Status, $probe.closed, $probe.kind, $probe.detail, $tooBig.Body)
+        }
+    }
+
+    # --- case 15 (hardening regression): dead peers are reaped --------------
+    # A connection table that never notices a peer going away starves the 16
+    # connection budget: 16 short lived clients would be enough to make the
+    # endpoint refuse everything afterwards. The status body exposes the live
+    # table size (`connections`), and a fresh request proves the budget is back.
+    Invoke-Case 'case15_connection_reaping' {
+        $held = @()
+        $capEnforced = $false
+        try {
+            for ($c = 0; $c -lt 16; $c++) { $held += (Open-Connection -Port $EditorPort) }
+            Start-Sleep -Milliseconds 800
+
+            # The 17th connection is closed by the server before it can be used,
+            # so either the request cannot be written or it is never answered.
+            $over = Open-Connection -Port $EditorPort
+            $overResp = $null
+            try {
+                Send-McpRequest -Conn $over -Body '{"jsonrpc":"2.0","id":1700,"method":"ping"}'
+                $overResp = Read-Message -Reader (New-Reader -Stream $over.Stream) -TimeoutMs 5000
+            } catch {
+                $overResp = $null
+            }
+            $capEnforced = ($null -eq $overResp) -or (-not ($overResp.Body -match '"id":1700'))
+            $over.Client.Close()
+        } finally {
+            foreach ($c in $held) { $c.Client.Close() }
+        }
+        Start-Sleep -Milliseconds 800
+
+        $statusAfter = Invoke-StatusProbe -Port $EditorPort
+        $statusJson = ConvertFrom-JsonSafe -Text $statusAfter.Body
+        $live = -1
+        if ($null -ne $statusJson -and $null -ne $statusJson.PSObject.Properties['connections']) {
+            $live = [int]$statusJson.connections
+        }
+
+        $fresh = Open-Connection -Port $EditorPort
+        try {
+            Send-McpRequest -Conn $fresh -Body '{"jsonrpc":"2.0","id":999,"method":"ping"}'
+            $clock = [Diagnostics.Stopwatch]::StartNew()
+            $freshResp = Read-Message -Reader (New-Reader -Stream $fresh.Stream) -TimeoutMs 8000
+            $clock.Stop()
+        } finally { $fresh.Client.Close() }
+        $freshOk = $null -ne $freshResp -and ($freshResp.Body -match '"id":999')
+
+        # 16 entries that are gone must no longer be counted; the status probe's
+        # own connection is still in the table and is the only tolerated entry.
+        $ok = $capEnforced -and $freshOk -and ($live -ge 0) -and ($live -le 2)
+        return @{
+            pass = $ok
+            evidence = ("cap_enforced_on_17th={0} live_connections_after_close={1} fresh_request_served={2} latency_ms={3}" -f `
+                $capEnforced, $live, $freshOk, $clock.ElapsedMilliseconds)
+        }
+    }
+
+    # --- case 16 (hardening regression): Expect: 100-continue ----------------
+    Invoke-Case 'case16_expect_100_continue' {
+        $Conn = Open-Connection -Port $EditorPort
+        try {
+            $reader = New-Reader -Stream $Conn.Stream
+            # A body over the 1 KiB threshold is where curl starts to wait for
+            # the interim response.
+            $body = '{"jsonrpc":"2.0","id":1600,"method":"ping","params":{"pad":"' + ('x' * 2000) + '"}}'
+            $bodyBytes = [Text.Encoding]::UTF8.GetBytes($body)
+            $head = "POST /mcp HTTP/1.1`r`nHost: 127.0.0.1`r`nExpect: 100-continue`r`nContent-Type: application/json`r`nContent-Length: $($bodyBytes.Length)`r`n`r`n"
+            Send-Text -Conn $Conn -Text $head
+
+            # The body is withheld: the server has to answer before it is sent.
+            $clock = [Diagnostics.Stopwatch]::StartNew()
+            $interim = Read-Message -Reader $reader -TimeoutMs 8000
+            $clock.Stop()
+            $interimSeen = ($interim.Status -eq 100) -and ($interim.Header -match '^HTTP/1\.1 100 Continue')
+
+            Send-Bytes -Conn $Conn -Bytes $bodyBytes
+            $final = Read-Message -Reader $reader -TimeoutMs 15000
+        } finally { $Conn.Client.Close() }
+
+        $interimCount = ([regex]::Matches($interim.Header + $final.Header, '100 Continue')).Count
+        $ok = $interimSeen -and ($interimCount -eq 1) -and ($final.Status -eq 200) -and ($final.Body -match '"id":1600')
+        return @{
+            pass = $ok
+            evidence = ("interim='{0}' after {1} ms; interim_sent_times={2}; final_status={3} final_body={4}" -f `
+                ($interim.Header -replace "`r`n", '\r\n'), $clock.ElapsedMilliseconds, $interimCount, $final.Status, $final.Body)
+        }
+    }
+
+    # --- case 17 (GDR-12.2): header block over 8 KiB -> 431 ----------------
+    Invoke-Case 'case17_header_too_large_431' {
+        $Conn = Open-Connection -Port $EditorPort
+        try {
+            $pad = ''
+            for ($i = 0; $i -lt 400; $i++) { $pad += "X-Pad: 0123456789012345678901234567890123456789`r`n" }
+            Send-Text -Conn $Conn -Text ("POST /mcp HTTP/1.1`r`nHost: 127.0.0.1`r`n" + $pad + "Content-Length: 2`r`n`r`n{}")
+            $resp = Read-Message -Reader (New-Reader -Stream $Conn.Stream) -TimeoutMs 10000
+            $reason = ''
+            if ($resp.Header -match '^HTTP/1\.1\s+(\d+)\s+([^\r\n]+)') { $reason = $Matches[2] }
+            $probe = Test-PeerClosed -Conn $Conn -ProbeBody '{"jsonrpc":"2.0","id":"after-431","method":"ping"}' -ProbeId 'after-431'
+        } finally { $Conn.Client.Close() }
+        $ok = ($resp.Status -eq 431) -and ($reason -eq 'Request Header Fields Too Large') -and $probe.closed
+        return @{
+            pass = $ok
+            evidence = ("status={0} reason='{1}' closed_after={2} proof={3} ({4}) body={5}" -f $resp.Status, $reason, $probe.closed, $probe.kind, $probe.detail, $resp.Body)
+        }
+    }
+
+    # --- case 18 (GDR-12.3): bare LF header terminator -> 400, not a stall --
+    # Before the fix this request produced no answer at all until the 30 s idle
+    # reaper closed the connection, so the latency is part of the assertion.
+    Invoke-Case 'case18_bare_lf_terminator_400' {
+        $Conn = Open-Connection -Port $EditorPort
+        try {
+            $clock = [Diagnostics.Stopwatch]::StartNew()
+            Send-Text -Conn $Conn -Text "POST /mcp HTTP/1.1`nHost: 127.0.0.1`nContent-Length: 2`n`n{}"
+            $resp = Read-Message -Reader (New-Reader -Stream $Conn.Stream) -TimeoutMs 10000
+            $clock.Stop()
+            $probe = Test-PeerClosed -Conn $Conn -ProbeBody '{"jsonrpc":"2.0","id":"after-lf","method":"ping"}' -ProbeId 'after-lf'
+        } finally { $Conn.Client.Close() }
+
+            Send-Bytes -Conn $Conn -Bytes $bodyBytes
+            $final = Read-Message -Reader $reader -TimeoutMs 15000
+        } finally { $Conn.Client.Close() }
+
+        $interimCount = ([regex]::Matches($interim.Header + $final.Header, '100 Continue')).Count
+        $ok = $interimSeen -and ($interimCount -eq 1) -and ($final.Status -eq 200) -and ($final.Body -match '"id":1600')
+        return @{
+            pass = $ok
+            evidence = ("interim='{0}' after {1} ms; interim_sent_times={2}; final_status={3} final_body={4}" -f `
+                ($interim.Header -replace "`r`n", '\r\n'), $clock.ElapsedMilliseconds, $interimCount, $final.Status, $final.Body)
+        }
+    }
+
+    # --- case 17 (GDR-12.2): header block over 8 KiB -> 431 ----------------
+    Invoke-Case 'case17_header_too_large_431' {
+        $Conn = Open-Connection -Port $EditorPort
+        try {
+            $pad = ''
+            for ($i = 0; $i -lt 400; $i++) { $pad += "X-Pad: 0123456789012345678901234567890123456789`r`n" }
+            Send-Text -Conn $Conn -Text ("POST /mcp HTTP/1.1`r`nHost: 127.0.0.1`r`n" + $pad + "Content-Length: 2`r`n`r`n{}")
+            $resp = Read-Message -Reader (New-Reader -Stream $Conn.Stream) -TimeoutMs 10000
+            $reason = ''
+            if ($resp.Header -match '^HTTP/1\.1\s+(\d+)\s+([^\r\n]+)') { $reason = $Matches[2] }
+            $probe = Test-PeerClosed -Conn $Conn -ProbeBody '{"jsonrpc":"2.0","id":"after-431","method":"ping"}' -ProbeId 'after-431'
+        } finally { $Conn.Client.Close() }
+        $ok = ($resp.Status -eq 431) -and ($reason -eq 'Request Header Fields Too Large') -and $probe.closed
+        return @{
+            pass = $ok
+            evidence = ("status={0} reason='{1}' closed_after={2} proof={3} ({4}) body={5}" -f $resp.Status, $reason, $probe.closed, $probe.kind, $probe.detail, $resp.Body)
+        }
+    }
+
+    # --- case 18 (GDR-12.3): bare LF header terminator -> 400, not a stall --
+    # Before the fix this request produced no answer at all until the 30 s idle
+    # reaper closed the connection, so the latency is part of the assertion.
+    Invoke-Case 'case18_bare_lf_terminator_400' {
+        $Conn = Open-Connection -Port $EditorPort
+        try {
+            $clock = [Diagnostics.Stopwatch]::StartNew()
+            Send-Text -Conn $Conn -Text "POST /mcp HTTP/1.1`nHost: 127.0.0.1`nContent-Length: 2`n`n{}"
+            $resp = Read-Message -Reader (New-Reader -Stream $Conn.Stream) -TimeoutMs 10000
+            $clock.Stop()
+            $probe = Test-PeerClosed -Conn $Conn -ProbeBody '{"jsonrpc":"2.0","id":"after-lf","method":"ping"}' -ProbeId 'after-lf'
+        } finally { $Conn.Client.Close() }
+        $ok = ($resp.Status -eq 400) -and ($clock.ElapsedMilliseconds -lt 5000) -and $probe.closed
+        return @{
+            pass = $ok
+            evidence = ("status={0} answered_after={1} ms closed_after={2} proof={3} ({4}) body={5}" -f $resp.Status, $clock.ElapsedMilliseconds, $probe.closed, $probe.kind, $probe.detail, $resp.Body)
+        }
+    }
+
+    # --- case 19 (GDR-12.4): non-UTF-8 body stays accepted but warns --------
+    Invoke-Case 'case19_invalid_utf8_body_warns' {
+        $Conn = Open-Connection -Port $EditorPort
+        try {
+            # A payload that is valid JSON once the offending byte is replaced:
+            # it must still be served (loose acceptance), with the id echoed.
+            $head = '{"jsonrpc":"2.0","id":"utf8","method":"ping","params":{"pad":"'
+            $tail = '"}}'
+        }
+        $gameList = Invoke-Mcp -Port $GamePort -Body '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+        $gameListJson = ConvertFrom-JsonSafe -Text $gameList.Body
+        $gameProbe = Invoke-StatusProbe -Port $GamePort
+        $gameProbeJson = ConvertFrom-JsonSafe -Text $gameProbe.Body
+        $gameInit = Invoke-Mcp -Port $GamePort -Body '{"jsonrpc":"2.0","id":3,"method":"initialize"}'
+
+        if ($null -eq $gameListJson -or $null -eq $gameListJson.result) {
+            return @{ pass = $false; evidence = ("no tools/list result: {0}" -f $gameList.Body) }
+        }
+        $comparison = Compare-ToolListToFixture -ActualTools @($gameListJson.result.tools) -Names $GameToolNames
+        # TASK-006 §2: no editor-scope tool may be visible on the game endpoint,
+        # and asking for one by name must be refused with -32601 rather than run.
+        $gameToolNames = @($gameListJson.result.tools | ForEach-Object { [string]$_.name })
+        $leaked = @($gameToolNames | Where-Object { $EditorOnlyToolNames -contains $_ })
+        $refusal = Invoke-Mcp -Port $GamePort -Body '{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"editor_get_errors","arguments":{}}}'
+        $refusalJson = ConvertFrom-JsonSafe -Text $refusal.Body
+        $refused = ($null -ne $refusalJson) -and ($refusalJson.error.code -eq -32601)
+        $ok = $comparison.ok -and ($gameProbeJson.is_editor -eq $false) -and ($gameInit.Body -match 'godot-mcp-rs') -and
+              ($leaked.Count -eq 0) -and $refused -and ($gameToolNames.Count -eq $GameToolNames.Count)
+        return @{
+            pass = $ok
+            evidence = ("tools={0} editor_scope_leaked={1} editor_tool_call={2} status={3} is_editor={4} initialize={5}; {6}" -f `
+                $gameList.Body, ($leaked -join ','), $refusal.Body, $gameProbe.Status, $gameProbeJson.is_editor, $gameInit.Body, $comparison.notes)
+        }
+    }
+    Stop-Engine -Handle $script:gameHandle
+    $script:gameHandle = $null
+
+    # --- case 13: game process without --mcp-port must not listen -----------
+    Invoke-Case 'case13_game_without_port' {
+        $script:gameNoPortHandle = Start-Engine -Arguments @('--headless', '--path', $GameProject) -LogName 'game-noport'
+        $sawRoleLine = Wait-ForLogLine -Path $script:gameNoPortHandle.Out -Pattern '\[MCP\] role=game' -TimeoutMs 180000
+        Start-Sleep -Milliseconds 1500
+        $listening = Test-TcpConnect -Port $GamePort -TimeoutMs 1500
+        $alive = -not $script:gameNoPortHandle.Process.HasExited
+        $ok = $sawRoleLine -and (-not $listening) -and $alive
+        return @{
+            pass = $ok
+            evidence = ("role_line={0} listening_on_{1}={2} alive={3} mcp_lines={4}" -f $sawRoleLine, $GamePort, $listening, $alive, (Get-McpLogLines -Path $script:gameNoPortHandle.Out))
+        $script:gameNoPortHandle = Start-Engine -Arguments @('--headless', '--path', $GameProject) -LogName 'game-noport'
+        $sawRoleLine = Wait-ForLogLine -Path $script:gameNoPortHandle.Out -Pattern '\[MCP\] role=game' -TimeoutMs 180000
+        Start-Sleep -Milliseconds 1500
+        $listening = Test-TcpConnect -Port $GamePort -TimeoutMs 1500
+        $alive = -not $script:gameNoPortHandle.Process.HasExited
+        $ok = $sawRoleLine -and (-not $listening) -and $alive
+        return @{
+            pass = $ok
+            evidence = ("role_line={0} listening_on_{1}={2} alive={3} mcp_lines={4}" -f $sawRoleLine, $GamePort, $listening, $alive, (Get-McpLogLines -Path $script:gameNoPortHandle.Out))
+        }
+        $alive = -not $script:gameNoPortHandle.Process.HasExited
+        $ok = $sawRoleLine -and (-not $listening) -and $alive
+        return @{
+            pass = $ok
+            evidence = ("role_line={0} listening_on_{1}={2} alive={3} mcp_lines={4}" -f $sawRoleLine, $GamePort, $listening, $alive, (Get-McpLogLines -Path $script:gameNoPortHandle.Out))
+        }
+    }
+    Stop-Engine -Handle $script:gameNoPortHandle
+    $script:gameNoPortHandle = $null
+
+    # --- case 14: port already in use -> no crash, WARNING, port 0 ---------
+    Invoke-Case 'case14_port_occupied' {
+        $script:blocker = New-Object System.Net.Sockets.TcpListener([Net.IPAddress]::Parse('127.0.0.1'), $EditorPort)
+        $script:blocker.Start()
+        $blocked = Test-TcpConnect -Port $EditorPort -TimeoutMs 1000
+        $script:occupiedHandle = Start-Engine -Arguments @('--headless', '-e', '--path', $EditorProject, "--mcp-port=$EditorPort") -LogName 'editor-occupied'
+        $bindFailed = Wait-ForLogLine -Path $script:occupiedHandle.Out -Pattern '\[MCP\] bind failed' -TimeoutMs 180000
+        if (-not $bindFailed) { $bindFailed = Wait-ForLogLine -Path $script:occupiedHandle.Err -Pattern 'bind failed' -TimeoutMs 1000 }
+        $portZero = Wait-ForLogLine -Path $script:occupiedHandle.Out -Pattern 'get_port\(\)=0' -TimeoutMs 5000
+        Start-Sleep -Milliseconds 1500
+        $alive = -not $script:occupiedHandle.Process.HasExited
+        $ok = $blocked -and $bindFailed -and $portZero -and $alive
+        return @{
+            pass = $ok
+            evidence = ("blocker_listening={0} bind_failed_warning={1} get_port_zero={2} engine_alive={3} mcp_lines={4}" -f $blocked, $bindFailed, $portZero, $alive, (Get-McpLogLines -Path $script:occupiedHandle.Out))
+        }
+    }
+    Stop-Engine -Handle $script:occupiedHandle
+    $script:occupiedHandle = $null
+    if ($null -ne $script:blocker) { $script:blocker.Stop(); $script:blocker = $null }
+} catch {
+    Write-Host ("EXCEPTION: {0}" -f $_.Exception.Message)
+    Write-Host $_.ScriptStackTrace
+} finally {
+    Stop-Engine -Handle $script:occupiedHandle
+    Stop-Engine -Handle $script:gameNoPortHandle
+    Stop-Engine -Handle $script:gameHandle
+    Stop-Engine -Handle $script:editorHandle
+    if ($null -ne $script:blocker) { try { $script:blocker.Stop() } catch { } }
+
+    # Only the PIDs started by this script are gone; 9877 must be untouched.
+    #
+    # TASK-041 section 1.3 - what this case asserts, and why it is not the old
+    # assertion. The old form was `$userPortAlive -and $userPortSame`, i.e. "the
+    # user's editor is listening on 9877 and it is the same pid", which conflates
+    # two different things and fails in an environment where the user simply is not
+    # running Godot (measured in TASK-040 section 8.5: 9877 had no listener).
+    #
+    # The invariant this script actually has to guarantee is "**we** never occupy
+    # 9877", and that is decidable without the user's editor being up:
+    #   * every engine process this script starts is recorded with its pid **and
+    #     its command line** ($script:StartedArguments), so "did we ever ask for
+    #     9877" is answered from the real arguments rather than from an assumption
+    #     about the call sites;
+    #   * a listener on 9877 that belongs to one of our pids is a violation;
+    #   * no listener at all is an environment fact, not a pass by default: the
+    #     evidence line says which of the two it is, so "nobody is on 9877" can
+    #     never be read as "we proved we did not take it" without the reason;
+    #   * a listener that was already there and kept the same pid is the user's
+    #     editor, untouched.
+    # Nothing here is weakened: the stronger half (our pids, our command lines) is
+    # extra, and the "same pid before and after" check still applies whenever a
+    # listener exists.
+    $userPortPidAfter = Get-ListenerPid -Port $UserPort
+    $userPortAlive = Test-Listener -Port $UserPort
+    $userPortSame = ($userPortPidBefore -eq $userPortPidAfter)
+    $userPortOurs = $userPortAlive -and ($script:StartedPids -contains $userPortPidAfter)
+    $userPortAskedByUs = @($script:StartedArguments.Values | Where-Object { $_ -match ('--mcp-port=' + $UserPort + '(\s|$)') })
+    $userPortAsked = ($userPortAskedByUs.Count -gt 0)
+    if ($userPortAsked) {
+        $userPortPass = $false
+        $userPortClass = 'violation_this_script_requested_the_user_port'
+    } elseif ($userPortOurs) {
+        $userPortPass = $false
+        $userPortClass = 'violation_this_script_owns_the_user_port'
+    } elseif (-not $userPortAlive) {
+        $userPortPass = $true
+        $userPortClass = 'environment_fact_no_listener_before_or_after'
+    } elseif ($userPortPidBefore -le 0) {
+        $userPortPass = $true
+        $userPortClass = 'foreign_listener_appeared_during_the_run'
+    } elseif ($userPortSame) {
+        $userPortPass = $true
+        $userPortClass = 'user_editor_present_untouched'
+    } else {
+        # A listener that was there before and is a different pid now: this script
+        # never kills anything but its own pids, so this is a real surprise and it
+        # stays a failure (the old assertion failed here too).
+        $userPortPass = $false
+        $userPortClass = 'user_editor_pid_changed_during_the_run'
+        $userPortPass = $true
+        $userPortClass = 'user_editor_present_untouched'
+    } else {
+        # A listener that was there before and is a different pid now: this script
+        # never kills anything but its own pids, so this is a real surprise and it
+        # stays a failure (the old assertion failed here too).
+        $userPortPass = $false
+        $userPortClass = 'user_editor_pid_changed_during_the_run'
+    }
+    Record-Result 'guard_user_port_9877' $userPortPass ("listening={0} pid_before={1} pid_after={2} ours={3} same_pid={4} asked_by_us={5} classification={6}" -f `
+        $userPortAlive, $userPortPidBefore, $userPortPidAfter, $userPortOurs, $userPortSame, $userPortAsked, $userPortClass)
+}
+
+Write-Host ''
+Write-Host '========================== SUMMARY =========================='
+
+# R-4: state plainly which gate this run is, so that "all cases passed" can
+# never be misread as "the whole 171 entry contract is live". The verbatim
+# equality gate covers exactly the implemented tools listed in $ToolNames.
+$contractSize = 0
+if (Test-Path $RenamedContract) {
+    $contractJson = ConvertFrom-Json (Get-Content -Raw -Encoding UTF8 $RenamedContract)
+    $contractSize = @($contractJson.result.tools).Count
+}
+$implementedCount = $ToolNames.Count
+Write-Host ("implemented tools      : {0} / contract {1}" -f $implementedCount, $contractSize)
+Write-Host ("process split          : editor endpoint {0} tool(s), game endpoint {1} tool(s), editor-only {2}, game-only {3}" -f `
+    $EditorToolNames.Count, $GameToolNames.Count, $EditorOnlyToolNames.Count, $GameOnlyToolNames.Count)
+Write-Host ("equality gate coverage : {0} tool(s) compared verbatim on the editor endpoint" -f $EditorToolNames.Count)
+# D-3 (TASK-003 section 1.2): `-f` binds tighter than `+`, so a multi fragment
+# message has to be concatenated *inside* its own parentheses before the format
+# operator runs. Without the inner pair only the last fragment was formatted and
+# the SUMMARY printed a literal `{0} of {1}` instead of the two counts.
+Write-Host (("known_deviation        : per-batch gate, NOT a full-contract gate ({0} of {1} contract entries " +
+            "are implemented and compared verbatim); unimplemented tools are deliberately absent from " +
+            "tools/list (GDR-7)") -f $implementedCount, $contractSize)
+$contractGateOk = ($contractSize -eq $ExpectedContractSize) -and ($implementedCount -le $contractSize)
+Record-Result 'gate_scope_declared' $contractGateOk `
+    ("implemented={0} contract={1} expected_contract={2} tool_names={3}" -f `
+        $implementedCount, $contractSize, $ExpectedContractSize, ($ToolNames -join ','))
+
+$passed = @($script:Results | Where-Object { $_.pass }).Count
+$total = $script:Results.Count
+foreach ($r in $script:Results) {
+    $tag = if ($r.pass) { 'PASS' } else { 'FAIL' }
+    Write-Host ("{0}  {1}" -f $tag, $r.id)
+}
+Write-Host ("{0}/{1} cases passed" -f $passed, $total)
+Write-Host ("implemented tools = {0} (editor endpoint) / {1} (game endpoint); contract = {2}; known_deviation = per-batch verbatim gate only" -f `
+    $EditorToolNames.Count, $GameToolNames.Count, $contractSize)
+if ($passed -ne $total) { exit 1 }
+exit 0
+# message has to be concatenated *inside* its own parentheses before the format
+# operator runs. Without the inner pair only the last fragment was formatted and
+# the SUMMARY printed a literal `{0} of {1}` instead of the two counts.
+Write-Host (("known_deviation        : per-batch gate, NOT a full-contract gate ({0} of {1} contract entries " +
+            "are implemented and compared verbatim); unimplemented tools are deliberately absent from " +
+            "tools/list (GDR-7)") -f $implementedCount, $contractSize)
+$contractGateOk = ($contractSize -eq $ExpectedContractSize) -and ($implementedCount -le $contractSize)
+Record-Result 'gate_scope_declared' $contractGateOk `
+    ("implemented={0} contract={1} expected_contract={2} tool_names={3}" -f `
+        $implementedCount, $contractSize, $ExpectedContractSize, ($ToolNames -join ','))
+
+$passed = @($script:Results | Where-Object { $_.pass }).Count
+$total = $script:Results.Count
+foreach ($r in $script:Results) {
+    $tag = if ($r.pass) { 'PASS' } else { 'FAIL' }
+    Write-Host ("{0}  {1}" -f $tag, $r.id)
+}
+Write-Host ("{0}/{1} cases passed" -f $passed, $total)
+Write-Host ("implemented tools = {0} (editor endpoint) / {1} (game endpoint); contract = {2}; known_deviation = per-batch verbatim gate only" -f `
+    $EditorToolNames.Count, $GameToolNames.Count, $contractSize)
+if ($passed -ne $total) { exit 1 }
+exit 0

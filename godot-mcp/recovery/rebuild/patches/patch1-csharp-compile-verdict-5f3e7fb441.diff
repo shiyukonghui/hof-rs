@@ -1,0 +1,106 @@
+commit 5f3e7fb441e8f31129ac5c8797bf2642d2884564
+Author: starsliving <1620462725@qq.com>
+Date:   Thu Sep 24 23:51:38 2026 +0800
+
+    mcp_server: TASK-055 - a real C# compile verdict (D112 engine patch + recorded build diagnostics)
+    
+    The engine never had a C# compile verdict: `CSharpScript::reload()` returns OK
+    unconditionally and only looks the type up in the assembly that was already
+    built, so TASK-054 had to answer `unverifiable` for every `.cs` file.
+    
+    Engine patch (one public read-only accessor, no signature or semantic change):
+    `CSharpScript::is_source_newer_than_assembly()` lifts the comparison
+    `_update_exports()` already made for the editor's placeholders (source mtime vs
+    the loaded project assembly) into a public API, and that call site now uses it.
+    
+    Module side: the already public `Script::is_script_valid()` plus that accessor
+    answer "compiled / not compiled"; the project-level half comes from the per-file
+    diagnostics `project_build_csharp` parses out of the `dotnet build` output it
+    already captures and records (with the modification time each file had at that
+    build, so an edited file expires its old diagnostic). `project_validate_script`
+    and `project_validate_scripts` now answer `ok` / `invalid` + the compiler's own
+    text / `not_compiled` (never `invalid` for "nothing built it"), with the same
+    sentences from both tools; the non-mono answer is unchanged.
+    
+    Contract: 175 entries, only the two validate descriptions move
+    (DESCRIPTION_OVERRIDES / ADDED_TOOLS, GENERATOR_VERSION 1.17.0). The plural
+    response gains `not_compiled_count`; `count` stays the sum of its five counters.
+    
+    Evidence (docs/reports/evidence/task055, scripts/mcp055_*): a real Godot C#
+    project built through the tool on a mono build (syntax error -> invalid with
+    CS1519/CS1002 text, valid file -> ok, edited file -> not_compiled in the same
+    payload), the plain build's -32000 unchanged byte for byte, and a pre/post
+    comparison of 35 probes where every label outside the declared set is identical.
+
+diff --git a/modules/mono/csharp_script.cpp b/modules/mono/csharp_script.cpp
+index 2024ab2ca3..9a6c5eea91 100644
+--- a/modules/mono/csharp_script.cpp
++++ b/modules/mono/csharp_script.cpp
+@@ -2171,9 +2171,7 @@ bool CSharpScript::_update_exports(PlaceHolderScriptInstance *p_instance_to_upda
+ 				p_instance_to_update->update(propnames, values);
+ 			}
+ 		} else if (placeholders.size()) {
+-			uint64_t script_modified_time = FileAccess::get_modified_time(get_path());
+-			uint64_t last_valid_build_time = GDMono::get_singleton()->get_project_assembly_modified_time();
+-			if (script_modified_time > last_valid_build_time) {
++			if (is_source_newer_than_assembly()) {
+ 				for (PlaceHolderScriptInstance *instance : placeholders) {
+ 					Object *owner = instance->get_owner();
+ 					if (owner->get_script_instance() == instance) {
+@@ -2620,6 +2618,25 @@ Error CSharpScript::reload(bool p_keep_state) {
+ 	return OK;
+ }
+ 
++bool CSharpScript::is_source_newer_than_assembly() const {
++	const String script_path = get_path();
++	if (script_path.is_empty()) {
++		return false;
++	}
++
++	const uint64_t script_modified_time = FileAccess::get_modified_time(script_path);
++	if (script_modified_time == 0) {
++		// The file cannot be read (it is gone): there is no newer source for
++		// the loaded assembly.
++		return false;
++	}
++
++	// Zero when no project assembly was ever built, which is what makes every
++	// readable source file "newer" than nothing.
++	const uint64_t last_valid_build_time = GDMono::get_singleton()->get_project_assembly_modified_time();
++	return script_modified_time > last_valid_build_time;
++}
++
+ ScriptLanguage *CSharpScript::get_language() const {
+ 	return CSharpLanguage::get_singleton();
+ }
+diff --git a/modules/mono/csharp_script.h b/modules/mono/csharp_script.h
+index a1cca8684d..76fd9a161f 100644
+--- a/modules/mono/csharp_script.h
++++ b/modules/mono/csharp_script.h
+@@ -273,6 +273,26 @@ public:
+ 		return type_info.is_abstract;
+ 	}
+ 
++	/**
++	 * Returns whether this script's source file has been modified after the
++	 * project assembly currently loaded in this process was built, i.e. whether
++	 * the assembly does not contain a build of the source as it is on disk.
++	 *
++	 * `reload()` cannot answer this: C# has no compiler on this side, `reload()`
++	 * only looks the type up in the assembly that was already built and returns
++	 * `OK` regardless (see its definition), so its return value is not a compile
++	 * verdict. A caller that has to tell "this file was changed after the last
++	 * successful build" apart from "this file does not compile" needs this
++	 * signal, which is why it is a public accessor rather than a local variable:
++	 * the editor already makes this comparison to decide whether a placeholder
++	 * has to be refreshed (see `_update_exports`), and the built-in MCP module
++	 * makes it to answer "has this file been compiled?" honestly.
++	 *
++	 * Returns `false` when the script has no path, or when its file cannot be
++	 * read: nothing can be newer than the loaded assembly then.
++	 */
++	bool is_source_newer_than_assembly() const;
++
+ 	bool inherits_script(const Ref<Script> &p_script) const override;
+ 
+ 	Ref<Script> get_base_script() const override;

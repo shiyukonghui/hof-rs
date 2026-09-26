@@ -1,0 +1,72 @@
+{
+ "godot": {
+  "root": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\rebuild\\godot",
+  "total_py": 228,
+  "counts": {
+   "ok": 228
+  },
+  "failures": []
+ },
+ "_low-confidence": {
+  "root": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\rebuild\\_low-confidence",
+  "total_py": 7,
+  "counts": {
+   "syntax-error": 3,
+   "ok": 4
+  },
+  "failures": [
+   {
+    "status": "syntax-error",
+    "detail": "SyntaxError: EOF while scanning triple-quoted string literal",
+    "line": 60,
+    "rel": "methods.py",
+    "bytes": 2288
+   },
+   {
+    "status": "syntax-error",
+    "detail": "IndentationError: unindent does not match any outer indentation level",
+    "line": 74,
+    "rel": "modules\\mono\\build_scripts\\build_assemblies.py",
+    "bytes": 13226
+   },
+   {
+    "status": "syntax-error",
+    "detail": "IndentationError: unexpected indent",
+    "line": 1,
+    "rel": "platform\\windows\\detect.py",
+    "bytes": 7335
+   }
+  ]
+ },
+ "staging": {
+  "root": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\staging",
+  "total_py": 458,
+  "counts": {
+   "syntax-error": 3,
+   "ok": 455
+  },
+  "failures": [
+   {
+    "status": "syntax-error",
+    "detail": "SyntaxError: EOF while scanning triple-quoted string literal",
+    "line": 60,
+    "rel": "methods.py",
+    "bytes": 2288
+   },
+   {
+    "status": "syntax-error",
+    "detail": "IndentationError: unindent does not match any outer indentation level",
+    "line": 74,
+    "rel": "modules\\mono\\build_scripts\\build_assemblies.py",
+    "bytes": 13226
+   },
+   {
+    "status": "syntax-error",
+    "detail": "IndentationError: unexpected indent",
+    "line": 1,
+    "rel": "platform\\windows\\detect.py",
+    "bytes": 7335
+   }
+  ]
+ }
+}

@@ -1,0 +1,522 @@
+tree1    -> placed52   | static const int DEFAULT_EDITOR_PORT = 9877;
+tree2    -> placed53   | static const int MAX_PORT = 65535;
+tree3    -> placed-    | 
+tree4    -> placed55   | static bool _try_parse_port(const String &p_text, int &r_port) {
+tree5    -> placed56   | 	if (!p_text.is_valid_int()) {
+tree6    -> placed57   | 		return false;
+tree7    -> placed58   | 	}
+tree8    -> placed59   | 	const int parsed = p_text.to_int();
+tree9    -> placed68   | 	if (parsed < 0 || parsed > MAX_PORT) {
+tree10   -> placed69   | 		return false;
+tree11   -> placed70   | 	}
+tree12   -> placed71   | 	r_port = parsed;
+tree13   -> placed72   | 	return true;
+tree14   -> placed73   | }
+tree15   -> placed-    | 
+tree16   -> placed75   | MCPPortConfig parse(const Vector<String> &p_cmdline_args, bool p_has_setting, int p_setting_port, bool p_is_editor) {
+tree17   -> placed76   | 	MCPPortConfig config;
+tree18   -> placed77   | 	// Default: the editor listens on 9877 (same port as the GDExtension addon),
+tree19   -> placed78   | 	// while a game process does not listen at all unless asked to.
+tree20   -> placed79   | 	config.port = p_is_editor ? DEFAULT_EDITOR_PORT : 0;
+tree21   -> placed-    | 
+tree22   -> placed81   | 	int explicit_port = -1;
+tree23   -> placed82   | 	const int arg_count = p_cmdline_args.size();
+tree24   -> placed83   | 	for (int i = 0; i < arg_count; i++) {
+tree25   -> placed84   | 		const String &arg = p_cmdline_args[i];
+tree26   -> placed85   | 		if (arg.begins_with("--mcp-port=")) {
+tree27   -> placed86   | 			int parsed = 0;
+tree28   -> placed87   | 			if (_try_parse_port(arg.substr(String("--mcp-port=").length()), parsed)) {
+tree29   -> placed88   | 				explicit_port = parsed;
+tree30   -> placed89   | 			}
+tree31   -> placed90   | 		} else if (arg == "--mcp-port") {
+tree32   -> placed91   | 			// `--mcp-port N` form.
+tree33   -> placed92   | 			if (i + 1 < arg_count) {
+tree34   -> placed93   | 				int parsed = 0;
+tree35   -> placed94   | 				if (_try_parse_port(p_cmdline_args[i + 1], parsed)) {
+tree36   -> placed95   | 					explicit_port = parsed;
+tree37   -> placed96   | 				}
+tree38   -> placed97   | 				i++;
+tree39   -> placed98   | 			}
+tree40   -> placed99   | 		}
+tree41   -> placed100  | 	}
+tree42   -> placed-    | 
+tree43   -> placed102  | 	if (p_has_setting && p_setting_port > 0 && p_setting_port <= MAX_PORT) {
+tree44   -> placed103  | 		config.port = p_setting_port;
+tree45   -> placed104  | 		config.from_project_setting = true;
+tree46   -> placed105  | 	}
+tree47   -> placed-    | 
+tree48   -> placed107  | 	if (explicit_port >= 0) {
+tree49   -> placed108  | 		config.port = explicit_port;
+tree50   -> placed109  | 		config.explicit_cmdline = true;
+tree51   -> placed110  | 	}
+tree52   -> placed-    | 
+tree53   -> placed112  | 	return config;
+tree54   -> placed113  | }
+tree55   -> placed-    | 
+tree56   -> placed115  | bool should_listen(bool p_is_editor, const MCPPortConfig &p_config, bool p_enabled_in_game) {
+tree57   -> placed116  | 	if (p_config.port <= 0) {
+tree58   -> placed117  | 		return false;
+tree59   -> placed118  | 	}
+tree60   -> placed119  | 	if (p_is_editor) {
+tree61   -> placed120  | 		return true;
+tree62   -> placed121  | 	}
+tree63   -> placed122  | 	// A game process must opt in explicitly (REQUIREMENTS C4).
+tree64   -> placed123  | 	return p_config.explicit_cmdline || p_enabled_in_game;
+tree65   -> placed124  | }
+tree66   -> placed-    | 
+tree67   -> placed126  | } // namespace MCPPort
+tree68   -> placed-    | 
+tree69   -> placed128  | namespace MCPPendingTimeout {
+tree70   -> placed-    | 
+tree71   -> placed130  | int effective_ms(int p_configured_ms) {
+tree72   -> placed131  | 	// TASK-014 R-3: `<= 0` is not a deadline. The transport reads 0 as "no
+tree73   -> placed132  | 	// deadline" and the frame-waiting deferred tools declare no deadline of their
+tree74   -> placed133  | 	// own, so a configured 0 would leave them able to hang forever - the exact
+tree75   -> placed134  | 	// failure GDR-20 point 4 removes. A positive value is passed through
+tree76   -> placed135  | 	// unchanged, so the setting stays a working knob.
+tree77   -> placed136  | 	return p_configured_ms <= 0 ? DEFAULT_MS : p_configured_ms;
+tree78   -> placed137  | }
+tree79   -> placed-    | 
+tree80   -> placed139  | } // namespace MCPPendingTimeout
+tree81   -> placed-    | 
+tree82   -> placed141  | MCPServer::MCPServer() {
+tree83   -> placed142  | 	set_process(false);
+tree84   -> placed143  | }
+tree85   -> placed-    | 
+tree86   -> placed145  | MCPServer::~MCPServer() {
+tree87   -> placed146  | 	_shutdown();
+tree88   -> placed147  | }
+tree89   -> placed-    | 
+tree90   -> placed149  | void MCPServer::_bind_methods() {
+tree91   -> placed150  | 	ClassDB::bind_method(D_METHOD("bootstrap"), &MCPServer::bootstrap);
+tree92   -> placed151  | 	ClassDB::bind_method(D_METHOD("get_port"), &MCPServer::get_port);
+tree93   -> placed152  | 	ClassDB::bind_method(D_METHOD("is_listening"), &MCPServer::is_listening);
+tree94   -> placed153  | 	ClassDB::bind_method(D_METHOD("get_frame_count"), &MCPServer::get_frame_count);
+tree95   -> placed154  | 	ClassDB::bind_method(D_METHOD("get_tool_count"), &MCPServer::get_tool_count);
+tree96   -> placed155  | 	// TASK-063 (a): the recorded startup outcome, reachable from GDScript as well
+tree97   -> placed156  | 	// (`get_port()` alone cannot say *why* it is 0). Not a tool and not part of
+tree98   -> placed157  | 	// the HTTP contract - see the comment on the accessors.
+tree99   -> placed158  | 	ClassDB::bind_method(D_METHOD("get_endpoint_state"), &MCPServer::_get_endpoint_state_bind);
+tree100  -> placed159  | 	ClassDB::bind_method(D_METHOD("get_endpoint_state_reason"), &MCPServer::get_endpoint_state_reason);
+tree101  -> placed160  | 	ClassDB::bind_method(D_METHOD("get_requested_port"), &MCPServer::get_requested_port);
+tree102  -> placed161  | 	ClassDB::bind_method(D_METHOD("is_endpoint_bind_failed"), &MCPServer::is_endpoint_bind_failed);
+tree103  -> placed162  | }
+tree104  -> placed-    | 
+tree105  -> placed164  | String MCPServer::_get_endpoint_state_bind() const {
+tree106  -> placed165  | 	return String(get_endpoint_state());
+tree107  -> placed166  | }
+tree108  -> placed-    | 
+tree109  -> placed168  | Dictionary MCPServer::debug_endpoint_state() const {
+tree110  -> placed169  | 	Dictionary state;
+tree111  -> placed170  | 	state["state"] = String(get_endpoint_state());
+tree112  -> placed171  | 	state["listening"] = listening;
+tree113  -> placed172  | 	state["port"] = port;
+tree114  -> placed173  | 	state["requested_port"] = requested_port;
+tree115  -> placed174  | 	state["reason"] = endpoint_state_reason;
+tree116  -> placed175  | 	state["is_editor"] = is_editor;
+tree117  -> placed176  | 	state["tool_count"] = registry.get_visible_tool_count(is_editor);
+tree118  -> placed177  | 	return state;
+tree119  -> placed178  | }
+tree120  -> placed-    | 
+tree121  -> placed225  | 	(void)p_delta;
+tree122  -> placed226  | 	// GDR-20 point 7: the frame clock of the deferred channel is the SceneTree's
+tree123  -> placed227  | 	// frame counter, not a private counter of this node - the tools have to see
+tree124  -> placed228  | 	// the same number of frames the game actually rendered, and a test can drive
+tree125  -> placed229  | 	// the transport with an arbitrary frame number. A process without a
+tree126  -> placed230  | 	// SceneTree (the doctest binary runs the pump through this same function)
+tree127  -> placed231  | 	// keeps the private counter so that the diagnostics still move.
+tree128  -> placed232  | 	SceneTree *tree = SceneTree::get_singleton();
+tree129  -> placed233  | 	if (tree != nullptr) {
+tree130  -> placed234  | 		frame_count = (int)tree->get_frame();
+tree131  -> placed235  | 	} else {
+tree132  -> placed236  | 		frame_count++;
+tree133  -> placed237  | 	}
+tree134  -> placed238  | 	// TASK-044: the frame clock of an in-flight capture is handed in *before*
+tree135  -> placed239  | 	// the transport poll, so a capture armed while a request is answered is
+tree136  -> placed240  | 	// completed one frame later and not in the frame it was taken in.
+tree137  -> placed241  | 	if (capture_engine != nullptr && capture_engine->is_active()) {
+tree138  -> placed242  | 		capture_engine->begin_frame((int64_t)frame_count);
+tree139  -> placed243  | 	}
+tree140  -> placed244  | 	if (http_server != nullptr) {
+tree141  -> placed245  | 		// Everything (socket polling, parsing, tool execution, advancing the
+tree142  -> placed246  | 		// deferred tasks and writing the responses back) happens here, on the
+tree143  -> placed247  | 		// main thread, once per frame.
+tree144  -> placed248  | 		http_server->poll(max_requests_per_frame, (int64_t)frame_count);
+tree145  -> placed249  | 	}
+tree146  -> placed250  | 	// TASK-044: strictly after the responses of this frame. The encoding, the
+tree147  -> placed251  | 	// PNGs, the pixel comparison and the appended log line of every capture
+tree148  -> placed252  | 	// whose call was answered at least one rendered frame ago happen here - the
+tree149  -> placed253  | 	// response was produced above and never waits for any of it.
+tree150  -> placed254  | 	if (capture_engine != nullptr && capture_engine->is_active()) {
+tree151  -> placed255  | 		capture_engine->tick((int64_t)frame_count);
+tree152  -> placed256  | 	}
+tree153  -> placed257  | }
+tree154  -> placed-    | 
+tree155  -> placed259  | void MCPServer::_shutdown() {
+tree156  -> placed260  | 	if (http_server != nullptr) {
+tree157  -> placed261  | 		http_server->stop();
+tree158  -> placed262  | 		memdelete(http_server);
+tree159  -> placed263  | 		http_server = nullptr;
+tree160  -> placed264  | 	}
+tree161  -> placed265  | 	// TASK-038: the trace file is flushed and closed with everything else, so an
+tree162  -> placed266  | 	// orderly shutdown never loses the last line. `close()` flushes first.
+tree163  -> placed267  | 	if (trace_recorder != nullptr) {
+tree164  -> placed268  | 		trace_recorder->close();
+tree165  -> placed269  | 		memdelete(trace_recorder);
+tree166  -> placed270  | 		trace_recorder = nullptr;
+tree167  -> placed271  | 	}
+tree168  -> placed272  | 	// TASK-044: the capture engine reports into the trace file, so it is torn
+tree169  -> placed273  | 	// down next. In-flight captures are dropped rather than written: there is no
+tree170  -> placed274  | 	// longer a file to describe them in.
+tree171  -> placed275  | 	if (capture_engine != nullptr) {
+tree172  -> placed276  | 		capture_engine->stop();
+tree173  -> placed277  | 		memdelete(capture_engine);
+tree174  -> placed278  | 		capture_engine = nullptr;
+tree175  -> placed279  | 	}
+tree176  -> placed280  | 	listening = false;
+tree177  -> placed281  | 	port = 0;
+tree178  -> placed282  | 	set_process(false);
+tree179  -> placed283  | }
+tree180  -> placed-    | 
+tree181  -> placed285  | void MCPServer::handle_jsonrpc_request(const String &p_body, MCPHttpOutcome &r_outcome) {
+tree182  -> placed286  | 	// GDR-20: the dispatch either answers now or hands over a task for the
+tree183  -> placed287  | 	// transport to advance; both are carried by the outcome.
+tree184  -> placed288  | 	//
+tree185  -> placed289  | 	// TASK-038: `p_trace` is true only while a recorder is open. With the trace
+tree186  -> placed290  | 	// switched off (the default) the dispatcher is asked for exactly what it was
+tree187  -> placed291  | 	// asked for before this task existed, and `r_outcome.trace` stays untraceable.
+tree188  -> placed292  | 	const bool trace_enabled = trace_recorder != nullptr && trace_recorder->is_active();
+tree189  -> placed-    | 
+tree190  -> placed294  | 	// TASK-044: the whole cost this feature adds to a request is the one
+tree191  -> placed295  | 	// framebuffer copy below, taken *before* the tool runs so that "before" means
+tree192  -> placed296  | 	// "the frame the call was received in". `capture_token` is -1 for everything
+tree193  -> placed297  | 	// that is not a captured `tools/call`, which is every request in the default
+tree194  -> placed298  | 	// configuration.
+tree195  -> placed299  | 	const bool capture_enabled = capture_engine != nullptr && capture_engine->is_active();
+tree196  -> placed300  | 	int capture_token = -1;
+tree197  -> placed301  | 	if (capture_enabled) {
+tree198  -> placed302  | 		String capture_tool;
+tree199  -> placed303  | 		if (MCPCapture::payload_calls_tool(p_body, capture_tool)) {
+tree200  -> placed304  | 			if (registry.is_deferred_tool(StringName(capture_tool))) {
+tree201  -> placed305  | 				// Answered across frames, so the call line is written from the
+tree202  -> placed306  | 				// completion - far too late to decide whether the picture should
+tree203  -> placed307  | 				// have been dropped. The log still gets a verdict instead of
+tree204  -> placed308  | 				// silence; no snapshot is taken.
+tree205  -> placed309  | 				capture_token = capture_engine->arm_unavailable(capture_tool,
+tree206  -> placed310  | 						"the call is answered across frames (deferred), which the capture does not cover");
+tree207  -> placed311  | 			} else {
+tree208  -> placed312  | 				capture_token = capture_engine->arm(capture_tool);
+tree209  -> placed313  | 			}
+tree210  -> placed314  | 		}
+tree211  -> placed315  | 	}
+tree212  -> placed-    | 
+tree213  -> placed317  | 	const MCPJsonRpc::Dispatch dispatched = MCPJsonRpc::dispatch(p_body, registry, is_editor, (uint64_t)pending_timeout_ms, trace_enabled);
+tree214  -> placed318  | 	r_outcome.body = dispatched.response.body;
+tree215  -> placed319  | 	r_outcome.http_status = dispatched.response.http_status;
+tree216  -> placed320  | 	r_outcome.close = false;
+tree217  -> placed321  | 	r_outcome.deferred = dispatched.deferred;
+tree218  -> placed322  | 	r_outcome.task = dispatched.task;
+tree219  -> placed323  | 	r_outcome.id_json = dispatched.id_json;
+tree220  -> placed324  | 	r_outcome.timeout_ms = dispatched.timeout_ms;
+tree221  -> placed325  | 	r_outcome.trace = dispatched.trace;
+tree222  -> placed-    | 
+tree223  -> placed327  | 	if (capture_enabled && capture_token >= 0) {
+tree224  -> placed328  | 		// The call line is the *next* request line the recorder writes: the
+tree225  -> placed329  | 		// transport writes it immediately after this call returns, with no other
+tree226  -> placed330  | 		// line in between, so its `seq` is knowable here - and the capture line,
+tree227  -> placed331  | 		// appended a frame later, carries the same number.
+tree228  -> placed332  | 		const int capture_seq = trace_recorder->get_seq() + 1;
+tree229  -> placed333  | 		if (capture_engine->finish(capture_token, dispatched.trace.ok, capture_seq)) {
+tree230  -> placed334  | 			r_outcome.trace.capture_present = true;
+tree231  -> placed335  | 			r_outcome.trace.capture_mode = MCPCapture::mode_name(capture_engine->get_config().mode);
+tree232  -> placed336  | 			r_outcome.trace.capture_viewport = capture_engine->get_viewport_name();
+tree233  -> placed337  | 			r_outcome.trace.capture_status = capture_engine->call_line_status(capture_token);
+tree234  -> placed338  | 			r_outcome.trace.capture_reason = capture_engine->call_line_reason(capture_token);
+tree235  -> placed339  | 			r_outcome.trace.capture_token = capture_token;
+tree236  -> placed340  | 		}
+tree237  -> placed341  | 	}
+tree238  -> placed342  | }
+tree239  -> placed-    | 
+tree240  -> placed344  | String MCPServer::build_deferred_body(const MCPDeferred::Completion &p_completion) {
+tree241  -> placed426  | 			has_port_setting = true;
+tree242  -> placed427  | 			setting_port = (int)value;
+tree243  -> placed428  | 		}
+tree244  -> placed429  | 	}
+tree245  -> placed-    | 
+tree246  -> placed492  | 	Vector<String> cmdline_args;
+tree247  -> placed493  | 	if (OS::get_singleton() != nullptr) {
+tree248  -> placed494  | 		const List<String> args = OS::get_singleton()->get_cmdline_args();
+tree249  -> placed495  | 		for (const String &arg : args) {
+tree250  -> placed496  | 			cmdline_args.push_back(arg);
+tree251  -> placed497  | 		}
+tree252  -> placed498  | 	}
+tree253  -> placed-    | 
+tree254  -> placed585  | 	port_config = MCPPort::parse(cmdline_args, has_port_setting, setting_port, is_editor);
+tree255  -> placed586  | 	const bool listen = MCPPort::should_listen(is_editor, port_config, enabled_in_game);
+tree256  -> placed-    | 
+tree257  -> placed588  | 	const char *source = "default";
+tree258  -> placed589  | 	if (port_config.explicit_cmdline) {
+tree259  -> placed590  | 		source = "cmdline";
+tree260  -> placed591  | 	} else if (port_config.from_project_setting) {
+tree261  -> placed592  | 		source = "project_setting";
+tree262  -> placed593  | 	}
+tree263  -> placed-    | 
+tree264  -> placed595  | 	print_line(vformat("[MCP] role=%s configured_port=%d source=%s listen=%s",
+tree265  -> placed596  | 			is_editor ? "editor" : "game", port_config.port, source, listen ? "true" : "false"));
+tree266  -> placed-    | 
+tree267  -> placed611  | 	if (!listen) {
+tree268  -> placed612  | 		port = 0;
+tree269  -> placed613  | 		listening = false;
+tree270  -> placed614  | 		print_line("[MCP] not listening (get_port()=0)");
+tree271  -> placed615  | 		return;
+tree272  -> placed616  | 	}
+tree273  -> placed-    | 
+tree274  -> placed618  | 	http_server = memnew(MCPHttpServer);
+tree275  -> placed619  | 	http_server->set_sink(this);
+tree276  -> placed621  | 	http_server->set_max_body_bytes(max_body_bytes);
+tree277  -> placed622  | 	http_server->set_connection_idle_seconds(connection_idle_seconds);
+tree278  -> placed-    | 
+tree279  -> placed626  | 	const Error err = http_server->listen((uint16_t)port_config.port);
+tree280  -> placed627  | 	if (err != OK) {
+tree281  -> placed628  | 		// Binding failures must never take the engine down; the endpoint
+tree282  -> placed629  | 		// simply stays disabled and get_port() reports 0.
+tree283  -> placed630  | 		print_line(vformat("[MCP] bind failed on 127.0.0.1:%d (error=%d)", port_config.port, (int)err));
+tree284  -> placed631  | 		WARN_PRINT(vformat("[MCP] bind failed on 127.0.0.1:%d; MCP server disabled", port_config.port));
+tree285  -> placed632  | 		print_line("[MCP] get_port()=0 (MCP server disabled)");
+tree286  -> placed-    | 
+tree287  -> placed634  | 		memdelete(http_server);
+tree288  -> placed635  | 		http_server = nullptr;
+tree289  -> placed636  | 		port = 0;
+tree290  -> placed637  | 		listening = false;
+tree291  -> placed638  | 		return;
+tree292  -> placed639  | 	}
+tree293  -> placed-    | 
+tree294  -> placed641  | 	port = port_config.port;
+tree295  -> placed642  | 	listening = true;
+tree296  -> placed643  | 	print_line(vformat("[MCP] listening on 127.0.0.1:%d (editor=%s, tools=%d)",
+tree297  -> placed644  | 			port, is_editor ? "true" : "false", registry.get_visible_tool_count(is_editor)));
+tree298  -> placed653  | }
+tree299  -> placed-    | 	// have not been ported yet are not registered at all, so they can never show
+tree300  -> placed-    | 	// up in `tools/list` (GDR-7).
+tree301  -> placed-    | 	register_all_tools(registry);
+tree302  -> placed-    | }
+tree303  -> placed-    | 
+tree304  -> placed-    | void MCPServer::_start_service() {
+tree305  -> placed-    | 	if (service_started) {
+tree306  -> placed-    | 		return;
+tree307  -> placed-    | 	}
+tree308  -> placed-    | 	service_started = true;
+tree309  -> placed-    | 
+tree310  -> placed-    | 	is_editor = Engine::get_singleton() != nullptr && Engine::get_singleton()->is_editor_hint();
+tree311  -> placed-    | 
+tree312  -> placed-    | 	_register_tools();
+tree313  -> placed-    | 
+tree314  -> placed-    | 	max_body_bytes = _get_int_setting("mcp_server/max_body_bytes", 8 * 1024 * 1024);
+tree315  -> placed-    | 	max_requests_per_frame = _get_int_setting("mcp_server/max_requests_per_frame", 8);
+tree316  -> placed-    | 	if (max_requests_per_frame < 1) {
+tree317  -> placed-    | 		max_requests_per_frame = 1;
+tree318  -> placed-    | 	}
+tree319  -> placed-    | 	connection_idle_seconds = (double)_get_int_setting("mcp_server/connection_idle_seconds", 30);
+tree320  -> placed-    | 	if (connection_idle_seconds < 1.0) {
+tree321  -> placed-    | 		connection_idle_seconds = 1.0;
+tree322  -> placed-    | 	}
+tree323  -> placed-    | 
+tree324  -> placed-    | 	// GDR-20: the ceiling of a deferred request (30 s by default) and the
+tree325  -> placed-    | 	// per-frame tick budget. A budget below 1 would stall every pending request
+tree326  -> placed-    | 	// forever, so it is clamped like `max_requests_per_frame`.
+tree327  -> placed-    | 	//
+tree328  -> placed-    | 	// TASK-014 R-3: a ceiling of 0 (or a negative value) is *not* a working
+tree329  -> placed-    | 	// configuration. The transport reads 0 as "no deadline" and the frame-waiting
+tree330  -> placed-    | 	// deferred tools declare no deadline of their own, so 0 would switch off the
+tree331  -> placed-    | 	// module's only fallback for them. The M2 acceptance found the setting
+tree332  -> placed-    | 	// accepted 0 silently (mcp_server.cpp used to fold a negative value into 0
+tree333  -> placed-    | 	// and leave 0 alone); `MCPPendingTimeout::effective_ms` now maps `<= 0` to the
+tree334  -> placed-    | 	// default and the startup line below reports both values.
+tree335  -> placed-    | 	const int configured_pending_timeout_ms = _get_int_setting("mcp_server/pending_timeout_ms", MCPPendingTimeout::DEFAULT_MS);
+tree336  -> placed-    | 	pending_timeout_ms = MCPPendingTimeout::effective_ms(configured_pending_timeout_ms);
+tree337  -> placed-    | 	pending_ticks_per_frame = _get_int_setting("mcp_server/pending_ticks_per_frame", 8);
+tree338  -> placed-    | 	if (pending_ticks_per_frame < 1) {
+tree339  -> placed-    | 		pending_ticks_per_frame = 1;
+tree340  -> placed-    | 	}
+tree341  -> placed-    | 	if (pending_timeout_ms != configured_pending_timeout_ms) {
+tree342  -> placed-    | 		WARN_PRINT(vformat("[MCP] mcp_server/pending_timeout_ms=%d is not a usable deadline (0 would switch the deferred fallback off); using %d ms",
+tree343  -> placed-    | 				configured_pending_timeout_ms, pending_timeout_ms));
+tree344  -> placed-    | 	}
+tree345  -> placed-    | 	print_line(vformat("[MCP] pending_timeout_ms=%d (configured=%d) pending_ticks_per_frame=%d",
+tree346  -> placed-    | 			pending_timeout_ms, configured_pending_timeout_ms, pending_ticks_per_frame));
+tree347  -> placed-    | 
+tree348  -> placed-    | 	const bool enabled_in_game = _get_bool_setting("godot_mcp/enabled_in_game", false);
+tree349  -> placed-    | 
+tree350  -> placed-    | 	ProjectSettings *settings = ProjectSettings::get_singleton();
+tree351  -> placed-    | 	bool has_port_setting = false;
+tree352  -> placed-    | 	int setting_port = 0;
+tree353  -> placed-    | 	if (settings != nullptr && settings->has_setting("godot_mcp/port")) {
+tree354  -> placed-    | 		const Variant value = settings->get_setting("godot_mcp/port");
+tree355  -> placed-    | 		if (value.get_type() == Variant::INT || value.get_type() == Variant::FLOAT) {
+tree356  -> placed-    | 			has_port_setting = true;
+tree357  -> placed-    | 			setting_port = (int)value;
+tree358  -> placed-    | 		}
+tree359  -> placed-    | 	}
+tree360  -> placed-    | 
+tree361  -> placed-    | 	Vector<String> cmdline_args;
+tree362  -> placed-    | 	if (OS::get_singleton() != nullptr) {
+tree363  -> placed-    | 		const List<String> args = OS::get_singleton()->get_cmdline_args();
+tree364  -> placed-    | 		for (const String &arg : args) {
+tree365  -> placed-    | 			cmdline_args.push_back(arg);
+tree366  -> placed-    | 		}
+tree367  -> placed-    | 	}
+tree368  -> placed-    | 
+tree369  -> placed-    | 	// TASK-038: resolve the opt-in call trace exactly the way the port is
+tree370  -> placed-    | 	// resolved (GDR-4): command line beats project setting beats the default, and
+tree371  -> placed-    | 	// the default is "off" - no file is opened, and the transport is never given
+tree372  -> placed-    | 	// a recorder, so nothing on the request path changes.
+tree373  -> placed-    | 	{
+tree374  -> placed-    | 		bool has_trace_setting = false;
+tree375  -> placed-    | 		String setting_trace_path;
+tree376  -> placed-    | 		if (settings != nullptr) {
+tree377  -> placed-    | 			const char *const trace_setting_names[] = { "godot_mcp/trace_file", "godot_mcp.trace_file" };
+tree378  -> placed-    | 			for (int i = 0; i < 2; i++) {
+tree379  -> placed-    | 				if (!settings->has_setting(trace_setting_names[i])) {
+tree380  -> placed-    | 					continue;
+tree381  -> placed-    | 				}
+tree382  -> placed-    | 				const Variant value = settings->get_setting(trace_setting_names[i]);
+tree383  -> placed-    | 				if (value.get_type() == Variant::STRING) {
+tree384  -> placed-    | 					has_trace_setting = true;
+tree385  -> placed-    | 					setting_trace_path = (String)value;
+tree386  -> placed-    | 					break;
+tree387  -> placed-    | 				}
+tree388  -> placed-    | 			}
+tree389  -> placed-    | 		}
+tree390  -> placed-    | 
+tree391  -> placed-    | 		trace_config = MCPTrace::parse(cmdline_args, has_trace_setting, setting_trace_path);
+tree392  -> placed-    | 
+tree393  -> placed-    | 		if (trace_config.enabled) {
+tree394  -> placed-    | 			trace_recorder = memnew(MCPTrace::Recorder);
+tree395  -> placed-    | 			if (!trace_recorder->open(trace_config.path)) {
+tree396  -> placed-    | 				// `open()` has already warned once; the recorder is dead but the
+tree397  -> placed-    | 				// pointer stays valid (and inert) so `is_active()` is the single
+tree398  -> placed-    | 				// question the transport asks.
+tree399  -> placed-    | 				WARN_PRINT(vformat("[MCP] call trace could not be started for '%s'", trace_config.path));
+tree400  -> placed-    | 			}
+tree401  -> placed-    | 			if (trace_recorder->is_active()) {
+tree402  -> placed-    | 				// The user has to be told that this file may contain project
+tree403  -> placed-    | 				// content: it records the arguments of every tool call.
+tree404  -> placed-    | 				print_line(vformat("[MCP] trace enabled: file=%s (records initialize / tools/list / every tools/call; arguments may contain project content)",
+tree405  -> placed-    | 						trace_config.path));
+tree406  -> placed-    | 			} else {
+tree407  -> placed-    | 				print_line(vformat("[MCP] trace requested for '%s' but disabled (see the warning above)", trace_config.path));
+tree408  -> placed-    | 			}
+tree409  -> placed-    | 		} else {
+tree410  -> placed-    | 			print_line("[MCP] trace=off (default; use --mcp-trace=<path> or godot_mcp/trace_file to enable)");
+tree411  -> placed-    | 		}
+tree412  -> placed-    | 	}
+tree413  -> placed-    | 
+tree414  -> placed-    | 	// TASK-044: the capture extension, resolved exactly like the trace above and
+tree415  -> placed-    | 	// only ever *after* it - a capture line is a line in the trace file, so the
+tree416  -> placed-    | 	// two switches are not independent, and a capture without a trace is refused
+tree417  -> placed-    | 	// with a warning instead of being silently ignored.
+tree418  -> placed-    | 	{
+tree419  -> placed-    | 		bool has_capture_setting = false;
+tree420  -> placed-    | 		String setting_capture_value;
+tree421  -> placed-    | 		if (settings != nullptr) {
+tree422  -> placed-    | 			const char *const capture_setting_names[] = { "godot_mcp/capture", "godot_mcp.capture" };
+tree423  -> placed-    | 			for (int i = 0; i < 2; i++) {
+tree424  -> placed-    | 				if (!settings->has_setting(capture_setting_names[i])) {
+tree425  -> placed-    | 					continue;
+tree426  -> placed-    | 				}
+tree427  -> placed-    | 				const Variant value = settings->get_setting(capture_setting_names[i]);
+tree428  -> placed-    | 				if (value.get_type() == Variant::STRING) {
+tree429  -> placed-    | 					has_capture_setting = true;
+tree430  -> placed-    | 					setting_capture_value = (String)value;
+tree431  -> placed-    | 					break;
+tree432  -> placed-    | 				}
+tree433  -> placed-    | 			}
+tree434  -> placed-    | 		}
+tree435  -> placed-    | 
+tree436  -> placed-    | 		capture_config = MCPCapture::parse(cmdline_args, has_capture_setting, setting_capture_value, trace_config.path);
+tree437  -> placed-    | 		if (!capture_config.warning.is_empty()) {
+tree438  -> placed-    | 			WARN_PRINT(vformat("[MCP] %s", capture_config.warning));
+tree439  -> placed-    | 		}
+tree440  -> placed-    | 
+tree441  -> placed-    | 		if (capture_config.mode != MCPCapture::Mode::OFF) {
+tree442  -> placed-    | 			MCPCapture::Engine *engine = memnew(MCPCapture::Engine);
+tree443  -> placed-    | 			if (engine->start(capture_config, trace_recorder, is_editor)) {
+tree444  -> placed-    | 				capture_engine = engine;
+tree445  -> placed-    | 			} else {
+tree446  -> placed-    | 				// `start()` has already warned; the engine holds nothing.
+tree447  -> placed-    | 				memdelete(engine);
+tree448  -> placed-    | 			}
+tree449  -> placed-    | 		} else {
+tree450  -> placed-    | 			print_line("[MCP] capture=off (default; use --mcp-capture=on_error|every_call together with --mcp-trace=<path>)");
+tree451  -> placed-    | 		}
+tree452  -> placed-    | 	}
+tree453  -> placed-    | 
+tree454  -> placed-    | 	port_config = MCPPort::parse(cmdline_args, has_port_setting, setting_port, is_editor);
+tree455  -> placed-    | 	const bool listen = MCPPort::should_listen(is_editor, port_config, enabled_in_game);
+tree456  -> placed-    | 
+tree457  -> placed-    | 	const char *source = "default";
+tree458  -> placed-    | 	if (port_config.explicit_cmdline) {
+tree459  -> placed-    | 		source = "cmdline";
+tree460  -> placed-    | 	} else if (port_config.from_project_setting) {
+tree461  -> placed-    | 		source = "project_setting";
+tree462  -> placed-    | 	}
+tree463  -> placed-    | 
+tree464  -> placed-    | 	print_line(vformat("[MCP] role=%s configured_port=%d source=%s listen=%s",
+tree465  -> placed-    | 			is_editor ? "editor" : "game", port_config.port, source, listen ? "true" : "false"));
+tree466  -> placed-    | 
+tree467  -> placed-    | 	// TASK-054 (O-12): the generation marker of this trace file. The file is
+tree468  -> placed-    | 	// append-only and may be reused across runs, so the observer needs one line
+tree469  -> placed-    | 	// per process that says where a generation begins. It is written here
+tree470  -> placed-    | 	// because this is the first place that knows all of its fields - the port is
+tree471  -> placed-    | 	// resolved just above, the trace file was opened earlier - and it goes
+tree472  -> placed-    | 	// through the event-line path, so it consumes no request `seq` (the first
+tree473  -> placed-    | 	// request of this process is still `seq == 1`). It is written whether or not
+tree474  -> placed-    | 	// the server ends up listening: the file was opened either way, and a run
+tree475  -> placed-    | 	// that failed to bind is exactly the kind of fact a trace should carry.
+tree476  -> placed-    | 	if (trace_recorder != nullptr) {
+tree477  -> placed-    | 		trace_recorder->record_event_line(MCPTrace::build_trace_opened_fields(is_editor, port_config.port, listen));
+tree478  -> placed-    | 	}
+tree479  -> placed-    | 
+tree480  -> placed-    | 	if (!listen) {
+tree481  -> placed-    | 		port = 0;
+tree482  -> placed-    | 		listening = false;
+tree483  -> placed-    | 		print_line("[MCP] not listening (get_port()=0)");
+tree484  -> placed-    | 		return;
+tree485  -> placed-    | 	}
+tree486  -> placed-    | 
+tree487  -> placed-    | 	http_server = memnew(MCPHttpServer);
+tree488  -> placed-    | 	http_server->set_sink(this);
+tree489  -> placed-    | 	http_server->set_trace_recorder(trace_recorder);
+tree490  -> placed-    | 	http_server->set_max_body_bytes(max_body_bytes);
+tree491  -> placed-    | 	http_server->set_connection_idle_seconds(connection_idle_seconds);
+tree492  -> placed-    | 	http_server->set_pending_timeout_ms((uint64_t)pending_timeout_ms);
+tree493  -> placed-    | 	http_server->set_pending_ticks_per_frame(pending_ticks_per_frame);
+tree494  -> placed-    | 
+tree495  -> placed-    | 	const Error err = http_server->listen((uint16_t)port_config.port);
+tree496  -> placed-    | 	if (err != OK) {
+tree497  -> placed-    | 		// Binding failures must never take the engine down; the endpoint
+tree498  -> placed-    | 		// simply stays disabled and get_port() reports 0.
+tree499  -> placed-    | 		print_line(vformat("[MCP] bind failed on 127.0.0.1:%d (error=%d)", port_config.port, (int)err));
+tree500  -> placed-    | 		WARN_PRINT(vformat("[MCP] bind failed on 127.0.0.1:%d; MCP server disabled", port_config.port));
+tree501  -> placed-    | 		print_line("[MCP] get_port()=0 (MCP server disabled)");
+tree502  -> placed-    | 
+tree503  -> placed-    | 		memdelete(http_server);
+tree504  -> placed-    | 		http_server = nullptr;
+tree505  -> placed-    | 		port = 0;
+tree506  -> placed-    | 		listening = false;
+tree507  -> placed-    | 		return;
+tree508  -> placed-    | 	}
+tree509  -> placed-    | 
+tree510  -> placed-    | 	port = port_config.port;
+tree511  -> placed-    | 	listening = true;
+tree512  -> placed-    | 	print_line(vformat("[MCP] listening on 127.0.0.1:%d (editor=%s, tools=%d)",
+tree513  -> placed-    | 			port, is_editor ? "true" : "false", registry.get_visible_tool_count(is_editor)));
+tree514  -> placed-    | 	// TASK-010 section 3.2: a *successful* bind gets an INFO line carrying the
+tree515  -> placed-    | 	// port, the process role and where the port came from. The editor listens by
+tree516  -> placed-    | 	// default (GDR-4), so an engine run that was never meant to serve MCP - the
+tree517  -> placed-    | 	// obvious one being `--import`, which is an editor process and therefore
+tree518  -> placed-    | 	// binds 9877 unless told otherwise - used to do so silently; the INFO line
+tree519  -> placed-    | 	// makes that visible in the log next to the role line printed above.
+tree520  -> placed-    | 	print_line(vformat("[MCP] INFO: MCP server is ready on 127.0.0.1:%d as the %s process (port source=%s, tools=%d)",
+tree521  -> placed-    | 			port, is_editor ? "editor" : "game", source, registry.get_visible_tool_count(is_editor)));
+tree522  -> placed-    | }

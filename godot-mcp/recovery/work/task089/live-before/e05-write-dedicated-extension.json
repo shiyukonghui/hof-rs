@@ -1,0 +1,1 @@
+﻿{"error":{"code":-32602,"data":{"suggestion":"Use project_create_script or project_edit_script to write a GDScript file"},"message":"Parameter 'path' names a '.gd' file ('res://main.gd'), which has a dedicated tool"},"id":105,"jsonrpc":"2.0"}

@@ -1,0 +1,108 @@
+	// BEGIN generated
+	// (scripts/gen_b2_game_schema.py: docs/tools_list.renamed.json entries copied byte for byte;
+	//  channel/verb/scope/mutating read from docs/tool-rename-map.json. Re-running the generator
+	//  --in-place reproduces this span byte for byte.)
+	{
+		ToolBuilder builder("running_game_run_test_scenario", String::utf8("运行测试场景并执行一系列测试步骤"));
+
+		Dictionary schema;
+		Dictionary v0;
+		Dictionary v1;
+		v1[String::utf8("description")] = String::utf8("场景路径，可选 'main', 'current' 或 res:// 路径");
+		v1[String::utf8("type")] = String::utf8("string");
+		v0[String::utf8("scene_path")] = v1;
+		Dictionary v2;
+		v2[String::utf8("description")] = String::utf8("测试步骤数组，每个步骤包含 type(input/wait/assert) 和相关参数");
+		Dictionary v3;
+		Dictionary v4;
+		Dictionary v5;
+		v5[String::utf8("description")] = String::utf8("操作名称（input 类型使用）");
+		v5[String::utf8("type")] = String::utf8("string");
+		v4[String::utf8("action")] = v5;
+		Dictionary v6;
+		v6[String::utf8("description")] = String::utf8("期望值（assert 类型使用）");
+		v4[String::utf8("expected")] = v6;
+		Dictionary v7;
+		v7[String::utf8("description")] = String::utf8("按键代码（input 类型使用）");
+		v7[String::utf8("type")] = String::utf8("string");
+		v4[String::utf8("keycode")] = v7;
+		Dictionary v8;
+		v8[String::utf8("description")] = String::utf8("节点路径（wait/assert 类型使用）");
+		v8[String::utf8("type")] = String::utf8("string");
+		v4[String::utf8("node_path")] = v8;
+		Dictionary v9;
+		v9[String::utf8("default")] = String::utf8("eq");
+		v9[String::utf8("description")] = String::utf8("比较操作符: eq/neq/gt/lt/gte/lte/contains/type_is");
+		v9[String::utf8("type")] = String::utf8("string");
+		v4[String::utf8("operator")] = v9;
+		Dictionary v10;
+		v10[String::utf8("default")] = true;
+		v10[String::utf8("description")] = String::utf8("input 步骤：注入的事件是按下(true，默认)还是松开(false)");
+		v10[String::utf8("type")] = String::utf8("boolean");
+		v4[String::utf8("pressed")] = v10;
+		Dictionary v11;
+		v11[String::utf8("description")] = String::utf8("属性名（assert 类型使用）");
+		v11[String::utf8("type")] = String::utf8("string");
+		v4[String::utf8("property")] = v11;
+		Dictionary v12;
+		v12[String::utf8("description")] = String::utf8("等待秒数（wait 类型使用）");
+		v12[String::utf8("type")] = String::utf8("number");
+		v4[String::utf8("seconds")] = v12;
+		Dictionary v13;
+		v13[String::utf8("default")] = 1.0;
+		v13[String::utf8("description")] = String::utf8("input 步骤作用于 action 时的强度（默认 1.0；引擎会夹到 0..1）");
+		v13[String::utf8("type")] = String::utf8("number");
+		v4[String::utf8("strength")] = v13;
+		Dictionary v14;
+		v14[String::utf8("description")] = String::utf8("期望文本（assert 类型使用）");
+		v14[String::utf8("type")] = String::utf8("string");
+		v4[String::utf8("text")] = v14;
+		Dictionary v15;
+		v15[String::utf8("description")] = String::utf8("步骤类型");
+		Array v16;
+		v16.push_back(String::utf8("input"));
+		v16.push_back(String::utf8("wait"));
+		v16.push_back(String::utf8("assert"));
+		v15[String::utf8("enum")] = v16;
+		v15[String::utf8("type")] = String::utf8("string");
+		v4[String::utf8("type")] = v15;
+		v3[String::utf8("properties")] = v4;
+		Array v17;
+		v17.push_back(String::utf8("type"));
+		v3[String::utf8("required")] = v17;
+		v3[String::utf8("type")] = String::utf8("object");
+		v2[String::utf8("items")] = v3;
+		v2[String::utf8("type")] = String::utf8("array");
+		v0[String::utf8("steps")] = v2;
+		schema[String::utf8("properties")] = v0;
+		Array v18;
+		v18.push_back(String::utf8("steps"));
+		schema[String::utf8("required")] = v18;
+		schema[String::utf8("type")] = String::utf8("object");
+
+		builder.channel("running_game").verb("run").scope(MCPToolScope::GAME).mutating(true).schema(schema).pending_handler(_tool_run_test_scenario);
+		builder.register_into(r_registry);
+	}
+	{
+		ToolBuilder builder("running_game_run_stress_test", String::utf8("运行压力测试，重复执行指定操作 count 次"));
+
+		Dictionary schema;
+		Dictionary v0;
+		Dictionary v1;
+		v1[String::utf8("description")] = String::utf8("要执行的操作（可选，默认使用方向键）");
+		v1[String::utf8("type")] = String::utf8("string");
+		v0[String::utf8("action")] = v1;
+		Dictionary v2;
+		v2[String::utf8("default")] = 10;
+		v2[String::utf8("description")] = String::utf8("重复次数");
+		v2[String::utf8("type")] = String::utf8("integer");
+		v0[String::utf8("count")] = v2;
+		schema[String::utf8("properties")] = v0;
+		Array v3;
+		schema[String::utf8("required")] = v3;
+		schema[String::utf8("type")] = String::utf8("object");
+
+		builder.channel("running_game").verb("run").scope(MCPToolScope::GAME).mutating(true).schema(schema).pending_handler(_tool_run_stress_test);
+		builder.register_into(r_registry);
+	}
+	// END generated

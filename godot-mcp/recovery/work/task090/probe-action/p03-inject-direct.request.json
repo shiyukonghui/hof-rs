@@ -1,0 +1,1 @@
+﻿{"method":"tools/call","params":{"arguments":{"code":"var e = InputEventAction.new()\ne.action = \"mcp_right\"\ne.pressed = true\ne.strength = 1.0\nInput.parse_input_event(e)\nreturn \"injected\""},"name":"running_game_execute_gdscript"},"id":403,"jsonrpc":"2.0"}

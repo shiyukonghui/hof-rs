@@ -1,0 +1,29 @@
+modules/mcp_server: task086 (2c-5) step5 - tester assertions to the recovered generation, and the 2c-5 manifest
+
+Four independent restorations of the reconstructed test header, each pinned to
+its recorded source (detail in REBUILT-2C-MANIFEST.md section 2c-5):
+
+* 38 stale registry-size assertions (48/76/59/35/31/24, the TASK-015/TASK-017
+  generation) -> 73/177/154/50, the numbers the contract predicts and the
+  registry now measures. The recorded edit stream moves exactly these numbers up
+  batch by batch (`events-edit seq=974/1085/705`), and 177/154/73 is 176/153/72
+  plus the TASK-075 tool. Applied by work/task086/fix_counts.py with each of the
+  39 sites asserted before the write.
+* the TASK-024 `payload["reason"]` key (replaced by the nine-key TASK-026 source
+  block) -> the recorded `note` half, in both the success and the honest-empty
+  branch.
+* the two `String(const char *)` log fixtures that put mojibake in the log
+  (this fork's `String(const char *)` is `append_latin1`,
+  core/string/ustring.h:693) -> the recorded seq=756/758 text, which appends
+  `String::utf8(...)` for the CJK line.
+* `the analysis tools never write to the project`: its `CHECK(before.size() == 13)`
+  and the two-line TASK-026 comment are a splice from the *other* fixture - the
+  case below it, `the file readers never write to the project`, is the one whose
+  fixture is `ReadFilesProject` and whose inventory is 13. `ScratchProject`
+  writes 11 files and the recorded text (events-edit seq=457) asserts 11.
+
+Measured after this commit: `--headless --test --test-case=[MCPServer]*`
+-> 143 cases / 140 passed / 3 failed; 6391 assertions / 6376 passed / 15 failed;
+exit 1 (was 111 / 90 / 21 and 4370 / 4099 / 271 before TASK-086). The three
+remaining cases are the ones whose *test* side is the older generation and whose
+updated text is not in the recording - see the manifest's "Open conflicts".

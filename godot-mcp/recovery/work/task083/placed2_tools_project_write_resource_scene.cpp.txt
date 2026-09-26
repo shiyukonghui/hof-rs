@@ -1,0 +1,852 @@
+    1| @@MISSING@@
+    2| @@MISSING@@
+    3| @@MISSING@@
+    4| @@MISSING@@
+    5| @@MISSING@@
+    6| @@MISSING@@
+    7| @@MISSING@@
+    8| @@MISSING@@
+    9| @@MISSING@@
+   10| @@MISSING@@
+   11| @@MISSING@@
+   12| @@MISSING@@
+   13| @@MISSING@@
+   14| @@MISSING@@
+   15| @@MISSING@@
+   16| @@MISSING@@
+   17| @@MISSING@@
+   18| @@MISSING@@
+   19| @@MISSING@@
+   20| @@MISSING@@
+   21| @@MISSING@@
+   22| @@MISSING@@
+   23| @@MISSING@@
+   24| @@MISSING@@
+   25| @@MISSING@@
+   26| @@MISSING@@
+   27| @@MISSING@@
+   28| @@MISSING@@
+   29| /**************************************************************************/
+   30| #include "project_write_resource_scene.h"
+   31| 
+   32| #include "tool_builder.h"
+   33| #include "tool_helpers.h"
+   34| 
+   35| #include "core/error/error_macros.h"
+   36| #include "core/io/dir_access.h"
+   37| #include "core/io/file_access.h"
+   38| #include "core/io/json.h"
+   39| #include "core/io/resource_loader.h"
+   40| #include "core/io/resource_saver.h"
+   41| #include "core/object/class_db.h"
+   42| #include "core/object/object.h"
+   43| #include "core/object/ref_counted.h"
+   44| #include "core/os/os.h"
+   45| #include "core/string/string_name.h"
+   46| #include "core/templates/hash_set.h"
+   47| #include "core/variant/callable.h"
+   48| #include "core/variant/variant.h"
+   49| #include "scene/main/node.h"
+   50| #include "scene/resources/packed_scene.h"
+   51| 
+   52| using namespace MCPTools;
+   53| 
+   54| // ---------------------------------------------------------------------------
+   55| // Shared helpers
+   56| //
+   57| // The four tools of this group all follow the same shape: normalise the path,
+   58| // build or load an object, apply a caller supplied property bag, and publish the
+   59| // result. The helpers below are the three things they must do identically - a
+   60| // JSON value becomes a property value, a resource becomes a file, and an object
+   61| // becomes a property bag.
+   62| // ---------------------------------------------------------------------------
+   63| 
+   64| // `properties` is an *optional* argument in three of the four tools, but when it
+   65| // is present it must be an object (PLAYBOOK section 6.2: a present argument with
+   66| // the wrong type is an error, never silently ignored).
+   67| static bool _optional_properties(const Dictionary &p_args, Dictionary &r_out, MCPToolError &r_error) {
+   68| 	const Variant value = p_args.get("properties", Variant());
+   69| 	if (value.get_type() == Variant::NIL) {
+   70| 		r_out = Dictionary();
+   71| 		return true;
+   72| 	}
+   73| 	if (value.get_type() != Variant::DICTIONARY) {
+   74| 		r_error = MCPToolError::invalid_params(vformat("Parameter 'properties' must be an object, got %s",
+   75| 				Variant::get_type_name(value.get_type())));
+   76| 		return false;
+   77| 	}
+   78| 	r_out = value;
+   79| 	return true;
+   80| }
+   81| 
+   82| // `shape_vector_from_json` for `_resource_property_value` below - the
+   83| // component-shaping step TASK-026 added to the two resource writers (the
+   84| // reasoning is next to that helper). No circular include:
+   85| // `running_game_node_write.h` does not include this file.
+   86| #include "running_game_node_write.h"
+   87| 
+   88| // The property-value conversion lives in `tools/tool_helpers.*` since TASK-009
+   89| // section 2.2: `property_value_from_json`, `coerce_to_property_type` and
+   90| // `property_type_of` are one definition per helper for both writing groups (this
+   91| // file used to own the full copy and `editor_write_scene_editor.cpp` a subset of
+   92| // it; the union, i.e. the superset, is what was hoisted). The conversion rules
+   93| // that used to be documented here - the integral fold, `#rrggbb`, the
+   94| // `Vector2(..)` / `Vector3(..)` grammar, "an object stays a Dictionary",
+   95| // `type_convert` and the non-finite-number refusal - are preserved next to that
+   96| // single definition.
+   97| 
+   98| // ---------------------------------------------------------------------------
+   99| // TASK-026 (E-9, third surface of E-3): the three steps every *other* write path
+  100| // of the module takes.
+  101| //
+  102| // `property_value_from_json` -> `shape_vector_from_json` -> `coerce_to_property_type`
+  103| // is the exact sequence of `MCPTools::prepare_node_property_value`
+  104| // (tools/running_game_node_write.cpp:664-680), which the editor node writer, the
+  105| // batch writer, the cross-scene writer and `project_set_setting` all use. The
+  106| // two resource writers used only the first and the third step, so every value
+  107| // the module's own read side answers as an *object* or as an array of objects -
+  108| // `{"x":..,"y":..}` for a `Vector2`, `{"r":..,"g":..,"b":..,"a":..}` for a
+  109| // `Color`, `[{x,y},..]` for a `PackedVector2Array`, all of them GDR-25 section
+  110| // 23.4's read-back shapes - was refused with `-32602` here while the same value
+  111| // was accepted on the node path. That is section 23.4's closure rule failing
+  112| // *between two tools of one module*: `project_read_resource` now answers those
+  113| // shapes (TASK-026 E-9) and `project_edit_resource` has to take them back.
+  114| //
+  115| // `shape_vector_from_json` is a no-op for a target that is not component-shaped,
+  116| // so nothing else about these two tools changes.
+  117| //
+  118| // TASK-027 D-8: an Object-valued property of a resource (`Environment.sky`,
+  119| // `Object.script`, ...) is taken by the same `coerce_to_property_type` OBJECT
+  120| // branch the node path uses, and the class the property declares is passed along
+  121| // so a resource of the wrong class is refused by name instead of stored as null.
+  122| // ---------------------------------------------------------------------------
+  123| static bool _resource_property_value(const Variant &p_raw_value, Variant::Type p_target_type,
+  124| 		const StringName &p_property_name, const Object *p_object, Variant &r_out, MCPToolError &r_error) {
+  125| 	const Variant json_value = property_value_from_json(p_raw_value, p_target_type);
+  126| 	Variant shaped;
+  127| 	if (!shape_vector_from_json(json_value, p_target_type, String(p_property_name), "properties", shaped, r_error)) {
+  128| 		return false;
+  129| 	}
+  130| 	return coerce_to_property_type(shaped, p_target_type, r_out, r_error, "properties",
+  131| 			ValueSlot::FROM_TARGET_TYPE,
+  132| 			p_target_type == Variant::OBJECT ? object_property_class_hint(p_object, p_property_name) : String());
+  133| }
+  134| 
+  135| // The names of every property the object can be given through `set()`.
+  136| static HashSet<StringName> _property_names(const Object *p_object) {
+  137| 	HashSet<StringName> names;
+  138| 	List<PropertyInfo> properties;
+  139| 	p_object->get_property_list(&properties);
+  140| 	for (const PropertyInfo &property : properties) {
+  141| 		names.insert(property.name);
+  142| 	}
+  143| 	return names;
+  144| }
+  145| 
+  146| // Whether `p_name` may be handed to `Object::set()` at all.
+  147| static bool _is_settable_property_name(const StringName &p_name) {
+  148| 	return String(p_name).is_valid_identifier();
+  149| }
+  150| 
+  151| // The JSON image of a property, for the old/new pair of a `changed` entry.
+  152| static Variant _serialized_property(const Object *p_object, const StringName &p_name) {
+  153| 	return serialize_variant(p_object->get(p_name));
+  154| }
+  155| 
+  156| // ---------------------------------------------------------------------------
+  157| // TASK-022 D-5: "was it really set?" is a **read-back** question.
+  158| //
+  159| // `project_create_resource` used to answer `properties_set: ["min_value"]` for
+  160| // `Curve.min_value = 5.0` and report nothing else, while the engine's own setter
+  161| // had stored `max_value - 0.01` (0.99) - the M4b re-audit measured it and noted
+  162| // that the sibling `project_edit_resource` answers the same call with a real
+  163| // `changed: {min_value: {old, new}}`. The two entries now have one standard: the
+  164| // value is read back after `Object::set()` and compared with what the caller
+  165| // asked for, and an attribute the setter did not store as asked is reported as
+  166| // `ignored` instead of as "set".
+  167| //
+  168| // The comparison is made at the width the member really stores. A single
+  169| // precision member keeps the nearest `float`, so `(double)(float)0.1` is not
+  170| // `0.1`; comparing doubles would report a perfectly good write as "ignored". For
+  171| // every other target the serialized images are compared directly (a vector is a
+  172| // component object on both sides, so the comparison is a structural one).
+  173| //
+  174| // MCP-NARROWING: G24-RESOURCE-SET-WIDTH (TASK-023 D-7). The `(real_t)` casts
+  175| // below narrow a serialized `double` to the member's width; they are safe
+  176| // **because they are the comparison's own width**, and they cannot lose a value
+  177| // the write gate has already refused: `properties` is coerced through
+  178| // `coerce_to_property_type` (the `REAL_T` slot) *before* `Object::set()`, so the
+  179| // requested side is a value the 32-bit slot can hold, and both sides are then
+  180| // narrowed to that one width. A caller that could reach this line with `1e300`
+  181| // would get the honest answer "the stored value is not the request" - which is
+  182| // what the `ignored` entry of the D-5 read-back exists to say.
+  183| // ---------------------------------------------------------------------------
+  184| static bool _stored_value_matches_request(const Variant &p_requested_serialized,
+  185| 		const Variant &p_stored_serialized, Variant::Type p_target_type) {
+  186| 	if (p_target_type == Variant::FLOAT) {
+  187| 		// MCP-NARROWING: G24-RESOURCE-SET-WIDTH - the two `(real_t)` casts below
+  188| 		// are the comparison's own width, and the requested side reached this
+  189| 		// function through the `REAL_T` gate (TASK-023 D-7).
+  190| 		return (real_t)p_requested_serialized == (real_t)p_stored_serialized;
+  191| 	}
+  192| 	return p_requested_serialized == p_stored_serialized;
+  193| }
+  194| 
+  195| // The one `properties` bag writer both resource tools use. It is declared here
+  196| // and defined further down (next to `project_edit_resource`, where its rules are
+  197| // written out) because `project_create_resource` calls it and the two tools are
+  198| // otherwise ordered as the manifest lists them.
+  199| static bool _write_resource_properties(const Ref<Resource> &p_resource, const Dictionary &p_properties,
+  200| 		Dictionary &r_changed, Dictionary &r_ignored, Array &r_properties_set, MCPToolError &r_error);
+  201| 
+  202| // ---------------------------------------------------------------------------
+  203| // Atomic publish (TASK-007 section 3.1)
+  204| //
+  205| // `ResourceSaver::save()` writes straight into the destination, so a failure in
+  206| // the middle of a save (a full disk, a format saver that refuses the value, a
+  207| // write error) can leave a truncated - that is, **corrupted** - file where the
+  208| // caller's resource used to be. The migration source did exactly that.
+  209| //
+  210| // TASK-008 section 3 hoisted the mechanism into `tools/tool_helpers.*`
+  211| // (`publish_file_atomically`, `temporary_sibling_path`) so that the editor write
+  212| // group's `editor_save_scene` shares it instead of growing a second, subtly
+  213| // different copy. What is left here is the same private name the four tools of
+  214| // this group already call, plus the one-line adapter that lets the shared helper
+  215| // drive `ResourceSaver::save()`:
+  216| //
+  217| //   * the temporary file name keeps its extension last (`created.mcp-tmp.tres`),
+  218| //     because `ResourceFormatSaver::recognize_path()` compares the text after the
+  219| //     **last** dot against the saver's extension list (a measured bug of an
+  220| //     earlier revision, REPORT-007 section 8.1);
+  221| //   * the destination is only touched after a *successful* save of a temporary
+  222| //     sibling that really exists, the old bytes are copied aside first, and a
+  223| //     failed publish puts them back.
+  224| //
+  225| // On every failure path the temporary file (and the backup) is removed: the
+  226| // group may not leave a half-written artefact behind.
+  227| // ---------------------------------------------------------------------------
+  228| 
+  229| static Error _resource_save_writer(const String &p_temp_path, void *p_userdata) {
+  230| 	const Ref<Resource> *resource = static_cast<const Ref<Resource> *>(p_userdata);
+  231| 	return ResourceSaver::save(*resource, p_temp_path);
+  232| }
+  233| 
+  234| static Error _save_resource_atomically(const Ref<Resource> &p_resource, const String &p_path) {
+  235| 	// The `Ref` is copied into a local so that the callback has a stable address
+  236| 	// for the whole call; `publish_file_atomically` never stores it.
+  237| 	Ref<Resource> held = p_resource;
+  238| 	return publish_file_atomically(p_path, _resource_save_writer, &held);
+  239| }
+  240| 
+  241| // ---------------------------------------------------------------------------
+  242| // project_create_resource (old `create_resource`, resource.rs:199)
+  243| //
+  244| // `path` + `type` are required; `properties` (object) and `overwrite` (bool,
+  245| // default false) are optional. The type has to be an *instantiable* `Resource`
+  246| // subclass; an unknown or non-resource class is -32602, because it is the
+  247| // argument that names the class. An existing file is refused with -32000 unless
+  248| // `overwrite = true` says otherwise - the migration source had that guard, and
+  249| // the write group keeps it.
+  250| //
+  251| // Returns `{"path","type","properties_set":[...],"changed":{}}`.
+  252| // ---------------------------------------------------------------------------
+  253| 
+  254| static Variant _tool_create_resource(const Dictionary &p_args, MCPToolError &r_error) {
+  255| 	String raw_path;
+  256| 	if (!require_string(p_args, "path", raw_path, r_error)) {
+  257| 		return Variant();
+  258| 	}
+  259| 	String path;
+  260| 	if (!normalize_project_path(raw_path, path, r_error)) {
+  261| 		return Variant();
+  262| 	}
+  263| 	String type_name;
+  264| 	if (!require_string(p_args, "type", type_name, r_error)) {
+  265| 		return Variant();
+  266| 	}
+  267| 	Dictionary properties;
+  268| 	if (!_optional_properties(p_args, properties, r_error)) {
+  269| 		return Variant();
+  270| 	}
+  271| 	bool overwrite = false;
+  272| 	if (!optional_bool(p_args, "overwrite", false, overwrite, r_error)) {
+  273| 		return Variant();
+  274| 	}
+  275| 
+  276| 	if (path == String("res://")) {
+  277| 		r_error = MCPToolError::invalid_params(
+  278| 				"Parameter 'path' must name a file, got the project root 'res://'");
+  279| 		return Variant();
+  280| 	}
+  281| 	if (FileAccess::exists(path) && !overwrite) {
+  282| 		r_error = MCPToolError::tool_state(vformat("Resource already exists: %s", path),
+  283| 				"Set overwrite=true to replace the existing file");
+  284| 		return Variant();
+  285| 	}
+  286| 
+  287| 	const StringName class_name(type_name);
+  288| 	if (!ClassDB::class_exists(class_name) || !ClassDB::can_instantiate(class_name) ||
+  289| 			!ClassDB::is_parent_class(class_name, "Resource")) {
+  290| 		r_error = MCPToolError::invalid_params(
+  291| 				vformat("Parameter 'type' must name a resource class, got '%s'", type_name));
+  292| 		return Variant();
+  293| 	}
+  294| 	Object *created = ClassDB::instantiate(class_name);
+  295| 	Resource *resource = Object::cast_to<Resource>(created);
+  296| 	if (resource == nullptr) {
+  297| 		if (created != nullptr) {
+  298| 			memdelete(created);
+  299| 		}
+  300| 		r_error = MCPToolError::invalid_params(
+  301| 				vformat("Parameter 'type' must name a resource class, got '%s'", type_name));
+  302| 		return Variant();
+  303| 	}
+  304| 	const Ref<Resource> resource_ref(resource);
+  305| 
+  306| 	Array properties_set;
+  307| 	// TASK-022 D-5: the three fields the answer carries about the `properties`
+  308| 	// bag, all of them built from a read-back of the object (see
+  309| 	// `_stored_value_matches_request`):
+  310| 	//   * `changed` - `{<name>: {old, new}}`, the same shape
+  311| 	//     `project_edit_resource` answers, so the caller can see what the engine
+  312| 	//     really stored;
+  313| 	//   * `properties_set` - only the names whose read-back **is** the value that
+  314| 	//     was asked for;
+  315| 	//   * `ignored` - the names the engine's own setter stored differently (it
+  316| 	//     clamped or refused the value), with the requested and the stored value
+  317| 	//     and the reason, so "I set it" is never claimed for them.
+  318| 	//
+  319| 	// TASK-037 D2: the validation, the write and the read-back moved into
+  320| 	// `_write_resource_properties` (below), because `project_edit_resource` has
+  321| 	// to answer the *same* call the same way. What changed for this tool is the
+  322| 	// unknown-name rule: a name the resource does not have is a `-32001` naming
+  323| 	// it, not a silent skip (see the comment on the helper).
+  324| 	Dictionary ignored;
+  325| 	Dictionary changed;
+  326| 	if (!properties.is_empty()) {
+  327| 		if (!_write_resource_properties(resource, properties, changed, ignored, properties_set, r_error)) {
+  328| 			return Variant();
+  329| 		}
+  330| 	}
+  331| 
+  332| 	const Error save_error = _save_resource_atomically(resource_ref, path);
+  333| 	if (save_error != OK) {
+  334| 		r_error = MCPToolError::internal(vformat("Failed to save resource: %s", error_names[(int)save_error]));
+  335| 		return Variant();
+  336| 	}
+  337| 
+  338| 	Dictionary result;
+  339| 	result["path"] = path;
+  340| // ---------------------------------------------------------------------------
+  341| // project_create_scene_file (old `create_scene`, scene.rs:171)
+  342| //
+  343| // `path` is required; `root_type` (default "Node2D") and `root_name` (default:
+  344| // the file stem) are optional. The root type has to be an instantiable `Node`
+  345| // subclass. Unlike the migration source this tool **refuses to replace an
+  346| // existing file** (-32000 + suggestion): the contract has no `overwrite`
+  347| // argument, and a write tool that silently replaces a scene is not something a
+  348| // caller can opt out of. Everything else - the packing, the root name default,
+  349| // the "Node" fallback of the reference's `unwrap_or` - is unchanged.
+  350| //
+  351| // Returns `{"path","root_type","root_name","created":true}`.
+  352| // ---------------------------------------------------------------------------
+  353| 
+  354| static Variant _tool_create_scene_file(const Dictionary &p_args, MCPToolError &r_error) {
+  355| 	String raw_path;
+  356| 	if (!require_string(p_args, "path", raw_path, r_error)) {
+  357| 		return Variant();
+  358| 				continue;
+  359| 			}
+  360| 			Variant value;
+  361| 			if (!_coerce_to_property_type(_property_value_from_json(properties[keys[i]], _property_type(resource.ptr(), key)),
+  362| 						_property_type(resource.ptr(), key), value, r_error)) {
+  363| 				return Variant();
+  364| 			}
+  365| 			resource->set(key, value);
+  366| // project_create_scene_file (old `create_scene`, scene.rs:171)
+  367| //
+  368| // `path` is required; `root_type` (default "Node2D") and `root_name` (default:
+  369| // the file stem) are optional. The root type has to be an instantiable `Node`
+  370| // subclass. Unlike the migration source this tool **refuses to replace an
+  371| // existing file** (-32000 + suggestion): the contract has no `overwrite`
+  372| // argument, and a write tool that silently replaces a scene is not something a
+  373| // caller can opt out of. Everything else - the packing, the root name default,
+  374| // the "Node" fallback of the reference's `unwrap_or` - is unchanged.
+  375| //
+  376| // Returns `{"path","root_type","root_name","created":true}`.
+  377| // ---------------------------------------------------------------------------
+  378| 
+  379| static Variant _tool_create_scene_file(const Dictionary &p_args, MCPToolError &r_error) {
+  380| 	String raw_path;
+  381| 	if (!require_string(p_args, "path", raw_path, r_error)) {
+  382| 		return Variant();
+  383| 	}
+  384| 	String path;
+  385| 	if (!normalize_project_path(raw_path, path, r_error)) {
+  386| 		return Variant();
+  387| 	}
+  388| 	String type_name;
+  389| 	if (!optional_string(p_args, "root_type", "Node2D", type_name, r_error)) {
+  390| 		return Variant();
+  391| 	}
+  392| 	String requested_name;
+  393| 	if (!optional_string(p_args, "root_name", String(), requested_name, r_error)) {
+  394| 		return Variant();
+  395| 	}
+  396| 
+  397| 	if (path == String("res://")) {
+  398| 		r_error = MCPToolError::invalid_params(
+  399| 				"Parameter 'path' must name a file, got the project root 'res://'");
+  400| 		return Variant();
+  401| 	}
+  402| 	if (FileAccess::exists(path)) {
+  403| 		r_error = MCPToolError::tool_state(vformat("Scene file already exists: %s", path),
+  404| 				"Delete it first with project_delete_scene_file, or choose another path");
+  405| 		return Variant();
+  406| 	}
+  407| 
+  408| 	const StringName class_name(type_name);
+  409| 	if (!ClassDB::class_exists(class_name) || !ClassDB::can_instantiate(class_name) ||
+  410| 			!ClassDB::is_parent_class(class_name, "Node")) {
+  411| 		r_error = MCPToolError::invalid_params(
+  412| 				vformat("Parameter 'root_type' must name a node class, got '%s'", type_name));
+  413| 		return Variant();
+  414| 	}
+  415| 	Object *created = ClassDB::instantiate(class_name);
+  416| 	Node *root = Object::cast_to<Node>(created);
+  417| 	if (root == nullptr) {
+  418| 		if (created != nullptr) {
+  419| 			memdelete(created);
+  420| 		}
+  421| 		r_error = MCPToolError::invalid_params(
+  422| 				vformat("Parameter 'root_type' must name a node class, got '%s'", type_name));
+  423| 		return Variant();
+  424| 	}
+  425| 
+  426| 	String root_name = requested_name;
+  427| 	if (root_name.is_empty()) {
+  428| 		root_name = path.get_file().get_basename();
+  429| 	}
+  430| 	if (root_name.is_empty()) {
+  431| 		root_name = "Node";
+  432| 	}
+  433| 	root->set_name(root_name);
+  434| 
+  435| 	Ref<PackedScene> scene;
+  436| 	scene.instantiate();
+  437| 	const Error pack_error = scene->pack(root);
+  438| 	if (pack_error != OK) {
+  439| 		memdelete(root);
+  440| 	result["path"] = path;
+  441| 	result["root_type"] = type_name;
+  442| 	result["root_name"] = root_name;
+  443| 	result["created"] = true;
+  444| 	return result;
+  445| }
+  446| 
+  447| // ---------------------------------------------------------------------------
+  448| // project_delete_scene_file (old `delete_scene`, scene.rs:251)
+  449| //
+  450| // `path` is required and must exist, otherwise -32001 with a suggestion (the
+  451| // migration source returned not_found as well). The scene file and, when it is
+  452| // there, its `<path>.import` sidecar are removed - the `rescan` the reference
+  453| // performed afterwards is an editor-side refresh that the tool does not need.
+  454| //
+  455| // Returns `{"path","deleted":true}` where `path` is the *normalised* path.
+  456| // ---------------------------------------------------------------------------
+  457| 
+  458| static Variant _tool_delete_scene_file(const Dictionary &p_args, MCPToolError &r_error) {
+  459| 	String raw_path;
+  460| 	if (!require_string(p_args, "path", raw_path, r_error)) {
+  461| 		return Variant();
+  462| 	}
+  463| 	String path;
+  464| 	if (!normalize_project_path(raw_path, path, r_error)) {
+  465| 		return Variant();
+  466| 	}
+  467| 
+  468| 	if (!FileAccess::exists(path)) {
+  469| 		r_error = MCPToolError::not_found(vformat("Scene file '%s'", path),
+  470| 				"Use project_get_filesystem_tree to list the .tscn files of the project");
+  471| 		return Variant();
+  472| 	}
+  473| 
+  474| 	const Error remove_error = DirAccess::remove_absolute(path);
+  475| 	if (remove_error != OK) {
+  476| 		r_error = MCPToolError::internal(vformat("Failed to delete the scene file: %s",
+  477| 				error_names[(int)remove_error]));
+  478| 		return Variant();
+  479| 	}
+  480| 	// A scene that was imported has a sidecar; it is removed with the scene.
+  481| 	const String import_path = path + ".import";
+  482| 	if (FileAccess::exists(import_path)) {
+  483| 		DirAccess::remove_absolute(import_path);
+  484| 	}
+  485| 
+  486| 	Dictionary result;
+  487| 	result["path"] = path;
+  488| 	result["deleted"] = true;
+  489| 	return result;
+  490| }
+  491| 
+  492| // ---------------------------------------------------------------------------
+  493| // TASK-037 D2: the one `properties` bag writer of the two resource tools.
+  494| //
+  495| // Before this task the two tools were *almost* the same loop and differed in
+  496| // exactly the way the M4e/B5 audit (REPORT-AUDIT-B5 D2) reported:
+  497| //
+  498| //   * `project_create_resource` skipped a name the object does not have and
+  499| //     answered `{"properties_set":[],"message":"No properties were changed"}`
+  500| //     (a success shape);
+  501| //   * `project_edit_resource` did the same, *and* it listed an engine-clamped
+  502| //     value in `changed` with no `ignored` entry at all.
+  503| //
+  504| // Both halves are the failure class this module exists to remove: a response
+  505| // that is a success and says nothing about a parameter that was never applied.
+  506| // The rule is now one rule, taken from `DESIGN-DETAIL` section 20.6 and
+  507| // PLAYBOOK section 6.1:
+  508| //
+  509| //   * a key that is not a settable property name is a bad *argument*
+  510| //     (`-32602`) - it can never address a property, so the name is the problem
+  511| //     (the same judgement `editor_set_node_property` makes through
+  512| //     `split_property_path` / `_is_settable_property_name`);
+  513| //   * a well-formed key the object does not have is `-32001` **naming it** in
+  514| //     `data.suggestion` (the TASK-014 D-1 shape). The whole call is refused and
+  515| 		return Variant();
+  516| 	}
+  517| 	// A scene that was imported has a sidecar; it is removed with the scene.
+  518| 	const String import_path = path + ".import";
+  519| 	if (FileAccess::exists(import_path)) {
+  520| 		DirAccess::remove_absolute(import_path);
+  521| 	}
+  522| 
+  523| 	Dictionary result;
+  524| 	result["path"] = path;
+  525| 	result["deleted"] = true;
+  526| 	return result;
+  527| }
+  528| 
+  529| // ---------------------------------------------------------------------------
+  530| // TASK-037 D2: the one `properties` bag writer of the two resource tools.
+  531| //
+  532| // Before this task the two tools were *almost* the same loop and differed in
+  533| // exactly the way the M4e/B5 audit (REPORT-AUDIT-B5 D2) reported:
+  534| //
+  535| //   * `project_create_resource` skipped a name the object does not have and
+  536| //     answered `{"properties_set":[],"message":"No properties were changed"}`
+  537| //     (a success shape);
+  538| //   * `project_edit_resource` did the same, *and* it listed an engine-clamped
+  539| //     value in `changed` with no `ignored` entry at all.
+  540| //
+  541| // Both halves are the failure class this module exists to remove: a response
+  542| // that is a success and says nothing about a parameter that was never applied.
+  543| // The rule is now one rule, taken from `DESIGN-DETAIL` section 20.6 and
+  544| // PLAYBOOK section 6.1:
+  545| //
+  546| //   * a key that is not a settable property name is a bad *argument*
+  547| //     (`-32602`) - it can never address a property, so the name is the problem
+  548| //     (the same judgement `editor_set_node_property` makes through
+  549| //     `split_property_path` / `_is_settable_property_name`);
+  550| //   * a well-formed key the object does not have is `-32001` **naming it** in
+  551| //     `data.suggestion` (the TASK-014 D-1 shape). The whole call is refused and
+  552| //     nothing is written, so "some of my properties were applied and some were
+  553| //     not" cannot be mistaken for "all of them were";
+  554| //   * only then is the value coerced and written, and the object is read back:
+  555| //     a value the engine's own setter stored differently goes to `ignored` with
+  556| //     `requested` / `stored` / `reason`, and only a name whose read-back **is**
+  557| //     the request goes to `properties_set`.
+  558| //
+  559| // Refusing on the first unknown name (rather than reporting a partial write) is
+  560| // what makes the refusal *actionable*: the caller learns the name, fixes it and
+  561| // re-sends, and no half-applied bag is left behind. A bag that legitimately
+  562| // wants "whatever exists" has no expression here - and that is deliberate, since
+  563| // a silent subset write is exactly the shape being eliminated.
+  564| // ---------------------------------------------------------------------------
+  565| static bool _write_resource_properties(const Ref<Resource> &p_resource, const Dictionary &p_properties,
+  566| 		Dictionary &r_changed, Dictionary &r_ignored, Array &r_properties_set, MCPToolError &r_error) {
+  567| 	const HashMap<StringName, bool> table = _property_table(p_resource.ptr());
+  568| 	const Array keys = p_properties.keys();
+  569| 	for (int i = 0; i < keys.size(); i++) {
+  570| 		const StringName key(keys[i]);
+  571| 		const bool *is_label = table.getptr(key);
+  572| 		if (String(key).is_empty()) {
+  573| 			// A nameless key can never address a property: it is the argument
+  574| 			// that is wrong, not the resource.
+  575| 			r_error = MCPToolError::invalid_params(
+  576| 					"Property name must not be empty: Object::set() cannot address a property without a name");
+  577| 			return false;
+  578| 		}
+  579| 		if (is_label != nullptr && *is_label) {
+  580| 			r_error = MCPToolError::invalid_params(vformat(
+  581| 					"Property name '%s' is an inspector group/category label, not a property: %s's own property list "
+  582| 					"carries it with PROPERTY_USAGE_GROUP/SUBGROUP/CATEGORY, which has no value and no setter",
+  583| 					String(key), p_resource->get_class()));
+  584| 			return false;
+  585| 		}
+  586| 		if (is_label == nullptr) {
+  587| 			// TASK-049: the object's own property table is the authority on what
+  588| 			// a property is - it is the table `Object::set()` itself resolves
+  589| 			// through, and it is what the readers enumerate. A name that is not
+  590| 			// a *name* at all is the argument's fault (-32602); a well-formed
+  591| 			// name the table does not carry is an unknown property (-32001,
+  592| 			// naming it).
+  593| 			if (!resource_bag_name_is_addressable(key)) {
+  594| 				r_error = MCPToolError::invalid_params(vformat(
+  595| //
+  596| // Returns `{"path","type","changed":{<name>:{"old","new"}},"ignored":{...},
+  597| // "properties_set":[...]}`. An **empty** `properties` bag still answers the
+  598| // reference's `{"path","changed":{},"message":"No properties were changed"}`
+  599| // shape and writes nothing: "the caller named no property at all" is a
+  600| // different statement from "a name the caller gave does not exist", and only the
+  601| // second one is an error.
+  602| // ---------------------------------------------------------------------------
+  603| 
+  604| static bool _require_properties(const Dictionary &p_args, Dictionary &r_out, MCPToolError &r_error) {
+  605| 	const Variant value = p_args.get("properties", Variant());
+  606| 	if (value.get_type() == Variant::NIL) {
+  607| 		r_error = MCPToolError::invalid_params("Missing required parameter: properties");
+  608| 		return false;
+  609| 	}
+  610| 	if (value.get_type() != Variant::DICTIONARY) {
+  611| 		r_error = MCPToolError::invalid_params(vformat("Parameter 'properties' must be an object, got %s",
+  612| 				Variant::get_type_name(value.get_type())));
+  613| 		return false;
+  614| 	}
+  615| 	r_out = value;
+  616| 	return true;
+  617| }
+  618| 
+  619| static Variant _tool_edit_resource(const Dictionary &p_args, MCPToolError &r_error) {
+  620| 		const Variant::Type target_type = property_type_of(p_resource.ptr(), key);
+  621| 		Variant value;
+  622| 		if (!_resource_property_value(p_properties[keys[i]], target_type, key, p_resource.ptr(), value, r_error)) {
+  623| 			return false;
+  624| 		}
+  625| 		const Variant old_value = _serialized_property(p_resource.ptr(), key);
+  626| 		p_resource->set(key, value);
+  627| 		const Variant new_value = _serialized_property(p_resource.ptr(), key);
+  628| 
+  629| 		Dictionary entry;
+  630| 		entry["old"] = old_value;
+  631| 		entry["new"] = new_value;
+  632| 		r_changed[String(key)] = entry;
+  633| 
+  634| 		// TASK-022 D-5 / DESIGN-DETAIL section 20.6: "was it really set?" is a
+  635| 		// read-back question. The comparison is made at the member's width (see
+  636| 		// `_stored_value_matches_request`).
+  637| 		if (_stored_value_matches_request(serialize_variant(value), new_value, target_type)) {
+  638| 			r_properties_set.push_back(String(key));
+  639| 		} else {
+  640| 			Dictionary miss;
+  641| 			miss["requested"] = serialize_variant(value);
+  642| 			miss["stored"] = new_value;
+  643| 			miss["reason"] = "the engine's own property setter stored a different value for this property "
+  644| 							 "(it clamps or refuses input outside its own range), so it is not reported as set";
+  645| 			r_ignored[String(key)] = miss;
+  646| 		}
+  647| 	}
+  648| 	return true;
+  649| }
+  650| 
+  651| // ---------------------------------------------------------------------------
+  652| // project_edit_resource (old `edit_resource`, resource.rs:131)
+  653| //
+  654| // `path` and `properties` are both required. The resource is loaded, every
+  655| // property of the bag is written through `_write_resource_properties`, and the
+  656| // result is saved.
+  657| //
+  658| // TASK-037 D2 - the observable contract of the bag, one rule for both resource
+  659| // writers (see the helper):
+  660| //   * a name that is not a settable identifier -> `-32602`, nothing written;
+  661| //   * a name the resource does not have -> `-32001` + `data.suggestion` naming
+  662| //     it, nothing written and **no file is touched**;
+  663| //   * a value the engine's setter clamped or refused -> the entry appears in
+  664| //     `ignored` with `requested` / `stored` / `reason` (it is *also* in
+  665| //     `changed`, which reports the read-back truth); `properties_set` lists the
+  666| //     names whose read-back is the request.
+  667| //
+  668| // Returns `{"path","type","changed":{<name>:{"old","new"}},"ignored":{...},
+  669| // "properties_set":[...]}`. An **empty** `properties` bag still answers the
+  670| 	{
+  671| 		ToolBuilder builder("project_create_resource", String::utf8(R"desc(创建新资源文件)desc"));
+  672| 		builder.channel("project").verb("create").scope(MCPToolScope::BOTH).mutating(true);
+  673| 		builder.schema(_schema_from_json(R"schema({"properties":{"overwrite":{"default":false,"description":"是否覆盖已存在的文件","type":"boolean"},"path":{"description":"保存路径 (res://)","type":"string"},"properties":{"description":"初始属性字典","type":"object"},"type":{"description":"资源类型","type":"string"}},"required":["path","type"],"type":"object"})schema"));
+  674| 		builder.handler(_tool_create_resource).register_into(r_registry);
+  675| 	}
+  676| 
+  677| 	{
+  678| 		ToolBuilder builder("project_create_scene_file", String::utf8(R"desc(创建新场景文件)desc"));
+  679| 		builder.channel("project").verb("create").scope(MCPToolScope::BOTH).mutating(true);
+  680| 		builder.schema(_schema_from_json(R"schema({"properties":{"path":{"description":"保存路径 (res://)","type":"string"},"root_name":{"description":"根节点名称 (可选)","type":"string"},"root_type":{"default":"Node2D","description":"根节点类型","type":"string"}},"required":["path"],"type":"object"})schema"));
+  681| 		builder.handler(_tool_create_scene_file).register_into(r_registry);
+  682| 	}
+  683| 
+  684| 	{
+  685| 		ToolBuilder builder("project_delete_scene_file", String::utf8(R"desc(删除场景文件)desc"));
+  686| 		builder.channel("project").verb("delete").scope(MCPToolScope::BOTH).mutating(true);
+  687| 		builder.schema(_schema_from_json(R"schema({"properties":{"path":{"description":"要删除的场景文件路径 (res://)","type":"string"}},"required":["path"],"type":"object"})schema"));
+  688| 		builder.handler(_tool_delete_scene_file).register_into(r_registry);
+  689| 	}
+  690| 
+  691| 	{
+  692| 		ToolBuilder builder("project_edit_resource", String::utf8(R"desc(编辑资源文件属性并保存)desc"));
+  693| 		builder.channel("project").verb("edit").scope(MCPToolScope::BOTH).mutating(true);
+  694| 		builder.schema(_schema_from_json(R"schema({"properties":{"path":{"description":"资源文件路径 (res://)","type":"string"},"properties":{"description":"要修改的属性字典","type":"object"}},"required":["path","properties"],"type":"object"})schema"));
+  695| 		builder.handler(_tool_edit_resource).register_into(r_registry);
+  696| 	}
+  697| }
+  698| @@MISSING@@
+  699| @@MISSING@@
+  700| 	}
+  701| 	String path;
+  702| 	if (!normalize_project_path(raw_path, path, r_error)) {
+  703| 		return Variant();
+  704| 	}
+  705| 	Dictionary properties;
+  706| 	if (!_require_properties(p_args, properties, r_error)) {
+  707| 		return Variant();
+  708| 	}
+  709| 
+  710| 	if (!FileAccess::exists(path)) {
+  711| 		r_error = MCPToolError::not_found(vformat("Resource '%s'", path),
+  712| 				"Use project_get_filesystem_tree to list the resources of the project");
+  713| 		return Variant();
+  714| 	}
+  715| 	const Ref<Resource> resource = ResourceLoader::load(path);
+  716| 	if (resource.is_null()) {
+  717| 		// The file is there but is not (or no longer) a loadable resource. It is
+  718| 		// deliberately left exactly as it is: a read failure must never turn
+  719| 		// into a write.
+  720| 		r_error = MCPToolError::not_found(vformat("Loadable resource '%s'", path),
+  721| 				"The file exists but could not be loaded as a resource; fix or delete it first");
+  722| 		return Variant();
+  723| 	}
+  724| 
+  725| 	Dictionary changed;
+  726| 	Dictionary ignored;
+  727| 	Array properties_set;
+  728| 	if (!properties.is_empty()) {
+  729| 		if (!_write_resource_properties(resource, properties, changed, ignored, properties_set, r_error)) {
+  730| 			return Variant();
+  731| 		}
+  732| 	}
+  733| 
+  734| 	// The reference's "nothing to do" short circuit, kept for the one case where
+  735| 	// it is honest: the caller sent an **empty** bag. A bag that named a property
+  736| 	// the resource does not have never reaches this line (it is a -32001 above),
+  737| 	// which is the TASK-037 D2 fix - the old code answered this same success
+  738| 	// shape for `{"no_such_property": 1}` and left the caller unable to tell the
+  739| 	// two apart.
+  740| @@MISSING@@
+  741| @@MISSING@@
+  742| @@MISSING@@
+  743| @@MISSING@@
+  744| @@MISSING@@
+  745| @@MISSING@@
+  746| @@MISSING@@
+  747| @@MISSING@@
+  748| @@MISSING@@
+  749| @@MISSING@@
+  750| @@MISSING@@
+  751| @@MISSING@@
+  752| @@MISSING@@
+  753| @@MISSING@@
+  754| @@MISSING@@
+  755| @@MISSING@@
+  756| @@MISSING@@
+  757| @@MISSING@@
+  758| @@MISSING@@
+  759| @@MISSING@@
+  760| @@MISSING@@
+  761| @@MISSING@@
+  762| @@MISSING@@
+  763| @@MISSING@@
+  764| @@MISSING@@
+  765| @@MISSING@@
+  766| @@MISSING@@
+  767| @@MISSING@@
+  768| @@MISSING@@
+  769| @@MISSING@@
+  770| @@MISSING@@
+  771| @@MISSING@@
+  772| @@MISSING@@
+  773| @@MISSING@@
+  774| @@MISSING@@
+  775| @@MISSING@@
+  776| @@MISSING@@
+  777| @@MISSING@@
+  778| @@MISSING@@
+  779| @@MISSING@@
+  780| @@MISSING@@
+  781| @@MISSING@@
+  782| @@MISSING@@
+  783| @@MISSING@@
+  784| @@MISSING@@
+  785| @@MISSING@@
+  786| @@MISSING@@
+  787| @@MISSING@@
+  788| @@MISSING@@
+  789| @@MISSING@@
+  790| @@MISSING@@
+  791| @@MISSING@@
+  792| @@MISSING@@
+  793| @@MISSING@@
+  794| @@MISSING@@
+  795| @@MISSING@@
+  796| @@MISSING@@
+  797| @@MISSING@@
+  798| @@MISSING@@
+  799| @@MISSING@@
+  800| @@MISSING@@
+  801| @@MISSING@@
+  802| @@MISSING@@
+  803| @@MISSING@@
+  804| @@MISSING@@
+  805| @@MISSING@@
+  806| @@MISSING@@
+  807| @@MISSING@@
+  808| @@MISSING@@
+  809| @@MISSING@@
+  810| @@MISSING@@
+  811| @@MISSING@@
+  812| @@MISSING@@
+  813| @@MISSING@@
+  814| @@MISSING@@
+  815| @@MISSING@@
+  816| @@MISSING@@
+  817| @@MISSING@@
+  818| @@MISSING@@
+  819| @@MISSING@@
+  820| @@MISSING@@
+  821| @@MISSING@@
+  822| @@MISSING@@
+  823| @@MISSING@@
+  824| @@MISSING@@
+  825| @@MISSING@@
+  826| @@MISSING@@
+  827| @@MISSING@@
+  828| @@MISSING@@
+  829| @@MISSING@@
+  830| @@MISSING@@
+  831| @@MISSING@@
+  832| @@MISSING@@
+  833| @@MISSING@@
+  834| @@MISSING@@
+  835| @@MISSING@@
+  836| @@MISSING@@
+  837| @@MISSING@@
+  838| @@MISSING@@
+  839| @@MISSING@@
+  840| @@MISSING@@
+  841| @@MISSING@@
+  842| @@MISSING@@
+  843| @@MISSING@@
+  844| @@MISSING@@
+  845| @@MISSING@@
+  846| @@MISSING@@
+  847| @@MISSING@@
+  848| @@MISSING@@
+  849| @@MISSING@@
+  850| @@MISSING@@
+  851| @@MISSING@@
+  852| @@MISSING@@

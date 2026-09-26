@@ -1,0 +1,1 @@
+﻿{"method":"tools/call","params":{"arguments":{"code":"var p = get_parent().get_node(\"Player\")\np.color = Color(0.1, 0.9, 0.1, 1.0)\nreturn p.color"},"name":"running_game_execute_gdscript"},"id":311,"jsonrpc":"2.0"}

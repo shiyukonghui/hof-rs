@@ -1,0 +1,44 @@
+modules\mcp_server\mcp_capture.h | in-tree=False | LC-bytes=13549
+modules\mcp_server\docs\tool-groups-added.json | in-tree=False | LC-bytes=8506
+modules\mcp_server\docs\tool-groups-b5.json | in-tree=False | LC-bytes=12012
+modules\mcp_server\docs\reports\REPORT-009-b1-closure-running-game-read-scene.md | in-tree=False | LC-bytes=55596
+modules\mcp_server\docs\reports\REPORT-036-b5-navigation-theme-export-android.md | in-tree=False | LC-bytes=46567
+modules\mcp_server\scripts\check_narrowing_points.py | in-tree=False | LC-bytes=47151
+modules\mcp_server\scripts\mcp010_b2_observation_evidence.ps1 | in-tree=False | LC-bytes=58545
+modules\mcp_server\scripts\mcp018_b3_closure_evidence.ps1 | in-tree=False | LC-bytes=70270
+modules\mcp_server\scripts\mcp019_b4_evidence.ps1 | in-tree=False | LC-bytes=38002
+modules\mcp_server\scripts\mcp023_narrowing_guardrail_evidence.ps1 | in-tree=False | LC-bytes=15001
+modules\mcp_server\scripts\mcp024b_ergonomics_batch2_evidence.ps1 | in-tree=False | LC-bytes=47913
+modules\mcp_server\scripts\mcp025_e3_writeside_evidence.ps1 | in-tree=False | LC-bytes=43258
+modules\mcp_server\scripts\mcp026_e9_e6_evidence.ps1 | in-tree=False | LC-bytes=45257
+modules\mcp_server\scripts\mcp031_gate6_coverage_probes.ps1 | in-tree=False | LC-bytes=22462
+modules\mcp_server\scripts\mcp059_contract_pre_post.py | in-tree=False | LC-bytes=16508
+modules\mcp_server\scripts\mcp066b_run.ps1 | in-tree=False | LC-bytes=77104
+modules\mcp_server\scripts\mcp068_live.ps1 | in-tree=False | LC-bytes=22831
+modules\mcp_server\tools\editor_animation_tree_write.cpp | in-tree=False | LC-bytes=58985
+modules\mcp_server\tools\editor_control_layout_write.cpp | in-tree=False | LC-bytes=10401
+modules\mcp_server\tools\editor_node_read.cpp | in-tree=False | LC-bytes=21233
+modules\mcp_server\tools\editor_playback.cpp | in-tree=False | LC-bytes=29222
+modules\mcp_server\tools\editor_read_scene_inspector.cpp | in-tree=False | LC-bytes=24190
+modules\mcp_server\tools\editor_write_scene_editor.cpp | in-tree=False | LC-bytes=31738
+modules\mcp_server\tools\project_read_analysis.cpp | in-tree=False | LC-bytes=40722
+modules\mcp_server\tools\project_write_resource_scene.cpp | in-tree=False | LC-bytes=24324
+modules\mcp_server\tools\running_game_assertion.cpp | in-tree=False | LC-bytes=32801
+modules\mcp_server\tools\running_game_node_write.cpp | in-tree=False | LC-bytes=55362
+modules\mcp_server\tools\running_game_observation.cpp | in-tree=False | LC-bytes=36895
+modules\mcp_server\tools\tool_helpers.cpp | in-tree=False | LC-bytes=155309
+---PRESENT---
+methods.py | in-tree=True | LC-bytes=2288 | tree-bytes=65515
+core\config\project_settings.cpp | in-tree=True | LC-bytes=29340 | tree-bytes=102533
+modules\mcp_server\mcp_jsonrpc.cpp | in-tree=True | LC-bytes=17307 | tree-bytes=11623
+modules\mcp_server\docs\DESIGN-DETAIL.md | in-tree=True | LC-bytes=84486 | tree-bytes=31531
+modules\mcp_server\docs\tool-rename-map.json | in-tree=True | LC-bytes=11240 | tree-bytes=70917
+modules\mcp_server\docs\tools_list.renamed.json | in-tree=True | LC-bytes=26377 | tree-bytes=129016
+modules\mcp_server\docs\scripts\check_tool_groups.py | in-tree=True | LC-bytes=55916 | tree-bytes=6431
+modules\mcp_server\docs\scripts\template.md | in-tree=True | LC-bytes=6257 | tree-bytes=48640
+modules\mcp_server\scripts\gen_renamed_contract.py | in-tree=True | LC-bytes=118449 | tree-bytes=118450
+modules\mcp_server\tests\test_mcp_server.h | in-tree=True | LC-bytes=431976 | tree-bytes=66392
+modules\mcp_server\tools\project_read_template.cpp | in-tree=True | LC-bytes=12945 | tree-bytes=25587
+modules\mcp_server\tools\registration.cpp | in-tree=True | LC-bytes=17014 | tree-bytes=17014
+modules\mono\build_scripts\build_assemblies.py | in-tree=True | LC-bytes=13226 | tree-bytes=16128
+platform\windows\detect.py | in-tree=True | LC-bytes=7335 | tree-bytes=35990

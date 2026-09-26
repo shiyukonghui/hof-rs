@@ -1,0 +1,1 @@
+﻿{"jsonrpc":"2.0","id":105,"method":"tools/call","params":{"name":"editor_set_node_property","arguments":{"path":"ColorRect","property":"color","value":{"r":0.1,"g":0.9,"b":0.1,"a":1.0}}}}

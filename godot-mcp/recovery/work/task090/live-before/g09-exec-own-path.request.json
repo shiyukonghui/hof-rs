@@ -1,0 +1,1 @@
+﻿{"method":"tools/call","params":{"arguments":{"code":"return get_path()"},"name":"running_game_execute_gdscript"},"id":309,"jsonrpc":"2.0"}

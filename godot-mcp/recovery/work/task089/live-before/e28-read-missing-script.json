@@ -1,0 +1,1 @@
+﻿{"error":{"code":-32001,"data":{"suggestion":"Use project_get_filesystem_tree to list the files of the project"},"message":"File 'res://nope.gd' not found"},"id":128,"jsonrpc":"2.0"}

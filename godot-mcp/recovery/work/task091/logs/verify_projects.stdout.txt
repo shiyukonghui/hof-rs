@@ -1,0 +1,13 @@
+### VERIFY projects
+SRC=H:\rebuild\projects
+DST=F:\moonbit-hof-rs\godot-mcp\projects
+src_files=303
+dst_files=303
+missing_in_dst=0
+extra_in_dst=0
+compared=303
+mismatched=0
+src_total_bytes=6029718
+dst_total_bytes=6029718
+VERIFY_projects=PASS
+json=C:\Users\wyl\AppData\Local\Temp\mcp-recovery\work\task091\logs\verify_projects.json

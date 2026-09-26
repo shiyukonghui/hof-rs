@@ -1,0 +1,23 @@
+modules/mcp_server: task085 (2c-4) step2 - compilation green; 37 -> 0 compile errors
+
+scons platform=windows target=editor tests=no -j8 -k now reaches the link stage
+with no compilation error at all.  Remaining: one undefined symbol,
+`MCPJsonRpc::dispatch`.
+
+* tools/editor_node_write.cpp - the six call sites that still used the pre-hoist
+  private names are renamed to the hoisted ones (`MCPTools::edited_scene_root`,
+  `MCPTools::find_node`, `relative_path`), matching the file's own other 27 sites
+* tools/editor_write_scene_editor.cpp - the tree's `_tool_set_viewport_3d_camera`
+  body was a duplicate of `_tool_add_resource_to_node_property`'s, leaving an
+  unbalanced `{` (C1070 at 1061).  Replaced with the recorded body: rev1088
+  t=1790180050322 lines 718-749 + rev1046 t=1790093622477 lines 721-760
+* tools/project_write_resource_scene.cpp - `_tool_create_scene_file` restored from
+  rev697 t=1790165880935 lines 379-459; `_property_table` and
+  `MCPTools::resource_bag_name_is_addressable` re-inserted from the recorded
+  replay; `_tool_delete_scene_file` restored from rev775 t=1790229066466
+  lines 446-490; `_require_properties` forward-declared; the
+  `is_label == nullptr` branch closed (the one marked low-confidence completion)
+* tools/tool_helpers.cpp - the recorded `MCPTools::schema_with_integer_defaults`
+  (rev3233 t=1790245547163 lines 3198-3229) is back; the tree had lost it
+* mcp_jsonrpc.cpp - `build_result_raw` / `build_error_raw` appended from the
+  recorded rev388 t=1790170254765 window

@@ -1,0 +1,6 @@
+tools\editor_node_batch_write.cpp
+tools\running_game_node_write.cpp
+tools\running_game_test_execution.cpp
+tool_registry.cpp
+tools\project_write_resource_scene.cpp
+tools\editor_write_scene_editor.cpp

@@ -1,0 +1,70 @@
+seq=858
+call=call_a4c8f4f7b8944c9c|bc6d6fe482a93753
+f=1c7c8e74-284c-4506-b2df-9bdb550dfe8c_session.v3.jsonl.jsonl
+path=F:\RustProjects\godot-mcp-pro\code\godot\modules\mcp_server\scripts\accept_m1.ps1
+replace_all=False
+result=The file F:\RustProjects\godot-mcp-pro\code\godot\modules\mcp_server\scripts\accept_m1.ps1 has been updated successfully.
+seq=858
+time=1790015088330
+
+========== old : 240 bytes, 6 lines ==========
+    Stop-Engine -Handle $script:editorHandle
+    $script:editorHandle = $null
+
+    # ------------------------------------------------------------------
+    # Game side
+    # ------------------------------------------------------------------
+
+========== new : 3061 bytes, 52 lines ==========
+    # --- case 20 (TASK-004 §3.1): tools/list survives a process restart ------
+    # The determinism cases of the doctest suite compare calls *inside* one
+    # process. This one stops the editor and starts a second, independent
+    # process (same binary, same project, same port) and requires the two
+    # `tools/list` bodies to be byte-identical, hash included.
+    Invoke-Case 'case20_tools_list_cross_process_restart' {
+        $body = '{"jsonrpc":"2.0","id":77,"method":"tools/list","params":{}}'
+        $firstPid = $script:editorHandle.Process.Id
+        $first = Invoke-Mcp -Port $EditorPort -Body $body
+        $firstBytes = [Text.Encoding]::UTF8.GetBytes($first.Body)
+
+        Stop-Engine -Handle $script:editorHandle
+        $script:editorHandle = $null
+        $script:editorHandle = Start-Engine -Arguments @('--headless', '--verbose', '-e', '--path', $EditorProject, "--mcp-port=$EditorPort") -LogName 'editor-restart'
+        $secondPid = $script:editorHandle.Process.Id
+        if (-not (Wait-ForTcp -Port $EditorPort -TimeoutMs 180000)) {
+            return @{ pass = $false; evidence = ("the restarted editor (pid={0}) never came up; log={1}" -f $secondPid, (Get-McpLogLines -Path $script:editorHandle.Out)) }
+        }
+        if (-not (Wait-ForStablePump -Port $EditorPort -TimeoutMs 180000)) {
+            return @{ pass = $false; evidence = 'the restarted editor never pumped steadily' }
+        }
+
+        $second = Invoke-Mcp -Port $EditorPort -Body $body
+        $secondBytes = [Text.Encoding]::UTF8.GetBytes($second.Body)
+
+        $identical = ($firstBytes.Length -eq $secondBytes.Length)
+        if ($identical) {
+            for ($i = 0; $i -lt $firstBytes.Length; $i++) {
+                if ($firstBytes[$i] -ne $secondBytes[$i]) { $identical = $false; break }
+            }
+        }
+        $sha = [System.Security.Cryptography.SHA256]::Create()
+        $firstHash = (($sha.ComputeHash($firstBytes) | ForEach-Object { $_.ToString('x2') }) -join '')
+        $secondHash = (($sha.ComputeHash($secondBytes) | ForEach-Object { $_.ToString('x2') }) -join '')
+        $firstJson = ConvertFrom-JsonSafe -Text $first.Body
+        $secondJson = ConvertFrom-JsonSafe -Text $second.Body
+        $toolCount = if ($null -ne $firstJson -and $null -ne $firstJson.result) { @($firstJson.result.tools).Count } else { -1 }
+
+        $ok = $identical -and ($firstPid -ne $secondPid) -and ($first.Status -eq 200) -and ($second.Status -eq 200) -and ($toolCount -eq $ToolNames.Count)
+        return @{
+            pass = $ok
+            evidence = ("pid_first={0} pid_second={1} tools={2} bytes={3}/{4} byte_identical={5} sha256_first={6} sha256_second={7}" -f `
+                $firstPid, $secondPid, $toolCount, $firstBytes.Length, $secondBytes.Length, $identical, $firstHash, $secondHash)
+        }
+    }
+
+    Stop-Engine -Handle $script:editorHandle
+    $script:editorHandle = $null
+
+    # ------------------------------------------------------------------
+    # Game side
+    # ------------------------------------------------------------------

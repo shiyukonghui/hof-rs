@@ -1,0 +1,1142 @@
+[
+ {
+  "rel": "gles3_builders.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "glsl_builders.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "methods.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "platform_methods.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "scu_builders.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "version.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "_b0_probe.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "_mcp044_verify_restore.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "core\\core_builders.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "core\\extension\\make_interface_dumper.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "core\\extension\\make_interface_header.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "core\\extension\\make_wrappers.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "core\\input\\input_builders.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "core\\object\\make_virtuals.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "core\\profiling\\profiling_builders.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "doc\\tools\\doc_status.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "doc\\tools\\make_rst.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "editor\\editor_builders.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "editor\\template_builders.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "editor\\icons\\editor_icons_builders.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "editor\\themes\\editor_theme_builders.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "main\\main_builders.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "misc\\scripts\\char_range_fetch.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "misc\\scripts\\check_ci_log.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "misc\\scripts\\copyright_headers.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "misc\\scripts\\dotnet_format.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "misc\\scripts\\file_format.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "misc\\scripts\\header_guards.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "misc\\scripts\\install_accesskit.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "misc\\scripts\\install_angle.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "misc\\scripts\\install_d3d12_sdk_windows.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "misc\\scripts\\install_perfetto.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "misc\\scripts\\install_swappy_android.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "misc\\scripts\\purge_cache.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "misc\\scripts\\ucaps_fetch.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "misc\\scripts\\unicode_ranges_fetch.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "misc\\scripts\\validate_codeowners.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "misc\\scripts\\validate_includes.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "misc\\scripts\\validate_xml.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "misc\\utility\\color.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "misc\\utility\\godot_gdb_pretty_print.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "misc\\utility\\scons_hints.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\modules_builders.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\astcenc\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\basis_universal\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\bcdec\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\betsy\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\bmp\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\camera\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\csg\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\cvtt\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\dds\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\enet\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\etcpak\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\fbx\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\freetype\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\gdscript\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\glslang\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\gltf\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\godot_physics_2d\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\godot_physics_3d\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\gridmap\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\hdr\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\interactive_music\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\jolt_physics\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\jpg\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\jsonrpc\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\ktx\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\lightmapper_rd\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mbedtls\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\gen_b2_restore.tmp.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\reports\\evidence\\task065b\\_scaffold_schemas.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\reports\\evidence\\task074\\aggregate\\c_batch30.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\reports\\evidence\\task074\\aggregate\\c_calls.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\reports\\evidence\\task074\\aggregate\\c_calls2.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\reports\\evidence\\task074\\aggregate\\c_caps.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\reports\\evidence\\task074\\aggregate\\c_dups.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\reports\\evidence\\task074\\aggregate\\c_evidence.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\reports\\evidence\\task074\\aggregate\\c_items.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\reports\\evidence\\task074\\aggregate\\c_items2.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\reports\\evidence\\task074\\aggregate\\c_misc.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\reports\\evidence\\task074\\aggregate\\c_recompute.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\reports\\evidence\\task074\\aggregate\\c_verify.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\reports\\evidence\\task074\\observations\\check10.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\reports\\evidence\\task074\\observations\\check3.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\reports\\evidence\\task074\\observations\\check5.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\reports\\evidence\\task074\\observations\\check6.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\reports\\evidence\\task074\\observations\\check7.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\reports\\evidence\\task074\\observations\\check8.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\reports\\evidence\\task074\\observations\\check9.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\reports\\evidence\\task074\\observations\\obs_digest.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\reports\\evidence\\task074\\observations\\obs_episodes.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\reports\\evidence\\task075\\arg_kinds.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\reports\\evidence\\task075\\compare_accept_inventories.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\reports\\evidence\\task075\\dump_bodies.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\reports\\evidence\\task075\\find_unreadable_args.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\reports\\evidence\\task075\\make_sha_manifest.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\scripts\\check_rename_map.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\scripts\\check_tool_groups.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\scripts\\gen_table.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\scripts\\selfcheck.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\scripts\\_task012_counts.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\scripts\\_task012_dump.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\scripts\\_task012_grep.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\scripts\\_task012_map.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\scripts\\_tmp_analyze.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\scripts\\_tmp_dump_contract.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\scripts\\_tmp_extract.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\scripts\\_tmp_gen_b3_b5.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\scripts\\_tmp_reg.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\scripts\\_tmp_remaining.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\tasks\\_tmp_counts036.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\tasks\\_tmp_dump036.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\tasks\\_tmp_fixps036.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\tasks\\_tmp_fixps036b.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\tasks\\_tmp_fixtests036.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\tasks\\_tmp_flip036.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\tasks\\_tmp_mark036.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\tasks\\_tmp_q036.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\tasks\\_tmp_q036b.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\docs\\tasks\\_tmp_q036c.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\analyze_mcp_trace.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\check_evidence_args.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\check_exit_propagation.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\check_hardcoded_counts.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\check_tautologies.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\gen_b2_game_schema.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\gen_renamed_contract.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\gen_running_game_schema.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp043_contract_diff.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp043_group_lookup.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp043_registration_literals.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp043_survey.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp050_contract_diff.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp051_contract_diff.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp051_final_sweep.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp051_wire_verbatim_check.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp052_contract_diff.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp053_contract_diff.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp055_diag.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp055_diag2.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp055_fix_ascii.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp055_fix_case.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp055_log_tail.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp055_pre_post_compare.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp055_sync_literals.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp056_pre_post_compare.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp059_sync_literals.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp063_evidence_manifest.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp065b_pixel_recompute.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp066b_make_pngs.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp068_bump_added_manifest.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp068_contract_cpp_diff.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp068_contract_fingerprint.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp068_fix_added_entries.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp069_override_dump.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp076_accept_inventory_compare.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\mcp076_descriptions_only.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\_mcp017_contract_precheck.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\_probe064_offline.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\_t064_extract.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mcp_server\\scripts\\__tmp_bump052.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\meshoptimizer\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mobile_vr\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mono\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mono\\__init__.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mono\\build_scripts\\build_assemblies.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mono\\build_scripts\\mono_configure.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mono\\build_scripts\\__init__.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\mp3\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\msdfgen\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\multiplayer\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\navigation_2d\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\navigation_3d\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\noise\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\objectdb_profiler\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\ogg\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\openxr\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\raycast\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\raycast\\godot_update_embree.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\svg\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\texture_streaming\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\text_server_adv\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\text_server_adv\\text_server_adv_builders.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\text_server_fb\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\tga\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\theora\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\tilemap\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\tinyexr\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\upnp\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\vhacd\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\visionos_xr\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\visual_shader\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\vorbis\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\webp\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\webrtc\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\websocket\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\webxr\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\xatlas_unwrap\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "modules\\zip\\config.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "platform\\platform_builders.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "platform\\android\\detect.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "platform\\android\\platform_android_builders.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "platform\\ios\\detect.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "platform\\ios\\platform_ios_builders.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "platform\\linuxbsd\\detect.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "platform\\linuxbsd\\msvs.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "platform\\linuxbsd\\platform_linuxbsd_builders.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "platform\\macos\\detect.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "platform\\macos\\msvs.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "platform\\macos\\platform_macos_builders.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "platform\\visionos\\detect.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "platform\\visionos\\platform_visionos_builders.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "platform\\web\\detect.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "platform\\web\\emscripten_helpers.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "platform\\web\\serve.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "platform\\windows\\detect.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "platform\\windows\\msvs.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "platform\\windows\\platform_windows_builders.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "scene\\theme\\default_theme_builders.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "scene\\theme\\icons\\default_theme_icons_builders.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "servers\\rendering\\storage\\make_ltc_lut.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "tests\\create_test.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "tests\\test_builders.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "tests\\compatibility_test\\run_compatibility_test.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "tests\\python_build\\validate_builders.py",
+  "errors": 0,
+  "first": ""
+ },
+ {
+  "rel": "thirdparty\\mbedtls\\extract_mbedtls_sources.py",
+  "errors": 0,
+  "first": ""
+ }
+]

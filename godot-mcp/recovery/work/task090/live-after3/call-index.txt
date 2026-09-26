@@ -1,0 +1,58 @@
+﻿e01-tools-list|9888|60|46810|tools/list
+e02-write-text|9888|228|215|file write (real change)
+e03-write-text-again|9888|228|216|file write, same bytes (no effect)
+e04-read-text|9888|130|526|file read
+e05-write-new-dirs|9888|182|229|file write into new directories
+e06-create-script|9888|211|209|script create (real change)
+e07-create-script-again|9888|211|209|boundary: script already exists (created must be false)
+e08-edit-script-same|9888|209|208|script edit, same bytes (no effect)
+e09-edit-script-real|9888|250|208|script edit (real change)
+e10-create-scene-file|9888|179|176|scene file create (file change)
+e11-create-resource|9888|157|207|resource create (file change)
+e12-create-resource-again|9888|157|183|MUST fail: resource already exists (data.suggestion)
+e13-create-scene-file-again|9888|179|207|MUST fail: scene file already exists (data.suggestion)
+e14-delete-scene-file|9888|140|129|delete (real change)
+e15-delete-scene-file-again|9888|140|203|MUST fail: already deleted (data.suggestion)
+e16-set-setting|9888|186|245|project.godot section write (real change)
+e17-set-setting-again|9888|186|245|project.godot same value (no effect)
+e18-get-settings|9888|126|1888|settings read
+e19-read-script|9888|125|1736|script read
+e20-statistics|9888|106|285|analysis read
+e21-open-scene|9888|125|121|scene open
+e22-editor-scene-tree|9888|105|2097|scene read
+e23-node-properties|9888|125|3097|node read
+e24-set-sky-color|9888|181|334|node write (screen change)
+e25-set-sky-color-again|9888|181|336|node write, same value (no effect)
+e26-save-scene|9888|101|120|scene save (file change)
+e27-editor-screenshot|9888|146|150|screenshot (file change)
+e28-get-errors|9888|101|346|editor log read
+g01-scene-tree-before|9889|111|486|the tree before any executor call
+g02-player-properties|9889|136|3106|running game read
+g03-exec-root-name|9889|146|127|executor: is self inside the scene root?
+g04-exec-read-x|9889|173|119|executor: read a pre-existing node property
+g05-exec-move-player|9889|207|119|executor: drive the game (screen change)
+g06-exec-move-player-again|9889|207|119|executor: drive it again (screen change)
+g07-exec-player-path|9889|173|138|executor: absolute path of a real node
+g08-exec-set-hud|9889|209|136|executor: change the HUD (screen change)
+g09-exec-own-path|9889|139|139|executor: the temporary node is a child of the scene root
+g10-exec-current-scene|9889|158|127|executor: get_tree() reaches the running scene
+g11-exec-set-color|9889|216|197|executor: recolour (screen change)
+g12-exec-set-color-again|9889|216|197|executor: same colour again (no effect)
+g13-scene-tree-after-exec|9889|111|486|the tree after the executor calls
+g14-exec-parse-error|9889|130|494|MUST fail: parse error (data.parse_error)
+g15-exec-runtime-error|9889|172|116|runtime error after mounting (must still clean up)
+g16-set-position|9889|181|232|node write (screen change)
+g17-set-position-again|9889|181|231|node write, same value (no effect)
+g18-set-missing-node|9889|186|180|MUST fail: node does not exist (data.suggestion)
+g19-player-readback|9889|136|3103|read back the written state
+g20-assert-pass|9889|184|322|assertion that holds (position)
+g21-assert-fail|9889|185|434|assertion that does NOT hold (ledger flag)
+g22-click-move-button|9889|139|198|input simulation: the Move button (screen change)
+g23-assert-after-click|9889|184|322|assertion that holds after the click
+g24-click-missing-button|9889|147|243|MUST fail: no such button (data.suggestion)
+g25-scenario-pass|9889|295|625|input -> wait -> assert (should hold)
+g26-scenario-fail|9889|298|744|input -> wait -> assert (must NOT hold)
+g27-assert-screen-text-pass|9889|141|588|screen text assertion that holds
+g28-assert-screen-text-fail|9889|150|607|screen text assertion that does NOT hold
+g29-game-screenshot|9889|151|166|screenshot (file change)
+g30-scene-tree-final|9889|111|486|the tree at the end of the session

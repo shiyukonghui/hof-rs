@@ -1,0 +1,12 @@
+﻿TASK-079 F: read-only post-check
+time=2026-09-26T00:03:41.6455874+08:00
+target=F:\RustProjects\godot-mcp-pro\code\godot
+target.Exists=True
+target.Attributes=Directory
+target.CreationTimeUtc=2026-09-21T09:56:35.2774556Z
+target.LastWriteTimeUtc=2026-09-25T15:19:49.0164127Z
+recurse.items=0
+recurse.bytes=
+code.parent.items=2
+code.parent.names=godot,mcpp-main
+volume.free=392206733312

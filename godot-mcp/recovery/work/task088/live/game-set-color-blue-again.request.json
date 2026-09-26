@@ -1,0 +1,1 @@
+﻿{"jsonrpc":"2.0","id":203,"method":"tools/call","params":{"name":"running_game_set_node_property","arguments":{"node_path":"ColorRect","property":"color","value":{"r":0.1,"g":0.1,"b":0.9,"a":1.0}}}}

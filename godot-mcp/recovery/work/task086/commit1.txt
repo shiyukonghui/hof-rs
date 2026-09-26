@@ -1,0 +1,27 @@
+modules/mcp_server: task086 (2c-5) step1 - restore the 12 unregistered game-scope tools
+
+TASK-085 ended with 21 failing cases and the biggest cluster was
+`-32601 METHOD_NOT_FOUND` at tests/test_mcp_server.h:6241/6242 (17x) and
+:2982/2983 (7x): tools the tests name are not in the table at all.
+
+Root cause, measured statically (work/task086/stat_names.py): the module
+declares 158 of the contract's 177 tool names. The 19 missing ones sit in four
+group files whose `// BEGIN generated` span is empty or stale:
+
+  * tools/running_game_input.cpp           (0 of 4 tools registered)
+  * tools/running_game_observation.cpp     (0 of 6)
+  * tools/running_game_assertion.cpp       (1 of 3)
+  * tools/editor_read_scene_inspector.cpp  (0 of 7, a `// @@REGISTRATION_BLOCK@@`
+                                            placeholder instead)
+
+This commit restores the first three from the *recorded generator*: every one
+of those spans is emitted by `scripts/gen_b2_game_schema.py`, which copies
+`description`/`inputSchema` byte for byte out of docs/tools_list.renamed.json and
+reads channel/verb/scope/mutating out of docs/tool-rename-map.json. Re-running it
+with `--in-place` reproduces the span, so no text is invented here.
+
+  python scripts/gen_b2_game_schema.py --group running_game_input         --in-place tools/running_game_input.cpp
+  python scripts/gen_b2_game_schema.py --group running_game_observation   --in-place tools/running_game_observation.cpp
+  python scripts/gen_b2_game_schema.py --group running_game_assertion     --in-place tools/running_game_assertion.cpp
+
+(measured: 33270 -> 36295, 36845 -> 43267, 32767 -> 36161 bytes)

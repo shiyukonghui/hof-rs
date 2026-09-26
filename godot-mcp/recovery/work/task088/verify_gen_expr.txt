@@ -1,0 +1,9 @@
+contract entries = 177
+names: evaluates to -> docs/tools_list.renamed.json (177 entries) minus the 66 tools of docs/tool-groups.json and docs/tool-groups-b2.json
+   names the real size (177): True   still says 171: False
+excluded: evaluates to -> none: the two unregister_until_implemented entries are absent from the 177 entry contract already
+   names the real size (177): True   still says 171: False
+the literal this line used to carry is still in the file: False
+names: scanned numbers on the line = none
+excluded: scanned numbers on the line = none
+RESULT: PASS

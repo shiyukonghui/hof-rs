@@ -1,0 +1,1 @@
+﻿{"method":"tools/call","params":{"arguments":{"steps":[{"pressed":true,"type":"input","action":"mcp_right"},{"type":"wait","seconds":0.4},{"expected":{"y":420,"x":99999},"property":"position","node_path":"Player","type":"assert"}]},"name":"running_game_run_test_scenario"},"id":326,"jsonrpc":"2.0"}

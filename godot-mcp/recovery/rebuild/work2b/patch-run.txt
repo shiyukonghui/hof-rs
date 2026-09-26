@@ -1,0 +1,32 @@
+== patch run 2026-09-26T00:07:28.1618481+08:00 ==
+-- pristine state --
+core/config/project_settings.cpp bytes=75556 lines=1921 sha256=c76f85acfb214ddadf16cd08742eec5c73a20d6753843bcb33f5e552f745886c
+core/config/project_settings.h bytes=13295 lines=298 sha256=1e4e7d6e24b559f6c27e6f6b02f21de68967bea0c226d25f4f6680a660a2d994
+editor/editor_node.cpp bytes=389353 lines=9852 sha256=8110094827f6d7da6209ad2e1c7f371f96f63307255300630b78803c70cd2321
+modules/mono/csharp_script.cpp bytes=86199 lines=2810 sha256=842199675aa4775830508b10d209bde494edd66786114776627548d41177d0db
+modules/mono/csharp_script.h bytes=20978 lines=578 sha256=41fe4bdf644b6cdf1621d18ffcecb6deaa8447225764909e233630a5553cc5cd
+-- patch sha256 --
+patch1 patch1-csharp-compile-verdict-5f3e7fb441.diff bytes=5303 sha256=6b0ee95c2abde614a4ec0ed2e6e4b7eb00ee39a75ebddf3906737d43cda02353
+patch2 patch2-projectsettings-section-publish-96f631addb.diff bytes=23683 sha256=70decff99a232fd5866f37cd8bd952ffa40afee8801d2bfc1eaa4b5be46b4c4c
+patch3 patch3-save-preserving-text-2f85141a74.diff bytes=20309 sha256=41867b2962fce8c764da13fe9812c8c67a2bba22c16be5923c0c53206a5fae7e
+-- git apply --check (sequential) --
+check patch1 exit=0 (patch1-csharp-compile-verdict-5f3e7fb441.diff)
+check patch2 exit=0 (patch2-projectsettings-section-publish-96f631addb.diff)
+check patch3 exit=1 (patch3-save-preserving-text-2f85141a74.diff)
+ABORT: check failed
+-- git apply for real --
+apply patch1 exit=0 (patch1-csharp-compile-verdict-5f3e7fb441.diff) out=[]
+apply patch2 exit=0 (patch2-projectsettings-section-publish-96f631addb.diff) out=[]
+apply patch3 exit=0 (patch3-save-preserving-text-2f85141a74.diff) out=[]
+-- post state --
+core/config/project_settings.cpp bytes=102533 lines=2533 sha256=e9c4f6fb143afcdd63939574e0067a4aff929ff47d2893b996da218415d05f68
+core/config/project_settings.h bytes=19002 lines=376 sha256=b8491ca81d1a8f8cdb986325812948e74406904614a0503704184452e19b7d79
+editor/editor_node.cpp bytes=400247 lines=9870 sha256=699bfc817f99ce25cd45678cb3213dea203b49e1a85c4f4f54f7d1b597647ec8
+modules/mono/csharp_script.cpp bytes=89504 lines=2827 sha256=7fef858f8f51a177390f1a878591a4567943ce2b78965b599e47b04b85975eb8
+modules/mono/csharp_script.h bytes=22687 lines=598 sha256=499bdbc4e2e8340125bc88e79065826da5753ee07da7070bf4ba58952ae16f0b
+-- symbol counts --
+core/config/project_settings.cpp is_source_newer_than_assembly=0 update_settings_section_text=4 save_custom_section=6 save_preserving_text=5
+core/config/project_settings.h is_source_newer_than_assembly=0 update_settings_section_text=2 save_custom_section=5 save_preserving_text=2
+editor/editor_node.cpp is_source_newer_than_assembly=0 update_settings_section_text=0 save_custom_section=0 save_preserving_text=2
+modules/mono/csharp_script.cpp is_source_newer_than_assembly=2 update_settings_section_text=0 save_custom_section=0 save_preserving_text=0
+modules/mono/csharp_script.h is_source_newer_than_assembly=1 update_settings_section_text=0 save_custom_section=0 save_preserving_text=0

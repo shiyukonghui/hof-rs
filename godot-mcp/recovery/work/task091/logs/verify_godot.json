@@ -1,0 +1,23 @@
+{
+    "label":  "godot",
+    "src":  "H:\\rebuild\\godot",
+    "dst":  "F:\\moonbit-hof-rs\\godot-mcp\\godot",
+    "src_files":  21793,
+    "dst_files":  21793,
+    "missing":  0,
+    "extra":  0,
+    "compared":  21793,
+    "mismatched":  0,
+    "src_total_bytes":  5055873699,
+    "dst_total_bytes":  5055873699,
+    "verdict":  "PASS",
+    "mismatches":  [
+
+                   ],
+    "missing_list":  [
+
+                     ],
+    "extra_list":  [
+
+                   ]
+}

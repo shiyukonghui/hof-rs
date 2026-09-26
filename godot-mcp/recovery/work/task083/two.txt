@@ -1,0 +1,2 @@
+tools\editor_testing_read.cpp
+tools\project_validate_scripts.cpp

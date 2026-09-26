@@ -1,0 +1,2309 @@
+00001	ca4db400:1270 seq=1268	#!/usr/bin/env python3
+00002	ca4db400:1270 seq=1268	# -*- coding: utf-8 -*-
+00003	ca4db400:1270 seq=1268	"""Generate docs/tools_list.renamed.json from the old contract + the rename map.
+00004	ca4db400:1270 seq=1268	
+00005	ca4db400:1270 seq=1268	Spec source
+00006	ca4db400:1270 seq=1268	-----------
+00007	ca4db400:1270 seq=1268	* docs/DESIGN-DETAIL.md section 16 item 2 (the renamed contract is the reference
+00008	ca4db400:1270 seq=1268	  artifact of every per-batch equality gate), GDR-16, GDR-17 and GDR-18.
+00009	ca4db400:1270 seq=1268	* docs/B0-BRIEF.md section 2 (frozen task book for B0).
+00010	ca4db400:1270 seq=1268	* docs/tool-rename-map.json is the single source of truth (174 entries).
+00011	ca4db400:1270 seq=1268	* docs/tasks/TASK-001-rename-map-v1.1.md section 2.5.1 (the v1.1 map shape).
+00012	ca4db400:1270 seq=1268	
+00013	ca4db400:1270 seq=1268	The transform is mechanical and idempotent:
+00014	ca4db400:1270 seq=1268	
+00015	ca4db400:1270 seq=1268	  * `name`         <- the map's `new_name`;
+00016	ca4db400:1270 seq=1268	  * `description`  <- the old contract object, carried over verbatim;
+00017	ca4db400:1270 seq=1268	  * `inputSchema`  <- the old contract object, carried over verbatim;
+00018	ca4db400:1270 seq=1268	  * top level `id` / `jsonrpc` are carried over from the old contract;
+00019	ca4db400:1270 seq=1268	  * `disposition == "unregister_until_implemented"` entries are dropped (2);
+00020	ca4db400:1270 seq=1268	  * `disposition == "merge_into"` entries are dropped (1), where the surviving
+00021	ca4db400:1270 seq=1268	    entry is named by the entry's own `merge_target` field (= its `old_name`).
+00022	ca4db400:1270 seq=1268	    v1.1 replaced the v1.0 inline `merge_into:<old_name>` form with that field
+00023	ca4db400:1270 seq=1268	    (D-4), and GDR-17 cancelled two of the three v1.0 merges because they were
+00024	ca4db400:1270 seq=1268	    lossy - the two de-merged tools now each keep their own, distinct name.
+00025	ca4db400:1270 seq=1268	
+00026	ca4db400:1270 seq=1268	Expected output: 174 - 2 unregistered - 1 lossless merge == 171 tools.
+00027	ca4db400:1270 seq=1268	
+00028	ca4db400:1270 seq=1268	`description` / `inputSchema` may only ever change through the explicit
+00029	ca4db400:1270 seq=1268	DESCRIPTION_OVERRIDES / SCHEMA_OVERRIDES lists below (SCHEMA_OVERRIDES is still
+00030	ca4db400:1270 seq=1268	empty, every entry must carry a `reason` that ends up in `_meta.overrides`).
+00031	ca4db400:1270 seq=1268	Without such an entry, not a single character of those fields is allowed to move -
+00032	ca4db400:1270 seq=1268	the script asserts that by re-serializing both objects and comparing.
+00033	ca4db400:1270 seq=1268	
+00034	ca4db400:1270 seq=1268	v1.2 (TASK-002 section 2.1, audit risks R-1/R-2/R-3): DESCRIPTION_OVERRIDES is no
+00035	ca4db400:1270 seq=1268	longer empty. Seven tools stay ambiguous "by name alone" because each pair shares
+00036	ca4db400:1270 seq=1268	channel / verb / scope / mutating and differs only in the result shape, the hit
+00037	ca4db400:1270 seq=1268	cap or the case sensitivity, so every one of them gets one inline discriminator
+00038	ca4db400:1270 seq=1268	sentence. The discriminators are transcribed from the *migration source* (read,
+00039	ca4db400:1270 seq=1268	not guessed): commands/project.rs, commands/batch.rs, commands/analysis.rs.
+00040	ca4db400:1270 seq=1268	Each override is append-only (`<old description> + " " + <discriminator>`), which
+00041	ca4db400:1270 seq=1268	the script enforces, so no original wording can be silently dropped. A stale
+00042	ca4db400:1270 seq=1268	override (an `old_name` that never matches) is a hard failure as well.
+00043	ca4db400:1270 seq=1268	
+00044	ca4db400:1270 seq=1268	v1.3 (TASK-003 section 1.1, decision D49/D-1): `_meta.order_normative = false`.
+00045	ca4db400:1270 seq=1268	The *membership* and the *content* of `result.tools` are the contract; their
+00046	ca4db400:1270 seq=1268	*order* is explicitly not. The engine still has to be deterministic (two
+00047	ca4db400:1270 seq=1268	consecutive `tools/list` calls of one build must be byte-identical, see
+00048	ca4db400:1270 seq=1268	DESIGN-DETAIL section 17.4 and the doctest
+00049	ca4db400:1270 seq=1268	`[MCPServer] tools/list is byte-identical across consecutive calls`), but it is
+00050	ca4db400:1270 seq=1268	free to differ from the order of this file. Nothing else in the transform
+00051	ca4db400:1270 seq=1268	changed, so the two artifacts can be compared key by key.
+00052	ca4db400:1270 seq=1268	
+00053	ca4db400:1270 seq=1268	v1.4 (TASK-007 section 1): an override record may carry `"mode": "replace"`.
+00054	ca4db400:1270 seq=1268	Every override was append-only until then, which is the right default - but an
+00055	ca4db400:1270 seq=1268	append cannot fix a sentence that is *factually wrong*: the reader would keep the
+00056	ca4db400:1270 seq=1268	false statement in the field and have to reconcile it with the appended one.
+00057	ca4db400:1270 seq=1268	`editor_analyze_signal_flow` is the first such case (its description claimed the
+00058	ca4db400:1270 seq=1268	persistent test was `flags & 1`, which is `CONNECT_DEFERRED` in Godot 4 while the
+00059	ca4db400:1270 seq=1268	implementation - correctly - tests `CONNECT_PERSIST`). A replacing override is
+00060	ca4db400:1270 seq=1268	only accepted when its `reason` quotes the text it replaces verbatim, so the
+00061	ca4db400:1270 seq=1268	original wording stays in `_meta.overrides` even though the field is rewritten;
+00062	ca4db400:1270 seq=1268	append remains the default and every existing entry is unchanged.
+00063	ca4db400:1270 seq=1268	
+00064	ca4db400:1270 seq=1268	v1.5 (TASK-014 section 1 D-3, decision D59 ruling 1 + the M2 acceptance): the
+00065	ca4db400:1270 seq=1268	first `SCHEMA_OVERRIDES` entry, and the two rules that make a schema override
+00066	ca4db400:1270 seq=1268	auditable. `running_game_play_input_recording` (old `replay_recording`) had
+00067	ca4db400:1270 seq=1268	`inputSchema.required = ["events"]` while its implementation - correctly - lets
+00068	ca4db400:1270 seq=1268	`events` be omitted and replays this game process' most recent recording instead
+00069	ca4db400:1270 seq=1268	(D59 ruling 1). The contract was the side that lied, and the decision was to fix
+00070	ca4db400:1270 seq=1268	the contract, not the behaviour, so the *only* edit is "remove `events` from
+00071	ca4db400:1270 seq=1268	`required`" plus the description sentence that documents the fallback:
+00072	ca4db400:1270 seq=1268	
+00073	ca4db400:1270 seq=1268	  * a schema override is always a **replacement** (there is no append for an
+00074	ca4db400:1270 seq=1268	    object) and must therefore carry `"mode": "replace"`, like the factual
+00075	ca4db400:1270 seq=1268	    correction of v1.4;
+00076	ca4db400:1270 seq=1268	  * its `reason` has to quote the removed `required` member verbatim
+00077	ca4db400:1270 seq=1268	    (`json.dumps(..., ensure_ascii=False)` of the old list), so the member that
+00078	ca4db400:1270 seq=1268	    disappeared from the contract is still reconstructible from
+00079	ca4db400:1270 seq=1268	    `_meta.overrides` - a reason that does not name what it deletes is refused.
+00080	ca4db400:1270 seq=1268	
+00081	ca4db400:1270 seq=1268	The declared/fired override bookkeeping is now per `(kind, old_name)` instead of
+00082	ca4db400:1270 seq=1268	per `old_name`: until v1.5 a single `old_name` could not carry both a description
+00083	ca4db400:1270 seq=1268	and a schema override, because `declared_overrides` was the *union* of the two
+00084	ca4db400:1270 seq=1268	tables and the count check compared it against one record per fired override.
+00085	ca4db400:1270 seq=1268	Each table is still required to fire exactly once per declared name, and a
+00086	ca4db400:1270 seq=1268	declared name that never fires is still a hard failure.
+00087	ca4db400:1270 seq=1268	
+00088	ca4db400:1270 seq=1268	v1.6 (TASK-024a section 1 - the E-10 item, alone after the TASK-024 mid-flight
+00089	ca4db400:1270 seq=1268	failure): the second `SCHEMA_OVERRIDES` entry, and a `DESCRIPTION_OVERRIDES`
+00090	ca4db400:1270 seq=1268	entry for the *same* tool. `editor_play_scene` (old `play_scene`) now injects
+00091	ca4db400:1270 seq=1268	`--mcp-port=<port>` into the game process it spawns
+00092	ca4db400:1270 seq=1268	(`EditorRunBar::play_*(..., p_play_args)`; `EditorInterface::play_*` does not
+00093	ca4db400:1270 seq=1268	forward run arguments, which is why the module stopped going through it). The
+00094	ca4db400:1270 seq=1268	port becomes discoverable only if the schema carries it - hence the optional
+00095	ca4db400:1270 seq=1268	`mcp_port` integer - and the fact that the child's port no longer comes from the
+00096	ca4db400:1270 seq=1268	test project's `godot_mcp/port` setting has to be readable from the contract,
+00097	ca4db400:1270 seq=1268	otherwise the tool would only have traded one undiscoverable rule for another.
+00098	ca4db400:1270 seq=1268	That is the description entry, and it stays **append-only** (`运行场景` is still
+00099	ca4db400:1270 seq=1268	its prefix). The schema entry is a replacement like v1.5's, with the same
+00100	ca4db400:1270 seq=1268	obligation: its reason names the removed `required` member verbatim (here the
+00101	ca4db400:1270 seq=1268	empty list - this tool never had a required parameter). Both mechanisms are
+00102	ca4db400:1270 seq=1268	unchanged; only the tables grew.
+00103	ca4db400:1270 seq=1268	
+00104	ca4db400:1270 seq=1268	v1.7 (TASK-029 - the follow-up the TASK-028 report asked the decision maker
+00105	ca4db400:1270 seq=1268	for): `editor_get_test_report` (old `get_test_report`) declares
+00106	ca4db400:1270 seq=1268	`"clear": {"default": true}` while its implementation has been an explicit
+00107	ca4db400:1270 seq=1268	opt-in since TASK-028 G-3 - an omitted `clear` reads, and only `clear: true`
+00108	ca4db400:1270 seq=1268	deletes anything. The bridge file it deletes is `user://mcp_test_report.json`
+00109	ca4db400:1270 seq=1268	and it is **shared**: every client of the same editor process reads the same
+00110	ca4db400:1270 seq=1268	one, so a default that deletes means the first reader takes the report away
+00111	ca4db400:1270 seq=1268	from the next. The decision was to fix the contract, not the behaviour
+00112	ca4db400:1270 seq=1268	("option A"), so the *only* edit is that one member's value - `true` -> `false`
+00113	ca4db400:1270 seq=1268	- plus the sentence that names the shared file, and both are the third
+00114	ca4db400:1270 seq=1268	`SCHEMA_OVERRIDES` entry and the second entry that is a *pair* with a
+00115	c0061494:1330 seq=1328	description override of the same tool. The mechanism is v1.6's unchanged:
+00116	c0061494:1330 seq=1328	
+00117	c0061494:1330 seq=1328	  * the schema entry is a replacement (`"mode": "replace"`), and its `reason`
+00118	c0061494:1330 seq=1328	    quotes the removed `required` member verbatim (`[]`, this schema never had
+00119	c0061494:1330 seq=1328	    a required parameter) as the v1.5 guard demands. On top of that guard it
+00120	c0061494:1330 seq=1328	    quotes the member whose *value* it rewrites, verbatim:
+00121	c0061494:1330 seq=1328	    `"default": true` (the spelling in the emitted JSON). A value change is not
+00122	c0061494:1330 seq=1328	    covered by the machinery - the guard can only see the `required` list - so
+00123	c0061494:1330 seq=1328	    the quotation is what keeps the replaced declaration reconstructible from
+00124	c0061494:1330 seq=1328	    `_meta.overrides`. Every other character of the schema (`clear.description`
+00125	c0061494:1330 seq=1328	    = `是否清除结果`, the two `type`s) is carried over unchanged;
+00126	c0061494:1330 seq=1328	  * the description entry stays **append-only** (`获取测试结果报告` is still its
+00127	c0061494:1330 seq=1328	    prefix): the original wording was never wrong, it was just silent about the
+00128	c0061494:1330 seq=1328	    destructive half of `clear`, and a caller has to be able to see that from
+00129	c0061494:1330 seq=1328	    `tools/list` alone.
+00130	c0061494:1330 seq=1328	
+00131	c0061494:1330 seq=1328	Standard library only (Python 3.9). No third party package is used anywhere.
+00132	c0061494:1330 seq=1328	
+00133	c0061494:1330 seq=1328	v1.8 (TASK-032 D6, the second half of the M4d defect report): the seventh
+00134	c0061494:1330 seq=1328	`DESCRIPTION_OVERRIDES` entry, for `running_game_get_node_properties` (old
+00135	c0061494:1330 seq=1328	`get_game_node_properties`). Its family returns **SceneTree absolute** paths -
+00136	c0061494:1330 seq=1328	`running_game_get_scene_tree` answers `path = "/root/Main/Actor"` - while the
+00137	c0061494:1330 seq=1328	`node_path` description of the same family reads "relative to the scene root"
+00138	c0061494:1330 seq=1328	("节点路径（相对于场景根节点）"). Measured on 9889, both spellings are accepted on
+00139	c0061494:1330 seq=1328	the way in (an absolute `/root/...` path, a path relative to the current scene's
+00140	c0061494:1330 seq=1328	root, or a by-name walk), so the tool is usable - but a client that only reads
+00141	c0061494:1330 seq=1328	`tools/list` could not know that, and would have to guess whether one tool's
+00142	c0061494:1330 seq=1328	answer can be fed into the next. The entry is **append-only** (the original
+00143	c0061494:1330 seq=1328	`获取运行中游戏指定节点的属性` stays first, verbatim) and declares the shape the
+00144	c0061494:1330 seq=1328	tool really answers with plus both accepted input spellings. Nothing else of the
+00145	c0061494:1330 seq=1328	transform changed, and no other field of that entry moved.
+00146	c0061494:1330 seq=1328	"""
+00147	c0061494:1330 seq=1328	
+00148	c0061494:1330 seq=1328	import argparse
+00149	c0061494:1330 seq=1328	import hashlib
+00150	c0061494:1330 seq=1328	import json
+00151	c0061494:1330 seq=1328	import os
+00152	c0061494:1330 seq=1328	import re
+00153	c0061494:1330 seq=1328	import sys
+00154	c0061494:1330 seq=1328	
+00155	c0061494:1330 seq=1328	GENERATOR_VERSION = "1.8.0"
+00156	c0061494:1330 seq=1328	GENERATED_BY = "modules/mcp_server/scripts/gen_renamed_contract.py"
+00157	c0061494:1330 seq=1328	
+00158	c0061494:1330 seq=1328	# Explicit override hooks. SCHEMA_OVERRIDES was empty for B0/B1: the rename is
+00159	c0061494:1330 seq=1328	# name-only plus, from v1.2 on, the seven description disambiguations below.
+00160	c0061494:1330 seq=1328	# Any entry has to look like {"reason": "...", "value": <object>} and is recorded
+00161	c0061494:1330 seq=1328	# in `_meta.overrides` so that the deviation stays auditable.
+00162	c0061494:1330 seq=1328	#
+00163	c0061494:1330 seq=1328	# v1.5 (TASK-014 D-3): SCHEMA_OVERRIDES takes its first entry. A schema override
+00164	c0061494:1330 seq=1328	# is a whole-object *replacement* (there is nothing to append to), so it must
+00165	c0061494:1330 seq=1328	# carry `"mode": "replace"`, and its reason must quote the `required` member it
+00166	c0061494:1330 seq=1328	# removes verbatim - see the guard in `main`. No other character of the schema
+00167	c0061494:1330 seq=1328	# moves.
+00168	c0061494:1330 seq=1328	#
+00169	c0061494:1330 seq=1328	# v1.2: R-1/R-2/R-3 disambiguation (TASK-002 section 2.1.1). Each discriminator
+00170	c0061494:1330 seq=1328	# below is a *fact read out of the migration source*, never an invention; the
+00171	c0061494:1330 seq=1328	# line references are the ones already audited for tool-rename-map.json v1.1.
+00172	c0061494:1330 seq=1328	DESCRIPTION_OVERRIDES = {
+00173	c0061494:1330 seq=1328	    # R-1: editor_analyze_signal_flow vs editor_list_signal_connections.
+00174	c0061494:1330 seq=1328	    # analysis.rs:387-410 / analysis.rs:96-160 (nested nodes[], flags & 1, exact
+00175	c0061494:1330 seq=1328	    # node_path via had_node, no signal_name filter) against
+00176	c0061494:1330 seq=1328	    # batch.rs:207-263 (flat connections[], all connections, substring matches).
+00177	c0061494:1330 seq=1328	    "analyze_signal_flow": {
+00178	c0061494:1330 seq=1328	        "reason": (
+00179	c0061494:1330 seq=1328	            "R-1 消歧 + 事实纠正（TASK-007 §1）：原文按迁移源 analysis.rs:387 写成“只统计持久连接（flags & 1）”，"
+00180	c0061494:1330 seq=1328	            "但 Godot 4 里 CONNECT_DEFERRED = 1、CONNECT_PERSIST = 2（core/object/object.h:356-360），"
+00181	c0061494:1330 seq=1328	            "照字面实现会让普通 .tscn 场景恒返回 nodes: []。实现（TASK-006 已交付）按意图用了 CONNECT_PERSIST，"
+00182	c0061494:1330 seq=1328	            "契约描述是唯一还在说 flags & 1 的地方，故用 mode=replace 纠正。"
+00183	c0061494:1330 seq=1328	            "被替换的原文（逐字保留以便审计）："
+00184	c0061494:1330 seq=1328	            "分析当前场景的信号连接流 判别点：按节点嵌套返回 nodes[]（每节点含 signals_emitted/signals_connected_to），"
+00185	c0061494:1330 seq=1328	            "只统计持久连接（flags & 1）、node_path 精确匹配、无 signal_name 过滤；"
+00186	c0061494:1330 seq=1328	            "要扁平 connections[] 或子串匹配请用 editor_list_signal_connections。"
+00187	c0061494:1330 seq=1328	        ),
+00188	c0061494:1330 seq=1328	        "mode": "replace",
+00189	c0061494:1330 seq=1328	        "value": "分析当前场景的信号连接流 判别点：按节点嵌套返回 nodes[]（每节点含 signals_emitted/signals_connected_to），只收集持久连接（CONNECT_PERSIST，值为 2；注意 Godot 4 中 flags & 1 是 CONNECT_DEFERRED，不是持久连接）、node_path 精确匹配、无 signal_name 过滤；要扁平 connections[] 或子串匹配请用 editor_list_signal_connections。",
+00190	c0061494:1330 seq=1328	    },
+00191	c0061494:1330 seq=1328	    "find_signal_connections": {
+00192	c0061494:1330 seq=1328	        "reason": (
+00193	c0061494:1330 seq=1328	            "R-1 消歧：与 editor_analyze_signal_flow 形状/过滤/匹配方式不同（batch.rs:207 扁平 "
+00194	c0061494:1330 seq=1328	            "connections[]+count、不过滤非持久连接、node_path 与 signal_name 均子串匹配）。"
+00195	c0061494:1330 seq=1328	        ),
+00196	c0061494:1330 seq=1328	        "value": "递归查找场景中所有信号连接 判别点：扁平返回 connections[]（每项 {source,signal,target,method}）与 count，收全部连接（不过滤非持久连接）、node_path 与 signal_name 均按子串匹配；要按节点嵌套的流向分析请用 editor_analyze_signal_flow。",
+00197	c0061494:1330 seq=1328	    },
+00198	c0061494:1330 seq=1328	    # R-2: project_search_file_names vs project_search_file_contents.
+00199	c0061494:1330 seq=1328	    # project.rs:159-191 (file name substring, case insensitive, cap 200) against
+00200	c0061494:1330 seq=1328	    # project.rs:194-246 (per line, case insensitive, cap 50).
+00201	c0061494:1330 seq=1328	    "search_files": {
+00202	c0061494:1330 seq=1328	        "reason": (
+00203	c0061494:1330 seq=1328	            "R-2 消歧：search_files 只按文件名子串匹配（project.rs:175，大小写不敏感、上限 200，"
+00204	c0061494:1330 seq=1328	            "不读内容不返回行号），与 search_in_files 的逐行内容匹配完全不同。"
+00205	c0061494:1330 seq=1328	        ),
+00206	c0061494:1330 seq=1328	        "value": "搜索文件 判别点：只匹配文件名子串（大小写不敏感、上限 200），不读文件内容、不返回行号；要搜索文件内容请用 project_search_file_contents。",
+00207	c0061494:1330 seq=1328	    },
+00208	c0061494:1330 seq=1328	    "search_in_files": {
+00209	c0061494:1330 seq=1328	        "reason": (
+00210	c0061494:1330 seq=1328	            "R-2 消歧：search_in_files 逐行返回 {file,line,text}（project.rs:221-229，大小写不敏感、"
+00211	c0061494:1330 seq=1328	            "上限 50、跳过 addons 与 .godot），与 find_node_references 的按文件聚合不同。"
+00212	c0061494:1330 seq=1328	        ),
+00213	c0061494:1330 seq=1328	        "value": "在文件内容中搜索文本 判别点：逐行返回 {file,line,text}（大小写不敏感、上限 50，跳过 addons 与 .godot 目录）；要按文件聚合的 {file,lines[]}（大小写敏感、上限 100）请用 project_find_files_referencing_symbol。",
+00214	c0061494:1330 seq=1328	    },
+00215	c0061494:1330 seq=1328	    # R-2/R-3: project_find_files_referencing_symbol (batch.rs:419-512) is the
+00216	c0061494:1330 seq=1328	    # de-merged twin of project_search_file_contents (GDR-17).
+00217	c0061494:1330 seq=1328	    "find_node_references": {
+00218	c0061494:1330 seq=1328	        "reason": (
+00219	c0061494:1330 seq=1328	            "R-2 消歧：find_node_references 按文件聚合 {file,lines[]}（batch.rs:474-489，大小写敏感、"
+00220	c0061494:1330 seq=1328	            "上限 100、每文件最多 5 行），与 search_in_files 的逐行形状互为对照（GDR-17 取消合并）。"
+00221	c0061494:1330 seq=1328	        ),
+00222	c0061494:1330 seq=1328	        "value": "在项目文件中搜索指定模式的引用 判别点：按文件聚合返回 {file,lines[]}（每文件最多 5 行、大小写敏感、上限 100，跳过隐藏文件与 addons，只扫 .tscn/.gd/.tres/.gdshader）；要逐行 {file,line,text}（大小写不敏感、上限 50）请用 project_search_file_contents。",
+00223	c0061494:1330 seq=1328	    },
+00224	c0061494:1330 seq=1328	    # R-3: the two converts are a pure direction pair (project.rs:295-322).
+00225	c0061494:1330 seq=1328	    "uid_to_project_path": {
+00226	c0061494:1330 seq=1328	        "reason": (
+00227	c0061494:1330 seq=1328	            "R-3 消歧：uid_to_project_path 入参是文本 UID、出参 {uid,path}，UID 文本非法即报参数错误"
+00228	c0061494:1330 seq=1328	            "（project.rs:295-305），与反向转换项目路径->UID 是纯方向对。"
+00229	c0061494:1330 seq=1328	        ),
+00230	c0061494:1330 seq=1328	        "value": "将 UID 转换为项目路径 判别点：入参为字符串文本 UID（如 uid://...），返回 {uid,path}，UID 文本格式非法时报参数错误；反向转换请用 project_convert_path_to_uid。",
+00231	c0061494:1330 seq=1328	    },
+00232	c0061494:1330 seq=1328	    "project_path_to_uid": {
+00233	c0061494:1330 seq=1328	        "reason": (
+00234	c0061494:1330 seq=1328	            "R-3 消歧：project_path_to_uid 入参是项目路径、出参 {path,uid}，路径未注册时 uid 为空串且"
+00235	c0061494:1330 seq=1328	            "不报错（project.rs:308-322），与反向转换 UID->路径是纯方向对。"
+00236	c0061494:1330 seq=1328	        ),
+00237	c0061494:1330 seq=1328	        "value": "将项目路径转换为 UID 判别点：入参为项目路径（如 res://...），返回 {path,uid}，路径未注册时 uid 为空串且不报错；反向转换请用 project_convert_uid_to_path。",
+00238	c0061494:1330 seq=1328	    },
+00239	c0061494:1330 seq=1328	    # D-3 (TASK-014 section 1.3): the fallback D59 ruling 1 introduced, mirrored
+00240	c0061494:1330 seq=1328	    # into the text a client actually reads. The schema override below stops
+00241	c0061494:1330 seq=1328	    # requiring `events`, so this sentence has to say what omitting it does -
+00242	c0061494:1330 seq=1328	    # otherwise the contract would only have traded one silent rule for a missing
+00243	c0061494:1330 seq=1328	    # one.
+00244	c0061494:1330 seq=1328	    "replay_recording": {
+00245	ca4db400:1270 seq=1268	    the editor's own `Class::method` wiring, and neither `node_path` nor
+00246	ca4db400:1270 seq=1268	    `signal_name` can separate them (the `source` of an internal connection is an
+00247	ca4db400:1270 seq=1268	    ordinary scene-node path). `scope` is an enum rather than a boolean so the
+00248	ca4db400:1270 seq=1268	    `internal` half is expressible too, and its default is the pre-TASK-051
+00249	ca4db400:1270 seq=1268	    answer. The `signal_name` substring filter is deliberately **not** changed -
+00250	ca4db400:1270 seq=1268	    it is the frozen discriminator against `editor_analyze_signal_flow`
+00251	ca4db400:1270 seq=1268	    (GDR-17 / R-1);
+00252	ca4db400:1270 seq=1268	  * `simulate_input_sequence` (`editor_simulate_input_sequence`) gains the
+00253	ca4db400:1270 seq=1268	    `events[].items` object schema. The measured defect (audit §5.4, `X11`):
+00254	ca4db400:1270 seq=1268	    `{"type":"array"}` with no `items` meant a client could only learn the
+00255	ca4db400:1270 seq=1268	    element shape - starting with the required `type` and its `enum` - by
+00256	ca4db400:1270 seq=1268	    failing once (`-32602 "Missing required parameter: events[0].type"`);
+00257	ca4db400:1270 seq=1268	  * `run_test_scenario` (`running_game_run_test_scenario`) gains
+00258	ca4db400:1270 seq=1268	    `steps[].pressed` and `steps[].strength`, both of which the implementation
+00259	ca4db400:1270 seq=1268	    has read since TASK-019 (`running_game_test_execution.cpp:141-148`) while the
+00260	ca4db400:1270 seq=1268	    declaration named only nine of the eleven members (audit §5.5);
+00261	ca4db400:1270 seq=1268	  * `play_scene` (`editor_play_scene`) gains `headless` (boolean, default false)
+00262	ca4db400:1270 seq=1268	    and `extra_args` (array of strings, default `[]`). The measured defect
+00263	ca4db400:1270 seq=1268	    (audit §3.3): the child's command line was `--path / --remote-debug /
+00264	ca4db400:1270 seq=1268	    --editor-pid / --scene` plus this tool's own `--mcp-port=<port>`, so
+00265	ca4db400:1270 seq=1268	    `--headless` - a routine CI need, and *not* inherited from the editor (it is
+00266	ca4db400:1270 seq=1268	    absent from `Main::get_forwardable_cli_arguments(CLI_SCOPE_PROJECT)`) - could
+00267	ca4db400:1270 seq=1268	    not be requested at all. `--mcp-port` inside `extra_args` is refused rather
+00268	ca4db400:1270 seq=1268	    than appended, because `MCPPort::parse` takes the last occurrence and the
+00269	ca4db400:1270 seq=1268	    answer's `endpoint` would then name a port the child is not listening on.
+00270	ca4db400:1270 seq=1268	
+00271	ca4db400:1270 seq=1268	No `description` field moves in this version: every new meaning is carried by
+00272	ca4db400:1270 seq=1268	the property it belongs to, which is also what a client reads in `tools/list`.
+00273	ca4db400:1270 seq=1268	
+00274	ca4db400:1270 seq=1268	v1.8 (TASK-052, `DESIGN-DETAIL.md` section 26 / GDR-28 - "契约扩张：新增工具"):
+00275	ca4db400:1270 seq=1268	the generator stops being a pure *rename + override* of the 174 old entries. The
+00276	ca4db400:1270 seq=1268	decision maker may now author **new** tool entries, and they live in a third,
+00277	ca4db400:1270 seq=1268	separate table:
+00278	ca4db400:1270 seq=1268	
+00279	ca4db400:1270 seq=1268	  * `ADDED_TOOLS` is a list, not a dict keyed by `old_name`: a new entry has no
+00280	ca4db400:1270 seq=1268	    old name to be keyed by, which is exactly what makes it a *new* entry rather
+00281	ca4db400:1270 seq=1268	    than an override of a migrated one. It is therefore separate from both
+00282	ca4db400:1270 seq=1268	    `DESCRIPTION_OVERRIDES` and `SCHEMA_OVERRIDES` (GDR-28 point 1), and the
+00283	ca4db400:1270 seq=1268	    append happens **after** the rename + override pass, so an added entry can
+00284	ca4db400:1270 seq=1268	    never be mistaken for a carried-over one;
+00285	ca4db400:1270 seq=1268	  * the append is **deterministic**: the list's order is the output's order, the
+00286	ca4db400:1270 seq=1268	    entry carries only `name` / `description` / `inputSchema` (the three fields
+00287	ca4db400:1270 seq=1268	    of the contract), and the two name lists (`ported` vs `added`) are proved
+00288	ca4db400:1270 seq=1268	    disjoint - a new name that collided with a ported or a dropped name is a
+00289	ca4db400:1270 seq=1268	    hard failure;
+00290	ca4db400:1270 seq=1268	  * the naming lint of GDR-16 is applied to an added name exactly as it is to a
+00291	ca4db400:1270 seq=1268	    ported one (L1 pattern, L4 no `update_`, L2 verb inside the closed set,
+00292	ca4db400:1270 seq=1268	    L3 channel and verb derived from the name itself, because there is no
+00293	ca4db400:1270 seq=1268	    `tool-rename-map.json` row for a new tool);
+00294	ca4db400:1270 seq=1268	  * `_meta` gains **`added_tools`** (the ordered list of names) and
+00295	ca4db400:1270 seq=1268	    **`added_count`** (its length), and `_meta.count` stays `len(result.tools)`,
+00296	ca4db400:1270 seq=1268	    so the contract's own `count` is `171 + N` from now on;
+00297	ca4db400:1270 seq=1268	  * the transform is still idempotent: two runs of one build write byte-identical
+00298	ca4db400:1270 seq=1268	    files (the same property the rename pass has always had).
+00299	ca4db400:1270 seq=1268	
+00300	ca4db400:1270 seq=1268	Note what did **not** change: `result.tools` of the 171 ported entries is still a
+00301	ca4db400:1270 seq=1268	byte-exact carry-over unless an override records the deviation, the frozen old
+00302	ca4db400:1270 seq=1268	contract sha is still enforced, and `order_normative` is still false. The
+00303	ca4db400:1270 seq=1268	machine checks that consume the two numbers are `check_tool_groups.py
+00304	ca4db400:1270 seq=1268	--check-completeness` (`171 + N = 66 + 105 + N`, each name exactly once) and its
+00305	ca4db400:1270 seq=1268	`--added` mode (which validates `docs/tool-groups-added.json`).
+00306	ca4db400:1270 seq=1268	
+00307	ca4db400:1270 seq=1268	v1.16 (TASK-054, the C# honesty defect the audit's D-053-3 registered and
+00308	ca4db400:1270 seq=1268	`DESIGN-DETAIL.md` section 26 / GDR-28 point 13 parked): **no entry is added and
+00309	ca4db400:1270 seq=1268	no `inputSchema` moves** - the count stays 175 - but two `description` fields
+00310	ca4db400:1270 seq=1268	stop over-promising about C#. `CSharpScript::reload()` returns `OK`
+00311	ca4db400:1270 seq=1268	unconditionally (`modules/mono/csharp_script.cpp:2588-2621`) and never compiles
+00312	ca4db400:1270 seq=1268	the source it was given, so in a Mono build a `.cs` file with a syntax error used
+00313	ca4db400:1270 seq=1268	to be answered `{"valid": true, "message": "Script compiles successfully"}`
+00314	ca4db400:1270 seq=1268	(measured: TASK-053 `c03`, and again by this task on the pre-change binary). The
+00315	ca4db400:1270 seq=1268	single-file tool now refuses that file with `-32000` and the plural tool
+00316	ca4db400:1270 seq=1268	classifies it `unverifiable` (no `valid` value, plus the engine basis in
+00317	ca4db400:1270 seq=1268	`reason`), so both tools say the same thing:
+00318	ca4db400:1270 seq=1268	
+00319	ca4db400:1270 seq=1268	  * `validate_script` (`project_validate_script`) gets one more **append-only**
+00320	ca4db400:1270 seq=1268	    sentence - the v1.12 override already exists, so its original wording is
+00321	ca4db400:1270 seq=1268	    untouched and this is a change to that entry's `value` and `reason`;
+00322	ca4db400:1270 seq=1268	  * `project_validate_scripts` is an **added** entry (`ADDED_TOOLS`), which has no
+00323	ca4db400:1270 seq=1268	    `old_name` and therefore no `DESCRIPTION_OVERRIDES` key: its description
+00324	ca4db400:1270 seq=1268	    lives in the table the decision maker authored, and it is extended there. The
+00325	ca4db400:1270 seq=1268	    four categories it publishes become five (`ok` / `invalid` /
+00326	ca4db400:1270 seq=1268	    `language_unavailable` / `unverifiable`), which is why the sentence has to be
+00327	ca4db400:1270 seq=1268	    in the field a client reads.
+00328	ca4db400:1270 seq=1268	"""
+00329	ca4db400:1270 seq=1268	
+00330	ca4db400:1270 seq=1268	import argparse
+00331	ca4db400:1270 seq=1268	import hashlib
+00332	ca4db400:1270 seq=1268	import json
+00333	ca4db400:1270 seq=1268	import os
+00334	ca4db400:1270 seq=1268	import re
+00335	ca4db400:1270 seq=1268	import sys
+00336	ca4db400:1270 seq=1268	
+00337	ca4db400:1270 seq=1268	GENERATOR_VERSION = "1.16.0"
+00338	ca4db400:1270 seq=1268	GENERATED_BY = "modules/mcp_server/scripts/gen_renamed_contract.py"
+00339	ca4db400:1270 seq=1268	
+00340	ca4db400:1270 seq=1268	# Explicit override hooks. SCHEMA_OVERRIDES was empty for B0/B1: the rename is
+00341	ca4db400:1270 seq=1268	# name-only plus, from v1.2 on, the seven description disambiguations below.
+00342	ca4db400:1270 seq=1268	# Any entry has to look like {"reason": "...", "value": <object>} and is recorded
+00343	ca4db400:1270 seq=1268	# in `_meta.overrides` so that the deviation stays auditable.
+00344	ca4db400:1270 seq=1268	#
+00345	ca4db400:1270 seq=1268	# v1.5 (TASK-014 D-3): SCHEMA_OVERRIDES takes its first entry. A schema override
+00346	ca4db400:1270 seq=1268	# is a whole-object *replacement* (there is nothing to append to), so it must
+00347	ca4db400:1270 seq=1268	# carry `"mode": "replace"`, and its reason must quote the `required` member it
+00348	ca4db400:1270 seq=1268	# removes verbatim - see the guard in `main`. No other character of the schema
+00349	ca4db400:1270 seq=1268	# moves.
+00350	ca4db400:1270 seq=1268	#
+00351	ca4db400:1270 seq=1268	# v1.2: R-1/R-2/R-3 disambiguation (TASK-002 section 2.1.1). Each discriminator
+00352	ca4db400:1270 seq=1268	# below is a *fact read out of the migration source*, never an invention; the
+00353	ca4db400:1270 seq=1268	# line references are the ones already audited for tool-rename-map.json v1.1.
+00354	ca4db400:1270 seq=1268	DESCRIPTION_OVERRIDES = {
+00355	ca4db400:1270 seq=1268	    # R-1: editor_analyze_signal_flow vs editor_list_signal_connections.
+00356	ca4db400:1270 seq=1268	    # analysis.rs:387-410 / analysis.rs:96-160 (nested nodes[], flags & 1, exact
+00357	ca4db400:1270 seq=1268	    # node_path via had_node, no signal_name filter) against
+00358	ca4db400:1270 seq=1268	    # batch.rs:207-263 (flat connections[], all connections, substring matches).
+00359	ca4db400:1270 seq=1268	    "analyze_signal_flow": {
+00360	ca4db400:1270 seq=1268	        "reason": (
+00361	ca4db400:1270 seq=1268	            "R-1 消歧 + 事实纠正（TASK-007 §1）：原文按迁移源 analysis.rs:387 写成“只统计持久连接（flags & 1）”，"
+00362	ca4db400:1270 seq=1268	            "但 Godot 4 里 CONNECT_DEFERRED = 1、CONNECT_PERSIST = 2（core/object/object.h:356-360），"
+00363	ca4db400:1270 seq=1268	            "照字面实现会让普通 .tscn 场景恒返回 nodes: []。实现（TASK-006 已交付）按意图用了 CONNECT_PERSIST，"
+00364	ca4db400:1270 seq=1268	            "契约描述是唯一还在说 flags & 1 的地方，故用 mode=replace 纠正。"
+00365	ca4db400:1270 seq=1268	            "被替换的原文（逐字保留以便审计）："
+00366	ca4db400:1270 seq=1268	            "分析当前场景的信号连接流 判别点：按节点嵌套返回 nodes[]（每节点含 signals_emitted/signals_connected_to），"
+00367	ca4db400:1270 seq=1268	            "只统计持久连接（flags & 1）、node_path 精确匹配、无 signal_name 过滤；"
+00368	ca4db400:1270 seq=1268	            "要扁平 connections[] 或子串匹配请用 editor_list_signal_connections。"
+00369	ca4db400:1270 seq=1268	        ),
+00370	ca4db400:1270 seq=1268	        "mode": "replace",
+00371	ca4db400:1270 seq=1268	        "value": "分析当前场景的信号连接流 判别点：按节点嵌套返回 nodes[]（每节点含 signals_emitted/signals_connected_to），只收集持久连接（CONNECT_PERSIST，值为 2；注意 Godot 4 中 flags & 1 是 CONNECT_DEFERRED，不是持久连接）、node_path 精确匹配、无 signal_name 过滤；要扁平 connections[] 或子串匹配请用 editor_list_signal_connections。",
+00372	ca4db400:1270 seq=1268	    },
+00373	ca4db400:1270 seq=1268	    "find_signal_connections": {
+00374	ca4db400:1270 seq=1268	        "reason": (
+00375	ca4db400:1270 seq=1268	            "R-1 消歧：与 editor_analyze_signal_flow 形状/过滤/匹配方式不同（batch.rs:207 扁平 "
+00376	ca4db400:1270 seq=1268	            "connections[]+count、不过滤非持久连接、node_path 与 signal_name 均子串匹配）。"
+00377	ca4db400:1270 seq=1268	        ),
+00378	ca4db400:1270 seq=1268	        "value": "递归查找场景中所有信号连接 判别点：扁平返回 connections[]（每项 {source,signal,target,method}）与 count，收全部连接（不过滤非持久连接）、node_path 与 signal_name 均按子串匹配；要按节点嵌套的流向分析请用 editor_analyze_signal_flow。",
+00379	ca4db400:1270 seq=1268	    },
+00380	ca4db400:1270 seq=1268	    # R-2: project_search_file_names vs project_search_file_contents.
+00381	ca4db400:1270 seq=1268	    # project.rs:159-191 (file name substring, case insensitive, cap 200) against
+00382	ca4db400:1270 seq=1268	    # project.rs:194-246 (per line, case insensitive, cap 50).
+00383	ca4db400:1270 seq=1268	    "search_files": {
+00384	ca4db400:1270 seq=1268	        "reason": (
+00385	ca4db400:1270 seq=1268	            "R-2 消歧：search_files 只按文件名子串匹配（project.rs:175，大小写不敏感、上限 200，"
+00386	ca4db400:1270 seq=1268	            "不读内容不返回行号），与 search_in_files 的逐行内容匹配完全不同。"
+00387	ca4db400:1270 seq=1268	        ),
+00388	ca4db400:1270 seq=1268	        "value": "搜索文件 判别点：只匹配文件名子串（大小写不敏感、上限 200），不读文件内容、不返回行号；要搜索文件内容请用 project_search_file_contents。",
+00389	ca4db400:1270 seq=1268	    },
+00390	ca4db400:1270 seq=1268	    "search_in_files": {
+00391	ca4db400:1270 seq=1268	        "reason": (
+00392	ca4db400:1270 seq=1268	            "R-2 消歧：search_in_files 逐行返回 {file,line,text}（project.rs:221-229，大小写不敏感、"
+00393	ca4db400:1270 seq=1268	            "上限 50、跳过 addons 与 .godot），与 find_node_references 的按文件聚合不同。"
+00394	ca4db400:1270 seq=1268	        ),
+00395	ca4db400:1270 seq=1268	        "value": "在文件内容中搜索文本 判别点：逐行返回 {file,line,text}（大小写不敏感、上限 50，跳过 addons 与 .godot 目录）；要按文件聚合的 {file,lines[]}（大小写敏感、上限 100）请用 project_find_files_referencing_symbol。",
+00396	ca4db400:1270 seq=1268	    },
+00397	ca4db400:1270 seq=1268	    # R-2/R-3: project_find_files_referencing_symbol (batch.rs:419-512) is the
+00398	ca4db400:1270 seq=1268	    # de-merged twin of project_search_file_contents (GDR-17).
+00399	ca4db400:1270 seq=1268	    "find_node_references": {
+00400	ca4db400:1270 seq=1268	        "reason": (
+00401	ca4db400:1270 seq=1268	            "R-2 消歧：find_node_references 按文件聚合 {file,lines[]}（batch.rs:474-489，大小写敏感、"
+00402	ca4db400:1270 seq=1268	            "上限 100、每文件最多 5 行），与 search_in_files 的逐行形状互为对照（GDR-17 取消合并）。"
+00403	ca4db400:1270 seq=1268	        ),
+00404	ca4db400:1270 seq=1268	        "value": "在项目文件中搜索指定模式的引用 判别点：按文件聚合返回 {file,lines[]}（每文件最多 5 行、大小写敏感、上限 100，跳过隐藏文件与 addons，只扫 .tscn/.gd/.tres/.gdshader）；要逐行 {file,line,text}（大小写不敏感、上限 50）请用 project_search_file_contents。",
+00405	ca4db400:1270 seq=1268	    },
+00406	ca4db400:1270 seq=1268	    # R-3: the two converts are a pure direction pair (project.rs:295-322).
+00407	ca4db400:1270 seq=1268	    "uid_to_project_path": {
+00408	ca4db400:1270 seq=1268	        "reason": (
+00409	ca4db400:1270 seq=1268	            "R-3 消歧：uid_to_project_path 入参是文本 UID、出参 {uid,path}，UID 文本非法即报参数错误"
+00410	ca4db400:1270 seq=1268	            "（project.rs:295-305），与反向转换项目路径->UID 是纯方向对。"
+00411	ca4db400:1270 seq=1268	        ),
+00412	ca4db400:1270 seq=1268	        "value": "将 UID 转换为项目路径 判别点：入参为字符串文本 UID（如 uid://...），返回 {uid,path}，UID 文本格式非法时报参数错误；反向转换请用 project_convert_path_to_uid。",
+00413	ca4db400:1270 seq=1268	    },
+00414	ca4db400:1270 seq=1268	    "project_path_to_uid": {
+00415	ca4db400:1270 seq=1268	        "reason": (
+00416	ca4db400:1270 seq=1268	            "R-3 消歧：project_path_to_uid 入参是项目路径、出参 {path,uid}，路径未注册时 uid 为空串且"
+00417	ca4db400:1270 seq=1268	            "不报错（project.rs:308-322），与反向转换 UID->路径是纯方向对。"
+00418	ca4db400:1270 seq=1268	        ),
+00419	ca4db400:1270 seq=1268	        "value": "将项目路径转换为 UID 判别点：入参为项目路径（如 res://...），返回 {path,uid}，路径未注册时 uid 为空串且不报错；反向转换请用 project_convert_uid_to_path。",
+00420	ca4db400:1270 seq=1268	    },
+00421	ca4db400:1270 seq=1268	    # D-3 (TASK-014 section 1.3): the fallback D59 ruling 1 introduced, mirrored
+00422	ca4db400:1270 seq=1268	    # into the text a client actually reads. The schema override below stops
+00423	ca4db400:1270 seq=1268	    # requiring `events`, so this sentence has to say what omitting it does -
+00424	ca4db400:1270 seq=1268	    # otherwise the contract would only have traded one silent rule for a missing
+00425	ca4db400:1270 seq=1268	    # one.
+00426	ca4db400:1270 seq=1268	    "replay_recording": {
+00427	ca4db400:1270 seq=1268	        "reason": (
+00428	ca4db400:1270 seq=1268	            "D-3 契约与行为一致（TASK-014 §1.3 / D59 裁决 1）：实现允许缺省 events，并回放本游戏进程内"
+00429	ca4db400:1270 seq=1268	            "最近一次 running_game_stop_input_recording 的录制；契约原文的 required=[events] 与描述都没有"
+00430	ca4db400:1270 seq=1268	            "这条回退，按契约传 events 的消费者反而享受不到它。"
+00431	ca4db400:1270 seq=1268	        ),
+00432	ca4db400:1270 seq=1268	        "value": "回放之前录制的输入事件序列 缺省 `events` 时，回放本游戏进程内最近一次 running_game_stop_input_recording 的录制；若本进程没有可用录制则返回 -32602。",
+00433	ca4db400:1270 seq=1268	    },
+00434	ca4db400:1270 seq=1268	    # TASK-024a E-10 (the E-10 half of TASK-024, run as its own task after the
+00435	ca4db400:1270 seq=1268	    # TASK-024 mid-flight failure): the game child's MCP port is now injected by
+00436	ca4db400:1270 seq=1268	    # the tool, and that is only discoverable if the contract says so. The
+00437	ca4db400:1270 seq=1268	    # original wording ("运行场景") stays, first, verbatim.
+00438	ca4db400:1270 seq=1268	    "play_scene": {
+00439	ca4db400:1270 seq=1268	        "reason": (
+00440	ca4db400:1270 seq=1268	            "TASK-024a E-10 顺手性（GDR-23 §21 第 4 条）：原描述只有“运行场景”，"
+00441	ca4db400:1270 seq=1268	            "没有告诉调用方游戏子进程的 MCP 端口从哪来。实测（REPORT-AUDIT-M4c D-13）编辑器起的子进程 cmdline "
+00442	ca4db400:1270 seq=1268	            "里没有 --mcp-port（只有 --path/--remote-debug/--editor-pid/--scene），游戏于是只读自己的 "
+00443	ca4db400:1270 seq=1268	            "godot_mcp/port 设置，“跑起来观察”必须先改被测工程。实现改为经 "
+00444	ca4db400:1270 seq=1268	            "EditorRunBar::play_*(..., p_play_args) 注入 --mcp-port=<端口>"
+00445	ca4db400:1270 seq=1268	            "（EditorInterface::play_* 不转发运行参数，故不能再走它），并在响应里回 "
+00446	ca4db400:1270 seq=1268	            "mcp_port/mcp_port_source/endpoint/pid，故追加判别句。原文“运行场景”逐字保留在句首（append 模式）。"
+00447	ca4db400:1270 seq=1268	        ),
+00448	ca4db400:1270 seq=1268	        "value": "运行场景 起游戏时经 EditorRunBar::play_*(..., p_play_args) 注入 --mcp-port=<端口>，使编辑器起的游戏子进程立刻可被 MCP 观察，无需改被测工程的 godot_mcp/port 设置：端口可用可选参数 mcp_port 指定（越界、已被占用、以及编辑器自己正在用的端口都会被拒绝，不会把游戏指向一个连不上的端口），缺省时自动挑一个空闲端口，且不与编辑器自身端口相同；响应在确认子进程已创建后给出 mcp_port、mcp_port_source（argument/auto_free_port）、可直连的 endpoint 与游戏 pid，子进程没起来则不报成功。",
+00449	ca4db400:1270 seq=1268	    },
+00450	ca4db400:1270 seq=1268	    # TASK-029: the *behaviour* became an opt-in in TASK-028 G-3; this entry makes
+00451	ca4db400:1270 seq=1268	    # the text a caller reads say the same thing, and names the destructive half
+00452	ca4db400:1270 seq=1268	    # the old `default: true` was hiding. The original wording stays first,
+00453	ca4db400:1270 seq=1268	    # verbatim (append mode).
+00454	ca4db400:1270 seq=1268	    "get_test_report": {
+00455	ca4db400:1270 seq=1268	        "reason": (
+00456	ca4db400:1270 seq=1268	            "TASK-029 契约与行为一致（TASK-028 G-3 收口，决策者裁决方案 A）：原文只有“获取测试结果报告”，"
+00457	ca4db400:1270 seq=1268	            "既没说清 clear 的缺省语义，也没说清它会删掉一个**共享**文件。而读取带破坏性副作用是有实测记录的缺陷"
+00458	ca4db400:1270 seq=1268	            "（user://mcp_test_report.json 由同一编辑器进程的所有客户端共用，先读的一方会删掉后读一方还没读的报告，"
+00459	ca4db400:1270 seq=1268	            "M4c 的 G-3）；TASK-028 已把实现改成显式 opt-in，契约是唯一还在宣称“缺省即清”的地方。"
+00460	ca4db400:1270 seq=1268	            "一个只读 tools/list 的智能体必须能看出这一点，故追加判别句。原文“获取测试结果报告”逐字保留在句首（append 模式）。"
+00461	ca4db400:1270 seq=1268	        ),
+00462	ca4db400:1270 seq=1268	        "value": "获取测试结果报告 缺省（不给 clear）或 clear:false 是纯读取：不改变、不删除任何东西，cleared 为空数组；只有显式 clear:true 才会清空，并且会删除**共享**的桥接文件 user://mcp_test_report.json —— 该文件由同一编辑器进程的所有客户端共用，删除后其它尚未读取该报告的客户端就读不到了（cleared 会列出真正被清掉的范围：editor_process / game_process_file）。",
+00463	ca4db400:1270 seq=1268	    },
+00464	ca4db400:1270 seq=1268	    # TASK-032 D6 (M4d): the returned `path` of the scene-tree family is the
+00465	ca4db400:1270 seq=1268	    # *SceneTree* absolute path (`/root/Main/Actor`), while the `node_path`
+00466	ca4db400:1270 seq=1268	    # description of the same family says "relative to the scene root". Both
+00467	ca4db400:1270 seq=1268	    # spellings are accepted on the way in (the node resolver takes an absolute
+00468	ca4db400:1270 seq=1268	    # `/root/...` path, a path relative to the current scene's root, or a
+00469	ca4db400:1270 seq=1268	    # by-name walk), but a client that only reads the description could not know
+00470	ca4db400:1270 seq=1268	    # that, and would have to guess how to feed one tool's answer into the next.
+00471	ca4db400:1270 seq=1268	    # Append-only: the original wording stays first, verbatim.
+00472	ca4db400:1270 seq=1268	    "get_game_node_properties": {
+00473	ca4db400:1270 seq=1268	        "reason": (
+00474	ca4db400:1270 seq=1268	            "TASK-032 D6 契约与行为一致（M4d 第四次独立验收）：running_game_get_scene_tree 实测返回 "
+00475	ca4db400:1270 seq=1268	            "path=\"/root/Main/Actor\"（Node::get_path()，从 SceneTree 根 /root 起算的绝对路径），"
+00476	ca4db400:1270 seq=1268	            "而同族 running_game_get_node_properties 的 node_path 描述写的是“相对于场景根节点”，"
+00477	ca4db400:1270 seq=1268	            "只读 tools/list 的调用方看不出「绝对路径」也能喂回来。实测两种写法都能被解析"
+00478	ca4db400:1270 seq=1268	            "（MCPTools::resolve_game_node：\"/root/...\" 走 SceneTree 根，其余先相对当前场景根解析、"
+00479	ca4db400:1270 seq=1268	            "再退化为按名查找），故追加判别句声明实际返回形态。原文“获取运行中游戏指定节点的属性”逐字保留在句首（append 模式）。"
+00480	ca4db400:1270 seq=1268	        ),
+00481	ca4db400:1270 seq=1268	        "value": "获取运行中游戏指定节点的属性 返回的 path 是 SceneTree 绝对路径（形如 /root/Main/Actor，从 /root 起算，不是场景根相对路径）；node_path 两种写法都接受：相对场景根节点（如 Actor、A/B）或绝对路径（如 /root/Main/Actor），解析顺序是先绝对路径、再相对当前场景根、最后按节点名查找。",
+00482	ca4db400:1270 seq=1268	    },
+00483	ca4db400:1270 seq=1268	    # ------------------------------------------------------------------
+00484	ca4db400:1270 seq=1268	    # TASK-043 (v1.11): the rewrite side effect TASK-042 section 3 measured,
+00485	ca4db400:1270 seq=1268	    # appended to the description of every tool that really saves the whole
+00486	ca4db400:1270 seq=1268	    # `project.godot`. The sentence is shared verbatim by all five entries; the
+00487	ca4db400:1270 seq=1268	    # per-entry `reason` carries that tool's own source chain. It is
+00488	ca4db400:1270 seq=1268	    # deliberately conditional ("when this call saves") because three of the
+00489	ca4db400:1270 seq=1268	    # five have success paths that write nothing at all.
+00490	ca4db400:1270 seq=1268	    # ------------------------------------------------------------------
+00491	ca4db400:1270 seq=1268	    "set_project_setting": {
+00492	ca4db400:1270 seq=1268	        "reason": (
+00493	ca4db400:1270 seq=1268	            "TASK-043 副作用诚实化（决策者裁决；依据 TASK-042 §3 对真实带注释工程文件的字节级实测，"
+00494	ca4db400:1270 seq=1268	            "以及本批 §1 的源码普查）：project_set_setting 经引擎写出口保存 project.godot —— "
+00495	ca4db400:1270 seq=1268	            "tools/project_setting_write.cpp:217 settings->set_setting() -> :218 publish_project_settings() "
+00496	ca4db400:1270 seq=1268	            "-> tools/tool_helpers.cpp:571-573 publish_project_settings_to(project_settings_file_path()) "
+00497	ca4db400:1270 seq=1268	            "-> :558-566 save_custom 回调 -> core/config/project_settings.cpp:1234-1341 save_custom() "
+00498	ca4db400:1270 seq=1268	            "-> :1162-1210 _save_settings_text()（先写固定 7 行头，再遍历全部设置）。"
+00499	ca4db400:1270 seq=1268	            "save_custom() 只有整文件输出、p_custom 只能改「写哪些值」不能改「写哪一段」，ConfigFile::save() 同样整文件，"
+00500	ca4db400:1270 seq=1268	            "注释不属于任何数据结构 —— 引擎无局部发布 API。因此：整文件被重写、手写注释全部丢失、其余行逐字保留、"
+00501	ca4db400:1270 seq=1268	            "重复同参调用字节不变（幂等）。副作用不得沉默，故句尾 append 一句；原文“设置项目设置”逐字保留在句首（append 模式）。"
+00502	ca4db400:1270 seq=1268	        ),
+00503	ca4db400:1270 seq=1268	        "value": "设置项目设置 When this call saves, it rewrites the entire project.godot with the engine's own whole-file writer (the engine has no partial-publish API), so every hand-written comment in that file is lost: the remaining settings are re-emitted verbatim and a repeated identical call changes no bytes (idempotent), and because the comments cannot be kept, back the file up yourself before calling if you need them.",
+00504	ca4db400:1270 seq=1268	    },
+00505	ca4db400:1270 seq=1268	    "add_autoload": {
+00506	ca4db400:1270 seq=1268	        "reason": (
+00507	ca4db400:1270 seq=1268	            "TASK-043 副作用诚实化（决策者裁决；依据 TASK-042 §3 的字节级实测 + 本批源码普查）："
+00508	ca4db400:1270 seq=1268	            "project_add_autoload 的写入路径是 tools/project_autoload_write.cpp:149 settings->set_setting(key, declared) "
+00509	ca4db400:1270 seq=1268	            "-> :150 publish_project_settings() -> 同一个 publish_project_settings_to()/save_custom()。"
+00510	ca4db400:1270 seq=1268	            "与该调用同形的副作用：整文件重写、手写注释全丢、其余行逐字保留、幂等；引擎无局部发布 API。"
+00511	ca4db400:1270 seq=1268	            "措辞用条件句（when this call saves），因为「autoload 已存在且路径相同」的成功路径（:121-135）不发布、不写文件。"
+00512	ca4db400:1270 seq=1268	            "原文“注册自动加载”逐字保留在句首（append 模式）。"
+00513	ca4db400:1270 seq=1268	        ),
+00514	ca4db400:1270 seq=1268	        "value": "注册自动加载 When this call saves, it rewrites the entire project.godot with the engine's own whole-file writer (the engine has no partial-publish API), so every hand-written comment in that file is lost: the remaining settings are re-emitted verbatim and a repeated identical call changes no bytes (idempotent), and because the comments cannot be kept, back the file up yourself before calling if you need them.",
+00515	ca4db400:1270 seq=1268	    },
+00516	ca4db400:1270 seq=1268	    "remove_autoload": {
+00517	ca4db400:1270 seq=1268	        "reason": (
+00518	ca4db400:1270 seq=1268	            "TASK-043 副作用诚实化（决策者裁决；依据 TASK-042 §3 的字节级实测 + 本批源码普查）："
+00519	ca4db400:1270 seq=1268	            "project_remove_autoload 的写入路径是 tools/project_autoload_write.cpp:180 settings->clear(key) "
+00520	ca4db400:1270 seq=1268	            "-> :181 publish_project_settings() -> 同一个 publish_project_settings_to()/save_custom()。"
+00521	ca4db400:1270 seq=1268	            "副作用同族：整文件重写、手写注释全丢、其余行逐字保留、幂等；引擎无局部发布 API。"
+00522	ca4db400:1270 seq=1268	            "条件句同样必要：要移除的名字不存在时（:174-178）直接 -32001，不写文件。"
+00523	ca4db400:1270 seq=1268	            "原文“移除自动加载”逐字保留在句首（append 模式）。"
+00524	ca4db400:1270 seq=1268	        ),
+00525	ca4db400:1270 seq=1268	        "value": "移除自动加载 When this call saves, it rewrites the entire project.godot with the engine's own whole-file writer (the engine has no partial-publish API), so every hand-written comment in that file is lost: the remaining settings are re-emitted verbatim and a repeated identical call changes no bytes (idempotent), and because the comments cannot be kept, back the file up yourself before calling if you need them.",
+00526	ca4db400:1270 seq=1268	    },
+00527	ca4db400:1270 seq=1268	    "set_input_action": {
+00528	ca4db400:1270 seq=1268	        "reason": (
+00529	ca4db400:1270 seq=1268	            "TASK-043 副作用诚实化（决策者裁决；依据 TASK-041 的 M-6 落地与 TASK-042 §3 的字节级实测 + 本批源码普查）："
+00530	ca4db400:1270 seq=1268	            "editor_add_input_action 的持久化路径是 tools/editor_input_simulation.cpp:665 MCPTools::persist_input_action() "
+00531	ca4db400:1270 seq=1268	            "-> tools/tool_helpers.cpp:842 persist_input_action() -> :788 persist_input_action_to() -> :815 publish_project_settings_to() "
+00532	ca4db400:1270 seq=1268	            "-> save_custom()，即引擎自己的整文件写出口。实测（REPORT-042 §3.2）：真实带 4 行手写注释的 project.godot "
+00533	ca4db400:1270 seq=1268	            "407B -> 869B，注释 4/4 丢失、文件头变成引擎固定 7 行、既有动作的手写多行块逐字节保留、第二次同参调用 sha256 不变。"
+00534	ca4db400:1270 seq=1268	            "引擎无局部发布 API，故副作用必须写在调用方读得到的地方；措辞为条件句，因为进程没有 project.godot 时"
+00535	ca4db400:1270 seq=1268	            "（tool_helpers.cpp:855-858）只写内存并向游戏不可见，不写文件。原文“创建 Input Action”逐字保留在句首（append 模式）。"
+00536	ca4db400:1270 seq=1268	        ),
+00537	ca4db400:1270 seq=1268	        "value": "创建 Input Action When this call saves, it rewrites the entire project.godot with the engine's own whole-file writer (the engine has no partial-publish API), so every hand-written comment in that file is lost: the remaining settings are re-emitted verbatim and a repeated identical call changes no bytes (idempotent), and because the comments cannot be kept, back the file up yourself before calling if you need them.",
+00538	ca4db400:1270 seq=1268	    },
+00539	ca4db400:1270 seq=1268	    "reload_plugin": {
+00540	ca4db400:1270 seq=1268	        "reason": (
+00541	ca4db400:1270 seq=1268	            "TASK-043 副作用诚实化（决策者裁决；本批 §1.2 的实测探针 scripts/mcp043_reload_plugin_rewrite_probe.ps1，14/14 PASS）："
+00542	ca4db400:1270 seq=1268	            "editor_reload_plugin 的写入出口是**间接**的，所以它靠源码链 + 实测两条腿确认，而不是猜。源码链："
+00543	ca4db400:1270 seq=1268	            "tools/editor_write_scene_editor.cpp:396-397 set_addon_plugin_enabled(name,false,false)/(name,true,false) "
+00544	ca4db400:1270 seq=1268	            "-> editor/editor_node.cpp:4548（禁用分支）/ :4627（启用分支）都走 :4512-4531 _update_addon_config()，"
+00545	ca4db400:1270 seq=1268	            "它**不受 p_config_changed 约束**、无条件 :4530 project_settings_editor->queue_save() "
+00546	ca4db400:1270 seq=1268	            "-> editor/settings/project_settings_editor.cpp:97-99（settings_changed=true + 启动 1.5s 一次性 Timer，"
+00547	ca4db400:1270 seq=1268	            "Timer 建于 :870-874）-> :102-106 _save() -> ProjectSettings::save() -> save_custom() 整文件。"
+00548	ca4db400:1270 seq=1268	            "实测（全新 scratch 工程，3 行手写注释 + 1 个已启用 addon）：编辑器启动与 --import 都不动文件（对照，SHA 不变），"
+00549	ca4db400:1270 seq=1268	            "调用一次 reload 后 504B -> 585B、3/3 注释丢失、出现引擎固定头、config/name 与 editor_plugins/enabled 逐字保留，"
+00550	ca4db400:1270 seq=1268	            "第二次调用字节不变（幂等）。措辞为条件句：没有已启用插件时工具在循环前就以 -32000 返回，不写文件。"
+00551	ca4db400:1270 seq=1268	            "原文“重新加载 MCP 插件”逐字保留在句首（append 模式）。"
+00552	ca4db400:1270 seq=1268	        ),
+00553	ca4db400:1270 seq=1268	        "value": "重新加载 MCP 插件 When this call saves, it rewrites the entire project.godot with the engine's own whole-file writer (the engine has no partial-publish API), so every hand-written comment in that file is lost: the remaining settings are re-emitted verbatim and a repeated identical call changes no bytes (idempotent), and because the comments cannot be kept, back the file up yourself before calling if you need them.",
+00554	ca4db400:1270 seq=1268	    },
+00555	ca4db400:1270 seq=1268	    # v1.12 (TASK-050 N-2): `project_validate_script` resolved the file's language
+00556	ca4db400:1270 seq=1268	    # from its extension and, when that language was absent, **fell back to
+00557	ca4db400:1270 seq=1268	    # GDScript** - so a legitimate `.cs` in a `module_mono_enabled=no` build was
+00558	ca4db400:1270 seq=1268	    # answered `{"error_text":"ERR_PARSE_ERROR","valid":false,"message":
+00559	ca4db400:1270 seq=1268	    # "Compilation failed..."}`. "This build has no C# backend" was being
+00560	ca4db400:1270 seq=1268	    # published as "your script does not compile", which is the honesty gap the
+00561	ca4db400:1270 seq=1268	    # racing-backlog audit recorded as N-2 and TASK-050 removes: the fallback is
+00562	ca4db400:1270 seq=1268	    # gone, a language this build does not contain is a `-32000` refusal carrying
+00563	ca4db400:1270 seq=1268	    # `data.suggestion`, and `valid` is only ever a verdict produced by the file's
+00564	ca4db400:1270 seq=1268	    # **own** language. The one place a caller can learn that is this description,
+00565	ca4db400:1270 seq=1268	    # so the sentence is appended (the original `验证脚本语法` stays first,
+00566	ca4db400:1270 seq=1268	    # verbatim - the append-only guard checks exactly that).
+00567	ca4db400:1270 seq=1268	    "validate_script": {
+00568	ca4db400:1270 seq=1268	        "reason": (
+00569	ca4db400:1270 seq=1268	            "TASK-050 N-2 诚实性（决策者裁决；依据 racing-backlog 审计的 N-2 与我在 9888 上的独立复现）："
+00570	ca4db400:1270 seq=1268	            "project_validate_script 原实现（project_read_files.cpp 旧 302-305 行）在 "
+00571	ca4db400:1270 seq=1268	            "ScriptServer::get_language_for_extension(ext) 返回 null 时回退 GDScript，"
+00572	ca4db400:1270 seq=1268	            "于是 module_mono_enabled=no 构建里的合法 .cs 得到 {\"error_text\":\"ERR_PARSE_ERROR\",\"valid\":false,"
+00573	ca4db400:1270 seq=1268	            "\"message\":\"Compilation failed. Check the script for errors.\"} —— 把「本构建没有该语言的脚本后端」"
+00574	ca4db400:1270 seq=1268	            "冒充成「编译失败」。改为能力感知：语言不可用 → -32000 + data.suggestion（说明用哪个构建/文件），"
+00575	ca4db400:1270 seq=1268	            "valid 只在真的用该文件自身语言编译过时才是结论；进程没有任何脚本语言时仍走原有的结构检查降级分支（其 message 明说没有编译）。"
+00576	ca4db400:1270 seq=1268	            "原文“验证脚本语法”逐字保留在句首（append 模式）。"
+00577	ca4db400:1270 seq=1268	            "TASK-054（D-053-3）在同一句后追加一句：语言**存在**但该 API 不能编译其脚本的（C#，mono 构建）同样不给 valid —— "
+00578	ca4db400:1270 seq=1268	            "CSharpScript::reload() 无条件返回 OK（modules/mono/csharp_script.cpp:2588-2621，函数体里唯一的 return 在 2620 行）"
+00579	ca4db400:1270 seq=1268	            "且从不解析 set_source_code() 传入的源码；唯一真信号是私有字段 CSharpScript::valid（csharp_script.h:137，"
+00580	c0061494:1332 seq=1330	            sys.exit("FATAL: merge keep '%s' is itself excluded" % keep)
+00581	c0061494:1332 seq=1330	        # self check 4: the merged entry and its keeper share one new name, so
+00582	c0061494:1332 seq=1330	        # deduplication cannot create a duplicate.
+00583	c0061494:1332 seq=1330	        if by_old_name[keep]["new_name"] != item["new_name"]:
+00584	c0061494:1332 seq=1330	            sys.exit("FATAL: merge %s -> %s but keeper %s -> %s"
+00585	c0061494:1332 seq=1330	                     % (item["old_name"], item["new_name"], keep, by_old_name[keep]["new_name"]))
+00586	c0061494:1332 seq=1330	
+00587	c0061494:1332 seq=1330	    excluded_set = set(excluded)
+00588	c0061494:1332 seq=1330	    merged_set = set(item["old_name"] for item in merged)
+00589	c0061494:1332 seq=1330	    dropped = excluded_set | merged_set
+00590	c0061494:1332 seq=1330	
+00591	c0061494:1332 seq=1330	    # --- self check 2: every emitted new name passes the isomorphic lint -----
+00592	c0061494:1332 seq=1330	    for entry in entries:
+00593	c0061494:1332 seq=1330	        if entry["old_name"] in dropped:
+00594	c0061494:1332 seq=1330	            continue
+00595	c0061494:1332 seq=1330	        reason = validate_renamed(entry, closed_set)
+00596	c0061494:1332 seq=1330	        if reason is not None:
+00597	c0061494:1332 seq=1330	            sys.exit("FATAL: %s" % reason)
+00598	c0061494:1332 seq=1330	
+00599	c0061494:1332 seq=1330	    # --- transform: name only, description / inputSchema verbatim ------------
+00600	c0061494:1332 seq=1330	    overrides_used = []
+00601	c0061494:1332 seq=1330	    new_tools = []
+00602	c0061494:1332 seq=1330	    name_sources = []
+00603	c0061494:1332 seq=1330	    for tool in old_contract["result"]["tools"]:
+00604	c0061494:1332 seq=1330	        entry = by_old_name[tool["name"]]
+00605	c0061494:1332 seq=1330	        if entry["old_name"] in dropped:
+00606	c0061494:1332 seq=1330	            continue
+00607	c0061494:1332 seq=1330	
+00608	c0061494:1332 seq=1330	        new_tool = dict(tool)  # keeps the old key order
+00609	c0061494:1332 seq=1330	        new_tool["name"] = entry["new_name"]
+00610	c0061494:1332 seq=1330	
+00611	c0061494:1332 seq=1330	        description, desc_overridden = apply_override(DESCRIPTION_OVERRIDES, entry["old_name"],
+00612	c0061494:1332 seq=1330	                                                     tool["description"], overrides_used, "description")
+00613	c0061494:1332 seq=1330	        schema, schema_overridden = apply_override(SCHEMA_OVERRIDES, entry["old_name"],
+00614	c0061494:1332 seq=1330	                                                  tool["inputSchema"], overrides_used, "inputSchema")
+00615	c0061494:1332 seq=1330	
+00616	c0061494:1332 seq=1330	        # The no-override case must be a byte-exact carry over at the object
+00617	c0061494:1332 seq=1330	        # level; the assertion is what keeps the promise from section 2 honest.
+00618	c0061494:1332 seq=1330	        if not desc_overridden and canonical(description) != canonical(tool["description"]):
+00619	c0061494:1332 seq=1330	            sys.exit("FATAL: description of %s changed without an explicit override" % entry["old_name"])
+00620	c0061494:1332 seq=1330	        if not schema_overridden and canonical(schema) != canonical(tool["inputSchema"]):
+00621	c0061494:1332 seq=1330	            sys.exit("FATAL: inputSchema of %s changed without an explicit override" % entry["old_name"])
+00622	c0061494:1332 seq=1330	        # v1.2: an *append* override may only add one discriminator sentence, so
+00623	c0061494:1332 seq=1330	        # the original wording can never be silently dropped. v1.4 adds the
+00624	c0061494:1332 seq=1330	        # explicit `mode: "replace"` escape hatch for text that is factually
+00625	c0061494:1332 seq=1330	        # wrong; it is refused unless the record's reason quotes the text it
+00626	c0061494:1332 seq=1330	        # replaces, so a replacement cannot be a silent edit either.
+00627	c0061494:1332 seq=1330	        mode = DESCRIPTION_OVERRIDES.get(entry["old_name"], {}).get("mode", "append") if desc_overridden else "append"
+00628	c0061494:1332 seq=1330	        if desc_overridden and mode == "append" and not str(description).startswith(str(tool["description"]) + " "):
+00629	c0061494:1332 seq=1330	            sys.exit("FATAL: description override of %s is not append-only (original wording lost)"
+00630	c0061494:1332 seq=1330	                     % entry["old_name"])
+00631	c0061494:1332 seq=1330	        if desc_overridden and mode == "replace":
+00632	c0061494:1332 seq=1330	            original = str(tool["description"])
+00633	c0061494:1332 seq=1330	            reason = str(DESCRIPTION_OVERRIDES[entry["old_name"]]["reason"])
+00634	c0061494:1332 seq=1330	            if original not in reason:
+00635	c0061494:1332 seq=1330	                sys.exit("FATAL: replacing description override of %s must quote the text it replaces in "
+00636	c0061494:1332 seq=1330	                         "'reason' (original wording would be lost from the record)"
+00637	c0061494:1332 seq=1330	                         % entry["old_name"])
+00638	c0061494:1332 seq=1330	        # v1.5: a schema override is a whole-object replacement, and the one thing
+00639	c0061494:1332 seq=1330	        # it can silently drop is a `required` member. The record must therefore
+00640	c0061494:1332 seq=1330	        # name what it removes, verbatim, or the contract's old obligation is gone
+00641	c0061494:1332 seq=1330	        # with no trace beyond "a schema override fired".
+00642	c0061494:1332 seq=1330	        if schema_overridden:
+00643	c0061494:1332 seq=1330	            record = SCHEMA_OVERRIDES[entry["old_name"]]
+00644	c0061494:1332 seq=1330	            if record.get("mode") != "replace":
+00645	c0061494:1332 seq=1330	                sys.exit("FATAL: schema override of %s must carry \"mode\": \"replace\" (a schema is "
+00646	c0061494:1332 seq=1330	                         "replaced, there is nothing to append to)" % entry["old_name"])
+00647	c0061494:1332 seq=1330	            removed_required = canonical(tool["inputSchema"].get("required", []))
+00648	c0061494:1332 seq=1330	            if removed_required not in str(record["reason"]):
+00649	c0061494:1332 seq=1330	                sys.exit("FATAL: schema override of %s must quote the 'required' member it removes "
+00650	c0061494:1332 seq=1330	                         "verbatim in 'reason' (expected %s)"
+00651	c0061494:1332 seq=1330	                         % (entry["old_name"], removed_required))
+00652	c0061494:1332 seq=1330	
+00653	c0061494:1332 seq=1330	        new_tool["description"] = description
+00654	c0061494:1332 seq=1330	        new_tool["inputSchema"] = schema
+00655	c0061494:1332 seq=1330	        new_tools.append(new_tool)
+00656	c0061494:1332 seq=1330	        name_sources.append(entry["new_name"])
+00657	c0061494:1332 seq=1330	
+00658	c0061494:1332 seq=1330	    # --- self check 5: every declared override fired exactly once ------------
+00659	c0061494:1332 seq=1330	    # v1.5: per `(kind, old_name)`, not per `old_name`. One tool may legitimately
+00660	c0061494:1332 seq=1330	    # carry both a description and a schema override (D-3 is the first), and
+00661	c0061494:1332 seq=1330	    # nothing about that should make either record disappear. The counters are
+00662	c0061494:1332 seq=1330	    # still exact in both directions: a declared name that never fires is a hard
+00663	c0061494:1332 seq=1330	    # failure, and so is a record count that does not match the declaration.
+00664	c0061494:1332 seq=1330	    declared_overrides = set(
+00665	c0061494:1332 seq=1330	        (kind, name)
+00666	c0061494:1332 seq=1330	        for kind, table in (("description", DESCRIPTION_OVERRIDES), ("inputSchema", SCHEMA_OVERRIDES))
+00667	c0061494:1332 seq=1330	        for name in table)
+00668	c0061494:1332 seq=1330	    fired_overrides = set((record["kind"], record["old_name"]) for record in overrides_used)
+00669	c0061494:1332 seq=1330	    stale_overrides = sorted("%s/%s" % pair for pair in (declared_overrides - fired_overrides))
+00670	c0061494:1332 seq=1330	    if stale_overrides:
+00671	c0061494:1332 seq=1330	        sys.exit("FATAL: override(s) never fired (typo in old_name?): %s" % stale_overrides)
+00672	c0061494:1332 seq=1330	    if len(overrides_used) != len(declared_overrides):
+00673	c0061494:1332 seq=1330	        sys.exit("FATAL: %d override records for %d declared overrides"
+00674	c0061494:1332 seq=1330	                 % (len(overrides_used), len(declared_overrides)))
+00675	c0061494:1332 seq=1330	
+00676	c0061494:1332 seq=1330	    # --- self check 3: count and uniqueness ----------------------------------
+00677	c0061494:1332 seq=1330	    # 174 entries - 2 unregister_until_implemented - 1 lossless merge == 171.
+00678	c0061494:1332 seq=1330	    EXPECTED_OUTPUT = 174 - 2 - 1
+00679	c0061494:1332 seq=1330	    if len(new_tools) != EXPECTED_OUTPUT:
+00680	c0061494:1332 seq=1330	        sys.exit("FATAL: expected %d output tools, got %d" % (EXPECTED_OUTPUT, len(new_tools)))
+00681	c0061494:1332 seq=1330	    if len(set(name_sources)) != len(name_sources):
+00682	c0061494:1332 seq=1330	        duplicates = sorted(name for name in set(name_sources) if name_sources.count(name) > 1)
+00683	c0061494:1332 seq=1330	        sys.exit("FATAL: duplicate new names in the output: %s" % duplicates)
+00684	c0061494:1332 seq=1330	
+00685	c0061494:1332 seq=1330	    meta = {
+00686	c0061494:1332 seq=1330	        "generated_from": old_path,
+00687	c0061494:1332 seq=1330	        "generated_from_sha256": old_sha,
+00688	c0061494:1332 seq=1330	        "map_path": map_path,
+00689	c0061494:1332 seq=1330	        "map_sha256": map_sha,
+00690	c0061494:1332 seq=1330	        "tool_count_in": len(old_names),
+00691	c0061494:1332 seq=1330	        "count": len(new_tools),
+00692	c0061494:1332 seq=1330	        # D-1 (TASK-003 section 1.1, D49): `result.tools` is a *set* for the
+00693	c0061494:1332 seq=1330	        # consumers; the order is explicitly outside the contract. The engine is
+00694	c0061494:1332 seq=1330	        # only required to be deterministic within one build (a second
+00695	c0061494:1332 seq=1330	        # `tools/list` on the same registry is byte-identical), not to reproduce
+00696	c0061494:1332 seq=1330	        # the order below - so no implementation may ever be "fixed" to match it.
+00697	c0061494:1332 seq=1330	        "order_normative": False,
+00698	c0061494:1332 seq=1330	        "excluded": excluded,
+00699	c0061494:1332 seq=1330	        "merged": merged,
+00700	c0061494:1332 seq=1330	        "generator_version": GENERATOR_VERSION,
+00701	c0061494:1332 seq=1330	        "generated_by": GENERATED_BY,
+00702	c0061494:1332 seq=1330	    }
+00703	c0061494:1332 seq=1330	    if overrides_used:
+00704	c0061494:1332 seq=1330	        meta["overrides"] = overrides_used
+00705	c0061494:1332 seq=1330	
+00706	c0061494:1332 seq=1330	    output = {
+00707	c0061494:1332 seq=1330	        "id": old_contract["id"],
+00708	c0061494:1332 seq=1330	        "jsonrpc": old_contract["jsonrpc"],
+00709	c0061494:1332 seq=1330	        "result": {"tools": new_tools},
+00710	c0061494:1332 seq=1330	        "_meta": meta,
+00711	c0061494:1332 seq=1330	    }
+00712	c0061494:1332 seq=1330	
+00713	c0061494:1332 seq=1330	    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+00714	c0061494:1332 seq=1330	    with open(out_path, "w", encoding="utf-8", newline="\n") as handle:
+00715	c0061494:1332 seq=1330	        json.dump(output, handle, ensure_ascii=False, indent=2)
+00716	c0061494:1332 seq=1330	        handle.write("\n")
+00717	c0061494:1332 seq=1330	
+00718	c0061494:1332 seq=1330	    out_sha = sha256_file(out_path)
+00719	c0061494:1332 seq=1330	
+00720	c0061494:1332 seq=1330	    print("gen_renamed_contract: input tools = %d" % len(old_names))
+00721	c0061494:1332 seq=1330	    print("gen_renamed_contract: output tools = %d" % len(new_tools))
+00722	c0061494:1332 seq=1330	    print("gen_renamed_contract: order_normative = %s (order is not part of the contract)"
+00723	c0061494:1332 seq=1330	          % json.dumps(output["_meta"]["order_normative"]))
+00724	c0061494:1332 seq=1330	    print("gen_renamed_contract: merged = %d (%s)" % (
+00725	c0061494:1332 seq=1330	        len(merged), ", ".join("%s -> %s" % (m["old_name"], m["merged_into"]) for m in merged)))
+00726	c0061494:1332 seq=1330	    print("gen_renamed_contract: unregister = %d (%s)" % (len(excluded), ", ".join(excluded)))
+00727	c0061494:1332 seq=1330	    print("gen_renamed_contract: overrides = %d (%s)"
+00728	c0061494:1332 seq=1330	          % (len(overrides_used), ", ".join("%s/%s:%s" % (record["kind"], record["old_name"], record["mode"]) for record in overrides_used)))
+00729	c0061494:1332 seq=1330	    print("gen_renamed_contract: old contract sha256 = %s" % old_sha)
+00730	c0061494:1332 seq=1330	    print("gen_renamed_contract: rename map sha256 = %s" % map_sha)
+00731	c0061494:1332 seq=1330	    print("gen_renamed_contract: output sha256 = %s" % out_sha)
+00732	c0061494:1332 seq=1330	    print("gen_renamed_contract: self-checks = OK (lint %d/%d, unique %d/%d, disposition enum OK)"
+00733	c0061494:1332 seq=1330	          % (len(new_tools), len(new_tools), len(new_tools), len(new_tools)))
+00734	c0061494:1332 seq=1330	    print("gen_renamed_contract: wrote %s" % out_path)
+00735	c0061494:1332 seq=1330	    return 0
+00736	c0061494:1332 seq=1330	
+00737	c0061494:1332 seq=1330	
+00738	c0061494:1332 seq=1330	if __name__ == "__main__":
+00739	c0061494:1332 seq=1330	    sys.exit(main())
+00740	14aeb3d6:1262 seq=1260	        if not schema_overridden and canonical(schema) != canonical(tool["inputSchema"]):
+00741	14aeb3d6:1262 seq=1260	            sys.exit("FATAL: inputSchema of %s changed without an explicit override" % entry["old_name"])
+00742	14aeb3d6:1262 seq=1260	        # v1.2: an *append* override may only add one discriminator sentence, so
+00743	14aeb3d6:1262 seq=1260	        # the original wording can never be silently dropped. v1.4 adds the
+00744	14aeb3d6:1262 seq=1260	        # explicit `mode: "replace"` escape hatch for text that is factually
+00745	14aeb3d6:1262 seq=1260	        # wrong; it is refused unless the record's reason quotes the text it
+00746	14aeb3d6:1262 seq=1260	        # replaces, so a replacement cannot be a silent edit either.
+00747	14aeb3d6:1262 seq=1260	        mode = DESCRIPTION_OVERRIDES.get(entry["old_name"], {}).get("mode", "append") if desc_overridden else "append"
+00748	14aeb3d6:1262 seq=1260	        if desc_overridden and mode == "append" and not str(description).startswith(str(tool["description"]) + " "):
+00749	14aeb3d6:1262 seq=1260	            sys.exit("FATAL: description override of %s is not append-only (original wording lost)"
+00750	14aeb3d6:1262 seq=1260	                     % entry["old_name"])
+00751	14aeb3d6:1262 seq=1260	        if desc_overridden and mode == "replace":
+00752	14aeb3d6:1262 seq=1260	            original = str(tool["description"])
+00753	14aeb3d6:1262 seq=1260	            reason = str(DESCRIPTION_OVERRIDES[entry["old_name"]]["reason"])
+00754	14aeb3d6:1262 seq=1260	            if original not in reason:
+00755	14aeb3d6:1262 seq=1260	                sys.exit("FATAL: replacing description override of %s must quote the text it replaces in "
+00756	14aeb3d6:1262 seq=1260	                         "'reason' (original wording would be lost from the record)"
+00757	14aeb3d6:1262 seq=1260	                         % entry["old_name"])
+00758	14aeb3d6:1262 seq=1260	        # v1.5: a schema override is a whole-object replacement, and the one thing
+00759	14aeb3d6:1262 seq=1260	        # it can silently drop is a `required` member. The record must therefore
+00760	14aeb3d6:1262 seq=1260	        # name what it removes, verbatim, or the contract's old obligation is gone
+00761	14aeb3d6:1262 seq=1260	        # with no trace beyond "a schema override fired".
+00762	14aeb3d6:1262 seq=1260	        if schema_overridden:
+00763	14aeb3d6:1262 seq=1260	            record = SCHEMA_OVERRIDES[entry["old_name"]]
+00764	14aeb3d6:1262 seq=1260	            if record.get("mode") != "replace":
+00765	14aeb3d6:1262 seq=1260	                sys.exit("FATAL: schema override of %s must carry \"mode\": \"replace\" (a schema is "
+00766	14aeb3d6:1262 seq=1260	                         "replaced, there is nothing to append to)" % entry["old_name"])
+00767	14aeb3d6:1262 seq=1260	            removed_required = canonical(tool["inputSchema"].get("required", []))
+00768	14aeb3d6:1262 seq=1260	            if removed_required not in str(record["reason"]):
+00769	14aeb3d6:1262 seq=1260	                sys.exit("FATAL: schema override of %s must quote the 'required' member it removes "
+00770	14aeb3d6:1262 seq=1260	                         "verbatim in 'reason' (expected %s)"
+00771	14aeb3d6:1262 seq=1260	                         % (entry["old_name"], removed_required))
+00772	14aeb3d6:1262 seq=1260	
+00773	14aeb3d6:1262 seq=1260	        new_tool["description"] = description
+00774	14aeb3d6:1262 seq=1260	        new_tool["inputSchema"] = schema
+00775	14aeb3d6:1262 seq=1260	        new_tools.append(new_tool)
+00776	14aeb3d6:1262 seq=1260	        name_sources.append(entry["new_name"])
+00777	14aeb3d6:1262 seq=1260	
+00778	14aeb3d6:1262 seq=1260	    # --- self check 5: every declared override fired exactly once ------------
+00779	14aeb3d6:1262 seq=1260	    # v1.5: per `(kind, old_name)`, not per `old_name`. One tool may legitimately
+00780	14aeb3d6:1262 seq=1260	    # carry both a description and a schema override (D-3 is the first), and
+00781	14aeb3d6:1262 seq=1260	    # nothing about that should make either record disappear. The counters are
+00782	14aeb3d6:1262 seq=1260	    # still exact in both directions: a declared name that never fires is a hard
+00783	14aeb3d6:1262 seq=1260	    # failure, and so is a record count that does not match the declaration.
+00784	14aeb3d6:1262 seq=1260	    declared_overrides = set(
+00785	14aeb3d6:1262 seq=1260	        (kind, name)
+00786	14aeb3d6:1262 seq=1260	        for kind, table in (("description", DESCRIPTION_OVERRIDES), ("inputSchema", SCHEMA_OVERRIDES))
+00787	14aeb3d6:1262 seq=1260	        for name in table)
+00788	14aeb3d6:1262 seq=1260	    fired_overrides = set((record["kind"], record["old_name"]) for record in overrides_used)
+00789	14aeb3d6:1262 seq=1260	    stale_overrides = sorted("%s/%s" % pair for pair in (declared_overrides - fired_overrides))
+00790	14aeb3d6:1262 seq=1260	    if stale_overrides:
+00791	14aeb3d6:1262 seq=1260	        sys.exit("FATAL: override(s) never fired (typo in old_name?): %s" % stale_overrides)
+00792	14aeb3d6:1262 seq=1260	    if len(overrides_used) != len(declared_overrides):
+00793	14aeb3d6:1262 seq=1260	        sys.exit("FATAL: %d override records for %d declared overrides"
+00794	14aeb3d6:1262 seq=1260	                 % (len(overrides_used), len(declared_overrides)))
+00795	14aeb3d6:1262 seq=1260	
+00796	14aeb3d6:1262 seq=1260	    # --- self check 3: count and uniqueness ----------------------------------
+00797	14aeb3d6:1262 seq=1260	    # 174 entries - 2 unregister_until_implemented - 1 lossless merge == 171.
+00798	14aeb3d6:1262 seq=1260	    EXPECTED_OUTPUT = 174 - 2 - 1
+00799	14aeb3d6:1262 seq=1260	    if len(new_tools) != EXPECTED_OUTPUT:
+00800	14aeb3d6:1262 seq=1260	        sys.exit("FATAL: expected %d output tools, got %d" % (EXPECTED_OUTPUT, len(new_tools)))
+00801	14aeb3d6:1262 seq=1260	    if len(set(name_sources)) != len(name_sources):
+00802	14aeb3d6:1262 seq=1260	        duplicates = sorted(name for name in set(name_sources) if name_sources.count(name) > 1)
+00803	14aeb3d6:1262 seq=1260	        sys.exit("FATAL: duplicate new names in the output: %s" % duplicates)
+00804	14aeb3d6:1262 seq=1260	
+00805	14aeb3d6:1262 seq=1260	    meta = {
+00806	14aeb3d6:1262 seq=1260	        "generated_from": old_path,
+00807	14aeb3d6:1262 seq=1260	        "generated_from_sha256": old_sha,
+00808	14aeb3d6:1262 seq=1260	        "map_path": map_path,
+00809	14aeb3d6:1262 seq=1260	        "map_sha256": map_sha,
+00810	14aeb3d6:1262 seq=1260	        "tool_count_in": len(old_names),
+00811	14aeb3d6:1262 seq=1260	        "count": len(new_tools),
+00812	14aeb3d6:1262 seq=1260	        # D-1 (TASK-003 section 1.1, D49): `result.tools` is a *set* for the
+00813	14aeb3d6:1262 seq=1260	        # consumers; the order is explicitly outside the contract. The engine is
+00814	14aeb3d6:1262 seq=1260	        # only required to be deterministic within one build (a second
+00815	14aeb3d6:1262 seq=1260	        # `tools/list` on the same registry is byte-identical), not to reproduce
+00816	14aeb3d6:1262 seq=1260	        # the order below - so no implementation may ever be "fixed" to match it.
+00817	14aeb3d6:1262 seq=1260	        "order_normative": False,
+00818	14aeb3d6:1262 seq=1260	        "excluded": excluded,
+00819	14aeb3d6:1262 seq=1260	        "merged": merged,
+00820	14aeb3d6:1262 seq=1260	        "generator_version": GENERATOR_VERSION,
+00821	14aeb3d6:1262 seq=1260	        "generated_by": GENERATED_BY,
+00822	14aeb3d6:1262 seq=1260	    }
+00823	14aeb3d6:1262 seq=1260	    if overrides_used:
+00824	14aeb3d6:1262 seq=1260	        meta["overrides"] = overrides_used
+00825	14aeb3d6:1262 seq=1260	
+00826	14aeb3d6:1262 seq=1260	    output = {
+00827	14aeb3d6:1262 seq=1260	        "id": old_contract["id"],
+00828	14aeb3d6:1262 seq=1260	        "jsonrpc": old_contract["jsonrpc"],
+00829	14aeb3d6:1262 seq=1260	        "result": {"tools": new_tools},
+00830	14aeb3d6:1262 seq=1260	        "_meta": meta,
+00831	14aeb3d6:1262 seq=1260	    }
+00832	14aeb3d6:1262 seq=1260	
+00833	14aeb3d6:1262 seq=1260	    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+00834	14aeb3d6:1262 seq=1260	    with open(out_path, "w", encoding="utf-8", newline="\n") as handle:
+00835	14aeb3d6:1262 seq=1260	        json.dump(output, handle, ensure_ascii=False, indent=2)
+00836	14aeb3d6:1262 seq=1260	        handle.write("\n")
+00837	14aeb3d6:1262 seq=1260	
+00838	14aeb3d6:1262 seq=1260	    out_sha = sha256_file(out_path)
+00839	14aeb3d6:1262 seq=1260	
+00840	14aeb3d6:1262 seq=1260	    print("gen_renamed_contract: input tools = %d" % len(old_names))
+00841	14aeb3d6:1262 seq=1260	    print("gen_renamed_contract: output tools = %d" % len(new_tools))
+00842	14aeb3d6:1262 seq=1260	    print("gen_renamed_contract: order_normative = %s (order is not part of the contract)"
+00843	14aeb3d6:1262 seq=1260	          % json.dumps(output["_meta"]["order_normative"]))
+00844	14aeb3d6:1262 seq=1260	    print("gen_renamed_contract: merged = %d (%s)" % (
+00845	14aeb3d6:1262 seq=1260	        len(merged), ", ".join("%s -> %s" % (m["old_name"], m["merged_into"]) for m in merged)))
+00846	14aeb3d6:1262 seq=1260	    print("gen_renamed_contract: unregister = %d (%s)" % (len(excluded), ", ".join(excluded)))
+00847	14aeb3d6:1262 seq=1260	    print("gen_renamed_contract: overrides = %d (%s)"
+00848	14aeb3d6:1262 seq=1260	          % (len(overrides_used), ", ".join("%s/%s:%s" % (record["kind"], record["old_name"], record["mode"]) for record in overrides_used)))
+00849	14aeb3d6:1262 seq=1260	    print("gen_renamed_contract: old contract sha256 = %s" % old_sha)
+00850	14aeb3d6:1262 seq=1260	    print("gen_renamed_contract: rename map sha256 = %s" % map_sha)
+00851	14aeb3d6:1262 seq=1260	    print("gen_renamed_contract: output sha256 = %s" % out_sha)
+00852	14aeb3d6:1262 seq=1260	    print("gen_renamed_contract: self-checks = OK (lint %d/%d, unique %d/%d, disposition enum OK)"
+00853	14aeb3d6:1262 seq=1260	          % (len(new_tools), len(new_tools), len(new_tools), len(new_tools)))
+00854	14aeb3d6:1262 seq=1260	    print("gen_renamed_contract: wrote %s" % out_path)
+00855	14aeb3d6:1262 seq=1260	    return 0
+00856	14aeb3d6:1262 seq=1260	
+00857	14aeb3d6:1262 seq=1260	
+00858	14aeb3d6:1262 seq=1260	if __name__ == "__main__":
+00859	14aeb3d6:1262 seq=1260	    sys.exit(main())
+00860	4c88c4fd:975 seq=973	
+00861	4c88c4fd:975 seq=973	    excluded_set = set(excluded)
+00862	4c88c4fd:975 seq=973	    merged_set = set(item["old_name"] for item in merged)
+00863	4c88c4fd:975 seq=973	    dropped = excluded_set | merged_set
+00864	4c88c4fd:975 seq=973	
+00865	4c88c4fd:975 seq=973	    # --- self check 2: every emitted new name passes the isomorphic lint -----
+00866	4c88c4fd:975 seq=973	    for entry in entries:
+00867	4c88c4fd:975 seq=973	        if entry["old_name"] in dropped:
+00868	4c88c4fd:975 seq=973	            continue
+00869	4c88c4fd:975 seq=973	        reason = validate_renamed(entry, closed_set)
+00870	4c88c4fd:975 seq=973	        if reason is not None:
+00871	4c88c4fd:975 seq=973	            sys.exit("FATAL: %s" % reason)
+00872	4c88c4fd:975 seq=973	
+00873	4c88c4fd:975 seq=973	    # --- transform: name only, description / inputSchema verbatim ------------
+00874	4c88c4fd:975 seq=973	    overrides_used = []
+00875	4c88c4fd:975 seq=973	    new_tools = []
+00876	4c88c4fd:975 seq=973	    name_sources = []
+00877	4c88c4fd:975 seq=973	    for tool in old_contract["result"]["tools"]:
+00878	4c88c4fd:975 seq=973	        entry = by_old_name[tool["name"]]
+00879	4c88c4fd:975 seq=973	        if entry["old_name"] in dropped:
+00880	4c88c4fd:975 seq=973	            continue
+00881	4c88c4fd:975 seq=973	
+00882	4c88c4fd:975 seq=973	        new_tool = dict(tool)  # keeps the old key order
+00883	4c88c4fd:975 seq=973	        new_tool["name"] = entry["new_name"]
+00884	4c88c4fd:975 seq=973	
+00885	4c88c4fd:975 seq=973	        description, desc_overridden = apply_override(DESCRIPTION_OVERRIDES, entry["old_name"],
+00886	4c88c4fd:975 seq=973	                                                     tool["description"], overrides_used, "description")
+00887	4c88c4fd:975 seq=973	        schema, schema_overridden = apply_override(SCHEMA_OVERRIDES, entry["old_name"],
+00888	4c88c4fd:975 seq=973	                                                  tool["inputSchema"], overrides_used, "inputSchema")
+00889	4c88c4fd:975 seq=973	
+00890	4c88c4fd:975 seq=973	        # The no-override case must be a byte-exact carry over at the object
+00891	4c88c4fd:975 seq=973	        # level; the assertion is what keeps the promise from section 2 honest.
+00892	4c88c4fd:975 seq=973	        if not desc_overridden and canonical(description) != canonical(tool["description"]):
+00893	4c88c4fd:975 seq=973	            sys.exit("FATAL: description of %s changed without an explicit override" % entry["old_name"])
+00894	4c88c4fd:975 seq=973	        if not schema_overridden and canonical(schema) != canonical(tool["inputSchema"]):
+00895	4c88c4fd:975 seq=973	            sys.exit("FATAL: inputSchema of %s changed without an explicit override" % entry["old_name"])
+00896	4c88c4fd:975 seq=973	        # v1.2: an *append* override may only add one discriminator sentence, so
+00897	4c88c4fd:975 seq=973	        # the original wording can never be silently dropped. v1.4 adds the
+00898	4c88c4fd:975 seq=973	        # explicit `mode: "replace"` escape hatch for text that is factually
+00899	4c88c4fd:975 seq=973	        # wrong; it is refused unless the record's reason quotes the text it
+00900	4c88c4fd:975 seq=973	        # replaces, so a replacement cannot be a silent edit either.
+00901	4c88c4fd:975 seq=973	        mode = DESCRIPTION_OVERRIDES.get(entry["old_name"], {}).get("mode", "append") if desc_overridden else "append"
+00902	4c88c4fd:975 seq=973	        if desc_overridden and mode == "append" and not str(description).startswith(str(tool["description"]) + " "):
+00903	4c88c4fd:975 seq=973	            sys.exit("FATAL: description override of %s is not append-only (original wording lost)"
+00904	4c88c4fd:975 seq=973	                     % entry["old_name"])
+00905	4c88c4fd:975 seq=973	        if desc_overridden and mode == "replace":
+00906	4c88c4fd:975 seq=973	            original = str(tool["description"])
+00907	4c88c4fd:975 seq=973	            reason = str(DESCRIPTION_OVERRIDES[entry["old_name"]]["reason"])
+00908	4c88c4fd:975 seq=973	            if original not in reason:
+00909	4c88c4fd:975 seq=973	                sys.exit("FATAL: replacing description override of %s must quote the text it replaces in "
+00910	4c88c4fd:975 seq=973	                         "'reason' (original wording would be lost from the record)"
+00911	4c88c4fd:975 seq=973	                         % entry["old_name"])
+00912	4c88c4fd:975 seq=973	        # v1.5: a schema override is a whole-object replacement, and the one thing
+00913	4c88c4fd:975 seq=973	        # it can silently drop is a `required` member. The record must therefore
+00914	4c88c4fd:975 seq=973	        # name what it removes, verbatim, or the contract's old obligation is gone
+00915	4c88c4fd:975 seq=973	        # with no trace beyond "a schema override fired".
+00916	4c88c4fd:975 seq=973	        if schema_overridden:
+00917	4c88c4fd:975 seq=973	            record = SCHEMA_OVERRIDES[entry["old_name"]]
+00918	4c88c4fd:975 seq=973	            if record.get("mode") != "replace":
+00919	4c88c4fd:975 seq=973	                sys.exit("FATAL: schema override of %s must carry \"mode\": \"replace\" (a schema is "
+00920	4c88c4fd:975 seq=973	                         "replaced, there is nothing to append to)" % entry["old_name"])
+00921	4c88c4fd:975 seq=973	            removed_required = canonical(tool["inputSchema"].get("required", []))
+00922	4c88c4fd:975 seq=973	            if removed_required not in str(record["reason"]):
+00923	4c88c4fd:975 seq=973	                sys.exit("FATAL: schema override of %s must quote the 'required' member it removes "
+00924	4c88c4fd:975 seq=973	                         "verbatim in 'reason' (expected %s)"
+00925	4c88c4fd:975 seq=973	                         % (entry["old_name"], removed_required))
+00926	4c88c4fd:975 seq=973	
+00927	4c88c4fd:975 seq=973	        new_tool["description"] = description
+00928	4c88c4fd:975 seq=973	        new_tool["inputSchema"] = schema
+00929	4c88c4fd:975 seq=973	        new_tools.append(new_tool)
+00930	4c88c4fd:975 seq=973	        name_sources.append(entry["new_name"])
+00931	4c88c4fd:975 seq=973	
+00932	4c88c4fd:975 seq=973	    # --- self check 5: every declared override fired exactly once ------------
+00933	4c88c4fd:975 seq=973	    # v1.5: per `(kind, old_name)`, not per `old_name`. One tool may legitimately
+00934	4c88c4fd:975 seq=973	    # carry both a description and a schema override (D-3 is the first), and
+00935	4c88c4fd:975 seq=973	    # nothing about that should make either record disappear. The counters are
+00936	4c88c4fd:975 seq=973	    # still exact in both directions: a declared name that never fires is a hard
+00937	4c88c4fd:975 seq=973	    # failure, and so is a record count that does not match the declaration.
+00938	4c88c4fd:975 seq=973	    declared_overrides = set(
+00939	4c88c4fd:975 seq=973	        (kind, name)
+00940	4c88c4fd:975 seq=973	        for kind, table in (("description", DESCRIPTION_OVERRIDES), ("inputSchema", SCHEMA_OVERRIDES))
+00941	4c88c4fd:975 seq=973	        for name in table)
+00942	4c88c4fd:975 seq=973	    fired_overrides = set((record["kind"], record["old_name"]) for record in overrides_used)
+00943	4c88c4fd:975 seq=973	    stale_overrides = sorted("%s/%s" % pair for pair in (declared_overrides - fired_overrides))
+00944	4c88c4fd:975 seq=973	    if stale_overrides:
+00945	4c88c4fd:975 seq=973	        sys.exit("FATAL: override(s) never fired (typo in old_name?): %s" % stale_overrides)
+00946	4c88c4fd:975 seq=973	    if len(overrides_used) != len(declared_overrides):
+00947	4c88c4fd:975 seq=973	        sys.exit("FATAL: %d override records for %d declared overrides"
+00948	4c88c4fd:975 seq=973	                 % (len(overrides_used), len(declared_overrides)))
+00949	4c88c4fd:975 seq=973	
+00950	4c88c4fd:975 seq=973	    # --- self check 3: count and uniqueness ----------------------------------
+00951	4c88c4fd:975 seq=973	    # 174 entries - 2 unregister_until_implemented - 1 lossless merge == 171.
+00952	4c88c4fd:975 seq=973	    EXPECTED_OUTPUT = 174 - 2 - 1
+00953	4c88c4fd:975 seq=973	    if len(new_tools) != EXPECTED_OUTPUT:
+00954	4c88c4fd:975 seq=973	        sys.exit("FATAL: expected %d output tools, got %d" % (EXPECTED_OUTPUT, len(new_tools)))
+00955	4c88c4fd:975 seq=973	    if len(set(name_sources)) != len(name_sources):
+00956	4c88c4fd:975 seq=973	        duplicates = sorted(name for name in set(name_sources) if name_sources.count(name) > 1)
+00957	4c88c4fd:975 seq=973	        sys.exit("FATAL: duplicate new names in the output: %s" % duplicates)
+00958	4c88c4fd:975 seq=973	
+00959	4c88c4fd:975 seq=973	    meta = {
+00960	4c88c4fd:975 seq=973	        "generated_from": old_path,
+00961	4c88c4fd:975 seq=973	        "generated_from_sha256": old_sha,
+00962	4c88c4fd:975 seq=973	        "map_path": map_path,
+00963	4c88c4fd:975 seq=973	        "map_sha256": map_sha,
+00964	4c88c4fd:975 seq=973	        "tool_count_in": len(old_names),
+00965	4c88c4fd:975 seq=973	        "count": len(new_tools),
+00966	4c88c4fd:975 seq=973	        # D-1 (TASK-003 section 1.1, D49): `result.tools` is a *set* for the
+00967	4c88c4fd:975 seq=973	        # consumers; the order is explicitly outside the contract. The engine is
+00968	4c88c4fd:975 seq=973	        # only required to be deterministic within one build (a second
+00969	4c88c4fd:975 seq=973	        # `tools/list` on the same registry is byte-identical), not to reproduce
+00970	4c88c4fd:975 seq=973	        # the order below - so no implementation may ever be "fixed" to match it.
+00971	4c88c4fd:975 seq=973	        "order_normative": False,
+00972	4c88c4fd:975 seq=973	        "excluded": excluded,
+00973	4c88c4fd:975 seq=973	        "merged": merged,
+00974	4c88c4fd:975 seq=973	        "generator_version": GENERATOR_VERSION,
+00975	4c88c4fd:975 seq=973	        "generated_by": GENERATED_BY,
+00976	4c88c4fd:975 seq=973	    }
+00977	4c88c4fd:975 seq=973	    if overrides_used:
+00978	4c88c4fd:975 seq=973	        meta["overrides"] = overrides_used
+00979	4c88c4fd:975 seq=973	
+00980	4c88c4fd:975 seq=973	    output = {
+00981	4c88c4fd:975 seq=973	        "id": old_contract["id"],
+00982	4c88c4fd:975 seq=973	        "jsonrpc": old_contract["jsonrpc"],
+00983	4c88c4fd:975 seq=973	        "result": {"tools": new_tools},
+00984	4c88c4fd:975 seq=973	        "_meta": meta,
+00985	4c88c4fd:975 seq=973	    }
+00986	4c88c4fd:975 seq=973	
+00987	4c88c4fd:975 seq=973	    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+00988	4c88c4fd:975 seq=973	    with open(out_path, "w", encoding="utf-8", newline="\n") as handle:
+00989	4c88c4fd:975 seq=973	        json.dump(output, handle, ensure_ascii=False, indent=2)
+00990	4c88c4fd:975 seq=973	        handle.write("\n")
+00991	4c88c4fd:975 seq=973	
+00992	4c88c4fd:975 seq=973	    out_sha = sha256_file(out_path)
+00993	4c88c4fd:975 seq=973	
+00994	4c88c4fd:975 seq=973	    print("gen_renamed_contract: input tools = %d" % len(old_names))
+00995	4c88c4fd:975 seq=973	    print("gen_renamed_contract: output tools = %d" % len(new_tools))
+00996	4c88c4fd:975 seq=973	    print("gen_renamed_contract: order_normative = %s (order is not part of the contract)"
+00997	4c88c4fd:975 seq=973	          % json.dumps(output["_meta"]["order_normative"]))
+00998	4c88c4fd:975 seq=973	    print("gen_renamed_contract: merged = %d (%s)" % (
+00999	4c88c4fd:975 seq=973	        len(merged), ", ".join("%s -> %s" % (m["old_name"], m["merged_into"]) for m in merged)))
+01000	4c88c4fd:975 seq=973	    print("gen_renamed_contract: unregister = %d (%s)" % (len(excluded), ", ".join(excluded)))
+01001	4c88c4fd:975 seq=973	    print("gen_renamed_contract: overrides = %d (%s)"
+01002	4c88c4fd:975 seq=973	          % (len(overrides_used), ", ".join("%s/%s:%s" % (record["kind"], record["old_name"], record["mode"]) for record in overrides_used)))
+01003	4c88c4fd:975 seq=973	    print("gen_renamed_contract: old contract sha256 = %s" % old_sha)
+01004	4c88c4fd:975 seq=973	    print("gen_renamed_contract: rename map sha256 = %s" % map_sha)
+01005	4c88c4fd:975 seq=973	    print("gen_renamed_contract: output sha256 = %s" % out_sha)
+01006	4c88c4fd:975 seq=973	    print("gen_renamed_contract: self-checks = OK (lint %d/%d, unique %d/%d, disposition enum OK)"
+01007	4c88c4fd:975 seq=973	          % (len(new_tools), len(new_tools), len(new_tools), len(new_tools)))
+01008	4c88c4fd:975 seq=973	    print("gen_renamed_contract: wrote %s" % out_path)
+01009	4c88c4fd:975 seq=973	    return 0
+01010	4c88c4fd:975 seq=973	
+01011	4c88c4fd:975 seq=973	
+01012	4c88c4fd:975 seq=973	if __name__ == "__main__":
+01013	2ecf5c87:933 seq=931	        "generated_by": GENERATED_BY,
+01014	2ecf5c87:933 seq=931	    }
+01015	2ecf5c87:933 seq=931	    if overrides_used:
+01016	2ecf5c87:933 seq=931	        meta["overrides"] = overrides_used
+01017	2ecf5c87:933 seq=931	
+01018	2ecf5c87:933 seq=931	    output = {
+01019	2ecf5c87:933 seq=931	        "id": old_contract["id"],
+01020	2ecf5c87:933 seq=931	        "jsonrpc": old_contract["jsonrpc"],
+01021	2ecf5c87:933 seq=931	        "result": {"tools": new_tools},
+01022	2ecf5c87:933 seq=931	        "_meta": meta,
+01023	2ecf5c87:933 seq=931	    }
+01024	2ecf5c87:933 seq=931	
+01025	2ecf5c87:933 seq=931	    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+01026	2ecf5c87:933 seq=931	    with open(out_path, "w", encoding="utf-8", newline="\n") as handle:
+01027	2ecf5c87:933 seq=931	        json.dump(output, handle, ensure_ascii=False, indent=2)
+01028	2ecf5c87:933 seq=931	        handle.write("\n")
+01029	2ecf5c87:933 seq=931	
+01030	2ecf5c87:933 seq=931	    out_sha = sha256_file(out_path)
+01031	2ecf5c87:933 seq=931	
+01032	2ecf5c87:933 seq=931	    print("gen_renamed_contract: input tools = %d" % len(old_names))
+01033	2ecf5c87:933 seq=931	    print("gen_renamed_contract: output tools = %d" % len(new_tools))
+01034	2ecf5c87:933 seq=931	    print("gen_renamed_contract: order_normative = %s (order is not part of the contract)"
+01035	2ecf5c87:933 seq=931	          % json.dumps(output["_meta"]["order_normative"]))
+01036	2ecf5c87:933 seq=931	    print("gen_renamed_contract: merged = %d (%s)" % (
+01037	2ecf5c87:933 seq=931	        len(merged), ", ".join("%s -> %s" % (m["old_name"], m["merged_into"]) for m in merged)))
+01038	2ecf5c87:933 seq=931	    print("gen_renamed_contract: unregister = %d (%s)" % (len(excluded), ", ".join(excluded)))
+01039	2ecf5c87:933 seq=931	    print("gen_renamed_contract: overrides = %d (%s)"
+01040	2ecf5c87:933 seq=931	          % (len(overrides_used), ", ".join("%s/%s:%s" % (record["kind"], record["old_name"], record["mode"]) for record in overrides_used)))
+01041	2ecf5c87:933 seq=931	    print("gen_renamed_contract: old contract sha256 = %s" % old_sha)
+01042	2ecf5c87:933 seq=931	    print("gen_renamed_contract: rename map sha256 = %s" % map_sha)
+01043	2ecf5c87:933 seq=931	    print("gen_renamed_contract: output sha256 = %s" % out_sha)
+01044	2ecf5c87:933 seq=931	    print("gen_renamed_contract: self-checks = OK (lint %d/%d, unique %d/%d, disposition enum OK)"
+01045	2ecf5c87:933 seq=931	          % (len(new_tools), len(new_tools), len(new_tools), len(new_tools)))
+01046	2ecf5c87:933 seq=931	    print("gen_renamed_contract: wrote %s" % out_path)
+01047	2ecf5c87:933 seq=931	    return 0
+01048	2ecf5c87:933 seq=931	
+01049	2ecf5c87:933 seq=931	
+01050	2e24e5ca:1233 seq=1231	        },
+01051	2e24e5ca:1233 seq=1231	    },
+01052	2e24e5ca:1233 seq=1231	}
+01053	2e24e5ca:1233 seq=1231	
+01054	2e24e5ca:1233 seq=1231	HERE = os.path.dirname(os.path.abspath(__file__))
+01055	2e24e5ca:1233 seq=1231	MODULE_ROOT = os.path.dirname(HERE)
+01056	2e24e5ca:1233 seq=1231	
+01057	2e24e5ca:1233 seq=1231	DEFAULT_OLD_CONTRACT = r"F:\moonbit-hof-rs\tests\fixtures\mcp\tools_list.json"
+01058	2e24e5ca:1233 seq=1231	DEFAULT_MAP = os.path.join(MODULE_ROOT, "docs", "tool-rename-map.json")
+01059	2e24e5ca:1233 seq=1231	DEFAULT_OUT = os.path.join(MODULE_ROOT, "docs", "tools_list.renamed.json")
+01060	2e24e5ca:1233 seq=1231	
+01061	2e24e5ca:1233 seq=1231	OLD_CONTRACT_SHA256 = "8f8051c4c0f8941089f0b21a193cef7c51fa7c41d7e312b1463ea8593f313c54"
+01062	2e24e5ca:1233 seq=1231	
+01063	2e24e5ca:1233 seq=1231	# GDR-16 L1: channels tried longest prefix first. `running_game_` carries its own
+01064	2e24e5ca:1233 seq=1231	# underscore, so a `split('_')[1]` parse would read the verb as `game`.
+01065	2e24e5ca:1233 seq=1231	CHANNELS = ("running_game", "project", "editor", "os")
+01066	2e24e5ca:1233 seq=1231	L1_PATTERN = re.compile(r"^(editor|running_game|project|os)_[a-z0-9_]+$")
+01067	2e24e5ca:1233 seq=1231	
+01068	2e24e5ca:1233 seq=1231	# D-4: the disposition field is an enum, and a merge names its survivor through
+01069	2e24e5ca:1233 seq=1231	# the separate `merge_target` field instead of the v1.0 `merge_into:<old_name>`
+01070	2e24e5ca:1233 seq=1231	# string form.
+01071	2e24e5ca:1233 seq=1231	DISPOSITION_ENUM = (
+01072	2e24e5ca:1233 seq=1231	    "rename",
+01073	2e24e5ca:1233 seq=1231	    "keep",
+01074	2e24e5ca:1233 seq=1231	    "merge_into",
+01075	2e24e5ca:1233 seq=1231	    "unregister_until_implemented",
+01076	2e24e5ca:1233 seq=1231	    "fix_implementation_first",
+01077	2e24e5ca:1233 seq=1231	)
+01078	2e24e5ca:1233 seq=1231	
+01079	2e24e5ca:1233 seq=1231	
+01080	2e24e5ca:1233 seq=1231	def sha256_file(path):
+01081	2e24e5ca:1233 seq=1231	    digest = hashlib.sha256()
+01082	2e24e5ca:1233 seq=1231	    with open(path, "rb") as handle:
+01083	2e24e5ca:1233 seq=1231	        for chunk in iter(lambda: handle.read(65536), b""):
+01084	2e24e5ca:1233 seq=1231	            digest.update(chunk)
+01085	2e24e5ca:1233 seq=1231	    return digest.hexdigest()
+01086	2e24e5ca:1233 seq=1231	
+01087	2e24e5ca:1233 seq=1231	
+01088	2e24e5ca:1233 seq=1231	def parse_tool_name(name):
+01089	2e24e5ca:1233 seq=1231	    """Isomorphic to MCPToolRegistry::parse_tool_name (tool_registry.cpp)."""
+01090	2e24e5ca:1233 seq=1231	    for channel in CHANNELS:
+01091	2e24e5ca:1233 seq=1231	        prefix = channel + "_"
+01092	2e24e5ca:1233 seq=1231	        if not name.startswith(prefix):
+01093	2e24e5ca:1233 seq=1231	            continue
+01094	2e24e5ca:1233 seq=1231	        rest = name[len(prefix):]
+01095	2e24e5ca:1233 seq=1231	        if not rest:
+01096	2e24e5ca:1233 seq=1231	            return None
+01097	2e24e5ca:1233 seq=1231	        if not all((("a" <= c <= "z") or ("0" <= c <= "9") or c == "_") for c in rest):
+01098	2e24e5ca:1233 seq=1231	            return None
+01099	2e24e5ca:1233 seq=1231	        # `editor_get` is legal: the object segment is not required (D-E4).
+01100	2e24e5ca:1233 seq=1231	        verb = rest.split("_", 1)[0]
+01101	2e24e5ca:1233 seq=1231	        return channel, verb
+01102	2e24e5ca:1233 seq=1231	    return None
+01103	2e24e5ca:1233 seq=1231	
+01104	2e24e5ca:1233 seq=1231	
+01105	2e24e5ca:1233 seq=1231	def validate_renamed(entry, closed_set):
+01106	2e24e5ca:1233 seq=1231	    """GDR-16 L1..L4 checks for one map entry. Returns None or a reason."""
+01107	2e24e5ca:1233 seq=1231	    name = entry["new_name"]
+01108	2e24e5ca:1233 seq=1231	    if "update_" in name:
+01109	2e24e5ca:1233 seq=1231	        return "L4 banned 'update_': %s" % name
+01110	2e24e5ca:1233 seq=1231	    if not L1_PATTERN.match(name):
+01111	2e24e5ca:1233 seq=1231	        return "L1 pattern mismatch: %s" % name
+01112	2e24e5ca:1233 seq=1231	    parsed = parse_tool_name(name)
+01113	2e24e5ca:1233 seq=1231	    if parsed is None:
+01114	2e24e5ca:1233 seq=1231	        return "L1 parse failure: %s" % name
+01115	2e24e5ca:1233 seq=1231	    channel, verb = parsed
+01116	2e24e5ca:1233 seq=1231	    if verb not in closed_set:
+01117	2e24e5ca:1233 seq=1231	        return "L2 verb '%s' outside the closed set: %s" % (verb, name)
+01118	2e24e5ca:1233 seq=1231	    if verb != entry.get("verb"):
+01119	2e24e5ca:1233 seq=1231	        return "L3 declared verb '%s' != parsed '%s': %s" % (entry.get("verb"), verb, name)
+01120	2e24e5ca:1233 seq=1231	    if channel != entry.get("channel"):
+01121	2e24e5ca:1233 seq=1231	        return "L3 declared channel '%s' != parsed '%s': %s" % (entry.get("channel"), channel, name)
+01122	2e24e5ca:1233 seq=1231	    return None
+01123	2e24e5ca:1233 seq=1231	
+01124	2e24e5ca:1233 seq=1231	
+01125	2e24e5ca:1233 seq=1231	def canonical(value):
+01126	2e24e5ca:1233 seq=1231	    return json.dumps(value, ensure_ascii=False, sort_keys=True)
+01127	2e24e5ca:1233 seq=1231	
+01128	2e24e5ca:1233 seq=1231	
+01129	2e24e5ca:1233 seq=1231	def apply_override(table, old_name, fallback, used, kind):
+01130	2e24e5ca:1233 seq=1231	    """Returns (value, overridden). `overridden` is what makes the carry-over
+01131	2e24e5ca:1233 seq=1231	    assertion below precise: the promise is "nothing moves *without* an explicit
+01132	2e24e5ca:1233 seq=1231	    override", so a fired override has to be exempt from it (in B0 the table was
+01133	2e24e5ca:1233 seq=1231	    empty, so the distinction was not observable and the blanket assertion made
+01134	2e24e5ca:1233 seq=1231	    every override impossible).
+01135	2e24e5ca:1233 seq=1231	
+01136	2e24e5ca:1233 seq=1231	    An entry is either
+01137	2e24e5ca:1233 seq=1231	
+01138	2e24e5ca:1233 seq=1231	      * append-only (the default, v1.2): `value` is `<old value> + " " +
+01139	2e24e5ca:1233 seq=1231	        <discriminator>`, so not a byte of the original wording can be lost; or
+01140	2e24e5ca:1233 seq=1231	      * `"mode": "replace"` (v1.4): `value` is the corrected text and the
+01141	2e24e5ca:1233 seq=1231	        *reason* has to carry the old text verbatim, so the correction stays
+01142	2e24e5ca:1233 seq=1231	        auditable in `_meta.overrides` even though the field itself is rewritten.
+01143	2e24e5ca:1233 seq=1231	        This mode exists for a value that is factually **wrong**, where an
+01144	2e24e5ca:1233 seq=1231	        append-only discriminator would leave the false statement in the field a
+01145	2e24e5ca:1233 seq=1231	        caller reads (`TASK-007` section 1).
+01146	2e24e5ca:1233 seq=1231	    """
+01147	2e24e5ca:1233 seq=1231	    record = table.get(old_name)
+01148	2e24e5ca:1233 seq=1231	    if record is None:
+01149	2e24e5ca:1233 seq=1231	        return fallback, False
+01150	2e24e5ca:1233 seq=1231	    if "reason" not in record or "value" not in record:
+01151	2e24e5ca:1233 seq=1231	        raise SystemExit("override for %s must carry 'reason' and 'value'" % old_name)
+01152	2e24e5ca:1233 seq=1231	    if not str(record["reason"]).strip():
+01153	2e24e5ca:1233 seq=1231	        raise SystemExit("override for %s carries an empty 'reason'" % old_name)
+01154	2e24e5ca:1233 seq=1231	    mode = record.get("mode", "append")
+01155	2e24e5ca:1233 seq=1231	    if mode not in ("append", "replace"):
+01156	2e24e5ca:1233 seq=1231	        raise SystemExit("override for %s carries an unknown mode %r" % (old_name, mode))
+01157	2e24e5ca:1233 seq=1231	    used.append({"kind": kind, "old_name": old_name, "mode": mode, "reason": record["reason"]})
+01158	2e24e5ca:1233 seq=1231	    return record["value"], True
+01159	2e24e5ca:1233 seq=1231	
+01160	2e24e5ca:1233 seq=1231	
+01161	2e24e5ca:1233 seq=1231	def main():
+01162	2e24e5ca:1233 seq=1231	    parser = argparse.ArgumentParser(description="Generate the renamed tools/list contract.")
+01163	2e24e5ca:1233 seq=1231	    parser.add_argument("--old-contract", default=DEFAULT_OLD_CONTRACT)
+01164	2e24e5ca:1233 seq=1231	    parser.add_argument("--map", default=DEFAULT_MAP)
+01165	2e24e5ca:1233 seq=1231	    parser.add_argument("--out", default=DEFAULT_OUT)
+01166	2e24e5ca:1233 seq=1231	    args = parser.parse_args()
+01167	2e24e5ca:1233 seq=1231	
+01168	2e24e5ca:1233 seq=1231	    old_path = os.path.abspath(args.old_contract)
+01169	2e24e5ca:1233 seq=1231	    map_path = os.path.abspath(args.map)
+01170	2e24e5ca:1233 seq=1231	    out_path = os.path.abspath(args.out)
+01171	2e24e5ca:1233 seq=1231	
+01172	2e24e5ca:1233 seq=1231	    for path, label in ((old_path, "old contract"), (map_path, "rename map")):
+01173	2e24e5ca:1233 seq=1231	        if not os.path.isfile(path):
+01174	2e24e5ca:1233 seq=1231	            sys.exit("FATAL: %s not found: %s" % (label, path))
+01175	2e24e5ca:1233 seq=1231	
+01176	2e24e5ca:1233 seq=1231	    old_sha = sha256_file(old_path)
+01177	2e24e5ca:1233 seq=1231	    map_sha = sha256_file(map_path)
+01178	2e24e5ca:1233 seq=1231	
+01179	2e24e5ca:1233 seq=1231	    with open(old_path, "r", encoding="utf-8") as handle:
+01180	2e24e5ca:1233 seq=1231	        old_contract = json.load(handle)
+01181	2e24e5ca:1233 seq=1231	    with open(map_path, "r", encoding="utf-8") as handle:
+01182	2e24e5ca:1233 seq=1231	        rename_map = json.load(handle)
+01183	2e24e5ca:1233 seq=1231	
+01184	2e24e5ca:1233 seq=1231	    if old_sha != OLD_CONTRACT_SHA256:
+01185	2e24e5ca:1233 seq=1231	        sys.exit("FATAL: old contract sha256 %s != the frozen %s" % (old_sha, OLD_CONTRACT_SHA256))
+01186	2e24e5ca:1233 seq=1231	
+01187	2e24e5ca:1233 seq=1231	    # --- self check 1: map vs old contract are the same 174 tool names -------
+01188	2e24e5ca:1233 seq=1231	    entries = rename_map["tools"]
+01189	2e24e5ca:1233 seq=1231	    total = rename_map.get("total")
+01190	2e24e5ca:1233 seq=1231	    if not (len(entries) == total == 174):
+01191	2e24e5ca:1233 seq=1231	        sys.exit("FATAL: map total=%s but %d entries" % (total, len(entries)))
+01192	2e24e5ca:1233 seq=1231	
+01193	2e24e5ca:1233 seq=1231	    old_names = [tool["name"] for tool in old_contract["result"]["tools"]]
+01194	2e24e5ca:1233 seq=1231	    entry_names = [entry["old_name"] for entry in entries]
+01195	2e24e5ca:1233 seq=1231	    if len(set(old_names)) != len(old_names):
+01196	2e24e5ca:1233 seq=1231	        sys.exit("FATAL: the old contract has duplicate tool names")
+01197	2e24e5ca:1233 seq=1231	    if set(old_names) != set(entry_names):
+01198	2e24e5ca:1233 seq=1231	        missing = sorted(set(old_names) - set(entry_names))
+01199	2e24e5ca:1233 seq=1231	        extra = sorted(set(entry_names) - set(old_names))
+01200	2e24e5ca:1233 seq=1231	        sys.exit("FATAL: map does not cover the old contract: missing=%s extra=%s" % (missing, extra))
+01201	2e24e5ca:1233 seq=1231	
+01202	2e24e5ca:1233 seq=1231	    by_old_name = {entry["old_name"]: entry for entry in entries}
+01203	2e24e5ca:1233 seq=1231	    closed_set = set(rename_map["convention"]["verb_closed_set"])
+01204	2e24e5ca:1233 seq=1231	
+01205	2e24e5ca:1233 seq=1231	    # --- D-4: disposition is an enum, and a merge is named by merge_target ----
+01206	2e24e5ca:1233 seq=1231	    bad_enum = sorted({entry.get("disposition") for entry in entries} - set(DISPOSITION_ENUM))
+01207	2e24e5ca:1233 seq=1231	    if bad_enum:
+01208	2e24e5ca:1233 seq=1231	        sys.exit("FATAL: disposition value(s) outside the enum: %s" % bad_enum)
+01209	2e24e5ca:1233 seq=1231	    legacy = [entry["old_name"] for entry in entries
+01210	2e24e5ca:1233 seq=1231	              if str(entry.get("disposition", "")).startswith("merge_into:")]
+01211	2e24e5ca:1233 seq=1231	    if legacy:
+01212	2e24e5ca:1233 seq=1231	        sys.exit("FATAL: the v1.0 inline 'merge_into:<old_name>' form survives on %s" % legacy)
+01213	2e24e5ca:1233 seq=1231	
+01214	2e24e5ca:1233 seq=1231	    # --- disposition split ---------------------------------------------------
+01215	2e24e5ca:1233 seq=1231	    excluded = [entry["old_name"] for entry in entries
+01216	2e24e5ca:1233 seq=1231	                if entry.get("disposition") == "unregister_until_implemented"]
+01217	2e24e5ca:1233 seq=1231	    merged = []
+01218	2e24e5ca:1233 seq=1231	    for entry in entries:
+01219	2e24e5ca:1233 seq=1231	        if entry.get("disposition") != "merge_into":
+01220	2e24e5ca:1233 seq=1231	            continue
+01221	2e24e5ca:1233 seq=1231	        target = entry.get("merge_target")
+01222	2e24e5ca:1233 seq=1231	        if not target:
+01223	2e24e5ca:1233 seq=1231	            sys.exit("FATAL: merge_into entry %s carries no merge_target" % entry["old_name"])
+01224	2e24e5ca:1233 seq=1231	        merged.append({
+01225	2e24e5ca:1233 seq=1231	            "old_name": entry["old_name"],
+01226	2e24e5ca:1233 seq=1231	            "new_name": entry["new_name"],
+01227	2e24e5ca:1233 seq=1231	            "merged_into": target,
+01228	2e24e5ca:1233 seq=1231	        })
+01229	2e24e5ca:1233 seq=1231	    for entry in entries:
+01230	2e24e5ca:1233 seq=1231	        if entry.get("disposition") != "merge_into" and "merge_target" in entry:
+01231	2e24e5ca:1233 seq=1231	            sys.exit("FATAL: merge_target on a non-merge entry: %s" % entry["old_name"])
+01232	2e24e5ca:1233 seq=1231	
+01233	2e24e5ca:1233 seq=1231	    if len(excluded) != 2:
+01234	2e24e5ca:1233 seq=1231	        sys.exit("FATAL: expected 2 unregister_until_implemented entries, got %d" % len(excluded))
+01235	2e24e5ca:1233 seq=1231	    if len(merged) != 1:
+01236	2e24e5ca:1233 seq=1231	        sys.exit("FATAL: expected 1 merge_into entry (GDR-17), got %d" % len(merged))
+01237	2e24e5ca:1233 seq=1231	
+01238	2e24e5ca:1233 seq=1231	    keep_names = set(entry["old_name"] for entry in entries)
+01239	2e24e5ca:1233 seq=1231	    for item in merged:
+01240	2e24e5ca:1233 seq=1231	        keep = item["merged_into"]
+01241	2e24e5ca:1233 seq=1231	        if keep not in keep_names:
+01242	2e24e5ca:1233 seq=1231	            sys.exit("FATAL: merge keep '%s' is not an old_name in the map" % keep)
+01243	2e24e5ca:1233 seq=1231	        if keep in excluded:
+01244	2e24e5ca:1233 seq=1231	            sys.exit("FATAL: merge keep '%s' is itself excluded" % keep)
+01245	2e24e5ca:1233 seq=1231	        # self check 4: the merged entry and its keeper share one new name, so
+01246	2e24e5ca:1233 seq=1231	        # deduplication cannot create a duplicate.
+01247	2e24e5ca:1233 seq=1231	        if by_old_name[keep]["new_name"] != item["new_name"]:
+01248	2e24e5ca:1233 seq=1231	            sys.exit("FATAL: merge %s -> %s but keeper %s -> %s"
+01249	2e24e5ca:1233 seq=1231	                     % (item["old_name"], item["new_name"], keep, by_old_name[keep]["new_name"]))
+01250	2e24e5ca:1233 seq=1231	
+01251	2e24e5ca:1233 seq=1231	    excluded_set = set(excluded)
+01252	2e24e5ca:1233 seq=1231	    merged_set = set(item["old_name"] for item in merged)
+01253	2e24e5ca:1233 seq=1231	    dropped = excluded_set | merged_set
+01254	2e24e5ca:1233 seq=1231	
+01255	2e24e5ca:1233 seq=1231	    # --- self check 2: every emitted new name passes the isomorphic lint -----
+01256	2e24e5ca:1233 seq=1231	    for entry in entries:
+01257	2e24e5ca:1233 seq=1231	        if entry["old_name"] in dropped:
+01258	2e24e5ca:1233 seq=1231	            continue
+01259	2e24e5ca:1233 seq=1231	        reason = validate_renamed(entry, closed_set)
+01260	2e24e5ca:1233 seq=1231	        if reason is not None:
+01261	2e24e5ca:1233 seq=1231	            sys.exit("FATAL: %s" % reason)
+01262	2e24e5ca:1233 seq=1231	
+01263	2e24e5ca:1233 seq=1231	    # --- transform: name only, description / inputSchema verbatim ------------
+01264	2e24e5ca:1233 seq=1231	    overrides_used = []
+01265	2e24e5ca:1233 seq=1231	    new_tools = []
+01266	2e24e5ca:1233 seq=1231	    name_sources = []
+01267	2e24e5ca:1233 seq=1231	    for tool in old_contract["result"]["tools"]:
+01268	2e24e5ca:1233 seq=1231	        entry = by_old_name[tool["name"]]
+01269	2e24e5ca:1233 seq=1231	        if entry["old_name"] in dropped:
+01270	2e24e5ca:1233 seq=1231	            continue
+01271	2e24e5ca:1233 seq=1231	
+01272	2e24e5ca:1233 seq=1231	        new_tool = dict(tool)  # keeps the old key order
+01273	2e24e5ca:1233 seq=1231	        new_tool["name"] = entry["new_name"]
+01274	2e24e5ca:1233 seq=1231	
+01275	2e24e5ca:1233 seq=1231	        description, desc_overridden = apply_override(DESCRIPTION_OVERRIDES, entry["old_name"],
+01276	2e24e5ca:1233 seq=1231	                                                     tool["description"], overrides_used, "description")
+01277	2e24e5ca:1233 seq=1231	        schema, schema_overridden = apply_override(SCHEMA_OVERRIDES, entry["old_name"],
+01278	2e24e5ca:1233 seq=1231	                                                  tool["inputSchema"], overrides_used, "inputSchema")
+01279	2e24e5ca:1233 seq=1231	
+01280	2e24e5ca:1233 seq=1231	        # The no-override case must be a byte-exact carry over at the object
+01281	2e24e5ca:1233 seq=1231	        # level; the assertion is what keeps the promise from section 2 honest.
+01282	2e24e5ca:1233 seq=1231	        if not desc_overridden and canonical(description) != canonical(tool["description"]):
+01283	2e24e5ca:1233 seq=1231	            sys.exit("FATAL: description of %s changed without an explicit override" % entry["old_name"])
+01284	2e24e5ca:1233 seq=1231	        if not schema_overridden and canonical(schema) != canonical(tool["inputSchema"]):
+01285	2e24e5ca:1233 seq=1231	            sys.exit("FATAL: inputSchema of %s changed without an explicit override" % entry["old_name"])
+01286	2e24e5ca:1233 seq=1231	        # v1.2: an *append* override may only add one discriminator sentence, so
+01287	2e24e5ca:1233 seq=1231	        # the original wording can never be silently dropped. v1.4 adds the
+01288	2e24e5ca:1233 seq=1231	        # explicit `mode: "replace"` escape hatch for text that is factually
+01289	2e24e5ca:1233 seq=1231	        # wrong; it is refused unless the record's reason quotes the text it
+01290	2e24e5ca:1233 seq=1231	        # replaces, so a replacement cannot be a silent edit either.
+01291	2e24e5ca:1233 seq=1231	        mode = DESCRIPTION_OVERRIDES.get(entry["old_name"], {}).get("mode", "append") if desc_overridden else "append"
+01292	2e24e5ca:1233 seq=1231	        if desc_overridden and mode == "append" and not str(description).startswith(str(tool["description"]) + " "):
+01293	2e24e5ca:1233 seq=1231	            sys.exit("FATAL: description override of %s is not append-only (original wording lost)"
+01294	2e24e5ca:1233 seq=1231	                     % entry["old_name"])
+01295	2e24e5ca:1233 seq=1231	        if desc_overridden and mode == "replace":
+01296	2e24e5ca:1233 seq=1231	            original = str(tool["description"])
+01297	2e24e5ca:1233 seq=1231	            reason = str(DESCRIPTION_OVERRIDES[entry["old_name"]]["reason"])
+01298	2e24e5ca:1233 seq=1231	            if original not in reason:
+01299	2e24e5ca:1233 seq=1231	                sys.exit("FATAL: replacing description override of %s must quote the text it replaces in "
+01300	2e24e5ca:1233 seq=1231	                         "'reason' (original wording would be lost from the record)"
+01301	2e24e5ca:1233 seq=1231	                         % entry["old_name"])
+01302	2e24e5ca:1233 seq=1231	        # v1.5: a schema override is a whole-object replacement, and the one thing
+01303	2e24e5ca:1233 seq=1231	        # it can silently drop is a `required` member. The record must therefore
+01304	2e24e5ca:1233 seq=1231	        # name what it removes, verbatim, or the contract's old obligation is gone
+01305	2e24e5ca:1233 seq=1231	        # with no trace beyond "a schema override fired".
+01306	2e24e5ca:1233 seq=1231	        if schema_overridden:
+01307	2e24e5ca:1233 seq=1231	            record = SCHEMA_OVERRIDES[entry["old_name"]]
+01308	2e24e5ca:1233 seq=1231	            if record.get("mode") != "replace":
+01309	2e24e5ca:1233 seq=1231	                sys.exit("FATAL: schema override of %s must carry \"mode\": \"replace\" (a schema is "
+01310	2e24e5ca:1233 seq=1231	                         "replaced, there is nothing to append to)" % entry["old_name"])
+01311	2e24e5ca:1233 seq=1231	            removed_required = canonical(tool["inputSchema"].get("required", []))
+01312	2e24e5ca:1233 seq=1231	            if removed_required not in str(record["reason"]):
+01313	2e24e5ca:1233 seq=1231	                sys.exit("FATAL: schema override of %s must quote the 'required' member it removes "
+01314	2e24e5ca:1233 seq=1231	                         "verbatim in 'reason' (expected %s)"
+01315	2e24e5ca:1233 seq=1231	                         % (entry["old_name"], removed_required))
+01316	2e24e5ca:1233 seq=1231	
+01317	2e24e5ca:1233 seq=1231	        new_tool["description"] = description
+01318	2e24e5ca:1233 seq=1231	        new_tool["inputSchema"] = schema
+01319	2e24e5ca:1233 seq=1231	        new_tools.append(new_tool)
+01320	2e24e5ca:1233 seq=1231	        name_sources.append(entry["new_name"])
+01321	2e24e5ca:1233 seq=1231	
+01322	2e24e5ca:1233 seq=1231	    # --- self check 5: every declared override fired exactly once ------------
+01323	2e24e5ca:1233 seq=1231	    # v1.5: per `(kind, old_name)`, not per `old_name`. One tool may legitimately
+01324	2e24e5ca:1233 seq=1231	    # carry both a description and a schema override (D-3 is the first), and
+01325	2e24e5ca:1233 seq=1231	    # nothing about that should make either record disappear. The counters are
+01326	2e24e5ca:1233 seq=1231	    # still exact in both directions: a declared name that never fires is a hard
+01327	2e24e5ca:1233 seq=1231	    # failure, and so is a record count that does not match the declaration.
+01328	2e24e5ca:1233 seq=1231	    declared_overrides = set(
+01329	2e24e5ca:1233 seq=1231	        (kind, name)
+01330	2e24e5ca:1233 seq=1231	        for kind, table in (("description", DESCRIPTION_OVERRIDES), ("inputSchema", SCHEMA_OVERRIDES))
+01331	2e24e5ca:1233 seq=1231	        for name in table)
+01332	2e24e5ca:1233 seq=1231	    fired_overrides = set((record["kind"], record["old_name"]) for record in overrides_used)
+01333	2e24e5ca:1233 seq=1231	    stale_overrides = sorted("%s/%s" % pair for pair in (declared_overrides - fired_overrides))
+01334	2e24e5ca:1233 seq=1231	    if stale_overrides:
+01335	2e24e5ca:1233 seq=1231	        sys.exit("FATAL: override(s) never fired (typo in old_name?): %s" % stale_overrides)
+01336	2e24e5ca:1233 seq=1231	    if len(overrides_used) != len(declared_overrides):
+01337	2e24e5ca:1233 seq=1231	        sys.exit("FATAL: %d override records for %d declared overrides"
+01338	2e24e5ca:1233 seq=1231	                 % (len(overrides_used), len(declared_overrides)))
+01339	2e24e5ca:1233 seq=1231	
+01340	2e24e5ca:1233 seq=1231	    # --- self check 3: count and uniqueness ----------------------------------
+01341	2e24e5ca:1233 seq=1231	    # 174 entries - 2 unregister_until_implemented - 1 lossless merge == 171.
+01342	2e24e5ca:1233 seq=1231	    EXPECTED_OUTPUT = 174 - 2 - 1
+01343	2e24e5ca:1233 seq=1231	    if len(new_tools) != EXPECTED_OUTPUT:
+01344	2e24e5ca:1233 seq=1231	        sys.exit("FATAL: expected %d output tools, got %d" % (EXPECTED_OUTPUT, len(new_tools)))
+01345	2e24e5ca:1233 seq=1231	    if len(set(name_sources)) != len(name_sources):
+01346	2e24e5ca:1233 seq=1231	        duplicates = sorted(name for name in set(name_sources) if name_sources.count(name) > 1)
+01347	2e24e5ca:1233 seq=1231	        sys.exit("FATAL: duplicate new names in the output: %s" % duplicates)
+01348	2e24e5ca:1233 seq=1231	
+01349	2e24e5ca:1233 seq=1231	    meta = {
+01350	2e24e5ca:1233 seq=1231	        "generated_from": old_path,
+01351	2e24e5ca:1233 seq=1231	        "generated_from_sha256": old_sha,
+01352	2e24e5ca:1233 seq=1231	        "map_path": map_path,
+01353	2e24e5ca:1233 seq=1231	        "map_sha256": map_sha,
+01354	2e24e5ca:1233 seq=1231	        "tool_count_in": len(old_names),
+01355	2e24e5ca:1233 seq=1231	        "count": len(new_tools),
+01356	2e24e5ca:1233 seq=1231	        # D-1 (TASK-003 section 1.1, D49): `result.tools` is a *set* for the
+01357	2e24e5ca:1233 seq=1231	        # consumers; the order is explicitly outside the contract. The engine is
+01358	2e24e5ca:1233 seq=1231	        # only required to be deterministic within one build (a second
+01359	2e24e5ca:1233 seq=1231	        # `tools/list` on the same registry is byte-identical), not to reproduce
+01360	2e24e5ca:1233 seq=1231	        # the order below - so no implementation may ever be "fixed" to match it.
+01361	2e24e5ca:1233 seq=1231	        "order_normative": False,
+01362	2e24e5ca:1233 seq=1231	        "excluded": excluded,
+01363	2e24e5ca:1233 seq=1231	        "merged": merged,
+01364	2e24e5ca:1233 seq=1231	        "generator_version": GENERATOR_VERSION,
+01365	2e24e5ca:1233 seq=1231	        "generated_by": GENERATED_BY,
+01366	2e24e5ca:1233 seq=1231	    }
+01367	2e24e5ca:1233 seq=1231	    if overrides_used:
+01368	2e24e5ca:1233 seq=1231	        meta["overrides"] = overrides_used
+01369	2e24e5ca:1233 seq=1231	
+01370	2e24e5ca:1233 seq=1231	    output = {
+01371	2e24e5ca:1233 seq=1231	        "id": old_contract["id"],
+01372	2e24e5ca:1233 seq=1231	        "jsonrpc": old_contract["jsonrpc"],
+01373	2e24e5ca:1233 seq=1231	        "result": {"tools": new_tools},
+01374	2e24e5ca:1233 seq=1231	        "_meta": meta,
+01375	2e24e5ca:1233 seq=1231	    }
+01376	2e24e5ca:1233 seq=1231	
+01377	2e24e5ca:1233 seq=1231	    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+01378	2e24e5ca:1233 seq=1231	    with open(out_path, "w", encoding="utf-8", newline="\n") as handle:
+01379	2e24e5ca:1233 seq=1231	        json.dump(output, handle, ensure_ascii=False, indent=2)
+01380	2e24e5ca:1233 seq=1231	        handle.write("\n")
+01381	2e24e5ca:1233 seq=1231	
+01382	2e24e5ca:1233 seq=1231	    out_sha = sha256_file(out_path)
+01383	2e24e5ca:1233 seq=1231	
+01384	2e24e5ca:1233 seq=1231	    print("gen_renamed_contract: input tools = %d" % len(old_names))
+01385	2e24e5ca:1233 seq=1231	    print("gen_renamed_contract: output tools = %d" % len(new_tools))
+01386	2e24e5ca:1233 seq=1231	    print("gen_renamed_contract: order_normative = %s (order is not part of the contract)"
+01387	2e24e5ca:1233 seq=1231	          % json.dumps(output["_meta"]["order_normative"]))
+01388	2e24e5ca:1233 seq=1231	    print("gen_renamed_contract: merged = %d (%s)" % (
+01389	2e24e5ca:1233 seq=1231	        len(merged), ", ".join("%s -> %s" % (m["old_name"], m["merged_into"]) for m in merged)))
+01390	2e24e5ca:1233 seq=1231	    print("gen_renamed_contract: unregister = %d (%s)" % (len(excluded), ", ".join(excluded)))
+01391	2e24e5ca:1233 seq=1231	    print("gen_renamed_contract: overrides = %d (%s)"
+01392	2e24e5ca:1233 seq=1231	          % (len(overrides_used), ", ".join("%s/%s:%s" % (record["kind"], record["old_name"], record["mode"]) for record in overrides_used)))
+01393	2e24e5ca:1233 seq=1231	    print("gen_renamed_contract: old contract sha256 = %s" % old_sha)
+01394	2e24e5ca:1233 seq=1231	    print("gen_renamed_contract: rename map sha256 = %s" % map_sha)
+01395	2e24e5ca:1233 seq=1231	    print("gen_renamed_contract: output sha256 = %s" % out_sha)
+01396	2e24e5ca:1233 seq=1231	    print("gen_renamed_contract: self-checks = OK (lint %d/%d, unique %d/%d, disposition enum OK)"
+01397	2e24e5ca:1233 seq=1231	          % (len(new_tools), len(new_tools), len(new_tools), len(new_tools)))
+01398	2e24e5ca:1233 seq=1231	    print("gen_renamed_contract: wrote %s" % out_path)
+01399	2e24e5ca:1233 seq=1231	    return 0
+01400	2e24e5ca:1233 seq=1231	
+01401	2e24e5ca:1233 seq=1231	
+01402	2e24e5ca:1233 seq=1231	if __name__ == "__main__":
+01403	2e24e5ca:1233 seq=1231	    sys.exit(main())
+01404	a98131de:421 seq=419	                            "property": {
+01405	a98131de:421 seq=419	                                "description": "属性名（assert 类型使用）",
+01406	a98131de:421 seq=419	                                "type": "string",
+01407	a98131de:421 seq=419	                            },
+01408	a98131de:421 seq=419	                            "seconds": {
+01409	a98131de:421 seq=419	                                "description": "等待秒数（wait 类型使用）",
+01410	a98131de:421 seq=419	                                "type": "number",
+01411	a98131de:421 seq=419	                            },
+01412	a98131de:421 seq=419	                            "strength": {
+01413	a98131de:421 seq=419	                                "default": 1.0,
+01414	a98131de:421 seq=419	                                "description": "input 步骤作用于 action 时的强度（默认 1.0；引擎会夹到 0..1）",
+01415	a98131de:421 seq=419	                                "type": "number",
+01416	a98131de:421 seq=419	                            },
+01417	a98131de:421 seq=419	                            "text": {
+01418	a98131de:421 seq=419	                                "description": "期望文本（assert 类型使用）",
+01419	a98131de:421 seq=419	                                "type": "string",
+01420	66677225:112 seq=110	            continue
+01421	66677225:112 seq=110	        rest = name[len(prefix):]
+01422	66677225:112 seq=110	        if not rest:
+01423	66677225:112 seq=110	            return None
+01424	66677225:112 seq=110	        if not all((("a" <= c <= "z") or ("0" <= c <= "9") or c == "_") for c in rest):
+01425	66677225:112 seq=110	            return None
+01426	66677225:112 seq=110	        # `editor_get` is legal: the object segment is not required (D-E4).
+01427	66677225:112 seq=110	        verb = rest.split("_", 1)[0]
+01428	66677225:112 seq=110	        return channel, verb
+01429	66677225:112 seq=110	    return None
+01430	66677225:112 seq=110	
+01431	66677225:112 seq=110	
+01432	66677225:112 seq=110	def validate_renamed(entry, closed_set):
+01433	66677225:112 seq=110	    """GDR-16 L1..L4 checks for one map entry. Returns None or a reason."""
+01434	66677225:112 seq=110	    name = entry["new_name"]
+01435	66677225:112 seq=110	    if "update_" in name:
+01436	66677225:112 seq=110	        return "L4 banned 'update_': %s" % name
+01437	66677225:112 seq=110	    if not L1_PATTERN.match(name):
+01438	66677225:112 seq=110	        return "L1 pattern mismatch: %s" % name
+01439	66677225:112 seq=110	    parsed = parse_tool_name(name)
+01440	66677225:112 seq=110	    if parsed is None:
+01441	66677225:112 seq=110	        return "L1 parse failure: %s" % name
+01442	66677225:112 seq=110	    channel, verb = parsed
+01443	66677225:112 seq=110	    if verb not in closed_set:
+01444	66677225:112 seq=110	        return "L2 verb '%s' outside the closed set: %s" % (verb, name)
+01445	66677225:112 seq=110	    if verb != entry.get("verb"):
+01446	66677225:112 seq=110	        return "L3 declared verb '%s' != parsed '%s': %s" % (entry.get("verb"), verb, name)
+01447	66677225:112 seq=110	    if channel != entry.get("channel"):
+01448	66677225:112 seq=110	        return "L3 declared channel '%s' != parsed '%s': %s" % (entry.get("channel"), channel, name)
+01449	66677225:112 seq=110	    return None
+01450	66677225:112 seq=110	
+01451	66677225:112 seq=110	
+01452	12fdd0ea:559 seq=557	def apply_override(table, old_name, fallback, used, kind):
+01453	12fdd0ea:559 seq=557	    """Returns (value, overridden). `overridden` is what makes the carry-over
+01454	12fdd0ea:559 seq=557	    assertion below precise: the promise is "nothing moves *without* an explicit
+01455	12fdd0ea:559 seq=557	    override", so a fired override has to be exempt from it (in B0 the table was
+01456	12fdd0ea:559 seq=557	    empty, so the distinction was not observable and the blanket assertion made
+01457	12fdd0ea:559 seq=557	    every override impossible).
+01458	12fdd0ea:559 seq=557	
+01459	12fdd0ea:559 seq=557	    An entry is either
+01460	12fdd0ea:559 seq=557	
+01461	12fdd0ea:559 seq=557	      * append-only (the default, v1.2): `value` is `<old value> + " " +
+01462	12fdd0ea:559 seq=557	        <discriminator>`, so not a byte of the original wording can be lost; or
+01463	12fdd0ea:559 seq=557	      * `"mode": "replace"` (v1.4): `value` is the corrected text and the
+01464	12fdd0ea:559 seq=557	        *reason* has to carry the old text verbatim, so the correction stays
+01465	12fdd0ea:559 seq=557	        auditable in `_meta.overrides` even though the field itself is rewritten.
+01466	12fdd0ea:559 seq=557	        This mode exists for a value that is factually **wrong**, where an
+01467	12fdd0ea:559 seq=557	        append-only discriminator would leave the false statement in the field a
+01468	12fdd0ea:559 seq=557	        caller reads (`TASK-007` section 1).
+01469	12fdd0ea:559 seq=557	    """
+01470	12fdd0ea:559 seq=557	    record = table.get(old_name)
+01471	12fdd0ea:559 seq=557	    if record is None:
+01472	12fdd0ea:559 seq=557	        return fallback, False
+01473	12fdd0ea:559 seq=557	    if "reason" not in record or "value" not in record:
+01474	12fdd0ea:559 seq=557	        raise SystemExit("override for %s must carry 'reason' and 'value'" % old_name)
+01475	12fdd0ea:559 seq=557	    if not str(record["reason"]).strip():
+01476	12fdd0ea:559 seq=557	        raise SystemExit("override for %s carries an empty 'reason'" % old_name)
+01477	12fdd0ea:559 seq=557	    mode = record.get("mode", "append")
+01478	12fdd0ea:559 seq=557	    if mode not in ("append", "replace"):
+01479	12fdd0ea:559 seq=557	        raise SystemExit("override for %s carries an unknown mode %r" % (old_name, mode))
+01480	12fdd0ea:559 seq=557	    used.append({"kind": kind, "old_name": old_name, "mode": mode, "reason": record["reason"]})
+01481	12fdd0ea:559 seq=557	    return record["value"], True
+01482	12fdd0ea:559 seq=557	
+01483	12fdd0ea:559 seq=557	
+01484	12fdd0ea:559 seq=557	def main():
+01485	12fdd0ea:559 seq=557	    parser = argparse.ArgumentParser(description="Generate the renamed tools/list contract.")
+01486	12fdd0ea:559 seq=557	    parser.add_argument("--old-contract", default=DEFAULT_OLD_CONTRACT)
+01487	12fdd0ea:559 seq=557	    parser.add_argument("--map", default=DEFAULT_MAP)
+01488	12fdd0ea:559 seq=557	    parser.add_argument("--out", default=DEFAULT_OUT)
+01489	12fdd0ea:559 seq=557	    args = parser.parse_args()
+01490	12fdd0ea:559 seq=557	
+01491	12fdd0ea:559 seq=557	    old_path = os.path.abspath(args.old_contract)
+01492	12fdd0ea:559 seq=557	    map_path = os.path.abspath(args.map)
+01493	12fdd0ea:559 seq=557	    out_path = os.path.abspath(args.out)
+01494	12fdd0ea:559 seq=557	
+01495	12fdd0ea:559 seq=557	    for path, label in ((old_path, "old contract"), (map_path, "rename map")):
+01496	12fdd0ea:559 seq=557	        if not os.path.isfile(path):
+01497	12fdd0ea:559 seq=557	            sys.exit("FATAL: %s not found: %s" % (label, path))
+01498	12fdd0ea:559 seq=557	
+01499	12fdd0ea:559 seq=557	    old_sha = sha256_file(old_path)
+01500	8ffcba7d:1166 seq=1164	        # v1.5: a schema override is a whole-object replacement, and the one thing
+01501	8ffcba7d:1166 seq=1164	        # it can silently drop is a `required` member. The record must therefore
+01502	8ffcba7d:1166 seq=1164	        # name what it removes, verbatim, or the contract's old obligation is gone
+01503	8ffcba7d:1166 seq=1164	        # with no trace beyond "a schema override fired".
+01504	8ffcba7d:1166 seq=1164	        if schema_overridden:
+01505	8ffcba7d:1166 seq=1164	            record = SCHEMA_OVERRIDES[entry["old_name"]]
+01506	8ffcba7d:1166 seq=1164	            if record.get("mode") != "replace":
+01507	8ffcba7d:1166 seq=1164	                sys.exit("FATAL: schema override of %s must carry \"mode\": \"replace\" (a schema is "
+01508	8ffcba7d:1166 seq=1164	                         "replaced, there is nothing to append to)" % entry["old_name"])
+01509	8ffcba7d:1166 seq=1164	            removed_required = canonical(tool["inputSchema"].get("required", []))
+01510	8ffcba7d:1166 seq=1164	            if removed_required not in str(record["reason"]):
+01511	8ffcba7d:1166 seq=1164	                sys.exit("FATAL: schema override of %s must quote the 'required' member it removes "
+01512	8ffcba7d:1166 seq=1164	                         "verbatim in 'reason' (expected %s)"
+01513	8ffcba7d:1166 seq=1164	                         % (entry["old_name"], removed_required))
+01514	8ffcba7d:1166 seq=1164	
+01515	8ffcba7d:1166 seq=1164	        new_tool["description"] = description
+01516	8ffcba7d:1166 seq=1164	        new_tool["inputSchema"] = schema
+01517	8ffcba7d:1166 seq=1164	        new_tools.append(new_tool)
+01518	8ffcba7d:1166 seq=1164	        name_sources.append(entry["new_name"])
+01519	8ffcba7d:1166 seq=1164	
+01520	8ffcba7d:1166 seq=1164	    # --- v1.8 (GDR-28 point 1): deterministic append of the new tools ---------
+01521	8ffcba7d:1166 seq=1164	    # After the rename + override pass, never before: an added entry is not a
+01522	8ffcba7d:1166 seq=1164	    # carried-over entry with a changed field, and the two name lists are proved
+01523	8ffcba7d:1166 seq=1164	    # disjoint in both directions below. The output key order is the ported
+01524	8ffcba7d:1166 seq=1164	    # entries' key order (`description`, `inputSchema`, `name`, which is the old
+01525	8ffcba7d:1166 seq=1164	    # contract's own order with `name` replaced), so the file stays diffable.
+01526	8ffcba7d:1166 seq=1164	    ported_names = set(name_sources)
+01527	8ffcba7d:1166 seq=1164	    map_new_names = set(entry["new_name"] for entry in entries)
+01528	8ffcba7d:1166 seq=1164	    added_names = []
+01529	8ffcba7d:1166 seq=1164	    added_verbs_used = set()
+01530	8ffcba7d:1166 seq=1164	    for record in ADDED_TOOLS:
+01531	8ffcba7d:1166 seq=1164	        reason = validate_added(record, closed_set)
+01532	8ffcba7d:1166 seq=1164	        if reason is not None:
+01533	8ffcba7d:1166 seq=1164	            sys.exit("FATAL: added tool: %s" % reason)
+01534	8ffcba7d:1166 seq=1164	        name = record["name"]
+01535	8ffcba7d:1166 seq=1164	        if name in ported_names:
+01536	8ffcba7d:1166 seq=1164	            sys.exit("FATAL: added tool %s has the same name as a ported tool" % name)
+01537	8ffcba7d:1166 seq=1164	        if name in map_new_names:
+01538	8ffcba7d:1166 seq=1164	            sys.exit("FATAL: added tool %s collides with a rename-map new_name" % name)
+01539	8ffcba7d:1166 seq=1164	        if name in added_names:
+01540	8ffcba7d:1166 seq=1164	            sys.exit("FATAL: added tool %s is declared twice" % name)
+01541	8ffcba7d:1166 seq=1164	        if record["verb"] not in closed_set:
+01542	8ffcba7d:1166 seq=1164	            added_verbs_used.add(record["verb"])
+01543	8ffcba7d:1166 seq=1164	        added_names.append(name)
+01544	8ffcba7d:1166 seq=1164	        new_tools.append({
+01545	8ffcba7d:1166 seq=1164	            "description": record["description"],
+01546	8ffcba7d:1166 seq=1164	            "inputSchema": record["inputSchema"],
+01547	8ffcba7d:1166 seq=1164	            "name": name,
+01548	8ffcba7d:1166 seq=1164	        })
+01549	8ffcba7d:1166 seq=1164	        name_sources.append(name)
+01550	8ffcba7d:1166 seq=1164	    stale_verbs = sorted(set(ADDED_VERB_EXTENSIONS) - added_verbs_used)
+01551	8ffcba7d:1166 seq=1164	    if stale_verbs:
+01552	8ffcba7d:1166 seq=1164	        sys.exit("FATAL: ADDED_VERB_EXTENSIONS record(s) never used: %s" % stale_verbs)
+01553	8ffcba7d:1166 seq=1164	
+01554	8ffcba7d:1166 seq=1164	    # --- self check 5: every declared override fired exactly once ------------
+01555	8ffcba7d:1166 seq=1164	    # v1.5: per `(kind, old_name)`, not per `old_name`. One tool may legitimately
+01556	8ffcba7d:1166 seq=1164	    # carry both a description and a schema override (D-3 is the first), and
+01557	8ffcba7d:1166 seq=1164	    # nothing about that should make either record disappear. The counters are
+01558	8ffcba7d:1166 seq=1164	    # still exact in both directions: a declared name that never fires is a hard
+01559	8ffcba7d:1166 seq=1164	    # failure, and so is a record count that does not match the declaration.
+01560	8ffcba7d:1166 seq=1164	    declared_overrides = set(
+01561	8ffcba7d:1166 seq=1164	        (kind, name)
+01562	8ffcba7d:1166 seq=1164	        for kind, table in (("description", DESCRIPTION_OVERRIDES), ("inputSchema", SCHEMA_OVERRIDES))
+01563	8ffcba7d:1166 seq=1164	        for name in table)
+01564	8ffcba7d:1166 seq=1164	    fired_overrides = set((record["kind"], record["old_name"]) for record in overrides_used)
+01565	8ffcba7d:1166 seq=1164	    stale_overrides = sorted("%s/%s" % pair for pair in (declared_overrides - fired_overrides))
+01566	8ffcba7d:1166 seq=1164	    if stale_overrides:
+01567	8ffcba7d:1166 seq=1164	        sys.exit("FATAL: override(s) never fired (typo in old_name?): %s" % stale_overrides)
+01568	8ffcba7d:1166 seq=1164	    if len(overrides_used) != len(declared_overrides):
+01569	8ffcba7d:1166 seq=1164	        sys.exit("FATAL: %d override records for %d declared overrides"
+01570	8ffcba7d:1166 seq=1164	                 % (len(overrides_used), len(declared_overrides)))
+01571	8ffcba7d:1166 seq=1164	
+01572	8ffcba7d:1166 seq=1164	    # --- self check 3: count and uniqueness ----------------------------------
+01573	8ffcba7d:1166 seq=1164	    # 174 entries - 2 unregister_until_implemented - 1 lossless merge == 171,
+01574	8ffcba7d:1166 seq=1164	    # plus the N entries the decision maker authored (GDR-28): 171 + N.
+01575	8ffcba7d:1166 seq=1164	    EXPECTED_OUTPUT = 174 - 2 - 1 + len(ADDED_TOOLS)
+01576	8ffcba7d:1166 seq=1164	    if len(new_tools) != EXPECTED_OUTPUT:
+01577	8ffcba7d:1166 seq=1164	        sys.exit("FATAL: expected %d output tools, got %d" % (EXPECTED_OUTPUT, len(new_tools)))
+01578	8ffcba7d:1166 seq=1164	    if len(set(name_sources)) != len(name_sources):
+01579	8ffcba7d:1166 seq=1164	        duplicates = sorted(name for name in set(name_sources) if name_sources.count(name) > 1)
+01580	8ffcba7d:1166 seq=1164	        sys.exit("FATAL: duplicate new names in the output: %s" % duplicates)
+01581	8ffcba7d:1166 seq=1164	
+01582	8ffcba7d:1166 seq=1164	    meta = {
+01583	8ffcba7d:1166 seq=1164	        "generated_from": old_path,
+01584	8ffcba7d:1166 seq=1164	        "generated_from_sha256": old_sha,
+01585	8ffcba7d:1166 seq=1164	        "map_path": map_path,
+01586	8ffcba7d:1166 seq=1164	        "map_sha256": map_sha,
+01587	8ffcba7d:1166 seq=1164	        "tool_count_in": len(old_names),
+01588	8ffcba7d:1166 seq=1164	        "count": len(new_tools),
+01589	8ffcba7d:1166 seq=1164	        # v1.8 (GDR-28 point 1): the entries that did not come from the map. The
+01590	8ffcba7d:1166 seq=1164	        # list is ordered exactly like the append, so `result.tools[-N:]` are
+01591	8ffcba7d:1166 seq=1164	        # these names in this order; `added_count` is redundant with the list's
+01592	8ffcba7d:1166 seq=1164	        # length on purpose (a consumer that only needs the arithmetic does not
+01593	8ffcba7d:1166 seq=1164	        # have to trust a length).
+01594	8ffcba7d:1166 seq=1164	        "added_count": len(added_names),
+01595	8ffcba7d:1166 seq=1164	        "added_tools": added_names,
+01596	8ffcba7d:1166 seq=1164	        # D-1 (TASK-003 section 1.1, D49): `result.tools` is a *set* for the
+01597	8ffcba7d:1166 seq=1164	        # consumers; the order is explicitly outside the contract. The engine is
+01598	8ffcba7d:1166 seq=1164	        # only required to be deterministic within one build (a second
+01599	8ffcba7d:1166 seq=1164	        # `tools/list` on the same registry is byte-identical), not to reproduce
+01600	8ffcba7d:1166 seq=1164	        # the order below - so no implementation may ever be "fixed" to match it.
+01601	8ffcba7d:1166 seq=1164	        "order_normative": False,
+01602	8ffcba7d:1166 seq=1164	        "excluded": excluded,
+01603	8ffcba7d:1166 seq=1164	        "merged": merged,
+01604	8ffcba7d:1166 seq=1164	        "generator_version": GENERATOR_VERSION,
+01605	8ffcba7d:1166 seq=1164	        "generated_by": GENERATED_BY,
+01606	8ffcba7d:1166 seq=1164	    }
+01607	8ffcba7d:1166 seq=1164	    if overrides_used:
+01608	8ffcba7d:1166 seq=1164	        meta["overrides"] = overrides_used
+01609	8ffcba7d:1166 seq=1164	
+01610	8ffcba7d:1166 seq=1164	    output = {
+01611	8ffcba7d:1166 seq=1164	        "id": old_contract["id"],
+01612	8ffcba7d:1166 seq=1164	        "jsonrpc": old_contract["jsonrpc"],
+01613	8ffcba7d:1166 seq=1164	        "result": {"tools": new_tools},
+01614	8ffcba7d:1166 seq=1164	        "_meta": meta,
+01615	8ffcba7d:1166 seq=1164	    }
+01616	8ffcba7d:1166 seq=1164	
+01617	8ffcba7d:1166 seq=1164	    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+01618	8ffcba7d:1166 seq=1164	    with open(out_path, "w", encoding="utf-8", newline="\n") as handle:
+01619	8ffcba7d:1166 seq=1164	        json.dump(output, handle, ensure_ascii=False, indent=2)
+01620	8ffcba7d:1166 seq=1164	        handle.write("\n")
+01621	8ffcba7d:1166 seq=1164	
+01622	8ffcba7d:1166 seq=1164	    out_sha = sha256_file(out_path)
+01623	8ffcba7d:1166 seq=1164	
+01624	8ffcba7d:1166 seq=1164	    print("gen_renamed_contract: input tools = %d" % len(old_names))
+01625	8ffcba7d:1166 seq=1164	    print("gen_renamed_contract: output tools = %d" % len(new_tools))
+01626	8ffcba7d:1166 seq=1164	    print("gen_renamed_contract: order_normative = %s (order is not part of the contract)"
+01627	8ffcba7d:1166 seq=1164	          % json.dumps(output["_meta"]["order_normative"]))
+01628	8ffcba7d:1166 seq=1164	    print("gen_renamed_contract: merged = %d (%s)" % (
+01629	8ffcba7d:1166 seq=1164	        len(merged), ", ".join("%s -> %s" % (m["old_name"], m["merged_into"]) for m in merged)))
+01630	8ffcba7d:1166 seq=1164	    print("gen_renamed_contract: unregister = %d (%s)" % (len(excluded), ", ".join(excluded)))
+01631	8ffcba7d:1166 seq=1164	    print("gen_renamed_contract: added = %d (%s)" % (len(added_names), ", ".join(added_names)))
+01632	8ffcba7d:1166 seq=1164	    for record in ADDED_TOOLS:
+01633	8ffcba7d:1166 seq=1164	        print("gen_renamed_contract: added[%s] verb=%s reason=%s"
+01634	8ffcba7d:1166 seq=1164	              % (record["name"], record["verb"], record["reason"]))
+01635	8ffcba7d:1166 seq=1164	    print("gen_renamed_contract: added verb extensions used = %s"
+01636	8ffcba7d:1166 seq=1164	          % (", ".join(sorted(added_verbs_used)) if added_verbs_used else "(none)"))
+01637	8ffcba7d:1166 seq=1164	    print("gen_renamed_contract: overrides = %d (%s)"
+01638	8ffcba7d:1166 seq=1164	          % (len(overrides_used), ", ".join("%s/%s:%s" % (record["kind"], record["old_name"], record["mode"]) for record in overrides_used)))
+01639	8ffcba7d:1166 seq=1164	    print("gen_renamed_contract: old contract sha256 = %s" % old_sha)
+01640	8ffcba7d:1166 seq=1164	    print("gen_renamed_contract: rename map sha256 = %s" % map_sha)
+01641	8ffcba7d:1166 seq=1164	    print("gen_renamed_contract: output sha256 = %s" % out_sha)
+01642	8ffcba7d:1166 seq=1164	    print("gen_renamed_contract: self-checks = OK (lint %d/%d, unique %d/%d, disposition enum OK)"
+01643	8ffcba7d:1166 seq=1164	          % (len(new_tools), len(new_tools), len(new_tools), len(new_tools)))
+01644	8ffcba7d:1166 seq=1164	    print("gen_renamed_contract: wrote %s" % out_path)
+01645	8ffcba7d:1166 seq=1164	    return 0
+01646	8ffcba7d:1166 seq=1164	
+01647	8ffcba7d:1166 seq=1164	
+01648	8ffcba7d:1166 seq=1164	if __name__ == "__main__":
+01649	8ffcba7d:1166 seq=1164	    sys.exit(main())
+01650	d216393e:157 seq=155	            "is always the sum of the per-category counters."
+01651	d216393e:157 seq=155	        ),
+01652	d216393e:157 seq=155	        "inputSchema": {
+01653	d216393e:157 seq=155	            "properties": {
+01654	d216393e:157 seq=155	                "include_errors_only": {
+01655	d216393e:157 seq=155	                    "default": False,
+01656	d216393e:157 seq=155	                    "type": "boolean",
+01657	d216393e:157 seq=155	                },
+01658	d216393e:157 seq=155	                "paths": {
+01659	d216393e:157 seq=155	                    "items": {"type": "string"},
+01660	d216393e:157 seq=155	                    "type": "array",
+01661	d216393e:157 seq=155	                },
+01662	d216393e:157 seq=155	            },
+01663	d216393e:157 seq=155	            "required": [],
+01664	d216393e:157 seq=155	            "type": "object",
+01665	d216393e:157 seq=155	        },
+01666	d216393e:157 seq=155	        "reason": (
+01667	d216393e:157 seq=155	            "C-4 (3) of REPORT-AUDIT-RACING-BACKLOG: the racing trace calls `project_validate_script` "
+01668	d216393e:157 seq=155	            "seventeen times, six of them back to back (seq 127-132 and 274-279), because one call answers "
+01669	d216393e:157 seq=155	            "one file - and the ported contract has only the singular tool. The engine-side basis is "
+01670	d216393e:157 seq=155	            "already there: `ScriptServer::get_language_for_extension()` plus `Script::set_source_code()` "
+01671	d216393e:157 seq=155	            "+ `Script::reload()` is one loop, and TASK-050 N-2's three-way decision (a language this "
+01672	d216393e:157 seq=155	            "build does not contain is a refusal, never a borrowed verdict) is the same per file. The tool "
+01673	d216393e:157 seq=155	            "answers a category per file (`ok` / `invalid` / `language_unavailable`) whose counters account "
+01674	d216393e:157 seq=155	            "for every file it classified, and it is bounded (an explicit truncation marker) because a "
+01675	d216393e:157 seq=155	            "response must not be a function of how many scripts the caller's project has. "
+01676	d216393e:157 seq=155	            "TASK-054 (D-053-3) adds the fifth category `unverifiable`: a language this build contains whose "
+01677	d216393e:1266 seq=1264	            "scripts the engine API cannot compile. `CSharpScript::reload()` returns OK unconditionally "
+01678	d216393e:1266 seq=1264	            "(modules/mono/csharp_script.cpp:2588-2621) and never parses the source, so the plural tool used "
+01679	d216393e:1266 seq=1264	            "to answer a syntax-error `.cs` with `ok` / `valid: true` (measured: TASK-053 c03). The item now "
+01680	d216393e:1266 seq=1264	            "carries `valid: null`, a `reason` quoting the engine basis (the private `CSharpScript::valid` "
+01681	d216393e:1266 seq=1264	            "field, csharp_script.h:137, set at csharp_script.cpp:2599 from ScriptManagerBridge.cs:436-463) "
+01682	d216393e:1266 seq=1264	            "and a `suggestion`; `unverifiable_count` joins the counters so `count` stays the sum of the "
+01683	d216393e:1266 seq=1264	            "categories. The singular tool refuses the same file with -32000, so the two tools agree. "
+01684	d216393e:1266 seq=1264	            "TASK-055 (D112) replaces the TASK-054 half of this description: C# now has a real verdict "
+01685	d216393e:1266 seq=1264	            "(the engine accessor `CSharpScript::is_source_newer_than_assembly()` plus the public "
+01686	d216393e:1266 seq=1264	            "`Script::is_script_valid()`), the project-level half comes from the per-file diagnostics "
+01687	d216393e:1266 seq=1264	            "`project_build_csharp` records, `not_compiled` joins the categories for 'nothing compiled "
+01688	d216393e:1266 seq=1264	            "this source' (never published as `invalid`), `unverifiable` stays for the residual 'the "
+01689	d216393e:1266 seq=1264	            "engine could not load the file as a Script', and `not_compiled_count` joins the counters so "
+01690	d216393e:1266 seq=1264	            "`count` remains the sum of the five."
+01691	d216393e:1266 seq=1264	        ),
+01692	d216393e:1266 seq=1264	    },
+01693	d216393e:1266 seq=1264	    {
+01694	d216393e:1266 seq=1264	        "name": "editor_set_node_script_batch",
+01695	d216393e:1266 seq=1264	        "channel": "editor",
+01696	d216393e:1266 seq=1264	        "verb": "set",
+01697	d216393e:1266 seq=1264	        "description": (
+01698	d216393e:1266 seq=1264	            "Attach one script to many nodes in the edited scene in a single call, and answer per node "
+01699	d216393e:1266 seq=1264	            "whether the attachment landed and the script was readable. 'node_paths' is an array of node "
+01700	d216393e:1266 seq=1264	            "paths resolved relative to the edited scene root - the same strings the singular tools take "
+01701	d216393e:1266 seq=1264	            "under the name 'path' (editor_set_node_property, editor_get_node_properties): 'Bricks/Car' "
+01702	d216393e:1266 seq=1264	            "and './Bricks/Car' address 'Car' inside 'Bricks', and the edited scene root's own name may "
+01703	d216393e:1266 seq=1264	            "be used as a prefix ('Main/Bricks/Car' == 'Bricks/Car' == './Bricks/Car'). An absolute "
+01704	d216393e:1266 seq=1264	            "scene-tree path ('/root/Main/Bricks/Car') is not accepted, and a bare name such as 'Car' "
+01705	d216393e:1266 seq=1264	            "only addresses a direct child of the edited scene root. A refused path names this rule in "
+01706	d216393e:1266 seq=1264	            "data.suggestion."
+01707	d216393e:1266 seq=1264	        ),
+01708	d216393e:1266 seq=1264	        "inputSchema": {
+01709	d216393e:1266 seq=1264	            "properties": {
+01710	d216393e:1266 seq=1264	                "keep_existing": {
+01711	d216393e:1266 seq=1264	                    "default": False,
+01712	d216393e:1266 seq=1264	                    "type": "boolean",
+01713	d216393e:1266 seq=1264	                },
+01714	d216393e:1266 seq=1264	                "node_paths": {
+01715	d216393e:1266 seq=1264	                    "items": {"type": "string"},
+01716	d216393e:1266 seq=1264	                    "type": "array",
+01717	d216393e:1266 seq=1264	                },
+01718	d216393e:1266 seq=1264	                "script_path": {"type": "string"},
+01719	d216393e:1266 seq=1264	            },
+01720	d216393e:1266 seq=1264	            "required": ["node_paths", "script_path"],
+01721	d216393e:1266 seq=1264	            "type": "object",
+01722	d216393e:1266 seq=1264	        },
+01723	d216393e:1266 seq=1264	        "reason": (
+01724	d216393e:1266 seq=1264	            "C-4 (4) of REPORT-AUDIT-RACING-BACKLOG: `editor_set_node_script` is called eight times in a "
+01725	d216393e:1266 seq=1264	            "row (racing trace seq 133-140) to give the nodes of one edited scene their scripts, and the "
+01726	d216393e:1266 seq=1264	            "ported contract has no batch form. The engine-side basis is `Object::set_script()` plus the "
+01727	d216393e:1266 seq=1264	            "read-back `editor_set_node_script` already performs (`node->get_script()`): `set_script()` is "
+01728	d216393e:1266 seq=1264	            "a void method whose early return for an abstract script is exactly why a batch must answer "
+01729	d216393e:1266 seq=1264	            "what each node really carries. The tool is all-or-nothing like `editor_add_nodes_batch`, "
+01730	d216393e:1266 seq=1264	            "`keep_existing` skips a node that already has a script instead of silently replacing it, and "
+01731	d216393e:1266 seq=1264	            "one `script_path` for the batch is the whole reason the take-back exists."
+01732	d216393e:1266 seq=1264	        ),
+01733	d216393e:1266 seq=1264	    },
+01734	d216393e:1266 seq=1264	    {
+01735	d216393e:1266 seq=1264	        "name": "editor_set_node_property_updates",
+01736	d216393e:1266 seq=1264	        "channel": "editor",
+01737	d216393e:1266 seq=1264	        "verb": "set",
+01738	d216393e:1266 seq=1264	        "description": (
+01739	d216393e:1266 seq=1264	            "Set a different value on each of many nodes in the edited scene in one call, and answer per "
+01740	d216393e:1266 seq=1264	            "entry whether the value landed."
+01741	d216393e:1266 seq=1264	        ),
+01742	d216393e:1266 seq=1264	        "inputSchema": {
+01743	d216393e:1266 seq=1264	            "properties": {
+01744	d216393e:1266 seq=1264	                "updates": {
+01745	d216393e:1266 seq=1264	                    "items": {
+01746	d216393e:1266 seq=1264	                        "properties": {
+01747	d216393e:1266 seq=1264	                            "path": {"type": "string"},
+01748	d216393e:1266 seq=1264	                            "property": {"type": "string"},
+01749	d216393e:1266 seq=1264	                            "value": {},
+01750	d216393e:1266 seq=1264	                        },
+01751	d216393e:1266 seq=1264	                        "required": ["path", "property", "value"],
+01752	d216393e:1266 seq=1264	                        "type": "object",
+01753	d216393e:1266 seq=1264	                    },
+01754	d216393e:1266 seq=1264	                    "minItems": 1,
+01755	d216393e:1266 seq=1264	                    "type": "array",
+01756	d216393e:1266 seq=1264	                },
+01757	d216393e:1266 seq=1264	                "stop_on_error": {
+01758	d216393e:1266 seq=1264	                    "default": False,
+01759	d216393e:1266 seq=1264	                    "type": "boolean",
+01760	d216393e:1266 seq=1264	                },
+01761	d216393e:1266 seq=1264	            },
+01762	d216393e:1266 seq=1264	            "required": ["updates"],
+01763	d216393e:1266 seq=1264	            "type": "object",
+01764	d216393e:1266 seq=1264	        },
+01765	d216393e:1266 seq=1264	        "reason": (
+01766	d216393e:1266 seq=1264	            "TASK-060 M-1 / D-6 (the second round's capability gap): the ported contract's only batch "
+01767	d216393e:1266 seq=1264	            "property write is `editor_set_node_property_batch`, whose grammar is "
+01768	d216393e:1266 seq=1264	            "`{node_type, property, value}` - one **type-scoped** value for every node of a class. Laying "
+01769	d216393e:1266 seq=1264	            "out a level therefore costs one `editor_set_node_property` per node: the round-2 trace called "
+01770	d216393e:1266 seq=1264	            "it 60 times (57 of them the same tool back to back, `fragments`/bigrams of "
+01771	d216393e:1266 seq=1264	            "REPORT-062's TRACE-FRICTION-ANALYSIS), and the request that asked for the missing shape "
+01772	d216393e:1266 seq=1264	            "(`updates:[...]`) was answered `-32602 Unknown parameter 'updates'` (c3_a5_batch_positions). "
+01773	d216393e:1266 seq=1264	            "The engine-side basis is that the write itself is already per node and already gated: "
+01774	d216393e:1266 seq=1264	            "`MCPTools::write_node_property` is one property write on one `Object` (declared type, "
+01775	d216393e:1266 seq=1264	            "component mapping, `ValueSlot` narrowing gate, read-back), so a *path*-scoped list is one loop "
+01776	d216393e:1266 seq=1264	            "over it and needs no new narrowing rule. The engine has no batch setter, so the tool must be "
+01777	d216393e:1266 seq=1264	            "an added name rather than a ported one (GDR-28). `updates[].path` is the same string the "
+01778	d216393e:1266 seq=1264	            "singular tools take under the name `path` (see `NODE_PATH_RULE_SENTENCE`); `stop_on_error` "
+01779	d216393e:1266 seq=1264	            "exists because the useful answer depends on the caller's intent - `false` (the default) "
+01780	d216393e:1266 seq=1264	            "reports every entry and leaves the ones that landed in place, `true` is all-or-nothing like "
+01781	d216393e:1266 seq=1264	            "the rest of this module's batches: the first refusal stops the call and every entry that "
+01782	d216393e:1266 seq=1264	            "already landed is put back to the value it had. The per-entry `changed`/`old_value`/"
+01783	d216393e:1266 seq=1264	            "`new_value` triple is the read-back the sibling tools publish, so 'the value landed' is "
+01784	d216393e:1266 seq=1264	            "never asserted from the request."
+01785	d216393e:1266 seq=1264	        ),
+01786	d216393e:1266 seq=1264	    },
+01787	d216393e:1266 seq=1264	]
+01788	d216393e:1266 seq=1264	
+01789	d216393e:1266 seq=1264	HERE = os.path.dirname(os.path.abspath(__file__))
+01790	d216393e:1266 seq=1264	MODULE_ROOT = os.path.dirname(HERE)
+01791	d216393e:1266 seq=1264	
+01792	d216393e:1266 seq=1264	# ---------------------------------------------------------------------------
+01793	d216393e:1266 seq=1264	# The verbs an *added* tool may introduce.
+01794	d216393e:1266 seq=1264	#
+01795	d216393e:1266 seq=1264	# `tool-rename-map.json`'s `convention.verb_closed_set` is the map's own closed
+01796	d216393e:1266 seq=1264	# set for the 174 ported entries, and it stays the authority for those - this
+01797	d216393e:1266 seq=1264	# generator must never widen it (the map's sha256 travels into
+01798	d216393e:1266 seq=1264	# `_meta.map_sha256` and every ported name is validated against it). GDR-28 point
+01799	d216393e:1266 seq=1264	# 4 requires an added entry to be named by the same rule as a ported one, and it
+01800	d216393e:1266 seq=1264	# spells out the channel restriction and the `update_` ban; it does not say
+01801	d216393e:1266 seq=1264	# whether the closed set binds added names too. The decision taken here (recorded
+01802	d216393e:1266 seq=1264	# in `docs/reports/REPORT-052-added-tools.md`, and reported as a gap in the spec
+01803	d216393e:1266 seq=1264	# wording) is: **the closed set keeps its meaning, and a new verb may only enter
+01804	d216393e:1266 seq=1264	# through an explicit record below**, so `--added` can print the exact set of
+01805	d216393e:1266 seq=1264	# verbs the contract ever invented. Two records exist because the decision maker
+01806	d216393e:1266 seq=1264	# fixed the two names of TASK-052 section 1:
+01807	d216393e:1266 seq=1264	#
+01808	d216393e:1266 seq=1264	#   * `build` - `project_build_csharp`. No existing verb says "compile the
+01809	d216393e:1266 seq=1264	#     project with an external toolchain": `run`/`execute` name a script or a
+01810	d216393e:1266 seq=1264	#     scenario, `export` names a Godot export preset;
+01811	d216393e:1266 seq=1264	#   * `write` - `project_write_text_file`. `create` would claim the file is new
+01812	d216393e:1266 seq=1264	#     (it may overwrite), `edit` names a change to an existing file, `set` names
+01813	d216393e:1266 seq=1264	#     a *setting* (`project_set_setting` is the sibling this tool points callers
+01814	d216393e:1266 seq=1264	#     to for `project.godot`), and `save` names the engine's save_* writers.
+01815	d216393e:1266 seq=1264	#     `write` is the verb the contract wording itself uses ("Write a project text
+01816	d216393e:1266 seq=1264	#     file").
+01817	9d3e21df:536 seq=534	
+01818	9d3e21df:536 seq=534	        description, desc_overridden = apply_override(DESCRIPTION_OVERRIDES, entry["old_name"],
+01819	9d3e21df:536 seq=534	                                                     tool["description"], overrides_used, "description")
+01820	9d3e21df:536 seq=534	        schema, schema_overridden = apply_override(SCHEMA_OVERRIDES, entry["old_name"],
+01821	9d3e21df:536 seq=534	                                                  tool["inputSchema"], overrides_used, "inputSchema")
+01822	9d3e21df:536 seq=534	
+01823	9d3e21df:536 seq=534	        # The no-override case must be a byte-exact carry over at the object
+01824	9d3e21df:536 seq=534	        # level; the assertion is what keeps the promise from section 2 honest.
+01825	9d3e21df:536 seq=534	        if not desc_overridden and canonical(description) != canonical(tool["description"]):
+01826	9d3e21df:536 seq=534	            sys.exit("FATAL: description of %s changed without an explicit override" % entry["old_name"])
+01827	9d3e21df:536 seq=534	        if not schema_overridden and canonical(schema) != canonical(tool["inputSchema"]):
+01828	9d3e21df:536 seq=534	            sys.exit("FATAL: inputSchema of %s changed without an explicit override" % entry["old_name"])
+01829	9d3e21df:536 seq=534	        # v1.2: an *append* override may only add one discriminator sentence, so
+01830	9d3e21df:536 seq=534	        # the original wording can never be silently dropped. v1.4 adds the
+01831	9d3e21df:536 seq=534	        # explicit `mode: "replace"` escape hatch for text that is factually
+01832	9d3e21df:536 seq=534	        # wrong; it is refused unless the record's reason quotes the text it
+01833	9d3e21df:536 seq=534	        # replaces, so a replacement cannot be a silent edit either.
+01834	9d3e21df:536 seq=534	        mode = DESCRIPTION_OVERRIDES.get(entry["old_name"], {}).get("mode", "append") if desc_overridden else "append"
+01835	9d3e21df:536 seq=534	        if desc_overridden and mode == "append" and not str(description).startswith(str(tool["description"]) + " "):
+01836	9d3e21df:536 seq=534	            sys.exit("FATAL: description override of %s is not append-only (original wording lost)"
+01837	9d3e21df:536 seq=534	                     % entry["old_name"])
+01838	9d3e21df:536 seq=534	        if desc_overridden and mode == "replace":
+01839	9d3e21df:536 seq=534	            original = str(tool["description"])
+01840	9d3e21df:536 seq=534	            reason = str(DESCRIPTION_OVERRIDES[entry["old_name"]]["reason"])
+01841	9d3e21df:536 seq=534	            if original not in reason:
+01842	9d3e21df:536 seq=534	                sys.exit("FATAL: replacing description override of %s must quote the text it replaces in "
+01843	9d3e21df:536 seq=534	                         "'reason' (original wording would be lost from the record)"
+01844	9d3e21df:536 seq=534	                         % entry["old_name"])
+01845	9d3e21df:536 seq=534	        # v1.5: a schema override is a whole-object replacement, and the one thing
+01846	9d3e21df:536 seq=534	        # it can silently drop is a `required` member. The record must therefore
+01847	9d3e21df:536 seq=534	        # name what it removes, verbatim, or the contract's old obligation is gone
+01848	9d3e21df:536 seq=534	        # with no trace beyond "a schema override fired".
+01849	9d3e21df:536 seq=534	        if schema_overridden:
+01850	9d3e21df:536 seq=534	            record = SCHEMA_OVERRIDES[entry["old_name"]]
+01851	9d3e21df:536 seq=534	            if record.get("mode") != "replace":
+01852	9d3e21df:536 seq=534	                sys.exit("FATAL: schema override of %s must carry \"mode\": \"replace\" (a schema is "
+01853	d216393e:167 seq=165	        for chunk in iter(lambda: handle.read(65536), b""):
+01854	d216393e:167 seq=165	            digest.update(chunk)
+01855	d216393e:167 seq=165	    return digest.hexdigest()
+01856	d216393e:167 seq=165	
+01857	d216393e:167 seq=165	
+01858	d216393e:167 seq=165	def parse_tool_name(name):
+01859	d216393e:167 seq=165	    """Isomorphic to MCPToolRegistry::parse_tool_name (tool_registry.cpp)."""
+01860	d216393e:167 seq=165	    for channel in CHANNELS:
+01861	d216393e:167 seq=165	        prefix = channel + "_"
+01862	d216393e:167 seq=165	        if not name.startswith(prefix):
+01863	d216393e:167 seq=165	            continue
+01864	d216393e:167 seq=165	        rest = name[len(prefix):]
+01865	d216393e:167 seq=165	        if not rest:
+01866	d216393e:167 seq=165	            return None
+01867	d216393e:167 seq=165	        if not all((("a" <= c <= "z") or ("0" <= c <= "9") or c == "_") for c in rest):
+01868	d216393e:167 seq=165	            return None
+01869	d216393e:167 seq=165	        # `editor_get` is legal: the object segment is not required (D-E4).
+01870	d216393e:167 seq=165	        verb = rest.split("_", 1)[0]
+01871	d216393e:167 seq=165	        return channel, verb
+01872	d216393e:167 seq=165	    return None
+01873	d216393e:167 seq=165	
+01874	d216393e:167 seq=165	
+01875	d216393e:167 seq=165	def validate_renamed(entry, closed_set):
+01876	d216393e:167 seq=165	    """GDR-16 L1..L4 checks for one map entry. Returns None or a reason."""
+01877	d216393e:167 seq=165	    name = entry["new_name"]
+01878	d216393e:167 seq=165	    if "update_" in name:
+01879	d216393e:167 seq=165	        return "L4 banned 'update_': %s" % name
+01880	d216393e:167 seq=165	    if not L1_PATTERN.match(name):
+01881	d216393e:167 seq=165	        return "L1 pattern mismatch: %s" % name
+01882	d216393e:167 seq=165	    parsed = parse_tool_name(name)
+01883	d216393e:167 seq=165	    if parsed is None:
+01884	d216393e:167 seq=165	        return "L1 parse failure: %s" % name
+01885	d216393e:167 seq=165	    channel, verb = parsed
+01886	d216393e:167 seq=165	    if verb not in closed_set:
+01887	d216393e:167 seq=165	        return "L2 verb '%s' outside the closed set: %s" % (verb, name)
+01888	d216393e:167 seq=165	    if verb != entry.get("verb"):
+01889	d216393e:167 seq=165	        return "L3 declared verb '%s' != parsed '%s': %s" % (entry.get("verb"), verb, name)
+01890	d216393e:167 seq=165	    if channel != entry.get("channel"):
+01891	d216393e:167 seq=165	        return "L3 declared channel '%s' != parsed '%s': %s" % (entry.get("channel"), channel, name)
+01892	d216393e:167 seq=165	    return None
+01893	d216393e:167 seq=165	
+01894	d216393e:167 seq=165	
+01895	d216393e:167 seq=165	def canonical(value):
+01896	d216393e:167 seq=165	    return json.dumps(value, ensure_ascii=False, sort_keys=True)
+01897	d216393e:167 seq=165	
+01898	d216393e:167 seq=165	
+01899	d216393e:167 seq=165	def validate_added(entry, closed_set):
+01900	d216393e:167 seq=165	    """GDR-28 point 4 naming lint for one `ADDED_TOOLS` record.
+01901	d216393e:167 seq=165	
+01902	d216393e:167 seq=165	    There is no `tool-rename-map.json` row for a new tool, so the two facts a
+01903	d216393e:167 seq=165	    ported entry is cross-checked against the map (`channel`, `verb`) are
+01904	d216393e:167 seq=165	    cross-checked against the record's own declaration here: the name is parsed
+01905	d216393e:167 seq=165	    with the isomorphic `parse_tool_name`, and the channel and the verb the name
+01906	d216393e:167 seq=165	    spells out have to be the ones the record declares. A verb outside the map's
+01907	d216393e:167 seq=165	    closed set is accepted only when `ADDED_VERB_EXTENSIONS` carries a record for
+01908	d216393e:167 seq=165	    it (see the table's comment). Returns None or a reason."""
+01909	d216393e:167 seq=165	    for field in ("name", "channel", "verb", "description", "inputSchema", "reason"):
+01910	d216393e:167 seq=165	        if field not in entry:
+01911	d216393e:167 seq=165	            return "missing field '%s'" % field
+01912	d216393e:167 seq=165	    if not str(entry["name"]).strip():
+01913	d216393e:167 seq=165	        return "empty name"
+01914	d216393e:167 seq=165	    if not str(entry["reason"]).strip():
+01915	d216393e:167 seq=165	        return "empty reason (an added entry has to say why it exists)"
+01916	d216393e:167 seq=165	    name = entry["name"]
+01917	d216393e:167 seq=165	    if "update_" in name:
+01918	d216393e:167 seq=165	        return "L4 banned 'update_': %s" % name
+01919	d216393e:167 seq=165	    if not L1_PATTERN.match(name):
+01920	d216393e:167 seq=165	        return "L1 pattern mismatch: %s" % name
+01921	d216393e:167 seq=165	    parsed = parse_tool_name(name)
+01922	d216393e:167 seq=165	    if parsed is None:
+01923	d216393e:167 seq=165	        return "L1 parse failure: %s" % name
+01924	d216393e:167 seq=165	    channel, verb = parsed
+01925	d216393e:167 seq=165	    if channel != entry["channel"]:
+01926	d216393e:167 seq=165	        return "declared channel '%s' != parsed '%s': %s" % (entry["channel"], channel, name)
+01927	d216393e:167 seq=165	    if verb != entry["verb"]:
+01928	d216393e:167 seq=165	        return "declared verb '%s' != parsed '%s': %s" % (entry["verb"], verb, name)
+01929	d216393e:167 seq=165	    if verb not in closed_set and verb not in ADDED_VERB_EXTENSIONS:
+01930	d216393e:167 seq=165	        return "L2 verb '%s' is outside the closed set and has no ADDED_VERB_EXTENSIONS record: %s" % (verb, name)
+01931	d216393e:167 seq=165	    if not isinstance(entry["description"], str) or not entry["description"].strip():
+01932	d216393e:167 seq=165	        return "description must be a non-empty string"
+01933	d216393e:167 seq=165	    if not isinstance(entry["inputSchema"], dict):
+01934	d216393e:167 seq=165	        return "inputSchema must be a JSON object"
+01935	d216393e:167 seq=165	    return None
+01936	d216393e:167 seq=165	
+01937	a98131de:120 seq=118	    if len(merged) != 1:
+01938	a98131de:120 seq=118	        sys.exit("FATAL: expected 1 merge_into entry (GDR-17), got %d" % len(merged))
+01939	a98131de:120 seq=118	
+01940	a98131de:120 seq=118	    keep_names = set(entry["old_name"] for entry in entries)
+01941	a98131de:120 seq=118	    for item in merged:
+01942	a98131de:120 seq=118	        keep = item["merged_into"]
+01943	a98131de:120 seq=118	        if keep not in keep_names:
+01944	a98131de:120 seq=118	            sys.exit("FATAL: merge keep '%s' is not an old_name in the map" % keep)
+01945	a98131de:120 seq=118	        if keep in excluded:
+01946	a98131de:120 seq=118	            sys.exit("FATAL: merge keep '%s' is itself excluded" % keep)
+01947	a98131de:120 seq=118	        # self check 4: the merged entry and its keeper share one new name, so
+01948	a98131de:120 seq=118	        # deduplication cannot create a duplicate.
+01949	a98131de:120 seq=118	        if by_old_name[keep]["new_name"] != item["new_name"]:
+01950	a98131de:120 seq=118	            sys.exit("FATAL: merge %s -> %s but keeper %s -> %s"
+01951	a98131de:120 seq=118	                     % (item["old_name"], item["new_name"], keep, by_old_name[keep]["new_name"]))
+01952	a98131de:120 seq=118	
+01953	a98131de:120 seq=118	    excluded_set = set(excluded)
+01954	a98131de:120 seq=118	    merged_set = set(item["old_name"] for item in merged)
+01955	a98131de:120 seq=118	    dropped = excluded_set | merged_set
+01956	a98131de:120 seq=118	
+01957	a98131de:120 seq=118	    # --- self check 2: every emitted new name passes the isomorphic lint -----
+01958	a98131de:120 seq=118	    for entry in entries:
+01959	a98131de:120 seq=118	        if entry["old_name"] in dropped:
+01960	a98131de:120 seq=118	            continue
+01961	a98131de:120 seq=118	        reason = validate_renamed(entry, closed_set)
+01962	a98131de:120 seq=118	        if reason is not None:
+01963	a98131de:120 seq=118	            sys.exit("FATAL: %s" % reason)
+01964	a98131de:120 seq=118	
+01965	a98131de:120 seq=118	    # --- transform: name only, description / inputSchema verbatim ------------
+01966	a98131de:120 seq=118	    overrides_used = []
+01967	a98131de:120 seq=118	    new_tools = []
+01968	a98131de:120 seq=118	    name_sources = []
+01969	a98131de:120 seq=118	    for tool in old_contract["result"]["tools"]:
+01970	a98131de:120 seq=118	        entry = by_old_name[tool["name"]]
+01971	a98131de:120 seq=118	        if entry["old_name"] in dropped:
+01972	a98131de:120 seq=118	            continue
+01973	a98131de:120 seq=118	
+01974	a98131de:120 seq=118	        new_tool = dict(tool)  # keeps the old key order
+01975	a98131de:120 seq=118	        new_tool["name"] = entry["new_name"]
+01976	a98131de:120 seq=118	
+01977	a98131de:120 seq=118	        description, desc_overridden = apply_override(DESCRIPTION_OVERRIDES, entry["old_name"],
+01978	a98131de:120 seq=118	                                                     tool["description"], overrides_used, "description")
+01979	a98131de:120 seq=118	        schema, schema_overridden = apply_override(SCHEMA_OVERRIDES, entry["old_name"],
+01980	a98131de:125 seq=123	                                                  tool["inputSchema"], overrides_used, "inputSchema")
+01981	a98131de:125 seq=123	
+01982	a98131de:125 seq=123	        # The no-override case must be a byte-exact carry over at the object
+01983	a98131de:125 seq=123	        # level; the assertion is what keeps the promise from section 2 honest.
+01984	a98131de:125 seq=123	        if not desc_overridden and canonical(description) != canonical(tool["description"]):
+01985	a98131de:125 seq=123	            sys.exit("FATAL: description of %s changed without an explicit override" % entry["old_name"])
+01986	a98131de:125 seq=123	        if not schema_overridden and canonical(schema) != canonical(tool["inputSchema"]):
+01987	a98131de:125 seq=123	            sys.exit("FATAL: inputSchema of %s changed without an explicit override" % entry["old_name"])
+01988	a98131de:125 seq=123	        # v1.2: an *append* override may only add one discriminator sentence, so
+01989	a98131de:125 seq=123	        # the original wording can never be silently dropped. v1.4 adds the
+01990	a98131de:125 seq=123	        # explicit `mode: "replace"` escape hatch for text that is factually
+01991	a98131de:125 seq=123	        # wrong; it is refused unless the record's reason quotes the text it
+01992	a98131de:125 seq=123	        # replaces, so a replacement cannot be a silent edit either.
+01993	a98131de:125 seq=123	        mode = DESCRIPTION_OVERRIDES.get(entry["old_name"], {}).get("mode", "append") if desc_overridden else "append"
+01994	a98131de:125 seq=123	        if desc_overridden and mode == "append" and not str(description).startswith(str(tool["description"]) + " "):
+01995	a98131de:125 seq=123	            sys.exit("FATAL: description override of %s is not append-only (original wording lost)"
+01996	a98131de:125 seq=123	                     % entry["old_name"])
+01997	a98131de:125 seq=123	        if desc_overridden and mode == "replace":
+01998	a98131de:125 seq=123	            original = str(tool["description"])
+01999	a98131de:125 seq=123	            reason = str(DESCRIPTION_OVERRIDES[entry["old_name"]]["reason"])
+02000	a98131de:125 seq=123	            if original not in reason:
+02001	a98131de:125 seq=123	                sys.exit("FATAL: replacing description override of %s must quote the text it replaces in "
+02002	a98131de:125 seq=123	                         "'reason' (original wording would be lost from the record)"
+02003	a98131de:125 seq=123	                         % entry["old_name"])
+02004	a98131de:125 seq=123	        # v1.5: a schema override is a whole-object replacement, and the one thing
+02005	bd7065ac:213 seq=211	    record = table.get(old_name)
+02006	bd7065ac:213 seq=211	    if record is None:
+02007	bd7065ac:213 seq=211	        return fallback, False
+02008	bd7065ac:213 seq=211	    if "reason" not in record or "value" not in record:
+02009	bd7065ac:213 seq=211	        raise SystemExit("override for %s must carry 'reason' and 'value'" % old_name)
+02010	bd7065ac:213 seq=211	    if not str(record["reason"]).strip():
+02011	bd7065ac:213 seq=211	        raise SystemExit("override for %s carries an empty 'reason'" % old_name)
+02012	bd7065ac:213 seq=211	    mode = record.get("mode", "append")
+02013	bd7065ac:213 seq=211	    if mode not in ("append", "replace"):
+02014	bd7065ac:213 seq=211	        raise SystemExit("override for %s carries an unknown mode %r" % (old_name, mode))
+02015	bd7065ac:213 seq=211	    used.append({"kind": kind, "old_name": old_name, "mode": mode, "reason": record["reason"]})
+02016	bd7065ac:213 seq=211	    return record["value"], True
+02017	bd7065ac:213 seq=211	
+02018	bd7065ac:213 seq=211	
+02019	bd7065ac:213 seq=211	def main():
+02020	bd7065ac:213 seq=211	    parser = argparse.ArgumentParser(description="Generate the renamed tools/list contract.")
+02021	bd7065ac:213 seq=211	    parser.add_argument("--old-contract", default=DEFAULT_OLD_CONTRACT)
+02022	bd7065ac:213 seq=211	    parser.add_argument("--map", default=DEFAULT_MAP)
+02023	bd7065ac:213 seq=211	    parser.add_argument("--out", default=DEFAULT_OUT)
+02024	bd7065ac:213 seq=211	    args = parser.parse_args()
+02025	bd7065ac:213 seq=211	
+02026	bd7065ac:213 seq=211	    old_path = os.path.abspath(args.old_contract)
+02027	bd7065ac:213 seq=211	    map_path = os.path.abspath(args.map)
+02028	bd7065ac:213 seq=211	    out_path = os.path.abspath(args.out)
+02029	bd7065ac:213 seq=211	
+02030	bd7065ac:213 seq=211	    for path, label in ((old_path, "old contract"), (map_path, "rename map")):
+02031	bd7065ac:213 seq=211	        if not os.path.isfile(path):
+02032	bd7065ac:213 seq=211	            sys.exit("FATAL: %s not found: %s" % (label, path))
+02033	bd7065ac:213 seq=211	
+02034	bd7065ac:213 seq=211	    old_sha = sha256_file(old_path)
+02035	bd7065ac:208 seq=206	    map_sha = sha256_file(map_path)
+02036	bd7065ac:208 seq=206	
+02037	bd7065ac:208 seq=206	    with open(old_path, "r", encoding="utf-8") as handle:
+02038	bd7065ac:208 seq=206	        old_contract = json.load(handle)
+02039	bd7065ac:208 seq=206	    with open(map_path, "r", encoding="utf-8") as handle:
+02040	bd7065ac:208 seq=206	        rename_map = json.load(handle)
+02041	bd7065ac:208 seq=206	
+02042	bd7065ac:208 seq=206	    if old_sha != OLD_CONTRACT_SHA256:
+02043	bd7065ac:208 seq=206	        sys.exit("FATAL: old contract sha256 %s != the frozen %s" % (old_sha, OLD_CONTRACT_SHA256))
+02044	bd7065ac:208 seq=206	
+02045	bd7065ac:208 seq=206	    # --- self check 1: map vs old contract are the same 174 tool names -------
+02046	bd7065ac:208 seq=206	    entries = rename_map["tools"]
+02047	bd7065ac:208 seq=206	    total = rename_map.get("total")
+02048	bd7065ac:208 seq=206	    if not (len(entries) == total == 174):
+02049	bd7065ac:208 seq=206	        sys.exit("FATAL: map total=%s but %d entries" % (total, len(entries)))
+02050	bd7065ac:208 seq=206	
+02051	bd7065ac:208 seq=206	    old_names = [tool["name"] for tool in old_contract["result"]["tools"]]
+02052	bd7065ac:208 seq=206	    entry_names = [entry["old_name"] for entry in entries]
+02053	bd7065ac:208 seq=206	    if len(set(old_names)) != len(old_names):
+02054	bd7065ac:208 seq=206	        sys.exit("FATAL: the old contract has duplicate tool names")
+02055	bd7065ac:208 seq=206	    if set(old_names) != set(entry_names):
+02056	bd7065ac:208 seq=206	        missing = sorted(set(old_names) - set(entry_names))
+02057	bd7065ac:208 seq=206	        extra = sorted(set(entry_names) - set(old_names))
+02058	bd7065ac:208 seq=206	        sys.exit("FATAL: map does not cover the old contract: missing=%s extra=%s" % (missing, extra))
+02059	bd7065ac:208 seq=206	
+02060	bd7065ac:208 seq=206	    by_old_name = {entry["old_name"]: entry for entry in entries}
+02061	bd7065ac:208 seq=206	    closed_set = set(rename_map["convention"]["verb_closed_set"])
+02062	bd7065ac:208 seq=206	
+02063	bd7065ac:208 seq=206	    # --- D-4: disposition is an enum, and a merge is named by merge_target ----
+02064	bd7065ac:208 seq=206	    bad_enum = sorted({entry.get("disposition") for entry in entries} - set(DISPOSITION_ENUM))
+02065	bd7065ac:208 seq=206	    if bad_enum:
+02066	bd7065ac:208 seq=206	        sys.exit("FATAL: disposition value(s) outside the enum: %s" % bad_enum)
+02067	bd7065ac:208 seq=206	    legacy = [entry["old_name"] for entry in entries
+02068	bd7065ac:208 seq=206	              if str(entry.get("disposition", "")).startswith("merge_into:")]
+02069	bd7065ac:208 seq=206	    if legacy:
+02070	bd7065ac:208 seq=206	        sys.exit("FATAL: the v1.0 inline 'merge_into:<old_name>' form survives on %s" % legacy)
+02071	bd7065ac:208 seq=206	
+02072	bd7065ac:208 seq=206	    # --- disposition split ---------------------------------------------------
+02073	bd7065ac:208 seq=206	    excluded = [entry["old_name"] for entry in entries
+02074	bd7065ac:208 seq=206	                if entry.get("disposition") == "unregister_until_implemented"]
+02075	bd7065ac:208 seq=206	    merged = []
+02076	bd7065ac:208 seq=206	    for entry in entries:
+02077	bd7065ac:208 seq=206	        if entry.get("disposition") != "merge_into":
+02078	bd7065ac:208 seq=206	            continue
+02079	bd7065ac:208 seq=206	        target = entry.get("merge_target")
+02080	bd7065ac:208 seq=206	        if not target:
+02081	bd7065ac:208 seq=206	            sys.exit("FATAL: merge_into entry %s carries no merge_target" % entry["old_name"])
+02082	bd7065ac:208 seq=206	        merged.append({
+02083	bd7065ac:208 seq=206	            "old_name": entry["old_name"],
+02084	bd7065ac:208 seq=206	            "new_name": entry["new_name"],
+02085	bd7065ac:208 seq=206	            "merged_into": target,
+02086	bd7065ac:208 seq=206	        })
+02087	bd7065ac:208 seq=206	    for entry in entries:
+02088	bd7065ac:208 seq=206	        if entry.get("disposition") != "merge_into" and "merge_target" in entry:
+02089	bd7065ac:208 seq=206	            sys.exit("FATAL: merge_target on a non-merge entry: %s" % entry["old_name"])
+02090	a98131de:125 seq=123	        "map_sha256": map_sha,
+02091	a98131de:125 seq=123	        "tool_count_in": len(old_names),
+02092	a98131de:125 seq=123	        "count": len(new_tools),
+02093	a98131de:125 seq=123	        # v1.8 (GDR-28 point 1): the entries that did not come from the map. The
+02094	a98131de:125 seq=123	        # list is ordered exactly like the append, so `result.tools[-N:]` are
+02095	a98131de:125 seq=123	        # these names in this order; `added_count` is redundant with the list's
+02096	a98131de:125 seq=123	        # length on purpose (a consumer that only needs the arithmetic does not
+02097	a98131de:125 seq=123	        # have to trust a length).
+02098	a98131de:125 seq=123	        "added_count": len(added_names),
+02099	a98131de:125 seq=123	        "added_tools": added_names,
+02100	a98131de:125 seq=123	        # D-1 (TASK-003 section 1.1, D49): `result.tools` is a *set* for the
+02101	a98131de:125 seq=123	        # consumers; the order is explicitly outside the contract. The engine is
+02102	a98131de:125 seq=123	        # only required to be deterministic within one build (a second
+02103	a98131de:125 seq=123	        # `tools/list` on the same registry is byte-identical), not to reproduce
+02104	a98131de:125 seq=123	        # the order below - so no implementation may ever be "fixed" to match it.
+02105	a98131de:125 seq=123	        "order_normative": False,
+02106	a98131de:125 seq=123	        "excluded": excluded,
+02107	a98131de:125 seq=123	        "merged": merged,
+02108	a98131de:125 seq=123	        "generator_version": GENERATOR_VERSION,
+02109	a98131de:125 seq=123	        "generated_by": GENERATED_BY,
+02110	a98131de:125 seq=123	    }
+02111	a98131de:125 seq=123	    if overrides_used:
+02112	a98131de:125 seq=123	        meta["overrides"] = overrides_used
+02113	a98131de:125 seq=123	
+02114	a98131de:125 seq=123	    output = {
+02115	a98131de:125 seq=123	        "id": old_contract["id"],
+02116	a98131de:125 seq=123	        "jsonrpc": old_contract["jsonrpc"],
+02117	a98131de:125 seq=123	        "result": {"tools": new_tools},
+02118	a98131de:125 seq=123	        "_meta": meta,
+02119	a98131de:125 seq=123	    }
+02120	a98131de:125 seq=123	
+02121	a98131de:125 seq=123	    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+02122	a98131de:125 seq=123	    with open(out_path, "w", encoding="utf-8", newline="\n") as handle:
+02123	a98131de:125 seq=123	        json.dump(output, handle, ensure_ascii=False, indent=2)
+02124	a98131de:125 seq=123	        handle.write("\n")
+02125	a98131de:125 seq=123	
+02126	a98131de:125 seq=123	    out_sha = sha256_file(out_path)
+02127	a98131de:125 seq=123	
+02128	a98131de:125 seq=123	    print("gen_renamed_contract: input tools = %d" % len(old_names))
+02129	a98131de:125 seq=123	    print("gen_renamed_contract: output tools = %d" % len(new_tools))
+02130	a98131de:125 seq=123	    print("gen_renamed_contract: order_normative = %s (order is not part of the contract)"
+02131	a98131de:125 seq=123	          % json.dumps(output["_meta"]["order_normative"]))
+02132	a98131de:125 seq=123	    print("gen_renamed_contract: merged = %d (%s)" % (
+02133	a98131de:125 seq=123	        len(merged), ", ".join("%s -> %s" % (m["old_name"], m["merged_into"]) for m in merged)))
+02134	a98131de:125 seq=123	    print("gen_renamed_contract: unregister = %d (%s)" % (len(excluded), ", ".join(excluded)))
+02135	a98131de:125 seq=123	    print("gen_renamed_contract: added = %d (%s)" % (len(added_names), ", ".join(added_names)))
+02136	a98131de:125 seq=123	    for record in ADDED_TOOLS:
+02137	a98131de:125 seq=123	        print("gen_renamed_contract: added[%s] verb=%s reason=%s"
+02138	a98131de:125 seq=123	              % (record["name"], record["verb"], record["reason"]))
+02139	a98131de:125 seq=123	    print("gen_renamed_contract: added verb extensions used = %s"
+02140	a98131de:125 seq=123	          % (", ".join(sorted(added_verbs_used)) if added_verbs_used else "(none)"))
+02141	a98131de:125 seq=123	    print("gen_renamed_contract: overrides = %d (%s)"
+02142	a98131de:125 seq=123	          % (len(overrides_used), ", ".join("%s/%s:%s" % (record["kind"], record["old_name"], record["mode"]) for record in overrides_used)))
+02143	a98131de:125 seq=123	    print("gen_renamed_contract: old contract sha256 = %s" % old_sha)
+02144	a98131de:125 seq=123	    print("gen_renamed_contract: rename map sha256 = %s" % map_sha)
+02145	a98131de:125 seq=123	    print("gen_renamed_contract: output sha256 = %s" % out_sha)
+02146	a98131de:125 seq=123	    print("gen_renamed_contract: self-checks = OK (lint %d/%d, unique %d/%d, disposition enum OK)"
+02147	a98131de:125 seq=123	          % (len(new_tools), len(new_tools), len(new_tools), len(new_tools)))
+02148	a98131de:125 seq=123	    print("gen_renamed_contract: wrote %s" % out_path)
+02149	a98131de:125 seq=123	    return 0
+02150	a98131de:125 seq=123	
+02151	a98131de:125 seq=123	
+02152	a98131de:125 seq=123	if __name__ == "__main__":
+02153	a98131de:125 seq=123	    sys.exit(main())
+02154	bd7065ac:116 seq=114	            original = str(tool["description"])
+02155	bd7065ac:116 seq=114	            reason = str(DESCRIPTION_OVERRIDES[entry["old_name"]]["reason"])
+02156	bd7065ac:116 seq=114	            if original not in reason:
+02157	bd7065ac:116 seq=114	                sys.exit("FATAL: replacing description override of %s must quote the text it replaces in "
+02158	bd7065ac:116 seq=114	                         "'reason' (original wording would be lost from the record)"
+02159	bd7065ac:116 seq=114	                         % entry["old_name"])
+02160	bd7065ac:116 seq=114	        # v1.5: a schema override is a whole-object replacement, and the one thing
+02161	bd7065ac:116 seq=114	        # it can silently drop is a `required` member. The record must therefore
+02162	bd7065ac:116 seq=114	        # name what it removes, verbatim, or the contract's old obligation is gone
+02163	bd7065ac:116 seq=114	        # with no trace beyond "a schema override fired".
+02164	bd7065ac:116 seq=114	        if schema_overridden:
+02165	bd7065ac:116 seq=114	            record = SCHEMA_OVERRIDES[entry["old_name"]]
+02166	bd7065ac:116 seq=114	            if record.get("mode") != "replace":
+02167	bd7065ac:116 seq=114	                sys.exit("FATAL: schema override of %s must carry \"mode\": \"replace\" (a schema is "
+02168	bd7065ac:116 seq=114	                         "replaced, there is nothing to append to)" % entry["old_name"])
+02169	bd7065ac:116 seq=114	            removed_required = canonical(tool["inputSchema"].get("required", []))
+02170	bd7065ac:116 seq=114	            if removed_required not in str(record["reason"]):
+02171	bd7065ac:116 seq=114	                sys.exit("FATAL: schema override of %s must quote the 'required' member it removes "
+02172	bd7065ac:116 seq=114	                         "verbatim in 'reason' (expected %s)"
+02173	bd7065ac:116 seq=114	                         % (entry["old_name"], removed_required))
+02174	bd7065ac:116 seq=114	
+02175	bd7065ac:116 seq=114	        new_tool["description"] = description
+02176	bd7065ac:116 seq=114	        new_tool["inputSchema"] = schema
+02177	bd7065ac:116 seq=114	        new_tools.append(new_tool)
+02178	bd7065ac:116 seq=114	        name_sources.append(entry["new_name"])
+02179	bd7065ac:116 seq=114	
+02180	bd7065ac:116 seq=114	    # --- v1.8 (GDR-28 point 1): deterministic append of the new tools ---------
+02181	bd7065ac:116 seq=114	    # After the rename + override pass, never before: an added entry is not a
+02182	bd7065ac:116 seq=114	    # carried-over entry with a changed field, and the two name lists are proved
+02183	bd7065ac:116 seq=114	    # disjoint in both directions below. The output key order is the ported
+02184	bd7065ac:116 seq=114	    # entries' key order (`description`, `inputSchema`, `name`, which is the old
+02185	bd7065ac:116 seq=114	    # contract's own order with `name` replaced), so the file stays diffable.
+02186	bd7065ac:116 seq=114	    ported_names = set(name_sources)
+02187	bd7065ac:116 seq=114	    map_new_names = set(entry["new_name"] for entry in entries)
+02188	bd7065ac:116 seq=114	    added_names = []
+02189	bd7065ac:116 seq=114	    added_verbs_used = set()
+02190	bd7065ac:116 seq=114	    for record in ADDED_TOOLS:
+02191	bd7065ac:116 seq=114	        reason = validate_added(record, closed_set)
+02192	bd7065ac:116 seq=114	        if reason is not None:
+02193	bd7065ac:116 seq=114	            sys.exit("FATAL: added tool: %s" % reason)
+02194	bd7065ac:116 seq=114	        name = record["name"]
+02195	bd7065ac:116 seq=114	        if name in ported_names:
+02196	bd7065ac:116 seq=114	            sys.exit("FATAL: added tool %s has the same name as a ported tool" % name)
+02197	bd7065ac:116 seq=114	        if name in map_new_names:
+02198	bd7065ac:116 seq=114	            sys.exit("FATAL: added tool %s collides with a rename-map new_name" % name)
+02199	bd7065ac:116 seq=114	        if name in added_names:
+02200	bd7065ac:116 seq=114	            sys.exit("FATAL: added tool %s is declared twice" % name)
+02201	bd7065ac:116 seq=114	        if record["verb"] not in closed_set:
+02202	bd7065ac:116 seq=114	            added_verbs_used.add(record["verb"])
+02203	bd7065ac:116 seq=114	        added_names.append(name)
+02204	bd7065ac:116 seq=114	        new_tools.append({
+02205	bd7065ac:116 seq=114	            "description": record["description"],
+02206	bd7065ac:116 seq=114	            "inputSchema": record["inputSchema"],
+02207	bd7065ac:116 seq=114	            "name": name,
+02208	bd7065ac:116 seq=114	        })
+02209	bd7065ac:116 seq=114	        name_sources.append(name)
+02210	-		<<<MISSING>>>
+02211	-		<<<MISSING>>>
+02212	-		<<<MISSING>>>
+02213	-		<<<MISSING>>>
+02214	-		<<<MISSING>>>
+02215	-		<<<MISSING>>>
+02216	-		<<<MISSING>>>
+02217	-		<<<MISSING>>>
+02218	-		<<<MISSING>>>
+02219	-		<<<MISSING>>>
+02220	-		<<<MISSING>>>
+02221	-		<<<MISSING>>>
+02222	-		<<<MISSING>>>
+02223	-		<<<MISSING>>>
+02224	-		<<<MISSING>>>
+02225	-		<<<MISSING>>>
+02226	-		<<<MISSING>>>
+02227	-		<<<MISSING>>>
+02228	-		<<<MISSING>>>
+02229	-		<<<MISSING>>>
+02230	-		<<<MISSING>>>
+02231	-		<<<MISSING>>>
+02232	-		<<<MISSING>>>
+02233	-		<<<MISSING>>>
+02234	-		<<<MISSING>>>
+02235	-		<<<MISSING>>>
+02236	-		<<<MISSING>>>
+02237	-		<<<MISSING>>>
+02238	-		<<<MISSING>>>
+02239	-		<<<MISSING>>>
+02240	bd7065ac:202 seq=200	        sys.exit("FATAL: duplicate new names in the output: %s" % duplicates)
+02241	bd7065ac:202 seq=200	
+02242	bd7065ac:202 seq=200	    meta = {
+02243	bd7065ac:202 seq=200	        "generated_from": old_path,
+02244	bd7065ac:202 seq=200	        "generated_from_sha256": old_sha,
+02245	bd7065ac:202 seq=200	        "map_path": map_path,
+02246	bd7065ac:202 seq=200	        "map_sha256": map_sha,
+02247	bd7065ac:202 seq=200	        "tool_count_in": len(old_names),
+02248	bd7065ac:202 seq=200	        "count": len(new_tools),
+02249	bd7065ac:202 seq=200	        # v1.8 (GDR-28 point 1): the entries that did not come from the map. The
+02250	bd7065ac:202 seq=200	        # list is ordered exactly like the append, so `result.tools[-N:]` are
+02251	bd7065ac:202 seq=200	        # these names in this order; `added_count` is redundant with the list's
+02252	bd7065ac:202 seq=200	        # length on purpose (a consumer that only needs the arithmetic does not
+02253	bd7065ac:202 seq=200	        # have to trust a length).
+02254	bd7065ac:202 seq=200	        "added_count": len(added_names),
+02255	bd7065ac:202 seq=200	        "added_tools": added_names,
+02256	bd7065ac:202 seq=200	        # D-1 (TASK-003 section 1.1, D49): `result.tools` is a *set* for the
+02257	bd7065ac:202 seq=200	        # consumers; the order is explicitly outside the contract. The engine is
+02258	bd7065ac:202 seq=200	        # only required to be deterministic within one build (a second
+02259	bd7065ac:202 seq=200	        # `tools/list` on the same registry is byte-identical), not to reproduce
+02260	bd7065ac:202 seq=200	        # the order below - so no implementation may ever be "fixed" to match it.
+02261	bd7065ac:202 seq=200	        "order_normative": False,
+02262	bd7065ac:202 seq=200	        "excluded": excluded,
+02263	bd7065ac:202 seq=200	        "merged": merged,
+02264	bd7065ac:202 seq=200	        "generator_version": GENERATOR_VERSION,
+02265	bd7065ac:202 seq=200	        "generated_by": GENERATED_BY,
+02266	bd7065ac:202 seq=200	    }
+02267	bd7065ac:202 seq=200	    if overrides_used:
+02268	bd7065ac:202 seq=200	        meta["overrides"] = overrides_used
+02269	bd7065ac:202 seq=200	
+02270	bd7065ac:202 seq=200	    output = {
+02271	bd7065ac:202 seq=200	        "id": old_contract["id"],
+02272	bd7065ac:202 seq=200	        "jsonrpc": old_contract["jsonrpc"],
+02273	bd7065ac:202 seq=200	        "result": {"tools": new_tools},
+02274	bd7065ac:202 seq=200	        "_meta": meta,
+02275	bd7065ac:202 seq=200	    }
+02276	bd7065ac:202 seq=200	
+02277	bd7065ac:202 seq=200	    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+02278	bd7065ac:202 seq=200	    with open(out_path, "w", encoding="utf-8", newline="\n") as handle:
+02279	bd7065ac:202 seq=200	        json.dump(output, handle, ensure_ascii=False, indent=2)
+02280	bd7065ac:202 seq=200	        handle.write("\n")
+02281	bd7065ac:202 seq=200	
+02282	bd7065ac:202 seq=200	    out_sha = sha256_file(out_path)
+02283	bd7065ac:202 seq=200	
+02284	bd7065ac:202 seq=200	    print("gen_renamed_contract: input tools = %d" % len(old_names))
+02285	bd7065ac:202 seq=200	    print("gen_renamed_contract: output tools = %d" % len(new_tools))
+02286	bd7065ac:202 seq=200	    print("gen_renamed_contract: order_normative = %s (order is not part of the contract)"
+02287	bd7065ac:202 seq=200	          % json.dumps(output["_meta"]["order_normative"]))
+02288	bd7065ac:202 seq=200	    print("gen_renamed_contract: merged = %d (%s)" % (
+02289	bd7065ac:202 seq=200	        len(merged), ", ".join("%s -> %s" % (m["old_name"], m["merged_into"]) for m in merged)))
+02290	bd7065ac:202 seq=200	    print("gen_renamed_contract: unregister = %d (%s)" % (len(excluded), ", ".join(excluded)))
+02291	bd7065ac:202 seq=200	    print("gen_renamed_contract: added = %d (%s)" % (len(added_names), ", ".join(added_names)))
+02292	bd7065ac:202 seq=200	    for record in ADDED_TOOLS:
+02293	bd7065ac:202 seq=200	        print("gen_renamed_contract: added[%s] verb=%s reason=%s"
+02294	bd7065ac:202 seq=200	              % (record["name"], record["verb"], record["reason"]))
+02295	bd7065ac:202 seq=200	    print("gen_renamed_contract: added verb extensions used = %s"
+02296	bd7065ac:202 seq=200	          % (", ".join(sorted(added_verbs_used)) if added_verbs_used else "(none)"))
+02297	bd7065ac:202 seq=200	    print("gen_renamed_contract: overrides = %d (%s)"
+02298	bd7065ac:202 seq=200	          % (len(overrides_used), ", ".join("%s/%s:%s" % (record["kind"], record["old_name"], record["mode"]) for record in overrides_used)))
+02299	bd7065ac:202 seq=200	    print("gen_renamed_contract: old contract sha256 = %s" % old_sha)
+02300	bd7065ac:202 seq=200	    print("gen_renamed_contract: rename map sha256 = %s" % map_sha)
+02301	bd7065ac:202 seq=200	    print("gen_renamed_contract: output sha256 = %s" % out_sha)
+02302	bd7065ac:202 seq=200	    print("gen_renamed_contract: self-checks = OK (lint %d/%d, unique %d/%d, disposition enum OK)"
+02303	bd7065ac:202 seq=200	          % (len(new_tools), len(new_tools), len(new_tools), len(new_tools)))
+02304	bd7065ac:202 seq=200	    print("gen_renamed_contract: wrote %s" % out_path)
+02305	bd7065ac:202 seq=200	    return 0
+02306	bd7065ac:202 seq=200	
+02307	bd7065ac:202 seq=200	
+02308	bd7065ac:202 seq=200	if __name__ == "__main__":
+02309	bd7065ac:202 seq=200	    sys.exit(main())

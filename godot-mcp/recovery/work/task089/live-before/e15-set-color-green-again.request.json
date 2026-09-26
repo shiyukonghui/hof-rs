@@ -1,0 +1,1 @@
+﻿{"method":"tools/call","params":{"arguments":{"path":"Player","property":"color","value":{"g":0.9,"r":0.1,"b":0.1,"a":1}},"name":"editor_set_node_property"},"id":115,"jsonrpc":"2.0"}

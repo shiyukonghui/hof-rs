@@ -1,0 +1,1 @@
+﻿{"id":128,"jsonrpc":"2.0","result":{"content":[{"text":"{\"available\":true,\"count\":1,\"editor\":true,\"errors\":[\"  ERROR: res://main.tscn:1 - Parse Error: Expected '['.\"],\"in_process\":true,\"log_path\":\"user://logs/godot.log\",\"note\":\"\",\"pid\":72456,\"port\":9888,\"process\":\"editor\",\"source\":\"editor_log\"}","type":"text"}]}}

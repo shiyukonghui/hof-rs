@@ -1,0 +1,1 @@
+﻿{"method":"tools/call","params":{"arguments":{"path":"res://notes.txt","overwrite":true,"content":"MCP round-7 session text.\nSecond line.\nThird line.\n"},"name":"project_write_text_file"},"id":102,"jsonrpc":"2.0"}

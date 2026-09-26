@@ -1,0 +1,809 @@
+{
+  "capture_pairs": [
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0001_after.png",
+      "after_bytes": 12331,
+      "after_sha256": "F885CEED871CD96767EA4268AEE717753BD209B51266B2219D4224A7D5E850C1",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0001_before.png",
+      "before_bytes": 12331,
+      "before_sha256": "F885CEED871CD96767EA4268AEE717753BD209B51266B2219D4224A7D5E850C1",
+      "changed": false,
+      "changed_pixels_reported": 0,
+      "recomputed": {
+        "changed_pixel_ratio": 0.0,
+        "changed_pixels": 0,
+        "changed_pixels_any_difference": 0,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 1,
+      "tool": "running_game_get_scene_tree",
+      "total_pixels_reported": 480000
+    },
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0002_after.png",
+      "after_bytes": 12331,
+      "after_sha256": "F885CEED871CD96767EA4268AEE717753BD209B51266B2219D4224A7D5E850C1",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0002_before.png",
+      "before_bytes": 12331,
+      "before_sha256": "F885CEED871CD96767EA4268AEE717753BD209B51266B2219D4224A7D5E850C1",
+      "changed": false,
+      "changed_pixels_reported": 0,
+      "recomputed": {
+        "changed_pixel_ratio": 0.0,
+        "changed_pixels": 0,
+        "changed_pixels_any_difference": 0,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 2,
+      "tool": "running_game_get_node_properties",
+      "total_pixels_reported": 480000
+    },
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0003_after.png",
+      "after_bytes": 12331,
+      "after_sha256": "F885CEED871CD96767EA4268AEE717753BD209B51266B2219D4224A7D5E850C1",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0003_before.png",
+      "before_bytes": 12331,
+      "before_sha256": "F885CEED871CD96767EA4268AEE717753BD209B51266B2219D4224A7D5E850C1",
+      "changed": false,
+      "changed_pixels_reported": 0,
+      "recomputed": {
+        "changed_pixel_ratio": 0.0,
+        "changed_pixels": 0,
+        "changed_pixels_any_difference": 0,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 3,
+      "tool": "running_game_execute_gdscript",
+      "total_pixels_reported": 480000
+    },
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0004_after.png",
+      "after_bytes": 12331,
+      "after_sha256": "F885CEED871CD96767EA4268AEE717753BD209B51266B2219D4224A7D5E850C1",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0004_before.png",
+      "before_bytes": 12331,
+      "before_sha256": "F885CEED871CD96767EA4268AEE717753BD209B51266B2219D4224A7D5E850C1",
+      "changed": false,
+      "changed_pixels_reported": 0,
+      "recomputed": {
+        "changed_pixel_ratio": 0.0,
+        "changed_pixels": 0,
+        "changed_pixels_any_difference": 0,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 4,
+      "tool": "running_game_execute_gdscript",
+      "total_pixels_reported": 480000
+    },
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0005_after.png",
+      "after_bytes": 12085,
+      "after_sha256": "225824A0A4898C6BFDA07699A710E1627D1B9748812903D0C805FADEC1A26B60",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0005_before.png",
+      "before_bytes": 12331,
+      "before_sha256": "F885CEED871CD96767EA4268AEE717753BD209B51266B2219D4224A7D5E850C1",
+      "changed": true,
+      "changed_pixels_reported": 12800,
+      "recomputed": {
+        "changed_pixel_ratio": 0.02666666666666667,
+        "changed_pixels": 12800,
+        "changed_pixels_any_difference": 12800,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 5,
+      "tool": "running_game_execute_gdscript",
+      "total_pixels_reported": 480000
+    },
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0006_after.png",
+      "after_bytes": 12058,
+      "after_sha256": "66664AB82F2B90C27BA8B7D60EFA5E9BF8CA32EC1CF729365DD4AA15F425F9CF",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0006_before.png",
+      "before_bytes": 12085,
+      "before_sha256": "225824A0A4898C6BFDA07699A710E1627D1B9748812903D0C805FADEC1A26B60",
+      "changed": true,
+      "changed_pixels_reported": 12800,
+      "recomputed": {
+        "changed_pixel_ratio": 0.02666666666666667,
+        "changed_pixels": 12800,
+        "changed_pixels_any_difference": 12800,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 6,
+      "tool": "running_game_execute_gdscript",
+      "total_pixels_reported": 480000
+    },
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0007_after.png",
+      "after_bytes": 12058,
+      "after_sha256": "66664AB82F2B90C27BA8B7D60EFA5E9BF8CA32EC1CF729365DD4AA15F425F9CF",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0007_before.png",
+      "before_bytes": 12058,
+      "before_sha256": "66664AB82F2B90C27BA8B7D60EFA5E9BF8CA32EC1CF729365DD4AA15F425F9CF",
+      "changed": false,
+      "changed_pixels_reported": 0,
+      "recomputed": {
+        "changed_pixel_ratio": 0.0,
+        "changed_pixels": 0,
+        "changed_pixels_any_difference": 0,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 7,
+      "tool": "running_game_execute_gdscript",
+      "total_pixels_reported": 480000
+    },
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0008_after.png",
+      "after_bytes": 11867,
+      "after_sha256": "9421F1DDCC5697A80402782B7A7F4814F24145C84E34673E2B11CF42C7354EAD",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0008_before.png",
+      "before_bytes": 12058,
+      "before_sha256": "66664AB82F2B90C27BA8B7D60EFA5E9BF8CA32EC1CF729365DD4AA15F425F9CF",
+      "changed": true,
+      "changed_pixels_reported": 1363,
+      "recomputed": {
+        "changed_pixel_ratio": 0.0028395833333333333,
+        "changed_pixels": 1363,
+        "changed_pixels_any_difference": 1464,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 8,
+      "tool": "running_game_execute_gdscript",
+      "total_pixels_reported": 480000
+    },
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0009_after.png",
+      "after_bytes": 11867,
+      "after_sha256": "9421F1DDCC5697A80402782B7A7F4814F24145C84E34673E2B11CF42C7354EAD",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0009_before.png",
+      "before_bytes": 11867,
+      "before_sha256": "9421F1DDCC5697A80402782B7A7F4814F24145C84E34673E2B11CF42C7354EAD",
+      "changed": false,
+      "changed_pixels_reported": 0,
+      "recomputed": {
+        "changed_pixel_ratio": 0.0,
+        "changed_pixels": 0,
+        "changed_pixels_any_difference": 0,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 9,
+      "tool": "running_game_execute_gdscript",
+      "total_pixels_reported": 480000
+    },
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0010_after.png",
+      "after_bytes": 11867,
+      "after_sha256": "9421F1DDCC5697A80402782B7A7F4814F24145C84E34673E2B11CF42C7354EAD",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0010_before.png",
+      "before_bytes": 11867,
+      "before_sha256": "9421F1DDCC5697A80402782B7A7F4814F24145C84E34673E2B11CF42C7354EAD",
+      "changed": false,
+      "changed_pixels_reported": 0,
+      "recomputed": {
+        "changed_pixel_ratio": 0.0,
+        "changed_pixels": 0,
+        "changed_pixels_any_difference": 0,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 10,
+      "tool": "running_game_execute_gdscript",
+      "total_pixels_reported": 480000
+    },
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0011_after.png",
+      "after_bytes": 12108,
+      "after_sha256": "D90EDC83A3956A93515BB9BCEA1E765C25E55D9B646FAB65F3DAE2E641FE0838",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0011_before.png",
+      "before_bytes": 11867,
+      "before_sha256": "9421F1DDCC5697A80402782B7A7F4814F24145C84E34673E2B11CF42C7354EAD",
+      "changed": true,
+      "changed_pixels_reported": 6400,
+      "recomputed": {
+        "changed_pixel_ratio": 0.013333333333333334,
+        "changed_pixels": 6400,
+        "changed_pixels_any_difference": 6400,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 11,
+      "tool": "running_game_execute_gdscript",
+      "total_pixels_reported": 480000
+    },
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0012_after.png",
+      "after_bytes": 12108,
+      "after_sha256": "D90EDC83A3956A93515BB9BCEA1E765C25E55D9B646FAB65F3DAE2E641FE0838",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0012_before.png",
+      "before_bytes": 12108,
+      "before_sha256": "D90EDC83A3956A93515BB9BCEA1E765C25E55D9B646FAB65F3DAE2E641FE0838",
+      "changed": false,
+      "changed_pixels_reported": 0,
+      "recomputed": {
+        "changed_pixel_ratio": 0.0,
+        "changed_pixels": 0,
+        "changed_pixels_any_difference": 0,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 12,
+      "tool": "running_game_execute_gdscript",
+      "total_pixels_reported": 480000
+    },
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0013_after.png",
+      "after_bytes": 12108,
+      "after_sha256": "D90EDC83A3956A93515BB9BCEA1E765C25E55D9B646FAB65F3DAE2E641FE0838",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0013_before.png",
+      "before_bytes": 12108,
+      "before_sha256": "D90EDC83A3956A93515BB9BCEA1E765C25E55D9B646FAB65F3DAE2E641FE0838",
+      "changed": false,
+      "changed_pixels_reported": 0,
+      "recomputed": {
+        "changed_pixel_ratio": 0.0,
+        "changed_pixels": 0,
+        "changed_pixels_any_difference": 0,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 13,
+      "tool": "running_game_get_scene_tree",
+      "total_pixels_reported": 480000
+    },
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0014_after.png",
+      "after_bytes": 12108,
+      "after_sha256": "D90EDC83A3956A93515BB9BCEA1E765C25E55D9B646FAB65F3DAE2E641FE0838",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0014_before.png",
+      "before_bytes": 12108,
+      "before_sha256": "D90EDC83A3956A93515BB9BCEA1E765C25E55D9B646FAB65F3DAE2E641FE0838",
+      "changed": false,
+      "changed_pixels_reported": 0,
+      "recomputed": {
+        "changed_pixel_ratio": 0.0,
+        "changed_pixels": 0,
+        "changed_pixels_any_difference": 0,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 14,
+      "tool": "running_game_execute_gdscript",
+      "total_pixels_reported": 480000
+    },
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0015_after.png",
+      "after_bytes": 12108,
+      "after_sha256": "D90EDC83A3956A93515BB9BCEA1E765C25E55D9B646FAB65F3DAE2E641FE0838",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0015_before.png",
+      "before_bytes": 12108,
+      "before_sha256": "D90EDC83A3956A93515BB9BCEA1E765C25E55D9B646FAB65F3DAE2E641FE0838",
+      "changed": false,
+      "changed_pixels_reported": 0,
+      "recomputed": {
+        "changed_pixel_ratio": 0.0,
+        "changed_pixels": 0,
+        "changed_pixels_any_difference": 0,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 15,
+      "tool": "running_game_execute_gdscript",
+      "total_pixels_reported": 480000
+    },
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0016_after.png",
+      "after_bytes": 11678,
+      "after_sha256": "338746CCBB1651C80F191EE9F9C0BCD94D0A5EBA1C35A0312B87AAFA9E90276F",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0016_before.png",
+      "before_bytes": 12108,
+      "before_sha256": "D90EDC83A3956A93515BB9BCEA1E765C25E55D9B646FAB65F3DAE2E641FE0838",
+      "changed": true,
+      "changed_pixels_reported": 12800,
+      "recomputed": {
+        "changed_pixel_ratio": 0.02666666666666667,
+        "changed_pixels": 12800,
+        "changed_pixels_any_difference": 12800,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 16,
+      "tool": "running_game_set_node_property",
+      "total_pixels_reported": 480000
+    },
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0017_after.png",
+      "after_bytes": 11678,
+      "after_sha256": "338746CCBB1651C80F191EE9F9C0BCD94D0A5EBA1C35A0312B87AAFA9E90276F",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0017_before.png",
+      "before_bytes": 11678,
+      "before_sha256": "338746CCBB1651C80F191EE9F9C0BCD94D0A5EBA1C35A0312B87AAFA9E90276F",
+      "changed": false,
+      "changed_pixels_reported": 0,
+      "recomputed": {
+        "changed_pixel_ratio": 0.0,
+        "changed_pixels": 0,
+        "changed_pixels_any_difference": 0,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 17,
+      "tool": "running_game_set_node_property",
+      "total_pixels_reported": 480000
+    },
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0018_after.png",
+      "after_bytes": 11678,
+      "after_sha256": "338746CCBB1651C80F191EE9F9C0BCD94D0A5EBA1C35A0312B87AAFA9E90276F",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0018_before.png",
+      "before_bytes": 11678,
+      "before_sha256": "338746CCBB1651C80F191EE9F9C0BCD94D0A5EBA1C35A0312B87AAFA9E90276F",
+      "changed": false,
+      "changed_pixels_reported": 0,
+      "recomputed": {
+        "changed_pixel_ratio": 0.0,
+        "changed_pixels": 0,
+        "changed_pixels_any_difference": 0,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 18,
+      "tool": "running_game_set_node_property",
+      "total_pixels_reported": 480000
+    },
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0019_after.png",
+      "after_bytes": 11678,
+      "after_sha256": "338746CCBB1651C80F191EE9F9C0BCD94D0A5EBA1C35A0312B87AAFA9E90276F",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0019_before.png",
+      "before_bytes": 11678,
+      "before_sha256": "338746CCBB1651C80F191EE9F9C0BCD94D0A5EBA1C35A0312B87AAFA9E90276F",
+      "changed": false,
+      "changed_pixels_reported": 0,
+      "recomputed": {
+        "changed_pixel_ratio": 0.0,
+        "changed_pixels": 0,
+        "changed_pixels_any_difference": 0,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 19,
+      "tool": "running_game_get_node_properties",
+      "total_pixels_reported": 480000
+    },
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0020_after.png",
+      "after_bytes": 11678,
+      "after_sha256": "338746CCBB1651C80F191EE9F9C0BCD94D0A5EBA1C35A0312B87AAFA9E90276F",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0020_before.png",
+      "before_bytes": 11678,
+      "before_sha256": "338746CCBB1651C80F191EE9F9C0BCD94D0A5EBA1C35A0312B87AAFA9E90276F",
+      "changed": false,
+      "changed_pixels_reported": 0,
+      "recomputed": {
+        "changed_pixel_ratio": 0.0,
+        "changed_pixels": 0,
+        "changed_pixels_any_difference": 0,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 20,
+      "tool": "running_game_assert_node_state",
+      "total_pixels_reported": 480000
+    },
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0021_after.png",
+      "after_bytes": 11678,
+      "after_sha256": "338746CCBB1651C80F191EE9F9C0BCD94D0A5EBA1C35A0312B87AAFA9E90276F",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0021_before.png",
+      "before_bytes": 11678,
+      "before_sha256": "338746CCBB1651C80F191EE9F9C0BCD94D0A5EBA1C35A0312B87AAFA9E90276F",
+      "changed": false,
+      "changed_pixels_reported": 0,
+      "recomputed": {
+        "changed_pixel_ratio": 0.0,
+        "changed_pixels": 0,
+        "changed_pixels_any_difference": 0,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 21,
+      "tool": "running_game_assert_node_state",
+      "total_pixels_reported": 480000
+    },
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0022_after.png",
+      "after_bytes": 11678,
+      "after_sha256": "01C8DBCBA42B92B34CB3CF4343E8E1E3B654CDE1E8A28C0C3CC6D5CB2DA89D18",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0022_before.png",
+      "before_bytes": 11678,
+      "before_sha256": "338746CCBB1651C80F191EE9F9C0BCD94D0A5EBA1C35A0312B87AAFA9E90276F",
+      "changed": true,
+      "changed_pixels_reported": 1600,
+      "recomputed": {
+        "changed_pixel_ratio": 0.0033333333333333335,
+        "changed_pixels": 1600,
+        "changed_pixels_any_difference": 1600,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 22,
+      "tool": "running_game_simulate_button_click_by_text",
+      "total_pixels_reported": 480000
+    },
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0023_after.png",
+      "after_bytes": 11678,
+      "after_sha256": "01C8DBCBA42B92B34CB3CF4343E8E1E3B654CDE1E8A28C0C3CC6D5CB2DA89D18",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0023_before.png",
+      "before_bytes": 11678,
+      "before_sha256": "01C8DBCBA42B92B34CB3CF4343E8E1E3B654CDE1E8A28C0C3CC6D5CB2DA89D18",
+      "changed": false,
+      "changed_pixels_reported": 0,
+      "recomputed": {
+        "changed_pixel_ratio": 0.0,
+        "changed_pixels": 0,
+        "changed_pixels_any_difference": 0,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 23,
+      "tool": "running_game_assert_node_state",
+      "total_pixels_reported": 480000
+    },
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0024_after.png",
+      "after_bytes": 11678,
+      "after_sha256": "01C8DBCBA42B92B34CB3CF4343E8E1E3B654CDE1E8A28C0C3CC6D5CB2DA89D18",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0024_before.png",
+      "before_bytes": 11678,
+      "before_sha256": "01C8DBCBA42B92B34CB3CF4343E8E1E3B654CDE1E8A28C0C3CC6D5CB2DA89D18",
+      "changed": false,
+      "changed_pixels_reported": 0,
+      "recomputed": {
+        "changed_pixel_ratio": 0.0,
+        "changed_pixels": 0,
+        "changed_pixels_any_difference": 0,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 24,
+      "tool": "running_game_simulate_button_click_by_text",
+      "total_pixels_reported": 480000
+    },
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0027_after.png",
+      "after_bytes": 12050,
+      "after_sha256": "3E28CC16CC6B2C8BAC25C4C52247905D4A549043F69F977084EDA3F2A4884F14",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0027_before.png",
+      "before_bytes": 12050,
+      "before_sha256": "3E28CC16CC6B2C8BAC25C4C52247905D4A549043F69F977084EDA3F2A4884F14",
+      "changed": false,
+      "changed_pixels_reported": 0,
+      "recomputed": {
+        "changed_pixel_ratio": 0.0,
+        "changed_pixels": 0,
+        "changed_pixels_any_difference": 0,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 27,
+      "tool": "running_game_assert_screen_text",
+      "total_pixels_reported": 480000
+    },
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0028_after.png",
+      "after_bytes": 12050,
+      "after_sha256": "3E28CC16CC6B2C8BAC25C4C52247905D4A549043F69F977084EDA3F2A4884F14",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0028_before.png",
+      "before_bytes": 12050,
+      "before_sha256": "3E28CC16CC6B2C8BAC25C4C52247905D4A549043F69F977084EDA3F2A4884F14",
+      "changed": false,
+      "changed_pixels_reported": 0,
+      "recomputed": {
+        "changed_pixel_ratio": 0.0,
+        "changed_pixels": 0,
+        "changed_pixels_any_difference": 0,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 28,
+      "tool": "running_game_assert_screen_text",
+      "total_pixels_reported": 480000
+    },
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0029_after.png",
+      "after_bytes": 12050,
+      "after_sha256": "3E28CC16CC6B2C8BAC25C4C52247905D4A549043F69F977084EDA3F2A4884F14",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0029_before.png",
+      "before_bytes": 12050,
+      "before_sha256": "3E28CC16CC6B2C8BAC25C4C52247905D4A549043F69F977084EDA3F2A4884F14",
+      "changed": false,
+      "changed_pixels_reported": 0,
+      "recomputed": {
+        "changed_pixel_ratio": 0.0,
+        "changed_pixels": 0,
+        "changed_pixels_any_difference": 0,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 29,
+      "tool": "running_game_capture_screenshot",
+      "total_pixels_reported": 480000
+    },
+    {
+      "after": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0030_after.png",
+      "after_bytes": 12050,
+      "after_sha256": "3E28CC16CC6B2C8BAC25C4C52247905D4A549043F69F977084EDA3F2A4884F14",
+      "before": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3\\shots-game/0030_before.png",
+      "before_bytes": 12050,
+      "before_sha256": "3E28CC16CC6B2C8BAC25C4C52247905D4A549043F69F977084EDA3F2A4884F14",
+      "changed": false,
+      "changed_pixels_reported": 0,
+      "recomputed": {
+        "changed_pixel_ratio": 0.0,
+        "changed_pixels": 0,
+        "changed_pixels_any_difference": 0,
+        "comparable": true,
+        "height": 600,
+        "threshold": 10,
+        "total_pixels": 480000,
+        "width": 800
+      },
+      "recomputed_matches_reported": true,
+      "seq": 30,
+      "tool": "running_game_get_scene_tree",
+      "total_pixels_reported": 480000
+    }
+  ],
+  "dir": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\work\\task090\\live-after3",
+  "executor": {
+    "g03-exec-root-name": {
+      "result": "Main",
+      "result_type": "StringName"
+    },
+    "g04-exec-read-x": {
+      "result": 100.0,
+      "result_type": "float"
+    },
+    "g05-exec-move-player": {
+      "result": 220.0,
+      "result_type": "float"
+    },
+    "g06-exec-move-player-again": {
+      "result": 340.0,
+      "result_type": "float"
+    },
+    "g07-exec-player-path": {
+      "result": "/root/Main/Player",
+      "result_type": "NodePath"
+    },
+    "g08-exec-set-hud": {
+      "result": "HUD from executor",
+      "result_type": "String"
+    },
+    "g09-exec-own-path": {
+      "result": "/root/Main/@Node@8",
+      "result_type": "NodePath"
+    },
+    "g10-exec-current-scene": {
+      "result": "Main",
+      "result_type": "StringName"
+    },
+    "g11-exec-set-color": {
+      "result": {
+        "a": 1.0,
+        "b": 0.100000001490116,
+        "g": 0.899999976158142,
+        "r": 0.100000001490116
+      },
+      "result_type": "Color"
+    },
+    "g12-exec-set-color-again": {
+      "result": {
+        "a": 1.0,
+        "b": 0.100000001490116,
+        "g": 0.899999976158142,
+        "r": 0.100000001490116
+      },
+      "result_type": "Color"
+    },
+    "g14-exec-parse-error": null,
+    "g15-exec-runtime-error": {
+      "result": null,
+      "result_type": "Nil"
+    }
+  },
+  "label": "after3",
+  "pillow": true,
+  "scene_tree": {
+    "after_executor": [
+      [
+        "/root/Main",
+        "Node2D"
+      ],
+      [
+        "/root/Main/Sky",
+        "ColorRect"
+      ],
+      [
+        "/root/Main/Player",
+        "ColorRect"
+      ],
+      [
+        "/root/Main/HUD",
+        "Label"
+      ],
+      [
+        "/root/Main/MoveButton",
+        "Button"
+      ]
+    ],
+    "before": [
+      [
+        "/root/Main",
+        "Node2D"
+      ],
+      [
+        "/root/Main/Sky",
+        "ColorRect"
+      ],
+      [
+        "/root/Main/Player",
+        "ColorRect"
+      ],
+      [
+        "/root/Main/HUD",
+        "Label"
+      ],
+      [
+        "/root/Main/MoveButton",
+        "Button"
+      ]
+    ],
+    "final": [
+      [
+        "/root/Main",
+        "Node2D"
+      ],
+      [
+        "/root/Main/Sky",
+        "ColorRect"
+      ],
+      [
+        "/root/Main/Player",
+        "ColorRect"
+      ],
+      [
+        "/root/Main/HUD",
+        "Label"
+      ],
+      [
+        "/root/Main/MoveButton",
+        "Button"
+      ]
+    ],
+    "identical_before_after": true,
+    "identical_before_final": true,
+    "node_count_after_executor": 5,
+    "node_count_before": 5,
+    "node_count_final": 5
+  }
+}

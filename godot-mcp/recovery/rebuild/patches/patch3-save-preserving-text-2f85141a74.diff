@@ -1,0 +1,387 @@
+commit 2f85141a74f2ee18cb905168cd99aa886de8b95e
+Author: starsliving <1620462725@qq.com>
+Date:   Fri Sep 25 12:51:38 2026 +0800
+
+    mcp_server: TASK-067 list the build's script languages, and publish project.godot by section on editor open
+    
+    F-066-1: project_list_scripts hardcoded .gd/.gdshader, so a Mono project with six readable .cs files answered count=0 while four of the module's own error messages told the caller to use it. The extension set is now derived from ScriptServer (the languages this build registered) plus .gdshader. Contract unchanged (176, d4e53b43840b...); no override needed.
+    
+    F-066-2: the editor's own save on open (editor/editor_node.cpp, the !cmdline_mode branch that --import and --headless never reach) called ProjectSettings::save(), i.e. the whole-file writer, which regenerated project.godot and deleted every hand-written comment. It now calls the new ProjectSettings::save_preserving_text(), which publishes the same settings section by section through patch 2's update_settings_section_text() and copies every other byte through. save()/save_custom()/save_custom_section() keep their observable behaviour; the collection and the two I/O halves of save_custom_section() are extracted, not rewritten.
+    
+    Tests: a throwaway ScriptLanguage makes the enumeration defect red in BOTH variants, and 17 assertions pin the multi-section publish (comments verbatim, [input] not last, idempotence, sectionless key).
+
+diff --git a/core/config/project_settings.cpp b/core/config/project_settings.cpp
+index 4cc40e3ae1..cac2117573 100644
+--- a/core/config/project_settings.cpp
++++ b/core/config/project_settings.cpp
+@@ -1231,9 +1231,12 @@ bool _csproj_exists(const String &p_root_dir) {
+ }
+ #endif // TOOLS_ENABLED
+ 
+-Error ProjectSettings::save_custom(const String &p_path, const CustomMap &p_custom, const Vector<String> &p_custom_features, bool p_merge_with_current) {
+-	ERR_FAIL_COND_V_MSG(p_path.is_empty(), ERR_INVALID_PARAMETER, "Project settings save path cannot be empty.");
+-
++// TASK-067 (patch 3): the "which settings would a save write, grouped by
++// section" half of the whole-file writer, moved here unchanged so that
++// `save_preserving_text()` publishes **exactly** the set `save()` would publish.
++// Splitting it out is a pure extraction - every line below was already in
++// `save_custom()`, in the same order, with the same `_VCSort` ordering.
++Error ProjectSettings::_collect_settings_for_save(const CustomMap &p_custom, bool p_merge_with_current, const Vector<String> &p_custom_features, RBMap<String, List<String>> &r_props, String &r_features) {
+ #ifdef TOOLS_ENABLED
+ 	PackedStringArray project_features = get_setting("application/config/features");
+ 	// If there is no feature list currently present, force one to generate.
+@@ -1331,6 +1334,24 @@ Error ProjectSettings::save_custom(const String &p_path, const CustomMap &p_cust
+ 		save_features += f;
+ 	}
+ 
++	r_props = save_props;
++	r_features = save_features;
++	return OK;
++}
++
++Error ProjectSettings::save_custom(const String &p_path, const CustomMap &p_custom, const Vector<String> &p_custom_features, bool p_merge_with_current) {
++	ERR_FAIL_COND_V_MSG(p_path.is_empty(), ERR_INVALID_PARAMETER, "Project settings save path cannot be empty.");
++
++	// TASK-067 (patch 3): the collection is shared with `save_preserving_text()`
++	// so the whole-file writer and the per-section publisher cannot publish
++	// different sets.
++	RBMap<String, List<String>> save_props;
++	String save_features;
++	const Error collect_error = _collect_settings_for_save(p_custom, p_merge_with_current, p_custom_features, save_props, save_features);
++	if (collect_error != OK) {
++		return collect_error;
++	}
++
+ 	if (p_path.ends_with(".godot") || p_path.ends_with("override.cfg")) {
+ 		return _save_settings_text(p_path, save_props, p_custom, save_features);
+ 	} else if (p_path.ends_with(".binary")) {
+@@ -1679,14 +1700,19 @@ Error ProjectSettings::update_settings_section_text(const String &p_text, const
+ 	return OK;
+ }
+ 
+-Error ProjectSettings::save_custom_section(const String &p_path, const String &p_section, const CustomMap &p_custom) {
+-	ERR_FAIL_COND_V_MSG(p_path.is_empty(), ERR_INVALID_PARAMETER, "Project settings section save path cannot be empty.");
++// ---------------------------------------------------------------------------
++// TASK-067 (patch 3): the two I/O halves of the section publish.
++//
++// They are extracted from `save_custom_section()` so a whole-file publish can do
++// ONE read and ONE write instead of one pair per section, and so the read and
++// the write rule exist in exactly one place. The byte behaviour is unchanged:
++// the reader puts back the UTF-8 BOM that `append_utf8()` skips, and the writer
++// replaces the file through a sibling plus a backup and verifies the bytes it
++// claims to have written.
++// ---------------------------------------------------------------------------
+ 
+-	if (!FileAccess::exists(p_path)) {
+-		// This method publishes *into* a file; it never creates a project from
+-		// nothing, exactly like `load_custom()` refuses to invent one.
+-		return ERR_FILE_NOT_FOUND;
+-	}
++Error ProjectSettings::_read_settings_text_file(const String &p_path, String &r_text) const {
++	r_text = String();
+ 
+ 	Error err = OK;
+ 	Ref<FileAccess> reader = FileAccess::open(p_path, FileAccess::READ, &err);
+@@ -1714,24 +1740,14 @@ Error ProjectSettings::save_custom_section(const String &p_path, const String &p
+ 	// It is therefore put back into the text explicitly - measured, not assumed:
+ 	// an unqualified read-modify-write through `get_as_text()`/`store_string()`
+ 	// removes the BOM from a file that had one.
+-	String text;
+ 	if (length >= 3 && raw[0] == 0xEF && raw[1] == 0xBB && raw[2] == 0xBF) {
+-		text = String::chr(0xFEFF);
+-	}
+-	text.append_utf8((const char *)raw.ptr(), (int)length);
+-
+-	String updated;
+-	const Error update_error = update_settings_section_text(text, p_section, p_custom, updated);
+-	if (update_error != OK) {
+-		return update_error;
+-	}
+-	if (updated == text) {
+-		// Nothing to say that the file does not already say. Returning here is
+-		// what keeps a repeat call from touching the file at all (the bytes and
+-		// the modification time both stay put).
+-		return OK;
++		r_text = String::chr(0xFEFF);
+ 	}
++	r_text.append_utf8((const char *)raw.ptr(), (int)length);
++	return OK;
++}
+ 
++Error ProjectSettings::_publish_settings_text_file(const String &p_path, const String &p_text) const {
+ 	// The destination is replaced the way the rest of this code base replaces a
+ 	// file it must not destroy: write a sibling, keep a backup, publish, roll
+ 	// back if the publish fails.
+@@ -1743,18 +1759,19 @@ Error ProjectSettings::save_custom_section(const String &p_path, const String &p
+ 		return backup_error;
+ 	}
+ 
++	Error err = OK;
+ 	Error result = OK;
+ 	Ref<FileAccess> writer = FileAccess::open(temp_path, FileAccess::WRITE, &err);
+ 	if (err != OK || writer.is_null()) {
+ 		result = err != OK ? err : ERR_CANT_CREATE;
+ 	} else {
+-		const CharString bytes = updated.utf8();
++		const CharString bytes = p_text.utf8();
+ 		writer->store_buffer((const uint8_t *)bytes.get_data(), bytes.length());
+ 		writer->close();
+ 
+ 		if (!FileAccess::exists(temp_path)) {
+ 			result = FAILED;
+-		} else if (updated.utf8().length() != FileAccess::get_file_as_bytes(temp_path).size()) {
++		} else if (p_text.utf8().length() != FileAccess::get_file_as_bytes(temp_path).size()) {
+ 			// The writer reported success; the file is the only thing that
+ 			// proves the bytes really landed (a store_buffer that ran out of
+ 			// space returns without an error).
+@@ -1776,6 +1793,153 @@ Error ProjectSettings::save_custom_section(const String &p_path, const String &p
+ 	return result;
+ }
+ 
++Error ProjectSettings::publish_settings_sections_text(const String &p_text, const Vector<String> &p_sections, const CustomMap &p_values, String &r_result) {
++	r_result = p_text;
++	for (const String &section : p_sections) {
++		if (section.is_empty()) {
++			// See `save_preserving_text()`: a sectionless key is a top-level
++			// assignment of the file itself and has no section form.
++			continue;
++		}
++		const String prefix = section + "/";
++		CustomMap section_settings;
++		for (const KeyValue<String, Variant> &E : p_values) {
++			if (E.key.begins_with(prefix) && E.key.length() > prefix.length()) {
++				section_settings[E.key] = E.value;
++			}
++		}
++		if (section_settings.is_empty()) {
++			continue;
++		}
++		String next;
++		const Error update_error = update_settings_section_text(r_result, section, section_settings, next);
++		if (update_error != OK) {
++			return update_error;
++		}
++		r_result = next;
++	}
++	return OK;
++}
++
++Error ProjectSettings::save_custom_section(const String &p_path, const String &p_section, const CustomMap &p_custom) {
++	ERR_FAIL_COND_V_MSG(p_path.is_empty(), ERR_INVALID_PARAMETER, "Project settings section save path cannot be empty.");
++
++	if (!FileAccess::exists(p_path)) {
++		// This method publishes *into* a file; it never creates a project from
++		// nothing, exactly like `load_custom()` refuses to invent one.
++		return ERR_FILE_NOT_FOUND;
++	}
++
++	String text;
++	const Error read_error = _read_settings_text_file(p_path, text);
++	if (read_error != OK) {
++		return read_error;
++	}
++
++	String updated;
++	const Error update_error = update_settings_section_text(text, p_section, p_custom, updated);
++	if (update_error != OK) {
++		return update_error;
++	}
++	if (updated == text) {
++		// Nothing to say that the file does not already say. Returning here is
++		// what keeps a repeat call from touching the file at all (the bytes and
++		// the modification time both stay put).
++		return OK;
++	}
++
++	return _publish_settings_text_file(p_path, updated);
++}
++
++// ---------------------------------------------------------------------------
++// TASK-067 (patch 3): the editor's own save on open.
++//
++// Root cause of "opening the project in a windowed editor eats the comments in
++// project.godot" (`editor/editor_node.cpp:1062-1072`, reached only when
++// `cmdline_mode` is false - `editor_node.cpp:8479` sets it from
++// `DisplayServer::get_name() == "headless"`, which is why `--import` and
++// `--headless` never showed it): that call site used `save()`, i.e. the
++// whole-file writer, which regenerates `project.godot` from the engine's own
++// serializer - seven header comment lines plus every stored setting, and nothing
++// a human typed.
++//
++// `save_preserving_text()` keeps the two things the call site actually wants -
++// the settings of the editor's own state, and a fresh modification time (the
++// project manager reads `project.godot`'s mtime as "last edited",
++// `editor/project_manager/project_list.cpp:866-869`) - and publishes them
++// section by section into the file that is there, copying every other byte
++// through. It is the same rule the writing tools follow since TASK-057 patch 2.
++// ---------------------------------------------------------------------------
++
++Error ProjectSettings::save_preserving_text() {
++	const String path = get_resource_path().path_join("project.godot");
++	ERR_FAIL_COND_V_MSG(!FileAccess::exists(path), ERR_FILE_NOT_FOUND,
++			vformat("There is no project settings file at '%s' to publish into.", path));
++
++	// The same set `save()` would write: `save()` calls
++	// `save_custom(path)` with an empty custom map and `p_merge_with_current`
++	// true, so the rendering-API and `C#` feature entries `save_custom()`
++	// recomputes are part of it and opening a project still persists them.
++	RBMap<String, List<String>> save_props;
++	String save_features;
++	const Error collect_error = _collect_settings_for_save(CustomMap(), true, Vector<String>(), save_props, save_features);
++	(void)save_features;
++	if (collect_error != OK) {
++		return collect_error;
++	}
++
++	String text;
++	const Error read_error = _read_settings_text_file(path, text);
++	if (read_error != OK) {
++		return read_error;
++	}
++
++	String updated = text;
++	{
++		// The section order is `save_props`' order (an `RBMap` over section
++		// names, so it is sorted and reproducible), and the values are the live
++		// settings - the same ones `_save_settings_text()` would have serialized.
++		Vector<String> sections;
++		CustomMap values;
++		for (const KeyValue<String, List<String>> &E : save_props) {
++			if (E.key.is_empty()) {
++				// A setting with no section is a top-level assignment of the file
++				// itself: `_load_settings_text()` calls `set(assign, value)` for one
++				// (`project_settings.cpp:1001-1002`). It can only have come from the
++				// file, and this publish copies the file through byte for byte, so
++				// there is nothing to publish for it. Section publishing has no form
++				// for a sectionless key by construction -
++				// `update_settings_section_text()` refuses an empty section name, and
++				// `_save_settings_text()` writes such a key before the first header.
++				continue;
++			}
++			sections.push_back(E.key);
++			for (const String &name : E.value) {
++				const String full = E.key + "/" + name;
++				values[full] = get(full);
++			}
++		}
++		const Error publish_error = publish_settings_sections_text(text, sections, values, updated);
++		if (publish_error != OK) {
++			return publish_error;
++		}
++	}
++
++	// Always write, even when `updated == text`. The call site's stated purpose
++	// is to mark the project as last modified, and the project manager reads that
++	// timestamp as "the date the project was last edited"; the bytes written in
++	// the unchanged case are the file's own bytes, so the comments survive either
++	// way. `last_save_time` is refreshed exactly like `save()` does it, so the
++	// editor's external-change check (`editor/editor_node.cpp:1627`) does not
++	// report the write this call just made as somebody else's.
++	const Error write_error = _publish_settings_text_file(path, updated);
++	if (write_error != OK) {
++		return write_error;
++	}
++	last_save_time = FileAccess::get_modified_time(path);
++	return OK;
++}
++
+ Error ProjectSettings::_save_custom_section_bnd(const String &p_path, const String &p_section, const Dictionary &p_settings) {
+ 	CustomMap custom;
+ 	for (const KeyValue<Variant, Variant> &E : p_settings) {
+diff --git a/core/config/project_settings.h b/core/config/project_settings.h
+index c4ba285132..36e447f844 100644
+--- a/core/config/project_settings.h
++++ b/core/config/project_settings.h
+@@ -136,6 +136,19 @@ protected:
+ 	Error _save_settings_text(const String &p_file, const RBMap<String, List<String>> &p_props, const CustomMap &p_custom = CustomMap(), const String &p_custom_features = String());
+ 	Error _save_settings_binary(const String &p_file, const RBMap<String, List<String>> &p_props, const CustomMap &p_custom = CustomMap(), const String &p_custom_features = String());
+ 
++	// TASK-067 (patch 3). The three pieces `save_custom()` and the section
++	// publish share, so the whole-file writer and the per-section writer cannot
++	// drift apart:
++	//   * `_collect_settings_for_save()` is the "which settings would a save
++	//     write, grouped by section" half of `save_custom()`;
++	//   * `_read_settings_text_file()` reads a settings file as the engine
++	//     decodes it, UTF-8 BOM included;
++	//   * `_publish_settings_text_file()` replaces it atomically (sibling,
++	//     backup, verify-bytes, rename, roll back).
++	Error _collect_settings_for_save(const CustomMap &p_custom, bool p_merge_with_current, const Vector<String> &p_custom_features, RBMap<String, List<String>> &r_props, String &r_features);
++	Error _read_settings_text_file(const String &p_path, String &r_text) const;
++	Error _publish_settings_text_file(const String &p_path, const String &p_text) const;
++
+ 	Error _save_custom_bnd(const String &p_file);
+ 	Error _save_custom_section_bnd(const String &p_path, const String &p_section, const Dictionary &p_settings);
+ 
+@@ -234,11 +247,41 @@ public:
+ 	// inside the section may itself contain `/` (`rendering/renderer/...` is
+ 	// stored under `[rendering]`), which is why only the first separator splits.
+ 	Error save_custom_section(const String &p_path, const String &p_section, const CustomMap &p_custom);
++	// TASK-067 (patch 3). The editor's own "save the project on open" call
++	// (`editor/editor_node.cpp:1071`) - it must not be a different writer from the
++	// section publish, or the editor would preserve comments while every tool
++	// that writes one section does, and lose them the moment it opens the project
++	// itself.
++	//
++	// It publishes **the settings `save()` would publish** (the same collection
++	// `save_custom()` builds, section by section) into the file that is already
++	// there, and copies every other byte through: comments, blank lines, key
++	// order, a BOM and CRLF included. Unlike `save_custom_section()` it always
++	// writes the file - the call site's stated purpose is to mark the project as
++	// last modified (`editor/project_manager/project_list.cpp:866-869` reads that
++	// timestamp as "last edited") - and it refreshes `get_last_saved_time()`, so
++	// the editor's own external-change check
++	// (`editor/editor_node.cpp:1627`) does not fire on the write it just made.
++	//
++	// It does not create a project: a missing `project.godot` is
++	// `ERR_FILE_NOT_FOUND`, and the caller keeps `save()` for that (and for
++	// binary projects).
++	Error save_preserving_text();
+ 	// The text half of `save_custom_section()`, without any I/O, so the exact
+ 	// byte behaviour can be exercised on a string. `p_text` is the file as the
+ 	// engine decodes it (a UTF-8 BOM, if the caller put one in, is ordinary
+ 	// content of the first line and is therefore preserved).
+ 	static Error update_settings_section_text(const String &p_text, const String &p_section, const CustomMap &p_custom, String &r_result);
++	// TASK-067 (patch 3): the text half of `save_preserving_text()` - the same
++	// per-section publish, applied to every named section in one pass over the
++	// text (one read, one write, one rollback point instead of one per section).
++	// `p_values` is keyed by full setting name; a section takes the keys whose
++	// first `/`-separated part is its name, which is exactly the grouping
++	// `_save_settings_text()` writes. `p_sections` fixes the order, so the result
++	// is reproducible for a given input. It is static and free of I/O for the same
++	// reason `update_settings_section_text()` is: the byte behaviour can be
++	// exercised on a string without touching the running project's own file.
++	static Error publish_settings_sections_text(const String &p_text, const Vector<String> &p_sections, const CustomMap &p_values, String &r_result);
+ 	void set_custom_property_info(const PropertyInfo &p_info);
+ 	const HashMap<StringName, PropertyInfo> &get_custom_property_info() const;
+ 	uint64_t get_last_saved_time() { return last_save_time; }
+diff --git a/editor/editor_node.cpp b/editor/editor_node.cpp
+index fe1c5648ac..1ee0bda7a7 100644
+--- a/editor/editor_node.cpp
++++ b/editor/editor_node.cpp
+@@ -1068,7 +1068,25 @@ void EditorNode::_notification(int p_what) {
+ 						ProjectSettings::get_singleton()->set_setting(initial_setting.key, initial_setting.value);
+ 					}
+ 				}
+-				ProjectSettings::get_singleton()->save();
++				// TASK-067 (patch 3). This used to be `save()`, which regenerates
++				// `project.godot` from the engine's own serializer - seven header
++				// comment lines plus every stored setting, and nothing a human
++				// typed. The result was that merely OPENING the project in a
++				// windowed editor deleted every hand written comment from it
++				// (`--import` and `--headless` never showed it: the
++				// `!cmdline_mode` guard above, set in the constructor from
++				// `DisplayServer::get_name() == "headless"`).
++				//
++				// `save_preserving_text()` publishes the same settings section by
++				// section and copies every other byte through, which is the rule
++				// the writing tools have followed since TASK-057 patch 2. A
++				// `project.godot` that does not exist yet (or a binary project)
++				// still needs `save()`, which is what creates it.
++				if (project_settings_path.is_empty() || !FileAccess::exists(project_settings_path)) {
++					ProjectSettings::get_singleton()->save();
++				} else {
++					ProjectSettings::get_singleton()->save_preserving_text();
++				}
+ 			}
+ 
+ 			_titlebar_resized();

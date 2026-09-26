@@ -1,0 +1,1 @@
+rewrote the generated span of H:\rebuild\godot\modules\mcp_server\tools\running_game_frame_observation.cpp (32110 bytes -> 32456 bytes)

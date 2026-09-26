@@ -1,0 +1,1 @@
+﻿{"method":"tools/call","params":{"arguments":{"code":"return get_tree().current_scene.name"},"name":"running_game_execute_gdscript"},"id":310,"jsonrpc":"2.0"}

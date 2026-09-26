@@ -1,0 +1,20 @@
+WARNING: The ANGLE rendering driver requires dependencies to be installed.
+You can install them by running `python misc\scripts\install_angle.py`.
+See the documentation for more information:
+	https://docs.godotengine.org/en/latest/engine_details/development/compiling/compiling_for_windows.html#compiling-with-angle-support
+Alternatively, disable this driver by compiling with `angle=no` explicitly.
+.\modules/mcp_server/tests/test_mcp_server.h(10023): error C2660: “StreamPeerSocket::put_data�\ufffd: 函数不接�\ufffd 1 �\ufffd参数
+.\core/io/stream_peer_socket.h(84): note: 参�\ufffd��\ufffd�StreamPeerSocket::put_data”的声明
+.\modules/mcp_server/tests/test_mcp_server.h(10023): note: 尝试匹配参数列表�\ufffd(Vector<uint8_t>)”时
+scons: *** [bin\obj\tests\test_main.windows.editor.x86_64.obj] Error 2
+modules\mcp_server\mcp_jsonrpc.cpp(84): warning C4834: 放弃具有 [[nodiscard]] 属�\ufffd�的函数的返回�\ufffd\ufffd
+modules\mcp_server\mcp_trace.cpp(380): error C2660: “FileAccess::get_length�\ufffd: 函数不接�\ufffd 1 �\ufffd参数
+.\core/io/file_access.h(175): note: 参�\ufffd��\ufffd�FileAccess::get_length”的声明
+modules\mcp_server\mcp_trace.cpp(380): note: 尝试匹配参数列表�\ufffd(const String)”时
+scons: *** [bin\obj\modules\mcp_server\mcp_trace.windows.editor.x86_64.obj] Error 2
+F:\moonbit-hof-rs\godot-mcp\godot\modules\mcp_server\tools\editor_node_setup.h(36): warning C4099: “Color�\ufffd: 类型名称以前使用“struct”现在使用的�\ufffd“class�\ufffd
+.\core/math/color.h(38): note: 参�\ufffd��\ufffd�Color”的声明
+modules\mcp_server\tests\test_mcp_server.cpp(225): error C2039: "publish_text_atomically": 不是 "MCPTools" 的成�\ufffd
+F:\moonbit-hof-rs\godot-mcp\godot\modules\mcp_server\tests\../tools/tool_builder.h(55): note: 参�\ufffd��\ufffd�MCPTools”的声明
+modules\mcp_server\tests\test_mcp_server.cpp(225): error C3861: “publish_text_atomically�\ufffd: 找不到标识�\ufffd\ufffd
+scons: *** [bin\obj\modules\mcp_server\tests\test_mcp_server.windows.editor.x86_64.obj] Error 2

@@ -5325,3 +5325,48 @@ g09 `ANCHOR_JUDGE RESULT PASS`（`ANCHOR_STRUCTURAL_EQUIVALENT`，二进制自�
 ②`running_game_get_node_property_samples` 报 `scene_evidence=unavailable`，这是引擎声明的边界；
 ③`project_edit_script` 的 trace 行 `args_truncated=true`（9464 B），是 trace 自己的字节上限，不是丢证据；
 ④报告里的 `recomputed px` 用的是引擎的规则 `max(|dr|,|dg|,|db|) > 10`，与 trace 自报的数逐对相等，但「任意差异」口径会更大（TASK-090 已记录同一现象）。
+
+## D140 — TASK-092（A 段）恢复档案迁回本项目 + 三条溯源缺口的处置决策（B 段设计）
+
+TASK-092 A 段把 `C:\Users\wyl\AppData\Local\Temp\mcp-recovery\` 整体迁进
+`godot-mcp\recovery\`；B 段把 MCP-TRACEABILITY 里剩下的三条缺口一次收口，决策在此落笔。
+
+**A：迁移（先复制 → 逐文件 sha → 才删源）**
+
+* 源 33,433 文件 / 2,520,301,348 B；目标同一批文件**逐文件 SHA-256 全等**：
+  `compared=33433 mismatched=0 size_mismatch=0 missing_in_dst=0 extra_in_dst=0`，
+  两侧字节数**精确相等**（`VERIFY_RECOVERY=PASS`，`recovery\work\task092\logs\verify.txt`）。
+  路径最长超过 260 字符，所以两侧都用 `Directory::EnumerateFiles` + `\\?\` 前缀 + .NET 直读
+  （`Get-ChildItem` 会静默漏掉长路径——TASK-091 已经踩过一次）。
+  校验全过之后才删 C: 源（白名单前缀 + 先打印清单 + 无通配符 + `-LiteralPath`）。
+* 目标结构：根级 23 个 `.md` → `recovery\reports\`，其余顶层目录原样保留
+  （`logs\ work\ staging\ transcripts\ rebuild\ backup\ scripts\ tmp\`）。
+* **入库分界线**（`.gitignore` 的 TASK-092 段，README §8 有同一份清单）：
+  入库 = 2,436 文件 / 75.6 MB（报告、manifest、`work\` 下的脚本与实测产物、`rebuild\` 的补丁与
+  低置信清单）；忽略 = 约 31,000 文件 / 2.44 GB（`transcripts\ staging\ logs\ tmp\ backup\`、
+  `rebuild\godot\`（**重建期的引擎树旧副本**，与铁律 4 同性质）、`work\events-*.jsonl` 等原始料）。
+  **忽略不等于丢失**：文件留在盘上，只是不进 git 历史。
+* 迁移脚本、两侧清单与 robocopy 日志留在 `recovery\work\task092\`（证据随档案走）。
+
+**B：三条缺口的处置（选型与否决理由）**
+
+| 缺口 | 考虑过的选项 | 最终选择 | 理由 |
+|---|---|---|---|
+| **① `args_truncated`（9464 B 的参数无法复核）** | (a) 提高 `max_args_bytes` 上限；(b) 把参数整份入 trace、取消上限；(c) 超限载荷写**旁路文件**并在行上记路径 + sha256 + 字节数 | **(c)** | (a) 只是把墙往后挪，任何固定上限都会再被撞到，且大参数会把 trace 变成项目副本；(b) 去掉上限等于让一个调试旁路通道吃掉主路径的 I/O 与磁盘；(c) 把「裁断」变成**可核的事实**：行上仍有前缀与真实字节数（旧读者不受影响），完整载荷可读、可重算 hash。**同一机制覆盖三个有界载荷**（`args` / `result_json` / `error_data_json`），不另造第二套 |
+| **① 的判据** | (a) 行上有 `args_sidecar` 就算完整；(b) 台账**读盘重算** sha256 与字节数 | **(b)** | (a) 是「它说写了就写了」，与 D94 抓到的「无条件回显」同类。台账 `sidecar_of()` 自己打开文件、重算 hash、重量大小，只有三者全对才是 `sidecar_verified`；`sidecar_mismatch` 给出实际值。`relative_path` 相对 trace 目录，所以 trace 换机器后仍可核 |
+| **② `not_tracked_deferred`** | (a) 保持声明、只在文档写清；(b) 让延迟调用在**完成时**补齐文件侧与画面侧证据 | **(b)** | (a) 等于把「场景/压力这两个工具的答案就是判定」这句话的理解权交给读者；(b) 代码上**不是新机制**：文件侧复用 TASK-089 的 `MutationScope`（开在 `Queue::tick()` 这个任务真正运行的地方，跨帧累计），画面侧复用 TASK-044 的 `Engine::arm/finish`（`before` 在请求帧、`finish` 移到完成帧）。只剩一条**命名**边界：deadline 在第一次 tick 之前就到 → `not_tracked_deferred`；而「看过但没落盘」明确写 `no_mutation`，两者不再混同 |
+| **② 的代价** | (a) 每帧开一次 scope；(b) 忽略 | **(a)** | trace 关时一个 scope 都不开（与立即调用同一条件）；trace 开时每次 tick 多一对方括号 + 每帧一次 `begin/end`，无分配。在飞的延迟调用会多持有一帧 framebuffer 拷贝（数量上界 = pending 表上界），连接断开时由 `Engine::discard()` 显式释放 |
+| **③ 两个缺失的 doctest** | (a) 继续用「第 8 轮 trace 实测钉住」；(b) 补 doctest | **(b)** | `in_input_map`（动作已声明 / 未声明两种）由 `[MCPServer]` 用例自建 `InputMap` 驱动；`_tick_pending` 的 `result_json` 需要真实传输层，所以用例**开一个环回 socket**（与 `tests/core/io/test_tcp_server.cpp` 同一套等待惯用法）。另外把 B1/B2 的新契约也各补一条 doctest（sidecar 与延迟窗口），否则新能力只有文档没有回归网 |
+| **④ `_frame_cost_ms` 用瞬时帧率** | (a) 保留 `Engine::get_frames_per_second()`；(b) 用 `Performance` 的最近一帧；(c) 自建**最近 N 帧中位数**窗口 | **(c)** | (a) 的读数**一秒才更新一次**，一次卡顿被接下来整整一秒的 deadline 继承（实测同一场景两个实例 `4396` / `1150`）；(b) 同样是瞬间值；(c) 采样点本来就有——`MCPServer::pump_frame` 每帧都跑，一次 `get_ticks_usec()`。窗口 15 帧、中位数、截断到整毫秒、夹 [16, 1000]，**60 fps 下与旧常量逐字相同**（16667 µs → 16 ms），行为对快进程零变化 |
+| **⑤ 重建** | (a) 只重建 mono；(b) 两个变体都重建 | **(b)** | 契约描述与测试都改了，`accept_m1` 的 case12 会逐字比对 `tools_list.renamed.json`；TASK-090 已经证明只重建一个变体会得到 21/22 |
+
+**读法落文档**：`modules/mcp_server/docs/reports/MCP-TRACEABILITY.md` 新增 §2.6（sidecar 字段与
+成本）、§2.7（延迟调用的两侧证据与边界表）、§3.1（`args_evidence` 六种取值 → `args_complete`）、
+§6（帧代价取值规则表）；`godot-mcp\README.md` §8 是恢复档案的内容与忽略策略，§4.3 指向上述读法。
+
+**回滚点**：A 段是文件位移，回滚 = 反向复制（源已删，但目标是一份逐文件校验过的完整副本）；
+B 段每个缺口一个提交，任一条都可单独 `git revert`，且都不改 `tools_list` 契约（`inputSchema`
+与 description 一字未动）。
+
+> 结果（门、Pong 重跑、facts_complete 前后对比、提交与 push）在 B 段实现与验收完成后追加为 D141。
+

@@ -1,0 +1,1 @@
+﻿{"method":"tools/call","params":{"arguments":{"property":"position","node_path":"Player","value":{"y":420,"x":60}},"name":"running_game_set_node_property"},"id":317,"jsonrpc":"2.0"}

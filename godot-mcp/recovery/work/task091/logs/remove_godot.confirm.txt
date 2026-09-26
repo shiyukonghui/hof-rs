@@ -1,0 +1,32 @@
+TARGET   : H:\rebuild\godot
+PREFIX   : H:\rebuild (allowed)
+FILES    : 21793
+BYTES    : 5055873699
+MB       : 4,821.7
+TOP LEVEL: 43 entries
+   d--h-- .git
+   d----- .github
+   d----- bin
+   d----- core
+   d----- doc
+   d----- drivers
+   d----- editor
+   d----- main
+   d----- misc
+   d----- modules
+   d----- platform
+   d----- scene
+   d----- servers
+   d----- tests
+   d----- thirdparty
+   d----- __pycache__
+   -a---- .clang-format
+   -a---- .clang-tidy
+   -a---- .clangd
+   -a---- .editorconfig
+   -a---- .git-blame-ignore-revs
+   -a---- .gitattributes
+   -a---- .gitignore
+   -a---- .mailmap
+   -a---- .pre-commit-config.yaml
+REMOVED  : H:\rebuild\godot

@@ -1,0 +1,24 @@
+TRACE LEDGER C:\Users\wyl\AppData\Local\Temp\mcp-recovery\work\task089\live\trace-game.jsonl
+calls=15 malformed_lines=0
+verdicts: failed=5, ok_effect_observed=1, ok_file_effect_observed=5, ok_no_effect_observed=4
+file_effects: changed=5, none=10
+
+seq    req_id   tool                                   dur_ms    ok       err      scene_effect   file_effect     verdict
+-------------------------------------------------------------------------------------------------------------------------
+1      201      running_game_get_scene_tree            505       True     0        unchanged      none            ok_no_effect_observed
+2      202      running_game_get_node_properties       258       True     0        unchanged      none            ok_no_effect_observed
+3      203      running_game_execute_gdscript          260       False    -32602   unchanged      none            failed
+4      204      running_game_execute_gdscript          522       False    -32602   unchanged      none            failed
+5      205      running_game_execute_gdscript          524       False    -32602   unchanged      none            failed
+6      206      running_game_set_node_property         240       True     0        changed        none            ok_effect_observed
+7      207      running_game_set_node_property         533       True     0        unchanged      none            ok_no_effect_observed
+8      208      running_game_set_node_property         508       False    -32001   unchanged      none            failed
+9      209      running_game_assert_node_state         273       True     0        unchanged      changed         ok_file_effect_observed
+10     210      running_game_assert_node_state         265       True     0        unchanged      changed         ok_file_effect_observed
+11     211      running_game_assert_screen_text        276       True     0        unchanged      changed         ok_file_effect_observed
+12     212      running_game_assert_screen_text        274       True     0        unchanged      changed         ok_file_effect_observed
+13     213      running_game_simulate_button_click_by_ 256       False    -32001   unchanged      none            failed
+14     214      running_game_capture_screenshot        274       True     0        unchanged      changed         ok_file_effect_observed
+15     215      running_game_get_node_properties       236       True     0        unchanged      none            ok_no_effect_observed
+
+rows whose reconstructible facts are all present: 15/15

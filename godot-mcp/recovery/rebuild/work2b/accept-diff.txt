@@ -1,0 +1,232 @@
+### tree[81:110] vs merged[81:119]
+- #      a probe request that is never answered.
+- #
+- #  Usage:  powershell -NoProfile -ExecutionPolicy Bypass -File accept_m1.ps1
+- # =============================================================================
+- 
+- $ErrorActionPreference = 'Stop'
+- 
+- $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
+- $Engine = Join-Path $RepoRoot 'bin\godot.windows.editor.x86_64.console.exe'
+- $RenamedContract = Join-Path $RepoRoot 'modules\mcp_server\docs\tools_list.renamed.json'
+- # Windows PowerShell 5.1 prepends one), and `--import`'s exit code is checked
+- # with a bounded retry and a diagnosis printed on every failure. This acceptance
+- # gate used to do neither.
+- . (Join-Path $PSScriptRoot 'mcp_import_guard.ps1')
+- # TASK-018 section 2: `$ToolNames` is **derived from the manifests** instead of
+- # being a hand-maintained literal.
+- #
+- # Until TASK-018 this was a literal array that every batch had to append to by
+- # hand (TASK-014/015/016/017 each did, and each recorded it as a declared
+- # deviation), which is exactly the kind of list that drifts: a tool can be
+- # implemented and registered while this file still does not know about it, and
+- # the equality gate then silently keeps testing the previous batch's set.
+- #
+- # The single source of truth is now the per-batch group manifests
+- # (`docs/tool-groups.json`, `-b2`, `-b3`, `-b4`, `-b5`): the expected set is the
+- # union of the `tools` of every group marked `implemented: true`, in manifest
+- # order, de-duplicated. Every assertion below keeps its exact form and strength -
+- # `$EditorToolNames` / `$GameToolNames` / `$EditorOnlyToolNames` /
+- # `$GameOnlyToolNames` are still derived from `$ToolNames` through the rename
+- # map, `case3` and `case12` still compare every name/description/inputSchema
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
+### tree[231:549] vs merged[240:689]
+-     }
+- }
+- 
+- # -----------------------------------------------------------------------------
+- # Small utilities
+- # -----------------------------------------------------------------------------
+- 
+- function Get-CanonicalJson {
+-     param($Value)
+-     if ($null -eq $Value) { return 'null' }
+- function Test-Listener {
+-     param([int]$Port)
+-     $lines = & netstat -ano -p TCP 2>$null
+-     foreach ($line in $lines) {
+-         if ($line -match 'LISTENING' -and $line -match ("[:\]]" + $Port + "\s")) { return $true }
+-     }
+-     return $false
+- }
+- 
+- function Get-ListenerPid {
+-     param([int]$Port)
+-     $lines = & netstat -ano -p TCP 2>$null
+-     foreach ($line in $lines) {
+-         if ($line -match 'LISTENING' -and $line -match ("[:\]]" + $Port + "\s")) {
+-             $fields = ($line.Trim() -split '\s+')
+-             return [int]$fields[-1]
+-         }
+-     }
+- 
+-         $notes += ("{0}: name_verbatim={1} inputSchema_verbatim={2} description_verbatim={3} fixture_description='{4}' actual_description='{5}'" -f `
+-             $name, $nameEqual, $schemaEqual, $descriptionEqual, $expected[0].description, $actual[0].description)
+-     }
+-     return @{ ok = $ok; notes = ($notes -join ' | ') }
+- }
+- 
+- function Test-Listener {
+-     param([int]$Port)
+-     $lines = & netstat -ano -p TCP 2>$null
+-     foreach ($line in $lines) {
+-         if ($line -match 'LISTENING' -and $line -match ("[:\]]" + $Port + "\s")) { return $true }
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
+### tree[630:1027] vs merged[770:1299]
+-         $interimCount = ([regex]::Matches($interim.Header + $final.Header, '100 Continue')).Count
+-         $ok = $interimSeen -and ($interimCount -eq 1) -and ($final.Status -eq 200) -and ($final.Body -match '"id":1600')
+-         return @{
+-             pass = $ok
+-             evidence = ("interim='{0}' after {1} ms; interim_sent_times={2}; final_status={3} final_body={4}" -f `
+-                 ($interim.Header -replace "`r`n", '\r\n'), $clock.ElapsedMilliseconds, $interimCount, $final.Status, $final.Body)
+-         }
+-     }
+- 
+-     Stop-Engine -Handle $script:editorHandle
+-     $script:editorHandle = $null
+- 
+-     # ------------------------------------------------------------------
+-     # Game side
+-         }
+-         $gameList = Invoke-Mcp -Port $GamePort -Body '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+-         $gameListJson = ConvertFrom-JsonSafe -Text $gameList.Body
+-         $gameProbe = Invoke-StatusProbe -Port $GamePort
+-         $gameProbeJson = ConvertFrom-JsonSafe -Text $gameProbe.Body
+-         $gameInit = Invoke-Mcp -Port $GamePort -Body '{"jsonrpc":"2.0","id":3,"method":"initialize"}'
+- 
+-         if ($null -eq $gameListJson -or $null -eq $gameListJson.result) {
+-             return @{ pass = $false; evidence = ("no tools/list result: {0}" -f $gameList.Body) }
+-         }
+-         $comparison = Compare-ToolListToFixture -ActualTools @($gameListJson.result.tools)
+-         $ok = $comparison.ok -and ($gameProbeJson.is_editor -eq $false) -and ($gameInit.Body -match 'godot-mcp-rs')
+-         return @{
+-             pass = $ok
+-             evidence = ("tools/list={0} status={1} is_editor={2} initialize={3}; {4}" -f $gameList.Body, $gameProbe.Status, $gameProbeJson.is_editor, $gameInit.
+-         }
+-     }
+-     Stop-Engine -Handle $script:gameHandle
+-     $script:gameHandle = $null
+- 
+-     # --- case 13: game process without --mcp-port must not listen -----------
+-     Invoke-Case 'case13_game_without_port' {
+-             $resp = Read-Message -Reader (New-Reader -Stream $Conn.Stream) -TimeoutMs 10000
+-             $clock.Stop()
+-             $probe = Test-PeerClosed -Conn $Conn -ProbeBody '{"jsonrpc":"2.0","id":"after-lf","method":"ping"}' -ProbeId 'after-lf'
+-         } finally { $Conn.Client.Close() }
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>
++ <<<MISSING>>>

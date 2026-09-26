@@ -1,0 +1,34 @@
+﻿=== TASK-088 live traceability session (windowed) ===
+engine  : H:\rebuild\godot\bin\godot.windows.editor.x86_64.mono.console.exe
+project : C:\Users\wyl\AppData\Local\Temp\mcp-recovery\work\task088\live-proj
+editor  : "H:\rebuild\godot\bin\godot.windows.editor.x86_64.mono.console.exe" -e --path C:\Users\wyl\AppData\Local\Temp\mcp-recovery\work\task088\live-proj --mcp-port=9888 --mcp-trace=C:\Users\wyl\AppData\Local\Temp\mcp-recovery\work\task088\live\trace-editor.jsonl --mcp-capture=every_call --mcp-capture-dir=C:\Users\wyl\AppData\Local\Temp\mcp-recovery\work\task088\live\shots-editor --mcp-capture-viewport=2d
+--- editor side ---
+  [editor-tools-list] port=9888 bytes=46810 -> C:\Users\wyl\AppData\Local\Temp\mcp-recovery\work\task088\live\editor-tools-list.json
+  [editor-open-scene-1] port=9888 bytes=121 -> C:\Users\wyl\AppData\Local\Temp\mcp-recovery\work\task088\live\editor-open-scene-1.json
+  [editor-read-tree-1] port=9888 bytes=923 -> C:\Users\wyl\AppData\Local\Temp\mcp-recovery\work\task088\live\editor-read-tree-1.json
+  [editor-set-color-green] port=9888 bytes=338 -> C:\Users\wyl\AppData\Local\Temp\mcp-recovery\work\task088\live\editor-set-color-green.json
+  [editor-set-color-green-again] port=9888 bytes=338 -> C:\Users\wyl\AppData\Local\Temp\mcp-recovery\work\task088\live\editor-set-color-green-again.json
+game    : "H:\rebuild\godot\bin\godot.windows.editor.x86_64.mono.console.exe" --path C:\Users\wyl\AppData\Local\Temp\mcp-recovery\work\task088\live-proj --mcp-port=9889 --mcp-trace=C:\Users\wyl\AppData\Local\Temp\mcp-recovery\work\task088\live\trace-game.jsonl --mcp-capture=every_call --mcp-capture-dir=C:\Users\wyl\AppData\Local\Temp\mcp-recovery\work\task088\live\shots-game
+--- game side ---
+  [game-read-tree-1] port=9889 bytes=246 -> C:\Users\wyl\AppData\Local\Temp\mcp-recovery\work\task088\live\game-read-tree-1.json
+  [game-set-color-blue] port=9889 bytes=349 -> C:\Users\wyl\AppData\Local\Temp\mcp-recovery\work\task088\live\game-set-color-blue.json
+  [game-set-color-blue-again] port=9889 bytes=349 -> C:\Users\wyl\AppData\Local\Temp\mcp-recovery\work\task088\live\game-set-color-blue-again.json
+--- artefacts ---
+C:\Users\wyl\AppData\Local\Temp\mcp-recovery\work\task088\live\shots-editor: 8 file(s)
+  0002_after.png  78036 bytes
+  0002_before.png  78036 bytes
+  0003_after.png  78036 bytes
+  0003_before.png  78036 bytes
+  0004_after.png  78036 bytes
+  0004_before.png  78036 bytes
+  0005_after.png  78036 bytes
+  0005_before.png  78036 bytes
+C:\Users\wyl\AppData\Local\Temp\mcp-recovery\work\task088\live\shots-game: 6 file(s)
+  0001_after.png  12266 bytes
+  0001_before.png  12266 bytes
+  0002_after.png  12266 bytes
+  0002_before.png  12266 bytes
+  0003_after.png  12266 bytes
+  0003_before.png  12266 bytes
+C:\Users\wyl\AppData\Local\Temp\mcp-recovery\work\task088\live\trace-editor.jsonl: 5011 bytes, 10 lines
+C:\Users\wyl\AppData\Local\Temp\mcp-recovery\work\task088\live\trace-game.jsonl: 3731 bytes, 7 lines

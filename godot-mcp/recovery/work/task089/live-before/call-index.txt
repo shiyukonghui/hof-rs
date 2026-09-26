@@ -1,0 +1,46 @@
+﻿editor-tools-list|9888|60|46810|tools/list
+e02-write-text|9888|215|216|file write (real change)
+e03-write-text-again|9888|215|216|file write, same bytes (no effect)
+e04-read-text|9888|130|513|file read
+e05-write-dedicated-extension|9888|143|242|boundary: .gd has a dedicated tool
+e06-write-new-dirs|9888|174|229|file write into new directories
+e07-create-script|9888|211|209|script create (real change)
+e08-create-script-again|9888|211|208|boundary: script already exists
+e09-edit-script-same|9888|209|208|script edit, same bytes (no effect)
+e10-edit-script-real|9888|250|208|script edit (real change)
+e11-open-scene|9888|125|121|scene open
+e12-scene-tree|9888|105|1695|scene read
+e13-node-properties|9888|125|3097|node read
+e14-set-color-green|9888|182|335|node write (screen change)
+e15-set-color-green-again|9888|182|335|node write, same value (no effect)
+e16-save-scene|9888|101|120|scene save (file change)
+e17-bad-node-path|9888|180|178|boundary: node does not exist
+e18-create-scene-file|9888|179|176|scene file create
+e19-create-resource|9888|158|208|resource create
+e20-delete-scene-file|9888|140|129|delete (real change)
+e21-delete-scene-file-again|9888|140|203|boundary: already deleted
+e22-set-setting|9888|173|232|project.godot section write (real change)
+e23-set-setting-again|9888|173|232|project.godot same value (no effect)
+e24-get-settings|9888|126|1875|settings read
+e25-statistics|9888|106|286|analysis read
+e26-scene-complexity|9888|140|289|analysis read
+e27-search-contents|9888|130|521|analysis read
+e28-read-missing-script|9888|125|182|boundary: missing file
+e29-editor-screenshot|9888|146|150|screenshot (file change)
+e30-editor-screenshot-again|9888|146|150|screenshot to the same path
+e31-get-errors|9888|101|287|editor log read
+g01-scene-tree|9889|111|405|running game read
+g02-node-properties|9889|136|3106|running game read
+g03-execute-gdscript|9889|183|238|runtime code (screen change)
+g04-execute-gdscript-2|9889|199|238|runtime code (screen change)
+g05-execute-gdscript-bad|9889|159|238|boundary: bad code
+g06-set-color-blue|9889|193|346|runtime node write (screen change)
+g07-set-color-blue-again|9889|193|346|runtime node write, same value (no effect)
+g08-set-missing-node|9889|186|180|boundary: node does not exist
+g09-assert-pass|9889|196|437|assertion that should pass
+g10-assert-fail|9889|196|688|assertion that should fail
+g11-assert-screen-text|9889|136|479|assertion that should pass
+g12-assert-screen-text-fail|9889|150|507|assertion that should fail
+g13-click-missing-button|9889|147|243|boundary: no such button
+g14-game-screenshot|9889|151|166|screenshot (file change)
+g15-hud-properties|9889|133|4329|running game read

@@ -1,0 +1,47 @@
+source H:\rebuild\godot\modules\mcp_server\tools\editor_tilemap_write.cpp (544 lines)
+
+=== lines 520..560 (raw) ===
+  520: 	}
+  521: 	return json.get_data();
+  522: }
+  523: 
+  524: void register_editor_tilemap_write_tools(MCPToolRegistry &r_registry) {
+  525: 	{
+  526: 		ToolBuilder builder("editor_remove_all_tilemap_cells", String::utf8(R"desc(清除所有格子)desc"));
+  527: 		builder.channel("editor").verb("remove").scope(MCPToolScope::EDITOR).mutating(true);
+  528: 		builder.schema(_schema_from_json(R"schema({"properties":{"node_path":{"type":"string"}},"required":["node_path"],"type":"object"})schema"));
+  529: 		builder.handler(_tool_remove_all_tilemap_cells).register_into(r_registry);
+  530: 	}
+  531: 	{
+  532: 		ToolBuilder builder("editor_set_tilemap_cell", String::utf8(R"desc(设置瓦片地图单元格 写格子要求目标 TileMapLayer 的 TileSet 里已经存在一个 TileSetAtlasSource：project_create_resource 用 type=TileSet 只会造出一个空 TileSet（source_count=0，既没有 source 也没有 texture），而当前工具集没有任何“给 TileSet 添加 atlas source / texture / tile”的入口，所以在可预见的调用序列里本工具无法成功 —— 这是一处如实声明的能力缺口，不是本工具的缺陷；调用方要么在编辑器里手工建好带 atlas source 的 TileSet，要么在项目里自带一个含 source 的 .tres。TileSet 里没有该 source 时本工具以 -32602 拒绝，并在 data.suggestion 里点名它接受的参数。)desc"));
+  533: 		builder.channel("editor").verb("set").scope(MCPToolScope::EDITOR).mutating(true);
+  534: 		builder.schema(_schema_from_json(R"schema({"properties":{"atlas_coords":{"properties":{"x":{"type":"integer"},"y":{"type":"integer"}},"type":"object"},"node_path":{"type":"string"},"source_id":{"type":"integer"},"x":{"type":"integer"},"y":{"type":"integer"}},"required":["node_path","x","y","source_id"],"type":"object"})schema"));
+  535: 		builder.handler(_tool_set_tilemap_cell).register_into(r_registry);
+  536: 	}
+  537: 	{
+  538: 		ToolBuilder builder("editor_set_tilemap_cells_in_rect", String::utf8(R"desc(填充瓦片地图矩形区域 写格子要求目标 TileMapLayer 的 TileSet 里已经存在一个 TileSetAtlasSource：project_create_resource 用 type=TileSet 只会造出一个空 TileSet（source_count=0，既没有 source 也没有 texture），而当前工具集没有任何“给 TileSet 添加 atlas source / texture / tile”的入口，所以在可预见的调用序列里本工具无法成功 —— 这是一处如实声明的能力缺口，不是本工具的缺陷；调用方要么在编辑器里手工建好带 atlas source 的 TileSet，要么在项目里自带一个含 source 的 .tres。TileSet 里没有该 source 时本工具以 -32602 拒绝，并在 data.suggestion 里点名它接受的参数。)desc"));
+  539: 		builder.channel("editor").verb("set").scope(MCPToolScope::EDITOR).mutating(true);
+  540: 		builder.schema(_schema_from_json(R"schema({"properties":{"atlas_coords":{"properties":{"x":{"type":"integer"},"y":{"type":"integer"}},"type":"object"},"node_path":{"type":"string"},"rect":{"properties":{"height":{"type":"integer"},"width":{"type":"integer"},"x":{"type":"integer"},"y":{"type":"integer"}},"type":"object"},"source_id":{"type":"integer"}},"required":["node_path","rect","source_id"],"type":"object"})schema"));
+  541: 		builder.handler(_tool_set_tilemap_cells_in_rect).register_into(r_registry);
+  542: 	}
+  543: }
+  544: 
+
+=== ToolBuilder description literals for the two tilemap tools ===
+line 532: ToolBuilder builder("editor_set_tilemap_cell", String::utf8(R"desc(设置瓦片地图单元格 写格子要求目标 TileMapLayer 的 TileSet 里已经存在一个 TileSetAtlasSource：project_create_resource 用 type=TileSet 只会造出一个空 TileSet（source_cou
+line 538: ToolBuilder builder("editor_set_tilemap_cells_in_rect", String::utf8(R"desc(填充瓦片地图矩形区域 写格子要求目标 TileMapLayer 的 TileSet 里已经存在一个 TileSetAtlasSource：project_create_resource 用 type=TileSet 只会造出一个空 TileSet（
+
+=== full string literals containing the marker ===
+  at line 532: bytes=727
+  desc(设置瓦片地图单元格 写格子要求目标 TileMapLayer 的 TileSet 里已经存在一个 TileSetAtlasSource：project_create_resource 用 type=TileSet 只会造出一个空 TileSet（source_count=0，既没有 source 也没有 texture），而当前工具集没有任何“给 TileSet 添加 atlas source / texture / tile”的入口，所以在可预见的调用序列里本工具无法成功 —— 这是一处如实声明的能力缺口，不是本工具的缺陷；调用方要么在编辑器里手工建好带 atlas source 的 TileSet，要么在项目里自带一个含 source 的 .tres。TileSet 里没有该 source 时本工具以 -32602 拒绝，并在 data.suggestion 里点名它接受的参数。)desc
+  at line 532: bytes=730
+  desc(填充瓦片地图矩形区域 写格子要求目标 TileMapLayer 的 TileSet 里已经存在一个 TileSetAtlasSource：project_create_resource 用 type=TileSet 只会造出一个空 TileSet（source_count=0，既没有 source 也没有 texture），而当前工具集没有任何“给 TileSet 添加 atlas source / texture / tile”的入口，所以在可预见的调用序列里本工具无法成功 —— 这是一处如实声明的能力缺口，不是本工具的缺陷；调用方要么在编辑器里手工建好带 atlas source 的 TileSet，要么在项目里自带一个含 source 的 .tres。TileSet 里没有该 source 时本工具以 -32602 拒绝，并在 data.suggestion 里点名它接受的参数。)desc
+  at line 538: bytes=730
+  desc(填充瓦片地图矩形区域 写格子要求目标 TileMapLayer 的 TileSet 里已经存在一个 TileSetAtlasSource：project_create_resource 用 type=TileSet 只会造出一个空 TileSet（source_count=0，既没有 source 也没有 texture），而当前工具集没有任何“给 TileSet 添加 atlas source / texture / tile”的入口，所以在可预见的调用序列里本工具无法成功 —— 这是一处如实声明的能力缺口，不是本工具的缺陷；调用方要么在编辑器里手工建好带 atlas source 的 TileSet，要么在项目里自带一个含 source 的 .tres。TileSet 里没有该 source 时本工具以 -32602 拒绝，并在 data.suggestion 里点名它接受的参数。)desc
+
+=== old contract descriptions (READ ONLY source) ===
+old contract exists=True
+sha256=8f8051c4c0f8941089f0b21a193cef7c51fa7c41d7e312b1463ea8593f313c54
+  get_scene_tree: bytes=42  '获取当前编辑场景的完整场景树'
+  tilemap_set_cell: bytes=27  '设置瓦片地图单元格'
+  tilemap_fill_rect: bytes=30  '填充瓦片地图矩形区域'

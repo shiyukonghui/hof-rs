@@ -48,3 +48,47 @@ godot-mcp/runs/
 $null
 $l
 %DST%/
+
+# ---------------------------------------------------------------------------
+# TASK-092：恢复档案 godot-mcp/recovery/（源 C:\...\Temp\mcp-recovery，2.52 GB /
+# 33,433 文件，逐文件 sha256 校验后迁入；见 D140）与 godot-mcp/README.md §8。
+#
+# 分界线是「体量 + 是否可再生」：
+#   * 大块原始料（会话转录、重建暂存、日志原始流、引擎树旧副本、引擎二进制备份）
+#     不进库——它们要么能从别处再生，要么是 100 MB 级二进制；
+#   * 小而不可再生的**判定依据**（TASK-078..091 报告、RECOVERY-PLAN /
+#     STATE-OF-RECOVERY、EXTRACTION/REBUILD manifest、逐任务脚本与实测产物）
+#     入库。
+# ---------------------------------------------------------------------------
+# 会话转录 / 重建暂存 / 原始日志 / 临时目录：数百 MB 级原始料
+godot-mcp/recovery/transcripts/
+godot-mcp/recovery/staging/
+godot-mcp/recovery/logs/
+godot-mcp/recovery/tmp/
+# 引擎二进制备份（193 MB 单个 .exe）
+godot-mcp/recovery/backup/
+# 重建期的**引擎树旧副本**（19,238 文件 / 1.18 GB）：与 godot-mcp/godot/ 同性质，
+# 铁律 4「主仓不得纳入引擎树」
+godot-mcp/recovery/rebuild/godot/
+# 原始事件流（106 MB 的 transcripts 派生 dump）：是上面 transcripts 的加工中间物
+godot-mcp/recovery/work/events-*.jsonl
+godot-mcp/recovery/work/reconstruction.jsonl
+godot-mcp/recovery/work/gen-runs.jsonl
+godot-mcp/recovery/work/assembly-stats.json
+# 工作区里的构建产物与解释器缓存
+godot-mcp/recovery/work/**/.godot/
+godot-mcp/recovery/work/**/bin/
+godot-mcp/recovery/work/**/obj/
+godot-mcp/recovery/work/**/__pycache__/
+godot-mcp/recovery/work/**/*.pyc
+godot-mcp/recovery/**/*.dll
+# 三个嵌套的 .git（重建期的 patch 演练 / 抽取暂存留下的仓库元数据）。
+# 忽略它们而不是删除它们（破坏性命令默认拒绝）。git **拒绝进入**含 .git 的目录
+# （`error: ... does not have a commit checked out`），所以下面两个目录整体忽略：
+godot-mcp/recovery/**/.git/
+#   * work/gitapply-probe/  = `git apply` 演练用的 5 个**引擎源文件**（585 KB）——
+#     派生自引擎树，铁律 4 意义上不入库；演练本身由 rebuild/patches 的 diff 可复现。
+#   * rebuild/_excluded/    = 只有一个 .git 目录（其中是重建时被排除的 T026 提交信息）；
+#     那份文本已原样复制到 rebuild/_excluded-T026COMMITMSG.kept.txt（sha 相同）后入库。
+godot-mcp/recovery/work/gitapply-probe/
+godot-mcp/recovery/rebuild/_excluded/

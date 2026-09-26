@@ -26,11 +26,13 @@ godot-mcp/
 │   ├── game_report.py            ←   每游戏报告：判定分布 + facts_complete + 独立复算像素差 + 缺陷清单
 │   ├── run_gates.ps1             ←   九道门 + accept_m1，每门一个 cmd 子进程
 │   └── sessions/                 ←   各游戏的调用集（JSON + payload/）
-└── runs/                         ← 试测产物：trace / ledger / 截图 / 每游戏报告 / 门日志（不入库）
+├── runs/                         ← 试测产物：trace / ledger / 截图 / 每游戏报告 / 门日志（不入库）
+└── recovery/                     ← 恢复档案：TASK-078..092 的报告 / 脚本 / 实测产物（见 §8）
 ```
 
 主仓 `.gitignore` 排除 `godot-mcp/godot/`（整棵）、各工程的 `.godot/` `bin/` `obj/` `.mono/`
-`export_presets.cfg`，以及 `godot-mcp/runs/`。
+`export_presets.cfg`、`godot-mcp/runs/`，以及 `recovery/` 里体量大/可再生的那几块（§8 有清单与
+分界线）。
 **`*.import` 故意不忽略** —— 它是 Godot 的资源 UID 映射，属于工程源码。
 
 ---
@@ -110,6 +112,19 @@ python modules\mcp_server\scripts\mcp_trace_ledger.py <trace.jsonl> ^
   --text <ledger.txt> --json <ledger.json>
 ```
 
+**字段与判定规则的可信来源是引擎仓里的 `modules\mcp_server\docs\reports\MCP-TRACEABILITY.md`**，
+不是本 README。TASK-092 之后它多了三件事要读：
+
+* **被裁掉的参数不再无据可查**：超限载荷整份写进 `<trace 名>.sidecar/`，行上给相对/绝对路径 +
+  真实字节数 + sha256，台账**重新算一遍**并据此判 `args_complete` 与 `args_evidence`
+  （`inline_complete` / `sidecar_verified` / `sidecar_missing` / `sidecar_mismatch` /
+  `truncated_no_sidecar` / `sidecar_not_recorded_in_trace`）——见该文档 §2.6 / §3.1；
+* **延迟调用的文件侧与画面侧证据都在完成时刻采集**：文件副作用跨延迟窗口累计（`Queue::tick`），
+  截图 `before` 在请求帧、`after` 在完成帧之后；只有「一帧都没被观测」才写 `not_tracked_deferred`
+  ——见 §2.7；
+* **`timeout_ms` 由稳定的帧代价估计造出**（最近 15 帧中位数，截断并夹在 [16, 1000] ms），
+  所以两条相同场景的 `timeout_ms` 不同只说明取值时刻不同——见 §6。
+
 ---
 
 ## 5. 新游戏
@@ -148,3 +163,43 @@ powershell -NoProfile -ExecutionPolicy Bypass -File F:\moonbit-hof-rs\godot-mcp\
 3. **构建与运行从 cmd 启动。**
 4. 主仓**不得**把 4.7 GB 的引擎树纳入跟踪。
 5. **每个里程碑 push。**
+
+---
+
+## 8. `recovery/` —— 恢复档案（TASK-092 迁入）
+
+`recovery/` 是**重建期（TASK-078..091）的全部档案**：事故（D136）之后从 178 份会话记录里把
+MCP 模块重建回来的那批文档、脚本、实测产物与原始料。TASK-092 把它从
+`C:\Users\wyl\AppData\Local\Temp\mcp-recovery\` 迁进本项目 —— **先 robocopy 复制、再逐文件
+SHA-256 校验（两侧文件数与字节数相等、`mismatched=0`）、校验全过才删源**（铁律 2）。
+拷贝脚本、校验脚本与两侧清单留在 `recovery/work/task092/`。
+
+```
+recovery/
+├── reports/        ← RECOVERY-PLAN / STATE-OF-RECOVERY、TASK-078..092 报告、
+│                      EXTRACTION-MANIFEST / REPORT、REBUILD-2A/2B 报告与 manifest（23 个 .md）
+├── logs/           ← 重建期的原始日志（436 文件 / 2.4 MB）        【不入库：原始料】
+├── work/           ← 逐任务的脚本与**关键实测产物**（trace / ledger / PNG / 分析输出）
+│   ├── task078 .. task091、gitapply-probe、patchdry…（脚本 + 证据）
+│   ├── events-*.jsonl（106 MB 会话事件 dump）                    【不入库：transcripts 的中间物】
+│   └── task092/    ← TASK-092 自己的迁移脚本、校验输出与门日志
+├── staging/        ← 重建暂存（10,861 文件 / 344 MB）             【不入库：暂存】
+├── transcripts/    ← 178 份会话记录（566 MB）                     【不入库：转录】
+├── rebuild/        ← 重建期的引擎补丁 / patch manifest / 低置信清单 / 旧副本
+│   ├── patches、work2b、_low-confidence、_refs、_excluded、ENGINE-PATCHES-TO-REAPPLY.md
+│   └── godot/      ← 重建期的**引擎树旧副本**（19,238 文件 / 1.18 GB）【不入库：引擎树，铁律 4】
+├── backup/         ← 重建前的引擎二进制备份（193 MB）              【不入库：大二进制】
+├── scripts/        ← 重建期的抽取 / 校验 / manifest 生成脚本（36 个）
+└── tmp/            ← 重建期的临时目录                              【不入库：临时】
+```
+
+**忽略策略与它的分界线**（`.gitignore` 的 `TASK-092` 段）：入库的是**小而不可再生的判定依据**
+（各 TASK 报告、RECOVERY-PLAN、STATE-OF-RECOVERY、EXTRACTION/REBUILD manifest、`work/` 下的脚本
+与实测产物、`rebuild/` 的补丁与清单），入库量 **2,436 文件 / 75.6 MB**；忽略的是**大块原始料与
+可再生的大二进制**（transcripts / staging / logs / tmp / backup / `rebuild/godot` / `events-*.jsonl`
+等，约 31,000 文件 / 2.44 GB）。**忽略不等于丢失**：它们在盘上原样保留，只是不进 git 历史。
+
+> 为什么 `recovery/rebuild/godot/` 也忽略：它是重建期的引擎树旧副本，与 `godot-mcp/godot/`
+> 同性质 —— 铁律 4 说的是「引擎树不入主仓」，与它是不是旧版本无关。
+
+---

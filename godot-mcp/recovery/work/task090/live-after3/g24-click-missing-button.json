@@ -1,0 +1,1 @@
+﻿{"error":{"code":-32001,"data":{"suggestion":"Use running_game_find_ui_elements to list the game's Control nodes, or retry with partial=true"},"message":"A visible Button whose text contains 'NoSuchButton' not found"},"id":324,"jsonrpc":"2.0"}

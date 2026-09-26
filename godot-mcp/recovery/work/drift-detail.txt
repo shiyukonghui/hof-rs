@@ -1,0 +1,4 @@
+==== modules\mono\editor\Godot.NET.Sdk\Godot.NET.Sdk\Godot.NET.Sdk.csproj staged_lines=43 baseline_lines=43
+==== modules\mono\editor\Godot.NET.Sdk\Godot.SourceGenerators\Godot.SourceGenerators.csproj staged_lines=40 baseline_lines=40
+==== build-m0-attempt1.log staged_lines=15 baseline_lines=15
+==== install-deps-m0.log staged_lines=44 baseline_lines=44

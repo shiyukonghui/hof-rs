@@ -1,0 +1,34 @@
+TARGET   : F:\moonbit-hof-rs\godot-mcp\projects\pong
+FILES    : 135
+BYTES    : 8507123
+MB       : 8.11
+KEEPS    : F:\moonbit-hof-rs\godot-mcp\runs\pong  (evidence is never touched)
+TOP LEVEL:
+   d----- .godot
+   d----- scenes
+   d----- src
+   -a---- .gitignore
+   -a---- NuGet.config
+   -a---- pong.csproj
+   -a---- project.godot
+   -a---- README.md
+REMOVED  : F:\moonbit-hof-rs\godot-mcp\projects\pong
+template : F:\moonbit-hof-rs\godot-mcp\projects\_template
+dest     : F:\moonbit-hof-rs\godot-mcp\projects\pong
+name     : pong
+class    : PongGame
+  substituted: project.godot
+  substituted: README.md
+  substituted: __NAME__.csproj
+  substituted: scenes\main.tscn
+  substituted: src\__CLASS__.cs
+placeholder files left: 0
+  .gitignore
+  NuGet.config
+  pong.csproj
+  project.godot
+  README.md
+  scenes\main.tscn
+  src\PongGame.cs
+created  : F:\moonbit-hof-rs\godot-mcp\projects\pong
+RESET    : pong is back to the template state

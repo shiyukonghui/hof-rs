@@ -1,0 +1,68 @@
+== distinct tools_list*.json tokens in payload index ==
+  tools_list-editor.json                        events-read.jsonl,events-write.jsonl
+  tools_list-game.json                          events-read.jsonl,events-write.jsonl
+  tools_list.OLD.json                           events-diff.jsonl,events-termfile.jsonl,events-termlog.jsonl
+  tools_list.after.json                         events-diff.jsonl,events-edit.jsonl,events-read.jsonl,events-termlog.jsonl,gen-runs.jsonl
+  tools_list.baseline_no_overrides.json         events-edit.jsonl,events-termdump.jsonl,events-termfile.jsonl,events-write.jsonl
+  tools_list.before.json                        events-diff.jsonl,events-edit.jsonl,events-read.jsonl,events-termdump.jsonl,events-termfile.jsonl,events-termlog.jsonl,events-write.jsonl,gen-runs.jsonl
+  tools_list.editor.request.json                events-read.jsonl
+  tools_list.editor.response.json               events-read.jsonl,events-termlog.jsonl
+  tools_list.json                               events-diff.jsonl,events-edit.jsonl,events-read.jsonl,events-termdump.jsonl,events-termfile.jsonl,events-termlog.jsonl,events-write.jsonl,gen-runs.jsonl,reconstruction.jsonl
+  tools_list.renamed.json                       events-diff.jsonl,events-edit.jsonl,events-read.jsonl,events-termdump.jsonl,events-termfile.jsonl,events-termlog.jsonl,events-write.jsonl,gen-runs.jsonl,reconstruction.jsonl
+  tools_list.renamed.regen.json                 events-termlog.jsonl,events-write.jsonl,gen-runs.jsonl
+  tools_list.request.json                       events-diff.jsonl,events-read.jsonl,events-termdump.jsonl,events-write.jsonl,gen-runs.jsonl
+  tools_list.res.json                           events-read.jsonl,events-termlog.jsonl,events-write.jsonl
+  tools_list.resp.json                          events-diff.jsonl,events-read.jsonl,events-termdump.jsonl,events-termlog.jsonl,events-write.jsonl,gen-runs.jsonl
+  tools_list.response.json                      events-diff.jsonl,events-edit.jsonl,events-read.jsonl,events-termdump.jsonl,events-termfile.jsonl,events-termlog.jsonl,events-write.jsonl,gen-runs.jsonl
+  tools_list__0001__17b0e4fe.request.json       events-diff.jsonl
+  tools_list__0001__b9e9dd03.request.json       events-diff.jsonl
+  tools_list__0001__c37335a1.response.json      events-diff.jsonl
+  tools_list__0001__ce229ba2.response.json      events-diff.jsonl
+  tools_list__0002__0ed732af.response.json      events-diff.jsonl
+  tools_list__0002__333b4a68.response.json      events-diff.jsonl
+  tools_list_actual.json                        events-write.jsonl
+  tools_list_editor.json                        events-termlog.jsonl,events-write.jsonl,gen-runs.jsonl
+  tools_list_editor_9888.response.json          events-read.jsonl,events-write.jsonl
+  tools_list_game.json                          events-termlog.jsonl,events-write.jsonl
+  tools_list_game_9889.request.json             events-termdump.jsonl
+  tools_list_game_9889.response.json            events-read.jsonl,events-termdump.jsonl,events-termlog.jsonl,events-write.jsonl
+== distinct tool-rename-map*.json tokens ==
+  tool-rename-map.json                          events-diff.jsonl,events-edit.jsonl,events-read.jsonl,events-termdump.jsonl,events-termfile.jsonl,events-termlog.jsonl,events-write.jsonl,gen-runs.jsonl,reconstruction.jsonl
+
+== baseline tree engine marker scan (blob text search) ==
+  core/config/project_settings.cpp              bytes=75556    no patch markers
+  core/config/project_settings.h                bytes=13295    no patch markers
+  editor/editor_node.cpp                        bytes=389353   no patch markers
+  modules/mono/csharp_script.cpp                bytes=86199    no patch markers
+  modules/mono/csharp_script.h                  bytes=20978    no patch markers
+
+== hard gap status ==
+  modules\mcp_server\tests\test_mcp_server.h           staging=431976 tree=66392
+  modules\mcp_server\docs\DESIGN-DETAIL.md             staging=84486 tree=31531
+  modules\mcp_server\tools\registration.cpp            staging=17014 tree=2580
+  modules\mcp_server\scripts\accept_m1.ps1             staging=57469 tree=52075
+  modules\mcp_server\scripts\gen_renamed_contract.py   staging=118449 tree=21390
+
+== reconstruction rows for gaps (and tools assets) ==
+  modules\mcp_server\docs\spec\TASK-016\REQUIREMENTS.md                  conf=mid  wrote=True  bytes=7011    cov=100.0  tail=no   failed=0 n_edit=0
+  modules\mcp_server\docs\spec\TASK-016\DESIGN-DETAIL.md                 conf=mid  wrote=True  bytes=21265   cov=100.0  tail=no   failed=0 n_edit=0
+  modules\mcp_server\docs\spec\TASK-016\ACCEPTANCE.md                    conf=high wrote=True  bytes=8032    cov=0.0    tail=no   failed=0 n_edit=0
+  modules\mcp_server\scripts\gen_renamed_contract.py                     conf=low  wrote=True  bytes=118449  cov=75.0   tail=partial-only failed=47 n_edit=125
+  modules\mcp_server\docs\MCP-SERVER-HANDOVER.md                         conf=high wrote=True  bytes=67905   cov=12.2   tail=no   failed=0 n_edit=5
+  modules\mcp_server\docs\spec\TASK-005\REQUIREMENTS.md                  conf=mid  wrote=True  bytes=9732    cov=100.0  tail=no   failed=0 n_edit=0
+  modules\mcp_server\docs\spec\TASK-005\DESIGN-DETAIL.md                 conf=mid  wrote=True  bytes=18619   cov=100.0  tail=no   failed=0 n_edit=0
+  modules\mcp_server\tests\test_mcp_server.h                             conf=low  wrote=True  bytes=431976  cov=46.9   tail=no   failed=456 n_edit=793
+  modules\mcp_server\scripts\accept_m1.ps1                               conf=mid  wrote=True  bytes=57469   cov=79.9   tail=partial-only failed=5 n_edit=76
+  __external\F\moonbit-hof-rs\.spec\hof-rs\REQUIREMENTS.md               conf=mid  wrote=True  bytes=16022   cov=100.0  tail=no   failed=0 n_edit=8
+  __external\F\moonbit-hof-rs\.spec\hof-rs\DESIGN-DETAIL.md              conf=high wrote=True  bytes=103209  cov=85.2   tail=no   failed=0 n_edit=27
+  __external\F\moonbit-hof-rs\.spec\hof-rs\ACCEPTANCE.md                 conf=mid  wrote=True  bytes=9365    cov=100.0  tail=no   failed=0 n_edit=0
+  __external\F\moonbit-hof-rs\.spec\godot-mcp-engine\REQUIREMENTS.md     conf=mid  wrote=True  bytes=7439    cov=100.0  tail=no   failed=0 n_edit=0
+  __external\F\moonbit-hof-rs\.spec\godot-mcp-engine\DESIGN-DETAIL.md    conf=mid  wrote=True  bytes=22051   cov=100.0  tail=no   failed=0 n_edit=2
+  __external\F\moonbit-hof-rs\.spec\godot-mcp-engine\ACCEPTANCE.md       conf=high wrote=True  bytes=10258   cov=96.0   tail=no   failed=0 n_edit=2
+  modules\mcp_server\tools\registration.cpp                              conf=low  wrote=True  bytes=17014   cov=100.0  tail=no   failed=42 n_edit=42
+  modules\mcp_server\docs\DESIGN-DETAIL.md                               conf=low  wrote=True  bytes=84486   cov=100.0  tail=no   failed=50 n_edit=50
+  modules\mcp_server\tools\__up__\tests\test_mcp_server.h                conf=low  wrote=False bytes=None    cov=0.0    tail=unknown failed=1 n_edit=1
+  modules\mcp_server\docs\tools_list.renamed.json                        conf=mid  wrote=True  bytes=26377   cov=20.3   tail=yes  failed=0 n_edit=0
+  modules\mcp_server\docs\tool-rename-map.json                           conf=mid  wrote=True  bytes=11240   cov=14.8   tail=yes  failed=0 n_edit=0
+  modules\mcp_server\docs\ACCEPTANCE.md                                  conf=mid  wrote=True  bytes=10257   cov=100.0  tail=no   failed=0 n_edit=0
+  modules\mcp_server\docs\REQUIREMENTS.md                                conf=mid  wrote=True  bytes=2515    cov=35.7   tail=partial-only failed=0 n_edit=0

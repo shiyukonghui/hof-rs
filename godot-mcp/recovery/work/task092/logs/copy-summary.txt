@@ -1,0 +1,9 @@
+﻿ROBOCOPY backup       exit=1
+ROBOCOPY logs         exit=1
+ROBOCOPY rebuild      exit=1
+ROBOCOPY scripts      exit=1
+ROBOCOPY staging      exit=1
+ROBOCOPY tmp          exit=1
+ROBOCOPY transcripts  exit=1
+ROBOCOPY work         exit=1
+COPY_DONE 2026-09-26 23:41:21

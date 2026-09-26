@@ -1,0 +1,23 @@
+modules/mcp_server: task085 (2c-4) step4 - build 2 (tests=yes) is GREEN
+
+tests/test_mcp_server.h:
+* ten TEST_CASEs used `ScratchProject` unqualified and five used
+  `list_files_recursive` unqualified - both live in `namespace TestMCPServer`
+  and the recorded rev3846 window shows both spellings, i.e. the namespace
+  opener/closer around that block was lost.  Qualifying them is the
+  behaviour-identical repair.
+* the `#endif` at 8384 had lost its `#ifdef MCP_EDITOR_TOOLS_ENABLED` opener,
+  so everything after it was skipped; the guard is restored right after the
+  TEST_CASE's opening brace.
+* the five `editor_read_scene_inspector` TEST_CASEs appeared twice: the copy at
+  2941-3583 is the later one (48 game-scope / 76 editor-process tools - the
+  counts the current registration produces), the copy at 9133-9487 the earlier
+  one (19 / 26).  Ruling (B): the earlier generation is dropped.
+* two `CHECK(payload["created"] == true)`-shaped assertions do not compile
+  (`Variant` has no `operator==(bool)`); the recorded spelling
+  `CHECK((bool)payload["created"]);` is used.
+* three `CHECK(a && <comparison>)` expressions trip doctest's C2338
+  ("Expression Too Complex"); they are parenthesised.
+
+scons platform=windows target=editor tests=yes -j8 -k: exit 0, 0 errors,
+bin/godot.windows.editor.x86_64.exe (193225216 bytes).

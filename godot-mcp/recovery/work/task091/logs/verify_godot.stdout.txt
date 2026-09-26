@@ -1,0 +1,23 @@
+### VERIFY godot
+SRC=H:\rebuild\godot
+DST=F:\moonbit-hof-rs\godot-mcp\godot
+src_files=21793
+dst_files=21793
+missing_in_dst=0
+extra_in_dst=0
+  progress 2000/21793 mismatches=0
+  progress 4000/21793 mismatches=0
+  progress 6000/21793 mismatches=0
+  progress 8000/21793 mismatches=0
+  progress 10000/21793 mismatches=0
+  progress 12000/21793 mismatches=0
+  progress 14000/21793 mismatches=0
+  progress 16000/21793 mismatches=0
+  progress 18000/21793 mismatches=0
+  progress 20000/21793 mismatches=0
+compared=21793
+mismatched=0
+src_total_bytes=5055873699
+dst_total_bytes=5055873699
+VERIFY_godot=PASS
+json=C:\Users\wyl\AppData\Local\Temp\mcp-recovery\work\task091\logs\verify_godot.json

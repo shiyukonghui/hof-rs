@@ -1,0 +1,1 @@
+﻿{"method":"tools/call","params":{"arguments":{"content":"extends RefCounted\n\nfunc tag() -\u003e String:\n\treturn \"round8\"\n\nfunc extra() -\u003e int:\n\treturn 8\n","path":"res://util.gd"},"name":"project_edit_script"},"id":109,"jsonrpc":"2.0"}

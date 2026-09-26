@@ -1,0 +1,6 @@
+docs(godot-mcp): 更正 Pong 缺陷记录里的一个数字 —— run-4 里「注定失败的断言」是 2 条不是 3 条
+
+初稿把 run-1（P-1 未修时）两条**偶然失败**的比分断言算进了「刻意构造的失败断言」。
+run-4 的台账里刻意构造的失败断言只有两条：seq=12（板位置 eq → scenario_assertion_failed）、
+seq=27（屏幕文本不存在 → assertion_failed）；另有三条场景断言 scenario_passed 作正对照。
+D139 与 projects/pong/README.md 同步更正，并写明为什么初稿会数错。

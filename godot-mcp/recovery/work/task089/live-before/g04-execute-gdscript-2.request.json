@@ -1,0 +1,1 @@
+﻿{"method":"tools/call","params":{"arguments":{"code":"var m = get_node(\"/root/Main\"); m.set_hud(\"HUD from MCP\"); return m.moves"},"name":"running_game_execute_gdscript"},"id":204,"jsonrpc":"2.0"}

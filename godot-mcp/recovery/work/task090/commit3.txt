@@ -1,0 +1,34 @@
+modules/mcp_server: task090 (2c-9) step3 - the round-8 fixes: the InputMap fact, the scenario flags, the frame-based deadline
+
+TASK-090 item C. The round-8 session (a purpose-built mini game, both endpoints,
+trace + every-call capture, 57 calls) produced three defects with a clear root
+cause; this commit carries the two that are the module's.
+
+1. `running_game_run_test_scenario`'s input step now answers `action` +
+   `in_input_map`, the same field `editor_simulate_input_action` already answers.
+   Root cause, measured and then read out of the engine source: the injected
+   event *is* delivered to `_input` (the before-run's stderr carries the
+   GDScript backtrace of `main.gd:_input`), but `InputEvent::is_action_pressed`
+   resolves through `InputMap::event_get_action_status`, which answers false for
+   an action the InputMap does not declare (core/input/input_map.cpp:291-292).
+   The step reported `injected: 1` and the game silently did nothing.
+
+2. `scripts/mcp_trace_ledger.py`'s `result_flags` also reads a scenario summary
+   (`scenario_passed` / `scenario_assertion_failed` / `scenario_errors` /
+   `scenario_asserted_nothing`). Without it the ledger could not answer the one
+   question the scenario tools exist for - did the assertions hold - because a
+   scenario nests its verdicts in `results[]` and summarises in `all_passed`.
+
+3. Both drivers of `running_game_test_execution.cpp` estimated their deadline
+   from a hard-coded frame time (250 ms per scenario step, 16 ms per stress
+   iteration) although they advance one step / iteration per frame. Measured: a
+   game run whose every call took 250-530 ms (a ~4 fps loop) killed a 0.4 s,
+   3-step scenario that did exactly what it was asked with its own 1150 ms
+   estimate. The estimate now uses the process' own frame rate, floored at the
+   old constants, so a 60 fps game keeps the deadline it always had.
+
+The third defect's harness half (the project declares `mcp_right` in its
+InputMap) lives in H:\rebuild\projects\mcpplay8, outside the repository.
+REBUILT-2C-MANIFEST.md section 2c-9 (J-1..J-3) records all of it, including the
+two findings that are deliberately *not* defects (the capture's threshold-10
+pixel rule, and the deferred channel's declared unobservability).

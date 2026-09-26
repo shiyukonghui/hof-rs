@@ -1,0 +1,7 @@
+﻿### VERIFY recovery migration
+src=C:\Users\wyl\AppData\Local\Temp\mcp-recovery
+dst=F:\moonbit-hof-rs\godot-mcp\recovery
+src_files=33433 expected_dst_files=33433 dst_files=33433
+compared=33433 mismatched=0 size_mismatch=0 missing_in_dst=0 extra_in_dst=0
+src_total_bytes=2520301348 dst_matched_total_bytes=2520301348
+VERIFY_RECOVERY=PASS

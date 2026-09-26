@@ -1,0 +1,3 @@
+6b0ee95c2abde614a4ec0ed2e6e4b7eb00ee39a75ebddf3906737d43cda02353  patch1-csharp-compile-verdict-5f3e7fb441.diff
+70decff99a232fd5866f37cd8bd952ffa40afee8801d2bfc1eaa4b5be46b4c4c  patch2-projectsettings-section-publish-96f631addb.diff
+41867b2962fce8c764da13fe9812c8c67a2bba22c16be5923c0c53206a5fae7e  patch3-save-preserving-text-2f85141a74.diff

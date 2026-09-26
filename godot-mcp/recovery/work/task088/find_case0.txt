@@ -1,0 +1,1 @@
+seq=1030 time=1790321324515 path=F:\RustProjects\godot-mcp-pro\code\godot\modules\mcp_server\scripts\accept_m1.ps1 old_bytes=77 new_bytes=1998 old_lines=1 new_lines=32

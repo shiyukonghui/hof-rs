@@ -1,0 +1,1 @@
+﻿{"method":"tools/call","params":{"arguments":{"path":"Sky","property":"color","value":{"g":0.05,"r":0.05,"b":0.1,"a":1}},"name":"editor_set_node_property"},"id":125,"jsonrpc":"2.0"}

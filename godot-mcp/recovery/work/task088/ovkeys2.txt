@@ -1,0 +1,10 @@
+DESCRIPTION_OVERRIDES: A=14 B=9
+  A only: ['get_scene_tree', 'list_scripts', 'run_test_scenario', 'tilemap_fill_rect', 'tilemap_set_cell']
+  B only: []
+  A keys: analyze_signal_flow, find_signal_connections, search_files, search_in_files, find_node_references, uid_to_project_path, project_path_to_uid, replay_recording, play_scene, get_scene_tree, tilemap_set_cell, tilemap_fill_rect, list_scripts, run_test_scenario
+  B keys: analyze_signal_flow, find_signal_connections, search_files, search_in_files, find_node_references, uid_to_project_path, project_path_to_uid, replay_recording, play_scene
+SCHEMA_OVERRIDES: A=12 B=13
+  A only: []
+  B only: []
+  A keys: monitor_properties, replay_recording, play_scene, get_test_report, add_state_machine_state, set_blend_tree_node, set_material_3d, add_state_machine_transition, batch_add_nodes, find_signal_connections, simulate_sequence, run_test_scenario
+  B keys: monitor_properties, replay_recording, play_scene, play_scene, get_test_report, add_state_machine_state, set_blend_tree_node, set_material_3d, add_state_machine_transition, batch_add_nodes, find_signal_connections, simulate_sequence, run_test_scenario

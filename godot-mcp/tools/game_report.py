@@ -136,10 +136,14 @@ def ledger_summary(ledger_json):
     rows = ledger_json.get("rows") or []
     verdicts = {}
     facts_complete = 0
+    args_evidence = {}
     for row in rows:
         verdicts[row["verdict"]] = verdicts.get(row["verdict"], 0) + 1
         if row.get("facts_complete"):
             facts_complete += 1
+        # TASK-092 (item B1): how the parameters' completeness was established.
+        key = row.get("args_evidence") or "not_recorded_in_trace"
+        args_evidence[key] = args_evidence.get(key, 0) + 1
     ineffective = [r for r in rows
                    if r["verdict"] in ("ok_no_effect_observed", "ok_effect_unavailable")]
     failed = [r for r in rows if r["verdict"] == "failed"]
@@ -149,6 +153,7 @@ def ledger_summary(ledger_json):
         "malformed_lines": ledger_json.get("malformed_lines"),
         "verdicts": verdicts,
         "facts_complete": facts_complete,
+        "args_evidence": args_evidence,
         "rows": rows,
         "failed": failed,
         "ineffective": ineffective,
@@ -241,8 +246,13 @@ def main():
         facts = row.get("facts") or {}
         reasons = []
         if not facts.get("args"):
-            reasons.append("args_truncated=%s (args_bytes=%s; the trace's own bound, "
-                           "not a lost fact)" % (row.get("args_truncated"), row.get("args_bytes")))
+            # TASK-092 (item B1): "cropped" is no longer the same as "lost". The
+            # reason names which side of the sidecar rule failed, because the two
+            # have different fixes (write the evidence vs. find the file).
+            reasons.append("args_evidence=%s (args_bytes=%s; sidecar=%s)"
+                           % (row.get("args_evidence") or "args_truncated=%s" % row.get("args_truncated"),
+                              row.get("args_bytes"),
+                              json.dumps(row.get("args_sidecar_detail") or {}, sort_keys=True)[:200]))
         if not facts.get("file_effect"):
             reasons.append("file_effect_status=%s (%s)" % (
                 row.get("file_effect_status"), row.get("file_effect_evidence")))
@@ -334,6 +344,8 @@ def main():
         lines.append("* verdicts: " + (", ".join(
             "%s=%d" % (k, summary["verdicts"][k]) for k in sorted(summary["verdicts"])) or "<none>"))
         lines.append("* `facts_complete`: **%d/%d**" % (summary["facts_complete"], summary["calls"] or 0))
+        lines.append("* `args_evidence`: " + (", ".join(
+            "%s=%d" % (k, summary["args_evidence"][k]) for k in sorted(summary["args_evidence"])) or "<none>"))
         lines.append("* failed: %d, no-effect observed: %d" % (
             len(summary["failed"]), len(summary["ineffective"])))
         lines.append("")
@@ -440,6 +452,7 @@ def main():
                                          "capture_status", "capture_reason",
                                          "file_effect", "file_effect_status", "file_effect_evidence",
                                          "args_bytes", "args_truncated",
+                                         "args_complete", "args_evidence", "args_sidecar_detail",
                                          "error_code", "result_flags", "error_flags")}
                 for row in summary["rows"]]
     with io.open(os.path.join(run, "report.json"), "w", encoding="utf-8", newline="\n") as handle:

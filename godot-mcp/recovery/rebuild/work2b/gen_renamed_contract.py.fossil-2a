@@ -1,0 +1,422 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Generate docs/tools_list.renamed.json from the old contract + the rename map.
+
+Spec source
+-----------
+* docs/DESIGN-DETAIL.md section 16 item 2 (the renamed contract is the reference
+  artifact of every per-batch equality gate), GDR-16, GDR-17 and GDR-18.
+* docs/B0-BRIEF.md section 2 (frozen task book for B0).
+* docs/tool-rename-map.json is the single source of truth (174 entries).
+* docs/tasks/TASK-001-rename-map-v1.1.md section 2.5.1 (the v1.1 map shape).
+
+The transform is mechanical and idempotent:
+
+  * `name`         <- the map's `new_name`;
+  * `description`  <- the old contract object, carried over verbatim;
+  * `inputSchema`  <- the old contract object, carried over verbatim;
+  * top level `id` / `jsonrpc` are carried over from the old contract;
+  * `disposition == "unregister_until_implemented"` entries are dropped (2);
+  * `disposition == "merge_into"` entries are dropped (1), where the surviving
+    entry is named by the entry's own `merge_target` field (= its `old_name`).
+    v1.1 replaced the v1.0 inline `merge_into:<old_name>` form with that field
+    (D-4), and GDR-17 cancelled two of the three v1.0 merges because they were
+    lossy - the two de-merged tools now each keep their own, distinct name.
+
+Expected output: 174 - 2 unregistered - 1 lossless merge == 171 tools.
+
+`description` / `inputSchema` may only ever change through the explicit
+DESCRIPTION_OVERRIDES / SCHEMA_OVERRIDES lists below (SCHEMA_OVERRIDES is still
+empty, every entry must carry a `reason` that ends up in `_meta.overrides`).
+Without such an entry, not a single character of those fields is allowed to move -
+the script asserts that by re-serializing both objects and comparing.
+
+v1.2 (TASK-002 section 2.1, audit risks R-1/R-2/R-3): DESCRIPTION_OVERRIDES is no
+longer empty. Seven tools stay ambiguous "by name alone" because each pair shares
+channel / verb / scope / mutating and differs only in the result shape, the hit
+cap or the case sensitivity, so every one of them gets one inline discriminator
+sentence. The discriminators are transcribed from the *migration source* (read,
+not guessed): commands/project.rs, commands/batch.rs, commands/analysis.rs.
+Each override is append-only (`<old description> + " " + <discriminator>`), which
+the script enforces, so no original wording can be silently dropped. A stale
+override (an `old_name` that never matches) is a hard failure as well.
+
+Standard library only (Python 3.9). No third party package is used anywhere.
+"""
+
+import argparse
+import hashlib
+import json
+import os
+import re
+import sys
+
+GENERATOR_VERSION = "1.2.0"
+GENERATED_BY = "modules/mcp_server/scripts/gen_renamed_contract.py"
+
+# Explicit override hooks. SCHEMA_OVERRIDES stays empty for B0/B1: the rename is
+# name-only plus, from v1.2 on, the seven description disambiguations below.
+# Any entry has to look like {"reason": "...", "value": <object>} and is recorded
+# in `_meta.overrides` so that the deviation stays auditable.
+#
+# v1.2: R-1/R-2/R-3 disambiguation (TASK-002 section 2.1.1). Each discriminator
+# below is a *fact read out of the migration source*, never an invention; the
+# line references are the ones already audited for tool-rename-map.json v1.1.
+DESCRIPTION_OVERRIDES = {
+    # R-1: editor_analyze_signal_flow vs editor_list_signal_connections.
+    # analysis.rs:387-410 / analysis.rs:96-160 (nested nodes[], flags & 1, exact
+    # node_path via had_node, no signal_name filter) against
+    # batch.rs:207-263 (flat connections[], all connections, substring matches).
+    "analyze_signal_flow": {
+        "reason": (
+            "R-1 消歧：analyse 与 list 的返回值形状/过滤/匹配方式不同（analysis.rs:387 按节点嵌套、"
+            "flags&1 只留持久连接、node_path 精确、无 signal_name；batch.rs:207 扁平 connections[]、"
+            "收全部连接、子串匹配）。description 内联判别点，调用方不看文档即可二选一。"
+        ),
+        "value": "分析当前场景的信号连接流 判别点：按节点嵌套返回 nodes[]（每节点含 signals_emitted/signals_connected_to），只统计持久连接（flags & 1）、node_path 精确匹配、无 signal_name 过滤；要扁平 connections[] 或子串匹配请用 editor_list_signal_connections。",
+    },
+    "find_signal_connections": {
+        "reason": (
+            "R-1 消歧：与 editor_analyze_signal_flow 形状/过滤/匹配方式不同（batch.rs:207 扁平 "
+            "connections[]+count、不过滤非持久连接、node_path 与 signal_name 均子串匹配）。"
+        ),
+        "value": "递归查找场景中所有信号连接 判别点：扁平返回 connections[]（每项 {source,signal,target,method}）与 count，收全部连接（不过滤非持久连接）、node_path 与 signal_name 均按子串匹配；要按节点嵌套的流向分析请用 editor_analyze_signal_flow。",
+    },
+    # R-2: project_search_file_names vs project_search_file_contents.
+    # project.rs:159-191 (file name substring, case insensitive, cap 200) against
+    # project.rs:194-246 (per line, case insensitive, cap 50).
+    "search_files": {
+        "reason": (
+            "R-2 消歧：search_files 只按文件名子串匹配（project.rs:175，大小写不敏感、上限 200，"
+            "不读内容不返回行号），与 search_in_files 的逐行内容匹配完全不同。"
+        ),
+        "value": "搜索文件 判别点：只匹配文件名子串（大小写不敏感、上限 200），不读文件内容、不返回行号；要搜索文件内容请用 project_search_file_contents。",
+    },
+    "search_in_files": {
+        "reason": (
+            "R-2 消歧：search_in_files 逐行返回 {file,line,text}（project.rs:221-229，大小写不敏感、"
+            "上限 50、跳过 addons 与 .godot），与 find_node_references 的按文件聚合不同。"
+        ),
+        "value": "在文件内容中搜索文本 判别点：逐行返回 {file,line,text}（大小写不敏感、上限 50，跳过 addons 与 .godot 目录）；要按文件聚合的 {file,lines[]}（大小写敏感、上限 100）请用 project_find_files_referencing_symbol。",
+    },
+    # R-2/R-3: project_find_files_referencing_symbol (batch.rs:419-512) is the
+    # de-merged twin of project_search_file_contents (GDR-17).
+    "find_node_references": {
+        "reason": (
+            "R-2 消歧：find_node_references 按文件聚合 {file,lines[]}（batch.rs:474-489，大小写敏感、"
+            "上限 100、每文件最多 5 行），与 search_in_files 的逐行形状互为对照（GDR-17 取消合并）。"
+        ),
+        "value": "在项目文件中搜索指定模式的引用 判别点：按文件聚合返回 {file,lines[]}（每文件最多 5 行、大小写敏感、上限 100，跳过隐藏文件与 addons，只扫 .tscn/.gd/.tres/.gdshader）；要逐行 {file,line,text}（大小写不敏感、上限 50）请用 project_search_file_contents。",
+    },
+    # R-3: the two converts are a pure direction pair (project.rs:295-322).
+    "uid_to_project_path": {
+        "reason": (
+            "R-3 消歧：uid_to_project_path 入参是文本 UID、出参 {uid,path}，UID 文本非法即报参数错误"
+            "（project.rs:295-305），与反向转换项目路径->UID 是纯方向对。"
+        ),
+        "value": "将 UID 转换为项目路径 判别点：入参为字符串文本 UID（如 uid://...），返回 {uid,path}，UID 文本格式非法时报参数错误；反向转换请用 project_convert_path_to_uid。",
+    },
+    "project_path_to_uid": {
+        "reason": (
+            "R-3 消歧：project_path_to_uid 入参是项目路径、出参 {path,uid}，路径未注册时 uid 为空串且"
+            "不报错（project.rs:308-322），与反向转换 UID->路径是纯方向对。"
+        ),
+        "value": "将项目路径转换为 UID 判别点：入参为项目路径（如 res://...），返回 {path,uid}，路径未注册时 uid 为空串且不报错；反向转换请用 project_convert_uid_to_path。",
+    },
+}
+SCHEMA_OVERRIDES = {}
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+MODULE_ROOT = os.path.dirname(HERE)
+
+DEFAULT_OLD_CONTRACT = r"F:\moonbit-hof-rs\tests\fixtures\mcp\tools_list.json"
+DEFAULT_MAP = os.path.join(MODULE_ROOT, "docs", "tool-rename-map.json")
+DEFAULT_OUT = os.path.join(MODULE_ROOT, "docs", "tools_list.renamed.json")
+
+OLD_CONTRACT_SHA256 = "8f8051c4c0f8941089f0b21a193cef7c51fa7c41d7e312b1463ea8593f313c54"
+
+# GDR-16 L1: channels tried longest prefix first. `running_game_` carries its own
+# underscore, so a `split('_')[1]` parse would read the verb as `game`.
+CHANNELS = ("running_game", "project", "editor", "os")
+L1_PATTERN = re.compile(r"^(editor|running_game|project|os)_[a-z0-9_]+$")
+
+# D-4: the disposition field is an enum, and a merge names its survivor through
+# the separate `merge_target` field instead of the v1.0 `merge_into:<old_name>`
+# string form.
+DISPOSITION_ENUM = (
+    "rename",
+    "keep",
+    "merge_into",
+    "unregister_until_implemented",
+    "fix_implementation_first",
+)
+
+
+def sha256_file(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(65536), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def parse_tool_name(name):
+    """Isomorphic to MCPToolRegistry::parse_tool_name (tool_registry.cpp)."""
+    for channel in CHANNELS:
+        prefix = channel + "_"
+        if not name.startswith(prefix):
+            continue
+        rest = name[len(prefix):]
+        if not rest:
+            return None
+        if not all((("a" <= c <= "z") or ("0" <= c <= "9") or c == "_") for c in rest):
+            return None
+        # `editor_get` is legal: the object segment is not required (D-E4).
+        verb = rest.split("_", 1)[0]
+        return channel, verb
+    return None
+
+
+def validate_renamed(entry, closed_set):
+    """GDR-16 L1..L4 checks for one map entry. Returns None or a reason."""
+    name = entry["new_name"]
+    if "update_" in name:
+        return "L4 banned 'update_': %s" % name
+    if not L1_PATTERN.match(name):
+        return "L1 pattern mismatch: %s" % name
+    parsed = parse_tool_name(name)
+    if parsed is None:
+        return "L1 parse failure: %s" % name
+    channel, verb = parsed
+    if verb not in closed_set:
+        return "L2 verb '%s' outside the closed set: %s" % (verb, name)
+    if verb != entry.get("verb"):
+        return "L3 declared verb '%s' != parsed '%s': %s" % (entry.get("verb"), verb, name)
+    if channel != entry.get("channel"):
+        return "L3 declared channel '%s' != parsed '%s': %s" % (entry.get("channel"), channel, name)
+    return None
+
+
+def canonical(value):
+    return json.dumps(value, ensure_ascii=False, sort_keys=True)
+
+
+def apply_override(table, old_name, fallback, used, kind):
+    """Returns (value, overridden). `overridden` is what makes the carry-over
+    assertion below precise: the promise is "nothing moves *without* an explicit
+    override", so a fired override has to be exempt from it (in B0 the table was
+    empty, so the distinction was not observable and the blanket assertion made
+    every override impossible)."""
+    record = table.get(old_name)
+    if record is None:
+        return fallback, False
+    if "reason" not in record or "value" not in record:
+        raise SystemExit("override for %s must carry 'reason' and 'value'" % old_name)
+    if not str(record["reason"]).strip():
+        raise SystemExit("override for %s carries an empty 'reason'" % old_name)
+    used.append({"kind": kind, "old_name": old_name, "reason": record["reason"]})
+    return record["value"], True
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Generate the renamed tools/list contract.")
+    parser.add_argument("--old-contract", default=DEFAULT_OLD_CONTRACT)
+    parser.add_argument("--map", default=DEFAULT_MAP)
+    parser.add_argument("--out", default=DEFAULT_OUT)
+    args = parser.parse_args()
+
+    old_path = os.path.abspath(args.old_contract)
+    map_path = os.path.abspath(args.map)
+    out_path = os.path.abspath(args.out)
+
+    for path, label in ((old_path, "old contract"), (map_path, "rename map")):
+        if not os.path.isfile(path):
+            sys.exit("FATAL: %s not found: %s" % (label, path))
+
+    old_sha = sha256_file(old_path)
+    map_sha = sha256_file(map_path)
+
+    with open(old_path, "r", encoding="utf-8") as handle:
+        old_contract = json.load(handle)
+    with open(map_path, "r", encoding="utf-8") as handle:
+        rename_map = json.load(handle)
+
+    if old_sha != OLD_CONTRACT_SHA256:
+        sys.exit("FATAL: old contract sha256 %s != the frozen %s" % (old_sha, OLD_CONTRACT_SHA256))
+
+    # --- self check 1: map vs old contract are the same 174 tool names -------
+    entries = rename_map["tools"]
+    total = rename_map.get("total")
+    if not (len(entries) == total == 174):
+        sys.exit("FATAL: map total=%s but %d entries" % (total, len(entries)))
+
+    old_names = [tool["name"] for tool in old_contract["result"]["tools"]]
+    entry_names = [entry["old_name"] for entry in entries]
+    if len(set(old_names)) != len(old_names):
+        sys.exit("FATAL: the old contract has duplicate tool names")
+    if set(old_names) != set(entry_names):
+        missing = sorted(set(old_names) - set(entry_names))
+        extra = sorted(set(entry_names) - set(old_names))
+        sys.exit("FATAL: map does not cover the old contract: missing=%s extra=%s" % (missing, extra))
+
+    by_old_name = {entry["old_name"]: entry for entry in entries}
+    closed_set = set(rename_map["convention"]["verb_closed_set"])
+
+    # --- D-4: disposition is an enum, and a merge is named by merge_target ----
+    bad_enum = sorted({entry.get("disposition") for entry in entries} - set(DISPOSITION_ENUM))
+    if bad_enum:
+        sys.exit("FATAL: disposition value(s) outside the enum: %s" % bad_enum)
+    legacy = [entry["old_name"] for entry in entries
+              if str(entry.get("disposition", "")).startswith("merge_into:")]
+    if legacy:
+        sys.exit("FATAL: the v1.0 inline 'merge_into:<old_name>' form survives on %s" % legacy)
+
+    # --- disposition split ---------------------------------------------------
+    excluded = [entry["old_name"] for entry in entries
+                if entry.get("disposition") == "unregister_until_implemented"]
+    merged = []
+    for entry in entries:
+        if entry.get("disposition") != "merge_into":
+            continue
+        target = entry.get("merge_target")
+        if not target:
+            sys.exit("FATAL: merge_into entry %s carries no merge_target" % entry["old_name"])
+        merged.append({
+            "old_name": entry["old_name"],
+            "new_name": entry["new_name"],
+            "merged_into": target,
+        })
+    for entry in entries:
+        if entry.get("disposition") != "merge_into" and "merge_target" in entry:
+            sys.exit("FATAL: merge_target on a non-merge entry: %s" % entry["old_name"])
+
+    if len(excluded) != 2:
+        sys.exit("FATAL: expected 2 unregister_until_implemented entries, got %d" % len(excluded))
+    if len(merged) != 1:
+        sys.exit("FATAL: expected 1 merge_into entry (GDR-17), got %d" % len(merged))
+
+    keep_names = set(entry["old_name"] for entry in entries)
+    for item in merged:
+        keep = item["merged_into"]
+        if keep not in keep_names:
+            sys.exit("FATAL: merge keep '%s' is not an old_name in the map" % keep)
+        if keep in excluded:
+            sys.exit("FATAL: merge keep '%s' is itself excluded" % keep)
+        # self check 4: the merged entry and its keeper share one new name, so
+        # deduplication cannot create a duplicate.
+        if by_old_name[keep]["new_name"] != item["new_name"]:
+            sys.exit("FATAL: merge %s -> %s but keeper %s -> %s"
+                     % (item["old_name"], item["new_name"], keep, by_old_name[keep]["new_name"]))
+
+    excluded_set = set(excluded)
+    merged_set = set(item["old_name"] for item in merged)
+    dropped = excluded_set | merged_set
+
+    # --- self check 2: every emitted new name passes the isomorphic lint -----
+    for entry in entries:
+        if entry["old_name"] in dropped:
+            continue
+        reason = validate_renamed(entry, closed_set)
+        if reason is not None:
+            sys.exit("FATAL: %s" % reason)
+
+    # --- transform: name only, description / inputSchema verbatim ------------
+    overrides_used = []
+    new_tools = []
+    name_sources = []
+    for tool in old_contract["result"]["tools"]:
+        entry = by_old_name[tool["name"]]
+        if entry["old_name"] in dropped:
+            continue
+
+        new_tool = dict(tool)  # keeps the old key order
+        new_tool["name"] = entry["new_name"]
+
+        description, desc_overridden = apply_override(DESCRIPTION_OVERRIDES, entry["old_name"],
+                                                     tool["description"], overrides_used, "description")
+        schema, schema_overridden = apply_override(SCHEMA_OVERRIDES, entry["old_name"],
+                                                  tool["inputSchema"], overrides_used, "inputSchema")
+
+        # The no-override case must be a byte-exact carry over at the object
+        # level; the assertion is what keeps the promise from section 2 honest.
+        if not desc_overridden and canonical(description) != canonical(tool["description"]):
+            sys.exit("FATAL: description of %s changed without an explicit override" % entry["old_name"])
+        if not schema_overridden and canonical(schema) != canonical(tool["inputSchema"]):
+            sys.exit("FATAL: inputSchema of %s changed without an explicit override" % entry["old_name"])
+        # v1.2: an override may only *append* one discriminator sentence, so the
+        # original wording can never be silently dropped.
+        if desc_overridden and not str(description).startswith(str(tool["description"]) + " "):
+            sys.exit("FATAL: description override of %s is not append-only (original wording lost)"
+                     % entry["old_name"])
+
+        new_tool["description"] = description
+        new_tool["inputSchema"] = schema
+        new_tools.append(new_tool)
+        name_sources.append(entry["new_name"])
+
+    # --- self check 5: every declared override fired exactly once ------------
+    declared_overrides = set(DESCRIPTION_OVERRIDES) | set(SCHEMA_OVERRIDES)
+    fired_overrides = set(record["old_name"] for record in overrides_used)
+    stale_overrides = sorted(declared_overrides - fired_overrides)
+    if stale_overrides:
+        sys.exit("FATAL: override(s) never fired (typo in old_name?): %s" % stale_overrides)
+    if len(overrides_used) != len(declared_overrides):
+        sys.exit("FATAL: %d override records for %d declared overrides"
+                 % (len(overrides_used), len(declared_overrides)))
+
+    # --- self check 3: count and uniqueness ----------------------------------
+    # 174 entries - 2 unregister_until_implemented - 1 lossless merge == 171.
+    EXPECTED_OUTPUT = 174 - 2 - 1
+    if len(new_tools) != EXPECTED_OUTPUT:
+        sys.exit("FATAL: expected %d output tools, got %d" % (EXPECTED_OUTPUT, len(new_tools)))
+    if len(set(name_sources)) != len(name_sources):
+        duplicates = sorted(name for name in set(name_sources) if name_sources.count(name) > 1)
+        sys.exit("FATAL: duplicate new names in the output: %s" % duplicates)
+
+    meta = {
+        "generated_from": old_path,
+        "generated_from_sha256": old_sha,
+        "map_path": map_path,
+        "map_sha256": map_sha,
+        "tool_count_in": len(old_names),
+        "count": len(new_tools),
+        "excluded": excluded,
+        "merged": merged,
+        "generator_version": GENERATOR_VERSION,
+        "generated_by": GENERATED_BY,
+    }
+    if overrides_used:
+        meta["overrides"] = overrides_used
+
+    output = {
+        "id": old_contract["id"],
+        "jsonrpc": old_contract["jsonrpc"],
+        "result": {"tools": new_tools},
+        "_meta": meta,
+    }
+
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    with open(out_path, "w", encoding="utf-8", newline="\n") as handle:
+        json.dump(output, handle, ensure_ascii=False, indent=2)
+        handle.write("\n")
+
+    out_sha = sha256_file(out_path)
+
+    print("gen_renamed_contract: input tools = %d" % len(old_names))
+    print("gen_renamed_contract: output tools = %d" % len(new_tools))
+    print("gen_renamed_contract: merged = %d (%s)" % (
+        len(merged), ", ".join("%s -> %s" % (m["old_name"], m["merged_into"]) for m in merged)))
+    print("gen_renamed_contract: unregister = %d (%s)" % (len(excluded), ", ".join(excluded)))
+    print("gen_renamed_contract: description overrides = %d (append-only, %s)"
+          % (len(overrides_used), ", ".join(record["old_name"] for record in overrides_used)))
+    print("gen_renamed_contract: old contract sha256 = %s" % old_sha)
+    print("gen_renamed_contract: rename map sha256 = %s" % map_sha)
+    print("gen_renamed_contract: output sha256 = %s" % out_sha)
+    print("gen_renamed_contract: self-checks = OK (lint %d/%d, unique %d/%d, disposition enum OK)"
+          % (len(new_tools), len(new_tools), len(new_tools), len(new_tools)))
+    print("gen_renamed_contract: wrote %s" % out_path)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

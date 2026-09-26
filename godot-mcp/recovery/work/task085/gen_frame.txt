@@ -1,0 +1,102 @@
+	// BEGIN generated
+	// (scripts/gen_b2_game_schema.py: docs/tools_list.renamed.json entries copied byte for byte;
+	//  channel/verb/scope/mutating read from docs/tool-rename-map.json. Re-running the generator
+	//  --in-place reproduces this span byte for byte.)
+	{
+		ToolBuilder builder("running_game_get_node_property_samples", String::utf8("监控运行中游戏节点的属性随时间的变化"));
+
+		Dictionary schema;
+		Dictionary v0;
+		Dictionary v1;
+		v1[String::utf8("default")] = 60;
+		v1[String::utf8("description")] = String::utf8("采集帧数");
+		v1[String::utf8("type")] = String::utf8("integer");
+		v0[String::utf8("frame_count")] = v1;
+		Dictionary v2;
+		v2[String::utf8("default")] = 1;
+		v2[String::utf8("description")] = String::utf8("采集间隔帧数");
+		v2[String::utf8("type")] = String::utf8("integer");
+		v0[String::utf8("frame_interval")] = v2;
+		Dictionary v3;
+		v3[String::utf8("description")] = String::utf8("节点路径");
+		v3[String::utf8("type")] = String::utf8("string");
+		v0[String::utf8("node_path")] = v3;
+		Dictionary v4;
+		v4[String::utf8("description")] = String::utf8("要监控的属性列表");
+		Dictionary v5;
+		v5[String::utf8("type")] = String::utf8("string");
+		v4[String::utf8("items")] = v5;
+		v4[String::utf8("type")] = String::utf8("array");
+		v0[String::utf8("properties")] = v4;
+		Dictionary v6;
+		v6[String::utf8("default")] = 1;
+		v6[String::utf8("description")] = String::utf8("回传采样步长：仍然每 frame_interval 帧观察一次，但只回传每第 N 个观察点（第一个恒回传）；缺省 1 与旧行为逐字节一致，大于 1 时响应追加 sample_stride 与 observed_count 两个字段（观察点总数），frame_count 始终是回传的样本数");
+		v6[String::utf8("type")] = String::utf8("integer");
+		v0[String::utf8("sample_stride")] = v6;
+		schema[String::utf8("properties")] = v0;
+		Array v7;
+		v7.push_back(String::utf8("node_path"));
+		v7.push_back(String::utf8("properties"));
+		schema[String::utf8("required")] = v7;
+		schema[String::utf8("type")] = String::utf8("object");
+
+		builder.channel("running_game").verb("get").scope(MCPToolScope::GAME).mutating(false).schema(schema).pending_handler(_tool_get_node_property_samples);
+		builder.register_into(r_registry);
+	}
+	{
+		ToolBuilder builder("running_game_find_node_when_available", String::utf8("等待运行中游戏的指定节点出现"));
+
+		Dictionary schema;
+		Dictionary v0;
+		Dictionary v1;
+		v1[String::utf8("description")] = String::utf8("要等待的节点路径");
+		v1[String::utf8("type")] = String::utf8("string");
+		v0[String::utf8("node_path")] = v1;
+		Dictionary v2;
+		v2[String::utf8("default")] = 5;
+		v2[String::utf8("description")] = String::utf8("每隔多少帧检查一次");
+		v2[String::utf8("type")] = String::utf8("integer");
+		v0[String::utf8("poll_frames")] = v2;
+		Dictionary v3;
+		v3[String::utf8("default")] = 5.0;
+		v3[String::utf8("description")] = String::utf8("超时时间（秒）");
+		v3[String::utf8("type")] = String::utf8("number");
+		v0[String::utf8("timeout")] = v3;
+		schema[String::utf8("properties")] = v0;
+		Array v4;
+		v4.push_back(String::utf8("node_path"));
+		schema[String::utf8("required")] = v4;
+		schema[String::utf8("type")] = String::utf8("object");
+
+		builder.channel("running_game").verb("find").scope(MCPToolScope::GAME).mutating(false).schema(schema).pending_handler(_tool_find_node_when_available);
+		builder.register_into(r_registry);
+	}
+	{
+		ToolBuilder builder("running_game_capture_frames", String::utf8("连续截取运行中游戏的帧画面"));
+
+		Dictionary schema;
+		Dictionary v0;
+		Dictionary v1;
+		v1[String::utf8("default")] = 5;
+		v1[String::utf8("description")] = String::utf8("截取帧数");
+		v1[String::utf8("type")] = String::utf8("integer");
+		v0[String::utf8("count")] = v1;
+		Dictionary v2;
+		v2[String::utf8("default")] = 10;
+		v2[String::utf8("description")] = String::utf8("帧间隔");
+		v2[String::utf8("type")] = String::utf8("integer");
+		v0[String::utf8("frame_interval")] = v2;
+		Dictionary v3;
+		v3[String::utf8("default")] = true;
+		v3[String::utf8("description")] = String::utf8("是否使用半分辨率");
+		v3[String::utf8("type")] = String::utf8("boolean");
+		v0[String::utf8("half_resolution")] = v3;
+		schema[String::utf8("properties")] = v0;
+		Array v4;
+		schema[String::utf8("required")] = v4;
+		schema[String::utf8("type")] = String::utf8("object");
+
+		builder.channel("running_game").verb("capture").scope(MCPToolScope::GAME).mutating(false).schema(schema).pending_handler(_tool_capture_frames);
+		builder.register_into(r_registry);
+	}
+	// END generated

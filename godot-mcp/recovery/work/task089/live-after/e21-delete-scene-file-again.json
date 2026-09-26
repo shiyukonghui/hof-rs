@@ -1,0 +1,1 @@
+﻿{"error":{"code":-32001,"data":{"suggestion":"Use project_get_filesystem_tree to list the .tscn files of the project"},"message":"Scene file 'res://scratch/box.tscn' not found"},"id":121,"jsonrpc":"2.0"}

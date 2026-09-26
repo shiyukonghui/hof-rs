@@ -1,0 +1,29 @@
+HEALTH CHECK @ 2026-09-26T02:20:18.9778992Z
+$ git status --short
+(empty above = clean)
+$ git status --short --ignored (module only)
+!! modules/mcp_server/docs/reports/evidence/task076/red_phase_contract_vs_head_cpp.log
+$ git log --oneline -3
+54200f0d77 modules/mcp_server: rebuild from session transcripts (fidelity noted in report)
+aa898be34a engine: reapply the three MCP patches (verified by sha)
+57277407e7 Merge pull request #123585 from m4gr3d/fix_debug_keystore_generation
+$ git rev-parse --abbrev-ref HEAD
+feature/mcp-server-module-rebuild
+$ git rev-parse HEAD
+54200f0d77aa2f79f4ecb75c6c1ea7826ebae352
+$ git rev-list --count 57277407e77e61b161f35dbd7aeb510f7a9e26a6..HEAD
+2
+$ git show --stat --oneline HEAD~0 (summary)
+54200f0d77 modules/mcp_server: rebuild from session transcripts (fidelity noted in report)
+ modules/mcp_server/README.md                       |   77 +
+ modules/mcp_server/SCsub                           |   12 +
+$ tracked files under modules/mcp_server
+669
+$ branch list
+* feature/mcp-server-module-rebuild 54200f0d77 modules/mcp_server: rebuild from session transcripts (fidelity noted in report)
+  master                            57277407e7 [origin/master] Merge pull request #123585 from m4gr3d/fix_debug_keystore_generation
+$ remotes (no push performed)
+origin	git@github.com:shiyukonghui/godot.git (fetch)
+origin	git@github.com:shiyukonghui/godot.git (push)
+$ .git dir size (MB)
+906.4

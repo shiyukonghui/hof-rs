@@ -1,0 +1,1 @@
+﻿{"method":"tools/call","params":{"arguments":{"code":"return get_parent().get_node(\"Player\").position.x"},"name":"running_game_execute_gdscript"},"id":304,"jsonrpc":"2.0"}

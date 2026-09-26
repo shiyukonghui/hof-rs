@@ -1,0 +1,31 @@
+modules/mcp_server: task090 (2c-9) step2 - D-3: the game executor reaches the running scene tree
+
+TASK-090 item B, decision D-3. The game-side executor's `self` was a bare
+`extends RefCounted`, so `get_node()` / `$Path` / node properties / signals /
+`get_tree()` did not exist on it: it could reach the engine singletons and
+nothing else, which is not "execute GDScript in the running game".
+
+The ruling: with a reachable scene tree the generated body compiles to
+`extends Node` and its instance is mounted as the last child of the current scene
+root (the tree root when there is none) for the duration of the call, then
+removed on every path. Without a scene tree the previous `RefCounted` behaviour
+is kept byte for byte. Declared boundary: the node lives for less than one frame,
+so `_process` / `_physics_process` do not tick; `_ready` does run.
+
+* tool_helpers.h/.cpp: `build_execute_gdscript_source()` gains a trailing
+  `bool p_node_base = false`, and the duplicate declaration block after
+  `namespace MCPTools` (TASK-089 defect D-4) is deleted - the signature change
+  would otherwise have had to edit the stale copy a second time.
+* running_game_script_execution.h/.cpp: the body is split into
+  `execute_gdscript_code(code, tool_script, mount_point, error)` (exported, so a
+  doctest without a SceneTree can hand it a real tree) plus the argument half
+  that picks the mount point; one unconditional cleanup before the call-error
+  return, `queue_free`-aware.
+* docs/tools_list.renamed.json + the regenerated span: the contract description
+  now states the scene-tree reach, the path basis and the lifetime boundary.
+* tests/test_mcp_server.h: two new cases (150/150 now) - the failure payload on
+  the call line (item A) and the scene-tree mount / cleanup / fallback.
+
+Live evidence (round-8): `get_parent().name` = Main, `/root/Main/Player` reached,
+`get_path()` of the body itself = `/root/Main/@Node@8`, moves and recolours show
+up as pixel diffs, the scene tree is identical before / after / at the end.

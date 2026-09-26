@@ -1,0 +1,11 @@
+modules/mcp_server: task089 (2c-8) step3 - the gate ledger (9/9 + 22/22) and the iron-rule record
+
+All nine gates are green on the binary built at 80035ed11 and self-reporting
+that commit: module doctest 148/148 (6464 assertions), full doctest 1574/1574
+(430777), group manifests PASS, contract subset 3/3 on both live endpoints,
+rename map PASS, tautologies PASS, exit propagation 10/10, hardcoded counts
+UNCLASSIFIED=0, anchor ANCHOR_EQUAL with diff_count=0. The M1 acceptance
+battery is 22/22 at the same HEAD.
+
+Manifest section 2c-8 gains H-7 (the gate ledger) and H-8 (the iron rules, with
+the F: pre/post flight hashes).

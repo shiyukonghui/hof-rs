@@ -1,0 +1,82 @@
+=== DESCRIPTION_OVERRIDES (line 517) raw key count=9 ===
+  line   522  analyze_signal_flow
+  line   536  find_signal_connections
+  line   546  search_files
+  line   553  search_in_files
+  line   562  find_node_references
+  line   570  uid_to_project_path
+  line   577  project_path_to_uid
+  line   589  replay_recording
+  line   600  play_scene
+  duplicate keys: NONE
+  distinct=9 raw=9
+=== SCHEMA_OVERRIDES (line 617) raw key count=13 ===
+  line   631  monitor_properties
+  line   675  replay_recording
+  line   701  play_scene  <== DUPLICATE
+  line   728  play_scene  <== DUPLICATE
+  line   775  get_test_report
+  line   805  add_state_machine_state
+  line   834  set_blend_tree_node
+  line   875  set_material_3d
+  line   900  add_state_machine_transition
+  line   940  batch_add_nodes
+  line   991  find_signal_connections
+  line  1025  simulate_sequence
+  line  1139  run_test_scenario
+  duplicate keys: ['play_scene']
+  distinct=12 raw=13
+
+=== ALL source occurrences of the suspect override names ===
+play_scene: 5 occurrences
+    line    90: entry for the *same* tool. `editor_play_scene` (old `play_scene`) now injects
+    line   261: * `play_scene` (`editor_play_scene`) gains `headless` (boolean, default false)
+    line   600: "play_scene": {
+    line   701: "play_scene": {
+    line   728: "play_scene": {
+find_signal_connections: 3 occurrences
+    line   241: * `find_signal_connections` (`editor_list_signal_connections`) gains the
+    line   536: "find_signal_connections": {
+    line   991: "find_signal_connections": {
+editor_get_scene_tree: 1 occurrences
+    line   463: * **`editor_get_scene_tree`** (old `get_scene_tree`) is the *authority* for
+editor_set_tilemap_cell: 1 occurrences
+    line   476: * **`editor_set_tilemap_cell` / `editor_set_tilemap_cells_in_rect`** (old
+editor_set_tilemap_cells_in_rect: 1 occurrences
+    line   476: * **`editor_set_tilemap_cell` / `editor_set_tilemap_cells_in_rect`** (old
+tilemap_set_cell: 1 occurrences
+    line   477: `tilemap_set_cell` / `tilemap_fill_rect`): writing a cell requires a
+tilemap_fill_rect: 1 occurrences
+    line   477: `tilemap_set_cell` / `tilemap_fill_rect`): writing a cell requires a
+get_scene_tree: 3 occurrences
+    line   136: `running_game_get_scene_tree` answers `path = "/root/Main/Actor"` - while the
+    line   463: * **`editor_get_scene_tree`** (old `get_scene_tree`) is the *authority* for
+    line   615: # (`running_game_get_scene_tree`), and `scripts/gen_b2_game_schema.py`
+
+=== v1.22 sentence literals ===
+SCENE_TREE_ADDRESSABILITY_SENTENCE: [(488, 'The sentences are two module-level literals (`SCENE_TREE_ADDRESSABILITY_SENTENCE`')]
+TILEMAP_ATLAS_GAP_SENTENCE: [(489, 'and `TILEMAP_ATLAS_GAP_SENTENCE`) so the two tilemap entries cannot drift apart,')]
+
+=== how DESCRIPTION_OVERRIDES is consumed / appended to ===
+  line    29: DESCRIPTION_OVERRIDES / SCHEMA_OVERRIDES lists below (SCHEMA_OVERRIDES is still
+  line    34: v1.2 (TASK-002 section 2.1, audit risks R-1/R-2/R-3): DESCRIPTION_OVERRIDES is no
+  line    65: first `SCHEMA_OVERRIDES` entry, and the two rules that make a schema override
+  line    89: failure): the second `SCHEMA_OVERRIDES` entry, and a `DESCRIPTION_OVERRIDES`
+  line   114: `SCHEMA_OVERRIDES` entry and the second entry that is a *pair* with a
+  line   134: `DESCRIPTION_OVERRIDES` entry, for `running_game_get_node_properties` (old
+  line   148: `SCHEMA_OVERRIDES` entries of the animation-tree family, all `mode=replace` and
+  line   167: fourth `SCHEMA_OVERRIDES` entry, `mode=replace`, for `editor_set_material_3d`
+  line   227: scheduled as C-3 / O-9 / O-4 / O-5 / M-3): **five `SCHEMA_OVERRIDES` entries,
+  line   282: `DESCRIPTION_OVERRIDES` and `SCHEMA_OVERRIDES` (GDR-28 point 1), and the
+  line   323: `old_name` and therefore no `DESCRIPTION_OVERRIDES` key: its description
+  line   445: no `SCHEMA_OVERRIDES` record is touched by this version.
+  line   503: # Explicit override hooks. SCHEMA_OVERRIDES was empty for B0/B1: the rename is
+  line   508: # v1.5 (TASK-014 D-3): SCHEMA_OVERRIDES takes its first entry. A schema override
+  line   517: DESCRIPTION_OVERRIDES = {
+  line   617: SCHEMA_OVERRIDES = {
+  line  1797: description, desc_overridden = apply_override(DESCRIPTION_OVERRIDES, entry["old_name"],
+  line  1799: schema, schema_overridden = apply_override(SCHEMA_OVERRIDES, entry["old_name"],
+  line  1813: mode = DESCRIPTION_OVERRIDES.get(entry["old_name"], {}).get("mode", "append") if desc_overridden else "append"
+  line  1819: reason = str(DESCRIPTION_OVERRIDES[entry["old_name"]]["reason"])
+  line  1829: record = SCHEMA_OVERRIDES[entry["old_name"]]
+  line  1886: for kind, table in (("description", DESCRIPTION_OVERRIDES), ("inputSchema", SCHEMA_OVERRIDES))

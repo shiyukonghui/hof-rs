@@ -1,0 +1,81 @@
+file lines=1974
+
+=== identical source lines (>50 chars) repeated >=2x ===
+  x2 lines=[319, 347]
+    * `validate_script` (`project_validate_script`) gets one more **append-only**
+  x2 lines=[699, 725]
+    # replaces the whole object, so `mode` is repeated verbatim and nothing else
+  x6 lines=[797, 804, 865, 874, 933, 939]
+    # -----------------------------------------------------------------------
+  x2 lines=[807, 836]
+    "TASK-034 §0 契约与行为一致（TASK-033 §7.1 上报的 schema 缺口）：新增可选 animation 成员。"
+  x3 lines=[826, 859, 924]
+    "state_machine_path": {"default": "", "type": "string"},
+  x4 lines=[1221, 1237, 1505, 1534]
+    # ---------------------------------------------------------------------------
+count=6
+
+=== repeated contiguous blocks, run=8 ===
+  start lines [973, 1206]
+    first='                                "type": "string",'
+    last ='                },'
+  start lines [1591, 1630]
+    first='    if "update_" in name:'
+    last ='    channel, verb = parsed'
+count=2
+
+=== override tables (via ast) ===
+DESCRIPTION_OVERRIDES at line 517: 9 entries
+    - analyze_signal_flow
+    - find_signal_connections
+    - search_files
+    - search_in_files
+    - find_node_references
+    - uid_to_project_path
+    - project_path_to_uid
+    - replay_recording
+    - play_scene
+SCHEMA_OVERRIDES at line 617: 12 entries
+    - monitor_properties
+    - replay_recording
+    - play_scene
+    - get_test_report
+    - add_state_machine_state
+    - set_blend_tree_node
+    - set_material_3d
+    - add_state_machine_transition
+    - batch_add_nodes
+    - find_signal_connections
+    - simulate_sequence
+    - run_test_scenario
+total override entries = 21
+
+tools_list.renamed.json bytes=129016 sha256=078433de71db6a6da9190e4e9434dbed0376139c88fe19638b4251aff55d8b5c
+  _meta keys=['added_count', 'added_tools', 'count', 'excluded', 'generated_by', 'generated_from', 'generated_from_sha256', 'generator_version', 'map_path', 'map_sha256', 'merged', 'order_normative', 'overrides', 'tool_count_in']
+  count=177 added_count=6 generator_version=1.22.0
+  _meta.overrides len=21
+  kinds={'description': 9, 'inputSchema': 12}
+  result.tools=177
+  editor_*=104  running_game_*=23  other=50
+  order_normative=False
+  map_sha256='2f552719f6a23fe328df0a2944c6048824c1b2a750aebc0fe2cabbcd3529c2bd'
+  added_tools_sha256=None
+  added_tools=['project_build_csharp', 'project_write_text_file', 'project_validate_scripts', 'editor_set_node_script_batch', 'editor_set_node_property_updates', 'project_read_text_file']
+tool-rename-map.json bytes=70917 sha256=2f552719f6a23fe328df0a2944c6048824c1b2a750aebc0fe2cabbcd3529c2bd
+
+=== TASK-076A / 076A references in the generator ===
+  line 458: v1.22 (TASK-076 section A.1 - the two boundaries TASK-075's D4/D5 established):
+
+=== script tail (last 12 lines) ===
+  1963:     print("gen_renamed_contract: old contract sha256 = %s" % old_sha)
+  1964:     print("gen_renamed_contract: rename map sha256 = %s" % map_sha)
+  1965:     print("gen_renamed_contract: output sha256 = %s" % out_sha)
+  1966:     print("gen_renamed_contract: self-checks = OK (lint %d/%d, unique %d/%d, disposition enum OK)"
+  1967:           % (len(new_tools), len(new_tools), len(new_tools), len(new_tools)))
+  1968:     print("gen_renamed_contract: wrote %s" % out_path)
+  1969:     return 0
+  1970: 
+  1971: 
+  1972: if __name__ == "__main__":
+  1973:     sys.exit(main())
+  1974: 

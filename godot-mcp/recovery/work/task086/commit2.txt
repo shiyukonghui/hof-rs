@@ -1,0 +1,30 @@
+modules/mcp_server: task086 (2c-5) step2 - the 7 inspector tools and the TASK-026 log source block
+
+Two independent losses in tools/editor_read_scene_inspector.cpp.
+
+(1) The registration block. The file still carried the placeholder
+`// @@REGISTRATION_BLOCK@@` that the recorded generator
+`C:\Users\wyl\AppData\Local\Temp\t006_gen_reg.py` (events-write seq=593,
+t=1790023003060) replaces. That script is in the recording verbatim; the replay
+here is the script with its two absolute paths moved from the F: checkout to
+H:\rebuild\godot and *nothing else changed* (work/task086/t006_gen_reg_h.py):
+its ORDER table, its emitted template, its contract read. It restores the seven
+editor-scope tools (`editor_get_errors`, `editor_get_output_log`,
+`editor_get_open_scripts`, `editor_get_scene_tree`, `editor_get_selection`,
+`editor_get_viewport_3d_camera`, `editor_analyze_signal_flow`), which is the
+`-32601` cluster at tests/test_mcp_server.h:2982/2983 (7x).
+
+(2) The TASK-026 log source block (E-6 + G-4, GDR-25 section 23.3). The tree's
+shared-helper span was still the pre-TASK-026 generation: `_log_tail_lines()`
+answering only a `source` marker, `_tool_get_errors()` answering no source at
+all. The recorded edit seq=470 (t=1790127805398) is the whole replacement
+(130 -> 209 lines); its recorded `old` is split at the anchor
+`// The tail window of \`read_log_file\`` and the part of its `new` that precedes
+that anchor (`struct MCPLogSource` + the section comment) is inserted in front of
+it. Both halves verified to occur exactly once before the write
+(work/task086/apply_tail.py, insert_head.py). The restored span brings
+`MCPLogSource`, `_read_log_source()` and `_add_log_source_fields()` with it, so
+both log tools now answer the same nine-key block
+(`source`, `in_process`, `available`, `editor`, `process`, `pid`, `port`,
+`log_path`, `note`) and "nothing readable" is an ordinary empty answer instead of
+`-32603`.

@@ -1,0 +1,19 @@
+modules/mcp_server: task090 (2c-9) step4 - a deferred call's own body reaches its trace line too
+
+TASK-090 item C, the fourth round-8 defect (found after the first three were
+fixed). `MCPTrace::Record::result_json` - TASK-089's "the tool's own answer" -
+was filled only on the immediate success path, so every deferred call carried
+`result_bytes` and nothing else. The scenario and stress drivers are exactly the
+tools whose answer *is* a verdict (`all_passed`, `passed` per step), so the
+ledger could not answer "did the assertions hold" for them no matter how the
+reader was written.
+
+* mcp_http_server.cpp `_tick_pending`: for `CompletionKind::DONE` the record now
+  gets `result_json` / `result_json_bytes` from `completion.result` - the same
+  Variant `build_deferred_body` wraps with the same `content_result`, so the
+  deferred line and the wire body carry the same bytes.
+
+Measured on the final round-8 battery: game `seq=25` carries
+`"all_passed":true, "passed":1` (and the input step's `"in_input_map":true`),
+`seq=26` carries `"all_passed":false, "failed":1`; the ledger now prints
+`scenario_passed` and `scenario_assertion_failed` on those two rows.

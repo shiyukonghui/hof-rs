@@ -1,0 +1,75 @@
+t=1790024418882 seq=123 totalLines=439 offset=1 marks=DSV keys=7 analyze_signal_flow,find_signal_connections,search_files,search_in_files,find_node_references,uid_to_project_path,project_path_to_uid
+t=1790053488900 seq=54 totalLines=482 offset=1 marks=DSV keys=7 analyze_signal_flow,find_signal_connections,search_files,search_in_files,find_node_references,uid_to_project_path,project_path_to_uid
+t=1790053835060 seq=388 totalLines=512 offset=168 marks=S keys=2 uid_to_project_path,project_path_to_uid
+t=1790135537339 seq=24 totalLines=637 offset=1 marks=DSV keys=11 analyze_signal_flow,find_signal_connections,search_files,search_in_files,find_node_references,uid_to_project_path,project_path_to_uid,replay_recording,play_scene,replay_recording,play_scene
+t=1790254496940 seq=165 totalLines=1774 offset=525 marks=S keys=2 validate_script,monitor_properties
+t=1790255119931 seq=543 totalLines=1774 offset=300 marks=V keys=0 
+t=1790153992223 seq=86 totalLines=859 offset=1 marks=DSV keys=17 analyze_signal_flow,find_signal_connections,search_files,search_in_files,find_node_references,uid_to_project_path,project_path_to_uid,replay_recording,play_scene,get_test_report,get_game_node_properties,replay_recording,play_scene,get_test_report,add_state_machine_state,set_blend_tree_node,add_state_machine_transition
+t=1790153992223 seq=86 totalLines=859 offset=1 marks=DSV keys=17 analyze_signal_flow,find_signal_connections,search_files,search_in_files,find_node_references,uid_to_project_path,project_path_to_uid,replay_recording,play_scene,get_test_report,get_game_node_properties,replay_recording,play_scene,get_test_report,add_state_machine_state,set_blend_tree_node,add_state_machine_transition
+t=1790243250378 seq=59 totalLines=1403 offset=1050 marks=V keys=0 
+t=1790243392881 seq=211 totalLines=1403 offset=232 marks=DV keys=1 analyze_signal_flow
+t=1790243250378 seq=59 totalLines=1403 offset=1050 marks=V keys=0 
+t=1790238854852 seq=44 totalLines=1051 offset=1 marks=DSV keys=24 analyze_signal_flow,find_signal_connections,search_files,search_in_files,find_node_references,uid_to_project_path,project_path_to_uid,replay_recording,play_scene,get_test_report,get_game_node_properties,set_project_setting,add_autoload,remove_autoload,set_input_action,reload_plugin,validate_script,replay_recording,play_scene,get_test_report,add_state_machine_state,set_blend_tree_node,set_material_3d,add_state_machine_transition
+t=1790238859646 seq=49 totalLines=1051 offset=696 marks=V keys=0 
+t=1790238854852 seq=44 totalLines=1051 offset=1 marks=DSV keys=24 analyze_signal_flow,find_signal_connections,search_files,search_in_files,find_node_references,uid_to_project_path,project_path_to_uid,replay_recording,play_scene,get_test_report,get_game_node_properties,set_project_setting,add_autoload,remove_autoload,set_input_action,reload_plugin,validate_script,replay_recording,play_scene,get_test_report,add_state_machine_state,set_blend_tree_node,set_material_3d,add_state_machine_transition
+t=1790238859646 seq=49 totalLines=1051 offset=696 marks=V keys=0 
+t=1790007883557 seq=59 totalLines=322 offset=1 marks=DSV keys=0 
+t=1790097923383 seq=59 totalLines=578 offset=95 marks=DSV keys=9 analyze_signal_flow,find_signal_connections,search_files,search_in_files,find_node_references,uid_to_project_path,project_path_to_uid,replay_recording,replay_recording
+t=1790098131222 seq=64 totalLines=578 offset=435 marks=V keys=0 
+t=1790233462983 seq=91 totalLines=1013 offset=120 marks=DV keys=4 analyze_signal_flow,find_signal_connections,search_files,search_in_files
+t=1790233466387 seq=98 totalLines=1013 offset=830 marks=V keys=0 
+t=1790234542395 seq=564 totalLines=1013 offset=395 marks=S keys=4 remove_autoload,set_input_action,reload_plugin,replay_recording
+t=1790233462983 seq=91 totalLines=1013 offset=120 marks=DV keys=4 analyze_signal_flow,find_signal_connections,search_files,search_in_files
+t=1790233466387 seq=98 totalLines=1013 offset=830 marks=V keys=0 
+t=1790162815832 seq=126 totalLines=907 offset=740 marks=V keys=0 
+t=1790013397446 seq=189 totalLines=439 offset=380 marks=V keys=0 
+t=1790105000326 seq=69 totalLines=578 offset=1 marks=DSV keys=9 analyze_signal_flow,find_signal_connections,search_files,search_in_files,find_node_references,uid_to_project_path,project_path_to_uid,replay_recording,replay_recording
+t=1790260777203 seq=99 totalLines=1817 offset=1 marks=DSV keys=19 analyze_signal_flow,find_signal_connections,search_files,search_in_files,find_node_references,uid_to_project_path,project_path_to_uid,replay_recording,play_scene,get_test_report,get_game_node_properties,set_project_setting,add_autoload,remove_autoload,set_input_action,reload_plugin,validate_script,monitor_properties,replay_recording
+t=1790260782063 seq=104 totalLines=1817 offset=656 marks=- keys=10 play_scene,get_test_report,add_state_machine_state,set_blend_tree_node,set_material_3d,add_state_machine_transition,batch_add_nodes,find_signal_connections,simulate_sequence,run_test_scenario
+t=1790260787134 seq=109 totalLines=1817 offset=1356 marks=V keys=2 build,write
+t=1790012047314 seq=54 totalLines=422 offset=1 marks=DSV keys=7 analyze_signal_flow,find_signal_connections,search_files,search_in_files,find_node_references,uid_to_project_path,project_path_to_uid
+t=1790006135586 seq=40 totalLines=286 offset=1 marks=DSV keys=0 
+t=1790006290765 seq=200 totalLines=320 offset=276 marks=V keys=0 
+t=1790248810733 seq=52 totalLines=1649 offset=1090 marks=- keys=2 build,write
+t=1790249084696 seq=252 totalLines=1649 offset=1500 marks=V keys=0 
+t=1790249089990 seq=262 totalLines=1649 offset=540 marks=S keys=4 validate_script,replay_recording,play_scene,get_test_report
+t=1790248810733 seq=52 totalLines=1649 offset=1090 marks=- keys=2 build,write
+t=1790249084696 seq=252 totalLines=1649 offset=1500 marks=V keys=0 
+t=1790298442713 seq=538 totalLines=1994 offset=440 marks=D keys=10 analyze_signal_flow,find_signal_connections,search_files,search_in_files,find_node_references,uid_to_project_path,project_path_to_uid,replay_recording,play_scene,get_test_report
+t=1790298446581 seq=543 totalLines=1994 offset=340 marks=V keys=0 
+t=1790298451582 seq=550 totalLines=1994 offset=1240 marks=- keys=1 run_test_scenario
+t=1790298456383 seq=560 totalLines=1994 offset=712 marks=- keys=1 validate_script
+t=1790004784308 seq=88 totalLines=286 offset=1 marks=DSV keys=0 
+t=1790312191867 seq=107 totalLines=2153 offset=490 marks=D keys=9 analyze_signal_flow,find_signal_connections,search_files,search_in_files,find_node_references,uid_to_project_path,project_path_to_uid,replay_recording,play_scene
+t=1790312194286 seq=112 totalLines=2153 offset=610 marks=S keys=10 get_test_report,get_game_node_properties,set_project_setting,add_autoload,remove_autoload,set_input_action,reload_plugin,validate_script,update_property,get_node_properties
+t=1790312199438 seq=122 totalLines=2153 offset=1980 marks=V keys=0 
+t=1790312395531 seq=418 totalLines=2153 offset=1350 marks=- keys=1 run_test_scenario
+t=1790312444859 seq=478 totalLines=2232 offset=419 marks=V keys=0 
+t=1790007225188 seq=266 totalLines=322 offset=1 marks=DSV keys=0 
+t=1790142034777 seq=60 totalLines=706 offset=1 marks=DV keys=10 analyze_signal_flow,find_signal_connections,search_files,search_in_files,find_node_references,uid_to_project_path,project_path_to_uid,replay_recording,play_scene,get_test_report
+t=1790142038382 seq=65 totalLines=706 offset=260 marks=S keys=3 replay_recording,play_scene,get_test_report
+t=1790142077712 seq=80 totalLines=706 offset=460 marks=V keys=0 
+t=1790280130528 seq=103 totalLines=1874 offset=360 marks=DV keys=6 analyze_signal_flow,find_signal_connections,search_files,search_in_files,find_node_references,uid_to_project_path
+t=1790280133758 seq=111 totalLines=1874 offset=500 marks=- keys=7 get_game_node_properties,set_project_setting,add_autoload,remove_autoload,set_input_action,reload_plugin,validate_script
+t=1790280137745 seq=116 totalLines=1874 offset=1660 marks=V keys=0 
+t=1790150184285 seq=59 totalLines=739 offset=150 marks=DSV keys=14 analyze_signal_flow,find_signal_connections,search_files,search_in_files,find_node_references,uid_to_project_path,project_path_to_uid,replay_recording,play_scene,get_test_report,get_game_node_properties,replay_recording,play_scene,get_test_report
+t=1790150186912 seq=64 totalLines=739 offset=450 marks=V keys=0 
+t=1790150661552 seq=499 totalLines=739 offset=128 marks=V keys=0 
+t=1790150184285 seq=59 totalLines=739 offset=150 marks=DSV keys=14 analyze_signal_flow,find_signal_connections,search_files,search_in_files,find_node_references,uid_to_project_path,project_path_to_uid,replay_recording,play_scene,get_test_report,get_game_node_properties,replay_recording,play_scene,get_test_report
+t=1790150186912 seq=64 totalLines=739 offset=450 marks=V keys=0 
+t=1790346589845 seq=37 totalLines=2309 offset=440 marks=DV keys=7 analyze_signal_flow,find_signal_connections,search_files,search_in_files,find_node_references,uid_to_project_path,project_path_to_uid
+t=1790346647659 seq=108 totalLines=2309 offset=890 marks=S keys=3 list_scripts,run_test_scenario,monitor_properties
+t=1790346726671 seq=198 totalLines=2309 offset=2240 marks=V keys=0 
+t=1790146987280 seq=326 totalLines=739 offset=115 marks=DV keys=8 analyze_signal_flow,find_signal_connections,search_files,search_in_files,find_node_references,uid_to_project_path,project_path_to_uid,replay_recording
+t=1790146989620 seq=331 totalLines=739 offset=245 marks=S keys=6 play_scene,get_test_report,get_game_node_properties,replay_recording,play_scene,get_test_report
+t=1790147011479 seq=336 totalLines=739 offset=580 marks=V keys=0 
+t=1790146987280 seq=326 totalLines=739 offset=115 marks=DV keys=8 analyze_signal_flow,find_signal_connections,search_files,search_in_files,find_node_references,uid_to_project_path,project_path_to_uid,replay_recording
+t=1790147011479 seq=336 totalLines=739 offset=580 marks=V keys=0 
+t=1790262578013 seq=168 totalLines=1817 offset=1 marks=DSV keys=19 analyze_signal_flow,find_signal_connections,search_files,search_in_files,find_node_references,uid_to_project_path,project_path_to_uid,replay_recording,play_scene,get_test_report,get_game_node_properties,set_project_setting,add_autoload,remove_autoload,set_input_action,reload_plugin,validate_script,monitor_properties,replay_recording
+t=1790262578013 seq=168 totalLines=1817 offset=1 marks=DSV keys=19 analyze_signal_flow,find_signal_connections,search_files,search_in_files,find_node_references,uid_to_project_path,project_path_to_uid,replay_recording,play_scene,get_test_report,get_game_node_properties,set_project_setting,add_autoload,remove_autoload,set_input_action,reload_plugin,validate_script,monitor_properties,replay_recording
+t=1790341957179 seq=164 totalLines=2260 offset=1817 marks=- keys=2 build,write
+t=1790342769406 seq=665 totalLines=2298 offset=440 marks=V keys=0 
+t=1790189092706 seq=119 totalLines=907 offset=180 marks=DSV keys=13 analyze_signal_flow,find_signal_connections,search_files,search_in_files,find_node_references,uid_to_project_path,project_path_to_uid,replay_recording,play_scene,get_test_report,get_game_node_properties,replay_recording,play_scene
+t=1790189112555 seq=136 totalLines=907 offset=740 marks=V keys=0 
+t=1790189302720 seq=304 totalLines=907 offset=140 marks=V keys=0 
+t=1790189315725 seq=319 totalLines=941 offset=350 marks=S keys=2 get_game_node_properties,replay_recording

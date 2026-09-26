@@ -1,0 +1,1 @@
+﻿{"method":"tools/call","params":{"arguments":{"code":"return InputMap.has_action(\"mcp_right\")"},"name":"running_game_execute_gdscript"},"id":402,"jsonrpc":"2.0"}

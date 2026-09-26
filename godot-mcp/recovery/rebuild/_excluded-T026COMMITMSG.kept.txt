@@ -1,0 +1,22 @@
+TASK-026 ergonomics batch 3: E-9 resource values, E-6+G-4 log source
+
+project_read_resource answered {loaded,path,type} and not one value of the
+resource, so a caller had to run a second tool to see what a file stores. It now
+answers the values the engine itself declares as stored (PROPERTY_USAGE_STORAGE)
+through the module's single serialize_variant, bounded at 64 properties with an
+explicit truncation marker (truncated / dropped / limits), and the two resource
+writers run the module's component-shaping step (shape_vector_from_json) so a
+value the read side answers as an object can be fed back as it is.
+
+editor_get_errors / editor_get_output_log read the shared user://logs/godot.log
+and nothing else, and that file belongs to the project's game process (the editor
+never writes it: main.cpp:2287/2292 leaves file logging behind the pc feature
+tag, which is disabled in the editor). Measured: the editor endpoint answered
+another process's lines, and an unreadable file answered -32603. Both tools now
+read this process's own Output panel first (MCPTools::editor_log_lines, the same
+EditorLog the sibling editor_remove_output_log touches), fall back to the file
+only when there is no in-process log, and answer one shared source block
+(source / in_process / available / editor / process / pid / port / log_path /
+note). An unreadable source is an honest empty answer, never -32603.
+
+Gate 6's PINNED list renumbered for the two pins whose source lines moved.

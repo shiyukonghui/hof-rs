@@ -1,0 +1,20 @@
+modules/mcp_server: task086 (2c-5) step3 - replay the TASK-024b dependency answer
+
+`project_get_scene_dependencies` still answered the pre-TASK-024b shape: the
+loader string was split and `parts[1]`/`parts[2]` read without the UID half, so
+`declared_type`/`path_source` were absent (tests/test_mcp_server.h:2758/2765,
+the `TASK-024b E-1/G-2: a uid-bearing ext_resource keeps its type and its
+res:// path` case).
+
+The recorded edit seq=480 (t=1790120943437) is the whole replacement of that
+comment block plus function (46 -> 123 lines), and it is the last content edit of
+the file. Its recorded `old` does not match the tree (the tree is a later,
+intermediate generation than the one the edit was taken against), so the
+replacement is applied to the tree span 707-800 - both boundaries asserted
+(`// ----...` and the function's closing `}`) and the span asserted unique before
+the write (work/task086/span_from_edit.py). The text written is the recorded
+`new` verbatim: it resolves the UID through `ResourceUID::ensure_path_nocheck`,
+falls back to the tag's own `path`, reports `path_source`
+(`uid` / `scene_path` / `unresolved`), `type` through
+`ResourceLoader::get_resource_type` with the tag type as fallback, and
+`declared_type` verbatim.
