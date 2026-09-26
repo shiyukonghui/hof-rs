@@ -223,6 +223,44 @@ B① 的字面判据**成立**（离屏 SubViewport 本身能拿到变化画面�
 
 ### F3 提交后的两仓日志与状态
 
+**主仓 `F:\moonbit-hof-rs`（分支 `master`，无远端）** — `git log --oneline -8`：
+
+```
+9fbe917 docs(godot-mcp): TASK-095 - D-1 re-localised: the canvas items the loaded scene brings in stop re-recording their draw commands
+63e0749 docs(godot-mcp): TASK-094 - the report's closing section carries the real per-gate exit codes, both repositories' logs and the reason the rebuild was deliberately not run
+b42e233 docs(godot-mcp): TASK-094 - D142 in the decision log (D-1 attributed to the machine's picture pipeline and the twelve hypotheses eliminated, D-2 judged as test brittleness and its readiness predicate fixed), with the ten gate exit codes and the three accept_m1 measurements
+f65fe78 docs(godot-mcp): TASK-094 - D-1 is the machine's picture pipeline, not the module: the minimal counter-example (blue/red/green background, three identical PNGs that still show the dark background, with the property read back as green), the twelve eliminated hypotheses, the same-session A/B that answers 10/29 non-zero at 00:14 and 0/29 at 02:00 on unchanged binary bytes, and the four bypasses that all fail; the pixel-diff column stays at its real 0 because no fix can be produced from inside this process
+5f47949 docs(godot-mcp): TASK-093 - the report carries the two commit ids of this task and the final gate ledger
+ae0b791 docs(godot-mcp): TASK-093 - the report and its evidence: eight game-side defects with before/after runs, the ten gates green, and the one environment defect that blocks pixel evidence
+97167e4 feat(godot-mcp): TASK-093 - the 2nd and 3rd C# games (Breakout, Snake), every byte of them written by MCP calls, plus the cross-round GAME-LOOP-LOG
+fed0135 docs(godot-mcp): TASK-092 - the summary table carries the same two measurement points as the body, so the report cannot be read two ways
+```
+
+`git status --short`：**空（0 行）**。
+`9fbe917` 携带 `DECISIONS.md`（D143）、`GAME-LOOP-LOG.md`（D-1 定域更正段 + 待办改写）、本报告、
+以及入库的 `recovery\work\task095\` 证据集（另含 `COMMIT-MSG.txt`，提交信息的原文留档）。
+
+**引擎仓 `F:\moonbit-hof-rs\godot-mcp\godot`（分支 `feature/mcp-server-module-rebuild`）** — `git log --oneline -8`：
+
+```
+8b9dd9a72b modules/mcp_server: task094 - D-2 is a load-sensitive readiness predicate, not a defect: the accept_m1 wait now asks the main loop to advance (frame_count strictly increasing six samples in a row) instead of asking it to be faster than 20 fps, so the suite is 22/22 solo and 22/22 under eight CPU burners
+cf554ef58c modules/mcp_server: task092 (B2/B3/B4) step2 - a deferred call's file effects and its capture are collected at completion, the two missing doctests exist, and the frame cost is a clamped median of a window
+87fbf82f4b modules/mcp_server: task092 (B1) step1 - an over-bound payload is written whole to a sidecar the line can be checked against, and the ledger re-hashes it
+382549f63e modules/mcp_server: task090 (2c-9) step6 - the round-8 record: the traceability section and the gate ledger
+8604fcf9e2 modules/mcp_server: task090 (2c-9) step5 - the description change is declared in the generator, so the contract stays reproducible
+eee58538a1 modules/mcp_server: task090 (2c-9) step4 - a deferred call's own body reaches its trace line too
+cac01b5f9f modules/mcp_server: task090 (2c-9) step3 - the round-8 fixes: the InputMap fact, the scenario flags, the frame-based deadline
+a455a87bea modules/mcp_server: task090 (2c-9) step2 - D-3: the game executor reaches the running scene tree
+```
+
+`git status --short`：**空（0 行）** —— **本任务没有在这一仓里落任何字节**，所以没有新提交、没有 push。
+`git rev-parse HEAD` == `refs/remotes/origin/feature/mcp-server-module-rebuild` ==
+`8b9dd9a72be43c90e875d2c765ca673ba59a9492`（仍是 TASK-094 那一刻的状态）。
+
+**收尾清理检查（跑完后立刻测）**：`Get-Process -Name godot*` → **无**；
+`Get-NetTCPConnection -State Listen` 在 `9888/9889/9890/9891/9892/9896–9899` → **无监听**。
+
+
 ---
 
 ## G. 本任务产出的文件
