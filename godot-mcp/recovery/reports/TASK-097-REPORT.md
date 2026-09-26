@@ -278,9 +278,16 @@ godot\modules\mcp_server\docs\reports\REBUILT-2C-MANIFEST.md   2c-10 节
 
 ## G. 提交后的逐字复核（本报告自身的提交之后）
 
-**边界说明（把话说死）**：本节由一次**纯文档**追加提交写入，它描述的是**本报告那次提交（主仓 `4e2b85b`、引擎仓 `094b071f9b`）之后**的两仓状态；携带本句话的追加提交是主仓上唯一的后续改动，因此「`git log` 顶端再多一行」是它唯一的差别。§D1 的门账快照描述的是 `2385fe2fb5` 这一编译锚点（两变体都是在它之后重建的）。
+**边界说明（把话说死）**：本节的两段帐是**本报告那次提交之后、以及本报告自身的任何纯文档追加提交之前**的那一刻的两仓状态。此后每次纯文档追加（包括携带本句的那一次、以及 `GAME-LOOP-LOG.md` 台账口径注记那一次）都只让主仓 `git log` 顶部多出**文档**提交，**不会**改变本节里唯一真正会变旧的两个事实：**已跟踪改动 0 条**、**未跟踪 136 条全部来自 `recovery\work\task096\`**。§D1 的门账快照描述的是 `2385fe2fb5` 这一编译锚点（两变体都是在它之后重建的）。
 
-### G1 主仓 `F:\moonbit-hof-rs`（分支 `master`，无远端）
+**报告提交之后主仓上追加的纯文档提交（逐字）**：
+
+```
+fc54163 docs(godot-mcp): TASK-097 - GAME-LOOP-LOG's TASK-096 re-localisation section gains the one-line closure note, so its "unavailable (D-1)" wording is read as the historical record of the runs before the cleanup rather than as the current state of the pixel column
+d1ac6e6 docs(godot-mcp): TASK-097 - the report's closing section: both repositories' real git logs and status lines, the tracked-versus-untracked accounting (0 tracked changes, 136 untracked entries all left over from TASK-096), the engine branch being level with its remote at 094b071f9b, and the post-run process/port check
+```
+
+### G1 主仓 `F:\moonbit-hof-rs`（分支 `master`，无远端）—— 报告提交那一刻（HEAD = `d1ac6e6` 之前是 `4e2b85b`）
 
 `git log --oneline -8`：
 
