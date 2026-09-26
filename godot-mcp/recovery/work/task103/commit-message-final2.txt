@@ -1,0 +1,6 @@
+docs(godot-mcp): TASK-103 - F4 says exactly which file a commit helper leaves behind: one .err.txt, because the .out.txt it just wrote is taken into the commit itself
+
+git_commit.ps1 writes its own stdout/stderr, then git add -A, then commits: the .out.txt
+lands in the commit, the .err.txt is written while the commit runs and stays modified.
+F4 now states that (with a file-name pattern rather than a name the next commit would
+make stale) instead of saying "a pair". No evidence file changed.

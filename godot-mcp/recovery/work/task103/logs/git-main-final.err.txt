@@ -1,0 +1,6 @@
+warning: in the working copy of 'godot-mcp/recovery/reports/TASK-103-REPORT.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'godot-mcp/recovery/work/task103/logs/git-main-housekeeping.err.txt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'godot-mcp/recovery/work/task103/logs/git-main-housekeeping.out.txt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'godot-mcp/recovery/work/task103/commit-message-final.txt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'godot-mcp/recovery/work/task103/fix_f4.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'godot-mcp/recovery/work/task103/fix_f4_final.py', LF will be replaced by CRLF the next time Git touches it
