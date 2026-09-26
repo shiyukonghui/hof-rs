@@ -55,10 +55,14 @@ VERIFY_RECOVERY=PASS
 
 盘上总量 **33,456 文件 / 2,520,551,255 B（2,404 MB）**；其中
 
-* **入库 2,436 文件 / 79,318,459 B（75.6 MB）**：`reports\`（RECOVERY-PLAN、STATE-OF-RECOVERY、
-  TASK-078..092 报告、EXTRACTION/REBUILD manifest）、`scripts\`、`rebuild\` 的补丁与清单
-  （`patches\ work2b\ _low-confidence\ _refs\`）、`work\task*` 的脚本与实测产物（trace / ledger /
-  PNG / 分析输出 / task092 的迁移脚本与全部门日志）。
+* **入库**：迁移那一刻测得 **2,436 文件 / 79,318,459 B（75.6 MB）**；收尾时（含 TASK-092 自己的
+  迁移脚本、校验输出、构建/门/版本日志与 before 基线）**2,456 文件 / ≈75.9 MB**。
+  内容是 `reports\`（RECOVERY-PLAN、STATE-OF-RECOVERY、TASK-078..092 报告、EXTRACTION/REBUILD
+  manifest）、`scripts\`、`rebuild\` 的补丁与清单（`patches\ work2b\ _low-confidence\ _refs\`）、
+  `work\task*` 的脚本与实测产物（trace / ledger / PNG / 分析输出）。
+  **单个最大**的入库文件是 `rebuild\work2b\gen-hits.txt`（21.06 MB 文本，契约重建生成器的命中
+  清单，REBUILD-2B manifest 的原始证据）—— 它是文本证据不是原始料，所以留下；若日后要瘦身，
+  这是第一个候选（本报告点名它，而不是让它在数字里隐形成分）。
 * **忽略 ≈31,020 文件 / ≈2.33 GB**（26 个忽略入口）：`transcripts\`（566 MB）、`staging\`（344 MB）、
   `logs\`（2.4 MB 原始流）、`tmp\`、`backup\`（193 MB 引擎二进制备份）、
   `rebuild\godot\`（**重建期的引擎树旧副本**，19,238 文件 / 1.18 GB —— 与铁律 4 同性质）、

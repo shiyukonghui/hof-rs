@@ -195,9 +195,10 @@ recovery/
 
 **忽略策略与它的分界线**（`.gitignore` 的 `TASK-092` 段）：入库的是**小而不可再生的判定依据**
 （各 TASK 报告、RECOVERY-PLAN、STATE-OF-RECOVERY、EXTRACTION/REBUILD manifest、`work/` 下的脚本
-与实测产物、`rebuild/` 的补丁与清单），入库量 **2,436 文件 / 75.6 MB**；忽略的是**大块原始料与
-可再生的大二进制**（transcripts / staging / logs / tmp / backup / `rebuild/godot` / `events-*.jsonl`
-等，约 31,000 文件 / 2.44 GB）。**忽略不等于丢失**：它们在盘上原样保留，只是不进 git 历史。
+与实测产物、`rebuild/` 的补丁与清单），入库量 **≈2,456 文件 / 75.9 MB**（其中最大单个是
+`rebuild/work2b/gen-hits.txt` 的 21.06 MB 文本证据）；忽略的是**大块原始料与可再生的大二进制**
+（transcripts / staging / logs / tmp / backup / `rebuild/godot` / `events-*.jsonl` 等，
+26 个忽略入口 / ≈31,020 文件 / ≈2.33 GB）。**忽略不等于丢失**：它们在盘上原样保留，只是不进 git 历史。
 
 > 为什么 `recovery/rebuild/godot/` 也忽略：它是重建期的引擎树旧副本，与 `godot-mcp/godot/`
 > 同性质 —— 铁律 4 说的是「引擎树不入主仓」，与它是不是旧版本无关。
