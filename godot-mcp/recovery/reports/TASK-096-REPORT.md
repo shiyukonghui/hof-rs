@@ -314,3 +314,36 @@ runs\gates\task096\              summary.txt 与 g01..g10 的真实 stdout/stder
 ```
 
 **一句话收尾**：TASK-096 的产出是**一次归属判定 + 一条被登记的新缺陷 + 像素证据链的诚实化 + 第 4 个游戏**——不是一次引擎修复。引擎侧只多了一份说明「像素不可得时该拿什么当证据」的文档；真正要做的事（删副本、让同名节点别静默改名）写在 `GAME-LOOP-LOG.md` 的 D-3 与 §A5 里，等决策者开口。
+
+---
+
+## G. 提交后的逐字复核（本报告自身的提交之后）
+
+上面 §D3 的两段 `git log` 是本报告**写下来那一刻**的快照；本报告自身是主仓的**下一个**提交。下面这一节是提交完成后重测的逐字输出，**使 §D3 的快照不可能被本报告自己的提交改旧**。
+
+**主仓 `F:\moonbit-hof-rs`（分支 `master`）** — `git log --oneline -8`：
+
+```
+b84bc87 docs(godot-mcp): TASK-096 - the report: the ownership A/B (the same operation batch is normal on both engines and on a clean probe project, so the answer is neither our regression nor an upstream behaviour nor the presentation layer but the duplicate node layer a replayed editor phase writes into a scene), the occlusion proof with its recomputable colours, the pixel column becoming unavailable (D-1) with the replacement evidence chain, and the 4th C# game Tetris with its three fixed defects and their before/after runs
+1b5b108 feat(godot-mcp): TASK-096 - D-1 is neither the machine picture pipeline nor the loaded canvas items: a replayed editor phase writes a whole duplicate node layer into the scene, drawn on top, so the screen really is still; the same batch of operations is normal on a clean probe project on both engines; the pixel column becomes 'unavailable (D-1)' with the replacement evidence chain in MCP-TRACEABILITY.md section 7; and the 4th C# game Tetris is delivered through MCP calls (42/42 facts, 11/42 non-zero pixel diffs on a clean scene), with three defects fixed and re-run
+813f0d0 docs(godot-mcp): TASK-095 - the report's closing section carries both repositories' real git logs and status lines, the tracked-versus-ignored accounting of the evidence set, and the post-run process and port cleanup check
+9fbe917 docs(godot-mcp): TASK-095 - D-1 re-localised: the canvas items the loaded scene brings in stop re-recording their draw commands
+63e0749 docs(godot-mcp): TASK-094 - the report's closing section carries the real per-gate exit codes, both repositories' logs and the reason the rebuild was deliberately not run
+b42e233 docs(godot-mcp): TASK-094 - D142 in the decision log (D-1 attributed to the machine's picture pipeline and the twelve hypotheses eliminated, D-2 judged as test brittleness and its readiness predicate fixed), with the ten gate exit codes and the three accept_m1 measurements
+f65fe78 docs(godot-mcp): TASK-094 - D-1 is the machine's picture pipeline, not the module: the minimal counter-example (blue/red/green background, three identical PNGs that still show the dark background, with the property read back as green), the twelve eliminated hypotheses, the same-session A/B that answers 10/29 non-zero at 00:14 and 0/29 at 02:00 on unchanged binary bytes, and the four bypasses that all fail; the pixel-diff column stays at its real 0 because no fix can be produced from inside this process
+5f47949 docs(godot-mcp): TASK-093 - the report carries the two commit ids of this task and the final gate ledger
+```
+
+`git status --short`（剔除未跟踪行后）：**空 —— 没有任何已跟踪文件处于被改状态**；未跟踪的只有 §D4 说明的那两类（`reporttest-pong\` 的临时副本、4 个 0 字节 `tmp_*.tscn`）。
+
+**引擎仓 `F:\moonbit-hof-rs\godot-mcp\godot`（分支 `feature/mcp-server-module-rebuild`）** — `git log --oneline -4` 与 `git status --short`：
+
+```
+95aa1d8984 modules/mcp_server: task096 - MCP-TRACEABILITY gains section 7: what the evidence chain is when the pixel diff is unavailable, and how the ledger is to be read then; the section also carries the re-localisation of D-1 (the duplicate node layer a replayed editor phase writes into a scene), which is why the three older games' pixel column says unavailable rather than 0
+8b9dd9a72b modules/mcp_server: task094 - D-2 is a load-sensitive readiness predicate, not a defect: the accept_m1 wait now asks the main loop to advance (frame_count strictly increasing six samples in a row) instead of asking it to be faster than 20 fps, so the suite is 22/22 solo and 22/22 under eight CPU burners
+cf554ef58c modules/mcp_server: task092 (B2/B3/B4) step2 - a deferred call's file effects and its capture are collected at completion, the two missing doctests exist, and the frame cost is a clamped median of a window
+87fbf82f4b modules/mcp_server: task092 (B1) step1 - an over-bound payload is written whole to a sidecar the line can be checked against, and the ledger re-hashes it
+```
+
+`git status --short`：**空**；`HEAD == origin/feature/mcp-server-module-rebuild == 95aa1d8984fc88aa0415a3b823811fd76d76a2ad`。
+
