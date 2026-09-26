@@ -360,6 +360,6 @@ da9edda docs(godot-mcp): TASK-103 - the report's F4 states the closing boundary 
 5. 缺陷分栏：**工具缺陷 0 条**（未改模块一个字节）+ **游戏或驱动缺陷 1 条**（RT-1）+ 取证工具自身 2 条（E-1a/1b，均已修）；X-2 只登记。
 6. 里程碑小结（20 款一览、**合计 2 554 次调用 = 编辑器 303 / 游戏 2 251**、工具缺陷累计与修复轮次、像素/复算覆盖率 20/20、`--import` 累计 3/38）与**独立验收入口**已写进 `GAME-LOOP-LOG.md`。
 7. 收尾：**未改模块 → 走免跑判定**，`run_gates.ps1` 自判 `ANCHOR_STRUCTURAL_EQUIVALENT` + `SKIP_REBUILD`；**十道门与 `accept_m1` 本轮未重跑（如实说明，不做「应该可以」的转述）**。
-8. 主仓提交 `a8e0e56`（139 文件 / 24 875 增）+ 报告 `60bc9fb` + **三次自查修订** `4ea0da5`/`8cf0227`/`e3b8b57`（断言分解、20 款合计 2 554、`--import` 3/38、最终审计脚本），最终 HEAD `e3b8b57`；引擎仓**工作树空、HEAD 未动、无 push**（fork 已是 `1f9d0cb1c9`）。
+8. 主仓提交 `a8e0e56`（139 文件 / 24 875 增）+ 报告 `60bc9fb` + **四次自查修订** `4ea0da5`/`8cf0227`/`e3b8b57`/`e5caf63`（断言分解、20 款合计 2 554、`--import` 3/38、最终审计脚本、F4 收尾节），**收尾时 HEAD `e5caf63`**（它自己的哈希写在提交之后，逐字见 `logs\git-f4.out.txt`）；引擎仓**工作树空、HEAD 未动、无 push**（fork 已是 `1f9d0cb1c9`）。
 9. 报告：`F:\moonbit-hof-rs\godot-mcp\recovery\reports\TASK-104-REPORT.md`；决策 **D152** 已入 `DECISIONS.md`。
 10. 遗留：`--import` 关机期消息本轮**非崩溃形态**出现 1 次（`IMPORT_EXIT=0`）；三款均为经典规则的最小完整子集；X-2 未修。
