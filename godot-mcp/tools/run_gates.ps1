@@ -38,10 +38,26 @@ foreach ($cmd in $commands) {
   $name = ('g{0:d2}' -f $i)
   $out = Join-Path $OutDir ($name + '.stdout.txt')
   $err = Join-Path $OutDir ($name + '.stderr.txt')
-  $wrapped = ($cmd + ' & echo GATE_EXIT=%ERRORLEVEL%')
+  # TASK-092: the exit code marker is expanded with **delayed** expansion
+  # (`cmd /v:on` + `!ERRORLEVEL!`). `%ERRORLEVEL%` is expanded when cmd parses the
+  # whole line, i.e. *before* the command runs, so the TASK-089..091 spelling
+  # echoed whatever the error level had been on entry - a marker that cannot
+  # report a failure. The commands, their order and the output layout are
+  # unchanged; only the marker is now able to be non-zero.
+  $wrapped = ($cmd + ' & echo GATE_EXIT=!ERRORLEVEL!')
   $sw = [System.Diagnostics.Stopwatch]::StartNew()
-  $p = Start-Process -FilePath 'cmd.exe' -ArgumentList '/c', $wrapped -WorkingDirectory $engine `
-        -RedirectStandardOutput $out -RedirectStandardError $err -NoNewWindow -Wait -PassThru
+  # TASK-092: `-Wait` is not used either. On this machine it hung forever on a
+  # build whose child had already exited (`Start-Process -Wait` waits for every
+  # process sharing the redirected handles); the gate runner polls the direct
+  # child instead, which `cmd /c` cannot outlive.
+  $p = Start-Process -FilePath 'cmd.exe' -ArgumentList '/v:on', '/c', $wrapped -WorkingDirectory $engine `
+        -RedirectStandardOutput $out -RedirectStandardError $err -NoNewWindow -PassThru
+  $deadline = (Get-Date).AddMinutes(10)
+  while (-not $p.HasExited) {
+    if ((Get-Date) -gt $deadline) { throw "gate $name timed out: $cmd" }
+    Start-Sleep -Milliseconds 500
+  }
+  Start-Sleep -Seconds 1
   $sw.Stop()
   $code = ''
   if (Test-Path -LiteralPath $out) {

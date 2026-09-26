@@ -3,4 +3,4 @@ You can install them by running `python misc\scripts\install_angle.py`.
 See the documentation for more information:
 	https://docs.godotengine.org/en/latest/engine_details/development/compiling/compiling_for_windows.html#compiling-with-angle-support
 Alternatively, disable this driver by compiling with `angle=no` explicitly.
-  正在创建�\ufffd bin\godot.windows.editor.x86_64.mono.lib 和�\ufffd�象 bin\godot.windows.editor.x86_64.mono.exp
+  正在创建�\ufffd bin\godot.windows.editor.x86_64.lib 和�\ufffd�象 bin\godot.windows.editor.x86_64.exp

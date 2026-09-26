@@ -1,0 +1,42 @@
+TRACE LEDGER F:\moonbit-hof-rs\godot-mcp\runs\pong\pong-run4\trace-game.jsonl
+calls=29 malformed_lines=0
+verdicts: ok_effect_observed=6, ok_effect_unavailable=6, ok_file_effect_observed=9, ok_no_effect_observed=8
+file_effects: changed=9, none=13, not_tracked=6, unchanged=1
+
+seq    req_id   tool                                   dur_ms    ok       err      scene_effect   file_effect     flags                      verdict
+----------------------------------------------------------------------------------------------------------------------------------------------------
+1      124      running_game_get_scene_tree            15        True     0        unchanged      none            -                          ok_no_effect_observed
+2      125      running_game_get_node_properties       18        True     0        unchanged      none            -                          ok_no_effect_observed
+3      126      running_game_get_node_properties       16        True     0        unchanged      none            -                          ok_no_effect_observed
+4      127      running_game_capture_screenshot        37        True     0        unchanged      unchanged       -                          ok_no_effect_observed
+5      128      running_game_assert_node_state         23        True     0        unchanged      changed         -                          ok_file_effect_observed
+6      129      running_game_run_test_scenario         842       True     0        unavailable    not_tracked     scenario_passed            ok_effect_unavailable
+7      130      running_game_get_node_properties       16        True     0        changed        none            -                          ok_effect_observed
+8      131      running_game_capture_screenshot        37        True     0        changed        changed         -                          ok_file_effect_observed
+9      132      running_game_set_node_property         20        True     0        changed        none            -                          ok_effect_observed
+10     133      running_game_capture_screenshot        37        True     0        unchanged      changed         -                          ok_file_effect_observed
+11     134      running_game_run_test_scenario         356       True     0        unavailable    not_tracked     scenario_passed            ok_effect_unavailable
+12     135      running_game_run_test_scenario         252       True     0        unavailable    not_tracked     scenario_assertion_failed  ok_effect_unavailable
+13     136      running_game_run_test_scenario         342       True     0        unavailable    not_tracked     scenario_passed            ok_effect_unavailable
+14     137      running_game_execute_gdscript          16        True     0        unchanged      none            -                          ok_no_effect_observed
+15     138      running_game_execute_gdscript          19        True     0        unchanged      none            -                          ok_no_effect_observed
+16     139      running_game_set_node_property         16        True     0        changed        none            -                          ok_effect_observed
+17     140      running_game_set_node_property         16        True     0        changed        none            -                          ok_effect_observed
+18     141      running_game_assert_node_state         24        True     0        unchanged      changed         -                          ok_file_effect_observed
+19     142      running_game_set_node_property         16        True     0        changed        none            -                          ok_effect_observed
+20     143      running_game_set_node_property         15        True     0        changed        none            -                          ok_effect_observed
+21     144      running_game_assert_node_state         25        True     0        unchanged      changed         -                          ok_file_effect_observed
+22     145      running_game_assert_node_state         23        True     0        unchanged      changed         -                          ok_file_effect_observed
+23     146      running_game_capture_screenshot        37        True     0        unchanged      changed         -                          ok_file_effect_observed
+24     147      running_game_get_scene_tree            15        True     0        unchanged      none            -                          ok_no_effect_observed
+25     148      running_game_execute_gdscript          3         True     0        unchanged      none            -                          ok_no_effect_observed
+26     149      running_game_assert_screen_text        24        True     0        unchanged      changed         -                          ok_file_effect_observed
+27     150      running_game_assert_screen_text        25        True     0        unchanged      changed         assertion_failed           ok_file_effect_observed
+28     151      running_game_run_stress_test           72        True     0        unavailable    not_tracked     -                          ok_effect_unavailable
+29     152      running_game_get_node_property_samples 515       True     0        unavailable    not_tracked     -                          ok_effect_unavailable
+
+rows whose reconstructible facts are all present: 23/29
+
+failure payloads (`error_data_json`) present on 0/29 call(s)
+error_data_evidence: not_applicable=29
+args_evidence: inline_complete=29

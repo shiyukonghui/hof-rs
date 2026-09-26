@@ -5370,3 +5370,52 @@ B 段每个缺口一个提交，任一条都可单独 `git revert`，且都不�
 
 > 结果（门、Pong 重跑、facts_complete 前后对比、提交与 push）在 B 段实现与验收完成后追加为 D141。
 
+## D141 — TASK-092 结果（B/C 段）：三条缺口闭合、两变体重建、九门 + accept_m1 全绿、Pong `facts_complete` 100%
+
+TASK-092 B/C 段交付：三条溯源缺口闭合 + 两个变体重建 + 九门与 accept_m1 全绿 + Pong 重跑到 100%
+
+**引擎仓交付**（`modules/mcp_server/**`，提交 `87fbf82f4b` + `cf554ef58c`，已 push 到 fork）：
+B1 超限载荷的 sidecar（三个有界载荷同一机制）+ 台账**读盘重算**判 `args_complete`；
+B2 延迟调用的文件侧（`Queue::tick` 跨窗口累计）与画面侧（`finish` 移到完成时）证据；
+B3 补 5 条 doctest（含被 TASK-090 声明「测不了」的两个：`in_input_map`、`_tick_pending` 的
+`result_json`，后者用**真实环回 socket** 驱动运输层）；B4 `mcp_frame_clock`（最近 15 帧中位数、
+截断、夹 [16,1000]）。契约（`inputSchema` / description / `tools_list.renamed.json`）**一字未动**。
+
+**实现期抓到并修掉的自身缺陷**（都是「报成功但没发生」的近亲，如实记录）：
+1. **`Engine::_fps` 的默认值是 1** —— 无样本时退回 `get_frames_per_second()` 会把占位值读成
+   `1000 ms/帧`，把 deadline 放大 60 倍。改为无样本即取旧常量 16，并在文档写明**为什么故意不退回**。
+2. **`run_gates.ps1` 的退出码标记是坏的**：`%ERRORLEVEL%` 在 cmd 解析整行时展开（命令运行之前），
+   所以它报不出失败。改为 `cmd /v:on` + `!ERRORLEVEL!`。TASK-089..091 的门结论仍然成立，
+   因为它们引用的是各门输出正文的判定行而不是那个标记。
+3. **`Start-Process -Wait` 在子进程早已退出后永不返回**（等的是共享重定向句柄的全部进程）：
+   构建脚本与门跑器都改成轮询 `HasExited` + 日志尾部标记读退出码。
+4. **`in_input_map` 之所以「测不了」是结构问题不是环境问题**：工具在无 `SceneTree` 的进程里
+   `-32000`，于是内核不可达。把内核导出为 `MCPTools::create_test_scenario_task(...)`（环境检查
+   留在工具侧、位置不变），与 TASK-090 为 GDScript 执行器做的是同一个动作。
+
+**验证（真实输出）**：两变体 build exit 0，自报 `4.8.dev[.mono].custom_build.cf554ef58` == HEAD；
+门 1 `155/155 · 6613 assertions`、门 2 `1581/1581 · 430926 assertions`、门 3–8 各自 PASS、
+门 9 **`ANCHOR_EQUAL`（diff_count=0）**、门 10 `accept_m1 22/22`，**g01..g10 全部 exit 0**
+（`runs\gates\task092\`）。
+
+**Pong 重跑（第 5 次运行，`runs\pong\pong-task092`，先 `reset_game.ps1` 复位）**：
+`facts_complete` 编辑器 **21/23 → 23/23**、游戏 **23/29 → 29/29**（100%）；
+`args_evidence` = `inline_complete=22, sidecar_verified=1`；
+`ok_effect_unavailable` 两侧都归零（延迟调用从「无法观测」变成有文件侧与画面侧实测证据：
+4 条场景 `observed_changed` + px 512/3200/0/3200，压力与逐帧采样 `no_mutation`，
+`frames_waited` 6–51 证明 after 帧在完成之后）；报告缺陷清单 **0 条**；
+capture 52/52 对 PNG 独立复算与 trace 自报逐对相等。
+
+**主仓交付**：恢复档案迁入 `godot-mcp\recovery\`（33,433 文件逐文件 sha256、两侧字节数精确相等、
+`mismatched=0`，校验全过后才删 C: 源）；入库 2,436 文件 / 75.6 MB，忽略 ≈31,020 文件 / 2.33 GB
+（transcripts / staging / logs / tmp / backup / `rebuild\godot` 引擎树旧副本 / 事件流 dump /
+三个嵌套 `.git`）；README §8 + `.gitignore` 分界线；`game_report.py` 报 `args_evidence`；
+`projects\pong\scenes\main.tscn` 是会话重放后的 engine `unique_id` 变化（语义相同），
+而 `projects\pong\README.md` 是**手写文档**被 reset 覆盖过，已还原并单独说明。
+
+**遗留（不阻塞）**：①Pong 仍是一局一次会话，D138 的 20 个游戏未起步；②本次门 9 记录的是
+报告落地**之前**那一刻的锚点（报告提交后 HEAD 会多出几个 `.md`，届时回到
+`ANCHOR_STRUCTURAL_EQUIVALENT`，没有为此再重建）；③`error_message` 仍是纯截断（刻意）；
+④`work\gitapply-probe\` 与 `rebuild\_excluded\` 因嵌套 `.git` 整体未入库，内容在盘上。
+
+

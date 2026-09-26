@@ -1,0 +1,7 @@
+[doctest] doctest version is "2.4.12"
+[doctest] run with "--help" for options
+===============================================================================
+[doctest] test cases:  155 |  155 passed | 0 failed | 1429 skipped
+[doctest] assertions: 6613 | 6613 passed | 0 failed |
+[doctest] Status: SUCCESS!
+TASK092_EXIT=0 

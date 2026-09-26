@@ -1,0 +1,36 @@
+TRACE LEDGER F:\moonbit-hof-rs\godot-mcp\runs\pong\pong-run4\trace-editor.jsonl
+calls=23 malformed_lines=0
+verdicts: ok_effect_observed=3, ok_effect_unavailable=1, ok_file_effect_observed=9, ok_no_effect_observed=10
+file_effects: changed=9, none=12, not_tracked=1, unchanged=1
+
+seq    req_id   tool                                   dur_ms    ok       err      scene_effect   file_effect     flags                      verdict
+----------------------------------------------------------------------------------------------------------------------------------------------------
+2      101      project_create_script                  36        True     0        unchanged      changed         -                          ok_file_effect_observed
+3      102      project_create_script                  30        True     0        unchanged      changed         -                          ok_file_effect_observed
+4      103      project_edit_script                    30        True     0        unchanged      changed         -                          ok_file_effect_observed
+5      104      project_build_csharp                   3480      True     0        unavailable    not_tracked     -                          ok_effect_unavailable
+6      105      project_validate_scripts               23        True     0        unchanged      none            result_unparseable         ok_no_effect_observed
+7      106      editor_open_scene                      20        True     0        unchanged      none            -                          ok_no_effect_observed
+8      107      editor_add_nodes_batch                 19        True     0        changed        none            -                          ok_effect_observed
+9      108      editor_set_node_script_batch           18        True     0        unchanged      none            -                          ok_no_effect_observed
+10     109      editor_set_node_script_batch           25        True     0        unchanged      none            -                          ok_no_effect_observed
+11     110      editor_set_node_property               21        True     0        changed        none            -                          ok_effect_observed
+12     111      editor_set_node_property               19        True     0        changed        none            -                          ok_effect_observed
+13     112      editor_set_node_property               19        True     0        unchanged      none            -                          ok_no_effect_observed
+14     113      editor_add_input_action                26        True     0        unchanged      changed         -                          ok_file_effect_observed
+15     114      editor_add_input_action                29        True     0        unchanged      changed         -                          ok_file_effect_observed
+16     115      editor_add_input_action                29        True     0        unchanged      changed         -                          ok_file_effect_observed
+17     116      editor_add_input_action                29        True     0        unchanged      changed         -                          ok_file_effect_observed
+18     117      editor_add_input_action                27        True     0        unchanged      changed         -                          ok_file_effect_observed
+19     118      editor_save_scene                      56        True     0        unchanged      changed         -                          ok_file_effect_observed
+20     119      editor_get_scene_tree                  19        True     0        unchanged      none            -                          ok_no_effect_observed
+21     120      editor_get_node_properties             18        True     0        unchanged      none            -                          ok_no_effect_observed
+22     121      project_validate_scripts               22        True     0        unchanged      none            -                          ok_no_effect_observed
+23     122      editor_capture_screenshot              261       True     0        unchanged      unchanged       -                          ok_no_effect_observed
+24     123      editor_get_errors                      19        True     0        unchanged      none            -                          ok_no_effect_observed
+
+rows whose reconstructible facts are all present: 21/23
+
+failure payloads (`error_data_json`) present on 0/23 call(s)
+error_data_evidence: not_applicable=23
+args_evidence: inline_complete=22, sidecar_not_recorded_in_trace=1

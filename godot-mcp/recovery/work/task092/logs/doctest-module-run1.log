@@ -1,0 +1,44 @@
+[doctest] doctest version is "2.4.12"
+[doctest] run with "--help" for options
+===============================================================================
+.\modules/mcp_server/tests/test_mcp_server.h(9706):
+TEST CASE:  [MCPServer] a scenario input step answers in_input_map for a declared and for an undeclared action
+
+.\modules/mcp_server/tests/test_mcp_server.h(9743): ERROR: CHECK( error.code == 0 ) is NOT correct!
+  values: CHECK( -32000 == 0 )
+
+.\modules/mcp_server/tests/test_mcp_server.h(9744): FATAL ERROR: REQUIRE( task != nullptr ) is NOT correct!
+  values: REQUIRE( nullptr != nullptr )
+
+.\modules/mcp_server/tests/test_mcp_server.h(9743): ERROR: CHECK( error.code == 0 ) is NOT correct!
+  values: CHECK( -32000 == 0 )
+
+.\modules/mcp_server/tests/test_mcp_server.h(9744): FATAL ERROR: REQUIRE( task != nullptr ) is NOT correct!
+  values: REQUIRE( nullptr != nullptr )
+
+===============================================================================
+.\modules/mcp_server/tests/test_mcp_server.h(9835):
+TEST CASE:  [MCPServer] a deferred call's file effects are observed across its window and its boundaries are named
+
+.\modules/mcp_server/tests/test_mcp_server.h(9919): ERROR: CHECK( out[0].file_effect_status.is_empty() ) is NOT correct!
+  values: CHECK( false )
+
+===============================================================================
+.\modules/mcp_server/tests/test_mcp_server.h(10097):
+TEST CASE:  [MCPServer] an over-bound argument list is written whole to a sidecar the line names
+
+.\modules/mcp_server/tests/test_mcp_server.h(10177): ERROR: CHECK( under.contains("\"content\":\"tiny\"") ) is NOT correct!
+  values: CHECK( false )
+
+===============================================================================
+.\modules/mcp_server/tests/test_mcp_server.h(10199):
+TEST CASE:  [MCPServer] the frame-cost estimate is a clamped median of a window, not a moment reading
+
+.\modules/mcp_server/tests/test_mcp_server.h(10204): ERROR: CHECK( MCPFrameClock::frame_cost_ms() == MCPFrameClock::FLOOR_MS ) is NOT correct!
+  values: CHECK( 1000 == 16 )
+
+===============================================================================
+[doctest] test cases:  155 |  151 passed | 4 failed | 1429 skipped
+[doctest] assertions: 6594 | 6587 passed | 7 failed |
+[doctest] Status: FAILURE!
+TASK092_EXIT=1 
