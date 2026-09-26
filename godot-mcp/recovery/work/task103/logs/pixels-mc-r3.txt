@@ -1,0 +1,24 @@
+== runs\missilecommand\mc-task103-r3
+   NONZERO 3    editor_add_nodes_batch                     changed=213027 status=done
+   trace-editor.jsonl: 14 capture pair(s), 1 non-zero
+   NONZERO 29   running_game_execute_gdscript              changed=4923 status=done
+   NONZERO 32   running_game_execute_gdscript              changed=421 status=done
+   NONZERO 38   running_game_execute_gdscript              changed=5004 status=done
+   NONZERO 39   running_game_execute_gdscript              changed=193 status=done
+   NONZERO 44   running_game_execute_gdscript              changed=5384 status=done
+   NONZERO 52   running_game_execute_gdscript              changed=10163 status=done
+   NONZERO 57   running_game_execute_gdscript              changed=5350 status=done
+   NONZERO 58   running_game_execute_gdscript              changed=2972 status=done
+   NONZERO 65   running_game_execute_gdscript              changed=3353 status=done
+   NONZERO 66   running_game_execute_gdscript              changed=15899 status=done
+   NONZERO 74   running_game_execute_gdscript              changed=13532 status=done
+   NONZERO 75   running_game_execute_gdscript              changed=1586 status=done
+   NONZERO 83   running_game_execute_gdscript              changed=4370 status=done
+   NONZERO 85   running_game_run_test_scenario             changed=193 status=done
+   NONZERO 91   running_game_execute_gdscript              changed=392 status=done
+   NONZERO 94   running_game_get_node_property_samples     changed=168 status=done
+   NONZERO 95   running_game_assert_node_state             changed=168 status=done
+   NONZERO 97   running_game_assert_node_state             changed=168 status=done
+   NONZERO 101  running_game_execute_gdscript              changed=168 status=done
+   NONZERO 102  running_game_execute_gdscript              changed=346 status=done
+   trace-game.jsonl: 113 capture pair(s), 20 non-zero

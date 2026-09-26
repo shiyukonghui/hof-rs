@@ -1,0 +1,34 @@
+== runs\towerdefense\td-task103-r3
+   NONZERO 3    editor_add_nodes_batch                     changed=213012 status=done
+   trace-editor.jsonl: 14 capture pair(s), 1 non-zero
+   NONZERO 34   running_game_execute_gdscript              changed=181976 status=done
+   NONZERO 36   running_game_execute_gdscript              changed=4409 status=done
+   NONZERO 40   running_game_execute_gdscript              changed=4387 status=done
+   NONZERO 49   running_game_execute_gdscript              changed=2613 status=done
+   NONZERO 51   running_game_execute_gdscript              changed=2010 status=done
+   NONZERO 55   running_game_execute_gdscript              changed=2797 status=done
+   NONZERO 59   running_game_execute_gdscript              changed=1981 status=done
+   NONZERO 60   running_game_execute_gdscript              changed=4503 status=done
+   NONZERO 66   running_game_execute_gdscript              changed=6103 status=done
+   NONZERO 67   running_game_execute_gdscript              changed=1446 status=done
+   NONZERO 73   running_game_execute_gdscript              changed=1443 status=done
+   NONZERO 74   running_game_execute_gdscript              changed=1433 status=done
+   NONZERO 82   running_game_execute_gdscript              changed=391 status=done
+   NONZERO 84   running_game_run_test_scenario             changed=1128 status=done
+   NONZERO 88   running_game_execute_gdscript              changed=4000 status=done
+   NONZERO 89   running_game_execute_gdscript              changed=4505 status=done
+   NONZERO 90   running_game_execute_gdscript              changed=1686 status=done
+   NONZERO 91   running_game_execute_gdscript              changed=1784 status=done
+   NONZERO 94   running_game_execute_gdscript              changed=3370 status=done
+   NONZERO 106  running_game_execute_gdscript              changed=6574 status=done
+   NONZERO 107  running_game_execute_gdscript              changed=4505 status=done
+   NONZERO 108  running_game_execute_gdscript              changed=1686 status=done
+   NONZERO 109  running_game_execute_gdscript              changed=1784 status=done
+   NONZERO 113  running_game_get_node_property_samples     changed=1373 status=done
+   NONZERO 114  running_game_assert_node_state             changed=1120 status=done
+   NONZERO 115  running_game_assert_node_state             changed=97 status=done
+   NONZERO 116  running_game_assert_node_state             changed=94 status=done
+   NONZERO 117  running_game_execute_gdscript              changed=1420 status=done
+   NONZERO 120  running_game_execute_gdscript              changed=7240 status=done
+   NONZERO 121  running_game_execute_gdscript              changed=1992 status=done
+   trace-game.jsonl: 131 capture pair(s), 30 non-zero

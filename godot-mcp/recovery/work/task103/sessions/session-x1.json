@@ -1,0 +1,55 @@
+{
+ "import": true,
+ "calls": [
+  {
+   "tag": "g01-failing-addchild",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var main = get_parent()\nvar c = ColorRect.new()\nc.name = StringName(\"ProbeOverlay\")\nc.position = Vector2(20, 556)\nc.size = Vector2(120, 30)\nc.color = Color(0.95, 0.35, 0.95, 1.0)\nmain.addChild(c)\nreturn \"overlay added\""
+   },
+   "note": "X-1 的最小复现：TASK-102 g115 那段原文（C# 的 addChild 拼写打在一个 C# Node2D 上）"
+  },
+  {
+   "tag": "g02-scene-tree-after-fail",
+   "port": "game",
+   "tool": "running_game_get_scene_tree",
+   "arguments": {},
+   "note": "失败之后立刻读一次场景树：没有任何 ProbeOverlay（失败确实什么也没做）"
+  },
+  {
+   "tag": "g03-control-add_child",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var main = get_parent()\nvar c = ColorRect.new()\nc.name = StringName(\"ProbeOverlay\")\nc.position = Vector2(20, 556)\nc.size = Vector2(120, 30)\nc.color = Color(0.95, 0.35, 0.95, 1.0)\nmain.add_child(c)\nreturn \"overlay added\""
+   },
+   "note": "正控：同样的八行只把 addChild 改成 add_child；环境、挂载点、这个 C# 节点都是好的"
+  },
+  {
+   "tag": "g04-scene-tree-after-ok",
+   "port": "game",
+   "tool": "running_game_get_scene_tree",
+   "arguments": {},
+   "note": "成功之后读场景树：ProbeOverlay 在树上"
+  },
+  {
+   "tag": "g05-success-null",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var c = ColorRect.new()\nc.queue_free()"
+   },
+   "note": "成功但没有返回值：要能与「跑了且有副作用」区分开"
+  },
+  {
+   "tag": "g06-parse-fail",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "return ("
+   },
+   "note": "解析失败：-32602 的既有契约，本轮必须一字不动"
+  }
+ ]
+}

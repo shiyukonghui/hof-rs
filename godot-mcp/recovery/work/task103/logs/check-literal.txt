@@ -1,0 +1,8 @@
+description: byte-identical in the C++ literal (741 chars)
+inputSchema[properties]: emitted
+inputSchema[required]: emitted
+inputSchema[type]: emitted
+registration: ToolBuilder builder("running_game_execute_gdscript"
+registration: builder.channel("running_game").verb("execute").scope(MCPToolScope::GAME).mutating(true)
+registration: handler(_tool_execute_gdscript)
+CHECK_LITERAL OK

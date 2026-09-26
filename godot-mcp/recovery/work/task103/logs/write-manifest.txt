@@ -1,0 +1,1 @@
+appended the 2c-12 section to F:\moonbit-hof-rs\godot-mcp\godot\modules\mcp_server\docs\reports\REBUILT-2C-MANIFEST.md (126266 bytes)

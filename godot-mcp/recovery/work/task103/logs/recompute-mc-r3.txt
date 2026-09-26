@@ -1,0 +1,11 @@
+== missilecommand : 128 response file(s) in runs\missilecommand\mc-task103-r3
+   DECLARED g70-assert-boundary                -32001 Property 'NoSuchPropertyAtAll' on node '/root/Main' not found
+   literals : 71/71 aligned with the generator's own expectations and passed
+   declared : 1 boundary assertion(s) whose expected answer is the -32001 refusal
+   city     g12-readback-t0        recomputed=29583456 reported=29583456 OK
+   world    g12-readback-t0        recomputed=852442047 reported=852442047 OK
+   city     g67-final-readback     recomputed=29583456 reported=29583456 OK
+   world    g67-final-readback     recomputed=-1116815080 reported=-1116815080 OK
+   assertions checked : 71
+   hash checks        : 4
+   TOTAL RECOMPUTATION MISMATCHES: 0

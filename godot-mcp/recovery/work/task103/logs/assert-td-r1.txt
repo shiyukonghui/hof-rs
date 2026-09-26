@@ -1,0 +1,42 @@
+== runs\towerdefense\td-task103-r1
+   FAILED g52-assert-towers                  TowersPlaced eq 3.0  actual=0
+   FAILED g53-assert-gold                    Gold eq 850.0  actual=0
+   FAILED g55-assert-won                     Won eq True  actual=False
+   FAILED g57-assert-killed                  EnemiesKilled eq 15.0  actual=0
+   FAILED g58-assert-leaked                  EnemiesLeaked eq 0.0  actual=5
+   FAILED g59-assert-lives                   Lives eq 5.0  actual=0
+   FAILED g60-assert-steps                   Steps eq 306.0  actual=544
+   FAILED g61-assert-score                   Score eq 150.0  actual=0
+   FAILED g62-assert-hook-applied            LastHookSteps eq 306.0  actual=543
+   FAILED g63-assert-wave                    Wave eq 3.0  actual=1
+   FAILED g65-assert-screen-win              ? None None  actual=None
+   ?                          pass=1 fail=1
+   AutoTicks                  pass=2 fail=0
+   Cols                       pass=1 fail=0
+   EnemiesAlive               pass=3 fail=0
+   EnemiesKilled              pass=2 fail=1
+   EnemiesLeaked              pass=1 fail=1
+   EnemiesSpawned             pass=1 fail=0
+   EnemyList                  pass=4 fail=0
+   GameOver                   pass=2 fail=0
+   Gold                       pass=6 fail=1
+   InputSteps                 pass=1 fail=0
+   LastAutoSteps              pass=3 fail=0
+   LastHookSteps              pass=5 fail=1
+   Lives                      pass=3 fail=1
+   MapHash                    pass=1 fail=0
+   PathHash                   pass=1 fail=0
+   PathLength                 pass=1 fail=0
+   ProbeState                 pass=4 fail=0
+   ProbeValue                 pass=5 fail=0
+   Rows                       pass=1 fail=0
+   Score                      pass=1 fail=1
+   Steps                      pass=6 fail=1
+   Tile                       pass=1 fail=0
+   TowerList                  pass=3 fail=0
+   TowersPlaced               pass=3 fail=1
+   Wave                       pass=1 fail=1
+   WaveLeftToSpawn            pass=1 fail=0
+   WaveMax                    pass=1 fail=0
+   Won                        pass=1 fail=1
+   TOTAL: 66 passed, 11 failed

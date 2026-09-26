@@ -1,0 +1,652 @@
+{
+ "root": "F:\\moonbit-hof-rs\\godot-mcp\\projects\\missilecommand",
+ "files": 129,
+ "bytes": 8448444,
+ "entries": [
+  {
+   "path": ".gitignore",
+   "bytes": 87,
+   "sha256": "0d2a76f040df20fed3e84eb6616e1133ad4bb203915d3280a953a3243e9a029b"
+  },
+  {
+   "path": "NuGet.config",
+   "bytes": 464,
+   "sha256": "a7a216422a8736832982a5a31efd6b653c68ff19994577054a28831c155f6589"
+  },
+  {
+   "path": "README.md",
+   "bytes": 2035,
+   "sha256": "0701af92b8dcaf7159d11ceb7607bc31379bbfeebd9024dc3865bdb940bdd82c"
+  },
+  {
+   "path": "missilecommand.csproj",
+   "bytes": 357,
+   "sha256": "d99d317fda75d35553f462d90a7f644ce1e9344d37c14800d9715a6a8f1f87a5"
+  },
+  {
+   "path": "project.godot",
+   "bytes": 1001,
+   "sha256": "b0cb577b6ee2b7f85a3731722292d46268799ca8612b5b150570cc63e5bbd91b"
+  },
+  {
+   "path": ".godot/.gdignore",
+   "bytes": 1,
+   "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+  },
+  {
+   "path": ".godot/global_script_class_cache.cfg",
+   "bytes": 8,
+   "sha256": "f61aa7ad3097022d6a9d110ca3f73fa7bb348ec2cf9a6e7c9523574dc75f5a16"
+  },
+  {
+   "path": ".godot/scene_groups_cache.cfg",
+   "bytes": 0,
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "path": ".godot/uid_cache.bin",
+   "bytes": 123,
+   "sha256": "1d22e836d81533c7ef698f97fe9106541b4b8218e0b49dd9bc48d4746b8a88e2"
+  },
+  {
+   "path": ".godot/editor/editor_layout.cfg",
+   "bytes": 1530,
+   "sha256": "25d66f59aecb1ff183a451334eba4205fd97a1313b534ed64bb4ac244d689a40"
+  },
+  {
+   "path": ".godot/editor/filesystem_cache10",
+   "bytes": 502,
+   "sha256": "0c6a7bcac4be93cb48af29eef7b2470e4526659abb74bce7f6c134be406fc9d5"
+  },
+  {
+   "path": ".godot/editor/filesystem_update4",
+   "bytes": 63,
+   "sha256": "7db3c6d5b82d616b96e62bf20b57d2e9589203879f2483e78cb758df7193d5dc"
+  },
+  {
+   "path": ".godot/editor/main.mcp-tmp.tscn-folding-82c1904bfdea32b6497dfb01094960f9.cfg",
+   "bytes": 49,
+   "sha256": "fa44dfbae9b3b64980c44d9922acdad9b34ea46c85cce8a917708577229c27f6"
+  },
+  {
+   "path": ".godot/editor/main.tscn-folding-3ad5c15c4f3250da0cc7c1af1770d85f.cfg",
+   "bytes": 135,
+   "sha256": "2a6ea00109f698c6a7974dc37b4e24cf14432af5870a71ffd69f7d46ac9e9fe4"
+  },
+  {
+   "path": ".godot/editor/project_metadata.cfg",
+   "bytes": 191,
+   "sha256": "dae8e10d044298e2fbb291b23464f27f2318b58fc29e41dc8f0e9edb29e8bc19"
+  },
+  {
+   "path": ".godot/editor/script_editor_cache.cfg",
+   "bytes": 0,
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "path": ".godot/editor/shader_editor_cache.cfg",
+   "bytes": 0,
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "path": ".godot/mono/metadata/ide_messaging_meta.txt",
+   "bytes": 86,
+   "sha256": "534c75888cdb283b6e1f7e610a7d192086299824860bbe0b1e23ef3312100eb1"
+  },
+  {
+   "path": ".godot/mono/temp/bin/Debug/GodotSharp.dll",
+   "bytes": 6029312,
+   "sha256": "8f6f26758762b41742f5ffbfd11a39b9cefad988fb7b7b61099799447d5d2153"
+  },
+  {
+   "path": ".godot/mono/temp/bin/Debug/GodotSharpEditor.dll",
+   "bytes": 309760,
+   "sha256": "f815c75579bd73177008f737e5964dbc36a07ca9c552978a82d58738b68cbc02"
+  },
+  {
+   "path": ".godot/mono/temp/bin/Debug/missilecommand.deps.json",
+   "bytes": 1690,
+   "sha256": "fbe6d18a611067b2538302f33bab14653b44b00b834d233216f235aee8e39859"
+  },
+  {
+   "path": ".godot/mono/temp/bin/Debug/missilecommand.dll",
+   "bytes": 48128,
+   "sha256": "76ff5134568ebc026042fd3e4568e0d9d8b9a0a9be17e886daa1b017f3326738"
+  },
+  {
+   "path": ".godot/mono/temp/bin/Debug/missilecommand.pdb",
+   "bytes": 42884,
+   "sha256": "0494d14a6defd7cb7f14fc706d210888ab8d69f49a3d28b20a81a42dcf8a92e2"
+  },
+  {
+   "path": ".godot/mono/temp/bin/Debug/missilecommand.runtimeconfig.json",
+   "bytes": 303,
+   "sha256": "0b539cd55c434f10c9e5913db2d3a936cd8364449499f28ef21a1108f828e7e9"
+  },
+  {
+   "path": ".godot/mono/temp/obj/missilecommand.csproj.nuget.dgspec.json",
+   "bytes": 3290,
+   "sha256": "3f429641b06738844ed25286567d715face3b64a1630c121c5c8a1b71f89c00f"
+  },
+  {
+   "path": ".godot/mono/temp/obj/missilecommand.csproj.nuget.g.props",
+   "bytes": 1613,
+   "sha256": "56a8b70bd9ba6c141970d1b2c8d63fdac746aeba1c98ac45a41355115d3ca3fb"
+  },
+  {
+   "path": ".godot/mono/temp/obj/missilecommand.csproj.nuget.g.targets",
+   "bytes": 150,
+   "sha256": "971cc9b535384849b5c661d776cd7a80833a416265e32e8968e06c367368b8b5"
+  },
+  {
+   "path": ".godot/mono/temp/obj/project.assets.json",
+   "bytes": 5577,
+   "sha256": "f62fab515922c4c306f2b1be55937443d02f6502eeb15f449a35d5d364e44066"
+  },
+  {
+   "path": ".godot/mono/temp/obj/project.nuget.cache",
+   "bytes": 559,
+   "sha256": "727606c5f96336645e6e9403dd145ff9b6ee473a2b08f1f2307946241cff40c3"
+  },
+  {
+   "path": ".godot/mono/temp/obj/Debug/.NETCoreApp,Version=v8.0.AssemblyAttributes.cs",
+   "bytes": 198,
+   "sha256": "f7a5d9789c863625e139ff99e1113a503830f6b85a88f6129916df83ac76b49e"
+  },
+  {
+   "path": ".godot/mono/temp/obj/Debug/missilec.1544D719.Up2Date",
+   "bytes": 0,
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "path": ".godot/mono/temp/obj/Debug/missilecommand.AssemblyInfo.cs",
+   "bytes": 1016,
+   "sha256": "eac20946834d9a24b295e034d1520198c3256007c458e9eb2220c224d6fc4022"
+  },
+  {
+   "path": ".godot/mono/temp/obj/Debug/missilecommand.AssemblyInfoInputs.cache",
+   "bytes": 66,
+   "sha256": "1f354063f4d0556eac9d94cf79aa7312d41035015f1f07719bcebd9b8b5cacc1"
+  },
+  {
+   "path": ".godot/mono/temp/obj/Debug/missilecommand.GeneratedMSBuildEditorConfig.editorconfig",
+   "bytes": 1128,
+   "sha256": "2eb9abd9ffc9b59ff8844e1b6b113ac0d7e811dcc3ace6c633c79d5596ea71ab"
+  },
+  {
+   "path": ".godot/mono/temp/obj/Debug/missilecommand.assets.cache",
+   "bytes": 1805,
+   "sha256": "0fa05f9c04538f98c2c12def0547d969a63ad244d0f1bf48cadd9f3de9ce095d"
+  },
+  {
+   "path": ".godot/mono/temp/obj/Debug/missilecommand.csproj.AssemblyReference.cache",
+   "bytes": 500,
+   "sha256": "f0cf53e5862ad88cda8bfe6b23b7a420f26e3f80a8ae8da8c9054400833b8831"
+  },
+  {
+   "path": ".godot/mono/temp/obj/Debug/missilecommand.csproj.CoreCompileInputs.cache",
+   "bytes": 66,
+   "sha256": "5f87ecee53ccc69df24b039debe800e713c23ebb6ef16c39448bf3ebf5735068"
+  },
+  {
+   "path": ".godot/mono/temp/obj/Debug/missilecommand.csproj.FileListAbsolute.txt",
+   "bytes": 1864,
+   "sha256": "c58f98ca3c958bafff4535d35a021f4f0abe5a0f9a4642e1fc0aaa143c51cb49"
+  },
+  {
+   "path": ".godot/mono/temp/obj/Debug/missilecommand.dll",
+   "bytes": 48128,
+   "sha256": "76ff5134568ebc026042fd3e4568e0d9d8b9a0a9be17e886daa1b017f3326738"
+  },
+  {
+   "path": ".godot/mono/temp/obj/Debug/missilecommand.genruntimeconfig.cache",
+   "bytes": 66,
+   "sha256": "65d03dc5f65a61358bec4121a3720ce0d1ba9bdac82cfb56205b5b1f6fe121d5"
+  },
+  {
+   "path": ".godot/mono/temp/obj/Debug/missilecommand.pdb",
+   "bytes": 42884,
+   "sha256": "0494d14a6defd7cb7f14fc706d210888ab8d69f49a3d28b20a81a42dcf8a92e2"
+  },
+  {
+   "path": ".godot/mono/temp/obj/Debug/ref/missilecommand.dll",
+   "bytes": 9216,
+   "sha256": "81f7ce92c452700bdca99b914595bca5a20c51f037188ba633cba30dea62213f"
+  },
+  {
+   "path": ".godot/mono/temp/obj/Debug/refint/missilecommand.dll",
+   "bytes": 9216,
+   "sha256": "81f7ce92c452700bdca99b914595bca5a20c51f037188ba633cba30dea62213f"
+  },
+  {
+   "path": ".godot/shader_cache/BestFitNormalShaderRD/d65e6ea77efd8d290a152dbcb8639a29dbdd5805c731c8b63cefdcf3c4c80b02/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 860,
+   "sha256": "32d7aa2ee4319da7877921f98afbb65171f7222338a3feb49edfcf7b5d1a9a90"
+  },
+  {
+   "path": ".godot/shader_cache/BlitShaderRD/40e3b764faabc011648bb5b530c31f40cd89c49f360b18268897c6b65e8c128c/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 6516,
+   "sha256": "144ffc10d372cfcc9882e216696afb379ebb8bfebc3ed1c5a1607574b297586e"
+  },
+  {
+   "path": ".godot/shader_cache/BokehDofShaderRD/6fed21aa46845cada9a175b4bda2e8bc4b840013bbdcbe4ff00c66ca567b1507/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 5956,
+   "sha256": "fd8d96d85ec1ce686ee4403e766236ebe4f07230d800fa5684282f37f59e3384"
+  },
+  {
+   "path": ".godot/shader_cache/CanvasOcclusionShaderRD/0b4e53e2abd4fd0993ccef4fff8ece41c89fb12abd1fe2ef797d103ca983f094/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 2928,
+   "sha256": "3441b097b0f30bc4f35abc7a1991fc26ad3e4f684b1cf8a6f4bacf629f72b809"
+  },
+  {
+   "path": ".godot/shader_cache/CanvasSdfShaderRD/607171c74434cb56fcacc6773836f5ad22bc3dcedb4065e0fa6cf99d3fb1df9b/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 4968,
+   "sha256": "58e6519cf1566d35e0928f874ab5d8970c88a8e5d413c845db51fa19a5fbd904"
+  },
+  {
+   "path": ".godot/shader_cache/CanvasShaderRD/1548f8821eb24d269c871e2972454a51e4476ba29658ba7ca3f9f763bf79fce0/56a67896f3c107eaf9e88e8612864458461c38a0.vulkan.cache",
+   "bytes": 42876,
+   "sha256": "9d39820cb647d00eb96c410bcfc9aacbde071dcc93a543fcf3b1efefd04126e6"
+  },
+  {
+   "path": ".godot/shader_cache/CanvasShaderRD/1548f8821eb24d269c871e2972454a51e4476ba29658ba7ca3f9f763bf79fce0/717daeb6b486ee5cab5dcc2b51c7658a6eacb9c7.vulkan.cache",
+   "bytes": 41812,
+   "sha256": "56b93b0ce4376763eb53f255ffdb0d823ec4697a8b97ce2e1b0e0b358a39266c"
+  },
+  {
+   "path": ".godot/shader_cache/CanvasShaderRD/1548f8821eb24d269c871e2972454a51e4476ba29658ba7ca3f9f763bf79fce0/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 40624,
+   "sha256": "d76acdc27679ab636883fc412f0a0b632437edb8cd36a10a797b9499a4d4c2ed"
+  },
+  {
+   "path": ".godot/shader_cache/CanvasShaderRD/1548f8821eb24d269c871e2972454a51e4476ba29658ba7ca3f9f763bf79fce0/8f9335de72e837eeead40640cc01fddc5baf5a7c.vulkan.cache",
+   "bytes": 24784,
+   "sha256": "b6098956a0828dcd071f4d2c0ae1d4753c973fced578fadafc2f5851ff9abf4c"
+  },
+  {
+   "path": ".godot/shader_cache/CanvasShaderRD/1548f8821eb24d269c871e2972454a51e4476ba29658ba7ca3f9f763bf79fce0/90b96afad25c311837b639f3c9d81d610d9b7ee9.vulkan.cache",
+   "bytes": 25100,
+   "sha256": "e275ee588acaabb1d39d162b40ff97f08cf5f40bec1a1c22e916a2f98f79b155"
+  },
+  {
+   "path": ".godot/shader_cache/ClusterDebugShaderRD/2699d19b54f6bbe790cfc4fb34a241c2a1fd7c63762885e990370c1698c60f6b/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 1752,
+   "sha256": "e6b78dc0399fd10b337d3faaf0b66b1a7716eb2df76e8d58b7eeb517f5e38f09"
+  },
+  {
+   "path": ".godot/shader_cache/ClusterRenderShaderRD/163b054358427527d676367ab10d18c667cca9f7e6c57005bcbb399ba8748480/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 3092,
+   "sha256": "d9b1d48160bd86eb25ea899c3e2ee4a1d4a64dacc5cbf5aced07777389efa053"
+  },
+  {
+   "path": ".godot/shader_cache/ClusterStoreShaderRD/9851937b9ae07a0e8c7e26b8f8dfc30c20c26fd20e1ca2e865bb797c5624ecf5/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 1220,
+   "sha256": "9b1f251a49971f6f3113559ad87f44e661217d5c706e454aecee894e32d044c9"
+  },
+  {
+   "path": ".godot/shader_cache/CopyShaderRD/185bfb2d81f6e9ea0ec13fad92cd1f7c7cd1dc5f57b15a9f4c05c7dd8c4620fb/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 14148,
+   "sha256": "8a2c8d518919dd1a085a6ed729d9546ebd4e4f42f8b9e6b0f0edf5b20af5e76e"
+  },
+  {
+   "path": ".godot/shader_cache/CopyToFbShaderRD/8bd2925cdb5817404339e415949a546ebbe00135612c72bf38fbefddaf919f74/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 5496,
+   "sha256": "fd97a86cd9e07f7b00b4fa86ed9c0d53cb5b45f80a6478998eb2f3617f069dcd"
+  },
+  {
+   "path": ".godot/shader_cache/CubeToDpShaderRD/b1594ceb537adc35102e45f586f3e626a7f845b92655813ae91b730c3972590d/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 1320,
+   "sha256": "75e9c782242633cbf85baa7be191b9ed4de1176d7b8885d351f9d9dbe6256092"
+  },
+  {
+   "path": ".godot/shader_cache/CubeToOctmapShaderRD/e5b3c57cab53a465305c2f118416df1f9cec4d9cd546c37c2fc50c2523d1c4c0/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 1088,
+   "sha256": "910221b1518cb17b363cc7a3b24d173e27a3b18f4e767cac422b15b86ce487e7"
+  },
+  {
+   "path": ".godot/shader_cache/FsrUpscaleShaderRD/4289e18614012fa307202f88d5730b494fab62fd62e0a14a7f0cbbcc85d64dc5/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 11532,
+   "sha256": "5510f1f0fbdb4817d08a78a10ba87ecf878016333cc3174514c411c0efa7cabe"
+  },
+  {
+   "path": ".godot/shader_cache/GiShaderRD/ebf7f24b81d802a4dfab602c71145e72a444bdcfec033fd2c305d3fa52d4ebf3/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 34612,
+   "sha256": "0c285a9195f6b8ac8a8ff14cea6235668ae814d158e8d7d88b92d27341809245"
+  },
+  {
+   "path": ".godot/shader_cache/IntegrateDfgShaderRD/b4a18b8fd6fdcdad657f640c99da34b994ffcd881aefd34409159e2fda3018a9/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 1644,
+   "sha256": "94f1b179f96becea1216055d16db72e9ef5faae9017d682cc86fea63b5566297"
+  },
+  {
+   "path": ".godot/shader_cache/LuminanceReduceShaderRD/66c18e2948cf64d1891e833777161a0025bbd407aa3756f09bfe63df0ffa40e0/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 2836,
+   "sha256": "181e9fa4a0e86abdb8a3329bab7b6287a22401c9c7d5111acde1de596e46f2fd"
+  },
+  {
+   "path": ".godot/shader_cache/MotionVectorsShaderRD/aeef5a2d4ba2ee7639f155da590a9988ae287ae569d15ea9fb114ca5ce3897c0/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 1644,
+   "sha256": "2d6a1514de5e1a10adccbfaff5a96f99a7c141fb2d85cd4303444f015157de2e"
+  },
+  {
+   "path": ".godot/shader_cache/OctmapDownsamplerShaderRD/7cec7d6e2de73ec2ad4af7935073275f5b7fa149d3bde1ba9c2f2214b64f173e/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 2928,
+   "sha256": "082e47181fc10b89c7929ea36fac97cb87e6c48eb7a1eb8a3c2d6232c3303277"
+  },
+  {
+   "path": ".godot/shader_cache/OctmapFilterShaderRD/1789f70d69641125d0ec0c6e5932afc0dc8100fff0d689ea373f4021cd851876/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 23616,
+   "sha256": "f7e810a5fc895dfa9b26c2172b56ab3e305c9cf521ee09d3e1ddfd5c13d54197"
+  },
+  {
+   "path": ".godot/shader_cache/OctmapRoughnessShaderRD/947d70f0a6a3a5ec50e3c0f7b156657f82748d49e01f62d8d93f7c104ccdcbf2/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 5248,
+   "sha256": "f1d348fab9b7ff2a668a359988eb45781a96d3ba3d99347a915334a89cc36248"
+  },
+  {
+   "path": ".godot/shader_cache/ParticlesCopyShaderRD/fc7a3ec65c6db1c1ba0665737adf9eddefbca1dc332117430e66de075213dc8f/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 45216,
+   "sha256": "d5b5cfa4580bc308ef8e78fe97ac8265509dab6daac1ea09879d7d9337bb0fdb"
+  },
+  {
+   "path": ".godot/shader_cache/ParticlesShaderRD/6b50851963bd021e317a9b21a1cc33beafc551013163dd4edf51c6e21a3ed181/07b5904b662900d90454c39c46885098de79aa4c.vulkan.cache",
+   "bytes": 6408,
+   "sha256": "76dc56f3cf26ef7017dd62c84642e60a57c545b5591123711958cbc69376e8bd"
+  },
+  {
+   "path": ".godot/shader_cache/ResolveShaderRD/f4be0285c03a77f7a2e0e9f7fcec7d48ff8f3390a5a9b0159d305cf631402efb/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 4000,
+   "sha256": "3a4b055f32fcbf7aeda54e3e06d0028d11a25db1171a5a78aa02ea5383fa363d"
+  },
+  {
+   "path": ".godot/shader_cache/SceneForwardClusteredShaderRD/314ed9931b970452db7043d5722bc2387d9522886a7602b9a6a0b9bb9bdeadc7/166f29b7efce47a62ab4558d019ba003f152d0a3.vulkan.cache",
+   "bytes": 68380,
+   "sha256": "d387e0ca836747d61fa14e5a48988e6199b3f987fa5a0b8e6e6b0424834f3ed5"
+  },
+  {
+   "path": ".godot/shader_cache/SceneForwardClusteredShaderRD/314ed9931b970452db7043d5722bc2387d9522886a7602b9a6a0b9bb9bdeadc7/188dbcfbda6d0e9c5ff65997ed836295ddd8b63b.vulkan.cache",
+   "bytes": 113116,
+   "sha256": "d1a3ca7fca45823b10d55c5ad0f799d6fe51d282ffe65b965843d4ed8f592d5a"
+  },
+  {
+   "path": ".godot/shader_cache/SceneForwardClusteredShaderRD/314ed9931b970452db7043d5722bc2387d9522886a7602b9a6a0b9bb9bdeadc7/3cbe07e060845e6f3b9d04bfbca6611c68dd7473.vulkan.cache",
+   "bytes": 69920,
+   "sha256": "e399aa085f386fcee51487a1b1700123f5b0bcccd0e8e0a87ce2505d263abca8"
+  },
+  {
+   "path": ".godot/shader_cache/SceneForwardClusteredShaderRD/314ed9931b970452db7043d5722bc2387d9522886a7602b9a6a0b9bb9bdeadc7/4d161e027d36dae3228a2fd069c9016607e1d80e.vulkan.cache",
+   "bytes": 66792,
+   "sha256": "b4ace4fbc115c5a36c53fa3883ca1d278c84672b5003703c8cd7d5e2bad4bc18"
+  },
+  {
+   "path": ".godot/shader_cache/SceneForwardClusteredShaderRD/314ed9931b970452db7043d5722bc2387d9522886a7602b9a6a0b9bb9bdeadc7/5a9465a6f80f297e012b68fdf20fd61ebbb13317.vulkan.cache",
+   "bytes": 66592,
+   "sha256": "65180b849f43c525c99115dedd6b52c81b726e0d365ea502466ab6f9efa25713"
+  },
+  {
+   "path": ".godot/shader_cache/SceneForwardClusteredShaderRD/314ed9931b970452db7043d5722bc2387d9522886a7602b9a6a0b9bb9bdeadc7/6151eec230aed1db05f6345da4cd0467316a60b8.vulkan.cache",
+   "bytes": 66884,
+   "sha256": "788f898532393e55dbc7026a31ed704faf2db418c90b2ff3a4dec2617002979d"
+  },
+  {
+   "path": ".godot/shader_cache/SceneForwardClusteredShaderRD/314ed9931b970452db7043d5722bc2387d9522886a7602b9a6a0b9bb9bdeadc7/6c12f6b53a6e64c7cb16c3a593db235f5bb43e3b.vulkan.cache",
+   "bytes": 67252,
+   "sha256": "209ac27a02af7650ea938cd3b30aa6ed860072a3d041213c1b5f2043bbb30ac7"
+  },
+  {
+   "path": ".godot/shader_cache/SceneForwardClusteredShaderRD/314ed9931b970452db7043d5722bc2387d9522886a7602b9a6a0b9bb9bdeadc7/7458bae28dc5e86e5080765c3ace30044eef9c81.vulkan.cache",
+   "bytes": 66592,
+   "sha256": "65180b849f43c525c99115dedd6b52c81b726e0d365ea502466ab6f9efa25713"
+  },
+  {
+   "path": ".godot/shader_cache/SceneForwardClusteredShaderRD/314ed9931b970452db7043d5722bc2387d9522886a7602b9a6a0b9bb9bdeadc7/766562d5bd8d8fe8f82fbed546ecf33e95f688ff.vulkan.cache",
+   "bytes": 66592,
+   "sha256": "65180b849f43c525c99115dedd6b52c81b726e0d365ea502466ab6f9efa25713"
+  },
+  {
+   "path": ".godot/shader_cache/SceneForwardClusteredShaderRD/314ed9931b970452db7043d5722bc2387d9522886a7602b9a6a0b9bb9bdeadc7/a784797763b72ce058effad41b273eb697df9814.vulkan.cache",
+   "bytes": 110360,
+   "sha256": "732fa255ef9d066997eb547139c60fadeb764e6a9c851cb68edacac60bebbd87"
+  },
+  {
+   "path": ".godot/shader_cache/SceneForwardClusteredShaderRD/314ed9931b970452db7043d5722bc2387d9522886a7602b9a6a0b9bb9bdeadc7/bd7cdfb6ebe93637904ddc8acf4a9922b99f08b8.vulkan.cache",
+   "bytes": 68900,
+   "sha256": "703623580747323b4f52c4678e4751f6c06b7ddff07189d14f26bcf1a1dc813f"
+  },
+  {
+   "path": ".godot/shader_cache/SceneForwardClusteredShaderRD/314ed9931b970452db7043d5722bc2387d9522886a7602b9a6a0b9bb9bdeadc7/bfcdf8b15d169a0dd0a1f259be1b0016d22b02c0.vulkan.cache",
+   "bytes": 67056,
+   "sha256": "9f7daab88d69dbe06a66bddbd8bf6782efb234dfb3a49b3b772e6e1a60b7ca6a"
+  },
+  {
+   "path": ".godot/shader_cache/SceneForwardClusteredShaderRD/314ed9931b970452db7043d5722bc2387d9522886a7602b9a6a0b9bb9bdeadc7/c01d76f20128e3693ef07bb58508488af1d837fd.vulkan.cache",
+   "bytes": 68584,
+   "sha256": "08b895e27379f94b9668f6a76783923389bf23e6ec74e6d6413770f7d51ef5ef"
+  },
+  {
+   "path": ".godot/shader_cache/SceneForwardClusteredShaderRD/314ed9931b970452db7043d5722bc2387d9522886a7602b9a6a0b9bb9bdeadc7/cb49d0ec89c580026bd929acb60112d53950c946.vulkan.cache",
+   "bytes": 66792,
+   "sha256": "b4ace4fbc115c5a36c53fa3883ca1d278c84672b5003703c8cd7d5e2bad4bc18"
+  },
+  {
+   "path": ".godot/shader_cache/SceneForwardClusteredShaderRD/314ed9931b970452db7043d5722bc2387d9522886a7602b9a6a0b9bb9bdeadc7/cc8f88974db93622b7e6ae8e1ac22e58c8fdbaed.vulkan.cache",
+   "bytes": 67936,
+   "sha256": "82b669005d8ff1d6bc433c47a6d3273b184cf2e870ba300ba1ff4646562775fd"
+  },
+  {
+   "path": ".godot/shader_cache/SceneForwardClusteredShaderRD/314ed9931b970452db7043d5722bc2387d9522886a7602b9a6a0b9bb9bdeadc7/d405ec8e1b0a93aaa83ff5c0c8a469c932974132.vulkan.cache",
+   "bytes": 62536,
+   "sha256": "4973426bd517381620fd650a99abf069c7b63929f20f2bb5ed90a5e9f4b7cb61"
+  },
+  {
+   "path": ".godot/shader_cache/ScreenSpaceContactShadowsShaderRD/975e38d21ede1d9a3298a1204802a09f75f24485cb73dc72883bde1b6a48a9a7/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 8988,
+   "sha256": "ec6da81a731671365167e2eba6a9fdb68b08f62e0afc898f3f011aadedd80867"
+  },
+  {
+   "path": ".godot/shader_cache/ScreenSpaceReflectionDownsampleShaderRD/335cb72b0f7f5f97f125abc5de825d1f8877c9c0296506dd0f7becf96ea3372a/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 3852,
+   "sha256": "23f26b9ccf558c94586dc5f840fb835deb4d40b6b769e7b7c8de03379cd7b0dd"
+  },
+  {
+   "path": ".godot/shader_cache/ScreenSpaceReflectionFilterShaderRD/91cb516243c23955a5e3caa2d5d1935c62789428f522919b43d4e96e69fea4b5/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 1640,
+   "sha256": "97e03f0a9781b942aa05490695b9b0cec185ac4853c5b6e4740be8b1b3f51827"
+  },
+  {
+   "path": ".godot/shader_cache/ScreenSpaceReflectionHizShaderRD/572e0e0377e652cde43f3a1534891e36decf14eaad1f3b0faa339e7b891f7dd8/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 2976,
+   "sha256": "bb92f38683b5e59a575a98eaa0e8b2f60e5b3f7cfd62cbbba58c7752ffda41ca"
+  },
+  {
+   "path": ".godot/shader_cache/ScreenSpaceReflectionResolveShaderRD/9cfd31b4f54754a3ae686fc8dd2934721361e8aad76e7fe639c357c0087bc962/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 1672,
+   "sha256": "25ddb4fa83905a9bab5817c4cab564461e5f77848baecab572dd31465e12c9f6"
+  },
+  {
+   "path": ".godot/shader_cache/ScreenSpaceReflectionShaderRD/a6b14a663bbc7a46eb22a7cc1d87248b867364c28fc0f5033d0723fa51b88216/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 3916,
+   "sha256": "f5274013fb319de9ceff0a66087b19e374e36b4ca541e83c598ea2ed5085c1ba"
+  },
+  {
+   "path": ".godot/shader_cache/SdfgiDebugProbesShaderRD/4a206883f17c578959b0a426b3d947c3f984860f3b78d14dc627ccecb044b364/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 7916,
+   "sha256": "745c64b561c6ae3b9e305e156d9d38767b712407896807ddd6962a5083e14dbf"
+  },
+  {
+   "path": ".godot/shader_cache/SdfgiDebugShaderRD/970758916032fe7f98607565d3b415619d7e8d9d41783d5b2e7fdad7990a1e33/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 2328,
+   "sha256": "94fb14ee61099776c613e8311ce2f0730cd8db974ef32de90fba4f277d03ae32"
+  },
+  {
+   "path": ".godot/shader_cache/SdfgiDirectLightShaderRD/02c68e7182863d56e747e0453e98d9891aaff0cbe1ed6e5b1b7f2376ef206432/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 16844,
+   "sha256": "56c14f27d97bc64c3f6728e50fa45df4ef3b9f458e0e6bcb8c816b3789e16ac8"
+  },
+  {
+   "path": ".godot/shader_cache/SdfgiIntegrateShaderRD/48eb704b53ae65ea6b055312a238f5a36a66f4fa88e8c93b93777f539e685c66/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 12568,
+   "sha256": "44aea57fc01300a80e065394e18397b206b8f91da4382fa5ee8c528fd0b72e31"
+  },
+  {
+   "path": ".godot/shader_cache/SdfgiPreprocessShaderRD/5c8d27f6053ca2df3575e0d8d09353352a94e83fee17463d8ef4d87bd0fee9dd/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 14560,
+   "sha256": "bf8bf2876d4307ad75592a9d00c64525a1f9e8d328372b41b2ad68f78f70d9b0"
+  },
+  {
+   "path": ".godot/shader_cache/ShadowFrustumShaderRD/9ef3207f29d6c52e7d4d0f0f805c9e6cbca90f11808e48917ce8f5b782421536/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 696,
+   "sha256": "7a1274b9b3096192aaf38fabf41d8f25e946d8eec08628931499320ff726ca8c"
+  },
+  {
+   "path": ".godot/shader_cache/SkeletonShaderRD/c485b73435e15bee049af72ab3be8084fd5281881e573fee9e06747f3cdf382c/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 5236,
+   "sha256": "0a7794b1cfd0e44974ee453be9227342f3895b13526bf81e1319cf4c4ca08777"
+  },
+  {
+   "path": ".godot/shader_cache/SkyShaderRD/51ce6d5e0d912d2c66d5843c9e1031bdd91addad20b3e02f30ac6bd73cd9010c/0fa1946a11e1cca806ebfe4b3b4ac7f723d8b701.vulkan.cache",
+   "bytes": 17688,
+   "sha256": "45b19cb9ed437a4ca42b1015670d547a2deba420b7411daec7c1100ecd49cd3f"
+  },
+  {
+   "path": ".godot/shader_cache/SkyShaderRD/51ce6d5e0d912d2c66d5843c9e1031bdd91addad20b3e02f30ac6bd73cd9010c/9247dd7bf98483a15ebb05f8c580a398614a07d8.vulkan.cache",
+   "bytes": 22272,
+   "sha256": "b62edc763d10f021470984742d9bf56d48396efd17b301fee107ded6a9964f12"
+  },
+  {
+   "path": ".godot/shader_cache/SkyShaderRD/51ce6d5e0d912d2c66d5843c9e1031bdd91addad20b3e02f30ac6bd73cd9010c/ff1961ca0c4c55a79eb12f819a7b6345801bbbaf.vulkan.cache",
+   "bytes": 18048,
+   "sha256": "4406e1d76475589c52835618e43a7f89956a169eab84e7fa86fd3497e1ae608b"
+  },
+  {
+   "path": ".godot/shader_cache/SmaaBlendingShaderRD/0004829ec183ecaeb474fd247cf0ec06a928e957529f647abe950662f95a0af6/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 1956,
+   "sha256": "a4e4b0f8e94f9eef8fb1098a3211007ead869affe5058a1281f62ae8acf4ce96"
+  },
+  {
+   "path": ".godot/shader_cache/SmaaEdgeDetectionShaderRD/0c3e82eb873dc33c6479dc0b6f49092870898c41ac75e6535131462f4d2c8ada/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 1408,
+   "sha256": "02ab0777c2cddec778106d8fcbbefe2e6a939d40ffa71308b5b6063baaba6b42"
+  },
+  {
+   "path": ".godot/shader_cache/SmaaWeightCalculationShaderRD/d961e09685bb65c8b78fab991af115af91a698771ade4375283efc02db89373f/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 4520,
+   "sha256": "cd76dfe84cbb970af8fc961fc1a8c1dafdc4b9b3d2b33bd92dd51ea6be3fb3d7"
+  },
+  {
+   "path": ".godot/shader_cache/SortShaderRD/0d1fc6e795b70aa4ec91356e55e230fd3540d8aad88aa5855d3832a6a9b1cb0d/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 3044,
+   "sha256": "47ceabf0dd3bdad129a0b96904f077a08b7b0bb9e71e9af0d0744fb8445b1613"
+  },
+  {
+   "path": ".godot/shader_cache/SpecularMergeShaderRD/03c6e1da1950f582c54fa6b890c54094bfa1ed4ae29d4566ea9d0afac88e646b/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 3332,
+   "sha256": "59785255bcfd4943583898f0915e9453d2294e3bcfe4bb358323cad1f5b96db6"
+  },
+  {
+   "path": ".godot/shader_cache/SsEffectsDownsampleShaderRD/05526370eaf67bd2145d4233a9ca3b6bc6436ce8b4b8f92c835fe17216174d89/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 9796,
+   "sha256": "06e9c5a766a54405ecf0190c9beaa2852897af7f06ab5c133805d695cfce6a8b"
+  },
+  {
+   "path": ".godot/shader_cache/SsaoBlurShaderRD/14b4039daed3f4fe041c11d1ca9a019c2ce5331d311462215992b285584d3312/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 3084,
+   "sha256": "7a552a418fa4f1cc8a745a1cf688c1c5659eea1d8ed127bf98e04127b0f35648"
+  },
+  {
+   "path": ".godot/shader_cache/SsaoImportanceMapShaderRD/ce93fdd08c0cc9d2f84f77dcdecdc8309dd02e5592c2f60d53f0b16620c16713/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 2592,
+   "sha256": "85bd4813586dce20a85e7217f630d79f0b928e2a90704ac516818e8f8d2e2c55"
+  },
+  {
+   "path": ".godot/shader_cache/SsaoInterleaveShaderRD/6cf9373754d66b693b1dc116db60c936ea0e7b1e04930831b150988b1636488f/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 2756,
+   "sha256": "4dce49c8bf7d4ee09430f0d802f495acfd48dee903205ef13478482bc23d69cf"
+  },
+  {
+   "path": ".godot/shader_cache/SsaoShaderRD/17277330876a54e43ef3e50f7fd373b87020c2d1acbcaffe9fe92f1687e84eb9/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 14484,
+   "sha256": "bb9c1c1d1ebf8ff41df41420954acc846c4f6f46e1a93c5376cee3539b868219"
+  },
+  {
+   "path": ".godot/shader_cache/SsilBlurShaderRD/f3189a94d996802b4b5c3366cb9b0d2554dc7b3c020577ac87ae59e8a30a2646/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 3180,
+   "sha256": "f58c2f3a48a4eb0d931b6f2aaf6703b67896561295a7709684308cfff353e098"
+  },
+  {
+   "path": ".godot/shader_cache/SsilImportanceMapShaderRD/9baa20cd141d44d2c6752e4abfb62e0e789118697af1b25fa1d0bab157cccf9e/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 2636,
+   "sha256": "81ec15b63e6312a6491c39d3068b79c9beabcd490ced57970362a6d4b3ecb56b"
+  },
+  {
+   "path": ".godot/shader_cache/SsilInterleaveShaderRD/2a9be58e548e3c57a383ab3e11c456e258164e86c2dc7cc22b52f45858b18992/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 2912,
+   "sha256": "a28856c0d62bdbf1826cde1452339d6181baa6192c7ea8d76e911b14b9f3b551"
+  },
+  {
+   "path": ".godot/shader_cache/SsilShaderRD/8c656e31c6fc38a4618cced1cadb37d8c603c41764f7704d4a09657656c8f40e/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 14372,
+   "sha256": "f8715261f2d0824f18f1f2b31147d550718da7ca8fc69295b2d34488a9caf194"
+  },
+  {
+   "path": ".godot/shader_cache/SubsurfaceScatteringShaderRD/7790255c4ac26c014b12e2510c18eaf91265439a021d513b4632edfef1f40ea6/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 5192,
+   "sha256": "ddf2542786039b1048a2eec748c3cba601509375e71b32bc0a33a7d8aeae4810"
+  },
+  {
+   "path": ".godot/shader_cache/TaaResolveShaderRD/e089a941f84710527695ff45c955343fce1eaa7253b6ed2a0aed94e7ee8fb1cb/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 3712,
+   "sha256": "0cf9bed586b834fe976a051f7d5a01b241f150ef922ecdbbe48fb5bfbc47191e"
+  },
+  {
+   "path": ".godot/shader_cache/TexBlitShaderRD/91080b2d7140e2a399bb877c5814d8c10114a82acaa695c5c05fae3058a3dfde/1e8995c9eb0e9b0b053035999de68595c521a33e.vulkan.cache",
+   "bytes": 6760,
+   "sha256": "5e45ede135ab7b89589ac62e39287550a763180ba0edf1b3e77e61a9944417d9"
+  },
+  {
+   "path": ".godot/shader_cache/TonemapShaderRD/f49de824b2f4746cf8b412773cea41a18aaaba875a01c5a8729c92f1a6ad81ef/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 23596,
+   "sha256": "7917f2a98fcfbddbbc97a308d26a80e6414a9a029afed37697e859722515aef7"
+  },
+  {
+   "path": ".godot/shader_cache/VolumetricFogProcessShaderRD/bc6f14198ccf362cefbaa235ea6255a3cbc4645d61dd6bac9cb8d01eddf76bff/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 29168,
+   "sha256": "316088014fbce49cb44fe17fbf5c30f9dd3b43cf9d8610425cbb7f2fc49f3e03"
+  },
+  {
+   "path": ".godot/shader_cache/VolumetricFogShaderRD/bdc4029dd7ebb50d0b751e6fb926dddd4f519babdaeb92f54bd33a6f3765dc28/3377d4ca9d0fc2e16f62596ee37d619e8e7e3f54.vulkan.cache",
+   "bytes": 3308,
+   "sha256": "276a5c97b778b2e398d6ccb47a242893b0b55e140cc05127354d36340080f1e6"
+  },
+  {
+   "path": ".godot/shader_cache/VoxelGiDebugShaderRD/4fda60ed5ee51dd15a98fe7c921c996418ac57861a60d8cac696f3cec0099fba/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 4904,
+   "sha256": "c1f860060a549515ac4cadacaa8f7a7e54c9202d584ad77623caa5597c604583"
+  },
+  {
+   "path": ".godot/shader_cache/VoxelGiShaderRD/84c4feb50f8d2d45d8d53a2e390588750cea409d01fae505bad579d168770e80/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 22376,
+   "sha256": "9e6755ea6a3a761b21d2aa1f17edf25aab56744cd44f7a319c203890c38466bb"
+  },
+  {
+   "path": ".godot/shader_cache/VrsShaderRD/8b1f983892dd1ebebe66a1c11bd84990b9e7fc82d0058b0763f7d4f3d2728ff5/8305c75c1294a9f00656f0f14344bb8bedcfe4e7.vulkan.cache",
+   "bytes": 2584,
+   "sha256": "f1ab8968f186e6767c24153ea8082a3768685315f576a7c31ad76c33ef4b109b"
+  },
+  {
+   "path": "scenes/main.tscn",
+   "bytes": 859,
+   "sha256": "24bb00564654010e94ed9d33375f9f87414156bbdf2375a3914d4adaeb71ce63"
+  },
+  {
+   "path": "src/MissileCommandGame.cs",
+   "bytes": 40135,
+   "sha256": "9447f0df135d9eee8b93f6a441bd79d549fdaf3eae7819bd96a6290482c8ee24"
+  },
+  {
+   "path": "src/MissileCommandGame.cs.uid",
+   "bytes": 19,
+   "sha256": "f3242310b76fb05414a12fde622c667718784fc1642cb9b28a4ec1bcdb2a639d"
+  }
+ ]
+}

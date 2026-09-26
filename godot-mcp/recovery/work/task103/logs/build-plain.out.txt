@@ -1,0 +1,3 @@
+scons: D:\Anaconda\Scripts\scons.exe  (from first `scons` on PATH)
+build_local: exit code = 0
+build_local: log = C:\Users\wyl\AppData\Local\Temp\mcp_server_build_local.log

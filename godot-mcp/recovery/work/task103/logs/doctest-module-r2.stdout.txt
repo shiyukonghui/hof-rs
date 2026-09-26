@@ -1,0 +1,17 @@
+[doctest] doctest version is "2.4.12"
+[doctest] run with "--help" for options
+===============================================================================
+.\modules/mcp_server/tests/test_mcp_server.h(9920):
+TEST CASE:  [MCPServer] running_game_execute_gdscript reports a GDScript runtime error structurally
+
+.\modules/mcp_server/tests/test_mcp_server.h(9970): ERROR: CHECK( (bool)script_error["in_generated_body"] == true ) is NOT correct!
+  values: CHECK( false == true )
+
+.\modules/mcp_server/tests/test_mcp_server.h(9975): ERROR: CHECK( String(script_error["script_path"]) == String(script_error["body_script_path"]) ) is NOT correct!
+  values: CHECK( gdscript://-9223371484028730203.gd ==  )
+
+===============================================================================
+[doctest] test cases:  157 |  156 passed | 1 failed | 1429 skipped
+[doctest] assertions: 6724 | 6722 passed | 2 failed |
+[doctest] Status: FAILURE!
+ENGINE_EXIT=1

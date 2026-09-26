@@ -1,0 +1,506 @@
+[
+ {
+  "tag": "g02-assert-field-w",
+  "property": "FieldW",
+  "operator": "eq",
+  "expected": 800,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g03-assert-field-h",
+  "property": "FieldH",
+  "operator": "eq",
+  "expected": 600,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g04-assert-city-y",
+  "property": "CityY",
+  "operator": "eq",
+  "expected": 548,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g05-assert-city-count",
+  "property": "CitiesAlive",
+  "operator": "eq",
+  "expected": 6,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g06-assert-city-list",
+  "property": "CityList",
+  "operator": "eq",
+  "expected": "1|1|1|1|1|1",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g07-assert-ammo",
+  "property": "Ammo",
+  "operator": "eq",
+  "expected": 30,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g08-assert-ammo-list",
+  "property": "AmmoList",
+  "operator": "eq",
+  "expected": "10|10|10",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g09-assert-wave",
+  "property": "Wave",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g10-assert-wave-max",
+  "property": "WaveMax",
+  "operator": "eq",
+  "expected": 3,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g11-assert-spawned",
+  "property": "Spawned",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g15-assert-frozen-steps",
+  "property": "Steps",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g16-assert-frozen-auto",
+  "property": "LastAutoSteps",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g17-assert-frozen-hook",
+  "property": "LastHookSteps",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g18a-assert-probe-value",
+  "property": "ProbeValue",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g18b-assert-probe-state",
+  "property": "ProbeState",
+  "operator": "eq",
+  "expected": "city",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g19a-assert-probe-value",
+  "property": "ProbeValue",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g19b-assert-probe-state",
+  "property": "ProbeState",
+  "operator": "eq",
+  "expected": "battery",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g20a-assert-probe-value",
+  "property": "ProbeValue",
+  "operator": "eq",
+  "expected": -1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g20b-assert-probe-state",
+  "property": "ProbeState",
+  "operator": "eq",
+  "expected": "ground",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g21a-assert-probe-state",
+  "property": "ProbeState",
+  "operator": "eq",
+  "expected": "outside",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g22a-assert-incoming-list",
+  "property": "IncomingList",
+  "operator": "eq",
+  "expected": "320,530,320,548,0,12,320,530|700,100,700,600,0,40,700,100",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g22b-assert-blast-list",
+  "property": "ExplosionList",
+  "operator": "eq",
+  "expected": "320,548,8",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g23a-assert-incoming-list",
+  "property": "IncomingList",
+  "operator": "eq",
+  "expected": "700,112,700,600,1,40,700,100",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g23b-assert-destroyed",
+  "property": "Destroyed",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g23c-assert-score",
+  "property": "Score",
+  "operator": "eq",
+  "expected": 25,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g23d-assert-blasts",
+  "property": "ExplosionsActive",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g23e-assert-blast-life",
+  "property": "ExplosionList",
+  "operator": "eq",
+  "expected": "320,548,7",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g25a-assert-interceptor-list",
+  "property": "InterceptorList",
+  "operator": "eq",
+  "expected": "400,586,312,542,0,8,400,586",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g25b-assert-fired",
+  "property": "Fired",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g25c-assert-ammo",
+  "property": "Ammo",
+  "operator": "eq",
+  "expected": 29,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g25d-assert-ammo-list",
+  "property": "AmmoList",
+  "operator": "eq",
+  "expected": "10|9|10",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g26a-assert-interceptor-none",
+  "property": "InterceptorAlive",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g26b-assert-blast-list",
+  "property": "ExplosionList",
+  "operator": "eq",
+  "expected": "312,542,7",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g26c-assert-destroyed",
+  "property": "Destroyed",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g26d-assert-leaked",
+  "property": "Leaked",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g26e-assert-score",
+  "property": "Score",
+  "operator": "eq",
+  "expected": 625,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g26f-assert-wave",
+  "property": "Wave",
+  "operator": "eq",
+  "expected": 2,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g26g-assert-ammo-refilled",
+  "property": "AmmoList",
+  "operator": "eq",
+  "expected": "10|10|10",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g28a-assert-fired-still",
+  "property": "Fired",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g29a-assert-fired-still",
+  "property": "Fired",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g31a-assert-leaked",
+  "property": "Leaked",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g31b-assert-cities",
+  "property": "CitiesAlive",
+  "operator": "eq",
+  "expected": 5,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g31c-assert-city-list",
+  "property": "CityList",
+  "operator": "eq",
+  "expected": "1|1|0|1|1|1",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g31d-assert-cities-lost",
+  "property": "CitiesLost",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g31e-assert-incoming-none",
+  "property": "IncomingAlive",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g31f-assert-hook-applied",
+  "property": "LastHookSteps",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g33a-assert-cities-zero",
+  "property": "CitiesAlive",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g33b-assert-over",
+  "property": "GameOver",
+  "operator": "eq",
+  "expected": true,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g33c-assert-not-won",
+  "property": "Won",
+  "operator": "eq",
+  "expected": false,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g33d-assert-hook-applied",
+  "property": "LastHookSteps",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g34a-assert-fired-still",
+  "property": "Fired",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g37a-assert-won",
+  "property": "Won",
+  "operator": "eq",
+  "expected": true,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g37b-assert-over",
+  "property": "GameOver",
+  "operator": "eq",
+  "expected": true,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g37c-assert-score",
+  "property": "Score",
+  "operator": "eq",
+  "expected": 500,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g37d-assert-cities",
+  "property": "CitiesAlive",
+  "operator": "eq",
+  "expected": 5,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g37e-assert-hook-applied",
+  "property": "LastHookSteps",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g43-assert-input-shots",
+  "property": "InputShots",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g44-assert-fired",
+  "property": "Fired",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g45-assert-ammo",
+  "property": "Ammo",
+  "operator": "eq",
+  "expected": 29,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g46-assert-interceptor",
+  "property": "InterceptorAlive",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g49-assert-clock-steps-0",
+  "property": "Steps",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g52-assert-clock-moved",
+  "property": "Steps",
+  "operator": "gt",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g53-assert-clock-spawned",
+  "property": "Spawned",
+  "operator": "gt",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g54-assert-clock-auto-ticks",
+  "property": "AutoTicks",
+  "operator": "gte",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g56-assert-clock-off-auto",
+  "property": "LastAutoSteps",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g60-assert-hook-3",
+  "property": "LastHookSteps",
+  "operator": "eq",
+  "expected": 3,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g61-assert-steps-3",
+  "property": "Steps",
+  "operator": "eq",
+  "expected": 3,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g63-assert-hook-still-3",
+  "property": "LastHookSteps",
+  "operator": "eq",
+  "expected": 3,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g64-assert-auto-0",
+  "property": "LastAutoSteps",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g65-assert-still-no-auto",
+  "property": "AutoTicks",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g66-assert-steps-still",
+  "property": "Steps",
+  "operator": "eq",
+  "expected": 3,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g70-assert-boundary",
+  "property": "NoSuchPropertyAtAll",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": true
+ }
+]

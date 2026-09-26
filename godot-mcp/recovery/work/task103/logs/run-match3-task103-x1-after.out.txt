@@ -1,0 +1,102 @@
+=== godot-mcp game session ===
+game     : match3
+project  : F:\moonbit-hof-rs\godot-mcp\projects\match3
+session  : F:\moonbit-hof-rs\godot-mcp\recovery\work\task103\sessions\session-x1.json
+run      : F:\moonbit-hof-rs\godot-mcp\runs\match3\task103-x1-after
+engine   : F:\moonbit-hof-rs\godot-mcp\godot\bin\godot.windows.editor.x86_64.mono.console.exe
+import   : exit 0 (echoed) / 0 (process)  (F:\moonbit-hof-rs\godot-mcp\runs\match3\task103-x1-after\import.stdout.txt)
+game     : "F:\moonbit-hof-rs\godot-mcp\godot\bin\godot.windows.editor.x86_64.mono.console.exe" --path F:\moonbit-hof-rs\godot-mcp\projects\match3 --mcp-port=9959 --mcp-trace=F:\moonbit-hof-rs\godot-mcp\runs\match3\task103-x1-after\trace-game.jsonl --mcp-capture=every_call --mcp-capture-dir=F:\moonbit-hof-rs\godot-mcp\runs\match3\task103-x1-after\shots-game --mcp-capture-viewport=2d
+--- game side (9889) ---
+  [g01-failing-addchild] port=9959 bytes=1091 :: {"error":{"code":-32000,"data":{"script_error":{"body_script_path":"gdscript://-9223371989626911104.gd","column":null,"error_count":1,"function":"_mcp_execute",...
+  [g02-scene-tree-after-fail] port=9959 bytes=5417 :: {"id":101,"jsonrpc":"2.0","result":{"content":[{"text":"{\"tree\":{\"children\":[{\"name\":\"Background\",\"path\":\"/root/Main/Background\",\"type\":\"ColorRec...
+  [g03-control-add_child] port=9959 bytes=132 :: {"id":102,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":\"overlay added\",\"result_type\":\"String\"}","type":"text"}]}}
+  [g04-scene-tree-after-ok] port=9959 bytes=5505 :: {"id":103,"jsonrpc":"2.0","result":{"content":[{"text":"{\"tree\":{\"children\":[{\"name\":\"Background\",\"path\":\"/root/Main/Background\",\"type\":\"ColorRec...
+  [g05-success-null] port=9959 bytes=494 :: {"id":104,"jsonrpc":"2.0","result":{"content":[{"text":"{\"note\":\"The body returned no value (result is null / result_type \\\"Nil\\\"). This is not evidence ...
+  [g06-parse-fail] port=9959 bytes=494 :: {"error":{"code":-32602,"data":{"parse_error":{"generated_line":4,"in_caller_code":true,"line":1,"message":"Parse Error: Expected grouping expression.","message...
+  taskkill exit 1 (the tree may already be gone)
+--- ledger ---
+editor: trace ABSENT
+game: ledger exit 0 -> F:\moonbit-hof-rs\godot-mcp\runs\match3\task103-x1-after\ledger-game.txt
+    | TRACE LEDGER F:\moonbit-hof-rs\godot-mcp\runs\match3\task103-x1-after\trace-game.jsonl
+    | calls=6 malformed_lines=0
+    | verdicts: failed=2, ok_effect_observed=1, ok_no_effect_observed=3
+    | file_effects: none=6
+    | 
+    | seq    req_id   tool                                   dur_ms    ok       err      scene_effect   file_effect     flags                      verdict
+--- per-game report ---
+report: exit 0
+    | # Per-game report 鈥?`match3`
+    | 
+    | * run tag: `task103-x1-after`
+    | * run dir: `F:\moonbit-hof-rs\godot-mcp\runs\match3\task103-x1-after`
+    | * Pillow/numpy available for the independent pixel recomputation: **True**
+    | 
+    | ## editor endpoint (9888)
+    | 
+    | **no ledger** 鈥?see `engine-editor.stderr.txt`.
+    | 
+    | ## game endpoint (9889)
+    | 
+    | * calls: **6** (malformed trace lines: 0)
+    | * verdicts: failed=2, ok_effect_observed=1, ok_no_effect_observed=3
+    | * `facts_complete`: **6/6**
+    | * `args_evidence`: inline_complete=6
+    | * failed: 2, no-effect observed: 3
+    | 
+    | ## Pixel proof (recomputed, not taken on trust)
+    | 
+    | ### editor
+    | 
+    | *no capture pairs in the trace.*
+    | 
+    | ### game
+    | 
+    | | seq | tool | trace changed | trace px | **recomputed px** | PNG sha equal |
+    | |---|---|---|---|---|---|
+    | | 1 | `running_game_execute_gdscript` | False | 0 | **0** | True |
+    | | 2 | `running_game_get_scene_tree` | False | 0 | **0** | True |
+    | | 3 | `running_game_execute_gdscript` | True | 3600 | **3600** | False |
+    | | 4 | `running_game_get_scene_tree` | False | 0 | **0** | True |
+    | | 5 | `running_game_execute_gdscript` | False | 0 | **0** | True |
+    | | 6 | `running_game_execute_gdscript` | False | 0 | **0** | True |
+    | 
+    | **capture pairs with a recomputed non-zero pixel diff: 1/6**
+    | 
+    | ### Saved frames (`user://`, `running_game_capture_screenshot`)
+    | 
+    | Directory: `C:\Users\wyl\AppData\Roaming\Godot\app_userdata\match3`
+    | 
+    | | frame | size | bytes | sha256 (first 12) | previous same-size frame | **recomputed px vs it** |
+    | |---|---|---|---|---|---|
+    | | `m3-t0.png` | 800x600 | 10216 | `04B5CBCB04B7` | - | **-** |
+    | | `m3-t1.png` | 800x600 | 10643 | `312E7AD5CC30` | `m3-t0.png` | **140015** |
+    | | `m3-t2.png` | 800x600 | 11099 | `14DB9CCB6F7A` | `m3-t1.png` | **17813** |
+    | | `m3-t3.png` | 800x600 | 10687 | `E1F605108B26` | `m3-t2.png` | **24265** |
+    | | `m3-t4.png` | 800x600 | 10204 | `C81366718806` | `m3-t3.png` | **6892** |
+    | | `m3-t5.png` | 800x600 | 11776 | `5A4453CA9AEE` | `m3-t4.png` | **132911** |
+    | | `m3-t6.png` | 800x600 | 10675 | `17B181CCE043` | `m3-t5.png` | **135425** |
+    | 
+    | > `user://` survives between runs, so the same names are rewritten by each run; the byte count, the sha256 and the diff above are recomputed from the files on disk at report time.
+    | 
+    | ## The game's own stdout (causal chain)
+    | 
+    | ### editor (0 line(s))
+    | 
+    | ```
+    | ```
+    | 
+    | ### game (0 line(s))
+    | 
+    | ```
+    | ```
+    | 
+    | ## Defect list
+    | 
+    | | id | severity | claim | evidence | root cause |
+    | |---|---|---|---|---|
+    | | `editor-0` | blocking | no ledger was produced for the editor endpoint | `ledger-editor.json is absent` | the endpoint never answered (see engine-editor.stderr.txt) |
+    | | `game-failed-1` | medium | call 1 (running_game_execute_gdscript) failed with error -32000 | `{"script_error":{"body_script_path":"gdscript://-9223371989626911104.gd","column":null,"error_count":1,"function":"_mcp_execute","generated_line":10,"in_caller_code":true,"in_generated_body":true,"lin` | declared failure |
+    | | `game-failed-6` | medium | call 6 (running_game_execute_gdscript) failed with error -32602 | `{"parse_error":{"generated_line":4,"in_caller_code":true,"line":1,"message":"Parse Error: Expected grouping expression.","messages":["Parse Error: Expected grouping expression."]},"parse_error_column"` | declared failure |
+    | 
+run root : F:\moonbit-hof-rs\godot-mcp\runs\match3\task103-x1-after
+RUN_EXIT=0

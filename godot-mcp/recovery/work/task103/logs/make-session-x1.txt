@@ -1,0 +1,2 @@
+wrote F:\moonbit-hof-rs\godot-mcp\recovery\work\task103\sessions\session-x1.json (6 calls)
+json round-trip: OK (6 calls)

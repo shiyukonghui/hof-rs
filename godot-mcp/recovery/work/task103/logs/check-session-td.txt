@@ -1,0 +1,5 @@
+file      : F:\moonbit-hof-rs\godot-mcp\tools\sessions\towerdefense\session.json
+bytes     : 40441
+calls     : 144 (editor 14 / game 130)
+utf8 json : OK
+CHECK_SESSION OK

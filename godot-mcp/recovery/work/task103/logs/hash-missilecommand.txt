@@ -1,0 +1,3 @@
+manifest: F:\moonbit-hof-rs\godot-mcp\recovery\work\task103\archive\missilecommand-20260927-062552.manifest.json
+files   : 129
+bytes   : 8448444

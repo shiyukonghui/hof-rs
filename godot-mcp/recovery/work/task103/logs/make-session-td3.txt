@@ -1,0 +1,6 @@
+wrote F:\moonbit-hof-rs\godot-mcp\tools\sessions\towerdefense\session.json
+calls: 145 (editor 14 / game 131)
+expectations: 76 -> F:\moonbit-hof-rs\godot-mcp\recovery\work\task103\expectations-towerdefense.json
+path length: 101  map hash: 26299736  path hash: -577587427
+full game: won=True over=True steps=306 applied=306 killed=15 leaked=0 lives=5 score=150 wave=3
+json round-trip: OK (145 calls)

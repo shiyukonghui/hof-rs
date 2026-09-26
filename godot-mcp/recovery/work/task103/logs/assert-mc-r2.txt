@@ -1,0 +1,35 @@
+== runs\missilecommand\mc-task103-r2
+   FAILED g18b-assert-probe-state            ProbeState eq 'city'  actual='ground'
+   FAILED g19b-assert-probe-state            ProbeState eq 'battery'  actual='ground'
+   ?                          pass=2 fail=0
+   Ammo                       pass=3 fail=0
+   AmmoList                   pass=3 fail=0
+   AutoTicks                  pass=2 fail=0
+   CitiesAlive                pass=4 fail=0
+   CitiesLost                 pass=1 fail=0
+   CityList                   pass=2 fail=0
+   CityY                      pass=1 fail=0
+   Destroyed                  pass=2 fail=0
+   ExplosionList              pass=3 fail=0
+   ExplosionsActive           pass=1 fail=0
+   FieldH                     pass=1 fail=0
+   FieldW                     pass=1 fail=0
+   Fired                      pass=5 fail=0
+   GameOver                   pass=2 fail=0
+   IncomingAlive              pass=1 fail=0
+   IncomingList               pass=2 fail=0
+   InputShots                 pass=1 fail=0
+   InterceptorAlive           pass=2 fail=0
+   InterceptorList            pass=1 fail=0
+   LastAutoSteps              pass=3 fail=0
+   LastHookSteps              pass=6 fail=0
+   Leaked                     pass=2 fail=0
+   ProbeState                 pass=2 fail=2
+   ProbeValue                 pass=3 fail=0
+   Score                      pass=3 fail=0
+   Spawned                    pass=2 fail=0
+   Steps                      pass=5 fail=0
+   Wave                       pass=2 fail=0
+   WaveMax                    pass=1 fail=0
+   Won                        pass=2 fail=0
+   TOTAL: 71 passed, 2 failed

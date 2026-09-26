@@ -1,0 +1,14 @@
+== towerdefense : 5 frame(s) in C:\Users\wyl\AppData\Roaming\Godot\app_userdata\towerdefense
+  frame        size         bytes  sha256[0:16]     vs report
+  td-t0.png    800x600      10646  35AA2DC1FCBB70FF same
+  td-t1.png    800x600      11133  F85513125A8E23DF same
+  td-t2.png    800x600      11413  3C9ADA3375BCE25E same
+  td-t3.png    800x600      12171  B0577DD2A5FA5BE5 same
+  td-t4.png    800x600      11201  EEF1114E79DF0B36 same
+  distinct sha256 among the frames: 5/5
+  pair diffs (recomputed here):
+    td-t0.png    -> td-t1.png    engine=185084  any=212832  total=480000  (report.json agrees)
+    td-t1.png    -> td-t2.png    engine=8356    any=8624    total=480000  (report.json agrees)
+    td-t2.png    -> td-t3.png    engine=3376    any=3651    total=480000  (report.json agrees)
+    td-t3.png    -> td-t4.png    engine=8133    any=8358    total=480000  (report.json agrees)
+  pairs where the report and this recomputation disagree: 0
