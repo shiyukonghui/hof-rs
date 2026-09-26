@@ -14,7 +14,7 @@
 | 段 | 要求 | 结论 | 证据 |
 |---|---|---|---|
 | **A①** | 恢复档案迁回 `godot-mcp\recovery\`，先复制 → 逐文件 sha → 才删 C: 源 | **达成** | 33,433 文件 / 2,520,301,348 B，`compared=33433 mismatched=0 size_mismatch=0 missing=0 extra=0`，两侧字节数**精确相等** → `VERIFY_RECOVERY=PASS`（`work\task092\logs\verify.txt`） |
-| **A②** | 主仓 .gitignore 忽略体量大者、保留并提交小而有价值者 | **达成** | 入库 **2,436 文件 / 75.6 MB**；忽略 26 个入口（≈31,020 文件 / 2.33 GB）：`transcripts\ staging\ logs\ tmp\ backup\ rebuild\godot\`、`work\events-*.jsonl`、三个嵌套 `.git` 与两个含它的目录 |
+| **A②** | 主仓 .gitignore 忽略体量大者、保留并提交小而有价值者 | **达成** | 入库 **2,436 文件 / 75.6 MB**（迁移那一刻）→ 收尾 **2,456 / ≈75.9 MB**；忽略 26 个入口（≈31,020 文件 / 2.33 GB）：`transcripts\ staging\ logs\ tmp\ backup\ rebuild\godot\`、`work\events-*.jsonl`、三个嵌套 `.git` 与两个含它的目录 |
 | **A③** | README 增补 recovery 一节 | **达成** | `godot-mcp\README.md` §8（内容清单 + 分界线 + 为什么忽略 `rebuild\godot`） |
 | **A④** | 主仓提交、`git status` 干净 | **达成** | `d043fd3`；收尾时只剩本次任务的新增证据与报告（随 `C` 段提交） |
 | **B①** | `args_truncated` 要有可核的旁路证据，台账据此判 `args_complete`，判据写进 MCP-TRACEABILITY.md | **达成** | 超限载荷整份写入 `<trace 名>.sidecar/`，行上给 `path`/`relative_path`/`bytes`/`sha256`；台账**读盘重算**后判 `sidecar_verified`；文档 §2.6 / §3.1（+§6） |
@@ -23,7 +23,7 @@
 | **B④** | `_frame_cost_ms` 改用稳定估计并写明取值规则 | **达成** | 新增 `mcp_frame_clock.{h,cpp}`：最近 15 帧**中位数**、截断到整毫秒、夹 [16,1000]，采样点 `MCPServer::pump_frame`；规则表见 MCP-TRACEABILITY.md §6 |
 | **B⑤** | 重建 mono + 非 mono，重跑九道门 + accept_m1（真实输出） | **达成** | 两变体 build exit 0，自报 `cf554ef58` == HEAD；**g01–g10 全部 exit 0**，`accept_m1 22/22`，门 9 `ANCHOR_EQUAL diff_count=0` |
 | **B⑥** | 重跑 Pong 会话，`facts_complete` 达 100%，给改进前后对比 | **达成** | 编辑器 **23/23**、游戏 **29/29**（前：21/23、23/29）；报告缺陷清单 **0 条**；52/52 像素对独立复算一致 |
-| **C** | 每步提交（引擎 push）、报告含两仓 log/status、如实报告 | **达成** | 引擎 2 次提交并 push（`87fbf82f4b..cf554ef58c`）；主仓 2 次提交；见 §C |
+| **C** | 每步提交（引擎 push）、报告含两仓 log/status、如实报告 | **达成** | 引擎 **2 次提交并 push**（`87fbf82f4b..cf554ef58c`，HEAD==origin）；主仓 **2 个逻辑提交**（A=`d043fd3`，B+C=`4e74537`）+ 若干条纯文档的自我更正；见 §C |
 
 ---
 
