@@ -1,0 +1,12 @@
+== rtype : 4 frame(s) in C:\Users\wyl\AppData\Roaming\Godot\app_userdata\rtype
+  frame        size         bytes  sha256[0:16]     vs report
+  rt-t0.png    800x600      12095  32466FD4473303CC same
+  rt-t1.png    800x600      12668  173F50BA80DFB8A4 same
+  rt-t2.png    800x600      15163  CFC09250EBDEE419 same
+  rt-t3.png    800x600      12114  8DDF838FAFFB1B4F same
+  distinct sha256 among the frames: 4/4
+  pair diffs (recomputed here):
+    rt-t0.png    -> rt-t1.png    engine=2069    any=2133    total=480000  (report.json agrees)
+    rt-t1.png    -> rt-t2.png    engine=7095    any=7500    total=480000  (report.json agrees)
+    rt-t2.png    -> rt-t3.png    engine=7547    any=7944    total=480000  (report.json agrees)
+  pairs where the report and this recomputation disagree: 0

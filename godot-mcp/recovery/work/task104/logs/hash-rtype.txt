@@ -1,0 +1,3 @@
+manifest: F:\moonbit-hof-rs\godot-mcp\recovery\work\task104\archive\rtype-20260927-072931.manifest.json
+files   : 129
+bytes   : 8450207

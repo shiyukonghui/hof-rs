@@ -31,6 +31,9 @@
 | 15 | Match-3 | C# | 145（编辑器 14 / 游戏 131） | **145/145（100%）** | 编辑器：`failed=1`（**声明的同名拒绝**）、`ok_effect_observed=1`、`ok_file_effect_observed=6`、`ok_no_effect_observed=6`；游戏：`failed=1`（**声明的边界调用**，`-32001`）、`ok_effect_observed=17`、`ok_file_effect_observed=89`、`ok_no_effect_observed=24` | **1 / 4**（工具 **X-1**（只记录、未改模块）：`running_game_execute_gdscript` 的脚本**运行期报错**时工具回 `ok` + `result: null`，诊断只落在引擎 stderr 里；**M3-1 会话**：默认棋盘的 `ProbeValue` 是**猜**的（`g11` 期望 5 实得 1），改成用 Python 复算 `BuildBoard()` 的 LCG + 消稳循环并断言整盘 / 哈希 / Seed；**M3-2 会话**：三种非法交换的期望计数各自建在**新副本**上（1/1/1），而会话在同一块盘上累计（1/2/3）；**M3-3 会话**：正控 overlay 的 GDScript 写成了 C# 的 `addChild`；**M3-4 会话 / 测试设计**：自动时钟采样的钉板只**一个合法交换**，时钟在第一个采样帧之前就把它吃掉，30 帧采样全程看着**冻住的盘面**（`AutoTicks` 4→33 而 `Moves`/`Score`/`BoardHash`/`Refills` 一动不动）而断言照样全 PASS —— 四周都修好并重跑 r3） | `runs\match3\m3-task102-r3`（首轮 `r1`，中间 `r2`） | 第 15 个游戏。8×8 六色、网格交换、三连检测与消除、下落补充、**连锁得分**（第 n 链 ×n）、非法交换拒绝（盘面逐字节不变）。**像素差 22/145 非零**（编辑器 1/14、游戏 21/131），`user://` 七帧逐对 **140015 / 17813 / 24265 / 6892 / 132911 / 135425 px**，七个 sha **7/7 互不相同**；独立复算 （`pixel_recompute.py` + `frames_recompute.py` + `recompute_readbacks.py`）**0 处不符**。断言 **85 PASS + 1 条声明的边界失败**（`-32001`）＋ **2 条屏幕文本 PASS** ＋ **1 条场景断言 PASS** = **88 PASS**。**Python 第二实现**（`recovery\work\task102\make_session_match3.py` 的 `MSim`）独立算出并作为断言字面量的有：默认棋盘（同一条 LCG `seed=(seed*1103515245+12345) mod 2^31`、`(seed>>16)%6`、行优先填充 + 消稳循环）与它的 `BoardHash`/`Seed`、安静棋盘（**没有任何合法交换**）与 `AutoStep(3)` 的 `LastHookSteps=0`、指定交换后的**整盘 / 哈希 / Seed / Refills / 连锁长度 / 消除数 / 得分**、`AutoStep(1)` 选中的**行优先第一个合法交换**、两波连锁的整盘与 90 分、胜利（490→520 越过 500 线）与失败（`move_limit=1`）。规则逐条钉住：非法交换被拒且 `Board`/`BoardHash` 一字不变；非相邻与越界各按名字拒绝；连锁 `LastChain=2`、`LastCleared=6`、`Score=90`；胜利 `Won`/`GameOver`=true；再交换 `reason=game_over`。与帧率无关的增量 `LastHookSteps`；时钟浮点累加器；**`BoardHash neq H0` 把「盘面冻住」变成一条会 FAIL 的断言**（M3-4 的教训写进断言本身）。多帧采样：冻结基线 12 帧对自动对局 30 帧（`BoardHash` **26 个不同值**、`Moves` 3→32、`Score` 150→1270、`TotalCleared` 12→112、`Refills` 12→112、`Elapsed`/`Ticks` 各 30 个）。`e06` 同名批量被 `-32000` 拒绝（3 条 `conflicts`），`e05`/`e09` 的 sha `7772574a…`（842 B）**逐字节相同**；`project_build_csharp` exit 0（3725 ms）、`invalid_count=0`；树里 68/69 个节点名 **0 个 `@` 开头** |
 | 16 | Tower Defense | C# | 145（编辑器 14 / 游戏 131） | **145/145（100%）** | 编辑器：`failed=1`（**声明的同名拒绝**，D-3）、`ok_effect_observed=1`、`ok_file_effect_observed=4`、`ok_no_effect_observed=8`；游戏：`failed=1`（**声明的边界调用**，`-32001`）、`ok_effect_observed=26`、`ok_file_effect_observed=78`、`ok_no_effect_observed=26` | **0 / 1**（**TD-1 会话**：全程对局那一段**漏了 `ForceTestState`** —— 三座塔建在上一段钉住的 `gold=0` 状态上、全部被 `no_gold` 拒绝，`StepFrames(4000)` 于是在无塔的场地上让 5 个敌人漏到终点、5 条命耗尽（`g53` 期望 3 实得 0、`g55` 期望 true 实得 false 等 **11 条同时 FAIL**）；另外**取证工具**自身 1 条（`R-1`，见下），**不算模块缺陷**） | `runs\towerdefense\td-task103-r3`（首轮 `-r1`，中间 `-r2` 未从模板重开） | 第 16 个游戏。16×12 的 50 px 格点、**101 格无分支蛇形走廊**（路径由「从 S 出发、按右/下/左/上取第一个不是来路的路径格」的**确定性走法**从 ASCII 地图导出，Python 用同一走法重算 `PathHash`）、**整数行进**（每个敌人 `accum++`，攒满 `speed` 才进一格）、放塔（`-32000` 之外还有 `not_buildable`/`occupied`/`no_gold`/`out_of_bounds` 四种具名拒绝）、**切比雪夫射程 3 + 冷却 3 的塔**（取射程内**路径下标最大**的敌人）、三波（4/5/6 个，血 30/45/60）、生命与胜负。**像素差 31/145 非零**（编辑器 1/14、游戏 30/131），`user://` 五帧逐对 **185084 / 8356 / 3376 / 8133 px**、五个 sha **5/5 互不相同**；独立复算（`task102\pixel_recompute.py` 逐调用对 + `task102\frames_recompute.py` 保存帧 + 本轮 `recompute_readbacks.py`）**0 处不符**。断言 **77 PASS + 1 条声明的边界失败**（`-32001`）= 77 通过 / 0 失败。**Python 第二实现**（`make_session_towerdefense.py` 的 `TSim`）独立算出并作为断言字面量的有：`MapHash=26299736`（由打印出来的 ASCII 重推）、`PathHash=-577587427` / `PathLength=101`（**重新走一遍**打印出来的地图）、逐步损伤后的 `EnemyList`、击杀后的 `Score`/`Gold`、漏掉后 `Wave` 与 `WaveLeftToSpawn` 的推进、以及**一整局**（三座塔、306 步、15 杀、0 漏、剩 5 条命、150 分、Wave=3）的每一步结果。与帧率无关的增量 `LastHookSteps`（`StepFrames(3)`→3）在十二帧之后仍是 3，而 `LastAutoSteps` 归 0；时钟是浮点累加器 `_autoAccum += delta*AutoClock`，`Elapsed` 是每帧 `+= delta` 的浮点秒表。多帧采样：冻结基线 12 帧（`Steps`/`EnemiesAlive`/`Gold`/`Lives`/`Won` 各只有 1 个值，`Elapsed`/`Ticks` 各 12 个不同值）对自动时钟 30 帧，并带**会 FAIL 的硬断言**（`Steps gt 0`、`EnemiesSpawned gt 0`、`AutoTicks gte 1` —— M3-4 的教训写进断言本身）。`e06` 同名批量被 `-32000` 拒绝（3 条 `conflicts`），`e05`/`e09` 的 sha `41de249a…`（860 B）**逐字节相同**；`project_build_csharp` exit 0（3796 ms）、`invalid_count=0`、`editor_get_errors count=0`；树里 279 个节点名 **0 个 `@` 开头**；声明的 `td_auto_step` 动作真的让 `Steps` 前进（`InputSteps=1`） |
 | 17 | Missile Command | C# | 127（编辑器 14 / 游戏 113） | **127/127（100%）** | 编辑器：`failed=1`（**声明的同名拒绝**，D-3）、`ok_effect_observed=1`、`ok_file_effect_observed=4`、`ok_no_effect_observed=8`；游戏：`failed=1`（**声明的边界调用**，`-32001`）、`ok_effect_observed=17`、`ok_file_effect_observed=74`、`ok_no_effect_observed=21` | **0 / 3**（**MC-1 载荷**：`PosAt` 是实例方法却被 `static AddMissiles` 调用 → `CS0120` → **C# 编译失败、脚本没挂上**，游戏退化成裸 `Node2D`；**MC-2 会话**：三条 `ProbeState` 断言写在探针循环**之后**，读到的是**最后**那次探针的状态（`g18b` 期望 `city` 实得 `ground`、`g19b` 期望 `battery` 实得 `ground`）；**TD-2 会话/证据**：TD 的 r2 **没有从模板重新实例化**，工程里已有三个静态节点 → 编辑器相首次同名批量被拒、像素列变 0/14。三条都已修并重跑） | `runs\missilecommand\mc-task103-r3`（首轮 `-r1`，`-r2` 已修 `PosAt` 但会话仍有 MC-2） | 第 17 个游戏。800×600 场地、**6 座城市 + 3 个炮台（每台 10 发、每波补满）**、LCG 生成来袭弹（`seed=(seed*1103515245+12345) mod 2^31`，`x0=20+((seed>>16)%760)`、目标 6 城或地面）、**整数 floor 插值轨迹**（`x0 + DivFloor((tx-x0)*k, dur)`，C# 侧把 floor 显式写出来以便与 Python 的 `//` 逐位一致）、拦截弹从 x 最近的**有弹**炮台发射、爆炸半径 34 / 存在 8 步、**爆炸按下标顺序清掉半径内的来袭弹**、来袭弹落地按其目标点 28 px 摧毁城市、波次与得分（25/杀、每存活城市 100）。**像素差 21/127 非零**（编辑器 1/14、游戏 20/113），`user://` 五帧逐对 **15823 / 13578 / 4370 / 346 px**、五个 sha **5/5 互不相同**；独立复算（`task102\pixel_recompute.py` + `task102\frames_recompute.py` + 本轮 `recompute_readbacks.py`）**0 处不符**。断言 **73 PASS + 1 条声明的边界失败**（`-32001`）= 73 通过 / 0 失败。**Python 第二实现**（`make_session_missilecommand.py` 的 `MSim`）独立算出并作为断言字面量的有：初始 `CityList`/`AmmoList`/`CityHash=29583456`/`WorldHash=852442047`、定盘天幕逐步的 `IncomingList` 与 `ExplosionList`、**一次爆炸的覆盖判定**（半径内的被打掉、半径外的活下来，`Destroyed`/`Score` 同步）、**带提前量的拦截**（在 Python 里把「拦截弹到达所需步数」与「来袭弹走到该点所需步数」迭代到不动点，得到 `InterceptorList=400,586,312,542,0,8,400,586`、8 步后爆炸点与来袭弹位置**逐位相同**→ 命中、`Leaked=0`、随后该波清算 `Wave` 推进并补满弹药）、一城被毁的 `CityList=1,1,0,1,1,1`、六城尽失的败局、以及**末波清空即胜**（`maxwave=1`，`Score=500`、`Won`/`GameOver`=true）。与帧率无关的增量 `LastHookSteps` 在十二帧之后仍是 3，而 `LastAutoSteps` 归 0；时钟是浮点累加器；`Elapsed` 是浮点秒表。多帧采样：冻结基线 12 帧对自动时钟 30 帧，带**会 FAIL 的硬断言**（`Steps gt 0`、`Spawned gt 0`、`AutoTicks gte 1`）。`e06` 同名批量被 `-32000` 拒绝，`project_build_csharp` exit 0（3815 ms）、`invalid_count=0`、`editor_get_errors count=0`；树里 270 个节点名 **0 个 `@` 开头**；声明的 `mc_auto_fire` 动作真的发了一发（`InputShots=1`、`Fired=1`、`Ammo` 29） |
+| 18 | R-Type | C# | 223（编辑器 14 / 游戏 209） | **223/223（100%）**（编辑器 14/14、游戏 209/209） | 编辑器：`failed=1`（**声明的同名拒绝**，D-3）、`ok_effect_observed=1`、`ok_file_effect_observed=4`、`ok_no_effect_observed=8`；游戏：`failed=1`（**声明的边界调用**，`-32001`）、`ok_effect_observed=83`、`ok_file_effect_observed=101`、`ok_no_effect_observed=24` | **0 / 1**（**RT-1 会话**：r1 的 `g114-assert-rejected` 期望 `RejectedMoves=0` 实得 **1** —— 游戏结束后那次 `MovePlayer` 确实被拒并计数，而生成器只发了调用、没有让自己那份 Python 第二实现跟着走同一步（与 K-1/TD-1 同一类：期望值必须来自它所断言的那一刻）；补上 `lose.fire()` / `lose.move(8, 0)`，从模板重新实例化后重跑 r2） | `runs\rtype\rt-task104-r2`（首轮 `runs\rtype\rt-task104-r1`） | 第 18 个游戏。800×600 场地、**整数运动学**（船 8 px/次调用，玩家子弹 16、敌机 3、敌弹 6 px/步），**编队入场**（第 k 个出生点 = `(830 + (k/3)*40, 120 + (k%3)*70)`，一边入场一边整体左移）、三波 4/5/6 个敌人、敌机 45 步固定冷却的射击、子弹取**出生顺序里第一个**重叠的敌机、越界敌机扣命、生命与得分。**像素差 87/223 非零**（编辑器 1/14、游戏 86/209），`user://` 四帧逐对 **2069 / 7095 / 7547 px**、四个 sha **4/4 互不相同**；独立复算（`task104\pixel_recompute.py` 逐调用对 + `task104\frames_recompute.py` 保存帧 + 本轮 `recompute_readbacks.py`）**0 处不符**。断言 **99 PASS + 1 条声明的边界失败**（`-32001`）＋ **1 条屏幕文本 PASS**（`WAVE CLEARED`）= **101 PASS / 0 FAIL**。**Python 第二实现**（`recovery\work\task104\make_session_rtype.py` 的 `RSim`）独立算出并作为断言字面量的有：编队逐帧的 `EnemyList`、子弹与敌弹的 `BulletList`/`EnemyBulletList`、每一次碰撞后的 `StateHash`、以及**一整局**（三波 15 个敌人、6 杀 9 漏、剩 49 命、600 分、960 步、Wave=3）的每一步结果。规则逐条钉住：四个方向的移动与四处边界钳位（含两条会被记进 `RejectedMoves` 的“原地不动”拒绝）、子弹出右边界消失（104+44×16 ≥ 800）、一次击杀 = 100 分、敌机 45 步冷却后开火（枪口 = `(x-8, y+6)`）、中弹扣命、敌机穿越整场扣命、最后一命耗尽即败（钩子停在 1/3 步）、三波清空即胜。与帧率无关的增量 `LastHookSteps`（`StepFrames(3)`→3）在时钟跑过 12 帧之后仍是 3，而 `LastAutoSteps` 归 0；时钟是浮点累加器 `_autoAccum += delta*AutoClock`，`Elapsed` 是每帧 `+= delta` 的浮点秒表。多帧采样：冻结基线 12 帧（`Steps`/`EnemiesAlive`/`BulletsActive`/`StateHash` 各 1 个值，`Elapsed`/`Ticks` 各 12 个不同值）对自动时钟 30 帧，并带三条**会 FAIL 的硬断言**（`Steps gt 0`、`EnemiesSpawned gt 0`、`StateHash neq H0` —— M3-4 的教训写进断言本身）。`e06` 同名批量被 `-32000` 拒绝（`conflicts` 3 条：`Background`/`Hud`/`Status`），`e05`/`e09` 的 sha `0494b8a0…`（850 B）**逐字节相同**；`project_build_csharp` exit 0（4266 ms）、`editor_get_errors count=0`；三次 `running_game_get_scene_tree` 共 **214 个节点名 0 个 `@` 开头**；声明的 `rt_fire` 动作**按按下沿**只发一发（`InputShots=1`） |
+| 19 | Puzzle Bobble | C# | 157（编辑器 14 / 游戏 143） | **157/157（100%）**（编辑器 14/14、游戏 143/143） | 编辑器：`failed=1`（**声明的同名拒绝**，D-3）、`ok_effect_observed=1`、`ok_file_effect_observed=4`、`ok_no_effect_observed=8`；游戏：`failed=1`（**声明的边界调用**，`-32001`）、`ok_effect_observed=27`、`ok_file_effect_observed=91`、`ok_no_effect_observed=24` | **0 / 0**（首轮一次通过，没有发现工具缺陷或游戏/驱动缺陷） | `runs\puzzlebobble\pb-task104-r1` | 第 19 个游戏。8×12 的方形泡泡网格（40 px/格）、**六色**、底部中央的发射器、**五种整数发射方向** `(±2,-1) (±1,-1) (0,-1)`（一格一步，两侧墙反弹）、**同色四连通三连消除**、**悬空掉落**（与顶行不连通的泡泡落下并计分）、**连锁**（掉落按“代”推进：只有正下方为空的浮空泡泡先落，一层一代，每一代提升链倍率）、**失败线**（结算后任何停在 row ≥ 10 的泡泡判负）、清空棋盘判胜。**像素差 29/157 非零**（编辑器 1/14、游戏 28/143），`user://` 四帧逐对 **53444 / 18251 / 2929 px**、四个 sha **4/4 互不相同**；独立复算（`pixel_recompute.py` + `frames_recompute.py` + `recompute_readbacks.py`）**0 处不符**。断言 **85 PASS + 1 条声明的边界失败**（`-32001`）＋ **1 条屏幕文本 PASS**（`BOARD CLEARED`）= **87 PASS / 0 FAIL**。**Python 第二实现**（`make_session_puzzlebobble.py` 的 `BSim`）独立算出并作为断言字面量的有：**初始棋盘**（同一条 LCG `seed=(seed*1103515245+12345) mod 2^31`、`(seed>>16)%6`、行优先填 4 行 + 同一套“去掉三连”的稳定循环）、它的 `Board`/`BoardHash`/`BubblesInUse`、五种方向的飞行与**第 3 步的墙面反弹**、一发命中的**落点**与**消除/掉落/连锁/得分**（三连：`attach=(4,3)`、chain 2、cleared 3、dropped 1、70 分；两格浮空塔：`attach=(4,6)`、**chain 4**、cleared 3、dropped 3、**210 分**）、失败线那一发的落点与判负、以及清空棋盘的那一发（30 分、`Won`）。规则逐条钉住：`Probe` 的 outside/empty/occupied/shooter/projectile 五种命名与颜色值、`Aim` 的五档与两端钳位（同向重设被拒）、同色重设后 `ShooterColor` 前进到 `NextColor`、每发之后 `Shots` 递增、结束后 `Shoot`/`Aim` 被拒。与帧率无关的增量 `LastHookSteps`（`StepFrames(3)`→3）在时钟跑过 12 帧之后仍是 3，而 `LastAutoSteps` 归 0；时钟是浮点累加器。多帧采样：冻结基线 12 帧（`Steps`/`BubblesInUse`/`BoardHash` 各 1 个值，`Elapsed`/`Ticks` 各 12 个不同值）对自动时钟 30 帧（**先发射再开钟**，否则棋盘无事可做），带三条**会 FAIL 的硬断言**（`Steps gt 0`、`BoardHash neq H0`、`AutoTicks gte 1`）。`e06` 同名批量被 `-32000` 拒绝（`conflicts` 3 条），`e05`/`e09` 的 sha `3723211c…`（868 B）**逐字节相同**；`project_build_csharp` exit 0（2489 ms）、`e13` 回 `invalid_count=0`（本轮它是 `valid=true`）、`editor_get_errors count=0`；树里 **214 个节点名 0 个 `@` 开头**；声明的 `pb_shoot` 动作按按下沿只发一发（`InputShots=1`） |
+| 20 | Lunar Lander | C# | 230（编辑器 14 / 游戏 216） | **230/230（100%）**（编辑器 14/14、游戏 216/216） | 编辑器：`failed=1`（**声明的同名拒绝**，D-3）、`ok_effect_observed=1`、`ok_file_effect_observed=4`、`ok_no_effect_observed=8`；游戏：`failed=1`（**声明的边界调用**，`-32001`）、`ok_effect_observed=39`、`ok_file_effect_observed=154`、`ok_no_effect_observed=22` | **0 / 0**（首轮一次通过，没有发现工具缺陷或游戏/驱动缺陷） | `runs\lunarlander\ll-task104-r1` | 第 20 个游戏，也是 D138「至少 20 款」的收口款。800×600 月面、地面线 y=560、**三个着陆台**（120–200 / 360–440 / 600–680，倍率 1/2/1）；**十二档整数姿态**（30° 一档）与**整数推力表**（正立 (0,-4)）、重力每步 +1、每次点火消耗 1 燃料、**整数积分** `vy += 重力; x += vx; y += vy`；着陆判定 = 在着陆台上 且 `|Vx| ≤ 2` 且 `|Vy| ≤ 6` 且距正立 ≤ 1 档，存活则得分 = **剩余燃料 × 台倍率**，否则坠毁；飞出场地也是坠毁。**像素差 41/230 非零**（编辑器 1/14、游戏 40/216），`user://` 四帧逐对 **6798 / 1117 / 6885 px**、四个 sha **4/4 互不相同**；独立复算（`pixel_recompute.py` + `frames_recompute.py` + `recompute_readbacks.py`）**0 处不符**。断言 **148 PASS + 1 条声明的边界失败**（`-32001`）＋ **1 条屏幕文本 PASS**（`THE EAGLE HAS LANDED`）= **150 PASS / 0 FAIL**。**Python 第二实现**（`make_session_lunarlander.py` 的 `LSim`）独立算出并作为断言字面量的有：三座台与倍率、每一项容差、十二档推力表、以及**一条真实的整数下降轨迹** —— 生成器先在 Python 里**搜**出「自由落体到 y≥430 → 连续点火 8 步 → 滑行」的方案，再按搜出来的相位驱动载荷，逐相位断言 `Lx`/`Ly`/`Vx`/`Vy`/`Fuel`/`Steps`/`StateHash`/`LastHookSteps`（35 步、右脚在 554、`Vy=3`、剩 492 燃料、**台 1 → 984 分**）。**事后复算独立重放整条轨迹**：`recompute_readbacks.py` 只吃运行自己写的响应文件与 `call-index.txt` 的调用顺序，在**自己的**代码里重做「点火/重力/积分/触地」并逐检查点比对 —— **17 个检查点、0 处不符**。规则逐条钉住：`Thrust()` 的脉冲与 `SetThrust` 的持续点火分开、空箱点火被拒、**每一条容差的边界两侧**（`|Vy|` 6 存活 / 7 坠毁、`|Vx|` 4 坠毁、90° 坠毁、**330° 存活**证明容差是两侧的、错过所有着陆台坠毁、左右台各按自己倍率给分）、飞出场地即坠毁、结束后点火被拒。与帧率无关的增量 `LastHookSteps`（`StepFrames(3)`→3）在时钟跑过 12 帧之后仍是 3，而 `LastAutoSteps` 归 0；时钟是浮点累加器。多帧采样：冻结基线 12 帧（`Lx`/`Ly`/`Vx`/`Vy`/`Fuel`/`StateHash` 各 1 个值，`Elapsed`/`Ticks` 各 12 个不同值）对自动时钟 30 帧，带四条**会 FAIL 的硬断言**（`Steps gt 0`、`Ly gt 起始值`、`StateHash neq H0`、`AutoTicks gte 1`）。`e06` 同名批量被 `-32000` 拒绝（`conflicts` 3 条），`e05`/`e09` 的 sha `50ec3aba…`（844 B）**逐字节相同**；`project_build_csharp` exit 0（3782 ms）、`e13` 回 `invalid_count=0`、`editor_get_errors count=0`；树里 **136 个节点名 0 个 `@` 开头**；声明的 `ll_thrust` 动作按按下沿只点一次火（`InputThrusts=1`） |
 
 ---
 
@@ -401,6 +404,175 @@ TASK-098 把台账每一行引用的数字**从它自己引用的那份产物里
 8. **`--import` 的关机期访问违例本轮 0 次**：TD 的 r1/r2/r3 与 MC 的 r1/r2/r3 六次导入全部 `IMPORT_EXIT=0`、`import.stderr.txt` 0 字节。累计口径 **3/34**（待办 2 不变）。
 
 
+
+---
+
+### TASK-104 记录（2026-09-27）
+
+1. **第 18、19、20 款交付**，D138 的「至少 20 个经典小游戏、全部 C#」到此收口。三款都从**模板实例化**
+   （`tools\new_game.ps1`），**游戏内容全部由 MCP 调用写成**：`project_edit_script` 写 C# 载荷、
+   `editor_add_nodes_batch` 一次建好三个静态节点（`Background`/`Hud`/`Status`，其后再不许静态节点）、
+   `editor_add_input_action` 声明一个动作、`editor_save_scene`、`project_build_csharp`、`project_validate_scripts`；
+   游戏相全部是 `running_game_*`。三款的调用数、判定分布与 `facts_complete` 见上面第 18/19/20 行，
+   全部取自各自那一轮的 `report.json` / `ledger-*.txt`。
+2. **固化模板照用并再添两条**：
+   * 既有：批量建静态节点 → 运行期创建动态对象 → 只钉游戏本身可达的状态 → 先采样、后改变 → 故意重跑同名批量 →
+     帧率无关步进 → 一个属性一个写者 → 采样带「必须动」硬断言 → 像素差 + Python 第二实现独立复算；
+     以及 TASK-103 的「每段测试从自己的 `ForceTestState` 开始」「重跑从模板重新实例化」「`static` 只能调 `static`」
+     「断言紧挨它引用的那一刻」「取证脚本自己也要能读错」。
+   * **新增（写给第 21 款起）**：①**两态动作要成对测**（本题连发/脉冲、发射/瞄准，`Thrust()` 与 `SetThrust()` 是两种写者，
+     各有断言）；②**每一条容差的边界两侧都要测**，而且**越界的“存活侧”也要测**—— LL 的 330° 存活证明容差是两侧的，
+     只测 90° 坠毁会让人误以为“必须恰好正立”。
+3. **缺陷清单（分栏）**：
+   * **工具缺陷（`modules\mcp_server`）：0 条。** 本轮**没有改动模块任何一个字节**，因此 §C 的收尾走的是
+     **免跑判定**（`run_gates.ps1` 纯文档预检 → `ANCHOR_STRUCTURAL_EQUIVALENT` + `SKIP_REBUILD`），
+     十道门与 `accept_m1` **未重跑**，原因与判定见 `recovery\reports\TASK-104-REPORT.md` §C 与本文件末尾。
+   * **一行诚实记录（不是缺陷）**：`project_validate_scripts` 在 rtype r2 上回 `not_compiled_count=1`
+     （`category=not_compiled`，理由是「构建产物里没有这个源文件的记录」）；同一条工具在 pb r1 上回 `valid=true`。
+     TD/MC（TASK-103）当时也是 `not_compiled=1`。三次的 `invalid_count` 都是 0、`project_build_csharp` 都是 exit 0，
+     所以这是**判定类别随时序变化的既有边界**（工具自己把理由写清楚了），不是回归，也不构成本轮的游戏缺陷。
+   * **游戏或驱动缺陷：1 条**
+     | id | 层 | 现象（证据） | 根因 | 处置 → 重跑结果 |
+     |---|---|---|---|---|
+     | **RT-1** | R-Type **会话** | r1 的 `g114-assert-rejected` 期望 `RejectedMoves=0` 实得 **1**（同段 `g112` 期望 `BulletsFired=0` 恰好也是 0，所以没照出另一半） | 生成器只把调用发出去、**没有让自己那份 `RSim` 跟着走同一步**：游戏结束后的 `FireBullet()` / `MovePlayer()` 在载荷里被拒并计数，而在 `RSim` 里这两次调用根本没发生 | 补 `lose.fire()` 与 `lose.move(8, 0)`；按 TD-2 的教训**从模板重新实例化**（先写 sha256 清单再 `Move-Item`）后重跑 r2 → `101 PASS / 0 FAIL` |
+   * **取证工具自身 2 条（`E-1`，明确**不是**模块缺陷、也不是游戏缺陷）**：都在本轮新写的
+     `recovery\work\task104\recompute_readbacks.py` 里。
+     ①哈希复算分支写成了 `"state_hash=" in fields`，而 `fields` 是**字典**（键不含 `=`）→ 条件恒假 →
+     两款各只算到 **2 个哈希**（本该更多）却仍报 `0 处不符` —— **静默少算**，比报错更危险；
+     改成 `"state_hash" in fields` 后 R-Type/PB/LL 各 2 个 `Dump()` 读数全部参与复算。
+     ②`SetThrust` 的回读按 `text.split("=",1)[1].strip()=="True"` 解析，实得 `"True fuel=500"` → 恒假 →
+     LL 的独立重放**从头到尾没开过火**，报了 **10 处不符**（`g115`/`g125` 的 `steps`/`y`/`vy`/`fuel`）；
+     改成 `grab(text, "thrust_on") == "True"` 后 **17 个检查点 0 处不符**。
+     ②的意义在**它响了**：这条复算脚本没有和载荷“互相迁就”地静默同意，而是把 10 条不一致摆出来，
+     才让人去分清「是载荷错了」还是「是复算脚本错了」—— 上一轮 R-1 的教训（取证脚本自己也要能读错）在这里第二次应验。
+4. **「像素差 + 独立复算」三款的真实数值**：R-Type **87/223**（编辑器 1/14、游戏 86/209），
+   `user://` 四帧 **2069 / 7095 / 7547 px**；Puzzle Bobble **29/157**（1/14、28/143），四帧 **53444 / 18251 / 2929 px**；
+   Lunar Lander **41/230**（1/14、40/216），四帧 **6798 / 1117 / 6885 px**。
+   三款的 `recomputed-vs-trace mismatches` 都是 **0**，保存帧 sha 与 `report.json` 逐值一致、**4/4 互不相同**，
+   帧链逐对独立复算 **0 处分歧**；`recompute_readbacks.py` 还独立重算了
+   R-Type 的 `StateHash`（由打印出来的 `player`/`enemies`/两张子弹表重推）、
+   Puzzle Bobble 的 `BoardHash`（由打印出来的棋盘重推）**与初始棋盘本身**（同一条 LCG + 同一个稳定循环）、
+   Lunar Lander 的 `StateHash` **与整条积分轨迹**（按 `call-index.txt` 的调用顺序重放，17 个检查点）。
+5. **时钟与单写者（继承 G1/F-1/M3-4）**：三款都是浮点累加器（`_autoAccum += delta * rate`），
+   `Elapsed` 是每帧 `+= delta` 的浮点秒表；三款各有 `LastHookSteps`（钩子）与 `LastAutoSteps`（每帧时钟）**两个**属性，
+   且都在采样里出现过；三款都在时钟跑过 12 帧之后断言 `LastHookSteps` **仍是钩子写下的那个值**。
+   **M3-4 的教训写进断言本身**：三款的采样后面都跟着会 FAIL 的硬断言（`Steps gt 0` 与一个 `neq 窗口起始哈希`），
+   所以「时钟在走而世界冻住」不再是采样里的一串常数，而是一条红。
+
+
+---
+
+## 里程碑：20 款（TASK-104 收口）
+
+* **口径**：D138 —— 轮次不设限，至少 20 个经典小游戏、**全部 C#**，每款都要有可复算的「操作有效性」证据。
+  TASK-104 交付第 18/19/20 款，口径达成。
+
+### 20 款一览（每行一款；调用数 = 编辑器 / 游戏，`facts` = 可重建事实齐全的调用占比）
+
+| # | 游戏 | 会话调用数 | `facts_complete` | 像素差（非零 / 可比） | 独立复算 | 缺陷（工具 / 游戏或驱动） | 证据路径 |
+|---|---|---|---|---|---|---|---|
+| 1 | Pong | 23 / 29（52） | 52/52（100%） | 14/74 | 0 处不符 | 0 / 6 | `runs\pong\pong-clean-task097` |
+| 2 | Breakout | 21 / 34（55） | 55/55（100%） | 14/89 | 0 处不符 | 0 / 5 | `runs\breakout\breakout-clean-task097` |
+| 3 | Snake | 20 / 31（51） | 51/51（100%） | 13/102 | 0 处不符 | 0 / 4 | `runs\snake\snake-clean-task097` |
+| 4 | Tetris | 6 / 36（42） | 42/42（100%） | 11/42 | 0 处不符 | 0 / 3 | `runs\tetris\tetris-task096-r2` |
+| 5 | Space Invaders | 15 / 44（59） | 59/59（100%） | 12/59 | 0 处不符 | 0 / 0 | `runs\spaceinvaders\si-task097-r1` |
+| 6 | Asteroids | 16 / 55（71） | 71/71（100%） | 16/71 | 0 处不符 | 0 / 1 | `runs\asteroids\ast-task098-r2` |
+| 7 | Pac-Man | 16 / 64（80） | 80/80（100%） | 15/80 | 0 处不符 | 0 / 1 | `runs\pacman\pac-task098-r2` |
+| 8 | Frogger | 16 / 74（90） | 90/90（100%） | 17/90 | 0 处不符 | 0 / 0 | `runs\frogger\frog-task099-r1` |
+| 9 | Flappy Bird | 14 / 78（92） | 92/92（100%） | 22/92 | 0 处不符 | 0 / 1 | `runs\flappy\flappy-task099-r2` |
+| 10 | 2048 | 16 / 113（129） | 129/129（100%） | 26/129 | 0 处不符 | 0 / 1 | `runs\game2048\2048-task100-r2` |
+| 11 | Minesweeper | 14 / 141（155） | 155/155（100%） | 21/155 | 0 处不符 | 0 / 1 | `runs\minesweeper\mine-task100-r2` |
+| 12 | Sokoban | 14 / 176（190） | 190/190（100%） | 29/190 | 0 处不符 | 0 / 1 | `runs\sokoban\soko-task101-r2` |
+| 13 | Bomberman | 14 / 219（233） | 233/233（100%） | 45/233 | 0 处不符 | 0 / 3 | `runs\bomberman\bomb-task101-r4` |
+| 14 | Platformer | 14 / 214（228） | 228/228（100%） | 40/228 | 0 处不符 | 0 / 2 | `runs\platformer\plat-task102-r2` |
+| 15 | Match-3 | 14 / 131（145） | 145/145（100%） | 22/145 | 0 处不符 | 1 / 4（X-1 已于 TASK-103 修） | `runs\match3\m3-task102-r3` |
+| 16 | Tower Defense | 14 / 131（145） | 145/145（100%） | 31/145 | 0 处不符 | 0 / 1 | `runs\towerdefense\td-task103-r3` |
+| 17 | Missile Command | 14 / 113（127） | 127/127（100%） | 21/127 | 0 处不符 | 0 / 3 | `runs\missilecommand\mc-task103-r3` |
+| 18 | **R-Type** | 14 / 209（223） | 223/223（100%） | **87/223** | **0 处不符** | **0 / 1** | `runs\rtype\rt-task104-r2` |
+| 19 | **Puzzle Bobble** | 14 / 143（157） | 157/157（100%） | **29/157** | **0 处不符** | **0 / 0** | `runs\puzzlebobble\pb-task104-r1` |
+| 20 | **Lunar Lander** | 14 / 216（230） | 230/230（100%） | **41/230** | **0 处不符** | **0 / 0** | `runs\lunarlander\ll-task104-r1` |
+
+合计 **2 441 次调用**（编辑器 300 / 游戏 2 141），`facts_complete` **20 款全部 100%**。
+
+### 证据覆盖率
+
+* **像素证据：20/20 款可得且非零。** 每一款都有「逐调用捕获对里非零的组数」与「`user://` 保存帧链」两路；
+  帧链逐对（engine 规则 >10 与 any-difference 两套）**都由 `pixel_recompute.py` / `frames_recompute.py` 独立重算**，
+  与 `report.json` **逐对一致（0 处分歧）**。第 1–3 款的像素列是 TASK-097 清理副本层后**回填**的（见 D-1 结案节）。
+* **独立复算：20/20 款。** 每一款都有「从规则重写的 Python 第二实现」产出会话里的断言字面量
+  （`recovery\work\task{task}\make_session_<game>.py`），并且事后有一支**不 import 生成器、不看 `report.json`、不看 C#**
+  的复算脚本（`recompute_readbacks.py` 等）把打印出来的状态重算一遍：哈希、地图/路径/棋盘、整数轨迹、逐格爆炸范围、
+  消除与掉落结果。**20 款合计 0 处不符。**
+* **事后复算的能力清单（截至 TASK-104）**：R-Type `StateHash`（由打印列表重推）、
+  Puzzle Bobble `BoardHash` **与初始棋盘本身**（LCG + 稳定循环重算）、
+  Lunar Lander `StateHash` **与整条 35 步积分轨迹**（按 `call-index.txt` 顺序重放，17 个检查点）、
+  Tower Defense `MapHash`/`PathHash`（重走一遍路径）、Missile Command `CityHash`/`WorldHash`、
+  Platformer `MapHash`/抛物线、Match-3 整盘与连锁、Sokoban/Bomberman/2048/Minesweeper 的哈希与逐格结果。
+
+### 工具缺陷累计清单与修复轮次
+
+| id | 现象 | 修复轮次 | 状态 |
+|---|---|---|---|
+| **D-3** | `editor_add_nodes_batch` 对同名节点既不拒绝也不报告 → `.tscn` 里进整份副本层（也是 D-1 的真因） | **TASK-097** | 已修；20 款每一轮的编辑器相都**故意重跑同名批量**，`-32000` + `data.conflicts` 成为常态化证据 |
+| **D-1** | 像素回读恒返回第一帧 | **TASK-097（D-3 的副产物）** | 已结案；三个老场景的副本层已删，像素列已回填 |
+| **D-2** | `accept_m1.ps1` 的就绪判据是吞吐（≥20 fps）而不是就绪 | **TASK-094** | 已修（改为 `frame_count` 连续 6 次严格递增） |
+| **G-1** | `run_gates.ps1` 的锚点默认值落后于引擎仓 HEAD | **TASK-099** | 已修（锚点取二进制自己的 `--version` + 纯文档预检跳过） |
+| **X-1** | `running_game_execute_gdscript` 的脚本**运行期报错**回 `ok` + `null`，诊断只落引擎 stderr | **TASK-103** | 已修（`-32000` + `data.script_error` + `data.suggestion`；成功但无返回值带 `note`；错误进 trace），修后两变体重建、十道门全绿 |
+| **X-2（观察，未修）** | `project_validate_scripts` 的 `valid` 有时缺席（`not_compiled_count=1`，工具自己写明理由），同一命令在另一轮回 `valid=true`；三次的 `invalid_count` 都是 0 | —— | **只记录**：它是工具自己说清楚的判定类别，不是回归；修它要动模块 → 重建两变体 + 十道门，本任务的范围与 C) 分支都不含此改动 |
+| **R-1 / E-1** | **取证脚本自身**的两类读错（`last=` 之后的片段覆盖真字段；字典成员判断写成带 `=` 的字符串；`True fuel=500` 当成 `True`） | TASK-103 / TASK-104 | 已修；另一件**证据**：E-1 的第二个 bug 是**响亮地**报出 10 处不符才被发现的 —— 复算脚本必须能喊 |
+
+### `--import` 累计口径
+
+* **崩溃形态（`exit=-1073741819` / `0xC0000005`，stderr 只有 `Parameter "singleton" is null.`）**：
+  TASK-099 留档时是 **3/23**；TASK-100 的 4 次、TASK-101 的 6 次、TASK-102 的 5 次、TASK-103 的 6 次、
+  TASK-104 的 **4 次**全部 `IMPORT_EXIT=0`。**累计 3/48，TASK-099 之后 25 次导入 0 次复现。**
+* **非崩溃形态（同样的 `singleton` 行 + `Thread::~Thread` 警告，但 `IMPORT_EXIT=0` 且导入已跑完）**：
+  TASK-104 出现 **1 次**（`runs\rtype\rt-task104-r1`，stderr 307 B）。它印证 TASK-099 的定位：
+  这条消息是**关机期**的，不是导入失败；`IMPORT_EXIT` 仍然不能当健康信号用。
+
+### 下一步：独立验收入口（TASK-105）
+
+验收子代理应当**只**读下列文件与命令，不读本轮的总结文字：
+
+**要读的工件（按顺序）**
+
+1. `recovery\reports\TASK-104-REPORT.md` —— 本轮结论、逐条证据与遗留。
+2. `godot-mcp\GAME-LOOP-LOG.md` —— 台账第 18/19/20 行、`### TASK-104 记录`、本节（里程碑）。
+3. `F:\moonbit-hof-rs\DECISIONS.md` 的 **D152** —— 本轮的决策与被否决选项。
+4. 三份载荷（**唯一**的游戏实现）：
+   `godot-mcp\tools\sessions\rtype\payload\RTypeGame.cs`、
+   `...\puzzlebobble\payload\PuzzleBobbleGame.cs`、
+   `...\lunarlander\payload\LunarLanderGame.cs`。
+5. 三份会话（**唯一的调用序列**）：`tools\sessions\{rtype,puzzlebobble,lunarlander}\session.json`。
+6. 三份生成器 + Python 第二实现：`recovery\work\task104\make_session_{rtype,puzzlebobble,lunarlander}.py`。
+7. 三份期望清单：`recovery\work\task104\expectations-{rtype,puzzlebobble,lunarlander}.json`。
+8. 三份运行产物：`runs\rtype\rt-task104-r2\`、`runs\puzzlebobble\pb-task104-r1\`、`runs\lunarlander\ll-task104-r1\`
+   （`trace-*.jsonl` / `ledger-*.{txt,json}` / `report.{md,json}` / 每调用一个 `<tag>.json` / `call-index.txt` / `shots-*/`）。
+9. 本轮自己的证据日志：`recovery\work\task104\logs\{assert,recompute,pixel,frames,facts,pixelpairs,checksession-py}-<game>.txt`。
+
+**可以自己跑的命令（都是只读）**
+
+```
+python tools\game_report.py  <run-dir> --game=<game> --run-tag=<tag>          # 重算台账/像素/帧链
+python recovery\work\task104\assert_summary.py <run-dir>                     # 逐属性断言分栏
+python recovery\work\task104\recompute_readbacks.py <run-dir> recovery\work\task104\expectations-<game>.json <game>
+python recovery\work\task104\pixel_recompute.py   <run-dir>                  # 逐调用捕获对，两套阈值
+python recovery\work\task104\frames_recompute.py  <game> <prefix>-t <run-dir> # 保存帧链 + 与 report.json 对账
+python recovery\work\task104\game_facts.py        <run-dir>                  # 构建/校验/@-名/台账事实
+python recovery\work\task104\check_session.py     tools\sessions\<game>\session.json
+powershell -File recovery\work\task104\check_session_ps.ps1 -Session tools\sessions\<game>\session.json -Label <game>
+```
+
+**应当主动构造的反例**
+
+* 把 `expectations-<game>.json` 里任意一条 `expected` 改掉，重跑 `recompute_readbacks.py` —— 它必须报 `LITERAL`/`FAILED`，
+  否则「字面量对齐」不是一条真检查。
+* 用 `python make_session_<game>.py` 重新生成会话，与仓里的 `session.json` 逐字节比对 —— 生成器必须是**确定性**的。
+* 对三款各挑一条**越界的存活侧**断言（LL 的 330°、PB 的 `|Vy|` 边界、R-Type 的钳位）核对它真的在容差之内。
+* **不重跑十道门**：本轮**没有改动 `modules\mcp_server` 任何一个字节**，所以 §C 走的是免跑判定；
+  验收若要跑门，请先自己确认引擎仓的工作树与 TASK-103 的 `1f9d0cb1c9` 之间没有编译输入差异
+  （`git -C godot-mcp\godot status --short` 与 `git diff --stat 1f9d0cb1c9..HEAD -- modules\mcp_server`）。
+
 ## 待办
 
 1. **D-1 结案（TASK-097）**：D-3 的根因动作已落进模块（`editor_add_nodes_batch` 默认拒绝同名，`on_name_conflict: "rename"` 才改名且 `editor_save_scene` 会报告），三个老游戏的副本层已用 `editor_delete_node` 逐个删除并复核，像素差列已回填真实数值（Pong 14/74、Breakout 14/89、Snake 13/102，逐对独立复算一致）。复现命令：`powershell -File tools\run_game_session.ps1 -Game pong -Session tools\sessions\pong\session-clean-task097.json -RunTag x -EditorPort 9916 -GamePort 9917`（breakout / snake 同理，会话名同款）。
@@ -451,3 +623,12 @@ TASK-098 把台账每一行引用的数字**从它自己引用的那份产物里
    `ForceTestState` 一次钉死、**多帧采样先于会改变状态的那一步**、
    **增量属性与帧率无关且单一写者**、建场景那一步故意重跑同名批量、任何时钟都用浮点累加器，
    并额外带上「采样窗口内状态必然改变」的断言。
+7. **（TASK-104 续）第 21 款起，模板再加两条**：①**两态动作要成对测** —— 同一个量若既能被「一次调用」写、
+   又能被「每帧时钟」写（LL 的 `Thrust()` 对 `SetThrust()`），就必须是**两个属性**、各有自己的断言；
+   ②**每条容差的边界两侧都要测，而且越界的「存活侧」也要测** —— LL 的 330° 存活才说明容差是两侧的，
+   只测 90° 坠毁会让人误以为规则要求恰好正立。
+   台账已到第 20 行，D138 的口径达成；后续轮次若继续加游戏，沿用同一套模板（静态节点一次批量建好、
+   动态对象运行期新建、`ForceTestState` 一次钉死、**多帧采样先于会改变状态的那一步**、
+   **增量属性与帧率无关且单一写者**、建场景那一步故意重跑同名批量、任何时钟都用浮点累加器、
+   采样窗口内状态必然改变的断言、Python 第二实现 + 事后独立复算）。
+

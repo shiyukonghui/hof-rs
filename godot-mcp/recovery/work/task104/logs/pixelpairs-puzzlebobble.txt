@@ -1,0 +1,32 @@
+== F:\moonbit-hof-rs\godot-mcp\runs\puzzlebobble\pb-task104-r1
+   NONZERO 3    editor_add_nodes_batch                     changed=212977 status=done
+   trace-editor.jsonl: 14 capture pair(s), 1 non-zero
+   NONZERO 19   running_game_execute_gdscript              changed=44770 status=done
+   NONZERO 32   running_game_execute_gdscript              changed=1401 status=done
+   NONZERO 37   running_game_execute_gdscript              changed=1401 status=done
+   NONZERO 49   running_game_execute_gdscript              changed=766 status=done
+   NONZERO 53   running_game_execute_gdscript              changed=1152 status=done
+   NONZERO 56   running_game_execute_gdscript              changed=1152 status=done
+   NONZERO 58   running_game_execute_gdscript              changed=1152 status=done
+   NONZERO 64   running_game_execute_gdscript              changed=766 status=done
+   NONZERO 65   running_game_execute_gdscript              changed=674 status=done
+   NONZERO 66   running_game_execute_gdscript              changed=3292 status=done
+   NONZERO 73   running_game_execute_gdscript              changed=7325 status=done
+   NONZERO 74   running_game_execute_gdscript              changed=674 status=done
+   NONZERO 75   running_game_execute_gdscript              changed=5574 status=done
+   NONZERO 84   running_game_execute_gdscript              changed=7693 status=done
+   NONZERO 85   running_game_execute_gdscript              changed=674 status=done
+   NONZERO 86   running_game_execute_gdscript              changed=8193 status=done
+   NONZERO 94   running_game_execute_gdscript              changed=18320 status=done
+   NONZERO 95   running_game_execute_gdscript              changed=674 status=done
+   NONZERO 96   running_game_execute_gdscript              changed=4584 status=done
+   NONZERO 103  running_game_execute_gdscript              changed=19577 status=done
+   NONZERO 104  running_game_execute_gdscript              changed=674 status=done
+   NONZERO 105  running_game_execute_gdscript              changed=6100 status=done
+   NONZERO 116  running_game_execute_gdscript              changed=2929 status=done
+   NONZERO 118  running_game_run_test_scenario             changed=674 status=done
+   NONZERO 121  running_game_execute_gdscript              changed=6610 status=done
+   NONZERO 122  running_game_execute_gdscript              changed=674 status=done
+   NONZERO 126  running_game_get_node_property_samples     changed=5574 status=done
+   NONZERO 132  running_game_execute_gdscript              changed=3177 status=done
+   trace-game.jsonl: 143 capture pair(s), 28 non-zero

@@ -1,0 +1,8 @@
+== rtype : 224 response file(s) in F:\moonbit-hof-rs\godot-mcp\runs\rtype\rt-task104-r2
+   call order entries : 223
+   DECLARED g208-assert-boundary               -32001 Property 'NoSuchPropertyAtAll' on node '/root/Main' not found
+   literals : 99/99 aligned with the generator's own expectations and passed
+   declared : 1 boundary assertion(s) whose expected answer is the -32001 refusal
+   hash checks        : 2
+   assertions checked : 99
+   TOTAL RECOMPUTATION MISMATCHES: 0

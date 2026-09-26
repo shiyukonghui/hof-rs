@@ -1,0 +1,18 @@
+build            e12-build-csharp         exit=0 duration_ms=2489
+validate         e13-validate-scripts     valid=1 invalid=0 files=1
+editor errors    e14-get-errors           {"available": true, "count": 0, "editor": true, "errors": [], "in_process": true, "log_path": "user://logs/godot.log", "note": "", "pid": 69412, "port": 9966, "process": "editor", "source": "editor_lo
+scene trees read 3, node names 214, names starting with '@' 0
+reading          g129-final-readback      cols=8 rows=12 cell=40 colors=6 fail_row=10 fill_rows=4 seed=20251040 board=......../......../......../......../......../......../......../......../......../......../......../........ board_hash=0 bubbles=0 shooter=4 col
+reading          g13-readback-t0          cols=8 rows=12 cell=40 colors=6 fail_row=10 fill_rows=4 seed=20251040 board=00304531/05323242/34451215/34534301/......../......../......../......../......../......../......../........ board_hash=-1955787933 bubbles=32 sh
+ledger-editor.txt calls=14 malformed_lines=0
+ledger-editor.txt verdicts: failed=1, ok_effect_observed=1, ok_file_effect_observed=4, ok_no_effect_observed=8
+ledger-editor.txt rows whose reconstructible facts are all present: 14/14
+ledger-game.txt  calls=143 malformed_lines=0
+ledger-game.txt  verdicts: failed=1, ok_effect_observed=27, ok_file_effect_observed=91, ok_no_effect_observed=24
+ledger-game.txt  rows whose reconstructible facts are all present: 143/143
+pixel_evidence   {"capture_pairs": 157, "comparable_pairs": 157, "non_zero_pairs": 29, "note": "", "reason": "", "verdict": "available"}
+saved frames     4
+  pb-t0.png    800x600     13439 C7D9077041104747   diff_vs_prev=None
+  pb-t1.png    800x600     13681 70B2475EEEF4EE99   diff_vs_prev=53444
+  pb-t2.png    800x600     13559 F4F9536CF1C14C0D   diff_vs_prev=18251
+  pb-t3.png    800x600     11948 6485623E19BBDD0B   diff_vs_prev=2929

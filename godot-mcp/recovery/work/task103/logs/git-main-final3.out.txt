@@ -1,0 +1,14 @@
+[master 4e88119] docs(godot-mcp): TASK-103 - the report's F4 states the closing boundary the way it was measured: the helper's post-commit log/status lines go into the same handle, so a pair stays modified
+ 10 files changed, 91 insertions(+), 4 deletions(-)
+ create mode 100644 godot-mcp/recovery/work/task103/commit-message-final3.txt
+ create mode 100644 godot-mcp/recovery/work/task103/fix_f4_measured.py
+ create mode 100644 godot-mcp/recovery/work/task103/logs/fix-f4-measured.txt
+ create mode 100644 godot-mcp/recovery/work/task103/logs/fix-f4-measured.txt.err.txt
+ create mode 100644 godot-mcp/recovery/work/task103/logs/git-main-final3.cmd
+ create mode 100644 godot-mcp/recovery/work/task103/logs/git-main-final3.err.txt
+ create mode 100644 godot-mcp/recovery/work/task103/logs/git-main-final3.out.txt
+GIT_EXIT=0
+4e88119 docs(godot-mcp): TASK-103 - the report's F4 states the closing boundary the way it was measured: the helper's post-commit log/status lines go into the same handle, so a pair stays modified
+9dc688c docs(godot-mcp): TASK-103 - F4 says exactly which file a commit helper leaves behind: one .err.txt, because the .out.txt it just wrote is taken into the commit itself
+da9edda docs(godot-mcp): TASK-103 - the report's F4 states the closing boundary exactly instead of claiming a clean tree the last commit cannot produce
+ M godot-mcp/recovery/work/task103/logs/git-main-final3.err.txt

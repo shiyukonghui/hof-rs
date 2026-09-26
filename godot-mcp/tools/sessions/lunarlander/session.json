@@ -1,0 +1,2641 @@
+{
+ "import": true,
+ "calls": [
+  {
+   "tag": "e01-edit-game",
+   "port": "editor",
+   "tool": "project_edit_script",
+   "arguments": {
+    "path": "res://src/LunarLanderGame.cs",
+    "content_file": "payload/LunarLanderGame.cs"
+   },
+   "note": "the whole game is written through the MCP script writer (the template stub is replaced)"
+  },
+  {
+   "tag": "e02-open-scene",
+   "port": "editor",
+   "tool": "editor_open_scene",
+   "arguments": {
+    "path": "res://scenes/main.tscn"
+   },
+   "note": "the template scene carries the root Main (Node2D) the script is attached to"
+  },
+  {
+   "tag": "e03-batch-add-static",
+   "port": "editor",
+   "tool": "editor_add_nodes_batch",
+   "arguments": {
+    "nodes": [
+     {
+      "type": "ColorRect",
+      "name": "Background",
+      "parent_path": ".",
+      "properties": {
+       "offset_left": 0,
+       "offset_top": 0,
+       "offset_right": 800,
+       "offset_bottom": 600,
+       "color": {
+        "r": 0.02,
+        "g": 0.02,
+        "b": 0.05,
+        "a": 1
+       }
+      }
+     },
+     {
+      "type": "Label",
+      "name": "Hud",
+      "parent_path": ".",
+      "properties": {
+       "offset_left": 14,
+       "offset_top": 10,
+       "offset_right": 790,
+       "offset_bottom": 44,
+       "text": "ALT 452  VX 0  VY 0  FUEL 500  ANGLE 0  BURNS 0  STEP 0",
+       "theme_override_font_sizes/font_size": 20
+      }
+     },
+     {
+      "type": "Label",
+      "name": "Status",
+      "parent_path": ".",
+      "properties": {
+       "offset_left": 14,
+       "offset_top": 48,
+       "offset_right": 500,
+       "offset_bottom": 82,
+       "text": "LAND SAFELY",
+       "theme_override_font_sizes/font_size": 20
+      }
+     }
+    ]
+   },
+   "note": "the three static nodes of the scene, through the batch tool; the ground, the three pads, the starfield, the lander and the flame are created at run time"
+  },
+  {
+   "tag": "e04-save-1",
+   "port": "editor",
+   "tool": "editor_save_scene",
+   "arguments": {},
+   "note": "the scene with the three static nodes on disk: sha A"
+  },
+  {
+   "tag": "e05-read-1",
+   "port": "editor",
+   "tool": "project_read_text_file",
+   "arguments": {
+    "path": "res://scenes/main.tscn"
+   },
+   "note": "sha A and the exact bytes"
+  },
+  {
+   "tag": "e06-batch-add-static-again",
+   "port": "editor",
+   "tool": "editor_add_nodes_batch",
+   "arguments": {
+    "nodes": [
+     {
+      "type": "ColorRect",
+      "name": "Background",
+      "parent_path": ".",
+      "properties": {
+       "offset_left": 0,
+       "offset_top": 0,
+       "offset_right": 800,
+       "offset_bottom": 600,
+       "color": {
+        "r": 0.02,
+        "g": 0.02,
+        "b": 0.05,
+        "a": 1
+       }
+      }
+     },
+     {
+      "type": "Label",
+      "name": "Hud",
+      "parent_path": ".",
+      "properties": {
+       "offset_left": 14,
+       "offset_top": 10,
+       "offset_right": 790,
+       "offset_bottom": 44,
+       "text": "ALT 452  VX 0  VY 0  FUEL 500  ANGLE 0  BURNS 0  STEP 0",
+       "theme_override_font_sizes/font_size": 20
+      }
+     },
+     {
+      "type": "Label",
+      "name": "Status",
+      "parent_path": ".",
+      "properties": {
+       "offset_left": 14,
+       "offset_top": 48,
+       "offset_right": 500,
+       "offset_bottom": 82,
+       "text": "LAND SAFELY",
+       "theme_override_font_sizes/font_size": 20
+      }
+     }
+    ]
+   },
+   "note": "the deliberate replay of the same batch: D-3's refusal (-32000, data.conflicts) must appear in every round's evidence"
+  },
+  {
+   "tag": "e07-tree-after-refusal",
+   "port": "editor",
+   "tool": "editor_get_scene_tree",
+   "arguments": {},
+   "note": "the refused batch wrote nothing: the tree still has exactly the three static nodes"
+  },
+  {
+   "tag": "e08-save-2",
+   "port": "editor",
+   "tool": "editor_save_scene",
+   "arguments": {},
+   "note": "save again after the refusal"
+  },
+  {
+   "tag": "e09-read-2",
+   "port": "editor",
+   "tool": "project_read_text_file",
+   "arguments": {
+    "path": "res://scenes/main.tscn"
+   },
+   "note": "sha B: byte-identical to sha A, because the refused batch changed no byte"
+  },
+  {
+   "tag": "e10-action-thrust",
+   "port": "editor",
+   "tool": "editor_add_input_action",
+   "arguments": {
+    "action": "ll_thrust",
+    "key": "Space"
+   },
+   "note": "one burn per press edge, for the input-edge scenario"
+  },
+  {
+   "tag": "e11-save-3",
+   "port": "editor",
+   "tool": "editor_save_scene",
+   "arguments": {},
+   "note": "persist the declared action"
+  },
+  {
+   "tag": "e12-build-csharp",
+   "port": "editor",
+   "tool": "project_build_csharp",
+   "arguments": {},
+   "note": "the payload really compiles: the real dotnet exit code"
+  },
+  {
+   "tag": "e13-validate-scripts",
+   "port": "editor",
+   "tool": "project_validate_scripts",
+   "arguments": {},
+   "note": "per-file verdicts for every script in the project"
+  },
+  {
+   "tag": "e14-get-errors",
+   "port": "editor",
+   "tool": "editor_get_errors",
+   "arguments": {},
+   "note": "the editor's own error list after the build"
+  },
+  {
+   "tag": "g01-scene-tree",
+   "port": "game",
+   "tool": "running_game_get_scene_tree",
+   "arguments": {},
+   "note": "the running game's tree: three static nodes, no @-auto names"
+  },
+  {
+   "tag": "g02-assert-field-w",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "FieldW",
+    "operator": "eq",
+    "expected": 800
+   },
+   "note": "the field is 800 pixels wide"
+  },
+  {
+   "tag": "g03-assert-field-h",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "FieldH",
+    "operator": "eq",
+    "expected": 600
+   },
+   "note": "and 600 tall"
+  },
+  {
+   "tag": "g04-assert-ground",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GroundY",
+    "operator": "eq",
+    "expected": 560
+   },
+   "note": "the ground line is at y=560"
+  },
+  {
+   "tag": "g05-assert-gravity",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GravityStep",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "gravity adds 1 px/step every step"
+  },
+  {
+   "tag": "g06-assert-cost",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "ThrustCost",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "a burn costs one fuel unit"
+  },
+  {
+   "tag": "g07-assert-fuel-start",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "StartFuel",
+    "operator": "eq",
+    "expected": 500
+   },
+   "note": "the tank holds 500"
+  },
+  {
+   "tag": "g08-assert-angle-count",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "AngleCount",
+    "operator": "eq",
+    "expected": 12
+   },
+   "note": "twelve attitudes"
+  },
+  {
+   "tag": "g09-assert-angle-step",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "AngleStepDeg",
+    "operator": "eq",
+    "expected": 30
+   },
+   "note": "thirty degrees apart"
+  },
+  {
+   "tag": "g10-assert-max-vx",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "MaxLandVx",
+    "operator": "eq",
+    "expected": 2
+   },
+   "note": "a landing survives +/-2 px/step horizontally"
+  },
+  {
+   "tag": "g11-assert-max-vy",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "MaxLandVy",
+    "operator": "eq",
+    "expected": 6
+   },
+   "note": "and +/-6 px/step vertically"
+  },
+  {
+   "tag": "g12-assert-max-angle",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "MaxLandAngle",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "and one attitude step from upright"
+  },
+  {
+   "tag": "g13-assert-pads",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PadList",
+    "operator": "eq",
+    "expected": "120,200|360,440|600,680"
+   },
+   "note": "the three pads, recomputed in Python"
+  },
+  {
+   "tag": "g14-assert-mult",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PadMultipliers",
+    "operator": "eq",
+    "expected": "1,2,1"
+   },
+   "note": "the middle pad pays double"
+  },
+  {
+   "tag": "g15-assert-start-pos",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Ly",
+    "operator": "eq",
+    "expected": 100
+   },
+   "note": "a fresh game starts at y=100"
+  },
+  {
+   "tag": "g16-assert-thrust-table",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "ThrustY",
+    "operator": "eq",
+    "expected": -4
+   },
+   "note": "upright thrust is (0,-4), recomputed in Python"
+  },
+  {
+   "tag": "g17-readback-t0",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.Dump()"
+   },
+   "note": "the whole state on one line"
+  },
+  {
+   "tag": "g18-shot-t0",
+   "port": "game",
+   "tool": "running_game_capture_screenshot",
+   "arguments": {
+    "save_path": "user://ll-t0.png"
+   },
+   "note": "the first frame: the ground, the pads and the lander"
+  },
+  {
+   "tag": "g19-samples-frozen",
+   "port": "game",
+   "tool": "running_game_get_node_property_samples",
+   "arguments": {
+    "node_path": "Main",
+    "properties": [
+     "Lx",
+     "Ly",
+     "Vx",
+     "Vy",
+     "Fuel",
+     "StateHash",
+     "Elapsed",
+     "Ticks"
+    ],
+    "frame_count": 12,
+    "frame_interval": 1
+   },
+   "note": "determinism baseline: AutoClock is 0, so the flight facts are constant while Elapsed and Ticks both advance"
+  },
+  {
+   "tag": "g20-assert-frozen-steps",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Steps",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "with the clock off, not one step has run"
+  },
+  {
+   "tag": "g21-assert-frozen-auto",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastAutoSteps",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "and the auto clock applied nothing"
+  },
+  {
+   "tag": "g22-assert-frozen-hook",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastHookSteps",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "and the hook applied nothing either"
+  },
+  {
+   "tag": "g23-probe-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.ForceTestState(\"l=400,548;v=0,0;angle=0;fuel=400\")"
+   },
+   "note": "the lander pinned just above the middle pad"
+  },
+  {
+   "tag": "g24-probe",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.Probe(400, 545)"
+   },
+   "note": "the probe names what stands at one point, so the assertion below is about that point"
+  },
+  {
+   "tag": "g24a-assert-state",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "ProbeState",
+    "operator": "eq",
+    "expected": "lander"
+   },
+   "note": "(400,545) is lander"
+  },
+  {
+   "tag": "g24b-assert-value",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "ProbeValue",
+    "operator": "eq",
+    "expected": -1
+   },
+   "note": "and the pad index it names"
+  },
+  {
+   "tag": "g25-probe",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.Probe(400, 570)"
+   },
+   "note": "the probe names what stands at one point, so the assertion below is about that point"
+  },
+  {
+   "tag": "g25a-assert-state",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "ProbeState",
+    "operator": "eq",
+    "expected": "pad"
+   },
+   "note": "(400,570) is pad"
+  },
+  {
+   "tag": "g25b-assert-value",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "ProbeValue",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "and the pad index it names"
+  },
+  {
+   "tag": "g26-probe",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.Probe(50, 570)"
+   },
+   "note": "the probe names what stands at one point, so the assertion below is about that point"
+  },
+  {
+   "tag": "g26a-assert-state",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "ProbeState",
+    "operator": "eq",
+    "expected": "ground"
+   },
+   "note": "(50,570) is ground"
+  },
+  {
+   "tag": "g26b-assert-value",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "ProbeValue",
+    "operator": "eq",
+    "expected": -1
+   },
+   "note": "and the pad index it names"
+  },
+  {
+   "tag": "g27-probe",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.Probe(400, 300)"
+   },
+   "note": "the probe names what stands at one point, so the assertion below is about that point"
+  },
+  {
+   "tag": "g27a-assert-state",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "ProbeState",
+    "operator": "eq",
+    "expected": "sky"
+   },
+   "note": "(400,300) is sky"
+  },
+  {
+   "tag": "g27b-assert-value",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "ProbeValue",
+    "operator": "eq",
+    "expected": -1
+   },
+   "note": "and the pad index it names"
+  },
+  {
+   "tag": "g28-probe",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.Probe(900, 100)"
+   },
+   "note": "the probe names what stands at one point, so the assertion below is about that point"
+  },
+  {
+   "tag": "g28a-assert-state",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "ProbeState",
+    "operator": "eq",
+    "expected": "outside"
+   },
+   "note": "(900,100) is outside"
+  },
+  {
+   "tag": "g28b-assert-value",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "ProbeValue",
+    "operator": "eq",
+    "expected": -1
+   },
+   "note": "and the pad index it names"
+  },
+  {
+   "tag": "g29-probe",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.Probe(160, 570)"
+   },
+   "note": "the probe names what stands at one point, so the assertion below is about that point"
+  },
+  {
+   "tag": "g29a-assert-state",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "ProbeState",
+    "operator": "eq",
+    "expected": "pad"
+   },
+   "note": "(160,570) is pad"
+  },
+  {
+   "tag": "g29b-assert-value",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "ProbeValue",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "and the pad index it names"
+  },
+  {
+   "tag": "g30-spin-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.ForceTestState(\"l=400,300;v=0,0;angle=0;fuel=400\")"
+   },
+   "note": "a pinned lander for the attitude tests"
+  },
+  {
+   "tag": "g31-spin-right",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.RotateRight()"
+   },
+   "note": "one attitude step clockwise"
+  },
+  {
+   "tag": "g32-assert-angle",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "AngleIndex",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "the attitude index is 1"
+  },
+  {
+   "tag": "g33-assert-deg",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "AngleDeg",
+    "operator": "eq",
+    "expected": 30
+   },
+   "note": "which is 30 degrees"
+  },
+  {
+   "tag": "g34-assert-thrust-x",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "ThrustX",
+    "operator": "eq",
+    "expected": 2
+   },
+   "note": "and its burn is (2,-3), from the integer table"
+  },
+  {
+   "tag": "g35-assert-thrust-y",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "ThrustY",
+    "operator": "eq",
+    "expected": -3
+   },
+   "note": "the y half of the same table entry"
+  },
+  {
+   "tag": "g36-spin-left",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.RotateLeft()"
+   },
+   "note": "one attitude step back"
+  },
+  {
+   "tag": "g37-assert-angle-back",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "AngleIndex",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "back to upright"
+  },
+  {
+   "tag": "g38-assert-rotations",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Rotations",
+    "operator": "eq",
+    "expected": 2
+   },
+   "note": "2 attitude changes counted"
+  },
+  {
+   "tag": "g39-spin-left-11",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.RotateLeft()"
+   },
+   "note": "one step anticlockwise wraps to 330 degrees"
+  },
+  {
+   "tag": "g40-assert-wrap",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "AngleIndex",
+    "operator": "eq",
+    "expected": 11
+   },
+   "note": "the last attitude"
+  },
+  {
+   "tag": "g41-assert-wrap-deg",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "AngleDeg",
+    "operator": "eq",
+    "expected": 330
+   },
+   "note": "330 degrees"
+  },
+  {
+   "tag": "g42-burn-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.ForceTestState(\"l=400,300;v=0,0;angle=0;fuel=10\")"
+   },
+   "note": "a pinned lander with ten fuel units"
+  },
+  {
+   "tag": "g43-burn",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.Thrust()"
+   },
+   "note": "one burn adds the attitude's thrust pair"
+  },
+  {
+   "tag": "g44-assert-vy",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Vy",
+    "operator": "eq",
+    "expected": -4
+   },
+   "note": "the velocity after the impulse (-4)"
+  },
+  {
+   "tag": "g45-assert-fuel",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Fuel",
+    "operator": "eq",
+    "expected": 9
+   },
+   "note": "the fuel after the burn (9)"
+  },
+  {
+   "tag": "g46-assert-count",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "ThrustCount",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "1 burn counted"
+  },
+  {
+   "tag": "g47-burn-step",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.StepFrames(1)"
+   },
+   "note": "one step: gravity adds 1 and the lander moves"
+  },
+  {
+   "tag": "g48-assert-vy-2",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Vy",
+    "operator": "eq",
+    "expected": -3
+   },
+   "note": "the velocity after gravity (-3)"
+  },
+  {
+   "tag": "g49-assert-ly",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Ly",
+    "operator": "eq",
+    "expected": 297
+   },
+   "note": "and the new altitude (y=297)"
+  },
+  {
+   "tag": "g50-assert-hash",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "StateHash",
+    "operator": "eq",
+    "expected": -1567979006
+   },
+   "note": "the world hash, recomputed in Python"
+  },
+  {
+   "tag": "g51-dry-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.ForceTestState(\"l=400,300;v=0,0;angle=0;fuel=0\")"
+   },
+   "note": "an empty tank"
+  },
+  {
+   "tag": "g52-dry-burn",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.Thrust()"
+   },
+   "note": "a burn with no fuel"
+  },
+  {
+   "tag": "g53-assert-rejected",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "RejectedThrusts",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "refused: no fuel"
+  },
+  {
+   "tag": "g54-assert-count-zero",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "ThrustCount",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "and no burn was counted"
+  },
+  {
+   "tag": "g55-hold-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.ForceTestState(\"l=400,300;v=0,0;angle=0;fuel=100;thrust=1\")"
+   },
+   "note": "the continuous burn switched on by the pinned state"
+  },
+  {
+   "tag": "g56-assert-flag",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "ThrustOn",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "the flag is on"
+  },
+  {
+   "tag": "g57-hold-step",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.StepFrames(1)"
+   },
+   "note": "one step: the burn and gravity both apply"
+  },
+  {
+   "tag": "g58-assert-hold-vy",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Vy",
+    "operator": "eq",
+    "expected": -3
+   },
+   "note": "burn -4 then gravity +1 gives vy=-3"
+  },
+  {
+   "tag": "g59-assert-hold-fuel",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Fuel",
+    "operator": "eq",
+    "expected": 99
+   },
+   "note": "and the fuel paid for it (99)"
+  },
+  {
+   "tag": "g60-hold-off",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.SetThrust(false)"
+   },
+   "note": "switch the burn off"
+  },
+  {
+   "tag": "g61-hold-step-2",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.StepFrames(1)"
+   },
+   "note": "one more step: gravity alone"
+  },
+  {
+   "tag": "g62-assert-hold-vy-2",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Vy",
+    "operator": "eq",
+    "expected": -2
+   },
+   "note": "now vy=-2"
+  },
+  {
+   "tag": "g63-assert-hold-fuel-2",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Fuel",
+    "operator": "eq",
+    "expected": 99
+   },
+   "note": "the fuel no longer moves (99)"
+  },
+  {
+   "tag": "g64-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.ForceTestState(\"l=400,548;v=0,3;angle=0;fuel=400\")"
+   },
+   "note": "the middle pad at the maximum surviving vertical speed minus one: it lands"
+  },
+  {
+   "tag": "g64a-assert-pinned",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Ly",
+    "operator": "eq",
+    "expected": 548
+   },
+   "note": "the pinned altitude"
+  },
+  {
+   "tag": "g64b-step",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.StepFrames(3)"
+   },
+   "note": "three steps are enough for the belly to reach the ground"
+  },
+  {
+   "tag": "g64c-assert-landed",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Landed",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "Python says landed=True"
+  },
+  {
+   "tag": "g64d-assert-crashed",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Crashed",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "Python says crashed=False"
+  },
+  {
+   "tag": "g64e-assert-pad",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PadIndex",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "the pad Python names is 1"
+  },
+  {
+   "tag": "g64f-assert-score",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Score",
+    "operator": "eq",
+    "expected": 800
+   },
+   "note": "remaining fuel times the pad multiplier: 800"
+  },
+  {
+   "tag": "g64g-assert-over",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GameOver",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "the game ended"
+  },
+  {
+   "tag": "g68-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.ForceTestState(\"l=400,548;v=0,6;angle=0;fuel=400\")"
+   },
+   "note": "one more and it is past max_vy: it crashes"
+  },
+  {
+   "tag": "g68a-assert-pinned",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Ly",
+    "operator": "eq",
+    "expected": 548
+   },
+   "note": "the pinned altitude"
+  },
+  {
+   "tag": "g68b-step",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.StepFrames(3)"
+   },
+   "note": "three steps are enough for the belly to reach the ground"
+  },
+  {
+   "tag": "g68c-assert-landed",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Landed",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "Python says landed=False"
+  },
+  {
+   "tag": "g68d-assert-crashed",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Crashed",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "Python says crashed=True"
+  },
+  {
+   "tag": "g68e-assert-pad",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PadIndex",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "the pad Python names is 1"
+  },
+  {
+   "tag": "g68f-assert-score",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Score",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "remaining fuel times the pad multiplier: 0"
+  },
+  {
+   "tag": "g68g-assert-over",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GameOver",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "the game ended"
+  },
+  {
+   "tag": "g72-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.ForceTestState(\"l=400,548;v=4,0;angle=0;fuel=400\")"
+   },
+   "note": "over the middle pad but too fast horizontally: it crashes"
+  },
+  {
+   "tag": "g72a-assert-pinned",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Ly",
+    "operator": "eq",
+    "expected": 548
+   },
+   "note": "the pinned altitude"
+  },
+  {
+   "tag": "g72b-step",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.StepFrames(3)"
+   },
+   "note": "three steps are enough for the belly to reach the ground"
+  },
+  {
+   "tag": "g72c-assert-landed",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Landed",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "Python says landed=False"
+  },
+  {
+   "tag": "g72d-assert-crashed",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Crashed",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "Python says crashed=True"
+  },
+  {
+   "tag": "g72e-assert-pad",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PadIndex",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "the pad Python names is 1"
+  },
+  {
+   "tag": "g72f-assert-score",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Score",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "remaining fuel times the pad multiplier: 0"
+  },
+  {
+   "tag": "g72g-assert-over",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GameOver",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "the game ended"
+  },
+  {
+   "tag": "g76-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.ForceTestState(\"l=400,548;v=0,0;angle=3;fuel=400\")"
+   },
+   "note": "slow enough, but 90 degrees over: it crashes"
+  },
+  {
+   "tag": "g76a-assert-pinned",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Ly",
+    "operator": "eq",
+    "expected": 548
+   },
+   "note": "the pinned altitude"
+  },
+  {
+   "tag": "g76b-step",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.StepFrames(3)"
+   },
+   "note": "three steps are enough for the belly to reach the ground"
+  },
+  {
+   "tag": "g76c-assert-landed",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Landed",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "Python says landed=False"
+  },
+  {
+   "tag": "g76d-assert-crashed",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Crashed",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "Python says crashed=True"
+  },
+  {
+   "tag": "g76e-assert-pad",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PadIndex",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "the pad Python names is 1"
+  },
+  {
+   "tag": "g76f-assert-score",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Score",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "remaining fuel times the pad multiplier: 0"
+  },
+  {
+   "tag": "g76g-assert-over",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GameOver",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "the game ended"
+  },
+  {
+   "tag": "g80-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.ForceTestState(\"l=400,548;v=0,0;angle=11;fuel=400\")"
+   },
+   "note": "330 degrees is one attitude step from upright, so the tolerance is two-sided: it lands"
+  },
+  {
+   "tag": "g80a-assert-pinned",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Ly",
+    "operator": "eq",
+    "expected": 548
+   },
+   "note": "the pinned altitude"
+  },
+  {
+   "tag": "g80b-step",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.StepFrames(3)"
+   },
+   "note": "three steps are enough for the belly to reach the ground"
+  },
+  {
+   "tag": "g80c-assert-landed",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Landed",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "Python says landed=True"
+  },
+  {
+   "tag": "g80d-assert-crashed",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Crashed",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "Python says crashed=False"
+  },
+  {
+   "tag": "g80e-assert-pad",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PadIndex",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "the pad Python names is 1"
+  },
+  {
+   "tag": "g80f-assert-score",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Score",
+    "operator": "eq",
+    "expected": 800
+   },
+   "note": "remaining fuel times the pad multiplier: 800"
+  },
+  {
+   "tag": "g80g-assert-over",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GameOver",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "the game ended"
+  },
+  {
+   "tag": "g84-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.ForceTestState(\"l=100,548;v=0,0;angle=0;fuel=400\")"
+   },
+   "note": "a perfect descent between the pads: it crashes because it missed every pad"
+  },
+  {
+   "tag": "g84a-assert-pinned",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Ly",
+    "operator": "eq",
+    "expected": 548
+   },
+   "note": "the pinned altitude"
+  },
+  {
+   "tag": "g84b-step",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.StepFrames(3)"
+   },
+   "note": "three steps are enough for the belly to reach the ground"
+  },
+  {
+   "tag": "g84c-assert-landed",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Landed",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "Python says landed=False"
+  },
+  {
+   "tag": "g84d-assert-crashed",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Crashed",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "Python says crashed=True"
+  },
+  {
+   "tag": "g84e-assert-pad",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PadIndex",
+    "operator": "eq",
+    "expected": -1
+   },
+   "note": "the pad Python names is -1"
+  },
+  {
+   "tag": "g84f-assert-score",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Score",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "remaining fuel times the pad multiplier: 0"
+  },
+  {
+   "tag": "g84g-assert-over",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GameOver",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "the game ended"
+  },
+  {
+   "tag": "g88-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.ForceTestState(\"l=160,548;v=0,0;angle=0;fuel=300\")"
+   },
+   "note": "the left pad pays its multiplier of 1"
+  },
+  {
+   "tag": "g88a-assert-pinned",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Ly",
+    "operator": "eq",
+    "expected": 548
+   },
+   "note": "the pinned altitude"
+  },
+  {
+   "tag": "g88b-step",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.StepFrames(3)"
+   },
+   "note": "three steps are enough for the belly to reach the ground"
+  },
+  {
+   "tag": "g88c-assert-landed",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Landed",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "Python says landed=True"
+  },
+  {
+   "tag": "g88d-assert-crashed",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Crashed",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "Python says crashed=False"
+  },
+  {
+   "tag": "g88e-assert-pad",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PadIndex",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "the pad Python names is 0"
+  },
+  {
+   "tag": "g88f-assert-score",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Score",
+    "operator": "eq",
+    "expected": 300
+   },
+   "note": "remaining fuel times the pad multiplier: 300"
+  },
+  {
+   "tag": "g88g-assert-over",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GameOver",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "the game ended"
+  },
+  {
+   "tag": "g92-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.ForceTestState(\"l=640,548;v=0,0;angle=0;fuel=250\")"
+   },
+   "note": "and the right pad too"
+  },
+  {
+   "tag": "g92a-assert-pinned",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Ly",
+    "operator": "eq",
+    "expected": 548
+   },
+   "note": "the pinned altitude"
+  },
+  {
+   "tag": "g92b-step",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.StepFrames(3)"
+   },
+   "note": "three steps are enough for the belly to reach the ground"
+  },
+  {
+   "tag": "g92c-assert-landed",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Landed",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "Python says landed=True"
+  },
+  {
+   "tag": "g92d-assert-crashed",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Crashed",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "Python says crashed=False"
+  },
+  {
+   "tag": "g92e-assert-pad",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PadIndex",
+    "operator": "eq",
+    "expected": 2
+   },
+   "note": "the pad Python names is 2"
+  },
+  {
+   "tag": "g92f-assert-score",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Score",
+    "operator": "eq",
+    "expected": 250
+   },
+   "note": "remaining fuel times the pad multiplier: 250"
+  },
+  {
+   "tag": "g92g-assert-over",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "GameOver",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "the game ended"
+  },
+  {
+   "tag": "g96-shot-crashed",
+   "port": "game",
+   "tool": "running_game_capture_screenshot",
+   "arguments": {
+    "save_path": "user://ll-t1.png"
+   },
+   "note": "the field after the last of the landing tests"
+  },
+  {
+   "tag": "g97-gone-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.ForceTestState(\"l=799,100;v=5,0;angle=0;fuel=100\")"
+   },
+   "note": "a lander at the right edge, moving right"
+  },
+  {
+   "tag": "g98-gone-step",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.StepFrames(1)"
+   },
+   "note": "one step: it leaves the field"
+  },
+  {
+   "tag": "g99-assert-crashed",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Crashed",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "an out-of-field flight is a crash"
+  },
+  {
+   "tag": "g100-assert-landed",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Landed",
+    "operator": "eq",
+    "expected": false
+   },
+   "note": "not a landing"
+  },
+  {
+   "tag": "g101-assert-pad",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PadIndex",
+    "operator": "eq",
+    "expected": -1
+   },
+   "note": "no pad"
+  },
+  {
+   "tag": "g102-assert-score",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Score",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "and no score"
+  },
+  {
+   "tag": "g103-descent-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.ForceTestState(\"\")"
+   },
+   "note": "the default start: y=100, no velocity, 500 fuel, upright"
+  },
+  {
+   "tag": "g104-descent-thrust-0",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.SetThrust(false)"
+   },
+   "note": "phase 1 of the searched descent: the burn is off"
+  },
+  {
+   "tag": "g105-descent-steps-0",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.StepFrames(26)"
+   },
+   "note": "phase 1: 26 steps of the same integer rules Python runs"
+  },
+  {
+   "tag": "g106-assert-x-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Lx",
+    "operator": "eq",
+    "expected": 400
+   },
+   "note": "checkpoint: x=400"
+  },
+  {
+   "tag": "g107-assert-y-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Ly",
+    "operator": "eq",
+    "expected": 451
+   },
+   "note": "checkpoint: y=451"
+  },
+  {
+   "tag": "g108-assert-vx-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Vx",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "checkpoint: vx=0"
+  },
+  {
+   "tag": "g109-assert-vy-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Vy",
+    "operator": "eq",
+    "expected": 26
+   },
+   "note": "checkpoint: vy=26"
+  },
+  {
+   "tag": "g110-assert-fuel-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Fuel",
+    "operator": "eq",
+    "expected": 500
+   },
+   "note": "checkpoint: fuel=500"
+  },
+  {
+   "tag": "g111-assert-steps-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Steps",
+    "operator": "eq",
+    "expected": 26
+   },
+   "note": "checkpoint: the flight is at step 26"
+  },
+  {
+   "tag": "g112-assert-hash-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "StateHash",
+    "operator": "eq",
+    "expected": -1453177863
+   },
+   "note": "checkpoint: the recomputed world hash"
+  },
+  {
+   "tag": "g113-assert-hook-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastHookSteps",
+    "operator": "eq",
+    "expected": 26
+   },
+   "note": "the hook applied 26 of the 26 steps"
+  },
+  {
+   "tag": "g114-descent-thrust-1",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.SetThrust(true)"
+   },
+   "note": "phase 2 of the searched descent: the burn is on"
+  },
+  {
+   "tag": "g115-descent-steps-1",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.StepFrames(8)"
+   },
+   "note": "phase 2: 8 steps of the same integer rules Python runs"
+  },
+  {
+   "tag": "g116-assert-x-1",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Lx",
+    "operator": "eq",
+    "expected": 400
+   },
+   "note": "checkpoint: x=400"
+  },
+  {
+   "tag": "g117-assert-y-1",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Ly",
+    "operator": "eq",
+    "expected": 551
+   },
+   "note": "checkpoint: y=551"
+  },
+  {
+   "tag": "g118-assert-vx-1",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Vx",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "checkpoint: vx=0"
+  },
+  {
+   "tag": "g119-assert-vy-1",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Vy",
+    "operator": "eq",
+    "expected": 2
+   },
+   "note": "checkpoint: vy=2"
+  },
+  {
+   "tag": "g120-assert-fuel-1",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Fuel",
+    "operator": "eq",
+    "expected": 492
+   },
+   "note": "checkpoint: fuel=492"
+  },
+  {
+   "tag": "g121-assert-steps-1",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Steps",
+    "operator": "eq",
+    "expected": 34
+   },
+   "note": "checkpoint: the flight is at step 34"
+  },
+  {
+   "tag": "g122-assert-hash-1",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "StateHash",
+    "operator": "eq",
+    "expected": 1409022013
+   },
+   "note": "checkpoint: the recomputed world hash"
+  },
+  {
+   "tag": "g123-assert-hook-1",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastHookSteps",
+    "operator": "eq",
+    "expected": 8
+   },
+   "note": "the hook applied 8 of the 8 steps"
+  },
+  {
+   "tag": "g124-descent-thrust-2",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.SetThrust(false)"
+   },
+   "note": "phase 3 of the searched descent: the burn is off"
+  },
+  {
+   "tag": "g125-descent-steps-2",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.StepFrames(1)"
+   },
+   "note": "phase 3: 1 steps of the same integer rules Python runs"
+  },
+  {
+   "tag": "g126-assert-x-2",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Lx",
+    "operator": "eq",
+    "expected": 400
+   },
+   "note": "checkpoint: x=400"
+  },
+  {
+   "tag": "g127-assert-y-2",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Ly",
+    "operator": "eq",
+    "expected": 554
+   },
+   "note": "checkpoint: y=554"
+  },
+  {
+   "tag": "g128-assert-vx-2",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Vx",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "checkpoint: vx=0"
+  },
+  {
+   "tag": "g129-assert-vy-2",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Vy",
+    "operator": "eq",
+    "expected": 3
+   },
+   "note": "checkpoint: vy=3"
+  },
+  {
+   "tag": "g130-assert-fuel-2",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Fuel",
+    "operator": "eq",
+    "expected": 492
+   },
+   "note": "checkpoint: fuel=492"
+  },
+  {
+   "tag": "g131-assert-steps-2",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Steps",
+    "operator": "eq",
+    "expected": 35
+   },
+   "note": "checkpoint: the flight is at step 35"
+  },
+  {
+   "tag": "g132-assert-hash-2",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "StateHash",
+    "operator": "eq",
+    "expected": 1494939258
+   },
+   "note": "checkpoint: the recomputed world hash"
+  },
+  {
+   "tag": "g133-assert-hook-2",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastHookSteps",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "the hook applied 1 of the 1 steps"
+  },
+  {
+   "tag": "g134-assert-landed",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Landed",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "the searched descent lands: True (trigger 430, burn 8 steps)"
+  },
+  {
+   "tag": "g135-assert-won",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Won",
+    "operator": "eq",
+    "expected": true
+   },
+   "note": "and it is a win"
+  },
+  {
+   "tag": "g136-assert-pad",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "PadIndex",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "on pad 1 (multiplier 2)"
+  },
+  {
+   "tag": "g137-assert-score",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Score",
+    "operator": "eq",
+    "expected": 984
+   },
+   "note": "remaining fuel 492 times 2 = 984"
+  },
+  {
+   "tag": "g138-assert-touch",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "TouchY",
+    "operator": "eq",
+    "expected": 554
+   },
+   "note": "the belly reached y=554"
+  },
+  {
+   "tag": "g139-assert-minvy",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "MinVy",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "the top of the arc: the most negative vy was 0"
+  },
+  {
+   "tag": "g140-assert-burns",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "ThrustCount",
+    "operator": "eq",
+    "expected": 8
+   },
+   "note": "the descent burned 8 fuel units"
+  },
+  {
+   "tag": "g141-shot-won",
+   "port": "game",
+   "tool": "running_game_capture_screenshot",
+   "arguments": {
+    "save_path": "user://ll-t2.png"
+   },
+   "note": "the landed eagle on the middle pad"
+  },
+  {
+   "tag": "g142-assert-screen-win",
+   "port": "game",
+   "tool": "running_game_assert_screen_text",
+   "arguments": {
+    "text": "THE EAGLE HAS LANDED"
+   },
+   "note": "the status label really is on the captured screen"
+  },
+  {
+   "tag": "g143-burn-after-win",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.Thrust()"
+   },
+   "note": "a burn after the landing"
+  },
+  {
+   "tag": "g144-assert-rejected-after",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "ThrustCount",
+    "operator": "eq",
+    "expected": 8
+   },
+   "note": "refused: the flight is over"
+  },
+  {
+   "tag": "g200-input-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.ForceTestState(\"l=400,100;v=0,0;angle=0;fuel=500\")"
+   },
+   "note": "a pinned lander for the declared-input scenario"
+  },
+  {
+   "tag": "g201-poll-on",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.SetPollInput(true)"
+   },
+   "note": "start listening to the declared action"
+  },
+  {
+   "tag": "g202-input-thrust",
+   "port": "game",
+   "tool": "running_game_run_test_scenario",
+   "arguments": {
+    "steps": [
+     {
+      "type": "input",
+      "action": "ll_thrust",
+      "pressed": true
+     },
+     {
+      "type": "wait",
+      "seconds": 0.45
+     },
+     {
+      "type": "assert",
+      "node_path": "Main",
+      "property": "ThrustCount",
+      "operator": "gte",
+      "expected": 1
+     }
+    ]
+   },
+   "note": "the declared action really burns (a press edge, so exactly one burn)"
+  },
+  {
+   "tag": "g203-assert-input-thrusts",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "InputThrusts",
+    "operator": "eq",
+    "expected": 1
+   },
+   "note": "the edge burned exactly once"
+  },
+  {
+   "tag": "g204-poll-off",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.SetPollInput(false)"
+   },
+   "note": "stop listening again, so the rest of the session is deterministic"
+  },
+  {
+   "tag": "g205-clock-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.ForceTestState(\"l=400,100;v=0,0;angle=0;fuel=500\")"
+   },
+   "note": "a fresh flight: with gravity on, the clock has something to move"
+  },
+  {
+   "tag": "g206-assert-clock-steps-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Steps",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "the clock is off, so nothing has moved yet"
+  },
+  {
+   "tag": "g207-assert-clock-hash-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "StateHash",
+    "operator": "eq",
+    "expected": 1382117432
+   },
+   "note": "the pinned world hash"
+  },
+  {
+   "tag": "g208-clock-on",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.SetAutoClock(60.0)"
+   },
+   "note": "the clock ticks 60 times a second (a float accumulator, F-1's fix)"
+  },
+  {
+   "tag": "g209-samples-clock",
+   "port": "game",
+   "tool": "running_game_get_node_property_samples",
+   "arguments": {
+    "node_path": "Main",
+    "properties": [
+     "Ly",
+     "Vy",
+     "Fuel",
+     "StateHash",
+     "Elapsed",
+     "Ticks"
+    ],
+    "frame_count": 30,
+    "frame_interval": 1
+   },
+   "note": "thirty frames with the clock running: gravity integrates and the world hash moves"
+  },
+  {
+   "tag": "g210-assert-clock-moved",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Steps",
+    "operator": "gt",
+    "expected": 0
+   },
+   "note": "MUST MOVE: if the clock is frozen this assertion FAILS (the M3-4 lesson)"
+  },
+  {
+   "tag": "g211-assert-clock-ly-moved",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Ly",
+    "operator": "gt",
+    "expected": 100
+   },
+   "note": "MUST FALL: a live clock has to move the lander down"
+  },
+  {
+   "tag": "g212-assert-clock-hash-moved",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "StateHash",
+    "operator": "neq",
+    "expected": 1382117432
+   },
+   "note": "MUST CHANGE: a frozen world would keep the pinned hash (the M3-4 lesson)"
+  },
+  {
+   "tag": "g213-assert-clock-auto-ticks",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "AutoTicks",
+    "operator": "gte",
+    "expected": 1
+   },
+   "note": "the clock applied at least one step"
+  },
+  {
+   "tag": "g214-clock-off",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.SetAutoClock(0.0)"
+   },
+   "note": "stop the clock"
+  },
+  {
+   "tag": "g215-assert-clock-off-auto",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastAutoSteps",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "with the clock off the frame contributes nothing"
+  },
+  {
+   "tag": "g216-hook-setup",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.ForceTestState(\"l=400,300;v=0,0;angle=0;fuel=500\")"
+   },
+   "note": "a pinned state again"
+  },
+  {
+   "tag": "g217-hook-step-3",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.StepFrames(3)"
+   },
+   "note": "three hook steps"
+  },
+  {
+   "tag": "g218-assert-hook-3",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastHookSteps",
+    "operator": "eq",
+    "expected": 3
+   },
+   "note": "the hook's own property"
+  },
+  {
+   "tag": "g219-samples-quiet",
+   "port": "game",
+   "tool": "running_game_get_node_property_samples",
+   "arguments": {
+    "node_path": "Main",
+    "properties": [
+     "Ly",
+     "Vy",
+     "Elapsed",
+     "Ticks"
+    ],
+    "frame_count": 12,
+    "frame_interval": 1
+   },
+   "note": "the clock is off, so the frame loop advances Elapsed and Ticks and nothing else"
+  },
+  {
+   "tag": "g220-assert-hook-still-3",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastHookSteps",
+    "operator": "eq",
+    "expected": 3
+   },
+   "note": "after twelve frames the hook's property is STILL 3: the clock never writes it (the G1 lesson)"
+  },
+  {
+   "tag": "g221-assert-auto-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "LastAutoSteps",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "while the clock's own property is 0"
+  },
+  {
+   "tag": "g222-assert-auto-ticks-0",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "AutoTicks",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "and it applied nothing at all"
+  },
+  {
+   "tag": "g223-assert-steps-still",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "Steps",
+    "operator": "eq",
+    "expected": 3
+   },
+   "note": "the flight did not move on its own"
+  },
+  {
+   "tag": "g224-final-readback",
+   "port": "game",
+   "tool": "running_game_execute_gdscript",
+   "arguments": {
+    "code": "var g = get_parent()\nreturn g.Dump()"
+   },
+   "note": "the final state on one line: every counter this session asserted"
+  },
+  {
+   "tag": "g225-shot-final",
+   "port": "game",
+   "tool": "running_game_capture_screenshot",
+   "arguments": {
+    "save_path": "user://ll-t3.png"
+   },
+   "note": "the final frame"
+  },
+  {
+   "tag": "g226-final-tree",
+   "port": "game",
+   "tool": "running_game_get_scene_tree",
+   "arguments": {},
+   "note": "the final tree: every node name is one this game made, no @-auto names"
+  },
+  {
+   "tag": "g227-assert-boundary",
+   "port": "game",
+   "tool": "running_game_assert_node_state",
+   "arguments": {
+    "node_path": "Main",
+    "property": "NoSuchPropertyAtAll",
+    "operator": "eq",
+    "expected": 0
+   },
+   "note": "the declared boundary failure: an assertion on a property that does not exist (-32001)"
+  }
+ ]
+}

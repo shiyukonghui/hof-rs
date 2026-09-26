@@ -1,0 +1,27 @@
+[gd_scene format=3 uid="uid://bb4vvutxh3rjn"]
+
+[ext_resource type="Script" uid="uid://7nkt0aoxi6ej" path="res://src/LunarLanderGame.cs" id="1_t6lrv"]
+
+[node name="Main" type="Node2D" unique_id=277182332]
+script = ExtResource("1_t6lrv")
+
+[node name="Background" type="ColorRect" parent="." unique_id=905766401]
+offset_right = 800.0
+offset_bottom = 600.0
+color = Color(0.02, 0.02, 0.05, 1)
+
+[node name="Hud" type="Label" parent="." unique_id=871218348]
+offset_left = 14.0
+offset_top = 10.0
+offset_right = 790.0
+offset_bottom = 44.0
+theme_override_font_sizes/font_size = 20
+text = "ALT 452  VX 0  VY 0  FUEL 500  ANGLE 0  BURNS 0  STEP 0"
+
+[node name="Status" type="Label" parent="." unique_id=1456499408]
+offset_left = 14.0
+offset_top = 48.0
+offset_right = 500.0
+offset_bottom = 82.0
+theme_override_font_sizes/font_size = 20
+text = "LAND SAFELY"

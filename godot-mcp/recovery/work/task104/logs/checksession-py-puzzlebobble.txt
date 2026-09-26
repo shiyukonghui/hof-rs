@@ -1,0 +1,5 @@
+file      : F:\moonbit-hof-rs\godot-mcp\tools\sessions\puzzlebobble\session.json
+bytes     : 45095
+calls     : 157 (editor 14 / game 143)
+utf8 json : OK
+CHECK_SESSION OK

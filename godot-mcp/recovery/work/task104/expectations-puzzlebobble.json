@@ -1,0 +1,604 @@
+[
+ {
+  "tag": "g02-assert-cols",
+  "property": "Cols",
+  "operator": "eq",
+  "expected": 8,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g03-assert-rows",
+  "property": "Rows",
+  "operator": "eq",
+  "expected": 12,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g04-assert-cell",
+  "property": "Cell",
+  "operator": "eq",
+  "expected": 40,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g05-assert-colors",
+  "property": "Colors",
+  "operator": "eq",
+  "expected": 6,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g06-assert-fail-row",
+  "property": "FailRow",
+  "operator": "eq",
+  "expected": 10,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g07-assert-fill-rows",
+  "property": "FillRows",
+  "operator": "eq",
+  "expected": 4,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g08-assert-seed",
+  "property": "InitSeed",
+  "operator": "eq",
+  "expected": 20251040,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g09-assert-board",
+  "property": "Board",
+  "operator": "eq",
+  "expected": "00304531/05323242/34451215/34534301/......../......../......../......../......../......../......../........",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g10-assert-board-hash",
+  "property": "BoardHash",
+  "operator": "eq",
+  "expected": -1955787933,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g11-assert-bubbles",
+  "property": "BubblesInUse",
+  "operator": "eq",
+  "expected": 32,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g12-assert-shooter-col",
+  "property": "ShooterCol",
+  "operator": "eq",
+  "expected": 4,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g16-assert-frozen-steps",
+  "property": "Steps",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g17-assert-frozen-auto",
+  "property": "LastAutoSteps",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g18-assert-frozen-hook",
+  "property": "LastHookSteps",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g21a-assert-state",
+  "property": "ProbeState",
+  "operator": "eq",
+  "expected": "empty",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g21b-assert-value",
+  "property": "ProbeValue",
+  "operator": "eq",
+  "expected": -1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g22a-assert-state",
+  "property": "ProbeState",
+  "operator": "eq",
+  "expected": "shooter",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g22b-assert-value",
+  "property": "ProbeValue",
+  "operator": "eq",
+  "expected": -1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g23a-assert-state",
+  "property": "ProbeState",
+  "operator": "eq",
+  "expected": "outside",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g23b-assert-value",
+  "property": "ProbeValue",
+  "operator": "eq",
+  "expected": -1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g24a-assert-state",
+  "property": "ProbeState",
+  "operator": "eq",
+  "expected": "empty",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g24b-assert-value",
+  "property": "ProbeValue",
+  "operator": "eq",
+  "expected": -1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g26-assert-bubbles",
+  "property": "BubblesInUse",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g27a-assert-state",
+  "property": "ProbeState",
+  "operator": "eq",
+  "expected": "occupied",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g27b-assert-value",
+  "property": "ProbeValue",
+  "operator": "eq",
+  "expected": 3,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g30-assert-angle",
+  "property": "AngleIndex",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g31-assert-moves",
+  "property": "Moves",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g33-assert-angle-4",
+  "property": "AngleIndex",
+  "operator": "eq",
+  "expected": 4,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g35-assert-rejected",
+  "property": "RejectedMoves",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g37-assert-angle-clamped",
+  "property": "AngleIndex",
+  "operator": "eq",
+  "expected": 4,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g41-assert-shots",
+  "property": "Shots",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g42-assert-proj-start",
+  "property": "ProjCol",
+  "operator": "eq",
+  "expected": 4,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g43-assert-proj-row",
+  "property": "ProjRow",
+  "operator": "eq",
+  "expected": 11,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g45-assert-proj-1",
+  "property": "ProjCol",
+  "operator": "eq",
+  "expected": 2,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g46-assert-proj-row-1",
+  "property": "ProjRow",
+  "operator": "eq",
+  "expected": 10,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g48-assert-proj-2",
+  "property": "ProjCol",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g50-assert-proj-3",
+  "property": "ProjCol",
+  "operator": "eq",
+  "expected": 2,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g51-assert-proj-row-3",
+  "property": "ProjRow",
+  "operator": "eq",
+  "expected": 8,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g52a-assert-probe",
+  "property": "ProbeState",
+  "operator": "eq",
+  "expected": "projectile",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g52b-assert-probe-value",
+  "property": "ProbeValue",
+  "operator": "eq",
+  "expected": 2,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g56-assert-attach-col",
+  "property": "LastAttachCol",
+  "operator": "eq",
+  "expected": 4,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g57-assert-attach-row",
+  "property": "LastAttachRow",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g58-assert-chain-0",
+  "property": "LastChain",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g59-assert-board",
+  "property": "Board",
+  "operator": "eq",
+  "expected": "....2.../......../......../......../......../......../......../......../......../......../......../........",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g60-assert-bubbles",
+  "property": "BubblesInUse",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g61-assert-hook",
+  "property": "LastHookSteps",
+  "operator": "eq",
+  "expected": 12,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g65-assert-attach",
+  "property": "LastAttachCol",
+  "operator": "eq",
+  "expected": 4,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g66-assert-attach-row",
+  "property": "LastAttachRow",
+  "operator": "eq",
+  "expected": 3,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g67-assert-cleared",
+  "property": "LastCleared",
+  "operator": "eq",
+  "expected": 3,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g68-assert-dropped",
+  "property": "LastDropped",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g69-assert-chain",
+  "property": "LastChain",
+  "operator": "eq",
+  "expected": 2,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g70-assert-score",
+  "property": "Score",
+  "operator": "eq",
+  "expected": 70,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g71-assert-board",
+  "property": "Board",
+  "operator": "eq",
+  "expected": "0......./......../......../......../......../......../......../......../......../......../......../........",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g72-assert-board-hash",
+  "property": "BoardHash",
+  "operator": "eq",
+  "expected": -528365601,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g76-assert-attach",
+  "property": "LastAttachRow",
+  "operator": "eq",
+  "expected": 6,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g77-assert-cleared",
+  "property": "LastCleared",
+  "operator": "eq",
+  "expected": 3,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g78-assert-dropped",
+  "property": "LastDropped",
+  "operator": "eq",
+  "expected": 3,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g79-assert-chain",
+  "property": "LastChain",
+  "operator": "eq",
+  "expected": 4,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g80-assert-score",
+  "property": "Score",
+  "operator": "eq",
+  "expected": 210,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g81-assert-board",
+  "property": "Board",
+  "operator": "eq",
+  "expected": "0......./......../......../......../......../......../......../......../......../......../......../........",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g82-assert-totals",
+  "property": "TotalDropped",
+  "operator": "eq",
+  "expected": 3,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g86-assert-attach",
+  "property": "LastAttachRow",
+  "operator": "eq",
+  "expected": 10,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g87-assert-failed",
+  "property": "Failed",
+  "operator": "eq",
+  "expected": true,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g88-assert-over",
+  "property": "GameOver",
+  "operator": "eq",
+  "expected": true,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g89-assert-not-won",
+  "property": "Won",
+  "operator": "eq",
+  "expected": false,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g90-assert-score",
+  "property": "Score",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g95-assert-cleared",
+  "property": "LastCleared",
+  "operator": "eq",
+  "expected": 3,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g96-assert-bubbles",
+  "property": "BubblesInUse",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g97-assert-won",
+  "property": "Won",
+  "operator": "eq",
+  "expected": true,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g98-assert-over",
+  "property": "GameOver",
+  "operator": "eq",
+  "expected": true,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g99-assert-failed",
+  "property": "Failed",
+  "operator": "eq",
+  "expected": false,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g100-assert-score",
+  "property": "Score",
+  "operator": "eq",
+  "expected": 30,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g104-assert-shots",
+  "property": "Shots",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g108-assert-input-shots",
+  "property": "InputShots",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g112-assert-clock-steps-0",
+  "property": "Steps",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g113-assert-clock-hash-0",
+  "property": "BoardHash",
+  "operator": "eq",
+  "expected": 120778397,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g116-assert-clock-moved",
+  "property": "Steps",
+  "operator": "gt",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g117-assert-clock-hash-moved",
+  "property": "BoardHash",
+  "operator": "neq",
+  "expected": 120778397,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g118-assert-clock-auto-ticks",
+  "property": "AutoTicks",
+  "operator": "gte",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g120-assert-clock-off-auto",
+  "property": "LastAutoSteps",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g123-assert-hook-3",
+  "property": "LastHookSteps",
+  "operator": "eq",
+  "expected": 3,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g125-assert-hook-still-3",
+  "property": "LastHookSteps",
+  "operator": "eq",
+  "expected": 3,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g126-assert-auto-0",
+  "property": "LastAutoSteps",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g127-assert-auto-ticks-0",
+  "property": "AutoTicks",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g128-assert-steps-still",
+  "property": "Steps",
+  "operator": "eq",
+  "expected": 3,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g132-assert-boundary",
+  "property": "NoSuchPropertyAtAll",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": true
+ }
+]

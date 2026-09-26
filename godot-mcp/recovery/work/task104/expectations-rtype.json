@@ -1,0 +1,702 @@
+[
+ {
+  "tag": "g02-assert-field-w",
+  "property": "FieldW",
+  "operator": "eq",
+  "expected": 800,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g03-assert-field-h",
+  "property": "FieldH",
+  "operator": "eq",
+  "expected": 600,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g04-assert-hud",
+  "property": "HudBottom",
+  "operator": "eq",
+  "expected": 64,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g05-assert-player-speed",
+  "property": "PlayerSpeed",
+  "operator": "eq",
+  "expected": 8,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g06-assert-bullet-speed",
+  "property": "BulletSpeed",
+  "operator": "eq",
+  "expected": 16,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g07-assert-enemy-speed",
+  "property": "EnemySpeed",
+  "operator": "eq",
+  "expected": 3,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g08-assert-enemy-bullet-speed",
+  "property": "EnemyBulletSpeed",
+  "operator": "eq",
+  "expected": 6,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g09-assert-wave-max",
+  "property": "WaveMax",
+  "operator": "eq",
+  "expected": 3,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g10-assert-lives",
+  "property": "Lives",
+  "operator": "eq",
+  "expected": 3,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g11-assert-score",
+  "property": "Score",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g12-assert-start-pos",
+  "property": "PlayerY",
+  "operator": "eq",
+  "expected": 300,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g16-assert-frozen-steps",
+  "property": "Steps",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g17-assert-frozen-auto",
+  "property": "LastAutoSteps",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g18-assert-frozen-hook",
+  "property": "LastHookSteps",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g20-assert-probe-pos-x",
+  "property": "PlayerX",
+  "operator": "eq",
+  "expected": 80,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g21-assert-probe-pos-y",
+  "property": "PlayerY",
+  "operator": "eq",
+  "expected": 300,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g22a-assert-probe-state",
+  "property": "ProbeState",
+  "operator": "eq",
+  "expected": "player",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g23a-assert-probe-state",
+  "property": "ProbeState",
+  "operator": "eq",
+  "expected": "empty",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g24a-assert-probe-state",
+  "property": "ProbeState",
+  "operator": "eq",
+  "expected": "outside",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g25a-assert-probe-state",
+  "property": "ProbeState",
+  "operator": "eq",
+  "expected": "empty",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g27-assert-x-after-right",
+  "property": "PlayerX",
+  "operator": "eq",
+  "expected": 88,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g28-assert-moves",
+  "property": "Moves",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g30-assert-y-after-up",
+  "property": "PlayerY",
+  "operator": "eq",
+  "expected": 292,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g32-assert-y-back",
+  "property": "PlayerY",
+  "operator": "eq",
+  "expected": 300,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g34-assert-x-clamped-left",
+  "property": "PlayerX",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g35-assert-hash-after-clamp",
+  "property": "StateHash",
+  "operator": "eq",
+  "expected": 277145704,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g37-assert-rejected",
+  "property": "RejectedMoves",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g38-assert-moves-still",
+  "property": "Moves",
+  "operator": "eq",
+  "expected": 4,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g40-assert-y-top",
+  "property": "PlayerY",
+  "operator": "eq",
+  "expected": 64,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g42-assert-y-bottom",
+  "property": "PlayerY",
+  "operator": "eq",
+  "expected": 584,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g44-assert-x-right",
+  "property": "PlayerX",
+  "operator": "eq",
+  "expected": 776,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g46-assert-rejected-2",
+  "property": "RejectedMoves",
+  "operator": "eq",
+  "expected": 2,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g49-assert-shots",
+  "property": "BulletsFired",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g50-assert-active",
+  "property": "BulletsActive",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g51-assert-bullet-list",
+  "property": "BulletList",
+  "operator": "eq",
+  "expected": "104,306",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g52a-assert-probe-bullet",
+  "property": "ProbeState",
+  "operator": "eq",
+  "expected": "bullet",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g54-assert-list-1",
+  "property": "BulletList",
+  "operator": "eq",
+  "expected": "120,306",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g55-assert-steps-1",
+  "property": "Steps",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g57-assert-list-4",
+  "property": "BulletList",
+  "operator": "eq",
+  "expected": "168,306",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g58-assert-hook-3",
+  "property": "LastHookSteps",
+  "operator": "eq",
+  "expected": 3,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g62-assert-out-empty",
+  "property": "BulletList",
+  "operator": "eq",
+  "expected": "",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g63-assert-out-active",
+  "property": "BulletsActive",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g64-assert-out-steps",
+  "property": "Steps",
+  "operator": "eq",
+  "expected": 44,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g65-assert-out-hook",
+  "property": "LastHookSteps",
+  "operator": "eq",
+  "expected": 44,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g67-assert-enemies",
+  "property": "EnemiesAlive",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g68-assert-before-hash",
+  "property": "StateHash",
+  "operator": "eq",
+  "expected": -892898965,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g70-assert-killed",
+  "property": "EnemiesKilled",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g71-assert-alive",
+  "property": "EnemiesAlive",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g72-assert-score",
+  "property": "Score",
+  "operator": "eq",
+  "expected": 100,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g73-assert-bullet-gone",
+  "property": "BulletList",
+  "operator": "eq",
+  "expected": "",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g74-assert-after-hash",
+  "property": "StateHash",
+  "operator": "eq",
+  "expected": -1727393376,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g77-assert-spawned-1",
+  "property": "EnemiesSpawned",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g78-assert-left-1",
+  "property": "WaveLeftToSpawn",
+  "operator": "eq",
+  "expected": 3,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g79-assert-countdown-1",
+  "property": "SpawnCountdown",
+  "operator": "eq",
+  "expected": 6,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g80-assert-list-1",
+  "property": "EnemyList",
+  "operator": "eq",
+  "expected": "827,120,44",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g82-assert-spawned-4",
+  "property": "EnemiesSpawned",
+  "operator": "eq",
+  "expected": 3,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g83-assert-left-0",
+  "property": "WaveLeftToSpawn",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g84-assert-list-4",
+  "property": "EnemyList",
+  "operator": "eq",
+  "expected": "773,120,26|794,190,33|815,260,40",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g85-assert-formation-rows",
+  "property": "EnemiesAlive",
+  "operator": "eq",
+  "expected": 3,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g88-assert-eshots",
+  "property": "EnemyShotsFired",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g89-assert-eshots-active",
+  "property": "EnemyBulletsActive",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g90-assert-ebullet-list",
+  "property": "EnemyBulletList",
+  "operator": "eq",
+  "expected": "389,306",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g91-assert-enemy-list",
+  "property": "EnemyList",
+  "operator": "eq",
+  "expected": "397,300,45",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g93-assert-ebullet-list-2",
+  "property": "EnemyBulletList",
+  "operator": "eq",
+  "expected": "383,306",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g96-assert-lives",
+  "property": "Lives",
+  "operator": "eq",
+  "expected": 2,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g97-assert-over",
+  "property": "GameOver",
+  "operator": "eq",
+  "expected": false,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g98-assert-ebullets",
+  "property": "EnemyBulletList",
+  "operator": "eq",
+  "expected": "",
+  "declared_boundary": false
+ },
+ {
+  "tag": "g99-assert-hash",
+  "property": "StateHash",
+  "operator": "eq",
+  "expected": -1154936247,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g102-assert-escaped",
+  "property": "EnemiesEscaped",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g103-assert-lives",
+  "property": "Lives",
+  "operator": "eq",
+  "expected": 2,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g104-assert-alive",
+  "property": "EnemiesAlive",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g107-assert-lives-0",
+  "property": "Lives",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g108-assert-over",
+  "property": "GameOver",
+  "operator": "eq",
+  "expected": true,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g109-assert-not-won",
+  "property": "Won",
+  "operator": "eq",
+  "expected": false,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g110-assert-hook-applied",
+  "property": "LastHookSteps",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g112-assert-shots-zero",
+  "property": "BulletsFired",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g114-assert-rejected",
+  "property": "RejectedMoves",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g119-assert-input-shots",
+  "property": "InputShots",
+  "operator": "eq",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g175-assert-won",
+  "property": "Won",
+  "operator": "eq",
+  "expected": true,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g176-assert-over",
+  "property": "GameOver",
+  "operator": "eq",
+  "expected": true,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g177-assert-spawned",
+  "property": "EnemiesSpawned",
+  "operator": "eq",
+  "expected": 15,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g178-assert-killed",
+  "property": "EnemiesKilled",
+  "operator": "eq",
+  "expected": 6,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g179-assert-escaped",
+  "property": "EnemiesEscaped",
+  "operator": "eq",
+  "expected": 9,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g180-assert-lives",
+  "property": "Lives",
+  "operator": "eq",
+  "expected": 49,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g181-assert-score",
+  "property": "Score",
+  "operator": "eq",
+  "expected": 600,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g182-assert-wave",
+  "property": "Wave",
+  "operator": "eq",
+  "expected": 3,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g183-assert-steps",
+  "property": "Steps",
+  "operator": "eq",
+  "expected": 960,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g187-assert-clock-steps-0",
+  "property": "Steps",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g188-assert-clock-hash-0",
+  "property": "StateHash",
+  "operator": "eq",
+  "expected": -1156095780,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g191-assert-clock-moved",
+  "property": "Steps",
+  "operator": "gt",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g192-assert-clock-spawned",
+  "property": "EnemiesSpawned",
+  "operator": "gt",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g193-assert-clock-hash-moved",
+  "property": "StateHash",
+  "operator": "neq",
+  "expected": -1156095780,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g194-assert-clock-auto-ticks",
+  "property": "AutoTicks",
+  "operator": "gte",
+  "expected": 1,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g196-assert-clock-off-auto",
+  "property": "LastAutoSteps",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g199-assert-hook-3",
+  "property": "LastHookSteps",
+  "operator": "eq",
+  "expected": 3,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g201-assert-hook-still-3",
+  "property": "LastHookSteps",
+  "operator": "eq",
+  "expected": 3,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g202-assert-auto-0",
+  "property": "LastAutoSteps",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g203-assert-auto-ticks-0",
+  "property": "AutoTicks",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g204-assert-steps-still",
+  "property": "Steps",
+  "operator": "eq",
+  "expected": 3,
+  "declared_boundary": false
+ },
+ {
+  "tag": "g208-assert-boundary",
+  "property": "NoSuchPropertyAtAll",
+  "operator": "eq",
+  "expected": 0,
+  "declared_boundary": true
+ }
+]
