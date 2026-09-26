@@ -1,0 +1,24 @@
+feat(godot-mcp): TASK-093 - the 2nd and 3rd C# games (Breakout, Snake), every byte of them written by MCP calls, plus the cross-round GAME-LOOP-LOG
+
+Both projects are instantiated from _template by new_game.ps1 and then built
+entirely through the MCP endpoints: project_create_script / project_edit_script
+write the C#, editor_add_nodes_batch writes the scenes (21 nodes for Breakout,
+40 for Snake), editor_set_node_script_batch attaches the scripts,
+editor_add_input_action declares the actions, project_build_csharp builds
+(exit_code=0) and editor_save_scene writes the scene file. tools/sessions/<game>/
+session.json is therefore the replay script as well as the record.
+
+Breakout: paddle / ball / 15-brick wall, brick destruction, scoring and both
+endings. Snake: grid movement, food growth, self-collision, wall collision and
+scoring. Every observable is a real Godot property (Export or node property), so
+the MCP trace carries it, the ledger judges it and an assertion can pin it.
+
+Both games reach facts_complete 100% (Breakout 21/21 + 34/34, Snake 20/20 +
+31/31) and each carries a deliberately failing assertion plus a boundary call.
+The pixel-difference half of the evidence is blocked by the environment defect
+D-1 (every capture PNG in a run is byte-identical) - recorded, reproduced by a
+self-checking script, root cause unknown and not guessed at.
+
+GAME-LOOP-LOG.md is the new cross-round ledger: one row per game (calls, facts,
+verdicts, defects split into tool vs game/driver, evidence path) with Pong's
+numbers copied from TASK-091's report, plus the defect registry for this round.

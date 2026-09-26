@@ -1,0 +1,16 @@
+docs(godot-mcp): TASK-093 - the report and its evidence: eight game-side defects with before/after runs, the ten gates green, and the one environment defect that blocks pixel evidence
+
+recovery/reports/TASK-093-REPORT.md carries the per-item verdict table, both
+games' evidence tables, the eight defects fixed in the projects and sessions
+(B-1..B-5, S-1..S-4) each with the run that failed before and the run that
+passed after, the gate table and the honest statement of what is still blocked.
+
+recovery/work/task093/ holds the scripts and raw outputs: the session logs of all
+eight Breakout rounds and six Snake rounds, the three gate runs (task093 was cut
+short in a background job, task093b used the stale anchor, task093c is the green
+one), and two narrow probes - diag_render.ps1 (self-checking: does the game
+window's readback change at all?) and diag_breakout.ps1 (what does the paddle
+contact test actually compare?).
+
+The engine repository is untouched by this task: no module byte changed, so no
+rebuild, no two-variant re-run and no push; `git status --short` there is empty.

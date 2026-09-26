@@ -128,3 +128,21 @@ g09 exit=0 wall=2.6s cmd= powershell -NoProfile -ExecutionPolicy Bypass -File mo
     | ANCHOR_JUDGE SUMMARY anchor=cf554ef58 anchor_reported=cf554ef58 head=cf554ef58 verdict=ANCHOR_EQUAL ancestor=yes diff_count=0 safe_count=0 red_count=0 criterion="A is an ancestor of H (A == H counts) and git diff --name-only A..H contains no compile input (safe = declared non-compiling whitelist, everything else red)" reason="the binary self-reports the very commit HEAD points at; the diff is empty by construction" diff=[<empty>]
     | ANCHOR_JUDGE RESULT PASS
     | GATE_EXIT=0 
+g10 exit=0 wall=50.7s cmd= powershell -NoProfile -ExecutionPolicy Bypass -File modules\mcp_server\scripts\accept_m1.ps1
+    | PASS  case8_concurrent_100
+    | PASS  case9_keep_alive_two_requests
+    | PASS  case10_half_packet
+    | PASS  case11_body_too_large
+    | PASS  case15_connection_reaping
+    | PASS  case16_expect_100_continue
+    | PASS  case17_header_too_large_431
+    | PASS  case18_bare_lf_terminator_400
+    | PASS  case19_invalid_utf8_body_warns
+    | PASS  case20_tools_list_cross_process_restart
+    | PASS  case12_game_process_endpoint
+    | PASS  case13_game_without_port
+    | PASS  case14_port_occupied
+    | PASS  guard_user_port_9877
+    | 22/22 cases passed
+    | GATE_EXIT=0 
+summary=F:\moonbit-hof-rs\godot-mcp\runs\gates\task093c\summary.txt
