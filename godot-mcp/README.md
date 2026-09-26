@@ -21,9 +21,12 @@ godot-mcp/
 │   ├── mcpplay/  mcpplay8/       ←   重建期的 GDScript 试测工程（原样迁入，留档）
 ├── tools/                        ← 驱动与报告工具
 │   ├── new_game.ps1              ←   从 _template 生成一个新游戏工程
+│   ├── reset_game.ps1            ←   把一个游戏工程恢复成刚生成的状态（唯一带删除的工具）
 │   ├── run_game_session.ps1      ←   ★ 统一试测驱动：起 9888/9889 + trace + 重放 + 台账 + 每游戏报告
-│   └── sessions/                 ←   各游戏的调用集（JSON）
-└── runs/                         ← 试测产物：trace / ledger / 截图 / 每游戏报告（不入库）
+│   ├── game_report.py            ←   每游戏报告：判定分布 + facts_complete + 独立复算像素差 + 缺陷清单
+│   ├── run_gates.ps1             ←   九道门 + accept_m1，每门一个 cmd 子进程
+│   └── sessions/                 ←   各游戏的调用集（JSON + payload/）
+└── runs/                         ← 试测产物：trace / ledger / 截图 / 每游戏报告 / 门日志（不入库）
 ```
 
 主仓 `.gitignore` 排除 `godot-mcp/godot/`（整棵）、各工程的 `.godot/` `bin/` `obj/` `.mono/`
@@ -123,7 +126,21 @@ powershell -NoProfile -ExecutionPolicy Bypass -File F:\moonbit-hof-rs\godot-mcp\
 
 ---
 
-## 6. 铁律（每题任务书都照抄）
+## 6. 九道门
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File F:\moonbit-hof-rs\godot-mcp\tools\run_gates.ps1 -Tag task091
+```
+
+每道门一个 `cmd.exe` 子进程、各自的 stdout/stderr，退出码在子进程内部回显后解析
+（PowerShell 5.1 对重定向子进程的 `ExitCode` 时好时坏）。日志落在 `runs\gates\<tag>\`。
+第 10 条是 `accept_m1.ps1`（22 个 case），它不是「门」但每次都跟着跑。
+
+**改了 `modules/mcp_server` 就要重建两个变体再跑门**（见 §3）。
+
+---
+
+## 7. 铁律（每题任务书都照抄）
 
 1. **禁止一切 shell 重定向**：输出用 `Start-Process -RedirectStandardOutput <绝对路径>` 或 `-OutFile`。
 2. **破坏性命令默认拒绝**：非空 / 绝对 / 白名单前缀 / 先打印清单；含通配符或 `..` → `throw`。
