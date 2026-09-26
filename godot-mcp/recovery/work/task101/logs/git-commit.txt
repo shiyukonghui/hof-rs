@@ -1,0 +1,5 @@
+[master 5e43af0] docs(godot-mcp): TASK-101 - the report: the two new C# games with their real call counts, verdict distributions, assertion tallies and independently recomputed pixel columns, the four defects their first runs caught (a session that read a fact from the wrong moment, a payload that consumed the enemy it walked into, a session that asserted a probe it never made, and a pinned board whose fuse had already decided the level so the 30-frame sample watched a frozen board while every assertion still passed), each with its fix and re-run, and the gate runner's doc-only preflight that skipped the ten gates because not one module byte changed
+ 3 files changed, 260 insertions(+), 1 deletion(-)
+ create mode 100644 godot-mcp/recovery/reports/TASK-101-REPORT.md
+ create mode 100644 godot-mcp/recovery/work/task101/commit-message-report.txt
+COMMIT_EXIT=0
