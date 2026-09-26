@@ -1,16 +1,18 @@
 param(
-  [string]$Root = 'F:\moonbit-hof-rs'
+  [string]$Root = 'F:\moonbit-hof-rs',
+  [string]$Tag = 'final-snapshot'
 )
 # TASK-104: the two-repository snapshot the report quotes, written through
 # Start-Process so the helper owns its stdout/stderr (iron rule 1: no shell
-# redirection anywhere).
+# redirection anywhere). -Tag names the output pair so the mid-task snapshot the
+# report quotes verbatim is not overwritten by the closing one.
 $ErrorActionPreference = 'Stop'
 $work = Join-Path $Root 'godot-mcp\recovery\work\task104'
 $logs = Join-Path $work 'logs'
 New-Item -ItemType Directory -Force -Path $logs | Out-Null
-$out = Join-Path $logs 'final-snapshot.txt'
-$err = Join-Path $logs 'final-snapshot.err.txt'
-$bat = Join-Path $logs 'final-snapshot.cmd'
+$out = Join-Path $logs ("{0}.txt" -f $Tag)
+$err = Join-Path $logs ("{0}.err.txt" -f $Tag)
+$bat = Join-Path $logs ("{0}.cmd" -f $Tag)
 $batch = @(
   '@echo off',
   'set MAIN=F:\moonbit-hof-rs',

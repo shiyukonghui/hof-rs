@@ -303,6 +303,52 @@ INFO: No tasks are running which match the specified criteria.
 
 （`SNAPSHOT_EXIT=1` 是那条 `findstr` 无匹配的退出码，不是错误。）**未改变机器显示或串流状态。**
 
+### F4 报告写完之后的三次自查提交（收尾时的最终状态）
+
+本报告的第一版（提交 `60bc9fb`）里有两处数字**没有经得起复查**，都当场改掉并各留一个提交，
+而不是留在报告里等人替我发现：
+
+| 提交 | 改了什么 | 为什么 |
+|---|---|---|
+| `4ea0da5` | 断言分解与 20 款调用合计 | ①把「101 PASS」写成「99 + 1 条边界 + 1 条屏幕文本」，**分类差一格**：`assert_summary.py` 逐 tag 输出显示 101 里 99 条带 `property`，另两条是屏幕文本与 `run_test_scenario` 自带的断言，而那条声明的 `-32001` **不进任何一栏**；②把 20 行两列相加应是 **2 554**（303 / 2 251），原写 2 441（300 / 2 141） |
+| `8cf0227` | `--import` 累计口径 | 原写 **3/48**（把 TASK-099 自己的 `3/23` 当成 TASK-100 之前的基数）。台账里的链是 `3/13 → 3/17 → 3/23 → 3/28`（TASK-102）`→ 3/34`（TASK-103），所以本轮是 **3/38**，`3/23` 之后共 **15 次导入、0 次复现** |
+| `e3b8b57` | 最终审计脚本 | `audit_report_claims.py` 从运行产物与 20 行台账**重新推导**每一个头条数字并打印出来对账，输出存 `logs\audit-claims.txt`，与报告逐项一致；同一次顺带修掉行 20 的一个用词 |
+
+三处修订都用**Python 写入器 + 逐条「恰好匹配一次」断言**做的，所以不可能静默改不动。
+**这句话本身是留档：本报告的数字是我在写完之后又验过一遍的，不是初稿。**
+
+收尾时的最终状态（逐字取自 `logs\closing.txt`）：
+
+主仓 `F:\moonbit-hof-rs`（`master`），`rev-parse HEAD` = `e3b8b57894eb77888502cb9d5eb940be886c3289`：
+
+```
+e3b8b57 docs(godot-mcp): TASK-104 - the final audit script re-derives every headline number from the run products and the ledger, and one wording fix
+8cf0227 docs(godot-mcp): TASK-104 - the --import cumulative denominator is corrected to 3/38 (it was written as 3/48 from a mis-read base)
+4ea0da5 docs(godot-mcp): TASK-104 - the assertion tallies and the twenty-game call total are corrected against the run products instead of left as first written
+60bc9fb docs(godot-mcp): TASK-104 - the report: the three new C# games with their real call counts, verdict distributions, assertion tallies and independently recomputed pixel columns, the one session defect their first runs caught, the two defects of the evidence tool itself, the twenty-game milestone, and the honest statement that no module byte changed so the ten gates and accept_m1 were NOT re-run
+a8e0e56 feat(godot-mcp): TASK-104 (D152) - the 18th, 19th and 20th C# games are delivered through MCP calls only, which closes D138's twenty-game target
+4e88119 docs(godot-mcp): TASK-103 - the report's F4 states the closing boundary the way it was measured: the helper's post-commit log/status lines go into the same handle, so a pair stays modified
+9dc688c docs(godot-mcp): TASK-103 - F4 says exactly which file a commit helper leaves behind: one .err.txt, because the .out.txt it just wrote is taken into the commit itself
+da9edda docs(godot-mcp): TASK-103 - the report's F4 states the closing boundary exactly instead of claiming a clean tree the last commit cannot produce
+```
+
+`git status --short`（主仓，取 `closing.txt` 那一刻）：
+
+```
+ M godot-mcp/recovery/work/task104/final_snapshot.ps1
+ M godot-mcp/recovery/work/task104/logs/git-audit.err.txt
+ M godot-mcp/recovery/work/task104/logs/git-audit.out.txt
+?? godot-mcp/recovery/work/task104/logs/closing.cmd
+?? godot-mcp/recovery/work/task104/logs/closing.err.txt
+?? godot-mcp/recovery/work/task104/logs/closing.txt
+```
+
+同样**全是收尾助手自己写的**（`git-audit.*` 是 `git_commit.ps1` 在提交之后写回去的那一对；
+`final_snapshot.ps1` 这次为了不覆盖 F1 引用的那一份而被加上了 `-Tag`，于是它自己也成了待提交项；
+`closing.*` 是刚写出来的快照）。收尾时的引擎仓仍然是 **`1f9d0cb1c9`、工作树空、无 push**。
+本报告所在的这一次提交会把上面这 6 项收进仓 —— 这正是 TASK-102/103 记下的那条**收尾自身的边界**
+（按铁律 1 拥有自己输出的助手，其日志必然落在它所属的提交之后），**到此为止，不再提交**。
+
 ---
 
 ## G. 返回值（≤ 10 行）
@@ -314,6 +360,6 @@ INFO: No tasks are running which match the specified criteria.
 5. 缺陷分栏：**工具缺陷 0 条**（未改模块一个字节）+ **游戏或驱动缺陷 1 条**（RT-1）+ 取证工具自身 2 条（E-1a/1b，均已修）；X-2 只登记。
 6. 里程碑小结（20 款一览、**合计 2 554 次调用 = 编辑器 303 / 游戏 2 251**、工具缺陷累计与修复轮次、像素/复算覆盖率 20/20、`--import` 累计 3/38）与**独立验收入口**已写进 `GAME-LOOP-LOG.md`。
 7. 收尾：**未改模块 → 走免跑判定**，`run_gates.ps1` 自判 `ANCHOR_STRUCTURAL_EQUIVALENT` + `SKIP_REBUILD`；**十道门与 `accept_m1` 本轮未重跑（如实说明，不做「应该可以」的转述）**。
-8. 主仓提交 `a8e0e56`（139 文件 / 24 875 增）；引擎仓**工作树空、HEAD 未动、无 push**（fork 已是 `1f9d0cb1c9`）。
+8. 主仓提交 `a8e0e56`（139 文件 / 24 875 增）+ 报告 `60bc9fb` + **三次自查修订** `4ea0da5`/`8cf0227`/`e3b8b57`（断言分解、20 款合计 2 554、`--import` 3/38、最终审计脚本），最终 HEAD `e3b8b57`；引擎仓**工作树空、HEAD 未动、无 push**（fork 已是 `1f9d0cb1c9`）。
 9. 报告：`F:\moonbit-hof-rs\godot-mcp\recovery\reports\TASK-104-REPORT.md`；决策 **D152** 已入 `DECISIONS.md`。
 10. 遗留：`--import` 关机期消息本轮**非崩溃形态**出现 1 次（`IMPORT_EXIT=0`）；三款均为经典规则的最小完整子集；X-2 未修。

@@ -1,0 +1,14 @@
+[master e3b8b57] docs(godot-mcp): TASK-104 - the final audit script re-derives every headline number from the run products and the ledger, and one wording fix
+ 10 files changed, 244 insertions(+), 1 deletion(-)
+ create mode 100644 godot-mcp/recovery/work/task104/audit_report_claims.py
+ create mode 100644 godot-mcp/recovery/work/task104/commit-message-audit.txt
+ create mode 100644 godot-mcp/recovery/work/task104/logs/audit-claims.txt
+ create mode 100644 godot-mcp/recovery/work/task104/logs/audit-claims.txt.err.txt
+ create mode 100644 godot-mcp/recovery/work/task104/logs/git-audit.cmd
+ create mode 100644 godot-mcp/recovery/work/task104/logs/git-audit.err.txt
+ create mode 100644 godot-mcp/recovery/work/task104/logs/git-audit.out.txt
+GIT_EXIT=0
+e3b8b57 docs(godot-mcp): TASK-104 - the final audit script re-derives every headline number from the run products and the ledger, and one wording fix
+8cf0227 docs(godot-mcp): TASK-104 - the --import cumulative denominator is corrected to 3/38 (it was written as 3/48 from a mis-read base)
+4ea0da5 docs(godot-mcp): TASK-104 - the assertion tallies and the twenty-game call total are corrected against the run products instead of left as first written
+ M godot-mcp/recovery/work/task104/logs/git-audit.err.txt

@@ -1,0 +1,5 @@
+warning: in the working copy of 'godot-mcp/GAME-LOOP-LOG.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'godot-mcp/recovery/work/task104/logs/git-fiximport.err.txt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'godot-mcp/recovery/work/task104/logs/git-fiximport.out.txt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'godot-mcp/recovery/work/task104/audit_report_claims.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'godot-mcp/recovery/work/task104/commit-message-audit.txt', LF will be replaced by CRLF the next time Git touches it
