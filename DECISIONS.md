@@ -5523,6 +5523,38 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 
 **遗留（不阻塞）**：①三个老场景仍带副本层 → 像素差列在清理前保持「不可得（D-1）」（**本轮按口径只记录**）；②D-3 的**根因动作**（`editor_add_nodes_batch` 同名时拒绝/报告）未做，它会触发重建 + 十门 + `accept_m1`；③TASK-094/095 的三条前置路径（改机器状态、影子渲染、永久不可得）**作废**；④TASK-096 本报告自陈两处铁律滑手（用 `>` 重定向写了两个自己的工作文件，`recovery\work\task096\tmp_*.tscn` 与 `reporttest-pong-print.txt`；已改用 `-OutFile`/不落盘），见 `TASK-096-REPORT.md` §铁律。
 
+## D145 — TASK-097：D-3 修在根上（同名默认拒绝、`editor_save_scene` 报告重复），三个老场景的副本层删除并把像素差列回填成真实数值，第 5 个游戏 Space Invaders 交付
+
+**触发问题**：D144（TASK-096）把 D-1 定域到工具缺陷 **D-3** 并留下两个待决策动作——①最小动作（删掉三个场景里的副本层、重放会话、回填像素列）、②根因动作（`editor_add_nodes_batch` 同名时拒绝/报告，会触发重建 + 十门 + `accept_m1`）。TASK-097 一并立项，并追加第 5 个游戏与两仓收尾。
+
+**考虑过的选项**
+
+| 决策点 | 选项 | 选择 | 理由 |
+|---|---|---|---|
+| ① 同名怎么处置 | (a) 仍改名，只在 `created[].name` 里回报；(b) **默认拒绝**（`-32000` + `data.conflicts`），显式 `on_name_conflict:"rename"` 才保留引擎改名；(c) 加 `overwrite`：删掉既有同名节点再写入 | **(b)** | (a) 正是现状：三个场景就是这么被污染的——重放会话的人不看 `created[].name`；(c) 拿「删掉一个可能有脚本/信号引用的节点」当默认或半默认行为，破坏性太大；`rename` 只把「我确实要一份新节点」这件事交回调用方，且响应必须说明改了哪些名 |
+| ② 拒绝用哪个错误码 | (a) `-32602`（参数形状违规）；(b) `-32001`（找不到）；(c) **`-32000`（工具状态）** | **(c)** | 调用是合法且形状正确的，`name` 是合法字符串、`refuse` 是合法取值；拒绝它的是**项目状态**（那个名字已经被占）。这正是 `project_text_write.cpp` 为「目标已存在且 `overwrite=false`」确立的读法（GDR-14），并且 `tools_state` 一律带 `data.suggestion` |
+| ③ 改动范围 | (a) 只有批量工具；(b) 连 `editor_add_node`（单个）一起改 | **(a)** | 批量工具是污染源：一个请求能一次造出一整层副本。单个工具在自己的响应里**明确回报** `name`，改动它要再动一份契约；作为**声明过的边界**留给下一批 |
+| ④ `editor_save_scene` 侧 | (a) 默认拒绝保存；(b) **保存 + 结构化报告** | **(b)** | 任务书要的是「给出明确报告（不静默保存）」。树是被调用方自己的状态，拒绝保存会让「只想看一眼再存」的场景无法完成；`duplicates` / `duplicates_count` / `note` 逐条name给出**被复制的是谁、复制品叫什么、怎么修**（`editor_delete_node` 那条路径） |
+| ⑤ 报告怎么保证不过期 | (a) 只记一条历史日志；(b) **记录 + 每次回答前对活树复核**（两个 ObjectID 仍在、仍同父） | **(b)** | 报告必须是「关于眼前这棵树」的陈述；节点删掉/搬走后再报「有重复」就是假警报（doctest 钉住这条） |
+| ⑥ 老场景怎么清 | (a) 手改 `.tscn`；(b) **只用 MCP 调用**（`editor_open_scene` → `editor_delete_node` × 65 → `editor_save_scene`），并原样重放该游戏整份会话 | **(b)** | 「项目状态只由 MCP 调用改动」是这条线的纪律；而且重放是「游戏逻辑未变」的第四条独立证据（原会话里每条断言仍然通过） |
+| ⑦ 像素列怎么写 | (a) 直接删掉「不可得」标注；(b) **回填真实数值**，并保留 D-1 时期的历史值作对照 | **(b)** | 一次回填把「当时的证据链不可用」与「画面确实没变」彻底分开；历史值留在格子里，读者能看出这条列曾经为什么是 `不可得` |
+| ⑧ 第 5 个游戏用什么形态 | (a) 场景里摆 40 个入侵者节点（靠批量工具）；(b) **5 个静态节点用批量工具 + 40 个入侵者运行期新建** | **(b)** | 场景保持小而干净（编辑相只有 15 次调用），同时把「运行期新建的节点确实被画出来」变成这款游戏自己的证据；也让「同一批再跑一次被拒绝」这一步有判别力 |
+
+**最终选择与理由**：`editor_add_nodes_batch` 新增 `on_name_conflict`（默认 `"refuse"`）。检查分两段：**场景树命中**在 prepare 阶段之前**整批**扫描（什么都不分配，因此拒绝能一次列出全部冲突：`data.conflicts[i] = {index,type,requested_name,parent_path,node_path,existing_node_path,existing_type}`）；**同批内重名**仍走 prepare 阶段的路径比较，但默认策略下也开始拒绝（同一个 bug 的另一种形状）。`"rename"` 是显式开关，提交阶段把每个被改名的节点写进 `created[i].name_conflict="renamed"` / `renamed_count` / `renamed[]`，并把（复制品，被占名者）这一对记进会话内的注册表；`editor_save_scene` 通过 `duplicate_name_conflicts_on()` 复核活树后附上 `duplicates` / `duplicates_count` / `note`。契约经生成器 **append-only 描述 override + `mode=replace` 的 schema override** 进入，六项形状量不变。
+
+**预期影响与回滚点**：行为变化是**默认拒绝**——任何「靠再跑一次同名批量来刷新场景」的旧用法会在第一次调用就被响亮拒绝（这是有意的，且错误里给出了两条改法）。回滚 = `git revert 2385fe2fb5` 后重建两变体；契约可由生成器重放；三个场景是主仓文件，独立于引擎提交。风险敞口：①`editor_add_node` 未改（见③）；②`editor_save_scene` 每编辑器会话重发场景 `uid`（**观测到的既有行为，本轮未改**：`.tscn` 头一行变、其余字节不变；三款游戏都按路径加载，项目内没有按 uid 的引用，登记在此以免「sha 变了」被误读）；③`g14` 的飞行采样开始太晚（会话设计局限，不是工具缺陷）。
+
+**验证（真实输出）**：
+* **最小同批复现，修前/修后**：`runs\pong\d3-before`（旧二进制）第二次同名批量返回 `ok` 并造出 `@ColorRect@20956`，`project_read_text_file` 的 sha 由 `851ff76b…`(240 B) 变成 `166e0221…`(388 B)，副本进了 `.tscn`；`runs\pong\d3-after-r2`（新二进制）同一步 `-32000`，`data.conflicts` 给出 `node_path=Dup / existing_node_path=Dup / existing_type=ColorRect`，随后 `project_read_text_file` 的 sha 与保存前**逐字相同**（`8f7d1768…`，241 B）；`on_name_conflict:"rename"` 那一步 `renamed_count=1`、`conflicting_node_path=Dup`，紧接着的 `editor_save_scene` 回答 `duplicates_count=1` + `note`（写明「@ColorRect@20956 (duplicate of Dup)」与修法）。
+* **doctest**：模块 `156/156`、`6683/6683` 断言、`SUCCESS!`（新增 1 个 case，钉住同名被拒/不同名通过/消息含冲突路径/批内重名/显式改名/保存侧报告与它的过期规则）。
+* **真项目复核**：Pong / Breakout / Snake / Space Invaders 四次重放里，会话里那一次同名 `editor_add_nodes_batch` 全部 `-32000`，重放后的场景树**没有任何 `@Type@N` 自动名节点**。
+* **副本层清理 + 像素列回填**（`recovery\work\task097\check_cleanup.py` 逐条实测）：Pong 8→0（5 ColorRect + 3 Label），场景 sha `EACAF41B…`(3391 B)→`BD5E740C…`(1989 B)，具名节点块 9/9 相同，属性采样 4/4 相同，像素差 **14/74 非零**；Breakout 20→0，`2EE4A2B5…`(8553 B)→`DB616EB2…`(4731 B)，21/21、4/4，像素差 **14/89 非零**；Snake 37→0，`653A3541…`(13284 B)→`47D8BB7E…`(7075 B)，38/38、4/4，像素差 **13/102 非零**。「清理前文件去掉副本块 == 清理后文件」三款都成立（除场景 `uid` 一行）。独立复算 `recovery\work\task097\pixel_recompute.py` 与 `tools\game_report.py` 的报告**逐对一致，0 处不符**。
+* **第 5 个游戏 Space Invaders**：`runs\spaceinvaders\si-task097-r1`，59 次调用（编辑器 15 / 游戏 44），`facts_complete` **59/59（100%）**，判定分布 `failed=1`（那次声明的同名拒绝）+ `ok_effect=10` + `ok_file_effect=28` + `ok_no_effect=20`，首轮**零缺陷**；像素差 **12/59 非零**（`si-t0`→`t1` 1576 / `t1`→`t2` 38127 / `t2`→`t3` 16990 / `t3`→`t4` 4800 px）；`project_build_csharp` exit 0、`invalid_count=0`；断言覆盖 `Score` 0→10、`InvadersRemaining` 40→39→1→0、`InvadersKilled=1`、`WaveSteps` 0→11、`Won`/`GameOver`（胜与负两种）、屏幕文本 `WAVE CLEARED` / `GAME OVER`，冻结基线（12 帧 `WaveX` 恒 140）对移动采样（152→260）。
+* **十道门 + 验收**：`runs\gates\task097\summary.txt`，`g01`…`g10` **全部 `exit=0`**：`156/156`、`1582/1582 / 3 skipped`、`TOOL-GROUPS CHECK PASS`、`3/3 checks passed`（`editor 154` / `game 73` / `contract 177`）、`RESULT: PASS`、`TAUTOLOGY CHECK PASS`、`PROBES 10/10`、`UNCLASSIFIED=0`、**`ANCHOR_JUDGE VERDICT=ANCHOR_EQUAL`（anchor=HEAD=2385fe2fb，diff_count=0）**、`accept_m1` **22/22**。两变体都在 `2385fe2fb5` 之后串行重建（`4.8.dev.mono.custom_build.2385fe2fb` / `4.8.dev.custom_build.2385fe2fb`）。
+
+**遗留（不阻塞）**：①`editor_add_node`（单个）仍保留引擎改名（见③）；②`editor_save_scene` 重发场景 `uid` 的行为未修（已登记）；③`g14` 的采样时机局限；④本轮有**三处铁律滑手**（都是本任务自己工作目录里的 `>` 重定向：`NUL_TMP.txt` 立即删除、`tool-before.txt` / `tool-after.txt` 因落到控制台代码页而作废并改用 Python 写入），已记入 `REBUILT-2C-MANIFEST.md` §K-4 与报告；⑤一次 `--import` 以访问违例退出（d3-after 首轮，`import exit=-1073741819`），同一二进制随后手动重跑与其余六次会话全部 `exit 0`，登记为一次性环境抖动。
+
+
 
 
 

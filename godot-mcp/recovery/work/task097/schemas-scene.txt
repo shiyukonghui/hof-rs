@@ -1,0 +1,113 @@
+== project_create_scene_file
+desc: 创建新场景文件
+{
+ "properties": {
+  "path": {
+   "description": "保存路径 (res://)",
+   "type": "string"
+  },
+  "root_name": {
+   "description": "根节点名称 (可选)",
+   "type": "string"
+  },
+  "root_type": {
+   "default": "Node2D",
+   "description": "根节点类型",
+   "type": "string"
+  }
+ },
+ "required": [
+  "path"
+ ],
+ "type": "object"
+}
+== editor_open_scene
+desc: 在编辑器中打开场景
+{
+ "properties": {
+  "path": {
+   "description": "res:// 路径",
+   "type": "string"
+  }
+ },
+ "required": [
+  "path"
+ ],
+ "type": "object"
+}
+== editor_delete_node
+desc: 删除节点
+{
+ "properties": {
+  "path": {
+   "type": "string"
+  }
+ },
+ "required": [
+  "path"
+ ],
+ "type": "object"
+}
+== editor_get_scene_tree
+desc: 获取当前编辑场景的完整场景树 本工具是“此刻编辑器侧可寻址什么”的权威：实例子场景内部的节点可能不出现在这棵树里，因为编辑器把 PackedScene 缓存成实例快照 —— 子场景改了以后，同一会话里既有的实例与新建的实例都仍带旧缓存（游戏进程从磁盘加载，因此能看到新节点）；要操作子场景新增的内部节点，就把 editor_add_node 的 parent_path 指向该实例、把它作为外层场景里实例下的子节点写（实测可寻址并可连信号），或者开一个新的编辑器会话让缓存重建；子场景本身的编辑永远应当先做，再做外层场景的实例化。这不是“各工具看不看得见不一致”：属性写工具与信号工具经同一个 MCPTools::find_node 解析路径，对同一路径给出同一结论，差别只在编辑器缓存。
+{
+ "properties": {
+  "max_depth": {
+   "default": -1,
+   "description": "最大深度 (-1 无限)",
+   "type": "integer"
+  }
+ },
+ "required": [],
+ "type": "object"
+}
+== editor_save_scene
+desc: 保存当前场景
+{
+ "properties": {
+  "path": {
+   "description": "保存路径 (可选)",
+   "type": "string"
+  }
+ },
+ "required": [],
+ "type": "object"
+}
+== project_delete_scene_file
+desc: 删除场景文件
+{
+ "properties": {
+  "path": {
+   "description": "要删除的场景文件路径 (res://)",
+   "type": "string"
+  }
+ },
+ "required": [
+  "path"
+ ],
+ "type": "object"
+}
+== editor_add_node
+desc: 向场景添加新节点
+{
+ "properties": {
+  "name": {
+   "type": "string"
+  },
+  "parent_path": {
+   "default": ".",
+   "type": "string"
+  },
+  "properties": {
+   "default": {},
+   "type": "object"
+  },
+  "type": {
+   "type": "string"
+  }
+ },
+ "required": [
+  "type"
+ ],
+ "type": "object"
+}

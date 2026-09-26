@@ -1,0 +1,58 @@
+== project_read_text_file
+desc: Read a text file inside the project and answer its bytes, size and digest, so a file written by a tool can be verified with a tool.
+{
+ "properties": {
+  "max_bytes": {
+   "default": 1048576,
+   "maximum": 16777216,
+   "type": "integer"
+  },
+  "path": {
+   "type": "string"
+  }
+ },
+ "required": [
+  "path"
+ ],
+ "type": "object"
+}
+== project_write_text_file
+desc: Write a project text file such as a .csproj, .sln, NuGet.config or .cfg, and answer the resulting size and sha256. Refuses scene, resource and script paths (use the dedicated tools for those) and refuses project.godot (use project_set_setting).
+{
+ "properties": {
+  "content": {
+   "type": "string"
+  },
+  "overwrite": {
+   "default": false,
+   "type": "boolean"
+  },
+  "path": {
+   "type": "string"
+  }
+ },
+ "required": [
+  "path",
+  "content"
+ ],
+ "type": "object"
+}
+== editor_get_node_properties
+desc: 获取节点属性
+{
+ "properties": {
+  "path": {
+   "type": "string"
+  },
+  "properties": {
+   "items": {
+    "type": "string"
+   },
+   "type": "array"
+  }
+ },
+ "required": [
+  "path"
+ ],
+ "type": "object"
+}

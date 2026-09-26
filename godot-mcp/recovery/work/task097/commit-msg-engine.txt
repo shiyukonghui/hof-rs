@@ -1,0 +1,27 @@
+modules/mcp_server: task097 (D-3) - a requested node name the target parent already carries is now refused instead of silently renamed, so a replayed editor phase can no longer write a whole duplicate node layer into a scene; editor_save_scene reports the duplicates a batch made under an explicit rename instead of saving them silently
+
+editor_add_nodes_batch gains on_name_conflict ("refuse" by default, "rename" as the
+explicit opt-in). The scene-tree half of the check runs before anything is allocated,
+so the refusal carries the complete list: -32000 with data.conflicts
+{index,type,requested_name,parent_path,node_path,existing_node_path,existing_type}
+per offending element, data.suggestion naming the two legal fixes, and the usual
+data.batch rollback envelope (empty, because nothing was prepared). The default also
+refuses two elements of one request asking for the same name under the same parent -
+the same duplicate-generation bug. The escape hatch keeps the engine's own rename and
+reports it: renamed_count, renamed[] and name_conflict="renamed" on the created entry.
+
+editor_save_scene attaches the duplicates an opted-in rename left behind
+(duplicates, duplicates_count, note), so a save can no longer be silent about a layer
+that draws on top of the real nodes. The records are re-validated against the live
+tree (duplicate_name_conflicts_on), so a repaired scene reports nothing.
+
+Contract: gen_renamed_contract.py gains the schema property (SCHEMA_OVERRIDES,
+mode=replace, required ["nodes"] still quoted verbatim) and an append-only
+DESCRIPTION_OVERRIDES record for batch_add_nodes; the regenerated contract keeps its
+six shape quantities (count 177, added_count 6, generator_version 1.22.0, editor 154,
+game 73, idempotent - measured by two consecutive generator runs with the same sha256).
+
+Tests: one new doctest case pins the refusal, the conflict paths in the message, the
+empty-write guarantee, the distinct-name success, the within-batch refusal, the
+opt-in rename and the save-side report; the argument-validation case pins the
+on_name_conflict grammar. Module doctests 156/156, 6683 assertions, exit 0.
