@@ -206,7 +206,7 @@ START nomon 00:09:36  END nomon exit=0 00:11:30
 | 6 | 同义反复 | `TAUTOLOGY CHECK PASS`（scanned=2 file kind(s) under 2 root(s)） |
 | 7 | 退出码传播 | `PROBES: 10/10` |
 | 8 | 硬编码计数 | `RESULT: PASS … none is UNCLASSIFIED`（BUCKET UNCLASSIFIED=0, total=116） |
-| 9 | 引擎锚点 | `ANCHOR_JUDGE VERDICT=ANCHOR_EQUAL`；`anchor=cf554ef58 head=cf554ef58 diff_count=0 red_count=0`；`ANCHOR_JUDGE RESULT PASS` |
+| 9 | 引擎锚点 | `ANCHOR_JUDGE VERDICT=ANCHOR_EQUAL`；`anchor=cf554ef58 head=cf554ef58 diff_count=0 red_count=0`；`ANCHOR_JUDGE RESULT PASS`（**报告落地后重跑一次仍为 `ANCHOR_EQUAL`**，见 §D3） |
 | +10 | `accept_m1.ps1` | **`22/22 cases passed`** |
 
 **顺带修掉门跑器的一个真缺陷**：`run_gates.ps1` 原来用 `%ERRORLEVEL%` 作退出码标记，
@@ -219,7 +219,8 @@ error level，**报不出失败**。本次改为 `cmd /v:on` + `!ERRORLEVEL!`（
 
 ```
 reset_game.ps1 -Name pong -Confirm   →  REMOVED + RESET（133 文件 / 7.96 MB → 模板态）
-run_game_session.ps1 -Game pong -RunTag pong-task092  →  编辑器 24 条 + 游戏 29 条调用，
+run_game_session.ps1 -Game pong -RunTag pong-task092  →  编辑器 24 条请求（1 条 tools/list +
+                                                        23 条 tools/call）+ 游戏 29 条 tools/call，
                                                         ledger/report 全部 exit 0
 ```
 
@@ -278,12 +279,14 @@ a455a87bea modules/mcp_server: task090 (2c-9) step2 - D-3: the game executor rea
 ### 主仓 `F:\moonbit-hof-rs`
 
 ```
-<见 §C 提交清单>  docs(godot-mcp): TASK-092 B/C - ...
+4e74537 docs(godot-mcp): TASK-092 B/C - the three traceability gaps are closed (args sidecar, deferred file+screen evidence, the two missing doctests, a stable frame-cost estimate), the gates and accept_m1 are green, and Pong reaches facts_complete 100%
 d043fd3 chore(godot-mcp): TASK-092 A - the recovery archive moves into the project (per-file sha256 verified) and its ignore policy is split by size and reproducibility
 f523904 docs(godot-mcp): 更正 Pong 缺陷记录里的一个数字 —— run-4 里「注定失败的断言」是 2 条不是 3 条
 9f87061 docs(decisions): D139 TASK-091 D 段交付 —— 脚手架 + 试测驱动 + Pong + 6 条缺陷的重跑对比
 df02ccb feat(godot-mcp): 可复用 C# 游戏模板 + 统一试测驱动 + 第 1 个游戏 Pong
 355eefc chore(godot-mcp): 迁移入主仓 + 嵌套 git 忽略策略 + D136/D137/D138
+fef32a3 docs(decisions): D135 **独立验收 fail** —— 抓到阻塞 D-B1(res 围栏被链接穿透，模块级) + D-B2(编译不过仍报 readable) + D-B3(分析器误报) + 我的裁决
+96249df docs(decisions): D134 TASK-075 交付 —— D2 契约违约+静默已修（含防假修复对照）／**新增 project_read_text_file（契约 176→177）**／D9 根因修且**撤回上轮错误结论**／D4·D5 定性／分析器漏报修
 ```
 
 `git status --short`：**空**（收尾核验）。本次主仓改动：`recovery\`（迁移 + task092 证据）、
@@ -303,9 +306,10 @@ df02ccb feat(godot-mcp): 可复用 C# 游戏模板 + 统一试测驱动 + 第 1 
    「≥20 个游戏」还没开始推进。
 2. **`user://` 跨轮留存**：同名截图会被下一轮覆盖，报告里的 sha/像素差都是**当轮文件**的复算值。
    本次 `changed=10/13`、`unchanged=1` 里的那条 `unchanged` 就是这种跨轮同字节。
-3. **门 9 的锚点现在是 `ANCHOR_EQUAL`（diff_count=0）**：本次报告落地后 HEAD 会比二进制多出
-   几个 `.md`，届时它会回到 TASK-090 那样的 `ANCHOR_STRUCTURAL_EQUIVALENT`（非编译输入）。
-   **我没有为此再重建**：本次门批次记录的锚点就是它跑的那一刻（`cf554ef58c == HEAD`），如实标注。
+3. **门 9 的锚点是 `ANCHOR_EQUAL`（diff_count=0），并且本报告提交之后仍然是**：
+   它判的是**引擎仓**的 HEAD，而引擎仓自构建以来没有新提交（本报告与 D141 都在主仓里）。
+   已实测复跑一次：`ANCHOR_JUDGE VERDICT=ANCHOR_EQUAL … RESULT PASS`
+   （`work\task092\logs\gate9-after-report.log`）。**没有为此再重建**，因为不需要重建。
 4. **延迟调用的画面侧代价**：每个在飞的延迟调用多持有一帧 framebuffer 拷贝，数量上界 = pending 表
    上界；连接断开由 `Engine::discard()` 释放。这是**声明的代价**，不是泄漏。
 5. **仍然是纯截断的只有 `error_message`（512 B）**：它是给人看的一句话，机器可读的那一半在
