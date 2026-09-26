@@ -14,10 +14,10 @@
 
 | 段 | 要求 | 结论 | 关键证据 |
 |---|---|---|---|
-| **A①** | **#18 R-Type 横版射击**（C#，只用 MCP 调用开发）：玩家移动、子弹、敌机波次与**编队**、敌弹、生命与得分 | **做完，首轮照出 1 条会话缺陷（RT-1）并重跑 r2 后全绿。** 223 次调用（编辑器 14 / 游戏 209），`facts_complete` **223/223（100%）**；断言 **99 PASS + 1 条声明的边界失败**（`-32001`）＋ 1 条屏幕文本 = **101 PASS / 0 FAIL**；像素差 **87/223 非零**（编辑器 1/14、游戏 86/209），`user://` 四帧逐对 **2069 / 7095 / 7547 px**、**4/4 互不相同**；独立复算 **0 处不符**；`project_build_csharp` exit 0（4266 ms）、`invalid_count=0`；树里 **214 个节点名 0 个 `@` 开头** | `runs\rtype\rt-task104-r2`（首轮 `rt-task104-r1`）、`logs\assert-rtype.txt`、`logs\pixel-rtype.txt`、`logs\frames-rtype.txt`、`logs\recompute-rtype.txt`、`logs\facts-rtype.txt` |
-| **A②** | **#19 Puzzle Bobble**：方形泡泡网格、发射与吸附、同色三连消除、悬空掉落、连锁、失败线 | **做完，首轮一次通过，零缺陷。** 157 次调用（14 / 143），`facts_complete` **157/157（100%）**；断言 **85 PASS + 1 条声明的边界失败** ＋ 1 条屏幕文本 = **87 PASS / 0 FAIL**；像素差 **29/157 非零**（1/14、28/143），四帧逐对 **53444 / 18251 / 2929 px**、**4/4 互不相同**；独立复算 **0 处不符**（含**初始棋盘本身**由 LCG + 稳定循环重算）；`project_build_csharp` exit 0（2489 ms）、`invalid_count=0`；树里 **214 个节点名 0 个 `@` 开头** | `runs\puzzlebobble\pb-task104-r1`、`logs\assert-puzzlebobble.txt`、`logs\pixel-puzzlebobble.txt`、`logs\frames-puzzlebobble.txt`、`logs\recompute-puzzlebobble.txt`、`logs\facts-puzzlebobble.txt` |
-| **A③** | **#20 Lunar Lander**：重力与推力、燃料、旋转、着陆台判定（速度/角度）、剩余燃料得分 | **做完，首轮一次通过，零缺陷。** 230 次调用（14 / 216），`facts_complete` **230/230（100%）**；断言 **148 PASS + 1 条声明的边界失败** ＋ 1 条屏幕文本 = **150 PASS / 0 FAIL**；像素差 **41/230 非零**（1/14、40/216），四帧逐对 **6798 / 1117 / 6885 px**、**4/4 互不相同**；独立复算 **0 处不符**，含**整条 35 步积分轨迹按 `call-index.txt` 顺序重放、17 个检查点**；`project_build_csharp` exit 0（3782 ms）、`invalid_count=0`；树里 **136 个节点名 0 个 `@` 开头** | `runs\lunarlander\ll-task104-r1`、`logs\assert-lunarlander.txt`、`logs\pixel-lunarlander.txt`、`logs\frames-lunarlander.txt`、`logs\recompute-lunarlander.txt`、`logs\facts-lunarlander.txt` |
-| **B** | 达 20 款后在台账里做**里程碑小结**（每款一行、20 款一览、工具缺陷累计清单与修复轮次、像素证据与独立复算覆盖率、`--import` 累计），并**为独立验收准备入口** | **做完。** `GAME-LOOP-LOG.md` 新增 `## 里程碑：20 款（TASK-104 收口）`：20 款一览表（含第 18/19/20 行）、合计 **2 441 次调用**（编辑器 300 / 游戏 2 141）、`facts_complete` **20/20 款 100%**、**像素证据 20/20 可得且非零**、**独立复算 20/20、合计 0 处不符**、工具缺陷累计清单（D-3/D-1/D-2/G-1/X-1/X-2）与修复轮次、`--import` 累计、以及**验收要读的 9 类文件 + 10 条只读命令 + 4 条应当主动构造的反例** | `GAME-LOOP-LOG.md` 的 `### TASK-104 记录` 与 `## 里程碑：20 款（TASK-104 收口）` |
+| **A①** | **#18 R-Type 横版射击**（C#，只用 MCP 调用开发）：玩家移动、子弹、敌机波次与**编队**、敌弹、生命与得分 | **做完，首轮照出 1 条会话缺陷（RT-1）并重跑 r2 后全绿。** 223 次调用（编辑器 14 / 游戏 209），`facts_complete` **223/223（100%）**；断言 **101 PASS / 0 FAIL** = 99 条带属性的 node-state ＋ 1 条屏幕文本 ＋ 1 条场景自带断言，**另有 1 条声明的边界失败**（`-32001`，不计入 PASS）；像素差 **87/223 非零**（编辑器 1/14、游戏 86/209），`user://` 四帧逐对 **2069 / 7095 / 7547 px**、**4/4 互不相同**；独立复算 **0 处不符**；`project_build_csharp` exit 0（4266 ms）、`invalid_count=0`；三次场景树读取共 **214 个节点名 0 个 `@` 开头** | `runs\rtype\rt-task104-r2`（首轮 `rt-task104-r1`）、`logs\assert-rtype.txt`、`logs\pixel-rtype.txt`、`logs\frames-rtype.txt`、`logs\recompute-rtype.txt`、`logs\facts-rtype.txt` |
+| **A②** | **#19 Puzzle Bobble**：方形泡泡网格、发射与吸附、同色三连消除、悬空掉落、连锁、失败线 | **做完，首轮一次通过，零缺陷。** 157 次调用（14 / 143），`facts_complete` **157/157（100%）**；断言 **87 PASS / 0 FAIL** = 85 条带属性的 node-state ＋ 1 条屏幕文本 ＋ 1 条场景自带断言，**另有 1 条声明的边界失败**（`-32001`，不计入 PASS）；像素差 **29/157 非零**（1/14、28/143），四帧逐对 **53444 / 18251 / 2929 px**、**4/4 互不相同**；独立复算 **0 处不符**（含**初始棋盘本身**由 LCG + 稳定循环重算）；`project_build_csharp` exit 0（2489 ms）、`invalid_count=0`；三次场景树读取共 **214 个节点名 0 个 `@` 开头** | `runs\puzzlebobble\pb-task104-r1`、`logs\assert-puzzlebobble.txt`、`logs\pixel-puzzlebobble.txt`、`logs\frames-puzzlebobble.txt`、`logs\recompute-puzzlebobble.txt`、`logs\facts-puzzlebobble.txt` |
+| **A③** | **#20 Lunar Lander**：重力与推力、燃料、旋转、着陆台判定（速度/角度）、剩余燃料得分 | **做完，首轮一次通过，零缺陷。** 230 次调用（14 / 216），`facts_complete` **230/230（100%）**；断言 **150 PASS / 0 FAIL** = 148 条带属性的 node-state ＋ 1 条屏幕文本 ＋ 1 条场景自带断言，**另有 1 条声明的边界失败**（`-32001`，不计入 PASS）；像素差 **41/230 非零**（1/14、40/216），四帧逐对 **6798 / 1117 / 6885 px**、**4/4 互不相同**；独立复算 **0 处不符**，含**整条 35 步积分轨迹按 `call-index.txt` 顺序重放、17 个检查点**；`project_build_csharp` exit 0（3782 ms）、`invalid_count=0`；三次场景树读取共 **136 个节点名 0 个 `@` 开头** | `runs\lunarlander\ll-task104-r1`、`logs\assert-lunarlander.txt`、`logs\pixel-lunarlander.txt`、`logs\frames-lunarlander.txt`、`logs\recompute-lunarlander.txt`、`logs\facts-lunarlander.txt` |
+| **B** | 达 20 款后在台账里做**里程碑小结**（每款一行、20 款一览、工具缺陷累计清单与修复轮次、像素证据与独立复算覆盖率、`--import` 累计），并**为独立验收准备入口** | **做完。** `GAME-LOOP-LOG.md` 新增 `## 里程碑：20 款（TASK-104 收口）`：20 款一览表（含第 18/19/20 行）、合计 **2 554 次调用**（编辑器 303 / 游戏 2 251，两列分别逐行相加得出）、`facts_complete` **20/20 款 100%**、**像素证据 20/20 可得且非零**、**独立复算 20/20、合计 0 处不符**、工具缺陷累计清单（D-3/D-1/D-2/G-1/X-1/X-2）与修复轮次、`--import` 累计、以及**验收要读的 9 类文件 + 10 条只读命令 + 4 条应当主动构造的反例** | `GAME-LOOP-LOG.md` 的 `### TASK-104 记录` 与 `## 里程碑：20 款（TASK-104 收口）` |
 | **C** | 改模块 → 重建两变体 + 十道门全绿 + `accept_m1` 22/22 + push 到 fork；**未改模块则用免跑判定并如实说明**；主仓提交；报告含两仓 `git log --oneline -8` 与 `git status --short` | **未改模块，走免跑判定，如实说明：十道门与 `accept_m1` 本轮未重跑。** 引擎仓工作树**空**、HEAD 未移动；`tools\run_gates.ps1 -Tag task104` 自判 **`ANCHOR_STRUCTURAL_EQUIVALENT` + `SKIP_REBUILD` + `GATES_SKIPPED=1`**（理由：锚点与 HEAD 之间那 1 个文件是非编译的 `.md`）。主仓提交见 §F；两仓日志与状态逐字见 §F（取自 `logs\final-snapshot.txt`）。**没有 push**：fork 上已是 `1f9d0cb1c9`，本地与之同级 | `runs\gates\task104\summary.txt`、`logs\final-snapshot.txt`、§C、§F |
 
 ---
@@ -87,9 +87,12 @@
 
 ### A3 断言与「独立复算」（三款各自的真实数值）
 
-* **断言**：R-Type **101 PASS / 0 FAIL**（99 条 node-state + 1 条声明的边界失败 + 1 条屏幕文本 `WAVE CLEARED`）；
-  Puzzle Bobble **87 PASS / 0 FAIL**（85 + 1 + 1，屏幕文本 `BOARD CLEARED`）；
-  Lunar Lander **150 PASS / 0 FAIL**（148 + 1 + 1，屏幕文本 `THE EAGLE HAS LANDED`）。逐属性分栏见 `logs\assert-*.txt`。
+* **断言**（分解逐款用脚本核对过：`assert_summary.py` 的每一处 PASS 都归到它自己那一类）：
+  R-Type **101 PASS / 0 FAIL** = 99 条带属性的 `running_game_assert_node_state` ＋ 1 条屏幕文本（`WAVE CLEARED`）
+  ＋ 1 条 `running_game_run_test_scenario` 自带的断言；**另有 1 条声明的边界失败**（`-32001`，不计入 PASS）。
+  Puzzle Bobble **87 PASS / 0 FAIL** = 85 + 1 条屏幕文本（`BOARD CLEARED`）+ 1 条场景断言，另有 1 条边界失败。
+  Lunar Lander **150 PASS / 0 FAIL** = 148 + 1 条屏幕文本（`THE EAGLE HAS LANDED`）+ 1 条场景断言，另有 1 条边界失败。
+  逐属性分栏见 `logs\assert-*.txt`。
 * **Python 第二实现**：三款各一份**从规则重写**的模拟器
   （`make_session_rtype.py` 的 `RSim`、`make_session_puzzlebobble.py` 的 `BSim`、`make_session_lunarlander.py` 的 `LSim`）。
   会话里每一个 `expected` 都取自它们；生成器同时导出 `expectations-*.json`，事后复算脚本把清单与响应里**实际回报的 `expected`** 逐条对齐：
@@ -308,7 +311,7 @@ INFO: No tasks are running which match the specified criteria.
 3. Puzzle Bobble `pb-task104-r1`：157 调用（14/143）、87 PASS/0 FAIL、像素 29/157、复算 0 处不符（含初始棋盘由 LCG 重算）；零缺陷。
 4. Lunar Lander `ll-task104-r1`：230 调用（14/216）、150 PASS/0 FAIL、像素 41/230、复算 0 处不符（含 **35 步积分轨迹 17 个检查点独立重放**）；零缺陷。
 5. 缺陷分栏：**工具缺陷 0 条**（未改模块一个字节）+ **游戏或驱动缺陷 1 条**（RT-1）+ 取证工具自身 2 条（E-1a/1b，均已修）；X-2 只登记。
-6. 里程碑小结（20 款一览、工具缺陷累计与修复轮次、像素/复算覆盖率 20/20、`--import` 累计 3/48）与**独立验收入口**已写进 `GAME-LOOP-LOG.md`。
+6. 里程碑小结（20 款一览、**合计 2 554 次调用 = 编辑器 303 / 游戏 2 251**、工具缺陷累计与修复轮次、像素/复算覆盖率 20/20、`--import` 累计 3/48）与**独立验收入口**已写进 `GAME-LOOP-LOG.md`。
 7. 收尾：**未改模块 → 走免跑判定**，`run_gates.ps1` 自判 `ANCHOR_STRUCTURAL_EQUIVALENT` + `SKIP_REBUILD`；**十道门与 `accept_m1` 本轮未重跑（如实说明，不做「应该可以」的转述）**。
 8. 主仓提交 `a8e0e56`（139 文件 / 24 875 增）；引擎仓**工作树空、HEAD 未动、无 push**（fork 已是 `1f9d0cb1c9`）。
 9. 报告：`F:\moonbit-hof-rs\godot-mcp\recovery\reports\TASK-104-REPORT.md`；决策 **D152** 已入 `DECISIONS.md`。
