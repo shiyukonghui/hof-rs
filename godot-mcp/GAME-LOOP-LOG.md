@@ -644,3 +644,19 @@ powershell -File recovery\work\task104\check_session_ps.ps1 -Session tools\sessi
    **增量属性与帧率无关且单一写者**、建场景那一步故意重跑同名批量、任何时钟都用浮点累加器、
    采样窗口内状态必然改变的断言、Python 第二实现 + 事后独立复算）。
 
+---
+
+## TASK-117 —— 交付物侧补记：可玩版已重新导出（2026-09-27）
+
+* TASK-116 把「19/20 款出厂把玩家输入关着」修在根上并复跑为 20/20，**但那份证据是对 `projects\` 下的
+  工程做的**；TASK-109 交付、用户真正双击的那批 exe 是**修复前**导出的 —— 这是 D161 没覆盖的缺口。
+* TASK-117 用**已构建的 4.8.dev 模板**（**未下载、未重建模板、未改任何导出模板策略**）重新导出
+  20 款到 `dist\exe\<game>\`，并给 `tools\playability_gate.py` 加了 `--exe-root`，把**同一套 P1..P6**
+  跑在**导出 exe 本体**上（`runs\playability-exe\`）：**20/20 playable**，与工程侧 20/20 **零差集**
+  —— 没有出现任何「工程可玩而导出不可玩」的导出相关缺陷。
+* 交付包：`dist\godot-mcp-20games-playable-20260927-1424-part{1,2}of2.zip`（每个分卷 < 2 GiB），
+  自检 25/25 PASS，从包里解出 pong 直接跑 = exit 0 + `PONG_READY`。修复前那批已**移动**到
+  `dist\exe-task109-pre-fix\`（移动不删，作为对照）。
+* 口径补一条：**以后「可玩」必须对交付物本身取证**；对工程跑门只回答「工程可玩」。
+  详见 `recovery\reports\TASK-117-REPORT.md` 与 `DECISIONS.md` D162。
+
