@@ -6177,3 +6177,113 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
   * **一次铁律 1 的失误（如实披露）**：本任务早期有两条只读探查命令用到了 `2>nul` 重定向，
     发现后立即改用无重定向写法；本轮所有构建/运行/会话**均无重定向**（日志由
     `run_game_session.ps1` 自己的 `Start-Process -RedirectStandardOutput/Error` 产生）。
+
+---
+
+## D160 — TASK-115：H7 的 15 条按实测一分为二；H1 的 5 条与 TASK-113 的 3 条见证升档；
+##         以及一条会改变 SAC 建议的导出实测（`embed_pck=false` 不够，`modify_resources` 才是关键）
+
+* 日期：2026-09-27（UTC）
+* 触发问题：TASK-114 §E 把三件事留给了下一轮 —— (a) H7 的 15 条 0 次工具先分类再练；
+  (b) H1 的 5 条 `count_only` 与 TASK-113 被内容级门降级的 3 条见证；(c) 一个「有界的
+  SAC 友好导出可行性探针」。本轮三件都做了，并且**(c) 的结论推翻了任务书的假设**。
+* 考虑的选项（含被否决者及理由）：
+  1. **H7 的 15 条**：
+     * 选项 A（任务书设想）：把 `editor_simulate_*` 5 条 + `editor_get_test_report` +
+       `editor_analyze_screenshot_diff` 一起判为「结构性不可达」，只练剩下的 8 条。
+       **否决**：读源码就知道这个分类是猜的。`editor_get_test_report` 读的是游戏进程
+       `user://` 桥接文件、没有文件就从本进程累加器诚实回答（`editor_testing_read.cpp:151-229`），
+       `editor_analyze_screenshot_diff` 明写「no display server is needed … also works in a
+       `--headless` process」（同文件 :261-265）。先测再分类，不先归类再迁就。
+     * **选项 B（采用）**：15 条**全部按实测分类**。10 条可达（选中/取消选中、Output 面板、
+       运行条、插件表、测试报告桥、截图比对、自动关闭对话框）真的去调；5 条
+       `editor_simulate_*` 留作「范围排除」并逐条写清 why/evidence/何时可测。
+  2. **H7 的「生效」标准**：任务书要求「≥5 次 + ≥1 生效 + ≥1 边界」。
+     * 选项 A：想办法造出像素/文件效果让 ledger 判 `ok_effect_observed`。**否决**：
+       实测 82 次调用里 **0 次**像素变化、**0 次**文件变化（`verdicts: failed=19,
+       ok_no_effect_observed=62, ok_effect_unavailable=1`）——编辑器自己的 GUI 状态本来就不在
+       截图与文件效果这两个通道里，「造」不出来，硬报就是假成功。
+     * **选项 B（采用）**：把「生效」如实降级为**同 run 内容级读回**（TASK-113 的
+       `witness_read` + `expect`），并在报告里把「档位到 `readback`、状态仍是
+       `计数达标缺证据`」写成结论而不是缺陷掩饰。
+  3. **`editor_set_auto_dismiss_dialogs`**：
+     * 选项 A：登记为不可达。**否决**：它可达，7 次调用每次都给出实现注释里承诺的
+       `-32000`（引擎根本没有进程级的 auto-dismiss 开关，`editor_node_write.cpp:1037-1063`）。
+     * **选项 B（采用）**：登记为「已实测、按设计只有边界」，档位 `count_only`，
+       并说明它永远不会有效果。
+  4. **SAC 导出探针的范围**：
+     * 选项 A：直接下载官方 4.7.1 mono 导出模板（约 1 GB）再测。**否决**：任务书明写
+       「若模板缺失或需联网下载 → 先报告，不要擅自长时间下载」。
+     * **选项 B（采用）**：模板缺失就如实报告；**②③ 用本机已装的 `4.8.dev` 模板做**，
+       因为导出代码路径与模板对不对得上签名无关，机制结论可迁移；官方模板那一格明确标注「未测」。
+  5. **三份 TASK-113 被拒声明**：
+     * 选项 A：原样留着，让它们继续出现在 §0.1 的被拒列表里。**否决**：同一个工具会在
+       「已核实见证」表和「被拒声明」表里同时出现，读起来自相矛盾。
+     * **选项 B（采用）**：把它们从 `readback` 数组移到一个新的 `readback_superseded` 数组
+       （带 `superseded_by` + `superseded_reason`），**不删**，并记进本轮报告与决策。
+* 最终选择与选择理由：
+  * **H7 一分为二**（实测）：**10 条可达并已练到 ≥5 次**（`runs/_exercises/ex_editor/h7-task115`，
+    82 次调用 / 正确 63 / 边界 19），其中 `editor_get_test_report`（6 次 / 有效 5 / 边界 1）与
+    `editor_analyze_screenshot_diff`（8 次 / 有效 5 / 边界 3）**直接达标**（读类工具的载荷本身就是证据），
+    其余 7 条升到证据档位 `readback`（同 run 内容级见证），**1 条**（`editor_set_auto_dismiss_dialogs`）
+    按设计停在 `count_only`。**5 条 `editor_simulate_*` 写进登记表的 `categories.H7.still_out`**，
+    理由是 **D59 / GDR-21 的范围决定**而不是能力缺失 —— 登记表里明确写出「它们在本构建里是编译进来、
+    在编辑器端点是注册过的，真编辑器里 Input/InputMap 单例一定存在（源码原话）」，并写出
+    可测条件（编辑器侧输入观测 + 批次自述「游戏端点不该看到任何东西」），而不是一句「不可达」。
+  * **H1 的 5 条 + TASK-113 的 3 条见证**：全部升到 `readback`，且**每一条的 `expect` 都是
+    这一轮真的写进去的值**（`M:res://assets/mat3d_b.tres` / `C:Camera3D` / `L:DirectionalLight3D` /
+    `E:WorldEnvironment` / `S:res://src/exc4b.gd` / `T:res://themes/c4b.tres` /
+    `expect_absent=[DelA..DelE]`）。顺带测出 TASK-113 那条「用
+    `editor_get_node_properties` 读 `script`」的见证**根本写不出 `expect`**：该工具对
+    `script` 这个名字直接 `-32001`（`c4-v5-task111` seq 141，源码规则在
+    `editor_node_read.cpp:206-208`）——这是本轮解释「为什么降级」而不是绕过它的关键一步。
+  * **(c) SAC 导出探针三问的实测答案**（`recovery/work/task115/probe_export.ps1`，
+    报告 `recovery/work/task115/logs/probe-report.txt`）：
+    1. **官方 4.7.1-stable mono 导出模板没有安装**：
+       `%APPDATA%\Godot\export_templates\` 下**只有** `4.8.dev`（`4.7.1.stable.mono` 目录
+       `exists=False`）。官方 4.7.1 mono **编辑器** exe 仍是 `Valid`（`CN=Prehensile Tales B.V.`）；
+       本机唯一的模板 exe（`4.8.dev\windows_release_x86_64.exe`，82198528 B）是 `NotSigned`。
+       **按任务书要求：不下载，只报告。**「官方模板 exe 是否 Valid」这一格因此**未测**。
+    2. **`embed_pck=false` 不足以保住模板字节**：默认预设（`embed_pck=false` +
+       `modify_resources=true`）导出的 exe 是 82057728 B / `9A64C843…A9AD`，
+       **与模板不同**（少了 140800 B）；把 `application/modify_resources` 也设成 `false`，
+       导出的 exe 是 **82198528 B / `AA883610…471E`，与模板 sha256 逐字节相同**。
+       即：**签名能否保住取决于 `modify_resources=false`**（`embed_pck=true` 时为 82062160 B /
+       `27AE0FEB…1DC9`，同样不同）。这是一个**改变 SAC 建议的新事实**：以前只说
+       「导出的 exe = 模板拷贝」，实测说「默认设置下会被改写」。
+    3. **导出的 exe 真能跑，且真的读同目录 `.pck`**：不带 `.pck` 时
+       `ERROR: Couldn't load project data at path … Is the .pck file missing?`（且**弹模态框不退出**，
+       探针因此加了有界等待）；带同目录 `ex_editor.pck` 时 headless `--quit-after 60` 与
+       带窗口（Vulkan/RTX 4090）`--quit-after 120` **都是 `RUN_EXIT=0`**；
+       与模板逐字节相同的那份 exe（配同目录 pck）也 `RUN_EXIT=0`。跑完无残留进程。
+  * **H8 剩余 3 条**（`os_list_android_devices` / `os_deploy_to_android_device` /
+    `project_get_android_preset_info`）按 TASK-114 的建议**正式登记为
+    `categories.H8.external_device`（需要外部设备）而不是「不可达」**。
+* 预期影响与回滚点：
+  * **台账增量**：run 104→**109**、trace 172→**177**、`tools/call` 8471→**8665**（+194）、
+    出现过的工具 159→**169**（+10）、0 次 18→**8**（−10）、达标 104→**106**（+2）、
+    档位 `readback` 89→**106**（+17）、`count_only` 12→**5**（−7）、`no_calls` 18→**8**。
+    登记表 `reclassified` 56→**66**（+10，成员仍是 74，**一条没删**）。
+  * **内容级见证**：声明 38→**50**、经 trace 复核通过 33→**48**、逐字命中 33→**48**、
+    被拒 5→**2**（剩下两条 `editor_add_gridmap` / `editor_connect_signal` 是 TASK-115 未碰的既有缺口）。
+  * **对用户的直接影响（必须转达）**：SAC 那一侧的出路 ②/③ 建议要按 §(c)2 修正 ——
+    想要「官方模板签名被带进导出物」，预设必须同时满足
+    `binary_format/embed_pck=false` **且** `application/modify_resources=false`；
+    这条**只在未签名的 `4.8.dev` 模板上验证过字节同一性**，官方 4.7.1 模板那一格**未测**
+    （缺模板，不下载）。**不得**把「机制成立」说成「官方模板已验证」。
+  * **已知的能力边界（不掩盖）**：H7 的 7 条写工具**到不了「达标」**，因为编辑器 GUI 状态
+    不在 ledger 的像素/文件两个证据通道里；要改变这一点需要给 ledger 增加第三个证据通道
+    （「编辑器自身状态的读回」），那是**契约/口径变更**，超出本轮范围，本轮只如实登记。
+  * 回滚点：主仓侧 `git revert <TASK-115 主仓提交>`。引擎侧 `godot/modules/mcp_server/`
+    **一个字节未改**，因此按铁律 7 **未重建两变体、未跑十道门、未 push 引擎仓**。
+    20 款正式工程与它们的历史 `runs/` 只读未动；本轮 run 全部落在
+    `runs/_exercises/{ex_editor,ex_3d,ex_write5,ex_anim2}/` 下。
+  * **本轮的一次失误（如实披露）**：探针第一次跑在「不带 `.pck` 运行」这一步**挂住**——
+    导出的游戏在找不到 pck 时弹**模态对话框**等人工点击，`Start-Process -Wait` 永不返回。
+    发现后杀掉该进程、把游戏运行改成**有界等待**（超时即 `taskkill /T /F` 并记为
+    `TIMEOUT(ns)`），重跑完成。这是本轮唯一一次需要杀进程的地方，全部发生在我自己的
+    `recovery/work/task115/export_probe/` 下。
+  * **依赖/环境**：本轮无新增依赖、无联网下载。`ex_editor` 是**无 C#、无 GDScript 业务代码**
+    的最小工程（只有 `addons/probe_plugin` 一个空 `EditorPlugin`，为的是让
+    `editor_reload_plugin` 有真实对象可禁用/启用）。
+
