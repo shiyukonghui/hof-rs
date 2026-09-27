@@ -1,0 +1,527 @@
+{
+  "batches": [
+    "c23"
+  ],
+  "project": "_exercises/ex_scene",
+  "manifests": [
+    "tools\\sessions\\_exercises\\ex_scene\\c23-manifest.json"
+  ],
+  "coverage": "F:\\moonbit-hof-rs\\godot-mcp\\coverage.json",
+  "mode": "all-runs",
+  "targets": 25,
+  "passed": 20,
+  "setup_only": [
+    "editor_add_nodes_batch",
+    "editor_connect_signal",
+    "editor_open_scene",
+    "editor_save_scene",
+    "editor_set_node_groups",
+    "editor_set_node_script_batch",
+    "editor_setup_collision_shape",
+    "project_add_autoload",
+    "project_build_csharp",
+    "project_create_script"
+  ],
+  "results": [
+    {
+      "tool": "editor_analyze_signal_flow",
+      "calls": 12,
+      "effective": 8,
+      "failed": 4,
+      "facts_complete": 12,
+      "declared_ok": 5,
+      "declared_probe": 1,
+      "declared_edge": 0,
+      "boundary_evidence": "failed_call",
+      "facts_all": true,
+      "checks": {
+        "calls>=5": true,
+        "effective>=1": true,
+        "boundary>=1": true,
+        "boundary_declared": true,
+        "edge_declared": false
+      },
+      "verdict": "pass"
+    },
+    {
+      "tool": "editor_execute_gdscript",
+      "calls": 12,
+      "effective": 10,
+      "failed": 2,
+      "facts_complete": 12,
+      "declared_ok": 5,
+      "declared_probe": 1,
+      "declared_edge": 0,
+      "boundary_evidence": "failed_call",
+      "facts_all": true,
+      "checks": {
+        "calls>=5": true,
+        "effective>=1": true,
+        "boundary>=1": true,
+        "boundary_declared": true,
+        "edge_declared": false
+      },
+      "verdict": "pass"
+    },
+    {
+      "tool": "editor_find_nodes_by_type",
+      "calls": 12,
+      "effective": 10,
+      "failed": 2,
+      "facts_complete": 12,
+      "declared_ok": 5,
+      "declared_probe": 1,
+      "declared_edge": 0,
+      "boundary_evidence": "failed_call",
+      "facts_all": true,
+      "checks": {
+        "calls>=5": true,
+        "effective>=1": true,
+        "boundary>=1": true,
+        "boundary_declared": true,
+        "edge_declared": false
+      },
+      "verdict": "pass"
+    },
+    {
+      "tool": "editor_find_nodes_in_group",
+      "calls": 12,
+      "effective": 10,
+      "failed": 2,
+      "facts_complete": 12,
+      "declared_ok": 5,
+      "declared_probe": 1,
+      "declared_edge": 0,
+      "boundary_evidence": "failed_call",
+      "facts_all": true,
+      "checks": {
+        "calls>=5": true,
+        "effective>=1": true,
+        "boundary>=1": true,
+        "boundary_declared": true,
+        "edge_declared": false
+      },
+      "verdict": "pass"
+    },
+    {
+      "tool": "editor_get_collision_info",
+      "calls": 12,
+      "effective": 8,
+      "failed": 4,
+      "facts_complete": 12,
+      "declared_ok": 5,
+      "declared_probe": 1,
+      "declared_edge": 0,
+      "boundary_evidence": "failed_call",
+      "facts_all": true,
+      "checks": {
+        "calls>=5": true,
+        "effective>=1": true,
+        "boundary>=1": true,
+        "boundary_declared": true,
+        "edge_declared": false
+      },
+      "verdict": "pass"
+    },
+    {
+      "tool": "editor_get_input_actions",
+      "calls": 12,
+      "effective": 10,
+      "failed": 2,
+      "facts_complete": 12,
+      "declared_ok": 5,
+      "declared_probe": 1,
+      "declared_edge": 0,
+      "boundary_evidence": "failed_call",
+      "facts_all": true,
+      "checks": {
+        "calls>=5": true,
+        "effective>=1": true,
+        "boundary>=1": true,
+        "boundary_declared": true,
+        "edge_declared": false
+      },
+      "verdict": "pass"
+    },
+    {
+      "tool": "editor_get_node_groups",
+      "calls": 12,
+      "effective": 10,
+      "failed": 2,
+      "facts_complete": 12,
+      "declared_ok": 5,
+      "declared_probe": 1,
+      "declared_edge": 0,
+      "boundary_evidence": "failed_call",
+      "facts_all": true,
+      "checks": {
+        "calls>=5": true,
+        "effective>=1": true,
+        "boundary>=1": true,
+        "boundary_declared": true,
+        "edge_declared": false
+      },
+      "verdict": "pass"
+    },
+    {
+      "tool": "editor_get_node_properties",
+      "calls": 68,
+      "effective": 55,
+      "failed": 11,
+      "facts_complete": 68,
+      "declared_ok": 5,
+      "declared_probe": 1,
+      "declared_edge": 0,
+      "boundary_evidence": "failed_call",
+      "facts_all": true,
+      "checks": {
+        "calls>=5": true,
+        "effective>=1": true,
+        "boundary>=1": true,
+        "boundary_declared": true,
+        "edge_declared": false
+      },
+      "verdict": "pass"
+    },
+    {
+      "tool": "editor_get_node_signals",
+      "calls": 12,
+      "effective": 10,
+      "failed": 2,
+      "facts_complete": 12,
+      "declared_ok": 5,
+      "declared_probe": 1,
+      "declared_edge": 0,
+      "boundary_evidence": "failed_call",
+      "facts_all": true,
+      "checks": {
+        "calls>=5": true,
+        "effective>=1": true,
+        "boundary>=1": true,
+        "boundary_declared": true,
+        "edge_declared": false
+      },
+      "verdict": "pass"
+    },
+    {
+      "tool": "editor_get_open_scripts",
+      "calls": 12,
+      "effective": 10,
+      "failed": 2,
+      "facts_complete": 12,
+      "declared_ok": 5,
+      "declared_probe": 1,
+      "declared_edge": 0,
+      "boundary_evidence": "failed_call",
+      "facts_all": true,
+      "checks": {
+        "calls>=5": true,
+        "effective>=1": true,
+        "boundary>=1": true,
+        "boundary_declared": true,
+        "edge_declared": false
+      },
+      "verdict": "pass"
+    },
+    {
+      "tool": "editor_get_output_log",
+      "calls": 12,
+      "effective": 12,
+      "failed": 0,
+      "facts_complete": 12,
+      "declared_ok": 5,
+      "declared_probe": 1,
+      "declared_edge": 0,
+      "boundary_evidence": "NONE",
+      "facts_all": true,
+      "checks": {
+        "calls>=5": true,
+        "effective>=1": true,
+        "boundary>=1": false,
+        "boundary_declared": true,
+        "edge_declared": false
+      },
+      "verdict": "fail"
+    },
+    {
+      "tool": "editor_get_performance_monitors",
+      "calls": 12,
+      "effective": 10,
+      "failed": 2,
+      "facts_complete": 12,
+      "declared_ok": 5,
+      "declared_probe": 1,
+      "declared_edge": 0,
+      "boundary_evidence": "failed_call",
+      "facts_all": true,
+      "checks": {
+        "calls>=5": true,
+        "effective>=1": true,
+        "boundary>=1": true,
+        "boundary_declared": true,
+        "edge_declared": false
+      },
+      "verdict": "pass"
+    },
+    {
+      "tool": "editor_get_physics_layers",
+      "calls": 12,
+      "effective": 6,
+      "failed": 6,
+      "facts_complete": 12,
+      "declared_ok": 5,
+      "declared_probe": 1,
+      "declared_edge": 0,
+      "boundary_evidence": "failed_call",
+      "facts_all": true,
+      "checks": {
+        "calls>=5": true,
+        "effective>=1": true,
+        "boundary>=1": true,
+        "boundary_declared": true,
+        "edge_declared": false
+      },
+      "verdict": "pass"
+    },
+    {
+      "tool": "editor_get_scene_tree",
+      "calls": 83,
+      "effective": 50,
+      "failed": 0,
+      "facts_complete": 83,
+      "declared_ok": 5,
+      "declared_probe": 1,
+      "declared_edge": 0,
+      "boundary_evidence": "NONE",
+      "facts_all": true,
+      "checks": {
+        "calls>=5": true,
+        "effective>=1": true,
+        "boundary>=1": false,
+        "boundary_declared": true,
+        "edge_declared": false
+      },
+      "verdict": "fail"
+    },
+    {
+      "tool": "editor_get_selection",
+      "calls": 12,
+      "effective": 10,
+      "failed": 2,
+      "facts_complete": 12,
+      "declared_ok": 5,
+      "declared_probe": 1,
+      "declared_edge": 0,
+      "boundary_evidence": "failed_call",
+      "facts_all": true,
+      "checks": {
+        "calls>=5": true,
+        "effective>=1": true,
+        "boundary>=1": true,
+        "boundary_declared": true,
+        "edge_declared": false
+      },
+      "verdict": "pass"
+    },
+    {
+      "tool": "editor_list_signal_connections",
+      "calls": 12,
+      "effective": 5,
+      "failed": 4,
+      "facts_complete": 12,
+      "declared_ok": 5,
+      "declared_probe": 1,
+      "declared_edge": 0,
+      "boundary_evidence": "failed_call",
+      "facts_all": true,
+      "checks": {
+        "calls>=5": true,
+        "effective>=1": true,
+        "boundary>=1": true,
+        "boundary_declared": true,
+        "edge_declared": false
+      },
+      "verdict": "pass"
+    },
+    {
+      "tool": "running_game_capture_frames",
+      "calls": 12,
+      "effective": 0,
+      "failed": 2,
+      "facts_complete": 10,
+      "declared_ok": 5,
+      "declared_probe": 1,
+      "declared_edge": 0,
+      "boundary_evidence": "failed_call",
+      "facts_all": false,
+      "checks": {
+        "calls>=5": true,
+        "effective>=1": false,
+        "boundary>=1": true,
+        "boundary_declared": true,
+        "edge_declared": false
+      },
+      "verdict": "fail"
+    },
+    {
+      "tool": "running_game_capture_signal_emissions",
+      "calls": 12,
+      "effective": 0,
+      "failed": 2,
+      "facts_complete": 10,
+      "declared_ok": 5,
+      "declared_probe": 1,
+      "declared_edge": 0,
+      "boundary_evidence": "failed_call",
+      "facts_all": false,
+      "checks": {
+        "calls>=5": true,
+        "effective>=1": false,
+        "boundary>=1": true,
+        "boundary_declared": true,
+        "edge_declared": false
+      },
+      "verdict": "fail"
+    },
+    {
+      "tool": "running_game_find_nearby_nodes",
+      "calls": 12,
+      "effective": 10,
+      "failed": 2,
+      "facts_complete": 12,
+      "declared_ok": 5,
+      "declared_probe": 1,
+      "declared_edge": 0,
+      "boundary_evidence": "failed_call",
+      "facts_all": true,
+      "checks": {
+        "calls>=5": true,
+        "effective>=1": true,
+        "boundary>=1": true,
+        "boundary_declared": true,
+        "edge_declared": false
+      },
+      "verdict": "pass"
+    },
+    {
+      "tool": "running_game_find_nodes_by_script",
+      "calls": 12,
+      "effective": 10,
+      "failed": 2,
+      "facts_complete": 12,
+      "declared_ok": 5,
+      "declared_probe": 1,
+      "declared_edge": 0,
+      "boundary_evidence": "failed_call",
+      "facts_all": true,
+      "checks": {
+        "calls>=5": true,
+        "effective>=1": true,
+        "boundary>=1": true,
+        "boundary_declared": true,
+        "edge_declared": false
+      },
+      "verdict": "pass"
+    },
+    {
+      "tool": "running_game_find_ui_elements",
+      "calls": 12,
+      "effective": 10,
+      "failed": 2,
+      "facts_complete": 12,
+      "declared_ok": 5,
+      "declared_probe": 1,
+      "declared_edge": 0,
+      "boundary_evidence": "failed_call",
+      "facts_all": true,
+      "checks": {
+        "calls>=5": true,
+        "effective>=1": true,
+        "boundary>=1": true,
+        "boundary_declared": true,
+        "edge_declared": false
+      },
+      "verdict": "pass"
+    },
+    {
+      "tool": "running_game_get_autoload_node",
+      "calls": 12,
+      "effective": 10,
+      "failed": 2,
+      "facts_complete": 12,
+      "declared_ok": 5,
+      "declared_probe": 1,
+      "declared_edge": 0,
+      "boundary_evidence": "failed_call",
+      "facts_all": true,
+      "checks": {
+        "calls>=5": true,
+        "effective>=1": true,
+        "boundary>=1": true,
+        "boundary_declared": true,
+        "edge_declared": false
+      },
+      "verdict": "pass"
+    },
+    {
+      "tool": "running_game_get_node_properties",
+      "calls": 52,
+      "effective": 48,
+      "failed": 2,
+      "facts_complete": 52,
+      "declared_ok": 5,
+      "declared_probe": 1,
+      "declared_edge": 0,
+      "boundary_evidence": "failed_call",
+      "facts_all": true,
+      "checks": {
+        "calls>=5": true,
+        "effective>=1": true,
+        "boundary>=1": true,
+        "boundary_declared": true,
+        "edge_declared": false
+      },
+      "verdict": "pass"
+    },
+    {
+      "tool": "running_game_get_node_properties_batch",
+      "calls": 12,
+      "effective": 10,
+      "failed": 0,
+      "facts_complete": 12,
+      "declared_ok": 5,
+      "declared_probe": 1,
+      "declared_edge": 0,
+      "boundary_evidence": "NONE",
+      "facts_all": true,
+      "checks": {
+        "calls>=5": true,
+        "effective>=1": true,
+        "boundary>=1": false,
+        "boundary_declared": true,
+        "edge_declared": false
+      },
+      "verdict": "fail"
+    },
+    {
+      "tool": "running_game_simulate_button_click_by_text",
+      "calls": 12,
+      "effective": 2,
+      "failed": 2,
+      "facts_complete": 12,
+      "declared_ok": 5,
+      "declared_probe": 1,
+      "declared_edge": 0,
+      "boundary_evidence": "failed_call",
+      "facts_all": true,
+      "checks": {
+        "calls>=5": true,
+        "effective>=1": true,
+        "boundary>=1": true,
+        "boundary_declared": true,
+        "edge_declared": false
+      },
+      "verdict": "pass"
+    }
+  ]
+}

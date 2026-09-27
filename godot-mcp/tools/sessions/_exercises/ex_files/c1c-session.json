@@ -1,0 +1,262 @@
+{
+  "_comment": "TASK-110 batch c1c -- closes the last two family-1 gate failures (plus the bonus tool's boundary). Root causes in the header above.",
+  "game": "_exercises_ex_files",
+  "import": true,
+  "calls": [
+    {
+      "tag": "c1c-001-project_create_scene_file-ok",
+      "port": "editor",
+      "tool": "project_create_scene_file",
+      "arguments": {
+        "path": "res://scenes/ex_s1.tscn",
+        "root_type": "Node2D",
+        "root_name": "ExRoot1"
+      },
+      "note": "project_create_scene_file call 1/5. recreate the scenes c1 deleted, so the across-scenes writer has targets"
+    },
+    {
+      "tag": "c1c-002-project_create_scene_file-ok",
+      "port": "editor",
+      "tool": "project_create_scene_file",
+      "arguments": {
+        "path": "res://scenes/ex_s2.tscn",
+        "root_type": "Node2D",
+        "root_name": "ExRoot2"
+      },
+      "note": "project_create_scene_file call 2/5. recreate the scenes c1 deleted, so the across-scenes writer has targets"
+    },
+    {
+      "tag": "c1c-003-project_create_scene_file-ok",
+      "port": "editor",
+      "tool": "project_create_scene_file",
+      "arguments": {
+        "path": "res://scenes/ex_s3.tscn",
+        "root_type": "Node2D",
+        "root_name": "ExRoot3"
+      },
+      "note": "project_create_scene_file call 3/5. recreate the scenes c1 deleted, so the across-scenes writer has targets"
+    },
+    {
+      "tag": "c1c-004-project_create_scene_file-ok",
+      "port": "editor",
+      "tool": "project_create_scene_file",
+      "arguments": {
+        "path": "res://scenes/ex_s4.tscn",
+        "root_type": "Node2D",
+        "root_name": "ExRoot4"
+      },
+      "note": "project_create_scene_file call 4/5. recreate the scenes c1 deleted, so the across-scenes writer has targets"
+    },
+    {
+      "tag": "c1c-005-project_create_scene_file-ok",
+      "port": "editor",
+      "tool": "project_create_scene_file",
+      "arguments": {
+        "path": "res://scenes/ex_s5.tscn",
+        "root_type": "Node2D",
+        "root_name": "ExRoot5"
+      },
+      "note": "project_create_scene_file call 5/5. recreate the scenes c1 deleted, so the across-scenes writer has targets"
+    },
+    {
+      "tag": "c1c-006-project_create_scene_file-probe",
+      "port": "editor",
+      "tool": "project_create_scene_file",
+      "arguments": {
+        "path": "res://scenes/main.tscn"
+      },
+      "note": "project_create_scene_file boundary: the scene already exists"
+    },
+    {
+      "tag": "c1c-007-project_set_node_property_across_scenes-ok",
+      "port": "editor",
+      "tool": "project_set_node_property_across_scenes",
+      "arguments": {
+        "type": "Node2D",
+        "property": "visible",
+        "value": false,
+        "dry_run": true,
+        "path_filter": "res://scenes"
+      },
+      "note": "project_set_node_property_across_scenes call 1/5. visible=false differs from the default, so a real write changes bytes"
+    },
+    {
+      "tag": "c1c-008-project_set_node_property_across_scenes-ok",
+      "port": "editor",
+      "tool": "project_set_node_property_across_scenes",
+      "arguments": {
+        "type": "Node2D",
+        "property": "visible",
+        "value": false,
+        "dry_run": true,
+        "path_filter": "res://scenes"
+      },
+      "note": "project_set_node_property_across_scenes call 2/5. visible=false differs from the default, so a real write changes bytes"
+    },
+    {
+      "tag": "c1c-009-project_set_node_property_across_scenes-ok",
+      "port": "editor",
+      "tool": "project_set_node_property_across_scenes",
+      "arguments": {
+        "type": "Node2D",
+        "property": "visible",
+        "value": false,
+        "dry_run": true,
+        "path_filter": "res://scenes"
+      },
+      "note": "project_set_node_property_across_scenes call 3/5. visible=false differs from the default, so a real write changes bytes"
+    },
+    {
+      "tag": "c1c-010-project_set_node_property_across_scenes-ok",
+      "port": "editor",
+      "tool": "project_set_node_property_across_scenes",
+      "arguments": {
+        "type": "Node2D",
+        "property": "visible",
+        "value": false,
+        "dry_run": true,
+        "path_filter": "res://scenes"
+      },
+      "note": "project_set_node_property_across_scenes call 4/5. visible=false differs from the default, so a real write changes bytes"
+    },
+    {
+      "tag": "c1c-011-project_set_node_property_across_scenes-ok",
+      "port": "editor",
+      "tool": "project_set_node_property_across_scenes",
+      "arguments": {
+        "type": "Node2D",
+        "property": "visible",
+        "value": false,
+        "dry_run": false,
+        "path_filter": "res://scenes"
+      },
+      "note": "project_set_node_property_across_scenes call 5/5. visible=false differs from the default, so a real write changes bytes"
+    },
+    {
+      "tag": "c1c-012-project_set_node_property_across_scenes-probe",
+      "port": "editor",
+      "tool": "project_set_node_property_across_scenes",
+      "arguments": {
+        "type": 123,
+        "property": "visible",
+        "value": false,
+        "path_filter": "res://scenes"
+      },
+      "note": "project_set_node_property_across_scenes boundary: type is typed string, not int"
+    },
+    {
+      "tag": "c1c-013-project_validate_script-ok",
+      "port": "editor",
+      "tool": "project_validate_script",
+      "arguments": {
+        "path": "res://src/PongGame.cs"
+      },
+      "note": "project_validate_script call 1/5. this editor process started after c1b's build, so the assembly is loaded"
+    },
+    {
+      "tag": "c1c-014-project_validate_script-ok",
+      "port": "editor",
+      "tool": "project_validate_script",
+      "arguments": {
+        "path": "res://src/Ball.cs"
+      },
+      "note": "project_validate_script call 2/5. this editor process started after c1b's build, so the assembly is loaded"
+    },
+    {
+      "tag": "c1c-015-project_validate_script-ok",
+      "port": "editor",
+      "tool": "project_validate_script",
+      "arguments": {
+        "path": "res://src/Paddle.cs"
+      },
+      "note": "project_validate_script call 3/5. this editor process started after c1b's build, so the assembly is loaded"
+    },
+    {
+      "tag": "c1c-016-project_validate_script-ok",
+      "port": "editor",
+      "tool": "project_validate_script",
+      "arguments": {
+        "path": "res://src/ex_c1_1.cs"
+      },
+      "note": "project_validate_script call 4/5. this editor process started after c1b's build, so the assembly is loaded"
+    },
+    {
+      "tag": "c1c-017-project_validate_script-ok",
+      "port": "editor",
+      "tool": "project_validate_script",
+      "arguments": {
+        "path": "res://src/ex_c1_2.cs"
+      },
+      "note": "project_validate_script call 5/5. this editor process started after c1b's build, so the assembly is loaded"
+    },
+    {
+      "tag": "c1c-018-project_validate_script-probe",
+      "port": "editor",
+      "tool": "project_validate_script",
+      "arguments": {
+        "path": "res://src/NoSuchFile.cs"
+      },
+      "note": "project_validate_script boundary: path does not exist"
+    },
+    {
+      "tag": "c1c-019-project_create_script-ok",
+      "port": "editor",
+      "tool": "project_create_script",
+      "arguments": {
+        "path": "res://src/ex_c1c_1.cs",
+        "content": "using Godot;\n\npublic partial class ExC1c1 : Node\n{\n    public override void _Ready() { }\n}\n"
+      },
+      "note": "project_create_script call 1/5. new C# script"
+    },
+    {
+      "tag": "c1c-020-project_create_script-ok",
+      "port": "editor",
+      "tool": "project_create_script",
+      "arguments": {
+        "path": "res://src/ex_c1c_2.cs",
+        "content": "using Godot;\n\npublic partial class ExC1c2 : Node\n{\n    public override void _Ready() { }\n}\n"
+      },
+      "note": "project_create_script call 2/5. new C# script"
+    },
+    {
+      "tag": "c1c-021-project_create_script-ok",
+      "port": "editor",
+      "tool": "project_create_script",
+      "arguments": {
+        "path": "res://src/ex_c1c_3.cs",
+        "content": "using Godot;\n\npublic partial class ExC1c3 : Node\n{\n    public override void _Ready() { }\n}\n"
+      },
+      "note": "project_create_script call 3/5. new C# script"
+    },
+    {
+      "tag": "c1c-022-project_create_script-ok",
+      "port": "editor",
+      "tool": "project_create_script",
+      "arguments": {
+        "path": "res://src/ex_c1c_4.cs",
+        "content": "using Godot;\n\npublic partial class ExC1c4 : Node\n{\n    public override void _Ready() { }\n}\n"
+      },
+      "note": "project_create_script call 4/5. new C# script"
+    },
+    {
+      "tag": "c1c-023-project_create_script-ok",
+      "port": "editor",
+      "tool": "project_create_script",
+      "arguments": {
+        "path": "res://src/ex_c1c_5.cs",
+        "content": "using Godot;\n\npublic partial class ExC1c5 : Node\n{\n    public override void _Ready() { }\n}\n"
+      },
+      "note": "project_create_script call 5/5. new C# script"
+    },
+    {
+      "tag": "c1c-024-project_create_script-probe",
+      "port": "editor",
+      "tool": "project_create_script",
+      "arguments": {
+        "path": 123,
+        "content": "using Godot;\n\npublic partial class ExBad : Node\n{\n    public override void _Ready() { }\n}\n"
+      },
+      "note": "project_create_script boundary: path is typed string, not int"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+fix(godot-mcp): TASK-110 - editor_list_signal_connections' registered schema regains `scope`, the one member that made the TASK-051 narrowing unreachable
+
+The coverage batch's parameter probe (batch c23, calls c23-059/060/061) sent
+`scope:"user"` / `scope:"internal"` to editor_list_signal_connections and got
+-32602 "Unknown parameter 'scope' for tool 'editor_list_signal_connections'"
+with the suggestion "Accepted parameters ...: node_path, signal_name".
+
+That answer is only half true, and the other half is the defect:
+
+  * the contract declares the parameter - docs/tools_list.renamed.json carries
+    `scope` with type string, default "all", enum [all,user,internal] and a
+    description that even names the response key it produces;
+  * the handler implements it - editor_node_read.cpp parses `scope`
+    (optional_string + parse_signal_connection_scope, with a -32602 for a bad
+    value), filters through filter_signal_connections_by_scope and answers
+    `scope` plus the `counts` breakdown - and the responses measured in this
+    batch do carry both (`{"count":1,"counts":{"all":1,"internal":0,"user":1},
+    "scope":"all"}`);
+  * the *registered* schema was the only thing out of step: its JSON literal
+    declared node_path and signal_name and stopped there, so the parameter
+    validator refused the argument before the handler could run.
+
+So the capability was implemented, documented and unreachable at the same time.
+The fix copies the contract's own member into the schema literal verbatim
+(enum, default and description included), which leaves the schema and the
+contract byte-equal for this tool instead of teaching the contract to accept a
+smaller answer.
+
+Measured before/after (same session shape, same project):
+  before: scope:"user" and scope:"internal" -> -32602, 0/3 accepted
+  after:  scope:"all"|"user"|"internal"    -> ok, 3/3 accepted, counts present
+
+Engine-only change; the main repository's coverage ledger records the batch.

@@ -1,0 +1,2484 @@
+{
+  "_comment": "TASK-110 batch c1 -- the 40 project_* contract tools that the 20-game loop never called. Every tool gets 5 effective-intended calls plus 1 boundary/probe call. Editor endpoint only: project_* is scope=both and the editor endpoint is the one the loop uses for project work.",
+  "game": "_exercises_ex_files",
+  "import": true,
+  "calls": [
+    {
+      "tag": "c1-001-project_create_shader-ok",
+      "port": "editor",
+      "tool": "project_create_shader",
+      "arguments": {
+        "path": "res://shaders/ex1.gdshader",
+        "shader_type": "shader_type canvas_item;"
+      },
+      "note": "project_create_shader call 1/5. new .gdshader"
+    },
+    {
+      "tag": "c1-002-project_create_shader-ok",
+      "port": "editor",
+      "tool": "project_create_shader",
+      "arguments": {
+        "path": "res://shaders/ex2.gdshader",
+        "shader_type": "shader_type canvas_item;"
+      },
+      "note": "project_create_shader call 2/5. new .gdshader"
+    },
+    {
+      "tag": "c1-003-project_create_shader-ok",
+      "port": "editor",
+      "tool": "project_create_shader",
+      "arguments": {
+        "path": "res://shaders/ex3.gdshader",
+        "shader_type": "shader_type canvas_item;"
+      },
+      "note": "project_create_shader call 3/5. new .gdshader"
+    },
+    {
+      "tag": "c1-004-project_create_shader-ok",
+      "port": "editor",
+      "tool": "project_create_shader",
+      "arguments": {
+        "path": "res://shaders/ex4.gdshader",
+        "shader_type": "shader_type canvas_item;"
+      },
+      "note": "project_create_shader call 4/5. new .gdshader"
+    },
+    {
+      "tag": "c1-005-project_create_shader-ok",
+      "port": "editor",
+      "tool": "project_create_shader",
+      "arguments": {
+        "path": "res://shaders/ex5.gdshader",
+        "shader_type": "shader_type canvas_item;"
+      },
+      "note": "project_create_shader call 5/5. new .gdshader"
+    },
+    {
+      "tag": "c1-006-project_create_shader-probe",
+      "port": "editor",
+      "tool": "project_create_shader",
+      "arguments": {
+        "path": "res://scenes/main.tscn",
+        "shader_type": "shader_type canvas_item;"
+      },
+      "note": "project_create_shader boundary: a .tscn path is not a shader destination"
+    },
+    {
+      "tag": "c1-007-project_edit_shader-ok",
+      "port": "editor",
+      "tool": "project_edit_shader",
+      "arguments": {
+        "path": "res://shaders/ex1.gdshader",
+        "code": "shader_type canvas_item;\nuniform float speed = 1.0;\nuniform vec4 tint : source_color = vec4(1.0, 0.5, 0.5, 1.0);\nvoid fragment() { COLOR = tint * 0.5; }\n"
+      },
+      "note": "project_edit_shader call 1/5. write code with two uniforms"
+    },
+    {
+      "tag": "c1-008-project_edit_shader-ok",
+      "port": "editor",
+      "tool": "project_edit_shader",
+      "arguments": {
+        "path": "res://shaders/ex2.gdshader",
+        "code": "shader_type canvas_item;\nuniform float speed = 1.0;\nuniform vec4 tint : source_color = vec4(1.0, 0.5, 0.5, 1.0);\nvoid fragment() { COLOR = tint * 0.5; }\n"
+      },
+      "note": "project_edit_shader call 2/5. write code with two uniforms"
+    },
+    {
+      "tag": "c1-009-project_edit_shader-ok",
+      "port": "editor",
+      "tool": "project_edit_shader",
+      "arguments": {
+        "path": "res://shaders/ex3.gdshader",
+        "code": "shader_type canvas_item;\nuniform float speed = 1.0;\nuniform vec4 tint : source_color = vec4(1.0, 0.5, 0.5, 1.0);\nvoid fragment() { COLOR = tint * 0.5; }\n"
+      },
+      "note": "project_edit_shader call 3/5. write code with two uniforms"
+    },
+    {
+      "tag": "c1-010-project_edit_shader-ok",
+      "port": "editor",
+      "tool": "project_edit_shader",
+      "arguments": {
+        "path": "res://shaders/ex4.gdshader",
+        "code": "shader_type canvas_item;\nuniform float speed = 1.0;\nuniform vec4 tint : source_color = vec4(1.0, 0.5, 0.5, 1.0);\nvoid fragment() { COLOR = tint * 0.5; }\n"
+      },
+      "note": "project_edit_shader call 4/5. write code with two uniforms"
+    },
+    {
+      "tag": "c1-011-project_edit_shader-ok",
+      "port": "editor",
+      "tool": "project_edit_shader",
+      "arguments": {
+        "path": "res://shaders/ex5.gdshader",
+        "code": "shader_type canvas_item;\nuniform float speed = 1.0;\nuniform vec4 tint : source_color = vec4(1.0, 0.5, 0.5, 1.0);\nvoid fragment() { COLOR = tint * 0.5; }\n"
+      },
+      "note": "project_edit_shader call 5/5. write code with two uniforms"
+    },
+    {
+      "tag": "c1-012-project_edit_shader-probe",
+      "port": "editor",
+      "tool": "project_edit_shader",
+      "arguments": {
+        "path": "res://shaders/absent.gdshader",
+        "code": "shader_type canvas_item;\nuniform float speed = 1.0;\nuniform vec4 tint : source_color = vec4(1.0, 0.5, 0.5, 1.0);\nvoid fragment() { COLOR = tint * 0.5; }\n"
+      },
+      "note": "project_edit_shader boundary: path does not exist"
+    },
+    {
+      "tag": "c1-013-project_create_theme-ok",
+      "port": "editor",
+      "tool": "project_create_theme",
+      "arguments": {
+        "path": "res://themes/ex1.tres",
+        "name": "ExTheme1"
+      },
+      "note": "project_create_theme call 1/5. new Theme resource"
+    },
+    {
+      "tag": "c1-014-project_create_theme-ok",
+      "port": "editor",
+      "tool": "project_create_theme",
+      "arguments": {
+        "path": "res://themes/ex2.tres",
+        "name": "ExTheme2"
+      },
+      "note": "project_create_theme call 2/5. new Theme resource"
+    },
+    {
+      "tag": "c1-015-project_create_theme-ok",
+      "port": "editor",
+      "tool": "project_create_theme",
+      "arguments": {
+        "path": "res://themes/ex3.tres",
+        "name": "ExTheme3"
+      },
+      "note": "project_create_theme call 3/5. new Theme resource"
+    },
+    {
+      "tag": "c1-016-project_create_theme-ok",
+      "port": "editor",
+      "tool": "project_create_theme",
+      "arguments": {
+        "path": "res://themes/ex4.tres",
+        "name": "ExTheme4"
+      },
+      "note": "project_create_theme call 4/5. new Theme resource"
+    },
+    {
+      "tag": "c1-017-project_create_theme-ok",
+      "port": "editor",
+      "tool": "project_create_theme",
+      "arguments": {
+        "path": "res://themes/ex5.tres",
+        "name": "ExTheme5"
+      },
+      "note": "project_create_theme call 5/5. new Theme resource"
+    },
+    {
+      "tag": "c1-018-project_create_theme-probe",
+      "port": "editor",
+      "tool": "project_create_theme",
+      "arguments": {
+        "path": "res://themes/ex1.tres",
+        "name": "Dup"
+      },
+      "note": "project_create_theme boundary: the theme already exists"
+    },
+    {
+      "tag": "c1-019-project_create_resource-ok",
+      "port": "editor",
+      "tool": "project_create_resource",
+      "arguments": {
+        "path": "res://resources/ex1.tres",
+        "type": "Gradient"
+      },
+      "note": "project_create_resource call 1/5. new .tres"
+    },
+    {
+      "tag": "c1-020-project_create_resource-ok",
+      "port": "editor",
+      "tool": "project_create_resource",
+      "arguments": {
+        "path": "res://resources/ex2.tres",
+        "type": "Curve"
+      },
+      "note": "project_create_resource call 2/5. new .tres"
+    },
+    {
+      "tag": "c1-021-project_create_resource-ok",
+      "port": "editor",
+      "tool": "project_create_resource",
+      "arguments": {
+        "path": "res://resources/ex3.tres",
+        "type": "Gradient"
+      },
+      "note": "project_create_resource call 3/5. new .tres"
+    },
+    {
+      "tag": "c1-022-project_create_resource-ok",
+      "port": "editor",
+      "tool": "project_create_resource",
+      "arguments": {
+        "path": "res://resources/ex4.tres",
+        "type": "Curve"
+      },
+      "note": "project_create_resource call 4/5. new .tres"
+    },
+    {
+      "tag": "c1-023-project_create_resource-ok",
+      "port": "editor",
+      "tool": "project_create_resource",
+      "arguments": {
+        "path": "res://resources/ex5.tres",
+        "type": "Resource"
+      },
+      "note": "project_create_resource call 5/5. new .tres"
+    },
+    {
+      "tag": "c1-024-project_create_resource-probe",
+      "port": "editor",
+      "tool": "project_create_resource",
+      "arguments": {
+        "path": "res://resources/ex_bad.tres",
+        "type": "NoSuchResourceType"
+      },
+      "note": "project_create_resource boundary: unknown resource type"
+    },
+    {
+      "tag": "c1-025-project_create_scene_file-ok",
+      "port": "editor",
+      "tool": "project_create_scene_file",
+      "arguments": {
+        "path": "res://scenes/ex_s1.tscn",
+        "root_type": "Node2D",
+        "root_name": "ExRoot1"
+      },
+      "note": "project_create_scene_file call 1/5. new .tscn"
+    },
+    {
+      "tag": "c1-026-project_create_scene_file-ok",
+      "port": "editor",
+      "tool": "project_create_scene_file",
+      "arguments": {
+        "path": "res://scenes/ex_s2.tscn",
+        "root_type": "Node2D",
+        "root_name": "ExRoot2"
+      },
+      "note": "project_create_scene_file call 2/5. new .tscn"
+    },
+    {
+      "tag": "c1-027-project_create_scene_file-ok",
+      "port": "editor",
+      "tool": "project_create_scene_file",
+      "arguments": {
+        "path": "res://scenes/ex_s3.tscn",
+        "root_type": "Node2D",
+        "root_name": "ExRoot3"
+      },
+      "note": "project_create_scene_file call 3/5. new .tscn"
+    },
+    {
+      "tag": "c1-028-project_create_scene_file-ok",
+      "port": "editor",
+      "tool": "project_create_scene_file",
+      "arguments": {
+        "path": "res://scenes/ex_s4.tscn",
+        "root_type": "Node2D",
+        "root_name": "ExRoot4"
+      },
+      "note": "project_create_scene_file call 4/5. new .tscn"
+    },
+    {
+      "tag": "c1-029-project_create_scene_file-ok",
+      "port": "editor",
+      "tool": "project_create_scene_file",
+      "arguments": {
+        "path": "res://scenes/ex_s5.tscn",
+        "root_type": "Node2D",
+        "root_name": "ExRoot5"
+      },
+      "note": "project_create_scene_file call 5/5. new .tscn"
+    },
+    {
+      "tag": "c1-030-project_create_scene_file-probe",
+      "port": "editor",
+      "tool": "project_create_scene_file",
+      "arguments": {
+        "path": "res://scenes/main.tscn"
+      },
+      "note": "project_create_scene_file boundary: the scene already exists"
+    },
+    {
+      "tag": "c1-031-project_create_script-ok",
+      "port": "editor",
+      "tool": "project_create_script",
+      "arguments": {
+        "path": "res://src/ex_c1_1.cs",
+        "content": "using Godot;\n\npublic partial class ExC11 : Node\n{\n    public override void _Ready() { }\n}\n"
+      },
+      "note": "project_create_script call 1/5. new C# script"
+    },
+    {
+      "tag": "c1-032-project_create_script-ok",
+      "port": "editor",
+      "tool": "project_create_script",
+      "arguments": {
+        "path": "res://src/ex_c1_2.cs",
+        "content": "using Godot;\n\npublic partial class ExC12 : Node\n{\n    public override void _Ready() { }\n}\n"
+      },
+      "note": "project_create_script call 2/5. new C# script"
+    },
+    {
+      "tag": "c1-033-project_create_script-ok",
+      "port": "editor",
+      "tool": "project_create_script",
+      "arguments": {
+        "path": "res://src/ex_c1_3.cs",
+        "content": "using Godot;\n\npublic partial class ExC13 : Node\n{\n    public override void _Ready() { }\n}\n"
+      },
+      "note": "project_create_script call 3/5. new C# script"
+    },
+    {
+      "tag": "c1-034-project_create_script-ok",
+      "port": "editor",
+      "tool": "project_create_script",
+      "arguments": {
+        "path": "res://src/ex_c1_4.cs",
+        "content": "using Godot;\n\npublic partial class ExC14 : Node\n{\n    public override void _Ready() { }\n}\n"
+      },
+      "note": "project_create_script call 4/5. new C# script"
+    },
+    {
+      "tag": "c1-035-project_create_script-ok",
+      "port": "editor",
+      "tool": "project_create_script",
+      "arguments": {
+        "path": "res://src/ex_c1_5.cs",
+        "content": "using Godot;\n\npublic partial class ExC15 : Node\n{\n    public override void _Ready() { }\n}\n"
+      },
+      "note": "project_create_script call 5/5. new C# script"
+    },
+    {
+      "tag": "c1-036-project_create_script-probe",
+      "port": "editor",
+      "tool": "project_create_script",
+      "arguments": {
+        "path": "res://src/PongGame.cs",
+        "content": "using Godot;\n\npublic partial class PongGame : Node\n{\n    public override void _Ready() { }\n}\n"
+      },
+      "note": "project_create_script boundary: the script already exists (no overwrite)"
+    },
+    {
+      "tag": "c1-037-project_write_text_file-ok",
+      "port": "editor",
+      "tool": "project_write_text_file",
+      "arguments": {
+        "path": "res://notes_ex1.cfg",
+        "content": "hello ex1\n",
+        "overwrite": true
+      },
+      "note": "project_write_text_file call 1/5. plain text file"
+    },
+    {
+      "tag": "c1-038-project_write_text_file-ok",
+      "port": "editor",
+      "tool": "project_write_text_file",
+      "arguments": {
+        "path": "res://notes_ex2.cfg",
+        "content": "hello ex2\n"
+      },
+      "note": "project_write_text_file call 2/5. plain text file"
+    },
+    {
+      "tag": "c1-039-project_write_text_file-ok",
+      "port": "editor",
+      "tool": "project_write_text_file",
+      "arguments": {
+        "path": "res://notes_ex3.cfg",
+        "content": "hello ex3\n"
+      },
+      "note": "project_write_text_file call 3/5. plain text file"
+    },
+    {
+      "tag": "c1-040-project_write_text_file-ok",
+      "port": "editor",
+      "tool": "project_write_text_file",
+      "arguments": {
+        "path": "res://notes_ex4.cfg",
+        "content": "hello ex4\n",
+        "overwrite": true
+      },
+      "note": "project_write_text_file call 4/5. plain text file"
+    },
+    {
+      "tag": "c1-041-project_write_text_file-ok",
+      "port": "editor",
+      "tool": "project_write_text_file",
+      "arguments": {
+        "path": "res://notes_ex5.cfg",
+        "content": "hello ex5\n"
+      },
+      "note": "project_write_text_file call 5/5. plain text file"
+    },
+    {
+      "tag": "c1-042-project_write_text_file-probe",
+      "port": "editor",
+      "tool": "project_write_text_file",
+      "arguments": {
+        "path": "res://scenes/main.tscn",
+        "content": "not a scene"
+      },
+      "note": "project_write_text_file boundary: a .tscn destination is refused (use the scene tools)"
+    },
+    {
+      "tag": "c1-043-project_get_info-ok",
+      "port": "editor",
+      "tool": "project_get_info",
+      "arguments": {},
+      "note": "project_get_info call 1/5."
+    },
+    {
+      "tag": "c1-044-project_get_info-ok",
+      "port": "editor",
+      "tool": "project_get_info",
+      "arguments": {},
+      "note": "project_get_info call 2/5."
+    },
+    {
+      "tag": "c1-045-project_get_info-ok",
+      "port": "editor",
+      "tool": "project_get_info",
+      "arguments": {},
+      "note": "project_get_info call 3/5."
+    },
+    {
+      "tag": "c1-046-project_get_info-ok",
+      "port": "editor",
+      "tool": "project_get_info",
+      "arguments": {},
+      "note": "project_get_info call 4/5."
+    },
+    {
+      "tag": "c1-047-project_get_info-ok",
+      "port": "editor",
+      "tool": "project_get_info",
+      "arguments": {},
+      "note": "project_get_info call 5/5."
+    },
+    {
+      "tag": "c1-048-project_get_info-probe",
+      "port": "editor",
+      "tool": "project_get_info",
+      "arguments": {
+        "bogus_argument": 1
+      },
+      "note": "project_get_info boundary: out-of-contract argument accepted or rejected? both are recorded"
+    },
+    {
+      "tag": "c1-049-project_get_settings-ok",
+      "port": "editor",
+      "tool": "project_get_settings",
+      "arguments": {},
+      "note": "project_get_settings call 1/5."
+    },
+    {
+      "tag": "c1-050-project_get_settings-ok",
+      "port": "editor",
+      "tool": "project_get_settings",
+      "arguments": {
+        "prefix": "application"
+      },
+      "note": "project_get_settings call 2/5."
+    },
+    {
+      "tag": "c1-051-project_get_settings-ok",
+      "port": "editor",
+      "tool": "project_get_settings",
+      "arguments": {
+        "prefix": "display"
+      },
+      "note": "project_get_settings call 3/5."
+    },
+    {
+      "tag": "c1-052-project_get_settings-ok",
+      "port": "editor",
+      "tool": "project_get_settings",
+      "arguments": {
+        "prefix": "dotnet"
+      },
+      "note": "project_get_settings call 4/5."
+    },
+    {
+      "tag": "c1-053-project_get_settings-ok",
+      "port": "editor",
+      "tool": "project_get_settings",
+      "arguments": {
+        "include_default": true
+      },
+      "note": "project_get_settings call 5/5."
+    },
+    {
+      "tag": "c1-054-project_get_settings-probe",
+      "port": "editor",
+      "tool": "project_get_settings",
+      "arguments": {
+        "prefix": 12345
+      },
+      "note": "project_get_settings boundary: prefix is typed string, not int"
+    },
+    {
+      "tag": "c1-055-project_get_statistics-ok",
+      "port": "editor",
+      "tool": "project_get_statistics",
+      "arguments": {},
+      "note": "project_get_statistics call 1/5."
+    },
+    {
+      "tag": "c1-056-project_get_statistics-ok",
+      "port": "editor",
+      "tool": "project_get_statistics",
+      "arguments": {
+        "path": "res://src"
+      },
+      "note": "project_get_statistics call 2/5."
+    },
+    {
+      "tag": "c1-057-project_get_statistics-ok",
+      "port": "editor",
+      "tool": "project_get_statistics",
+      "arguments": {
+        "path": "res://scenes"
+      },
+      "note": "project_get_statistics call 3/5."
+    },
+    {
+      "tag": "c1-058-project_get_statistics-ok",
+      "port": "editor",
+      "tool": "project_get_statistics",
+      "arguments": {
+        "include_addons": true
+      },
+      "note": "project_get_statistics call 4/5."
+    },
+    {
+      "tag": "c1-059-project_get_statistics-ok",
+      "port": "editor",
+      "tool": "project_get_statistics",
+      "arguments": {
+        "path": "res://"
+      },
+      "note": "project_get_statistics call 5/5."
+    },
+    {
+      "tag": "c1-060-project_get_statistics-probe",
+      "port": "editor",
+      "tool": "project_get_statistics",
+      "arguments": {
+        "path": "res://no_such_dir"
+      },
+      "note": "project_get_statistics boundary: path does not exist"
+    },
+    {
+      "tag": "c1-061-project_get_filesystem_tree-ok",
+      "port": "editor",
+      "tool": "project_get_filesystem_tree",
+      "arguments": {},
+      "note": "project_get_filesystem_tree call 1/5."
+    },
+    {
+      "tag": "c1-062-project_get_filesystem_tree-ok",
+      "port": "editor",
+      "tool": "project_get_filesystem_tree",
+      "arguments": {
+        "max_depth": 1
+      },
+      "note": "project_get_filesystem_tree call 2/5."
+    },
+    {
+      "tag": "c1-063-project_get_filesystem_tree-ok",
+      "port": "editor",
+      "tool": "project_get_filesystem_tree",
+      "arguments": {
+        "max_depth": 2
+      },
+      "note": "project_get_filesystem_tree call 3/5."
+    },
+    {
+      "tag": "c1-064-project_get_filesystem_tree-ok",
+      "port": "editor",
+      "tool": "project_get_filesystem_tree",
+      "arguments": {
+        "path": "res://src"
+      },
+      "note": "project_get_filesystem_tree call 4/5."
+    },
+    {
+      "tag": "c1-065-project_get_filesystem_tree-ok",
+      "port": "editor",
+      "tool": "project_get_filesystem_tree",
+      "arguments": {
+        "path": "res://scenes"
+      },
+      "note": "project_get_filesystem_tree call 5/5."
+    },
+    {
+      "tag": "c1-066-project_get_filesystem_tree-probe",
+      "port": "editor",
+      "tool": "project_get_filesystem_tree",
+      "arguments": {
+        "path": "res://no_such_dir"
+      },
+      "note": "project_get_filesystem_tree boundary: path does not exist"
+    },
+    {
+      "tag": "c1-067-project_list_scripts-ok",
+      "port": "editor",
+      "tool": "project_list_scripts",
+      "arguments": {},
+      "note": "project_list_scripts call 1/5."
+    },
+    {
+      "tag": "c1-068-project_list_scripts-ok",
+      "port": "editor",
+      "tool": "project_list_scripts",
+      "arguments": {},
+      "note": "project_list_scripts call 2/5."
+    },
+    {
+      "tag": "c1-069-project_list_scripts-ok",
+      "port": "editor",
+      "tool": "project_list_scripts",
+      "arguments": {},
+      "note": "project_list_scripts call 3/5."
+    },
+    {
+      "tag": "c1-070-project_list_scripts-ok",
+      "port": "editor",
+      "tool": "project_list_scripts",
+      "arguments": {},
+      "note": "project_list_scripts call 4/5."
+    },
+    {
+      "tag": "c1-071-project_list_scripts-ok",
+      "port": "editor",
+      "tool": "project_list_scripts",
+      "arguments": {},
+      "note": "project_list_scripts call 5/5."
+    },
+    {
+      "tag": "c1-072-project_list_scripts-probe",
+      "port": "editor",
+      "tool": "project_list_scripts",
+      "arguments": {
+        "bogus_argument": 1
+      },
+      "note": "project_list_scripts boundary: out-of-contract argument accepted or rejected?"
+    },
+    {
+      "tag": "c1-073-project_find_unused_resources-ok",
+      "port": "editor",
+      "tool": "project_find_unused_resources",
+      "arguments": {},
+      "note": "project_find_unused_resources call 1/5."
+    },
+    {
+      "tag": "c1-074-project_find_unused_resources-ok",
+      "port": "editor",
+      "tool": "project_find_unused_resources",
+      "arguments": {
+        "path": "res://src"
+      },
+      "note": "project_find_unused_resources call 2/5."
+    },
+    {
+      "tag": "c1-075-project_find_unused_resources-ok",
+      "port": "editor",
+      "tool": "project_find_unused_resources",
+      "arguments": {
+        "path": "res://scenes"
+      },
+      "note": "project_find_unused_resources call 3/5."
+    },
+    {
+      "tag": "c1-076-project_find_unused_resources-ok",
+      "port": "editor",
+      "tool": "project_find_unused_resources",
+      "arguments": {
+        "include_addons": true
+      },
+      "note": "project_find_unused_resources call 4/5."
+    },
+    {
+      "tag": "c1-077-project_find_unused_resources-ok",
+      "port": "editor",
+      "tool": "project_find_unused_resources",
+      "arguments": {
+        "path": "res://"
+      },
+      "note": "project_find_unused_resources call 5/5."
+    },
+    {
+      "tag": "c1-078-project_find_unused_resources-probe",
+      "port": "editor",
+      "tool": "project_find_unused_resources",
+      "arguments": {
+        "path": "res://no_such_dir"
+      },
+      "note": "project_find_unused_resources boundary: path does not exist"
+    },
+    {
+      "tag": "c1-079-project_detect_circular_dependencies-ok",
+      "port": "editor",
+      "tool": "project_detect_circular_dependencies",
+      "arguments": {},
+      "note": "project_detect_circular_dependencies call 1/5."
+    },
+    {
+      "tag": "c1-080-project_detect_circular_dependencies-ok",
+      "port": "editor",
+      "tool": "project_detect_circular_dependencies",
+      "arguments": {
+        "path": "res://scenes"
+      },
+      "note": "project_detect_circular_dependencies call 2/5."
+    },
+    {
+      "tag": "c1-081-project_detect_circular_dependencies-ok",
+      "port": "editor",
+      "tool": "project_detect_circular_dependencies",
+      "arguments": {
+        "path": "res://src"
+      },
+      "note": "project_detect_circular_dependencies call 3/5."
+    },
+    {
+      "tag": "c1-082-project_detect_circular_dependencies-ok",
+      "port": "editor",
+      "tool": "project_detect_circular_dependencies",
+      "arguments": {
+        "include_addons": true
+      },
+      "note": "project_detect_circular_dependencies call 4/5."
+    },
+    {
+      "tag": "c1-083-project_detect_circular_dependencies-ok",
+      "port": "editor",
+      "tool": "project_detect_circular_dependencies",
+      "arguments": {
+        "path": "res://"
+      },
+      "note": "project_detect_circular_dependencies call 5/5."
+    },
+    {
+      "tag": "c1-084-project_detect_circular_dependencies-probe",
+      "port": "editor",
+      "tool": "project_detect_circular_dependencies",
+      "arguments": {
+        "path": "res://no_such_dir"
+      },
+      "note": "project_detect_circular_dependencies boundary: path does not exist"
+    },
+    {
+      "tag": "c1-085-project_search_file_names-ok",
+      "port": "editor",
+      "tool": "project_search_file_names",
+      "arguments": {
+        "pattern": "*.cs"
+      },
+      "note": "project_search_file_names call 1/5."
+    },
+    {
+      "tag": "c1-086-project_search_file_names-ok",
+      "port": "editor",
+      "tool": "project_search_file_names",
+      "arguments": {
+        "pattern": "main"
+      },
+      "note": "project_search_file_names call 2/5."
+    },
+    {
+      "tag": "c1-087-project_search_file_names-ok",
+      "port": "editor",
+      "tool": "project_search_file_names",
+      "arguments": {
+        "pattern": "*.tscn"
+      },
+      "note": "project_search_file_names call 3/5."
+    },
+    {
+      "tag": "c1-088-project_search_file_names-ok",
+      "port": "editor",
+      "tool": "project_search_file_names",
+      "arguments": {
+        "pattern": "Ball"
+      },
+      "note": "project_search_file_names call 4/5."
+    },
+    {
+      "tag": "c1-089-project_search_file_names-ok",
+      "port": "editor",
+      "tool": "project_search_file_names",
+      "arguments": {
+        "pattern": "*.uid"
+      },
+      "note": "project_search_file_names call 5/5."
+    },
+    {
+      "tag": "c1-090-project_search_file_names-probe",
+      "port": "editor",
+      "tool": "project_search_file_names",
+      "arguments": {
+        "pattern": ""
+      },
+      "note": "project_search_file_names boundary: empty pattern (contract edge: matches everything or is refused)"
+    },
+    {
+      "tag": "c1-091-project_search_file_contents-ok",
+      "port": "editor",
+      "tool": "project_search_file_contents",
+      "arguments": {
+        "pattern": "class"
+      },
+      "note": "project_search_file_contents call 1/5."
+    },
+    {
+      "tag": "c1-092-project_search_file_contents-ok",
+      "port": "editor",
+      "tool": "project_search_file_contents",
+      "arguments": {
+        "pattern": "PongGame"
+      },
+      "note": "project_search_file_contents call 2/5."
+    },
+    {
+      "tag": "c1-093-project_search_file_contents-ok",
+      "port": "editor",
+      "tool": "project_search_file_contents",
+      "arguments": {
+        "pattern": "_Ready"
+      },
+      "note": "project_search_file_contents call 3/5."
+    },
+    {
+      "tag": "c1-094-project_search_file_contents-ok",
+      "port": "editor",
+      "tool": "project_search_file_contents",
+      "arguments": {
+        "pattern": "velocity",
+        "file_pattern": "*.cs"
+      },
+      "note": "project_search_file_contents call 4/5."
+    },
+    {
+      "tag": "c1-095-project_search_file_contents-ok",
+      "port": "editor",
+      "tool": "project_search_file_contents",
+      "arguments": {
+        "pattern": "extends"
+      },
+      "note": "project_search_file_contents call 5/5."
+    },
+    {
+      "tag": "c1-096-project_search_file_contents-probe",
+      "port": "editor",
+      "tool": "project_search_file_contents",
+      "arguments": {
+        "pattern": ""
+      },
+      "note": "project_search_file_contents boundary: empty pattern (contract edge)"
+    },
+    {
+      "tag": "c1-097-project_find_files_referencing_symbol-ok",
+      "port": "editor",
+      "tool": "project_find_files_referencing_symbol",
+      "arguments": {
+        "pattern": "res://src/Ball.cs"
+      },
+      "note": "project_find_files_referencing_symbol call 1/5."
+    },
+    {
+      "tag": "c1-098-project_find_files_referencing_symbol-ok",
+      "port": "editor",
+      "tool": "project_find_files_referencing_symbol",
+      "arguments": {
+        "pattern": "PongGame"
+      },
+      "note": "project_find_files_referencing_symbol call 2/5."
+    },
+    {
+      "tag": "c1-099-project_find_files_referencing_symbol-ok",
+      "port": "editor",
+      "tool": "project_find_files_referencing_symbol",
+      "arguments": {
+        "pattern": "Ball"
+      },
+      "note": "project_find_files_referencing_symbol call 3/5."
+    },
+    {
+      "tag": "c1-100-project_find_files_referencing_symbol-ok",
+      "port": "editor",
+      "tool": "project_find_files_referencing_symbol",
+      "arguments": {
+        "pattern": "uid://"
+      },
+      "note": "project_find_files_referencing_symbol call 4/5."
+    },
+    {
+      "tag": "c1-101-project_find_files_referencing_symbol-ok",
+      "port": "editor",
+      "tool": "project_find_files_referencing_symbol",
+      "arguments": {
+        "pattern": "Main"
+      },
+      "note": "project_find_files_referencing_symbol call 5/5."
+    },
+    {
+      "tag": "c1-102-project_find_files_referencing_symbol-probe",
+      "port": "editor",
+      "tool": "project_find_files_referencing_symbol",
+      "arguments": {
+        "pattern": ""
+      },
+      "note": "project_find_files_referencing_symbol boundary: empty pattern (contract edge)"
+    },
+    {
+      "tag": "c1-103-project_find_script_references-ok",
+      "port": "editor",
+      "tool": "project_find_script_references",
+      "arguments": {
+        "query": "res://src/Ball.cs"
+      },
+      "note": "project_find_script_references call 1/5."
+    },
+    {
+      "tag": "c1-104-project_find_script_references-ok",
+      "port": "editor",
+      "tool": "project_find_script_references",
+      "arguments": {
+        "query": "PongGame"
+      },
+      "note": "project_find_script_references call 2/5."
+    },
+    {
+      "tag": "c1-105-project_find_script_references-ok",
+      "port": "editor",
+      "tool": "project_find_script_references",
+      "arguments": {
+        "query": "Paddle"
+      },
+      "note": "project_find_script_references call 3/5."
+    },
+    {
+      "tag": "c1-106-project_find_script_references-ok",
+      "port": "editor",
+      "tool": "project_find_script_references",
+      "arguments": {
+        "query": "Ball",
+        "include_addons": true
+      },
+      "note": "project_find_script_references call 4/5."
+    },
+    {
+      "tag": "c1-107-project_find_script_references-ok",
+      "port": "editor",
+      "tool": "project_find_script_references",
+      "arguments": {
+        "query": "res://src/Paddle.cs"
+      },
+      "note": "project_find_script_references call 5/5."
+    },
+    {
+      "tag": "c1-108-project_find_script_references-probe",
+      "port": "editor",
+      "tool": "project_find_script_references",
+      "arguments": {
+        "query": "res://src/NoSuch.cs"
+      },
+      "note": "project_find_script_references boundary: script path does not exist"
+    },
+    {
+      "tag": "c1-109-project_read_script-ok",
+      "port": "editor",
+      "tool": "project_read_script",
+      "arguments": {
+        "path": "res://src/PongGame.cs"
+      },
+      "note": "project_read_script call 1/5."
+    },
+    {
+      "tag": "c1-110-project_read_script-ok",
+      "port": "editor",
+      "tool": "project_read_script",
+      "arguments": {
+        "path": "res://src/Ball.cs"
+      },
+      "note": "project_read_script call 2/5."
+    },
+    {
+      "tag": "c1-111-project_read_script-ok",
+      "port": "editor",
+      "tool": "project_read_script",
+      "arguments": {
+        "path": "res://src/Paddle.cs"
+      },
+      "note": "project_read_script call 3/5."
+    },
+    {
+      "tag": "c1-112-project_read_script-ok",
+      "port": "editor",
+      "tool": "project_read_script",
+      "arguments": {
+        "path": "res://src/PongGame.cs"
+      },
+      "note": "project_read_script call 4/5."
+    },
+    {
+      "tag": "c1-113-project_read_script-ok",
+      "port": "editor",
+      "tool": "project_read_script",
+      "arguments": {
+        "path": "res://src/Ball.cs"
+      },
+      "note": "project_read_script call 5/5."
+    },
+    {
+      "tag": "c1-114-project_read_script-probe",
+      "port": "editor",
+      "tool": "project_read_script",
+      "arguments": {
+        "path": "res://src/NoSuchFile.cs"
+      },
+      "note": "project_read_script boundary: path does not exist"
+    },
+    {
+      "tag": "c1-115-project_read_text_file-ok",
+      "port": "editor",
+      "tool": "project_read_text_file",
+      "arguments": {
+        "path": "res://src/PongGame.cs"
+      },
+      "note": "project_read_text_file call 1/5."
+    },
+    {
+      "tag": "c1-116-project_read_text_file-ok",
+      "port": "editor",
+      "tool": "project_read_text_file",
+      "arguments": {
+        "path": "res://pong.csproj"
+      },
+      "note": "project_read_text_file call 2/5."
+    },
+    {
+      "tag": "c1-117-project_read_text_file-ok",
+      "port": "editor",
+      "tool": "project_read_text_file",
+      "arguments": {
+        "path": "res://NuGet.config"
+      },
+      "note": "project_read_text_file call 3/5."
+    },
+    {
+      "tag": "c1-118-project_read_text_file-ok",
+      "port": "editor",
+      "tool": "project_read_text_file",
+      "arguments": {
+        "path": "res://README.md"
+      },
+      "note": "project_read_text_file call 4/5."
+    },
+    {
+      "tag": "c1-119-project_read_text_file-ok",
+      "port": "editor",
+      "tool": "project_read_text_file",
+      "arguments": {
+        "path": "res://export_presets.cfg"
+      },
+      "note": "project_read_text_file call 5/5."
+    },
+    {
+      "tag": "c1-120-project_read_text_file-probe",
+      "port": "editor",
+      "tool": "project_read_text_file",
+      "arguments": {
+        "path": "res://src/NoSuchFile.cs"
+      },
+      "note": "project_read_text_file boundary: path does not exist"
+    },
+    {
+      "tag": "c1-121-project_read_shader-ok",
+      "port": "editor",
+      "tool": "project_read_shader",
+      "arguments": {
+        "path": "res://shaders/ex1.gdshader"
+      },
+      "note": "project_read_shader call 1/5."
+    },
+    {
+      "tag": "c1-122-project_read_shader-ok",
+      "port": "editor",
+      "tool": "project_read_shader",
+      "arguments": {
+        "path": "res://shaders/ex2.gdshader"
+      },
+      "note": "project_read_shader call 2/5."
+    },
+    {
+      "tag": "c1-123-project_read_shader-ok",
+      "port": "editor",
+      "tool": "project_read_shader",
+      "arguments": {
+        "path": "res://shaders/ex3.gdshader"
+      },
+      "note": "project_read_shader call 3/5."
+    },
+    {
+      "tag": "c1-124-project_read_shader-ok",
+      "port": "editor",
+      "tool": "project_read_shader",
+      "arguments": {
+        "path": "res://shaders/ex4.gdshader"
+      },
+      "note": "project_read_shader call 4/5."
+    },
+    {
+      "tag": "c1-125-project_read_shader-ok",
+      "port": "editor",
+      "tool": "project_read_shader",
+      "arguments": {
+        "path": "res://shaders/ex5.gdshader"
+      },
+      "note": "project_read_shader call 5/5."
+    },
+    {
+      "tag": "c1-126-project_read_shader-probe",
+      "port": "editor",
+      "tool": "project_read_shader",
+      "arguments": {
+        "path": "res://shaders/absent.gdshader"
+      },
+      "note": "project_read_shader boundary: shader does not exist"
+    },
+    {
+      "tag": "c1-127-project_get_shader_params-ok",
+      "port": "editor",
+      "tool": "project_get_shader_params",
+      "arguments": {
+        "path": "res://shaders/ex1.gdshader"
+      },
+      "note": "project_get_shader_params call 1/5."
+    },
+    {
+      "tag": "c1-128-project_get_shader_params-ok",
+      "port": "editor",
+      "tool": "project_get_shader_params",
+      "arguments": {
+        "path": "res://shaders/ex2.gdshader"
+      },
+      "note": "project_get_shader_params call 2/5."
+    },
+    {
+      "tag": "c1-129-project_get_shader_params-ok",
+      "port": "editor",
+      "tool": "project_get_shader_params",
+      "arguments": {
+        "path": "res://shaders/ex3.gdshader"
+      },
+      "note": "project_get_shader_params call 3/5."
+    },
+    {
+      "tag": "c1-130-project_get_shader_params-ok",
+      "port": "editor",
+      "tool": "project_get_shader_params",
+      "arguments": {
+        "path": "res://shaders/ex4.gdshader"
+      },
+      "note": "project_get_shader_params call 4/5."
+    },
+    {
+      "tag": "c1-131-project_get_shader_params-ok",
+      "port": "editor",
+      "tool": "project_get_shader_params",
+      "arguments": {
+        "path": "res://shaders/ex5.gdshader"
+      },
+      "note": "project_get_shader_params call 5/5."
+    },
+    {
+      "tag": "c1-132-project_get_shader_params-probe",
+      "port": "editor",
+      "tool": "project_get_shader_params",
+      "arguments": {
+        "path": "res://shaders/absent.gdshader"
+      },
+      "note": "project_get_shader_params boundary: shader does not exist"
+    },
+    {
+      "tag": "c1-133-project_read_scene_file_content-ok",
+      "port": "editor",
+      "tool": "project_read_scene_file_content",
+      "arguments": {
+        "path": "res://scenes/main.tscn"
+      },
+      "note": "project_read_scene_file_content call 1/5."
+    },
+    {
+      "tag": "c1-134-project_read_scene_file_content-ok",
+      "port": "editor",
+      "tool": "project_read_scene_file_content",
+      "arguments": {
+        "path": "res://scenes/ex_s1.tscn"
+      },
+      "note": "project_read_scene_file_content call 2/5."
+    },
+    {
+      "tag": "c1-135-project_read_scene_file_content-ok",
+      "port": "editor",
+      "tool": "project_read_scene_file_content",
+      "arguments": {
+        "path": "res://scenes/ex_s2.tscn"
+      },
+      "note": "project_read_scene_file_content call 3/5."
+    },
+    {
+      "tag": "c1-136-project_read_scene_file_content-ok",
+      "port": "editor",
+      "tool": "project_read_scene_file_content",
+      "arguments": {
+        "path": "res://scenes/ex_s3.tscn"
+      },
+      "note": "project_read_scene_file_content call 4/5."
+    },
+    {
+      "tag": "c1-137-project_read_scene_file_content-ok",
+      "port": "editor",
+      "tool": "project_read_scene_file_content",
+      "arguments": {
+        "path": "res://scenes/ex_s4.tscn"
+      },
+      "note": "project_read_scene_file_content call 5/5."
+    },
+    {
+      "tag": "c1-138-project_read_scene_file_content-probe",
+      "port": "editor",
+      "tool": "project_read_scene_file_content",
+      "arguments": {
+        "path": "res://scenes/absent.tscn"
+      },
+      "note": "project_read_scene_file_content boundary: scene does not exist"
+    },
+    {
+      "tag": "c1-139-project_get_scene_dependencies-ok",
+      "port": "editor",
+      "tool": "project_get_scene_dependencies",
+      "arguments": {
+        "path": "res://scenes/main.tscn"
+      },
+      "note": "project_get_scene_dependencies call 1/5."
+    },
+    {
+      "tag": "c1-140-project_get_scene_dependencies-ok",
+      "port": "editor",
+      "tool": "project_get_scene_dependencies",
+      "arguments": {
+        "path": "res://scenes/ex_s1.tscn"
+      },
+      "note": "project_get_scene_dependencies call 2/5."
+    },
+    {
+      "tag": "c1-141-project_get_scene_dependencies-ok",
+      "port": "editor",
+      "tool": "project_get_scene_dependencies",
+      "arguments": {
+        "path": "res://scenes/ex_s2.tscn"
+      },
+      "note": "project_get_scene_dependencies call 3/5."
+    },
+    {
+      "tag": "c1-142-project_get_scene_dependencies-ok",
+      "port": "editor",
+      "tool": "project_get_scene_dependencies",
+      "arguments": {
+        "path": "res://scenes/ex_s3.tscn"
+      },
+      "note": "project_get_scene_dependencies call 4/5."
+    },
+    {
+      "tag": "c1-143-project_get_scene_dependencies-ok",
+      "port": "editor",
+      "tool": "project_get_scene_dependencies",
+      "arguments": {
+        "path": "res://scenes/ex_s4.tscn"
+      },
+      "note": "project_get_scene_dependencies call 5/5."
+    },
+    {
+      "tag": "c1-144-project_get_scene_dependencies-probe",
+      "port": "editor",
+      "tool": "project_get_scene_dependencies",
+      "arguments": {
+        "path": "res://scenes/absent.tscn"
+      },
+      "note": "project_get_scene_dependencies boundary: scene does not exist"
+    },
+    {
+      "tag": "c1-145-project_get_scene_exports-ok",
+      "port": "editor",
+      "tool": "project_get_scene_exports",
+      "arguments": {
+        "path": "res://scenes/main.tscn"
+      },
+      "note": "project_get_scene_exports call 1/5."
+    },
+    {
+      "tag": "c1-146-project_get_scene_exports-ok",
+      "port": "editor",
+      "tool": "project_get_scene_exports",
+      "arguments": {
+        "path": "res://scenes/ex_s1.tscn"
+      },
+      "note": "project_get_scene_exports call 2/5."
+    },
+    {
+      "tag": "c1-147-project_get_scene_exports-ok",
+      "port": "editor",
+      "tool": "project_get_scene_exports",
+      "arguments": {
+        "path": "res://scenes/ex_s2.tscn"
+      },
+      "note": "project_get_scene_exports call 3/5."
+    },
+    {
+      "tag": "c1-148-project_get_scene_exports-ok",
+      "port": "editor",
+      "tool": "project_get_scene_exports",
+      "arguments": {
+        "path": "res://scenes/ex_s3.tscn"
+      },
+      "note": "project_get_scene_exports call 4/5."
+    },
+    {
+      "tag": "c1-149-project_get_scene_exports-ok",
+      "port": "editor",
+      "tool": "project_get_scene_exports",
+      "arguments": {
+        "path": "res://scenes/ex_s4.tscn"
+      },
+      "note": "project_get_scene_exports call 5/5."
+    },
+    {
+      "tag": "c1-150-project_get_scene_exports-probe",
+      "port": "editor",
+      "tool": "project_get_scene_exports",
+      "arguments": {
+        "path": "res://scenes/absent.tscn"
+      },
+      "note": "project_get_scene_exports boundary: scene does not exist"
+    },
+    {
+      "tag": "c1-151-project_analyze_scene_complexity-ok",
+      "port": "editor",
+      "tool": "project_analyze_scene_complexity",
+      "arguments": {},
+      "note": "project_analyze_scene_complexity call 1/5."
+    },
+    {
+      "tag": "c1-152-project_analyze_scene_complexity-ok",
+      "port": "editor",
+      "tool": "project_analyze_scene_complexity",
+      "arguments": {
+        "path": "res://scenes/main.tscn"
+      },
+      "note": "project_analyze_scene_complexity call 2/5."
+    },
+    {
+      "tag": "c1-153-project_analyze_scene_complexity-ok",
+      "port": "editor",
+      "tool": "project_analyze_scene_complexity",
+      "arguments": {
+        "path": "res://scenes/ex_s1.tscn"
+      },
+      "note": "project_analyze_scene_complexity call 3/5."
+    },
+    {
+      "tag": "c1-154-project_analyze_scene_complexity-ok",
+      "port": "editor",
+      "tool": "project_analyze_scene_complexity",
+      "arguments": {
+        "path": "res://scenes/ex_s2.tscn"
+      },
+      "note": "project_analyze_scene_complexity call 4/5."
+    },
+    {
+      "tag": "c1-155-project_analyze_scene_complexity-ok",
+      "port": "editor",
+      "tool": "project_analyze_scene_complexity",
+      "arguments": {
+        "path": "res://scenes/ex_s3.tscn"
+      },
+      "note": "project_analyze_scene_complexity call 5/5."
+    },
+    {
+      "tag": "c1-156-project_analyze_scene_complexity-probe",
+      "port": "editor",
+      "tool": "project_analyze_scene_complexity",
+      "arguments": {
+        "path": "res://scenes/absent.tscn"
+      },
+      "note": "project_analyze_scene_complexity boundary: scene does not exist"
+    },
+    {
+      "tag": "c1-157-project_read_resource-ok",
+      "port": "editor",
+      "tool": "project_read_resource",
+      "arguments": {
+        "path": "res://resources/ex1.tres"
+      },
+      "note": "project_read_resource call 1/5."
+    },
+    {
+      "tag": "c1-158-project_read_resource-ok",
+      "port": "editor",
+      "tool": "project_read_resource",
+      "arguments": {
+        "path": "res://resources/ex2.tres"
+      },
+      "note": "project_read_resource call 2/5."
+    },
+    {
+      "tag": "c1-159-project_read_resource-ok",
+      "port": "editor",
+      "tool": "project_read_resource",
+      "arguments": {
+        "path": "res://resources/ex3.tres"
+      },
+      "note": "project_read_resource call 3/5."
+    },
+    {
+      "tag": "c1-160-project_read_resource-ok",
+      "port": "editor",
+      "tool": "project_read_resource",
+      "arguments": {
+        "path": "res://resources/ex4.tres"
+      },
+      "note": "project_read_resource call 4/5."
+    },
+    {
+      "tag": "c1-161-project_read_resource-ok",
+      "port": "editor",
+      "tool": "project_read_resource",
+      "arguments": {
+        "path": "res://resources/ex5.tres"
+      },
+      "note": "project_read_resource call 5/5."
+    },
+    {
+      "tag": "c1-162-project_read_resource-probe",
+      "port": "editor",
+      "tool": "project_read_resource",
+      "arguments": {
+        "path": "res://resources/absent.tres"
+      },
+      "note": "project_read_resource boundary: resource does not exist"
+    },
+    {
+      "tag": "c1-163-project_get_theme_info-ok",
+      "port": "editor",
+      "tool": "project_get_theme_info",
+      "arguments": {
+        "theme_path": "res://themes/ex1.tres"
+      },
+      "note": "project_get_theme_info call 1/5."
+    },
+    {
+      "tag": "c1-164-project_get_theme_info-ok",
+      "port": "editor",
+      "tool": "project_get_theme_info",
+      "arguments": {
+        "theme_path": "res://themes/ex2.tres"
+      },
+      "note": "project_get_theme_info call 2/5."
+    },
+    {
+      "tag": "c1-165-project_get_theme_info-ok",
+      "port": "editor",
+      "tool": "project_get_theme_info",
+      "arguments": {
+        "theme_path": "res://themes/ex3.tres"
+      },
+      "note": "project_get_theme_info call 3/5."
+    },
+    {
+      "tag": "c1-166-project_get_theme_info-ok",
+      "port": "editor",
+      "tool": "project_get_theme_info",
+      "arguments": {
+        "theme_path": "res://themes/ex4.tres"
+      },
+      "note": "project_get_theme_info call 4/5."
+    },
+    {
+      "tag": "c1-167-project_get_theme_info-ok",
+      "port": "editor",
+      "tool": "project_get_theme_info",
+      "arguments": {
+        "theme_path": "res://themes/ex5.tres"
+      },
+      "note": "project_get_theme_info call 5/5."
+    },
+    {
+      "tag": "c1-168-project_get_theme_info-probe",
+      "port": "editor",
+      "tool": "project_get_theme_info",
+      "arguments": {
+        "theme_path": "res://themes/absent.tres"
+      },
+      "note": "project_get_theme_info boundary: theme does not exist"
+    },
+    {
+      "tag": "c1-169-project_get_resource_preview-ok",
+      "port": "editor",
+      "tool": "project_get_resource_preview",
+      "arguments": {
+        "path": "res://scenes/main.tscn"
+      },
+      "note": "project_get_resource_preview call 1/5."
+    },
+    {
+      "tag": "c1-170-project_get_resource_preview-ok",
+      "port": "editor",
+      "tool": "project_get_resource_preview",
+      "arguments": {
+        "path": "res://themes/ex1.tres"
+      },
+      "note": "project_get_resource_preview call 2/5."
+    },
+    {
+      "tag": "c1-171-project_get_resource_preview-ok",
+      "port": "editor",
+      "tool": "project_get_resource_preview",
+      "arguments": {
+        "path": "res://themes/ex2.tres"
+      },
+      "note": "project_get_resource_preview call 3/5."
+    },
+    {
+      "tag": "c1-172-project_get_resource_preview-ok",
+      "port": "editor",
+      "tool": "project_get_resource_preview",
+      "arguments": {
+        "path": "res://resources/ex1.tres"
+      },
+      "note": "project_get_resource_preview call 4/5."
+    },
+    {
+      "tag": "c1-173-project_get_resource_preview-ok",
+      "port": "editor",
+      "tool": "project_get_resource_preview",
+      "arguments": {
+        "path": "res://resources/ex2.tres"
+      },
+      "note": "project_get_resource_preview call 5/5."
+    },
+    {
+      "tag": "c1-174-project_get_resource_preview-probe",
+      "port": "editor",
+      "tool": "project_get_resource_preview",
+      "arguments": {
+        "path": "res://resources/absent.tres"
+      },
+      "note": "project_get_resource_preview boundary: resource does not exist"
+    },
+    {
+      "tag": "c1-175-project_convert_path_to_uid-ok",
+      "port": "editor",
+      "tool": "project_convert_path_to_uid",
+      "arguments": {
+        "path": "res://scenes/main.tscn"
+      },
+      "note": "project_convert_path_to_uid call 1/5."
+    },
+    {
+      "tag": "c1-176-project_convert_path_to_uid-ok",
+      "port": "editor",
+      "tool": "project_convert_path_to_uid",
+      "arguments": {
+        "path": "res://src/PongGame.cs"
+      },
+      "note": "project_convert_path_to_uid call 2/5."
+    },
+    {
+      "tag": "c1-177-project_convert_path_to_uid-ok",
+      "port": "editor",
+      "tool": "project_convert_path_to_uid",
+      "arguments": {
+        "path": "res://src/Ball.cs"
+      },
+      "note": "project_convert_path_to_uid call 3/5."
+    },
+    {
+      "tag": "c1-178-project_convert_path_to_uid-ok",
+      "port": "editor",
+      "tool": "project_convert_path_to_uid",
+      "arguments": {
+        "path": "res://src/Paddle.cs"
+      },
+      "note": "project_convert_path_to_uid call 4/5."
+    },
+    {
+      "tag": "c1-179-project_convert_path_to_uid-ok",
+      "port": "editor",
+      "tool": "project_convert_path_to_uid",
+      "arguments": {
+        "path": "res://pong.csproj"
+      },
+      "note": "project_convert_path_to_uid call 5/5."
+    },
+    {
+      "tag": "c1-180-project_convert_path_to_uid-edge",
+      "port": "editor",
+      "tool": "project_convert_path_to_uid",
+      "arguments": {
+        "path": "res://no/such/file.cs"
+      },
+      "note": "project_convert_path_to_uid boundary: documented edge: an unregistered path answers uid=\"\" and does NOT error"
+    },
+    {
+      "tag": "c1-181-project_convert_uid_to_path-ok",
+      "port": "editor",
+      "tool": "project_convert_uid_to_path",
+      "arguments": {
+        "uid": "uid://dkqi2elfc51wh"
+      },
+      "note": "project_convert_uid_to_path call 1/5."
+    },
+    {
+      "tag": "c1-182-project_convert_uid_to_path-ok",
+      "port": "editor",
+      "tool": "project_convert_uid_to_path",
+      "arguments": {
+        "uid": "uid://bo6p3rkt7rbe7"
+      },
+      "note": "project_convert_uid_to_path call 2/5."
+    },
+    {
+      "tag": "c1-183-project_convert_uid_to_path-ok",
+      "port": "editor",
+      "tool": "project_convert_uid_to_path",
+      "arguments": {
+        "uid": "uid://dhfj67vumndol"
+      },
+      "note": "project_convert_uid_to_path call 3/5."
+    },
+    {
+      "tag": "c1-184-project_convert_uid_to_path-ok",
+      "port": "editor",
+      "tool": "project_convert_uid_to_path",
+      "arguments": {
+        "uid": "uid://c3c3aa5aswx3x"
+      },
+      "note": "project_convert_uid_to_path call 4/5."
+    },
+    {
+      "tag": "c1-185-project_convert_uid_to_path-ok",
+      "port": "editor",
+      "tool": "project_convert_uid_to_path",
+      "arguments": {
+        "uid": "uid://dkqi2elfc51wh"
+      },
+      "note": "project_convert_uid_to_path call 5/5."
+    },
+    {
+      "tag": "c1-186-project_convert_uid_to_path-probe",
+      "port": "editor",
+      "tool": "project_convert_uid_to_path",
+      "arguments": {
+        "uid": "not-a-uid"
+      },
+      "note": "project_convert_uid_to_path boundary: the uid text is malformed (contract says parameter error)"
+    },
+    {
+      "tag": "c1-187-project_validate_script-ok",
+      "port": "editor",
+      "tool": "project_validate_script",
+      "arguments": {
+        "path": "res://src/PongGame.cs"
+      },
+      "note": "project_validate_script call 1/5."
+    },
+    {
+      "tag": "c1-188-project_validate_script-ok",
+      "port": "editor",
+      "tool": "project_validate_script",
+      "arguments": {
+        "path": "res://src/Ball.cs"
+      },
+      "note": "project_validate_script call 2/5."
+    },
+    {
+      "tag": "c1-189-project_validate_script-ok",
+      "port": "editor",
+      "tool": "project_validate_script",
+      "arguments": {
+        "path": "res://src/Paddle.cs"
+      },
+      "note": "project_validate_script call 3/5."
+    },
+    {
+      "tag": "c1-190-project_validate_script-ok",
+      "port": "editor",
+      "tool": "project_validate_script",
+      "arguments": {
+        "path": "res://src/ex_c1_1.cs"
+      },
+      "note": "project_validate_script call 4/5."
+    },
+    {
+      "tag": "c1-191-project_validate_script-ok",
+      "port": "editor",
+      "tool": "project_validate_script",
+      "arguments": {
+        "path": "res://src/ex_c1_2.cs"
+      },
+      "note": "project_validate_script call 5/5."
+    },
+    {
+      "tag": "c1-192-project_validate_script-probe",
+      "port": "editor",
+      "tool": "project_validate_script",
+      "arguments": {
+        "path": "res://src/NoSuchFile.cs"
+      },
+      "note": "project_validate_script boundary: path does not exist"
+    },
+    {
+      "tag": "c1-193-project_set_theme_color-ok",
+      "port": "editor",
+      "tool": "project_set_theme_color",
+      "arguments": {
+        "theme_path": "res://themes/ex1.tres",
+        "node_type": "Button",
+        "color_name": "font_color",
+        "color": {
+          "r": 0.0,
+          "g": 0.2,
+          "b": 0.3,
+          "a": 1.0
+        }
+      },
+      "note": "project_set_theme_color call 1/5."
+    },
+    {
+      "tag": "c1-194-project_set_theme_color-ok",
+      "port": "editor",
+      "tool": "project_set_theme_color",
+      "arguments": {
+        "theme_path": "res://themes/ex2.tres",
+        "node_type": "Button",
+        "color_name": "font_color",
+        "color": {
+          "r": 0.1,
+          "g": 0.2,
+          "b": 0.3,
+          "a": 1.0
+        }
+      },
+      "note": "project_set_theme_color call 2/5."
+    },
+    {
+      "tag": "c1-195-project_set_theme_color-ok",
+      "port": "editor",
+      "tool": "project_set_theme_color",
+      "arguments": {
+        "theme_path": "res://themes/ex3.tres",
+        "node_type": "Button",
+        "color_name": "font_color",
+        "color": {
+          "r": 0.2,
+          "g": 0.2,
+          "b": 0.3,
+          "a": 1.0
+        }
+      },
+      "note": "project_set_theme_color call 3/5."
+    },
+    {
+      "tag": "c1-196-project_set_theme_color-ok",
+      "port": "editor",
+      "tool": "project_set_theme_color",
+      "arguments": {
+        "theme_path": "res://themes/ex4.tres",
+        "node_type": "Button",
+        "color_name": "font_color",
+        "color": {
+          "r": 0.30000000000000004,
+          "g": 0.2,
+          "b": 0.3,
+          "a": 1.0
+        }
+      },
+      "note": "project_set_theme_color call 4/5."
+    },
+    {
+      "tag": "c1-197-project_set_theme_color-ok",
+      "port": "editor",
+      "tool": "project_set_theme_color",
+      "arguments": {
+        "theme_path": "res://themes/ex5.tres",
+        "node_type": "Button",
+        "color_name": "font_color",
+        "color": {
+          "r": 0.4,
+          "g": 0.2,
+          "b": 0.3,
+          "a": 1.0
+        }
+      },
+      "note": "project_set_theme_color call 5/5."
+    },
+    {
+      "tag": "c1-198-project_set_theme_color-probe",
+      "port": "editor",
+      "tool": "project_set_theme_color",
+      "arguments": {
+        "theme_path": "res://themes/absent.tres",
+        "node_type": "Button",
+        "color_name": "font_color",
+        "color": {
+          "r": 1,
+          "g": 0,
+          "b": 0,
+          "a": 1
+        }
+      },
+      "note": "project_set_theme_color boundary: theme does not exist"
+    },
+    {
+      "tag": "c1-199-project_set_theme_constant-ok",
+      "port": "editor",
+      "tool": "project_set_theme_constant",
+      "arguments": {
+        "theme_path": "res://themes/ex1.tres",
+        "node_type": "Button",
+        "constant_name": "h_separation",
+        "value": 0
+      },
+      "note": "project_set_theme_constant call 1/5."
+    },
+    {
+      "tag": "c1-200-project_set_theme_constant-ok",
+      "port": "editor",
+      "tool": "project_set_theme_constant",
+      "arguments": {
+        "theme_path": "res://themes/ex2.tres",
+        "node_type": "Button",
+        "constant_name": "h_separation",
+        "value": 1
+      },
+      "note": "project_set_theme_constant call 2/5."
+    },
+    {
+      "tag": "c1-201-project_set_theme_constant-ok",
+      "port": "editor",
+      "tool": "project_set_theme_constant",
+      "arguments": {
+        "theme_path": "res://themes/ex3.tres",
+        "node_type": "Button",
+        "constant_name": "h_separation",
+        "value": 2
+      },
+      "note": "project_set_theme_constant call 3/5."
+    },
+    {
+      "tag": "c1-202-project_set_theme_constant-ok",
+      "port": "editor",
+      "tool": "project_set_theme_constant",
+      "arguments": {
+        "theme_path": "res://themes/ex4.tres",
+        "node_type": "Button",
+        "constant_name": "h_separation",
+        "value": 3
+      },
+      "note": "project_set_theme_constant call 4/5."
+    },
+    {
+      "tag": "c1-203-project_set_theme_constant-ok",
+      "port": "editor",
+      "tool": "project_set_theme_constant",
+      "arguments": {
+        "theme_path": "res://themes/ex5.tres",
+        "node_type": "Button",
+        "constant_name": "h_separation",
+        "value": 4
+      },
+      "note": "project_set_theme_constant call 5/5."
+    },
+    {
+      "tag": "c1-204-project_set_theme_constant-probe",
+      "port": "editor",
+      "tool": "project_set_theme_constant",
+      "arguments": {
+        "theme_path": "res://themes/absent.tres",
+        "node_type": "Button",
+        "constant_name": "h_separation",
+        "value": 1
+      },
+      "note": "project_set_theme_constant boundary: theme does not exist"
+    },
+    {
+      "tag": "c1-205-project_set_theme_font_size-ok",
+      "port": "editor",
+      "tool": "project_set_theme_font_size",
+      "arguments": {
+        "theme_path": "res://themes/ex1.tres",
+        "node_type": "Button",
+        "font_size_name": "font_size",
+        "size": 12
+      },
+      "note": "project_set_theme_font_size call 1/5."
+    },
+    {
+      "tag": "c1-206-project_set_theme_font_size-ok",
+      "port": "editor",
+      "tool": "project_set_theme_font_size",
+      "arguments": {
+        "theme_path": "res://themes/ex2.tres",
+        "node_type": "Button",
+        "font_size_name": "font_size",
+        "size": 13
+      },
+      "note": "project_set_theme_font_size call 2/5."
+    },
+    {
+      "tag": "c1-207-project_set_theme_font_size-ok",
+      "port": "editor",
+      "tool": "project_set_theme_font_size",
+      "arguments": {
+        "theme_path": "res://themes/ex3.tres",
+        "node_type": "Button",
+        "font_size_name": "font_size",
+        "size": 14
+      },
+      "note": "project_set_theme_font_size call 3/5."
+    },
+    {
+      "tag": "c1-208-project_set_theme_font_size-ok",
+      "port": "editor",
+      "tool": "project_set_theme_font_size",
+      "arguments": {
+        "theme_path": "res://themes/ex4.tres",
+        "node_type": "Button",
+        "font_size_name": "font_size",
+        "size": 15
+      },
+      "note": "project_set_theme_font_size call 4/5."
+    },
+    {
+      "tag": "c1-209-project_set_theme_font_size-ok",
+      "port": "editor",
+      "tool": "project_set_theme_font_size",
+      "arguments": {
+        "theme_path": "res://themes/ex5.tres",
+        "node_type": "Button",
+        "font_size_name": "font_size",
+        "size": 16
+      },
+      "note": "project_set_theme_font_size call 5/5."
+    },
+    {
+      "tag": "c1-210-project_set_theme_font_size-probe",
+      "port": "editor",
+      "tool": "project_set_theme_font_size",
+      "arguments": {
+        "theme_path": "res://themes/absent.tres",
+        "node_type": "Button",
+        "font_size_name": "font_size",
+        "size": 12
+      },
+      "note": "project_set_theme_font_size boundary: theme does not exist"
+    },
+    {
+      "tag": "c1-211-project_set_theme_stylebox-ok",
+      "port": "editor",
+      "tool": "project_set_theme_stylebox",
+      "arguments": {
+        "theme_path": "res://themes/ex1.tres",
+        "node_type": "Panel",
+        "stylebox_name": "panel",
+        "bg_color": "#002233",
+        "border_width": 1,
+        "corner_radius": 0
+      },
+      "note": "project_set_theme_stylebox call 1/5."
+    },
+    {
+      "tag": "c1-212-project_set_theme_stylebox-ok",
+      "port": "editor",
+      "tool": "project_set_theme_stylebox",
+      "arguments": {
+        "theme_path": "res://themes/ex2.tres",
+        "node_type": "Panel",
+        "stylebox_name": "panel",
+        "bg_color": "#102233",
+        "border_width": 2,
+        "corner_radius": 1
+      },
+      "note": "project_set_theme_stylebox call 2/5."
+    },
+    {
+      "tag": "c1-213-project_set_theme_stylebox-ok",
+      "port": "editor",
+      "tool": "project_set_theme_stylebox",
+      "arguments": {
+        "theme_path": "res://themes/ex3.tres",
+        "node_type": "Panel",
+        "stylebox_name": "panel",
+        "bg_color": "#202233",
+        "border_width": 3,
+        "corner_radius": 2
+      },
+      "note": "project_set_theme_stylebox call 3/5."
+    },
+    {
+      "tag": "c1-214-project_set_theme_stylebox-ok",
+      "port": "editor",
+      "tool": "project_set_theme_stylebox",
+      "arguments": {
+        "theme_path": "res://themes/ex4.tres",
+        "node_type": "Panel",
+        "stylebox_name": "panel",
+        "bg_color": "#302233",
+        "border_width": 4,
+        "corner_radius": 3
+      },
+      "note": "project_set_theme_stylebox call 4/5."
+    },
+    {
+      "tag": "c1-215-project_set_theme_stylebox-ok",
+      "port": "editor",
+      "tool": "project_set_theme_stylebox",
+      "arguments": {
+        "theme_path": "res://themes/ex5.tres",
+        "node_type": "Panel",
+        "stylebox_name": "panel",
+        "bg_color": "#402233",
+        "border_width": 5,
+        "corner_radius": 4
+      },
+      "note": "project_set_theme_stylebox call 5/5."
+    },
+    {
+      "tag": "c1-216-project_set_theme_stylebox-probe",
+      "port": "editor",
+      "tool": "project_set_theme_stylebox",
+      "arguments": {
+        "theme_path": "res://themes/absent.tres",
+        "node_type": "Panel",
+        "stylebox_name": "panel",
+        "bg_color": "#112233"
+      },
+      "note": "project_set_theme_stylebox boundary: theme does not exist"
+    },
+    {
+      "tag": "c1-217-project_edit_resource-ok",
+      "port": "editor",
+      "tool": "project_edit_resource",
+      "arguments": {
+        "path": "res://resources/ex1.tres",
+        "properties": {
+          "resource_name": "ExRes1"
+        }
+      },
+      "note": "project_edit_resource call 1/5."
+    },
+    {
+      "tag": "c1-218-project_edit_resource-ok",
+      "port": "editor",
+      "tool": "project_edit_resource",
+      "arguments": {
+        "path": "res://resources/ex2.tres",
+        "properties": {
+          "resource_name": "ExRes2"
+        }
+      },
+      "note": "project_edit_resource call 2/5."
+    },
+    {
+      "tag": "c1-219-project_edit_resource-ok",
+      "port": "editor",
+      "tool": "project_edit_resource",
+      "arguments": {
+        "path": "res://resources/ex3.tres",
+        "properties": {
+          "resource_name": "ExRes3"
+        }
+      },
+      "note": "project_edit_resource call 3/5."
+    },
+    {
+      "tag": "c1-220-project_edit_resource-ok",
+      "port": "editor",
+      "tool": "project_edit_resource",
+      "arguments": {
+        "path": "res://resources/ex4.tres",
+        "properties": {
+          "resource_name": "ExRes4"
+        }
+      },
+      "note": "project_edit_resource call 4/5."
+    },
+    {
+      "tag": "c1-221-project_edit_resource-ok",
+      "port": "editor",
+      "tool": "project_edit_resource",
+      "arguments": {
+        "path": "res://resources/ex5.tres",
+        "properties": {
+          "resource_name": "ExRes5"
+        }
+      },
+      "note": "project_edit_resource call 5/5."
+    },
+    {
+      "tag": "c1-222-project_edit_resource-probe",
+      "port": "editor",
+      "tool": "project_edit_resource",
+      "arguments": {
+        "path": "res://resources/absent.tres",
+        "properties": {
+          "resource_name": "x"
+        }
+      },
+      "note": "project_edit_resource boundary: resource does not exist"
+    },
+    {
+      "tag": "c1-223-project_set_setting-ok",
+      "port": "editor",
+      "tool": "project_set_setting",
+      "arguments": {
+        "key": "application/config/description",
+        "value": "ex_files exercise project 0"
+      },
+      "note": "project_set_setting call 1/5."
+    },
+    {
+      "tag": "c1-224-project_set_setting-ok",
+      "port": "editor",
+      "tool": "project_set_setting",
+      "arguments": {
+        "key": "application/config/description",
+        "value": "ex_files exercise project 1"
+      },
+      "note": "project_set_setting call 2/5."
+    },
+    {
+      "tag": "c1-225-project_set_setting-ok",
+      "port": "editor",
+      "tool": "project_set_setting",
+      "arguments": {
+        "key": "application/config/description",
+        "value": "ex_files exercise project 2"
+      },
+      "note": "project_set_setting call 3/5."
+    },
+    {
+      "tag": "c1-226-project_set_setting-ok",
+      "port": "editor",
+      "tool": "project_set_setting",
+      "arguments": {
+        "key": "application/config/description",
+        "value": "ex_files exercise project 3"
+      },
+      "note": "project_set_setting call 4/5."
+    },
+    {
+      "tag": "c1-227-project_set_setting-ok",
+      "port": "editor",
+      "tool": "project_set_setting",
+      "arguments": {
+        "key": "application/config/description",
+        "value": "ex_files exercise project 4"
+      },
+      "note": "project_set_setting call 5/5."
+    },
+    {
+      "tag": "c1-228-project_set_setting-probe",
+      "port": "editor",
+      "tool": "project_set_setting",
+      "arguments": {
+        "key": "",
+        "value": 1
+      },
+      "note": "project_set_setting boundary: empty setting key"
+    },
+    {
+      "tag": "c1-229-project_add_autoload-ok",
+      "port": "editor",
+      "tool": "project_add_autoload",
+      "arguments": {
+        "name": "ExA1",
+        "path": "res://src/ex_c1_1.cs"
+      },
+      "note": "project_add_autoload call 1/5."
+    },
+    {
+      "tag": "c1-230-project_add_autoload-ok",
+      "port": "editor",
+      "tool": "project_add_autoload",
+      "arguments": {
+        "name": "ExA2",
+        "path": "res://src/ex_c1_2.cs"
+      },
+      "note": "project_add_autoload call 2/5."
+    },
+    {
+      "tag": "c1-231-project_add_autoload-ok",
+      "port": "editor",
+      "tool": "project_add_autoload",
+      "arguments": {
+        "name": "ExA3",
+        "path": "res://src/ex_c1_3.cs"
+      },
+      "note": "project_add_autoload call 3/5."
+    },
+    {
+      "tag": "c1-232-project_add_autoload-ok",
+      "port": "editor",
+      "tool": "project_add_autoload",
+      "arguments": {
+        "name": "ExA4",
+        "path": "res://src/ex_c1_4.cs"
+      },
+      "note": "project_add_autoload call 4/5."
+    },
+    {
+      "tag": "c1-233-project_add_autoload-ok",
+      "port": "editor",
+      "tool": "project_add_autoload",
+      "arguments": {
+        "name": "ExA5",
+        "path": "res://src/ex_c1_5.cs"
+      },
+      "note": "project_add_autoload call 5/5."
+    },
+    {
+      "tag": "c1-234-project_add_autoload-probe",
+      "port": "editor",
+      "tool": "project_add_autoload",
+      "arguments": {
+        "name": "ExBad",
+        "path": "res://src/NoSuchFile.cs"
+      },
+      "note": "project_add_autoload boundary: script path does not exist"
+    },
+    {
+      "tag": "c1-235-project_remove_autoload-ok",
+      "port": "editor",
+      "tool": "project_remove_autoload",
+      "arguments": {
+        "name": "ExA1"
+      },
+      "note": "project_remove_autoload call 1/5."
+    },
+    {
+      "tag": "c1-236-project_remove_autoload-ok",
+      "port": "editor",
+      "tool": "project_remove_autoload",
+      "arguments": {
+        "name": "ExA2"
+      },
+      "note": "project_remove_autoload call 2/5."
+    },
+    {
+      "tag": "c1-237-project_remove_autoload-ok",
+      "port": "editor",
+      "tool": "project_remove_autoload",
+      "arguments": {
+        "name": "ExA3"
+      },
+      "note": "project_remove_autoload call 3/5."
+    },
+    {
+      "tag": "c1-238-project_remove_autoload-ok",
+      "port": "editor",
+      "tool": "project_remove_autoload",
+      "arguments": {
+        "name": "ExA4"
+      },
+      "note": "project_remove_autoload call 4/5."
+    },
+    {
+      "tag": "c1-239-project_remove_autoload-ok",
+      "port": "editor",
+      "tool": "project_remove_autoload",
+      "arguments": {
+        "name": "ExA5"
+      },
+      "note": "project_remove_autoload call 5/5."
+    },
+    {
+      "tag": "c1-240-project_remove_autoload-probe",
+      "port": "editor",
+      "tool": "project_remove_autoload",
+      "arguments": {
+        "name": "NoSuchAutoload"
+      },
+      "note": "project_remove_autoload boundary: autoload is not registered"
+    },
+    {
+      "tag": "c1-241-project_set_node_property_across_scenes-ok",
+      "port": "editor",
+      "tool": "project_set_node_property_across_scenes",
+      "arguments": {
+        "type": "ColorRect",
+        "property": "color",
+        "value": {
+          "r": 0.0,
+          "g": 0.1,
+          "b": 0.2,
+          "a": 1.0
+        },
+        "dry_run": true,
+        "path_filter": "res://scenes"
+      },
+      "note": "project_set_node_property_across_scenes call 1/5."
+    },
+    {
+      "tag": "c1-242-project_set_node_property_across_scenes-ok",
+      "port": "editor",
+      "tool": "project_set_node_property_across_scenes",
+      "arguments": {
+        "type": "ColorRect",
+        "property": "color",
+        "value": {
+          "r": 0.05,
+          "g": 0.1,
+          "b": 0.2,
+          "a": 1.0
+        },
+        "dry_run": true,
+        "path_filter": "res://scenes"
+      },
+      "note": "project_set_node_property_across_scenes call 2/5."
+    },
+    {
+      "tag": "c1-243-project_set_node_property_across_scenes-ok",
+      "port": "editor",
+      "tool": "project_set_node_property_across_scenes",
+      "arguments": {
+        "type": "ColorRect",
+        "property": "color",
+        "value": {
+          "r": 0.1,
+          "g": 0.1,
+          "b": 0.2,
+          "a": 1.0
+        },
+        "dry_run": true,
+        "path_filter": "res://scenes"
+      },
+      "note": "project_set_node_property_across_scenes call 3/5."
+    },
+    {
+      "tag": "c1-244-project_set_node_property_across_scenes-ok",
+      "port": "editor",
+      "tool": "project_set_node_property_across_scenes",
+      "arguments": {
+        "type": "ColorRect",
+        "property": "color",
+        "value": {
+          "r": 0.15000000000000002,
+          "g": 0.1,
+          "b": 0.2,
+          "a": 1.0
+        },
+        "dry_run": true,
+        "path_filter": "res://scenes"
+      },
+      "note": "project_set_node_property_across_scenes call 4/5."
+    },
+    {
+      "tag": "c1-245-project_set_node_property_across_scenes-ok",
+      "port": "editor",
+      "tool": "project_set_node_property_across_scenes",
+      "arguments": {
+        "type": "ColorRect",
+        "property": "color",
+        "value": {
+          "r": 0.0,
+          "g": 0.1,
+          "b": 0.2,
+          "a": 1.0
+        },
+        "dry_run": false,
+        "path_filter": "res://scenes",
+        "force": false
+      },
+      "note": "project_set_node_property_across_scenes call 5/5."
+    },
+    {
+      "tag": "c1-246-project_set_node_property_across_scenes-probe",
+      "port": "editor",
+      "tool": "project_set_node_property_across_scenes",
+      "arguments": {
+        "type": "ColorRect",
+        "property": "no_such_property",
+        "value": 1,
+        "path_filter": "res://scenes"
+      },
+      "note": "project_set_node_property_across_scenes boundary: property does not exist on the type"
+    },
+    {
+      "tag": "c1-247-project_delete_scene_file-ok",
+      "port": "editor",
+      "tool": "project_delete_scene_file",
+      "arguments": {
+        "path": "res://scenes/ex_s1.tscn"
+      },
+      "note": "project_delete_scene_file call 1/5."
+    },
+    {
+      "tag": "c1-248-project_delete_scene_file-ok",
+      "port": "editor",
+      "tool": "project_delete_scene_file",
+      "arguments": {
+        "path": "res://scenes/ex_s2.tscn"
+      },
+      "note": "project_delete_scene_file call 2/5."
+    },
+    {
+      "tag": "c1-249-project_delete_scene_file-ok",
+      "port": "editor",
+      "tool": "project_delete_scene_file",
+      "arguments": {
+        "path": "res://scenes/ex_s3.tscn"
+      },
+      "note": "project_delete_scene_file call 3/5."
+    },
+    {
+      "tag": "c1-250-project_delete_scene_file-ok",
+      "port": "editor",
+      "tool": "project_delete_scene_file",
+      "arguments": {
+        "path": "res://scenes/ex_s4.tscn"
+      },
+      "note": "project_delete_scene_file call 4/5."
+    },
+    {
+      "tag": "c1-251-project_delete_scene_file-ok",
+      "port": "editor",
+      "tool": "project_delete_scene_file",
+      "arguments": {
+        "path": "res://scenes/ex_s5.tscn"
+      },
+      "note": "project_delete_scene_file call 5/5."
+    },
+    {
+      "tag": "c1-252-project_delete_scene_file-probe",
+      "port": "editor",
+      "tool": "project_delete_scene_file",
+      "arguments": {
+        "path": "res://scenes/absent.tscn"
+      },
+      "note": "project_delete_scene_file boundary: scene does not exist"
+    }
+  ]
+}

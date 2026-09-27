@@ -1,0 +1,19 @@
+[gd_resource type="Theme" format=3 uid="uid://drt8gcxne1gmc"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_jkb71"]
+bg_color = Color(0.0627451, 0.13333334, 0.2, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 1
+corner_radius_top_right = 1
+corner_radius_bottom_right = 1
+corner_radius_bottom_left = 1
+
+[resource]
+resource_name = "ExTheme2"
+Button/colors/font_color = Color(0.1, 0.2, 0.3, 1)
+Button/constants/h_separation = 1
+Button/font_sizes/font_size = 13
+Panel/styles/panel = SubResource("StyleBoxFlat_jkb71")

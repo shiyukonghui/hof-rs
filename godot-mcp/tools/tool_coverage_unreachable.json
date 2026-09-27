@@ -1,0 +1,565 @@
+{
+  "_comment": "TASK-110 tool coverage ledger - the structurally-unreachable register. Derived verbatim from recovery/reports/TOOL-COVERAGE-TASK-108.md section 5.3, which is explicitly an INFERENCE (missing subsystem/asset/precondition), not a runtime measurement. A tool listed here is reported as 'unreachable(registry)' by tools/tool_coverage.py; it is NOT counted as a coverage miss. Delete an entry only by demonstrating the missing subsystem now exists in the measured corpus - and if you do, record the demonstration under `reclassified` instead of deleting it silently, so the inference's error stays auditable.",
+  "_source_report": "recovery/reports/TOOL-COVERAGE-TASK-108.md",
+  "_source_section": "5.3 (5) which of them are structurally unreachable in this loop (INFERENCE)",
+  "categories": {
+    "H1": {
+      "code": "H1",
+      "label": "3D 内容管线",
+      "why_unreachable": "20 款游戏**全部是 2D**，世界由 `ColorRect` / `Label` 在运行期或加载期拼出；工程里没有任何 Mesh / Camera3D / 光照 / WorldEnvironment 资产，也没有 `.tscn` 里能寻址的 3D 节点",
+      "supporting_evidence": "模块侧 `tools/editor_scene_3d_write.cpp`；20 款游戏的载荷全部为 2D 坐标（台账逐条记 `ColorRect`/`Label`/像素差）",
+      "tools": [
+        "editor_add_mesh_instance",
+        "editor_set_material_3d",
+        "editor_setup_camera_3d",
+        "editor_set_viewport_3d_camera",
+        "editor_get_viewport_3d_camera",
+        "editor_setup_lighting",
+        "editor_setup_world_environment"
+      ]
+    },
+    "H2": {
+      "code": "H2",
+      "label": "动画 / AnimationTree / 状态机",
+      "why_unreachable": "运动一律由**载荷自己的整数运动学**推进（`StepFrames(n)`、`_Process` 里 `x+=vx`），从不使用 `AnimationPlayer` / `AnimationTree`；没有动画资源可读写，也没有状态机可建",
+      "supporting_evidence": "`tools/editor_animation_read.cpp`、`editor_animation_write.cpp`、`editor_animation_tree_write.cpp`、`tools/animation_shared.cpp`；契约 override 里 `add_state_machine_state` 的 `animation` 成员是「结构性不可达」的已知缺口",
+      "tools": [
+        "editor_create_animation",
+        "editor_add_animation_track",
+        "editor_set_animation_keyframe",
+        "editor_remove_animation",
+        "editor_list_animations",
+        "editor_get_animation_info",
+        "editor_create_animation_tree",
+        "editor_get_animation_tree_structure",
+        "editor_add_state_machine_state",
+        "editor_add_state_machine_transition",
+        "editor_remove_state_machine_state",
+        "editor_remove_state_machine_transition",
+        "editor_set_blend_tree_node",
+        "editor_set_animation_tree_parameter"
+      ]
+    },
+    "H3": {
+      "code": "H3",
+      "label": "TileMap / GridMap",
+      "why_unreachable": "棋盘、迷宫、格点全部是**运行期新建的独立 `ColorRect`**（如 Pac-Man 的 125 颗豆子、Sokoban 的箱子、Match-3 的 8×8），20 个工程里没有 `TileMapLayer`、没有 `GridMap`、也没有 `TileSet` 资源，因此整族都没有作用对象",
+      "supporting_evidence": "`tools/editor_tilemap_read.cpp`、`editor_tilemap_write.cpp`、`tilemap_shared.cpp`。**额外证据（契约自述）**：`editor_set_tilemap_cell` / `editor_set_tilemap_cells_in_rect` 的 `description` 明写「当前工具集没有任何『给 TileSet 添加 atlas source / texture / tile』的入口，所以在可预见的调用序列里本工具无法成功 —— 这是一处如实声明的能力缺口」；同一条 override 另注明该缺口句只挂在两个**写**工具上，`editor_get_tilemap_info/_used_cells/_cell` 与 `editor_remove_all_tilemap_cells` 不要求 source 存在（即有 TileMapLayer 时它们是可达的）",
+      "tools": [
+        "editor_add_gridmap",
+        "editor_get_tilemap_cell",
+        "editor_get_tilemap_info",
+        "editor_get_tilemap_used_cells",
+        "editor_remove_all_tilemap_cells",
+        "editor_set_tilemap_cell",
+        "editor_set_tilemap_cells_in_rect"
+      ]
+    },
+    "H4": {
+      "code": "H4",
+      "label": "导航",
+      "why_unreachable": "需要先有 `NavigationRegion2D` + 烘焙过的 `NavigationMesh` + `NavigationAgent`；本循环的寻路是载荷自己手写的格点/路径算法（Tower Defense 的 101 格蛇形走廊由 ASCII 地图确定性导出，Python 复算 `PathHash`），没有任何导航资产",
+      "supporting_evidence": "`tools/editor_navigation_read.cpp`、`editor_navigation_write.cpp`、`running_game_navigation_write.cpp`（`running_game_move_player_to_target` 就在这个文件里，前置条件即导航代理）",
+      "tools": [
+        "editor_bake_navigation_mesh",
+        "editor_get_navigation_info",
+        "editor_set_navigation_layers",
+        "editor_setup_navigation_agent",
+        "editor_setup_navigation_region",
+        "running_game_move_player_to_target"
+      ]
+    },
+    "H5": {
+      "code": "H5",
+      "label": "音频",
+      "why_unreachable": "20 款游戏**没有一个有声音**，没有 `AudioStreamPlayer`、没有 bus 布局，也没有音频资产",
+      "supporting_evidence": "`tools/editor_audio_read.cpp`、`editor_audio_write.cpp`、`audio_shared.cpp`",
+      "tools": [
+        "editor_add_audio_bus",
+        "editor_add_audio_bus_effect",
+        "editor_add_audio_player",
+        "editor_get_audio_bus_layout",
+        "editor_get_audio_info",
+        "editor_set_audio_bus_property"
+      ]
+    },
+    "H6": {
+      "code": "H6",
+      "label": "粒子",
+      "why_unreachable": "全部视觉证据是「节点位置/颜色 → 像素差」，没有任何 `GPUParticles2D` / 粒子材质 / 渐变",
+      "supporting_evidence": "`tools/editor_particle_read.cpp`、`editor_particle_write.cpp`、`particle_shared.cpp`",
+      "tools": [
+        "editor_create_particles",
+        "editor_get_particle_info",
+        "editor_set_particle_color_gradient",
+        "editor_set_particle_material",
+        "editor_set_particle_preset"
+      ]
+    },
+    "H7": {
+      "code": "H7",
+      "label": "编辑器 GUI 状态 / 编辑器自有播放与输入注入 / 编辑器侧测试运行",
+      "why_unreachable": "这类工具的输入是**编辑器进程自己的 GUI 状态**（当前选择、打开的脚本、Output 面板、对话框、已装插件）或**编辑器自己的播放器/输入队列**。本循环里编辑器端点只做「开场景 / 加节点 / 存场景 / 建脚本 / 编译 / 读错误」；所有行为验证都走游戏端点，且**刻意不用**编辑器侧输入注入（B2 说明：`editor_simulate_*` 注入的是编辑器进程的输入，不能用来驱动游戏进程 —— D59 / GDR-21 的边界）",
+      "supporting_evidence": "`tools/editor_playback.cpp`、`editor_input_simulation.cpp`、`editor_profiling_read.cpp`、`editor_testing_read.cpp`、`editor_script_write.cpp`、`editor_read_scene_inspector.cpp`；`editor_get_test_report` / `editor_analyze_screenshot_diff` 需要「编辑器侧测试运行」，而本循环的测试运行发生在游戏端点",
+      "tools": [
+        "editor_play_scene",
+        "editor_stop_scene",
+        "editor_simulate_input_action",
+        "editor_simulate_input_sequence",
+        "editor_simulate_key",
+        "editor_simulate_mouse_click",
+        "editor_simulate_mouse_move",
+        "editor_get_selection",
+        "editor_set_node_selection",
+        "editor_remove_node_selection",
+        "editor_get_open_scripts",
+        "editor_get_output_log",
+        "editor_remove_output_log",
+        "editor_set_auto_dismiss_dialogs",
+        "editor_reload_plugin",
+        "editor_get_performance_monitors",
+        "editor_get_test_report",
+        "editor_analyze_screenshot_diff",
+        "editor_rescan_project_filesystem"
+      ]
+    },
+    "H8": {
+      "code": "H8",
+      "label": "发布 / 导出 / Android 部署路径",
+      "why_unreachable": "循环的终点是「游戏跑起来 + 可复算证据」，从不打包、不导出、不连真机；`project_export_game` 甚至被契约 `_meta.excluded` 排除、`project_get_export_info` 等只在发布路径生效",
+      "supporting_evidence": "`tools/project_export_read.cpp`、`os_android_read.cpp`、`os_android_write.cpp`、`project_android_read.cpp`；契约 `_meta.excluded = [\"navigate_to\",\"export_project\"]`",
+      "tools": [
+        "os_deploy_to_android_device",
+        "os_list_android_devices",
+        "project_get_export_info",
+        "project_list_export_presets",
+        "project_get_android_preset_info"
+      ]
+    },
+    "H9": {
+      "code": "H9",
+      "label": "运行期录放与特殊捕获（deferred / 条件态）",
+      "why_unreachable": "需要先进入某个**非默认运行态**才有效：`running_game_capture_frames` 需要开启逐帧捕获模式（本循环用的是整帧截图 `capture_screenshot`，298 次），信号发射捕获需要先注册监听，输入录制族需要「先 create → 再 play/stop」的三步会话。本循环的输入证据走的是**声明式 input action + 断言/场景驱动**，从未开过录制器",
+      "supporting_evidence": "`tools/running_game_capture.cpp`、`input_recorder.cpp`、`running_game_input.cpp`；台账里所有输入证据都是 `editor_add_input_action` + `running_game_run_test_scenario`",
+      "tools": [
+        "running_game_capture_frames",
+        "running_game_capture_signal_emissions",
+        "running_game_create_input_recording",
+        "running_game_play_input_recording",
+        "running_game_stop_input_recording"
+      ]
+    }
+  },
+  "members": [
+    {
+      "tool": "editor_add_mesh_instance",
+      "scope": "editor",
+      "category": "H1"
+    },
+    {
+      "tool": "editor_get_viewport_3d_camera",
+      "scope": "editor",
+      "category": "H1"
+    },
+    {
+      "tool": "editor_set_material_3d",
+      "scope": "editor",
+      "category": "H1"
+    },
+    {
+      "tool": "editor_set_viewport_3d_camera",
+      "scope": "editor",
+      "category": "H1"
+    },
+    {
+      "tool": "editor_setup_camera_3d",
+      "scope": "editor",
+      "category": "H1"
+    },
+    {
+      "tool": "editor_setup_lighting",
+      "scope": "editor",
+      "category": "H1"
+    },
+    {
+      "tool": "editor_setup_world_environment",
+      "scope": "editor",
+      "category": "H1"
+    },
+    {
+      "tool": "editor_add_animation_track",
+      "scope": "editor",
+      "category": "H2"
+    },
+    {
+      "tool": "editor_add_state_machine_state",
+      "scope": "editor",
+      "category": "H2"
+    },
+    {
+      "tool": "editor_add_state_machine_transition",
+      "scope": "editor",
+      "category": "H2"
+    },
+    {
+      "tool": "editor_create_animation",
+      "scope": "editor",
+      "category": "H2"
+    },
+    {
+      "tool": "editor_create_animation_tree",
+      "scope": "editor",
+      "category": "H2"
+    },
+    {
+      "tool": "editor_get_animation_info",
+      "scope": "editor",
+      "category": "H2"
+    },
+    {
+      "tool": "editor_get_animation_tree_structure",
+      "scope": "editor",
+      "category": "H2"
+    },
+    {
+      "tool": "editor_list_animations",
+      "scope": "editor",
+      "category": "H2"
+    },
+    {
+      "tool": "editor_remove_animation",
+      "scope": "editor",
+      "category": "H2"
+    },
+    {
+      "tool": "editor_remove_state_machine_state",
+      "scope": "editor",
+      "category": "H2"
+    },
+    {
+      "tool": "editor_remove_state_machine_transition",
+      "scope": "editor",
+      "category": "H2"
+    },
+    {
+      "tool": "editor_set_animation_keyframe",
+      "scope": "editor",
+      "category": "H2"
+    },
+    {
+      "tool": "editor_set_animation_tree_parameter",
+      "scope": "editor",
+      "category": "H2"
+    },
+    {
+      "tool": "editor_set_blend_tree_node",
+      "scope": "editor",
+      "category": "H2"
+    },
+    {
+      "tool": "editor_add_gridmap",
+      "scope": "editor",
+      "category": "H3"
+    },
+    {
+      "tool": "editor_get_tilemap_cell",
+      "scope": "editor",
+      "category": "H3"
+    },
+    {
+      "tool": "editor_get_tilemap_info",
+      "scope": "editor",
+      "category": "H3"
+    },
+    {
+      "tool": "editor_get_tilemap_used_cells",
+      "scope": "editor",
+      "category": "H3"
+    },
+    {
+      "tool": "editor_remove_all_tilemap_cells",
+      "scope": "editor",
+      "category": "H3"
+    },
+    {
+      "tool": "editor_set_tilemap_cell",
+      "scope": "editor",
+      "category": "H3"
+    },
+    {
+      "tool": "editor_set_tilemap_cells_in_rect",
+      "scope": "editor",
+      "category": "H3"
+    },
+    {
+      "tool": "editor_bake_navigation_mesh",
+      "scope": "editor",
+      "category": "H4"
+    },
+    {
+      "tool": "editor_get_navigation_info",
+      "scope": "editor",
+      "category": "H4"
+    },
+    {
+      "tool": "editor_set_navigation_layers",
+      "scope": "editor",
+      "category": "H4"
+    },
+    {
+      "tool": "editor_setup_navigation_agent",
+      "scope": "editor",
+      "category": "H4"
+    },
+    {
+      "tool": "editor_setup_navigation_region",
+      "scope": "editor",
+      "category": "H4"
+    },
+    {
+      "tool": "running_game_move_player_to_target",
+      "scope": "game",
+      "category": "H4"
+    },
+    {
+      "tool": "editor_add_audio_bus",
+      "scope": "editor",
+      "category": "H5"
+    },
+    {
+      "tool": "editor_add_audio_bus_effect",
+      "scope": "editor",
+      "category": "H5"
+    },
+    {
+      "tool": "editor_add_audio_player",
+      "scope": "editor",
+      "category": "H5"
+    },
+    {
+      "tool": "editor_get_audio_bus_layout",
+      "scope": "editor",
+      "category": "H5"
+    },
+    {
+      "tool": "editor_get_audio_info",
+      "scope": "editor",
+      "category": "H5"
+    },
+    {
+      "tool": "editor_set_audio_bus_property",
+      "scope": "editor",
+      "category": "H5"
+    },
+    {
+      "tool": "editor_create_particles",
+      "scope": "editor",
+      "category": "H6"
+    },
+    {
+      "tool": "editor_get_particle_info",
+      "scope": "editor",
+      "category": "H6"
+    },
+    {
+      "tool": "editor_set_particle_color_gradient",
+      "scope": "editor",
+      "category": "H6"
+    },
+    {
+      "tool": "editor_set_particle_material",
+      "scope": "editor",
+      "category": "H6"
+    },
+    {
+      "tool": "editor_set_particle_preset",
+      "scope": "editor",
+      "category": "H6"
+    },
+    {
+      "tool": "editor_analyze_screenshot_diff",
+      "scope": "editor",
+      "category": "H7"
+    },
+    {
+      "tool": "editor_get_open_scripts",
+      "scope": "editor",
+      "category": "H7"
+    },
+    {
+      "tool": "editor_get_output_log",
+      "scope": "editor",
+      "category": "H7"
+    },
+    {
+      "tool": "editor_get_performance_monitors",
+      "scope": "editor",
+      "category": "H7"
+    },
+    {
+      "tool": "editor_get_selection",
+      "scope": "editor",
+      "category": "H7"
+    },
+    {
+      "tool": "editor_get_test_report",
+      "scope": "editor",
+      "category": "H7"
+    },
+    {
+      "tool": "editor_play_scene",
+      "scope": "editor",
+      "category": "H7"
+    },
+    {
+      "tool": "editor_reload_plugin",
+      "scope": "editor",
+      "category": "H7"
+    },
+    {
+      "tool": "editor_remove_node_selection",
+      "scope": "editor",
+      "category": "H7"
+    },
+    {
+      "tool": "editor_remove_output_log",
+      "scope": "editor",
+      "category": "H7"
+    },
+    {
+      "tool": "editor_rescan_project_filesystem",
+      "scope": "editor",
+      "category": "H7"
+    },
+    {
+      "tool": "editor_set_auto_dismiss_dialogs",
+      "scope": "editor",
+      "category": "H7"
+    },
+    {
+      "tool": "editor_set_node_selection",
+      "scope": "editor",
+      "category": "H7"
+    },
+    {
+      "tool": "editor_simulate_input_action",
+      "scope": "editor",
+      "category": "H7"
+    },
+    {
+      "tool": "editor_simulate_input_sequence",
+      "scope": "editor",
+      "category": "H7"
+    },
+    {
+      "tool": "editor_simulate_key",
+      "scope": "editor",
+      "category": "H7"
+    },
+    {
+      "tool": "editor_simulate_mouse_click",
+      "scope": "editor",
+      "category": "H7"
+    },
+    {
+      "tool": "editor_simulate_mouse_move",
+      "scope": "editor",
+      "category": "H7"
+    },
+    {
+      "tool": "editor_stop_scene",
+      "scope": "editor",
+      "category": "H7"
+    },
+    {
+      "tool": "os_deploy_to_android_device",
+      "scope": "both",
+      "category": "H8"
+    },
+    {
+      "tool": "os_list_android_devices",
+      "scope": "both",
+      "category": "H8"
+    },
+    {
+      "tool": "project_get_android_preset_info",
+      "scope": "both",
+      "category": "H8"
+    },
+    {
+      "tool": "project_get_export_info",
+      "scope": "both",
+      "category": "H8"
+    },
+    {
+      "tool": "project_list_export_presets",
+      "scope": "both",
+      "category": "H8"
+    },
+    {
+      "tool": "running_game_capture_frames",
+      "scope": "game",
+      "category": "H9"
+    },
+    {
+      "tool": "running_game_capture_signal_emissions",
+      "scope": "game",
+      "category": "H9"
+    },
+    {
+      "tool": "running_game_create_input_recording",
+      "scope": "game",
+      "category": "H9"
+    },
+    {
+      "tool": "running_game_play_input_recording",
+      "scope": "game",
+      "category": "H9"
+    },
+    {
+      "tool": "running_game_stop_input_recording",
+      "scope": "game",
+      "category": "H9"
+    }
+  ],
+  "total": 74,
+  "_reclassified_comment": "TASK-110 batch c23 called these six for real (>=5 calls each, with an effective call and a boundary probe). They are removed from the 'unreachable' set that tool_coverage.py reports, and kept here with the run that did it.",
+  "reclassified": [
+    {
+      "tool": "editor_get_selection",
+      "from": "H7",
+      "why": "the editor's own GUI selection state is readable through the editor endpoint: no selection is a valid answer ({\"count\":0,\"nodes\":[],\"top_only\":false}).",
+      "evidence": "runs/_exercises/ex_scene/c23-task110/trace-editor.jsonl"
+    },
+    {
+      "tool": "editor_get_open_scripts",
+      "from": "H7",
+      "why": "the open-script list is answerable with none open ({\"count\":0,\"scripts\":[]}).",
+      "evidence": "runs/_exercises/ex_scene/c23-task110/trace-editor.jsonl"
+    },
+    {
+      "tool": "editor_get_output_log",
+      "from": "H7",
+      "why": "the editor's Output panel is readable in-process; the answer carries available/in_process/log_path plus the lines.",
+      "evidence": "runs/_exercises/ex_scene/c23-task110/trace-editor.jsonl"
+    },
+    {
+      "tool": "editor_get_performance_monitors",
+      "from": "H7",
+      "why": "60 monitors reported from the editor process; no subsystem is missing.",
+      "evidence": "runs/_exercises/ex_scene/c23-task110/trace-editor.jsonl"
+    },
+    {
+      "tool": "running_game_capture_frames",
+      "from": "H9",
+      "why": "frame capture needs no pre-registered mode: count/frame_interval are enough and the frames come back inline (base64 PNG).",
+      "evidence": "runs/_exercises/ex_scene/c23-task110/trace-game.jsonl"
+    },
+    {
+      "tool": "running_game_capture_signal_emissions",
+      "from": "H9",
+      "why": "it registers the watch itself and reports what fired inside duration_ms (measured: 1 and 2 emissions for Tick.timeout).",
+      "evidence": "runs/_exercises/ex_scene/c23-task110/trace-game.jsonl"
+    }
+  ]
+}

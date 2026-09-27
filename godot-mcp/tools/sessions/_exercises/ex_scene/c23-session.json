@@ -1,0 +1,1586 @@
+{
+  "_comment": "TASK-110 batch c23 -- families (2) editor read/inspect and (3) running_game query. Editor phase: build the scene the readers need, then read it. Game phase: query the same scene while it runs, with a C# click handler whose pixel change is real.",
+  "game": "_exercises_ex_scene",
+  "import": true,
+  "calls": [
+    {
+      "tag": "c23-001-editor_open_scene-ok",
+      "port": "editor",
+      "tool": "editor_open_scene",
+      "arguments": {
+        "path": "res://scenes/main.tscn"
+      },
+      "note": "the scene every reader addresses"
+    },
+    {
+      "tag": "c23-002-project_create_script-ok",
+      "port": "editor",
+      "tool": "project_create_script",
+      "arguments": {
+        "path": "res://src/ExAuto.cs",
+        "content": "using Godot;\n\npublic partial class ExAuto : Node\n{\n    public int Ticks { get; private set; }\n    public override void _Ready() { Ticks = 0; }\n}\n"
+      },
+      "note": "autoload subject for running_game_get_autoload_node"
+    },
+    {
+      "tag": "c23-003-project_create_script-ok",
+      "port": "editor",
+      "tool": "project_create_script",
+      "arguments": {
+        "path": "res://src/ExButton.cs",
+        "content": "using Godot;\n\npublic partial class ExButton : Button\n{\n    public override void _Ready() { Pressed += OnPressed; }\n\n    private void OnPressed()\n    {\n        var bg = GetNodeOrNull<ColorRect>(\"../Background\");\n        if (bg != null) { bg.Color = new Color(1.0f, 0.0f, 0.0f, 1.0f); }\n    }\n}\n"
+      },
+      "note": "the button whose click must change pixels"
+    },
+    {
+      "tag": "c23-004-editor_add_nodes_batch-ok",
+      "port": "editor",
+      "tool": "editor_add_nodes_batch",
+      "arguments": {
+        "nodes": [
+          {
+            "type": "Timer",
+            "name": "Tick",
+            "parent_path": ".",
+            "properties": {
+              "wait_time": 0.25,
+              "autostart": true
+            }
+          },
+          {
+            "type": "Button",
+            "name": "ClickMe",
+            "parent_path": ".",
+            "properties": {
+              "text": "ClickMe",
+              "offset_left": 320.0,
+              "offset_top": 520.0,
+              "offset_right": 480.0,
+              "offset_bottom": 560.0
+            }
+          },
+          {
+            "type": "StaticBody2D",
+            "name": "Body",
+            "parent_path": "."
+          },
+          {
+            "type": "Label",
+            "name": "Hint",
+            "parent_path": ".",
+            "properties": {
+              "text": "hint",
+              "offset_left": 20.0,
+              "offset_top": 560.0,
+              "offset_right": 300.0,
+              "offset_bottom": 590.0
+            }
+          }
+        ]
+      },
+      "note": "signal source, UI subject, physics subject"
+    },
+    {
+      "tag": "c23-005-editor_setup_collision_shape-ok",
+      "port": "editor",
+      "tool": "editor_setup_collision_shape",
+      "arguments": {
+        "node_path": "Body",
+        "shape_type": "RectangleShape2D",
+        "shape_params": {
+          "size": {
+            "x": 64,
+            "y": 64
+          }
+        }
+      },
+      "note": "collision subject"
+    },
+    {
+      "tag": "c23-006-editor_set_node_script_batch-ok",
+      "port": "editor",
+      "tool": "editor_set_node_script_batch",
+      "arguments": {
+        "node_paths": [
+          "ClickMe"
+        ],
+        "script_path": "res://src/ExButton.cs"
+      },
+      "note": "attach the click handler"
+    },
+    {
+      "tag": "c23-007-editor_set_node_groups-ok",
+      "port": "editor",
+      "tool": "editor_set_node_groups",
+      "arguments": {
+        "node_path": "Ball",
+        "groups": [
+          "ex_balls",
+          "ex_all"
+        ]
+      },
+      "note": "a group to find"
+    },
+    {
+      "tag": "c23-008-editor_set_node_groups-ok",
+      "port": "editor",
+      "tool": "editor_set_node_groups",
+      "arguments": {
+        "node_path": "ClickMe",
+        "groups": [
+          "ex_ui"
+        ]
+      },
+      "note": "a group to find"
+    },
+    {
+      "tag": "c23-009-editor_connect_signal-ok",
+      "port": "editor",
+      "tool": "editor_connect_signal",
+      "arguments": {
+        "source_path": "ClickMe",
+        "signal": "pressed",
+        "target_path": "Main",
+        "method": "_on_clickme_pressed"
+      },
+      "note": "a connection for the signal readers"
+    },
+    {
+      "tag": "c23-010-editor_connect_signal-ok",
+      "port": "editor",
+      "tool": "editor_connect_signal",
+      "arguments": {
+        "source_path": "Tick",
+        "signal": "timeout",
+        "target_path": "Main",
+        "method": "_on_tick_timeout"
+      },
+      "note": "a second connection, different signal"
+    },
+    {
+      "tag": "c23-011-project_add_autoload-ok",
+      "port": "editor",
+      "tool": "project_add_autoload",
+      "arguments": {
+        "name": "ExAuto",
+        "path": "res://src/ExAuto.cs"
+      },
+      "note": "autoload subject"
+    },
+    {
+      "tag": "c23-012-project_build_csharp-ok",
+      "port": "editor",
+      "tool": "project_build_csharp",
+      "arguments": {
+        "configuration": "Debug",
+        "timeout_ms": 300000,
+        "rescan": true
+      },
+      "note": "the C# scripts must compile before the game endpoint can run them"
+    },
+    {
+      "tag": "c23-013-editor_save_scene-ok",
+      "port": "editor",
+      "tool": "editor_save_scene",
+      "arguments": {},
+      "note": "persist the scene the game endpoint will load"
+    },
+    {
+      "tag": "c23-014-editor_find_nodes_by_type-ok",
+      "port": "editor",
+      "tool": "editor_find_nodes_by_type",
+      "arguments": {
+        "type": "ColorRect"
+      },
+      "note": "editor_find_nodes_by_type call 1/5."
+    },
+    {
+      "tag": "c23-015-editor_find_nodes_by_type-ok",
+      "port": "editor",
+      "tool": "editor_find_nodes_by_type",
+      "arguments": {
+        "type": "Label"
+      },
+      "note": "editor_find_nodes_by_type call 2/5."
+    },
+    {
+      "tag": "c23-016-editor_find_nodes_by_type-ok",
+      "port": "editor",
+      "tool": "editor_find_nodes_by_type",
+      "arguments": {
+        "type": "Node2D"
+      },
+      "note": "editor_find_nodes_by_type call 3/5."
+    },
+    {
+      "tag": "c23-017-editor_find_nodes_by_type-ok",
+      "port": "editor",
+      "tool": "editor_find_nodes_by_type",
+      "arguments": {
+        "type": "Button"
+      },
+      "note": "editor_find_nodes_by_type call 4/5."
+    },
+    {
+      "tag": "c23-018-editor_find_nodes_by_type-ok",
+      "port": "editor",
+      "tool": "editor_find_nodes_by_type",
+      "arguments": {
+        "type": "Timer"
+      },
+      "note": "editor_find_nodes_by_type call 5/5."
+    },
+    {
+      "tag": "c23-019-editor_find_nodes_by_type-probe",
+      "port": "editor",
+      "tool": "editor_find_nodes_by_type",
+      "arguments": {
+        "type": 123
+      },
+      "note": "editor_find_nodes_by_type boundary: type is typed string, not int"
+    },
+    {
+      "tag": "c23-020-editor_find_nodes_in_group-ok",
+      "port": "editor",
+      "tool": "editor_find_nodes_in_group",
+      "arguments": {
+        "group": "ex_balls"
+      },
+      "note": "editor_find_nodes_in_group call 1/5."
+    },
+    {
+      "tag": "c23-021-editor_find_nodes_in_group-ok",
+      "port": "editor",
+      "tool": "editor_find_nodes_in_group",
+      "arguments": {
+        "group": "ex_all"
+      },
+      "note": "editor_find_nodes_in_group call 2/5."
+    },
+    {
+      "tag": "c23-022-editor_find_nodes_in_group-ok",
+      "port": "editor",
+      "tool": "editor_find_nodes_in_group",
+      "arguments": {
+        "group": "ex_ui"
+      },
+      "note": "editor_find_nodes_in_group call 3/5."
+    },
+    {
+      "tag": "c23-023-editor_find_nodes_in_group-ok",
+      "port": "editor",
+      "tool": "editor_find_nodes_in_group",
+      "arguments": {
+        "group": "ex_all"
+      },
+      "note": "editor_find_nodes_in_group call 4/5."
+    },
+    {
+      "tag": "c23-024-editor_find_nodes_in_group-ok",
+      "port": "editor",
+      "tool": "editor_find_nodes_in_group",
+      "arguments": {
+        "group": "ex_ui"
+      },
+      "note": "editor_find_nodes_in_group call 5/5."
+    },
+    {
+      "tag": "c23-025-editor_find_nodes_in_group-probe",
+      "port": "editor",
+      "tool": "editor_find_nodes_in_group",
+      "arguments": {
+        "group": ""
+      },
+      "note": "editor_find_nodes_in_group boundary: empty group name"
+    },
+    {
+      "tag": "c23-026-editor_get_collision_info-ok",
+      "port": "editor",
+      "tool": "editor_get_collision_info",
+      "arguments": {
+        "node_path": "Body"
+      },
+      "note": "editor_get_collision_info call 1/5."
+    },
+    {
+      "tag": "c23-027-editor_get_collision_info-ok",
+      "port": "editor",
+      "tool": "editor_get_collision_info",
+      "arguments": {},
+      "note": "editor_get_collision_info call 2/5."
+    },
+    {
+      "tag": "c23-028-editor_get_collision_info-ok",
+      "port": "editor",
+      "tool": "editor_get_collision_info",
+      "arguments": {
+        "node_path": "BodyShape"
+      },
+      "note": "editor_get_collision_info call 3/5."
+    },
+    {
+      "tag": "c23-029-editor_get_collision_info-ok",
+      "port": "editor",
+      "tool": "editor_get_collision_info",
+      "arguments": {
+        "node_path": "Ball"
+      },
+      "note": "editor_get_collision_info call 4/5."
+    },
+    {
+      "tag": "c23-030-editor_get_collision_info-ok",
+      "port": "editor",
+      "tool": "editor_get_collision_info",
+      "arguments": {
+        "node_path": "Main"
+      },
+      "note": "editor_get_collision_info call 5/5."
+    },
+    {
+      "tag": "c23-031-editor_get_collision_info-probe",
+      "port": "editor",
+      "tool": "editor_get_collision_info",
+      "arguments": {
+        "node_path": "NoSuchNode"
+      },
+      "note": "editor_get_collision_info boundary: node does not exist"
+    },
+    {
+      "tag": "c23-032-editor_get_input_actions-ok",
+      "port": "editor",
+      "tool": "editor_get_input_actions",
+      "arguments": {},
+      "note": "editor_get_input_actions call 1/5."
+    },
+    {
+      "tag": "c23-033-editor_get_input_actions-ok",
+      "port": "editor",
+      "tool": "editor_get_input_actions",
+      "arguments": {},
+      "note": "editor_get_input_actions call 2/5."
+    },
+    {
+      "tag": "c23-034-editor_get_input_actions-ok",
+      "port": "editor",
+      "tool": "editor_get_input_actions",
+      "arguments": {},
+      "note": "editor_get_input_actions call 3/5."
+    },
+    {
+      "tag": "c23-035-editor_get_input_actions-ok",
+      "port": "editor",
+      "tool": "editor_get_input_actions",
+      "arguments": {},
+      "note": "editor_get_input_actions call 4/5."
+    },
+    {
+      "tag": "c23-036-editor_get_input_actions-ok",
+      "port": "editor",
+      "tool": "editor_get_input_actions",
+      "arguments": {},
+      "note": "editor_get_input_actions call 5/5."
+    },
+    {
+      "tag": "c23-037-editor_get_input_actions-probe",
+      "port": "editor",
+      "tool": "editor_get_input_actions",
+      "arguments": {
+        "bogus_argument": 1
+      },
+      "note": "editor_get_input_actions boundary: out-of-contract argument"
+    },
+    {
+      "tag": "c23-038-editor_get_node_groups-ok",
+      "port": "editor",
+      "tool": "editor_get_node_groups",
+      "arguments": {
+        "node_path": "Ball"
+      },
+      "note": "editor_get_node_groups call 1/5."
+    },
+    {
+      "tag": "c23-039-editor_get_node_groups-ok",
+      "port": "editor",
+      "tool": "editor_get_node_groups",
+      "arguments": {
+        "node_path": "ClickMe"
+      },
+      "note": "editor_get_node_groups call 2/5."
+    },
+    {
+      "tag": "c23-040-editor_get_node_groups-ok",
+      "port": "editor",
+      "tool": "editor_get_node_groups",
+      "arguments": {
+        "node_path": "Main"
+      },
+      "note": "editor_get_node_groups call 3/5."
+    },
+    {
+      "tag": "c23-041-editor_get_node_groups-ok",
+      "port": "editor",
+      "tool": "editor_get_node_groups",
+      "arguments": {
+        "node_path": "PaddleLeft"
+      },
+      "note": "editor_get_node_groups call 4/5."
+    },
+    {
+      "tag": "c23-042-editor_get_node_groups-ok",
+      "port": "editor",
+      "tool": "editor_get_node_groups",
+      "arguments": {
+        "node_path": "Tick"
+      },
+      "note": "editor_get_node_groups call 5/5."
+    },
+    {
+      "tag": "c23-043-editor_get_node_groups-probe",
+      "port": "editor",
+      "tool": "editor_get_node_groups",
+      "arguments": {
+        "node_path": "NoSuchNode"
+      },
+      "note": "editor_get_node_groups boundary: node does not exist"
+    },
+    {
+      "tag": "c23-044-editor_get_node_signals-ok",
+      "port": "editor",
+      "tool": "editor_get_node_signals",
+      "arguments": {
+        "node_path": "ClickMe"
+      },
+      "note": "editor_get_node_signals call 1/5."
+    },
+    {
+      "tag": "c23-045-editor_get_node_signals-ok",
+      "port": "editor",
+      "tool": "editor_get_node_signals",
+      "arguments": {
+        "node_path": "Tick"
+      },
+      "note": "editor_get_node_signals call 2/5."
+    },
+    {
+      "tag": "c23-046-editor_get_node_signals-ok",
+      "port": "editor",
+      "tool": "editor_get_node_signals",
+      "arguments": {
+        "node_path": "Main"
+      },
+      "note": "editor_get_node_signals call 3/5."
+    },
+    {
+      "tag": "c23-047-editor_get_node_signals-ok",
+      "port": "editor",
+      "tool": "editor_get_node_signals",
+      "arguments": {
+        "node_path": "Ball"
+      },
+      "note": "editor_get_node_signals call 4/5."
+    },
+    {
+      "tag": "c23-048-editor_get_node_signals-ok",
+      "port": "editor",
+      "tool": "editor_get_node_signals",
+      "arguments": {
+        "node_path": "Body"
+      },
+      "note": "editor_get_node_signals call 5/5."
+    },
+    {
+      "tag": "c23-049-editor_get_node_signals-probe",
+      "port": "editor",
+      "tool": "editor_get_node_signals",
+      "arguments": {
+        "node_path": "NoSuchNode"
+      },
+      "note": "editor_get_node_signals boundary: node does not exist"
+    },
+    {
+      "tag": "c23-050-editor_get_physics_layers-ok",
+      "port": "editor",
+      "tool": "editor_get_physics_layers",
+      "arguments": {
+        "node_path": "Body"
+      },
+      "note": "editor_get_physics_layers call 1/5."
+    },
+    {
+      "tag": "c23-051-editor_get_physics_layers-ok",
+      "port": "editor",
+      "tool": "editor_get_physics_layers",
+      "arguments": {
+        "node_path": "Body"
+      },
+      "note": "editor_get_physics_layers call 2/5."
+    },
+    {
+      "tag": "c23-052-editor_get_physics_layers-ok",
+      "port": "editor",
+      "tool": "editor_get_physics_layers",
+      "arguments": {
+        "node_path": "Main"
+      },
+      "note": "editor_get_physics_layers call 3/5."
+    },
+    {
+      "tag": "c23-053-editor_get_physics_layers-ok",
+      "port": "editor",
+      "tool": "editor_get_physics_layers",
+      "arguments": {
+        "node_path": "Ball"
+      },
+      "note": "editor_get_physics_layers call 4/5."
+    },
+    {
+      "tag": "c23-054-editor_get_physics_layers-ok",
+      "port": "editor",
+      "tool": "editor_get_physics_layers",
+      "arguments": {
+        "node_path": "Body"
+      },
+      "note": "editor_get_physics_layers call 5/5."
+    },
+    {
+      "tag": "c23-055-editor_get_physics_layers-probe",
+      "port": "editor",
+      "tool": "editor_get_physics_layers",
+      "arguments": {
+        "node_path": "NoSuchNode"
+      },
+      "note": "editor_get_physics_layers boundary: node does not exist"
+    },
+    {
+      "tag": "c23-056-editor_list_signal_connections-ok",
+      "port": "editor",
+      "tool": "editor_list_signal_connections",
+      "arguments": {},
+      "note": "editor_list_signal_connections call 1/5."
+    },
+    {
+      "tag": "c23-057-editor_list_signal_connections-ok",
+      "port": "editor",
+      "tool": "editor_list_signal_connections",
+      "arguments": {
+        "node_path": "ClickMe"
+      },
+      "note": "editor_list_signal_connections call 2/5."
+    },
+    {
+      "tag": "c23-058-editor_list_signal_connections-ok",
+      "port": "editor",
+      "tool": "editor_list_signal_connections",
+      "arguments": {
+        "signal_name": "pressed"
+      },
+      "note": "editor_list_signal_connections call 3/5."
+    },
+    {
+      "tag": "c23-059-editor_list_signal_connections-ok",
+      "port": "editor",
+      "tool": "editor_list_signal_connections",
+      "arguments": {
+        "scope": "user"
+      },
+      "note": "editor_list_signal_connections call 4/5."
+    },
+    {
+      "tag": "c23-060-editor_list_signal_connections-ok",
+      "port": "editor",
+      "tool": "editor_list_signal_connections",
+      "arguments": {
+        "scope": "internal"
+      },
+      "note": "editor_list_signal_connections call 5/5."
+    },
+    {
+      "tag": "c23-061-editor_list_signal_connections-probe",
+      "port": "editor",
+      "tool": "editor_list_signal_connections",
+      "arguments": {
+        "scope": "bogus"
+      },
+      "note": "editor_list_signal_connections boundary: scope is an enum of all/user/internal"
+    },
+    {
+      "tag": "c23-062-editor_analyze_signal_flow-ok",
+      "port": "editor",
+      "tool": "editor_analyze_signal_flow",
+      "arguments": {},
+      "note": "editor_analyze_signal_flow call 1/5."
+    },
+    {
+      "tag": "c23-063-editor_analyze_signal_flow-ok",
+      "port": "editor",
+      "tool": "editor_analyze_signal_flow",
+      "arguments": {
+        "node_path": "ClickMe"
+      },
+      "note": "editor_analyze_signal_flow call 2/5."
+    },
+    {
+      "tag": "c23-064-editor_analyze_signal_flow-ok",
+      "port": "editor",
+      "tool": "editor_analyze_signal_flow",
+      "arguments": {
+        "node_path": "Main"
+      },
+      "note": "editor_analyze_signal_flow call 3/5."
+    },
+    {
+      "tag": "c23-065-editor_analyze_signal_flow-ok",
+      "port": "editor",
+      "tool": "editor_analyze_signal_flow",
+      "arguments": {
+        "node_path": "Tick"
+      },
+      "note": "editor_analyze_signal_flow call 4/5."
+    },
+    {
+      "tag": "c23-066-editor_analyze_signal_flow-ok",
+      "port": "editor",
+      "tool": "editor_analyze_signal_flow",
+      "arguments": {
+        "node_path": ""
+      },
+      "note": "editor_analyze_signal_flow call 5/5."
+    },
+    {
+      "tag": "c23-067-editor_analyze_signal_flow-probe",
+      "port": "editor",
+      "tool": "editor_analyze_signal_flow",
+      "arguments": {
+        "node_path": "NoSuchNode"
+      },
+      "note": "editor_analyze_signal_flow boundary: node does not exist"
+    },
+    {
+      "tag": "c23-068-editor_get_open_scripts-ok",
+      "port": "editor",
+      "tool": "editor_get_open_scripts",
+      "arguments": {},
+      "note": "editor_get_open_scripts call 1/5."
+    },
+    {
+      "tag": "c23-069-editor_get_open_scripts-ok",
+      "port": "editor",
+      "tool": "editor_get_open_scripts",
+      "arguments": {},
+      "note": "editor_get_open_scripts call 2/5."
+    },
+    {
+      "tag": "c23-070-editor_get_open_scripts-ok",
+      "port": "editor",
+      "tool": "editor_get_open_scripts",
+      "arguments": {},
+      "note": "editor_get_open_scripts call 3/5."
+    },
+    {
+      "tag": "c23-071-editor_get_open_scripts-ok",
+      "port": "editor",
+      "tool": "editor_get_open_scripts",
+      "arguments": {},
+      "note": "editor_get_open_scripts call 4/5."
+    },
+    {
+      "tag": "c23-072-editor_get_open_scripts-ok",
+      "port": "editor",
+      "tool": "editor_get_open_scripts",
+      "arguments": {},
+      "note": "editor_get_open_scripts call 5/5."
+    },
+    {
+      "tag": "c23-073-editor_get_open_scripts-probe",
+      "port": "editor",
+      "tool": "editor_get_open_scripts",
+      "arguments": {
+        "bogus_argument": 1
+      },
+      "note": "editor_get_open_scripts boundary: out-of-contract argument"
+    },
+    {
+      "tag": "c23-074-editor_get_output_log-ok",
+      "port": "editor",
+      "tool": "editor_get_output_log",
+      "arguments": {
+        "max_lines": 10
+      },
+      "note": "editor_get_output_log call 1/5."
+    },
+    {
+      "tag": "c23-075-editor_get_output_log-ok",
+      "port": "editor",
+      "tool": "editor_get_output_log",
+      "arguments": {
+        "max_lines": 50
+      },
+      "note": "editor_get_output_log call 2/5."
+    },
+    {
+      "tag": "c23-076-editor_get_output_log-ok",
+      "port": "editor",
+      "tool": "editor_get_output_log",
+      "arguments": {
+        "filter": "error"
+      },
+      "note": "editor_get_output_log call 3/5."
+    },
+    {
+      "tag": "c23-077-editor_get_output_log-ok",
+      "port": "editor",
+      "tool": "editor_get_output_log",
+      "arguments": {
+        "filter": "scene"
+      },
+      "note": "editor_get_output_log call 4/5."
+    },
+    {
+      "tag": "c23-078-editor_get_output_log-ok",
+      "port": "editor",
+      "tool": "editor_get_output_log",
+      "arguments": {},
+      "note": "editor_get_output_log call 5/5."
+    },
+    {
+      "tag": "c23-079-editor_get_output_log-probe",
+      "port": "editor",
+      "tool": "editor_get_output_log",
+      "arguments": {
+        "max_lines": -1
+      },
+      "note": "editor_get_output_log boundary: negative max_lines"
+    },
+    {
+      "tag": "c23-080-editor_get_selection-ok",
+      "port": "editor",
+      "tool": "editor_get_selection",
+      "arguments": {},
+      "note": "editor_get_selection call 1/5."
+    },
+    {
+      "tag": "c23-081-editor_get_selection-ok",
+      "port": "editor",
+      "tool": "editor_get_selection",
+      "arguments": {
+        "top_only": true
+      },
+      "note": "editor_get_selection call 2/5."
+    },
+    {
+      "tag": "c23-082-editor_get_selection-ok",
+      "port": "editor",
+      "tool": "editor_get_selection",
+      "arguments": {},
+      "note": "editor_get_selection call 3/5."
+    },
+    {
+      "tag": "c23-083-editor_get_selection-ok",
+      "port": "editor",
+      "tool": "editor_get_selection",
+      "arguments": {
+        "top_only": false
+      },
+      "note": "editor_get_selection call 4/5."
+    },
+    {
+      "tag": "c23-084-editor_get_selection-ok",
+      "port": "editor",
+      "tool": "editor_get_selection",
+      "arguments": {},
+      "note": "editor_get_selection call 5/5."
+    },
+    {
+      "tag": "c23-085-editor_get_selection-probe",
+      "port": "editor",
+      "tool": "editor_get_selection",
+      "arguments": {
+        "bogus_argument": 1
+      },
+      "note": "editor_get_selection boundary: out-of-contract argument"
+    },
+    {
+      "tag": "c23-086-editor_get_performance_monitors-ok",
+      "port": "editor",
+      "tool": "editor_get_performance_monitors",
+      "arguments": {},
+      "note": "editor_get_performance_monitors call 1/5."
+    },
+    {
+      "tag": "c23-087-editor_get_performance_monitors-ok",
+      "port": "editor",
+      "tool": "editor_get_performance_monitors",
+      "arguments": {},
+      "note": "editor_get_performance_monitors call 2/5."
+    },
+    {
+      "tag": "c23-088-editor_get_performance_monitors-ok",
+      "port": "editor",
+      "tool": "editor_get_performance_monitors",
+      "arguments": {},
+      "note": "editor_get_performance_monitors call 3/5."
+    },
+    {
+      "tag": "c23-089-editor_get_performance_monitors-ok",
+      "port": "editor",
+      "tool": "editor_get_performance_monitors",
+      "arguments": {},
+      "note": "editor_get_performance_monitors call 4/5."
+    },
+    {
+      "tag": "c23-090-editor_get_performance_monitors-ok",
+      "port": "editor",
+      "tool": "editor_get_performance_monitors",
+      "arguments": {},
+      "note": "editor_get_performance_monitors call 5/5."
+    },
+    {
+      "tag": "c23-091-editor_get_performance_monitors-probe",
+      "port": "editor",
+      "tool": "editor_get_performance_monitors",
+      "arguments": {
+        "bogus_argument": 1
+      },
+      "note": "editor_get_performance_monitors boundary: out-of-contract argument"
+    },
+    {
+      "tag": "c23-092-editor_execute_gdscript-ok",
+      "port": "editor",
+      "tool": "editor_execute_gdscript",
+      "arguments": {
+        "code": "return 1 + 1"
+      },
+      "note": "editor_execute_gdscript call 1/5."
+    },
+    {
+      "tag": "c23-093-editor_execute_gdscript-ok",
+      "port": "editor",
+      "tool": "editor_execute_gdscript",
+      "arguments": {
+        "code": "return EditorInterface.get_edited_scene_root().name"
+      },
+      "note": "editor_execute_gdscript call 2/5."
+    },
+    {
+      "tag": "c23-094-editor_execute_gdscript-ok",
+      "port": "editor",
+      "tool": "editor_execute_gdscript",
+      "arguments": {
+        "code": "return Engine.get_version_info()[\"major\"]"
+      },
+      "note": "editor_execute_gdscript call 3/5."
+    },
+    {
+      "tag": "c23-095-editor_execute_gdscript-ok",
+      "port": "editor",
+      "tool": "editor_execute_gdscript",
+      "arguments": {
+        "code": "return ProjectSettings.get_setting(\"application/config/name\")"
+      },
+      "note": "editor_execute_gdscript call 4/5."
+    },
+    {
+      "tag": "c23-096-editor_execute_gdscript-ok",
+      "port": "editor",
+      "tool": "editor_execute_gdscript",
+      "arguments": {
+        "code": "return Performance.get_monitor(Performance.TIME_FPS)"
+      },
+      "note": "editor_execute_gdscript call 5/5."
+    },
+    {
+      "tag": "c23-097-editor_execute_gdscript-probe",
+      "port": "editor",
+      "tool": "editor_execute_gdscript",
+      "arguments": {
+        "code": "this is not valid gdscript at all ("
+      },
+      "note": "editor_execute_gdscript boundary: unparseable GDScript"
+    },
+    {
+      "tag": "c23-098-editor_get_scene_tree-ok",
+      "port": "editor",
+      "tool": "editor_get_scene_tree",
+      "arguments": {},
+      "note": "editor_get_scene_tree call 1/5."
+    },
+    {
+      "tag": "c23-099-editor_get_scene_tree-ok",
+      "port": "editor",
+      "tool": "editor_get_scene_tree",
+      "arguments": {
+        "max_depth": 1
+      },
+      "note": "editor_get_scene_tree call 2/5."
+    },
+    {
+      "tag": "c23-100-editor_get_scene_tree-ok",
+      "port": "editor",
+      "tool": "editor_get_scene_tree",
+      "arguments": {
+        "max_depth": 2
+      },
+      "note": "editor_get_scene_tree call 3/5."
+    },
+    {
+      "tag": "c23-101-editor_get_scene_tree-ok",
+      "port": "editor",
+      "tool": "editor_get_scene_tree",
+      "arguments": {},
+      "note": "editor_get_scene_tree call 4/5."
+    },
+    {
+      "tag": "c23-102-editor_get_scene_tree-ok",
+      "port": "editor",
+      "tool": "editor_get_scene_tree",
+      "arguments": {
+        "max_depth": 3
+      },
+      "note": "editor_get_scene_tree call 5/5."
+    },
+    {
+      "tag": "c23-103-editor_get_scene_tree-probe",
+      "port": "editor",
+      "tool": "editor_get_scene_tree",
+      "arguments": {
+        "max_depth": -2
+      },
+      "note": "editor_get_scene_tree boundary: max_depth below the contract's -1 floor"
+    },
+    {
+      "tag": "c23-104-editor_get_node_properties-ok",
+      "port": "editor",
+      "tool": "editor_get_node_properties",
+      "arguments": {
+        "path": "Ball"
+      },
+      "note": "editor_get_node_properties call 1/5."
+    },
+    {
+      "tag": "c23-105-editor_get_node_properties-ok",
+      "port": "editor",
+      "tool": "editor_get_node_properties",
+      "arguments": {
+        "path": "Main"
+      },
+      "note": "editor_get_node_properties call 2/5."
+    },
+    {
+      "tag": "c23-106-editor_get_node_properties-ok",
+      "port": "editor",
+      "tool": "editor_get_node_properties",
+      "arguments": {
+        "path": "Background"
+      },
+      "note": "editor_get_node_properties call 3/5."
+    },
+    {
+      "tag": "c23-107-editor_get_node_properties-ok",
+      "port": "editor",
+      "tool": "editor_get_node_properties",
+      "arguments": {
+        "path": "Ball",
+        "properties": [
+          "position",
+          "color"
+        ]
+      },
+      "note": "editor_get_node_properties call 4/5."
+    },
+    {
+      "tag": "c23-108-editor_get_node_properties-ok",
+      "port": "editor",
+      "tool": "editor_get_node_properties",
+      "arguments": {
+        "path": "ClickMe"
+      },
+      "note": "editor_get_node_properties call 5/5."
+    },
+    {
+      "tag": "c23-109-editor_get_node_properties-probe",
+      "port": "editor",
+      "tool": "editor_get_node_properties",
+      "arguments": {
+        "path": "NoSuchNode"
+      },
+      "note": "editor_get_node_properties boundary: node does not exist"
+    },
+    {
+      "tag": "c23-110-running_game_find_nearby_nodes-ok",
+      "port": "game",
+      "tool": "running_game_find_nearby_nodes",
+      "arguments": {
+        "position": {
+          "x": 400,
+          "y": 270
+        },
+        "radius": 120
+      },
+      "note": "running_game_find_nearby_nodes call 1/5."
+    },
+    {
+      "tag": "c23-111-running_game_find_nearby_nodes-ok",
+      "port": "game",
+      "tool": "running_game_find_nearby_nodes",
+      "arguments": {
+        "position": {
+          "x": 400,
+          "y": 270
+        },
+        "radius": 1000
+      },
+      "note": "running_game_find_nearby_nodes call 2/5."
+    },
+    {
+      "tag": "c23-112-running_game_find_nearby_nodes-ok",
+      "port": "game",
+      "tool": "running_game_find_nearby_nodes",
+      "arguments": {
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "radius": 100
+      },
+      "note": "running_game_find_nearby_nodes call 3/5."
+    },
+    {
+      "tag": "c23-113-running_game_find_nearby_nodes-ok",
+      "port": "game",
+      "tool": "running_game_find_nearby_nodes",
+      "arguments": {
+        "position": {
+          "x": 400,
+          "y": 270
+        },
+        "radius": 200,
+        "type_filter": "ColorRect"
+      },
+      "note": "running_game_find_nearby_nodes call 4/5."
+    },
+    {
+      "tag": "c23-114-running_game_find_nearby_nodes-ok",
+      "port": "game",
+      "tool": "running_game_find_nearby_nodes",
+      "arguments": {
+        "position": {
+          "x": 400,
+          "y": 270
+        },
+        "radius": 200,
+        "group_filter": "ex_balls"
+      },
+      "note": "running_game_find_nearby_nodes call 5/5."
+    },
+    {
+      "tag": "c23-115-running_game_find_nearby_nodes-probe",
+      "port": "game",
+      "tool": "running_game_find_nearby_nodes",
+      "arguments": {
+        "position": "not-a-vector"
+      },
+      "note": "running_game_find_nearby_nodes boundary: position is typed object, not string"
+    },
+    {
+      "tag": "c23-116-running_game_find_nodes_by_script-ok",
+      "port": "game",
+      "tool": "running_game_find_nodes_by_script",
+      "arguments": {
+        "script": "res://src/Ball.cs"
+      },
+      "note": "running_game_find_nodes_by_script call 1/5."
+    },
+    {
+      "tag": "c23-117-running_game_find_nodes_by_script-ok",
+      "port": "game",
+      "tool": "running_game_find_nodes_by_script",
+      "arguments": {
+        "script": "res://src/Ball.cs",
+        "properties": [
+          "position"
+        ]
+      },
+      "note": "running_game_find_nodes_by_script call 2/5."
+    },
+    {
+      "tag": "c23-118-running_game_find_nodes_by_script-ok",
+      "port": "game",
+      "tool": "running_game_find_nodes_by_script",
+      "arguments": {
+        "script": "res://src/Paddle.cs"
+      },
+      "note": "running_game_find_nodes_by_script call 3/5."
+    },
+    {
+      "tag": "c23-119-running_game_find_nodes_by_script-ok",
+      "port": "game",
+      "tool": "running_game_find_nodes_by_script",
+      "arguments": {
+        "script": "res://src/ExButton.cs"
+      },
+      "note": "running_game_find_nodes_by_script call 4/5."
+    },
+    {
+      "tag": "c23-120-running_game_find_nodes_by_script-ok",
+      "port": "game",
+      "tool": "running_game_find_nodes_by_script",
+      "arguments": {
+        "script": "res://src/PongGame.cs"
+      },
+      "note": "running_game_find_nodes_by_script call 5/5."
+    },
+    {
+      "tag": "c23-121-running_game_find_nodes_by_script-probe",
+      "port": "game",
+      "tool": "running_game_find_nodes_by_script",
+      "arguments": {
+        "script": 123
+      },
+      "note": "running_game_find_nodes_by_script boundary: script is typed string, not int"
+    },
+    {
+      "tag": "c23-122-running_game_find_ui_elements-ok",
+      "port": "game",
+      "tool": "running_game_find_ui_elements",
+      "arguments": {},
+      "note": "running_game_find_ui_elements call 1/5."
+    },
+    {
+      "tag": "c23-123-running_game_find_ui_elements-ok",
+      "port": "game",
+      "tool": "running_game_find_ui_elements",
+      "arguments": {
+        "type_filter": "Label"
+      },
+      "note": "running_game_find_ui_elements call 2/5."
+    },
+    {
+      "tag": "c23-124-running_game_find_ui_elements-ok",
+      "port": "game",
+      "tool": "running_game_find_ui_elements",
+      "arguments": {
+        "type_filter": "Button"
+      },
+      "note": "running_game_find_ui_elements call 3/5."
+    },
+    {
+      "tag": "c23-125-running_game_find_ui_elements-ok",
+      "port": "game",
+      "tool": "running_game_find_ui_elements",
+      "arguments": {
+        "type_filter": "ColorRect"
+      },
+      "note": "running_game_find_ui_elements call 4/5."
+    },
+    {
+      "tag": "c23-126-running_game_find_ui_elements-ok",
+      "port": "game",
+      "tool": "running_game_find_ui_elements",
+      "arguments": {},
+      "note": "running_game_find_ui_elements call 5/5."
+    },
+    {
+      "tag": "c23-127-running_game_find_ui_elements-probe",
+      "port": "game",
+      "tool": "running_game_find_ui_elements",
+      "arguments": {
+        "bogus_argument": 1
+      },
+      "note": "running_game_find_ui_elements boundary: out-of-contract argument"
+    },
+    {
+      "tag": "c23-128-running_game_get_autoload_node-ok",
+      "port": "game",
+      "tool": "running_game_get_autoload_node",
+      "arguments": {
+        "name": "ExAuto"
+      },
+      "note": "running_game_get_autoload_node call 1/5."
+    },
+    {
+      "tag": "c23-129-running_game_get_autoload_node-ok",
+      "port": "game",
+      "tool": "running_game_get_autoload_node",
+      "arguments": {
+        "name": "ExAuto",
+        "properties": [
+          "name"
+        ]
+      },
+      "note": "running_game_get_autoload_node call 2/5."
+    },
+    {
+      "tag": "c23-130-running_game_get_autoload_node-ok",
+      "port": "game",
+      "tool": "running_game_get_autoload_node",
+      "arguments": {
+        "name": "ExAuto"
+      },
+      "note": "running_game_get_autoload_node call 3/5."
+    },
+    {
+      "tag": "c23-131-running_game_get_autoload_node-ok",
+      "port": "game",
+      "tool": "running_game_get_autoload_node",
+      "arguments": {
+        "name": "ExAuto"
+      },
+      "note": "running_game_get_autoload_node call 4/5."
+    },
+    {
+      "tag": "c23-132-running_game_get_autoload_node-ok",
+      "port": "game",
+      "tool": "running_game_get_autoload_node",
+      "arguments": {
+        "name": "ExAuto"
+      },
+      "note": "running_game_get_autoload_node call 5/5."
+    },
+    {
+      "tag": "c23-133-running_game_get_autoload_node-probe",
+      "port": "game",
+      "tool": "running_game_get_autoload_node",
+      "arguments": {
+        "name": "NoSuchAuto"
+      },
+      "note": "running_game_get_autoload_node boundary: autoload is not registered"
+    },
+    {
+      "tag": "c23-134-running_game_get_node_properties_batch-ok",
+      "port": "game",
+      "tool": "running_game_get_node_properties_batch",
+      "arguments": {
+        "nodes": [
+          {
+            "node_path": "Ball"
+          }
+        ]
+      },
+      "note": "running_game_get_node_properties_batch call 1/5."
+    },
+    {
+      "tag": "c23-135-running_game_get_node_properties_batch-ok",
+      "port": "game",
+      "tool": "running_game_get_node_properties_batch",
+      "arguments": {
+        "nodes": [
+          {
+            "node_path": "Ball",
+            "properties": [
+              "position"
+            ]
+          },
+          {
+            "node_path": "PaddleLeft",
+            "properties": [
+              "position"
+            ]
+          }
+        ]
+      },
+      "note": "running_game_get_node_properties_batch call 2/5."
+    },
+    {
+      "tag": "c23-136-running_game_get_node_properties_batch-ok",
+      "port": "game",
+      "tool": "running_game_get_node_properties_batch",
+      "arguments": {
+        "nodes": [
+          {
+            "node_path": "Main"
+          }
+        ]
+      },
+      "note": "running_game_get_node_properties_batch call 3/5."
+    },
+    {
+      "tag": "c23-137-running_game_get_node_properties_batch-ok",
+      "port": "game",
+      "tool": "running_game_get_node_properties_batch",
+      "arguments": {
+        "nodes": [
+          {
+            "node_path": "ClickMe",
+            "properties": [
+              "text",
+              "position"
+            ]
+          }
+        ]
+      },
+      "note": "running_game_get_node_properties_batch call 4/5."
+    },
+    {
+      "tag": "c23-138-running_game_get_node_properties_batch-ok",
+      "port": "game",
+      "tool": "running_game_get_node_properties_batch",
+      "arguments": {
+        "nodes": [
+          {
+            "node_path": "Ball"
+          },
+          {
+            "node_path": "PaddleRight"
+          }
+        ]
+      },
+      "note": "running_game_get_node_properties_batch call 5/5."
+    },
+    {
+      "tag": "c23-139-running_game_get_node_properties_batch-probe",
+      "port": "game",
+      "tool": "running_game_get_node_properties_batch",
+      "arguments": {
+        "nodes": [
+          {
+            "node_path": "NoSuchNode"
+          }
+        ]
+      },
+      "note": "running_game_get_node_properties_batch boundary: node does not exist"
+    },
+    {
+      "tag": "c23-140-running_game_get_node_properties-ok",
+      "port": "game",
+      "tool": "running_game_get_node_properties",
+      "arguments": {
+        "node_path": "Ball"
+      },
+      "note": "running_game_get_node_properties call 1/5."
+    },
+    {
+      "tag": "c23-141-running_game_get_node_properties-ok",
+      "port": "game",
+      "tool": "running_game_get_node_properties",
+      "arguments": {
+        "node_path": "Ball",
+        "properties": [
+          "position"
+        ]
+      },
+      "note": "running_game_get_node_properties call 2/5."
+    },
+    {
+      "tag": "c23-142-running_game_get_node_properties-ok",
+      "port": "game",
+      "tool": "running_game_get_node_properties",
+      "arguments": {
+        "node_path": "Main"
+      },
+      "note": "running_game_get_node_properties call 3/5."
+    },
+    {
+      "tag": "c23-143-running_game_get_node_properties-ok",
+      "port": "game",
+      "tool": "running_game_get_node_properties",
+      "arguments": {
+        "node_path": "ClickMe"
+      },
+      "note": "running_game_get_node_properties call 4/5."
+    },
+    {
+      "tag": "c23-144-running_game_get_node_properties-ok",
+      "port": "game",
+      "tool": "running_game_get_node_properties",
+      "arguments": {
+        "node_path": "Background"
+      },
+      "note": "running_game_get_node_properties call 5/5."
+    },
+    {
+      "tag": "c23-145-running_game_get_node_properties-probe",
+      "port": "game",
+      "tool": "running_game_get_node_properties",
+      "arguments": {
+        "node_path": "NoSuchNode"
+      },
+      "note": "running_game_get_node_properties boundary: node does not exist"
+    },
+    {
+      "tag": "c23-146-running_game_capture_frames-ok",
+      "port": "game",
+      "tool": "running_game_capture_frames",
+      "arguments": {
+        "count": 2,
+        "frame_interval": 5
+      },
+      "note": "running_game_capture_frames call 1/5."
+    },
+    {
+      "tag": "c23-147-running_game_capture_frames-ok",
+      "port": "game",
+      "tool": "running_game_capture_frames",
+      "arguments": {
+        "count": 5
+      },
+      "note": "running_game_capture_frames call 2/5."
+    },
+    {
+      "tag": "c23-148-running_game_capture_frames-ok",
+      "port": "game",
+      "tool": "running_game_capture_frames",
+      "arguments": {
+        "count": 3,
+        "half_resolution": false
+      },
+      "note": "running_game_capture_frames call 3/5."
+    },
+    {
+      "tag": "c23-149-running_game_capture_frames-ok",
+      "port": "game",
+      "tool": "running_game_capture_frames",
+      "arguments": {
+        "count": 2
+      },
+      "note": "running_game_capture_frames call 4/5."
+    },
+    {
+      "tag": "c23-150-running_game_capture_frames-ok",
+      "port": "game",
+      "tool": "running_game_capture_frames",
+      "arguments": {
+        "count": 4,
+        "frame_interval": 2
+      },
+      "note": "running_game_capture_frames call 5/5."
+    },
+    {
+      "tag": "c23-151-running_game_capture_frames-probe",
+      "port": "game",
+      "tool": "running_game_capture_frames",
+      "arguments": {
+        "count": -1
+      },
+      "note": "running_game_capture_frames boundary: negative frame count"
+    },
+    {
+      "tag": "c23-152-running_game_capture_signal_emissions-ok",
+      "port": "game",
+      "tool": "running_game_capture_signal_emissions",
+      "arguments": {
+        "node_paths": [
+          "Tick"
+        ],
+        "duration_ms": 300
+      },
+      "note": "running_game_capture_signal_emissions call 1/5."
+    },
+    {
+      "tag": "c23-153-running_game_capture_signal_emissions-ok",
+      "port": "game",
+      "tool": "running_game_capture_signal_emissions",
+      "arguments": {
+        "node_paths": [
+          "ClickMe"
+        ],
+        "duration_ms": 300
+      },
+      "note": "running_game_capture_signal_emissions call 2/5."
+    },
+    {
+      "tag": "c23-154-running_game_capture_signal_emissions-ok",
+      "port": "game",
+      "tool": "running_game_capture_signal_emissions",
+      "arguments": {
+        "node_paths": [
+          "Main"
+        ],
+        "duration_ms": 300
+      },
+      "note": "running_game_capture_signal_emissions call 3/5."
+    },
+    {
+      "tag": "c23-155-running_game_capture_signal_emissions-ok",
+      "port": "game",
+      "tool": "running_game_capture_signal_emissions",
+      "arguments": {
+        "node_paths": [
+          "Tick"
+        ],
+        "signal_filter": [
+          "timeout"
+        ],
+        "duration_ms": 500
+      },
+      "note": "running_game_capture_signal_emissions call 4/5."
+    },
+    {
+      "tag": "c23-156-running_game_capture_signal_emissions-ok",
+      "port": "game",
+      "tool": "running_game_capture_signal_emissions",
+      "arguments": {
+        "node_paths": [
+          "Ball"
+        ],
+        "duration_ms": 300
+      },
+      "note": "running_game_capture_signal_emissions call 5/5."
+    },
+    {
+      "tag": "c23-157-running_game_capture_signal_emissions-probe",
+      "port": "game",
+      "tool": "running_game_capture_signal_emissions",
+      "arguments": {
+        "node_paths": [
+          "NoSuchNode"
+        ],
+        "duration_ms": 200
+      },
+      "note": "running_game_capture_signal_emissions boundary: node does not exist"
+    },
+    {
+      "tag": "c23-158-running_game_simulate_button_click_by_text-ok",
+      "port": "game",
+      "tool": "running_game_simulate_button_click_by_text",
+      "arguments": {
+        "text": "ClickMe"
+      },
+      "note": "running_game_simulate_button_click_by_text call 1/5."
+    },
+    {
+      "tag": "c23-159-running_game_simulate_button_click_by_text-ok",
+      "port": "game",
+      "tool": "running_game_simulate_button_click_by_text",
+      "arguments": {
+        "text": "ClickMe"
+      },
+      "note": "running_game_simulate_button_click_by_text call 2/5."
+    },
+    {
+      "tag": "c23-160-running_game_simulate_button_click_by_text-ok",
+      "port": "game",
+      "tool": "running_game_simulate_button_click_by_text",
+      "arguments": {
+        "text": "ClickMe"
+      },
+      "note": "running_game_simulate_button_click_by_text call 3/5."
+    },
+    {
+      "tag": "c23-161-running_game_simulate_button_click_by_text-ok",
+      "port": "game",
+      "tool": "running_game_simulate_button_click_by_text",
+      "arguments": {
+        "text": "lickMe"
+      },
+      "note": "running_game_simulate_button_click_by_text call 4/5."
+    },
+    {
+      "tag": "c23-162-running_game_simulate_button_click_by_text-ok",
+      "port": "game",
+      "tool": "running_game_simulate_button_click_by_text",
+      "arguments": {
+        "text": "ClickMe"
+      },
+      "note": "running_game_simulate_button_click_by_text call 5/5."
+    },
+    {
+      "tag": "c23-163-running_game_simulate_button_click_by_text-probe",
+      "port": "game",
+      "tool": "running_game_simulate_button_click_by_text",
+      "arguments": {
+        "text": "NoSuchButtonText"
+      },
+      "note": "running_game_simulate_button_click_by_text boundary: no button carries this text"
+    }
+  ]
+}

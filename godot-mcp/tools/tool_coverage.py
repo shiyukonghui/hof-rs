@@ -1,0 +1,636 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""tool_coverage.py -- the refreshable tool-coverage ledger (TASK-110 item A).
+
+TASK-108 measured coverage once, by hand, and wrote the answer into a report.
+This script is that measurement made executable and repeatable: point it at the
+contract and at `runs/**/trace-*.jsonl` and it re-derives, from the trace原文,
+the two things the ledger has to answer:
+
+    * how many times was each of the 177 contract tools called, and
+    * is that a *coverage* number or just a *count* - was at least one call
+      effective, and was at least one call a boundary/failure?
+
+Two corpus modes, never mixed (they answer different questions):
+
+    --only-final   the 20 final-run tags of dist/review_data.json (the TASK-108
+                   section 3 corpus)
+    (default)      every `runs/**/trace-*.jsonl` (the TASK-108 section 4 corpus),
+                   which now also contains the TASK-110 exercise runs.
+
+Per-call facts come from `mcp_trace_ledger.py` itself, imported as a module, so
+"effective" and "boundary" use that reader's verdict vocabulary instead of a
+second, drifting definition:
+
+    boundary  = the call answered `ok=false`.
+    effective = for a READ-verb tool (get/read/search/list/find/analyze/detect/
+                convert/validate/check): the call answered ok and returned a
+                substantive payload; a read never moves a pixel or a byte, so the
+                payload IS its evidence.
+                for every other verb (create/edit/set/add/remove/write/build...):
+                the ledger's own ok_effect_observed / ok_file_effect_observed -
+                i.e. the call really changed the screen or a file.
+
+Outputs (both are fully regenerated on every run):
+
+    TOOL-COVERAGE.md   总表 + 分桶 + <5 清单 + 不可达登记表的联动视图
+    coverage.json      the same data, machine readable
+
+Usage:
+    python tools/tool_coverage.py [--only-final] [--runs DIR] [--exclude NAME]
+                                  [--targets FILE] [--md PATH] [--json PATH]
+
+Exit 0 when the ledger was written, 2 on a usage/IO error.
+"""
+import argparse
+import datetime
+import hashlib
+import importlib.util
+import io
+import json
+import os
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+
+CONTRACT = os.path.join("godot", "modules", "mcp_server", "docs", "tools_list.renamed.json")
+RENAME_MAP = os.path.join("godot", "modules", "mcp_server", "docs", "tool-rename-map.json")
+GROUP_FILES = ["tool-groups.json", "tool-groups-b2.json", "tool-groups-b3.json",
+               "tool-groups-b4.json", "tool-groups-b5.json", "tool-groups-added.json"]
+GROUPS_DIR = os.path.join("godot", "modules", "mcp_server", "docs")
+REVIEW_DATA = os.path.join("dist", "review_data.json")
+LEDGER = os.path.join("godot", "modules", "mcp_server", "scripts", "mcp_trace_ledger.py")
+REGISTRY = os.path.join("tools", "tool_coverage_unreachable.json")
+
+# The rename map's verb closed set, split into "a payload is its evidence" and
+# "a state change is its evidence". `assert` / `execute` / `evaluate` are on the
+# read side because their whole result *is* the payload they answer with (an
+# assertion verdict, the value an executed snippet computed) - a read never moves
+# a pixel or a byte, so demanding a screen/file delta from it would report a
+# working reader as ineffective.
+READ_VERBS = {"get", "read", "search", "list", "find", "analyze", "detect",
+              "convert", "validate", "check", "assert", "execute", "evaluate"}
+EFFECT_VERDICTS = {"ok_effect_observed", "ok_file_effect_observed"}
+NEGATIVE_FLAGS = {"assertion_failed", "created_conflict",
+                  "scenario_assertion_failed", "scenario_errors"}
+BUCKETS = ("0", "1-4", ">=5")
+
+
+def sha256_file(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest().upper()
+
+
+def load_json(path):
+    with io.open(path, "r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def load_module(path, name):
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def contract_tools(root):
+    return [t["name"] for t in load_json(os.path.join(root, CONTRACT))["result"]["tools"]]
+
+
+def scope_and_verb(root):
+    """(scopes, verbs) joined by name, exactly as TASK-108 section 1.2 describes."""
+    scopes, verbs = {}, {}
+    for entry in load_json(os.path.join(root, RENAME_MAP))["tools"]:
+        name = entry.get("new_name")
+        if not name:
+            continue
+        scopes.setdefault(name, entry.get("scope"))
+        verbs.setdefault(name, entry.get("verb"))
+    for fname in GROUP_FILES:
+        doc = load_json(os.path.join(root, GROUPS_DIR, fname))
+        for group in doc.get("groups") or []:
+            scope = group.get("scope")
+            for name in group.get("tools") or []:
+                if scope:
+                    scopes.setdefault(name, scope)
+    return scopes, verbs
+
+
+def final_run_dirs(root):
+    doc = load_json(os.path.join(root, REVIEW_DATA))
+    out = []
+    for game in doc.get("games") or []:
+        tag = game.get("run_tag")
+        name = game.get("game")
+        if tag and name:
+            out.append(os.path.join("runs", name, tag))
+    return out
+
+
+def iter_traces(root, runs_dir, only_final, excludes):
+    """[(relative run dir, absolute trace path)]. Order is deterministic."""
+    found = []
+    if only_final:
+        bases = [os.path.join(root, d) for d in final_run_dirs(root)]
+    else:
+        base = runs_dir if os.path.isabs(runs_dir) else os.path.join(root, runs_dir)
+        bases = []
+        for dirpath, _dirnames, filenames in os.walk(base):
+            if any(f.startswith("trace-") and f.endswith(".jsonl") for f in filenames):
+                bases.append(dirpath)
+        bases.sort()
+    for base_dir in bases:
+        if not os.path.isdir(base_dir):
+            continue
+        rel = os.path.relpath(base_dir, root).replace("\\", "/")
+        if any(x and x in rel for x in excludes):
+            continue
+        for fname in sorted(os.listdir(base_dir)):
+            if fname.startswith("trace-") and fname.endswith(".jsonl"):
+                found.append((rel, os.path.join(base_dir, fname)))
+    return found
+
+
+def substantive(raw):
+    if not isinstance(raw, str) or raw.strip() == "":
+        return False
+    try:
+        body = json.loads(raw)
+    except ValueError:
+        return False
+    if isinstance(body, dict):
+        return len(body) > 0
+    if isinstance(body, list):
+        return len(body) > 0
+    return bool(body)
+
+
+def verb_of(name, verbs):
+    """The contract's verb for one tool.
+
+    The six `_meta.added_tools` have no entry in the rename map, so their verb is
+    the name's own second segment (`project_read_text_file` -> `read`); without
+    this fallback every added tool would be judged as if it were a writer and a
+    working reader would be reported ineffective.
+    """
+    verb = verbs.get(name)
+    if verb:
+        return verb
+    parts = name.split("_")
+    return parts[1] if len(parts) > 1 else None
+
+
+def classify(row, verb):
+    """(effective, boundary) for one ledger row."""
+    if not row["ok"]:
+        return False, True
+    flags = set(row.get("result_flags") or [])
+    if flags & NEGATIVE_FLAGS:
+        return False, False
+    if row["verdict"] in EFFECT_VERDICTS:
+        return True, False
+    if verb in READ_VERBS and substantive(row.get("result_json")):
+        return True, False
+    return False, False
+
+
+def build_rows(root, ledger, traces, verbs, scopes):
+    stats = {}
+    corpus = {"trace_files": 0, "run_dirs": 0, "calls": 0, "malformed_lines": 0,
+              "ok": 0, "failed": 0, "distinct_tools": 0, "sidecars_verified": 0}
+    seen_dirs = set()
+    for rel, path in traces:
+        records, broken = ledger.load(path)
+        rows = ledger.build(records, path)
+        corpus["trace_files"] += 1
+        corpus["malformed_lines"] += broken
+        if rel not in seen_dirs:
+            seen_dirs.add(rel)
+            corpus["run_dirs"] += 1
+        for row in rows:
+            name = row.get("tool")
+            if not name:
+                continue
+            corpus["calls"] += 1
+            corpus["ok"] += 1 if row["ok"] else 0
+            corpus["failed"] += 0 if row["ok"] else 1
+            if row.get("args_evidence") == "sidecar_verified" or \
+               row.get("result_json_evidence") == "sidecar_verified":
+                corpus["sidecars_verified"] += 1
+            st = stats.setdefault(name, {
+                "tool": name, "calls": 0, "ok": 0, "failed": 0, "effective": 0,
+                "verdicts": {}, "file_effects": {}, "runs": {}, "first_ts": None,
+                "last_ts": None, "truncated_args": 0, "flags": {}, "facts_complete": 0})
+            st["calls"] += 1
+            st["ok"] += 1 if row["ok"] else 0
+            st["failed"] += 0 if row["ok"] else 1
+            st["verdicts"][row["verdict"]] = st["verdicts"].get(row["verdict"], 0) + 1
+            st["file_effects"][row["file_effect"]] = st["file_effects"].get(row["file_effect"], 0) + 1
+            st["runs"][rel] = st["runs"].get(rel, 0) + 1
+            if row.get("facts_complete"):
+                st["facts_complete"] += 1
+            if row.get("args_truncated"):
+                st["truncated_args"] += 1
+            for flag in row.get("result_flags") or []:
+                st["flags"][flag] = st["flags"].get(flag, 0) + 1
+            for flag in row.get("error_flags") or []:
+                st["flags"][flag] = st["flags"].get(flag, 0) + 1
+            eff, bnd = classify(row, verb_of(name, verbs))
+            st["effective"] += 1 if eff else 0
+            ts = row.get("ended_ts_ms")
+            if isinstance(ts, (int, float)):
+                if st["first_ts"] is None or ts < st["first_ts"]:
+                    st["first_ts"] = ts
+                if st["last_ts"] is None or ts > st["last_ts"]:
+                    st["last_ts"] = ts
+    corpus["distinct_tools"] = len(stats)
+    return stats, corpus
+
+
+def status_of(st, registry_members):
+    if st is None:
+        calls = 0
+        eff = 0
+        bnd = 0
+    else:
+        calls, eff, bnd = st["calls"], st["effective"], st["failed"]
+    if calls >= 5 and eff >= 1 and bnd >= 1:
+        return "达标"
+    if calls >= 5:
+        return "计数达标缺证据"
+    if calls >= 1:
+        return "未达(1-4)"
+    return "未达(0)"
+
+
+def bucket_of(calls):
+    if calls >= 5:
+        return ">=5"
+    if calls >= 1:
+        return "1-4"
+    return "0"
+
+
+def build_payload(args):
+    root = os.path.abspath(args.root)
+    contract_path = os.path.join(root, CONTRACT)
+    names = contract_tools(root)
+    scopes, verbs = scope_and_verb(root)
+    ledger = load_module(os.path.join(root, LEDGER), "mcp_trace_ledger")
+    traces = iter_traces(root, args.runs, args.only_final, args.exclude or [])
+    stats, corpus = build_rows(root, ledger, traces, verbs, scopes)
+
+    registry = {"categories": {}, "members": [], "reclassified": []}
+    reg_path = os.path.join(root, REGISTRY)
+    if os.path.isfile(reg_path):
+        registry = load_json(reg_path)
+    # A tool the register once called unreachable but the corpus has since called
+    # for real is NOT unreachable; the register keeps the entry for audit and this
+    # reader takes it out of the set it reports.
+    reclassified = {r["tool"]: r for r in registry.get("reclassified") or []}
+    reg_members = {m["tool"]: m["category"] for m in registry.get("members") or []
+                   if m["tool"] not in reclassified}
+
+    tools = []
+    for name in names:
+        st = stats.get(name)
+        calls = st["calls"] if st else 0
+        eff = st["effective"] if st else 0
+        bnd = st["failed"] if st else 0
+        runs = sorted((st["runs"] if st else {}).items(), key=lambda kv: (-kv[1], kv[0]))
+        row = {
+            "tool": name,
+            "scope": scopes.get(name),
+            "verb": verb_of(name, verbs),
+            "calls": calls,
+            "ok": st["ok"] if st else 0,
+            "boundary": bnd,
+            "effective": eff,
+            "facts_complete": st["facts_complete"] if st else 0,
+            "bucket": bucket_of(calls),
+            "status": status_of(st, reg_members),
+            "unreachable_category": reg_members.get(name),
+            "verdicts": st["verdicts"] if st else {},
+            "file_effects": st["file_effects"] if st else {},
+            "flags": st["flags"] if st else {},
+            "evidence": [{"run": r, "calls": c} for r, c in runs[:5]],
+            "first_ts_ms": st["first_ts"] if st else None,
+            "last_ts_ms": st["last_ts"] if st else None,
+        }
+        row["gate"] = bool(calls >= 5 and eff >= 1 and bnd >= 1)
+        tools.append(row)
+
+    by_status = {}
+    by_bucket = {}
+    by_scope = {}
+    for row in tools:
+        by_status[row["status"]] = by_status.get(row["status"], 0) + 1
+        by_bucket[row["bucket"]] = by_bucket.get(row["bucket"], 0) + 1
+        key = row["scope"] or "?"
+        slot = by_scope.setdefault(key, {"tools": 0, "called": 0, ">=5": 0, "0": 0})
+        slot["tools"] += 1
+        slot["called"] += 1 if row["calls"] else 0
+        slot["0"] += 1 if row["calls"] == 0 else 0
+        slot["..."] = None
+        if row["bucket"] == ">=5":
+            slot[">=5"] += 1
+    for key in by_scope:
+        by_scope[key].pop("...", None)
+
+    registry_view = []
+    for item in registry.get("members") or []:
+        st = stats.get(item["tool"])
+        calls = st["calls"] if st else 0
+        gone = item["tool"] in reclassified
+        registry_view.append({
+            "tool": item["tool"], "scope": item["scope"], "category": item["category"],
+            "measured_calls": calls,
+            "drift": calls > 0,
+            "reclassified": gone,
+            "evidence": sorted((st["runs"] if st else {}).items(), key=lambda kv: (-kv[1], kv[0]))[:3],
+        })
+
+    targets = None
+    if args.targets:
+        with io.open(args.targets, "r", encoding="utf-8") as handle:
+            targets = [ln.strip() for ln in handle
+                       if ln.strip() and not ln.strip().startswith("#")]
+
+    fingerprints = {}
+    for rel in (CONTRACT, RENAME_MAP, REVIEW_DATA):
+        p = os.path.join(root, rel)
+        if os.path.isfile(p):
+            fingerprints[rel] = {"bytes": os.path.getsize(p), "sha256": sha256_file(p)}
+
+    return {
+        "generated_utc": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "mode": "only-final" if args.only_final else "all-runs",
+        "root": root,
+        "runs_dir": args.runs,
+        "excludes": args.exclude or [],
+        "corpus": corpus,
+        "fingerprints": fingerprints,
+        "buckets": by_bucket,
+        "status_counts": by_status,
+        "scope_counts": by_scope,
+        "targets": targets,
+        "targets_view": [r for r in tools if targets and r["tool"] in set(targets)],
+        "tools": tools,
+        "unreachable_registry": {
+            "source": registry.get("_source_report"),
+            "section": registry.get("_source_section"),
+            "categories": registry.get("categories") or {},
+            "members_total": len(registry_view),
+            "drift": [r for r in registry_view if r["drift"]],
+            "reclassified": registry.get("reclassified") or [],
+            "members": registry_view,
+        },
+    }
+
+
+def md_evidence(row, limit=2):
+    parts = ["%s(%d)" % (e["run"], e["calls"]) for e in row["evidence"][:limit]]
+    return " ; ".join(parts) if parts else "-"
+
+
+def render_md(payload, title, cmdline):
+    lines = []
+    corpus = payload["corpus"]
+    buckets = payload["buckets"]
+    status = payload["status_counts"]
+    total = len(payload["tools"])
+    lines.append("# %s" % title)
+    lines.append("")
+    lines.append("> 本文件由 `%s` 自动生成，**随时可重跑刷新**。命令行：" % os.path.basename(__file__))
+    lines.append("> `%s`" % cmdline)
+    lines.append("")
+    lines.append("口径（mode）：**%s**；语料：**%d 个 run 目录 / %d 个 trace 文件 / %d 次 "
+                 "`tools/call`**（`ok=false` %d 次、解析失败行 %d、sidecar 校验通过 %d）"
+                 % (payload["mode"], corpus["run_dirs"], corpus["trace_files"], corpus["calls"],
+                    corpus["failed"], corpus["malformed_lines"], corpus["sidecars_verified"]))
+    if payload["excludes"]:
+        lines.append("；已剔除路径片段：%s" % ", ".join("`%s`" % x for x in payload["excludes"]))
+    lines.append("")
+    lines.append("生成时间（UTC）：%s" % payload["generated_utc"])
+    lines.append("")
+    lines.append("**「有效调用」的判定**（由 `mcp_trace_ledger.py` 的 verdict 词汇给出，不另立一套）：")
+    lines.append("")
+    lines.append("- `边界调用` = 该工具 `ok=false` 的调用次数（失败/拒绝即边界证据）。")
+    lines.append("- `有效调用`：**读类动词**（get/read/search/list/find/analyze/detect/convert/validate/check）"
+                 "= `ok=true` 且回包是实质载荷（读类调用不会动像素/字节，回包本身就是证据）；")
+    lines.append("  **其余动词**（create/edit/set/add/remove/write/build…）= ledger 的 `ok_effect_observed` / "
+                 "`ok_file_effect_observed`，即真的改了画面或文件。"
+                 "带 `assertion_failed` / `created_conflict` / `scenario_errors` 的 ok 调用不计有效。")
+    lines.append("- `状态`：`达标` = 调用≥5 且 有效≥1 且 边界≥1；`计数达标缺证据` = 调用≥5 但缺有效或边界；"
+                 "`未达(1-4)` / `未达(0)`；`不可达` 不在本表状态里，见 §4 登记表。")
+    lines.append("")
+    lines.append("## 0. 分桶与状态")
+    lines.append("")
+    lines.append("| 桶 | 工具数 |")
+    lines.append("|---|---|")
+    for key in BUCKETS:
+        lines.append("| `%s` 次 | %d |" % (key, buckets.get(key, 0)))
+    lines.append("| **合计** | **%d** |" % total)
+    lines.append("")
+    lines.append("| 状态 | 工具数 |")
+    lines.append("|---|---|")
+    for key in ("达标", "计数达标缺证据", "未达(1-4)", "未达(0)"):
+        lines.append("| %s | %d |" % (key, status.get(key, 0)))
+    lines.append("")
+    lines.append("| scope | 契约条数 | 被调用过 | 0 次 | ≥5 次 |")
+    lines.append("|---|---|---|---|---|")
+    for key in sorted(payload["scope_counts"]):
+        s = payload["scope_counts"][key]
+        lines.append("| %s | %d | %d | %d | %d |" % (key, s["tools"], s["called"], s["0"], s[">=5"]))
+    lines.append("")
+    lines.append("## 1. 总表（177 条契约工具，逐条一行）")
+    lines.append("")
+    lines.append("| # | tool | scope | verb | 累计调用 | 有效调用 | 边界调用 | 证据路径 | 状态 |")
+    lines.append("|---|---|---|---|---|---|---|---|---|")
+    for i, row in enumerate(payload["tools"], 1):
+        lines.append("| %d | `%s` | %s | %s | %d | %d | %d | %s | %s |"
+                     % (i, row["tool"], row["scope"] or "?", row["verb"] or "?", row["calls"],
+                        row["effective"], row["boundary"], md_evidence(row), row["status"]))
+    lines.append("")
+    lines.append("## 2. 分桶明细")
+    lines.append("")
+    for index, key in enumerate((">=5", "1-4", "0"), 1):
+        rows = [r for r in payload["tools"] if r["bucket"] == key]
+        lines.append("### 2.%d `%s` 次（%d 条）" % (index, key, len(rows)))
+        if key == "0":
+            lines.append("")
+            lines.append("（按前缀分组，均为 0 次；其中登记为「不可达」的见 §4）")
+            lines.append("")
+            grouped = {}
+            for r in rows:
+                grouped.setdefault(r["tool"].split("_")[0], []).append(r["tool"])
+            for prefix in sorted(grouped):
+                lines.append("- **%s_**（%d）：%s" % (prefix, len(grouped[prefix]),
+                                                     " ".join("`%s`" % x for x in grouped[prefix])))
+        else:
+            lines.append("")
+            lines.append("| tool | scope | 累计 | 有效 | 边界 | 状态 | 证据 |")
+            lines.append("|---|---|---|---|---|---|---|")
+            for r in rows:
+                lines.append("| `%s` | %s | %d | %d | %d | %s | %s |"
+                             % (r["tool"], r["scope"], r["calls"], r["effective"], r["boundary"],
+                                r["status"], md_evidence(r, 3)))
+        lines.append("")
+    lines.append("## 3. `<5` 清单（本轮仍未达标的工具）")
+    lines.append("")
+    under = [r for r in payload["tools"] if r["calls"] < 5]
+    lines.append("共 **%d** 条（占契约 %.1f%%）：`0` 次 %d 条、`1-4` 次 %d 条。"
+                 % (len(under), 100.0 * len(under) / max(total, 1),
+                    buckets.get("0", 0), buckets.get("1-4", 0)))
+    lines.append("")
+    lines.append("| tool | scope | verb | 累计 | 有效 | 边界 | 登记不可达 | 状态 |")
+    lines.append("|---|---|---|---|---|---|---|---|")
+    for r in under:
+        lines.append("| `%s` | %s | %s | %d | %d | %d | %s | %s |"
+                     % (r["tool"], r["scope"] or "?", r["verb"] or "?", r["calls"],
+                        r["effective"], r["boundary"], r["unreachable_category"] or "-",
+                        r["status"]))
+    lines.append("")
+    lines.append("## 4. 不可达登记表的联动视图（H1–H9）")
+    lines.append("")
+    reg = payload["unreachable_registry"]
+    lines.append("登记来源：`%s` §%s（**推断**，判据是「缺少本循环不具备的子系统/资产/前置运行态」）。"
+                 "本视图把登记表与本轮实测**对在一起**：`实测调用` 列不为 0 的条目就是登记漂移，"
+                 "必须在下一轮从登记表里移除或改判。" % (reg.get("source"), reg.get("section")))
+    lines.append("")
+    lines.append("登记成员 **%d** 条；其中实测**已被调用**（登记漂移）**%d** 条，其中 **%d** 条已按实测证据"
+                 "改判并记入登记表的 `reclassified`（下表 `改判` 列打 `YES`），其余为待复核漂移。"
+                 % (reg.get("members_total", 0), len(reg.get("drift") or []),
+                    len([r for r in (reg.get("drift") or []) if r.get("reclassified")])))
+    lines.append("")
+    for code in sorted(reg.get("categories") or {}):
+        cat = reg["categories"][code]
+        lines.append("### %s %s" % (code, cat.get("label", "")))
+        lines.append("")
+        lines.append("- 为何不可达（推断）：%s" % cat.get("why_unreachable", ""))
+        lines.append("- 支撑证据（只读观察）：%s" % cat.get("supporting_evidence", ""))
+        lines.append("")
+        lines.append("| tool | scope | 实测调用 | 漂移 | 改判 | 证据 |")
+        lines.append("|---|---|---|---|---|---|")
+        for item in reg["members"]:
+            if item["category"] != code:
+                continue
+            ev = " ; ".join("%s(%d)" % (r, c) for r, c in item["evidence"]) or "-"
+            lines.append("| `%s` | %s | %d | %s | %s | %s |"
+                         % (item["tool"], item["scope"], item["measured_calls"],
+                            "**YES**" if item["drift"] else "-",
+                            "YES" if item.get("reclassified") else "-", ev))
+        lines.append("")
+    if reg.get("reclassified"):
+        lines.append("")
+        lines.append("#### 已改判的条目（推断被实测推翻，逐条留证）")
+        lines.append("")
+        lines.append("| tool | 原类别 | 为什么可以删掉这条「不可达」 | 证据 |")
+        lines.append("|---|---|---|---|")
+        for item in reg["reclassified"]:
+            lines.append("| `%s` | %s | %s | `%s` |"
+                         % (item["tool"], item["from"], item.get("why", ""), item.get("evidence", "")))
+        lines.append("")
+    tv = payload.get("targets_view")
+    if tv is not None:
+        lines.append("## 5. 本轮批次进度（--targets）")
+        lines.append("")
+        done = [r for r in tv if r["gate"]]
+        lines.append("批次 **%d** 条：达标 **%d**、计数达标缺证据 **%d**、未达 **%d**。"
+                     % (len(tv), len(done),
+                        len([r for r in tv if r["calls"] >= 5 and not r["gate"]]),
+                        len([r for r in tv if r["calls"] < 5])))
+        lines.append("")
+        lines.append("`facts` 列 = trace 里字段齐备的调用数 / 总调用数（request_id、tool、args、"
+                     "times、result、capture、scene_evidence、file_effect、error_data 全部在场）。")
+        lines.append("")
+        lines.append("| tool | scope | 累计 | 有效 | 边界 | facts | 状态 | 证据 |")
+        lines.append("|---|---|---|---|---|---|---|---|")
+        for r in sorted(tv, key=lambda x: (x["calls"], x["tool"])):
+            lines.append("| `%s` | %s | %d | %d | %d | %d/%d | %s | %s |"
+                         % (r["tool"], r["scope"], r["calls"], r["effective"], r["boundary"],
+                            r.get("facts_complete", 0), r["calls"], r["status"], md_evidence(r, 3)))
+        lines.append("")
+    lines.append("## 输入指纹")
+    lines.append("")
+    lines.append("| 文件 | 字节 | sha256 |")
+    lines.append("|---|---|---|")
+    for rel in sorted(payload["fingerprints"]):
+        fp = payload["fingerprints"][rel]
+        lines.append("| `%s` | %d | `%s` |" % (rel, fp["bytes"], fp["sha256"]))
+    lines.append("")
+    return "\n".join(lines) + "\n"
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Refreshable tool-coverage ledger.")
+    parser.add_argument("--root", default=ROOT)
+    parser.add_argument("--runs", default="runs")
+    parser.add_argument("--only-final", action="store_true",
+                        help="measure dist/review_data.json's 20 final tags only")
+    parser.add_argument("--exclude", action="append", default=[],
+                        help="run-path substring to exclude (repeatable)")
+    parser.add_argument("--targets", default=None,
+                        help="a file with one tool name per line: adds the batch-progress view")
+    parser.add_argument("--md", default=None)
+    parser.add_argument("--json", default=None)
+    args = parser.parse_args(argv)
+
+    root = os.path.abspath(args.root)
+    for rel in (CONTRACT, RENAME_MAP, LEDGER):
+        if not os.path.isfile(os.path.join(root, rel)):
+            sys.stderr.write("tool_coverage: missing %s\n" % os.path.join(root, rel))
+            return 2
+    if args.only_final and not os.path.isfile(os.path.join(root, REVIEW_DATA)):
+        sys.stderr.write("tool_coverage: --only-final needs %s\n" % REVIEW_DATA)
+        return 2
+
+    try:
+        payload = build_payload(args)
+    except (IOError, ValueError) as exc:
+        sys.stderr.write("tool_coverage: %s\n" % exc)
+        return 2
+
+    md_path = args.md or os.path.join(root, "TOOL-COVERAGE.md")
+    json_path = args.json or os.path.join(root, "coverage.json")
+    if args.only_final:
+        md_path = os.path.join(root, "TOOL-COVERAGE-final20.md")
+        json_path = os.path.join(root, "coverage-final20.json")
+
+    title = "TOOL-COVERAGE — 契约工具覆盖台账（%s）" % payload["mode"]
+    argv_used = ["python", "tools/tool_coverage.py"]
+    if args.only_final:
+        argv_used.append("--only-final")
+    if args.runs != "runs":
+        argv_used += ["--runs", args.runs]
+    for x in args.exclude:
+        argv_used += ["--exclude", x]
+    if args.targets:
+        argv_used += ["--targets", args.targets]
+    cmdline = " ".join(argv_used)
+
+    with io.open(md_path, "w", encoding="utf-8", newline="\n") as handle:
+        handle.write(render_md(payload, title, cmdline))
+    with io.open(json_path, "w", encoding="utf-8", newline="\n") as handle:
+        handle.write(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=False) + "\n")
+
+    b = payload["buckets"]
+    s = payload["status_counts"]
+    print("tool_coverage: mode=%s runs=%d trace_files=%d calls=%d distinct=%d"
+          % (payload["mode"], payload["corpus"]["run_dirs"], payload["corpus"]["trace_files"],
+             payload["corpus"]["calls"], payload["corpus"]["distinct_tools"]))
+    print("  buckets: 0=%d 1-4=%d >=5=%d | status: 达标=%d 缺证据=%d 未达1-4=%d 未达0=%d"
+          % (b.get("0", 0), b.get("1-4", 0), b.get(">=5", 0),
+             s.get("达标", 0), s.get("计数达标缺证据", 0), s.get("未达(1-4)", 0), s.get("未达(0)", 0)))
+    print("  registry: %d members, %d drift" % (payload["unreachable_registry"]["members_total"],
+                                                len(payload["unreachable_registry"]["drift"])))
+    print("  wrote %s\n  wrote %s" % (md_path, json_path))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

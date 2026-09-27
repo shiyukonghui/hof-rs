@@ -1,0 +1,174 @@
+{
+  "batch": "c1c",
+  "project": "_exercises/ex_files",
+  "calls": [
+    {
+      "tag": "c1c-001-project_create_scene_file-ok",
+      "tool": "project_create_scene_file",
+      "port": "editor",
+      "intent": "ok",
+      "note": "project_create_scene_file call 1/5. recreate the scenes c1 deleted, so the across-scenes writer has targets"
+    },
+    {
+      "tag": "c1c-002-project_create_scene_file-ok",
+      "tool": "project_create_scene_file",
+      "port": "editor",
+      "intent": "ok",
+      "note": "project_create_scene_file call 2/5. recreate the scenes c1 deleted, so the across-scenes writer has targets"
+    },
+    {
+      "tag": "c1c-003-project_create_scene_file-ok",
+      "tool": "project_create_scene_file",
+      "port": "editor",
+      "intent": "ok",
+      "note": "project_create_scene_file call 3/5. recreate the scenes c1 deleted, so the across-scenes writer has targets"
+    },
+    {
+      "tag": "c1c-004-project_create_scene_file-ok",
+      "tool": "project_create_scene_file",
+      "port": "editor",
+      "intent": "ok",
+      "note": "project_create_scene_file call 4/5. recreate the scenes c1 deleted, so the across-scenes writer has targets"
+    },
+    {
+      "tag": "c1c-005-project_create_scene_file-ok",
+      "tool": "project_create_scene_file",
+      "port": "editor",
+      "intent": "ok",
+      "note": "project_create_scene_file call 5/5. recreate the scenes c1 deleted, so the across-scenes writer has targets"
+    },
+    {
+      "tag": "c1c-006-project_create_scene_file-probe",
+      "tool": "project_create_scene_file",
+      "port": "editor",
+      "intent": "probe",
+      "note": "project_create_scene_file boundary: the scene already exists"
+    },
+    {
+      "tag": "c1c-007-project_set_node_property_across_scenes-ok",
+      "tool": "project_set_node_property_across_scenes",
+      "port": "editor",
+      "intent": "ok",
+      "note": "project_set_node_property_across_scenes call 1/5. visible=false differs from the default, so a real write changes bytes"
+    },
+    {
+      "tag": "c1c-008-project_set_node_property_across_scenes-ok",
+      "tool": "project_set_node_property_across_scenes",
+      "port": "editor",
+      "intent": "ok",
+      "note": "project_set_node_property_across_scenes call 2/5. visible=false differs from the default, so a real write changes bytes"
+    },
+    {
+      "tag": "c1c-009-project_set_node_property_across_scenes-ok",
+      "tool": "project_set_node_property_across_scenes",
+      "port": "editor",
+      "intent": "ok",
+      "note": "project_set_node_property_across_scenes call 3/5. visible=false differs from the default, so a real write changes bytes"
+    },
+    {
+      "tag": "c1c-010-project_set_node_property_across_scenes-ok",
+      "tool": "project_set_node_property_across_scenes",
+      "port": "editor",
+      "intent": "ok",
+      "note": "project_set_node_property_across_scenes call 4/5. visible=false differs from the default, so a real write changes bytes"
+    },
+    {
+      "tag": "c1c-011-project_set_node_property_across_scenes-ok",
+      "tool": "project_set_node_property_across_scenes",
+      "port": "editor",
+      "intent": "ok",
+      "note": "project_set_node_property_across_scenes call 5/5. visible=false differs from the default, so a real write changes bytes"
+    },
+    {
+      "tag": "c1c-012-project_set_node_property_across_scenes-probe",
+      "tool": "project_set_node_property_across_scenes",
+      "port": "editor",
+      "intent": "probe",
+      "note": "project_set_node_property_across_scenes boundary: type is typed string, not int"
+    },
+    {
+      "tag": "c1c-013-project_validate_script-ok",
+      "tool": "project_validate_script",
+      "port": "editor",
+      "intent": "ok",
+      "note": "project_validate_script call 1/5. this editor process started after c1b's build, so the assembly is loaded"
+    },
+    {
+      "tag": "c1c-014-project_validate_script-ok",
+      "tool": "project_validate_script",
+      "port": "editor",
+      "intent": "ok",
+      "note": "project_validate_script call 2/5. this editor process started after c1b's build, so the assembly is loaded"
+    },
+    {
+      "tag": "c1c-015-project_validate_script-ok",
+      "tool": "project_validate_script",
+      "port": "editor",
+      "intent": "ok",
+      "note": "project_validate_script call 3/5. this editor process started after c1b's build, so the assembly is loaded"
+    },
+    {
+      "tag": "c1c-016-project_validate_script-ok",
+      "tool": "project_validate_script",
+      "port": "editor",
+      "intent": "ok",
+      "note": "project_validate_script call 4/5. this editor process started after c1b's build, so the assembly is loaded"
+    },
+    {
+      "tag": "c1c-017-project_validate_script-ok",
+      "tool": "project_validate_script",
+      "port": "editor",
+      "intent": "ok",
+      "note": "project_validate_script call 5/5. this editor process started after c1b's build, so the assembly is loaded"
+    },
+    {
+      "tag": "c1c-018-project_validate_script-probe",
+      "tool": "project_validate_script",
+      "port": "editor",
+      "intent": "probe",
+      "note": "project_validate_script boundary: path does not exist"
+    },
+    {
+      "tag": "c1c-019-project_create_script-ok",
+      "tool": "project_create_script",
+      "port": "editor",
+      "intent": "ok",
+      "note": "project_create_script call 1/5. new C# script"
+    },
+    {
+      "tag": "c1c-020-project_create_script-ok",
+      "tool": "project_create_script",
+      "port": "editor",
+      "intent": "ok",
+      "note": "project_create_script call 2/5. new C# script"
+    },
+    {
+      "tag": "c1c-021-project_create_script-ok",
+      "tool": "project_create_script",
+      "port": "editor",
+      "intent": "ok",
+      "note": "project_create_script call 3/5. new C# script"
+    },
+    {
+      "tag": "c1c-022-project_create_script-ok",
+      "tool": "project_create_script",
+      "port": "editor",
+      "intent": "ok",
+      "note": "project_create_script call 4/5. new C# script"
+    },
+    {
+      "tag": "c1c-023-project_create_script-ok",
+      "tool": "project_create_script",
+      "port": "editor",
+      "intent": "ok",
+      "note": "project_create_script call 5/5. new C# script"
+    },
+    {
+      "tag": "c1c-024-project_create_script-probe",
+      "tool": "project_create_script",
+      "port": "editor",
+      "intent": "probe",
+      "note": "project_create_script boundary: path is typed string, not int"
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+feat(godot-mcp): TASK-110 - the coverage loop's first batch: the TASK-108 measurement becomes a re-runnable ledger (both corpora reproduce it number for number), three exercise projects and four sessions take 63 never-called tools to >=5 (family 1: 42/42 through the batch gate, contract-wide >=5 goes 27 -> 89), the ledger's unreachable-register view falsifies 6 of TASK-108's own inferences, and the batch's parameter probe catches a blocking contract defect - editor_list_signal_connections' `scope` is declared by the contract, implemented by the handler, and absent from the registered schema - fixed at the root, both variants rebuilt, ten gates green, pushed to the fork, with the same batch re-run for the before/after
+
+Item A - the ledger (tools/tool_coverage.py + TOOL-COVERAGE.md + coverage.json):
+  * inputs: the contract, tool-rename-map.json + the six tool-groups manifests (scope),
+    dist/review_data.json (--only-final) and runs/**/trace-*.jsonl (all-runs); per-call
+    facts come from mcp_trace_ledger.py imported as a module, so "effective" and
+    "boundary" use that reader's verdicts instead of a second, drifting definition.
+  * validation: --only-final recomputes 20 dirs / 40 files / 2612 calls / 27 tool names /
+    150-2-25, all-runs (before this batch) recomputes 81 / 140 / 6618 / 29 / 148-2-27 -
+    every number identical to TASK-108 sections 3 and 4.
+  * new columns the old report could not give: effective, boundary, trace-fact
+    completeness, and one row per contract tool with its evidence paths.
+  * the unreachable register (tools/tool_coverage_unreachable.json) is derived line by
+    line from TASK-108 section 5.3 (74 tools / 9 classes) and shown as a *linked view*
+    against the measurement.
+
+Item B - the first coverage batch (three exercise projects, four sessions, 651 calls):
+  * projects/_exercises/{ex_files,ex_scene,ex_scene2} are copies of projects/pong plus
+    five hand-built 8x8 PNGs (no third-party imaging library); the 20 real game projects
+    and their runs/ are read-only, zero bytes changed.
+  * sessions are generated (tools/gen_coverage_session.py) together with a manifest that
+    records each call's intent (ok / probe / edge / setup); tools/verify_coverage_batch.py
+    judges ">=5 calls and >=1 effective and >=1 boundary" per target, and setup calls are
+    not judged - the trace alone cannot tell a designed boundary from an accident.
+  * family 1 (project_*, 40 targets + 2 bonus): c1 (252 calls) passes 34/42, c1b (49) and
+    c1c (24) close the rest; all 42 pass. Every one of the eight gaps had its root cause
+    on the session side, not in a tool: no built assembly (project_validate_script
+    correctly refuses to publish `valid`), no image-previewable resource, probes that used
+    inputs the tool tolerates, a scene the session had deleted, a duplicate-path probe that
+    is merely idempotent.
+  * families 2 and 3 (14 editor readers + 9 running-game queries): c23 (163 calls, 109
+    editor + 54 game) passes 20/25; the five that do not are named with their measured
+    reason rather than papered over.
+  * contract-wide delta over the all-runs corpus: distinct tools 29 -> 92, >=5 calls
+    27 -> 89, zero-call 148 -> 85, strict gate 5 -> 66, "reachable but uncovered" 76 -> 20.
+
+Item A/B's joint finding - the register's 74 inferences are not all true:
+  * six members were called for real (H7: editor_get_selection / get_open_scripts /
+    get_output_log / get_performance_monitors; H9: running_game_capture_frames /
+    capture_signal_emissions). They are recorded under `reclassified` with the run that
+    did it, not deleted silently, so the inference's error stays auditable.
+
+Item C - one defect fixed at the root (engine commit 3fdabe2d9a, pushed):
+  * editor_list_signal_connections accepts `scope` per the contract and implements it in
+    the handler (the response really does carry scope and counts), but the registered
+    schema at editor_node_read.cpp:774 listed only node_path and signal_name, so the
+    parameter validator answered -32602 "Unknown parameter 'scope'" before the handler ran.
+    Measured 3/3 rejected before; after the one-member fix, {scope:"user"} answers with the
+    user-side connection only, {scope:"internal"} answers 36217 bytes, and a bad enum value
+    now gets a message that names the real cause.
+  * both variants rebuilt after the module commit (exit 0 each, --version carries
+    3fdabe2d9), ten gates g01..g10 all exit 0 (g09 ANCHOR_EQUAL, g10 accept_m1 22/22,
+    g04 contract subset 3/3), push output 1f9d0cb1c9..3fdabe2d9a.
+  * the same session re-run against a fresh ex_scene2 gives the before/after in one place:
+    the editor ledger's failed count goes 20 -> 18 over the same 163 calls.
+  * four further findings are registered, not patched, because each fix is a design
+    decision rather than a mechanical repair (search_file_contents' extension whitelist
+    silently skips .cs on a C# project; build_csharp advertises a 600000 ms maximum while
+    the effective timeout is min(requested, the server's 30000 ms pending timeout);
+    get_settings.include_default is declared and deliberately ignored; get_collision_info's
+    node_path is optional in the schema and required in practice), plus three observations
+    (a value-rule refusal coded as -32602, batch per-item errors inside an ok payload, and
+    analyze_signal_flow not resolving the scene root by name).
+
+The report is recovery/reports/TASK-110-REPORT.md, the decision is DECISIONS.md D155, and
+TOOL-COVERAGE-TASK-108.md is committed with this batch because make_unreachable_registry.py
+parses it: the register's derivation has to be reproducible from history.

@@ -141,3 +141,18 @@ godot-mcp/recovery/work/task099/logs/importprobe/*.stdout.txt
 godot-mcp/recovery/work/task099/logs/importprobe/*.stderr.txt
 godot-mcp/recovery/work/task099/archive/*/.godot/
 
+# ---------------------------------------------------------------------------
+# TASK-110：覆盖练习工程 `godot-mcp/projects/_exercises/`。
+#
+# 它们由 `godot-mcp/recovery/work/task110/make_exercise_project.py` 从 `projects/pong`
+# 复制并补种 5 张小 PNG 得到，**不触碰** 20 款正式工程。规则与上面 33-40 行同性质
+# （源码入库、构建产物不入库），只是这里多一层目录：`projects/*/` 只匹配一层，
+# 所以 `_exercises/<name>/.godot/` 需要自己的规则，否则 8.4 MB 的导入缓存会被
+# 当成源码提交。
+# ---------------------------------------------------------------------------
+godot-mcp/projects/_exercises/*/.godot/
+godot-mcp/projects/_exercises/*/bin/
+godot-mcp/projects/_exercises/*/obj/
+godot-mcp/projects/_exercises/*/.mono/
+godot-mcp/recovery/work/task110/schemas/
+

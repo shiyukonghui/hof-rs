@@ -1,0 +1,496 @@
+{
+  "_comment": "TASK-110 batch c1b -- closes c1's eight gate failures. Same project, same target list; each failure's root cause is named in this file's header and fixed in the session rather than papered over in the ledger.",
+  "game": "_exercises_ex_files",
+  "import": true,
+  "calls": [
+    {
+      "tag": "c1b-001-project_build_csharp-ok",
+      "port": "editor",
+      "tool": "project_build_csharp",
+      "arguments": {
+        "configuration": "Debug",
+        "timeout_ms": 300000,
+        "rescan": true
+      },
+      "note": "c1b precondition: project_validate_script needs a loaded assembly"
+    },
+    {
+      "tag": "c1b-002-project_validate_script-ok",
+      "port": "editor",
+      "tool": "project_validate_script",
+      "arguments": {
+        "path": "res://src/PongGame.cs"
+      },
+      "note": "project_validate_script call 1/5. now that the assembly is loaded these get a real verdict"
+    },
+    {
+      "tag": "c1b-003-project_validate_script-ok",
+      "port": "editor",
+      "tool": "project_validate_script",
+      "arguments": {
+        "path": "res://src/Ball.cs"
+      },
+      "note": "project_validate_script call 2/5. now that the assembly is loaded these get a real verdict"
+    },
+    {
+      "tag": "c1b-004-project_validate_script-ok",
+      "port": "editor",
+      "tool": "project_validate_script",
+      "arguments": {
+        "path": "res://src/Paddle.cs"
+      },
+      "note": "project_validate_script call 3/5. now that the assembly is loaded these get a real verdict"
+    },
+    {
+      "tag": "c1b-005-project_validate_script-ok",
+      "port": "editor",
+      "tool": "project_validate_script",
+      "arguments": {
+        "path": "res://src/ex_c1_1.cs"
+      },
+      "note": "project_validate_script call 4/5. now that the assembly is loaded these get a real verdict"
+    },
+    {
+      "tag": "c1b-006-project_validate_script-ok",
+      "port": "editor",
+      "tool": "project_validate_script",
+      "arguments": {
+        "path": "res://src/ex_c1_2.cs"
+      },
+      "note": "project_validate_script call 5/5. now that the assembly is loaded these get a real verdict"
+    },
+    {
+      "tag": "c1b-007-project_validate_script-probe",
+      "port": "editor",
+      "tool": "project_validate_script",
+      "arguments": {
+        "path": "res://src/NoSuchFile.cs"
+      },
+      "note": "project_validate_script boundary: path does not exist"
+    },
+    {
+      "tag": "c1b-008-project_get_resource_preview-ok",
+      "port": "editor",
+      "tool": "project_get_resource_preview",
+      "arguments": {
+        "path": "res://assets/seed1.png"
+      },
+      "note": "project_get_resource_preview call 1/5. a texture is the resource class this tool can preview"
+    },
+    {
+      "tag": "c1b-009-project_get_resource_preview-ok",
+      "port": "editor",
+      "tool": "project_get_resource_preview",
+      "arguments": {
+        "path": "res://assets/seed2.png"
+      },
+      "note": "project_get_resource_preview call 2/5. a texture is the resource class this tool can preview"
+    },
+    {
+      "tag": "c1b-010-project_get_resource_preview-ok",
+      "port": "editor",
+      "tool": "project_get_resource_preview",
+      "arguments": {
+        "path": "res://assets/seed3.png"
+      },
+      "note": "project_get_resource_preview call 3/5. a texture is the resource class this tool can preview"
+    },
+    {
+      "tag": "c1b-011-project_get_resource_preview-ok",
+      "port": "editor",
+      "tool": "project_get_resource_preview",
+      "arguments": {
+        "path": "res://assets/seed4.png"
+      },
+      "note": "project_get_resource_preview call 4/5. a texture is the resource class this tool can preview"
+    },
+    {
+      "tag": "c1b-012-project_get_resource_preview-ok",
+      "port": "editor",
+      "tool": "project_get_resource_preview",
+      "arguments": {
+        "path": "res://assets/seed5.png"
+      },
+      "note": "project_get_resource_preview call 5/5. a texture is the resource class this tool can preview"
+    },
+    {
+      "tag": "c1b-013-project_get_resource_preview-probe",
+      "port": "editor",
+      "tool": "project_get_resource_preview",
+      "arguments": {
+        "path": "res://assets/absent.png"
+      },
+      "note": "project_get_resource_preview boundary: asset does not exist"
+    },
+    {
+      "tag": "c1b-014-project_search_file_names-ok",
+      "port": "editor",
+      "tool": "project_search_file_names",
+      "arguments": {
+        "path": "res://src",
+        "pattern": "Ball"
+      },
+      "note": "project_search_file_names call 1/5. filename substring search (globs like *.cs match nothing by contract)"
+    },
+    {
+      "tag": "c1b-015-project_search_file_names-ok",
+      "port": "editor",
+      "tool": "project_search_file_names",
+      "arguments": {
+        "path": "res://scenes",
+        "pattern": "main"
+      },
+      "note": "project_search_file_names call 2/5. filename substring search (globs like *.cs match nothing by contract)"
+    },
+    {
+      "tag": "c1b-016-project_search_file_names-ok",
+      "port": "editor",
+      "tool": "project_search_file_names",
+      "arguments": {
+        "pattern": "notes"
+      },
+      "note": "project_search_file_names call 3/5. filename substring search (globs like *.cs match nothing by contract)"
+    },
+    {
+      "tag": "c1b-017-project_search_file_names-ok",
+      "port": "editor",
+      "tool": "project_search_file_names",
+      "arguments": {
+        "path": "res://src",
+        "pattern": ".cs"
+      },
+      "note": "project_search_file_names call 4/5. filename substring search (globs like *.cs match nothing by contract)"
+    },
+    {
+      "tag": "c1b-018-project_search_file_names-ok",
+      "port": "editor",
+      "tool": "project_search_file_names",
+      "arguments": {
+        "path": "res://assets",
+        "pattern": ".png"
+      },
+      "note": "project_search_file_names call 5/5. filename substring search (globs like *.cs match nothing by contract)"
+    },
+    {
+      "tag": "c1b-019-project_search_file_names-probe",
+      "port": "editor",
+      "tool": "project_search_file_names",
+      "arguments": {
+        "path": "res://no_such_dir",
+        "pattern": "x"
+      },
+      "note": "project_search_file_names boundary: search path does not exist"
+    },
+    {
+      "tag": "c1b-020-project_search_file_contents-ok",
+      "port": "editor",
+      "tool": "project_search_file_contents",
+      "arguments": {
+        "pattern": "class",
+        "path": "res://src"
+      },
+      "note": "project_search_file_contents call 1/5. path-scoped content search"
+    },
+    {
+      "tag": "c1b-021-project_search_file_contents-ok",
+      "port": "editor",
+      "tool": "project_search_file_contents",
+      "arguments": {
+        "pattern": "ColorRect",
+        "path": "res://scenes"
+      },
+      "note": "project_search_file_contents call 2/5. path-scoped content search"
+    },
+    {
+      "tag": "c1b-022-project_search_file_contents-ok",
+      "port": "editor",
+      "tool": "project_search_file_contents",
+      "arguments": {
+        "pattern": "PongGame",
+        "path": "res://src"
+      },
+      "note": "project_search_file_contents call 3/5. path-scoped content search"
+    },
+    {
+      "tag": "c1b-023-project_search_file_contents-ok",
+      "port": "editor",
+      "tool": "project_search_file_contents",
+      "arguments": {
+        "pattern": "text",
+        "path": "res://scenes",
+        "file_pattern": "*.tscn"
+      },
+      "note": "project_search_file_contents call 4/5. path-scoped content search"
+    },
+    {
+      "tag": "c1b-024-project_search_file_contents-ok",
+      "port": "editor",
+      "tool": "project_search_file_contents",
+      "arguments": {
+        "pattern": "shader_type",
+        "path": "res://shaders"
+      },
+      "note": "project_search_file_contents call 5/5. path-scoped content search"
+    },
+    {
+      "tag": "c1b-025-project_search_file_contents-probe",
+      "port": "editor",
+      "tool": "project_search_file_contents",
+      "arguments": {
+        "pattern": "class",
+        "path": "res://no_such_dir"
+      },
+      "note": "project_search_file_contents boundary: search path does not exist"
+    },
+    {
+      "tag": "c1b-026-project_find_files_referencing_symbol-ok",
+      "port": "editor",
+      "tool": "project_find_files_referencing_symbol",
+      "arguments": {
+        "pattern": "PongGame"
+      },
+      "note": "project_find_files_referencing_symbol call 1/5. the tool has no path argument, so its only boundary is a typed one"
+    },
+    {
+      "tag": "c1b-027-project_find_files_referencing_symbol-ok",
+      "port": "editor",
+      "tool": "project_find_files_referencing_symbol",
+      "arguments": {
+        "pattern": "res://src/Ball.cs"
+      },
+      "note": "project_find_files_referencing_symbol call 2/5. the tool has no path argument, so its only boundary is a typed one"
+    },
+    {
+      "tag": "c1b-028-project_find_files_referencing_symbol-ok",
+      "port": "editor",
+      "tool": "project_find_files_referencing_symbol",
+      "arguments": {
+        "pattern": "Ball"
+      },
+      "note": "project_find_files_referencing_symbol call 3/5. the tool has no path argument, so its only boundary is a typed one"
+    },
+    {
+      "tag": "c1b-029-project_find_files_referencing_symbol-ok",
+      "port": "editor",
+      "tool": "project_find_files_referencing_symbol",
+      "arguments": {
+        "pattern": "uid://"
+      },
+      "note": "project_find_files_referencing_symbol call 4/5. the tool has no path argument, so its only boundary is a typed one"
+    },
+    {
+      "tag": "c1b-030-project_find_files_referencing_symbol-ok",
+      "port": "editor",
+      "tool": "project_find_files_referencing_symbol",
+      "arguments": {
+        "pattern": "Main"
+      },
+      "note": "project_find_files_referencing_symbol call 5/5. the tool has no path argument, so its only boundary is a typed one"
+    },
+    {
+      "tag": "c1b-031-project_find_files_referencing_symbol-probe",
+      "port": "editor",
+      "tool": "project_find_files_referencing_symbol",
+      "arguments": {
+        "pattern": 123
+      },
+      "note": "project_find_files_referencing_symbol boundary: pattern is typed string, not int"
+    },
+    {
+      "tag": "c1b-032-project_find_script_references-ok",
+      "port": "editor",
+      "tool": "project_find_script_references",
+      "arguments": {
+        "query": "Ball",
+        "path": "res://src"
+      },
+      "note": "project_find_script_references call 1/5. path-scoped reference search"
+    },
+    {
+      "tag": "c1b-033-project_find_script_references-ok",
+      "port": "editor",
+      "tool": "project_find_script_references",
+      "arguments": {
+        "query": "PongGame",
+        "path": "res://src"
+      },
+      "note": "project_find_script_references call 2/5. path-scoped reference search"
+    },
+    {
+      "tag": "c1b-034-project_find_script_references-ok",
+      "port": "editor",
+      "tool": "project_find_script_references",
+      "arguments": {
+        "query": "res://src/Paddle.cs",
+        "path": "res://scenes"
+      },
+      "note": "project_find_script_references call 3/5. path-scoped reference search"
+    },
+    {
+      "tag": "c1b-035-project_find_script_references-ok",
+      "port": "editor",
+      "tool": "project_find_script_references",
+      "arguments": {
+        "query": "Ball"
+      },
+      "note": "project_find_script_references call 4/5. path-scoped reference search"
+    },
+    {
+      "tag": "c1b-036-project_find_script_references-ok",
+      "port": "editor",
+      "tool": "project_find_script_references",
+      "arguments": {
+        "query": "Paddle",
+        "path": "res://src"
+      },
+      "note": "project_find_script_references call 5/5. path-scoped reference search"
+    },
+    {
+      "tag": "c1b-037-project_find_script_references-probe",
+      "port": "editor",
+      "tool": "project_find_script_references",
+      "arguments": {
+        "query": "Ball",
+        "path": "res://no_such_dir"
+      },
+      "note": "project_find_script_references boundary: search path does not exist"
+    },
+    {
+      "tag": "c1b-038-project_set_node_property_across_scenes-ok",
+      "port": "editor",
+      "tool": "project_set_node_property_across_scenes",
+      "arguments": {
+        "type": "Node2D",
+        "property": "visible",
+        "value": true,
+        "dry_run": true,
+        "path_filter": "res://scenes"
+      },
+      "note": "project_set_node_property_across_scenes call 1/5. the created scenes hold a Node2D root, which has `visible`"
+    },
+    {
+      "tag": "c1b-039-project_set_node_property_across_scenes-ok",
+      "port": "editor",
+      "tool": "project_set_node_property_across_scenes",
+      "arguments": {
+        "type": "Node2D",
+        "property": "visible",
+        "value": true,
+        "dry_run": true,
+        "path_filter": "res://scenes"
+      },
+      "note": "project_set_node_property_across_scenes call 2/5. the created scenes hold a Node2D root, which has `visible`"
+    },
+    {
+      "tag": "c1b-040-project_set_node_property_across_scenes-ok",
+      "port": "editor",
+      "tool": "project_set_node_property_across_scenes",
+      "arguments": {
+        "type": "Node2D",
+        "property": "visible",
+        "value": true,
+        "dry_run": true,
+        "path_filter": "res://scenes"
+      },
+      "note": "project_set_node_property_across_scenes call 3/5. the created scenes hold a Node2D root, which has `visible`"
+    },
+    {
+      "tag": "c1b-041-project_set_node_property_across_scenes-ok",
+      "port": "editor",
+      "tool": "project_set_node_property_across_scenes",
+      "arguments": {
+        "type": "Node2D",
+        "property": "visible",
+        "value": true,
+        "dry_run": true,
+        "path_filter": "res://scenes"
+      },
+      "note": "project_set_node_property_across_scenes call 4/5. the created scenes hold a Node2D root, which has `visible`"
+    },
+    {
+      "tag": "c1b-042-project_set_node_property_across_scenes-ok",
+      "port": "editor",
+      "tool": "project_set_node_property_across_scenes",
+      "arguments": {
+        "type": "Node2D",
+        "property": "visible",
+        "value": true,
+        "dry_run": false,
+        "path_filter": "res://scenes"
+      },
+      "note": "project_set_node_property_across_scenes call 5/5. the created scenes hold a Node2D root, which has `visible`"
+    },
+    {
+      "tag": "c1b-043-project_set_node_property_across_scenes-probe",
+      "port": "editor",
+      "tool": "project_set_node_property_across_scenes",
+      "arguments": {
+        "type": "Node2D",
+        "property": "visible",
+        "value": true,
+        "path_filter": "res://no_such_dir"
+      },
+      "note": "project_set_node_property_across_scenes boundary: path filter does not match a real directory"
+    },
+    {
+      "tag": "c1b-044-project_create_script-ok",
+      "port": "editor",
+      "tool": "project_create_script",
+      "arguments": {
+        "path": "res://src/ex_c1b_1.cs",
+        "content": "using Godot;\n\npublic partial class ExC1b1 : Node\n{\n    public override void _Ready() { }\n}\n"
+      },
+      "note": "project_create_script call 1/5. new C# script"
+    },
+    {
+      "tag": "c1b-045-project_create_script-ok",
+      "port": "editor",
+      "tool": "project_create_script",
+      "arguments": {
+        "path": "res://src/ex_c1b_2.cs",
+        "content": "using Godot;\n\npublic partial class ExC1b2 : Node\n{\n    public override void _Ready() { }\n}\n"
+      },
+      "note": "project_create_script call 2/5. new C# script"
+    },
+    {
+      "tag": "c1b-046-project_create_script-ok",
+      "port": "editor",
+      "tool": "project_create_script",
+      "arguments": {
+        "path": "res://src/ex_c1b_3.cs",
+        "content": "using Godot;\n\npublic partial class ExC1b3 : Node\n{\n    public override void _Ready() { }\n}\n"
+      },
+      "note": "project_create_script call 3/5. new C# script"
+    },
+    {
+      "tag": "c1b-047-project_create_script-ok",
+      "port": "editor",
+      "tool": "project_create_script",
+      "arguments": {
+        "path": "res://src/ex_c1b_4.cs",
+        "content": "using Godot;\n\npublic partial class ExC1b4 : Node\n{\n    public override void _Ready() { }\n}\n"
+      },
+      "note": "project_create_script call 4/5. new C# script"
+    },
+    {
+      "tag": "c1b-048-project_create_script-ok",
+      "port": "editor",
+      "tool": "project_create_script",
+      "arguments": {
+        "path": "res://src/ex_c1b_5.cs",
+        "content": "using Godot;\n\npublic partial class ExC1b5 : Node\n{\n    public override void _Ready() { }\n}\n"
+      },
+      "note": "project_create_script call 5/5. new C# script"
+    },
+    {
+      "tag": "c1b-049-project_create_script-probe",
+      "port": "editor",
+      "tool": "project_create_script",
+      "arguments": {
+        "path": "res://no_such_dir/x.cs",
+        "content": "using Godot;\n\npublic partial class ExBad : Node\n{\n    public override void _Ready() { }\n}\n"
+      },
+      "note": "project_create_script boundary: destination directory does not exist"
+    }
+  ]
+}

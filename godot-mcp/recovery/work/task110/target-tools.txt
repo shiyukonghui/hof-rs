@@ -1,0 +1,401 @@
+====================================================================================================
+FAMILY 1 - project_* zero-call   (40 tools)
+====================================================================================================
+### project_add_autoload
+  desc: 注册自动加载 When this call saves, it rewrites the entire project.godot with the engine's own whole-file writer (the engine has no partial-publish API), so every hand-written comment in that file is lost: the remaining settings are re-emitted verbatim and a repeated identical call changes no bytes (idempotent), and because the comments cannot be kept, back the file up yourself before calling if you need them.
+  required: ['name', 'path']   additionalProperties=None
+    - name : string
+    - path : string
+
+### project_analyze_scene_complexity
+  desc: 分析场景的复杂度（节点数、深度、类型分布等）
+  required: []   additionalProperties=None
+    - path : string  场景文件路径（可选，不传则分析当前编辑场景）
+
+### project_convert_path_to_uid
+  desc: 将项目路径转换为 UID 判别点：入参为项目路径（如 res://...），返回 {path,uid}，路径未注册时 uid 为空串且不报错；反向转换请用 project_convert_uid_to_path。
+  required: ['path']   additionalProperties=None
+    - path : string
+
+### project_convert_uid_to_path
+  desc: 将 UID 转换为项目路径 判别点：入参为字符串文本 UID（如 uid://...），返回 {uid,path}，UID 文本格式非法时报参数错误；反向转换请用 project_convert_path_to_uid。
+  required: ['uid']   additionalProperties=None
+    - uid : string
+
+### project_create_resource
+  desc: 创建新资源文件
+  required: ['path', 'type']   additionalProperties=None
+    - overwrite : boolean  default=false  是否覆盖已存在的文件
+    - path : string  保存路径 (res://)
+    - properties : object  初始属性字典
+    - type : string  资源类型
+
+### project_create_scene_file
+  desc: 创建新场景文件
+  required: ['path']   additionalProperties=None
+    - path : string  保存路径 (res://)
+    - root_name : string  根节点名称 (可选)
+    - root_type : string  default="Node2D"  根节点类型
+
+### project_create_shader
+  desc: 创建着色器文件
+  required: ['path']   additionalProperties=None
+    - path : string
+    - shader_type : string  default="shader_type spatial;"
+
+### project_create_theme
+  desc: 创建 Theme 资源
+  required: ['path']   additionalProperties=None
+    - name : string  主题名称
+    - path : string  保存路径 (res://)
+
+### project_delete_scene_file
+  desc: 删除场景文件
+  required: ['path']   additionalProperties=None
+    - path : string  要删除的场景文件路径 (res://)
+
+### project_detect_circular_dependencies
+  desc: 检测场景文件之间的循环依赖
+  required: []   additionalProperties=None
+    - include_addons : boolean  default=false  是否包含 addons 目录
+    - path : string  default="res://"  搜索路径
+
+### project_edit_resource
+  desc: 编辑资源文件属性并保存
+  required: ['path', 'properties']   additionalProperties=None
+    - path : string  资源文件路径 (res://)
+    - properties : object  要修改的属性字典
+
+### project_edit_shader
+  desc: 编辑着色器代码
+  required: ['path', 'code']   additionalProperties=None
+    - code : string
+    - path : string
+
+### project_find_files_referencing_symbol
+  desc: 在项目文件中搜索指定模式的引用 判别点：按文件聚合返回 {file,lines[]}（每文件最多 5 行、大小写敏感、上限 100，跳过隐藏文件与 addons，只扫 .tscn/.gd/.tres/.gdshader）；要逐行 {file,line,text}（大小写不敏感、上限 50）请用 project_search_file_contents。
+  required: ['pattern']   additionalProperties=None
+    - pattern : string  要搜索的模式
+
+### project_find_script_references
+  desc: 查找引用指定脚本的所有文件
+  required: ['query']   additionalProperties=None
+    - include_addons : boolean  default=false  是否包含 addons 目录
+    - path : string  default="res://"  搜索路径
+    - query : string  要搜索的脚本路径或类名
+
+### project_find_unused_resources
+  desc: 查找项目中可能未使用的资源文件
+  required: []   additionalProperties=None
+    - include_addons : boolean  default=false  是否包含 addons 目录
+    - path : string  default="res://"  搜索路径，默认为 res://
+
+### project_get_filesystem_tree
+  desc: 获取文件系统树状结构
+  required: []   additionalProperties=None
+    - max_depth : integer  default=-1
+    - path : string  default="res://"
+
+### project_get_info
+  desc: 获取项目信息
+  required: []   additionalProperties=None
+
+### project_get_resource_preview
+  desc: 获取资源预览图片 (base64编码PNG)
+  required: ['path']   additionalProperties=None
+    - max_size : integer  default=256  最大尺寸 (默认 256)
+    - path : string  资源文件路径 (res://)
+
+### project_get_scene_dependencies
+  desc: 获取场景文件的依赖资源列表
+  required: ['path']   additionalProperties=None
+    - path : string  场景文件路径 (res://)
+
+### project_get_scene_exports
+  desc: 获取场景根节点的导出变量列表
+  required: ['path']   additionalProperties=None
+    - path : string  场景文件路径 (res://)
+
+### project_get_settings
+  desc: 获取项目设置
+  required: []   additionalProperties=None
+    - include_default : boolean  default=false
+    - prefix : string
+
+### project_get_shader_params
+  desc: 获取着色器参数列表
+  required: ['path']   additionalProperties=None
+    - path : string
+
+### project_get_statistics
+  desc: 获取项目统计信息（文件数、脚本行数、场景数等）
+  required: []   additionalProperties=None
+    - include_addons : boolean  default=false  是否包含 addons 目录
+    - path : string  default="res://"  统计路径
+
+### project_get_theme_info
+  desc: 获取主题信息
+  required: ['theme_path']   additionalProperties=None
+    - theme_path : string
+
+### project_list_scripts
+  desc: 列出所有脚本文件 会包含 .godot 下的生成脚本：本工具的 walk 从 res:// 起递归，只跳过 . 与 ..，因此引擎自己生成的文件也在答案里（真实 mono 工程会出现 res://.godot/mono/temp/obj/** 下的 .cs，例如 res://.godot/mono/temp/obj/Debug/*.AssemblyInfo.cs），调用方若要只看手写脚本请自行过滤这些路径。
+  required: []   additionalProperties=None
+
+### project_read_resource
+  desc: 读取资源文件
+  required: ['path']   additionalProperties=None
+    - path : string
+
+### project_read_scene_file_content
+  desc: 读取 .tscn 场景文件内容
+  required: ['path']   additionalProperties=None
+    - path : string  场景文件路径 (res://)
+
+### project_read_script
+  desc: 读取脚本文件
+  required: ['path']   additionalProperties=None
+    - path : string
+
+### project_read_shader
+  desc: 读取着色器文件
+  required: ['path']   additionalProperties=None
+    - path : string
+
+### project_remove_autoload
+  desc: 移除自动加载 When this call saves, it rewrites the entire project.godot with the engine's own whole-file writer (the engine has no partial-publish API), so every hand-written comment in that file is lost: the remaining settings are re-emitted verbatim and a repeated identical call changes no bytes (idempotent), and because the comments cannot be kept, back the file up yourself before calling if you need them.
+  required: ['name']   additionalProperties=None
+    - name : string
+
+### project_search_file_contents
+  desc: 在文件内容中搜索文本 判别点：逐行返回 {file,line,text}（大小写不敏感、上限 50，跳过 addons 与 .godot 目录）；要按文件聚合的 {file,lines[]}（大小写敏感、上限 100）请用 project_find_files_referencing_symbol。
+  required: ['pattern']   additionalProperties=None
+    - file_pattern : string  default="*"
+    - path : string  default="res://"
+    - pattern : string
+
+### project_search_file_names
+  desc: 搜索文件 判别点：只匹配文件名子串（大小写不敏感、上限 200），不读文件内容、不返回行号；要搜索文件内容请用 project_search_file_contents。
+  required: ['pattern']   additionalProperties=None
+    - path : string  default="res://"
+    - pattern : string
+
+### project_set_node_property_across_scenes
+  desc: 跨场景批量设置节点属性
+  required: ['type', 'property', 'value']   additionalProperties=None
+    - dry_run : boolean  仅预览，不实际修改
+    - exclude_addons : boolean  default=true  是否排除 addons 目录
+    - force : boolean  default=false  是否强制修改正在编辑的场景
+    - path_filter : string  路径过滤，默认 res://
+    - property : string  属性名
+    - type : string  节点类型
+    - value : 属性值
+
+### project_set_setting
+  desc: 设置项目设置 When this call saves, it rewrites the entire project.godot with the engine's own whole-file writer (the engine has no partial-publish API), so every hand-written comment in that file is lost: the remaining settings are re-emitted verbatim and a repeated identical call changes no bytes (idempotent), and because the comments cannot be kept, back the file up yourself before calling if you need them.
+  required: ['key', 'value']   additionalProperties=None
+    - key : string
+    - type : string
+    - value : 设置值
+
+### project_set_theme_color
+  desc: 设置主题颜色
+  required: ['theme_path', 'color_name', 'color']   additionalProperties=None
+    - color : object  包含 r,g,b,a 的字典
+    - color_name : string
+    - node_type : string  default="Button"
+    - theme_path : string
+
+### project_set_theme_constant
+  desc: 设置主题常量
+  required: ['theme_path', 'constant_name', 'value']   additionalProperties=None
+    - constant_name : string
+    - node_type : string  default="Button"
+    - theme_path : string
+    - value : integer
+
+### project_set_theme_font_size
+  desc: 设置主题字体大小
+  required: ['theme_path', 'font_size_name', 'size']   additionalProperties=None
+    - font_size_name : string
+    - node_type : string  default="Button"
+    - size : integer
+    - theme_path : string
+
+### project_set_theme_stylebox
+  desc: 设置主题样式盒
+  required: ['theme_path', 'stylebox_name']   additionalProperties=None
+    - bg_color : string
+    - border_color : string
+    - border_width : integer
+    - corner_radius : integer
+    - node_type : string  default="Panel"
+    - stylebox_name : string
+    - theme_path : string
+
+### project_validate_script
+  desc: 验证脚本语法 判别点：valid 只在真的用该文件自身的脚本语言编译过时才是结论（true=编译通过；false=编译失败，error_text 给 ERR_* 标识符）；本构建不含该语言的脚本后端时（例如 module_mono_enabled=no 的构建里的 .cs）不借用别的语言解析、也不给出 valid，而是以 -32000 拒绝并在 data.suggestion 里说明该用哪个构建或文件；进程根本没有初始化任何脚本语言时（--test 进程）只做括号平衡的结构检查，message 会明说没有编译。 A '.cs' file now gets a real verdict (TASK-055): `valid: true` means the loaded .NET assembly contains a build of this exact source (Script::is_script_valid() found a class for the script's path and CSharpScript::is_source_newer_than_assembl
+  required: ['path']   additionalProperties=None
+    - path : string
+
+### project_write_text_file
+  desc: Write a project text file such as a .csproj, .sln, NuGet.config or .cfg, and answer the resulting size and sha256. Refuses scene, resource and script paths (use the dedicated tools for those) and refuses project.godot (use project_set_setting).
+  required: ['path', 'content']   additionalProperties=None
+    - content : string
+    - overwrite : boolean  default=false
+    - path : string
+
+====================================================================================================
+FAMILY 2 - editor read/inspect zero-call   (18 tools)
+====================================================================================================
+### editor_find_nodes_by_type
+  desc: 按类型查找所有节点
+  required: ['type']   additionalProperties=None
+    - type : string
+
+### editor_find_nodes_in_group
+  desc: 按组名查找所有节点
+  required: ['group']   additionalProperties=None
+    - group : string  组名
+
+### editor_get_collision_info
+  desc: 获取碰撞信息
+  required: []   additionalProperties=None
+    - node_path : string
+
+### editor_get_input_actions
+  desc: 列出所有 Input Action
+  required: []   additionalProperties=None
+
+### editor_get_node_groups
+  desc: 获取节点所属的分组列表
+  required: ['node_path']   additionalProperties=None
+    - node_path : string  节点路径
+
+### editor_get_node_signals
+  desc: 获取指定节点的信号列表及连接信息
+  required: ['node_path']   additionalProperties=None
+    - node_path : string  节点路径 (相对于场景根节点)
+
+### editor_get_physics_layers
+  desc: 获取物理层信息
+  required: ['node_path']   additionalProperties=None
+    - node_path : string
+
+### editor_list_signal_connections
+  desc: 递归查找场景中所有信号连接 判别点：扁平返回 connections[]（每项 {source,signal,target,method}）与 count，收全部连接（不过滤非持久连接）、node_path 与 signal_name 均按子串匹配；要按节点嵌套的流向分析请用 editor_analyze_signal_flow。
+  required: []   additionalProperties=None
+    - node_path : string  节点路径过滤（可选，包含匹配）
+    - scope : string  enum=all,user,internal  default="all"  连接范围：all=全部连接（默认，与本工具旧答案逐字相同）；user=只保留 method 不含 "::" 的连接，即场景/脚本自己连的；internal=只保留 method 形如 Class::method 的引擎/编辑器内部连接（编辑器的自连线）。注意内部连接的 source 是普通场景节点路径，按 node_path/signal_name 过滤不掉
+    - signal_name : string  信号名过滤（可选，包含匹配）
+
+### editor_get_open_scripts
+  desc: 获取编辑器中打开的所有脚本
+  required: []   additionalProperties=None
+
+### editor_get_output_log
+  desc: 获取输出日志
+  required: []   additionalProperties=None
+    - filter : string  过滤关键字
+    - max_lines : integer  default=100  最大行数
+
+### editor_get_selection
+  desc: 获取编辑器当前选中的节点
+  required: []   additionalProperties=None
+    - top_only : boolean  仅返回顶层选中节点 (可选，默认 false)
+
+### editor_get_performance_monitors
+  desc: 获取编辑器性能指标
+  required: []   additionalProperties=None
+
+### editor_analyze_signal_flow
+  desc: 分析当前场景的信号连接流 判别点：按节点嵌套返回 nodes[]（每节点含 signals_emitted/signals_connected_to），只收集持久连接（CONNECT_PERSIST，值为 2；注意 Godot 4 中 flags & 1 是 CONNECT_DEFERRED，不是持久连接）、node_path 精确匹配、无 signal_name 过滤；要扁平 connections[] 或子串匹配请用 editor_list_signal_connections。
+  required: []   additionalProperties=None
+    - node_path : string  要分析的节点路径（可选，不传则分析整个场景）
+
+### editor_execute_gdscript
+  desc: 在编辑器上下文中执行 GDScript 代码
+  required: ['code']   additionalProperties=None
+    - code : string  要执行的 GDScript 代码
+
+### editor_get_node_properties
+  desc: 获取节点属性
+  required: ['path']   additionalProperties=None
+    - path : string
+    - properties : array  items:string
+
+### editor_get_scene_tree
+  desc: 获取当前编辑场景的完整场景树 本工具是“此刻编辑器侧可寻址什么”的权威：实例子场景内部的节点可能不出现在这棵树里，因为编辑器把 PackedScene 缓存成实例快照 —— 子场景改了以后，同一会话里既有的实例与新建的实例都仍带旧缓存（游戏进程从磁盘加载，因此能看到新节点）；要操作子场景新增的内部节点，就把 editor_add_node 的 parent_path 指向该实例、把它作为外层场景里实例下的子节点写（实测可寻址并可连信号），或者开一个新的编辑器会话让缓存重建；子场景本身的编辑永远应当先做，再做外层场景的实例化。这不是“各工具看不看得见不一致”：属性写工具与信号工具经同一个 MCPTools::find_node 解析路径，对同一路径给出同一结论，差别只在编辑器缓存。
+  required: []   additionalProperties=None
+    - max_depth : integer  default=-1  最大深度 (-1 无限)
+
+### editor_get_animation_info
+  desc: 获取动画的详细信息（时长、轨道、关键帧等）
+  required: ['node_path', 'animation']   additionalProperties=None
+    - animation : string
+    - node_path : string
+
+### editor_list_animations
+  desc: 列出所有动画
+  required: ['node_path']   additionalProperties=None
+    - node_path : string
+
+====================================================================================================
+FAMILY 3 - running_game query zero-call   (9 tools)
+====================================================================================================
+### running_game_find_nearby_nodes
+  desc: 在运行中的游戏内查找指定位置附近的节点
+  required: ['position']   additionalProperties=None
+    - group_filter : string  节点组过滤
+    - max_results : integer  最大返回结果数
+    - position : object  中心位置，如 {"x": 0, "y": 0}
+    - radius : number  搜索半径
+    - type_filter : string  节点类型过滤
+
+### running_game_find_nodes_by_script
+  desc: 在运行中的游戏中按脚本路径查找节点
+  required: ['script']   additionalProperties=None
+    - properties : array  items:string  需要同时获取的属性列表
+    - script : string  脚本路径（如 res://enemy.gd）
+
+### running_game_find_ui_elements
+  desc: 查找运行中游戏的所有 UI 元素
+  required: []   additionalProperties=None
+    - type_filter : string  按控件类型过滤（如 Button, Label）
+
+### running_game_get_autoload_node
+  desc: 获取自动加载节点的信息
+  required: ['name']   additionalProperties=None
+    - name : string  自动加载节点名称
+    - properties : array  items:string  需要获取的属性列表
+
+### running_game_get_node_properties_batch
+  desc: 批量获取多个节点的属性
+  required: ['nodes']   additionalProperties=None
+    - nodes : array  items:object  节点信息数组，每个元素包含 node_path 和可选的 properties
+
+### running_game_simulate_button_click_by_text
+  desc: 通过按钮文本点击运行中游戏的按钮
+  required: ['text']   additionalProperties=None
+    - partial : boolean  default=true  是否使用部分匹配
+    - text : string  按钮上显示的文本
+
+### running_game_get_node_properties
+  desc: 获取运行中游戏指定节点的属性
+  required: ['node_path']   additionalProperties=None
+    - node_path : string  节点路径（相对于场景根节点）
+    - properties : array  items:string  要获取的属性列表（可选，不传则返回所有属性）
+
+### running_game_capture_frames
+  desc: 连续截取运行中游戏的帧画面
+  required: []   additionalProperties=None
+    - count : integer  default=5  截取帧数
+    - frame_interval : integer  default=10  帧间隔
+    - half_resolution : boolean  default=true  是否使用半分辨率
+
+### running_game_capture_signal_emissions
+  desc: 监听运行中游戏节点的信号发射
+  required: ['node_paths']   additionalProperties=None
+    - duration_ms : integer  default=5000  监听持续时间（毫秒）
+    - node_paths : array  items:string  要监听的节点路径列表
+    - signal_filter : array  items:string  要监听的信号名称过滤列表（可选）
