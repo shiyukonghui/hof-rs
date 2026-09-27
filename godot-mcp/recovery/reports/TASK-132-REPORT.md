@@ -520,9 +520,36 @@ python runs\model-player\_scripts\probe_jev_image.py <3 张图>   :: Jev 图像�
   `DECISIONS.md`。依据：`godot-mcp/godot/` 一个字节没动
   （`git -C godot status --short` 只有 TASK-130 之前就在的未跟踪 `uid_cache.bin`）。
 
-### L.1 两仓 git（提交后回填见 §M）
+### L.1 两仓 git（提交后）
 
-**外层仓 `F:\moonbit-hof-rs`（`master`）**：本任务交付提交见 §M；基线 `a511087`。
+**外层仓 `F:\moonbit-hof-rs`（`master`）**：本任务交付提交 = **`a470a5c`**
+（7 files changed, 2931 insertions(+), 13 deletions(-)）
+
+```text
+a470a5c feat(godot-mcp): TASK-132 (D176/D177/D178/D179/D180) - the playability verdict becomes
+        "a MODEL acts as a simulated human player" ...               <- 本任务的交付提交
+a511087 docs(godot-mcp): TASK-131 - correct the read-image inventory ...  <- 本任务的基线
+147f832 docs(godot-mcp): TASK-131 - state the commit invariant ...
+747ef6f docs(godot-mcp): TASK-131 - record the final commit id ...
+03692fd feat(godot-mcp): TASK-131 (D173/D174/D175) - real OS-key delivery is proven ...
+
+$ git status --short
+(clean; 提交后本报告若再被修改，则只有这一份文档会出现在里面)
+
+$ git show --stat --oneline a470a5c
+ DECISIONS.md                                          |  D176-D180
+ godot-mcp/recovery/reports/TASK-132-REPORT.md         |  new
+ godot-mcp/recovery/tasks/TASK-132.md                  |  new（本任务书）
+ godot-mcp/recovery/tasks/TEMPLATE-logic-feedback.md   |  模型玩家 + 读图 + demo 布局
+ godot-mcp/tools/playability_gate.py                   |  模型玩家判据（仅新增）
+ godot-mcp/tools/playtest_agent.py                     |  1 处 hook（默认行为逐字不变）
+ godot-mcp/tools/playtest_player.py                    |  new（回路工具）
+```
+
+**提交口径（沿用 TASK-131 的不变式）**：**交付提交 = `a470a5c`**；
+凡 `a470a5c` 之后的提交**只允许改 `recovery/reports/TASK-132-REPORT.md`**（补 git 状态之类）。
+`runs/model-player/**` **不在提交里**——`.gitignore:43`（`godot-mcp/runs/`）忽略整个 `runs/`，
+与 TASK-131 的 `runs/realinput/**` 同惯例；证据留在盘上，报告里的路径直接可用。
 
 **嵌套引擎仓 `F:\moonbit-hof-rs\godot-mcp\godot`（自带 `.git`）**：本任务**零字节改动**
 
@@ -546,11 +573,14 @@ $ git -C godot status --short
 
 ## M. 提交与决策日志
 
-* 决策日志：`DECISIONS.md`（追加 D176–D180，见该文件）。
-* 交付提交：§L.1 的基线之上一条 `feat(godot-mcp): TASK-132 …`，
-  只包含本任务的独占清单文件（见 §L 末的清单）。
-* 报告自身在收尾时可能再被改一两次（补 git 状态），那将是**只改本报告**的 docs 提交。
-
+* 决策日志：`DECISIONS.md` **D176–D180**（本任务提交 `a470a5c` 一并带上）：
+  D176 = 判据换成模型玩家并把 P1..P7 降级；D177 = 帧预算对齐 + 移动量比较；
+  D178 = 玩家候选去掉 `done` + `playtest_agent` 的 1 处 hook；
+  D179 = 终局局面在第一次模型调用前中止；D180 = 真实键 ack 的 settle 与字段名兼容。
+* 交付提交：**`a470a5c`**（见 §L.1），只包含本任务独占清单里的 7 个文件。
+* **报告自身在收尾时又被改过一次**（补 §L.1/§M 的 git 状态），那是一条**只改本报告**的 docs 提交
+  ——所以"报告里写的 HEAD"与"真实 HEAD"会差一个 docs 提交（TASK-130/131 都踩过同一个坑，
+  这里同样用不变式表述）。
 ---
 
 ## N. 遗留与待决（交给决策者，本任务不擅自扩大范围）
