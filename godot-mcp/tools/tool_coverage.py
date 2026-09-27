@@ -36,6 +36,24 @@ Outputs (both are fully regenerated on every run):
     TOOL-COVERAGE.md   总表 + 分桶 + <5 清单 + 不可达登记表的联动视图
     coverage.json      the same data, machine readable
 
+TASK-112 item B adds the **evidence tier** ladder. "effective >= 1" is a
+pass/fail bit, and a bit cannot say *how strong* the evidence behind it is; the
+ledger therefore labels every tool with one tier:
+
+    pixel_effect > file_effect > readback > count_only        (no_calls = 0 calls)
+
+and `readback` has two explicitly distinct kinds:
+
+    * `witness_read` - a **write**-class tool's effect corroborated by an
+      INDEPENDENT READ CALL in the same run. The pairing is not inferred here:
+      it is **declared in a session manifest** (`readback` array, see
+      `tools/sessions/_exercises/**/*-manifest.json`) and this reader only
+      accepts a declaration whose witness call it can find again in the run's
+      trace, answering `ok=true` with a substantive payload. A tool's own
+      response saying "success" is *not* a readback witness.
+    * `own_payload`  - a READ-verb tool: its answer *is* the measurement, so
+      there is no separate call to wait for (the TASK-111 `READ_VERBS` rule).
+
 Usage:
     python tools/tool_coverage.py [--only-final] [--runs DIR] [--exclude NAME]
                                   [--targets FILE] [--md PATH] [--json PATH]
@@ -87,6 +105,31 @@ EFFECT_VERDICTS = {"ok_effect_observed", "ok_file_effect_observed"}
 NEGATIVE_FLAGS = {"assertion_failed", "created_conflict",
                   "scenario_assertion_failed", "scenario_errors"}
 BUCKETS = ("0", "1-4", ">=5")
+
+# ---------------------------------------------------------------------------
+# TASK-112 item B: the evidence tier ladder.
+#
+# The order is the strength order and is the only place it is written down;
+# `render_md` and `coverage.json` both read it from here.
+# ---------------------------------------------------------------------------
+TIER_PIXEL = "pixel_effect"
+TIER_FILE = "file_effect"
+TIER_READBACK = "readback"
+TIER_COUNT = "count_only"
+TIER_NONE = "no_calls"
+TIER_ORDER = (TIER_PIXEL, TIER_FILE, TIER_READBACK, TIER_COUNT, TIER_NONE)
+TIER_LABEL = {
+    TIER_PIXEL: "ok_effect_observed（画面/视口真的变了）",
+    TIER_FILE: "ok_file_effect_observed（文件真的变了）",
+    TIER_READBACK: "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+    TIER_COUNT: "只有计数与边界，没有生效证据",
+    TIER_NONE: "0 次调用",
+}
+# The declared-witness source. One directory level up from the batch files, so a
+# new exercise family only has to drop its manifest next to its session.
+SESSIONS_DIR = os.path.join("tools", "sessions", "_exercises")
+READBACK_KIND_WITNESS = "witness_read"
+READBACK_KIND_OWN = "own_payload"
 
 
 def sha256_file(path):
@@ -181,6 +224,69 @@ def substantive(raw):
     return bool(body)
 
 
+def load_readback_declarations(root):
+    """Every `readback` declaration the session manifests carry.
+
+    A declaration is one object:
+
+        {"tool": "<the writer>", "witness_tool": "<the reader>",
+         "run": "runs/_exercises/<project>/<batch>", "why": "<what is read back>",
+         "witness_seq": <optional>}
+
+    The reader is only a *declaration*: `verify_readback` re-finds the witness
+    call in that run's trace before the tier is granted, so a stale or invented
+    declaration cannot promote a tool.
+    """
+    base = os.path.join(root, SESSIONS_DIR)
+    found = []
+    if not os.path.isdir(base):
+        return found
+    for dirpath, _dirnames, filenames in os.walk(base):
+        for fname in sorted(filenames):
+            if not fname.endswith("-manifest.json"):
+                continue
+            path = os.path.join(dirpath, fname)
+            try:
+                doc = load_json(path)
+            except (IOError, ValueError):
+                continue
+            for item in doc.get("readback") or []:
+                if not isinstance(item, dict) or not item.get("tool") or not item.get("witness_tool"):
+                    continue
+                entry = dict(item)
+                entry["declared_in"] = os.path.relpath(path, root).replace("\\", "/")
+                found.append(entry)
+    found.sort(key=lambda e: (e["tool"], e.get("run", ""), e.get("witness_tool", "")))
+    return found
+
+
+def verify_readback(declaration, run_index):
+    """The verified pointer, or None when the declaration cannot be confirmed.
+
+    A witness counts only if, inside the declared run, a call of the declared
+    reader tool exists, answered `ok=true`, and carried a substantive payload
+    (or a verified sidecar - the TASK-111 rule). The strongest such call is
+    reported so the ledger can point at it.
+    """
+    run = declaration.get("run")
+    witness = declaration.get("witness_tool")
+    if not run or not witness:
+        return None
+    per_tool = run_index.get(run)
+    if not per_tool:
+        return None
+    st = per_tool.get(witness)
+    if not st or st["ok"] < 1 or st["substantive"] < 1:
+        return None
+    return {
+        "witness_tool": witness,
+        "run": run,
+        "witness_seq": st["first_substantive_seq"],
+        "why": declaration.get("why", ""),
+        "declared_in": declaration.get("declared_in", ""),
+    }
+
+
 def verb_of(name, verbs):
     """The contract's verb for one tool.
 
@@ -225,6 +331,11 @@ def classify(row, verb):
 
 def build_rows(root, ledger, traces, verbs, scopes):
     stats = {}
+    # TASK-112 item B: `{run: {tool: {ok, substantive, first_substantive_seq}}}`,
+    # the index a readback declaration is verified against. It is built from the
+    # same rows the rest of the ledger uses, so a declaration can never be
+    # "verified" by a call the ledger does not have.
+    run_index = {}
     corpus = {"trace_files": 0, "run_dirs": 0, "calls": 0, "malformed_lines": 0,
               "ok": 0, "failed": 0, "distinct_tools": 0, "sidecars_verified": 0}
     seen_dirs = set()
@@ -236,6 +347,7 @@ def build_rows(root, ledger, traces, verbs, scopes):
         if rel not in seen_dirs:
             seen_dirs.add(rel)
             corpus["run_dirs"] += 1
+        run_tools = run_index.setdefault(rel, {})
         for row in rows:
             name = row.get("tool")
             if not name:
@@ -246,10 +358,21 @@ def build_rows(root, ledger, traces, verbs, scopes):
             if row.get("args_evidence") == "sidecar_verified" or \
                row.get("result_json_evidence") == "sidecar_verified":
                 corpus["sidecars_verified"] += 1
+            substantive_payload = (row.get("result_json_evidence") == "sidecar_verified"
+                                   or substantive(row.get("result_json")))
+            rt = run_tools.setdefault(name, {"ok": 0, "substantive": 0,
+                                             "first_substantive_seq": None})
+            if row["ok"]:
+                rt["ok"] += 1
+            if row["ok"] and substantive_payload:
+                rt["substantive"] += 1
+                if rt["first_substantive_seq"] is None:
+                    rt["first_substantive_seq"] = row.get("call_id")
             st = stats.setdefault(name, {
                 "tool": name, "calls": 0, "ok": 0, "failed": 0, "effective": 0,
                 "verdicts": {}, "file_effects": {}, "runs": {}, "first_ts": None,
-                "last_ts": None, "truncated_args": 0, "flags": {}, "facts_complete": 0})
+                "last_ts": None, "truncated_args": 0, "flags": {}, "facts_complete": 0,
+                "pixel_effect": 0, "file_effect": 0, "read_payload": 0})
             st["calls"] += 1
             st["ok"] += 1 if row["ok"] else 0
             st["failed"] += 0 if row["ok"] else 1
@@ -266,6 +389,14 @@ def build_rows(root, ledger, traces, verbs, scopes):
                 st["flags"][flag] = st["flags"].get(flag, 0) + 1
             eff, bnd = classify(row, verb_of(name, verbs))
             st["effective"] += 1 if eff else 0
+            # TASK-112 item B: the tier a tool ends up on is read off the same
+            # verdicts `classify` uses, so the two can never disagree.
+            if row["ok"] and row["verdict"] == "ok_effect_observed":
+                st["pixel_effect"] += 1
+            if row["ok"] and row["verdict"] == "ok_file_effect_observed":
+                st["file_effect"] += 1
+            if eff and verb_of(name, verbs) in READ_VERBS:
+                st["read_payload"] += 1
             ts = row.get("ended_ts_ms")
             if isinstance(ts, (int, float)):
                 if st["first_ts"] is None or ts < st["first_ts"]:
@@ -273,7 +404,33 @@ def build_rows(root, ledger, traces, verbs, scopes):
                 if st["last_ts"] is None or ts > st["last_ts"]:
                     st["last_ts"] = ts
     corpus["distinct_tools"] = len(stats)
-    return stats, corpus
+    return stats, corpus, run_index
+
+
+def evidence_tier(st, verb, readback):
+    """The strongest evidence this tool's calls carry (TASK-112 item B).
+
+    `readback` is the verified witness pointer (write tools) - a READ-verb tool
+    is `own_payload` on the same ladder rung, because its answer *is* the
+    measurement and none of its callers could wait for a second call.
+    """
+    if st is None or st["calls"] < 1:
+        return TIER_NONE, None
+    if st.get("pixel_effect"):
+        return TIER_PIXEL, None
+    if st.get("file_effect"):
+        return TIER_FILE, None
+    if verb in READ_VERBS and st.get("read_payload"):
+        return TIER_READBACK, {"kind": READBACK_KIND_OWN, "witness_tool": None,
+                               "run": None, "witness_seq": None,
+                               "why": "读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），"
+                                      "不存在「另一次读调用」可等",
+                               "declared_in": None}
+    if readback:
+        entry = dict(readback)
+        entry["kind"] = READBACK_KIND_WITNESS
+        return TIER_READBACK, entry
+    return TIER_COUNT, None
 
 
 def status_of(st, registry_members):
@@ -307,7 +464,21 @@ def build_payload(args):
     scopes, verbs = scope_and_verb(root)
     ledger = load_module(os.path.join(root, LEDGER), "mcp_trace_ledger")
     traces = iter_traces(root, args.runs, args.only_final, args.exclude or [])
-    stats, corpus = build_rows(root, ledger, traces, verbs, scopes)
+    stats, corpus, run_index = build_rows(root, ledger, traces, verbs, scopes)
+
+    # TASK-112 item B: every declared readback witness is re-verified against the
+    # run's own rows; an unverifiable declaration is reported as rejected instead
+    # of silently granting a tier.
+    declarations = load_readback_declarations(root)
+    verified_readback = {}
+    readback_rejected = []
+    for declaration in declarations:
+        pointer = verify_readback(declaration, run_index)
+        if pointer is None:
+            readback_rejected.append(declaration)
+            continue
+        # The strongest (first) verified witness of a tool wins.
+        verified_readback.setdefault(declaration["tool"], pointer)
 
     registry = {"categories": {}, "members": [], "reclassified": []}
     reg_path = os.path.join(root, REGISTRY)
@@ -327,6 +498,7 @@ def build_payload(args):
         eff = st["effective"] if st else 0
         bnd = st["failed"] if st else 0
         runs = sorted((st["runs"] if st else {}).items(), key=lambda kv: (-kv[1], kv[0]))
+        tier, readback = evidence_tier(st, verb_of(name, verbs), verified_readback.get(name))
         row = {
             "tool": name,
             "scope": scopes.get(name),
@@ -335,6 +507,12 @@ def build_payload(args):
             "ok": st["ok"] if st else 0,
             "boundary": bnd,
             "effective": eff,
+            "evidence_tier": tier,
+            "evidence_tier_label": TIER_LABEL[tier],
+            "readback": readback,
+            "pixel_effect_calls": st["pixel_effect"] if st else 0,
+            "file_effect_calls": st["file_effect"] if st else 0,
+            "read_payload_calls": st["read_payload"] if st else 0,
             "facts_complete": st["facts_complete"] if st else 0,
             "bucket": bucket_of(calls),
             "status": status_of(st, reg_members),
@@ -352,9 +530,11 @@ def build_payload(args):
     by_status = {}
     by_bucket = {}
     by_scope = {}
+    by_tier = {}
     for row in tools:
         by_status[row["status"]] = by_status.get(row["status"], 0) + 1
         by_bucket[row["bucket"]] = by_bucket.get(row["bucket"], 0) + 1
+        by_tier[row["evidence_tier"]] = by_tier.get(row["evidence_tier"], 0) + 1
         key = row["scope"] or "?"
         slot = by_scope.setdefault(key, {"tools": 0, "called": 0, ">=5": 0, "0": 0})
         slot["tools"] += 1
@@ -401,6 +581,14 @@ def build_payload(args):
         "fingerprints": fingerprints,
         "buckets": by_bucket,
         "status_counts": by_status,
+        "evidence_tier_counts": by_tier,
+        "evidence_tier_order": list(TIER_ORDER),
+        "readback_declarations": {
+            "declared": len(declarations),
+            "verified": len(verified_readback),
+            "rejected": readback_rejected,
+            "verified_by_tool": verified_readback,
+        },
         "scope_counts": by_scope,
         "targets": targets,
         "targets_view": [r for r in tools if targets and r["tool"] in set(targets)],
@@ -420,6 +608,22 @@ def build_payload(args):
 def md_evidence(row, limit=2):
     parts = ["%s(%d)" % (e["run"], e["calls"]) for e in row["evidence"][:limit]]
     return " ; ".join(parts) if parts else "-"
+
+
+def md_tier_evidence(row):
+    """The one-line reason for the tool's evidence tier."""
+    tier = row.get("evidence_tier")
+    if tier == TIER_PIXEL:
+        return "ok_effect_observed ×%d" % row.get("pixel_effect_calls", 0)
+    if tier == TIER_FILE:
+        return "ok_file_effect_observed ×%d" % row.get("file_effect_calls", 0)
+    if tier == TIER_READBACK:
+        entry = row.get("readback") or {}
+        if entry.get("kind") == READBACK_KIND_OWN:
+            return "own_payload ×%d（读类回包即证据）" % row.get("read_payload_calls", 0)
+        return "witness `%s`@%s seq=%s" % (entry.get("witness_tool"), entry.get("run"),
+                                           entry.get("witness_seq"))
+    return "-"
 
 
 def render_md(payload, title, cmdline):
@@ -454,6 +658,59 @@ def render_md(payload, title, cmdline):
     lines.append("- `状态`：`达标` = 调用≥5 且 有效≥1 且 边界≥1；`计数达标缺证据` = 调用≥5 但缺有效或边界；"
                  "`未达(1-4)` / `未达(0)`；`不可达` 不在本表状态里，见 §4 登记表。")
     lines.append("")
+    lines.append("**「证据档位」的判定**（TASK-112 B；档位由强到弱，一个工具只落一档）：")
+    lines.append("")
+    lines.append("| 档位 | 判据 | 工具数 |")
+    lines.append("|---|---|---|")
+    tier_counts = payload.get("evidence_tier_counts", {})
+    for tier in payload.get("evidence_tier_order", TIER_ORDER):
+        lines.append("| `%s` | %s | %d |" % (tier, TIER_LABEL[tier], tier_counts.get(tier, 0)))
+    lines.append("")
+    lines.append("- `readback` 有两种 **互不混同** 的 kind：`witness_read`（写类工具，效果由**另一次独立的读调用**"
+                 "在同一 run 内读回佐证）与 `own_payload`（读类动词，回包本身即测量结果，不存在可等的第二次调用）。")
+    lines.append("- `witness_read` **不是推断**：配对写在会话 manifest 的 `readback` 数组里，"
+                 "本工具会回到该 run 的 trace 里把见证调用**再找一次**（必须 `ok=true` 且回包是实质载荷），"
+                 "找不到就不给档位（见 §0.1 的 rejected 列表）。")
+    lines.append("- **不得**把「写工具自己响应里说成功了」当作 readback：那条路径只能落在 `count_only`。")
+    lines.append("")
+    lines.append("### 0.1 readback 声明与见证（TASK-112 B）")
+    lines.append("")
+    rb = payload.get("readback_declarations") or {}
+    lines.append("声明 **%d** 条（来源：`%s/**/*-manifest.json` 的 `readback` 数组）；"
+                 "**经 trace 复核通过 %d 条**，被拒 %d 条。"
+                 % (rb.get("declared", 0), SESSIONS_DIR.replace("\\", "/"),
+                    rb.get("verified", 0), len(rb.get("rejected") or [])))
+    lines.append("")
+    lines.append("| 写工具 | 档位 | kind | 见证读调用 | run | 见证 seq | 读回的是什么 |")
+    lines.append("|---|---|---|---|---|---|---|")
+    for row in payload["tools"]:
+        entry = row.get("readback")
+        if not entry:
+            continue
+        lines.append("| `%s` | `%s` | %s | %s | %s | %s | %s |"
+                     % (row["tool"], row["evidence_tier"],
+                        entry.get("kind", ""),
+                        "`%s`" % entry["witness_tool"] if entry.get("witness_tool") else "-",
+                        entry.get("run") or "-",
+                        entry.get("witness_seq") if entry.get("witness_seq") is not None else "-",
+                        entry.get("why") or "-"))
+    lines.append("")
+    if rb.get("rejected"):
+        lines.append("**被拒的声明（在声明的 run 里找不到合格的见证调用，档位不授予）**：")
+        lines.append("")
+        for item in rb["rejected"]:
+            lines.append("- `%s` <- `%s` @ `%s`（声明于 `%s`）"
+                         % (item.get("tool"), item.get("witness_tool"), item.get("run"),
+                            item.get("declared_in")))
+        lines.append("")
+    lines.append("### 0.2 逐档工具清单（TASK-112 B）")
+    lines.append("")
+    for tier in payload.get("evidence_tier_order", TIER_ORDER):
+        rows = [r for r in payload["tools"] if r["evidence_tier"] == tier]
+        lines.append("- **`%s`**（%d）：%s"
+                     % (tier, len(rows),
+                        " ".join("`%s`" % r["tool"] for r in rows) if rows else "（无）"))
+    lines.append("")
     lines.append("## 0. 分桶与状态")
     lines.append("")
     lines.append("| 桶 | 工具数 |")
@@ -475,12 +732,13 @@ def render_md(payload, title, cmdline):
     lines.append("")
     lines.append("## 1. 总表（177 条契约工具，逐条一行）")
     lines.append("")
-    lines.append("| # | tool | scope | verb | 累计调用 | 有效调用 | 边界调用 | 证据路径 | 状态 |")
-    lines.append("|---|---|---|---|---|---|---|---|---|")
+    lines.append("| # | tool | scope | verb | 累计调用 | 有效调用 | 边界调用 | 证据档位 | 档位证据 | 证据路径 | 状态 |")
+    lines.append("|---|---|---|---|---|---|---|---|---|---|---|")
     for i, row in enumerate(payload["tools"], 1):
-        lines.append("| %d | `%s` | %s | %s | %d | %d | %d | %s | %s |"
+        lines.append("| %d | `%s` | %s | %s | %d | %d | %d | `%s` | %s | %s | %s |"
                      % (i, row["tool"], row["scope"] or "?", row["verb"] or "?", row["calls"],
-                        row["effective"], row["boundary"], md_evidence(row), row["status"]))
+                        row["effective"], row["boundary"], row["evidence_tier"],
+                        md_tier_evidence(row), md_evidence(row), row["status"]))
     lines.append("")
     lines.append("## 2. 分桶明细")
     lines.append("")
@@ -499,12 +757,12 @@ def render_md(payload, title, cmdline):
                                                      " ".join("`%s`" % x for x in grouped[prefix])))
         else:
             lines.append("")
-            lines.append("| tool | scope | 累计 | 有效 | 边界 | 状态 | 证据 |")
-            lines.append("|---|---|---|---|---|---|---|")
+            lines.append("| tool | scope | 累计 | 有效 | 边界 | 档位 | 状态 | 证据 |")
+            lines.append("|---|---|---|---|---|---|---|---|")
             for r in rows:
-                lines.append("| `%s` | %s | %d | %d | %d | %s | %s |"
+                lines.append("| `%s` | %s | %d | %d | %d | `%s` | %s | %s |"
                              % (r["tool"], r["scope"], r["calls"], r["effective"], r["boundary"],
-                                r["status"], md_evidence(r, 3)))
+                                r["evidence_tier"], r["status"], md_evidence(r, 3)))
         lines.append("")
     lines.append("## 3. `<5` 清单（本轮仍未达标的工具）")
     lines.append("")
@@ -513,13 +771,13 @@ def render_md(payload, title, cmdline):
                  % (len(under), 100.0 * len(under) / max(total, 1),
                     buckets.get("0", 0), buckets.get("1-4", 0)))
     lines.append("")
-    lines.append("| tool | scope | verb | 累计 | 有效 | 边界 | 登记不可达 | 状态 |")
-    lines.append("|---|---|---|---|---|---|---|---|")
+    lines.append("| tool | scope | verb | 累计 | 有效 | 边界 | 档位 | 登记不可达 | 状态 |")
+    lines.append("|---|---|---|---|---|---|---|---|---|")
     for r in under:
-        lines.append("| `%s` | %s | %s | %d | %d | %d | %s | %s |"
+        lines.append("| `%s` | %s | %s | %d | %d | %d | `%s` | %s | %s |"
                      % (r["tool"], r["scope"] or "?", r["verb"] or "?", r["calls"],
-                        r["effective"], r["boundary"], r["unreachable_category"] or "-",
-                        r["status"]))
+                        r["effective"], r["boundary"], r["evidence_tier"],
+                        r["unreachable_category"] or "-", r["status"]))
     lines.append("")
     lines.append("## 4. 不可达登记表的联动视图（H1–H9）")
     lines.append("")

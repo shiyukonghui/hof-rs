@@ -93,5 +93,13 @@
       "intent": "setup",
       "note": "read-back: Ball has no user connection left"
     }
+  ],
+  "readback": [
+      {
+          "tool": "editor_disconnect_signal",
+          "run": "runs/_exercises/ex_write6/c5-task111",
+          "witness_tool": "editor_list_signal_connections",
+          "why": "断开之后再读一次连接表：count=0（同一次运行、同一个节点）"
+      }
   ]
 }

@@ -317,5 +317,13 @@
       "intent": "setup",
       "note": "persist the 3D scene the family built"
     }
+  ],
+  "readback": [
+      {
+          "tool": "editor_set_viewport_3d_camera",
+          "run": "runs/_exercises/ex_3d/h1-task111",
+          "witness_tool": "editor_get_viewport_3d_camera",
+          "why": "下一次调用读回上一次写入的 fov/position"
+      }
   ]
 }

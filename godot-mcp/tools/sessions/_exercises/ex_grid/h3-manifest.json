@@ -338,5 +338,13 @@
       "intent": "setup",
       "note": "persist the tile edits"
     }
+  ],
+  "readback": [
+      {
+          "tool": "editor_add_gridmap",
+          "run": "runs/_exercises/ex_grid/h3-task111",
+          "witness_tool": "editor_get_scene_tree",
+          "why": "建出来的 GridMap 节点必须出现在编辑场景树里"
+      }
   ]
 }
