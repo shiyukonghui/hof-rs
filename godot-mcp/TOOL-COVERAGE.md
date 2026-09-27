@@ -3,9 +3,9 @@
 > 本文件由 `tool_coverage.py` 自动生成，**随时可重跑刷新**。命令行：
 > `python tools/tool_coverage.py`
 
-口径（mode）：**all-runs**；语料：**111 个 run 目录 / 180 个 trace 文件 / 8712 次 `tools/call`**（`ok=false` 655 次、解析失败行 0、sidecar 校验通过 277）
+口径（mode）：**all-runs**；语料：**112 个 run 目录 / 182 个 trace 文件 / 8729 次 `tools/call`**（`ok=false` 672 次、解析失败行 0、sidecar 校验通过 277）；**出现过的工具名（distinct）= 172**（= 契约 177 − 0 次 5）
 
-生成时间（UTC）：2026-09-27T06:43:01Z
+生成时间（UTC）：2026-09-27T07:08:23Z
 
 **「有效调用」的判定**（由 `mcp_trace_ledger.py` 的 verdict 词汇给出，不另立一套）：
 
@@ -28,22 +28,27 @@
 - `witness_read` **不是推断**：配对写在会话 manifest 的 `readback` 数组里，本工具会回到该 run 的 trace 里把见证调用**再找一次**（必须 `ok=true` 且回包是实质载荷），找不到就不给档位（见 §0.1 的 rejected 列表）。
 - **内容级复核（TASK-113 C）**：声明可带 `expect`（一个或一组字面量），本工具在**见证调用的回包**里逐字搜它（回包被 trace 截断时读已核验的 sidecar）；搜不到就**不给档位**并记入 rejected，理由逐条写出。所以 `witness_read` 现在证明的是「写进去的值能从引擎自己的回答里读回来」，不再只是「那一次读调用发生过」。
 - **不得**把「写工具自己响应里说成功了」当作 readback：那条路径只能落在 `count_only`。
+- **TASK-120 A 的四条硬规则**（任一条不满足即**拒签**，理由写进 rejected 列表）：
+  **A1** 见证工具必须是**读类动词**（`READ_VERBS`）——写工具自己的回包不是读回，见证工具也不能是被见证工具自己；**A2** 被采用的见证调用必须**晚于**被见证工具的至少一次调用（同 run、`seq` 更大）——写在写之前的读只能读回起始值；**A3** `expect` 至少要有一条**带值**的字面量（`"x":346.0`），只有裸键名（`"position"`）的声明会被拒；**A4** 不得**只**声明 `expect_absent`——必须同时给同一主体的 `expect` 锚点。
+  依据：TASK-119 独立验收的 D2/D3（`"position"` 近似恒真 + 见证在写之前）。M2/M3 反例自证（旧口径签、新口径拒）见 `recovery/work/task120/witness_rules_selftest.py`。
 
 ### 0.0 权威证据通道声明（TASK-118 A；声明表：`tools/tool_channels.json`）
 
-每条契约工具**声明一条**权威证据通道；`达标` 只在该通道上以内容级证据判定。声明由 `recovery/work/task118/gen_channels.py` 生成、本工具加载，**覆盖不到契约时本工具直接拒绝运行**（缺一条工具＝那条工具会悄悄退回旧口径）。
+每条契约工具**声明一条**权威证据通道；`达标` 只在该通道上以内容级证据判定。声明由 `recovery/work/task118/gen_channels.py` 生成、本工具加载，**覆盖不到契约时本工具直接拒绝运行**（缺一条工具＝那条工具会悄悄退回旧口径）。**TASK-120 B 起还校验「通道 ↔ verb」一致**：动作类动词不得声明成 `payload`（`read_payload` 只对读类动词累加，那样的证据门恒为 0），读类动词也不得声明成画面/文件/内存态通道（它的回包**就是**测量结果）；违规直接拒绝运行。
+
+> **`basis` 的口径（TASK-120 D4）**：`channel_template`。每条 `basis` 是**通道级模板**：同一通道的 22/28/51/76 条逐字相同，只有 `subject` 逐条不同。它说明的是「为什么这条通道配这类工具」，不是逐工具的推理记录；逐工具的推理在 `subject`、该工具的会话/manifest，以及台账 §0.1 的见证表里（TASK-119 D6）。
 
 | 通道 | 判据 | 声明条数 | 有通道证据 | 通道证据观测数 | 其中达标 | 计数达标缺证据 | 未达(0) |
 |---|---|---|---|---|---|---|---|
-| `file_effect` | 盘上的文件（ok_file_effect_observed） | 22 | 22 | 484 | 17 | 5 | 0 |
-| `pixel_effect` | 渲染出的画面/视口（ok_effect_observed） | 28 | 28 | 238 | 23 | 5 | 0 |
-| `editor_state` | 进程内的存在态：另一次独立读调用逐字读回（verified witness_read + expect） | 51 | 45 | 45 | 44 | 2 | 5 |
-| `payload` | 查询类：ok=true 且回包是实质载荷（回包即测量结果） | 76 | 74 | 5933 | 68 | 8 | 0 |
+| `file_effect` | 盘上的文件（ok_file_effect_observed） | 22 | 21 | 469 | 21 | 1 | 0 |
+| `pixel_effect` | 渲染出的画面/视口（ok_effect_observed） | 28 | 28 | 238 | 28 | 0 | 0 |
+| `editor_state` | 进程内的存在态：另一次独立读调用逐字读回（verified witness_read + expect） | 51 | 45 | 45 | 45 | 1 | 5 |
+| `payload` | 查询类：ok=true 且回包是实质载荷（回包即测量结果） | 76 | 75 | 5958 | 75 | 1 | 0 |
 
 - `editor_state` 通道的判据就是 TASK-113 C 的内容级见证：**另一次独立读调用**在同一 run 内、`ok=true`、回包是实质载荷，且其回包里**逐字**包含被写入的值（会话 manifest 的 `readback` 数组 + `expect`）。本工具会回到 trace 里把见证再找一次；写工具自己回包里的成功字样**不是**这条通道的证据。
 - 一个工具只在**一条**通道上被判定：声明为 `editor_state` 的工具即使顺手动了像素也不算达标，声明为 `payload` 的工具不会被要求交截图。
 
-**因通道声明而新达标 44 条**（旧口径下它们落在 `计数达标缺证据`，因为它们的效果既不在盘上、也不在这个工程的 2D 视口里）：
+**因通道声明而新达标 45 条**（旧口径下它们落在 `计数达标缺证据`，因为它们的效果既不在盘上、也不在这个工程的 2D 视口里）：
 
 | tool | 声明通道 | 累计 | 边界 | 通道证据 | 证据路径 | 判定依据（逐字来自声明表） |
 |---|---|---|---|---|---|---|
@@ -61,6 +66,7 @@
 | `editor_rescan_project_filesystem` | `editor_state` | 6 | 1 | 1 | runs/_exercises/ex_editor/h7-task115(6) | editor_state：编辑器 FileSystem dock 的扫描结果。判定依据：契约改变的状态既不在盘上、也不（在这个工程的视口里）可靠地反映成像素：它是编辑器进程自己的 GUI / 插件 / 文件系统状态，或运行中游戏进程的内存态。这条通道只接受**另一次独立读调用**在自己的回包里**逐字**包含被写入的值的证据（会话 manifest 的 witness_read + expect，本工具会回到 trace 里再核一次）；写工具自己的回包不算。 |
 | `editor_set_viewport_3d_camera` | `editor_state` | 6 | 1 | 1 | runs/_exercises/ex_3d/h1-task111(6) | editor_state：编辑器 3D 视口相机。判定依据：契约改变的状态既不在盘上、也不（在这个工程的视口里）可靠地反映成像素：它是编辑器进程自己的 GUI / 插件 / 文件系统状态，或运行中游戏进程的内存态。这条通道只接受**另一次独立读调用**在自己的回包里**逐字**包含被写入的值的证据（会话 manifest 的 witness_read + expect，本工具会回到 trace 里再核一次）；写工具自己的回包不算。 |
 | `running_game_create_input_recording` | `editor_state` | 7 | 1 | 1 | runs/_exercises/ex_rec/h9-task113(7) | editor_state：运行期游戏的输入录制缓冲（由 stop 的回包逐字读回）。判定依据：契约改变的状态既不在盘上、也不（在这个工程的视口里）可靠地反映成像素：它是编辑器进程自己的 GUI / 插件 / 文件系统状态，或运行中游戏进程的内存态。这条通道只接受**另一次独立读调用**在自己的回包里**逐字**包含被写入的值的证据（会话 manifest 的 witness_read + expect，本工具会回到 trace 里再核一次）；写工具自己的回包不算。 |
+| `running_game_stop_input_recording` | `editor_state` | 8 | 1 | 1 | runs/_exercises/ex_rec/h9-task113(7) ; runs/_exercises/ex_grid/c8-task120(1) | editor_state：运行期游戏的输入录制缓冲（回包里的 event_count/events）。判定依据：契约改变的状态既不在盘上、也不（在这个工程的视口里）可靠地反映成像素：它是编辑器进程自己的 GUI / 插件 / 文件系统状态，或运行中游戏进程的内存态。这条通道只接受**另一次独立读调用**在自己的回包里**逐字**包含被写入的值的证据（会话 manifest 的 witness_read + expect，本工具会回到 trace 里再核一次）；写工具自己的回包不算。 |
 | `editor_set_node_script` | `editor_state` | 36 | 6 | 1 | runs/_exercises/ex_write/c4-task111(6) ; runs/_exercises/ex_write2/c4b-task111(6) | editor_state：节点挂载的脚本（Node.get_script().resource_path）。判定依据：契约改变的状态既不在盘上、也不（在这个工程的视口里）可靠地反映成像素：它是编辑器进程自己的 GUI / 插件 / 文件系统状态，或运行中游戏进程的内存态。这条通道只接受**另一次独立读调用**在自己的回包里**逐字**包含被写入的值的证据（会话 manifest 的 witness_read + expect，本工具会回到 trace 里再核一次）；写工具自己的回包不算。 |
 | `editor_create_animation` | `editor_state` | 23 | 2 | 1 | runs/_exercises/ex_anim/h2-task111(9) ; runs/_exercises/ex_anim2/h2b-task111(9) | editor_state：动画库里的动画（AnimationPlayer）。判定依据：契约改变的状态既不在盘上、也不（在这个工程的视口里）可靠地反映成像素：它是编辑器进程自己的 GUI / 插件 / 文件系统状态，或运行中游戏进程的内存态。这条通道只接受**另一次独立读调用**在自己的回包里**逐字**包含被写入的值的证据（会话 manifest 的 witness_read + expect，本工具会回到 trace 里再核一次）；写工具自己的回包不算。 |
 | `editor_add_animation_track` | `editor_state` | 12 | 2 | 1 | runs/_exercises/ex_anim/h2-task111(6) ; runs/_exercises/ex_anim2/h2b-task111(6) | editor_state：动画的轨道表（Animation）。判定依据：契约改变的状态既不在盘上、也不（在这个工程的视口里）可靠地反映成像素：它是编辑器进程自己的 GUI / 插件 / 文件系统状态，或运行中游戏进程的内存态。这条通道只接受**另一次独立读调用**在自己的回包里**逐字**包含被写入的值的证据（会话 manifest 的 witness_read + expect，本工具会回到 trace 里再核一次）；写工具自己的回包不算。 |
@@ -94,35 +100,18 @@
 
 - **被新口径降级的工具：0 条**（旧口径达标、新口径不达标——这一栏必须为空，不为空说明有工具在它自己声明的通道上根本拿不出证据，是需要解释的缺陷）。**0 条**
 
-**声明通道上仍不达标 25 条**（逐条给原因）：
+**声明通道上仍不达标 8 条**（逐条给原因）：
 
 | tool | 声明通道 | 累计 | 边界 | 通道证据 | 原因 |
 |---|---|---|---|---|---|
-| `editor_open_scene` | `pixel_effect` | 86 | 0 | 9 | channel-evidence=9 but no boundary call |
-| `editor_save_scene` | `file_effect` | 123 | 0 | 77 | channel-evidence=77 but no boundary call |
-| `editor_delete_node` | `pixel_effect` | 65 | 0 | 5 | channel-evidence=5 but no boundary call |
-| `editor_set_node_property` | `pixel_effect` | 41 | 0 | 12 | channel-evidence=12 but no boundary call |
-| `editor_get_errors` | `payload` | 50 | 0 | 50 | channel-evidence=50 but no boundary call |
-| `editor_capture_screenshot` | `file_effect` | 25 | 0 | 15 | channel-evidence=15 but no boundary call |
-| `running_game_capture_screenshot` | `payload` | 298 | 0 | 298 | channel-evidence=298 but no boundary call |
-| `editor_set_auto_dismiss_dialogs` | `editor_state` | 7 | 7 | 0 | channel-evidence=0 on the declared channel `editor_state` |
-| `running_game_get_scene_tree` | `payload` | 123 | 0 | 123 | channel-evidence=123 but no boundary call |
-| `running_game_get_node_property_samples` | `payload` | 122 | 0 | 122 | channel-evidence=122 but no boundary call |
-| `running_game_stop_input_recording` | `editor_state` | 7 | 0 | 1 | channel-evidence=1 but no boundary call |
-| `project_edit_script` | `file_effect` | 60 | 0 | 52 | channel-evidence=52 but no boundary call |
+| `editor_set_auto_dismiss_dialogs` | `editor_state` | 7 | 7 | 0 | 引擎未实现：-32000 Not implemented: editor_set_auto_dismiss_dialogs（不是缺证据；runs/_exercises/ex_editor/h7-task115/trace-editor.jsonl seq=74..80） |
 | `editor_simulate_key` | `editor_state` | 0 | 0 | 0 | calls<5 |
 | `editor_simulate_mouse_click` | `editor_state` | 0 | 0 | 0 | calls<5 |
 | `editor_simulate_mouse_move` | `editor_state` | 0 | 0 | 0 | calls<5 |
 | `editor_simulate_input_action` | `editor_state` | 0 | 0 | 0 | calls<5 |
-| `editor_add_input_action` | `file_effect` | 189 | 0 | 122 | channel-evidence=122 but no boundary call |
 | `editor_simulate_input_sequence` | `editor_state` | 0 | 0 | 0 | calls<5 |
-| `running_game_run_test_scenario` | `pixel_effect` | 185 | 0 | 1 | channel-evidence=1 but no boundary call |
-| `running_game_assert_screen_text` | `payload` | 80 | 0 | 65 | channel-evidence=65 but no boundary call |
-| `running_game_run_stress_test` | `pixel_effect` | 27 | 0 | 5 | channel-evidence=5 but no boundary call |
 | `project_get_android_preset_info` | `payload` | 6 | 6 | 0 | channel-evidence=0 on the declared channel `payload` |
-| `os_deploy_to_android_device` | `payload` | 6 | 6 | 0 | channel-evidence=0 on the declared channel `payload` |
-| `project_build_csharp` | `file_effect` | 67 | 0 | 63 | channel-evidence=63 but no boundary call |
-| `project_validate_scripts` | `payload` | 84 | 0 | 80 | channel-evidence=80 but no boundary call |
+| `os_deploy_to_android_device` | `file_effect` | 6 | 6 | 0 | channel-evidence=0 on the declared channel `file_effect` |
 
 **逐条工具的通道声明与判定依据**（177 条；`subject` 是这条工具作用的对象，`basis` 是为什么它是这条通道而不是另一条）：
 
@@ -166,7 +155,7 @@
 | 36 | `editor_execute_gdscript` | editor | execute | `payload` | 被求值的表达式返回值 | payload：被求值的表达式返回值。判定依据：契约是查询：回包本身就是测量结果，不存在「另一次调用」可等（TASK-111 的 READ_VERBS 规则）。内容级证据 = ok=true 且回包是实质载荷。 |
 | 37 | `editor_get_errors` | editor | get | `payload` | 错误列表 | payload：错误列表。判定依据：契约是查询：回包本身就是测量结果，不存在「另一次调用」可等（TASK-111 的 READ_VERBS 规则）。内容级证据 = ok=true 且回包是实质载荷。 |
 | 38 | `editor_get_output_log` | editor | get | `payload` | 编辑器 Output 面板的日志行 | payload：编辑器 Output 面板的日志行。判定依据：契约是查询：回包本身就是测量结果，不存在「另一次调用」可等（TASK-111 的 READ_VERBS 规则）。内容级证据 = ok=true 且回包是实质载荷。 |
-| 39 | `editor_capture_screenshot` | editor | capture | `file_effect` | 落盘的 PNG 截图 | file_effect：落盘的 PNG 截图。判定依据：契约写的是盘上的产物：它落盘之后可以被任何一次 project_read_* / project_get_filesystem_tree 重新读到，所以权威证据是文件本身，不是回包里的成功字样，也不是编辑器画面。 |
+| 39 | `editor_capture_screenshot` | editor | capture | `payload` | 截图帧：回包里的 base64 PNG（或落盘的那张 PNG） | payload：`capture` 属于 READ_VERBS（TASK-111 的规则），而契约写的是「返回 base64 PNG **或**保存到文件」——两条都是合法成功路径。25 次调用里只有 15 次留下文件效果，把 `file_effect` 当权威通道会把 10 次合法的内联成功判成「没有证据」（TASK-119 D5）。所以权威通道是回包载荷本身：`ok=true` 且回包是实质载荷（回包即测量结果）。落盘的那几次另有 `file_effect` 记录，可作旁证。 |
 | 40 | `running_game_capture_screenshot` | game | capture | `payload` | 帧截图载荷（回包里的 base64 图） | payload：帧截图载荷（回包里的 base64 图）。判定依据：契约是查询：回包本身就是测量结果，不存在「另一次调用」可等（TASK-111 的 READ_VERBS 规则）。内容级证据 = ok=true 且回包是实质载荷。 |
 | 41 | `editor_remove_output_log` | editor | remove | `editor_state` | 编辑器 Output 面板的日志缓冲 | editor_state：编辑器 Output 面板的日志缓冲。判定依据：契约改变的状态既不在盘上、也不（在这个工程的视口里）可靠地反映成像素：它是编辑器进程自己的 GUI / 插件 / 文件系统状态，或运行中游戏进程的内存态。这条通道只接受**另一次独立读调用**在自己的回包里**逐字**包含被写入的值的证据（会话 manifest 的 witness_read + expect，本工具会回到 trace 里再核一次）；写工具自己的回包不算。 |
 | 42 | `editor_reload_plugin` | editor | reload | `editor_state` | editor_plugins/enabled 里的 addon 与插件实例 | editor_state：editor_plugins/enabled 里的 addon 与插件实例。判定依据：契约改变的状态既不在盘上、也不（在这个工程的视口里）可靠地反映成像素：它是编辑器进程自己的 GUI / 插件 / 文件系统状态，或运行中游戏进程的内存态。这条通道只接受**另一次独立读调用**在自己的回包里**逐字**包含被写入的值的证据（会话 manifest 的 witness_read + expect，本工具会回到 trace 里再核一次）；写工具自己的回包不算。 |
@@ -298,7 +287,7 @@
 | 168 | `editor_get_test_report` | editor | get | `payload` | 游戏进程持久化的测试报告 / 本进程累加器 | payload：游戏进程持久化的测试报告 / 本进程累加器。判定依据：契约是查询：回包本身就是测量结果，不存在「另一次调用」可等（TASK-111 的 READ_VERBS 规则）。内容级证据 = ok=true 且回包是实质载荷。 |
 | 169 | `os_list_android_devices` | both | list | `payload` | adb devices -l 的解析结果（本机 adb 在、设备为空） | payload：adb devices -l 的解析结果（本机 adb 在、设备为空）。判定依据：契约是查询：回包本身就是测量结果，不存在「另一次调用」可等（TASK-111 的 READ_VERBS 规则）。内容级证据 = ok=true 且回包是实质载荷。 |
 | 170 | `project_get_android_preset_info` | both | get | `payload` | Android 预设信息（本机没有 Android 预设，只测到缺失） | payload：Android 预设信息（本机没有 Android 预设，只测到缺失）。判定依据：契约是查询：回包本身就是测量结果，不存在「另一次调用」可等（TASK-111 的 READ_VERBS 规则）。内容级证据 = ok=true 且回包是实质载荷。 |
-| 171 | `os_deploy_to_android_device` | both | deploy | `payload` | 部署报告（效果落在外接设备上；本机只能测到它的拒绝分支） | payload：部署报告（效果落在外接设备上；本机只能测到它的拒绝分支）。判定依据：契约是查询：回包本身就是测量结果，不存在「另一次调用」可等（TASK-111 的 READ_VERBS 规则）。内容级证据 = ok=true 且回包是实质载荷。 |
+| 171 | `os_deploy_to_android_device` | both | deploy | `file_effect` | 导出产物：部署写出的 APK / 推到设备上的产物（本机只能测到它的拒绝分支） | file_effect：deploy 是**动作动词**，不是读类动词，所以它的回包不是测量结果——`read_payload` 只对 READ_VERBS 里的动词累加，把它声明成 `payload` 会让这条工具的通道证据**恒为 0**（TASK-119 D1：无论真机接上、部署成功多少次都不会变）。它真正可观测的产物是部署写出的文件（导出的 APK）。声明依据是契约描述「将项目导出并部署到 Android 设备」。本机没有 Android 预设、没有设备，所以这条通道上目前只有拒绝分支（-32001 / -32602），台账如实记为 `计数达标缺证据`。 |
 | 172 | `project_build_csharp` | both | build | `file_effect` | dotnet build 产生的程序集 | file_effect：dotnet build 产生的程序集。判定依据：契约写的是盘上的产物：它落盘之后可以被任何一次 project_read_* / project_get_filesystem_tree 重新读到，所以权威证据是文件本身，不是回包里的成功字样，也不是编辑器画面。 |
 | 173 | `project_write_text_file` | both | write | `file_effect` | 被写出的文本文件 | file_effect：被写出的文本文件。判定依据：契约写的是盘上的产物：它落盘之后可以被任何一次 project_read_* / project_get_filesystem_tree 重新读到，所以权威证据是文件本身，不是回包里的成功字样，也不是编辑器画面。 |
 | 174 | `project_validate_scripts` | both | validate | `payload` | 批量校验判词 | payload：批量校验判词。判定依据：契约是查询：回包本身就是测量结果，不存在「另一次调用」可等（TASK-111 的 READ_VERBS 规则）。内容级证据 = ok=true 且回包是实质载荷。 |
@@ -312,53 +301,53 @@
 
 下表只列 `kind = witness_read` 的档位（**有**独立读调用可以点名的那一类，共 51 条）；另外 66 条是 `own_payload`（读类动词，回包即证据、没有第二次调用可点名），它们逐条列在 §0.2。
 
-| 写工具 | kind | 见证读调用 | run | 见证 seq | 内容级 `expect`（逐字） | `expect_absent` | 读回的是什么 |
-|---|---|---|---|---|---|---|---|
-| `editor_add_scene_instance` | `witness_read` | `editor_get_scene_tree` | runs/_exercises/ex_write5/c4-v5-task111 | 132 | `"Sub1"` | - | 挂载的实例必须出现在编辑场景树里（editor_get_scene_tree 列出被实例化出来的节点） |
-| `editor_play_scene` | `witness_read` | `editor_execute_gdscript` | runs/_exercises/ex_editor/h7-task115 | 59 | `"result":true` | - | the editor's own run bar reports playing after the tool answered playing:true, and reports not playing after the matching stop |
-| `editor_stop_scene` | `witness_read` | `editor_execute_gdscript` | runs/_exercises/ex_editor/h7-task115 | 61 | `"result":false` | - | after the stop the editor's own run bar reports is_playing_scene() == false |
-| `editor_rename_node` | `witness_read` | `editor_get_node_properties` | runs/_exercises/ex_write5/c4-v5-task111 | 138 | `"name":"Ren1"` | - | 读回被改名节点的 name（重命名后按新名字仍可寻址） |
-| `editor_connect_signal` | `witness_read` | `editor_list_signal_connections` | runs/_exercises/ex_grid/c6-task118 | 23 | `"method":"_c6_a"` ; `"source":"Ball"` | - | the connection the tool reported as persisted is in the editor's own connection table, read back with scope=user (the same call's counts block answers user:5), and the boundary probe's source (NoSuchNode) is not in it |
-| `editor_disconnect_signal` | `witness_read` | `editor_list_signal_connections` | runs/_exercises/ex_write6/c5-task111 | 13 | `"count":0` | - | 断开之后再读一次连接表：count=0（同一次运行、同一个节点） |
-| `editor_set_node_groups` | `witness_read` | `editor_get_node_groups` | runs/_exercises/ex_write5/c4-v5-task111 | 143 | `"ex_host"` | - | 读回被写节点的 groups 列表 |
-| `editor_set_node_selection` | `witness_read` | `editor_get_selection` | runs/_exercises/ex_editor/h7-task115 | 13 | `"name":"Box"` ; `"type":"ColorRect"` | - | the editor's own EditorSelection really answers with the node the tool selected |
-| `editor_remove_node_selection` | `witness_read` | `editor_get_selection` | runs/_exercises/ex_editor/h7-task115 | 22 | `"count":0` ; `"nodes":[]` | - | after the clear the editor's own EditorSelection really is empty, while the same reader had answered a non-empty list earlier in the run |
-| `editor_remove_output_log` | `witness_read` | `editor_get_output_log` | runs/_exercises/ex_editor/h7-task115 | 6 | `"in_process":true` | `Godot Engine v4.8.dev` | the Output panel of THIS editor process is readable in-process, and after the clear the engine's own log no longer holds the startup lines it held before it (count 10 -> 1 empty line) |
-| `editor_reload_plugin` | `witness_read` | `project_get_settings` | runs/_exercises/ex_editor/h7-task115 | 37 | `res://addons/probe_plugin/plugin.cfg` | - | the addon the tool disabled and enabled again is the one ProjectSettings really lists as enabled |
-| `editor_rescan_project_filesystem` | `witness_read` | `project_get_filesystem_tree` | runs/_exercises/ex_editor/h7-task115 | 82 | `editor_probe.tscn` | - | after the rescan the project's own filesystem tree still answers with the scene it swept |
-| `editor_set_viewport_3d_camera` | `witness_read` | `editor_get_viewport_3d_camera` | runs/_exercises/ex_3d/h1-task111 | 27 | `"position":{"x":1.0,"y":1.0,"z":1.0}` | - | 下一次调用读回上一次写入的 fov/position |
-| `running_game_create_input_recording` | `witness_read` | `running_game_stop_input_recording` | runs/_exercises/ex_rec/h9-task113 | 5 | `"event_count":2` | - | the stop call's answer carries the events of the session create started (event_count > 0) |
-| `running_game_stop_input_recording` | `witness_read` | `running_game_get_node_properties` | runs/_exercises/ex_rec/h9-task113 | 2 | `"position"` | - | the position read after the stop differs from the position read before the session (the recorded keys moved the player) |
-| `editor_set_node_script` | `witness_read` | `editor_execute_gdscript` | runs/_exercises/ex_write5/c4b-task115 | 12 | `S:res://src/exc4b.gd` | - | the node the tool named really carries that script: the engine's own Node.get_script().resource_path answers it (editor_get_node_properties cannot answer 'script' by name at all - measured -32001 in c4-v5-task111 seq 141) |
-| `editor_create_animation` | `witness_read` | `editor_list_animations` | runs/_exercises/ex_anim2/h2b-task111 | 23 | `"Anim5"` | - | 读回动画列表，新建的动画在其中 |
-| `editor_add_animation_track` | `witness_read` | `editor_get_animation_info` | runs/_exercises/ex_anim2/h2b-task111 | 29 | `"path":"Target:scale"` | - | 读回同一动画的轨道表 |
-| `editor_set_animation_keyframe` | `witness_read` | `editor_get_animation_info` | runs/_exercises/ex_anim2/h2b-task111 | 29 | `"easing":2.0` ; `"time":1.0` | - | 读回同一动画的关键帧 |
-| `editor_remove_animation` | `witness_read` | `editor_list_animations` | runs/_exercises/ex_anim2/h2c-task115 | 14 | `"node_path":"Player"` | `DelA` ; `DelB` ; `DelC` ; `DelD` ; `DelE` | the same AnimationPlayer is read back after the removals, and none of the five names this run created and removed is in the library any more (the run's own earlier read, before the removals, is skipped because it still holds them) |
-| `editor_set_physics_layers` | `witness_read` | `editor_get_node_properties` | runs/_exercises/ex_write5/c4-v5-task111 | 139 | `"collision_layer":1` | - | 读回同一个节点的 collision_layer / collision_mask |
-| `editor_setup_physics_body` | `witness_read` | `editor_get_scene_tree` | runs/_exercises/ex_write5/c4-v5-task111 | 132 | `"PB1"` | - | 建出来的物理体节点必须出现在编辑场景树里 |
-| `editor_add_mesh_instance` | `witness_read` | `editor_get_scene_tree` | runs/_exercises/ex_3d/h1b2-task115 | 11 | `"name":"N1"` ; `"type":"MeshInstance3D"` | - | the MeshInstance3D the tool created is in the edited scene tree under the exact name it was given |
-| `editor_setup_camera_3d` | `witness_read` | `editor_execute_gdscript` | runs/_exercises/ex_3d/h1b2-task115 | 25 | `C:Camera3D` | - | the node the tool created under the named parent really is a Camera3D |
-| `editor_setup_lighting` | `witness_read` | `editor_execute_gdscript` | runs/_exercises/ex_3d/h1b2-task115 | 32 | `L:DirectionalLight3D` | - | the node the tool created under the named parent really is the DirectionalLight3D the first call asked for |
-| `editor_set_material_3d` | `witness_read` | `editor_execute_gdscript` | runs/_exercises/ex_3d/h1b2-task115 | 18 | `M:res://assets/mat3d_b.tres` | - | the engine's own MeshInstance3D::get_surface_override_material(0) answers with the material this run assigned |
-| `editor_setup_world_environment` | `witness_read` | `editor_execute_gdscript` | runs/_exercises/ex_3d/h1b2-task115 | 39 | `E:WorldEnvironment` | - | the node the tool created for world_env_path really is a WorldEnvironment |
-| `editor_add_gridmap` | `witness_read` | `editor_get_scene_tree` | runs/_exercises/ex_grid/c6-task118 | 9 | `"name":"GM6"` ; `"type":"GridMap"` | - | the GridMap the tool created is in the edited scene tree under the exact name it was given, with the engine's own class name; the same tree lists every sibling it created (GM7..GM10) and does NOT list the boundary probe's GMX |
-| `editor_add_audio_player` | `witness_read` | `editor_get_node_properties` | runs/_exercises/ex_audio/h5-task113 | 42 | `AudioStreamPlayer2D` | - | the node editor_add_audio_player created must be in the scene as an AudioStreamPlayer2D |
-| `editor_add_audio_bus` | `witness_read` | `editor_get_audio_bus_layout` | runs/_exercises/ex_audio/h5-task113 | 22 | `"Music"` | - | the bus editor_add_audio_bus created must appear in the engine's bus layout |
-| `editor_set_audio_bus_property` | `witness_read` | `editor_get_audio_bus_layout` | runs/_exercises/ex_audio/h5-task113 | 43 | `"volume_db":-6` | - | the written volume_db must be the bus's real value in the layout |
-| `editor_add_audio_bus_effect` | `witness_read` | `editor_get_audio_bus_layout` | runs/_exercises/ex_audio/h5-task113 | 22 | `AudioEffectAmplify` | - | the effect must appear in the bus's effect list with the engine's class name |
-| `editor_set_control_theme` | `witness_read` | `editor_execute_gdscript` | runs/_exercises/ex_write5/c4b-task115 | 19 | `T:res://themes/c4b.tres` | - | the Control the tool named really carries that theme: the engine's own Control.theme.resource_path answers it |
-| `editor_create_animation_tree` | `witness_read` | `editor_get_animation_tree_structure` | runs/_exercises/ex_anim2/h2b-task111 | 88 | `"parameters/BT/B1/blend_amount"` | - | 读回 AnimationTree 的结构（tree_root / 状态机） |
-| `editor_add_state_machine_state` | `witness_read` | `editor_get_animation_tree_structure` | runs/_exercises/ex_anim2/h2b-task111 | 88 | `"Walk"` | - | 读回状态机里的状态列表 |
-| `editor_remove_state_machine_state` | `witness_read` | `editor_get_animation_tree_structure` | runs/_exercises/ex_anim2/h2b-task111 | 91 | `"node_path":"AT4"` | `Extra0` ; `Extra4` | 读回状态机里的状态列表，被删的状态不在了 |
-| `editor_add_state_machine_transition` | `witness_read` | `editor_get_animation_tree_structure` | runs/_exercises/ex_anim2/h2b-task111 | 88 | `"Idle"` | - | 读回状态机里的迁移列表 |
-| `editor_remove_state_machine_transition` | `witness_read` | `editor_get_animation_tree_structure` | runs/_exercises/ex_anim2/h2b-task111 | 88 | `"transition_count":5` | `"from":"Idle","index":0,"switch_mode":"immediate","to":"Walk"` | 读回状态机里的迁移列表，被删的迁移不在了 |
-| `editor_set_blend_tree_node` | `witness_read` | `editor_get_animation_tree_structure` | runs/_exercises/ex_anim2/h2b-task111 | 88 | `parameters/BT/T1/scale` | - | 读回混合树节点真的挂在树上 |
-| `editor_set_animation_tree_parameter` | `witness_read` | `editor_get_animation_tree_structure` | runs/_exercises/ex_anim2/h2b-task111 | 88 | `parameters/Walk/backward` | - | 读回参数表里出现被写的参数 |
-| `editor_setup_navigation_region` | `witness_read` | `editor_get_navigation_info` | runs/_exercises/ex_nav/h4-task113 | 27 | `"RegionA"` | - | the created NavigationRegion2D must appear in editor_get_navigation_info's region list with its real class and layer mask |
-| `editor_setup_navigation_agent` | `witness_read` | `editor_get_navigation_info` | runs/_exercises/ex_nav/h4-task113 | 27 | `"max_speed"` | - | the created NavigationAgent2D must appear in the agent list with the radius and max_speed the tool wrote |
-| `editor_set_navigation_layers` | `witness_read` | `editor_get_navigation_info` | runs/_exercises/ex_nav/h4-task113 | 27 | `"navigation_layers":2` | - | the mask editor_set_navigation_layers wrote must be in the read-back record |
-| `editor_create_particles` | `witness_read` | `editor_get_particle_info` | runs/_exercises/ex_particles/h6-task113 | 34 | `"process_material_slot":"process_material"` | - | the created system must answer as a GPUParticles2D with its own process_material |
-| `editor_set_node_script_batch` | `witness_read` | `editor_execute_gdscript` | runs/_exercises/ex_grid/c6-task118 | 16 | `S:res://src/Paddle.cs` | - | the node the batch attached to (Background) really carries that script: the engine's own Node.get_script().resource_path answers it. editor_get_node_properties is NOT the witness here - TASK-115 measured it answering -32001 for the property named 'script' (c4-v5-task111 seq 141) |
+| 写工具 | kind | 见证读调用 | 见证 verb | run | 见证 seq | 内容级 `expect`（逐字） | `expect_absent` | 读回的是什么 |
+|---|---|---|---|---|---|---|---|---|
+| `editor_add_scene_instance` | `witness_read` | `editor_get_scene_tree` | `get` | runs/_exercises/ex_write5/c4-v5-task111 | 132 | `/Main/Sub1/C4Node2` ; `"name":"Sub1"` | - | 挂载的实例必须出现在编辑场景树里（editor_get_scene_tree 列出被实例化出来的节点）：expect 现在带值——实例自己的子节点 C4Node2（来自 res://scenes/c4_sub.tscn）挂在节点路径 /Main/Sub1/C4Node2 之下，树里那个节点的名字是 Sub1；旧的 `"Sub1"` 只是裸名字，被 TASK-120 A3 拒签 |
+| `editor_play_scene` | `witness_read` | `editor_execute_gdscript` | `execute` | runs/_exercises/ex_editor/h7-task115 | 59 | `"result":true` | - | the editor's own run bar reports playing after the tool answered playing:true, and reports not playing after the matching stop |
+| `editor_stop_scene` | `witness_read` | `editor_execute_gdscript` | `execute` | runs/_exercises/ex_editor/h7-task115 | 61 | `"result":false` | - | after the stop the editor's own run bar reports is_playing_scene() == false |
+| `editor_rename_node` | `witness_read` | `editor_get_node_properties` | `get` | runs/_exercises/ex_write5/c4-v5-task111 | 138 | `"name":"Ren1"` | - | 读回被改名节点的 name（重命名后按新名字仍可寻址） |
+| `editor_connect_signal` | `witness_read` | `editor_list_signal_connections` | `list` | runs/_exercises/ex_grid/c6-task118 | 23 | `"method":"_c6_a"` ; `"source":"Ball"` | - | the connection the tool reported as persisted is in the editor's own connection table, read back with scope=user (the same call's counts block answers user:5), and the boundary probe's source (NoSuchNode) is not in it |
+| `editor_disconnect_signal` | `witness_read` | `editor_list_signal_connections` | `list` | runs/_exercises/ex_write6/c5-task111 | 13 | `"count":0` | - | 断开之后再读一次连接表：count=0（同一次运行、同一个节点） |
+| `editor_set_node_groups` | `witness_read` | `editor_get_node_groups` | `get` | runs/_exercises/ex_write5/c4-v5-task111 | 143 | `"node_path":"Host"` ; `"groups":["ex_host"]` | - | 读回被写节点的 groups 列表：expect 现在带值——Host 这个节点路径与它的 groups 数组内容；旧的 `"ex_host"` 只是裸名字，被 TASK-120 A3 拒签 |
+| `editor_set_node_selection` | `witness_read` | `editor_get_selection` | `get` | runs/_exercises/ex_editor/h7-task115 | 13 | `"name":"Box"` ; `"type":"ColorRect"` | - | the editor's own EditorSelection really answers with the node the tool selected |
+| `editor_remove_node_selection` | `witness_read` | `editor_get_selection` | `get` | runs/_exercises/ex_editor/h7-task115 | 22 | `"count":0` ; `"nodes":[]` | - | after the clear the editor's own EditorSelection really is empty, while the same reader had answered a non-empty list earlier in the run |
+| `editor_remove_output_log` | `witness_read` | `editor_get_output_log` | `get` | runs/_exercises/ex_editor/h7-task115 | 6 | `"in_process":true` | `Godot Engine v4.8.dev` | the Output panel of THIS editor process is readable in-process, and after the clear the engine's own log no longer holds the startup lines it held before it (count 10 -> 1 empty line) |
+| `editor_reload_plugin` | `witness_read` | `project_get_settings` | `get` | runs/_exercises/ex_editor/h7-task115 | 37 | `res://addons/probe_plugin/plugin.cfg` | - | the addon the tool disabled and enabled again is the one ProjectSettings really lists as enabled |
+| `editor_rescan_project_filesystem` | `witness_read` | `project_get_filesystem_tree` | `get` | runs/_exercises/ex_editor/h7-task115 | 82 | `editor_probe.tscn` | - | after the rescan the project's own filesystem tree still answers with the scene it swept |
+| `editor_set_viewport_3d_camera` | `witness_read` | `editor_get_viewport_3d_camera` | `get` | runs/_exercises/ex_3d/h1-task111 | 27 | `"position":{"x":1.0,"y":1.0,"z":1.0}` | - | 下一次调用读回上一次写入的 fov/position |
+| `running_game_create_input_recording` | `witness_read` | `running_game_get_node_properties` | `get` | runs/_exercises/ex_rec/h9-task113 | 18 | `"x":346.0` | - | the read call at seq 18 (after the create->play->stop chain) answers x=346.0, while the same reader answered x=100.0 before the session started (seq 2): the recorded session the created recorder captured really drove the game. The old witness was running_game_stop_input_recording's own response - a WRITE tool, which the TASK-120 A1 rule rejects. Boundary: the engine exposes no read tool for the recorder itself, so a read call can show this consequence of the recording, not the recorder's internal state |
+| `running_game_stop_input_recording` | `witness_read` | `running_game_get_node_properties` | `get` | runs/_exercises/ex_rec/h9-task113 | 18 | `"x":346.0` | - | the read at seq 18 - taken after the stop call at seq 17 - answers x=346.0, while the same reader answered x=100.0 before the session (seq 2): the recorded session this stop closed really had driven the game. `"position"` alone was rejected as a bare key (TASK-120 A3). Boundary: no read tool exposes the recorder's state, so this is the consequence a read call can show |
+| `editor_set_node_script` | `witness_read` | `editor_execute_gdscript` | `execute` | runs/_exercises/ex_write5/c4b-task115 | 12 | `S:res://src/exc4b.gd` | - | the node the tool named really carries that script: the engine's own Node.get_script().resource_path answers it (editor_get_node_properties cannot answer 'script' by name at all - measured -32001 in c4-v5-task111 seq 141) |
+| `editor_create_animation` | `witness_read` | `editor_list_animations` | `list` | runs/_exercises/ex_anim2/h2b-task111 | 23 | `"animations":["Anim1","Anim2","Anim3","Anim4","Anim5"` | - | the animation list read back after the eight creates starts with the five animations in creation order, Anim5 among them; `"Anim5"` alone was rejected as a bare name (TASK-120 A3) |
+| `editor_add_animation_track` | `witness_read` | `editor_get_animation_info` | `get` | runs/_exercises/ex_anim2/h2b-task111 | 29 | `"path":"Target:scale"` | - | 读回同一动画的轨道表 |
+| `editor_set_animation_keyframe` | `witness_read` | `editor_get_animation_info` | `get` | runs/_exercises/ex_anim2/h2b-task111 | 29 | `"easing":2.0` ; `"time":1.0` | - | 读回同一动画的关键帧 |
+| `editor_remove_animation` | `witness_read` | `editor_list_animations` | `list` | runs/_exercises/ex_anim2/h2c-task115 | 14 | `"node_path":"Player"` | `DelA` ; `DelB` ; `DelC` ; `DelD` ; `DelE` | the same AnimationPlayer is read back after the removals, and none of the five names this run created and removed is in the library any more (the run's own earlier read, before the removals, is skipped because it still holds them) |
+| `editor_set_physics_layers` | `witness_read` | `editor_get_node_properties` | `get` | runs/_exercises/ex_write5/c4-v5-task111 | 139 | `"collision_layer":1` | - | 读回同一个节点的 collision_layer / collision_mask |
+| `editor_setup_physics_body` | `witness_read` | `editor_get_scene_tree` | `get` | runs/_exercises/ex_write5/c4-v5-task111 | 132 | `/Main/PB1/CollisionShape2D` ; `"name":"PB1"` | - | 建出来的物理体节点必须出现在编辑场景树里：expect 现在带值——工具建出的 RigidBody2D（PB1）连同它自己的 CollisionShape2D 子节点，节点路径 /Main/PB1/CollisionShape2D；旧的 `"PB1"` 只是裸名字，被 TASK-120 A3 拒签 |
+| `editor_add_mesh_instance` | `witness_read` | `editor_get_scene_tree` | `get` | runs/_exercises/ex_3d/h1b2-task115 | 11 | `"name":"N1"` ; `"type":"MeshInstance3D"` | - | the MeshInstance3D the tool created is in the edited scene tree under the exact name it was given |
+| `editor_setup_camera_3d` | `witness_read` | `editor_execute_gdscript` | `execute` | runs/_exercises/ex_3d/h1b2-task115 | 25 | `C:Camera3D` | - | the node the tool created under the named parent really is a Camera3D |
+| `editor_setup_lighting` | `witness_read` | `editor_execute_gdscript` | `execute` | runs/_exercises/ex_3d/h1b2-task115 | 32 | `L:DirectionalLight3D` | - | the node the tool created under the named parent really is the DirectionalLight3D the first call asked for |
+| `editor_set_material_3d` | `witness_read` | `editor_execute_gdscript` | `execute` | runs/_exercises/ex_3d/h1b2-task115 | 18 | `M:res://assets/mat3d_b.tres` | - | the engine's own MeshInstance3D::get_surface_override_material(0) answers with the material this run assigned |
+| `editor_setup_world_environment` | `witness_read` | `editor_execute_gdscript` | `execute` | runs/_exercises/ex_3d/h1b2-task115 | 39 | `E:WorldEnvironment` | - | the node the tool created for world_env_path really is a WorldEnvironment |
+| `editor_add_gridmap` | `witness_read` | `editor_get_scene_tree` | `get` | runs/_exercises/ex_grid/c6-task118 | 9 | `"name":"GM6"` ; `"type":"GridMap"` | - | the GridMap the tool created is in the edited scene tree under the exact name it was given, with the engine's own class name; the same tree lists every sibling it created (GM7..GM10) and does NOT list the boundary probe's GMX |
+| `editor_add_audio_player` | `witness_read` | `editor_get_node_properties` | `get` | runs/_exercises/ex_audio/h5-task113 | 42 | `AudioStreamPlayer2D` | - | the node editor_add_audio_player created must be in the scene as an AudioStreamPlayer2D |
+| `editor_add_audio_bus` | `witness_read` | `editor_get_audio_bus_layout` | `get` | runs/_exercises/ex_audio/h5-task113 | 22 | `"name":"Music"` ; `"index":2` | - | the bus editor_add_audio_bus created is in the engine's bus layout with the name and the index the layout assigns it; the literal carries the VALUE (TASK-120 A3: the bare name `"Music"` was rejected - it is matched by any payload carrying that string) |
+| `editor_set_audio_bus_property` | `witness_read` | `editor_get_audio_bus_layout` | `get` | runs/_exercises/ex_audio/h5-task113 | 43 | `"volume_db":-6` | - | the written volume_db must be the bus's real value in the layout |
+| `editor_add_audio_bus_effect` | `witness_read` | `editor_get_audio_bus_layout` | `get` | runs/_exercises/ex_audio/h5-task113 | 22 | `AudioEffectAmplify` | - | the effect must appear in the bus's effect list with the engine's class name |
+| `editor_set_control_theme` | `witness_read` | `editor_execute_gdscript` | `execute` | runs/_exercises/ex_write5/c4b-task115 | 19 | `T:res://themes/c4b.tres` | - | the Control the tool named really carries that theme: the engine's own Control.theme.resource_path answers it |
+| `editor_create_animation_tree` | `witness_read` | `editor_get_animation_tree_structure` | `get` | runs/_exercises/ex_anim2/h2b-task111 | 88 | `"parameters/BT/B1/blend_amount"` | - | 读回 AnimationTree 的结构（tree_root / 状态机） |
+| `editor_add_state_machine_state` | `witness_read` | `editor_get_animation_tree_structure` | `get` | runs/_exercises/ex_anim2/h2b-task111 | 88 | `"name":"Walk"` ; `"animation":"Anim2"` | - | the state editor_add_state_machine_state created for AT1 (state_name Walk, animation Anim2) is in the engine's state list with its animation binding; `"Walk"` alone was rejected as a bare name (TASK-120 A3) |
+| `editor_remove_state_machine_state` | `witness_read` | `editor_get_animation_tree_structure` | `get` | runs/_exercises/ex_anim2/h2b-task111 | 91 | `"node_path":"AT4"` | `Extra0` ; `Extra4` | 读回状态机里的状态列表，被删的状态不在了 |
+| `editor_add_state_machine_transition` | `witness_read` | `editor_get_animation_tree_structure` | `get` | runs/_exercises/ex_anim2/h2b-task111 | 88 | `"from":"Jump"` ; `"to":"Walk"` | - | the Jump -> Walk transition editor_add_state_machine_transition created is in the engine's transition list (`from`/`to` with their values); `"Idle"` alone was rejected as a bare name (TASK-120 A3) |
+| `editor_remove_state_machine_transition` | `witness_read` | `editor_get_animation_tree_structure` | `get` | runs/_exercises/ex_anim2/h2b-task111 | 88 | `"transition_count":5` | `"from":"Idle","index":0,"switch_mode":"immediate","to":"Walk"` | 读回状态机里的迁移列表，被删的迁移不在了 |
+| `editor_set_blend_tree_node` | `witness_read` | `editor_get_animation_tree_structure` | `get` | runs/_exercises/ex_anim2/h2b-task111 | 88 | `parameters/BT/T1/scale` | - | 读回混合树节点真的挂在树上 |
+| `editor_set_animation_tree_parameter` | `witness_read` | `editor_get_animation_tree_structure` | `get` | runs/_exercises/ex_anim2/h2b-task111 | 88 | `parameters/Walk/backward` | - | 读回参数表里出现被写的参数 |
+| `editor_setup_navigation_region` | `witness_read` | `editor_get_navigation_info` | `get` | runs/_exercises/ex_nav/h4-task113 | 27 | `"path":"RegionA"` ; `"type":"NavigationRegion2D"` | - | the NavigationRegion2D editor_setup_navigation_region created (RegionA) is in the engine's region list with the engine's own class name; `"RegionA"` alone was rejected as a bare name (TASK-120 A3) |
+| `editor_setup_navigation_agent` | `witness_read` | `editor_get_navigation_info` | `get` | runs/_exercises/ex_nav/h4-task113 | 27 | `"path":"Player/NA3"` ; `"max_speed":320.0` | - | the NavigationAgent2D editor_setup_navigation_agent created (NA3) is in the engine's agent list with the max_speed 320.0 the tool wrote; `"max_speed"` alone was rejected as a bare key (TASK-120 A3) |
+| `editor_set_navigation_layers` | `witness_read` | `editor_get_navigation_info` | `get` | runs/_exercises/ex_nav/h4-task113 | 27 | `"navigation_layers":2` | - | the mask editor_set_navigation_layers wrote must be in the read-back record |
+| `editor_create_particles` | `witness_read` | `editor_get_particle_info` | `get` | runs/_exercises/ex_particles/h6-task113 | 34 | `"process_material_slot":"process_material"` | - | the created system must answer as a GPUParticles2D with its own process_material |
+| `editor_set_node_script_batch` | `witness_read` | `editor_execute_gdscript` | `execute` | runs/_exercises/ex_grid/c6-task118 | 16 | `S:res://src/Paddle.cs` | - | the node the batch attached to (Background) really carries that script: the engine's own Node.get_script().resource_path answers it. editor_get_node_properties is NOT the witness here - TASK-115 measured it answering -32001 for the property named 'script' (c4-v5-task111 seq 141) |
 
 ### 0.2 逐档工具清单（TASK-112 B）
 
@@ -379,8 +368,8 @@
 
 | 状态 | 工具数 |
 |---|---|
-| 达标 | 152 |
-| 计数达标缺证据 | 20 |
+| 达标 | 169 |
+| 计数达标缺证据 | 3 |
 | 未达(1-4) | 0 |
 | 未达(0) | 5 |
 
@@ -404,18 +393,18 @@
 | 8 | `project_convert_path_to_uid` | both | convert | 6 | 5 | 1 | `readback` | own_payload ×5（读类回包即证据） | runs/_exercises/ex_files/c1-task110(6) | `payload` | 5 | 达标 |
 | 9 | `editor_get_scene_tree` | editor | get | 113 | 109 | 4 | `readback` | own_payload ×109（读类回包即证据） | runs/_exercises/ex_write5/c4-v5-task111(7) ; runs/_exercises/ex_scene/c23-task110(6) | `payload` | 109 | 达标 |
 | 10 | `project_read_scene_file_content` | both | read | 6 | 5 | 1 | `readback` | own_payload ×5（读类回包即证据） | runs/_exercises/ex_files/c1-task110(6) | `payload` | 5 | 达标 |
-| 11 | `editor_open_scene` | editor | open | 86 | 9 | 0 | `pixel_effect` | ok_effect_observed ×9 | runs/breakout/breakout-clean-task097(2) ; runs/pong/pong-clean-task097(2) | `pixel_effect` | 9 | 计数达标缺证据 |
+| 11 | `editor_open_scene` | editor | open | 87 | 9 | 1 | `pixel_effect` | ok_effect_observed ×9 | runs/breakout/breakout-clean-task097(2) ; runs/pong/pong-clean-task097(2) | `pixel_effect` | 9 | 达标 |
 | 12 | `project_delete_scene_file` | both | delete | 10 | 8 | 2 | `file_effect` | ok_file_effect_observed ×8 | runs/_exercises/ex_files/c1-task110(6) ; runs/pong/d3-after(2) | `file_effect` | 8 | 达标 |
 | 13 | `editor_add_scene_instance` | editor | add | 30 | 0 | 5 | `readback` | witness `editor_get_scene_tree`@runs/_exercises/ex_write5/c4-v5-task111 seq=132 | runs/_exercises/ex_write/c4-task111(6) ; runs/_exercises/ex_write2/c4b-task111(6) | `editor_state` | 1 | 达标 |
 | 14 | `project_get_scene_exports` | both | get | 6 | 5 | 1 | `readback` | own_payload ×5（读类回包即证据） | runs/_exercises/ex_files/c1-task110(6) | `payload` | 5 | 达标 |
 | 15 | `editor_play_scene` | editor | play | 7 | 0 | 2 | `readback` | witness `editor_execute_gdscript`@runs/_exercises/ex_editor/h7-task115 seq=59 | runs/_exercises/ex_editor/h7-task115(7) | `editor_state` | 1 | 达标 |
 | 16 | `editor_stop_scene` | editor | stop | 7 | 0 | 1 | `readback` | witness `editor_execute_gdscript`@runs/_exercises/ex_editor/h7-task115 seq=61 | runs/_exercises/ex_editor/h7-task115(7) | `editor_state` | 1 | 达标 |
-| 17 | `editor_save_scene` | editor | save | 123 | 77 | 0 | `file_effect` | ok_file_effect_observed ×77 | runs/lunarlander/ll-task104-r1(3) ; runs/missilecommand/mc-task103-r1(3) | `file_effect` | 77 | 计数达标缺证据 |
+| 17 | `editor_save_scene` | editor | save | 124 | 77 | 1 | `file_effect` | ok_file_effect_observed ×77 | runs/lunarlander/ll-task104-r1(3) ; runs/missilecommand/mc-task103-r1(3) | `file_effect` | 77 | 达标 |
 | 18 | `project_create_scene_file` | both | create | 20 | 18 | 2 | `file_effect` | ok_file_effect_observed ×18 | runs/_exercises/ex_files/c1-task110(6) ; runs/_exercises/ex_files/c1c-task110(6) | `file_effect` | 18 | 达标 |
 | 19 | `editor_add_node` | editor | add | 36 | 10 | 5 | `pixel_effect` | ok_effect_observed ×10 | runs/_exercises/ex_write/c4-task111(6) ; runs/_exercises/ex_write2/c4b-task111(6) | `pixel_effect` | 10 | 达标 |
-| 20 | `editor_delete_node` | editor | delete | 65 | 5 | 0 | `pixel_effect` | ok_effect_observed ×5 | runs/snake/snake-clean-task097(37) ; runs/breakout/breakout-clean-task097(20) | `pixel_effect` | 5 | 计数达标缺证据 |
+| 20 | `editor_delete_node` | editor | delete | 66 | 5 | 1 | `pixel_effect` | ok_effect_observed ×5 | runs/snake/snake-clean-task097(37) ; runs/breakout/breakout-clean-task097(20) | `pixel_effect` | 5 | 达标 |
 | 21 | `editor_rename_node` | editor | rename | 30 | 0 | 7 | `readback` | witness `editor_get_node_properties`@runs/_exercises/ex_write5/c4-v5-task111 seq=138 | runs/_exercises/ex_write/c4-task111(6) ; runs/_exercises/ex_write2/c4b-task111(6) | `editor_state` | 1 | 达标 |
-| 22 | `editor_set_node_property` | editor | set | 41 | 12 | 0 | `pixel_effect` | ok_effect_observed ×12 | runs/pong/pong-clean-task097(3) ; runs/pong/pong-control-task093(3) | `pixel_effect` | 12 | 计数达标缺证据 |
+| 22 | `editor_set_node_property` | editor | set | 42 | 12 | 1 | `pixel_effect` | ok_effect_observed ×12 | runs/pong/pong-clean-task097(3) ; runs/pong/pong-control-task093(3) | `pixel_effect` | 12 | 达标 |
 | 23 | `editor_get_node_properties` | editor | get | 74 | 62 | 12 | `readback` | own_payload ×62（读类回包即证据） | runs/breakout/breakout-clean-task097(10) ; runs/pong/pong-clean-task097(9) | `payload` | 62 | 达标 |
 | 24 | `editor_duplicate_node` | editor | duplicate | 30 | 5 | 7 | `pixel_effect` | ok_effect_observed ×5 | runs/_exercises/ex_write/c4-task111(6) ; runs/_exercises/ex_write2/c4b-task111(6) | `pixel_effect` | 5 | 达标 |
 | 25 | `editor_connect_signal` | editor | connect | 45 | 0 | 7 | `readback` | witness `editor_list_signal_connections`@runs/_exercises/ex_grid/c6-task118 seq=23 | runs/_exercises/ex_grid/c6-task118(6) ; runs/_exercises/ex_write/c4-task111(6) | `editor_state` | 1 | 达标 |
@@ -430,10 +419,10 @@
 | 34 | `editor_set_node_selection` | editor | set | 9 | 0 | 1 | `readback` | witness `editor_get_selection`@runs/_exercises/ex_editor/h7-task115 seq=13 | runs/_exercises/ex_editor/h7-task115(9) | `editor_state` | 1 | 达标 |
 | 35 | `editor_remove_node_selection` | editor | remove | 6 | 0 | 1 | `readback` | witness `editor_get_selection`@runs/_exercises/ex_editor/h7-task115 seq=22 | runs/_exercises/ex_editor/h7-task115(6) | `editor_state` | 1 | 达标 |
 | 36 | `editor_execute_gdscript` | editor | execute | 26 | 24 | 2 | `readback` | own_payload ×24（读类回包即证据） | runs/_exercises/ex_scene/c23-task110(6) ; runs/_exercises/ex_scene2/c23-after-task110(6) | `payload` | 24 | 达标 |
-| 37 | `editor_get_errors` | editor | get | 50 | 50 | 0 | `readback` | own_payload ×50（读类回包即证据） | runs/asteroids/ast-task098-r1(1) ; runs/asteroids/ast-task098-r2(1) | `payload` | 50 | 计数达标缺证据 |
+| 37 | `editor_get_errors` | editor | get | 51 | 50 | 1 | `readback` | own_payload ×50（读类回包即证据） | runs/_exercises/ex_grid/c8-task120(1) ; runs/asteroids/ast-task098-r1(1) | `payload` | 50 | 达标 |
 | 38 | `editor_get_output_log` | editor | get | 38 | 34 | 4 | `readback` | own_payload ×34（读类回包即证据） | runs/_exercises/ex_scene/c23-task110(6) ; runs/_exercises/ex_scene2/c23-after-task110(6) | `payload` | 34 | 达标 |
-| 39 | `editor_capture_screenshot` | editor | capture | 25 | 25 | 0 | `file_effect` | ok_file_effect_observed ×15 | runs/breakout/breakout-clean-task097(1) ; runs/breakout/breakout-task093(1) | `file_effect` | 15 | 计数达标缺证据 |
-| 40 | `running_game_capture_screenshot` | game | capture | 298 | 298 | 0 | `pixel_effect` | ok_effect_observed ×1 | runs/match3/m3-task102-r1(7) ; runs/match3/m3-task102-r2(7) | `payload` | 298 | 计数达标缺证据 |
+| 39 | `editor_capture_screenshot` | editor | capture | 26 | 25 | 1 | `file_effect` | ok_file_effect_observed ×15 | runs/_exercises/ex_grid/c8-task120(1) ; runs/breakout/breakout-clean-task097(1) | `payload` | 25 | 达标 |
+| 40 | `running_game_capture_screenshot` | game | capture | 299 | 298 | 1 | `pixel_effect` | ok_effect_observed ×1 | runs/match3/m3-task102-r1(7) ; runs/match3/m3-task102-r2(7) | `payload` | 298 | 达标 |
 | 41 | `editor_remove_output_log` | editor | remove | 6 | 0 | 1 | `readback` | witness `editor_get_output_log`@runs/_exercises/ex_editor/h7-task115 seq=6 | runs/_exercises/ex_editor/h7-task115(6) | `editor_state` | 1 | 达标 |
 | 42 | `editor_reload_plugin` | editor | reload | 6 | 0 | 1 | `readback` | witness `project_get_settings`@runs/_exercises/ex_editor/h7-task115 seq=37 | runs/_exercises/ex_editor/h7-task115(6) | `editor_state` | 1 | 达标 |
 | 43 | `editor_rescan_project_filesystem` | editor | rescan | 6 | 0 | 1 | `readback` | witness `project_get_filesystem_tree`@runs/_exercises/ex_editor/h7-task115 seq=82 | runs/_exercises/ex_editor/h7-task115(6) | `editor_state` | 1 | 达标 |
@@ -442,14 +431,14 @@
 | 46 | `editor_set_auto_dismiss_dialogs` | editor | set | 7 | 0 | 7 | `count_only` | - | runs/_exercises/ex_editor/h7-task115(7) | `editor_state` | 0 | 计数达标缺证据 |
 | 47 | `editor_get_viewport_3d_camera` | editor | get | 6 | 5 | 1 | `readback` | own_payload ×5（读类回包即证据） | runs/_exercises/ex_3d/h1-task111(6) | `payload` | 5 | 达标 |
 | 48 | `editor_set_viewport_3d_camera` | editor | set | 6 | 0 | 1 | `readback` | witness `editor_get_viewport_3d_camera`@runs/_exercises/ex_3d/h1-task111 seq=27 | runs/_exercises/ex_3d/h1-task111(6) | `editor_state` | 1 | 达标 |
-| 49 | `running_game_get_scene_tree` | game | get | 123 | 123 | 0 | `pixel_effect` | ok_effect_observed ×1 | runs/asteroids/ast-task098-r1(2) ; runs/asteroids/ast-task098-r2(2) | `payload` | 123 | 计数达标缺证据 |
+| 49 | `running_game_get_scene_tree` | game | get | 124 | 123 | 1 | `pixel_effect` | ok_effect_observed ×1 | runs/asteroids/ast-task098-r1(2) ; runs/asteroids/ast-task098-r2(2) | `payload` | 123 | 达标 |
 | 50 | `running_game_get_node_properties` | game | get | 58 | 56 | 2 | `pixel_effect` | ok_effect_observed ×8 | runs/_exercises/ex_scene/c23-task110(6) ; runs/_exercises/ex_scene2/c23-after-task110(6) | `payload` | 56 | 达标 |
 | 51 | `running_game_set_node_property` | game | set | 49 | 28 | 2 | `pixel_effect` | ok_effect_observed ×28 | runs/pong/pong-clean-task097(5) ; runs/pong/pong-control-task093(5) | `pixel_effect` | 28 | 达标 |
 | 52 | `running_game_capture_frames` | game | capture | 36 | 30 | 6 | `readback` | own_payload ×30（读类回包即证据） | runs/_exercises/ex_scene/c23-task110(6) ; runs/_exercises/ex_scene2/c23-after-task110(6) | `payload` | 30 | 达标 |
-| 53 | `running_game_get_node_property_samples` | game | get | 122 | 122 | 0 | `pixel_effect` | ok_effect_observed ×35 | runs/spaceinvaders/si-task097-r1(5) ; runs/tetris/tetris-task096(4) | `payload` | 122 | 计数达标缺证据 |
+| 53 | `running_game_get_node_property_samples` | game | get | 123 | 122 | 1 | `pixel_effect` | ok_effect_observed ×35 | runs/spaceinvaders/si-task097-r1(5) ; runs/tetris/tetris-task096(4) | `payload` | 122 | 达标 |
 | 54 | `running_game_execute_gdscript` | game | execute | 1626 | 1593 | 33 | `pixel_effect` | ok_effect_observed ×873 | runs/rtype/rt-task104-r1(98) ; runs/rtype/rt-task104-r2(98) | `payload` | 1593 | 达标 |
-| 55 | `running_game_create_input_recording` | game | create | 7 | 0 | 1 | `readback` | witness `running_game_stop_input_recording`@runs/_exercises/ex_rec/h9-task113 seq=5 | runs/_exercises/ex_rec/h9-task113(7) | `editor_state` | 1 | 达标 |
-| 56 | `running_game_stop_input_recording` | game | stop | 7 | 0 | 0 | `readback` | witness `running_game_get_node_properties`@runs/_exercises/ex_rec/h9-task113 seq=2 | runs/_exercises/ex_rec/h9-task113(7) | `editor_state` | 1 | 计数达标缺证据 |
+| 55 | `running_game_create_input_recording` | game | create | 7 | 0 | 1 | `readback` | witness `running_game_get_node_properties`@runs/_exercises/ex_rec/h9-task113 seq=18 | runs/_exercises/ex_rec/h9-task113(7) | `editor_state` | 1 | 达标 |
+| 56 | `running_game_stop_input_recording` | game | stop | 8 | 0 | 1 | `readback` | witness `running_game_get_node_properties`@runs/_exercises/ex_rec/h9-task113 seq=18 | runs/_exercises/ex_rec/h9-task113(7) ; runs/_exercises/ex_grid/c8-task120(1) | `editor_state` | 1 | 达标 |
 | 57 | `running_game_play_input_recording` | game | play | 7 | 6 | 1 | `pixel_effect` | ok_effect_observed ×6 | runs/_exercises/ex_rec/h9-task113(7) | `pixel_effect` | 6 | 达标 |
 | 58 | `running_game_find_nodes_by_script` | game | find | 12 | 10 | 2 | `readback` | own_payload ×10（读类回包即证据） | runs/_exercises/ex_scene/c23-task110(6) ; runs/_exercises/ex_scene2/c23-after-task110(6) | `payload` | 10 | 达标 |
 | 59 | `running_game_get_autoload_node` | game | get | 12 | 10 | 2 | `readback` | own_payload ×10（读类回包即证据） | runs/_exercises/ex_scene/c23-task110(6) ; runs/_exercises/ex_scene2/c23-after-task110(6) | `payload` | 10 | 达标 |
@@ -464,7 +453,7 @@
 | 68 | `project_list_scripts` | both | list | 6 | 5 | 1 | `readback` | own_payload ×5（读类回包即证据） | runs/_exercises/ex_files/c1-task110(6) | `payload` | 5 | 达标 |
 | 69 | `project_read_script` | both | read | 8 | 6 | 2 | `readback` | own_payload ×6（读类回包即证据） | runs/_exercises/ex_files/c1-task110(6) ; runs/_exercises/ex_files/c1-smoke(2) | `payload` | 6 | 达标 |
 | 70 | `project_create_script` | both | create | 77 | 44 | 1 | `file_effect` | ok_file_effect_observed ×44 | runs/_exercises/ex_files/c1-task110(6) ; runs/_exercises/ex_files/c1b-task110(6) | `file_effect` | 44 | 达标 |
-| 71 | `project_edit_script` | both | edit | 60 | 52 | 0 | `file_effect` | ok_file_effect_observed ×52 | runs/tetris/tetris-task096-r2(2) ; runs/asteroids/ast-task098-r1(1) | `file_effect` | 52 | 计数达标缺证据 |
+| 71 | `project_edit_script` | both | edit | 61 | 52 | 1 | `file_effect` | ok_file_effect_observed ×52 | runs/tetris/tetris-task096-r2(2) ; runs/_exercises/ex_grid/c8-task120(1) | `file_effect` | 52 | 达标 |
 | 72 | `editor_set_node_script` | editor | set | 36 | 0 | 6 | `readback` | witness `editor_execute_gdscript`@runs/_exercises/ex_write5/c4b-task115 seq=12 | runs/_exercises/ex_write/c4-task111(6) ; runs/_exercises/ex_write2/c4b-task111(6) | `editor_state` | 1 | 达标 |
 | 73 | `editor_get_open_scripts` | editor | get | 12 | 10 | 2 | `readback` | own_payload ×10（读类回包即证据） | runs/_exercises/ex_scene/c23-task110(6) ; runs/_exercises/ex_scene2/c23-after-task110(6) | `payload` | 10 | 达标 |
 | 74 | `project_validate_script` | both | validate | 18 | 3 | 15 | `readback` | own_payload ×3（读类回包即证据） | runs/_exercises/ex_files/c1-task110(6) ; runs/_exercises/ex_files/c1b-task110(6) | `payload` | 3 | 达标 |
@@ -473,7 +462,7 @@
 | 77 | `editor_simulate_mouse_move` | editor | simulate | 0 | 0 | 0 | `no_calls` | - | - | `editor_state` | 0 | 未达(0) |
 | 78 | `editor_simulate_input_action` | editor | simulate | 0 | 0 | 0 | `no_calls` | - | - | `editor_state` | 0 | 未达(0) |
 | 79 | `editor_get_input_actions` | editor | get | 12 | 10 | 2 | `readback` | own_payload ×10（读类回包即证据） | runs/_exercises/ex_scene/c23-task110(6) ; runs/_exercises/ex_scene2/c23-after-task110(6) | `payload` | 10 | 达标 |
-| 80 | `editor_add_input_action` | editor | add | 189 | 122 | 0 | `file_effect` | ok_file_effect_observed ×122 | runs/pong/pong-clean-task097(5) ; runs/pong/pong-control-task093(5) | `file_effect` | 122 | 计数达标缺证据 |
+| 80 | `editor_add_input_action` | editor | add | 190 | 122 | 1 | `file_effect` | ok_file_effect_observed ×122 | runs/pong/pong-clean-task097(5) ; runs/pong/pong-control-task093(5) | `file_effect` | 122 | 达标 |
 | 81 | `editor_simulate_input_sequence` | editor | simulate | 0 | 0 | 0 | `no_calls` | - | - | `editor_state` | 0 | 未达(0) |
 | 82 | `editor_find_nodes_by_type` | editor | find | 12 | 10 | 2 | `readback` | own_payload ×10（读类回包即证据） | runs/_exercises/ex_scene/c23-task110(6) ; runs/_exercises/ex_scene2/c23-after-task110(6) | `payload` | 10 | 达标 |
 | 83 | `editor_set_node_property_batch` | editor | set | 30 | 15 | 5 | `pixel_effect` | ok_effect_observed ×15 | runs/_exercises/ex_write/c4-task111(6) ; runs/_exercises/ex_write2/c4b-task111(6) | `pixel_effect` | 15 | 达标 |
@@ -557,17 +546,17 @@
 | 161 | `project_find_script_references` | both | find | 12 | 11 | 1 | `readback` | own_payload ×11（读类回包即证据） | runs/_exercises/ex_files/c1-task110(6) ; runs/_exercises/ex_files/c1b-task110(6) | `payload` | 11 | 达标 |
 | 162 | `project_detect_circular_dependencies` | both | detect | 6 | 5 | 1 | `readback` | own_payload ×5（读类回包即证据） | runs/_exercises/ex_files/c1-task110(6) | `payload` | 5 | 达标 |
 | 163 | `project_get_statistics` | both | get | 7 | 5 | 2 | `readback` | own_payload ×5（读类回包即证据） | runs/_exercises/ex_files/c1-task110(6) ; runs/_exercises/ex_files/c1-smoke(1) | `payload` | 5 | 达标 |
-| 164 | `running_game_run_test_scenario` | game | run | 185 | 131 | 0 | `pixel_effect` | ok_effect_observed ×1 | runs/snake/snake-clean-task097(8) ; runs/snake/snake-task093(8) | `pixel_effect` | 1 | 计数达标缺证据 |
+| 164 | `running_game_run_test_scenario` | game | run | 186 | 131 | 1 | `pixel_effect` | ok_effect_observed ×1 | runs/snake/snake-clean-task097(8) ; runs/snake/snake-task093(8) | `pixel_effect` | 1 | 达标 |
 | 165 | `running_game_assert_node_state` | game | assert | 2903 | 2719 | 115 | `file_effect` | ok_file_effect_observed ×2788 | runs/lunarlander/ll-task104-r1(149) ; runs/bomberman/bomb-task101-r4(144) | `payload` | 2719 | 达标 |
-| 166 | `running_game_assert_screen_text` | game | assert | 80 | 65 | 0 | `file_effect` | ok_file_effect_observed ×80 | runs/asteroids/ast-task098-r1(2) ; runs/asteroids/ast-task098-r2(2) | `payload` | 65 | 计数达标缺证据 |
-| 167 | `running_game_run_stress_test` | game | run | 27 | 5 | 0 | `pixel_effect` | ok_effect_observed ×5 | runs/breakout/breakout-clean-task097(1) ; runs/breakout/breakout-task093(1) | `pixel_effect` | 5 | 计数达标缺证据 |
+| 166 | `running_game_assert_screen_text` | game | assert | 81 | 65 | 1 | `file_effect` | ok_file_effect_observed ×80 | runs/asteroids/ast-task098-r1(2) ; runs/asteroids/ast-task098-r2(2) | `payload` | 65 | 达标 |
+| 167 | `running_game_run_stress_test` | game | run | 28 | 5 | 1 | `pixel_effect` | ok_effect_observed ×5 | runs/_exercises/ex_grid/c8-task120(1) ; runs/breakout/breakout-clean-task097(1) | `pixel_effect` | 5 | 达标 |
 | 168 | `editor_get_test_report` | editor | get | 6 | 5 | 1 | `readback` | own_payload ×5（读类回包即证据） | runs/_exercises/ex_editor/h7-task115(6) | `payload` | 5 | 达标 |
 | 169 | `os_list_android_devices` | both | list | 6 | 5 | 1 | `readback` | own_payload ×5（读类回包即证据） | runs/_exercises/ex_grid/c7-task118(6) | `payload` | 5 | 达标 |
 | 170 | `project_get_android_preset_info` | both | get | 6 | 0 | 6 | `count_only` | - | runs/_exercises/ex_grid/c7-task118(6) | `payload` | 0 | 计数达标缺证据 |
-| 171 | `os_deploy_to_android_device` | both | deploy | 6 | 0 | 6 | `count_only` | - | runs/_exercises/ex_grid/c7-task118(6) | `payload` | 0 | 计数达标缺证据 |
-| 172 | `project_build_csharp` | both | build | 67 | 63 | 0 | `file_effect` | ok_file_effect_observed ×63 | runs/_exercises/ex_files/c1b-task110(1) ; runs/_exercises/ex_grid/c6-task118(1) | `file_effect` | 63 | 计数达标缺证据 |
+| 171 | `os_deploy_to_android_device` | both | deploy | 6 | 0 | 6 | `count_only` | - | runs/_exercises/ex_grid/c7-task118(6) | `file_effect` | 0 | 计数达标缺证据 |
+| 172 | `project_build_csharp` | both | build | 68 | 63 | 1 | `file_effect` | ok_file_effect_observed ×63 | runs/_exercises/ex_files/c1b-task110(1) ; runs/_exercises/ex_grid/c6-task118(1) | `file_effect` | 63 | 达标 |
 | 173 | `project_write_text_file` | both | write | 7 | 6 | 1 | `file_effect` | ok_file_effect_observed ×6 | runs/_exercises/ex_files/c1-task110(6) ; runs/_exercises/ex_files/c1-smoke(1) | `file_effect` | 6 | 达标 |
-| 174 | `project_validate_scripts` | both | validate | 84 | 80 | 0 | `readback` | own_payload ×80（读类回包即证据） | runs/breakout/breakout-clean-task097(2) ; runs/breakout/breakout-task093(2) | `payload` | 80 | 计数达标缺证据 |
+| 174 | `project_validate_scripts` | both | validate | 85 | 80 | 1 | `readback` | own_payload ×80（读类回包即证据） | runs/breakout/breakout-clean-task097(2) ; runs/breakout/breakout-task093(2) | `payload` | 80 | 达标 |
 | 175 | `editor_set_node_script_batch` | editor | set | 56 | 0 | 1 | `readback` | witness `editor_execute_gdscript`@runs/_exercises/ex_grid/c6-task118 seq=16 | runs/_exercises/ex_grid/c6-task118(6) ; runs/breakout/breakout-clean-task097(2) | `editor_state` | 1 | 达标 |
 | 176 | `editor_set_node_property_updates` | editor | set | 30 | 3 | 7 | `pixel_effect` | ok_effect_observed ×3 | runs/_exercises/ex_write/c4-task111(6) ; runs/_exercises/ex_write2/c4b-task111(6) | `pixel_effect` | 3 | 达标 |
 | 177 | `project_read_text_file` | both | read | 86 | 85 | 1 | `readback` | own_payload ×85（读类回包即证据） | runs/_exercises/ex_files/c1-task110(6) ; runs/pong/d3-after(3) | `payload` | 85 | 达标 |
@@ -588,18 +577,18 @@
 | `project_convert_path_to_uid` | both | 6 | 5 | 1 | `readback` | 达标 | runs/_exercises/ex_files/c1-task110(6) |
 | `editor_get_scene_tree` | editor | 113 | 109 | 4 | `readback` | 达标 | runs/_exercises/ex_write5/c4-v5-task111(7) ; runs/_exercises/ex_scene/c23-task110(6) ; runs/_exercises/ex_scene2/c23-after-task110(6) |
 | `project_read_scene_file_content` | both | 6 | 5 | 1 | `readback` | 达标 | runs/_exercises/ex_files/c1-task110(6) |
-| `editor_open_scene` | editor | 86 | 9 | 0 | `pixel_effect` | 计数达标缺证据 | runs/breakout/breakout-clean-task097(2) ; runs/pong/pong-clean-task097(2) ; runs/snake/snake-clean-task097(2) |
+| `editor_open_scene` | editor | 87 | 9 | 1 | `pixel_effect` | 达标 | runs/breakout/breakout-clean-task097(2) ; runs/pong/pong-clean-task097(2) ; runs/snake/snake-clean-task097(2) |
 | `project_delete_scene_file` | both | 10 | 8 | 2 | `file_effect` | 达标 | runs/_exercises/ex_files/c1-task110(6) ; runs/pong/d3-after(2) ; runs/pong/d3-after-r2(2) |
 | `editor_add_scene_instance` | editor | 30 | 0 | 5 | `readback` | 达标 | runs/_exercises/ex_write/c4-task111(6) ; runs/_exercises/ex_write2/c4b-task111(6) ; runs/_exercises/ex_write3/c4c-task111(6) |
 | `project_get_scene_exports` | both | 6 | 5 | 1 | `readback` | 达标 | runs/_exercises/ex_files/c1-task110(6) |
 | `editor_play_scene` | editor | 7 | 0 | 2 | `readback` | 达标 | runs/_exercises/ex_editor/h7-task115(7) |
 | `editor_stop_scene` | editor | 7 | 0 | 1 | `readback` | 达标 | runs/_exercises/ex_editor/h7-task115(7) |
-| `editor_save_scene` | editor | 123 | 77 | 0 | `file_effect` | 计数达标缺证据 | runs/lunarlander/ll-task104-r1(3) ; runs/missilecommand/mc-task103-r1(3) ; runs/missilecommand/mc-task103-r2(3) |
+| `editor_save_scene` | editor | 124 | 77 | 1 | `file_effect` | 达标 | runs/lunarlander/ll-task104-r1(3) ; runs/missilecommand/mc-task103-r1(3) ; runs/missilecommand/mc-task103-r2(3) |
 | `project_create_scene_file` | both | 20 | 18 | 2 | `file_effect` | 达标 | runs/_exercises/ex_files/c1-task110(6) ; runs/_exercises/ex_files/c1c-task110(6) ; runs/_exercises/ex_write/c4-task111(1) |
 | `editor_add_node` | editor | 36 | 10 | 5 | `pixel_effect` | 达标 | runs/_exercises/ex_write/c4-task111(6) ; runs/_exercises/ex_write2/c4b-task111(6) ; runs/_exercises/ex_write3/c4c-task111(6) |
-| `editor_delete_node` | editor | 65 | 5 | 0 | `pixel_effect` | 计数达标缺证据 | runs/snake/snake-clean-task097(37) ; runs/breakout/breakout-clean-task097(20) ; runs/pong/pong-clean-task097(8) |
+| `editor_delete_node` | editor | 66 | 5 | 1 | `pixel_effect` | 达标 | runs/snake/snake-clean-task097(37) ; runs/breakout/breakout-clean-task097(20) ; runs/pong/pong-clean-task097(8) |
 | `editor_rename_node` | editor | 30 | 0 | 7 | `readback` | 达标 | runs/_exercises/ex_write/c4-task111(6) ; runs/_exercises/ex_write2/c4b-task111(6) ; runs/_exercises/ex_write3/c4c-task111(6) |
-| `editor_set_node_property` | editor | 41 | 12 | 0 | `pixel_effect` | 计数达标缺证据 | runs/pong/pong-clean-task097(3) ; runs/pong/pong-control-task093(3) ; runs/pong/pong-run1(3) |
+| `editor_set_node_property` | editor | 42 | 12 | 1 | `pixel_effect` | 达标 | runs/pong/pong-clean-task097(3) ; runs/pong/pong-control-task093(3) ; runs/pong/pong-run1(3) |
 | `editor_get_node_properties` | editor | 74 | 62 | 12 | `readback` | 达标 | runs/breakout/breakout-clean-task097(10) ; runs/pong/pong-clean-task097(9) ; runs/snake/snake-clean-task097(9) |
 | `editor_duplicate_node` | editor | 30 | 5 | 7 | `pixel_effect` | 达标 | runs/_exercises/ex_write/c4-task111(6) ; runs/_exercises/ex_write2/c4b-task111(6) ; runs/_exercises/ex_write3/c4c-task111(6) |
 | `editor_connect_signal` | editor | 45 | 0 | 7 | `readback` | 达标 | runs/_exercises/ex_grid/c6-task118(6) ; runs/_exercises/ex_write/c4-task111(6) ; runs/_exercises/ex_write2/c4b-task111(6) |
@@ -614,10 +603,10 @@
 | `editor_set_node_selection` | editor | 9 | 0 | 1 | `readback` | 达标 | runs/_exercises/ex_editor/h7-task115(9) |
 | `editor_remove_node_selection` | editor | 6 | 0 | 1 | `readback` | 达标 | runs/_exercises/ex_editor/h7-task115(6) |
 | `editor_execute_gdscript` | editor | 26 | 24 | 2 | `readback` | 达标 | runs/_exercises/ex_scene/c23-task110(6) ; runs/_exercises/ex_scene2/c23-after-task110(6) ; runs/_exercises/ex_3d/h1b-task115(4) |
-| `editor_get_errors` | editor | 50 | 50 | 0 | `readback` | 计数达标缺证据 | runs/asteroids/ast-task098-r1(1) ; runs/asteroids/ast-task098-r2(1) ; runs/breakout/breakout-clean-task097(1) |
+| `editor_get_errors` | editor | 51 | 50 | 1 | `readback` | 达标 | runs/_exercises/ex_grid/c8-task120(1) ; runs/asteroids/ast-task098-r1(1) ; runs/asteroids/ast-task098-r2(1) |
 | `editor_get_output_log` | editor | 38 | 34 | 4 | `readback` | 达标 | runs/_exercises/ex_scene/c23-task110(6) ; runs/_exercises/ex_scene2/c23-after-task110(6) ; runs/_exercises/ex_write/c4-task111(6) |
-| `editor_capture_screenshot` | editor | 25 | 25 | 0 | `file_effect` | 计数达标缺证据 | runs/breakout/breakout-clean-task097(1) ; runs/breakout/breakout-task093(1) ; runs/breakout/breakout-task093-r2(1) |
-| `running_game_capture_screenshot` | game | 298 | 298 | 0 | `pixel_effect` | 计数达标缺证据 | runs/match3/m3-task102-r1(7) ; runs/match3/m3-task102-r2(7) ; runs/match3/m3-task102-r3(7) |
+| `editor_capture_screenshot` | editor | 26 | 25 | 1 | `file_effect` | 达标 | runs/_exercises/ex_grid/c8-task120(1) ; runs/breakout/breakout-clean-task097(1) ; runs/breakout/breakout-task093(1) |
+| `running_game_capture_screenshot` | game | 299 | 298 | 1 | `pixel_effect` | 达标 | runs/match3/m3-task102-r1(7) ; runs/match3/m3-task102-r2(7) ; runs/match3/m3-task102-r3(7) |
 | `editor_remove_output_log` | editor | 6 | 0 | 1 | `readback` | 达标 | runs/_exercises/ex_editor/h7-task115(6) |
 | `editor_reload_plugin` | editor | 6 | 0 | 1 | `readback` | 达标 | runs/_exercises/ex_editor/h7-task115(6) |
 | `editor_rescan_project_filesystem` | editor | 6 | 0 | 1 | `readback` | 达标 | runs/_exercises/ex_editor/h7-task115(6) |
@@ -626,14 +615,14 @@
 | `editor_set_auto_dismiss_dialogs` | editor | 7 | 0 | 7 | `count_only` | 计数达标缺证据 | runs/_exercises/ex_editor/h7-task115(7) |
 | `editor_get_viewport_3d_camera` | editor | 6 | 5 | 1 | `readback` | 达标 | runs/_exercises/ex_3d/h1-task111(6) |
 | `editor_set_viewport_3d_camera` | editor | 6 | 0 | 1 | `readback` | 达标 | runs/_exercises/ex_3d/h1-task111(6) |
-| `running_game_get_scene_tree` | game | 123 | 123 | 0 | `pixel_effect` | 计数达标缺证据 | runs/asteroids/ast-task098-r1(2) ; runs/asteroids/ast-task098-r2(2) ; runs/bomberman/bomb-task101-r1(2) |
+| `running_game_get_scene_tree` | game | 124 | 123 | 1 | `pixel_effect` | 达标 | runs/asteroids/ast-task098-r1(2) ; runs/asteroids/ast-task098-r2(2) ; runs/bomberman/bomb-task101-r1(2) |
 | `running_game_get_node_properties` | game | 58 | 56 | 2 | `pixel_effect` | 达标 | runs/_exercises/ex_scene/c23-task110(6) ; runs/_exercises/ex_scene2/c23-after-task110(6) ; runs/_exercises/ex_rec/h9-task113(5) |
 | `running_game_set_node_property` | game | 49 | 28 | 2 | `pixel_effect` | 达标 | runs/pong/pong-clean-task097(5) ; runs/pong/pong-control-task093(5) ; runs/pong/pong-run1(5) |
 | `running_game_capture_frames` | game | 36 | 30 | 6 | `readback` | 达标 | runs/_exercises/ex_scene/c23-task110(6) ; runs/_exercises/ex_scene2/c23-after-task110(6) ; runs/_exercises/ex_write/c4-task111(6) |
-| `running_game_get_node_property_samples` | game | 122 | 122 | 0 | `pixel_effect` | 计数达标缺证据 | runs/spaceinvaders/si-task097-r1(5) ; runs/tetris/tetris-task096(4) ; runs/tetris/tetris-task096-r2(4) |
+| `running_game_get_node_property_samples` | game | 123 | 122 | 1 | `pixel_effect` | 达标 | runs/spaceinvaders/si-task097-r1(5) ; runs/tetris/tetris-task096(4) ; runs/tetris/tetris-task096-r2(4) |
 | `running_game_execute_gdscript` | game | 1626 | 1593 | 33 | `pixel_effect` | 达标 | runs/rtype/rt-task104-r1(98) ; runs/rtype/rt-task104-r2(98) ; runs/bomberman/bomb-task101-r2(61) |
 | `running_game_create_input_recording` | game | 7 | 0 | 1 | `readback` | 达标 | runs/_exercises/ex_rec/h9-task113(7) |
-| `running_game_stop_input_recording` | game | 7 | 0 | 0 | `readback` | 计数达标缺证据 | runs/_exercises/ex_rec/h9-task113(7) |
+| `running_game_stop_input_recording` | game | 8 | 0 | 1 | `readback` | 达标 | runs/_exercises/ex_rec/h9-task113(7) ; runs/_exercises/ex_grid/c8-task120(1) |
 | `running_game_play_input_recording` | game | 7 | 6 | 1 | `pixel_effect` | 达标 | runs/_exercises/ex_rec/h9-task113(7) |
 | `running_game_find_nodes_by_script` | game | 12 | 10 | 2 | `readback` | 达标 | runs/_exercises/ex_scene/c23-task110(6) ; runs/_exercises/ex_scene2/c23-after-task110(6) |
 | `running_game_get_autoload_node` | game | 12 | 10 | 2 | `readback` | 达标 | runs/_exercises/ex_scene/c23-task110(6) ; runs/_exercises/ex_scene2/c23-after-task110(6) |
@@ -648,12 +637,12 @@
 | `project_list_scripts` | both | 6 | 5 | 1 | `readback` | 达标 | runs/_exercises/ex_files/c1-task110(6) |
 | `project_read_script` | both | 8 | 6 | 2 | `readback` | 达标 | runs/_exercises/ex_files/c1-task110(6) ; runs/_exercises/ex_files/c1-smoke(2) |
 | `project_create_script` | both | 77 | 44 | 1 | `file_effect` | 达标 | runs/_exercises/ex_files/c1-task110(6) ; runs/_exercises/ex_files/c1b-task110(6) ; runs/_exercises/ex_files/c1c-task110(6) |
-| `project_edit_script` | both | 60 | 52 | 0 | `file_effect` | 计数达标缺证据 | runs/tetris/tetris-task096-r2(2) ; runs/asteroids/ast-task098-r1(1) ; runs/asteroids/ast-task098-r2(1) |
+| `project_edit_script` | both | 61 | 52 | 1 | `file_effect` | 达标 | runs/tetris/tetris-task096-r2(2) ; runs/_exercises/ex_grid/c8-task120(1) ; runs/asteroids/ast-task098-r1(1) |
 | `editor_set_node_script` | editor | 36 | 0 | 6 | `readback` | 达标 | runs/_exercises/ex_write/c4-task111(6) ; runs/_exercises/ex_write2/c4b-task111(6) ; runs/_exercises/ex_write3/c4c-task111(6) |
 | `editor_get_open_scripts` | editor | 12 | 10 | 2 | `readback` | 达标 | runs/_exercises/ex_scene/c23-task110(6) ; runs/_exercises/ex_scene2/c23-after-task110(6) |
 | `project_validate_script` | both | 18 | 3 | 15 | `readback` | 达标 | runs/_exercises/ex_files/c1-task110(6) ; runs/_exercises/ex_files/c1b-task110(6) ; runs/_exercises/ex_files/c1c-task110(6) |
 | `editor_get_input_actions` | editor | 12 | 10 | 2 | `readback` | 达标 | runs/_exercises/ex_scene/c23-task110(6) ; runs/_exercises/ex_scene2/c23-after-task110(6) |
-| `editor_add_input_action` | editor | 189 | 122 | 0 | `file_effect` | 计数达标缺证据 | runs/pong/pong-clean-task097(5) ; runs/pong/pong-control-task093(5) ; runs/pong/pong-run1(5) |
+| `editor_add_input_action` | editor | 190 | 122 | 1 | `file_effect` | 达标 | runs/pong/pong-clean-task097(5) ; runs/pong/pong-control-task093(5) ; runs/pong/pong-run1(5) |
 | `editor_find_nodes_by_type` | editor | 12 | 10 | 2 | `readback` | 达标 | runs/_exercises/ex_scene/c23-task110(6) ; runs/_exercises/ex_scene2/c23-after-task110(6) |
 | `editor_set_node_property_batch` | editor | 30 | 15 | 5 | `pixel_effect` | 达标 | runs/_exercises/ex_write/c4-task111(6) ; runs/_exercises/ex_write2/c4b-task111(6) ; runs/_exercises/ex_write3/c4c-task111(6) |
 | `editor_list_signal_connections` | editor | 14 | 10 | 4 | `readback` | 达标 | runs/_exercises/ex_scene/c23-task110(6) ; runs/_exercises/ex_scene2/c23-after-task110(6) ; runs/_exercises/ex_grid/c6-task118(1) |
@@ -736,17 +725,17 @@
 | `project_find_script_references` | both | 12 | 11 | 1 | `readback` | 达标 | runs/_exercises/ex_files/c1-task110(6) ; runs/_exercises/ex_files/c1b-task110(6) |
 | `project_detect_circular_dependencies` | both | 6 | 5 | 1 | `readback` | 达标 | runs/_exercises/ex_files/c1-task110(6) |
 | `project_get_statistics` | both | 7 | 5 | 2 | `readback` | 达标 | runs/_exercises/ex_files/c1-task110(6) ; runs/_exercises/ex_files/c1-smoke(1) |
-| `running_game_run_test_scenario` | game | 185 | 131 | 0 | `pixel_effect` | 计数达标缺证据 | runs/snake/snake-clean-task097(8) ; runs/snake/snake-task093(8) ; runs/snake/snake-task093-r2(8) |
+| `running_game_run_test_scenario` | game | 186 | 131 | 1 | `pixel_effect` | 达标 | runs/snake/snake-clean-task097(8) ; runs/snake/snake-task093(8) ; runs/snake/snake-task093-r2(8) |
 | `running_game_assert_node_state` | game | 2903 | 2719 | 115 | `file_effect` | 达标 | runs/lunarlander/ll-task104-r1(149) ; runs/bomberman/bomb-task101-r4(144) ; runs/bomberman/bomb-task101-r3(142) |
-| `running_game_assert_screen_text` | game | 80 | 65 | 0 | `file_effect` | 计数达标缺证据 | runs/asteroids/ast-task098-r1(2) ; runs/asteroids/ast-task098-r2(2) ; runs/bomberman/bomb-task101-r1(2) |
-| `running_game_run_stress_test` | game | 27 | 5 | 0 | `pixel_effect` | 计数达标缺证据 | runs/breakout/breakout-clean-task097(1) ; runs/breakout/breakout-task093(1) ; runs/breakout/breakout-task093-r2(1) |
+| `running_game_assert_screen_text` | game | 81 | 65 | 1 | `file_effect` | 达标 | runs/asteroids/ast-task098-r1(2) ; runs/asteroids/ast-task098-r2(2) ; runs/bomberman/bomb-task101-r1(2) |
+| `running_game_run_stress_test` | game | 28 | 5 | 1 | `pixel_effect` | 达标 | runs/_exercises/ex_grid/c8-task120(1) ; runs/breakout/breakout-clean-task097(1) ; runs/breakout/breakout-task093(1) |
 | `editor_get_test_report` | editor | 6 | 5 | 1 | `readback` | 达标 | runs/_exercises/ex_editor/h7-task115(6) |
 | `os_list_android_devices` | both | 6 | 5 | 1 | `readback` | 达标 | runs/_exercises/ex_grid/c7-task118(6) |
 | `project_get_android_preset_info` | both | 6 | 0 | 6 | `count_only` | 计数达标缺证据 | runs/_exercises/ex_grid/c7-task118(6) |
 | `os_deploy_to_android_device` | both | 6 | 0 | 6 | `count_only` | 计数达标缺证据 | runs/_exercises/ex_grid/c7-task118(6) |
-| `project_build_csharp` | both | 67 | 63 | 0 | `file_effect` | 计数达标缺证据 | runs/_exercises/ex_files/c1b-task110(1) ; runs/_exercises/ex_grid/c6-task118(1) ; runs/_exercises/ex_scene/c23-task110(1) |
+| `project_build_csharp` | both | 68 | 63 | 1 | `file_effect` | 达标 | runs/_exercises/ex_files/c1b-task110(1) ; runs/_exercises/ex_grid/c6-task118(1) ; runs/_exercises/ex_grid/c8-task120(1) |
 | `project_write_text_file` | both | 7 | 6 | 1 | `file_effect` | 达标 | runs/_exercises/ex_files/c1-task110(6) ; runs/_exercises/ex_files/c1-smoke(1) |
-| `project_validate_scripts` | both | 84 | 80 | 0 | `readback` | 计数达标缺证据 | runs/breakout/breakout-clean-task097(2) ; runs/breakout/breakout-task093(2) ; runs/breakout/breakout-task093-r2(2) |
+| `project_validate_scripts` | both | 85 | 80 | 1 | `readback` | 达标 | runs/breakout/breakout-clean-task097(2) ; runs/breakout/breakout-task093(2) ; runs/breakout/breakout-task093-r2(2) |
 | `editor_set_node_script_batch` | editor | 56 | 0 | 1 | `readback` | 达标 | runs/_exercises/ex_grid/c6-task118(6) ; runs/breakout/breakout-clean-task097(2) ; runs/breakout/breakout-task093(2) |
 | `editor_set_node_property_updates` | editor | 30 | 3 | 7 | `pixel_effect` | 达标 | runs/_exercises/ex_write/c4-task111(6) ; runs/_exercises/ex_write2/c4b-task111(6) ; runs/_exercises/ex_write3/c4c-task111(6) |
 | `project_read_text_file` | both | 86 | 85 | 1 | `readback` | 达标 | runs/_exercises/ex_files/c1-task110(6) ; runs/pong/d3-after(3) ; runs/pong/d3-after-r2(3) |
@@ -785,9 +774,32 @@
 | 栏 | 工具数 | 工具 | 登记位置 |
 |---|---|---|---|
 | `scope-excluded`（按 D59 / GDR-21 范围决定排除） | 5 | `editor_simulate_key` `editor_simulate_mouse_click` `editor_simulate_mouse_move` `editor_simulate_input_action` `editor_simulate_input_sequence` | `H7` |
-| `needs-an-external-device`（本机实测：缺设备/缺预设） | 3 | `os_list_android_devices` `os_deploy_to_android_device` `project_get_android_preset_info` | `H8` |
+
+#### `needs-an-external-device`：**逐条**当前状态（TASK-120 D2）
+
+这个栏位的三条工具**不在同一状态**，所以逐条列出；只读一行工具名会读成「三条都不可测」，而实际上其中一条已经达标。
+
+| tool | 台账状态 | 本机实测 | 证据 |
+|---|---|---|---|
+| `os_list_android_devices` | 达标 | 5 x ok + 1 x -32602 边界 | `runs/_exercises/ex_grid/c7-task118/trace-editor.jsonl` |
+| `project_get_android_preset_info` | 计数达标缺证据 | 6 x ok=false（5 x -32000 no Android preset，1 x -32001 preset not found） | `runs/_exercises/ex_grid/c7-task118/trace-editor.jsonl` |
+| `os_deploy_to_android_device` | 计数达标缺证据 | 6 x ok=false（5 x -32001，1 x -32602） | `runs/_exercises/ex_grid/c7-task118/trace-editor.jsonl` |
+
+- `os_list_android_devices`：runs adb for real (source "adb devices -l") and answers an empty device list; the tool is PASSING. It is in this bucket only because the DEVICE it would list is not on this machine - the measurement itself needs nothing external.
+- `project_get_android_preset_info`：refusal branch only: no project in this repo has an Android export preset, so no ok answer exists to measure. Needs an external preset, not a code change.
+- `os_deploy_to_android_device`：refusal branch only: no Android preset and no device. TASK-120 item B moved its declared channel from `payload` to `file_effect`, so its evidence gate is at least satisfiable once an export/deploy really writes an artifact.
 
 `needs-an-external-device` 的本机实测命令与结果写在登记表 `categories.H8.external_device.measured_on_this_machine` 里，调用证据在 `runs/_exercises/ex_grid/c7-task118`。
+
+#### `engine-not-implemented`：**引擎未实现**类（TASK-120 D3）
+
+TASK-120 item D3: tools whose SUCCESS branch does not exist in this engine build. They are not 'missing evidence' - there is nothing to collect. Kept separate from the count_only / 缺证据 language so a reader cannot read them as an unfinished measurement.
+
+| tool | 引擎回答 | 本机实测 | 证据 | 台账状态 |
+|---|---|---|---|---|
+| `editor_set_auto_dismiss_dialogs` | `-32000 Not implemented: editor_set_auto_dismiss_dialogs` | 7 calls, 0 ok: 5 calls with valid input all answer -32000 Not implemented (seq 74-78); the other 2 (seq 79-80) are argument-validation refusals (-32602 missing/mistyped 'enabled'). TASK-119's D5/R5 wrote '7/7 -32000': the precise split is 5/5 of the valid-input calls. | `runs/_exercises/ex_editor/h7-task115/trace-editor.jsonl seq=74..80` | 计数达标缺证据 |
+
+- `editor_set_auto_dismiss_dialogs`：计数达标缺证据 - the numeric rule cannot see WHY a channel has no evidence; this entry is the missing explanation, and the ledger's still-short table prints it as 引擎未实现 instead of the generic reason.
 
 ### H1 3D 内容管线
 
@@ -933,7 +945,7 @@
 | `running_game_capture_signal_emissions` | game | 36 | **YES** | YES | runs/_exercises/ex_scene/c23-task110(6) ; runs/_exercises/ex_scene2/c23-after-task110(6) ; runs/_exercises/ex_write/c4-task111(6) |
 | `running_game_create_input_recording` | game | 7 | **YES** | YES | runs/_exercises/ex_rec/h9-task113(7) |
 | `running_game_play_input_recording` | game | 7 | **YES** | YES | runs/_exercises/ex_rec/h9-task113(7) |
-| `running_game_stop_input_recording` | game | 7 | **YES** | YES | runs/_exercises/ex_rec/h9-task113(7) |
+| `running_game_stop_input_recording` | game | 8 | **YES** | YES | runs/_exercises/ex_rec/h9-task113(7) ; runs/_exercises/ex_grid/c8-task120(1) |
 
 
 #### 已改判的条目（推断被实测推翻，逐条留证）

@@ -708,9 +708,9 @@
       "tool": "editor_create_animation",
       "run": "runs/_exercises/ex_anim2/h2b-task111",
       "witness_tool": "editor_list_animations",
-      "why": "读回动画列表，新建的动画在其中",
+      "why": "the animation list read back after the eight creates starts with the five animations in creation order, Anim5 among them; `\"Anim5\"` alone was rejected as a bare name (TASK-120 A3)",
       "expect": [
-        "\"Anim5\""
+        "\"animations\":[\"Anim1\",\"Anim2\",\"Anim3\",\"Anim4\",\"Anim5\""
       ]
     },
     {
@@ -745,9 +745,10 @@
       "tool": "editor_add_state_machine_state",
       "run": "runs/_exercises/ex_anim2/h2b-task111",
       "witness_tool": "editor_get_animation_tree_structure",
-      "why": "读回状态机里的状态列表",
+      "why": "the state editor_add_state_machine_state created for AT1 (state_name Walk, animation Anim2) is in the engine's state list with its animation binding; `\"Walk\"` alone was rejected as a bare name (TASK-120 A3)",
       "expect": [
-        "\"Walk\""
+        "\"name\":\"Walk\"",
+        "\"animation\":\"Anim2\""
       ]
     },
     {
@@ -767,9 +768,10 @@
       "tool": "editor_add_state_machine_transition",
       "run": "runs/_exercises/ex_anim2/h2b-task111",
       "witness_tool": "editor_get_animation_tree_structure",
-      "why": "读回状态机里的迁移列表",
+      "why": "the Jump -> Walk transition editor_add_state_machine_transition created is in the engine's transition list (`from`/`to` with their values); `\"Idle\"` alone was rejected as a bare name (TASK-120 A3)",
       "expect": [
-        "\"Idle\""
+        "\"from\":\"Jump\"",
+        "\"to\":\"Walk\""
       ]
     },
     {

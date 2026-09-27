@@ -306,9 +306,11 @@
       "tool": "editor_set_particle_material",
       "witness_tool": "editor_get_particle_info",
       "run": "runs/_exercises/ex_particles/h6-task113",
-      "why": "the parameter editor_set_particle_material wrote must be in the read-back parameter set",
+      "why": "P1's own record carries the two values the write at seq 17 reported storing (initial_velocity_min 40.0 / initial_velocity_max 90.0), read back at seq 34; the bare key `\"damping_min\"` was rejected (TASK-120 A3) and its value on P2 (1.0) is a value the seed scene already had - it is not evidence of this write",
       "expect": [
-        "\"damping_min\""
+        "\"node_path\":\"P1\"",
+        "\"initial_velocity_min\":40.0",
+        "\"initial_velocity_max\":90.0"
       ]
     },
     {

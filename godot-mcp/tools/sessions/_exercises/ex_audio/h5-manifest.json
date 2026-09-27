@@ -309,9 +309,10 @@
       "tool": "editor_add_audio_bus",
       "witness_tool": "editor_get_audio_bus_layout",
       "run": "runs/_exercises/ex_audio/h5-task113",
-      "why": "the bus editor_add_audio_bus created must appear in the engine's bus layout",
+      "why": "the bus editor_add_audio_bus created is in the engine's bus layout with the name and the index the layout assigns it; the literal carries the VALUE (TASK-120 A3: the bare name `\"Music\"` was rejected - it is matched by any payload carrying that string)",
       "expect": [
-        "\"Music\""
+        "\"name\":\"Music\"",
+        "\"index\":2"
       ]
     },
     {

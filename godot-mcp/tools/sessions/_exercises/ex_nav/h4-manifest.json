@@ -288,18 +288,20 @@
       "tool": "editor_setup_navigation_region",
       "witness_tool": "editor_get_navigation_info",
       "run": "runs/_exercises/ex_nav/h4-task113",
-      "why": "the created NavigationRegion2D must appear in editor_get_navigation_info's region list with its real class and layer mask",
+      "why": "the NavigationRegion2D editor_setup_navigation_region created (RegionA) is in the engine's region list with the engine's own class name; `\"RegionA\"` alone was rejected as a bare name (TASK-120 A3)",
       "expect": [
-        "\"RegionA\""
+        "\"path\":\"RegionA\"",
+        "\"type\":\"NavigationRegion2D\""
       ]
     },
     {
       "tool": "editor_setup_navigation_agent",
       "witness_tool": "editor_get_navigation_info",
       "run": "runs/_exercises/ex_nav/h4-task113",
-      "why": "the created NavigationAgent2D must appear in the agent list with the radius and max_speed the tool wrote",
+      "why": "the NavigationAgent2D editor_setup_navigation_agent created (NA3) is in the engine's agent list with the max_speed 320.0 the tool wrote; `\"max_speed\"` alone was rejected as a bare key (TASK-120 A3)",
       "expect": [
-        "\"max_speed\""
+        "\"path\":\"Player/NA3\"",
+        "\"max_speed\":320.0"
       ]
     },
     {
@@ -324,9 +326,10 @@
       "tool": "running_game_move_player_to_target",
       "witness_tool": "running_game_get_node_properties",
       "run": "runs/_exercises/ex_nav/h4-task113",
-      "why": "the player's position after the moves differs from its start (100,300)",
+      "why": "running_game_move_player_to_target is judged on its pixel_effect channel; its readback declaration is kept for audit and now states the post-write position itself (220.86, 394.86, on the way to the last target (200,400) and different from the start (100,300)); `\"position\"` alone was rejected (TASK-120 A3)",
       "expect": [
-        "\"position\""
+        "\"x\":220.86",
+        "\"y\":394.86"
       ]
     }
   ]

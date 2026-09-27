@@ -78,6 +78,7 @@ import importlib.util
 import io
 import json
 import os
+import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -185,6 +186,28 @@ READBACK_KIND_OWN = "own_payload"
 # TASK-113 item C content check. A witness is normally the first such call; the
 # cap only bounds memory on a tool read hundreds of times in one run.
 PAYLOAD_KEEP = 12
+# ---------------------------------------------------------------------------
+# TASK-120 item A: the four rules a `readback` declaration has to satisfy before
+# it may carry any weight at all. TASK-119's independent acceptance (D2/D3) found
+# that a declaration could name a *write* tool as its witness, could point at a
+# read taken **before** the write, and could state an `expect` that is only a JSON
+# *key name* - which made `expect` nearly tautological (any payload of that reader
+# matches it) and let a witness be chosen before the write it claims to witness.
+# The rules, in the order they are checked:
+#
+#   A1  the witness tool must be a READ-verb tool (READ_VERBS). A write tool's own
+#       success response is not a read-back - the permanent rule from TASK-112.
+#   A2  the witness call must be later (larger `seq`, same run) than at least one
+#       call of the tool it witnesses. A read taken before the write can only
+#       prove the *start* value.
+#   A3  at least one `expect` literal must carry a VALUE, not just a key name:
+#       `"position"` (a bare quoted identifier) is rejected, `"x":346.0` is not.
+#   A4  `expect_absent` may not be declared on its own: without `expect` there is
+#       no "same subject" anchor, and `expect_matches([], text)` is true of every
+#       payload (TASK-119's R3).
+# A declaration that violates any of them is REJECTED: no tier, no channel
+# evidence, and the reason is printed in the ledger's rejected list.
+READBACK_KEY_ONLY = re.compile(r'^"[A-Za-z_][A-Za-z0-9_]*"$')
 
 
 def sha256_file(path):
@@ -279,13 +302,24 @@ def substantive(raw):
     return bool(body)
 
 
-def load_channels(root, names):
+def load_channels(root, names, verbs):
     """Every tool's declared authoritative evidence channel (TASK-118 item A).
 
     The table is data, not code, so it can be reviewed on its own; this reader
-    only enforces the two things that make it trustworthy: it covers the
-    contract exactly (no tool silently falls back to the old rule, no entry for a
-    tool that no longer exists) and every channel is one of the four.
+    only enforces the things that make it trustworthy: it covers the contract
+    exactly (no tool silently falls back to the old rule, no entry for a tool that
+    no longer exists), every channel is one of the four, and - TASK-120 item B -
+    every channel AGREES WITH THE TOOL'S VERB.
+
+    Why the verb check is a hard failure and not a warning: `payload` evidence is
+    counted as `read_payload`, which only a read-verb tool ever accumulates
+    (`build_rows`). An action tool declared `payload` therefore has an evidence
+    gate that can never be satisfied, however well the tool works - TASK-119's
+    D1 (`os_deploy_to_android_device`, verb `deploy`). Symmetrically, a read
+    tool's answer *is* its measurement, so a read tool declared on a
+    screen/file/memory channel would be asked for a delta no reader produces.
+    Both mistakes are structural, so this reader refuses to run instead of
+    publishing a number the mistake made meaningless.
     """
     path = os.path.join(root, CHANNELS_FILE)
     if not os.path.isfile(path):
@@ -300,6 +334,22 @@ def load_channels(root, names):
     bad = sorted(n for n, e in entries.items() if e.get("channel") not in CHANNEL_ORDER)
     if bad:
         raise SystemExit("channel table declares an unknown channel for: %s" % bad)
+    inconsistent = []
+    for name in names:
+        channel = entries[name].get("channel")
+        verb = verb_of(name, verbs)
+        is_read = verb in READ_VERBS
+        if is_read and channel != CHANNEL_PAYLOAD:
+            inconsistent.append("%s (verb `%s` is a read verb: its answer IS the measurement) "
+                               "declares `%s`" % (name, verb, channel))
+        elif (not is_read) and channel == CHANNEL_PAYLOAD:
+            inconsistent.append("%s (verb `%s` is an action verb) declares `payload`: "
+                               "`read_payload` only ever counts read-verb tools, so this "
+                               "tool's evidence gate could never be satisfied"
+                               % (name, verb))
+    if inconsistent:
+        raise SystemExit("channel table contradicts the tool verb (TASK-120 item B):\n  - "
+                         + "\n  - ".join(inconsistent))
     return entries, doc
 
 
@@ -477,7 +527,23 @@ def witness_payload_text(payload):
     return text if isinstance(text, str) else None
 
 
-def verify_readback(declaration, run_index):
+def literal_is_key_only(literal):
+    """True for a literal that is only a JSON *key name* (`"position"`).
+
+    TASK-120 item A3: such a literal is matched by every payload of that reader
+    which happens to carry the key, whatever the value - it anchors the subject
+    but proves nothing about the write. At least one declared literal has to
+    bring the value along (`"x":346.0`, `"MAX_SPEED":400.0`, `"name":"GM6"`).
+    """
+    return bool(READBACK_KEY_ONLY.match(literal))
+
+
+def value_carrying_literals(literals):
+    """The declared literals that carry a value rather than only a key name."""
+    return [x for x in literals if not literal_is_key_only(x)]
+
+
+def verify_readback(declaration, run_index, verbs):
     """(verified pointer, rejection reason). Pointer is None when not confirmed.
 
     A witness counts only if, inside the declared run, a call of the declared
@@ -485,11 +551,30 @@ def verify_readback(declaration, run_index):
     (or a verified sidecar - the TASK-111 rule). TASK-113 item C: when the
     declaration carries `expect`, the payload of one such call must contain
     every declared literal verbatim; the call that matched is the one reported.
+    TASK-120 item A tightens the four things TASK-119 found loose:
+
+      A1 the witness tool must be a READ-verb tool (not the writer itself, and
+         not another writer: "a write tool's own response is not a readback");
+      A2 the matched witness call must be LATER than at least one call of the
+         tool it witnesses, in the same run (larger `seq`);
+      A3 at least one `expect` literal must carry a value, not only a key name;
+      A4 `expect_absent` is only meaningful together with `expect`.
     """
     run = declaration.get("run")
     witness = declaration.get("witness_tool")
+    tool = declaration.get("tool")
     if not run or not witness:
         return None, "the declaration names no run/witness_tool"
+    # --- A1 -----------------------------------------------------------------
+    witness_verb = verb_of(witness, verbs)
+    if witness_verb not in READ_VERBS:
+        return None, ("TASK-120 A1: the declared witness tool `%s` is not a read call "
+                      "(verb=%s). A write tool's own response is not a read-back witness - "
+                      "the witness has to be an independent READ call (READ_VERBS=%s)."
+                      % (witness, witness_verb, ",".join(sorted(READ_VERBS))))
+    if tool and witness == tool:
+        return None, ("TASK-120 A1: `%s` is declared as its own witness; a tool cannot "
+                      "read back its own effect." % tool)
     per_tool = run_index.get(run)
     if not per_tool:
         return None, "the declared run is not in the corpus"
@@ -499,6 +584,12 @@ def verify_readback(declaration, run_index):
 
     expects = expected_literals(declaration)
     forbids = forbidden_literals(declaration)
+    # --- A4 -----------------------------------------------------------------
+    if forbids and not expects:
+        return None, ("TASK-120 A4: `expect_absent` is declared without `expect`. "
+                      "The absence of the removed thing is only meaningful on the same "
+                      "subject, so an `expect` literal (the subject anchor) is required: "
+                      "`expect_matches([], text)` is true of every payload.")
     if not expects and not forbids:
         # TASK-113 item C: the witness has to be checkable at the content level.
         # A declaration that names no literal at all stays at the call level and
@@ -507,16 +598,42 @@ def verify_readback(declaration, run_index):
         return None, ("no content-level `expect`/`expect_absent` declared: the witness would only "
                       "prove that a read call happened (TASK-113 item C requires the written value, "
                       "or the removal it addresses, to be readable back)")
+    # --- A3 -----------------------------------------------------------------
+    if expects and not value_carrying_literals(expects):
+        return None, ("TASK-120 A3: every declared `expect` literal is a bare JSON key name "
+                      "(%s). That is matched by any payload of `%s` that carries the key, "
+                      "whatever the value, so it proves nothing about the write; at least one "
+                      "literal has to carry the written VALUE (e.g. `\"x\":346.0`)."
+                      % (", ".join("'%s'" % x for x in expects), witness))
+
+    # --- A2 -----------------------------------------------------------------
+    witnessed = (per_tool.get(tool) or {})
+    tool_seqs = [s for s in (witnessed.get("seqs") or []) if isinstance(s, int)]
     chosen = None
+    matched_but_not_later = None
     for payload in st["payloads"]:
         text = witness_payload_text(payload)
         if not expect_matches(expects, text):
             continue
         if forbids and not expect_forbids(forbids, text):
             continue
-        chosen = {"seq": payload["seq"], "matched": expects}
+        seq = payload["seq"]
+        # A witness taken before every call of the tool it witnesses can only
+        # report the value the tool did not write yet.
+        if not any(s < seq for s in tool_seqs):
+            if matched_but_not_later is None:
+                matched_but_not_later = seq
+            continue
+        chosen = {"seq": seq, "matched": expects}
         break
     if chosen is None:
+        if matched_but_not_later is not None:
+            return None, ("TASK-120 A2: `%s` @ seq=%s matches expect %s, but that witness call is "
+                          "not later than any of the %d call(s) of `%s` in that run (seqs=%s): a "
+                          "read taken before the write can only report the pre-write value."
+                          % (witness, matched_but_not_later,
+                             " and ".join("'%s'" % x for x in expects) or "(none)",
+                             len(tool_seqs), tool, tool_seqs))
         return None, ("none of the %d substantive `%s` payload(s) satisfies expect %s%s"
                       % (len(st["payloads"]), witness,
                          " and ".join("'%s'" % x for x in expects) or "(none)",
@@ -524,8 +641,11 @@ def verify_readback(declaration, run_index):
                          if forbids else ""))
     pointer = {
         "witness_tool": witness,
+        "witness_verb": witness_verb,
         "run": run,
         "witness_seq": chosen["seq"],
+        "witness_after_write": True,
+        "witnessed_tool_first_seq": min(tool_seqs) if tool_seqs else None,
         "why": declaration.get("why", ""),
         "declared_in": declaration.get("declared_in", ""),
         "expect": expects,
@@ -611,7 +731,11 @@ def build_rows(root, ledger, traces, verbs, scopes):
                                    or substantive(row.get("result_json")))
             rt = run_tools.setdefault(name, {"ok": 0, "substantive": 0,
                                              "first_substantive_seq": None,
-                                             "payloads": []})
+                                             "seqs": [], "payloads": []})
+            # TASK-120 item A2: every call seq of this tool in this run, so a
+            # declared witness can be checked to come AFTER at least one of them.
+            if isinstance(row.get("call_id"), int):
+                rt["seqs"].append(row["call_id"])
             if row["ok"]:
                 rt["ok"] += 1
             if row["ok"] and substantive_payload:
@@ -735,7 +859,7 @@ def build_payload(args):
     readback_rejected = []
     content_checked = 0
     for declaration in declarations:
-        pointer, reason = verify_readback(declaration, run_index)
+        pointer, reason = verify_readback(declaration, run_index, verbs)
         if pointer is None:
             rejected = dict(declaration)
             rejected["reason"] = reason
@@ -755,9 +879,15 @@ def build_payload(args):
     reclassified = {r["tool"]: r for r in registry.get("reclassified") or []}
     reg_members = {m["tool"]: m["category"] for m in registry.get("members") or []
                    if m["tool"] not in reclassified}
+    # TASK-120 item D3: the tools whose success branch does not exist in this
+    # engine build. They stay on the numeric ladder (the rule cannot see why a
+    # channel is empty) but the ledger spells the reason out instead of calling
+    # them "missing evidence".
+    engine_not_implemented = {item["tool"]: item for item in
+                              (registry.get("engine_not_implemented") or {}).get("items") or []}
 
     # TASK-118 item A: the declared channel every tool is judged on.
-    channels, channel_doc = load_channels(root, names)
+    channels, channel_doc = load_channels(root, names, verbs)
 
     tools = []
     for name in names:
@@ -795,6 +925,8 @@ def build_payload(args):
             "bucket": bucket_of(calls),
             "status": status_of_channel(calls, channel_evidence, bnd),
             "status_legacy": legacy_status,
+            "ledger_class": "engine_not_implemented" if name in engine_not_implemented else None,
+            "ledger_class_note": (engine_not_implemented.get(name) or {}).get("verdict"),
             "unreachable_category": reg_members.get(name),
             "verdicts": st["verdicts"] if st else {},
             "file_effects": st["file_effects"] if st else {},
@@ -849,6 +981,10 @@ def build_payload(args):
             continue
         if row["calls"] < 5:
             reason = "calls<5"
+        elif row["tool"] in engine_not_implemented:
+            reason = ("引擎未实现：%s（不是缺证据；%s）"
+                      % (engine_not_implemented[row["tool"]]["verdict"],
+                         engine_not_implemented[row["tool"]]["evidence"]))
         elif row["boundary"] < 1:
             reason = "channel-evidence=%d but no boundary call" % row["channel_evidence"]
         else:
@@ -918,6 +1054,8 @@ def build_payload(args):
         "evidence_channel_order": list(CHANNEL_ORDER),
         "evidence_channel_labels": CHANNEL_LABEL,
         "evidence_channel_source": CHANNELS_FILE.replace("\\", "/"),
+        "evidence_channel_basis_scope": channel_doc.get("basis_scope"),
+        "evidence_channel_basis_scope_note": channel_doc.get("basis_scope_note"),
         "channel_delta": channel_delta,
         "readback_declarations": {
             "declared": len(declarations),
@@ -944,6 +1082,7 @@ def build_payload(args):
             # separate so they can never be added into that count by accident.
             "scope_excluded": registry.get("scope_excluded") or {},
             "needs_an_external_device": registry.get("needs_an_external_device") or {},
+            "engine_not_implemented": registry.get("engine_not_implemented") or {},
         },
     }
 
@@ -981,9 +1120,11 @@ def render_md(payload, title, cmdline):
     lines.append("> `%s`" % cmdline)
     lines.append("")
     lines.append("口径（mode）：**%s**；语料：**%d 个 run 目录 / %d 个 trace 文件 / %d 次 "
-                 "`tools/call`**（`ok=false` %d 次、解析失败行 %d、sidecar 校验通过 %d）"
+                 "`tools/call`**（`ok=false` %d 次、解析失败行 %d、sidecar 校验通过 %d）；"
+                 "**出现过的工具名（distinct）= %d**（= 契约 %d − 0 次 %d）"
                  % (payload["mode"], corpus["run_dirs"], corpus["trace_files"], corpus["calls"],
-                    corpus["failed"], corpus["malformed_lines"], corpus["sidecars_verified"]))
+                    corpus["failed"], corpus["malformed_lines"], corpus["sidecars_verified"],
+                    corpus["distinct_tools"], total, buckets.get("0", 0)))
     if payload["excludes"]:
         lines.append("；已剔除路径片段：%s" % ", ".join("`%s`" % x for x in payload["excludes"]))
     lines.append("")
@@ -1022,14 +1163,33 @@ def render_md(payload, title, cmdline):
                  "所以 `witness_read` 现在证明的是「写进去的值能从引擎自己的回答里读回来」，"
                  "不再只是「那一次读调用发生过」。")
     lines.append("- **不得**把「写工具自己响应里说成功了」当作 readback：那条路径只能落在 `count_only`。")
+    lines.append("- **TASK-120 A 的四条硬规则**（任一条不满足即**拒签**，理由写进 rejected 列表）：")
+    lines.append("  **A1** 见证工具必须是**读类动词**（`READ_VERBS`）——写工具自己的回包不是读回，"
+                 "见证工具也不能是被见证工具自己；"
+                 "**A2** 被采用的见证调用必须**晚于**被见证工具的至少一次调用（同 run、`seq` 更大）"
+                 "——写在写之前的读只能读回起始值；"
+                 "**A3** `expect` 至少要有一条**带值**的字面量（`\"x\":346.0`），"
+                 "只有裸键名（`\"position\"`）的声明会被拒；"
+                 "**A4** 不得**只**声明 `expect_absent`——必须同时给同一主体的 `expect` 锚点。")
+    lines.append("  依据：TASK-119 独立验收的 D2/D3（`\"position\"` 近似恒真 + 见证在写之前）。"
+                 "M2/M3 反例自证（旧口径签、新口径拒）见 "
+                 "`recovery/work/task120/witness_rules_selftest.py`。")
     lines.append("")
     lines.append("### 0.0 权威证据通道声明（TASK-118 A；声明表：`%s`）"
                  % payload.get("evidence_channel_source", "tools/tool_channels.json"))
     lines.append("")
     lines.append("每条契约工具**声明一条**权威证据通道；`达标` 只在该通道上以内容级证据判定。"
                  "声明由 `recovery/work/task118/gen_channels.py` 生成、本工具加载，"
-                 "**覆盖不到契约时本工具直接拒绝运行**（缺一条工具＝那条工具会悄悄退回旧口径）。")
+                 "**覆盖不到契约时本工具直接拒绝运行**（缺一条工具＝那条工具会悄悄退回旧口径）。"
+                 "**TASK-120 B 起还校验「通道 ↔ verb」一致**：动作类动词不得声明成 `payload`"
+                 "（`read_payload` 只对读类动词累加，那样的证据门恒为 0），读类动词也不得声明成"
+                 "画面/文件/内存态通道（它的回包**就是**测量结果）；违规直接拒绝运行。")
     lines.append("")
+    if payload.get("evidence_channel_basis_scope_note"):
+        lines.append("> **`basis` 的口径（TASK-120 D4）**：`%s`。%s"
+                     % (payload.get("evidence_channel_basis_scope", "?"),
+                        payload["evidence_channel_basis_scope_note"]))
+        lines.append("")
     lines.append("| 通道 | 判据 | 声明条数 | 有通道证据 | 通道证据观测数 | 其中达标 | 计数达标缺证据 | 未达(0) |")
     lines.append("|---|---|---|---|---|---|---|---|")
     ch_counts = payload.get("evidence_channel_counts", {})
@@ -1106,8 +1266,8 @@ def render_md(payload, title, cmdline):
                  "另外 %d 条是 `own_payload`（读类动词，回包即证据、没有第二次调用可点名），"
                  "它们逐条列在 §0.2。" % (rb.get("verified", 0), len(own)))
     lines.append("")
-    lines.append("| 写工具 | kind | 见证读调用 | run | 见证 seq | 内容级 `expect`（逐字） | `expect_absent` | 读回的是什么 |")
-    lines.append("|---|---|---|---|---|---|---|---|")
+    lines.append("| 写工具 | kind | 见证读调用 | 见证 verb | run | 见证 seq | 内容级 `expect`（逐字） | `expect_absent` | 读回的是什么 |")
+    lines.append("|---|---|---|---|---|---|---|---|---|")
     for row in payload["tools"]:
         entry = row.get("readback")
         if not entry or entry.get("kind") != READBACK_KIND_WITNESS:
@@ -1116,9 +1276,10 @@ def render_md(payload, title, cmdline):
         absent = entry.get("expect_absent") or []
         expect_text = " ; ".join("`%s`" % x.replace("`", "'") for x in expect) if expect else "（未声明）"
         absent_text = " ; ".join("`%s`" % x.replace("`", "'") for x in absent) if absent else "-"
-        lines.append("| `%s` | `%s` | `%s` | %s | %s | %s | %s | %s |"
+        lines.append("| `%s` | `%s` | `%s` | `%s` | %s | %s | %s | %s | %s |"
                      % (row["tool"], entry.get("kind", ""),
                         entry["witness_tool"] if entry.get("witness_tool") else "-",
+                        entry.get("witness_verb") or "-",
                         entry.get("run") or "-",
                         entry.get("witness_seq") if entry.get("witness_seq") is not None else "-",
                         expect_text, absent_text,
@@ -1232,15 +1393,54 @@ def render_md(payload, title, cmdline):
                      % (scope_out.get("count", 0),
                         " ".join("`%s`" % t for t in scope_out.get("tools") or []) or "-",
                         scope_out.get("register_category", "-")))
-        lines.append("| `needs-an-external-device`（本机实测：缺设备/缺预设） | %d | %s | `%s` |"
-                     % (ext_dev.get("count", 0),
-                        " ".join("`%s`" % t for t in ext_dev.get("tools") or []) or "-",
-                        ext_dev.get("register_category", "-")))
         lines.append("")
+        lines.append("#### `needs-an-external-device`：**逐条**当前状态（TASK-120 D2）")
+        lines.append("")
+        lines.append("这个栏位的三条工具**不在同一状态**，所以逐条列出；只读一行工具名会读成"
+                     "「三条都不可测」，而实际上其中一条已经达标。")
+        lines.append("")
+        lines.append("| tool | 台账状态 | 本机实测 | 证据 |")
+        lines.append("|---|---|---|---|")
+        items = ext_dev.get("items")
+        if items:
+            for item in items:
+                row = [r for r in payload["tools"] if r["tool"] == item["tool"]]
+                live = row[0]["status"] if row else item.get("ledger_status", "-")
+                lines.append("| `%s` | %s | %s | `%s` |"
+                             % (item["tool"], live, item.get("measured", "-"),
+                                item.get("evidence", "-")))
+        else:
+            for tool in ext_dev.get("tools") or []:
+                row = [r for r in payload["tools"] if r["tool"] == tool]
+                lines.append("| `%s` | %s | - | - |"
+                             % (tool, row[0]["status"] if row else "-"))
+        lines.append("")
+        if items:
+            for item in items:
+                lines.append("- `%s`：%s" % (item["tool"], item.get("note", "")))
+            lines.append("")
         if ext_dev.get("measured_run"):
             lines.append("`needs-an-external-device` 的本机实测命令与结果写在登记表 "
                          "`categories.H8.external_device.measured_on_this_machine` 里，"
                          "调用证据在 `%s`。" % ext_dev["measured_run"])
+            lines.append("")
+        eng = reg.get("engine_not_implemented") or {}
+        if eng.get("items"):
+            lines.append("#### `engine-not-implemented`：**引擎未实现**类（TASK-120 D3）")
+            lines.append("")
+            lines.append("%s" % eng.get("comment", ""))
+            lines.append("")
+            lines.append("| tool | 引擎回答 | 本机实测 | 证据 | 台账状态 |")
+            lines.append("|---|---|---|---|---|")
+            for item in eng["items"]:
+                row = [r for r in payload["tools"] if r["tool"] == item["tool"]]
+                lines.append("| `%s` | `%s` | %s | `%s` | %s |"
+                             % (item["tool"], item.get("verdict", "-"), item.get("measured", "-"),
+                                item.get("evidence", "-"),
+                                row[0]["status"] if row else "-"))
+            lines.append("")
+            for item in eng["items"]:
+                lines.append("- `%s`：%s" % (item["tool"], item.get("ledger_status_unchanged", "")))
             lines.append("")
     for code in sorted(reg.get("categories") or {}):
         cat = reg["categories"][code]

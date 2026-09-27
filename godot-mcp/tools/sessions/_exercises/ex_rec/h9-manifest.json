@@ -202,29 +202,29 @@
   "readback": [
     {
       "tool": "running_game_create_input_recording",
-      "witness_tool": "running_game_stop_input_recording",
+      "witness_tool": "running_game_get_node_properties",
       "run": "runs/_exercises/ex_rec/h9-task113",
-      "why": "the stop call's answer carries the events of the session create started (event_count > 0)",
+      "why": "the read call at seq 18 (after the create->play->stop chain) answers x=346.0, while the same reader answered x=100.0 before the session started (seq 2): the recorded session the created recorder captured really drove the game. The old witness was running_game_stop_input_recording's own response - a WRITE tool, which the TASK-120 A1 rule rejects. Boundary: the engine exposes no read tool for the recorder itself, so a read call can show this consequence of the recording, not the recorder's internal state",
       "expect": [
-        "\"event_count\":2"
+        "\"x\":346.0"
       ]
     },
     {
       "tool": "running_game_play_input_recording",
       "witness_tool": "running_game_get_node_properties",
       "run": "runs/_exercises/ex_rec/h9-task113",
-      "why": "the player's position after the create->stop->play chain is not the reset (100,300): the replay really drove the game",
+      "why": "the read at seq 22 - taken right after the create->stop->play replay (call at seq 21) - answers x=151.0, while the read just before it (seq 20, after the reset) answered x=100.0: the replay really drove the player. `\"position\"` alone was rejected as a bare key (TASK-120 A3)",
       "expect": [
-        "\"position\""
+        "\"x\":151.0"
       ]
     },
     {
       "tool": "running_game_stop_input_recording",
       "witness_tool": "running_game_get_node_properties",
       "run": "runs/_exercises/ex_rec/h9-task113",
-      "why": "the position read after the stop differs from the position read before the session (the recorded keys moved the player)",
+      "why": "the read at seq 18 - taken after the stop call at seq 17 - answers x=346.0, while the same reader answered x=100.0 before the session (seq 2): the recorded session this stop closed really had driven the game. `\"position\"` alone was rejected as a bare key (TASK-120 A3). Boundary: no read tool exposes the recorder's state, so this is the consequence a read call can show",
       "expect": [
-        "\"position\""
+        "\"x\":346.0"
       ]
     }
   ]

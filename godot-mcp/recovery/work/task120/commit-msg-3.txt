@@ -1,0 +1,1 @@
+chore(godot-mcp): TASK-120 - refresh the ledger once more after the decision record (generated_utc only; every number identical to the one quoted in the report)

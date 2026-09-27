@@ -1149,9 +1149,10 @@
    "tool": "editor_add_scene_instance",
    "run": "runs/_exercises/ex_write5/c4-v5-task111",
    "witness_tool": "editor_get_scene_tree",
-   "why": "挂载的实例必须出现在编辑场景树里（editor_get_scene_tree 列出被实例化出来的节点）",
+   "why": "挂载的实例必须出现在编辑场景树里（editor_get_scene_tree 列出被实例化出来的节点）：expect 现在带值——实例自己的子节点 C4Node2（来自 res://scenes/c4_sub.tscn）挂在节点路径 /Main/Sub1/C4Node2 之下，树里那个节点的名字是 Sub1；旧的 `\"Sub1\"` 只是裸名字，被 TASK-120 A3 拒签",
    "expect": [
-    "\"Sub1\""
+    "/Main/Sub1/C4Node2",
+    "\"name\":\"Sub1\""
    ]
   },
   {
@@ -1167,9 +1168,10 @@
    "tool": "editor_set_node_groups",
    "run": "runs/_exercises/ex_write5/c4-v5-task111",
    "witness_tool": "editor_get_node_groups",
-   "why": "读回被写节点的 groups 列表",
+   "why": "读回被写节点的 groups 列表：expect 现在带值——Host 这个节点路径与它的 groups 数组内容；旧的 `\"ex_host\"` 只是裸名字，被 TASK-120 A3 拒签",
    "expect": [
-    "\"ex_host\""
+    "\"node_path\":\"Host\"",
+    "\"groups\":[\"ex_host\"]"
    ]
   },
   {
@@ -1185,9 +1187,10 @@
    "tool": "editor_setup_physics_body",
    "run": "runs/_exercises/ex_write5/c4-v5-task111",
    "witness_tool": "editor_get_scene_tree",
-   "why": "建出来的物理体节点必须出现在编辑场景树里",
+   "why": "建出来的物理体节点必须出现在编辑场景树里：expect 现在带值——工具建出的 RigidBody2D（PB1）连同它自己的 CollisionShape2D 子节点，节点路径 /Main/PB1/CollisionShape2D；旧的 `\"PB1\"` 只是裸名字，被 TASK-120 A3 拒签",
    "expect": [
-    "\"PB1\""
+    "/Main/PB1/CollisionShape2D",
+    "\"name\":\"PB1\""
    ]
   }
  ],

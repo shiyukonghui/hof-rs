@@ -1,16 +1,16 @@
 {
-  "generated_utc": "2026-09-27T06:43:01Z",
+  "generated_utc": "2026-09-27T07:08:23Z",
   "mode": "all-runs",
   "root": "F:\\moonbit-hof-rs\\godot-mcp",
   "runs_dir": "runs",
   "excludes": [],
   "corpus": {
-    "trace_files": 180,
-    "run_dirs": 111,
-    "calls": 8712,
+    "trace_files": 182,
+    "run_dirs": 112,
+    "calls": 8729,
     "malformed_lines": 0,
     "ok": 8057,
-    "failed": 655,
+    "failed": 672,
     "distinct_tools": 172,
     "sidecars_verified": 277
   },
@@ -33,8 +33,8 @@
     "0": 5
   },
   "status_counts": {
-    "达标": 152,
-    "计数达标缺证据": 20,
+    "达标": 169,
+    "计数达标缺证据": 3,
     "未达(0)": 5
   },
   "evidence_tier_counts": {
@@ -70,6 +70,8 @@
     "payload": "查询类：ok=true 且回包是实质载荷（回包即测量结果）"
   },
   "evidence_channel_source": "tools/tool_channels.json",
+  "evidence_channel_basis_scope": "channel_template",
+  "evidence_channel_basis_scope_note": "每条 `basis` 是**通道级模板**：同一通道的 22/28/51/76 条逐字相同，只有 `subject` 逐条不同。它说明的是「为什么这条通道配这类工具」，不是逐工具的推理记录；逐工具的推理在 `subject`、该工具的会话/manifest，以及台账 §0.1 的见证表里（TASK-119 D6）。",
   "channel_delta": {
     "channel_counts": {
       "payload": 76,
@@ -85,33 +87,32 @@
     },
     "channel_status": {
       "payload": {
-        "达标": 68,
-        "计数达标缺证据": 8
+        "达标": 75,
+        "计数达标缺证据": 1
       },
       "file_effect": {
-        "达标": 17,
-        "计数达标缺证据": 5
+        "达标": 21,
+        "计数达标缺证据": 1
       },
       "pixel_effect": {
-        "计数达标缺证据": 5,
-        "达标": 23
+        "达标": 28
       },
       "editor_state": {
-        "达标": 44,
-        "计数达标缺证据": 2,
+        "达标": 45,
+        "计数达标缺证据": 1,
         "未达(0)": 5
       }
     },
     "channel_evidence": {
       "payload": {
         "tools": 76,
-        "with_evidence": 74,
-        "evidence_observations": 5933
+        "with_evidence": 75,
+        "evidence_observations": 5958
       },
       "file_effect": {
         "tools": 22,
-        "with_evidence": 22,
-        "evidence_observations": 484
+        "with_evidence": 21,
+        "evidence_observations": 469
       },
       "pixel_effect": {
         "tools": 28,
@@ -250,6 +251,15 @@
         "channel_evidence": 1,
         "channel_basis": "editor_state：运行期游戏的输入录制缓冲（由 stop 的回包逐字读回）。判定依据：契约改变的状态既不在盘上、也不（在这个工程的视口里）可靠地反映成像素：它是编辑器进程自己的 GUI / 插件 / 文件系统状态，或运行中游戏进程的内存态。这条通道只接受**另一次独立读调用**在自己的回包里**逐字**包含被写入的值的证据（会话 manifest 的 witness_read + expect，本工具会回到 trace 里再核一次）；写工具自己的回包不算。",
         "evidence_path": "runs/_exercises/ex_rec/h9-task113(7)"
+      },
+      {
+        "tool": "running_game_stop_input_recording",
+        "channel": "editor_state",
+        "calls": 8,
+        "boundary": 1,
+        "channel_evidence": 1,
+        "channel_basis": "editor_state：运行期游戏的输入录制缓冲（回包里的 event_count/events）。判定依据：契约改变的状态既不在盘上、也不（在这个工程的视口里）可靠地反映成像素：它是编辑器进程自己的 GUI / 插件 / 文件系统状态，或运行中游戏进程的内存态。这条通道只接受**另一次独立读调用**在自己的回包里**逐字**包含被写入的值的证据（会话 manifest 的 witness_read + expect，本工具会回到 trace 里再核一次）；写工具自己的回包不算。",
+        "evidence_path": "runs/_exercises/ex_rec/h9-task113(7) ; runs/_exercises/ex_grid/c8-task120(1)"
       },
       {
         "tool": "editor_set_node_script",
@@ -525,111 +535,12 @@
     "demoted_from_legacy_rule": [],
     "still_short": [
       {
-        "tool": "editor_open_scene",
-        "channel": "pixel_effect",
-        "calls": 86,
-        "boundary": 0,
-        "channel_evidence": 9,
-        "reason": "channel-evidence=9 but no boundary call",
-        "status": "计数达标缺证据"
-      },
-      {
-        "tool": "editor_save_scene",
-        "channel": "file_effect",
-        "calls": 123,
-        "boundary": 0,
-        "channel_evidence": 77,
-        "reason": "channel-evidence=77 but no boundary call",
-        "status": "计数达标缺证据"
-      },
-      {
-        "tool": "editor_delete_node",
-        "channel": "pixel_effect",
-        "calls": 65,
-        "boundary": 0,
-        "channel_evidence": 5,
-        "reason": "channel-evidence=5 but no boundary call",
-        "status": "计数达标缺证据"
-      },
-      {
-        "tool": "editor_set_node_property",
-        "channel": "pixel_effect",
-        "calls": 41,
-        "boundary": 0,
-        "channel_evidence": 12,
-        "reason": "channel-evidence=12 but no boundary call",
-        "status": "计数达标缺证据"
-      },
-      {
-        "tool": "editor_get_errors",
-        "channel": "payload",
-        "calls": 50,
-        "boundary": 0,
-        "channel_evidence": 50,
-        "reason": "channel-evidence=50 but no boundary call",
-        "status": "计数达标缺证据"
-      },
-      {
-        "tool": "editor_capture_screenshot",
-        "channel": "file_effect",
-        "calls": 25,
-        "boundary": 0,
-        "channel_evidence": 15,
-        "reason": "channel-evidence=15 but no boundary call",
-        "status": "计数达标缺证据"
-      },
-      {
-        "tool": "running_game_capture_screenshot",
-        "channel": "payload",
-        "calls": 298,
-        "boundary": 0,
-        "channel_evidence": 298,
-        "reason": "channel-evidence=298 but no boundary call",
-        "status": "计数达标缺证据"
-      },
-      {
         "tool": "editor_set_auto_dismiss_dialogs",
         "channel": "editor_state",
         "calls": 7,
         "boundary": 7,
         "channel_evidence": 0,
-        "reason": "channel-evidence=0 on the declared channel `editor_state`",
-        "status": "计数达标缺证据"
-      },
-      {
-        "tool": "running_game_get_scene_tree",
-        "channel": "payload",
-        "calls": 123,
-        "boundary": 0,
-        "channel_evidence": 123,
-        "reason": "channel-evidence=123 but no boundary call",
-        "status": "计数达标缺证据"
-      },
-      {
-        "tool": "running_game_get_node_property_samples",
-        "channel": "payload",
-        "calls": 122,
-        "boundary": 0,
-        "channel_evidence": 122,
-        "reason": "channel-evidence=122 but no boundary call",
-        "status": "计数达标缺证据"
-      },
-      {
-        "tool": "running_game_stop_input_recording",
-        "channel": "editor_state",
-        "calls": 7,
-        "boundary": 0,
-        "channel_evidence": 1,
-        "reason": "channel-evidence=1 but no boundary call",
-        "status": "计数达标缺证据"
-      },
-      {
-        "tool": "project_edit_script",
-        "channel": "file_effect",
-        "calls": 60,
-        "boundary": 0,
-        "channel_evidence": 52,
-        "reason": "channel-evidence=52 but no boundary call",
+        "reason": "引擎未实现：-32000 Not implemented: editor_set_auto_dismiss_dialogs（不是缺证据；runs/_exercises/ex_editor/h7-task115/trace-editor.jsonl seq=74..80）",
         "status": "计数达标缺证据"
       },
       {
@@ -669,15 +580,6 @@
         "status": "未达(0)"
       },
       {
-        "tool": "editor_add_input_action",
-        "channel": "file_effect",
-        "calls": 189,
-        "boundary": 0,
-        "channel_evidence": 122,
-        "reason": "channel-evidence=122 but no boundary call",
-        "status": "计数达标缺证据"
-      },
-      {
         "tool": "editor_simulate_input_sequence",
         "channel": "editor_state",
         "calls": 0,
@@ -685,33 +587,6 @@
         "channel_evidence": 0,
         "reason": "calls<5",
         "status": "未达(0)"
-      },
-      {
-        "tool": "running_game_run_test_scenario",
-        "channel": "pixel_effect",
-        "calls": 185,
-        "boundary": 0,
-        "channel_evidence": 1,
-        "reason": "channel-evidence=1 but no boundary call",
-        "status": "计数达标缺证据"
-      },
-      {
-        "tool": "running_game_assert_screen_text",
-        "channel": "payload",
-        "calls": 80,
-        "boundary": 0,
-        "channel_evidence": 65,
-        "reason": "channel-evidence=65 but no boundary call",
-        "status": "计数达标缺证据"
-      },
-      {
-        "tool": "running_game_run_stress_test",
-        "channel": "pixel_effect",
-        "calls": 27,
-        "boundary": 0,
-        "channel_evidence": 5,
-        "reason": "channel-evidence=5 but no boundary call",
-        "status": "计数达标缺证据"
       },
       {
         "tool": "project_get_android_preset_info",
@@ -724,29 +599,11 @@
       },
       {
         "tool": "os_deploy_to_android_device",
-        "channel": "payload",
+        "channel": "file_effect",
         "calls": 6,
         "boundary": 6,
         "channel_evidence": 0,
-        "reason": "channel-evidence=0 on the declared channel `payload`",
-        "status": "计数达标缺证据"
-      },
-      {
-        "tool": "project_build_csharp",
-        "channel": "file_effect",
-        "calls": 67,
-        "boundary": 0,
-        "channel_evidence": 63,
-        "reason": "channel-evidence=63 but no boundary call",
-        "status": "计数达标缺证据"
-      },
-      {
-        "tool": "project_validate_scripts",
-        "channel": "payload",
-        "calls": 84,
-        "boundary": 0,
-        "channel_evidence": 80,
-        "reason": "channel-evidence=80 but no boundary call",
+        "reason": "channel-evidence=0 on the declared channel `file_effect`",
         "status": "计数达标缺证据"
       }
     ]
@@ -760,8 +617,11 @@
     "verified_by_tool": {
       "editor_add_animation_track": {
         "witness_tool": "editor_get_animation_info",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 29,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 11,
         "why": "读回同一动画的轨道表",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
         "expect": [
@@ -772,20 +632,27 @@
       },
       "editor_add_audio_bus": {
         "witness_tool": "editor_get_audio_bus_layout",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_audio/h5-task113",
         "witness_seq": 22,
-        "why": "the bus editor_add_audio_bus created must appear in the engine's bus layout",
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 2,
+        "why": "the bus editor_add_audio_bus created is in the engine's bus layout with the name and the index the layout assigns it; the literal carries the VALUE (TASK-120 A3: the bare name `\"Music\"` was rejected - it is matched by any payload carrying that string)",
         "declared_in": "tools/sessions/_exercises/ex_audio/h5-manifest.json",
         "expect": [
-          "\"Music\""
+          "\"name\":\"Music\"",
+          "\"index\":2"
         ],
         "expect_absent": [],
         "expect_matched": true
       },
       "editor_add_audio_bus_effect": {
         "witness_tool": "editor_get_audio_bus_layout",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_audio/h5-task113",
         "witness_seq": 22,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 9,
         "why": "the effect must appear in the bus's effect list with the engine's class name",
         "declared_in": "tools/sessions/_exercises/ex_audio/h5-manifest.json",
         "expect": [
@@ -796,8 +663,11 @@
       },
       "editor_add_audio_player": {
         "witness_tool": "editor_get_node_properties",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_audio/h5-task113",
         "witness_seq": 42,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 16,
         "why": "the node editor_add_audio_player created must be in the scene as an AudioStreamPlayer2D",
         "declared_in": "tools/sessions/_exercises/ex_audio/h5-manifest.json",
         "expect": [
@@ -808,8 +678,11 @@
       },
       "editor_add_gridmap": {
         "witness_tool": "editor_get_scene_tree",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_grid/c6-task118",
         "witness_seq": 9,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 3,
         "why": "the GridMap the tool created is in the edited scene tree under the exact name it was given, with the engine's own class name; the same tree lists every sibling it created (GM7..GM10) and does NOT list the boundary probe's GMX",
         "declared_in": "tools/sessions/_exercises/ex_close/c6-manifest.json",
         "expect": [
@@ -821,8 +694,11 @@
       },
       "editor_add_mesh_instance": {
         "witness_tool": "editor_get_scene_tree",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_3d/h1b2-task115",
         "witness_seq": 11,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 5,
         "why": "the MeshInstance3D the tool created is in the edited scene tree under the exact name it was given",
         "declared_in": "tools/sessions/_exercises/ex_3d/h1b-manifest.json",
         "expect": [
@@ -834,44 +710,59 @@
       },
       "editor_add_scene_instance": {
         "witness_tool": "editor_get_scene_tree",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_write5/c4-v5-task111",
         "witness_seq": 132,
-        "why": "挂载的实例必须出现在编辑场景树里（editor_get_scene_tree 列出被实例化出来的节点）",
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 21,
+        "why": "挂载的实例必须出现在编辑场景树里（editor_get_scene_tree 列出被实例化出来的节点）：expect 现在带值——实例自己的子节点 C4Node2（来自 res://scenes/c4_sub.tscn）挂在节点路径 /Main/Sub1/C4Node2 之下，树里那个节点的名字是 Sub1；旧的 `\"Sub1\"` 只是裸名字，被 TASK-120 A3 拒签",
         "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
         "expect": [
-          "\"Sub1\""
+          "/Main/Sub1/C4Node2",
+          "\"name\":\"Sub1\""
         ],
         "expect_absent": [],
         "expect_matched": true
       },
       "editor_add_state_machine_state": {
         "witness_tool": "editor_get_animation_tree_structure",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 88,
-        "why": "读回状态机里的状态列表",
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 41,
+        "why": "the state editor_add_state_machine_state created for AT1 (state_name Walk, animation Anim2) is in the engine's state list with its animation binding; `\"Walk\"` alone was rejected as a bare name (TASK-120 A3)",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
         "expect": [
-          "\"Walk\""
+          "\"name\":\"Walk\"",
+          "\"animation\":\"Anim2\""
         ],
         "expect_absent": [],
         "expect_matched": true
       },
       "editor_add_state_machine_transition": {
         "witness_tool": "editor_get_animation_tree_structure",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 88,
-        "why": "读回状态机里的迁移列表",
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 53,
+        "why": "the Jump -> Walk transition editor_add_state_machine_transition created is in the engine's transition list (`from`/`to` with their values); `\"Idle\"` alone was rejected as a bare name (TASK-120 A3)",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
         "expect": [
-          "\"Idle\""
+          "\"from\":\"Jump\"",
+          "\"to\":\"Walk\""
         ],
         "expect_absent": [],
         "expect_matched": true
       },
       "editor_bake_navigation_mesh": {
         "witness_tool": "editor_get_navigation_info",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_nav/h4-task113",
         "witness_seq": 27,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 21,
         "why": "the bake's own polygon_count must appear in the region record (baked: true)",
         "declared_in": "tools/sessions/_exercises/ex_nav/h4-manifest.json",
         "expect": [
@@ -882,8 +773,11 @@
       },
       "editor_connect_signal": {
         "witness_tool": "editor_list_signal_connections",
+        "witness_verb": "list",
         "run": "runs/_exercises/ex_grid/c6-task118",
         "witness_seq": 23,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 17,
         "why": "the connection the tool reported as persisted is in the editor's own connection table, read back with scope=user (the same call's counts block answers user:5), and the boundary probe's source (NoSuchNode) is not in it",
         "declared_in": "tools/sessions/_exercises/ex_close/c6-manifest.json",
         "expect": [
@@ -895,20 +789,26 @@
       },
       "editor_create_animation": {
         "witness_tool": "editor_list_animations",
+        "witness_verb": "list",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 23,
-        "why": "读回动画列表，新建的动画在其中",
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 2,
+        "why": "the animation list read back after the eight creates starts with the five animations in creation order, Anim5 among them; `\"Anim5\"` alone was rejected as a bare name (TASK-120 A3)",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
         "expect": [
-          "\"Anim5\""
+          "\"animations\":[\"Anim1\",\"Anim2\",\"Anim3\",\"Anim4\",\"Anim5\""
         ],
         "expect_absent": [],
         "expect_matched": true
       },
       "editor_create_animation_tree": {
         "witness_tool": "editor_get_animation_tree_structure",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 88,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 35,
         "why": "读回 AnimationTree 的结构（tree_root / 状态机）",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
         "expect": [
@@ -919,8 +819,11 @@
       },
       "editor_create_particles": {
         "witness_tool": "editor_get_particle_info",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_particles/h6-task113",
         "witness_seq": 34,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 2,
         "why": "the created system must answer as a GPUParticles2D with its own process_material",
         "declared_in": "tools/sessions/_exercises/ex_particles/h6-manifest.json",
         "expect": [
@@ -931,8 +834,11 @@
       },
       "editor_disconnect_signal": {
         "witness_tool": "editor_list_signal_connections",
+        "witness_verb": "list",
         "run": "runs/_exercises/ex_write6/c5-task111",
         "witness_seq": 13,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 7,
         "why": "断开之后再读一次连接表：count=0（同一次运行、同一个节点）",
         "declared_in": "tools/sessions/_exercises/ex_write6/c5-manifest.json",
         "expect": [
@@ -943,8 +849,11 @@
       },
       "editor_play_scene": {
         "witness_tool": "editor_execute_gdscript",
+        "witness_verb": "execute",
         "run": "runs/_exercises/ex_editor/h7-task115",
         "witness_seq": 59,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 58,
         "why": "the editor's own run bar reports playing after the tool answered playing:true, and reports not playing after the matching stop",
         "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
         "expect": [
@@ -955,8 +864,11 @@
       },
       "editor_reload_plugin": {
         "witness_tool": "project_get_settings",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_editor/h7-task115",
         "witness_seq": 37,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 31,
         "why": "the addon the tool disabled and enabled again is the one ProjectSettings really lists as enabled",
         "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
         "expect": [
@@ -967,8 +879,11 @@
       },
       "editor_remove_animation": {
         "witness_tool": "editor_list_animations",
+        "witness_verb": "list",
         "run": "runs/_exercises/ex_anim2/h2c-task115",
         "witness_seq": 14,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 8,
         "why": "the same AnimationPlayer is read back after the removals, and none of the five names this run created and removed is in the library any more (the run's own earlier read, before the removals, is skipped because it still holds them)",
         "declared_in": "tools/sessions/_exercises/ex_anim2/h2c-manifest.json",
         "expect": [
@@ -985,8 +900,11 @@
       },
       "editor_remove_node_selection": {
         "witness_tool": "editor_get_selection",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_editor/h7-task115",
         "witness_seq": 22,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 21,
         "why": "after the clear the editor's own EditorSelection really is empty, while the same reader had answered a non-empty list earlier in the run",
         "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
         "expect": [
@@ -998,8 +916,11 @@
       },
       "editor_remove_output_log": {
         "witness_tool": "editor_get_output_log",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_editor/h7-task115",
         "witness_seq": 6,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 5,
         "why": "the Output panel of THIS editor process is readable in-process, and after the clear the engine's own log no longer holds the startup lines it held before it (count 10 -> 1 empty line)",
         "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
         "expect": [
@@ -1012,8 +933,11 @@
       },
       "editor_remove_state_machine_state": {
         "witness_tool": "editor_get_animation_tree_structure",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 91,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 70,
         "why": "读回状态机里的状态列表，被删的状态不在了",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
         "expect": [
@@ -1027,8 +951,11 @@
       },
       "editor_remove_state_machine_transition": {
         "witness_tool": "editor_get_animation_tree_structure",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 88,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 64,
         "why": "读回状态机里的迁移列表，被删的迁移不在了",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
         "expect": [
@@ -1041,8 +968,11 @@
       },
       "editor_rename_node": {
         "witness_tool": "editor_get_node_properties",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_write5/c4-v5-task111",
         "witness_seq": 138,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 47,
         "why": "读回被改名节点的 name（重命名后按新名字仍可寻址）",
         "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
         "expect": [
@@ -1053,8 +983,11 @@
       },
       "editor_rescan_project_filesystem": {
         "witness_tool": "project_get_filesystem_tree",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_editor/h7-task115",
         "witness_seq": 82,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 38,
         "why": "after the rescan the project's own filesystem tree still answers with the scene it swept",
         "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
         "expect": [
@@ -1065,8 +998,11 @@
       },
       "editor_set_animation_keyframe": {
         "witness_tool": "editor_get_animation_info",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 29,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 17,
         "why": "读回同一动画的关键帧",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
         "expect": [
@@ -1078,8 +1014,11 @@
       },
       "editor_set_animation_tree_parameter": {
         "witness_tool": "editor_get_animation_tree_structure",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 88,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 82,
         "why": "读回参数表里出现被写的参数",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
         "expect": [
@@ -1090,8 +1029,11 @@
       },
       "editor_set_audio_bus_property": {
         "witness_tool": "editor_get_audio_bus_layout",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_audio/h5-task113",
         "witness_seq": 43,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 34,
         "why": "the written volume_db must be the bus's real value in the layout",
         "declared_in": "tools/sessions/_exercises/ex_audio/h5-manifest.json",
         "expect": [
@@ -1102,8 +1044,11 @@
       },
       "editor_set_blend_tree_node": {
         "witness_tool": "editor_get_animation_tree_structure",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 88,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 76,
         "why": "读回混合树节点真的挂在树上",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
         "expect": [
@@ -1114,8 +1059,11 @@
       },
       "editor_set_control_theme": {
         "witness_tool": "editor_execute_gdscript",
+        "witness_verb": "execute",
         "run": "runs/_exercises/ex_write5/c4b-task115",
         "witness_seq": 19,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 13,
         "why": "the Control the tool named really carries that theme: the engine's own Control.theme.resource_path answers it",
         "declared_in": "tools/sessions/_exercises/ex_write5/c4b-manifest.json",
         "expect": [
@@ -1126,8 +1074,11 @@
       },
       "editor_set_material_3d": {
         "witness_tool": "editor_execute_gdscript",
+        "witness_verb": "execute",
         "run": "runs/_exercises/ex_3d/h1b2-task115",
         "witness_seq": 18,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 12,
         "why": "the engine's own MeshInstance3D::get_surface_override_material(0) answers with the material this run assigned",
         "declared_in": "tools/sessions/_exercises/ex_3d/h1b-manifest.json",
         "expect": [
@@ -1138,8 +1089,11 @@
       },
       "editor_set_navigation_layers": {
         "witness_tool": "editor_get_navigation_info",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_nav/h4-task113",
         "witness_seq": 27,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 14,
         "why": "the mask editor_set_navigation_layers wrote must be in the read-back record",
         "declared_in": "tools/sessions/_exercises/ex_nav/h4-manifest.json",
         "expect": [
@@ -1150,20 +1104,27 @@
       },
       "editor_set_node_groups": {
         "witness_tool": "editor_get_node_groups",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_write5/c4-v5-task111",
         "witness_seq": 143,
-        "why": "读回被写节点的 groups 列表",
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 77,
+        "why": "读回被写节点的 groups 列表：expect 现在带值——Host 这个节点路径与它的 groups 数组内容；旧的 `\"ex_host\"` 只是裸名字，被 TASK-120 A3 拒签",
         "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
         "expect": [
-          "\"ex_host\""
+          "\"node_path\":\"Host\"",
+          "\"groups\":[\"ex_host\"]"
         ],
         "expect_absent": [],
         "expect_matched": true
       },
       "editor_set_node_script": {
         "witness_tool": "editor_execute_gdscript",
+        "witness_verb": "execute",
         "run": "runs/_exercises/ex_write5/c4b-task115",
         "witness_seq": 12,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 6,
         "why": "the node the tool named really carries that script: the engine's own Node.get_script().resource_path answers it (editor_get_node_properties cannot answer 'script' by name at all - measured -32001 in c4-v5-task111 seq 141)",
         "declared_in": "tools/sessions/_exercises/ex_write5/c4b-manifest.json",
         "expect": [
@@ -1174,8 +1135,11 @@
       },
       "editor_set_node_script_batch": {
         "witness_tool": "editor_execute_gdscript",
+        "witness_verb": "execute",
         "run": "runs/_exercises/ex_grid/c6-task118",
         "witness_seq": 16,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 10,
         "why": "the node the batch attached to (Background) really carries that script: the engine's own Node.get_script().resource_path answers it. editor_get_node_properties is NOT the witness here - TASK-115 measured it answering -32001 for the property named 'script' (c4-v5-task111 seq 141)",
         "declared_in": "tools/sessions/_exercises/ex_close/c6-manifest.json",
         "expect": [
@@ -1186,8 +1150,11 @@
       },
       "editor_set_node_selection": {
         "witness_tool": "editor_get_selection",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_editor/h7-task115",
         "witness_seq": 13,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 12,
         "why": "the editor's own EditorSelection really answers with the node the tool selected",
         "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
         "expect": [
@@ -1199,8 +1166,11 @@
       },
       "editor_set_particle_color_gradient": {
         "witness_tool": "editor_get_particle_info",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_particles/h6-task113",
         "witness_seq": 34,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 25,
         "why": "the gradient stops the tool wrote must come back as the material's colours",
         "declared_in": "tools/sessions/_exercises/ex_particles/h6-manifest.json",
         "expect": [
@@ -1211,20 +1181,28 @@
       },
       "editor_set_particle_material": {
         "witness_tool": "editor_get_particle_info",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_particles/h6-task113",
         "witness_seq": 34,
-        "why": "the parameter editor_set_particle_material wrote must be in the read-back parameter set",
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 17,
+        "why": "P1's own record carries the two values the write at seq 17 reported storing (initial_velocity_min 40.0 / initial_velocity_max 90.0), read back at seq 34; the bare key `\"damping_min\"` was rejected (TASK-120 A3) and its value on P2 (1.0) is a value the seed scene already had - it is not evidence of this write",
         "declared_in": "tools/sessions/_exercises/ex_particles/h6-manifest.json",
         "expect": [
-          "\"damping_min\""
+          "\"node_path\":\"P1\"",
+          "\"initial_velocity_min\":40.0",
+          "\"initial_velocity_max\":90.0"
         ],
         "expect_absent": [],
         "expect_matched": true
       },
       "editor_set_particle_preset": {
         "witness_tool": "editor_get_particle_info",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_particles/h6-task113",
         "witness_seq": 34,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 10,
         "why": "the fire preset's own amount/lifetime must be the node's real values",
         "declared_in": "tools/sessions/_exercises/ex_particles/h6-manifest.json",
         "expect": [
@@ -1235,8 +1213,11 @@
       },
       "editor_set_physics_layers": {
         "witness_tool": "editor_get_node_properties",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_write5/c4-v5-task111",
         "witness_seq": 139,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 96,
         "why": "读回同一个节点的 collision_layer / collision_mask",
         "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
         "expect": [
@@ -1247,8 +1228,11 @@
       },
       "editor_set_viewport_3d_camera": {
         "witness_tool": "editor_get_viewport_3d_camera",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_3d/h1-task111",
         "witness_seq": 27,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 21,
         "why": "下一次调用读回上一次写入的 fov/position",
         "declared_in": "tools/sessions/_exercises/ex_3d/h1-manifest.json",
         "expect": [
@@ -1259,8 +1243,11 @@
       },
       "editor_setup_camera_3d": {
         "witness_tool": "editor_execute_gdscript",
+        "witness_verb": "execute",
         "run": "runs/_exercises/ex_3d/h1b2-task115",
         "witness_seq": 25,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 19,
         "why": "the node the tool created under the named parent really is a Camera3D",
         "declared_in": "tools/sessions/_exercises/ex_3d/h1b-manifest.json",
         "expect": [
@@ -1271,8 +1258,11 @@
       },
       "editor_setup_lighting": {
         "witness_tool": "editor_execute_gdscript",
+        "witness_verb": "execute",
         "run": "runs/_exercises/ex_3d/h1b2-task115",
         "witness_seq": 32,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 26,
         "why": "the node the tool created under the named parent really is the DirectionalLight3D the first call asked for",
         "declared_in": "tools/sessions/_exercises/ex_3d/h1b-manifest.json",
         "expect": [
@@ -1283,44 +1273,59 @@
       },
       "editor_setup_navigation_agent": {
         "witness_tool": "editor_get_navigation_info",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_nav/h4-task113",
         "witness_seq": 27,
-        "why": "the created NavigationAgent2D must appear in the agent list with the radius and max_speed the tool wrote",
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 8,
+        "why": "the NavigationAgent2D editor_setup_navigation_agent created (NA3) is in the engine's agent list with the max_speed 320.0 the tool wrote; `\"max_speed\"` alone was rejected as a bare key (TASK-120 A3)",
         "declared_in": "tools/sessions/_exercises/ex_nav/h4-manifest.json",
         "expect": [
-          "\"max_speed\""
+          "\"path\":\"Player/NA3\"",
+          "\"max_speed\":320.0"
         ],
         "expect_absent": [],
         "expect_matched": true
       },
       "editor_setup_navigation_region": {
         "witness_tool": "editor_get_navigation_info",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_nav/h4-task113",
         "witness_seq": 27,
-        "why": "the created NavigationRegion2D must appear in editor_get_navigation_info's region list with its real class and layer mask",
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 2,
+        "why": "the NavigationRegion2D editor_setup_navigation_region created (RegionA) is in the engine's region list with the engine's own class name; `\"RegionA\"` alone was rejected as a bare name (TASK-120 A3)",
         "declared_in": "tools/sessions/_exercises/ex_nav/h4-manifest.json",
         "expect": [
-          "\"RegionA\""
+          "\"path\":\"RegionA\"",
+          "\"type\":\"NavigationRegion2D\""
         ],
         "expect_absent": [],
         "expect_matched": true
       },
       "editor_setup_physics_body": {
         "witness_tool": "editor_get_scene_tree",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_write5/c4-v5-task111",
         "witness_seq": 132,
-        "why": "建出来的物理体节点必须出现在编辑场景树里",
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 84,
+        "why": "建出来的物理体节点必须出现在编辑场景树里：expect 现在带值——工具建出的 RigidBody2D（PB1）连同它自己的 CollisionShape2D 子节点，节点路径 /Main/PB1/CollisionShape2D；旧的 `\"PB1\"` 只是裸名字，被 TASK-120 A3 拒签",
         "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
         "expect": [
-          "\"PB1\""
+          "/Main/PB1/CollisionShape2D",
+          "\"name\":\"PB1\""
         ],
         "expect_absent": [],
         "expect_matched": true
       },
       "editor_setup_world_environment": {
         "witness_tool": "editor_execute_gdscript",
+        "witness_verb": "execute",
         "run": "runs/_exercises/ex_3d/h1b2-task115",
         "witness_seq": 39,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 33,
         "why": "the node the tool created for world_env_path really is a WorldEnvironment",
         "declared_in": "tools/sessions/_exercises/ex_3d/h1b-manifest.json",
         "expect": [
@@ -1331,8 +1336,11 @@
       },
       "editor_stop_scene": {
         "witness_tool": "editor_execute_gdscript",
+        "witness_verb": "execute",
         "run": "runs/_exercises/ex_editor/h7-task115",
         "witness_seq": 61,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 60,
         "why": "after the stop the editor's own run bar reports is_playing_scene() == false",
         "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
         "expect": [
@@ -1342,49 +1350,62 @@
         "expect_matched": true
       },
       "running_game_create_input_recording": {
-        "witness_tool": "running_game_stop_input_recording",
+        "witness_tool": "running_game_get_node_properties",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_rec/h9-task113",
-        "witness_seq": 5,
-        "why": "the stop call's answer carries the events of the session create started (event_count > 0)",
+        "witness_seq": 18,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 3,
+        "why": "the read call at seq 18 (after the create->play->stop chain) answers x=346.0, while the same reader answered x=100.0 before the session started (seq 2): the recorded session the created recorder captured really drove the game. The old witness was running_game_stop_input_recording's own response - a WRITE tool, which the TASK-120 A1 rule rejects. Boundary: the engine exposes no read tool for the recorder itself, so a read call can show this consequence of the recording, not the recorder's internal state",
         "declared_in": "tools/sessions/_exercises/ex_rec/h9-manifest.json",
         "expect": [
-          "\"event_count\":2"
+          "\"x\":346.0"
         ],
         "expect_absent": [],
         "expect_matched": true
       },
       "running_game_move_player_to_target": {
         "witness_tool": "running_game_get_node_properties",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_nav/h4-task113",
         "witness_seq": 7,
-        "why": "the player's position after the moves differs from its start (100,300)",
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 1,
+        "why": "running_game_move_player_to_target is judged on its pixel_effect channel; its readback declaration is kept for audit and now states the post-write position itself (220.86, 394.86, on the way to the last target (200,400) and different from the start (100,300)); `\"position\"` alone was rejected (TASK-120 A3)",
         "declared_in": "tools/sessions/_exercises/ex_nav/h4-manifest.json",
         "expect": [
-          "\"position\""
+          "\"x\":220.86",
+          "\"y\":394.86"
         ],
         "expect_absent": [],
         "expect_matched": true
       },
       "running_game_play_input_recording": {
         "witness_tool": "running_game_get_node_properties",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_rec/h9-task113",
-        "witness_seq": 2,
-        "why": "the player's position after the create->stop->play chain is not the reset (100,300): the replay really drove the game",
+        "witness_seq": 22,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 4,
+        "why": "the read at seq 22 - taken right after the create->stop->play replay (call at seq 21) - answers x=151.0, while the read just before it (seq 20, after the reset) answered x=100.0: the replay really drove the player. `\"position\"` alone was rejected as a bare key (TASK-120 A3)",
         "declared_in": "tools/sessions/_exercises/ex_rec/h9-manifest.json",
         "expect": [
-          "\"position\""
+          "\"x\":151.0"
         ],
         "expect_absent": [],
         "expect_matched": true
       },
       "running_game_stop_input_recording": {
         "witness_tool": "running_game_get_node_properties",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_rec/h9-task113",
-        "witness_seq": 2,
-        "why": "the position read after the stop differs from the position read before the session (the recorded keys moved the player)",
+        "witness_seq": 18,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 5,
+        "why": "the read at seq 18 - taken after the stop call at seq 17 - answers x=346.0, while the same reader answered x=100.0 before the session (seq 2): the recorded session this stop closed really had driven the game. `\"position\"` alone was rejected as a bare key (TASK-120 A3). Boundary: no read tool exposes the recorder's state, so this is the consequence a read call can show",
         "declared_in": "tools/sessions/_exercises/ex_rec/h9-manifest.json",
         "expect": [
-          "\"position\""
+          "\"x\":346.0"
         ],
         "expect_absent": [],
         "expect_matched": true
@@ -1445,6 +1466,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 6,
@@ -1501,6 +1524,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 6,
@@ -1558,6 +1583,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 11,
@@ -1614,6 +1641,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 11,
@@ -1670,6 +1699,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 7,
@@ -1724,6 +1755,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_file_effect_observed": 5,
@@ -1777,6 +1810,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 6,
@@ -1833,6 +1868,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -1885,6 +1922,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 109,
@@ -1954,6 +1993,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -1979,9 +2020,9 @@
       "tool": "editor_open_scene",
       "scope": "editor",
       "verb": "open",
-      "calls": 86,
+      "calls": 87,
       "ok": 86,
-      "boundary": 0,
+      "boundary": 1,
       "effective": 9,
       "evidence_channel": "pixel_effect",
       "evidence_channel_label": "渲染出的画面/视口（ok_effect_observed）",
@@ -1995,19 +2036,24 @@
       "pixel_effect_calls": 9,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 86,
+      "facts_complete": 87,
       "bucket": ">=5",
-      "status": "计数达标缺证据",
-      "status_legacy": "计数达标缺证据",
+      "status": "达标",
+      "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 77,
-        "ok_effect_observed": 9
+        "ok_effect_observed": 9,
+        "failed": 1
       },
       "file_effects": {
-        "none": 86
+        "none": 87
       },
-      "flags": {},
+      "flags": {
+        "error_suggestion": 1
+      },
       "evidence": [
         {
           "run": "runs/breakout/breakout-clean-task097",
@@ -2031,8 +2077,8 @@
         }
       ],
       "first_ts_ms": 1790435678487,
-      "last_ts_ms": 1790490876474,
-      "gate": false
+      "last_ts_ms": 1790492663163,
+      "gate": true
     },
     {
       "tool": "project_delete_scene_file",
@@ -2058,6 +2104,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_file_effect_observed": 8,
@@ -2106,12 +2154,16 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_scene_tree",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_write5/c4-v5-task111",
         "witness_seq": 132,
-        "why": "挂载的实例必须出现在编辑场景树里（editor_get_scene_tree 列出被实例化出来的节点）",
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 21,
+        "why": "挂载的实例必须出现在编辑场景树里（editor_get_scene_tree 列出被实例化出来的节点）：expect 现在带值——实例自己的子节点 C4Node2（来自 res://scenes/c4_sub.tscn）挂在节点路径 /Main/Sub1/C4Node2 之下，树里那个节点的名字是 Sub1；旧的 `\"Sub1\"` 只是裸名字，被 TASK-120 A3 拒签",
         "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
         "expect": [
-          "\"Sub1\""
+          "/Main/Sub1/C4Node2",
+          "\"name\":\"Sub1\""
         ],
         "expect_absent": [],
         "expect_matched": true,
@@ -2124,6 +2176,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 25,
@@ -2192,6 +2246,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -2231,8 +2287,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_execute_gdscript",
+        "witness_verb": "execute",
         "run": "runs/_exercises/ex_editor/h7-task115",
         "witness_seq": 59,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 58,
         "why": "the editor's own run bar reports playing after the tool answered playing:true, and reports not playing after the matching stop",
         "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
         "expect": [
@@ -2249,6 +2308,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -2288,8 +2349,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_execute_gdscript",
+        "witness_verb": "execute",
         "run": "runs/_exercises/ex_editor/h7-task115",
         "witness_seq": 61,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 60,
         "why": "after the stop the editor's own run bar reports is_playing_scene() == false",
         "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
         "expect": [
@@ -2306,6 +2370,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_effect_unavailable": 1,
@@ -2332,9 +2398,9 @@
       "tool": "editor_save_scene",
       "scope": "editor",
       "verb": "save",
-      "calls": 123,
+      "calls": 124,
       "ok": 123,
-      "boundary": 0,
+      "boundary": 1,
       "effective": 77,
       "evidence_channel": "file_effect",
       "evidence_channel_label": "盘上的文件（ok_file_effect_observed）",
@@ -2348,20 +2414,26 @@
       "pixel_effect_calls": 0,
       "file_effect_calls": 77,
       "read_payload_calls": 0,
-      "facts_complete": 123,
+      "facts_complete": 124,
       "bucket": ">=5",
-      "status": "计数达标缺证据",
-      "status_legacy": "计数达标缺证据",
+      "status": "达标",
+      "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_file_effect_observed": 77,
+        "failed": 1,
         "ok_no_effect_observed": 46
       },
       "file_effects": {
         "changed": 77,
+        "none": 1,
         "unchanged": 46
       },
-      "flags": {},
+      "flags": {
+        "error_suggestion": 1
+      },
       "evidence": [
         {
           "run": "runs/lunarlander/ll-task104-r1",
@@ -2385,8 +2457,8 @@
         }
       ],
       "first_ts_ms": 1790435679865,
-      "last_ts_ms": 1790479065001,
-      "gate": false
+      "last_ts_ms": 1790492663274,
+      "gate": true
     },
     {
       "tool": "project_create_scene_file",
@@ -2412,6 +2484,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_file_effect_observed": 18,
@@ -2474,6 +2548,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 21,
@@ -2516,9 +2592,9 @@
       "tool": "editor_delete_node",
       "scope": "editor",
       "verb": "delete",
-      "calls": 65,
+      "calls": 66,
       "ok": 65,
-      "boundary": 0,
+      "boundary": 1,
       "effective": 5,
       "evidence_channel": "pixel_effect",
       "evidence_channel_label": "渲染出的画面/视口（ok_effect_observed）",
@@ -2532,19 +2608,24 @@
       "pixel_effect_calls": 5,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 65,
+      "facts_complete": 66,
       "bucket": ">=5",
-      "status": "计数达标缺证据",
-      "status_legacy": "计数达标缺证据",
+      "status": "达标",
+      "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
+        "failed": 1,
         "ok_effect_observed": 5,
         "ok_no_effect_observed": 60
       },
       "file_effects": {
-        "none": 65
+        "none": 66
       },
-      "flags": {},
+      "flags": {
+        "error_suggestion": 1
+      },
       "evidence": [
         {
           "run": "runs/snake/snake-clean-task097",
@@ -2557,11 +2638,15 @@
         {
           "run": "runs/pong/pong-clean-task097",
           "calls": 8
+        },
+        {
+          "run": "runs/_exercises/ex_grid/c8-task120",
+          "calls": 1
         }
       ],
       "first_ts_ms": 1790447851424,
-      "last_ts_ms": 1790448011881,
-      "gate": false
+      "last_ts_ms": 1790492663382,
+      "gate": true
     },
     {
       "tool": "editor_rename_node",
@@ -2581,8 +2666,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_node_properties",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_write5/c4-v5-task111",
         "witness_seq": 138,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 47,
         "why": "读回被改名节点的 name（重命名后按新名字仍可寻址）",
         "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
         "expect": [
@@ -2599,6 +2687,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 23,
@@ -2640,9 +2730,9 @@
       "tool": "editor_set_node_property",
       "scope": "editor",
       "verb": "set",
-      "calls": 41,
+      "calls": 42,
       "ok": 41,
-      "boundary": 0,
+      "boundary": 1,
       "effective": 12,
       "evidence_channel": "pixel_effect",
       "evidence_channel_label": "渲染出的画面/视口（ok_effect_observed）",
@@ -2656,19 +2746,24 @@
       "pixel_effect_calls": 12,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 41,
+      "facts_complete": 42,
       "bucket": ">=5",
-      "status": "计数达标缺证据",
-      "status_legacy": "计数达标缺证据",
+      "status": "达标",
+      "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
+        "failed": 1,
         "ok_no_effect_observed": 29,
         "ok_effect_observed": 12
       },
       "file_effects": {
-        "none": 41
+        "none": 42
       },
-      "flags": {},
+      "flags": {
+        "error_suggestion": 1
+      },
       "evidence": [
         {
           "run": "runs/pong/pong-clean-task097",
@@ -2692,8 +2787,8 @@
         }
       ],
       "first_ts_ms": 1790435678915,
-      "last_ts_ms": 1790447933315,
-      "gate": false
+      "last_ts_ms": 1790492663487,
+      "gate": true
     },
     {
       "tool": "editor_get_node_properties",
@@ -2726,6 +2821,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 62,
@@ -2788,6 +2885,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 18,
@@ -2844,8 +2943,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_list_signal_connections",
+        "witness_verb": "list",
         "run": "runs/_exercises/ex_grid/c6-task118",
         "witness_seq": 23,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 17,
         "why": "the connection the tool reported as persisted is in the editor's own connection table, read back with scope=user (the same call's counts block answers user:5), and the boundary probe's source (NoSuchNode) is not in it",
         "declared_in": "tools/sessions/_exercises/ex_close/c6-manifest.json",
         "expect": [
@@ -2863,6 +2965,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 38,
@@ -2918,8 +3022,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_list_signal_connections",
+        "witness_verb": "list",
         "run": "runs/_exercises/ex_write6/c5-task111",
         "witness_seq": 13,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 7,
         "why": "断开之后再读一次连接表：count=0（同一次运行、同一个节点）",
         "declared_in": "tools/sessions/_exercises/ex_write6/c5-manifest.json",
         "expect": [
@@ -2936,6 +3043,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -2981,6 +3090,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "failed": 14,
@@ -3043,6 +3154,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "failed": 20,
@@ -3105,6 +3218,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 14,
@@ -3170,6 +3285,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 11,
@@ -3217,12 +3334,16 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_node_groups",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_write5/c4-v5-task111",
         "witness_seq": 143,
-        "why": "读回被写节点的 groups 列表",
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 77,
+        "why": "读回被写节点的 groups 列表：expect 现在带值——Host 这个节点路径与它的 groups 数组内容；旧的 `\"ex_host\"` 只是裸名字，被 TASK-120 A3 拒签",
         "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
         "expect": [
-          "\"ex_host\""
+          "\"node_path\":\"Host\"",
+          "\"groups\":[\"ex_host\"]"
         ],
         "expect_absent": [],
         "expect_matched": true,
@@ -3235,6 +3356,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 25,
@@ -3303,6 +3426,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 10,
@@ -3359,6 +3484,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 15,
@@ -3406,8 +3533,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_selection",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_editor/h7-task115",
         "witness_seq": 13,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 12,
         "why": "the editor's own EditorSelection really answers with the node the tool selected",
         "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
         "expect": [
@@ -3425,6 +3555,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 8,
@@ -3464,8 +3596,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_selection",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_editor/h7-task115",
         "witness_seq": 22,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 21,
         "why": "after the clear the editor's own EditorSelection really is empty, while the same reader had answered a non-empty list earlier in the run",
         "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
         "expect": [
@@ -3483,6 +3618,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -3535,6 +3672,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 24,
@@ -3577,9 +3716,9 @@
       "tool": "editor_get_errors",
       "scope": "editor",
       "verb": "get",
-      "calls": 50,
+      "calls": 51,
       "ok": 50,
-      "boundary": 0,
+      "boundary": 1,
       "effective": 50,
       "evidence_channel": "payload",
       "evidence_channel_label": "查询类：ok=true 且回包是实质载荷（回包即测量结果）",
@@ -3600,19 +3739,28 @@
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 50,
-      "facts_complete": 50,
+      "facts_complete": 51,
       "bucket": ">=5",
-      "status": "计数达标缺证据",
-      "status_legacy": "计数达标缺证据",
+      "status": "达标",
+      "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
+        "failed": 1,
         "ok_no_effect_observed": 50
       },
       "file_effects": {
-        "none": 50
+        "none": 51
       },
-      "flags": {},
+      "flags": {
+        "error_suggestion": 1
+      },
       "evidence": [
+        {
+          "run": "runs/_exercises/ex_grid/c8-task120",
+          "calls": 1
+        },
         {
           "run": "runs/asteroids/ast-task098-r1",
           "calls": 1
@@ -3628,15 +3776,11 @@
         {
           "run": "runs/breakout/breakout-task093",
           "calls": 1
-        },
-        {
-          "run": "runs/breakout/breakout-task093-r2",
-          "calls": 1
         }
       ],
       "first_ts_ms": 1790435680630,
-      "last_ts_ms": 1790467795181,
-      "gate": false
+      "last_ts_ms": 1790492663593,
+      "gate": true
     },
     {
       "tool": "editor_get_output_log",
@@ -3669,6 +3813,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 34,
@@ -3710,15 +3856,15 @@
       "tool": "editor_capture_screenshot",
       "scope": "editor",
       "verb": "capture",
-      "calls": 25,
+      "calls": 26,
       "ok": 25,
-      "boundary": 0,
+      "boundary": 1,
       "effective": 25,
-      "evidence_channel": "file_effect",
-      "evidence_channel_label": "盘上的文件（ok_file_effect_observed）",
-      "evidence_channel_basis": "file_effect：落盘的 PNG 截图。判定依据：契约写的是盘上的产物：它落盘之后可以被任何一次 project_read_* / project_get_filesystem_tree 重新读到，所以权威证据是文件本身，不是回包里的成功字样，也不是编辑器画面。",
-      "evidence_channel_subject": "落盘的 PNG 截图",
-      "channel_evidence": 15,
+      "evidence_channel": "payload",
+      "evidence_channel_label": "查询类：ok=true 且回包是实质载荷（回包即测量结果）",
+      "evidence_channel_basis": "payload：`capture` 属于 READ_VERBS（TASK-111 的规则），而契约写的是「返回 base64 PNG **或**保存到文件」——两条都是合法成功路径。25 次调用里只有 15 次留下文件效果，把 `file_effect` 当权威通道会把 10 次合法的内联成功判成「没有证据」（TASK-119 D5）。所以权威通道是回包载荷本身：`ok=true` 且回包是实质载荷（回包即测量结果）。落盘的那几次另有 `file_effect` 记录，可作旁证。",
+      "evidence_channel_subject": "截图帧：回包里的 base64 PNG（或落盘的那张 PNG）",
+      "channel_evidence": 25,
       "channel_evidence_ok": true,
       "evidence_tier": "file_effect",
       "evidence_tier_label": "ok_file_effect_observed（文件真的变了）",
@@ -3726,21 +3872,31 @@
       "pixel_effect_calls": 0,
       "file_effect_calls": 15,
       "read_payload_calls": 25,
-      "facts_complete": 25,
+      "facts_complete": 26,
       "bucket": ">=5",
-      "status": "计数达标缺证据",
-      "status_legacy": "计数达标缺证据",
+      "status": "达标",
+      "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
+        "failed": 1,
         "ok_file_effect_observed": 15,
         "ok_no_effect_observed": 10
       },
       "file_effects": {
+        "none": 1,
         "changed": 15,
         "unchanged": 10
       },
-      "flags": {},
+      "flags": {
+        "error_suggestion": 1
+      },
       "evidence": [
+        {
+          "run": "runs/_exercises/ex_grid/c8-task120",
+          "calls": 1
+        },
         {
           "run": "runs/breakout/breakout-clean-task097",
           "calls": 1
@@ -3756,23 +3912,19 @@
         {
           "run": "runs/breakout/breakout-task093-r3",
           "calls": 1
-        },
-        {
-          "run": "runs/breakout/breakout-task093-r4",
-          "calls": 1
         }
       ],
       "first_ts_ms": 1790435680525,
-      "last_ts_ms": 1790467795078,
-      "gate": false
+      "last_ts_ms": 1790492663701,
+      "gate": true
     },
     {
       "tool": "running_game_capture_screenshot",
       "scope": "game",
       "verb": "capture",
-      "calls": 298,
+      "calls": 299,
       "ok": 298,
-      "boundary": 0,
+      "boundary": 1,
       "effective": 298,
       "evidence_channel": "payload",
       "evidence_channel_label": "查询类：ok=true 且回包是实质载荷（回包即测量结果）",
@@ -3786,22 +3938,26 @@
       "pixel_effect_calls": 1,
       "file_effect_calls": 164,
       "read_payload_calls": 298,
-      "facts_complete": 298,
+      "facts_complete": 299,
       "bucket": ">=5",
-      "status": "计数达标缺证据",
-      "status_legacy": "计数达标缺证据",
+      "status": "达标",
+      "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
+        "failed": 1,
         "ok_no_effect_observed": 133,
         "ok_file_effect_observed": 164,
         "ok_effect_observed": 1
       },
       "file_effects": {
-        "none": 6,
+        "none": 7,
         "changed": 164,
         "unchanged": 128
       },
       "flags": {
+        "error_suggestion": 1,
         "result_unparseable": 6
       },
       "evidence": [
@@ -3827,8 +3983,8 @@
         }
       ],
       "first_ts_ms": 1790435692132,
-      "last_ts_ms": 1790467813851,
-      "gate": false
+      "last_ts_ms": 1790492676605,
+      "gate": true
     },
     {
       "tool": "editor_remove_output_log",
@@ -3848,8 +4004,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_output_log",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_editor/h7-task115",
         "witness_seq": 6,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 5,
         "why": "the Output panel of THIS editor process is readable in-process, and after the clear the engine's own log no longer holds the startup lines it held before it (count 10 -> 1 empty line)",
         "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
         "expect": [
@@ -3868,6 +4027,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -3907,8 +4068,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "project_get_settings",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_editor/h7-task115",
         "witness_seq": 37,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 31,
         "why": "the addon the tool disabled and enabled again is the one ProjectSettings really lists as enabled",
         "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
         "expect": [
@@ -3925,6 +4089,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -3964,8 +4130,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "project_get_filesystem_tree",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_editor/h7-task115",
         "witness_seq": 82,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 38,
         "why": "after the rescan the project's own filesystem tree still answers with the scene it swept",
         "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
         "expect": [
@@ -3982,6 +4151,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -4034,6 +4205,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 10,
@@ -4090,6 +4263,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -4135,6 +4310,8 @@
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": "engine_not_implemented",
+      "ledger_class_note": "-32000 Not implemented: editor_set_auto_dismiss_dialogs",
       "unreachable_category": null,
       "verdicts": {
         "failed": 7
@@ -4186,6 +4363,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -4225,8 +4404,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_viewport_3d_camera",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_3d/h1-task111",
         "witness_seq": 27,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 21,
         "why": "下一次调用读回上一次写入的 fov/position",
         "declared_in": "tools/sessions/_exercises/ex_3d/h1-manifest.json",
         "expect": [
@@ -4243,6 +4425,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -4268,9 +4452,9 @@
       "tool": "running_game_get_scene_tree",
       "scope": "game",
       "verb": "get",
-      "calls": 123,
+      "calls": 124,
       "ok": 123,
-      "boundary": 0,
+      "boundary": 1,
       "effective": 123,
       "evidence_channel": "payload",
       "evidence_channel_label": "查询类：ok=true 且回包是实质载荷（回包即测量结果）",
@@ -4284,19 +4468,23 @@
       "pixel_effect_calls": 1,
       "file_effect_calls": 0,
       "read_payload_calls": 123,
-      "facts_complete": 123,
+      "facts_complete": 124,
       "bucket": ">=5",
-      "status": "计数达标缺证据",
-      "status_legacy": "计数达标缺证据",
+      "status": "达标",
+      "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
+        "failed": 1,
         "ok_no_effect_observed": 122,
         "ok_effect_observed": 1
       },
       "file_effects": {
-        "none": 123
+        "none": 124
       },
       "flags": {
+        "error_suggestion": 1,
         "result_unparseable": 62
       },
       "evidence": [
@@ -4322,8 +4510,8 @@
         }
       ],
       "first_ts_ms": 1790435691987,
-      "last_ts_ms": 1790479227487,
-      "gate": false
+      "last_ts_ms": 1790492677122,
+      "gate": true
     },
     {
       "tool": "running_game_get_node_properties",
@@ -4349,6 +4537,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 48,
@@ -4412,6 +4602,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_effect_observed": 28,
@@ -4481,6 +4673,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 30,
@@ -4524,9 +4718,9 @@
       "tool": "running_game_get_node_property_samples",
       "scope": "game",
       "verb": "get",
-      "calls": 122,
+      "calls": 123,
       "ok": 122,
-      "boundary": 0,
+      "boundary": 1,
       "effective": 122,
       "evidence_channel": "payload",
       "evidence_channel_label": "查询类：ok=true 且回包是实质载荷（回包即测量结果）",
@@ -4542,19 +4736,24 @@
       "read_payload_calls": 122,
       "facts_complete": 118,
       "bucket": ">=5",
-      "status": "计数达标缺证据",
-      "status_legacy": "计数达标缺证据",
+      "status": "达标",
+      "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
+        "failed": 1,
         "ok_no_effect_observed": 83,
         "ok_effect_observed": 35,
         "ok_effect_unavailable": 4
       },
       "file_effects": {
+        "not_recorded": 1,
         "none": 118,
         "not_tracked": 4
       },
       "flags": {
+        "error_suggestion": 1,
         "result_unparseable": 10
       },
       "evidence": [
@@ -4580,8 +4779,8 @@
         }
       ],
       "first_ts_ms": 1790435697125,
-      "last_ts_ms": 1790467810437,
-      "gate": false
+      "last_ts_ms": 1790492677642,
+      "gate": true
     },
     {
       "tool": "running_game_execute_gdscript",
@@ -4607,6 +4806,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 720,
@@ -4663,13 +4864,16 @@
       "evidence_tier": "readback",
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
-        "witness_tool": "running_game_stop_input_recording",
+        "witness_tool": "running_game_get_node_properties",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_rec/h9-task113",
-        "witness_seq": 5,
-        "why": "the stop call's answer carries the events of the session create started (event_count > 0)",
+        "witness_seq": 18,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 3,
+        "why": "the read call at seq 18 (after the create->play->stop chain) answers x=346.0, while the same reader answered x=100.0 before the session started (seq 2): the recorded session the created recorder captured really drove the game. The old witness was running_game_stop_input_recording's own response - a WRITE tool, which the TASK-120 A1 rule rejects. Boundary: the engine exposes no read tool for the recorder itself, so a read call can show this consequence of the recording, not the recorder's internal state",
         "declared_in": "tools/sessions/_exercises/ex_rec/h9-manifest.json",
         "expect": [
-          "\"event_count\":2"
+          "\"x\":346.0"
         ],
         "expect_absent": [],
         "expect_matched": true,
@@ -4682,6 +4886,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 6,
@@ -4707,9 +4913,9 @@
       "tool": "running_game_stop_input_recording",
       "scope": "game",
       "verb": "stop",
-      "calls": 7,
+      "calls": 8,
       "ok": 7,
-      "boundary": 0,
+      "boundary": 1,
       "effective": 0,
       "evidence_channel": "editor_state",
       "evidence_channel_label": "进程内的存在态：另一次独立读调用逐字读回（verified witness_read + expect）",
@@ -4721,12 +4927,15 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "running_game_get_node_properties",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_rec/h9-task113",
-        "witness_seq": 2,
-        "why": "the position read after the stop differs from the position read before the session (the recorded keys moved the player)",
+        "witness_seq": 18,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 5,
+        "why": "the read at seq 18 - taken after the stop call at seq 17 - answers x=346.0, while the same reader answered x=100.0 before the session (seq 2): the recorded session this stop closed really had driven the game. `\"position\"` alone was rejected as a bare key (TASK-120 A3). Boundary: no read tool exposes the recorder's state, so this is the consequence a read call can show",
         "declared_in": "tools/sessions/_exercises/ex_rec/h9-manifest.json",
         "expect": [
-          "\"position\""
+          "\"x\":346.0"
         ],
         "expect_absent": [],
         "expect_matched": true,
@@ -4735,27 +4944,36 @@
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 7,
+      "facts_complete": 8,
       "bucket": ">=5",
-      "status": "计数达标缺证据",
+      "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
+        "failed": 1,
         "ok_no_effect_observed": 7
       },
       "file_effects": {
-        "none": 7
+        "none": 8
       },
-      "flags": {},
+      "flags": {
+        "error_suggestion": 1
+      },
       "evidence": [
         {
           "run": "runs/_exercises/ex_rec/h9-task113",
           "calls": 7
+        },
+        {
+          "run": "runs/_exercises/ex_grid/c8-task120",
+          "calls": 1
         }
       ],
       "first_ts_ms": 1790479229066,
-      "last_ts_ms": 1790479238349,
-      "gate": false
+      "last_ts_ms": 1790492678155,
+      "gate": true
     },
     {
       "tool": "running_game_play_input_recording",
@@ -4781,6 +4999,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_effect_observed": 6,
@@ -4834,6 +5054,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 10,
@@ -4890,6 +5112,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 10,
@@ -4946,6 +5170,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 32,
@@ -5015,6 +5241,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 10,
@@ -5064,6 +5292,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_effect_observed": 2,
@@ -5121,6 +5351,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -5189,6 +5421,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 10,
@@ -5238,6 +5472,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_effect_observed": 5,
@@ -5291,6 +5527,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 26,
@@ -5360,6 +5598,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 10,
@@ -5416,6 +5656,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -5468,6 +5710,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 6,
@@ -5518,6 +5762,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_file_effect_observed": 44,
@@ -5562,9 +5808,9 @@
       "tool": "project_edit_script",
       "scope": "both",
       "verb": "edit",
-      "calls": 60,
+      "calls": 61,
       "ok": 60,
-      "boundary": 0,
+      "boundary": 1,
       "effective": 52,
       "evidence_channel": "file_effect",
       "evidence_channel_label": "盘上的文件（ok_file_effect_observed）",
@@ -5578,24 +5824,34 @@
       "pixel_effect_calls": 0,
       "file_effect_calls": 52,
       "read_payload_calls": 0,
-      "facts_complete": 56,
+      "facts_complete": 57,
       "bucket": ">=5",
-      "status": "计数达标缺证据",
-      "status_legacy": "计数达标缺证据",
+      "status": "达标",
+      "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
+        "failed": 1,
         "ok_file_effect_observed": 52,
         "ok_no_effect_observed": 8
       },
       "file_effects": {
+        "none": 1,
         "changed": 52,
         "unchanged": 8
       },
-      "flags": {},
+      "flags": {
+        "error_suggestion": 1
+      },
       "evidence": [
         {
           "run": "runs/tetris/tetris-task096-r2",
           "calls": 2
+        },
+        {
+          "run": "runs/_exercises/ex_grid/c8-task120",
+          "calls": 1
         },
         {
           "run": "runs/asteroids/ast-task098-r1",
@@ -5608,15 +5864,11 @@
         {
           "run": "runs/bomberman/bomb-task101-r1",
           "calls": 1
-        },
-        {
-          "run": "runs/bomberman/bomb-task101-r2",
-          "calls": 1
         }
       ],
       "first_ts_ms": 1790435675150,
-      "last_ts_ms": 1790467789329,
-      "gate": false
+      "last_ts_ms": 1790492663810,
+      "gate": true
     },
     {
       "tool": "editor_set_node_script",
@@ -5636,8 +5888,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_execute_gdscript",
+        "witness_verb": "execute",
         "run": "runs/_exercises/ex_write5/c4b-task115",
         "witness_seq": 12,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 6,
         "why": "the node the tool named really carries that script: the engine's own Node.get_script().resource_path answers it (editor_get_node_properties cannot answer 'script' by name at all - measured -32001 in c4-v5-task111 seq 141)",
         "declared_in": "tools/sessions/_exercises/ex_write5/c4b-manifest.json",
         "expect": [
@@ -5654,6 +5909,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 30,
@@ -5722,6 +5979,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 10,
@@ -5778,6 +6037,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "failed": 15,
@@ -5831,6 +6092,8 @@
       "bucket": "0",
       "status": "未达(0)",
       "status_legacy": "未达(0)",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": "H7",
       "verdicts": {},
       "file_effects": {},
@@ -5864,6 +6127,8 @@
       "bucket": "0",
       "status": "未达(0)",
       "status_legacy": "未达(0)",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": "H7",
       "verdicts": {},
       "file_effects": {},
@@ -5897,6 +6162,8 @@
       "bucket": "0",
       "status": "未达(0)",
       "status_legacy": "未达(0)",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": "H7",
       "verdicts": {},
       "file_effects": {},
@@ -5930,6 +6197,8 @@
       "bucket": "0",
       "status": "未达(0)",
       "status_legacy": "未达(0)",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": "H7",
       "verdicts": {},
       "file_effects": {},
@@ -5970,6 +6239,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 10,
@@ -5999,9 +6270,9 @@
       "tool": "editor_add_input_action",
       "scope": "editor",
       "verb": "add",
-      "calls": 189,
+      "calls": 190,
       "ok": 189,
-      "boundary": 0,
+      "boundary": 1,
       "effective": 122,
       "evidence_channel": "file_effect",
       "evidence_channel_label": "盘上的文件（ok_file_effect_observed）",
@@ -6015,20 +6286,26 @@
       "pixel_effect_calls": 0,
       "file_effect_calls": 122,
       "read_payload_calls": 0,
-      "facts_complete": 189,
+      "facts_complete": 190,
       "bucket": ">=5",
-      "status": "计数达标缺证据",
-      "status_legacy": "计数达标缺证据",
+      "status": "达标",
+      "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
+        "failed": 1,
         "ok_file_effect_observed": 122,
         "ok_no_effect_observed": 67
       },
       "file_effects": {
+        "none": 1,
         "changed": 122,
         "unchanged": 67
       },
-      "flags": {},
+      "flags": {
+        "error_suggestion": 1
+      },
       "evidence": [
         {
           "run": "runs/pong/pong-clean-task097",
@@ -6052,8 +6329,8 @@
         }
       ],
       "first_ts_ms": 1790435679246,
-      "last_ts_ms": 1790467794168,
-      "gate": false
+      "last_ts_ms": 1790492663918,
+      "gate": true
     },
     {
       "tool": "editor_simulate_input_sequence",
@@ -6079,6 +6356,8 @@
       "bucket": "0",
       "status": "未达(0)",
       "status_legacy": "未达(0)",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": "H7",
       "verdicts": {},
       "file_effects": {},
@@ -6119,6 +6398,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 10,
@@ -6168,6 +6449,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_effect_observed": 15,
@@ -6237,6 +6520,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 10,
@@ -6295,6 +6580,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_effect_observed": 47,
@@ -6366,6 +6653,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 11,
@@ -6422,6 +6711,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -6467,6 +6758,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 16,
@@ -6529,6 +6822,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 13,
@@ -6576,12 +6871,15 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_list_animations",
+        "witness_verb": "list",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 23,
-        "why": "读回动画列表，新建的动画在其中",
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 2,
+        "why": "the animation list read back after the eight creates starts with the five animations in creation order, Anim5 among them; `\"Anim5\"` alone was rejected as a bare name (TASK-120 A3)",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
         "expect": [
-          "\"Anim5\""
+          "\"animations\":[\"Anim1\",\"Anim2\",\"Anim3\",\"Anim4\",\"Anim5\""
         ],
         "expect_absent": [],
         "expect_matched": true,
@@ -6594,6 +6892,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 21,
@@ -6641,8 +6941,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_animation_info",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 29,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 11,
         "why": "读回同一动画的轨道表",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
         "expect": [
@@ -6659,6 +6962,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 10,
@@ -6702,8 +7007,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_animation_info",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 29,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 17,
         "why": "读回同一动画的关键帧",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
         "expect": [
@@ -6721,6 +7029,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 10,
@@ -6777,6 +7087,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 10,
@@ -6820,8 +7132,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_list_animations",
+        "witness_verb": "list",
         "run": "runs/_exercises/ex_anim2/h2c-task115",
         "witness_seq": 14,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 8,
         "why": "the same AnimationPlayer is read back after the removals, and none of the five names this run created and removed is in the library any more (the run's own earlier read, before the removals, is skipped because it still holds them)",
         "declared_in": "tools/sessions/_exercises/ex_anim2/h2c-manifest.json",
         "expect": [
@@ -6844,6 +7159,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 15,
@@ -6904,6 +7221,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -6956,6 +7275,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -7002,6 +7323,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_effect_observed": 5,
@@ -7047,6 +7370,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_effect_observed": 9,
@@ -7092,6 +7417,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_effect_observed": 5,
@@ -7144,6 +7471,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -7196,6 +7525,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -7241,6 +7572,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_file_effect_observed": 7,
@@ -7295,6 +7628,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_file_effect_observed": 5,
@@ -7341,6 +7676,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_file_effect_observed": 5,
@@ -7387,6 +7724,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_file_effect_observed": 7,
@@ -7452,6 +7791,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "failed": 7,
@@ -7508,6 +7849,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 11,
@@ -7564,6 +7907,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 12,
@@ -7620,6 +7965,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 6,
@@ -7669,6 +8016,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_file_effect_observed": 11,
@@ -7731,6 +8080,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_file_effect_observed": 7,
@@ -7785,6 +8136,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 15,
@@ -7843,6 +8196,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "failed": 14,
@@ -7908,6 +8263,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -7953,6 +8310,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_effect_observed": 16,
@@ -8015,6 +8374,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_effect_observed": 9,
@@ -8071,8 +8432,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_node_properties",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_write5/c4-v5-task111",
         "witness_seq": 139,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 96,
         "why": "读回同一个节点的 collision_layer / collision_mask",
         "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
         "expect": [
@@ -8089,6 +8453,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 18,
@@ -8153,6 +8519,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 6,
@@ -8196,12 +8564,16 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_scene_tree",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_write5/c4-v5-task111",
         "witness_seq": 132,
-        "why": "建出来的物理体节点必须出现在编辑场景树里",
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 84,
+        "why": "建出来的物理体节点必须出现在编辑场景树里：expect 现在带值——工具建出的 RigidBody2D（PB1）连同它自己的 CollisionShape2D 子节点，节点路径 /Main/PB1/CollisionShape2D；旧的 `\"PB1\"` 只是裸名字，被 TASK-120 A3 拒签",
         "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
         "expect": [
-          "\"PB1\""
+          "/Main/PB1/CollisionShape2D",
+          "\"name\":\"PB1\""
         ],
         "expect_absent": [],
         "expect_matched": true,
@@ -8214,6 +8586,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 17,
@@ -8278,6 +8652,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 8,
@@ -8321,8 +8697,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_scene_tree",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_3d/h1b2-task115",
         "witness_seq": 11,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 5,
         "why": "the MeshInstance3D the tool created is in the edited scene tree under the exact name it was given",
         "declared_in": "tools/sessions/_exercises/ex_3d/h1b-manifest.json",
         "expect": [
@@ -8340,6 +8719,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 15,
@@ -8387,8 +8768,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_execute_gdscript",
+        "witness_verb": "execute",
         "run": "runs/_exercises/ex_3d/h1b2-task115",
         "witness_seq": 25,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 19,
         "why": "the node the tool created under the named parent really is a Camera3D",
         "declared_in": "tools/sessions/_exercises/ex_3d/h1b-manifest.json",
         "expect": [
@@ -8405,6 +8789,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 15,
@@ -8452,8 +8838,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_execute_gdscript",
+        "witness_verb": "execute",
         "run": "runs/_exercises/ex_3d/h1b2-task115",
         "witness_seq": 32,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 26,
         "why": "the node the tool created under the named parent really is the DirectionalLight3D the first call asked for",
         "declared_in": "tools/sessions/_exercises/ex_3d/h1b-manifest.json",
         "expect": [
@@ -8470,6 +8859,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 15,
@@ -8517,8 +8908,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_execute_gdscript",
+        "witness_verb": "execute",
         "run": "runs/_exercises/ex_3d/h1b2-task115",
         "witness_seq": 18,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 12,
         "why": "the engine's own MeshInstance3D::get_surface_override_material(0) answers with the material this run assigned",
         "declared_in": "tools/sessions/_exercises/ex_3d/h1b-manifest.json",
         "expect": [
@@ -8535,6 +8929,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 13,
@@ -8582,8 +8978,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_execute_gdscript",
+        "witness_verb": "execute",
         "run": "runs/_exercises/ex_3d/h1b2-task115",
         "witness_seq": 39,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 33,
         "why": "the node the tool created for world_env_path really is a WorldEnvironment",
         "declared_in": "tools/sessions/_exercises/ex_3d/h1b-manifest.json",
         "expect": [
@@ -8600,6 +8999,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 15,
@@ -8647,8 +9048,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_scene_tree",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_grid/c6-task118",
         "witness_seq": 9,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 3,
         "why": "the GridMap the tool created is in the edited scene tree under the exact name it was given, with the engine's own class name; the same tree lists every sibling it created (GM7..GM10) and does NOT list the boundary probe's GMX",
         "declared_in": "tools/sessions/_exercises/ex_close/c6-manifest.json",
         "expect": [
@@ -8666,6 +9070,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 10,
@@ -8709,8 +9115,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_node_properties",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_audio/h5-task113",
         "witness_seq": 42,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 16,
         "why": "the node editor_add_audio_player created must be in the scene as an AudioStreamPlayer2D",
         "declared_in": "tools/sessions/_exercises/ex_audio/h5-manifest.json",
         "expect": [
@@ -8727,6 +9136,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -8779,6 +9190,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -8831,6 +9244,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 6,
@@ -8870,12 +9285,16 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_audio_bus_layout",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_audio/h5-task113",
         "witness_seq": 22,
-        "why": "the bus editor_add_audio_bus created must appear in the engine's bus layout",
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 2,
+        "why": "the bus editor_add_audio_bus created is in the engine's bus layout with the name and the index the layout assigns it; the literal carries the VALUE (TASK-120 A3: the bare name `\"Music\"` was rejected - it is matched by any payload carrying that string)",
         "declared_in": "tools/sessions/_exercises/ex_audio/h5-manifest.json",
         "expect": [
-          "\"Music\""
+          "\"name\":\"Music\"",
+          "\"index\":2"
         ],
         "expect_absent": [],
         "expect_matched": true,
@@ -8888,6 +9307,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -8927,8 +9348,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_audio_bus_layout",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_audio/h5-task113",
         "witness_seq": 43,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 34,
         "why": "the written volume_db must be the bus's real value in the layout",
         "declared_in": "tools/sessions/_exercises/ex_audio/h5-manifest.json",
         "expect": [
@@ -8945,6 +9369,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -8984,8 +9410,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_audio_bus_layout",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_audio/h5-task113",
         "witness_seq": 22,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 9,
         "why": "the effect must appear in the bus's effect list with the engine's class name",
         "declared_in": "tools/sessions/_exercises/ex_audio/h5-manifest.json",
         "expect": [
@@ -9002,6 +9431,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -9047,6 +9478,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_file_effect_observed": 11,
@@ -9109,6 +9542,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_file_effect_observed": 5,
@@ -9155,6 +9590,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_file_effect_observed": 5,
@@ -9201,6 +9638,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_file_effect_observed": 5,
@@ -9247,6 +9686,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_file_effect_observed": 5,
@@ -9287,8 +9728,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_execute_gdscript",
+        "witness_verb": "execute",
         "run": "runs/_exercises/ex_write5/c4b-task115",
         "witness_seq": 19,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 13,
         "why": "the Control the tool named really carries that theme: the engine's own Control.theme.resource_path answers it",
         "declared_in": "tools/sessions/_exercises/ex_write5/c4b-manifest.json",
         "expect": [
@@ -9305,6 +9749,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 24,
@@ -9373,6 +9819,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -9412,8 +9860,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_animation_tree_structure",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 88,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 35,
         "why": "读回 AnimationTree 的结构（tree_root / 状态机）",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
         "expect": [
@@ -9430,6 +9881,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 10,
@@ -9486,6 +9939,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 10,
@@ -9530,12 +9985,16 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_animation_tree_structure",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 88,
-        "why": "读回状态机里的状态列表",
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 41,
+        "why": "the state editor_add_state_machine_state created for AT1 (state_name Walk, animation Anim2) is in the engine's state list with its animation binding; `\"Walk\"` alone was rejected as a bare name (TASK-120 A3)",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
         "expect": [
-          "\"Walk\""
+          "\"name\":\"Walk\"",
+          "\"animation\":\"Anim2\""
         ],
         "expect_absent": [],
         "expect_matched": true,
@@ -9548,6 +10007,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 16,
@@ -9591,8 +10052,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_animation_tree_structure",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 91,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 70,
         "why": "读回状态机里的状态列表，被删的状态不在了",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
         "expect": [
@@ -9612,6 +10076,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -9655,12 +10121,16 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_animation_tree_structure",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 88,
-        "why": "读回状态机里的迁移列表",
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 53,
+        "why": "the Jump -> Walk transition editor_add_state_machine_transition created is in the engine's transition list (`from`/`to` with their values); `\"Idle\"` alone was rejected as a bare name (TASK-120 A3)",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
         "expect": [
-          "\"Idle\""
+          "\"from\":\"Jump\"",
+          "\"to\":\"Walk\""
         ],
         "expect_absent": [],
         "expect_matched": true,
@@ -9673,6 +10143,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 20,
@@ -9716,8 +10188,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_animation_tree_structure",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 88,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 64,
         "why": "读回状态机里的迁移列表，被删的迁移不在了",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
         "expect": [
@@ -9736,6 +10211,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 10,
@@ -9779,8 +10256,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_animation_tree_structure",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 88,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 76,
         "why": "读回混合树节点真的挂在树上",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
         "expect": [
@@ -9797,6 +10277,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -9840,8 +10322,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_animation_tree_structure",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 88,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 82,
         "why": "读回参数表里出现被写的参数",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
         "expect": [
@@ -9858,6 +10343,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 8,
@@ -9901,12 +10388,16 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_navigation_info",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_nav/h4-task113",
         "witness_seq": 27,
-        "why": "the created NavigationRegion2D must appear in editor_get_navigation_info's region list with its real class and layer mask",
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 2,
+        "why": "the NavigationRegion2D editor_setup_navigation_region created (RegionA) is in the engine's region list with the engine's own class name; `\"RegionA\"` alone was rejected as a bare name (TASK-120 A3)",
         "declared_in": "tools/sessions/_exercises/ex_nav/h4-manifest.json",
         "expect": [
-          "\"RegionA\""
+          "\"path\":\"RegionA\"",
+          "\"type\":\"NavigationRegion2D\""
         ],
         "expect_absent": [],
         "expect_matched": true,
@@ -9919,6 +10410,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -9964,6 +10457,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_effect_observed": 1,
@@ -10005,12 +10500,16 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_navigation_info",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_nav/h4-task113",
         "witness_seq": 27,
-        "why": "the created NavigationAgent2D must appear in the agent list with the radius and max_speed the tool wrote",
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 8,
+        "why": "the NavigationAgent2D editor_setup_navigation_agent created (NA3) is in the engine's agent list with the max_speed 320.0 the tool wrote; `\"max_speed\"` alone was rejected as a bare key (TASK-120 A3)",
         "declared_in": "tools/sessions/_exercises/ex_nav/h4-manifest.json",
         "expect": [
-          "\"max_speed\""
+          "\"path\":\"Player/NA3\"",
+          "\"max_speed\":320.0"
         ],
         "expect_absent": [],
         "expect_matched": true,
@@ -10023,6 +10522,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -10062,8 +10563,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_navigation_info",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_nav/h4-task113",
         "witness_seq": 27,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 14,
         "why": "the mask editor_set_navigation_layers wrote must be in the read-back record",
         "declared_in": "tools/sessions/_exercises/ex_nav/h4-manifest.json",
         "expect": [
@@ -10080,6 +10584,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -10132,6 +10638,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -10171,8 +10679,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_get_particle_info",
+        "witness_verb": "get",
         "run": "runs/_exercises/ex_particles/h6-task113",
         "witness_seq": 34,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 2,
         "why": "the created system must answer as a GPUParticles2D with its own process_material",
         "declared_in": "tools/sessions/_exercises/ex_particles/h6-manifest.json",
         "expect": [
@@ -10189,6 +10700,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -10234,6 +10747,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_effect_observed": 5,
@@ -10279,6 +10794,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_effect_observed": 6,
@@ -10324,6 +10841,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_effect_observed": 5,
@@ -10369,6 +10888,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_effect_observed": 6,
@@ -10421,6 +10942,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -10473,6 +10996,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 8,
@@ -10529,6 +11054,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -10581,6 +11108,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 11,
@@ -10637,6 +11166,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -10689,6 +11220,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "failed": 2,
@@ -10718,9 +11251,9 @@
       "tool": "running_game_run_test_scenario",
       "scope": "game",
       "verb": "run",
-      "calls": 185,
+      "calls": 186,
       "ok": 185,
-      "boundary": 0,
+      "boundary": 1,
       "effective": 131,
       "evidence_channel": "pixel_effect",
       "evidence_channel_label": "渲染出的画面/视口（ok_effect_observed）",
@@ -10736,21 +11269,26 @@
       "read_payload_calls": 0,
       "facts_complete": 170,
       "bucket": ">=5",
-      "status": "计数达标缺证据",
-      "status_legacy": "计数达标缺证据",
+      "status": "达标",
+      "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
+        "failed": 1,
         "ok_file_effect_observed": 162,
         "ok_effect_observed": 1,
         "ok_no_effect_observed": 7,
         "ok_effect_unavailable": 15
       },
       "file_effects": {
+        "not_recorded": 1,
         "changed": 162,
         "none": 8,
         "not_tracked": 15
       },
       "flags": {
+        "error_suggestion": 1,
         "scenario_passed": 141,
         "scenario_asserted_nothing": 8,
         "scenario_assertion_failed": 36
@@ -10778,8 +11316,8 @@
         }
       ],
       "first_ts_ms": 1790435694121,
-      "last_ts_ms": 1790467813715,
-      "gate": false
+      "last_ts_ms": 1790492678684,
+      "gate": true
     },
     {
       "tool": "running_game_assert_node_state",
@@ -10805,6 +11343,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_file_effect_observed": 2788,
@@ -10848,9 +11388,9 @@
       "tool": "running_game_assert_screen_text",
       "scope": "game",
       "verb": "assert",
-      "calls": 80,
+      "calls": 81,
       "ok": 80,
-      "boundary": 0,
+      "boundary": 1,
       "effective": 65,
       "evidence_channel": "payload",
       "evidence_channel_label": "查询类：ok=true 且回包是实质载荷（回包即测量结果）",
@@ -10864,18 +11404,23 @@
       "pixel_effect_calls": 0,
       "file_effect_calls": 80,
       "read_payload_calls": 65,
-      "facts_complete": 80,
+      "facts_complete": 81,
       "bucket": ">=5",
-      "status": "计数达标缺证据",
-      "status_legacy": "计数达标缺证据",
+      "status": "达标",
+      "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
+        "failed": 1,
         "ok_file_effect_observed": 80
       },
       "file_effects": {
+        "none": 1,
         "changed": 80
       },
       "flags": {
+        "error_suggestion": 1,
         "assertion_failed": 15
       },
       "evidence": [
@@ -10901,16 +11446,16 @@
         }
       ],
       "first_ts_ms": 1790435696442,
-      "last_ts_ms": 1790465505733,
-      "gate": false
+      "last_ts_ms": 1790492679189,
+      "gate": true
     },
     {
       "tool": "running_game_run_stress_test",
       "scope": "game",
       "verb": "run",
-      "calls": 27,
+      "calls": 28,
       "ok": 27,
-      "boundary": 0,
+      "boundary": 1,
       "effective": 5,
       "evidence_channel": "pixel_effect",
       "evidence_channel_label": "渲染出的画面/视口（ok_effect_observed）",
@@ -10926,20 +11471,30 @@
       "read_payload_calls": 0,
       "facts_complete": 23,
       "bucket": ">=5",
-      "status": "计数达标缺证据",
-      "status_legacy": "计数达标缺证据",
+      "status": "达标",
+      "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
+        "failed": 1,
         "ok_effect_observed": 5,
         "ok_no_effect_observed": 18,
         "ok_effect_unavailable": 4
       },
       "file_effects": {
+        "not_recorded": 1,
         "none": 23,
         "not_tracked": 4
       },
-      "flags": {},
+      "flags": {
+        "error_suggestion": 1
+      },
       "evidence": [
+        {
+          "run": "runs/_exercises/ex_grid/c8-task120",
+          "calls": 1
+        },
         {
           "run": "runs/breakout/breakout-clean-task097",
           "calls": 1
@@ -10955,15 +11510,11 @@
         {
           "run": "runs/breakout/breakout-task093-r3",
           "calls": 1
-        },
-        {
-          "run": "runs/breakout/breakout-task093-r4",
-          "calls": 1
         }
       ],
       "first_ts_ms": 1790435696606,
-      "last_ts_ms": 1790467814007,
-      "gate": false
+      "last_ts_ms": 1790492679705,
+      "gate": true
     },
     {
       "tool": "editor_get_test_report",
@@ -10996,6 +11547,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -11049,6 +11602,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 5,
@@ -11094,6 +11649,8 @@
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "failed": 6
@@ -11122,10 +11679,10 @@
       "ok": 0,
       "boundary": 6,
       "effective": 0,
-      "evidence_channel": "payload",
-      "evidence_channel_label": "查询类：ok=true 且回包是实质载荷（回包即测量结果）",
-      "evidence_channel_basis": "payload：部署报告（效果落在外接设备上；本机只能测到它的拒绝分支）。判定依据：契约是查询：回包本身就是测量结果，不存在「另一次调用」可等（TASK-111 的 READ_VERBS 规则）。内容级证据 = ok=true 且回包是实质载荷。",
-      "evidence_channel_subject": "部署报告（效果落在外接设备上；本机只能测到它的拒绝分支）",
+      "evidence_channel": "file_effect",
+      "evidence_channel_label": "盘上的文件（ok_file_effect_observed）",
+      "evidence_channel_basis": "file_effect：deploy 是**动作动词**，不是读类动词，所以它的回包不是测量结果——`read_payload` 只对 READ_VERBS 里的动词累加，把它声明成 `payload` 会让这条工具的通道证据**恒为 0**（TASK-119 D1：无论真机接上、部署成功多少次都不会变）。它真正可观测的产物是部署写出的文件（导出的 APK）。声明依据是契约描述「将项目导出并部署到 Android 设备」。本机没有 Android 预设、没有设备，所以这条通道上目前只有拒绝分支（-32001 / -32602），台账如实记为 `计数达标缺证据`。",
+      "evidence_channel_subject": "导出产物：部署写出的 APK / 推到设备上的产物（本机只能测到它的拒绝分支）",
       "channel_evidence": 0,
       "channel_evidence_ok": false,
       "evidence_tier": "count_only",
@@ -11138,6 +11695,8 @@
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "failed": 6
@@ -11162,9 +11721,9 @@
       "tool": "project_build_csharp",
       "scope": "both",
       "verb": "build",
-      "calls": 67,
+      "calls": 68,
       "ok": 67,
-      "boundary": 0,
+      "boundary": 1,
       "effective": 63,
       "evidence_channel": "file_effect",
       "evidence_channel_label": "盘上的文件（ok_file_effect_observed）",
@@ -11180,18 +11739,23 @@
       "read_payload_calls": 0,
       "facts_complete": 63,
       "bucket": ">=5",
-      "status": "计数达标缺证据",
-      "status_legacy": "计数达标缺证据",
+      "status": "达标",
+      "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_file_effect_observed": 63,
+        "failed": 1,
         "ok_effect_unavailable": 4
       },
       "file_effects": {
         "changed": 63,
+        "not_recorded": 1,
         "not_tracked": 4
       },
       "flags": {
+        "error_suggestion": 1,
         "result_unparseable": 1
       },
       "evidence": [
@@ -11204,21 +11768,21 @@
           "calls": 1
         },
         {
+          "run": "runs/_exercises/ex_grid/c8-task120",
+          "calls": 1
+        },
+        {
           "run": "runs/_exercises/ex_scene/c23-task110",
           "calls": 1
         },
         {
           "run": "runs/_exercises/ex_scene2/c23-after-task110",
           "calls": 1
-        },
-        {
-          "run": "runs/_exercises/ex_write/c4-task111",
-          "calls": 1
         }
       ],
       "first_ts_ms": 1790435678313,
-      "last_ts_ms": 1790490880506,
-      "gate": false
+      "last_ts_ms": 1790492664028,
+      "gate": true
     },
     {
       "tool": "project_write_text_file",
@@ -11244,6 +11808,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_file_effect_observed": 6,
@@ -11274,9 +11840,9 @@
       "tool": "project_validate_scripts",
       "scope": "both",
       "verb": "validate",
-      "calls": 84,
+      "calls": 85,
       "ok": 84,
-      "boundary": 0,
+      "boundary": 1,
       "effective": 80,
       "evidence_channel": "payload",
       "evidence_channel_label": "查询类：ok=true 且回包是实质载荷（回包即测量结果）",
@@ -11297,18 +11863,22 @@
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 80,
-      "facts_complete": 84,
+      "facts_complete": 85,
       "bucket": ">=5",
-      "status": "计数达标缺证据",
-      "status_legacy": "计数达标缺证据",
+      "status": "达标",
+      "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
+        "failed": 1,
         "ok_no_effect_observed": 84
       },
       "file_effects": {
-        "none": 84
+        "none": 85
       },
       "flags": {
+        "error_suggestion": 1,
         "result_unparseable": 25
       },
       "evidence": [
@@ -11334,8 +11904,8 @@
         }
       ],
       "first_ts_ms": 1790435678383,
-      "last_ts_ms": 1790467794742,
-      "gate": false
+      "last_ts_ms": 1790492664137,
+      "gate": true
     },
     {
       "tool": "editor_set_node_script_batch",
@@ -11355,8 +11925,11 @@
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
         "witness_tool": "editor_execute_gdscript",
+        "witness_verb": "execute",
         "run": "runs/_exercises/ex_grid/c6-task118",
         "witness_seq": 16,
+        "witness_after_write": true,
+        "witnessed_tool_first_seq": 10,
         "why": "the node the batch attached to (Background) really carries that script: the engine's own Node.get_script().resource_path answers it. editor_get_node_properties is NOT the witness here - TASK-115 measured it answering -32001 for the property named 'script' (c4-v5-task111 seq 141)",
         "declared_in": "tools/sessions/_exercises/ex_close/c6-manifest.json",
         "expect": [
@@ -11373,6 +11946,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "计数达标缺证据",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 55,
@@ -11434,6 +12009,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 20,
@@ -11503,6 +12080,8 @@
       "bucket": ">=5",
       "status": "达标",
       "status_legacy": "达标",
+      "ledger_class": null,
+      "ledger_class_note": null,
       "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 85,
@@ -12851,13 +13430,17 @@
         "tool": "running_game_stop_input_recording",
         "scope": "game",
         "category": "H9",
-        "measured_calls": 7,
+        "measured_calls": 8,
         "drift": true,
         "reclassified": true,
         "evidence": [
           [
             "runs/_exercises/ex_rec/h9-task113",
             7
+          ],
+          [
+            "runs/_exercises/ex_grid/c8-task120",
+            1
           ]
         ]
       }
@@ -14569,13 +15152,17 @@
         "tool": "running_game_stop_input_recording",
         "scope": "game",
         "category": "H9",
-        "measured_calls": 7,
+        "measured_calls": 8,
         "drift": true,
         "reclassified": true,
         "evidence": [
           [
             "runs/_exercises/ex_rec/h9-task113",
             7
+          ],
+          [
+            "runs/_exercises/ex_grid/c8-task120",
+            1
           ]
         ]
       }
@@ -14593,7 +15180,7 @@
       "register_category": "H7"
     },
     "needs_an_external_device": {
-      "comment": "TASK-118 section D: tools whose code path exists but whose subject is outside this machine (a device, an Android preset). Measured, not inferred.",
+      "comment": "TASK-118 section D: tools whose code path exists but whose subject is outside this machine (a device, an Android preset). Measured, not inferred. TASK-120 item D2 adds `items`: the PER-TOOL status, because the three are not in the same state - one of them is already 达标 and the other two have only their refusal branch.",
       "tools": [
         "os_list_android_devices",
         "os_deploy_to_android_device",
@@ -14601,7 +15188,43 @@
       ],
       "count": 3,
       "register_category": "H8",
-      "measured_run": "runs/_exercises/ex_grid/c7-task118"
+      "measured_run": "runs/_exercises/ex_grid/c7-task118",
+      "items": [
+        {
+          "tool": "os_list_android_devices",
+          "ledger_status": "达标",
+          "measured": "5 x ok + 1 x -32602 边界",
+          "evidence": "runs/_exercises/ex_grid/c7-task118/trace-editor.jsonl",
+          "note": "runs adb for real (source \"adb devices -l\") and answers an empty device list; the tool is PASSING. It is in this bucket only because the DEVICE it would list is not on this machine - the measurement itself needs nothing external."
+        },
+        {
+          "tool": "project_get_android_preset_info",
+          "ledger_status": "计数达标缺证据",
+          "measured": "6 x ok=false（5 x -32000 no Android preset，1 x -32001 preset not found）",
+          "evidence": "runs/_exercises/ex_grid/c7-task118/trace-editor.jsonl",
+          "note": "refusal branch only: no project in this repo has an Android export preset, so no ok answer exists to measure. Needs an external preset, not a code change."
+        },
+        {
+          "tool": "os_deploy_to_android_device",
+          "ledger_status": "计数达标缺证据",
+          "measured": "6 x ok=false（5 x -32001，1 x -32602）",
+          "evidence": "runs/_exercises/ex_grid/c7-task118/trace-editor.jsonl",
+          "note": "refusal branch only: no Android preset and no device. TASK-120 item B moved its declared channel from `payload` to `file_effect`, so its evidence gate is at least satisfiable once an export/deploy really writes an artifact."
+        }
+      ]
+    },
+    "engine_not_implemented": {
+      "comment": "TASK-120 item D3: tools whose SUCCESS branch does not exist in this engine build. They are not 'missing evidence' - there is nothing to collect. Kept separate from the count_only / 缺证据 language so a reader cannot read them as an unfinished measurement.",
+      "items": [
+        {
+          "tool": "editor_set_auto_dismiss_dialogs",
+          "verdict": "-32000 Not implemented: editor_set_auto_dismiss_dialogs",
+          "evidence": "runs/_exercises/ex_editor/h7-task115/trace-editor.jsonl seq=74..80",
+          "measured": "7 calls, 0 ok: 5 calls with valid input all answer -32000 Not implemented (seq 74-78); the other 2 (seq 79-80) are argument-validation refusals (-32602 missing/mistyped 'enabled'). TASK-119's D5/R5 wrote '7/7 -32000': the precise split is 5/5 of the valid-input calls.",
+          "ledger_status_unchanged": "计数达标缺证据 - the numeric rule cannot see WHY a channel has no evidence; this entry is the missing explanation, and the ledger's still-short table prints it as 引擎未实现 instead of the generic reason."
+        }
+      ],
+      "count": 1
     }
   }
 }
