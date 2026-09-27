@@ -444,11 +444,14 @@ def run_all(verbose=True, argv=None):
     results["ok"] = all(results["checks"].values())
     results["reproduce"] = [
         "netstat -ano | findstr :%d" % args.port,
-        "D:\\Anaconda\\Scripts\\python.exe tools\\tests\\jev_dumb_server.py --mode ok "
+        "D:\\Anaconda\\python.exe tools\\tests\\jev_dumb_server.py --mode ok "
         "--port %d" % args.port,
-        "D:\\Anaconda\\Scripts\\python.exe tools\\tests\\test_jev_agent.py --port %d "
+        "D:\\Anaconda\\python.exe tools\\tests\\test_jev_agent.py --port %d "
         "--out runs\\playability\\agent-probe-jev.json" % args.port,
-        "D:\\Anaconda\\Scripts\\python.exe tools\\playtest_agent.py --probe-jev",
+        "D:\\Anaconda\\python.exe tools\\playtest_agent.py --probe-jev",
+        "# NOTE: the interpreter that ran here is %s (%s); the task file's "
+        "D:\\Anaconda\\Scripts\\python.exe does NOT exist on this machine."
+        % (sys.executable, sys.version.split()[0]),
     ]
     _write(args.out, results)
     if verbose:
