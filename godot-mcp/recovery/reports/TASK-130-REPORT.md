@@ -536,3 +536,8 @@ e041cae270 modules/mcp_server: task099 - REBUILT-2C-MANIFEST gains the 2c-11 sec
 
 > 引擎仓：本次**未改任何引擎文件**（`godot/modules/mcp_server/**` 零字节），因此**未触发**两变体重建、
 > 十道门、`accept_m1`、push —— 与 §9.1 铁律 7 一致。
+
+> 追记：本报告自身（含上述提交记录、§9.5 的点名与 §11 Q8 的交接提示）由紧随其后的
+> **`ebab184 docs(godot-mcp): TASK-130 - record the final commit id ...`** 入库，
+> 之后又补了一条 `docs(godot-mcp): TASK-130 - note the follow-up commit in the report`，
+> 使报告记录的 HEAD 与实际 HEAD 一致。两个 docs 提交都不含任何代码/配置改动。
