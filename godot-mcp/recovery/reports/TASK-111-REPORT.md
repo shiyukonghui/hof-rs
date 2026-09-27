@@ -390,3 +390,48 @@ h2 首轮（`ex_anim/h2-task111`，94 次）有 2 处缺口，**根因都在会�
 2. **把「契约 177 条 `inputSchema.properties` vs 注册 schema」做一次成员级对照**
    （TASK-110 §E 已建议，本轮又抓到 D-T111-2/D-T111-3 两条只靠调用侧探测发现的成员级问题）。
    现在有了 `recovery/work/task111/dump_schemas.py` 这个起点，做成一次性对照的边际成本已经很低。
+
+---
+
+## F. 提交与跑后的进程/端口检查
+
+### F1. 主仓提交
+
+```
+$ git log --oneline -1
+787e01a feat(godot-mcp): TASK-111 - coverage loop batch 2: ... (212 files changed, 18848 insertions(+), 1241 deletions(-))
+```
+
+**引擎仓本轮零改动**（`F:\moonbit-hof-rs\godot-mcp\godot` 未做任何提交；
+工作树里没有本任务产生的改动）。上一轮已修的引擎缺陷仍是 TASK-110 的 `3fdabe2d9a`，
+本轮**没有**重建、**没有**重跑十道门 —— 因为它们不是本任务产生的。
+
+### F2. 提交后仍未纳入的工作树条目（逐条说明，都不是本任务的产物）
+
+```
+$ git status --short
+ M godot-mcp/recovery/work/task104/logs/git-housekeeping.err.txt   <- TASK-104 收尾时的既有状态
+ M godot-mcp/recovery/work/task104/logs/git-housekeeping.out.txt   <- 同上
+?? godot-mcp/dist/                                                <- TASK-107/109 的产物
+?? godot-mcp/recovery/reports/ACCEPTANCE-TASK-107.md              <- TASK-107 的产物
+?? godot-mcp/projects/_exercises/ex_write2/                       <- 本任务被中途放弃的工程副本
+?? godot-mcp/projects/_exercises/ex_write3/                       <- 同上
+?? godot-mcp/projects/_exercises/ex_write4/                       <- 同上
+```
+
+`ex_write2` 是一次被**主动终止**的运行留下的半成品（会话文件当时是旧的，
+用 `job_kill` 停掉后换了新工程），`ex_write3` / `ex_write4` 是会话修好前两次未收口的尝试。
+三者**只留在盘上**、没有入库，因为入库的 `ex_write`（首轮，c4 的「修复前」对照）与
+`ex_write5`（收口轮）已经覆盖了前后对比。**没有删除它们**（破坏性命令默认拒绝）。
+
+### F3. 跑后的进程与端口检查（铁律 4）
+
+```
+$ netstat -ano | findstr "LISTENING" | findstr "9888 9889 9877"   ->  NO_LISTENERS
+$ tasklist  | findstr /I godot                                    ->  NO_GODOT_PROC
+```
+
+本轮 6 次会话运行（c4 首轮 / c4c / c4-v5 / c5 / h1 / h2b / h3）全部用同一对端口
+**9888 / 9889**，每次跑前都先确认这两个端口无监听、无 `godot` 进程；
+用户端口 **9877** 全程未被占用（构建/导入用的一次性进程也在同一秒内退出）。
+
