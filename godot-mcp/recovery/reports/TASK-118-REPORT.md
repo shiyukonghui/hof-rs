@@ -321,20 +321,30 @@ tool_coverage: mode=all-runs runs=111 trace_files=180 calls=8712 distinct=172
 ## G. 提交
 
 ```
-$ cd F:\moonbit-hof-rs && git log --oneline -3   （本次提交后）
+$ cd F:\moonbit-hof-rs && git log --oneline -4      （只列消息，不写哈希：见下）
+chore(godot-mcp): TASK-118 - refresh the ledger once more after the decision record (timestamp only)
+docs(godot-mcp):  TASK-118 - the report and the D163 decision record
+feat(godot-mcp):  TASK-118 (D163) - judge coverage on each tool's declared evidence channel, drain
+                  four count_only tools, and register the simulate/Android families by measurement
+docs(godot-mcp):  TASK-117 - the report, the D162 decision record, and the game-loop log note
 ```
 
-本轮按 TASK-114/115 的同构顺序落 **两个提交**（**正文只按消息引用、不写哈希**：本报告自己就在其中一次
-提交里，任何写进正文的哈希都会被「写哈希」这个动作本身改掉）：
+三个提交、顺序与 TASK-114/115 同构（**正文只按消息引用、不写死哈希**：本报告自己就在其中一次提交里，
+任何写进正文的哈希都会被「写哈希」这个动作本身改掉；准确哈希请用 `git log --oneline`）：
 
 1. **功能提交** —— `tools/tool_coverage.py`（通道口径）、`tools/tool_channels.json`、
    `tools/tool_coverage_unreachable.json`（scope-excluded / external_device 实测 / 三条 reclassified）、
    两个会话与清单、台账两件、派生脚本；
-2. **报告与决策** —— `recovery/reports/TASK-118-REPORT.md` + `DECISIONS.md` D163。
+2. **报告与决策** —— `recovery/reports/TASK-118-REPORT.md` + `DECISIONS.md` D163；
+3. **再刷一次台账** —— 台账的 `generated_utc` 每跑一次都会变，所以重跑一次留下时间戳；
+   **实测数字逐字不变**（`runs=111 trace_files=180 calls=8712 distinct=172 ;
+   buckets: 0=5 1-4=0 >=5=172 ; status: 达标=152 计数达标缺证据=20 未达0=5 ; registry: 74 members, 69 drift`）。
 
 * 显式入库：`TOOL-COVERAGE.md` / `coverage.json`、`tools/tool_channels.json`、
   `tools/sessions/_exercises/ex_close/`、`tools/sessions/_exercises/{ex_grid/h3,ex_write/c4}-manifest.json`
   （两条声明被移进 `readback_superseded`）、`recovery/work/task118/`、本报告、`DECISIONS.md`。
-* **没有**入库：`runs/`（既有约定）、`projects/_exercises/ex_grid/.godot/`（既有忽略）、`dist/`。
+* **没有**入库：`runs/`（既有约定）、`projects/_exercises/ex_grid/.godot/`（既有忽略）、`dist/`、
+  以及主仓里 TASK-104 遗留的 `recovery/work/task104/logs/git-housekeeping.{out,err}.txt`
+  （不是本任务产物，**未删未提交**）。
 * **引擎仓（`F:\moonbit-hof-rs\godot-mcp\godot`）本轮无提交、无 push**：
   `godot/modules/mcp_server/` 一个字节未改。
