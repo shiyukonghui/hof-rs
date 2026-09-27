@@ -5,7 +5,7 @@
 
 口径（mode）：**all-runs**；语料：**109 个 run 目录 / 177 个 trace 文件 / 8665 次 `tools/call`**（`ok=false` 638 次、解析失败行 0、sidecar 校验通过 276）
 
-生成时间（UTC）：2026-09-27T04:06:54Z
+生成时间（UTC）：2026-09-27T04:20:39Z
 
 **「有效调用」的判定**（由 `mcp_trace_ledger.py` 的 verdict 词汇给出，不另立一套）：
 
@@ -505,7 +505,7 @@
 
 登记来源：`recovery/reports/TOOL-COVERAGE-TASK-108.md` §5.3 (5) which of them are structurally unreachable in this loop (INFERENCE)（**推断**，判据是「缺少本循环不具备的子系统/资产/前置运行态」）。本视图把登记表与本轮实测**对在一起**：`实测调用` 列不为 0 的条目就是登记漂移，必须在下一轮从登记表里移除或改判。
 
-登记成员 **74** 条；其中实测**已被调用**（登记漂移）**66** 条，其中 **56** 条已按实测证据改判并记入登记表的 `reclassified`（下表 `改判` 列打 `YES`），其余为待复核漂移。
+登记成员 **74** 条；其中实测**已被调用**（登记漂移）**66** 条，其中 **66** 条已按实测证据改判并记入登记表的 `reclassified`（下表 `改判` 列打 `YES`），其余为待复核漂移。
 
 ### H1 3D 内容管线
 
@@ -602,30 +602,30 @@
 
 ### H7 编辑器 GUI 状态 / 编辑器自有播放与输入注入 / 编辑器侧测试运行
 
-- 为何不可达（推断）：这类工具的输入是**编辑器进程自己的 GUI 状态**（当前选择、打开的脚本、Output 面板、对话框、已装插件）或**编辑器自己的播放器/输入队列**。本循环里编辑器端点只做「开场景 / 加节点 / 存场景 / 建脚本 / 编译 / 读错误」；所有行为验证都走游戏端点，且**刻意不用**编辑器侧输入注入（B2 说明：`editor_simulate_*` 注入的是编辑器进程的输入，不能用来驱动游戏进程 —— D59 / GDR-21 的边界）
-- 支撑证据（只读观察）：`tools/editor_playback.cpp`、`editor_input_simulation.cpp`、`editor_profiling_read.cpp`、`editor_testing_read.cpp`、`editor_script_write.cpp`、`editor_read_scene_inspector.cpp`；`editor_get_test_report` / `editor_analyze_screenshot_diff` 需要「编辑器侧测试运行」，而本循环的测试运行发生在游戏端点
+- 为何不可达（推断）：SUPERSEDED BY MEASUREMENT (TASK-115). The original inference below was a single claim about a mixed family, and it was wrong for ten of its nineteen members: the editor's own GUI state (selection, Output panel, run bar, addon list, test-report bridge file, screenshot diff) is fully readable and writable through the editor endpoint. What is really left is the five editor_simulate_* tools, whose exclusion is a scope decision (D59 / GDR-21), not a missing subsystem - see `still_out`. ORIGINAL TEXT, kept for audit: SUPERSEDED BY MEASUREMENT (TASK-115). The original inference below was a single claim about a mixed family, and it was wrong for ten of its nineteen members: the editor's own GUI state (selection, Output panel, run bar, addon list, test-report bridge file, screenshot diff) is fully readable and writable through the editor endpoint. What is really left is the five editor_simulate_* tools, whose exclusion is a scope decision (D59 / GDR-21), not a missing subsystem - see `still_out`. ORIGINAL TEXT, kept for audit: 这类工具的输入是**编辑器进程自己的 GUI 状态**（当前选择、打开的脚本、Output 面板、对话框、已装插件）或**编辑器自己的播放器/输入队列**。本循环里编辑器端点只做「开场景 / 加节点 / 存场景 / 建脚本 / 编译 / 读错误」；所有行为验证都走游戏端点，且**刻意不用**编辑器侧输入注入（B2 说明：`editor_simulate_*` 注入的是编辑器进程的输入，不能用来驱动游戏进程 —— D59 / GDR-21 的边界）
+- 支撑证据（只读观察）：TASK-115: runs/_exercises/ex_editor/h7-task115 (82 calls, 169 named tools in the whole corpus after the batch); tools/sessions/_exercises/ex_editor/h7-manifest.json (7 content-level read-back declarations, all verified). ORIGINAL TEXT, kept for audit: TASK-115: runs/_exercises/ex_editor/h7-task115 (82 calls, 169 named tools in the whole corpus after the batch); tools/sessions/_exercises/ex_editor/h7-manifest.json (7 content-level read-back declarations, all verified). ORIGINAL TEXT, kept for audit: `tools/editor_playback.cpp`、`editor_input_simulation.cpp`、`editor_profiling_read.cpp`、`editor_testing_read.cpp`、`editor_script_write.cpp`、`editor_read_scene_inspector.cpp`；`editor_get_test_report` / `editor_analyze_screenshot_diff` 需要「编辑器侧测试运行」，而本循环的测试运行发生在游戏端点
 
 | tool | scope | 实测调用 | 漂移 | 改判 | 证据 |
 |---|---|---|---|---|---|
-| `editor_analyze_screenshot_diff` | editor | 8 | **YES** | - | runs/_exercises/ex_editor/h7-task115(8) |
+| `editor_analyze_screenshot_diff` | editor | 8 | **YES** | YES | runs/_exercises/ex_editor/h7-task115(8) |
 | `editor_get_open_scripts` | editor | 12 | **YES** | YES | runs/_exercises/ex_scene/c23-task110(6) ; runs/_exercises/ex_scene2/c23-after-task110(6) |
 | `editor_get_output_log` | editor | 38 | **YES** | YES | runs/_exercises/ex_scene/c23-task110(6) ; runs/_exercises/ex_scene2/c23-after-task110(6) ; runs/_exercises/ex_write/c4-task111(6) |
 | `editor_get_performance_monitors` | editor | 12 | **YES** | YES | runs/_exercises/ex_scene/c23-task110(6) ; runs/_exercises/ex_scene2/c23-after-task110(6) |
 | `editor_get_selection` | editor | 17 | **YES** | YES | runs/_exercises/ex_scene/c23-task110(6) ; runs/_exercises/ex_scene2/c23-after-task110(6) ; runs/_exercises/ex_editor/h7-task115(5) |
-| `editor_get_test_report` | editor | 6 | **YES** | - | runs/_exercises/ex_editor/h7-task115(6) |
-| `editor_play_scene` | editor | 7 | **YES** | - | runs/_exercises/ex_editor/h7-task115(7) |
-| `editor_reload_plugin` | editor | 6 | **YES** | - | runs/_exercises/ex_editor/h7-task115(6) |
-| `editor_remove_node_selection` | editor | 6 | **YES** | - | runs/_exercises/ex_editor/h7-task115(6) |
-| `editor_remove_output_log` | editor | 6 | **YES** | - | runs/_exercises/ex_editor/h7-task115(6) |
-| `editor_rescan_project_filesystem` | editor | 6 | **YES** | - | runs/_exercises/ex_editor/h7-task115(6) |
-| `editor_set_auto_dismiss_dialogs` | editor | 7 | **YES** | - | runs/_exercises/ex_editor/h7-task115(7) |
-| `editor_set_node_selection` | editor | 9 | **YES** | - | runs/_exercises/ex_editor/h7-task115(9) |
+| `editor_get_test_report` | editor | 6 | **YES** | YES | runs/_exercises/ex_editor/h7-task115(6) |
+| `editor_play_scene` | editor | 7 | **YES** | YES | runs/_exercises/ex_editor/h7-task115(7) |
+| `editor_reload_plugin` | editor | 6 | **YES** | YES | runs/_exercises/ex_editor/h7-task115(6) |
+| `editor_remove_node_selection` | editor | 6 | **YES** | YES | runs/_exercises/ex_editor/h7-task115(6) |
+| `editor_remove_output_log` | editor | 6 | **YES** | YES | runs/_exercises/ex_editor/h7-task115(6) |
+| `editor_rescan_project_filesystem` | editor | 6 | **YES** | YES | runs/_exercises/ex_editor/h7-task115(6) |
+| `editor_set_auto_dismiss_dialogs` | editor | 7 | **YES** | YES | runs/_exercises/ex_editor/h7-task115(7) |
+| `editor_set_node_selection` | editor | 9 | **YES** | YES | runs/_exercises/ex_editor/h7-task115(9) |
 | `editor_simulate_input_action` | editor | 0 | - | - | - |
 | `editor_simulate_input_sequence` | editor | 0 | - | - | - |
 | `editor_simulate_key` | editor | 0 | - | - | - |
 | `editor_simulate_mouse_click` | editor | 0 | - | - | - |
 | `editor_simulate_mouse_move` | editor | 0 | - | - | - |
-| `editor_stop_scene` | editor | 7 | **YES** | - | runs/_exercises/ex_editor/h7-task115(7) |
+| `editor_stop_scene` | editor | 7 | **YES** | YES | runs/_exercises/ex_editor/h7-task115(7) |
 
 ### H8 发布 / 导出 / Android 部署路径
 
@@ -714,6 +714,16 @@
 | `running_game_stop_input_recording` | H9 | input recording needs the three-step create -> play/stop session, which the corpus never opened: projects/_exercises/ex_rec carries a player script whose motion is driven by the key events the replay injects. All three members ran five times each: every create/stop round captured the two key events the explicit replay injected (event_count 2), and the final create -> stop -> play chain (no `events` argument) moved the player from x=100 to x=151 with a recomputed pixel diff of 1152 pixels - the replay really drives the running game. | `runs/_exercises/ex_rec/h9-task113/trace-game.jsonl` |
 | `project_get_export_info` | H8 | the two export-read tools only need res://export_presets.cfg, not a real export. Ex_export (2 presets: Windows Desktop + Web) drove the real success branch on BOTH endpoints -- editor answers capabilities={editor_export:true,editor_process:true,presets_source:'editor_export'} with preset_count=2, the game process answers editor_export:false,editor_process:false,presets_source:'export_presets.cfg' with the same preset_count=2. Ex_export_np (no export_presets.cfg at all) drove the capability-missing branch: presets_file_present=false, count=0, message="'res://export_presets.cfg' does not exist: this project has no export presets", and on the editor endpoint unavailable[] carries the export_presets entry -- i.e. a missing file is an answer, not an error. The empty inputSchema also gives a constructible boundary: any argument is refused with -32602 "accepts no parameters" (4x, both endpoints). | `runs/_exercises/ex_export/h8-task114/trace-editor.jsonl, runs/_exercises/ex_export/h8-task114/trace-game.jsonl, runs/_exercises/ex_export_np/h8n-task114/trace-editor.jsonl, runs/_exercises/ex_export_np/h8n-task114/trace-game.jsonl` |
 | `project_list_export_presets` | H8 | same two runs: count=2 with the preset records read straight out of export_presets.cfg on both endpoints, and count=0 + presets_file_present=false + message on the project without the file. The unknown-argument gate refuses preset_name and index with -32602. | `runs/_exercises/ex_export/h8-task114/trace-editor.jsonl, runs/_exercises/ex_export/h8-task114/trace-game.jsonl, runs/_exercises/ex_export_np/h8n-task114/trace-editor.jsonl, runs/_exercises/ex_export_np/h8n-task114/trace-game.jsonl` |
+| `editor_play_scene` | H7 | the editor's own scene player IS reachable from the editor endpoint: five releases of the project's main/current/custom scene each really created a game child process (--mcp-port 61849/61856/61861/61865/9899 answered in args_injected, pid + endpoint in the answer), and the editor's own run bar state was read back by editor_execute_gdscript -> EditorInterface.is_playing_scene(), true after play and false after the matching stop. The tools that start and stop the editor's player were never about the game endpoint. | `runs/_exercises/ex_editor/h7-task115/trace-editor.jsonl` |
+| `editor_stop_scene` | H7 | same run: five stops each answered stopped:true and killed the child, a sixth answered {stopped:false, 'No scene playing'} (the documented honest answer, not a failure), and is_playing_scene() read back false. The stop tool is the module's only 'no orphan game process' lever, and this run used it five times with no orphan left (post-run tasklist shows no godot process). | `runs/_exercises/ex_editor/h7-task115/trace-editor.jsonl` |
+| `editor_set_node_selection` | H7 | the editor's own EditorSelection is writable through the editor endpoint: nine calls (node_paths, node_path, mode=replace/add) each answered with the selection the engine holds, and editor_get_selection read the same node back by name and type (five content-level witnesses). | `runs/_exercises/ex_editor/h7-task115/trace-editor.jsonl` |
+| `editor_remove_node_selection` | H7 | same run: five clears answered cleared:1/1/1/3/0 and editor_get_selection then answered {"count":0,"nodes":[]} - the empty selection is a valid, verifiable answer, which is what the register's 'GUI state is not reachable' inference got wrong. | `runs/_exercises/ex_editor/h7-task115/trace-editor.jsonl` |
+| `editor_remove_output_log` | H7 | the Output panel of the editor process is both readable and clearable here: the panel held 10 lines (including 'Godot Engine v4.8.dev.custom_build') before the clear and one empty line after it, read back by editor_get_output_log in the same run (expect 'in_process':true + expect_absent 'Godot Engine v4.8.dev'). | `runs/_exercises/ex_editor/h7-task115/trace-editor.jsonl` |
+| `editor_reload_plugin` | H7 | with a real addon enabled (projects/_exercises/ex_editor/addons/probe_plugin, listed by ProjectSettings' editor_plugins/enabled) five calls each answered {reloading:true, plugins:['res://addons/probe_plugin/plugin.cfg']}; the enabled list itself was read back by project_get_settings. NOTE: the success is NOT pixel/file observable (verdict ok_no_effect_observed), so this tool's only honest evidence channel is the read-back. | `runs/_exercises/ex_editor/h7-task115/trace-editor.jsonl` |
+| `editor_rescan_project_filesystem` | H7 | EditorFileSystem::scan() is reachable through the editor endpoint: five calls each answered {reloaded:true}, and project_get_filesystem_tree read the project back with its scenes and addon files after the rescan. | `runs/_exercises/ex_editor/h7-task115/trace-editor.jsonl` |
+| `editor_get_test_report` | H7 | the register's 'it needs an editor-side test run' inference is wrong by measurement: the tool reads the user:// bridge file the GAME process persists and otherwise answers honestly from this process' accumulator. Five calls each answered source=editor_process with no_results:true (total 0), the opt-in clear:true arm answered cleared:['editor_process'], and a mistyped clear is -32602. It is a read tool, so its own payload is substantive evidence: counted 达标 by tools/tool_coverage.py. | `runs/_exercises/ex_editor/h7-task115/trace-editor.jsonl` |
+| `editor_analyze_screenshot_diff` | H7 | same class of correction: the comparison is CPU-side (Image::load / load_png_from_buffer) and needs no display server and no editor-side test run at all. Five calls measured real pairs (8x8 identical -> changed_pixels 0; two differing 8x8 PNGs -> changed_pixels 32; threshold 0 and 255 at the inclusive/exclusive ends) and three refusals were measured (missing image -32001, 8x8 vs 16x16 size mismatch -32602, threshold 300 -32602). Counted 达标. | `runs/_exercises/ex_editor/h7-task115/trace-editor.jsonl` |
+| `editor_set_auto_dismiss_dialogs` | H7 | called seven times, and every well-formed call is the honest -32000 the implementation documents ('this engine has no process-wide auto-dismiss setting for editor dialogs'), plus two -32602 for the malformed ones. So the tool is REACHABLE and its contract is exercised, but it can never produce a success: its provider is a deliberate not-implemented, not a missing subsystem. It therefore stays at evidence tier count_only (7 boundary calls, 0 effective) BY DESIGN, and the register entry for it should read 'measured, boundary-only' rather than 'unreachable'. | `runs/_exercises/ex_editor/h7-task115/trace-editor.jsonl` |
 
 ## 5. 本轮批次进度（--targets）
 

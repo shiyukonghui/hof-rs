@@ -466,17 +466,24 @@ post-probe-check  ex_editor.exe -> none
 
 ```
 $ cd F:\moonbit-hof-rs && git log --oneline -3
-2c1ff0a feat(godot-mcp): TASK-115 (D160) - split H7 by measurement, restore eight witnesses,
-        and the export/signature probe
-<HEAD>  docs(godot-mcp): TASK-115 - the report and the D160 decision record
-eb52b26 docs(godot-mcp): TASK-114 - record the two commit hashes and the engine-repo status in the report
+<HEAD~2>  feat(godot-mcp): TASK-115 (D160) - split H7 by measurement, restore eight witnesses,
+          and the export/signature probe
+<HEAD~1>  docs(godot-mcp): TASK-115 - the report and the D160 decision record
+<HEAD>    chore(godot-mcp): TASK-115 - refresh the ledger once more, and record the three-commit
+          order in the report
 ```
 
-* 上面第二个哈希写 `<HEAD>` 不是偷懒：**本报告自己就在那一次提交里**，
-  任何写进正文的哈希都会因为写哈希这件事本身而失效。要读到它请用 `git log --oneline -1`。
-  功能提交 `2c1ff0a` 是稳定的，可以直接用。
-* 提交顺序与 TASK-114 一致：**先落工程/会话/清单/台账/登记表/派生脚本**（`2c1ff0a`），
-  再落**报告与决策**（HEAD），这样「改动 → 提交 → 决策日志」三者可互查。
+三个提交、顺序与 TASK-114 同构（**正文只按消息引用、不写哈希**：本报告自己就在其中一次提交里，
+任何写进正文的哈希都会被「写哈希」这个动作本身改掉；准确哈希请用 `git log --oneline`）：
+
+1. **功能提交**（`HEAD~2`）—— 工程 / 会话 / 清单 / 台账 / 登记表 / 派生脚本；
+2. **报告与决策**（`HEAD~1`）—— 本报告 + `DECISIONS.md` D160；
+3. **再刷一次台账**（`HEAD`）—— 原因是 `tool_coverage.py` 把登记表的 `reclassified` 当**输入**：
+   第一次刷新跑在 `reclassify_h7.py` 之前，所以 `TOOL-COVERAGE.md` §4 里那 10 条新漂移还标着
+   「待复核」。重刷后是 **74 成员 / 66 漂移 / 66 已改判 / 0 条未改判漂移**，语料数字不变
+   （109 run / 177 trace / 8665 调用 / 169 工具）。
+
+这样「改动 → 提交 → 决策日志」三者可互查。
 * 显式入库的东西：`projects/_exercises/ex_editor/`（含 `export_presets.cfg` —— 该工程自己的
   `.gitignore` **没有**忽略它）、四个会话与清单、`TOOL-COVERAGE.md` / `coverage.json`、
   `tools/tool_coverage_unreachable.json`、`recovery/work/task115/`（脚本 + README +
