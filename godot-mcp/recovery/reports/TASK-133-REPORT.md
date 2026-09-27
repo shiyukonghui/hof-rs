@@ -2,6 +2,7 @@
 
 * 任务书：`F:\moonbit-hof-rs\godot-mcp\recovery\tasks\TASK-133.md`（2026-09-27）
 * 报告：**本文件**
+* **交付提交：`b330500`**（见 §9）
 * 证据根（本任务新产物）：`F:\moonbit-hof-rs\godot-mcp\runs\model-player\after-fix\**`
 * 修复前证据：**直接引用 TASK-132 的既有产物**（`runs/model-player/<game>/<backend>/**`，
   本次**没有重跑**、**没有覆盖**一个字节；见 §5 的 sha256）
@@ -622,8 +623,15 @@ game2048 的第一帧从「全 0 空盘」变成「两张 2」；puzzlebobble �
 **两仓 git**
 
 ```text
-$ git -C F:\moonbit-hof-rs log --oneline -5     (交付提交见文末)
-<见 §8>
+$ git -C F:\moonbit-hof-rs log --oneline -5
+b330500 fix(godot-mcp): TASK-133 (D181/D182/D183/D184/D185/D186) - the 4 real defects ...   <- 本任务交付提交
+913dc15 docs(godot-mcp): TASK-132 - correct the selftest assertion count to the 23 ...
+8017558 docs(godot-mcp): TASK-132 - record the deliverable commit a470a5c ...
+a470a5c feat(godot-mcp): TASK-132 (D176/D177/D178/D179/D180) - the playability verdict becomes ...
+a511087 docs(godot-mcp): TASK-131 - correct the read-image inventory ...
+
+$ git -C F:\moonbit-hof-rs status --short
+(clean -- 提交后本报告若再被修改，则只有这一份文档会出现在里面)
 
 $ git -C F:\moonbit-hof-rs\godot-mcp\godot log --oneline -5
 ba1587c71e fix(mcp_server): TASK-112 - ...
@@ -696,9 +704,16 @@ $ git -C F:\moonbit-hof-rs\godot-mcp\godot status --short
   * **D184** puzzlebobble：瞄准点串重画 + 五档循环；
   * **D185** 判据细化：`MODEL_FIXED_POINT` 独立结论 + 统一移除 `done`；
   * **D186** `runs/**` 继续不入库，但报告必须给关键产物路径 + sha256。
-* 交付提交：**见本次提交的哈希**（提交信息形如
-  `fix(godot-mcp): TASK-133 - the 4 real playability defects ...`）。
-  提交只包含上面「文件所有权自查」里的 16 个改动 + 2 个新增文件。
+* 交付提交：**`b330500`**（19 files changed, 1932 insertions(+), 32 deletions(-)），
+  提交信息 `fix(godot-mcp): TASK-133 (D181/D182/D183/D184/D185/D186) - the 4 real defects
+  the model-player criterion caught, plus the criterion's own refinements`。
+  只包含「文件所有权自查」里的 16 个改动 + 3 个新增文件
+  （报告、任务书、新测试）。
+* **提交口径（沿用 TASK-131/132 的不变式）**：交付提交 = `b330500`；
+  凡 `b330500` 之后的提交**只允许改这一份报告**（补 git 状态之类），
+  所以「报告里写的 HEAD」与「真实 HEAD」可能差一个 docs 提交。
+* `runs/**` **不在提交里**：`.gitignore:43`（`godot-mcp/runs/`）忽略整个 `runs/`，
+  与本任务 §1.C.3 的裁决一致（D186）。证据留在盘上，报告里的路径 + sha256 直接可用。
 
 ---
 
