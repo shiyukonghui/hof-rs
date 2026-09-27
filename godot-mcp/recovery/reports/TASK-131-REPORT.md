@@ -595,4 +595,59 @@ python runs\realinput\_scripts\check_patch_scope.py
 * 未为了"让真实键生效"去改游戏的输入映射或工程设置（**先测量**：结论是根本不需要改）。
 * 独占清单以外的文件只新增（`tools/playability_rescore.py`、`runs/realinput/**`、`recovery/tasks/TEMPLATE-logic-feedback.md`、本报告）。
 
-### F.3 两仓 git（提交后回填见文末 §G）
+### F.3 两仓 git（提交后）
+
+**外层仓 `F:\moonbit-hof-rs`（`master`）**：本任务提交 `03692fd`（8 files changed, 5763 insertions(+), 243 deletions(-)）
+
+```text
+03692fd feat(godot-mcp): TASK-131 (D173/D174/D175) - real OS-key delivery is proven on this machine ...
+14c2564 docs(godot-mcp): TASK-130 - note the follow-up commit in the report so the recorded HEAD matches the real HEAD
+ebab184 docs(godot-mcp): TASK-130 - record the final commit id and the post-commit git log/status ...
+8cd0127 feat(godot-mcp): TASK-130 (D171/D172) - ...            <- 本任务的基线
+f39d4e7 docs(godot-mcp): TASK-129 - record the final commit id ...
+
+$ git status --short
+?? godot-mcp/recovery/tasks/TASK-132.md
+```
+
+**嵌套引擎仓 `F:\moonbit-hof-rs\godot-mcp\godot`（自带 `.git`）**：本任务**零字节改动**
+
+```text
+ba1587c71e fix(mcp_server): TASK-112 - ...                      <- 与本任务无关，仍是 HEAD
+3fdabe2d9a fix(godot-mcp): TASK-110 - ...
+1f9d0cb1c9 modules/mcp_server: task103 - ...
+1c7f5c07a1 modules/mcp_server: task103 (X-1) - ...
+e041cae270 modules/mcp_server: task099 - ...
+
+$ git status --short
+?? uid_cache.bin                                                <- 本任务之前就在
+```
+
+**两点必须点名**（铁律 9：别人的遗留改动不要替他提交）：
+
+1. `godot-mcp/recovery/tasks/TASK-132.md` 在本任务执行期间出现，**不是我的文件**，**没有被我提交**，留给决策者。
+2. 引擎仓的未跟踪 `uid_cache.bin` 同理（TASK-130 之前就在）。
+
+---
+
+## G. 遗留风险与下一步建议（交给决策者裁决，本任务不擅自扩大范围）
+
+1. **两个真游戏缺陷未修**（本任务只做"判定"，修游戏属于另一批工作）：
+   * `snake`：`_Ready()` → `ResetSnake()` 把方向设为 `(1,0)` 且 `_Process` 立刻步进，1.52 秒自撞右墙；
+     InputMap 无重开键；类注释 "The snake starts parked" 与实现不符。修法方向（供参考）：
+     初始方向置零并等待第一个方向键（与 pong/breakout 的确定性规则一致）+ 加一个重开键。
+   * `game2048`：开局没有生成初始棋子（`GridString` 全 0、`TilesInUse=0`）。修法方向：
+     `_Ready()`（或首次 `Move` 之前）按设计生成 2 个随机/固定棋子。
+2. **`puzzlebobble` 的瞄准可见性**：`pb_left/right` 只改 `AngleIndex` 且像素差 0。二选一（画出来 / 声明为可观测）。
+3. **`P7` 对 snake 是 PASS**：P7 只检查声明节点；建议给它声明一个"必须存在的分数 `Label`"，
+   这样"没有 HUD"就会有一条机器判据（这属于 P7 声明面的收紧，不在本任务内）。
+4. **既存缺陷未修**：`--agent` 段的 `'ScriptedAgent' object has no attribute 'last_evidence'`
+   （旧代码同样存在；不影响 P1..P7，但会让 `--agent` / `--visual-agent` 段静默失效）。
+5. **读图的分辨率边界**：23 格 filmstrip 是逐格看的（每格 210px 宽），HUD 小字类结论一律以状态字段为准；
+   若以后要求"每帧全尺寸原图"级别的读图证据，需要把 `--visual-frames` 类的机制推广到逐帧。
+6. **真实键结论的可迁移性**：本结论只在**本机、本次会话**成立；别的机器/会话必须重跑
+   `real_input_probe.py env`（`display_active`、前台可切换性、`SendInput` 返回）再引用。
+7. **`refusal_evidence` 豁免是一个可被滥用的口子**：它要求"同局至少一个动作真的推动了玩法"，
+   但一个**部分动作坏掉**的游戏仍可能靠它蒙过个别动作。建议下一批把"每个动作必须要有
+   玩法证据**或**一个明确的、逐动作的拒绝声明"再收紧一档（本任务未做，避免一次改太多）。
+
