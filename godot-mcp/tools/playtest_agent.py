@@ -1574,7 +1574,12 @@ class PlayJevAgent(PlaytestAgent):
         `score` role reports the expected level from the ordered-levels Choice.
         """
         questions, roles = {}, {}
-        act = action_criteria(goal)
+        # TASK-132: go through the same hook `JevAgent` exposes, so a caller that needs a
+        # different option set (a PLAYER must not be offered "stop probing") can override
+        # one method instead of rebuilding the question.  `action_criteria` is unchanged
+        # and remains the default, so this is byte-identical for every existing caller.
+        act = (self.build_action_criteria(goal) if hasattr(self, "build_action_criteria")
+               else action_criteria(goal))
         questions[self.action_key] = {
             "type": "choice",
             "instructions": self.options.get(

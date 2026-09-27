@@ -1408,6 +1408,7 @@ def run_gate(game, args):
             gate["criteria"] = {"P7": verdict_p7(game, controls, gate["p7_probe"])}
             gate["criteria_scope"] = ("P7 only (--only-p7): the declarative required-UI "
                                       "check; P1..P6 were deliberately not run")
+            record_model_player_criterion(gate, args, game)
             log("    P7 (only run): %s -- %s"
                 % ("PASS" if gate["criteria"]["P7"]["pass"] else "FAIL",
                    gate["criteria"]["P7"]["why"]))
@@ -1636,6 +1637,9 @@ def run_gate(game, args):
 
         # ---------------- verdicts ----------------
         gate["criteria"] = verdicts(game, gate, proj, frames, s0, s1, s_end, controls)
+
+        # ---------------- TASK-132: the MODEL-PLAYER criterion ----------------
+        record_model_player_criterion(gate, args, game)
 
         # ---------------- agent in the loop (item D) ----------------
         goal = {"game": game, "objective": args.objective or
@@ -2512,6 +2516,142 @@ def arm_evidence(ch, decl, min_px=P3_MIN_CHANGED_PIXELS, refusal_decl=None):
     }
 
 
+# ---------------------------------------------------------------------------
+# TASK-132: the MODEL-PLAYER criterion, as a gate-readable document
+# ---------------------------------------------------------------------------
+# The user's TASK-132 ruling replaced "does the state move when a scripted action is
+# injected" with "does a MODEL acting as a simulated human player look at the picture,
+# choose an input, and does the game accept it AND the picture change".  The loop that
+# produces that evidence is `tools/playtest_player.py`; it writes `steps.jsonl`.  P1..P7
+# are NOT the model-player criterion and must not be quoted as one -- they answer "can the
+# code run" only.  This function is the single place the gate states the rule and can be
+# handed a recorded run's steps.
+MODEL_PLAYER_CRITERION_NOTE = (
+    "TASK-132: P1..P7 answer 'can the game's code run and draw'; they are NOT the "
+    "playability verdict.  The playability verdict is the MODEL-PLAYER loop "
+    "(tools/playtest_player.py): a model looks at one full-window frame, answers a `choice` "
+    "question whose criteria are the game's own declared InputMap actions, the action is "
+    "injected through Input.parse_input_event, and the run records (a) the game's own "
+    "InputMap read as the ack evidence, (b) the before/after frame sha256 and pixel diff "
+    "against an equal-frame-budget NO-INPUT control window, and (c) every frame for a human "
+    "to read.  FAIL = the model produced an action AND the game accepted it AND the picture "
+    "did not change.  PASS = >= 8 steps with >= 75% accepted-and-changed AND the reader's "
+    "per-frame check agreeing the changes match the game's declared logic."
+)
+
+
+def record_model_player_criterion(gate, args, game):
+    """File the TASK-132 model-player rule beside P1..P7 in `gate.json`.
+
+    Called from BOTH paths (the full run and `--only-p7`) for the same reason: a reader who
+    sees "P1..P7 pass" must also see, in the same document, that those seven are not the
+    playability verdict.  With no `--model-player-steps` the note is recorded and the
+    evidence is null -- an unmeasured criterion is left visibly unmeasured, never implied.
+    """
+    gate["model_player_criterion"] = {"note": MODEL_PLAYER_CRITERION_NOTE,
+                                      "steps_file": None, "evidence": None}
+    p = getattr(args, "model_player_steps", "")
+    if not p:
+        return gate["model_player_criterion"]
+    try:
+        with io.open(p, encoding="utf-8") as fh:
+            mp_steps = [json.loads(line) for line in fh if line.strip()]
+        gate["model_player_criterion"] = {
+            "note": MODEL_PLAYER_CRITERION_NOTE,
+            "steps_file": os.path.abspath(p),
+            "evidence": evaluate_model_player_steps(mp_steps, game)}
+        log("    model-player criterion: pass=%s (%s)"
+            % (gate["model_player_criterion"]["evidence"]["pass"],
+               gate["model_player_criterion"]["evidence"]["why"][:110]))
+    except Exception as e:  # noqa: BLE001
+        gate["model_player_criterion"]["error"] = "%s: %s" % (type(e).__name__, e)
+        log("    model-player criterion could not be read: %s" % e)
+    return gate["model_player_criterion"]
+
+
+def evaluate_model_player_steps(steps, game=None):
+    """The TASK-132 rule, applied to a recorded `steps.jsonl` list.
+
+    This is the gate-side reading of the model-player evidence: it states the rule in the
+    same file as P1..P7 so a reader of `gate.json` can see that P1..P7 are not the verdict.
+    The authoritative summary is the loop's own `player.json`; this function exists so the
+    gate can record the criterion beside the other criteria without importing the tool.
+    """
+    steps = [r for r in (steps or []) if isinstance(r, dict) and r.get("step")]
+    injected = [r for r in steps if (r.get("ack") or {}).get("injected")]
+    accepted = [r for r in injected if (r.get("ack") or {}).get("accepted")]
+    changed = [r for r in accepted if (r.get("change") or {}).get("changed")]
+    fail = [r["step"] for r in steps
+            if r.get("step_verdict") == "FAIL_no_change_after_accepted_input"]
+    fail_recs = [r for r in steps if r["step"] in fail]
+    actions = [r.get("action", {}).get("action") for r in steps
+               if (r.get("action") or {}).get("action")]
+    # The same two evidence-quality distinctions the loop's own `summarise` makes (a single
+    # source of truth for the rule): a repeated action on a byte-identical frame, or a game
+    # already in a declared terminal state, cannot support a game verdict.
+    fail_actions = sorted(set((r.get("action") or {}).get("action") for r in fail_recs))
+    fail_reqs = sorted(set((r.get("model") or {}).get("request_path") for r in fail_recs))
+    fail_frames = sorted(set(r.get("frame_before_sha") for r in fail_recs))
+    same_action = bool(len(injected) >= 2 and len(set(actions)) == 1)
+    fixed_point = bool(len(fail) >= 2 and len(fail_actions) == 1 and
+                       (len(fail_reqs) <= 1 or len(fail_frames) <= 1))
+    terminal = any((r.get("markers") or {}).get("GameOver") is True for r in steps)
+    out = {"criterion": "MODEL_PLAYER", "what": MODEL_PLAYER_CRITERION_NOTE,
+           "game": game, "evidence_source": "runs/model-player/<game>/<backend>/steps.jsonl",
+           "steps": len(steps), "injected_steps": len(injected),
+           "accepted_steps": len(accepted), "accepted_and_changed": len(changed),
+           "accepted_and_changed_rate": (round(len(changed) / float(len(accepted)), 4)
+                                         if accepted else None),
+           "fail_steps": fail, "distinct_actions": sorted(set(actions)),
+           "one_action_loop": same_action,
+           "fail_evidence": {"distinct_actions_in_the_failing_steps": fail_actions,
+                             "distinct_request_bodies_in_the_failing_steps": len(fail_reqs),
+                             "distinct_before_frames_in_the_failing_steps": len(fail_frames),
+                             "same_action_fixed_point": fixed_point},
+           "declared_terminal_seen": bool(terminal),
+           "thresholds": {"min_steps": 8, "min_rate": 0.75},
+           "pass": None, "why": ""}
+    if fail and not fixed_point and not terminal:
+        out["pass"] = False
+        out["why"] = ("%d accepted input(s) left the viewport unchanged (the user's FAIL "
+                      "condition): steps %s" % (len(fail), fail))
+    elif fail and fixed_point:
+        out["pass"] = None
+        out["why"] = ("the FAIL condition occurred on steps %s, but every failing step shows "
+                      "the SAME action (%s) and a byte-identical frame, so 'the game ignored "
+                      "it' cannot be told apart from 'the model stopped playing'"
+                      % (fail, fail_actions))
+    elif fail and terminal:
+        out["pass"] = None
+        out["why"] = ("the FAIL condition occurred on steps %s, but the game declared a "
+                      "TERMINAL state, so every later frame is frozen by the game's own rule"
+                      % (fail,))
+    elif len(injected) < 8:
+        out["pass"] = None
+        out["why"] = ("only %d injected step(s): the rule needs >= 8" % len(injected))
+    elif same_action:
+        out["pass"] = None
+        out["why"] = ("the model repeated ONE action over every injected step, so 'the game "
+                      "ignored it' cannot be told apart from 'the model stopped playing'")
+    elif out["accepted_and_changed_rate"] >= 0.75:
+        out["pass"] = True
+        out["why"] = ("%d/%d accepted steps changed the picture (%.4f)"
+                      % (len(changed), len(accepted), out["accepted_and_changed_rate"]))
+    else:
+        out["pass"] = False
+        out["why"] = ("accepted-and-changed rate %.4f < 0.75"
+                      % (out["accepted_and_changed_rate"] or 0.0))
+    if out["pass"] is not False:
+        out["pass"] = None if out["pass"] is None else out["pass"]
+    out["reader_judgement_required"] = True
+    out["reader_judgement_note"] = (
+        "the machine half above can only say whether the picture moved; the other half of "
+        "the TASK-132 PASS condition is a human reading the before/after frames and saying "
+        "whether the change is the one the game's rules call for -- it is recorded in the "
+        "task's report and is NOT inferable from these numbers")
+    return out
+
+
 def marker_values(state, decl):
     """The X13 timeline sample: the declared marker fields, as of this state read."""
     fields = decl.get("fields") or ["Paused", "GameOver", "Ticks", "Score"]
@@ -3332,6 +3472,12 @@ def main(argv=None):
                          "not measured; gate.json and playability.json record that scope "
                          "(`criteria_scope` / `criteria_covered`) so an --only-p7 run is "
                          "never mistaken for a full verdict.")
+    ap.add_argument("--model-player-steps", default="",
+                    help="TASK-132: read a model-player run's steps.jsonl and record the "
+                         "MODEL-PLAYER criterion beside P1..P7 in gate.json.  The verdict "
+                         "itself lives in that run's player.json; this only makes the rule "
+                         "and the numbers visible where the other criteria are read, so "
+                         "P1..P7 are never mistaken for a playability verdict.")
     ap.add_argument("--visual-input-form", default="native", choices=("native", "crop"),
                     help="TASK-130 B: the pixels the VISION backend is shown.  `native` "
                          "(default) is the captured full-window frame -- byte-identical to "

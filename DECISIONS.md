@@ -7018,3 +7018,157 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
     `runs/realinput/_scripts/check_patch_scope.py` 证明：除这 5 个键外全文件**逐字节等价**）；
     删掉新键即回到 TASK-130 的判据口径。
   * 未触发重建/十道门：本任务**未改引擎模块**（`godot-mcp/godot/` 零字节改动）。
+
+---
+
+## D176 — TASK-132：可玩性判据换成「模型当模拟真人玩家」（看图出操作 → 游戏接受 → 画面必须动态变化）
+
+- 日期：2026-09-27
+- 触发问题：用户裁定 —— 现有"P1..P7"回答的是"代码能不能跑"，不是"能不能玩"。
+  新的通关判据只有一个：**模型看图 → 输出一个操作 → 游戏接受这个输入 → 画面出现动态变化**，
+  且**子代理读前后帧时必须判断这个变化符合游戏逻辑**。FAIL 就是
+  "模型出了操作 ∧ 游戏接受了 ∧ 画面没变"。
+- 选项：
+  1. **新增一条独立的"模型玩家"判据（独立工具 + 独立产物），把 P1..P7 降级为"代码能跑"**（选中）
+  2. 把模型玩家塞进门里当第 8 条 P8 —— 否决：会与"门自己采帧/注入"的既有语义纠缠，
+     而且用户明确要求"其他判据不再下可玩性结论"
+  3. 只改赛道假设（把门的脚本 agent 换成模型 agent）—— 否决：门的 agent 段只做
+     "把决策喂进去"，不闭合"取帧→模型→注入→接受→变化→对照窗"的回路
+- 选择：选项 1。新工具 `tools/playtest_player.py`（回路），
+  门的 `playability_gate.py` 只**新增**模型玩家判据的规则文本与一个可核对的计算函数
+  （`MODEL_PLAYER_CRITERION_NOTE` / `evaluate_model_player_steps` /
+  `record_model_player_criterion` / CLI `--model-player-steps`）。
+- 理由：
+  * 判据必须是**闭环**的：缺 ack 就退化成"模型自述"，缺对照窗就退化成"画面本来就在动"，
+    缺读图就退化成"数字冒充看图"。三样分属三个不同的证据种类，所以做成一条回路、
+    每步都落三类证据。
+  * P1..P7 **不删**——它们是"能不能跑"的守卫，仍有价值；只是**不得**再用它们下可玩性结论。
+    据此，门在**完整跑与 `--only-p7` 两条路径上**都把这条规则与数字记进
+    `gate.json -> model_player_criterion`，让读者在同一份文档里看到
+    "P1..P7 全绿 ≠ 可玩"。
+  * 判据的两半必须分开写：**机器半**（画面是否变化）与本报告 §G 的**读图半**
+    （变化是否符合游戏逻辑）。机器半能自动核，读图半不能——所以报告里分开列，
+    且 demo 产物要让人**一图看懂**（左帧右操作），使读图半可复核。
+- 预期影响与回滚点：
+  * 新工具可单独删除而不影响 P1..P7：`tools/playtest_player.py` + `runs/model-player/**`；
+    门侧三处新增是可独立回滚的函数与一个 CLI 开关（不带 `--model-player-steps` 时
+    只写规则、不写证据，`pass=null`，不会伪造判定）。
+  * **判定结果（3 款 × 2 后端，全部落证据）**：
+    `tetris×jev` **PASS**（8/8）；`pong×jev` **FAIL**（10 步中 9 步接受但无差异）；
+    `snake×{jev,playjev}`、`tetris×playjev`、`pong×playjev`、`pong` 真实键臂 = **INCONCLUSIVE**
+    （分别是"第一帧前已结束"与"模型同动作同帧固定点"）。
+  * 证据根 `runs/model-player/**`（被 `.gitignore` 忽略，与 TASK-131 的 `runs/realinput/**` 同惯例）。
+
+---
+
+## D177 — TASK-132：两个测量窗口必须按**游戏帧数**对齐，且"变化"要比**移动量**而不是变化键个数
+
+- 日期：2026-09-27
+- 触发问题：第一版回路用**墙钟**（0.35 s）做"等长对照窗"，结果 pong 的动作窗与对照窗
+  **都报 1100 像素**（MCP 往返本身改变窗口内的帧数），真实输入被判成"没变化"；
+  改用帧数对齐后，又发现"比较变化的键个数"会被**自己会动的游戏**骗过：
+  pong 的球在两个窗口里都"变了"，计数相等。
+- 选项：
+  1. **按 `Engine.get_frames_drawn()` 对齐两侧预算 + 用移动量（位置向量欧氏距离/标量差之和）比较**（选中）
+  2. 只把墙钟调长/调短 —— 否决：窗口长度本身不是被控制量，调参只会移动伪影
+  3. 用"变化键个数"或"最大单字段变化" —— 否决：个数被自主动画骗过；
+     最大值会丢掉"多个字段各自小幅变化"的合力
+- 选择：选项 1。`wait_frames()` 等待 `drawn` 差达到 `--window-frames`（默认 30）；
+  `decide_changed()`：`changed = 玩法移动量 > 对照窗移动量 或 px > max(2.5×对照, 40)`。
+- 理由：
+  * 对照窗与被测窗必须**同样长**才有可比性，"同样长"在有渲染循环的进程里只有帧数说得清。
+  * "输入造成了变化"与"画面在动"是两件事；移动量把"挡板被推动 200 px"与
+    "球自己飞了 2 px"分开（`runs/model-player/tetris/jev` 的
+    `PaddleLeft.pos` 式证据 vs `pong` 的 `Ball.pos` 证据）。
+  * 因子 2.5 高于门里 `arm_evidence` 的 1.5：这两个窗口是**活游戏的实测窗**，
+    比较里带的时序余量更大；40 px 沿用门的"真实帧差"常量，不新造阈值。
+- 预期影响与回滚点：
+  * 两条规则都是纯函数（`decide_changed` / `movement_magnitude`），由 `playtest_player.py selftest`
+  的 22 条断言钉住（含"50 px vs 48 对照 → 不算变化"、"球两窗都走 1.7 px → 不算变化"、
+    "挡板走 202 px vs 球 1.7 px → 算变化"）。删/改这两条即回滚判据强度。
+  * 已录制的证据可**无损重算**：`playtest_player.py resummarise` 由 `steps.jsonl` 重推结论，
+    `backfill_labels.py` 由 `state_delta` 重推字段级标签——规则改动与重跑伪影因此可区分。
+
+---
+
+## D178 — TASK-132：模型玩家的候选动作里**去掉 `done`**、**保留 `wait`**；对 `playtest_agent.py` 只加 1 处 hook
+
+- 日期：2026-09-27
+- 触发问题：第一次全跑时模型从第 4 步起连续 9 步回答 `done`（P=0.61），
+  请求体**逐字节相同**，回路再没测到游戏。`done` 是
+  `playtest_agent.action_criteria` 给**探针**准备的选项（"停止探测：再试也没用"），
+  对**玩家**是个陷阱。
+- 选项：
+  1. **在回路侧重建 criteria（`Player.choice_criteria`，去掉 `done`）并挂到 agent 的
+     `build_action_criteria` 上；同时在 `PlayJevAgent.build_questions` 里把直接调用
+     `action_criteria(goal)` 改成走 `self.build_action_criteria(goal)`（默认实现逐字不变）**（选中）
+  2. 改 `action_criteria` 本身，全局去掉 `done` —— 否决：会改变门里 `--agent` 探针的既有行为
+  3. loop 里把 `done` 当 `wait` 处理 —— 否决：掩盖了"模型在说停止"这个事实，且概率表仍会
+     被 `done` 占走质量
+- 选择：选项 1。
+- 理由：探针与玩家的目标不同——探针要能**停下来**，玩家不能由自己终止回路。
+  选项 1 把差异放在**调用方**，`playtest_agent.py` 的默认路径**逐字不变**
+  （改动只是把硬编码的函数调用换成同名 hook，`JevAgent` 早已有 `build_action_criteria`）。
+- 预期影响与回滚点：
+  * 对既有调用者零影响（`JevAgent.build_action_criteria` 本来就返回
+    `action_criteria(goal)`；`PlayJevAgent` 现在走同一个默认实现）。
+  * 实测：去掉 `done` 后模型改为 `wait`（P=0.61 连选），**仍然是模型侧的失效**，
+    但 `wait` 是**真动作**（球在飞时按等是合理选择）且不计入注入步 —— 于是
+    "模型没出可注入动作"与"游戏忽略了输入"在证据上被分开了。
+  * 回滚点：一行 hook 的移除即可；若把 `--action-instructions` 恢复成
+    `action_criteria` 的默认文案，候选里也不会重新出现 `done`（它由 loop 重建）。
+
+---
+
+## D179 — TASK-132：**开局就已经结束的局面**必须在第一次模型调用前中止（INCONCLUSIVE），不得记成游戏的 FAIL
+
+- 日期：2026-09-27
+- 触发问题：第一版 snake 回路里，模型答 `snake_right`、游戏自己的
+  `Input.is_action_pressed` 报 True、画面 0 像素 —— 生成了一条"游戏接受了输入却没反应"
+  的 FAIL。而 TASK-131 已经证明：snake 在第一帧出现**之前**就已 `GameOver`
+  （1.52 秒自撞右墙、InputMap 无重开键），那些帧是**按规则冻结**的。
+- 选项：
+  1. **settle 后立刻在游戏自己的状态上求值 `liveness.terminal`，成立则不发任何模型请求，
+     记 INCONCLUSIVE 并保留"终止条件 + 在哪一刻成立"作为理由**（选中）
+  2. 照走回路、把 FAIL 照实报告 —— 否决：会用一个**从未拿到可玩局面的**测量去归罪游戏
+  3. 想办法"复活"游戏（重开/改状态）—— 否决：越出任务边界，且改的正是被测对象
+- 选择：选项 1（`--ignore-terminal` 保留显式旁路，便于以后专门研究"死局下的输入"）。
+- 理由：用户判据的 FAIL 是"**游戏接受了输入但画面没变**"，它隐含一个前提：
+  这一刻游戏**本可以**对输入作出反应。终局后的静止是游戏规则的**正确行为**，
+  不是可玩性缺陷。同理，回路**每步之后**也检查终止条件并停止，
+  以免用重复的静态步把一条证据放大成"比例"。
+- 预期影响与回滚点：
+  * snake 在两个后端上都记 `snake 0 步 + terminal_at_settle_before_the_first_model_call`；
+    结论 INCONCLUSIVE，**缺的是"一个还没结束的局面"**（报告 §N.2 点名了真缺陷）。
+  * 回滚点：删掉 settle 后的那次求值即回到"照走回路"的行为；`session.json`
+    与 `player.json` 都记录了 `terminal_stop` / `liveness` 声明，回滚后证据仍可重算。
+
+---
+
+## D180 — TASK-132：真实键臂读 ack 前必须留 settle；ack 判定同时认 `is_action_pressed` 与 `pressed`
+
+- 日期：2026-09-27
+- 触发问题：真实 OS 键臂第一版只报出 `state_moved`，看起来像"真实键没进 InputMap"，
+  而同一动作的合成臂报 `action_pressed`。两个原因都被实测抓住：
+  (a) OS 键先到窗口消息队列、再由 DisplayServer 变成 `InputEventKey`，
+  同毫秒读取 `Input.is_action_pressed()` 会读到**处理之前**的状态；
+  (b) 门的 `probe_action_state` 返回的字段名是 `pressed`，而合成臂自己的探针返回
+  `is_action_pressed`，只认一个字段会把真实的 `pressed: true` 读成 None。
+- 选项：
+  1. **读 ack 前固定 settle（`--ack-read-delay-ms`，默认 60 ms），并把原始读数
+     `injection.ack_after_keydown` 一起存下来；ack 判定两个字段名都认**（选中）
+  2. 只在真实键臂加 settle —— 否决：合成臂同样受益于**统一**的读取时序，
+     且两个通道的判据口径必须一致
+  3. 把真实键臂的 ack 降级为"只认 state_moved" —— 否决：那会把最硬的一条证据
+     （游戏自己的 InputMap 状态）丢掉，正是 TASK-131 警告过的"变了哈希 ≠ 键生效"
+- 选择：选项 1。
+- 理由：真实键与合成键的差别应当在**送达层**（是否经过 OS/窗口消息），
+  而不该在"我们读得太早"或"字段名看错了"上；把这两条修掉之后，
+  两个通道才第一次可以在**同一套 ack 口径**下比较。
+- 预期影响与回滚点：
+  * 修正后真实键臂逐步报 `action_pressed`，读数
+    `{"action":"pong_serve","has_action":true,"pressed":true,"strength":1.0}`，
+    与 TASK-131 §A 的"真实键确实送达"结论一致（本任务只跑 pong 一款）。
+  * 回滚点：`--ack-read-delay-ms 0` 复现旧行为（证据保留在
+    `runs/model-player/realkey/pong/jev/steps.jsonl` 的 `ack_after_keydown` 里，
+    旧读数仍可对照）。
