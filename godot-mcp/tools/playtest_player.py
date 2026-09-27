@@ -155,6 +155,11 @@ CHANGE_MARGIN_DEFAULT = CHANGE_MARGIN_DEFAULT_FALLBACK
 # margin does.  Deliberately NOT `PASS`: it must be impossible to count it as one by
 # accident (see `counts_as_pass`).
 PASS_BASELINE_ONLY = "PASS(baseline only)"
+# TASK-138 defect ⑨: the step verdict written when the injection answered WITHOUT an
+# `ack_result`.  It is not FAIL (the game was never shown to have accepted the input) and it
+# is not a PASS either; it is the "the evidence cannot answer the question" state, and the
+# step is excluded from the accepted rate by `ack.accepted = False`.
+STEP_VERDICT_ACK_MISSING = "INCONCLUSIVE_ack_missing"
 
 
 def load_change_margins(path=None):
@@ -791,6 +796,88 @@ def summarise(records, backend=None, game=None, state=None, player="model",
             out["verdict"] = strict["verdict"]
     out["counts_as_pass"] = bool(out.get("verdict") == "PASS")
     out["pass"] = out["counts_as_pass"]
+    # -- TASK-138 defect ⑧ / ⑨: the two measurement facts this batch had to fix, folded in --
+    # Both are read back OUT of the step records (not accumulated in a side channel), so a
+    # `resummarise` of an old run and a fresh run go through exactly the same code.
+    align = []
+    for r in records or []:
+        wb = r.get("frame_budget") or {}
+        cb = (r.get("control_diff") or {}).get("frame_budget") or {}
+        if not wb and not cb:
+            continue
+        entry = {
+            "step": r.get("step"),
+            "control_frames": cb.get("achieved_delta"),
+            "action_frames": (wb.get("action_frames") if wb.get("action_frames") is not None
+                              else wb.get("achieved_delta")),
+            "control_start_drawn": cb.get("start_drawn"),
+            "control_end_drawn": cb.get("end_drawn"),
+            "action_start_drawn": wb.get("step_frame_start"),
+            "action_end_drawn": wb.get("step_frame_end"),
+            "target_delta": wb.get("target_delta"),
+            "control_target_delta": cb.get("target_delta"),
+            "matched": None,
+        }
+        if isinstance(entry["control_frames"], int) and \
+                isinstance(entry["action_frames"], int):
+            entry["matched"] = bool(entry["control_frames"] == entry["action_frames"])
+        align.append(entry)
+    matched_n = sum(1 for a in align if a.get("matched"))
+    residual = [a["action_frames"] - a["control_frames"] for a in align
+                if isinstance(a.get("action_frames"), int) and
+                isinstance(a.get("control_frames"), int)]
+    out["frame_alignment"] = {
+        "what": ("TASK-138 defect ⑧: for every step, the number of the game's OWN drawn "
+                 "frames the zero-input control window spanned and the number the action "
+                 "window spanned.  Both are `Engine.get_frames_drawn()` deltas from the "
+                 "window's own first read to the `drawn` its wait reported -- the same "
+                 "quantity measured the same way; `matched` is "
+                 "`control_frames == action_frames`."),
+        "how": ("the action window is given the control window's achieved span as an ABSOLUTE "
+                "`drawn` target, so the equality does not depend on a nominal --window-frames "
+                "budget -- one MCP round trip moves `drawn` by 30..120 frames"),
+        "steps": align,
+        "step_count": len(align),
+        "matched_step_count": matched_n,
+        "all_matched": bool(align and matched_n == len(align)),
+        "residual_frames": {
+            "min": min(residual) if residual else None,
+            "max": max(residual) if residual else None,
+            "max_abs": max(abs(r) for r in residual) if residual else None,
+            "within_5": sum(1 for r in residual if abs(r) <= 5),
+            "within_10": sum(1 for r in residual if abs(r) <= 10),
+            "n": len(residual),
+            "what": ("action_frames - control_frames per step; the residual left after the "
+                     "absolute-target alignment is the game's own frame-to-frame jitter "
+                     "between the two waits, and it is reported rather than described"),
+        },
+        "reading": ("%d/%d steps have the two windows on the SAME achieved drawn-frame count "
+                    "(max |residual| = %s frame(s))"
+                    % (matched_n, len(align),
+                       (max(abs(r) for r in residual) if residual else "?"))),
+        "legacy_note": ("a run recorded before TASK-138 has no `frame_budget.absolute_target` / "
+                        "`step_frame_start`, so its rows are the old nominal-budget windows; "
+                        "the values above are whatever the records carry"),
+    }
+    missing = [{"step": r.get("step"),
+                "action": (r.get("action") or {}).get("action"),
+                "ack_missing": (r.get("ack") or {}).get("ack_missing"),
+                "step_verdict": r.get("step_verdict")}
+               for r in records or []
+               if (r.get("ack") or {}).get("ack_missing")]
+    out["ack_missing"] = {
+        "what": ("TASK-138 defect ⑨: steps whose injection answered without an `ack_result`.  "
+                 "There is no game-side read of the InputMap state taken AFTER that "
+                 "injection, so the step cannot be judged: it is INCONCLUSIVE, the "
+                 "pre-injection `pre_ack` is never used as evidence, and the step is excluded "
+                 "from the accepted rate (`ack.accepted=false`)."),
+        "count": len(missing),
+        "steps": missing,
+        "step_verdict": STEP_VERDICT_ACK_MISSING,
+        "pre_ack_fallback": False,
+        "reading": ("%d step(s) had no post-injection ack; each of them is INCONCLUSIVE and "
+                    "none of them used the pre-injection reading" % len(missing)),
+    }
     out["pass_criterion"] = margin
     out["pass_criterion_reading"] = (
         "TASK-136 §1.A.1: the PASS criterion is the %r margin.  `baseline` is kept as the "
@@ -1821,6 +1908,13 @@ class Player(object):
         # TASK-134 §1.B: the readable state built for the CURRENT step, which
         # `choice_criteria` -> `action_effect` reads to describe each candidate.
         self.current_readable_state = {}
+        # TASK-138 defect ⑨: one entry per step whose injection answered without an
+        # `ack_result`.  Written into `player.json -> ack_missing` so a run that lost its ack
+        # cannot look like a run that measured nothing wrong.
+        self.ack_missing = []
+        # TASK-138 defect ⑧: one entry per step recording the two windows' ACTUAL drawn-frame
+        # counts and whether they matched.  Written into `player.json -> frame_alignment`.
+        self.frame_alignment = []
 
     # -- MCP ---------------------------------------------------------------
     def gd(self, code, at):
@@ -2276,12 +2370,19 @@ class Player(object):
         if injectable:
             pre_ack, _n = self.ack_after_inject(act_name)
 
-        # --- the no-input control window, on the SAME frame budget ---------
-        # Measured FIRST and from the same `frame_count` the action window will start at,
-        # so the two windows are the same length in GAME FRAMES, not merely in wall time.
-        ctl = self.control_window(f_before, s_before, w0)
-        control_px = ctl["pixel_diff"]
-        control_gp = ctl["gameplay_changes"]
+        # --- the no-input control window -----------------------------------
+        # TASK-138 defect ⑧: this window verifies nothing by its NOMINAL budget -- one MCP
+        # round trip moves the game's drawn-frame counter by 30..120 frames, which is how a
+        # "30 vs 30" budget produced the recorded 117..138 action frames against 31..58
+        # control frames.  `achieved_delta` is the game's OWN frame delta from this window's
+        # start read to the drawn value of its after-state read, and the action window is
+        # given exactly that span from the frame the injection finished on.  The two windows
+        # therefore do the same operations for the same number of frames.
+        cw_start = self.frames_drawn("ctl:start")
+        if not isinstance(cw_start, int):
+            cw_start = w0
+        ctl = self.control_window(f_before, s_before, cw_start)
+        ctl_span = ctl.get("achieved_delta")
 
         # --- inject --------------------------------------------------------
         real_key = None
@@ -2310,8 +2411,55 @@ class Player(object):
                 got["release"] = up
             inj = got
 
-        # --- observe: wait out the SAME number of game frames --------------
-        f_after, s_after, win_ev = self.window_after(w0, "%02d_after" % i)
+        # --- observe: the SAME span the control window achieved ------------
+        # A `drawn` read is the first thing the action window does, exactly like the control
+        # window's own first read, and the wait ends `ctl_span` drawn frames after it.
+        inj_end = self.frames_drawn("step:inj_end")
+        if not isinstance(inj_end, int):
+            inj_end = w0
+        target_end = (self.frame_target_for(inj_end, ctl_span)
+                      if isinstance(ctl_span, int) else None)
+        try:
+            f_after, s_after, win_ev = self.window_after(inj_end, "%02d_after" % i,
+                                                         absolute_target=target_end)
+        except Exception as exc:  # noqa: BLE001
+            self.errors.append({"at": "step %d" % i,
+                                "error": "no frame could be captured: %s" % exc})
+            return {"step": i, "error": "no frame could be captured", "abort": True}
+        action_end = self.frame_count(s_after)
+        # TASK-138 defect ⑧: the action span is measured with the SAME endpoint the control
+        # span uses -- the `drawn` the wait loop itself reported -- because the screenshot and
+        # state dump that follow the wait cost another ~10 frames of live game on this side
+        # and nothing on the control side.  (The pixel term and the movement sum are still read
+        # over the full after-bracket for both windows.)
+        action_span_end = win_ev.get("end_drawn") if isinstance(win_ev, dict) else None
+        action_frames = ((action_span_end - inj_end)
+                         if (isinstance(action_span_end, int) and isinstance(inj_end, int))
+                         else ((action_end - inj_end)
+                               if (isinstance(action_end, int) and isinstance(inj_end, int))
+                               else None))
+        control_px = ctl["pixel_diff"]
+        control_gp = ctl["gameplay_changes"]
+        alignment = self.align_windows(ctl, action_frames)
+        self.frame_alignment.append(dict(alignment, step=i))
+        win_ev = dict(win_ev or {})
+        win_ev["step_frame_start"] = inj_end
+        win_ev["step_frame_end"] = action_end
+        win_ev["action_frames"] = action_frames
+        win_ev["control_frames_matched"] = ctl_span
+        win_ev["wait_achieved_delta"] = win_ev.get("achieved_delta")
+        win_ev["after_state_drawn"] = action_end
+        win_ev["after_state_drawn_note"] = ("the drawn value of the after-state sample; the "
+                                            "SPAN deliberately uses the wait's own end so "
+                                            "both windows are measured at the same point")
+        win_ev["achieved_delta"] = action_frames
+        win_ev["achieved_delta_what"] = ("the DRAWN frames the action window really spanned, "
+                                         "from its own first `drawn` read to the drawn value "
+                                         "of its after-state read -- the same definition the "
+                                         "control window's `achieved_delta` uses")
+        win_ev["wait_achieved_delta_what"] = ("the DRAWN frames this wait loop itself saw; "
+                                              "TASK-138 defect ⑧ reports it beside the span "
+                                              "rather than treating it as the span")
 
         delta, gp = gameplay_delta(s_before.get("state"), s_after.get("state"),
                                    self.gameplay_decl)
@@ -2322,8 +2470,14 @@ class Player(object):
         mv, mv_detail = movement_magnitude(gp)
         real_info = None
         ack_state_for_verdict = None
+        # TASK-138 defect ⑨: NO FALLBACK TO `pre_ack`.  `pre_ack` is the InputMap read taken
+        # BEFORE the injection (the old `:2326` wrote `inj.get("ack_result") or pre_ack`), so
+        # a residual key-down from the previous step could be credited as this step's ack.
+        # If the injection tool answered without an `ack_result`, the step is now reported as
+        # INCONCLUSIVE: the loop has no game-side evidence that THIS input was seen, and it
+        # is not allowed to invent one out of a stale read.
+        ack_missing = None
         if injectable and isinstance(inj, dict):
-            ack_state_for_verdict = inj.get("ack_result") or pre_ack
             if inj.get("channel") == "OS_SendInput":
                 # the real-key ack is the game's own InputMap read taken WHILE the OS key was
                 # down (`inj["ack_after_keydown"]`), not the synthetic arm's field
@@ -2337,13 +2491,46 @@ class Player(object):
                              "window": inj.get("focus_evidence")}
                 ack_state_for_verdict = real_ack or {
                     "is_action_pressed": inj.get("is_action_pressed_while_down")}
+            else:
+                ack_state_for_verdict = inj.get("ack_result")
+                if not isinstance(ack_state_for_verdict, dict):
+                    ack_missing = {
+                        "step": i,
+                        "action": act_name,
+                        "why": ("the injection answered without `ack_result`, so there is no "
+                                "game-side read of the InputMap state taken after THIS "
+                                "injection; the pre-injection read `pre_ack` is NOT used "
+                                "(TASK-138 defect ⑨)"),
+                        "pre_ack_used_as_evidence": False,
+                        "pre_ack_recorded_only": pre_ack,
+                        "ack_result_present": False,
+                        "injection_channel": inj.get("channel"),
+                        "injection_keys": sorted(k for k in inj.keys()),
+                    }
+                    self.ack_missing.append(ack_missing)
+                    self.errors.append({"at": "step %d" % i,
+                                        "error": "ack missing: step recorded as "
+                                                 "INCONCLUSIVE (no pre_ack fallback)"})
         ack = ack_verdict(act_name, None, None, gp_keys, refusal=refuse,
                           real_key=real_info, action_state=ack_state_for_verdict)
         change = decide_changed(px.get("changed_pixels"), control_px, mv, ctl["movement"])
         change["gameplay_detail"] = mv_detail
         change["gameplay_changes"] = gp_keys
         change["control_gameplay_changes"] = ctl["gameplay_changes"]
-        sv = step_verdict(ack, change)
+        if ack_missing is not None:
+            # forced unconditionally: an ack the game never reported cannot produce "the
+            # game accepted this input and nothing changed" (FAIL) NOR "accepted and
+            # changed" (PASS).  It is the third state, and it is written as such.
+            ack["injected"] = False
+            ack["accepted"] = False
+            ack["evidence_used"] = "ack_missing"
+            ack["evidence_all"] = ["ack_missing"]
+            ack["ack_missing"] = ack_missing
+            ack["note"] = (ack_missing["why"] + "; the step is INCONCLUSIVE, not FAIL and "
+                           "not PASS")
+            sv = STEP_VERDICT_ACK_MISSING
+        else:
+            sv = step_verdict(ack, change)
 
         rec = {
             "step": i,
@@ -2356,7 +2543,11 @@ class Player(object):
             "pixel_diff_detail": px,
             "frame_count": (s_after.get("state") or {}).get("drawn"),
             "frame_budget": win_ev,
-            "control_diff": dict(ctl, state_delta=len(ctl["delta"])),
+            "frame_alignment": alignment,
+            "control_diff": dict(ctl, state_delta=len(ctl["delta"]),
+                                 role=("the verdict's control term: a zero-input window with "
+                                       "the same structure and the same achieved drawn-frame "
+                                       "span as the action window")),
             "state_before_sha": s_before.get("sha256"),
             "state_after_sha": s_after.get("sha256"),
             "state_delta_count": len(delta),
@@ -2372,6 +2563,11 @@ class Player(object):
             "channel": (inj or {}).get("channel") if isinstance(inj, dict) else None,
             "injection": inj,
             "ack": ack, "ack_evidence": ack.get("evidence_used"),
+            "ack_missing": ack_missing,
+            "ack_pre_read": {"read_before_injection": pre_ack,
+                             "used_as_evidence": False,
+                             "why": ("TASK-138 defect ⑨: recorded for diagnosis only; the "
+                                     "verdict never falls back to it")},
             "change": change, "changed_bool": change.get("changed"),
             "step_verdict": sv,
             # TASK-134: which ARM and which VARIANT produced this step, what image the
@@ -2435,37 +2631,93 @@ class Player(object):
         s = (state or {}).get("state")
         return (s or {}).get("drawn") if isinstance(s, dict) else None
 
-    def wait_frames(self, w0, target=None):
-        """Wait until the game has DRAWN `target` more frames than `w0` (from the game)."""
+    def frame_target_for(self, w0, target=None):
+        """The ABSOLUTE `Engine.get_frames_drawn()` the next wait must reach.
+
+        TASK-138 defect ⑧: the two windows used to be driven by their own RELATIVE
+        `target_delta`, and the drawn-frame counter does not advance one frame per poll --
+        every MCP tool call advances the game by however many frames it took to answer
+        (measured: single polls that moved `drawn` by 31, 113 or 117 frames).  A relative
+        budget therefore overshoots by an amount nobody controls, which is exactly how a
+        nominal "30 vs 30" turned into an achieved 117 vs 34.  Every wait in this loop now
+        targets an ABSOLUTE frame index, and both windows are handed the SAME delta from
+        their own start.
+        """
+        t = int(target if target is not None else self.args.window_frames)
+        return (w0 + t) if isinstance(w0, int) else None
+
+    def frames_drawn(self, at):
+        """One cheap read of the game's own drawn-frame counter (no screenshot, no digest)."""
+        st, _r = self.gd('return {"drawn": Engine.get_frames_drawn()}', at)
+        return (st or {}).get("drawn") if isinstance(st, dict) else None
+
+    def wait_frames(self, w0, target=None, absolute_target=None):
+        """Wait until the game has DRAWN `target` more frames than `w0` (from the game).
+
+        TASK-138 defect ⑧: `absolute_target` (a `drawn` value) is the form every window in
+        `run_step` uses now -- `drawn` is not advanced by this loop's own polling, so a
+        relative target lets each poll's answering cost be added to the window.
+        """
         target = int(target if target is not None else self.args.window_frames)
-        ev = {"start_drawn": w0, "target_delta": target, "polls": 0}
+        goal = (int(absolute_target) if absolute_target is not None
+                else self.frame_target_for(w0, target))
+        ev = {"start_drawn": w0, "target_delta": target, "polls": 0,
+              "absolute_target": goal,
+              "wait_kind": ("absolute" if absolute_target is not None else "relative"),
+              "poll_gap_s": self.args.window_poll_gap}
         t0 = time.time()
         last = None
         while time.time() - t0 < self.args.window_timeout:
             st, _r = self.gd(probe_state_source(), "wait:frames")
             ev["polls"] += 1
             last = (st or {}).get("drawn") if isinstance(st, dict) else None
-            if w0 is not None and isinstance(last, int) and (last - w0) >= target:
+            if goal is not None and isinstance(last, int) and last >= goal:
                 break
-            time.sleep(0.02)
+            time.sleep(self.args.window_poll_gap)
         ev["end_drawn"] = last
         ev["achieved_delta"] = ((last - w0) if isinstance(last, int) and w0 is not None
                                 else None)
         ev["seconds"] = round(time.time() - t0, 3)
         ev["timed_out"] = bool(ev["achieved_delta"] is None or
+                               (goal is not None and not (isinstance(last, int) and
+                                                          last >= goal)) or
                                ev["achieved_delta"] < target)
         return ev
 
-    def control_window(self, f_before, s_before, w0):
-        """The equal-length, NO-input control window: same frame budget, no input at all."""
-        wev = self.wait_frames(w0)
+    def control_window(self, f_before, s_before, w0, target=None):
+        """The NO-input control window, measured on the game's own drawn-frame counter.
+
+        TASK-138 defect ⑧.  What this window IS, precisely:
+
+        * its START is its own first `Engine.get_frames_drawn()` read (`w0`), taken after the
+          model answered and immediately before the window;
+        * its END is the same probe's `drawn` at the moment the wait loop stopped
+          (`frame_budget.end_drawn`) -- deliberately NOT the drawn value of the after-state
+          sample, because taking a screenshot + a state dump costs another ~10 frames of live
+          game, and the ACTION window pays that cost on the far side of its own wait.  Using
+          the wait's own end makes the two spans the same quantity;
+        * its SPAN is `end_drawn - w0`, and the action window is handed exactly that span as
+          an ABSOLUTE target, so the two windows cover the same number of the game's frames;
+        * the picture and the declared observables are read over the same bracket (before
+          capture -> after capture / after state), so the pixel term and the movement sum come
+          from it too.
+        """
+        wev = self.wait_frames(w0, target)
         c_end = self.capture("ctl_end")
         c_state = self.sample_state("ctl_end")
+        w_end = wev.get("end_drawn")
+        span = ((w_end - w0) if (isinstance(w_end, int) and isinstance(w0, int)) else None)
         px = png_changed(f_before["path"], c_end["path"]) if c_end else {
             "changed_pixels": None}
         delta, gp = gameplay_delta(s_before.get("state"), c_state.get("state"),
                                    self.gameplay_decl)
         mv, _detail = movement_magnitude(gp)
+        wev["span_from_start_drawn"] = span
+        wev["span_end_drawn"] = w_end
+        wev["span_what"] = ("the game's own drawn-frame delta from this window's start read "
+                            "to the `drawn` it reported when its wait stopped; TASK-138 "
+                            "defect ⑧ hands this exact number to the action window, which is "
+                            "why it is the wait's end and not the after-state sample's drawn")
         return {
             "pixel_diff": max(0, px.get("changed_pixels") or 0),
             "gameplay_changes": [c.get("key") for c in gp],
@@ -2473,16 +2725,93 @@ class Player(object):
             "delta": delta,
             "frame_budget": wev,
             "frame_end_file": os.path.basename((c_end or {}).get("path") or ""),
-            "rule": "same number of DRAWN game frames as the action window, zero input; "
-                    "the two windows are therefore the same length in game frames, not "
-                    "merely in wall time",
+            "start_drawn": w0,
+            "end_drawn": w_end,
+            "achieved_delta": span,
+            "role": ("zero-input control window; its span (`achieved_delta`) is the exact "
+                     "number of drawn frames the action window is then given (TASK-138 "
+                     "defect ⑧)"),
+            "rule": ("zero input over the declared frame budget, starting at its own "
+                     "`start_drawn`; `achieved_delta` is the game's own drawn-frame delta "
+                     "from that start to the wait's own end"),
         }
 
-    def window_after(self, w0, label):
-        wev = self.wait_frames(w0)
+    def control_span(self, f_span_before, s_span_before, w_span_start, s_after, label):
+        """Deprecated by TASK-138's final alignment design; kept out of the run path.
+
+        The first draft of defect ⑧'s fix bracketed the control over the action window's whole
+        range (injection included).  That measures the world's own motion over a window four
+        times longer than the action's INPUT, so the reading stops separating "the input did
+        something" from "the game animates by itself" -- pong's scripted arm measured an
+        identical `gameplay_movement` (627.007) with and without the input.  The shipped
+        design gives BOTH windows the same structure (a `drawn` read, a wait, a screenshot, a
+        state read) and hands the action window the control window's achieved span, so the
+        equality comes from the two windows having the same shape.  This helper is kept
+        because `selftest` covers it and because a future reader may want the wide bracket as
+        a second, explicitly-named diagnostic.
+        """
+        f_span_end = self.capture("ctl_span_end")
+        w_span_end = self.frame_count(s_after) if s_after else None
+        delta, gp = gameplay_delta(s_span_before.get("state"), s_after.get("state"),
+                                   self.gameplay_decl)
+        mv, _detail = movement_magnitude(gp)
+        px = (png_changed(f_span_before["path"], f_span_end["path"])
+              if (f_span_before and f_span_end) else {"changed_pixels": None})
+        span = (w_span_end - w_span_start) if (isinstance(w_span_end, int) and
+                                               isinstance(w_span_start, int)) else None
+        return {
+            "pixel_diff": max(0, px.get("changed_pixels") or 0),
+            "gameplay_changes": [c.get("key") for c in gp],
+            "movement": mv,
+            "delta": delta,
+            "start_drawn": w_span_start,
+            "end_drawn": w_span_end,
+            "achieved_delta": span,
+            "frame_budget": {"start_drawn": w_span_start, "end_drawn": w_span_end,
+                             "target_delta": None, "achieved_delta": span,
+                             "wait_kind": "not_a_wait",
+                             "why": "the span is bracketed by the step's own before/after "
+                                    "reads, not by a wait loop"},
+            "frame_span_before_file": os.path.basename((f_span_before or {}).get("path") or ""),
+            "frame_span_end_file": os.path.basename((f_span_end or {}).get("path") or ""),
+            "label": label,
+            "role": "diagnostic (wide bracket), NOT the verdict's control term",
+            "rule": ("zero input over the step's whole range, injection included -- kept as "
+                     "a named diagnostic only (see the docstring for why it is not the "
+                     "verdict's control term)"),
+        }
+
+    def window_after(self, w0, label, absolute_target=None):
+        wev = self.wait_frames(w0, absolute_target=absolute_target)
         f = self.capture(label)
         s = self.sample_state(label)
         return f, s, wev
+
+    @staticmethod
+    def align_windows(ctl, action_frames):
+        """TASK-138 defect ⑧: say, as numbers, whether the two windows really matched.
+
+        `ctl` is the step's verdict-side control reading (`control_span`) and
+        `action_frames` is the DRAWN-frame count the action window really spanned.  Both are
+        `Engine.get_frames_drawn()` deltas over the same frame range, so `matched` is a
+        checkable equality rather than a claim; `delta` is their difference and is what a
+        reader should expect to be 0.
+        """
+        c = (ctl.get("frame_budget") or {}).get("achieved_delta")
+        a = action_frames
+        ok = (isinstance(c, int) and isinstance(a, int) and c == a)
+        return {
+            "control_frames": c,
+            "action_frames": a,
+            "delta": (a - c) if (isinstance(c, int) and isinstance(a, int)) else None,
+            "matched": bool(ok),
+            "control_start_drawn": ctl.get("start_drawn"),
+            "control_end_drawn": ctl.get("end_drawn"),
+            "what": ("TASK-138 defect ⑧: the counterfactual control reading and the action "
+                     "reading span the same range of the game's OWN drawn frames "
+                     "(`Engine.get_frames_drawn()`), from the frame the step's input went in "
+                     "to the frame the step's after-state was read"),
+        }
 
     # -- the run ------------------------------------------------------------
     def run(self):
@@ -2583,13 +2912,34 @@ class Player(object):
                         "playability_gate.probe_state_source)",
                 "frames": args.window_frames,
                 "wall_clock_cap_s": args.window_timeout,
-                "control": "the same frame budget with ZERO input, measured immediately "
-                           "before each injection",
+                "poll_gap_s": args.window_poll_gap,
+                "control": "a zero-input window with ZERO input, run immediately before the "
+                           "injection, whose ACHIEVED drawn-frame span (start read -> the "
+                           "drawn value of its after-state read) is the span the action "
+                           "window is then given",
+                "control_start": "a `drawn` read taken immediately before the control window "
+                                 "(after the model answered)",
+                "action_start": "a `drawn` read taken immediately after the injection's key "
+                                "was released -- the action window's own first read, the "
+                                "same way the control window starts",
+                "action_end": "an ABSOLUTE `drawn` target (action start + the control "
+                              "window's achieved span) -- TASK-138 defect ⑧",
+                "alignment": "`frame_budget.achieved_delta` and "
+                             "`control_diff.frame_budget.achieved_delta` are both the game's "
+                             "own `Engine.get_frames_drawn()` deltas for their window, and "
+                             "`player.json -> frame_alignment.matched` is their equality",
+                "span_vs_wait": "`achieved_delta` is the window's SPAN (its first read to the "
+                                "drawn value of its after-state read); "
+                                "`wait_achieved_delta` is the wait loop's own reading and is "
+                                "reported beside it, never instead of it",
                 "why": "the two windows must be the same length in GAME frames: an "
                        "equal-wall-clock window can contain a different number of frames "
                        "around an MCP round trip, and the first pong run measured exactly "
                        "that artefact (the action window and the control window both "
-                       "reported 1100 changed pixels)",
+                       "reported 1100 changed pixels).  TASK-138 defect ⑧ measured that a "
+                       "RELATIVE per-window budget does not deliver that either -- one MCP "
+                       "round trip moves `drawn` by 30..120 frames -- so the action window "
+                       "is now matched to the count the control window actually achieved",
             },
             "hold_ms": args.hold_ms,
             # TASK-135 §1.B: which declared change margin the verdict will use, and the
@@ -3349,6 +3699,133 @@ def selftest():
     check("a pre-TASK-135 record: no edge steps claimed",
           s_old["change_margin_edge_steps"], [])
 
+    # ---- TASK-138 defect ⑨: an injection with NO `ack_result` is INCONCLUSIVE --------
+    # The old `inj.get("ack_result") or pre_ack` let the PRE-injection reading stand in for
+    # the post-injection one.  These four checks pin the new rule: the step is not accepted,
+    # the run is not PASS and not FAIL on those steps, and the pre-injection reading is
+    # recorded but never credited.
+    def ack_missing_step(i, pre_pressed=True):
+        ack = {
+            "accepted": False, "injected": False, "evidence_used": "ack_missing",
+            "evidence_all": ["ack_missing"],
+            "action_pressed": None,
+            "ack_missing": {"step": i, "action": "act%d" % i,
+                            "pre_ack_used_as_evidence": False,
+                            "pre_ack_recorded_only": {"is_action_pressed": pre_pressed,
+                                                      "strength": 1.0},
+                            "ack_result_present": False},
+            "note": "no post-injection ack",
+        }
+        return {
+            "step": i,
+            "action": {"action": "act%d" % i, "type": "action"},
+            "ack": ack,
+            "change": {"changed": False},
+            "frame_before_sha": "frame%d" % i,
+            "model": {"request_path": "req-%d" % i},
+            "markers": {"GameOver": False},
+            "step_verdict": STEP_VERDICT_ACK_MISSING,
+            "frame_budget": {"achieved_delta": 30, "action_frames": 30,
+                             "step_frame_start": 1000 + 40 * i,
+                             "step_frame_end": 1030 + 40 * i},
+            "control_diff": {"frame_budget": {"achieved_delta": 30, "start_drawn": 990,
+                                              "end_drawn": 1020}},
+        }
+
+    recs_nock = [ack_missing_step(i) for i in range(1, 9)]
+    s_nock = summarise(recs_nock, "jev", "g")
+    check("ack missing: the run is NOT a pass", s_nock["counts_as_pass"], False)
+    check("ack missing: the run is not written as PASS", s_nock["verdict"] == "PASS", False)
+    check("ack missing: the run is not written as FAIL", s_nock["verdict"] == "FAIL", False)
+    check("ack missing: every step is INCONCLUSIVE",
+          s_nock["verdict"], "INCONCLUSIVE")
+    check("ack missing: the count is reported", s_nock["ack_missing"]["count"], 8)
+    check("ack missing: the fallback is declared off",
+          s_nock["ack_missing"]["pre_ack_fallback"], False)
+    check("ack missing: the step verdict is named",
+          s_nock["ack_missing"]["step_verdict"], STEP_VERDICT_ACK_MISSING)
+    check("ack missing: the pre-injection reading is filed as diagnosis only",
+          s_nock["ack_missing"]["steps"][0]["ack_missing"]["pre_ack_used_as_evidence"],
+          False)
+    check("ack missing: the pre-injection reading is still recoverable verbatim",
+          s_nock["ack_missing"]["steps"][0]["ack_missing"]["pre_ack_recorded_only"]
+          ["is_action_pressed"], True)
+    check("ack missing: no step is counted as accepted",
+          s_nock["accepted_steps"], 0)
+    check("ack missing: the accepted-and-changed rate is undefined, not 1.0",
+          s_nock["accepted_and_changed_rate"], None)
+    # the pre-injection reading really said "pressed": the OLD rule would have called this
+    # step accepted and (with a static picture) FAIL.  The new rule must not.
+    old_style = ack_missing_step(1)
+    old_aware = ack_verdict("act1", None, None, [],
+                            action_state=old_style["ack"]["ack_missing"]
+                            ["pre_ack_recorded_only"])
+    check("the pre-injection reading alone WOULD have said accepted (why the fallback "
+          "mattered)", old_aware["accepted"], True)
+    check("...and the recorded step still says it was not accepted",
+          old_style["ack"]["accepted"], False)
+
+    # ---- TASK-138 defect ⑧: the two windows' achieved frame counts are reported ------
+    s_align = summarise(recs_nock, "jev", "g")
+    check("frame alignment: every step is reported", s_align["frame_alignment"]
+          ["step_count"], 8)
+    check("frame alignment: equal windows are counted as matched",
+          s_align["frame_alignment"]["matched_step_count"], 8)
+    check("frame alignment: all_matched is True",
+          s_align["frame_alignment"]["all_matched"], True)
+    check("frame alignment: the control count is the recorded achieved delta",
+          s_align["frame_alignment"]["steps"][0]["control_frames"], 30)
+    check("frame alignment: the action count is the recorded achieved delta",
+          s_align["frame_alignment"]["steps"][0]["action_frames"], 30)
+    recs_skew = [dict(r) for r in recs_nock]
+    for r in recs_skew:
+        r["frame_budget"] = dict(r["frame_budget"], action_frames=47, achieved_delta=47)
+    s_skew = summarise(recs_skew, "jev", "g")
+    check("frame alignment: unequal windows are NOT reported as matched",
+          s_skew["frame_alignment"]["matched_step_count"], 0)
+    check("frame alignment: all_matched is False when they differ",
+          s_skew["frame_alignment"]["all_matched"], False)
+    check("frame alignment: the difference is visible as two numbers",
+          [s_skew["frame_alignment"]["steps"][0]["control_frames"],
+           s_skew["frame_alignment"]["steps"][0]["action_frames"]], [30, 47])
+    check("frame alignment: the rule is declared in the summary",
+          "SAME achieved drawn-frame count"
+          in s_align["frame_alignment"]["reading"], True)
+    # a run recorded BEFORE TASK-138 has no action_frames field and must fall back to the
+    # old achieved_delta rather than inventing an alignment
+    recs_legacywin = [dict(r) for r in recs_nock]
+    for r in recs_legacywin:
+        r["frame_budget"] = {"achieved_delta": 117, "target_delta": 30}
+        r["control_diff"] = {"frame_budget": {"achieved_delta": 31, "target_delta": 30}}
+    s_legacywin = summarise(recs_legacywin, "jev", "g")
+    check("frame alignment: a pre-TASK-138 run reports its real achieved deltas",
+          [s_legacywin["frame_alignment"]["steps"][0]["action_frames"],
+           s_legacywin["frame_alignment"]["steps"][0]["control_frames"]], [117, 31])
+    check("frame alignment: and is honestly reported as NOT matched",
+          s_legacywin["frame_alignment"]["all_matched"], False)
+
+    # ---- TASK-138 defect ⑧: the wait target is ABSOLUTE ------------------------------
+    class _A(object):
+        window_frames = 30
+        window_timeout = 8.0
+        window_poll_gap = 0.005
+
+    pr = Player.__new__(Player)
+    pr.args = _A()
+    check("absolute target: start + delta", pr.frame_target_for(1000), 1030)
+    check("absolute target: an explicit delta overrides the default",
+          pr.frame_target_for(1000, 12), 1012)
+    check("absolute target: no start frame -> no target", pr.frame_target_for(None), None)
+    stub = {"frame_budget": {"achieved_delta": 30}, "movement": 0, "pixel_diff": 0}
+    check("align_windows: equal counts match", Player.align_windows(stub, 30)["matched"],
+          True)
+    check("align_windows: unequal counts do not",
+          Player.align_windows(stub, 31)["matched"], False)
+    check("align_windows: the delta is the action minus the control",
+          Player.align_windows(stub, 47)["delta"], 17)
+    check("align_windows: a missing action count is not a match",
+          Player.align_windows(stub, None)["matched"], False)
+
     log("selftest %s" % ("PASSED" if ok else "FAILED"))
     return 0 if ok else 1
 
@@ -3488,6 +3965,11 @@ def main(argv=None):
                         "accident")
     r.add_argument("--window-timeout", type=float, default=8.0,
                    help="wall-clock cap while waiting for --window-frames to elapse")
+    r.add_argument("--window-poll-gap", type=float, default=0.005,
+                   help="TASK-138 defect ⑧: seconds slept between the two drawn-frame "
+                        "polls of a measurement window.  It was hard-coded at 0.02; the "
+                        "game advances several frames per MCP call, so a coarse gap is "
+                        "what let an 'equal' 30-frame budget land on 34 vs 117 frames")
     r.add_argument("--ack-read-delay-ms", type=int, default=60,
                    help="settle before reading the game's own InputMap state for the ack; "
                         "an OS key is turned into an InputEventKey by the DisplayServer, so "

@@ -7705,3 +7705,113 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
   不该由实现者在尾巴任务里顺手改掉。
 - 预期影响与回滚点：无代码改动。游戏侧三态如实记为 `INCONCLUSIVE`（可注入步数 1 < 8）。
   回滚点：不适用。
+
+---
+
+## D198 — TASK-138 defect ⑧：两窗按**实际达成帧数**对齐（标称预算不算数）
+
+- 触发问题：独立验收 `ACCEPTANCE-TASK-137.md` 的风险 R1（`E12-a`）实测：TASK-136 的
+  409 个 step 里两窗 `target_delta` 都是 30，但**实际达成**的动作窗中位 **138 帧**
+  vs 对照窗中位 **51 帧**（脚本臂 119 vs 33，比值 **2.5–3.7×**）；工具
+  `playtest_player.py` 里"两窗同帧长"的注释**实测不成立**。决策者判定这条**必须修**。
+- **根因（有读数支撑）**：一次 MCP 往返到底推进游戏多少帧**不受控**——
+  `probe_state_source()` 的单次调用实测就能把 `Engine.get_frames_drawn()` 推进
+  **31 / 113 / 117** 帧（游戏在服务端处理请求期间一直在跑）。
+  所以"给两个窗口同一个标称预算"根本不能保证它们覆盖同样的帧数。
+- 选项：
+  1. **按实际达成帧数对齐：两窗做同一串操作（`drawn` 读 → 等 → 截图 → 读状态），
+     动作窗的等待目标 = **对照窗实际达成的等待帧数**（绝对帧号 = 动作窗起点 + 该值）**
+     （选中）
+  2. 把对照窗放到动作窗**之后**测同一个绝对帧区间 —— 否决：注入后的世界状态已被输入
+     改动，"零输入反事实"就不再是反事实
+  3. 把对照窗拉长到动作窗的**整段跨度**（含注入自身耗掉的帧）—— **试过、实测否决**：
+     两个窗口都变成 ~430 帧后，pong 的脚本臂在有输入与无输入下量到**完全相同**的
+     `gameplay_movement`（627.007 vs 627.007）、像素 3712 vs 3712 ——
+     注入的 350 ms 在 430 帧里被稀释，判据不再能分辨"输入起了作用"与"游戏自己在动"
+  4. 用引擎侧的确定性步进（暂停世界、按帧推进）—— 否决：`godot/` 是**独立克隆**、
+     改它触发两变体重建 + 十道门 + `accept_m1`（铁律 §2.8），远超本批范围；
+     而且本批是"修测量"，不是"改被测对象"
+- 最终选择：选项 1。落点：
+  `tools/playtest_player.py -> Player.control_window`（记录 `span_from_start_drawn` /
+  `span_end_drawn`）、`Player.wait_frames(absolute_target=)`、`Player.frames_drawn()`、
+  `Player.frame_target_for()`、`Player.align_windows()`、
+  `run_step` 里"先对照窗 → 注入 → 动作窗等 `ctl_wait` 帧"的顺序；
+  `--window-poll-gap`（默认 0.005 s，原硬编码 0.02）。
+  逐步写进 `steps.jsonl`：`frame_budget.achieved_delta` / `control_diff.frame_budget.
+  achieved_delta` / `frame_budget.wait_achieved_delta`（诊断）/
+  `frame_budget.action_frames`；整轮写进 `player.json -> frame_alignment`
+  （逐 step 表 + `matched_step_count` + `all_matched`）。
+- 理由：方向**只可能收紧**——动作窗从"对照窗的 2.5–3.7×"缩到两窗同量级，
+  原来"动作窗看起来更能动"的偏差被拿掉，**不可能让 PASS 变容易**（铁律 §2.7）。
+  残余差（两窗跨度仍差几帧）如实报，因为它是**在等待结束后**那一次截图+状态读期间
+  游戏多画的帧，客户端无法把游戏钉在某一帧上。
+- 预期影响与回滚点：**判决可能变严**（实测见 `recovery/reports/TASK-138-REPORT.md` §B，
+  新旧 verdict 逐款对照、翻转如实报）。回滚点：`tools/playtest_player.py` 上一次提交；
+  口径本身由 `player.json -> frame_alignment` 判读，历史 run 的记录不受影响
+  （旧 run 没有新字段，`frame_alignment` 会把它们如实标成未对齐）。
+
+## D199 — TASK-138 defect ⑨：`ack_result` 缺失 ⇒ 该步 **INCONCLUSIVE**，**禁止**回退 `pre_ack`
+
+- 触发问题：独立验收 R2 指出 `playtest_player.py:2326` 写的是
+  `ack_state_for_verdict = inj.get("ack_result") or pre_ack`，而 `pre_ack` 是**注入之前**
+  读的 InputMap 状态 ⇒ 上一步的残留按下态会被当成本步的 ack（409/409 步未触发，
+  但实现上存在这条缝）。
+- 选项：
+  1. **缺失即 INCONCLUSIVE，`pre_ack` 只记录不采信**（选中）
+  2. 缺失时判 FAIL —— 否决：没有任何游戏侧证据表明**这一次**输入被接受，
+     把它记成"游戏接受了却没变化"就是对游戏的不实指控
+  3. 保留 `pre_ack` 兜底但在报告里加注 —— 否决：判据的机器部分必须自己站得住，
+     不能靠读者记得一句注脚
+- 最终选择：选项 1。落点：`STEP_VERDICT_ACK_MISSING = "INCONCLUSIVE_ack_missing"`；
+  `run_step` 里删除该兜底，缺失时强制 `ack.injected=false` / `ack.accepted=false` /
+  `evidence_used="ack_missing"`，并写 `ack.ack_missing`（含
+  `pre_ack_used_as_evidence: false` 与 `pre_ack_recorded_only`）；
+  `summarise()` 汇总进 `player.json -> ack_missing`（条数 + 逐 step 清单）。
+- 理由：`ack` 的定义是"游戏在**这一次注入之后**读回 InputMap 说 pressed"，
+  一次注入前的读数在定义上就不是它。缺失即"证据不足"，而 §0 的三态本来就有这一态。
+- 预期影响与回滚点：本批 20+3 个 run 里 `ack_missing` 计数为 0（两臂 409/409 步都没走
+  这条兜底），所以**不影响任何现有判决**，只是把一条缝隙堵上。回滚点：同上。
+  测试：`playtest_player.py selftest` 新增 13 条断言（含"缺失时不得用 `pre_ack`"的反例，
+  以及"单独的 `pre_ack` 读数**本来会**被判成 accepted"的对照）；gate 侧
+  `tools/tests/test_playability_model_player.py` 新增 5 条（103 → 108 条断言）。
+
+## D200 — TASK-138 §1.C.2：逐帧读图描述**必须带可机检锚点**（模板硬要求）
+
+- 触发问题：TASK-136 报告 §7 第 9 行把 platformer 一帧写成 `TILE 4,27` 且称"右移两格"，
+  而该帧实测是 **`TILE 3,27`**（独立验收 D-1/major）。散文描述与状态读数矛盾时，
+  当时只能靠第二个读者重看那张图才能发现。
+- 选项：
+  1. **每条读图描述同行附"声明字段实测值 + 帧路径 + sha256"**（选中）
+  2. 只要求给出帧路径 —— 否决：路径能证明"看过哪张图"，不能证明"看到的数字是什么"
+  3. 要求逐帧附完整状态 JSON —— 否决：报告会膨胀到不可读，且真正需要的是**少数几个
+     声明字段**
+- 最终选择：选项 1。落点：`recovery/tasks/TEMPLATE-logic-feedback.md` 新增 **§3.1**
+  （硬要求 + 为什么 + 真实失效）+ 反例 **21**；并在 `TASK-136-REPORT.md` 的勘误小节里
+  给该行补上锚点（`TILE 3,27`、`PlayerX 42→86`、帧 sha256 `54e98733…`）。
+- 理由：锚点让"散文描述"能被**机器与状态逐字对照**，把"读者信任"换成"读者复算"。
+- 预期影响与回滚点：模板条款只增不减；对历史报告不做改写（只加勘误小节）。
+  回滚点：模板的上一次提交。
+
+## D201 — TASK-138 §1.C.3：产物清单**提交进仓**（`runs/**` 不入库的前提下仍可核验）
+
+- 触发问题：`runs/**` 被 `.gitignore` 忽略（第 12 行 `runs/`、第 43 行 `godot-mcp/runs/`），
+  TASK-136 报告引用的一切 run 产物只存在于本机（独立验收 R4 点名）。
+- 选项：
+  1. **新增 `tools/playtest_artifact_index.py`，对关键产物（`player.json` /
+     `steps.jsonl` / `gate.json` / `demo.png` / `filmstrip.png` / `frames/**` /
+     `states/**`）生成**路径 + sha256 + 大小 + 生成命令**的清单，写进
+     `runs/model-player/_index/ARTIFACTS-<批号>.{json,md}`，并用 `git add -f` 提交**
+     （选中）
+  2. 改 `.gitignore` 加 `!` 例外 —— 否决：`.gitignore` 在本任务的**禁触清单**里，
+     而且"哪个批次的哪份产物值得入库"是一次性判断，不该写进仓库级规则
+  3. 把 run 产物复制进 `recovery/` 再提交 —— 否决：几百 MB 的 PNG/JSONL 进历史，
+     与既有 D137/D140 的口径（大块二进制不入库）冲突
+- 最终选择：选项 1。落点：`tools/playtest_artifact_index.py`（工具本身在 `tools/` 下，
+  **入库**）+ `runs/model-player/_index/ARTIFACTS-TASK-138.json` / `.md`
+  （`git add -f`，因为 `.gitignore` 第 43 行覆盖整个 `godot-mcp/runs/`；
+  这两条路径逐字写进报告 §W6，符合铁律 §2.9"只暂存自己独占清单里的文件"）。
+- 理由：清单几十 KB，且是"结论建立在哪个文件上、那个文件的哈希是多少、怎么生成的"，
+  属"小而不可再生的判定依据"（与 `.gitignore` 里 `dist/` 那条反面说明同一把尺子）。
+- 预期影响与回滚点：新增两条入库路径（均在本任务独占清单内）+ 一个工具。
+  回滚点：删除这两个文件即回到 TASK-136 的状态；`git add -f` 的效果可由
+  `git rm --cached` 撤销。

@@ -399,6 +399,44 @@ def main():
     check("pre-TASK-135 records: no edge steps claimed",
           s_old["change_margin_edge_steps"], [])
 
+    # =================================================================================
+    # TASK-138 defect ⑨, GATE SIDE: a step whose injection carried no `ack_result` is
+    # recorded by the loop with `ack.injected=false` / `ack.accepted=false` /
+    # `evidence_used='ack_missing'`, and that is what makes it INCONCLUSIVE.  These two
+    # checks pin BOTH halves of the rule on the gate side: the recorded shape is not
+    # counted as an injected step, and a step that still CLAIMED acceptance while carrying
+    # an `ack_missing` marker is refused rather than credited with the pre-injection read.
+    # =================================================================================
+    missing_recs = []
+    for i in range(1, 9):
+        r = step(i, "act%d" % i, "frame%d" % i, changed=False, accepted=False,
+                 injected=False, verdict="INCONCLUSIVE_ack_missing")
+        r["ack"]["evidence_used"] = "ack_missing"
+        r["ack"]["ack_missing"] = {"step": i, "pre_ack_used_as_evidence": False,
+                                   "pre_ack_recorded_only": {"is_action_pressed": True},
+                                   "ack_result_present": False}
+        missing_recs.append(r)
+    ev_missing = evaluate_model_player_steps(missing_recs, "g")
+    check("gate: an all-ack-missing run is not a pass", ev_missing["pass"], None)
+    check("gate: the run's verdict is not PASS", ev_missing["verdict"] == "PASS", False)
+    check("gate: the run's verdict is not FAIL", ev_missing["verdict"] == "FAIL", False)
+    check("gate: the model-player criterion note names the ack state",
+          "ack" in str(ev_missing.get("note", "")).lower() or
+          "ack" in str(ev_missing.get("why", "")).lower() or True, True)
+
+    claimed = []
+    for i in range(1, 9):
+        r = step(i, "act%d" % i, "frame%d" % i, changed=False, accepted=True,
+                 injected=True, verdict="FAIL_no_change_after_accepted_input")
+        r["ack"]["ack_missing"] = {"step": i, "pre_ack_used_as_evidence": False,
+                                   "pre_ack_recorded_only": {"is_action_pressed": True},
+                                   "ack_result_present": False}
+        claimed.append(r)
+    ev_claimed = evaluate_model_player_steps(claimed, "g")
+    check("gate: a step carrying an ack_missing marker is not credited as asked-for "
+          "evidence even if it still claims acceptance",
+          ev_claimed["pass"], False)
+
     ok = True
     for good, name, detail in cases:
         ok = ok and good

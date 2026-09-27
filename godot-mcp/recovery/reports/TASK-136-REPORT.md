@@ -697,4 +697,190 @@ $ git -C F:\moonbit-hof-rs\godot-mcp\godot status --short
 
 ---
 
-*报告结束。*
+---
+
+## 勘误（TASK-138）
+
+> **本节是 TASK-138 追加的勘误，只增不改**：上面 §0–§12 的正文、表格与一切已提交的
+> 证据文件**一字未动**（本报告全文写入后，其 `sha256` 会因这次追加而变化——这正是
+> 勘误 ⑤ 说的自指问题；勘误 ⑤ 给出的更正就是**不再声称内容哈希可核**）。
+> 每一条按「**原文 / 更正 / 更正依据（一手证据路径 + sha256）**」给出；
+> 依据里的 sha256 是**本次（TASK-138）实测**的值，可直接用
+> `certutil -hashfile <路径> SHA256` 复算。
+> 触发来源：独立验收报告 `recovery/reports/ACCEPTANCE-TASK-137.md` 的缺陷 D-1…D-7
+> 与风险 R1/R2（本批按决策者的编号写成勘误 ①–⑦）。
+> 本节的证据收集脚本：`runs/model-player/_scripts/t138_errata_evidence.py`（只读）。
+
+| # | 位置（原报告行号） | 严重度 | 一句话 |
+|---|---|---|---|
+| ① | §7 第 9 行（正文第 446 行） | major | platformer 帧描述写成 `TILE 4,27`，实测 **`TILE 3,27`** |
+| ② | §11.2（正文第 632 行） | major | `t136_redirect_scan.json` 的 sha256 前缀与磁盘不符 |
+| ③ | §3.5（正文第 182 行） | minor | 台账拆分 16/95 实为 **17/94** |
+| ④ | §11.2（正文第 631 行） | minor | "截至 111 条"的台账哈希不可核，截点口径不清 |
+| ⑤ | §11.2 / §11.4（正文第 623、657 行） | minor | 首版报告哈希自指、不可核 |
+| ⑥ | §4.1（正文第 209 行） | minor | platformer 的 strict 列填 `FAIL`，顶层 verdict 实为 `INCONCLUSIVE` |
+| ⑦ | §1.2（正文第 84 行） | minor | 把 platformer 当 `PASS(baseline only)` 的例子，真例是 pong / asteroids |
+
+### ① platformer 的帧描述（major）
+
+* **原文**（§7 第 9 行，正文第 446 行）：
+  > `runs\model-player\t136-scripted-final\platformer\scripted\frames\004_01_after.png` |
+  > 800×600 | 同一关卡，HUD 变成 **`TILE 4,27`**，蓝玩家明显右移两格 | **玩家真的向右移动了两格**
+* **更正**：该帧 HUD 实测是 **`TILE 3,27`**（不是 `4,27`），"右移两格"这句与图上的
+  `TILE 3` 自相矛盾，**删去"两格"这个量词**。该行要证明的结论（**修后玩家确实动起来了**）
+  **仍然成立**，依据是同一 run 的逐步读数：`PlayerX 42→86`（第 1 步 `plat_right`）、
+  `LIVES 3→2→1`（第 3、5 步起掉血），像素差 `599 → 737 → 1088`。
+  **本次已按勘误 ① 的同一条要求，给该行补上可机检锚点**（见下面的锚点行）。
+* **更正依据**（一手，全部本次实测）：
+  * 帧：`F:\moonbit-hof-rs\godot-mcp\runs\model-player\t136-scripted-final\platformer\scripted\frames\004_01_after.png`
+    `sha256 = 54e9873333c3edbb2ac3797778462f7bdc8d7a265a519dbd8d73d822e651ef05`
+    （10801 B，800×600；TASK-138 用 `read_image` 实看，读到的 HUD 逐字是
+    `GEMS 0/14  SCORE 0  LIVES 3  AIR 0  TILE 3,27`）
+  * 同 run 逐步状态：`...\t136-scripted-final\platformer\scripted\steps.jsonl`
+    `sha256 = 004671fe88706f75a95ee06c786927f35338d765f2e37ac4dfaf5b7dd47f2a09`
+    （118767 B）：第 1 步 `state_delta` 里 `/root/Main.PlayerX {from: 42, to: 86}`、
+    `markers.drawn=801`、`markers.Lives=3`
+  * 该 run 的汇总：`...\platformer\scripted\player.json`
+    `sha256 = a823fd9fab9f214fe6ce262e3cd43a84e37675d0c3768619ce36266b1fd7b3f1`（13312 B）
+* **补上的锚点行**（TASK-138 §1.C.2 要求的写法）：
+  > **§7 第 9 行（platformer `004_01_after.png`）的锚点**：
+  > `TILE=3,27`（`PlayerX=226, PlayerY=432` → 列 3 / 行 27，格宽 16 px）、`LIVES=3`、
+  > `GEMS=0/14`、`SCORE=0`；`step 1` 的 `PlayerX 42→86`（`plat_right`，第 1 步）、
+  > `step 2` 的 `PlayerX 118→194`（`plat_jump`）、`step 3` 的 `LIVES 3→2`。
+  > 文件：`runs/model-player/t136-scripted-final/platformer/scripted/frames/004_01_after.png`
+  > `sha256 54e98733…`；状态：`...\platformer\scripted\steps.jsonl` `sha256 004671fe…`。
+
+### ② `t136_redirect_scan.json` 的 sha256 与磁盘不符（major）
+
+* **原文**（§11.2，正文第 632 行）：`重定向自查 | 42bbab3f48906aeb | ...\t136_redirect_scan.json`
+* **更正**：磁盘上的实测值是
+  **`sha256 = 3ac18ad769996410301550b1f55e7488dffa8fd1b586549aad2dcf467257e4fc`**
+  （15994 B），前缀 **`3ac18ad7`**。原报告的 `42bbab3f…` **对不上磁盘上的任何版本**，
+  本批无法复现该值——如实记。
+* **它是哪个时刻的产物**（原文缺这句）：它是**同一台账截点（前 111 条）
+  在 `2026-09-28T03:22:17` 那一次扫描**的产物；此后 TASK-136 又跑过一次
+  `t136_scan_redirects.py`（`_scripts/t136_scan_redirects.py -q`，台账第 111 条），
+  **覆盖写了同一个文件**，而 §11.2 表里填的哈希是**它的初版**、不是在库版本。
+  也就是说：**这个文件是被覆盖式写入的**，它只有一个"现状"，没有可回溯的多个版本。
+* **更正依据**：
+  * `F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t136_redirect_scan.json`
+    `sha256 = 3ac18ad769996410301550b1f55e7488dffa8fd1b586549aad2dcf467257e4fc`（15994 B）
+  * 该文件的头部自述（本次逐字读）：`{"ledger": "...t136_commands.jsonl",
+    "commands": 111, "hits": 3}` —— 即它自己声明扫描的是**111 条**、命中 **3** 条。
+  * 台账第 111 条：`D:\Anaconda\python.exe runs\model-player\_scripts\t136_scan_redirects.py -q`
+    （`ts = 2026-09-28T03:22:17`，见下面 ④ 的复算口径）。
+
+### ③ 台账拆分 16/95 实为 17/94（minor）
+
+* **原文**（§3.5，正文第 182 行）：
+  > 台账共 **111** 条 = **16 条人工回填**（包装器上线之前） + **95 条包装器条目**
+* **更正**：按 `source == "manual-backfill"` **精确计数**得 **17 + 94 = 111**。
+  包装器条目**不带 `source` 字段**（`t136_cmd.py` 第 52 行写的是
+  `{"ts", "cwd", "argv"}`），所以"包装器条目"= **非 manual 的余数**，不是独立计数字段。
+* **可复算口径**（TASK-138 用的就是这一条，逐字给出）：
+  ```
+  D:\Anaconda\python.exe -c "import io,json;L=io.open(r'<台账>',encoding='utf-8').read().splitlines();print(len(L),sum(1 for l in L[:111] if json.loads(l).get('source')=='manual-backfill'))"
+  ```
+  实测输出：前 111 条 = `manual=17, wrapper=94`；全文件（140 条）= `manual=17, wrapper=123`。
+* **更正依据**：
+  * `F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t136_commands.jsonl`
+    （TASK-136 截点时刻的版本见 ④；本批读到的现状全文件 140 条）
+  * `F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t136_cmd.py`（第 52 行）
+    `sha256` 见 ④ 的产物清单；它的第 52 行确实是 `entry = {"ts": ..., "cwd": ..., "argv": ...}`，
+    **没有 `source`**。
+
+### ④ 台账哈希"截至 111 条"不可核、截点口径不清（minor）
+
+* **原文**（§11.2，正文第 631 行）：
+  > 命令台账 | `e24685fc09eaa3c1`（截至 111 条；台账是**追加式**的，之后每跑一条命令哈希都会变） | ...
+* **更正**：一句"截至 111 条"**不足以定界**（同一个文件在"追加"与"截断"两种操作下
+  哈希都会变，而截点本身没有任何机器可读的记录）。改为**可复算的定界方式**：
+  1. **行数**：本批读到时共 **140** 行；TASK-136 的截点是**前 111 行**；
+  2. **截点行的逐字内容**：第 111 行 =
+     `{"ts": "2026-09-28T03:22:17", "cwd": "F:/moonbit-hof-rs/godot-mcp", "argv": ["D:\\Anaconda\\python.exe", "runs\\model-player\\_scripts\\t136_scan_redirects.py", "-q"]}`
+     —— 读者按这一行的 `ts` + `argv` 就能在台账里**定位**截点；
+  3. **末行时间戳**（本批读到时）：`2026-09-28T03:53:59`；
+  4. **全文件 sha256**（本批读到时）：
+     `4991d50569b0a9e45340f8ea98b2dcc9f7a93ced5bcc7ac2d705ab1fa4247f81`（35610 B）；
+     这个值**随时会变**（本批自己在追加），所以它只标"本批读到时"；
+  5. 原报告说"截点之后的条目只有收尾/提交/回写命令"**与事实有出入**：第 112–116 行里
+     有 `pytest tools\tests -q` 与 `playtest_player.py selftest` 两条**验证命令**
+     （逐条：112 `git add`、113 `git commit --amend`、114 `git status`、
+     115 `pytest tools\tests -q`、116 `playtest_player.py selftest`）。如实更正。
+  6. **TASK-136 交付提交信息里的 "93 commands scanned" 是已作废的旧数字**
+     （`git log -1 --format=%B 49c919a`），本批**不改历史提交**，只在此点名。
+* **更正依据**：台账文件逐条（`ts` / `cwd` / `argv` 都在同一文件里，可用上面的 Python 口径
+  复算）；`git log -1 --format=%B 49c919a` 的正文。
+
+### ⑤ 首版报告哈希自指、不可核（minor）
+
+* **原文**（§11.2 第 623 行与 §11.4 第 657 行）：首版 `sha256 = f98a457587…`、55665 B。
+* **更正**：**不再声称"首版报告的内容哈希可核"**。理由（这是哈希的定义，不是失误）：
+  把"本文件的哈希"写进**本文件**，写入动作本身就会改变该哈希，所以任何"首版哈希"
+  在写入后都**不可能**与磁盘现状一致。可核的事实只有：
+  * 本报告**被提交进库**（`49c919a` 与随后的 docs-only 提交都含它）；
+  * 本报告**本批读到时**的现状：`sha256 = 7c5a1738e601e018b3886a708f915ccce96e96cd31c8896aebf1a0753d678224`
+    （58488 B）；**该值在本节追加后会再次改变**。
+  * 若需要"某个时刻的字节"可核，正确做法是**把文件提交进 git，用提交号定位**，
+    而不是在文件里写它自己的哈希。
+* **更正依据**：
+  * `F:\moonbit-hof-rs\godot-mcp\recovery\reports\TASK-136-REPORT.md`
+    `sha256 = 7c5a1738e601e018b3886a708f915ccce96e96cd31c8896aebf1a0753d678224`（58488 B，
+    本节追加**之前**）
+  * `git -C F:\moonbit-hof-rs log --oneline -5`（该文件的提交历史）
+
+### ⑥ §4.1 platformer 的 strict 列（minor）
+
+* **原文**（§4.1 表，正文第 209 行）：`| 12 | platformer | **FAIL** | FAIL | PASS | False | 11 | 11 | 8 | 0.7273 | 8 | 5,7,9 | ... | 13.42 |`
+  —— 第 3 列（strict）写 `FAIL`，而**顶层 `verdict` 实为 `INCONCLUSIVE`**。
+* **更正**：该 run 的权威读数是
+  `verdict = INCONCLUSIVE`、`strict_verdict = INCONCLUSIVE`、`baseline_verdict = INCONCLUSIVE`、
+  `game_side_verdict = FAIL`、`baseline_game_side_verdict = PASS`、
+  `strict_game_side_verdict = FAIL`、`counts_as_pass = false`；
+  成因写在它自己的 `why` 里：**第 11 步游戏宣布了终局状态**，之后的帧被游戏自己的规则冻住，
+  所以"模型本可以拿一条活着的局做什么"无法判断（TASK-132 §1.2）。
+  **原报告 §4.1 那一行想表达的是"游戏侧"读数（baseline PASS / strict FAIL）**，
+  这一点与 `game_side_verdict` 一致，但列名写的是 strict，**表头语义与数值不匹配**。
+  * 另外，本节按同一份 `player.json` 复核时发现，`runs\model-player\t136-scripted-final\
+    platformer\scripted\player.json` 的 **`baseline_verdict` 也是 `INCONCLUSIVE`**
+    （顶层与两把尺子都被终局条款降级），**游戏侧**才是 `baseline_game_side_verdict=PASS`。
+    请读者按后者理解原表的意图。
+* **更正依据**：
+  * `F:\moonbit-hof-rs\godot-mcp\runs\model-player\t136-scripted-final\platformer\scripted\player.json`
+    `sha256 = a823fd9fab9f214fe6ce262e3cd43a84e37675d0c3768619ce36266b1fd7b3f1`（13312 B）：
+    `verdict=INCONCLUSIVE`、`game_side_verdict=FAIL`、`baseline_game_side_verdict=PASS`、
+    `steps=11`、`injected_steps=11`、`changed_steps_of_accepted=8`、
+    `accepted_and_changed_rate=0.7273`、`fail_steps=[5,7,9]`
+
+### ⑦ §1.2 举例错（minor）
+
+* **原文**（§1.2 开头，正文第 84 行）：
+  > `platformer`（本批修过物理时钟）：baseline `PASS` / strict `FAIL`，边缘步 **5（1.536×）、7（1.896×）、9（1.536×）**
+  —— 把它并列进了"`PASS(baseline only)` 的实例"。
+* **更正**：**platformer 的顶层 verdict 是 `INCONCLUSIVE`**，不是 `PASS(baseline only)`。
+  这一节真正的 `PASS(baseline only)` 实例是：
+  * **`pong × jev × V3`**（§1.2 上半部分那个，`verdict=PASS(baseline only)`、
+    `counts_as_pass=false`、`strict_fail_steps=[2]`、边缘步 `2=1.202×`）——**成立**；
+  * **`asteroids`（脚本臂）**：`verdict=PASS(baseline only)`、`counts_as_pass=false`、
+    `strict_verdict=FAIL`、`baseline_verdict=PASS`、边缘步 **3（1.309×）、11（1.442×）**。
+    （本批实测其 `player.json`：`sha256 = a96b797836c73de6b70a10866dfd2be607ff074a6b712202e9e803a901bca386`，
+    11036 B。）
+  platformer 那一行真正被证明的是"**strict FAIL 且没有被记成 PASS**"（顶层还因终局条款
+  降到 INCONCLUSIVE），以及它的边缘步读数本身（5=1.536×、7=1.896×、9=1.536×）——后者成立。
+* **更正依据**：`...\t136-scripted-final\platformer\scripted\player.json`（同上 sha256）；
+  `...\t136-scripted-final\asteroids\scripted\player.json`（`a96b7978…`）；
+  `...\t136-jev-v3\pong\jev\player.json`。
+
+### 本节未做的两件事（如实声明）
+
+1. **没有改写任何历史证据文件**（含本报告 §0–§12 全文、`t136_commands.jsonl`、
+   `t136_redirect_scan.json`、各 run 的 `player.json` / `steps.jsonl` / PNG）；
+   本次只**追加**了本节，并**新增**了 TASK-138 自己的产物。
+2. **没有把勘误集中到单独的 `ERRATA.md`**（任务书 §1.A 允许二选一）：本次选择
+   "在 `TASK-136-REPORT.md` 新增勘误小节"，理由是这样读者在同一份文档里就能看到
+   "原文 → 更正"，不必跨文件比对。因此**仓库里不存在** `recovery/reports/ERRATA.md`。
+
+---
+
+*报告结束（§0–§12 为 TASK-136 原文，一字未动；「勘误（TASK-138）」小节为 TASK-138 追加）。*
+
