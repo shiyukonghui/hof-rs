@@ -1,0 +1,136 @@
+{
+ "_comment": "TASK-118 batch c7 -- the Android capability probe. It does not declare any read-back (there is no writer here whose value could be read back): it measures the machine. Everything the register says about the three Android tools is measured in runs/_exercises/ex_grid/c7-task118 plus the commands recorded in this file's session notes.",
+ "batch": "c7",
+ "project": "projects/_exercises/ex_grid",
+ "session": "tools/sessions/_exercises/ex_close/c7-session.json",
+ "readback": [],
+ "calls": [
+  {
+   "tag": "c7-001-os_list_android_devices-ok",
+   "tool": "os_list_android_devices",
+   "port": "editor",
+   "intent": "ok",
+   "note": "os_list_android_devices call 1/5: measures the machine (adb on PATH for this process only, no device attached)"
+  },
+  {
+   "tag": "c7-002-os_list_android_devices-ok",
+   "tool": "os_list_android_devices",
+   "port": "editor",
+   "intent": "ok",
+   "note": "os_list_android_devices call 2/5"
+  },
+  {
+   "tag": "c7-003-os_list_android_devices-ok",
+   "tool": "os_list_android_devices",
+   "port": "editor",
+   "intent": "ok",
+   "note": "os_list_android_devices call 3/5"
+  },
+  {
+   "tag": "c7-004-os_list_android_devices-ok",
+   "tool": "os_list_android_devices",
+   "port": "editor",
+   "intent": "ok",
+   "note": "os_list_android_devices call 4/5"
+  },
+  {
+   "tag": "c7-005-os_list_android_devices-ok",
+   "tool": "os_list_android_devices",
+   "port": "editor",
+   "intent": "ok",
+   "note": "os_list_android_devices call 5/5"
+  },
+  {
+   "tag": "c7-006-os_list_android_devices-probe",
+   "tool": "os_list_android_devices",
+   "port": "editor",
+   "intent": "probe",
+   "note": "boundary: the contract declares an empty object schema, so any argument is refused"
+  },
+  {
+   "tag": "c7-007-project_get_android_preset_info-ok",
+   "tool": "project_get_android_preset_info",
+   "port": "editor",
+   "intent": "ok",
+   "note": "project_get_android_preset_info call 1/5: this project has no Android preset (only Windows Desktop)"
+  },
+  {
+   "tag": "c7-008-project_get_android_preset_info-ok",
+   "tool": "project_get_android_preset_info",
+   "port": "editor",
+   "intent": "ok",
+   "note": "project_get_android_preset_info call 2/5"
+  },
+  {
+   "tag": "c7-009-project_get_android_preset_info-ok",
+   "tool": "project_get_android_preset_info",
+   "port": "editor",
+   "intent": "ok",
+   "note": "project_get_android_preset_info call 3/5"
+  },
+  {
+   "tag": "c7-010-project_get_android_preset_info-ok",
+   "tool": "project_get_android_preset_info",
+   "port": "editor",
+   "intent": "ok",
+   "note": "project_get_android_preset_info call 4/5"
+  },
+  {
+   "tag": "c7-011-project_get_android_preset_info-ok",
+   "tool": "project_get_android_preset_info",
+   "port": "editor",
+   "intent": "ok",
+   "note": "project_get_android_preset_info call 5/5"
+  },
+  {
+   "tag": "c7-012-project_get_android_preset_info-probe",
+   "tool": "project_get_android_preset_info",
+   "port": "editor",
+   "intent": "probe",
+   "note": "boundary: a preset name that does not exist"
+  },
+  {
+   "tag": "c7-013-os_deploy_to_android_device-probe",
+   "tool": "os_deploy_to_android_device",
+   "port": "editor",
+   "intent": "probe",
+   "note": "os_deploy_to_android_device boundary 1/5: no such preset; skip_export keeps the export child process out of it"
+  },
+  {
+   "tag": "c7-014-os_deploy_to_android_device-probe",
+   "tool": "os_deploy_to_android_device",
+   "port": "editor",
+   "intent": "probe",
+   "note": "os_deploy_to_android_device boundary 2/5"
+  },
+  {
+   "tag": "c7-015-os_deploy_to_android_device-probe",
+   "tool": "os_deploy_to_android_device",
+   "port": "editor",
+   "intent": "probe",
+   "note": "os_deploy_to_android_device boundary 3/5"
+  },
+  {
+   "tag": "c7-016-os_deploy_to_android_device-probe",
+   "tool": "os_deploy_to_android_device",
+   "port": "editor",
+   "intent": "probe",
+   "note": "os_deploy_to_android_device boundary 4/5"
+  },
+  {
+   "tag": "c7-017-os_deploy_to_android_device-probe",
+   "tool": "os_deploy_to_android_device",
+   "port": "editor",
+   "intent": "probe",
+   "note": "os_deploy_to_android_device boundary 5/5 (no Android export template is installed anyway: %APPDATA%\\Godot\\export_templates holds 4.8.dev Windows templates only)"
+  },
+  {
+   "tag": "c7-018-os_deploy_to_android_device-probe",
+   "tool": "os_deploy_to_android_device",
+   "port": "editor",
+   "intent": "probe",
+   "note": "boundary: the only preset in this project is a Windows Desktop one, which is not an Android preset"
+  }
+ ],
+ "_run": "runs/_exercises/ex_grid/c7-task118"
+}

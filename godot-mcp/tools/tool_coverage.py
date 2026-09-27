@@ -136,6 +136,46 @@ TIER_LABEL = {
     TIER_COUNT: "只有计数与边界，没有生效证据",
     TIER_NONE: "0 次调用",
 }
+# ---------------------------------------------------------------------------
+# TASK-118 item A: the AUTHORITATIVE EVIDENCE CHANNEL of every contract tool.
+#
+# Before TASK-118 a tool was "effective" whenever *either* the frame or a file
+# moved, and its tier was simply the strongest of the two. That made a whole
+# class of tools unreportable: an editor write whose effect lives in the editor
+# process' own memory (the selection, the Output panel, the addon list, the
+# connection table, the in-memory scene) moved neither pixels (the 2D viewport
+# of an exercise project does not repaint for it) nor bytes (nothing is saved),
+# so `editor_set_node_selection` and forty of its siblings could never leave
+# `计数达标缺证据` no matter how well they worked.
+#
+# The decision (TASK-118 section A) is that every tool declares ONE channel, and
+# `达标` is judged ON THAT CHANNEL with content-level evidence:
+#
+#   file_effect   ok_file_effect_observed - a file on disk really changed
+#   pixel_effect  ok_effect_observed      - the rendered frame really changed
+#   editor_state  a verified `witness_read` whose `expect` literal was found
+#                 VERBATIM in another, independent call's payload (TASK-113 C)
+#   payload       ok=true with a substantive payload (the answer IS the
+#                 measurement; the TASK-111 READ_VERBS rule)
+#
+# The declarations live in `tools/tool_channels.json` (authored by
+# `recovery/work/task118/gen_channels.py`, one entry per tool with the contract
+# basis spelled out). This reader refuses to run when that file does not cover
+# the contract exactly - a channel table that silently misses a tool would let
+# a tool fall back to the old, weaker rule without anyone noticing.
+# ---------------------------------------------------------------------------
+CHANNEL_FILE = "file_effect"
+CHANNEL_PIXEL = "pixel_effect"
+CHANNEL_STATE = "editor_state"
+CHANNEL_PAYLOAD = "payload"
+CHANNEL_ORDER = (CHANNEL_FILE, CHANNEL_PIXEL, CHANNEL_STATE, CHANNEL_PAYLOAD)
+CHANNEL_LABEL = {
+    CHANNEL_FILE: "盘上的文件（ok_file_effect_observed）",
+    CHANNEL_PIXEL: "渲染出的画面/视口（ok_effect_observed）",
+    CHANNEL_STATE: "进程内的存在态：另一次独立读调用逐字读回（verified witness_read + expect）",
+    CHANNEL_PAYLOAD: "查询类：ok=true 且回包是实质载荷（回包即测量结果）",
+}
+CHANNELS_FILE = os.path.join("tools", "tool_channels.json")
 # The declared-witness source. One directory level up from the batch files, so a
 # new exercise family only has to drop its manifest next to its session.
 SESSIONS_DIR = os.path.join("tools", "sessions", "_exercises")
@@ -237,6 +277,70 @@ def substantive(raw):
     if isinstance(body, list):
         return len(body) > 0
     return bool(body)
+
+
+def load_channels(root, names):
+    """Every tool's declared authoritative evidence channel (TASK-118 item A).
+
+    The table is data, not code, so it can be reviewed on its own; this reader
+    only enforces the two things that make it trustworthy: it covers the
+    contract exactly (no tool silently falls back to the old rule, no entry for a
+    tool that no longer exists) and every channel is one of the four.
+    """
+    path = os.path.join(root, CHANNELS_FILE)
+    if not os.path.isfile(path):
+        raise SystemExit("missing channel table: %s" % path)
+    doc = load_json(path)
+    entries = doc.get("channels") or {}
+    missing = [n for n in names if n not in entries]
+    extra = [n for n in entries if n not in names]
+    if missing or extra:
+        raise SystemExit("channel table does not cover the contract: missing=%s extra=%s"
+                         % (missing, extra))
+    bad = sorted(n for n, e in entries.items() if e.get("channel") not in CHANNEL_ORDER)
+    if bad:
+        raise SystemExit("channel table declares an unknown channel for: %s" % bad)
+    return entries, doc
+
+
+def channel_evidence_count(st, channel, readback):
+    """How many content-level observations the tool carries ON ITS OWN CHANNEL.
+
+    Only the declared channel counts. A `editor_state` tool that happened to move
+    a pixel is still judged by its read-back, and a `payload` tool is never asked
+    for a screenshot: that is the whole point of declaring the channel.
+    """
+    if st is None:
+        return 0
+    if channel == CHANNEL_PIXEL:
+        return st.get("pixel_effect", 0)
+    if channel == CHANNEL_FILE:
+        return st.get("file_effect", 0)
+    if channel == CHANNEL_PAYLOAD:
+        return st.get("read_payload", 0)
+    if channel == CHANNEL_STATE:
+        # The TASK-118 rule for this channel: another independent read call
+        # carries the written value verbatim (`expect` matched in its payload).
+        if readback and readback.get("expect_matched"):
+            return 1
+        return 0
+    return 0
+
+
+def status_of_channel(calls, channel_evidence, boundary):
+    """`达标` judged on the declared channel (TASK-118 item A).
+
+    The two gates the ladder always had are kept unchanged (>=5 calls, >=1
+    boundary call); only the evidence gate moves from "a pixel or a file moved"
+    to "the tool's own declared channel carries content-level evidence".
+    """
+    if calls >= 5 and channel_evidence >= 1 and boundary >= 1:
+        return "达标"
+    if calls >= 5:
+        return "计数达标缺证据"
+    if calls >= 1:
+        return "未达(1-4)"
+    return "未达(0)"
 
 
 def load_readback_declarations(root):
@@ -645,13 +749,15 @@ def build_payload(args):
     registry = {"categories": {}, "members": [], "reclassified": []}
     reg_path = os.path.join(root, REGISTRY)
     if os.path.isfile(reg_path):
-        registry = load_json(reg_path)
-    # A tool the register once called unreachable but the corpus has since called
+        registry = load_json(reg_path)    # A tool the register once called unreachable but the corpus has since called
     # for real is NOT unreachable; the register keeps the entry for audit and this
     # reader takes it out of the set it reports.
     reclassified = {r["tool"]: r for r in registry.get("reclassified") or []}
     reg_members = {m["tool"]: m["category"] for m in registry.get("members") or []
                    if m["tool"] not in reclassified}
+
+    # TASK-118 item A: the declared channel every tool is judged on.
+    channels, channel_doc = load_channels(root, names)
 
     tools = []
     for name in names:
@@ -661,6 +767,10 @@ def build_payload(args):
         bnd = st["failed"] if st else 0
         runs = sorted((st["runs"] if st else {}).items(), key=lambda kv: (-kv[1], kv[0]))
         tier, readback = evidence_tier(st, verb_of(name, verbs), verified_readback.get(name))
+        declaration = channels.get(name) or {}
+        channel = declaration.get("channel")
+        channel_evidence = channel_evidence_count(st, channel, verified_readback.get(name))
+        legacy_status = status_of(st, reg_members)
         row = {
             "tool": name,
             "scope": scopes.get(name),
@@ -669,6 +779,12 @@ def build_payload(args):
             "ok": st["ok"] if st else 0,
             "boundary": bnd,
             "effective": eff,
+            "evidence_channel": channel,
+            "evidence_channel_label": CHANNEL_LABEL.get(channel, ""),
+            "evidence_channel_basis": declaration.get("basis", ""),
+            "evidence_channel_subject": declaration.get("subject", ""),
+            "channel_evidence": channel_evidence,
+            "channel_evidence_ok": channel_evidence >= 1,
             "evidence_tier": tier,
             "evidence_tier_label": TIER_LABEL[tier],
             "readback": readback,
@@ -677,7 +793,8 @@ def build_payload(args):
             "read_payload_calls": st["read_payload"] if st else 0,
             "facts_complete": st["facts_complete"] if st else 0,
             "bucket": bucket_of(calls),
-            "status": status_of(st, reg_members),
+            "status": status_of_channel(calls, channel_evidence, bnd),
+            "status_legacy": legacy_status,
             "unreachable_category": reg_members.get(name),
             "verdicts": st["verdicts"] if st else {},
             "file_effects": st["file_effects"] if st else {},
@@ -686,17 +803,19 @@ def build_payload(args):
             "first_ts_ms": st["first_ts"] if st else None,
             "last_ts_ms": st["last_ts"] if st else None,
         }
-        row["gate"] = bool(calls >= 5 and eff >= 1 and bnd >= 1)
+        row["gate"] = bool(calls >= 5 and channel_evidence >= 1 and bnd >= 1)
         tools.append(row)
 
     by_status = {}
     by_bucket = {}
     by_scope = {}
     by_tier = {}
+    by_channel = {}
     for row in tools:
         by_status[row["status"]] = by_status.get(row["status"], 0) + 1
         by_bucket[row["bucket"]] = by_bucket.get(row["bucket"], 0) + 1
         by_tier[row["evidence_tier"]] = by_tier.get(row["evidence_tier"], 0) + 1
+        by_channel[row["evidence_channel"]] = by_channel.get(row["evidence_channel"], 0) + 1
         key = row["scope"] or "?"
         slot = by_scope.setdefault(key, {"tools": 0, "called": 0, ">=5": 0, "0": 0})
         slot["tools"] += 1
@@ -707,6 +826,56 @@ def build_payload(args):
             slot[">=5"] += 1
     for key in by_scope:
         by_scope[key].pop("...", None)
+
+    # TASK-118 item A: the delta the channel rule produces, spelled out per tool
+    # so a reviewer can check every promotion and every tool still short.
+    channel_status_by_channel = {}
+    channel_evidence_by_channel = {}
+    for row in tools:
+        key = row["evidence_channel"]
+        slot = channel_status_by_channel.setdefault(key, {})
+        slot[row["status"]] = slot.get(row["status"], 0) + 1
+        ev = channel_evidence_by_channel.setdefault(key, {"tools": 0, "with_evidence": 0,
+                                                          "evidence_observations": 0})
+        ev["tools"] += 1
+        ev["with_evidence"] += 1 if row["channel_evidence"] >= 1 else 0
+        ev["evidence_observations"] += row["channel_evidence"]
+
+    promoted = [r for r in tools if r["status"] == "达标" and r["status_legacy"] != "达标"]
+    demoted = [r for r in tools if r["status"] != "达标" and r["status_legacy"] == "达标"]
+    still_short = []
+    for row in tools:
+        if row["status"] == "达标":
+            continue
+        if row["calls"] < 5:
+            reason = "calls<5"
+        elif row["boundary"] < 1:
+            reason = "channel-evidence=%d but no boundary call" % row["channel_evidence"]
+        else:
+            reason = "channel-evidence=0 on the declared channel `%s`" % row["evidence_channel"]
+        still_short.append({"tool": row["tool"], "channel": row["evidence_channel"],
+                            "calls": row["calls"], "boundary": row["boundary"],
+                            "channel_evidence": row["channel_evidence"], "reason": reason,
+                            "status": row["status"]})
+
+    channel_delta = {
+        "channel_counts": by_channel,
+        "channel_counts_declared": channel_doc.get("channel_counts") or {},
+        "channel_status": channel_status_by_channel,
+        "channel_evidence": channel_evidence_by_channel,
+        "promoted_from_legacy_rule": [
+            {"tool": r["tool"], "channel": r["evidence_channel"], "calls": r["calls"],
+             "boundary": r["boundary"], "channel_evidence": r["channel_evidence"],
+             "channel_basis": r["evidence_channel_basis"],
+             "evidence_path": md_evidence(r, 2)}
+            for r in promoted],
+        "demoted_from_legacy_rule": [
+            {"tool": r["tool"], "channel": r["evidence_channel"], "calls": r["calls"],
+             "boundary": r["boundary"], "channel_evidence": r["channel_evidence"],
+             "legacy_effective": r["effective"]}
+            for r in demoted],
+        "still_short": still_short,
+    }
 
     registry_view = []
     for item in registry.get("members") or []:
@@ -745,6 +914,11 @@ def build_payload(args):
         "status_counts": by_status,
         "evidence_tier_counts": by_tier,
         "evidence_tier_order": list(TIER_ORDER),
+        "evidence_channel_counts": by_channel,
+        "evidence_channel_order": list(CHANNEL_ORDER),
+        "evidence_channel_labels": CHANNEL_LABEL,
+        "evidence_channel_source": CHANNELS_FILE.replace("\\", "/"),
+        "channel_delta": channel_delta,
         "readback_declarations": {
             "declared": len(declarations),
             "verified": len(verified_readback),
@@ -766,6 +940,10 @@ def build_payload(args):
             "drift": [r for r in registry_view if r["drift"]],
             "reclassified": registry.get("reclassified") or [],
             "members": registry_view,
+            # TASK-118 C/D: the two buckets that are NOT "unreachable", kept
+            # separate so they can never be added into that count by accident.
+            "scope_excluded": registry.get("scope_excluded") or {},
+            "needs_an_external_device": registry.get("needs_an_external_device") or {},
         },
     }
 
@@ -820,8 +998,10 @@ def render_md(payload, title, cmdline):
     lines.append("  **其余动词**（create/edit/set/add/remove/write/build…）= ledger 的 `ok_effect_observed` / "
                  "`ok_file_effect_observed`，即真的改了画面或文件。"
                  "带 `assertion_failed` / `created_conflict` / `scenario_errors` 的 ok 调用不计有效。")
-    lines.append("- `状态`：`达标` = 调用≥5 且 有效≥1 且 边界≥1；`计数达标缺证据` = 调用≥5 但缺有效或边界；"
-                 "`未达(1-4)` / `未达(0)`；`不可达` 不在本表状态里，见 §4 登记表。")
+    lines.append("- `状态`（**TASK-118 A 起按声明的证据通道判定**）：`达标` = 调用≥5 且 **该工具声明的那条通道**"
+                 "上有内容级证据 ≥1 且 边界≥1；`计数达标缺证据` = 调用≥5 但该通道缺证据（或缺边界）；"
+                 "`未达(1-4)` / `未达(0)`；`不可达` 不在本表状态里，见 §4 登记表。"
+                 "（旧口径「像素或文件动了就算有效」仍列在 `coverage.json` 的 `status_legacy` 与 `effective` 里，供对照。）")
     lines.append("")
     lines.append("**「证据档位」的判定**（TASK-112 B；档位由强到弱，一个工具只落一档）：")
     lines.append("")
@@ -842,6 +1022,73 @@ def render_md(payload, title, cmdline):
                  "所以 `witness_read` 现在证明的是「写进去的值能从引擎自己的回答里读回来」，"
                  "不再只是「那一次读调用发生过」。")
     lines.append("- **不得**把「写工具自己响应里说成功了」当作 readback：那条路径只能落在 `count_only`。")
+    lines.append("")
+    lines.append("### 0.0 权威证据通道声明（TASK-118 A；声明表：`%s`）"
+                 % payload.get("evidence_channel_source", "tools/tool_channels.json"))
+    lines.append("")
+    lines.append("每条契约工具**声明一条**权威证据通道；`达标` 只在该通道上以内容级证据判定。"
+                 "声明由 `recovery/work/task118/gen_channels.py` 生成、本工具加载，"
+                 "**覆盖不到契约时本工具直接拒绝运行**（缺一条工具＝那条工具会悄悄退回旧口径）。")
+    lines.append("")
+    lines.append("| 通道 | 判据 | 声明条数 | 有通道证据 | 通道证据观测数 | 其中达标 | 计数达标缺证据 | 未达(0) |")
+    lines.append("|---|---|---|---|---|---|---|---|")
+    ch_counts = payload.get("evidence_channel_counts", {})
+    delta = payload.get("channel_delta", {})
+    ev_by = delta.get("channel_evidence", {})
+    st_by = delta.get("channel_status", {})
+    for channel in payload.get("evidence_channel_order", CHANNEL_ORDER):
+        ev = ev_by.get(channel, {})
+        st = st_by.get(channel, {})
+        lines.append("| `%s` | %s | %d | %d | %d | %d | %d | %d |"
+                     % (channel, payload.get("evidence_channel_labels", CHANNEL_LABEL).get(channel, ""),
+                        ch_counts.get(channel, 0), ev.get("with_evidence", 0),
+                        ev.get("evidence_observations", 0),
+                        st.get("达标", 0), st.get("计数达标缺证据", 0), st.get("未达(0)", 0)))
+    lines.append("")
+    lines.append("- `editor_state` 通道的判据就是 TASK-113 C 的内容级见证：**另一次独立读调用**在同一 run 内、"
+                 "`ok=true`、回包是实质载荷，且其回包里**逐字**包含被写入的值（会话 manifest 的 `readback` 数组 + `expect`）。"
+                 "本工具会回到 trace 里把见证再找一次；写工具自己回包里的成功字样**不是**这条通道的证据。")
+    lines.append("- 一个工具只在**一条**通道上被判定：声明为 `editor_state` 的工具即使顺手动了像素也不算达标，"
+                 "声明为 `payload` 的工具不会被要求交截图。")
+    lines.append("")
+    promoted = delta.get("promoted_from_legacy_rule") or []
+    demoted = delta.get("demoted_from_legacy_rule") or []
+    lines.append("**因通道声明而新达标 %d 条**（旧口径下它们落在 `计数达标缺证据`，因为它们的效果既不在盘上、"
+                 "也不在这个工程的 2D 视口里）：" % len(promoted))
+    lines.append("")
+    lines.append("| tool | 声明通道 | 累计 | 边界 | 通道证据 | 证据路径 | 判定依据（逐字来自声明表） |")
+    lines.append("|---|---|---|---|---|---|---|")
+    for item in promoted:
+        lines.append("| `%s` | `%s` | %d | %d | %d | %s | %s |"
+                     % (item["tool"], item["channel"], item["calls"], item["boundary"],
+                        item["channel_evidence"], item["evidence_path"],
+                        item["channel_basis"].replace("|", "/")))
+    lines.append("")
+    lines.append("- **被新口径降级的工具：%d 条**（旧口径达标、新口径不达标——这一栏必须为空，"
+                 "不为空说明有工具在它自己声明的通道上根本拿不出证据，是需要解释的缺陷）。%s"
+                 % (len(demoted),
+                    " ".join("`%s`" % d["tool"] for d in demoted) if demoted else "**0 条**"))
+    lines.append("")
+    short = delta.get("still_short") or []
+    lines.append("**声明通道上仍不达标 %d 条**（逐条给原因）：" % len(short))
+    lines.append("")
+    lines.append("| tool | 声明通道 | 累计 | 边界 | 通道证据 | 原因 |")
+    lines.append("|---|---|---|---|---|---|")
+    for item in short:
+        lines.append("| `%s` | `%s` | %d | %d | %d | %s |"
+                     % (item["tool"], item["channel"], item["calls"], item["boundary"],
+                        item["channel_evidence"], item["reason"]))
+    lines.append("")
+    lines.append("**逐条工具的通道声明与判定依据**（177 条；`subject` 是这条工具作用的对象，"
+                 "`basis` 是为什么它是这条通道而不是另一条）：")
+    lines.append("")
+    lines.append("| # | tool | scope | verb | 声明通道 | subject | basis |")
+    lines.append("|---|---|---|---|---|---|---|")
+    for i, row in enumerate(payload["tools"], 1):
+        lines.append("| %d | `%s` | %s | %s | `%s` | %s | %s |"
+                     % (i, row["tool"], row["scope"] or "?", row["verb"] or "?",
+                        row["evidence_channel"], row["evidence_channel_subject"].replace("|", "/"),
+                        row["evidence_channel_basis"].replace("|", "/")))
     lines.append("")
     lines.append("### 0.1 readback 声明与见证（TASK-112 B；内容级 `expect` 复核见 TASK-113 C）")
     lines.append("")
@@ -914,13 +1161,14 @@ def render_md(payload, title, cmdline):
     lines.append("")
     lines.append("## 1. 总表（177 条契约工具，逐条一行）")
     lines.append("")
-    lines.append("| # | tool | scope | verb | 累计调用 | 有效调用 | 边界调用 | 证据档位 | 档位证据 | 证据路径 | 状态 |")
-    lines.append("|---|---|---|---|---|---|---|---|---|---|---|")
+    lines.append("| # | tool | scope | verb | 累计调用 | 有效调用 | 边界调用 | 证据档位 | 档位证据 | 证据路径 | 声明通道 | 通道证据 | 状态 |")
+    lines.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|")
     for i, row in enumerate(payload["tools"], 1):
-        lines.append("| %d | `%s` | %s | %s | %d | %d | %d | `%s` | %s | %s | %s |"
+        lines.append("| %d | `%s` | %s | %s | %d | %d | %d | `%s` | %s | %s | `%s` | %d | %s |"
                      % (i, row["tool"], row["scope"] or "?", row["verb"] or "?", row["calls"],
                         row["effective"], row["boundary"], row["evidence_tier"],
-                        md_tier_evidence(row), md_evidence(row), row["status"]))
+                        md_tier_evidence(row), md_evidence(row), row["evidence_channel"],
+                        row["channel_evidence"], row["status"]))
     lines.append("")
     lines.append("## 2. 分桶明细")
     lines.append("")
@@ -973,6 +1221,27 @@ def render_md(payload, title, cmdline):
                  % (reg.get("members_total", 0), len(reg.get("drift") or []),
                     len([r for r in (reg.get("drift") or []) if r.get("reclassified")])))
     lines.append("")
+    scope_out = reg.get("scope_excluded") or {}
+    ext_dev = reg.get("needs_an_external_device") or {}
+    if scope_out or ext_dev:
+        lines.append("**与「不可达」分开计的两栏**（TASK-118 C/D：它们不是不可达，不能加进上一段的数字里）：")
+        lines.append("")
+        lines.append("| 栏 | 工具数 | 工具 | 登记位置 |")
+        lines.append("|---|---|---|---|")
+        lines.append("| `scope-excluded`（按 D59 / GDR-21 范围决定排除） | %d | %s | `%s` |"
+                     % (scope_out.get("count", 0),
+                        " ".join("`%s`" % t for t in scope_out.get("tools") or []) or "-",
+                        scope_out.get("register_category", "-")))
+        lines.append("| `needs-an-external-device`（本机实测：缺设备/缺预设） | %d | %s | `%s` |"
+                     % (ext_dev.get("count", 0),
+                        " ".join("`%s`" % t for t in ext_dev.get("tools") or []) or "-",
+                        ext_dev.get("register_category", "-")))
+        lines.append("")
+        if ext_dev.get("measured_run"):
+            lines.append("`needs-an-external-device` 的本机实测命令与结果写在登记表 "
+                         "`categories.H8.external_device.measured_on_this_machine` 里，"
+                         "调用证据在 `%s`。" % ext_dev["measured_run"])
+            lines.append("")
     for code in sorted(reg.get("categories") or {}):
         cat = reg["categories"][code]
         lines.append("### %s %s" % (code, cat.get("label", "")))

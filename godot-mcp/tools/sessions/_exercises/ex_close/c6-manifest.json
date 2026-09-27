@@ -1,0 +1,246 @@
+{
+ "_comment": "TASK-118 batch c6 (ex_close) -- the run that drains the four count_only tools TASK-115 left open. Each of the three editor writers is paired with a content-level read-back inside THIS run; running_game_find_node_when_available needs no declaration because it is a read-verb tool whose successful payload is the measurement. Evidence: runs/_exercises/ex_grid/c6-task118 (editor trace 23 calls, game trace 6 calls).",
+ "batch": "c6",
+ "project": "projects/_exercises/ex_grid",
+ "session": "tools/sessions/_exercises/ex_close/c6-session.json",
+ "run": "runs/_exercises/ex_grid/c6-task118",
+ "calls": [
+  {
+   "tag": "c6-001-editor_open_scene-ok",
+   "tool": "editor_open_scene",
+   "port": "editor",
+   "intent": "ok",
+   "note": "the playable main scene: Main(Node2D), Background/Ball/PaddleLeft/PaddleRight (ColorRect), scores (Label)"
+  },
+  {
+   "tag": "c6-002-project_build_csharp-ok",
+   "tool": "project_build_csharp",
+   "port": "editor",
+   "intent": "ok",
+   "note": "build the C# assembly first: the game endpoint of this same run has to be able to start the scene"
+  },
+  {
+   "tag": "c6-003-editor_add_gridmap-ok",
+   "tool": "editor_add_gridmap",
+   "port": "editor",
+   "intent": "ok",
+   "note": "editor_add_gridmap call 1/5 (GM1..GM5 already exist in the saved grid.tscn; use fresh names)"
+  },
+  {
+   "tag": "c6-004-editor_add_gridmap-ok",
+   "tool": "editor_add_gridmap",
+   "port": "editor",
+   "intent": "ok",
+   "note": "editor_add_gridmap call 2/5"
+  },
+  {
+   "tag": "c6-005-editor_add_gridmap-ok",
+   "tool": "editor_add_gridmap",
+   "port": "editor",
+   "intent": "ok",
+   "note": "editor_add_gridmap call 3/5"
+  },
+  {
+   "tag": "c6-006-editor_add_gridmap-ok",
+   "tool": "editor_add_gridmap",
+   "port": "editor",
+   "intent": "ok",
+   "note": "editor_add_gridmap call 4/5"
+  },
+  {
+   "tag": "c6-007-editor_add_gridmap-ok",
+   "tool": "editor_add_gridmap",
+   "port": "editor",
+   "intent": "ok",
+   "note": "editor_add_gridmap call 5/5"
+  },
+  {
+   "tag": "c6-008-editor_add_gridmap-probe",
+   "tool": "editor_add_gridmap",
+   "port": "editor",
+   "intent": "probe",
+   "note": "editor_add_gridmap boundary: the mesh library does not exist"
+  },
+  {
+   "tag": "c6-009-editor_get_scene_tree-witness",
+   "tool": "editor_get_scene_tree",
+   "port": "editor",
+   "intent": "witness",
+   "note": "read-back witness for editor_add_gridmap: the created GridMap nodes must be in the edited scene tree"
+  },
+  {
+   "tag": "c6-010-editor_set_node_script_batch-ok",
+   "tool": "editor_set_node_script_batch",
+   "port": "editor",
+   "intent": "ok",
+   "note": "editor_set_node_script_batch call 1/5 (Background is a ColorRect, Paddle : ColorRect)"
+  },
+  {
+   "tag": "c6-011-editor_set_node_script_batch-ok",
+   "tool": "editor_set_node_script_batch",
+   "port": "editor",
+   "intent": "ok",
+   "note": "editor_set_node_script_batch call 2/5"
+  },
+  {
+   "tag": "c6-012-editor_set_node_script_batch-ok",
+   "tool": "editor_set_node_script_batch",
+   "port": "editor",
+   "intent": "ok",
+   "note": "editor_set_node_script_batch call 3/5"
+  },
+  {
+   "tag": "c6-013-editor_set_node_script_batch-ok",
+   "tool": "editor_set_node_script_batch",
+   "port": "editor",
+   "intent": "ok",
+   "note": "editor_set_node_script_batch call 4/5"
+  },
+  {
+   "tag": "c6-014-editor_set_node_script_batch-ok",
+   "tool": "editor_set_node_script_batch",
+   "port": "editor",
+   "intent": "ok",
+   "note": "editor_set_node_script_batch call 5/5"
+  },
+  {
+   "tag": "c6-015-editor_set_node_script_batch-probe",
+   "tool": "editor_set_node_script_batch",
+   "port": "editor",
+   "intent": "probe",
+   "note": "editor_set_node_script_batch boundary: the node path does not resolve"
+  },
+  {
+   "tag": "c6-016-editor_execute_gdscript-witness",
+   "tool": "editor_execute_gdscript",
+   "port": "editor",
+   "intent": "witness",
+   "note": "read-back witness for editor_set_node_script_batch: the engine's own Node.get_script().resource_path (TASK-115: editor_get_node_properties answers -32001 for 'script')"
+  },
+  {
+   "tag": "c6-017-editor_connect_signal-ok",
+   "tool": "editor_connect_signal",
+   "port": "editor",
+   "intent": "ok",
+   "note": "editor_connect_signal call 1/5: a persisted connection editor_list_signal_connections has to answer with"
+  },
+  {
+   "tag": "c6-018-editor_connect_signal-ok",
+   "tool": "editor_connect_signal",
+   "port": "editor",
+   "intent": "ok",
+   "note": "editor_connect_signal call 2/5"
+  },
+  {
+   "tag": "c6-019-editor_connect_signal-ok",
+   "tool": "editor_connect_signal",
+   "port": "editor",
+   "intent": "ok",
+   "note": "editor_connect_signal call 3/5"
+  },
+  {
+   "tag": "c6-020-editor_connect_signal-ok",
+   "tool": "editor_connect_signal",
+   "port": "editor",
+   "intent": "ok",
+   "note": "editor_connect_signal call 4/5"
+  },
+  {
+   "tag": "c6-021-editor_connect_signal-ok",
+   "tool": "editor_connect_signal",
+   "port": "editor",
+   "intent": "ok",
+   "note": "editor_connect_signal call 5/5"
+  },
+  {
+   "tag": "c6-022-editor_connect_signal-probe",
+   "tool": "editor_connect_signal",
+   "port": "editor",
+   "intent": "probe",
+   "note": "editor_connect_signal boundary: the source node does not exist"
+  },
+  {
+   "tag": "c6-023-editor_list_signal_connections-witness",
+   "tool": "editor_list_signal_connections",
+   "port": "editor",
+   "intent": "witness",
+   "note": "read-back witness for editor_connect_signal: the connection table the editor itself holds"
+  },
+  {
+   "tag": "c6-024-running_game_find_node_when_available-ok",
+   "tool": "running_game_find_node_when_available",
+   "port": "game",
+   "intent": "ok",
+   "note": "call 1/5: the scene root of the running game (this tool's own answer IS the measurement)"
+  },
+  {
+   "tag": "c6-025-running_game_find_node_when_available-ok",
+   "tool": "running_game_find_node_when_available",
+   "port": "game",
+   "intent": "ok",
+   "note": "call 2/5: the ball the scene instantiates at load"
+  },
+  {
+   "tag": "c6-026-running_game_find_node_when_available-ok",
+   "tool": "running_game_find_node_when_available",
+   "port": "game",
+   "intent": "ok",
+   "note": "call 3/5"
+  },
+  {
+   "tag": "c6-027-running_game_find_node_when_available-ok",
+   "tool": "running_game_find_node_when_available",
+   "port": "game",
+   "intent": "ok",
+   "note": "call 4/5"
+  },
+  {
+   "tag": "c6-028-running_game_find_node_when_available-ok",
+   "tool": "running_game_find_node_when_available",
+   "port": "game",
+   "intent": "ok",
+   "note": "call 5/5: an absolute path, which the contract says is resolved even before a current scene exists"
+  },
+  {
+   "tag": "c6-029-running_game_find_node_when_available-probe",
+   "tool": "running_game_find_node_when_available",
+   "port": "game",
+   "intent": "probe",
+   "note": "boundary: the wait expires with -32000 and data.timeout_ms"
+  }
+ ],
+ "readback": [
+  {
+   "tool": "editor_add_gridmap",
+   "witness_tool": "editor_get_scene_tree",
+   "run": "runs/_exercises/ex_grid/c6-task118",
+   "witness_seq": 9,
+   "expect": [
+    "\"name\":\"GM6\"",
+    "\"type\":\"GridMap\""
+   ],
+   "why": "the GridMap the tool created is in the edited scene tree under the exact name it was given, with the engine's own class name; the same tree lists every sibling it created (GM7..GM10) and does NOT list the boundary probe's GMX"
+  },
+  {
+   "tool": "editor_set_node_script_batch",
+   "witness_tool": "editor_execute_gdscript",
+   "run": "runs/_exercises/ex_grid/c6-task118",
+   "witness_seq": 16,
+   "expect": [
+    "S:res://src/Paddle.cs"
+   ],
+   "why": "the node the batch attached to (Background) really carries that script: the engine's own Node.get_script().resource_path answers it. editor_get_node_properties is NOT the witness here - TASK-115 measured it answering -32001 for the property named 'script' (c4-v5-task111 seq 141)"
+  },
+  {
+   "tool": "editor_connect_signal",
+   "witness_tool": "editor_list_signal_connections",
+   "run": "runs/_exercises/ex_grid/c6-task118",
+   "witness_seq": 23,
+   "expect": [
+    "\"method\":\"_c6_a\"",
+    "\"source\":\"Ball\""
+   ],
+   "why": "the connection the tool reported as persisted is in the editor's own connection table, read back with scope=user (the same call's counts block answers user:5), and the boundary probe's source (NoSuchNode) is not in it"
+  }
+ ]
+}
