@@ -1,0 +1,30 @@
+{
+  "_comment": "TASK-113 item B: the online post-fix comparison for D-T111-2 and D-T111-3, on the fix binary (4.8.dev.mono.custom_build.3fdabe2d9). Each call is the exact request TASK-111 used to reproduce the defect; projects/_exercises/ex_write4/scenes/main.tscn still carries BodyA/CollisionShape2D and the pre-fix 'Ray4d' RayCast3D the defect silently built.",
+  "game": "_exercises/ex_write4",
+  "import": true,
+  "calls": [
+    {"tag": "b-001-open", "port": "editor", "tool": "editor_open_scene",
+     "arguments": {"path": "res://scenes/main.tscn"},
+     "note": "the scene TASK-111's c4 batch edited"},
+    {"tag": "b-002-dt111-2", "port": "editor", "tool": "editor_add_resource_to_node_property",
+     "arguments": {"node_path": "BodyA/CollisionShape2D", "property": "shape",
+                   "resource_type": "RectangleShape2D",
+                   "resource_properties": {"size": {"x": 48, "y": 48}}},
+     "note": "D-T111-2 repro: the vector component object the pre-fix code refused with -32602"},
+    {"tag": "b-003-read-shape", "port": "editor", "tool": "editor_get_node_properties",
+     "arguments": {"path": "BodyA/CollisionShape2D", "properties": ["shape"]},
+     "note": "read-back: the engine's own view of the shape just written"},
+    {"tag": "b-004-dt111-3-4d", "port": "editor", "tool": "editor_add_raycast",
+     "arguments": {"dimension": "4d", "name": "Ray4dPost"},
+     "note": "D-T111-3 repro: '4d' silently built a RayCast3D before the fix"},
+    {"tag": "b-005-dt111-3-2D", "port": "editor", "tool": "editor_add_raycast",
+     "arguments": {"dimension": "2D", "name": "Ray2DUp"},
+     "note": "same closed set, upper case"},
+    {"tag": "b-006-dt111-3-2d", "port": "editor", "tool": "editor_add_raycast",
+     "arguments": {"dimension": "2d", "name": "Ray2dPost"},
+     "note": "positive control: a legal value must not be refused by the dimension rule"},
+    {"tag": "b-007-tree", "port": "editor", "tool": "editor_get_scene_tree",
+     "arguments": {"max_depth": 1},
+     "note": "read-back: which of the three raycast calls really created a node"}
+  ]
+}

@@ -704,71 +704,109 @@
     }
   ],
   "readback": [
-      {
-          "tool": "editor_create_animation",
-          "run": "runs/_exercises/ex_anim2/h2b-task111",
-          "witness_tool": "editor_list_animations",
-          "why": "读回动画列表，新建的动画在其中"
-      },
-      {
-          "tool": "editor_add_animation_track",
-          "run": "runs/_exercises/ex_anim2/h2b-task111",
-          "witness_tool": "editor_get_animation_info",
-          "why": "读回同一动画的轨道表"
-      },
-      {
-          "tool": "editor_set_animation_keyframe",
-          "run": "runs/_exercises/ex_anim2/h2b-task111",
-          "witness_tool": "editor_get_animation_info",
-          "why": "读回同一动画的关键帧"
-      },
-      {
-          "tool": "editor_remove_animation",
-          "run": "runs/_exercises/ex_anim2/h2b-task111",
-          "witness_tool": "editor_list_animations",
-          "why": "读回动画列表，被删的动画不在了"
-      },
-      {
-          "tool": "editor_create_animation_tree",
-          "run": "runs/_exercises/ex_anim2/h2b-task111",
-          "witness_tool": "editor_get_animation_tree_structure",
-          "why": "读回 AnimationTree 的结构（tree_root / 状态机）"
-      },
-      {
-          "tool": "editor_add_state_machine_state",
-          "run": "runs/_exercises/ex_anim2/h2b-task111",
-          "witness_tool": "editor_get_animation_tree_structure",
-          "why": "读回状态机里的状态列表"
-      },
-      {
-          "tool": "editor_remove_state_machine_state",
-          "run": "runs/_exercises/ex_anim2/h2b-task111",
-          "witness_tool": "editor_get_animation_tree_structure",
-          "why": "读回状态机里的状态列表，被删的状态不在了"
-      },
-      {
-          "tool": "editor_add_state_machine_transition",
-          "run": "runs/_exercises/ex_anim2/h2b-task111",
-          "witness_tool": "editor_get_animation_tree_structure",
-          "why": "读回状态机里的迁移列表"
-      },
-      {
-          "tool": "editor_remove_state_machine_transition",
-          "run": "runs/_exercises/ex_anim2/h2b-task111",
-          "witness_tool": "editor_get_animation_tree_structure",
-          "why": "读回状态机里的迁移列表，被删的迁移不在了"
-      },
-      {
-          "tool": "editor_set_blend_tree_node",
-          "run": "runs/_exercises/ex_anim2/h2b-task111",
-          "witness_tool": "editor_get_animation_tree_structure",
-          "why": "读回混合树节点真的挂在树上"
-      },
-      {
-          "tool": "editor_set_animation_tree_parameter",
-          "run": "runs/_exercises/ex_anim2/h2b-task111",
-          "witness_tool": "editor_get_animation_tree_structure",
-          "why": "读回参数表里出现被写的参数"
-      }
+    {
+      "tool": "editor_create_animation",
+      "run": "runs/_exercises/ex_anim2/h2b-task111",
+      "witness_tool": "editor_list_animations",
+      "why": "读回动画列表，新建的动画在其中",
+      "expect": [
+        "\"Anim5\""
+      ]
+    },
+    {
+      "tool": "editor_add_animation_track",
+      "run": "runs/_exercises/ex_anim2/h2b-task111",
+      "witness_tool": "editor_get_animation_info",
+      "why": "读回同一动画的轨道表",
+      "expect": [
+        "\"path\":\"Target:scale\""
+      ]
+    },
+    {
+      "tool": "editor_set_animation_keyframe",
+      "run": "runs/_exercises/ex_anim2/h2b-task111",
+      "witness_tool": "editor_get_animation_info",
+      "why": "读回同一动画的关键帧",
+      "expect": [
+        "\"easing\":2.0",
+        "\"time\":1.0"
+      ]
+    },
+    {
+      "tool": "editor_remove_animation",
+      "run": "runs/_exercises/ex_anim2/h2b-task111",
+      "witness_tool": "editor_list_animations",
+      "why": "读回动画列表，被删的动画不在了"
+    },
+    {
+      "tool": "editor_create_animation_tree",
+      "run": "runs/_exercises/ex_anim2/h2b-task111",
+      "witness_tool": "editor_get_animation_tree_structure",
+      "why": "读回 AnimationTree 的结构（tree_root / 状态机）",
+      "expect": [
+        "\"parameters/BT/B1/blend_amount\""
+      ]
+    },
+    {
+      "tool": "editor_add_state_machine_state",
+      "run": "runs/_exercises/ex_anim2/h2b-task111",
+      "witness_tool": "editor_get_animation_tree_structure",
+      "why": "读回状态机里的状态列表",
+      "expect": [
+        "\"Walk\""
+      ]
+    },
+    {
+      "tool": "editor_remove_state_machine_state",
+      "run": "runs/_exercises/ex_anim2/h2b-task111",
+      "witness_tool": "editor_get_animation_tree_structure",
+      "why": "读回状态机里的状态列表，被删的状态不在了",
+      "expect": [
+        "\"node_path\":\"AT4\""
+      ],
+      "expect_absent": [
+        "Extra0",
+        "Extra4"
+      ]
+    },
+    {
+      "tool": "editor_add_state_machine_transition",
+      "run": "runs/_exercises/ex_anim2/h2b-task111",
+      "witness_tool": "editor_get_animation_tree_structure",
+      "why": "读回状态机里的迁移列表",
+      "expect": [
+        "\"Idle\""
+      ]
+    },
+    {
+      "tool": "editor_remove_state_machine_transition",
+      "run": "runs/_exercises/ex_anim2/h2b-task111",
+      "witness_tool": "editor_get_animation_tree_structure",
+      "why": "读回状态机里的迁移列表，被删的迁移不在了",
+      "expect": [
+        "\"transition_count\":5"
+      ],
+      "expect_absent": [
+        "\"from\":\"Idle\",\"index\":0,\"switch_mode\":\"immediate\",\"to\":\"Walk\""
+      ]
+    },
+    {
+      "tool": "editor_set_blend_tree_node",
+      "run": "runs/_exercises/ex_anim2/h2b-task111",
+      "witness_tool": "editor_get_animation_tree_structure",
+      "why": "读回混合树节点真的挂在树上",
+      "expect": [
+        "parameters/BT/T1/scale"
+      ]
+    },
+    {
+      "tool": "editor_set_animation_tree_parameter",
+      "run": "runs/_exercises/ex_anim2/h2b-task111",
+      "witness_tool": "editor_get_animation_tree_structure",
+      "why": "读回参数表里出现被写的参数",
+      "expect": [
+        "parameters/Walk/backward"
+      ]
+    }
   ]
 }

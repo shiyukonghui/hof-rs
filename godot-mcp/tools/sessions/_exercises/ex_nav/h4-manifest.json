@@ -1,0 +1,333 @@
+{
+  "batch": "h4",
+  "project": "ex_nav",
+  "calls": [
+    {
+      "tag": "h4-001-editor_open_scene",
+      "tool": "editor_open_scene",
+      "port": "editor",
+      "intent": "setup",
+      "note": "the scene every H4 tool addresses"
+    },
+    {
+      "tag": "h4-002-editor_setup_navigation_region",
+      "tool": "editor_setup_navigation_region",
+      "port": "editor",
+      "intent": "ok",
+      "note": "setup_navigation_region call 1/5 (a NavigationPolygon resource is created and assigned)"
+    },
+    {
+      "tag": "h4-003-editor_setup_navigation_region",
+      "tool": "editor_setup_navigation_region",
+      "port": "editor",
+      "intent": "ok",
+      "note": "setup_navigation_region call 2/5 (a NavigationPolygon resource is created and assigned)"
+    },
+    {
+      "tag": "h4-004-editor_setup_navigation_region",
+      "tool": "editor_setup_navigation_region",
+      "port": "editor",
+      "intent": "ok",
+      "note": "setup_navigation_region call 3/5 (a NavigationPolygon resource is created and assigned)"
+    },
+    {
+      "tag": "h4-005-editor_setup_navigation_region",
+      "tool": "editor_setup_navigation_region",
+      "port": "editor",
+      "intent": "ok",
+      "note": "setup_navigation_region call 4/5 (a NavigationPolygon resource is created and assigned)"
+    },
+    {
+      "tag": "h4-006-editor_setup_navigation_region",
+      "tool": "editor_setup_navigation_region",
+      "port": "editor",
+      "intent": "ok",
+      "note": "setup_navigation_region call 5/5 (a NavigationPolygon resource is created and assigned)"
+    },
+    {
+      "tag": "h4-007-editor_setup_navigation_region",
+      "tool": "editor_setup_navigation_region",
+      "port": "editor",
+      "intent": "probe",
+      "note": "parent does not exist"
+    },
+    {
+      "tag": "h4-008-editor_setup_navigation_agent",
+      "tool": "editor_setup_navigation_agent",
+      "port": "editor",
+      "intent": "ok",
+      "note": "setup_navigation_agent call 1/5"
+    },
+    {
+      "tag": "h4-009-editor_setup_navigation_agent",
+      "tool": "editor_setup_navigation_agent",
+      "port": "editor",
+      "intent": "ok",
+      "note": "setup_navigation_agent call 2/5"
+    },
+    {
+      "tag": "h4-010-editor_setup_navigation_agent",
+      "tool": "editor_setup_navigation_agent",
+      "port": "editor",
+      "intent": "ok",
+      "note": "setup_navigation_agent call 3/5"
+    },
+    {
+      "tag": "h4-011-editor_setup_navigation_agent",
+      "tool": "editor_setup_navigation_agent",
+      "port": "editor",
+      "intent": "ok",
+      "note": "setup_navigation_agent call 4/5"
+    },
+    {
+      "tag": "h4-012-editor_setup_navigation_agent",
+      "tool": "editor_setup_navigation_agent",
+      "port": "editor",
+      "intent": "ok",
+      "note": "setup_navigation_agent call 5/5"
+    },
+    {
+      "tag": "h4-013-editor_setup_navigation_agent",
+      "tool": "editor_setup_navigation_agent",
+      "port": "editor",
+      "intent": "probe",
+      "note": "agent_type is a closed set of 2D/3D"
+    },
+    {
+      "tag": "h4-014-editor_set_navigation_layers",
+      "tool": "editor_set_navigation_layers",
+      "port": "editor",
+      "intent": "ok",
+      "note": "set_navigation_layers call 1/5 (the written mask is read back by editor_get_navigation_info)"
+    },
+    {
+      "tag": "h4-015-editor_set_navigation_layers",
+      "tool": "editor_set_navigation_layers",
+      "port": "editor",
+      "intent": "ok",
+      "note": "set_navigation_layers call 2/5 (the written mask is read back by editor_get_navigation_info)"
+    },
+    {
+      "tag": "h4-016-editor_set_navigation_layers",
+      "tool": "editor_set_navigation_layers",
+      "port": "editor",
+      "intent": "ok",
+      "note": "set_navigation_layers call 3/5 (the written mask is read back by editor_get_navigation_info)"
+    },
+    {
+      "tag": "h4-017-editor_set_navigation_layers",
+      "tool": "editor_set_navigation_layers",
+      "port": "editor",
+      "intent": "ok",
+      "note": "set_navigation_layers call 4/5 (the written mask is read back by editor_get_navigation_info)"
+    },
+    {
+      "tag": "h4-018-editor_set_navigation_layers",
+      "tool": "editor_set_navigation_layers",
+      "port": "editor",
+      "intent": "ok",
+      "note": "set_navigation_layers call 5/5 (the written mask is read back by editor_get_navigation_info)"
+    },
+    {
+      "tag": "h4-019-editor_set_navigation_layers",
+      "tool": "editor_set_navigation_layers",
+      "port": "editor",
+      "intent": "probe",
+      "note": "negative mask is outside the uint32 range"
+    },
+    {
+      "tag": "h4-020-editor_set_navigation_layers",
+      "tool": "editor_set_navigation_layers",
+      "port": "editor",
+      "intent": "probe",
+      "note": "a Label has no navigation_layers member"
+    },
+    {
+      "tag": "h4-021-editor_bake_navigation_mesh",
+      "tool": "editor_bake_navigation_mesh",
+      "port": "editor",
+      "intent": "ok",
+      "note": "bake 1/5 of the region whose polygon carries an outline"
+    },
+    {
+      "tag": "h4-022-editor_bake_navigation_mesh",
+      "tool": "editor_bake_navigation_mesh",
+      "port": "editor",
+      "intent": "ok",
+      "note": "bake 2/5 of the region whose polygon carries an outline"
+    },
+    {
+      "tag": "h4-023-editor_bake_navigation_mesh",
+      "tool": "editor_bake_navigation_mesh",
+      "port": "editor",
+      "intent": "ok",
+      "note": "bake 3/5 of the region whose polygon carries an outline"
+    },
+    {
+      "tag": "h4-024-editor_bake_navigation_mesh",
+      "tool": "editor_bake_navigation_mesh",
+      "port": "editor",
+      "intent": "ok",
+      "note": "bake 4/5 of the region whose polygon carries an outline"
+    },
+    {
+      "tag": "h4-025-editor_bake_navigation_mesh",
+      "tool": "editor_bake_navigation_mesh",
+      "port": "editor",
+      "intent": "ok",
+      "note": "bake 5/5 of the region whose polygon carries an outline"
+    },
+    {
+      "tag": "h4-026-editor_bake_navigation_mesh",
+      "tool": "editor_bake_navigation_mesh",
+      "port": "editor",
+      "intent": "probe",
+      "note": "a Label is not a NavigationRegion"
+    },
+    {
+      "tag": "h4-027-editor_get_navigation_info",
+      "tool": "editor_get_navigation_info",
+      "port": "editor",
+      "intent": "ok",
+      "note": "read back the regions/agents/layers written above (1/5)"
+    },
+    {
+      "tag": "h4-028-editor_get_navigation_info",
+      "tool": "editor_get_navigation_info",
+      "port": "editor",
+      "intent": "ok",
+      "note": "read back the regions/agents/layers written above (2/5)"
+    },
+    {
+      "tag": "h4-029-editor_get_navigation_info",
+      "tool": "editor_get_navigation_info",
+      "port": "editor",
+      "intent": "ok",
+      "note": "read back the regions/agents/layers written above (3/5)"
+    },
+    {
+      "tag": "h4-030-editor_get_navigation_info",
+      "tool": "editor_get_navigation_info",
+      "port": "editor",
+      "intent": "ok",
+      "note": "read back the regions/agents/layers written above (4/5)"
+    },
+    {
+      "tag": "h4-031-editor_get_navigation_info",
+      "tool": "editor_get_navigation_info",
+      "port": "editor",
+      "intent": "ok",
+      "note": "read back the regions/agents/layers written above (5/5)"
+    },
+    {
+      "tag": "h4-032-editor_get_navigation_info",
+      "tool": "editor_get_navigation_info",
+      "port": "editor",
+      "intent": "probe",
+      "note": "node does not exist"
+    },
+    {
+      "tag": "h4-033-editor_save_scene",
+      "tool": "editor_save_scene",
+      "port": "editor",
+      "intent": "setup",
+      "note": "persist the baked polygon so the game endpoint loads real navigation data"
+    },
+    {
+      "tag": "h4-034-running_game_move_player_to_target",
+      "tool": "running_game_move_player_to_target",
+      "port": "game",
+      "intent": "ok",
+      "note": "move call 1/5; the agent path is the engine's own NavigationServer path"
+    },
+    {
+      "tag": "h4-035-running_game_move_player_to_target",
+      "tool": "running_game_move_player_to_target",
+      "port": "game",
+      "intent": "ok",
+      "note": "move call 2/5; the agent path is the engine's own NavigationServer path"
+    },
+    {
+      "tag": "h4-036-running_game_move_player_to_target",
+      "tool": "running_game_move_player_to_target",
+      "port": "game",
+      "intent": "ok",
+      "note": "move call 3/5; the agent path is the engine's own NavigationServer path"
+    },
+    {
+      "tag": "h4-037-running_game_move_player_to_target",
+      "tool": "running_game_move_player_to_target",
+      "port": "game",
+      "intent": "ok",
+      "note": "move call 4/5; the agent path is the engine's own NavigationServer path"
+    },
+    {
+      "tag": "h4-038-running_game_move_player_to_target",
+      "tool": "running_game_move_player_to_target",
+      "port": "game",
+      "intent": "ok",
+      "note": "move call 5/5; the agent path is the engine's own NavigationServer path"
+    },
+    {
+      "tag": "h4-039-running_game_move_player_to_target",
+      "tool": "running_game_move_player_to_target",
+      "port": "game",
+      "intent": "probe",
+      "note": "target node does not exist"
+    },
+    {
+      "tag": "h4-040-running_game_get_node_properties",
+      "tool": "running_game_get_node_properties",
+      "port": "game",
+      "intent": "setup",
+      "note": "read-back: where the player really ended up after the moves"
+    }
+  ],
+  "readback": [
+    {
+      "tool": "editor_setup_navigation_region",
+      "witness_tool": "editor_get_navigation_info",
+      "run": "runs/_exercises/ex_nav/h4-task113",
+      "why": "the created NavigationRegion2D must appear in editor_get_navigation_info's region list with its real class and layer mask",
+      "expect": [
+        "\"RegionA\""
+      ]
+    },
+    {
+      "tool": "editor_setup_navigation_agent",
+      "witness_tool": "editor_get_navigation_info",
+      "run": "runs/_exercises/ex_nav/h4-task113",
+      "why": "the created NavigationAgent2D must appear in the agent list with the radius and max_speed the tool wrote",
+      "expect": [
+        "\"max_speed\""
+      ]
+    },
+    {
+      "tool": "editor_set_navigation_layers",
+      "witness_tool": "editor_get_navigation_info",
+      "run": "runs/_exercises/ex_nav/h4-task113",
+      "why": "the mask editor_set_navigation_layers wrote must be in the read-back record",
+      "expect": [
+        "\"navigation_layers\":2"
+      ]
+    },
+    {
+      "tool": "editor_bake_navigation_mesh",
+      "witness_tool": "editor_get_navigation_info",
+      "run": "runs/_exercises/ex_nav/h4-task113",
+      "why": "the bake's own polygon_count must appear in the region record (baked: true)",
+      "expect": [
+        "\"baked\":true"
+      ]
+    },
+    {
+      "tool": "running_game_move_player_to_target",
+      "witness_tool": "running_game_get_node_properties",
+      "run": "runs/_exercises/ex_nav/h4-task113",
+      "why": "the player's position after the moves differs from its start (100,300)",
+      "expect": [
+        "\"position\""
+      ]
+    }
+  ]
+}

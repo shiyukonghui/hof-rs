@@ -523,7 +523,7 @@
     }
   ],
   "total": 74,
-  "_reclassified_comment": "TASK-110 batch c23 called six of the register's 'structurally unreachable' tools for real; TASK-111 batches h1/h2/h3 added 28 more (all of H1, H2 and H3). Every entry stays here with the run that demonstrated it instead of being deleted silently, so the inference's error stays auditable.",
+  "_reclassified_comment": "TASK-110 batch c23 called six of the register's 'structurally unreachable' tools for real; TASK-111 batches h1/h2/h3 added 28 more (all of H1, H2 and H3). Every entry stays here with the run that demonstrated it instead of being deleted silently, so the inference's error stays auditable. TASK-113 batches h4/h5/h6/h9 added the remaining 20 (all of H4, H5 and H6, and the three recording tools of H9): their preconditions are project-shipped assets built by the engine's own API, and each tool ran at least six times with a boundary probe.",
   "reclassified": [
     {
       "tool": "editor_get_selection",
@@ -784,6 +784,166 @@
       "evidence": "runs/_exercises/ex_grid/h3-task111/trace-editor.jsonl",
       "batch": "h3",
       "task": "TASK-111"
+    },
+    {
+      "tool": "editor_bake_navigation_mesh",
+      "from": "H4",
+      "why": "the corpus has no navigation data, but the family needs only a project that ships a NavigationRegion2D with an outline-bearing NavigationPolygon plus a player: projects/_exercises/ex_nav carries scenes/main.tscn built by the engine's own API (mk_probe.gd). All six members ran for real: editor_setup_navigation_region / editor_setup_navigation_agent create their nodes, editor_set_navigation_layers writes the mask editor_get_navigation_info reads back, editor_bake_navigation_mesh really baked (the first bake moved 155978 pixels in the editor viewport and reported baked:true with polygon_count 1), and running_game_move_player_to_target moved the player along the engine's own NavigationServer path in all five calls (distance_traveled 178.1/399.3/181.4/166.6/461.2).",
+      "evidence": "runs/_exercises/ex_nav/h4-task113/trace-editor.jsonl",
+      "batch": "h4-task113",
+      "task": "TASK-113"
+    },
+    {
+      "tool": "editor_get_navigation_info",
+      "from": "H4",
+      "why": "the corpus has no navigation data, but the family needs only a project that ships a NavigationRegion2D with an outline-bearing NavigationPolygon plus a player: projects/_exercises/ex_nav carries scenes/main.tscn built by the engine's own API (mk_probe.gd). All six members ran for real: editor_setup_navigation_region / editor_setup_navigation_agent create their nodes, editor_set_navigation_layers writes the mask editor_get_navigation_info reads back, editor_bake_navigation_mesh really baked (the first bake moved 155978 pixels in the editor viewport and reported baked:true with polygon_count 1), and running_game_move_player_to_target moved the player along the engine's own NavigationServer path in all five calls (distance_traveled 178.1/399.3/181.4/166.6/461.2).",
+      "evidence": "runs/_exercises/ex_nav/h4-task113/trace-editor.jsonl",
+      "batch": "h4-task113",
+      "task": "TASK-113"
+    },
+    {
+      "tool": "editor_set_navigation_layers",
+      "from": "H4",
+      "why": "the corpus has no navigation data, but the family needs only a project that ships a NavigationRegion2D with an outline-bearing NavigationPolygon plus a player: projects/_exercises/ex_nav carries scenes/main.tscn built by the engine's own API (mk_probe.gd). All six members ran for real: editor_setup_navigation_region / editor_setup_navigation_agent create their nodes, editor_set_navigation_layers writes the mask editor_get_navigation_info reads back, editor_bake_navigation_mesh really baked (the first bake moved 155978 pixels in the editor viewport and reported baked:true with polygon_count 1), and running_game_move_player_to_target moved the player along the engine's own NavigationServer path in all five calls (distance_traveled 178.1/399.3/181.4/166.6/461.2).",
+      "evidence": "runs/_exercises/ex_nav/h4-task113/trace-editor.jsonl",
+      "batch": "h4-task113",
+      "task": "TASK-113"
+    },
+    {
+      "tool": "editor_setup_navigation_agent",
+      "from": "H4",
+      "why": "the corpus has no navigation data, but the family needs only a project that ships a NavigationRegion2D with an outline-bearing NavigationPolygon plus a player: projects/_exercises/ex_nav carries scenes/main.tscn built by the engine's own API (mk_probe.gd). All six members ran for real: editor_setup_navigation_region / editor_setup_navigation_agent create their nodes, editor_set_navigation_layers writes the mask editor_get_navigation_info reads back, editor_bake_navigation_mesh really baked (the first bake moved 155978 pixels in the editor viewport and reported baked:true with polygon_count 1), and running_game_move_player_to_target moved the player along the engine's own NavigationServer path in all five calls (distance_traveled 178.1/399.3/181.4/166.6/461.2).",
+      "evidence": "runs/_exercises/ex_nav/h4-task113/trace-editor.jsonl",
+      "batch": "h4-task113",
+      "task": "TASK-113"
+    },
+    {
+      "tool": "editor_setup_navigation_region",
+      "from": "H4",
+      "why": "the corpus has no navigation data, but the family needs only a project that ships a NavigationRegion2D with an outline-bearing NavigationPolygon plus a player: projects/_exercises/ex_nav carries scenes/main.tscn built by the engine's own API (mk_probe.gd). All six members ran for real: editor_setup_navigation_region / editor_setup_navigation_agent create their nodes, editor_set_navigation_layers writes the mask editor_get_navigation_info reads back, editor_bake_navigation_mesh really baked (the first bake moved 155978 pixels in the editor viewport and reported baked:true with polygon_count 1), and running_game_move_player_to_target moved the player along the engine's own NavigationServer path in all five calls (distance_traveled 178.1/399.3/181.4/166.6/461.2).",
+      "evidence": "runs/_exercises/ex_nav/h4-task113/trace-editor.jsonl",
+      "batch": "h4-task113",
+      "task": "TASK-113"
+    },
+    {
+      "tool": "running_game_move_player_to_target",
+      "from": "H4",
+      "why": "the corpus has no navigation data, but the family needs only a project that ships a NavigationRegion2D with an outline-bearing NavigationPolygon plus a player: projects/_exercises/ex_nav carries scenes/main.tscn built by the engine's own API (mk_probe.gd). All six members ran for real: editor_setup_navigation_region / editor_setup_navigation_agent create their nodes, editor_set_navigation_layers writes the mask editor_get_navigation_info reads back, editor_bake_navigation_mesh really baked (the first bake moved 155978 pixels in the editor viewport and reported baked:true with polygon_count 1), and running_game_move_player_to_target moved the player along the engine's own NavigationServer path in all five calls (distance_traveled 178.1/399.3/181.4/166.6/461.2).",
+      "evidence": "runs/_exercises/ex_nav/h4-task113/trace-game.jsonl",
+      "batch": "h4-task113",
+      "task": "TASK-113"
+    },
+    {
+      "tool": "editor_add_audio_bus",
+      "from": "H5",
+      "why": "no game has any sound, but the family's subjects are the editor process's own AudioServer and one AudioStreamPlayer2D node: projects/_exercises/ex_audio ships five real RIFF WAVE assets (generated by the TASK-113 generator and imported by --import). All six members ran: five buses were added (Music/Sfx/Ambient/Voice/Ui), five effects attached to them, five players created, and editor_get_audio_bus_layout / editor_get_audio_info read the engine's own bus list (including the volume_db -6.0 editor_set_audio_bus_property wrote) back.",
+      "evidence": "runs/_exercises/ex_audio/h5-task113/trace-editor.jsonl",
+      "batch": "h5-task113",
+      "task": "TASK-113"
+    },
+    {
+      "tool": "editor_add_audio_bus_effect",
+      "from": "H5",
+      "why": "no game has any sound, but the family's subjects are the editor process's own AudioServer and one AudioStreamPlayer2D node: projects/_exercises/ex_audio ships five real RIFF WAVE assets (generated by the TASK-113 generator and imported by --import). All six members ran: five buses were added (Music/Sfx/Ambient/Voice/Ui), five effects attached to them, five players created, and editor_get_audio_bus_layout / editor_get_audio_info read the engine's own bus list (including the volume_db -6.0 editor_set_audio_bus_property wrote) back.",
+      "evidence": "runs/_exercises/ex_audio/h5-task113/trace-editor.jsonl",
+      "batch": "h5-task113",
+      "task": "TASK-113"
+    },
+    {
+      "tool": "editor_add_audio_player",
+      "from": "H5",
+      "why": "no game has any sound, but the family's subjects are the editor process's own AudioServer and one AudioStreamPlayer2D node: projects/_exercises/ex_audio ships five real RIFF WAVE assets (generated by the TASK-113 generator and imported by --import). All six members ran: five buses were added (Music/Sfx/Ambient/Voice/Ui), five effects attached to them, five players created, and editor_get_audio_bus_layout / editor_get_audio_info read the engine's own bus list (including the volume_db -6.0 editor_set_audio_bus_property wrote) back.",
+      "evidence": "runs/_exercises/ex_audio/h5-task113/trace-editor.jsonl",
+      "batch": "h5-task113",
+      "task": "TASK-113"
+    },
+    {
+      "tool": "editor_get_audio_bus_layout",
+      "from": "H5",
+      "why": "no game has any sound, but the family's subjects are the editor process's own AudioServer and one AudioStreamPlayer2D node: projects/_exercises/ex_audio ships five real RIFF WAVE assets (generated by the TASK-113 generator and imported by --import). All six members ran: five buses were added (Music/Sfx/Ambient/Voice/Ui), five effects attached to them, five players created, and editor_get_audio_bus_layout / editor_get_audio_info read the engine's own bus list (including the volume_db -6.0 editor_set_audio_bus_property wrote) back.",
+      "evidence": "runs/_exercises/ex_audio/h5-task113/trace-editor.jsonl",
+      "batch": "h5-task113",
+      "task": "TASK-113"
+    },
+    {
+      "tool": "editor_get_audio_info",
+      "from": "H5",
+      "why": "no game has any sound, but the family's subjects are the editor process's own AudioServer and one AudioStreamPlayer2D node: projects/_exercises/ex_audio ships five real RIFF WAVE assets (generated by the TASK-113 generator and imported by --import). All six members ran: five buses were added (Music/Sfx/Ambient/Voice/Ui), five effects attached to them, five players created, and editor_get_audio_bus_layout / editor_get_audio_info read the engine's own bus list (including the volume_db -6.0 editor_set_audio_bus_property wrote) back.",
+      "evidence": "runs/_exercises/ex_audio/h5-task113/trace-editor.jsonl",
+      "batch": "h5-task113",
+      "task": "TASK-113"
+    },
+    {
+      "tool": "editor_set_audio_bus_property",
+      "from": "H5",
+      "why": "no game has any sound, but the family's subjects are the editor process's own AudioServer and one AudioStreamPlayer2D node: projects/_exercises/ex_audio ships five real RIFF WAVE assets (generated by the TASK-113 generator and imported by --import). All six members ran: five buses were added (Music/Sfx/Ambient/Voice/Ui), five effects attached to them, five players created, and editor_get_audio_bus_layout / editor_get_audio_info read the engine's own bus list (including the volume_db -6.0 editor_set_audio_bus_property wrote) back.",
+      "evidence": "runs/_exercises/ex_audio/h5-task113/trace-editor.jsonl",
+      "batch": "h5-task113",
+      "task": "TASK-113"
+    },
+    {
+      "tool": "editor_create_particles",
+      "from": "H6",
+      "why": "the corpus has no particles, but the family needs only GPUParticles2D nodes and a ParticleProcessMaterial: projects/_exercises/ex_particles ships a scene with one GPUParticles2D and editor_create_particles makes five more. All five members ran: two presets (fire/smoke/...), five process-material parameter writes and five colour gradients, each read back by editor_get_particle_info (params, colors and color_stop_count).",
+      "evidence": "runs/_exercises/ex_particles/h6-task113/trace-editor.jsonl",
+      "batch": "h6-task113",
+      "task": "TASK-113"
+    },
+    {
+      "tool": "editor_get_particle_info",
+      "from": "H6",
+      "why": "the corpus has no particles, but the family needs only GPUParticles2D nodes and a ParticleProcessMaterial: projects/_exercises/ex_particles ships a scene with one GPUParticles2D and editor_create_particles makes five more. All five members ran: two presets (fire/smoke/...), five process-material parameter writes and five colour gradients, each read back by editor_get_particle_info (params, colors and color_stop_count).",
+      "evidence": "runs/_exercises/ex_particles/h6-task113/trace-editor.jsonl",
+      "batch": "h6-task113",
+      "task": "TASK-113"
+    },
+    {
+      "tool": "editor_set_particle_color_gradient",
+      "from": "H6",
+      "why": "the corpus has no particles, but the family needs only GPUParticles2D nodes and a ParticleProcessMaterial: projects/_exercises/ex_particles ships a scene with one GPUParticles2D and editor_create_particles makes five more. All five members ran: two presets (fire/smoke/...), five process-material parameter writes and five colour gradients, each read back by editor_get_particle_info (params, colors and color_stop_count).",
+      "evidence": "runs/_exercises/ex_particles/h6-task113/trace-editor.jsonl",
+      "batch": "h6-task113",
+      "task": "TASK-113"
+    },
+    {
+      "tool": "editor_set_particle_material",
+      "from": "H6",
+      "why": "the corpus has no particles, but the family needs only GPUParticles2D nodes and a ParticleProcessMaterial: projects/_exercises/ex_particles ships a scene with one GPUParticles2D and editor_create_particles makes five more. All five members ran: two presets (fire/smoke/...), five process-material parameter writes and five colour gradients, each read back by editor_get_particle_info (params, colors and color_stop_count).",
+      "evidence": "runs/_exercises/ex_particles/h6-task113/trace-editor.jsonl",
+      "batch": "h6-task113",
+      "task": "TASK-113"
+    },
+    {
+      "tool": "editor_set_particle_preset",
+      "from": "H6",
+      "why": "the corpus has no particles, but the family needs only GPUParticles2D nodes and a ParticleProcessMaterial: projects/_exercises/ex_particles ships a scene with one GPUParticles2D and editor_create_particles makes five more. All five members ran: two presets (fire/smoke/...), five process-material parameter writes and five colour gradients, each read back by editor_get_particle_info (params, colors and color_stop_count).",
+      "evidence": "runs/_exercises/ex_particles/h6-task113/trace-editor.jsonl",
+      "batch": "h6-task113",
+      "task": "TASK-113"
+    },
+    {
+      "tool": "running_game_create_input_recording",
+      "from": "H9",
+      "why": "input recording needs the three-step create -> play/stop session, which the corpus never opened: projects/_exercises/ex_rec carries a player script whose motion is driven by the key events the replay injects. All three members ran five times each: every create/stop round captured the two key events the explicit replay injected (event_count 2), and the final create -> stop -> play chain (no `events` argument) moved the player from x=100 to x=151 with a recomputed pixel diff of 1152 pixels - the replay really drives the running game.",
+      "evidence": "runs/_exercises/ex_rec/h9-task113/trace-game.jsonl",
+      "batch": "h9-task113",
+      "task": "TASK-113"
+    },
+    {
+      "tool": "running_game_play_input_recording",
+      "from": "H9",
+      "why": "input recording needs the three-step create -> play/stop session, which the corpus never opened: projects/_exercises/ex_rec carries a player script whose motion is driven by the key events the replay injects. All three members ran five times each: every create/stop round captured the two key events the explicit replay injected (event_count 2), and the final create -> stop -> play chain (no `events` argument) moved the player from x=100 to x=151 with a recomputed pixel diff of 1152 pixels - the replay really drives the running game.",
+      "evidence": "runs/_exercises/ex_rec/h9-task113/trace-game.jsonl",
+      "batch": "h9-task113",
+      "task": "TASK-113"
+    },
+    {
+      "tool": "running_game_stop_input_recording",
+      "from": "H9",
+      "why": "input recording needs the three-step create -> play/stop session, which the corpus never opened: projects/_exercises/ex_rec carries a player script whose motion is driven by the key events the replay injects. All three members ran five times each: every create/stop round captured the two key events the explicit replay injected (event_count 2), and the final create -> stop -> play chain (no `events` argument) moved the player from x=100 to x=151 with a recomputed pixel diff of 1152 pixels - the replay really drives the running game.",
+      "evidence": "runs/_exercises/ex_rec/h9-task113/trace-game.jsonl",
+      "batch": "h9-task113",
+      "task": "TASK-113"
     }
   ]
 }

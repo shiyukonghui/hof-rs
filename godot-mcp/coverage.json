@@ -1,18 +1,18 @@
 {
-  "generated_utc": "2026-09-27T03:07:06Z",
+  "generated_utc": "2026-09-27T03:25:24Z",
   "mode": "all-runs",
   "root": "F:\\moonbit-hof-rs\\godot-mcp",
   "runs_dir": "runs",
   "excludes": [],
   "corpus": {
-    "trace_files": 162,
-    "run_dirs": 97,
-    "calls": 8286,
+    "trace_files": 168,
+    "run_dirs": 102,
+    "calls": 8444,
     "malformed_lines": 0,
-    "ok": 7718,
-    "failed": 568,
-    "distinct_tools": 137,
-    "sidecars_verified": 272
+    "ok": 7843,
+    "failed": 601,
+    "distinct_tools": 157,
+    "sidecars_verified": 273
   },
   "fingerprints": {
     "godot\\modules\\mcp_server\\docs\\tools_list.renamed.json": {
@@ -29,20 +29,20 @@
     }
   },
   "buckets": {
-    ">=5": 137,
-    "0": 40
+    ">=5": 157,
+    "0": 20
   },
   "status_counts": {
-    "达标": 92,
-    "计数达标缺证据": 45,
-    "未达(0)": 40
+    "达标": 102,
+    "计数达标缺证据": 55,
+    "未达(0)": 20
   },
   "evidence_tier_counts": {
-    "readback": 77,
+    "readback": 87,
     "file_effect": 24,
-    "pixel_effect": 27,
-    "no_calls": 40,
-    "count_only": 9
+    "pixel_effect": 34,
+    "no_calls": 20,
+    "count_only": 12
   },
   "evidence_tier_order": [
     "pixel_effect",
@@ -52,164 +52,454 @@
     "no_calls"
   ],
   "readback_declarations": {
-    "declared": 22,
-    "verified": 20,
+    "declared": 38,
+    "verified": 33,
     "rejected": [
       {
         "tool": "editor_add_gridmap",
         "run": "runs/_exercises/ex_grid/h3-task111",
         "witness_tool": "editor_get_scene_tree",
         "why": "建出来的 GridMap 节点必须出现在编辑场景树里",
-        "declared_in": "tools/sessions/_exercises/ex_grid/h3-manifest.json"
+        "declared_in": "tools/sessions/_exercises/ex_grid/h3-manifest.json",
+        "reason": "no `ok=true` substantive call of `editor_get_scene_tree` in that run"
       },
       {
         "tool": "editor_connect_signal",
         "run": "runs/_exercises/ex_write5/c4-v5-task111",
         "witness_tool": "editor_list_signal_connections",
         "why": "读回同一节点的连接表，连接真的在里面",
-        "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json"
+        "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
+        "reason": "no `ok=true` substantive call of `editor_list_signal_connections` in that run"
+      },
+      {
+        "tool": "editor_remove_animation",
+        "run": "runs/_exercises/ex_anim2/h2b-task111",
+        "witness_tool": "editor_list_animations",
+        "why": "读回动画列表，被删的动画不在了",
+        "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
+        "reason": "no content-level `expect`/`expect_absent` declared: the witness would only prove that a read call happened (TASK-113 item C requires the written value, or the removal it addresses, to be readable back)"
+      },
+      {
+        "tool": "editor_set_control_theme",
+        "run": "runs/_exercises/ex_write5/c4-v5-task111",
+        "witness_tool": "editor_get_node_properties",
+        "why": "读回同一个 Control 的 theme 属性（不是工具自己响应里的 applied:true）",
+        "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
+        "reason": "no content-level `expect`/`expect_absent` declared: the witness would only prove that a read call happened (TASK-113 item C requires the written value, or the removal it addresses, to be readable back)"
+      },
+      {
+        "tool": "editor_set_node_script",
+        "run": "runs/_exercises/ex_write5/c4-v5-task111",
+        "witness_tool": "editor_get_node_properties",
+        "why": "读回被写节点的 script 属性（不是工具自己响应里的 attached:true）",
+        "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
+        "reason": "no content-level `expect`/`expect_absent` declared: the witness would only prove that a read call happened (TASK-113 item C requires the written value, or the removal it addresses, to be readable back)"
       }
     ],
+    "content_checked": 33,
+    "declared_with_expect": 33,
     "verified_by_tool": {
       "editor_add_animation_track": {
         "witness_tool": "editor_get_animation_info",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 29,
         "why": "读回同一动画的轨道表",
-        "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json"
+        "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
+        "expect": [
+          "\"path\":\"Target:scale\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true
+      },
+      "editor_add_audio_bus": {
+        "witness_tool": "editor_get_audio_bus_layout",
+        "run": "runs/_exercises/ex_audio/h5-task113",
+        "witness_seq": 22,
+        "why": "the bus editor_add_audio_bus created must appear in the engine's bus layout",
+        "declared_in": "tools/sessions/_exercises/ex_audio/h5-manifest.json",
+        "expect": [
+          "\"Music\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true
+      },
+      "editor_add_audio_bus_effect": {
+        "witness_tool": "editor_get_audio_bus_layout",
+        "run": "runs/_exercises/ex_audio/h5-task113",
+        "witness_seq": 22,
+        "why": "the effect must appear in the bus's effect list with the engine's class name",
+        "declared_in": "tools/sessions/_exercises/ex_audio/h5-manifest.json",
+        "expect": [
+          "AudioEffectAmplify"
+        ],
+        "expect_absent": [],
+        "expect_matched": true
+      },
+      "editor_add_audio_player": {
+        "witness_tool": "editor_get_node_properties",
+        "run": "runs/_exercises/ex_audio/h5-task113",
+        "witness_seq": 42,
+        "why": "the node editor_add_audio_player created must be in the scene as an AudioStreamPlayer2D",
+        "declared_in": "tools/sessions/_exercises/ex_audio/h5-manifest.json",
+        "expect": [
+          "AudioStreamPlayer2D"
+        ],
+        "expect_absent": [],
+        "expect_matched": true
       },
       "editor_add_scene_instance": {
         "witness_tool": "editor_get_scene_tree",
         "run": "runs/_exercises/ex_write5/c4-v5-task111",
         "witness_seq": 132,
         "why": "挂载的实例必须出现在编辑场景树里（editor_get_scene_tree 列出被实例化出来的节点）",
-        "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json"
+        "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
+        "expect": [
+          "\"Sub1\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true
       },
       "editor_add_state_machine_state": {
         "witness_tool": "editor_get_animation_tree_structure",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 88,
         "why": "读回状态机里的状态列表",
-        "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json"
+        "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
+        "expect": [
+          "\"Walk\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true
       },
       "editor_add_state_machine_transition": {
         "witness_tool": "editor_get_animation_tree_structure",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 88,
         "why": "读回状态机里的迁移列表",
-        "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json"
+        "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
+        "expect": [
+          "\"Idle\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true
+      },
+      "editor_bake_navigation_mesh": {
+        "witness_tool": "editor_get_navigation_info",
+        "run": "runs/_exercises/ex_nav/h4-task113",
+        "witness_seq": 27,
+        "why": "the bake's own polygon_count must appear in the region record (baked: true)",
+        "declared_in": "tools/sessions/_exercises/ex_nav/h4-manifest.json",
+        "expect": [
+          "\"baked\":true"
+        ],
+        "expect_absent": [],
+        "expect_matched": true
       },
       "editor_create_animation": {
         "witness_tool": "editor_list_animations",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 23,
         "why": "读回动画列表，新建的动画在其中",
-        "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json"
+        "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
+        "expect": [
+          "\"Anim5\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true
       },
       "editor_create_animation_tree": {
         "witness_tool": "editor_get_animation_tree_structure",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 88,
         "why": "读回 AnimationTree 的结构（tree_root / 状态机）",
-        "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json"
+        "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
+        "expect": [
+          "\"parameters/BT/B1/blend_amount\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true
+      },
+      "editor_create_particles": {
+        "witness_tool": "editor_get_particle_info",
+        "run": "runs/_exercises/ex_particles/h6-task113",
+        "witness_seq": 34,
+        "why": "the created system must answer as a GPUParticles2D with its own process_material",
+        "declared_in": "tools/sessions/_exercises/ex_particles/h6-manifest.json",
+        "expect": [
+          "\"process_material_slot\":\"process_material\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true
       },
       "editor_disconnect_signal": {
         "witness_tool": "editor_list_signal_connections",
         "run": "runs/_exercises/ex_write6/c5-task111",
         "witness_seq": 13,
         "why": "断开之后再读一次连接表：count=0（同一次运行、同一个节点）",
-        "declared_in": "tools/sessions/_exercises/ex_write6/c5-manifest.json"
-      },
-      "editor_remove_animation": {
-        "witness_tool": "editor_list_animations",
-        "run": "runs/_exercises/ex_anim2/h2b-task111",
-        "witness_seq": 23,
-        "why": "读回动画列表，被删的动画不在了",
-        "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json"
+        "declared_in": "tools/sessions/_exercises/ex_write6/c5-manifest.json",
+        "expect": [
+          "\"count\":0"
+        ],
+        "expect_absent": [],
+        "expect_matched": true
       },
       "editor_remove_state_machine_state": {
         "witness_tool": "editor_get_animation_tree_structure",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
-        "witness_seq": 88,
+        "witness_seq": 91,
         "why": "读回状态机里的状态列表，被删的状态不在了",
-        "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json"
+        "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
+        "expect": [
+          "\"node_path\":\"AT4\""
+        ],
+        "expect_absent": [
+          "Extra0",
+          "Extra4"
+        ],
+        "expect_matched": true
       },
       "editor_remove_state_machine_transition": {
         "witness_tool": "editor_get_animation_tree_structure",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 88,
         "why": "读回状态机里的迁移列表，被删的迁移不在了",
-        "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json"
+        "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
+        "expect": [
+          "\"transition_count\":5"
+        ],
+        "expect_absent": [
+          "\"from\":\"Idle\",\"index\":0,\"switch_mode\":\"immediate\",\"to\":\"Walk\""
+        ],
+        "expect_matched": true
       },
       "editor_rename_node": {
         "witness_tool": "editor_get_node_properties",
         "run": "runs/_exercises/ex_write5/c4-v5-task111",
         "witness_seq": 138,
         "why": "读回被改名节点的 name（重命名后按新名字仍可寻址）",
-        "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json"
+        "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
+        "expect": [
+          "\"name\":\"Ren1\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true
       },
       "editor_set_animation_keyframe": {
         "witness_tool": "editor_get_animation_info",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 29,
         "why": "读回同一动画的关键帧",
-        "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json"
+        "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
+        "expect": [
+          "\"easing\":2.0",
+          "\"time\":1.0"
+        ],
+        "expect_absent": [],
+        "expect_matched": true
       },
       "editor_set_animation_tree_parameter": {
         "witness_tool": "editor_get_animation_tree_structure",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 88,
         "why": "读回参数表里出现被写的参数",
-        "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json"
+        "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
+        "expect": [
+          "parameters/Walk/backward"
+        ],
+        "expect_absent": [],
+        "expect_matched": true
+      },
+      "editor_set_audio_bus_property": {
+        "witness_tool": "editor_get_audio_bus_layout",
+        "run": "runs/_exercises/ex_audio/h5-task113",
+        "witness_seq": 43,
+        "why": "the written volume_db must be the bus's real value in the layout",
+        "declared_in": "tools/sessions/_exercises/ex_audio/h5-manifest.json",
+        "expect": [
+          "\"volume_db\":-6"
+        ],
+        "expect_absent": [],
+        "expect_matched": true
       },
       "editor_set_blend_tree_node": {
         "witness_tool": "editor_get_animation_tree_structure",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
         "witness_seq": 88,
         "why": "读回混合树节点真的挂在树上",
-        "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json"
+        "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
+        "expect": [
+          "parameters/BT/T1/scale"
+        ],
+        "expect_absent": [],
+        "expect_matched": true
       },
-      "editor_set_control_theme": {
-        "witness_tool": "editor_get_node_properties",
-        "run": "runs/_exercises/ex_write5/c4-v5-task111",
-        "witness_seq": 138,
-        "why": "读回同一个 Control 的 theme 属性（不是工具自己响应里的 applied:true）",
-        "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json"
+      "editor_set_navigation_layers": {
+        "witness_tool": "editor_get_navigation_info",
+        "run": "runs/_exercises/ex_nav/h4-task113",
+        "witness_seq": 27,
+        "why": "the mask editor_set_navigation_layers wrote must be in the read-back record",
+        "declared_in": "tools/sessions/_exercises/ex_nav/h4-manifest.json",
+        "expect": [
+          "\"navigation_layers\":2"
+        ],
+        "expect_absent": [],
+        "expect_matched": true
       },
       "editor_set_node_groups": {
         "witness_tool": "editor_get_node_groups",
         "run": "runs/_exercises/ex_write5/c4-v5-task111",
         "witness_seq": 143,
         "why": "读回被写节点的 groups 列表",
-        "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json"
+        "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
+        "expect": [
+          "\"ex_host\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true
       },
-      "editor_set_node_script": {
-        "witness_tool": "editor_get_node_properties",
-        "run": "runs/_exercises/ex_write5/c4-v5-task111",
-        "witness_seq": 138,
-        "why": "读回被写节点的 script 属性（不是工具自己响应里的 attached:true）",
-        "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json"
+      "editor_set_particle_color_gradient": {
+        "witness_tool": "editor_get_particle_info",
+        "run": "runs/_exercises/ex_particles/h6-task113",
+        "witness_seq": 34,
+        "why": "the gradient stops the tool wrote must come back as the material's colours",
+        "declared_in": "tools/sessions/_exercises/ex_particles/h6-manifest.json",
+        "expect": [
+          "\"color_stop_count\":2"
+        ],
+        "expect_absent": [],
+        "expect_matched": true
+      },
+      "editor_set_particle_material": {
+        "witness_tool": "editor_get_particle_info",
+        "run": "runs/_exercises/ex_particles/h6-task113",
+        "witness_seq": 34,
+        "why": "the parameter editor_set_particle_material wrote must be in the read-back parameter set",
+        "declared_in": "tools/sessions/_exercises/ex_particles/h6-manifest.json",
+        "expect": [
+          "\"damping_min\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true
+      },
+      "editor_set_particle_preset": {
+        "witness_tool": "editor_get_particle_info",
+        "run": "runs/_exercises/ex_particles/h6-task113",
+        "witness_seq": 34,
+        "why": "the fire preset's own amount/lifetime must be the node's real values",
+        "declared_in": "tools/sessions/_exercises/ex_particles/h6-manifest.json",
+        "expect": [
+          "\"amount\":24"
+        ],
+        "expect_absent": [],
+        "expect_matched": true
       },
       "editor_set_physics_layers": {
         "witness_tool": "editor_get_node_properties",
         "run": "runs/_exercises/ex_write5/c4-v5-task111",
-        "witness_seq": 138,
+        "witness_seq": 139,
         "why": "读回同一个节点的 collision_layer / collision_mask",
-        "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json"
+        "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
+        "expect": [
+          "\"collision_layer\":1"
+        ],
+        "expect_absent": [],
+        "expect_matched": true
       },
       "editor_set_viewport_3d_camera": {
         "witness_tool": "editor_get_viewport_3d_camera",
         "run": "runs/_exercises/ex_3d/h1-task111",
         "witness_seq": 27,
         "why": "下一次调用读回上一次写入的 fov/position",
-        "declared_in": "tools/sessions/_exercises/ex_3d/h1-manifest.json"
+        "declared_in": "tools/sessions/_exercises/ex_3d/h1-manifest.json",
+        "expect": [
+          "\"position\":{\"x\":1.0,\"y\":1.0,\"z\":1.0}"
+        ],
+        "expect_absent": [],
+        "expect_matched": true
+      },
+      "editor_setup_navigation_agent": {
+        "witness_tool": "editor_get_navigation_info",
+        "run": "runs/_exercises/ex_nav/h4-task113",
+        "witness_seq": 27,
+        "why": "the created NavigationAgent2D must appear in the agent list with the radius and max_speed the tool wrote",
+        "declared_in": "tools/sessions/_exercises/ex_nav/h4-manifest.json",
+        "expect": [
+          "\"max_speed\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true
+      },
+      "editor_setup_navigation_region": {
+        "witness_tool": "editor_get_navigation_info",
+        "run": "runs/_exercises/ex_nav/h4-task113",
+        "witness_seq": 27,
+        "why": "the created NavigationRegion2D must appear in editor_get_navigation_info's region list with its real class and layer mask",
+        "declared_in": "tools/sessions/_exercises/ex_nav/h4-manifest.json",
+        "expect": [
+          "\"RegionA\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true
       },
       "editor_setup_physics_body": {
         "witness_tool": "editor_get_scene_tree",
         "run": "runs/_exercises/ex_write5/c4-v5-task111",
         "witness_seq": 132,
         "why": "建出来的物理体节点必须出现在编辑场景树里",
-        "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json"
+        "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
+        "expect": [
+          "\"PB1\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true
+      },
+      "running_game_create_input_recording": {
+        "witness_tool": "running_game_stop_input_recording",
+        "run": "runs/_exercises/ex_rec/h9-task113",
+        "witness_seq": 5,
+        "why": "the stop call's answer carries the events of the session create started (event_count > 0)",
+        "declared_in": "tools/sessions/_exercises/ex_rec/h9-manifest.json",
+        "expect": [
+          "\"event_count\":2"
+        ],
+        "expect_absent": [],
+        "expect_matched": true
+      },
+      "running_game_move_player_to_target": {
+        "witness_tool": "running_game_get_node_properties",
+        "run": "runs/_exercises/ex_nav/h4-task113",
+        "witness_seq": 7,
+        "why": "the player's position after the moves differs from its start (100,300)",
+        "declared_in": "tools/sessions/_exercises/ex_nav/h4-manifest.json",
+        "expect": [
+          "\"position\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true
+      },
+      "running_game_play_input_recording": {
+        "witness_tool": "running_game_get_node_properties",
+        "run": "runs/_exercises/ex_rec/h9-task113",
+        "witness_seq": 2,
+        "why": "the player's position after the create->stop->play chain is not the reset (100,300): the replay really drove the game",
+        "declared_in": "tools/sessions/_exercises/ex_rec/h9-manifest.json",
+        "expect": [
+          "\"position\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true
+      },
+      "running_game_stop_input_recording": {
+        "witness_tool": "running_game_get_node_properties",
+        "run": "runs/_exercises/ex_rec/h9-task113",
+        "witness_seq": 2,
+        "why": "the position read after the stop differs from the position read before the session (the recorded keys moved the player)",
+        "declared_in": "tools/sessions/_exercises/ex_rec/h9-manifest.json",
+        "expect": [
+          "\"position\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true
       }
     }
   },
@@ -222,15 +512,15 @@
     },
     "editor": {
       "tools": 104,
-      "called": 73,
-      ">=5": 73,
-      "0": 31
+      "called": 89,
+      ">=5": 89,
+      "0": 15
     },
     "game": {
       "tools": 23,
-      "called": 19,
-      ">=5": 19,
-      "0": 4
+      "called": 23,
+      ">=5": 23,
+      "0": 0
     }
   },
   "targets": null,
@@ -616,10 +906,10 @@
       "tool": "editor_get_scene_tree",
       "scope": "editor",
       "verb": "get",
-      "calls": 108,
-      "ok": 104,
+      "calls": 109,
+      "ok": 105,
       "boundary": 4,
-      "effective": 104,
+      "effective": 105,
       "evidence_tier": "readback",
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
@@ -632,20 +922,20 @@
       },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
-      "read_payload_calls": 104,
-      "facts_complete": 108,
+      "read_payload_calls": 105,
+      "facts_complete": 109,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 104,
+        "ok_no_effect_observed": 105,
         "failed": 4
       },
       "file_effects": {
-        "none": 108
+        "none": 109
       },
       "flags": {
-        "result_unparseable": 54,
+        "result_unparseable": 55,
         "error_suggestion": 4
       },
       "evidence": [
@@ -671,7 +961,7 @@
         }
       ],
       "first_ts_ms": 1790435679973,
-      "last_ts_ms": 1790475654377,
+      "last_ts_ms": 1790479270081,
       "gate": true
     },
     {
@@ -723,26 +1013,26 @@
       "tool": "editor_open_scene",
       "scope": "editor",
       "verb": "open",
-      "calls": 76,
-      "ok": 76,
+      "calls": 80,
+      "ok": 80,
       "boundary": 0,
-      "effective": 5,
+      "effective": 8,
       "evidence_tier": "pixel_effect",
       "evidence_tier_label": "ok_effect_observed（画面/视口真的变了）",
       "readback": null,
-      "pixel_effect_calls": 5,
+      "pixel_effect_calls": 8,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 76,
+      "facts_complete": 80,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 71,
-        "ok_effect_observed": 5
+        "ok_no_effect_observed": 72,
+        "ok_effect_observed": 8
       },
       "file_effects": {
-        "none": 76
+        "none": 80
       },
       "flags": {},
       "evidence": [
@@ -768,7 +1058,7 @@
         }
       ],
       "first_ts_ms": 1790435678487,
-      "last_ts_ms": 1790476022589,
+      "last_ts_ms": 1790479269475,
       "gate": false
     },
     {
@@ -834,6 +1124,11 @@
         "witness_seq": 132,
         "why": "挂载的实例必须出现在编辑场景树里（editor_get_scene_tree 列出被实例化出来的节点）",
         "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
+        "expect": [
+          "\"Sub1\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
         "kind": "witness_read"
       },
       "pixel_effect_calls": 0,
@@ -980,26 +1275,26 @@
       "tool": "editor_save_scene",
       "scope": "editor",
       "verb": "save",
-      "calls": 122,
-      "ok": 122,
+      "calls": 123,
+      "ok": 123,
       "boundary": 0,
-      "effective": 76,
+      "effective": 77,
       "evidence_tier": "file_effect",
       "evidence_tier_label": "ok_file_effect_observed（文件真的变了）",
       "readback": null,
       "pixel_effect_calls": 0,
-      "file_effect_calls": 76,
+      "file_effect_calls": 77,
       "read_payload_calls": 0,
-      "facts_complete": 122,
+      "facts_complete": 123,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
       "verdicts": {
-        "ok_file_effect_observed": 76,
+        "ok_file_effect_observed": 77,
         "ok_no_effect_observed": 46
       },
       "file_effects": {
-        "changed": 76,
+        "changed": 77,
         "unchanged": 46
       },
       "flags": {},
@@ -1026,7 +1321,7 @@
         }
       ],
       "first_ts_ms": 1790435679865,
-      "last_ts_ms": 1790475875246,
+      "last_ts_ms": 1790479065001,
       "gate": false
     },
     {
@@ -1199,6 +1494,11 @@
         "witness_seq": 138,
         "why": "读回被改名节点的 name（重命名后按新名字仍可寻址）",
         "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
+        "expect": [
+          "\"name\":\"Ren1\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
         "kind": "witness_read"
       },
       "pixel_effect_calls": 0,
@@ -1300,10 +1600,10 @@
       "tool": "editor_get_node_properties",
       "scope": "editor",
       "verb": "get",
-      "calls": 72,
-      "ok": 60,
+      "calls": 74,
+      "ok": 62,
       "boundary": 12,
-      "effective": 60,
+      "effective": 62,
       "evidence_tier": "readback",
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
@@ -1316,17 +1616,17 @@
       },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
-      "read_payload_calls": 60,
-      "facts_complete": 72,
+      "read_payload_calls": 62,
+      "facts_complete": 74,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 60,
+        "ok_no_effect_observed": 62,
         "failed": 12
       },
       "file_effects": {
-        "none": 72
+        "none": 74
       },
       "flags": {
         "result_unparseable": 2,
@@ -1355,7 +1655,7 @@
         }
       ],
       "first_ts_ms": 1790435680078,
-      "last_ts_ms": 1790475654283,
+      "last_ts_ms": 1790479269681,
       "gate": true
     },
     {
@@ -1483,6 +1783,11 @@
         "witness_seq": 13,
         "why": "断开之后再读一次连接表：count=0（同一次运行、同一个节点）",
         "declared_in": "tools/sessions/_exercises/ex_write6/c5-manifest.json",
+        "expect": [
+          "\"count\":0"
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
         "kind": "witness_read"
       },
       "pixel_effect_calls": 0,
@@ -1571,8 +1876,8 @@
       "tool": "editor_add_resource_to_node_property",
       "scope": "editor",
       "verb": "add",
-      "calls": 32,
-      "ok": 12,
+      "calls": 33,
+      "ok": 13,
       "boundary": 20,
       "effective": 12,
       "evidence_tier": "pixel_effect",
@@ -1581,16 +1886,17 @@
       "pixel_effect_calls": 12,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 32,
+      "facts_complete": 33,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
       "verdicts": {
         "failed": 20,
-        "ok_effect_observed": 12
+        "ok_effect_observed": 12,
+        "ok_no_effect_observed": 1
       },
       "file_effects": {
-        "none": 32
+        "none": 33
       },
       "flags": {
         "error_suggestion": 20
@@ -1618,7 +1924,7 @@
         }
       ],
       "first_ts_ms": 1790475127125,
-      "last_ts_ms": 1790475645045,
+      "last_ts_ms": 1790479269582,
       "gate": true
     },
     {
@@ -1741,6 +2047,11 @@
         "witness_seq": 143,
         "why": "读回被写节点的 groups 列表",
         "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
+        "expect": [
+          "\"ex_host\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
         "kind": "witness_read"
       },
       "pixel_effect_calls": 0,
@@ -2455,6 +2766,11 @@
         "witness_seq": 27,
         "why": "下一次调用读回上一次写入的 fov/position",
         "declared_in": "tools/sessions/_exercises/ex_3d/h1-manifest.json",
+        "expect": [
+          "\"position\":{\"x\":1.0,\"y\":1.0,\"z\":1.0}"
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
         "kind": "witness_read"
       },
       "pixel_effect_calls": 0,
@@ -2488,26 +2804,26 @@
       "tool": "running_game_get_scene_tree",
       "scope": "game",
       "verb": "get",
-      "calls": 122,
-      "ok": 122,
+      "calls": 123,
+      "ok": 123,
       "boundary": 0,
-      "effective": 122,
+      "effective": 123,
       "evidence_tier": "pixel_effect",
       "evidence_tier_label": "ok_effect_observed（画面/视口真的变了）",
       "readback": null,
       "pixel_effect_calls": 1,
       "file_effect_calls": 0,
-      "read_payload_calls": 122,
-      "facts_complete": 122,
+      "read_payload_calls": 123,
+      "facts_complete": 123,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 121,
+        "ok_no_effect_observed": 122,
         "ok_effect_observed": 1
       },
       "file_effects": {
-        "none": 122
+        "none": 123
       },
       "flags": {
         "result_unparseable": 62
@@ -2535,34 +2851,34 @@
         }
       ],
       "first_ts_ms": 1790435691987,
-      "last_ts_ms": 1790467813897,
+      "last_ts_ms": 1790479227487,
       "gate": false
     },
     {
       "tool": "running_game_get_node_properties",
       "scope": "game",
       "verb": "get",
-      "calls": 52,
-      "ok": 50,
+      "calls": 58,
+      "ok": 56,
       "boundary": 2,
-      "effective": 50,
+      "effective": 56,
       "evidence_tier": "pixel_effect",
       "evidence_tier_label": "ok_effect_observed（画面/视口真的变了）",
       "readback": null,
       "pixel_effect_calls": 8,
       "file_effect_calls": 0,
-      "read_payload_calls": 50,
-      "facts_complete": 52,
+      "read_payload_calls": 56,
+      "facts_complete": 58,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 42,
+        "ok_no_effect_observed": 48,
         "failed": 2,
         "ok_effect_observed": 8
       },
       "file_effects": {
-        "none": 52
+        "none": 58
       },
       "flags": {
         "result_unparseable": 2,
@@ -2578,47 +2894,47 @@
           "calls": 6
         },
         {
+          "run": "runs/_exercises/ex_rec/h9-task113",
+          "calls": 5
+        },
+        {
           "run": "runs/pong/pong-clean-task097",
           "calls": 3
         },
         {
           "run": "runs/pong/pong-control-task093",
           "calls": 3
-        },
-        {
-          "run": "runs/pong/pong-run1",
-          "calls": 3
         }
       ],
       "first_ts_ms": 1790435692032,
-      "last_ts_ms": 1790474356723,
+      "last_ts_ms": 1790479238397,
       "gate": true
     },
     {
       "tool": "running_game_set_node_property",
       "scope": "game",
       "verb": "set",
-      "calls": 48,
-      "ok": 46,
+      "calls": 49,
+      "ok": 47,
       "boundary": 2,
-      "effective": 27,
+      "effective": 28,
       "evidence_tier": "pixel_effect",
       "evidence_tier_label": "ok_effect_observed（画面/视口真的变了）",
       "readback": null,
-      "pixel_effect_calls": 27,
+      "pixel_effect_calls": 28,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 48,
+      "facts_complete": 49,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_effect_observed": 27,
+        "ok_effect_observed": 28,
         "ok_no_effect_observed": 19,
         "failed": 2
       },
       "file_effects": {
-        "none": 48
+        "none": 49
       },
       "flags": {
         "error_suggestion": 2
@@ -2646,7 +2962,7 @@
         }
       ],
       "first_ts_ms": 1790435693260,
-      "last_ts_ms": 1790447948479,
+      "last_ts_ms": 1790479236166,
       "gate": true
     },
     {
@@ -2828,79 +3144,137 @@
       "tool": "running_game_create_input_recording",
       "scope": "game",
       "verb": "create",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 7,
+      "ok": 6,
+      "boundary": 1,
       "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
-      "readback": null,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "witness_tool": "running_game_stop_input_recording",
+        "run": "runs/_exercises/ex_rec/h9-task113",
+        "witness_seq": 5,
+        "why": "the stop call's answer carries the events of the session create started (event_count > 0)",
+        "declared_in": "tools/sessions/_exercises/ex_rec/h9-manifest.json",
+        "expect": [
+          "\"event_count\":2"
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
+        "kind": "witness_read"
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H9",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "facts_complete": 7,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 6,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 7
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_rec/h9-task113",
+          "calls": 7
+        }
+      ],
+      "first_ts_ms": 1790479227602,
+      "last_ts_ms": 1790479238181,
       "gate": false
     },
     {
       "tool": "running_game_stop_input_recording",
       "scope": "game",
       "verb": "stop",
-      "calls": 0,
-      "ok": 0,
+      "calls": 7,
+      "ok": 7,
       "boundary": 0,
       "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
-      "readback": null,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "witness_tool": "running_game_get_node_properties",
+        "run": "runs/_exercises/ex_rec/h9-task113",
+        "witness_seq": 2,
+        "why": "the position read after the stop differs from the position read before the session (the recorded keys moved the player)",
+        "declared_in": "tools/sessions/_exercises/ex_rec/h9-manifest.json",
+        "expect": [
+          "\"position\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
+        "kind": "witness_read"
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H9",
-      "verdicts": {},
-      "file_effects": {},
+      "facts_complete": 7,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 7
+      },
+      "file_effects": {
+        "none": 7
+      },
       "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_rec/h9-task113",
+          "calls": 7
+        }
+      ],
+      "first_ts_ms": 1790479229066,
+      "last_ts_ms": 1790479238349,
       "gate": false
     },
     {
       "tool": "running_game_play_input_recording",
       "scope": "game",
       "verb": "play",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
+      "calls": 7,
+      "ok": 6,
+      "boundary": 1,
+      "effective": 6,
+      "evidence_tier": "pixel_effect",
+      "evidence_tier_label": "ok_effect_observed（画面/视口真的变了）",
       "readback": null,
-      "pixel_effect_calls": 0,
+      "pixel_effect_calls": 6,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H9",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "facts_complete": 6,
+      "bucket": ">=5",
+      "status": "达标",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_effect_observed": 6,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 6,
+        "not_recorded": 1
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_rec/h9-task113",
+          "calls": 7
+        }
+      ],
+      "first_ts_ms": 1790479228063,
+      "last_ts_ms": 1790479238280,
+      "gate": true
     },
     {
       "tool": "running_game_find_nodes_by_script",
@@ -3260,27 +3634,40 @@
       "tool": "running_game_move_player_to_target",
       "scope": "game",
       "verb": "move",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
+      "calls": 6,
+      "ok": 5,
+      "boundary": 1,
+      "effective": 5,
+      "evidence_tier": "pixel_effect",
+      "evidence_tier_label": "ok_effect_observed（画面/视口真的变了）",
       "readback": null,
-      "pixel_effect_calls": 0,
+      "pixel_effect_calls": 5,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H4",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "facts_complete": 5,
+      "bucket": ">=5",
+      "status": "达标",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_effect_observed": 5,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 5,
+        "not_recorded": 1
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_nav/h4-task113",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790479077638,
+      "last_ts_ms": 1790479082688,
+      "gate": true
     },
     {
       "tool": "running_game_capture_signal_emissions",
@@ -3606,16 +3993,9 @@
       "ok": 25,
       "boundary": 5,
       "effective": 0,
-      "evidence_tier": "readback",
-      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
-      "readback": {
-        "witness_tool": "editor_get_node_properties",
-        "run": "runs/_exercises/ex_write5/c4-v5-task111",
-        "witness_seq": 138,
-        "why": "读回被写节点的 script 属性（不是工具自己响应里的 attached:true）",
-        "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
-        "kind": "witness_read"
-      },
+      "evidence_tier": "count_only",
+      "evidence_tier_label": "只有计数与边界，没有生效证据",
+      "readback": null,
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
@@ -4415,6 +4795,11 @@
         "witness_seq": 23,
         "why": "读回动画列表，新建的动画在其中",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
+        "expect": [
+          "\"Anim5\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
         "kind": "witness_read"
       },
       "pixel_effect_calls": 0,
@@ -4464,6 +4849,11 @@
         "witness_seq": 29,
         "why": "读回同一动画的轨道表",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
+        "expect": [
+          "\"path\":\"Target:scale\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
         "kind": "witness_read"
       },
       "pixel_effect_calls": 0,
@@ -4513,6 +4903,12 @@
         "witness_seq": 29,
         "why": "读回同一动画的关键帧",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
+        "expect": [
+          "\"easing\":2.0",
+          "\"time\":1.0"
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
         "kind": "witness_read"
       },
       "pixel_effect_calls": 0,
@@ -4603,16 +4999,9 @@
       "ok": 10,
       "boundary": 2,
       "effective": 0,
-      "evidence_tier": "readback",
-      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
-      "readback": {
-        "witness_tool": "editor_list_animations",
-        "run": "runs/_exercises/ex_anim2/h2b-task111",
-        "witness_seq": 23,
-        "why": "读回动画列表，被删的动画不在了",
-        "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
-        "kind": "witness_read"
-      },
+      "evidence_tier": "count_only",
+      "evidence_tier_label": "只有计数与边界，没有生效证据",
+      "readback": null,
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
@@ -5510,9 +5899,9 @@
       "tool": "editor_add_raycast",
       "scope": "editor",
       "verb": "add",
-      "calls": 33,
-      "ok": 24,
-      "boundary": 9,
+      "calls": 36,
+      "ok": 25,
+      "boundary": 11,
       "effective": 16,
       "evidence_tier": "pixel_effect",
       "evidence_tier_label": "ok_effect_observed（画面/视口真的变了）",
@@ -5520,20 +5909,20 @@
       "pixel_effect_calls": 16,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 33,
+      "facts_complete": 36,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
       "verdicts": {
         "ok_effect_observed": 16,
-        "failed": 9,
-        "ok_no_effect_observed": 8
+        "failed": 11,
+        "ok_no_effect_observed": 9
       },
       "file_effects": {
-        "none": 33
+        "none": 36
       },
       "flags": {
-        "error_suggestion": 9
+        "error_suggestion": 11
       },
       "evidence": [
         {
@@ -5558,7 +5947,7 @@
         }
       ],
       "first_ts_ms": 1790475126416,
-      "last_ts_ms": 1790475644388,
+      "last_ts_ms": 1790479269977,
       "gate": true
     },
     {
@@ -5629,9 +6018,14 @@
       "readback": {
         "witness_tool": "editor_get_node_properties",
         "run": "runs/_exercises/ex_write5/c4-v5-task111",
-        "witness_seq": 138,
+        "witness_seq": 139,
         "why": "读回同一个节点的 collision_layer / collision_mask",
         "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
+        "expect": [
+          "\"collision_layer\":1"
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
         "kind": "witness_read"
       },
       "pixel_effect_calls": 0,
@@ -5738,6 +6132,11 @@
         "witness_seq": 132,
         "why": "建出来的物理体节点必须出现在编辑场景树里",
         "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
+        "expect": [
+          "\"PB1\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
         "kind": "witness_read"
       },
       "pixel_effect_calls": 0,
@@ -6060,156 +6459,290 @@
       "tool": "editor_add_audio_player",
       "scope": "editor",
       "verb": "add",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 6,
+      "ok": 5,
+      "boundary": 1,
       "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
-      "readback": null,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "witness_tool": "editor_get_node_properties",
+        "run": "runs/_exercises/ex_audio/h5-task113",
+        "witness_seq": 42,
+        "why": "the node editor_add_audio_player created must be in the scene as an AudioStreamPlayer2D",
+        "declared_in": "tools/sessions/_exercises/ex_audio/h5-manifest.json",
+        "expect": [
+          "AudioStreamPlayer2D"
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
+        "kind": "witness_read"
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H5",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "facts_complete": 6,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 6
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_audio/h5-task113",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790479130939,
+      "last_ts_ms": 1790479131433,
       "gate": false
     },
     {
       "tool": "editor_get_audio_info",
       "scope": "editor",
       "verb": "get",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
-      "readback": null,
+      "calls": 6,
+      "ok": 5,
+      "boundary": 1,
+      "effective": 5,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "kind": "own_payload",
+        "witness_tool": null,
+        "run": null,
+        "witness_seq": null,
+        "why": "读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等",
+        "declared_in": null
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
-      "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H5",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "read_payload_calls": 5,
+      "facts_complete": 6,
+      "bucket": ">=5",
+      "status": "达标",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 6
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_audio/h5-task113",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790479132149,
+      "last_ts_ms": 1790479132664,
+      "gate": true
     },
     {
       "tool": "editor_get_audio_bus_layout",
       "scope": "editor",
       "verb": "get",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
-      "readback": null,
+      "calls": 7,
+      "ok": 6,
+      "boundary": 1,
+      "effective": 6,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "kind": "own_payload",
+        "witness_tool": null,
+        "run": null,
+        "witness_seq": null,
+        "why": "读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等",
+        "declared_in": null
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
-      "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H5",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "read_payload_calls": 6,
+      "facts_complete": 7,
+      "bucket": ">=5",
+      "status": "达标",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 6,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 7
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_audio/h5-task113",
+          "calls": 7
+        }
+      ],
+      "first_ts_ms": 1790479131534,
+      "last_ts_ms": 1790479133673,
+      "gate": true
     },
     {
       "tool": "editor_add_audio_bus",
       "scope": "editor",
       "verb": "add",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 7,
+      "ok": 5,
+      "boundary": 2,
       "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
-      "readback": null,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "witness_tool": "editor_get_audio_bus_layout",
+        "run": "runs/_exercises/ex_audio/h5-task113",
+        "witness_seq": 22,
+        "why": "the bus editor_add_audio_bus created must appear in the engine's bus layout",
+        "declared_in": "tools/sessions/_exercises/ex_audio/h5-manifest.json",
+        "expect": [
+          "\"Music\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
+        "kind": "witness_read"
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H5",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "facts_complete": 7,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 2
+      },
+      "file_effects": {
+        "none": 7
+      },
+      "flags": {
+        "error_suggestion": 2
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_audio/h5-task113",
+          "calls": 7
+        }
+      ],
+      "first_ts_ms": 1790479129289,
+      "last_ts_ms": 1790479130181,
       "gate": false
     },
     {
       "tool": "editor_set_audio_bus_property",
       "scope": "editor",
       "verb": "set",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 8,
+      "ok": 5,
+      "boundary": 3,
       "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
-      "readback": null,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "witness_tool": "editor_get_audio_bus_layout",
+        "run": "runs/_exercises/ex_audio/h5-task113",
+        "witness_seq": 43,
+        "why": "the written volume_db must be the bus's real value in the layout",
+        "declared_in": "tools/sessions/_exercises/ex_audio/h5-manifest.json",
+        "expect": [
+          "\"volume_db\":-6"
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
+        "kind": "witness_read"
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H5",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "facts_complete": 8,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 3
+      },
+      "file_effects": {
+        "none": 8
+      },
+      "flags": {
+        "error_suggestion": 3
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_audio/h5-task113",
+          "calls": 8
+        }
+      ],
+      "first_ts_ms": 1790479132765,
+      "last_ts_ms": 1790479133473,
       "gate": false
     },
     {
       "tool": "editor_add_audio_bus_effect",
       "scope": "editor",
       "verb": "add",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 7,
+      "ok": 5,
+      "boundary": 2,
       "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
-      "readback": null,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "witness_tool": "editor_get_audio_bus_layout",
+        "run": "runs/_exercises/ex_audio/h5-task113",
+        "witness_seq": 22,
+        "why": "the effect must appear in the bus's effect list with the engine's class name",
+        "declared_in": "tools/sessions/_exercises/ex_audio/h5-manifest.json",
+        "expect": [
+          "AudioEffectAmplify"
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
+        "kind": "witness_read"
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H5",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "facts_complete": 7,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 2
+      },
+      "file_effects": {
+        "none": 7
+      },
+      "flags": {
+        "error_suggestion": 2
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_audio/h5-task113",
+          "calls": 7
+        }
+      ],
+      "first_ts_ms": 1790479130278,
+      "last_ts_ms": 1790479130844,
       "gate": false
     },
     {
@@ -6431,16 +6964,9 @@
       "ok": 19,
       "boundary": 5,
       "effective": 0,
-      "evidence_tier": "readback",
-      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
-      "readback": {
-        "witness_tool": "editor_get_node_properties",
-        "run": "runs/_exercises/ex_write5/c4-v5-task111",
-        "witness_seq": 138,
-        "why": "读回同一个 Control 的 theme 属性（不是工具自己响应里的 applied:true）",
-        "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
-        "kind": "witness_read"
-      },
+      "evidence_tier": "count_only",
+      "evidence_tier_label": "只有计数与边界，没有生效证据",
+      "readback": null,
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
@@ -6541,6 +7067,11 @@
         "witness_seq": 88,
         "why": "读回 AnimationTree 的结构（tree_root / 状态机）",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
+        "expect": [
+          "\"parameters/BT/B1/blend_amount\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
         "kind": "witness_read"
       },
       "pixel_effect_calls": 0,
@@ -6640,6 +7171,11 @@
         "witness_seq": 88,
         "why": "读回状态机里的状态列表",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
+        "expect": [
+          "\"Walk\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
         "kind": "witness_read"
       },
       "pixel_effect_calls": 0,
@@ -6686,9 +7222,17 @@
       "readback": {
         "witness_tool": "editor_get_animation_tree_structure",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
-        "witness_seq": 88,
+        "witness_seq": 91,
         "why": "读回状态机里的状态列表，被删的状态不在了",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
+        "expect": [
+          "\"node_path\":\"AT4\""
+        ],
+        "expect_absent": [
+          "Extra0",
+          "Extra4"
+        ],
+        "expect_matched": true,
         "kind": "witness_read"
       },
       "pixel_effect_calls": 0,
@@ -6738,6 +7282,11 @@
         "witness_seq": 88,
         "why": "读回状态机里的迁移列表",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
+        "expect": [
+          "\"Idle\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
         "kind": "witness_read"
       },
       "pixel_effect_calls": 0,
@@ -6787,6 +7336,13 @@
         "witness_seq": 88,
         "why": "读回状态机里的迁移列表，被删的迁移不在了",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
+        "expect": [
+          "\"transition_count\":5"
+        ],
+        "expect_absent": [
+          "\"from\":\"Idle\",\"index\":0,\"switch_mode\":\"immediate\",\"to\":\"Walk\""
+        ],
+        "expect_matched": true,
         "kind": "witness_read"
       },
       "pixel_effect_calls": 0,
@@ -6836,6 +7392,11 @@
         "witness_seq": 88,
         "why": "读回混合树节点真的挂在树上",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
+        "expect": [
+          "parameters/BT/T1/scale"
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
         "kind": "witness_read"
       },
       "pixel_effect_calls": 0,
@@ -6885,6 +7446,11 @@
         "witness_seq": 88,
         "why": "读回参数表里出现被写的参数",
         "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
+        "expect": [
+          "parameters/Walk/backward"
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
         "kind": "witness_read"
       },
       "pixel_effect_calls": 0,
@@ -6922,261 +7488,438 @@
       "tool": "editor_setup_navigation_region",
       "scope": "editor",
       "verb": "setup",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 6,
+      "ok": 5,
+      "boundary": 1,
       "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
-      "readback": null,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "witness_tool": "editor_get_navigation_info",
+        "run": "runs/_exercises/ex_nav/h4-task113",
+        "witness_seq": 27,
+        "why": "the created NavigationRegion2D must appear in editor_get_navigation_info's region list with its real class and layer mask",
+        "declared_in": "tools/sessions/_exercises/ex_nav/h4-manifest.json",
+        "expect": [
+          "\"RegionA\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
+        "kind": "witness_read"
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H4",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "facts_complete": 6,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 6
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_nav/h4-task113",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790479061756,
+      "last_ts_ms": 1790479062283,
       "gate": false
     },
     {
       "tool": "editor_bake_navigation_mesh",
       "scope": "editor",
       "verb": "bake",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
+      "calls": 6,
+      "ok": 5,
+      "boundary": 1,
+      "effective": 1,
+      "evidence_tier": "pixel_effect",
+      "evidence_tier_label": "ok_effect_observed（画面/视口真的变了）",
       "readback": null,
-      "pixel_effect_calls": 0,
+      "pixel_effect_calls": 1,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H4",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "facts_complete": 5,
+      "bucket": ">=5",
+      "status": "达标",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_effect_observed": 1,
+        "ok_no_effect_observed": 4,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 5,
+        "not_recorded": 1
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_nav/h4-task113",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790479063669,
+      "last_ts_ms": 1790479064259,
+      "gate": true
     },
     {
       "tool": "editor_setup_navigation_agent",
       "scope": "editor",
       "verb": "setup",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 6,
+      "ok": 5,
+      "boundary": 1,
       "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
-      "readback": null,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "witness_tool": "editor_get_navigation_info",
+        "run": "runs/_exercises/ex_nav/h4-task113",
+        "witness_seq": 27,
+        "why": "the created NavigationAgent2D must appear in the agent list with the radius and max_speed the tool wrote",
+        "declared_in": "tools/sessions/_exercises/ex_nav/h4-manifest.json",
+        "expect": [
+          "\"max_speed\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
+        "kind": "witness_read"
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H4",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "facts_complete": 6,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 6
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_nav/h4-task113",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790479062383,
+      "last_ts_ms": 1790479062898,
       "gate": false
     },
     {
       "tool": "editor_set_navigation_layers",
       "scope": "editor",
       "verb": "set",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 7,
+      "ok": 5,
+      "boundary": 2,
       "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
-      "readback": null,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "witness_tool": "editor_get_navigation_info",
+        "run": "runs/_exercises/ex_nav/h4-task113",
+        "witness_seq": 27,
+        "why": "the mask editor_set_navigation_layers wrote must be in the read-back record",
+        "declared_in": "tools/sessions/_exercises/ex_nav/h4-manifest.json",
+        "expect": [
+          "\"navigation_layers\":2"
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
+        "kind": "witness_read"
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H4",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "facts_complete": 7,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 2
+      },
+      "file_effects": {
+        "none": 7
+      },
+      "flags": {
+        "error_suggestion": 2
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_nav/h4-task113",
+          "calls": 7
+        }
+      ],
+      "first_ts_ms": 1790479062995,
+      "last_ts_ms": 1790479063573,
       "gate": false
     },
     {
       "tool": "editor_get_navigation_info",
       "scope": "editor",
       "verb": "get",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
-      "readback": null,
+      "calls": 6,
+      "ok": 5,
+      "boundary": 1,
+      "effective": 5,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "kind": "own_payload",
+        "witness_tool": null,
+        "run": null,
+        "witness_seq": null,
+        "why": "读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等",
+        "declared_in": null
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
-      "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H4",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "read_payload_calls": 5,
+      "facts_complete": 6,
+      "bucket": ">=5",
+      "status": "达标",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 6
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_nav/h4-task113",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790479064368,
+      "last_ts_ms": 1790479064876,
+      "gate": true
     },
     {
       "tool": "editor_create_particles",
       "scope": "editor",
       "verb": "create",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 8,
+      "ok": 5,
+      "boundary": 3,
       "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
-      "readback": null,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "witness_tool": "editor_get_particle_info",
+        "run": "runs/_exercises/ex_particles/h6-task113",
+        "witness_seq": 34,
+        "why": "the created system must answer as a GPUParticles2D with its own process_material",
+        "declared_in": "tools/sessions/_exercises/ex_particles/h6-manifest.json",
+        "expect": [
+          "\"process_material_slot\":\"process_material\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
+        "kind": "witness_read"
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H6",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "facts_complete": 8,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 3
+      },
+      "file_effects": {
+        "none": 8
+      },
+      "flags": {
+        "error_suggestion": 3
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_particles/h6-task113",
+          "calls": 8
+        }
+      ],
+      "first_ts_ms": 1790479177947,
+      "last_ts_ms": 1790479178716,
       "gate": false
     },
     {
       "tool": "editor_set_particle_material",
       "scope": "editor",
       "verb": "set",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
+      "calls": 8,
+      "ok": 5,
+      "boundary": 3,
+      "effective": 5,
+      "evidence_tier": "pixel_effect",
+      "evidence_tier_label": "ok_effect_observed（画面/视口真的变了）",
       "readback": null,
-      "pixel_effect_calls": 0,
+      "pixel_effect_calls": 5,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H6",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "facts_complete": 8,
+      "bucket": ">=5",
+      "status": "达标",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_effect_observed": 5,
+        "failed": 3
+      },
+      "file_effects": {
+        "none": 8
+      },
+      "flags": {
+        "error_suggestion": 3
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_particles/h6-task113",
+          "calls": 8
+        }
+      ],
+      "first_ts_ms": 1790479179511,
+      "last_ts_ms": 1790479180236,
+      "gate": true
     },
     {
       "tool": "editor_set_particle_color_gradient",
       "scope": "editor",
       "verb": "set",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
+      "calls": 9,
+      "ok": 6,
+      "boundary": 3,
+      "effective": 6,
+      "evidence_tier": "pixel_effect",
+      "evidence_tier_label": "ok_effect_observed（画面/视口真的变了）",
       "readback": null,
-      "pixel_effect_calls": 0,
+      "pixel_effect_calls": 6,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H6",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "facts_complete": 9,
+      "bucket": ">=5",
+      "status": "达标",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_effect_observed": 6,
+        "failed": 3
+      },
+      "file_effects": {
+        "none": 9
+      },
+      "flags": {
+        "error_suggestion": 3
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_particles/h6-task113",
+          "calls": 9
+        }
+      ],
+      "first_ts_ms": 1790479180343,
+      "last_ts_ms": 1790479181229,
+      "gate": true
     },
     {
       "tool": "editor_set_particle_preset",
       "scope": "editor",
       "verb": "set",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
+      "calls": 7,
+      "ok": 5,
+      "boundary": 2,
+      "effective": 5,
+      "evidence_tier": "pixel_effect",
+      "evidence_tier_label": "ok_effect_observed（画面/视口真的变了）",
       "readback": null,
-      "pixel_effect_calls": 0,
+      "pixel_effect_calls": 5,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H6",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "facts_complete": 7,
+      "bucket": ">=5",
+      "status": "达标",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_effect_observed": 5,
+        "failed": 2
+      },
+      "file_effects": {
+        "none": 7
+      },
+      "flags": {
+        "error_suggestion": 2
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_particles/h6-task113",
+          "calls": 7
+        }
+      ],
+      "first_ts_ms": 1790479178818,
+      "last_ts_ms": 1790479179410,
+      "gate": true
     },
     {
       "tool": "editor_get_particle_info",
       "scope": "editor",
       "verb": "get",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
+      "calls": 7,
+      "ok": 6,
+      "boundary": 1,
+      "effective": 6,
+      "evidence_tier": "pixel_effect",
+      "evidence_tier_label": "ok_effect_observed（画面/视口真的变了）",
       "readback": null,
-      "pixel_effect_calls": 0,
+      "pixel_effect_calls": 6,
       "file_effect_calls": 0,
-      "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H6",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "read_payload_calls": 6,
+      "facts_complete": 7,
+      "bucket": ">=5",
+      "status": "达标",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_effect_observed": 6,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 7
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_particles/h6-task113",
+          "calls": 7
+        }
+      ],
+      "first_ts_ms": 1790479181336,
+      "last_ts_ms": 1790479181980,
+      "gate": true
     },
     {
       "tool": "project_find_unused_resources",
@@ -8716,6 +9459,244 @@
         ]
       },
       {
+        "tool": "editor_bake_navigation_mesh",
+        "scope": "editor",
+        "category": "H4",
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_nav/h4-task113",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_get_navigation_info",
+        "scope": "editor",
+        "category": "H4",
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_nav/h4-task113",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_set_navigation_layers",
+        "scope": "editor",
+        "category": "H4",
+        "measured_calls": 7,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_nav/h4-task113",
+            7
+          ]
+        ]
+      },
+      {
+        "tool": "editor_setup_navigation_agent",
+        "scope": "editor",
+        "category": "H4",
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_nav/h4-task113",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_setup_navigation_region",
+        "scope": "editor",
+        "category": "H4",
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_nav/h4-task113",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "running_game_move_player_to_target",
+        "scope": "game",
+        "category": "H4",
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_nav/h4-task113",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_add_audio_bus",
+        "scope": "editor",
+        "category": "H5",
+        "measured_calls": 7,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_audio/h5-task113",
+            7
+          ]
+        ]
+      },
+      {
+        "tool": "editor_add_audio_bus_effect",
+        "scope": "editor",
+        "category": "H5",
+        "measured_calls": 7,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_audio/h5-task113",
+            7
+          ]
+        ]
+      },
+      {
+        "tool": "editor_add_audio_player",
+        "scope": "editor",
+        "category": "H5",
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_audio/h5-task113",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_get_audio_bus_layout",
+        "scope": "editor",
+        "category": "H5",
+        "measured_calls": 7,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_audio/h5-task113",
+            7
+          ]
+        ]
+      },
+      {
+        "tool": "editor_get_audio_info",
+        "scope": "editor",
+        "category": "H5",
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_audio/h5-task113",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_set_audio_bus_property",
+        "scope": "editor",
+        "category": "H5",
+        "measured_calls": 8,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_audio/h5-task113",
+            8
+          ]
+        ]
+      },
+      {
+        "tool": "editor_create_particles",
+        "scope": "editor",
+        "category": "H6",
+        "measured_calls": 8,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_particles/h6-task113",
+            8
+          ]
+        ]
+      },
+      {
+        "tool": "editor_get_particle_info",
+        "scope": "editor",
+        "category": "H6",
+        "measured_calls": 7,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_particles/h6-task113",
+            7
+          ]
+        ]
+      },
+      {
+        "tool": "editor_set_particle_color_gradient",
+        "scope": "editor",
+        "category": "H6",
+        "measured_calls": 9,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_particles/h6-task113",
+            9
+          ]
+        ]
+      },
+      {
+        "tool": "editor_set_particle_material",
+        "scope": "editor",
+        "category": "H6",
+        "measured_calls": 8,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_particles/h6-task113",
+            8
+          ]
+        ]
+      },
+      {
+        "tool": "editor_set_particle_preset",
+        "scope": "editor",
+        "category": "H6",
+        "measured_calls": 7,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_particles/h6-task113",
+            7
+          ]
+        ]
+      },
+      {
         "tool": "editor_get_open_scripts",
         "scope": "editor",
         "category": "H7",
@@ -8832,6 +9813,48 @@
           [
             "runs/_exercises/ex_write/c4-task111",
             6
+          ]
+        ]
+      },
+      {
+        "tool": "running_game_create_input_recording",
+        "scope": "game",
+        "category": "H9",
+        "measured_calls": 7,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_rec/h9-task113",
+            7
+          ]
+        ]
+      },
+      {
+        "tool": "running_game_play_input_recording",
+        "scope": "game",
+        "category": "H9",
+        "measured_calls": 7,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_rec/h9-task113",
+            7
+          ]
+        ]
+      },
+      {
+        "tool": "running_game_stop_input_recording",
+        "scope": "game",
+        "category": "H9",
+        "measured_calls": 7,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_rec/h9-task113",
+            7
           ]
         ]
       }
@@ -9096,6 +10119,166 @@
         "evidence": "runs/_exercises/ex_grid/h3-task111/trace-editor.jsonl",
         "batch": "h3",
         "task": "TASK-111"
+      },
+      {
+        "tool": "editor_bake_navigation_mesh",
+        "from": "H4",
+        "why": "the corpus has no navigation data, but the family needs only a project that ships a NavigationRegion2D with an outline-bearing NavigationPolygon plus a player: projects/_exercises/ex_nav carries scenes/main.tscn built by the engine's own API (mk_probe.gd). All six members ran for real: editor_setup_navigation_region / editor_setup_navigation_agent create their nodes, editor_set_navigation_layers writes the mask editor_get_navigation_info reads back, editor_bake_navigation_mesh really baked (the first bake moved 155978 pixels in the editor viewport and reported baked:true with polygon_count 1), and running_game_move_player_to_target moved the player along the engine's own NavigationServer path in all five calls (distance_traveled 178.1/399.3/181.4/166.6/461.2).",
+        "evidence": "runs/_exercises/ex_nav/h4-task113/trace-editor.jsonl",
+        "batch": "h4-task113",
+        "task": "TASK-113"
+      },
+      {
+        "tool": "editor_get_navigation_info",
+        "from": "H4",
+        "why": "the corpus has no navigation data, but the family needs only a project that ships a NavigationRegion2D with an outline-bearing NavigationPolygon plus a player: projects/_exercises/ex_nav carries scenes/main.tscn built by the engine's own API (mk_probe.gd). All six members ran for real: editor_setup_navigation_region / editor_setup_navigation_agent create their nodes, editor_set_navigation_layers writes the mask editor_get_navigation_info reads back, editor_bake_navigation_mesh really baked (the first bake moved 155978 pixels in the editor viewport and reported baked:true with polygon_count 1), and running_game_move_player_to_target moved the player along the engine's own NavigationServer path in all five calls (distance_traveled 178.1/399.3/181.4/166.6/461.2).",
+        "evidence": "runs/_exercises/ex_nav/h4-task113/trace-editor.jsonl",
+        "batch": "h4-task113",
+        "task": "TASK-113"
+      },
+      {
+        "tool": "editor_set_navigation_layers",
+        "from": "H4",
+        "why": "the corpus has no navigation data, but the family needs only a project that ships a NavigationRegion2D with an outline-bearing NavigationPolygon plus a player: projects/_exercises/ex_nav carries scenes/main.tscn built by the engine's own API (mk_probe.gd). All six members ran for real: editor_setup_navigation_region / editor_setup_navigation_agent create their nodes, editor_set_navigation_layers writes the mask editor_get_navigation_info reads back, editor_bake_navigation_mesh really baked (the first bake moved 155978 pixels in the editor viewport and reported baked:true with polygon_count 1), and running_game_move_player_to_target moved the player along the engine's own NavigationServer path in all five calls (distance_traveled 178.1/399.3/181.4/166.6/461.2).",
+        "evidence": "runs/_exercises/ex_nav/h4-task113/trace-editor.jsonl",
+        "batch": "h4-task113",
+        "task": "TASK-113"
+      },
+      {
+        "tool": "editor_setup_navigation_agent",
+        "from": "H4",
+        "why": "the corpus has no navigation data, but the family needs only a project that ships a NavigationRegion2D with an outline-bearing NavigationPolygon plus a player: projects/_exercises/ex_nav carries scenes/main.tscn built by the engine's own API (mk_probe.gd). All six members ran for real: editor_setup_navigation_region / editor_setup_navigation_agent create their nodes, editor_set_navigation_layers writes the mask editor_get_navigation_info reads back, editor_bake_navigation_mesh really baked (the first bake moved 155978 pixels in the editor viewport and reported baked:true with polygon_count 1), and running_game_move_player_to_target moved the player along the engine's own NavigationServer path in all five calls (distance_traveled 178.1/399.3/181.4/166.6/461.2).",
+        "evidence": "runs/_exercises/ex_nav/h4-task113/trace-editor.jsonl",
+        "batch": "h4-task113",
+        "task": "TASK-113"
+      },
+      {
+        "tool": "editor_setup_navigation_region",
+        "from": "H4",
+        "why": "the corpus has no navigation data, but the family needs only a project that ships a NavigationRegion2D with an outline-bearing NavigationPolygon plus a player: projects/_exercises/ex_nav carries scenes/main.tscn built by the engine's own API (mk_probe.gd). All six members ran for real: editor_setup_navigation_region / editor_setup_navigation_agent create their nodes, editor_set_navigation_layers writes the mask editor_get_navigation_info reads back, editor_bake_navigation_mesh really baked (the first bake moved 155978 pixels in the editor viewport and reported baked:true with polygon_count 1), and running_game_move_player_to_target moved the player along the engine's own NavigationServer path in all five calls (distance_traveled 178.1/399.3/181.4/166.6/461.2).",
+        "evidence": "runs/_exercises/ex_nav/h4-task113/trace-editor.jsonl",
+        "batch": "h4-task113",
+        "task": "TASK-113"
+      },
+      {
+        "tool": "running_game_move_player_to_target",
+        "from": "H4",
+        "why": "the corpus has no navigation data, but the family needs only a project that ships a NavigationRegion2D with an outline-bearing NavigationPolygon plus a player: projects/_exercises/ex_nav carries scenes/main.tscn built by the engine's own API (mk_probe.gd). All six members ran for real: editor_setup_navigation_region / editor_setup_navigation_agent create their nodes, editor_set_navigation_layers writes the mask editor_get_navigation_info reads back, editor_bake_navigation_mesh really baked (the first bake moved 155978 pixels in the editor viewport and reported baked:true with polygon_count 1), and running_game_move_player_to_target moved the player along the engine's own NavigationServer path in all five calls (distance_traveled 178.1/399.3/181.4/166.6/461.2).",
+        "evidence": "runs/_exercises/ex_nav/h4-task113/trace-game.jsonl",
+        "batch": "h4-task113",
+        "task": "TASK-113"
+      },
+      {
+        "tool": "editor_add_audio_bus",
+        "from": "H5",
+        "why": "no game has any sound, but the family's subjects are the editor process's own AudioServer and one AudioStreamPlayer2D node: projects/_exercises/ex_audio ships five real RIFF WAVE assets (generated by the TASK-113 generator and imported by --import). All six members ran: five buses were added (Music/Sfx/Ambient/Voice/Ui), five effects attached to them, five players created, and editor_get_audio_bus_layout / editor_get_audio_info read the engine's own bus list (including the volume_db -6.0 editor_set_audio_bus_property wrote) back.",
+        "evidence": "runs/_exercises/ex_audio/h5-task113/trace-editor.jsonl",
+        "batch": "h5-task113",
+        "task": "TASK-113"
+      },
+      {
+        "tool": "editor_add_audio_bus_effect",
+        "from": "H5",
+        "why": "no game has any sound, but the family's subjects are the editor process's own AudioServer and one AudioStreamPlayer2D node: projects/_exercises/ex_audio ships five real RIFF WAVE assets (generated by the TASK-113 generator and imported by --import). All six members ran: five buses were added (Music/Sfx/Ambient/Voice/Ui), five effects attached to them, five players created, and editor_get_audio_bus_layout / editor_get_audio_info read the engine's own bus list (including the volume_db -6.0 editor_set_audio_bus_property wrote) back.",
+        "evidence": "runs/_exercises/ex_audio/h5-task113/trace-editor.jsonl",
+        "batch": "h5-task113",
+        "task": "TASK-113"
+      },
+      {
+        "tool": "editor_add_audio_player",
+        "from": "H5",
+        "why": "no game has any sound, but the family's subjects are the editor process's own AudioServer and one AudioStreamPlayer2D node: projects/_exercises/ex_audio ships five real RIFF WAVE assets (generated by the TASK-113 generator and imported by --import). All six members ran: five buses were added (Music/Sfx/Ambient/Voice/Ui), five effects attached to them, five players created, and editor_get_audio_bus_layout / editor_get_audio_info read the engine's own bus list (including the volume_db -6.0 editor_set_audio_bus_property wrote) back.",
+        "evidence": "runs/_exercises/ex_audio/h5-task113/trace-editor.jsonl",
+        "batch": "h5-task113",
+        "task": "TASK-113"
+      },
+      {
+        "tool": "editor_get_audio_bus_layout",
+        "from": "H5",
+        "why": "no game has any sound, but the family's subjects are the editor process's own AudioServer and one AudioStreamPlayer2D node: projects/_exercises/ex_audio ships five real RIFF WAVE assets (generated by the TASK-113 generator and imported by --import). All six members ran: five buses were added (Music/Sfx/Ambient/Voice/Ui), five effects attached to them, five players created, and editor_get_audio_bus_layout / editor_get_audio_info read the engine's own bus list (including the volume_db -6.0 editor_set_audio_bus_property wrote) back.",
+        "evidence": "runs/_exercises/ex_audio/h5-task113/trace-editor.jsonl",
+        "batch": "h5-task113",
+        "task": "TASK-113"
+      },
+      {
+        "tool": "editor_get_audio_info",
+        "from": "H5",
+        "why": "no game has any sound, but the family's subjects are the editor process's own AudioServer and one AudioStreamPlayer2D node: projects/_exercises/ex_audio ships five real RIFF WAVE assets (generated by the TASK-113 generator and imported by --import). All six members ran: five buses were added (Music/Sfx/Ambient/Voice/Ui), five effects attached to them, five players created, and editor_get_audio_bus_layout / editor_get_audio_info read the engine's own bus list (including the volume_db -6.0 editor_set_audio_bus_property wrote) back.",
+        "evidence": "runs/_exercises/ex_audio/h5-task113/trace-editor.jsonl",
+        "batch": "h5-task113",
+        "task": "TASK-113"
+      },
+      {
+        "tool": "editor_set_audio_bus_property",
+        "from": "H5",
+        "why": "no game has any sound, but the family's subjects are the editor process's own AudioServer and one AudioStreamPlayer2D node: projects/_exercises/ex_audio ships five real RIFF WAVE assets (generated by the TASK-113 generator and imported by --import). All six members ran: five buses were added (Music/Sfx/Ambient/Voice/Ui), five effects attached to them, five players created, and editor_get_audio_bus_layout / editor_get_audio_info read the engine's own bus list (including the volume_db -6.0 editor_set_audio_bus_property wrote) back.",
+        "evidence": "runs/_exercises/ex_audio/h5-task113/trace-editor.jsonl",
+        "batch": "h5-task113",
+        "task": "TASK-113"
+      },
+      {
+        "tool": "editor_create_particles",
+        "from": "H6",
+        "why": "the corpus has no particles, but the family needs only GPUParticles2D nodes and a ParticleProcessMaterial: projects/_exercises/ex_particles ships a scene with one GPUParticles2D and editor_create_particles makes five more. All five members ran: two presets (fire/smoke/...), five process-material parameter writes and five colour gradients, each read back by editor_get_particle_info (params, colors and color_stop_count).",
+        "evidence": "runs/_exercises/ex_particles/h6-task113/trace-editor.jsonl",
+        "batch": "h6-task113",
+        "task": "TASK-113"
+      },
+      {
+        "tool": "editor_get_particle_info",
+        "from": "H6",
+        "why": "the corpus has no particles, but the family needs only GPUParticles2D nodes and a ParticleProcessMaterial: projects/_exercises/ex_particles ships a scene with one GPUParticles2D and editor_create_particles makes five more. All five members ran: two presets (fire/smoke/...), five process-material parameter writes and five colour gradients, each read back by editor_get_particle_info (params, colors and color_stop_count).",
+        "evidence": "runs/_exercises/ex_particles/h6-task113/trace-editor.jsonl",
+        "batch": "h6-task113",
+        "task": "TASK-113"
+      },
+      {
+        "tool": "editor_set_particle_color_gradient",
+        "from": "H6",
+        "why": "the corpus has no particles, but the family needs only GPUParticles2D nodes and a ParticleProcessMaterial: projects/_exercises/ex_particles ships a scene with one GPUParticles2D and editor_create_particles makes five more. All five members ran: two presets (fire/smoke/...), five process-material parameter writes and five colour gradients, each read back by editor_get_particle_info (params, colors and color_stop_count).",
+        "evidence": "runs/_exercises/ex_particles/h6-task113/trace-editor.jsonl",
+        "batch": "h6-task113",
+        "task": "TASK-113"
+      },
+      {
+        "tool": "editor_set_particle_material",
+        "from": "H6",
+        "why": "the corpus has no particles, but the family needs only GPUParticles2D nodes and a ParticleProcessMaterial: projects/_exercises/ex_particles ships a scene with one GPUParticles2D and editor_create_particles makes five more. All five members ran: two presets (fire/smoke/...), five process-material parameter writes and five colour gradients, each read back by editor_get_particle_info (params, colors and color_stop_count).",
+        "evidence": "runs/_exercises/ex_particles/h6-task113/trace-editor.jsonl",
+        "batch": "h6-task113",
+        "task": "TASK-113"
+      },
+      {
+        "tool": "editor_set_particle_preset",
+        "from": "H6",
+        "why": "the corpus has no particles, but the family needs only GPUParticles2D nodes and a ParticleProcessMaterial: projects/_exercises/ex_particles ships a scene with one GPUParticles2D and editor_create_particles makes five more. All five members ran: two presets (fire/smoke/...), five process-material parameter writes and five colour gradients, each read back by editor_get_particle_info (params, colors and color_stop_count).",
+        "evidence": "runs/_exercises/ex_particles/h6-task113/trace-editor.jsonl",
+        "batch": "h6-task113",
+        "task": "TASK-113"
+      },
+      {
+        "tool": "running_game_create_input_recording",
+        "from": "H9",
+        "why": "input recording needs the three-step create -> play/stop session, which the corpus never opened: projects/_exercises/ex_rec carries a player script whose motion is driven by the key events the replay injects. All three members ran five times each: every create/stop round captured the two key events the explicit replay injected (event_count 2), and the final create -> stop -> play chain (no `events` argument) moved the player from x=100 to x=151 with a recomputed pixel diff of 1152 pixels - the replay really drives the running game.",
+        "evidence": "runs/_exercises/ex_rec/h9-task113/trace-game.jsonl",
+        "batch": "h9-task113",
+        "task": "TASK-113"
+      },
+      {
+        "tool": "running_game_play_input_recording",
+        "from": "H9",
+        "why": "input recording needs the three-step create -> play/stop session, which the corpus never opened: projects/_exercises/ex_rec carries a player script whose motion is driven by the key events the replay injects. All three members ran five times each: every create/stop round captured the two key events the explicit replay injected (event_count 2), and the final create -> stop -> play chain (no `events` argument) moved the player from x=100 to x=151 with a recomputed pixel diff of 1152 pixels - the replay really drives the running game.",
+        "evidence": "runs/_exercises/ex_rec/h9-task113/trace-game.jsonl",
+        "batch": "h9-task113",
+        "task": "TASK-113"
+      },
+      {
+        "tool": "running_game_stop_input_recording",
+        "from": "H9",
+        "why": "input recording needs the three-step create -> play/stop session, which the corpus never opened: projects/_exercises/ex_rec carries a player script whose motion is driven by the key events the replay injects. All three members ran five times each: every create/stop round captured the two key events the explicit replay injected (event_count 2), and the final create -> stop -> play chain (no `events` argument) moved the player from x=100 to x=151 with a recomputed pixel diff of 1152 pixels - the replay really drives the running game.",
+        "evidence": "runs/_exercises/ex_rec/h9-task113/trace-game.jsonl",
+        "batch": "h9-task113",
+        "task": "TASK-113"
       }
     ],
     "members": [
@@ -9551,154 +10734,239 @@
         "tool": "editor_bake_navigation_mesh",
         "scope": "editor",
         "category": "H4",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_nav/h4-task113",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_get_navigation_info",
         "scope": "editor",
         "category": "H4",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_nav/h4-task113",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_set_navigation_layers",
         "scope": "editor",
         "category": "H4",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 7,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_nav/h4-task113",
+            7
+          ]
+        ]
       },
       {
         "tool": "editor_setup_navigation_agent",
         "scope": "editor",
         "category": "H4",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_nav/h4-task113",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_setup_navigation_region",
         "scope": "editor",
         "category": "H4",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_nav/h4-task113",
+            6
+          ]
+        ]
       },
       {
         "tool": "running_game_move_player_to_target",
         "scope": "game",
         "category": "H4",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_nav/h4-task113",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_add_audio_bus",
         "scope": "editor",
         "category": "H5",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 7,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_audio/h5-task113",
+            7
+          ]
+        ]
       },
       {
         "tool": "editor_add_audio_bus_effect",
         "scope": "editor",
         "category": "H5",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 7,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_audio/h5-task113",
+            7
+          ]
+        ]
       },
       {
         "tool": "editor_add_audio_player",
         "scope": "editor",
         "category": "H5",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_audio/h5-task113",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_get_audio_bus_layout",
         "scope": "editor",
         "category": "H5",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 7,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_audio/h5-task113",
+            7
+          ]
+        ]
       },
       {
         "tool": "editor_get_audio_info",
         "scope": "editor",
         "category": "H5",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_audio/h5-task113",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_set_audio_bus_property",
         "scope": "editor",
         "category": "H5",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 8,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_audio/h5-task113",
+            8
+          ]
+        ]
       },
       {
         "tool": "editor_create_particles",
         "scope": "editor",
         "category": "H6",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 8,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_particles/h6-task113",
+            8
+          ]
+        ]
       },
       {
         "tool": "editor_get_particle_info",
         "scope": "editor",
         "category": "H6",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 7,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_particles/h6-task113",
+            7
+          ]
+        ]
       },
       {
         "tool": "editor_set_particle_color_gradient",
         "scope": "editor",
         "category": "H6",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 9,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_particles/h6-task113",
+            9
+          ]
+        ]
       },
       {
         "tool": "editor_set_particle_material",
         "scope": "editor",
         "category": "H6",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 8,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_particles/h6-task113",
+            8
+          ]
+        ]
       },
       {
         "tool": "editor_set_particle_preset",
         "scope": "editor",
         "category": "H6",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 7,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_particles/h6-task113",
+            7
+          ]
+        ]
       },
       {
         "tool": "editor_analyze_screenshot_diff",
@@ -10004,28 +11272,43 @@
         "tool": "running_game_create_input_recording",
         "scope": "game",
         "category": "H9",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 7,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_rec/h9-task113",
+            7
+          ]
+        ]
       },
       {
         "tool": "running_game_play_input_recording",
         "scope": "game",
         "category": "H9",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 7,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_rec/h9-task113",
+            7
+          ]
+        ]
       },
       {
         "tool": "running_game_stop_input_recording",
         "scope": "game",
         "category": "H9",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 7,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_rec/h9-task113",
+            7
+          ]
+        ]
       }
     ]
   }

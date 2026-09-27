@@ -1,0 +1,231 @@
+{
+  "batch": "h9",
+  "project": "ex_rec",
+  "calls": [
+    {
+      "tag": "h9-001-running_game_get_scene_tree",
+      "tool": "running_game_get_scene_tree",
+      "port": "game",
+      "intent": "setup",
+      "note": "the running scene the recorder drives"
+    },
+    {
+      "tag": "h9-002-running_game_get_node_properties",
+      "tool": "running_game_get_node_properties",
+      "port": "game",
+      "intent": "setup",
+      "note": "read-back #1: the player's position before any input"
+    },
+    {
+      "tag": "h9-003-running_game_create_input_recording",
+      "tool": "running_game_create_input_recording",
+      "port": "game",
+      "intent": "ok",
+      "note": "create call 1/5"
+    },
+    {
+      "tag": "h9-004-running_game_play_input_recording",
+      "tool": "running_game_play_input_recording",
+      "port": "game",
+      "intent": "ok",
+      "note": "play call 1/5 with an explicit two-event recording; the injected keys are what the recorder in the same run captures"
+    },
+    {
+      "tag": "h9-005-running_game_stop_input_recording",
+      "tool": "running_game_stop_input_recording",
+      "port": "game",
+      "intent": "ok",
+      "note": "stop call 1/5: the events the recorder captured are returned"
+    },
+    {
+      "tag": "h9-006-running_game_create_input_recording",
+      "tool": "running_game_create_input_recording",
+      "port": "game",
+      "intent": "ok",
+      "note": "create call 2/5"
+    },
+    {
+      "tag": "h9-007-running_game_play_input_recording",
+      "tool": "running_game_play_input_recording",
+      "port": "game",
+      "intent": "ok",
+      "note": "play call 2/5 with an explicit two-event recording; the injected keys are what the recorder in the same run captures"
+    },
+    {
+      "tag": "h9-008-running_game_stop_input_recording",
+      "tool": "running_game_stop_input_recording",
+      "port": "game",
+      "intent": "ok",
+      "note": "stop call 2/5: the events the recorder captured are returned"
+    },
+    {
+      "tag": "h9-009-running_game_create_input_recording",
+      "tool": "running_game_create_input_recording",
+      "port": "game",
+      "intent": "ok",
+      "note": "create call 3/5"
+    },
+    {
+      "tag": "h9-010-running_game_play_input_recording",
+      "tool": "running_game_play_input_recording",
+      "port": "game",
+      "intent": "ok",
+      "note": "play call 3/5 with an explicit two-event recording; the injected keys are what the recorder in the same run captures"
+    },
+    {
+      "tag": "h9-011-running_game_stop_input_recording",
+      "tool": "running_game_stop_input_recording",
+      "port": "game",
+      "intent": "ok",
+      "note": "stop call 3/5: the events the recorder captured are returned"
+    },
+    {
+      "tag": "h9-012-running_game_create_input_recording",
+      "tool": "running_game_create_input_recording",
+      "port": "game",
+      "intent": "ok",
+      "note": "create call 4/5"
+    },
+    {
+      "tag": "h9-013-running_game_play_input_recording",
+      "tool": "running_game_play_input_recording",
+      "port": "game",
+      "intent": "ok",
+      "note": "play call 4/5 with an explicit two-event recording; the injected keys are what the recorder in the same run captures"
+    },
+    {
+      "tag": "h9-014-running_game_stop_input_recording",
+      "tool": "running_game_stop_input_recording",
+      "port": "game",
+      "intent": "ok",
+      "note": "stop call 4/5: the events the recorder captured are returned"
+    },
+    {
+      "tag": "h9-015-running_game_create_input_recording",
+      "tool": "running_game_create_input_recording",
+      "port": "game",
+      "intent": "ok",
+      "note": "create call 5/5"
+    },
+    {
+      "tag": "h9-016-running_game_play_input_recording",
+      "tool": "running_game_play_input_recording",
+      "port": "game",
+      "intent": "ok",
+      "note": "play call 5/5 with an explicit two-event recording; the injected keys are what the recorder in the same run captures"
+    },
+    {
+      "tag": "h9-017-running_game_stop_input_recording",
+      "tool": "running_game_stop_input_recording",
+      "port": "game",
+      "intent": "ok",
+      "note": "stop call 5/5: the events the recorder captured are returned"
+    },
+    {
+      "tag": "h9-018-running_game_get_node_properties",
+      "tool": "running_game_get_node_properties",
+      "port": "game",
+      "intent": "setup",
+      "note": "the player really moved while the recorded keys were down"
+    },
+    {
+      "tag": "h9-019-running_game_set_node_property",
+      "tool": "running_game_set_node_property",
+      "port": "game",
+      "intent": "setup",
+      "note": "reset the player so the replay's own motion is measurable"
+    },
+    {
+      "tag": "h9-020-running_game_get_node_properties",
+      "tool": "running_game_get_node_properties",
+      "port": "game",
+      "intent": "setup",
+      "note": "read-back #2: the player is back at (100,300) before the replay"
+    },
+    {
+      "tag": "h9-021-running_game_play_input_recording",
+      "tool": "running_game_play_input_recording",
+      "port": "game",
+      "intent": "ok",
+      "note": "the create->stop->play chain: this replays the recording just stopped (no `events` argument)"
+    },
+    {
+      "tag": "h9-022-running_game_get_node_properties",
+      "tool": "running_game_get_node_properties",
+      "port": "game",
+      "intent": "setup",
+      "note": "read-back #3: the replay moved the player (position.x > 100)"
+    },
+    {
+      "tag": "h9-023-running_game_create_input_recording",
+      "tool": "running_game_create_input_recording",
+      "port": "game",
+      "intent": "setup",
+      "note": "start a recording that the boundary below then finds already running"
+    },
+    {
+      "tag": "h9-024-running_game_create_input_recording",
+      "tool": "running_game_create_input_recording",
+      "port": "game",
+      "intent": "probe",
+      "note": "a recording is already running in this process"
+    },
+    {
+      "tag": "h9-025-running_game_stop_input_recording",
+      "tool": "running_game_stop_input_recording",
+      "port": "game",
+      "intent": "setup",
+      "note": "close that session"
+    },
+    {
+      "tag": "h9-026-running_game_play_input_recording",
+      "tool": "running_game_play_input_recording",
+      "port": "game",
+      "intent": "probe",
+      "note": "an empty event array is refused (nothing to replay)"
+    },
+    {
+      "tag": "h9-027-running_game_stop_input_recording",
+      "tool": "running_game_stop_input_recording",
+      "port": "game",
+      "intent": "edge",
+      "note": "stop with nothing recording is a documented success (there is nothing to collect)"
+    },
+    {
+      "tag": "h9-028-running_game_get_node_properties",
+      "tool": "running_game_get_node_properties",
+      "port": "game",
+      "intent": "setup",
+      "note": "read-back #4: the position after the boundary calls"
+    }
+  ],
+  "readback": [
+    {
+      "tool": "running_game_create_input_recording",
+      "witness_tool": "running_game_stop_input_recording",
+      "run": "runs/_exercises/ex_rec/h9-task113",
+      "why": "the stop call's answer carries the events of the session create started (event_count > 0)",
+      "expect": [
+        "\"event_count\":2"
+      ]
+    },
+    {
+      "tool": "running_game_play_input_recording",
+      "witness_tool": "running_game_get_node_properties",
+      "run": "runs/_exercises/ex_rec/h9-task113",
+      "why": "the player's position after the create->stop->play chain is not the reset (100,300): the replay really drove the game",
+      "expect": [
+        "\"position\""
+      ]
+    },
+    {
+      "tool": "running_game_stop_input_recording",
+      "witness_tool": "running_game_get_node_properties",
+      "run": "runs/_exercises/ex_rec/h9-task113",
+      "why": "the position read after the stop differs from the position read before the session (the recorded keys moved the player)",
+      "expect": [
+        "\"position\""
+      ]
+    }
+  ]
+}

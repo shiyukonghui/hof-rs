@@ -51,6 +51,17 @@ and `readback` has two explicitly distinct kinds:
       accepts a declaration whose witness call it can find again in the run's
       trace, answering `ok=true` with a substantive payload. A tool's own
       response saying "success" is *not* a readback witness.
+
+TASK-113 item C upgrades that witness from the *call* level to the *content*
+level. A declaration may carry `expect`: one literal string, or a list of them,
+that must appear **verbatim** in the payload of the witness call this reader
+found (the call's `result_json`, or the verified sidecar file when the payload
+was over the inline budget). The check is a plain byte-level `in` test on the
+payload, so "the witness call happened" is no longer enough - the value the
+writer claims to have written has to be readable back out of the engine's own
+answer. A declaration whose `expect` cannot be matched grants **no** tier and is
+reported under the rejected list with that reason, exactly like a missing
+witness call.
     * `own_payload`  - a READ-verb tool: its answer *is* the measurement, so
       there is no separate call to wait for (the TASK-111 `READ_VERBS` rule).
 
@@ -130,6 +141,10 @@ TIER_LABEL = {
 SESSIONS_DIR = os.path.join("tools", "sessions", "_exercises")
 READBACK_KIND_WITNESS = "witness_read"
 READBACK_KIND_OWN = "own_payload"
+# How many substantive payloads of one tool in one run are kept for the
+# TASK-113 item C content check. A witness is normally the first such call; the
+# cap only bounds memory on a tool read hundreds of times in one run.
+PAYLOAD_KEEP = 12
 
 
 def sha256_file(path):
@@ -231,10 +246,12 @@ def load_readback_declarations(root):
 
         {"tool": "<the writer>", "witness_tool": "<the reader>",
          "run": "runs/_exercises/<project>/<batch>", "why": "<what is read back>",
-         "witness_seq": <optional>}
+         "expect": "<literal that must be in the witness payload>"  (TASK-113 C)
+                  or ["<literal>", ...], "witness_seq": <optional>}
 
     The reader is only a *declaration*: `verify_readback` re-finds the witness
-    call in that run's trace before the tier is granted, so a stale or invented
+    call in that run's trace - and, when `expect` is given, searches that call's
+    payload for the literal - before the tier is granted, so a stale or invented
     declaration cannot promote a tool.
     """
     base = os.path.join(root, SESSIONS_DIR)
@@ -260,31 +277,159 @@ def load_readback_declarations(root):
     return found
 
 
+def expected_literals(declaration):
+    """The declared `expect` as a list of literals ([] when not declared)."""
+    raw = declaration.get("expect")
+    if raw is None:
+        return []
+    if isinstance(raw, str):
+        return [raw] if raw != "" else []
+    if isinstance(raw, list):
+        return [x for x in raw if isinstance(x, str) and x != ""]
+    return []
+
+
+def forbidden_literals(declaration):
+    """The declared `expect_absent` as a list of literals ([] when not declared).
+
+    A subtractive write (a removal, a clear) has no value to find in the
+    read-back; what proves it is the *absence* of the thing it removed. That
+    absence is only meaningful on the **same subject**, so the check requires a
+    payload matched by `expect` (usually the subject anchor, e.g. the node the
+    removal addressed) in which none of the `expect_absent` literals appears.
+    """
+    raw = declaration.get("expect_absent")
+    if raw is None:
+        return []
+    if isinstance(raw, str):
+        return [raw] if raw != "" else []
+    if isinstance(raw, list):
+        return [x for x in raw if isinstance(x, str) and x != ""]
+    return []
+
+
+def payload_variants(text):
+    """Every spelling of a witness payload the literal may have to match.
+
+    The trace stores a tool's answer in one of two shapes depending on the
+    reader that wrote it: the answer itself, or the JSON-RPC envelope with the
+    answer escaped inside `content[0].text`. Both are the same bytes the engine
+    answered with, so the content check searches the payload *and* its unescaped
+    / unwrapped spellings instead of depending on the trace's shape.
+    """
+    variants = [text]
+    unescaped = text.replace('\\"', '"').replace("\\n", "\n").replace("\\\\", "\\")
+    if unescaped != text:
+        variants.append(unescaped)
+    stripped = text.strip()
+    if stripped.startswith("{"):
+        try:
+            body = json.loads(stripped)
+        except ValueError:
+            body = None
+        if isinstance(body, dict):
+            content = body.get("content")
+            if isinstance(content, list):
+                for item in content:
+                    if isinstance(item, dict) and isinstance(item.get("text"), str):
+                        variants.append(item["text"])
+    return variants
+
+
+def expect_matches(literals, text):
+    """True when every literal appears verbatim in one spelling of the payload."""
+    if text is None:
+        return False
+    for variant in payload_variants(text):
+        if all(literal in variant for literal in literals):
+            return True
+    return False
+
+
+def expect_forbids(forbidden, text):
+    """True when none of the forbidden literals appears in any spelling."""
+    if text is None:
+        return False
+    for variant in payload_variants(text):
+        if any(literal in variant for literal in forbidden):
+            return False
+    return True
+
+
+def witness_payload_text(payload):
+    """The witness call's own answer as text: inline, or the verified sidecar.
+
+    A payload larger than the trace's inline budget is not on the call line; the
+    ledger has already re-hashed and re-measured its sidecar, so reading that
+    file is reading the same bytes the engine answered with.
+    """
+    if payload.get("sidecar_path"):
+        try:
+            with io.open(payload["sidecar_path"], "r", encoding="utf-8", errors="replace") as handle:
+                return handle.read()
+        except IOError:
+            return None
+    text = payload.get("text")
+    return text if isinstance(text, str) else None
+
+
 def verify_readback(declaration, run_index):
-    """The verified pointer, or None when the declaration cannot be confirmed.
+    """(verified pointer, rejection reason). Pointer is None when not confirmed.
 
     A witness counts only if, inside the declared run, a call of the declared
     reader tool exists, answered `ok=true`, and carried a substantive payload
-    (or a verified sidecar - the TASK-111 rule). The strongest such call is
-    reported so the ledger can point at it.
+    (or a verified sidecar - the TASK-111 rule). TASK-113 item C: when the
+    declaration carries `expect`, the payload of one such call must contain
+    every declared literal verbatim; the call that matched is the one reported.
     """
     run = declaration.get("run")
     witness = declaration.get("witness_tool")
     if not run or not witness:
-        return None
+        return None, "the declaration names no run/witness_tool"
     per_tool = run_index.get(run)
     if not per_tool:
-        return None
+        return None, "the declared run is not in the corpus"
     st = per_tool.get(witness)
     if not st or st["ok"] < 1 or st["substantive"] < 1:
-        return None
-    return {
+        return None, "no `ok=true` substantive call of `%s` in that run" % witness
+
+    expects = expected_literals(declaration)
+    forbids = forbidden_literals(declaration)
+    if not expects and not forbids:
+        # TASK-113 item C: the witness has to be checkable at the content level.
+        # A declaration that names no literal at all stays at the call level and
+        # is therefore NOT granted a tier any more - that is the whole point of
+        # the upgrade, and the rejection reason says so.
+        return None, ("no content-level `expect`/`expect_absent` declared: the witness would only "
+                      "prove that a read call happened (TASK-113 item C requires the written value, "
+                      "or the removal it addresses, to be readable back)")
+    chosen = None
+    for payload in st["payloads"]:
+        text = witness_payload_text(payload)
+        if not expect_matches(expects, text):
+            continue
+        if forbids and not expect_forbids(forbids, text):
+            continue
+        chosen = {"seq": payload["seq"], "matched": expects}
+        break
+    if chosen is None:
+        return None, ("none of the %d substantive `%s` payload(s) satisfies expect %s%s"
+                      % (len(st["payloads"]), witness,
+                         " and ".join("'%s'" % x for x in expects) or "(none)",
+                         (" and expect_absent " + " and ".join("'%s'" % x for x in forbids))
+                         if forbids else ""))
+    pointer = {
         "witness_tool": witness,
         "run": run,
-        "witness_seq": st["first_substantive_seq"],
+        "witness_seq": chosen["seq"],
         "why": declaration.get("why", ""),
         "declared_in": declaration.get("declared_in", ""),
+        "expect": expects,
+        "expect_absent": forbids,
+        "expect_matched": True,
     }
+    return pointer, None
+
 
 
 def verb_of(name, verbs):
@@ -361,13 +506,24 @@ def build_rows(root, ledger, traces, verbs, scopes):
             substantive_payload = (row.get("result_json_evidence") == "sidecar_verified"
                                    or substantive(row.get("result_json")))
             rt = run_tools.setdefault(name, {"ok": 0, "substantive": 0,
-                                             "first_substantive_seq": None})
+                                             "first_substantive_seq": None,
+                                             "payloads": []})
             if row["ok"]:
                 rt["ok"] += 1
             if row["ok"] and substantive_payload:
                 rt["substantive"] += 1
                 if rt["first_substantive_seq"] is None:
                     rt["first_substantive_seq"] = row.get("call_id")
+                # TASK-113 item C: the payload itself, so a declared `expect`
+                # can be matched against the engine's own answer instead of
+                # against the mere fact that the call happened.
+                if len(rt["payloads"]) < PAYLOAD_KEEP:
+                    sidecar = (row.get("result_json_sidecar_detail") or {}).get("resolved_path")
+                    if row.get("result_json_evidence") != "sidecar_verified":
+                        sidecar = None
+                    rt["payloads"].append({"seq": row.get("call_id"),
+                                           "text": row.get("result_json"),
+                                           "sidecar_path": sidecar})
             st = stats.setdefault(name, {
                 "tool": name, "calls": 0, "ok": 0, "failed": 0, "effective": 0,
                 "verdicts": {}, "file_effects": {}, "runs": {}, "first_ts": None,
@@ -468,15 +624,21 @@ def build_payload(args):
 
     # TASK-112 item B: every declared readback witness is re-verified against the
     # run's own rows; an unverifiable declaration is reported as rejected instead
-    # of silently granting a tier.
+    # of silently granting a tier. TASK-113 item C: a declaration that carries
+    # `expect` is only verified when the witness payload really contains it.
     declarations = load_readback_declarations(root)
     verified_readback = {}
     readback_rejected = []
+    content_checked = 0
     for declaration in declarations:
-        pointer = verify_readback(declaration, run_index)
+        pointer, reason = verify_readback(declaration, run_index)
         if pointer is None:
-            readback_rejected.append(declaration)
+            rejected = dict(declaration)
+            rejected["reason"] = reason
+            readback_rejected.append(rejected)
             continue
+        if pointer.get("expect_matched"):
+            content_checked += 1
         # The strongest (first) verified witness of a tool wins.
         verified_readback.setdefault(declaration["tool"], pointer)
 
@@ -587,6 +749,9 @@ def build_payload(args):
             "declared": len(declarations),
             "verified": len(verified_readback),
             "rejected": readback_rejected,
+            "content_checked": content_checked,
+            "declared_with_expect": len([d for d in declarations
+                                         if expected_literals(d) or forbidden_literals(d)]),
             "verified_by_tool": verified_readback,
         },
         "scope_counts": by_scope,
@@ -671,15 +836,22 @@ def render_md(payload, title, cmdline):
     lines.append("- `witness_read` **不是推断**：配对写在会话 manifest 的 `readback` 数组里，"
                  "本工具会回到该 run 的 trace 里把见证调用**再找一次**（必须 `ok=true` 且回包是实质载荷），"
                  "找不到就不给档位（见 §0.1 的 rejected 列表）。")
+    lines.append("- **内容级复核（TASK-113 C）**：声明可带 `expect`（一个或一组字面量），"
+                 "本工具在**见证调用的回包**里逐字搜它（回包被 trace 截断时读已核验的 sidecar）；"
+                 "搜不到就**不给档位**并记入 rejected，理由逐条写出。"
+                 "所以 `witness_read` 现在证明的是「写进去的值能从引擎自己的回答里读回来」，"
+                 "不再只是「那一次读调用发生过」。")
     lines.append("- **不得**把「写工具自己响应里说成功了」当作 readback：那条路径只能落在 `count_only`。")
     lines.append("")
-    lines.append("### 0.1 readback 声明与见证（TASK-112 B）")
+    lines.append("### 0.1 readback 声明与见证（TASK-112 B；内容级 `expect` 复核见 TASK-113 C）")
     lines.append("")
     rb = payload.get("readback_declarations") or {}
     lines.append("声明 **%d** 条（来源：`%s/**/*-manifest.json` 的 `readback` 数组）；"
-                 "**经 trace 复核通过 %d 条**，被拒 %d 条。"
+                 "**经 trace 复核通过 %d 条**，被拒 %d 条；其中带 `expect` 的声明 **%d** 条、"
+                 "**逐字命中 %d** 条。"
                  % (rb.get("declared", 0), SESSIONS_DIR.replace("\\", "/"),
-                    rb.get("verified", 0), len(rb.get("rejected") or [])))
+                    rb.get("verified", 0), len(rb.get("rejected") or []),
+                    rb.get("declared_with_expect", 0), rb.get("content_checked", 0)))
     lines.append("")
     own = [r for r in payload["tools"]
            if r.get("readback") and r["readback"].get("kind") == READBACK_KIND_OWN]
@@ -687,26 +859,31 @@ def render_md(payload, title, cmdline):
                  "另外 %d 条是 `own_payload`（读类动词，回包即证据、没有第二次调用可点名），"
                  "它们逐条列在 §0.2。" % (rb.get("verified", 0), len(own)))
     lines.append("")
-    lines.append("| 写工具 | kind | 见证读调用 | run | 见证 seq | 读回的是什么 |")
-    lines.append("|---|---|---|---|---|---|")
+    lines.append("| 写工具 | kind | 见证读调用 | run | 见证 seq | 内容级 `expect`（逐字） | `expect_absent` | 读回的是什么 |")
+    lines.append("|---|---|---|---|---|---|---|---|")
     for row in payload["tools"]:
         entry = row.get("readback")
         if not entry or entry.get("kind") != READBACK_KIND_WITNESS:
             continue
-        lines.append("| `%s` | `%s` | `%s` | %s | %s | %s |"
+        expect = entry.get("expect") or []
+        absent = entry.get("expect_absent") or []
+        expect_text = " ; ".join("`%s`" % x.replace("`", "'") for x in expect) if expect else "（未声明）"
+        absent_text = " ; ".join("`%s`" % x.replace("`", "'") for x in absent) if absent else "-"
+        lines.append("| `%s` | `%s` | `%s` | %s | %s | %s | %s | %s |"
                      % (row["tool"], entry.get("kind", ""),
                         entry["witness_tool"] if entry.get("witness_tool") else "-",
                         entry.get("run") or "-",
                         entry.get("witness_seq") if entry.get("witness_seq") is not None else "-",
+                        expect_text, absent_text,
                         entry.get("why") or "-"))
     lines.append("")
     if rb.get("rejected"):
-        lines.append("**被拒的声明（在声明的 run 里找不到合格的见证调用，档位不授予）**：")
+        lines.append("**被拒的声明（找不到合格的见证调用，或内容级 `expect` 未命中；档位不授予）**：")
         lines.append("")
         for item in rb["rejected"]:
-            lines.append("- `%s` <- `%s` @ `%s`（声明于 `%s`）"
+            lines.append("- `%s` <- `%s` @ `%s`（声明于 `%s`）：%s"
                          % (item.get("tool"), item.get("witness_tool"), item.get("run"),
-                            item.get("declared_in")))
+                            item.get("declared_in"), item.get("reason") or "无理由字段"))
         lines.append("")
     lines.append("### 0.2 逐档工具清单（TASK-112 B）")
     lines.append("")

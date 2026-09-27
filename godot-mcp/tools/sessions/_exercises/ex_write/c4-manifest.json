@@ -1145,53 +1145,68 @@
     }
   ],
   "readback": [
-      {
-          "tool": "editor_add_scene_instance",
-          "run": "runs/_exercises/ex_write5/c4-v5-task111",
-          "witness_tool": "editor_get_scene_tree",
-          "why": "挂载的实例必须出现在编辑场景树里（editor_get_scene_tree 列出被实例化出来的节点）"
-      },
-      {
-          "tool": "editor_rename_node",
-          "run": "runs/_exercises/ex_write5/c4-v5-task111",
-          "witness_tool": "editor_get_node_properties",
-          "why": "读回被改名节点的 name（重命名后按新名字仍可寻址）"
-      },
-      {
-          "tool": "editor_set_node_groups",
-          "run": "runs/_exercises/ex_write5/c4-v5-task111",
-          "witness_tool": "editor_get_node_groups",
-          "why": "读回被写节点的 groups 列表"
-      },
-      {
-          "tool": "editor_set_node_script",
-          "run": "runs/_exercises/ex_write5/c4-v5-task111",
-          "witness_tool": "editor_get_node_properties",
-          "why": "读回被写节点的 script 属性（不是工具自己响应里的 attached:true）"
-      },
-      {
-          "tool": "editor_set_physics_layers",
-          "run": "runs/_exercises/ex_write5/c4-v5-task111",
-          "witness_tool": "editor_get_node_properties",
-          "why": "读回同一个节点的 collision_layer / collision_mask"
-      },
-      {
-          "tool": "editor_setup_physics_body",
-          "run": "runs/_exercises/ex_write5/c4-v5-task111",
-          "witness_tool": "editor_get_scene_tree",
-          "why": "建出来的物理体节点必须出现在编辑场景树里"
-      },
-      {
-          "tool": "editor_set_control_theme",
-          "run": "runs/_exercises/ex_write5/c4-v5-task111",
-          "witness_tool": "editor_get_node_properties",
-          "why": "读回同一个 Control 的 theme 属性（不是工具自己响应里的 applied:true）"
-      },
-      {
-          "tool": "editor_connect_signal",
-          "run": "runs/_exercises/ex_write5/c4-v5-task111",
-          "witness_tool": "editor_list_signal_connections",
-          "why": "读回同一节点的连接表，连接真的在里面"
-      }
+    {
+      "tool": "editor_add_scene_instance",
+      "run": "runs/_exercises/ex_write5/c4-v5-task111",
+      "witness_tool": "editor_get_scene_tree",
+      "why": "挂载的实例必须出现在编辑场景树里（editor_get_scene_tree 列出被实例化出来的节点）",
+      "expect": [
+        "\"Sub1\""
+      ]
+    },
+    {
+      "tool": "editor_rename_node",
+      "run": "runs/_exercises/ex_write5/c4-v5-task111",
+      "witness_tool": "editor_get_node_properties",
+      "why": "读回被改名节点的 name（重命名后按新名字仍可寻址）",
+      "expect": [
+        "\"name\":\"Ren1\""
+      ]
+    },
+    {
+      "tool": "editor_set_node_groups",
+      "run": "runs/_exercises/ex_write5/c4-v5-task111",
+      "witness_tool": "editor_get_node_groups",
+      "why": "读回被写节点的 groups 列表",
+      "expect": [
+        "\"ex_host\""
+      ]
+    },
+    {
+      "tool": "editor_set_node_script",
+      "run": "runs/_exercises/ex_write5/c4-v5-task111",
+      "witness_tool": "editor_get_node_properties",
+      "why": "读回被写节点的 script 属性（不是工具自己响应里的 attached:true）"
+    },
+    {
+      "tool": "editor_set_physics_layers",
+      "run": "runs/_exercises/ex_write5/c4-v5-task111",
+      "witness_tool": "editor_get_node_properties",
+      "why": "读回同一个节点的 collision_layer / collision_mask",
+      "expect": [
+        "\"collision_layer\":1"
+      ]
+    },
+    {
+      "tool": "editor_setup_physics_body",
+      "run": "runs/_exercises/ex_write5/c4-v5-task111",
+      "witness_tool": "editor_get_scene_tree",
+      "why": "建出来的物理体节点必须出现在编辑场景树里",
+      "expect": [
+        "\"PB1\""
+      ]
+    },
+    {
+      "tool": "editor_set_control_theme",
+      "run": "runs/_exercises/ex_write5/c4-v5-task111",
+      "witness_tool": "editor_get_node_properties",
+      "why": "读回同一个 Control 的 theme 属性（不是工具自己响应里的 applied:true）"
+    },
+    {
+      "tool": "editor_connect_signal",
+      "run": "runs/_exercises/ex_write5/c4-v5-task111",
+      "witness_tool": "editor_list_signal_connections",
+      "why": "读回同一节点的连接表，连接真的在里面"
+    }
   ]
 }
