@@ -5,7 +5,7 @@
 
 口径（mode）：**all-runs**；语料：**102 个 run 目录 / 168 个 trace 文件 / 8444 次 `tools/call`**（`ok=false` 601 次、解析失败行 0、sidecar 校验通过 273）
 
-生成时间（UTC）：2026-09-27T03:25:24Z
+生成时间（UTC）：2026-09-27T03:28:53Z
 
 **「有效调用」的判定**（由 `mcp_trace_ledger.py` 的 verdict 词汇给出，不另立一套）：
 
