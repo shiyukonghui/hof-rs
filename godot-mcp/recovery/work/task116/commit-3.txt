@@ -1,0 +1,6 @@
+chore(godot-mcp): TASK-116 - refresh the report's own commit list
+
+The report reads both repositories' `git log --oneline -8` / `git status --short` at
+generation time (read-only `git` calls inside tools/playability_report.py), so the copy
+committed one step ago named its own parent as HEAD. Regenerated; the two TASK-116
+commits are now in the list.

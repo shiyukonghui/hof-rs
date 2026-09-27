@@ -770,6 +770,7 @@ JSON 动作能解析、judge JSON 能解析、500 被报成错误而不是静默
 `git log --oneline -8`：
 
 ```
+4d651d1 docs(godot-mcp): TASK-116 - the report, the defect register, and the D161 decision record
 34b1fc6 feat(godot-mcp): TASK-116 (D161) - the playability gate, and the 19 games it found were unplayable
 aaf2d9a docs(godot-mcp): TASK-115 - the report's commit list now names all four commits
 b180262 fix(godot-mcp): TASK-115 - reclassify_h7.py was only half idempotent; recompose the H7 note from its original
@@ -777,16 +778,13 @@ d4c1d2b chore(godot-mcp): TASK-115 - refresh the ledger once more, and record th
 84fb1bc docs(godot-mcp): TASK-115 - the report and the D160 decision record
 2c1ff0a feat(godot-mcp): TASK-115 (D160) - split H7 by measurement, restore eight witnesses, and the export/signature probe
 eb52b26 docs(godot-mcp): TASK-114 - record the two commit hashes and the engine-repo status in the report
-64d4d71 docs(godot-mcp): TASK-114 - the report and the D159 decision record
 ```
 
 `git status --short`：
 
 ```
- M DECISIONS.md
  M godot-mcp/recovery/work/task104/logs/git-housekeeping.err.txt
  M godot-mcp/recovery/work/task104/logs/git-housekeeping.out.txt
- M godot-mcp/tools/playability_report.py
 ?? godot-mcp/dist/MANIFEST.txt
 ?? godot-mcp/dist/PACKAGE-INFO-TASK109.txt
 ?? godot-mcp/dist/SELFCHECK.txt
@@ -815,8 +813,6 @@ eb52b26 docs(godot-mcp): TASK-114 - record the two commit hashes and the engine-
 ?? godot-mcp/projects/_exercises/ex_write3/
 ?? godot-mcp/projects/_exercises/ex_write4/
 ?? godot-mcp/recovery/reports/ACCEPTANCE-TASK-107.md
-?? godot-mcp/recovery/reports/PLAYABILITY-DEFECTS.md
-?? godot-mcp/recovery/reports/PLAYABILITY-REPORT.md
 ?? godot-mcp/tools/__pycache__/
 ```
 
