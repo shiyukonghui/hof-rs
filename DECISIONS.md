@@ -7902,15 +7902,17 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
   **sha256 完全相同**（`c09b58739e8d3094b081f997554e29ca6e602b55d2acdc757664aaa92ddefe4d`），
   而 `GameOver` 仍是 `false`、`Lives` 仍是 2。这**不是**测量噪声，是这条更长的窗口**揭出的一个真实
   游戏侧缺陷**（死亡后不重生），TASK-139 只测不改，故**登记不修**，留给下一批。
-- **第二条实测结论（比窗口长度更重要）**：**脚本臂的 verdict 不是每次都能复现**。重复性探针
-  （同一条命令跑两遍、5 款、专用端口）在 **w30** 显示 **5 款里 4 款两遍不等**：`pong`
-  `PASS(baseline only)` vs `PASS`、`breakout` INCONCLUSIVE vs FAIL、`asteroids`/`tetris` PASS vs
-  INCONCLUSIVE；机制是 `Engine.get_frames_drawn()` 的实际跨度与 MCP 往返抖动逐次不同，以及
-  **`ack_result` 偶发缺失**（TASK-138 defect ⑨ 规定缺失即该步 INCONCLUSIVE，于是整局翻档）。
-  在 **w90** 下同一探针 5 款**两遍全一致**（`asteroids`/`pacman`/`tetris`/`pong`/`breakout`，
-  `rc` 全 0；见 `t139_determinism_t139-determinism-{w30,w90}.json`）。因此本批的结论是：
-  **w30 的逐款 verdict 不可复现，w90 在同样 5 款上可复现**——这正是 `min_frames` 存在的理由，
-  也是敏感矩阵里 `pong` 那类"翻转"不能全部记到窗口长度头上的原因（报告 §A.4 逐条区分）。
+- **第二条实测结论（比窗口长度更重要）**：**w30 的逐款 verdict 不可复现**。重复性探针
+  （同一条命令跑两遍、5 款、专用端口）跑了**三轮完整的 w30**，把三轮并排后
+  5 款里 **4 款在不同轮次之间翻过档**（`asteroids` PASS/INCONCLUSIVE/FAIL、
+  `tetris` PASS/FAIL/INCONCLUSIVE、`pong` PASS vs `PASS(baseline only)`、
+  `breakout` INCONCLUSIVE/FAIL）——**同一命令、同一代码**。
+  **w90 的两轮完整运行**在同样 5 款上逐款一致（`asteroids` PASS、`pacman` PASS、`tetris` PASS、
+  `pong` PASS、`breakout` FAIL）。机制是两件事：(a) `Engine.get_frames_drawn()` 的实际跨度逐次不同
+  （同一步 w30 的 `control_frames` 在 30–41 之间跳）；(b) **`ack_result` 偶发缺失**
+  （TASK-138 defect ⑨ 规定缺失即该步 INCONCLUSIVE，于是整局翻档）。
+  注意：三轮中的第二轮曾因 w30/w90 **共用端口互杀**产生 `rc=1`，那一轮不作为常规证据，
+  但 (b) 这条机制在第一、三轮（`rc` 全 0）同样出现，故**不是事故的产物**。
 - 选择与影响：`model_player_window.min_frames=20` 保持不变（它只拦"太短"，不拦"抖动"）；
   **新的、更准确的措辞**是：`min_frames` 管"窗口短到装不下一次反应"，**重复性**是另一个独立问题，
   本批只测量并登记，不擅自改判据。已写进 `TEMPLATE-logic-feedback.md §1.2c` 与报告 §A.4。

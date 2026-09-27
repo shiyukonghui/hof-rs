@@ -140,11 +140,14 @@
 * **号不准（`None`/未记录）≠ 太短**：写 `unmeasured`，不得据此判 `WINDOW_TOO_SHORT`——
   工具不许发明它没有的测量。
 * **短窗口与不可复现是两件事**（TASK-139 实测）：`min_frames` 只拦"短到装不下一次反应"。
-  重复性探针（同一条命令跑两遍、5 款、专用端口）在 **`--window-frames 30`** 下显示 **4/5 款两遍
-  不等**（`pong` baseline-only vs PASS、`breakout` INCONCLUSIVE vs FAIL、`asteroids`/`tetris`
-  PASS vs INCONCLUSIVE），机制是实际帧跨度抖动 + **`ack_result` 偶发缺失**（§1.2b ⇒ 该步
-  INCONCLUSIVE ⇒ 整局翻档）；`--window-frames 90` 下同样 5 款**两遍全一致**。
-  ⇒ **报告里引用某款的 verdict 时，必须同时说明是哪一档、以及该档是否已被重复性探针验证**；
+  重复性探针（同一条命令跑两遍、5 款、专用端口）跑了 **三轮完整的 `--window-frames 30`**，
+  并排后 **5 款里 4 款在不同轮次之间翻过档**（`asteroids` PASS/INCONCLUSIVE/FAIL、
+  `tetris` PASS/FAIL/INCONCLUSIVE、`pong` PASS vs `PASS(baseline only)`、`breakout`
+  INCONCLUSIVE/FAIL），**同一命令、同一代码**；`--window-frames 90` 的两轮完整运行在同样 5 款上
+  **逐款一致**。机制：(a) 实际帧跨度逐次不同（同一步 w30 的 `control_frames` 在 30–41 之间跳）；
+  (b) **`ack_result` 偶发缺失**（§1.2b ⇒ 该步 INCONCLUSIVE ⇒ 整局翻档）——(b) 在 `rc` 全 0 的轮次里
+  同样出现，故不是事故的产物。
+  ⇒ **报告里引用某款的 verdict 时，必须同时说明是哪一档、哪一轮**；
   不得把一次 w30 抽样当成可复现读数，也不得把"抖动翻档"记到窗口长度的账上。
 
 ### 1.2b `ack` 缺失 ⇒ 该步 INCONCLUSIVE，**禁止**回退到注入前的读数（TASK-138 defect ⑨）

@@ -10,6 +10,7 @@
   "pong",
   "breakout"
  ],
+ "repeats": 2,
  "runs": [
   {
    "game": "asteroids",
@@ -44,13 +45,13 @@
     "strict_verdict": "PASS",
     "baseline_verdict": "PASS",
     "game_side_verdict": "PASS",
-    "injected_steps": 12,
-    "accepted_steps": 1,
-    "changed_steps_of_accepted": 1,
+    "injected_steps": 8,
+    "accepted_steps": 8,
+    "changed_steps_of_accepted": 8,
     "accepted_and_changed_rate": 1.0,
-    "rated_step_count": 1,
+    "rated_step_count": 8,
     "refused_steps": [],
-    "real_progress_step_count": 7,
+    "real_progress_step_count": 8,
     "fail_steps": [],
     "window_too_short": false,
     "window_too_short_steps": [],
@@ -62,13 +63,13 @@
      "strict_verdict": "PASS",
      "baseline_verdict": "PASS",
      "game_side_verdict": "PASS",
-     "injected_steps": 12,
-     "accepted_steps": 1,
-     "changed_steps_of_accepted": 1,
+     "injected_steps": 8,
+     "accepted_steps": 8,
+     "changed_steps_of_accepted": 8,
      "accepted_and_changed_rate": 1.0,
-     "rated_step_count": 1,
+     "rated_step_count": 8,
      "refused_steps": [],
-     "real_progress_step_count": 7,
+     "real_progress_step_count": 8,
      "fail_steps": [],
      "window_too_short": false,
      "window_too_short_steps": [],
@@ -77,14 +78,14 @@
     },
     "_steps": {
      "1": {
-      "step_verdict": "changed_but_ack_missing",
+      "step_verdict": "ok_ack_and_changed",
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 3072,
-      "control_frames": 33,
-      "action_frames": 37,
-      "gameplay_movement": 0.0,
+      "pixel_diff": 84,
+      "control_frames": 30,
+      "action_frames": 30,
+      "gameplay_movement": 77.953,
       "action": "ast_left"
      },
      "2": {
@@ -92,120 +93,76 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 6297,
-      "control_frames": 34,
-      "action_frames": 37,
-      "gameplay_movement": 30.0,
+      "pixel_diff": 15,
+      "control_frames": 32,
+      "action_frames": 33,
+      "gameplay_movement": 2117.794,
       "action": "ast_fire"
      },
      "3": {
-      "step_verdict": "changed_but_ack_missing",
+      "step_verdict": "ok_ack_and_changed",
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 5212,
-      "control_frames": 32,
-      "action_frames": 36,
-      "gameplay_movement": 0.0,
+      "pixel_diff": 100,
+      "control_frames": 30,
+      "action_frames": 30,
+      "gameplay_movement": 129.174,
       "action": "ast_right"
      },
      "4": {
-      "step_verdict": "no_ack_no_change",
-      "changed": false,
-      "changed_strict": false,
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 0,
+      "pixel_diff": 968,
       "control_frames": 32,
-      "action_frames": 34,
-      "gameplay_movement": 0.0,
+      "action_frames": 35,
+      "gameplay_movement": 216.478,
       "action": "ast_thrust"
      },
      "5": {
-      "step_verdict": "changed_but_ack_missing",
+      "step_verdict": "ok_ack_and_changed",
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 352,
-      "control_frames": 34,
-      "action_frames": 37,
-      "gameplay_movement": 0.0,
+      "pixel_diff": 968,
+      "control_frames": 31,
+      "action_frames": 34,
+      "gameplay_movement": 276.425,
       "action": "ast_left"
      },
      "6": {
-      "step_verdict": "no_ack_no_change",
-      "changed": false,
-      "changed_strict": false,
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 0,
-      "control_frames": 31,
-      "action_frames": 36,
-      "gameplay_movement": 0.0,
+      "pixel_diff": 6406,
+      "control_frames": 30,
+      "action_frames": 33,
+      "gameplay_movement": 743.338,
       "action": "ast_fire"
      },
      "7": {
-      "step_verdict": "changed_but_ack_missing",
+      "step_verdict": "ok_ack_and_changed",
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 352,
-      "control_frames": 33,
-      "action_frames": 34,
-      "gameplay_movement": 0.0,
+      "pixel_diff": 887,
+      "control_frames": 30,
+      "action_frames": 32,
+      "gameplay_movement": 137.004,
       "action": "ast_right"
      },
      "8": {
-      "step_verdict": "no_ack_no_change",
-      "changed": false,
-      "changed_strict": false,
-      "refused_legal": false,
-      "pixel_diff": 0,
-      "control_frames": 36,
-      "action_frames": 40,
-      "gameplay_movement": 0.0,
-      "action": "ast_thrust"
-     },
-     "9": {
-      "step_verdict": "changed_but_ack_missing",
+      "step_verdict": "ok_ack_and_changed",
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 352,
+      "pixel_diff": 969,
       "control_frames": 31,
-      "action_frames": 35,
-      "gameplay_movement": 0.0,
-      "action": "ast_left"
-     },
-     "10": {
-      "step_verdict": "no_ack_no_change",
-      "changed": false,
-      "changed_strict": false,
-      "refused_legal": false,
-      "pixel_diff": 0,
-      "control_frames": 33,
-      "action_frames": 38,
-      "gameplay_movement": 0.0,
-      "action": "ast_fire"
-     },
-     "11": {
-      "step_verdict": "changed_but_ack_missing",
-      "changed": true,
-      "changed_strict": true,
-      "refused_legal": false,
-      "pixel_diff": 352,
-      "control_frames": 36,
-      "action_frames": 39,
-      "gameplay_movement": 0.0,
-      "action": "ast_right"
-     },
-     "12": {
-      "step_verdict": "no_ack_no_change",
-      "changed": false,
-      "changed_strict": false,
-      "refused_legal": false,
-      "pixel_diff": 0,
-      "control_frames": 34,
-      "action_frames": 39,
-      "gameplay_movement": 0.0,
+      "action_frames": 32,
+      "gameplay_movement": 226.194,
       "action": "ast_thrust"
      }
     }
@@ -281,10 +238,10 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 88,
-      "control_frames": 30,
-      "action_frames": 33,
-      "gameplay_movement": 77.768,
+      "pixel_diff": 84,
+      "control_frames": 31,
+      "action_frames": 32,
+      "gameplay_movement": 78.483,
       "action": "ast_left"
      },
      "2": {
@@ -292,10 +249,10 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 17,
+      "pixel_diff": 16,
       "control_frames": 30,
-      "action_frames": 30,
-      "gameplay_movement": 2133.265,
+      "action_frames": 33,
+      "gameplay_movement": 2082.599,
       "action": "ast_fire"
      },
      "3": {
@@ -303,10 +260,10 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 92,
-      "control_frames": 30,
-      "action_frames": 30,
-      "gameplay_movement": 131.857,
+      "pixel_diff": 52,
+      "control_frames": 34,
+      "action_frames": 36,
+      "gameplay_movement": 83.75,
       "action": "ast_right"
      },
      "4": {
@@ -314,10 +271,10 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 964,
-      "control_frames": 30,
-      "action_frames": 32,
-      "gameplay_movement": 208.294,
+      "pixel_diff": 968,
+      "control_frames": 33,
+      "action_frames": 33,
+      "gameplay_movement": 226.411,
       "action": "ast_thrust"
      },
      "5": {
@@ -326,9 +283,9 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 968,
-      "control_frames": 30,
-      "action_frames": 30,
-      "gameplay_movement": 269.897,
+      "control_frames": 32,
+      "action_frames": 34,
+      "gameplay_movement": 287.36,
       "action": "ast_left"
      },
      "6": {
@@ -336,10 +293,10 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 6412,
-      "control_frames": 33,
-      "action_frames": 36,
-      "gameplay_movement": 770.559,
+      "pixel_diff": 6410,
+      "control_frames": 35,
+      "action_frames": 37,
+      "gameplay_movement": 794.157,
       "action": "ast_fire"
      },
      "7": {
@@ -347,10 +304,10 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 872,
-      "control_frames": 32,
-      "action_frames": 36,
-      "gameplay_movement": 132.709,
+      "pixel_diff": 832,
+      "control_frames": 30,
+      "action_frames": 30,
+      "gameplay_movement": 132.643,
       "action": "ast_right"
      },
      "8": {
@@ -358,10 +315,10 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 969,
+      "pixel_diff": 967,
       "control_frames": 32,
       "action_frames": 33,
-      "gameplay_movement": 241.603,
+      "gameplay_movement": 245.492,
       "action": "ast_thrust"
      }
     }
@@ -450,7 +407,7 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 4197,
-      "control_frames": 32,
+      "control_frames": 30,
       "action_frames": 32,
       "gameplay_movement": 282.0,
       "action": "pac_left"
@@ -461,8 +418,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 2217,
-      "control_frames": 31,
-      "action_frames": 37,
+      "control_frames": 33,
+      "action_frames": 35,
       "gameplay_movement": 279.0,
       "action": "pac_up"
      },
@@ -472,8 +429,8 @@
       "changed_strict": false,
       "refused_legal": true,
       "pixel_diff": 0,
-      "control_frames": 31,
-      "action_frames": 32,
+      "control_frames": 32,
+      "action_frames": 34,
       "gameplay_movement": 0.0,
       "action": "pac_right"
      },
@@ -484,7 +441,7 @@
       "refused_legal": false,
       "pixel_diff": 1352,
       "control_frames": 31,
-      "action_frames": 35,
+      "action_frames": 32,
       "gameplay_movement": 240.0,
       "action": "pac_down"
      },
@@ -494,8 +451,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 1978,
-      "control_frames": 30,
-      "action_frames": 32,
+      "control_frames": 31,
+      "action_frames": 34,
       "gameplay_movement": 282.0,
       "action": "pac_left"
      },
@@ -505,8 +462,8 @@
       "changed_strict": false,
       "refused_legal": true,
       "pixel_diff": 0,
-      "control_frames": 32,
-      "action_frames": 34,
+      "control_frames": 31,
+      "action_frames": 33,
       "gameplay_movement": 0.0,
       "action": "pac_up"
      },
@@ -516,8 +473,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 1352,
-      "control_frames": 35,
-      "action_frames": 36,
+      "control_frames": 30,
+      "action_frames": 32,
       "gameplay_movement": 243.0,
       "action": "pac_right"
      },
@@ -527,8 +484,8 @@
       "changed_strict": false,
       "refused_legal": true,
       "pixel_diff": 0,
-      "control_frames": 31,
-      "action_frames": 31,
+      "control_frames": 32,
+      "action_frames": 33,
       "gameplay_movement": 0.0,
       "action": "pac_down"
      },
@@ -538,8 +495,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 1352,
-      "control_frames": 34,
-      "action_frames": 37,
+      "control_frames": 33,
+      "action_frames": 33,
       "gameplay_movement": 243.0,
       "action": "pac_left"
      },
@@ -549,7 +506,7 @@
       "changed_strict": false,
       "refused_legal": true,
       "pixel_diff": 0,
-      "control_frames": 32,
+      "control_frames": 30,
       "action_frames": 32,
       "gameplay_movement": 0.0,
       "action": "pac_up"
@@ -560,8 +517,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 1352,
-      "control_frames": 32,
-      "action_frames": 32,
+      "control_frames": 30,
+      "action_frames": 31,
       "gameplay_movement": 243.0,
       "action": "pac_right"
      },
@@ -571,8 +528,8 @@
       "changed_strict": false,
       "refused_legal": true,
       "pixel_diff": 0,
-      "control_frames": 32,
-      "action_frames": 34,
+      "control_frames": 30,
+      "action_frames": 31,
       "gameplay_movement": 0.0,
       "action": "pac_down"
      }
@@ -663,7 +620,7 @@
       "refused_legal": false,
       "pixel_diff": 4197,
       "control_frames": 32,
-      "action_frames": 37,
+      "action_frames": 32,
       "gameplay_movement": 282.0,
       "action": "pac_left"
      },
@@ -673,8 +630,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 2217,
-      "control_frames": 32,
-      "action_frames": 33,
+      "control_frames": 31,
+      "action_frames": 34,
       "gameplay_movement": 279.0,
       "action": "pac_up"
      },
@@ -684,7 +641,7 @@
       "changed_strict": false,
       "refused_legal": true,
       "pixel_diff": 0,
-      "control_frames": 34,
+      "control_frames": 33,
       "action_frames": 35,
       "gameplay_movement": 0.0,
       "action": "pac_right"
@@ -696,7 +653,7 @@
       "refused_legal": false,
       "pixel_diff": 1352,
       "control_frames": 30,
-      "action_frames": 32,
+      "action_frames": 30,
       "gameplay_movement": 240.0,
       "action": "pac_down"
      },
@@ -706,8 +663,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 1978,
-      "control_frames": 32,
-      "action_frames": 36,
+      "control_frames": 34,
+      "action_frames": 35,
       "gameplay_movement": 282.0,
       "action": "pac_left"
      },
@@ -718,7 +675,7 @@
       "refused_legal": true,
       "pixel_diff": 0,
       "control_frames": 30,
-      "action_frames": 33,
+      "action_frames": 32,
       "gameplay_movement": 0.0,
       "action": "pac_up"
      },
@@ -728,8 +685,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 1352,
-      "control_frames": 32,
-      "action_frames": 35,
+      "control_frames": 30,
+      "action_frames": 31,
       "gameplay_movement": 243.0,
       "action": "pac_right"
      },
@@ -739,8 +696,8 @@
       "changed_strict": false,
       "refused_legal": true,
       "pixel_diff": 0,
-      "control_frames": 31,
-      "action_frames": 31,
+      "control_frames": 32,
+      "action_frames": 33,
       "gameplay_movement": 0.0,
       "action": "pac_down"
      },
@@ -750,8 +707,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 1352,
-      "control_frames": 32,
-      "action_frames": 34,
+      "control_frames": 30,
+      "action_frames": 31,
       "gameplay_movement": 243.0,
       "action": "pac_left"
      },
@@ -761,8 +718,8 @@
       "changed_strict": false,
       "refused_legal": true,
       "pixel_diff": 0,
-      "control_frames": 31,
-      "action_frames": 32,
+      "control_frames": 33,
+      "action_frames": 33,
       "gameplay_movement": 0.0,
       "action": "pac_up"
      },
@@ -772,7 +729,7 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 1352,
-      "control_frames": 31,
+      "control_frames": 33,
       "action_frames": 34,
       "gameplay_movement": 243.0,
       "action": "pac_right"
@@ -783,8 +740,8 @@
       "changed_strict": false,
       "refused_legal": true,
       "pixel_diff": 0,
-      "control_frames": 33,
-      "action_frames": 34,
+      "control_frames": 30,
+      "action_frames": 32,
       "gameplay_movement": 0.0,
       "action": "pac_down"
      }
@@ -862,23 +819,12 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 3174,
-      "control_frames": 31,
-      "action_frames": 32,
+      "control_frames": 33,
+      "action_frames": 33,
       "gameplay_movement": 1.0,
       "action": "tetris_rotate"
      },
      "2": {
-      "step_verdict": "ok_ack_and_changed",
-      "changed": true,
-      "changed_strict": true,
-      "refused_legal": false,
-      "pixel_diff": 4232,
-      "control_frames": 32,
-      "action_frames": 32,
-      "gameplay_movement": 1.0,
-      "action": "tetris_left"
-     },
-     "3": {
       "step_verdict": "ok_ack_and_changed",
       "changed": true,
       "changed_strict": true,
@@ -889,14 +835,25 @@
       "gameplay_movement": 1.0,
       "action": "tetris_left"
      },
+     "3": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4232,
+      "control_frames": 30,
+      "action_frames": 32,
+      "gameplay_movement": 1.0,
+      "action": "tetris_left"
+     },
      "4": {
       "step_verdict": "ok_ack_and_changed",
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 4232,
-      "control_frames": 31,
-      "action_frames": 31,
+      "control_frames": 33,
+      "action_frames": 36,
       "gameplay_movement": 1.0,
       "action": "tetris_left"
      },
@@ -906,7 +863,7 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 6348,
-      "control_frames": 32,
+      "control_frames": 31,
       "action_frames": 32,
       "gameplay_movement": 10.0,
       "action": "tetris_drop"
@@ -917,8 +874,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 2116,
-      "control_frames": 31,
-      "action_frames": 32,
+      "control_frames": 30,
+      "action_frames": 33,
       "gameplay_movement": 1.0,
       "action": "tetris_right"
      },
@@ -929,7 +886,7 @@
       "refused_legal": false,
       "pixel_diff": 2116,
       "control_frames": 33,
-      "action_frames": 33,
+      "action_frames": 34,
       "gameplay_movement": 1.0,
       "action": "tetris_right"
      },
@@ -940,7 +897,7 @@
       "refused_legal": false,
       "pixel_diff": 2116,
       "control_frames": 30,
-      "action_frames": 31,
+      "action_frames": 30,
       "gameplay_movement": 1.0,
       "action": "tetris_right"
      }
@@ -1018,7 +975,7 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 3174,
-      "control_frames": 32,
+      "control_frames": 33,
       "action_frames": 33,
       "gameplay_movement": 1.0,
       "action": "tetris_rotate"
@@ -1030,7 +987,7 @@
       "refused_legal": false,
       "pixel_diff": 4232,
       "control_frames": 31,
-      "action_frames": 33,
+      "action_frames": 32,
       "gameplay_movement": 1.0,
       "action": "tetris_left"
      },
@@ -1040,8 +997,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 4232,
-      "control_frames": 30,
-      "action_frames": 30,
+      "control_frames": 31,
+      "action_frames": 35,
       "gameplay_movement": 1.0,
       "action": "tetris_left"
      },
@@ -1051,8 +1008,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 4232,
-      "control_frames": 30,
-      "action_frames": 31,
+      "control_frames": 32,
+      "action_frames": 36,
       "gameplay_movement": 1.0,
       "action": "tetris_left"
      },
@@ -1062,8 +1019,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 6348,
-      "control_frames": 30,
-      "action_frames": 30,
+      "control_frames": 31,
+      "action_frames": 32,
       "gameplay_movement": 10.0,
       "action": "tetris_drop"
      },
@@ -1073,8 +1030,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 2116,
-      "control_frames": 31,
-      "action_frames": 33,
+      "control_frames": 30,
+      "action_frames": 30,
       "gameplay_movement": 1.0,
       "action": "tetris_right"
      },
@@ -1084,8 +1041,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 2116,
-      "control_frames": 33,
-      "action_frames": 34,
+      "control_frames": 30,
+      "action_frames": 30,
       "gameplay_movement": 1.0,
       "action": "tetris_right"
      },
@@ -1095,8 +1052,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 2116,
-      "control_frames": 30,
-      "action_frames": 30,
+      "control_frames": 31,
+      "action_frames": 32,
       "gameplay_movement": 1.0,
       "action": "tetris_right"
      }
@@ -1106,6 +1063,212 @@
   {
    "game": "pong",
    "repeat": 1,
+   "rc": 0,
+   "cmd": [
+    "D:\\Anaconda\\python.exe",
+    "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+    "run",
+    "--game",
+    "pong",
+    "--backend",
+    "scripted",
+    "--player",
+    "scripted",
+    "--variant",
+    "V1",
+    "--image-form",
+    "full",
+    "--steps",
+    "12",
+    "--port",
+    "9967",
+    "--window-frames",
+    "30",
+    "--out-prefix",
+    "t139-determinism-w30"
+   ],
+   "run": {
+    "verdict": "PASS(baseline only)",
+    "counts_as_pass": false,
+    "strict_verdict": "FAIL",
+    "baseline_verdict": "PASS",
+    "game_side_verdict": "FAIL",
+    "injected_steps": 11,
+    "accepted_steps": 11,
+    "changed_steps_of_accepted": 9,
+    "accepted_and_changed_rate": 0.8182,
+    "rated_step_count": 11,
+    "refused_steps": [],
+    "real_progress_step_count": 9,
+    "fail_steps": [
+     5,
+     7
+    ],
+    "window_too_short": false,
+    "window_too_short_steps": [],
+    "MODEL_FIXED_POINT": false,
+    "MODEL_NO_PROGRESS": false,
+    "_summary": {
+     "verdict": "PASS(baseline only)",
+     "counts_as_pass": false,
+     "strict_verdict": "FAIL",
+     "baseline_verdict": "PASS",
+     "game_side_verdict": "FAIL",
+     "injected_steps": 11,
+     "accepted_steps": 11,
+     "changed_steps_of_accepted": 9,
+     "accepted_and_changed_rate": 0.8182,
+     "rated_step_count": 11,
+     "refused_steps": [],
+     "real_progress_step_count": 9,
+     "fail_steps": [
+      5,
+      7
+     ],
+     "window_too_short": false,
+     "window_too_short_steps": [],
+     "MODEL_FIXED_POINT": false,
+     "MODEL_NO_PROGRESS": false
+    },
+    "_steps": {
+     "1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 3712,
+      "control_frames": 30,
+      "action_frames": 31,
+      "gameplay_movement": 717.006,
+      "action": "pong_serve"
+     },
+     "2": {
+      "step_verdict": "changed_but_ack_missing",
+      "changed": true,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 928,
+      "control_frames": 31,
+      "action_frames": 32,
+      "gameplay_movement": 783.616,
+      "action": null
+     },
+     "3": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 3712,
+      "control_frames": 30,
+      "action_frames": 31,
+      "gameplay_movement": 600.853,
+      "action": "pong_left_down"
+     },
+     "4": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 6912,
+      "control_frames": 31,
+      "action_frames": 36,
+      "gameplay_movement": 1228.157,
+      "action": "pong_left_up"
+     },
+     "5": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 5888,
+      "control_frames": 32,
+      "action_frames": 34,
+      "gameplay_movement": 1295.492,
+      "action": "pong_left_down"
+     },
+     "6": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 6176,
+      "control_frames": 31,
+      "action_frames": 32,
+      "gameplay_movement": 1360.899,
+      "action": "pong_left_up"
+     },
+     "7": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 5600,
+      "control_frames": 31,
+      "action_frames": 34,
+      "gameplay_movement": 1528.926,
+      "action": "pong_left_down"
+     },
+     "8": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4460,
+      "control_frames": 30,
+      "action_frames": 31,
+      "gameplay_movement": 1260.028,
+      "action": "pong_left_up"
+     },
+     "9": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 3712,
+      "control_frames": 30,
+      "action_frames": 32,
+      "gameplay_movement": 794.707,
+      "action": "pong_serve"
+     },
+     "10": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4544,
+      "control_frames": 33,
+      "action_frames": 38,
+      "gameplay_movement": 1446.776,
+      "action": "pong_left_down"
+     },
+     "11": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4300,
+      "control_frames": 31,
+      "action_frames": 32,
+      "gameplay_movement": 843.671,
+      "action": "pong_left_up"
+     },
+     "12": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 512,
+      "control_frames": 30,
+      "action_frames": 32,
+      "gameplay_movement": 585.89,
+      "action": "pong_serve"
+     }
+    }
+   }
+  },
+  {
+   "game": "pong",
+   "repeat": 2,
    "rc": 0,
    "cmd": [
     "D:\\Anaconda\\python.exe",
@@ -1179,8 +1342,8 @@
       "refused_legal": false,
       "pixel_diff": 3712,
       "control_frames": 31,
-      "action_frames": 33,
-      "gameplay_movement": 746.474,
+      "action_frames": 31,
+      "gameplay_movement": 726.903,
       "action": "pong_serve"
      },
      "2": {
@@ -1188,10 +1351,10 @@
       "changed": true,
       "changed_strict": false,
       "refused_legal": false,
-      "pixel_diff": 576,
-      "control_frames": 31,
-      "action_frames": 33,
-      "gameplay_movement": 787.184,
+      "pixel_diff": 864,
+      "control_frames": 32,
+      "action_frames": 34,
+      "gameplay_movement": 781.12,
       "action": null
      },
      "3": {
@@ -1200,9 +1363,9 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 3712,
-      "control_frames": 31,
-      "action_frames": 32,
-      "gameplay_movement": 595.113,
+      "control_frames": 35,
+      "action_frames": 36,
+      "gameplay_movement": 607.244,
       "action": "pong_left_down"
      },
      "4": {
@@ -1211,9 +1374,9 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 6912,
-      "control_frames": 33,
-      "action_frames": 34,
-      "gameplay_movement": 1729.888,
+      "control_frames": 31,
+      "action_frames": 31,
+      "gameplay_movement": 1252.81,
       "action": "pong_left_up"
      },
      "5": {
@@ -1221,10 +1384,10 @@
       "changed": true,
       "changed_strict": false,
       "refused_legal": false,
-      "pixel_diff": 6368,
+      "pixel_diff": 6400,
       "control_frames": 30,
-      "action_frames": 30,
-      "gameplay_movement": 1570.763,
+      "action_frames": 34,
+      "gameplay_movement": 1319.859,
       "action": "pong_left_down"
      },
      "6": {
@@ -1232,10 +1395,10 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 4768,
-      "control_frames": 30,
-      "action_frames": 31,
-      "gameplay_movement": 1660.436,
+      "pixel_diff": 4300,
+      "control_frames": 31,
+      "action_frames": 34,
+      "gameplay_movement": 722.946,
       "action": "pong_left_up"
      },
      "7": {
@@ -1243,44 +1406,44 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 6912,
+      "pixel_diff": 512,
       "control_frames": 30,
       "action_frames": 30,
-      "gameplay_movement": 1860.497,
-      "action": "pong_left_down"
+      "gameplay_movement": 575.658,
+      "action": "pong_serve"
      },
      "8": {
       "step_verdict": "ok_ack_and_changed",
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 4064,
-      "control_frames": 33,
+      "pixel_diff": 4173,
+      "control_frames": 30,
       "action_frames": 33,
-      "gameplay_movement": 1453.851,
-      "action": "pong_left_up"
+      "gameplay_movement": 1066.338,
+      "action": "pong_left_down"
      },
      "9": {
       "step_verdict": "ok_ack_and_changed",
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 5632,
-      "control_frames": 30,
-      "action_frames": 30,
-      "gameplay_movement": 935.383,
-      "action": "pong_left_up"
+      "pixel_diff": 512,
+      "control_frames": 33,
+      "action_frames": 38,
+      "gameplay_movement": 598.68,
+      "action": "pong_serve"
      },
      "10": {
       "step_verdict": "ok_ack_and_changed",
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 5536,
+      "pixel_diff": 6912,
       "control_frames": 31,
-      "action_frames": 32,
-      "gameplay_movement": 1410.583,
-      "action": "pong_left_down"
+      "action_frames": 33,
+      "gameplay_movement": 1580.871,
+      "action": "pong_left_up"
      },
      "11": {
       "step_verdict": "ok_ack_and_changed",
@@ -1289,198 +1452,20 @@
       "refused_legal": false,
       "pixel_diff": 3712,
       "control_frames": 33,
-      "action_frames": 34,
-      "gameplay_movement": 864.106,
-      "action": "pong_left_up"
+      "action_frames": 35,
+      "gameplay_movement": 1126.152,
+      "action": "pong_left_down"
      },
      "12": {
       "step_verdict": "ok_ack_and_changed",
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 4268,
-      "control_frames": 30,
-      "action_frames": 34,
-      "gameplay_movement": 1153.079,
-      "action": "pong_left_down"
-     }
-    }
-   }
-  },
-  {
-   "game": "pong",
-   "repeat": 2,
-   "rc": 0,
-   "cmd": [
-    "D:\\Anaconda\\python.exe",
-    "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
-    "run",
-    "--game",
-    "pong",
-    "--backend",
-    "scripted",
-    "--player",
-    "scripted",
-    "--variant",
-    "V1",
-    "--image-form",
-    "full",
-    "--steps",
-    "12",
-    "--port",
-    "9967",
-    "--window-frames",
-    "30",
-    "--out-prefix",
-    "t139-determinism-w30"
-   ],
-   "run": {
-    "verdict": "PASS",
-    "counts_as_pass": true,
-    "strict_verdict": "PASS",
-    "baseline_verdict": "PASS",
-    "game_side_verdict": "PASS",
-    "injected_steps": 9,
-    "accepted_steps": 9,
-    "changed_steps_of_accepted": 9,
-    "accepted_and_changed_rate": 1.0,
-    "rated_step_count": 9,
-    "refused_steps": [],
-    "real_progress_step_count": 9,
-    "fail_steps": [],
-    "window_too_short": false,
-    "window_too_short_steps": [],
-    "MODEL_FIXED_POINT": false,
-    "MODEL_NO_PROGRESS": false,
-    "_summary": {
-     "verdict": "PASS",
-     "counts_as_pass": true,
-     "strict_verdict": "PASS",
-     "baseline_verdict": "PASS",
-     "game_side_verdict": "PASS",
-     "injected_steps": 9,
-     "accepted_steps": 9,
-     "changed_steps_of_accepted": 9,
-     "accepted_and_changed_rate": 1.0,
-     "rated_step_count": 9,
-     "refused_steps": [],
-     "real_progress_step_count": 9,
-     "fail_steps": [],
-     "window_too_short": false,
-     "window_too_short_steps": [],
-     "MODEL_FIXED_POINT": false,
-     "MODEL_NO_PROGRESS": false
-    },
-    "_steps": {
-     "1": {
-      "step_verdict": "ok_ack_and_changed",
-      "changed": true,
-      "changed_strict": true,
-      "refused_legal": false,
       "pixel_diff": 3712,
-      "control_frames": 32,
-      "action_frames": 33,
-      "gameplay_movement": 740.714,
-      "action": "pong_serve"
-     },
-     "2": {
-      "step_verdict": "changed_but_ack_missing",
-      "changed": true,
-      "changed_strict": false,
-      "refused_legal": false,
-      "pixel_diff": 768,
-      "control_frames": 32,
-      "action_frames": 34,
-      "gameplay_movement": 789.715,
-      "action": null
-     },
-     "3": {
-      "step_verdict": "ok_ack_and_changed",
-      "changed": true,
-      "changed_strict": true,
-      "refused_legal": false,
-      "pixel_diff": 3712,
-      "control_frames": 31,
-      "action_frames": 34,
-      "gameplay_movement": 1238.401,
-      "action": "pong_left_down"
-     },
-     "4": {
-      "step_verdict": "ok_ack_and_changed",
-      "changed": true,
-      "changed_strict": true,
-      "refused_legal": false,
-      "pixel_diff": 6912,
-      "control_frames": 30,
-      "action_frames": 33,
-      "gameplay_movement": 1204.303,
+      "control_frames": 34,
+      "action_frames": 35,
+      "gameplay_movement": 883.954,
       "action": "pong_left_up"
-     },
-     "5": {
-      "step_verdict": "ok_ack_and_changed",
-      "changed": true,
-      "changed_strict": true,
-      "refused_legal": false,
-      "pixel_diff": 5024,
-      "control_frames": 32,
-      "action_frames": 33,
-      "gameplay_movement": 1281.1,
-      "action": "pong_left_down"
-     },
-     "6": {
-      "step_verdict": "ok_ack_and_changed",
-      "changed": true,
-      "changed_strict": true,
-      "refused_legal": false,
-      "pixel_diff": 4608,
-      "control_frames": 32,
-      "action_frames": 32,
-      "gameplay_movement": 1164.199,
-      "action": "pong_left_up"
-     },
-     "7": {
-      "step_verdict": "ok_ack_and_changed",
-      "changed": true,
-      "changed_strict": true,
-      "refused_legal": false,
-      "pixel_diff": 4768,
-      "control_frames": 32,
-      "action_frames": 34,
-      "gameplay_movement": 959.942,
-      "action": "pong_left_down"
-     },
-     "8": {
-      "step_verdict": "ok_ack_and_changed",
-      "changed": true,
-      "changed_strict": true,
-      "refused_legal": false,
-      "pixel_diff": 3670,
-      "control_frames": 30,
-      "action_frames": 31,
-      "gameplay_movement": 756.637,
-      "action": "pong_left_up"
-     },
-     "9": {
-      "step_verdict": "ok_ack_and_changed",
-      "changed": true,
-      "changed_strict": true,
-      "refused_legal": false,
-      "pixel_diff": 3628,
-      "control_frames": 32,
-      "action_frames": 34,
-      "gameplay_movement": 691.61,
-      "action": "pong_left_up"
-     },
-     "10": {
-      "step_verdict": "ok_ack_and_changed",
-      "changed": true,
-      "changed_strict": true,
-      "refused_legal": false,
-      "pixel_diff": 512,
-      "control_frames": 32,
-      "action_frames": 34,
-      "gameplay_movement": 584.959,
-      "action": "pong_serve"
      }
     }
    }
@@ -1556,9 +1541,9 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 392,
-      "control_frames": 30,
-      "action_frames": 31,
-      "gameplay_movement": 539.482,
+      "control_frames": 35,
+      "action_frames": 41,
+      "gameplay_movement": 741.719,
       "action": "breakout_launch"
      },
      "2": {
@@ -1567,9 +1552,9 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 9369,
-      "control_frames": 33,
-      "action_frames": 36,
-      "gameplay_movement": 627.949,
+      "control_frames": 31,
+      "action_frames": 32,
+      "gameplay_movement": 1794.794,
       "action": "breakout_right"
      },
      "3": {
@@ -1579,8 +1564,8 @@
       "refused_legal": false,
       "pixel_diff": 5212,
       "control_frames": 34,
-      "action_frames": 36,
-      "gameplay_movement": 1856.998,
+      "action_frames": 35,
+      "gameplay_movement": 1868.719,
       "action": "breakout_left"
      },
      "4": {
@@ -1589,8 +1574,8 @@
       "changed_strict": false,
       "refused_legal": false,
       "pixel_diff": 0,
-      "control_frames": 34,
-      "action_frames": 36,
+      "control_frames": 31,
+      "action_frames": 31,
       "gameplay_movement": 0.0,
       "action": null
      },
@@ -1600,8 +1585,8 @@
       "changed_strict": false,
       "refused_legal": false,
       "pixel_diff": 0,
-      "control_frames": 31,
-      "action_frames": 35,
+      "control_frames": 33,
+      "action_frames": 34,
       "gameplay_movement": 0.0,
       "action": null
      },
@@ -1622,12 +1607,23 @@
       "changed_strict": false,
       "refused_legal": false,
       "pixel_diff": 0,
+      "control_frames": 32,
+      "action_frames": 34,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "8": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
       "control_frames": 31,
       "action_frames": 32,
       "gameplay_movement": 0.0,
       "action": null
      },
-     "8": {
+     "9": {
       "step_verdict": "no_ack_no_change",
       "changed": false,
       "changed_strict": false,
@@ -1638,24 +1634,13 @@
       "gameplay_movement": 0.0,
       "action": null
      },
-     "9": {
-      "step_verdict": "no_ack_no_change",
-      "changed": false,
-      "changed_strict": false,
-      "refused_legal": false,
-      "pixel_diff": 0,
-      "control_frames": 30,
-      "action_frames": 31,
-      "gameplay_movement": 0.0,
-      "action": null
-     },
      "10": {
       "step_verdict": "no_ack_no_change",
       "changed": false,
       "changed_strict": false,
       "refused_legal": false,
       "pixel_diff": 0,
-      "control_frames": 31,
+      "control_frames": 30,
       "action_frames": 34,
       "gameplay_movement": 0.0,
       "action": null
@@ -1666,8 +1651,8 @@
       "changed_strict": false,
       "refused_legal": false,
       "pixel_diff": 0,
-      "control_frames": 35,
-      "action_frames": 37,
+      "control_frames": 34,
+      "action_frames": 39,
       "gameplay_movement": 0.0,
       "action": null
      },
@@ -1677,8 +1662,8 @@
       "changed_strict": false,
       "refused_legal": false,
       "pixel_diff": 0,
-      "control_frames": 34,
-      "action_frames": 34,
+      "control_frames": 31,
+      "action_frames": 31,
       "gameplay_movement": 0.0,
       "action": null
      }
@@ -1756,9 +1741,9 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 392,
-      "control_frames": 30,
-      "action_frames": 34,
-      "gameplay_movement": 559.878,
+      "control_frames": 33,
+      "action_frames": 36,
+      "gameplay_movement": 721.314,
       "action": "breakout_launch"
      },
      "2": {
@@ -1767,9 +1752,9 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 9369,
-      "control_frames": 35,
-      "action_frames": 39,
-      "gameplay_movement": 676.123,
+      "control_frames": 30,
+      "action_frames": 35,
+      "gameplay_movement": 1813.35,
       "action": "breakout_right"
      },
      "3": {
@@ -1778,9 +1763,9 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 5212,
-      "control_frames": 31,
-      "action_frames": 34,
-      "gameplay_movement": 1796.663,
+      "control_frames": 32,
+      "action_frames": 32,
+      "gameplay_movement": 1853.507,
       "action": "breakout_left"
      },
      "4": {
@@ -1789,78 +1774,12 @@
       "changed_strict": false,
       "refused_legal": false,
       "pixel_diff": 0,
-      "control_frames": 36,
-      "action_frames": 41,
+      "control_frames": 34,
+      "action_frames": 39,
       "gameplay_movement": 0.0,
       "action": null
      },
      "5": {
-      "step_verdict": "no_ack_no_change",
-      "changed": false,
-      "changed_strict": false,
-      "refused_legal": false,
-      "pixel_diff": 0,
-      "control_frames": 33,
-      "action_frames": 34,
-      "gameplay_movement": 0.0,
-      "action": null
-     },
-     "6": {
-      "step_verdict": "no_ack_no_change",
-      "changed": false,
-      "changed_strict": false,
-      "refused_legal": false,
-      "pixel_diff": 0,
-      "control_frames": 36,
-      "action_frames": 41,
-      "gameplay_movement": 0.0,
-      "action": null
-     },
-     "7": {
-      "step_verdict": "no_ack_no_change",
-      "changed": false,
-      "changed_strict": false,
-      "refused_legal": false,
-      "pixel_diff": 0,
-      "control_frames": 34,
-      "action_frames": 36,
-      "gameplay_movement": 0.0,
-      "action": null
-     },
-     "8": {
-      "step_verdict": "no_ack_no_change",
-      "changed": false,
-      "changed_strict": false,
-      "refused_legal": false,
-      "pixel_diff": 0,
-      "control_frames": 30,
-      "action_frames": 34,
-      "gameplay_movement": 0.0,
-      "action": null
-     },
-     "9": {
-      "step_verdict": "no_ack_no_change",
-      "changed": false,
-      "changed_strict": false,
-      "refused_legal": false,
-      "pixel_diff": 0,
-      "control_frames": 31,
-      "action_frames": 34,
-      "gameplay_movement": 0.0,
-      "action": null
-     },
-     "10": {
-      "step_verdict": "no_ack_no_change",
-      "changed": false,
-      "changed_strict": false,
-      "refused_legal": false,
-      "pixel_diff": 0,
-      "control_frames": 34,
-      "action_frames": 38,
-      "gameplay_movement": 0.0,
-      "action": null
-     },
-     "11": {
       "step_verdict": "no_ack_no_change",
       "changed": false,
       "changed_strict": false,
@@ -1871,14 +1790,80 @@
       "gameplay_movement": 0.0,
       "action": null
      },
+     "6": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 34,
+      "action_frames": 36,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "7": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 31,
+      "action_frames": 34,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "8": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 36,
+      "action_frames": 38,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "9": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 34,
+      "action_frames": 37,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "10": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 31,
+      "action_frames": 32,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "11": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 32,
+      "action_frames": 32,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
      "12": {
       "step_verdict": "no_ack_no_change",
       "changed": false,
       "changed_strict": false,
       "refused_legal": false,
       "pixel_diff": 0,
-      "control_frames": 30,
-      "action_frames": 32,
+      "control_frames": 36,
+      "action_frames": 36,
       "gameplay_movement": 0.0,
       "action": null
      }
@@ -1889,43 +1874,31 @@
  "comparison": [
   {
    "game": "asteroids",
+   "repeats": 2,
+   "verdicts": [
+    "PASS",
+    "PASS"
+   ],
    "verdict_repeat1": "PASS",
    "verdict_repeat2": "PASS",
    "verdict_stable": true,
-   "summary_differences": {
-    "injected_steps": [
-     12,
-     8
-    ],
-    "accepted_steps": [
-     1,
-     8
-    ],
-    "changed_steps_of_accepted": [
-     1,
-     8
-    ],
-    "rated_step_count": [
-     1,
-     8
-    ],
-    "real_progress_step_count": [
-     7,
-     8
-    ]
-   },
+   "rc_by_repeat": [
+    0,
+    0
+   ],
+   "summary_differences": {},
    "step_differences": [
     {
      "step": 1,
      "repeat1": {
-      "step_verdict": "changed_but_ack_missing",
+      "step_verdict": "ok_ack_and_changed",
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 3072,
-      "control_frames": 33,
-      "action_frames": 37,
-      "gameplay_movement": 0.0,
+      "pixel_diff": 84,
+      "control_frames": 30,
+      "action_frames": 30,
+      "gameplay_movement": 77.953,
       "action": "ast_left"
      },
      "repeat2": {
@@ -1933,10 +1906,10 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 88,
-      "control_frames": 30,
-      "action_frames": 33,
-      "gameplay_movement": 77.768,
+      "pixel_diff": 84,
+      "control_frames": 31,
+      "action_frames": 32,
+      "gameplay_movement": 78.483,
       "action": "ast_left"
      }
     },
@@ -1947,10 +1920,10 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 6297,
-      "control_frames": 34,
-      "action_frames": 37,
-      "gameplay_movement": 30.0,
+      "pixel_diff": 15,
+      "control_frames": 32,
+      "action_frames": 33,
+      "gameplay_movement": 2117.794,
       "action": "ast_fire"
      },
      "repeat2": {
@@ -1958,24 +1931,24 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 17,
+      "pixel_diff": 16,
       "control_frames": 30,
-      "action_frames": 30,
-      "gameplay_movement": 2133.265,
+      "action_frames": 33,
+      "gameplay_movement": 2082.599,
       "action": "ast_fire"
      }
     },
     {
      "step": 3,
      "repeat1": {
-      "step_verdict": "changed_but_ack_missing",
+      "step_verdict": "ok_ack_and_changed",
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 5212,
-      "control_frames": 32,
-      "action_frames": 36,
-      "gameplay_movement": 0.0,
+      "pixel_diff": 100,
+      "control_frames": 30,
+      "action_frames": 30,
+      "gameplay_movement": 129.174,
       "action": "ast_right"
      },
      "repeat2": {
@@ -1983,24 +1956,24 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 92,
-      "control_frames": 30,
-      "action_frames": 30,
-      "gameplay_movement": 131.857,
+      "pixel_diff": 52,
+      "control_frames": 34,
+      "action_frames": 36,
+      "gameplay_movement": 83.75,
       "action": "ast_right"
      }
     },
     {
      "step": 4,
      "repeat1": {
-      "step_verdict": "no_ack_no_change",
-      "changed": false,
-      "changed_strict": false,
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 0,
+      "pixel_diff": 968,
       "control_frames": 32,
-      "action_frames": 34,
-      "gameplay_movement": 0.0,
+      "action_frames": 35,
+      "gameplay_movement": 216.478,
       "action": "ast_thrust"
      },
      "repeat2": {
@@ -2008,24 +1981,24 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 964,
-      "control_frames": 30,
-      "action_frames": 32,
-      "gameplay_movement": 208.294,
+      "pixel_diff": 968,
+      "control_frames": 33,
+      "action_frames": 33,
+      "gameplay_movement": 226.411,
       "action": "ast_thrust"
      }
     },
     {
      "step": 5,
      "repeat1": {
-      "step_verdict": "changed_but_ack_missing",
+      "step_verdict": "ok_ack_and_changed",
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 352,
-      "control_frames": 34,
-      "action_frames": 37,
-      "gameplay_movement": 0.0,
+      "pixel_diff": 968,
+      "control_frames": 31,
+      "action_frames": 34,
+      "gameplay_movement": 276.425,
       "action": "ast_left"
      },
      "repeat2": {
@@ -2034,23 +2007,23 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 968,
-      "control_frames": 30,
-      "action_frames": 30,
-      "gameplay_movement": 269.897,
+      "control_frames": 32,
+      "action_frames": 34,
+      "gameplay_movement": 287.36,
       "action": "ast_left"
      }
     },
     {
      "step": 6,
      "repeat1": {
-      "step_verdict": "no_ack_no_change",
-      "changed": false,
-      "changed_strict": false,
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 0,
-      "control_frames": 31,
-      "action_frames": 36,
-      "gameplay_movement": 0.0,
+      "pixel_diff": 6406,
+      "control_frames": 30,
+      "action_frames": 33,
+      "gameplay_movement": 743.338,
       "action": "ast_fire"
      },
      "repeat2": {
@@ -2058,24 +2031,24 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 6412,
-      "control_frames": 33,
-      "action_frames": 36,
-      "gameplay_movement": 770.559,
+      "pixel_diff": 6410,
+      "control_frames": 35,
+      "action_frames": 37,
+      "gameplay_movement": 794.157,
       "action": "ast_fire"
      }
     },
     {
      "step": 7,
      "repeat1": {
-      "step_verdict": "changed_but_ack_missing",
+      "step_verdict": "ok_ack_and_changed",
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 352,
-      "control_frames": 33,
-      "action_frames": 34,
-      "gameplay_movement": 0.0,
+      "pixel_diff": 887,
+      "control_frames": 30,
+      "action_frames": 32,
+      "gameplay_movement": 137.004,
       "action": "ast_right"
      },
      "repeat2": {
@@ -2083,24 +2056,24 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 872,
-      "control_frames": 32,
-      "action_frames": 36,
-      "gameplay_movement": 132.709,
+      "pixel_diff": 832,
+      "control_frames": 30,
+      "action_frames": 30,
+      "gameplay_movement": 132.643,
       "action": "ast_right"
      }
     },
     {
      "step": 8,
      "repeat1": {
-      "step_verdict": "no_ack_no_change",
-      "changed": false,
-      "changed_strict": false,
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 0,
-      "control_frames": 36,
-      "action_frames": 40,
-      "gameplay_movement": 0.0,
+      "pixel_diff": 969,
+      "control_frames": 31,
+      "action_frames": 32,
+      "gameplay_movement": 226.194,
       "action": "ast_thrust"
      },
      "repeat2": {
@@ -2108,81 +2081,30 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 969,
+      "pixel_diff": 967,
       "control_frames": 32,
       "action_frames": 33,
-      "gameplay_movement": 241.603,
+      "gameplay_movement": 245.492,
       "action": "ast_thrust"
      }
-    },
-    {
-     "step": 9,
-     "repeat1": {
-      "step_verdict": "changed_but_ack_missing",
-      "changed": true,
-      "changed_strict": true,
-      "refused_legal": false,
-      "pixel_diff": 352,
-      "control_frames": 31,
-      "action_frames": 35,
-      "gameplay_movement": 0.0,
-      "action": "ast_left"
-     },
-     "repeat2": null
-    },
-    {
-     "step": 10,
-     "repeat1": {
-      "step_verdict": "no_ack_no_change",
-      "changed": false,
-      "changed_strict": false,
-      "refused_legal": false,
-      "pixel_diff": 0,
-      "control_frames": 33,
-      "action_frames": 38,
-      "gameplay_movement": 0.0,
-      "action": "ast_fire"
-     },
-     "repeat2": null
-    },
-    {
-     "step": 11,
-     "repeat1": {
-      "step_verdict": "changed_but_ack_missing",
-      "changed": true,
-      "changed_strict": true,
-      "refused_legal": false,
-      "pixel_diff": 352,
-      "control_frames": 36,
-      "action_frames": 39,
-      "gameplay_movement": 0.0,
-      "action": "ast_right"
-     },
-     "repeat2": null
-    },
-    {
-     "step": 12,
-     "repeat1": {
-      "step_verdict": "no_ack_no_change",
-      "changed": false,
-      "changed_strict": false,
-      "refused_legal": false,
-      "pixel_diff": 0,
-      "control_frames": 34,
-      "action_frames": 39,
-      "gameplay_movement": 0.0,
-      "action": "ast_thrust"
-     },
-     "repeat2": null
     }
    ],
-   "step_difference_count": 12
+   "step_difference_count": 8
   },
   {
    "game": "pacman",
+   "repeats": 2,
+   "verdicts": [
+    "PASS",
+    "PASS"
+   ],
    "verdict_repeat1": "PASS",
    "verdict_repeat2": "PASS",
    "verdict_stable": true,
+   "rc_by_repeat": [
+    0,
+    0
+   ],
    "summary_differences": {},
    "step_differences": [
     {
@@ -2193,7 +2115,7 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 4197,
-      "control_frames": 32,
+      "control_frames": 30,
       "action_frames": 32,
       "gameplay_movement": 282.0,
       "action": "pac_left"
@@ -2205,7 +2127,7 @@
       "refused_legal": false,
       "pixel_diff": 4197,
       "control_frames": 32,
-      "action_frames": 37,
+      "action_frames": 32,
       "gameplay_movement": 282.0,
       "action": "pac_left"
      }
@@ -2218,8 +2140,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 2217,
-      "control_frames": 31,
-      "action_frames": 37,
+      "control_frames": 33,
+      "action_frames": 35,
       "gameplay_movement": 279.0,
       "action": "pac_up"
      },
@@ -2229,8 +2151,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 2217,
-      "control_frames": 32,
-      "action_frames": 33,
+      "control_frames": 31,
+      "action_frames": 34,
       "gameplay_movement": 279.0,
       "action": "pac_up"
      }
@@ -2243,8 +2165,8 @@
       "changed_strict": false,
       "refused_legal": true,
       "pixel_diff": 0,
-      "control_frames": 31,
-      "action_frames": 32,
+      "control_frames": 32,
+      "action_frames": 34,
       "gameplay_movement": 0.0,
       "action": "pac_right"
      },
@@ -2254,7 +2176,7 @@
       "changed_strict": false,
       "refused_legal": true,
       "pixel_diff": 0,
-      "control_frames": 34,
+      "control_frames": 33,
       "action_frames": 35,
       "gameplay_movement": 0.0,
       "action": "pac_right"
@@ -2269,7 +2191,7 @@
       "refused_legal": false,
       "pixel_diff": 1352,
       "control_frames": 31,
-      "action_frames": 35,
+      "action_frames": 32,
       "gameplay_movement": 240.0,
       "action": "pac_down"
      },
@@ -2280,7 +2202,7 @@
       "refused_legal": false,
       "pixel_diff": 1352,
       "control_frames": 30,
-      "action_frames": 32,
+      "action_frames": 30,
       "gameplay_movement": 240.0,
       "action": "pac_down"
      }
@@ -2293,8 +2215,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 1978,
-      "control_frames": 30,
-      "action_frames": 32,
+      "control_frames": 31,
+      "action_frames": 34,
       "gameplay_movement": 282.0,
       "action": "pac_left"
      },
@@ -2304,8 +2226,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 1978,
-      "control_frames": 32,
-      "action_frames": 36,
+      "control_frames": 34,
+      "action_frames": 35,
       "gameplay_movement": 282.0,
       "action": "pac_left"
      }
@@ -2318,8 +2240,8 @@
       "changed_strict": false,
       "refused_legal": true,
       "pixel_diff": 0,
-      "control_frames": 32,
-      "action_frames": 34,
+      "control_frames": 31,
+      "action_frames": 33,
       "gameplay_movement": 0.0,
       "action": "pac_up"
      },
@@ -2330,7 +2252,7 @@
       "refused_legal": true,
       "pixel_diff": 0,
       "control_frames": 30,
-      "action_frames": 33,
+      "action_frames": 32,
       "gameplay_movement": 0.0,
       "action": "pac_up"
      }
@@ -2343,8 +2265,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 1352,
-      "control_frames": 35,
-      "action_frames": 36,
+      "control_frames": 30,
+      "action_frames": 32,
       "gameplay_movement": 243.0,
       "action": "pac_right"
      },
@@ -2354,8 +2276,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 1352,
-      "control_frames": 32,
-      "action_frames": 35,
+      "control_frames": 30,
+      "action_frames": 31,
       "gameplay_movement": 243.0,
       "action": "pac_right"
      }
@@ -2368,8 +2290,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 1352,
-      "control_frames": 34,
-      "action_frames": 37,
+      "control_frames": 33,
+      "action_frames": 33,
       "gameplay_movement": 243.0,
       "action": "pac_left"
      },
@@ -2379,8 +2301,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 1352,
-      "control_frames": 32,
-      "action_frames": 34,
+      "control_frames": 30,
+      "action_frames": 31,
       "gameplay_movement": 243.0,
       "action": "pac_left"
      }
@@ -2393,7 +2315,7 @@
       "changed_strict": false,
       "refused_legal": true,
       "pixel_diff": 0,
-      "control_frames": 32,
+      "control_frames": 30,
       "action_frames": 32,
       "gameplay_movement": 0.0,
       "action": "pac_up"
@@ -2404,8 +2326,8 @@
       "changed_strict": false,
       "refused_legal": true,
       "pixel_diff": 0,
-      "control_frames": 31,
-      "action_frames": 32,
+      "control_frames": 33,
+      "action_frames": 33,
       "gameplay_movement": 0.0,
       "action": "pac_up"
      }
@@ -2418,8 +2340,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 1352,
-      "control_frames": 32,
-      "action_frames": 32,
+      "control_frames": 30,
+      "action_frames": 31,
       "gameplay_movement": 243.0,
       "action": "pac_right"
      },
@@ -2429,7 +2351,7 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 1352,
-      "control_frames": 31,
+      "control_frames": 33,
       "action_frames": 34,
       "gameplay_movement": 243.0,
       "action": "pac_right"
@@ -2443,8 +2365,8 @@
       "changed_strict": false,
       "refused_legal": true,
       "pixel_diff": 0,
-      "control_frames": 32,
-      "action_frames": 34,
+      "control_frames": 30,
+      "action_frames": 31,
       "gameplay_movement": 0.0,
       "action": "pac_down"
      },
@@ -2454,8 +2376,8 @@
       "changed_strict": false,
       "refused_legal": true,
       "pixel_diff": 0,
-      "control_frames": 33,
-      "action_frames": 34,
+      "control_frames": 30,
+      "action_frames": 32,
       "gameplay_movement": 0.0,
       "action": "pac_down"
      }
@@ -2465,63 +2387,22 @@
   },
   {
    "game": "tetris",
+   "repeats": 2,
+   "verdicts": [
+    "PASS",
+    "PASS"
+   ],
    "verdict_repeat1": "PASS",
    "verdict_repeat2": "PASS",
    "verdict_stable": true,
+   "rc_by_repeat": [
+    0,
+    0
+   ],
    "summary_differences": {},
    "step_differences": [
     {
-     "step": 1,
-     "repeat1": {
-      "step_verdict": "ok_ack_and_changed",
-      "changed": true,
-      "changed_strict": true,
-      "refused_legal": false,
-      "pixel_diff": 3174,
-      "control_frames": 31,
-      "action_frames": 32,
-      "gameplay_movement": 1.0,
-      "action": "tetris_rotate"
-     },
-     "repeat2": {
-      "step_verdict": "ok_ack_and_changed",
-      "changed": true,
-      "changed_strict": true,
-      "refused_legal": false,
-      "pixel_diff": 3174,
-      "control_frames": 32,
-      "action_frames": 33,
-      "gameplay_movement": 1.0,
-      "action": "tetris_rotate"
-     }
-    },
-    {
      "step": 2,
-     "repeat1": {
-      "step_verdict": "ok_ack_and_changed",
-      "changed": true,
-      "changed_strict": true,
-      "refused_legal": false,
-      "pixel_diff": 4232,
-      "control_frames": 32,
-      "action_frames": 32,
-      "gameplay_movement": 1.0,
-      "action": "tetris_left"
-     },
-     "repeat2": {
-      "step_verdict": "ok_ack_and_changed",
-      "changed": true,
-      "changed_strict": true,
-      "refused_legal": false,
-      "pixel_diff": 4232,
-      "control_frames": 31,
-      "action_frames": 33,
-      "gameplay_movement": 1.0,
-      "action": "tetris_left"
-     }
-    },
-    {
-     "step": 3,
      "repeat1": {
       "step_verdict": "ok_ack_and_changed",
       "changed": true,
@@ -2539,8 +2420,33 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 4232,
+      "control_frames": 31,
+      "action_frames": 32,
+      "gameplay_movement": 1.0,
+      "action": "tetris_left"
+     }
+    },
+    {
+     "step": 3,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4232,
       "control_frames": 30,
-      "action_frames": 30,
+      "action_frames": 32,
+      "gameplay_movement": 1.0,
+      "action": "tetris_left"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4232,
+      "control_frames": 31,
+      "action_frames": 35,
       "gameplay_movement": 1.0,
       "action": "tetris_left"
      }
@@ -2553,8 +2459,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 4232,
-      "control_frames": 31,
-      "action_frames": 31,
+      "control_frames": 33,
+      "action_frames": 36,
       "gameplay_movement": 1.0,
       "action": "tetris_left"
      },
@@ -2564,35 +2470,10 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 4232,
-      "control_frames": 30,
-      "action_frames": 31,
+      "control_frames": 32,
+      "action_frames": 36,
       "gameplay_movement": 1.0,
       "action": "tetris_left"
-     }
-    },
-    {
-     "step": 5,
-     "repeat1": {
-      "step_verdict": "ok_ack_and_changed",
-      "changed": true,
-      "changed_strict": true,
-      "refused_legal": false,
-      "pixel_diff": 6348,
-      "control_frames": 32,
-      "action_frames": 32,
-      "gameplay_movement": 10.0,
-      "action": "tetris_drop"
-     },
-     "repeat2": {
-      "step_verdict": "ok_ack_and_changed",
-      "changed": true,
-      "changed_strict": true,
-      "refused_legal": false,
-      "pixel_diff": 6348,
-      "control_frames": 30,
-      "action_frames": 30,
-      "gameplay_movement": 10.0,
-      "action": "tetris_drop"
      }
     },
     {
@@ -2603,8 +2484,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 2116,
-      "control_frames": 31,
-      "action_frames": 32,
+      "control_frames": 30,
+      "action_frames": 33,
       "gameplay_movement": 1.0,
       "action": "tetris_right"
      },
@@ -2614,8 +2495,8 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 2116,
-      "control_frames": 31,
-      "action_frames": 33,
+      "control_frames": 30,
+      "action_frames": 30,
       "gameplay_movement": 1.0,
       "action": "tetris_right"
      }
@@ -2629,32 +2510,7 @@
       "refused_legal": false,
       "pixel_diff": 2116,
       "control_frames": 33,
-      "action_frames": 33,
-      "gameplay_movement": 1.0,
-      "action": "tetris_right"
-     },
-     "repeat2": {
-      "step_verdict": "ok_ack_and_changed",
-      "changed": true,
-      "changed_strict": true,
-      "refused_legal": false,
-      "pixel_diff": 2116,
-      "control_frames": 33,
       "action_frames": 34,
-      "gameplay_movement": 1.0,
-      "action": "tetris_right"
-     }
-    },
-    {
-     "step": 8,
-     "repeat1": {
-      "step_verdict": "ok_ack_and_changed",
-      "changed": true,
-      "changed_strict": true,
-      "refused_legal": false,
-      "pixel_diff": 2116,
-      "control_frames": 30,
-      "action_frames": 31,
       "gameplay_movement": 1.0,
       "action": "tetris_right"
      },
@@ -2669,61 +2525,70 @@
       "gameplay_movement": 1.0,
       "action": "tetris_right"
      }
+    },
+    {
+     "step": 8,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 2116,
+      "control_frames": 30,
+      "action_frames": 30,
+      "gameplay_movement": 1.0,
+      "action": "tetris_right"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 2116,
+      "control_frames": 31,
+      "action_frames": 32,
+      "gameplay_movement": 1.0,
+      "action": "tetris_right"
+     }
     }
    ],
-   "step_difference_count": 8
+   "step_difference_count": 6
   },
   {
    "game": "pong",
+   "repeats": 2,
+   "verdicts": [
+    "PASS(baseline only)",
+    "PASS(baseline only)"
+   ],
    "verdict_repeat1": "PASS(baseline only)",
-   "verdict_repeat2": "PASS",
-   "verdict_stable": false,
+   "verdict_repeat2": "PASS(baseline only)",
+   "verdict_stable": true,
+   "rc_by_repeat": [
+    0,
+    0
+   ],
    "summary_differences": {
-    "verdict": [
-     "PASS(baseline only)",
-     "PASS"
-    ],
-    "counts_as_pass": [
-     false,
-     true
-    ],
-    "strict_verdict": [
-     "FAIL",
-     "PASS"
-    ],
-    "game_side_verdict": [
-     "FAIL",
-     "PASS"
-    ],
-    "injected_steps": [
-     11,
-     9
-    ],
-    "accepted_steps": [
-     11,
-     9
-    ],
     "changed_steps_of_accepted": [
-     10,
-     9
+     9,
+     10
     ],
     "accepted_and_changed_rate": [
-     0.9091,
-     1.0
-    ],
-    "rated_step_count": [
-     11,
-     9
+     0.8182,
+     0.9091
     ],
     "real_progress_step_count": [
-     10,
-     9
+     9,
+     10
     ],
     "fail_steps": [
      [
-      5
+      5,
+      7
      ],
-     []
+     [
+      5
+     ]
     ]
    },
    "step_differences": [
@@ -2735,9 +2600,9 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 3712,
-      "control_frames": 31,
-      "action_frames": 33,
-      "gameplay_movement": 746.474,
+      "control_frames": 30,
+      "action_frames": 31,
+      "gameplay_movement": 717.006,
       "action": "pong_serve"
      },
      "repeat2": {
@@ -2746,9 +2611,9 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 3712,
-      "control_frames": 32,
-      "action_frames": 33,
-      "gameplay_movement": 740.714,
+      "control_frames": 31,
+      "action_frames": 31,
+      "gameplay_movement": 726.903,
       "action": "pong_serve"
      }
     },
@@ -2759,10 +2624,10 @@
       "changed": true,
       "changed_strict": false,
       "refused_legal": false,
-      "pixel_diff": 576,
+      "pixel_diff": 928,
       "control_frames": 31,
-      "action_frames": 33,
-      "gameplay_movement": 787.184,
+      "action_frames": 32,
+      "gameplay_movement": 783.616,
       "action": null
      },
      "repeat2": {
@@ -2770,10 +2635,10 @@
       "changed": true,
       "changed_strict": false,
       "refused_legal": false,
-      "pixel_diff": 768,
+      "pixel_diff": 864,
       "control_frames": 32,
       "action_frames": 34,
-      "gameplay_movement": 789.715,
+      "gameplay_movement": 781.12,
       "action": null
      }
     },
@@ -2785,9 +2650,9 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 3712,
-      "control_frames": 31,
-      "action_frames": 32,
-      "gameplay_movement": 595.113,
+      "control_frames": 30,
+      "action_frames": 31,
+      "gameplay_movement": 600.853,
       "action": "pong_left_down"
      },
      "repeat2": {
@@ -2796,9 +2661,9 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 3712,
-      "control_frames": 31,
-      "action_frames": 34,
-      "gameplay_movement": 1238.401,
+      "control_frames": 35,
+      "action_frames": 36,
+      "gameplay_movement": 607.244,
       "action": "pong_left_down"
      }
     },
@@ -2810,9 +2675,9 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 6912,
-      "control_frames": 33,
-      "action_frames": 34,
-      "gameplay_movement": 1729.888,
+      "control_frames": 31,
+      "action_frames": 36,
+      "gameplay_movement": 1228.157,
       "action": "pong_left_up"
      },
      "repeat2": {
@@ -2821,9 +2686,9 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 6912,
-      "control_frames": 30,
-      "action_frames": 33,
-      "gameplay_movement": 1204.303,
+      "control_frames": 31,
+      "action_frames": 31,
+      "gameplay_movement": 1252.81,
       "action": "pong_left_up"
      }
     },
@@ -2834,21 +2699,21 @@
       "changed": true,
       "changed_strict": false,
       "refused_legal": false,
-      "pixel_diff": 6368,
-      "control_frames": 30,
-      "action_frames": 30,
-      "gameplay_movement": 1570.763,
+      "pixel_diff": 5888,
+      "control_frames": 32,
+      "action_frames": 34,
+      "gameplay_movement": 1295.492,
       "action": "pong_left_down"
      },
      "repeat2": {
       "step_verdict": "ok_ack_and_changed",
       "changed": true,
-      "changed_strict": true,
+      "changed_strict": false,
       "refused_legal": false,
-      "pixel_diff": 5024,
-      "control_frames": 32,
-      "action_frames": 33,
-      "gameplay_movement": 1281.1,
+      "pixel_diff": 6400,
+      "control_frames": 30,
+      "action_frames": 34,
+      "gameplay_movement": 1319.859,
       "action": "pong_left_down"
      }
     },
@@ -2859,10 +2724,10 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 4768,
-      "control_frames": 30,
-      "action_frames": 31,
-      "gameplay_movement": 1660.436,
+      "pixel_diff": 6176,
+      "control_frames": 31,
+      "action_frames": 32,
+      "gameplay_movement": 1360.899,
       "action": "pong_left_up"
      },
      "repeat2": {
@@ -2870,10 +2735,10 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 4608,
-      "control_frames": 32,
-      "action_frames": 32,
-      "gameplay_movement": 1164.199,
+      "pixel_diff": 4300,
+      "control_frames": 31,
+      "action_frames": 34,
+      "gameplay_movement": 722.946,
       "action": "pong_left_up"
      }
     },
@@ -2882,12 +2747,12 @@
      "repeat1": {
       "step_verdict": "ok_ack_and_changed",
       "changed": true,
-      "changed_strict": true,
+      "changed_strict": false,
       "refused_legal": false,
-      "pixel_diff": 6912,
-      "control_frames": 30,
-      "action_frames": 30,
-      "gameplay_movement": 1860.497,
+      "pixel_diff": 5600,
+      "control_frames": 31,
+      "action_frames": 34,
+      "gameplay_movement": 1528.926,
       "action": "pong_left_down"
      },
      "repeat2": {
@@ -2895,11 +2760,11 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 4768,
-      "control_frames": 32,
-      "action_frames": 34,
-      "gameplay_movement": 959.942,
-      "action": "pong_left_down"
+      "pixel_diff": 512,
+      "control_frames": 30,
+      "action_frames": 30,
+      "gameplay_movement": 575.658,
+      "action": "pong_serve"
      }
     },
     {
@@ -2909,10 +2774,10 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 4064,
-      "control_frames": 33,
-      "action_frames": 33,
-      "gameplay_movement": 1453.851,
+      "pixel_diff": 4460,
+      "control_frames": 30,
+      "action_frames": 31,
+      "gameplay_movement": 1260.028,
       "action": "pong_left_up"
      },
      "repeat2": {
@@ -2920,11 +2785,11 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 3670,
+      "pixel_diff": 4173,
       "control_frames": 30,
-      "action_frames": 31,
-      "gameplay_movement": 756.637,
-      "action": "pong_left_up"
+      "action_frames": 33,
+      "gameplay_movement": 1066.338,
+      "action": "pong_left_down"
      }
     },
     {
@@ -2934,22 +2799,22 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 5632,
+      "pixel_diff": 3712,
       "control_frames": 30,
-      "action_frames": 30,
-      "gameplay_movement": 935.383,
-      "action": "pong_left_up"
+      "action_frames": 32,
+      "gameplay_movement": 794.707,
+      "action": "pong_serve"
      },
      "repeat2": {
       "step_verdict": "ok_ack_and_changed",
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 3628,
-      "control_frames": 32,
-      "action_frames": 34,
-      "gameplay_movement": 691.61,
-      "action": "pong_left_up"
+      "pixel_diff": 512,
+      "control_frames": 33,
+      "action_frames": 38,
+      "gameplay_movement": 598.68,
+      "action": "pong_serve"
      }
     },
     {
@@ -2959,10 +2824,10 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 5536,
-      "control_frames": 31,
-      "action_frames": 32,
-      "gameplay_movement": 1410.583,
+      "pixel_diff": 4544,
+      "control_frames": 33,
+      "action_frames": 38,
+      "gameplay_movement": 1446.776,
       "action": "pong_left_down"
      },
      "repeat2": {
@@ -2970,11 +2835,11 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 512,
-      "control_frames": 32,
-      "action_frames": 34,
-      "gameplay_movement": 584.959,
-      "action": "pong_serve"
+      "pixel_diff": 6912,
+      "control_frames": 31,
+      "action_frames": 33,
+      "gameplay_movement": 1580.871,
+      "action": "pong_left_up"
      }
     },
     {
@@ -2984,13 +2849,23 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 3712,
-      "control_frames": 33,
-      "action_frames": 34,
-      "gameplay_movement": 864.106,
+      "pixel_diff": 4300,
+      "control_frames": 31,
+      "action_frames": 32,
+      "gameplay_movement": 843.671,
       "action": "pong_left_up"
      },
-     "repeat2": null
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 3712,
+      "control_frames": 33,
+      "action_frames": 35,
+      "gameplay_movement": 1126.152,
+      "action": "pong_left_down"
+     }
     },
     {
      "step": 12,
@@ -2999,22 +2874,41 @@
       "changed": true,
       "changed_strict": true,
       "refused_legal": false,
-      "pixel_diff": 4268,
+      "pixel_diff": 512,
       "control_frames": 30,
-      "action_frames": 34,
-      "gameplay_movement": 1153.079,
-      "action": "pong_left_down"
+      "action_frames": 32,
+      "gameplay_movement": 585.89,
+      "action": "pong_serve"
      },
-     "repeat2": null
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 3712,
+      "control_frames": 34,
+      "action_frames": 35,
+      "gameplay_movement": 883.954,
+      "action": "pong_left_up"
+     }
     }
    ],
    "step_difference_count": 12
   },
   {
    "game": "breakout",
+   "repeats": 2,
+   "verdicts": [
+    "INCONCLUSIVE",
+    "INCONCLUSIVE"
+   ],
    "verdict_repeat1": "INCONCLUSIVE",
    "verdict_repeat2": "INCONCLUSIVE",
    "verdict_stable": true,
+   "rc_by_repeat": [
+    0,
+    0
+   ],
    "summary_differences": {},
    "step_differences": [
     {
@@ -3025,9 +2919,9 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 392,
-      "control_frames": 30,
-      "action_frames": 31,
-      "gameplay_movement": 539.482,
+      "control_frames": 35,
+      "action_frames": 41,
+      "gameplay_movement": 741.719,
       "action": "breakout_launch"
      },
      "repeat2": {
@@ -3036,9 +2930,9 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 392,
-      "control_frames": 30,
-      "action_frames": 34,
-      "gameplay_movement": 559.878,
+      "control_frames": 33,
+      "action_frames": 36,
+      "gameplay_movement": 721.314,
       "action": "breakout_launch"
      }
     },
@@ -3050,9 +2944,9 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 9369,
-      "control_frames": 33,
-      "action_frames": 36,
-      "gameplay_movement": 627.949,
+      "control_frames": 31,
+      "action_frames": 32,
+      "gameplay_movement": 1794.794,
       "action": "breakout_right"
      },
      "repeat2": {
@@ -3061,9 +2955,9 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 9369,
-      "control_frames": 35,
-      "action_frames": 39,
-      "gameplay_movement": 676.123,
+      "control_frames": 30,
+      "action_frames": 35,
+      "gameplay_movement": 1813.35,
       "action": "breakout_right"
      }
     },
@@ -3076,8 +2970,8 @@
       "refused_legal": false,
       "pixel_diff": 5212,
       "control_frames": 34,
-      "action_frames": 36,
-      "gameplay_movement": 1856.998,
+      "action_frames": 35,
+      "gameplay_movement": 1868.719,
       "action": "breakout_left"
      },
      "repeat2": {
@@ -3086,9 +2980,9 @@
       "changed_strict": true,
       "refused_legal": false,
       "pixel_diff": 5212,
-      "control_frames": 31,
-      "action_frames": 34,
-      "gameplay_movement": 1796.663,
+      "control_frames": 32,
+      "action_frames": 32,
+      "gameplay_movement": 1853.507,
       "action": "breakout_left"
      }
     },
@@ -3100,8 +2994,8 @@
       "changed_strict": false,
       "refused_legal": false,
       "pixel_diff": 0,
-      "control_frames": 34,
-      "action_frames": 36,
+      "control_frames": 31,
+      "action_frames": 31,
       "gameplay_movement": 0.0,
       "action": null
      },
@@ -3111,8 +3005,8 @@
       "changed_strict": false,
       "refused_legal": false,
       "pixel_diff": 0,
-      "control_frames": 36,
-      "action_frames": 41,
+      "control_frames": 34,
+      "action_frames": 39,
       "gameplay_movement": 0.0,
       "action": null
      }
@@ -3125,8 +3019,8 @@
       "changed_strict": false,
       "refused_legal": false,
       "pixel_diff": 0,
-      "control_frames": 31,
-      "action_frames": 35,
+      "control_frames": 33,
+      "action_frames": 34,
       "gameplay_movement": 0.0,
       "action": null
      },
@@ -3136,8 +3030,8 @@
       "changed_strict": false,
       "refused_legal": false,
       "pixel_diff": 0,
-      "control_frames": 33,
-      "action_frames": 34,
+      "control_frames": 31,
+      "action_frames": 31,
       "gameplay_movement": 0.0,
       "action": null
      }
@@ -3161,8 +3055,8 @@
       "changed_strict": false,
       "refused_legal": false,
       "pixel_diff": 0,
-      "control_frames": 36,
-      "action_frames": 41,
+      "control_frames": 34,
+      "action_frames": 36,
       "gameplay_movement": 0.0,
       "action": null
      }
@@ -3175,8 +3069,8 @@
       "changed_strict": false,
       "refused_legal": false,
       "pixel_diff": 0,
-      "control_frames": 31,
-      "action_frames": 32,
+      "control_frames": 32,
+      "action_frames": 34,
       "gameplay_movement": 0.0,
       "action": null
      },
@@ -3186,8 +3080,8 @@
       "changed_strict": false,
       "refused_legal": false,
       "pixel_diff": 0,
-      "control_frames": 34,
-      "action_frames": 36,
+      "control_frames": 31,
+      "action_frames": 34,
       "gameplay_movement": 0.0,
       "action": null
      }
@@ -3200,8 +3094,8 @@
       "changed_strict": false,
       "refused_legal": false,
       "pixel_diff": 0,
-      "control_frames": 34,
-      "action_frames": 36,
+      "control_frames": 31,
+      "action_frames": 32,
       "gameplay_movement": 0.0,
       "action": null
      },
@@ -3211,8 +3105,8 @@
       "changed_strict": false,
       "refused_legal": false,
       "pixel_diff": 0,
-      "control_frames": 30,
-      "action_frames": 34,
+      "control_frames": 36,
+      "action_frames": 38,
       "gameplay_movement": 0.0,
       "action": null
      }
@@ -3225,8 +3119,8 @@
       "changed_strict": false,
       "refused_legal": false,
       "pixel_diff": 0,
-      "control_frames": 30,
-      "action_frames": 31,
+      "control_frames": 34,
+      "action_frames": 36,
       "gameplay_movement": 0.0,
       "action": null
      },
@@ -3236,8 +3130,8 @@
       "changed_strict": false,
       "refused_legal": false,
       "pixel_diff": 0,
-      "control_frames": 31,
-      "action_frames": 34,
+      "control_frames": 34,
+      "action_frames": 37,
       "gameplay_movement": 0.0,
       "action": null
      }
@@ -3250,7 +3144,7 @@
       "changed_strict": false,
       "refused_legal": false,
       "pixel_diff": 0,
-      "control_frames": 31,
+      "control_frames": 30,
       "action_frames": 34,
       "gameplay_movement": 0.0,
       "action": null
@@ -3261,8 +3155,8 @@
       "changed_strict": false,
       "refused_legal": false,
       "pixel_diff": 0,
-      "control_frames": 34,
-      "action_frames": 38,
+      "control_frames": 31,
+      "action_frames": 32,
       "gameplay_movement": 0.0,
       "action": null
      }
@@ -3275,8 +3169,8 @@
       "changed_strict": false,
       "refused_legal": false,
       "pixel_diff": 0,
-      "control_frames": 35,
-      "action_frames": 37,
+      "control_frames": 34,
+      "action_frames": 39,
       "gameplay_movement": 0.0,
       "action": null
      },
@@ -3286,8 +3180,8 @@
       "changed_strict": false,
       "refused_legal": false,
       "pixel_diff": 0,
-      "control_frames": 31,
-      "action_frames": 31,
+      "control_frames": 32,
+      "action_frames": 32,
       "gameplay_movement": 0.0,
       "action": null
      }
@@ -3300,8 +3194,8 @@
       "changed_strict": false,
       "refused_legal": false,
       "pixel_diff": 0,
-      "control_frames": 34,
-      "action_frames": 34,
+      "control_frames": 31,
+      "action_frames": 31,
       "gameplay_movement": 0.0,
       "action": null
      },
@@ -3311,8 +3205,8 @@
       "changed_strict": false,
       "refused_legal": false,
       "pixel_diff": 0,
-      "control_frames": 30,
-      "action_frames": 32,
+      "control_frames": 36,
+      "action_frames": 36,
       "gameplay_movement": 0.0,
       "action": null
      }
@@ -3321,5 +3215,28 @@
    "step_difference_count": 12
   }
  ],
- "all_verdicts_stable": false
+ "verdicts_by_game": {
+  "asteroids": [
+   "PASS",
+   "PASS"
+  ],
+  "pacman": [
+   "PASS",
+   "PASS"
+  ],
+  "tetris": [
+   "PASS",
+   "PASS"
+  ],
+  "pong": [
+   "PASS(baseline only)",
+   "PASS(baseline only)"
+  ],
+  "breakout": [
+   "INCONCLUSIVE",
+   "INCONCLUSIVE"
+  ]
+ },
+ "all_rc_zero": true,
+ "all_verdicts_stable": true
 }

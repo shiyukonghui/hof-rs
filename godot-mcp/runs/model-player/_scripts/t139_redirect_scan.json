@@ -1,9 +1,9 @@
 {
  "scanner": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_scan_redirects.py",
  "ledger": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t136_commands.jsonl",
- "ledger_sha256_at_scan": "1886fd0c593073d36ec8847db970f499ef7a87f85359b26f7b8182e9641c2083",
- "ledger_bytes_at_scan": 165433,
- "ledger_lines_total": 481,
+ "ledger_sha256_at_scan": "9be2999f6e58bb4e3a067ac07d86a0dcad36d5a7eb7d7103dff2570467ffed86",
+ "ledger_bytes_at_scan": 171864,
+ "ledger_lines_total": 500,
  "cut": {
   "first_task139_index": 201,
   "first_task139_entry": {
@@ -45,9 +45,9 @@
   },
   "what": "the first ledger entry that names a `t139_*` script or carries `source == t139-wrapper-call`; this batch's commands are that entry and everything after it"
  },
- "this_batch_commands": 280,
+ "this_batch_commands": 299,
  "this_batch_first_ts": "2026-09-28T04:43:17",
- "this_batch_last_ts": "2026-09-28T06:35:04",
+ "this_batch_last_ts": "2026-09-28T06:47:14",
  "hits": 0,
  "hit_lines": [],
  "false_positives": [],
@@ -93,6 +93,9 @@
   },
   {
    "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_decl_probe.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_det_show.py"
   },
   {
    "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_determinism.py"
