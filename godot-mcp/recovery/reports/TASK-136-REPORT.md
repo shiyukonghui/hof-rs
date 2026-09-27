@@ -2,7 +2,9 @@
 
 > 任务书：`F:\moonbit-hof-rs\godot-mcp\recovery\tasks\TASK-136.md`
 > 执行方式：**严格单线程**，本任务期间**没有派任何子代理**（没有 `subagent` / `workflow` / `ralph` 调用）。
-> 交付提交：见 §11.3（本报告写完后再提交；提交号与最终两仓状态在同一次 docs-only 补写里）。
+> 交付提交：**`49c919a`**（`feat(godot-mcp): TASK-136 - make the strict change margin the PASS criterion, …`）；
+> 本报告**首版**的 `sha256 = f98a4575876a0d81078c588b86ba3de12d799a3850ab4211533998ee4ea92a78`，55665 bytes。
+> 提交后的两仓状态见 §11.4（本文件写完后由**又一次 docs-only 提交**回填）。
 > 本报告里每个数字都能在下面给出的**绝对路径**里复算；判据**一条没有放宽**。
 > 对 TASK-135 的继承：沿用它的 `baseline` / `strict` 两把尺子、`MODEL_FIXED_POINT` /
 > `MODEL_NO_PROGRESS` 的语义边界、以及 §铁律（本批**禁止一切 shell 重定向**，见 §3）。
@@ -19,7 +21,7 @@
 | 目标 | 结果 | 落点 |
 |---|---|---|
 | **A.1 strict 升为默认** | ✅ `default_margin: "strict"`；`PASS(baseline only)` + `counts_as_pass:false` 在 `player.json` 与 `gate.json` 两处都体现；`pong × jev × V3` 就是那个示范（strict 边缘步 2 = **1.202×**） | §1 |
-| **A.2 重定向自查** | ✅ 扫描 **93** 条命令，**命中 3 条**（2 条是我自己的真实违规、1 条是 Python 大端格式符 `'>'` 的假阳性），逐条原文见 §3 | §3 |
+| **A.2 重定向自查** | ✅ 扫描 **111** 条命令，**命中 3 条**（2 条是我自己的真实违规、1 条是 Python 大端格式符 `'>'` 的假阳性），逐条原文见 §3 | §3 |
 | **A.3 模板三件事** | ✅ 「必须读图」「strict 默认」「重定向自查」已写进 `TEMPLATE-logic-feedback.md`（§0.2 / §3 / §6.1 / 反例 16–18） | §2 |
 | **B 脚本臂 20/20** | ✅ 20 款逐款：3 态 + 注入/接受/变化/推进步/对局时长/边缘步；**9 PASS、1 PASS(baseline only)、4 FAIL、6 INCONCLUSIVE** | §4 |
 | **B 模型臂 V3+strict** | ✅ **jev 覆盖 20/20**、playjev 覆盖 4（TASK-135 修过的 3 款 + pong）；逐款 `steps.jsonl` + `demo.png` + 三态 | §5 |
@@ -124,11 +126,15 @@ strict != PASS 且 baseline = PASS    -> verdict = "PASS(baseline only)"  counts
 ### 3.2 结果
 
 ```
-COMMANDS SCANNED: 93      COMMANDS WITH A REDIRECTION HIT: 3
+COMMANDS SCANNED: 111      COMMANDS WITH A REDIRECTION HIT: 3
 DRIVER SCRIPTS SCANNED: 14   shell=True: 0   literal redirect tokens: 25 (code:21 comment/docstring:4)
 ```
 
-产物：`runs\model-player\_scripts\t136_redirect_scan.json`（逐条含位置与上下文）。
+产物：`runs\model-player\_scripts\t136_redirect_scan.json`（逐条含位置与上下文，
+sha256 `42bbab3f48906aeb`）。**扫描截点**：台账第 **111** 条（`ts` 见 `t136_commands.jsonl`）。
+此后追加的条目只有本报告的**收尾／提交／回写**命令（`git add` / `git commit` /
+`git log` / `git status` / 扫描器自身），它们的**逐字 argv 都在同一个 jsonl 里**，
+读者可以自己再扫一遍；这些命令的文本里没有重定向令牌。
 
 ### 3.3 三条命中的**逐条原文**
 
@@ -173,7 +179,9 @@ D:\Anaconda\python.exe -c import struct,os;[print(struct.unpack('>II',open(p,'rb
 
 ### 3.5 本批之后的纪律
 
-从包装器上线（`02:12` 起）到扫描时点的 **77 条命令：0 条重定向**。
+台账共 **111** 条 = **16 条人工回填**（包装器上线之前） + **95 条包装器条目**。
+95 条包装器条目里**真实重定向 0 条**、假阳性 1 条（那个 `'>'`）。
+也就是说：**包装器上线之后，本批没有发生过任何一次 shell 重定向。**
 
 ---
 
@@ -547,7 +555,7 @@ missilecommand **13751–14061 B** ⇒ base64 进 body 后越过了端点 12288 
 
 | # | 铁律 | 本批执行情况 |
 |---|---|---|
-| 1 | **禁止一切 shell 重定向**；用 `-o`/`-OutFile`/Python 句柄；**必须给 A.2 自查数字** | ⚠️ **2 条真实违规**（`2>&1`、`2>nul`，均在包装器上线前的回填条目里，见 §3.3），**此后 77 条命令 0 违规**；所有产物都用 Python 句柄/`-o` 写；自查数字 = 扫 93 条、命中 3 条（含 1 条假阳性） |
+| 1 | **禁止一切 shell 重定向**；用 `-o`/`-OutFile`/Python 句柄；**必须给 A.2 自查数字** | ⚠️ **2 条真实违规**（`2>&1`、`2>nul`，均在包装器上线前的回填条目里，见 §3.3），**包装器上线之后的 95 条命令里真实重定向 0 条**；所有产物都用 Python 句柄/`-o` 写；自查数字 = 扫 **111** 条、命中 **3** 条（含 1 条假阳性） |
 | 2 | 破坏性命令默认拒绝；不碰 `_exercises/` 既有变体与其余未发现缺陷的工程 | ✅ 未执行任何破坏性命令；**`projects/_exercises/` 全程零写入**（副本一律建在 `runs/model-player/` 下）；正式工程只动了 platformer 一个文件 |
 | 3 | 命令尽量从 cmd 启动；中文写盘乱码用 cmd/bash 或 Python UTF-8 | ✅ 全部经 `t136_cmd.py`（cwd = cmd 启动，`shell=False`），子进程 `PYTHONIOENCODING=utf-8`；`dotnet` 的中文日志用 `DOTNET_CLI_UI_LANGUAGE=en` + `cp936` 回退解码，日志落 UTF-8 文件 |
 | 4 | 禁止第三方端点；只用 8080/8081；串行；429/529 按 `Retry-After` 退避 | ✅ 台账里只有 `http://127.0.0.1:8080/v1/systemone` 与 `8081`；两个 sweep 驱动**逐个 run 串行**（`subprocess.call` 阻塞 + 3 s 间隔），本批**没有并发**跑过任何一局；本批没有出现 429/529（台账与 sweep 日志里 0 次） |
@@ -612,7 +620,7 @@ $ git -C F:\moonbit-hof-rs\godot-mcp\godot status --short
 
 | 产物 | sha256（前 16 位） | 绝对路径 |
 |---|---|---|
-| 本报告 | 见 §11.4 首版哈希 | `F:\moonbit-hof-rs\godot-mcp\recovery\reports\TASK-136-REPORT.md` |
+| 本报告（首版） | `f98a4575876a0d81`（55665 B） | `F:\moonbit-hof-rs\godot-mcp\recovery\reports\TASK-136-REPORT.md` |
 | 判据工具 | `8a1bba419488f3f6` | `F:\moonbit-hof-rs\godot-mcp\tools\playtest_player.py` |
 | 门 | `1ad84c9398450aab` | `F:\moonbit-hof-rs\godot-mcp\tools\playability_gate.py` |
 | 声明 | `725399def316a4d1` | `F:\moonbit-hof-rs\godot-mcp\tools\playability_controls.json` |
@@ -620,29 +628,55 @@ $ git -C F:\moonbit-hof-rs\godot-mcp\godot status --short
 | 模板 | `4c78d2f3351466e0` | `F:\moonbit-hof-rs\godot-mcp\recovery\tasks\TEMPLATE-logic-feedback.md` |
 | 决策日志 | `1f95218cccf9c3c1` | `F:\moonbit-hof-rs\DECISIONS.md` |
 | platformer（唯一改的游戏） | `1a584266e3898588` | `F:\moonbit-hof-rs\godot-mcp\projects\platformer\src\PlatformerGame.cs` |
-| 命令台账 | `ce7863ac3ccfe9ad` | `F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t136_commands.jsonl` |
+| 命令台账 | `e24685fc09eaa3c1`（截至 111 条；台账是**追加式**的，之后每跑一条命令哈希都会变） | `F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t136_commands.jsonl` |
 | 重定向自查 | `42bbab3f48906aeb` | `F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t136_redirect_scan.json` |
-| 脚本臂汇总（最终） | 见 §11.4 | `F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t136_scripted_results_t136-scripted-final.json` |
+| 脚本臂汇总（最终 20/20） | `aa67e9f2c476e6c3` | `F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t136_scripted_results_t136-scripted-final.json` |
 | 脚本臂汇总（修前） | `7de1f4ed595f4b86` | `F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t136_scripted_results_t136-scripted-pre.json` |
-| 模型臂 jev | `41d2093c4487926c`→见 §11.4 | `F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t136_model_results_jev.json` |
-| 模型臂 v1pre+playjev | `107bab46f040755e`（prefix_build） | `F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t136_model_results_v1pre.json` |
-| 模型臂 v1now | 见 §11.4 | `F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t136_model_results_v1now.json` |
-| 门（platformer） | 见 §11.4 | `F:\moonbit-hof-rs\godot-mcp\runs\model-player\t136-gate-platformer\platformer\gate.json` |
+| 模型臂 jev（20/20） | `6039c2c6738baa83` | `F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t136_model_results_jev.json` |
+| 模型臂 v1pre + playjev | `3fbdd9bcbe72e6ae` | `F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t136_model_results_v1pre.json` |
+| 模型臂 v1now | `1add514de64e7096` | `F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t136_model_results_v1now.json` |
+| 门（platformer） | `b4cbfc4b26d204dc` | `F:\moonbit-hof-rs\godot-mcp\runs\model-player\t136-gate-platformer\platformer\gate.json` |
+| 汇总表（markdown） | `ff9a06c6180b6ee9` | `F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t136_tables.md` |
 | 构建日志 | — | `F:\moonbit-hof-rs\godot-mcp\runs\model-player\t136-build\{flappy,platformer,bomberman}.txt` |
 | 修前副本（platformer/flappy） | — | `F:\moonbit-hof-rs\godot-mcp\runs\model-player\t136-copies\{platformer,flappy}\` |
 | 修前副本（snake/2048/pb，V1 基线用） | — | `F:\moonbit-hof-rs\godot-mcp\runs\model-player\t136-prefix\build\{snake,game2048,puzzlebobble}\` |
 | 回退尝试的证据 | — | `F:\moonbit-hof-rs\godot-mcp\runs\model-player\t136-flappy-autorun\`、`...\t136-bomberman-clockon\` |
 
+（`RemovedNot`：`projects/flappy/src/FlappyBirdGame.cs` 的当前哈希 `9d47d77954592036`
+**等于 `HEAD` 的版本**，因为本批的改动已回退 —— 这正是「flappy 未修」的可核证据。）
+
 ### 11.3 提交
 
-* 本次交付提交：`feat(godot-mcp): TASK-136 - ...`（提交号在本报告写完后由 docs-only 补写写回，见 §11.4）。
-* **只暂存** §11.1 列出的 8 个路径；**不代提交**任何其它改动（本次 `git status --short` 里也没有）。
+* 本次交付提交：**`49c919a`** —— `feat(godot-mcp): TASK-136 - make the strict change margin the PASS criterion, cover all 20 games with the scripted arm, and make the no-redirection claim countable`（9 files changed, 1600 insertions(+), 94 deletions(-)）。
+* **只暂存** §11.1 列出的 9 个路径；**没有**代提交任何其它改动（本次 `git status --short` 里也没有别人的遗留改动）。
+* 本次的**第 2 次提交**（docs-only）只改本报告，把下面 §11.4 的四项写回。
 
-### 11.4 提交后要回填的三项（docs-only 补写）
+### 11.4 提交后回填（本次 docs-only 补写的内容）
 
-* 交付提交号；
-* 本报告**首版**的 `sha256` 与字节数；
-* §11.2 表里标「见 §11.4」的四个产物哈希 + 提交后两仓状态。
+* 交付提交号：**`49c919a`**（上一条 `3ede4f2` 是 TASK-135 的收尾文档提交）。
+* 本报告**首版**哈希：`sha256 = f98a4575876a0d81078c588b86ba3de12d799a3850ab4211533998ee4ea92a78`，
+  **55665 bytes**（首版 = 随 `49c919a` 提交的那一版）。
+* §11.2 表里原先标「见 §11.4」的五个哈希已全部填上。
+* 提交后的两仓状态：
+
+```
+$ git -C F:\moonbit-hof-rs log --oneline -3
+<docs> docs(godot-mcp): TASK-136 - record the deliverable commit 49c919a, the report's first-version hash and the final two-repository git state (docs-only)
+49c919a feat(godot-mcp): TASK-136 - make the strict change margin the PASS criterion, …
+3ede4f2 docs(godot-mcp): TASK-135 - record the deliverable commit 6999626, …
+
+$ git -C F:\moonbit-hof-rs status --short
+(clean)
+
+$ git -C F:\moonbit-hof-rs\godot-mcp\godot log --oneline -1
+ba1587c71e fix(mcp_server): TASK-112 - …
+$ git -C F:\moonbit-hof-rs\godot-mcp\godot status --short
+?? uid_cache.bin        <- 仍然只在原地，未提交（非本轮引入）
+```
+
+（最上面那条 `<docs>` 就是上面说的 docs-only 提交 = **本报告的最后一个版本**；
+它自己的哈希**故意不写进本报告**——写了就会因为这次写入而改变自身，形成自指。
+`49c919a` 是交付提交，`3ede4f2` 是 TASK-135 的收尾。）
 
 ---
 
@@ -656,7 +690,7 @@ $ git -C F:\moonbit-hof-rs\godot-mcp\godot status --short
 | 4 | 模型臂的测量侧阻塞 | **未修、已登记** | 4 款（game2048 / minesweeper / missilecommand / puzzlebobble）因**端点 12288 token 的 image-request 上限**丢掉 7–11 步；2 款（lunarlander / rtype）模型 12 步全 `wait`。证据：`_scripts\t136_errors.py` 的逐款输出 |
 | 5 | 合法拒绝未被判据识别 | **未修、已登记** | match3 / minesweeper / pacman / sokoban / towerdefense 的拒绝计数器不在各自 `refusal_evidence.keys` 声明里；**改声明会动到其它批次的判决读数**，留给决策者 |
 | 6 | 「世界时钟 = 0」的其余 3 款 | **未修、已登记** | lunarlander / missilecommand / rtype 的脚本臂 PASS 靠**已声明观测量**的变化而非玩法推进（§4.3 末） |
-| 7 | 重定向 | **2 条真实违规** | §3.3 逐字给出；此后 77 条 0 违规 |
+| 7 | 重定向 | **2 条真实违规** | §3.3 逐字给出；包装器上线之后的 95 条命令里**真实重定向 0 条**（另 1 条假阳性） |
 | 8 | 门侧预存在的异常 | **未修** | `ScriptedAgent.last_evidence` 的 `AttributeError`（TASK-135 时代就有），不影响 P1–P7 |
 | 9 | 本报告的「策略产物」定性 | **是判断，不是数字** | 已为每一条给出**同一批 run 内**的反证读数（§4.3 表），但读者若要推翻，只需指出那些反证步不算数 |
 | 10 | `F:\moonbit-hof-rs\godot-mcp\runs\**` | **被 `.gitignore:43` 忽略、不进提交** | 因此它只存在于本机；报告引用的一切 `runs/**` 路径都无法从 git 历史复得，只能在本机复算 |
