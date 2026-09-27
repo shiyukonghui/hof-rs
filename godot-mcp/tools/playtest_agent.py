@@ -43,16 +43,32 @@ Backends
              (`noul` / `choice` / `score`) to `POST <base>/v1/systemone` (or
              `/v1/decision`), checks readiness with `GET <base>/health`, and maps the
              answers back to the same action dict the other backends return.
+  playjev  : PlayJev 0.8B's image-state decision server (TASK-127), the *vision
+             fine-tuned* sibling of Jev.  Same endpoint name (`POST /v1/systemone`,
+             `GET /health`) but a DIFFERENT request shape: the state is
+             `{"frames": ["data:image/png;base64,..."]}` and every question must be
+             `type: "choice"` -- PlayJev serves no `noul`/`score` question type and no
+             text state (both are HTTP 400).  This backend therefore expresses the
+             invariants as yes/no Choices and the brokenness rating as an
+             ordered-levels Choice with an expected value, and it treats an absent or
+             unusable answer as an ABSTAIN (never as a success).  It is the backend to
+             use when the question is about the PIXELS; `jev` is the text-state one.
 
     env var                meaning                        example
     ---------------------  -----------------------------  ------------------------------
     PLAYTEST_BASE_URL      root URL of the model server   http://127.0.0.1:8080
                            (`jev`: a ROOT url -- the path  (no /v1 suffix for jev)
-                            is /v1/systemone by default)
+                            is /v1/systemone by default)    http://127.0.0.1:8081
+                                                            for `playjev`
     PLAYTEST_API_KEY       bearer token (may be empty)    sk-local
     PLAYTEST_MODEL         model name                     NeoHorse-Jev-4B
+                                                          (playjev: cosmetic -- its
+                                                           serve.py ignores the field)
     PLAYTEST_DECISION_PATH jev decision endpoint           /v1/systemone
     PLAYTEST_STATE_OVERFLOW  error | clip                 error
+    PLAYTEST_ABSTAIN_MIN_CONFIDENCE  playjev: a confidence below this is an
+                                     abstain (0 = off; the declared-abstain and
+                                     missing-answer rules are always on)   0
 
 NeoHorse-Jev is NOT an OpenAI model (corrected in TASK-124)
 -----------------------------------------------------------
@@ -621,6 +637,38 @@ def action_from_choice(choice, goal, hold_ms, why):
     return None
 
 
+def action_criteria(goal):
+    """`goal["actions"]` / `goal["keys"]` -> the Choice criteria dict.
+
+    A pure function shared by the two decision backends (`jev`, `playjev`), which
+    differ in the wire shape of a question but not in what an option means: one
+    option per declared InputMap action, one per documented key, plus `wait` and
+    `done`.  TASK-127 lifted this out of `JevAgent` unchanged so `PlayJevAgent`
+    could reuse it verbatim; `JevAgent.build_action_criteria` still returns exactly
+    the same dict it always did.
+    """
+    crit = {}
+    acts = (goal or {}).get("actions") or {}
+    for name in sorted(acts):
+        keys = acts.get(name)
+        if isinstance(keys, (list, tuple)):
+            keys_s = ",".join(str(k) for k in keys)
+        elif keys is None:
+            keys_s = ""
+        else:
+            keys_s = str(keys)
+        crit[name] = ("hold the game's InputMap action '%s' (bound key(s): %s)"
+                      % (name, keys_s or "?"))
+    for k in ((goal or {}).get("keys") or []):
+        if keycode_of(k) is None:
+            continue
+        ck = "key_%s" % str(k).strip().upper()
+        crit.setdefault(ck, "press and release the key %s" % k)
+    crit.setdefault("wait", "do nothing this step (hold position / observe)")
+    crit.setdefault("done", "stop probing: no further action is likely to help")
+    return crit
+
+
 class JevAgent(PlaytestAgent):
     """NeoHorse-Jev native decision backend.
 
@@ -767,26 +815,7 @@ class JevAgent(PlaytestAgent):
 
     # ---- request construction -------------------------------------------
     def build_action_criteria(self, goal):
-        crit = {}
-        acts = (goal or {}).get("actions") or {}
-        for name in sorted(acts):
-            keys = acts.get(name)
-            if isinstance(keys, (list, tuple)):
-                keys_s = ",".join(str(k) for k in keys)
-            elif keys is None:
-                keys_s = ""
-            else:
-                keys_s = str(keys)
-            crit[name] = ("hold the game's InputMap action '%s' (bound key(s): %s)"
-                          % (name, keys_s or "?"))
-        for k in ((goal or {}).get("keys") or []):
-            if keycode_of(k) is None:
-                continue
-            ck = "key_%s" % str(k).strip().upper()
-            crit.setdefault(ck, "press and release the key %s" % k)
-        crit.setdefault("wait", "do nothing this step (hold position / observe)")
-        crit.setdefault("done", "stop probing: no further action is likely to help")
-        return crit
+        return action_criteria(goal)
 
     def build_questions(self, goal, with_image=False):
         """The typed `questions` object.  Image requests carry EXACTLY one question."""
@@ -1141,6 +1170,594 @@ class JevAgent(PlaytestAgent):
 
 
 # ---------------------------------------------------------------------------
+# backend 4: playjev -- PlayJev 0.8B, the VISION fine-tuned sibling (TASK-127)
+# ---------------------------------------------------------------------------
+# Every protocol constant below is a first-party fact read out of the deployed
+# source, `playjev/serve.py` at commit ea3a514d2fcbc0756c36eabe052439db54544542
+# (`omnijev/PlayJev`, 2026-09-24); the line numbers are the ones in that file and
+# are quoted verbatim in the TASK-127 report.  The differences from Jev that
+# force this to be a separate backend rather than a flag on `JevAgent`:
+#
+#   * the state is `{"frames": [...]}` where each frame is a base64 string or a
+#     data URL (serve.py:32-37, 41-43).  A text state does not exist here: it is
+#     refused with 400 "text states belong to OpenJev" (serve.py:41-42).
+#   * ONLY `type: "choice"` questions are served (serve.py:53-54).  A `noul` or
+#     `score` question -- both legal on Jev -- is a 400 here.  So this backend
+#     expresses an invariant as a yes/no Choice and the brokenness rating as an
+#     ordered-levels Choice whose expected value is the score.
+#   * `criteria` is a dict (name -> description) or a list of names, with at
+#     least two options (serve.py:55-63); at most 26, the alphabet in
+#     `playjev/model.py:38`.
+#   * ONE image + N questions IS legal: the frames are shared by every question of
+#     one request (serve.py:16, 52-73).  That is the opposite of Jev's hard
+#     "exactly 1 image + 1 question" rule, and it is why a single PlayJev request
+#     can carry the action choice, the invariants and the score together.
+#   * the reply is `{"model", "answers", "timing"}` (serve.py:11-13, 69-74); there
+#     is no `usage`, no `input_tokens`/`image_tokens` at the top level and no
+#     `x-neohorse-*` header.
+#   * `serve.py` NEVER emits `abstain`, in the request or in the answer.  The
+#     `Decision` object it discards does carry `allowed_mass` -- "share of the
+#     full-vocabulary softmax that lands on the K answer slots" (model.py:102),
+#     i.e. the real "is the model answering at all?" diagnostic -- but the HTTP
+#     answer keeps only choice/probabilities/confidence.  This backend therefore
+#     (a) honours a server-sent `abstain` should a later build add one, and
+#     (b) classifies a MISSING or structurally unusable answer as an abstain, so
+#     "the model did not answer" can never be read as "the model said yes".
+#
+# One more fact worth recording: serve.py never reads the request's `model` field
+# (it answers with the `--name` the server was started with), so PLAYTEST_MODEL is
+# cosmetic for this backend.
+PLAYJEV_ANSWER_MODEL = "playjev-0.8b"
+PLAYJEV_HEALTH_PATH = "/health"
+PLAYJEV_MODELS_PATH = "/v1/models"
+PLAYJEV_DECISION_PATHS = ("/v1/systemone",)
+PLAYJEV_DEFAULT_BASE_URL = "http://127.0.0.1:8081"
+PLAYJEV_MIN_OPTIONS = 2
+PLAYJEV_MAX_OPTIONS = 26           # playjev/model.py:38 LETTERS
+PLAYJEV_TRUE = "yes"
+PLAYJEV_FALSE = "no"
+# The ordered brokenness levels, low -> high, WITHOUT the "N = " prefix (the option
+# NAME is the level number here, so the model never has to parse the number back
+# out of a sentence).  Same wording and same ordering as JEV_BROKENNESS_LEVELS.
+PLAYJEV_BROKENNESS_CRITERIA = [
+    ("1", "fully working: content is drawn, input responds, nothing looks wrong"),
+    ("2", "minor glitches only; still clearly playable"),
+    ("3", "partially broken: some documented capability is missing or unresponsive"),
+    ("4", "badly broken: the game barely responds or renders garbage"),
+    ("5", "unusable: flat/blank screen, error dialog, or frozen"),
+]
+PLAYJEV_ABSTAIN_NOTE = (
+    "ABSTAIN IS NOT SUCCESS.  PlayJev's serve.py has no abstain field, so this "
+    "backend derives one: an answer that is absent, or that carries no usable "
+    "probabilities, or whose confidence is below abstain_min_confidence is recorded "
+    "as abstain=true and the verdict becomes 'no verdict' (pass=null), never a pass. "
+    "The upstream `allowed_mass` diagnostic (playjev/model.py:102) would make this "
+    "much sharper and serve.py drops it -- see the TASK-127 report."
+)
+
+
+class PlayJevAgent(PlaytestAgent):
+    """PlayJev 0.8B (image states) native decision backend.
+
+    Like `JevAgent` it never raises out of `decide`: an unconfigured endpoint, an
+    unreachable service, a refused request or an unusable answer all become a safe
+    `wait` action plus a recorded reason.  Unlike `JevAgent` the frames are the
+    whole input -- PlayJev has no text-state path at all.
+    """
+
+    name = "playjev"
+
+    def __init__(self, game=None, objective="", options=None):
+        PlaytestAgent.__init__(self, game, objective, options)
+        o = self.options
+        self.base_url = ((o.get("base_url") or os.environ.get("PLAYTEST_BASE_URL", "")
+                          or PLAYJEV_DEFAULT_BASE_URL).rstrip("/"))
+        self.api_key = o.get("api_key")
+        if self.api_key is None:
+            self.api_key = os.environ.get("PLAYTEST_API_KEY", "")
+        self.model = (o.get("model") or os.environ.get("PLAYTEST_MODEL", "")
+                      or PLAYJEV_ANSWER_MODEL)
+        self.decision_path = (o.get("decision_path")
+                              or os.environ.get("PLAYTEST_DECISION_PATH", "")
+                              or "/v1/systemone")
+        self.health_path = o.get("health_path") or PLAYJEV_HEALTH_PATH
+        self.timeout = float(o.get("timeout", 120))
+        self.send_images = bool(o.get("send_images", True))    # pixels are the point
+        self.require_health = bool(o.get("require_health", True))
+        self.max_retries = max(0, int(o.get("max_retries", 1)))
+        self.retry_backoff = float(o.get("retry_backoff", 1.0))
+        self.retry_backoff_max = float(o.get("retry_backoff_max", 10.0))
+        self.hold_ms = int(o.get("hold_ms", 300))
+        self.invariant_questions = max(0, int(o.get("invariant_questions", 3)))
+        self.score_question = bool(o.get("score_question", True))
+        self.action_key = o.get("action_key") or "move"
+        self.score_key = o.get("score_key") or "brokenness"
+        self.score_criteria = list(o.get("score_criteria")
+                                   or PLAYJEV_BROKENNESS_CRITERIA)
+        self.abstain_min_confidence = float(
+            o.get("abstain_min_confidence")
+            if o.get("abstain_min_confidence") is not None
+            else (os.environ.get("PLAYTEST_ABSTAIN_MIN_CONFIDENCE") or 0.0))
+        self.thresholds = dict(DEFAULT_JEV_THRESHOLDS)
+        self.thresholds.update(o.get("thresholds") or {})
+
+        self.errors = []
+        self.calls = []            # request/response evidence for the gate
+        self.attempts = []         # every transport attempt
+        self.health = None
+        self.last_evidence = None
+        self.last_answers = {}     # question key -> classified answer record
+        self.last_roles = {}       # question key -> {"role", "options", ...}
+        self.last_noul = {}        # key -> record, for the gate's threshold rule
+        self.last_scores = {}
+        self.last_timings = {}
+        self._ready = None
+        # The service holds one engine lock and serves "one forward at a time"
+        # (serve.py:29, 65-68): serialise on this side too.
+        self._lock = threading.Lock()
+
+    # ---- error/evidence bookkeeping -------------------------------------
+    def _error(self, kind, message, **extra):
+        rec = {"kind": kind, "error": message}
+        rec.update(extra)
+        self.errors.append(rec)
+        return rec
+
+    # ---- transport -------------------------------------------------------
+    def _request(self, method, path, payload=None):
+        url = self.base_url + path
+        body = json.dumps(payload).encode("utf-8") if payload is not None else None
+        req = Request(url, data=body, method=method)
+        req.add_header("Content-Type", "application/json")
+        if self.api_key:
+            req.add_header("Authorization", "Bearer %s" % self.api_key)
+        rec = {"method": method, "url": url, "status": None, "headers": {},
+               "body": "", "seconds": 0.0, "lock": "serialized"}
+        t0 = time.time()
+        with self._lock:
+            try:
+                resp = urlopen(req, timeout=self.timeout)
+                raw = resp.read().decode("utf-8", "replace")
+                rec["status"] = getattr(resp, "status", 200)
+                rec["headers"] = dict((k.lower(), v) for k, v in resp.headers.items())
+                rec["body"] = raw
+            except HTTPError as e:
+                raw = e.read().decode("utf-8", "replace") if hasattr(e, "read") else ""
+                rec["status"] = e.code
+                try:
+                    rec["headers"] = dict((k.lower(), v) for k, v in e.headers.items())
+                except Exception:  # noqa: BLE001
+                    rec["headers"] = {}
+                rec["body"] = raw
+                rec["error"] = "HTTPError"
+            except URLError as e:
+                rec["error"] = "URLError: %s" % e
+            except Exception as e:  # noqa: BLE001 - the gate must never die
+                rec["error"] = "%s: %s" % (type(e).__name__, e)
+        rec["seconds"] = round(time.time() - t0, 3)
+        return rec
+
+    def check_health(self):
+        """`GET /health` -- PlayJev answers `{"ok": true, "model", "two_frame"}`
+        (serve.py:105-106), NOT Jev's `{"status": "ready", ...}`."""
+        rec = self._request("GET", self.health_path)
+        parsed = None
+        if rec.get("status") == 200 and rec.get("body"):
+            try:
+                parsed = json.loads(rec["body"])
+            except Exception as e:  # noqa: BLE001
+                rec["parse_error"] = "%s: %s" % (type(e).__name__, e)
+        rec["json"] = parsed
+        self.health = {"url": rec["url"], "status": rec.get("status"),
+                       "seconds": rec.get("seconds"), "json": parsed,
+                       "ok": parsed.get("ok") if isinstance(parsed, dict) else None,
+                       "model": parsed.get("model") if isinstance(parsed, dict) else None,
+                       "two_frame": parsed.get("two_frame") if isinstance(parsed, dict) else None,
+                       "error": rec.get("error")}
+        return rec
+
+    def _post_decision(self, payload):
+        """POST /v1/systemone.  Kept retry-shaped for forward compatibility: the
+        deployed serve.py has no busy protocol (its engine lock queues instead),
+        but a later build may answer 429/529 and `Retry-After` is honoured."""
+        attempts = []
+        delay = self.retry_backoff
+        max_attempts = self.max_retries + 1
+        rec = None
+        for i in range(1, max_attempts + 1):
+            rec = self._request("POST", self.decision_path, payload)
+            status = rec.get("status")
+            retry_after = (rec.get("headers") or {}).get("retry-after")
+            attempts.append({"attempt": i, "status": status, "seconds": rec.get("seconds"),
+                             "retry_after": retry_after, "error": rec.get("error")})
+            if status == 200:
+                break
+            if status in (429, 529):
+                wait = delay
+                try:
+                    wait = float(retry_after)
+                except (TypeError, ValueError):
+                    pass
+                wait = min(max(0.0, wait), self.retry_backoff_max)
+                if i < max_attempts:
+                    time.sleep(wait)
+                    delay = min(delay * 2.0, self.retry_backoff_max)
+                continue
+            break  # 400/404/500 are hard errors here: report, do not retry
+        rec["attempts"] = attempts
+        self.attempts.extend(attempts)
+        return rec
+
+    # ---- request construction -------------------------------------------
+    def build_questions(self, goal):
+        """Every question is a Choice.  Returns (questions, roles).
+
+        `roles[key]` is what the ANSWER means, which is how the response mapping
+        stays honest: a `noul` role reports P(true) from the yes/no Choice, a
+        `score` role reports the expected level from the ordered-levels Choice.
+        """
+        questions, roles = {}, {}
+        act = action_criteria(goal)
+        questions[self.action_key] = {
+            "type": "choice",
+            "instructions": self.options.get(
+                "action_instructions",
+                "Choose the single next input that best serves the objective."),
+            "criteria": act,
+        }
+        roles[self.action_key] = {"role": "action", "options": list(act)}
+        for key, text in JEV_INVARIANT_QUESTIONS[:self.invariant_questions]:
+            crit = {PLAYJEV_TRUE: "the frame does satisfy this statement",
+                    PLAYJEV_FALSE: "the frame does not satisfy this statement"}
+            questions[key] = {"type": "choice", "instructions": text, "criteria": crit}
+            roles[key] = {"role": "noul", "options": list(crit),
+                          "true_option": PLAYJEV_TRUE}
+        if self.score_question:
+            crit = dict(self.score_criteria)
+            questions[self.score_key] = {
+                "type": "choice",
+                "instructions": ("Rate how broken this frame is, from %s (fully working) "
+                                 "to %s (unusable)."
+                                 % (list(crit)[0], list(crit)[-1])),
+                "criteria": crit,
+            }
+            roles[self.score_key] = {"role": "score", "options": list(crit)}
+        for key, q in questions.items():
+            if q.get("type") != "choice":
+                raise JevProtocolError("playjev serves choice questions only (serve.py:53)")
+            n = len(q["criteria"])
+            if not (PLAYJEV_MIN_OPTIONS <= n <= PLAYJEV_MAX_OPTIONS):
+                raise JevProtocolError(
+                    "question %r has %d options; serve.py needs >= %d (serve.py:62) and "
+                    "model.py allows at most %d" % (key, n, PLAYJEV_MIN_OPTIONS,
+                                                    PLAYJEV_MAX_OPTIONS))
+        return questions, roles
+
+    def build_request(self, frames, state, goal):
+        """Build the image-state request.  There is no text-state fallback."""
+        usable = [f for f in (frames or [])
+                  if f.get("path") and os.path.isfile(f["path"])]
+        if not self.send_images:
+            raise JevProtocolError(
+                "PlayJev serves pixels only: with send_images=False there is no state "
+                "to send (a text state is refused 400, serve.py:41-42)")
+        if not usable:
+            raise JevProtocolError(
+                "PlayJev has no text-state path and no readable frame was given; the "
+                "service would answer 400 'state must be {\"frames\": [...]}'")
+        questions, roles = self.build_questions(goal or {})
+        f = usable[-1]
+        path = f["path"]
+        with open(path, "rb") as fh:
+            data = fh.read()
+        payload = {
+            "model": self.model,
+            "state": {"frames": ["data:image/png;base64,%s"
+                                 % base64.b64encode(data).decode("ascii")]},
+            "questions": questions,
+        }
+        body = json.dumps(payload).encode("utf-8")
+        meta = {
+            "decision_path": self.decision_path,
+            "transport": "state.frames (one data URL) -- NOT a top-level `image` field",
+            "frame_path": path,
+            "frame_bytes": len(data),
+            "frame_sha256": f.get("sha256"),
+            "frame_index": f.get("index"),
+            "question_count": len(questions),
+            "question_keys": list(questions.keys()),
+            "question_types": dict((k, v["type"]) for k, v in questions.items()),
+            "option_counts": dict((k, len(v["criteria"])) for k, v in questions.items()),
+            "question_roles": dict((k, v["role"]) for k, v in roles.items()),
+            "body_bytes": len(body),
+            "image_plus_n_questions": True,
+            "model_field_read_by_server": False,
+        }
+        if len(body) > JEV_LIMITS["image_request_max_bytes"]:
+            raise JevProtocolError(
+                "request body is %d bytes; kept under the Jev 8 MiB image cap so the "
+                "same frame could go to either backend" % len(body))
+        return payload, roles, meta
+
+    # ---- response parsing ------------------------------------------------
+    def parse_response(self, body):
+        if not body:
+            raise JevProtocolError("the service returned an empty body")
+        try:
+            data = json.loads(body)
+        except Exception as e:  # noqa: BLE001
+            raise JevProtocolError("the response body is not JSON: %s" % e)
+        if not isinstance(data, dict) or not isinstance(data.get("answers"), dict):
+            raise JevProtocolError("the response has no `answers` object: %s"
+                                   % (list(data)[:8] if isinstance(data, dict) else type(data)))
+        return data
+
+    def classify_answer(self, key, role, answer):
+        """One answer -> a record that says, explicitly, whether it is an ABSTAIN.
+
+        The abstain rules, in order (any hit sets `abstain` and records why):
+          1. the answer object is missing or not a dict;
+          2. the server declared `abstain: true`;
+          3. there are no usable `probabilities`;
+          4. the declared `choice` is not one of the returned probabilities;
+          5. `confidence` is below `abstain_min_confidence`;
+          6. the option this role needs (yes/no, or a level) is absent.
+        """
+        rec = {"key": key, "role": role["role"], "answer": answer,
+               "abstain": False, "abstain_reasons": []}
+        if not isinstance(answer, dict):
+            rec["abstain"] = True
+            rec["abstain_reasons"].append("the server sent no answer object for this question")
+            return rec
+        if answer.get("abstain") is not None:
+            rec["server_abstain"] = answer.get("abstain")
+            if answer.get("abstain"):
+                rec["abstain"] = True
+                rec["abstain_reasons"].append("the server declared abstain=true")
+        if answer.get("type") not in (None, "choice"):
+            rec["abstain"] = True
+            rec["abstain_reasons"].append("unexpected answer type %r" % answer.get("type"))
+        probs = answer.get("probabilities")
+        if not isinstance(probs, dict) or not probs:
+            rec["abstain"] = True
+            rec["abstain_reasons"].append("the answer carries no probabilities")
+            return rec
+        rec["probabilities"] = probs
+        rec["confidence"] = answer.get("confidence")
+        rec["choice"] = answer.get("choice")
+        if answer.get("choice") not in probs:
+            rec["abstain"] = True
+            rec["abstain_reasons"].append(
+                "choice %r is not one of the returned probabilities %s"
+                % (answer.get("choice"), sorted(probs)[:8]))
+        conf = answer.get("confidence")
+        if isinstance(conf, (int, float)) and conf < self.abstain_min_confidence:
+            rec["abstain"] = True
+            rec["abstain_reasons"].append(
+                "confidence %.6f < abstain_min_confidence %.6f"
+                % (conf, self.abstain_min_confidence))
+        if role["role"] == "noul":
+            p = probs.get(role["true_option"])
+            rec["noul"] = p if isinstance(p, (int, float)) else None
+            if rec["noul"] is None:
+                rec["abstain"] = True
+                rec["abstain_reasons"].append(
+                    "the option %r is missing from the probabilities" % role["true_option"])
+        elif role["role"] == "score":
+            idx = dict((name, i) for i, name in enumerate(role["options"]))
+            tot, mass = 0.0, 0.0
+            for name, p in probs.items():
+                if name in idx and isinstance(p, (int, float)):
+                    tot += (idx[name] + 1) * p
+                    mass += p
+            rec["score_mass"] = mass
+            rec["score"] = (tot / mass) if mass > 0 else None
+            rec["score_levels"] = role["options"]
+            if rec["score"] is None:
+                rec["abstain"] = True
+                rec["abstain_reasons"].append("no level probability was recognised")
+        elif role["role"] == "action":
+            rec["action_choice"] = answer.get("choice")
+        return rec
+
+    def collect_answers(self, answers, roles):
+        """Classify EVERY question this agent asked -- a missing answer to a
+        question we asked is an abstain, not a silence to be ignored."""
+        out = {}
+        for key, role in roles.items():
+            out[key] = self.classify_answer(key, role, (answers or {}).get(key))
+        return out
+
+    # ---- the interface ---------------------------------------------------
+    def decide(self, frames, state, goal):
+        if not self.base_url:
+            self._error("unconfigured", "PLAYTEST_BASE_URL is not set")
+            return {"type": "wait", "ms": 100,
+                    "why": "playjev backend unconfigured: PLAYTEST_BASE_URL is not set "
+                           "(recorded, not a success)"}
+        if self.decision_path not in PLAYJEV_DECISION_PATHS:
+            self._error("unconfigured",
+                        "unknown decision path %r; playjev serve.py provides %s"
+                        % (self.decision_path, list(PLAYJEV_DECISION_PATHS)))
+            return {"type": "wait", "ms": 100,
+                    "why": "playjev backend misconfigured: decision path %r"
+                           % self.decision_path}
+        if self.require_health and self._ready is not True:
+            rec = self.check_health()
+            ok = rec.get("status") == 200
+            if ok and isinstance(rec.get("json"), dict) and "ok" in rec["json"]:
+                ok = bool(rec["json"]["ok"])
+            if not ok:
+                self._error("health", "GET %s failed: status=%s error=%s"
+                            % (self.health_path, rec.get("status"), rec.get("error")),
+                            body=(rec.get("body") or "")[:400])
+                self._ready = False
+                return {"type": "wait", "ms": 200,
+                        "why": "playjev service is not reachable/ready (see recorded "
+                               "health error); degraded to wait"}
+            self._ready = True
+
+        try:
+            payload, roles, meta = self.build_request(frames, state, goal)
+        except JevProtocolError as e:
+            self._error("request", str(e))
+            return {"type": "wait", "ms": 200,
+                    "why": "playjev request refused before sending: %s" % e}
+        except Exception as e:  # noqa: BLE001
+            self._error("request", "%s: %s" % (type(e).__name__, e))
+            return {"type": "wait", "ms": 200, "why": "playjev request build failed: %s" % e}
+
+        rec = self._post_decision(payload)
+        evidence = {"kind": "decision", "transport": rec, "request_meta": meta,
+                    "request_payload": payload}
+        if rec.get("status") != 200:
+            msg = self._map_http_error(rec)
+            self._error("http", msg, status=rec.get("status"))
+            evidence["error"] = msg
+            self.calls.append(evidence)
+            self.last_evidence = evidence
+            return {"type": "wait", "ms": 200, "why": msg}
+
+        try:
+            data = self.parse_response(rec.get("body"))
+        except JevProtocolError as e:
+            msg = "playjev response could not be parsed: %s" % e
+            self._error("response", msg)
+            evidence["error"] = msg
+            self.calls.append(evidence)
+            self.last_evidence = evidence
+            return {"type": "wait", "ms": 200, "why": msg}
+
+        answers = data["answers"]
+        classified = self.collect_answers(answers, roles)
+        abstained = sorted(k for k, r in classified.items() if r["abstain"])
+        self.last_answers = classified
+        self.last_roles = roles
+        self.last_noul = dict((k, r) for k, r in classified.items() if r["role"] == "noul")
+        self.last_scores = dict((k, r) for k, r in classified.items() if r["role"] == "score")
+        self.last_timings = data.get("timing")
+        evidence.update({
+            "response_status": rec.get("status"),
+            "model": data.get("model"),
+            "timing": data.get("timing"),
+            "answers_raw": answers,
+            "answers_classified": classified,
+            "probability_tables": dict((k, r.get("probabilities")) for k, r in classified.items()),
+            "confidences": dict((k, r.get("confidence")) for k, r in classified.items()),
+            "abstain": bool(abstained),
+            "abstained_questions": abstained,
+            "abstain_reasons": dict((k, classified[k]["abstain_reasons"]) for k in abstained),
+            "unrequested_answers": sorted(set(answers) - set(roles)),
+        })
+        act = None
+        a = classified.get(self.action_key)
+        if a is not None and a["abstain"]:
+            msg = ("playjev ABSTAINED on %s (undecidable, NOT a success): %s"
+                   % (self.action_key, "; ".join(a["abstain_reasons"])))
+            self._error("abstain", msg, question=self.action_key)
+            evidence["error"] = msg
+            act = {"type": "wait", "ms": 200, "why": msg}
+        elif a is not None:
+            why = ("playjev choice=%r confidence=%s probabilities=%s"
+                   % (a.get("choice"), a.get("confidence"), a.get("probabilities")))
+            act = action_from_choice(a.get("choice"), goal, self.hold_ms, why)
+        if act is None:
+            msg = ("playjev returned no usable choice (answers=%s)"
+                   % list(answers.keys())[:8])
+            self._error("response", msg)
+            evidence["error"] = msg
+            act = {"type": "wait", "ms": 200, "why": msg}
+        evidence["action"] = act
+        self.calls.append(evidence)
+        self.last_evidence = evidence
+        return act
+
+    def _map_http_error(self, rec):
+        status = rec.get("status")
+        detail = (rec.get("body") or "")[:300]
+        n = len(rec.get("attempts") or [])
+        if status == 400:
+            return ("playjev refused the request as invalid (400) -- it serves choice "
+                    "questions over `state.frames` and nothing else: %s" % detail)
+        if status == 404:
+            return ("playjev has no such path (404): the only decision endpoint is "
+                    "POST /v1/systemone (serve.py:111). body=%s" % detail)
+        if status == 500:
+            return ("playjev failed on the request (500): %s" % detail)
+        if status in (429, 529):
+            return ("playjev worker is busy (HTTP %s) and still busy after %d attempts; "
+                    "`Retry-After` was honoured. body=%s" % (status, n, detail))
+        if status is None:
+            return "playjev service is not reachable (%s)" % rec.get("error")
+        return "playjev service returned HTTP %s: %s" % (status, detail)
+
+    def judge(self, frames, state, goal):
+        """Machine-readable verdict from the noul/score answers.  `decide()`'s
+        evidence is reused (one forward pass is enough and the service serialises)."""
+        if self.last_evidence is None:
+            self.decide(frames, state, goal)
+        return self.threshold_verdict()
+
+    def threshold_verdict(self):
+        crit = []
+        for key, r in sorted(self.last_noul.items()):
+            val = r.get("noul")
+            ok = (not r["abstain"]) and isinstance(val, (int, float)) \
+                and val >= self.thresholds["noul_min_p_true"]
+            crit.append({"id": "noul:%s" % key, "value": val,
+                         "rule": "P(true) >= %.3f" % self.thresholds["noul_min_p_true"],
+                         "pass": bool(ok), "abstain": r["abstain"],
+                         "abstain_reasons": r["abstain_reasons"],
+                         "confidence": r.get("confidence")})
+        for key, r in sorted(self.last_scores.items()):
+            val = r.get("score")
+            ok = (not r["abstain"]) and isinstance(val, (int, float)) \
+                and val <= self.thresholds["score_max_expected"]
+            crit.append({"id": "score:%s" % key, "value": val,
+                         "rule": "expected level <= %.3f"
+                                 % self.thresholds["score_max_expected"],
+                         "pass": bool(ok), "abstain": r["abstain"],
+                         "abstain_reasons": r["abstain_reasons"],
+                         "confidence": r.get("confidence")})
+        undecidable = sorted(c["id"] for c in crit if c["abstain"])
+        if not crit:
+            verdict = None
+        elif undecidable:
+            verdict = None           # an abstain is NEVER a pass
+        else:
+            verdict = all(c["pass"] for c in crit)
+        return {"backend": "playjev", "pass": verdict,
+                "decidable": not undecidable,
+                "undecidable": undecidable,
+                "why": ("no noul/score answer was captured: no threshold verdict is "
+                        "possible" if not crit else
+                        ("%d criterion/criteria abstained: no verdict (an abstain is not "
+                         "a pass)" % len(undecidable) if undecidable else
+                         ("%d/%d threshold criteria passed"
+                          % (sum(1 for c in crit if c["pass"]), len(crit))))),
+                "criteria": crit,
+                "thresholds": dict(self.thresholds),
+                "abstain_min_confidence": self.abstain_min_confidence,
+                "uncalibrated": True,
+                "note": JEV_THRESHOLD_NOTE,
+                "abstain_note": PLAYJEV_ABSTAIN_NOTE,
+                "source": ("last decision response" if self.last_evidence else "none")}
+
+    def report(self):
+        rep = PlaytestAgent.report(self)
+        rep.update({"base_url": self.base_url, "model": self.model,
+                    "decision_path": self.decision_path, "health": self.health,
+                    "errors": self.errors, "attempts": self.attempts,
+                    "abstain_min_confidence": self.abstain_min_confidence,
+                    "thresholds": dict(self.thresholds),
+                    "last_timings": self.last_timings,
+                    "last_abstained": sorted(k for k, r in self.last_answers.items()
+                                             if r["abstain"]),
+                    "threshold_verdict": self.threshold_verdict()})
+        return rep
+
+
+# ---------------------------------------------------------------------------
 # factory
 # ---------------------------------------------------------------------------
 def build_agent(name, game=None, objective="", options=None):
@@ -1151,7 +1768,10 @@ def build_agent(name, game=None, objective="", options=None):
         return OpenAIAgent(game, objective, options)
     if n == "jev":
         return JevAgent(game, objective, options)
-    raise ValueError("unknown agent backend %r (expected scripted|openai|jev)" % name)
+    if n == "playjev":
+        return PlayJevAgent(game, objective, options)
+    raise ValueError("unknown agent backend %r (expected scripted|openai|jev|playjev)"
+                     % name)
 
 
 # ---------------------------------------------------------------------------
@@ -1322,13 +1942,28 @@ def main(argv):
         import test_jev_agent
         r = test_jev_agent.run_all(verbose=True, argv=args[1:])
         return 0 if r["ok"] else 1
+    if args[0] == "--probe-playjev":
+        # TASK-127: same idea for the PlayJev backend -- a stdlib dumb
+        # /v1/systemone service that VALIDATES the request against the deployed
+        # serve.py's rules.  No weights, no GPU, stdlib only.
+        tests_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tests")
+        sys.path.insert(0, tests_dir)
+        import test_playjev_agent
+        r = test_playjev_agent.run_all(verbose=True, argv=args[1:])
+        return 0 if r["ok"] else 1
     if args[0] == "--selfcheck":
-        # interface shape only, no network
-        ag = build_agent("scripted", "demo", "demo")
-        act = ag.decide([], {}, {"keys": ["W", "SPACE"]})
-        print(json.dumps(act, ensure_ascii=False))
+        # interface shape only, no network.  The two decision backends are pointed at
+        # a port nothing listens on, so this proves the DEGRADED path (a recorded safe
+        # action) without ever touching a real service.
+        dead = {"base_url": "http://127.0.0.1:9", "timeout": 2}
+        for backend in ("scripted", "openai", "jev", "playjev"):
+            ag = build_agent(backend, "demo", "demo", dead)
+            act = ag.decide([], {}, {"keys": ["W", "SPACE"]})
+            print(json.dumps({"backend": backend, "name": ag.name, "action": act},
+                             ensure_ascii=False))
         return 0
-    print("unknown arguments: %r (try --probe, --probe-jev or --help)" % (args,))
+    print("unknown arguments: %r (try --probe, --probe-jev, --probe-playjev, "
+          "--selfcheck or --help)" % (args,))
     return 2
 
 

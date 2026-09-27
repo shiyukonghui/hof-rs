@@ -72,6 +72,55 @@ Usage
     python tools\\playability_gate.py --calibrate                 # metrics only
     python tools\\playability_gate.py --games pong --agent=openai # model in the loop
 
+The REAL model service (TASK-128)
+---------------------------------
+`--agent=jev` is the only path that talks to a deployed NeoHorse-Jev.  It reaches the
+service named by `--base-url` (new in TASK-128) or, when that is empty, by the
+`PLAYTEST_BASE_URL` environment variable.  Nothing else changes it: there is no
+hard-coded host, and an unset address is a recorded `wait` (never a silent success).
+
+    :: window command -- this DOES hit the real 8080 service:
+    set PLAYTEST_BASE_URL=http://127.0.0.1:8080
+    set PLAYTEST_MODEL=NeoHorse-Jev-4B
+    python tools\\playability_gate.py --all --agent=jev --base-url http://127.0.0.1:8080
+    :: evidence of what was reached lands in runs\\playability\\<game>\\agent.json:
+    ::   report.base_url, report.health.json.model, and per call
+    ::   .response_status / .model / .usage / .confidence_header, plus the
+    ::   `x-neohorse-confidence` and `x-neohorse-usage` response headers.
+
+`--probe` / `--probe-jev` / `--probe-playjev` / `--selfcheck` on `playtest_agent.py`
+are NOT a way to call a real service: they start a *dumb* in-process server and never
+touch a deployed port (measured in TASK-125).  Only the `--agent=jev` /
+`--agent=playjev` invocations above do.  `--base-url` deliberately does nothing for
+`--agent=scripted`/`none`; it is recorded in `gate\\agent\\service`.
+
+One measured trap on the jev path (TASK-128): the state is the game's whole exported
+node tree and **15 of the 20 games exceed Jev's documented 2048-token `state` cap**, so
+the service answers HTTP 422 `state exceeds 2048 tokens: N` and the model never runs.
+The client's `jev_estimate_tokens` is not the guard it reads as: this JSON tokenizes at
+~2.1-2.4 real tokens per estimated one (client 1018 -> service 2160; client 1791 ->
+service 4229), so `--agent-state-budget 800` is the setting that fits all 20.  The flag
+trims the state's `nodes` in tree order and records every dropped node in
+`gate\\agent\\state_for_agent`; the client's own `state_overflow="clip"` is no substitute
+(it would drop the whole `nodes` key at once).  The exact state text handed over is
+recorded there as a sha256 + head.
+
+The VISION service (TASK-127)
+-----------------------------
+`--agent=playjev` is the image-state backend: PlayJev 0.8B, the model that was actually
+fine-tuned on pixels.  Its server answers the same `POST /v1/systemone` name as Jev but
+takes `{"state": {"frames": ["data:image/png;base64,..."]}}` and serves `type: "choice"`
+questions ONLY, so a `noul`/`score` question -- legal on Jev -- is a 400 there.  The
+backend expresses the invariants as yes/no Choices and the brokenness rating as an
+ordered-levels Choice, and it can carry ONE image + N questions in a single request.
+Its default address is `http://127.0.0.1:8081`; `PLAYTEST_BASE_URL` (or `--base-url`)
+overrides it.  An answer it cannot use is recorded as an ABSTAIN and never as a pass.
+
+    :: window command -- this DOES hit the real 8081 service:
+    set PLAYTEST_BASE_URL=http://127.0.0.1:8081
+    set PLAYTEST_MODEL=playjev-0.8b
+    python tools\\playability_gate.py --games pong --agent=playjev --base-url http://127.0.0.1:8081
+
 Outputs
 -------
     runs\\playability\\<game>\\frames\\NN_<label>.png     full-window frames
@@ -118,6 +167,7 @@ EXE_ROOT = None
 
 sys.path.insert(0, HERE)
 from playtest_agent import build_agent, keycode_of, keyname_of  # noqa: E402
+from playtest_agent import jev_estimate_tokens, jev_render_state  # noqa: E402
 
 # --- gate constants, with the basis for each --------------------------------
 # P1: a frame is "content" only where it differs from its own modal colour.
@@ -1183,9 +1233,17 @@ def run_gate(game, args):
             agent = build_agent(args.agent, game, goal["objective"],
                                 {"plan": None, "hold_ms": int(args.hold * 1000),
                                  "decision_path": getattr(args, "decision_path", "") or "",
+                                 "base_url": (getattr(args, "base_url", "") or
+                                              os.environ.get("PLAYTEST_BASE_URL", "")),
                                  "thresholds": agent_thresholds})
             acts = []
-            action = agent.decide(frames_for_agent(frames), (s_end or {}), goal)
+            # TASK-128: the state handed to the model, and the record of what fitting it
+            # into the documented 2048-token cap cost (empty when --agent-state-budget 0).
+            agent_state, agent_state_ev = trim_state_for_agent(
+                s_end or {}, getattr(args, "agent_state_budget", 0))
+            agent_state_ev = dict(agent_state_ev or {})
+            agent_state_ev["fingerprint"] = state_fingerprint(agent_state)
+            action = agent.decide(frames_for_agent(frames), agent_state, goal)
             acts.append({"action": action, "why": "first decision"})
             if action.get("type") == "done":
                 pass
@@ -1198,8 +1256,8 @@ def run_gate(game, args):
                 acts.append({"action": action, "applied": applied})
                 time.sleep(args.settle_input)
                 capture("agent%02d" % step, mcp, None, note="after the agent's action")
-                action = agent.decide(frames_for_agent(frames), (s_end or {}), goal)
-            judge = agent.judge(frames_for_agent(frames), (s_end or {}), goal)
+                action = agent.decide(frames_for_agent(frames), agent_state, goal)
+            judge = agent.judge(frames_for_agent(frames), agent_state, goal)
             threshold_verdict = None
             if hasattr(agent, "threshold_verdict"):
                 try:
@@ -1208,6 +1266,17 @@ def run_gate(game, args):
                     threshold_verdict = {"error": "%s: %s" % (type(e).__name__, e)}
             gate["agent"] = {"report": agent.report(), "decisions": acts,
                              "judge": judge,
+                             # TASK-128 A1: which service was actually reached.  For the
+                             # jev backend this is the deployed NeoHorse-Jev named by
+                             # --base-url / PLAYTEST_BASE_URL -- NOT an in-process dumb
+                             # server (those live only in playtest_agent.py --probe*).
+                             "service": {
+                                 "backend": getattr(agent, "name", args.agent),
+                                 "base_url": getattr(agent, "base_url", None),
+                                 "decision_path": getattr(agent, "decision_path", None),
+                                 "model": getattr(agent, "model", None),
+                                 "health": getattr(agent, "health", None)},
+                             "state_for_agent": agent_state_ev,
                              # TASK-124 C: noul P(true) / score expected level against
                              # the CONFIGURABLE thresholds in tools/playability_controls.json
                              # (`agent_thresholds`).  Recorded, not silently trusted: the
@@ -1267,6 +1336,80 @@ def frames_for_agent(frames):
                     ("index", "path", "width", "height", "content_fraction", "bbox",
                      "bbox_coverage", "background_rgb", "changed_pixels_vs_prev")})
     return out
+
+
+def trim_state_for_agent(state, budget):
+    """TASK-128: fit the sampled state into Jev's documented 2048-token `state` cap.
+
+    Why this is needed at all (measured, not assumed): the gate's state is the game's
+    whole exported node tree, and 15 of the 20 games exceed the cap.  Jev REFUSES an
+    over-limit request (HTTP 422 `state exceeds 2048 tokens: N`) instead of truncating,
+    and `playtest_agent.py`'s own ceiling check only refuses client-side -- it does not
+    make the state fit.  The agent's `state_overflow="clip"` policy cannot help either:
+    it drops whole top-level keys biggest-first, and the biggest key here is `nodes`,
+    i.e. every game-specific field at once -- the model would then judge four scalars.
+
+    So the gate trims *inside* `nodes`, in the state's own tree order (root and its
+    first children are the ones that carry the movable objects), keeping every node it
+    can and recording exactly which nodes it dropped.  It is opt-in (`--agent-state-budget`,
+    default 0 = off), identical for positives and negatives, and the record is written to
+    `gate\\agent\\state_for_agent`, so a trimmed judgement is never mistaken for a
+    whole-state one.
+
+    Returns (state_for_the_agent, evidence|None).
+    """
+    if not budget or not isinstance(state, dict):
+        return state, None
+    ev = {"policy": "keep the state's nodes in tree order until the estimated token count "
+                    "fits the budget; drop the rest and name them",
+          "budget_tokens_estimate": budget, "documented_limit": 2048,
+          "note": "the client estimate is NOT an upper bound here: `jev_estimate_tokens` "
+                  "assumes ~4 ASCII chars/token, but this JSON state tokenizes at "
+                  "~1.7-2.4 real tokens per estimated one (measured: client 1018 -> "
+                  "service 2160; client 1791 -> service 4229).  The budget is therefore "
+                  "well below the documented cap, and the service's own count remains "
+                  "the binding constraint."}
+    before = jev_estimate_tokens(jev_render_state(state))
+    ev["state_tokens_estimate_before"] = before
+    if before <= budget:
+        ev.update({"trimmed": False, "state_tokens_estimate": before,
+                   "nodes_kept": None, "nodes_dropped": []})
+        return state, ev
+    nodes = state.get("nodes")
+    if not isinstance(nodes, dict):
+        ev.update({"trimmed": False, "state_tokens_estimate": before,
+                   "nodes_kept": None, "nodes_dropped": [],
+                   "why": "the state has no `nodes` object to trim; left unchanged"})
+        return state, ev
+    kept = {}
+    dropped = []
+    for key, value in nodes.items():
+        kept[key] = value
+        trial = dict(state)
+        trial["nodes"] = kept
+        if jev_estimate_tokens(jev_render_state(trial)) > budget:
+            kept.pop(key, None)
+            dropped.append(key)
+    trimmed = dict(state)
+    trimmed["nodes"] = kept
+    ev.update({"trimmed": True, "state_tokens_estimate": jev_estimate_tokens(
+        jev_render_state(trimmed)),
+        "nodes_in_source": len(nodes), "nodes_kept": len(kept),
+        "nodes_dropped": dropped,
+        "state_keys_kept": sorted(trimmed.keys())})
+    return trimmed, ev
+
+
+def state_fingerprint(state):
+    """TASK-128 A2: the exact state text handed to the model -- hash + a sample.
+
+    `agent.json` must let a reviewer re-derive what the model judged without shipping
+    the whole tree twice, so the rendered text is hashed and its head is kept.
+    """
+    text = jev_render_state(state)
+    return {"sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+            "chars": len(text), "tokens_estimate": jev_estimate_tokens(text),
+            "head": text[:400]}
 
 
 def apply_agent_action(mcp, action, gate, tag):
@@ -1721,16 +1864,37 @@ def main(argv=None):
     ap.add_argument("--calibrate", action="store_true",
                     help="run the frames/metrics only; no verdict report is trusted")
     ap.add_argument("--agent", default="scripted",
-                    help="scripted | openai | jev | none.  `jev` is NeoHorse-Jev's "
-                         "native structured-decision protocol (TASK-124): root URL in "
-                         "PLAYTEST_BASE_URL, GET /health readiness, POST /v1/systemone "
-                         "(or --decision-path /v1/decision).  `openai` is only for a "
-                         "model that really speaks OpenAI chat-completions.")
+                    help="scripted | openai | jev | playjev | none.  `jev` is "
+                         "NeoHorse-Jev's native structured-decision protocol (TASK-124): "
+                         "root URL in PLAYTEST_BASE_URL, GET /health readiness, POST "
+                         "/v1/systemone (or --decision-path /v1/decision).  `playjev` is "
+                         "PlayJev 0.8B's image-state server (TASK-127): the same "
+                         "endpoint name but `state.frames` instead of a text state, "
+                         "choice questions only, one image + N questions allowed, and an "
+                         "abstain is never a pass.  `openai` is only for a model that "
+                         "really speaks OpenAI chat-completions.")
     ap.add_argument("--agent-steps", type=int, default=2)
     ap.add_argument("--decision-path", default="",
                     help="TASK-124: the jev backend's decision endpoint "
                          "(/v1/systemone default, or /v1/decision; env "
                          "PLAYTEST_DECISION_PATH)" )
+    ap.add_argument("--base-url", default="",
+                    help="TASK-128: the REAL model service root URL for "
+                         "`--agent=jev`/`--agent=playjev`, e.g. "
+                         "http://127.0.0.1:8080 (jev) or http://127.0.0.1:8081 "
+                         "(playjev).  Empty falls back to the PLAYTEST_BASE_URL "
+                         "environment variable.  This is the documented real-service "
+                         "entry; `playtest_agent.py --probe*` never uses it and only "
+                         "talks to an in-process dumb server.")
+    ap.add_argument("--agent-state-budget", type=int, default=0,
+                    help="TASK-128: trim the sampled state to this estimated token "
+                         "count before handing it to the agent (0 = off, the pre-"
+                         "TASK-128 behaviour).  Jev refuses a state over its documented "
+                         "2048-token cap with HTTP 422 and 15 of the 20 games exceed it; "
+                         "--agent-state-budget 800 fits all of them (the client estimate "
+                         "under-counts the service by ~2.1-2.4x, so the budget must be "
+                         "well under 2048).  What was dropped is recorded in "
+                         "gate\\agent\\state_for_agent.")
     ap.add_argument("--objective", default="")
     ap.add_argument("--port", type=int, default=DEFAULT_PORT)
     ap.add_argument("--ready-timeout", type=float, default=240)
