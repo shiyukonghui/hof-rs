@@ -405,7 +405,16 @@ tool_coverage: mode=all-runs runs=109 trace_files=177 calls=8665 distinct=169
   并把**原文逐字附在后面**（不删除）。
 * 新增 `categories.H7.still_out`：5 条 `editor_simulate_*` 的 why / evidence / `measurable_when`。
 * 新增 `categories.H8.external_device`：3 条 Android 工具按「需要外部设备」登记（不是「不可达」）。
-* `reclassify_h7.py` 跑第二遍输出 `added 0, refreshed 10` —— **幂等**。
+* `reclassify_h7.py` 跑第二遍输出 `added 0, refreshed 10` —— `reclassified` 数组**幂等**。
+* **一处本轮自己踩到并修掉的缺陷（如实披露）**：该脚本的第一版只让 `reclassified` 数组幂等，
+  **分类正文不是** —— 它每次运行都往 `categories.H7.why_unreachable` 前面再贴一遍
+  「SUPERSEDED BY MEASUREMENT …」。跑第二遍之后那一格变成
+  `… SUPERSEDED … ORIGINAL TEXT: … SUPERSEDED … ORIGINAL TEXT: <原文>`（重复两遍）。
+  发现方式是**重刷台账后读 §4 的 H7 正文**（不是靠「应该不会重复」）。
+  修法：把原文存进独立的 `why_unreachable_original` / `supporting_evidence_original`，
+  每次运行**从原文重新合成**；并且能从一个已经被重复贴过的值里按**最后一个** `ORIGINAL TEXT:`
+  标记恢复出真原文（所以它能自愈，不需要手工回滚）。修完实测：
+  `SUPERSEDED BY MEASUREMENT` 出现 **1** 次、`ORIGINAL TEXT` 出现 **1** 次、原文 225 字逐字保留。
 
 ### D4. 跑前/跑后检查（铁律 4）
 

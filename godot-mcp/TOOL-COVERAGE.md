@@ -5,7 +5,7 @@
 
 口径（mode）：**all-runs**；语料：**109 个 run 目录 / 177 个 trace 文件 / 8665 次 `tools/call`**（`ok=false` 638 次、解析失败行 0、sidecar 校验通过 276）
 
-生成时间（UTC）：2026-09-27T04:20:39Z
+生成时间（UTC）：2026-09-27T04:21:44Z
 
 **「有效调用」的判定**（由 `mcp_trace_ledger.py` 的 verdict 词汇给出，不另立一套）：
 
@@ -602,8 +602,8 @@
 
 ### H7 编辑器 GUI 状态 / 编辑器自有播放与输入注入 / 编辑器侧测试运行
 
-- 为何不可达（推断）：SUPERSEDED BY MEASUREMENT (TASK-115). The original inference below was a single claim about a mixed family, and it was wrong for ten of its nineteen members: the editor's own GUI state (selection, Output panel, run bar, addon list, test-report bridge file, screenshot diff) is fully readable and writable through the editor endpoint. What is really left is the five editor_simulate_* tools, whose exclusion is a scope decision (D59 / GDR-21), not a missing subsystem - see `still_out`. ORIGINAL TEXT, kept for audit: SUPERSEDED BY MEASUREMENT (TASK-115). The original inference below was a single claim about a mixed family, and it was wrong for ten of its nineteen members: the editor's own GUI state (selection, Output panel, run bar, addon list, test-report bridge file, screenshot diff) is fully readable and writable through the editor endpoint. What is really left is the five editor_simulate_* tools, whose exclusion is a scope decision (D59 / GDR-21), not a missing subsystem - see `still_out`. ORIGINAL TEXT, kept for audit: 这类工具的输入是**编辑器进程自己的 GUI 状态**（当前选择、打开的脚本、Output 面板、对话框、已装插件）或**编辑器自己的播放器/输入队列**。本循环里编辑器端点只做「开场景 / 加节点 / 存场景 / 建脚本 / 编译 / 读错误」；所有行为验证都走游戏端点，且**刻意不用**编辑器侧输入注入（B2 说明：`editor_simulate_*` 注入的是编辑器进程的输入，不能用来驱动游戏进程 —— D59 / GDR-21 的边界）
-- 支撑证据（只读观察）：TASK-115: runs/_exercises/ex_editor/h7-task115 (82 calls, 169 named tools in the whole corpus after the batch); tools/sessions/_exercises/ex_editor/h7-manifest.json (7 content-level read-back declarations, all verified). ORIGINAL TEXT, kept for audit: TASK-115: runs/_exercises/ex_editor/h7-task115 (82 calls, 169 named tools in the whole corpus after the batch); tools/sessions/_exercises/ex_editor/h7-manifest.json (7 content-level read-back declarations, all verified). ORIGINAL TEXT, kept for audit: `tools/editor_playback.cpp`、`editor_input_simulation.cpp`、`editor_profiling_read.cpp`、`editor_testing_read.cpp`、`editor_script_write.cpp`、`editor_read_scene_inspector.cpp`；`editor_get_test_report` / `editor_analyze_screenshot_diff` 需要「编辑器侧测试运行」，而本循环的测试运行发生在游戏端点
+- 为何不可达（推断）：SUPERSEDED BY MEASUREMENT (TASK-115). The original inference below was a single claim about a mixed family, and it was wrong for ten of its nineteen members: the editor's own GUI state (selection, Output panel, run bar, addon list, test-report bridge file, screenshot diff) is fully readable and writable through the editor endpoint. What is really left is the five editor_simulate_* tools, whose exclusion is a scope decision (D59 / GDR-21), not a missing subsystem - see `still_out`. ORIGINAL TEXT, kept for audit: 这类工具的输入是**编辑器进程自己的 GUI 状态**（当前选择、打开的脚本、Output 面板、对话框、已装插件）或**编辑器自己的播放器/输入队列**。本循环里编辑器端点只做「开场景 / 加节点 / 存场景 / 建脚本 / 编译 / 读错误」；所有行为验证都走游戏端点，且**刻意不用**编辑器侧输入注入（B2 说明：`editor_simulate_*` 注入的是编辑器进程的输入，不能用来驱动游戏进程 —— D59 / GDR-21 的边界）
+- 支撑证据（只读观察）：TASK-115: runs/_exercises/ex_editor/h7-task115 (82 calls, 169 named tools in the whole corpus after the batch); tools/sessions/_exercises/ex_editor/h7-manifest.json (7 content-level read-back declarations, all verified). ORIGINAL TEXT, kept for audit: `tools/editor_playback.cpp`、`editor_input_simulation.cpp`、`editor_profiling_read.cpp`、`editor_testing_read.cpp`、`editor_script_write.cpp`、`editor_read_scene_inspector.cpp`；`editor_get_test_report` / `editor_analyze_screenshot_diff` 需要「编辑器侧测试运行」，而本循环的测试运行发生在游戏端点
 
 | tool | scope | 实测调用 | 漂移 | 改判 | 证据 |
 |---|---|---|---|---|---|

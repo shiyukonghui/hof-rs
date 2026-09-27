@@ -140,6 +140,44 @@ COMMENT = (
     "device under categories.H8.external_device). 66 of the 74 members are now measured."
 )
 
+# The marker the supersede note uses. The first version of this script prepended the
+# note on EVERY run, so running it twice produced "... SUPERSEDED ... ORIGINAL: ...
+# SUPERSEDED ... ORIGINAL: <text>" - a real idempotence bug, caught by diffing the
+# ledger after the second run. The fix is to keep the original text in its own key
+# and to RECOMPOSE the composed value from it on every run, and to recover the
+# original from an already-composed value by taking what follows the LAST marker.
+ORIGINAL_MARK = "ORIGINAL TEXT, kept for audit: "
+SUPERSEDE_PREFIX_WHY = (
+    "SUPERSEDED BY MEASUREMENT (TASK-115). The original inference below was a single "
+    "claim about a mixed family, and it was wrong for ten of its nineteen members: the "
+    "editor's own GUI state (selection, Output panel, run bar, addon list, test-report "
+    "bridge file, screenshot diff) is fully readable and writable through the editor "
+    "endpoint. What is really left is the five editor_simulate_* tools, whose exclusion "
+    "is a scope decision (D59 / GDR-21), not a missing subsystem - see `still_out`. "
+)
+SUPERSEDE_PREFIX_EVIDENCE = (
+    "TASK-115: runs/_exercises/ex_editor/h7-task115 (82 calls, 169 named tools in the "
+    "whole corpus after the batch); tools/sessions/_exercises/ex_editor/h7-manifest.json "
+    "(7 content-level read-back declarations, all verified). "
+)
+
+
+def original_of(doc, category, field):
+    """The category's pre-TASK-115 text, once, however many times this script ran.
+
+    Preference order: the dedicated `*_original` key this script writes; then the
+    tail after the LAST ORIGINAL_TEXT mark (which is the true original even when an
+    older, non-idempotent run composed the value twice); then the current value.
+    """
+    original_key = field + "_original"
+    if original_key in category:
+        return category[original_key]
+    current = category.get(field, "")
+    index = current.rfind(ORIGINAL_MARK)
+    if index >= 0:
+        return current[index + len(ORIGINAL_MARK):]
+    return current
+
 
 def main():
     with io.open(REGISTRY, "r", encoding="utf-8") as handle:
@@ -163,30 +201,23 @@ def main():
             doc["reclassified"].append(entry)
             added += 1
 
-    doc["categories"]["H7"]["still_out"] = H7_STILL_OUT
-    doc["categories"]["H7"]["why_unreachable"] = (
-        "SUPERSEDED BY MEASUREMENT (TASK-115). The original inference below was a single "
-        "claim about a mixed family, and it was wrong for ten of its nineteen members: the "
-        "editor's own GUI state (selection, Output panel, run bar, addon list, test-report "
-        "bridge file, screenshot diff) is fully readable and writable through the editor "
-        "endpoint. What is really left is the five editor_simulate_* tools, whose exclusion "
-        "is a scope decision (D59 / GDR-21), not a missing subsystem - see `still_out`. "
-        "ORIGINAL TEXT, kept for audit: " + doc["categories"]["H7"].get("why_unreachable", "")
-    )
-    doc["categories"]["H7"]["supporting_evidence"] = (
-        "TASK-115: runs/_exercises/ex_editor/h7-task115 (82 calls, 169 named tools in the "
-        "whole corpus after the batch); tools/sessions/_exercises/ex_editor/h7-manifest.json "
-        "(7 content-level read-back declarations, all verified). ORIGINAL TEXT, kept for "
-        "audit: " + doc["categories"]["H7"].get("supporting_evidence", "")
-    )
+    h7 = doc["categories"]["H7"]
+    h7["still_out"] = H7_STILL_OUT
+    why_original = original_of(doc, h7, "why_unreachable")
+    evidence_original = original_of(doc, h7, "supporting_evidence")
+    h7["why_unreachable_original"] = why_original
+    h7["supporting_evidence_original"] = evidence_original
+    h7["why_unreachable"] = SUPERSEDE_PREFIX_WHY + ORIGINAL_MARK + why_original
+    h7["supporting_evidence"] = SUPERSEDE_PREFIX_EVIDENCE + ORIGINAL_MARK + evidence_original
 
     doc["categories"]["H8"]["external_device"] = H8_EXTERNAL_DEVICE
     doc["_reclassified_comment"] = COMMENT
     doc["_task115_note"] = (
-        "TASK-115 edited `categories.H7.why_unreachable` / `supporting_evidence` (appending, "
-        "never deleting, the original inference with an explicit 'SUPERSEDED BY MEASUREMENT' "
-        "marker) and added `categories.H7.still_out` + `categories.H8.external_device`. "
-        "`members` was not touched: all 74 entries are still there."
+        "TASK-115 edited `categories.H7.why_unreachable` / `supporting_evidence` (moving the "
+        "original inference to `*_original` and composing the superseded text from it on every "
+        "run, so this script is idempotent) and added `categories.H7.still_out` + "
+        "`categories.H8.external_device`. `members` was not touched: all 74 entries are still "
+        "there, and the original wording is preserved verbatim in the `*_original` keys."
     )
 
     with io.open(REGISTRY, "w", encoding="utf-8", newline="\n") as handle:

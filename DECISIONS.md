@@ -6283,6 +6283,13 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
     发现后杀掉该进程、把游戏运行改成**有界等待**（超时即 `taskkill /T /F` 并记为
     `TIMEOUT(ns)`），重跑完成。这是本轮唯一一次需要杀进程的地方，全部发生在我自己的
     `recovery/work/task115/export_probe/` 下。
+  * **本轮的第二个失误（如实披露）**：`reclassify_h7.py` 的第一版只让 `reclassified` 数组幂等，
+    **分类正文不幂等** —— 第二次运行时把「SUPERSEDED BY MEASUREMENT … ORIGINAL TEXT:」又贴了一遍，
+    读起来像原文被说了两次。发现方式是**重刷台账后读 TOOL-COVERAGE.md §4 的正文**。
+    修法：原文移进 `categories.H7.why_unreachable_original` / `supporting_evidence_original`，
+    每次运行从原文**重新合成**，并且能按**最后一个** `ORIGINAL TEXT:` 标记从已经重复的值里自愈。
+    修完实测：`SUPERSEDED BY MEASUREMENT` 出现 1 次、`ORIGINAL TEXT` 1 次、原文 225 字逐字保留。
+
   * **依赖/环境**：本轮无新增依赖、无联网下载。`ex_editor` 是**无 C#、无 GDScript 业务代码**
     的最小工程（只有 `addons/probe_plugin` 一个空 `EditorPlugin`，为的是让
     `editor_reload_plugin` 有真实对象可禁用/启用）。
