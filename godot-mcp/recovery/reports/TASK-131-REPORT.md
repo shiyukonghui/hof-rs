@@ -23,7 +23,7 @@ InputMap 里没有重开键），`game2048` 的棋盘**从来没被种下任何�
 | X4 | **完成，取 ①** | 真实键有效；本机限制不再是默认解释；替代证据强度上限写在 §A.5 |
 | X5 | **完成** | §B.1 逐步对应表（seq → 状态 sha → 帧 sha/像素差 → `ts_ms`/`frame_count`）+ §B.2 四处对齐（pid/端口/trace/版本） |
 | X6 | **完成** | 采集视口 = 整窗 `800×600` = 工程声明 `[800,600]`（`out_window` 与 `window_conformance` 两处都记） |
-| X7 | **完成** | §C 逐帧读图描述表（`read_image` 实看：两张 23 格 filmstrip + 三张 filmstrip + 3 张 800×600 全尺寸） |
+| X7 | **完成** | §C 逐帧读图描述表（`read_image` 实看：三张 23/13/8 格 filmstrip + 两张 filmstrip + **6 张 800×600 全尺寸原图**） |
 | X8 | **完成** | `recovery/tasks/TEMPLATE-logic-feedback.md`（双通路 / 同实例核对 / 读图表 / 三态结论 + 8 条真实反例） |
 | X9 | **完成** | §F 可重跑命令逐条 + 铁律自查 + 两仓 `git log/status` |
 | X10 | **完成** | §D.1：**判据问题 (i)**（并额外发现"第一帧前就已结束"这个更根本的原因）；不是实例不一致 |
@@ -193,7 +193,9 @@ pong 的样例（节选，`runs/realinput/pong/steps.json`）：
 | 4 | `runs/realinput/pong/filmstrip.png` | 1086×448（13 格） | A/B 主证据：真实键与合成键都推动了挡板与世界 |
 | 5 | `runs/realinput/pong/frames/06_a00_pong_left_up_real_post.png` | **800×600 全尺寸** | 真实 W 之后左挡板到顶、球在中线 |
 | 6 | `runs/realinput/pong/frames/15_a01_pong_left_down_parse_post.png` | **800×600 全尺寸** | 合成 S 之后左挡板到底 |
-| 7 | `runs/realinput/tetris/filmstrip.png` | 1086×646（14 格） | 第二款：左→左→右→右 的循环协议肉眼可核 |
+| 7 | `runs/realinput/tetris/filmstrip.png` | 1086×448（8 格） | 第二款：左→左→右→右 的循环协议 |
+| 9 | `runs/realinput/tetris/frames/03_p00_ctl_end.png` | **800×600 全尺寸** | 对照态：青色 I 型块在场地靠左（约 x=352…456） |
+| 10 | `runs/realinput/tetris/frames/04_p00_arm1_tetris_left_real_post.png` | **800×600 全尺寸** | 真实 A 之后：同一块**左移一格**（约 x=328…432），与 `PieceX 3→2` 一致 |
 | 8 | `runs/realinput/snake/filmstrip.png` | 1086×448（8 格） | snake 8 帧全同（真实键也没能救活已结束的局） |
 
 ### C.1 `runs/playability/snake` 23 帧逐帧描述表（X10/X14 核心）
@@ -259,19 +261,25 @@ pong 的样例（节选，`runs/realinput/pong/steps.json`）：
 
 ### C.4 `runs/realinput/tetris` / `runs/realinput/snake` 逐帧描述表（节选）
 
+tetris 共 8 帧（`runs/realinput/tetris/frames/`），全尺寸看过 #03 与 #04：
+
 | 帧 | 我看到了什么 | 与上一帧相比 | 与操作相符？ |
 |---|---|---|---|
-| tetris #01-#03 | 深色场地 + 左上 `TETRIS HUD` + 右上浅蓝方块（当前块）+ 右侧 Next 面板 | 全同（px 0） | 对照 |
-| tetris #04 | **浅蓝方块左移一格** | 1058 px | **相符**：真实 A |
-| tetris #06-#07 | 方块再左移一格 | 1058 px | **相符**：合成 A（与真实臂同值） |
-| tetris #09-#10 | **方块右移一格** | 1058 px | **相符**：真实 D |
-| tetris #12-#13 | 方块再右移一格 | 1058 px | **相符**：合成 D |
+| #01 `01_settle` | 深色场地（约 256×488）、左侧面板白字 `TETRIS 10x20`、右侧 Next 空框、场地内靠上一条**青色的 4 格 I 型块** | — | 初始 |
+| #02 `02_p00_ctl_pre` | 同上，块位置相同 | 0 px | 对照 |
+| #03 `03_p00_ctl_end` | 同上；**全尺寸**看：块横跨约 `x=352…456` | 0 px | 对照窗结束（块没有自己动） |
+| #04 `04_p00_arm1_tetris_left_real_post` | **全尺寸**看：同一块**左移了一格**（约 `x=328…432`） | **1058 px** | **相符**：真实 A 让块左移（`PieceX 3→2`） |
+| #05 `05_p00_arm2_tetris_right_parse_post` | 块右移一格回原位 | **1058 px** | **相符**：合成 D（`PieceX 2→3`） |
+| #06 `06_p00_arm3_tetris_left_parse_post` | 块再左移一格 | **1058 px** | **相符**：合成 A（`PieceX 3→2`） |
+| #07 `07_p00_arm4_tetris_right_real_post` | 块再右移一格 | **1058 px** | **相符**：真实 D（`PieceX 2→3`） |
+| #08 `08_zz_tail` | 位置不变 | 0 px | 输入轮结束后静止（块不下落：`hold` 很短，重力间隔未到） |
 | snake #01-#08 | 红罩 + 4 格蛇身 + 左上角食物，**8 帧全同** | 全部 px 0 | **不相符**：真实键与合成键都没能让画面动（因为局已经结束） |
 
 **读图边界（照实声明）**：本轮 `read_image` 能力正常，全部上述图片**都真的看过了**。
-但**不是**每一张 800×600 单帧都单独看过全尺寸原图——23 格 filmstrip 是逐格看的（每格 210px 宽），
-另有 3 张关键帧看了全尺寸。**我没有**用像素差或 sha256 冒充"看过图"；
-filmstrip 缩略图看小字（如 HUD 数值）能力有限，所以 HUD 数值类结论一律以状态字段为准并在表里标注来源。
+其中**6 张 800×600 全尺寸原图**（snake settle、pong 两张、tetris 两张、加上 filmstrip 内的逐格查看），
+其余以 filmstrip 逐格查看（每格 210px 宽）。**我没有**用像素差或 sha256 冒充"看过图"；
+filmstrip 缩略图分辨不了 24px 的格子位移——**所以 tetris 的"左移一格"这一条我特意补读了两张全尺寸原图才写下来**；
+HUD 小字类结论一律以状态字段为准并在表里标注来源。
 
 ---
 
