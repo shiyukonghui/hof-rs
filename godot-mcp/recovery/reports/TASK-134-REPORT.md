@@ -728,6 +728,29 @@ $ git -C F:\moonbit-hof-rs\godot-mcp\godot status --short
 ?? uid_cache.bin          <- TASK-130 之前就在，非本轮引入（不提交）
 ```
 
+**交付提交：`0d47653`**（25 files changed, 4464 insertions(+), 25 deletions(-)）。
+提交信息逐条对应本报告 §1/§2/§3/§4；提交后 `git -C F:\moonbit-hof-rs status --short` **clean**。
+本报告自身的这次补写（把交付提交号与最终两仓状态写进来）是**第 2 次、只动这一份文档**的提交，
+与 TASK-132/133 的做法一致（报告的"docs-only invariant"）。
+
+**提交后的两仓状态**
+
+```text
+$ git -C F:\moonbit-hof-rs log --oneline -3
+0d47653 feat(godot-mcp): TASK-134 - split "the game is unplayable" from "the model cannot play it", ...
+2c12197 docs(godot-mcp): TASK-133 - correct one cross-reference (the process-record section is 8, not H)
+4ab5e4d docs(godot-mcp): TASK-133 - record the deliverable commit b330500 and the two-repository git state ...
+
+$ git -C F:\moonbit-hof-rs status --short
+(clean)
+
+$ git -C F:\moonbit-hof-rs\godot-mcp\godot log --oneline -1
+ba1587c71e fix(mcp_server): TASK-112 - ...
+
+$ git -C F:\moonbit-hof-rs\godot-mcp\godot status --short
+?? uid_cache.bin          <- 仍然只在原地，未提交（非本轮引入）
+```
+
 **关键产物：绝对路径 + sha256**（机器可读版 `runs/model-player/_scripts/t134_artifacts.json`；
 前缀省略 `F:\moonbit-hof-rs\godot-mcp\`）
 
