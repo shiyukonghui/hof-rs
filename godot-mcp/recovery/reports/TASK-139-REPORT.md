@@ -649,16 +649,19 @@ M  godot-mcp/tools/tests/test_playability_model_player.py
 * **本报告 + 第三轮重复性 + 报告口径的更新**：**`849601c`**
   （`TASK-139: the report, and the third repeat round that changed its most important finding`）
 * 提交信息文件：`t139_commit_msg.txt` / `t139_commit_msg2.txt`（随各自提交入库，便于核对提交说了什么）
-* `git log --oneline -3`（定稿时）：
+* `git log --oneline -3`（**定稿、全部提交之后**）：
 
 ```
+0ec4e8a TASK-139 docs: record the commit ids and the staging self-correction in the report
 849601c TASK-139: the report, and the third repeat round that changed its most important finding
 455626c TASK-139: declare a minimum measurement window, recognise legal refusals, and re-run 20x2
-926ac5e docs(godot-mcp): TASK-138 - state that the report's own later revisions are located by commit id, not by an embedded hash (docs-only)
 ```
 
-* **本报告本身**以 `849601c` 入库；定位方式用**提交号**，**不写自身内容哈希**
-  （写入动作会改变哈希，定义上不可核；与 TASK-138 勘误 ⑤ 的口径一致）。
+* **本报告本身**以 `849601c` 入库、并在 `0ec4e8a` 记下提交号与暂存自查；定位方式用**提交号**，
+  **不写自身内容哈希**（写入动作会改变哈希，定义上不可核；与 TASK-138 勘误 ⑤ 的口径一致）。
+* **自我指涉的终止说明（与 TASK-138 同样的处理）**：这一段本身也会改变报告，所以**不声称"报告最终版就是
+  某个写进报告的提交号"**。可核的只有两件事：(1) 报告在 `F:\moonbit-hof-rs\godot-mcp\recovery\reports\TASK-139-REPORT.md`；
+  (2) 用 `git log --follow --oneline -- <该路径>` 可以列出它的每一次内容修订，**最后一次**即定稿版本。
 * `git add -f` 的路径（`runs/**` 被忽略）：`ARTIFACTS-TASK-139.json` / `.md`，
   以及本批自己的 `_scripts/t139_*`（涉及台账可核性与结论复算，属"小而不可再生的判定依据"）。
   **提交前逐条核对了清单**：曾有一次 `git add -f` 误把整个 `_scripts/` 目录（含 TASK-134/135/136/138 的
