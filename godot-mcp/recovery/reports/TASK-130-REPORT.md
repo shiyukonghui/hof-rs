@@ -266,6 +266,7 @@
 | 整窗普查（5853 张） | `runs/playability/t130-editor-shots-full.json` |
 | 驱动脚本（不入库，`runs/` 被 `.gitignore`） | `runs/playability/_t130_input_form_study.py`、`_t130_study_summary.py`、`_t130_editor_full.py` 等 |
 | 裁剪实现（**入库**，门内） | `tools/playability_gate.py → content_bbox_crop()`、`--visual-input-form crop` |
+| 证据链自检 | `runs/playability/_t130_chain_check.py`：实验记录里 **266 张不同图像的文件 sha256 全部**与记录一致（0 缺失、0 不匹配）——"模型当时看到的是哪张图"可以从产物重建 |
 
 ---
 
@@ -296,7 +297,7 @@
 | 累计变化像素 | **227286** |
 | 每对都相同的游戏 | asteroids, bomberman, flappy, game2048, platformer, snake, tetris（7 款） |
 | 有差异的游戏 | breakout, frogger, lunarlander, match3, minesweeper, missilecommand, pacman, pong, puzzlebobble, rtype, sokoban, spaceinvaders, towerdefense（13 款） |
-| 单款最大差异 | minesweeper `01_settle` 等 7 对各自 **161077** 个变化像素 |
+| 单款最大差异 | minesweeper `07_a00_mine_reveal_next_parse_act.png` **161077** 个变化像素（该款 7 对**全部不同**） |
 
 settle/auto 帧（门的判定真正用的那批）**按文件名配对 20 对**：**16 对相同、4 对不同**
 （match3 / minesweeper / missilecommand / towerdefense 的 `01_settle.png`）。
@@ -368,7 +369,7 @@ D:\Anaconda\python.exe tools\playability_gate.py --games pong --visual-agent=pla
 | 1. 禁止一切 shell 重定向 | ⚠️ **1 处违规**：`_t130_ui_compact.py` 的**首次**运行用了 `... > runs\playability\_t130_ui_compact.txt 2>&1`（一条 scratch 分析清单，只写 `runs/` 下被 gitignore 的临时文本，不涉及任何产品/配置/工程文件）。发现后已把该脚本改成用 Python UTF-8 句柄自己写盘并**无重定向重跑**（脚本头部写明）。此外全程无 `>`/`>>`/`*>`/`2>&1`/`> nul` |
 | 2. 破坏性命令默认拒绝；禁止改 20 款正式工程 | ✅ 未执行删除/格式化；**未用 `git checkout`/`git restore`**（需要回退 4 个变体被误改的字节时，用 `git show HEAD:<path>` 读原内容 + Python 写回 + sha256 校验，见 `runs/playability/_t130_restore_variants.py`）。`projects/<game>/` **一个字节未改**（`git status --short` 可证） |
 | 3. 命令尽量从 cmd 启动；中文防乱码 | ✅ 所有命令由 cmd 运行；报告/JSON 由 Python UTF-8 句柄写入；`DECISIONS.md` 以文件当前的 CRLF 追加 |
-| 4. 禁止任何第三方端点 | ✅ 全部 HTTP 只发往 `127.0.0.1:8080`（8 次 `/health`）、`127.0.0.1:8081`（214 次判定）、`127.0.0.1:991x`（门自己的游戏进程）。无任何外部请求 |
+| 4. 禁止任何第三方端点 | ✅ 全部 HTTP 只发往 `127.0.0.1:8080`（2 次 `/health`）、`127.0.0.1:8081`（2 次 `/health` + **214 次判定**）、`127.0.0.1:991x`（门自己的游戏进程）。无任何外部请求 |
 | 5. 不得杀 8080/8081、不得动两个 venv、`F:\models\**` | ✅ 未重启/未杀两个服务（开始与结束都 200）；未写 `/opt/*-venv`；未在 `F:\models\**` 下创建/修改任何文件 |
 | 6. 唯一高位端口、跑前查占用、串行调用模型 | ✅ 门端口 9912/9913/9914/9915/9916（9911 当时处于 TIME_WAIT 所以避开），每次跑前 `netstat` 查空且门自己再 `kill_what_holds` 自检；未用 9877/9888/9889/8080/8081 作门端口；**模型调用全程单进程串行**（214 次，0 次 429/529、0 次 OOM） |
 | 7. 未改引擎模块 → 不触发两变体重建/十道门（须写明依据） | ✅ **未触发**。依据：本次改动只在 `godot-mcp/tools/**`、`godot-mcp/projects/_exercises/neg_*`、`godot-mcp/recovery/**`、`godot-mcp/runs/**`（不入库），`godot/modules/mcp_server/**` **零字节改动**；引擎仓 `git status --short` 只有一条**我没碰过**的遗留未跟踪文件（§9.5） |
@@ -438,7 +439,8 @@ ba1587c71e fix(mcp_server): TASK-112 - the three engine defects TASK-111 registe
 | 仓库 | 条目 | 说明 |
 |---|---|---|
 | 引擎仓 | `?? uid_cache.bin`（70 字节，mtime **2026/09/27 11:03**） | 引擎运行时在工作目录（`godot-mcp/godot/`）生成的缓存文件。**mtime 早于本任务**（本任务在 21:00 之后），所以是 TASK-129 或更早的 `--headless` 运行留下的；它不在我的独占清单里，**未暂存、未删除** |
-| 外层仓 | 无 | 本任务执行前外层仓是干净的（TASK-129 提交后 `status` 为空） |
+| 外层仓 | `?? godot-mcp/recovery/tasks/TASK-131.md` | 本任务执行**期间**由决策者写入的**下一份任务书**（不是我写的）。它把我的两个独占文件（`tools/playability_gate.py`、`tools/playability_controls.json`）也列进它的独占清单，并禁止它触碰 TASK-130 的 `projects/_exercises/neg_*` 与 `tools/tests/**`。**未暂存**，但它意味着 TASK-131 必须建立在 `8cd0127` 之上（见 §11 Q8） |
+| 外层仓 | 其余 | 本任务执行前外层仓是干净的（TASK-129 提交后 `status` 为空），提交后只剩上面这一条 |
 
 ---
 
@@ -472,6 +474,7 @@ ba1587c71e fix(mcp_server): TASK-112 - the three engine defects TASK-111 registe
 | Q5 | `snake` 没有文本 HUD，它的声明是"场地/食物/蛇头" | 已按实测声明 | 这类"没有 HUD"的游戏是 `required_ui` 用法的一次压力测试；将来新游戏照此办理 |
 | Q6 | 47/193 对不同像素的跨版本配对，差异来自状态分叉 | 已登记 | 若要把"修复前 vs 修复后的画面差异"当成信号，必须先控制**同一游戏时刻**（例如同一 tick 采样），否则测的是状态分叉 |
 | Q7 | 引擎仓遗留 `uid_cache.bin`（非本任务产出） | 未动 | 由决策者决定忽略/删除 |
+| Q8 | **交接提示**：执行期间出现的 `recovery/tasks/TASK-131.md` 把 `tools/playability_gate.py` 与 `tools/playability_controls.json` 也列为它的独占文件，并禁止它触碰 `projects/_exercises/neg_*` 与 `tools/tests/**` | 本任务已全部提交（`8cd0127`，工作区对该两文件为干净状态） | TASK-131 必须在 `8cd0127` 之上开始；本任务对这两文件的改动（P7 探针/判定、`required_ui` 声明、`content_bbox_crop`、`--only-p7`、`--visual-input-form`）是它的既有前提，若两者冲突以**实测+重新核验**为准并把冲突写进它的报告 |
 
 ---
 
@@ -492,14 +495,44 @@ ba1587c71e fix(mcp_server): TASK-112 - the three engine defects TASK-111 registe
 
 ## 13. 提交记录（提交后追记）
 
-**本任务的提交：见本节末尾（提交后回填）。**
-
-提交前用 `git status --short` 逐项核对，`git add` 的路径**逐个显式给出**（未用 `-A`）；
-`runs/**` 全部是运行产物且被 `.gitignore` 忽略，不入库；
-`godot-mcp/godot/uid_cache.bin`（引擎仓遗留）未暂存。
-
-提交后：
+**本任务的提交：`8cd0127`**
 
 ```
-（提交后回填：git log --oneline -5 / git status --short，两仓各一份）
+feat(godot-mcp): TASK-130 (D171/D172) - the declarative required-UI gate criterion P7 (20/20
+positives pass, neg_hud_missing flips to not_playable), a second UI-loss variant
+neg_ui_offscreen, and the input-form study proving PlayJev's zero separation is not a
+whole-window artefact
 ```
+
+`git status --short` 逐项核对后，**只暂存了 §9.3 列出的独占文件**（`git add` 的路径逐个显式给出，
+未用 `-A`；`neg_ui_offscreen/` 的 `git add --dry-run` 确认只加 10 个源码/场景/JSON 文件，
+`.godot/`、`bin/`、`obj/` 未入库）。`runs/**` 全部是运行产物且被 `.gitignore` 忽略，不入库；
+`godot-mcp/recovery/tasks/TASK-131.md`（决策者的下一份任务书）与引擎仓 `uid_cache.bin`（遗留）
+**未暂存**。
+
+提交后（**两个仓**）：
+
+```
+> git -C F:\moonbit-hof-rs log --oneline -5
+8cd0127 feat(godot-mcp): TASK-130 (D171/D172) - the declarative required-UI gate criterion P7 ...
+f39d4e7 docs(godot-mcp): TASK-129 - record the final commit id and the post-commit git log/status in the report
+b5ce09d feat(godot-mcp): TASK-129 (D168/D169/D170) - wire PlayJev into the gate, sample independent states, fix the token estimate, add real negative variants
+f01d23f docs(tasks): strict single-threading supersedes the worktree plan
+90ac351 docs(tasks): require git worktrees for concurrent subagents
+
+> git -C F:\moonbit-hof-rs status --short
+?? godot-mcp/recovery/tasks/TASK-131.md          <- 决策者的下一份任务书，不是我的产出
+
+> git -C F:\moonbit-hof-rs\godot-mcp\godot log --oneline -5
+ba1587c71e fix(mcp_server): TASK-112 - the three engine defects TASK-111 registered are fixed at the root ...
+3fdabe2d9a fix(godot-mcp): TASK-110 - editor_list_signal_connections' registered schema regains `scope` ...
+1f9d0cb1c9 modules/mcp_server: task103 - REBUILT-2C-MANIFEST gains the 2c-12 section ...
+1c7f5c07a1 modules/mcp_server: task103 (X-1) - a GDScript body that compiles and then fails while it runs ...
+e041cae270 modules/mcp_server: task099 - REBUILT-2C-MANIFEST gains the 2c-11 section ...
+
+> git -C F:\moonbit-hof-rs\godot-mcp\godot status --short
+?? uid_cache.bin                                 <- 11:03 的遗留缓存，不是我的产出
+```
+
+> 引擎仓：本次**未改任何引擎文件**（`godot/modules/mcp_server/**` 零字节），因此**未触发**两变体重建、
+> 十道门、`accept_m1`、push —— 与 §9.1 铁律 7 一致。
