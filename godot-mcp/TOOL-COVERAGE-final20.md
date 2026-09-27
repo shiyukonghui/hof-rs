@@ -5,12 +5,12 @@
 
 口径（mode）：**only-final**；语料：**20 个 run 目录 / 40 个 trace 文件 / 2612 次 `tools/call`**（`ok=false` 37 次、解析失败行 0、sidecar 校验通过 57）
 
-生成时间（UTC）：2026-09-27T01:37:23Z
+生成时间（UTC）：2026-09-27T02:04:18Z
 
 **「有效调用」的判定**（由 `mcp_trace_ledger.py` 的 verdict 词汇给出，不另立一套）：
 
 - `边界调用` = 该工具 `ok=false` 的调用次数（失败/拒绝即边界证据）。
-- `有效调用`：**读类动词**（get/read/search/list/find/analyze/detect/convert/validate/check）= `ok=true` 且回包是实质载荷（读类调用不会动像素/字节，回包本身就是证据）；
+- `有效调用`：**读类动词**（get/read/search/list/find/analyze/detect/convert/validate/check/assert/execute/evaluate，后三个的生效证据就是它回包的那个值或判词）= `ok=true` 且回包是实质载荷（读类调用不会动像素/字节，回包本身就是证据）；
   **其余动词**（create/edit/set/add/remove/write/build…）= ledger 的 `ok_effect_observed` / `ok_file_effect_observed`，即真的改了画面或文件。带 `assertion_failed` / `created_conflict` / `scenario_errors` 的 ok 调用不计有效。
 - `状态`：`达标` = 调用≥5 且 有效≥1 且 边界≥1；`计数达标缺证据` = 调用≥5 但缺有效或边界；`未达(1-4)` / `未达(0)`；`不可达` 不在本表状态里，见 §4 登记表。
 
@@ -298,11 +298,11 @@
 | `editor_get_node_groups` | editor | get | 0 | 0 | 0 | - | 未达(0) |
 | `editor_set_node_groups` | editor | set | 0 | 0 | 0 | - | 未达(0) |
 | `editor_find_nodes_in_group` | editor | find | 0 | 0 | 0 | - | 未达(0) |
-| `editor_get_selection` | editor | get | 0 | 0 | 0 | H7 | 未达(0) |
+| `editor_get_selection` | editor | get | 0 | 0 | 0 | - | 未达(0) |
 | `editor_set_node_selection` | editor | set | 0 | 0 | 0 | H7 | 未达(0) |
 | `editor_remove_node_selection` | editor | remove | 0 | 0 | 0 | H7 | 未达(0) |
 | `editor_execute_gdscript` | editor | execute | 0 | 0 | 0 | - | 未达(0) |
-| `editor_get_output_log` | editor | get | 0 | 0 | 0 | H7 | 未达(0) |
+| `editor_get_output_log` | editor | get | 0 | 0 | 0 | - | 未达(0) |
 | `editor_capture_screenshot` | editor | capture | 3 | 2 | 0 | - | 未达(1-4) |
 | `editor_remove_output_log` | editor | remove | 0 | 0 | 0 | H7 | 未达(0) |
 | `editor_reload_plugin` | editor | reload | 0 | 0 | 0 | H7 | 未达(0) |
@@ -312,7 +312,7 @@
 | `editor_set_auto_dismiss_dialogs` | editor | set | 0 | 0 | 0 | H7 | 未达(0) |
 | `editor_get_viewport_3d_camera` | editor | get | 0 | 0 | 0 | H1 | 未达(0) |
 | `editor_set_viewport_3d_camera` | editor | set | 0 | 0 | 0 | H1 | 未达(0) |
-| `running_game_capture_frames` | game | capture | 0 | 0 | 0 | H9 | 未达(0) |
+| `running_game_capture_frames` | game | capture | 0 | 0 | 0 | - | 未达(0) |
 | `running_game_create_input_recording` | game | create | 0 | 0 | 0 | H9 | 未达(0) |
 | `running_game_stop_input_recording` | game | stop | 0 | 0 | 0 | H9 | 未达(0) |
 | `running_game_play_input_recording` | game | play | 0 | 0 | 0 | H9 | 未达(0) |
@@ -324,12 +324,12 @@
 | `running_game_find_node_when_available` | game | find | 1 | 0 | 1 | - | 未达(1-4) |
 | `running_game_find_nearby_nodes` | game | find | 0 | 0 | 0 | - | 未达(0) |
 | `running_game_move_player_to_target` | game | move | 0 | 0 | 0 | H4 | 未达(0) |
-| `running_game_capture_signal_emissions` | game | capture | 0 | 0 | 0 | H9 | 未达(0) |
-| `editor_get_performance_monitors` | editor | get | 0 | 0 | 0 | H7 | 未达(0) |
+| `running_game_capture_signal_emissions` | game | capture | 0 | 0 | 0 | - | 未达(0) |
+| `editor_get_performance_monitors` | editor | get | 0 | 0 | 0 | - | 未达(0) |
 | `project_list_scripts` | both | list | 0 | 0 | 0 | - | 未达(0) |
 | `project_read_script` | both | read | 0 | 0 | 0 | - | 未达(0) |
 | `editor_set_node_script` | editor | set | 0 | 0 | 0 | - | 未达(0) |
-| `editor_get_open_scripts` | editor | get | 0 | 0 | 0 | H7 | 未达(0) |
+| `editor_get_open_scripts` | editor | get | 0 | 0 | 0 | - | 未达(0) |
 | `project_validate_script` | both | validate | 0 | 0 | 0 | - | 未达(0) |
 | `editor_simulate_key` | editor | simulate | 0 | 0 | 0 | H7 | 未达(0) |
 | `editor_simulate_mouse_click` | editor | simulate | 0 | 0 | 0 | H7 | 未达(0) |
@@ -429,160 +429,174 @@
 
 登记来源：`recovery/reports/TOOL-COVERAGE-TASK-108.md` §5.3 (5) which of them are structurally unreachable in this loop (INFERENCE)（**推断**，判据是「缺少本循环不具备的子系统/资产/前置运行态」）。本视图把登记表与本轮实测**对在一起**：`实测调用` 列不为 0 的条目就是登记漂移，必须在下一轮从登记表里移除或改判。
 
-登记成员 **74** 条；其中本轮实测**已被调用**（登记漂移）**0** 条。
+登记成员 **74** 条；其中实测**已被调用**（登记漂移）**0** 条，其中 **0** 条已按实测证据改判并记入登记表的 `reclassified`（下表 `改判` 列打 `YES`），其余为待复核漂移。
 
 ### H1 3D 内容管线
 
 - 为何不可达（推断）：20 款游戏**全部是 2D**，世界由 `ColorRect` / `Label` 在运行期或加载期拼出；工程里没有任何 Mesh / Camera3D / 光照 / WorldEnvironment 资产，也没有 `.tscn` 里能寻址的 3D 节点
 - 支撑证据（只读观察）：模块侧 `tools/editor_scene_3d_write.cpp`；20 款游戏的载荷全部为 2D 坐标（台账逐条记 `ColorRect`/`Label`/像素差）
 
-| tool | scope | 实测调用 | 漂移 | 证据 |
-|---|---|---|---|---|
-| `editor_add_mesh_instance` | editor | 0 | - | - |
-| `editor_get_viewport_3d_camera` | editor | 0 | - | - |
-| `editor_set_material_3d` | editor | 0 | - | - |
-| `editor_set_viewport_3d_camera` | editor | 0 | - | - |
-| `editor_setup_camera_3d` | editor | 0 | - | - |
-| `editor_setup_lighting` | editor | 0 | - | - |
-| `editor_setup_world_environment` | editor | 0 | - | - |
+| tool | scope | 实测调用 | 漂移 | 改判 | 证据 |
+|---|---|---|---|---|---|
+| `editor_add_mesh_instance` | editor | 0 | - | - | - |
+| `editor_get_viewport_3d_camera` | editor | 0 | - | - | - |
+| `editor_set_material_3d` | editor | 0 | - | - | - |
+| `editor_set_viewport_3d_camera` | editor | 0 | - | - | - |
+| `editor_setup_camera_3d` | editor | 0 | - | - | - |
+| `editor_setup_lighting` | editor | 0 | - | - | - |
+| `editor_setup_world_environment` | editor | 0 | - | - | - |
 
 ### H2 动画 / AnimationTree / 状态机
 
 - 为何不可达（推断）：运动一律由**载荷自己的整数运动学**推进（`StepFrames(n)`、`_Process` 里 `x+=vx`），从不使用 `AnimationPlayer` / `AnimationTree`；没有动画资源可读写，也没有状态机可建
 - 支撑证据（只读观察）：`tools/editor_animation_read.cpp`、`editor_animation_write.cpp`、`editor_animation_tree_write.cpp`、`tools/animation_shared.cpp`；契约 override 里 `add_state_machine_state` 的 `animation` 成员是「结构性不可达」的已知缺口
 
-| tool | scope | 实测调用 | 漂移 | 证据 |
-|---|---|---|---|---|
-| `editor_add_animation_track` | editor | 0 | - | - |
-| `editor_add_state_machine_state` | editor | 0 | - | - |
-| `editor_add_state_machine_transition` | editor | 0 | - | - |
-| `editor_create_animation` | editor | 0 | - | - |
-| `editor_create_animation_tree` | editor | 0 | - | - |
-| `editor_get_animation_info` | editor | 0 | - | - |
-| `editor_get_animation_tree_structure` | editor | 0 | - | - |
-| `editor_list_animations` | editor | 0 | - | - |
-| `editor_remove_animation` | editor | 0 | - | - |
-| `editor_remove_state_machine_state` | editor | 0 | - | - |
-| `editor_remove_state_machine_transition` | editor | 0 | - | - |
-| `editor_set_animation_keyframe` | editor | 0 | - | - |
-| `editor_set_animation_tree_parameter` | editor | 0 | - | - |
-| `editor_set_blend_tree_node` | editor | 0 | - | - |
+| tool | scope | 实测调用 | 漂移 | 改判 | 证据 |
+|---|---|---|---|---|---|
+| `editor_add_animation_track` | editor | 0 | - | - | - |
+| `editor_add_state_machine_state` | editor | 0 | - | - | - |
+| `editor_add_state_machine_transition` | editor | 0 | - | - | - |
+| `editor_create_animation` | editor | 0 | - | - | - |
+| `editor_create_animation_tree` | editor | 0 | - | - | - |
+| `editor_get_animation_info` | editor | 0 | - | - | - |
+| `editor_get_animation_tree_structure` | editor | 0 | - | - | - |
+| `editor_list_animations` | editor | 0 | - | - | - |
+| `editor_remove_animation` | editor | 0 | - | - | - |
+| `editor_remove_state_machine_state` | editor | 0 | - | - | - |
+| `editor_remove_state_machine_transition` | editor | 0 | - | - | - |
+| `editor_set_animation_keyframe` | editor | 0 | - | - | - |
+| `editor_set_animation_tree_parameter` | editor | 0 | - | - | - |
+| `editor_set_blend_tree_node` | editor | 0 | - | - | - |
 
 ### H3 TileMap / GridMap
 
 - 为何不可达（推断）：棋盘、迷宫、格点全部是**运行期新建的独立 `ColorRect`**（如 Pac-Man 的 125 颗豆子、Sokoban 的箱子、Match-3 的 8×8），20 个工程里没有 `TileMapLayer`、没有 `GridMap`、也没有 `TileSet` 资源，因此整族都没有作用对象
 - 支撑证据（只读观察）：`tools/editor_tilemap_read.cpp`、`editor_tilemap_write.cpp`、`tilemap_shared.cpp`。**额外证据（契约自述）**：`editor_set_tilemap_cell` / `editor_set_tilemap_cells_in_rect` 的 `description` 明写「当前工具集没有任何『给 TileSet 添加 atlas source / texture / tile』的入口，所以在可预见的调用序列里本工具无法成功 —— 这是一处如实声明的能力缺口」；同一条 override 另注明该缺口句只挂在两个**写**工具上，`editor_get_tilemap_info/_used_cells/_cell` 与 `editor_remove_all_tilemap_cells` 不要求 source 存在（即有 TileMapLayer 时它们是可达的）
 
-| tool | scope | 实测调用 | 漂移 | 证据 |
-|---|---|---|---|---|
-| `editor_add_gridmap` | editor | 0 | - | - |
-| `editor_get_tilemap_cell` | editor | 0 | - | - |
-| `editor_get_tilemap_info` | editor | 0 | - | - |
-| `editor_get_tilemap_used_cells` | editor | 0 | - | - |
-| `editor_remove_all_tilemap_cells` | editor | 0 | - | - |
-| `editor_set_tilemap_cell` | editor | 0 | - | - |
-| `editor_set_tilemap_cells_in_rect` | editor | 0 | - | - |
+| tool | scope | 实测调用 | 漂移 | 改判 | 证据 |
+|---|---|---|---|---|---|
+| `editor_add_gridmap` | editor | 0 | - | - | - |
+| `editor_get_tilemap_cell` | editor | 0 | - | - | - |
+| `editor_get_tilemap_info` | editor | 0 | - | - | - |
+| `editor_get_tilemap_used_cells` | editor | 0 | - | - | - |
+| `editor_remove_all_tilemap_cells` | editor | 0 | - | - | - |
+| `editor_set_tilemap_cell` | editor | 0 | - | - | - |
+| `editor_set_tilemap_cells_in_rect` | editor | 0 | - | - | - |
 
 ### H4 导航
 
 - 为何不可达（推断）：需要先有 `NavigationRegion2D` + 烘焙过的 `NavigationMesh` + `NavigationAgent`；本循环的寻路是载荷自己手写的格点/路径算法（Tower Defense 的 101 格蛇形走廊由 ASCII 地图确定性导出，Python 复算 `PathHash`），没有任何导航资产
 - 支撑证据（只读观察）：`tools/editor_navigation_read.cpp`、`editor_navigation_write.cpp`、`running_game_navigation_write.cpp`（`running_game_move_player_to_target` 就在这个文件里，前置条件即导航代理）
 
-| tool | scope | 实测调用 | 漂移 | 证据 |
-|---|---|---|---|---|
-| `editor_bake_navigation_mesh` | editor | 0 | - | - |
-| `editor_get_navigation_info` | editor | 0 | - | - |
-| `editor_set_navigation_layers` | editor | 0 | - | - |
-| `editor_setup_navigation_agent` | editor | 0 | - | - |
-| `editor_setup_navigation_region` | editor | 0 | - | - |
-| `running_game_move_player_to_target` | game | 0 | - | - |
+| tool | scope | 实测调用 | 漂移 | 改判 | 证据 |
+|---|---|---|---|---|---|
+| `editor_bake_navigation_mesh` | editor | 0 | - | - | - |
+| `editor_get_navigation_info` | editor | 0 | - | - | - |
+| `editor_set_navigation_layers` | editor | 0 | - | - | - |
+| `editor_setup_navigation_agent` | editor | 0 | - | - | - |
+| `editor_setup_navigation_region` | editor | 0 | - | - | - |
+| `running_game_move_player_to_target` | game | 0 | - | - | - |
 
 ### H5 音频
 
 - 为何不可达（推断）：20 款游戏**没有一个有声音**，没有 `AudioStreamPlayer`、没有 bus 布局，也没有音频资产
 - 支撑证据（只读观察）：`tools/editor_audio_read.cpp`、`editor_audio_write.cpp`、`audio_shared.cpp`
 
-| tool | scope | 实测调用 | 漂移 | 证据 |
-|---|---|---|---|---|
-| `editor_add_audio_bus` | editor | 0 | - | - |
-| `editor_add_audio_bus_effect` | editor | 0 | - | - |
-| `editor_add_audio_player` | editor | 0 | - | - |
-| `editor_get_audio_bus_layout` | editor | 0 | - | - |
-| `editor_get_audio_info` | editor | 0 | - | - |
-| `editor_set_audio_bus_property` | editor | 0 | - | - |
+| tool | scope | 实测调用 | 漂移 | 改判 | 证据 |
+|---|---|---|---|---|---|
+| `editor_add_audio_bus` | editor | 0 | - | - | - |
+| `editor_add_audio_bus_effect` | editor | 0 | - | - | - |
+| `editor_add_audio_player` | editor | 0 | - | - | - |
+| `editor_get_audio_bus_layout` | editor | 0 | - | - | - |
+| `editor_get_audio_info` | editor | 0 | - | - | - |
+| `editor_set_audio_bus_property` | editor | 0 | - | - | - |
 
 ### H6 粒子
 
 - 为何不可达（推断）：全部视觉证据是「节点位置/颜色 → 像素差」，没有任何 `GPUParticles2D` / 粒子材质 / 渐变
 - 支撑证据（只读观察）：`tools/editor_particle_read.cpp`、`editor_particle_write.cpp`、`particle_shared.cpp`
 
-| tool | scope | 实测调用 | 漂移 | 证据 |
-|---|---|---|---|---|
-| `editor_create_particles` | editor | 0 | - | - |
-| `editor_get_particle_info` | editor | 0 | - | - |
-| `editor_set_particle_color_gradient` | editor | 0 | - | - |
-| `editor_set_particle_material` | editor | 0 | - | - |
-| `editor_set_particle_preset` | editor | 0 | - | - |
+| tool | scope | 实测调用 | 漂移 | 改判 | 证据 |
+|---|---|---|---|---|---|
+| `editor_create_particles` | editor | 0 | - | - | - |
+| `editor_get_particle_info` | editor | 0 | - | - | - |
+| `editor_set_particle_color_gradient` | editor | 0 | - | - | - |
+| `editor_set_particle_material` | editor | 0 | - | - | - |
+| `editor_set_particle_preset` | editor | 0 | - | - | - |
 
 ### H7 编辑器 GUI 状态 / 编辑器自有播放与输入注入 / 编辑器侧测试运行
 
 - 为何不可达（推断）：这类工具的输入是**编辑器进程自己的 GUI 状态**（当前选择、打开的脚本、Output 面板、对话框、已装插件）或**编辑器自己的播放器/输入队列**。本循环里编辑器端点只做「开场景 / 加节点 / 存场景 / 建脚本 / 编译 / 读错误」；所有行为验证都走游戏端点，且**刻意不用**编辑器侧输入注入（B2 说明：`editor_simulate_*` 注入的是编辑器进程的输入，不能用来驱动游戏进程 —— D59 / GDR-21 的边界）
 - 支撑证据（只读观察）：`tools/editor_playback.cpp`、`editor_input_simulation.cpp`、`editor_profiling_read.cpp`、`editor_testing_read.cpp`、`editor_script_write.cpp`、`editor_read_scene_inspector.cpp`；`editor_get_test_report` / `editor_analyze_screenshot_diff` 需要「编辑器侧测试运行」，而本循环的测试运行发生在游戏端点
 
-| tool | scope | 实测调用 | 漂移 | 证据 |
-|---|---|---|---|---|
-| `editor_analyze_screenshot_diff` | editor | 0 | - | - |
-| `editor_get_open_scripts` | editor | 0 | - | - |
-| `editor_get_output_log` | editor | 0 | - | - |
-| `editor_get_performance_monitors` | editor | 0 | - | - |
-| `editor_get_selection` | editor | 0 | - | - |
-| `editor_get_test_report` | editor | 0 | - | - |
-| `editor_play_scene` | editor | 0 | - | - |
-| `editor_reload_plugin` | editor | 0 | - | - |
-| `editor_remove_node_selection` | editor | 0 | - | - |
-| `editor_remove_output_log` | editor | 0 | - | - |
-| `editor_rescan_project_filesystem` | editor | 0 | - | - |
-| `editor_set_auto_dismiss_dialogs` | editor | 0 | - | - |
-| `editor_set_node_selection` | editor | 0 | - | - |
-| `editor_simulate_input_action` | editor | 0 | - | - |
-| `editor_simulate_input_sequence` | editor | 0 | - | - |
-| `editor_simulate_key` | editor | 0 | - | - |
-| `editor_simulate_mouse_click` | editor | 0 | - | - |
-| `editor_simulate_mouse_move` | editor | 0 | - | - |
-| `editor_stop_scene` | editor | 0 | - | - |
+| tool | scope | 实测调用 | 漂移 | 改判 | 证据 |
+|---|---|---|---|---|---|
+| `editor_analyze_screenshot_diff` | editor | 0 | - | - | - |
+| `editor_get_open_scripts` | editor | 0 | - | YES | - |
+| `editor_get_output_log` | editor | 0 | - | YES | - |
+| `editor_get_performance_monitors` | editor | 0 | - | YES | - |
+| `editor_get_selection` | editor | 0 | - | YES | - |
+| `editor_get_test_report` | editor | 0 | - | - | - |
+| `editor_play_scene` | editor | 0 | - | - | - |
+| `editor_reload_plugin` | editor | 0 | - | - | - |
+| `editor_remove_node_selection` | editor | 0 | - | - | - |
+| `editor_remove_output_log` | editor | 0 | - | - | - |
+| `editor_rescan_project_filesystem` | editor | 0 | - | - | - |
+| `editor_set_auto_dismiss_dialogs` | editor | 0 | - | - | - |
+| `editor_set_node_selection` | editor | 0 | - | - | - |
+| `editor_simulate_input_action` | editor | 0 | - | - | - |
+| `editor_simulate_input_sequence` | editor | 0 | - | - | - |
+| `editor_simulate_key` | editor | 0 | - | - | - |
+| `editor_simulate_mouse_click` | editor | 0 | - | - | - |
+| `editor_simulate_mouse_move` | editor | 0 | - | - | - |
+| `editor_stop_scene` | editor | 0 | - | - | - |
 
 ### H8 发布 / 导出 / Android 部署路径
 
 - 为何不可达（推断）：循环的终点是「游戏跑起来 + 可复算证据」，从不打包、不导出、不连真机；`project_export_game` 甚至被契约 `_meta.excluded` 排除、`project_get_export_info` 等只在发布路径生效
 - 支撑证据（只读观察）：`tools/project_export_read.cpp`、`os_android_read.cpp`、`os_android_write.cpp`、`project_android_read.cpp`；契约 `_meta.excluded = ["navigate_to","export_project"]`
 
-| tool | scope | 实测调用 | 漂移 | 证据 |
-|---|---|---|---|---|
-| `os_deploy_to_android_device` | both | 0 | - | - |
-| `os_list_android_devices` | both | 0 | - | - |
-| `project_get_android_preset_info` | both | 0 | - | - |
-| `project_get_export_info` | both | 0 | - | - |
-| `project_list_export_presets` | both | 0 | - | - |
+| tool | scope | 实测调用 | 漂移 | 改判 | 证据 |
+|---|---|---|---|---|---|
+| `os_deploy_to_android_device` | both | 0 | - | - | - |
+| `os_list_android_devices` | both | 0 | - | - | - |
+| `project_get_android_preset_info` | both | 0 | - | - | - |
+| `project_get_export_info` | both | 0 | - | - | - |
+| `project_list_export_presets` | both | 0 | - | - | - |
 
 ### H9 运行期录放与特殊捕获（deferred / 条件态）
 
 - 为何不可达（推断）：需要先进入某个**非默认运行态**才有效：`running_game_capture_frames` 需要开启逐帧捕获模式（本循环用的是整帧截图 `capture_screenshot`，298 次），信号发射捕获需要先注册监听，输入录制族需要「先 create → 再 play/stop」的三步会话。本循环的输入证据走的是**声明式 input action + 断言/场景驱动**，从未开过录制器
 - 支撑证据（只读观察）：`tools/running_game_capture.cpp`、`input_recorder.cpp`、`running_game_input.cpp`；台账里所有输入证据都是 `editor_add_input_action` + `running_game_run_test_scenario`
 
-| tool | scope | 实测调用 | 漂移 | 证据 |
-|---|---|---|---|---|
-| `running_game_capture_frames` | game | 0 | - | - |
-| `running_game_capture_signal_emissions` | game | 0 | - | - |
-| `running_game_create_input_recording` | game | 0 | - | - |
-| `running_game_play_input_recording` | game | 0 | - | - |
-| `running_game_stop_input_recording` | game | 0 | - | - |
+| tool | scope | 实测调用 | 漂移 | 改判 | 证据 |
+|---|---|---|---|---|---|
+| `running_game_capture_frames` | game | 0 | - | YES | - |
+| `running_game_capture_signal_emissions` | game | 0 | - | YES | - |
+| `running_game_create_input_recording` | game | 0 | - | - | - |
+| `running_game_play_input_recording` | game | 0 | - | - | - |
+| `running_game_stop_input_recording` | game | 0 | - | - | - |
+
+
+#### 已改判的条目（推断被实测推翻，逐条留证）
+
+| tool | 原类别 | 为什么可以删掉这条「不可达」 | 证据 |
+|---|---|---|---|
+| `editor_get_selection` | H7 | the editor's own GUI selection state is readable through the editor endpoint: no selection is a valid answer ({"count":0,"nodes":[],"top_only":false}). | `runs/_exercises/ex_scene/c23-task110/trace-editor.jsonl` |
+| `editor_get_open_scripts` | H7 | the open-script list is answerable with none open ({"count":0,"scripts":[]}). | `runs/_exercises/ex_scene/c23-task110/trace-editor.jsonl` |
+| `editor_get_output_log` | H7 | the editor's Output panel is readable in-process; the answer carries available/in_process/log_path plus the lines. | `runs/_exercises/ex_scene/c23-task110/trace-editor.jsonl` |
+| `editor_get_performance_monitors` | H7 | 60 monitors reported from the editor process; no subsystem is missing. | `runs/_exercises/ex_scene/c23-task110/trace-editor.jsonl` |
+| `running_game_capture_frames` | H9 | frame capture needs no pre-registered mode: count/frame_interval are enough and the frames come back inline (base64 PNG). | `runs/_exercises/ex_scene/c23-task110/trace-game.jsonl` |
+| `running_game_capture_signal_emissions` | H9 | it registers the watch itself and reports what fired inside duration_ms (measured: 1 and 2 emissions for Tick.timeout). | `runs/_exercises/ex_scene/c23-task110/trace-game.jsonl` |
 
 ## 5. 本轮批次进度（--targets）
 
 批次 **0** 条：达标 **0**、计数达标缺证据 **0**、未达 **0**。
 
-| tool | scope | 累计 | 有效 | 边界 | 状态 | 证据 |
-|---|---|---|---|---|---|---|
+`facts` 列 = trace 里字段齐备的调用数 / 总调用数（request_id、tool、args、times、result、capture、scene_evidence、file_effect、error_data 全部在场）。
+
+| tool | scope | 累计 | 有效 | 边界 | facts | 状态 | 证据 |
+|---|---|---|---|---|---|---|---|
 
 ## 输入指纹
 

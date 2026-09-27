@@ -1,5 +1,5 @@
 {
-  "generated_utc": "2026-09-27T01:37:23Z",
+  "generated_utc": "2026-09-27T02:04:18Z",
   "mode": "only-final",
   "root": "F:\\moonbit-hof-rs\\godot-mcp",
   "runs_dir": "runs",
@@ -70,6 +70,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -89,6 +90,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -108,6 +110,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -127,6 +130,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -146,6 +150,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -165,6 +170,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -184,6 +190,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -203,6 +210,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -222,6 +230,7 @@
       "ok": 24,
       "boundary": 0,
       "effective": 19,
+      "facts_complete": 24,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
@@ -268,6 +277,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -287,6 +297,7 @@
       "ok": 21,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 21,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
@@ -331,6 +342,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -350,6 +362,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -369,6 +382,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -388,6 +402,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H7",
@@ -407,6 +422,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H7",
@@ -426,6 +442,7 @@
       "ok": 42,
       "boundary": 0,
       "effective": 21,
+      "facts_complete": 42,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
@@ -472,6 +489,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -491,6 +509,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -510,6 +529,7 @@
       "ok": 28,
       "boundary": 0,
       "effective": 5,
+      "facts_complete": 28,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
@@ -543,6 +563,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -562,6 +583,7 @@
       "ok": 5,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 5,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
@@ -594,6 +616,7 @@
       "ok": 19,
       "boundary": 1,
       "effective": 19,
+      "facts_complete": 20,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
@@ -633,6 +656,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -652,6 +676,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -671,6 +696,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -690,6 +716,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -709,6 +736,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -728,6 +756,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -747,6 +776,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -766,6 +796,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -785,6 +816,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -804,9 +836,10 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
-      "unreachable_category": "H7",
+      "unreachable_category": null,
       "verdicts": {},
       "file_effects": {},
       "flags": {},
@@ -823,6 +856,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H7",
@@ -842,6 +876,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H7",
@@ -861,6 +896,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -880,6 +916,7 @@
       "ok": 17,
       "boundary": 0,
       "effective": 17,
+      "facts_complete": 17,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
@@ -924,9 +961,10 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
-      "unreachable_category": "H7",
+      "unreachable_category": null,
       "verdicts": {},
       "file_effects": {},
       "flags": {},
@@ -943,6 +981,7 @@
       "ok": 3,
       "boundary": 0,
       "effective": 2,
+      "facts_complete": 3,
       "bucket": "1-4",
       "status": "未达(1-4)",
       "unreachable_category": null,
@@ -981,6 +1020,7 @@
       "ok": 102,
       "boundary": 0,
       "effective": 44,
+      "facts_complete": 102,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
@@ -1027,6 +1067,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H7",
@@ -1046,6 +1087,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H7",
@@ -1065,6 +1107,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H7",
@@ -1084,6 +1127,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -1103,6 +1147,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H7",
@@ -1122,6 +1167,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H7",
@@ -1141,6 +1187,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H1",
@@ -1160,6 +1207,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H1",
@@ -1179,6 +1227,7 @@
       "ok": 40,
       "boundary": 0,
       "effective": 18,
+      "facts_complete": 40,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
@@ -1225,6 +1274,7 @@
       "ok": 5,
       "boundary": 0,
       "effective": 5,
+      "facts_complete": 5,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
@@ -1258,6 +1308,7 @@
       "ok": 6,
       "boundary": 0,
       "effective": 6,
+      "facts_complete": 6,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
@@ -1290,9 +1341,10 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
-      "unreachable_category": "H9",
+      "unreachable_category": null,
       "verdicts": {},
       "file_effects": {},
       "flags": {},
@@ -1309,6 +1361,7 @@
       "ok": 49,
       "boundary": 0,
       "effective": 49,
+      "facts_complete": 49,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
@@ -1356,6 +1409,7 @@
       "ok": 668,
       "boundary": 0,
       "effective": 668,
+      "facts_complete": 668,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
@@ -1401,6 +1455,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H9",
@@ -1420,6 +1475,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H9",
@@ -1439,6 +1495,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H9",
@@ -1458,6 +1515,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -1477,6 +1535,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -1496,6 +1555,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -1515,6 +1575,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -1534,6 +1595,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -1553,6 +1615,7 @@
       "ok": 0,
       "boundary": 1,
       "effective": 0,
+      "facts_complete": 1,
       "bucket": "1-4",
       "status": "未达(1-4)",
       "unreachable_category": null,
@@ -1583,6 +1646,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -1602,6 +1666,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H4",
@@ -1621,9 +1686,10 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
-      "unreachable_category": "H9",
+      "unreachable_category": null,
       "verdicts": {},
       "file_effects": {},
       "flags": {},
@@ -1640,9 +1706,10 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
-      "unreachable_category": "H7",
+      "unreachable_category": null,
       "verdicts": {},
       "file_effects": {},
       "flags": {},
@@ -1659,6 +1726,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -1678,6 +1746,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -1697,6 +1766,7 @@
       "ok": 6,
       "boundary": 0,
       "effective": 2,
+      "facts_complete": 6,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
@@ -1735,6 +1805,7 @@
       "ok": 21,
       "boundary": 0,
       "effective": 18,
+      "facts_complete": 21,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
@@ -1781,6 +1852,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -1800,9 +1872,10 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
-      "unreachable_category": "H7",
+      "unreachable_category": null,
       "verdicts": {},
       "file_effects": {},
       "flags": {},
@@ -1819,6 +1892,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -1838,6 +1912,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H7",
@@ -1857,6 +1932,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H7",
@@ -1876,6 +1952,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H7",
@@ -1895,6 +1972,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H7",
@@ -1914,6 +1992,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -1933,6 +2012,7 @@
       "ok": 52,
       "boundary": 0,
       "effective": 44,
+      "facts_complete": 52,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
@@ -1979,6 +2059,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H7",
@@ -1998,6 +2079,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -2017,6 +2099,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -2036,6 +2119,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -2055,6 +2139,7 @@
       "ok": 17,
       "boundary": 18,
       "effective": 17,
+      "facts_complete": 35,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
@@ -2104,6 +2189,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -2123,6 +2209,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -2142,6 +2229,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -2161,6 +2249,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H2",
@@ -2180,6 +2269,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H2",
@@ -2199,6 +2289,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H2",
@@ -2218,6 +2309,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H2",
@@ -2237,6 +2329,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H2",
@@ -2256,6 +2349,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H2",
@@ -2275,6 +2369,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H3",
@@ -2294,6 +2389,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H3",
@@ -2313,6 +2409,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H3",
@@ -2332,6 +2429,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H3",
@@ -2351,6 +2449,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H3",
@@ -2370,6 +2469,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H3",
@@ -2389,6 +2489,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -2408,6 +2509,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -2427,6 +2529,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -2446,6 +2549,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -2465,6 +2569,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -2484,6 +2589,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -2503,6 +2609,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H8",
@@ -2522,6 +2629,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H8",
@@ -2541,6 +2649,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -2560,6 +2669,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -2579,6 +2689,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -2598,6 +2709,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -2617,6 +2729,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -2636,6 +2749,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -2655,6 +2769,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -2674,6 +2789,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -2693,6 +2809,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -2712,6 +2829,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -2731,6 +2849,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -2750,6 +2869,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -2769,6 +2889,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H1",
@@ -2788,6 +2909,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H1",
@@ -2807,6 +2929,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H1",
@@ -2826,6 +2949,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H1",
@@ -2845,6 +2969,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H1",
@@ -2864,6 +2989,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H3",
@@ -2883,6 +3009,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H5",
@@ -2902,6 +3029,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H5",
@@ -2921,6 +3049,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H5",
@@ -2940,6 +3069,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H5",
@@ -2959,6 +3089,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H5",
@@ -2978,6 +3109,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H5",
@@ -2997,6 +3129,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -3016,6 +3149,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -3035,6 +3169,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -3054,6 +3189,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -3073,6 +3209,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -3092,6 +3229,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -3111,6 +3249,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -3130,6 +3269,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H2",
@@ -3149,6 +3289,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H2",
@@ -3168,6 +3309,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H2",
@@ -3187,6 +3329,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H2",
@@ -3206,6 +3349,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H2",
@@ -3225,6 +3369,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H2",
@@ -3244,6 +3389,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H2",
@@ -3263,6 +3409,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H2",
@@ -3282,6 +3429,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H4",
@@ -3301,6 +3449,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H4",
@@ -3320,6 +3469,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H4",
@@ -3339,6 +3489,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H4",
@@ -3358,6 +3509,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H4",
@@ -3377,6 +3529,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H6",
@@ -3396,6 +3549,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H6",
@@ -3415,6 +3569,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H6",
@@ -3434,6 +3589,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H6",
@@ -3453,6 +3609,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H6",
@@ -3472,6 +3629,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -3491,6 +3649,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -3510,6 +3669,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -3529,6 +3689,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -3548,6 +3709,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -3567,6 +3729,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -3586,6 +3749,7 @@
       "ok": 39,
       "boundary": 0,
       "effective": 38,
+      "facts_complete": 39,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
@@ -3636,6 +3800,7 @@
       "ok": 1291,
       "boundary": 17,
       "effective": 1287,
+      "facts_complete": 1308,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
@@ -3685,6 +3850,7 @@
       "ok": 30,
       "boundary": 0,
       "effective": 29,
+      "facts_complete": 30,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
@@ -3731,6 +3897,7 @@
       "ok": 5,
       "boundary": 0,
       "effective": 3,
+      "facts_complete": 5,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
@@ -3776,6 +3943,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H7",
@@ -3795,6 +3963,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H8",
@@ -3814,6 +3983,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H8",
@@ -3833,6 +4003,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": "H8",
@@ -3852,6 +4023,7 @@
       "ok": 20,
       "boundary": 0,
       "effective": 20,
+      "facts_complete": 20,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
@@ -3896,6 +4068,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -3915,6 +4088,7 @@
       "ok": 23,
       "boundary": 0,
       "effective": 20,
+      "facts_complete": 23,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
@@ -3961,6 +4135,7 @@
       "ok": 6,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 6,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
@@ -3997,6 +4172,7 @@
       "ok": 0,
       "boundary": 0,
       "effective": 0,
+      "facts_complete": 0,
       "bucket": "0",
       "status": "未达(0)",
       "unreachable_category": null,
@@ -4016,6 +4192,7 @@
       "ok": 36,
       "boundary": 0,
       "effective": 34,
+      "facts_complete": 36,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
@@ -4208,6 +4385,44 @@
     },
     "members_total": 74,
     "drift": [],
+    "reclassified": [
+      {
+        "tool": "editor_get_selection",
+        "from": "H7",
+        "why": "the editor's own GUI selection state is readable through the editor endpoint: no selection is a valid answer ({\"count\":0,\"nodes\":[],\"top_only\":false}).",
+        "evidence": "runs/_exercises/ex_scene/c23-task110/trace-editor.jsonl"
+      },
+      {
+        "tool": "editor_get_open_scripts",
+        "from": "H7",
+        "why": "the open-script list is answerable with none open ({\"count\":0,\"scripts\":[]}).",
+        "evidence": "runs/_exercises/ex_scene/c23-task110/trace-editor.jsonl"
+      },
+      {
+        "tool": "editor_get_output_log",
+        "from": "H7",
+        "why": "the editor's Output panel is readable in-process; the answer carries available/in_process/log_path plus the lines.",
+        "evidence": "runs/_exercises/ex_scene/c23-task110/trace-editor.jsonl"
+      },
+      {
+        "tool": "editor_get_performance_monitors",
+        "from": "H7",
+        "why": "60 monitors reported from the editor process; no subsystem is missing.",
+        "evidence": "runs/_exercises/ex_scene/c23-task110/trace-editor.jsonl"
+      },
+      {
+        "tool": "running_game_capture_frames",
+        "from": "H9",
+        "why": "frame capture needs no pre-registered mode: count/frame_interval are enough and the frames come back inline (base64 PNG).",
+        "evidence": "runs/_exercises/ex_scene/c23-task110/trace-game.jsonl"
+      },
+      {
+        "tool": "running_game_capture_signal_emissions",
+        "from": "H9",
+        "why": "it registers the watch itself and reports what fired inside duration_ms (measured: 1 and 2 emissions for Tick.timeout).",
+        "evidence": "runs/_exercises/ex_scene/c23-task110/trace-game.jsonl"
+      }
+    ],
     "members": [
       {
         "tool": "editor_add_mesh_instance",
@@ -4215,6 +4430,7 @@
         "category": "H1",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4223,6 +4439,7 @@
         "category": "H1",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4231,6 +4448,7 @@
         "category": "H1",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4239,6 +4457,7 @@
         "category": "H1",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4247,6 +4466,7 @@
         "category": "H1",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4255,6 +4475,7 @@
         "category": "H1",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4263,6 +4484,7 @@
         "category": "H1",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4271,6 +4493,7 @@
         "category": "H2",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4279,6 +4502,7 @@
         "category": "H2",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4287,6 +4511,7 @@
         "category": "H2",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4295,6 +4520,7 @@
         "category": "H2",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4303,6 +4529,7 @@
         "category": "H2",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4311,6 +4538,7 @@
         "category": "H2",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4319,6 +4547,7 @@
         "category": "H2",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4327,6 +4556,7 @@
         "category": "H2",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4335,6 +4565,7 @@
         "category": "H2",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4343,6 +4574,7 @@
         "category": "H2",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4351,6 +4583,7 @@
         "category": "H2",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4359,6 +4592,7 @@
         "category": "H2",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4367,6 +4601,7 @@
         "category": "H2",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4375,6 +4610,7 @@
         "category": "H2",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4383,6 +4619,7 @@
         "category": "H3",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4391,6 +4628,7 @@
         "category": "H3",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4399,6 +4637,7 @@
         "category": "H3",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4407,6 +4646,7 @@
         "category": "H3",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4415,6 +4655,7 @@
         "category": "H3",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4423,6 +4664,7 @@
         "category": "H3",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4431,6 +4673,7 @@
         "category": "H3",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4439,6 +4682,7 @@
         "category": "H4",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4447,6 +4691,7 @@
         "category": "H4",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4455,6 +4700,7 @@
         "category": "H4",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4463,6 +4709,7 @@
         "category": "H4",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4471,6 +4718,7 @@
         "category": "H4",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4479,6 +4727,7 @@
         "category": "H4",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4487,6 +4736,7 @@
         "category": "H5",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4495,6 +4745,7 @@
         "category": "H5",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4503,6 +4754,7 @@
         "category": "H5",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4511,6 +4763,7 @@
         "category": "H5",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4519,6 +4772,7 @@
         "category": "H5",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4527,6 +4781,7 @@
         "category": "H5",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4535,6 +4790,7 @@
         "category": "H6",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4543,6 +4799,7 @@
         "category": "H6",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4551,6 +4808,7 @@
         "category": "H6",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4559,6 +4817,7 @@
         "category": "H6",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4567,6 +4826,7 @@
         "category": "H6",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4575,6 +4835,7 @@
         "category": "H7",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4583,6 +4844,7 @@
         "category": "H7",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": true,
         "evidence": []
       },
       {
@@ -4591,6 +4853,7 @@
         "category": "H7",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": true,
         "evidence": []
       },
       {
@@ -4599,6 +4862,7 @@
         "category": "H7",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": true,
         "evidence": []
       },
       {
@@ -4607,6 +4871,7 @@
         "category": "H7",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": true,
         "evidence": []
       },
       {
@@ -4615,6 +4880,7 @@
         "category": "H7",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4623,6 +4889,7 @@
         "category": "H7",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4631,6 +4898,7 @@
         "category": "H7",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4639,6 +4907,7 @@
         "category": "H7",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4647,6 +4916,7 @@
         "category": "H7",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4655,6 +4925,7 @@
         "category": "H7",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4663,6 +4934,7 @@
         "category": "H7",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4671,6 +4943,7 @@
         "category": "H7",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4679,6 +4952,7 @@
         "category": "H7",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4687,6 +4961,7 @@
         "category": "H7",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4695,6 +4970,7 @@
         "category": "H7",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4703,6 +4979,7 @@
         "category": "H7",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4711,6 +4988,7 @@
         "category": "H7",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4719,6 +4997,7 @@
         "category": "H7",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4727,6 +5006,7 @@
         "category": "H8",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4735,6 +5015,7 @@
         "category": "H8",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4743,6 +5024,7 @@
         "category": "H8",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4751,6 +5033,7 @@
         "category": "H8",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4759,6 +5042,7 @@
         "category": "H8",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4767,6 +5051,7 @@
         "category": "H9",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": true,
         "evidence": []
       },
       {
@@ -4775,6 +5060,7 @@
         "category": "H9",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": true,
         "evidence": []
       },
       {
@@ -4783,6 +5069,7 @@
         "category": "H9",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4791,6 +5078,7 @@
         "category": "H9",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       },
       {
@@ -4799,6 +5087,7 @@
         "category": "H9",
         "measured_calls": 0,
         "drift": false,
+        "reclassified": false,
         "evidence": []
       }
     ]

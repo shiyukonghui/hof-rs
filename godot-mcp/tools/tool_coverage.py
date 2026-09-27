@@ -420,7 +420,8 @@ def render_md(payload, title, cmdline):
     lines.append("**「有效调用」的判定**（由 `mcp_trace_ledger.py` 的 verdict 词汇给出，不另立一套）：")
     lines.append("")
     lines.append("- `边界调用` = 该工具 `ok=false` 的调用次数（失败/拒绝即边界证据）。")
-    lines.append("- `有效调用`：**读类动词**（get/read/search/list/find/analyze/detect/convert/validate/check）"
+    lines.append("- `有效调用`：**读类动词**（get/read/search/list/find/analyze/detect/convert/validate/check/"
+                 "assert/execute/evaluate，后三个的生效证据就是它回包的那个值或判词）"
                  "= `ok=true` 且回包是实质载荷（读类调用不会动像素/字节，回包本身就是证据）；")
     lines.append("  **其余动词**（create/edit/set/add/remove/write/build…）= ledger 的 `ok_effect_observed` / "
                  "`ok_file_effect_observed`，即真的改了画面或文件。"

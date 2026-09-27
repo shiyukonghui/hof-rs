@@ -5,12 +5,12 @@
 
 口径（mode）：**all-runs**；语料：**87 个 run 目录 / 148 个 trace 文件 / 7280 次 `tools/call`**（`ok=false` 329 次、解析失败行 0、sidecar 校验通过 226）
 
-生成时间（UTC）：2026-09-27T02:00:03Z
+生成时间（UTC）：2026-09-27T02:04:14Z
 
 **「有效调用」的判定**（由 `mcp_trace_ledger.py` 的 verdict 词汇给出，不另立一套）：
 
 - `边界调用` = 该工具 `ok=false` 的调用次数（失败/拒绝即边界证据）。
-- `有效调用`：**读类动词**（get/read/search/list/find/analyze/detect/convert/validate/check）= `ok=true` 且回包是实质载荷（读类调用不会动像素/字节，回包本身就是证据）；
+- `有效调用`：**读类动词**（get/read/search/list/find/analyze/detect/convert/validate/check/assert/execute/evaluate，后三个的生效证据就是它回包的那个值或判词）= `ok=true` 且回包是实质载荷（读类调用不会动像素/字节，回包本身就是证据）；
   **其余动词**（create/edit/set/add/remove/write/build…）= ledger 的 `ok_effect_observed` / `ok_file_effect_observed`，即真的改了画面或文件。带 `assertion_failed` / `created_conflict` / `scenario_errors` 的 ok 调用不计有效。
 - `状态`：`达标` = 调用≥5 且 有效≥1 且 边界≥1；`计数达标缺证据` = 调用≥5 但缺有效或边界；`未达(1-4)` / `未达(0)`；`不可达` 不在本表状态里，见 §4 登记表。
 
