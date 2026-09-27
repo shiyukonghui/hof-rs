@@ -42,7 +42,8 @@ from playability_gate import evaluate_model_player_steps  # noqa: E402
 from playtest_agent import action_criteria  # noqa: E402
 from playtest_player import (  # noqa: E402
     change_margin_edge_steps, changed_of, decide_changed, load_change_margins,
-    model_fixed_point, model_no_progress, summarise,
+    load_refusal_boundary, load_window_declaration, model_fixed_point, model_no_progress,
+    step_refusal_record, summarise, window_frames_of,
 )
 
 
@@ -447,9 +448,246 @@ def main():
     return 0 if ok else 1
 
 
+# =====================================================================================
+# TASK-139 §1.A/§1.B -- the two declarations this batch added, and their boundary.
+# =====================================================================================
+def refusal_step(i, action, refusal_key="RejectedMoves", changed=False, frames=None):
+    """One step the GAME's own counter recorded as a deliberate refusal."""
+    r = step(i, action, (frames or "frame%d" % i), changed=changed)
+    r["action"] = {"action": action, "type": "action"}
+    r["model"] = {"request_path": "req-%s-%d" % (action, i)}
+    r["state_delta"] = [{"key": "/root/Main.%s" % refusal_key, "from": i - 1, "to": i},
+                        {"key": "/root/Main.Ticks", "from": 10 * i, "to": 10 * i + 7}]
+    r["step_refusal"] = {"refused_legal": True,
+                         "refusal_evidence": "/root/Main.%s: %d -> %d"
+                                             % (refusal_key, i - 1, i),
+                         "keys": ["/root/Main.%s" % refusal_key],
+                         "source": "the game's own exported state delta for this step",
+                         "declaration": "TASK-131 X12 (carve-out); TASK-139 §1.B"}
+    if not changed:
+        r["change"] = {"changed": False}
+        r["step_verdict"] = "FAIL_no_change_after_accepted_input"
+    return r
+
+
+def task139_cases():
+    cases = []
+
+    def check(name, got, want):
+        cases.append((got == want, name, "got=%r want=%r" % (got, want)))
+
+    decl = {"keys": ["RejectedMoves", "Rejected"], "value_words": []}
+
+    # ---- §1.A: the declared minimum window and the WINDOW_TOO_SHORT state -----------------
+    w = load_window_declaration()
+    check("window: a minimum frame count is declared", isinstance(w["min_frames"], int), True)
+    check("window: the declaration carries a basis", bool(w.get("basis")), True)
+    check("window: it comes from the controls file",
+          str(w["source"]).endswith("playability_controls.json"), True)
+    check("window: a 29-frame window is NOT too short", window_frames_of(29, 29)["too_short"],
+          False)
+    check("window: a 19-frame window IS too short", window_frames_of(19, 30)["too_short"],
+          True)
+    check("window: the ACTION window is judged too (not just the control)",
+          window_frames_of(30, 7)["short_windows"], ["action_frames"])
+    check("window: the state is named, not just a boolean",
+          window_frames_of(3, 3)["state"], "WINDOW_TOO_SHORT")
+    check("window: an unrecorded span is 'unmeasured', never 'too short'",
+          window_frames_of(None, None)["state"], "unmeasured")
+    check("window: an unmeasured span is not flagged",
+          window_frames_of(None, None)["too_short"], False)
+
+    # the boundary applied to a whole run: a healthy run at 30 frames stays PASS ...
+    healthy = clean_run(8)
+    for r in healthy:
+        r["frame_budget"] = {"achieved_delta": 30, "action_frames": 30}
+        r["control_diff"] = {"frame_budget": {"achieved_delta": 30}}
+    s_healthy = summarise(healthy, "jev", "pong")
+    check("window: a run measured at 30 frames is a normal PASS", s_healthy["verdict"], "PASS")
+    check("window: ... and counts as a pass", s_healthy["counts_as_pass"], True)
+
+    # ... and the SAME run at 3 frames is NOT a PASS.
+    short = [dict(r) for r in healthy]
+    for r in short:
+        r["frame_budget"] = {"achieved_delta": 3, "action_frames": 3}
+    s_short = summarise(short, "jev", "pong")
+    check("window: the same run at 3 frames is WINDOW_TOO_SHORT",
+          "WINDOW_TOO_SHORT" in s_short["verdict"], True)
+    check("window: ... and does NOT count as a pass", s_short["counts_as_pass"], False)
+    check("window: ... the underlying verdict is preserved beside it",
+          s_short["verdict_before_window_check"], "PASS")
+    check("window: ... the offending steps are named",
+          s_short["window_too_short_steps"], list(range(1, 9)))
+    check("window: the gate-side reading agrees the shorter run is not a pass",
+          "WINDOW_TOO_SHORT" in evaluate_model_player_steps(short, "pong")["verdict"], True)
+    check("gate window: the raw verdict is preserved",
+          evaluate_model_player_steps(short, "pong")["verdict_before_window_check"], "PASS")
+
+    # ---- §1.B: the legal-refusal predicate reads the GAME's own counter -------------------
+    check("refusal: the game's counter is read from the state delta",
+          bool(step_refusal_record({"state_delta": [
+              {"key": "/root/Main.RejectedMoves", "from": 0, "to": 1}]}, decl)), True)
+    check("refusal: an unrelated change is NOT a refusal",
+          step_refusal_record({"state_delta": [
+              {"key": "/root/Main.Ticks", "from": 0, "to": 1}]}, decl), None)
+    check("refusal: a refusal key that did not move is NOT a refusal",
+          step_refusal_record({"state_delta": [
+              {"key": "/root/Main.RejectedMoves", "from": 1, "to": 1}]}, decl), None)
+
+    # TASK-139 §1.B: the evidence STRING must name the game's own exported COUNTER.  The
+    # motivating measurement is `t139-scripted-w30/match3/scripted` step 2, whose delta
+    # carries BOTH `InputRejectedSwaps 0->1` (the declared counter) and
+    # `LastEvent 'reset' -> 'rejected reason=no_match ...'` (a free-text field that also
+    # matched the broad `Rejected` pattern).  The counter is what the declaration names, so
+    # the counter is what the record must say.
+    decl_exact = {"keys": ["Rejected", "RejectedMoves", "InputRejectedSwaps"],
+                  "value_words": [], "game_side_fields": ["InputRejectedSwaps",
+                                                          "RejectedMoves"],
+                  "declared_by": "TASK-131 X12 (carve-out); TASK-139 §1.B"}
+    mixed_delta = [{"key": "/root/Main.InputRejectedSwaps", "from": 0, "to": 1},
+                   {"key": "/root/Main.LastEvent", "from": "reset",
+                    "to": "rejected reason=no_match from=4,5 to=4,6 rejected=1"},
+                   {"key": "/root/Main.RejectedMoves", "from": 0, "to": 1}]
+    rr = step_refusal_record({"state_delta": mixed_delta}, decl_exact)
+    check("refusal: the evidence names the declared COUNTER, not a free-text field",
+          rr["game_side_counter"], "/root/Main.InputRejectedSwaps")
+    check("refusal: the evidence string is the counter's before -> after",
+          rr["refusal_evidence"], "/root/Main.InputRejectedSwaps: 0 -> 1")
+    check("refusal: every declared counter that moved is listed",
+          rr["game_side_counters_moved"],
+          ["/root/Main.InputRejectedSwaps", "/root/Main.RejectedMoves"])
+    # a game that declares NO exact counter still gets the broad-pattern behaviour
+    rr2 = step_refusal_record({"state_delta": mixed_delta}, {"keys": ["Rejected"]})
+    check("refusal: without game_side_fields the broad keys still work",
+          bool(rr2), True)
+
+    # ---- §1.B (i): "refused AND really progressing" CAN pass (if progress is enough) -------
+    mixed = []
+    for i in range(1, 9):
+        if i % 2 == 0:
+            mixed.append(refusal_step(i, "swap", changed=False))
+        else:
+            r = step(i, "move%d" % i, "frame%d" % i, changed=True)
+            mixed.append(r)
+    s_mix = summarise(mixed, "jev", "match3")
+    check("refusal+progress: the run is a PASS", s_mix["verdict"], "PASS")
+    check("refusal+progress: it counts as a pass", s_mix["counts_as_pass"], True)
+    check("refusal+progress: the refused steps are named",
+          s_mix["refused_steps"], [2, 4, 6, 8])
+    check("refusal+progress: they are NOT in the FAIL set", s_mix["fail_steps"], [])
+    check("refusal+progress: the raw FAIL set is preserved beside it",
+          s_mix["fail_steps_before_refusal_carve_out"], [2, 4, 6, 8])
+    check("refusal+progress: the rated denominator excludes them",
+          s_mix["rated_step_count"], 4)
+    check("refusal+progress: the rate is over the rated steps",
+          s_mix["rated_and_changed_rate"], 1.0)
+    check("refusal+progress: refusals are NOT counted as real progress",
+          s_mix["real_progress_steps"], [1, 3, 5, 7])
+    check("refusal+progress: it is not a refusal-only run",
+          s_mix["refusal_only_run"], False)
+
+    # the gate must reach the SAME verdict on the same records
+    ev_mix = evaluate_model_player_steps(mixed, "match3")
+    check("gate agrees: refusal+progress is a PASS", ev_mix["verdict"], "PASS")
+    check("gate agrees: the refused steps", ev_mix["refused_steps"], [2, 4, 6, 8])
+    check("gate agrees: they are dropped from the FAIL set", ev_mix["fail_steps"], [])
+    check("gate agrees: real progress excludes them",
+          ev_mix["real_progress_steps"], [1, 3, 5, 7])
+    check("gate agrees: counts_as_pass", ev_mix["counts_as_pass"], True)
+
+    # ---- §1.B (ii): "refused everywhere, zero progress" MUST NOT pass ----------------------
+    # Varied actions AND varied frames so the model-side fixed-point clauses are NOT the
+    # reason it fails: the REFUSAL boundary alone has to refuse this run.
+    only_ref = [refusal_step(i, "act%d" % ((i % 3) + 1)) for i in range(1, 9)]
+    s_ref = summarise(only_ref, "jev", "match3")
+    check("all-refused: the verdict is NOT a PASS", s_ref["verdict"] == "PASS", False)
+    check("all-refused: the verdict is FAIL", s_ref["verdict"], "FAIL")
+    check("all-refused: counts_as_pass is false", s_ref["counts_as_pass"], False)
+    check("all-refused: every step is a refused step",
+          s_ref["refused_steps"], list(range(1, 9)))
+    check("all-refused: zero rated steps remain", s_ref["rated_step_count"], 0)
+    check("all-refused: zero real progress steps", s_ref["real_progress_step_count"], 0)
+    check("all-refused: it is flagged as a refusal-only run",
+          s_ref["refusal_only_run"], True)
+    check("all-refused: no model fixed point is claimed (the actions differ)",
+          s_ref["MODEL_FIXED_POINT"], False)
+    check("all-refused: the why names the boundary",
+          "refuses everything" in s_ref["why"] or "refusal" in s_ref["why"], True)
+
+    ev_ref = evaluate_model_player_steps(only_ref, "match3")
+    check("gate: all-refused is NOT a PASS", ev_ref["verdict"] == "PASS", False)
+    check("gate: all-refused verdict is FAIL", ev_ref["verdict"], "FAIL")
+    check("gate: all-refused counts_as_pass is false", ev_ref["counts_as_pass"], False)
+    check("gate: all-refused real progress is zero",
+          ev_ref["real_progress_step_count"], 0)
+
+    # ---- §1.B (iii): refusals but too little progress -> INCONCLUSIVE, never PASS ----------
+    few = []
+    for i in range(1, 9):
+        if i <= 6:
+            few.append(refusal_step(i, "swap"))
+        else:
+            few.append(step(i, "go%d" % i, "frame%d" % i, changed=True))
+    s_few = summarise(few, "jev", "sokoban")
+    check("mostly-refused: not a PASS", s_few["verdict"] == "PASS", False)
+    check("mostly-refused: INCONCLUSIVE (too little real progress)",
+          s_few["verdict"], "INCONCLUSIVE")
+    check("mostly-refused: real progress is 2", s_few["real_progress_step_count"], 2)
+
+    # ---- §1.B (iv): a run with NO refusals is byte-for-byte the old reading ----------------
+    plain = clean_run(8)
+    s_plain = summarise(plain, "jev", "pong")
+    check("no refusals: refused_step_count is 0", s_plain["refused_step_count"], 0)
+    check("no refusals: the FAIL set is the raw set",
+          s_plain["fail_steps"], s_plain["fail_steps_before_refusal_carve_out"])
+    check("no refusals: the rate has the full denominator", s_plain["rated_step_count"], 8)
+    check("no refusals: still a plain PASS", s_plain["verdict"], "PASS")
+
+    # THE FLOOR MAY NOT TOUCH A RUN WITH ZERO REFUSALS.  `t139-scripted` measured scripted
+    # runs that were PASS with as few as 2 changed steps; gating those on
+    # `min_real_progress_steps` would TIGHTEN a criterion this batch promised only to make
+    # fairer ("不许放宽判据" cuts both ways: it also forbids an unrelated tightening).
+    thin = []
+    for i in range(1, 9):
+        thin.append(step(i, "act%d" % i, "frame%d" % i, changed=(i <= 2)))
+    s_thin = summarise(thin, "jev", "pong")
+    check("zero refusals: the floor does NOT apply (real progress 2 < 4)", s_thin["verdict"] ==
+          "INCONCLUSIVE", False)
+    check("zero refusals: the verdict is the rate's own FAIL", s_thin["verdict"], "FAIL")
+    check("zero refusals: real progress is reported anyway",
+          s_thin["real_progress_step_count"], 2)
+    ev_thin = evaluate_model_player_steps(thin, "pong")
+    check("gate: the floor does not apply with zero refusals either",
+          ev_thin["verdict"], "FAIL")
+    check("... but the floor DOES apply once a refusal removed a denominator step",
+          s_few["real_progress_step_count"] < 4 and bool(s_few["refused_steps"]), True)
+
+    # ---- the boundary is declared, not hard-coded -----------------------------------------
+    b = load_refusal_boundary()
+    check("boundary: the floor is declared", isinstance(b["min_real_progress_steps"], int),
+          True)
+    check("boundary: the floor carries a basis", bool(b.get("basis")), True)
+    check("boundary: the floor is at least half the minimum step count",
+          b["min_real_progress_steps"] >= 4, True)
+    check("boundary: the floor is below what a no-refusal PASS already shows (>= 6)",
+          b["min_real_progress_steps"] < 6, True)
+
+    ok = True
+    for good, name, detail in cases:
+        ok = ok and good
+        print("%-58s %s%s" % (name[:58], "OK" if good else "MISMATCH",
+                              "" if good else "  " + detail))
+    print("task139_cases %s (%d assertions)" % ("PASSED" if ok else "FAILED", len(cases)))
+    return 0 if ok else 1
+
+
+def test_task139_window_and_refusal():
+    assert task139_cases() == 0
+
+
 def test_model_player_rules():
     assert main() == 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(task139_cases() or main())

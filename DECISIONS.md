@@ -7815,3 +7815,104 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 - 预期影响与回滚点：新增两条入库路径（均在本任务独占清单内）+ 一个工具。
   回滚点：删除这两个文件即回到 TASK-136 的状态；`git add -f` 的效果可由
   `git rm --cached` 撤销。
+
+## D202 — TASK-139 §1.A：**声明式最小测量窗口长度**，低于阈值即 `WINDOW_TOO_SHORT`（不是 PASS）
+
+- 触发问题：TASK-138 登记遗留风险 ①——`asteroids` 的 verdict **对窗口长度敏感**，而两窗的
+  实际跨度是**测量值**（客户端轮询抖动让"标称 30 帧"落成 29..34 帧，TASK-138 defect ⑧ 实测）。
+  在此之前工具**没有语言**表达"这个判定是在太短的窗口上做的"：3 帧窗口与 300 帧窗口会给出
+  **同样的两个 verdict 字符串**。
+- 选项：
+  1. **在 `tools/playability_controls.json` 声明 `model_player_window.min_frames`（=20，含依据），
+     工具强制：任一窗实测跨度低于该值 ⇒ 该 run 标 `WINDOW_TOO_SHORT`，`counts_as_pass=false`（选中）**
+  2. 把阈值硬编码进 `playtest_player.py` —— 否决：本仓的规则是"可争辩的判断要写成声明"
+     （TASK-116 P6 / TASK-135 §1.B 同一口径），硬编码会让阈值无法被独立验收逐条核对
+  3. 不加阈值，只在报告里说明敏感性 —— 否决：那就把"测量太短"退化成读者记忆，而不是机器状态；
+     TASK-139 §3.X1 明确要求 `WINDOW_TOO_SHORT` 与 FAIL / `MODEL_*` **分开且不进 PASS**
+- 最终选择：选项 1。落点：`tools/playability_controls.json -> model_player_window`（含 `basis`）；
+  `tools/playtest_player.py` 的 `load_window_declaration` / `window_frames_of` / `summarise`
+  （写 `player.json -> window_frames`，并给 verdict 加前缀 `WINDOW_TOO_SHORT `）；
+  `tools/playability_gate.py -> evaluate_model_player_steps` 读**同一块声明**并做同样的收口；
+  断言在 `tools/tests/test_playability_model_player.py`（58 条 TASK-139 断言）。
+- 理由（**取值 20 的依据**，实测不是猜）：TASK-138 的 20 款共记录 61 步，两窗达成跨度落在
+  **29..34 帧**，没有任何一窗低于 29；20 因此在**全部已有证据的地板之下**（本批 80 个窗口命中 0），
+  同时高于一次 MCP 往返（30..120 帧）这一分辨率下限，且在 ~60 Hz 下约 1/3 秒——比变化测试
+  比较的 1.0 s 短一档。短于 20 帧的窗口装不下"松键 → 游戏主循环 → 观测值回读"这一整拍，
+  这正是该状态拒绝下判断的场合。
+- 边界（写进 `not_a_loosening`）：该检查**只能把 PASS 拿掉，永不能补上**；`--window-frames`
+  与两把尺子的公式**一字未动**；判的跨度为游戏自己上报的 `Engine.get_frames_drawn()` 增量。
+- 预期影响与回滚点：新增一个顶层声明块 + 一个 verdict 状态 + 一个 gate 字段。
+  回滚点：删掉 `model_player_window` 块即回到"没有最小窗口概念"的状态；
+  `window_frames` / `window_too_short` 字段对老读者是**新增而非改名**，不影响任何历史 verdict。
+
+## D203 — TASK-139 §1.B：**合法拒绝的边界**——可以不让它算 FAIL，但绝不让"全在拒绝"拿到 PASS
+
+- 触发问题：TASK-136 §4.3/§12 登记的判据缺陷——5 款游戏（`match3` / `minesweeper` / `pacman` /
+  `sokoban` / `towerdefense`）把"游戏按规则拒绝"写在**自己的导出计数器**里
+  （`RejectedMoves` / `InputRejectedSwaps` / `InputRejectedCursorActions` / `RejectedSteps` /
+  `InputRejectedPlaces`），而模型玩家的 FAIL 条件把这种拒绝**记成游戏的缺陷**
+  （"接受了输入却什么都没变"）。门的 P2 自 TASK-131 X12 起就有这个豁免，**循环没有**。
+- 选项：
+  1. **声明式 `refusal_evidence.game_side_fields`（逐款点名字段）+ 步级豁免 + 声明式真实推进下限
+     （`model_player_refusal.min_real_progress_steps`=4）：拒绝步不判 FAIL、不进分母，但**永不算推进**，
+     且 run 必须仍有 ≥4 步真实推进；全拒绝零推进是显式 FAIL（选中）**
+  2. 只把拒绝步从分母拿掉（不做下限）—— 否决：那就等于"全都拒绝"也能凑出 `0/0`，
+     正好违反 TASK-139 §1.B 的规则边界
+  3. 把拒绝步直接当成"有推进"—— 否决：那是**放宽**判据，TASK-139 §2.7 明令禁止
+- 最终选择：选项 1。落点：`tools/playability_controls.json` 的 5 款 `games.<g>.refusal_evidence`
+  （新增 `game_side_fields` / `identifies` / `how_read` / `step_rule`，并把 TASK-131 的宽泛模式
+  `LastRefusedInput` 与 `value_words` **收窄/清空**——它们会对**任意值变化**误报）+ 顶层
+  `model_player_refusal`；`tools/playtest_player.py` 的 `step_refusal_record`（逐步入盘为
+  `steps.jsonl -> step_refusal`）/ `_summarise_core`；`tools/playability_gate.py` 同口径。
+- 理由（**下限 4 的依据**）：PASS 规则要 ≥8 个注入步、接受即变化率 ≥0.75，`8×0.75=6`，所以
+  **没有任何拒绝**的 run 天然带 ≥6 步真实推进，4 够不到它——该下限**只可能在豁免拿掉了分母时生效**；
+  4 又是最小步数 8 的一半（再低就不足以描述"这游戏能玩"）。字段来自游戏源码实测
+  （`RejectedMoves++` / `InputRejectedSwaps++` 等，见 5 款 `.cs`），不是模型自述。
+- 边界（写进 `not_a_loosening`）：豁免**只能**移掉游戏自己记录的拒绝；它**不能**把"没变"变成"变了"
+  （拒绝步同时不进 FAIL 集、不进推进集）；无拒绝的 run 分母不变、每个数字与 TASK-139 之前逐位相同。
+- 预期影响与回滚点：5 款游戏的模型玩家判定从 FAIL 侧移到"拒绝+真实推进"侧。
+  回滚点：删除 5 款的 `game_side_fields` 与顶层 `model_player_refusal` 块即回到 TASK-136 口径。
+
+## D204 — TASK-139 §1.C/§1.A：新口径下 20×2 重跑的分布变化，以及**窗口敏感性**的两条实测结论
+
+- 触发问题：TASK-138 遗留风险 ②——**其余 17 款模型臂未在新口径下复核**；风险 ①——`asteroids` 的
+  verdict 对窗口长度敏感。TASK-139 §1.C 要求在新口径下重跑 20×2，§1.A 要求两档窗口的敏感性矩阵。
+- 做法：同一份代码修订（`t139_code_revision.json` 的 `frozen-before-sweeps` / 快照可核）下，
+  三个臂各跑两档窗口（`--window-frames 30` 与 90，其余参数逐字相同），并加一个重复性探针。
+- **实测分布（本批，两档窗口各自的完整 20 款记录）**：
+  | 臂 | 档 | 分布 |
+  |---|---|---|
+  | 脚本 | w30 | `15 PASS / 1 baseline-only / 0 FAIL / 4 INCONCLUSIVE` |
+  | 脚本 | w90 | `15 PASS / 0 / 1 FAIL / 4 INCONCLUSIVE` |
+  | 模型 jev | w30 | `2 PASS / 0 / 3 FAIL / 15 INCONCLUSIVE` |
+  | 模型 jev | w90 | `1 PASS / 1 baseline-only / 2 FAIL / 16 INCONCLUSIVE` |
+  | playjev（≥8 款，实跑 10） | w30 | `3 PASS / 0 / 1 FAIL / 6 INCONCLUSIVE` |
+  脚本臂相对 TASK-136 的 `9/1/4/6` 的主要变化来自 §1.B 的合法拒绝豁免（5 款）、§1.A 的窗口声明
+  与既有 strict 判据，逐款对照见 `t139_compare.json` / 报告 §C。模型臂相对 TASK-136 的
+  `1/1/3/15`：`asteroids` FAIL → PASS、`pong` baseline-only → FAIL，其余 17 款首次在新口径下复核
+  （15 款仍 INCONCLUSIVE、`breakout` 仍 FAIL）。
+- **窗口敏感性（`SENSITIVE`，逐款点名受影响步）**：脚本臂 3 款（`breakout` w30 INCONCLUSIVE →
+  w90 FAIL、`platformer` PASS → INCONCLUSIVE、`pong` baseline-only → PASS）；模型臂 3 款
+  （`asteroids` PASS → FAIL、`pong` FAIL → baseline-only、`spaceinvaders` FAIL → INCONCLUSIVE）。
+  两档**都**有游戏因此掉出 PASS（脚本 `platformer`、模型 `asteroids`），**如实报，未掩盖**。
+- **`asteroids` 专项结论（推翻 TASK-138 的不确定性）**：**不是"仍然 PASS"**。脚本臂两档都 PASS，
+  但**模型臂 w30 PASS、w90 FAIL**，原因是 w90 的窗口足够长，小行星在窗口内撞毁飞船
+  （`Lives 3 → 2`，步骤 5）之后**飞船再未重生、画面完全冻结**：步骤 6–12 连续 7 步
+  `pixel_diff = 0`、`gameplay_movement = 0`，`frames\022_07_after.png` 与 `frames\037_12_after.png`
+  **sha256 完全相同**（`c09b58739e8d3094b081f997554e29ca6e602b55d2acdc757664aaa92ddefe4d`），
+  而 `GameOver` 仍是 `false`、`Lives` 仍是 2。这**不是**测量噪声，是这条更长的窗口**揭出的一个真实
+  游戏侧缺陷**（死亡后不重生），TASK-139 只测不改，故**登记不修**，留给下一批。
+- **第二条实测结论（比窗口长度更重要）**：**脚本臂的 verdict 不是每次都能复现**。重复性探针
+  （同一条命令跑两遍、5 款、专用端口）在 **w30** 显示 **5 款里 4 款两遍不等**：`pong`
+  `PASS(baseline only)` vs `PASS`、`breakout` INCONCLUSIVE vs FAIL、`asteroids`/`tetris` PASS vs
+  INCONCLUSIVE；机制是 `Engine.get_frames_drawn()` 的实际跨度与 MCP 往返抖动逐次不同，以及
+  **`ack_result` 偶发缺失**（TASK-138 defect ⑨ 规定缺失即该步 INCONCLUSIVE，于是整局翻档）。
+  在 **w90** 下同一探针 5 款**两遍全一致**（`asteroids`/`pacman`/`tetris`/`pong`/`breakout`，
+  `rc` 全 0；见 `t139_determinism_t139-determinism-{w30,w90}.json`）。因此本批的结论是：
+  **w30 的逐款 verdict 不可复现，w90 在同样 5 款上可复现**——这正是 `min_frames` 存在的理由，
+  也是敏感矩阵里 `pong` 那类"翻转"不能全部记到窗口长度头上的原因（报告 §A.4 逐条区分）。
+- 选择与影响：`model_player_window.min_frames=20` 保持不变（它只拦"太短"，不拦"抖动"）；
+  **新的、更准确的措辞**是：`min_frames` 管"窗口短到装不下一次反应"，**重复性**是另一个独立问题，
+  本批只测量并登记，不擅自改判据。已写进 `TEMPLATE-logic-feedback.md §1.2c` 与报告 §A.4。
+- 回滚点：本批对分布的可提交工件只有 `player.json`（`runs/**` 不入库）与
+  `runs/model-player/_index/ARTIFACTS-TASK-139.json` 的哈希清单；删掉清单即回到无索引状态。

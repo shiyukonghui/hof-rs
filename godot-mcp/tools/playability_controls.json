@@ -278,7 +278,7 @@
   "reading rather than the pass criterion: it is still computed and reported for every step",
   "and every run, so nothing about the old reading was lost or rewritten.",
   "`strict` asks the same question with a margin: the declared observables must move at",
-  "least 2x as far as they moved in the control window." ,
+  "least 2x as far as they moved in the control window.",
   "",
   "Why 2x:",
   "  * it is the example the task itself gives ('>= 2x the control window's noise/",
@@ -350,6 +350,88 @@
    ],
    "effect": "`player.json -> verdict` and `gate.json -> model_player_criterion.pass` use `strict`; `counts_as_pass` is true only for a literal `PASS`"
   }
+ },
+ "_model_player_window_comment": [
+  "TASK-139 §1.A -- the DECLARED MINIMUM MEASUREMENT WINDOW, and the `WINDOW_TOO_SHORT` state.",
+  "",
+  "Why this exists.  `--window-frames` is a NOMINAL budget: the loop waits until the game's",
+  "own `Engine.get_frames_drawn()` has advanced by that many frames, so the length a window",
+  "really achieves is a MEASURED quantity, and TASK-138 defect ⑧ already records it per step",
+  "(`frame_alignment.steps[].control_frames` / `.action_frames`).  Before this declaration the",
+  "tool had no way to say 'this judgement was made over a window too short to contain a game",
+  "reaction': a 3-frame window and a 300-frame window produced the same two verdict strings.",
+  "",
+  "`min_frames` is deliberately NOT a PASS gate.  It can only take a run OUT of PASS: a run",
+  "whose control or action window came out shorter than this is written",
+  "`WINDOW_TOO_SHORT <verdict>` with `counts_as_pass: false`, and the measured spans stay in",
+  "the artifact.  It never turns a non-PASS into a PASS and it does not move either ruler's",
+  "formula (both are unchanged from TASK-135/TASK-136).",
+  "",
+  "BASIS for 20 (measured, not guessed): TASK-138 recorded 61 steps across its 20 games, and",
+  "the achieved span of BOTH windows ran 29..34 drawn frames -- no window in that sweep was",
+  "ever shorter than 29.  20 is therefore BELOW every recorded run's own floor: it flags",
+  "nothing in that batch's evidence, it is comfortably above one MCP round trip (TASK-138",
+  "defect ⑧ measured a single round trip at 30..120 drawn frames, so a window is at most that",
+  "resolution), and at ~60 Hz it is about a third of a second -- 1/3 of the 1.0 s the change",
+  "test compares against.  A window shorter than 20 drawn frames cannot contain a full",
+  "input-release -> game-loop -> observable read-back cycle with any margin, which is exactly",
+  "the judgement this state refuses to make."
+ ],
+ "model_player_window": {
+  "declared_by": "TASK-139 §1.A",
+  "min_frames": 20,
+  "applies_to": [
+   "control_window",
+   "action_window"
+  ],
+  "state": "WINDOW_TOO_SHORT",
+  "state_counts_as_pass": false,
+  "how_used": "tools/playtest_player.py `load_window_declaration` / `window_frames_of` / `summarise` writes `player.json -> window_frames` (per step: the two measured spans, `too_short`, `short_windows`) and prefixes the verdict with `WINDOW_TOO_SHORT ` when any measured span is below `min_frames`; `counts_as_pass` and `pass` are forced false.  `gate.json -> model_player_criterion` reads the same block.",
+  "basis": "MEASURED: TASK-138 recorded 61 steps over its 20 games and the achieved span of both windows ran 29..34 drawn frames (nothing below 29); 20 sits below that floor, above one MCP round trip (30..120 frames, TASK-138 defect ⑧), and at ~60 Hz is about 1/3 s of game time.",
+  "not_a_loosening": [
+   "the check only ever removes a PASS; it can never create one",
+   "`--window-frames` and both rulers' formulas are unchanged from TASK-135/TASK-136",
+   "the spans it judges are the game's own `Engine.get_frames_drawn()` deltas, not a wall-clock estimate"
+  ]
+ },
+ "_model_player_refusal_comment": [
+  "TASK-139 §1.B -- the LEGAL-REFUSAL boundary.",
+  "",
+  "TASK-136 §4.3/§12 registered the defect: five games (`match3`, `minesweeper`, `pacman`,",
+  "`sokoban`, `towerdefense`) record a DELIBERATE refusal in their own exported counters, and",
+  "the model-player loop's FAIL condition charged that refusal to the game as 'accepted an",
+  "input and nothing changed'.  The gate has had this carve-out since TASK-131 X12",
+  "(`arm_evidence.refused`); the loop never did, so a legitimate 'I saw your key and I will",
+  "not move that way' was reported as a game defect.",
+  "",
+  "The boundary, declared here so it can be argued with: a LEGAL REFUSAL may be dropped from",
+  "the FAIL set and from the rate's denominator -- it is not evidence AGAINST the game -- but",
+  "it may NEVER be counted as progress.  A run must still show `min_real_progress_steps` of",
+  "real progress, so 'the game refused everything and nothing ever advanced' can never reach",
+  "PASS on refusals alone (the assertion lives in",
+  "tools/tests/test_playability_model_player.py).",
+  "",
+  "BASIS for 4: the PASS rule needs >= 8 injected steps, and TASK-132's accepted-and-changed",
+  "bar is 75%.  8 * 0.75 = 6, so a run that met the bar WITHOUT any refusals always carries",
+  ">= 6 real progress steps and 4 cannot touch it -- the floor is provably only reachable",
+  "when the carve-out removed part of the denominator.  4 is the number below which the",
+  "remaining evidence is too thin to describe a playable game at all (it is half the minimum",
+  "step count)."
+ ],
+ "model_player_refusal": {
+  "declared_by": "TASK-139 §1.B",
+  "min_real_progress_steps": 4,
+  "min_real_progress_rate": 0.5,
+  "rule": "a step the game's own exported counters record as a deliberate refusal is (1) removed from the model-player FAIL set, (2) removed from the rate's denominator, and (3) NEVER counted as progress.  A run is FAIL when every rated step was refused and no step produced real progress (`refusal_only_run`), and INCONCLUSIVE when fewer than `min_real_progress_steps` steps of real progress remain after the carve-out.",
+  "evidence_source": "the game's own exported state delta for the step (`steps.jsonl -> state_delta`), matched against `games.<game>.refusal_evidence.game_side_fields` / `.keys`; the model's own statement is never used",
+  "how_used": "tools/playtest_player.py `step_refusal_record` (per step, written as `steps.jsonl -> step_refusal`), `_summarise_core` (the FAIL set, the rated denominator, `refusal_only_run`, `real_progress_step_count`); the numbers are in `player.json -> refusal_boundary`",
+  "basis": "MEASURED: the PASS rule needs >= 8 injected steps and the accepted-and-changed bar is 0.75, so a run that met the bar with no refusals always has >= 6 real progress steps; 4 is below that and half the minimum step count.",
+  "not_a_loosening": [
+   "the carve-out can only remove a FAIL the GAME ITSELF recorded as a refusal",
+   "it can never turn a 'not changed' into a 'changed': refusals are excluded from both the FAIL set and the progress set",
+   "`refusal_only_run` is an explicit FAIL branch, so 'all refused, zero progress' cannot PASS",
+   "a run with no refusals has an empty refused set and every number is the pre-TASK-139 number"
+  ]
  },
  "games": {
   "asteroids": {
@@ -1280,22 +1362,30 @@
     "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
    },
    "refusal_evidence": {
-    "declared_by": "TASK-131 X12",
+    "declared_by": "TASK-131 X12 (carve-out); TASK-139 §1.B (game-side fields)",
     "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
     "keys": [
-     "LastRefusedInput",
-     "Rejected"
+     "InputRejectedSwaps",
+     "Rejected",
+     "RejectedMoves"
     ],
-    "value_words": [
-     "rejected",
-     "blocked",
-     "refused",
-     "no_change",
-     "cannot"
-    ],
+    "value_words": [],
     "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
     "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
-    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence",
+    "game_side_fields": [
+     "RejectedMoves",
+     "InputRejectedSwaps"
+    ],
+    "action_that_refuses": "m3_swap",
+    "identifies": "`m3_swap` on a pair whose swap matches no run of three: the game records it in `RejectedMoves` and `InputRejectedSwaps` and moves nothing.  Measured on TASK-138 scripted steps 2/4/6/10, where both counters advanced and no gameplay observable changed.  The neighbouring field `InputSwaps` is the ATTEMPT counter (it counts a legal swap too) and is deliberately NOT in this list -- it is not evidence of a refusal.",
+    "how_read": "the game's own exported property, read inside the game process by tools/playability_gate.probe_state_source() (executed through the MCP tool `running_game_execute_gdscript`), sampled before and after each injection and diffed into `steps.jsonl -> state_delta`; this tool then matches the diffed key against `game_side_fields`.  The model's own statement is never used.",
+    "step_rule": "a step is a LEGAL REFUSAL when `game_side_fields` (or `keys`) appears among the keys of `steps.jsonl -> state_delta` for that step -- i.e. the game itself recorded that it saw the input and refused the move.  Such a step is removed from the FAIL set and from the rate's denominator, is NEVER counted as real progress, and the run must still show `min_real_progress_steps` steps of real progress (`model_player_refusal`) or it cannot PASS.  A run in which EVERY rated step was refused and nothing advanced is an explicit FAIL (`refusal_only_run`).",
+    "min_real_progress_steps": 4,
+    "keys_before_task139": [
+     "LastRefusedInput",
+     "Rejected"
+    ]
    }
   },
   "minesweeper": {
@@ -1402,22 +1492,30 @@
     "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
    },
    "refusal_evidence": {
-    "declared_by": "TASK-131 X12",
+    "declared_by": "TASK-131 X12 (carve-out); TASK-139 §1.B (game-side fields)",
     "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
     "keys": [
-     "LastRefusedInput",
-     "Rejected"
+     "InputRejectedCursorActions",
+     "Rejected",
+     "RejectedMoves"
     ],
-    "value_words": [
-     "rejected",
-     "blocked",
-     "refused",
-     "no_change",
-     "cannot"
-    ],
+    "value_words": [],
     "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
     "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
-    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence",
+    "game_side_fields": [
+     "RejectedMoves",
+     "InputRejectedCursorActions"
+    ],
+    "action_that_refuses": "mine_reveal",
+    "identifies": "`mine_reveal` on a cell the game will not reveal (an already-revealed or flagged cell): `RejectedMoves` and `InputRejectedCursorActions` advance while `RevealedCount` and the picture stay put.  Measured on TASK-138 scripted steps 3/5/7/9/11.  The attempt counters (`InputCursorReveals`, `InputCursorActions`) are deliberately NOT in this list.",
+    "how_read": "the game's own exported property, read inside the game process by tools/playability_gate.probe_state_source() (executed through the MCP tool `running_game_execute_gdscript`), sampled before and after each injection and diffed into `steps.jsonl -> state_delta`; this tool then matches the diffed key against `game_side_fields`.  The model's own statement is never used.",
+    "step_rule": "a step is a LEGAL REFUSAL when `game_side_fields` (or `keys`) appears among the keys of `steps.jsonl -> state_delta` for that step -- i.e. the game itself recorded that it saw the input and refused the move.  Such a step is removed from the FAIL set and from the rate's denominator, is NEVER counted as real progress, and the run must still show `min_real_progress_steps` steps of real progress (`model_player_refusal`) or it cannot PASS.  A run in which EVERY rated step was refused and nothing advanced is an explicit FAIL (`refusal_only_run`).",
+    "min_real_progress_steps": 4,
+    "keys_before_task139": [
+     "LastRefusedInput",
+     "Rejected"
+    ]
    }
   },
   "missilecommand": {
@@ -1637,22 +1735,28 @@
     "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
    },
    "refusal_evidence": {
-    "declared_by": "TASK-131 X12",
+    "declared_by": "TASK-131 X12 (carve-out); TASK-139 §1.B (game-side fields)",
     "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
     "keys": [
-     "LastRefusedInput",
-     "Rejected"
+     "Rejected",
+     "RejectedSteps"
     ],
-    "value_words": [
-     "rejected",
-     "blocked",
-     "refused",
-     "no_change",
-     "cannot"
-    ],
+    "value_words": [],
     "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
     "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
-    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence",
+    "game_side_fields": [
+     "RejectedSteps"
+    ],
+    "action_that_refuses": "pac_up|pac_down|pac_left|pac_right",
+    "identifies": "a direction step into a wall: `RejectedSteps` advances and PacCol/PacX stay put.  Measured on TASK-138 scripted steps 3/6/8/10/12.",
+    "how_read": "the game's own exported property, read inside the game process by tools/playability_gate.probe_state_source() (executed through the MCP tool `running_game_execute_gdscript`), sampled before and after each injection and diffed into `steps.jsonl -> state_delta`; this tool then matches the diffed key against `game_side_fields`.  The model's own statement is never used.",
+    "step_rule": "a step is a LEGAL REFUSAL when `game_side_fields` (or `keys`) appears among the keys of `steps.jsonl -> state_delta` for that step -- i.e. the game itself recorded that it saw the input and refused the move.  Such a step is removed from the FAIL set and from the rate's denominator, is NEVER counted as real progress, and the run must still show `min_real_progress_steps` steps of real progress (`model_player_refusal`) or it cannot PASS.  A run in which EVERY rated step was refused and nothing advanced is an explicit FAIL (`refusal_only_run`).",
+    "min_real_progress_steps": 4,
+    "keys_before_task139": [
+     "LastRefusedInput",
+     "Rejected"
+    ]
    }
   },
   "platformer": {
@@ -2388,22 +2492,28 @@
     "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
    },
    "refusal_evidence": {
-    "declared_by": "TASK-131 X12",
+    "declared_by": "TASK-131 X12 (carve-out); TASK-139 §1.B (game-side fields)",
     "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
     "keys": [
-     "LastRefusedInput",
-     "Rejected"
+     "Rejected",
+     "RejectedMoves"
     ],
-    "value_words": [
-     "rejected",
-     "blocked",
-     "refused",
-     "no_change",
-     "cannot"
-    ],
+    "value_words": [],
     "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
     "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
-    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence",
+    "game_side_fields": [
+     "RejectedMoves"
+    ],
+    "action_that_refuses": "soko_up|soko_down|soko_left|soko_right",
+    "identifies": "walking into a wall or pushing a box that cannot move: `RejectedMoves` advances, PlayerCol/PlayerRow stay put.  Measured on TASK-138 scripted steps 3/5/11.",
+    "how_read": "the game's own exported property, read inside the game process by tools/playability_gate.probe_state_source() (executed through the MCP tool `running_game_execute_gdscript`), sampled before and after each injection and diffed into `steps.jsonl -> state_delta`; this tool then matches the diffed key against `game_side_fields`.  The model's own statement is never used.",
+    "step_rule": "a step is a LEGAL REFUSAL when `game_side_fields` (or `keys`) appears among the keys of `steps.jsonl -> state_delta` for that step -- i.e. the game itself recorded that it saw the input and refused the move.  Such a step is removed from the FAIL set and from the rate's denominator, is NEVER counted as real progress, and the run must still show `min_real_progress_steps` steps of real progress (`model_player_refusal`) or it cannot PASS.  A run in which EVERY rated step was refused and nothing advanced is an explicit FAIL (`refusal_only_run`).",
+    "min_real_progress_steps": 4,
+    "keys_before_task139": [
+     "LastRefusedInput",
+     "Rejected"
+    ]
    }
   },
   "spaceinvaders": {
@@ -2775,22 +2885,28 @@
     "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
    },
    "refusal_evidence": {
-    "declared_by": "TASK-131 X12",
+    "declared_by": "TASK-131 X12 (carve-out); TASK-139 §1.B (game-side fields)",
     "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
     "keys": [
-     "LastRefusedInput",
+     "InputRejectedPlaces",
      "Rejected"
     ],
-    "value_words": [
-     "rejected",
-     "blocked",
-     "refused",
-     "no_change",
-     "cannot"
-    ],
+    "value_words": [],
     "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
     "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
-    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence",
+    "game_side_fields": [
+     "InputRejectedPlaces"
+    ],
+    "action_that_refuses": "td_place",
+    "identifies": "`td_place` on a cell where a tower may not be built (occupied, or not enough gold): `InputRejectedPlaces` advances while `TowersPlaced` and `Gold` stay put.  Measured on TASK-138 scripted steps 6/9/12.  The attempt counter `InputPlaces` is deliberately NOT in this list.",
+    "how_read": "the game's own exported property, read inside the game process by tools/playability_gate.probe_state_source() (executed through the MCP tool `running_game_execute_gdscript`), sampled before and after each injection and diffed into `steps.jsonl -> state_delta`; this tool then matches the diffed key against `game_side_fields`.  The model's own statement is never used.",
+    "step_rule": "a step is a LEGAL REFUSAL when `game_side_fields` (or `keys`) appears among the keys of `steps.jsonl -> state_delta` for that step -- i.e. the game itself recorded that it saw the input and refused the move.  Such a step is removed from the FAIL set and from the rate's denominator, is NEVER counted as real progress, and the run must still show `min_real_progress_steps` steps of real progress (`model_player_refusal`) or it cannot PASS.  A run in which EVERY rated step was refused and nothing advanced is an explicit FAIL (`refusal_only_run`).",
+    "min_real_progress_steps": 4,
+    "keys_before_task139": [
+     "LastRefusedInput",
+     "Rejected"
+    ]
    }
   },
   "neg_input_dead": {

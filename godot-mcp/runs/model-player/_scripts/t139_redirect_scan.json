@@ -1,0 +1,4663 @@
+{
+ "scanner": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_scan_redirects.py",
+ "ledger": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t136_commands.jsonl",
+ "ledger_sha256_at_scan": "1886fd0c593073d36ec8847db970f499ef7a87f85359b26f7b8182e9641c2083",
+ "ledger_bytes_at_scan": 165433,
+ "ledger_lines_total": 481,
+ "cut": {
+  "first_task139_index": 201,
+  "first_task139_entry": {
+   "ts": "2026-09-28T04:43:17",
+   "cwd": "F:\\moonbit-hof-rs\\godot-mcp",
+   "argv": [
+    "D:\\Anaconda\\python.exe",
+    "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+    "run",
+    "--game",
+    "snake",
+    "--backend",
+    "scripted",
+    "--player",
+    "scripted",
+    "--variant",
+    "V1",
+    "--image-form",
+    "full",
+    "--steps",
+    "12",
+    "--port",
+    "9961",
+    "--window-frames",
+    "30",
+    "--out-prefix",
+    "t139-scripted-w30"
+   ],
+   "source": "t139-wrapper-call"
+  },
+  "previous_entry": {
+   "ts": "2026-09-28T04:30:20",
+   "cwd": "F:\\moonbit-hof-rs\\godot-mcp",
+   "argv": [
+    "D:\\Anaconda\\python.exe",
+    "-c",
+    "\nimport os,psutil,hashlib,io\np=r'recovery\\reports\\TASK-138-REPORT.md'\nt=io.open(p,encoding='utf-8').read()\nprint('report exists:',os.path.isfile(p),'bytes',os.path.getsize(p),'lines',len(t.splitlines()))\nprint('sha256 (as on disk now):',hashlib.sha256(t.encode('utf-8')).hexdigest())\nleft=[]\nfor pr in psutil.process_iter(['pid','cmdline']):\n    try: cl=' '.join(pr.info['cmdline'] or [])\n    except Exception: continue\n    if 't138_sweep.py' in cl or 't138_repeat.py' in cl or 'godot.windows' in cl.lower(): left.append((pr.info['pid'],cl[:80]))\nprint('leftover batch/engine processes:',left)"
+   ]
+  },
+  "what": "the first ledger entry that names a `t139_*` script or carries `source == t139-wrapper-call`; this batch's commands are that entry and everything after it"
+ },
+ "this_batch_commands": 280,
+ "this_batch_first_ts": "2026-09-28T04:43:17",
+ "this_batch_last_ts": "2026-09-28T06:35:04",
+ "hits": 0,
+ "hit_lines": [],
+ "false_positives": [],
+ "script_files": [
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_add_blocks.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_add_refusal_fields.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_after.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_anchors.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_backfill.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_chain.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_cleanup.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_cmd.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_code_revision.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_compare.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_coverage.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_cut_probe.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_debug_mixed.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_decl_probe.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_determinism.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_flip.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_hashes.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_health.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_inspect_step.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_lines.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_merge.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_refusal_probe.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_scan_redirects.py",
+   "skipped": "this scanner's own pattern table and shell=True regex"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_sensitivity.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_sweep.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_terminal.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_timing.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_timing2.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_artifact_index.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py"
+  }
+ ],
+ "script_hits": [
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_add_blocks.py",
+   "line": 31,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"`WINDOW_TOO_SHORT <verdict>` with `counts_as_pass: false`, and the measured spans stay in\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_add_blocks.py",
+   "line": 42,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"input-release -> game-loop -> observable read-back cycle with any margin, which is exactly\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_add_blocks.py",
+   "line": 42,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"input-release -> game-loop -> observable read-back cycle with any margin, which is exactly\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_add_blocks.py",
+   "line": 53,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"`summarise` writes `player.json -> window_frames` (per step: the two measured \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_add_blocks.py",
+   "line": 56,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"`counts_as_pass` and `pass` are forced false.  `gate.json -> \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_add_blocks.py",
+   "line": 87,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"BASIS for 4: the PASS rule needs >= 8 injected steps, and TASK-132's accepted-and-changed\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_add_blocks.py",
+   "line": 89,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\">= 6 real progress steps and 4 cannot touch it -- the floor is provably only reachable\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_add_blocks.py",
+   "line": 105,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"evidence_source\": (\"the game's own exported state delta for the step (`steps.jsonl -> \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_add_blocks.py",
+   "line": 107,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"`games.<game>.refusal_evidence.game_side_fields` / `.keys`; the \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_add_blocks.py",
+   "line": 110,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"`steps.jsonl -> step_refusal`), `_summarise_core` (the FAIL set, the rated \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_add_blocks.py",
+   "line": 112,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"in `player.json -> refusal_boundary`\"),"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_add_blocks.py",
+   "line": 113,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"basis\": (\"MEASURED: the PASS rule needs >= 8 injected steps and the accepted-and-changed \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_add_blocks.py",
+   "line": 114,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"bar is 0.75, so a run that met the bar with no refusals always has >= 6 real \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_add_refusal_fields.py",
+   "line": 11,
+   "token": ">",
+   "kind": "code",
+   "text": "(every one of them was observed in `steps.jsonl -> state_delta` of the TASK-138"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_add_refusal_fields.py",
+   "line": 33,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"diffed into `steps.jsonl -> state_delta`; this tool then matches the diffed key \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_add_refusal_fields.py",
+   "line": 83,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"`steps.jsonl -> state_delta` for that step -- i.e. the game itself recorded that it saw \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_after.py",
+   "line": 58,
+   "token": ">",
+   "kind": "code",
+   "text": "if n >= wait_for and n == last:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_after.py",
+   "line": 60,
+   "token": ">",
+   "kind": "code",
+   "text": "if stable >= 3:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_anchors.py",
+   "line": 4,
+   "token": ">",
+   "kind": "code",
+   "text": "For each requested `<prefix>/<game>/<backend>` it prints, per step, the BEFORE/AFTER frame"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_anchors.py",
+   "line": 4,
+   "token": ">",
+   "kind": "code",
+   "text": "For each requested `<prefix>/<game>/<backend>` it prints, per step, the BEFORE/AFTER frame"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_anchors.py",
+   "line": 4,
+   "token": ">",
+   "kind": "code",
+   "text": "For each requested `<prefix>/<game>/<backend>` it prints, per step, the BEFORE/AFTER frame"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_anchors.py",
+   "line": 6,
+   "token": ">",
+   "kind": "code",
+   "text": "DECLARED game-state fields as of that step (`steps.jsonl -> markers` and the declared"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_anchors.py",
+   "line": 104,
+   "token": ">",
+   "kind": "code",
+   "text": "print(\"      delta %s %r -> %r\" % (d_.get(\"key\"), d_.get(\"from\"), d_.get(\"to\")))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_cmd.py",
+   "line": 6,
+   "token": ">",
+   "kind": "code",
+   "text": "is executed with `shell=False` so a `>`, `2>&1` or `1>NUL` token could not be interpreted as"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_cmd.py",
+   "line": 6,
+   "token": "2>&1",
+   "kind": "code",
+   "text": "is executed with `shell=False` so a `>`, `2>&1` or `1>NUL` token could not be interpreted as"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_cmd.py",
+   "line": 6,
+   "token": "1>NUL",
+   "kind": "code",
+   "text": "is executed with `shell=False` so a `>`, `2>&1` or `1>NUL` token could not be interpreted as"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_cmd.py",
+   "line": 15,
+   "token": ">",
+   "kind": "code",
+   "text": "D:\\\\Anaconda\\\\python.exe runs\\\\model-player\\\\_scripts\\\\t139_cmd.py --cwd <dir> -- <cmd> <args...>"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_cmd.py",
+   "line": 15,
+   "token": ">",
+   "kind": "code",
+   "text": "D:\\\\Anaconda\\\\python.exe runs\\\\model-player\\\\_scripts\\\\t139_cmd.py --cwd <dir> -- <cmd> <args...>"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_cmd.py",
+   "line": 15,
+   "token": ">",
+   "kind": "code",
+   "text": "D:\\\\Anaconda\\\\python.exe runs\\\\model-player\\\\_scripts\\\\t139_cmd.py --cwd <dir> -- <cmd> <args...>"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_cmd.py",
+   "line": 89,
+   "token": ">",
+   "kind": "code",
+   "text": "print(\"usage: t139_cmd.py [--cwd DIR] [--ledger PATH] -- <command> [args...]\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_code_revision.py",
+   "line": 63,
+   "token": ">",
+   "kind": "code",
+   "text": "print(\"%-58s %s %s\" % (rel, v.get(\"sha256\", \"<missing>\")[:16], v.get(\"bytes\")))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_compare.py",
+   "line": 7,
+   "token": ">",
+   "kind": "code",
+   "text": "* the per-game old -> new table with the flip flagged,"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_compare.py",
+   "line": 37,
+   "token": ">",
+   "kind": "code",
+   "text": "v = v or \"<missing>\""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_compare.py",
+   "line": 59,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"\"\"`[{game, summary:{verdict,...}}]` -> {game: summary}.\"\"\""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_compare.py",
+   "line": 67,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"\"\"`<prefix>/<game>/<player>/player.json` -> {game: summary}."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_compare.py",
+   "line": 67,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"\"\"`<prefix>/<game>/<player>/player.json` -> {game: summary}."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_compare.py",
+   "line": 67,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"\"\"`<prefix>/<game>/<player>/player.json` -> {game: summary}."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_compare.py",
+   "line": 67,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"\"\"`<prefix>/<game>/<player>/player.json` -> {game: summary}."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_compare.py",
+   "line": 104,
+   "token": ">",
+   "kind": "code",
+   "text": "print(\"   %-16s %-26s -> %-26s %s\" % (g, o, n, \"FLIP\"))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_cut_probe.py",
+   "line": 42,
+   "token": ">",
+   "kind": "code",
+   "text": "if first > 0:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_hashes.py",
+   "line": 5,
+   "token": ">",
+   "kind": "code",
+   "text": "report can be recomputed with `certutil -hashfile <path> SHA256` or by re-running this file."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_health.py",
+   "line": 38,
+   "token": ">",
+   "kind": "code",
+   "text": "print(\"   GET %s -> %s %s\" % (path, st, body[:200].replace(\"\\n\", \" \")))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_inspect_step.py",
+   "line": 32,
+   "token": ">",
+   "kind": "code",
+   "text": "idx = int(argv[1]) if len(argv) > 1 else 0"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_merge.py",
+   "line": 6,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "`t139_results_<prefix>-<suffix>.json`.  This merges those rows into the arm's full"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_merge.py",
+   "line": 6,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "`t139_results_<prefix>-<suffix>.json`.  This merges those rows into the arm's full"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_merge.py",
+   "line": 7,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "`t139_results_<prefix>.json`, one row per game, so the arm's outcome file stays a complete"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_merge.py",
+   "line": 33,
+   "token": ">",
+   "kind": "code",
+   "text": "print(\"usage: t139_merge.py <prefix> <suffix>\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_merge.py",
+   "line": 33,
+   "token": ">",
+   "kind": "code",
+   "text": "print(\"usage: t139_merge.py <prefix> <suffix>\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_sensitivity.py",
+   "line": 120,
+   "token": ">",
+   "kind": "code",
+   "text": "flip = len(set(verdicts)) > 1"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_sensitivity.py",
+   "line": 150,
+   "token": ">",
+   "kind": "code",
+   "text": "if flip and len(rungs) > 1:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_sweep.py",
+   "line": 8,
+   "token": ">",
+   "kind": "code",
+   "text": "playjev    the vision arm, `--backend playjev --variant V3` (>= 8 games if budget allows)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_sweep.py",
+   "line": 167,
+   "token": ">",
+   "kind": "code",
+   "text": "log(\"sweep arm=%s window=%d done (%d runs) -> %s\" % (arm, window, len(results), outp))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 21,
+   "token": ">",
+   "kind": "code",
+   "text": "game side the viewport is always `tree->get_root()`, whatever"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 31,
+   "token": ">",
+   "kind": "code",
+   "text": "P1 visibility      full-window frame -> background = modal colour, content mask ="
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 32,
+   "token": ">",
+   "kind": "code",
+   "text": "pixels differing from it by > PIXEL_DELTA.  Reports the content"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 78,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "`cmd.exe /c <generated .cmd>`), iron rule 4 (one unique port, checked before use)."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 98,
+   "token": ">",
+   "kind": "code",
+   "text": ":: evidence of what was reached lands in runs\\\\playability\\\\<game>\\\\agent.json:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 113,
+   "token": ">",
+   "kind": "code",
+   "text": "tokenizes at ~2.1-2.4 real tokens per estimated one (client 1018 -> service 2160; client"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 114,
+   "token": ">",
+   "kind": "code",
+   "text": "1791 -> service 4229).  TASK-129 D-C fixes that estimator (a conservative x2.5 coefficient"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 129,
+   "token": ">",
+   "kind": "code",
+   "text": "states => `sample_size: 1`, stated in the artifact."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 170,
+   "token": ">",
+   "kind": "code",
+   "text": "sampled with REAL full-window frames without touching `projects\\\\<game>`.  `--exercise <name>`"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 170,
+   "token": ">",
+   "kind": "code",
+   "text": "sampled with REAL full-window frames without touching `projects\\\\<game>`.  `--exercise <name>`"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 175,
+   "token": ">",
+   "kind": "code",
+   "text": "runs\\\\playability\\\\<game>\\\\frames\\\\NN_<label>.png     full-window frames"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 175,
+   "token": ">",
+   "kind": "code",
+   "text": "runs\\\\playability\\\\<game>\\\\frames\\\\NN_<label>.png     full-window frames"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 176,
+   "token": ">",
+   "kind": "code",
+   "text": "runs\\\\playability\\\\<game>\\\\frames.json                per-frame geometry + metrics"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 177,
+   "token": ">",
+   "kind": "code",
+   "text": "runs\\\\playability\\\\<game>\\\\filmstrip.png              all frames in one image"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 178,
+   "token": ">",
+   "kind": "code",
+   "text": "runs\\\\playability\\\\<game>\\\\states\\\\NN_<label>.json    sampled game state"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 178,
+   "token": ">",
+   "kind": "code",
+   "text": "runs\\\\playability\\\\<game>\\\\states\\\\NN_<label>.json    sampled game state"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 179,
+   "token": ">",
+   "kind": "code",
+   "text": "runs\\\\playability\\\\<game>\\\\gate.json                  P1..P7 verdicts + evidence"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 182,
+   "token": ">",
+   "kind": "code",
+   "text": "runs\\\\playability\\\\<game>\\\\agent.json                 the text backend: every call,"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 185,
+   "token": ">",
+   "kind": "code",
+   "text": "runs\\\\playability\\\\<game>\\\\playjev.json               the vision backend: per-frame"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 222,
+   "token": ">",
+   "kind": "comment",
+   "text": "# which keeps `projects\\<game>` the default and makes the exception explicit and recorded."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 227,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"\"\"Where this game's project lives: `projects\\\\<game>`, or the registered exercise.\"\"\""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 235,
+   "token": ">",
+   "kind": "comment",
+   "text": "# else.  `EXE_ROOT` is `<root>\\dist\\exe`; the gate then launches"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 236,
+   "token": ">",
+   "kind": "comment",
+   "text": "# `<EXE_ROOT>\\<game>\\<game>.exe --mcp-port=N` with the game's own directory as cwd."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 236,
+   "token": ">",
+   "kind": "comment",
+   "text": "# `<EXE_ROOT>\\<game>\\<game>.exe --mcp-port=N` with the game's own directory as cwd."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 236,
+   "token": ">",
+   "kind": "comment",
+   "text": "# `<EXE_ROOT>\\<game>\\<game>.exe --mcp-port=N` with the game's own directory as cwd."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 262,
+   "token": ">",
+   "kind": "code",
+   "text": "P1_MIN_CONTENT_FRACTION = 0.008    # >=0.8% of the window's pixels are content"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 269,
+   "token": ">",
+   "kind": "code",
+   "text": "P1_MIN_BBOX_COVERAGE = 0.12       # content bbox spans >=12% of the window area"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 541,
+   "token": ">",
+   "kind": "code",
+   "text": "out[\"current_scene\"] = str(get_tree().current_scene.get_path()) if get_tree().current_scene != null else \"<null>\""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 552,
+   "token": ">",
+   "kind": "code",
+   "text": "while stack.size() > 0 and n_nodes < %d:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 762,
+   "token": ">",
+   "kind": "code",
+   "text": "cmd -> .console.exe -> engine chain survived `taskkill /T` (\"the operation"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 762,
+   "token": ">",
+   "kind": "code",
+   "text": "cmd -> .console.exe -> engine chain survived `taskkill /T` (\"the operation"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 904,
+   "token": ">>",
+   "kind": "code",
+   "text": "q = (flat >> 4)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 908,
+   "token": ">>",
+   "kind": "code",
+   "text": "bg_q = np.array([(bg_key >> 8) & 0xF, (bg_key >> 4) & 0xF, bg_key & 0xF], dtype=np.int16)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 908,
+   "token": ">>",
+   "kind": "code",
+   "text": "bg_q = np.array([(bg_key >> 8) & 0xF, (bg_key >> 4) & 0xF, bg_key & 0xF], dtype=np.int16)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 911,
+   "token": ">",
+   "kind": "code",
+   "text": "mask = diff > PIXEL_DELTA"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 960,
+   "token": ">>",
+   "kind": "code",
+   "text": "q = (flat >> 4)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 965,
+   "token": ">>",
+   "kind": "code",
+   "text": "bg_q = np.array([(bg_key >> 8) & 0xF, (bg_key >> 4) & 0xF, bg_key & 0xF], dtype=np.int16)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 965,
+   "token": ">>",
+   "kind": "code",
+   "text": "bg_q = np.array([(bg_key >> 8) & 0xF, (bg_key >> 4) & 0xF, bg_key & 0xF], dtype=np.int16)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 968,
+   "token": ">",
+   "kind": "code",
+   "text": "mask = diff > PIXEL_DELTA"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 969,
+   "token": ">",
+   "kind": "code",
+   "text": "if margin > 0 and 2 * margin < min(h, w):"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 973,
+   "token": ">",
+   "kind": "code",
+   "text": "info = {\"rule\": \"modal-colour (4-bit quantised) + PIXEL_DELTA>%d content mask, \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 1026,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"changed_pixels\": int((d > PIXEL_DELTA).sum()),"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 1027,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"any_difference_pixels\": int((d > 0).sum()),"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 1111,
+   "token": ">",
+   "kind": "code",
+   "text": "if eb.get(k, \"<missing>\") != v:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 1185,
+   "token": ">",
+   "kind": "comment",
+   "text": "# step below picks >= 3 of these that are HASH-DIFFERENT, so \"3 calls\" really is"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 1338,
+   "token": ">",
+   "kind": "code",
+   "text": "log(\"    endpoint up in %ss; tools/list -> %d tools\" % (secs, len(tools)))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 1428,
+   "token": ">",
+   "kind": "comment",
+   "text": "# a naive before->after delta credits *every* action.  Each action is"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 1496,
+   "token": ">",
+   "kind": "code",
+   "text": "state_wins = len(act_delta) > len(ctl_delta)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 1497,
+   "token": ">",
+   "kind": "code",
+   "text": "pixel_wins = act_px_n > max(int(ctl_px_n * 1.5), P3_MIN_CHANGED_PIXELS)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 1551,
+   "token": ">",
+   "kind": "comment",
+   "text": "# `snake_pause` turned `Paused` false->true and never turned it back, so every"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 1553,
+   "token": ">",
+   "kind": "comment",
+   "text": "# return;`).  Each declaration in `games.<game>.mode_actions` names the marker, the"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 1628,
+   "token": ">",
+   "kind": "code",
+   "text": "or w_[\"rect\"][2] > 200)]"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 1658,
+   "token": ">",
+   "kind": "comment",
+   "text": "# ---- TASK-129 D-B: >= 3 INDEPENDENT state observations ----------------"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 1673,
+   "token": ">",
+   "kind": "code",
+   "text": "distinct_enough = sample_size >= wanted"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 1841,
+   "token": ">",
+   "kind": "code",
+   "text": "for every existing consumer.  But once the gate really samples >= 3 states, the honest"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 1875,
+   "token": ">",
+   "kind": "code",
+   "text": "else bool(min(mins) >= threshold)),"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 1916,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"~1.7-2.4 real tokens per estimated one (measured: client 1018 -> \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 1917,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"service 2160; client 1791 -> service 4229).  The budget is therefore \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 1938,
+   "token": ">",
+   "kind": "code",
+   "text": "if jev_estimate_tokens(jev_render_state(trial)) > budget:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2008,
+   "token": ">",
+   "kind": "code",
+   "text": "if len(picked) >= n:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2027,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"\"\"`calls[-1]` -> {question key: the raw answer}, so no signal is summarised away.\"\"\""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2068,
+   "token": ">",
+   "kind": "code",
+   "text": "if len(picked) >= n:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2142,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"rule\": \"playable P(true) >= %.3f\" % thresholds[\"noul_min_p_true\"],"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2150,
+   "token": ">",
+   "kind": "code",
+   "text": "out[\"visual_sample_size_is_independent\"] = bool(len(vis_frames) > 1)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2233,
+   "token": ">",
+   "kind": "code",
+   "text": "out[\"verdict\"] = {\"pass\": bool(worst >= thresholds[\"noul_min_p_true\"]),"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2235,
+   "token": ">",
+   "kind": "code",
+   "text": "% (sum(1 for v in vals if v >= thresholds[\"noul_min_p_true\"]),"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2257,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"case_evidence\": \"runs/playability/<out-root>/<game>/calls/*.json\"}"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2257,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"case_evidence\": \"runs/playability/<out-root>/<game>/calls/*.json\"}"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2382,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"\"\"`playjev_thresholds.playable_min_p_true` -> the agent's `noul_min_p_true`."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2399,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"\"\"The declaration half of P7: `games.<game>.required_ui.items` (TASK-130).\"\"\""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2409,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"\"\"`games.<game>.gameplay_observables` -- TASK-131 X12.\"\"\""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2414,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"\"\"`games.<game>.state_markers` -- TASK-131 X13 (per-frame Paused/clock/Ticks).\"\"\""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2419,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"\"\"`games.<game>.mode_actions` -- TASK-131 X13 (actions with a persistent effect).\"\"\""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2425,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"\"\"`games.<game>.liveness` -- TASK-131 X10/X13 (the state the player is first shown).\"\"\""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2430,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"\"\"`games.<game>.refusal_evidence` -- TASK-131 X12."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2449,
+   "token": ">",
+   "kind": "code",
+   "text": "return \"%s: %r -> %r\" % (k, c.get(\"from\"), c.get(\"to\"))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2493,
+   "token": ">",
+   "kind": "code",
+   "text": "pixel_wins = act_px > max(int(ctl_px * 1.5), min_px)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2494,
+   "token": ">",
+   "kind": "code",
+   "text": "gameplay_wins = len(act_g) > len(ctl_g)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2499,
+   "token": ">",
+   "kind": "code",
+   "text": "len(act.get(\"state_changes\") or []) > len(ctl.get(\"state_changes\") or [])"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2538,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"did not change.  PASS = >= 8 steps with >= 75% accepted-and-changed AND the reader's \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2538,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"did not change.  PASS = >= 8 steps with >= 75% accepted-and-changed AND the reader's \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2541,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"PASSes: MODEL_FIXED_POINT (TASK-133: >= 3 steps of the same action on a byte-identical \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2542,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"frame) and MODEL_NO_PROGRESS (TASK-134: >= 3 consecutive sent steps with no gameplay \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2554,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "`tools/playability_controls.json -> model_player_change_margin`; this function reads the"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2613,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "`>= min_run` consecutive injected steps answering the SAME action on a"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2640,
+   "token": ">",
+   "kind": "code",
+   "text": "if run_len > best[\"length\"]:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2641,
+   "token": ">",
+   "kind": "code",
+   "text": "best.update({\"found\": run_len >= int(min_run), \"length\": run_len,"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2645,
+   "token": ">",
+   "kind": "code",
+   "text": "best[\"reading\"] = (\"no run of >= %d consecutive steps shared one action AND one \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2666,
+   "token": ">",
+   "kind": "code",
+   "text": "window).  `>= min_run` consecutive such steps is the conclusion."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2685,
+   "token": ">",
+   "kind": "code",
+   "text": "if run_len > best[\"length\"]:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2686,
+   "token": ">",
+   "kind": "code",
+   "text": "best.update({\"found\": run_len >= int(min_run), \"length\": run_len,"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2690,
+   "token": ">",
+   "kind": "code",
+   "text": "best[\"reading\"] = (\"no run of >= %d consecutive steps that were SENT to the game \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2696,
+   "token": ">",
+   "kind": "code",
+   "text": "best[\"what\"] = (\"TASK-134 §1.C.1: >= %d consecutive injected steps with no gameplay \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2781,
+   "token": ">",
+   "kind": "code",
+   "text": "same_action = bool(len(injected) >= 2 and len(set(actions)) == 1)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2782,
+   "token": ">",
+   "kind": "code",
+   "text": "fixed_point = bool(len(fail) >= 2 and len(fail_actions) == 1 and"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2785,
+   "token": ">",
+   "kind": "comment",
+   "text": "# TASK-133 §1.C.1: the model's fixed point, on ITS OWN threshold (>= 3 consecutive"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2795,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"\"\"The whole TASK-132 rule under ONE margin -> (pass, why)."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2824,
+   "token": ">",
+   "kind": "code",
+   "text": "return None, (\"only %d injected step(s): the rule needs >= 8\" % len(injected))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2840,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"legal-refusal carve-out; the boundary needs >= %s\""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2843,
+   "token": ">",
+   "kind": "code",
+   "text": "if rate is not None and rate >= 0.75:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2865,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"game\": game, \"evidence_source\": \"runs/model-player/<game>/<backend>/steps.jsonl\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2865,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"game\": game, \"evidence_source\": \"runs/model-player/<game>/<backend>/steps.jsonl\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2917,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"progress, and a run must still show >= %s steps of \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3002,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "`games.<game>.liveness.terminal` is a list of {field, value, means}.  This is the"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3042,
+   "token": ">",
+   "kind": "code",
+   "text": "on_screen         its global rect overlaps the viewport by >= min_area_px"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3101,
+   "token": ">",
+   "kind": "code",
+   "text": "add(\"alpha\", alpha > P7_MIN_ALPHA,"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3102,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"modulate.a = %.4f (must be > %.4f)\" % (alpha, P7_MIN_ALPHA))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3107,
+   "token": ">",
+   "kind": "code",
+   "text": "add(\"on_screen\", (area is not None) and area >= float(min_area),"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3108,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"the part of its rect inside the viewport is %s px^2 (declared >= %s), \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3114,
+   "token": ">",
+   "kind": "code",
+   "text": "add(\"size\", size[0] >= min_size[0] and size[1] >= min_size[1],"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3114,
+   "token": ">",
+   "kind": "code",
+   "text": "add(\"size\", size[0] >= min_size[0] and size[1] >= min_size[1],"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3115,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"size is %s (declared >= %s)\" % (size, min_size))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3148,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"; \".join(\"%s -> %s\" % (m[\"id\"], \",\".join(m[\"failed_checks\"]))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3232,
+   "token": ">",
+   "kind": "code",
+   "text": "p1_pass = (not flat) and cf >= P1_MIN_CONTENT_FRACTION and bc >= P1_MIN_BBOX_COVERAGE"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3232,
+   "token": ">",
+   "kind": "code",
+   "text": "p1_pass = (not flat) and cf >= P1_MIN_CONTENT_FRACTION and bc >= P1_MIN_BBOX_COVERAGE"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3233,
+   "token": ">",
+   "kind": "code",
+   "text": "why = \"best frame #%s: content %.4f%% (>=%.2f%%), bbox coverage %.4f%% (>=%.2f%%), \" \\"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3233,
+   "token": ">",
+   "kind": "code",
+   "text": "why = \"best frame #%s: content %.4f%% (>=%.2f%%), bbox coverage %.4f%% (>=%.2f%%), \" \\"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3357,
+   "token": ">",
+   "kind": "code",
+   "text": "loop_advanced = len(drawn) >= 2 and drawn[-1] > drawn[0]"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3357,
+   "token": ">",
+   "kind": "code",
+   "text": "loop_advanced = len(drawn) >= 2 and drawn[-1] > drawn[0]"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3369,
+   "token": ">",
+   "kind": "code",
+   "text": "autonomous_evidence = bool(auto_gameplay) or pixel_auto >= P3_MIN_CHANGED_PIXELS"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3381,
+   "token": ">",
+   "kind": "code",
+   "text": "reasons.append(\"the render loop did not advance (frames_drawn %s -> %s)\""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3389,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"change >= %d px was seen, in the no-input frames OR during the \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3393,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"why\": \"frames_drawn %s -> %s (advanced=%s); gameplay progress: autonomous=%s \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3762,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"agent.json -> report.calls[*].state_budget_retries.\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3794,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"`projects/_exercises/<name>` and is then addressable exactly \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3795,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"like a game (--games <name>).  Nothing under \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3796,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"projects/<game>/ is touched by this.\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3861,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"<exe-root>\\\\<game>\\\\<game>.exe instead of the project\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3861,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"<exe-root>\\\\<game>\\\\<game>.exe instead of the project\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3861,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"<exe-root>\\\\<game>\\\\<game>.exe instead of the project\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3912,
+   "token": ">",
+   "kind": "code",
+   "text": "log(\"exercises: %s\" % \", \".join(\"%s -> %s\" % (k, v) for k, v in sorted(GAME_DIRS.items())))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3913,
+   "token": ">",
+   "kind": "code",
+   "text": "log(\"thresholds: P1 content>=%.4f bbox>=%.4f delta>%d | P2 %d frames | P3 %d px | \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3913,
+   "token": ">",
+   "kind": "code",
+   "text": "log(\"thresholds: P1 content>=%.4f bbox>=%.4f delta>%d | P2 %d frames | P3 %d px | \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3913,
+   "token": ">",
+   "kind": "code",
+   "text": "log(\"thresholds: P1 content>=%.4f bbox>=%.4f delta>%d | P2 %d frames | P3 %d px | \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3915,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"(P7 alpha>%.4f)\""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_artifact_index.py",
+   "line": 14,
+   "token": ">",
+   "kind": "code",
+   "text": "Per run directory (`<prefix>/<game>/<backend>/`):"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_artifact_index.py",
+   "line": 14,
+   "token": ">",
+   "kind": "code",
+   "text": "Per run directory (`<prefix>/<game>/<backend>/`):"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_artifact_index.py",
+   "line": 14,
+   "token": ">",
+   "kind": "code",
+   "text": "Per run directory (`<prefix>/<game>/<backend>/`):"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_artifact_index.py",
+   "line": 169,
+   "token": ">",
+   "kind": "comment",
+   "text": "# sha256 over \"<relpath> <sha256> <bytes>\\n\" for every file in the directory, so"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_artifact_index.py",
+   "line": 169,
+   "token": ">",
+   "kind": "comment",
+   "text": "# sha256 over \"<relpath> <sha256> <bytes>\\n\" for every file in the directory, so"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_artifact_index.py",
+   "line": 169,
+   "token": ">",
+   "kind": "comment",
+   "text": "# sha256 over \"<relpath> <sha256> <bytes>\\n\" for every file in the directory, so"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_artifact_index.py",
+   "line": 179,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"digest_what\": (\"sha256 over `\\\"<repo-relative path> <file sha256> <bytes>\\\\n\\\"` \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_artifact_index.py",
+   "line": 179,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"digest_what\": (\"sha256 over `\\\"<repo-relative path> <file sha256> <bytes>\\\\n\\\"` \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_artifact_index.py",
+   "line": 179,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"digest_what\": (\"sha256 over `\\\"<repo-relative path> <file sha256> <bytes>\\\\n\\\"` \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_artifact_index.py",
+   "line": 240,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"`certutil -hashfile <path> SHA256` or this same script.\"),"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_artifact_index.py",
+   "line": 258,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"> 为什么入库：`runs/**` 被 `.gitignore` 忽略（第 12 行 `runs/`、第 43 行\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_artifact_index.py",
+   "line": 259,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"> 为什么入库：`runs/**` 被 `.gitignore` 忽略（第 12 行 `runs/`、第 43 行\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_artifact_index.py",
+   "line": 260,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"> `godot-mcp/runs/`），报告引用的每个 run 产物只存在于本机。本文件把**关键产物**\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_artifact_index.py",
+   "line": 261,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"> 的 sha256 / 大小 / 生成命令**提交进仓**，使结论在 `runs/**` 不入库的前提下仍可事后核验。\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_artifact_index.py",
+   "line": 262,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\">\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_artifact_index.py",
+   "line": 263,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"> 复算：`certutil -hashfile <path> SHA256`，或重跑本清单的生成器\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_artifact_index.py",
+   "line": 263,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"> 复算：`certutil -hashfile <path> SHA256`，或重跑本清单的生成器\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_artifact_index.py",
+   "line": 264,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"> （命令见本文件表头的 §复算）。\", \"\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"\"\"playtest_player.py -- TASK-132: the MODEL-PLAYER loop (image in -> action out -> inject -> watch)."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"\"\"playtest_player.py -- TASK-132: the MODEL-PLAYER loop (image in -> action out -> inject -> watch)."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"\"\"playtest_player.py -- TASK-132: the MODEL-PLAYER loop (image in -> action out -> inject -> watch)."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 16,
+   "token": ">",
+   "kind": "code",
+   "text": "1. the model really looked at the pixels  -> request body carries a base64 PNG, exactly"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 17,
+   "token": ">",
+   "kind": "code",
+   "text": "1 image + 1 question (kept verbatim in <out>/<step>/request.json)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 17,
+   "token": ">",
+   "kind": "code",
+   "text": "1 image + 1 question (kept verbatim in <out>/<step>/request.json)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 18,
+   "token": ">",
+   "kind": "code",
+   "text": "2. the GAME accepted the input (ack)      -> the game's OWN InputMap says the action is"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 20,
+   "token": ">",
+   "kind": "code",
+   "text": "3. the VIEWPORT changed (change)          -> before/after frame sha256 + pixel diff,"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 22,
+   "token": ">",
+   "kind": "code",
+   "text": "gameplay observables (`tools/playability_controls.json -> gameplay_observables`)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 48,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/session.json        pid / port / engine / viewport / action-set source"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 48,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/session.json        pid / port / engine / viewport / action-set source"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 49,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/steps.jsonl         one JSON object per step (schema in the task)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 49,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/steps.jsonl         one JSON object per step (schema in the task)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 50,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/frames/*.png        every frame the loop captured"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 50,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/frames/*.png        every frame the loop captured"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 51,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/states/*.json       every state snapshot the loop read"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 51,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/states/*.json       every state snapshot the loop read"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 52,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/<step>/request.json the RAW request body the model received (base64 kept)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 52,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/<step>/request.json the RAW request body the model received (base64 kept)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 52,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/<step>/request.json the RAW request body the model received (base64 kept)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 53,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/<step>/response.json the RAW response body the service returned"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 53,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/<step>/response.json the RAW response body the service returned"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 53,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/<step>/response.json the RAW response body the service returned"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 54,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/demo.png            left = frame sequence, right = the model's action+probs"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 54,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/demo.png            left = frame sequence, right = the model's action+probs"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 55,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/filmstrip.png       the gate's filmstrip format, for human re-checks"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 55,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/filmstrip.png       the gate's filmstrip format, for human re-checks"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 56,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/player.json         the verdict + per-step summary + counts"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 56,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/player.json         the verdict + per-step summary + counts"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 109,
+   "token": ">",
+   "kind": "comment",
+   "text": "# names the threshold: with the same action AND the same frame hash for >= 3"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 117,
+   "token": ">",
+   "kind": "comment",
+   "text": "# entirely: >= 3 consecutive steps that were really SENT to the game and produced no"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 123,
+   "token": ">",
+   "kind": "comment",
+   "text": "#   * pixels   -- `> max(2.5 * control, 40)`.  The factor is higher than the gate's"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 135,
+   "token": ">",
+   "kind": "comment",
+   "text": "# `mv > cmv`, which a game that is animating on its own can clear by a hair.  The strict"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 138,
+   "token": ">",
+   "kind": "comment",
+   "text": "# control window (>= 2x is the task's own example, and 2x is what the pixel term already"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 168,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "`tools/playability_controls.json -> model_player_change_margin`.  The file is the"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 363,
+   "token": ">",
+   "kind": "code",
+   "text": "(`games.<game>.refusal_evidence.game_side_fields` / `keys`) names the counters the"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 395,
+   "token": ">",
+   "kind": "code",
+   "text": "hit = \"%s: %r -> %r\" % (c.get(\"key\"), c.get(\"from\"), c.get(\"to\"))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 420,
+   "token": ">",
+   "kind": "code",
+   "text": "if factor > 1.0:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 423,
+   "token": ">",
+   "kind": "code",
+   "text": "gameplay_wins = bool(mv >= factor * cmv and mv >= floor)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 423,
+   "token": ">",
+   "kind": "code",
+   "text": "gameplay_wins = bool(mv >= factor * cmv and mv >= floor)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 426,
+   "token": ">",
+   "kind": "code",
+   "text": "gameplay_wins = bool(mv > cmv)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 427,
+   "token": ">",
+   "kind": "code",
+   "text": "pixel_wins = px > max(int(ctl * float(spec[\"pixel_control_factor\"])),"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 429,
+   "token": ">",
+   "kind": "code",
+   "text": "ratio = (round(mv / cmv, 3) if cmv > 0 else None)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 435,
+   "token": ">",
+   "kind": "code",
+   "text": "why = (\"the viewport changed %d px, over the control window's %d (needs > \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 492,
+   "token": ">",
+   "kind": "code",
+   "text": "(recorded in `session.json -> action_set_source`), it never invents an action."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 560,
+   "token": ">",
+   "kind": "code",
+   "text": "nodes move), so the useful reading is \"<node>.<field>: <from> -> <to>\".  The values are"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 560,
+   "token": ">",
+   "kind": "code",
+   "text": "nodes move), so the useful reading is \"<node>.<field>: <from> -> <to>\".  The values are"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 560,
+   "token": ">",
+   "kind": "code",
+   "text": "nodes move), so the useful reading is \"<node>.<field>: <from> -> <to>\".  The values are"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 560,
+   "token": ">",
+   "kind": "code",
+   "text": "nodes move), so the useful reading is \"<node>.<field>: <from> -> <to>\".  The values are"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 560,
+   "token": ">",
+   "kind": "code",
+   "text": "nodes move), so the useful reading is \"<node>.<field>: <from> -> <to>\".  The values are"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 568,
+   "token": ">",
+   "kind": "code",
+   "text": "out.append(\"%s.pos %s->%s\" % (key, _short(f), _short(t)))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 570,
+   "token": ">",
+   "kind": "code",
+   "text": "out.append(\"%s %s->%s\" % (key, _short(f), _short(t)))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 609,
+   "token": ">",
+   "kind": "code",
+   "text": "len(f) == len(t) >= 2:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 634,
+   "token": ">",
+   "kind": "code",
+   "text": "* the viewport changed more than the control did -- `> max(2.5*control, 40 px)`."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 642,
+   "token": ">",
+   "kind": "code",
+   "text": "observables must move >= 2x as far as in the control window, with a declared floor for"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 786,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"(>= %.1fx the control window) it does NOT\""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 790,
+   "token": ">",
+   "kind": "code",
+   "text": "if len(out) >= limit:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 824,
+   "token": ">",
+   "kind": "code",
+   "text": "if cur_len > best[\"length\"]:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 825,
+   "token": ">",
+   "kind": "code",
+   "text": "best.update({\"found\": cur_len >= int(min_run), \"length\": cur_len,"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 829,
+   "token": ">",
+   "kind": "code",
+   "text": "best[\"reading\"] = (\"no run of >= %d consecutive steps shared one action AND one \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 862,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"\"\"TASK-134 §1.C.1: >= `min_run` consecutive SENT steps with NO gameplay progress."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 893,
+   "token": ">",
+   "kind": "code",
+   "text": "if cur_len > best[\"length\"]:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 894,
+   "token": ">",
+   "kind": "code",
+   "text": "best.update({\"found\": cur_len >= int(min_run), \"length\": cur_len,"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 898,
+   "token": ">",
+   "kind": "code",
+   "text": "best[\"length_note\"] = (\"no run of >= %d consecutive SENT steps without gameplay \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 908,
+   "token": ">",
+   "kind": "code",
+   "text": "best[\"what\"] = (\"TASK-134 §1.C.1: >= %d consecutive injected steps with no gameplay \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 917,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"\"\"`steps.jsonl` -> the TASK-132 §1.2 three-state verdict, under BOTH margins."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 948,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"what\": (\"TASK-135 §1.B: the baseline rule is TASK-132's `gameplay movement > \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 971,
+   "token": ">",
+   "kind": "comment",
+   "text": "#   * strict PASS                        -> `PASS`,                counts_as_pass True"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 972,
+   "token": ">",
+   "kind": "comment",
+   "text": "#   * strict not PASS but baseline PASS  -> `PASS(baseline only)`, counts_as_pass False"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 973,
+   "token": ">",
+   "kind": "comment",
+   "text": "#   * neither PASS                       -> the STRICT verdict,   counts_as_pass False"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 975,
+   "token": ">",
+   "kind": "comment",
+   "text": "# baseline term and its pixel term is identical), so `strict PASS => baseline PASS`;"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1127,
+   "token": ">",
+   "kind": "code",
+   "text": "out[\"window_why\"] = (\"every measured window spans >= %d drawn frames (declared \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1135,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"\"\"`steps.jsonl` -> the TASK-132 §1.2 three-state verdict."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1139,
+   "token": ">",
+   "kind": "code",
+   "text": "* PASS   : >= 8 steps, and among the ACCEPTED steps >= 75% changed, and the loop was"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1139,
+   "token": ">",
+   "kind": "code",
+   "text": "* PASS   : >= 8 steps, and among the ACCEPTED steps >= 75% changed, and the loop was"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1206,
+   "token": ">",
+   "kind": "comment",
+   "text": "#   (a) the model VARIED its action and the game still would not move  -> a real"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1209,
+   "token": ">",
+   "kind": "comment",
+   "text": "#       step (its fixed point) -> the run cannot separate \"the game ignores this input\""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1228,
+   "token": ">",
+   "kind": "code",
+   "text": "len(fail_steps) >= 2 and len(fp_actions) == 1 and"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1231,
+   "token": ">",
+   "kind": "comment",
+   "text": "# threshold (>= 3 identical action + identical frame).  It is a statement about the"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1269,
+   "token": ">",
+   "kind": "code",
+   "text": "if len(stamps) >= 2:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1299,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"game_clock_first_last_ms\": ([stamps[0][0], stamps[-1][0]] if len(stamps) >= 2"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1339,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"counted as progress, and a run must still show >= \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1340,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"%d steps of real progress (>= %.2f of its rated steps) to PASS\""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1370,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"one_action_loop\": bool(len(model_steps) >= PASS_MIN_STEPS and len(distinct) <= 1),"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1382,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"rule\": \"PASS = >=%d injected steps AND accepted-and-changed rate >= %.2f AND the \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1382,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"rule\": \"PASS = >=%d injected steps AND accepted-and-changed rate >= %.2f AND the \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1386,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"the MODEL (>= %d steps of the same action on the same frame) and \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1387,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"MODEL_NO_PROGRESS is its wider twin (>= %d consecutive sent steps with no \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1395,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"must still show >= %d steps of real progress\""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1448,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"PASS rule needs >= %d.  %s\""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1465,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"carve-out removed step(s) %s; the boundary needs >= %d, because a \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1495,
+   "token": ">",
+   "kind": "comment",
+   "text": "# action.  Every numeral in this reading (>= 8 injected steps, >= 75% progress,"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1495,
+   "token": ">",
+   "kind": "comment",
+   "text": "# action.  Every numeral in this reading (>= 8 injected steps, >= 75% progress,"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1508,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"game-side rule needs >= %d\""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1525,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"carve-out; the boundary needs >= %d\""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1546,
+   "token": ">",
+   "kind": "code",
+   "text": "out[\"game_side_rule\"] = (\"same thresholds as the model arm (>= %d injected steps, \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1547,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\">= %.2f progress, FAIL on any accepted-but-unchanged \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1548,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"step, >= %d steps of real progress); only the two \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1773,
+   "token": ">",
+   "kind": "code",
+   "text": "if bb and bb[2] > 32 and bb[3] > 32:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1773,
+   "token": ">",
+   "kind": "code",
+   "text": "if bb and bb[2] > 32 and bb[3] > 32:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1858,
+   "token": ">",
+   "kind": "code",
+   "text": "TASK-133 measured `pong x jev`'s \"playable window\" with `PONG_TICK` and read 23 s -> 18 s,"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1860,
+   "token": ">",
+   "kind": "code",
+   "text": "the left paddle (TASK-133 §4.2, `LEFT 5:0` -> `RIGHT 5:0`).  \"The model did not play\" and"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1889,
+   "token": ">",
+   "kind": "comment",
+   "text": "# only answer \"no scripted policy is declared for this game\" -> `wait` -> zero"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1889,
+   "token": ">",
+   "kind": "comment",
+   "text": "# only answer \"no scripted policy is declared for this game\" -> `wait` -> zero"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1890,
+   "token": ">",
+   "kind": "comment",
+   "text": "# injected steps -> INCONCLUSIVE for 15 of the 20 games, which is exactly what"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1943,
+   "token": ">",
+   "kind": "code",
+   "text": "if self._f(vel, 0) > 0:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1946,
+   "token": ">",
+   "kind": "code",
+   "text": "return self._act(\"pong_left_up\" if py > target + 10 else"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1949,
+   "token": ">",
+   "kind": "code",
+   "text": "if py - by > 10:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1952,
+   "token": ">",
+   "kind": "code",
+   "text": "if by - py > 10:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2034,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"piece at x=%s -> target column %d, then drop\" % (px, t))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2054,
+   "token": ">",
+   "kind": "code",
+   "text": "change the AIM ANGLE (`AngleIndex` 2->3->4->0->1 over the whole arc; `ShooterCol`"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2054,
+   "token": ">",
+   "kind": "code",
+   "text": "change the AIM ANGLE (`AngleIndex` 2->3->4->0->1 over the whole arc; `ShooterCol`"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2054,
+   "token": ">",
+   "kind": "code",
+   "text": "change the AIM ANGLE (`AngleIndex` 2->3->4->0->1 over the whole arc; `ShooterCol`"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2054,
+   "token": ">",
+   "kind": "code",
+   "text": "change the AIM ANGLE (`AngleIndex` 2->3->4->0->1 over the whole arc; `ShooterCol`"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2075,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"sweep the aim: AngleIndex %s -> %s (the aim dots move with it)\""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2125,
+   "token": ">",
+   "kind": "code",
+   "text": "if bx > px + 8:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2143,
+   "token": ">",
+   "kind": "code",
+   "text": "if self._f([y], 0, 300.0) > self._f([target], 0, 300.0) - 20:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2157,
+   "token": ">",
+   "kind": "code",
+   "text": "if int(row) > int(v.get(\"GoalRow\") if v.get(\"GoalRow\") is not None else 0):"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2328,
+   "token": ">",
+   "kind": "comment",
+   "text": "# `choice_criteria` -> `action_effect` reads to describe each candidate."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2331,
+   "token": ">",
+   "kind": "comment",
+   "text": "# `ack_result`.  Written into `player.json -> ack_missing` so a run that lost its ack"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2335,
+   "token": ">",
+   "kind": "comment",
+   "text": "# counts and whether they matched.  Written into `player.json -> frame_alignment`."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2478,
+   "token": ">",
+   "kind": "comment",
+   "text": "#   (`build_goal` -> the agent's `action_criteria` builds it from the action set"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2552,
+   "token": ">",
+   "kind": "code",
+   "text": "return (\"shift the falling piece one column %s: PieceX %s -> %s.  The piece only \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2558,
+   "token": ">",
+   "kind": "code",
+   "text": "return (\"rotate the falling piece: PieceRot %s -> %s.  A rotation that does not \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2578,
+   "token": ">",
+   "kind": "code",
+   "text": "return (\"move the shooter one column %s: ShooterCol %s -> %s; the aim dots move \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2595,
+   "token": ">",
+   "kind": "code",
+   "text": "(`tools/playability_controls.json -> games.<game>.capabilities[]`, whose fields are"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2595,
+   "token": ">",
+   "kind": "code",
+   "text": "(`tools/playability_controls.json -> games.<game>.capabilities[]`, whose fields are"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3109,
+   "token": ">",
+   "kind": "code",
+   "text": "if goal is not None and isinstance(last, int) and last >= goal:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3118,
+   "token": ">",
+   "kind": "code",
+   "text": "last >= goal)) or"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3137,
+   "token": ">",
+   "kind": "code",
+   "text": "capture -> after capture / after state), so the pixel term and the movement sum come"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3357,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"injection, whose ACHIEVED drawn-frame span (start read -> the \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3370,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"`player.json -> frame_alignment.matched` is their equality\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3395,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"which one `player.json -> verdict` is; the other is filed as \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3448,
+   "token": ">",
+   "kind": "code",
+   "text": "i >= PASS_MIN_STEPS:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3453,
+   "token": ">",
+   "kind": "code",
+   "text": "for t in tail)) > 1:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3629,
+   "token": ">",
+   "kind": "code",
+   "text": "dr.text((x, y + 20), \"ack: %s  [%s]   changed: %s   -> %s\""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3808,
+   "token": ">",
+   "kind": "code",
+   "text": "if len(cur) + len(w) + 1 > width:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3832,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"accepted + 0 px vs 0 control -> not changed\", ch[\"changed\"], False)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3838,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"4300 px vs 0 control -> changed\", ch2[\"changed\"], True)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3843,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"50 px vs 48 control -> NOT changed\", ch3[\"changed\"], False)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3845,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"100 px vs 120 control -> NOT changed\", ch4[\"changed\"], False)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3847,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"100 px vs 20 control -> changed\", ch4b[\"changed\"], True)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3852,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"ball moved 1.7 px in both windows -> NOT changed\", ch6[\"changed\"], False)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3854,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"paddle moved 202 px vs ball's 1.7 -> changed\", ch7[\"changed\"], True)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3862,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"gameplay moved the same in control too -> NOT changed\", ch5[\"changed\"], False)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3872,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"8 distinct accepted+changed -> PASS\", s[\"verdict\"], \"PASS\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3878,
+   "token": ">",
+   "kind": "comment",
+   "text": "# one FAILing step among varied actions, no terminal state -> the strong FAIL"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3879,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"one accepted static step -> FAIL\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3890,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"same action + same frame on every failing step -> INCONCLUSIVE\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3893,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"one action repeated 8x -> INCONCLUSIVE\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3895,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"3 steps -> INCONCLUSIVE\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3907,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"nothing -> not accepted\", a3[\"accepted\"], False)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3910,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"no model action -> not injected\", a4[\"injected\"], False)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3911,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"no model action -> not accepted\", a4[\"accepted\"], False)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3914,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"8 steps but the model never acted -> INCONCLUSIVE\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3926,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"8 identical action+frame steps -> fixed point found\", fp[\"found\"], True)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3931,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"2 identical steps -> NOT a fixed point\", model_fixed_point(recs_fp[:2])[\"found\"],"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3933,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"3 identical steps -> a fixed point\", model_fixed_point(recs_fp[:3])[\"found\"],"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3940,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"same action on different frames -> NOT a fixed point\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3957,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"clean run -> no fixed point\", summarise(recs, \"jev\", \"g\")[\"MODEL_FIXED_POINT\"],"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3959,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"clean run -> still PASS\", summarise(recs, \"jev\", \"g\")[\"verdict\"], \"PASS\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3973,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"mixed actions + no progress -> MODEL_NO_PROGRESS\", npg[\"found\"], True)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3985,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"same action+frame+no change -> BOTH conclusions\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3989,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"same action+frame that DID change -> only the fixed point\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3993,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"clean run -> no MODEL_NO_PROGRESS\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3996,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"2 static steps -> NOT MODEL_NO_PROGRESS\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3998,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"3 static steps -> MODEL_NO_PROGRESS\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4020,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"scripted arm with 8/8 progress -> game-side PASS\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4041,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"strict keeps a 2.35x gameplay win (>= 2x)\", ch_keep[\"strict\"][\"changed\"], True)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4052,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"zero control + 0.5 movement -> baseline changed\", ch_zero[\"changed\"], True)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4053,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"zero control + 0.5 movement -> strict NOT changed (below the floor)\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4055,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"zero control + 1.0 movement -> strict changed\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4258,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"absolute target: no start frame -> no target\", pr.frame_target_for(None), None)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4327,
+   "token": ">",
+   "kind": "code",
+   "text": "description=\"TASK-132 model-player loop: image -> model action -> inject -> \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4327,
+   "token": ">",
+   "kind": "code",
+   "text": "description=\"TASK-132 model-player loop: image -> model action -> inject -> \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4327,
+   "token": ">",
+   "kind": "code",
+   "text": "description=\"TASK-132 model-player loop: image -> model action -> inject -> \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4328,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"ack/change evidence -> demo\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4361,
+   "token": ">",
+   "kind": "code",
+   "text": "help=\"which declared change margin `player.json -> verdict` is computed \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4362,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"with.  TASK-136 §1.A.1: the DEFAULT is 'strict' (>= %.1fx the \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4364,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"written as PASS; 'baseline' (TASK-132: gameplay movement > control \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4368,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"declaration lives in tools/playability_controls.json -> \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4374,
+   "token": ">",
+   "kind": "code",
+   "text": "help=\"project = the source project under godot; exe = dist/exe/<game>\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4380,
+   "token": ">",
+   "kind": "docstring-or-string",
+   "text": "\"game, e.g. neg_frozen -> breakout)\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4437,
+   "token": ">",
+   "kind": "code",
+   "text": "sub.add_parser(\"prep\", help=\"read-only environment probe -> runs/model-player/_env/prep.json\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4441,
+   "token": ">",
+   "kind": "code",
+   "text": "s.add_argument(\"--path\", required=True, help=\"a <game>/<backend> evidence directory\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4441,
+   "token": ">",
+   "kind": "code",
+   "text": "s.add_argument(\"--path\", required=True, help=\"a <game>/<backend> evidence directory\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4444,
+   "token": ">",
+   "kind": "code",
+   "text": "a.add_argument(\"--path\", required=True, help=\"a <game>/<backend> evidence directory\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4444,
+   "token": ">",
+   "kind": "code",
+   "text": "a.add_argument(\"--path\", required=True, help=\"a <game>/<backend> evidence directory\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4450,
+   "token": ">",
+   "kind": "code",
+   "text": "f.add_argument(\"--path\", required=True, help=\"a <game>/<backend> evidence directory\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4450,
+   "token": ">",
+   "kind": "code",
+   "text": "f.add_argument(\"--path\", required=True, help=\"a <game>/<backend> evidence directory\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4451,
+   "token": ">",
+   "kind": "code",
+   "text": "f.add_argument(\"--out\", default=\"\", help=\"default <path>/failcase.png\")"
+  }
+ ],
+ "shell_true": [],
+ "code_hits": [
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_add_refusal_fields.py",
+   "line": 11,
+   "token": ">",
+   "kind": "code",
+   "text": "(every one of them was observed in `steps.jsonl -> state_delta` of the TASK-138"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_after.py",
+   "line": 58,
+   "token": ">",
+   "kind": "code",
+   "text": "if n >= wait_for and n == last:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_after.py",
+   "line": 60,
+   "token": ">",
+   "kind": "code",
+   "text": "if stable >= 3:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_anchors.py",
+   "line": 4,
+   "token": ">",
+   "kind": "code",
+   "text": "For each requested `<prefix>/<game>/<backend>` it prints, per step, the BEFORE/AFTER frame"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_anchors.py",
+   "line": 4,
+   "token": ">",
+   "kind": "code",
+   "text": "For each requested `<prefix>/<game>/<backend>` it prints, per step, the BEFORE/AFTER frame"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_anchors.py",
+   "line": 4,
+   "token": ">",
+   "kind": "code",
+   "text": "For each requested `<prefix>/<game>/<backend>` it prints, per step, the BEFORE/AFTER frame"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_anchors.py",
+   "line": 6,
+   "token": ">",
+   "kind": "code",
+   "text": "DECLARED game-state fields as of that step (`steps.jsonl -> markers` and the declared"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_anchors.py",
+   "line": 104,
+   "token": ">",
+   "kind": "code",
+   "text": "print(\"      delta %s %r -> %r\" % (d_.get(\"key\"), d_.get(\"from\"), d_.get(\"to\")))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_cmd.py",
+   "line": 6,
+   "token": ">",
+   "kind": "code",
+   "text": "is executed with `shell=False` so a `>`, `2>&1` or `1>NUL` token could not be interpreted as"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_cmd.py",
+   "line": 6,
+   "token": "2>&1",
+   "kind": "code",
+   "text": "is executed with `shell=False` so a `>`, `2>&1` or `1>NUL` token could not be interpreted as"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_cmd.py",
+   "line": 6,
+   "token": "1>NUL",
+   "kind": "code",
+   "text": "is executed with `shell=False` so a `>`, `2>&1` or `1>NUL` token could not be interpreted as"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_cmd.py",
+   "line": 15,
+   "token": ">",
+   "kind": "code",
+   "text": "D:\\\\Anaconda\\\\python.exe runs\\\\model-player\\\\_scripts\\\\t139_cmd.py --cwd <dir> -- <cmd> <args...>"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_cmd.py",
+   "line": 15,
+   "token": ">",
+   "kind": "code",
+   "text": "D:\\\\Anaconda\\\\python.exe runs\\\\model-player\\\\_scripts\\\\t139_cmd.py --cwd <dir> -- <cmd> <args...>"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_cmd.py",
+   "line": 15,
+   "token": ">",
+   "kind": "code",
+   "text": "D:\\\\Anaconda\\\\python.exe runs\\\\model-player\\\\_scripts\\\\t139_cmd.py --cwd <dir> -- <cmd> <args...>"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_cmd.py",
+   "line": 89,
+   "token": ">",
+   "kind": "code",
+   "text": "print(\"usage: t139_cmd.py [--cwd DIR] [--ledger PATH] -- <command> [args...]\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_code_revision.py",
+   "line": 63,
+   "token": ">",
+   "kind": "code",
+   "text": "print(\"%-58s %s %s\" % (rel, v.get(\"sha256\", \"<missing>\")[:16], v.get(\"bytes\")))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_compare.py",
+   "line": 7,
+   "token": ">",
+   "kind": "code",
+   "text": "* the per-game old -> new table with the flip flagged,"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_compare.py",
+   "line": 37,
+   "token": ">",
+   "kind": "code",
+   "text": "v = v or \"<missing>\""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_compare.py",
+   "line": 104,
+   "token": ">",
+   "kind": "code",
+   "text": "print(\"   %-16s %-26s -> %-26s %s\" % (g, o, n, \"FLIP\"))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_cut_probe.py",
+   "line": 42,
+   "token": ">",
+   "kind": "code",
+   "text": "if first > 0:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_hashes.py",
+   "line": 5,
+   "token": ">",
+   "kind": "code",
+   "text": "report can be recomputed with `certutil -hashfile <path> SHA256` or by re-running this file."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_health.py",
+   "line": 38,
+   "token": ">",
+   "kind": "code",
+   "text": "print(\"   GET %s -> %s %s\" % (path, st, body[:200].replace(\"\\n\", \" \")))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_inspect_step.py",
+   "line": 32,
+   "token": ">",
+   "kind": "code",
+   "text": "idx = int(argv[1]) if len(argv) > 1 else 0"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_merge.py",
+   "line": 33,
+   "token": ">",
+   "kind": "code",
+   "text": "print(\"usage: t139_merge.py <prefix> <suffix>\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_merge.py",
+   "line": 33,
+   "token": ">",
+   "kind": "code",
+   "text": "print(\"usage: t139_merge.py <prefix> <suffix>\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_sensitivity.py",
+   "line": 120,
+   "token": ">",
+   "kind": "code",
+   "text": "flip = len(set(verdicts)) > 1"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_sensitivity.py",
+   "line": 150,
+   "token": ">",
+   "kind": "code",
+   "text": "if flip and len(rungs) > 1:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_sweep.py",
+   "line": 8,
+   "token": ">",
+   "kind": "code",
+   "text": "playjev    the vision arm, `--backend playjev --variant V3` (>= 8 games if budget allows)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t139_sweep.py",
+   "line": 167,
+   "token": ">",
+   "kind": "code",
+   "text": "log(\"sweep arm=%s window=%d done (%d runs) -> %s\" % (arm, window, len(results), outp))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 21,
+   "token": ">",
+   "kind": "code",
+   "text": "game side the viewport is always `tree->get_root()`, whatever"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 31,
+   "token": ">",
+   "kind": "code",
+   "text": "P1 visibility      full-window frame -> background = modal colour, content mask ="
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 32,
+   "token": ">",
+   "kind": "code",
+   "text": "pixels differing from it by > PIXEL_DELTA.  Reports the content"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 98,
+   "token": ">",
+   "kind": "code",
+   "text": ":: evidence of what was reached lands in runs\\\\playability\\\\<game>\\\\agent.json:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 113,
+   "token": ">",
+   "kind": "code",
+   "text": "tokenizes at ~2.1-2.4 real tokens per estimated one (client 1018 -> service 2160; client"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 114,
+   "token": ">",
+   "kind": "code",
+   "text": "1791 -> service 4229).  TASK-129 D-C fixes that estimator (a conservative x2.5 coefficient"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 129,
+   "token": ">",
+   "kind": "code",
+   "text": "states => `sample_size: 1`, stated in the artifact."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 170,
+   "token": ">",
+   "kind": "code",
+   "text": "sampled with REAL full-window frames without touching `projects\\\\<game>`.  `--exercise <name>`"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 170,
+   "token": ">",
+   "kind": "code",
+   "text": "sampled with REAL full-window frames without touching `projects\\\\<game>`.  `--exercise <name>`"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 175,
+   "token": ">",
+   "kind": "code",
+   "text": "runs\\\\playability\\\\<game>\\\\frames\\\\NN_<label>.png     full-window frames"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 175,
+   "token": ">",
+   "kind": "code",
+   "text": "runs\\\\playability\\\\<game>\\\\frames\\\\NN_<label>.png     full-window frames"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 176,
+   "token": ">",
+   "kind": "code",
+   "text": "runs\\\\playability\\\\<game>\\\\frames.json                per-frame geometry + metrics"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 177,
+   "token": ">",
+   "kind": "code",
+   "text": "runs\\\\playability\\\\<game>\\\\filmstrip.png              all frames in one image"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 178,
+   "token": ">",
+   "kind": "code",
+   "text": "runs\\\\playability\\\\<game>\\\\states\\\\NN_<label>.json    sampled game state"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 178,
+   "token": ">",
+   "kind": "code",
+   "text": "runs\\\\playability\\\\<game>\\\\states\\\\NN_<label>.json    sampled game state"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 179,
+   "token": ">",
+   "kind": "code",
+   "text": "runs\\\\playability\\\\<game>\\\\gate.json                  P1..P7 verdicts + evidence"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 182,
+   "token": ">",
+   "kind": "code",
+   "text": "runs\\\\playability\\\\<game>\\\\agent.json                 the text backend: every call,"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 185,
+   "token": ">",
+   "kind": "code",
+   "text": "runs\\\\playability\\\\<game>\\\\playjev.json               the vision backend: per-frame"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 262,
+   "token": ">",
+   "kind": "code",
+   "text": "P1_MIN_CONTENT_FRACTION = 0.008    # >=0.8% of the window's pixels are content"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 269,
+   "token": ">",
+   "kind": "code",
+   "text": "P1_MIN_BBOX_COVERAGE = 0.12       # content bbox spans >=12% of the window area"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 541,
+   "token": ">",
+   "kind": "code",
+   "text": "out[\"current_scene\"] = str(get_tree().current_scene.get_path()) if get_tree().current_scene != null else \"<null>\""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 552,
+   "token": ">",
+   "kind": "code",
+   "text": "while stack.size() > 0 and n_nodes < %d:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 762,
+   "token": ">",
+   "kind": "code",
+   "text": "cmd -> .console.exe -> engine chain survived `taskkill /T` (\"the operation"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 762,
+   "token": ">",
+   "kind": "code",
+   "text": "cmd -> .console.exe -> engine chain survived `taskkill /T` (\"the operation"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 904,
+   "token": ">>",
+   "kind": "code",
+   "text": "q = (flat >> 4)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 908,
+   "token": ">>",
+   "kind": "code",
+   "text": "bg_q = np.array([(bg_key >> 8) & 0xF, (bg_key >> 4) & 0xF, bg_key & 0xF], dtype=np.int16)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 908,
+   "token": ">>",
+   "kind": "code",
+   "text": "bg_q = np.array([(bg_key >> 8) & 0xF, (bg_key >> 4) & 0xF, bg_key & 0xF], dtype=np.int16)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 911,
+   "token": ">",
+   "kind": "code",
+   "text": "mask = diff > PIXEL_DELTA"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 960,
+   "token": ">>",
+   "kind": "code",
+   "text": "q = (flat >> 4)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 965,
+   "token": ">>",
+   "kind": "code",
+   "text": "bg_q = np.array([(bg_key >> 8) & 0xF, (bg_key >> 4) & 0xF, bg_key & 0xF], dtype=np.int16)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 965,
+   "token": ">>",
+   "kind": "code",
+   "text": "bg_q = np.array([(bg_key >> 8) & 0xF, (bg_key >> 4) & 0xF, bg_key & 0xF], dtype=np.int16)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 968,
+   "token": ">",
+   "kind": "code",
+   "text": "mask = diff > PIXEL_DELTA"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 969,
+   "token": ">",
+   "kind": "code",
+   "text": "if margin > 0 and 2 * margin < min(h, w):"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 973,
+   "token": ">",
+   "kind": "code",
+   "text": "info = {\"rule\": \"modal-colour (4-bit quantised) + PIXEL_DELTA>%d content mask, \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 1111,
+   "token": ">",
+   "kind": "code",
+   "text": "if eb.get(k, \"<missing>\") != v:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 1338,
+   "token": ">",
+   "kind": "code",
+   "text": "log(\"    endpoint up in %ss; tools/list -> %d tools\" % (secs, len(tools)))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 1496,
+   "token": ">",
+   "kind": "code",
+   "text": "state_wins = len(act_delta) > len(ctl_delta)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 1497,
+   "token": ">",
+   "kind": "code",
+   "text": "pixel_wins = act_px_n > max(int(ctl_px_n * 1.5), P3_MIN_CHANGED_PIXELS)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 1628,
+   "token": ">",
+   "kind": "code",
+   "text": "or w_[\"rect\"][2] > 200)]"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 1673,
+   "token": ">",
+   "kind": "code",
+   "text": "distinct_enough = sample_size >= wanted"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 1841,
+   "token": ">",
+   "kind": "code",
+   "text": "for every existing consumer.  But once the gate really samples >= 3 states, the honest"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 1875,
+   "token": ">",
+   "kind": "code",
+   "text": "else bool(min(mins) >= threshold)),"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 1938,
+   "token": ">",
+   "kind": "code",
+   "text": "if jev_estimate_tokens(jev_render_state(trial)) > budget:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2008,
+   "token": ">",
+   "kind": "code",
+   "text": "if len(picked) >= n:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2068,
+   "token": ">",
+   "kind": "code",
+   "text": "if len(picked) >= n:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2150,
+   "token": ">",
+   "kind": "code",
+   "text": "out[\"visual_sample_size_is_independent\"] = bool(len(vis_frames) > 1)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2233,
+   "token": ">",
+   "kind": "code",
+   "text": "out[\"verdict\"] = {\"pass\": bool(worst >= thresholds[\"noul_min_p_true\"]),"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2235,
+   "token": ">",
+   "kind": "code",
+   "text": "% (sum(1 for v in vals if v >= thresholds[\"noul_min_p_true\"]),"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2449,
+   "token": ">",
+   "kind": "code",
+   "text": "return \"%s: %r -> %r\" % (k, c.get(\"from\"), c.get(\"to\"))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2493,
+   "token": ">",
+   "kind": "code",
+   "text": "pixel_wins = act_px > max(int(ctl_px * 1.5), min_px)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2494,
+   "token": ">",
+   "kind": "code",
+   "text": "gameplay_wins = len(act_g) > len(ctl_g)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2499,
+   "token": ">",
+   "kind": "code",
+   "text": "len(act.get(\"state_changes\") or []) > len(ctl.get(\"state_changes\") or [])"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2640,
+   "token": ">",
+   "kind": "code",
+   "text": "if run_len > best[\"length\"]:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2641,
+   "token": ">",
+   "kind": "code",
+   "text": "best.update({\"found\": run_len >= int(min_run), \"length\": run_len,"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2645,
+   "token": ">",
+   "kind": "code",
+   "text": "best[\"reading\"] = (\"no run of >= %d consecutive steps shared one action AND one \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2666,
+   "token": ">",
+   "kind": "code",
+   "text": "window).  `>= min_run` consecutive such steps is the conclusion."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2685,
+   "token": ">",
+   "kind": "code",
+   "text": "if run_len > best[\"length\"]:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2686,
+   "token": ">",
+   "kind": "code",
+   "text": "best.update({\"found\": run_len >= int(min_run), \"length\": run_len,"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2690,
+   "token": ">",
+   "kind": "code",
+   "text": "best[\"reading\"] = (\"no run of >= %d consecutive steps that were SENT to the game \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2696,
+   "token": ">",
+   "kind": "code",
+   "text": "best[\"what\"] = (\"TASK-134 §1.C.1: >= %d consecutive injected steps with no gameplay \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2781,
+   "token": ">",
+   "kind": "code",
+   "text": "same_action = bool(len(injected) >= 2 and len(set(actions)) == 1)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2782,
+   "token": ">",
+   "kind": "code",
+   "text": "fixed_point = bool(len(fail) >= 2 and len(fail_actions) == 1 and"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2824,
+   "token": ">",
+   "kind": "code",
+   "text": "return None, (\"only %d injected step(s): the rule needs >= 8\" % len(injected))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 2843,
+   "token": ">",
+   "kind": "code",
+   "text": "if rate is not None and rate >= 0.75:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3042,
+   "token": ">",
+   "kind": "code",
+   "text": "on_screen         its global rect overlaps the viewport by >= min_area_px"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3101,
+   "token": ">",
+   "kind": "code",
+   "text": "add(\"alpha\", alpha > P7_MIN_ALPHA,"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3107,
+   "token": ">",
+   "kind": "code",
+   "text": "add(\"on_screen\", (area is not None) and area >= float(min_area),"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3114,
+   "token": ">",
+   "kind": "code",
+   "text": "add(\"size\", size[0] >= min_size[0] and size[1] >= min_size[1],"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3114,
+   "token": ">",
+   "kind": "code",
+   "text": "add(\"size\", size[0] >= min_size[0] and size[1] >= min_size[1],"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3232,
+   "token": ">",
+   "kind": "code",
+   "text": "p1_pass = (not flat) and cf >= P1_MIN_CONTENT_FRACTION and bc >= P1_MIN_BBOX_COVERAGE"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3232,
+   "token": ">",
+   "kind": "code",
+   "text": "p1_pass = (not flat) and cf >= P1_MIN_CONTENT_FRACTION and bc >= P1_MIN_BBOX_COVERAGE"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3233,
+   "token": ">",
+   "kind": "code",
+   "text": "why = \"best frame #%s: content %.4f%% (>=%.2f%%), bbox coverage %.4f%% (>=%.2f%%), \" \\"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3233,
+   "token": ">",
+   "kind": "code",
+   "text": "why = \"best frame #%s: content %.4f%% (>=%.2f%%), bbox coverage %.4f%% (>=%.2f%%), \" \\"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3357,
+   "token": ">",
+   "kind": "code",
+   "text": "loop_advanced = len(drawn) >= 2 and drawn[-1] > drawn[0]"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3357,
+   "token": ">",
+   "kind": "code",
+   "text": "loop_advanced = len(drawn) >= 2 and drawn[-1] > drawn[0]"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3369,
+   "token": ">",
+   "kind": "code",
+   "text": "autonomous_evidence = bool(auto_gameplay) or pixel_auto >= P3_MIN_CHANGED_PIXELS"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3381,
+   "token": ">",
+   "kind": "code",
+   "text": "reasons.append(\"the render loop did not advance (frames_drawn %s -> %s)\""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3912,
+   "token": ">",
+   "kind": "code",
+   "text": "log(\"exercises: %s\" % \", \".join(\"%s -> %s\" % (k, v) for k, v in sorted(GAME_DIRS.items())))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3913,
+   "token": ">",
+   "kind": "code",
+   "text": "log(\"thresholds: P1 content>=%.4f bbox>=%.4f delta>%d | P2 %d frames | P3 %d px | \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3913,
+   "token": ">",
+   "kind": "code",
+   "text": "log(\"thresholds: P1 content>=%.4f bbox>=%.4f delta>%d | P2 %d frames | P3 %d px | \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py",
+   "line": 3913,
+   "token": ">",
+   "kind": "code",
+   "text": "log(\"thresholds: P1 content>=%.4f bbox>=%.4f delta>%d | P2 %d frames | P3 %d px | \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_artifact_index.py",
+   "line": 14,
+   "token": ">",
+   "kind": "code",
+   "text": "Per run directory (`<prefix>/<game>/<backend>/`):"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_artifact_index.py",
+   "line": 14,
+   "token": ">",
+   "kind": "code",
+   "text": "Per run directory (`<prefix>/<game>/<backend>/`):"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_artifact_index.py",
+   "line": 14,
+   "token": ">",
+   "kind": "code",
+   "text": "Per run directory (`<prefix>/<game>/<backend>/`):"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 16,
+   "token": ">",
+   "kind": "code",
+   "text": "1. the model really looked at the pixels  -> request body carries a base64 PNG, exactly"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 17,
+   "token": ">",
+   "kind": "code",
+   "text": "1 image + 1 question (kept verbatim in <out>/<step>/request.json)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 17,
+   "token": ">",
+   "kind": "code",
+   "text": "1 image + 1 question (kept verbatim in <out>/<step>/request.json)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 18,
+   "token": ">",
+   "kind": "code",
+   "text": "2. the GAME accepted the input (ack)      -> the game's OWN InputMap says the action is"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 20,
+   "token": ">",
+   "kind": "code",
+   "text": "3. the VIEWPORT changed (change)          -> before/after frame sha256 + pixel diff,"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 22,
+   "token": ">",
+   "kind": "code",
+   "text": "gameplay observables (`tools/playability_controls.json -> gameplay_observables`)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 48,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/session.json        pid / port / engine / viewport / action-set source"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 48,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/session.json        pid / port / engine / viewport / action-set source"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 49,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/steps.jsonl         one JSON object per step (schema in the task)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 49,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/steps.jsonl         one JSON object per step (schema in the task)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 50,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/frames/*.png        every frame the loop captured"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 50,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/frames/*.png        every frame the loop captured"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 51,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/states/*.json       every state snapshot the loop read"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 51,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/states/*.json       every state snapshot the loop read"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 52,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/<step>/request.json the RAW request body the model received (base64 kept)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 52,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/<step>/request.json the RAW request body the model received (base64 kept)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 52,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/<step>/request.json the RAW request body the model received (base64 kept)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 53,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/<step>/response.json the RAW response body the service returned"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 53,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/<step>/response.json the RAW response body the service returned"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 53,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/<step>/response.json the RAW response body the service returned"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 54,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/demo.png            left = frame sequence, right = the model's action+probs"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 54,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/demo.png            left = frame sequence, right = the model's action+probs"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 55,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/filmstrip.png       the gate's filmstrip format, for human re-checks"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 55,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/filmstrip.png       the gate's filmstrip format, for human re-checks"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 56,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/player.json         the verdict + per-step summary + counts"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 56,
+   "token": ">",
+   "kind": "code",
+   "text": "<game>/<backend>/player.json         the verdict + per-step summary + counts"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 363,
+   "token": ">",
+   "kind": "code",
+   "text": "(`games.<game>.refusal_evidence.game_side_fields` / `keys`) names the counters the"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 395,
+   "token": ">",
+   "kind": "code",
+   "text": "hit = \"%s: %r -> %r\" % (c.get(\"key\"), c.get(\"from\"), c.get(\"to\"))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 420,
+   "token": ">",
+   "kind": "code",
+   "text": "if factor > 1.0:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 423,
+   "token": ">",
+   "kind": "code",
+   "text": "gameplay_wins = bool(mv >= factor * cmv and mv >= floor)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 423,
+   "token": ">",
+   "kind": "code",
+   "text": "gameplay_wins = bool(mv >= factor * cmv and mv >= floor)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 426,
+   "token": ">",
+   "kind": "code",
+   "text": "gameplay_wins = bool(mv > cmv)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 427,
+   "token": ">",
+   "kind": "code",
+   "text": "pixel_wins = px > max(int(ctl * float(spec[\"pixel_control_factor\"])),"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 429,
+   "token": ">",
+   "kind": "code",
+   "text": "ratio = (round(mv / cmv, 3) if cmv > 0 else None)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 435,
+   "token": ">",
+   "kind": "code",
+   "text": "why = (\"the viewport changed %d px, over the control window's %d (needs > \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 492,
+   "token": ">",
+   "kind": "code",
+   "text": "(recorded in `session.json -> action_set_source`), it never invents an action."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 560,
+   "token": ">",
+   "kind": "code",
+   "text": "nodes move), so the useful reading is \"<node>.<field>: <from> -> <to>\".  The values are"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 560,
+   "token": ">",
+   "kind": "code",
+   "text": "nodes move), so the useful reading is \"<node>.<field>: <from> -> <to>\".  The values are"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 560,
+   "token": ">",
+   "kind": "code",
+   "text": "nodes move), so the useful reading is \"<node>.<field>: <from> -> <to>\".  The values are"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 560,
+   "token": ">",
+   "kind": "code",
+   "text": "nodes move), so the useful reading is \"<node>.<field>: <from> -> <to>\".  The values are"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 560,
+   "token": ">",
+   "kind": "code",
+   "text": "nodes move), so the useful reading is \"<node>.<field>: <from> -> <to>\".  The values are"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 568,
+   "token": ">",
+   "kind": "code",
+   "text": "out.append(\"%s.pos %s->%s\" % (key, _short(f), _short(t)))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 570,
+   "token": ">",
+   "kind": "code",
+   "text": "out.append(\"%s %s->%s\" % (key, _short(f), _short(t)))"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 609,
+   "token": ">",
+   "kind": "code",
+   "text": "len(f) == len(t) >= 2:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 634,
+   "token": ">",
+   "kind": "code",
+   "text": "* the viewport changed more than the control did -- `> max(2.5*control, 40 px)`."
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 642,
+   "token": ">",
+   "kind": "code",
+   "text": "observables must move >= 2x as far as in the control window, with a declared floor for"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 790,
+   "token": ">",
+   "kind": "code",
+   "text": "if len(out) >= limit:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 824,
+   "token": ">",
+   "kind": "code",
+   "text": "if cur_len > best[\"length\"]:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 825,
+   "token": ">",
+   "kind": "code",
+   "text": "best.update({\"found\": cur_len >= int(min_run), \"length\": cur_len,"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 829,
+   "token": ">",
+   "kind": "code",
+   "text": "best[\"reading\"] = (\"no run of >= %d consecutive steps shared one action AND one \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 893,
+   "token": ">",
+   "kind": "code",
+   "text": "if cur_len > best[\"length\"]:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 894,
+   "token": ">",
+   "kind": "code",
+   "text": "best.update({\"found\": cur_len >= int(min_run), \"length\": cur_len,"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 898,
+   "token": ">",
+   "kind": "code",
+   "text": "best[\"length_note\"] = (\"no run of >= %d consecutive SENT steps without gameplay \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 908,
+   "token": ">",
+   "kind": "code",
+   "text": "best[\"what\"] = (\"TASK-134 §1.C.1: >= %d consecutive injected steps with no gameplay \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1127,
+   "token": ">",
+   "kind": "code",
+   "text": "out[\"window_why\"] = (\"every measured window spans >= %d drawn frames (declared \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1139,
+   "token": ">",
+   "kind": "code",
+   "text": "* PASS   : >= 8 steps, and among the ACCEPTED steps >= 75% changed, and the loop was"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1139,
+   "token": ">",
+   "kind": "code",
+   "text": "* PASS   : >= 8 steps, and among the ACCEPTED steps >= 75% changed, and the loop was"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1228,
+   "token": ">",
+   "kind": "code",
+   "text": "len(fail_steps) >= 2 and len(fp_actions) == 1 and"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1269,
+   "token": ">",
+   "kind": "code",
+   "text": "if len(stamps) >= 2:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1546,
+   "token": ">",
+   "kind": "code",
+   "text": "out[\"game_side_rule\"] = (\"same thresholds as the model arm (>= %d injected steps, \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1773,
+   "token": ">",
+   "kind": "code",
+   "text": "if bb and bb[2] > 32 and bb[3] > 32:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1773,
+   "token": ">",
+   "kind": "code",
+   "text": "if bb and bb[2] > 32 and bb[3] > 32:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1858,
+   "token": ">",
+   "kind": "code",
+   "text": "TASK-133 measured `pong x jev`'s \"playable window\" with `PONG_TICK` and read 23 s -> 18 s,"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1860,
+   "token": ">",
+   "kind": "code",
+   "text": "the left paddle (TASK-133 §4.2, `LEFT 5:0` -> `RIGHT 5:0`).  \"The model did not play\" and"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1943,
+   "token": ">",
+   "kind": "code",
+   "text": "if self._f(vel, 0) > 0:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1946,
+   "token": ">",
+   "kind": "code",
+   "text": "return self._act(\"pong_left_up\" if py > target + 10 else"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1949,
+   "token": ">",
+   "kind": "code",
+   "text": "if py - by > 10:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 1952,
+   "token": ">",
+   "kind": "code",
+   "text": "if by - py > 10:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2054,
+   "token": ">",
+   "kind": "code",
+   "text": "change the AIM ANGLE (`AngleIndex` 2->3->4->0->1 over the whole arc; `ShooterCol`"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2054,
+   "token": ">",
+   "kind": "code",
+   "text": "change the AIM ANGLE (`AngleIndex` 2->3->4->0->1 over the whole arc; `ShooterCol`"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2054,
+   "token": ">",
+   "kind": "code",
+   "text": "change the AIM ANGLE (`AngleIndex` 2->3->4->0->1 over the whole arc; `ShooterCol`"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2054,
+   "token": ">",
+   "kind": "code",
+   "text": "change the AIM ANGLE (`AngleIndex` 2->3->4->0->1 over the whole arc; `ShooterCol`"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2125,
+   "token": ">",
+   "kind": "code",
+   "text": "if bx > px + 8:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2143,
+   "token": ">",
+   "kind": "code",
+   "text": "if self._f([y], 0, 300.0) > self._f([target], 0, 300.0) - 20:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2157,
+   "token": ">",
+   "kind": "code",
+   "text": "if int(row) > int(v.get(\"GoalRow\") if v.get(\"GoalRow\") is not None else 0):"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2552,
+   "token": ">",
+   "kind": "code",
+   "text": "return (\"shift the falling piece one column %s: PieceX %s -> %s.  The piece only \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2558,
+   "token": ">",
+   "kind": "code",
+   "text": "return (\"rotate the falling piece: PieceRot %s -> %s.  A rotation that does not \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2578,
+   "token": ">",
+   "kind": "code",
+   "text": "return (\"move the shooter one column %s: ShooterCol %s -> %s; the aim dots move \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2595,
+   "token": ">",
+   "kind": "code",
+   "text": "(`tools/playability_controls.json -> games.<game>.capabilities[]`, whose fields are"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 2595,
+   "token": ">",
+   "kind": "code",
+   "text": "(`tools/playability_controls.json -> games.<game>.capabilities[]`, whose fields are"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3109,
+   "token": ">",
+   "kind": "code",
+   "text": "if goal is not None and isinstance(last, int) and last >= goal:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3118,
+   "token": ">",
+   "kind": "code",
+   "text": "last >= goal)) or"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3137,
+   "token": ">",
+   "kind": "code",
+   "text": "capture -> after capture / after state), so the pixel term and the movement sum come"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3448,
+   "token": ">",
+   "kind": "code",
+   "text": "i >= PASS_MIN_STEPS:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3453,
+   "token": ">",
+   "kind": "code",
+   "text": "for t in tail)) > 1:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3629,
+   "token": ">",
+   "kind": "code",
+   "text": "dr.text((x, y + 20), \"ack: %s  [%s]   changed: %s   -> %s\""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3808,
+   "token": ">",
+   "kind": "code",
+   "text": "if len(cur) + len(w) + 1 > width:"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3832,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"accepted + 0 px vs 0 control -> not changed\", ch[\"changed\"], False)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3838,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"4300 px vs 0 control -> changed\", ch2[\"changed\"], True)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3843,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"50 px vs 48 control -> NOT changed\", ch3[\"changed\"], False)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3845,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"100 px vs 120 control -> NOT changed\", ch4[\"changed\"], False)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3847,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"100 px vs 20 control -> changed\", ch4b[\"changed\"], True)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3852,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"ball moved 1.7 px in both windows -> NOT changed\", ch6[\"changed\"], False)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3854,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"paddle moved 202 px vs ball's 1.7 -> changed\", ch7[\"changed\"], True)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3862,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"gameplay moved the same in control too -> NOT changed\", ch5[\"changed\"], False)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3872,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"8 distinct accepted+changed -> PASS\", s[\"verdict\"], \"PASS\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3879,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"one accepted static step -> FAIL\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3890,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"same action + same frame on every failing step -> INCONCLUSIVE\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3893,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"one action repeated 8x -> INCONCLUSIVE\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3895,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"3 steps -> INCONCLUSIVE\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3907,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"nothing -> not accepted\", a3[\"accepted\"], False)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3910,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"no model action -> not injected\", a4[\"injected\"], False)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3911,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"no model action -> not accepted\", a4[\"accepted\"], False)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3914,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"8 steps but the model never acted -> INCONCLUSIVE\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3926,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"8 identical action+frame steps -> fixed point found\", fp[\"found\"], True)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3931,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"2 identical steps -> NOT a fixed point\", model_fixed_point(recs_fp[:2])[\"found\"],"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3933,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"3 identical steps -> a fixed point\", model_fixed_point(recs_fp[:3])[\"found\"],"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3940,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"same action on different frames -> NOT a fixed point\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3957,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"clean run -> no fixed point\", summarise(recs, \"jev\", \"g\")[\"MODEL_FIXED_POINT\"],"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3959,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"clean run -> still PASS\", summarise(recs, \"jev\", \"g\")[\"verdict\"], \"PASS\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3973,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"mixed actions + no progress -> MODEL_NO_PROGRESS\", npg[\"found\"], True)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3985,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"same action+frame+no change -> BOTH conclusions\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3989,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"same action+frame that DID change -> only the fixed point\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3993,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"clean run -> no MODEL_NO_PROGRESS\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3996,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"2 static steps -> NOT MODEL_NO_PROGRESS\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 3998,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"3 static steps -> MODEL_NO_PROGRESS\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4020,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"scripted arm with 8/8 progress -> game-side PASS\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4041,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"strict keeps a 2.35x gameplay win (>= 2x)\", ch_keep[\"strict\"][\"changed\"], True)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4052,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"zero control + 0.5 movement -> baseline changed\", ch_zero[\"changed\"], True)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4053,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"zero control + 0.5 movement -> strict NOT changed (below the floor)\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4055,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"zero control + 1.0 movement -> strict changed\","
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4258,
+   "token": ">",
+   "kind": "code",
+   "text": "check(\"absolute target: no start frame -> no target\", pr.frame_target_for(None), None)"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4327,
+   "token": ">",
+   "kind": "code",
+   "text": "description=\"TASK-132 model-player loop: image -> model action -> inject -> \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4327,
+   "token": ">",
+   "kind": "code",
+   "text": "description=\"TASK-132 model-player loop: image -> model action -> inject -> \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4327,
+   "token": ">",
+   "kind": "code",
+   "text": "description=\"TASK-132 model-player loop: image -> model action -> inject -> \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4361,
+   "token": ">",
+   "kind": "code",
+   "text": "help=\"which declared change margin `player.json -> verdict` is computed \""
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4374,
+   "token": ">",
+   "kind": "code",
+   "text": "help=\"project = the source project under godot; exe = dist/exe/<game>\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4437,
+   "token": ">",
+   "kind": "code",
+   "text": "sub.add_parser(\"prep\", help=\"read-only environment probe -> runs/model-player/_env/prep.json\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4441,
+   "token": ">",
+   "kind": "code",
+   "text": "s.add_argument(\"--path\", required=True, help=\"a <game>/<backend> evidence directory\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4441,
+   "token": ">",
+   "kind": "code",
+   "text": "s.add_argument(\"--path\", required=True, help=\"a <game>/<backend> evidence directory\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4444,
+   "token": ">",
+   "kind": "code",
+   "text": "a.add_argument(\"--path\", required=True, help=\"a <game>/<backend> evidence directory\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4444,
+   "token": ">",
+   "kind": "code",
+   "text": "a.add_argument(\"--path\", required=True, help=\"a <game>/<backend> evidence directory\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4450,
+   "token": ">",
+   "kind": "code",
+   "text": "f.add_argument(\"--path\", required=True, help=\"a <game>/<backend> evidence directory\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4450,
+   "token": ">",
+   "kind": "code",
+   "text": "f.add_argument(\"--path\", required=True, help=\"a <game>/<backend> evidence directory\")"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+   "line": 4451,
+   "token": ">",
+   "kind": "code",
+   "text": "f.add_argument(\"--out\", default=\"\", help=\"default <path>/failcase.png\")"
+  }
+ ]
+}

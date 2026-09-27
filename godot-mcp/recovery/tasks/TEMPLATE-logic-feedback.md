@@ -121,6 +121,32 @@
   PASS，**如实报掉出**，**不许**为了保绿把窗口调回去（TASK-138 实测：pong 的脚本臂在
   等长窗口下从 PASS 变成"边缘"）。
 
+### 1.2c 测量窗口有**声明式最小长度**；低于它 ⇒ `WINDOW_TOO_SHORT`（TASK-139 §1.A）
+
+对齐口径（§1.2）保证两窗**等长**，但它不保证两窗**够长**。窗口的实际跨度是**测量值**
+（客户端轮询抖动让"标称 30 帧"落成 29..34 帧），所以"这个判定是在太短的窗口上做的"
+必须能被机器说出来，而不是靠读者记忆。
+
+* **声明**：`tools/playability_controls.json -> model_player_window.min_frames`（本系列 = **20**，
+  依据：TASK-138 的 20 款共 61 步，两窗达成跨度落在 **29..34 帧**，没有一窗低于 29；20 因此在
+  全部已有证据的地板之下，同时高于一次 MCP 往返（30..120 帧）这一分辨率下限）。
+* **强制**：**对照窗与动作窗都判**。任一步的任一侧实测跨度 `< min_frames` ⇒ 该 run 的 verdict
+  写 **`WINDOW_TOO_SHORT <原 verdict>`**、`counts_as_pass=false`、`pass=false`；
+  `player.json -> window_frames` 逐步给出两侧跨度、`too_short`、`short_windows`，
+  并保留 `verdict_before_window_check`（原判定**不被销毁**）。
+* **与 FAIL / `MODEL_*` 分开**：它是关于**测量**的状态，不是关于游戏的结论，也**不是** PASS。
+* **只能收紧**：该检查**只能**把 PASS 拿掉，**永不**能补上；它不改 `--window-frames` 的标称
+  预算，也不改两把尺子的任何公式。有 run 因此掉出 PASS 就**如实报**。
+* **号不准（`None`/未记录）≠ 太短**：写 `unmeasured`，不得据此判 `WINDOW_TOO_SHORT`——
+  工具不许发明它没有的测量。
+* **短窗口与不可复现是两件事**（TASK-139 实测）：`min_frames` 只拦"短到装不下一次反应"。
+  重复性探针（同一条命令跑两遍、5 款、专用端口）在 **`--window-frames 30`** 下显示 **4/5 款两遍
+  不等**（`pong` baseline-only vs PASS、`breakout` INCONCLUSIVE vs FAIL、`asteroids`/`tetris`
+  PASS vs INCONCLUSIVE），机制是实际帧跨度抖动 + **`ack_result` 偶发缺失**（§1.2b ⇒ 该步
+  INCONCLUSIVE ⇒ 整局翻档）；`--window-frames 90` 下同样 5 款**两遍全一致**。
+  ⇒ **报告里引用某款的 verdict 时，必须同时说明是哪一档、以及该档是否已被重复性探针验证**；
+  不得把一次 w30 抽样当成可复现读数，也不得把"抖动翻档"记到窗口长度的账上。
+
 ### 1.2b `ack` 缺失 ⇒ 该步 INCONCLUSIVE，**禁止**回退到注入前的读数（TASK-138 defect ⑨）
 
 `ack` 的语义是"游戏**在这一次注入之后**读回 InputMap 说 pressed"。注入工具若返回了但
@@ -292,6 +318,26 @@
 * **允许的唯一豁免**：游戏自己记录了**蓄意拒绝**（墙、边界、非法方向）。
   豁免生效还要求**同一局里至少有一个动作真的推动了玩法**——否则
   "全部都拒绝了，因为游戏已经死了"（snake / game2048）仍然判红。
+
+### 4.1 合法拒绝的**边界**（TASK-139 §1.B —— 豁免不许把"全在拒绝"变成 PASS）
+
+模型玩家回路（`tools/playtest_player.py`）自 TASK-139 起也有这条豁免，边界写在
+`tools/playability_controls.json -> model_player_refusal`（本系列 `min_real_progress_steps` = **4**）：
+
+1. **证据必须来自游戏自己导出的状态**：`games.<game>.refusal_evidence.game_side_fields`
+   **逐字点名字段**（`RejectedMoves` / `InputRejectedSwaps` / `InputRejectedCursorActions` /
+   `RejectedSteps` / `InputRejectedPlaces` …），值从 `steps.jsonl -> state_delta` 读；
+   **模型自述一律不算**。TASK-131 的宽泛模式 `LastRefusedInput` 与 `value_words`
+   对这 5 款**已收窄/清空**——它们会对**任意值变化**误报。
+2. **只许移掉"对游戏不利"的部分**：拒绝步 ①不进 FAIL 集、②不进接受率的分母，
+   但 ③**永不算推进**（它同时不进 `real_progress` 集）。豁免**不能**把"没变"变成"变了"。
+3. **必须有真实推进的地板**：run 必须仍有 `>= min_real_progress_steps` 步真实推进
+   （依据：PASS 要 ≥8 注入步、接受即变化率 ≥0.75，`8×0.75=6`，所以**无拒绝**的 run 天然带
+   ≥6 步真实推进，4 够不到它——该下限只可能在豁免拿掉了分母时生效）。
+4. **全拒绝零推进 = 显式 FAIL**（`refusal_only_run`），不得 PASS；真实推进不足 = INCONCLUSIVE。
+5. **无拒绝的 run 逐位不变**：拒绝集为空时分母就是 `accepted`，每个数字与 TASK-139 之前相同。
+6. 反向测试必须同时存在（`tools/tests/test_playability_model_player.py`）：
+   "拒绝+真实推进 ⇒ 可 PASS" 与 "全在拒绝、零推进 ⇒ 必须不是 PASS"（有断言）。
 * **先判"开局是不是已经结束"**：在 settle 帧上求值
   `games.<game>.liveness.terminal`（例如 `/root/Main.GameOver == true`）。
   一个在第一帧就已经结束的游戏，其后的静止画面**必然**合法，
@@ -417,3 +463,15 @@
 21. **逐帧读图只写散文、不给可机检锚点**（TASK-138 §1.C.2）⇒ 描述与状态矛盾时无法当场
     发现（TASK-136 §7 第 9 行的 `TILE 4,27`）。修法：每条描述同行给**声明字段实测值
     + 帧路径 + sha256**（§3.1）。
+22. **把"标称窗口预算"当成"窗口够长"**（TASK-139 §1.A）⇒ 3 帧窗口与 300 帧窗口会给出
+    **同样的两个 verdict 字符串**，读者无从知道判定是在多短的窗口上做的。修法：
+    声明 `model_player_window.min_frames`，低于它即 `WINDOW_TOO_SHORT`（不进 PASS，§1.2c）。
+23. **用"游戏按规则拒绝"当 PASS 的理由**（TASK-139 §1.B）⇒ 那就等于"全都拒绝"也能凑出 `0/0`
+    的通过率。修法：拒绝只许移掉 FAIL 与分母，**永不算推进**，且必须有真实推进地板；
+    全拒绝零推进是显式 FAIL（§4.1）。
+24. **把"某个字段出现在状态差分里"当成"该字段动了"**（TASK-139 §1.B）⇒ 状态 dump 会列出
+    每一个导出属性，`from == to` 的项什么也没说明；按它判拒绝会对**任意一步**误报豁免。
+    修法：只认 `from != to` 的项。
+25. **拒绝集不进"模型固定点"的判据**（TASK-139 §1.B）⇒ 一局里被拒绝的步与"模型卡住"是两回事，
+    把前者混进后者会把"游戏明确看见并拒绝了输入"错报成 INCONCLUSIVE。
+    修法：拒绝步从固定点/无进展的样本里排除，**原始逐步 verdict 保留不改**。

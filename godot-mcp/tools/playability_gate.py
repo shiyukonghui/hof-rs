@@ -2707,11 +2707,44 @@ def evaluate_model_player_steps(steps, game=None):
     same file as P1..P7 so a reader of `gate.json` can see that P1..P7 are not the verdict.
     The authoritative summary is the loop's own `player.json`; this function exists so the
     gate can record the criterion beside the other criteria without importing the tool.
+
+    TASK-139 §1.A/§1.B: the two declarations this batch added are applied HERE too, so the
+    gate cannot report a verdict the loop would not:
+      * a window shorter than the declared `min_frames` makes the run WINDOW_TOO_SHORT (never
+        a PASS), read from the same per-step measured spans the loop records;
+      * a step the game's own counters recorded as a deliberate refusal is dropped from the
+        FAIL set and the denominator, and a run refused everywhere cannot PASS.
     """
     steps = [r for r in (steps or []) if isinstance(r, dict) and r.get("step")]
     injected = [r for r in steps if (r.get("ack") or {}).get("injected")]
     accepted = [r for r in injected if (r.get("ack") or {}).get("accepted")]
     margins = load_change_margins()
+    # the loop owns the refusal/window declarations; the import is deferred so this module
+    # keeps loading first (playtest_player imports THIS file at module scope).
+    try:
+        from playtest_player import (load_refusal_boundary, load_window_declaration,
+                                     step_refusal_record, window_frames_of)
+        refusal_boundary = load_refusal_boundary()
+        window_decl = load_window_declaration()
+    except Exception as e:  # noqa: BLE001
+        refusal_boundary = {"min_real_progress_steps": 4, "min_real_progress_rate": 0.5,
+                            "declared_by": "TASK-139 §1.B", "load_error": str(e)}
+        window_decl = {"min_frames": 20, "declared_by": "TASK-139 §1.A",
+                       "load_error": str(e)}
+
+        def step_refusal_record(rec, decl):
+            return None
+
+        def window_frames_of(c, a, min_frames=20):
+            return {"min_frames": min_frames, "control_frames": c, "action_frames": a,
+                    "measured": False, "too_short": False, "state": "unmeasured",
+                    "short_windows": []}
+
+    def _refused(rec):
+        sr = rec.get("step_refusal")
+        if isinstance(sr, dict):
+            return bool(sr.get("refused_legal"))
+        return bool((rec.get("ack") or {}).get("refusal"))
 
     def _changed(rec, margin):
         """One step under one margin: `change.strict` when the loop recorded it, else the
@@ -2721,11 +2754,21 @@ def evaluate_model_player_steps(steps, game=None):
             return bool(ch["strict"].get("changed"))
         return bool(ch.get("changed"))
 
+    refused_recs = [r for r in accepted if _refused(r)]
+    refused_steps = [r["step"] for r in refused_recs]
+    refused_set = set(refused_steps)
+    rated = [r for r in accepted if r["step"] not in refused_set]
     changed = [r for r in accepted if _changed(r, "baseline")]
     changed_strict = [r for r in accepted if _changed(r, "strict")]
+    real_progress = [r["step"] for r in rated if _changed(r, "baseline")]
+    real_progress_strict = [r["step"] for r in rated if _changed(r, "strict")]
+    refusal_only_run = bool(refused_recs and not rated)
     fail = [r["step"] for r in steps
             if r.get("step_verdict") == "FAIL_no_change_after_accepted_input"]
+    fail_raw = list(fail)
+    fail = [s for s in fail if s not in refused_set]
     fail_strict = [r["step"] for r in accepted if not _changed(r, "strict")]
+    fail_strict = [s for s in fail_strict if s not in refused_set]
     fail_recs = [r for r in steps if r["step"] in fail]
     actions = [r.get("action", {}).get("action") for r in steps
                if (r.get("action") or {}).get("action")]
@@ -2758,7 +2801,11 @@ def evaluate_model_player_steps(steps, game=None):
         """
         ch = changed_strict if margin == "strict" else changed
         fl = fail_strict if margin == "strict" else fail
-        rate = (round(len(ch) / float(len(accepted)), 4) if accepted else None)
+        rp = real_progress_strict if margin == "strict" else real_progress
+        # TASK-139 §1.B: the rates are over the RATED steps (accepted steps that were not a
+        # legal refusal), and the floor under the carve-out is checked BEFORE the rate, so a
+        # run refused everywhere can never reach the rate comparison.
+        rate = (round(len(ch) / float(len(rated)), 4) if rated else None)
         if fl and not fixed_point and not terminal:
             return False, ("%d accepted input(s) left the viewport unchanged under the %s "
                            "margin (the user's FAIL condition): steps %s"
@@ -2783,9 +2830,21 @@ def evaluate_model_player_steps(steps, game=None):
             return None, ("the model repeated ONE action over every injected step, so 'the "
                           "game ignored it' cannot be told apart from 'the model stopped "
                           "playing'")
-        if rate >= 0.75:
-            return True, ("%d/%d accepted steps changed the picture under the %s margin "
-                          "(%.4f)" % (len(ch), len(accepted), margin, rate))
+        # -- TASK-139 §1.B: the refusal boundary -------------------------------------------
+        if refusal_only_run:
+            return False, ("every rated step was a DELIBERATE refusal recorded by the game's "
+                           "own counters (steps %s) and no step produced real progress, so "
+                           "'all refused' cannot PASS (TASK-139 §1.B)" % refused_steps)
+        if len(rp) < int(refusal_boundary.get("min_real_progress_steps", 4)) and refused_recs:
+            return None, ("only %d step(s) of REAL progress under the %s margin after the "
+                          "legal-refusal carve-out; the boundary needs >= %s"
+                          % (len(rp), margin,
+                             refusal_boundary.get("min_real_progress_steps", 4)))
+        if rate is not None and rate >= 0.75:
+            return True, ("%d/%d rated steps changed the picture under the %s margin (%s)"
+                          "(%.4f)" % (len(ch), len(rated), margin,
+                                      (" with legal refusals %s excluded" % refused_steps)
+                                      if refused_steps else "", rate))
         return False, ("accepted-and-changed rate under the %s margin %.4f < 0.75"
                        % (margin, rate or 0.0))
 
@@ -2806,8 +2865,9 @@ def evaluate_model_player_steps(steps, game=None):
            "game": game, "evidence_source": "runs/model-player/<game>/<backend>/steps.jsonl",
            "steps": len(steps), "injected_steps": len(injected),
            "accepted_steps": len(accepted), "accepted_and_changed": len(changed),
-           "accepted_and_changed_rate": (round(len(changed) / float(len(accepted)), 4)
-                                         if accepted else None),
+           "rated_denominator": len(rated),
+           "accepted_and_changed_rate": (round(len(changed) / float(len(rated)), 4)
+                                         if rated else None),
            "fail_steps": fail, "distinct_actions": sorted(set(actions)),
            "one_action_loop": same_action,
            # -- TASK-136 §1.A.1: both readings, and which one is the pass criterion --------
@@ -2816,8 +2876,8 @@ def evaluate_model_player_steps(steps, game=None):
            "change_margin_declaration_source": margins.get("source"),
            "accepted_and_changed_strict": len(changed_strict),
            "accepted_and_changed_rate_strict": (round(len(changed_strict) /
-                                                      float(len(accepted)), 4)
-                                                if accepted else None),
+                                                      float(len(rated)), 4)
+                                                if rated else None),
            "fail_steps_baseline": fail,
            "fail_steps_strict": fail_strict,
            "pass_baseline": pass_baseline,
@@ -2840,15 +2900,77 @@ def evaluate_model_player_steps(steps, game=None):
                              "distinct_before_frames_in_the_failing_steps": len(fail_frames),
                              "same_action_fixed_point": fixed_point},
            "declared_terminal_seen": bool(terminal),
+           # -- TASK-139 §1.B: the legal-refusal reading, beside the raw one -----------------
+           "refused_steps": refused_steps,
+           "refused_step_count": len(refused_recs),
+           "rated_steps": [r["step"] for r in rated],
+           "rated_step_count": len(rated),
+           "rated_and_changed_rate": (round(len(changed) / float(len(rated)), 4)
+                                      if rated else None),
+           "real_progress_steps": real_progress,
+           "real_progress_step_count": len(real_progress),
+           "refusal_only_run": refusal_only_run,
+           "refusal_boundary": dict(refusal_boundary,
+                                    rule=("a step the game's own counters recorded as a "
+                                          "deliberate refusal is dropped from the FAIL set and "
+                                          "from the rate's denominator, is NEVER counted as "
+                                          "progress, and a run must still show >= %s steps of "
+                                          "real progress"
+                                          % refusal_boundary.get("min_real_progress_steps", 4)),
+                                    not_a_loosening=[
+                                        "the carve-out can only remove a FAIL the game "
+                                        "itself recorded as a refusal",
+                                        "it can never turn a 'not changed' into a 'changed'",
+                                        "a run refused everywhere cannot PASS",
+                                    ]),
+           "fail_steps_before_refusal_carve_out": fail_raw,
+           "fail_steps_dropped_as_legal_refusals": [s for s in fail_raw
+                                                    if s in refused_set],
            "thresholds": {"min_steps": 8, "min_rate": 0.75,
                           "model_fixed_point_min_run": 3,
                           "model_no_progress_min_run": 3,
+                          "min_real_progress_steps":
+                              refusal_boundary.get("min_real_progress_steps", 4),
+                          "window_min_frames": window_decl.get("min_frames", 20),
                           "change_margin": criterion,
                           "strict_gameplay_control_factor":
                               margins["strict"]["gameplay_control_factor"],
                           "strict_gameplay_min_movement":
                               margins["strict"]["gameplay_min_movement"]},
            "pass": pass_criterion, "why": why_criterion}
+    # -- TASK-139 §1.A, GATE SIDE: the same window check the loop applies, applied last so
+    #    it can take a run out of PASS but never put one in.
+    win_steps = []
+    for r in steps:
+        wb = r.get("frame_budget") or {}
+        cb = (r.get("control_diff") or {}).get("frame_budget") or {}
+        af = wb.get("action_frames")
+        if af is None:
+            af = wb.get("achieved_delta")
+        w = window_frames_of(cb.get("achieved_delta"), af, window_decl.get("min_frames", 20))
+        w["step"] = r.get("step")
+        win_steps.append(w)
+    short = [w for w in win_steps if w.get("too_short")]
+    out["window_frames"] = {
+        "declared_by": window_decl.get("declared_by"),
+        "min_frames": window_decl.get("min_frames", 20),
+        "steps": win_steps,
+        "step_count": len(win_steps),
+        "too_short_steps": [w["step"] for w in short],
+        "too_short_step_count": len(short),
+        "state": ("WINDOW_TOO_SHORT" if short else
+                  ("ok" if any(w.get("measured") for w in win_steps) else "unmeasured")),
+        "rule": ("TASK-139 §1.A: a step whose control or action window spanned fewer than "
+                 "the declared `min_frames` drawn frames is WINDOW_TOO_SHORT and the run is "
+                 "NOT counted as a PASS"),
+    }
+    out["window_too_short"] = bool(short)
+    out["window_too_short_steps"] = [w["step"] for w in short]
+    out["verdict_before_window_check"] = verdict
+    if short:
+        out["verdict"] = "WINDOW_TOO_SHORT %s" % verdict
+        out["counts_as_pass"] = False
+        out["pass"] = False
     out["reader_judgement_required"] = True
     out["reader_judgement_note"] = (
         "the machine half above can only say whether the picture moved; the other half of "

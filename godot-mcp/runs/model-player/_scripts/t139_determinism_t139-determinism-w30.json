@@ -1,0 +1,3325 @@
+{
+ "task": "TASK-139",
+ "section": "A -- repeat / determinism probe",
+ "arm": "scripted",
+ "window": 30,
+ "games": [
+  "asteroids",
+  "pacman",
+  "tetris",
+  "pong",
+  "breakout"
+ ],
+ "runs": [
+  {
+   "game": "asteroids",
+   "repeat": 1,
+   "rc": 0,
+   "cmd": [
+    "D:\\Anaconda\\python.exe",
+    "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+    "run",
+    "--game",
+    "asteroids",
+    "--backend",
+    "scripted",
+    "--player",
+    "scripted",
+    "--variant",
+    "V1",
+    "--image-form",
+    "full",
+    "--steps",
+    "12",
+    "--port",
+    "9967",
+    "--window-frames",
+    "30",
+    "--out-prefix",
+    "t139-determinism-w30"
+   ],
+   "run": {
+    "verdict": "PASS",
+    "counts_as_pass": true,
+    "strict_verdict": "PASS",
+    "baseline_verdict": "PASS",
+    "game_side_verdict": "PASS",
+    "injected_steps": 12,
+    "accepted_steps": 1,
+    "changed_steps_of_accepted": 1,
+    "accepted_and_changed_rate": 1.0,
+    "rated_step_count": 1,
+    "refused_steps": [],
+    "real_progress_step_count": 7,
+    "fail_steps": [],
+    "window_too_short": false,
+    "window_too_short_steps": [],
+    "MODEL_FIXED_POINT": false,
+    "MODEL_NO_PROGRESS": false,
+    "_summary": {
+     "verdict": "PASS",
+     "counts_as_pass": true,
+     "strict_verdict": "PASS",
+     "baseline_verdict": "PASS",
+     "game_side_verdict": "PASS",
+     "injected_steps": 12,
+     "accepted_steps": 1,
+     "changed_steps_of_accepted": 1,
+     "accepted_and_changed_rate": 1.0,
+     "rated_step_count": 1,
+     "refused_steps": [],
+     "real_progress_step_count": 7,
+     "fail_steps": [],
+     "window_too_short": false,
+     "window_too_short_steps": [],
+     "MODEL_FIXED_POINT": false,
+     "MODEL_NO_PROGRESS": false
+    },
+    "_steps": {
+     "1": {
+      "step_verdict": "changed_but_ack_missing",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 3072,
+      "control_frames": 33,
+      "action_frames": 37,
+      "gameplay_movement": 0.0,
+      "action": "ast_left"
+     },
+     "2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 6297,
+      "control_frames": 34,
+      "action_frames": 37,
+      "gameplay_movement": 30.0,
+      "action": "ast_fire"
+     },
+     "3": {
+      "step_verdict": "changed_but_ack_missing",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 5212,
+      "control_frames": 32,
+      "action_frames": 36,
+      "gameplay_movement": 0.0,
+      "action": "ast_right"
+     },
+     "4": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 32,
+      "action_frames": 34,
+      "gameplay_movement": 0.0,
+      "action": "ast_thrust"
+     },
+     "5": {
+      "step_verdict": "changed_but_ack_missing",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 352,
+      "control_frames": 34,
+      "action_frames": 37,
+      "gameplay_movement": 0.0,
+      "action": "ast_left"
+     },
+     "6": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 31,
+      "action_frames": 36,
+      "gameplay_movement": 0.0,
+      "action": "ast_fire"
+     },
+     "7": {
+      "step_verdict": "changed_but_ack_missing",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 352,
+      "control_frames": 33,
+      "action_frames": 34,
+      "gameplay_movement": 0.0,
+      "action": "ast_right"
+     },
+     "8": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 36,
+      "action_frames": 40,
+      "gameplay_movement": 0.0,
+      "action": "ast_thrust"
+     },
+     "9": {
+      "step_verdict": "changed_but_ack_missing",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 352,
+      "control_frames": 31,
+      "action_frames": 35,
+      "gameplay_movement": 0.0,
+      "action": "ast_left"
+     },
+     "10": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 33,
+      "action_frames": 38,
+      "gameplay_movement": 0.0,
+      "action": "ast_fire"
+     },
+     "11": {
+      "step_verdict": "changed_but_ack_missing",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 352,
+      "control_frames": 36,
+      "action_frames": 39,
+      "gameplay_movement": 0.0,
+      "action": "ast_right"
+     },
+     "12": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 34,
+      "action_frames": 39,
+      "gameplay_movement": 0.0,
+      "action": "ast_thrust"
+     }
+    }
+   }
+  },
+  {
+   "game": "asteroids",
+   "repeat": 2,
+   "rc": 0,
+   "cmd": [
+    "D:\\Anaconda\\python.exe",
+    "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+    "run",
+    "--game",
+    "asteroids",
+    "--backend",
+    "scripted",
+    "--player",
+    "scripted",
+    "--variant",
+    "V1",
+    "--image-form",
+    "full",
+    "--steps",
+    "12",
+    "--port",
+    "9967",
+    "--window-frames",
+    "30",
+    "--out-prefix",
+    "t139-determinism-w30"
+   ],
+   "run": {
+    "verdict": "PASS",
+    "counts_as_pass": true,
+    "strict_verdict": "PASS",
+    "baseline_verdict": "PASS",
+    "game_side_verdict": "PASS",
+    "injected_steps": 8,
+    "accepted_steps": 8,
+    "changed_steps_of_accepted": 8,
+    "accepted_and_changed_rate": 1.0,
+    "rated_step_count": 8,
+    "refused_steps": [],
+    "real_progress_step_count": 8,
+    "fail_steps": [],
+    "window_too_short": false,
+    "window_too_short_steps": [],
+    "MODEL_FIXED_POINT": false,
+    "MODEL_NO_PROGRESS": false,
+    "_summary": {
+     "verdict": "PASS",
+     "counts_as_pass": true,
+     "strict_verdict": "PASS",
+     "baseline_verdict": "PASS",
+     "game_side_verdict": "PASS",
+     "injected_steps": 8,
+     "accepted_steps": 8,
+     "changed_steps_of_accepted": 8,
+     "accepted_and_changed_rate": 1.0,
+     "rated_step_count": 8,
+     "refused_steps": [],
+     "real_progress_step_count": 8,
+     "fail_steps": [],
+     "window_too_short": false,
+     "window_too_short_steps": [],
+     "MODEL_FIXED_POINT": false,
+     "MODEL_NO_PROGRESS": false
+    },
+    "_steps": {
+     "1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 88,
+      "control_frames": 30,
+      "action_frames": 33,
+      "gameplay_movement": 77.768,
+      "action": "ast_left"
+     },
+     "2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 17,
+      "control_frames": 30,
+      "action_frames": 30,
+      "gameplay_movement": 2133.265,
+      "action": "ast_fire"
+     },
+     "3": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 92,
+      "control_frames": 30,
+      "action_frames": 30,
+      "gameplay_movement": 131.857,
+      "action": "ast_right"
+     },
+     "4": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 964,
+      "control_frames": 30,
+      "action_frames": 32,
+      "gameplay_movement": 208.294,
+      "action": "ast_thrust"
+     },
+     "5": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 968,
+      "control_frames": 30,
+      "action_frames": 30,
+      "gameplay_movement": 269.897,
+      "action": "ast_left"
+     },
+     "6": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 6412,
+      "control_frames": 33,
+      "action_frames": 36,
+      "gameplay_movement": 770.559,
+      "action": "ast_fire"
+     },
+     "7": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 872,
+      "control_frames": 32,
+      "action_frames": 36,
+      "gameplay_movement": 132.709,
+      "action": "ast_right"
+     },
+     "8": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 969,
+      "control_frames": 32,
+      "action_frames": 33,
+      "gameplay_movement": 241.603,
+      "action": "ast_thrust"
+     }
+    }
+   }
+  },
+  {
+   "game": "pacman",
+   "repeat": 1,
+   "rc": 0,
+   "cmd": [
+    "D:\\Anaconda\\python.exe",
+    "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+    "run",
+    "--game",
+    "pacman",
+    "--backend",
+    "scripted",
+    "--player",
+    "scripted",
+    "--variant",
+    "V1",
+    "--image-form",
+    "full",
+    "--steps",
+    "12",
+    "--port",
+    "9967",
+    "--window-frames",
+    "30",
+    "--out-prefix",
+    "t139-determinism-w30"
+   ],
+   "run": {
+    "verdict": "PASS",
+    "counts_as_pass": true,
+    "strict_verdict": "PASS",
+    "baseline_verdict": "PASS",
+    "game_side_verdict": "PASS",
+    "injected_steps": 12,
+    "accepted_steps": 12,
+    "changed_steps_of_accepted": 7,
+    "accepted_and_changed_rate": 1.0,
+    "rated_step_count": 7,
+    "refused_steps": [
+     3,
+     6,
+     8,
+     10,
+     12
+    ],
+    "real_progress_step_count": 7,
+    "fail_steps": [],
+    "window_too_short": false,
+    "window_too_short_steps": [],
+    "MODEL_FIXED_POINT": false,
+    "MODEL_NO_PROGRESS": false,
+    "_summary": {
+     "verdict": "PASS",
+     "counts_as_pass": true,
+     "strict_verdict": "PASS",
+     "baseline_verdict": "PASS",
+     "game_side_verdict": "PASS",
+     "injected_steps": 12,
+     "accepted_steps": 12,
+     "changed_steps_of_accepted": 7,
+     "accepted_and_changed_rate": 1.0,
+     "rated_step_count": 7,
+     "refused_steps": [
+      3,
+      6,
+      8,
+      10,
+      12
+     ],
+     "real_progress_step_count": 7,
+     "fail_steps": [],
+     "window_too_short": false,
+     "window_too_short_steps": [],
+     "MODEL_FIXED_POINT": false,
+     "MODEL_NO_PROGRESS": false
+    },
+    "_steps": {
+     "1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4197,
+      "control_frames": 32,
+      "action_frames": 32,
+      "gameplay_movement": 282.0,
+      "action": "pac_left"
+     },
+     "2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 2217,
+      "control_frames": 31,
+      "action_frames": 37,
+      "gameplay_movement": 279.0,
+      "action": "pac_up"
+     },
+     "3": {
+      "step_verdict": "FAIL_no_change_after_accepted_input",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": true,
+      "pixel_diff": 0,
+      "control_frames": 31,
+      "action_frames": 32,
+      "gameplay_movement": 0.0,
+      "action": "pac_right"
+     },
+     "4": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 1352,
+      "control_frames": 31,
+      "action_frames": 35,
+      "gameplay_movement": 240.0,
+      "action": "pac_down"
+     },
+     "5": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 1978,
+      "control_frames": 30,
+      "action_frames": 32,
+      "gameplay_movement": 282.0,
+      "action": "pac_left"
+     },
+     "6": {
+      "step_verdict": "FAIL_no_change_after_accepted_input",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": true,
+      "pixel_diff": 0,
+      "control_frames": 32,
+      "action_frames": 34,
+      "gameplay_movement": 0.0,
+      "action": "pac_up"
+     },
+     "7": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 1352,
+      "control_frames": 35,
+      "action_frames": 36,
+      "gameplay_movement": 243.0,
+      "action": "pac_right"
+     },
+     "8": {
+      "step_verdict": "FAIL_no_change_after_accepted_input",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": true,
+      "pixel_diff": 0,
+      "control_frames": 31,
+      "action_frames": 31,
+      "gameplay_movement": 0.0,
+      "action": "pac_down"
+     },
+     "9": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 1352,
+      "control_frames": 34,
+      "action_frames": 37,
+      "gameplay_movement": 243.0,
+      "action": "pac_left"
+     },
+     "10": {
+      "step_verdict": "FAIL_no_change_after_accepted_input",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": true,
+      "pixel_diff": 0,
+      "control_frames": 32,
+      "action_frames": 32,
+      "gameplay_movement": 0.0,
+      "action": "pac_up"
+     },
+     "11": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 1352,
+      "control_frames": 32,
+      "action_frames": 32,
+      "gameplay_movement": 243.0,
+      "action": "pac_right"
+     },
+     "12": {
+      "step_verdict": "FAIL_no_change_after_accepted_input",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": true,
+      "pixel_diff": 0,
+      "control_frames": 32,
+      "action_frames": 34,
+      "gameplay_movement": 0.0,
+      "action": "pac_down"
+     }
+    }
+   }
+  },
+  {
+   "game": "pacman",
+   "repeat": 2,
+   "rc": 0,
+   "cmd": [
+    "D:\\Anaconda\\python.exe",
+    "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+    "run",
+    "--game",
+    "pacman",
+    "--backend",
+    "scripted",
+    "--player",
+    "scripted",
+    "--variant",
+    "V1",
+    "--image-form",
+    "full",
+    "--steps",
+    "12",
+    "--port",
+    "9967",
+    "--window-frames",
+    "30",
+    "--out-prefix",
+    "t139-determinism-w30"
+   ],
+   "run": {
+    "verdict": "PASS",
+    "counts_as_pass": true,
+    "strict_verdict": "PASS",
+    "baseline_verdict": "PASS",
+    "game_side_verdict": "PASS",
+    "injected_steps": 12,
+    "accepted_steps": 12,
+    "changed_steps_of_accepted": 7,
+    "accepted_and_changed_rate": 1.0,
+    "rated_step_count": 7,
+    "refused_steps": [
+     3,
+     6,
+     8,
+     10,
+     12
+    ],
+    "real_progress_step_count": 7,
+    "fail_steps": [],
+    "window_too_short": false,
+    "window_too_short_steps": [],
+    "MODEL_FIXED_POINT": false,
+    "MODEL_NO_PROGRESS": false,
+    "_summary": {
+     "verdict": "PASS",
+     "counts_as_pass": true,
+     "strict_verdict": "PASS",
+     "baseline_verdict": "PASS",
+     "game_side_verdict": "PASS",
+     "injected_steps": 12,
+     "accepted_steps": 12,
+     "changed_steps_of_accepted": 7,
+     "accepted_and_changed_rate": 1.0,
+     "rated_step_count": 7,
+     "refused_steps": [
+      3,
+      6,
+      8,
+      10,
+      12
+     ],
+     "real_progress_step_count": 7,
+     "fail_steps": [],
+     "window_too_short": false,
+     "window_too_short_steps": [],
+     "MODEL_FIXED_POINT": false,
+     "MODEL_NO_PROGRESS": false
+    },
+    "_steps": {
+     "1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4197,
+      "control_frames": 32,
+      "action_frames": 37,
+      "gameplay_movement": 282.0,
+      "action": "pac_left"
+     },
+     "2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 2217,
+      "control_frames": 32,
+      "action_frames": 33,
+      "gameplay_movement": 279.0,
+      "action": "pac_up"
+     },
+     "3": {
+      "step_verdict": "FAIL_no_change_after_accepted_input",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": true,
+      "pixel_diff": 0,
+      "control_frames": 34,
+      "action_frames": 35,
+      "gameplay_movement": 0.0,
+      "action": "pac_right"
+     },
+     "4": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 1352,
+      "control_frames": 30,
+      "action_frames": 32,
+      "gameplay_movement": 240.0,
+      "action": "pac_down"
+     },
+     "5": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 1978,
+      "control_frames": 32,
+      "action_frames": 36,
+      "gameplay_movement": 282.0,
+      "action": "pac_left"
+     },
+     "6": {
+      "step_verdict": "FAIL_no_change_after_accepted_input",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": true,
+      "pixel_diff": 0,
+      "control_frames": 30,
+      "action_frames": 33,
+      "gameplay_movement": 0.0,
+      "action": "pac_up"
+     },
+     "7": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 1352,
+      "control_frames": 32,
+      "action_frames": 35,
+      "gameplay_movement": 243.0,
+      "action": "pac_right"
+     },
+     "8": {
+      "step_verdict": "FAIL_no_change_after_accepted_input",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": true,
+      "pixel_diff": 0,
+      "control_frames": 31,
+      "action_frames": 31,
+      "gameplay_movement": 0.0,
+      "action": "pac_down"
+     },
+     "9": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 1352,
+      "control_frames": 32,
+      "action_frames": 34,
+      "gameplay_movement": 243.0,
+      "action": "pac_left"
+     },
+     "10": {
+      "step_verdict": "FAIL_no_change_after_accepted_input",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": true,
+      "pixel_diff": 0,
+      "control_frames": 31,
+      "action_frames": 32,
+      "gameplay_movement": 0.0,
+      "action": "pac_up"
+     },
+     "11": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 1352,
+      "control_frames": 31,
+      "action_frames": 34,
+      "gameplay_movement": 243.0,
+      "action": "pac_right"
+     },
+     "12": {
+      "step_verdict": "FAIL_no_change_after_accepted_input",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": true,
+      "pixel_diff": 0,
+      "control_frames": 33,
+      "action_frames": 34,
+      "gameplay_movement": 0.0,
+      "action": "pac_down"
+     }
+    }
+   }
+  },
+  {
+   "game": "tetris",
+   "repeat": 1,
+   "rc": 0,
+   "cmd": [
+    "D:\\Anaconda\\python.exe",
+    "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+    "run",
+    "--game",
+    "tetris",
+    "--backend",
+    "scripted",
+    "--player",
+    "scripted",
+    "--variant",
+    "V1",
+    "--image-form",
+    "full",
+    "--steps",
+    "12",
+    "--port",
+    "9967",
+    "--window-frames",
+    "30",
+    "--out-prefix",
+    "t139-determinism-w30"
+   ],
+   "run": {
+    "verdict": "PASS",
+    "counts_as_pass": true,
+    "strict_verdict": "PASS",
+    "baseline_verdict": "PASS",
+    "game_side_verdict": "PASS",
+    "injected_steps": 8,
+    "accepted_steps": 8,
+    "changed_steps_of_accepted": 8,
+    "accepted_and_changed_rate": 1.0,
+    "rated_step_count": 8,
+    "refused_steps": [],
+    "real_progress_step_count": 8,
+    "fail_steps": [],
+    "window_too_short": false,
+    "window_too_short_steps": [],
+    "MODEL_FIXED_POINT": false,
+    "MODEL_NO_PROGRESS": false,
+    "_summary": {
+     "verdict": "PASS",
+     "counts_as_pass": true,
+     "strict_verdict": "PASS",
+     "baseline_verdict": "PASS",
+     "game_side_verdict": "PASS",
+     "injected_steps": 8,
+     "accepted_steps": 8,
+     "changed_steps_of_accepted": 8,
+     "accepted_and_changed_rate": 1.0,
+     "rated_step_count": 8,
+     "refused_steps": [],
+     "real_progress_step_count": 8,
+     "fail_steps": [],
+     "window_too_short": false,
+     "window_too_short_steps": [],
+     "MODEL_FIXED_POINT": false,
+     "MODEL_NO_PROGRESS": false
+    },
+    "_steps": {
+     "1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 3174,
+      "control_frames": 31,
+      "action_frames": 32,
+      "gameplay_movement": 1.0,
+      "action": "tetris_rotate"
+     },
+     "2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4232,
+      "control_frames": 32,
+      "action_frames": 32,
+      "gameplay_movement": 1.0,
+      "action": "tetris_left"
+     },
+     "3": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4232,
+      "control_frames": 33,
+      "action_frames": 34,
+      "gameplay_movement": 1.0,
+      "action": "tetris_left"
+     },
+     "4": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4232,
+      "control_frames": 31,
+      "action_frames": 31,
+      "gameplay_movement": 1.0,
+      "action": "tetris_left"
+     },
+     "5": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 6348,
+      "control_frames": 32,
+      "action_frames": 32,
+      "gameplay_movement": 10.0,
+      "action": "tetris_drop"
+     },
+     "6": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 2116,
+      "control_frames": 31,
+      "action_frames": 32,
+      "gameplay_movement": 1.0,
+      "action": "tetris_right"
+     },
+     "7": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 2116,
+      "control_frames": 33,
+      "action_frames": 33,
+      "gameplay_movement": 1.0,
+      "action": "tetris_right"
+     },
+     "8": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 2116,
+      "control_frames": 30,
+      "action_frames": 31,
+      "gameplay_movement": 1.0,
+      "action": "tetris_right"
+     }
+    }
+   }
+  },
+  {
+   "game": "tetris",
+   "repeat": 2,
+   "rc": 0,
+   "cmd": [
+    "D:\\Anaconda\\python.exe",
+    "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+    "run",
+    "--game",
+    "tetris",
+    "--backend",
+    "scripted",
+    "--player",
+    "scripted",
+    "--variant",
+    "V1",
+    "--image-form",
+    "full",
+    "--steps",
+    "12",
+    "--port",
+    "9967",
+    "--window-frames",
+    "30",
+    "--out-prefix",
+    "t139-determinism-w30"
+   ],
+   "run": {
+    "verdict": "PASS",
+    "counts_as_pass": true,
+    "strict_verdict": "PASS",
+    "baseline_verdict": "PASS",
+    "game_side_verdict": "PASS",
+    "injected_steps": 8,
+    "accepted_steps": 8,
+    "changed_steps_of_accepted": 8,
+    "accepted_and_changed_rate": 1.0,
+    "rated_step_count": 8,
+    "refused_steps": [],
+    "real_progress_step_count": 8,
+    "fail_steps": [],
+    "window_too_short": false,
+    "window_too_short_steps": [],
+    "MODEL_FIXED_POINT": false,
+    "MODEL_NO_PROGRESS": false,
+    "_summary": {
+     "verdict": "PASS",
+     "counts_as_pass": true,
+     "strict_verdict": "PASS",
+     "baseline_verdict": "PASS",
+     "game_side_verdict": "PASS",
+     "injected_steps": 8,
+     "accepted_steps": 8,
+     "changed_steps_of_accepted": 8,
+     "accepted_and_changed_rate": 1.0,
+     "rated_step_count": 8,
+     "refused_steps": [],
+     "real_progress_step_count": 8,
+     "fail_steps": [],
+     "window_too_short": false,
+     "window_too_short_steps": [],
+     "MODEL_FIXED_POINT": false,
+     "MODEL_NO_PROGRESS": false
+    },
+    "_steps": {
+     "1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 3174,
+      "control_frames": 32,
+      "action_frames": 33,
+      "gameplay_movement": 1.0,
+      "action": "tetris_rotate"
+     },
+     "2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4232,
+      "control_frames": 31,
+      "action_frames": 33,
+      "gameplay_movement": 1.0,
+      "action": "tetris_left"
+     },
+     "3": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4232,
+      "control_frames": 30,
+      "action_frames": 30,
+      "gameplay_movement": 1.0,
+      "action": "tetris_left"
+     },
+     "4": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4232,
+      "control_frames": 30,
+      "action_frames": 31,
+      "gameplay_movement": 1.0,
+      "action": "tetris_left"
+     },
+     "5": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 6348,
+      "control_frames": 30,
+      "action_frames": 30,
+      "gameplay_movement": 10.0,
+      "action": "tetris_drop"
+     },
+     "6": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 2116,
+      "control_frames": 31,
+      "action_frames": 33,
+      "gameplay_movement": 1.0,
+      "action": "tetris_right"
+     },
+     "7": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 2116,
+      "control_frames": 33,
+      "action_frames": 34,
+      "gameplay_movement": 1.0,
+      "action": "tetris_right"
+     },
+     "8": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 2116,
+      "control_frames": 30,
+      "action_frames": 30,
+      "gameplay_movement": 1.0,
+      "action": "tetris_right"
+     }
+    }
+   }
+  },
+  {
+   "game": "pong",
+   "repeat": 1,
+   "rc": 0,
+   "cmd": [
+    "D:\\Anaconda\\python.exe",
+    "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+    "run",
+    "--game",
+    "pong",
+    "--backend",
+    "scripted",
+    "--player",
+    "scripted",
+    "--variant",
+    "V1",
+    "--image-form",
+    "full",
+    "--steps",
+    "12",
+    "--port",
+    "9967",
+    "--window-frames",
+    "30",
+    "--out-prefix",
+    "t139-determinism-w30"
+   ],
+   "run": {
+    "verdict": "PASS(baseline only)",
+    "counts_as_pass": false,
+    "strict_verdict": "FAIL",
+    "baseline_verdict": "PASS",
+    "game_side_verdict": "FAIL",
+    "injected_steps": 11,
+    "accepted_steps": 11,
+    "changed_steps_of_accepted": 10,
+    "accepted_and_changed_rate": 0.9091,
+    "rated_step_count": 11,
+    "refused_steps": [],
+    "real_progress_step_count": 10,
+    "fail_steps": [
+     5
+    ],
+    "window_too_short": false,
+    "window_too_short_steps": [],
+    "MODEL_FIXED_POINT": false,
+    "MODEL_NO_PROGRESS": false,
+    "_summary": {
+     "verdict": "PASS(baseline only)",
+     "counts_as_pass": false,
+     "strict_verdict": "FAIL",
+     "baseline_verdict": "PASS",
+     "game_side_verdict": "FAIL",
+     "injected_steps": 11,
+     "accepted_steps": 11,
+     "changed_steps_of_accepted": 10,
+     "accepted_and_changed_rate": 0.9091,
+     "rated_step_count": 11,
+     "refused_steps": [],
+     "real_progress_step_count": 10,
+     "fail_steps": [
+      5
+     ],
+     "window_too_short": false,
+     "window_too_short_steps": [],
+     "MODEL_FIXED_POINT": false,
+     "MODEL_NO_PROGRESS": false
+    },
+    "_steps": {
+     "1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 3712,
+      "control_frames": 31,
+      "action_frames": 33,
+      "gameplay_movement": 746.474,
+      "action": "pong_serve"
+     },
+     "2": {
+      "step_verdict": "changed_but_ack_missing",
+      "changed": true,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 576,
+      "control_frames": 31,
+      "action_frames": 33,
+      "gameplay_movement": 787.184,
+      "action": null
+     },
+     "3": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 3712,
+      "control_frames": 31,
+      "action_frames": 32,
+      "gameplay_movement": 595.113,
+      "action": "pong_left_down"
+     },
+     "4": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 6912,
+      "control_frames": 33,
+      "action_frames": 34,
+      "gameplay_movement": 1729.888,
+      "action": "pong_left_up"
+     },
+     "5": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 6368,
+      "control_frames": 30,
+      "action_frames": 30,
+      "gameplay_movement": 1570.763,
+      "action": "pong_left_down"
+     },
+     "6": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4768,
+      "control_frames": 30,
+      "action_frames": 31,
+      "gameplay_movement": 1660.436,
+      "action": "pong_left_up"
+     },
+     "7": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 6912,
+      "control_frames": 30,
+      "action_frames": 30,
+      "gameplay_movement": 1860.497,
+      "action": "pong_left_down"
+     },
+     "8": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4064,
+      "control_frames": 33,
+      "action_frames": 33,
+      "gameplay_movement": 1453.851,
+      "action": "pong_left_up"
+     },
+     "9": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 5632,
+      "control_frames": 30,
+      "action_frames": 30,
+      "gameplay_movement": 935.383,
+      "action": "pong_left_up"
+     },
+     "10": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 5536,
+      "control_frames": 31,
+      "action_frames": 32,
+      "gameplay_movement": 1410.583,
+      "action": "pong_left_down"
+     },
+     "11": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 3712,
+      "control_frames": 33,
+      "action_frames": 34,
+      "gameplay_movement": 864.106,
+      "action": "pong_left_up"
+     },
+     "12": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4268,
+      "control_frames": 30,
+      "action_frames": 34,
+      "gameplay_movement": 1153.079,
+      "action": "pong_left_down"
+     }
+    }
+   }
+  },
+  {
+   "game": "pong",
+   "repeat": 2,
+   "rc": 0,
+   "cmd": [
+    "D:\\Anaconda\\python.exe",
+    "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+    "run",
+    "--game",
+    "pong",
+    "--backend",
+    "scripted",
+    "--player",
+    "scripted",
+    "--variant",
+    "V1",
+    "--image-form",
+    "full",
+    "--steps",
+    "12",
+    "--port",
+    "9967",
+    "--window-frames",
+    "30",
+    "--out-prefix",
+    "t139-determinism-w30"
+   ],
+   "run": {
+    "verdict": "PASS",
+    "counts_as_pass": true,
+    "strict_verdict": "PASS",
+    "baseline_verdict": "PASS",
+    "game_side_verdict": "PASS",
+    "injected_steps": 9,
+    "accepted_steps": 9,
+    "changed_steps_of_accepted": 9,
+    "accepted_and_changed_rate": 1.0,
+    "rated_step_count": 9,
+    "refused_steps": [],
+    "real_progress_step_count": 9,
+    "fail_steps": [],
+    "window_too_short": false,
+    "window_too_short_steps": [],
+    "MODEL_FIXED_POINT": false,
+    "MODEL_NO_PROGRESS": false,
+    "_summary": {
+     "verdict": "PASS",
+     "counts_as_pass": true,
+     "strict_verdict": "PASS",
+     "baseline_verdict": "PASS",
+     "game_side_verdict": "PASS",
+     "injected_steps": 9,
+     "accepted_steps": 9,
+     "changed_steps_of_accepted": 9,
+     "accepted_and_changed_rate": 1.0,
+     "rated_step_count": 9,
+     "refused_steps": [],
+     "real_progress_step_count": 9,
+     "fail_steps": [],
+     "window_too_short": false,
+     "window_too_short_steps": [],
+     "MODEL_FIXED_POINT": false,
+     "MODEL_NO_PROGRESS": false
+    },
+    "_steps": {
+     "1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 3712,
+      "control_frames": 32,
+      "action_frames": 33,
+      "gameplay_movement": 740.714,
+      "action": "pong_serve"
+     },
+     "2": {
+      "step_verdict": "changed_but_ack_missing",
+      "changed": true,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 768,
+      "control_frames": 32,
+      "action_frames": 34,
+      "gameplay_movement": 789.715,
+      "action": null
+     },
+     "3": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 3712,
+      "control_frames": 31,
+      "action_frames": 34,
+      "gameplay_movement": 1238.401,
+      "action": "pong_left_down"
+     },
+     "4": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 6912,
+      "control_frames": 30,
+      "action_frames": 33,
+      "gameplay_movement": 1204.303,
+      "action": "pong_left_up"
+     },
+     "5": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 5024,
+      "control_frames": 32,
+      "action_frames": 33,
+      "gameplay_movement": 1281.1,
+      "action": "pong_left_down"
+     },
+     "6": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4608,
+      "control_frames": 32,
+      "action_frames": 32,
+      "gameplay_movement": 1164.199,
+      "action": "pong_left_up"
+     },
+     "7": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4768,
+      "control_frames": 32,
+      "action_frames": 34,
+      "gameplay_movement": 959.942,
+      "action": "pong_left_down"
+     },
+     "8": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 3670,
+      "control_frames": 30,
+      "action_frames": 31,
+      "gameplay_movement": 756.637,
+      "action": "pong_left_up"
+     },
+     "9": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 3628,
+      "control_frames": 32,
+      "action_frames": 34,
+      "gameplay_movement": 691.61,
+      "action": "pong_left_up"
+     },
+     "10": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 512,
+      "control_frames": 32,
+      "action_frames": 34,
+      "gameplay_movement": 584.959,
+      "action": "pong_serve"
+     }
+    }
+   }
+  },
+  {
+   "game": "breakout",
+   "repeat": 1,
+   "rc": 0,
+   "cmd": [
+    "D:\\Anaconda\\python.exe",
+    "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+    "run",
+    "--game",
+    "breakout",
+    "--backend",
+    "scripted",
+    "--player",
+    "scripted",
+    "--variant",
+    "V1",
+    "--image-form",
+    "full",
+    "--steps",
+    "12",
+    "--port",
+    "9967",
+    "--window-frames",
+    "30",
+    "--out-prefix",
+    "t139-determinism-w30"
+   ],
+   "run": {
+    "verdict": "INCONCLUSIVE",
+    "counts_as_pass": false,
+    "strict_verdict": "INCONCLUSIVE",
+    "baseline_verdict": "INCONCLUSIVE",
+    "game_side_verdict": "INCONCLUSIVE",
+    "injected_steps": 3,
+    "accepted_steps": 3,
+    "changed_steps_of_accepted": 3,
+    "accepted_and_changed_rate": 1.0,
+    "rated_step_count": 3,
+    "refused_steps": [],
+    "real_progress_step_count": 3,
+    "fail_steps": [],
+    "window_too_short": false,
+    "window_too_short_steps": [],
+    "MODEL_FIXED_POINT": false,
+    "MODEL_NO_PROGRESS": false,
+    "_summary": {
+     "verdict": "INCONCLUSIVE",
+     "counts_as_pass": false,
+     "strict_verdict": "INCONCLUSIVE",
+     "baseline_verdict": "INCONCLUSIVE",
+     "game_side_verdict": "INCONCLUSIVE",
+     "injected_steps": 3,
+     "accepted_steps": 3,
+     "changed_steps_of_accepted": 3,
+     "accepted_and_changed_rate": 1.0,
+     "rated_step_count": 3,
+     "refused_steps": [],
+     "real_progress_step_count": 3,
+     "fail_steps": [],
+     "window_too_short": false,
+     "window_too_short_steps": [],
+     "MODEL_FIXED_POINT": false,
+     "MODEL_NO_PROGRESS": false
+    },
+    "_steps": {
+     "1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 392,
+      "control_frames": 30,
+      "action_frames": 31,
+      "gameplay_movement": 539.482,
+      "action": "breakout_launch"
+     },
+     "2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 9369,
+      "control_frames": 33,
+      "action_frames": 36,
+      "gameplay_movement": 627.949,
+      "action": "breakout_right"
+     },
+     "3": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 5212,
+      "control_frames": 34,
+      "action_frames": 36,
+      "gameplay_movement": 1856.998,
+      "action": "breakout_left"
+     },
+     "4": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 34,
+      "action_frames": 36,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "5": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 31,
+      "action_frames": 35,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "6": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 32,
+      "action_frames": 32,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "7": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 31,
+      "action_frames": 32,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "8": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 34,
+      "action_frames": 36,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "9": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 30,
+      "action_frames": 31,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "10": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 31,
+      "action_frames": 34,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "11": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 35,
+      "action_frames": 37,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "12": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 34,
+      "action_frames": 34,
+      "gameplay_movement": 0.0,
+      "action": null
+     }
+    }
+   }
+  },
+  {
+   "game": "breakout",
+   "repeat": 2,
+   "rc": 0,
+   "cmd": [
+    "D:\\Anaconda\\python.exe",
+    "F:\\moonbit-hof-rs\\godot-mcp\\tools\\playtest_player.py",
+    "run",
+    "--game",
+    "breakout",
+    "--backend",
+    "scripted",
+    "--player",
+    "scripted",
+    "--variant",
+    "V1",
+    "--image-form",
+    "full",
+    "--steps",
+    "12",
+    "--port",
+    "9967",
+    "--window-frames",
+    "30",
+    "--out-prefix",
+    "t139-determinism-w30"
+   ],
+   "run": {
+    "verdict": "INCONCLUSIVE",
+    "counts_as_pass": false,
+    "strict_verdict": "INCONCLUSIVE",
+    "baseline_verdict": "INCONCLUSIVE",
+    "game_side_verdict": "INCONCLUSIVE",
+    "injected_steps": 3,
+    "accepted_steps": 3,
+    "changed_steps_of_accepted": 3,
+    "accepted_and_changed_rate": 1.0,
+    "rated_step_count": 3,
+    "refused_steps": [],
+    "real_progress_step_count": 3,
+    "fail_steps": [],
+    "window_too_short": false,
+    "window_too_short_steps": [],
+    "MODEL_FIXED_POINT": false,
+    "MODEL_NO_PROGRESS": false,
+    "_summary": {
+     "verdict": "INCONCLUSIVE",
+     "counts_as_pass": false,
+     "strict_verdict": "INCONCLUSIVE",
+     "baseline_verdict": "INCONCLUSIVE",
+     "game_side_verdict": "INCONCLUSIVE",
+     "injected_steps": 3,
+     "accepted_steps": 3,
+     "changed_steps_of_accepted": 3,
+     "accepted_and_changed_rate": 1.0,
+     "rated_step_count": 3,
+     "refused_steps": [],
+     "real_progress_step_count": 3,
+     "fail_steps": [],
+     "window_too_short": false,
+     "window_too_short_steps": [],
+     "MODEL_FIXED_POINT": false,
+     "MODEL_NO_PROGRESS": false
+    },
+    "_steps": {
+     "1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 392,
+      "control_frames": 30,
+      "action_frames": 34,
+      "gameplay_movement": 559.878,
+      "action": "breakout_launch"
+     },
+     "2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 9369,
+      "control_frames": 35,
+      "action_frames": 39,
+      "gameplay_movement": 676.123,
+      "action": "breakout_right"
+     },
+     "3": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 5212,
+      "control_frames": 31,
+      "action_frames": 34,
+      "gameplay_movement": 1796.663,
+      "action": "breakout_left"
+     },
+     "4": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 36,
+      "action_frames": 41,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "5": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 33,
+      "action_frames": 34,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "6": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 36,
+      "action_frames": 41,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "7": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 34,
+      "action_frames": 36,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "8": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 30,
+      "action_frames": 34,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "9": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 31,
+      "action_frames": 34,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "10": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 34,
+      "action_frames": 38,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "11": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 31,
+      "action_frames": 31,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "12": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 30,
+      "action_frames": 32,
+      "gameplay_movement": 0.0,
+      "action": null
+     }
+    }
+   }
+  }
+ ],
+ "comparison": [
+  {
+   "game": "asteroids",
+   "verdict_repeat1": "PASS",
+   "verdict_repeat2": "PASS",
+   "verdict_stable": true,
+   "summary_differences": {
+    "injected_steps": [
+     12,
+     8
+    ],
+    "accepted_steps": [
+     1,
+     8
+    ],
+    "changed_steps_of_accepted": [
+     1,
+     8
+    ],
+    "rated_step_count": [
+     1,
+     8
+    ],
+    "real_progress_step_count": [
+     7,
+     8
+    ]
+   },
+   "step_differences": [
+    {
+     "step": 1,
+     "repeat1": {
+      "step_verdict": "changed_but_ack_missing",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 3072,
+      "control_frames": 33,
+      "action_frames": 37,
+      "gameplay_movement": 0.0,
+      "action": "ast_left"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 88,
+      "control_frames": 30,
+      "action_frames": 33,
+      "gameplay_movement": 77.768,
+      "action": "ast_left"
+     }
+    },
+    {
+     "step": 2,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 6297,
+      "control_frames": 34,
+      "action_frames": 37,
+      "gameplay_movement": 30.0,
+      "action": "ast_fire"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 17,
+      "control_frames": 30,
+      "action_frames": 30,
+      "gameplay_movement": 2133.265,
+      "action": "ast_fire"
+     }
+    },
+    {
+     "step": 3,
+     "repeat1": {
+      "step_verdict": "changed_but_ack_missing",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 5212,
+      "control_frames": 32,
+      "action_frames": 36,
+      "gameplay_movement": 0.0,
+      "action": "ast_right"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 92,
+      "control_frames": 30,
+      "action_frames": 30,
+      "gameplay_movement": 131.857,
+      "action": "ast_right"
+     }
+    },
+    {
+     "step": 4,
+     "repeat1": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 32,
+      "action_frames": 34,
+      "gameplay_movement": 0.0,
+      "action": "ast_thrust"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 964,
+      "control_frames": 30,
+      "action_frames": 32,
+      "gameplay_movement": 208.294,
+      "action": "ast_thrust"
+     }
+    },
+    {
+     "step": 5,
+     "repeat1": {
+      "step_verdict": "changed_but_ack_missing",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 352,
+      "control_frames": 34,
+      "action_frames": 37,
+      "gameplay_movement": 0.0,
+      "action": "ast_left"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 968,
+      "control_frames": 30,
+      "action_frames": 30,
+      "gameplay_movement": 269.897,
+      "action": "ast_left"
+     }
+    },
+    {
+     "step": 6,
+     "repeat1": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 31,
+      "action_frames": 36,
+      "gameplay_movement": 0.0,
+      "action": "ast_fire"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 6412,
+      "control_frames": 33,
+      "action_frames": 36,
+      "gameplay_movement": 770.559,
+      "action": "ast_fire"
+     }
+    },
+    {
+     "step": 7,
+     "repeat1": {
+      "step_verdict": "changed_but_ack_missing",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 352,
+      "control_frames": 33,
+      "action_frames": 34,
+      "gameplay_movement": 0.0,
+      "action": "ast_right"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 872,
+      "control_frames": 32,
+      "action_frames": 36,
+      "gameplay_movement": 132.709,
+      "action": "ast_right"
+     }
+    },
+    {
+     "step": 8,
+     "repeat1": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 36,
+      "action_frames": 40,
+      "gameplay_movement": 0.0,
+      "action": "ast_thrust"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 969,
+      "control_frames": 32,
+      "action_frames": 33,
+      "gameplay_movement": 241.603,
+      "action": "ast_thrust"
+     }
+    },
+    {
+     "step": 9,
+     "repeat1": {
+      "step_verdict": "changed_but_ack_missing",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 352,
+      "control_frames": 31,
+      "action_frames": 35,
+      "gameplay_movement": 0.0,
+      "action": "ast_left"
+     },
+     "repeat2": null
+    },
+    {
+     "step": 10,
+     "repeat1": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 33,
+      "action_frames": 38,
+      "gameplay_movement": 0.0,
+      "action": "ast_fire"
+     },
+     "repeat2": null
+    },
+    {
+     "step": 11,
+     "repeat1": {
+      "step_verdict": "changed_but_ack_missing",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 352,
+      "control_frames": 36,
+      "action_frames": 39,
+      "gameplay_movement": 0.0,
+      "action": "ast_right"
+     },
+     "repeat2": null
+    },
+    {
+     "step": 12,
+     "repeat1": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 34,
+      "action_frames": 39,
+      "gameplay_movement": 0.0,
+      "action": "ast_thrust"
+     },
+     "repeat2": null
+    }
+   ],
+   "step_difference_count": 12
+  },
+  {
+   "game": "pacman",
+   "verdict_repeat1": "PASS",
+   "verdict_repeat2": "PASS",
+   "verdict_stable": true,
+   "summary_differences": {},
+   "step_differences": [
+    {
+     "step": 1,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4197,
+      "control_frames": 32,
+      "action_frames": 32,
+      "gameplay_movement": 282.0,
+      "action": "pac_left"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4197,
+      "control_frames": 32,
+      "action_frames": 37,
+      "gameplay_movement": 282.0,
+      "action": "pac_left"
+     }
+    },
+    {
+     "step": 2,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 2217,
+      "control_frames": 31,
+      "action_frames": 37,
+      "gameplay_movement": 279.0,
+      "action": "pac_up"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 2217,
+      "control_frames": 32,
+      "action_frames": 33,
+      "gameplay_movement": 279.0,
+      "action": "pac_up"
+     }
+    },
+    {
+     "step": 3,
+     "repeat1": {
+      "step_verdict": "FAIL_no_change_after_accepted_input",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": true,
+      "pixel_diff": 0,
+      "control_frames": 31,
+      "action_frames": 32,
+      "gameplay_movement": 0.0,
+      "action": "pac_right"
+     },
+     "repeat2": {
+      "step_verdict": "FAIL_no_change_after_accepted_input",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": true,
+      "pixel_diff": 0,
+      "control_frames": 34,
+      "action_frames": 35,
+      "gameplay_movement": 0.0,
+      "action": "pac_right"
+     }
+    },
+    {
+     "step": 4,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 1352,
+      "control_frames": 31,
+      "action_frames": 35,
+      "gameplay_movement": 240.0,
+      "action": "pac_down"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 1352,
+      "control_frames": 30,
+      "action_frames": 32,
+      "gameplay_movement": 240.0,
+      "action": "pac_down"
+     }
+    },
+    {
+     "step": 5,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 1978,
+      "control_frames": 30,
+      "action_frames": 32,
+      "gameplay_movement": 282.0,
+      "action": "pac_left"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 1978,
+      "control_frames": 32,
+      "action_frames": 36,
+      "gameplay_movement": 282.0,
+      "action": "pac_left"
+     }
+    },
+    {
+     "step": 6,
+     "repeat1": {
+      "step_verdict": "FAIL_no_change_after_accepted_input",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": true,
+      "pixel_diff": 0,
+      "control_frames": 32,
+      "action_frames": 34,
+      "gameplay_movement": 0.0,
+      "action": "pac_up"
+     },
+     "repeat2": {
+      "step_verdict": "FAIL_no_change_after_accepted_input",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": true,
+      "pixel_diff": 0,
+      "control_frames": 30,
+      "action_frames": 33,
+      "gameplay_movement": 0.0,
+      "action": "pac_up"
+     }
+    },
+    {
+     "step": 7,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 1352,
+      "control_frames": 35,
+      "action_frames": 36,
+      "gameplay_movement": 243.0,
+      "action": "pac_right"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 1352,
+      "control_frames": 32,
+      "action_frames": 35,
+      "gameplay_movement": 243.0,
+      "action": "pac_right"
+     }
+    },
+    {
+     "step": 9,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 1352,
+      "control_frames": 34,
+      "action_frames": 37,
+      "gameplay_movement": 243.0,
+      "action": "pac_left"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 1352,
+      "control_frames": 32,
+      "action_frames": 34,
+      "gameplay_movement": 243.0,
+      "action": "pac_left"
+     }
+    },
+    {
+     "step": 10,
+     "repeat1": {
+      "step_verdict": "FAIL_no_change_after_accepted_input",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": true,
+      "pixel_diff": 0,
+      "control_frames": 32,
+      "action_frames": 32,
+      "gameplay_movement": 0.0,
+      "action": "pac_up"
+     },
+     "repeat2": {
+      "step_verdict": "FAIL_no_change_after_accepted_input",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": true,
+      "pixel_diff": 0,
+      "control_frames": 31,
+      "action_frames": 32,
+      "gameplay_movement": 0.0,
+      "action": "pac_up"
+     }
+    },
+    {
+     "step": 11,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 1352,
+      "control_frames": 32,
+      "action_frames": 32,
+      "gameplay_movement": 243.0,
+      "action": "pac_right"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 1352,
+      "control_frames": 31,
+      "action_frames": 34,
+      "gameplay_movement": 243.0,
+      "action": "pac_right"
+     }
+    },
+    {
+     "step": 12,
+     "repeat1": {
+      "step_verdict": "FAIL_no_change_after_accepted_input",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": true,
+      "pixel_diff": 0,
+      "control_frames": 32,
+      "action_frames": 34,
+      "gameplay_movement": 0.0,
+      "action": "pac_down"
+     },
+     "repeat2": {
+      "step_verdict": "FAIL_no_change_after_accepted_input",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": true,
+      "pixel_diff": 0,
+      "control_frames": 33,
+      "action_frames": 34,
+      "gameplay_movement": 0.0,
+      "action": "pac_down"
+     }
+    }
+   ],
+   "step_difference_count": 11
+  },
+  {
+   "game": "tetris",
+   "verdict_repeat1": "PASS",
+   "verdict_repeat2": "PASS",
+   "verdict_stable": true,
+   "summary_differences": {},
+   "step_differences": [
+    {
+     "step": 1,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 3174,
+      "control_frames": 31,
+      "action_frames": 32,
+      "gameplay_movement": 1.0,
+      "action": "tetris_rotate"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 3174,
+      "control_frames": 32,
+      "action_frames": 33,
+      "gameplay_movement": 1.0,
+      "action": "tetris_rotate"
+     }
+    },
+    {
+     "step": 2,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4232,
+      "control_frames": 32,
+      "action_frames": 32,
+      "gameplay_movement": 1.0,
+      "action": "tetris_left"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4232,
+      "control_frames": 31,
+      "action_frames": 33,
+      "gameplay_movement": 1.0,
+      "action": "tetris_left"
+     }
+    },
+    {
+     "step": 3,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4232,
+      "control_frames": 33,
+      "action_frames": 34,
+      "gameplay_movement": 1.0,
+      "action": "tetris_left"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4232,
+      "control_frames": 30,
+      "action_frames": 30,
+      "gameplay_movement": 1.0,
+      "action": "tetris_left"
+     }
+    },
+    {
+     "step": 4,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4232,
+      "control_frames": 31,
+      "action_frames": 31,
+      "gameplay_movement": 1.0,
+      "action": "tetris_left"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4232,
+      "control_frames": 30,
+      "action_frames": 31,
+      "gameplay_movement": 1.0,
+      "action": "tetris_left"
+     }
+    },
+    {
+     "step": 5,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 6348,
+      "control_frames": 32,
+      "action_frames": 32,
+      "gameplay_movement": 10.0,
+      "action": "tetris_drop"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 6348,
+      "control_frames": 30,
+      "action_frames": 30,
+      "gameplay_movement": 10.0,
+      "action": "tetris_drop"
+     }
+    },
+    {
+     "step": 6,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 2116,
+      "control_frames": 31,
+      "action_frames": 32,
+      "gameplay_movement": 1.0,
+      "action": "tetris_right"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 2116,
+      "control_frames": 31,
+      "action_frames": 33,
+      "gameplay_movement": 1.0,
+      "action": "tetris_right"
+     }
+    },
+    {
+     "step": 7,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 2116,
+      "control_frames": 33,
+      "action_frames": 33,
+      "gameplay_movement": 1.0,
+      "action": "tetris_right"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 2116,
+      "control_frames": 33,
+      "action_frames": 34,
+      "gameplay_movement": 1.0,
+      "action": "tetris_right"
+     }
+    },
+    {
+     "step": 8,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 2116,
+      "control_frames": 30,
+      "action_frames": 31,
+      "gameplay_movement": 1.0,
+      "action": "tetris_right"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 2116,
+      "control_frames": 30,
+      "action_frames": 30,
+      "gameplay_movement": 1.0,
+      "action": "tetris_right"
+     }
+    }
+   ],
+   "step_difference_count": 8
+  },
+  {
+   "game": "pong",
+   "verdict_repeat1": "PASS(baseline only)",
+   "verdict_repeat2": "PASS",
+   "verdict_stable": false,
+   "summary_differences": {
+    "verdict": [
+     "PASS(baseline only)",
+     "PASS"
+    ],
+    "counts_as_pass": [
+     false,
+     true
+    ],
+    "strict_verdict": [
+     "FAIL",
+     "PASS"
+    ],
+    "game_side_verdict": [
+     "FAIL",
+     "PASS"
+    ],
+    "injected_steps": [
+     11,
+     9
+    ],
+    "accepted_steps": [
+     11,
+     9
+    ],
+    "changed_steps_of_accepted": [
+     10,
+     9
+    ],
+    "accepted_and_changed_rate": [
+     0.9091,
+     1.0
+    ],
+    "rated_step_count": [
+     11,
+     9
+    ],
+    "real_progress_step_count": [
+     10,
+     9
+    ],
+    "fail_steps": [
+     [
+      5
+     ],
+     []
+    ]
+   },
+   "step_differences": [
+    {
+     "step": 1,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 3712,
+      "control_frames": 31,
+      "action_frames": 33,
+      "gameplay_movement": 746.474,
+      "action": "pong_serve"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 3712,
+      "control_frames": 32,
+      "action_frames": 33,
+      "gameplay_movement": 740.714,
+      "action": "pong_serve"
+     }
+    },
+    {
+     "step": 2,
+     "repeat1": {
+      "step_verdict": "changed_but_ack_missing",
+      "changed": true,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 576,
+      "control_frames": 31,
+      "action_frames": 33,
+      "gameplay_movement": 787.184,
+      "action": null
+     },
+     "repeat2": {
+      "step_verdict": "changed_but_ack_missing",
+      "changed": true,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 768,
+      "control_frames": 32,
+      "action_frames": 34,
+      "gameplay_movement": 789.715,
+      "action": null
+     }
+    },
+    {
+     "step": 3,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 3712,
+      "control_frames": 31,
+      "action_frames": 32,
+      "gameplay_movement": 595.113,
+      "action": "pong_left_down"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 3712,
+      "control_frames": 31,
+      "action_frames": 34,
+      "gameplay_movement": 1238.401,
+      "action": "pong_left_down"
+     }
+    },
+    {
+     "step": 4,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 6912,
+      "control_frames": 33,
+      "action_frames": 34,
+      "gameplay_movement": 1729.888,
+      "action": "pong_left_up"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 6912,
+      "control_frames": 30,
+      "action_frames": 33,
+      "gameplay_movement": 1204.303,
+      "action": "pong_left_up"
+     }
+    },
+    {
+     "step": 5,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 6368,
+      "control_frames": 30,
+      "action_frames": 30,
+      "gameplay_movement": 1570.763,
+      "action": "pong_left_down"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 5024,
+      "control_frames": 32,
+      "action_frames": 33,
+      "gameplay_movement": 1281.1,
+      "action": "pong_left_down"
+     }
+    },
+    {
+     "step": 6,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4768,
+      "control_frames": 30,
+      "action_frames": 31,
+      "gameplay_movement": 1660.436,
+      "action": "pong_left_up"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4608,
+      "control_frames": 32,
+      "action_frames": 32,
+      "gameplay_movement": 1164.199,
+      "action": "pong_left_up"
+     }
+    },
+    {
+     "step": 7,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 6912,
+      "control_frames": 30,
+      "action_frames": 30,
+      "gameplay_movement": 1860.497,
+      "action": "pong_left_down"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4768,
+      "control_frames": 32,
+      "action_frames": 34,
+      "gameplay_movement": 959.942,
+      "action": "pong_left_down"
+     }
+    },
+    {
+     "step": 8,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4064,
+      "control_frames": 33,
+      "action_frames": 33,
+      "gameplay_movement": 1453.851,
+      "action": "pong_left_up"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 3670,
+      "control_frames": 30,
+      "action_frames": 31,
+      "gameplay_movement": 756.637,
+      "action": "pong_left_up"
+     }
+    },
+    {
+     "step": 9,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 5632,
+      "control_frames": 30,
+      "action_frames": 30,
+      "gameplay_movement": 935.383,
+      "action": "pong_left_up"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 3628,
+      "control_frames": 32,
+      "action_frames": 34,
+      "gameplay_movement": 691.61,
+      "action": "pong_left_up"
+     }
+    },
+    {
+     "step": 10,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 5536,
+      "control_frames": 31,
+      "action_frames": 32,
+      "gameplay_movement": 1410.583,
+      "action": "pong_left_down"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 512,
+      "control_frames": 32,
+      "action_frames": 34,
+      "gameplay_movement": 584.959,
+      "action": "pong_serve"
+     }
+    },
+    {
+     "step": 11,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 3712,
+      "control_frames": 33,
+      "action_frames": 34,
+      "gameplay_movement": 864.106,
+      "action": "pong_left_up"
+     },
+     "repeat2": null
+    },
+    {
+     "step": 12,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 4268,
+      "control_frames": 30,
+      "action_frames": 34,
+      "gameplay_movement": 1153.079,
+      "action": "pong_left_down"
+     },
+     "repeat2": null
+    }
+   ],
+   "step_difference_count": 12
+  },
+  {
+   "game": "breakout",
+   "verdict_repeat1": "INCONCLUSIVE",
+   "verdict_repeat2": "INCONCLUSIVE",
+   "verdict_stable": true,
+   "summary_differences": {},
+   "step_differences": [
+    {
+     "step": 1,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 392,
+      "control_frames": 30,
+      "action_frames": 31,
+      "gameplay_movement": 539.482,
+      "action": "breakout_launch"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 392,
+      "control_frames": 30,
+      "action_frames": 34,
+      "gameplay_movement": 559.878,
+      "action": "breakout_launch"
+     }
+    },
+    {
+     "step": 2,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 9369,
+      "control_frames": 33,
+      "action_frames": 36,
+      "gameplay_movement": 627.949,
+      "action": "breakout_right"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 9369,
+      "control_frames": 35,
+      "action_frames": 39,
+      "gameplay_movement": 676.123,
+      "action": "breakout_right"
+     }
+    },
+    {
+     "step": 3,
+     "repeat1": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 5212,
+      "control_frames": 34,
+      "action_frames": 36,
+      "gameplay_movement": 1856.998,
+      "action": "breakout_left"
+     },
+     "repeat2": {
+      "step_verdict": "ok_ack_and_changed",
+      "changed": true,
+      "changed_strict": true,
+      "refused_legal": false,
+      "pixel_diff": 5212,
+      "control_frames": 31,
+      "action_frames": 34,
+      "gameplay_movement": 1796.663,
+      "action": "breakout_left"
+     }
+    },
+    {
+     "step": 4,
+     "repeat1": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 34,
+      "action_frames": 36,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "repeat2": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 36,
+      "action_frames": 41,
+      "gameplay_movement": 0.0,
+      "action": null
+     }
+    },
+    {
+     "step": 5,
+     "repeat1": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 31,
+      "action_frames": 35,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "repeat2": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 33,
+      "action_frames": 34,
+      "gameplay_movement": 0.0,
+      "action": null
+     }
+    },
+    {
+     "step": 6,
+     "repeat1": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 32,
+      "action_frames": 32,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "repeat2": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 36,
+      "action_frames": 41,
+      "gameplay_movement": 0.0,
+      "action": null
+     }
+    },
+    {
+     "step": 7,
+     "repeat1": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 31,
+      "action_frames": 32,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "repeat2": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 34,
+      "action_frames": 36,
+      "gameplay_movement": 0.0,
+      "action": null
+     }
+    },
+    {
+     "step": 8,
+     "repeat1": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 34,
+      "action_frames": 36,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "repeat2": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 30,
+      "action_frames": 34,
+      "gameplay_movement": 0.0,
+      "action": null
+     }
+    },
+    {
+     "step": 9,
+     "repeat1": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 30,
+      "action_frames": 31,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "repeat2": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 31,
+      "action_frames": 34,
+      "gameplay_movement": 0.0,
+      "action": null
+     }
+    },
+    {
+     "step": 10,
+     "repeat1": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 31,
+      "action_frames": 34,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "repeat2": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 34,
+      "action_frames": 38,
+      "gameplay_movement": 0.0,
+      "action": null
+     }
+    },
+    {
+     "step": 11,
+     "repeat1": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 35,
+      "action_frames": 37,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "repeat2": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 31,
+      "action_frames": 31,
+      "gameplay_movement": 0.0,
+      "action": null
+     }
+    },
+    {
+     "step": 12,
+     "repeat1": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 34,
+      "action_frames": 34,
+      "gameplay_movement": 0.0,
+      "action": null
+     },
+     "repeat2": {
+      "step_verdict": "no_ack_no_change",
+      "changed": false,
+      "changed_strict": false,
+      "refused_legal": false,
+      "pixel_diff": 0,
+      "control_frames": 30,
+      "action_frames": 32,
+      "gameplay_movement": 0.0,
+      "action": null
+     }
+    }
+   ],
+   "step_difference_count": 12
+  }
+ ],
+ "all_verdicts_stable": false
+}

@@ -1,0 +1,124 @@
+[05:07:58] ==============================================================================
+[05:07:58] TASK-139 determinism arm=scripted window=30 games=('asteroids', 'pacman', 'tetris') prefix=t139-determinism-w30 port=9967
+[05:07:58] START asteroids repeat 1
+[05:08:35] DONE  asteroids    rep=1 rc=0 verdict=PASS                  
+[05:08:37] START asteroids repeat 2
+[05:09:14] DONE  asteroids    rep=2 rc=0 verdict=PASS                  
+[05:09:16] START pacman repeat 1
+[05:10:01] DONE  pacman       rep=1 rc=0 verdict=PASS                  
+[05:10:03] START pacman repeat 2
+[05:10:48] DONE  pacman       rep=2 rc=0 verdict=PASS                  
+[05:10:50] START tetris repeat 1
+[05:11:27] DONE  tetris       rep=1 rc=0 verdict=PASS                  
+[05:11:29] START tetris repeat 2
+[05:12:06] DONE  tetris       rep=2 rc=0 verdict=PASS                  
+[05:12:21] ==============================================================================
+[05:12:21] TASK-139 determinism arm=scripted window=90 games=('asteroids', 'pacman', 'tetris', 'pong', 'breakout') prefix=t139-determinism-w90 port=9967
+[05:12:21] START asteroids repeat 1
+[05:13:05] DONE  asteroids    rep=1 rc=0 verdict=PASS                  
+[05:13:07] START asteroids repeat 2
+[05:13:51] DONE  asteroids    rep=2 rc=0 verdict=PASS                  
+[05:13:53] START pacman repeat 1
+[05:14:48] DONE  pacman       rep=1 rc=0 verdict=PASS                  
+[05:14:50] START pacman repeat 2
+[05:15:45] DONE  pacman       rep=2 rc=0 verdict=PASS                  
+[05:15:47] START tetris repeat 1
+[05:16:31] DONE  tetris       rep=1 rc=0 verdict=PASS                  
+[05:16:33] START tetris repeat 2
+[05:17:17] DONE  tetris       rep=2 rc=0 verdict=PASS                  
+[05:17:19] START pong repeat 1
+[05:18:03] DONE  pong         rep=1 rc=0 verdict=PASS                  
+[05:18:05] START pong repeat 2
+[05:18:48] DONE  pong         rep=2 rc=0 verdict=PASS                  
+[05:18:50] START breakout repeat 1
+[05:19:40] DONE  breakout     rep=1 rc=0 verdict=FAIL                  
+[05:19:42] START breakout repeat 2
+[05:20:33] DONE  breakout     rep=2 rc=0 verdict=FAIL                  
+[05:37:03] ==============================================================================
+[05:37:03] TASK-139 determinism arm=scripted window=30 games=('asteroids', 'pacman', 'tetris', 'pong', 'breakout') prefix=t139-determinism-w30 port=9967
+[05:37:03] START asteroids repeat 1
+[05:37:05] ==============================================================================
+[05:37:05] TASK-139 determinism arm=scripted window=90 games=('asteroids', 'pacman', 'tetris', 'pong', 'breakout') prefix=t139-determinism-w90 port=9967
+[05:37:05] START asteroids repeat 1
+[05:37:31] DONE  asteroids    rep=1 rc=1 verdict=PASS                  
+[05:37:32] DONE  asteroids    rep=1 rc=0 verdict=FAIL                  
+[05:37:33] START asteroids repeat 2
+[05:37:34] START asteroids repeat 2
+[05:37:36] DONE  asteroids    rep=2 rc=1 verdict=PASS                  
+[05:37:38] START pacman repeat 1
+[05:38:05] DONE  asteroids    rep=2 rc=0 verdict=PASS                  
+[05:38:06] DONE  pacman       rep=1 rc=1 verdict=PASS                  
+[05:38:07] START pacman repeat 1
+[05:38:08] START pacman repeat 2
+[05:38:10] DONE  pacman       rep=1 rc=1 verdict=PASS                  
+[05:38:12] START pacman repeat 2
+[05:38:49] DONE  pacman       rep=2 rc=0 verdict=INCONCLUSIVE          
+[05:38:49] DONE  pacman       rep=2 rc=0 verdict=PASS                  
+[05:38:51] START tetris repeat 1
+[05:38:51] START tetris repeat 1
+[05:38:53] DONE  tetris       rep=1 rc=1 verdict=PASS                  
+[05:38:55] START tetris repeat 2
+[05:39:32] DONE  tetris       rep=2 rc=0 verdict=INCONCLUSIVE          
+[05:39:32] DONE  tetris       rep=1 rc=0 verdict=FAIL                  
+[05:39:34] START pong repeat 1
+[05:39:34] START tetris repeat 2
+[05:39:36] DONE  pong         rep=1 rc=1 verdict=None                  
+[05:39:38] START pong repeat 2
+[05:40:08] DONE  tetris       rep=2 rc=0 verdict=INCONCLUSIVE          
+[05:40:08] DONE  pong         rep=2 rc=0 verdict=PASS(baseline only)   
+[05:40:10] START pong repeat 1
+[05:40:10] START breakout repeat 1
+[05:40:56] DONE  pong         rep=1 rc=0 verdict=PASS(baseline only)   
+[05:40:56] DONE  breakout     rep=1 rc=0 verdict=FAIL                  
+[05:40:58] START pong repeat 2
+[05:40:58] START breakout repeat 2
+[05:41:44] DONE  pong         rep=2 rc=0 verdict=PASS(baseline only)   
+[05:41:45] DONE  breakout     rep=2 rc=0 verdict=FAIL                  
+[05:41:47] START breakout repeat 1
+[05:42:07] ==============================================================================
+[05:42:07] TASK-139 determinism arm=scripted window=30 games=('asteroids', 'pacman', 'tetris', 'pong', 'breakout') prefix=t139-determinism-w30 port=9967
+[05:42:07] START asteroids repeat 1
+[05:42:09] DONE  breakout     rep=1 rc=1 verdict=FAIL                  
+[05:42:11] START breakout repeat 2
+[05:42:38] DONE  breakout     rep=2 rc=0 verdict=FAIL                  
+[05:42:39] DONE  asteroids    rep=1 rc=0 verdict=PASS                  
+[05:42:41] START asteroids repeat 2
+[05:43:17] DONE  asteroids    rep=2 rc=0 verdict=PASS                  
+[05:43:19] START pacman repeat 1
+[05:44:04] DONE  pacman       rep=1 rc=0 verdict=PASS                  
+[05:44:06] START pacman repeat 2
+[05:44:51] DONE  pacman       rep=2 rc=0 verdict=PASS                  
+[05:44:53] START tetris repeat 1
+[05:45:31] DONE  tetris       rep=1 rc=0 verdict=PASS                  
+[05:45:33] START tetris repeat 2
+[05:46:09] DONE  tetris       rep=2 rc=0 verdict=PASS                  
+[05:46:11] START pong repeat 1
+[05:46:54] DONE  pong         rep=1 rc=0 verdict=PASS(baseline only)   
+[05:46:56] START pong repeat 2
+[05:47:36] DONE  pong         rep=2 rc=0 verdict=PASS                  
+[05:47:38] START breakout repeat 1
+[05:48:18] DONE  breakout     rep=1 rc=0 verdict=INCONCLUSIVE          
+[05:48:20] START breakout repeat 2
+[05:49:00] DONE  breakout     rep=2 rc=0 verdict=INCONCLUSIVE          
+[05:55:53] ==============================================================================
+[05:55:53] TASK-139 determinism arm=scripted window=90 games=('asteroids', 'pacman', 'tetris', 'pong', 'breakout') prefix=t139-determinism-w90 port=9968
+[05:55:53] START asteroids repeat 1
+[05:56:36] DONE  asteroids    rep=1 rc=0 verdict=PASS                  
+[05:56:38] START asteroids repeat 2
+[05:57:21] DONE  asteroids    rep=2 rc=0 verdict=PASS                  
+[05:57:23] START pacman repeat 1
+[05:58:18] DONE  pacman       rep=1 rc=0 verdict=PASS                  
+[05:58:20] START pacman repeat 2
+[05:59:15] DONE  pacman       rep=2 rc=0 verdict=PASS                  
+[05:59:17] START tetris repeat 1
+[06:00:00] DONE  tetris       rep=1 rc=0 verdict=PASS                  
+[06:00:02] START tetris repeat 2
+[06:00:45] DONE  tetris       rep=2 rc=0 verdict=PASS                  
+[06:00:47] START pong repeat 1
+[06:01:31] DONE  pong         rep=1 rc=0 verdict=PASS                  
+[06:01:33] START pong repeat 2
+[06:02:16] DONE  pong         rep=2 rc=0 verdict=PASS                  
+[06:02:18] START breakout repeat 1
+[06:03:08] DONE  breakout     rep=1 rc=0 verdict=FAIL                  
+[06:03:10] START breakout repeat 2
+[06:04:00] DONE  breakout     rep=2 rc=0 verdict=FAIL                  

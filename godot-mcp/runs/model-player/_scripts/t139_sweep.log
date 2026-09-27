@@ -1,0 +1,380 @@
+[04:43:17] ==============================================================================
+[04:43:17] TASK-139 sweep arm=scripted window=30 games=1 prefix=t139-scripted-w30 port=9961 backend=scripted
+[04:43:17] START snake
+[04:43:55] DONE  snake          rc=0  38.0s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=6
+[04:43:57] sweep arm=scripted window=30 done (1 runs) -> F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t139_results_t139-scripted-w30.json
+[04:44:00] ==============================================================================
+[04:44:00] TASK-139 sweep arm=scripted window=90 games=3 prefix=t139-scripted-w90 port=9961 backend=scripted
+[04:44:00] START snake
+[04:44:44] DONE  snake          rc=0  44.6s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=6
+[04:44:46] START match3
+[04:45:41] DONE  match3         rc=0  54.2s verdict=PASS                     window=ok       refused=[2, 4, 6, 10] real=8 rate=1.0 align=3
+[04:45:43] START pacman
+[04:46:38] DONE  pacman         rc=0  55.7s verdict=PASS                     window=ok       refused=[3, 6, 8, 10, 12] real=7 rate=1.0 align=4
+[04:46:40] sweep arm=scripted window=90 done (3 runs) -> F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t139_results_t139-scripted-w90.json
+[04:46:56] ==============================================================================
+[04:46:56] TASK-139 sweep arm=scripted window=30 games=20 prefix=t139-scripted-w30 port=9961 backend=scripted
+[04:46:56] START asteroids
+[04:46:57] ==============================================================================
+[04:46:57] TASK-139 sweep arm=scripted window=90 games=20 prefix=t139-scripted-w90 port=9962 backend=scripted
+[04:46:57] START asteroids
+[04:47:32] DONE  asteroids      rc=0  36.8s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=3
+[04:47:34] START bomberman
+[04:47:41] DONE  asteroids      rc=0  43.6s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=5
+[04:47:43] START bomberman
+[04:48:20] DONE  bomberman      rc=0  45.2s verdict=INCONCLUSIVE             window=ok       refused=[4, 6, 8] real=6 rate=0.6667 align=4
+[04:48:22] START breakout
+[04:48:37] DONE  bomberman      rc=0  54.5s verdict=INCONCLUSIVE             window=ok       refused=[4, 6, 8] real=6 rate=0.6667 align=4
+[04:48:39] START breakout
+[04:49:02] DONE  breakout       rc=0  40.4s verdict=INCONCLUSIVE             window=ok       refused=[] real=3 rate=1.0 align=6
+[04:49:04] START flappy
+[04:49:30] DONE  breakout       rc=0  50.5s verdict=FAIL                     window=ok       refused=[] real=2 rate=0.6667 align=6
+[04:49:32] START flappy
+[04:49:49] DONE  flappy         rc=0  44.5s verdict=INCONCLUSIVE             window=ok       refused=[] real=1 rate=0.0833 align=3
+[04:49:51] START frogger
+[04:50:15] DONE  frogger        rc=0  24.5s verdict=INCONCLUSIVE             window=ok       refused=[] real=1 rate=1.0 align=0
+[04:50:17] START game2048
+[04:50:27] DONE  flappy         rc=0  54.8s verdict=INCONCLUSIVE             window=ok       refused=[] real=1 rate=0.0833 align=4
+[04:50:29] START frogger
+[04:51:04] ==============================================================================
+[04:51:04] TASK-139 sweep arm=scripted window=30 games=20 prefix=t139-scripted-w30 port=9961 backend=scripted
+[04:51:04] START asteroids
+[04:51:04] ==============================================================================
+[04:51:04] TASK-139 sweep arm=scripted window=90 games=20 prefix=t139-scripted-w90 port=9962 backend=scripted
+[04:51:04] START asteroids
+[04:51:09] ==============================================================================
+[04:51:09] TASK-139 sweep arm=model window=30 games=20 prefix=t139-jev-v3-w30 port=9963 backend=jev
+[04:51:09] START asteroids
+[04:51:42] DONE  asteroids      rc=0  37.9s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=3
+[04:51:44] START bomberman
+[04:51:48] DONE  asteroids      rc=0  44.1s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=2
+[04:51:50] START bomberman
+[04:51:57] DONE  asteroids      rc=0  48.4s verdict=None                     window=None     refused=None real=None rate=None align=None
+[04:51:59] START bomberman
+[04:52:29] DONE  bomberman      rc=0  44.9s verdict=INCONCLUSIVE             window=ok       refused=[4, 6, 8] real=6 rate=0.6667 align=4
+[04:52:31] START breakout
+[04:52:44] ==============================================================================
+[04:52:44] TASK-139 sweep arm=model window=30 games=20 prefix=t139-jev-v3-w30 port=9963 backend=jev
+[04:52:44] START asteroids
+[04:52:45] DONE  bomberman      rc=0  55.3s verdict=INCONCLUSIVE             window=ok       refused=[4, 6, 8] real=6 rate=0.6667 align=3
+[04:52:47] START breakout
+[04:53:11] DONE  breakout       rc=0  40.6s verdict=INCONCLUSIVE             window=ok       refused=[] real=3 rate=1.0 align=6
+[04:53:13] START flappy
+[04:53:23] DONE  asteroids      rc=0  38.8s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=2
+[04:53:25] START bomberman
+[04:53:38] DONE  breakout       rc=0  50.5s verdict=FAIL                     window=ok       refused=[] real=2 rate=0.6667 align=5
+[04:53:40] START flappy
+[04:53:57] DONE  flappy         rc=0  44.3s verdict=INCONCLUSIVE             window=ok       refused=[] real=1 rate=0.0833 align=3
+[04:53:59] START frogger
+[04:54:13] DONE  bomberman      rc=0  47.9s verdict=INCONCLUSIVE             window=ok       refused=[] real=1 rate=0.0833 align=3
+[04:54:15] START breakout
+[04:54:24] DONE  frogger        rc=0  24.4s verdict=INCONCLUSIVE             window=ok       refused=[] real=1 rate=1.0 align=1
+[04:54:26] START game2048
+[04:54:34] DONE  flappy         rc=0  54.5s verdict=INCONCLUSIVE             window=ok       refused=[] real=1 rate=0.0833 align=4
+[04:54:36] START frogger
+[04:55:01] DONE  frogger        rc=0  25.2s verdict=INCONCLUSIVE             window=ok       refused=[] real=1 rate=1.0 align=1
+[04:55:03] DONE  game2048       rc=0  37.1s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=3
+[04:55:03] START game2048
+[04:55:03] DONE  breakout       rc=0  48.2s verdict=FAIL                     window=ok       refused=[] real=3 rate=0.25 align=6
+[04:55:05] START lunarlander
+[04:55:05] START flappy
+[04:55:42] DONE  lunarlander    rc=0  37.2s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=5
+[04:55:44] START match3
+[04:55:47] DONE  game2048       rc=0  43.6s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=4
+[04:55:49] START lunarlander
+[04:55:52] DONE  flappy         rc=0  46.9s verdict=INCONCLUSIVE             window=ok       refused=[] real=1 rate=0.0833 align=4
+[04:55:54] START frogger
+[04:56:19] DONE  frogger        rc=0  24.8s verdict=INCONCLUSIVE             window=ok       refused=[] real=1 rate=1.0 align=2
+[04:56:21] START game2048
+[04:56:29] DONE  match3         rc=0  44.5s verdict=PASS                     window=ok       refused=[2, 4, 6, 10] real=8 rate=1.0 align=5
+[04:56:31] START minesweeper
+[04:56:33] DONE  lunarlander    rc=0  44.3s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=5
+[04:56:35] START match3
+[04:57:03] DONE  game2048       rc=0  42.1s verdict=INCONCLUSIVE             window=ok       refused=[] real=5 rate=1.0 align=4
+[04:57:05] START lunarlander
+[04:57:16] DONE  minesweeper    rc=0  45.5s verdict=PASS                     window=ok       refused=[3, 5, 7, 9, 11] real=7 rate=1.0 align=5
+[04:57:18] START missilecommand
+[04:57:30] DONE  match3         rc=0  54.7s verdict=PASS                     window=ok       refused=[2, 4, 6, 10] real=8 rate=1.0 align=3
+[04:57:32] START minesweeper
+[04:57:46] DONE  lunarlander    rc=0  40.7s verdict=INCONCLUSIVE             window=ok       refused=[] real=0 rate=None align=4
+[04:57:48] START match3
+[04:57:56] DONE  missilecommand rc=0  37.4s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=4
+[04:57:58] START pacman
+[04:58:27] DONE  minesweeper    rc=0  54.9s verdict=PASS                     window=ok       refused=[3, 5, 7, 9, 11] real=7 rate=1.0 align=3
+[04:58:29] START missilecommand
+[04:58:35] DONE  match3         rc=0  47.5s verdict=INCONCLUSIVE             window=ok       refused=[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] real=1 rate=1.0 align=6
+[04:58:37] START minesweeper
+[04:58:43] DONE  pacman         rc=0  45.2s verdict=PASS                     window=ok       refused=[3, 6, 8, 10, 12] real=7 rate=1.0 align=5
+[04:58:45] START platformer
+[04:59:13] DONE  missilecommand rc=0  43.8s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=3
+[04:59:15] START pacman
+[04:59:18] DONE  minesweeper    rc=0  40.2s verdict=INCONCLUSIVE             window=ok       refused=[] real=1 rate=1.0 align=5
+[04:59:20] START missilecommand
+[04:59:20] DONE  platformer     rc=0  35.6s verdict=INCONCLUSIVE             window=ok       refused=[] real=4 rate=0.5714 align=4
+[04:59:22] START pong
+[04:59:59] DONE  missilecommand rc=0  39.6s verdict=INCONCLUSIVE             window=ok       refused=[] real=1 rate=1.0 align=4
+[05:00:01] START pacman
+[05:00:03] DONE  pong           rc=0  40.3s verdict=PASS                     window=ok       refused=[] real=9 rate=1.0 align=6
+[05:00:05] START puzzlebobble
+[05:00:10] DONE  pacman         rc=0  54.9s verdict=PASS                     window=ok       refused=[3, 6, 8, 10, 12] real=7 rate=1.0 align=3
+[05:00:12] START platformer
+[05:00:42] DONE  puzzlebobble   rc=0  37.5s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=3
+[05:00:44] START rtype
+[05:00:49] DONE  pacman         rc=0  47.7s verdict=INCONCLUSIVE             window=ok       refused=[3, 4, 5, 6, 7, 8, 9, 10, 11, 12] real=2 rate=1.0 align=5
+[05:00:51] START platformer
+[05:00:55] DONE  platformer     rc=0  43.7s verdict=INCONCLUSIVE             window=ok       refused=[4, 6, 8] real=5 rate=1.0 align=4
+[05:00:57] START pong
+[05:01:22] DONE  rtype          rc=0  37.4s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=3
+[05:01:24] START snake
+[05:01:28] DONE  platformer     rc=0  37.1s verdict=INCONCLUSIVE             window=ok       refused=[] real=6 rate=0.8571 align=3
+[05:01:30] START pong
+[05:01:51] DONE  pong           rc=0  54.0s verdict=PASS(baseline only)      window=ok       refused=[] real=9 rate=0.8182 align=5
+[05:01:53] START puzzlebobble
+[05:02:02] DONE  snake          rc=0  37.8s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=7
+[05:02:04] START sokoban
+[05:02:17] DONE  pong           rc=0  47.2s verdict=FAIL                     window=ok       refused=[] real=8 rate=0.6667 align=4
+[05:02:19] START puzzlebobble
+[05:02:37] DONE  puzzlebobble   rc=0  44.1s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=4
+[05:02:39] START rtype
+[05:02:48] DONE  sokoban        rc=0  44.4s verdict=PASS                     window=ok       refused=[3, 5, 11] real=9 rate=1.0 align=4
+[05:02:50] START spaceinvaders
+[05:02:59] DONE  puzzlebobble   rc=0  40.2s verdict=INCONCLUSIVE             window=ok       refused=[] real=2 rate=1.0 align=5
+[05:03:01] START rtype
+[05:03:24] DONE  rtype          rc=0  44.1s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=4
+[05:03:26] START snake
+[05:03:27] DONE  spaceinvaders  rc=0  37.3s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=4
+[05:03:29] START tetris
+[05:03:42] DONE  rtype          rc=0  40.5s verdict=INCONCLUSIVE             window=ok       refused=[] real=0 rate=None align=4
+[05:03:44] START snake
+[05:04:06] DONE  tetris         rc=0  37.0s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=1
+[05:04:08] START towerdefense
+[05:04:10] DONE  snake          rc=0  44.6s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=5
+[05:04:12] START sokoban
+[05:04:28] DONE  snake          rc=0  44.5s verdict=INCONCLUSIVE             window=ok       refused=[] real=10 rate=1.0 align=4
+[05:04:30] START sokoban
+[05:04:53] DONE  towerdefense   rc=0  45.1s verdict=PASS                     window=ok       refused=[6, 9, 12] real=9 rate=1.0 align=4
+[05:04:55] sweep arm=scripted window=30 done (20 runs) -> F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t139_results_t139-scripted-w30.json
+[05:05:07] DONE  sokoban        rc=0  55.0s verdict=PASS                     window=ok       refused=[3, 5, 11] real=9 rate=1.0 align=4
+[05:05:09] START spaceinvaders
+[05:05:18] DONE  sokoban        rc=0  47.4s verdict=INCONCLUSIVE             window=ok       refused=[] real=1 rate=0.0833 align=3
+[05:05:20] START spaceinvaders
+[05:05:53] DONE  spaceinvaders  rc=0  43.7s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=5
+[05:05:55] START tetris
+[05:06:08] DONE  spaceinvaders  rc=0  47.8s verdict=FAIL                     window=ok       refused=[] real=6 rate=0.5 align=3
+[05:06:10] START tetris
+[05:06:38] DONE  tetris         rc=0  43.4s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=4
+[05:06:40] START towerdefense
+[05:06:49] DONE  tetris         rc=0  39.3s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=3
+[05:06:51] START towerdefense
+[05:07:31] DONE  towerdefense   rc=0  39.6s verdict=INCONCLUSIVE             window=ok       refused=[] real=8 rate=1.0 align=4
+[05:07:33] sweep arm=model window=30 done (20 runs) -> F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t139_results_t139-jev-v3-w30.json
+[05:07:35] DONE  towerdefense   rc=0  54.6s verdict=PASS                     window=ok       refused=[6, 9, 12] real=9 rate=1.0 align=3
+[05:07:37] sweep arm=scripted window=90 done (20 runs) -> F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t139_results_t139-scripted-w90.json
+[05:08:09] ==============================================================================
+[05:08:09] TASK-139 sweep arm=model window=90 games=20 prefix=t139-jev-v3-w90 port=9964 backend=jev
+[05:08:09] START asteroids
+[05:09:07] DONE  asteroids      rc=0  58.2s verdict=FAIL                     window=ok       refused=[] real=3 rate=0.25 align=4
+[05:09:09] START bomberman
+[05:10:08] DONE  bomberman      rc=0  58.7s verdict=INCONCLUSIVE             window=ok       refused=[] real=1 rate=0.0833 align=5
+[05:10:10] START breakout
+[05:11:10] DONE  breakout       rc=0  59.8s verdict=FAIL                     window=ok       refused=[] real=3 rate=0.25 align=5
+[05:11:12] START flappy
+[05:12:10] DONE  flappy         rc=0  58.3s verdict=INCONCLUSIVE             window=ok       refused=[] real=1 rate=0.0833 align=4
+[05:12:12] START frogger
+[05:12:38] DONE  frogger        rc=0  26.0s verdict=INCONCLUSIVE             window=ok       refused=[] real=1 rate=1.0 align=3
+[05:12:40] START game2048
+[05:13:33] DONE  game2048       rc=0  53.0s verdict=INCONCLUSIVE             window=ok       refused=[] real=5 rate=1.0 align=4
+[05:13:35] START lunarlander
+[05:14:26] DONE  lunarlander    rc=0  51.2s verdict=INCONCLUSIVE             window=ok       refused=[] real=0 rate=None align=5
+[05:14:28] START match3
+[05:15:27] DONE  match3         rc=0  58.5s verdict=INCONCLUSIVE             window=ok       refused=[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] real=1 rate=1.0 align=3
+[05:15:29] START minesweeper
+[05:16:18] DONE  minesweeper    rc=0  49.7s verdict=INCONCLUSIVE             window=ok       refused=[] real=1 rate=1.0 align=4
+[05:16:20] START missilecommand
+[05:17:10] DONE  missilecommand rc=0  49.5s verdict=INCONCLUSIVE             window=ok       refused=[] real=1 rate=1.0 align=5
+[05:17:12] START pacman
+[05:18:11] DONE  pacman         rc=0  58.8s verdict=INCONCLUSIVE             window=ok       refused=[3, 4, 5, 6, 7, 8, 9, 10, 11, 12] real=2 rate=1.0 align=4
+[05:18:13] START platformer
+[05:18:53] DONE  platformer     rc=0  40.6s verdict=INCONCLUSIVE             window=ok       refused=[] real=4 rate=0.6667 align=4
+[05:18:55] START pong
+[05:19:51] DONE  pong           rc=0  56.1s verdict=PASS(baseline only)      window=ok       refused=[] real=7 rate=0.875 align=6
+[05:19:53] START puzzlebobble
+[05:20:40] ==============================================================================
+[05:20:40] TASK-139 sweep arm=scripted window=30 games=5 prefix=t139-scripted-w30 port=9969 backend=scripted
+[05:20:40] START match3
+[05:20:43] DONE  puzzlebobble   rc=0  50.2s verdict=INCONCLUSIVE             window=ok       refused=[] real=2 rate=1.0 align=3
+[05:20:45] START rtype
+[05:21:25] DONE  match3         rc=0  44.1s verdict=PASS                     window=ok       refused=[2, 4, 6, 10] real=8 rate=1.0 align=4
+[05:21:27] START minesweeper
+[05:21:37] DONE  rtype          rc=0  51.6s verdict=INCONCLUSIVE             window=ok       refused=[] real=0 rate=None align=5
+[05:21:39] START snake
+[05:22:11] DONE  minesweeper    rc=0  44.6s verdict=PASS                     window=ok       refused=[3, 5, 7, 9, 11] real=7 rate=1.0 align=4
+[05:22:13] START pacman
+[05:22:33] DONE  snake          rc=0  53.5s verdict=INCONCLUSIVE             window=ok       refused=[] real=10 rate=1.0 align=6
+[05:22:35] START sokoban
+[05:22:58] DONE  pacman         rc=0  45.2s verdict=PASS                     window=ok       refused=[3, 6, 8, 10, 12] real=7 rate=1.0 align=5
+[05:23:00] START sokoban
+[05:23:33] DONE  sokoban        rc=0  58.3s verdict=INCONCLUSIVE             window=ok       refused=[] real=1 rate=0.0833 align=2
+[05:23:35] START spaceinvaders
+[05:23:45] DONE  sokoban        rc=0  44.8s verdict=PASS                     window=ok       refused=[3, 5, 11] real=9 rate=1.0 align=5
+[05:23:47] START towerdefense
+[05:24:32] DONE  towerdefense   rc=0  44.6s verdict=PASS                     window=ok       refused=[6, 9, 12] real=9 rate=1.0 align=4
+[05:24:33] DONE  spaceinvaders  rc=0  58.5s verdict=INCONCLUSIVE             window=ok       refused=[] real=12 rate=1.0 align=2
+[05:24:34] sweep arm=scripted window=30 done (5 runs) -> F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t139_results_t139-scripted-w30.json
+[05:24:35] START tetris
+[05:25:22] DONE  tetris         rc=0  46.5s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=3
+[05:25:24] START towerdefense
+[05:25:51] ==============================================================================
+[05:25:51] TASK-139 sweep arm=scripted window=90 games=6 prefix=t139-scripted-w90 port=9972 backend=scripted
+[05:25:51] START counterev
+[05:25:51] DONE  counterev      rc=1   0.6s verdict=None                     window=None     refused=None real=None rate=None align=None
+[05:25:53] START match3
+[05:25:56] ==============================================================================
+[05:25:56] TASK-139 sweep arm=scripted window=30 games=6 prefix=t139-scripted-w30 port=9973 backend=scripted
+[05:25:56] START counterev
+[05:25:57] DONE  counterev      rc=1   0.5s verdict=None                     window=None     refused=None real=None rate=None align=None
+[05:25:59] START match3
+[05:26:11] DONE  towerdefense   rc=0  47.0s verdict=INCONCLUSIVE             window=ok       refused=[] real=8 rate=1.0 align=2
+[05:26:13] sweep arm=model window=90 done (20 runs) -> F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t139_results_t139-jev-v3-w90.json
+[05:26:43] DONE  match3         rc=0  44.7s verdict=PASS                     window=ok       refused=[2, 4, 6, 10] real=8 rate=1.0 align=4
+[05:26:45] START minesweeper
+[05:26:48] DONE  match3         rc=0  55.2s verdict=PASS                     window=ok       refused=[2, 4, 6, 10] real=8 rate=1.0 align=3
+[05:26:50] ==============================================================================
+[05:26:50] TASK-139 sweep arm=playjev window=30 games=10 prefix=t139-playjev-v3-w30 port=9965 backend=playjev
+[05:26:50] START tetris
+[05:26:50] START minesweeper
+[05:27:30] DONE  minesweeper    rc=0  44.9s verdict=PASS                     window=ok       refused=[3, 5, 7, 9, 11] real=7 rate=1.0 align=5
+[05:27:32] START pacman
+[05:27:39] DONE  tetris         rc=0  48.7s verdict=INCONCLUSIVE             window=ok       refused=[] real=0 rate=None align=4
+[05:27:41] START pong
+[05:27:45] DONE  minesweeper    rc=0  55.1s verdict=PASS                     window=ok       refused=[3, 5, 7, 9, 11] real=7 rate=1.0 align=4
+[05:27:47] START pacman
+[05:28:18] DONE  pacman         rc=0  45.5s verdict=PASS                     window=ok       refused=[3, 6, 8, 10, 12] real=7 rate=1.0 align=6
+[05:28:20] START sokoban
+[05:28:35] DONE  pong           rc=0  54.4s verdict=INCONCLUSIVE             window=ok       refused=[] real=1 rate=0.0833 align=4
+[05:28:37] START asteroids
+[05:28:42] DONE  pacman         rc=0  55.0s verdict=PASS                     window=ok       refused=[3, 6, 8, 10, 12] real=7 rate=1.0 align=4
+[05:28:44] START sokoban
+[05:29:06] DONE  sokoban        rc=0  46.1s verdict=PASS                     window=ok       refused=[3, 5, 11] real=9 rate=1.0 align=4
+[05:29:08] START towerdefense
+[05:29:31] DONE  asteroids      rc=0  54.3s verdict=INCONCLUSIVE             window=ok       refused=[] real=12 rate=1.0 align=4
+[05:29:33] START snake
+[05:29:39] DONE  sokoban        rc=0  54.9s verdict=PASS                     window=ok       refused=[3, 5, 11] real=9 rate=1.0 align=4
+[05:29:41] START towerdefense
+[05:29:53] DONE  towerdefense   rc=0  45.0s verdict=PASS                     window=ok       refused=[6, 9, 12] real=9 rate=1.0 align=6
+[05:29:55] sweep arm=scripted window=30 done (6 runs) -> F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t139_results_t139-scripted-w30-counterev.json
+[05:30:29] DONE  snake          rc=0  55.5s verdict=INCONCLUSIVE             window=ok       refused=[5] real=4 rate=0.3636 align=6
+[05:30:31] START game2048
+[05:30:36] DONE  towerdefense   rc=0  54.8s verdict=PASS                     window=ok       refused=[6, 9, 12] real=9 rate=1.0 align=5
+[05:30:38] sweep arm=scripted window=90 done (6 runs) -> F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t139_results_t139-scripted-w90.json
+[05:31:25] DONE  game2048       rc=0  54.0s verdict=PASS                     window=ok       refused=[6, 7, 8, 9, 10, 11, 12] real=5 rate=1.0 align=5
+[05:31:27] START rtype
+[05:32:10] DONE  rtype          rc=0  43.2s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=3
+[05:32:12] START match3
+[05:33:06] DONE  match3         rc=0  54.0s verdict=INCONCLUSIVE             window=ok       refused=[] real=4 rate=0.3333 align=3
+[05:33:08] START pacman
+[05:34:02] DONE  pacman         rc=0  53.6s verdict=FAIL                     window=ok       refused=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] real=0 rate=None align=4
+[05:34:04] START sokoban
+[05:34:58] DONE  sokoban        rc=0  54.1s verdict=PASS                     window=ok       refused=[5, 6, 7, 8, 9, 10, 11, 12] real=4 rate=1.0 align=5
+[05:35:00] START minesweeper
+[05:35:54] DONE  minesweeper    rc=0  53.7s verdict=INCONCLUSIVE             window=ok       refused=[] real=4 rate=0.3333 align=5
+[05:35:56] sweep arm=playjev window=30 done (10 runs) -> F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t139_results_t139-playjev-v3-w30.json
+[05:51:12] ==============================================================================
+[05:51:12] TASK-139 sweep arm=scripted window=90 games=5 prefix=t139-scripted-w90 port=9962 backend=scripted
+[05:51:12] START asteroids
+[05:51:55] DONE  asteroids      rc=0  43.7s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=4
+[05:51:57] START pacman
+[05:52:52] DONE  pacman         rc=0  54.5s verdict=PASS                     window=ok       refused=[3, 6, 8, 10, 12] real=7 rate=1.0 align=5
+[05:52:54] START tetris
+[05:53:37] DONE  tetris         rc=0  43.0s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=2
+[05:53:39] START pong
+[05:54:22] DONE  pong           rc=0  43.5s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=3
+[05:54:24] START breakout
+[05:55:14] DONE  breakout       rc=0  49.9s verdict=FAIL                     window=ok       refused=[] real=2 rate=0.6667 align=6
+[05:55:16] sweep arm=scripted window=90 done (5 runs) -> F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t139_results_t139-scripted-w90.json
+[06:04:03] ==============================================================================
+[06:04:03] TASK-139 sweep arm=scripted window=90 games=20 prefix=t139-scripted-w90 port=9962 backend=scripted
+[06:04:03] START asteroids
+[06:04:46] DONE  asteroids      rc=0  43.4s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=3
+[06:04:48] START bomberman
+[06:05:42] DONE  bomberman      rc=0  54.1s verdict=INCONCLUSIVE             window=ok       refused=[4, 6, 8] real=6 rate=0.6667 align=4
+[06:05:44] START breakout
+[06:06:34] DONE  breakout       rc=0  50.2s verdict=FAIL                     window=ok       refused=[] real=2 rate=0.6667 align=5
+[06:06:36] START flappy
+[06:07:30] DONE  flappy         rc=0  54.0s verdict=INCONCLUSIVE             window=ok       refused=[] real=1 rate=0.0833 align=4
+[06:07:32] START frogger
+[06:07:58] DONE  frogger        rc=0  25.3s verdict=INCONCLUSIVE             window=ok       refused=[] real=1 rate=1.0 align=1
+[06:08:00] START game2048
+[06:08:43] DONE  game2048       rc=0  43.5s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=3
+[06:08:45] START lunarlander
+[06:09:29] DONE  lunarlander    rc=0  43.4s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=3
+[06:09:31] START match3
+[06:10:25] DONE  match3         rc=0  54.3s verdict=PASS                     window=ok       refused=[2, 4, 6, 10] real=8 rate=1.0 align=3
+[06:10:27] START minesweeper
+[06:11:22] DONE  minesweeper    rc=0  54.9s verdict=PASS                     window=ok       refused=[3, 5, 7, 9, 11] real=7 rate=1.0 align=3
+[06:11:24] START missilecommand
+[06:12:07] DONE  missilecommand rc=0  43.1s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=3
+[06:12:09] START pacman
+[06:13:04] DONE  pacman         rc=0  55.2s verdict=PASS                     window=ok       refused=[3, 6, 8, 10, 12] real=7 rate=1.0 align=5
+[06:13:06] START platformer
+[06:13:50] DONE  platformer     rc=0  43.7s verdict=INCONCLUSIVE             window=ok       refused=[4, 6, 8] real=5 rate=1.0 align=3
+[06:13:52] START pong
+[06:14:35] DONE  pong           rc=0  43.1s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=5
+[06:14:37] START puzzlebobble
+[06:15:20] DONE  puzzlebobble   rc=0  43.5s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=4
+[06:15:22] START rtype
+[06:16:06] DONE  rtype          rc=0  43.5s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=4
+[06:16:08] START snake
+[06:16:52] DONE  snake          rc=0  44.3s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=6
+[06:16:54] START sokoban
+[06:17:49] DONE  sokoban        rc=0  54.3s verdict=PASS                     window=ok       refused=[3, 5, 11] real=9 rate=1.0 align=4
+[06:17:51] START spaceinvaders
+[06:18:34] DONE  spaceinvaders  rc=0  43.3s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=4
+[06:18:36] START tetris
+[06:19:19] DONE  tetris         rc=0  43.2s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=5
+[06:19:21] START towerdefense
+[06:20:16] DONE  towerdefense   rc=0  54.6s verdict=PASS                     window=ok       refused=[6, 9, 12] real=9 rate=1.0 align=4
+[06:20:18] sweep arm=scripted window=90 done (20 runs) -> F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t139_results_t139-scripted-w90.json
+[06:20:18] ==============================================================================
+[06:20:18] TASK-139 sweep arm=scripted window=30 games=20 prefix=t139-scripted-w30 port=9961 backend=scripted
+[06:20:18] START asteroids
+[06:20:55] DONE  asteroids      rc=0  36.8s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=3
+[06:20:57] START bomberman
+[06:21:41] DONE  bomberman      rc=0  44.5s verdict=INCONCLUSIVE             window=ok       refused=[4, 6, 8] real=6 rate=0.6667 align=4
+[06:21:43] START breakout
+[06:22:23] DONE  breakout       rc=0  40.3s verdict=INCONCLUSIVE             window=ok       refused=[] real=3 rate=1.0 align=6
+[06:22:25] START flappy
+[06:23:09] DONE  flappy         rc=0  43.9s verdict=INCONCLUSIVE             window=ok       refused=[] real=1 rate=0.0833 align=4
+[06:23:11] START frogger
+[06:23:36] DONE  frogger        rc=0  24.2s verdict=INCONCLUSIVE             window=ok       refused=[] real=1 rate=1.0 align=1
+[06:23:38] START game2048
+[06:24:14] DONE  game2048       rc=0  36.5s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=3
+[06:24:16] START lunarlander
+[06:24:53] DONE  lunarlander    rc=0  36.7s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=2
+[06:24:55] START match3
+[06:25:39] DONE  match3         rc=0  43.9s verdict=PASS                     window=ok       refused=[2, 4, 6, 10] real=8 rate=1.0 align=4
+[06:25:41] START minesweeper
+[06:26:26] DONE  minesweeper    rc=0  44.8s verdict=PASS                     window=ok       refused=[3, 5, 7, 9, 11] real=7 rate=1.0 align=3
+[06:26:28] START missilecommand
+[06:27:04] DONE  missilecommand rc=0  36.6s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=4
+[06:27:06] START pacman
+[06:27:51] DONE  pacman         rc=0  44.4s verdict=PASS                     window=ok       refused=[3, 6, 8, 10, 12] real=7 rate=1.0 align=4
+[06:27:53] START platformer
+[06:28:30] DONE  platformer     rc=0  37.1s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=5
+[06:28:32] START pong
+[06:29:16] DONE  pong           rc=0  43.8s verdict=PASS(baseline only)      window=ok       refused=[] real=10 rate=0.9091 align=6
+[06:29:18] START puzzlebobble
+[06:29:54] DONE  puzzlebobble   rc=0  36.8s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=3
+[06:29:56] START rtype
+[06:30:33] DONE  rtype          rc=0  36.7s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=2
+[06:30:35] START snake
+[06:31:13] DONE  snake          rc=0  37.5s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=6
+[06:31:15] START sokoban
+[06:31:59] DONE  sokoban        rc=0  44.6s verdict=PASS                     window=ok       refused=[3, 5, 11] real=9 rate=1.0 align=3
+[06:32:01] START spaceinvaders
+[06:32:38] DONE  spaceinvaders  rc=0  36.8s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=3
+[06:32:40] START tetris
+[06:33:17] DONE  tetris         rc=0  36.8s verdict=PASS                     window=ok       refused=[] real=8 rate=1.0 align=2
+[06:33:19] START towerdefense
+[06:34:03] DONE  towerdefense   rc=0  44.2s verdict=PASS                     window=ok       refused=[6, 9, 12] real=9 rate=1.0 align=4
+[06:34:05] sweep arm=scripted window=30 done (20 runs) -> F:\moonbit-hof-rs\godot-mcp\runs\model-player\_scripts\t139_results_t139-scripted-w30.json

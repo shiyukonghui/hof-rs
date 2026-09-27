@@ -65,19 +65,30 @@ def rel(p):
     return os.path.relpath(p, ROOT).replace("\\", "/")
 
 
-def load_commands():
-    """Every command this series recorded, newest last, plus the sweep cmd fields."""
+def load_commands(results_glob=None, ledger=None):
+    """Every command this series recorded, newest last, plus the sweep cmd fields.
+
+    TASK-139 made this task-parameterised: `results_glob` names the sweep result files to
+    harvest the per-game `cmd` from (default: TASK-138's two), and `ledger` names the shared
+    append-only command ledger (default: `t136_commands.jsonl`, still the one ledger every
+    batch since TASK-136 appends to).
+    """
+    import glob as _glob
     cmds = []
-    for name in ("t138_results_scripted.json", "t138_results_model.json"):
-        p = os.path.join(HERE, name)
-        if not os.path.isfile(p):
+    pats = results_glob or [os.path.join(HERE, "t138_results_scripted.json"),
+                            os.path.join(HERE, "t138_results_model.json")]
+    for p in sorted(set(x for pat in pats for x in _glob.glob(pat))):
+        try:
+            rows = json.load(io.open(p, encoding="utf-8"))
+        except Exception:  # noqa: BLE001
             continue
-        for e in json.load(io.open(p, encoding="utf-8")):
+        for e in rows:
             cmds.append({"game": e.get("game"), "argv": e.get("cmd"),
-                         "source": "%s (sweep driver)" % name,
+                         "source": "%s (sweep driver)" % os.path.basename(p),
                          "stdout": e.get("stdout")})
-    if os.path.isfile(LEDGER):
-        for line in io.open(LEDGER, encoding="utf-8"):
+    ledger = ledger or LEDGER
+    if os.path.isfile(ledger):
+        for line in io.open(ledger, encoding="utf-8"):
             line = line.strip()
             if not line:
                 continue
@@ -86,7 +97,7 @@ def load_commands():
             except ValueError:
                 continue
             cmds.append({"argv": e.get("argv"), "ts": e.get("ts"), "cwd": e.get("cwd"),
-                         "source": "t136_commands.jsonl"})
+                         "source": os.path.basename(ledger)})
     return cmds
 
 
@@ -96,7 +107,8 @@ def commands_for(cmds, game, prefix):
     for c in cmds:
         argv = c.get("argv") or []
         joined = " ".join(str(a) for a in argv)
-        if game in joined and (prefix in joined or c.get("source", "").startswith("t138_")):
+        if game in joined and (prefix in joined or c.get("source", "").startswith("t138_")
+                               or c.get("source", "").startswith("t139_")):
             out.append({"argv": argv, "ts": c.get("ts"), "source": c.get("source"),
                         "stdout": c.get("stdout"), "cwd": c.get("cwd")})
     # de-duplicate identical argv sets
@@ -178,6 +190,15 @@ def index_run(prefix, game, backend, d, cmds, full=False):
         entry["injected_steps"] = s.get("injected_steps")
         entry["changed_steps_of_accepted"] = s.get("changed_steps_of_accepted")
         entry["accepted_and_changed_rate"] = s.get("accepted_and_changed_rate")
+        # TASK-139 §1.A/§1.B: the two readings this batch added, so the index carries the
+        # numbers the batch's conclusions rest on rather than only the verdict string.
+        entry["rated_step_count"] = s.get("rated_step_count")
+        entry["rated_and_changed_rate"] = s.get("rated_and_changed_rate")
+        entry["refused_steps"] = s.get("refused_steps")
+        entry["real_progress_step_count"] = s.get("real_progress_step_count")
+        entry["window_min_frames"] = (s.get("window_frames") or {}).get("min_frames")
+        entry["window_state"] = (s.get("window_frames") or {}).get("state")
+        entry["window_too_short_steps"] = s.get("window_too_short_steps")
         fa = s.get("frame_alignment") or {}
         entry["frame_alignment"] = {"reading": fa.get("reading"),
                                     "matched_step_count": fa.get("matched_step_count"),
@@ -189,26 +210,33 @@ def index_run(prefix, game, backend, d, cmds, full=False):
 
 def main(argv):
     roots = ["t138-scripted", "t138-jev-v3"]
+    task = "TASK-138"
+    results_glob = None
     if "--roots" in argv:
         roots = argv[argv.index("--roots") + 1:]
         roots = [r for r in roots if not r.startswith("-")]
-    out_json = OUT_JSON
-    out_md = OUT_MD
-    if "--out-json" in argv:
-        out_json = argv[argv.index("--out-json") + 1]
-    if "--out-md" in argv:
-        out_md = argv[argv.index("--out-md") + 1]
-    cmds = load_commands()
+    if "--task" in argv:
+        task = argv[argv.index("--task") + 1]
+    if "--results-glob" in argv:
+        results_glob = [argv[argv.index("--results-glob") + 1]]
+    if "--ledger" in argv:
+        globals()["LEDGER"] = argv[argv.index("--ledger") + 1]
+    out_json = OUT_JSON if "--out-json" not in argv else argv[argv.index("--out-json") + 1]
+    out_md = OUT_MD if "--out-md" not in argv else argv[argv.index("--out-md") + 1]
+    if "--task" in argv and "--out-json" not in argv:
+        out_json = os.path.join(RUNS, "_index", "ARTIFACTS-%s.json" % task)
+        out_md = os.path.join(RUNS, "_index", "ARTIFACTS-%s.md" % task)
+    cmds = load_commands(results_glob=results_glob)
     full = "--full" in argv
     entries = []
     for prefix, game, backend, d in run_dirs(roots):
         entries.append(index_run(prefix, game, backend, d, cmds, full=full))
     doc = {
-        "task": "TASK-138",
+        "task": task,
         "when": time.strftime("%Y-%m-%dT%H:%M:%S"),
-        "why": ("TASK-138 §1.C.3: `runs/**` is ignored by `.gitignore` (line 43), so this "
-                "index is the committed record of WHICH file each conclusion rests on: path + "
-                "sha256 + size + the command that produced it.  Verify with "
+        "why": ("TASK-138 §1.C.3 / TASK-139 §1.C: `runs/**` is ignored by `.gitignore`, so "
+                "this index is the committed record of WHICH file each conclusion rests on: "
+                "path + sha256 + size + the command that produced it.  Verify with "
                 "`certutil -hashfile <path> SHA256` or this same script."),
         "repo_root": ROOT,
         "ignored_rule": "godot-mcp/runs/  (.gitignore line 43) and runs/ (line 12)",
@@ -218,15 +246,16 @@ def main(argv):
         "run_count": len(entries),
         "file_count": sum(len(e["files"]) for e in entries),
         "how_to_recheck": (
-            "D:\\Anaconda\\python.exe runs\\model-player\\_scripts\\t138_artifact_index.py "
-            "--roots %s" % " ".join(roots)),
+            "D:\\Anaconda\\python.exe tools\\playtest_artifact_index.py --task %s "
+            "--roots %s" % (task, " ".join(roots))),
         "runs": entries,
     }
     if not os.path.isdir(os.path.dirname(out_json)):
         os.makedirs(os.path.dirname(out_json))
     with io.open(out_json, "w", encoding="utf-8") as fh:
         fh.write(json.dumps(doc, ensure_ascii=False, indent=1))
-    lines = ["# ARTIFACTS-TASK-138 — 关键产物清单（路径 + sha256 + 大小 + 生成命令）", "",
+    lines = ["# ARTIFACTS-%s — 关键产物清单（路径 + sha256 + 大小 + 生成命令）" % task, "",
+             "> 为什么入库：`runs/**` 被 `.gitignore` 忽略（第 12 行 `runs/`、第 43 行",
              "> 为什么入库：`runs/**` 被 `.gitignore` 忽略（第 12 行 `runs/`、第 43 行",
              "> `godot-mcp/runs/`），报告引用的每个 run 产物只存在于本机。本文件把**关键产物**",
              "> 的 sha256 / 大小 / 生成命令**提交进仓**，使结论在 `runs/**` 不入库的前提下仍可事后核验。",
