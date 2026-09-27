@@ -9,7 +9,7 @@
 * 新门运行：`runs/model-player/t133-gate/**`、`runs/model-player/t133-gate-p7final/**`
 * **严格单线程**：本任务期间**没有派发任何子代理**；全部在本会话串行完成
   （中途发现有一瞬间并行跑了 game2048 与 pong 两个 run，**立即 kill 掉 pong 那个**
-  并重跑，见 §H.4）
+  并重跑，见 §8.4）
 
 ---
 
