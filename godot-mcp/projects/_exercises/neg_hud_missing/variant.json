@@ -1,0 +1,46 @@
+{
+ "task": "TASK-129 D-D",
+ "variant": "neg_hud_missing",
+ "failure_mode": "UI/controls missing (the HUD is removed)",
+ "source_project": "tetris",
+ "construction": "copy of projects/tetris with `visible = false` on the three HUD nodes of main.tscn (`SidePanel`, `PanelEdge`, `HudLabel` -- together 240x480 px of the 800x600 window).  The playfield, the piece logic and the InputMap are untouched: this is 'the interface is gone, the game is not'.",
+ "patch": {
+  "file": "scenes\\main.tscn",
+  "edits": [
+   {
+    "node": "SidePanel",
+    "property": "visible",
+    "value": "false",
+    "already_present": false
+   },
+   {
+    "node": "PanelEdge",
+    "property": "visible",
+    "value": "false",
+    "already_present": false
+   },
+   {
+    "node": "HudLabel",
+    "property": "visible",
+    "value": "false",
+    "already_present": false
+   }
+  ],
+  "scene_sha256_before_patch": "71a962e18eee31cd81d01344e278c0580b35a8a9e24e5ec22eba8990e194dc57",
+  "scene_sha256_after_patch": "8d97a04a49f375954b6d339ca87c9b4d6166a157ae73b930e5f10e6c1cb606f1",
+  "csharp_sources_copied_unchanged": true
+ },
+ "expected_gate_criteria": {
+  "P1": "PASS by measurement (the remaining field still exceeds the content threshold) -- the HUD is 24% of the window but not all of it",
+  "P2": "PASS",
+  "P3": "PASS",
+  "P4": "PASS",
+  "P5": "PASS (P5 is about the InputMap and the README, not about pixels)",
+  "P6": "PASS",
+  "gate": "playable -- DECLARED AS A BLIND SPOT: no machine criterion we implemented asks whether the interface a player needs is on screen.  The variant is kept as a real frame a VISION model can be asked about."
+ },
+ "engine": "F:\\moonbit-hof-rs\\godot-mcp\\godot\\bin\\godot.windows.editor.x86_64.mono.console.exe",
+ "runnable_with": "python tools/playability_gate.py --exercise neg_hud_missing --games neg_hud_missing --agent=jev --visual-agent=playjev --out-root runs/playability/negatives",
+ "no_build_needed": "the .tscn declaration is read at load time and no C# is changed, so the copied .NET assembly is still the source project's -- verified by csharp_sources_copied_unchanged",
+ "projects_dir_untouched": true
+}

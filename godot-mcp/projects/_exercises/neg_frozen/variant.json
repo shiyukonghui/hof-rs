@@ -1,0 +1,34 @@
+{
+ "task": "TASK-129 D-D",
+ "variant": "neg_frozen",
+ "failure_mode": "frozen (frames do not advance the game)",
+ "source_project": "breakout",
+ "construction": "copy of projects/breakout with `process_mode = 4` (PROCESS_MODE_DISABLED) on the root Node2D of main.tscn.  `_Process`/`_PhysicsProcess`/input handling of that subtree are switched off, while the renderer keeps submitting the window (`Engine.get_frames_drawn()` still advances).  This is the 'frozen but the process is alive' mode that P3 exists for.",
+ "patch": {
+  "file": "scenes\\main.tscn",
+  "edits": [
+   {
+    "node": "Main",
+    "property": "process_mode",
+    "value": "4",
+    "already_present": false
+   }
+  ],
+  "scene_sha256_before_patch": "db616eb2d0efdc02e224103c2582e5f3d0a9c346ad1bfa6380f62d0d234b56a7",
+  "scene_sha256_after_patch": "bfa0144a7f1eb88a3a80414ad01e06a6e99edda03c27bc87e3ef5871b8c8bc8e",
+  "csharp_sources_copied_unchanged": true
+ },
+ "expected_gate_criteria": {
+  "P1": "PASS (the initial frame is still drawn)",
+  "P2": "FAIL (nothing can respond)",
+  "P3": "FAIL (frames_drawn advances but no state and no pixel changes)",
+  "P4": "PASS (the process is alive, no dialog)",
+  "P5": "FAIL (the documented controls do nothing)",
+  "P6": "FAIL (no capability is delivered)",
+  "gate": "not_playable"
+ },
+ "engine": "F:\\moonbit-hof-rs\\godot-mcp\\godot\\bin\\godot.windows.editor.x86_64.mono.console.exe",
+ "runnable_with": "python tools/playability_gate.py --exercise neg_frozen --games neg_frozen --agent=jev --visual-agent=playjev --out-root runs/playability/negatives",
+ "no_build_needed": "the .tscn declaration is read at load time and no C# is changed, so the copied .NET assembly is still the source project's -- verified by csharp_sources_copied_unchanged",
+ "projects_dir_untouched": true
+}

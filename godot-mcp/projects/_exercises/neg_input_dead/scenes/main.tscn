@@ -1,0 +1,28 @@
+[gd_scene format=3 uid="uid://boitqfrcvmqhn"]
+
+[ext_resource type="Script" uid="uid://csbg2beus2ckm" path="res://src/MinesweeperGame.cs" id="1_t6lrv"]
+
+[node name="Main" type="Node2D" unique_id=462916564]
+script = ExtResource("1_t6lrv")
+PollInput = false
+
+[node name="Background" type="ColorRect" parent="." unique_id=1840952910]
+offset_right = 800.0
+offset_bottom = 600.0
+color = Color(0.06, 0.07, 0.09, 1)
+
+[node name="Hud" type="Label" parent="." unique_id=2069849641]
+offset_left = 20.0
+offset_top = 8.0
+offset_right = 560.0
+offset_bottom = 46.0
+theme_override_font_sizes/font_size = 26
+text = "MINES 10  FLAGS 0  SAFE LEFT 71"
+
+[node name="Status" type="Label" parent="." unique_id=1399442125]
+offset_left = 560.0
+offset_top = 8.0
+offset_right = 795.0
+offset_bottom = 46.0
+theme_override_font_sizes/font_size = 24
+text = "SWEEP THE FIELD"

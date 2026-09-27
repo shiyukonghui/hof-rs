@@ -94,32 +94,63 @@ touch a deployed port (measured in TASK-125).  Only the `--agent=jev` /
 `--agent=playjev` invocations above do.  `--base-url` deliberately does nothing for
 `--agent=scripted`/`none`; it is recorded in `gate\\agent\\service`.
 
-One measured trap on the jev path (TASK-128): the state is the game's whole exported
-node tree and **15 of the 20 games exceed Jev's documented 2048-token `state` cap**, so
-the service answers HTTP 422 `state exceeds 2048 tokens: N` and the model never runs.
-The client's `jev_estimate_tokens` is not the guard it reads as: this JSON tokenizes at
-~2.1-2.4 real tokens per estimated one (client 1018 -> service 2160; client 1791 ->
-service 4229), so `--agent-state-budget 800` is the setting that fits all 20.  The flag
-trims the state's `nodes` in tree order and records every dropped node in
-`gate\\agent\\state_for_agent`; the client's own `state_overflow="clip"` is no substitute
-(it would drop the whole `nodes` key at once).  The exact state text handed over is
-recorded there as a sha256 + head.
+One measured trap on the jev path (TASK-128, fixed in TASK-129): the state is the game's
+whole exported node tree and **15 of the 20 games exceed Jev's documented 2048-token
+`state` cap**, so the service answers HTTP 422 `state exceeds 2048 tokens: N` and the model
+never runs.  The client's `jev_estimate_tokens` was not the guard it read as: this JSON
+tokenizes at ~2.1-2.4 real tokens per estimated one (client 1018 -> service 2160; client
+1791 -> service 4229).  TASK-129 D-C fixes that estimator (a conservative x2.5 coefficient
+calibrated on the service's own `usage`, plus a bounded "answer a real 422 by halving the
+budget" retry); the flag `--agent-state-budget` trims the state's `nodes` in tree order and
+records every dropped node.  **The unit changed**: `--agent-state-budget 2000` selects
+exactly the state `--agent-state-budget 800` did in TASK-128 (2000/2.5), so the fitted jev
+thresholds stay comparable.  The exact state text handed over is recorded as a sha256 + head
+in `gate\\agent\\observations[i].state_for_agent`.
 
-The VISION service (TASK-127)
------------------------------
-`--agent=playjev` is the image-state backend: PlayJev 0.8B, the model that was actually
-fine-tuned on pixels.  Its server answers the same `POST /v1/systemone` name as Jev but
-takes `{"state": {"frames": ["data:image/png;base64,..."]}}` and serves `type: "choice"`
-questions ONLY, so a `noul`/`score` question -- legal on Jev -- is a 400 there.  The
-backend expresses the invariants as yes/no Choices and the brokenness rating as an
-ordered-levels Choice, and it can carry ONE image + N questions in a single request.
-Its default address is `http://127.0.0.1:8081`; `PLAYTEST_BASE_URL` (or `--base-url`)
-overrides it.  An answer it cannot use is recorded as an ABSTAIN and never as a pass.
+TASK-129 D-B, the sampling defect
+---------------------------------
+TASK-128 measured that the gate handed the SAME `s_end` to all three `decide()` calls, and
+the three answers came back bit-identical -- i.e. one independent model observation per game,
+not three.  `--agent-state-samples N` (default 3) now picks N states that are HASH-DIFFERENT
+as the model sees them (preference: before input / after input / after the input round),
+sends one per call, and records each call with the state it was given.  Fewer than N distinct
+states => `sample_size: 1`, stated in the artifact.
+
+The VISION service (TASK-127, wired into the gate in TASK-129 C)
+----------------------------------------------------------------
+Two ways to reach PlayJev 0.8B, the model that was actually fine-tuned on pixels:
+
+  * `--agent=playjev` -- the image-state DECISION backend (TASK-127).  Its server answers
+    the same `POST /v1/systemone` name as Jev but takes
+    `{"state": {"frames": ["data:image/png;base64,..."]}}` and serves `type: "choice"`
+    questions ONLY, so a `noul`/`score` question -- legal on Jev -- is a 400 there.  The
+    backend expresses the invariants as yes/no Choices and the brokenness rating as an
+    ordered-levels Choice, and it can carry ONE image + N questions in a single request.
+    Its default address is `http://127.0.0.1:8081`; `PLAYTEST_BASE_URL` (or `--base-url`)
+    overrides it.  An answer it cannot use is recorded as an ABSTAIN and never as a pass.
+  * `--visual-agent=playjev` -- TASK-129's gate path: it runs BESIDE `--agent`, judges the
+    frames this run captured (one request per frame, one image + N questions), asks the
+    playability invariant as `playable`, and writes `gate["playjev"]` next to
+    `gate["agent"]`.  `score` is recorded there as an explicitly UNCALIBRATED,
+    DIRECTION-SUSPECT observation and is NOT in the decision path (D-E); the optional
+    `--visual-legend-probe` asks one frame with the legend order reversed to test whether
+    the inversion is a wording artefact, and its result never enters a verdict either.
 
     :: window command -- this DOES hit the real 8081 service:
     set PLAYTEST_BASE_URL=http://127.0.0.1:8081
     set PLAYTEST_MODEL=playjev-0.8b
     python tools\\playability_gate.py --games pong --agent=playjev --base-url http://127.0.0.1:8081
+
+    :: TASK-129: both backends in one pass, negatives from an exercise tree:
+    python tools\\playability_gate.py --games pong --agent=jev --base-url http://127.0.0.1:8080 --agent-state-budget 2000 --visual-agent=playjev
+    python tools\\playability_gate.py --exercise neg_frozen --games neg_frozen --agent=jev --visual-agent=playjev --out-root runs\\playability\\negatives
+
+Declarative negative variants (TASK-129 D-D)
+--------------------------------------------
+`projects\\_exercises\\neg_*` holds COPIES of real projects whose scene file declares one
+failure (input dead / black screen / frozen / HUD removed), so the four failure modes can be
+sampled with REAL full-window frames without touching `projects\\<game>`.  `--exercise <name>`
+makes such a directory addressable like a game; `--out-root` decides where its frames land.
 
 Outputs
 -------
@@ -127,7 +158,14 @@ Outputs
     runs\\playability\\<game>\\frames.json                per-frame geometry + metrics
     runs\\playability\\<game>\\filmstrip.png              all frames in one image
     runs\\playability\\<game>\\states\\NN_<label>.json    sampled game state
-    runs\\playability\\<game>\\gate.json                  P1..P5 verdicts + evidence
+    runs\\playability\\<game>\\gate.json                  P1..P6 verdicts + evidence
+    runs\\playability\\<game>\\agent.json                 the text backend: every call,
+                                                        every state it judged (D-B), and
+                                                        every 422 budget retry (D-C)
+    runs\\playability\\<game>\\playjev.json               the vision backend: per-frame
+                                                        probabilities, the `playable`
+                                                        answer, the score observation
+                                                        and the flip-legend probe
     runs\\playability\\playability.json                   machine-readable, all games
     runs\\playability\\summary.txt                        the console log, verbatim
 """
@@ -152,10 +190,23 @@ from PIL import Image, ImageDraw
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)                       # ...\godot-mcp
 PROJECTS = os.path.join(ROOT, "projects")
+EXERCISES = os.path.join(PROJECTS, "_exercises")   # TASK-129 D-D negative variants live here
 RUNS = os.path.join(ROOT, "runs", "playability")
 ENGINE = os.path.join(ROOT, "godot", "bin", "godot.windows.editor.x86_64.mono.console.exe")
 ENGINE_CWD = os.path.join(ROOT, "godot")
 REPORTS = os.path.join(ROOT, "recovery", "reports")
+
+# TASK-129 D-D: a declarative negative variant is a *copy* of a real project under
+# `projects\_exercises\neg_*`, so the gate has to be told where to find it.  `--exercise`
+# registers those names here; every path lookup for a game goes through `project_dir()`,
+# which keeps `projects\<game>` the default and makes the exception explicit and recorded.
+GAME_DIRS = {}
+
+
+def project_dir(game):
+    """Where this game's project lives: `projects\\<game>`, or the registered exercise."""
+    return GAME_DIRS.get(game) or os.path.join(PROJECTS, game)
+
 
 # TASK-117: the same gate must be able to judge **the exported artifact** instead of
 # the project.  A game can be playable in the editor build and broken in the export
@@ -168,6 +219,7 @@ EXE_ROOT = None
 sys.path.insert(0, HERE)
 from playtest_agent import build_agent, keycode_of, keyname_of  # noqa: E402
 from playtest_agent import jev_estimate_tokens, jev_render_state  # noqa: E402
+from playtest_agent import JEV_TOKEN_SAFETY_FACTOR, PLAYJEV_SCORE_DIRECTION_NOTE  # noqa: E402
 
 # --- gate constants, with the basis for each --------------------------------
 # P1: a frame is "content" only where it differs from its own modal colour.
@@ -245,9 +297,9 @@ README_KEY_TOKEN = re.compile(r"`([^`]{1,24})`")
 
 
 def parse_project(game):
-    pdir = os.path.join(PROJECTS, game)
+    pdir = project_dir(game)
     gd = read_text(os.path.join(pdir, "project.godot"))
-    info = {"game": game, "dir": pdir}
+    info = {"game": game, "dir": pdir, "dir_is_exercise": pdir.startswith(EXERCISES)}
     m = re.search(r"window/size/viewport_width=(\d+)", gd)
     m2 = re.search(r"window/size/viewport_height=(\d+)", gd)
     info["declared_viewport"] = [int(m.group(1)), int(m2.group(1))] if m and m2 else None
@@ -662,7 +714,7 @@ class GameProcess(object):
             self.cmdline = ('"%s" --mcp-port=%d' % (exe, self.port))
             cwd = game_dir
         else:
-            project = os.path.join(PROJECTS, self.game)
+            project = project_dir(self.game)
             self.launched = ENGINE
             self.cmdline = ('"%s" --path "%s" --mcp-port=%d' % (ENGINE, project, self.port))
             cwd = ENGINE_CWD
@@ -892,6 +944,12 @@ def run_gate(game, args):
     proj = parse_project(game)
     controls = load_controls()
     agent_thresholds = load_agent_thresholds()
+    playjev_thresholds = load_playjev_thresholds()
+    # TASK-129 D-B: every state the game was sampled in, in sampling order.  The agent
+    # step below picks >= 3 of these that are HASH-DIFFERENT, so "3 calls" really is
+    # "3 independent observations" (TASK-128 measured that it was not: the same s_end was
+    # handed to all three calls and the answers came back bit-identical).
+    state_pool = []
     write_json(os.path.join(outdir, "project.json"), proj)
     try:
         audit = audit_one(game)
@@ -909,7 +967,8 @@ def run_gate(game, args):
     # can be tied to one file rather than to "the export".
     target = {"mode": "exported-exe" if EXE_ROOT else "project",
               "engine": ENGINE, "exe_root": EXE_ROOT,
-              "project_dir": os.path.join(PROJECTS, game)}
+              "project_dir": project_dir(game),
+              "project_dir_is_exercise": project_dir(game).startswith(EXERCISES)}
     if EXE_ROOT:
         exe_path = os.path.join(EXE_ROOT, game, game + ".exe")
         pck_path = os.path.join(EXE_ROOT, game, game + ".pck")
@@ -1003,6 +1062,7 @@ def run_gate(game, args):
             return None
         if save:
             write_json(os.path.join(states_dir, label + ".json"), val)
+        state_pool.append({"label": label, "state": val})
         return val
 
     def gd(mcp, code, at):
@@ -1225,28 +1285,69 @@ def run_gate(game, args):
         gate["criteria"] = verdicts(game, gate, proj, frames, s0, s1, s_end, controls)
 
         # ---------------- agent in the loop (item D) ----------------
+        goal = {"game": game, "objective": args.objective or
+                "make the game visibly respond to its own documented controls",
+                "actions": {k: v["keys"] for k, v in proj["actions"].items()},
+                "keys": proj["readme_keys"]}
         if args.agent and args.agent != "none":
-            goal = {"game": game, "objective": args.objective or
-                    "make the game visibly respond to its own documented controls",
-                    "actions": {k: v["keys"] for k, v in proj["actions"].items()},
-                    "keys": proj["readme_keys"]}
             agent = build_agent(args.agent, game, goal["objective"],
                                 {"plan": None, "hold_ms": int(args.hold * 1000),
                                  "decision_path": getattr(args, "decision_path", "") or "",
                                  "base_url": (getattr(args, "base_url", "") or
                                               os.environ.get("PLAYTEST_BASE_URL", "")),
+                                 "max_state_retries": getattr(args, "max_state_retries", 2),
                                  "thresholds": agent_thresholds})
             acts = []
-            # TASK-128: the state handed to the model, and the record of what fitting it
-            # into the documented 2048-token cap cost (empty when --agent-state-budget 0).
-            agent_state, agent_state_ev = trim_state_for_agent(
-                s_end or {}, getattr(args, "agent_state_budget", 0))
-            agent_state_ev = dict(agent_state_ev or {})
-            agent_state_ev["fingerprint"] = state_fingerprint(agent_state)
-            action = agent.decide(frames_for_agent(frames), agent_state, goal)
+            # ---- TASK-129 D-B: >= 3 INDEPENDENT state observations ----------------
+            # TASK-128 handed the SAME `s_end` to all three calls and measured that the
+            # three answers came back bit-identical, i.e. every game had exactly ONE
+            # independent model observation.  Here the pool of states the gate already
+            # sampled (before any input / during the run / after the input round) is
+            # deduplicated by the sha256 of the exact text handed over, and up to
+            # --agent-state-samples distinct ones are sent, one per call.  If the game
+            # cannot offer that many distinct states, the sample size is reported as 1
+            # (D-B: "otherwise count the sample as 1 and say so"), never as 3.
+            wanted = max(1, int(getattr(args, "agent_state_samples", 3)))
+            budget = getattr(args, "agent_state_budget", 0)
+            picked = pick_state_samples(
+                state_pool, wanted,
+                lambda st: state_fingerprint(trim_state_for_agent(st, budget)[0]))
+            sample_size = len(picked)
+            distinct_enough = sample_size >= wanted
+            if not distinct_enough:
+                log("    NOTE: only %d hash-different state(s) available (wanted %d); the "
+                    "model sample size is counted as 1 per D-B" % (sample_size, wanted))
+            observations = []
+            frames_decide = frames_for_agent(frames)
+            for si, item in enumerate(picked):
+                st_agent, st_ev = trim_state_for_agent(item["state"], budget)
+                st_ev = dict(st_ev or {})
+                st_ev["fingerprint"] = state_fingerprint(st_agent)
+                st_ev["source_label"] = item["label"]
+                st_ev["source_state_sha256"] = item["source_sha256"]
+                st_ev["independent_sample"] = bool(distinct_enough)
+                action = agent.decide(frames_decide, st_agent, goal)
+                try:
+                    obs_verdict = agent.threshold_verdict()
+                except Exception as e:  # noqa: BLE001
+                    obs_verdict = {"error": "%s: %s" % (type(e).__name__, e)}
+                observations.append({
+                    "index": si, "state_label": item["label"],
+                    "phase": item["phase"],
+                    "state_sha256": st_ev["fingerprint"]["sha256"],
+                    "source_state_sha256": item["source_sha256"],
+                    "state_for_agent": st_ev,
+                    "action": action,
+                    "threshold_verdict": obs_verdict,
+                    "evidence": agent.last_evidence})
+                log("    agent observation %d/%d state=%s sha=%s noul=%s"
+                    % (si + 1, sample_size, item["label"],
+                       (st_ev["fingerprint"]["sha256"] or "")[:12],
+                       {k: (o or {}).get("noul") for k, o in sorted(
+                           (agent.last_noul or {}).items())}))
+            action = observations[0]["action"] if observations else {"type": "wait",
+                                                                    "why": "no state"}
             acts.append({"action": action, "why": "first decision"})
-            if action.get("type") == "done":
-                pass
             # execute a couple of the agent's decisions so the interface is used
             # for real, not just called
             for step in range(args.agent_steps):
@@ -1256,8 +1357,11 @@ def run_gate(game, args):
                 acts.append({"action": action, "applied": applied})
                 time.sleep(args.settle_input)
                 capture("agent%02d" % step, mcp, None, note="after the agent's action")
-                action = agent.decide(frames_for_agent(frames), agent_state, goal)
-            judge = agent.judge(frames_for_agent(frames), agent_state, goal)
+                action = agent.decide(frames_decide, observations[-1]["state_for_agent"]
+                                      if observations else {}, goal)
+            judge = agent.judge(frames_decide,
+                                observations[-1]["state_for_agent"] if observations else {},
+                                goal)
             threshold_verdict = None
             if hasattr(agent, "threshold_verdict"):
                 try:
@@ -1266,6 +1370,22 @@ def run_gate(game, args):
                     threshold_verdict = {"error": "%s: %s" % (type(e).__name__, e)}
             gate["agent"] = {"report": agent.report(), "decisions": acts,
                              "judge": judge,
+                             # TASK-129 D-B: the multi-state sampling evidence.  Every
+                             # call is here with the state it was given (sha256 + what
+                             # trimming cost), its action and its own noul/score answer.
+                             "observations": observations,
+                             "aggregate_over_observations": agent_aggregate(observations),
+                             "sample_size": sample_size,
+                             "sample_size_required": wanted,
+                             "sample_size_is_independent": bool(distinct_enough),
+                             "sample_size_note": (
+                                 "%d hash-different state(s) were sent, one per call; "
+                                 "TASK-128's one-state-three-calls construction is gone"
+                                 % sample_size) if distinct_enough else
+                                 ("only %d hash-different state(s) could be sampled, so "
+                                  "the model sample size is 1 (D-B)" % sample_size),
+                             "state_pool": [{"label": p["label"]}
+                                            for p in state_pool],
                              # TASK-128 A1: which service was actually reached.  For the
                              # jev backend this is the deployed NeoHorse-Jev named by
                              # --base-url / PLAYTEST_BASE_URL -- NOT an in-process dumb
@@ -1276,15 +1396,36 @@ def run_gate(game, args):
                                  "decision_path": getattr(agent, "decision_path", None),
                                  "model": getattr(agent, "model", None),
                                  "health": getattr(agent, "health", None)},
-                             "state_for_agent": agent_state_ev,
+                             "state_for_agent": (observations[-1]["state_for_agent"]
+                                                 if observations else None),
+                             "token_estimator": {
+                                 "name": "jev_estimate_tokens (TASK-129 D-C calibrated)",
+                                 "safety_factor": JEV_TOKEN_SAFETY_FACTOR,
+                                 "bridge": "budget 2000 here == budget 800 in TASK-128 "
+                                           "(2000 / 2.5), verified on the 20 recorded "
+                                           "positive states"},
                              # TASK-124 C: noul P(true) / score expected level against
                              # the CONFIGURABLE thresholds in tools/playability_controls.json
                              # (`agent_thresholds`).  Recorded, not silently trusted: the
                              # verdict carries its own `uncalibrated` flag.
                              "threshold_verdict": threshold_verdict,
+                             "thresholds": dict(agent_thresholds),
                              "thresholds_source": os.path.join(HERE,
                                                                "playability_controls.json")}
             write_json(os.path.join(outdir, "agent.json"), gate["agent"])
+
+        # ---------------- TASK-129 C/D-E: the VISION backend (PlayJev) ----------------
+        if getattr(args, "visual_agent", "") and args.visual_agent != "none":
+            try:
+                gate["playjev"] = run_visual_agent(game, args, goal, frames,
+                                                   playjev_thresholds, log)
+                write_json(os.path.join(outdir, "playjev.json"), gate["playjev"])
+            except Exception as e:  # noqa: BLE001
+                import traceback
+                gate["playjev"] = {"backend": args.visual_agent,
+                                   "error": "%s: %s" % (type(e).__name__, e),
+                                   "traceback": traceback.format_exc()[-2000:]}
+                log("    playjev pass FAILED: %s: %s" % (type(e).__name__, e))
 
     except Exception as e:  # noqa: BLE001
         import traceback
@@ -1327,6 +1468,49 @@ def run_gate(game, args):
         if not c.get("pass"):
             log("      %s FAIL: %s" % (k, c.get("why")))
     return gate
+
+
+def agent_aggregate(observations):
+    """TASK-129 D-B: what a verdict over SEVERAL independent states should say.
+
+    The single top-level `threshold_verdict` is TASK-124's shape (the last call): it is kept
+    for every existing consumer.  But once the gate really samples >= 3 states, the honest
+    aggregate is the WORST observation -- a game that looks unplayable in any state it was
+    sampled in has not earned "playable" -- so it is computed and recorded separately, and
+    the report says which number is which.  `noul_min_p_true` is applied to the MINIMUM
+    noul over questions inside each observation, then the minimum over observations.
+    """
+    per_obs = []
+    for ob in (observations or []):
+        crit = (ob.get("threshold_verdict") or {}).get("criteria") or []
+        vals = dict((str(c.get("id")).split(":", 1)[1], c.get("value")) for c in crit
+                    if str(c.get("id", "")).startswith("noul:")
+                    and isinstance(c.get("value"), (int, float)))
+        threshold = ((ob.get("threshold_verdict") or {}).get("thresholds") or {}).get(
+            "noul_min_p_true")
+        pass_ok = None
+        if vals and threshold is not None:
+            noul_crit = [c for c in crit
+                         if str(c.get("id", "")).startswith("noul:")]
+            pass_ok = bool(noul_crit) and all(c.get("pass") for c in noul_crit)
+        per_obs.append({"state_label": ob.get("state_label"),
+                        "state_sha256": ob.get("state_sha256"),
+                        "noul": vals, "min_noul": min(vals.values()) if vals else None,
+                        "threshold": threshold,
+                        "pass": pass_ok})
+    mins = [o["min_noul"] for o in per_obs if isinstance(o["min_noul"], (int, float))]
+    threshold = next((o["threshold"] for o in per_obs
+                      if isinstance(o["threshold"], (int, float))), None)
+    return {"rule": "the game is playable only if EVERY sampled state passes "
+                    "(worst-case over observations)",
+            "n_observations": len(per_obs),
+            "per_observation": per_obs,
+            "min_over_observations": min(mins) if mins else None,
+            "threshold": threshold,
+            "pass": (None if not mins or threshold is None
+                     else bool(min(mins) >= threshold)),
+            "note": "computed from the SAME independent states the calls used; the "
+                    "top-level `threshold_verdict` remains the last call's (TASK-124 shape)"}
 
 
 def frames_for_agent(frames):
@@ -1412,6 +1596,314 @@ def state_fingerprint(state):
             "head": text[:400]}
 
 
+def state_phase(label):
+    """Where in the run a sampled state was taken (D-B names three phases)."""
+    if label == "00_settle":
+        return "before-input"
+    if label.startswith("post"):
+        return "after-the-input-round"
+    if label.endswith("_act"):
+        return "after-input"
+    if label.startswith("auto"):
+        return "autonomous"
+    if label.endswith("_pre") or label.endswith("_ctl"):
+        return "no-input-control-window"
+    return "other"
+
+
+def pick_state_samples(pool, n, fingerprint_fn):
+    """TASK-129 D-B: up to `n` states that are DIFFERENT as the model sees them.
+
+    The gate samples a state before every action and after it, so the pool is large; what
+    matters is that the picked ones are *independent observations*.  Identity is measured on
+    the exact text that will be sent (`fingerprint_fn` = trim, then sha256), because two
+    raw trees that trim to the same request are one observation, not two.  The preference
+    order is D-B's own example -- before input / after input / a while later -- and the
+    rest of the pool follows so a game that cannot offer those still gets a sample.
+
+    Returns [{"label", "phase", "state", "sha256" (as sent), "source_sha256" (raw)}].
+    """
+    def sent_sha(state):
+        try:
+            return (fingerprint_fn(state) or {}).get("sha256")
+        except Exception:  # noqa: BLE001
+            return None
+
+    by_label = dict((p["label"], p) for p in pool)
+    order = []
+    if "00_settle" in by_label:
+        order.append("00_settle")
+    for suffix, prefix in (("_act", None), (None, "post"), (None, "auto")):
+        hits = [p["label"] for p in pool
+                if (p["label"].endswith(suffix) if suffix else p["label"].startswith(prefix))]
+        if hits:
+            order.append(hits[-1])
+    order += [p["label"] for p in pool]
+    picked, seen = [], set()
+    for label in order:
+        if len(picked) >= n:
+            break
+        item = by_label.get(label)
+        if item is None:
+            continue
+        sha = sent_sha(item["state"])
+        if not sha or sha in seen:
+            continue
+        seen.add(sha)
+        try:
+            raw = state_fingerprint(item["state"])["sha256"]
+        except Exception:  # noqa: BLE001
+            raw = None
+        picked.append({"label": label, "phase": state_phase(label), "state": item["state"],
+                       "sha256": sha, "source_sha256": raw})
+    return picked
+
+
+def per_question(evidence):
+    """`calls[-1]` -> {question key: the raw answer}, so no signal is summarised away."""
+    out = {}
+    for key, r in (evidence.get("answers_classified") or {}).items():
+        out[key] = {"role": r.get("role"), "choice": r.get("choice"),
+                    "noul": r.get("noul"), "score": r.get("score"),
+                    "score_levels": r.get("score_levels"),
+                    "legend_flipped": r.get("legend_flipped"),
+                    "probabilities": r.get("probabilities"),
+                    "confidence": r.get("confidence"),
+                    "abstain": r.get("abstain"),
+                    "abstain_reasons": r.get("abstain_reasons")}
+    return out
+
+
+def pick_visual_frames(usable, settled, n):
+    """TASK-129 C: up to `n` frames that are DIFFERENT images, preferring the settle ones.
+
+    TASK-128's lesson applies to pixels too: pong's screen is byte-identical for every
+    automatic frame until the ball is served, so "3 frames" would have been ONE visual
+    observation reported three times.  The preference order is settle/auto first (what a
+    player sees when the game comes up), then an after-input frame and then a post frame,
+    and identity is the file's sha256 -- the same hash the artifact records.
+    """
+    def sha(f):
+        return f.get("sha256")
+
+    order = []
+    for f in settled:
+        order.append(f)
+    for f in usable:
+        label = str(f.get("label", ""))
+        if label.endswith("_act") and f not in order:
+            order.append(f)
+    for f in usable:
+        if str(f.get("label", "")).startswith("post") and f not in order:
+            order.append(f)
+    for f in usable:
+        if f not in order:
+            order.append(f)
+    picked, seen = [], set()
+    for f in order:
+        if len(picked) >= n:
+            break
+        s = sha(f)
+        if not s or s in seen:
+            continue
+        seen.add(s)
+        picked.append(f)
+    note = ("%d hash-distinct frame(s) chosen from %d usable; %d settle/auto frame(s) "
+            "were available, %d of them hash-distinct"
+            % (len(picked), len(usable), len(settled),
+               len(set(sha(f) for f in settled))))
+    return picked, note
+
+
+def run_visual_agent(game, args, goal, frames, playjev_thresholds, log_fn):
+    """TASK-129 C: the VISION backend's pass over the frames this run captured.
+
+    One image + N choice questions per request (PlayJev's `serve.py` shares ONE frame set
+    between every question of a request), with the playability answer asked as `playable`
+    and the brokenness answer kept as an observation that is NOT in the decision path
+    (D-E).  Nothing here changes P1..P6: the result lands in `gate["playjev"]` beside
+    `gate["agent"]`.
+    """
+    usable = [f for f in frames
+              if f.get("ok") and f.get("path") and os.path.isfile(f["path"])]
+    settled = [f for f in usable
+               if f.get("label") == "settle" or str(f.get("label", "")).startswith("auto")]
+    vis_frames, vis_note = pick_visual_frames(usable, settled,
+                                              max(1, int(args.visual_frames)))
+    base_url = (getattr(args, "playjev_base_url", "") or
+                os.environ.get("PLAYTEST_PLAYJEV_BASE_URL", "") or
+                os.environ.get("PLAYJEV_BASE_URL", ""))
+    thresholds = visual_thresholds_for_agent(playjev_thresholds)
+    opts = {"base_url": base_url,
+            "model": "playjev-0.8b",
+            "decision_path": "/v1/systemone",
+            "invariant_questions": int(getattr(args, "playjev_invariant_questions", 3)),
+            "score_question": True,
+            "score_in_verdict": False,
+            "verdict_invariant_keys": ["playable"],
+            "abstain_min_confidence": float(
+                getattr(args, "playjev_abstain_min_confidence", 0.0)),
+            "timeout": float(getattr(args, "playjev_timeout", 300.0)),
+            "thresholds": thresholds}
+    agent = build_agent("playjev", game, goal.get("objective") or "", opts)
+    questions, roles = {}, {}
+    try:
+        questions, roles = agent.build_questions(goal)
+    except Exception as e:  # noqa: BLE001
+        questions = {"error": "%s: %s" % (type(e).__name__, e)}
+    out = {"backend": "playjev",
+           "task": "TASK-129 C/D-E",
+           "one_image_plus_n_questions": True,
+           "playable_key": agent.playable_key,
+           "score_in_decision_path": False,
+           "score_direction_note": PLAYJEV_SCORE_DIRECTION_NOTE,
+           "uncalibrated": bool(playjev_thresholds.get("uncalibrated", True)),
+           "thresholds": thresholds,
+           "thresholds_source_block": playjev_thresholds,
+           "thresholds_source": os.path.join(HERE, "playability_controls.json"),
+           "question_keys": list(questions) if isinstance(questions, dict) else None,
+           "question_roles": dict((k, v["role"]) for k, v in roles.items()),
+           "questions": questions if isinstance(questions, dict) else {"error": questions},
+           "rule": "playable P(true) >= %.3f" % thresholds["noul_min_p_true"],
+           "frames_used": [],
+           "observations": [],
+           "frames_available": len(usable),
+           "frames_settle_available": len(settled),
+           "frame_selection_note": vis_note,
+           "notes": []}
+    out["visual_sample_size"] = len(vis_frames)
+    out["visual_sample_size_is_independent"] = bool(len(vis_frames) > 1)
+    if not vis_frames:
+        out["error"] = ("no usable full-window frame was captured, so the vision backend "
+                        "has nothing to judge (PlayJev refuses a text state)")
+        log_fn("    playjev: NO FRAME to judge")
+        return out
+
+    for f in vis_frames:
+        frame_rec = {k: f.get(k) for k in
+                     ("index", "path", "width", "height", "sha256", "content_fraction",
+                      "bbox", "bbox_coverage", "background_rgb", "window",
+                      "changed_pixels_vs_prev")}
+        frame_rec["label"] = f.get("label")
+        out["frames_used"].append({"label": f.get("label"), "index": f.get("index"),
+                                   "file": os.path.basename(f.get("path") or ""),
+                                   "path": f.get("path"), "sha256": f.get("sha256")})
+        t0 = time.time()
+        action = agent.decide([frame_rec], {}, goal)
+        wall = round(time.time() - t0, 3)
+        ev = agent.last_evidence or {}
+        q = per_question(ev)
+        verdict = agent.threshold_verdict()
+        obs = {"frame_label": f.get("label"), "frame_index": f.get("index"),
+               "frame_file": os.path.basename(f.get("path") or ""),
+               "frame_path": f.get("path"), "frame_sha256": f.get("sha256"),
+               "content_fraction": f.get("content_fraction"), "bbox": f.get("bbox"),
+               "http_status": (ev.get("transport") or {}).get("status"),
+               "seconds": wall, "model": ev.get("model"), "timing": ev.get("timing"),
+               "request_meta": ev.get("request_meta"),
+               "transport": {"url": (ev.get("transport") or {}).get("url"),
+                             "status": (ev.get("transport") or {}).get("status"),
+                             "seconds": (ev.get("transport") or {}).get("seconds"),
+                             "attempts": (ev.get("transport") or {}).get("attempts")},
+               "action": action, "questions": q,
+               "playable": q.get(agent.playable_key, {}).get("noul"),
+               "abstain": bool(ev.get("abstain")),
+               "abstained_questions": ev.get("abstained_questions"),
+               "abstain_reasons": ev.get("abstain_reasons"),
+               "verdict": verdict,
+               "score_observation": ev.get("score_observation")}
+        out["observations"].append(obs)
+        log_fn("    playjev frame=%s status=%s playable=%s score=%s abstain=%s conf=%s"
+               % (f.get("label"), obs["http_status"], obs["playable"],
+                  (obs["score_observation"] or {}).get("values"),
+                  obs["abstain"], q.get(agent.playable_key, {}).get("confidence")))
+
+    # the gate-level vision verdict: every used frame must clear the `playable` rule and
+    # no `playable` answer may abstain (an abstain is never a pass)
+    vals = [o["playable"] for o in out["observations"]]
+    abstained = [o for o in out["observations"]
+                 if o["abstain"] and agent.playable_key in (o["abstained_questions"] or [])]
+    if abstained:
+        out["verdict"] = {"pass": None, "why": "%d frame(s) abstained on `playable`"
+                                               % len(abstained)}
+    elif any(not isinstance(v, (int, float)) for v in vals):
+        out["verdict"] = {"pass": None, "why": "no usable `playable` answer"}
+    else:
+        worst = min(vals)
+        out["verdict"] = {"pass": bool(worst >= thresholds["noul_min_p_true"]),
+                          "why": "%d/%d frames clear `%s`: worst P(true)=%.6f vs %.3f"
+                                 % (sum(1 for v in vals if v >= thresholds["noul_min_p_true"]),
+                                    len(vals), out["rule"], worst,
+                                    thresholds["noul_min_p_true"]),
+                          "worst_playable": worst}
+    out["playable_values"] = dict((o["frame_label"], o["playable"])
+                                  for o in out["observations"])
+    out["playable_distribution"] = describe_small(vals)
+    out["score_observation"] = {
+        "role": "observation", "in_decision_path": False, "direction": "suspect",
+        "uncalibrated": True, "note": PLAYJEV_SCORE_DIRECTION_NOTE,
+        "per_frame": dict((o["frame_label"],
+                           (o["score_observation"] or {}).get("values"))
+                          for o in out["observations"]),
+        "distribution": describe_small(
+            [(o["score_observation"] or {}).get("values", {}).get("brokenness")
+             for o in out["observations"]])}
+    out["service"] = {"backend": getattr(agent, "name", "playjev"),
+                      "base_url": getattr(agent, "base_url", None),
+                      "decision_path": getattr(agent, "decision_path", None),
+                      "model": getattr(agent, "model", None),
+                      "answer_model": (agent.last_evidence or {}).get("model"),
+                      "health": getattr(agent, "health", None),
+                      "case_evidence": "runs/playability/<out-root>/<game>/calls/*.json"}
+    out["errors"] = list(agent.errors)
+
+    # ---- D-E declarative probe: flip the legend order, and NEVER use the result ----
+    if getattr(args, "visual_legend_probe", False):
+        probe_opts = dict(opts)
+        probe_opts["legend_flipped"] = True
+        probe = build_agent("playjev", game, goal.get("objective") or "", probe_opts)
+        f = vis_frames[0]
+        frame_rec = {k: f.get(k) for k in
+                     ("index", "path", "width", "height", "sha256", "content_fraction",
+                      "bbox", "bbox_coverage", "background_rgb", "window",
+                      "changed_pixels_vs_prev")}
+        frame_rec["label"] = f.get("label")
+        act = probe.decide([frame_rec], {}, goal)
+        ev = probe.last_evidence or {}
+        q = per_question(ev)
+        out["legend_probe"] = {
+            "declared_probe": True,
+            "in_decision_path": False,
+            "purpose": "test whether the measured score inversion is a wording/legend-order "
+                       "artefact: the SAME frame is asked the SAME question with the option "
+                       "order reversed",
+            "frame_label": f.get("label"), "frame_sha256": f.get("sha256"),
+            "order_used": ["5..1 (flipped)"],
+            "http_status": (ev.get("transport") or {}).get("status"),
+            "action": act,
+            "questions": q,
+            "playable_flipped_run": q.get(probe.playable_key, {}).get("noul"),
+            "score_with_flipped_legend": q.get(probe.score_key, {}).get("score"),
+            "score_with_flipped_legend_levels": q.get(probe.score_key, {}).get("score_levels"),
+            "legend_flipped": True,
+            "note": "NEVER ENTERS THE VERDICT (TASK-129 D-E); recorded so the direction "
+                    "question can be argued with data"}
+    return out
+
+
+def describe_small(xs):
+    """n/min/max/median/mean over a handful of numbers, with the raw values kept."""
+    vals = sorted(x for x in (xs or []) if isinstance(x, (int, float)))
+    if not vals:
+        return {"n": 0, "min": None, "max": None, "median": None, "mean": None,
+                "values": []}
+    n = len(vals)
+    med = vals[n // 2] if n % 2 else 0.5 * (vals[n // 2 - 1] + vals[n // 2])
+    return {"n": n, "min": vals[0], "max": vals[-1], "median": med,
+            "mean": sum(vals) / float(n), "values": vals}
+
+
+
 def apply_agent_action(mcp, action, gate, tag):
     t = action.get("type")
     if t == "key" and isinstance(action.get("keycode"), int):
@@ -1470,6 +1962,37 @@ def load_agent_thresholds(path=None):
         return {}
     doc = json.load(io.open(p, encoding="utf-8"))
     return doc.get("agent_thresholds") or {}
+
+
+def load_playjev_thresholds(path=None):
+    """TASK-129 C/D-E: the VISION backend's own threshold block, INDEPENDENT of Jev's.
+
+    They are separate on purpose: Jev judges a text `state` and PlayJev judges one frame,
+    so a number fitted for one backend is not a number for the other.  The block also
+    states, in the configuration itself, that `score` is not in the decision path.
+    """
+    p = path or os.path.join(HERE, "playability_controls.json")
+    if not os.path.isfile(p):
+        return {}
+    doc = json.load(io.open(p, encoding="utf-8"))
+    return doc.get("playjev_thresholds") or {}
+
+
+def visual_thresholds_for_agent(block):
+    """`playjev_thresholds.playable_min_p_true` -> the agent's `noul_min_p_true`.
+
+    The mapping is explicit and recorded (the gate keeps the source block verbatim), so a
+    reviewer can always see which number produced which verdict.
+    """
+    t = {"noul_min_p_true": 0.5, "score_max_expected": 2.5}
+    if isinstance(block, dict):
+        v = block.get("playable_min_p_true")
+        if isinstance(v, (int, float)):
+            t["noul_min_p_true"] = float(v)
+        v = block.get("score_max_expected")
+        if isinstance(v, (int, float)):
+            t["score_max_expected"] = float(v)
+    return t
 
 
 def verdict_p6(game, controls, tested):
@@ -1735,7 +2258,7 @@ def audit_one(g):
     """The static half of P5 for one game: declared actions vs the ones the code reads."""
     proj = parse_project(g)
     src = []
-    for dirpath, _dn, fns in os.walk(os.path.join(PROJECTS, g, "src")):
+    for dirpath, _dn, fns in os.walk(os.path.join(project_dir(g), "src")):
         for fn in fns:
             if fn.endswith(".cs"):
                 src.append(os.path.join(dirpath, fn))
@@ -1812,14 +2335,48 @@ def write_reports(gates, audit, args):
                # TASK-124 C: the model-in-the-loop thresholds are configurable and
                # explicitly UNCALIBRATED; copied into the summary so a verdict is never
                # separated from the numbers that produced it.
-               "agent_thresholds": load_agent_thresholds()}
+               "agent_thresholds": load_agent_thresholds(),
+               # TASK-129 C: the VISION backend's own block, independent of Jev's.
+               "playjev_thresholds": load_playjev_thresholds(),
+               "visual_agent": getattr(args, "visual_agent", "") or None,
+               "token_estimator": {"name": "jev_estimate_tokens (TASK-129 D-C)",
+                                   "safety_factor": JEV_TOKEN_SAFETY_FACTOR,
+                                   "agent_state_budget": getattr(args, "agent_state_budget", 0),
+                                   "bridge": "budget 2000 (TASK-129) == budget 800 (TASK-128)"},
+               "agent_state_samples": getattr(args, "agent_state_samples", 3)}
     for g in gates:
         crit = g.get("criteria") or {}
+        pj = g.get("playjev") or {}
         summary["games"].append({
             "game": g["game"],
             "target": g.get("target"),
             "verdict": "playable" if all((crit.get(k) or {}).get("pass") for k in
                                          ("P1", "P2", "P3", "P4", "P5", "P6")) else "not_playable",
+            # TASK-129 D-B: how many INDEPENDENT model observations this game produced.
+            "agent_sample_size": ((g.get("agent") or {}).get("sample_size")),
+            "agent_sample_size_required": ((g.get("agent") or {}).get("sample_size_required")),
+            "agent_aggregate": (None if not (g.get("agent") or {}).get(
+                "aggregate_over_observations") else {
+                "rule": (g["agent"]["aggregate_over_observations"] or {}).get("rule"),
+                "min_over_observations": (g["agent"]["aggregate_over_observations"] or {}
+                                          ).get("min_over_observations"),
+                "threshold": (g["agent"]["aggregate_over_observations"] or {}).get("threshold"),
+                "pass": (g["agent"]["aggregate_over_observations"] or {}).get("pass")}),
+            "playjev": (None if not pj else {
+                "playable_values": pj.get("playable_values"),
+                "playable_distribution": pj.get("playable_distribution"),
+                "verdict": pj.get("verdict"),
+                "frames_used": [f.get("file") for f in (pj.get("frames_used") or [])],
+                "frames_used_sha256": [f.get("sha256") for f in (pj.get("frames_used") or [])],
+                "thresholds": pj.get("thresholds"),
+                "score_in_decision_path": pj.get("score_in_decision_path"),
+                "score_observation_values": (pj.get("score_observation") or {}).get("per_frame"),
+                "legend_probe": (None if not pj.get("legend_probe") else {
+                    "score_with_flipped_legend":
+                        pj["legend_probe"].get("score_with_flipped_legend"),
+                    "in_decision_path": False}),
+                "errors": pj.get("errors"),
+            }),
             "criteria": {k: dict({"pass": (crit.get(k) or {}).get("pass"),
                                   "why": (crit.get(k) or {}).get("why")},
                                  **({"capabilities": (crit.get(k) or {}).get("capabilities"),
@@ -1874,6 +2431,51 @@ def main(argv=None):
                          "abstain is never a pass.  `openai` is only for a model that "
                          "really speaks OpenAI chat-completions.")
     ap.add_argument("--agent-steps", type=int, default=2)
+    ap.add_argument("--agent-state-samples", type=int, default=3,
+                    help="TASK-129 D-B: how many HASH-DIFFERENT states to hand the agent, "
+                         "one per call (default 3).  TASK-128 handed the same state to all "
+                         "three calls, so every game had one independent observation; when "
+                         "fewer than this many distinct states can be sampled the run "
+                         "records `sample_size: 1` instead of pretending.")
+    ap.add_argument("--max-state-retries", type=int, default=2,
+                    help="TASK-129 D-C: how many times a REAL HTTP 422 "
+                         "(`state exceeds N tokens`) may be answered by halving the state "
+                         "and re-POSTing.  Bounded; every retry is recorded in "
+                         "agent.json -> report.calls[*].state_budget_retries.")
+    ap.add_argument("--visual-agent", default="",
+                    help="TASK-129 C: a SECOND backend that judges the captured FRAMES "
+                         "(only `playjev` is implemented).  It runs beside --agent, writes "
+                         "gate[\"playjev\"] next to gate[\"agent\"], asks ONE image + N "
+                         "choice questions per request, and its `score` answer is recorded "
+                         "as a direction-suspect observation that is NOT in the decision "
+                         "path (D-E).")
+    ap.add_argument("--playjev-base-url", default="",
+                    help="TASK-129: the PlayJev service root for --visual-agent=playjev.  "
+                         "Empty falls back to PLAYTEST_PLAYJEV_BASE_URL / PLAYJEV_BASE_URL, "
+                         "then to playtest_agent's default http://127.0.0.1:8081.")
+    ap.add_argument("--visual-frames", type=int, default=3,
+                    help="TASK-129: how many of the pre-input frames (settle + auto*) the "
+                         "vision backend judges; one request per frame, one image + N "
+                         "questions per request.")
+    ap.add_argument("--playjev-invariant-questions", type=int, default=3,
+                    help="TASK-129: how many invariant Choice questions to ask per frame. "
+                         "The FIRST is always `playable`; the others are the remaining jev "
+                         "invariants and are recorded as observations, not criteria.")
+    ap.add_argument("--playjev-abstain-min-confidence", type=float, default=0.0,
+                    help="TASK-129: a `playable` confidence below this is recorded as an "
+                         "ABSTAIN (TASK-127's rule, reproducible against the real service).")
+    ap.add_argument("--playjev-timeout", type=float, default=300.0)
+    ap.add_argument("--visual-legend-probe", action="store_true",
+                    help="TASK-129 D-E: also ask ONE frame with the brokenness legend "
+                         "REVERSED, to test whether the measured score inversion is a "
+                         "wording/legend-order artefact.  Its result is stored under "
+                         "gate[\"playjev\"][\"legend_probe\"] and NEVER enters a verdict.")
+    ap.add_argument("--exercise", nargs="*", default=[],
+                    help="TASK-129 D-D: declarative negative variants under "
+                         "projects/_exercises/.  Each name is a directory "
+                         "`projects/_exercises/<name>` and is then addressable exactly "
+                         "like a game (--games <name>).  Nothing under "
+                         "projects/<game>/ is touched by this.")
     ap.add_argument("--decision-path", default="",
                     help="TASK-124: the jev backend's decision endpoint "
                          "(/v1/systemone default, or /v1/decision; env "
@@ -1887,14 +2489,16 @@ def main(argv=None):
                          "entry; `playtest_agent.py --probe*` never uses it and only "
                          "talks to an in-process dumb server.")
     ap.add_argument("--agent-state-budget", type=int, default=0,
-                    help="TASK-128: trim the sampled state to this estimated token "
-                         "count before handing it to the agent (0 = off, the pre-"
-                         "TASK-128 behaviour).  Jev refuses a state over its documented "
-                         "2048-token cap with HTTP 422 and 15 of the 20 games exceed it; "
-                         "--agent-state-budget 800 fits all of them (the client estimate "
-                         "under-counts the service by ~2.1-2.4x, so the budget must be "
-                         "well under 2048).  What was dropped is recorded in "
-                         "gate\\agent\\state_for_agent.")
+                    help="TASK-128/TASK-129: trim the sampled state to this estimated token "
+                         "count before handing it to the agent (0 = off).  Jev refuses a "
+                         "state over its documented 2048-token cap with HTTP 422 and 15 of "
+                         "the 20 games exceed it.  UNIT CHANGED IN TASK-129: "
+                         "`jev_estimate_tokens` is now calibrated on the service's own "
+                         "`usage` (x2.5, conservative), so --agent-state-budget 2000 "
+                         "selects EXACTLY the state TASK-128's 800 did (2000/2.5) and the "
+                         "fitted jev thresholds stay comparable.  A REAL 422 is additionally "
+                         "answered by halving the budget, bounded by --max-state-retries.  "
+                         "What was dropped is recorded in gate\\agent\\observations.")
     ap.add_argument("--objective", default="")
     ap.add_argument("--port", type=int, default=DEFAULT_PORT)
     ap.add_argument("--ready-timeout", type=float, default=240)
@@ -1928,6 +2532,17 @@ def main(argv=None):
     all_games = sorted(d for d in os.listdir(PROJECTS)
                        if os.path.isdir(os.path.join(PROJECTS, d))
                        and not d.startswith("_") and not d.startswith("mcp"))
+    # TASK-129 D-D: register the declarative negative variants.  They live under
+    # projects\_exercises\ (a copy, never the real project), so they are invisible to
+    # `all_games` by design and have to be named explicitly.
+    for name in (args.exercise or []):
+        d = os.path.join(EXERCISES, name)
+        if not os.path.isdir(d):
+            raise SystemExit("--exercise %r: %s is not a directory" % (name, d))
+        if not os.path.isfile(os.path.join(d, "project.godot")):
+            raise SystemExit("--exercise %r: %s has no project.godot" % (name, d))
+        GAME_DIRS[name] = d
+    all_games = sorted(all_games + [n for n in (args.exercise or []) if n not in all_games])
     games = all_games if (args.all or not args.games) else args.games
     for g in games:
         if g not in all_games:
@@ -1942,6 +2557,15 @@ def main(argv=None):
     log("out root : %s" % RUNS)
     log("games    : %s" % ", ".join(games))
     log("ports    : %d (checked free before each game)" % args.port)
+    log("agents   : text=%s (state samples=%d, state budget=%d, max 422 state retries=%d)"
+        % (args.agent, args.agent_state_samples, args.agent_state_budget,
+           args.max_state_retries))
+    log("vision   : %s%s" % (args.visual_agent or "(off)",
+                             " frames=%d, invariants=%d, legend-probe=%s"
+                             % (args.visual_frames, args.playjev_invariant_questions,
+                                args.visual_legend_probe) if args.visual_agent else ""))
+    if GAME_DIRS:
+        log("exercises: %s" % ", ".join("%s -> %s" % (k, v) for k, v in sorted(GAME_DIRS.items())))
     log("thresholds: P1 content>=%.4f bbox>=%.4f delta>%d | P2 %d frames | P3 %d px | "
         "P6 from tools/playability_controls.json"
         % (P1_MIN_CONTENT_FRACTION, P1_MIN_BBOX_COVERAGE, PIXEL_DELTA, P2_FRAMES,

@@ -6727,3 +6727,100 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
     （`--agent-state-budget 0`）也完全回到 TASK-128 之前；`runs/` 不入库，随时可重跑。
   * 并发披露：TASK-127 的提交 `c6138d7` 顺带带走了本次对 `tools/playability_gate.py` 的改动
     （同一文件被两个并行子代理同时编辑）。
+
+## D168 — TASK-129 把 PlayJev 视觉判定接进试玩门：多状态采样（D-B）、token 估计修正（D-C）、真负面变体（D-D）、score 撤出判定（D-E）
+
+- 日期：2026-09-27/28（TASK-129，严格单线程下唯一的在跑任务）
+- 决策者裁定：D-A（导出 exe 为"玩家拿到的产物"的权威；负类只纳入导出产物确实失效的样本）、
+  D-B（每款 ≥3 个哈希不同的 state，否则样本量按 1 计）、D-C（用服务端 `usage` 标定 token 估计 +
+  422 自动减半重试、有界、逐次留证、禁止静默截断）、D-D（`projects/_exercises/neg_*` 建声明式
+  负面变体覆盖 ≥4 种失效模式并采真帧）、D-E（`score` 撤出判定路径，仅作"方向可疑"观察值 + 翻转图例探针）。
+- 触发问题（全部由 TASK-127/128 实测留下，不是推测）：
+  ① 门在 3 次调用里递**同一份 state**，三次回答逐位相同 → 每款只有 **1 个独立模型观测**；
+  ② 客户端 `jev_estimate_tokens` 低估服务侧 **2.1–2.4 倍**，20 款里 15 款一开始被 HTTP 422 拒；
+  ③ 负类只覆盖**一种**失效模式（`PollInput=false`），且 TASK-127 的负面帧是**派生**的（真帧里没有
+     一张天然退化帧，836 张 `content_fraction>=0.005`）；
+  ④ `score` 零分离度，且 TASK-127 观测到"方向反了"；
+  ⑤ PlayJev 视觉判定没有进门。
+- 选项与取舍：
+  1. 保留"三次同 state" —— **否决**（D-B 明确要求独立观测；且实测三次回答逐位相同，重复调用不是新样本）。
+  2. 用真实 Jev tokenizer 精确计数 —— **否决**：本机没有该 tokenizer；改为"服务端实测比值取上界系数 +
+     真 422 自动减半重试"，两者都可复算、可留证。
+  3. 继续用派生帧当负面样本 —— **否决**（D-D）：派生帧不是"真负面帧"。
+  4. 把 `playable` 之外的不变量与 `score` 一起算进 PlayJev 判定 —— **否决**（D-E）：只有 `playable` 进判定。
+  5. **选中**：`--agent-state-samples 3`（按"送给模型的那段文本"的 sha256 去重，凑不够就如实记
+     `sample_size: 1`）+ `--agent-state-budget 2000`（新系数下 **恰好等于** TASK-128 的 800，同一构型，
+     已在 20 份真实 state 上逐款核对）+ `--visual-agent=playjev`（1 图 + N 问，`playable` 进判定、
+     `score` 只作观察）+ 四类声明式负变体 + 导出 exe 负类复核。
+- 实测结论（详见 `recovery/reports/TASK-129-REPORT.md`）：
+  * **D-B 达成**：20/20 款拿到 **3 个哈希不同**的 state（`agent_sample_size 3/3`），每次调用连同它看到的
+    state 一起留证（`agent.json → observations[]`）。
+  * **D-C 达成**：`jev_estimate_tokens = ceil(2.5 × 旧估计)`（2.5 来自实测最坏比值 2.36 向上取整），
+    并把"旧 800 == 新 2000"作为可验证的桥梁；真 422（正文含 state/token 超限）时**减半预算重试**，
+    上限 `--max-state-retries 2`，逐次留证（`state_budget_retries`），且**不改变**传输层 422 的既有语义
+    （`--probe-jev` 33/33、`--probe-playjev` 49/49 全绿）。
+  * **D-D 达成**：四类声明式变体（`projects/_exercises/neg_input_dead|neg_black_screen|neg_frozen|
+    neg_hud_missing`，全是**拷贝**，C# 逐字节未改，只改 .tscn 一行声明），逐个 `--headless --quit-after 60`
+    退出码 0，并各自收到**真实整窗帧**（`runs/playability/negatives/<mode>/frames/*.png`，
+    含 sha256）。抓取情况：input_dead→P2/P5/P6 FAIL、black_screen→P1 FAIL、frozen→P3 FAIL、
+    hud_missing→**P1..P6 全过**（**声明为门的盲点**：没有任何机检问"玩家需要的界面在不在屏幕上"）。
+  * **D-E 达成**：`playable` 是唯一判定问句；`score` 进 `gate["playjev"]["score_observation"]`，
+    标 `in_decision_path:false / direction:"suspect" / uncalibrated:true`；翻转图例探针只写进
+    `legend_probe`，永不进判定。
+  * **PlayJev `playable` 在真帧上没有分离度**：正类 0.105–0.886（中位 0.445，51 帧 / 20 款），
+    负类 0.125–0.449（中位 0.210）→ 完全重叠；任何阈值要么放过全部真负样本，要么把 13/20 款修好版
+    打成不可玩。**它与 Jev 的 `score` 同命**：可以记录、可以做第二信号，不能当判决。
+  * **纠正 TASK-127 的一条结论（以代码/数据为准）**：`score` 的"方向反转"是**单对样本的轶事**
+    （黑屏 2.41 < 真实 snake 帧 3.97）；按类聚合**并不反转**（真帧正类中位 2.43 > 负类 2.36），
+    真正的缺陷是**零分离度**。翻转图例探针给出机制证据：|Δ| 中位 0.11、最大 1.09（1..5 尺度），
+    即 `score` 至少部分跟着**选项顺序**走，不是纯像素读取。
+  * **TASK-128 的 `noul_min_p_true=0.25` 只在"注入后单状态"构型下成立**：在 D-B 的 ≥3 状态构型下，
+    同一 0.25 会误报 14/20 款修好版；阈值**未改**（避免用另一次拟合掩盖构型差异），而是把
+    "构型"与"多状态重测结果"写进 `playability_controls.json → agent_thresholds.fitted_on/limitations`。
+  * 导出 exe 负类复核与 TASK-128 完全一致：**16 not_playable / 4 playable**（breakout/pong/snake/tetris）。
+- 预期影响与回滚点：
+  * `--agent-state-budget` 的**单位变了**（新系数下 2000 == 旧 800）；单看数字会误读，参数帮助文本与
+    docstring 都写明了桥梁，且报告给出 20 款逐款核对结果。
+  * `--agent=playjev` 的默认 `threshold_verdict` 不再把 `score` 当判据（`score_in_verdict` 默认 false）；
+    旧行为可用 `score_in_verdict: true` 复现。`playable` 问句键由 `playable_frame` 改为 `playable`
+    （措辞逐字相同，数字可比）。
+  * 未改 `projects/<game>/` 任何一行（负变体全是拷贝）；未改 `godot/modules/mcp_server/**` 一个字节
+    → **不触发**两变体重建 / 十道门 / `accept_m1` / push。未动 8080/8081 服务、`/opt/*-venv`、`F:\models\**`。
+  * 改动文件：`tools/playability_gate.py`、`tools/playtest_agent.py`、`tools/playability_controls.json`、
+    `tools/playjev_visual_calibrate.py`（新）、`projects/_exercises/neg_*`（新）、本决策、报告。
+  * **回滚点**：`git revert` 对应提交即回到 TASK-128 的采样/阈值语义（`--agent-state-samples` 默认 3，
+    但仅用 `--agent-state-budget 0` 即完全关闭裁剪）；`runs/` 不入库，随时可重跑。
+
+## D169 — 严格单线程：同一时刻只允许一个子代理改本仓（稳定性 > 吞吐）
+
+- 日期：2026-09-27（用户最终指示；推翻同日早先"并发用 git worktree"的方案）
+- 触发问题：TASK-127 与 TASK-128 **同时改 `tools/playability_gate.py`**，TASK-127 的提交 `c6138d7`
+  把 TASK-128 尚未提交的 `--base-url` 本体一并带走，只能靠提交信息与报告补救；而 worktree 方案本身
+  还要引入分支隔离、被 `.gitignore` 的重目录联接、清理顺序、端口/单块 GPU 不隔离等新风险
+  （`Remove-Item -Recurse` 会**穿过联接删掉目标内容**）。
+- 选项：① 并发 + worktree 一任务一分支 —— **否决**（机制自身的风险 + 两次实际损害）；
+  ② 并发但不隔离 —— **否决**（同一文件被两个代理改，已经发生过一次）；
+  ③ **严格单线程：同一时刻只有一个子代理在改本仓，决策者必须等到上一个交出报告路径才派下一个（选中）**。
+- 理由：**稳定性 > 吞吐**。并发带来的时间收益远小于它造成的返工与不可追溯风险；
+  详细理由与"附录（只作知识留存，不启用）"见 `godot-mcp/recovery/tasks/README.md` 第 8 条，
+  与本节内容一致。串行下仍保留三条纪律：独占/禁触清单照旧写（现在是边界自查）；提交前
+  `git status --short` 确认只暂存自己的文件；发现上一批遗留的未提交改动不要替他提交，改为在报告里点名。
+- 预期影响与回滚点：任务不再并行派发，编排上多花时间；引擎仓（自带 `.git`）也归入串行资源，
+  同一时刻只有一个任务可以改引擎模块。**worktree 方案仅在用户明确批准时才可启用**（启用前须列出
+  上述已知坑）。回滚点：若将来用户批准并发，唯一可行做法是 git worktree + 目录联接，且必须先得到批准。
+
+## D170 — 任务书里的事实必须标来源等级；代码与任务书冲突时以代码为准并显式纠正
+
+- 日期：2026-09-27（与 TASK-124..129 报告一并固化为仓库纪律）
+- 触发问题：任务书里的**二手事实**已经被实测推翻两次——`playjev/serve.py` **没有 `abstain` 字段**
+  （TASK-127），`state.frames` 的说法也**不成立**（TASK-127/128）；此外 TASK-128 还纠正了两处任务书事实
+  （负样本实际路径是 `dist\exe-task109-pre-fix\<game>\<game>.exe`，没有中间那层 `exe\`；
+  "修复前的 export 全是负样本"只对 16/20 成立）。若子代理照抄任务书，会把错误固化进代码与报告。
+- 选项：① 照抄任务书 —— **否决**（会把二手事实当一手事实入库）；
+  ② 只在自己心里改、报告里不提 —— **否决**（读者无法区分"我们遵守了任务书"与"我们纠正了任务书"）；
+  ③ **任务书事实逐条标来源等级（一手：仓库代码/模型卡原文，带路径或 URL；二手：文章摘要/第三方复述），
+  代码与任务书冲突时以代码为准并在报告里显式列"任务书 → 实测"的更正表（选中）**。
+- 理由：**子代理以代码为准并显式纠正任务书是被鼓励的行为，不是抗命**；来源等级让"这条事实有多硬"
+  变成可核对的东西，而不是语气强弱。范式：TASK-127 的两处纠正、TASK-128/129 的逐条更正表。
+- 预期影响与回滚点：任务书写作与报告阅读成本略增；收益是可追溯性——任何结论都能追到"一手证据在哪"。
+  回滚点：无（这是纪律，不是机制）；若某条一手证据失效，同样以新的一手证据为准并再次显式更正。

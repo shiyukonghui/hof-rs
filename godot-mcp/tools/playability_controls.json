@@ -85,16 +85,118 @@
    "method": "separation sweep over the observed values, joint minimum of both rules, ties to the prior; tools/agent_threshold_calibrate.py",
    "errors": "3 / 36 (1 fixed game flagged, 2 broken games passed); the 0.5/2.5 prior made 11 / 36",
    "report": "recovery/reports/TASK-128-REPORT.md",
-   "artifact": "runs/playability/agent-thresholds-fit.json"
+   "artifact": "runs/playability/agent-thresholds-fit.json",
+   "regime": "ONE state per game, and that state was the POST-INPUT one (the highest-noul phase).  TASK-129 D-B proved this matters -- see task129_multistate_recheck."
+  },
+  "task129_multistate_recheck": {
+   "what_changed": "TASK-129 D-B makes the gate send >= 3 HASH-DIFFERENT states per game instead of one state three times, so the same rule can be re-evaluated on independent observations and on the worst-case aggregate the gate now records (gate.agent.aggregate_over_observations).",
+   "positives": "runs/playability/t129-pos (20 games, 60 observations)",
+   "negatives": "runs/playability/negatives (3 counted declared variants, 9 observations) and runs/playability/t129-neg-exe (16 counted pre-fix exports, 57 observations)",
+   "at_the_fitted_0.25": {
+    "declared_variants": {"positive_observations_below": 27, "of": 60,
+                          "positive_GAMES_flagged": 13, "of_games": 20,
+                          "negative_games_passed": 0},
+    "with_pre_fix_exports": {"positive_observations_below": 27, "of": 60,
+                             "positive_GAMES_flagged": 14, "of_games": 20,
+                             "negative_games_passed": 3,
+                             "negative_games_that_slipped_through": ["frogger",
+                                                                     "puzzlebobble",
+                                                                     "spaceinvaders"]}
+   },
+   "best_worst_case_threshold_found": {
+    "declared_variants": {"t": 0.04423358291387558, "game_errors": 3, "of_games": 23},
+    "with_pre_fix_exports": {"t": 0.2462863177061081, "game_errors": 16, "of_games": 39}
+   },
+   "verdict": "THE 0.25 VALUE IS NOT CHANGED, AND MUST NOT BE READ AS A CROSS-STATE THRESHOLD.  It was fitted on the post-input state only; under D-B's multi-state sampling it flags 13-15 of the 20 fixed games.  Changing it again from this dataset would replace one regime-specific number with another, so the number stays, the regime is written down, and the limitation below is the operative statement.  (The same file, tools/playjev_visual_calibrate.py, prints both sweeps.)",
+   "artifact": "runs/playability/t129-playjev-fit.json -> jev_multistate_fit"
   },
   "limitations": [
    "NOT a calibration: no NLL/Brier/ECE is claimed and `uncalibrated` remains true.",
-   "Small sample: 20 positives / 16 negatives, ONE independent model observation per game (the gate re-asks with an unchanged state).",
-   "The negatives cover ONE failure mode (PollInput=false -> input dead). Games broken in ways that still answer input were never sampled.",
-   "The state the model sees is trimmed to fit Jev's 2048-token cap (--agent-state-budget 800), so noul_min_p_true belongs to that construction, not to a whole-tree state.",
-   "The jev backend sends the state TEXT only (no image), so this is a second signal beside P1..P6, never a replacement."
+   "Small sample: 20 positives / 16 negatives, and the negatives cover ONE failure mode (PollInput=false -> input dead). Games broken in ways that still answer input were never sampled.",
+   "REGIME (TASK-129 D-B, measured): the 0.25 value belongs to the single POST-INPUT state construction. With >= 3 independent states per game the SAME rule flags 13-15 of the 20 fixed games (see task129_multistate_recheck), so it is a property of that construction and of the gate's own verdict shape, not a probability. TASK-128's `state_for_agent` limitation below still holds.",
+   "The state the model sees is trimmed to fit Jev's 2048-token cap. TASK-129 changed the estimator to a calibrated x2.5 coefficient, so the comparable budget is now --agent-state-budget 2000 (it selects exactly the same state the old 800 did, verified per game on the 20 recorded states); the fit above was made with the OLD unit (800).",
+   "The jev backend sends the state TEXT only (no image), so this is a second signal beside P1..P6, never a replacement.",
+   "A real HTTP 422 `state exceeds N tokens` is answered by halving the state and re-sending, bounded by --max-state-retries (default 2) and recorded per attempt (tools/jev_422_retry_probe.py holds a real record on the deployed service)."
   ],
   "note": "FITTED BY SEPARATION (TASK-128), STILL NOT CALIBRATED. Vendor: 'NLL, Brier, and ECE calibration results have not been reported. Set thresholds on an independent dataset.' Fitted on positives = the 20 fixed games, negatives = the 16 genuinely input-dead pre-fix exports."
+ },
+ "_playjev_thresholds_comment": [
+  "TASK-129 C/D-E -- the VISION backend's OWN threshold block, independent of",
+  "`agent_thresholds` above.  They are separate on purpose: Jev judges a trimmed text",
+  "`state`, PlayJev judges ONE full-window frame, so a number fitted for one backend is",
+  "not a number for the other.",
+  "",
+  "`playable` is the ONLY question in the decision path (TASK-129 D-E).  The gate asks one",
+  "image + N choice questions per request, takes `playable` (a yes/no Choice whose P('yes')",
+  "is the `noul` value) and compares it with `playable_min_p_true`.",
+  "",
+  "`score`/brokenness is NOT a criterion.  TASK-127 measured the direction as INVERTED on",
+  "the deployed weights (a black screen scored 2.41 while a real snake frame scored 3.97 on",
+  "a 1=working..5=unusable legend), so the value is recorded with `direction: suspect`, and",
+  "the optional flip-legend probe (same frame, reversed option order) exists only to test",
+  "whether that inversion is a wording/legend-order artefact.  The probe never enters the",
+  "verdict.",
+  "",
+  "*** STILL UNCALIBRATED.  `uncalibrated` stays true: a separation fit on a few dozen",
+  "frames is not a probability calibration, and no ECE is claimed. ***",
+  "",
+  "`playable_min_p_true`  : P(the frame looks playable) must be >= this.",
+  "`score_max_expected`   : kept ONLY so a caller can reproduce the TASK-127 behaviour by",
+  "                         setting score_in_decision_path; unused by the gate."
+ ],
+ "playjev_thresholds": {
+  "backend": "playjev",
+  "playable_question": "playable",
+  "score_in_decision_path": false,
+  "playable_min_p_true": 0.5,
+  "score_max_expected": 2.5,
+  "uncalibrated": true,
+  "fitted_on": {
+   "positives": "runs/playability/t129-pos (20 fixed games, project tree; 51 hash-distinct real full-window frames)",
+   "negatives": "runs/playability/negatives (4 DECLARED failure modes) and runs/playability/t129-neg-exe (the 20 pre-fix EXPORTED artifacts, of which the gate itself judges 16 broken -- D-A's authority for 'what the player gets')",
+   "method": "threshold sweep over the per-frame `playable` values of both classes, counting misclassified FRAMES and misclassified GAMES separately; tools/playjev_visual_calibrate.py",
+   "artifacts": "runs/playability/t129-playjev-fit-declared.json and runs/playability/t129-playjev-fit.json",
+   "status": "FITTED AND REJECTED. No threshold separates the classes (see measured_on_real_negatives): the prior 0.5 is KEPT, because every fitted alternative is worse in a different way rather than better. This is a result, not a missing task."
+  },
+  "measured_on_real_negatives": {
+   "declared_variants_only": {
+    "threshold_kept_0.5": {"pos_games_flagged": 14, "neg_games_passed": 0,
+                           "game_errors": 14},
+    "best_game_level_fit": {"t": 0.104813, "pos_games_flagged": 0,
+                            "neg_games_passed": 3, "game_errors": 3},
+    "overlap_game_min": {"positive_min": 0.104813, "negative_max": 0.448697,
+                         "gap": -0.343884, "separable": false}
+   },
+   "with_the_authoritative_pre_fix_exports": {
+    "negative_games": 24, "negative_games_counted": 19, "negative_frames_counted": 19,
+    "negative_playable_min_median_max": [0.125427, 0.404992, 0.747749],
+    "positive_playable_min_median_max": [0.104813, 0.444876, 0.885693],
+    "threshold_kept_0.5": {"pos_games_flagged": 14, "neg_games_passed": 5,
+                           "game_errors": 19,
+                           "neg_games_that_slipped_through": ["asteroids", "flappy",
+                                                              "game2048", "platformer",
+                                                              "sokoban"]},
+    "best_game_level_fit": {"t": 0.218557, "pos_games_flagged": 4,
+                            "neg_games_passed": 13, "game_errors": 17},
+    "overlap_game_min": {"positive_min": 0.104813, "negative_max": 0.747749,
+                         "gap": -0.642936, "separable": false}
+   },
+   "mechanism_measured_not_guessed": {
+    "finding": "PlayJev's `playable` is a function of the PIXELS ONLY, deterministically: across 60 distinct images and 83 judgements, the 22 images that were judged more than once received IDENTICAL `playable` (and identical `score`) every time -- 20 of them appear in BOTH a fixed build and a broken pre-fix export, 2 in a fixed build and a declared negative variant.",
+    "consequence": "A defect that changes no pixel (input disabled, game loop frozen, the real `PollInput=false` failure) is invisible to this backend: its `playable` for the broken artifact is exactly the value of the fixed build. That is why the pre-fix exports score 0.13-0.75 -- the same numbers their fixed twins get.",
+    "artifact": "runs/playability/t129-frame-identity.json"
+   }
+  },
+  "limitations": [
+   "NOT a calibration: no NLL/Brier/ECE is claimed and `uncalibrated` remains true.",
+   "The threshold does NOT separate our own labelled classes at either granularity (frame or game): tools/playjev_visual_calibrate.py reports a negative gap for both. `playable` is therefore a recorded SECOND signal beside P1..P6, never an automatic verdict.",
+   "Mechanism (measured): the backend reads pixels only and is deterministic per image, so defects that do not change the frame are invisible to it by construction; conversely its value tracks the game's visual style, which is why a fixed minesweeper (0.125) scores lower than a broken tetris (0.85).",
+   "Three of the four declared negative modes are ENGINE-declared (input disabled, invisible scene, process disabled); only `neg_hud_missing` is a purely visual defect and no machine criterion catches it -- so the negative sample is biased towards failures a pixel-based model may or may not see. The authoritative negative set (the 16 pre-fix exports) is 16/16 input-dead, i.e. invisible in pixels.",
+   "Small sample: 20 positive games / 51 distinct frames, 19 counted negative frames; frames of one game are not independent games.",
+   "`confidence` is the service's own local statistic; it is recorded per question and never thresholded into a verdict.",
+   "The action question is still asked (the request is 1 image + N questions) but is NOT used by the gate's vision verdict."
+  ],
+  "note": "PRIOR 0.5 KEPT AFTER FITTING (TASK-129).  The score answer is recorded as a direction-suspect observation and is never compared with a threshold to produce a verdict.  The flip-legend probe (median |flipped - normal| 0.11-0.13, median |flipped - mirror| 1.09 on a 1..5 legend) shows the score answer follows the option ORDER at least partly, and it never enters the verdict either."
  },
  "games": {
   "asteroids": {
@@ -280,6 +382,75 @@
     {"need": "move the cursor down", "action": "td_down", "observable": "CursorRow"},
     {"need": "place a tower at the cursor", "action": "td_place",
      "observable": "TowersPlaced|Gold|TowerList"}
+   ]
+  },
+  "neg_input_dead": {
+   "_negative_variant": {
+    "task": "TASK-129 D-D",
+    "failure_mode": "input disconnected (the game never reads the InputMap)",
+    "source_project": "minesweeper",
+    "construction": "copy of projects/minesweeper with `PollInput = false` in scenes/main.tscn (no C# edited)",
+    "expected_criteria": "P2/P5/P6 FAIL, P1/P3 PASS"
+   },
+   "goal": "walk the cursor, reveal and flag cells -- with the input path DISABLED (negative variant)",
+   "capabilities": [
+    {"need": "move the cursor left", "action": "mine_left", "observable": "CursorCol"},
+    {"need": "move the cursor right", "action": "mine_right", "observable": "CursorCol"},
+    {"need": "move the cursor up", "action": "mine_up", "observable": "CursorRow"},
+    {"need": "move the cursor down", "action": "mine_down", "observable": "CursorRow"},
+    {"need": "reveal the cell under the cursor", "action": "mine_reveal",
+     "observable": "RevealedCount|Moves|RejectedMoves|MinesRelocated"},
+    {"need": "flag the cell under the cursor", "action": "mine_flag",
+     "observable": "FlaggedCount|FlagToggles|RejectedMoves"}
+   ]
+  },
+  "neg_black_screen": {
+   "_negative_variant": {
+    "task": "TASK-129 D-D",
+    "failure_mode": "not rendering / blank window (the scene is never drawn)",
+    "source_project": "snake",
+    "construction": "copy of projects/snake with `visible = false` on the root in scenes/main.tscn",
+    "expected_criteria": "P1 FAIL, P2..P6 PASS"
+   },
+   "goal": "eat the food and grow -- while nothing is drawn (negative variant)",
+   "capabilities": [
+    {"need": "turn up", "action": "snake_up", "observable": "DirectionX|DirectionY|LastRefusedInput"},
+    {"need": "turn down", "action": "snake_down", "observable": "DirectionX|DirectionY|LastRefusedInput"},
+    {"need": "turn left", "action": "snake_left", "observable": "DirectionX|DirectionY|LastRefusedInput"},
+    {"need": "turn right", "action": "snake_right", "observable": "DirectionX|DirectionY|LastRefusedInput"},
+    {"need": "pause", "action": "snake_pause", "observable": "Paused"}
+   ]
+  },
+  "neg_frozen": {
+   "_negative_variant": {
+    "task": "TASK-129 D-D",
+    "failure_mode": "frozen (frames do not advance the game)",
+    "source_project": "breakout",
+    "construction": "copy of projects/breakout with `process_mode = 4` on the root in scenes/main.tscn",
+    "expected_criteria": "P3 FAIL (and P2 fails with it); P1/P4 PASS"
+   },
+   "goal": "keep the ball alive with the paddle -- with the game loop DISABLED (negative variant)",
+   "capabilities": [
+    {"need": "move the paddle left", "action": "breakout_left", "observable": "Paddle|MinX"},
+    {"need": "move the paddle right", "action": "breakout_right", "observable": "Paddle|MaxX"},
+    {"need": "launch the ball", "action": "breakout_launch", "observable": "Launched|Ball"}
+   ]
+  },
+  "neg_hud_missing": {
+   "_negative_variant": {
+    "task": "TASK-129 D-D",
+    "failure_mode": "UI/controls missing (the HUD is removed)",
+    "source_project": "tetris",
+    "construction": "copy of projects/tetris with `visible = false` on SidePanel, PanelEdge and HudLabel in scenes/main.tscn",
+    "expected_criteria": "NO machine criterion is expected to catch it (declared blind spot); the variant exists so a VISION model can be asked about a real frame whose interface is gone"
+   },
+   "goal": "stack the falling pieces -- with the HUD REMOVED (negative variant)",
+   "capabilities": [
+    {"need": "move left", "action": "tetris_left", "observable": "PieceX"},
+    {"need": "move right", "action": "tetris_right", "observable": "PieceX"},
+    {"need": "rotate", "action": "tetris_rotate", "observable": "PieceRot"},
+    {"need": "soft drop", "action": "tetris_down", "observable": "PieceY|Score|Ticks"},
+    {"need": "hard drop", "action": "tetris_drop", "observable": "PieceY|Score|Lines|FilledCells"}
    ]
   }
  }

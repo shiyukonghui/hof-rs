@@ -1,0 +1,34 @@
+{
+ "task": "TASK-129 D-D",
+ "variant": "neg_black_screen",
+ "failure_mode": "not rendering / blank window (the scene is never drawn)",
+ "source_project": "snake",
+ "construction": "copy of projects/snake with `visible = false` on the root Node2D of main.tscn.  The engine keeps running the game (its state still moves, the loop still counts frames) but nothing is rasterised into the window except the viewport's clear colour -- the 'blank render' mode, produced by the engine's own visibility rule rather than by repainting a PNG.",
+ "patch": {
+  "file": "scenes\\main.tscn",
+  "edits": [
+   {
+    "node": "Main",
+    "property": "visible",
+    "value": "false",
+    "already_present": false
+   }
+  ],
+  "scene_sha256_before_patch": "f3b51df1d089c0cd933378a806ea908ab9cfeb4b2bf95cbc1b5faa78bf78306d",
+  "scene_sha256_after_patch": "e1f41c349e4f9493bad8c6e0f50a39e4218b7a4523b77e00b303bce919fae8af",
+  "csharp_sources_copied_unchanged": true
+ },
+ "expected_gate_criteria": {
+  "P1": "FAIL (a single flat colour: 0 content pixels)",
+  "P2": "PASS (state still changes on input, the pixel channel is not needed)",
+  "P3": "PASS (state moves autonomously)",
+  "P4": "PASS",
+  "P5": "PASS (the InputMap and the README still agree)",
+  "P6": "PASS (the capabilities still move their observables)",
+  "gate": "not_playable"
+ },
+ "engine": "F:\\moonbit-hof-rs\\godot-mcp\\godot\\bin\\godot.windows.editor.x86_64.mono.console.exe",
+ "runnable_with": "python tools/playability_gate.py --exercise neg_black_screen --games neg_black_screen --agent=jev --visual-agent=playjev --out-root runs/playability/negatives",
+ "no_build_needed": "the .tscn declaration is read at load time and no C# is changed, so the copied .NET assembly is still the source project's -- verified by csharp_sources_copied_unchanged",
+ "projects_dir_untouched": true
+}

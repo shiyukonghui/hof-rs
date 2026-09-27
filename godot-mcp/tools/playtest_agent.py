@@ -579,15 +579,51 @@ class JevProtocolError(Exception):
     """A request that must not be sent (or an answer that cannot be trusted)."""
 
 
-def jev_estimate_tokens(text):
-    """A conservative token estimate, used to *refuse* rather than silently truncate.
+JEV_TOKEN_SAFETY_FACTOR = 2.5
+# TASK-129 D-C.  The pre-TASK-129 estimator claimed to be an upper bound and was not:
+# the service's own `usage.input_tokens` says this JSON tokenizes 2.12-2.36x denser.
+# Measured on the deployed service (TASK-128 §3.1, verbatim in TASK-129's report):
+#
+#     breakout    client_raw 1018 -> service 2160   ratio 2.12   (HTTP 200 after trim)
+#     breakout    client_raw 1800 -> service 2172   ratio 1.21   (trimmed)
+#     bomberman   client_raw 1791 -> service 4229   ratio 2.36   (the worst case)
+#     pong        client_raw  431 -> accepted 200
+#
+# The coefficient is the worst measured ratio rounded UP (2.36 -> 2.5), so the estimate
+# stays on the safe side of the service's 2048-token `state` cap.  It is a SEPARATION
+# coefficient fitted on the service's own counter, not a tokenizer: this machine has no
+# Jev tokenizer.  What it buys is that the client guard now refuses the requests the
+# service really refuses, and that the 422 auto-halving retry (see `JevAgent.decide`)
+# stops being the only thing standing between us and a silently truncated state.
+JEV_TOKEN_SAFETY_BASIS = {
+    "kind": "conservative coefficient over the service's own usage.input_tokens",
+    "factor": JEV_TOKEN_SAFETY_FACTOR,
+    "measured_pairs": [
+        {"sample": "breakout untrimmed", "client_raw": 1018, "service_usage_input": 2160,
+         "ratio": 2.12},
+        {"sample": "breakout trimmed", "client_raw": 1800, "service_usage_input": 2172,
+         "ratio": 1.21},
+        {"sample": "bomberman trimmed", "client_raw": 1791, "service_usage_input": 4229,
+         "ratio": 2.36},
+        {"sample": "pong", "client_raw": 431, "service_usage_input": None,
+         "ratio": None, "note": "accepted (HTTP 200); no usage recorded in TASK-128"},
+    ],
+    "why_2_5": "ceil(2.36) rounded up; the ratio is the worst case observed, so the "
+               "estimate errs high (the safe direction for a hard 2048-token refusal)",
+    "bridge_to_task128": "the estimate is exactly ceil(2.5 * raw), so a budget of 2000 "
+                         "under this estimator selects EXACTLY the same state as the "
+                         "legacy budget of 800 did (2000 / 2.5 = 800).  TASK-128's "
+                         "fitted jev thresholds therefore remain comparable when the "
+                         "gate is re-run with --agent-state-budget 2000.",
+}
 
-    Basis (documented in the report): no Jev tokenizer exists on this machine, so the
-    estimate must be an upper bound.  BPE tokenizers of this family pack roughly four
-    ASCII characters per token, and every non-ASCII character (CJK is 3 bytes in
-    UTF-8) is charged one full token.  The estimate therefore never *under*-counts an
-    English/Chinese request, which means a request that passes the check is smaller
-    than the documented limit -- the safe direction for an over-limit rejection.
+
+def jev_estimate_tokens_raw(text):
+    """The pre-TASK-129 estimator (kept: it is the basis of the TASK-128 budget).
+
+    BPE tokenizers of this family pack roughly four ASCII characters per token, and every
+    non-ASCII character (CJK is 3 bytes in UTF-8) is charged one full token.  It is called
+    `raw` because it is NOT an upper bound -- see `JEV_TOKEN_SAFETY_FACTOR`.
     """
     ascii_n = 0
     other_n = 0
@@ -597,6 +633,16 @@ def jev_estimate_tokens(text):
         else:
             other_n += 1
     return (ascii_n + 3) // 4 + other_n
+
+
+def jev_estimate_tokens(text):
+    """TASK-129 D-C: a CONSERVATIVE estimate, calibrated on the service's own `usage`.
+
+    `ceil(2.5 * raw)` written in integers, so the caller never sees a float comparison
+    decide whether a request fits the documented cap.  The old behaviour is preserved
+    behind `jev_estimate_tokens_raw()` for every number that was fitted on it.
+    """
+    return (5 * jev_estimate_tokens_raw(text) + 1) // 2
 
 
 def jev_render_state(state):
@@ -709,6 +755,9 @@ class JevAgent(PlaytestAgent):
         self.action_key = o.get("action_key") or "move"
         self.score_key = o.get("score_key") or "brokenness"
         self.image_multi_question = str(o.get("image_multi_question", "error")).lower()
+        # TASK-129 D-C: how many times a REAL 422 `state exceeds N tokens` may be answered
+        # by halving the state and re-POSTing.  Bounded, recorded, never silent.
+        self.max_state_retries = max(0, int(o.get("max_state_retries", 2)))
         self.score_levels = list(o.get("score_levels") or JEV_BROKENNESS_LEVELS)
         self.thresholds = dict(DEFAULT_JEV_THRESHOLDS)
         self.thresholds.update(o.get("thresholds") or {})
@@ -915,6 +964,71 @@ class JevAgent(PlaytestAgent):
         dropped["dropped_tail_preview"] = text[lo:lo + 120]
         return text[:lo], dropped
 
+    # ---- TASK-129 D-C: answer a REAL 422 by halving the budget, once per attempt --
+    @staticmethod
+    def _is_state_overflow(rec):
+        """True only for the 422 the service uses for an over-limit `state`.
+
+        The check is deliberately textual: TASK-128 measured the service's own wording
+        (`{"detail":"state exceeds 2048 tokens: 2160"}`), and a 422 for any OTHER reason
+        (model alias, unknown field) must NOT be turned into a budget retry -- that would
+        loop without making the request any more legal.
+        """
+        if rec.get("status") != 422:
+            return False
+        body = (rec.get("body") or "").lower()
+        return ("exceeds" in body and "token" in body) or "state" in body and "token" in body
+
+    def shrink_state(self, state):
+        """Halve the state's estimated size, keeping the SAME policy as the gate.
+
+        The gate trims `nodes` in tree order (`trim_state_for_agent`); this repeats that
+        shape at half the previous estimate, so a retried judgement is still a judgement
+        of the same construction -- only smaller -- and every dropped node is named.
+        Returns (state, evidence).  Never silent: the caller records `evidence`.
+        """
+        before = jev_estimate_tokens(jev_render_state(state))
+        target = max(1, before // 2)
+        ev = {"reason": "the service answered 422 for an over-limit `state`; the budget "
+                        "was halved and the request re-sent (no silent truncation)",
+              "before_tokens_estimate": before, "target_tokens_estimate": target}
+        if isinstance(state, dict) and isinstance(state.get("nodes"), dict):
+            kept, dropped = {}, []
+            for key, value in state["nodes"].items():
+                kept[key] = value
+                trial = dict(state)
+                trial["nodes"] = kept
+                if jev_estimate_tokens(jev_render_state(trial)) > target:
+                    kept.pop(key, None)
+                    dropped.append(key)
+            out = dict(state)
+            out["nodes"] = kept
+            after = jev_estimate_tokens(jev_render_state(out))
+            ev.update({"policy": "keep `nodes` in tree order until the estimate fits half "
+                                 "the previous budget; name every dropped node",
+                       "nodes_in_source": len(state["nodes"]), "nodes_kept": len(kept),
+                       "nodes_dropped": dropped, "after_tokens_estimate": after})
+            return out, ev
+        if isinstance(state, dict):
+            kept, dropped = self._clip_state(state, target)
+            ev.update({"policy": "client clip to half the previous budget",
+                       "clipped": dropped,
+                       "after_tokens_estimate": jev_estimate_tokens(jev_render_state(kept))})
+            return kept, ev
+        text = state if isinstance(state, str) else jev_render_state(state)
+        lo, hi = 0, len(text)
+        while lo < hi:
+            mid = (lo + hi + 1) // 2
+            if jev_estimate_tokens(text[:mid]) <= target:
+                lo = mid
+            else:
+                hi = mid - 1
+        ev.update({"policy": "truncate the text to half the previous budget (recorded)",
+                   "dropped_chars": len(text) - lo,
+                   "dropped_tail_preview": text[lo:lo + 120],
+                   "after_tokens_estimate": jev_estimate_tokens(text[:lo])})
+        return text[:lo], ev
+
     def build_request(self, frames, state, goal, want="action"):
         """Build the typed request and its limits evidence (raises JevProtocolError)."""
         usable = [f for f in (frames or [])
@@ -1032,19 +1146,45 @@ class JevAgent(PlaytestAgent):
                         "why": "jev service is not reachable/ready (see recorded "
                                "health error); degraded to wait"}
 
-        try:
-            payload, meta = self.build_request(frames, state, goal, "action")
-        except JevProtocolError as e:
-            self._error("request", str(e))
-            return {"type": "wait", "ms": 200,
-                    "why": "jev request refused before sending: %s" % e}
-        except Exception as e:  # noqa: BLE001
-            self._error("request", "%s: %s" % (type(e).__name__, e))
-            return {"type": "wait", "ms": 200, "why": "jev request build failed: %s" % e}
+        # TASK-129 D-C: a REAL 422 (`state exceeds 2048 tokens: N`) is answered by halving
+        # the state and re-sending, up to `max_state_retries` times.  The retry lives here,
+        # NOT inside `_post_decision`: that method's `attempts` list is the transport-level
+        # retry record (429/529) and TASK-124's `D4_422_not_retried` check is about 422 not
+        # being a busy-retry.  Every budget retry is recorded separately and in full.
+        state_retries = []
+        state_value = state
+        payload = meta = rec = None
+        for attempt_i in range(self.max_state_retries + 1):
+            try:
+                payload, meta = self.build_request(frames, state_value, goal, "action")
+            except JevProtocolError as e:
+                self._error("request", str(e))
+                return {"type": "wait", "ms": 200,
+                        "why": "jev request refused before sending: %s" % e}
+            except Exception as e:  # noqa: BLE001
+                self._error("request", "%s: %s" % (type(e).__name__, e))
+                return {"type": "wait", "ms": 200,
+                        "why": "jev request build failed: %s" % e}
+            if state_retries:
+                meta = dict(meta)
+                meta["state_budget_retries"] = state_retries
+            rec = self._post_decision(payload)
+            if rec.get("status") != 422 or attempt_i >= self.max_state_retries:
+                break
+            if not self._is_state_overflow(rec):
+                break
+            state_value, shrink_ev = self.shrink_state(state_value)
+            entry = {"attempt": attempt_i + 1, "status": 422,
+                     "service_says": (rec.get("body") or "")[:300],
+                     "max_state_retries": self.max_state_retries,
+                     "baseline_is_halved_not_guessed": True}
+            entry.update(shrink_ev)
+            state_retries.append(entry)
+            if shrink_ev.get("after_tokens_estimate") in (None, 0):
+                break  # nothing left to shrink: do not loop on a hopeless request
 
-        rec = self._post_decision(payload)
         evidence = {"kind": "decision", "transport": rec, "request_meta": meta,
-                    "request_payload": payload}
+                    "request_payload": payload, "state_budget_retries": state_retries}
         if rec.get("status") != 200:
             msg = self._map_http_error(rec)
             self._error("http", msg, status=rec.get("status"))
@@ -1164,6 +1304,11 @@ class JevAgent(PlaytestAgent):
         rep.update({"base_url": self.base_url, "model": self.model,
                     "decision_path": self.decision_path, "health": self.health,
                     "errors": self.errors, "attempts": self.attempts,
+                    "max_state_retries": self.max_state_retries,
+                    "token_estimator": {
+                        "name": "jev_estimate_tokens (TASK-129 D-C calibrated)",
+                        "safety_factor": JEV_TOKEN_SAFETY_FACTOR,
+                        "basis": JEV_TOKEN_SAFETY_BASIS},
                     "thresholds": dict(self.thresholds),
                     "threshold_verdict": self.threshold_verdict()})
         return rep
@@ -1234,6 +1379,23 @@ PLAYJEV_ABSTAIN_NOTE = (
     "The upstream `allowed_mass` diagnostic (playjev/model.py:102) would make this "
     "much sharper and serve.py drops it -- see the TASK-127 report."
 )
+# TASK-129 D-E.  `score` is withdrawn from the decision path.  TASK-127 measured that the
+# DEPLOYED service rates a black screen 2.41 while a real snake frame gets 3.97 -- i.e. the
+# expected breakage level runs the WRONG WAY for the deployed weights -- so the number is
+# kept as an explicitly UNCALIBRATED, DIRECTION-SUSPECT observation and nothing more.  The
+# only way it can still block a verdict is structural: if the score answer is unusable the
+# model did not answer, and "the model did not answer" is never a pass (TASK-127's rule).
+PLAYJEV_PLAYABLE_KEY = "playable"
+PLAYJEV_PLAYABLE_QUESTION = (
+    "Does this frame clearly look playable, with no visual corruption or freeze?")
+PLAYJEV_SCORE_DIRECTION_NOTE = (
+    "OBSERVATION ONLY -- NOT IN THE DECISION PATH.  TASK-127 measured the direction as "
+    "INVERTED on the deployed PlayJev weights (black screen 2.41 < a real snake frame "
+    "3.97 on a 1=working..5=unusable legend), so this expected level is recorded with "
+    "`direction: suspect` and is never compared with a threshold to produce a verdict. "
+    "TASK-129 D-E; the flip-legend probe exists to test whether the inversion is a "
+    "wording/legend-order artefact, and its result never enters the verdict either."
+)
 
 
 class PlayJevAgent(PlaytestAgent):
@@ -1270,6 +1432,21 @@ class PlayJevAgent(PlaytestAgent):
         self.hold_ms = int(o.get("hold_ms", 300))
         self.invariant_questions = max(0, int(o.get("invariant_questions", 3)))
         self.score_question = bool(o.get("score_question", True))
+        # TASK-129 D-E: the playability invariant is asked under this key, and the score
+        # question's VALUE is not a criterion unless a caller explicitly asks for the old
+        # TASK-127 behaviour.
+        self.playable_key = o.get("playable_key") or PLAYJEV_PLAYABLE_KEY
+        self.score_in_verdict = bool(o.get("score_in_verdict", False))
+        self.score_abstain_blocks_verdict = bool(o.get("score_abstain_blocks_verdict", True))
+        # TASK-129 C: which noul questions may act as CRITERIA.  Empty/None = every noul
+        # question is a criterion (the TASK-127 behaviour).  The gate's visual path sets
+        # ["playable"], so the other invariants stay recorded observations.
+        self.verdict_invariant_keys = list(o.get("verdict_invariant_keys") or []) or None
+        # TASK-129 D-E: the declarative flip-legend probe.  It only reverses the OPTION
+        # ORDER of the score question so the same weights are asked the opposite way; the
+        # expected level is still computed in the canonical level order, and the probe's
+        # result is recorded outside the verdict.
+        self.legend_flipped = bool(o.get("legend_flipped", False))
         self.action_key = o.get("action_key") or "move"
         self.score_key = o.get("score_key") or "brokenness"
         self.score_criteria = list(o.get("score_criteria")
@@ -1406,22 +1583,34 @@ class PlayJevAgent(PlaytestAgent):
             "criteria": act,
         }
         roles[self.action_key] = {"role": "action", "options": list(act)}
-        for key, text in JEV_INVARIANT_QUESTIONS[:self.invariant_questions]:
+        # TASK-129 D-E: the playability question comes FIRST and under its own key
+        # (`playable`), asked with exactly the wording TASK-124/127 used for
+        # `playable_frame`, so the number is comparable with the earlier runs while the
+        # name says what it means.
+        invariants = [(self.playable_key, PLAYJEV_PLAYABLE_QUESTION)]
+        for key, text in JEV_INVARIANT_QUESTIONS:
+            if key == "playable_frame":
+                continue          # already asked, as `playable`
+            invariants.append((key, text))
+        for key, text in invariants[:self.invariant_questions]:
             crit = {PLAYJEV_TRUE: "the frame does satisfy this statement",
                     PLAYJEV_FALSE: "the frame does not satisfy this statement"}
             questions[key] = {"type": "choice", "instructions": text, "criteria": crit}
             roles[key] = {"role": "noul", "options": list(crit),
                           "true_option": PLAYJEV_TRUE}
         if self.score_question:
-            crit = dict(self.score_criteria)
+            ordered = list(self.score_criteria)
+            crit = dict(reversed(ordered) if self.legend_flipped else ordered)
             questions[self.score_key] = {
                 "type": "choice",
                 "instructions": ("Rate how broken this frame is, from %s (fully working) "
                                  "to %s (unusable)."
-                                 % (list(crit)[0], list(crit)[-1])),
+                                 % (ordered[0][0], ordered[-1][0])),
                 "criteria": crit,
             }
-            roles[self.score_key] = {"role": "score", "options": list(crit)}
+            roles[self.score_key] = {"role": "score", "options": list(crit),
+                                     "value_order": [name for name, _t in ordered],
+                                     "legend_flipped": self.legend_flipped}
         for key, q in questions.items():
             if q.get("type") != "choice":
                 raise JevProtocolError("playjev serves choice questions only (serve.py:53)")
@@ -1544,7 +1733,11 @@ class PlayJevAgent(PlaytestAgent):
                 rec["abstain_reasons"].append(
                     "the option %r is missing from the probabilities" % role["true_option"])
         elif role["role"] == "score":
-            idx = dict((name, i) for i, name in enumerate(role["options"]))
+            # TASK-129 D-E: the expected level is ALWAYS computed against the canonical
+            # level order (`value_order`), so a flip-legend probe measures the model and
+            # not our own re-ordering of the options.
+            order = role.get("value_order") or role["options"]
+            idx = dict((name, i) for i, name in enumerate(order))
             tot, mass = 0.0, 0.0
             for name, p in probs.items():
                 if name in idx and isinstance(p, (int, float)):
@@ -1553,6 +1746,7 @@ class PlayJevAgent(PlaytestAgent):
             rec["score_mass"] = mass
             rec["score"] = (tot / mass) if mass > 0 else None
             rec["score_levels"] = role["options"]
+            rec["legend_flipped"] = bool(role.get("legend_flipped"))
             if rec["score"] is None:
                 rec["abstain"] = True
                 rec["abstain_reasons"].append("no level probability was recognised")
@@ -1648,6 +1842,15 @@ class PlayJevAgent(PlaytestAgent):
             "abstained_questions": abstained,
             "abstain_reasons": dict((k, classified[k]["abstain_reasons"]) for k in abstained),
             "unrequested_answers": sorted(set(answers) - set(roles)),
+            # TASK-129 D-E: the playability answer under its own key, and the score kept
+            # as an explicitly direction-suspect observation OUTSIDE the verdict.
+            "playable_key": self.playable_key,
+            "score_observation": {
+                "in_decision_path": False, "direction": "suspect", "uncalibrated": True,
+                "note": PLAYJEV_SCORE_DIRECTION_NOTE,
+                "legend_flipped": bool(self.legend_flipped),
+                "values": dict((k, r.get("score")) for k, r in classified.items()
+                               if r["role"] == "score")},
         })
         act = None
         a = classified.get(self.action_key)
@@ -1700,27 +1903,54 @@ class PlayJevAgent(PlaytestAgent):
 
     def threshold_verdict(self):
         crit = []
+        noul_obs = []
         for key, r in sorted(self.last_noul.items()):
             val = r.get("noul")
+            obs = {"id": "noul:%s" % key, "value": val,
+                   "confidence": r.get("confidence"),
+                   "probabilities": r.get("probabilities"),
+                   "abstain": r["abstain"], "abstain_reasons": r["abstain_reasons"]}
+            if self.verdict_invariant_keys is not None \
+                    and key not in self.verdict_invariant_keys:
+                obs["in_decision_path"] = False
+                noul_obs.append(obs)
+                continue
             ok = (not r["abstain"]) and isinstance(val, (int, float)) \
                 and val >= self.thresholds["noul_min_p_true"]
-            crit.append({"id": "noul:%s" % key, "value": val,
-                         "rule": "P(true) >= %.3f" % self.thresholds["noul_min_p_true"],
-                         "pass": bool(ok), "abstain": r["abstain"],
-                         "abstain_reasons": r["abstain_reasons"],
-                         "confidence": r.get("confidence")})
+            obs.update({"rule": "P(true) >= %.3f"
+                                % self.thresholds["noul_min_p_true"],
+                        "pass": bool(ok), "in_decision_path": True})
+            crit.append(obs)
+        # TASK-129 D-E: the score answers are OBSERVATIONS.  Their value is never a
+        # pass/fail criterion; only a structurally unusable answer (an abstain) can make
+        # the verdict undecidable, which is TASK-127's "an abstain is not a pass" rule.
+        score_obs = []
         for key, r in sorted(self.last_scores.items()):
             val = r.get("score")
-            ok = (not r["abstain"]) and isinstance(val, (int, float)) \
-                and val <= self.thresholds["score_max_expected"]
-            crit.append({"id": "score:%s" % key, "value": val,
-                         "rule": "expected level <= %.3f"
-                                 % self.thresholds["score_max_expected"],
-                         "pass": bool(ok), "abstain": r["abstain"],
-                         "abstain_reasons": r["abstain_reasons"],
-                         "confidence": r.get("confidence")})
+            obs = {"id": "score:%s" % key, "value": val,
+                   "direction": "suspect",
+                   "in_decision_path": bool(self.score_in_verdict),
+                   "levels": r.get("score_levels"),
+                   "legend_flipped": r.get("legend_flipped"),
+                   "probabilities": r.get("probabilities"),
+                   "confidence": r.get("confidence"),
+                   "abstain": r["abstain"], "abstain_reasons": r["abstain_reasons"]}
+            if self.score_in_verdict:
+                obs["rule"] = ("expected level <= %.3f"
+                               % self.thresholds["score_max_expected"])
+                obs["pass"] = bool((not r["abstain"]) and isinstance(val, (int, float))
+                                   and val <= self.thresholds["score_max_expected"])
+                crit.append(obs)
+            score_obs.append(obs)
         undecidable = sorted(c["id"] for c in crit if c["abstain"])
-        if not crit:
+        if not self.score_in_verdict and self.score_abstain_blocks_verdict:
+            undecidable = sorted(set(undecidable) | set(o["id"] for o in score_obs
+                                                        if o["abstain"]))
+        if not crit and not score_obs:
+            verdict = None
+        elif not crit:
+            # only observations were collected (score_question alone): neither a pass nor
+            # a fail can be claimed
             verdict = None
         elif undecidable:
             verdict = None           # an abstain is NEVER a pass
@@ -1729,13 +1959,21 @@ class PlayJevAgent(PlaytestAgent):
         return {"backend": "playjev", "pass": verdict,
                 "decidable": not undecidable,
                 "undecidable": undecidable,
-                "why": ("no noul/score answer was captured: no threshold verdict is "
-                        "possible" if not crit else
-                        ("%d criterion/criteria abstained: no verdict (an abstain is not "
-                         "a pass)" % len(undecidable) if undecidable else
-                         ("%d/%d threshold criteria passed"
-                          % (sum(1 for c in crit if c["pass"]), len(crit))))),
+                "why": ("no answer was captured at all: no threshold verdict is possible"
+                        if (not crit and not noul_obs and not score_obs) else
+                        ("no question is in the decision path: no verdict is possible"
+                         if not crit else
+                         ("%d criterion/criteria abstained: no verdict (an abstain is not "
+                          "a pass)" % len(undecidable) if undecidable else
+                          ("%d/%d threshold criteria passed"
+                           % (sum(1 for c in crit if c["pass"]), len(crit)))))),
                 "criteria": crit,
+                "noul_observations": noul_obs,
+                "verdict_invariant_keys": self.verdict_invariant_keys,
+                "score_observations": score_obs,
+                "score_in_decision_path": bool(self.score_in_verdict),
+                "score_direction_note": PLAYJEV_SCORE_DIRECTION_NOTE,
+                "legend_flipped": bool(self.legend_flipped),
                 "thresholds": dict(self.thresholds),
                 "abstain_min_confidence": self.abstain_min_confidence,
                 "uncalibrated": True,
@@ -1743,14 +1981,39 @@ class PlayJevAgent(PlaytestAgent):
                 "abstain_note": PLAYJEV_ABSTAIN_NOTE,
                 "source": ("last decision response" if self.last_evidence else "none")}
 
+    def score_observation_only(self):
+        """TASK-129 D-E: what the VISION backend says about brokenness, as an observation.
+
+        Returned separately from `threshold_verdict()` so no caller can accidentally use it
+        as a verdict, and marked with the reason it is not one.
+        """
+        return {"role": "observation", "in_decision_path": False,
+                "direction": "suspect", "uncalibrated": True,
+                "note": PLAYJEV_SCORE_DIRECTION_NOTE,
+                "legend_flipped": bool(self.legend_flipped),
+                "questions": [k for k, r in sorted(self.last_scores.items())],
+                "values": dict((k, r.get("score")) for k, r in sorted(self.last_scores.items())),
+                "per_question": dict((k, {"value": r.get("score"),
+                                          "levels": r.get("score_levels"),
+                                          "legend_flipped": r.get("legend_flipped"),
+                                          "probabilities": r.get("probabilities"),
+                                          "confidence": r.get("confidence"),
+                                          "abstain": r["abstain"]})
+                                     for k, r in sorted(self.last_scores.items()))}
+
     def report(self):
         rep = PlaytestAgent.report(self)
         rep.update({"base_url": self.base_url, "model": self.model,
                     "decision_path": self.decision_path, "health": self.health,
                     "errors": self.errors, "attempts": self.attempts,
+                    "playable_key": self.playable_key,
+                    "invariant_questions": self.invariant_questions,
+                    "score_in_verdict": self.score_in_verdict,
+                    "legend_flipped": self.legend_flipped,
                     "abstain_min_confidence": self.abstain_min_confidence,
                     "thresholds": dict(self.thresholds),
                     "last_timings": self.last_timings,
+                    "score_observation": self.score_observation_only(),
                     "last_abstained": sorted(k for k, r in self.last_answers.items()
                                              if r["abstain"]),
                     "threshold_verdict": self.threshold_verdict()})
