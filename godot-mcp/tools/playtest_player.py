@@ -110,6 +110,14 @@ PASS_MIN_RATE = 0.75
 # consecutive steps, the model is stuck, and that conclusion is kept separate from the
 # game's FAIL (it is reported, never counted as a game defect, and never a PASS).
 MODEL_FIXED_POINT_MIN_RUN = 3
+# TASK-134 §1.C.1: the second model-side conclusion, and the one TASK-133's blind spot
+# needed.  `MODEL_FIXED_POINT` requires the SAME action AND the SAME frame, so
+# `pong x playjev` (TASK-133 §4.2a) escaped it: nine failing steps in which the model
+# varied its action once.  `MODEL_NO_PROGRESS` drops the "same action" requirement
+# entirely: >= 3 consecutive steps that were really SENT to the game and produced no
+# gameplay progress.  Like the fixed point it is a statement about the RUN's evidence
+# quality -- it is filed on its own, it is not a game defect, and it is never a PASS.
+MODEL_NO_PROGRESS_MIN_RUN = 3
 # A frame-to-frame change counts only if it beats the equal-length no-input control window.
 # Two independent margins, both recorded per step:
 #   * pixels   -- `> max(2.5 * control, 40)`.  The factor is higher than the gate's
@@ -452,7 +460,81 @@ def model_fixed_point(records, min_run=MODEL_FIXED_POINT_MIN_RUN):
     return best
 
 
-def summarise(records, backend=None, game=None, state=None):
+def step_made_progress(record):
+    """Did this step ADVANCE the game?  The per-step predicate `MODEL_NO_PROGRESS` uses.
+
+    It is deliberately the narrowest reading, and it is the one the user's criterion
+    already defines: the model produced an action, the action was really sent to the game
+    (`ack.injected`), and the picture did not change more than the equal-length no-input
+    control window (`change.changed` is false).  A step where no action was sent is not a
+    measurement of the game at all, so it neither counts as progress nor as its absence --
+    it BREAKS a run (see `model_no_progress`).
+
+    Note what this predicate does NOT look at: the action's identity, and the frame hash.
+    That is the whole point of the new rule -- `pong x playjev` varied its action once and
+    the fixed-point rule therefore missed it (TASK-133 §4.2a).
+    """
+    injected = bool((record.get("ack") or {}).get("injected"))
+    if not injected:
+        return None                      # not measured: neither progress nor its absence
+    return bool((record.get("change") or {}).get("changed"))
+
+
+def model_no_progress(records, min_run=MODEL_NO_PROGRESS_MIN_RUN):
+    """TASK-134 §1.C.1: >= `min_run` consecutive SENT steps with NO gameplay progress.
+
+    This is the companion to `model_fixed_point` and it exists because the fixed point has
+    a measured blind spot: it demands the SAME action on the SAME frame, so a sequence that
+    varies its action once (exactly `pong x playjev`, TASK-133 §4.2a: nine failing steps,
+    `rate 0.25`, `same_action_fixed_point` NOT triggered) is invisible to it.  This rule
+    drops the action requirement and keeps only "was it sent, and did anything advance".
+
+    The conclusion is about the RUN, and TASK-134 §1.C.3 fixes its status: it is reported
+    under its own key, it is NOT a game defect (it does not make the game FAIL) and it is
+    NOT a PASS (it is never evidence that the game is playable).  It is also NOT a licence
+    to stop failing a game: the existing `FAIL_no_change_after_accepted_input` reading is
+    unchanged and is still recorded beside it.
+
+    Returns the longest run as `{found, min_run, length, steps, actions, length_note,
+    reading}`.
+    """
+    best = {"found": False, "min_run": int(min_run), "length": 0, "steps": [],
+            "actions": [], "distinct_actions": []}
+    cur_len, cur_steps, cur_acts = 0, [], []
+    for r in records or []:
+        progress = step_made_progress(r)
+        if progress is None:
+            cur_len, cur_steps, cur_acts = 0, [], []
+            continue
+        if progress:
+            cur_len, cur_steps, cur_acts = 0, [], []
+            continue
+        cur_len += 1
+        cur_steps.append(r.get("step"))
+        cur_acts.append((r.get("action") or {}).get("action"))
+        if cur_len > best["length"]:
+            best.update({"found": cur_len >= int(min_run), "length": cur_len,
+                         "steps": list(cur_steps), "actions": list(cur_acts),
+                         "distinct_actions": sorted(set(a for a in cur_acts if a))})
+    if not best["found"]:
+        best["length_note"] = ("no run of >= %d consecutive SENT steps without gameplay "
+                               "progress (the longest was %d)"
+                               % (int(min_run), best["length"]))
+        best["reading"] = best["length_note"]
+    else:
+        best["reading"] = ("%d consecutive steps were SENT to the game and nothing "
+                           "advanced: steps %s, actions %s.  This is a statement about the "
+                           "RUN's evidence (the model produced no progress), NOT a game "
+                           "defect, and NOT a PASS -- it is filed separately from FAIL"
+                           % (best["length"], best["steps"], best["distinct_actions"]))
+    best["what"] = ("TASK-134 §1.C.1: >= %d consecutive injected steps with no gameplay "
+                    "progress, EVEN IF the actions differ (the fixed point's blind spot).  "
+                    "NOT a game defect, NOT a PASS; reported separately from FAIL."
+                    % int(min_run))
+    return best
+
+
+def summarise(records, backend=None, game=None, state=None, player="model"):
     """`steps.jsonl` -> the TASK-132 §1.2 three-state verdict.
 
     * FAIL   : at least one step is `FAIL_no_change_after_accepted_input` (the user's
@@ -497,11 +579,40 @@ def summarise(records, backend=None, game=None, state=None):
     # threshold (>= 3 identical action + identical frame).  It is a statement about the
     # model, so it lives beside the game verdict instead of inside it.
     fixed = model_fixed_point(steps)
+    # TASK-134 §1.C.1: the second, wider model-side conclusion.  Computed and REPORTED
+    # here; it deliberately does not enter any branch of the game verdict below, so the
+    # game's FAIL/PASS/INCONCLUSIVE reading is byte-for-byte the rule TASK-132/133 used.
+    noprog = model_no_progress(steps)
+    # TASK-134 §1.A: the GAME-side numbers, which answer "can this game be played" on
+    # their own.  `progress_steps` counts the SENT steps whose picture advanced more than
+    # its own no-input control window: the same predicate `decide_changed` already uses.
+    injected_steps_list = [r for r in steps if (r.get("ack") or {}).get("injected")]
+    progress_steps = [r["step"] for r in injected_steps_list
+                      if (r.get("change") or {}).get("changed")]
+    stamps = [(r.get("ts_ms"), r.get("step")) for r in steps
+              if isinstance(r.get("ts_ms"), (int, float))]
+    match_seconds = None
+    if len(stamps) >= 2:
+        match_seconds = round((stamps[-1][0] - stamps[0][0]) / 1000.0, 3)
     out = {
         "backend": backend, "game": game, "steps": n,
+        "player": player,
         "model_fixed_point": fixed,
         "MODEL_FIXED_POINT": bool(fixed.get("found")),
         "MODEL_FIXED_POINT_reading": fixed.get("reading"),
+        "model_no_progress": noprog,
+        "MODEL_NO_PROGRESS": bool(noprog.get("found")),
+        "MODEL_NO_PROGRESS_reading": noprog.get("reading"),
+        "MODEL_NO_PROGRESS_what": noprog.get("what"),
+        "progress_steps": progress_steps,
+        "progress_step_count": len(progress_steps),
+        "progress_rate_of_injected": (round(len(progress_steps) / float(len(injected_steps_list)), 4)
+                                      if injected_steps_list else None),
+        "progress_rate_of_accepted": (round(len(progress_steps) / float(len(accepted)), 4)
+                                      if accepted else None),
+        "match_seconds_in_game_clock": match_seconds,
+        "game_clock_first_last_ms": ([stamps[0][0], stamps[-1][0]] if len(stamps) >= 2
+                                     else None),
         "steps_without_an_action_from_the_model": no_action,
         "injected_steps": len(model_steps),
         "accepted_steps": len(accepted), "changed_steps_of_accepted": len(changed),
@@ -525,14 +636,18 @@ def summarise(records, backend=None, game=None, state=None):
         "distinct_actions": distinct,
         "one_action_loop": bool(len(model_steps) >= PASS_MIN_STEPS and len(distinct) <= 1),
         "thresholds": {"min_steps": PASS_MIN_STEPS, "min_rate": PASS_MIN_RATE,
-                       "model_fixed_point_min_run": MODEL_FIXED_POINT_MIN_RUN},
+                       "model_fixed_point_min_run": MODEL_FIXED_POINT_MIN_RUN,
+                       "model_no_progress_min_run": MODEL_NO_PROGRESS_MIN_RUN},
         "rule": "PASS = >=%d injected steps AND accepted-and-changed rate >= %.2f AND the "
                 "reader confirmed the changes match the game's declared logic; FAIL = an "
                 "accepted input left the viewport unchanged; INCONCLUSIVE = the evidence "
                 "cannot separate the two.  MODEL_FIXED_POINT is a separate conclusion about "
-                "the MODEL (>= %d steps of the same action on the same frame): it is never "
-                "a game defect and never a PASS"
-                % (PASS_MIN_STEPS, PASS_MIN_RATE, MODEL_FIXED_POINT_MIN_RUN),
+                "the MODEL (>= %d steps of the same action on the same frame) and "
+                "MODEL_NO_PROGRESS is its wider twin (>= %d consecutive sent steps with no "
+                "gameplay progress even if the actions differ): NEITHER is a game defect and "
+                "NEITHER is ever a PASS, and neither is allowed to change the game verdict"
+                % (PASS_MIN_STEPS, PASS_MIN_RATE, MODEL_FIXED_POINT_MIN_RUN,
+                   MODEL_NO_PROGRESS_MIN_RUN),
     }
     if fail_steps and not same_action_fixed_point and not unchanged_terminal:
         out["verdict"] = "FAIL"
@@ -587,7 +702,546 @@ def summarise(records, backend=None, game=None, state=None):
         out["why"] = ("%d/%d accepted steps changed the viewport (%.4f) over %d step(s); "
                       "the reader's per-frame check corroborates it"
                       % (len(changed), len(accepted), out["accepted_and_changed_rate"], n))
+    # TASK-134 §1.A.3: the GAME-side verdict, reported beside the model verdict and only
+    # when the arm that produced the records was the SCRIPTED player.
+    #
+    # Why a second reading is legitimate here, and why it is not a loosening: the two
+    # clauses it drops (`one_action_loop`, `MODEL_FIXED_POINT`) are by construction
+    # statements about a MODEL's behaviour -- they exist because "the model stopped
+    # playing" cannot be told apart from "the game ignored the input".  A deterministic
+    # scripted policy has no such ambiguity, and it is deliberately allowed to repeat an
+    # action.  Every numeral in this reading (>= 8 injected steps, >= 75% progress,
+    # FAIL on any accepted-but-unchanged step) is the SAME threshold the model arm is held
+    # to; only the two model-evidence clauses are inapplicable.  The model arm's own
+    # `verdict` below/above is untouched and remains the only verdict used for the model.
+    if player == "scripted":
+        if fail_steps:
+            out["game_side_verdict"] = "FAIL"
+            out["game_side_why"] = ("%d SENT action(s) left the picture unchanged vs the "
+                                    "same-frame-budget no-input control window: steps %s"
+                                    % (len(fail_steps), fail_steps))
+        elif len(injected_steps_list) < PASS_MIN_STEPS:
+            out["game_side_verdict"] = "INCONCLUSIVE"
+            out["game_side_why"] = ("only %d step(s) carried an injectable action; the "
+                                    "game-side rule needs >= %d"
+                                    % (len(injected_steps_list), PASS_MIN_STEPS))
+        elif not accepted:
+            out["game_side_verdict"] = "INCONCLUSIVE"
+            out["game_side_why"] = "no step's input was acknowledged by the game"
+        elif out["progress_rate_of_accepted"] < PASS_MIN_RATE:
+            out["game_side_verdict"] = "FAIL"
+            out["game_side_why"] = ("game-side progress rate %.4f < %.2f over %d accepted "
+                                    "step(s)" % (out["progress_rate_of_accepted"],
+                                                 PASS_MIN_RATE, len(accepted)))
+        else:
+            out["game_side_verdict"] = "PASS"
+            out["game_side_why"] = ("%d/%d accepted steps advanced the game (%.4f) over %d "
+                                    "step(s) of a deterministic human-like policy; the "
+                                    "model-evidence clauses (one-action loop, fixed point) "
+                                    "do not apply to a scripted policy"
+                                    % (len(progress_steps), len(accepted),
+                                       out["progress_rate_of_accepted"], n))
+        out["game_side_rule"] = ("same thresholds as the model arm (>= %d injected steps, "
+                                 ">= %.2f progress, FAIL on any accepted-but-unchanged "
+                                 "step); only the two MODEL-evidence clauses are dropped, "
+                                 "and they are dropped because a scripted policy has no "
+                                 "'stopped playing' ambiguity to resolve"
+                                 % (PASS_MIN_STEPS, PASS_MIN_RATE))
     return out
+
+
+# ---------------------------------------------------------------------------
+# TASK-134 §1.A/§1.B: the readable state, and the two arms that consume it
+# ---------------------------------------------------------------------------
+# The declared fields each game exports that a HUMAN would read off the screen to play it.
+# This table lives here (not in `playability_controls.json`) on purpose: it is the
+# DECLARATIVE VARIANT's payload, not the game's capability declaration, and TASK-134 says
+# every such addition must be switchable, side-by-side with the baseline and evidenced --
+# which is what `--variant=V2` does.  The values themselves come from the game's own
+# `probe_state_source` read, i.e. from inside the running game.
+READABLE_STATE_FIELDS = {
+    "pong": ["Ball.pos", "Ball.Velocity", "PaddleLeft.pos", "PaddleRight.pos",
+             "ScoreLeft.text", "ScoreRight.text", "WinLabel.text", "WinScore"],
+    "snake": ["HeadX", "HeadY", "DirectionX", "DirectionY", "Food.CellX", "Food.CellY",
+              "FoodsEaten", "Length", "Score", "GameOver", "WaitingForStart", "Started",
+              "Paused", "Ticks", "Columns", "Rows", "LastRefusedInput"],
+    "tetris": ["PieceX", "PieceY", "PieceRot", "PieceKind", "NextKind", "Gravity",
+               "DropInterval", "Lines", "Score", "Level", "FilledCells", "GameOver",
+               "Ticks"],
+    "game2048": ["GridString", "Score", "MoveCount", "EmptyCells", "MaxTile",
+                 "CanMoveAny", "GameOver", "TilesInUse", "MovesRejected",
+                 "LastMoveDir", "LastMoveMoved"],
+    "puzzlebobble": ["ShooterCol", "ShooterColor", "NextColor", "AngleIndex", "Board",
+                     "Score", "Shots", "TotalCleared", "TotalDropped", "ProjActive",
+                     "ProjCol", "ProjRow", "GameOver", "Failed", "ShooterCol"],
+}
+
+
+def _node_by_leaf(nodes, leaf):
+    """The shallowest node whose path's last segment is `leaf` (path, entry) or None."""
+    best = None
+    for path, e in (nodes or {}).items():
+        if path.rsplit("/", 1)[-1] == leaf:
+            if best is None or len(path) < len(best[0]):
+                best = (path, e)
+    return best
+
+
+def readable_state(game, state, marker_decl=None, last=None, extra_fields=None):
+    """TASK-134 §1.B/V2: the readable state, as the model would have to read the screen.
+
+    Everything in it is read out of the RUNNING GAME's own exported properties (the same
+    `probe_state_source` read the gate already trusts): the ball and paddle positions, the
+    snake's head/direction/food, the falling piece, the 2048 board string, the bubble
+    board.  `last` carries what the previous step did (its action, whether it changed
+    anything, and which declared gameplay observables moved) -- TASK-134 §1.B/V4 requires
+    exactly that sentence to be available to the model.
+
+    Returns a flat, deliberately small dict: the `jev` backend caps `state` at 2048 tokens
+    (measured ratios in JEV_TOKEN_SAFETY_BASIS), and V2's whole point is to add the state
+    WITHOUT dropping the image.
+    """
+    nodes = (state or {}).get("nodes") or {}
+    values, missing = {}, []
+    for spec in list(READABLE_STATE_FIELDS.get(game) or []) + list(extra_fields or []):
+        if "." in spec:
+            leaf, field = spec.rsplit(".", 1)
+        else:
+            leaf, field = "Main", spec
+        hit = _node_by_leaf(nodes, leaf)
+        val = (hit[1] or {}).get(field) if hit else None
+        if val is None:
+            # fall back to any node that carries the field name (the root script node is
+            # the usual case, and it is what the gate's own declaration points at)
+            for _p, e in nodes.items():
+                if field in e:
+                    val = e[field]
+                    break
+        if val is None:
+            missing.append(spec)
+        values[spec] = val
+    out = {"game": game,
+           "frame_drawn": (state or {}).get("drawn"),
+           "game_time_ms": (state or {}).get("ms"),
+           "values": values}
+    if missing:
+        out["fields_the_game_did_not_export"] = missing
+    if marker_decl:
+        out["markers"] = marker_values(state, marker_decl)
+    if last:
+        out["previous_step"] = {
+            "action": last.get("action"),
+            "result": last.get("result"),
+            "viewport_pixels_changed": last.get("pixel_diff"),
+            "declared_gameplay_observables_that_moved": last.get("gameplay_changes"),
+            "note": last.get("note"),
+        }
+    return out
+
+
+def readable_state_text(rs, max_chars=1400):
+    """The readable state as a compact, model-facing sentence block (V2/V4 on playjev).
+
+    PlayJev's serve.py has no text-state channel (a text `state` is a 400: serve.py:41-42),
+    so the V2 payload is carried in the action question's own free-text `instructions`
+    instead.  What the model is told is exactly the same content, and the run records the
+    text verbatim, so the two backends' V2 arms are comparable.
+    """
+    parts = []
+    for k, v in sorted((rs.get("values") or {}).items()):
+        if v is None:
+            continue
+        parts.append("%s=%s" % (k, json.dumps(v, ensure_ascii=False)))
+    body = "READABLE GAME STATE: " + "; ".join(parts)
+    prev = rs.get("previous_step") or {}
+    if prev.get("action"):
+        body += ("\nPREVIOUS STEP: action=%s result=%s."
+                 % (prev.get("action"), prev.get("result")))
+    return body[:max_chars]
+
+
+# The declarative variants (TASK-134 §1.B).  Each is switchable on the command line, each
+# is filed beside the baseline rather than replacing it, and each run's verbatim request
+# body is on disk.  `--variant=V1` is byte-identical to the pre-TASK-134 baseline.
+VARIANT_IDS = ("V1", "V2", "V3", "V4", "V5")
+VARIANT_NOTES = {
+    "V1": "baseline: ONE full-window image + ONE `choice` question whose criteria are the "
+          "game's declared actions (the TASK-132/133 arm, unchanged)",
+    "V2": "image + structured readable STATE (jev: the request's own `state` field; "
+          "playjev: serve.py refuses a text state, so the same text is carried in the "
+          "action question's `instructions` and the run records that)",
+    "V3": "the question asks which action PUSHES THE GAME FORWARD and every criterion "
+          "describes what THAT ACTION WILL DO to the picture/state, instead of naming it",
+    "V4": "V3 plus the anti-repeat rule: when the previous action produced no change it is "
+          "written into the state AND REMOVED from the candidate list",
+    "V5": "the image FORM varies (full 800x600 / cropped to the game viewport / "
+          "downsampled to 400x300); `--image-form` selects it",
+}
+
+VARIANT_INSTRUCTIONS = {
+    "V1": ("Look at the picture of the game and choose the single next input a human "
+           "player would press, to keep playing. Answer with one of the listed actions."),
+    "V3": ("Look at the picture of the game. Which single action NOW PUSHES THE GAME "
+           "FORWARD? Each option below says what that action will do to the picture and to "
+           "the game state. Choose the one that advances the game, and answer with one of "
+           "the listed options."),
+    "V4": ("Look at the picture of the game. Which single action NOW PUSHES THE GAME "
+           "FORWARD? Each option below says what that action will do to the picture and to "
+           "the game state. An action that produced no change on the previous step has "
+           "already been REMOVED from the list -- do not look for it. Answer with one of "
+           "the listed options."),
+}
+
+
+def image_for_model(rec, form, outdir):
+    """TASK-134 §1.B/V5: which IMAGE FORM the model is shown, recorded as a fact.
+
+    `full` keeps the 800x600 full-window frame the baseline uses.  `crop` cuts to the
+    content bbox the frame analysis already measured (the game viewport, with 12 px of
+    padding), and `downsample` resizes to 400x300.  The derived PNG is a REAL file on disk
+    with its own sha256, so the exact bytes the model received are checkable; the frame the
+    CHANGE test uses is always the original full frame, so V5 can never move the goalposts
+    of the change measurement.
+    """
+    from PIL import Image
+
+    src = rec.get("path")
+    out = {"form": form, "source_path": src, "source_sha256": rec.get("sha256"),
+           "source_width_height": [rec.get("width"), rec.get("height")]}
+    if not src or not os.path.isfile(src):
+        out["error"] = "no readable source frame"
+        return out
+    if form == "full":
+        out.update({"path": src, "sha256": rec.get("sha256"),
+                    "width": rec.get("width"), "height": rec.get("height")})
+        return out
+    im = Image.open(src).convert("RGB")
+    if form == "crop":
+        bb = rec.get("bbox")
+        if bb and bb[2] > 32 and bb[3] > 32:
+            pad = 12
+            x0 = max(0, int(bb[0]) - pad)
+            y0 = max(0, int(bb[1]) - pad)
+            x1 = min(im.width, int(bb[0]) + int(bb[2]) + pad)
+            y1 = min(im.height, int(bb[1]) + int(bb[3]) + pad)
+            im = im.crop((x0, y0, x1, y1))
+            out["crop_box"] = [x0, y0, x1, y1]
+        else:
+            out["crop_box"] = None
+            out["crop_note"] = ("the frame analysis found no usable content bbox, so the "
+                                "crop fell back to the full 800x600 frame")
+    elif form == "downsample":
+        im = im.resize((400, 300), Image.LANCZOS)
+    else:
+        out["error"] = "unknown image form %r" % form
+        out.update({"path": src, "sha256": rec.get("sha256")})
+        return out
+    dst = os.path.join(outdir, "%03d_model_image_%s.png" % (rec.get("index"), form))
+    im.save(dst, format="PNG")
+    out.update({"path": dst, "sha256": sha256_file(dst),
+                "width": im.width, "height": im.height})
+    return out
+
+
+_2048_MOVES = {"m2048_left": (-1, 0), "m2048_right": (1, 0),
+               "m2048_up": (0, -1), "m2048_down": (0, 1)}
+
+
+def _2048_parse(grid_string, n=4):
+    rows = []
+    for line in str(grid_string or "").split("/")[:n]:
+        cells = []
+        for c in line.split(",")[:n]:
+            try:
+                cells.append(int(c))
+            except (TypeError, ValueError):
+                cells.append(0)
+        while len(cells) < n:
+            cells.append(0)
+        rows.append(cells)
+    while len(rows) < n:
+        rows.append([0] * n)
+    return rows
+
+
+def _2048_slide(line):
+    """compress + merge left (the game's own rule, applied in the client for the POLICY)."""
+    vals = [v for v in line if v]
+    out, i = [], 0
+    while i < len(vals):
+        if i + 1 < len(vals) and vals[i] == vals[i + 1]:
+            out.append(vals[i] * 2)
+            i += 2
+        else:
+            out.append(vals[i])
+            i += 1
+    return out + [0] * (len(line) - len(out))
+
+
+def _2048_moved(grid, action, n=4):
+    dx, dy = _2048_MOVES[action]
+    if dx:
+        for r in range(n):
+            line = grid[r] if dx < 0 else list(reversed(grid[r]))
+            new = _2048_slide(line)
+            new = new if dx < 0 else list(reversed(new))
+            if new != grid[r]:
+                return True
+        return False
+    for c in range(n):
+        col = [grid[r][c] for r in range(n)]
+        line = col if dy < 0 else list(reversed(col))
+        new = _2048_slide(line)
+        new = new if dy < 0 else list(reversed(new))
+        if new != col:
+            return True
+    return False
+
+
+class ScriptedPlayerAgent(object):
+    """TASK-134 §1.A.1: the deterministic, human-like SCRIPTED player arm.
+
+    Why it exists
+    -------------
+    TASK-133 measured `pong x jev`'s "playable window" with `PONG_TICK` and read 23 s -> 18 s,
+    which looked like "the game got worse"; the real cause was that the model never touched
+    the left paddle (TASK-133 §4.2, `LEFT 5:0` -> `RIGHT 5:0`).  "The model did not play" and
+    "the game cannot be played" had been folded into one number.  This arm separates them: it
+    is a fixed policy, it reads the same exported state, it returns the SAME action dict the
+    model arm returns, and the loop's injection channel, ack evidence and equal-frame-budget
+    control-window change test are byte-for-byte the same code.  What it measures is the GAME.
+
+    What it is NOT
+    --------------
+    Not a model, not a gate criterion, and not a substitute for the model arm.  It never
+    communicates with 8080/8081.  Its `check_health` says so explicitly, and its per-step
+    decision record is written to the run directory beside the model's verbatim requests.
+    """
+
+    name = "scripted"
+
+    def __init__(self, game, objective="", options=None):
+        self.game = game
+        self.objective = objective or ""
+        self.options = options or {}
+        self.base_url = "scripted://local-policy/%s" % game
+        self.hold_ms = int(self.options.get("hold_ms", 350))
+        self.errors = []
+        self.calls = []
+        self.last_evidence = None
+        self._mem = {}
+        self.policy = {
+            "pong": self._pong, "snake": self._snake, "tetris": self._tetris,
+            "game2048": self._m2048, "puzzlebobble": self._pb,
+        }.get(game)
+
+    def check_health(self):
+        return {"url": None, "status": 200,
+                "json": {"scripted": True, "game": self.game,
+                         "policy": bool(self.policy),
+                         "note": "TASK-134 §1.A.1 scripted player: no model service is "
+                                 "contacted by this arm"}}
+
+    def report(self):
+        return {"backend": "scripted", "game": self.game, "objective": self.objective,
+                "policy_available": bool(self.policy),
+                "policy_memory": dict(self._mem),
+                "calls": len(self.calls), "errors": self.errors,
+                "note": "the scripted arm answers 'can the GAME be played'; the model arm "
+                        "answers 'can the MODEL play it'"}
+
+    # -- helpers -----------------------------------------------------------
+    def _act(self, name, goal, why):
+        acts = set((goal or {}).get("actions") or {})
+        if not name or name not in acts:
+            return {"type": "wait", "ms": 100,
+                    "why": "policy wanted %r, which this game does not declare (%s)"
+                           % (name, sorted(acts))}
+        return {"type": "action", "action": name, "pressed": True,
+                "hold_ms": self.hold_ms, "why": why}
+
+    @staticmethod
+    def _f(v, i, default=0.0):
+        try:
+            return float(v[i])
+        except (TypeError, ValueError, IndexError):
+            return default
+
+    # -- policies ----------------------------------------------------------
+    def _pong(self, v, goal):
+        ball = v.get("Ball.pos") or [0, 0, 16, 16]
+        vel = v.get("Ball.Velocity") or [0, 0]
+        pl = v.get("PaddleLeft.pos") or [24, 0, 16, 100]
+        by = self._f(ball, 1) + self._f(ball, 3, 16) / 2.0
+        py = self._f(pl, 1) + self._f(pl, 3, 100) / 2.0
+        if abs(self._f(vel, 0)) < 0.5 and abs(self._f(vel, 1)) < 0.5:
+            return self._act("pong_serve", goal,
+                             "the ball is parked (Velocity=0,0); a human serves with SPACE")
+        if self._f(vel, 0) > 0:
+            # the ball is travelling AWAY: re-centre, exactly as a human prepares
+            target = 276.0
+            return self._act("pong_left_up" if py > target + 10 else
+                             ("pong_left_down" if py < target - 10 else "wait"),
+                             goal, "ball is flying right; re-centre the left paddle")
+        if py - by > 10:
+            return self._act("pong_left_up", goal,
+                             "ball centre y=%.1f is above paddle centre y=%.1f" % (by, py))
+        if by - py > 10:
+            return self._act("pong_left_down", goal,
+                             "ball centre y=%.1f is below paddle centre y=%.1f" % (by, py))
+        return self._act("wait", goal,
+                         "paddle is already lined up with the ball (dy=%.1f)" % (by - py))
+
+    def _snake(self, v, goal):
+        if v.get("GameOver"):
+            return self._act("snake_restart", goal, "GameOver; a human presses R to restart")
+        if v.get("Paused"):
+            return self._act("snake_pause", goal, "the game is paused; unpause")
+        if v.get("WaitingForStart") or not v.get("Started"):
+            return self._act("snake_right", goal,
+                             "WaitingForStart: any direction key starts the run")
+        hx, hy = v.get("HeadX"), v.get("HeadY")
+        fx, fy = v.get("Food.CellX"), v.get("Food.CellY")
+        dx, dy = v.get("DirectionX"), v.get("DirectionY")
+        cols, rows = v.get("Columns") or 25, v.get("Rows") or 21
+        if None in (hx, hy, fx, fy, dx, dy):
+            return self._act("wait", goal, "the head/food/direction fields are not exported")
+        cur = (dx, dy)
+        name = {(-1, 0): "snake_left", (1, 0): "snake_right",
+                (0, -1): "snake_up", (0, 1): "snake_down"}
+        cands = []
+        for cand in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            if cand == (-cur[0], -cur[1]):
+                continue                      # reversal = instant death
+            nx, ny = hx + cand[0], hy + cand[1]
+            if not (0 <= nx < cols and 0 <= ny < rows):
+                continue                      # wall
+            cands.append((abs(fx - nx) + abs(fy - ny), cand))
+        if not cands:
+            return self._act(name.get(cur), goal,
+                             "cornered: only the current direction is legal")
+        cands.sort(key=lambda t: t[0])
+        # TASK-134: the game's OWN rule decides what a press does.  `SnakeGame.cs`
+        # `TrySetDirection` steps the snake ONLY when the requested direction differs from
+        # the current one ("a 'keep going' press is not a steering change", SnakeGame.cs
+        # 414-421); pressing the direction it already faces is a no-op.  The DEFAULT policy
+        # here is the naive human one -- steer toward the food -- and the declared
+        # `--scripted-alternate` arm is the game-rule-aware one that always TURNS when it
+        # wants to advance.  Both are recorded; neither changes the game.
+        pick = None
+        if self.options.get("snake_alternate_turns"):
+            for _d, c in cands:
+                if c != cur:
+                    pick = c
+                    break
+        if pick is None:
+            pick = cands[0][1]
+        return self._act(name[pick], goal,
+                         "head=(%s,%s) food=(%s,%s) dir=(%s,%s); steer toward the food "
+                         "without reversing%s"
+                         % (hx, hy, fx, fy, dx, dy,
+                            " (alternate-turn policy: the request is a CHANGE of direction "
+                            "because the game only steps on a change)" if pick != cur else
+                            " (the only legal request is the current direction, which the "
+                            "game treats as a no-op)"))
+
+    def _tetris(self, v, goal):
+        plan = self._mem.get("tet_plan") or []
+        if plan:
+            nxt = plan.pop(0)
+            self._mem["tet_plan"] = plan
+            return self._act(nxt, goal, "executing the plan for this piece (%d left)" % len(plan))
+        px = v.get("PieceX")
+        if px is None:
+            return self._act("wait", goal, "PieceX is not exported")
+        targets = [0, 9, 2, 7, 4]
+        n = int(self._mem.get("tet_n") or 0)
+        t = targets[n % len(targets)]
+        self._mem["tet_n"] = n + 1
+        kind = v.get("PieceKind")
+        plan = []
+        if kind is not None and int(kind) % 2 == 0:
+            plan.append("tetris_rotate")
+        plan += ["tetris_left"] * max(0, int(px) - t)
+        plan += ["tetris_right"] * max(0, t - int(px))
+        plan.append("tetris_drop")
+        self._mem["tet_plan"] = plan[1:]
+        self._mem["tet_target"] = t
+        return self._act(plan[0], goal,
+                         "piece at x=%s -> target column %d, then drop" % (px, t))
+
+    def _m2048(self, v, goal):
+        grid = _2048_parse(v.get("GridString"))
+        acts = list((goal or {}).get("actions") or {})
+        order = [a for a in ("m2048_left", "m2048_up", "m2048_right", "m2048_down")
+                 if a in acts]
+        if not v.get("CanMoveAny", True):
+            return self._act("wait", goal, "the game reports CanMoveAny=false")
+        for a in order:
+            if _2048_moved(grid, a):
+                return self._act(a, goal,
+                                 "the first configured direction that really moves the "
+                                 "board (grid=%s)" % v.get("GridString"))
+        return self._act("wait", goal, "no configured direction moves the board")
+
+    def _pb(self, v, goal):
+        """Aim a little, then fire -- the loop a human actually plays here.
+
+        MEASURED correction: `pb_left`/`pb_right` do NOT move the shooter sideways, they
+        change the AIM ANGLE (`AngleIndex` 2->3->4->0->1 over the whole arc; `ShooterCol`
+        stays at 4 in the TASK-133 build).  A first draft of this policy aimed by column
+        and therefore never reached its "target" and never fired (`Shots` stayed 0 for 20
+        steps).  The policy below is the corrected, declared one: it sweeps the aim and
+        fires every fourth step, so the projectile, the attachment and the clear logic are
+        all exercised.
+        """
+        if v.get("ProjActive"):
+            return self._act("wait", goal, "a projectile is in flight; let it resolve")
+        angle = v.get("AngleIndex")
+        if angle is None:
+            return self._act("wait", goal, "AngleIndex is not exported")
+        n = int(self._mem.get("pb_aim") or 0) + 1
+        self._mem["pb_aim"] = n
+        self._mem["pb_angle_last"] = angle
+        if n % 4 == 0:
+            return self._act("pb_shoot", goal,
+                             "aim has been swept for %d step(s) (AngleIndex=%s, "
+                             "ShooterColor=%s, NextColor=%s); fire"
+                             % (n, angle, v.get("ShooterColor"), v.get("NextColor")))
+        return self._act("pb_right", goal,
+                         "sweep the aim: AngleIndex %s -> %s (the aim dots move with it)"
+                         % (angle, (int(angle) + 1) % 5))
+
+    # -- the interface -----------------------------------------------------
+    def decide(self, frames, state, goal):
+        rs = state if isinstance(state, dict) else {}
+        values = rs.get("values") if isinstance(rs.get("values"), dict) else {}
+        if self.policy is None:
+            self.errors.append({"kind": "policy",
+                                "error": "no scripted policy for game %r" % self.game})
+            act = {"type": "wait", "ms": 100,
+                   "why": "no scripted policy is declared for this game"}
+        else:
+            try:
+                act = self.policy(values, goal or {})
+            except Exception as e:  # noqa: BLE001 - the loop must never die on the policy
+                self.errors.append({"kind": "policy",
+                                    "error": "%s: %s" % (type(e).__name__, e)})
+                act = {"type": "wait", "ms": 100, "why": "policy raised: %s" % e}
+        self.calls.append({"n": len(self.calls) + 1, "action": act, "state": rs})
+        self.last_evidence = {
+            "request_payload": {"kind": "scripted_policy", "game": self.game,
+                                "policy": (self.policy.__name__ if self.policy else None),
+                                "readable_state": rs},
+            "request_meta": {"with_image": bool(frames), "question_count": 0,
+                             "question_keys": [], "scripted_arm": True,
+                             "note": "TASK-134 §1.A.1: this arm sends NOTHING to a model "
+                                     "service; the record exists so the arm's decisions are "
+                                     "auditable beside the model's verbatim requests"},
+            "transport": {"status": None, "body": None, "headers": None, "attempts": []},
+            "action": act,
+        }
+        return act
 
 
 # ---------------------------------------------------------------------------
@@ -598,11 +1252,24 @@ class Player(object):
         self.args = args
         self.game = args.game
         self.backend = args.backend
+        # TASK-134 §1.A: `player` selects WHICH ARM runs.  `model` is the TASK-132/133 arm;
+        # `scripted` is the deterministic human-like policy that answers the game-side
+        # question.  `variant` is the declarative V1..V5 switch (§1.B) and `image_form` is
+        # V5's payload.  All three are recorded in session.json and player.json, so no run
+        # can be mistaken for another.
+        self.player = getattr(args, "player", "model")
+        self.variant = getattr(args, "variant", "V1")
+        self.image_form = getattr(args, "image_form", "full")
+        if self.player == "scripted":
+            # the scripted arm contacts no service, so its run directory names the ARM, not
+            # a model that was never called
+            self.backend = "scripted"
         self.outdir = os.path.join(RUNS_PLAYER, args.out_prefix or "", self.game, self.backend)
         self.frames_dir = os.path.join(self.outdir, "frames")
         self.states_dir = os.path.join(self.outdir, "states")
         self.calls_dir = os.path.join(self.outdir, "calls")
-        for d in (self.frames_dir, self.states_dir, self.calls_dir):
+        self.model_images_dir = os.path.join(self.outdir, "model-images")
+        for d in (self.frames_dir, self.states_dir, self.calls_dir, self.model_images_dir):
             if not os.path.isdir(d):
                 os.makedirs(d)
         self.steps = []
@@ -617,6 +1284,12 @@ class Player(object):
         self.controls = None
         self.terminal_stop = None
         self.terminal_at_settle = None
+        # TASK-134 §1.B/V4: what the PREVIOUS step did, as the anti-repeat rule needs it.
+        self.last_step_result = None
+        self.excluded_action = None
+        # TASK-134 §1.B: the readable state built for the CURRENT step, which
+        # `choice_criteria` -> `action_effect` reads to describe each candidate.
+        self.current_readable_state = {}
 
     # -- MCP ---------------------------------------------------------------
     def gd(self, code, at):
@@ -744,6 +1417,15 @@ class Player(object):
         return {"game": self.game, "objective": objective, "actions": acts, "keys": []}
 
     def make_agent(self):
+        # TASK-134 §1.A.1: the SCRIPTED arm.  It is deliberately the same interface, so
+        # every measurement downstream (injection channel, ack read, control window,
+        # change test) is the same code as the model arm's.
+        if self.player == "scripted":
+            return ScriptedPlayerAgent(self.game, self.build_goal().get("objective"),
+                                       {"hold_ms": int(self.args.hold_ms),
+                                        "snake_alternate_turns": bool(
+                                            getattr(self.args,
+                                                    "scripted_alternate", False))})
         base = self.args.base_url or DEFAULT_BACKENDS[self.backend]
         # The instruction is part of the measurement: it must ask for exactly one game
         # input and must not offer stopping, because "stop probing" is not an answer this
@@ -752,10 +1434,13 @@ class Player(object):
         #   (`build_goal` -> the agent's `action_criteria` builds it from the action set
         #   plus `wait`; `done` is added by `action_criteria`'s own default, so the
         #   criteria are rebuilt here to drop it).
-        instr = (self.args.action_instructions or
-                 "Look at the picture of the game and choose the single next input a human "
-                 "player would press, to keep playing. Answer with one of the listed "
-                 "actions.")
+        # TASK-134 §1.B: for V3/V4 the question itself changes ("which action pushes the
+        # game forward"), and for V4 a second sentence states that the last no-change
+        # action was removed.  The default (V1) text is byte-identical to TASK-132/133.
+        if self.args.action_instructions:
+            instr = self.args.action_instructions
+        else:
+            instr = VARIANT_INSTRUCTIONS.get(self.variant, VARIANT_INSTRUCTIONS["V1"])
         opts = {"base_url": base, "send_images": True,
                 "decision_path": "/v1/systemone", "hold_ms": int(self.args.hold_ms),
                 "timeout": float(self.args.timeout),
@@ -777,6 +1462,87 @@ class Player(object):
         ag.build_action_criteria = lambda goal: self.choice_criteria(goal)
         return ag
 
+    def action_effect(self, name, keys, rs):
+        """TASK-134 §1.B/V3: what THIS action will do, in the game's own vocabulary.
+
+        The baseline criterion is only the action's name and its bound key -- nothing tells
+        the model what pressing it does.  V3 replaces that with a sentence built from the
+        readable state: where the ball is and where the paddle is, how far the snake's head
+        is from the food, where the falling piece is.  Every sentence is derived from the
+        same exported fields the state dump carries, and it is written verbatim into the
+        request body that is saved on disk.
+        """
+        v = (rs or {}).get("values") or {}
+
+        def f(spec, i=0, d=0.0):
+            try:
+                return float((v.get(spec) or [])[i])
+            except (TypeError, ValueError, IndexError):
+                return d
+
+        bound = (" (bound key(s): %s)" % keys) if keys else ""
+        if name in ("pong_left_up", "pong_left_down"):
+            by = f("Ball.pos", 1) + f("Ball.pos", 3, 16) / 2.0
+            py = f("PaddleLeft.pos", 1) + f("PaddleLeft.pos", 3, 100) / 2.0
+            return ("move the LEFT paddle %s: this changes the left paddle's y position "
+                    "(now %.0f) and, if the ball reaches it, the ball's bounce direction. "
+                    "The ball's centre is at y=%.0f%s"
+                    % ("up" if name.endswith("up") else "down", py, by, bound))
+        if name in ("pong_right_up", "pong_right_down"):
+            return ("move the RIGHT paddle %s; it changes the right paddle's y position%s"
+                    % ("up" if name.endswith("up") else "down", bound))
+        if name == "pong_serve":
+            return ("serve the ball: this starts a new rally only if the ball is parked. "
+                    "Right now Ball.Velocity=%s%s" % (v.get("Ball.Velocity"), bound))
+        if name.startswith("snake_") and name != "snake_pause":
+            return ("turn the snake %s and take one step that way: this changes HeadX/HeadY "
+                    "and moves the whole body. head=(%s,%s) food=(%s,%s) dir=(%s,%s)%s"
+                    % (name.split("_")[1], v.get("HeadX"), v.get("HeadY"),
+                       v.get("Food.CellX"), v.get("Food.CellY"),
+                       v.get("DirectionX"), v.get("DirectionY"), bound))
+        if name == "snake_restart":
+            return "restart the run after GameOver%s" % bound
+        if name == "snake_pause":
+            return "pause/unpause: this freezes the game clock%s" % bound
+        if name == "tetris_left" or name == "tetris_right":
+            return ("shift the falling piece one column %s: PieceX %s -> %s.  The piece only "
+                    "becomes part of the stack when it is dropped%s"
+                    % (name.split("_")[1], v.get("PieceX"),
+                       ("%d" % (int(v["PieceX"]) - 1)) if isinstance(v.get("PieceX"), int)
+                       else "?", bound))
+        if name == "tetris_rotate":
+            return ("rotate the falling piece: PieceRot %s -> %s.  A rotation that does not "
+                    "fit is refused by the game%s"
+                    % (v.get("PieceRot"), ((int(v["PieceRot"]) + 1) % 4)
+                       if isinstance(v.get("PieceRot"), int) else "?", bound))
+        if name == "tetris_drop":
+            return ("hard-drop the piece: it lands, the board's filled cells change and a "
+                    "new piece spawns%s" % bound)
+        if name == "tetris_down":
+            return "step the piece down one row%s" % bound
+        if name.startswith("m2048_"):
+            d = name.split("_")[1]
+            grid = v.get("GridString")
+            nxt = _2048_slide([int(x) for x in (grid or "0,0,0,0").split("/")[0].split(",")]) \
+                if grid else None
+            return ("slide every tile %s and merge equal neighbours: the board string "
+                    "changes and the score rises.  Only a direction that really moves "
+                    "something is accepted by the game.  Board now: %s%s"
+                    % ({"left": "left", "right": "right", "up": "up", "down": "down"}[d],
+                       grid, bound))
+        if name in ("pb_left", "pb_right"):
+            return ("move the shooter one column %s: ShooterCol %s -> %s; the aim dots move "
+                    "with it%s" % (name.split("_")[1], v.get("ShooterCol"),
+                                   ("%d" % (int(v["ShooterCol"]) + (1 if name.endswith(
+                                       "right") else -1)))
+                                   if isinstance(v.get("ShooterCol"), int) else "?", bound))
+        if name == "pb_shoot":
+            return ("fire the bubble along the aim: a projectile spawns and lands on the "
+                    "board.  ShooterCol=%s ShooterColor=%s%s"
+                    % (v.get("ShooterCol"), v.get("ShooterColor"), bound))
+        return ("hold the game's InputMap action '%s' (bound key(s): %s)"
+                % (name, keys or "?"))
+
     def choice_criteria(self, goal):
         """The criteria dict the model is asked to choose from, WITHOUT `done`.
 
@@ -785,14 +1551,26 @@ class Player(object):
         in the first pong run, where Jev answered `done` with P=0.61 for nine steps straight.
         `wait` is kept (it is a real move: deal with a ball already in flight), `done` is
         dropped, and what was dropped is recorded in `session.json`.
+
+        TASK-134 §1.B: V3/V4 replace the name-only description with `action_effect(...)`,
+        and V4 additionally REMOVES the action that produced no change on the previous step
+        (`self.excluded_action`).  V1 keeps the TASK-132/133 text byte-for-byte, so the
+        baseline arm cannot be mistaken for a variant.
         """
+        described = self.variant in ("V3", "V4")
         crit = {}
         for name, keys in (goal.get("actions") or {}).items():
+            if self.variant == "V4" and name == self.excluded_action:
+                continue          # §1.B/V4: exclude the action that produced no change
             ks = ",".join(str(k) for k in keys) if isinstance(keys, (list, tuple)) else \
                 ("" if keys is None else str(keys))
-            crit[name] = ("hold the game's InputMap action '%s' (bound key(s): %s)"
-                          % (name, ks or "?"))
-        crit["wait"] = "do nothing this step (hold position / observe)"
+            if described:
+                crit[name] = self.action_effect(name, ks, self.current_readable_state)
+            else:
+                crit[name] = ("hold the game's InputMap action '%s' (bound key(s): %s)"
+                              % (name, ks or "?"))
+        crit["wait"] = ("do nothing this step (hold position / observe)" if not described
+                        else "do nothing this step: no state and no pixel changes")
         return crit
 
     # -- prep: make the game live before the model is asked to play ---------
@@ -840,6 +1618,11 @@ class Player(object):
         return out
 
     # -- one step -----------------------------------------------------------
+    def build_readable_state(self, s_before):
+        """TASK-134 §1.B/V2: the readable state for this step, from the game's own read."""
+        return readable_state(self.game, s_before.get("state"), self.marker_decl,
+                              last=self.last_step_result)
+
     def run_step(self, i, agent, goal):
         args = self.args
         s_before = self.sample_state("%02d_before" % i)
@@ -848,14 +1631,56 @@ class Player(object):
             return {"step": i, "error": "no frame could be captured", "abort": True}
         w0 = self.frame_count(s_before)
 
+        # --- TASK-134 §1.B: what this step's request will carry -------------------
+        # The readable state is built for EVERY arm (the scripted policy needs it to play),
+        # but which variant may PUT it in the request is the variant's own decision: V1
+        # sends none (byte-identical to TASK-132/133), V2 sends the whole thing, V3/V4 send
+        # it (V4 only the previous-step sentence) and describe the candidates with it.
+        rs = self.build_readable_state(s_before)
+        self.current_readable_state = rs
+        if self.player == "scripted":
+            state_for_agent = rs
+        elif self.variant == "V2":
+            state_for_agent = rs
+        elif self.variant == "V4":
+            state_for_agent = {"variant": "V4",
+                               "previous_step": rs.get("previous_step"),
+                               "rule": ("the action named in `previous_step.action` produced "
+                                        "NO change and has been removed from the candidate "
+                                        "list; pick a different one")}
+        else:
+            state_for_agent = {}
+        # V4's anti-repeat input: only an action that was really SENT and really produced
+        # nothing is excluded (a `wait` step or a step the game refused is not blamed).
+        if self.variant == "V4" and self.last_step_result and \
+                self.last_step_result.get("result") == "no change" and \
+                self.last_step_result.get("injected"):
+            self.excluded_action = self.last_step_result.get("action")
+        else:
+            self.excluded_action = None
+
         # --- the model really sees the picture -----------------------------
+        img = image_for_model(f_before, self.image_form, self.model_images_dir)
         frame_for_model = {k: f_before.get(k) for k in
                            ("index", "path", "width", "height", "sha256",
                             "content_fraction", "bbox", "background_rgb")}
+        if img.get("path"):
+            frame_for_model["path"] = img["path"]
         frame_for_model["window"] = self.osd.get("display_window_size")
         frame_for_model["declared"] = self.osd.get("declared_viewport")
+        if self.player == "model":
+            # V2/V4 on playjev: serve.py has no text-state channel (a text `state` is a
+            # 400, serve.py:41-42), so the same readable-state text rides in the action
+            # question's free-text `instructions`.  Recorded verbatim like everything else.
+            base_instr = (args.action_instructions
+                          or VARIANT_INSTRUCTIONS.get(self.variant,
+                                                      VARIANT_INSTRUCTIONS["V1"]))
+            if self.backend == "playjev" and self.variant in ("V2", "V4") and \
+                    hasattr(agent, "options"):
+                agent.options["action_instructions"] = (
+                    base_instr + "\n" + readable_state_text(rs))
         t0 = time.time()
-        action = agent.decide([frame_for_model], {}, goal)
+        action = agent.decide([frame_for_model], state_for_agent, goal)
         wall = round(time.time() - t0, 3)
         ev = agent.last_evidence or {}
         payload = ev.get("request_payload")
@@ -870,11 +1695,13 @@ class Player(object):
                    {"status": transport.get("status"), "body_raw": transport.get("body"),
                     "headers": transport.get("headers"), "attempts": transport.get("attempts")})
         write_json(os.path.join(sdir, "request_meta.json"), meta)
+        write_json(os.path.join(sdir, "readable_state.json"), rs)
 
         choice, probs, conf = choice_of(agent, self.backend, action)
 
-        if not isinstance(payload, dict) or "image" not in payload and \
-                not ((payload or {}).get("state") or {}).get("frames"):
+        if self.player == "model" and (
+                not isinstance(payload, dict) or "image" not in payload and
+                not ((payload or {}).get("state") or {}).get("frames")):
             self.errors.append({"at": "step %d" % i,
                                 "error": "the request carried NO image: the model was not "
                                          "shown the picture (TASK-132 forbids the text-only "
@@ -985,6 +1812,18 @@ class Player(object):
             "ack": ack, "ack_evidence": ack.get("evidence_used"),
             "change": change, "changed_bool": change.get("changed"),
             "step_verdict": sv,
+            # TASK-134: which ARM and which VARIANT produced this step, what image the
+            # model was actually shown, and whether the readable state was in the request.
+            "arm": {"player": self.player, "variant": self.variant,
+                    "image_form": self.image_form,
+                    "image_sent": img,
+                    "readable_state_in_request": bool(state_for_agent),
+                    "readable_state_keys": sorted((state_for_agent or {}).keys()),
+                    "readable_state_path": os.path.join(sdir, "readable_state.json"),
+                    "excluded_action_this_step": self.excluded_action,
+                    "instruction_text_sent": ((agent.options or {}).get(
+                        "action_instructions") if hasattr(agent, "options") else None)},
+            "readable_state": rs,
             "state_after_full": s_after.get("state"),
             "model": {"backend": self.backend, "seconds": wall,
                       "http_status": transport.get("status"),
@@ -1007,6 +1846,20 @@ class Player(object):
         self.steps.append(rec)
         rec.pop("state_after_full", None)
         rec["_state_after_full"] = s_after.get("state")
+        # TASK-134 §1.B/V4: hand the NEXT step what this one did.  `result` is the SAME
+        # `change.changed` reading the FAIL condition uses -- there is no second opinion.
+        self.last_step_result = {
+            "step": i, "action": act_name, "injected": bool(ack.get("injected")),
+            "accepted": bool(ack.get("accepted")),
+            "result": "changed" if change.get("changed") else "no change",
+            "pixel_diff": px.get("changed_pixels"),
+            "control_pixels": control_px,
+            "gameplay_changes": gp_keys,
+            "note": ("the previous action %r produced NO change in either the picture or "
+                     "the declared gameplay observables" % act_name
+                     if (ack.get("injected") and not change.get("changed"))
+                     else "the previous action %r produced a change" % act_name),
+        }
         log("  step %02d action=%-18s conf=%-7s http=%s | ack=%s(%s) px=%s vs ctl=%s "
             "mv=%s/%s | %s"
             % (i, rec["action"]["action"], conf, rec["model"]["http_status"],
@@ -1121,7 +1974,20 @@ class Player(object):
         agent = self.make_agent()
         health = agent.check_health()
         session = {
-            "task": "TASK-132", "game": self.game, "backend": self.backend,
+            "task": "TASK-132", "task_context": "TASK-134 (arm/variant split)",
+            "game": self.game, "backend": self.backend,
+            # TASK-134 §1.A/§1.B: which arm, which declarative variant, which image form.
+            "player": self.player, "variant": self.variant, "image_form": self.image_form,
+            "variant_note": VARIANT_NOTES.get(self.variant),
+            "arm_note": ("scripted deterministic human-like policy: answers 'can the GAME be "
+                         "played' and contacts no model service"
+                         if self.player == "scripted" else
+                         "model player: answers 'can the MODEL play it'"),
+            "scripted_policy": (getattr(agent, "policy", None).__name__
+                                if self.player == "scripted" and
+                                getattr(agent, "policy", None) else None),
+            "scripted_alternate_turns": bool(getattr(args, "scripted_alternate", False)),
+            "readable_state_fields": READABLE_STATE_FIELDS.get(self.game),
             "mode": args.mode, "exe_root": args.exe_root if args.mode == "exe" else None,
             "project_dir": pg.project_dir(self.game),
             "game_pid": self.gp.proc.pid if self.gp.proc else None,
@@ -1236,7 +2102,17 @@ class Player(object):
                 "declaration": self.liveness_decl}
 
         summary = summarise(self.steps, self.backend, self.game,
-                            state={"terminal_stop": self.terminal_stop})
+                            state={"terminal_stop": self.terminal_stop},
+                            player=self.player)
+        summary["player"] = self.player
+        summary["variant"] = self.variant
+        summary["variant_note"] = VARIANT_NOTES.get(self.variant)
+        summary["image_form"] = self.image_form
+        summary["readable_state_fields"] = READABLE_STATE_FIELDS.get(self.game)
+        summary["scripted_policy"] = (getattr(agent, "policy", None).__name__
+                                      if self.player == "scripted" and
+                                      getattr(agent, "policy", None) else None)
+        summary["scripted_alternate_turns"] = bool(getattr(args, "scripted_alternate", False))
         summary["prep_actions"] = list(args.prep_actions or [])
         summary["prep"] = preps
         summary["terminal_stop"] = self.terminal_stop
@@ -1456,10 +2332,13 @@ def resummarise(root):
         if os.path.isfile(os.path.join(dirpath, "player.json")):
             pj = json.load(io.open(os.path.join(dirpath, "player.json"), encoding="utf-8"))
         s = summarise(steps, backend, game,
-                      state={"terminal_stop": pj.get("terminal_stop")})
+                      state={"terminal_stop": pj.get("terminal_stop")},
+                      player=pj.get("player") or "model")
         for k in ("prep_actions", "prep", "terminal_stop", "settle_liveness_terminal",
                   "stop", "errors", "agent_errors", "channel", "counts",
-                  "terminal_at_settle_before_the_first_model_call"):
+                  "terminal_at_settle_before_the_first_model_call",
+                  "player", "variant", "variant_note", "image_form",
+                  "readable_state_fields", "scripted_policy"):
             if k in pj:
                 s[k] = pj[k]
         s["run_dir"] = os.path.abspath(dirpath)
@@ -1708,6 +2587,70 @@ def selftest():
           False)
     check("clean run -> still PASS", summarise(recs, "jev", "g")["verdict"], "PASS")
 
+    # 7b. TASK-134 §1.C.1: MODEL_NO_PROGRESS -- the fixed point's wider twin.
+    #     The measured blind spot: pong x playjev varied its action once, so the fixed-point
+    #     rule (same action AND same frame) never fired, and nine failing steps were filed as
+    #     the "strong" reading of a game FAIL.  The new rule must catch them anyway.
+    recs_mixed = [dict(r) for r in recs]
+    for i, r in enumerate(recs_mixed, 1):
+        r["frame_before_sha"] = "frame%02d" % i          # a different frame every step
+        r["action"] = {"action": "mixed%d" % i}          # ... and a different action
+        r["change"] = {"changed": False}
+        r["step_verdict"] = "FAIL_no_change_after_accepted_input"
+        r["ack"] = {"accepted": True, "injected": True}
+    npg = model_no_progress(recs_mixed)
+    check("mixed actions + no progress -> MODEL_NO_PROGRESS", npg["found"], True)
+    check("the whole run is the no-progress run", npg["length"], 8)
+    check("the actions really did differ", npg["distinct_actions"],
+          sorted("mixed%d" % i for i in range(1, 9)))
+    check("no-progress reading names its status",
+          "NOT a game defect" in npg["what"], True)
+    # the same action AND the same frame, with no change, is BOTH conclusions at once --
+    # exactly what the recorded `pong x playjev` run shows (TASK-133 §4.2a): the fixed
+    # point fired for 8 steps and the wider rule sees the same 8 steps.
+    recs_fp_static = [dict(r, change={"changed": False},
+                           step_verdict="FAIL_no_change_after_accepted_input")
+                      for r in recs_fp]
+    check("same action+frame+no change -> BOTH conclusions",
+          (model_fixed_point(recs_fp_static)["found"],
+           model_no_progress(recs_fp_static)["found"]), (True, True))
+    # ... but a fixed point that DID change the picture is not "no progress"
+    check("same action+frame that DID change -> only the fixed point",
+          (model_fixed_point(recs_fp)["found"], model_no_progress(recs_fp)["found"]),
+          (True, False))
+    # a run that progresses triggers neither
+    check("clean run -> no MODEL_NO_PROGRESS",
+          model_no_progress([dict(r) for r in recs])["found"], False)
+    # ... and the threshold is 3, exactly like the fixed point's
+    check("2 static steps -> NOT MODEL_NO_PROGRESS",
+          model_no_progress(recs_mixed[:2])["found"], False)
+    check("3 static steps -> MODEL_NO_PROGRESS",
+          model_no_progress(recs_mixed[:3])["found"], True)
+    # a `wait` step (nothing was sent) breaks the run: it is not a measurement of the game
+    recs_gap = [dict(r) for r in recs_mixed]
+    recs_gap[4] = dict(recs_gap[4], ack={"accepted": False, "injected": False},
+                       action={"action": None})
+    check("a `wait` step breaks the no-progress run", model_no_progress(recs_gap)["length"], 4)
+    # the summary reports it, and it does NOT touch the game verdict
+    s_np = summarise(recs_mixed, "playjev", "pong")
+    check("summary carries MODEL_NO_PROGRESS", s_np["MODEL_NO_PROGRESS"], True)
+    check("summary still says FAIL for that run", s_np["verdict"], "FAIL")
+    check("no-progress is not a graph PASS", s_np["verdict"] == "PASS", False)
+    check("no-progress threshold recorded",
+          s_np["thresholds"]["model_no_progress_min_run"], 3)
+
+    # 7c. TASK-134 §1.A: the scripted arm's GAME-side verdict, on the same records.
+    recs_scripted = [dict(r) for r in recs]
+    recs_scripted[0] = dict(recs_scripted[0], change={"changed": False},
+                            step_verdict="FAIL_no_change_after_accepted_input")
+    s_sc = summarise(recs_scripted, "scripted", "pong", player="scripted")
+    check("scripted arm gets a game_side_verdict", s_sc.get("game_side_verdict"), "FAIL")
+    s_sc_ok = summarise([dict(r) for r in recs], "scripted", "pong", player="scripted")
+    check("scripted arm with 8/8 progress -> game-side PASS",
+          s_sc_ok.get("game_side_verdict"), "PASS")
+    check("the model arm does NOT get a game_side_verdict",
+          "game_side_verdict" in summarise([dict(r) for r in recs], "jev", "pong"), False)
+
     # 8. TASK-133 §1.C.2: `done` is gone from the option set the probe offers
     from playtest_agent import action_criteria as _ac
     crit = _ac({"actions": {"a_up": ["W"]}, "keys": []})
@@ -1779,7 +2722,30 @@ def main(argv=None):
 
     r = sub.add_parser("run", help="run the model-player loop for one game and one backend")
     r.add_argument("--game", required=True)
-    r.add_argument("--backend", default="jev", choices=("jev", "playjev"))
+    r.add_argument("--backend", default="jev", choices=("jev", "playjev", "scripted"))
+    # TASK-134 §1.A: the two ARMS.  `model` = the TASK-132/133 model player; `scripted` =
+    # the deterministic human-like policy that measures the GAME rather than the model.
+    r.add_argument("--player", default="model", choices=("model", "scripted"),
+                   help="model = the model-player arm (the TASK-132/133 criterion); "
+                        "scripted = the deterministic human-like policy arm, which answers "
+                        "'can the GAME be played' and calls no service")
+    # TASK-134 §1.B: the declarative variants.  V1 is the untouched baseline.
+    r.add_argument("--variant", default="V1", choices=VARIANT_IDS,
+                   help="declarative request variant: V1 baseline (unchanged), V2 "
+                        "image+readable state, V3 question/candidate descriptions, V4 "
+                        "anti-repeat on top of V3, V5 image form (see --image-form).  "
+                        "Every variant is filed beside the baseline, never in place of it")
+    r.add_argument("--image-form", default="full",
+                   choices=("full", "crop", "downsample"),
+                   help="TASK-134 §1.B/V5: the image the model is shown -- 'full' is the "
+                        "800x600 full-window frame the baseline uses; 'crop' cuts to the "
+                        "measured content bbox; 'downsample' is 400x300")
+    r.add_argument("--scripted-alternate", action="store_true",
+                   help="scripted arm only: use the game-RULE-AWARE snake policy that "
+                        "always asks for a CHANGE of direction (SnakeGame.cs only steps on "
+                        "a direction change).  The default scripted snake policy steers "
+                        "toward the food like a human would; this flag measures whether the "
+                        "game's own rule, not the policy, is what limits progress")
     r.add_argument("--base-url", default="",
                    help="override the service root (default 8080 for jev, 8081 for playjev)")
     r.add_argument("--mode", default="project", choices=("project", "exe"),

@@ -1,0 +1,10 @@
+  正在确定要还原的项目…
+  已还原 F:\moonbit-hof-rs\godot-mcp\projects\_exercises\prefix_game2048\game2048.csproj (用时 166 毫秒)。
+C:\Program Files\dotnet\sdk\10.0.300-preview.0.26177.108\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: 你正在使用 .NET 的预览版。请参阅 https://aka.ms/dotnet-support-policy [F:\moonbit-hof-rs\godot-mcp\projects\_exercises\prefix_game2048\game2048.csproj]
+  game2048 -> F:\moonbit-hof-rs\godot-mcp\projects\_exercises\prefix_game2048\.godot\mono\temp\bin\Debug\game2048.dll
+
+已成功生成。
+    0 个警告
+    0 个错误
+
+已用时间 00:00:03.58

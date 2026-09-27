@@ -2536,7 +2536,11 @@ MODEL_PLAYER_CRITERION_NOTE = (
     "against an equal-frame-budget NO-INPUT control window, and (c) every frame for a human "
     "to read.  FAIL = the model produced an action AND the game accepted it AND the picture "
     "did not change.  PASS = >= 8 steps with >= 75% accepted-and-changed AND the reader's "
-    "per-frame check agreeing the changes match the game's declared logic."
+    "per-frame check agreeing the changes match the game's declared logic.  Two MODEL-side "
+    "conclusions are filed SEPARATELY from that verdict and are neither game defects nor "
+    "PASSes: MODEL_FIXED_POINT (TASK-133: >= 3 steps of the same action on a byte-identical "
+    "frame) and MODEL_NO_PROGRESS (TASK-134: >= 3 consecutive sent steps with no gameplay "
+    "progress even if the actions differ -- the fixed point's measured blind spot)."
 )
 
 
@@ -2617,6 +2621,51 @@ def _model_fixed_point_steps(injected_steps, min_run=3):
     return best
 
 
+def _model_no_progress_steps(steps, min_run=3):
+    """TASK-134 §1.C.1: the MODEL-side "no progress" conclusion, gate-side twin.
+
+    `MODEL_FIXED_POINT` demands the SAME action on the SAME frame, so `pong x playjev`'s
+    sequence -- nine steps that were accepted and left the picture unchanged, with the
+    action varied once -- slipped through it (TASK-133 §4.2a).  This rule keeps only the
+    two facts that matter: the step was really SENT to the game, and nothing advanced
+    (`change.changed` is false, i.e. the picture did not beat its own no-input control
+    window).  `>= min_run` consecutive such steps is the conclusion.
+
+    TASK-134 §1.C.3: it is filed under its own key, it is NOT a game defect (it never
+    touches `pass`), and it is NOT a PASS.  It is the gate-side twin of
+    `playtest_player.model_no_progress`, so `gate.json` and `player.json` cannot disagree.
+    """
+    best = {"found": False, "min_run": int(min_run), "length": 0, "steps": [],
+            "actions": [], "distinct_actions": []}
+    run_len, run_steps, run_acts = 0, [], []
+    for r in steps or []:
+        if not (r.get("ack") or {}).get("injected"):
+            run_len, run_steps, run_acts = 0, [], []
+            continue
+        if (r.get("change") or {}).get("changed"):
+            run_len, run_steps, run_acts = 0, [], []
+            continue
+        run_len += 1
+        run_steps.append(r.get("step"))
+        run_acts.append((r.get("action") or {}).get("action"))
+        if run_len > best["length"]:
+            best.update({"found": run_len >= int(min_run), "length": run_len,
+                         "steps": list(run_steps), "actions": list(run_acts),
+                         "distinct_actions": sorted(set(a for a in run_acts if a))})
+    if not best["found"]:
+        best["reading"] = ("no run of >= %d consecutive steps that were SENT to the game "
+                           "and made no gameplay progress (the longest was %d)"
+                           % (int(min_run), best["length"]))
+    else:
+        best["reading"] = ("%d consecutive steps were SENT to the game and nothing advanced "
+                           "(actions: %s)" % (best["length"], best["distinct_actions"]))
+    best["what"] = ("TASK-134 §1.C.1: >= %d consecutive injected steps with no gameplay "
+                    "progress, EVEN IF the actions differ.  NOT a game defect (it does not "
+                    "fail the game) and NOT a PASS; reported separately from FAIL."
+                    % int(min_run))
+    return best
+
+
 def evaluate_model_player_steps(steps, game=None):
     """The TASK-132 rule, applied to a recorded `steps.jsonl` list.
 
@@ -2649,6 +2698,10 @@ def evaluate_model_player_steps(steps, game=None):
     # own conclusion beside the game verdict -- never folded into `pass`, because it says
     # nothing about the game.
     mp_fixed = _model_fixed_point_steps(steps, 3)
+    # TASK-134 §1.C.1: the wider model-side conclusion.  Computed and REPORTED beside the
+    # verdict; it deliberately appears in NO branch below, so `pass` is the rule
+    # TASK-132/133 already used, unchanged.
+    mp_noprog = _model_no_progress_steps(steps, 3)
     out = {"criterion": "MODEL_PLAYER", "what": MODEL_PLAYER_CRITERION_NOTE,
            "game": game, "evidence_source": "runs/model-player/<game>/<backend>/steps.jsonl",
            "steps": len(steps), "injected_steps": len(injected),
@@ -2659,13 +2712,16 @@ def evaluate_model_player_steps(steps, game=None):
            "one_action_loop": same_action,
            "MODEL_FIXED_POINT": bool(mp_fixed.get("found")),
            "model_fixed_point": mp_fixed,
+           "MODEL_NO_PROGRESS": bool(mp_noprog.get("found")),
+           "model_no_progress": mp_noprog,
            "fail_evidence": {"distinct_actions_in_the_failing_steps": fail_actions,
                              "distinct_request_bodies_in_the_failing_steps": len(fail_reqs),
                              "distinct_before_frames_in_the_failing_steps": len(fail_frames),
                              "same_action_fixed_point": fixed_point},
            "declared_terminal_seen": bool(terminal),
            "thresholds": {"min_steps": 8, "min_rate": 0.75,
-                          "model_fixed_point_min_run": 3},
+                          "model_fixed_point_min_run": 3,
+                          "model_no_progress_min_run": 3},
            "pass": None, "why": ""}
     if fail and not fixed_point and not terminal:
         out["pass"] = False
