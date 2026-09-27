@@ -507,6 +507,8 @@ $ git -C F:\moonbit-hof-rs commit -F ...\t138_commit_msg.txt
 ```
 
 * 交付提交号：**`648b94c`**（父提交 `5a3da2e` = TASK-136 的收尾文档提交）。
+* **第 2 次提交（docs-only）`417dbc9`**：只改本报告，把上面这段"交付提交号 + blob 身份"写回
+  （与 TASK-136 的 `5a3da2e` 同一做法）。**它自己的哈希不写进本报告**——写了就自指（勘误 ⑤）。
 * 提交后 `git status --short` 只剩 `?? godot-mcp/recovery/reports/ACCEPTANCE-TASK-137.md`
   与 `?? godot-mcp/recovery/tasks/TASK-137-ACCEPT.md`（**上一位决策者的输入，本批不代提交**）。
 * **本报告自己的可核身份**：用**提交号 `648b94c` + git blob 哈希**定位，
