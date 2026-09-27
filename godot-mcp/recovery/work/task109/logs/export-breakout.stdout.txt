@@ -1,0 +1,32 @@
+Godot Engine v4.8.dev.mono.custom_build.1c7f5c07a (2026-09-26 22:29:22 UTC) - https://godotengine.org
+
+[MCP] pending_timeout_ms=30000 (configured=30000) pending_ticks_per_frame=8
+[MCP] trace=off (default; use --mcp-trace=<path> or godot_mcp/trace_file to enable)
+[MCP] capture=off (default; use --mcp-capture=on_error|every_call together with --mcp-trace=<path>)
+[MCP] role=editor configured_port=19403 source=cmdline listen=true
+[MCP] listening on 127.0.0.1:19403 (editor=true, tools=154)
+[MCP] INFO: MCP server is ready on 127.0.0.1:19403 as the editor process (port source=cmdline, tools=154)
+[   0% ] [90m[1mfirst_scan_filesystem[22m | Started 项目初始化 (5 steps)[39m[0m
+[   0% ] [90m[1mfirst_scan_filesystem[22m | 正在扫描文件结构……[39m[0m
+[  16% ] [90m[1mfirst_scan_filesystem[22m | 正在加载全局类名……[39m[0m
+[  33% ] [90m[1mfirst_scan_filesystem[22m | 正在校验 GDExtension……[39m[0m
+[  50% ] [90m[1mfirst_scan_filesystem[22m | 正在创建自动加载脚本……[39m[0m
+[  66% ] [90m[1mfirst_scan_filesystem[22m | 正在初始化插件……[39m[0m
+[  83% ] [90m[1mfirst_scan_filesystem[22m | 正在启动文件扫描……[39m[0m
+[92m[ DONE ][39m [1mfirst_scan_filesystem[22m
+[0m
+[   0% ] [90m[1mdotnet_publish_project[22m | Started Publishing .NET project... (1 steps)[39m[0m
+[   0% ] [90m[1mdotnet_publish_project[22m | Running dotnet publish[39m[0m
+[92m[ DONE ][39m [1mdotnet_publish_project[22m
+[0m
+[   0% ] [90m[1msavepack[22m | Started 打包中 (102 steps)[39m[0m
+[   1% ] [90m[1msavepack[22m | 正在保存文件：res://.godot/exported/133200997/export-3ad5c15c4f3250da0cc7c1af1770d85f-main.scn[39m[0m
+[  26% ] [90m[1msavepack[22m | 正在保存文件：res://src/BreakoutGame.cs[39m[0m
+[  50% ] [90m[1msavepack[22m | 正在保存文件：res://src/Brick.cs[39m[0m
+[  74% ] [90m[1msavepack[22m | 正在保存文件：res://src/Paddle.cs[39m[0m
+[  74% ] [90m[1msavepack[22m | 正在保存文件：res://scenes/main.tscn.remap[39m[0m
+[  74% ] [90m[1msavepack[22m | 正在保存文件：res://.godot/global_script_class_cache.cfg[39m[0m
+[  74% ] [90m[1msavepack[22m | 正在保存文件：res://.godot/uid_cache.bin[39m[0m
+[  74% ] [90m[1msavepack[22m | 正在保存文件：res://project.binary[39m[0m
+[92m[ DONE ][39m [1msavepack[22m
+[0m

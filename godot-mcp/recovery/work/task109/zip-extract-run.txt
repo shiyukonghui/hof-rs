@@ -1,0 +1,27 @@
+TASK-109 -- extract one game OUT OF THE SHIPPED ZIP and run it
+zip   : F:\moonbit-hof-rs\godot-mcp\dist\godot-mcp-20games-exe-20260927-0927-part2of2.zip
+game  : pong
+files extracted: 189
+
+command: F:\moonbit-hof-rs\godot-mcp\recovery\work\task109\unzip-test\godot-mcp-20games-exe-20260927-0927-part2of2\games\pong\pong.exe --headless --quit-after 120
+cwd    : F:\moonbit-hof-rs\godot-mcp\recovery\work\task109\unzip-test\godot-mcp-20games-exe-20260927-0927-part2of2\games\pong
+
+exit code                : 0
+READY line present       : True
+listen=false line present: True
+stderr bytes             : 0
+
+--- stdout ---
+Godot Engine v4.8.dev.mono.custom_build.1f9d0cb1c (2026-09-26 23:05:35 UTC) - https://godotengine.org
+
+PONG_READY name=Main ball=(392, 268) ball_v=(0, 0) win_score=5 auto_serve=True
+[MCP] pending_timeout_ms=30000 (configured=30000) pending_ticks_per_frame=8
+[MCP] trace=off (default; use --mcp-trace=<path> or godot_mcp/trace_file to enable)
+[MCP] capture=off (default; use --mcp-capture=on_error|every_call together with --mcp-trace=<path>)
+[MCP] role=game configured_port=0 source=default listen=false
+[MCP] not listening (get_port()=0)
+
+--- stderr ---
+
+
+ZIP-EXTRACT-RUN VERDICT: PASS

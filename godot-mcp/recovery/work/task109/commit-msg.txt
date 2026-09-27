@@ -1,0 +1,35 @@
+TASK-109: 20 C# games exported as runnable Windows exe + 2-part package (D154)
+
+交付物从「源码 + 证据」改成「可直接双击运行的游戏」：
+  dist\godot-mcp-20games-exe-20260927-0927-part1of2.zip  632348706 B
+  dist\godot-mcp-20games-exe-20260927-0927-part2of2.zip  632337210 B
+  (这两个 zip 与 3.2 GB 的 dist\exe\ 产物不进 git，与既有 dist 约定一致)
+
+导出模板：本机 export_templates 为空，用同一份源码自建
+  scons platform=windows target=template_release module_mono_enabled=yes -j8
+  -> exit 0 / 9m14s，安装为 %APPDATA%\Godot\export_templates\4.8.dev\windows_release_x86_64.exe
+  (引擎期待的目录是 4.8.dev，不是完整版本串)
+
+为离线 self-contained 发布补齐本地 NuGet 源（新增 3 个 8.0.25 运行时包，
+不改任何游戏工程的 NuGet.config）：
+  godot\bin\GodotSharp\Tools\nupkgs\microsoft.{netcore.app,windowsdesktop.app,aspnetcore.app}.runtime.win-x64.8.0.25.nupkg
+
+新增的构建文件（只新增，未改任何游戏逻辑）：
+  projects\<game>\export_presets.cfg  x20  (已被各工程 .gitignore 忽略)
+  projects\<game>\<game>.sln          x20  (GodotTools 导出强制要求)
+
+实测结论：
+  20/20 导出 exit 0；20/20 headless 启动 exit 0 且 stderr 0 字节，
+  每款 stdout 打出自己的 *_READY 真实游戏状态；
+  窗口化抽查 pong/snake/tetris 3/3 存活；
+  9877/9888/9889 运行前后监听者均为空，逐款日志含
+  [MCP] role=game configured_port=0 source=default listen=false
+  打包自检 PASS（20/20 一款不少、MANIFEST 双向一致、抽查重算哈希一致），
+  且 pong 从 part2 解出后直接运行 exit 0。
+
+过程中修掉 4 个阻塞点：preset 的 UTF-8 BOM、缺 <game>.sln、
+self-contained 的 NU1101、Start-Process 取不到 ExitCode（曾使验证全为假）。
+
+报告：godot-mcp\recovery\reports\TASK-109-REPORT.md
+证据：godot-mcp\recovery\work\task109\
+决策：DECISIONS.md D154

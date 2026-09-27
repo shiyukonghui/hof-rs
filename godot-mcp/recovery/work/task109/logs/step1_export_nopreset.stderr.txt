@@ -1,0 +1,8 @@
+ERROR: This project doesn't have an `export_presets.cfg` file at its root.
+Create an export preset from the "Project > Export" dialog and try again.
+   at: EditorNode::_fs_changed (editor\editor_node.cpp:1474)
+ERROR: Parameter "singleton" is null.
+   at: EditorNode::is_cmdline_mode (editor\editor_node.cpp:6750)
+WARNING: A Thread object is being destroyed without its completion having been realized.
+Please call wait_to_finish() on it to ensure correct cleanup.
+   at: Thread::~Thread (core\os\thread.cpp:118)

@@ -1,0 +1,77 @@
+==============================================================================
+PART 1  godot-mcp-20games-exe-20260927-0927-part1of2.zip
+==============================================================================
+zip bytes  : 632348706
+zip sha256 : f596189d64ea4cf61648af89779d990406538bf3b28325bf1e3fc92e26c8fdf1
+matches package-results.json : YES
+zip entries (files): 1893
+top-level folders  : ['godot-mcp-20games-exe-20260927-0927-part1of2']
+MANIFEST entries   : 1890
+in zip not in manifest : 0 []
+in manifest not in zip : 0 []
+games in part      : 10 ['asteroids', 'bomberman', 'breakout', 'flappy', 'frogger', 'game2048', 'lunarlander', 'match3', 'minesweeper', 'missilecommand']
+------------------------------------------------------------------------------
+spot-check: extract and re-hash
+------------------------------------------------------------------------------
+OK   games/asteroids/asteroids.exe
+       extracted bytes=82057728 sha256=c7a8cf2570566dba002ef790df853311da29128a923666b79403aee4ae8bf8ba
+OK   games/asteroids/asteroids.pck
+       extracted bytes=4484 sha256=3410572174a5c5533973701416257e858783bb9e02dd3498e8e2a53d43f8e7a1
+OK   games/asteroids/data_asteroids_windows_x86_64/asteroids.dll
+       extracted bytes=36352 sha256=45db3ec6c16d86284ad0ced35043f77d260dd9f765dc140a6a0044e02279d8ac
+OK   games/bomberman/bomberman.exe
+       extracted bytes=82057728 sha256=a0a309e78837dc665889e6d8039f15a36fff21477621c0a6afca427053f8578d
+OK   games/bomberman/bomberman.pck
+       extracted bytes=4004 sha256=134a04657fb5b30ab8fb012dcf4b62b99b1cdecbc37f5c916923f48996290890
+OK   games/bomberman/data_bomberman_windows_x86_64/bomberman.dll
+       extracted bytes=46080 sha256=e9dc34900c5297390dd3baeb9ccbc05558c95f7cfa37e3f4f38dee63bfdcffa7
+spot-checked files : 6
+README.md bytes    : 3609
+RUN-CHECK.txt bytes: 2876
+
+==============================================================================
+PART 2  godot-mcp-20games-exe-20260927-0927-part2of2.zip
+==============================================================================
+zip bytes  : 632337210
+zip sha256 : 59586e439fc2c329a04902beb242bf881445b6524ca1b8dea7c739bc63381d5c
+matches package-results.json : YES
+zip entries (files): 1893
+top-level folders  : ['godot-mcp-20games-exe-20260927-0927-part2of2']
+MANIFEST entries   : 1890
+in zip not in manifest : 0 []
+in manifest not in zip : 0 []
+games in part      : 10 ['pacman', 'platformer', 'pong', 'puzzlebobble', 'rtype', 'snake', 'sokoban', 'spaceinvaders', 'tetris', 'towerdefense']
+------------------------------------------------------------------------------
+spot-check: extract and re-hash
+------------------------------------------------------------------------------
+OK   games/pacman/pacman.exe
+       extracted bytes=82057728 sha256=4567bc648a8998840c556d8e7d43b1bd1ee9d98db3d140cdc25f6fd0d5f95019
+OK   games/pacman/pacman.pck
+       extracted bytes=4468 sha256=58883c15685b95b3d6ef7d0d5d0908824cb534b4c877e68d61b71047168a874c
+OK   games/pacman/data_pacman_windows_x86_64/pacman.dll
+       extracted bytes=31744 sha256=f433fa934e038365d8ca67365ed209eafa496208e1adc8187ac832f85fe7ca64
+OK   games/platformer/platformer.exe
+       extracted bytes=82057728 sha256=1e2b2a316db786b22df523687a5b87637a459d82da10b7616b7bceb2f301c531
+OK   games/platformer/platformer.pck
+       extracted bytes=4024 sha256=7e992d5a9da3a1e0d7ea3a1ca1e42183824555f618d8c4276494cb2960cdac37
+OK   games/platformer/data_platformer_windows_x86_64/platformer.dll
+       extracted bytes=45568 sha256=4c8c446e761d14aa2e0e3146e6a904a7b8f3af96198c0aecc31cf7228c7cd65d
+spot-checked files : 6
+README.md bytes    : 3577
+RUN-CHECK.txt bytes: 2876
+
+==============================================================================
+CROSS-PART VERDICT
+==============================================================================
+games found across parts: 20
+expected                : 20
+missing : none
+extra   : none
+dupes   : none
+total payload files across parts: 3786
+total zip bytes                 : 1264685916 (1.18 GB)
+
+SELF-CHECK VERDICT: PASS
+  20/20 games present, none missing, none duplicated;
+  MANIFEST matches the zip in both directions;
+  extracted spot-check files re-hash to the manifest values.
