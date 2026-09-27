@@ -6008,3 +6008,63 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
   * D-T111-3 改了契约（177 条不变，`_meta.overrides` +1，生成器 1.23.0）；任何按旧 schema 生成调用方代码的下游都只是**多**了一个 enum，不破坏既有取值。
   * **C 段（H4 导航 / H5 音频 / H9 录放 / H6 粒子）本轮未做**：预算全部用在本轮的三条引擎缺陷 + 两变体重建 + 十道门 + 档位口径上。它们仍留在不可达登记表里，方法沿用 TASK-111（先建练习工程证伪整族）。这不是结论，是待办。
   * 回滚点：主仓侧 `git revert <TASK-112 提交>`（台账/档位/声明/报告）；引擎侧 `git revert <模块提交>` 并重建两变体（契约 override 与模块同仓）。`projects/` 的 20 款正式工程与 `runs/` 只读未动。
+
+## D158 — TASK-113：C 段四族（H4 导航 / H5 音频 / H9 录放 / H6 粒子）用练习工程整族上线（0 次 40→20）；D-T111-2/-3 的修后线上对比；`readback` 见证从「调用级」升级为「内容级」（`expect`/`expect_absent`），当场降级 TASK-112 的三条弱见证
+
+* 日期：2026-09-27
+* 触发问题：TASK-112 §C 留下的 C 段（H4 6 / H5 6 / H9 3 / H6 5 共 20 条 0 次调用）、§A5 缺失的
+  「D-T111-2/-3 线上修后对比」、§B3 自述的「`witness_read` 只是调用级」这三件事。
+* 考虑的选项（含被否决者及理由）：
+  * **C 段的前置怎么造**：①**由引擎自己的 API 在 GDScript 里造**（采纳：`mk_probe.gd` 用
+    `NavigationPolygon::add_outline()` / `ResourceSaver::save()` 构造，再用 `load()` 挂 GDScript 玩家脚本）；
+    ②手写 `.tscn`/`.tres` 文本（否决：那等于让「前置是否成立」依赖我对 Godot 序列化格式的记忆，
+    且 TASK-111 已用同一理由否决过一次）。
+  * **H9「回放真的动了」怎么观察**：①给玩家挂一个**可见的 `Polygon2D`** 并用
+    `Input.is_key_pressed` 驱动移动，回放后既看像素差又用 `running_game_get_node_properties` 读位置（采纳）；
+    ②只断言回包的 `injected:2`（否决：那是工具自己说成功了，正是台账明令**不许**当 readback 的东西）。
+  * **H5 的素材**：①生成器写**真 RIFF/PCM** 再由 `--import` 导入（采纳）；②用 `AudioStreamGenerator`
+    或不放素材（否决：前者不是「工程自带资产」这条契约前置，后者让 `editor_add_audio_player` 的
+    关联对象无从谈起）。
+  * **内容级见证怎么写**：①加 `expect`（字面量必须在见证回包里逐字出现）（采纳）；②再加
+    `expect_absent` 表达**减法型写入**（删除/清空）的「读回来的东西不在了」，并要求它与 `expect`
+    同时声明、以 `expect` 作**同一主体**的锚点（采纳）；③只做 `expect`（否决：做不到
+    `editor_remove_state_machine_state` / `remove_state_machine_transition` 这类「删除」的判定，
+    除非写一个不指向主体的假字面量）。
+  * **内容级期望缺声明时怎么办**：①**不授予档位**（采纳）；②退回调用级并打标记（否决：那就没有升级）。
+* 选择：四族全部用练习工程上线；见证升级按「无内容级期望即不给档位」执行；引擎零改动。
+* 理由：
+  * 「不可达」是关于**语料**的观察，不是关于**工具**的能力——H4/H5/H6/H9 各自只缺一个可构造的前置，
+    逐族证伪的成本远低于替它们辩护的成本（TASK-110/111 已经两次证明这类推断会错）。
+  * 内容级判定必须**机械可执行**，否则「见证不再只是调用级」就只剩报告里的一句话。
+    拒绝是机制在工作的证据：本轮被拒 5 条里，3 条（`editor_set_node_script`、
+    `editor_set_control_theme`、`editor_remove_animation`）是 TASK-112 能过、本轮**不该过**的声明——
+    读完它们的 run 后发现见证回包里根本没有被写的值（`editor_get_node_properties` 在该 run 只读了
+    name/collision_layer/wait_time），删除型的那条列表读更是发生在删除**之前**。
+  * H9 的观察方式必须能穿过「工具自己说成功了」这层皮：像素差 + 位置读回两者都指向同一个事实
+    （复位 x=100 → 回放 → x=151），而回包里的 `injected:2` 一个字都不采用。
+* 做法与结果（全部真实退出码）：
+  * **四族**：新建 `projects/_exercises/{ex_nav,ex_audio,ex_rec,ex_particles}`（每族一个工程，
+    前置由 `mk_probe.gd` 生成），四组会话 h4 33+7 / h5 43 / h6 40 / h9 28 次调用 + B 段 7 次，
+    **共 +158 次调用**。20 条工具**全部 ≥5 次**（实测 6–9 次）、**可构造的边界全部造出**，
+    每条新调用都带同 run 的内容级读回。四个工程 `--headless --quit-after 5` **退出码全 0**。
+    `0` 次 40 → **20**、`达标` 92 → **102**。
+  * **B 段（修后线上）**：D-T111-2 `{"size":{"x":48,"y":48}}` 由 `-32602` 变为 `ok` 且回答含
+    `properties_set:["size"]` / `changed.size.old=(20,20)`；D-T111-3 `"4d"`/`"2D"` 均为 `-32602` +
+    `data.suggestion`，`"2d"` 正常建 `RayCast2D`。修前修后逐字并列见报告 §B。
+  * **C 段**：`tools/tool_coverage.py` 新增 `expect`/`expect_absent` 复核（含把 JSON-RPC 信封解包、
+    读已核验 sidecar 的 `payload_variants()`）。38 条声明 → **通过 33 条（全部逐字命中）、被拒 5 条**；
+    档位 `readback` 77 → 87、`pixel_effect` 27 → 34、`count_only` 9 → 12（+3 条被降级者）、
+    `no_calls` 40 → 20。
+  * **登记表**：`reclassified` +20（H4/H5/H6 全部 + H9 三条），每条带 why/evidence/batch/task，未删任何条目。
+  * **契约与引擎**：**均未改动**（177 条不变），因此按铁律 7 **不触发**两变体重建与十道门；
+    所有会话跑在 TASK-112 那个含三条修复的二进制 `4.8.dev.mono.custom_build.3fdabe2d9` 上。
+* 预期影响与回滚点：
+  * **档位口径从此是硬门**：新声明若没有 `expect`/`expect_absent`，即使见证调用存在也不给档位。
+    这会周期性「下调」一些工具，这是**预期的**——它换来的是「档位 = 写入的值能从引擎自己的回答里读回来」。
+  * **H6 的 `pixel_effect` 有已知混淆**（粒子默认 `emitting:true`，编辑器视口在动，
+    于是**只读**的 `editor_get_particle_info` 也报 70–95 像素差）：该族应当只认内容级 `readback`，
+    报告 §0/§E 已写明，下一批若要保留像素证据需先 `emitting=false`。
+  * **H1 的 5 条 `count_only` 未做**（见证读在 `h1` run 里缺失），下一批第一优先级是补回被降级的
+    3 条 + H1 的 5 条，而不是继续扩大新族。
+  * 回滚点：主仓侧 `git revert <TASK-113 提交>`（台账/声明/登记表/练习工程/报告）；
+    引擎侧**无提交**，无需重建或重跑十道门。20 款正式工程与它们的 `runs/` 只读未动。
