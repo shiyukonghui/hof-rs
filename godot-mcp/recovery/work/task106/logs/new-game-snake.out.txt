@@ -1,0 +1,19 @@
+template : F:\moonbit-hof-rs\godot-mcp\projects\_template
+dest     : F:\moonbit-hof-rs\godot-mcp\projects\snake
+name     : snake
+class    : SnakeGame
+  substituted: project.godot
+  substituted: __NAME__.csproj
+  substituted: scenes\main.tscn
+  substituted: src\__CLASS__.cs
+  generated : README.md (from _template\README.game.md)
+placeholder files left: 0
+  .gitignore
+  NuGet.config
+  project.godot
+  README.md
+  snake.csproj
+  scenes\main.tscn
+  src\SnakeGame.cs
+created  : F:\moonbit-hof-rs\godot-mcp\projects\snake
+NEWGAME_EXIT=0

@@ -1,0 +1,38 @@
+== check5 (assertion tallies in the FINAL run dirs, snake -> snake-task106-r1)
+game               passed   failed   errors  
+pong                    8        2        0  FAILURES: g12-paddle-up-2-must-fail(scenario failed=1 errors=0); g27-screen-text-miss(node_state prop=None exp=None act=None)
+breakout               11        2        0  FAILURES: g09-assert-paddle-original-must-fail(node_state prop=position exp={'x': 352.0, 'y': 540.0} act={'x': 8.0, 'y': 540.0}); g24-assert-win-must-fail(node_state prop=text exp=YOU CLEARED act=)
+snake                  16        2        0  FAILURES: g04-park-check-must-fail(node_state prop=position exp={'x': 120.0, 'y': 240.0} act={'x': 576.0, 'y': 240.0}); g26-wall-assert-must-fail(node_state prop=LoseReason exp=self act=wall)
+tetris                 11        0        0  clean
+spaceinvaders          17        0        0  clean
+asteroids              26        0        0  clean
+pacman                 32        0        0  clean
+frogger                37        0        0  clean
+flappy                 41        0        0  clean
+game2048               73        0        0  clean
+minesweeper            96        0        0  clean
+sokoban               127        0        0  clean
+bomberman             147        0        0  clean
+platformer            143        0        0  clean
+match3                 88        0        0  clean
+towerdefense           77        0        0  clean
+missilecommand         73        0        0  clean
+rtype                 101        0        0  clean
+puzzlebobble           87        0        0  clean
+lunarlander           150        0        0  clean
+
+TOTAL passed=1361 failed=6 errors=0
+
+== check6 (undeclared failing assertions in the FINAL run dirs)
+game             tag                                      declared? what
+------------------------------------------------------------------------------------------------------------------------
+pong             g12-paddle-up-2-must-fail                YES       scenario:position eq {'x': 24.0, 'y': 226.0} -> {'x': 24.0, 'y': 8.0}
+pong             g27-screen-text-miss                     YES       node_state:None eq None -> None
+breakout         g09-assert-paddle-original-must-fail     YES       node_state:position eq {'x': 352.0, 'y': 540.0} -> {'x': 8.0, 'y': 540.0}
+breakout         g24-assert-win-must-fail                 YES       node_state:text eq YOU CLEARED -> 
+snake            g04-park-check-must-fail                 YES       node_state:position eq {'x': 120.0, 'y': 240.0} -> {'x': 576.0, 'y': 240.0}
+snake            g26-wall-assert-must-fail                YES       node_state:LoseReason eq self -> wall
+
+UNDECLARED failing assertions in final runs: 0
+
+CHECK56_TASK106 OK

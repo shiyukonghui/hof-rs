@@ -5848,3 +5848,33 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
     ②三款各自都是经典规则的**最小完整子集**（R-Type 没有道具与地形、PB 没有顶部下压与瞄准线、
     LL 没有地形起伏与风）；③`ForceTestState` 仍允许钉出游戏本身到不了的状态（B-3 的成因），本轮以「会话不这么钉」处置；
     ④X-2 只登记未修。
+
+---
+
+## D153 — TASK-106：TASK-105 独立验收的三条 fail 修在根上（Snake 自撞判负的钉板与断言、三份与产物相反的表述、报告层缺「未声明失败」一格）；Snake 归档后从模板重新实例化重跑，未声明失败归零；模块零改动，十道门仍全跑
+
+- 日期：2026-09-27
+- 触发问题：TASK-105 的独立验收判 `fail`。D-1（blocking）：Snake 的**最终运行**含 3 条未声明失败断言，自撞判负这条规则**在证据里从未被走到**，而三份文档（含权威台账 `GAME-LOOP-LOG.md`）对同一批断言给出与产物相反的结论。D-2（medium）：`tools/game_report.py` 的 `report.json` 没有任何断言汇总，这类失败只能靠人写表。
+- 核查事实（全部来自产物，不是转述）：
+  * `runs\snake\snake-task093-r6` 与 `runs\snake\snake-clean-task097`：`g19-turn-down`（`DirectionY` 实得 `-1`）与 `g22-self-collision`（`GameOver` 实得 `false`、`LoseReason` 实得空串）共 **3** 条失败；文件名**不带** `-must-fail`、会话 note 是**正向意图**；两轮的 `ledger-game.txt` **已经**把 seq 19 / 22 标成 `scenario_assertion_failed`。
+  * `g20` 的钉板写成 `…;dir=1,0`，头在 `10,10` 而颈在 `9,10` —— 自撞判定是 `nx = HeadX + DirectionX`（`SnakeGame.cs:418-434`），头于是走向 `11,10`，**离开**身体；两轮引擎 stdout 里 `SNAKE_SELF` 各出现 **0 次**（对照 r3/r4/r5 各 3 次）。
+  * `g19` 复查 `g18` 之后的 `dir=0,-1`，`snake_down` 是 180° 掉头，被 `TrySetDirection` **正确**拒绝并记入 `LastRefusedInput` —— 断言失败的原因是钉板状态，不是游戏。
+- 选项：
+  1. **修钉板 + 修文档口径 + 报告层加一格**（选中）；
+  2. TASK-105 给出的替代：把 `g19`/`g22` 改名成 `*-must-fail`、note 写「本会话不覆盖」，同时把台账里「自撞由断言钉住」删掉；
+  3. 只改文档、不动会话 —— 让证据与结论一致，但保留未覆盖路径。
+- 选择：选项 1。
+- 理由：自撞判负是 Snake 的**规则**，不是边界。选项 2 等于永久放弃一条可测规则，也让「这款游戏的规则由断言钉住」这句话失真；选项 3 是把「未覆盖路径」洗成「没这回事」。选项 1 的成本只是两块钉板加一次重跑，却让那条规则重新可被证伪 —— 这正是本仓「断言必须能失败」的口径。
+- 做法与结果：
+  * **会话**（`tools\sessions\snake\session.json`，模板本体）：`g19` 前插入自己的钉板 `g18b-aim-turn-down`（`8,10|7,10|6,10;dir=1,0`，向下是合法转弯）；`g20` 的 `dir` 改成 `-1,0`（头 `10,10` 撞进颈 `9,10`）；插入 `g20b-dump-self-board`，在断言**之前**用 `Dump()` 把同一块盘面原样打出来。5 处 `ForceTestState` 盘面经 Python 与 PS 5.1 **双解析**一致（54 条调用，编辑器 21 / 游戏 33）。
+  * **按铁律 6 重跑**：先落 sha256 清单（工程 217 文件 / 10 229 425 B；旧跑法 `snake-clean-task097` 447 文件、`snake-task093-r6` 241 文件），把 `projects\snake` **移动**（零删除）到 `recovery\work\task106\archive\snake-20260927-080911\`，再用 `tools\new_game.ps1` 从 `_template` 重新实例化（TD-2 的教训），然后用修好的会话重跑。
+  * **重跑** `runs\snake\snake-task106-r1`（端口 9930 / 9931；跑前 `netstat`+`tasklist` 确认无残留，跑后同样为空）：编辑器 20 / 游戏 33（53 条调用），`facts_complete` **53/53**、`malformed_lines=0`；`scenario_assertion_failed` **2 → 0**，只剩 2 条 `assertion_failed`（`g04` / `g26`，都在文件名里声明）；`SNAKE_SELF head=9,10` 出现 **1** 次；`g19` / `g20b` / `g22` / `g25` 全绿；**未声明失败 0 条**。
+  * **文档口径**：`TASK-093-REPORT.md`（§A3 表与 §A4 汇总行两处）、`GAME-LOOP-LOG.md`（第 3 行与 S-3 行）、`TASK-097-REPORT.md` §B3 逐处改成「**当时为错报**：该轮 ledger 已标 `scenario_assertion_failed`」+「**TASK-106 重跑后自撞路径已实测覆盖**」，两者以时点分开、**不并存为同一时点的结论**；20 款里程碑表**保持 TASK-104 快照不动**，另加一条 TASK-106 追记，而不是改写那份快照。
+  * **报告层**：`tools\game_report.py` 新增 `assertion_summary()` —— 只读**运行自己保存的响应文件**（`*.json`），用运行自己的 `call-index.txt` 判定「这条失败有没有声明」；`report.json` 增 `assertions` 段、`report.md` 增「未声明失败」一节。实测：对 TASK-097 的旧运行（临时副本，不改归档）给出 **未声明失败: 3**，与 TASK-105 的 `check6_undeclared.py` 独立算出的 3 一致；对新运行给出 0。
+  * **收尾**：模块**零改动**（引擎仓 `git status` 为空、`HEAD = origin = 1f9d0cb1c`），因此**不重建**；但本次仍以 `-RunGates` 强制跑完十道门，`g01`…`g10` **全部 exit=0**（`accept_m1` **22/22**、`ANCHOR_STRUCTURAL_EQUIVALENT`），真实退出码在 `runs\gates\task106\summary.txt`。
+- 预期影响与回滚点：
+  * Snake 的**当前最终轮**是 `runs\snake\snake-task106-r1`；任何引用它的地方（`GAME-LOOP-LOG.md` 第 3 行、下一次独立验收的 FINAL 映射）都必须一起改，否则口径会再次分叉 —— 这是 TASK-105 那类矛盾的直接来源。
+  * 模板再加一条：**钉板必须让头走进身体**（`dir` 指向身体而不是离开身体），并且**断言这类规则之前要先在引擎 stdout 里找到这条规则的证据**（本次是 `SNAKE_SELF`）。「断言 passed」不等于「规则被走到」。
+  * 报告层的「未声明失败」一格从此对 20 款都生效，而且它是**从被验收对象自身的响应文件**算的，不读台账 flags、不依赖任何脚本名。
+  * 回滚点：`git revert` 本任务的提交即可；被归档的旧工程在 `recovery\work\task106\archive\snake-20260927-080911\`（带 sha256 清单），两轮旧跑法仍在 `runs\snake\` 原地未动（只加了 sha256 清单）。
+

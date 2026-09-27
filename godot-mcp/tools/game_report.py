@@ -23,8 +23,16 @@ TASK-096 (D-1): a pixel column that reads `0` is a *claim* that the picture did 
 change. When the pixel-evidence chain itself is broken, that claim cannot be made and
 the report says `不可得（D-1）` instead. The rule and the replacement evidence chain are
 in `modules/mcp_server/docs/reports/MCP-TRACEABILITY.md` §7.
+
+TASK-106 (D-2): the ledger speaks per call; it does not total the assertions a run's
+responses carry. A failing assertion that nobody declared therefore stayed invisible
+in the report even though the run's own `ledger-*.txt` had already flagged it
+(`scenario_assertion_failed`). The report now totals `passed/failed/errors` from the
+responses the run itself saved and prints the failures in two columns: the ones the
+run declared (`-must-fail` tag or a note that says so) and the **未声明失败** ones.
 """
 import argparse
+import glob
 import hashlib
 import io
 import json
@@ -187,6 +195,118 @@ def observable_lines(stdout_path, patterns):
     return out
 
 
+# --- TASK-106 (D-2): assertions, declared and undeclared -----------------------
+#
+# The words a session note uses to say "this assertion is meant to fail". Kept the
+# same list `check6_undeclared.py` used, so the report and the independent check
+# classify a failure the same way.
+DECLARED_NOTE_KEYS = (
+    "must fail", "must-fail", "must be refused", "boundary", "boundary call",
+    "注定失败", "intentionally", "expected to fail", "declared failure",
+)
+
+
+def declared_tags(run):
+    """The tags this run itself declares as a negative, with the note that says so.
+
+    The driver writes `tag|port|request_bytes|response_bytes|note` for every call
+    into `call-index.txt`, so the declaration travels with the run instead of being
+    re-derived from a session file whose name the report does not know.
+    """
+    declared = {}
+    text = read_text(os.path.join(run, "call-index.txt")) or ""
+    for line in text.splitlines():
+        parts = line.split("|")
+        if len(parts) < 5:
+            continue
+        tag = parts[0].strip()
+        note = "|".join(parts[4:]).strip()
+        if any(key in note.lower() for key in DECLARED_NOTE_KEYS):
+            declared[tag] = note
+    return declared
+
+
+def response_body(run, path):
+    """The parsed tool result of one saved response, or None.
+
+    An `ok` response carries a JSON text payload; an error envelope (`-320xx`) has
+    no payload and is not an assertion result, so it is skipped rather than guessed
+    at.
+    """
+    obj = read_json(path)
+    if not isinstance(obj, dict):
+        return None
+    try:
+        text = obj["result"]["content"][0]["text"]
+    except Exception:
+        return None
+    try:
+        body = json.loads(text)
+    except ValueError:
+        return None
+    return body if isinstance(body, dict) else None
+
+
+def assertion_summary(run):
+    """TASK-106 (D-2): total the assertions of every response this run saved, then
+    split the failures by whether the run declared them.
+
+    This is the column the defect that started TASK-106 needed: the ledger already
+    said `scenario_assertion_failed`, but nothing in the report turned that into a
+    number a reader could see. Both totals are recomputed from the raw response
+    files, never from the ledger's own flags.
+    """
+    declared = declared_tags(run)
+    passed = failed = errors = 0
+    responses = 0
+    all_failures = []
+    for path in sorted(glob.glob(os.path.join(run, "*.json"))):
+        if path.endswith(".request.json"):
+            continue
+        body = response_body(run, path)
+        if body is None:
+            continue
+        responses += 1
+        tag = os.path.basename(path)[:-len(".json")]
+        entries = []
+        if "all_passed" in body:
+            passed += int(body.get("passed") or 0)
+            failed += int(body.get("failed") or 0)
+            errors += int(body.get("errors") or 0)
+            for step in body.get("results") or []:
+                if isinstance(step, dict) and step.get("type") == "assert" and step.get("passed") is False:
+                    entries.append("scenario:%s %s %s -> actual %s" % (
+                        step.get("property"), step.get("operator"), step.get("expected"),
+                        step.get("actual")))
+        elif "passed" in body:
+            if body.get("passed"):
+                passed += 1
+            else:
+                failed += 1
+                entries.append("node_state:%s %s %s -> actual %s" % (
+                    body.get("property"), body.get("operator"), body.get("expected"),
+                    body.get("actual")))
+        for what in entries:
+            why = None
+            if "must-fail" in tag:
+                why = "tag carries -must-fail"
+            elif tag in declared:
+                why = "note: %s" % declared[tag]
+            all_failures.append({"tag": tag, "what": what, "declared_because": why})
+    undeclared = [f for f in all_failures if f["declared_because"] is None]
+    return {
+        "responses_scanned": responses,
+        "passed": passed,
+        "failed": failed,
+        "errors": errors,
+        "declared_tags": sorted(declared),
+        "failures": all_failures,
+        "declared_failures": [f for f in all_failures if f["declared_because"] is not None],
+        "undeclared_failures": undeclared,
+        "undeclared_count": len(undeclared),
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description="Per-game report for one run directory.")
     parser.add_argument("run")
@@ -217,6 +337,9 @@ def main():
         summary = ledger_summary(read_json(os.path.join(run, "ledger-%s.json" % name)))
         pairs = capture_pairs(os.path.join(run, "trace-%s.jsonl" % name))
         report["endpoints"][name] = {"ledger": summary, "captures": pairs}
+
+    # --- TASK-106 (D-2): the assertion column, declared versus undeclared --------
+    report["assertions"] = assertion_summary(run)
 
     # --- may this run's pixel column be read as a claim? (TASK-096, D-1) --------
     all_pairs = []
@@ -394,6 +517,37 @@ def main():
             "%s=%d" % (k, summary["args_evidence"][k]) for k in sorted(summary["args_evidence"])) or "<none>"))
         lines.append("* failed: %d, no-effect observed: %d" % (
             len(summary["failed"]), len(summary["ineffective"])))
+        lines.append("")
+
+    # TASK-106 (D-2): the assertion column -- a failure nobody declared must be
+    # readable straight out of the report, not only out of the ledger's flags.
+    aa = report["assertions"]
+    lines.append("## 未声明失败 (undeclared failing assertions)")
+    lines.append("")
+    lines.append("* responses scanned (this run's own `*.json`): **%d**" % aa["responses_scanned"])
+    lines.append("* assertions: **passed %d / failed %d / errors %d**" % (
+        aa["passed"], aa["failed"], aa["errors"]))
+    lines.append("* declared failures (`-must-fail` tag or a note that says so): **%d**%s" % (
+        len(aa["declared_failures"]),
+        (" — " + ", ".join("`%s`" % t for t in aa["declared_tags"])) if aa["declared_tags"] else ""))
+    lines.append("* **未声明失败: %d**" % aa["undeclared_count"])
+    lines.append("")
+    if aa["failures"]:
+        lines.append("| tag | what | declared because |")
+        lines.append("|---|---|---|")
+        for f in aa["failures"]:
+            lines.append("| `%s` | %s | %s |" % (
+                f["tag"], f["what"].replace("|", "\\|"),
+                (f["declared_because"] or "**NOT DECLARED**").replace("|", "\\|")))
+        lines.append("")
+    if aa["undeclared_count"]:
+        lines.append("> **本轮的 %d 条失败断言没有任何声明**：文件名不带 `-must-fail`，会话 note 也没说是边界/注定失败。"
+                     "这类失败必须被当成未覆盖路径或未声明的行为变更处理，而不是「成功。"
+                     "读法见 `modules/mcp_server/docs/reports/MCP-TRACEABILITY.md` §3。" % aa["undeclared_count"])
+        lines.append("")
+    else:
+        lines.append("> 本轮的每一条失败断言都在运行自身里声明过（`-must-fail` 标记或会话 note）。"
+                     "计数器只读运行自己保存的响应文件，不读台账的 flags。")
         lines.append("")
 
     # the pixel proof

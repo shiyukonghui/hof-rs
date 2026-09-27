@@ -122,7 +122,7 @@ editor_open_scene → editor_get_scene_tree(before) → project_read_text_file(b
 1. **清理前文件去掉副本块 == 清理后文件**（逐字节，除场景 `uid` 一行，见 B5）：三款都 **yes**；
 2. **具名节点的序列化块逐字节相同**：9/9、21/21、38/38；
 3. **属性采样（position/size/color/text/visible）前后相同**：4/4、4/4、4/4；
-4. **原会话里的断言仍然通过**：Pong `g05/g18/g21/g22/g26/g27`、Breakout `g05/g12d/g18/g20/g21/g22/g24`、Snake `g04/g06/g08/g13/g14/g15/g17/g18/g19/g22/g25/g26`（含各游戏「按设计失败」的那条断言，比如 Pong 的 `g12`、Breakout 的 `g24`、Snake 的 `g19/g22/g26`）；三款 `facts_complete` 分别为 74/74、89/89、102/102；
+4. **原会话里的断言仍然通过**：Pong `g05/g18/g21/g22/g26/g27`、Breakout `g05/g12d/g18/g20/g21/g22/g24`、Snake `g04/g06/g08/g13/g14/g15/g17/g18/g25/g26`（含各游戏「按设计失败」的那条断言，比如 Pong 的 `g12`、Breakout 的 `g24`、Snake 的 `g26`）；三款 `facts_complete` 分别为 74/74、89/89、102/102。**当时为错报（TASK-105 独立验收 D-1 指出，TASK-106 修正口径）**：本行原先把 Snake 的 `g19/g22` 也列进「仍然通过」，又在同处把它们追认为「按设计失败」；实际 `snake-clean-task097` 的 `g19-turn-down`（`DirectionY` 实得 `-1`）与 `g22-self-collision`（`GameOver` 实得 `false`、`LoseReason` 实得空串）共 3 条失败**没有任何声明**（文件名不带 `-must-fail`、会话 note 是正向意图），该轮自己的 `ledger-game.txt` 已把 seq 19 / 22 标成 `scenario_assertion_failed`，`SNAKE_SELF` 在引擎 stdout 出现 **0 次** —— 自撞判负这条规则当时没有被走到。**TASK-106 重跑后自撞路径已实测覆盖**：`g19` 另起自己的钉板、`g20` 的 `dir` 改为 `-1,0`，`runs\snake\snake-task106-r1` 的 `SNAKE_SELF head=9,10` 出现 1 次、`g19`/`g22` 全部 passed、台账里 `scenario_assertion_failed` 归零；
 5. **运动本身还在**：Snake 的 45 帧移动采样出现两个位置、Pong 的 `Ball` 位置从 `(392,268)` 走到场外、Breakout 的 `BallSpeedY` 由 276 变 -276（挡板弹回）。
 
 ### B4 独立复算（不是转述）

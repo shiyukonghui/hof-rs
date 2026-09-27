@@ -261,16 +261,22 @@
         {"type": "input", "action": "snake_up", "pressed": true},
         {"type": "assert", "node_path": "Main", "property": "DirectionY", "operator": "eq", "expected": -1}
      ]}, "note": "a legal turn is accepted"},
+    {"tag": "g18b-aim-turn-down", "port": "game", "tool": "running_game_execute_gdscript",
+     "arguments": {"code": "var m = get_parent()\nreturn m.ForceTestState(\"8,10|7,10|6,10;dir=1,0;food=0,0\")"},
+     "note": "test hook (TASK-106, D-1): g19 used to inherit g18's dir=0,-1, so snake_down was a 180-degree reversal that TrySetDirection rightly refused and DirectionY stayed -1. g19 now starts from its own board heading right, where down is a legal turn"},
     {"tag": "g19-turn-down", "port": "game", "tool": "running_game_run_test_scenario",
      "arguments": {"steps": [
         {"type": "input", "action": "snake_down", "pressed": true},
         {"type": "wait", "seconds": 0.4},
         {"type": "assert", "node_path": "Main", "property": "DirectionY", "operator": "eq", "expected": 1}
-     ]}, "note": "and the other direction is accepted too"},
+     ]}, "note": "and the other direction is accepted too (from g18b's own board, so the turn is legal rather than a refusal)"},
 
     {"tag": "g20-aim-self", "port": "game", "tool": "running_game_execute_gdscript",
-     "arguments": {"code": "var m = get_parent()\nreturn m.ForceTestState(\"10,10|9,10|8,10|7,10|6,10;dir=1,0;food=0,0\")"},
-     "note": "test hook: the head at 10,10 heading right straight into its own neck at 9,10"},
+     "arguments": {"code": "var m = get_parent()\nreturn m.ForceTestState(\"10,10|9,10|8,10|7,10|6,10;dir=-1,0;food=0,0\")"},
+     "note": "test hook: the head at 10,10 heading LEFT straight into its own neck at 9,10 -- dir=1,0 (the pre-TASK-106 value) walked the head AWAY from the body to 11,10, which is why the engine's stdout carried SNAKE_SELF zero times and g22 failed"},
+    {"tag": "g20b-dump-self-board", "port": "game", "tool": "running_game_execute_gdscript",
+     "arguments": {"code": "return get_parent().Dump()"},
+     "note": "the exact cells the self-collision test is about to step from (D-1 evidence: the aim and the ending are read from the same board)"},
     {"tag": "g21-boundary-unknown-property", "port": "game", "tool": "running_game_assert_node_state",
      "arguments": {"node_path": "Main", "property": "NotAProperty", "operator": "eq", "expected": 1},
      "note": "BOUNDARY CALL: asserting a property that does not exist -- the declared failure path"},
