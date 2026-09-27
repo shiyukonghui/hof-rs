@@ -6687,3 +6687,43 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
     产物不入库，随时可重跑。
   * **引擎未动**：`godot/modules/mcp_server/` 一个字节未改，按铁律 7 未触发两变体重建/十道门/
     accept_m1/引擎 push。
+
+## D167 — TASK-128 用本地 NeoHorse-Jev 标定可玩性阈值（真实服务入口 + state 裁剪 + 只做分离度）
+
+- 日期：2026-09-27（TASK-128，与 TASK-127 并行）
+- 触发问题：TASK-124 的 `agent_thresholds`（0.5 / 2.5）是拍脑袋的先验，厂商明确概率未校准；
+  TASK-125 又实测 `--agent=jev --probe` **不打真实服务**。门需要一个可发现、可留证的真实服务入口，
+  并在我们自己的正负样本上把阈值从"先验"变成"可争论的选择"。
+- 选项：
+  1. 只写文档、沿用先验阈值 —— 否决：实测先验在 20 款修好版上误报 **11/20**（模型把 12 款好游戏判成坏）。
+  2. 只靠 `PLAYTEST_BASE_URL` 环境变量作为唯一入口 —— 否决：可发现性差，TASK-125 已证明人会误把
+     `--probe*` 当真调用。
+  3. **给门加 `--base-url` 与 `--agent-state-budget` 两个显式参数（选中）**，`--probe*` 语义保持不变。
+- 最终选择：选项 3。阈值由 `tools/agent_threshold_calibrate.py` 在 20 正 / 16 负上做双规则联合最小误差扫描，
+  得 `noul_min_p_true = 0.25`（原 0.5）、`score_max_expected = 2.5`（**不变**），
+  `uncalibrated` **保持 true**。
+- 理由：
+  * 实测 Jev **拒绝**超过 2048 token 的 `state`（HTTP 422），20 款里 **15 款**天然超限，模型一次都跑不到；
+    而客户端 `jev_estimate_tokens` 低估服务侧 **2.1–2.4 倍**，故必须有一个"送入模型前裁剪 + 逐项留证"的开关，
+    且预算要压到 800 才安全。客户端自带的 `state_overflow="clip"` 会整块丢掉 `nodes`（= 全部游戏语义），
+    因此被否决。
+  * 分离度实测：`noul.responses_to_input` 是唯一有信号的问句（正类中位 0.4555 / 负类 0.1534），
+    但两类仍重叠；`playable_frame`/`no_render_failure` 几乎完全重叠（坏版本画面照样画对）；
+    `score` **零分离度**（最优扫描仍 13/36 错），所以只动 `noul`，score 维持 2.5 作上界护栏。
+  * 联合最小 3 错 / 36（准确率 91.7%）vs 先验 11 错 / 36（69.4%）；错分逐条点名写进报告 §5.3。
+  * **不做概率标定**：~36 样本上的 ECE 只是噪声，TASK-124 计划里"翻 `uncalibrated` 为 false"这一步
+    明确不执行——这是一条结论，不是遗漏。局限（样本小、每款仅 1 个独立观测、负类只有一种失效模式、
+    state 经过裁剪、模型只看文本）已写入 `tools/playability_controls.json` 的 `fitted_on`/`limitations`。
+- 预期影响与回滚点：
+  * `--probe*` 行为不变：`playtest_agent.py --probe-jev` **33/33 全绿**，回归项
+    `R_scripted_unchanged` / `R_openai_still_available` / `R_jev_factory` 仍 true。
+  * 未改 `projects/` 下任何游戏逻辑；未改 `godot/modules/mcp_server/**` 一个字节
+    → **不触发**两变体重建 / 十道门 / `accept_m1` / push。
+  * 未动模型服务（PID 730 全程存活）、`/opt/jev-venv`、`F:\models\NeoHorse-Jev-4B`、TASK-127 的 8081。
+  * 改动文件：`tools/playability_gate.py`（`--base-url`、`--agent-state-budget`、`trim_state_for_agent`、
+    `state_fingerprint`、`gate["agent"]["service"]`/`state_for_agent`）、`tools/agent_threshold_calibrate.py`（新）、
+    `tools/playability_controls.json`（阈值 + 局限）、本决策记录、`recovery/reports/TASK-128-REPORT.md`。
+  * **回滚点**：`git revert` 对应提交即可回到先验阈值（0.5 / 2.5），门的默认行为
+    （`--agent-state-budget 0`）也完全回到 TASK-128 之前；`runs/` 不入库，随时可重跑。
+  * 并发披露：TASK-127 的提交 `c6138d7` 顺带带走了本次对 `tools/playability_gate.py` 的改动
+    （同一文件被两个并行子代理同时编辑）。
