@@ -430,7 +430,7 @@ F:/moonbit-hof-rs
 > if exist godot-mcp\.git  →  NO-NESTED-GIT
 
 > git log --oneline -5
-38bc1a3 feat(godot-mcp): TASK-128 (D167) - fit the jev playability thresholds on 20 fixed games vs 16 pre-fix negatives, keep uncalibrated=true
+cc57989 feat(godot-mcp): TASK-128 (D167) - fit the jev playability thresholds on 20 fixed games vs 16 pre-fix negatives, keep uncalibrated=true
 5ccbcc3 chore(repo): TASK-125/127 follow-up - weight ignore rules and the parallel-ownership rule
 c6138d7 feat(godot-mcp): TASK-127 - deploy PlayJev 0.8B locally (WSL venv /opt/playjev-venv, port 8081) and add the --agent=playjev image-state backend
 a023eaa docs(godot-mcp): TASK-124 - the report (33/33 dumb-service checks, J1-J9 evidence) and the corrected reproduce commands
@@ -442,7 +442,12 @@ a023eaa docs(godot-mcp): TASK-124 - the report (33/33 dumb-service checks, J1-J9
 我这次对 `playability_gate.py` 的改动（`--base-url` / `--agent-state-budget` / `trim_state_for_agent` /
 `state_fingerprint` / `gate["agent"]["service"]` / `state_for_agent`）**被那个提交一起带走了**
 （已核实：`git show c6138d7:godot-mcp/tools/playability_gate.py | findstr trim_state_for_agent` 命中）。
-我随后单独提交本次剩余产物（`playability_controls.json`、`agent_threshold_calibrate.py`、`DECISIONS.md` D167、本报告）。
+我随后以 `cc57989` 单独提交本次剩余产物（`playability_controls.json`、`agent_threshold_calibrate.py`、
+`DECISIONS.md` D167、本报告）。
+
+> 关于上面这段 `git log`：它是"TASK-128 的实质提交 `cc57989` 及其前序"。本报告随后还有一条
+> `docs(godot-mcp): TASK-128 ...` 的追加提交（用于把最终哈希写准），所以你现在跑 `git log` 时
+> **顶部会多出那一条**，其下才是上面的 `5ccbcc3` 序列 —— 不是历史被改写。
 
 `git status --short`（本次执行期间的观察）：
 
