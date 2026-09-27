@@ -23,4 +23,37 @@
 7. **任务书里的事实必须标注来源等级**：一手（仓库代码/模型卡原文，带路径或 URL）与二手（文章摘要、
    第三方复述）必须区分。TASK-127 实测证明：任务书里两条二手事实（`abstain` 字段、`state.frames`）
    与 `playjev/serve.py` 真实代码不符——**子代理应以代码为准并显式纠正任务书**，这一行为被鼓励，不是抗命。
+8. **多子代理并行必须用 git worktree 分工作区（2026-09-27 用户指示，长期纪律）**
+   * 触发条件：**同一时刻有两个及以上子代理在改本仓文件**。单个子代理跑在主工作区（`F:\moonbit-hof-rs`）没问题。
+   * 建法（每个任务一个分支 + 一个 worktree）：
+     ```
+     git worktree add "F:\moonbit-hof-rs-wt\task129" -b task129
+     ```
+     同一分支**不能**被两个 worktree 同时检出（git 会拒绝），所以"一任务一分支"是硬约束。
+   * **必须处理的坑：被 `.gitignore` 的大目录不会出现在新 worktree 里。** 至少包括：
+     `godot-mcp/godot/`（引擎克隆，自带 `.git`）、`godot-mcp/runs/`、`godot-mcp/dist/`、
+     `godot-mcp/models/`、`godot-mcp/recovery/{transcripts,staging,logs,backup,rebuild/godot}/`、
+     `godot-mcp/projects/*/{.godot,bin,obj,.mono}/`。
+     这些是**运行必需品**（引擎二进制、证据目录、导出产物、权重），所以要在 worktree 里用
+     **目录联接（junction）**指回主工作区，例如（cmd）：
+     ```
+     cmd /c mklink /J "F:\moonbit-hof-rs-wt\task129\godot-mcp\runs"  "F:\moonbit-hof-rs\godot-mcp\runs"
+     ```
+     （`dist`、`models`、`recovery/transcripts` 等同法。）**永远不要**对 `.git` 目录做联接。
+   * **写共享目录的纪律**：`runs/`、`dist/` 通过联接共享——**每个任务只能写自己名下的子目录**
+     （例如 `runs/playability/<task>/`），**不得**直接覆盖别人的目录级产物。
+   * **引擎仓是共享的**：`godot-mcp/godot/` 自带 `.git`，两个 worktree 看到的是**同一个引擎仓**。
+     因此**同一时刻只允许一个任务修改引擎模块**；若确实需要并行改引擎，必须各自 `git clone` 独立的引擎树。
+   * **端口与 GPU 不隔离**：worktree 只隔离**文件**。任务书仍必须**逐个预留唯一端口**、**串行调用模型**、
+     并声明显存预算。
+   * **清理顺序（必须照做）**：①**先删联接**（`rmdir "<wt>\godot-mcp\runs"`，只删链接本身）；
+     ②再 `git worktree remove "<wt>"`；③确认合并后再 `git branch -d task<N>`。
+     ⚠️ **危险性**：`Remove-Item -Recurse` 会**穿过联接去删目标内容**——所以"破坏性命令默认拒绝"这条
+     必须对**联接**特别处理（先删链接、且绝不对联接递归删除）。
+   * **合并时机**：任务在自己分支上提交并只回报告路径；**合并进 `master` 由决策者在验收通过后统一做**，
+     避免并行分支互相纠缠。
+   * 需要时可把上面步骤固化成 `tools/new_worktree.ps1` / `tools/remove_worktree.ps1`（由后续批次按这份规程实现）。
+   * **待办**：本条的 `DECISIONS.md` 条目（编号顺延）**故意留给下一份任务书追加**，以免与正在运行的
+     TASK-129 追加决策条目时抢同一文件（这正是第 6 条"文件所有权"要避免的事）。
+
 
