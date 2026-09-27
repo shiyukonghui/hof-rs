@@ -1,0 +1,6 @@
+# Godot 构建产物：绝不入库
+.godot/
+bin/
+obj/
+.mono/
+*.user

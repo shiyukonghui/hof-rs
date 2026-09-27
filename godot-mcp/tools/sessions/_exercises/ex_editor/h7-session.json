@@ -1,0 +1,600 @@
+{
+  "_comment": "TASK-115 batch h7 -- the H7 family (editor GUI state) against projects/_exercises/ex_editor. Refutes the register's 'structurally unreachable' inference for the reachable half (selection, Output panel, run bar, addon list, test-report bridge, screenshot diff) and measures the boundary the rest really have (the 5 editor_simulate_* tools stay out: they inject input into the EDITOR process, which D59 / GDR-21 excludes). Every write is paired with a content-level read-back: editor_get_selection, editor_get_output_log, editor_execute_gdscript (is_playing_scene), project_get_settings, project_get_filesystem_tree.",
+  "game": "_exercises_ex_editor",
+  "import": true,
+  "calls": [
+    {
+      "tag": "h7-001-editor_open_scene-ok",
+      "port": "editor",
+      "tool": "editor_open_scene",
+      "arguments": { "path": "res://scenes/editor_probe.tscn" },
+      "note": "setup: Node2D root + two ColorRects + a Label + a Control, i.e. addressable subjects for the selection tools"
+    },
+    {
+      "tag": "h7-002-editor_get_scene_tree-ok",
+      "port": "editor",
+      "tool": "editor_get_scene_tree",
+      "arguments": {},
+      "note": "setup read, and the witness that editor_rescan_project_filesystem left the project readable (TASK-115 h7, expect editor_probe.tscn)"
+    },
+    {
+      "tag": "h7-003-editor_execute_gdscript-output",
+      "port": "editor",
+      "tool": "editor_execute_gdscript",
+      "arguments": { "code": "print(\"h7_probe_line\")" },
+      "note": "setup: put a known line in the editor's own Output panel so editor_remove_output_log has something to clear"
+    },
+    {
+      "tag": "h7-004-editor_get_output_log-ok",
+      "port": "editor",
+      "tool": "editor_get_output_log",
+      "arguments": { "max_lines": 200 },
+      "note": "read-back witness: the editor's Output panel is readable in-process (before the clear)"
+    },
+    {
+      "tag": "h7-005-editor_remove_output_log-ok",
+      "port": "editor",
+      "tool": "editor_remove_output_log",
+      "arguments": {},
+      "note": "editor_remove_output_log call 1/5; read back by editor_get_output_log with expect count 0"
+    },
+    {
+      "tag": "h7-006-editor_get_output_log-ok",
+      "port": "editor",
+      "tool": "editor_get_output_log",
+      "arguments": { "max_lines": 200 },
+      "note": "read-back witness: after h7-005 the panel really is empty (TASK-115 h7, expect count 0)"
+    },
+    {
+      "tag": "h7-007-editor_remove_output_log-ok",
+      "port": "editor",
+      "tool": "editor_remove_output_log",
+      "arguments": {},
+      "note": "editor_remove_output_log call 2/5"
+    },
+    {
+      "tag": "h7-008-editor_remove_output_log-ok",
+      "port": "editor",
+      "tool": "editor_remove_output_log",
+      "arguments": {},
+      "note": "editor_remove_output_log call 3/5"
+    },
+    {
+      "tag": "h7-009-editor_remove_output_log-ok",
+      "port": "editor",
+      "tool": "editor_remove_output_log",
+      "arguments": {},
+      "note": "editor_remove_output_log call 4/5"
+    },
+    {
+      "tag": "h7-010-editor_remove_output_log-ok",
+      "port": "editor",
+      "tool": "editor_remove_output_log",
+      "arguments": {},
+      "note": "editor_remove_output_log call 5/5"
+    },
+    {
+      "tag": "h7-011-editor_remove_output_log-probe",
+      "port": "editor",
+      "tool": "editor_remove_output_log",
+      "arguments": { "bogus": 1 },
+      "note": "editor_remove_output_log boundary: out-of-contract argument (the schema is an empty object)"
+    },
+
+    {
+      "tag": "h7-012-editor_set_node_selection-ok",
+      "port": "editor",
+      "tool": "editor_set_node_selection",
+      "arguments": { "node_paths": ["Box"] },
+      "note": "editor_set_node_selection call 1/5; read back by editor_get_selection with expect name Box"
+    },
+    {
+      "tag": "h7-013-editor_get_selection-ok",
+      "port": "editor",
+      "tool": "editor_get_selection",
+      "arguments": {},
+      "note": "read-back witness: Box is the editor's selected node (TASK-115 h7)"
+    },
+    {
+      "tag": "h7-014-editor_set_node_selection-ok",
+      "port": "editor",
+      "tool": "editor_set_node_selection",
+      "arguments": { "node_paths": ["Box2"] },
+      "note": "editor_set_node_selection call 2/5 (mode defaults to replace)"
+    },
+    {
+      "tag": "h7-015-editor_get_selection-ok",
+      "port": "editor",
+      "tool": "editor_get_selection",
+      "arguments": {},
+      "note": "read-back witness: Box2 replaced Box (TASK-115 h7)"
+    },
+    {
+      "tag": "h7-016-editor_set_node_selection-ok",
+      "port": "editor",
+      "tool": "editor_set_node_selection",
+      "arguments": { "node_paths": ["Box", "Box2"] },
+      "note": "editor_set_node_selection call 3/5: two paths in one replace"
+    },
+    {
+      "tag": "h7-017-editor_set_node_selection-ok",
+      "port": "editor",
+      "tool": "editor_set_node_selection",
+      "arguments": { "node_path": "Tag" },
+      "note": "editor_set_node_selection call 4/5: the single-node sugar"
+    },
+    {
+      "tag": "h7-018-editor_set_node_selection-ok",
+      "port": "editor",
+      "tool": "editor_set_node_selection",
+      "arguments": { "node_path": "Panel", "mode": "add" },
+      "note": "editor_set_node_selection call 5/5: mode=add leaves Tag selected and adds Panel"
+    },
+    {
+      "tag": "h7-019-editor_get_selection-ok",
+      "port": "editor",
+      "tool": "editor_get_selection",
+      "arguments": {},
+      "note": "read-back witness: the multi-select really has three nodes (TASK-115 h7, expect count 3)"
+    },
+    {
+      "tag": "h7-020-editor_set_node_selection-probe",
+      "port": "editor",
+      "tool": "editor_set_node_selection",
+      "arguments": { "node_path": "NoSuchNode" },
+      "note": "editor_set_node_selection boundary: node does not exist"
+    },
+
+    {
+      "tag": "h7-021-editor_remove_node_selection-ok",
+      "port": "editor",
+      "tool": "editor_remove_node_selection",
+      "arguments": {},
+      "note": "editor_remove_node_selection call 1/5 (three nodes were selected)"
+    },
+    {
+      "tag": "h7-022-editor_get_selection-ok",
+      "port": "editor",
+      "tool": "editor_get_selection",
+      "arguments": {},
+      "note": "read-back witness: the clear left nothing selected (TASK-115 h7, expect count 0)"
+    },
+    {
+      "tag": "h7-023-editor_set_node_selection-ok",
+      "port": "editor",
+      "tool": "editor_set_node_selection",
+      "arguments": { "node_path": "Box" },
+      "note": "re-select so the next remove_node_selection has a non-empty subject"
+    },
+    {
+      "tag": "h7-024-editor_remove_node_selection-ok",
+      "port": "editor",
+      "tool": "editor_remove_node_selection",
+      "arguments": {},
+      "note": "editor_remove_node_selection call 2/5"
+    },
+    {
+      "tag": "h7-025-editor_set_node_selection-ok",
+      "port": "editor",
+      "tool": "editor_set_node_selection",
+      "arguments": { "node_path": "Box2" },
+      "note": "re-select for the third clear"
+    },
+    {
+      "tag": "h7-026-editor_remove_node_selection-ok",
+      "port": "editor",
+      "tool": "editor_remove_node_selection",
+      "arguments": {},
+      "note": "editor_remove_node_selection call 3/5"
+    },
+    {
+      "tag": "h7-027-editor_set_node_selection-ok",
+      "port": "editor",
+      "tool": "editor_set_node_selection",
+      "arguments": { "node_paths": ["Box", "Box2", "Tag"] },
+      "note": "re-select for the fourth clear"
+    },
+    {
+      "tag": "h7-028-editor_remove_node_selection-ok",
+      "port": "editor",
+      "tool": "editor_remove_node_selection",
+      "arguments": {},
+      "note": "editor_remove_node_selection call 4/5"
+    },
+    {
+      "tag": "h7-029-editor_remove_node_selection-ok",
+      "port": "editor",
+      "tool": "editor_remove_node_selection",
+      "arguments": {},
+      "note": "editor_remove_node_selection call 5/5 (nothing selected: cleared 0 is the honest answer, not a failure)"
+    },
+    {
+      "tag": "h7-030-editor_remove_node_selection-probe",
+      "port": "editor",
+      "tool": "editor_remove_node_selection",
+      "arguments": { "bogus": 1 },
+      "note": "editor_remove_node_selection boundary: out-of-contract argument"
+    },
+
+    {
+      "tag": "h7-031-editor_reload_plugin-ok",
+      "port": "editor",
+      "tool": "editor_reload_plugin",
+      "arguments": {},
+      "note": "editor_reload_plugin call 1/5; project.godot enables addons/probe_plugin so there IS a plugin to disable+enable"
+    },
+    {
+      "tag": "h7-032-editor_reload_plugin-ok",
+      "port": "editor",
+      "tool": "editor_reload_plugin",
+      "arguments": {},
+      "note": "editor_reload_plugin call 2/5"
+    },
+    {
+      "tag": "h7-033-editor_reload_plugin-ok",
+      "port": "editor",
+      "tool": "editor_reload_plugin",
+      "arguments": {},
+      "note": "editor_reload_plugin call 3/5"
+    },
+    {
+      "tag": "h7-034-editor_reload_plugin-ok",
+      "port": "editor",
+      "tool": "editor_reload_plugin",
+      "arguments": {},
+      "note": "editor_reload_plugin call 4/5"
+    },
+    {
+      "tag": "h7-035-editor_reload_plugin-ok",
+      "port": "editor",
+      "tool": "editor_reload_plugin",
+      "arguments": {},
+      "note": "editor_reload_plugin call 5/5"
+    },
+    {
+      "tag": "h7-036-editor_reload_plugin-probe",
+      "port": "editor",
+      "tool": "editor_reload_plugin",
+      "arguments": { "bogus": 1 },
+      "note": "editor_reload_plugin boundary: out-of-contract argument"
+    },
+    {
+      "tag": "h7-037-project_get_settings-ok",
+      "port": "editor",
+      "tool": "project_get_settings",
+      "arguments": { "prefix": "editor_plugins/" },
+      "note": "read-back witness: the addon editor_reload_plugin acted on is the one ProjectSettings really has enabled (expect role_plugin path)"
+    },
+
+    {
+      "tag": "h7-038-editor_rescan_project_filesystem-ok",
+      "port": "editor",
+      "tool": "editor_rescan_project_filesystem",
+      "arguments": {},
+      "note": "editor_rescan_project_filesystem call 1/5; the scan is asynchronous, so the effect is read back with project_get_filesystem_tree"
+    },
+    {
+      "tag": "h7-039-editor_rescan_project_filesystem-ok",
+      "port": "editor",
+      "tool": "editor_rescan_project_filesystem",
+      "arguments": {},
+      "note": "editor_rescan_project_filesystem call 2/5"
+    },
+    {
+      "tag": "h7-040-editor_rescan_project_filesystem-ok",
+      "port": "editor",
+      "tool": "editor_rescan_project_filesystem",
+      "arguments": {},
+      "note": "editor_rescan_project_filesystem call 3/5"
+    },
+    {
+      "tag": "h7-041-editor_rescan_project_filesystem-ok",
+      "port": "editor",
+      "tool": "editor_rescan_project_filesystem",
+      "arguments": {},
+      "note": "editor_rescan_project_filesystem call 4/5"
+    },
+    {
+      "tag": "h7-042-editor_rescan_project_filesystem-ok",
+      "port": "editor",
+      "tool": "editor_rescan_project_filesystem",
+      "arguments": {},
+      "note": "editor_rescan_project_filesystem call 5/5"
+    },
+    {
+      "tag": "h7-043-editor_rescan_project_filesystem-probe",
+      "port": "editor",
+      "tool": "editor_rescan_project_filesystem",
+      "arguments": { "bogus": 1 },
+      "note": "editor_rescan_project_filesystem boundary: out-of-contract argument"
+    },
+
+    {
+      "tag": "h7-044-editor_get_test_report-ok",
+      "port": "editor",
+      "tool": "editor_get_test_report",
+      "arguments": {},
+      "note": "editor_get_test_report call 1/5: the bridge file is absent/is honestly empty, so the answer is source=editor_process with no_results=true"
+    },
+    {
+      "tag": "h7-045-editor_get_test_report-ok",
+      "port": "editor",
+      "tool": "editor_get_test_report",
+      "arguments": { "clear": false },
+      "note": "editor_get_test_report call 2/5"
+    },
+    {
+      "tag": "h7-046-editor_get_test_report-ok",
+      "port": "editor",
+      "tool": "editor_get_test_report",
+      "arguments": { "clear": true },
+      "note": "editor_get_test_report call 3/5: the opt-in clear arm"
+    },
+    {
+      "tag": "h7-047-editor_get_test_report-ok",
+      "port": "editor",
+      "tool": "editor_get_test_report",
+      "arguments": {},
+      "note": "editor_get_test_report call 4/5"
+    },
+    {
+      "tag": "h7-048-editor_get_test_report-ok",
+      "port": "editor",
+      "tool": "editor_get_test_report",
+      "arguments": {},
+      "note": "editor_get_test_report call 5/5"
+    },
+    {
+      "tag": "h7-049-editor_get_test_report-probe",
+      "port": "editor",
+      "tool": "editor_get_test_report",
+      "arguments": { "clear": "yes" },
+      "note": "editor_get_test_report boundary: clear is typed boolean, not string"
+    },
+
+    {
+      "tag": "h7-050-editor_analyze_screenshot_diff-ok",
+      "port": "editor",
+      "tool": "editor_analyze_screenshot_diff",
+      "arguments": { "image_a": "res://assets/a.png", "image_b": "res://assets/a.png" },
+      "note": "editor_analyze_screenshot_diff call 1/5: identical images -> changed_pixels 0"
+    },
+    {
+      "tag": "h7-051-editor_analyze_screenshot_diff-ok",
+      "port": "editor",
+      "tool": "editor_analyze_screenshot_diff",
+      "arguments": { "image_a": "res://assets/a.png", "image_b": "res://assets/b.png" },
+      "note": "editor_analyze_screenshot_diff call 2/5: two 8x8 PNGs that really differ"
+    },
+    {
+      "tag": "h7-052-editor_analyze_screenshot_diff-ok",
+      "port": "editor",
+      "tool": "editor_analyze_screenshot_diff",
+      "arguments": { "image_a": "res://assets/a.png", "image_b": "res://assets/b.png", "threshold": 0 },
+      "note": "editor_analyze_screenshot_diff call 3/5: threshold 0 is the inclusive end"
+    },
+    {
+      "tag": "h7-053-editor_analyze_screenshot_diff-ok",
+      "port": "editor",
+      "tool": "editor_analyze_screenshot_diff",
+      "arguments": { "image_a": "res://assets/b.png", "image_b": "res://assets/a.png" },
+      "note": "editor_analyze_screenshot_diff call 4/5: the arguments swapped, same measurement"
+    },
+    {
+      "tag": "h7-054-editor_analyze_screenshot_diff-ok",
+      "port": "editor",
+      "tool": "editor_analyze_screenshot_diff",
+      "arguments": { "image_a": "res://assets/a.png", "image_b": "res://assets/a.png", "threshold": 255 },
+      "note": "editor_analyze_screenshot_diff call 5/5: threshold 255 is the exclusive end"
+    },
+    {
+      "tag": "h7-055-editor_analyze_screenshot_diff-probe-missing",
+      "port": "editor",
+      "tool": "editor_analyze_screenshot_diff",
+      "arguments": { "image_a": "res://assets/no_such_image.png", "image_b": "res://assets/a.png" },
+      "note": "editor_analyze_screenshot_diff boundary: the named image does not exist"
+    },
+    {
+      "tag": "h7-056-editor_analyze_screenshot_diff-probe-size",
+      "port": "editor",
+      "tool": "editor_analyze_screenshot_diff",
+      "arguments": { "image_a": "res://assets/a.png", "image_b": "res://assets/c16.png" },
+      "note": "editor_analyze_screenshot_diff boundary: 8x8 against 16x16 is a size mismatch"
+    },
+    {
+      "tag": "h7-057-editor_analyze_screenshot_diff-probe-threshold",
+      "port": "editor",
+      "tool": "editor_analyze_screenshot_diff",
+      "arguments": { "image_a": "res://assets/a.png", "image_b": "res://assets/b.png", "threshold": 300 },
+      "note": "editor_analyze_screenshot_diff boundary: threshold outside 0..255"
+    },
+
+    {
+      "tag": "h7-058-editor_play_scene-ok",
+      "port": "editor",
+      "tool": "editor_play_scene",
+      "arguments": { "mode": "main", "headless": true },
+      "note": "editor_play_scene call 1/5: starts the editor's own scene player (a child process); the run bar state is read back by editor_execute_gdscript is_playing_scene"
+    },
+    { "sleep_ms": 5000, "port": "editor", "note": "let the game child start and the run bar switch to the playing state" },
+    {
+      "tag": "h7-059-editor_execute_gdscript-playing",
+      "port": "editor",
+      "tool": "editor_execute_gdscript",
+      "arguments": { "code": "return EditorInterface.is_playing_scene()" },
+      "note": "read-back witness: the editor's own run bar really reports playing (TASK-115 h7)"
+    },
+    {
+      "tag": "h7-060-editor_stop_scene-ok",
+      "port": "editor",
+      "tool": "editor_stop_scene",
+      "arguments": {},
+      "note": "editor_stop_scene call 1/5"
+    },
+    { "sleep_ms": 2000, "port": "editor", "note": "let the child process really die" },
+    {
+      "tag": "h7-061-editor_execute_gdscript-stopped",
+      "port": "editor",
+      "tool": "editor_execute_gdscript",
+      "arguments": { "code": "return EditorInterface.is_playing_scene()" },
+      "note": "read-back witness: the run bar reports not playing again (TASK-115 h7)"
+    },
+    {
+      "tag": "h7-062-editor_play_scene-ok",
+      "port": "editor",
+      "tool": "editor_play_scene",
+      "arguments": { "mode": "main", "headless": true },
+      "note": "editor_play_scene call 2/5"
+    },
+    { "sleep_ms": 4000, "port": "editor", "note": "let the second game child start" },
+    {
+      "tag": "h7-063-editor_stop_scene-ok",
+      "port": "editor",
+      "tool": "editor_stop_scene",
+      "arguments": {},
+      "note": "editor_stop_scene call 2/5"
+    },
+    { "sleep_ms": 2000, "port": "editor", "note": "let the child die" },
+    {
+      "tag": "h7-064-editor_play_scene-ok",
+      "port": "editor",
+      "tool": "editor_play_scene",
+      "arguments": { "mode": "current", "headless": true },
+      "note": "editor_play_scene call 3/5: mode=current plays the scene the editor has open"
+    },
+    { "sleep_ms": 4000, "port": "editor", "note": "let the third game child start" },
+    {
+      "tag": "h7-065-editor_stop_scene-ok",
+      "port": "editor",
+      "tool": "editor_stop_scene",
+      "arguments": {},
+      "note": "editor_stop_scene call 3/5"
+    },
+    { "sleep_ms": 2000, "port": "editor", "note": "let the child die" },
+    {
+      "tag": "h7-066-editor_play_scene-ok",
+      "port": "editor",
+      "tool": "editor_play_scene",
+      "arguments": { "mode": "res://scenes/editor_probe.tscn", "headless": true },
+      "note": "editor_play_scene call 4/5: an explicit project scene path"
+    },
+    { "sleep_ms": 4000, "port": "editor", "note": "let the fourth game child start" },
+    {
+      "tag": "h7-067-editor_stop_scene-ok",
+      "port": "editor",
+      "tool": "editor_stop_scene",
+      "arguments": {},
+      "note": "editor_stop_scene call 4/5"
+    },
+    { "sleep_ms": 2000, "port": "editor", "note": "let the child die" },
+    {
+      "tag": "h7-068-editor_play_scene-ok",
+      "port": "editor",
+      "tool": "editor_play_scene",
+      "arguments": { "mode": "main", "headless": true, "mcp_port": 9899 },
+      "note": "editor_play_scene call 5/5: an explicitly named free port"
+    },
+    { "sleep_ms": 4000, "port": "editor", "note": "let the fifth game child start" },
+    {
+      "tag": "h7-069-editor_stop_scene-ok",
+      "port": "editor",
+      "tool": "editor_stop_scene",
+      "arguments": {},
+      "note": "editor_stop_scene call 5/5"
+    },
+    { "sleep_ms": 2000, "port": "editor", "note": "let the child die" },
+    {
+      "tag": "h7-070-editor_stop_scene-probe-nothing",
+      "port": "editor",
+      "tool": "editor_stop_scene",
+      "arguments": {},
+      "note": "editor_stop_scene with nothing playing: stopped=false is the documented honest answer"
+    },
+    {
+      "tag": "h7-071-editor_stop_scene-probe-arg",
+      "port": "editor",
+      "tool": "editor_stop_scene",
+      "arguments": { "bogus": 1 },
+      "note": "editor_stop_scene boundary: out-of-contract argument"
+    },
+    {
+      "tag": "h7-072-editor_play_scene-probe-path",
+      "port": "editor",
+      "tool": "editor_play_scene",
+      "arguments": { "mode": "res://scenes/no_such_scene.tscn" },
+      "note": "editor_play_scene boundary: the named scene does not exist (nothing is started)"
+    },
+    {
+      "tag": "h7-073-editor_play_scene-probe-port",
+      "port": "editor",
+      "tool": "editor_play_scene",
+      "arguments": { "mode": "main", "mcp_port": 0 },
+      "note": "editor_play_scene boundary: mcp_port 0 is outside 1..65535 (and 0 is not the way to ask for the auto choice)"
+    },
+
+    {
+      "tag": "h7-074-editor_set_auto_dismiss_dialogs-probe-1",
+      "port": "editor",
+      "tool": "editor_set_auto_dismiss_dialogs",
+      "arguments": { "enabled": true },
+      "note": "editor_set_auto_dismiss_dialogs: the engine has no process-wide auto-dismiss knob, so every well-formed call is the honest -32000 (this is a boundary, by design)"
+    },
+    {
+      "tag": "h7-075-editor_set_auto_dismiss_dialogs-probe-2",
+      "port": "editor",
+      "tool": "editor_set_auto_dismiss_dialogs",
+      "arguments": { "enabled": false },
+      "note": "editor_set_auto_dismiss_dialogs 2/5"
+    },
+    {
+      "tag": "h7-076-editor_set_auto_dismiss_dialogs-probe-3",
+      "port": "editor",
+      "tool": "editor_set_auto_dismiss_dialogs",
+      "arguments": { "enabled": true },
+      "note": "editor_set_auto_dismiss_dialogs 3/5"
+    },
+    {
+      "tag": "h7-077-editor_set_auto_dismiss_dialogs-probe-4",
+      "port": "editor",
+      "tool": "editor_set_auto_dismiss_dialogs",
+      "arguments": { "enabled": false },
+      "note": "editor_set_auto_dismiss_dialogs 4/5"
+    },
+    {
+      "tag": "h7-078-editor_set_auto_dismiss_dialogs-probe-5",
+      "port": "editor",
+      "tool": "editor_set_auto_dismiss_dialogs",
+      "arguments": { "enabled": true },
+      "note": "editor_set_auto_dismiss_dialogs 5/5"
+    },
+    {
+      "tag": "h7-079-editor_set_auto_dismiss_dialogs-probe-missing",
+      "port": "editor",
+      "tool": "editor_set_auto_dismiss_dialogs",
+      "arguments": {},
+      "note": "editor_set_auto_dismiss_dialogs boundary: the required argument is missing"
+    },
+    {
+      "tag": "h7-080-editor_set_auto_dismiss_dialogs-probe-type",
+      "port": "editor",
+      "tool": "editor_set_auto_dismiss_dialogs",
+      "arguments": { "enabled": "yes" },
+      "note": "editor_set_auto_dismiss_dialogs boundary: enabled is typed boolean, not string"
+    },
+
+    {
+      "tag": "h7-081-editor_get_selection-ok",
+      "port": "editor",
+      "tool": "editor_get_selection",
+      "arguments": {},
+      "note": "final read-back: nothing is selected after the clear batch (TASK-115 h7)"
+    },
+    {
+      "tag": "h7-082-project_get_filesystem_tree-ok",
+      "port": "editor",
+      "tool": "project_get_filesystem_tree",
+      "arguments": {},
+      "note": "final read-back: the project the rescan swept is still fully listed (TASK-115 h7)"
+    }
+  ]
+}

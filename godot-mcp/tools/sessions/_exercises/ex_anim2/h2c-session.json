@@ -1,0 +1,113 @@
+{
+  "_comment": "TASK-115 batch h2c -- the third TASK-113 downgraded witness: editor_remove_animation. Its declared witness (editor_list_animations) only existed BEFORE the removals in h2b-task111, so no payload could show the absence. Here the list is read AFTER the removals, which is what makes the content-level check possible: expect the subject anchor (the same AnimationPlayer) and expect_absent the five names that were really removed.",
+  "game": "_exercises\\ex_anim2",
+  "import": true,
+  "calls": [
+    {
+      "tag": "h2c-001-editor_open_scene-ok",
+      "port": "editor",
+      "tool": "editor_open_scene",
+      "arguments": { "path": "res://scenes/anim.tscn" },
+      "note": "setup: Node2D root + AnimationPlayer with a default library"
+    },
+    {
+      "tag": "h2c-002-editor_create_animation-ok",
+      "port": "editor",
+      "tool": "editor_create_animation",
+      "arguments": { "node_path": "Player", "name": "DelA", "length": 1.0 },
+      "note": "the first animation this batch removes"
+    },
+    {
+      "tag": "h2c-003-editor_create_animation-ok",
+      "port": "editor",
+      "tool": "editor_create_animation",
+      "arguments": { "node_path": "Player", "name": "DelB", "length": 1.0 },
+      "note": "created only to be removed"
+    },
+    {
+      "tag": "h2c-004-editor_create_animation-ok",
+      "port": "editor",
+      "tool": "editor_create_animation",
+      "arguments": { "node_path": "Player", "name": "DelC", "length": 1.0 },
+      "note": "created only to be removed"
+    },
+    {
+      "tag": "h2c-005-editor_create_animation-ok",
+      "port": "editor",
+      "tool": "editor_create_animation",
+      "arguments": { "node_path": "Player", "name": "DelD", "length": 1.0 },
+      "note": "created only to be removed"
+    },
+    {
+      "tag": "h2c-006-editor_create_animation-ok",
+      "port": "editor",
+      "tool": "editor_create_animation",
+      "arguments": { "node_path": "Player", "name": "DelE", "length": 1.0 },
+      "note": "created only to be removed"
+    },
+    {
+      "tag": "h2c-007-editor_list_animations-before",
+      "port": "editor",
+      "tool": "editor_list_animations",
+      "arguments": { "node_path": "Player" },
+      "note": "setup read: the five names really are in the library before the removals"
+    },
+
+    {
+      "tag": "h2c-008-editor_remove_animation-ok",
+      "port": "editor",
+      "tool": "editor_remove_animation",
+      "arguments": { "node_path": "Player", "name": "DelA" },
+      "note": "editor_remove_animation call 1/5"
+    },
+    {
+      "tag": "h2c-009-editor_remove_animation-ok",
+      "port": "editor",
+      "tool": "editor_remove_animation",
+      "arguments": { "node_path": "Player", "name": "DelB" },
+      "note": "editor_remove_animation call 2/5"
+    },
+    {
+      "tag": "h2c-010-editor_remove_animation-ok",
+      "port": "editor",
+      "tool": "editor_remove_animation",
+      "arguments": { "node_path": "Player", "name": "DelC" },
+      "note": "editor_remove_animation call 3/5"
+    },
+    {
+      "tag": "h2c-011-editor_remove_animation-ok",
+      "port": "editor",
+      "tool": "editor_remove_animation",
+      "arguments": { "node_path": "Player", "name": "DelD" },
+      "note": "editor_remove_animation call 4/5"
+    },
+    {
+      "tag": "h2c-012-editor_remove_animation-ok",
+      "port": "editor",
+      "tool": "editor_remove_animation",
+      "arguments": { "node_path": "Player", "name": "DelE" },
+      "note": "editor_remove_animation call 5/5"
+    },
+    {
+      "tag": "h2c-013-editor_remove_animation-probe",
+      "port": "editor",
+      "tool": "editor_remove_animation",
+      "arguments": { "node_path": "Player", "name": "DelA" },
+      "note": "editor_remove_animation boundary: the animation is already gone"
+    },
+    {
+      "tag": "h2c-014-editor_list_animations-after",
+      "port": "editor",
+      "tool": "editor_list_animations",
+      "arguments": { "node_path": "Player" },
+      "note": "read-back witness: same AnimationPlayer, and none of the five removed names is in the library any more (TASK-115 h2c)"
+    },
+    {
+      "tag": "h2c-015-editor_list_animations-after2",
+      "port": "editor",
+      "tool": "editor_list_animations",
+      "arguments": { "node_path": "Player" },
+      "note": "second read of the same subject, so the witness search always has a qualifying payload"
+    }
+  ]
+}

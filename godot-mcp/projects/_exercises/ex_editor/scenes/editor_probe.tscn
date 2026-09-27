@@ -1,0 +1,30 @@
+[gd_scene format=3]
+
+[node name="Probe" type="Node2D"]
+
+[node name="Box" type="ColorRect" parent="."]
+offset_left = 40.0
+offset_top = 40.0
+offset_right = 140.0
+offset_bottom = 140.0
+color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="Box2" type="ColorRect" parent="."]
+offset_left = 180.0
+offset_top = 40.0
+offset_right = 280.0
+offset_bottom = 140.0
+color = Color(0.2, 0.9, 0.3, 1)
+
+[node name="Tag" type="Label" parent="."]
+offset_left = 40.0
+offset_top = 180.0
+offset_right = 300.0
+offset_bottom = 220.0
+text = "ex_editor probe"
+
+[node name="Panel" type="Control" parent="."]
+offset_left = 40.0
+offset_top = 240.0
+offset_right = 240.0
+offset_bottom = 340.0

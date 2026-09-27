@@ -733,12 +733,6 @@
       ]
     },
     {
-      "tool": "editor_remove_animation",
-      "run": "runs/_exercises/ex_anim2/h2b-task111",
-      "witness_tool": "editor_list_animations",
-      "why": "读回动画列表，被删的动画不在了"
-    },
-    {
       "tool": "editor_create_animation_tree",
       "run": "runs/_exercises/ex_anim2/h2b-task111",
       "witness_tool": "editor_get_animation_tree_structure",
@@ -807,6 +801,16 @@
       "expect": [
         "parameters/Walk/backward"
       ]
+    }
+  ],
+  "readback_superseded": [
+    {
+      "tool": "editor_remove_animation",
+      "run": "runs/_exercises/ex_anim2/h2b-task111",
+      "witness_tool": "editor_list_animations",
+      "why": "TASK-112's declaration: 读回动画列表，被删的动画不在了",
+      "superseded_by": "tools/sessions/_exercises/ex_anim2/h2c-manifest.json",
+      "superseded_reason": "TASK-113 item C refused it (no content-level expect). TASK-115 measured WHY: in h2b-task111 every editor_list_animations call precedes the removals, so no payload could carry the absence. The replacement reads the same AnimationPlayer AFTER the removals and declares the five removed names as expect_absent. Kept here for audit; not a live declaration."
     }
   ]
 }

@@ -1,18 +1,18 @@
 {
-  "generated_utc": "2026-09-27T03:45:32Z",
+  "generated_utc": "2026-09-27T04:06:54Z",
   "mode": "all-runs",
   "root": "F:\\moonbit-hof-rs\\godot-mcp",
   "runs_dir": "runs",
   "excludes": [],
   "corpus": {
-    "trace_files": 172,
-    "run_dirs": 104,
-    "calls": 8471,
+    "trace_files": 177,
+    "run_dirs": 109,
+    "calls": 8665,
     "malformed_lines": 0,
-    "ok": 7866,
-    "failed": 605,
-    "distinct_tools": 159,
-    "sidecars_verified": 273
+    "ok": 8027,
+    "failed": 638,
+    "distinct_tools": 169,
+    "sidecars_verified": 276
   },
   "fingerprints": {
     "godot\\modules\\mcp_server\\docs\\tools_list.renamed.json": {
@@ -29,20 +29,20 @@
     }
   },
   "buckets": {
-    ">=5": 159,
-    "0": 18
+    ">=5": 169,
+    "0": 8
   },
   "status_counts": {
-    "达标": 104,
-    "计数达标缺证据": 55,
-    "未达(0)": 18
+    "达标": 106,
+    "计数达标缺证据": 63,
+    "未达(0)": 8
   },
   "evidence_tier_counts": {
-    "readback": 89,
+    "readback": 106,
     "file_effect": 24,
     "pixel_effect": 34,
-    "no_calls": 18,
-    "count_only": 12
+    "count_only": 5,
+    "no_calls": 8
   },
   "evidence_tier_order": [
     "pixel_effect",
@@ -52,8 +52,8 @@
     "no_calls"
   ],
   "readback_declarations": {
-    "declared": 38,
-    "verified": 33,
+    "declared": 50,
+    "verified": 48,
     "rejected": [
       {
         "tool": "editor_add_gridmap",
@@ -70,34 +70,10 @@
         "why": "读回同一节点的连接表，连接真的在里面",
         "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
         "reason": "no `ok=true` substantive call of `editor_list_signal_connections` in that run"
-      },
-      {
-        "tool": "editor_remove_animation",
-        "run": "runs/_exercises/ex_anim2/h2b-task111",
-        "witness_tool": "editor_list_animations",
-        "why": "读回动画列表，被删的动画不在了",
-        "declared_in": "tools/sessions/_exercises/ex_anim/h2-manifest.json",
-        "reason": "no content-level `expect`/`expect_absent` declared: the witness would only prove that a read call happened (TASK-113 item C requires the written value, or the removal it addresses, to be readable back)"
-      },
-      {
-        "tool": "editor_set_control_theme",
-        "run": "runs/_exercises/ex_write5/c4-v5-task111",
-        "witness_tool": "editor_get_node_properties",
-        "why": "读回同一个 Control 的 theme 属性（不是工具自己响应里的 applied:true）",
-        "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
-        "reason": "no content-level `expect`/`expect_absent` declared: the witness would only prove that a read call happened (TASK-113 item C requires the written value, or the removal it addresses, to be readable back)"
-      },
-      {
-        "tool": "editor_set_node_script",
-        "run": "runs/_exercises/ex_write5/c4-v5-task111",
-        "witness_tool": "editor_get_node_properties",
-        "why": "读回被写节点的 script 属性（不是工具自己响应里的 attached:true）",
-        "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
-        "reason": "no content-level `expect`/`expect_absent` declared: the witness would only prove that a read call happened (TASK-113 item C requires the written value, or the removal it addresses, to be readable back)"
       }
     ],
-    "content_checked": 33,
-    "declared_with_expect": 33,
+    "content_checked": 48,
+    "declared_with_expect": 48,
     "verified_by_tool": {
       "editor_add_animation_track": {
         "witness_tool": "editor_get_animation_info",
@@ -143,6 +119,19 @@
         "declared_in": "tools/sessions/_exercises/ex_audio/h5-manifest.json",
         "expect": [
           "AudioStreamPlayer2D"
+        ],
+        "expect_absent": [],
+        "expect_matched": true
+      },
+      "editor_add_mesh_instance": {
+        "witness_tool": "editor_get_scene_tree",
+        "run": "runs/_exercises/ex_3d/h1b2-task115",
+        "witness_seq": 11,
+        "why": "the MeshInstance3D the tool created is in the edited scene tree under the exact name it was given",
+        "declared_in": "tools/sessions/_exercises/ex_3d/h1b-manifest.json",
+        "expect": [
+          "\"name\":\"N1\"",
+          "\"type\":\"MeshInstance3D\""
         ],
         "expect_absent": [],
         "expect_matched": true
@@ -243,6 +232,75 @@
         "expect_absent": [],
         "expect_matched": true
       },
+      "editor_play_scene": {
+        "witness_tool": "editor_execute_gdscript",
+        "run": "runs/_exercises/ex_editor/h7-task115",
+        "witness_seq": 59,
+        "why": "the editor's own run bar reports playing after the tool answered playing:true, and reports not playing after the matching stop",
+        "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
+        "expect": [
+          "\"result\":true"
+        ],
+        "expect_absent": [],
+        "expect_matched": true
+      },
+      "editor_reload_plugin": {
+        "witness_tool": "project_get_settings",
+        "run": "runs/_exercises/ex_editor/h7-task115",
+        "witness_seq": 37,
+        "why": "the addon the tool disabled and enabled again is the one ProjectSettings really lists as enabled",
+        "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
+        "expect": [
+          "res://addons/probe_plugin/plugin.cfg"
+        ],
+        "expect_absent": [],
+        "expect_matched": true
+      },
+      "editor_remove_animation": {
+        "witness_tool": "editor_list_animations",
+        "run": "runs/_exercises/ex_anim2/h2c-task115",
+        "witness_seq": 14,
+        "why": "the same AnimationPlayer is read back after the removals, and none of the five names this run created and removed is in the library any more (the run's own earlier read, before the removals, is skipped because it still holds them)",
+        "declared_in": "tools/sessions/_exercises/ex_anim2/h2c-manifest.json",
+        "expect": [
+          "\"node_path\":\"Player\""
+        ],
+        "expect_absent": [
+          "DelA",
+          "DelB",
+          "DelC",
+          "DelD",
+          "DelE"
+        ],
+        "expect_matched": true
+      },
+      "editor_remove_node_selection": {
+        "witness_tool": "editor_get_selection",
+        "run": "runs/_exercises/ex_editor/h7-task115",
+        "witness_seq": 22,
+        "why": "after the clear the editor's own EditorSelection really is empty, while the same reader had answered a non-empty list earlier in the run",
+        "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
+        "expect": [
+          "\"count\":0",
+          "\"nodes\":[]"
+        ],
+        "expect_absent": [],
+        "expect_matched": true
+      },
+      "editor_remove_output_log": {
+        "witness_tool": "editor_get_output_log",
+        "run": "runs/_exercises/ex_editor/h7-task115",
+        "witness_seq": 6,
+        "why": "the Output panel of THIS editor process is readable in-process, and after the clear the engine's own log no longer holds the startup lines it held before it (count 10 -> 1 empty line)",
+        "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
+        "expect": [
+          "\"in_process\":true"
+        ],
+        "expect_absent": [
+          "Godot Engine v4.8.dev"
+        ],
+        "expect_matched": true
+      },
       "editor_remove_state_machine_state": {
         "witness_tool": "editor_get_animation_tree_structure",
         "run": "runs/_exercises/ex_anim2/h2b-task111",
@@ -280,6 +338,18 @@
         "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
         "expect": [
           "\"name\":\"Ren1\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true
+      },
+      "editor_rescan_project_filesystem": {
+        "witness_tool": "project_get_filesystem_tree",
+        "run": "runs/_exercises/ex_editor/h7-task115",
+        "witness_seq": 82,
+        "why": "after the rescan the project's own filesystem tree still answers with the scene it swept",
+        "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
+        "expect": [
+          "editor_probe.tscn"
         ],
         "expect_absent": [],
         "expect_matched": true
@@ -333,6 +403,30 @@
         "expect_absent": [],
         "expect_matched": true
       },
+      "editor_set_control_theme": {
+        "witness_tool": "editor_execute_gdscript",
+        "run": "runs/_exercises/ex_write5/c4b-task115",
+        "witness_seq": 19,
+        "why": "the Control the tool named really carries that theme: the engine's own Control.theme.resource_path answers it",
+        "declared_in": "tools/sessions/_exercises/ex_write5/c4b-manifest.json",
+        "expect": [
+          "T:res://themes/c4b.tres"
+        ],
+        "expect_absent": [],
+        "expect_matched": true
+      },
+      "editor_set_material_3d": {
+        "witness_tool": "editor_execute_gdscript",
+        "run": "runs/_exercises/ex_3d/h1b2-task115",
+        "witness_seq": 18,
+        "why": "the engine's own MeshInstance3D::get_surface_override_material(0) answers with the material this run assigned",
+        "declared_in": "tools/sessions/_exercises/ex_3d/h1b-manifest.json",
+        "expect": [
+          "M:res://assets/mat3d_b.tres"
+        ],
+        "expect_absent": [],
+        "expect_matched": true
+      },
       "editor_set_navigation_layers": {
         "witness_tool": "editor_get_navigation_info",
         "run": "runs/_exercises/ex_nav/h4-task113",
@@ -353,6 +447,31 @@
         "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
         "expect": [
           "\"ex_host\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true
+      },
+      "editor_set_node_script": {
+        "witness_tool": "editor_execute_gdscript",
+        "run": "runs/_exercises/ex_write5/c4b-task115",
+        "witness_seq": 12,
+        "why": "the node the tool named really carries that script: the engine's own Node.get_script().resource_path answers it (editor_get_node_properties cannot answer 'script' by name at all - measured -32001 in c4-v5-task111 seq 141)",
+        "declared_in": "tools/sessions/_exercises/ex_write5/c4b-manifest.json",
+        "expect": [
+          "S:res://src/exc4b.gd"
+        ],
+        "expect_absent": [],
+        "expect_matched": true
+      },
+      "editor_set_node_selection": {
+        "witness_tool": "editor_get_selection",
+        "run": "runs/_exercises/ex_editor/h7-task115",
+        "witness_seq": 13,
+        "why": "the editor's own EditorSelection really answers with the node the tool selected",
+        "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
+        "expect": [
+          "\"name\":\"Box\"",
+          "\"type\":\"ColorRect\""
         ],
         "expect_absent": [],
         "expect_matched": true
@@ -417,6 +536,30 @@
         "expect_absent": [],
         "expect_matched": true
       },
+      "editor_setup_camera_3d": {
+        "witness_tool": "editor_execute_gdscript",
+        "run": "runs/_exercises/ex_3d/h1b2-task115",
+        "witness_seq": 25,
+        "why": "the node the tool created under the named parent really is a Camera3D",
+        "declared_in": "tools/sessions/_exercises/ex_3d/h1b-manifest.json",
+        "expect": [
+          "C:Camera3D"
+        ],
+        "expect_absent": [],
+        "expect_matched": true
+      },
+      "editor_setup_lighting": {
+        "witness_tool": "editor_execute_gdscript",
+        "run": "runs/_exercises/ex_3d/h1b2-task115",
+        "witness_seq": 32,
+        "why": "the node the tool created under the named parent really is the DirectionalLight3D the first call asked for",
+        "declared_in": "tools/sessions/_exercises/ex_3d/h1b-manifest.json",
+        "expect": [
+          "L:DirectionalLight3D"
+        ],
+        "expect_absent": [],
+        "expect_matched": true
+      },
       "editor_setup_navigation_agent": {
         "witness_tool": "editor_get_navigation_info",
         "run": "runs/_exercises/ex_nav/h4-task113",
@@ -449,6 +592,30 @@
         "declared_in": "tools/sessions/_exercises/ex_write/c4-manifest.json",
         "expect": [
           "\"PB1\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true
+      },
+      "editor_setup_world_environment": {
+        "witness_tool": "editor_execute_gdscript",
+        "run": "runs/_exercises/ex_3d/h1b2-task115",
+        "witness_seq": 39,
+        "why": "the node the tool created for world_env_path really is a WorldEnvironment",
+        "declared_in": "tools/sessions/_exercises/ex_3d/h1b-manifest.json",
+        "expect": [
+          "E:WorldEnvironment"
+        ],
+        "expect_absent": [],
+        "expect_matched": true
+      },
+      "editor_stop_scene": {
+        "witness_tool": "editor_execute_gdscript",
+        "run": "runs/_exercises/ex_editor/h7-task115",
+        "witness_seq": 61,
+        "why": "after the stop the editor's own run bar reports is_playing_scene() == false",
+        "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
+        "expect": [
+          "\"result\":false"
         ],
         "expect_absent": [],
         "expect_matched": true
@@ -512,9 +679,9 @@
     },
     "editor": {
       "tools": 104,
-      "called": 89,
-      ">=5": 89,
-      "0": 15
+      "called": 99,
+      ">=5": 99,
+      "0": 5
     },
     "game": {
       "tools": 23,
@@ -579,10 +746,10 @@
       "tool": "project_get_filesystem_tree",
       "scope": "both",
       "verb": "get",
-      "calls": 6,
-      "ok": 5,
+      "calls": 7,
+      "ok": 6,
       "boundary": 1,
-      "effective": 5,
+      "effective": 6,
       "evidence_tier": "readback",
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
@@ -595,30 +762,34 @@
       },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
-      "read_payload_calls": 5,
-      "facts_complete": 6,
+      "read_payload_calls": 6,
+      "facts_complete": 7,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 5,
+        "ok_no_effect_observed": 6,
         "failed": 1
       },
       "file_effects": {
-        "none": 6
+        "none": 7
       },
       "flags": {
-        "result_unparseable": 3,
+        "result_unparseable": 4,
         "error_suggestion": 1
       },
       "evidence": [
         {
           "run": "runs/_exercises/ex_files/c1-task110",
           "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_editor/h7-task115",
+          "calls": 1
         }
       ],
       "first_ts_ms": 1790473264402,
-      "last_ts_ms": 1790473264943,
+      "last_ts_ms": 1790481768269,
       "gate": true
     },
     {
@@ -723,10 +894,10 @@
       "tool": "project_get_settings",
       "scope": "both",
       "verb": "get",
-      "calls": 7,
-      "ok": 6,
+      "calls": 8,
+      "ok": 7,
       "boundary": 1,
-      "effective": 6,
+      "effective": 7,
       "evidence_tier": "readback",
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
@@ -739,17 +910,17 @@
       },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
-      "read_payload_calls": 6,
-      "facts_complete": 7,
+      "read_payload_calls": 7,
+      "facts_complete": 8,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 6,
+        "ok_no_effect_observed": 7,
         "failed": 1
       },
       "file_effects": {
-        "none": 7
+        "none": 8
       },
       "flags": {
         "result_unparseable": 2,
@@ -761,12 +932,16 @@
           "calls": 6
         },
         {
+          "run": "runs/_exercises/ex_editor/h7-task115",
+          "calls": 1
+        },
+        {
           "run": "runs/_exercises/ex_files/c1-smoke",
           "calls": 1
         }
       ],
       "first_ts_ms": 1790473214515,
-      "last_ts_ms": 1790473263551,
+      "last_ts_ms": 1790481733249,
       "gate": true
     },
     {
@@ -906,10 +1081,10 @@
       "tool": "editor_get_scene_tree",
       "scope": "editor",
       "verb": "get",
-      "calls": 109,
-      "ok": 105,
+      "calls": 112,
+      "ok": 108,
       "boundary": 4,
-      "effective": 105,
+      "effective": 108,
       "evidence_tier": "readback",
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
@@ -922,20 +1097,20 @@
       },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
-      "read_payload_calls": 105,
-      "facts_complete": 109,
+      "read_payload_calls": 108,
+      "facts_complete": 112,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 105,
+        "ok_no_effect_observed": 108,
         "failed": 4
       },
       "file_effects": {
-        "none": 109
+        "none": 112
       },
       "flags": {
-        "result_unparseable": 55,
+        "result_unparseable": 57,
         "error_suggestion": 4
       },
       "evidence": [
@@ -961,7 +1136,7 @@
         }
       ],
       "first_ts_ms": 1790435679973,
-      "last_ts_ms": 1790479270081,
+      "last_ts_ms": 1790481943857,
       "gate": true
     },
     {
@@ -1013,8 +1188,8 @@
       "tool": "editor_open_scene",
       "scope": "editor",
       "verb": "open",
-      "calls": 80,
-      "ok": 80,
+      "calls": 85,
+      "ok": 85,
       "boundary": 0,
       "effective": 8,
       "evidence_tier": "pixel_effect",
@@ -1023,16 +1198,16 @@
       "pixel_effect_calls": 8,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 80,
+      "facts_complete": 85,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 72,
+        "ok_no_effect_observed": 77,
         "ok_effect_observed": 8
       },
       "file_effects": {
-        "none": 80
+        "none": 85
       },
       "flags": {},
       "evidence": [
@@ -1053,12 +1228,12 @@
           "calls": 1
         },
         {
-          "run": "runs/_exercises/ex_anim/h2-task111",
+          "run": "runs/_exercises/ex_3d/h1b-task115",
           "calls": 1
         }
       ],
       "first_ts_ms": 1790435678487,
-      "last_ts_ms": 1790479269475,
+      "last_ts_ms": 1790481943536,
       "gate": false
     },
     {
@@ -1223,52 +1398,101 @@
       "tool": "editor_play_scene",
       "scope": "editor",
       "verb": "play",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 7,
+      "ok": 5,
+      "boundary": 2,
       "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
-      "readback": null,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "witness_tool": "editor_execute_gdscript",
+        "run": "runs/_exercises/ex_editor/h7-task115",
+        "witness_seq": 59,
+        "why": "the editor's own run bar reports playing after the tool answered playing:true, and reports not playing after the matching stop",
+        "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
+        "expect": [
+          "\"result\":true"
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
+        "kind": "witness_read"
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "facts_complete": 7,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
       "unreachable_category": "H7",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 2
+      },
+      "file_effects": {
+        "none": 7
+      },
+      "flags": {
+        "error_suggestion": 2
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_editor/h7-task115",
+          "calls": 7
+        }
+      ],
+      "first_ts_ms": 1790481735362,
+      "last_ts_ms": 1790481767486,
       "gate": false
     },
     {
       "tool": "editor_stop_scene",
       "scope": "editor",
       "verb": "stop",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 7,
+      "ok": 6,
+      "boundary": 1,
       "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
-      "readback": null,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "witness_tool": "editor_execute_gdscript",
+        "run": "runs/_exercises/ex_editor/h7-task115",
+        "witness_seq": 61,
+        "why": "after the stop the editor's own run bar reports is_playing_scene() == false",
+        "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
+        "expect": [
+          "\"result\":false"
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
+        "kind": "witness_read"
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "facts_complete": 7,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
       "unreachable_category": "H7",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "verdicts": {
+        "ok_effect_unavailable": 1,
+        "ok_no_effect_observed": 5,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 7
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_editor/h7-task115",
+          "calls": 7
+        }
+      ],
+      "first_ts_ms": 1790481740534,
+      "last_ts_ms": 1790481767325,
       "gate": false
     },
     {
@@ -1383,8 +1607,8 @@
       "tool": "editor_add_node",
       "scope": "editor",
       "verb": "add",
-      "calls": 30,
-      "ok": 25,
+      "calls": 36,
+      "ok": 31,
       "boundary": 5,
       "effective": 10,
       "evidence_tier": "pixel_effect",
@@ -1393,17 +1617,17 @@
       "pixel_effect_calls": 10,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 30,
+      "facts_complete": 36,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 15,
+        "ok_no_effect_observed": 21,
         "ok_effect_observed": 10,
         "failed": 5
       },
       "file_effects": {
-        "none": 30
+        "none": 36
       },
       "flags": {
         "error_suggestion": 5
@@ -1431,7 +1655,7 @@
         }
       ],
       "first_ts_ms": 1790475123423,
-      "last_ts_ms": 1790475643202,
+      "last_ts_ms": 1790481943639,
       "gate": true
     },
     {
@@ -2150,10 +2374,10 @@
       "tool": "editor_get_selection",
       "scope": "editor",
       "verb": "get",
-      "calls": 12,
-      "ok": 10,
+      "calls": 17,
+      "ok": 15,
       "boundary": 2,
-      "effective": 10,
+      "effective": 15,
       "evidence_tier": "readback",
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
@@ -2166,17 +2390,17 @@
       },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
-      "read_payload_calls": 10,
-      "facts_complete": 12,
+      "read_payload_calls": 15,
+      "facts_complete": 17,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 10,
+        "ok_no_effect_observed": 15,
         "failed": 2
       },
       "file_effects": {
-        "none": 12
+        "none": 17
       },
       "flags": {
         "error_suggestion": 2
@@ -2189,72 +2413,126 @@
         {
           "run": "runs/_exercises/ex_scene2/c23-after-task110",
           "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_editor/h7-task115",
+          "calls": 5
         }
       ],
       "first_ts_ms": 1790473691302,
-      "last_ts_ms": 1790474323343,
+      "last_ts_ms": 1790481768083,
       "gate": true
     },
     {
       "tool": "editor_set_node_selection",
       "scope": "editor",
       "verb": "set",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 9,
+      "ok": 8,
+      "boundary": 1,
       "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
-      "readback": null,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "witness_tool": "editor_get_selection",
+        "run": "runs/_exercises/ex_editor/h7-task115",
+        "witness_seq": 13,
+        "why": "the editor's own EditorSelection really answers with the node the tool selected",
+        "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
+        "expect": [
+          "\"name\":\"Box\"",
+          "\"type\":\"ColorRect\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
+        "kind": "witness_read"
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "facts_complete": 9,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
       "unreachable_category": "H7",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "verdicts": {
+        "ok_no_effect_observed": 8,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 9
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_editor/h7-task115",
+          "calls": 9
+        }
+      ],
+      "first_ts_ms": 1790481730282,
+      "last_ts_ms": 1790481732214,
       "gate": false
     },
     {
       "tool": "editor_remove_node_selection",
       "scope": "editor",
       "verb": "remove",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 6,
+      "ok": 5,
+      "boundary": 1,
       "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
-      "readback": null,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "witness_tool": "editor_get_selection",
+        "run": "runs/_exercises/ex_editor/h7-task115",
+        "witness_seq": 22,
+        "why": "after the clear the editor's own EditorSelection really is empty, while the same reader had answered a non-empty list earlier in the run",
+        "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
+        "expect": [
+          "\"count\":0",
+          "\"nodes\":[]"
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
+        "kind": "witness_read"
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "facts_complete": 6,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
       "unreachable_category": "H7",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 6
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_editor/h7-task115",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790481731478,
+      "last_ts_ms": 1790481732565,
       "gate": false
     },
     {
       "tool": "editor_execute_gdscript",
       "scope": "editor",
       "verb": "execute",
-      "calls": 12,
-      "ok": 10,
+      "calls": 25,
+      "ok": 23,
       "boundary": 2,
-      "effective": 10,
+      "effective": 23,
       "evidence_tier": "readback",
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
@@ -2267,17 +2545,17 @@
       },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
-      "read_payload_calls": 10,
-      "facts_complete": 12,
+      "read_payload_calls": 23,
+      "facts_complete": 25,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 10,
+        "ok_no_effect_observed": 23,
         "failed": 2
       },
       "file_effects": {
-        "none": 12
+        "none": 25
       },
       "flags": {
         "error_suggestion": 2,
@@ -2291,10 +2569,22 @@
         {
           "run": "runs/_exercises/ex_scene2/c23-after-task110",
           "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_3d/h1b-task115",
+          "calls": 4
+        },
+        {
+          "run": "runs/_exercises/ex_3d/h1b2-task115",
+          "calls": 4
+        },
+        {
+          "run": "runs/_exercises/ex_editor/h7-task115",
+          "calls": 3
         }
       ],
       "first_ts_ms": 1790473692576,
-      "last_ts_ms": 1790474324650,
+      "last_ts_ms": 1790481944821,
       "gate": true
     },
     {
@@ -2359,10 +2649,10 @@
       "tool": "editor_get_output_log",
       "scope": "editor",
       "verb": "get",
-      "calls": 36,
-      "ok": 32,
+      "calls": 38,
+      "ok": 34,
       "boundary": 4,
-      "effective": 32,
+      "effective": 34,
       "evidence_tier": "readback",
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
@@ -2375,17 +2665,17 @@
       },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
-      "read_payload_calls": 32,
-      "facts_complete": 36,
+      "read_payload_calls": 34,
+      "facts_complete": 38,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 32,
+        "ok_no_effect_observed": 34,
         "failed": 4
       },
       "file_effects": {
-        "none": 36
+        "none": 38
       },
       "flags": {
         "error_suggestion": 4
@@ -2413,7 +2703,7 @@
         }
       ],
       "first_ts_ms": 1790473690676,
-      "last_ts_ms": 1790475653376,
+      "last_ts_ms": 1790481729664,
       "gate": true
     },
     {
@@ -2530,78 +2820,152 @@
       "tool": "editor_remove_output_log",
       "scope": "editor",
       "verb": "remove",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 6,
+      "ok": 5,
+      "boundary": 1,
       "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
-      "readback": null,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "witness_tool": "editor_get_output_log",
+        "run": "runs/_exercises/ex_editor/h7-task115",
+        "witness_seq": 6,
+        "why": "the Output panel of THIS editor process is readable in-process, and after the clear the engine's own log no longer holds the startup lines it held before it (count 10 -> 1 empty line)",
+        "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
+        "expect": [
+          "\"in_process\":true"
+        ],
+        "expect_absent": [
+          "Godot Engine v4.8.dev"
+        ],
+        "expect_matched": true,
+        "kind": "witness_read"
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "facts_complete": 6,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
       "unreachable_category": "H7",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 6
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_editor/h7-task115",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790481729574,
+      "last_ts_ms": 1790481730125,
       "gate": false
     },
     {
       "tool": "editor_reload_plugin",
       "scope": "editor",
       "verb": "reload",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 6,
+      "ok": 5,
+      "boundary": 1,
       "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
-      "readback": null,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "witness_tool": "project_get_settings",
+        "run": "runs/_exercises/ex_editor/h7-task115",
+        "witness_seq": 37,
+        "why": "the addon the tool disabled and enabled again is the one ProjectSettings really lists as enabled",
+        "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
+        "expect": [
+          "res://addons/probe_plugin/plugin.cfg"
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
+        "kind": "witness_read"
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "facts_complete": 6,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
       "unreachable_category": "H7",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 6
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_editor/h7-task115",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790481732659,
+      "last_ts_ms": 1790481733148,
       "gate": false
     },
     {
       "tool": "editor_rescan_project_filesystem",
       "scope": "editor",
       "verb": "rescan",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 6,
+      "ok": 5,
+      "boundary": 1,
       "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
-      "readback": null,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "witness_tool": "project_get_filesystem_tree",
+        "run": "runs/_exercises/ex_editor/h7-task115",
+        "witness_seq": 82,
+        "why": "after the rescan the project's own filesystem tree still answers with the scene it swept",
+        "declared_in": "tools/sessions/_exercises/ex_editor/h7-manifest.json",
+        "expect": [
+          "editor_probe.tscn"
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
+        "kind": "witness_read"
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "facts_complete": 6,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
       "unreachable_category": "H7",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 6
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_editor/h7-task115",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790481733338,
+      "last_ts_ms": 1790481733850,
       "gate": false
     },
     {
@@ -2657,52 +3021,82 @@
       "tool": "editor_analyze_screenshot_diff",
       "scope": "editor",
       "verb": "analyze",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
-      "readback": null,
+      "calls": 8,
+      "ok": 5,
+      "boundary": 3,
+      "effective": 5,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "kind": "own_payload",
+        "witness_tool": null,
+        "run": null,
+        "witness_seq": null,
+        "why": "读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等",
+        "declared_in": null
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
-      "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "read_payload_calls": 5,
+      "facts_complete": 8,
+      "bucket": ">=5",
+      "status": "达标",
       "unreachable_category": "H7",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 3
+      },
+      "file_effects": {
+        "none": 8
+      },
+      "flags": {
+        "error_suggestion": 3
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_editor/h7-task115",
+          "calls": 8
+        }
+      ],
+      "first_ts_ms": 1790481734537,
+      "last_ts_ms": 1790481735234,
+      "gate": true
     },
     {
       "tool": "editor_set_auto_dismiss_dialogs",
       "scope": "editor",
       "verb": "set",
-      "calls": 0,
+      "calls": 7,
       "ok": 0,
-      "boundary": 0,
+      "boundary": 7,
       "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
+      "evidence_tier": "count_only",
+      "evidence_tier_label": "只有计数与边界，没有生效证据",
       "readback": null,
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "facts_complete": 7,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
       "unreachable_category": "H7",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "verdicts": {
+        "failed": 7
+      },
+      "file_effects": {
+        "none": 7
+      },
+      "flags": {
+        "error_suggestion": 7
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_editor/h7-task115",
+          "calls": 7
+        }
+      ],
+      "first_ts_ms": 1790481767561,
+      "last_ts_ms": 1790481768010,
       "gate": false
     },
     {
@@ -3879,27 +4273,27 @@
       "tool": "project_create_script",
       "scope": "both",
       "verb": "create",
-      "calls": 76,
-      "ok": 75,
+      "calls": 77,
+      "ok": 76,
       "boundary": 1,
-      "effective": 43,
+      "effective": 44,
       "evidence_tier": "file_effect",
       "evidence_tier_label": "ok_file_effect_observed（文件真的变了）",
       "readback": null,
       "pixel_effect_calls": 0,
-      "file_effect_calls": 43,
+      "file_effect_calls": 44,
       "read_payload_calls": 0,
-      "facts_complete": 76,
+      "facts_complete": 77,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_file_effect_observed": 43,
+        "ok_file_effect_observed": 44,
         "failed": 1,
         "ok_no_effect_observed": 32
       },
       "file_effects": {
-        "changed": 43,
+        "changed": 44,
         "none": 1,
         "unchanged": 32
       },
@@ -3929,7 +4323,7 @@
         }
       ],
       "first_ts_ms": 1790435674904,
-      "last_ts_ms": 1790475641454,
+      "last_ts_ms": 1790481869436,
       "gate": true
     },
     {
@@ -3989,29 +4383,41 @@
       "tool": "editor_set_node_script",
       "scope": "editor",
       "verb": "set",
-      "calls": 30,
-      "ok": 25,
-      "boundary": 5,
+      "calls": 36,
+      "ok": 30,
+      "boundary": 6,
       "effective": 0,
-      "evidence_tier": "count_only",
-      "evidence_tier_label": "只有计数与边界，没有生效证据",
-      "readback": null,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "witness_tool": "editor_execute_gdscript",
+        "run": "runs/_exercises/ex_write5/c4b-task115",
+        "witness_seq": 12,
+        "why": "the node the tool named really carries that script: the engine's own Node.get_script().resource_path answers it (editor_get_node_properties cannot answer 'script' by name at all - measured -32001 in c4-v5-task111 seq 141)",
+        "declared_in": "tools/sessions/_exercises/ex_write5/c4b-manifest.json",
+        "expect": [
+          "S:res://src/exc4b.gd"
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
+        "kind": "witness_read"
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 30,
+      "facts_complete": 36,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 25,
-        "failed": 5
+        "ok_no_effect_observed": 30,
+        "failed": 6
       },
       "file_effects": {
-        "none": 30
+        "none": 36
       },
       "flags": {
-        "error_suggestion": 5
+        "error_suggestion": 6
       },
       "evidence": [
         {
@@ -4036,7 +4442,7 @@
         }
       ],
       "first_ts_ms": 1790475132130,
-      "last_ts_ms": 1790475648305,
+      "last_ts_ms": 1790481870552,
       "gate": false
     },
     {
@@ -4734,10 +5140,10 @@
       "tool": "editor_list_animations",
       "scope": "editor",
       "verb": "list",
-      "calls": 12,
-      "ok": 10,
+      "calls": 15,
+      "ok": 13,
       "boundary": 2,
-      "effective": 10,
+      "effective": 13,
       "evidence_tier": "readback",
       "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
       "readback": {
@@ -4750,17 +5156,17 @@
       },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
-      "read_payload_calls": 10,
-      "facts_complete": 12,
+      "read_payload_calls": 13,
+      "facts_complete": 15,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 10,
+        "ok_no_effect_observed": 13,
         "failed": 2
       },
       "file_effects": {
-        "none": 12
+        "none": 15
       },
       "flags": {
         "error_suggestion": 2
@@ -4773,18 +5179,22 @@
         {
           "run": "runs/_exercises/ex_anim2/h2b-task111",
           "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_anim2/h2c-task115",
+          "calls": 3
         }
       ],
       "first_ts_ms": 1790475764754,
-      "last_ts_ms": 1790475827731,
+      "last_ts_ms": 1790481870984,
       "gate": true
     },
     {
       "tool": "editor_create_animation",
       "scope": "editor",
       "verb": "create",
-      "calls": 18,
-      "ok": 16,
+      "calls": 23,
+      "ok": 21,
       "boundary": 2,
       "effective": 0,
       "evidence_tier": "readback",
@@ -4805,16 +5215,16 @@
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 18,
+      "facts_complete": 23,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 16,
+        "ok_no_effect_observed": 21,
         "failed": 2
       },
       "file_effects": {
-        "none": 18
+        "none": 23
       },
       "flags": {
         "error_suggestion": 2
@@ -4827,10 +5237,14 @@
         {
           "run": "runs/_exercises/ex_anim2/h2b-task111",
           "calls": 9
+        },
+        {
+          "run": "runs/_exercises/ex_anim2/h2c-task115",
+          "calls": 5
         }
       ],
       "first_ts_ms": 1790475762699,
-      "last_ts_ms": 1790475825992,
+      "last_ts_ms": 1790481869938,
       "gate": false
     },
     {
@@ -4995,29 +5409,47 @@
       "tool": "editor_remove_animation",
       "scope": "editor",
       "verb": "remove",
-      "calls": 12,
-      "ok": 10,
-      "boundary": 2,
+      "calls": 18,
+      "ok": 15,
+      "boundary": 3,
       "effective": 0,
-      "evidence_tier": "count_only",
-      "evidence_tier_label": "只有计数与边界，没有生效证据",
-      "readback": null,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "witness_tool": "editor_list_animations",
+        "run": "runs/_exercises/ex_anim2/h2c-task115",
+        "witness_seq": 14,
+        "why": "the same AnimationPlayer is read back after the removals, and none of the five names this run created and removed is in the library any more (the run's own earlier read, before the removals, is skipped because it still holds them)",
+        "declared_in": "tools/sessions/_exercises/ex_anim2/h2c-manifest.json",
+        "expect": [
+          "\"node_path\":\"Player\""
+        ],
+        "expect_absent": [
+          "DelA",
+          "DelB",
+          "DelC",
+          "DelD",
+          "DelE"
+        ],
+        "expect_matched": true,
+        "kind": "witness_read"
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 12,
+      "facts_complete": 18,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 10,
-        "failed": 2
+        "ok_no_effect_observed": 15,
+        "failed": 3
       },
       "file_effects": {
-        "none": 12
+        "none": 18
       },
       "flags": {
-        "error_suggestion": 2
+        "error_suggestion": 3
       },
       "evidence": [
         {
@@ -5027,10 +5459,14 @@
         {
           "run": "runs/_exercises/ex_anim2/h2b-task111",
           "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_anim2/h2c-task115",
+          "calls": 6
         }
       ],
       "first_ts_ms": 1790475771473,
-      "last_ts_ms": 1790475835108,
+      "last_ts_ms": 1790481870752,
       "gate": false
     },
     {
@@ -5457,30 +5893,30 @@
       "tool": "project_create_resource",
       "scope": "both",
       "verb": "create",
-      "calls": 7,
-      "ok": 6,
-      "boundary": 1,
-      "effective": 6,
+      "calls": 9,
+      "ok": 7,
+      "boundary": 2,
+      "effective": 7,
       "evidence_tier": "file_effect",
       "evidence_tier_label": "ok_file_effect_observed（文件真的变了）",
       "readback": null,
       "pixel_effect_calls": 0,
-      "file_effect_calls": 6,
+      "file_effect_calls": 7,
       "read_payload_calls": 0,
-      "facts_complete": 7,
+      "facts_complete": 9,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_file_effect_observed": 6,
-        "failed": 1
+        "ok_file_effect_observed": 7,
+        "failed": 2
       },
       "file_effects": {
-        "changed": 6,
-        "none": 1
+        "changed": 7,
+        "none": 2
       },
       "flags": {
-        "error_suggestion": 1
+        "error_suggestion": 2
       },
       "evidence": [
         {
@@ -5490,10 +5926,18 @@
         {
           "run": "runs/_exercises/ex_3d/h1-task111",
           "calls": 1
+        },
+        {
+          "run": "runs/_exercises/ex_3d/h1b-task115",
+          "calls": 1
+        },
+        {
+          "run": "runs/_exercises/ex_3d/h1b2-task115",
+          "calls": 1
         }
       ],
       "first_ts_ms": 1790473257438,
-      "last_ts_ms": 1790475720302,
+      "last_ts_ms": 1790481943580,
       "gate": true
     },
     {
@@ -5569,7 +6013,7 @@
       "facts_complete": 13,
       "bucket": ">=5",
       "status": "达标",
-      "unreachable_category": "H8",
+      "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 11,
         "failed": 2
@@ -5618,7 +6062,7 @@
       "facts_complete": 14,
       "bucket": ">=5",
       "status": "达标",
-      "unreachable_category": "H8",
+      "unreachable_category": null,
       "verdicts": {
         "ok_no_effect_observed": 12,
         "failed": 2
@@ -6277,140 +6721,39 @@
       "tool": "editor_add_mesh_instance",
       "scope": "editor",
       "verb": "add",
-      "calls": 6,
-      "ok": 5,
-      "boundary": 1,
-      "effective": 0,
-      "evidence_tier": "count_only",
-      "evidence_tier_label": "只有计数与边界，没有生效证据",
-      "readback": null,
-      "pixel_effect_calls": 0,
-      "file_effect_calls": 0,
-      "read_payload_calls": 0,
-      "facts_complete": 6,
-      "bucket": ">=5",
-      "status": "计数达标缺证据",
-      "unreachable_category": null,
-      "verdicts": {
-        "ok_no_effect_observed": 5,
-        "failed": 1
-      },
-      "file_effects": {
-        "none": 6
-      },
-      "flags": {
-        "error_suggestion": 1
-      },
-      "evidence": [
-        {
-          "run": "runs/_exercises/ex_3d/h1-task111",
-          "calls": 6
-        }
-      ],
-      "first_ts_ms": 1790475720488,
-      "last_ts_ms": 1790475721046,
-      "gate": false
-    },
-    {
-      "tool": "editor_setup_camera_3d",
-      "scope": "editor",
-      "verb": "setup",
-      "calls": 6,
-      "ok": 5,
-      "boundary": 1,
-      "effective": 0,
-      "evidence_tier": "count_only",
-      "evidence_tier_label": "只有计数与边界，没有生效证据",
-      "readback": null,
-      "pixel_effect_calls": 0,
-      "file_effect_calls": 0,
-      "read_payload_calls": 0,
-      "facts_complete": 6,
-      "bucket": ">=5",
-      "status": "计数达标缺证据",
-      "unreachable_category": null,
-      "verdicts": {
-        "ok_no_effect_observed": 5,
-        "failed": 1
-      },
-      "file_effects": {
-        "none": 6
-      },
-      "flags": {
-        "error_suggestion": 1
-      },
-      "evidence": [
-        {
-          "run": "runs/_exercises/ex_3d/h1-task111",
-          "calls": 6
-        }
-      ],
-      "first_ts_ms": 1790475722829,
-      "last_ts_ms": 1790475723494,
-      "gate": false
-    },
-    {
-      "tool": "editor_setup_lighting",
-      "scope": "editor",
-      "verb": "setup",
-      "calls": 6,
-      "ok": 5,
-      "boundary": 1,
-      "effective": 0,
-      "evidence_tier": "count_only",
-      "evidence_tier_label": "只有计数与边界，没有生效证据",
-      "readback": null,
-      "pixel_effect_calls": 0,
-      "file_effect_calls": 0,
-      "read_payload_calls": 0,
-      "facts_complete": 6,
-      "bucket": ">=5",
-      "status": "计数达标缺证据",
-      "unreachable_category": null,
-      "verdicts": {
-        "ok_no_effect_observed": 5,
-        "failed": 1
-      },
-      "file_effects": {
-        "none": 6
-      },
-      "flags": {
-        "error_suggestion": 1
-      },
-      "evidence": [
-        {
-          "run": "runs/_exercises/ex_3d/h1-task111",
-          "calls": 6
-        }
-      ],
-      "first_ts_ms": 1790475724866,
-      "last_ts_ms": 1790475725436,
-      "gate": false
-    },
-    {
-      "tool": "editor_set_material_3d",
-      "scope": "editor",
-      "verb": "set",
-      "calls": 6,
-      "ok": 3,
+      "calls": 18,
+      "ok": 15,
       "boundary": 3,
       "effective": 0,
-      "evidence_tier": "count_only",
-      "evidence_tier_label": "只有计数与边界，没有生效证据",
-      "readback": null,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "witness_tool": "editor_get_scene_tree",
+        "run": "runs/_exercises/ex_3d/h1b2-task115",
+        "witness_seq": 11,
+        "why": "the MeshInstance3D the tool created is in the edited scene tree under the exact name it was given",
+        "declared_in": "tools/sessions/_exercises/ex_3d/h1b-manifest.json",
+        "expect": [
+          "\"name\":\"N1\"",
+          "\"type\":\"MeshInstance3D\""
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
+        "kind": "witness_read"
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 6,
+      "facts_complete": 18,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 3,
+        "ok_no_effect_observed": 15,
         "failed": 3
       },
       "file_effects": {
-        "none": 6
+        "none": 18
       },
       "flags": {
         "error_suggestion": 3
@@ -6419,48 +6762,250 @@
         {
           "run": "runs/_exercises/ex_3d/h1-task111",
           "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_3d/h1b-task115",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_3d/h1b2-task115",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475720488,
+      "last_ts_ms": 1790481943821,
+      "gate": false
+    },
+    {
+      "tool": "editor_setup_camera_3d",
+      "scope": "editor",
+      "verb": "setup",
+      "calls": 18,
+      "ok": 15,
+      "boundary": 3,
+      "effective": 0,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "witness_tool": "editor_execute_gdscript",
+        "run": "runs/_exercises/ex_3d/h1b2-task115",
+        "witness_seq": 25,
+        "why": "the node the tool created under the named parent really is a Camera3D",
+        "declared_in": "tools/sessions/_exercises/ex_3d/h1b-manifest.json",
+        "expect": [
+          "C:Camera3D"
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
+        "kind": "witness_read"
+      },
+      "pixel_effect_calls": 0,
+      "file_effect_calls": 0,
+      "read_payload_calls": 0,
+      "facts_complete": 18,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 15,
+        "failed": 3
+      },
+      "file_effects": {
+        "none": 18
+      },
+      "flags": {
+        "error_suggestion": 3
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_3d/h1-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_3d/h1b-task115",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_3d/h1b2-task115",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475722829,
+      "last_ts_ms": 1790481944352,
+      "gate": false
+    },
+    {
+      "tool": "editor_setup_lighting",
+      "scope": "editor",
+      "verb": "setup",
+      "calls": 18,
+      "ok": 15,
+      "boundary": 3,
+      "effective": 0,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "witness_tool": "editor_execute_gdscript",
+        "run": "runs/_exercises/ex_3d/h1b2-task115",
+        "witness_seq": 32,
+        "why": "the node the tool created under the named parent really is the DirectionalLight3D the first call asked for",
+        "declared_in": "tools/sessions/_exercises/ex_3d/h1b-manifest.json",
+        "expect": [
+          "L:DirectionalLight3D"
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
+        "kind": "witness_read"
+      },
+      "pixel_effect_calls": 0,
+      "file_effect_calls": 0,
+      "read_payload_calls": 0,
+      "facts_complete": 18,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 15,
+        "failed": 3
+      },
+      "file_effects": {
+        "none": 18
+      },
+      "flags": {
+        "error_suggestion": 3
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_3d/h1-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_3d/h1b-task115",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_3d/h1b2-task115",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475724866,
+      "last_ts_ms": 1790481944581,
+      "gate": false
+    },
+    {
+      "tool": "editor_set_material_3d",
+      "scope": "editor",
+      "verb": "set",
+      "calls": 18,
+      "ok": 13,
+      "boundary": 5,
+      "effective": 0,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "witness_tool": "editor_execute_gdscript",
+        "run": "runs/_exercises/ex_3d/h1b2-task115",
+        "witness_seq": 18,
+        "why": "the engine's own MeshInstance3D::get_surface_override_material(0) answers with the material this run assigned",
+        "declared_in": "tools/sessions/_exercises/ex_3d/h1b-manifest.json",
+        "expect": [
+          "M:res://assets/mat3d_b.tres"
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
+        "kind": "witness_read"
+      },
+      "pixel_effect_calls": 0,
+      "file_effect_calls": 0,
+      "read_payload_calls": 0,
+      "facts_complete": 18,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 13,
+        "failed": 5
+      },
+      "file_effects": {
+        "none": 18
+      },
+      "flags": {
+        "error_suggestion": 5
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_3d/h1-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_3d/h1b-task115",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_3d/h1b2-task115",
+          "calls": 6
         }
       ],
       "first_ts_ms": 1790475721147,
-      "last_ts_ms": 1790475722714,
+      "last_ts_ms": 1790481944093,
       "gate": false
     },
     {
       "tool": "editor_setup_world_environment",
       "scope": "editor",
       "verb": "setup",
-      "calls": 6,
-      "ok": 5,
-      "boundary": 1,
+      "calls": 18,
+      "ok": 15,
+      "boundary": 3,
       "effective": 0,
-      "evidence_tier": "count_only",
-      "evidence_tier_label": "只有计数与边界，没有生效证据",
-      "readback": null,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "witness_tool": "editor_execute_gdscript",
+        "run": "runs/_exercises/ex_3d/h1b2-task115",
+        "witness_seq": 39,
+        "why": "the node the tool created for world_env_path really is a WorldEnvironment",
+        "declared_in": "tools/sessions/_exercises/ex_3d/h1b-manifest.json",
+        "expect": [
+          "E:WorldEnvironment"
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
+        "kind": "witness_read"
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 6,
+      "facts_complete": 18,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 5,
-        "failed": 1
+        "ok_no_effect_observed": 15,
+        "failed": 3
       },
       "file_effects": {
-        "none": 6
+        "none": 18
       },
       "flags": {
-        "error_suggestion": 1
+        "error_suggestion": 3
       },
       "evidence": [
         {
           "run": "runs/_exercises/ex_3d/h1-task111",
           "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_3d/h1b-task115",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_3d/h1b2-task115",
+          "calls": 6
         }
       ],
       "first_ts_ms": 1790475725537,
-      "last_ts_ms": 1790475726135,
+      "last_ts_ms": 1790481944793,
       "gate": false
     },
     {
@@ -6795,26 +7340,26 @@
       "tool": "project_create_theme",
       "scope": "both",
       "verb": "create",
-      "calls": 11,
-      "ok": 10,
+      "calls": 12,
+      "ok": 11,
       "boundary": 1,
-      "effective": 10,
+      "effective": 11,
       "evidence_tier": "file_effect",
       "evidence_tier_label": "ok_file_effect_observed（文件真的变了）",
       "readback": null,
       "pixel_effect_calls": 0,
-      "file_effect_calls": 10,
+      "file_effect_calls": 11,
       "read_payload_calls": 0,
-      "facts_complete": 11,
+      "facts_complete": 12,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_file_effect_observed": 10,
+        "ok_file_effect_observed": 11,
         "failed": 1
       },
       "file_effects": {
-        "changed": 10,
+        "changed": 11,
         "none": 1
       },
       "flags": {
@@ -6843,7 +7388,7 @@
         }
       ],
       "first_ts_ms": 1790473255844,
-      "last_ts_ms": 1790475641795,
+      "last_ts_ms": 1790481869578,
       "gate": true
     },
     {
@@ -7006,29 +7551,41 @@
       "tool": "editor_set_control_theme",
       "scope": "editor",
       "verb": "set",
-      "calls": 24,
-      "ok": 19,
-      "boundary": 5,
+      "calls": 30,
+      "ok": 24,
+      "boundary": 6,
       "effective": 0,
-      "evidence_tier": "count_only",
-      "evidence_tier_label": "只有计数与边界，没有生效证据",
-      "readback": null,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "witness_tool": "editor_execute_gdscript",
+        "run": "runs/_exercises/ex_write5/c4b-task115",
+        "witness_seq": 19,
+        "why": "the Control the tool named really carries that theme: the engine's own Control.theme.resource_path answers it",
+        "declared_in": "tools/sessions/_exercises/ex_write5/c4b-manifest.json",
+        "expect": [
+          "T:res://themes/c4b.tres"
+        ],
+        "expect_absent": [],
+        "expect_matched": true,
+        "kind": "witness_read"
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
       "read_payload_calls": 0,
-      "facts_complete": 24,
+      "facts_complete": 30,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 19,
-        "failed": 5
+        "ok_no_effect_observed": 24,
+        "failed": 6
       },
       "file_effects": {
-        "none": 24
+        "none": 30
       },
       "flags": {
-        "error_suggestion": 5
+        "error_suggestion": 6
       },
       "evidence": [
         {
@@ -7046,10 +7603,14 @@
         {
           "run": "runs/_exercises/ex_write5/c4-v5-task111",
           "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write5/c4b-task115",
+          "calls": 6
         }
       ],
       "first_ts_ms": 1790475136339,
-      "last_ts_ms": 1790475651148,
+      "last_ts_ms": 1790481871434,
       "gate": false
     },
     {
@@ -8476,27 +9037,47 @@
       "tool": "editor_get_test_report",
       "scope": "editor",
       "verb": "get",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
-      "readback": null,
+      "calls": 6,
+      "ok": 5,
+      "boundary": 1,
+      "effective": 5,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "kind": "own_payload",
+        "witness_tool": null,
+        "run": null,
+        "witness_seq": null,
+        "why": "读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等",
+        "declared_in": null
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
-      "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "read_payload_calls": 5,
+      "facts_complete": 6,
+      "bucket": ">=5",
+      "status": "达标",
       "unreachable_category": "H7",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 6
+      },
+      "flags": {
+        "scenario_asserted_nothing": 5,
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_editor/h7-task115",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790481733943,
+      "last_ts_ms": 1790481734403,
+      "gate": true
     },
     {
       "tool": "os_list_android_devices",
@@ -9060,12 +9641,20 @@
         "tool": "editor_add_mesh_instance",
         "scope": "editor",
         "category": "H1",
-        "measured_calls": 6,
+        "measured_calls": 18,
         "drift": true,
         "reclassified": true,
         "evidence": [
           [
             "runs/_exercises/ex_3d/h1-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_3d/h1b-task115",
+            6
+          ],
+          [
+            "runs/_exercises/ex_3d/h1b2-task115",
             6
           ]
         ]
@@ -9088,12 +9677,20 @@
         "tool": "editor_set_material_3d",
         "scope": "editor",
         "category": "H1",
-        "measured_calls": 6,
+        "measured_calls": 18,
         "drift": true,
         "reclassified": true,
         "evidence": [
           [
             "runs/_exercises/ex_3d/h1-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_3d/h1b-task115",
+            6
+          ],
+          [
+            "runs/_exercises/ex_3d/h1b2-task115",
             6
           ]
         ]
@@ -9116,12 +9713,20 @@
         "tool": "editor_setup_camera_3d",
         "scope": "editor",
         "category": "H1",
-        "measured_calls": 6,
+        "measured_calls": 18,
         "drift": true,
         "reclassified": true,
         "evidence": [
           [
             "runs/_exercises/ex_3d/h1-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_3d/h1b-task115",
+            6
+          ],
+          [
+            "runs/_exercises/ex_3d/h1b2-task115",
             6
           ]
         ]
@@ -9130,12 +9735,20 @@
         "tool": "editor_setup_lighting",
         "scope": "editor",
         "category": "H1",
-        "measured_calls": 6,
+        "measured_calls": 18,
         "drift": true,
         "reclassified": true,
         "evidence": [
           [
             "runs/_exercises/ex_3d/h1-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_3d/h1b-task115",
+            6
+          ],
+          [
+            "runs/_exercises/ex_3d/h1b2-task115",
             6
           ]
         ]
@@ -9144,12 +9757,20 @@
         "tool": "editor_setup_world_environment",
         "scope": "editor",
         "category": "H1",
-        "measured_calls": 6,
+        "measured_calls": 18,
         "drift": true,
         "reclassified": true,
         "evidence": [
           [
             "runs/_exercises/ex_3d/h1-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_3d/h1b-task115",
+            6
+          ],
+          [
+            "runs/_exercises/ex_3d/h1b2-task115",
             6
           ]
         ]
@@ -9212,7 +9833,7 @@
         "tool": "editor_create_animation",
         "scope": "editor",
         "category": "H2",
-        "measured_calls": 18,
+        "measured_calls": 23,
         "drift": true,
         "reclassified": true,
         "evidence": [
@@ -9223,6 +9844,10 @@
           [
             "runs/_exercises/ex_anim2/h2b-task111",
             9
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2c-task115",
+            5
           ]
         ]
       },
@@ -9284,7 +9909,7 @@
         "tool": "editor_list_animations",
         "scope": "editor",
         "category": "H2",
-        "measured_calls": 12,
+        "measured_calls": 15,
         "drift": true,
         "reclassified": true,
         "evidence": [
@@ -9295,6 +9920,10 @@
           [
             "runs/_exercises/ex_anim2/h2b-task111",
             6
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2c-task115",
+            3
           ]
         ]
       },
@@ -9302,7 +9931,7 @@
         "tool": "editor_remove_animation",
         "scope": "editor",
         "category": "H2",
-        "measured_calls": 12,
+        "measured_calls": 18,
         "drift": true,
         "reclassified": true,
         "evidence": [
@@ -9312,6 +9941,10 @@
           ],
           [
             "runs/_exercises/ex_anim2/h2b-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2c-task115",
             6
           ]
         ]
@@ -9743,6 +10376,20 @@
         ]
       },
       {
+        "tool": "editor_analyze_screenshot_diff",
+        "scope": "editor",
+        "category": "H7",
+        "measured_calls": 8,
+        "drift": true,
+        "reclassified": false,
+        "evidence": [
+          [
+            "runs/_exercises/ex_editor/h7-task115",
+            8
+          ]
+        ]
+      },
+      {
         "tool": "editor_get_open_scripts",
         "scope": "editor",
         "category": "H7",
@@ -9764,7 +10411,7 @@
         "tool": "editor_get_output_log",
         "scope": "editor",
         "category": "H7",
-        "measured_calls": 36,
+        "measured_calls": 38,
         "drift": true,
         "reclassified": true,
         "evidence": [
@@ -9804,7 +10451,7 @@
         "tool": "editor_get_selection",
         "scope": "editor",
         "category": "H7",
-        "measured_calls": 12,
+        "measured_calls": 17,
         "drift": true,
         "reclassified": true,
         "evidence": [
@@ -9815,6 +10462,136 @@
           [
             "runs/_exercises/ex_scene2/c23-after-task110",
             6
+          ],
+          [
+            "runs/_exercises/ex_editor/h7-task115",
+            5
+          ]
+        ]
+      },
+      {
+        "tool": "editor_get_test_report",
+        "scope": "editor",
+        "category": "H7",
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": false,
+        "evidence": [
+          [
+            "runs/_exercises/ex_editor/h7-task115",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_play_scene",
+        "scope": "editor",
+        "category": "H7",
+        "measured_calls": 7,
+        "drift": true,
+        "reclassified": false,
+        "evidence": [
+          [
+            "runs/_exercises/ex_editor/h7-task115",
+            7
+          ]
+        ]
+      },
+      {
+        "tool": "editor_reload_plugin",
+        "scope": "editor",
+        "category": "H7",
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": false,
+        "evidence": [
+          [
+            "runs/_exercises/ex_editor/h7-task115",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_remove_node_selection",
+        "scope": "editor",
+        "category": "H7",
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": false,
+        "evidence": [
+          [
+            "runs/_exercises/ex_editor/h7-task115",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_remove_output_log",
+        "scope": "editor",
+        "category": "H7",
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": false,
+        "evidence": [
+          [
+            "runs/_exercises/ex_editor/h7-task115",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_rescan_project_filesystem",
+        "scope": "editor",
+        "category": "H7",
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": false,
+        "evidence": [
+          [
+            "runs/_exercises/ex_editor/h7-task115",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_set_auto_dismiss_dialogs",
+        "scope": "editor",
+        "category": "H7",
+        "measured_calls": 7,
+        "drift": true,
+        "reclassified": false,
+        "evidence": [
+          [
+            "runs/_exercises/ex_editor/h7-task115",
+            7
+          ]
+        ]
+      },
+      {
+        "tool": "editor_set_node_selection",
+        "scope": "editor",
+        "category": "H7",
+        "measured_calls": 9,
+        "drift": true,
+        "reclassified": false,
+        "evidence": [
+          [
+            "runs/_exercises/ex_editor/h7-task115",
+            9
+          ]
+        ]
+      },
+      {
+        "tool": "editor_stop_scene",
+        "scope": "editor",
+        "category": "H7",
+        "measured_calls": 7,
+        "drift": true,
+        "reclassified": false,
+        "evidence": [
+          [
+            "runs/_exercises/ex_editor/h7-task115",
+            7
           ]
         ]
       },
@@ -9824,7 +10601,7 @@
         "category": "H8",
         "measured_calls": 13,
         "drift": true,
-        "reclassified": false,
+        "reclassified": true,
         "evidence": [
           [
             "runs/_exercises/ex_export/h8-task114",
@@ -9842,7 +10619,7 @@
         "category": "H8",
         "measured_calls": 14,
         "drift": true,
-        "reclassified": false,
+        "reclassified": true,
         "evidence": [
           [
             "runs/_exercises/ex_export/h8-task114",
@@ -10361,6 +11138,22 @@
         "evidence": "runs/_exercises/ex_rec/h9-task113/trace-game.jsonl",
         "batch": "h9-task113",
         "task": "TASK-113"
+      },
+      {
+        "tool": "project_get_export_info",
+        "from": "H8",
+        "why": "the two export-read tools only need res://export_presets.cfg, not a real export. Ex_export (2 presets: Windows Desktop + Web) drove the real success branch on BOTH endpoints -- editor answers capabilities={editor_export:true,editor_process:true,presets_source:'editor_export'} with preset_count=2, the game process answers editor_export:false,editor_process:false,presets_source:'export_presets.cfg' with the same preset_count=2. Ex_export_np (no export_presets.cfg at all) drove the capability-missing branch: presets_file_present=false, count=0, message=\"'res://export_presets.cfg' does not exist: this project has no export presets\", and on the editor endpoint unavailable[] carries the export_presets entry -- i.e. a missing file is an answer, not an error. The empty inputSchema also gives a constructible boundary: any argument is refused with -32602 \"accepts no parameters\" (4x, both endpoints).",
+        "evidence": "runs/_exercises/ex_export/h8-task114/trace-editor.jsonl, runs/_exercises/ex_export/h8-task114/trace-game.jsonl, runs/_exercises/ex_export_np/h8n-task114/trace-editor.jsonl, runs/_exercises/ex_export_np/h8n-task114/trace-game.jsonl",
+        "batch": "h8",
+        "task": "TASK-114"
+      },
+      {
+        "tool": "project_list_export_presets",
+        "from": "H8",
+        "why": "same two runs: count=2 with the preset records read straight out of export_presets.cfg on both endpoints, and count=0 + presets_file_present=false + message on the project without the file. The unknown-argument gate refuses preset_name and index with -32602.",
+        "evidence": "runs/_exercises/ex_export/h8-task114/trace-editor.jsonl, runs/_exercises/ex_export/h8-task114/trace-game.jsonl, runs/_exercises/ex_export_np/h8n-task114/trace-editor.jsonl, runs/_exercises/ex_export_np/h8n-task114/trace-game.jsonl",
+        "batch": "h8",
+        "task": "TASK-114"
       }
     ],
     "members": [
@@ -10368,12 +11161,20 @@
         "tool": "editor_add_mesh_instance",
         "scope": "editor",
         "category": "H1",
-        "measured_calls": 6,
+        "measured_calls": 18,
         "drift": true,
         "reclassified": true,
         "evidence": [
           [
             "runs/_exercises/ex_3d/h1-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_3d/h1b-task115",
+            6
+          ],
+          [
+            "runs/_exercises/ex_3d/h1b2-task115",
             6
           ]
         ]
@@ -10396,12 +11197,20 @@
         "tool": "editor_set_material_3d",
         "scope": "editor",
         "category": "H1",
-        "measured_calls": 6,
+        "measured_calls": 18,
         "drift": true,
         "reclassified": true,
         "evidence": [
           [
             "runs/_exercises/ex_3d/h1-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_3d/h1b-task115",
+            6
+          ],
+          [
+            "runs/_exercises/ex_3d/h1b2-task115",
             6
           ]
         ]
@@ -10424,12 +11233,20 @@
         "tool": "editor_setup_camera_3d",
         "scope": "editor",
         "category": "H1",
-        "measured_calls": 6,
+        "measured_calls": 18,
         "drift": true,
         "reclassified": true,
         "evidence": [
           [
             "runs/_exercises/ex_3d/h1-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_3d/h1b-task115",
+            6
+          ],
+          [
+            "runs/_exercises/ex_3d/h1b2-task115",
             6
           ]
         ]
@@ -10438,12 +11255,20 @@
         "tool": "editor_setup_lighting",
         "scope": "editor",
         "category": "H1",
-        "measured_calls": 6,
+        "measured_calls": 18,
         "drift": true,
         "reclassified": true,
         "evidence": [
           [
             "runs/_exercises/ex_3d/h1-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_3d/h1b-task115",
+            6
+          ],
+          [
+            "runs/_exercises/ex_3d/h1b2-task115",
             6
           ]
         ]
@@ -10452,12 +11277,20 @@
         "tool": "editor_setup_world_environment",
         "scope": "editor",
         "category": "H1",
-        "measured_calls": 6,
+        "measured_calls": 18,
         "drift": true,
         "reclassified": true,
         "evidence": [
           [
             "runs/_exercises/ex_3d/h1-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_3d/h1b-task115",
+            6
+          ],
+          [
+            "runs/_exercises/ex_3d/h1b2-task115",
             6
           ]
         ]
@@ -10520,7 +11353,7 @@
         "tool": "editor_create_animation",
         "scope": "editor",
         "category": "H2",
-        "measured_calls": 18,
+        "measured_calls": 23,
         "drift": true,
         "reclassified": true,
         "evidence": [
@@ -10531,6 +11364,10 @@
           [
             "runs/_exercises/ex_anim2/h2b-task111",
             9
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2c-task115",
+            5
           ]
         ]
       },
@@ -10592,7 +11429,7 @@
         "tool": "editor_list_animations",
         "scope": "editor",
         "category": "H2",
-        "measured_calls": 12,
+        "measured_calls": 15,
         "drift": true,
         "reclassified": true,
         "evidence": [
@@ -10603,6 +11440,10 @@
           [
             "runs/_exercises/ex_anim2/h2b-task111",
             6
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2c-task115",
+            3
           ]
         ]
       },
@@ -10610,7 +11451,7 @@
         "tool": "editor_remove_animation",
         "scope": "editor",
         "category": "H2",
-        "measured_calls": 12,
+        "measured_calls": 18,
         "drift": true,
         "reclassified": true,
         "evidence": [
@@ -10620,6 +11461,10 @@
           ],
           [
             "runs/_exercises/ex_anim2/h2b-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2c-task115",
             6
           ]
         ]
@@ -11054,10 +11899,15 @@
         "tool": "editor_analyze_screenshot_diff",
         "scope": "editor",
         "category": "H7",
-        "measured_calls": 0,
-        "drift": false,
+        "measured_calls": 8,
+        "drift": true,
         "reclassified": false,
-        "evidence": []
+        "evidence": [
+          [
+            "runs/_exercises/ex_editor/h7-task115",
+            8
+          ]
+        ]
       },
       {
         "tool": "editor_get_open_scripts",
@@ -11081,7 +11931,7 @@
         "tool": "editor_get_output_log",
         "scope": "editor",
         "category": "H7",
-        "measured_calls": 36,
+        "measured_calls": 38,
         "drift": true,
         "reclassified": true,
         "evidence": [
@@ -11121,7 +11971,7 @@
         "tool": "editor_get_selection",
         "scope": "editor",
         "category": "H7",
-        "measured_calls": 12,
+        "measured_calls": 17,
         "drift": true,
         "reclassified": true,
         "evidence": [
@@ -11132,6 +11982,10 @@
           [
             "runs/_exercises/ex_scene2/c23-after-task110",
             6
+          ],
+          [
+            "runs/_exercises/ex_editor/h7-task115",
+            5
           ]
         ]
       },
@@ -11139,73 +11993,113 @@
         "tool": "editor_get_test_report",
         "scope": "editor",
         "category": "H7",
-        "measured_calls": 0,
-        "drift": false,
+        "measured_calls": 6,
+        "drift": true,
         "reclassified": false,
-        "evidence": []
+        "evidence": [
+          [
+            "runs/_exercises/ex_editor/h7-task115",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_play_scene",
         "scope": "editor",
         "category": "H7",
-        "measured_calls": 0,
-        "drift": false,
+        "measured_calls": 7,
+        "drift": true,
         "reclassified": false,
-        "evidence": []
+        "evidence": [
+          [
+            "runs/_exercises/ex_editor/h7-task115",
+            7
+          ]
+        ]
       },
       {
         "tool": "editor_reload_plugin",
         "scope": "editor",
         "category": "H7",
-        "measured_calls": 0,
-        "drift": false,
+        "measured_calls": 6,
+        "drift": true,
         "reclassified": false,
-        "evidence": []
+        "evidence": [
+          [
+            "runs/_exercises/ex_editor/h7-task115",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_remove_node_selection",
         "scope": "editor",
         "category": "H7",
-        "measured_calls": 0,
-        "drift": false,
+        "measured_calls": 6,
+        "drift": true,
         "reclassified": false,
-        "evidence": []
+        "evidence": [
+          [
+            "runs/_exercises/ex_editor/h7-task115",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_remove_output_log",
         "scope": "editor",
         "category": "H7",
-        "measured_calls": 0,
-        "drift": false,
+        "measured_calls": 6,
+        "drift": true,
         "reclassified": false,
-        "evidence": []
+        "evidence": [
+          [
+            "runs/_exercises/ex_editor/h7-task115",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_rescan_project_filesystem",
         "scope": "editor",
         "category": "H7",
-        "measured_calls": 0,
-        "drift": false,
+        "measured_calls": 6,
+        "drift": true,
         "reclassified": false,
-        "evidence": []
+        "evidence": [
+          [
+            "runs/_exercises/ex_editor/h7-task115",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_set_auto_dismiss_dialogs",
         "scope": "editor",
         "category": "H7",
-        "measured_calls": 0,
-        "drift": false,
+        "measured_calls": 7,
+        "drift": true,
         "reclassified": false,
-        "evidence": []
+        "evidence": [
+          [
+            "runs/_exercises/ex_editor/h7-task115",
+            7
+          ]
+        ]
       },
       {
         "tool": "editor_set_node_selection",
         "scope": "editor",
         "category": "H7",
-        "measured_calls": 0,
-        "drift": false,
+        "measured_calls": 9,
+        "drift": true,
         "reclassified": false,
-        "evidence": []
+        "evidence": [
+          [
+            "runs/_exercises/ex_editor/h7-task115",
+            9
+          ]
+        ]
       },
       {
         "tool": "editor_simulate_input_action",
@@ -11256,10 +12150,15 @@
         "tool": "editor_stop_scene",
         "scope": "editor",
         "category": "H7",
-        "measured_calls": 0,
-        "drift": false,
+        "measured_calls": 7,
+        "drift": true,
         "reclassified": false,
-        "evidence": []
+        "evidence": [
+          [
+            "runs/_exercises/ex_editor/h7-task115",
+            7
+          ]
+        ]
       },
       {
         "tool": "os_deploy_to_android_device",
@@ -11294,7 +12193,7 @@
         "category": "H8",
         "measured_calls": 13,
         "drift": true,
-        "reclassified": false,
+        "reclassified": true,
         "evidence": [
           [
             "runs/_exercises/ex_export/h8-task114",
@@ -11312,7 +12211,7 @@
         "category": "H8",
         "measured_calls": 14,
         "drift": true,
-        "reclassified": false,
+        "reclassified": true,
         "evidence": [
           [
             "runs/_exercises/ex_export/h8-task114",

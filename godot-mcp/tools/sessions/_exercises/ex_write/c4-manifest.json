@@ -1173,12 +1173,6 @@
       ]
     },
     {
-      "tool": "editor_set_node_script",
-      "run": "runs/_exercises/ex_write5/c4-v5-task111",
-      "witness_tool": "editor_get_node_properties",
-      "why": "读回被写节点的 script 属性（不是工具自己响应里的 attached:true）"
-    },
-    {
       "tool": "editor_set_physics_layers",
       "run": "runs/_exercises/ex_write5/c4-v5-task111",
       "witness_tool": "editor_get_node_properties",
@@ -1197,16 +1191,28 @@
       ]
     },
     {
-      "tool": "editor_set_control_theme",
-      "run": "runs/_exercises/ex_write5/c4-v5-task111",
-      "witness_tool": "editor_get_node_properties",
-      "why": "读回同一个 Control 的 theme 属性（不是工具自己响应里的 applied:true）"
-    },
-    {
       "tool": "editor_connect_signal",
       "run": "runs/_exercises/ex_write5/c4-v5-task111",
       "witness_tool": "editor_list_signal_connections",
       "why": "读回同一节点的连接表，连接真的在里面"
+    }
+  ],
+  "readback_superseded": [
+    {
+      "tool": "editor_set_node_script",
+      "run": "runs/_exercises/ex_write5/c4-v5-task111",
+      "witness_tool": "editor_get_node_properties",
+      "why": "TASK-112's declaration: 读回被写节点的 script 属性（不是工具自己响应里的 attached:true）",
+      "superseded_by": "tools/sessions/_exercises/ex_write5/c4b-manifest.json",
+      "superseded_reason": "TASK-113 item C refused it (no content-level expect), and TASK-115 measured WHY no expect could be written: editor_get_node_properties refuses the name 'script' outright (-32001 'Property script on node C4Node1 is not readable by name', c4-v5-task111 seq 141). The replacement reads Node.get_script().resource_path through editor_execute_gdscript instead. Kept here, out of the live `readback` array, so the rejected declaration stays auditable without appearing twice in TOOL-COVERAGE section 0.1."
+    },
+    {
+      "tool": "editor_set_control_theme",
+      "run": "runs/_exercises/ex_write5/c4-v5-task111",
+      "witness_tool": "editor_get_node_properties",
+      "why": "TASK-112's declaration: 读回同一个 Control 的 theme 属性（不是工具自己响应里的 applied:true）",
+      "superseded_by": "tools/sessions/_exercises/ex_write5/c4b-manifest.json",
+      "superseded_reason": "TASK-113 item C refused it (no content-level expect). TASK-115 replaced it with a declaration whose expect names the theme resource path the engine's own Control.theme answers with. Kept here for audit; not a live declaration."
     }
   ]
 }

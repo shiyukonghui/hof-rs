@@ -1,0 +1,145 @@
+{
+  "_comment": "TASK-115 batch c4b -- the two TASK-113 downgraded witnesses of the ex_write family, re-run with content-level read-backs. editor_set_node_script and editor_set_control_theme were refused a tier because editor_get_node_properties cannot answer 'script' by name at all (measured in c4-v5-task111 seq 141: -32001 'Property script on node C4Node1 is not readable by name'), so the witness here is editor_execute_gdscript reading the engine's own get_script().resource_path / Control.theme.resource_path. A GDScript file is the subject so the batch needs no C# build.",
+  "game": "_exercises\\ex_write5",
+  "import": true,
+  "calls": [
+    {
+      "tag": "c4b-001-editor_open_scene-ok",
+      "port": "editor",
+      "tool": "editor_open_scene",
+      "arguments": { "path": "res://scenes/main.tscn" },
+      "note": "setup: the scene both writers address"
+    },
+    {
+      "tag": "c4b-002-project_create_script-ok",
+      "port": "editor",
+      "tool": "project_create_script",
+      "arguments": {
+        "path": "res://src/exc4b.gd",
+        "content": "extends Node2D\n\n\nfunc _ready() -> void:\n\tpass\n"
+      },
+      "note": "the script editor_set_node_script attaches"
+    },
+    {
+      "tag": "c4b-003-project_create_theme-ok",
+      "port": "editor",
+      "tool": "project_create_theme",
+      "arguments": { "path": "res://themes/c4b.tres", "name": "C4bTheme" },
+      "note": "the theme editor_set_control_theme applies"
+    },
+    {
+      "tag": "c4b-004-editor_add_node-ok",
+      "port": "editor",
+      "tool": "editor_add_node",
+      "arguments": { "type": "Node2D", "name": "ScrHost", "parent_path": "." },
+      "note": "setup: the node the script is attached to"
+    },
+    {
+      "tag": "c4b-005-editor_add_node-ok",
+      "port": "editor",
+      "tool": "editor_add_node",
+      "arguments": { "type": "Control", "name": "ThemeHost", "parent_path": "." },
+      "note": "setup: the Control the theme is applied to"
+    },
+
+    {
+      "tag": "c4b-006-editor_set_node_script-ok",
+      "port": "editor",
+      "tool": "editor_set_node_script",
+      "arguments": { "node_path": "ScrHost", "script_path": "res://src/exc4b.gd" },
+      "note": "editor_set_node_script call 1/5; read back by editor_execute_gdscript reading get_script().resource_path"
+    },
+    {
+      "tag": "c4b-007-editor_set_node_script-ok",
+      "port": "editor",
+      "tool": "editor_set_node_script",
+      "arguments": { "node_path": "ScrHost", "script_path": "res://src/exc4b.gd" },
+      "note": "editor_set_node_script call 2/5"
+    },
+    {
+      "tag": "c4b-008-editor_set_node_script-ok",
+      "port": "editor",
+      "tool": "editor_set_node_script",
+      "arguments": { "node_path": "ScrHost", "script_path": "res://src/exc4b.gd" },
+      "note": "editor_set_node_script call 3/5"
+    },
+    {
+      "tag": "c4b-009-editor_set_node_script-ok",
+      "port": "editor",
+      "tool": "editor_set_node_script",
+      "arguments": { "node_path": "ScrHost", "script_path": "res://src/exc4b.gd" },
+      "note": "editor_set_node_script call 4/5"
+    },
+    {
+      "tag": "c4b-010-editor_set_node_script-ok",
+      "port": "editor",
+      "tool": "editor_set_node_script",
+      "arguments": { "node_path": "ScrHost", "script_path": "res://src/exc4b.gd" },
+      "note": "editor_set_node_script call 5/5"
+    },
+    {
+      "tag": "c4b-011-editor_set_node_script-probe",
+      "port": "editor",
+      "tool": "editor_set_node_script",
+      "arguments": { "node_path": "ScrHost", "script_path": "res://src/no_such_script.gd" },
+      "note": "editor_set_node_script boundary: script_path does not exist"
+    },
+    {
+      "tag": "c4b-012-editor_execute_gdscript-script",
+      "port": "editor",
+      "tool": "editor_execute_gdscript",
+      "arguments": { "code": "return \"S:\" + EditorInterface.get_edited_scene_root().get_node(\"ScrHost\").get_script().resource_path" },
+      "note": "read-back witness: the node the tool named really carries that script (TASK-115 c4b)"
+    },
+
+    {
+      "tag": "c4b-013-editor_set_control_theme-ok",
+      "port": "editor",
+      "tool": "editor_set_control_theme",
+      "arguments": { "node_path": "ThemeHost", "theme_path": "res://themes/c4b.tres" },
+      "note": "editor_set_control_theme call 1/5; read back by editor_execute_gdscript reading Control.theme.resource_path"
+    },
+    {
+      "tag": "c4b-014-editor_set_control_theme-ok",
+      "port": "editor",
+      "tool": "editor_set_control_theme",
+      "arguments": { "node_path": "ThemeHost", "theme_path": "res://themes/c4b.tres" },
+      "note": "editor_set_control_theme call 2/5"
+    },
+    {
+      "tag": "c4b-015-editor_set_control_theme-ok",
+      "port": "editor",
+      "tool": "editor_set_control_theme",
+      "arguments": { "node_path": "ThemeHost", "theme_path": "res://themes/c4b.tres" },
+      "note": "editor_set_control_theme call 3/5"
+    },
+    {
+      "tag": "c4b-016-editor_set_control_theme-ok",
+      "port": "editor",
+      "tool": "editor_set_control_theme",
+      "arguments": { "node_path": "ThemeHost", "theme_path": "res://themes/c4b.tres" },
+      "note": "editor_set_control_theme call 4/5"
+    },
+    {
+      "tag": "c4b-017-editor_set_control_theme-ok",
+      "port": "editor",
+      "tool": "editor_set_control_theme",
+      "arguments": { "node_path": "ThemeHost", "theme_path": "res://themes/c4b.tres" },
+      "note": "editor_set_control_theme call 5/5"
+    },
+    {
+      "tag": "c4b-018-editor_set_control_theme-probe",
+      "port": "editor",
+      "tool": "editor_set_control_theme",
+      "arguments": { "node_path": "ThemeHost", "theme_path": "res://themes/no_such_theme.tres" },
+      "note": "editor_set_control_theme boundary: theme_path does not exist"
+    },
+    {
+      "tag": "c4b-019-editor_execute_gdscript-theme",
+      "port": "editor",
+      "tool": "editor_execute_gdscript",
+      "arguments": { "code": "return \"T:\" + EditorInterface.get_edited_scene_root().get_node(\"ThemeHost\").theme.resource_path" },
+      "note": "read-back witness: the Control the tool named really carries that theme (TASK-115 c4b)"
+    }
+  ]
+}

@@ -1,0 +1,160 @@
+{
+  "_comment": "TASK-115 batch c4b -- the two TASK-113 downgraded witnesses of the ex_write family, re-run with content-level read-backs. editor_set_node_script and editor_set_control_theme were refused a tier because editor_get_node_properties cannot answer 'script' by name at all (measured in c4-v5-task111 seq 141: -32001 'Property script on node C4Node1 is not readable by name'), so the witness here is editor_execute_gdscript reading the engine's own get_script().resource_path / Control.theme.resource_path. A GDScript file is the subject so the batch needs no C# build.",
+  "batch": "c4b",
+  "project": "_exercises/ex_write5",
+  "calls": [
+    {
+      "tag": "c4b-001-editor_open_scene-ok",
+      "tool": "editor_open_scene",
+      "port": "editor",
+      "intent": "setup",
+      "note": "setup: the scene both writers address"
+    },
+    {
+      "tag": "c4b-002-project_create_script-ok",
+      "tool": "project_create_script",
+      "port": "editor",
+      "intent": "ok",
+      "note": "the script editor_set_node_script attaches"
+    },
+    {
+      "tag": "c4b-003-project_create_theme-ok",
+      "tool": "project_create_theme",
+      "port": "editor",
+      "intent": "ok",
+      "note": "the theme editor_set_control_theme applies"
+    },
+    {
+      "tag": "c4b-004-editor_add_node-ok",
+      "tool": "editor_add_node",
+      "port": "editor",
+      "intent": "setup",
+      "note": "setup: the node the script is attached to"
+    },
+    {
+      "tag": "c4b-005-editor_add_node-ok",
+      "tool": "editor_add_node",
+      "port": "editor",
+      "intent": "setup",
+      "note": "setup: the Control the theme is applied to"
+    },
+    {
+      "tag": "c4b-006-editor_set_node_script-ok",
+      "tool": "editor_set_node_script",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_set_node_script call 1/5; read back by editor_execute_gdscript reading get_script().resource_path"
+    },
+    {
+      "tag": "c4b-007-editor_set_node_script-ok",
+      "tool": "editor_set_node_script",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_set_node_script call 2/5"
+    },
+    {
+      "tag": "c4b-008-editor_set_node_script-ok",
+      "tool": "editor_set_node_script",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_set_node_script call 3/5"
+    },
+    {
+      "tag": "c4b-009-editor_set_node_script-ok",
+      "tool": "editor_set_node_script",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_set_node_script call 4/5"
+    },
+    {
+      "tag": "c4b-010-editor_set_node_script-ok",
+      "tool": "editor_set_node_script",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_set_node_script call 5/5"
+    },
+    {
+      "tag": "c4b-011-editor_set_node_script-probe",
+      "tool": "editor_set_node_script",
+      "port": "editor",
+      "intent": "probe",
+      "note": "editor_set_node_script boundary: script_path does not exist"
+    },
+    {
+      "tag": "c4b-012-editor_execute_gdscript-script",
+      "tool": "editor_execute_gdscript",
+      "port": "editor",
+      "intent": "setup",
+      "note": "read-back witness: the node the tool named really carries that script (TASK-115 c4b)"
+    },
+    {
+      "tag": "c4b-013-editor_set_control_theme-ok",
+      "tool": "editor_set_control_theme",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_set_control_theme call 1/5; read back by editor_execute_gdscript reading Control.theme.resource_path"
+    },
+    {
+      "tag": "c4b-014-editor_set_control_theme-ok",
+      "tool": "editor_set_control_theme",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_set_control_theme call 2/5"
+    },
+    {
+      "tag": "c4b-015-editor_set_control_theme-ok",
+      "tool": "editor_set_control_theme",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_set_control_theme call 3/5"
+    },
+    {
+      "tag": "c4b-016-editor_set_control_theme-ok",
+      "tool": "editor_set_control_theme",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_set_control_theme call 4/5"
+    },
+    {
+      "tag": "c4b-017-editor_set_control_theme-ok",
+      "tool": "editor_set_control_theme",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_set_control_theme call 5/5"
+    },
+    {
+      "tag": "c4b-018-editor_set_control_theme-probe",
+      "tool": "editor_set_control_theme",
+      "port": "editor",
+      "intent": "probe",
+      "note": "editor_set_control_theme boundary: theme_path does not exist"
+    },
+    {
+      "tag": "c4b-019-editor_execute_gdscript-theme",
+      "tool": "editor_execute_gdscript",
+      "port": "editor",
+      "intent": "setup",
+      "note": "read-back witness: the Control the tool named really carries that theme (TASK-115 c4b)"
+    }
+  ],
+  "readback": [
+    {
+      "tool": "editor_set_node_script",
+      "witness_tool": "editor_execute_gdscript",
+      "run": "runs/_exercises/ex_write5/c4b-task115",
+      "why": "the node the tool named really carries that script: the engine's own Node.get_script().resource_path answers it (editor_get_node_properties cannot answer 'script' by name at all - measured -32001 in c4-v5-task111 seq 141)",
+      "expect": [
+        "S:res://src/exc4b.gd"
+      ]
+    },
+    {
+      "tool": "editor_set_control_theme",
+      "witness_tool": "editor_execute_gdscript",
+      "run": "runs/_exercises/ex_write5/c4b-task115",
+      "why": "the Control the tool named really carries that theme: the engine's own Control.theme.resource_path answers it",
+      "expect": [
+        "T:res://themes/c4b.tres"
+      ]
+    }
+  ]
+}
