@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://bq114webprobe"]
+
+[node name="Main" type="Node2D"]
+
+[node name="Label" type="Label" parent="."]
+offset_left = 16.0
+offset_top = 16.0
+text = "gd_web_probe"

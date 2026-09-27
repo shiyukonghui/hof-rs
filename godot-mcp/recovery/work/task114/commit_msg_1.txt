@@ -1,0 +1,42 @@
+feat(godot-mcp): TASK-114 (D159) - the SAC toolkit, the C#->Web verdict, and two H8 tools
+
+A) The user-visible bug first: a packaged exe blocked by Windows 11 Smart App
+   Control and failing DLL loads. The deliverable is a READ-ONLY toolkit the user
+   runs on the blocked machine, plus an explicit refusal to touch that machine's
+   security settings (turning SAC off is irreversible, so it stays a human act):
+     dist/tools/sac_diagnose.ps1   SAC state (0/1/2 explained), CodeIntegrity
+                                   3077/3033/3036/3004/3082 events with the ones
+                                   naming a file in YOUR package called out,
+                                   per-file Authenticode+MOTW, how to read the
+                                   two different failure shapes. -Json too.
+     dist/tools/unblock_package.ps1 MOTW cleanup, DRY RUN unless -Apply, idempotent.
+     dist/README-SAC.md            Chinese: the three real options, the
+                                   irreversibility warning, and a CORRECTION.
+   Both .ps1 are pure ASCII (no BOM) so Windows PowerShell 5.1 parses them the
+   same regardless of code page; both pass [Parser]::ParseFile (PARSE_OK) and 16
+   Python policy checks (no write/security cmdlet in executable code,
+   Unblock-File only behind -Apply).
+
+B) "Can a C# game export to Web?" - answered by measurement, not opinion:
+   IMPOSSIBLE on Godot 4. The gate is compile time and lives at
+   platform/web/export/export_plugin.cpp:424-429 (#ifdef MODULE_MONO_ENABLED ->
+   return false) and fires BEFORE the template check. Three experiments:
+     (1) mono editor + real C# game  -> refuse
+     (2) mono editor + a PURE GDScript project -> the SAME refusal verbatim
+         (this is what rules out "the project's C# did it")
+     (3) non-mono editor + that same GDScript project -> passes the .NET gate and
+         only reports the missing web_nothreads_*.zip template
+   The web template could not be built here: scons rejects the platform outright
+   while emcc is absent (platform/web/detect.py:29-30), and after staging
+   emcc 6.0.10 by hand the build still dies in platform/web/*.cpp with 12-13
+   libc++ header-search-order errors.
+
+C) Coverage tail: the two export-read tools that only need export_presets.cfg.
+   project_get_export_info 13 calls / project_list_export_presets 14 calls, both
+   >=5 with 2 boundaries each, real success branch on BOTH endpoints plus the
+   capability-missing branch on a project with no export_presets.cfg. Ledger:
+   no_calls 20->18, readback 87->89, met 102->104, distinct 157->159.
+
+Engine side: zero bytes changed in godot/modules/mcp_server/, so per iron rule 7
+no rebuild and no ten gates. Binary stays 4.8.dev.mono.custom_build.3fdabe2d9.
+The 20 C# games and their historic runs/ were read-only, untouched.

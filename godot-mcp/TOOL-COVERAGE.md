@@ -3,9 +3,9 @@
 > 本文件由 `tool_coverage.py` 自动生成，**随时可重跑刷新**。命令行：
 > `python tools/tool_coverage.py`
 
-口径（mode）：**all-runs**；语料：**102 个 run 目录 / 168 个 trace 文件 / 8444 次 `tools/call`**（`ok=false` 601 次、解析失败行 0、sidecar 校验通过 273）
+口径（mode）：**all-runs**；语料：**104 个 run 目录 / 172 个 trace 文件 / 8471 次 `tools/call`**（`ok=false` 605 次、解析失败行 0、sidecar 校验通过 273）
 
-生成时间（UTC）：2026-09-27T03:28:53Z
+生成时间（UTC）：2026-09-27T03:45:32Z
 
 **「有效调用」的判定**（由 `mcp_trace_ledger.py` 的 verdict 词汇给出，不另立一套）：
 
@@ -20,9 +20,9 @@
 |---|---|---|
 | `pixel_effect` | ok_effect_observed（画面/视口真的变了） | 34 |
 | `file_effect` | ok_file_effect_observed（文件真的变了） | 24 |
-| `readback` | readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload） | 87 |
+| `readback` | readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload） | 89 |
 | `count_only` | 只有计数与边界，没有生效证据 | 12 |
-| `no_calls` | 0 次调用 | 20 |
+| `no_calls` | 0 次调用 | 18 |
 
 - `readback` 有两种 **互不混同** 的 kind：`witness_read`（写类工具，效果由**另一次独立的读调用**在同一 run 内读回佐证）与 `own_payload`（读类动词，回包本身即测量结果，不存在可等的第二次调用）。
 - `witness_read` **不是推断**：配对写在会话 manifest 的 `readback` 数组里，本工具会回到该 run 的 trace 里把见证调用**再找一次**（必须 `ok=true` 且回包是实质载荷），找不到就不给档位（见 §0.1 的 rejected 列表）。
@@ -33,7 +33,7 @@
 
 声明 **38** 条（来源：`tools/sessions/_exercises/**/*-manifest.json` 的 `readback` 数组）；**经 trace 复核通过 33 条**，被拒 5 条；其中带 `expect` 的声明 **33** 条、**逐字命中 33** 条。
 
-下表只列 `kind = witness_read` 的档位（**有**独立读调用可以点名的那一类，共 33 条）；另外 60 条是 `own_payload`（读类动词，回包即证据、没有第二次调用可点名），它们逐条列在 §0.2。
+下表只列 `kind = witness_read` 的档位（**有**独立读调用可以点名的那一类，共 33 条）；另外 62 条是 `own_payload`（读类动词，回包即证据、没有第二次调用可点名），它们逐条列在 §0.2。
 
 | 写工具 | kind | 见证读调用 | run | 见证 seq | 内容级 `expect`（逐字） | `expect_absent` | 读回的是什么 |
 |---|---|---|---|---|---|---|---|
@@ -77,29 +77,29 @@
 
 - **`pixel_effect`**（34）：`editor_open_scene` `editor_add_node` `editor_delete_node` `editor_set_node_property` `editor_duplicate_node` `editor_reparent_node` `editor_add_resource_to_node_property` `editor_set_anchor_preset` `running_game_capture_screenshot` `running_game_get_scene_tree` `running_game_get_node_properties` `running_game_set_node_property` `running_game_get_node_property_samples` `running_game_execute_gdscript` `running_game_play_input_recording` `running_game_simulate_button_click_by_text` `running_game_move_player_to_target` `editor_set_node_property_batch` `editor_add_nodes_batch` `editor_remove_all_tilemap_cells` `editor_set_tilemap_cell` `editor_set_tilemap_cells_in_rect` `editor_set_shader_material` `editor_set_shader_param` `editor_add_raycast` `editor_setup_collision_shape` `editor_bake_navigation_mesh` `editor_set_particle_material` `editor_set_particle_color_gradient` `editor_set_particle_preset` `editor_get_particle_info` `running_game_run_test_scenario` `running_game_run_stress_test` `editor_set_node_property_updates`
 - **`file_effect`**（24）：`project_set_setting` `project_delete_scene_file` `editor_save_scene` `project_create_scene_file` `editor_capture_screenshot` `project_create_script` `project_edit_script` `editor_add_input_action` `project_set_node_property_across_scenes` `project_add_autoload` `project_remove_autoload` `project_edit_resource` `project_create_resource` `project_create_shader` `project_edit_shader` `project_create_theme` `project_set_theme_color` `project_set_theme_constant` `project_set_theme_font_size` `project_set_theme_stylebox` `running_game_assert_node_state` `running_game_assert_screen_text` `project_build_csharp` `project_write_text_file`
-- **`readback`**（87）：`project_get_info` `project_get_filesystem_tree` `project_search_file_names` `project_search_file_contents` `project_get_settings` `project_convert_uid_to_path` `project_convert_path_to_uid` `editor_get_scene_tree` `project_read_scene_file_content` `editor_add_scene_instance` `project_get_scene_exports` `editor_rename_node` `editor_get_node_properties` `editor_disconnect_signal` `editor_get_node_groups` `editor_set_node_groups` `editor_find_nodes_in_group` `editor_get_selection` `editor_execute_gdscript` `editor_get_errors` `editor_get_output_log` `editor_get_node_signals` `editor_get_viewport_3d_camera` `editor_set_viewport_3d_camera` `running_game_capture_frames` `running_game_create_input_recording` `running_game_stop_input_recording` `running_game_find_nodes_by_script` `running_game_get_autoload_node` `running_game_get_node_properties_batch` `running_game_find_ui_elements` `running_game_find_nearby_nodes` `running_game_capture_signal_emissions` `editor_get_performance_monitors` `project_list_scripts` `project_read_script` `editor_get_open_scripts` `project_validate_script` `editor_get_input_actions` `editor_find_nodes_by_type` `editor_list_signal_connections` `project_find_files_referencing_symbol` `project_get_scene_dependencies` `editor_list_animations` `editor_create_animation` `editor_add_animation_track` `editor_set_animation_keyframe` `editor_get_animation_info` `editor_get_tilemap_info` `editor_get_tilemap_used_cells` `editor_get_tilemap_cell` `project_read_resource` `project_get_resource_preview` `project_read_shader` `project_get_shader_params` `editor_set_physics_layers` `editor_get_physics_layers` `editor_setup_physics_body` `editor_get_collision_info` `editor_add_audio_player` `editor_get_audio_info` `editor_get_audio_bus_layout` `editor_add_audio_bus` `editor_set_audio_bus_property` `editor_add_audio_bus_effect` `project_get_theme_info` `editor_create_animation_tree` `editor_get_animation_tree_structure` `editor_add_state_machine_state` `editor_remove_state_machine_state` `editor_add_state_machine_transition` `editor_remove_state_machine_transition` `editor_set_blend_tree_node` `editor_set_animation_tree_parameter` `editor_setup_navigation_region` `editor_setup_navigation_agent` `editor_set_navigation_layers` `editor_get_navigation_info` `editor_create_particles` `project_find_unused_resources` `editor_analyze_signal_flow` `project_analyze_scene_complexity` `project_find_script_references` `project_detect_circular_dependencies` `project_get_statistics` `project_validate_scripts` `project_read_text_file`
+- **`readback`**（89）：`project_get_info` `project_get_filesystem_tree` `project_search_file_names` `project_search_file_contents` `project_get_settings` `project_convert_uid_to_path` `project_convert_path_to_uid` `editor_get_scene_tree` `project_read_scene_file_content` `editor_add_scene_instance` `project_get_scene_exports` `editor_rename_node` `editor_get_node_properties` `editor_disconnect_signal` `editor_get_node_groups` `editor_set_node_groups` `editor_find_nodes_in_group` `editor_get_selection` `editor_execute_gdscript` `editor_get_errors` `editor_get_output_log` `editor_get_node_signals` `editor_get_viewport_3d_camera` `editor_set_viewport_3d_camera` `running_game_capture_frames` `running_game_create_input_recording` `running_game_stop_input_recording` `running_game_find_nodes_by_script` `running_game_get_autoload_node` `running_game_get_node_properties_batch` `running_game_find_ui_elements` `running_game_find_nearby_nodes` `running_game_capture_signal_emissions` `editor_get_performance_monitors` `project_list_scripts` `project_read_script` `editor_get_open_scripts` `project_validate_script` `editor_get_input_actions` `editor_find_nodes_by_type` `editor_list_signal_connections` `project_find_files_referencing_symbol` `project_get_scene_dependencies` `editor_list_animations` `editor_create_animation` `editor_add_animation_track` `editor_set_animation_keyframe` `editor_get_animation_info` `editor_get_tilemap_info` `editor_get_tilemap_used_cells` `editor_get_tilemap_cell` `project_read_resource` `project_get_resource_preview` `project_get_export_info` `project_list_export_presets` `project_read_shader` `project_get_shader_params` `editor_set_physics_layers` `editor_get_physics_layers` `editor_setup_physics_body` `editor_get_collision_info` `editor_add_audio_player` `editor_get_audio_info` `editor_get_audio_bus_layout` `editor_add_audio_bus` `editor_set_audio_bus_property` `editor_add_audio_bus_effect` `project_get_theme_info` `editor_create_animation_tree` `editor_get_animation_tree_structure` `editor_add_state_machine_state` `editor_remove_state_machine_state` `editor_add_state_machine_transition` `editor_remove_state_machine_transition` `editor_set_blend_tree_node` `editor_set_animation_tree_parameter` `editor_setup_navigation_region` `editor_setup_navigation_agent` `editor_set_navigation_layers` `editor_get_navigation_info` `editor_create_particles` `project_find_unused_resources` `editor_analyze_signal_flow` `project_analyze_scene_complexity` `project_find_script_references` `project_detect_circular_dependencies` `project_get_statistics` `project_validate_scripts` `project_read_text_file`
 - **`count_only`**（12）：`editor_connect_signal` `running_game_find_node_when_available` `editor_set_node_script` `editor_remove_animation` `editor_add_mesh_instance` `editor_setup_camera_3d` `editor_setup_lighting` `editor_set_material_3d` `editor_setup_world_environment` `editor_add_gridmap` `editor_set_control_theme` `editor_set_node_script_batch`
-- **`no_calls`**（20）：`editor_play_scene` `editor_stop_scene` `editor_set_node_selection` `editor_remove_node_selection` `editor_remove_output_log` `editor_reload_plugin` `editor_rescan_project_filesystem` `editor_analyze_screenshot_diff` `editor_set_auto_dismiss_dialogs` `editor_simulate_key` `editor_simulate_mouse_click` `editor_simulate_mouse_move` `editor_simulate_input_action` `editor_simulate_input_sequence` `project_get_export_info` `project_list_export_presets` `editor_get_test_report` `os_list_android_devices` `project_get_android_preset_info` `os_deploy_to_android_device`
+- **`no_calls`**（18）：`editor_play_scene` `editor_stop_scene` `editor_set_node_selection` `editor_remove_node_selection` `editor_remove_output_log` `editor_reload_plugin` `editor_rescan_project_filesystem` `editor_analyze_screenshot_diff` `editor_set_auto_dismiss_dialogs` `editor_simulate_key` `editor_simulate_mouse_click` `editor_simulate_mouse_move` `editor_simulate_input_action` `editor_simulate_input_sequence` `editor_get_test_report` `os_list_android_devices` `project_get_android_preset_info` `os_deploy_to_android_device`
 
 ## 0. 分桶与状态
 
 | 桶 | 工具数 |
 |---|---|
-| `0` 次 | 20 |
+| `0` 次 | 18 |
 | `1-4` 次 | 0 |
-| `>=5` 次 | 157 |
+| `>=5` 次 | 159 |
 | **合计** | **177** |
 
 | 状态 | 工具数 |
 |---|---|
-| 达标 | 102 |
+| 达标 | 104 |
 | 计数达标缺证据 | 55 |
 | 未达(1-4) | 0 |
-| 未达(0) | 20 |
+| 未达(0) | 18 |
 
 | scope | 契约条数 | 被调用过 | 0 次 | ≥5 次 |
 |---|---|---|---|---|
-| both | 50 | 45 | 5 | 45 |
+| both | 50 | 47 | 3 | 47 |
 | editor | 104 | 89 | 15 | 89 |
 | game | 23 | 23 | 0 | 23 |
 
@@ -213,8 +213,8 @@
 | 104 | `project_edit_resource` | both | edit | 6 | 5 | 1 | `file_effect` | ok_file_effect_observed ×5 | runs/_exercises/ex_files/c1-task110(6) | 达标 |
 | 105 | `project_create_resource` | both | create | 7 | 6 | 1 | `file_effect` | ok_file_effect_observed ×6 | runs/_exercises/ex_files/c1-task110(6) ; runs/_exercises/ex_3d/h1-task111(1) | 达标 |
 | 106 | `project_get_resource_preview` | both | get | 12 | 5 | 7 | `readback` | own_payload ×5（读类回包即证据） | runs/_exercises/ex_files/c1-task110(6) ; runs/_exercises/ex_files/c1b-task110(6) | 达标 |
-| 107 | `project_get_export_info` | both | get | 0 | 0 | 0 | `no_calls` | - | - | 未达(0) |
-| 108 | `project_list_export_presets` | both | list | 0 | 0 | 0 | `no_calls` | - | - | 未达(0) |
+| 107 | `project_get_export_info` | both | get | 13 | 11 | 2 | `readback` | own_payload ×11（读类回包即证据） | runs/_exercises/ex_export/h8-task114(8) ; runs/_exercises/ex_export_np/h8n-task114(5) | 达标 |
+| 108 | `project_list_export_presets` | both | list | 14 | 12 | 2 | `readback` | own_payload ×12（读类回包即证据） | runs/_exercises/ex_export/h8-task114(9) ; runs/_exercises/ex_export_np/h8n-task114(5) | 达标 |
 | 109 | `project_read_shader` | both | read | 7 | 6 | 1 | `readback` | own_payload ×6（读类回包即证据） | runs/_exercises/ex_files/c1-task110(6) ; runs/_exercises/ex_files/c1-smoke(1) | 达标 |
 | 110 | `project_create_shader` | both | create | 12 | 11 | 1 | `file_effect` | ok_file_effect_observed ×11 | runs/_exercises/ex_files/c1-task110(6) ; runs/_exercises/ex_files/c1-smoke(1) | 达标 |
 | 111 | `project_edit_shader` | both | edit | 8 | 7 | 1 | `file_effect` | ok_file_effect_observed ×7 | runs/_exercises/ex_files/c1-task110(6) ; runs/_exercises/ex_write4/c4-final-task111(1) | 达标 |
@@ -287,7 +287,7 @@
 
 ## 2. 分桶明细
 
-### 2.1 `>=5` 次（157 条）
+### 2.1 `>=5` 次（159 条）
 
 | tool | scope | 累计 | 有效 | 边界 | 档位 | 状态 | 证据 |
 |---|---|---|---|---|---|---|---|
@@ -383,6 +383,8 @@
 | `project_edit_resource` | both | 6 | 5 | 1 | `file_effect` | 达标 | runs/_exercises/ex_files/c1-task110(6) |
 | `project_create_resource` | both | 7 | 6 | 1 | `file_effect` | 达标 | runs/_exercises/ex_files/c1-task110(6) ; runs/_exercises/ex_3d/h1-task111(1) |
 | `project_get_resource_preview` | both | 12 | 5 | 7 | `readback` | 达标 | runs/_exercises/ex_files/c1-task110(6) ; runs/_exercises/ex_files/c1b-task110(6) |
+| `project_get_export_info` | both | 13 | 11 | 2 | `readback` | 达标 | runs/_exercises/ex_export/h8-task114(8) ; runs/_exercises/ex_export_np/h8n-task114(5) |
+| `project_list_export_presets` | both | 14 | 12 | 2 | `readback` | 达标 | runs/_exercises/ex_export/h8-task114(9) ; runs/_exercises/ex_export_np/h8n-task114(5) |
 | `project_read_shader` | both | 7 | 6 | 1 | `readback` | 达标 | runs/_exercises/ex_files/c1-task110(6) ; runs/_exercises/ex_files/c1-smoke(1) |
 | `project_create_shader` | both | 12 | 11 | 1 | `file_effect` | 达标 | runs/_exercises/ex_files/c1-task110(6) ; runs/_exercises/ex_files/c1-smoke(1) ; runs/_exercises/ex_write/c4-task111(1) |
 | `project_edit_shader` | both | 8 | 7 | 1 | `file_effect` | 达标 | runs/_exercises/ex_files/c1-task110(6) ; runs/_exercises/ex_write4/c4-final-task111(1) ; runs/_exercises/ex_write5/c4-v5-task111(1) |
@@ -454,17 +456,17 @@
 | tool | scope | 累计 | 有效 | 边界 | 档位 | 状态 | 证据 |
 |---|---|---|---|---|---|---|---|
 
-### 2.3 `0` 次（20 条）
+### 2.3 `0` 次（18 条）
 
 （按前缀分组，均为 0 次；其中登记为「不可达」的见 §4）
 
 - **editor_**（15）：`editor_play_scene` `editor_stop_scene` `editor_set_node_selection` `editor_remove_node_selection` `editor_remove_output_log` `editor_reload_plugin` `editor_rescan_project_filesystem` `editor_analyze_screenshot_diff` `editor_set_auto_dismiss_dialogs` `editor_simulate_key` `editor_simulate_mouse_click` `editor_simulate_mouse_move` `editor_simulate_input_action` `editor_simulate_input_sequence` `editor_get_test_report`
 - **os_**（2）：`os_list_android_devices` `os_deploy_to_android_device`
-- **project_**（3）：`project_get_export_info` `project_list_export_presets` `project_get_android_preset_info`
+- **project_**（1）：`project_get_android_preset_info`
 
 ## 3. `<5` 清单（本轮仍未达标的工具）
 
-共 **20** 条（占契约 11.3%）：`0` 次 20 条、`1-4` 次 0 条。
+共 **18** 条（占契约 10.2%）：`0` 次 18 条、`1-4` 次 0 条。
 
 | tool | scope | verb | 累计 | 有效 | 边界 | 档位 | 登记不可达 | 状态 |
 |---|---|---|---|---|---|---|---|---|
@@ -482,8 +484,6 @@
 | `editor_simulate_mouse_move` | editor | simulate | 0 | 0 | 0 | `no_calls` | H7 | 未达(0) |
 | `editor_simulate_input_action` | editor | simulate | 0 | 0 | 0 | `no_calls` | H7 | 未达(0) |
 | `editor_simulate_input_sequence` | editor | simulate | 0 | 0 | 0 | `no_calls` | H7 | 未达(0) |
-| `project_get_export_info` | both | get | 0 | 0 | 0 | `no_calls` | H8 | 未达(0) |
-| `project_list_export_presets` | both | list | 0 | 0 | 0 | `no_calls` | H8 | 未达(0) |
 | `editor_get_test_report` | editor | get | 0 | 0 | 0 | `no_calls` | H7 | 未达(0) |
 | `os_list_android_devices` | both | list | 0 | 0 | 0 | `no_calls` | H8 | 未达(0) |
 | `project_get_android_preset_info` | both | get | 0 | 0 | 0 | `no_calls` | H8 | 未达(0) |
@@ -493,7 +493,7 @@
 
 登记来源：`recovery/reports/TOOL-COVERAGE-TASK-108.md` §5.3 (5) which of them are structurally unreachable in this loop (INFERENCE)（**推断**，判据是「缺少本循环不具备的子系统/资产/前置运行态」）。本视图把登记表与本轮实测**对在一起**：`实测调用` 列不为 0 的条目就是登记漂移，必须在下一轮从登记表里移除或改判。
 
-登记成员 **74** 条；其中实测**已被调用**（登记漂移）**54** 条，其中 **54** 条已按实测证据改判并记入登记表的 `reclassified`（下表 `改判` 列打 `YES`），其余为待复核漂移。
+登记成员 **74** 条；其中实测**已被调用**（登记漂移）**56** 条，其中 **54** 条已按实测证据改判并记入登记表的 `reclassified`（下表 `改判` 列打 `YES`），其余为待复核漂移。
 
 ### H1 3D 内容管线
 
@@ -625,8 +625,8 @@
 | `os_deploy_to_android_device` | both | 0 | - | - | - |
 | `os_list_android_devices` | both | 0 | - | - | - |
 | `project_get_android_preset_info` | both | 0 | - | - | - |
-| `project_get_export_info` | both | 0 | - | - | - |
-| `project_list_export_presets` | both | 0 | - | - | - |
+| `project_get_export_info` | both | 13 | **YES** | - | runs/_exercises/ex_export/h8-task114(8) ; runs/_exercises/ex_export_np/h8n-task114(5) |
+| `project_list_export_presets` | both | 14 | **YES** | - | runs/_exercises/ex_export/h8-task114(9) ; runs/_exercises/ex_export_np/h8n-task114(5) |
 
 ### H9 运行期录放与特殊捕获（deferred / 条件态）
 

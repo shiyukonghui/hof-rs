@@ -1,0 +1,13 @@
+docs(godot-mcp): TASK-114 - the report and the D159 decision record
+
+TASK-114-REPORT.md carries the verbatim output of every command quoted (the four
+export attempts, the three emsdk failures, the real session replies) and an
+honest list of what was NOT done: H1's 5 count_only, TASK-113's 3 downgraded
+witnesses, H7's 15, H8's remaining 3, and the web template that never built.
+
+D159 also records a factual correction to this task's own premise: the locally
+installed official Godot 4.7.1-stable mono Windows editor binary is Authenticode
+VALID (CN=Prehensile Tales B.V., Certum), not unsigned. Our own six editor exes
+and the export template we build from source ARE NotSigned. The README therefore
+explains "swapping in the official binary does not help" with three reasons that
+survive measurement instead of the one that did not.

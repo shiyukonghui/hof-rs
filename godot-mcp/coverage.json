@@ -1,17 +1,17 @@
 {
-  "generated_utc": "2026-09-27T03:28:53Z",
+  "generated_utc": "2026-09-27T03:45:32Z",
   "mode": "all-runs",
   "root": "F:\\moonbit-hof-rs\\godot-mcp",
   "runs_dir": "runs",
   "excludes": [],
   "corpus": {
-    "trace_files": 168,
-    "run_dirs": 102,
-    "calls": 8444,
+    "trace_files": 172,
+    "run_dirs": 104,
+    "calls": 8471,
     "malformed_lines": 0,
-    "ok": 7843,
-    "failed": 601,
-    "distinct_tools": 157,
+    "ok": 7866,
+    "failed": 605,
+    "distinct_tools": 159,
     "sidecars_verified": 273
   },
   "fingerprints": {
@@ -29,19 +29,19 @@
     }
   },
   "buckets": {
-    ">=5": 157,
-    "0": 20
+    ">=5": 159,
+    "0": 18
   },
   "status_counts": {
-    "达标": 102,
+    "达标": 104,
     "计数达标缺证据": 55,
-    "未达(0)": 20
+    "未达(0)": 18
   },
   "evidence_tier_counts": {
-    "readback": 87,
+    "readback": 89,
     "file_effect": 24,
     "pixel_effect": 34,
-    "no_calls": 20,
+    "no_calls": 18,
     "count_only": 12
   },
   "evidence_tier_order": [
@@ -506,9 +506,9 @@
   "scope_counts": {
     "both": {
       "tools": 50,
-      "called": 45,
-      ">=5": 45,
-      "0": 5
+      "called": 47,
+      ">=5": 47,
+      "0": 3
     },
     "editor": {
       "tools": 104,
@@ -5549,53 +5549,99 @@
       "tool": "project_get_export_info",
       "scope": "both",
       "verb": "get",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
-      "readback": null,
+      "calls": 13,
+      "ok": 11,
+      "boundary": 2,
+      "effective": 11,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "kind": "own_payload",
+        "witness_tool": null,
+        "run": null,
+        "witness_seq": null,
+        "why": "读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等",
+        "declared_in": null
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
-      "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "read_payload_calls": 11,
+      "facts_complete": 13,
+      "bucket": ">=5",
+      "status": "达标",
       "unreachable_category": "H8",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "verdicts": {
+        "ok_no_effect_observed": 11,
+        "failed": 2
+      },
+      "file_effects": {
+        "none": 13
+      },
+      "flags": {
+        "error_suggestion": 2
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_export/h8-task114",
+          "calls": 8
+        },
+        {
+          "run": "runs/_exercises/ex_export_np/h8n-task114",
+          "calls": 5
+        }
+      ],
+      "first_ts_ms": 1790480636729,
+      "last_ts_ms": 1790480701425,
+      "gate": true
     },
     {
       "tool": "project_list_export_presets",
       "scope": "both",
       "verb": "list",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "evidence_tier": "no_calls",
-      "evidence_tier_label": "0 次调用",
-      "readback": null,
+      "calls": 14,
+      "ok": 12,
+      "boundary": 2,
+      "effective": 12,
+      "evidence_tier": "readback",
+      "evidence_tier_label": "readback：另一次独立读调用读回佐证（witness_read）或读类工具自己的载荷（own_payload）",
+      "readback": {
+        "kind": "own_payload",
+        "witness_tool": null,
+        "run": null,
+        "witness_seq": null,
+        "why": "读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等",
+        "declared_in": null
+      },
       "pixel_effect_calls": 0,
       "file_effect_calls": 0,
-      "read_payload_calls": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "read_payload_calls": 12,
+      "facts_complete": 14,
+      "bucket": ">=5",
+      "status": "达标",
       "unreachable_category": "H8",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "verdicts": {
+        "ok_no_effect_observed": 12,
+        "failed": 2
+      },
+      "file_effects": {
+        "none": 14
+      },
+      "flags": {
+        "error_suggestion": 2
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_export/h8-task114",
+          "calls": 9
+        },
+        {
+          "run": "runs/_exercises/ex_export_np/h8n-task114",
+          "calls": 5
+        }
+      ],
+      "first_ts_ms": 1790480636386,
+      "last_ts_ms": 1790480701943,
+      "gate": true
     },
     {
       "tool": "project_read_shader",
@@ -9773,6 +9819,42 @@
         ]
       },
       {
+        "tool": "project_get_export_info",
+        "scope": "both",
+        "category": "H8",
+        "measured_calls": 13,
+        "drift": true,
+        "reclassified": false,
+        "evidence": [
+          [
+            "runs/_exercises/ex_export/h8-task114",
+            8
+          ],
+          [
+            "runs/_exercises/ex_export_np/h8n-task114",
+            5
+          ]
+        ]
+      },
+      {
+        "tool": "project_list_export_presets",
+        "scope": "both",
+        "category": "H8",
+        "measured_calls": 14,
+        "drift": true,
+        "reclassified": false,
+        "evidence": [
+          [
+            "runs/_exercises/ex_export/h8-task114",
+            9
+          ],
+          [
+            "runs/_exercises/ex_export_np/h8n-task114",
+            5
+          ]
+        ]
+      },
+      {
         "tool": "running_game_capture_frames",
         "scope": "game",
         "category": "H9",
@@ -11210,19 +11292,37 @@
         "tool": "project_get_export_info",
         "scope": "both",
         "category": "H8",
-        "measured_calls": 0,
-        "drift": false,
+        "measured_calls": 13,
+        "drift": true,
         "reclassified": false,
-        "evidence": []
+        "evidence": [
+          [
+            "runs/_exercises/ex_export/h8-task114",
+            8
+          ],
+          [
+            "runs/_exercises/ex_export_np/h8n-task114",
+            5
+          ]
+        ]
       },
       {
         "tool": "project_list_export_presets",
         "scope": "both",
         "category": "H8",
-        "measured_calls": 0,
-        "drift": false,
+        "measured_calls": 14,
+        "drift": true,
         "reclassified": false,
-        "evidence": []
+        "evidence": [
+          [
+            "runs/_exercises/ex_export/h8-task114",
+            9
+          ],
+          [
+            "runs/_exercises/ex_export_np/h8n-task114",
+            5
+          ]
+        ]
       },
       {
         "tool": "running_game_capture_frames",

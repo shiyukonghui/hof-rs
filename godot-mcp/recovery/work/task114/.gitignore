@@ -1,0 +1,8 @@
+# TASK-114 scratch (not deliverables). Rebuild with README.md if needed.
+emsdk/
+motw_test/
+web_probe/cs_web_probe/
+web_probe/*/out/
+emcc_smoke.js
+emcc_smoke.wasm
+

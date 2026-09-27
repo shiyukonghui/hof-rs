@@ -1,0 +1,134 @@
+{
+  "_comment": "TASK-114 C4 -- H8 batch: the two export-read tools that only need export_presets.cfg. This project HAS export_presets.cfg with 2 presets (Windows Desktop + Web), so both tools are exercised on their real success branch, on BOTH endpoints, plus the unknown-argument boundary the empty inputSchema implies.",
+  "game": "_exercises/ex_export",
+  "import": true,
+  "calls": [
+    {
+      "tag": "h8-001-project_list_export_presets-editor-ok",
+      "port": "editor",
+      "tool": "project_list_export_presets",
+      "arguments": {},
+      "note": "project_list_export_presets call 1/3 on the editor endpoint. export_presets.cfg has 2 presets."
+    },
+    {
+      "tag": "h8-002-project_list_export_presets-editor-ok",
+      "port": "editor",
+      "tool": "project_list_export_presets",
+      "arguments": {},
+      "note": "project_list_export_presets call 2/3 on the editor endpoint (repeat: the answer must be stable)"
+    },
+    {
+      "tag": "h8-003-project_list_export_presets-editor-ok",
+      "port": "editor",
+      "tool": "project_list_export_presets",
+      "arguments": {},
+      "note": "project_list_export_presets call 3/3 on the editor endpoint"
+    },
+    {
+      "tag": "h8-004-project_get_export_info-editor-ok",
+      "port": "editor",
+      "tool": "project_get_export_info",
+      "arguments": {},
+      "note": "project_get_export_info call 1/3 on the editor endpoint. EditorExport exists here, so the editor_export capability must be available and export_platform_count > 0."
+    },
+    {
+      "tag": "h8-005-project_get_export_info-editor-ok",
+      "port": "editor",
+      "tool": "project_get_export_info",
+      "arguments": {},
+      "note": "project_get_export_info call 2/3 on the editor endpoint"
+    },
+    {
+      "tag": "h8-006-project_get_export_info-editor-ok",
+      "port": "editor",
+      "tool": "project_get_export_info",
+      "arguments": {},
+      "note": "project_get_export_info call 3/3 on the editor endpoint"
+    },
+    {
+      "tag": "h8-007-project_list_export_presets-game-ok",
+      "port": "game",
+      "tool": "project_list_export_presets",
+      "arguments": {},
+      "note": "project_list_export_presets call 1/3 on the GAME endpoint. No EditorExport in a game process, so presets_source must fall back to the file."
+    },
+    {
+      "tag": "h8-008-project_list_export_presets-game-ok",
+      "port": "game",
+      "tool": "project_list_export_presets",
+      "arguments": {},
+      "note": "project_list_export_presets call 2/3 on the game endpoint"
+    },
+    {
+      "tag": "h8-009-project_list_export_presets-game-ok",
+      "port": "game",
+      "tool": "project_list_export_presets",
+      "arguments": {},
+      "note": "project_list_export_presets call 3/3 on the game endpoint"
+    },
+    {
+      "tag": "h8-010-project_get_export_info-game-ok",
+      "port": "game",
+      "tool": "project_get_export_info",
+      "arguments": {},
+      "note": "project_get_export_info call 1/3 on the game endpoint. capabilities.editor_process must be false and unavailable[] must carry the editor_export entry."
+    },
+    {
+      "tag": "h8-011-project_get_export_info-game-ok",
+      "port": "game",
+      "tool": "project_get_export_info",
+      "arguments": {},
+      "note": "project_get_export_info call 2/3 on the game endpoint"
+    },
+    {
+      "tag": "h8-012-project_get_export_info-game-ok",
+      "port": "game",
+      "tool": "project_get_export_info",
+      "arguments": {},
+      "note": "project_get_export_info call 3/3 on the game endpoint"
+    },
+    {
+      "tag": "h8-013-project_list_export_presets-editor-unknown-arg",
+      "port": "editor",
+      "tool": "project_list_export_presets",
+      "arguments": {
+        "preset_name": "Windows Desktop"
+      },
+      "note": "project_list_export_presets boundary: the inputSchema is the empty object, so the registry's unknown-argument gate must refuse this"
+    },
+    {
+      "tag": "h8-014-project_get_export_info-editor-unknown-arg",
+      "port": "editor",
+      "tool": "project_get_export_info",
+      "arguments": {
+        "preset_name": "Windows Desktop"
+      },
+      "note": "project_get_export_info boundary: same empty-schema gate"
+    },
+    {
+      "tag": "h8-015-project_list_export_presets-game-unknown-arg",
+      "port": "game",
+      "tool": "project_list_export_presets",
+      "arguments": {
+        "index": 0
+      },
+      "note": "project_list_export_presets boundary on the game endpoint: same gate, different bogus key"
+    },
+    {
+      "tag": "h8-016-project_get_export_info-game-unknown-arg",
+      "port": "game",
+      "tool": "project_get_export_info",
+      "arguments": {
+        "index": 0
+      },
+      "note": "project_get_export_info boundary on the game endpoint"
+    },
+    {
+      "tag": "h8-017-project_list_export_presets-editor-ok-readback",
+      "port": "editor",
+      "tool": "project_list_export_presets",
+      "arguments": {},
+      "note": "read-back after the four refusals: the tool still answers with the same two presets"
+    }
+  ]
+}
