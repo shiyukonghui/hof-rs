@@ -11,7 +11,7 @@
 **做完了三件事，并在做的过程中找到一个必须马上说的缺陷。**
 
 1. **台账**：`tools/tool_coverage.py` 把 TASK-108 的统计方法固化成可重跑的工具，两种口径（全量 `runs/**` 与 `--only-final` 的 20 个最终 tag）各自**逐数复现 TASK-108**（2612 次 / 25 条 ≥5 / 150 条 0 次；6618 次 / 27 条 ≥5 / 148 条 0 次），并新增「有效 / 边界 / 字段齐备」三列与**不可达登记表的联动视图**。
-2. **覆盖**：新建 3 个练习工程、4 个专门会话、**4 组批次共 651 次调用**（c1 252 + c1b 49 + c1c 24 + c23 163×2），把**可达但 0 次的 63 条**工具从 0 打到 ≥5，其中**家族①的 40 条 project_* 全部通过「≥5 次 + ≥1 生效 + ≥1 边界」的批次门（40/40）**。全语料达标数 **27 → 89 / 177**。
+2. **覆盖**：新建 3 个练习工程、4 个专门会话、**4 组批次共 651 次调用**（c1 252 + c1b 49 + c1c 24 + c23 163×2），让 **63 条 0 次工具有了实测调用、其中 60 条达到 ≥5**（另有 2 条旧的 1-4 工具补到 ≥5），其中**家族①的 40 条 project_* 全部通过「≥5 次 + ≥1 生效 + ≥1 边界」的批次门（42/42）**。全语料**≥5 数 27 → 89 / 177**。
 3. **缺陷**：一个**阻塞级**契约/实现不符被实测抓到并修在根上 —— `editor_list_signal_connections` 的 `scope` 参数**契约声明、handler 实现、注册 schema 却没有**，于是调用方永远拿 -32602。修复后 `scope:user|internal` 从 0/3 accepted 变成 3/3 accepted；另登记 4 条根因明确但需设计决策的缺陷、3 条观察。
 
 **必须同时说清的边界**：§C2 的 4 条只登记未修（理由逐条给出）；`running_game_capture_frames` / `capture_signal_emissions` / `get_node_properties_batch` 这 3 条目标仍是「计数达标缺证据」，台账没有替它们把证据补上（§B4）。
@@ -188,9 +188,9 @@
 |---|---|---|---|
 | run 目录 / trace 文件 / `tools/call` | 81 / 140 / 6618 | 87 / 148 / **7280** | +6 / +8 / +662 |
 | 出现过的工具名 | 29 | **92** | **+63** |
-| `0` 次 | 148 | **85** | **−63** |
+| `0` 次 | 148 | **85** | **−63**（63 条 0 次工具全部有了实测调用） |
 | `1-4` 次 | 2 | 3 | +1（全部是 c23 的 setup 工具：`editor_connect_signal` 4、`editor_set_node_groups` 4、`editor_setup_collision_shape` 2） |
-| `≥5` 次 | 27 | **89** | **+62** |
+| `≥5` 次 | 27 | **89** | **+62**（60 条来自 0 桶 + 2 条旧的 1-4 工具 `project_create_scene_file` 3→15、`project_delete_scene_file` 4→10） |
 | `达标`（≥5 且 有生效 且 有边界） | 5 | **66** | **+61** |
 | 登记表「不可达」 | 74 | 74（其中 **6 条已按实测改判**，仍当不可达 68） | −6 |
 | 可达但未覆盖（<5 且非不可达） | 76 | **20** | **−56** |
@@ -332,3 +332,59 @@
 * **没有**碰 20 款正式工程与它们的历史 `runs/`：只读；练习轮一律写在 `runs/_exercises/` 与 `projects/_exercises/`（`projects/pong` 是我复制练习工程时的**源**，其本身零改动）。
 * **没有**把 `running_game_capture_*` 的「生效」规则改成对它们有利：台账宁可显示「计数达标缺证据」，也不为了让数字好看而放宽判定。
 * **没有**给 `runs/` 入库存档：`.gitignore` 第 43 行把 `godot-mcp/runs/` 按既有政策排除，所以本报告引用的 trace/ledger 只留在盘上（路径如上），入库的是工具、会话、清单与台账。
+
+---
+
+## G. 提交后的两仓逐字复核
+
+**边界说明**：本节是 TASK-110 主仓提交 `5f66cb2` **之后**那一刻的两仓状态；此后若再有纯文档追加（包括携带本节的那次），只会让主仓 `git log` 顶部多出文档提交，不会改变下面两组事实（引擎仓 HEAD/远端、主仓已跟踪改动为 0）。
+
+### G1. 引擎仓（`F:\moonbit-hof-rs\godot-mcp\godot`，分支 `feature/mcp-server-module-rebuild`）
+
+```
+$ git log --oneline -3
+3fdabe2d9a fix(godot-mcp): TASK-110 - editor_list_signal_connections' registered schema regains `scope`, the one member that made the TASK-051 narrowing unreachable
+1f9d0cb1c9 modules/mcp_server: task103 - REBUILT-2C-MANIFEST gains the 2c-12 section: ...
+1c7f5c07a1 modules/mcp_server: task103 (X-1) - ...
+
+$ git status --short
+(空)
+
+$ git rev-parse HEAD origin/feature/mcp-server-module-rebuild
+3fdabe2d9af5b482dc95ccb00ce63a0943601991
+3fdabe2d9af5b482dc95ccb00ce63a0943601991
+```
+
+push 的真实输出（`git push origin feature/mcp-server-module-rebuild`）：
+
+```
+To github.com:shiyukonghui/godot.git
+   1f9d0cb1c9..3fdabe2d9a  feature/mcp-server-module-rebuild -> feature/mcp-server-module-rebuild
+```
+
+即：**模块改动已提交并已 push，工作树干净，HEAD 与远端逐位相同。**
+
+### G2. 主仓（`F:\moonbit-hof-rs`，分支 `master`）
+
+```
+$ git log --oneline -2
+5f66cb2 feat(godot-mcp): TASK-110 - the coverage loop's first batch: ...
+d5e9240 TASK-109: 20 C# games exported as runnable Windows exe + 2-part package (D154)
+
+$ git status --short
+ M godot-mcp/recovery/work/task104/logs/git-housekeeping.err.txt
+ M godot-mcp/recovery/work/task104/logs/git-housekeeping.out.txt
+?? godot-mcp/dist/
+?? godot-mcp/recovery/reports/ACCEPTANCE-TASK-107.md
+```
+
+**这 4 条都不是本任务产生的**，本任务**没有**把它们纳入提交：两条 `task104` 日志是 TASK-104 收尾提交时的既有工作树状态，`dist/` 与 `ACCEPTANCE-TASK-107.md` 是 TASK-107/109 的产物。本任务自己的产物**全部已入库**（180 文件 / +29 771 行），`runs/` 按 `.gitignore` 第 43 行的既有政策不入库。
+
+### G3. 跑后的进程与端口检查（铁律 4）
+
+```
+$ netstat -ano | findstr 9888 9889 9877     ->  NO_LISTENERS   （无任何监听者）
+$ tasklist  | findstr /I godot              ->  NO_GODOT_PROC  （无残留引擎进程）
+```
+
+本轮 5 次运行（smoke / c1 / c1b / c1c / c23 / c23-after）全部用同一对端口 **9888 / 9889**，每次跑前都先确认这两端口无监听、无 `godot` 进程；用户端口 **9877** 全程未被占用（`g04` 的 `guard_user_port_9877` 也在门里独立核过）。
