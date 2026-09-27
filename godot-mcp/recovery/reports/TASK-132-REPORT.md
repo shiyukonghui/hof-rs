@@ -426,7 +426,7 @@ TASK-131 已登记，**不是本轮引入**，P1..P7 与模型玩家判据都在
 
 | 编号 | 结论 | 证据 |
 |---|---|---|
-| **Y1** | **完成** | `tools/playtest_player.py` 子命令 `run/prep/selftest/summary/demo/resummarise/failcase`；`--help` 可用；重跑命令见 §K.1；`python tools\playtest_player.py selftest` 全绿（22 条断言，纯函数、无游戏无模型） |
+| **Y1** | **完成** | `tools/playtest_player.py` 子命令 `run/prep/selftest/summary/demo/resummarise/failcase`；`--help` 可用；重跑命令见 §K.1；`python tools\playtest_player.py selftest` 全绿（**23 条断言**，纯函数、无游戏无模型） |
 | **Y2** | **完成** | §E/§F.1 的逐字证据：`runs/model-player/pong/jev/01/request.json`（6690 B）里 `image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAy…rkJggg=="`（长 5846）、`questions` 只有 `move` 一个 `choice`（`with_image true, question_count 1`）、`state {}`；响应 `usage {"input_tokens":650,"output_tokens":178,"image_tokens":475}`。PlayJev 的逐字证据同法（`tetris/playjev/01/`） |
 | **Y3** | **完成** | §D 表 + 每步 `ack_evidence`；**实物**：`probe_action_state` 的返回被存进 `injection.ack_result`（合成）与 `injection.ack_after_keydown`（真实键），如 `{"action":"pong_serve","has_action":true,"pressed":true,"strength":1.0}` |
 | **Y4** | **完成** | §E 逐步表（`frame_before_sha`/`frame_after_sha`/`pixel_diff`/`control_diff`/`frame_budget`/`changed_bool`），`steps.jsonl` 每行齐备 |

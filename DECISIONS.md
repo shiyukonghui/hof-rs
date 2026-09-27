@@ -7084,7 +7084,7 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
     比较里带的时序余量更大；40 px 沿用门的"真实帧差"常量，不新造阈值。
 - 预期影响与回滚点：
   * 两条规则都是纯函数（`decide_changed` / `movement_magnitude`），由 `playtest_player.py selftest`
-  的 22 条断言钉住（含"50 px vs 48 对照 → 不算变化"、"球两窗都走 1.7 px → 不算变化"、
+  的 23 条断言钉住（含"50 px vs 48 对照 → 不算变化"、"球两窗都走 1.7 px → 不算变化"、
     "挡板走 202 px vs 球 1.7 px → 算变化"）。删/改这两条即回滚判据强度。
   * 已录制的证据可**无损重算**：`playtest_player.py resummarise` 由 `steps.jsonl` 重推结论，
     `backfill_labels.py` 由 `state_delta` 重推字段级标签——规则改动与重跑伪影因此可区分。
