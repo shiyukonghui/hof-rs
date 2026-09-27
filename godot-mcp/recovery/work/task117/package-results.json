@@ -1,0 +1,44 @@
+[
+ {
+  "part": 1,
+  "zip": "F:\\moonbit-hof-rs\\godot-mcp\\dist\\godot-mcp-20games-playable-20260927-1424-part1of2.zip",
+  "name": "godot-mcp-20games-playable-20260927-1424-part1of2.zip",
+  "games": [
+   "asteroids",
+   "bomberman",
+   "breakout",
+   "flappy",
+   "frogger",
+   "game2048",
+   "lunarlander",
+   "match3",
+   "minesweeper",
+   "missilecommand"
+  ],
+  "payload_files": 1890,
+  "payload_bytes": 1619727483,
+  "zip_bytes": 632377243,
+  "zip_sha256": "b573907d9fdcad3125e5cfacf250e0ddb34b6502f5bef5ae19973ea67f69092e"
+ },
+ {
+  "part": 2,
+  "zip": "F:\\moonbit-hof-rs\\godot-mcp\\dist\\godot-mcp-20games-playable-20260927-1424-part2of2.zip",
+  "name": "godot-mcp-20games-playable-20260927-1424-part2of2.zip",
+  "games": [
+   "pacman",
+   "platformer",
+   "pong",
+   "puzzlebobble",
+   "rtype",
+   "snake",
+   "sokoban",
+   "spaceinvaders",
+   "tetris",
+   "towerdefense"
+  ],
+  "payload_files": 1890,
+  "payload_bytes": 1619704960,
+  "zip_bytes": 632362355,
+  "zip_sha256": "77fa0501f0e39fd2f206918e1d40ebedc1c0f4982c992908ec535c30831b66f0"
+ }
+]

@@ -108,6 +108,14 @@ ENGINE = os.path.join(ROOT, "godot", "bin", "godot.windows.editor.x86_64.mono.co
 ENGINE_CWD = os.path.join(ROOT, "godot")
 REPORTS = os.path.join(ROOT, "recovery", "reports")
 
+# TASK-117: the same gate must be able to judge **the exported artifact** instead of
+# the project.  A game can be playable in the editor build and broken in the export
+# (that is exactly the failure this switch exists to be able to see), so the two
+# runs are kept apart by output root and the executable is what changes, nothing
+# else.  `EXE_ROOT` is `<root>\dist\exe`; the gate then launches
+# `<EXE_ROOT>\<game>\<game>.exe --mcp-port=N` with the game's own directory as cwd.
+EXE_ROOT = None
+
 sys.path.insert(0, HERE)
 from playtest_agent import build_agent, keycode_of, keyname_of  # noqa: E402
 
@@ -167,7 +175,11 @@ def sha256_file(path):
     return h.hexdigest()
 
 
-def assert_inside(path, prefix=RUNS):
+def assert_inside(path, prefix=None):
+    # `prefix` is resolved at call time, not at def time: TASK-117 moves RUNS to
+    # `runs\playability-exe` for the exported-artifact sweep, and the guard has to
+    # move with it (otherwise the gate would refuse to clean its own new output).
+    prefix = prefix or RUNS
     full = os.path.abspath(path)
     pre = os.path.abspath(prefix).rstrip("\\") + os.sep
     if not full.lower().startswith(pre.lower()):
@@ -583,16 +595,29 @@ class GameProcess(object):
         self.outdir = outdir
         self.proc = None
         self.cmd_file = None
+        self.launched = None
         self.stdout = os.path.join(outdir, "engine-game.stdout.txt")
         self.stderr = os.path.join(outdir, "engine-game.stderr.txt")
         self.cmdline = ""
         self._handles = []
 
     def start(self, ready_timeout=240):
-        project = os.path.join(PROJECTS, self.game)
-        self.cmdline = ('"%s" --path "%s" --mcp-port=%d' % (ENGINE, project, self.port))
+        if EXE_ROOT:
+            # TASK-117: judge the shipped executable.  No `--path`: the exported exe
+            # finds its own sidecar `.pck` next to itself, which is the thing under
+            # test (TASK-115 §C③ measured that it really does read the sidecar).
+            game_dir = os.path.join(EXE_ROOT, self.game)
+            exe = os.path.join(game_dir, self.game + ".exe")
+            self.launched = exe
+            self.cmdline = ('"%s" --mcp-port=%d' % (exe, self.port))
+            cwd = game_dir
+        else:
+            project = os.path.join(PROJECTS, self.game)
+            self.launched = ENGINE
+            self.cmdline = ('"%s" --path "%s" --mcp-port=%d' % (ENGINE, project, self.port))
+            cwd = ENGINE_CWD
         self.cmd_file = os.path.join(self.outdir, "run-game.cmd")
-        batch = ["@echo off", "cd /d \"%s\"" % ENGINE_CWD, self.cmdline,
+        batch = ["@echo off", "cd /d \"%s\"" % cwd, self.cmdline,
                  "echo GAME_EXIT=%ERRORLEVEL%"]
         with io.open(self.cmd_file, "w", encoding="ascii", newline="\r\n") as fh:
             fh.write("\n".join(batch) + "\n")
@@ -604,7 +629,7 @@ class GameProcess(object):
         # CREATE_NO_WINDOW, not DETACHED_PROCESS: a detached tree could not be
         # killed by taskkill /T (see tree_pids_for_port).
         self.proc = subprocess.Popen(["cmd.exe", "/c", self.cmd_file],
-                                     cwd=ENGINE_CWD, stdout=fo, stderr=fe,
+                                     cwd=cwd, stdout=fo, stderr=fe,
                                      stdin=subprocess.DEVNULL,
                                      creationflags=0x08000000)
         t0 = time.time()
@@ -828,9 +853,34 @@ def run_gate(game, args):
     port = args.port
     gp = GameProcess(game, port, outdir)
 
-    gp = GameProcess(game, port, outdir)
+    # TASK-117: what exactly is under test.  For the exported sweep this is the
+    # shipped exe (with its sidecar .pck and data dir), hashed here so the verdict
+    # can be tied to one file rather than to "the export".
+    target = {"mode": "exported-exe" if EXE_ROOT else "project",
+              "engine": ENGINE, "exe_root": EXE_ROOT,
+              "project_dir": os.path.join(PROJECTS, game)}
+    if EXE_ROOT:
+        exe_path = os.path.join(EXE_ROOT, game, game + ".exe")
+        pck_path = os.path.join(EXE_ROOT, game, game + ".pck")
+        data_dir = os.path.join(EXE_ROOT, game, "data_%s_windows_x86_64" % game)
+        target["exe"] = {
+            "path": exe_path,
+            "exists": os.path.isfile(exe_path),
+            "bytes": os.path.getsize(exe_path) if os.path.isfile(exe_path) else None,
+            "sha256": sha256_file(exe_path) if os.path.isfile(exe_path) else None}
+        target["pck"] = {
+            "path": pck_path,
+            "exists": os.path.isfile(pck_path),
+            "bytes": os.path.getsize(pck_path) if os.path.isfile(pck_path) else None,
+            "sha256": sha256_file(pck_path) if os.path.isfile(pck_path) else None}
+        target["data_dir"] = {
+            "path": data_dir,
+            "exists": os.path.isdir(data_dir),
+            "files": (sum(len(f) for _r, _d, f in os.walk(data_dir))
+                      if os.path.isdir(data_dir) else 0)}
+
     gate = {"game": game, "started": time.strftime("%Y-%m-%d %H:%M:%S"),
-            "engine": ENGINE, "cmdline": gp.cmdline, "port": port,
+            "engine": ENGINE, "cmdline": gp.cmdline, "port": port, "target": target,
             "project": proj, "static_audit": audit, "criteria": {}, "frames": [],
             "actions_tested": [], "errors": [], "notes": []}
     frames = []
@@ -1575,6 +1625,8 @@ def write_reports(gates, audit, args):
     summary = {"task": "TASK-116", "generated": time.strftime("%Y-%m-%d %H:%M:%S"),
                "tool": "tools/playability_gate.py",
                "engine": ENGINE,
+               "target_mode": "exported-exe" if EXE_ROOT else "project",
+               "exe_root": EXE_ROOT, "out_root": RUNS,
                "criteria_thresholds": {
                    "P1_min_content_fraction": P1_MIN_CONTENT_FRACTION,
                    "P1_min_bbox_coverage": P1_MIN_BBOX_COVERAGE,
@@ -1586,6 +1638,7 @@ def write_reports(gates, audit, args):
         crit = g.get("criteria") or {}
         summary["games"].append({
             "game": g["game"],
+            "target": g.get("target"),
             "verdict": "playable" if all((crit.get(k) or {}).get("pass") for k in
                                          ("P1", "P2", "P3", "P4", "P5", "P6")) else "not_playable",
             "criteria": {k: dict({"pass": (crit.get(k) or {}).get("pass"),
@@ -1599,17 +1652,17 @@ def write_reports(gates, audit, args):
             "tools_list_count": g.get("tools_list_count"),
             "startup": g.get("startup"),
             "seconds": g.get("seconds"),
-            "frames": [{"file": "frames/" + os.path.basename(f.get("path", "")),
+            "frames": [{"file": "frames/" + os.path.basename(f.get("path") or f.get("file") or ""),
                         "index": f.get("index"), "label": f.get("label"),
                         "width": f.get("width"), "height": f.get("height"),
                         "content_fraction": f.get("content_fraction"),
                         "bbox": f.get("bbox"),
                         "changed_pixels_vs_prev": f.get("changed_pixels_vs_prev"),
                         "sha256": f.get("sha256")} for f in g.get("frames", [])
-                       if f.get("path")],
+                       if (f.get("path") or f.get("file"))],
             "actions": g.get("actions_tested"),
-            "filmstrip": "runs/playability/%s/filmstrip.png" % g["game"],
-            "gate_json": "runs/playability/%s/gate.json" % g["game"],
+            "filmstrip": os.path.join(RUNS, g["game"], "filmstrip.png"),
+            "gate_json": os.path.join(RUNS, g["game"], "gate.json"),
         })
     summary["totals"] = {
         "games": len(gates),
@@ -1646,8 +1699,22 @@ def main(argv=None):
     ap.add_argument("--max-actions", type=int, default=8)
     ap.add_argument("--fresh", action="store_true", default=True)
     ap.add_argument("--no-fresh", dest="fresh", action="store_false")
+    ap.add_argument("--exe-root", default="",
+                    help="TASK-117: gate the exported exe at "
+                         "<exe-root>\\<game>\\<game>.exe instead of the project")
+    ap.add_argument("--out-root", default="",
+                    help="write per-game output somewhere other than runs\\playability "
+                         "(TASK-117 uses runs\\playability-exe)")
     ap.add_argument("--no-report", action="store_true")
     args = ap.parse_args(argv)
+
+    global RUNS, EXE_ROOT
+    if args.out_root:
+        RUNS = os.path.abspath(args.out_root)
+    if args.exe_root:
+        EXE_ROOT = os.path.abspath(args.exe_root.rstrip("\\/"))
+        if not os.path.isdir(EXE_ROOT):
+            raise SystemExit("--exe-root is not a directory: %s" % EXE_ROOT)
 
     all_games = sorted(d for d in os.listdir(PROJECTS)
                        if os.path.isdir(os.path.join(PROJECTS, d))
@@ -1661,6 +1728,9 @@ def main(argv=None):
         os.makedirs(RUNS)
     log("=== playability gate (TASK-116) ===")
     log("engine   : %s" % ENGINE)
+    log("target   : %s%s" % ("EXPORTED EXE under " + EXE_ROOT if EXE_ROOT else "project tree",
+                             "" if not EXE_ROOT else " (no --path; sidecar pck)"))
+    log("out root : %s" % RUNS)
     log("games    : %s" % ", ".join(games))
     log("ports    : %d (checked free before each game)" % args.port)
     log("thresholds: P1 content>=%.4f bbox>=%.4f delta>%d | P2 %d frames | P3 %d px | "

@@ -1,0 +1,8 @@
+from zip    : godot-mcp-20games-playable-20260927-1424-part2of2.zip
+extracted   : 189 files -> F:\moonbit-hof-rs\godot-mcp\recovery\work\task117\unzip-run\godot-mcp-20games-playable-20260927-1424-part2of2\games\pong
+exe exists  : True
+exit code   : 0
+ready line  : True (PONG_READY)
+stdout tail : FROMZIP_EXIT=0
+stderr bytes: 0
+ZIP-EXTRACT-RUN VERDICT: PASS

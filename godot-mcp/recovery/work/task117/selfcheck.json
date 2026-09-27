@@ -1,0 +1,132 @@
+{
+ "checks": [
+  {
+   "check": "godot-mcp-20games-playable-20260927-1424-part1of2.zip: sha256/size match package-results",
+   "ok": true,
+   "detail": "recorded 632377243/b573907d9fdcad3125e5cfacf250e0ddb34b6502f5bef5ae19973ea67f69092e"
+  },
+  {
+   "check": "godot-mcp-20games-playable-20260927-1424-part1of2.zip: single top-level dir",
+   "ok": true,
+   "detail": "['godot-mcp-20games-playable-20260927-1424-part1of2']"
+  },
+  {
+   "check": "godot-mcp-20games-playable-20260927-1424-part1of2.zip: in zip not in manifest",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "godot-mcp-20games-playable-20260927-1424-part1of2.zip: in manifest not in zip",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "godot-mcp-20games-playable-20260927-1424-part1of2.zip: 10 games as declared",
+   "ok": true,
+   "detail": "zip=['asteroids', 'bomberman', 'breakout', 'flappy', 'frogger', 'game2048', 'lunarlander', 'match3', 'minesweeper', 'missilecommand'] declared=['asteroids', 'bomberman', 'breakout', 'flappy', 'frogger', 'game2048', 'lunarlander', 'match3', 'minesweeper', 'missilecommand']"
+  },
+  {
+   "check": "godot-mcp-20games-playable-20260927-1424-part1of2.zip: every game has exe+pck+data dir",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "godot-mcp-20games-playable-20260927-1424-part1of2.zip: README has a per-game '## 玩法' section",
+   "ok": true,
+   "detail": "missing: []"
+  },
+  {
+   "check": "godot-mcp-20games-playable-20260927-1424-part1of2.zip: README documents double-click",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "godot-mcp-20games-playable-20260927-1424-part1of2.zip: RUN-CHECK has per-game playability verdict",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "godot-mcp-20games-playable-20260927-1424-part1of2.zip: RUN-CHECK rows=20",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "godot-mcp-20games-playable-20260927-1424-part1of2.zip: extracted samples re-hash == MANIFEST (9/9)",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "godot-mcp-20games-playable-20260927-1424-part2of2.zip: sha256/size match package-results",
+   "ok": true,
+   "detail": "recorded 632362355/77fa0501f0e39fd2f206918e1d40ebedc1c0f4982c992908ec535c30831b66f0"
+  },
+  {
+   "check": "godot-mcp-20games-playable-20260927-1424-part2of2.zip: single top-level dir",
+   "ok": true,
+   "detail": "['godot-mcp-20games-playable-20260927-1424-part2of2']"
+  },
+  {
+   "check": "godot-mcp-20games-playable-20260927-1424-part2of2.zip: in zip not in manifest",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "godot-mcp-20games-playable-20260927-1424-part2of2.zip: in manifest not in zip",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "godot-mcp-20games-playable-20260927-1424-part2of2.zip: 10 games as declared",
+   "ok": true,
+   "detail": "zip=['pacman', 'platformer', 'pong', 'puzzlebobble', 'rtype', 'snake', 'sokoban', 'spaceinvaders', 'tetris', 'towerdefense'] declared=['pacman', 'platformer', 'pong', 'puzzlebobble', 'rtype', 'snake', 'sokoban', 'spaceinvaders', 'tetris', 'towerdefense']"
+  },
+  {
+   "check": "godot-mcp-20games-playable-20260927-1424-part2of2.zip: every game has exe+pck+data dir",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "godot-mcp-20games-playable-20260927-1424-part2of2.zip: README has a per-game '## 玩法' section",
+   "ok": true,
+   "detail": "missing: []"
+  },
+  {
+   "check": "godot-mcp-20games-playable-20260927-1424-part2of2.zip: README documents double-click",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "godot-mcp-20games-playable-20260927-1424-part2of2.zip: RUN-CHECK has per-game playability verdict",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "godot-mcp-20games-playable-20260927-1424-part2of2.zip: RUN-CHECK rows=20",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "godot-mcp-20games-playable-20260927-1424-part2of2.zip: extracted samples re-hash == MANIFEST (9/9)",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "20 distinct games across the parts",
+   "ok": true,
+   "detail": "seen=20"
+  },
+  {
+   "check": "no game in two parts",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "all 20 expected games present",
+   "ok": true,
+   "detail": "missing=[] extra=[]"
+  }
+ ],
+ "passed": 25,
+ "total": 25,
+ "verdict": "PASS"
+}
