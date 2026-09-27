@@ -6893,3 +6893,128 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
     不改变默认行为（默认 `native`）；
   * 回滚点：`--visual-input-form` 默认 native，删掉该开关即回到 TASK-129 的输入路径；
     `advice` 层无任何自动判决依赖视觉侧（`score_in_decision_path: false` 不变）。
+
+## D173 — TASK-131（A 段）：**真实 OS 键在本机确实能送达游戏窗口**；`Input.parse_input_event` 只是「DisplayServer 之内」的忠实通道；用户「按键无反应」不是输入通路缺陷
+
+- 日期：2026-09-27（TASK-131）
+- 触发问题：用户现场观察到"游戏跑起来以后我没有操作、画面也没有变化"，并追问两件事——
+  ①游戏记录与截图功能到底对应上了没有；②子代理有没有真的读图去验证操作轨迹。
+  决策者据此发现 `tools/playability_gate.py` 里一句**过度声称**（约 2512 行）：
+  `Input.parse_input_event` 是 "the path a real key press takes"。真实按键的路径是
+  **OS → DisplayServer（窗口是否有焦点、事件是否送达）→ `Input::parse_input_event` → InputMap + `_Input` 派发**，
+  门里的注入只覆盖了箭头右边那一半，**从来没有验证过 OS 事件能不能送到窗口**。
+- 选项：
+  ● 沿用"本机没有活动显示，无法做真实键验收"这条旧记录 —— **否决**：旧记录已被 `nvidia-smi`
+    实测反驳（`display_active = Enabled`）；
+  ● 只用合成注入并声称等价 —— **否决**：这正是要证伪的那句过度声称；
+  ● **先做只读能力探测，再用 Win32 `SendInput` 打真键，并与合成臂在同一个实例上对照** —— **采纳**。
+- 选择（实测，证据目录 `godot-mcp/runs/realinput/`）：
+  1. **本机具备送键条件**（`runs/realinput/_env/env.json`）：会话 1 = `console`/`Active`、
+     `OpenInputDesktop` 打开到 `Default`、`SM_CMONITORS = 1`、`SM_CXSCREEN/… = 2560×1440`、
+     `SM_REMOTESESSION = 0`；`SendInput` 发 F24 → `requested 1 / returned 1 / GetLastError 0`，
+     且 `GetAsyncKeyState` 在按下期间返回 `-32767`（OS 确认键真的按下）；`SetForegroundWindow`
+     **更换**了一个窗口并成功（不是对已在前台的窗口空转）。
+  2. **真实键有效，三选一取 ①**。发布版 exe 上，焦点强制到游戏窗口后：
+     `pong`：REAL `W` → `PaddleLeft.pos` y 226→26.67、像素差 3200（对照窗 0 变更 / 0 像素）；
+     `tetris`：REAL `A`/`D` → `PieceX` 3→2→3、像素差 1058，与合成臂**同值**；
+     `snake`：REAL 键把 `LastRefusedInput` 从 `""` 改成 `"-1,0"`（游戏自己的拒绝日志证明**事件确实到达了**）。
+     结论文字写在 `runs/realinput/<game>/real_input.json -> conclusion`。
+  3. **两条通路对照（同实例、同一动作、各自带无输入对照窗）**：`Input.parse_input_event` 与
+     `SendInput` **在 pong/tetris 上结果一致**；两者都只在 DisplayServer 之内/之上那一段不同。
+  4. 方法论上必须记住的一条：**幂等动作不能连测两次同一通道**（连按两次 LEFT，`DirectionX`
+     第二次不变），所以协议改成互逆动作对的循环 `REAL X → PARSE Y → PARSE X → REAL Y`
+     （第一版的反例留在 `runs/realinput/pong-hold0.5-confounded/` 与 `runs/realinput/snake` 的早期运行里）。
+  5. **替代证据的强度上限**（无论结论如何都要写）：机器侧最强的是"状态快照 sha256 + 整窗帧 sha256 +
+     游戏自身 stdout 事件 + pid/端口/trace/版本四处对齐"；它证明的是"这条注入/按键改变了这个实例"，
+     上限在于**不能证明"人坐在键盘前会看到什么"**——那一条只能由 `read_image` 读图补上（见 D174）。
+- 依据：`recovery/reports/TASK-131-REPORT.md` A/B/C 三段的表；工具 `tools/real_input_probe.py`
+  （`env` 只读探测 / `run` 实测，输出 `env.json`/`session.json`/`steps.json`/`real_input.json`/`frames/*`）。
+- 预期影响与回滚点：
+  * `Input.parse_input_event` 的地位**下调**为"DisplayServer 之内的忠实通道（对照臂）"，
+    不再写作"真人按键的路径"；
+  * 本机**不允许**再用"没有活动显示 / 无法送键"作为真实键验收失败的解释；
+  * 回滚点：`tools/real_input_probe.py` 是新增只读工具，删掉即无影响；门内无任何改动依赖它。
+
+## D174 — TASK-131（B/C 段）：**取证必须逐帧读图**，且"取证—输入同一实例"要四处对齐；这两条写进可复用模板
+
+- 日期：2026-09-27（TASK-131）
+- 触发问题：用户追问"当前的游戏记录和截图功能是否对应上了？子代理有去读取图片验证操作轨迹正确吗？"
+  决策者的复核发现：报告里大量使用 sha256 与像素差，**没有一处是"看过图"**；而"帧来自游戏端点"
+  过去只是**注释里的主张**，没有把 pid/端口/trace/版本四处对齐。
+- 选项：
+  ● 继续用像素差 + sha 代替看图 —— **否决**：用户明确问的就是"有没有真的看图"，数字不能冒充；
+  ● 只对齐端口 —— **否决**：同机多进程下端口不足以锁定实例；
+  ● **四处对齐（游戏 pid / MCP 端口 / trace 文件名 / 引擎 `--version`）+ 逐帧 `read_image`** —— **采纳**。
+- 选择：
+  1. 同实例四处对齐全部成立（示例见 `runs/realinput/pong/session.json`）：游戏 pid 与窗口 pid 同在
+     进程树内、`--mcp-port=9931` 唯一、`calls/NNN_<tool>.response.json` 逐调用落盘、
+     引擎版本串 `4.8.dev.mono.custom_build.3fdabe2d9`；并附游戏自己的 stdout（`PONG_TICK`…）。
+  2. **逐帧读图**实际执行：读了 `runs/playability/{snake,pong}/filmstrip.png`（23 格逐格）、
+     `runs/playability/snake/frames/01_settle.png`（800×600 全尺寸）、
+     `runs/realinput/{pong,tetris,snake}/filmstrip.png` 与 pong 的关键帧全尺寸原图；
+     逐帧描述表见报告 §C。**snake 的每一格都是"35% 透明度红色结束遮罩 + 4 格蛇身 + 左上角一颗食物"**，
+     这一条是只有读图才能得出的结论。
+  3. 产出可复用模板 `recovery/tasks/TEMPLATE-logic-feedback.md`：双通路 / 同实例核对项 /
+     逐帧读图表 / 三态结论（逻辑正确·逻辑错误·证据不足）+ 8 条真实反例清单。
+- 依据：报告 §B/§C 的两张表；`tools/real_input_probe.py run` 直接把逐步对应表写成
+  `runs/realinput/<game>/steps.json`（每行含注入调用 seq、状态 sha256、帧 sha256/像素差、`ts_ms`/`frame_count`）。
+- 预期影响与回滚点：**模板成为以后所有游戏逻辑验收的固定步骤**（"必须读图"是硬判据，不可用数字替代）；
+  回滚点：模板是新增文档；`real_input_probe.py` 是新增工具，二者都不改变门的行为。
+
+## D175 — TASK-131（判据段）：把"有变化"与"玩起来了"分开；`snake`/`game2048` 是两个真游戏缺陷；P1 阈值从实测分布重推
+
+- 日期：2026-09-27（TASK-131）
+- 触发问题：`snake` 的 23 帧逐字节相同、`game2048` 的棋盘全空，而旧门报 **P1..P7 全 PASS**。
+  决策者的复核把原因定位到判据（`P2` 接受任意状态变化、`P3` 只要求 `frames_drawn` 递增、
+  `P1` 阈值 0.4% 低于任何真实游戏的 settle 帧），并要求**收紧 + 重跑对比 + 说明哪些款翻红**。
+- 选项：
+  ● 只调阈值数字（把 0.4% 改成 1%）—— **否决**：改不动"用元状态充数"这个机制；
+  ● 把 P2/P3 一律改成"必须有像素差"—— **否决**：会误杀回合制游戏（sokoban 的合法推箱、
+    minesweeper 的翻格在部分帧上像素差可以是 0，而合法拒绝根本不改画面）；
+  ● **声明驱动 + 均匀元状态黑名单 + 一个显式且受限的"拒绝"豁免 + settle 活性检查** —— **采纳**。
+- 选择（全部落在 `tools/playability_controls.json` 的 5 个新声明与 `playability_gate.py` 的纯函数里）：
+  1. **`gameplay_observables.items`（声明）**：每款自己列出"算作世界在动"的 state key。
+     均匀黑名单 `META_KEY_PATTERNS`（时钟 `Ticks`/`Elapsed`、输入计数 `Input*`、输入描述 `LastEvent`、
+     拒绝日志、意图索引 `DirectionX/Y`/`Facing`/`AngleIndex`、摘要 `*Hash`、UI 文本 `*.text`、
+     模式标志 `Paused`/`GameOver`/`LoseReason`、`Seed`）**优先于声明**——声明不能把元状态写回来。
+  2. **新 P2** = 每个声明动作必须在声明的可观测上**赢过自己的无输入对照窗**（或像素赢过），
+     **或**是游戏自己记录的蓄意拒绝（`refusal_evidence`）；**并且至少一个动作真的推动了玩法**。
+     最后半句是关键：没有它，"全都拒绝了，因为局已经死了"（snake / game2048）会靠豁免蒙过去。
+  3. **新 P3** = `loop_advanced` **且** 有玩法推进证据（某个臂推动玩法/像素，或 auto/post 帧有玩法变化或像素差≥40）
+     **且** settle 帧上**没有**声明的终止条件成立（`liveness.terminal`）。`frames_drawn` 递增**不再充分**。
+  4. **X13**：`state_markers` 让**每一帧**带 `Paused`/`GameOver`/`Ticks`/`Score`/时钟读数；
+     `mode_actions` 声明"会留下持久模式"的动作与恢复方式——门在输入轮之后**恢复并读回**
+     （实测 `left_in_mode=['snake_pause'] restored=['snake_pause'] not_restorable=[]`），
+     没声明恢复的会被记进 `not_restorable`，**不允许静默**。
+  5. **X14 阈值重推**：`P1_MIN_CONTENT_FRACTION` 0.004 → **0.008**（依据：20 款 settle 帧的**最低健康值
+     = rtype 1.099%**，病态样本 = snake 0.600%；0.8% 居中，距两者各约 1.3×，且为旧值 2×；
+     **如实标注是"为分离而拟合"，n=1 不能叫标定**）。`bbox_coverage` **保留 0.12 但降级为诊断**：
+     snake 靠"左上角一颗食物 + (504,240) 的 96×24 蛇身"刷出 33% 跨度（填充率仅 1.8%），
+     而合法的稀疏射击游戏 rtype 跨度 95.6% / 填充 1.1% —— **跨度阈值做不到这件事**，于是新增
+     `bbox_fill` 只记录不判定。
+- 依据（三条独立来源互相印证）：
+  * **同证据重算**：`tools/playability_rescore.py` 用冻结的旧规则**逐字复现了全部 24 份记录的 P2/P3**
+    （0 处不复现），所以"前后"两列确实来自同一份证据。完整表 `runs/realinput/t131-rescore-from-recorded.json`。
+  * **真重跑**：`runs/playability/t131-after/`（20 款 + 5 负变体）。totals：
+    `playable 17 / not_playable 8`，`per_criterion_fail = {P1:2, P2:6, P3:5, P4:0, P5:2, P6:2, P7:3}`。
+    与重算**逐款一致**。
+  * **游戏侧根因证据**：`snake` —— settle 快照 `GameOver=true / LoseReason="wall" / Ticks=19` +
+    游戏自己 stdout 的 `SNAKE_WALL head=25,10 cols=25 rows=21 score=10 ticks=19`
+    （`ResetSnake()` 把方向设为 (1,0) 且 `_Process` 立刻步进，19×0.08s = **1.52 秒**自撞右墙，
+    InputMap 只有 `W/A/S/D/P`、**没有重开键**，类注释那句 "The snake starts parked" 与实现不符）；
+    `game2048` —— `GridString="0,0,0,0/0,0,0,0/0,0,0,0/0,0,0,0"`、`TilesInUse=0`、`MaxTile=0`，
+    四个方向全部被 `Move()` 判 `reason=no_change`（**开局没有种下初始棋子**）。
+- 预期影响与回滚点：
+  * 翻红 3 款正向（**定性**）：`snake` = 真游戏缺陷；`game2048` = 真游戏缺陷；
+    `puzzlebobble` = 判据边界（`pb_left/right` 只改 `AngleIndex` 且**像素差 0**，
+    两条出路写在报告 §D.2——画出来（游戏侧缺陷）或声明为玩法可观测（声明侧），**不偷偷放宽**）。
+  * 负变体首次被抓住 2 个：`neg_black_screen`（P2/P3 原来 pass）、`neg_input_dead`（P3 原来 pass）。
+  * `P1` 只有 snake 翻红（0.600% < 0.8%），含最低健康值 rtype（1.099%）在内其余全保持。
+  * **P7 交叉核对**：P7 对 snake 是 **PASS**（`field/food/head` 三个声明节点确实存在且可见）
+    ——与 P1 **不矛盾**，而是**互补地都没覆盖"棋盘盖着结束遮罩、游戏已经死了"这个形态**；
+    点名的 P7 可改进点（只提不实现）：给 snake 声明"必须存在的分数 `Label`"。
+  * 回滚点：`P1_MIN_CONTENT_FRACTION` 与三个判据函数各是一个常量/一段纯函数；
+    `tools/playability_controls.json` 的 5 个新键是**新增**（用
+    `runs/realinput/_scripts/check_patch_scope.py` 证明：除这 5 个键外全文件**逐字节等价**）；
+    删掉新键即回到 TASK-130 的判据口径。
+  * 未触发重建/十道门：本任务**未改引擎模块**（`godot-mcp/godot/` 零字节改动）。

@@ -93,19 +93,37 @@
    "positives": "runs/playability/t129-pos (20 games, 60 observations)",
    "negatives": "runs/playability/negatives (3 counted declared variants, 9 observations) and runs/playability/t129-neg-exe (16 counted pre-fix exports, 57 observations)",
    "at_the_fitted_0.25": {
-    "declared_variants": {"positive_observations_below": 27, "of": 60,
-                          "positive_GAMES_flagged": 13, "of_games": 20,
-                          "negative_games_passed": 0},
-    "with_pre_fix_exports": {"positive_observations_below": 27, "of": 60,
-                             "positive_GAMES_flagged": 14, "of_games": 20,
-                             "negative_games_passed": 3,
-                             "negative_games_that_slipped_through": ["frogger",
-                                                                     "puzzlebobble",
-                                                                     "spaceinvaders"]}
+    "declared_variants": {
+     "positive_observations_below": 27,
+     "of": 60,
+     "positive_GAMES_flagged": 13,
+     "of_games": 20,
+     "negative_games_passed": 0
+    },
+    "with_pre_fix_exports": {
+     "positive_observations_below": 27,
+     "of": 60,
+     "positive_GAMES_flagged": 14,
+     "of_games": 20,
+     "negative_games_passed": 3,
+     "negative_games_that_slipped_through": [
+      "frogger",
+      "puzzlebobble",
+      "spaceinvaders"
+     ]
+    }
    },
    "best_worst_case_threshold_found": {
-    "declared_variants": {"t": 0.04423358291387558, "game_errors": 3, "of_games": 23},
-    "with_pre_fix_exports": {"t": 0.2462863177061081, "game_errors": 16, "of_games": 39}
+    "declared_variants": {
+     "t": 0.04423358291387558,
+     "game_errors": 3,
+     "of_games": 23
+    },
+    "with_pre_fix_exports": {
+     "t": 0.2462863177061081,
+     "game_errors": 16,
+     "of_games": 39
+    }
    },
    "verdict": "THE 0.25 VALUE IS NOT CHANGED, AND MUST NOT BE READ AS A CROSS-STATE THRESHOLD.  It was fitted on the post-input state only; under D-B's multi-state sampling it flags 13-15 of the 20 fixed games.  Changing it again from this dataset would replace one regime-specific number with another, so the number stays, the regime is written down, and the limitation below is the operative statement.  (The same file, tools/playjev_visual_calibrate.py, prints both sweeps.)",
    "artifact": "runs/playability/t129-playjev-fit.json -> jev_multistate_fit"
@@ -160,26 +178,62 @@
   },
   "measured_on_real_negatives": {
    "declared_variants_only": {
-    "threshold_kept_0.5": {"pos_games_flagged": 14, "neg_games_passed": 0,
-                           "game_errors": 14},
-    "best_game_level_fit": {"t": 0.104813, "pos_games_flagged": 0,
-                            "neg_games_passed": 3, "game_errors": 3},
-    "overlap_game_min": {"positive_min": 0.104813, "negative_max": 0.448697,
-                         "gap": -0.343884, "separable": false}
+    "threshold_kept_0.5": {
+     "pos_games_flagged": 14,
+     "neg_games_passed": 0,
+     "game_errors": 14
+    },
+    "best_game_level_fit": {
+     "t": 0.104813,
+     "pos_games_flagged": 0,
+     "neg_games_passed": 3,
+     "game_errors": 3
+    },
+    "overlap_game_min": {
+     "positive_min": 0.104813,
+     "negative_max": 0.448697,
+     "gap": -0.343884,
+     "separable": false
+    }
    },
    "with_the_authoritative_pre_fix_exports": {
-    "negative_games": 24, "negative_games_counted": 19, "negative_frames_counted": 19,
-    "negative_playable_min_median_max": [0.125427, 0.404992, 0.747749],
-    "positive_playable_min_median_max": [0.104813, 0.444876, 0.885693],
-    "threshold_kept_0.5": {"pos_games_flagged": 14, "neg_games_passed": 5,
-                           "game_errors": 19,
-                           "neg_games_that_slipped_through": ["asteroids", "flappy",
-                                                              "game2048", "platformer",
-                                                              "sokoban"]},
-    "best_game_level_fit": {"t": 0.218557, "pos_games_flagged": 4,
-                            "neg_games_passed": 13, "game_errors": 17},
-    "overlap_game_min": {"positive_min": 0.104813, "negative_max": 0.747749,
-                         "gap": -0.642936, "separable": false}
+    "negative_games": 24,
+    "negative_games_counted": 19,
+    "negative_frames_counted": 19,
+    "negative_playable_min_median_max": [
+     0.125427,
+     0.404992,
+     0.747749
+    ],
+    "positive_playable_min_median_max": [
+     0.104813,
+     0.444876,
+     0.885693
+    ],
+    "threshold_kept_0.5": {
+     "pos_games_flagged": 14,
+     "neg_games_passed": 5,
+     "game_errors": 19,
+     "neg_games_that_slipped_through": [
+      "asteroids",
+      "flappy",
+      "game2048",
+      "platformer",
+      "sokoban"
+     ]
+    },
+    "best_game_level_fit": {
+     "t": 0.218557,
+     "pos_games_flagged": 4,
+     "neg_games_passed": 13,
+     "game_errors": 17
+    },
+    "overlap_game_min": {
+     "positive_min": 0.104813,
+     "negative_max": 0.747749,
+     "gap": -0.642936,
+     "separable": false
+    }
    },
    "mechanism_measured_not_guessed": {
     "finding": "PlayJev's `playable` is a function of the PIXELS ONLY, deterministically: across 60 distinct images and 83 judgements, the 22 images that were judged more than once received IDENTICAL `playable` (and identical `score`) every time -- 20 of them appear in BOTH a fixed build and a broken pre-fix export, 2 in a fixed build and a declared negative variant.",
@@ -206,17 +260,121 @@
     "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
     "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
     "items": [
-     {"id": "hud", "need": "score / lives / rocks readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 13200, "text_nonempty": true},
-     {"id": "status", "need": "the game's status line", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 5100, "text_nonempty": true}
+     {
+      "id": "hud",
+      "need": "score / lives / rocks readout",
+      "node": "/root/Main/Hud",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 13200,
+      "text_nonempty": true
+     },
+     {
+      "id": "status",
+      "need": "the game's status line",
+      "node": "/root/Main/Status",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 5100,
+      "text_nonempty": true
+     }
     ]
    },
    "goal": "fly the ship, shoot the rocks, survive",
    "capabilities": [
-    {"need": "turn left", "action": "ast_left", "observable": "ShipAngle"},
-    {"need": "turn right", "action": "ast_right", "observable": "ShipAngle"},
-    {"need": "thrust", "action": "ast_thrust", "observable": "ShipVelX|ShipVelY|Thrusting"},
-    {"need": "fire", "action": "ast_fire", "observable": "ShotsFired"}
-   ]
+    {
+     "need": "turn left",
+     "action": "ast_left",
+     "observable": "ShipAngle"
+    },
+    {
+     "need": "turn right",
+     "action": "ast_right",
+     "observable": "ShipAngle"
+    },
+    {
+     "need": "thrust",
+     "action": "ast_thrust",
+     "observable": "ShipVelX|ShipVelY|Thrusting"
+    },
+    {
+     "need": "fire",
+     "action": "ast_fire",
+     "observable": "ShotsFired"
+    }
+   ],
+   "gameplay_observables": {
+    "declared_by": "TASK-131 X12",
+    "what": "the state keys whose CHANGE means the game played, not that a bookkeeping variable moved",
+    "rule": "a changed state key counts as GAMEPLAY only when it (a) contains one of this game's `items` AND (b) does NOT match the uniform META patterns in tools/playability_gate.py: clocks (`Ticks`, `Elapsed`, `_logTimer`), input accounting (`Input*`, `LastEvent`, `LastDir`, `LastMoveDir`), refusals (`Rejected*`), digests (`*Hash`), UI labels (`*.text`), input intents (`DirectionX`/`DirectionY`, `Facing`, `AngleIndex`), mode flags (`Paused`, `GameOver`, `LoseReason`), seeds, `Moved`.  META wins over `items`, so a declaration cannot re-admit a meta key by listing it.  A position, a velocity, a board, a score or a consumed-object counter DOES count, because that is the world moving; an input acknowledgement is not.",
+    "items": [
+     "ShipX",
+     "ShipY",
+     "ShipVelX",
+     "ShipVelY",
+     "ShipAngle",
+     "/root/Main/Ship",
+     "BulletX",
+     "BulletY",
+     "BulletActive",
+     "/root/Main/Bullet",
+     "Score",
+     "Lives"
+    ],
+    "how_used": "tools/playability_gate.py `is_gameplay_key` / `gameplay_changes` / `arm_evidence`; P2 requires every declared action to move one of these (or pixels) past its own no-input control window, and P3 requires gameplay progress somewhere in the run",
+    "recorded_evidence": "runs/playability/<game>/gate.json -> criteria.P2.gameplay_evidence (per action) and criteria.P3.gameplay_progress"
+   },
+   "state_markers": {
+    "declared_by": "TASK-131 X13",
+    "node": "/root/Main",
+    "fields": [
+     "Paused",
+     "GameOver",
+     "LoseReason",
+     "Ticks",
+     "Score",
+     "Level",
+     "Lines",
+     "Lives"
+    ],
+    "rule": "TASK-131 X13: every captured frame records these fields as of the state read that goes with it (plus `ms`/`drawn`/`processed`/`physics`), so a static frame can be judged legal or illegal from the artifact instead of argued about.  A frame that is identical to its predecessor WHILE a mode flag here says the game is paused/over is a legal static frame; the same frame with the game live is not.",
+    "how_used": "tools/playability_gate.py `marker_values` (stamped into every frame record by `capture`) and `marker_timeline` (criteria.P3.marker_timeline)"
+   },
+   "liveness": {
+    "declared_by": "TASK-131 X10/X13",
+    "node": "/root/Main",
+    "declared": true,
+    "terminal": [
+     {
+      "field": "Lives",
+      "value": 0,
+      "means": "no lives left"
+     }
+    ],
+    "what": "the condition under which the game is over; the gate evaluates it on the SETTLE state, because a game that is already over before the first input cannot be judged by asking whether its picture changes afterwards",
+    "note": "",
+    "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
+   },
+   "refusal_evidence": {
+    "declared_by": "TASK-131 X12",
+    "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
+    "keys": [
+     "LastRefusedInput",
+     "Rejected"
+    ],
+    "value_words": [
+     "rejected",
+     "blocked",
+     "refused",
+     "no_change",
+     "cannot"
+    ],
+    "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
+    "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+   }
   },
   "bomberman": {
    "required_ui": {
@@ -225,35 +383,237 @@
     "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
     "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
     "items": [
-     {"id": "hud", "need": "bricks / enemies / lives readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 10000, "text_nonempty": true},
-     {"id": "status", "need": "the game's status line", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 3300, "text_nonempty": true}
+     {
+      "id": "hud",
+      "need": "bricks / enemies / lives readout",
+      "node": "/root/Main/Hud",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 10000,
+      "text_nonempty": true
+     },
+     {
+      "id": "status",
+      "need": "the game's status line",
+      "node": "/root/Main/Status",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 3300,
+      "text_nonempty": true
+     }
     ]
    },
    "goal": "walk the grid, place bombs, blow up the bricks without dying",
    "capabilities": [
-    {"need": "walk up", "action": "bomb_up", "observable": "PlayerRow|RejectedMoves"},
-    {"need": "walk down", "action": "bomb_down", "observable": "PlayerRow|RejectedMoves"},
-    {"need": "walk left", "action": "bomb_left", "observable": "PlayerCol|RejectedMoves"},
-    {"need": "walk right", "action": "bomb_right", "observable": "PlayerCol|RejectedMoves"},
-    {"need": "place a bomb", "action": "bomb_place", "observable": "BombsPlaced|BombsActive"}
-   ]
-  },  "breakout": {
+    {
+     "need": "walk up",
+     "action": "bomb_up",
+     "observable": "PlayerRow|RejectedMoves"
+    },
+    {
+     "need": "walk down",
+     "action": "bomb_down",
+     "observable": "PlayerRow|RejectedMoves"
+    },
+    {
+     "need": "walk left",
+     "action": "bomb_left",
+     "observable": "PlayerCol|RejectedMoves"
+    },
+    {
+     "need": "walk right",
+     "action": "bomb_right",
+     "observable": "PlayerCol|RejectedMoves"
+    },
+    {
+     "need": "place a bomb",
+     "action": "bomb_place",
+     "observable": "BombsPlaced|BombsActive"
+    }
+   ],
+   "gameplay_observables": {
+    "declared_by": "TASK-131 X12",
+    "what": "the state keys whose CHANGE means the game played, not that a bookkeeping variable moved",
+    "rule": "a changed state key counts as GAMEPLAY only when it (a) contains one of this game's `items` AND (b) does NOT match the uniform META patterns in tools/playability_gate.py: clocks (`Ticks`, `Elapsed`, `_logTimer`), input accounting (`Input*`, `LastEvent`, `LastDir`, `LastMoveDir`), refusals (`Rejected*`), digests (`*Hash`), UI labels (`*.text`), input intents (`DirectionX`/`DirectionY`, `Facing`, `AngleIndex`), mode flags (`Paused`, `GameOver`, `LoseReason`), seeds, `Moved`.  META wins over `items`, so a declaration cannot re-admit a meta key by listing it.  A position, a velocity, a board, a score or a consumed-object counter DOES count, because that is the world moving; an input acknowledgement is not.",
+    "items": [
+     "PlayerCol",
+     "PlayerRow",
+     "/root/Main/PlayerSprite",
+     "BombsActive",
+     "BombsPlaced",
+     "BombList",
+     "/root/Main/Bomb_",
+     "Lives",
+     "Score"
+    ],
+    "how_used": "tools/playability_gate.py `is_gameplay_key` / `gameplay_changes` / `arm_evidence`; P2 requires every declared action to move one of these (or pixels) past its own no-input control window, and P3 requires gameplay progress somewhere in the run",
+    "recorded_evidence": "runs/playability/<game>/gate.json -> criteria.P2.gameplay_evidence (per action) and criteria.P3.gameplay_progress"
+   },
+   "state_markers": {
+    "declared_by": "TASK-131 X13",
+    "node": "/root/Main",
+    "fields": [
+     "Paused",
+     "GameOver",
+     "LoseReason",
+     "Ticks",
+     "Score",
+     "Level",
+     "Lines",
+     "Lives"
+    ],
+    "rule": "TASK-131 X13: every captured frame records these fields as of the state read that goes with it (plus `ms`/`drawn`/`processed`/`physics`), so a static frame can be judged legal or illegal from the artifact instead of argued about.  A frame that is identical to its predecessor WHILE a mode flag here says the game is paused/over is a legal static frame; the same frame with the game live is not.",
+    "how_used": "tools/playability_gate.py `marker_values` (stamped into every frame record by `capture`) and `marker_timeline` (criteria.P3.marker_timeline)"
+   },
+   "liveness": {
+    "declared_by": "TASK-131 X10/X13",
+    "node": "/root/Main",
+    "declared": true,
+    "terminal": [
+     {
+      "field": "GameOver",
+      "value": true,
+      "means": "the game ended"
+     },
+     {
+      "field": "Lives",
+      "value": 0,
+      "means": "no lives left"
+     }
+    ],
+    "what": "the condition under which the game is over; the gate evaluates it on the SETTLE state, because a game that is already over before the first input cannot be judged by asking whether its picture changes afterwards",
+    "note": "",
+    "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
+   },
+   "refusal_evidence": {
+    "declared_by": "TASK-131 X12",
+    "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
+    "keys": [
+     "LastRefusedInput",
+     "Rejected"
+    ],
+    "value_words": [
+     "rejected",
+     "blocked",
+     "refused",
+     "no_change",
+     "cannot"
+    ],
+    "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
+    "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+   }
+  },
+  "breakout": {
    "required_ui": {
     "declared_by": "TASK-130 P7",
     "what": "the UI/controls a player needs on screen for this game to be usable; the declaration is the judgement, the check is machine-run",
     "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
     "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
     "items": [
-     {"id": "hud_score", "need": "score readout", "node": "/root/Main/HudScore", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 7600, "text_nonempty": true},
-     {"id": "hud_status", "need": "the status line above the playfield", "node": "/root/Main/HudStatus", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 7400}
+     {
+      "id": "hud_score",
+      "need": "score readout",
+      "node": "/root/Main/HudScore",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 7600,
+      "text_nonempty": true
+     },
+     {
+      "id": "hud_status",
+      "need": "the status line above the playfield",
+      "node": "/root/Main/HudStatus",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 7400
+     }
     ]
    },
    "goal": "keep the ball alive with the paddle and clear the bricks",
    "capabilities": [
-    {"need": "move the paddle left", "action": "breakout_left", "observable": "Paddle|MinX"},
-    {"need": "move the paddle right", "action": "breakout_right", "observable": "Paddle|MaxX"},
-    {"need": "launch the ball", "action": "breakout_launch", "observable": "Launched|Ball"}
-   ]
+    {
+     "need": "move the paddle left",
+     "action": "breakout_left",
+     "observable": "Paddle|MinX"
+    },
+    {
+     "need": "move the paddle right",
+     "action": "breakout_right",
+     "observable": "Paddle|MaxX"
+    },
+    {
+     "need": "launch the ball",
+     "action": "breakout_launch",
+     "observable": "Launched|Ball"
+    }
+   ],
+   "gameplay_observables": {
+    "declared_by": "TASK-131 X12",
+    "what": "the state keys whose CHANGE means the game played, not that a bookkeeping variable moved",
+    "rule": "a changed state key counts as GAMEPLAY only when it (a) contains one of this game's `items` AND (b) does NOT match the uniform META patterns in tools/playability_gate.py: clocks (`Ticks`, `Elapsed`, `_logTimer`), input accounting (`Input*`, `LastEvent`, `LastDir`, `LastMoveDir`), refusals (`Rejected*`), digests (`*Hash`), UI labels (`*.text`), input intents (`DirectionX`/`DirectionY`, `Facing`, `AngleIndex`), mode flags (`Paused`, `GameOver`, `LoseReason`), seeds, `Moved`.  META wins over `items`, so a declaration cannot re-admit a meta key by listing it.  A position, a velocity, a board, a score or a consumed-object counter DOES count, because that is the world moving; an input acknowledgement is not.",
+    "items": [
+     "BallX",
+     "BallY",
+     "BallSpeedX",
+     "BallSpeedY",
+     "Launched",
+     "PaddleBounces",
+     "/root/Main/Ball",
+     "/root/Main/Paddle",
+     "Score",
+     "Lives"
+    ],
+    "how_used": "tools/playability_gate.py `is_gameplay_key` / `gameplay_changes` / `arm_evidence`; P2 requires every declared action to move one of these (or pixels) past its own no-input control window, and P3 requires gameplay progress somewhere in the run",
+    "recorded_evidence": "runs/playability/<game>/gate.json -> criteria.P2.gameplay_evidence (per action) and criteria.P3.gameplay_progress"
+   },
+   "state_markers": {
+    "declared_by": "TASK-131 X13",
+    "node": "/root/Main",
+    "fields": [
+     "Paused",
+     "GameOver",
+     "LoseReason",
+     "Ticks",
+     "Score",
+     "Level",
+     "Lines",
+     "Lives"
+    ],
+    "rule": "TASK-131 X13: every captured frame records these fields as of the state read that goes with it (plus `ms`/`drawn`/`processed`/`physics`), so a static frame can be judged legal or illegal from the artifact instead of argued about.  A frame that is identical to its predecessor WHILE a mode flag here says the game is paused/over is a legal static frame; the same frame with the game live is not.",
+    "how_used": "tools/playability_gate.py `marker_values` (stamped into every frame record by `capture`) and `marker_timeline` (criteria.P3.marker_timeline)"
+   },
+   "liveness": {
+    "declared_by": "TASK-131 X10/X13",
+    "node": "/root/Main",
+    "declared": false,
+    "terminal": [],
+    "what": "the condition under which the game is over; the gate evaluates it on the SETTLE state, because a game that is already over before the first input cannot be judged by asking whether its picture changes afterwards",
+    "note": "no terminal flag is exported by this project (measured: the recorded settle state at <out>/<game>/states/00_settle.json carries no GameOver/Lives key), so `terminal` is empty and the liveness check can only report that it could not be applied -- P2/P3 still judge the run on gameplay progress",
+    "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
+   },
+   "refusal_evidence": {
+    "declared_by": "TASK-131 X12",
+    "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
+    "keys": [
+     "LastRefusedInput",
+     "Rejected"
+    ],
+    "value_words": [
+     "rejected",
+     "blocked",
+     "refused",
+     "no_change",
+     "cannot"
+    ],
+    "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
+    "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+   }
   },
   "flappy": {
    "required_ui": {
@@ -262,15 +622,98 @@
     "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
     "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
     "items": [
-     {"id": "hud", "need": "score / passed / frame readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 10600, "text_nonempty": true},
-     {"id": "status", "need": "pipes readout", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 4500, "text_nonempty": true}
+     {
+      "id": "hud",
+      "need": "score / passed / frame readout",
+      "node": "/root/Main/Hud",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 10600,
+      "text_nonempty": true
+     },
+     {
+      "id": "status",
+      "need": "pipes readout",
+      "node": "/root/Main/Status",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 4500,
+      "text_nonempty": true
+     }
     ]
    },
    "goal": "flap through the gaps and keep the bird alive",
    "capabilities": [
-    {"need": "flap", "action": "flap", "observable": "BirdVelocity|BirdY"},
-    {"need": "restart after dying", "action": "flappy_restart", "observable": "Restarts|GameOver|Score"}
-   ]
+    {
+     "need": "flap",
+     "action": "flap",
+     "observable": "BirdVelocity|BirdY"
+    },
+    {
+     "need": "restart after dying",
+     "action": "flappy_restart",
+     "observable": "Restarts|GameOver|Score"
+    }
+   ],
+   "gameplay_observables": {
+    "declared_by": "TASK-131 X12",
+    "what": "the state keys whose CHANGE means the game played, not that a bookkeeping variable moved",
+    "rule": "a changed state key counts as GAMEPLAY only when it (a) contains one of this game's `items` AND (b) does NOT match the uniform META patterns in tools/playability_gate.py: clocks (`Ticks`, `Elapsed`, `_logTimer`), input accounting (`Input*`, `LastEvent`, `LastDir`, `LastMoveDir`), refusals (`Rejected*`), digests (`*Hash`), UI labels (`*.text`), input intents (`DirectionX`/`DirectionY`, `Facing`, `AngleIndex`), mode flags (`Paused`, `GameOver`, `LoseReason`), seeds, `Moved`.  META wins over `items`, so a declaration cannot re-admit a meta key by listing it.  A position, a velocity, a board, a score or a consumed-object counter DOES count, because that is the world moving; an input acknowledgement is not.",
+    "items": [
+     "BirdVelocity",
+     "BirdY",
+     "/root/Main/Bird",
+     "Score",
+     "/root/Main/Pipe"
+    ],
+    "how_used": "tools/playability_gate.py `is_gameplay_key` / `gameplay_changes` / `arm_evidence`; P2 requires every declared action to move one of these (or pixels) past its own no-input control window, and P3 requires gameplay progress somewhere in the run",
+    "recorded_evidence": "runs/playability/<game>/gate.json -> criteria.P2.gameplay_evidence (per action) and criteria.P3.gameplay_progress"
+   },
+   "state_markers": {
+    "declared_by": "TASK-131 X13",
+    "node": "/root/Main",
+    "fields": [
+     "Paused",
+     "GameOver",
+     "LoseReason",
+     "Ticks",
+     "Score",
+     "Level",
+     "Lines",
+     "Lives"
+    ],
+    "rule": "TASK-131 X13: every captured frame records these fields as of the state read that goes with it (plus `ms`/`drawn`/`processed`/`physics`), so a static frame can be judged legal or illegal from the artifact instead of argued about.  A frame that is identical to its predecessor WHILE a mode flag here says the game is paused/over is a legal static frame; the same frame with the game live is not.",
+    "how_used": "tools/playability_gate.py `marker_values` (stamped into every frame record by `capture`) and `marker_timeline` (criteria.P3.marker_timeline)"
+   },
+   "liveness": {
+    "declared_by": "TASK-131 X10/X13",
+    "node": "/root/Main",
+    "declared": false,
+    "terminal": [],
+    "what": "the condition under which the game is over; the gate evaluates it on the SETTLE state, because a game that is already over before the first input cannot be judged by asking whether its picture changes afterwards",
+    "note": "no terminal flag is exported by this project (measured: the recorded settle state at <out>/<game>/states/00_settle.json carries no GameOver/Lives key), so `terminal` is empty and the liveness check can only report that it could not be applied -- P2/P3 still judge the run on gameplay progress",
+    "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
+   },
+   "refusal_evidence": {
+    "declared_by": "TASK-131 X12",
+    "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
+    "keys": [
+     "LastRefusedInput",
+     "Rejected"
+    ],
+    "value_words": [
+     "rejected",
+     "blocked",
+     "refused",
+     "no_change",
+     "cannot"
+    ],
+    "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
+    "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+   }
   },
   "frogger": {
    "required_ui": {
@@ -279,18 +722,122 @@
     "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
     "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
     "items": [
-     {"id": "hud", "need": "score / lives / homes readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 10300, "text_nonempty": true},
-     {"id": "status", "need": "homes readout", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 4500, "text_nonempty": true}
+     {
+      "id": "hud",
+      "need": "score / lives / homes readout",
+      "node": "/root/Main/Hud",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 10300,
+      "text_nonempty": true
+     },
+     {
+      "id": "status",
+      "need": "homes readout",
+      "node": "/root/Main/Status",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 4500,
+      "text_nonempty": true
+     }
     ]
    },
    "goal": "hop the frog across the road and the river",
    "hold_ms": 150,
    "capabilities": [
-    {"need": "hop up", "action": "frog_up", "observable": "FrogRow|Lives|GameOver|HomesReached|Score"},
-    {"need": "hop down", "action": "frog_down", "observable": "FrogRow|RejectedSteps"},
-    {"need": "hop left", "action": "frog_left", "observable": "FrogCol"},
-    {"need": "hop right", "action": "frog_right", "observable": "FrogCol"}
-   ]
+    {
+     "need": "hop up",
+     "action": "frog_up",
+     "observable": "FrogRow|Lives|GameOver|HomesReached|Score"
+    },
+    {
+     "need": "hop down",
+     "action": "frog_down",
+     "observable": "FrogRow|RejectedSteps"
+    },
+    {
+     "need": "hop left",
+     "action": "frog_left",
+     "observable": "FrogCol"
+    },
+    {
+     "need": "hop right",
+     "action": "frog_right",
+     "observable": "FrogCol"
+    }
+   ],
+   "gameplay_observables": {
+    "declared_by": "TASK-131 X12",
+    "what": "the state keys whose CHANGE means the game played, not that a bookkeeping variable moved",
+    "rule": "a changed state key counts as GAMEPLAY only when it (a) contains one of this game's `items` AND (b) does NOT match the uniform META patterns in tools/playability_gate.py: clocks (`Ticks`, `Elapsed`, `_logTimer`), input accounting (`Input*`, `LastEvent`, `LastDir`, `LastMoveDir`), refusals (`Rejected*`), digests (`*Hash`), UI labels (`*.text`), input intents (`DirectionX`/`DirectionY`, `Facing`, `AngleIndex`), mode flags (`Paused`, `GameOver`, `LoseReason`), seeds, `Moved`.  META wins over `items`, so a declaration cannot re-admit a meta key by listing it.  A position, a velocity, a board, a score or a consumed-object counter DOES count, because that is the world moving; an input acknowledgement is not.",
+    "items": [
+     "FrogCol",
+     "FrogX",
+     "FrogY",
+     "/root/Main/Frog",
+     "Lives",
+     "Score",
+     "HomesReached"
+    ],
+    "how_used": "tools/playability_gate.py `is_gameplay_key` / `gameplay_changes` / `arm_evidence`; P2 requires every declared action to move one of these (or pixels) past its own no-input control window, and P3 requires gameplay progress somewhere in the run",
+    "recorded_evidence": "runs/playability/<game>/gate.json -> criteria.P2.gameplay_evidence (per action) and criteria.P3.gameplay_progress"
+   },
+   "state_markers": {
+    "declared_by": "TASK-131 X13",
+    "node": "/root/Main",
+    "fields": [
+     "Paused",
+     "GameOver",
+     "LoseReason",
+     "Ticks",
+     "Score",
+     "Level",
+     "Lines",
+     "Lives"
+    ],
+    "rule": "TASK-131 X13: every captured frame records these fields as of the state read that goes with it (plus `ms`/`drawn`/`processed`/`physics`), so a static frame can be judged legal or illegal from the artifact instead of argued about.  A frame that is identical to its predecessor WHILE a mode flag here says the game is paused/over is a legal static frame; the same frame with the game live is not.",
+    "how_used": "tools/playability_gate.py `marker_values` (stamped into every frame record by `capture`) and `marker_timeline` (criteria.P3.marker_timeline)"
+   },
+   "liveness": {
+    "declared_by": "TASK-131 X10/X13",
+    "node": "/root/Main",
+    "declared": true,
+    "terminal": [
+     {
+      "field": "GameOver",
+      "value": true,
+      "means": "the game ended"
+     },
+     {
+      "field": "Lives",
+      "value": 0,
+      "means": "no lives left"
+     }
+    ],
+    "what": "the condition under which the game is over; the gate evaluates it on the SETTLE state, because a game that is already over before the first input cannot be judged by asking whether its picture changes afterwards",
+    "note": "",
+    "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
+   },
+   "refusal_evidence": {
+    "declared_by": "TASK-131 X12",
+    "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
+    "keys": [
+     "LastRefusedInput",
+     "Rejected"
+    ],
+    "value_words": [
+     "rejected",
+     "blocked",
+     "refused",
+     "no_change",
+     "cannot"
+    ],
+    "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
+    "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+   }
   },
   "game2048": {
    "required_ui": {
@@ -299,18 +846,126 @@
     "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
     "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
     "items": [
-     {"id": "hud", "need": "score / moves / max readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 10300, "text_nonempty": true},
-     {"id": "board", "need": "the 4x4 tile board container", "node": "/root/Main/Board", "class": "ColorRect", "must_exist": true, "must_be_visible": true, "min_area_px": 104000},
-     {"id": "status", "need": "the game's status line", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 4500, "text_nonempty": true}
+     {
+      "id": "hud",
+      "need": "score / moves / max readout",
+      "node": "/root/Main/Hud",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 10300,
+      "text_nonempty": true
+     },
+     {
+      "id": "board",
+      "need": "the 4x4 tile board container",
+      "node": "/root/Main/Board",
+      "class": "ColorRect",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 104000
+     },
+     {
+      "id": "status",
+      "need": "the game's status line",
+      "node": "/root/Main/Status",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 4500,
+      "text_nonempty": true
+     }
     ]
    },
    "goal": "merge tiles to reach 2048",
    "capabilities": [
-    {"need": "slide up", "action": "m2048_up", "observable": "MoveCount|MovesRejected|GridHash"},
-    {"need": "slide down", "action": "m2048_down", "observable": "MoveCount|MovesRejected|GridHash"},
-    {"need": "slide left", "action": "m2048_left", "observable": "MoveCount|MovesRejected|GridHash"},
-    {"need": "slide right", "action": "m2048_right", "observable": "MoveCount|MovesRejected|GridHash"}
-   ]
+    {
+     "need": "slide up",
+     "action": "m2048_up",
+     "observable": "MoveCount|MovesRejected|GridHash"
+    },
+    {
+     "need": "slide down",
+     "action": "m2048_down",
+     "observable": "MoveCount|MovesRejected|GridHash"
+    },
+    {
+     "need": "slide left",
+     "action": "m2048_left",
+     "observable": "MoveCount|MovesRejected|GridHash"
+    },
+    {
+     "need": "slide right",
+     "action": "m2048_right",
+     "observable": "MoveCount|MovesRejected|GridHash"
+    }
+   ],
+   "gameplay_observables": {
+    "declared_by": "TASK-131 X12",
+    "what": "the state keys whose CHANGE means the game played, not that a bookkeeping variable moved",
+    "rule": "a changed state key counts as GAMEPLAY only when it (a) contains one of this game's `items` AND (b) does NOT match the uniform META patterns in tools/playability_gate.py: clocks (`Ticks`, `Elapsed`, `_logTimer`), input accounting (`Input*`, `LastEvent`, `LastDir`, `LastMoveDir`), refusals (`Rejected*`), digests (`*Hash`), UI labels (`*.text`), input intents (`DirectionX`/`DirectionY`, `Facing`, `AngleIndex`), mode flags (`Paused`, `GameOver`, `LoseReason`), seeds, `Moved`.  META wins over `items`, so a declaration cannot re-admit a meta key by listing it.  A position, a velocity, a board, a score or a consumed-object counter DOES count, because that is the world moving; an input acknowledgement is not.",
+    "items": [
+     "GridString",
+     "MaxTile",
+     "TilesInUse",
+     "EmptyCells",
+     "MoveCount",
+     "MovesAccepted",
+     "TotalMerges",
+     "Score"
+    ],
+    "how_used": "tools/playability_gate.py `is_gameplay_key` / `gameplay_changes` / `arm_evidence`; P2 requires every declared action to move one of these (or pixels) past its own no-input control window, and P3 requires gameplay progress somewhere in the run",
+    "recorded_evidence": "runs/playability/<game>/gate.json -> criteria.P2.gameplay_evidence (per action) and criteria.P3.gameplay_progress"
+   },
+   "state_markers": {
+    "declared_by": "TASK-131 X13",
+    "node": "/root/Main",
+    "fields": [
+     "Paused",
+     "GameOver",
+     "LoseReason",
+     "Ticks",
+     "Score",
+     "Level",
+     "Lines",
+     "Lives"
+    ],
+    "rule": "TASK-131 X13: every captured frame records these fields as of the state read that goes with it (plus `ms`/`drawn`/`processed`/`physics`), so a static frame can be judged legal or illegal from the artifact instead of argued about.  A frame that is identical to its predecessor WHILE a mode flag here says the game is paused/over is a legal static frame; the same frame with the game live is not.",
+    "how_used": "tools/playability_gate.py `marker_values` (stamped into every frame record by `capture`) and `marker_timeline` (criteria.P3.marker_timeline)"
+   },
+   "liveness": {
+    "declared_by": "TASK-131 X10/X13",
+    "node": "/root/Main",
+    "declared": true,
+    "terminal": [
+     {
+      "field": "GameOver",
+      "value": true,
+      "means": "the 4x4 board is full"
+     }
+    ],
+    "what": "the condition under which the game is over; the gate evaluates it on the SETTLE state, because a game that is already over before the first input cannot be judged by asking whether its picture changes afterwards",
+    "note": "",
+    "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
+   },
+   "refusal_evidence": {
+    "declared_by": "TASK-131 X12",
+    "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
+    "keys": [
+     "LastRefusedInput",
+     "Rejected"
+    ],
+    "value_words": [
+     "rejected",
+     "blocked",
+     "refused",
+     "no_change",
+     "cannot"
+    ],
+    "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
+    "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+   }
   },
   "lunarlander": {
    "required_ui": {
@@ -319,16 +974,112 @@
     "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
     "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
     "items": [
-     {"id": "hud", "need": "altitude / velocity / fuel readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 13200, "text_nonempty": true},
-     {"id": "status", "need": "the objective line", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 8300, "text_nonempty": true}
+     {
+      "id": "hud",
+      "need": "altitude / velocity / fuel readout",
+      "node": "/root/Main/Hud",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 13200,
+      "text_nonempty": true
+     },
+     {
+      "id": "status",
+      "need": "the objective line",
+      "node": "/root/Main/Status",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 8300,
+      "text_nonempty": true
+     }
     ]
    },
    "goal": "steer the lander onto a pad without crashing",
    "capabilities": [
-    {"need": "burn (thrust)", "action": "ll_thrust", "observable": "Fuel|ThrustCount"},
-    {"need": "turn left", "action": "ll_rotate_left", "observable": "AngleDeg|RejectedRotations"},
-    {"need": "turn right", "action": "ll_rotate_right", "observable": "AngleDeg|RejectedRotations"}
-   ]
+    {
+     "need": "burn (thrust)",
+     "action": "ll_thrust",
+     "observable": "Fuel|ThrustCount"
+    },
+    {
+     "need": "turn left",
+     "action": "ll_rotate_left",
+     "observable": "AngleDeg|RejectedRotations"
+    },
+    {
+     "need": "turn right",
+     "action": "ll_rotate_right",
+     "observable": "AngleDeg|RejectedRotations"
+    }
+   ],
+   "gameplay_observables": {
+    "declared_by": "TASK-131 X12",
+    "what": "the state keys whose CHANGE means the game played, not that a bookkeeping variable moved",
+    "rule": "a changed state key counts as GAMEPLAY only when it (a) contains one of this game's `items` AND (b) does NOT match the uniform META patterns in tools/playability_gate.py: clocks (`Ticks`, `Elapsed`, `_logTimer`), input accounting (`Input*`, `LastEvent`, `LastDir`, `LastMoveDir`), refusals (`Rejected*`), digests (`*Hash`), UI labels (`*.text`), input intents (`DirectionX`/`DirectionY`, `Facing`, `AngleIndex`), mode flags (`Paused`, `GameOver`, `LoseReason`), seeds, `Moved`.  META wins over `items`, so a declaration cannot re-admit a meta key by listing it.  A position, a velocity, a board, a score or a consumed-object counter DOES count, because that is the world moving; an input acknowledgement is not.",
+    "items": [
+     "AngleDeg",
+     "Vy",
+     "Fuel",
+     "FuelUsed",
+     "ThrustX",
+     "ThrustY",
+     "/root/Main/Lander",
+     "Score"
+    ],
+    "how_used": "tools/playability_gate.py `is_gameplay_key` / `gameplay_changes` / `arm_evidence`; P2 requires every declared action to move one of these (or pixels) past its own no-input control window, and P3 requires gameplay progress somewhere in the run",
+    "recorded_evidence": "runs/playability/<game>/gate.json -> criteria.P2.gameplay_evidence (per action) and criteria.P3.gameplay_progress"
+   },
+   "state_markers": {
+    "declared_by": "TASK-131 X13",
+    "node": "/root/Main",
+    "fields": [
+     "Paused",
+     "GameOver",
+     "LoseReason",
+     "Ticks",
+     "Score",
+     "Level",
+     "Lines",
+     "Lives"
+    ],
+    "rule": "TASK-131 X13: every captured frame records these fields as of the state read that goes with it (plus `ms`/`drawn`/`processed`/`physics`), so a static frame can be judged legal or illegal from the artifact instead of argued about.  A frame that is identical to its predecessor WHILE a mode flag here says the game is paused/over is a legal static frame; the same frame with the game live is not.",
+    "how_used": "tools/playability_gate.py `marker_values` (stamped into every frame record by `capture`) and `marker_timeline` (criteria.P3.marker_timeline)"
+   },
+   "liveness": {
+    "declared_by": "TASK-131 X10/X13",
+    "node": "/root/Main",
+    "declared": true,
+    "terminal": [
+     {
+      "field": "GameOver",
+      "value": true,
+      "means": "the lander crashed or landed"
+     }
+    ],
+    "what": "the condition under which the game is over; the gate evaluates it on the SETTLE state, because a game that is already over before the first input cannot be judged by asking whether its picture changes afterwards",
+    "note": "",
+    "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
+   },
+   "refusal_evidence": {
+    "declared_by": "TASK-131 X12",
+    "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
+    "keys": [
+     "LastRefusedInput",
+     "Rejected"
+    ],
+    "value_words": [
+     "rejected",
+     "blocked",
+     "refused",
+     "no_change",
+     "cannot"
+    ],
+    "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
+    "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+   }
   },
   "match3": {
    "required_ui": {
@@ -337,19 +1088,116 @@
     "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
     "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
     "items": [
-     {"id": "hud", "need": "target / score / moves readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 12300, "text_nonempty": true},
-     {"id": "status", "need": "the game's status line", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 3500, "text_nonempty": true}
+     {
+      "id": "hud",
+      "need": "target / score / moves readout",
+      "node": "/root/Main/Hud",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 12300,
+      "text_nonempty": true
+     },
+     {
+      "id": "status",
+      "need": "the game's status line",
+      "node": "/root/Main/Status",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 3500,
+      "text_nonempty": true
+     }
     ]
    },
    "goal": "swap two adjacent gems to line up three or more",
    "capabilities": [
-    {"need": "move the cursor left", "action": "m3_left", "observable": "CursorCol"},
-    {"need": "move the cursor right", "action": "m3_right", "observable": "CursorCol"},
-    {"need": "move the cursor up", "action": "m3_up", "observable": "CursorRow"},
-    {"need": "move the cursor down", "action": "m3_down", "observable": "CursorRow"},
-    {"need": "swap the cursor's gem with the one to its right", "action": "m3_swap",
-     "observable": "LastSwap|Score|Moves|RejectedMoves"}
-   ]
+    {
+     "need": "move the cursor left",
+     "action": "m3_left",
+     "observable": "CursorCol"
+    },
+    {
+     "need": "move the cursor right",
+     "action": "m3_right",
+     "observable": "CursorCol"
+    },
+    {
+     "need": "move the cursor up",
+     "action": "m3_up",
+     "observable": "CursorRow"
+    },
+    {
+     "need": "move the cursor down",
+     "action": "m3_down",
+     "observable": "CursorRow"
+    },
+    {
+     "need": "swap the cursor's gem with the one to its right",
+     "action": "m3_swap",
+     "observable": "LastSwap|Score|Moves|RejectedMoves"
+    }
+   ],
+   "gameplay_observables": {
+    "declared_by": "TASK-131 X12",
+    "what": "the state keys whose CHANGE means the game played, not that a bookkeeping variable moved",
+    "rule": "a changed state key counts as GAMEPLAY only when it (a) contains one of this game's `items` AND (b) does NOT match the uniform META patterns in tools/playability_gate.py: clocks (`Ticks`, `Elapsed`, `_logTimer`), input accounting (`Input*`, `LastEvent`, `LastDir`, `LastMoveDir`), refusals (`Rejected*`), digests (`*Hash`), UI labels (`*.text`), input intents (`DirectionX`/`DirectionY`, `Facing`, `AngleIndex`), mode flags (`Paused`, `GameOver`, `LoseReason`), seeds, `Moved`.  META wins over `items`, so a declaration cannot re-admit a meta key by listing it.  A position, a velocity, a board, a score or a consumed-object counter DOES count, because that is the world moving; an input acknowledgement is not.",
+    "items": [
+     "Board",
+     "CursorCol",
+     "CursorRow",
+     "TotalCleared",
+     "MaxChain",
+     "Cascades",
+     "Refills",
+     "Score"
+    ],
+    "how_used": "tools/playability_gate.py `is_gameplay_key` / `gameplay_changes` / `arm_evidence`; P2 requires every declared action to move one of these (or pixels) past its own no-input control window, and P3 requires gameplay progress somewhere in the run",
+    "recorded_evidence": "runs/playability/<game>/gate.json -> criteria.P2.gameplay_evidence (per action) and criteria.P3.gameplay_progress"
+   },
+   "state_markers": {
+    "declared_by": "TASK-131 X13",
+    "node": "/root/Main",
+    "fields": [
+     "Paused",
+     "GameOver",
+     "LoseReason",
+     "Ticks",
+     "Score",
+     "Level",
+     "Lines",
+     "Lives"
+    ],
+    "rule": "TASK-131 X13: every captured frame records these fields as of the state read that goes with it (plus `ms`/`drawn`/`processed`/`physics`), so a static frame can be judged legal or illegal from the artifact instead of argued about.  A frame that is identical to its predecessor WHILE a mode flag here says the game is paused/over is a legal static frame; the same frame with the game live is not.",
+    "how_used": "tools/playability_gate.py `marker_values` (stamped into every frame record by `capture`) and `marker_timeline` (criteria.P3.marker_timeline)"
+   },
+   "liveness": {
+    "declared_by": "TASK-131 X10/X13",
+    "node": "/root/Main",
+    "declared": false,
+    "terminal": [],
+    "what": "the condition under which the game is over; the gate evaluates it on the SETTLE state, because a game that is already over before the first input cannot be judged by asking whether its picture changes afterwards",
+    "note": "no terminal flag is exported by this project (measured: the recorded settle state at <out>/<game>/states/00_settle.json carries no GameOver/Lives key), so `terminal` is empty and the liveness check can only report that it could not be applied -- P2/P3 still judge the run on gameplay progress",
+    "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
+   },
+   "refusal_evidence": {
+    "declared_by": "TASK-131 X12",
+    "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
+    "keys": [
+     "LastRefusedInput",
+     "Rejected"
+    ],
+    "value_words": [
+     "rejected",
+     "blocked",
+     "refused",
+     "no_change",
+     "cannot"
+    ],
+    "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
+    "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+   }
   },
   "minesweeper": {
    "required_ui": {
@@ -358,21 +1206,120 @@
     "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
     "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
     "items": [
-     {"id": "hud", "need": "mines / flags / safe-left readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 10800, "text_nonempty": true},
-     {"id": "status", "need": "the game's status line", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 4500, "text_nonempty": true}
+     {
+      "id": "hud",
+      "need": "mines / flags / safe-left readout",
+      "node": "/root/Main/Hud",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 10800,
+      "text_nonempty": true
+     },
+     {
+      "id": "status",
+      "need": "the game's status line",
+      "node": "/root/Main/Status",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 4500,
+      "text_nonempty": true
+     }
     ]
    },
    "goal": "reveal every safe cell without hitting a mine",
    "capabilities": [
-    {"need": "move the cursor left", "action": "mine_left", "observable": "CursorCol"},
-    {"need": "move the cursor right", "action": "mine_right", "observable": "CursorCol"},
-    {"need": "move the cursor up", "action": "mine_up", "observable": "CursorRow"},
-    {"need": "move the cursor down", "action": "mine_down", "observable": "CursorRow"},
-    {"need": "reveal the cell under the cursor", "action": "mine_reveal",
-     "observable": "RevealedCount|Moves|RejectedMoves|MinesRelocated"},
-    {"need": "flag the cell under the cursor", "action": "mine_flag",
-     "observable": "FlaggedCount|FlagToggles|RejectedMoves"}
-   ]
+    {
+     "need": "move the cursor left",
+     "action": "mine_left",
+     "observable": "CursorCol"
+    },
+    {
+     "need": "move the cursor right",
+     "action": "mine_right",
+     "observable": "CursorCol"
+    },
+    {
+     "need": "move the cursor up",
+     "action": "mine_up",
+     "observable": "CursorRow"
+    },
+    {
+     "need": "move the cursor down",
+     "action": "mine_down",
+     "observable": "CursorRow"
+    },
+    {
+     "need": "reveal the cell under the cursor",
+     "action": "mine_reveal",
+     "observable": "RevealedCount|Moves|RejectedMoves|MinesRelocated"
+    },
+    {
+     "need": "flag the cell under the cursor",
+     "action": "mine_flag",
+     "observable": "FlaggedCount|FlagToggles|RejectedMoves"
+    }
+   ],
+   "gameplay_observables": {
+    "declared_by": "TASK-131 X12",
+    "what": "the state keys whose CHANGE means the game played, not that a bookkeeping variable moved",
+    "rule": "a changed state key counts as GAMEPLAY only when it (a) contains one of this game's `items` AND (b) does NOT match the uniform META patterns in tools/playability_gate.py: clocks (`Ticks`, `Elapsed`, `_logTimer`), input accounting (`Input*`, `LastEvent`, `LastDir`, `LastMoveDir`), refusals (`Rejected*`), digests (`*Hash`), UI labels (`*.text`), input intents (`DirectionX`/`DirectionY`, `Facing`, `AngleIndex`), mode flags (`Paused`, `GameOver`, `LoseReason`), seeds, `Moved`.  META wins over `items`, so a declaration cannot re-admit a meta key by listing it.  A position, a velocity, a board, a score or a consumed-object counter DOES count, because that is the world moving; an input acknowledgement is not.",
+    "items": [
+     "CursorCol",
+     "CursorRow",
+     "RevealedCount",
+     "RemainingSafe",
+     "FlaggedCount",
+     "FlagToggles",
+     "/root/Main/Num_"
+    ],
+    "how_used": "tools/playability_gate.py `is_gameplay_key` / `gameplay_changes` / `arm_evidence`; P2 requires every declared action to move one of these (or pixels) past its own no-input control window, and P3 requires gameplay progress somewhere in the run",
+    "recorded_evidence": "runs/playability/<game>/gate.json -> criteria.P2.gameplay_evidence (per action) and criteria.P3.gameplay_progress"
+   },
+   "state_markers": {
+    "declared_by": "TASK-131 X13",
+    "node": "/root/Main",
+    "fields": [
+     "Paused",
+     "GameOver",
+     "LoseReason",
+     "Ticks",
+     "Score",
+     "Level",
+     "Lines",
+     "Lives"
+    ],
+    "rule": "TASK-131 X13: every captured frame records these fields as of the state read that goes with it (plus `ms`/`drawn`/`processed`/`physics`), so a static frame can be judged legal or illegal from the artifact instead of argued about.  A frame that is identical to its predecessor WHILE a mode flag here says the game is paused/over is a legal static frame; the same frame with the game live is not.",
+    "how_used": "tools/playability_gate.py `marker_values` (stamped into every frame record by `capture`) and `marker_timeline` (criteria.P3.marker_timeline)"
+   },
+   "liveness": {
+    "declared_by": "TASK-131 X10/X13",
+    "node": "/root/Main",
+    "declared": false,
+    "terminal": [],
+    "what": "the condition under which the game is over; the gate evaluates it on the SETTLE state, because a game that is already over before the first input cannot be judged by asking whether its picture changes afterwards",
+    "note": "no terminal flag is exported by this project (measured: the recorded settle state at <out>/<game>/states/00_settle.json carries no GameOver/Lives key), so `terminal` is empty and the liveness check can only report that it could not be applied -- P2/P3 still judge the run on gameplay progress",
+    "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
+   },
+   "refusal_evidence": {
+    "declared_by": "TASK-131 X12",
+    "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
+    "keys": [
+     "LastRefusedInput",
+     "Rejected"
+    ],
+    "value_words": [
+     "rejected",
+     "blocked",
+     "refused",
+     "no_change",
+     "cannot"
+    ],
+    "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
+    "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+   }
   },
   "missilecommand": {
    "required_ui": {
@@ -381,16 +1328,107 @@
     "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
     "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
     "items": [
-     {"id": "hud", "need": "wave / cities / ammo readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 13000, "text_nonempty": true},
-     {"id": "status", "need": "the objective line at the bottom", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 8800, "text_nonempty": true}
+     {
+      "id": "hud",
+      "need": "wave / cities / ammo readout",
+      "node": "/root/Main/Hud",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 13000,
+      "text_nonempty": true
+     },
+     {
+      "id": "status",
+      "need": "the objective line at the bottom",
+      "node": "/root/Main/Status",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 8800,
+      "text_nonempty": true
+     }
     ]
    },
    "goal": "intercept the incoming missiles before they land on the cities",
    "capabilities": [
-    {"need": "aim left", "action": "mc_left", "observable": "CursorX"},
-    {"need": "aim right", "action": "mc_right", "observable": "CursorX"},
-    {"need": "fire at the cursor", "action": "mc_fire", "observable": "Fired|Ammo|InterceptorAlive"}
-   ]
+    {
+     "need": "aim left",
+     "action": "mc_left",
+     "observable": "CursorX"
+    },
+    {
+     "need": "aim right",
+     "action": "mc_right",
+     "observable": "CursorX"
+    },
+    {
+     "need": "fire at the cursor",
+     "action": "mc_fire",
+     "observable": "Fired|Ammo|InterceptorAlive"
+    }
+   ],
+   "gameplay_observables": {
+    "declared_by": "TASK-131 X12",
+    "what": "the state keys whose CHANGE means the game played, not that a bookkeeping variable moved",
+    "rule": "a changed state key counts as GAMEPLAY only when it (a) contains one of this game's `items` AND (b) does NOT match the uniform META patterns in tools/playability_gate.py: clocks (`Ticks`, `Elapsed`, `_logTimer`), input accounting (`Input*`, `LastEvent`, `LastDir`, `LastMoveDir`), refusals (`Rejected*`), digests (`*Hash`), UI labels (`*.text`), input intents (`DirectionX`/`DirectionY`, `Facing`, `AngleIndex`), mode flags (`Paused`, `GameOver`, `LoseReason`), seeds, `Moved`.  META wins over `items`, so a declaration cannot re-admit a meta key by listing it.  A position, a velocity, a board, a score or a consumed-object counter DOES count, because that is the world moving; an input acknowledgement is not.",
+    "items": [
+     "Ammo",
+     "CursorX",
+     "Fired",
+     "InterceptorAlive",
+     "InterceptorList",
+     "/root/Main/Interceptor_",
+     "Score",
+     "Lives",
+     "Wave"
+    ],
+    "how_used": "tools/playability_gate.py `is_gameplay_key` / `gameplay_changes` / `arm_evidence`; P2 requires every declared action to move one of these (or pixels) past its own no-input control window, and P3 requires gameplay progress somewhere in the run",
+    "recorded_evidence": "runs/playability/<game>/gate.json -> criteria.P2.gameplay_evidence (per action) and criteria.P3.gameplay_progress"
+   },
+   "state_markers": {
+    "declared_by": "TASK-131 X13",
+    "node": "/root/Main",
+    "fields": [
+     "Paused",
+     "GameOver",
+     "LoseReason",
+     "Ticks",
+     "Score",
+     "Level",
+     "Lines",
+     "Lives"
+    ],
+    "rule": "TASK-131 X13: every captured frame records these fields as of the state read that goes with it (plus `ms`/`drawn`/`processed`/`physics`), so a static frame can be judged legal or illegal from the artifact instead of argued about.  A frame that is identical to its predecessor WHILE a mode flag here says the game is paused/over is a legal static frame; the same frame with the game live is not.",
+    "how_used": "tools/playability_gate.py `marker_values` (stamped into every frame record by `capture`) and `marker_timeline` (criteria.P3.marker_timeline)"
+   },
+   "liveness": {
+    "declared_by": "TASK-131 X10/X13",
+    "node": "/root/Main",
+    "declared": false,
+    "terminal": [],
+    "what": "the condition under which the game is over; the gate evaluates it on the SETTLE state, because a game that is already over before the first input cannot be judged by asking whether its picture changes afterwards",
+    "note": "no terminal flag is exported by this project (measured: the recorded settle state at <out>/<game>/states/00_settle.json carries no GameOver/Lives key), so `terminal` is empty and the liveness check can only report that it could not be applied -- P2/P3 still judge the run on gameplay progress",
+    "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
+   },
+   "refusal_evidence": {
+    "declared_by": "TASK-131 X12",
+    "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
+    "keys": [
+     "LastRefusedInput",
+     "Rejected"
+    ],
+    "value_words": [
+     "rejected",
+     "blocked",
+     "refused",
+     "no_change",
+     "cannot"
+    ],
+    "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
+    "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+   }
   },
   "pacman": {
    "required_ui": {
@@ -399,17 +1437,124 @@
     "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
     "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
     "items": [
-     {"id": "hud", "need": "score / lives / pellets readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 10800, "text_nonempty": true},
-     {"id": "status", "need": "pellets readout", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 4400, "text_nonempty": true}
+     {
+      "id": "hud",
+      "need": "score / lives / pellets readout",
+      "node": "/root/Main/Hud",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 10800,
+      "text_nonempty": true
+     },
+     {
+      "id": "status",
+      "need": "pellets readout",
+      "node": "/root/Main/Status",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 4400,
+      "text_nonempty": true
+     }
     ]
    },
    "goal": "eat every pellet and dodge the ghosts",
    "capabilities": [
-    {"need": "move up", "action": "pac_up", "observable": "PacRow|PacCol|RejectedSteps"},
-    {"need": "move down", "action": "pac_down", "observable": "PacRow|PacCol|RejectedSteps"},
-    {"need": "move left", "action": "pac_left", "observable": "PacCol|PacRow"},
-    {"need": "move right", "action": "pac_right", "observable": "PacCol|PacRow"}
-   ]
+    {
+     "need": "move up",
+     "action": "pac_up",
+     "observable": "PacRow|PacCol|RejectedSteps"
+    },
+    {
+     "need": "move down",
+     "action": "pac_down",
+     "observable": "PacRow|PacCol|RejectedSteps"
+    },
+    {
+     "need": "move left",
+     "action": "pac_left",
+     "observable": "PacCol|PacRow"
+    },
+    {
+     "need": "move right",
+     "action": "pac_right",
+     "observable": "PacCol|PacRow"
+    }
+   ],
+   "gameplay_observables": {
+    "declared_by": "TASK-131 X12",
+    "what": "the state keys whose CHANGE means the game played, not that a bookkeeping variable moved",
+    "rule": "a changed state key counts as GAMEPLAY only when it (a) contains one of this game's `items` AND (b) does NOT match the uniform META patterns in tools/playability_gate.py: clocks (`Ticks`, `Elapsed`, `_logTimer`), input accounting (`Input*`, `LastEvent`, `LastDir`, `LastMoveDir`), refusals (`Rejected*`), digests (`*Hash`), UI labels (`*.text`), input intents (`DirectionX`/`DirectionY`, `Facing`, `AngleIndex`), mode flags (`Paused`, `GameOver`, `LoseReason`), seeds, `Moved`.  META wins over `items`, so a declaration cannot re-admit a meta key by listing it.  A position, a velocity, a board, a score or a consumed-object counter DOES count, because that is the world moving; an input acknowledgement is not.",
+    "items": [
+     "PacCol",
+     "PacX",
+     "PacY",
+     "PelletsEaten",
+     "PelletsRemaining",
+     "Score",
+     "Lives",
+     "/root/Main/Pac",
+     "/root/Main/Pellet_",
+     "/root/Main/Ghost"
+    ],
+    "how_used": "tools/playability_gate.py `is_gameplay_key` / `gameplay_changes` / `arm_evidence`; P2 requires every declared action to move one of these (or pixels) past its own no-input control window, and P3 requires gameplay progress somewhere in the run",
+    "recorded_evidence": "runs/playability/<game>/gate.json -> criteria.P2.gameplay_evidence (per action) and criteria.P3.gameplay_progress"
+   },
+   "state_markers": {
+    "declared_by": "TASK-131 X13",
+    "node": "/root/Main",
+    "fields": [
+     "Paused",
+     "GameOver",
+     "LoseReason",
+     "Ticks",
+     "Score",
+     "Level",
+     "Lines",
+     "Lives"
+    ],
+    "rule": "TASK-131 X13: every captured frame records these fields as of the state read that goes with it (plus `ms`/`drawn`/`processed`/`physics`), so a static frame can be judged legal or illegal from the artifact instead of argued about.  A frame that is identical to its predecessor WHILE a mode flag here says the game is paused/over is a legal static frame; the same frame with the game live is not.",
+    "how_used": "tools/playability_gate.py `marker_values` (stamped into every frame record by `capture`) and `marker_timeline` (criteria.P3.marker_timeline)"
+   },
+   "liveness": {
+    "declared_by": "TASK-131 X10/X13",
+    "node": "/root/Main",
+    "declared": true,
+    "terminal": [
+     {
+      "field": "GameOver",
+      "value": true,
+      "means": "the game ended"
+     },
+     {
+      "field": "Lives",
+      "value": 0,
+      "means": "no lives left"
+     }
+    ],
+    "what": "the condition under which the game is over; the gate evaluates it on the SETTLE state, because a game that is already over before the first input cannot be judged by asking whether its picture changes afterwards",
+    "note": "",
+    "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
+   },
+   "refusal_evidence": {
+    "declared_by": "TASK-131 X12",
+    "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
+    "keys": [
+     "LastRefusedInput",
+     "Rejected"
+    ],
+    "value_words": [
+     "rejected",
+     "blocked",
+     "refused",
+     "no_change",
+     "cannot"
+    ],
+    "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
+    "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+   }
   },
   "platformer": {
    "required_ui": {
@@ -418,16 +1563,116 @@
     "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
     "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
     "items": [
-     {"id": "hud", "need": "gems / score / lives readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 10600, "text_nonempty": true},
-     {"id": "status", "need": "the objective line", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 2800, "text_nonempty": true}
+     {
+      "id": "hud",
+      "need": "gems / score / lives readout",
+      "node": "/root/Main/Hud",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 10600,
+      "text_nonempty": true
+     },
+     {
+      "id": "status",
+      "need": "the objective line",
+      "node": "/root/Main/Status",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 2800,
+      "text_nonempty": true
+     }
     ]
    },
    "goal": "run and jump to the goal, collecting the gems",
    "capabilities": [
-    {"need": "run left", "action": "plat_left", "observable": "PlayerX|VelX|Facing"},
-    {"need": "run right", "action": "plat_right", "observable": "PlayerX|VelX|Facing"},
-    {"need": "jump", "action": "plat_jump", "observable": "PlayerY|VelY|Jumps|JumpsRejected"}
-   ]
+    {
+     "need": "run left",
+     "action": "plat_left",
+     "observable": "PlayerX|VelX|Facing"
+    },
+    {
+     "need": "run right",
+     "action": "plat_right",
+     "observable": "PlayerX|VelX|Facing"
+    },
+    {
+     "need": "jump",
+     "action": "plat_jump",
+     "observable": "PlayerY|VelY|Jumps|JumpsRejected"
+    }
+   ],
+   "gameplay_observables": {
+    "declared_by": "TASK-131 X12",
+    "what": "the state keys whose CHANGE means the game played, not that a bookkeeping variable moved",
+    "rule": "a changed state key counts as GAMEPLAY only when it (a) contains one of this game's `items` AND (b) does NOT match the uniform META patterns in tools/playability_gate.py: clocks (`Ticks`, `Elapsed`, `_logTimer`), input accounting (`Input*`, `LastEvent`, `LastDir`, `LastMoveDir`), refusals (`Rejected*`), digests (`*Hash`), UI labels (`*.text`), input intents (`DirectionX`/`DirectionY`, `Facing`, `AngleIndex`), mode flags (`Paused`, `GameOver`, `LoseReason`), seeds, `Moved`.  META wins over `items`, so a declaration cannot re-admit a meta key by listing it.  A position, a velocity, a board, a score or a consumed-object counter DOES count, because that is the world moving; an input acknowledgement is not.",
+    "items": [
+     "VelX",
+     "VelY",
+     "Jumps",
+     "AirJumps",
+     "/root/Main/Player",
+     "Lives",
+     "Score"
+    ],
+    "how_used": "tools/playability_gate.py `is_gameplay_key` / `gameplay_changes` / `arm_evidence`; P2 requires every declared action to move one of these (or pixels) past its own no-input control window, and P3 requires gameplay progress somewhere in the run",
+    "recorded_evidence": "runs/playability/<game>/gate.json -> criteria.P2.gameplay_evidence (per action) and criteria.P3.gameplay_progress"
+   },
+   "state_markers": {
+    "declared_by": "TASK-131 X13",
+    "node": "/root/Main",
+    "fields": [
+     "Paused",
+     "GameOver",
+     "LoseReason",
+     "Ticks",
+     "Score",
+     "Level",
+     "Lines",
+     "Lives"
+    ],
+    "rule": "TASK-131 X13: every captured frame records these fields as of the state read that goes with it (plus `ms`/`drawn`/`processed`/`physics`), so a static frame can be judged legal or illegal from the artifact instead of argued about.  A frame that is identical to its predecessor WHILE a mode flag here says the game is paused/over is a legal static frame; the same frame with the game live is not.",
+    "how_used": "tools/playability_gate.py `marker_values` (stamped into every frame record by `capture`) and `marker_timeline` (criteria.P3.marker_timeline)"
+   },
+   "liveness": {
+    "declared_by": "TASK-131 X10/X13",
+    "node": "/root/Main",
+    "declared": true,
+    "terminal": [
+     {
+      "field": "GameOver",
+      "value": true,
+      "means": "the game ended"
+     },
+     {
+      "field": "Lives",
+      "value": 0,
+      "means": "no lives left"
+     }
+    ],
+    "what": "the condition under which the game is over; the gate evaluates it on the SETTLE state, because a game that is already over before the first input cannot be judged by asking whether its picture changes afterwards",
+    "note": "",
+    "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
+   },
+   "refusal_evidence": {
+    "declared_by": "TASK-131 X12",
+    "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
+    "keys": [
+     "LastRefusedInput",
+     "Rejected"
+    ],
+    "value_words": [
+     "rejected",
+     "blocked",
+     "refused",
+     "no_change",
+     "cannot"
+    ],
+    "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
+    "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+   }
   },
   "pong": {
    "required_ui": {
@@ -436,18 +1681,117 @@
     "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
     "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
     "items": [
-     {"id": "score_left", "need": "the left player's score", "node": "/root/Main/ScoreLeft", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 3400, "text_nonempty": true},
-     {"id": "score_right", "need": "the right player's score", "node": "/root/Main/ScoreRight", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 3400, "text_nonempty": true}
+     {
+      "id": "score_left",
+      "need": "the left player's score",
+      "node": "/root/Main/ScoreLeft",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 3400,
+      "text_nonempty": true
+     },
+     {
+      "id": "score_right",
+      "need": "the right player's score",
+      "node": "/root/Main/ScoreRight",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 3400,
+      "text_nonempty": true
+     }
     ]
    },
    "goal": "keep the ball in play and score five points",
    "capabilities": [
-    {"need": "move the left paddle up", "action": "pong_left_up", "observable": "PaddleLeft"},
-    {"need": "move the left paddle down", "action": "pong_left_down", "observable": "PaddleLeft"},
-    {"need": "move the right paddle up", "action": "pong_right_up", "observable": "PaddleRight"},
-    {"need": "move the right paddle down", "action": "pong_right_down", "observable": "PaddleRight"},
-    {"need": "serve the ball", "action": "pong_serve", "observable": "Ball|Velocity"}
-   ]
+    {
+     "need": "move the left paddle up",
+     "action": "pong_left_up",
+     "observable": "PaddleLeft"
+    },
+    {
+     "need": "move the left paddle down",
+     "action": "pong_left_down",
+     "observable": "PaddleLeft"
+    },
+    {
+     "need": "move the right paddle up",
+     "action": "pong_right_up",
+     "observable": "PaddleRight"
+    },
+    {
+     "need": "move the right paddle down",
+     "action": "pong_right_down",
+     "observable": "PaddleRight"
+    },
+    {
+     "need": "serve the ball",
+     "action": "pong_serve",
+     "observable": "Ball|Velocity"
+    }
+   ],
+   "gameplay_observables": {
+    "declared_by": "TASK-131 X12",
+    "what": "the state keys whose CHANGE means the game played, not that a bookkeeping variable moved",
+    "rule": "a changed state key counts as GAMEPLAY only when it (a) contains one of this game's `items` AND (b) does NOT match the uniform META patterns in tools/playability_gate.py: clocks (`Ticks`, `Elapsed`, `_logTimer`), input accounting (`Input*`, `LastEvent`, `LastDir`, `LastMoveDir`), refusals (`Rejected*`), digests (`*Hash`), UI labels (`*.text`), input intents (`DirectionX`/`DirectionY`, `Facing`, `AngleIndex`), mode flags (`Paused`, `GameOver`, `LoseReason`), seeds, `Moved`.  META wins over `items`, so a declaration cannot re-admit a meta key by listing it.  A position, a velocity, a board, a score or a consumed-object counter DOES count, because that is the world moving; an input acknowledgement is not.",
+    "items": [
+     "Ball.pos",
+     "Ball.Velocity",
+     "PaddleLeft.pos",
+     "PaddleRight.pos",
+     "/root/Main/Ball",
+     "/root/Main/PaddleLeft",
+     "/root/Main/PaddleRight",
+     "/root/Main/ScoreLeft",
+     "/root/Main/ScoreRight"
+    ],
+    "how_used": "tools/playability_gate.py `is_gameplay_key` / `gameplay_changes` / `arm_evidence`; P2 requires every declared action to move one of these (or pixels) past its own no-input control window, and P3 requires gameplay progress somewhere in the run",
+    "recorded_evidence": "runs/playability/<game>/gate.json -> criteria.P2.gameplay_evidence (per action) and criteria.P3.gameplay_progress"
+   },
+   "state_markers": {
+    "declared_by": "TASK-131 X13",
+    "node": "/root/Main",
+    "fields": [
+     "Paused",
+     "GameOver",
+     "LoseReason",
+     "Ticks",
+     "Score",
+     "Level",
+     "Lines",
+     "Lives"
+    ],
+    "rule": "TASK-131 X13: every captured frame records these fields as of the state read that goes with it (plus `ms`/`drawn`/`processed`/`physics`), so a static frame can be judged legal or illegal from the artifact instead of argued about.  A frame that is identical to its predecessor WHILE a mode flag here says the game is paused/over is a legal static frame; the same frame with the game live is not.",
+    "how_used": "tools/playability_gate.py `marker_values` (stamped into every frame record by `capture`) and `marker_timeline` (criteria.P3.marker_timeline)"
+   },
+   "liveness": {
+    "declared_by": "TASK-131 X10/X13",
+    "node": "/root/Main",
+    "declared": false,
+    "terminal": [],
+    "what": "the condition under which the game is over; the gate evaluates it on the SETTLE state, because a game that is already over before the first input cannot be judged by asking whether its picture changes afterwards",
+    "note": "no terminal flag is exported by this project (measured: the recorded settle state at <out>/<game>/states/00_settle.json carries no GameOver/Lives key), so `terminal` is empty and the liveness check can only report that it could not be applied -- P2/P3 still judge the run on gameplay progress",
+    "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
+   },
+   "refusal_evidence": {
+    "declared_by": "TASK-131 X12",
+    "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
+    "keys": [
+     "LastRefusedInput",
+     "Rejected"
+    ],
+    "value_words": [
+     "rejected",
+     "blocked",
+     "refused",
+     "no_change",
+     "cannot"
+    ],
+    "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
+    "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+   }
   },
   "puzzlebobble": {
    "required_ui": {
@@ -456,17 +1800,115 @@
     "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
     "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
     "items": [
-     {"id": "hud", "need": "shot / colour / next readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 13200, "text_nonempty": true},
-     {"id": "next_bubble", "need": "the NEXT-piece indicator the player aims with", "node": "/root/Main/NextBubble", "class": "ColorRect", "must_exist": true, "must_be_visible": true, "min_area_px": 300},
-     {"id": "status", "need": "the aim/fire prompt", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 10100, "text_nonempty": true}
+     {
+      "id": "hud",
+      "need": "shot / colour / next readout",
+      "node": "/root/Main/Hud",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 13200,
+      "text_nonempty": true
+     },
+     {
+      "id": "next_bubble",
+      "need": "the NEXT-piece indicator the player aims with",
+      "node": "/root/Main/NextBubble",
+      "class": "ColorRect",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 300
+     },
+     {
+      "id": "status",
+      "need": "the aim/fire prompt",
+      "node": "/root/Main/Status",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 10100,
+      "text_nonempty": true
+     }
     ]
    },
    "goal": "aim and shoot bubbles to clear the board",
    "capabilities": [
-    {"need": "aim left", "action": "pb_left", "observable": "AngleIndex|ShooterCol"},
-    {"need": "aim right", "action": "pb_right", "observable": "AngleIndex|ShooterCol"},
-    {"need": "shoot", "action": "pb_shoot", "observable": "Shots|ProjActive"}
-   ]
+    {
+     "need": "aim left",
+     "action": "pb_left",
+     "observable": "AngleIndex|ShooterCol"
+    },
+    {
+     "need": "aim right",
+     "action": "pb_right",
+     "observable": "AngleIndex|ShooterCol"
+    },
+    {
+     "need": "shoot",
+     "action": "pb_shoot",
+     "observable": "Shots|ProjActive"
+    }
+   ],
+   "gameplay_observables": {
+    "declared_by": "TASK-131 X12",
+    "what": "the state keys whose CHANGE means the game played, not that a bookkeeping variable moved",
+    "rule": "a changed state key counts as GAMEPLAY only when it (a) contains one of this game's `items` AND (b) does NOT match the uniform META patterns in tools/playability_gate.py: clocks (`Ticks`, `Elapsed`, `_logTimer`), input accounting (`Input*`, `LastEvent`, `LastDir`, `LastMoveDir`), refusals (`Rejected*`), digests (`*Hash`), UI labels (`*.text`), input intents (`DirectionX`/`DirectionY`, `Facing`, `AngleIndex`), mode flags (`Paused`, `GameOver`, `LoseReason`), seeds, `Moved`.  META wins over `items`, so a declaration cannot re-admit a meta key by listing it.  A position, a velocity, a board, a score or a consumed-object counter DOES count, because that is the world moving; an input acknowledgement is not.",
+    "items": [
+     "ProjActive",
+     "ProjCol",
+     "ProjRow",
+     "ProjColor",
+     "/root/Main/Projectile",
+     "Shots",
+     "Score",
+     "Bubbles"
+    ],
+    "how_used": "tools/playability_gate.py `is_gameplay_key` / `gameplay_changes` / `arm_evidence`; P2 requires every declared action to move one of these (or pixels) past its own no-input control window, and P3 requires gameplay progress somewhere in the run",
+    "recorded_evidence": "runs/playability/<game>/gate.json -> criteria.P2.gameplay_evidence (per action) and criteria.P3.gameplay_progress"
+   },
+   "state_markers": {
+    "declared_by": "TASK-131 X13",
+    "node": "/root/Main",
+    "fields": [
+     "Paused",
+     "GameOver",
+     "LoseReason",
+     "Ticks",
+     "Score",
+     "Level",
+     "Lines",
+     "Lives"
+    ],
+    "rule": "TASK-131 X13: every captured frame records these fields as of the state read that goes with it (plus `ms`/`drawn`/`processed`/`physics`), so a static frame can be judged legal or illegal from the artifact instead of argued about.  A frame that is identical to its predecessor WHILE a mode flag here says the game is paused/over is a legal static frame; the same frame with the game live is not.",
+    "how_used": "tools/playability_gate.py `marker_values` (stamped into every frame record by `capture`) and `marker_timeline` (criteria.P3.marker_timeline)"
+   },
+   "liveness": {
+    "declared_by": "TASK-131 X10/X13",
+    "node": "/root/Main",
+    "declared": false,
+    "terminal": [],
+    "what": "the condition under which the game is over; the gate evaluates it on the SETTLE state, because a game that is already over before the first input cannot be judged by asking whether its picture changes afterwards",
+    "note": "no terminal flag is exported by this project (measured: the recorded settle state at <out>/<game>/states/00_settle.json carries no GameOver/Lives key), so `terminal` is empty and the liveness check can only report that it could not be applied -- P2/P3 still judge the run on gameplay progress",
+    "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
+   },
+   "refusal_evidence": {
+    "declared_by": "TASK-131 X12",
+    "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
+    "keys": [
+     "LastRefusedInput",
+     "Rejected"
+    ],
+    "value_words": [
+     "rejected",
+     "blocked",
+     "refused",
+     "no_change",
+     "cannot"
+    ],
+    "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
+    "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+   }
   },
   "rtype": {
    "required_ui": {
@@ -475,18 +1917,131 @@
     "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
     "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
     "items": [
-     {"id": "hud", "need": "wave / lives / score readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 13200, "text_nonempty": true},
-     {"id": "status", "need": "the sector line", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 10600, "text_nonempty": true}
+     {
+      "id": "hud",
+      "need": "wave / lives / score readout",
+      "node": "/root/Main/Hud",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 13200,
+      "text_nonempty": true
+     },
+     {
+      "id": "status",
+      "need": "the sector line",
+      "node": "/root/Main/Status",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 10600,
+      "text_nonempty": true
+     }
     ]
    },
    "goal": "fly the ship, shoot the wave, survive",
    "capabilities": [
-    {"need": "fly left", "action": "rt_left", "observable": "PlayerX|RejectedMoves"},
-    {"need": "fly right", "action": "rt_right", "observable": "PlayerX|RejectedMoves"},
-    {"need": "fly up", "action": "rt_up", "observable": "PlayerY|RejectedMoves"},
-    {"need": "fly down", "action": "rt_down", "observable": "PlayerY|RejectedMoves"},
-    {"need": "fire", "action": "rt_fire", "observable": "BulletsFired|BulletsActive"}
-   ]
+    {
+     "need": "fly left",
+     "action": "rt_left",
+     "observable": "PlayerX|RejectedMoves"
+    },
+    {
+     "need": "fly right",
+     "action": "rt_right",
+     "observable": "PlayerX|RejectedMoves"
+    },
+    {
+     "need": "fly up",
+     "action": "rt_up",
+     "observable": "PlayerY|RejectedMoves"
+    },
+    {
+     "need": "fly down",
+     "action": "rt_down",
+     "observable": "PlayerY|RejectedMoves"
+    },
+    {
+     "need": "fire",
+     "action": "rt_fire",
+     "observable": "BulletsFired|BulletsActive"
+    }
+   ],
+   "gameplay_observables": {
+    "declared_by": "TASK-131 X12",
+    "what": "the state keys whose CHANGE means the game played, not that a bookkeeping variable moved",
+    "rule": "a changed state key counts as GAMEPLAY only when it (a) contains one of this game's `items` AND (b) does NOT match the uniform META patterns in tools/playability_gate.py: clocks (`Ticks`, `Elapsed`, `_logTimer`), input accounting (`Input*`, `LastEvent`, `LastDir`, `LastMoveDir`), refusals (`Rejected*`), digests (`*Hash`), UI labels (`*.text`), input intents (`DirectionX`/`DirectionY`, `Facing`, `AngleIndex`), mode flags (`Paused`, `GameOver`, `LoseReason`), seeds, `Moved`.  META wins over `items`, so a declaration cannot re-admit a meta key by listing it.  A position, a velocity, a board, a score or a consumed-object counter DOES count, because that is the world moving; an input acknowledgement is not.",
+    "items": [
+     "PlayerX",
+     "PlayerY",
+     "/root/Main/PlayerShip",
+     "BulletsActive",
+     "BulletsFired",
+     "BulletList",
+     "/root/Main/PBullet_",
+     "Score",
+     "Lives",
+     "Killed",
+     "Alive",
+     "Wave"
+    ],
+    "how_used": "tools/playability_gate.py `is_gameplay_key` / `gameplay_changes` / `arm_evidence`; P2 requires every declared action to move one of these (or pixels) past its own no-input control window, and P3 requires gameplay progress somewhere in the run",
+    "recorded_evidence": "runs/playability/<game>/gate.json -> criteria.P2.gameplay_evidence (per action) and criteria.P3.gameplay_progress"
+   },
+   "state_markers": {
+    "declared_by": "TASK-131 X13",
+    "node": "/root/Main",
+    "fields": [
+     "Paused",
+     "GameOver",
+     "LoseReason",
+     "Ticks",
+     "Score",
+     "Level",
+     "Lines",
+     "Lives"
+    ],
+    "rule": "TASK-131 X13: every captured frame records these fields as of the state read that goes with it (plus `ms`/`drawn`/`processed`/`physics`), so a static frame can be judged legal or illegal from the artifact instead of argued about.  A frame that is identical to its predecessor WHILE a mode flag here says the game is paused/over is a legal static frame; the same frame with the game live is not.",
+    "how_used": "tools/playability_gate.py `marker_values` (stamped into every frame record by `capture`) and `marker_timeline` (criteria.P3.marker_timeline)"
+   },
+   "liveness": {
+    "declared_by": "TASK-131 X10/X13",
+    "node": "/root/Main",
+    "declared": true,
+    "terminal": [
+     {
+      "field": "GameOver",
+      "value": true,
+      "means": "the game ended"
+     },
+     {
+      "field": "Lives",
+      "value": 0,
+      "means": "no lives left"
+     }
+    ],
+    "what": "the condition under which the game is over; the gate evaluates it on the SETTLE state, because a game that is already over before the first input cannot be judged by asking whether its picture changes afterwards",
+    "note": "",
+    "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
+   },
+   "refusal_evidence": {
+    "declared_by": "TASK-131 X12",
+    "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
+    "keys": [
+     "LastRefusedInput",
+     "Rejected"
+    ],
+    "value_words": [
+     "rejected",
+     "blocked",
+     "refused",
+     "no_change",
+     "cannot"
+    ],
+    "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
+    "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+   }
   },
   "snake": {
    "required_ui": {
@@ -495,19 +2050,143 @@
     "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
     "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
     "items": [
-     {"id": "field", "need": "the playing field", "node": "/root/Main/Background", "class": "ColorRect", "must_exist": true, "must_be_visible": true, "min_area_px": 240000},
-     {"id": "food", "need": "the food the player steers to", "node": "/root/Main/Food", "class": "ColorRect", "must_exist": true, "must_be_visible": true, "min_area_px": 300},
-     {"id": "head", "need": "the snake's head", "node": "/root/Main/SnakeSeg00", "class": "ColorRect", "must_exist": true, "must_be_visible": true, "min_area_px": 300}
+     {
+      "id": "field",
+      "need": "the playing field",
+      "node": "/root/Main/Background",
+      "class": "ColorRect",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 240000
+     },
+     {
+      "id": "food",
+      "need": "the food the player steers to",
+      "node": "/root/Main/Food",
+      "class": "ColorRect",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 300
+     },
+     {
+      "id": "head",
+      "need": "the snake's head",
+      "node": "/root/Main/SnakeSeg00",
+      "class": "ColorRect",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 300
+     }
     ]
    },
    "goal": "eat the food and grow without hitting the wall or yourself",
    "capabilities": [
-    {"need": "turn up", "action": "snake_up", "observable": "DirectionX|DirectionY|LastRefusedInput"},
-    {"need": "turn down", "action": "snake_down", "observable": "DirectionX|DirectionY|LastRefusedInput"},
-    {"need": "turn left", "action": "snake_left", "observable": "DirectionX|DirectionY|LastRefusedInput"},
-    {"need": "turn right", "action": "snake_right", "observable": "DirectionX|DirectionY|LastRefusedInput"},
-    {"need": "pause", "action": "snake_pause", "observable": "Paused"}
-   ]
+    {
+     "need": "turn up",
+     "action": "snake_up",
+     "observable": "DirectionX|DirectionY|LastRefusedInput"
+    },
+    {
+     "need": "turn down",
+     "action": "snake_down",
+     "observable": "DirectionX|DirectionY|LastRefusedInput"
+    },
+    {
+     "need": "turn left",
+     "action": "snake_left",
+     "observable": "DirectionX|DirectionY|LastRefusedInput"
+    },
+    {
+     "need": "turn right",
+     "action": "snake_right",
+     "observable": "DirectionX|DirectionY|LastRefusedInput"
+    },
+    {
+     "need": "pause",
+     "action": "snake_pause",
+     "observable": "Paused"
+    }
+   ],
+   "gameplay_observables": {
+    "declared_by": "TASK-131 X12",
+    "what": "the state keys whose CHANGE means the game played, not that a bookkeeping variable moved",
+    "rule": "a changed state key counts as GAMEPLAY only when it (a) contains one of this game's `items` AND (b) does NOT match the uniform META patterns in tools/playability_gate.py: clocks (`Ticks`, `Elapsed`, `_logTimer`), input accounting (`Input*`, `LastEvent`, `LastDir`, `LastMoveDir`), refusals (`Rejected*`), digests (`*Hash`), UI labels (`*.text`), input intents (`DirectionX`/`DirectionY`, `Facing`, `AngleIndex`), mode flags (`Paused`, `GameOver`, `LoseReason`), seeds, `Moved`.  META wins over `items`, so a declaration cannot re-admit a meta key by listing it.  A position, a velocity, a board, a score or a consumed-object counter DOES count, because that is the world moving; an input acknowledgement is not.",
+    "items": [
+     "HeadX",
+     "HeadY",
+     "Score",
+     "Length",
+     "FoodsEaten",
+     "/root/Main/SnakeSeg",
+     "/root/Main/Food",
+     "CellX",
+     "CellY"
+    ],
+    "how_used": "tools/playability_gate.py `is_gameplay_key` / `gameplay_changes` / `arm_evidence`; P2 requires every declared action to move one of these (or pixels) past its own no-input control window, and P3 requires gameplay progress somewhere in the run",
+    "recorded_evidence": "runs/playability/<game>/gate.json -> criteria.P2.gameplay_evidence (per action) and criteria.P3.gameplay_progress"
+   },
+   "state_markers": {
+    "declared_by": "TASK-131 X13",
+    "node": "/root/Main",
+    "fields": [
+     "Paused",
+     "GameOver",
+     "LoseReason",
+     "Ticks",
+     "Score",
+     "Level",
+     "Lines",
+     "Lives"
+    ],
+    "rule": "TASK-131 X13: every captured frame records these fields as of the state read that goes with it (plus `ms`/`drawn`/`processed`/`physics`), so a static frame can be judged legal or illegal from the artifact instead of argued about.  A frame that is identical to its predecessor WHILE a mode flag here says the game is paused/over is a legal static frame; the same frame with the game live is not.",
+    "how_used": "tools/playability_gate.py `marker_values` (stamped into every frame record by `capture`) and `marker_timeline` (criteria.P3.marker_timeline)"
+   },
+   "mode_actions": [
+    {
+     "action": "snake_pause",
+     "marker": "Paused",
+     "armed_value": true,
+     "effect": "`TogglePause()` flips `Paused`, and `SnakeGame._Process` returns immediately while it is true (src/SnakeGame.cs:159), so every frame taken after this action is necessarily static",
+     "restore": {
+      "action": "snake_pause",
+      "why": "the same action toggles the mode back off; the gate issues it again after the action round and reads the marker back"
+     },
+     "observed": "runs/playability/snake/states/a04_snake_pause_parse_act.json recorded `Paused false -> true`, and the old P3 quoted it as a real state change"
+    }
+   ],
+   "liveness": {
+    "declared_by": "TASK-131 X10/X13",
+    "node": "/root/Main",
+    "declared": true,
+    "terminal": [
+     {
+      "field": "GameOver",
+      "value": true,
+      "means": "the snake had already hit a wall or itself BEFORE the settle frame (the recorded log says `SNAKE_WALL head=25,10 cols=25 rows=21 score=10 ticks=19`, i.e. 1.52 s of game time at StepSeconds 0.08): the first picture the player is shown is the losing screen, and `_Process` returns immediately, so the board cannot move again"
+     }
+    ],
+    "what": "the condition under which the game is over; the gate evaluates it on the SETTLE state, because a game that is already over before the first input cannot be judged by asking whether its picture changes afterwards",
+    "note": "",
+    "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
+   },
+   "refusal_evidence": {
+    "declared_by": "TASK-131 X12",
+    "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
+    "keys": [
+     "LastRefusedInput",
+     "Rejected"
+    ],
+    "value_words": [
+     "rejected",
+     "blocked",
+     "refused",
+     "no_change",
+     "cannot"
+    ],
+    "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
+    "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+   }
   },
   "sokoban": {
    "required_ui": {
@@ -516,17 +2195,112 @@
     "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
     "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
     "items": [
-     {"id": "hud", "need": "level / boxes / steps readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 10900, "text_nonempty": true},
-     {"id": "status", "need": "the objective line", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 3300, "text_nonempty": true}
+     {
+      "id": "hud",
+      "need": "level / boxes / steps readout",
+      "node": "/root/Main/Hud",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 10900,
+      "text_nonempty": true
+     },
+     {
+      "id": "status",
+      "need": "the objective line",
+      "node": "/root/Main/Status",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 3300,
+      "text_nonempty": true
+     }
     ]
    },
    "goal": "push every box onto a goal",
    "capabilities": [
-    {"need": "walk up", "action": "soko_up", "observable": "PlayerRow|RejectedMoves"},
-    {"need": "walk down", "action": "soko_down", "observable": "PlayerRow|RejectedMoves"},
-    {"need": "walk left", "action": "soko_left", "observable": "PlayerCol|RejectedMoves"},
-    {"need": "walk right", "action": "soko_right", "observable": "PlayerCol|RejectedMoves"}
-   ]
+    {
+     "need": "walk up",
+     "action": "soko_up",
+     "observable": "PlayerRow|RejectedMoves"
+    },
+    {
+     "need": "walk down",
+     "action": "soko_down",
+     "observable": "PlayerRow|RejectedMoves"
+    },
+    {
+     "need": "walk left",
+     "action": "soko_left",
+     "observable": "PlayerCol|RejectedMoves"
+    },
+    {
+     "need": "walk right",
+     "action": "soko_right",
+     "observable": "PlayerCol|RejectedMoves"
+    }
+   ],
+   "gameplay_observables": {
+    "declared_by": "TASK-131 X12",
+    "what": "the state keys whose CHANGE means the game played, not that a bookkeeping variable moved",
+    "rule": "a changed state key counts as GAMEPLAY only when it (a) contains one of this game's `items` AND (b) does NOT match the uniform META patterns in tools/playability_gate.py: clocks (`Ticks`, `Elapsed`, `_logTimer`), input accounting (`Input*`, `LastEvent`, `LastDir`, `LastMoveDir`), refusals (`Rejected*`), digests (`*Hash`), UI labels (`*.text`), input intents (`DirectionX`/`DirectionY`, `Facing`, `AngleIndex`), mode flags (`Paused`, `GameOver`, `LoseReason`), seeds, `Moved`.  META wins over `items`, so a declaration cannot re-admit a meta key by listing it.  A position, a velocity, a board, a score or a consumed-object counter DOES count, because that is the world moving; an input acknowledgement is not.",
+    "items": [
+     "PlayerCol",
+     "PlayerRow",
+     "/root/Main/PlayerSprite",
+     "Steps",
+     "Pushes",
+     "UndoDepth",
+     "/root/Main/Box_",
+     "/root/Main/Goal",
+     "BoxesOnGoal"
+    ],
+    "how_used": "tools/playability_gate.py `is_gameplay_key` / `gameplay_changes` / `arm_evidence`; P2 requires every declared action to move one of these (or pixels) past its own no-input control window, and P3 requires gameplay progress somewhere in the run",
+    "recorded_evidence": "runs/playability/<game>/gate.json -> criteria.P2.gameplay_evidence (per action) and criteria.P3.gameplay_progress"
+   },
+   "state_markers": {
+    "declared_by": "TASK-131 X13",
+    "node": "/root/Main",
+    "fields": [
+     "Paused",
+     "GameOver",
+     "LoseReason",
+     "Ticks",
+     "Score",
+     "Level",
+     "Lines",
+     "Lives"
+    ],
+    "rule": "TASK-131 X13: every captured frame records these fields as of the state read that goes with it (plus `ms`/`drawn`/`processed`/`physics`), so a static frame can be judged legal or illegal from the artifact instead of argued about.  A frame that is identical to its predecessor WHILE a mode flag here says the game is paused/over is a legal static frame; the same frame with the game live is not.",
+    "how_used": "tools/playability_gate.py `marker_values` (stamped into every frame record by `capture`) and `marker_timeline` (criteria.P3.marker_timeline)"
+   },
+   "liveness": {
+    "declared_by": "TASK-131 X10/X13",
+    "node": "/root/Main",
+    "declared": false,
+    "terminal": [],
+    "what": "the condition under which the game is over; the gate evaluates it on the SETTLE state, because a game that is already over before the first input cannot be judged by asking whether its picture changes afterwards",
+    "note": "no terminal flag is exported by this project (measured: the recorded settle state at <out>/<game>/states/00_settle.json carries no GameOver/Lives key), so `terminal` is empty and the liveness check can only report that it could not be applied -- P2/P3 still judge the run on gameplay progress",
+    "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
+   },
+   "refusal_evidence": {
+    "declared_by": "TASK-131 X12",
+    "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
+    "keys": [
+     "LastRefusedInput",
+     "Rejected"
+    ],
+    "value_words": [
+     "rejected",
+     "blocked",
+     "refused",
+     "no_change",
+     "cannot"
+    ],
+    "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
+    "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+   }
   },
   "spaceinvaders": {
    "required_ui": {
@@ -535,16 +2309,116 @@
     "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
     "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
     "items": [
-     {"id": "hud", "need": "score readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 7200, "text_nonempty": true},
-     {"id": "status", "need": "invaders-left readout", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 7400, "text_nonempty": true}
+     {
+      "id": "hud",
+      "need": "score readout",
+      "node": "/root/Main/Hud",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 7200,
+      "text_nonempty": true
+     },
+     {
+      "id": "status",
+      "need": "invaders-left readout",
+      "node": "/root/Main/Status",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 7400,
+      "text_nonempty": true
+     }
     ]
    },
    "goal": "shoot the invaders before they reach the bottom",
    "capabilities": [
-    {"need": "move left", "action": "si_left", "observable": "PlayerX"},
-    {"need": "move right", "action": "si_right", "observable": "PlayerX"},
-    {"need": "fire", "action": "si_fire", "observable": "ShotsFired|BulletActive"}
-   ]
+    {
+     "need": "move left",
+     "action": "si_left",
+     "observable": "PlayerX"
+    },
+    {
+     "need": "move right",
+     "action": "si_right",
+     "observable": "PlayerX"
+    },
+    {
+     "need": "fire",
+     "action": "si_fire",
+     "observable": "ShotsFired|BulletActive"
+    }
+   ],
+   "gameplay_observables": {
+    "declared_by": "TASK-131 X12",
+    "what": "the state keys whose CHANGE means the game played, not that a bookkeeping variable moved",
+    "rule": "a changed state key counts as GAMEPLAY only when it (a) contains one of this game's `items` AND (b) does NOT match the uniform META patterns in tools/playability_gate.py: clocks (`Ticks`, `Elapsed`, `_logTimer`), input accounting (`Input*`, `LastEvent`, `LastDir`, `LastMoveDir`), refusals (`Rejected*`), digests (`*Hash`), UI labels (`*.text`), input intents (`DirectionX`/`DirectionY`, `Facing`, `AngleIndex`), mode flags (`Paused`, `GameOver`, `LoseReason`), seeds, `Moved`.  META wins over `items`, so a declaration cannot re-admit a meta key by listing it.  A position, a velocity, a board, a score or a consumed-object counter DOES count, because that is the world moving; an input acknowledgement is not.",
+    "items": [
+     "PlayerX",
+     "BulletX",
+     "BulletY",
+     "BulletActive",
+     "/root/Main/Player",
+     "/root/Main/Bullet",
+     "/root/Main/Invader_",
+     "InvadersKilled",
+     "InvadersRemaining",
+     "Score",
+     "Lives",
+     "Wave"
+    ],
+    "how_used": "tools/playability_gate.py `is_gameplay_key` / `gameplay_changes` / `arm_evidence`; P2 requires every declared action to move one of these (or pixels) past its own no-input control window, and P3 requires gameplay progress somewhere in the run",
+    "recorded_evidence": "runs/playability/<game>/gate.json -> criteria.P2.gameplay_evidence (per action) and criteria.P3.gameplay_progress"
+   },
+   "state_markers": {
+    "declared_by": "TASK-131 X13",
+    "node": "/root/Main",
+    "fields": [
+     "Paused",
+     "GameOver",
+     "LoseReason",
+     "Ticks",
+     "Score",
+     "Level",
+     "Lines",
+     "Lives"
+    ],
+    "rule": "TASK-131 X13: every captured frame records these fields as of the state read that goes with it (plus `ms`/`drawn`/`processed`/`physics`), so a static frame can be judged legal or illegal from the artifact instead of argued about.  A frame that is identical to its predecessor WHILE a mode flag here says the game is paused/over is a legal static frame; the same frame with the game live is not.",
+    "how_used": "tools/playability_gate.py `marker_values` (stamped into every frame record by `capture`) and `marker_timeline` (criteria.P3.marker_timeline)"
+   },
+   "liveness": {
+    "declared_by": "TASK-131 X10/X13",
+    "node": "/root/Main",
+    "declared": true,
+    "terminal": [
+     {
+      "field": "Lives",
+      "value": 0,
+      "means": "no lives left"
+     }
+    ],
+    "what": "the condition under which the game is over; the gate evaluates it on the SETTLE state, because a game that is already over before the first input cannot be judged by asking whether its picture changes afterwards",
+    "note": "",
+    "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
+   },
+   "refusal_evidence": {
+    "declared_by": "TASK-131 X12",
+    "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
+    "keys": [
+     "LastRefusedInput",
+     "Rejected"
+    ],
+    "value_words": [
+     "rejected",
+     "blocked",
+     "refused",
+     "no_change",
+     "cannot"
+    ],
+    "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
+    "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+   }
   },
   "tetris": {
    "required_ui": {
@@ -553,19 +2427,132 @@
     "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
     "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
     "items": [
-     {"id": "side_panel", "need": "the HUD side panel", "node": "/root/Main/SidePanel", "class": "ColorRect", "must_exist": true, "must_be_visible": true, "min_area_px": 57600},
-     {"id": "hud_label", "need": "the panel's title text", "node": "/root/Main/HudLabel", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 26200, "text_nonempty": true},
-     {"id": "panel_edge", "need": "the border that separates HUD from playfield", "node": "/root/Main/PanelEdge", "class": "ColorRect", "must_exist": true, "must_be_visible": true, "min_area_px": 500}
+     {
+      "id": "side_panel",
+      "need": "the HUD side panel",
+      "node": "/root/Main/SidePanel",
+      "class": "ColorRect",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 57600
+     },
+     {
+      "id": "hud_label",
+      "need": "the panel's title text",
+      "node": "/root/Main/HudLabel",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 26200,
+      "text_nonempty": true
+     },
+     {
+      "id": "panel_edge",
+      "need": "the border that separates HUD from playfield",
+      "node": "/root/Main/PanelEdge",
+      "class": "ColorRect",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 500
+     }
     ]
    },
    "goal": "stack the falling pieces and clear lines",
    "capabilities": [
-    {"need": "move left", "action": "tetris_left", "observable": "PieceX"},
-    {"need": "move right", "action": "tetris_right", "observable": "PieceX"},
-    {"need": "rotate", "action": "tetris_rotate", "observable": "PieceRot"},
-    {"need": "soft drop", "action": "tetris_down", "observable": "PieceY|Score|Ticks"},
-    {"need": "hard drop", "action": "tetris_drop", "observable": "PieceY|Score|Lines|FilledCells"}
-   ]
+    {
+     "need": "move left",
+     "action": "tetris_left",
+     "observable": "PieceX"
+    },
+    {
+     "need": "move right",
+     "action": "tetris_right",
+     "observable": "PieceX"
+    },
+    {
+     "need": "rotate",
+     "action": "tetris_rotate",
+     "observable": "PieceRot"
+    },
+    {
+     "need": "soft drop",
+     "action": "tetris_down",
+     "observable": "PieceY|Score|Ticks"
+    },
+    {
+     "need": "hard drop",
+     "action": "tetris_drop",
+     "observable": "PieceY|Score|Lines|FilledCells"
+    }
+   ],
+   "gameplay_observables": {
+    "declared_by": "TASK-131 X12",
+    "what": "the state keys whose CHANGE means the game played, not that a bookkeeping variable moved",
+    "rule": "a changed state key counts as GAMEPLAY only when it (a) contains one of this game's `items` AND (b) does NOT match the uniform META patterns in tools/playability_gate.py: clocks (`Ticks`, `Elapsed`, `_logTimer`), input accounting (`Input*`, `LastEvent`, `LastDir`, `LastMoveDir`), refusals (`Rejected*`), digests (`*Hash`), UI labels (`*.text`), input intents (`DirectionX`/`DirectionY`, `Facing`, `AngleIndex`), mode flags (`Paused`, `GameOver`, `LoseReason`), seeds, `Moved`.  META wins over `items`, so a declaration cannot re-admit a meta key by listing it.  A position, a velocity, a board, a score or a consumed-object counter DOES count, because that is the world moving; an input acknowledgement is not.",
+    "items": [
+     "PieceX",
+     "PieceY",
+     "PieceRot",
+     "PieceKind",
+     "NextKind",
+     "FilledCells",
+     "Lines",
+     "Score",
+     "Level",
+     "/root/Main/Board"
+    ],
+    "how_used": "tools/playability_gate.py `is_gameplay_key` / `gameplay_changes` / `arm_evidence`; P2 requires every declared action to move one of these (or pixels) past its own no-input control window, and P3 requires gameplay progress somewhere in the run",
+    "recorded_evidence": "runs/playability/<game>/gate.json -> criteria.P2.gameplay_evidence (per action) and criteria.P3.gameplay_progress"
+   },
+   "state_markers": {
+    "declared_by": "TASK-131 X13",
+    "node": "/root/Main",
+    "fields": [
+     "Paused",
+     "GameOver",
+     "LoseReason",
+     "Ticks",
+     "Score",
+     "Level",
+     "Lines",
+     "Lives"
+    ],
+    "rule": "TASK-131 X13: every captured frame records these fields as of the state read that goes with it (plus `ms`/`drawn`/`processed`/`physics`), so a static frame can be judged legal or illegal from the artifact instead of argued about.  A frame that is identical to its predecessor WHILE a mode flag here says the game is paused/over is a legal static frame; the same frame with the game live is not.",
+    "how_used": "tools/playability_gate.py `marker_values` (stamped into every frame record by `capture`) and `marker_timeline` (criteria.P3.marker_timeline)"
+   },
+   "liveness": {
+    "declared_by": "TASK-131 X10/X13",
+    "node": "/root/Main",
+    "declared": true,
+    "terminal": [
+     {
+      "field": "GameOver",
+      "value": true,
+      "means": "the stack reached the top"
+     }
+    ],
+    "what": "the condition under which the game is over; the gate evaluates it on the SETTLE state, because a game that is already over before the first input cannot be judged by asking whether its picture changes afterwards",
+    "note": "",
+    "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
+   },
+   "refusal_evidence": {
+    "declared_by": "TASK-131 X12",
+    "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
+    "keys": [
+     "LastRefusedInput",
+     "Rejected"
+    ],
+    "value_words": [
+     "rejected",
+     "blocked",
+     "refused",
+     "no_change",
+     "cannot"
+    ],
+    "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
+    "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+   }
   },
   "towerdefense": {
    "required_ui": {
@@ -574,19 +2561,133 @@
     "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
     "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
     "items": [
-     {"id": "hud", "need": "wave / lives / gold readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 13000, "text_nonempty": true},
-     {"id": "status", "need": "the objective line at the bottom", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 10600, "text_nonempty": true}
+     {
+      "id": "hud",
+      "need": "wave / lives / gold readout",
+      "node": "/root/Main/Hud",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 13000,
+      "text_nonempty": true
+     },
+     {
+      "id": "status",
+      "need": "the objective line at the bottom",
+      "node": "/root/Main/Status",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 10600,
+      "text_nonempty": true
+     }
     ]
    },
    "goal": "place towers on the map so the enemies never reach the exit",
    "capabilities": [
-    {"need": "move the cursor left", "action": "td_left", "observable": "CursorCol"},
-    {"need": "move the cursor right", "action": "td_right", "observable": "CursorCol"},
-    {"need": "move the cursor up", "action": "td_up", "observable": "CursorRow"},
-    {"need": "move the cursor down", "action": "td_down", "observable": "CursorRow"},
-    {"need": "place a tower at the cursor", "action": "td_place",
-     "observable": "TowersPlaced|Gold|TowerList"}
-   ]
+    {
+     "need": "move the cursor left",
+     "action": "td_left",
+     "observable": "CursorCol"
+    },
+    {
+     "need": "move the cursor right",
+     "action": "td_right",
+     "observable": "CursorCol"
+    },
+    {
+     "need": "move the cursor up",
+     "action": "td_up",
+     "observable": "CursorRow"
+    },
+    {
+     "need": "move the cursor down",
+     "action": "td_down",
+     "observable": "CursorRow"
+    },
+    {
+     "need": "place a tower at the cursor",
+     "action": "td_place",
+     "observable": "TowersPlaced|Gold|TowerList"
+    }
+   ],
+   "gameplay_observables": {
+    "declared_by": "TASK-131 X12",
+    "what": "the state keys whose CHANGE means the game played, not that a bookkeeping variable moved",
+    "rule": "a changed state key counts as GAMEPLAY only when it (a) contains one of this game's `items` AND (b) does NOT match the uniform META patterns in tools/playability_gate.py: clocks (`Ticks`, `Elapsed`, `_logTimer`), input accounting (`Input*`, `LastEvent`, `LastDir`, `LastMoveDir`), refusals (`Rejected*`), digests (`*Hash`), UI labels (`*.text`), input intents (`DirectionX`/`DirectionY`, `Facing`, `AngleIndex`), mode flags (`Paused`, `GameOver`, `LoseReason`), seeds, `Moved`.  META wins over `items`, so a declaration cannot re-admit a meta key by listing it.  A position, a velocity, a board, a score or a consumed-object counter DOES count, because that is the world moving; an input acknowledgement is not.",
+    "items": [
+     "CursorCol",
+     "CursorRow",
+     "Gold",
+     "TowersPlaced",
+     "TowerList",
+     "EnemiesAlive",
+     "EnemiesSpawned",
+     "EnemyList",
+     "/root/Main/Enemy_",
+     "/root/Main/Tower_",
+     "Lives",
+     "WaveLeftToSpawn",
+     "SpawnCountdown",
+     "Steps"
+    ],
+    "how_used": "tools/playability_gate.py `is_gameplay_key` / `gameplay_changes` / `arm_evidence`; P2 requires every declared action to move one of these (or pixels) past its own no-input control window, and P3 requires gameplay progress somewhere in the run",
+    "recorded_evidence": "runs/playability/<game>/gate.json -> criteria.P2.gameplay_evidence (per action) and criteria.P3.gameplay_progress"
+   },
+   "state_markers": {
+    "declared_by": "TASK-131 X13",
+    "node": "/root/Main",
+    "fields": [
+     "Paused",
+     "GameOver",
+     "LoseReason",
+     "Ticks",
+     "Score",
+     "Level",
+     "Lines",
+     "Lives"
+    ],
+    "rule": "TASK-131 X13: every captured frame records these fields as of the state read that goes with it (plus `ms`/`drawn`/`processed`/`physics`), so a static frame can be judged legal or illegal from the artifact instead of argued about.  A frame that is identical to its predecessor WHILE a mode flag here says the game is paused/over is a legal static frame; the same frame with the game live is not.",
+    "how_used": "tools/playability_gate.py `marker_values` (stamped into every frame record by `capture`) and `marker_timeline` (criteria.P3.marker_timeline)"
+   },
+   "liveness": {
+    "declared_by": "TASK-131 X10/X13",
+    "node": "/root/Main",
+    "declared": true,
+    "terminal": [
+     {
+      "field": "GameOver",
+      "value": true,
+      "means": "the game ended"
+     },
+     {
+      "field": "Lives",
+      "value": 0,
+      "means": "no lives left"
+     }
+    ],
+    "what": "the condition under which the game is over; the gate evaluates it on the SETTLE state, because a game that is already over before the first input cannot be judged by asking whether its picture changes afterwards",
+    "note": "",
+    "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
+   },
+   "refusal_evidence": {
+    "declared_by": "TASK-131 X12",
+    "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
+    "keys": [
+     "LastRefusedInput",
+     "Rejected"
+    ],
+    "value_words": [
+     "rejected",
+     "blocked",
+     "refused",
+     "no_change",
+     "cannot"
+    ],
+    "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
+    "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+   }
   },
   "neg_input_dead": {
    "required_ui": {
@@ -596,8 +2697,26 @@
     "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
     "note": "copy of the minesweeper declaration: this variant is a copy of projects/minesweeper and the point of P7 is that it must FAIL this declaration",
     "items": [
-     {"id": "hud", "need": "mines / flags / safe-left readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 10800, "text_nonempty": true},
-     {"id": "status", "need": "the game's status line", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 4500, "text_nonempty": true}
+     {
+      "id": "hud",
+      "need": "mines / flags / safe-left readout",
+      "node": "/root/Main/Hud",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 10800,
+      "text_nonempty": true
+     },
+     {
+      "id": "status",
+      "need": "the game's status line",
+      "node": "/root/Main/Status",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 4500,
+      "text_nonempty": true
+     }
     ]
    },
    "_negative_variant": {
@@ -609,15 +2728,102 @@
    },
    "goal": "walk the cursor, reveal and flag cells -- with the input path DISABLED (negative variant)",
    "capabilities": [
-    {"need": "move the cursor left", "action": "mine_left", "observable": "CursorCol"},
-    {"need": "move the cursor right", "action": "mine_right", "observable": "CursorCol"},
-    {"need": "move the cursor up", "action": "mine_up", "observable": "CursorRow"},
-    {"need": "move the cursor down", "action": "mine_down", "observable": "CursorRow"},
-    {"need": "reveal the cell under the cursor", "action": "mine_reveal",
-     "observable": "RevealedCount|Moves|RejectedMoves|MinesRelocated"},
-    {"need": "flag the cell under the cursor", "action": "mine_flag",
-     "observable": "FlaggedCount|FlagToggles|RejectedMoves"}
-   ]
+    {
+     "need": "move the cursor left",
+     "action": "mine_left",
+     "observable": "CursorCol"
+    },
+    {
+     "need": "move the cursor right",
+     "action": "mine_right",
+     "observable": "CursorCol"
+    },
+    {
+     "need": "move the cursor up",
+     "action": "mine_up",
+     "observable": "CursorRow"
+    },
+    {
+     "need": "move the cursor down",
+     "action": "mine_down",
+     "observable": "CursorRow"
+    },
+    {
+     "need": "reveal the cell under the cursor",
+     "action": "mine_reveal",
+     "observable": "RevealedCount|Moves|RejectedMoves|MinesRelocated"
+    },
+    {
+     "need": "flag the cell under the cursor",
+     "action": "mine_flag",
+     "observable": "FlaggedCount|FlagToggles|RejectedMoves"
+    }
+   ],
+   "gameplay_observables": {
+    "declared_by": "TASK-131 X12",
+    "what": "the state keys whose CHANGE means the game played, not that a bookkeeping variable moved",
+    "rule": "a changed state key counts as GAMEPLAY only when it (a) contains one of this game's `items` AND (b) does NOT match the uniform META patterns in tools/playability_gate.py: clocks (`Ticks`, `Elapsed`, `_logTimer`), input accounting (`Input*`, `LastEvent`, `LastDir`, `LastMoveDir`), refusals (`Rejected*`), digests (`*Hash`), UI labels (`*.text`), input intents (`DirectionX`/`DirectionY`, `Facing`, `AngleIndex`), mode flags (`Paused`, `GameOver`, `LoseReason`), seeds, `Moved`.  META wins over `items`, so a declaration cannot re-admit a meta key by listing it.  A position, a velocity, a board, a score or a consumed-object counter DOES count, because that is the world moving; an input acknowledgement is not.",
+    "items": [
+     "CursorCol",
+     "CursorRow",
+     "RevealedCount",
+     "RemainingSafe",
+     "FlaggedCount",
+     "FlagToggles",
+     "/root/Main/Num_"
+    ],
+    "how_used": "tools/playability_gate.py `is_gameplay_key` / `gameplay_changes` / `arm_evidence`; P2 requires every declared action to move one of these (or pixels) past its own no-input control window, and P3 requires gameplay progress somewhere in the run",
+    "recorded_evidence": "runs/playability/<game>/gate.json -> criteria.P2.gameplay_evidence (per action) and criteria.P3.gameplay_progress"
+   },
+   "state_markers": {
+    "declared_by": "TASK-131 X13",
+    "node": "/root/Main",
+    "fields": [
+     "Paused",
+     "GameOver",
+     "LoseReason",
+     "Ticks",
+     "Score",
+     "Level",
+     "Lines",
+     "Lives"
+    ],
+    "rule": "TASK-131 X13: every captured frame records these fields as of the state read that goes with it (plus `ms`/`drawn`/`processed`/`physics`), so a static frame can be judged legal or illegal from the artifact instead of argued about.  A frame that is identical to its predecessor WHILE a mode flag here says the game is paused/over is a legal static frame; the same frame with the game live is not.",
+    "how_used": "tools/playability_gate.py `marker_values` (stamped into every frame record by `capture`) and `marker_timeline` (criteria.P3.marker_timeline)"
+   },
+   "liveness": {
+    "declared_by": "TASK-131 X10/X13",
+    "node": "/root/Main",
+    "declared": true,
+    "terminal": [
+     {
+      "field": "GameOver",
+      "value": true,
+      "means": "the board is finished"
+     }
+    ],
+    "what": "the condition under which the game is over; the gate evaluates it on the SETTLE state, because a game that is already over before the first input cannot be judged by asking whether its picture changes afterwards",
+    "note": "",
+    "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
+   },
+   "refusal_evidence": {
+    "declared_by": "TASK-131 X12",
+    "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
+    "keys": [
+     "LastRefusedInput",
+     "Rejected"
+    ],
+    "value_words": [
+     "rejected",
+     "blocked",
+     "refused",
+     "no_change",
+     "cannot"
+    ],
+    "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
+    "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+   }
   },
   "neg_black_screen": {
    "required_ui": {
@@ -627,9 +2833,33 @@
     "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
     "note": "copy of the snake declaration: this variant is a copy of projects/snake and the point of P7 is that it must FAIL this declaration",
     "items": [
-     {"id": "field", "need": "the playing field", "node": "/root/Main/Background", "class": "ColorRect", "must_exist": true, "must_be_visible": true, "min_area_px": 240000},
-     {"id": "food", "need": "the food the player steers to", "node": "/root/Main/Food", "class": "ColorRect", "must_exist": true, "must_be_visible": true, "min_area_px": 300},
-     {"id": "head", "need": "the snake's head", "node": "/root/Main/SnakeSeg00", "class": "ColorRect", "must_exist": true, "must_be_visible": true, "min_area_px": 300}
+     {
+      "id": "field",
+      "need": "the playing field",
+      "node": "/root/Main/Background",
+      "class": "ColorRect",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 240000
+     },
+     {
+      "id": "food",
+      "need": "the food the player steers to",
+      "node": "/root/Main/Food",
+      "class": "ColorRect",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 300
+     },
+     {
+      "id": "head",
+      "need": "the snake's head",
+      "node": "/root/Main/SnakeSeg00",
+      "class": "ColorRect",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 300
+     }
     ]
    },
    "_negative_variant": {
@@ -641,12 +2871,112 @@
    },
    "goal": "eat the food and grow -- while nothing is drawn (negative variant)",
    "capabilities": [
-    {"need": "turn up", "action": "snake_up", "observable": "DirectionX|DirectionY|LastRefusedInput"},
-    {"need": "turn down", "action": "snake_down", "observable": "DirectionX|DirectionY|LastRefusedInput"},
-    {"need": "turn left", "action": "snake_left", "observable": "DirectionX|DirectionY|LastRefusedInput"},
-    {"need": "turn right", "action": "snake_right", "observable": "DirectionX|DirectionY|LastRefusedInput"},
-    {"need": "pause", "action": "snake_pause", "observable": "Paused"}
-   ]
+    {
+     "need": "turn up",
+     "action": "snake_up",
+     "observable": "DirectionX|DirectionY|LastRefusedInput"
+    },
+    {
+     "need": "turn down",
+     "action": "snake_down",
+     "observable": "DirectionX|DirectionY|LastRefusedInput"
+    },
+    {
+     "need": "turn left",
+     "action": "snake_left",
+     "observable": "DirectionX|DirectionY|LastRefusedInput"
+    },
+    {
+     "need": "turn right",
+     "action": "snake_right",
+     "observable": "DirectionX|DirectionY|LastRefusedInput"
+    },
+    {
+     "need": "pause",
+     "action": "snake_pause",
+     "observable": "Paused"
+    }
+   ],
+   "gameplay_observables": {
+    "declared_by": "TASK-131 X12",
+    "what": "the state keys whose CHANGE means the game played, not that a bookkeeping variable moved",
+    "rule": "a changed state key counts as GAMEPLAY only when it (a) contains one of this game's `items` AND (b) does NOT match the uniform META patterns in tools/playability_gate.py: clocks (`Ticks`, `Elapsed`, `_logTimer`), input accounting (`Input*`, `LastEvent`, `LastDir`, `LastMoveDir`), refusals (`Rejected*`), digests (`*Hash`), UI labels (`*.text`), input intents (`DirectionX`/`DirectionY`, `Facing`, `AngleIndex`), mode flags (`Paused`, `GameOver`, `LoseReason`), seeds, `Moved`.  META wins over `items`, so a declaration cannot re-admit a meta key by listing it.  A position, a velocity, a board, a score or a consumed-object counter DOES count, because that is the world moving; an input acknowledgement is not.",
+    "items": [
+     "HeadX",
+     "HeadY",
+     "Score",
+     "Length",
+     "FoodsEaten",
+     "/root/Main/SnakeSeg",
+     "/root/Main/Food",
+     "CellX",
+     "CellY"
+    ],
+    "how_used": "tools/playability_gate.py `is_gameplay_key` / `gameplay_changes` / `arm_evidence`; P2 requires every declared action to move one of these (or pixels) past its own no-input control window, and P3 requires gameplay progress somewhere in the run",
+    "recorded_evidence": "runs/playability/<game>/gate.json -> criteria.P2.gameplay_evidence (per action) and criteria.P3.gameplay_progress"
+   },
+   "state_markers": {
+    "declared_by": "TASK-131 X13",
+    "node": "/root/Main",
+    "fields": [
+     "Paused",
+     "GameOver",
+     "LoseReason",
+     "Ticks",
+     "Score",
+     "Level",
+     "Lines",
+     "Lives"
+    ],
+    "rule": "TASK-131 X13: every captured frame records these fields as of the state read that goes with it (plus `ms`/`drawn`/`processed`/`physics`), so a static frame can be judged legal or illegal from the artifact instead of argued about.  A frame that is identical to its predecessor WHILE a mode flag here says the game is paused/over is a legal static frame; the same frame with the game live is not.",
+    "how_used": "tools/playability_gate.py `marker_values` (stamped into every frame record by `capture`) and `marker_timeline` (criteria.P3.marker_timeline)"
+   },
+   "mode_actions": [
+    {
+     "action": "snake_pause",
+     "marker": "Paused",
+     "armed_value": true,
+     "effect": "`TogglePause()` flips `Paused`, and `SnakeGame._Process` returns immediately while it is true (src/SnakeGame.cs:159), so every frame taken after this action is necessarily static",
+     "restore": {
+      "action": "snake_pause",
+      "why": "the same action toggles the mode back off; the gate issues it again after the action round and reads the marker back"
+     },
+     "observed": "runs/playability/snake/states/a04_snake_pause_parse_act.json recorded `Paused false -> true`, and the old P3 quoted it as a real state change"
+    }
+   ],
+   "liveness": {
+    "declared_by": "TASK-131 X10/X13",
+    "node": "/root/Main",
+    "declared": true,
+    "terminal": [
+     {
+      "field": "GameOver",
+      "value": true,
+      "means": "same as snake (this variant is a copy of it)"
+     }
+    ],
+    "what": "the condition under which the game is over; the gate evaluates it on the SETTLE state, because a game that is already over before the first input cannot be judged by asking whether its picture changes afterwards",
+    "note": "",
+    "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
+   },
+   "refusal_evidence": {
+    "declared_by": "TASK-131 X12",
+    "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
+    "keys": [
+     "LastRefusedInput",
+     "Rejected"
+    ],
+    "value_words": [
+     "rejected",
+     "blocked",
+     "refused",
+     "no_change",
+     "cannot"
+    ],
+    "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
+    "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+   }
   },
   "neg_frozen": {
    "required_ui": {
@@ -656,8 +2986,25 @@
     "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
     "note": "copy of the breakout declaration: this variant is a copy of projects/breakout and the point of P7 is that it must FAIL this declaration",
     "items": [
-     {"id": "hud_score", "need": "score readout", "node": "/root/Main/HudScore", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 7600, "text_nonempty": true},
-     {"id": "hud_status", "need": "the status line above the playfield", "node": "/root/Main/HudStatus", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 7400}
+     {
+      "id": "hud_score",
+      "need": "score readout",
+      "node": "/root/Main/HudScore",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 7600,
+      "text_nonempty": true
+     },
+     {
+      "id": "hud_status",
+      "need": "the status line above the playfield",
+      "node": "/root/Main/HudStatus",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 7400
+     }
     ]
    },
    "_negative_variant": {
@@ -669,10 +3016,84 @@
    },
    "goal": "keep the ball alive with the paddle -- with the game loop DISABLED (negative variant)",
    "capabilities": [
-    {"need": "move the paddle left", "action": "breakout_left", "observable": "Paddle|MinX"},
-    {"need": "move the paddle right", "action": "breakout_right", "observable": "Paddle|MaxX"},
-    {"need": "launch the ball", "action": "breakout_launch", "observable": "Launched|Ball"}
-   ]
+    {
+     "need": "move the paddle left",
+     "action": "breakout_left",
+     "observable": "Paddle|MinX"
+    },
+    {
+     "need": "move the paddle right",
+     "action": "breakout_right",
+     "observable": "Paddle|MaxX"
+    },
+    {
+     "need": "launch the ball",
+     "action": "breakout_launch",
+     "observable": "Launched|Ball"
+    }
+   ],
+   "gameplay_observables": {
+    "declared_by": "TASK-131 X12",
+    "what": "the state keys whose CHANGE means the game played, not that a bookkeeping variable moved",
+    "rule": "a changed state key counts as GAMEPLAY only when it (a) contains one of this game's `items` AND (b) does NOT match the uniform META patterns in tools/playability_gate.py: clocks (`Ticks`, `Elapsed`, `_logTimer`), input accounting (`Input*`, `LastEvent`, `LastDir`, `LastMoveDir`), refusals (`Rejected*`), digests (`*Hash`), UI labels (`*.text`), input intents (`DirectionX`/`DirectionY`, `Facing`, `AngleIndex`), mode flags (`Paused`, `GameOver`, `LoseReason`), seeds, `Moved`.  META wins over `items`, so a declaration cannot re-admit a meta key by listing it.  A position, a velocity, a board, a score or a consumed-object counter DOES count, because that is the world moving; an input acknowledgement is not.",
+    "items": [
+     "BallX",
+     "BallY",
+     "BallSpeedX",
+     "BallSpeedY",
+     "Launched",
+     "PaddleBounces",
+     "/root/Main/Ball",
+     "/root/Main/Paddle",
+     "Score",
+     "Lives"
+    ],
+    "how_used": "tools/playability_gate.py `is_gameplay_key` / `gameplay_changes` / `arm_evidence`; P2 requires every declared action to move one of these (or pixels) past its own no-input control window, and P3 requires gameplay progress somewhere in the run",
+    "recorded_evidence": "runs/playability/<game>/gate.json -> criteria.P2.gameplay_evidence (per action) and criteria.P3.gameplay_progress"
+   },
+   "state_markers": {
+    "declared_by": "TASK-131 X13",
+    "node": "/root/Main",
+    "fields": [
+     "Paused",
+     "GameOver",
+     "LoseReason",
+     "Ticks",
+     "Score",
+     "Level",
+     "Lines",
+     "Lives"
+    ],
+    "rule": "TASK-131 X13: every captured frame records these fields as of the state read that goes with it (plus `ms`/`drawn`/`processed`/`physics`), so a static frame can be judged legal or illegal from the artifact instead of argued about.  A frame that is identical to its predecessor WHILE a mode flag here says the game is paused/over is a legal static frame; the same frame with the game live is not.",
+    "how_used": "tools/playability_gate.py `marker_values` (stamped into every frame record by `capture`) and `marker_timeline` (criteria.P3.marker_timeline)"
+   },
+   "liveness": {
+    "declared_by": "TASK-131 X10/X13",
+    "node": "/root/Main",
+    "declared": false,
+    "terminal": [],
+    "what": "the condition under which the game is over; the gate evaluates it on the SETTLE state, because a game that is already over before the first input cannot be judged by asking whether its picture changes afterwards",
+    "note": "no terminal flag is exported by this project (measured: the recorded settle state at <out>/<game>/states/00_settle.json carries no GameOver/Lives key), so `terminal` is empty and the liveness check can only report that it could not be applied -- P2/P3 still judge the run on gameplay progress",
+    "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
+   },
+   "refusal_evidence": {
+    "declared_by": "TASK-131 X12",
+    "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
+    "keys": [
+     "LastRefusedInput",
+     "Rejected"
+    ],
+    "value_words": [
+     "rejected",
+     "blocked",
+     "refused",
+     "no_change",
+     "cannot"
+    ],
+    "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
+    "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+   }
   },
   "neg_ui_offscreen": {
    "required_ui": {
@@ -682,8 +3103,26 @@
     "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
     "note": "copy of the flappy declaration: this variant is a copy of projects/flappy and the point of P7 is that it must FAIL this declaration",
     "items": [
-     {"id": "hud", "need": "score / passed / frame readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 10600, "text_nonempty": true},
-     {"id": "status", "need": "pipes readout", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 4500, "text_nonempty": true}
+     {
+      "id": "hud",
+      "need": "score / passed / frame readout",
+      "node": "/root/Main/Hud",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 10600,
+      "text_nonempty": true
+     },
+     {
+      "id": "status",
+      "need": "pipes readout",
+      "node": "/root/Main/Status",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 4500,
+      "text_nonempty": true
+     }
     ]
    },
    "_negative_variant": {
@@ -705,7 +3144,64 @@
      "action": "flappy_restart",
      "observable": "Restarts|GameOver|Score"
     }
-   ]
+   ],
+   "gameplay_observables": {
+    "declared_by": "TASK-131 X12",
+    "what": "the state keys whose CHANGE means the game played, not that a bookkeeping variable moved",
+    "rule": "a changed state key counts as GAMEPLAY only when it (a) contains one of this game's `items` AND (b) does NOT match the uniform META patterns in tools/playability_gate.py: clocks (`Ticks`, `Elapsed`, `_logTimer`), input accounting (`Input*`, `LastEvent`, `LastDir`, `LastMoveDir`), refusals (`Rejected*`), digests (`*Hash`), UI labels (`*.text`), input intents (`DirectionX`/`DirectionY`, `Facing`, `AngleIndex`), mode flags (`Paused`, `GameOver`, `LoseReason`), seeds, `Moved`.  META wins over `items`, so a declaration cannot re-admit a meta key by listing it.  A position, a velocity, a board, a score or a consumed-object counter DOES count, because that is the world moving; an input acknowledgement is not.",
+    "items": [
+     "BirdVelocity",
+     "BirdY",
+     "/root/Main/Bird",
+     "Score",
+     "/root/Main/Pipe"
+    ],
+    "how_used": "tools/playability_gate.py `is_gameplay_key` / `gameplay_changes` / `arm_evidence`; P2 requires every declared action to move one of these (or pixels) past its own no-input control window, and P3 requires gameplay progress somewhere in the run",
+    "recorded_evidence": "runs/playability/<game>/gate.json -> criteria.P2.gameplay_evidence (per action) and criteria.P3.gameplay_progress"
+   },
+   "state_markers": {
+    "declared_by": "TASK-131 X13",
+    "node": "/root/Main",
+    "fields": [
+     "Paused",
+     "GameOver",
+     "LoseReason",
+     "Ticks",
+     "Score",
+     "Level",
+     "Lines",
+     "Lives"
+    ],
+    "rule": "TASK-131 X13: every captured frame records these fields as of the state read that goes with it (plus `ms`/`drawn`/`processed`/`physics`), so a static frame can be judged legal or illegal from the artifact instead of argued about.  A frame that is identical to its predecessor WHILE a mode flag here says the game is paused/over is a legal static frame; the same frame with the game live is not.",
+    "how_used": "tools/playability_gate.py `marker_values` (stamped into every frame record by `capture`) and `marker_timeline` (criteria.P3.marker_timeline)"
+   },
+   "liveness": {
+    "declared_by": "TASK-131 X10/X13",
+    "node": "/root/Main",
+    "declared": false,
+    "terminal": [],
+    "what": "the condition under which the game is over; the gate evaluates it on the SETTLE state, because a game that is already over before the first input cannot be judged by asking whether its picture changes afterwards",
+    "note": "no terminal flag is exported by this project (measured: the recorded settle state at <out>/<game>/states/00_settle.json carries no GameOver/Lives key), so `terminal` is empty and the liveness check can only report that it could not be applied -- P2/P3 still judge the run on gameplay progress",
+    "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
+   },
+   "refusal_evidence": {
+    "declared_by": "TASK-131 X12",
+    "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
+    "keys": [
+     "LastRefusedInput",
+     "Rejected"
+    ],
+    "value_words": [
+     "rejected",
+     "blocked",
+     "refused",
+     "no_change",
+     "cannot"
+    ],
+    "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
+    "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+   }
   },
   "neg_hud_missing": {
    "required_ui": {
@@ -715,9 +3211,34 @@
     "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
     "note": "copy of the tetris declaration: this variant is a copy of projects/tetris and the point of P7 is that it must FAIL this declaration",
     "items": [
-     {"id": "side_panel", "need": "the HUD side panel", "node": "/root/Main/SidePanel", "class": "ColorRect", "must_exist": true, "must_be_visible": true, "min_area_px": 57600},
-     {"id": "hud_label", "need": "the panel's title text", "node": "/root/Main/HudLabel", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 26200, "text_nonempty": true},
-     {"id": "panel_edge", "need": "the border that separates HUD from playfield", "node": "/root/Main/PanelEdge", "class": "ColorRect", "must_exist": true, "must_be_visible": true, "min_area_px": 500}
+     {
+      "id": "side_panel",
+      "need": "the HUD side panel",
+      "node": "/root/Main/SidePanel",
+      "class": "ColorRect",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 57600
+     },
+     {
+      "id": "hud_label",
+      "need": "the panel's title text",
+      "node": "/root/Main/HudLabel",
+      "class": "Label",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 26200,
+      "text_nonempty": true
+     },
+     {
+      "id": "panel_edge",
+      "need": "the border that separates HUD from playfield",
+      "node": "/root/Main/PanelEdge",
+      "class": "ColorRect",
+      "must_exist": true,
+      "must_be_visible": true,
+      "min_area_px": 500
+     }
     ]
    },
    "_negative_variant": {
@@ -729,12 +3250,100 @@
    },
    "goal": "stack the falling pieces -- with the HUD REMOVED (negative variant)",
    "capabilities": [
-    {"need": "move left", "action": "tetris_left", "observable": "PieceX"},
-    {"need": "move right", "action": "tetris_right", "observable": "PieceX"},
-    {"need": "rotate", "action": "tetris_rotate", "observable": "PieceRot"},
-    {"need": "soft drop", "action": "tetris_down", "observable": "PieceY|Score|Ticks"},
-    {"need": "hard drop", "action": "tetris_drop", "observable": "PieceY|Score|Lines|FilledCells"}
-   ]
+    {
+     "need": "move left",
+     "action": "tetris_left",
+     "observable": "PieceX"
+    },
+    {
+     "need": "move right",
+     "action": "tetris_right",
+     "observable": "PieceX"
+    },
+    {
+     "need": "rotate",
+     "action": "tetris_rotate",
+     "observable": "PieceRot"
+    },
+    {
+     "need": "soft drop",
+     "action": "tetris_down",
+     "observable": "PieceY|Score|Ticks"
+    },
+    {
+     "need": "hard drop",
+     "action": "tetris_drop",
+     "observable": "PieceY|Score|Lines|FilledCells"
+    }
+   ],
+   "gameplay_observables": {
+    "declared_by": "TASK-131 X12",
+    "what": "the state keys whose CHANGE means the game played, not that a bookkeeping variable moved",
+    "rule": "a changed state key counts as GAMEPLAY only when it (a) contains one of this game's `items` AND (b) does NOT match the uniform META patterns in tools/playability_gate.py: clocks (`Ticks`, `Elapsed`, `_logTimer`), input accounting (`Input*`, `LastEvent`, `LastDir`, `LastMoveDir`), refusals (`Rejected*`), digests (`*Hash`), UI labels (`*.text`), input intents (`DirectionX`/`DirectionY`, `Facing`, `AngleIndex`), mode flags (`Paused`, `GameOver`, `LoseReason`), seeds, `Moved`.  META wins over `items`, so a declaration cannot re-admit a meta key by listing it.  A position, a velocity, a board, a score or a consumed-object counter DOES count, because that is the world moving; an input acknowledgement is not.",
+    "items": [
+     "PieceX",
+     "PieceY",
+     "PieceRot",
+     "PieceKind",
+     "NextKind",
+     "FilledCells",
+     "Lines",
+     "Score",
+     "Level",
+     "/root/Main/Board"
+    ],
+    "how_used": "tools/playability_gate.py `is_gameplay_key` / `gameplay_changes` / `arm_evidence`; P2 requires every declared action to move one of these (or pixels) past its own no-input control window, and P3 requires gameplay progress somewhere in the run",
+    "recorded_evidence": "runs/playability/<game>/gate.json -> criteria.P2.gameplay_evidence (per action) and criteria.P3.gameplay_progress"
+   },
+   "state_markers": {
+    "declared_by": "TASK-131 X13",
+    "node": "/root/Main",
+    "fields": [
+     "Paused",
+     "GameOver",
+     "LoseReason",
+     "Ticks",
+     "Score",
+     "Level",
+     "Lines",
+     "Lives"
+    ],
+    "rule": "TASK-131 X13: every captured frame records these fields as of the state read that goes with it (plus `ms`/`drawn`/`processed`/`physics`), so a static frame can be judged legal or illegal from the artifact instead of argued about.  A frame that is identical to its predecessor WHILE a mode flag here says the game is paused/over is a legal static frame; the same frame with the game live is not.",
+    "how_used": "tools/playability_gate.py `marker_values` (stamped into every frame record by `capture`) and `marker_timeline` (criteria.P3.marker_timeline)"
+   },
+   "liveness": {
+    "declared_by": "TASK-131 X10/X13",
+    "node": "/root/Main",
+    "declared": true,
+    "terminal": [
+     {
+      "field": "GameOver",
+      "value": true,
+      "means": "same as tetris"
+     }
+    ],
+    "what": "the condition under which the game is over; the gate evaluates it on the SETTLE state, because a game that is already over before the first input cannot be judged by asking whether its picture changes afterwards",
+    "note": "",
+    "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
+   },
+   "refusal_evidence": {
+    "declared_by": "TASK-131 X12",
+    "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
+    "keys": [
+     "LastRefusedInput",
+     "Rejected"
+    ],
+    "value_words": [
+     "rejected",
+     "blocked",
+     "refused",
+     "no_change",
+     "cannot"
+    ],
+    "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
+    "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+   }
   }
  }
 }

@@ -248,7 +248,24 @@ PIXEL_DELTA = 16              # 0..255 per channel; below this is film grain / d
 # PLAYABILITY-REPORT.md section "P1 threshold basis"; the whole sweep's numbers
 # are in runs\playability\playability.json, so the threshold can be re-judged
 # against its own data instead of being taken on faith.
-P1_MIN_CONTENT_FRACTION = 0.004   # >=0.4% of the window's pixels are content
+#
+# TASK-131 X14 RE-DERIVATION.  The old 0.004 was below every real game's own settle
+# frame, so it never had a basis: measured over the 25 targets (runs/realinput/_scripts/
+# p1_metrics.py prints the table), the settle-frame content fraction runs
+#   snake 0.0060 (pathological: a 35%-alpha game-over overlay over an empty board)
+#   rtype 0.01099, pong 0.0182, asteroids 0.0310, missilecommand 0.0458, ...
+#   tetris 0.4860
+# i.e. the lowest HEALTHY game is rtype at 1.099%.  0.008 is chosen as the largest round
+# value that keeps all 20 positives green (1.37x margin under rtype) and still rejects
+# snake's 0.0060 -- and it is 2x the old value.  It is FITTED FOR SEPARATION on one
+# pathological example, not calibrated: with n=1 there is no calibration to claim.
+P1_MIN_CONTENT_FRACTION = 0.008    # >=0.8% of the window's pixels are content
+# TASK-131: bbox_coverage is kept at 0.12 but DEMOTED to a diagnostic, because the snake
+# frame proves it is a SPAN metric, not a FILL metric: snake scored 33% "coverage" from
+# two specks in opposite corners (a 24x24 pellet at (0,0) and a 96x24 snake at (576,240)),
+# because the union bounding box of the two spans 600x264.  No threshold on a span can
+# tell "content fills the frame" from "two dots in opposite corners", so P1 records
+# `bbox_fill` (content pixels / bbox area) per frame and does not judge on it.
 P1_MIN_BBOX_COVERAGE = 0.12       # content bbox spans >=12% of the window area
 P2_FRAMES = 45                    # "within N frames": 45 drawn frames (~0.75 s @60)
 P2_SETTLE_S = 0.45
@@ -258,6 +275,26 @@ P3_MIN_CHANGED_PIXELS = 40        # a genuine frame-to-frame change, not noise
 # nothing).  Basis: modulate.a is exactly 1.0 for every declared node of all 20 games
 # measured at settle; 0.01 only separates "fully transparent" from "faded".
 P7_MIN_ALPHA = 0.01
+# TASK-131 X12: what may NOT be counted as "the game played".  Every pattern here has a
+# measured counterpart in the recorded evidence -- `snake` passed P2 on `DirectionX` and
+# `LastRefusedInput`, and P3 on `Ticks`-like clocks plus `frames_drawn`.  A change that
+# matches any of these is an input acknowledgement, a clock, a refusal, a digest or a
+# flag: it is evidence about the PLUMBING, never about the game world.
+META_KEY_PATTERNS = [
+    r"\.Ticks$", r"\.Elapsed$", r"\._logTimer$", r"\.AutoPlay$", r"\.AutoSteps$",
+    r"\.LastAutoSteps$", r"\.LastHookSteps$",
+    r"\.LastEvent$",                 # a STRING that describes the last input
+    r"\.LastRefusedInput$", r"Rejected",
+    r"\.Input[A-Z]",                 # input accounting: InputMoves/InputShots/InputAims..
+    r"\.Paused$", r"\.GameOver$", r"\.LoseReason$", r"\.Won$", r"\.CanMoveAny$",
+    r"\.Facing$", r"\.Direction[XY]$",     # an input intent, not a world position
+    r"\.LastDir$", r"\.LastMoveDir$", r"\.LastSwap$", r"\.LastChain$",
+    r"\.LastCleared$", r"\.AngleIndex$",   # the aim index: an intent, and animated by nothing
+    r"\.Seed$",
+    r"Hash$",                        # a digest OF the state, not the state
+    r"\.text$",                      # a Label's rendering of some other value
+    r"\.started$", r"\.Moved$",
+]
 DEFAULT_PORT = 9911
 STATE_NODE_CAP = 4000
 
@@ -1140,6 +1177,10 @@ def run_gate(game, args):
     controls = load_controls()
     agent_thresholds = load_agent_thresholds()
     playjev_thresholds = load_playjev_thresholds()
+    # TASK-131 X13: the per-frame marker declaration (Paused / clock / Ticks / Score ...).
+    # Read here so `capture` -- defined below and called for every frame -- can stamp each
+    # frame with the marker values of the state it was taken with.
+    MARKERS = [marker_declaration(controls, game)]
     # TASK-129 D-B: every state the game was sampled in, in sampling order.  The agent
     # step below picks >= 3 of these that are HASH-DIFFERENT, so "3 calls" really is
     # "3 independent observations" (TASK-128 measured that it was not: the same s_end was
@@ -1238,6 +1279,12 @@ def run_gate(game, args):
             rec["changed_pixels_vs_prev"] = None
         if state_after is not None:
             rec["state_summary"] = record_state(label, state_after)
+        # TASK-131 X13: EVERY frame carries the declared marker timeline (Paused, the
+        # clock fields, Ticks, ...) of the state read that goes with it, so "was this
+        # static frame legal?" can be answered from the artifact instead of argued about.
+        # Read out of the state the caller already sampled; no extra call is made.
+        if state_after is not None and isinstance(state_after, dict):
+            rec["markers"] = marker_values(state_after, MARKERS[0])
         frames.append(rec)
         gate["frames"].append({k: v_ for k, v_ in rec.items() if k != "path"})
         gate["frames"][-1]["file"] = fname
@@ -1319,6 +1366,23 @@ def run_gate(game, args):
         # ---------------- P1 + P3a: autonomous frames ----------------
         s0 = sample_state("00_settle", mcp)
         f0 = capture("settle", mcp, s0, note="first frame after %ss" % args.settle)
+        # TASK-131 X10/X13: what does the player see FIRST, and is the game already in a
+        # declared terminal state at that moment?  The snake defect lives exactly here.
+        liv = liveness_declaration(controls, game)
+        gate["settle_liveness"] = {
+            "declaration": liv,
+            "markers": marker_values(s0, MARKERS[0]),
+            "terminal_conditions_met": terminal_conditions_met(s0, liv),
+            "declared": bool(liv),
+        }
+        if gate["settle_liveness"]["terminal_conditions_met"]:
+            gate["notes"].append(
+                "the game is ALREADY in a declared terminal state at the settle frame: %s"
+                % json.dumps(gate["settle_liveness"]["terminal_conditions_met"],
+                             ensure_ascii=False))
+            log("    SETTLE LIVENESS: already terminal at settle: %s"
+                % json.dumps(gate["settle_liveness"]["terminal_conditions_met"],
+                             ensure_ascii=False))
 
         # ---------------- TASK-130 P7: the DECLARED required UI ----------------
         # Machine check, no model: the declaration in tools/playability_controls.json names
@@ -1479,6 +1543,69 @@ def run_gate(game, args):
                 action, kname, key_ok, push_ok, act_ok,
                 "SUSPICIOUS(action-only)" if entry["suspicious_mismatch"]
                 else ("event-only" if entry["responds_to_push_input_only"] else "")))
+
+        # ---------------- TASK-131 X13: action side effects ----------------
+        # An action sequence must not leave the game in a MODE and then keep sampling
+        # frames as if nothing had happened.  `snake` is the measured case: the gate's own
+        # `snake_pause` turned `Paused` false->true and never turned it back, so every
+        # frame after it was necessarily static (SnakeGame.cs:159 `if (GameOver || Paused)
+        # return;`).  Each declaration in `games.<game>.mode_actions` names the marker, the
+        # value that means "the mode is on", and the action that turns it off; the audit
+        # either restores the mode (recording the readback) or records explicitly that the
+        # game was left in it, so every later frame's marker stamp can be judged.
+        MODES = mode_declarations(controls, game)
+        after_actions = sample_state("zz_after_actions", mcp)
+        side = {"declarations": MODES,
+                "before": marker_values(s0, MARKERS[0]),
+                "after": marker_values(after_actions, MARKERS[0]),
+                "left_in_mode": [], "restored": [], "not_restorable": []}
+        for m in MODES:
+            field = m.get("marker")
+            armed = m.get("armed_value")
+            mv = marker_values(after_actions, MARKERS[0])
+            if not field or mv.get(field) != armed \
+                    or marker_values(s0, MARKERS[0]).get(field) == armed:
+                continue
+            entry = {"action": m.get("action"), "marker": field,
+                     "value_after_the_round": mv.get(field), "effect": m.get("effect"),
+                     "restore_declaration": m.get("restore")}
+            rest = m.get("restore") or {}
+            r_action = rest.get("action")
+            if r_action:
+                rkc = next((c for c in (proj["actions"].get(r_action) or {}).get(
+                    "keycode", []) if c), None)
+                if rkc is not None:
+                    gd(mcp, probe_key_event(rkc, True, "parse_input_event"),
+                       "restore-press:" + r_action)
+                    time.sleep(0.15)
+                    gd(mcp, probe_key_event(rkc, False, "parse_input_event"),
+                       "restore-release:" + r_action)
+                    time.sleep(args.settle_input)
+                    after_actions = sample_state("zz_after_restore", mcp)
+                    back = marker_values(after_actions, MARKERS[0]).get(field)
+                    entry["restored_to"] = back
+                    entry["restored"] = back != armed
+                    (side["restored"] if entry["restored"]
+                     else side["not_restorable"]).append(entry)
+                else:
+                    entry["restored"] = False
+                    entry["why"] = ("the declared restore action %r has no key code in the "
+                                    "InputMap" % r_action)
+                    side["not_restorable"].append(entry)
+            else:
+                entry["restored"] = False
+                entry["why"] = ("no restore action is declared for %r: the game is left in "
+                                "this mode and every later frame carries the marker"
+                                % m.get("action"))
+                side["not_restorable"].append(entry)
+            side["left_in_mode"].append(entry)
+        gate["action_side_effects"] = side
+        if MODES:
+            log("    action side effects: left_in_mode=%s restored=%s not_restorable=%s"
+                % ([e["action"] for e in side["left_in_mode"]],
+                   [e["action"] for e in side["restored"]],
+                   [e["action"] for e in side["not_restorable"]]))
+        s_after_actions = after_actions
 
         # ---------------- P3b: does anything keep moving after input ----------------
         post = []
@@ -2271,6 +2398,156 @@ def required_ui_items(controls, game):
     return decl, (items if isinstance(items, list) else [])
 
 
+# ---------------------------------------------------------------------------
+# TASK-131 X12/X13: the gameplay-observable declaration, and what it judges
+# ---------------------------------------------------------------------------
+def gameplay_declaration(controls, game):
+    """`games.<game>.gameplay_observables` -- TASK-131 X12."""
+    return ((controls or {}).get(game) or {}).get("gameplay_observables") or {}
+
+
+def marker_declaration(controls, game):
+    """`games.<game>.state_markers` -- TASK-131 X13 (per-frame Paused/clock/Ticks)."""
+    return ((controls or {}).get(game) or {}).get("state_markers") or {}
+
+
+def mode_declarations(controls, game):
+    """`games.<game>.mode_actions` -- TASK-131 X13 (actions with a persistent effect)."""
+    v = ((controls or {}).get(game) or {}).get("mode_actions")
+    return v if isinstance(v, list) else []
+
+
+def liveness_declaration(controls, game):
+    """`games.<game>.liveness` -- TASK-131 X10/X13 (the state the player is first shown)."""
+    return ((controls or {}).get(game) or {}).get("liveness") or {}
+
+
+def refusal_declaration(controls, game):
+    """`games.<game>.refusal_evidence` -- TASK-131 X12.
+
+    The one carve-out P2 keeps: an action that moved no gameplay observable may still be
+    correct when the GAME ITSELF recorded a deliberate refusal (a wall, the board edge, an
+    illegal direction).  That is the project convention TASK-116 wrote down.  The carve-out
+    is deliberately NOT enough on its own: P2 also requires that at least one action of the
+    game did move a gameplay observable, so "everything was refused, because the game is
+    dead" (snake, game2048) still fails.
+    """
+    return ((controls or {}).get(game) or {}).get("refusal_evidence") or {}
+
+
+def refusal_hit(changes, decl):
+    """The first changed entry that records a deliberate refusal, or None."""
+    keys = decl.get("keys") or ["LastRefusedInput", "Rejected"]
+    words = decl.get("value_words") or ["rejected", "blocked", "refused", "no_change"]
+    for c in changes or []:
+        k = c.get("key") or ""
+        if any(s in k for s in keys):
+            return "%s: %r -> %r" % (k, c.get("from"), c.get("to"))
+        v = c.get("to")
+        if isinstance(v, str) and any(w in v.lower() for w in words):
+            return "%s: %r" % (k, v)
+    return None
+
+
+def is_meta_key(key):
+    return any(re.search(p, key or "") for p in META_KEY_PATTERNS)
+
+
+def is_gameplay_key(key, decl):
+    """Is a changed state key a statement about the GAME WORLD?
+
+    Two gates, in this order: the key must name something the game's own declaration
+    lists, and it must not match the uniform META patterns.  META wins, deliberately --
+    otherwise a declaration could re-admit `Paused` by listing it.
+    """
+    items = decl.get("items") or []
+    return bool(key) and any(s in key for s in items) and not is_meta_key(key)
+
+
+def gameplay_changes(changes, decl):
+    return [c for c in (changes or []) if is_gameplay_key(c.get("key") or "", decl)]
+
+
+def arm_evidence(ch, decl, min_px=P3_MIN_CHANGED_PIXELS, refusal_decl=None):
+    """What ONE injection arm shows, judged against its own immediately preceding,
+    same-length, no-input control window (the attribution design P2 already used).
+
+    What TASK-131 changes is only WHAT may be counted: the action must have moved a
+    declared GAMEPLAY observable past its control, or changed pixels past its control.
+    `meta_only` is the exact case that used to pass: the action did something, but every
+    thing it did was plumbing (`snake`: `LastRefusedInput`, `DirectionX`, `Paused`).
+    `refused` is the one accepted alternative -- the game's own refusal record moved and
+    the control window did not -- reported separately so it can never masquerade as a
+    gameplay response.
+    """
+    ctl = ch.get("control") or {}
+    act = ch.get("action") or {}
+    ctl_g = gameplay_changes(ctl.get("state_changes"), decl)
+    act_g = gameplay_changes(act.get("state_changes"), decl)
+    ctl_px = max(0, (ctl.get("pixels") or {}).get("changed_pixels") or 0)
+    act_px = max(0, (act.get("pixels") or {}).get("changed_pixels") or 0)
+    pixel_wins = act_px > max(int(ctl_px * 1.5), min_px)
+    gameplay_wins = len(act_g) > len(ctl_g)
+    ctl_ref = refusal_hit(ctl.get("state_changes"), refusal_decl or {})
+    act_ref = refusal_hit(act.get("state_changes"), refusal_decl or {})
+    refused = bool(act_ref) and not ctl_ref and not gameplay_wins and not pixel_wins
+    meta_only = (not gameplay_wins) and (not pixel_wins) and not refused and \
+        len(act.get("state_changes") or []) > len(ctl.get("state_changes") or [])
+    return {
+        "control_gameplay_count": len(ctl_g),
+        "action_gameplay_count": len(act_g),
+        "gameplay_changes": [c.get("key") for c in act_g],
+        "gameplay_wins": bool(gameplay_wins),
+        "control_changed_pixels": ctl_px,
+        "action_changed_pixels": act_px,
+        "pixel_wins": bool(pixel_wins),
+        "refused": bool(refused),
+        "refusal_evidence": act_ref,
+        "control_refusal_evidence": ctl_ref,
+        "meta_only": bool(meta_only),
+        "responds": bool(gameplay_wins or pixel_wins),
+        # what P2 ultimately asks per action: a gameplay response, or a refusal the game
+        # itself recorded (and the run as a whole must still show at least one response)
+        "acceptable": bool(gameplay_wins or pixel_wins or refused),
+    }
+
+
+def marker_values(state, decl):
+    """The X13 timeline sample: the declared marker fields, as of this state read."""
+    fields = decl.get("fields") or ["Paused", "GameOver", "Ticks", "Score"]
+    node = decl.get("node") or "/root/Main"
+    nodes = (state or {}).get("nodes") or {}
+    entry = nodes.get(node) or {}
+    out = {}
+    for f in fields:
+        if f in entry:
+            out[f] = entry[f]
+    for k in ("ms", "drawn", "processed", "physics"):
+        if k in (state or {}):
+            out[k] = (state or {}).get(k)
+    return out
+
+
+def terminal_conditions_met(state, decl):
+    """X10/X13: is the game ALREADY in a declared terminal state at this read?
+
+    `games.<game>.liveness.terminal` is a list of {field, value, means}.  This is the
+    snake defect expressed as a criterion: `/root/Main.GameOver == true` at the SETTLE
+    frame, i.e. the first picture a player is shown is already the losing screen -- which
+    is why 23 captured frames were byte-identical while P2/P3 said "it responded" and
+    "it advanced".
+    """
+    terms = decl.get("terminal") or []
+    node = decl.get("node") or "/root/Main"
+    entry = ((state or {}).get("nodes") or {}).get(node) or {}
+    hit = []
+    for t in terms:
+        f = t.get("field")
+        if f in entry and entry.get(f) == t.get("value"):
+            hit.append({"field": f, "value": entry.get(f), "means": t.get("means")})
+    return hit
+
+
 def rect_intersection_area(rect, viewport):
     """Overlap of two [x, y, w, h] rects, clamped at 0.  None when either is missing."""
     if not rect or not viewport:
@@ -2458,7 +2735,9 @@ def verdict_p6(game, controls, tested):
 
 
 def verdicts(game, gate, proj, frames, s0, s1, s_end, controls=None):
+    controls = controls or {}
     crit = {}
+    decl = gameplay_declaration(controls, game)
 
     # ---- P1 -----------------------------------------------------------------
     usable = [f for f in frames if f.get("ok")]
@@ -2474,11 +2753,20 @@ def verdicts(game, gate, proj, frames, s0, s1, s_end, controls=None):
         cf = best.get("content_fraction", 0) or 0
         bc = best.get("bbox_coverage", 0) or 0
         flat = (best.get("content_pixels", 0) or 0) == 0
+        # TASK-131 X14: `bbox_fill` is the FILL fraction of the content bounding box, and
+        # it is recorded -- not judged -- because the snake frame scored 33% bbox_coverage
+        # from two specks in opposite corners (fill 1.8%), while rtype -- a legitimate
+        # sparse shooter -- has a 95.6% span with only 1.1% fill.  A span threshold cannot
+        # separate those, so the threshold that decides is the content fraction alone.
+        bb = best.get("bbox") or [0, 0, 0, 0]
+        bbox_area = max(1, (bb[2] or 0) * (bb[3] or 0))
+        fill = round(((best.get("content_pixels", 0) or 0) / float(bbox_area)), 6)
         p1_pass = (not flat) and cf >= P1_MIN_CONTENT_FRACTION and bc >= P1_MIN_BBOX_COVERAGE
-        why = "best frame #%s: content %.4f%% (>=%.2f%%), bbox coverage %.4f%% (>=%.2f%%), bbox=%s, bg=%s" % (
-            best.get("index"), 100.0 * cf, 100.0 * P1_MIN_CONTENT_FRACTION,
-            100.0 * bc, 100.0 * P1_MIN_BBOX_COVERAGE, best.get("bbox"),
-            best.get("background_rgb"))
+        why = "best frame #%s: content %.4f%% (>=%.2f%%), bbox coverage %.4f%% (>=%.2f%%), " \
+              "bbox=%s, bbox_fill %.3f%% (recorded, NOT a threshold), bg=%s" % (
+                  best.get("index"), 100.0 * cf, 100.0 * P1_MIN_CONTENT_FRACTION,
+                  100.0 * bc, 100.0 * P1_MIN_BBOX_COVERAGE, best.get("bbox"),
+                  100.0 * fill, best.get("background_rgb"))
         if flat:
             why = "the frame is a single flat colour (0 content pixels): %s" % why
         crit["P1"] = {"pass": bool(p1_pass), "why": why,
@@ -2486,7 +2774,9 @@ def verdicts(game, gate, proj, frames, s0, s1, s_end, controls=None):
                       "worst_frame": frame_evidence(worst),
                       "thresholds": {"min_content_fraction": P1_MIN_CONTENT_FRACTION,
                                      "min_bbox_coverage": P1_MIN_BBOX_COVERAGE,
-                                     "pixel_delta": PIXEL_DELTA},
+                                     "pixel_delta": PIXEL_DELTA,
+                                     "bbox_fill_is_recorded_not_judged": True},
+                      "bbox_fill_of_best_frame": fill,
                       # only the frames that were taken *before* any input, so this
                       # list stays readable instead of repeating every action's
                       # before-frame five times over
@@ -2498,30 +2788,79 @@ def verdicts(game, gate, proj, frames, s0, s1, s_end, controls=None):
         crit["P1"] = {"pass": False, "why": "no frame could be captured at all"}
 
     # ---- P2 / P5 ------------------------------------------------------------
+    # TASK-131 X12: an action "responds" only when it moves a declared GAMEPLAY
+    # observable past its own no-input control window, or moves pixels past it.  Any
+    # other change is an input acknowledgement (`LastRefusedInput`, `InputMoves`), a
+    # clock (`Ticks`, `Elapsed`), an intent index (`DirectionX`, `AngleIndex`) or a mode
+    # flag (`Paused`) and is reported as `meta_only`.
     tested = gate.get("actions_tested") or []
-    responded = [a for a in tested if a.get("responds")]
+    refdecl = refusal_declaration(controls, game)
+    for a in tested:
+        ev = arm_evidence((a.get("channels") or {}).get("parse") or {}, decl,
+                          refusal_decl=refdecl)
+        a["gameplay_evidence"] = ev
+        a["responds_gameplay"] = ev["responds"]
+        a["refused"] = ev["refused"]
+        a["responds_meta_only"] = ev["meta_only"]
+    responded = [a for a in tested if a.get("responds_gameplay")]
+    refused = [a for a in tested if a.get("refused")]
+    intent_only = [a for a in tested
+                   if not a.get("responds_gameplay") and not a.get("refused")]
     mismatched = [a for a in tested if a.get("mismatch")]
     suspicious = [a for a in tested if a.get("suspicious_mismatch")]
     if not tested:
         crit["P2"] = {"pass": False, "why": "there was no declared action to inject"}
     else:
-        p2 = len(responded) == len(tested)
+        # TASK-131: every action must move a declared GAMEPLAY observable (or pixels) past
+        # its own no-input control, or be a refusal the GAME ITSELF recorded; AND at least
+        # one action must really have moved something.  The second half is what keeps
+        # "everything was refused because the game is already over" (snake: `GameOver` at
+        # the settle frame; game2048: an empty board every move says `no_change` about)
+        # from passing on refusals alone.
+        p2 = (len(intent_only) == 0) and bool(responded)
         crit["P2"] = {
             "pass": bool(p2),
-            "why": "%d/%d declared actions produced a state or pixel change within %d frames "
-                   "through the faithful channel (`Input.parse_input_event`, the path a real key "
-                   "press takes): %d/%d; of the failures, %d answered only `Viewport.push_input` "
-                   "(an `_Input`-reader) and %d answered only `Input.action_press`"
-                   % (len(responded), len(tested), P2_FRAMES,
-                      sum(1 for a in tested if a.get("responds_to_real_key")), len(tested),
-                      sum(1 for a in tested if a.get("responds_to_push_input_only")),
-                      sum(1 for a in tested if a.get("responds_to_action_state_only"))),
+            "why": "%d/%d declared actions moved a DECLARED GAMEPLAY observable (or pixels) "
+                   "past their own no-input control window through the faithful channel "
+                   "(`Input.parse_input_event`, the path a real key press takes); %d were "
+                   "accepted as deliberate REFUSALS recorded by the game itself (%s); %d were "
+                   "META-ONLY or INTENT-ONLY and count for nothing (%s).  Declared gameplay "
+                   "observables: %s%s"
+                   % (len(responded), len(tested), len(refused),
+                      ", ".join("%s: %s" % (a.get("action"),
+                                            (a.get("gameplay_evidence") or {})
+                                            .get("refusal_evidence")) for a in refused)
+                      or "-",
+                      len(intent_only),
+                      ", ".join("%s (%s)" % (
+                          a.get("action"),
+                          "meta-only" if a.get("responds_meta_only") else "no change at all")
+                          for a in intent_only) or "-",
+                      (decl.get("items") or []),
+                      "" if responded else "  *** NO action moved anything: the game was "
+                                           "never shown to play ***"),
             "actions": [{k: a.get(k) for k in ("action", "key", "responds",
+                                               "responds_gameplay", "refused",
+                                               "responds_meta_only",
                                                "responds_to_real_key",
                                                "responds_to_push_input_only",
                                                "responds_to_action_state_only",
                                                "suspicious_mismatch")}
                         for a in tested],
+            "gameplay_evidence": [{"action": a.get("action"),
+                                   **(a.get("gameplay_evidence") or {})}
+                                  for a in tested],
+            "meta_only_actions": [a.get("action") for a in intent_only
+                                  if a.get("responds_meta_only")],
+            "intent_only_actions": [a.get("action") for a in intent_only],
+            "refused_actions": [a.get("action") for a in refused],
+            "actions_that_moved_gameplay": [a.get("action") for a in responded],
+            "requires_at_least_one_gameplay_response": True,
+            "declaration_source": os.path.join(HERE, "playability_controls.json"),
+            "declaration_keys": ["games.%s.gameplay_observables" % game,
+                                 "games.%s.refusal_evidence" % game],
+            "declared_gameplay_observables": (decl.get("items") or []),
+            "refusal_declaration": refdecl,
             "channel_mismatches": [a["action"] for a in tested if a.get("suspicious_mismatch")],
             "suspicious_action_only_mismatches": [a["action"] for a in tested
                                                   if a.get("suspicious_mismatch")],
@@ -2535,6 +2874,11 @@ def verdicts(game, gate, proj, frames, s0, s1, s_end, controls=None):
         }
 
     # ---- P3 -----------------------------------------------------------------
+    # TASK-131 X12: `frames_drawn` is necessary and NOT sufficient.  The rendering loop
+    # running is not the game advancing; a game that is over, frozen or waiting forever
+    # still draws frames.  P3 now requires gameplay progress, and names where it came
+    # from -- and it fails outright when the game was ALREADY in a declared terminal
+    # state at the settle frame (X13's liveness declaration).
     drawn = []
     if isinstance(s0, dict):
         drawn.append(s0.get("drawn"))
@@ -2549,28 +2893,62 @@ def verdicts(game, gate, proj, frames, s0, s1, s_end, controls=None):
     for f in frames:
         if f.get("label", "").startswith("auto") or f.get("label", "").startswith("post"):
             pixel_auto = max(pixel_auto, f.get("changed_pixels_vs_prev") or 0)
-    # the layered delta: everything that moved during the input round, taken from
-    # the per-action evidence (before -> after)
     input_delta_count = 0
     for a in tested:
         for ch in (a.get("channels") or {}).values():
             input_delta_count += ((ch.get("action") or {}).get("state_change_count") or 0)
-    p3_pass = loop_advanced and (
-        len(auto_delta) > 0 or len(post_delta) > 0 or pixel_auto >= P3_MIN_CHANGED_PIXELS
-        or input_delta_count > 0)
+    auto_gameplay = gameplay_changes(auto_delta, decl) + gameplay_changes(post_delta, decl)
+    autonomous_evidence = bool(auto_gameplay) or pixel_auto >= P3_MIN_CHANGED_PIXELS
+    input_gameplay = [a.get("action") for a in tested
+                      if (a.get("gameplay_evidence") or {}).get("gameplay_wins")]
+    input_evidence = bool(input_gameplay) or any(
+        (a.get("gameplay_evidence") or {}).get("pixel_wins") for a in tested)
+    liveness = gate.get("settle_liveness") or {}
+    terminal = liveness.get("terminal_conditions_met") or []
+    declares_liveness = bool(liveness.get("declared"))
+    p3_pass = (loop_advanced and not terminal
+               and (autonomous_evidence or input_evidence))
+    reasons = []
+    if not loop_advanced:
+        reasons.append("the render loop did not advance (frames_drawn %s -> %s)"
+                       % (drawn[0] if drawn else None, drawn[-1] if drawn else None))
+    if terminal:
+        reasons.append("the game is ALREADY in a declared terminal state at the settle "
+                       "frame (%s), so nothing it draws afterwards can be progress"
+                       % json.dumps(terminal, ensure_ascii=False))
+    if not (autonomous_evidence or input_evidence):
+        reasons.append("no declared gameplay observable moved and no frame-to-frame pixel "
+                       "change >= %d px was seen, in the no-input frames OR during the "
+                       "input round" % P3_MIN_CHANGED_PIXELS)
     crit["P3"] = {
         "pass": bool(p3_pass),
-        "why": "frames_drawn %s -> %s (advanced=%s); autonomous state changes=%d; "
-               "pixel change over the autonomous+post frames=%d; state changes seen "
-               "during the input round=%d"
+        "why": "frames_drawn %s -> %s (advanced=%s); gameplay progress: autonomous=%s "
+               "(from %s / pixel %d), input-round=%s (from %s); declared terminal at "
+               "settle=%s; state changes seen during the input round=%d (of which "
+               "gameplay=%d); %s"
                % (drawn[0] if drawn else None, drawn[-1] if drawn else None,
-                  loop_advanced, len(auto_delta), pixel_auto, input_delta_count),
+                  loop_advanced, autonomous_evidence,
+                  [c.get("key") for c in auto_gameplay][:8], pixel_auto,
+                  input_evidence, input_gameplay, bool(terminal), input_delta_count,
+                  len(gameplay_changes([c for a in tested
+                                        for ch in (a.get("channels") or {}).values()
+                                        for c in ((ch.get("action") or {})
+                                                  .get("state_changes") or [])], decl)),
+                  "; ".join(reasons) if reasons else "progress was demonstrated"),
+        "required": "loop advanced AND gameplay progress AND not already terminal at settle",
         "frames_drawn_samples": drawn,
         "autonomous_state_changes": auto_delta[:15],
         "autonomous_change_count": len(auto_delta),
+        "autonomous_gameplay_changes": [c.get("key") for c in auto_gameplay][:15],
         "total_state_changes_since_settle": post_delta[:15],
         "total_change_count": len(post_delta),
         "max_pixel_change_autonomous": pixel_auto,
+        "gameplay_progress": {"autonomous_evidence": autonomous_evidence,
+                              "input_round_evidence": input_evidence,
+                              "actions_with_gameplay_evidence": input_gameplay},
+        "settle_liveness": liveness,
+        "action_side_effects": gate.get("action_side_effects") or {},
+        "marker_timeline": marker_timeline(frames),
     }
 
     # ---- P4 -----------------------------------------------------------------
@@ -2657,6 +3035,26 @@ def verdicts(game, gate, proj, frames, s0, s1, s_end, controls=None):
     return crit
 
 
+def marker_timeline(frames):
+    """TASK-131 X13: every captured frame with the marker values it was taken at.
+
+    This is the artifact that answers "was this static frame legal?": `Paused`, the clock
+    fields, `Ticks` and the score are recorded beside each frame, so a reader can see
+    that (for example) frames 1..19 of snake were static while `GameOver=true`, and that
+    the gate's own `snake_pause` turned `Paused` on at frame 19.
+    """
+    out = []
+    for f in frames or []:
+        if not f.get("path"):
+            continue
+        out.append({"index": f.get("index"), "label": f.get("label"),
+                    "file": os.path.basename(f.get("path") or ""),
+                    "sha256": f.get("sha256"),
+                    "changed_pixels_vs_prev": f.get("changed_pixels_vs_prev"),
+                    "markers": f.get("markers")})
+    return out
+
+
 def frame_evidence(f):
     return {"index": f.get("index"), "label": f.get("label"),
             "file": os.path.basename(f.get("path", "")),
@@ -2665,7 +3063,8 @@ def frame_evidence(f):
             "bbox": f.get("bbox"), "bbox_coverage": f.get("bbox_coverage"),
             "background_rgb": f.get("background_rgb"),
             "changed_pixels_vs_prev": f.get("changed_pixels_vs_prev"),
-            "sha256": f.get("sha256")}
+            "sha256": f.get("sha256"),
+            "markers": f.get("markers")}
 
 
 # ---------------------------------------------------------------------------
