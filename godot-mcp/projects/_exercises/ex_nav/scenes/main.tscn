@@ -1,0 +1,93 @@
+[gd_scene format=3 uid="uid://ixht802r4ld6"]
+
+[ext_resource type="Script" uid="uid://bp14obv4x0e7p" path="res://src/move_player.gd" id="1_t6lrv"]
+
+[sub_resource type="NavigationPolygon" id="NavigationPolygon_0wfyh"]
+vertices = PackedVector2Array(750, 550, 50, 550, 50, 50, 750, 50)
+polygons = Array[PackedInt32Array]([PackedInt32Array(0, 1, 2, 3)])
+outlines = Array[PackedVector2Array]([PackedVector2Array(40, 40, 760, 40, 760, 560, 40, 560)])
+
+[sub_resource type="NavigationPolygon" id="NavigationPolygon_suvq4"]
+cell_size = 0.25
+agent_radius = 0.5
+
+[sub_resource type="NavigationPolygon" id="NavigationPolygon_o3k07"]
+cell_size = 0.25
+agent_radius = 6.0
+
+[sub_resource type="NavigationPolygon" id="NavigationPolygon_r3l7o"]
+cell_size = 0.25
+agent_radius = 0.5
+
+[sub_resource type="NavigationPolygon" id="NavigationPolygon_on4l3"]
+cell_size = 0.1
+agent_radius = 0.5
+
+[sub_resource type="NavigationPolygon" id="NavigationPolygon_vqqd8"]
+cell_size = 0.25
+agent_radius = 12.0
+
+[node name="NavRoot" type="Node2D" unique_id=327195315]
+
+[node name="Region" type="NavigationRegion2D" parent="." unique_id=87997242]
+navigation_polygon = SubResource("NavigationPolygon_0wfyh")
+navigation_layers = 3
+
+[node name="Player" type="CharacterBody2D" parent="." unique_id=1446814369]
+position = Vector2(100, 300)
+script = ExtResource("1_t6lrv")
+
+[node name="Drawn" type="Polygon2D" parent="Player" unique_id=1147816104]
+color = Color(0.9, 0.2, 0.2, 1)
+polygon = PackedVector2Array(-12, -12, 12, -12, 12, 12, -12, 12)
+
+[node name="Agent" type="NavigationAgent2D" parent="Player" unique_id=1917020921]
+navigation_layers = 5
+radius = 8.0
+max_speed = 240.0
+
+[node name="NA1" type="NavigationAgent2D" parent="Player" unique_id=1923666659]
+navigation_layers = 8
+radius = 0.5
+max_speed = 10.0
+
+[node name="NA2" type="NavigationAgent2D" parent="Player" unique_id=97325182]
+max_speed = 10.0
+
+[node name="NA3" type="NavigationAgent2D" parent="Player" unique_id=1940867911]
+radius = 0.5
+max_speed = 320.0
+
+[node name="Goal" type="Node2D" parent="." unique_id=4451857]
+position = Vector2(700, 300)
+
+[node name="NA4" type="NavigationAgent2D" parent="Goal" unique_id=1203199786]
+radius = 0.5
+max_speed = 10.0
+
+[node name="HUD" type="Label" parent="." unique_id=184458201]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 20.0
+offset_bottom = 20.0
+text = "ex"
+
+[node name="RegionA" type="NavigationRegion2D" parent="." unique_id=405120102]
+navigation_polygon = SubResource("NavigationPolygon_suvq4")
+
+[node name="NA5" type="NavigationAgent2D" parent="RegionA" unique_id=360233300]
+radius = 0.5
+max_speed = 10.0
+
+[node name="RegionB" type="NavigationRegion2D" parent="." unique_id=769167819]
+navigation_polygon = SubResource("NavigationPolygon_o3k07")
+
+[node name="RegionD" type="NavigationRegion2D" parent="RegionB" unique_id=1712221004]
+navigation_polygon = SubResource("NavigationPolygon_r3l7o")
+
+[node name="RegionC" type="NavigationRegion2D" parent="." unique_id=1806610319]
+navigation_polygon = SubResource("NavigationPolygon_on4l3")
+navigation_layers = 2
+
+[node name="RegionE" type="NavigationRegion2D" parent="RegionC" unique_id=899520322]
+navigation_polygon = SubResource("NavigationPolygon_vqqd8")

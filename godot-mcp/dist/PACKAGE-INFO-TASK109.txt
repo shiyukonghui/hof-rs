@@ -1,0 +1,54 @@
+==============================================================================
+PACKAGE INFO  --  TASK-109  20 C# games, runnable Windows exports
+==============================================================================
+timestamp        : 20260927-0927
+engine           : Godot Engine 4.8.dev.mono.custom_build
+                   editor  : 4.8.dev.mono.custom_build.1c7f5c07a (prebuilt, godot/bin)
+                   template: 4.8.dev.mono.custom_build.1f9d0cb1c (built here from the
+                             same source tree; 1f9d0cb1c9 is a docs-only commit on top
+                             of 1c7f5c07a1 -- `git diff --stat 1c7f5c07a1 1f9d0cb1c9`
+                             over *.cpp/*.h/*.cs/*.py/*.tscn/*.cfg is empty)
+export template  : %APPDATA%\Godot\export_templates\4.8.dev\windows_release_x86_64.exe
+                   bytes  82198528
+                   sha256 AA883610178DC5322DFFA8111DEB0C2CC610364FDBFB557995B319B39785471E
+built with       : scons platform=windows target=template_release module_mono_enabled=yes -j8
+                   (9m14s, exit 0)
+
+games            : 20 / 20 exported, 20 / 20 exit-code-0 verified headless
+export kind      : self-contained .NET (--self-contained true, Godot default)
+                   target machine does NOT need .NET installed
+
+part 1 of 2      : godot-mcp-20games-exe-20260927-0927-part1of2.zip
+                   bytes  632348706
+                   sha256 f596189d64ea4cf61648af89779d990406538bf3b28325bf1e3fc92e26c8fdf1
+                   games  asteroids bomberman breakout flappy frogger game2048
+                          lunarlander match3 minesweeper missilecommand
+part 2 of 2      : godot-mcp-20games-exe-20260927-0927-part2of2.zip
+                   bytes  632337210
+                   sha256 59586e439fc2c329a04902beb242bf881445b6524ca1b8dea7c739bc63381d5c
+                   games  pacman platformer pong puzzlebobble rtype snake sokoban
+                          spaceinvaders tetris towerdefense
+
+payload total    : 3.09 GB uncompressed (1.26 GB in the two zips)
+                   exe total  1641154560 bytes (20 x 82057728)
+                   data total 1598153915 bytes
+
+why two parts    : the whole package is ~3.2 GB uncompressed, above the common
+                   2 GB single-file limit, so it is split by game into two zips.
+                   Each part carries its own README.md / MANIFEST.txt / RUN-CHECK.txt.
+
+MCP port         : exported games do NOT listen by default.
+                   baseline and final listeners on 9877/9888/9889 were both EMPTY
+                   across all 20 headless runs and 3 windowed runs.
+                   per-run engine log line:
+                     [MCP] role=game configured_port=0 source=default listen=false
+                     [MCP] not listening (get_port()=0)
+
+self-check       : PASS -- 20/20 games present, none missing, none duplicated;
+                   MANIFEST matches zip in both directions; extracted spot-check
+                   files re-hash to the manifest values;
+                   a pong extracted FROM part2 of2 ran with exit code 0.
+
+reports          : recovery\reports\TASK-109-REPORT.md
+work + evidence  : recovery\work\task109\
+==============================================================================

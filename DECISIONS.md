@@ -6593,3 +6593,37 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
     `runs/_exercises/ex_grid/c8-task120` **不入库**。台账随时可 `python tools/tool_coverage.py` 重算。
   * **引擎未动**：`godot/modules/mcp_server/` 一个字节未改，按铁律 7 **未触发**两变体重建、
     未跑十道门、未跑 accept_m1、未 push 引擎仓。
+
+## D165 — 主仓过滤规则：把 7,858 条未跟踪压到 203 条（TASK-122）
+
+* **日期**：2026-09-27
+* **触发问题**：用户在 GUI 里看到主仓「7800 多个改动项」。实测
+  `git status --porcelain` 只有 **37 行**，`-uall` 才是 **7,858 项**——差额是 GUI 把未跟踪
+  **目录展开**。构成：`godot-mcp/dist/` **7,560 项（8.4 GB）**、`projects/_exercises/` 269 项、
+  `recovery/reports/` 3 份验收报告、`tools/__pycache__` 4 项，另 2 个已跟踪日志被修改。
+* **考虑的选项（含被否决者及理由）**：
+  1. **`git rm --cached` 把 dist 从历史里剔掉** —— 否决：`dist/` **从未入库**（tracked=3，
+     且那 3 个是 TASK-090 期的文本），历史里没有 8.4 GB 可清，`rm --cached` 无事可做。
+  2. **整体忽略 `godot-mcp/dist/`** —— 否决：dist 下的 `*.sha256.txt`、`MANIFEST.txt`、
+     `PACKAGE-INFO-*.txt`、`*.json`、`*.py` 只有几十 KB，却正是"交付了什么、哈希多少、
+     怎么重建"的**判定依据**；整体忽略会把证据一起丢掉（与 D137/D140 的尺子相反）。
+  3. **把 8.4 GB 二进制提交进历史** —— 否决：exe/pck/dll 可由已装的 4.8.dev 模板与
+     `dist/build_package.py` 重新导出（流程见 TASK-117-REPORT.md），进历史只会永久污染仓库。
+  4. **删除 `dist/exe-task109-pre-fix/`** —— 否决：破坏性命令默认拒绝，且它是修复前后
+     对照件；**规则是"不入库"，不是"删掉"**。
+  5. **把三份被取代的练习工程 `ex_write2/3/4` 也入库** —— 否决：TASK-111-REPORT §F2 已判定
+     它们是被 `ex_write5/ex_write6` 取代的中间产物；留盘对照即可，标签写在 `.gitignore` 注释里。
+* **最终选择**（`.gitignore` 新增 4 组规则，含"反面说明"注释防将来有人顺手忽略整个 dist）：
+  * `godot-mcp/dist/exe/`、`godot-mcp/dist/exe-task109-pre-fix/`、`godot-mcp/dist/*.zip`
+    → 忽略（约 1.2 GB 包 + 7,560 个文件）；
+  * `godot-mcp/**/__pycache__/`、`godot-mcp/**/*.pyc` → 忽略（可再生的解释器缓存）；
+  * `godot-mcp/projects/_exercises/ex_write{2,3,4}/` → 忽略（被取代的中间工程，附理由）；
+  * 其余 `_exercises/*`（源码、场景、素材、README）与 dist 的哈希/清单/脚本 → **入库**。
+* **选择理由**：沿用本仓既有尺子——**大块二进制、可再生产物不入库；小而不可再生的判定依据入库**；
+  并且把"为什么这样分"写进 `.gitignore` 注释，使规则本身可复核（本次新增的注释还显式说明了
+  "不要整体忽略 dist"的反面约束）。
+* **预期影响与回滚点**：
+  * `-uall` 未跟踪 **7,858 → 203**；`dist/` 仍完整留在盘上（8.4 GB，只是不入库）；
+  * 被忽略/不忽略的判定用 `git check-ignore -v` 逐条验证过（exe、zip、pyc、ex_write2 命中规则；
+    `dist/MANIFEST.txt` 与 `_exercises/ex_nav/project.godot` 保持可入库）；
+  * **回滚点**：`git checkout -- .gitignore` 即恢复；本决策不移动/不删除任何文件。

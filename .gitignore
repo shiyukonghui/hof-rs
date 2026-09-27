@@ -156,3 +156,37 @@ godot-mcp/projects/_exercises/*/obj/
 godot-mcp/projects/_exercises/*/.mono/
 godot-mcp/recovery/work/task110/schemas/
 
+# ---------------------------------------------------------------------------
+# TASK-122（用户要求：为主仓建立过滤，消掉 GUI 里 7800+ 的"改动项"）
+#
+# 实测 `git status --porcelain -uall` = 7,858 项；`git status --porcelain` 只有 37 行——
+# 差额来自 GUI 把未跟踪**目录展开**。其构成：`godot-mcp/dist/` 7,560 项（8.4 GB：
+# 7,320 个 .dll + 80 个 .exe + 40 个 .pck + 40 个 .pdb + 5 个包）、
+# `projects/_exercises/` 269 项、`recovery/reports/` 3 份验收报告、`tools/__pycache__` 4 项。
+#
+# 判定尺子沿用本文件既有的 D137/D140 口径——**大块二进制产物不入库，小而不可再生的
+# 判定依据入库**：
+#   * `dist/exe/`、`dist/exe-task109-pre-fix/`：TASK-109/117 导出的 20 款 exe + 每款
+#     约 188 个文件的 self-contained .NET 运行时；可由 `dist/build_package.py` 与已装
+#     的 4.8.dev 模板重新导出（TASK-117-REPORT.md 记了完整流程与三个构建前提）→ 不入库。
+#     修复前那批是**对照件**，留在盘上（`dist/exe-task109-pre-fix/`），同样不入库。
+#   * `dist/*.zip`：分卷包本体（约 1.2 GB）→ 不入库；包的**身份**（sha256 / MANIFEST /
+#     PACKAGE-INFO 文本）**保留并入库**，见下面的断言性说明。
+godot-mcp/dist/exe/
+godot-mcp/dist/exe-task109-pre-fix/
+godot-mcp/dist/*.zip
+# 反面说明（防以后有人"顺手"加上一条 `godot-mcp/dist/`）：dist 下的
+# `.sha256.txt` / `MANIFEST.txt` / `PACKAGE-INFO-*.txt` / `*.json` / `*.py` 只有几十 KB，
+# 且是"交付了什么、哈希多少、如何重建"的记录，**属判定依据，故意入库**。
+
+# Python 解释器缓存：随时可再生
+godot-mcp/**/__pycache__/
+godot-mcp/**/*.pyc
+
+# 覆盖练习里**已被取代**的三份中间工程：ex_write5/ex_write6 取代了 ex_write2/3/4
+# （见 recovery/reports/TASK-111-REPORT.md §F2 与 TASK-115 的 F2 说明），它们留在盘上
+# 作对照但不进历史。其余 `_exercises/*` 是覆盖证据的**源码与场景**，故意入库。
+godot-mcp/projects/_exercises/ex_write2/
+godot-mcp/projects/_exercises/ex_write3/
+godot-mcp/projects/_exercises/ex_write4/
+

@@ -1,0 +1,3 @@
+4335f6977194b27a7203bb14398b8fcb74f593816bf9c1a64ae60463a3f6daae  godot-mcp-20games-20260927-0844.zip
+# bytes: 7007625
+# manifest (in-zip): MANIFEST.txt ; same file copied to godot-mcp-20games-20260927-0844.MANIFEST.txt

@@ -1,0 +1,11 @@
+[master f25960c] docs(godot-mcp): TASK-104 - housekeeping: the amended commit message and the helper-owned logs of the closing commits are committed after the fact so the record matches
+ 7 files changed, 31 insertions(+), 2 deletions(-)
+ create mode 100644 godot-mcp/recovery/work/task104/commit-message-housekeeping.txt
+ create mode 100644 godot-mcp/recovery/work/task104/logs/git-housekeeping.cmd
+ create mode 100644 godot-mcp/recovery/work/task104/logs/git-housekeeping.err.txt
+ create mode 100644 godot-mcp/recovery/work/task104/logs/git-housekeeping.out.txt
+GIT_EXIT=0
+f25960c docs(godot-mcp): TASK-104 - housekeeping: the amended commit message and the helper-owned logs of the closing commits are committed after the fact so the record matches
+70869bf docs(godot-mcp): TASK-104 - the closing summary names the report's own commits so the HEAD it quotes is not one commit stale
+e5caf63 docs(godot-mcp): TASK-104 - the report gains F4, the three self-correction commits it took to make its own numbers survive a re-derivation
+ M godot-mcp/recovery/work/task104/logs/git-housekeeping.err.txt

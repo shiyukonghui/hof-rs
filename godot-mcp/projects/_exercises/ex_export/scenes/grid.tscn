@@ -1,0 +1,33 @@
+[gd_scene format=3 uid="uid://bcy562tqvdoxd"]
+
+[ext_resource type="Texture2D" uid="uid://6r7hsxt7kih1" path="res://assets/seed1.png" id="1_in2k4"]
+[ext_resource type="MeshLibrary" path="res://assets/meshlib.tres" id="2_xaf7j"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_ylah7"]
+texture = ExtResource("1_in2k4")
+texture_region_size = Vector2i(8, 8)
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_w88cy"]
+tile_size = Vector2i(8, 8)
+sources/0 = SubResource("TileSetAtlasSource_ylah7")
+
+[node name="GridRoot" type="Node2D" unique_id=616596042]
+
+[node name="Tiles" type="TileMapLayer" parent="." unique_id=808281747]
+tile_set = SubResource("TileSet_w88cy")
+
+[node name="GM1" type="GridMap" parent="." unique_id=691799729]
+mesh_library = ExtResource("2_xaf7j")
+
+[node name="GM2" type="GridMap" parent="." unique_id=2081195187]
+mesh_library = ExtResource("2_xaf7j")
+
+[node name="GM3" type="GridMap" parent="." unique_id=1391389817]
+mesh_library = ExtResource("2_xaf7j")
+
+[node name="GM4" type="GridMap" parent="." unique_id=1695838540]
+mesh_library = ExtResource("2_xaf7j")
+
+[node name="GM5" type="GridMap" parent="." unique_id=553844647]
+mesh_library = ExtResource("2_xaf7j")
