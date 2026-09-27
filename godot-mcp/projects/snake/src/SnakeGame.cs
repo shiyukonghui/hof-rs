@@ -40,30 +40,53 @@ public partial class SnakeGame : Node2D
     [Export] public int Rows = 21;
 
     /// <summary>
-    /// Seconds between automatic steps of the snake.
+    /// Seconds between automatic steps of the snake while the player is DRIVING it.
     ///
-    /// <para><b>TASK-133: the default is now 0 (turn-based), and that is the fix.</b>
-    /// While this was 0.08 the snake advanced on its own at 12.5 cells/s, so (a) a fresh
-    /// process drove itself into the right wall in 1.52 s before any driver could take a
-    /// picture, and (b) a single injected steering key was followed by hundreds of
-    /// unattributable automatic steps -- the usability gate could not tell the input from
-    /// the clock (measured: the control window moved exactly as much as the action
-    /// window). At 0 the snake advances one cell per accepted steering input, which is
-    /// what makes "this action was accepted and the head moved" attributable. The clock
-    /// is kept as a property (a session may set it to get continuous motion), and the
-    /// movement/death/food rules are unchanged.</para>
+    /// <para><b>TASK-135: the run is continuous again, and the clock is the player's.</b>
+    /// TASK-133 set this to 0 so that one injected key could not be followed by hundreds
+    /// of unattributable automatic steps; the measured cost was that the snake could then
+    /// ONLY move by turning ("a 'keep going' press is not a steering change"), so it could
+    /// never walk two cells in the same direction and a random pellet was unreachable
+    /// (scripted arm: 1/20 steps; `runs/model-player/t134-scripted/snake/scripted`).
+    /// TASK-135 restores continuous motion in the only form that keeps the input
+    /// attributable: the step clock runs AFTER the run has started AND while a direction
+    /// action is held down. A held key therefore walks the snake at this rate (the
+    /// key-repeat every keyboard game has), and a press that is released still takes its
+    /// own step (see <see cref="TrySetDirection"/>) -- so movement never depends on the
+    /// shape of the input.</para>
+    ///
+    /// <para><b>Why not "the snake always creeps, key or no key".</b> That is the pre-
+    /// TASK-133 behaviour, and it was measured to destroy attribution: with a free-running
+    /// clock the equal-length no-input CONTROL window advances exactly as far as the action
+    /// window, so neither the usability gate's P2 nor the model-player criterion can tell
+    /// the input from the clock (DECISIONS.md D181, option 2, rejected on that measurement).
+    /// A free-running clock is still available to a caller that wants it by setting
+    /// <see cref="AutoAdvance"/> (the deterministic test hook), and every rule of the game
+    /// -- movement, growth, scoring, wall and self death, restart -- is unchanged.</para>
     /// </summary>
-    [Export] public float StepSeconds = 0.0f;
+    [Export] public float StepSeconds = 0.25f;
 
     /// <summary>
     /// True only after <see cref="ForceTestState"/>: the deterministic test hook
-    /// switches the legacy continuous clock back on so the recorded session's
+    /// switches the legacy free-running step clock back on so the recorded session's
     /// "aim the board, wait 0.6 s, assert the head ate the pellet" steps keep measuring
     /// what they measured before (they drive the world with `_Process`, not with keys).
     /// A fresh process and a restarted run keep it false, which is what makes the live
-    /// game turn-based.
+    /// game's clock the PLAYER's clock (<see cref="StepSeconds"/>).
     /// </summary>
     [Export] public bool AutoAdvance = false;
+
+    /// <summary>
+    /// True while a direction action is down -- the live step clock's enable
+    /// (TASK-135).  Sampled directly from the InputMap, NOT through the
+    /// <c>_eventDriven</c> steering path: an injected press disables that path for the
+    /// action it carried (defect S-3), but it must still time the walk.
+    /// </summary>
+    private bool DirectionHeld()
+    {
+        return Input.IsActionPressed("snake_up") || Input.IsActionPressed("snake_down")
+            || Input.IsActionPressed("snake_left") || Input.IsActionPressed("snake_right");
+    }
 
     /// <summary>Pool size; the snake cannot grow past this.</summary>
     [Export] public int MaxSegments = 24;
@@ -256,12 +279,25 @@ public partial class SnakeGame : Node2D
             if (Input.IsActionPressed("snake_right") && !_eventDriven.Contains("snake_right")) { TrySetDirection(1, 0); }
         }
 
-        // TASK-133: the auto clock runs ONLY in the deterministic test mode
-        // (`ForceTestState`), because the recorded session's steps wait for the world to
-        // advance without pressing a key. The live game is turn-based: the press edge
-        // steps once (see `TrySetDirection`), and holding a key walks at `StepSeconds`.
+        // TASK-135: the step clock. It runs (a) in the deterministic test mode
+        // (`ForceTestState` sets `AutoAdvance`) and (b) in a live game AFTER the run has
+        // started AND while a direction key is held -- the keyboard game's own
+        // key-repeat. A released press still takes its own step in `TrySetDirection`, so
+        // motion never depends on the shape of the input; and because the no-input control
+        // window sees a still snake, "this action moved the game" stays attributable
+        // (DECISIONS.md D181 measured what a free-running clock does to that).
+        var driving = DirectionHeld();
         if (!AutoAdvance && StepSeconds <= 0.0f)
         {
+            _accum = 0.0f;
+            TickLog(dt);
+            return;
+        }
+        if (!AutoAdvance && !driving)
+        {
+            // Park the accumulator while the key is up: a step interval must never
+            // "bank up" during the idle time and then burst out on the next press.
+            _accum = 0.0f;
             TickLog(dt);
             return;
         }
@@ -413,22 +449,26 @@ public partial class SnakeGame : Node2D
         BeginRun();
         if (dx == DirectionX && dy == DirectionY)
         {
-            // The input asked for the direction the snake already faces. On the very first
-            // input `BeginRun` has just taken the step, so the run genuinely advanced. On a
-            // later one there is nothing to do: the snake advances when the player STEERS
-            // it, and a "keep going" press is not a steering change. (Walking on a held key
-            // is the clock path, `StepSeconds > 0`.)
+            // TASK-135 §1.A.1: a "keep going" press is no longer a no-op. The defect this
+            // removes was measured (TASK-134 §1.4a): with the direction unchanged the old
+            // code did nothing at all, so a player could NEVER walk two cells in the same
+            // direction -- the snake was playable only as a staircase, and a random pellet
+            // off that staircase was unreachable (scripted arm 1/20 steps). Now every
+            // accepted press takes one step, whatever direction it asked for; a HELD key
+            // keeps walking at `StepSeconds` (see `_Process`), so the press edge is not the
+            // only way to move.
+            if (!wasParked)
+            {
+                SimulateStep();
+            }
             return true;
         }
         DirectionX = dx;
         DirectionY = dy;
         LastRefusedInput = "";
         GD.Print($"SNAKE_DIR dir={DirectionX},{DirectionY}");
-        // TASK-133: the press edge IS the step. In continuous mode the clock would run
-        // hundreds of steps after one injected key press, which is exactly what made the
-        // usability gate unable to attribute the movement to the input; one attributable
-        // step per accepted input is what the criterion needs, and it is still the same
-        // movement/death/food rule.
+        // TASK-135: a turn sets the direction and takes its own step (the press edge is a
+        // step, never the ONLY step -- the held-key clock walks too).
         if (!wasParked)
         {
             SimulateStep();

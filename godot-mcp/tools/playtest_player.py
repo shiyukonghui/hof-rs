@@ -129,6 +129,122 @@ MODEL_NO_PROGRESS_MIN_RUN = 3
 #     beats one that travelled 2 px even though both "changed".
 CHANGE_CONTROL_FACTOR = 2.5
 CHANGE_MIN_PIXELS = pg.P3_MIN_CHANGED_PIXELS
+# TASK-135 §1.B: the DECLARATIVE STRICT MARGIN, filed beside the baseline and never in
+# place of it.  TASK-134 §7.4 measured that `pong x jev x V3`'s PASS rested on 3/8 steps
+# decided by the GAMEPLAY term alone, one of them by 1.19x -- the rule itself is
+# `mv > cmv`, which a game that is animating on its own can clear by a hair.  The strict
+# reading asks the same question with a declared margin: the declared observables must
+# move at least `STRICT_FACTOR` times as far as they moved in the equal-length no-input
+# control window (>= 2x is the task's own example, and 2x is what the pixel term already
+# requires at 2.5x).  Both readings are computed for EVERY step and both are reported;
+# the baseline rule and every historical verdict are left byte-for-byte alone.
+CHANGE_STRICT_CONTROL_FACTOR = 2.0
+# A ratio against a ZERO control window is undefined; the floor is what "the observable
+# really moved" means when the control did not move at all (1.0 = one whole unit of the
+# declared quantity, e.g. a board string that advanced, or one pixel of travel).
+CHANGE_STRICT_MIN_MOVEMENT = 1.0
+CHANGE_MARGINS = ("baseline", "strict")
+CHANGE_MARGIN_DEFAULT = "baseline"
+
+
+def load_change_margins(path=None):
+    """TASK-135 §1.B: the two change-test margins, read from the declaration file.
+
+    `tools/playability_controls.json -> model_player_change_margin`.  The file is the
+    declaration (it carries the `why` for each number); the constants above are the
+    fallback so the tool still runs if the block is missing.  A caller can also pin the
+    numbers with `--change-margin`, which selects WHICH reading the verdict uses -- it
+    never rewrites the declaration.
+    """
+    declared = {}
+    p = path or os.path.join(HERE, "playability_controls.json")
+    try:
+        with io.open(p, encoding="utf-8") as fh:
+            doc = json.load(fh)
+        declared = doc.get("model_player_change_margin") or {}
+    except Exception:  # noqa: BLE001 - a missing/!json declaration must not stop a run
+        declared = {}
+    base = declared.get("baseline") if isinstance(declared.get("baseline"), dict) else {}
+    strict = declared.get("strict") if isinstance(declared.get("strict"), dict) else {}
+    out = {
+        "source": os.path.abspath(p),
+        "declared": dict(declared),
+        "baseline": {
+            "name": "baseline" if "name" not in base else base["name"],
+            "gameplay_control_factor": float(base.get("gameplay_control_factor",
+                                                      1.0)),
+            "gameplay_min_movement": float(base.get("gameplay_min_movement", 0.0)),
+            "gameplay_rule": base.get("gameplay_rule", "strictly greater than the control"),
+            "pixel_control_factor": float(base.get("pixel_control_factor",
+                                                   CHANGE_CONTROL_FACTOR)),
+            "min_pixels": int(base.get("min_pixels", CHANGE_MIN_PIXELS)),
+        },
+        "strict": {
+            "name": "strict" if "name" not in strict else strict["name"],
+            "gameplay_control_factor": float(strict.get("gameplay_control_factor",
+                                                        CHANGE_STRICT_CONTROL_FACTOR)),
+            "gameplay_min_movement": float(strict.get("gameplay_min_movement",
+                                                      CHANGE_STRICT_MIN_MOVEMENT)),
+            "gameplay_rule": strict.get("gameplay_rule", "at least N times the control"),
+            "pixel_control_factor": float(strict.get("pixel_control_factor",
+                                                     CHANGE_CONTROL_FACTOR)),
+            "min_pixels": int(strict.get("min_pixels", CHANGE_MIN_PIXELS)),
+        },
+        "default_margin": declared.get("default_margin", CHANGE_MARGIN_DEFAULT),
+    }
+    return out
+
+
+CHANGE_MARGIN_DECLARATION = load_change_margins()
+
+
+def _margin_reading(margins, name, pixel_diff, control_pixels, gameplay_movement,
+                    control_movement):
+    """One margin applied to one step's four numbers -- the whole rule, in one place."""
+    spec = margins[name]
+    px = max(0, int(pixel_diff or 0))
+    ctl = max(0, int(control_pixels or 0))
+    mv = float(gameplay_movement or 0.0)
+    cmv = float(control_movement or 0.0)
+    factor = float(spec["gameplay_control_factor"])
+    floor = float(spec["gameplay_min_movement"])
+    if factor > 1.0:
+        # the STRICT shape: "the observables must move at least factor x as far as the
+        # control did", with an absolute floor for the zero-control case.
+        gameplay_wins = bool(mv >= factor * cmv and mv >= floor)
+    else:
+        # the BASELINE shape, unchanged from TASK-132: strictly more than the control.
+        gameplay_wins = bool(mv > cmv)
+    pixel_wins = px > max(int(ctl * float(spec["pixel_control_factor"])),
+                          int(spec["min_pixels"]))
+    ratio = (round(mv / cmv, 3) if cmv > 0 else None)
+    if gameplay_wins:
+        why = ("the declared gameplay observables moved %.3f in this window vs %.3f in "
+               "the control window (ratio %s, rule: %s)"
+               % (mv, cmv, ratio, spec["gameplay_rule"]))
+    elif pixel_wins:
+        why = ("the viewport changed %d px, over the control window's %d (needs > "
+               "max(%.1f*control, %d))" % (px, ctl, spec["pixel_control_factor"],
+                                           spec["min_pixels"]))
+    else:
+        why = ("neither the gameplay observables (moved %.3f vs control %.3f, ratio %s, "
+               "rule: %s) nor the viewport (changed %d px vs control %d) beat the no-input "
+               "control window" % (mv, cmv, ratio, spec["gameplay_rule"], px, ctl))
+    return {
+        "margin": name,
+        "changed": bool(gameplay_wins or pixel_wins),
+        "gameplay_wins": gameplay_wins,
+        "pixel_wins": pixel_wins,
+        "why_changed": why,
+        "pixel_diff": px, "control_pixels": ctl,
+        "gameplay_movement": mv, "control_movement": cmv,
+        "margin_ratio": ratio,
+        "gameplay_control_factor": factor,
+        "gameplay_min_movement": floor,
+        "pixel_control_factor": float(spec["pixel_control_factor"]),
+        "min_pixels": int(spec["min_pixels"]),
+        "rule": spec["gameplay_rule"],
+    }
 
 
 def log(msg):
@@ -297,7 +413,8 @@ def movement_magnitude(changes):
     return round(total, 3), detail
 
 
-def decide_changed(pixel_diff, control_pixels, gameplay_movement, control_movement):
+def decide_changed(pixel_diff, control_pixels, gameplay_movement, control_movement,
+                   margins=None):
     """The user's TASK-132 §1.1 step 5 change test, as one pure function.
 
     `changed` is true when the action window beat its own equal-length no-input control
@@ -310,32 +427,27 @@ def decide_changed(pixel_diff, control_pixels, gameplay_movement, control_moveme
     Both terms are needed: the pixel term alone would call a game that animates by itself
     "responsive", and the movement term alone would miss a game whose only visible response
     is a pixel-level effect (a flash, a cleared line) with no exported position.
+
+    TASK-135 §1.B adds a SECOND, DECLARATIVE reading and files it beside the first one:
+    `result["strict"]` applies the same two terms with the declared strict margin (the
+    observables must move >= 2x as far as in the control window, with a declared floor for
+    a zero control).  The top-level `changed` is still the baseline rule, byte-for-byte:
+    every historical verdict recomputed from a recorded run stays what it was, and the
+    strict reading can only ever ADD a number a reader can disagree with.
     """
-    px = max(0, int(pixel_diff or 0))
-    ctl = max(0, int(control_pixels or 0))
-    mv = float(gameplay_movement or 0.0)
-    cmv = float(control_movement or 0.0)
-    gameplay_wins = mv > cmv
-    pixel_wins = px > max(int(ctl * CHANGE_CONTROL_FACTOR), CHANGE_MIN_PIXELS)
-    why = ("the declared gameplay observables moved %.3f in this window vs %.3f in the "
-           "control window" % (mv, cmv)) if gameplay_wins else \
-          (("the viewport changed %d px, over the control window's %d "
-            "(needs > max(%.1f*control, %d))")
-           % (px, ctl, CHANGE_CONTROL_FACTOR, CHANGE_MIN_PIXELS) if pixel_wins else
-           ("neither the gameplay observables (moved %.3f vs control %.3f) nor the viewport "
-            "(changed %d px vs control %d, needs > max(%.1f*control, %d)) beat the no-input "
-            "control window" % (mv, cmv, px, ctl, CHANGE_CONTROL_FACTOR, CHANGE_MIN_PIXELS)))
-    return {
-        "changed": bool(gameplay_wins or pixel_wins),
-        "gameplay_wins": gameplay_wins,
-        "pixel_wins": pixel_wins,
-        "why_changed": why,
-        "pixel_diff": px, "control_pixels": ctl,
-        "gameplay_movement": mv, "control_movement": cmv,
-        "rule": "changed = (gameplay movement > control movement) OR "
-                "(px > max(%.1f*control, %d))"
-                % (CHANGE_CONTROL_FACTOR, CHANGE_MIN_PIXELS),
-    }
+    m = margins or CHANGE_MARGIN_DECLARATION
+    baseline = _margin_reading(m, "baseline", pixel_diff, control_pixels,
+                               gameplay_movement, control_movement)
+    strict = _margin_reading(m, "strict", pixel_diff, control_pixels,
+                             gameplay_movement, control_movement)
+    out = dict(baseline)
+    out.pop("margin", None)
+    out["strict"] = strict
+    out["margins_declared"] = {"source": m.get("source"),
+                               "baseline": m.get("baseline"),
+                               "strict": m.get("strict")}
+    return out
+
 
 
 def ack_verdict(action, down_result, up_result, gp_keys, refusal=None,
@@ -412,6 +524,63 @@ def step_verdict(ack, change):
     if not accepted and changed:
         return "changed_but_ack_missing"
     return "no_ack_no_change"
+
+
+def changed_of(record, margin=CHANGE_MARGIN_DEFAULT):
+    """One step's change reading under one of the two declared margins (TASK-135 §1.B).
+
+    `baseline` reads the top-level `changed` field (the TASK-132 rule; every recorded run
+    written before this task has it and nothing else).  `strict` reads the declaration's
+    stricter margin, which `decide_changed` now computes for every step.  A record written
+    before TASK-135 therefore reports `strict == baseline` instead of an error.
+    """
+    ch = record.get("change") or {}
+    if margin == "strict":
+        s = ch.get("strict")
+        if isinstance(s, dict) and "changed" in s:
+            return bool(s.get("changed"))
+        return bool(ch.get("changed"))
+    return bool(ch.get("changed"))
+
+
+def change_margin_edge_steps(records, limit=40):
+    """The steps where the two margins DISAGREE -- "which steps are the edge steps".
+
+    TASK-135 §1.B asks for the edge steps to be named, so this is a first-class reading
+    rather than something a reader has to dig out of the step files.  Every entry carries
+    the four numbers the decision used and the ratio between them, so "1.19x" is visible
+    as a number and not as an adjective.
+    """
+    out = []
+    for r in records or []:
+        ack = r.get("ack") or {}
+        if not (ack.get("injected") and ack.get("accepted")):
+            continue
+        ch = r.get("change") or {}
+        base = bool(ch.get("changed"))
+        strict = changed_of(r, "strict")
+        if base == strict:
+            continue
+        st = ch.get("strict") or {}
+        out.append({
+            "step": r.get("step"),
+            "action": (r.get("action") or {}).get("action"),
+            "baseline_changed": base,
+            "strict_changed": strict,
+            "pixel_diff": ch.get("pixel_diff"),
+            "control_pixels": ch.get("control_pixels"),
+            "gameplay_movement": ch.get("gameplay_movement"),
+            "control_movement": ch.get("control_movement"),
+            "margin_ratio": st.get("margin_ratio") if isinstance(st, dict) else None,
+            "step_verdict": r.get("step_verdict"),
+            "reading": ("baseline counted this step as a change; under the strict margin "
+                        "(>= %.1fx the control window) it does NOT"
+                        % float((st or {}).get("gameplay_control_factor") or
+                                CHANGE_STRICT_CONTROL_FACTOR)),
+        })
+        if len(out) >= limit:
+            break
+    return out
 
 
 def model_fixed_point(records, min_run=MODEL_FIXED_POINT_MIN_RUN):
@@ -534,7 +703,62 @@ def model_no_progress(records, min_run=MODEL_NO_PROGRESS_MIN_RUN):
     return best
 
 
-def summarise(records, backend=None, game=None, state=None, player="model"):
+def summarise(records, backend=None, game=None, state=None, player="model",
+              margin=None):
+    """`steps.jsonl` -> the TASK-132 §1.2 three-state verdict, under BOTH margins.
+
+    TASK-135 §1.B: the verdict is computed twice from the same records -- once with the
+    baseline TASK-132 change rule and once with the declared STRICT margin -- and both are
+    returned.  `margin` selects which of the two is the top-level verdict (`baseline` by
+    default, so every existing reader and every historical verdict is unchanged); the other
+    one is always present as `strict_*` / `baseline_*` fields together with the list of
+    steps the two readings disagree about.  Relaxing or tightening a margin can therefore
+    never silently move a verdict: both numbers, and the steps that separate them, are in
+    the same document.
+    """
+    margin = margin or CHANGE_MARGIN_DEFAULT
+    if margin not in CHANGE_MARGINS:
+        raise ValueError("unknown change margin %r (known: %s)" % (margin, CHANGE_MARGINS))
+    base = _summarise_core(records, backend, game, state, player, "baseline")
+    strict = _summarise_core(records, backend, game, state, player, "strict")
+    out = dict(strict if margin == "strict" else base)
+    edges = change_margin_edge_steps(records)
+    out["change_margin"] = {
+        "selected": margin,
+        "known": list(CHANGE_MARGINS),
+        "declaration_source": CHANGE_MARGIN_DECLARATION.get("source"),
+        "baseline": CHANGE_MARGIN_DECLARATION.get("baseline"),
+        "strict": CHANGE_MARGIN_DECLARATION.get("strict"),
+        "reading": ("the verdict above uses the %r margin; the other reading is reported "
+                    "beside it and is never used to replace it" % margin),
+        "edge_step_count": len(edges),
+        "edge_steps": edges,
+        "what": ("TASK-135 §1.B: the baseline rule is TASK-132's `gameplay movement > "
+                 "control movement`; the strict rule requires the declared observables to "
+                 "move at least %sx as far as the control window did (floor %s), which is "
+                 "the margin TASK-134 §7.4 asked for after `pong x jev x V3` passed on "
+                 "3/8 steps decided by ratios as small as 1.19x"
+                 % (CHANGE_MARGIN_DECLARATION["strict"]["gameplay_control_factor"],
+                    CHANGE_MARGIN_DECLARATION["strict"]["gameplay_min_movement"])),
+    }
+    out["baseline_verdict"] = base["verdict"]
+    out["baseline_why"] = base["why"]
+    out["baseline_accepted_and_changed_rate"] = base["accepted_and_changed_rate"]
+    out["baseline_fail_steps"] = base["fail_steps"]
+    out["baseline_game_side_verdict"] = base.get("game_side_verdict")
+    out["strict_verdict"] = strict["verdict"]
+    out["strict_why"] = strict["why"]
+    out["strict_accepted_and_changed_rate"] = strict["accepted_and_changed_rate"]
+    out["strict_fail_steps"] = strict["fail_steps"]
+    out["strict_changed_steps_of_accepted"] = strict["changed_steps_of_accepted"]
+    out["strict_game_side_verdict"] = strict.get("game_side_verdict")
+    out["strict_game_side_why"] = strict.get("game_side_why")
+    out["change_margin_edge_steps"] = edges
+    return out
+
+
+def _summarise_core(records, backend=None, game=None, state=None, player="model",
+                    margin=CHANGE_MARGIN_DEFAULT):
     """`steps.jsonl` -> the TASK-132 §1.2 three-state verdict.
 
     * FAIL   : at least one step is `FAIL_no_change_after_accepted_input` (the user's
@@ -545,6 +769,9 @@ def summarise(records, backend=None, game=None, state=None, player="model"):
                made "accepted?" unanswerable, or too few accepted steps to compute a rate.
     The per-step `changed` is the game-facing half; the "does this change match the game's
     rules" half is the reader's judgement (TASK-132 §1.3) and is passed in separately.
+
+    `margin` selects the change reading this ONE pass uses (TASK-135 §1.B); the public
+    `summarise` runs both and files them side by side.
     """
     steps = [r for r in (records or []) if r.get("step")]
     n = len(steps)
@@ -553,10 +780,17 @@ def summarise(records, backend=None, game=None, state=None, player="model"):
     model_steps = [r for r in steps if (r.get("ack") or {}).get("injected")]
     no_action = [r["step"] for r in steps if not (r.get("ack") or {}).get("injected")]
     accepted = [r for r in model_steps if (r.get("ack") or {}).get("accepted")]
-    changed = [r for r in accepted if (r.get("change") or {}).get("changed")]
+    changed = [r for r in accepted if changed_of(r, margin)]
+    # The FAIL condition, read under THIS margin.  Under `baseline` this set is exactly the
+    # set of steps whose recorded `step_verdict` is FAIL (that verdict is the baseline
+    # reading, written by the loop while the run was happening); under `strict` it is the
+    # same question asked with the stricter margin, and the baseline set is kept beside it.
     fail_steps = [r["step"] for r in steps
-                  if r.get("step_verdict") == "FAIL_no_change_after_accepted_input"]
+                  if r.get("step_verdict") == "FAIL_no_change_after_accepted_input"] \
+        if margin == "baseline" else \
+        [r["step"] for r in accepted if not changed_of(r, "strict")]
     fail_recs = [r for r in steps if r["step"] in fail_steps]
+
     actions = [r.get("action", {}).get("action") for r in steps]
     distinct = sorted(set(a for a in actions if a))
     # --- evidence quality of the FAIL steps (a distinction the verdict MUST carry) -----
@@ -588,7 +822,13 @@ def summarise(records, backend=None, game=None, state=None, player="model"):
     # its own no-input control window: the same predicate `decide_changed` already uses.
     injected_steps_list = [r for r in steps if (r.get("ack") or {}).get("injected")]
     progress_steps = [r["step"] for r in injected_steps_list
-                      if (r.get("change") or {}).get("changed")]
+                      if changed_of(r, margin)]
+    # TASK-135 §1.B: the same count under the OTHER margin, so a reader of `player.json`
+    # never has to open the step files to see whether the two readings differ.
+    progress_steps_baseline = [r["step"] for r in injected_steps_list
+                               if changed_of(r, "baseline")]
+    progress_steps_strict = [r["step"] for r in injected_steps_list
+                             if changed_of(r, "strict")]
     stamps = [(r.get("ts_ms"), r.get("step")) for r in steps
               if isinstance(r.get("ts_ms"), (int, float))]
     match_seconds = None
@@ -606,10 +846,15 @@ def summarise(records, backend=None, game=None, state=None, player="model"):
         "MODEL_NO_PROGRESS_what": noprog.get("what"),
         "progress_steps": progress_steps,
         "progress_step_count": len(progress_steps),
+        "progress_steps_baseline": progress_steps_baseline,
+        "progress_steps_strict": progress_steps_strict,
+        "progress_step_count_baseline": len(progress_steps_baseline),
+        "progress_step_count_strict": len(progress_steps_strict),
         "progress_rate_of_injected": (round(len(progress_steps) / float(len(injected_steps_list)), 4)
                                       if injected_steps_list else None),
         "progress_rate_of_accepted": (round(len(progress_steps) / float(len(accepted)), 4)
                                       if accepted else None),
+        "change_margin_used": margin,
         "match_seconds_in_game_clock": match_seconds,
         "game_clock_first_last_ms": ([stamps[0][0], stamps[-1][0]] if len(stamps) >= 2
                                      else None),
@@ -637,7 +882,12 @@ def summarise(records, backend=None, game=None, state=None, player="model"):
         "one_action_loop": bool(len(model_steps) >= PASS_MIN_STEPS and len(distinct) <= 1),
         "thresholds": {"min_steps": PASS_MIN_STEPS, "min_rate": PASS_MIN_RATE,
                        "model_fixed_point_min_run": MODEL_FIXED_POINT_MIN_RUN,
-                       "model_no_progress_min_run": MODEL_NO_PROGRESS_MIN_RUN},
+                       "model_no_progress_min_run": MODEL_NO_PROGRESS_MIN_RUN,
+                       "change_margin": margin,
+                       "change_margin_gameplay_control_factor":
+                           CHANGE_MARGIN_DECLARATION[margin]["gameplay_control_factor"],
+                       "change_margin_pixel_control_factor":
+                           CHANGE_MARGIN_DECLARATION[margin]["pixel_control_factor"]},
         "rule": "PASS = >=%d injected steps AND accepted-and-changed rate >= %.2f AND the "
                 "reader confirmed the changes match the game's declared logic; FAIL = an "
                 "accepted input left the viewport unchanged; INCONCLUSIVE = the evidence "
@@ -645,9 +895,13 @@ def summarise(records, backend=None, game=None, state=None, player="model"):
                 "the MODEL (>= %d steps of the same action on the same frame) and "
                 "MODEL_NO_PROGRESS is its wider twin (>= %d consecutive sent steps with no "
                 "gameplay progress even if the actions differ): NEITHER is a game defect and "
-                "NEITHER is ever a PASS, and neither is allowed to change the game verdict"
+                "NEITHER is ever a PASS, and neither is allowed to change the game verdict.  "
+                "TASK-135 §1.B: `changed` above uses the %r change margin (gameplay "
+                "movement factor %.2f); the other margin's reading is filed beside it as "
+                "baseline_*/strict_* and in `change_margin`"
                 % (PASS_MIN_STEPS, PASS_MIN_RATE, MODEL_FIXED_POINT_MIN_RUN,
-                   MODEL_NO_PROGRESS_MIN_RUN),
+                   MODEL_NO_PROGRESS_MIN_RUN, margin,
+                   CHANGE_MARGIN_DECLARATION[margin]["gameplay_control_factor"]),
     }
     if fail_steps and not same_action_fixed_point and not unchanged_terminal:
         out["verdict"] = "FAIL"
@@ -2030,6 +2284,19 @@ class Player(object):
                        "reported 1100 changed pixels)",
             },
             "hold_ms": args.hold_ms,
+            # TASK-135 §1.B: which declared change margin the verdict will use, and the
+            # declaration both readings come from (recorded in the run itself, so a reader
+            # never has to guess which number a verdict was computed with).
+            "change_margin": {
+                "selected": getattr(args, "change_margin", CHANGE_MARGIN_DEFAULT),
+                "known": list(CHANGE_MARGINS),
+                "declaration_source": CHANGE_MARGIN_DECLARATION.get("source"),
+                "baseline": CHANGE_MARGIN_DECLARATION.get("baseline"),
+                "strict": CHANGE_MARGIN_DECLARATION.get("strict"),
+                "what": "both readings are computed for every step; `selected` only decides "
+                        "which one `player.json -> verdict` is; the other is filed as "
+                        "strict_*/baseline_* beside it",
+            },
             "model_service": {"base_url": getattr(agent, "base_url", None),
                               "health": health.get("json") if isinstance(health, dict) else None,
                               "health_url": getattr(agent, "health_path", None),
@@ -2082,7 +2349,8 @@ class Player(object):
                     if r.get("step_verdict") == "ok_ack_and_changed" and args.patience and \
                             i >= PASS_MIN_STEPS:
                         tail = self.steps[-(PASS_MIN_STEPS):]
-                        if all((t.get("change") or {}).get("changed") for t in tail) and \
+                        _m = getattr(args, "change_margin", CHANGE_MARGIN_DEFAULT)
+                        if all(changed_of(t, _m) for t in tail) and \
                                 len(set((t.get("action") or {}).get("action")
                                         for t in tail)) > 1:
                             log("  early stop: %d consecutive accepted+changed steps with "
@@ -2103,11 +2371,14 @@ class Player(object):
 
         summary = summarise(self.steps, self.backend, self.game,
                             state={"terminal_stop": self.terminal_stop},
-                            player=self.player)
+                            player=self.player,
+                            margin=getattr(args, "change_margin", CHANGE_MARGIN_DEFAULT))
         summary["player"] = self.player
         summary["variant"] = self.variant
         summary["variant_note"] = VARIANT_NOTES.get(self.variant)
         summary["image_form"] = self.image_form
+        summary["change_margin_selected"] = getattr(args, "change_margin",
+                                                    CHANGE_MARGIN_DEFAULT)
         summary["readable_state_fields"] = READABLE_STATE_FIELDS.get(self.game)
         summary["scripted_policy"] = (getattr(agent, "policy", None).__name__
                                       if self.player == "scripted" and
@@ -2333,11 +2604,13 @@ def resummarise(root):
             pj = json.load(io.open(os.path.join(dirpath, "player.json"), encoding="utf-8"))
         s = summarise(steps, backend, game,
                       state={"terminal_stop": pj.get("terminal_stop")},
-                      player=pj.get("player") or "model")
+                      player=pj.get("player") or "model",
+                      margin=pj.get("change_margin_selected") or CHANGE_MARGIN_DEFAULT)
         for k in ("prep_actions", "prep", "terminal_stop", "settle_liveness_terminal",
                   "stop", "errors", "agent_errors", "channel", "counts",
                   "terminal_at_settle_before_the_first_model_call",
                   "player", "variant", "variant_note", "image_form",
+                  "change_margin_selected",
                   "readable_state_fields", "scripted_policy"):
             if k in pj:
                 s[k] = pj[k]
@@ -2658,6 +2931,95 @@ def selftest():
     check("probe criteria still offer `wait`", "wait" in crit, True)
     check("probe criteria still offer the declared action", "a_up" in crit, True)
 
+    # 9. TASK-135 §1.B: the two change margins, on the four numbers TASK-134 §7.4 named.
+    #    `pong x jev x V3` steps 2/3/7 (real measured values): the baseline counts all
+    #    three, the strict margin must drop the 1.09x and 1.19x ones and keep the 2.35x one.
+    ch_edge_a = decide_changed(2240, 2240, 780.4, 717.3)     # step 2: ratio 1.088
+    check("baseline counts a 1.09x gameplay win", ch_edge_a["changed"], True)
+    check("strict drops a 1.09x gameplay win",
+          ch_edge_a["strict"]["changed"], False)
+    check("strict records the ratio", ch_edge_a["strict"]["margin_ratio"], 1.088)
+    ch_keep = decide_changed(512, 512, 323.3, 137.5)         # step 3: ratio 2.351
+    check("strict keeps a 2.35x gameplay win (>= 2x)", ch_keep["strict"]["changed"], True)
+    check("strict changed implies baseline changed",
+          all(not decide_changed(px, ctl, mv, cmv)["strict"]["changed"] or
+              decide_changed(px, ctl, mv, cmv)["changed"]
+              for (px, ctl, mv, cmv) in ((2240, 2240, 780.4, 717.3),
+                                         (512, 512, 323.3, 137.5),
+                                         (0, 0, 5.0, 0.0),
+                                         (100, 20, 0.0, 0.0),
+                                         (0, 0, 0.0, 0.0))), True)
+    # a zero-control window: the ratio is undefined, so the floor decides
+    ch_zero = decide_changed(0, 0, 0.5, 0.0)
+    check("zero control + 0.5 movement -> baseline changed", ch_zero["changed"], True)
+    check("zero control + 0.5 movement -> strict NOT changed (below the floor)",
+          ch_zero["strict"]["changed"], False)
+    check("zero control + 1.0 movement -> strict changed",
+          decide_changed(0, 0, 1.0, 0.0)["strict"]["changed"], True)
+    check("the pixel term is the same in both margins (2.5x)",
+          decide_changed(1000, 500, 0.0, 0.0)["strict"]["changed"],
+          decide_changed(1000, 500, 0.0, 0.0)["changed"])
+    # the two verdicts, side by side, on ONE run: 8 steps, 2 of them gameplay-edge
+    # (the measured `pong x jev x V3` numbers: step 2 = 1.088x, step 3 = 2.351x,
+    #  step 7 = 1.195x, the rest decided by the pixel term with a zero control window)
+    recs_margin = []
+    for i in range(1, 9):
+        if i == 2:
+            edge = decide_changed(2240, 2240, 780.4, 717.3)
+        elif i == 3:
+            edge = decide_changed(512, 512, 323.3, 137.5)
+        elif i == 7:
+            edge = decide_changed(512, 512, 766.2, 641.1)
+        else:
+            edge = decide_changed(4300, 0, 200.0, 0.0)
+        recs_margin.append({"step": i, "action": {"action": "act%d" % i},
+                            "ack": {"accepted": True, "injected": True},
+                            "change": edge, "changed_bool": edge["changed"],
+                            "frame_before_sha": "frame%d" % i,
+                            "step_verdict": ("ok_ack_and_changed" if edge["changed"] else
+                                             "FAIL_no_change_after_accepted_input")})
+    s_margin = summarise(recs_margin, "jev", "pong")
+    check("margin run: baseline verdict is PASS", s_margin["verdict"], "PASS")
+    check("margin run: baseline rate is 1.0", s_margin["accepted_and_changed_rate"], 1.0)
+    check("margin run: strict rate is 0.75", s_margin["strict_accepted_and_changed_rate"],
+          0.75)
+    check("margin run: the strict reading of that run FAILS (the two edge steps)",
+          s_margin["strict_verdict"], "FAIL")
+    check("margin run: strict names the two edge steps", s_margin["strict_fail_steps"],
+          [2, 7])
+    check("margin run: the baseline verdict is still the top-level one by default",
+          s_margin["change_margin"]["selected"], "baseline")
+    check("margin run: edge steps are named", len(s_margin["change_margin_edge_steps"]), 2)
+    check("margin run: edge steps list their ratios",
+          [e["margin_ratio"] for e in s_margin["change_margin_edge_steps"]], [1.088, 1.195])
+    check("margin run: the declaration is recorded",
+          s_margin["change_margin"]["declaration_source"].endswith(
+              "playability_controls.json"), True)
+    # --change-margin=strict moves the top-level verdict and leaves the baseline beside it
+    s_strict = summarise(recs_margin, "jev", "pong", margin="strict")
+    check("margin=strict: the top-level verdict is the strict one",
+          s_strict["verdict"], "FAIL")
+    check("margin=strict: the baseline verdict is preserved beside it",
+          s_strict["baseline_verdict"], "PASS")
+    check("margin=strict: baseline rate still reported",
+          s_strict["baseline_accepted_and_changed_rate"], 1.0)
+    try:
+        summarise(recs_margin, "jev", "pong", margin="loose")
+        check("an unknown margin raises", False, True)
+    except ValueError:
+        check("an unknown margin raises", True, True)
+    # a record written BEFORE TASK-135 carries no `change.strict`: it must read as the
+    # baseline, never as an error, and never as a different verdict
+    recs_old = [dict(r) for r in recs_margin]
+    for r in recs_old:
+        r["change"] = {"changed": r["change"]["changed"]}
+    s_old = summarise(recs_old, "jev", "pong")
+    check("a pre-TASK-135 record: baseline verdict unchanged", s_old["verdict"], "PASS")
+    check("a pre-TASK-135 record: strict falls back to the baseline reading",
+          s_old["strict_verdict"], "PASS")
+    check("a pre-TASK-135 record: no edge steps claimed",
+          s_old["change_margin_edge_steps"], [])
+
     log("selftest %s" % ("PASSED" if ok else "FAILED"))
     return 0 if ok else 1
 
@@ -2746,6 +3108,17 @@ def main(argv=None):
                         "a direction change).  The default scripted snake policy steers "
                         "toward the food like a human would; this flag measures whether the "
                         "game's own rule, not the policy, is what limits progress")
+    # TASK-135 §1.B: which of the two DECLARED change margins the verdict uses.  The other
+    # reading is always computed and filed beside it, so this switch can never hide one.
+    r.add_argument("--change-margin", default=CHANGE_MARGIN_DEFAULT,
+                   choices=CHANGE_MARGINS,
+                   help="which declared change margin `player.json -> verdict` is computed "
+                        "with: 'baseline' (TASK-132: gameplay movement > control movement; "
+                        "the default, and byte-for-byte the historical rule) or 'strict' "
+                        "(TASK-135 §1.B: >= %.1fx the control window's movement, floor "
+                        "%.1f).  BOTH readings are always reported; the declaration lives "
+                        "in tools/playability_controls.json -> model_player_change_margin"
+                        % (CHANGE_STRICT_CONTROL_FACTOR, CHANGE_STRICT_MIN_MOVEMENT))
     r.add_argument("--base-url", default="",
                    help="override the service root (default 8080 for jev, 8081 for playjev)")
     r.add_argument("--mode", default="project", choices=("project", "exe"),
@@ -2832,7 +3205,15 @@ def main(argv=None):
         p = os.path.join(args.path, "steps.jsonl")
         recs = load_jsonl(p)
         parts = os.path.abspath(args.path).split(os.sep)
-        s = summarise(recs, parts[-1], parts[-2])
+        m = CHANGE_MARGIN_DEFAULT
+        pj = os.path.join(args.path, "player.json")
+        if os.path.isfile(pj):
+            try:
+                m = json.load(io.open(pj, encoding="utf-8")).get(
+                    "change_margin_selected") or m
+            except Exception:  # noqa: BLE001
+                m = CHANGE_MARGIN_DEFAULT
+        s = summarise(recs, parts[-1], parts[-2], margin=m)
         log(json.dumps(s, ensure_ascii=False, indent=1))
         return 0
     if args.cmd == "resummarise":

@@ -137,8 +137,39 @@ public partial class Game2048Game : Node2D
     /// </summary>
     [Export] public int LastHookSteps = 0;
 
-    /// <summary>When true an accepted move also drops a tile at a pinned cell (default off).</summary>
-    [Export] public bool AutoSpawn = false;
+    /// <summary>
+    /// When true an accepted move also drops a NEW tile (the real 2048 rule).
+    ///
+    /// <para><b>TASK-135 §1.A.3: default ON.</b> It used to be off, and the measured
+    /// consequence was that the board stopped growing after the opening deal: the scripted
+    /// arm slid the same single tile left and right for every step (`SCORE 4 MOVES 3 MAX 4`
+    /// with one `4` on the board, TASK-134 §1.4c), so the game's own goal -- reach 2048 --
+    /// was unreachable by construction. A 2048 in which no tile is ever dealt again is not
+    /// a hard 2048, it is not 2048.</para>
+    ///
+    /// <para><b>The tile is dealt like the real game deals it</b> (a uniformly chosen EMPTY
+    /// cell, value 2 or 4), and it is drawn from a seeded xorshift
+    /// (<see cref="SpawnSeed"/>) so a recorded run is still reproducible bit for bit --
+    /// the same reason the opening deal uses fixed cells. The pinned-cell hook
+    /// (<see cref="SpawnPinned"/>, set by <c>ForceTestState("spawn=r,c,v")</c>) is kept for
+    /// the sessions that need "this move deals exactly this tile at exactly this cell";
+    /// <c>ForceTestState</c> still switches both off first, exactly as its contract says.
+    /// </para>
+    /// </summary>
+    [Export] public bool AutoSpawn = true;
+
+    /// <summary>
+    /// When true the post-move deal lands at the PINNED cell (<see cref="SpawnRow"/>,
+    /// <see cref="SpawnCol"/>/<see cref="SpawnValue"/>) instead of a real empty cell.
+    /// Off by default; only <c>ForceTestState("spawn=...")</c> turns it on.
+    /// </summary>
+    [Export] public bool SpawnPinned = false;
+
+    /// <summary>
+    /// Seed of the post-move deal's xorshift. A fixed default keeps a recorded run
+    /// reproducible; a session may set it to deal a different (still deterministic) board.
+    /// </summary>
+    [Export] public int SpawnSeed = 20260928;
 
     /// <summary>Row the deterministic spawn drops at.</summary>
     [Export] public int SpawnRow = 0;
@@ -148,6 +179,9 @@ public partial class Game2048Game : Node2D
 
     /// <summary>Value the deterministic spawn drops.</summary>
     [Export] public int SpawnValue = 2;
+
+    /// <summary>Tiles dealt by the post-move spawn over the whole game (TASK-135).</summary>
+    [Export] public int SpawnedTiles = 0;
 
     /// <summary>When true the game reads its player's keyboard. The test driver switches this
     /// OFF explicitly (<see cref="SetPollInput"/>, <see cref="ForceTestState"/>) when it needs
@@ -173,6 +207,8 @@ public partial class Game2048Game : Node2D
     private Label _status;
     private float _autoAccum;
     private int _autoPhase;
+    /// <summary>xorshift state for the post-move deal (TASK-135); reset from <see cref="SpawnSeed"/>.</summary>
+    private uint _spawnState;
     private bool _prevUp;
     private bool _prevRight;
     private bool _prevDown;
@@ -324,10 +360,15 @@ public partial class Game2048Game : Node2D
         LastHookSteps = 0;
         _autoAccum = 0.0f;
         _autoPhase = 0;
-        AutoSpawn = false;
+        // TASK-135 §1.A.3: a live game deals a new tile after every accepted move; the
+        // pinned-cell stand-in is what a session opts into through `ForceTestState`.
+        AutoSpawn = true;
+        SpawnPinned = false;
         SpawnRow = 0;
         SpawnCol = 0;
         SpawnValue = 2;
+        SpawnedTiles = 0;
+        _spawnState = unchecked((uint)SpawnSeed);
         // TASK-116 D1: was `PollInput = false;` -- that is what
         // switched player input off again right after _Ready() ran.
         // The deterministic entry point is ForceTestState / SetPollInput.
@@ -570,7 +611,18 @@ public partial class Game2048Game : Node2D
         LastMoveGain = gain;
         if (AutoSpawn)
         {
-            SetCell(SpawnRow, SpawnCol, SpawnValue);
+            // TASK-135 §1.A.3: the real 2048 rule -- one new tile, on an EMPTY cell.
+            // `SpawnPinned` keeps the old deterministic stand-in for sessions that need
+            // "this move deals exactly this tile here" (ForceTestState's `spawn=` key).
+            if (SpawnPinned)
+            {
+                SetCell(SpawnRow, SpawnCol, SpawnValue);
+                SpawnedTiles++;
+            }
+            else
+            {
+                SpawnRandomTile();
+            }
         }
         Recompute();
         ApplyTiles();
@@ -673,6 +725,54 @@ public partial class Game2048Game : Node2D
         return LastEvent;
     }
 
+    /// <summary>
+    /// Deals one tile the way 2048 deals it -- value 2 (or 4, one time in ten) on a
+    /// uniformly chosen EMPTY cell (TASK-135 §1.A.3).
+    ///
+    /// <para>The cell is never overwritten: a real spawn is on an empty cell or it is not a
+    /// spawn. The randomness is a seeded xorshift rather than `GD.Randi()`, so a recording
+    /// replays identically (the project's determinism rule); the seed is an `[Export]`, so
+    /// a session that wants another board can set it instead of editing the game.</para>
+    /// </summary>
+    private string SpawnRandomTile()
+    {
+        var empty = new List<int>();
+        for (var i = 0; i < _grid.Length; i++)
+        {
+            if (_grid[i] == 0)
+            {
+                empty.Add(i);
+            }
+        }
+        if (empty.Count == 0)
+        {
+            LastEvent = "spawn skipped reason=no_empty_cell";
+            return LastEvent;
+        }
+        var pick = empty[(int)(NextRandom() % (uint)empty.Count)];
+        var value = (NextRandom() % 10u) == 0u ? 4 : 2;
+        SpawnedTiles++;
+        SetCell(pick / Cols, pick % Cols, value);
+        LastEvent = $"spawn {pick / Cols},{pick % Cols}={value} empty_before={empty.Count} "
+                    + $"dealt={SpawnedTiles} used={TilesInUse} max={MaxTile}";
+        return LastEvent;
+    }
+
+    /// <summary>The deterministic 32-bit xorshift behind <see cref="SpawnRandomTile"/>.</summary>
+    private uint NextRandom()
+    {
+        var x = _spawnState;
+        if (x == 0u)
+        {
+            x = unchecked((uint)SpawnSeed) | 1u;
+        }
+        x ^= x << 13;
+        x ^= x >> 17;
+        x ^= x << 5;
+        _spawnState = x;
+        return x;
+    }
+
     /// <summary>The deterministic auto-play policy: the first legal direction from the cycle.</summary>
     private bool AutoMoveOnce()
     {
@@ -744,6 +844,7 @@ public partial class Game2048Game : Node2D
                + $"won={Won} over={GameOver} auto={AutoPlay} auto_steps={AutoSteps} "
                + $"last_auto={LastAutoSteps} last_hook={LastHookSteps} input_moves={InputMoves} "
                + $"elapsed={Elapsed:F3} ticks={Ticks} "
+               + $"auto_spawn={AutoSpawn} spawn_pinned={SpawnPinned} dealt={SpawnedTiles} "
                + $"last={LastEvent}";
     }
 
@@ -759,6 +860,12 @@ public partial class Game2048Game : Node2D
     public string ForceTestState(string spec)
     {
         ResetBoard();
+        // The documented contract, kept exactly: "Auto-play, input polling and the spawn
+        // hook are switched OFF first, so a session's aim and the next readback are the
+        // same fact."  TASK-135 changed what a LIVE game does (`AutoSpawn` now defaults on
+        // and deals a real tile), not what a forced state does.
+        AutoSpawn = false;
+        SpawnPinned = false;
         foreach (var part in spec.Split(';'))
         {
             var kv = part.Split(new[] { '=' }, 2);
@@ -791,6 +898,7 @@ public partial class Game2048Game : Node2D
                     {
                         var p = kv[1].Split(',');
                         AutoSpawn = true;
+                        SpawnPinned = true;
                         SpawnRow = int.Parse(p[0]);
                         SpawnCol = int.Parse(p[1]);
                         SpawnValue = int.Parse(p[2]);

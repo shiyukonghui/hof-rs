@@ -252,6 +252,86 @@
   ],
   "note": "PRIOR 0.5 KEPT AFTER FITTING (TASK-129).  The score answer is recorded as a direction-suspect observation and is never compared with a threshold to produce a verdict.  The flip-legend probe (median |flipped - normal| 0.11-0.13, median |flipped - mirror| 1.09 on a 1..5 legend) shows the score answer follows the option ORDER at least partly, and it never enters the verdict either."
  },
+ "_model_player_change_margin_comment": [
+  "TASK-135 §1.B -- the MODEL-PLAYER change test's TWO margins, declared side by side.",
+  "",
+  "The change test is the whole game-facing half of the TASK-132 model-player criterion:",
+  "a step counts as 'the game responded' only when the action window BEATS its own",
+  "equal-length NO-INPUT control window.  There are two independent terms (TASK-132 §1.1",
+  "step 5), and until TASK-135 only one of them had a margin:",
+  "",
+  "  * pixels    -- `px > max(2.5 * control, 40)`.  The 2.5x is TASK-132's own, higher than",
+  "                 the gate's `arm_evidence` 1.5x because the two windows here are MEASURED",
+  "                 windows of a live game (the gate's are bracketed by its own MCP round",
+  "                 trips), so the comparison carries more timing slack; 40 px is the gate's",
+  "                 'a genuine frame-to-frame change, not noise'.",
+  "  * gameplay  -- the declared observables must move MORE in the action window, where",
+  "                 'more' was the bare `>` -- NO margin at all.",
+  "",
+  "TASK-134 §7.4 measured what that costs: `pong x jev x V3`'s PASS was carried by 3 of its",
+  "8 steps being decided by the gameplay term ALONE (`ctl_px == px` on those steps), and one",
+  "of the three won by 766.2 vs 641.1 -- a factor of 1.19.  A game that is animating by",
+  "itself (pong's ball keeps flying) therefore cleared the term by a hair.  TASK-135 §1.B",
+  "asked for a declared, stricter margin and forbade using it to turn a verdict green.",
+  "",
+  "`baseline` is the TASK-132 rule, unchanged and still the DEFAULT the verdict uses, so",
+  "every historical verdict recomputes byte-for-byte (re-checked on the recorded runs).",
+  "`strict` asks the same question with a margin: the declared observables must move at",
+  "least 2x as far as they moved in the control window." ,
+  "",
+  "Why 2x:",
+  "  * it is the example the task itself gives ('>= 2x the control window's noise/",
+  "    displacement'),",
+  "  * it is the margin the PIXEL term has always required (2.5x >= 2x), so after TASK-135",
+  "    the two terms are held to the same order of magnitude instead of one having a margin",
+  "    and the other none,",
+  "  * and it is what separates the measured edge steps from the measured real ones on the",
+  "    only run that has ever been decided by this term: `pong x jev x V3`'s steps 2 and 7",
+  "    sat at 1.09x and 1.19x (edge, dropped), while step 3 sat at 2.35x (kept).",
+  "",
+  "`gameplay_min_movement` is the floor for the zero-control case: with the control window",
+  "carrying no movement at all the ratio is undefined, and 1.0 is what 'the declared",
+  "quantity really moved' means (a board string that advanced, or one pixel of travel).",
+  "",
+  "Neither number is a verdict by itself: EVERY step is scored under BOTH margins, both",
+  "verdicts are written into `player.json` (`verdict` + `strict_verdict` +",
+  "`baseline_verdict`), and the steps the two readings disagree about are listed as",
+  "`change_margin_edge_steps`.  `--change-margin strict` selects which reading the top-level",
+  "verdict uses; the other is always reported beside it."
+ ],
+ "model_player_change_margin": {
+  "declared_by": "TASK-135 §1.B",
+  "how_used": "tools/playtest_player.py `_margin_reading` / `decide_changed` / `summarise`; every step records both readings in `change.strict`, and `player.json` carries both verdicts plus `change_margin_edge_steps`",
+  "default_margin": "baseline",
+  "baseline": {
+   "name": "baseline (TASK-132 §1.1 step 5, unchanged; still the default)",
+   "gameplay_rule": "the declared gameplay observables must move STRICTLY MORE than in the equal-length no-input control window",
+   "gameplay_control_factor": 1.0,
+   "gameplay_min_movement": 0.0,
+   "pixel_rule": "px > max(pixel_control_factor * control_px, min_pixels)",
+   "pixel_control_factor": 2.5,
+   "min_pixels": 40
+  },
+  "strict": {
+   "name": "strict (TASK-135 §1.B; reported beside the baseline, never in place of it)",
+   "gameplay_rule": "the declared gameplay observables must move at least gameplay_control_factor times as far as in the equal-length no-input control window, and by at least gameplay_min_movement in absolute terms",
+   "gameplay_control_factor": 2.0,
+   "gameplay_min_movement": 1.0,
+   "pixel_rule": "px > max(pixel_control_factor * control_px, min_pixels)  (unchanged: 2.5x already satisfies the 2x the gameplay term now asks for)",
+   "pixel_control_factor": 2.5,
+   "min_pixels": 40
+  },
+  "why_2x": [
+   "the task's own example is '>= 2x the control window's noise/displacement'",
+   "the pixel term has always required 2.5x, so the two terms now agree in order of magnitude",
+   "measured: on the only run ever decided by this term (`pong x jev x V3`), the two steps that lose attribution under 2x sat at 1.09x and 1.19x, while the one that keeps it sat at 2.35x"
+  ],
+  "not_a_loosening": [
+   "the baseline reading and the default verdict are unchanged, and the 22 historical run summaries recompute identically",
+   "the strict reading can only ever turn a baseline 'changed' into a 'not changed'; it can never turn a 'not changed' into a 'changed' (the strict term implies the baseline term)",
+   "when the strict margin drops a run out of PASS the report says so; the number is not tuned to keep anything green"
+  ]
+ },
  "games": {
   "asteroids": {
    "required_ui": {

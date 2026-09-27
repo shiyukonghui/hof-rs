@@ -41,6 +41,7 @@ sys.path.insert(0, TOOLS)
 from playability_gate import evaluate_model_player_steps  # noqa: E402
 from playtest_agent import action_criteria  # noqa: E402
 from playtest_player import (  # noqa: E402
+    change_margin_edge_steps, changed_of, decide_changed, load_change_margins,
     model_fixed_point, model_no_progress, summarise,
 )
 
@@ -244,6 +245,85 @@ def main():
     check("loop: that run is still FAIL (not softened to INCONCLUSIVE)",
           s_np["verdict"], "FAIL")
     check("loop: no-progress is not a PASS", s_np["verdict"] == "PASS", False)
+
+    # =================================================================================
+    # TASK-135 §1.B: the DECLARATIVE STRICT margin, filed beside the baseline.
+    # The four numbers are the measured `pong x jev x V3` ones (TASK-134 §7.4).
+    # =================================================================================
+    decl = load_change_margins()
+    check("margin declaration: baseline factor is 1.0 (the bare `>`)",
+          decl["baseline"]["gameplay_control_factor"], 1.0)
+    check("margin declaration: strict factor is 2.0",
+          decl["strict"]["gameplay_control_factor"], 2.0)
+    check("margin declaration: strict floor is 1.0",
+          decl["strict"]["gameplay_min_movement"], 1.0)
+    check("margin declaration: the default margin is the baseline",
+          decl["default_margin"], "baseline")
+    check("margin declaration: it comes from the controls file",
+          decl["source"].endswith("playability_controls.json"), True)
+
+    edge_109 = decide_changed(2240, 2240, 780.4, 717.3)     # 1.088x, pixel tie
+    edge_119 = decide_changed(512, 512, 766.2, 641.1)       # 1.195x, pixel tie
+    keep_235 = decide_changed(512, 512, 323.3, 137.5)       # 2.351x, pixel tie
+    check("1.09x: baseline says changed", edge_109["changed"], True)
+    check("1.09x: strict says NOT changed", edge_109["strict"]["changed"], False)
+    check("1.09x: strict records the ratio", edge_109["strict"]["margin_ratio"], 1.088)
+    check("1.20x: strict says NOT changed", edge_119["strict"]["changed"], False)
+    check("2.35x: strict says changed", keep_235["strict"]["changed"], True)
+    check("strict implies baseline (never the other way round)",
+          all(not r["strict"]["changed"] or r["changed"]
+              for r in (edge_109, edge_119, keep_235,
+                        decide_changed(0, 0, 5.0, 0.0),
+                        decide_changed(0, 0, 0.5, 0.0))), True)
+    check("zero control: the floor decides (0.5 -> no)",
+          decide_changed(0, 0, 0.5, 0.0)["strict"]["changed"], False)
+    check("zero control: the floor decides (1.0 -> yes)",
+          decide_changed(0, 0, 1.0, 0.0)["strict"]["changed"], True)
+
+    # one run, both verdicts: 8 steps, 2 of them gameplay-edge (steps 2 and 7)
+    recs_margin = []
+    for i in range(1, 9):
+        ch = ({2: edge_109, 3: keep_235, 7: edge_119}.get(i)
+              or decide_changed(4300, 0, 200.0, 0.0))
+        recs_margin.append({"step": i, "action": {"action": "act%d" % i},
+                            "ack": {"accepted": True, "injected": True},
+                            "change": ch, "changed_bool": ch["changed"],
+                            "frame_before_sha": "frame%d" % i,
+                            "model": {"request_path": "req%d" % i},
+                            "markers": {"GameOver": False},
+                            "step_verdict": ("ok_ack_and_changed" if ch["changed"] else
+                                             "FAIL_no_change_after_accepted_input")})
+    s = summarise(recs_margin, "jev", "pong")
+    check("margin run: baseline verdict PASS", s["verdict"], "PASS")
+    check("margin run: strict verdict FAIL (the edge steps)",
+          s["strict_verdict"], "FAIL")
+    check("margin run: strict fail steps are the two edge steps",
+          s["strict_fail_steps"], [2, 7])
+    check("margin run: strict rate is still reported (0.75)",
+          s["strict_accepted_and_changed_rate"], 0.75)
+    check("margin run: the baseline is still the default top-level reading",
+          s["change_margin"]["selected"], "baseline")
+    check("margin run: the edge steps are named",
+          [(e["step"], e["margin_ratio"]) for e in s["change_margin_edge_steps"]],
+          [(2, 1.088), (7, 1.195)])
+    check("margin run: the edge-step helper agrees with the summary",
+          s["change_margin_edge_steps"], change_margin_edge_steps(recs_margin))
+    check("margin run: `changed_of` reads the two margins",
+          (changed_of(recs_margin[1], "baseline"), changed_of(recs_margin[1], "strict")),
+          (True, False))
+    s_alt = summarise(recs_margin, "jev", "pong", margin="strict")
+    check("margin=strict: top-level verdict moves to the strict one",
+          s_alt["verdict"], "FAIL")
+    check("margin=strict: the baseline verdict is preserved beside it",
+          s_alt["baseline_verdict"], "PASS")
+    # a record without `change.strict` (everything written before TASK-135) is not an error
+    old = [dict(r, change={"changed": r["change"]["changed"]}) for r in recs_margin]
+    s_old = summarise(old, "jev", "pong")
+    check("pre-TASK-135 records: baseline verdict unchanged", s_old["verdict"], "PASS")
+    check("pre-TASK-135 records: strict falls back to the baseline",
+          s_old["strict_verdict"], "PASS")
+    check("pre-TASK-135 records: no edge steps claimed",
+          s_old["change_margin_edge_steps"], [])
 
     ok = True
     for good, name, detail in cases:

@@ -172,8 +172,34 @@ public partial class PuzzleBobbleGame : Node2D
     /// <summary>Frames processed since the last reset.</summary>
     [Export] public int Ticks = 0;
 
-    /// <summary>Auto steps per second; 0 keeps the world still (the default).</summary>
-    [Export] public float AutoClock = 0.0f;
+    /// <summary>
+    /// Simulation steps per second the game runs ON ITS OWN; 0 keeps the world still.
+    ///
+    /// <para><b>TASK-135 §1.A.2: the default is 20, and the alternative was measured
+    /// unplayable.</b> While this was 0 the ONLY producer of <see cref="Tick"/> was the
+    /// MCP <see cref="StepFrames"/> hook, so with no driver pushing frames a shot froze
+    /// the whole match: the projectile sat one cell above the shooter forever
+    /// (<c>Projectile.pos=[408,504]</c>, <c>ProjActive=true</c>, <c>Shots=1</c>,
+    /// <c>Steps=0</c> while <c>Ticks</c> kept climbing -- rendering ran, simulation did
+    /// not), and because <see cref="Shoot"/> refuses while a shot is in flight, the player
+    /// could never fire a second bubble (TASK-134 §1.4b, scripted arm: 4 injected steps
+    /// out of 20, then 16 frozen ones).</para>
+    ///
+    /// <para><b>Why 20.</b> One <see cref="Tick"/> advances the shot exactly one cell, and
+    /// the flight from the shooter to the board is about ten cells, so 20 steps/s puts a
+    /// shot on the board in ~0.5 s: it is the pace the arcade original flies at, it is
+    /// visible to a human, and it resolves INSIDE the measurement windows the usability
+    /// gate and the model-player loop use (a shot that takes longer than the window would
+    /// make "did the picture change" a matter of where the capture landed).</para>
+    ///
+    /// <para>The deterministic entry point is unaffected: <see cref="ForceTestState"/> ->
+    /// <see cref="ResetCounters"/> sets this back to 0 and <see cref="StepFrames"/> stays
+    /// the frame-rate-independent way to advance the world for a session, so a recorded
+    /// rule test still measures exactly what it measured. An idle clock steps nothing but
+    /// <see cref="Steps"/> (the projectile branch returns immediately), so it changes no
+    /// pixel and no declared gameplay observable.</para>
+    /// </summary>
+    [Export] public float AutoClock = 20.0f;
 
     /// <summary>Steps the auto clock has applied over the whole game.</summary>
     [Export] public int AutoTicks = 0;
@@ -1108,6 +1134,11 @@ public partial class PuzzleBobbleGame : Node2D
             _autoAccum += dt * AutoClock; // F-1's fix: accumulate, never (int)(delta * rate)
             var applied = 0;
             var guard = 0;
+            // TASK-135 §1.A.2: remember whether a shot was in flight when this frame's
+            // ticks began; a run of IDLE ticks (no projectile) advances only the `Steps`
+            // counter and must not repaint, because a repaint on an unchanged board is
+            // pure measurement noise for the no-input control window.
+            var wasActive = ProjActive;
             while (_autoAccum >= 1.0f && guard < 8)
             {
                 _autoAccum -= 1.0f;
@@ -1121,7 +1152,7 @@ public partial class PuzzleBobbleGame : Node2D
             }
             AutoTicks += applied;
             LastAutoSteps = applied;
-            if (applied > 0)
+            if (applied > 0 && (wasActive || ProjActive))
             {
                 // The clock deliberately does NOT touch LastHookSteps (the G1 lesson).
                 Recompute();
