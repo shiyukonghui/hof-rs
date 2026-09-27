@@ -6436,3 +6436,99 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
   * **回滚点**：主仓侧 `git revert` TASK-117 的功能提交（工具开关 + 脚本 + 报告 + 本决策）；
     `dist\exe-task109-pre-fix\` 是修复前产物的完整副本，随时可以恢复交付旧包。
 
+## D163 — TASK-118：**每个工具声明一条权威证据通道**，达标只在该通道上判定；四条 `count_only` 收口；
+##          `editor_simulate_*` 正式登记为 **scope-excluded**；三件 Android 工具按**实测**登记为
+##          **needs-an-external-device**
+
+* 日期：2026-09-27（UTC）
+* 触发问题：TASK-115 收尾时留下三条彼此纠缠的缺口——
+  1. **63 条 `计数达标缺证据` 里，44 条永远出不来**：它们的正确效果是**编辑器进程自己的内存态**
+     （选中、Output 面板、插件启用表、文件系统扫描、内存活场景里的节点/脚本/连接/动画/音频总线…），
+     而旧口径只认两条通道：**像素真的变了**或**文件真的变了**。这个工程 2D 视口对这些操作不重绘、
+     也没有 save，于是工具再正确也拿不到「有效调用」。
+  2. **4 条 `count_only` 待补**：`editor_connect_signal` / `editor_add_gridmap` /
+     `editor_set_node_script_batch` / `running_game_find_node_when_available`。
+  3. **8 条 0 次**：5 条 `editor_simulate_*` + 3 条 Android 工具，登记表里混在同一栏里。
+* 考虑的选项（含被否决者及理由）：
+  1. **达标口径**：
+     * 选项 A：维持「像素或文件动了才算有效」。**否决**：它把「效果不在盘上也不在画面上」等同于
+       「工具没生效」，而 TASK-115 已实测这 44 条工具**确实生效**（另一次独立读调用逐字读回了被写的值）。
+       不改口径等于永远用错误的对象回答覆盖率问题。
+     * 选项 B（采用）：**每个工具声明一条权威证据通道**（`file_effect` / `pixel_effect` / `editor_state` /
+       `payload`），`达标` 改为**在该工具声明的那条通道上**以内容级证据判定；`editor_state` 通道的判据
+       就是 TASK-113 C 的既有机制——**另一次独立读调用**在同一 run 内 `ok=true`、回包是实质载荷、
+       且回包里**逐字**包含被写入的值（`witness_read` + `expect`），本工具回到 trace 里复核。
+  2. **通道声明放哪里**：
+     * 选项 A：写死在 `tool_coverage.py` 里。**否决**：177 条声明混在千行脚本里无法单独评审。
+     * 选项 B（采用）：声明表 data 化到 `tools/tool_channels.json`（生成器
+       `recovery/work/task118/gen_channels.py` 逐条写 subject 与 basis），台账**加载它、并在覆盖不到
+       契约时直接拒绝运行**（缺一条工具＝那条工具会悄悄退回旧口径，这是必须响的失败）。
+  3. **四条 `count_only`**：
+     * 选项 A：把它们改成「读类动词」。**否决**：动词来自契约，改动词就是改契约。
+     * 选项 B（采用）：按通道补**内容级见证读**——`editor_add_gridmap` <- `editor_get_scene_tree`
+       （新建的 GridMap 节点在树里）、`editor_set_node_script_batch` <- `editor_execute_gdscript`
+       （`Node.get_script().resource_path`，**不用** TASK-115 实测会 `-32001` 的
+       `editor_get_node_properties["script"]`）、`editor_connect_signal` <- `editor_list_signal_connections`
+       （连接表本身），三条都在新批次 `runs/_exercises/ex_grid/c6-task118` 里同 run 完成；
+       `running_game_find_node_when_available` 是**读类动词**，它成功的回包（`{"found":true,...}`）
+       本身就是测量结果，于是新批次里给它 5 次真成功的调用即可（不另立见证）。
+  4. **5 条 `editor_simulate_*`**：
+     * 选项 A：继续叫 `unreachable`。**否决**：它们编译进了这个构建、端点是注册过的，真编辑器里它们
+       需要的东西一定存在（`Input` 由 `Main::setup2` 在**每个**引擎进程里创建）；做不到的是**驱动游戏**
+       ——它们注入的是**编辑器进程自己**的输入队列。
+     * 选项 B（采用）：正式登记为 **scope-excluded**（依据 D59 / GDR-21 的范围决定），与 `unreachable`
+       **分栏计数**，并写明源码行（`tools/editor_input_simulation.cpp:53-112`、`:121-144`）与**可测条件**
+       （出现「编辑器侧输入观测」批次时：用 Editorial 侧插件或 `editor_execute_gdscript` 数 `Input` 事件，
+       并在批次自述里写明游戏端点不该看到任何东西）。
+  5. **3 条 Android**：
+     * 选项 A：沿用 TASK-114/115 的「没装 SDK、没 adb」推断。**否决**：本轮**实测**发现 SDK **装在**
+       `C:\Program Files (x86)\Android\android-sdk`（adb 1.0.41 / 36.0.0，只是不在 PATH、
+       `ANDROID_HOME`/`ANDROID_SDK_ROOT` 未设；`JAVA_HOME` 指向同处的 openjdk 17）。
+     * 选项 B（采用）：实测后分类——`os_list_android_devices` 真跑了 adb、真答出**空设备表**
+       （5 次 ok + 1 次边界 → **达标**）；`project_get_android_preset_info` 与
+       `os_deploy_to_android_device` 各 6 次调用**全部落在拒绝分支**（本仓工程**没有任何** Android 预设；
+       `skip_export=true` 刻意不让导出子进程起来），登记为 **needs-an-external-device** 并写明
+       measured 命令与结果。**不安装 SDK、不改用户 PATH**：adb 只在本次会话进程内 prepend 进 PATH。
+  6. **边界门槛**：
+     * 选项 A：顺手把「边界≥1」也放宽，让 15 条「通道证据充足但没有边界调用」的工具（如
+       `editor_save_scene` 77 次文件效果、`running_game_capture_screenshot` 298 次载荷）也变达标。
+       **否决**：那是**另一个**口径变更，会把「失败/拒绝面也被测过」这条证据要求悄悄删掉。
+     * 选项 B（采用）：边界门槛**原样保留**，并把这一栏**逐条列出来**（25 条仍不达标里 17 条是这个原因、
+       3 条是声明通道上只有拒绝分支、5 条是 0 次），留给用户决定是否要单独立法。
+* 选择：1B / 2B / 3B / 4B / 5B / 6B，全部按上表执行。
+* 理由：
+  * **口径修正的效果可核**：达标 **106 → 152**；`计数达标缺证据` **63 → 20**；0 次 **8 → 5**；
+    工具名 **169 → 172** 个出现过（111 run / 180 trace / 8712 次调用）。**降级 0 条**——
+    没有任何工具在它自己声明的通道上拿不出证据，这是这次口径变更自洽性的关键指标。
+  * **通道声明是可审的**：四条通道判据不同、但都要求内容级证据；声明表逐条写出「为什么是这条通道」
+    （写脚本与写场景 → `file_effect`；影响画面的运行期操作 → `pixel_effect`；编辑器 GUI 内存态 →
+    `editor_state`；只读查询 → `payload`），台账 §0.0 打印 177 条声明、按通道的达标计数、
+    **因通道声明而新达标的 44 条**、以及**仍不达标的 25 条逐条原因**。
+  * **不得为了凑数把通道声明成它实际不影响的通道**：`os_deploy_to_android_device` 的效果落在外接设备上，
+    本机只能观察它的报告，所以声明 `payload` 并**同时**登记为 needs-an-external-device、
+    如实报「只有拒绝分支」；`editor_set_auto_dismiss_dialogs` 的 provider 恒为 `-32000`
+    （引擎没有进程级开关），声明 `editor_state` 后**仍然是** `计数达标缺证据`，**没有**被推成达标。
+  * **见证读选错工具会白干**：四条里最容易写错的是 `editor_set_node_script_batch`——TASK-115 已实测
+    `editor_get_node_properties` 对 `script` 直接 `-32001`；本轮换 `editor_execute_gdscript` 读
+    `get_script().resource_path`，并把这一点写进 manifest 的 `why`。
+  * **旧声明不删除**：TASK-113 那两条被拒声明（`editor_add_gridmap`@h3、`editor_connect_signal`@c4-v5）
+    被**移进** `readback_superseded`（带 `superseded_by` + `superseded_reason`），
+    所以被拒声明数 **2 → 0**，而 51 条声明**全部**经 trace 复核并逐字命中。
+* 预期影响与回滚点：
+  * **口径影响**：以后新增工具**必须**在 `tools/tool_channels.json` 里声明一条通道，否则
+    `tools/tool_coverage.py` 拒绝运行；`coverage.json` 同时保留旧口径（`status_legacy` / `effective`）
+    供对照，任何「达标数变化」都能拆成「口径变化」与「真实新证据」两部分。
+  * **已实测的边界（如实登记，不当作达标）**：`project_get_android_preset_info` 与
+    `os_deploy_to_android_device` 只有拒绝分支；`editor_set_auto_dismiss_dialogs` 是设计性 `count_only`；
+    17 条「通道证据充足、缺边界调用」的工具（见台账 §0.0 的「声明通道上仍不达标」表）**没有**被推成达标；
+    5 条 `editor_simulate_*` 仍是 0 次（scope-excluded）。
+  * **本机环境事实（写进登记表）**：adb **在**（off-PATH，1.0.41 / 36.0.0）、`adb devices -l` **空**、
+    本仓**没有** Android 预设、`%APPDATA%\Godot\export_templates` 只有 4.8.dev Windows 模板。
+  * **引擎侧零改动**：`godot/modules/mcp_server/` 一个字节未改，因此按铁律 7 **未触发**两变体重建、
+    未重跑十道门、未跑 accept_m1、未 push 引擎仓。
+  * **回滚点**：主仓侧 `git revert` TASK-118 的功能提交（`tools/tool_coverage.py`、
+    `tools/tool_channels.json`、台账两件、登记表、`tools/sessions/_exercises/ex_close/`、
+    `recovery/work/task118/`、报告与本决策）。台账可随时用 `python tools/tool_coverage.py` 重算；
+    两个新 run（`runs/_exercises/ex_grid/{c6,c7}-task118`）不入库，重跑用的会话文件在
+    `tools/sessions/_exercises/ex_close/` 里。
+
