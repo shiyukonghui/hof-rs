@@ -681,16 +681,21 @@ def render_md(payload, title, cmdline):
                  % (rb.get("declared", 0), SESSIONS_DIR.replace("\\", "/"),
                     rb.get("verified", 0), len(rb.get("rejected") or [])))
     lines.append("")
-    lines.append("| 写工具 | 档位 | kind | 见证读调用 | run | 见证 seq | 读回的是什么 |")
-    lines.append("|---|---|---|---|---|---|---|")
+    own = [r for r in payload["tools"]
+           if r.get("readback") and r["readback"].get("kind") == READBACK_KIND_OWN]
+    lines.append("下表只列 `kind = witness_read` 的档位（**有**独立读调用可以点名的那一类，共 %d 条）；"
+                 "另外 %d 条是 `own_payload`（读类动词，回包即证据、没有第二次调用可点名），"
+                 "它们逐条列在 §0.2。" % (rb.get("verified", 0), len(own)))
+    lines.append("")
+    lines.append("| 写工具 | kind | 见证读调用 | run | 见证 seq | 读回的是什么 |")
+    lines.append("|---|---|---|---|---|---|")
     for row in payload["tools"]:
         entry = row.get("readback")
-        if not entry:
+        if not entry or entry.get("kind") != READBACK_KIND_WITNESS:
             continue
-        lines.append("| `%s` | `%s` | %s | %s | %s | %s | %s |"
-                     % (row["tool"], row["evidence_tier"],
-                        entry.get("kind", ""),
-                        "`%s`" % entry["witness_tool"] if entry.get("witness_tool") else "-",
+        lines.append("| `%s` | `%s` | `%s` | %s | %s | %s |"
+                     % (row["tool"], entry.get("kind", ""),
+                        entry["witness_tool"] if entry.get("witness_tool") else "-",
                         entry.get("run") or "-",
                         entry.get("witness_seq") if entry.get("witness_seq") is not None else "-",
                         entry.get("why") or "-"))

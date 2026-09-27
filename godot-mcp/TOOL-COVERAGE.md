@@ -5,7 +5,7 @@
 
 口径（mode）：**all-runs**；语料：**97 个 run 目录 / 162 个 trace 文件 / 8286 次 `tools/call`**（`ok=false` 568 次、解析失败行 0、sidecar 校验通过 272）
 
-生成时间（UTC）：2026-09-27T02:48:10Z
+生成时间（UTC）：2026-09-27T03:07:06Z
 
 **「有效调用」的判定**（由 `mcp_trace_ledger.py` 的 verdict 词汇给出，不另立一套）：
 
@@ -32,85 +32,30 @@
 
 声明 **22** 条（来源：`tools/sessions/_exercises/**/*-manifest.json` 的 `readback` 数组）；**经 trace 复核通过 20 条**，被拒 2 条。
 
-| 写工具 | 档位 | kind | 见证读调用 | run | 见证 seq | 读回的是什么 |
-|---|---|---|---|---|---|---|
-| `project_get_info` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `project_get_filesystem_tree` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `project_search_file_names` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `project_search_file_contents` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `project_get_settings` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `project_convert_uid_to_path` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `project_convert_path_to_uid` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_get_scene_tree` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `project_read_scene_file_content` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_add_scene_instance` | `readback` | witness_read | `editor_get_scene_tree` | runs/_exercises/ex_write5/c4-v5-task111 | 132 | 挂载的实例必须出现在编辑场景树里（editor_get_scene_tree 列出被实例化出来的节点） |
-| `project_get_scene_exports` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_rename_node` | `readback` | witness_read | `editor_get_node_properties` | runs/_exercises/ex_write5/c4-v5-task111 | 138 | 读回被改名节点的 name（重命名后按新名字仍可寻址） |
-| `editor_get_node_properties` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_disconnect_signal` | `readback` | witness_read | `editor_list_signal_connections` | runs/_exercises/ex_write6/c5-task111 | 13 | 断开之后再读一次连接表：count=0（同一次运行、同一个节点） |
-| `editor_get_node_groups` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_set_node_groups` | `readback` | witness_read | `editor_get_node_groups` | runs/_exercises/ex_write5/c4-v5-task111 | 143 | 读回被写节点的 groups 列表 |
-| `editor_find_nodes_in_group` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_get_selection` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_execute_gdscript` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_get_errors` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_get_output_log` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_get_node_signals` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_get_viewport_3d_camera` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_set_viewport_3d_camera` | `readback` | witness_read | `editor_get_viewport_3d_camera` | runs/_exercises/ex_3d/h1-task111 | 27 | 下一次调用读回上一次写入的 fov/position |
-| `running_game_capture_frames` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `running_game_find_nodes_by_script` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `running_game_get_autoload_node` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `running_game_get_node_properties_batch` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `running_game_find_ui_elements` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `running_game_find_nearby_nodes` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `running_game_capture_signal_emissions` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_get_performance_monitors` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `project_list_scripts` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `project_read_script` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_set_node_script` | `readback` | witness_read | `editor_get_node_properties` | runs/_exercises/ex_write5/c4-v5-task111 | 138 | 读回被写节点的 script 属性（不是工具自己响应里的 attached:true） |
-| `editor_get_open_scripts` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `project_validate_script` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_get_input_actions` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_find_nodes_by_type` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_list_signal_connections` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `project_find_files_referencing_symbol` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `project_get_scene_dependencies` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_list_animations` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_create_animation` | `readback` | witness_read | `editor_list_animations` | runs/_exercises/ex_anim2/h2b-task111 | 23 | 读回动画列表，新建的动画在其中 |
-| `editor_add_animation_track` | `readback` | witness_read | `editor_get_animation_info` | runs/_exercises/ex_anim2/h2b-task111 | 29 | 读回同一动画的轨道表 |
-| `editor_set_animation_keyframe` | `readback` | witness_read | `editor_get_animation_info` | runs/_exercises/ex_anim2/h2b-task111 | 29 | 读回同一动画的关键帧 |
-| `editor_get_animation_info` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_remove_animation` | `readback` | witness_read | `editor_list_animations` | runs/_exercises/ex_anim2/h2b-task111 | 23 | 读回动画列表，被删的动画不在了 |
-| `editor_get_tilemap_info` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_get_tilemap_used_cells` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_get_tilemap_cell` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `project_read_resource` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `project_get_resource_preview` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `project_read_shader` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `project_get_shader_params` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_set_physics_layers` | `readback` | witness_read | `editor_get_node_properties` | runs/_exercises/ex_write5/c4-v5-task111 | 138 | 读回同一个节点的 collision_layer / collision_mask |
-| `editor_get_physics_layers` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_setup_physics_body` | `readback` | witness_read | `editor_get_scene_tree` | runs/_exercises/ex_write5/c4-v5-task111 | 132 | 建出来的物理体节点必须出现在编辑场景树里 |
-| `editor_get_collision_info` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_set_control_theme` | `readback` | witness_read | `editor_get_node_properties` | runs/_exercises/ex_write5/c4-v5-task111 | 138 | 读回同一个 Control 的 theme 属性（不是工具自己响应里的 applied:true） |
-| `project_get_theme_info` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_create_animation_tree` | `readback` | witness_read | `editor_get_animation_tree_structure` | runs/_exercises/ex_anim2/h2b-task111 | 88 | 读回 AnimationTree 的结构（tree_root / 状态机） |
-| `editor_get_animation_tree_structure` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_add_state_machine_state` | `readback` | witness_read | `editor_get_animation_tree_structure` | runs/_exercises/ex_anim2/h2b-task111 | 88 | 读回状态机里的状态列表 |
-| `editor_remove_state_machine_state` | `readback` | witness_read | `editor_get_animation_tree_structure` | runs/_exercises/ex_anim2/h2b-task111 | 88 | 读回状态机里的状态列表，被删的状态不在了 |
-| `editor_add_state_machine_transition` | `readback` | witness_read | `editor_get_animation_tree_structure` | runs/_exercises/ex_anim2/h2b-task111 | 88 | 读回状态机里的迁移列表 |
-| `editor_remove_state_machine_transition` | `readback` | witness_read | `editor_get_animation_tree_structure` | runs/_exercises/ex_anim2/h2b-task111 | 88 | 读回状态机里的迁移列表，被删的迁移不在了 |
-| `editor_set_blend_tree_node` | `readback` | witness_read | `editor_get_animation_tree_structure` | runs/_exercises/ex_anim2/h2b-task111 | 88 | 读回混合树节点真的挂在树上 |
-| `editor_set_animation_tree_parameter` | `readback` | witness_read | `editor_get_animation_tree_structure` | runs/_exercises/ex_anim2/h2b-task111 | 88 | 读回参数表里出现被写的参数 |
-| `project_find_unused_resources` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `editor_analyze_signal_flow` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `project_analyze_scene_complexity` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `project_find_script_references` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `project_detect_circular_dependencies` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `project_get_statistics` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `project_validate_scripts` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
-| `project_read_text_file` | `readback` | own_payload | - | - | - | 读类动词：回包本身即测量结果（TASK-111 的 READ_VERBS 规则），不存在「另一次读调用」可等 |
+下表只列 `kind = witness_read` 的档位（**有**独立读调用可以点名的那一类，共 20 条）；另外 57 条是 `own_payload`（读类动词，回包即证据、没有第二次调用可点名），它们逐条列在 §0.2。
+
+| 写工具 | kind | 见证读调用 | run | 见证 seq | 读回的是什么 |
+|---|---|---|---|---|---|
+| `editor_add_scene_instance` | `witness_read` | `editor_get_scene_tree` | runs/_exercises/ex_write5/c4-v5-task111 | 132 | 挂载的实例必须出现在编辑场景树里（editor_get_scene_tree 列出被实例化出来的节点） |
+| `editor_rename_node` | `witness_read` | `editor_get_node_properties` | runs/_exercises/ex_write5/c4-v5-task111 | 138 | 读回被改名节点的 name（重命名后按新名字仍可寻址） |
+| `editor_disconnect_signal` | `witness_read` | `editor_list_signal_connections` | runs/_exercises/ex_write6/c5-task111 | 13 | 断开之后再读一次连接表：count=0（同一次运行、同一个节点） |
+| `editor_set_node_groups` | `witness_read` | `editor_get_node_groups` | runs/_exercises/ex_write5/c4-v5-task111 | 143 | 读回被写节点的 groups 列表 |
+| `editor_set_viewport_3d_camera` | `witness_read` | `editor_get_viewport_3d_camera` | runs/_exercises/ex_3d/h1-task111 | 27 | 下一次调用读回上一次写入的 fov/position |
+| `editor_set_node_script` | `witness_read` | `editor_get_node_properties` | runs/_exercises/ex_write5/c4-v5-task111 | 138 | 读回被写节点的 script 属性（不是工具自己响应里的 attached:true） |
+| `editor_create_animation` | `witness_read` | `editor_list_animations` | runs/_exercises/ex_anim2/h2b-task111 | 23 | 读回动画列表，新建的动画在其中 |
+| `editor_add_animation_track` | `witness_read` | `editor_get_animation_info` | runs/_exercises/ex_anim2/h2b-task111 | 29 | 读回同一动画的轨道表 |
+| `editor_set_animation_keyframe` | `witness_read` | `editor_get_animation_info` | runs/_exercises/ex_anim2/h2b-task111 | 29 | 读回同一动画的关键帧 |
+| `editor_remove_animation` | `witness_read` | `editor_list_animations` | runs/_exercises/ex_anim2/h2b-task111 | 23 | 读回动画列表，被删的动画不在了 |
+| `editor_set_physics_layers` | `witness_read` | `editor_get_node_properties` | runs/_exercises/ex_write5/c4-v5-task111 | 138 | 读回同一个节点的 collision_layer / collision_mask |
+| `editor_setup_physics_body` | `witness_read` | `editor_get_scene_tree` | runs/_exercises/ex_write5/c4-v5-task111 | 132 | 建出来的物理体节点必须出现在编辑场景树里 |
+| `editor_set_control_theme` | `witness_read` | `editor_get_node_properties` | runs/_exercises/ex_write5/c4-v5-task111 | 138 | 读回同一个 Control 的 theme 属性（不是工具自己响应里的 applied:true） |
+| `editor_create_animation_tree` | `witness_read` | `editor_get_animation_tree_structure` | runs/_exercises/ex_anim2/h2b-task111 | 88 | 读回 AnimationTree 的结构（tree_root / 状态机） |
+| `editor_add_state_machine_state` | `witness_read` | `editor_get_animation_tree_structure` | runs/_exercises/ex_anim2/h2b-task111 | 88 | 读回状态机里的状态列表 |
+| `editor_remove_state_machine_state` | `witness_read` | `editor_get_animation_tree_structure` | runs/_exercises/ex_anim2/h2b-task111 | 88 | 读回状态机里的状态列表，被删的状态不在了 |
+| `editor_add_state_machine_transition` | `witness_read` | `editor_get_animation_tree_structure` | runs/_exercises/ex_anim2/h2b-task111 | 88 | 读回状态机里的迁移列表 |
+| `editor_remove_state_machine_transition` | `witness_read` | `editor_get_animation_tree_structure` | runs/_exercises/ex_anim2/h2b-task111 | 88 | 读回状态机里的迁移列表，被删的迁移不在了 |
+| `editor_set_blend_tree_node` | `witness_read` | `editor_get_animation_tree_structure` | runs/_exercises/ex_anim2/h2b-task111 | 88 | 读回混合树节点真的挂在树上 |
+| `editor_set_animation_tree_parameter` | `witness_read` | `editor_get_animation_tree_structure` | runs/_exercises/ex_anim2/h2b-task111 | 88 | 读回参数表里出现被写的参数 |
 
 **被拒的声明（在声明的 run 里找不到合格的见证调用，档位不授予）**：
 
