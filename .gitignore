@@ -183,6 +183,13 @@ godot-mcp/dist/*.zip
 godot-mcp/**/__pycache__/
 godot-mcp/**/*.pyc
 
+# TASK-125：本地模型权重（NeoHorse-Jev-4B 完整包约 9.15 GB）**绝不入库**。
+# 默认落点故意放在**仓库之外** `F:\models\NeoHorse-Jev-4B`，这条规则是
+# 万一有人把权重下到仓库里时的兜底（与 D165 同一把尺子：大块二进制不入库）。
+godot-mcp/models/
+godot-mcp/**/*.safetensors
+godot-mcp/**/*.gguf
+
 # 覆盖练习里**已被取代**的三份中间工程：ex_write5/ex_write6 取代了 ex_write2/3/4
 # （见 recovery/reports/TASK-111-REPORT.md §F2 与 TASK-115 的 F2 说明），它们留在盘上
 # 作对照但不进历史。其余 `_exercises/*` 是覆盖证据的**源码与场景**，故意入库。
