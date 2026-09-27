@@ -1,0 +1,218 @@
+{
+ "_comment": [
+  "TASK-116 P6 -- the capability table: what a human must be able to do in each game,",
+  "and which declared InputMap action is supposed to deliver it.",
+  "",
+  "Why this exists: P1..P5 can all be green on a game nobody can actually play. A Lunar",
+  "Lander whose only key is 'thrust' passes P1 (it draws), P2 (the key responds), P3 (the",
+  "loop runs) and, if the README documents the one key, P5 as well -- and it is still not",
+  "a game. P6 is the missing half: every row names a capability and the observable that",
+  "must move when that capability's action is injected, and the gate checks each row",
+  "against the same attributable evidence P2 collects.",
+  "",
+  "The table is authored by hand -- that part is judgement and is meant to be argued with.",
+  "Every row of it is then machine-checked -- that part is evidence.",
+  "",
+  "'observable' is a substring of a changed state key, and may list alternatives with '|':",
+  "a turn-based game legitimately refuses a move (a wall, the board edge, an illegal",
+  "direction) and records the refusal in its own exported counter, so 'the key did",
+  "something' is true either way.",
+  "",
+  "Where a game had NO exported refusal counter, TASK-116 added one (`frogger.RejectedSteps`,",
+  "`pacman.RejectedSteps`, `flappy.Restarts`). That is not a way to make the gate green: it is",
+  "the project's own design convention #1 ('observable state must be a Godot property') applied",
+  "to a case it had missed -- without it, 'the frog cannot hop down from the start row' and",
+  "'the down key is not wired at all' produced byte-identical evidence.",
+  "",
+  "'missing' records a capability that no declared action delivers yet -- the gate reports",
+  "it as a FAIL and the defect register carries it with a proposed patch. Rows are removed",
+  "from 'missing' only when the action really exists and really responds."
+ ],
+ "games": {
+  "asteroids": {
+   "goal": "fly the ship, shoot the rocks, survive",
+   "capabilities": [
+    {"need": "turn left", "action": "ast_left", "observable": "ShipAngle"},
+    {"need": "turn right", "action": "ast_right", "observable": "ShipAngle"},
+    {"need": "thrust", "action": "ast_thrust", "observable": "ShipVelX|ShipVelY|Thrusting"},
+    {"need": "fire", "action": "ast_fire", "observable": "ShotsFired"}
+   ]
+  },
+  "bomberman": {
+   "goal": "walk the grid, place bombs, blow up the bricks without dying",
+   "capabilities": [
+    {"need": "walk up", "action": "bomb_up", "observable": "PlayerRow|RejectedMoves"},
+    {"need": "walk down", "action": "bomb_down", "observable": "PlayerRow|RejectedMoves"},
+    {"need": "walk left", "action": "bomb_left", "observable": "PlayerCol|RejectedMoves"},
+    {"need": "walk right", "action": "bomb_right", "observable": "PlayerCol|RejectedMoves"},
+    {"need": "place a bomb", "action": "bomb_place", "observable": "BombsPlaced|BombsActive"}
+   ]
+  },  "breakout": {
+   "goal": "keep the ball alive with the paddle and clear the bricks",
+   "capabilities": [
+    {"need": "move the paddle left", "action": "breakout_left", "observable": "Paddle|MinX"},
+    {"need": "move the paddle right", "action": "breakout_right", "observable": "Paddle|MaxX"},
+    {"need": "launch the ball", "action": "breakout_launch", "observable": "Launched|Ball"}
+   ]
+  },
+  "flappy": {
+   "goal": "flap through the gaps and keep the bird alive",
+   "capabilities": [
+    {"need": "flap", "action": "flap", "observable": "BirdVelocity|BirdY"},
+    {"need": "restart after dying", "action": "flappy_restart", "observable": "Restarts|GameOver|Score"}
+   ]
+  },
+  "frogger": {
+   "goal": "hop the frog across the road and the river",
+   "hold_ms": 150,
+   "capabilities": [
+    {"need": "hop up", "action": "frog_up", "observable": "FrogRow|Lives|GameOver|HomesReached|Score"},
+    {"need": "hop down", "action": "frog_down", "observable": "FrogRow|RejectedSteps"},
+    {"need": "hop left", "action": "frog_left", "observable": "FrogCol"},
+    {"need": "hop right", "action": "frog_right", "observable": "FrogCol"}
+   ]
+  },
+  "game2048": {
+   "goal": "merge tiles to reach 2048",
+   "capabilities": [
+    {"need": "slide up", "action": "m2048_up", "observable": "MoveCount|MovesRejected|GridHash"},
+    {"need": "slide down", "action": "m2048_down", "observable": "MoveCount|MovesRejected|GridHash"},
+    {"need": "slide left", "action": "m2048_left", "observable": "MoveCount|MovesRejected|GridHash"},
+    {"need": "slide right", "action": "m2048_right", "observable": "MoveCount|MovesRejected|GridHash"}
+   ]
+  },
+  "lunarlander": {
+   "goal": "steer the lander onto a pad without crashing",
+   "capabilities": [
+    {"need": "burn (thrust)", "action": "ll_thrust", "observable": "Fuel|ThrustCount"},
+    {"need": "turn left", "action": "ll_rotate_left", "observable": "AngleDeg|RejectedRotations"},
+    {"need": "turn right", "action": "ll_rotate_right", "observable": "AngleDeg|RejectedRotations"}
+   ]
+  },
+  "match3": {
+   "goal": "swap two adjacent gems to line up three or more",
+   "capabilities": [
+    {"need": "move the cursor left", "action": "m3_left", "observable": "CursorCol"},
+    {"need": "move the cursor right", "action": "m3_right", "observable": "CursorCol"},
+    {"need": "move the cursor up", "action": "m3_up", "observable": "CursorRow"},
+    {"need": "move the cursor down", "action": "m3_down", "observable": "CursorRow"},
+    {"need": "swap the cursor's gem with the one to its right", "action": "m3_swap",
+     "observable": "LastSwap|Score|Moves|RejectedMoves"}
+   ]
+  },
+  "minesweeper": {
+   "goal": "reveal every safe cell without hitting a mine",
+   "capabilities": [
+    {"need": "move the cursor left", "action": "mine_left", "observable": "CursorCol"},
+    {"need": "move the cursor right", "action": "mine_right", "observable": "CursorCol"},
+    {"need": "move the cursor up", "action": "mine_up", "observable": "CursorRow"},
+    {"need": "move the cursor down", "action": "mine_down", "observable": "CursorRow"},
+    {"need": "reveal the cell under the cursor", "action": "mine_reveal",
+     "observable": "RevealedCount|Moves|RejectedMoves|MinesRelocated"},
+    {"need": "flag the cell under the cursor", "action": "mine_flag",
+     "observable": "FlaggedCount|FlagToggles|RejectedMoves"}
+   ]
+  },
+  "missilecommand": {
+   "goal": "intercept the incoming missiles before they land on the cities",
+   "capabilities": [
+    {"need": "aim left", "action": "mc_left", "observable": "CursorX"},
+    {"need": "aim right", "action": "mc_right", "observable": "CursorX"},
+    {"need": "fire at the cursor", "action": "mc_fire", "observable": "Fired|Ammo|InterceptorAlive"}
+   ]
+  },
+  "pacman": {
+   "goal": "eat every pellet and dodge the ghosts",
+   "capabilities": [
+    {"need": "move up", "action": "pac_up", "observable": "PacRow|PacCol|RejectedSteps"},
+    {"need": "move down", "action": "pac_down", "observable": "PacRow|PacCol|RejectedSteps"},
+    {"need": "move left", "action": "pac_left", "observable": "PacCol|PacRow"},
+    {"need": "move right", "action": "pac_right", "observable": "PacCol|PacRow"}
+   ]
+  },
+  "platformer": {
+   "goal": "run and jump to the goal, collecting the gems",
+   "capabilities": [
+    {"need": "run left", "action": "plat_left", "observable": "PlayerX|VelX|Facing"},
+    {"need": "run right", "action": "plat_right", "observable": "PlayerX|VelX|Facing"},
+    {"need": "jump", "action": "plat_jump", "observable": "PlayerY|VelY|Jumps|JumpsRejected"}
+   ]
+  },
+  "pong": {
+   "goal": "keep the ball in play and score five points",
+   "capabilities": [
+    {"need": "move the left paddle up", "action": "pong_left_up", "observable": "PaddleLeft"},
+    {"need": "move the left paddle down", "action": "pong_left_down", "observable": "PaddleLeft"},
+    {"need": "move the right paddle up", "action": "pong_right_up", "observable": "PaddleRight"},
+    {"need": "move the right paddle down", "action": "pong_right_down", "observable": "PaddleRight"},
+    {"need": "serve the ball", "action": "pong_serve", "observable": "Ball|Velocity"}
+   ]
+  },
+  "puzzlebobble": {
+   "goal": "aim and shoot bubbles to clear the board",
+   "capabilities": [
+    {"need": "aim left", "action": "pb_left", "observable": "AngleIndex|ShooterCol"},
+    {"need": "aim right", "action": "pb_right", "observable": "AngleIndex|ShooterCol"},
+    {"need": "shoot", "action": "pb_shoot", "observable": "Shots|ProjActive"}
+   ]
+  },
+  "rtype": {
+   "goal": "fly the ship, shoot the wave, survive",
+   "capabilities": [
+    {"need": "fly left", "action": "rt_left", "observable": "PlayerX|RejectedMoves"},
+    {"need": "fly right", "action": "rt_right", "observable": "PlayerX|RejectedMoves"},
+    {"need": "fly up", "action": "rt_up", "observable": "PlayerY|RejectedMoves"},
+    {"need": "fly down", "action": "rt_down", "observable": "PlayerY|RejectedMoves"},
+    {"need": "fire", "action": "rt_fire", "observable": "BulletsFired|BulletsActive"}
+   ]
+  },
+  "snake": {
+   "goal": "eat the food and grow without hitting the wall or yourself",
+   "capabilities": [
+    {"need": "turn up", "action": "snake_up", "observable": "DirectionX|DirectionY|LastRefusedInput"},
+    {"need": "turn down", "action": "snake_down", "observable": "DirectionX|DirectionY|LastRefusedInput"},
+    {"need": "turn left", "action": "snake_left", "observable": "DirectionX|DirectionY|LastRefusedInput"},
+    {"need": "turn right", "action": "snake_right", "observable": "DirectionX|DirectionY|LastRefusedInput"},
+    {"need": "pause", "action": "snake_pause", "observable": "Paused"}
+   ]
+  },
+  "sokoban": {
+   "goal": "push every box onto a goal",
+   "capabilities": [
+    {"need": "walk up", "action": "soko_up", "observable": "PlayerRow|RejectedMoves"},
+    {"need": "walk down", "action": "soko_down", "observable": "PlayerRow|RejectedMoves"},
+    {"need": "walk left", "action": "soko_left", "observable": "PlayerCol|RejectedMoves"},
+    {"need": "walk right", "action": "soko_right", "observable": "PlayerCol|RejectedMoves"}
+   ]
+  },
+  "spaceinvaders": {
+   "goal": "shoot the invaders before they reach the bottom",
+   "capabilities": [
+    {"need": "move left", "action": "si_left", "observable": "PlayerX"},
+    {"need": "move right", "action": "si_right", "observable": "PlayerX"},
+    {"need": "fire", "action": "si_fire", "observable": "ShotsFired|BulletActive"}
+   ]
+  },
+  "tetris": {
+   "goal": "stack the falling pieces and clear lines",
+   "capabilities": [
+    {"need": "move left", "action": "tetris_left", "observable": "PieceX"},
+    {"need": "move right", "action": "tetris_right", "observable": "PieceX"},
+    {"need": "rotate", "action": "tetris_rotate", "observable": "PieceRot"},
+    {"need": "soft drop", "action": "tetris_down", "observable": "PieceY|Score|Ticks"},
+    {"need": "hard drop", "action": "tetris_drop", "observable": "PieceY|Score|Lines|FilledCells"}
+   ]
+  },
+  "towerdefense": {
+   "goal": "place towers on the map so the enemies never reach the exit",
+   "capabilities": [
+    {"need": "move the cursor left", "action": "td_left", "observable": "CursorCol"},
+    {"need": "move the cursor right", "action": "td_right", "observable": "CursorCol"},
+    {"need": "move the cursor up", "action": "td_up", "observable": "CursorRow"},
+    {"need": "move the cursor down", "action": "td_down", "observable": "CursorRow"},
+    {"need": "place a tower at the cursor", "action": "td_place",
+     "observable": "TowersPlaced|Gold|TowerList"}
+   ]
+  }
+ }
+}

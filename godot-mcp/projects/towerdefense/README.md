@@ -10,6 +10,27 @@
 | 主场景 | `res://scenes/main.tscn` |
 | 根脚本 | `res://src/TowerDefenseGame.cs`（类 `TowerDefenseGame`） |
 
+## 玩法
+
+800×600。目标：place towers on the map so the enemies never reach the exit。
+
+| 操作 | 动作名 | 键 |
+|---|---|---|
+| move the cursor left | `td_left` | `A` |
+| move the cursor right | `td_right` | `D` |
+| move the cursor up | `td_up` | `W` |
+| move the cursor down | `td_down` | `S` |
+| place a tower at the cursor | `td_place` | `SPACE` |
+
+仅测试/辅助用的动作（无头测试推进局面用，玩家不需要按）：
+
+| 动作名 | 键 |
+|---|---|
+| `td_auto_step` | `G` |
+
+> 动作名就是 `project.godot` 的 `[input]` 里的名字，可用 `running_game_capture_screenshot` + `Input.action_press` 由 MCP 端点精确复现；
+> 可玩性门（`tools/playability_gate.py`）会逐条注入这些键，并要求**确实出现可归因的状态或像素变化**。
+
 ## 构建（离线）
 
 ```cmd

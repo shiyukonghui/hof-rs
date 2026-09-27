@@ -10,6 +10,27 @@
 | 主场景 | `res://scenes/main.tscn` |
 | 根脚本 | `res://src/Match3Game.cs`（类 `Match3Game`） |
 
+## 玩法
+
+800×600。目标：swap two adjacent gems to line up three or more。
+
+| 操作 | 动作名 | 键 |
+|---|---|---|
+| move the cursor left | `m3_left` | `A` |
+| move the cursor right | `m3_right` | `D` |
+| move the cursor up | `m3_up` | `W` |
+| move the cursor down | `m3_down` | `S` |
+| swap the cursor's gem with the one to its right | `m3_swap` | `SPACE` |
+
+仅测试/辅助用的动作（无头测试推进局面用，玩家不需要按）：
+
+| 动作名 | 键 |
+|---|---|
+| `m3_auto_move` | `G` |
+
+> 动作名就是 `project.godot` 的 `[input]` 里的名字，可用 `running_game_capture_screenshot` + `Input.action_press` 由 MCP 端点精确复现；
+> 可玩性门（`tools/playability_gate.py`）会逐条注入这些键，并要求**确实出现可归因的状态或像素变化**。
+
 ## 构建（离线）
 
 ```cmd

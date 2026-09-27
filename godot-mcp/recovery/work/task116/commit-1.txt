@@ -1,0 +1,102 @@
+feat(godot-mcp): TASK-116 (D161) - the playability gate, and the 19 games it found were unplayable
+
+Why this exists: the user played the 20 games and reported that some of them are not
+playable, while every piece of evidence we had came from `shots-editor` -- the WHOLE
+editor window (2978x1793 on this machine) with the running game embedded in a small
+sub-window inside it. A "512 px changed" measurement was a measurement of that little
+embedded region, not of what a player sees.
+
+What this adds
+--------------
+tools/playability_gate.py -- starts each game as a REAL game process (the engine binary
+without -e, a real OS window, never --headless) with the MCP endpoint on the GAME side,
+captures FULL-WINDOW frames through `running_game_capture_screenshot` (on the game side
+the viewport is always `tree->get_root()`, mcp_capture.cpp:270-296), records the OS
+window size, the root viewport size and the size the project declares next to every
+frame, and writes a filmstrip per game. Criteria, each machine-checked:
+
+  P1 visibility      content fraction + bounding-box coverage against the frame's own
+                     modal colour, over the frames taken BEFORE any input
+  P2 input response  every declared action, injected through the faithful channel
+                     `Input.parse_input_event` (the path a real key press takes: it sets
+                     the InputMap action state AND dispatches the event), measured
+                     against its OWN immediately preceding no-input control window
+  P3 main loop       Engine.get_frames_drawn() advances AND the game's own quantities move
+  P4 no crash/hang   process alive, no modal dialog (EnumWindows over the process tree),
+                     no MCP timeout
+  P5 discoverability InputMap vs the README's controls, and every declared action exercised
+  P6 control set     a hand-authored capability table (tools/playability_controls.json):
+                     for every thing a player must be able to do, the action that delivers
+                     it and the observable that must move. P1..P5 can all be green on a
+                     Lunar Lander whose only key is "thrust"; P6 is the missing half.
+
+tools/playtest_agent.py -- `decide(frames, state, goal) -> action`, two backends:
+`scripted` (the gate's default) and `openai` (OpenAI-compatible HTTP, screenshots as
+base64 + structured state, JSON action back, plus a `judge()` "does this look playable").
+`--probe` proves the transport against a built-in dumb server and a 500-returning one.
+
+What the gate found (the before run, preserved as runs/playability/playability.before.json)
+--------------------------------------------------------------------------------------------
+1/20 playable. P2 failed for 16, P5 for 19. Root cause, and it is one defect class:
+
+  D1  16 games shipped with `[Export] bool PollInput = false` -- and their `_Ready()`
+      calls a `Reset*()` that sets it false again -- so a human's keyboard did nothing
+      at all. That was chosen for deterministic headless testing; its consequence was
+      never measured, because the old evidence only ever looked at the editor.
+  D2  bomberman read `bomb_left`/`bomb_down` and sokoban read `soko_left`/`soko_down`,
+      none of which the InputMap declared -- half the directions never existed.
+  D3  D1's consequence, one row per game.
+  D5  19 of 20 READMEs documented no controls at all.
+  D11 29 capabilities that no action delivered (no rotate for the Lunar Lander, no cursor
+      for Match-3, no aim for Missile Command, no build for Tower Defense, ...).
+
+Fixes (all re-verified by re-running the same gate)
+--------------------------------------------------
+* PollInput defaults to true in the 16 games, and the `PollInput = false` inside the
+  startup `Reset*()` is gone; `SetPollInput(false)` / `ForceTestState` keep working and
+  remain the test-only switch. The deterministic defaults (AutoClock/AutoPlay/DriftSpeed)
+  are untouched, so a fresh process is still still until a key is pressed.
+* The 4 missing InputMap actions are declared, in Godot's own byte layout.
+* Real player controls for the 7 games that had none, wired to the games' own existing
+  API: lunarlander rotate (RotateLeft/RotateRight), rtype movement (MovePlayer),
+  puzzlebobble aim (Aim), match3 cursor+swap (Swap), minesweeper cursor+reveal+flag
+  (Reveal/ToggleFlag), missilecommand aim+fire (Fire), towerdefense cursor+place
+  (PlaceTower). The cursors are printed in the HUD so a player can see them, and each
+  starts mid-board, not in a corner where "up" and "left" clamp to nothing.
+* The headless-test actions moved off the player's keys (m3_auto_move, mc_auto_fire,
+  td_auto_step, mine_flag_next -> G); sessions inject by name, so they are unaffected.
+* A `## 玩法` section in all 19 READMEs, generated FROM each project's own [input] block,
+  so it is incapable of documenting a key that does not exist.
+* Three games had no observable for a refusal, which made "the frog cannot hop down from
+  the start row" byte-identical to "the down key is not wired". They gained the counter
+  the project's own design convention #1 asks for (frogger/pacman RejectedSteps,
+  flappy Restarts).
+
+After: 20/20 playable, P1..P6 all green, every fix re-verified by the same gate.
+
+Tool defects this task found and fixed in the gate itself (each one was a measurement error)
+-------------------------------------------------------------------------------------------
+* The state probe walked into the module's own `MCPServer` node and died on `.visible`;
+  every P3 sample was empty and would have read as "the loop does not advance".
+* The primary injection channel was `Viewport.push_input`, which dispatches but does NOT
+  set the InputMap action state -- so every game that polls `Input.IsActionPressed` was
+  reported as "suspicious action-only". `Input.parse_input_event` is the faithful channel.
+* A key was released only AFTER the state probe and the capture (~1 s of MCP round trips),
+  so a 150 ms hold became eight hops; in Frogger eight hops into the road became eight
+  deaths and the game was over before the next action was tested.
+* `@Node@N` (the GDScript executor's transient mount) and the always-advancing frame
+  counters were counted as "state changed", so any action could look like it responded.
+* After a harness failure the cmd -> console.exe -> engine tree survived `taskkill /T` and
+  held the port and the log file; start now sweeps by the run's unique port first.
+
+Evidence
+--------
+runs/playability/<game>/{frames/*.png, frames.json, filmstrip.png, gate.json, states/}
+runs/playability/playability.json (machine-readable) and playability.before.json
+runs/playability/summary.txt (the verbatim console log) and agent-probe.json
+recovery/reports/PLAYABILITY-REPORT.md and PLAYABILITY-DEFECTS.md (84 defects, all fixed
+and re-verified; the register is built from the before run and annotated from the after)
+
+The engine module is untouched: `git -C godot status --short` shows only Godot's own
+uid_cache.bin, so per iron rule 7 no variant rebuild / ten gates / accept_m1 / push is
+triggered.

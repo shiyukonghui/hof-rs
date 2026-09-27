@@ -205,11 +205,17 @@ public partial class LunarLanderGame : Node2D
     /// <summary>Index of the pad the probe named, -1 when the point is not on a pad.</summary>
     [Export] public int ProbeValue = -1;
 
-    /// <summary>When false the world ignores input (determinism rule: no polling by default).</summary>
-    [Export] public bool PollInput = false;
+    /// <summary>When true the game reads its player's keyboard. The test driver switches this
+    /// OFF explicitly (<see cref="SetPollInput"/>, <see cref="ForceTestState"/>) when it needs
+    /// a frozen, deterministic state; the deterministic defaults live in AutoClock / AutoPlay /
+    /// DriftSpeed, not here (TASK-116 defect D1).</summary>
+    [Export] public bool PollInput = true;
 
     /// <summary>Burns that arrived through the declared input action.</summary>
     [Export] public int InputThrusts = 0;
+
+    /// <summary>Attitude steps that arrived through the declared rotate actions (TASK-116 D3).</summary>
+    [Export] public int InputRotations = 0;
 
     /// <summary>What the last hook did -- the readback string a session quotes.</summary>
     [Export] public string LastEvent = "";
@@ -234,6 +240,8 @@ public partial class LunarLanderGame : Node2D
     private readonly List<ColorRect> _stars = new List<ColorRect>();
     private float _autoAccum;
     private bool _prevThrust;
+    private bool _prevRotateLeft;
+    private bool _prevRotateRight;
     private const int StarCount = 56;
 
     private int PadOf(int x)
@@ -515,7 +523,9 @@ public partial class LunarLanderGame : Node2D
         LastAutoSteps = 0;
         LastHookSteps = 0;
         _autoAccum = 0.0f;
-        PollInput = false;
+        // TASK-116 D1: was `PollInput = false;` -- that is what
+        // switched player input off again right after _Ready() ran.
+        // The deterministic entry point is ForceTestState / SetPollInput.
         InputThrusts = 0;
         _prevThrust = false;
         ProbeX = -1;
@@ -672,6 +682,8 @@ public partial class LunarLanderGame : Node2D
     {
         PollInput = enabled;
         _prevThrust = false;
+        _prevRotateLeft = false;
+        _prevRotateRight = false;
         LastEvent = $"poll_input={PollInput}";
         return LastEvent;
     }
@@ -686,6 +698,23 @@ public partial class LunarLanderGame : Node2D
             InputThrusts++;
         }
         _prevThrust = thrust;
+        // TASK-116 (defect D3): a lander whose only control is "burn" is not a game -- you
+        // cannot line up with a pad without turning. RotateLeft/RotateRight have existed all
+        // along as the session-driven API; they simply had no key bound to them.
+        var rotateLeft = Input.IsActionPressed("ll_rotate_left");
+        if (rotateLeft && !_prevRotateLeft && !GameOver)
+        {
+            RotateLeft();
+            InputRotations++;
+        }
+        _prevRotateLeft = rotateLeft;
+        var rotateRight = Input.IsActionPressed("ll_rotate_right");
+        if (rotateRight && !_prevRotateRight && !GameOver)
+        {
+            RotateRight();
+            InputRotations++;
+        }
+        _prevRotateRight = rotateRight;
     }
 
     public override void _Process(double delta)

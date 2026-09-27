@@ -112,9 +112,14 @@ public partial class FlappyBirdGame : Node2D
     /// <summary>When false (the default) the world only advances through the step hooks.</summary>
     [Export] public bool AutoRun = false;
 
-    /// <summary>When false (the default) the bird ignores input. The declared action is
-    /// <c>flap</c>; a test that wants it switches this on explicitly.</summary>
-    [Export] public bool PollInput = false;
+    /// <summary>When true the game reads its player's keyboard. The test driver switches this
+    /// OFF explicitly (<see cref="SetPollInput"/>, <see cref="ForceTestState"/>) when it needs
+    /// a frozen, deterministic state; the deterministic defaults live in AutoClock / AutoPlay /
+    /// DriftSpeed, not here (TASK-116 defect D1).</summary>
+    [Export] public bool PollInput = true;
+
+    /// <summary>Restarts that arrived through the declared `flappy_restart` action (TASK-116 D11).</summary>
+    [Export] public int Restarts = 0;
 
     /// <summary>Engine frames processed since the last reset (the clock, not the simulation).</summary>
     [Export] public int Ticks = 0;
@@ -279,6 +284,10 @@ public partial class FlappyBirdGame : Node2D
         Ticks++;
         if (PollInput && Input.IsActionPressed("flappy_restart"))
         {
+            // TASK-116 D11: the restart is observable even from a fresh game. Before this
+            // counter it only wrote values that were already at their defaults, so "the R key
+            // restarts" had no evidence a machine (or a player) could see.
+            Restarts++;
             AutoRun = false;
             _autoAccum = 0.0f;
             Score = 0;

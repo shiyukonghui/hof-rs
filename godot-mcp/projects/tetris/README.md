@@ -10,6 +10,21 @@
 | 主场景 | `res://scenes/main.tscn` |
 | 根脚本 | `res://src/TetrisGame.cs`（类 `TetrisGame`） |
 
+## 玩法
+
+800×600。目标：stack the falling pieces and clear lines。
+
+| 操作 | 动作名 | 键 |
+|---|---|---|
+| move left | `tetris_left` | `A` |
+| move right | `tetris_right` | `D` |
+| rotate | `tetris_rotate` | `W` |
+| soft drop | `tetris_down` | `S` |
+| hard drop | `tetris_drop` | `E` |
+
+> 动作名就是 `project.godot` 的 `[input]` 里的名字，可用 `running_game_capture_screenshot` + `Input.action_press` 由 MCP 端点精确复现；
+> 可玩性门（`tools/playability_gate.py`）会逐条注入这些键，并要求**确实出现可归因的状态或像素变化**。
+
 ## 构建（离线）
 
 ```cmd

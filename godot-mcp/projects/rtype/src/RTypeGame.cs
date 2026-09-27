@@ -67,6 +67,10 @@ public partial class RTypeGame : Node2D
     /// <summary>Ship y at the start of a fresh game.</summary>
     [Export] public int PlayerStartY = 300;
 
+    /// <summary>How many keyboard-driven ship moves happen per second (TASK-116 D3, frame-rate
+    /// independent: the accumulator is never `(int)(delta * rate)`).</summary>
+    [Export] public int PlayerStepsPerSecond = 20;
+
     /// <summary>Lives at the start of a fresh game.</summary>
     [Export] public int StartLives = 3;
 
@@ -239,11 +243,17 @@ public partial class RTypeGame : Node2D
     /// <summary>Index of the thing the probe named, -1 when the point is empty.</summary>
     [Export] public int ProbeValue = -1;
 
-    /// <summary>When false the world ignores input (determinism rule: no polling by default).</summary>
-    [Export] public bool PollInput = false;
+    /// <summary>When true the game reads its player's keyboard. The test driver switches this
+    /// OFF explicitly (<see cref="SetPollInput"/>, <see cref="ForceTestState"/>) when it needs
+    /// a frozen, deterministic state; the deterministic defaults live in AutoClock / AutoPlay /
+    /// DriftSpeed, not here (TASK-116 defect D1).</summary>
+    [Export] public bool PollInput = true;
 
     /// <summary>Shots that arrived through the declared input action.</summary>
     [Export] public int InputShots = 0;
+
+    /// <summary>Ship moves that arrived through the declared direction actions (TASK-116 D3).</summary>
+    [Export] public int InputMoves = 0;
 
     /// <summary>What the last hook did -- the readback string a session quotes.</summary>
     [Export] public string LastEvent = "";
@@ -267,6 +277,7 @@ public partial class RTypeGame : Node2D
     private Label _status;
     private float _autoAccum;
     private bool _prevFire;
+    private float _moveAccum;
     private const int EnemyPool = 16;
     private const int StarCount = 48;
 
@@ -736,7 +747,9 @@ public partial class RTypeGame : Node2D
         LastAutoSteps = 0;
         LastHookSteps = 0;
         _autoAccum = 0.0f;
-        PollInput = false;
+        // TASK-116 D1: was `PollInput = false;` -- that is what
+        // switched player input off again right after _Ready() ran.
+        // The deterministic entry point is ForceTestState / SetPollInput.
         InputShots = 0;
         _prevFire = false;
         Won = false;
@@ -936,11 +949,12 @@ public partial class RTypeGame : Node2D
     {
         PollInput = enabled;
         _prevFire = false;
+        _moveAccum = 0.0f;
         LastEvent = $"poll_input={PollInput}";
         return LastEvent;
     }
 
-    private void HandleInput()
+    private void HandleInput(double delta)
     {
         var fire = Input.IsActionPressed("rt_fire");
         // Press edges only: a key a scenario injected and never released fires exactly one bullet
@@ -951,6 +965,34 @@ public partial class RTypeGame : Node2D
             InputShots++;
         }
         _prevFire = fire;
+        // TASK-116 (defect D3): a ship that can only shoot and never move is not playable.
+        // MovePlayer is the session-driven move API; here it is driven from the keyboard at a
+        // fixed rate (PlayerSpeed pixels, PlayerStepsPerSecond times a second) so the ship does
+        // not move faster on a faster frame rate.
+        var dx = (Input.IsActionPressed("rt_right") ? 1 : 0) - (Input.IsActionPressed("rt_left") ? 1 : 0);
+        var dy = (Input.IsActionPressed("rt_down") ? 1 : 0) - (Input.IsActionPressed("rt_up") ? 1 : 0);
+        if (dx == 0 && dy == 0)
+        {
+            _moveAccum = 0.0f;
+            return;
+        }
+        _moveAccum += (float)delta * PlayerStepsPerSecond;
+        var guard = 0;
+        while (_moveAccum >= 1.0f && guard < 8)
+        {
+            _moveAccum -= 1.0f;
+            guard++;
+            if (GameOver)
+            {
+                break;
+            }
+            var before = PlayerX * 100000 + PlayerY;
+            MovePlayer(dx * PlayerSpeed, dy * PlayerSpeed);
+            if (PlayerX * 100000 + PlayerY != before)
+            {
+                InputMoves++;
+            }
+        }
     }
 
     public override void _Process(double delta)
@@ -965,7 +1007,7 @@ public partial class RTypeGame : Node2D
         }
         if (PollInput)
         {
-            HandleInput();
+            HandleInput(dt);
         }
         if (AutoClock > 0.0f)
         {

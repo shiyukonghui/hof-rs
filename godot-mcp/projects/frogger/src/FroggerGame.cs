@@ -150,11 +150,18 @@ public partial class FroggerGame : Node2D
     /// <summary>Traffic steps per second; 0 keeps the cars and logs still (the default).</summary>
     [Export] public float CarSpeed = 0.0f;
 
-    /// <summary>When false the frog ignores input (determinism rule: no polling by default).</summary>
-    [Export] public bool PollInput = false;
+    /// <summary>When true the game reads its player's keyboard. The test driver switches this
+    /// OFF explicitly (<see cref="SetPollInput"/>, <see cref="ForceTestState"/>) when it needs
+    /// a frozen, deterministic state; the deterministic defaults live in AutoClock / AutoPlay /
+    /// DriftSpeed, not here (TASK-116 defect D1).</summary>
+    [Export] public bool PollInput = true;
 
     /// <summary>Seconds between two input-driven cell moves, so a held key is a range and not a race.</summary>
     [Export] public float InputRepeat = 0.12f;
+
+    /// <summary>Hops the game refused (off the grid, or after the game was over). TASK-116 D11:
+    /// a refusal is a real answer to the player's key and must be an observable property.</summary>
+    [Export] public int RejectedSteps = 0;
 
     /// <summary>Frames processed since the last reset.</summary>
     [Export] public int Ticks = 0;
@@ -574,6 +581,7 @@ public partial class FroggerGame : Node2D
     {
         if (GameOver)
         {
+            RejectedSteps++;
             LastEvent = "step refused: game over";
             return LastEvent;
         }
@@ -581,6 +589,11 @@ public partial class FroggerGame : Node2D
         var nextRow = FrogRow + drow;
         if (nextCol < 0 || nextCol >= Cols || nextRow < 0 || nextRow >= Rows)
         {
+            // TASK-116 D11: a refused hop is a real answer to the player's key, and the project's
+            // own design convention says observable state must be a Godot property. Before this
+            // counter the refusal left no trace at all, so "the frog cannot hop down from the
+            // start row" was indistinguishable from "the down key is not wired".
+            RejectedSteps++;
             LastEvent = $"blocked at={nextCol},{nextRow} from={FrogCol},{FrogRow}";
             return LastEvent;
         }

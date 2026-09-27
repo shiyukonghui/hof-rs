@@ -10,6 +10,19 @@
 | 主场景 | `res://scenes/main.tscn` |
 | 根脚本 | `res://src/BreakoutGame.cs`（类 `BreakoutGame`） |
 
+## 玩法
+
+800×600。目标：keep the ball alive with the paddle and clear the bricks。
+
+| 操作 | 动作名 | 键 |
+|---|---|---|
+| move the paddle left | `breakout_left` | `A` |
+| move the paddle right | `breakout_right` | `D` |
+| launch the ball | `breakout_launch` | `SPACE` |
+
+> 动作名就是 `project.godot` 的 `[input]` 里的名字，可用 `running_game_capture_screenshot` + `Input.action_press` 由 MCP 端点精确复现；
+> 可玩性门（`tools/playability_gate.py`）会逐条注入这些键，并要求**确实出现可归因的状态或像素变化**。
+
 ## 构建（离线）
 
 ```cmd

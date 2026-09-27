@@ -199,11 +199,17 @@ public partial class PuzzleBobbleGame : Node2D
     /// <summary>A readable name for the probed cell: outside / projectile / occupied / shooter / empty.</summary>
     [Export] public string ProbeState = "";
 
-    /// <summary>When false the world ignores input (determinism rule: no polling by default).</summary>
-    [Export] public bool PollInput = false;
+    /// <summary>When true the game reads its player's keyboard. The test driver switches this
+    /// OFF explicitly (<see cref="SetPollInput"/>, <see cref="ForceTestState"/>) when it needs
+    /// a frozen, deterministic state; the deterministic defaults live in AutoClock / AutoPlay /
+    /// DriftSpeed, not here (TASK-116 defect D1).</summary>
+    [Export] public bool PollInput = true;
 
     /// <summary>Shots that arrived through the declared input action.</summary>
     [Export] public int InputShots = 0;
+
+    /// <summary>Aim steps that arrived through the declared pb_left / pb_right actions (TASK-116 D3).</summary>
+    [Export] public int InputAims = 0;
 
     /// <summary>What the last hook did -- the readback string a session quotes.</summary>
     [Export] public string LastEvent = "";
@@ -219,6 +225,8 @@ public partial class PuzzleBobbleGame : Node2D
     private ColorRect _nextSprite;
     private float _autoAccum;
     private bool _prevShoot;
+    private bool _prevAimLeft;
+    private bool _prevAimRight;
     private const int MaxChain = 24;
     private static readonly int[] AngleDc = { -2, -1, 0, 1, 2 };
     private static readonly int[] AngleDr = { -1, -1, -1, -1, -1 };
@@ -780,7 +788,9 @@ public partial class PuzzleBobbleGame : Node2D
         LastAutoSteps = 0;
         LastHookSteps = 0;
         _autoAccum = 0.0f;
-        PollInput = false;
+        // TASK-116 D1: was `PollInput = false;` -- that is what
+        // switched player input off again right after _Ready() ran.
+        // The deterministic entry point is ForceTestState / SetPollInput.
         InputShots = 0;
         _prevShoot = false;
         ProbeCol = -1;
@@ -926,6 +936,8 @@ public partial class PuzzleBobbleGame : Node2D
     {
         PollInput = enabled;
         _prevShoot = false;
+        _prevAimLeft = false;
+        _prevAimRight = false;
         LastEvent = $"poll_input={PollInput}";
         return LastEvent;
     }
@@ -940,6 +952,23 @@ public partial class PuzzleBobbleGame : Node2D
             InputShots++;
         }
         _prevShoot = shoot;
+        // TASK-116 (defect D3): without aim there is no game -- the shooter had no way to
+        // choose a direction, so every bubble flew at the same angle. Press edges again, so
+        // a held key walks the five-entry aim table one step at a time instead of jumping.
+        var aimLeft = Input.IsActionPressed("pb_left");
+        if (aimLeft && !_prevAimLeft && !GameOver)
+        {
+            Aim(AngleIndex - 1);
+            InputAims++;
+        }
+        _prevAimLeft = aimLeft;
+        var aimRight = Input.IsActionPressed("pb_right");
+        if (aimRight && !_prevAimRight && !GameOver)
+        {
+            Aim(AngleIndex + 1);
+            InputAims++;
+        }
+        _prevAimRight = aimRight;
     }
 
     public override void _Process(double delta)

@@ -10,6 +10,18 @@
 | 主场景 | `res://scenes/main.tscn` |
 | 根脚本 | `res://src/FlappyBirdGame.cs`（类 `FlappyBirdGame`） |
 
+## 玩法
+
+800×600。目标：flap through the gaps and keep the bird alive。
+
+| 操作 | 动作名 | 键 |
+|---|---|---|
+| flap | `flap` | `SPACE` |
+| restart after dying | `flappy_restart` | `R` |
+
+> 动作名就是 `project.godot` 的 `[input]` 里的名字，可用 `running_game_capture_screenshot` + `Input.action_press` 由 MCP 端点精确复现；
+> 可玩性门（`tools/playability_gate.py`）会逐条注入这些键，并要求**确实出现可归因的状态或像素变化**。
+
 ## 构建（离线）
 
 ```cmd

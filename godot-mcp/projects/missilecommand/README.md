@@ -10,6 +10,25 @@
 | 主场景 | `res://scenes/main.tscn` |
 | 根脚本 | `res://src/MissileCommandGame.cs`（类 `MissileCommandGame`） |
 
+## 玩法
+
+800×600。目标：intercept the incoming missiles before they land on the cities。
+
+| 操作 | 动作名 | 键 |
+|---|---|---|
+| aim left | `mc_left` | `A` |
+| aim right | `mc_right` | `D` |
+| fire at the cursor | `mc_fire` | `SPACE` |
+
+仅测试/辅助用的动作（无头测试推进局面用，玩家不需要按）：
+
+| 动作名 | 键 |
+|---|---|
+| `mc_auto_fire` | `G` |
+
+> 动作名就是 `project.godot` 的 `[input]` 里的名字，可用 `running_game_capture_screenshot` + `Input.action_press` 由 MCP 端点精确复现；
+> 可玩性门（`tools/playability_gate.py`）会逐条注入这些键，并要求**确实出现可归因的状态或像素变化**。
+
 ## 构建（离线）
 
 ```cmd

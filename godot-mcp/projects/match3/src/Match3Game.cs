@@ -155,11 +155,31 @@ public partial class Match3Game : Node2D
     /// </summary>
     [Export] public int LastHookSteps = 0;
 
-    /// <summary>When false the board ignores input (determinism rule: no polling by default).</summary>
-    [Export] public bool PollInput = false;
+    /// <summary>When true the game reads its player's keyboard. The test driver switches this
+    /// OFF explicitly (<see cref="SetPollInput"/>, <see cref="ForceTestState"/>) when it needs
+    /// a frozen, deterministic state; the deterministic defaults live in AutoClock / AutoPlay /
+    /// DriftSpeed, not here (TASK-116 defect D1).</summary>
+    [Export] public bool PollInput = true;
 
     /// <summary>Auto moves that arrived through the declared input action.</summary>
     [Export] public int InputMoves = 0;
+
+    /// <summary>Board row the player's keyboard cursor is on (TASK-116 D3). Drawn into the HUD
+    /// (`CURSOR r,c`) so the player can see where a swap would happen.</summary>
+    [Export] public int CursorRow = 0;
+
+    /// <summary>Board column the player's keyboard cursor is on (TASK-116 D3).</summary>
+    [Export] public int CursorCol = 0;
+
+    /// <summary>Cursor moves and swaps that arrived through the declared input actions.</summary>
+    [Export] public int InputCursors = 0;
+
+    /// <summary>Swaps that arrived through the declared `m3_swap` action.</summary>
+    [Export] public int InputSwaps = 0;
+
+    /// <summary>Of those, the ones the game refused (no line of three) -- a refusal still proves
+    /// the key was read, which is what the playability gate asks about.</summary>
+    [Export] public int InputRejectedSwaps = 0;
 
     /// <summary>Frames processed since the last reset.</summary>
     [Export] public int Ticks = 0;
@@ -174,6 +194,11 @@ public partial class Match3Game : Node2D
     private Label _status;
     private float _autoAccum;
     private bool _prevMove;
+    private bool _prevUp;
+    private bool _prevDown;
+    private bool _prevLeft;
+    private bool _prevRight;
+    private bool _prevSwap;
     private readonly List<int> _matches = new List<int>();
 
     private static readonly Color[] Palette =
@@ -426,7 +451,11 @@ public partial class Match3Game : Node2D
         if (_hud != null)
         {
             _hud.Text = $"TARGET {Target}  SCORE {Score}  MOVES {Moves}/{MovesLimit}  "
-                        + $"CHAIN {LastChain}  CLEARED {TotalCleared}";
+                        + $"CHAIN {LastChain}  CLEARED {TotalCleared}  "
+                        + $"CURSOR {CursorRow},{CursorCol}";
+            // TASK-116 (D3): the cursor is part of the HUD on purpose. The board is drawn with
+            // _Draw and a selection rectangle would be invisible against it; putting the cursor
+            // in the text line is the smallest change that makes it *visible to the player*.
         }
         if (_status != null)
         {
@@ -621,9 +650,21 @@ public partial class Match3Game : Node2D
     public string SetPollInput(bool enabled)
     {
         PollInput = enabled;
-        _prevMove = false;
+        ResetEdgeDetectors();
         LastEvent = $"poll_input={PollInput}";
         return LastEvent;
+    }
+
+    /// <summary>Forgets the press-edge state of every declared action, so a key that is still
+    /// held when polling is switched on does not fire as a fresh press.</summary>
+    private void ResetEdgeDetectors()
+    {
+        _prevMove = false;
+        _prevUp = false;
+        _prevDown = false;
+        _prevLeft = false;
+        _prevRight = false;
+        _prevSwap = false;
     }
 
     private void HandleInput()
@@ -641,6 +682,39 @@ public partial class Match3Game : Node2D
             }
         }
         _prevMove = move;
+        // TASK-116 (defect D3/D4): `m3_left` and `m3_right` were declared and never read, and
+        // there was no way to choose *which* gems to swap at all -- the only "move" was the
+        // random AutoStep above. The cursor plus Space is the smallest honest control scheme:
+        // W/A/S/D place the cursor, Space swaps the cursor's gem with its right neighbour.
+        MoveCursor("m3_up", -1, 0, ref _prevUp);
+        MoveCursor("m3_down", 1, 0, ref _prevDown);
+        MoveCursor("m3_left", 0, -1, ref _prevLeft);
+        MoveCursor("m3_right", 0, 1, ref _prevRight);
+        var swap = Input.IsActionPressed("m3_swap");
+        if (swap && !_prevSwap && !GameOver)
+        {
+            var before = Moves;
+            Swap(CursorRow, CursorCol, CursorRow, CursorCol + 1);
+            InputSwaps++;
+            if (Moves == before)
+            {
+                InputRejectedSwaps++;
+            }
+        }
+        _prevSwap = swap;
+    }
+
+    /// <summary>One keyboard cursor step, on the press edge, clamped to the board.</summary>
+    private void MoveCursor(string action, int dRow, int dCol, ref bool previous)
+    {
+        var held = Input.IsActionPressed(action);
+        if (held && !previous && !GameOver)
+        {
+            CursorRow = System.Math.Max(0, System.Math.Min(Rows - 1, CursorRow + dRow));
+            CursorCol = System.Math.Max(0, System.Math.Min(Cols - 1, CursorCol + dCol));
+            InputCursors++;
+        }
+        previous = held;
     }
 
     public override void _Process(double delta)
@@ -807,7 +881,7 @@ public partial class Match3Game : Node2D
         _autoAccum = 0.0f;
         PollInput = false;
         InputMoves = 0;
-        _prevMove = false;
+        ResetEdgeDetectors();
         Recompute();
         ApplyBoard();
         UpdateHud();
@@ -838,9 +912,19 @@ public partial class Match3Game : Node2D
         LastAutoSteps = 0;
         LastHookSteps = 0;
         _autoAccum = 0.0f;
-        PollInput = false;
+        // TASK-116 D1: was `PollInput = false;` -- that is what
+        // switched player input off again right after _Ready() ran.
+        // The deterministic entry point is ForceTestState / SetPollInput.
         InputMoves = 0;
-        _prevMove = false;
+        // TASK-116 D3: start the cursor in the middle of the board. A cursor parked at (0,0)
+        // makes "up" and "left" clamp to nothing on the very first press, which is both a bad
+        // first impression for a player and an untestable capability.
+        CursorRow = Rows / 2;
+        CursorCol = Cols / 2;
+        InputCursors = 0;
+        InputSwaps = 0;
+        InputRejectedSwaps = 0;
+        ResetEdgeDetectors();
         Ticks = 0;
         LastEvent = "reset";
     }

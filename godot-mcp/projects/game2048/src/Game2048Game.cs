@@ -149,8 +149,11 @@ public partial class Game2048Game : Node2D
     /// <summary>Value the deterministic spawn drops.</summary>
     [Export] public int SpawnValue = 2;
 
-    /// <summary>When false the board ignores input (determinism rule: no polling by default).</summary>
-    [Export] public bool PollInput = false;
+    /// <summary>When true the game reads its player's keyboard. The test driver switches this
+    /// OFF explicitly (<see cref="SetPollInput"/>, <see cref="ForceTestState"/>) when it needs
+    /// a frozen, deterministic state; the deterministic defaults live in AutoClock / AutoPlay /
+    /// DriftSpeed, not here (TASK-116 defect D1).</summary>
+    [Export] public bool PollInput = true;
 
     /// <summary>Moves that arrived through the declared input actions.</summary>
     [Export] public int InputMoves = 0;
@@ -290,7 +293,9 @@ public partial class Game2048Game : Node2D
         SpawnRow = 0;
         SpawnCol = 0;
         SpawnValue = 2;
-        PollInput = false;
+        // TASK-116 D1: was `PollInput = false;` -- that is what
+        // switched player input off again right after _Ready() ran.
+        // The deterministic entry point is ForceTestState / SetPollInput.
         InputMoves = 0;
         _prevUp = _prevRight = _prevDown = _prevLeft = false;
         Ticks = 0;

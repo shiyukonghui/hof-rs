@@ -10,6 +10,29 @@
 | 主场景 | `res://scenes/main.tscn` |
 | 根脚本 | `res://src/MinesweeperGame.cs`（类 `MinesweeperGame`） |
 
+## 玩法
+
+800×600。目标：reveal every safe cell without hitting a mine。
+
+| 操作 | 动作名 | 键 |
+|---|---|---|
+| move the cursor left | `mine_left` | `A` |
+| move the cursor right | `mine_right` | `D` |
+| move the cursor up | `mine_up` | `W` |
+| move the cursor down | `mine_down` | `S` |
+| reveal the cell under the cursor | `mine_reveal` | `SPACE` |
+| flag the cell under the cursor | `mine_flag` | `F` |
+
+仅测试/辅助用的动作（无头测试推进局面用，玩家不需要按）：
+
+| 动作名 | 键 |
+|---|---|
+| `mine_reveal_next` | `R` |
+| `mine_flag_next` | `G` |
+
+> 动作名就是 `project.godot` 的 `[input]` 里的名字，可用 `running_game_capture_screenshot` + `Input.action_press` 由 MCP 端点精确复现；
+> 可玩性门（`tools/playability_gate.py`）会逐条注入这些键，并要求**确实出现可归因的状态或像素变化**。
+
 ## 构建（离线）
 
 ```cmd

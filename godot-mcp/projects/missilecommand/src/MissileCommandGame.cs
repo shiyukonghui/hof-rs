@@ -204,11 +204,30 @@ public partial class MissileCommandGame : Node2D
     /// <summary>A readable name for the probed point: outside / ground / city / battery.</summary>
     [Export] public string ProbeState = "";
 
-    /// <summary>When false the field ignores input (determinism rule: no polling by default).</summary>
-    [Export] public bool PollInput = false;
+    /// <summary>When true the game reads its player's keyboard. The test driver switches this
+    /// OFF explicitly (<see cref="SetPollInput"/>, <see cref="ForceTestState"/>) when it needs
+    /// a frozen, deterministic state; the deterministic defaults live in AutoClock / AutoPlay /
+    /// DriftSpeed, not here (TASK-116 defect D1).</summary>
+    [Export] public bool PollInput = true;
 
     /// <summary>Shots that arrived through the declared input action.</summary>
     [Export] public int InputShots = 0;
+
+    /// <summary>Where the player's aim cursor is (TASK-116 D3); printed in the HUD, CursorY is
+    /// one blast line above the batteries.</summary>
+    [Export] public int CursorX = 400;
+
+    /// <summary>Height the player's fire key shoots at (TASK-116 D3).</summary>
+    [Export] public int CursorY = 300;
+
+    /// <summary>Pixels one aim-key press moves the cursor (TASK-116 D3).</summary>
+    [Export] public int CursorStep = 40;
+
+    /// <summary>Aim-key presses that arrived through the declared `mc_left` / `mc_right` actions.</summary>
+    [Export] public int InputAims = 0;
+
+    /// <summary>Shots that arrived through the declared `mc_fire` action (the player's own).</summary>
+    [Export] public int InputPlayerShots = 0;
 
     /// <summary>What the last hook did -- the readback string a session quotes.</summary>
     [Export] public string LastEvent = "";
@@ -233,6 +252,9 @@ public partial class MissileCommandGame : Node2D
     private int _randState;
     private float _autoAccum;
     private bool _prevFire;
+    private bool _prevAimLeft;
+    private bool _prevAimRight;
+    private bool _prevPlayerFire;
 
     /// <summary>C# truncates toward zero; Python's <c>//</c> floors. This is the floor, in both.</summary>
     private static int DivFloor(int a, int b)
@@ -446,7 +468,9 @@ public partial class MissileCommandGame : Node2D
         LastAutoSteps = 0;
         LastHookSteps = 0;
         _autoAccum = 0.0f;
-        PollInput = false;
+        // TASK-116 D1: was `PollInput = false;` -- that is what
+        // switched player input off again right after _Ready() ran.
+        // The deterministic entry point is ForceTestState / SetPollInput.
         InputShots = 0;
         _prevFire = false;
         Won = false;
@@ -589,7 +613,8 @@ public partial class MissileCommandGame : Node2D
         if (_hud != null)
         {
             _hud.Text = $"WAVE {Wave}/{WaveMax}  CITIES {CitiesAlive}  AMMO {Ammo}  "
-                        + $"INCOMING {IncomingAlive}  BLASTS {ExplosionsActive}  SCORE {Score}";
+                        + $"INCOMING {IncomingAlive}  BLASTS {ExplosionsActive}  SCORE {Score}  "
+                        + $"AIM {CursorX}";
         }
         if (_status != null)
         {
@@ -904,6 +929,9 @@ public partial class MissileCommandGame : Node2D
     {
         PollInput = enabled;
         _prevFire = false;
+        _prevAimLeft = false;
+        _prevAimRight = false;
+        _prevPlayerFire = false;
         LastEvent = $"poll_input={PollInput}";
         return LastEvent;
     }
@@ -927,6 +955,31 @@ public partial class MissileCommandGame : Node2D
             InputShots++;
         }
         _prevFire = fire;
+        // TASK-116 (defect D3): `mc_auto_fire` shoots at wherever the oldest missile happens
+        // to be -- that is a machine playing, not a player. The player gets an aim cursor
+        // (A/D, a fixed number of pixels per press) and a fire key (Space) that shoots at the
+        // cursor; the aim cursor is printed in the HUD so it is visible.
+        var aimLeft = Input.IsActionPressed("mc_left");
+        if (aimLeft && !_prevAimLeft && !GameOver)
+        {
+            CursorX = System.Math.Max(0, CursorX - CursorStep);
+            InputAims++;
+        }
+        _prevAimLeft = aimLeft;
+        var aimRight = Input.IsActionPressed("mc_right");
+        if (aimRight && !_prevAimRight && !GameOver)
+        {
+            CursorX = System.Math.Min(FieldW, CursorX + CursorStep);
+            InputAims++;
+        }
+        _prevAimRight = aimRight;
+        var playerFire = Input.IsActionPressed("mc_fire");
+        if (playerFire && !_prevPlayerFire && !GameOver)
+        {
+            Fire(CursorX, CursorY);
+            InputPlayerShots++;
+        }
+        _prevPlayerFire = playerFire;
     }
 
     public override void _Process(double delta)

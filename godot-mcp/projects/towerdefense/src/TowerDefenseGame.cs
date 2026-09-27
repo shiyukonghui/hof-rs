@@ -192,11 +192,30 @@ public partial class TowerDefenseGame : Node2D
     /// <summary>A readable name for the probed cell: outside / ground / path / spawn / exit / tower.</summary>
     [Export] public string ProbeState = "";
 
-    /// <summary>When false the world ignores input (determinism rule: no polling by default).</summary>
-    [Export] public bool PollInput = false;
+    /// <summary>When true the game reads its player's keyboard. The test driver switches this
+    /// OFF explicitly (<see cref="SetPollInput"/>, <see cref="ForceTestState"/>) when it needs
+    /// a frozen, deterministic state; the deterministic defaults live in AutoClock / AutoPlay /
+    /// DriftSpeed, not here (TASK-116 defect D1).</summary>
+    [Export] public bool PollInput = true;
 
     /// <summary>Hook steps that arrived through the declared input action.</summary>
     [Export] public int InputSteps = 0;
+
+    /// <summary>Map row the player's build cursor is on (TASK-116 D3); printed in the HUD.</summary>
+    [Export] public int CursorRow = 0;
+
+    /// <summary>Map column the player's build cursor is on (TASK-116 D3).</summary>
+    [Export] public int CursorCol = 0;
+
+    /// <summary>Cursor moves that arrived through the declared arrow actions.</summary>
+    [Export] public int InputCursors = 0;
+
+    /// <summary>Tower placements that arrived through the declared `td_place` action.</summary>
+    [Export] public int InputPlaces = 0;
+
+    /// <summary>Placements the game refused (path cell, occupied, no gold) -- a refusal still
+    /// proves the key was read, which is what the gate asks about.</summary>
+    [Export] public int InputRejectedPlaces = 0;
 
     /// <summary>What the last hook did -- the readback string a session quotes.</summary>
     [Export] public string LastEvent = "";
@@ -240,6 +259,11 @@ public partial class TowerDefenseGame : Node2D
     private Label _status;
     private float _autoAccum;
     private bool _prevStep;
+    private bool _prevUp;
+    private bool _prevDown;
+    private bool _prevLeft;
+    private bool _prevRight;
+    private bool _prevPlace;
 
     private int Idx(int col, int row)
     {
@@ -434,9 +458,19 @@ public partial class TowerDefenseGame : Node2D
         LastAutoSteps = 0;
         LastHookSteps = 0;
         _autoAccum = 0.0f;
-        PollInput = false;
+        // TASK-116 D1: was `PollInput = false;` -- that is what
+        // switched player input off again right after _Ready() ran.
+        // The deterministic entry point is ForceTestState / SetPollInput.
         InputSteps = 0;
-        _prevStep = false;
+        // TASK-116 D3: the build cursor starts in the middle of the map, not in the corner --
+        // at (0,0) the first "up" or "left" press clamps to nothing, which is both a poor
+        // first impression for a player and an untestable capability.
+        CursorRow = Rows / 2;
+        CursorCol = Cols / 2;
+        InputCursors = 0;
+        InputPlaces = 0;
+        InputRejectedPlaces = 0;
+        ResetEdgeDetectors();
         Won = false;
         GameOver = false;
         ProbeCol = -1;
@@ -577,7 +611,8 @@ public partial class TowerDefenseGame : Node2D
         if (_hud != null)
         {
             _hud.Text = $"WAVE {Wave}/{WaveMax}  LIVES {Lives}  GOLD {Gold}  ALIVE {EnemiesAlive}  "
-                        + $"KILLED {EnemiesKilled}  LEAK {EnemiesLeaked}  STEP {Steps}";
+                        + $"KILLED {EnemiesKilled}  LEAK {EnemiesLeaked}  STEP {Steps}  "
+                        + $"CURSOR {CursorCol},{CursorRow}";
         }
         if (_status != null)
         {
@@ -835,9 +870,20 @@ public partial class TowerDefenseGame : Node2D
     public string SetPollInput(bool enabled)
     {
         PollInput = enabled;
-        _prevStep = false;
+        ResetEdgeDetectors();
         LastEvent = $"poll_input={PollInput}";
         return LastEvent;
+    }
+
+    /// <summary>Forgets the press-edge state of every declared action (TASK-116 D3).</summary>
+    private void ResetEdgeDetectors()
+    {
+        _prevStep = false;
+        _prevUp = false;
+        _prevDown = false;
+        _prevLeft = false;
+        _prevRight = false;
+        _prevPlace = false;
     }
 
     private void HandleInput()
@@ -851,6 +897,38 @@ public partial class TowerDefenseGame : Node2D
             InputSteps++;
         }
         _prevStep = step;
+        // TASK-116 (defect D3): `td_auto_step` advances the world; nothing let a player *build*
+        // anything, which is the entire game. The cursor picks a cell (W/A/S/D), Space builds
+        // there, and the cursor is printed in the HUD so it is visible.
+        MoveCursor("td_up", -1, 0, ref _prevUp);
+        MoveCursor("td_down", 1, 0, ref _prevDown);
+        MoveCursor("td_left", 0, -1, ref _prevLeft);
+        MoveCursor("td_right", 0, 1, ref _prevRight);
+        var place = Input.IsActionPressed("td_place");
+        if (place && !_prevPlace && !GameOver)
+        {
+            var before = TowersPlaced;
+            PlaceTower(CursorCol, CursorRow);
+            InputPlaces++;
+            if (TowersPlaced == before)
+            {
+                InputRejectedPlaces++;
+            }
+        }
+        _prevPlace = place;
+    }
+
+    /// <summary>One keyboard cursor step, on the press edge, clamped to the map.</summary>
+    private void MoveCursor(string action, int dRow, int dCol, ref bool previous)
+    {
+        var held = Input.IsActionPressed(action);
+        if (held && !previous && !GameOver)
+        {
+            CursorRow = System.Math.Max(0, System.Math.Min(Rows - 1, CursorRow + dRow));
+            CursorCol = System.Math.Max(0, System.Math.Min(Cols - 1, CursorCol + dCol));
+            InputCursors++;
+        }
+        previous = held;
     }
 
     public override void _Process(double delta)

@@ -10,6 +10,20 @@
 | 主场景 | `res://scenes/main.tscn` |
 | 根脚本 | `res://src/FroggerGame.cs`（类 `FroggerGame`） |
 
+## 玩法
+
+800×600。目标：hop the frog across the road and the river。
+
+| 操作 | 动作名 | 键 |
+|---|---|---|
+| hop up | `frog_up` | `W` |
+| hop down | `frog_down` | `S` |
+| hop left | `frog_left` | `A` |
+| hop right | `frog_right` | `D` |
+
+> 动作名就是 `project.godot` 的 `[input]` 里的名字，可用 `running_game_capture_screenshot` + `Input.action_press` 由 MCP 端点精确复现；
+> 可玩性门（`tools/playability_gate.py`）会逐条注入这些键，并要求**确实出现可归因的状态或像素变化**。
+
 ## 构建（离线）
 
 ```cmd

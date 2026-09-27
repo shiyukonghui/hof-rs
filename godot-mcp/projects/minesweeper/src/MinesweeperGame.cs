@@ -168,14 +168,36 @@ public partial class MinesweeperGame : Node2D
     /// </summary>
     [Export] public int LastHookSteps = 0;
 
-    /// <summary>When false the board ignores input (determinism rule: no polling by default).</summary>
-    [Export] public bool PollInput = false;
+    /// <summary>When true the game reads its player's keyboard. The test driver switches this
+    /// OFF explicitly (<see cref="SetPollInput"/>, <see cref="ForceTestState"/>) when it needs
+    /// a frozen, deterministic state; the deterministic defaults live in AutoClock / AutoPlay /
+    /// DriftSpeed, not here (TASK-116 defect D1).</summary>
+    [Export] public bool PollInput = true;
 
     /// <summary>Reveals that arrived through the declared input actions.</summary>
     [Export] public int InputReveals = 0;
 
     /// <summary>Flag toggles that arrived through the declared input actions.</summary>
     [Export] public int InputFlags = 0;
+
+    /// <summary>Board row the player's keyboard cursor is on (TASK-116 D3); printed in the HUD.</summary>
+    [Export] public int CursorRow = 0;
+
+    /// <summary>Board column the player's keyboard cursor is on (TASK-116 D3).</summary>
+    [Export] public int CursorCol = 0;
+
+    /// <summary>Cursor moves that arrived through the declared arrow actions.</summary>
+    [Export] public int InputCursors = 0;
+
+    /// <summary>Reveals that arrived through the declared `mine_reveal` action (cursor cell).</summary>
+    [Export] public int InputCursorReveals = 0;
+
+    /// <summary>Flags that arrived through the declared `mine_flag` action (cursor cell).</summary>
+    [Export] public int InputCursorFlags = 0;
+
+    /// <summary>Cursor actions the game refused (already revealed, flagged, out of lives) --
+    /// a refusal still proves the key was read, which is what the gate asks about.</summary>
+    [Export] public int InputRejectedCursorActions = 0;
 
     /// <summary>Frames processed since the last reset.</summary>
     [Export] public int Ticks = 0;
@@ -194,6 +216,12 @@ public partial class MinesweeperGame : Node2D
     private float _autoAccum;
     private bool _prevReveal;
     private bool _prevFlag;
+    private bool _prevReveal2;
+    private bool _prevFlag2;
+    private bool _prevUp;
+    private bool _prevDown;
+    private bool _prevLeft;
+    private bool _prevRight;
 
     private int Cells()
     {
@@ -300,12 +328,37 @@ public partial class MinesweeperGame : Node2D
         LastAutoSteps = 0;
         LastHookSteps = 0;
         _autoAccum = 0.0f;
-        PollInput = false;
+        // TASK-116 D1: was `PollInput = false;` -- that is what
+        // switched player input off again right after _Ready() ran.
+        // The deterministic entry point is ForceTestState / SetPollInput.
         InputReveals = 0;
         InputFlags = 0;
         _prevReveal = false;
         _prevFlag = false;
+        // TASK-116 D3: the cursor starts in the middle, not in the corner -- at (0,0) the
+        // first "up" or "left" press clamps to nothing, which is both a poor first impression
+        // for a player and an untestable capability.
+        CursorRow = Rows / 2;
+        CursorCol = Cols / 2;
+        InputCursors = 0;
+        InputCursorReveals = 0;
+        InputCursorFlags = 0;
+        InputRejectedCursorActions = 0;
+        ResetEdgeDetectors();
         Ticks = 0;
+    }
+
+    /// <summary>Forgets the press-edge state of every declared action (TASK-116 D3).</summary>
+    private void ResetEdgeDetectors()
+    {
+        _prevReveal = false;
+        _prevFlag = false;
+        _prevReveal2 = false;
+        _prevFlag2 = false;
+        _prevUp = false;
+        _prevDown = false;
+        _prevLeft = false;
+        _prevRight = false;
     }
 
     /// <summary>The deterministic minefield: a fixed LCG over <paramref name="seed"/>.</summary>
@@ -478,7 +531,10 @@ public partial class MinesweeperGame : Node2D
     {
         if (_hud != null)
         {
-            _hud.Text = $"MINES {MineCount}  FLAGS {FlaggedCount}  SAFE LEFT {RemainingSafe}";
+            _hud.Text = $"MINES {MineCount}  FLAGS {FlaggedCount}  SAFE LEFT {RemainingSafe}  "
+                        + $"CURSOR {CursorRow},{CursorCol}";
+            // TASK-116 (D3): the cursor has to be *visible* to be usable, and the HUD line is
+            // the one place the player already reads. Space reveals the cursor cell, F flags it.
         }
         if (_status != null)
         {
@@ -551,6 +607,52 @@ public partial class MinesweeperGame : Node2D
         }
         _prevReveal = reveal;
         _prevFlag = flag;
+        // TASK-116 (defect D3): the two actions above ("reveal the next unrevealed cell",
+        // "flag the next unflagged cell") let a machine sweep the board but give a player no
+        // way to choose a cell -- a minesweeper where you cannot pick where to dig is not a
+        // game. The cursor makes the choice explicit: W/A/S/D move it, Space reveals it, F
+        // flags it, and the cursor is printed in the HUD so it is visible.
+        MoveCursor("mine_up", -1, 0, ref _prevUp);
+        MoveCursor("mine_down", 1, 0, ref _prevDown);
+        MoveCursor("mine_left", 0, -1, ref _prevLeft);
+        MoveCursor("mine_right", 0, 1, ref _prevRight);
+        var cursorReveal = Input.IsActionPressed("mine_reveal");
+        if (cursorReveal && !_prevReveal2 && !GameOver)
+        {
+            var before = RevealedCount;
+            Reveal(CursorRow, CursorCol);
+            InputCursorReveals++;
+            if (RevealedCount == before)
+            {
+                InputRejectedCursorActions++;
+            }
+        }
+        _prevReveal2 = cursorReveal;
+        var cursorFlag = Input.IsActionPressed("mine_flag");
+        if (cursorFlag && !_prevFlag2 && !GameOver)
+        {
+            var before = FlaggedCount;
+            ToggleFlag(CursorRow, CursorCol);
+            InputCursorFlags++;
+            if (FlaggedCount == before)
+            {
+                InputRejectedCursorActions++;
+            }
+        }
+        _prevFlag2 = cursorFlag;
+    }
+
+    /// <summary>One keyboard cursor step, on the press edge, clamped to the board.</summary>
+    private void MoveCursor(string action, int dRow, int dCol, ref bool previous)
+    {
+        var held = Input.IsActionPressed(action);
+        if (held && !previous && !GameOver)
+        {
+            CursorRow = System.Math.Max(0, System.Math.Min(Rows - 1, CursorRow + dRow));
+            CursorCol = System.Math.Max(0, System.Math.Min(Cols - 1, CursorCol + dCol));
+            InputCursors++;
+        }
+        previous = held;
     }
 
     private bool FlagNext()
@@ -827,8 +929,7 @@ public partial class MinesweeperGame : Node2D
     public string SetPollInput(bool enabled)
     {
         PollInput = enabled;
-        _prevReveal = false;
-        _prevFlag = false;
+        ResetEdgeDetectors();
         LastEvent = $"poll_input={PollInput}";
         return LastEvent;
     }

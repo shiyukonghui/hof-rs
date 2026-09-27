@@ -143,8 +143,11 @@ public partial class AsteroidsGame : Node2D
     /// <summary>Rock drift speed multiplier in pixels per second; 0 keeps them frozen (the default).</summary>
     [Export] public float DriftSpeed = 0.0f;
 
-    /// <summary>When false the ship ignores input (determinism rule: no polling by default).</summary>
-    [Export] public bool PollInput = false;
+    /// <summary>When true the game reads its player's keyboard. The test driver switches this
+    /// OFF explicitly (<see cref="SetPollInput"/>, <see cref="ForceTestState"/>) when it needs
+    /// a frozen, deterministic state; the deterministic defaults live in AutoClock / AutoPlay /
+    /// DriftSpeed, not here (TASK-116 defect D1).</summary>
+    [Export] public bool PollInput = true;
 
     /// <summary>Frames processed since the last reset.</summary>
     [Export] public int Ticks = 0;
