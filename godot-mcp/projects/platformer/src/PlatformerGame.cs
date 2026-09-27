@@ -206,8 +206,14 @@ public partial class PlatformerGame : Node2D
     /// <summary>Seconds since the last reset: a monotonic FLOAT accumulator, never truncated.</summary>
     [Export] public float Elapsed = 0.0f;
 
-    /// <summary>Fixed frames per second; 0 keeps the world still (the default).</summary>
-    [Export] public float AutoClock = 0.0f;
+    /// <summary>Fixed frames per second; 0 keeps the world still.  TASK-136 §1.B changed the
+    /// default from 0 to 20: with the clock off, gravity never ran, so VelX/VelY changed on
+    /// every key press while PlayerX/PlayerY never did -- the scripted arm measured two
+    /// changed steps in twelve and the player could not move at all
+    /// (`runs/model-player/t136-scripted/platformer/scripted`).  The deterministic hooks are
+    /// untouched: <see cref="StepFrames"/>, <see cref="SetAutoClock"/> and
+    /// <see cref="ForceTestState"/> still drive or freeze the world on demand.</summary>
+    [Export] public float AutoClock = 20.0f;
 
     /// <summary>Frames the auto clock has applied over the whole level.</summary>
     [Export] public int AutoTicks = 0;
@@ -380,7 +386,7 @@ public partial class PlatformerGame : Node2D
         VelY = 0;
         Facing = 1;
         OnGround = false;
-        AutoClock = 0.0f;
+        AutoClock = 20.0f;
         AutoTicks = 0;
         LastAutoSteps = 0;
         LastHookSteps = 0;

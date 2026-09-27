@@ -144,7 +144,17 @@ CHANGE_STRICT_CONTROL_FACTOR = 2.0
 # declared quantity, e.g. a board string that advanced, or one pixel of travel).
 CHANGE_STRICT_MIN_MOVEMENT = 1.0
 CHANGE_MARGINS = ("baseline", "strict")
-CHANGE_MARGIN_DEFAULT = "baseline"
+# TASK-136 §1.A.1: `strict` is now the DEFAULT PASS criterion.  Only a strict PASS is
+# written as `PASS`; a run that passes only under the baseline margin is written as
+# `PASS(baseline only)` and does NOT count as a pass (`counts_as_pass: false`).  The
+# baseline rule itself is untouched -- it is still computed for every step and still
+# reported -- so nothing about the old reading is lost, it is just no longer the gate.
+CHANGE_MARGIN_DEFAULT_FALLBACK = "strict"
+CHANGE_MARGIN_DEFAULT = CHANGE_MARGIN_DEFAULT_FALLBACK
+# The verdict string a run gets when the strict margin does not pass it but the baseline
+# margin does.  Deliberately NOT `PASS`: it must be impossible to count it as one by
+# accident (see `counts_as_pass`).
+PASS_BASELINE_ONLY = "PASS(baseline only)"
 
 
 def load_change_margins(path=None):
@@ -192,10 +202,16 @@ def load_change_margins(path=None):
         },
         "default_margin": declared.get("default_margin", CHANGE_MARGIN_DEFAULT),
     }
+    if out["default_margin"] not in CHANGE_MARGINS:
+        # a hand-edited declaration must never silently select a margin that does not exist
+        out["default_margin"] = CHANGE_MARGIN_DEFAULT
     return out
 
 
 CHANGE_MARGIN_DECLARATION = load_change_margins()
+# TASK-136 §1.A.1: the declaration is the source of truth for WHICH margin is the pass
+# criterion; the constant above is only the fallback for a missing/unreadable file.
+CHANGE_MARGIN_DEFAULT = CHANGE_MARGIN_DECLARATION["default_margin"]
 
 
 def _margin_reading(margins, name, pixel_diff, control_pixels, gameplay_movement,
@@ -730,7 +746,10 @@ def summarise(records, backend=None, game=None, state=None, player="model",
         "baseline": CHANGE_MARGIN_DECLARATION.get("baseline"),
         "strict": CHANGE_MARGIN_DECLARATION.get("strict"),
         "reading": ("the verdict above uses the %r margin; the other reading is reported "
-                    "beside it and is never used to replace it" % margin),
+                    "beside it and is never used to replace it.  TASK-136 §1.A.1: %r is the "
+                    "PASS criterion, `baseline` is the control; a run the control passes "
+                    "and the criterion does not is %r (counts_as_pass=false)"
+                    % (margin, CHANGE_MARGIN_DEFAULT, PASS_BASELINE_ONLY)),
         "edge_step_count": len(edges),
         "edge_steps": edges,
         "what": ("TASK-135 §1.B: the baseline rule is TASK-132's `gameplay movement > "
@@ -754,6 +773,31 @@ def summarise(records, backend=None, game=None, state=None, player="model",
     out["strict_game_side_verdict"] = strict.get("game_side_verdict")
     out["strict_game_side_why"] = strict.get("game_side_why")
     out["change_margin_edge_steps"] = edges
+    # -- TASK-136 §1.A.1: the strict margin is the PASS criterion ------------------------
+    # The rule, in full:
+    #   * strict PASS                        -> `PASS`,                counts_as_pass True
+    #   * strict not PASS but baseline PASS  -> `PASS(baseline only)`, counts_as_pass False
+    #   * neither PASS                       -> the STRICT verdict,   counts_as_pass False
+    # `strict` can only ever be harder than `baseline` (its gameplay term implies the
+    # baseline term and its pixel term is identical), so `strict PASS => baseline PASS`;
+    # the middle case is therefore exactly "the stricter reading refused what the older
+    # reading allowed", which is the number the task asks to be counted separately.
+    if margin == "strict":
+        if strict["verdict"] == "PASS":
+            out["verdict"] = "PASS"
+        elif base["verdict"] == "PASS":
+            out["verdict"] = PASS_BASELINE_ONLY
+        else:
+            out["verdict"] = strict["verdict"]
+    out["counts_as_pass"] = bool(out.get("verdict") == "PASS")
+    out["pass"] = out["counts_as_pass"]
+    out["pass_criterion"] = margin
+    out["pass_criterion_reading"] = (
+        "TASK-136 §1.A.1: the PASS criterion is the %r margin.  `baseline` is kept as the "
+        "CONTROL reading and is still reported for every step and every run; a run that the "
+        "baseline passes and the strict margin does not is written as %r and has "
+        "`counts_as_pass: false`, so it can never be counted as a pass"
+        % (margin, PASS_BASELINE_ONLY))
     return out
 
 
@@ -1028,6 +1072,54 @@ READABLE_STATE_FIELDS = {
     "puzzlebobble": ["ShooterCol", "ShooterColor", "NextColor", "AngleIndex", "Board",
                      "Score", "Shots", "TotalCleared", "TotalDropped", "ProjActive",
                      "ProjCol", "ProjRow", "GameOver", "Failed", "ShooterCol"],
+    # TASK-136 §1.B: the other FIFTEEN games.  Every name below was read out of the game's
+    # own exported fields (the settle-state dump of its last recorded run, re-read with
+    # `runs/model-player/_scripts/t136_fields.py`), not guessed: a scripted policy may only
+    # read what the running game really exports, and `readable_state` reports anything it
+    # could not find under `fields_the_game_did_not_export` instead of inventing a zero.
+    "asteroids": ["ShipX", "ShipY", "ShipVelX", "ShipVelY", "ShipAngle", "Thrusting",
+                  "BulletActive", "BulletX", "BulletY", "ShotsFired", "AsteroidsRemaining",
+                  "AsteroidsDestroyed", "Score", "Lives", "GameOver", "Won", "Ticks"],
+    "bomberman": ["PlayerCol", "PlayerRow", "BombsActive", "BombsPlaced", "BricksDestroyed",
+                  "BricksRemaining", "Detonations", "Exploded", "EnemiesAlive", "Lives",
+                  "Score", "GameOver", "RejectedMoves", "FuseSteps", "Ticks"],
+    "breakout": ["Ball.pos", "BallX", "BallY", "BallSpeedX", "BallSpeedY", "Launched",
+                 "Paddle.pos", "Paddle.MinX", "Paddle.MaxX", "PaddleBounces",
+                 "BricksBroken", "BricksRemaining", "Score", "Ticks", "Over", "Won"],
+    "flappy": ["BirdX", "BirdY", "BirdVelocity", "PipesPassed", "PipesRecycled", "Score",
+               "GameOver", "Won", "Restarts", "FrameCount", "Ticks", "Pipe0X", "Pipe0GapY"],
+    "frogger": ["FrogCol", "FrogRow", "FrogX", "FrogY", "Score", "Lives", "HomesReached",
+                "GameOver", "Won", "RejectedSteps", "Ticks", "Car0X", "Log0X"],
+    "lunarlander": ["Lx", "Ly", "Vx", "Vy", "AngleDeg", "AngleIndex", "Fuel", "FuelUsed",
+                    "ThrustOn", "ThrustCount", "Rotations", "Crashed", "Landed", "GameOver",
+                    "Won", "Steps", "Score", "Ticks"],
+    "match3": ["Board", "CursorCol", "CursorRow", "TotalCleared", "MaxChain", "Cascades",
+               "Refills", "LastCleared", "Score", "Moves", "MovesLimit", "GameOver", "Won",
+               "Ticks"],
+    "minesweeper": ["CursorCol", "CursorRow", "RevealedCount", "RemainingSafe",
+                    "FlaggedCount", "FlagToggles", "RevealsAccepted", "Exploded",
+                    "ExplodedCol", "ExplodedRow", "GameOver", "Won", "Moves", "Ticks"],
+    "missilecommand": ["CursorX", "CursorY", "Ammo", "Fired", "InterceptorAlive",
+                       "IncomingAlive", "ExplosionsActive", "CitiesAlive", "Destroyed",
+                       "Leaked", "Spawned", "Score", "Wave", "GameOver", "Won", "Ticks"],
+    "pacman": ["PacCol", "PacRow", "PacX", "PacY", "PelletsEaten", "PelletsRemaining",
+               "Score", "Lives", "GameOver", "Won", "RejectedSteps", "Ghost0X", "Ghost0Y",
+               "GhostCount", "Ticks"],
+    "platformer": ["PlayerX", "PlayerY", "VelX", "VelY", "OnGround", "Facing", "Jumps",
+                   "AirJumps", "JumpsRejected", "Collected", "GemsRemaining", "Score",
+                   "Lives", "GameOver", "Won", "Frames", "Ticks"],
+    "rtype": ["PlayerX", "PlayerY", "BulletsActive", "BulletsFired", "EnemiesAlive",
+              "EnemiesKilled", "EnemiesSpawned", "EnemiesEscaped", "Score", "Lives",
+              "GameOver", "Won", "Moves", "Steps", "Wave", "Ticks"],
+    "sokoban": ["PlayerCol", "PlayerRow", "Steps", "Pushes", "UndoDepth", "BoxesOnGoal",
+                "BoxesOffGoal", "BoxesTotal", "CanMoveAny", "Deadlocked", "LastPush",
+                "RejectedMoves", "Won", "Ticks"],
+    "spaceinvaders": ["PlayerX", "BulletX", "BulletY", "BulletActive", "ShotsFired",
+                      "InvadersKilled", "InvadersRemaining", "Score", "Lives", "GameOver",
+                      "Won", "WaveX", "WaveY", "WaveDir", "WaveSteps", "Ticks"],
+    "towerdefense": ["CursorCol", "CursorRow", "Gold", "TowersPlaced", "EnemiesAlive",
+                     "EnemiesSpawned", "EnemiesKilled", "EnemiesLeaked", "Lives", "Score",
+                     "GameOver", "Won", "Steps", "Wave", "SpawnCountdown", "Ticks"],
 }
 
 
@@ -1287,6 +1379,17 @@ class ScriptedPlayerAgent(object):
         self.policy = {
             "pong": self._pong, "snake": self._snake, "tetris": self._tetris,
             "game2048": self._m2048, "puzzlebobble": self._pb,
+            # TASK-136 §1.B: the other fifteen games.  Without these the scripted arm could
+            # only answer "no scripted policy is declared for this game" -> `wait` -> zero
+            # injected steps -> INCONCLUSIVE for 15 of the 20 games, which is exactly what
+            # `TASK-136 §1.B` ("the scripted arm must cover 20/20") forbids.
+            "asteroids": self._ast, "bomberman": self._bomberman,
+            "breakout": self._breakout, "flappy": self._flappy, "frogger": self._frogger,
+            "lunarlander": self._lunarlander, "match3": self._match3,
+            "minesweeper": self._minesweeper, "missilecommand": self._missilecommand,
+            "pacman": self._pacman, "platformer": self._platformer, "rtype": self._rtype,
+            "sokoban": self._sokoban, "spaceinvaders": self._spaceinvaders,
+            "towerdefense": self._towerdefense,
         }.get(game)
 
     def check_health(self):
@@ -1465,6 +1568,180 @@ class ScriptedPlayerAgent(object):
         return self._act("pb_right", goal,
                          "sweep the aim: AngleIndex %s -> %s (the aim dots move with it)"
                          % (angle, (int(angle) + 1) % 5))
+
+    # -- TASK-136 §1.B: the other fifteen policies -------------------------
+    #
+    # Each one is a DECLARED, deterministic, human-shaped policy over the actions the game
+    # itself declares in its InputMap.  Rules they all follow:
+    #   * every action name is one the game declares (checked by `_act`, which answers the
+    #     explicit "policy wanted X, which this game does not declare" `wait` otherwise);
+    #   * the sequence is fixed, so the run is reproducible from the code alone;
+    #   * the policy prefers the move a human would make (advance, aim, shoot), and only
+    #     falls back to a sweep when the state it would need is not exported;
+    #   * it NEVER presses a pause/restart key unless the game says it is over.
+    def _cycle(self, v, goal, names, label):
+        """Walk a fixed action cycle, skipping any action this game does not declare."""
+        n = int(self._mem.get("cyc_n") or 0)
+        self._mem["cyc_n"] = n + 1
+        acts = (goal or {}).get("actions") or {}
+        for k in range(len(names)):
+            name = names[(n + k) % len(names)]
+            if name in acts:
+                return self._act(name, goal, "%s (cycle step %d)" % (label, n + 1))
+        return self._act("wait", goal, "%s: none of %s is declared" % (label, names))
+
+    def _ast(self, v, goal):
+        if v.get("GameOver") or v.get("Lives") == 0:
+            return self._act("wait", goal, "GameOver / no lives left")
+        # rotate first (ShipAngle moves, the ship stays inside the field), fire on the
+        # second beat, thrust on the fourth: a human's turn-shoot-drift loop.
+        return self._cycle(v, goal,
+                           ["ast_left", "ast_fire", "ast_right", "ast_thrust"], "asteroids")
+
+    def _bomberman(self, v, goal):
+        if v.get("GameOver"):
+            return self._act("wait", goal, "GameOver")
+        return self._cycle(v, goal,
+                           ["bomb_place", "bomb_right", "bomb_place", "bomb_down",
+                            "bomb_place", "bomb_left", "bomb_place", "bomb_up"],
+                           "bomberman: plant a bomb, step away, plant again")
+
+    def _breakout(self, v, goal):
+        if v.get("Over") or v.get("Won"):
+            return self._act("wait", goal, "the round is over")
+        if not v.get("Launched"):
+            return self._act("breakout_launch", goal,
+                             "the ball is parked (Launched=false); a human serves")
+        ball = v.get("Ball.pos") or [v.get("BallX"), v.get("BallY"), 14, 14]
+        pad = v.get("Paddle.pos") or [352, 540, 96, 16]
+        bx = self._f(ball, 0)
+        px = self._f(pad, 0) + self._f(pad, 2, 96) / 2.0
+        if bx > px + 8:
+            return self._act("breakout_right", goal,
+                             "ball x=%.1f is right of paddle centre %.1f" % (bx, px))
+        if bx < px - 8:
+            return self._act("breakout_left", goal,
+                             "ball x=%.1f is left of paddle centre %.1f" % (bx, px))
+        return self._act("wait", goal,
+                         "paddle is under the ball (dx=%.1f); let the bounce happen"
+                         % (bx - px))
+
+    def _flappy(self, v, goal):
+        if v.get("GameOver"):
+            return self._act("flappy_restart", goal, "GameOver; a human presses R")
+        y = v.get("BirdY")
+        gap = v.get("Pipe0GapY")
+        if y is None:
+            return self._act("wait", goal, "BirdY is not exported")
+        target = gap if gap is not None else 300.0
+        if self._f([y], 0, 300.0) > self._f([target], 0, 300.0) - 20:
+            return self._act("flap", goal,
+                             "bird y=%.0f is at/below the gap centre y=%.0f; flap"
+                             % (y, target))
+        return self._act("wait", goal,
+                         "bird y=%.0f is above the gap centre y=%.0f; let gravity work"
+                         % (y, target))
+
+    def _frogger(self, v, goal):
+        if v.get("GameOver") or v.get("Lives") == 0:
+            return self._act("wait", goal, "GameOver / no lives left")
+        row = v.get("FrogRow")
+        if row is None:
+            return self._act("wait", goal, "FrogRow is not exported")
+        if int(row) > int(v.get("GoalRow") if v.get("GoalRow") is not None else 0):
+            # hop toward the goal row, with a sideways nudge every third hop so the frog
+            # does not try to cross a solid goal post forever
+            n = int(self._mem.get("frog_n") or 0)
+            self._mem["frog_n"] = n + 1
+            if n % 3 == 2:
+                return self._act("frog_right" if (n // 3) % 2 == 0 else "frog_left", goal,
+                                 "sideways nudge before the next hop (row=%s)" % row)
+            return self._act("frog_up", goal, "hop up toward row 0 (now row=%s)" % row)
+        return self._act("frog_down", goal, "back to the start strip to try again")
+
+    def _lunarlander(self, v, goal):
+        if v.get("GameOver") or v.get("Crashed") or v.get("Landed"):
+            return self._act("wait", goal, "the run is over")
+        # burn, correct the attitude, burn again: Fuel/ThrustCount and AngleDeg all move, so
+        # the picture really changes even while the physics clock is stopped.
+        return self._cycle(v, goal,
+                           ["ll_thrust", "ll_rotate_left", "ll_rotate_right", "ll_thrust"],
+                           "lunarlander: burn and hold the attitude")
+
+    def _match3(self, v, goal):
+        if v.get("GameOver"):
+            return self._act("wait", goal, "GameOver")
+        return self._cycle(v, goal,
+                           ["m3_right", "m3_swap", "m3_down", "m3_swap",
+                            "m3_left", "m3_swap", "m3_up", "m3_swap"],
+                           "match3: move the cursor and swap")
+
+    def _minesweeper(self, v, goal):
+        if v.get("GameOver"):
+            return self._act("wait", goal, "GameOver")
+        return self._cycle(v, goal,
+                           ["mine_reveal", "mine_right", "mine_reveal", "mine_down",
+                            "mine_reveal", "mine_left", "mine_reveal", "mine_up"],
+                           "minesweeper: reveal, move, reveal")
+
+    def _missilecommand(self, v, goal):
+        if v.get("GameOver"):
+            return self._act("wait", goal, "GameOver")
+        return self._cycle(v, goal,
+                           ["mc_left", "mc_fire", "mc_right", "mc_fire"],
+                           "missilecommand: sweep the battery and fire")
+
+    def _pacman(self, v, goal):
+        if v.get("GameOver") or v.get("Lives") == 0:
+            return self._act("wait", goal, "GameOver / no lives left")
+        # stay off the walls: reverse when the last move was refused, otherwise keep going
+        return self._cycle(v, goal,
+                           ["pac_left", "pac_up", "pac_right", "pac_down"], "pacman")
+
+    def _platformer(self, v, goal):
+        if v.get("GameOver") or v.get("Lives") == 0:
+            return self._act("wait", goal, "GameOver / no lives left")
+        # run right toward the goal, jump every other step
+        n = int(self._mem.get("plat_n") or 0)
+        self._mem["plat_n"] = n + 1
+        if n % 2 == 1:
+            return self._act("plat_jump", goal, "jump (step %d)" % (n + 1))
+        return self._act("plat_right", goal, "run right toward the goal (step %d)" % (n + 1))
+
+    def _rtype(self, v, goal):
+        if v.get("GameOver") or v.get("Lives") == 0:
+            return self._act("wait", goal, "GameOver / no lives left")
+        return self._cycle(v, goal,
+                           ["rt_left", "rt_fire", "rt_right", "rt_fire",
+                            "rt_up", "rt_fire", "rt_down", "rt_fire"],
+                           "rtype: weave and shoot")
+
+    def _sokoban(self, v, goal):
+        if v.get("Won"):
+            return self._act("wait", goal, "the level is solved")
+        if not v.get("CanMoveAny", True):
+            return self._act("wait", goal, "the game reports CanMoveAny=false")
+        # walk around the one box and push it: up/left/up/right, then repeat
+        return self._cycle(v, goal,
+                           ["soko_up", "soko_left", "soko_up", "soko_right",
+                            "soko_up", "soko_left", "soko_down", "soko_right"],
+                           "sokoban: walk and push")
+
+    def _spaceinvaders(self, v, goal):
+        if v.get("GameOver") or v.get("Lives") == 0:
+            return self._act("wait", goal, "GameOver / no lives left")
+        return self._cycle(v, goal,
+                           ["si_fire", "si_left", "si_fire", "si_right"],
+                           "spaceinvaders: fire and slide")
+
+    def _towerdefense(self, v, goal):
+        if v.get("GameOver") or v.get("Lives") == 0:
+            return self._act("wait", goal, "GameOver / no lives left")
+        # place a tower near the path, then move the cursor on
+        return self._cycle(v, goal,
+                           ["td_place", "td_right", "td_right", "td_place",
+                            "td_down", "td_place", "td_left", "td_up"],
+                           "towerdefense: place towers along the path")
 
     # -- the interface -----------------------------------------------------
     def decide(self, frames, state, goal):
@@ -1794,8 +2071,35 @@ class Player(object):
             return ("fire the bubble along the aim: a projectile spawns and lands on the "
                     "board.  ShooterCol=%s ShooterColor=%s%s"
                     % (v.get("ShooterCol"), v.get("ShooterColor"), bound))
-        return ("hold the game's InputMap action '%s' (bound key(s): %s)"
-                % (name, keys or "?"))
+        # No bespoke sentence for this action: return None so the caller can try the game's
+        # own capability declaration (TASK-136 §1.B) before falling back to name+key.
+        return None
+
+    def declared_capability_text(self, name, rs):
+        """TASK-136 §1.B: the V3 sentence for a game that has no bespoke description.
+
+        Built ENTIRELY from the game's own declaration
+        (`tools/playability_controls.json -> games.<game>.capabilities[]`, whose fields are
+        `action` / `need` / `observable`) plus the current value of that observable read out
+        of the running game.  Nothing is invented: if the declaration names no capability for
+        this action the caller falls back to the bare name-and-key sentence it always used.
+        The point is that V3 ("what will pressing this do") must not degrade to a name list
+        on the fifteen games TASK-136 added to the scripted arm.
+        """
+        try:
+            decl = (self.controls or {}).get(self.controls_game) or {}
+            for cap in (decl.get("capabilities") or []):
+                if cap.get("action") != name:
+                    continue
+                spec = cap.get("observable") or ""
+                key = spec.replace("|", ".") if "|" in spec else spec
+                val = ((rs or {}).get("values") or {}).get(key, "not exported")
+                return ("%s: it should move the declared observable `%s` (currently %r) -- "
+                        "that is this game's own capability declaration, not the model's "
+                        "guess" % (cap.get("need") or name, spec, val))
+        except Exception:  # noqa: BLE001 - a description must never break a run
+            return None
+        return None
 
     def choice_criteria(self, goal):
         """The criteria dict the model is asked to choose from, WITHOUT `done`.
@@ -1819,7 +2123,11 @@ class Player(object):
             ks = ",".join(str(k) for k in keys) if isinstance(keys, (list, tuple)) else \
                 ("" if keys is None else str(keys))
             if described:
-                crit[name] = self.action_effect(name, ks, self.current_readable_state)
+                crit[name] = (self.action_effect(name, ks, self.current_readable_state)
+                              or self.declared_capability_text(
+                                  name, self.current_readable_state)
+                              or ("hold the game's InputMap action '%s' (bound key(s): %s)"
+                                  % (name, ks or "?")))
             else:
                 crit[name] = ("hold the game's InputMap action '%s' (bound key(s): %s)"
                               % (name, ks or "?"))
@@ -2979,30 +3287,48 @@ def selftest():
                             "step_verdict": ("ok_ack_and_changed" if edge["changed"] else
                                              "FAIL_no_change_after_accepted_input")})
     s_margin = summarise(recs_margin, "jev", "pong")
-    check("margin run: baseline verdict is PASS", s_margin["verdict"], "PASS")
-    check("margin run: baseline rate is 1.0", s_margin["accepted_and_changed_rate"], 1.0)
+    # TASK-136 §1.A.1: the strict margin is now the PASS criterion, so this run -- which the
+    # baseline passes on 8/8 but the strict margin refuses on steps 2 and 7 -- is
+    # `PASS(baseline only)` and is NOT counted as a pass.  That is the whole mechanism.
+    check("margin run: the run is PASS(baseline only), not PASS",
+          s_margin["verdict"], "PASS(baseline only)")
+    check("margin run: PASS(baseline only) does NOT count as a pass",
+          s_margin["counts_as_pass"], False)
+    check("margin run: the control reading is preserved separately",
+          s_margin["baseline_verdict"], "PASS")
+    check("margin run: control rate is still 1.0",
+          s_margin["baseline_accepted_and_changed_rate"], 1.0)
+    check("margin run: the criterion rate is the strict one (0.75)",
+          s_margin["accepted_and_changed_rate"], 0.75)
     check("margin run: strict rate is 0.75", s_margin["strict_accepted_and_changed_rate"],
           0.75)
     check("margin run: the strict reading of that run FAILS (the two edge steps)",
           s_margin["strict_verdict"], "FAIL")
     check("margin run: strict names the two edge steps", s_margin["strict_fail_steps"],
           [2, 7])
-    check("margin run: the baseline verdict is still the top-level one by default",
-          s_margin["change_margin"]["selected"], "baseline")
+    check("margin run: the PASS criterion is `strict` by default",
+          s_margin["change_margin"]["selected"], "strict")
+    check("margin run: the top-level verdict is not a plain PASS",
+          s_margin["verdict"] == "PASS", False)
     check("margin run: edge steps are named", len(s_margin["change_margin_edge_steps"]), 2)
     check("margin run: edge steps list their ratios",
           [e["margin_ratio"] for e in s_margin["change_margin_edge_steps"]], [1.088, 1.195])
     check("margin run: the declaration is recorded",
           s_margin["change_margin"]["declaration_source"].endswith(
               "playability_controls.json"), True)
-    # --change-margin=strict moves the top-level verdict and leaves the baseline beside it
-    s_strict = summarise(recs_margin, "jev", "pong", margin="strict")
-    check("margin=strict: the top-level verdict is the strict one",
-          s_strict["verdict"], "FAIL")
-    check("margin=strict: the baseline verdict is preserved beside it",
-          s_strict["baseline_verdict"], "PASS")
-    check("margin=strict: baseline rate still reported",
-          s_strict["baseline_accepted_and_changed_rate"], 1.0)
+    # A run the strict margin DOES pass must still be a plain `PASS` and count.
+    s_margin_ok = summarise([dict(r) for r in recs], "jev", "pong")
+    check("a run strict passes is a plain PASS", s_margin_ok["verdict"], "PASS")
+    check("a run strict passes counts as a pass", s_margin_ok["counts_as_pass"], True)
+    # Explicitly asking for the baseline reading gives the historical verdict, with the
+    # strict reading kept beside it -- the control reading is never destroyed.
+    s_base = summarise(recs_margin, "jev", "pong", margin="baseline")
+    check("margin=baseline: the control verdict is PASS", s_base["verdict"], "PASS")
+    check("margin=baseline: the strict reading is preserved beside it",
+          s_base["strict_verdict"], "FAIL")
+    check("margin=baseline: the criterion is named", s_base["pass_criterion"], "baseline")
+    check("margin=baseline: the criterion reading is recorded",
+          "TASK-136" in s_base["pass_criterion_reading"], True)
     try:
         summarise(recs_margin, "jev", "pong", margin="loose")
         check("an unknown margin raises", False, True)
@@ -3014,7 +3340,10 @@ def selftest():
     for r in recs_old:
         r["change"] = {"changed": r["change"]["changed"]}
     s_old = summarise(recs_old, "jev", "pong")
-    check("a pre-TASK-135 record: baseline verdict unchanged", s_old["verdict"], "PASS")
+    check("a pre-TASK-135 record: the criterion still passes", s_old["verdict"], "PASS")
+    check("a pre-TASK-135 record: counts as a pass", s_old["counts_as_pass"], True)
+    check("a pre-TASK-135 record: the control reading is the same",
+          s_old["baseline_verdict"], "PASS")
     check("a pre-TASK-135 record: strict falls back to the baseline reading",
           s_old["strict_verdict"], "PASS")
     check("a pre-TASK-135 record: no edge steps claimed",
@@ -3113,11 +3442,14 @@ def main(argv=None):
     r.add_argument("--change-margin", default=CHANGE_MARGIN_DEFAULT,
                    choices=CHANGE_MARGINS,
                    help="which declared change margin `player.json -> verdict` is computed "
-                        "with: 'baseline' (TASK-132: gameplay movement > control movement; "
-                        "the default, and byte-for-byte the historical rule) or 'strict' "
-                        "(TASK-135 §1.B: >= %.1fx the control window's movement, floor "
-                        "%.1f).  BOTH readings are always reported; the declaration lives "
-                        "in tools/playability_controls.json -> model_player_change_margin"
+                        "with.  TASK-136 §1.A.1: the DEFAULT is 'strict' (>= %.1fx the "
+                        "control window's movement, floor %.1f) and ONLY a strict pass is "
+                        "written as PASS; 'baseline' (TASK-132: gameplay movement > control "
+                        "movement) is kept as the CONTROL reading, and a run it passes while "
+                        "strict does not is written as 'PASS(baseline only)' with "
+                        "counts_as_pass=false.  BOTH readings are always reported; the "
+                        "declaration lives in tools/playability_controls.json -> "
+                        "model_player_change_margin"
                         % (CHANGE_STRICT_CONTROL_FACTOR, CHANGE_STRICT_MIN_MOVEMENT))
     r.add_argument("--base-url", default="",
                    help="override the service root (default 8080 for jev, 8081 for playjev)")

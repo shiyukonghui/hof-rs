@@ -257,8 +257,8 @@ def main():
           decl["strict"]["gameplay_control_factor"], 2.0)
     check("margin declaration: strict floor is 1.0",
           decl["strict"]["gameplay_min_movement"], 1.0)
-    check("margin declaration: the default margin is the baseline",
-          decl["default_margin"], "baseline")
+    check("margin declaration: the PASS criterion is the strict margin (TASK-136 §1.A.1)",
+          decl["default_margin"], "strict")
     check("margin declaration: it comes from the controls file",
           decl["source"].endswith("playability_controls.json"), True)
 
@@ -294,15 +294,25 @@ def main():
                             "step_verdict": ("ok_ack_and_changed" if ch["changed"] else
                                              "FAIL_no_change_after_accepted_input")})
     s = summarise(recs_margin, "jev", "pong")
-    check("margin run: baseline verdict PASS", s["verdict"], "PASS")
+    # TASK-136 §1.A.1: strict is the PASS criterion, so a run only the baseline passes is
+    # `PASS(baseline only)` and does not count.  Everything the baseline said is kept.
+    check("margin run: the run is PASS(baseline only), not PASS",
+          s["verdict"], "PASS(baseline only)")
+    check("margin run: PASS(baseline only) does not count as a pass",
+          s["counts_as_pass"], False)
+    check("margin run: the control verdict is preserved", s["baseline_verdict"], "PASS")
+    check("margin run: the control rate is preserved",
+          s["baseline_accepted_and_changed_rate"], 1.0)
     check("margin run: strict verdict FAIL (the edge steps)",
           s["strict_verdict"], "FAIL")
     check("margin run: strict fail steps are the two edge steps",
           s["strict_fail_steps"], [2, 7])
     check("margin run: strict rate is still reported (0.75)",
           s["strict_accepted_and_changed_rate"], 0.75)
-    check("margin run: the baseline is still the default top-level reading",
-          s["change_margin"]["selected"], "baseline")
+    check("margin run: the strict margin is the default top-level criterion",
+          s["change_margin"]["selected"], "strict")
+    check("margin run: the criterion is named in the summary",
+          s["pass_criterion"], "strict")
     check("margin run: the edge steps are named",
           [(e["step"], e["margin_ratio"]) for e in s["change_margin_edge_steps"]],
           [(2, 1.088), (7, 1.195)])
@@ -311,11 +321,75 @@ def main():
     check("margin run: `changed_of` reads the two margins",
           (changed_of(recs_margin[1], "baseline"), changed_of(recs_margin[1], "strict")),
           (True, False))
+    # explicitly asking for the baseline reading restores the historical top-level verdict
+    # and leaves the strict reading beside it: the control reading is never destroyed.
+    s_base = summarise(recs_margin, "jev", "pong", margin="baseline")
+    check("margin=baseline: the control verdict is PASS", s_base["verdict"], "PASS")
+    check("margin=baseline: the strict reading is preserved beside it",
+          s_base["strict_verdict"], "FAIL")
+    check("margin=baseline: the criterion is named", s_base["pass_criterion"], "baseline")
     s_alt = summarise(recs_margin, "jev", "pong", margin="strict")
-    check("margin=strict: top-level verdict moves to the strict one",
-          s_alt["verdict"], "FAIL")
+    check("margin=strict: top-level verdict is PASS(baseline only)",
+          s_alt["verdict"], "PASS(baseline only)")
     check("margin=strict: the baseline verdict is preserved beside it",
           s_alt["baseline_verdict"], "PASS")
+    # a run the strict margin DOES pass is a plain, counted PASS
+    recs_clean = []
+    for i in range(1, 9):
+        ch = decide_changed(4300, 0, 200.0, 0.0)
+        recs_clean.append({"step": i, "action": {"action": "act%d" % i},
+                           "ack": {"accepted": True, "injected": True},
+                           "change": ch, "changed_bool": ch["changed"],
+                           "frame_before_sha": "frame%d" % i,
+                           "step_verdict": "ok_ack_and_changed"})
+    s_clean = summarise(recs_clean, "jev", "pong")
+    check("a strict-clean run is a plain PASS", s_clean["verdict"], "PASS")
+    check("a strict-clean run counts as a pass", s_clean["counts_as_pass"], True)
+
+    # =================================================================================
+    # TASK-136 §1.A.1, GATE SIDE: `gate.json -> model_player_criterion` must state the
+    # SAME criterion as the loop's `player.json`, on the same records, on both margins.
+    # =================================================================================
+    gate_mixed = []
+    for i in range(1, 9):
+        ch = ({2: edge_109, 7: edge_119}.get(i)
+              or decide_changed(4300, 0, 200.0, 0.0))
+        gate_mixed.append({
+            "step": i, "action": {"action": "act%d" % i},
+            "ack": {"accepted": True, "injected": True},
+            "change": ch, "frame_before_sha": "frame%d" % i,
+            "model": {"request_path": "req%d" % i},
+            "markers": {"GameOver": False},
+            "step_verdict": ("ok_ack_and_changed" if ch["changed"] else
+                             "FAIL_no_change_after_accepted_input")})
+    ev_mixed = evaluate_model_player_steps(gate_mixed, "pong")
+    check("gate: the criterion is the strict margin", ev_mixed["change_margin"], "strict")
+    check("gate: baseline reading is PASS", ev_mixed["pass_baseline"], True)
+    check("gate: strict reading is FAIL", ev_mixed["pass_strict"], False)
+    check("gate: the criterion follows strict", ev_mixed["pass"], False)
+    check("gate: the verdict is PASS(baseline only)",
+          ev_mixed["verdict"], "PASS(baseline only)")
+    check("gate: PASS(baseline only) does not count",
+          ev_mixed["counts_as_pass"], False)
+    check("gate: the strict failing steps are the two edge steps",
+          ev_mixed["fail_steps_strict"], [2, 7])
+    check("gate: the control reading records no failing step (the baseline passes them)",
+          ev_mixed["fail_steps_baseline"], [])
+    ev_mixed_clean = evaluate_model_player_steps(clean_run(8), "pong")
+    check("gate: a strict-clean run is a plain PASS",
+          ev_mixed_clean["verdict"], "PASS")
+    check("gate: a strict-clean run counts", ev_mixed_clean["counts_as_pass"], True)
+    check("gate: the declaration source is recorded",
+          str(ev_mixed["change_margin_declaration_source"]).endswith(
+              "playability_controls.json"), True)
+    # the two implementations must not drift: same criterion, same verdict string
+    check("loop and gate agree on the criterion", s["pass_criterion"],
+          ev_mixed["change_margin"])
+    check("loop and gate agree on the verdict string", s["verdict"], ev_mixed["verdict"])
+    check("loop and gate agree on counts_as_pass", s["counts_as_pass"],
+          ev_mixed["counts_as_pass"])
+    check("loop and gate agree on the strict failing steps", s["strict_fail_steps"],
+          ev_mixed["fail_steps_strict"])
     # a record without `change.strict` (everything written before TASK-135) is not an error
     old = [dict(r, change={"changed": r["change"]["changed"]}) for r in recs_margin]
     s_old = summarise(old, "jev", "pong")

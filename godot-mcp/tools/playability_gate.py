@@ -2540,8 +2540,42 @@ MODEL_PLAYER_CRITERION_NOTE = (
     "conclusions are filed SEPARATELY from that verdict and are neither game defects nor "
     "PASSes: MODEL_FIXED_POINT (TASK-133: >= 3 steps of the same action on a byte-identical "
     "frame) and MODEL_NO_PROGRESS (TASK-134: >= 3 consecutive sent steps with no gameplay "
-    "progress even if the actions differ -- the fixed point's measured blind spot)."
+    "progress even if the actions differ -- the fixed point's measured blind spot).  "
+    "TASK-136 §1.A.1: the CHANGE TEST is scored under TWO declared margins and the STRICT "
+    "one is the pass criterion; the baseline margin is the control reading, so a run only "
+    "it passes is written PASS(baseline only) with counts_as_pass=false and is NOT a pass."
 )
+
+
+def load_change_margins(path=None):
+    """TASK-136 §1.A.1: the two declared model-player change margins, read by the gate.
+
+    The loop (`tools/playtest_player.py`) is the authority and the declaration lives in
+    `tools/playability_controls.json -> model_player_change_margin`; this function reads the
+    SAME declaration so `gate.json` states the criterion the loop actually applied instead
+    of a second, drifting copy of the rule.
+    """
+    p = path or os.path.join(HERE, "playability_controls.json")
+    fallback = {"default_margin": "strict",
+                "strict": {"gameplay_control_factor": 2.0, "gameplay_min_movement": 1.0,
+                           "pixel_control_factor": 2.5, "min_pixels": P3_MIN_CHANGED_PIXELS},
+                "baseline": {"gameplay_control_factor": 1.0, "gameplay_min_movement": 0.0,
+                             "pixel_control_factor": 2.5,
+                             "min_pixels": P3_MIN_CHANGED_PIXELS}}
+    try:
+        doc = json.load(io.open(p, encoding="utf-8"))
+        block = doc.get("model_player_change_margin") or {}
+        for name in ("baseline", "strict"):
+            src = block.get(name) if isinstance(block.get(name), dict) else {}
+            for key in fallback[name]:
+                if key in src:
+                    fallback[name][key] = src[key]
+        if block.get("default_margin") in ("baseline", "strict"):
+            fallback["default_margin"] = block["default_margin"]
+        fallback["source"] = os.path.abspath(p)
+    except Exception:  # noqa: BLE001 - the gate must run on a bare checkout
+        pass
+    return fallback
 
 
 def record_model_player_criterion(gate, args, game):
@@ -2677,9 +2711,21 @@ def evaluate_model_player_steps(steps, game=None):
     steps = [r for r in (steps or []) if isinstance(r, dict) and r.get("step")]
     injected = [r for r in steps if (r.get("ack") or {}).get("injected")]
     accepted = [r for r in injected if (r.get("ack") or {}).get("accepted")]
-    changed = [r for r in accepted if (r.get("change") or {}).get("changed")]
+    margins = load_change_margins()
+
+    def _changed(rec, margin):
+        """One step under one margin: `change.strict` when the loop recorded it, else the
+        step's own `change.changed` (which IS the baseline reading)."""
+        ch = rec.get("change") or {}
+        if margin == "strict" and isinstance(ch.get("strict"), dict):
+            return bool(ch["strict"].get("changed"))
+        return bool(ch.get("changed"))
+
+    changed = [r for r in accepted if _changed(r, "baseline")]
+    changed_strict = [r for r in accepted if _changed(r, "strict")]
     fail = [r["step"] for r in steps
             if r.get("step_verdict") == "FAIL_no_change_after_accepted_input"]
+    fail_strict = [r["step"] for r in accepted if not _changed(r, "strict")]
     fail_recs = [r for r in steps if r["step"] in fail]
     actions = [r.get("action", {}).get("action") for r in steps
                if (r.get("action") or {}).get("action")]
@@ -2702,6 +2748,60 @@ def evaluate_model_player_steps(steps, game=None):
     # verdict; it deliberately appears in NO branch below, so `pass` is the rule
     # TASK-132/133 already used, unchanged.
     mp_noprog = _model_no_progress_steps(steps, 3)
+    def _decide(margin):
+        """The whole TASK-132 rule under ONE margin -> (pass, why).
+
+        `pass` is True / False / None (None = the criterion stays UNMEASURED, exactly as
+        TASK-132/133/134 already described it).  Everything that depends on the change
+        reading is recomputed; everything that is a statement about the MODEL (fixed point,
+        single-action loop, terminal state) is margin-independent by construction.
+        """
+        ch = changed_strict if margin == "strict" else changed
+        fl = fail_strict if margin == "strict" else fail
+        rate = (round(len(ch) / float(len(accepted)), 4) if accepted else None)
+        if fl and not fixed_point and not terminal:
+            return False, ("%d accepted input(s) left the viewport unchanged under the %s "
+                           "margin (the user's FAIL condition): steps %s"
+                           % (len(fl), margin, fl))
+        if fl and fixed_point:
+            return None, ("the FAIL condition occurred on steps %s under the %s margin, but "
+                          "every failing step shows the SAME action (%s) and a "
+                          "byte-identical frame, so 'the game ignored it' cannot be told "
+                          "apart from 'the model stopped playing'"
+                          % (fl, margin, fail_actions))
+        if fl and terminal:
+            return None, ("the FAIL condition occurred on steps %s under the %s margin, but "
+                          "the game declared a TERMINAL state, so every later frame is "
+                          "frozen by the game's own rule" % (fl, margin))
+        if len(injected) < 8:
+            return None, ("only %d injected step(s): the rule needs >= 8" % len(injected))
+        if mp_fixed.get("found"):
+            return None, ("MODEL_FIXED_POINT: %s.  A model-side fixed point is not a game "
+                          "defect and is not a PASS; the game criterion stays unmeasured"
+                          % mp_fixed.get("reading"))
+        if same_action:
+            return None, ("the model repeated ONE action over every injected step, so 'the "
+                          "game ignored it' cannot be told apart from 'the model stopped "
+                          "playing'")
+        if rate >= 0.75:
+            return True, ("%d/%d accepted steps changed the picture under the %s margin "
+                          "(%.4f)" % (len(ch), len(accepted), margin, rate))
+        return False, ("accepted-and-changed rate under the %s margin %.4f < 0.75"
+                       % (margin, rate or 0.0))
+
+    pass_baseline, why_baseline = _decide("baseline")
+    pass_strict, why_strict = _decide("strict")
+    criterion = margins.get("default_margin", "strict")
+    pass_criterion = pass_strict if criterion == "strict" else pass_baseline
+    why_criterion = why_strict if criterion == "strict" else why_baseline
+    if pass_criterion is True:
+        verdict = "PASS"
+    elif criterion == "strict" and pass_baseline is True:
+        verdict = "PASS(baseline only)"
+    elif pass_criterion is False:
+        verdict = "FAIL"
+    else:
+        verdict = "INCONCLUSIVE"
     out = {"criterion": "MODEL_PLAYER", "what": MODEL_PLAYER_CRITERION_NOTE,
            "game": game, "evidence_source": "runs/model-player/<game>/<backend>/steps.jsonl",
            "steps": len(steps), "injected_steps": len(injected),
@@ -2710,6 +2810,27 @@ def evaluate_model_player_steps(steps, game=None):
                                          if accepted else None),
            "fail_steps": fail, "distinct_actions": sorted(set(actions)),
            "one_action_loop": same_action,
+           # -- TASK-136 §1.A.1: both readings, and which one is the pass criterion --------
+           "change_margin": criterion,
+           "change_margin_known": ["baseline", "strict"],
+           "change_margin_declaration_source": margins.get("source"),
+           "accepted_and_changed_strict": len(changed_strict),
+           "accepted_and_changed_rate_strict": (round(len(changed_strict) /
+                                                      float(len(accepted)), 4)
+                                                if accepted else None),
+           "fail_steps_baseline": fail,
+           "fail_steps_strict": fail_strict,
+           "pass_baseline": pass_baseline,
+           "pass_strict": pass_strict,
+           "why_baseline": why_baseline,
+           "why_strict": why_strict,
+           "verdict": verdict,
+           "counts_as_pass": bool(verdict == "PASS"),
+           "pass_criterion_reading": (
+               "TASK-136 §1.A.1: `pass`/`verdict` use the %r margin.  Only a strict pass is "
+               "`PASS`; a run the baseline passes and strict does not is `PASS(baseline "
+               "only)` with counts_as_pass=false.  Both readings are reported."
+               % criterion),
            "MODEL_FIXED_POINT": bool(mp_fixed.get("found")),
            "model_fixed_point": mp_fixed,
            "MODEL_NO_PROGRESS": bool(mp_noprog.get("found")),
@@ -2721,51 +2842,13 @@ def evaluate_model_player_steps(steps, game=None):
            "declared_terminal_seen": bool(terminal),
            "thresholds": {"min_steps": 8, "min_rate": 0.75,
                           "model_fixed_point_min_run": 3,
-                          "model_no_progress_min_run": 3},
-           "pass": None, "why": ""}
-    if fail and not fixed_point and not terminal:
-        out["pass"] = False
-        out["why"] = ("%d accepted input(s) left the viewport unchanged (the user's FAIL "
-                      "condition): steps %s" % (len(fail), fail))
-    elif fail and fixed_point:
-        out["pass"] = None
-        out["why"] = ("the FAIL condition occurred on steps %s, but every failing step shows "
-                      "the SAME action (%s) and a byte-identical frame, so 'the game ignored "
-                      "it' cannot be told apart from 'the model stopped playing'"
-                      % (fail, fail_actions))
-    elif fail and terminal:
-        out["pass"] = None
-        out["why"] = ("the FAIL condition occurred on steps %s, but the game declared a "
-                      "TERMINAL state, so every later frame is frozen by the game's own rule"
-                      % (fail,))
-    elif len(injected) < 8:
-        out["pass"] = None
-        out["why"] = ("only %d injected step(s): the rule needs >= 8" % len(injected))
-    elif mp_fixed.get("found"):
-        # TASK-133 §1.C.1: the run is (mostly) the model's fixed point.  That is not a
-        # statement about the game, so it is filed as MODEL_FIXED_POINT and the game
-        # criterion stays unmeasured -- it can neither fail the game nor pass it.  This
-        # branch is checked BEFORE `same_action` on purpose: `same_action` is the same
-        # observation read more loosely, and the explicit fixed-point conclusion (with its
-        # length threshold and its steps) must be the one a reader sees.
-        out["pass"] = None
-        out["why"] = ("MODEL_FIXED_POINT: %s.  A model-side fixed point is not a game "
-                      "defect and is not a PASS; the game criterion stays unmeasured"
-                      % mp_fixed.get("reading"))
-    elif same_action:
-        out["pass"] = None
-        out["why"] = ("the model repeated ONE action over every injected step, so 'the game "
-                      "ignored it' cannot be told apart from 'the model stopped playing'")
-    elif out["accepted_and_changed_rate"] >= 0.75:
-        out["pass"] = True
-        out["why"] = ("%d/%d accepted steps changed the picture (%.4f)"
-                      % (len(changed), len(accepted), out["accepted_and_changed_rate"]))
-    else:
-        out["pass"] = False
-        out["why"] = ("accepted-and-changed rate %.4f < 0.75"
-                      % (out["accepted_and_changed_rate"] or 0.0))
-    if out["pass"] is not False:
-        out["pass"] = None if out["pass"] is None else out["pass"]
+                          "model_no_progress_min_run": 3,
+                          "change_margin": criterion,
+                          "strict_gameplay_control_factor":
+                              margins["strict"]["gameplay_control_factor"],
+                          "strict_gameplay_min_movement":
+                              margins["strict"]["gameplay_min_movement"]},
+           "pass": pass_criterion, "why": why_criterion}
     out["reader_judgement_required"] = True
     out["reader_judgement_note"] = (
         "the machine half above can only say whether the picture moved; the other half of "

@@ -274,8 +274,9 @@
   "itself (pong's ball keeps flying) therefore cleared the term by a hair.  TASK-135 §1.B",
   "asked for a declared, stricter margin and forbade using it to turn a verdict green.",
   "",
-  "`baseline` is the TASK-132 rule, unchanged and still the DEFAULT the verdict uses, so",
-  "every historical verdict recomputes byte-for-byte (re-checked on the recorded runs).",
+  "`baseline` is the TASK-132 rule, unchanged, and since TASK-136 §1.A.1 it is the CONTROL",
+  "reading rather than the pass criterion: it is still computed and reported for every step",
+  "and every run, so nothing about the old reading was lost or rewritten.",
   "`strict` asks the same question with a margin: the declared observables must move at",
   "least 2x as far as they moved in the control window." ,
   "",
@@ -296,15 +297,21 @@
   "Neither number is a verdict by itself: EVERY step is scored under BOTH margins, both",
   "verdicts are written into `player.json` (`verdict` + `strict_verdict` +",
   "`baseline_verdict`), and the steps the two readings disagree about are listed as",
-  "`change_margin_edge_steps`.  `--change-margin strict` selects which reading the top-level",
-  "verdict uses; the other is always reported beside it."
+  "`change_margin_edge_steps`.",
+  "",
+  "TASK-136 §1.A.1 changed WHICH margin is the criterion, not the margins themselves:",
+  "`default_margin` is now `strict`, so `player.json -> verdict` is `PASS` only when the",
+  "strict margin passes.  A run the strict margin refuses while the baseline accepts is",
+  "written `PASS(baseline only)` and carries `counts_as_pass: false` -- it is reported, and",
+  "it is never counted as a pass.  `--change-margin` still selects either reading for a",
+  "specific run (both are always reported beside each other)."
  ],
  "model_player_change_margin": {
-  "declared_by": "TASK-135 §1.B",
-  "how_used": "tools/playtest_player.py `_margin_reading` / `decide_changed` / `summarise`; every step records both readings in `change.strict`, and `player.json` carries both verdicts plus `change_margin_edge_steps`",
-  "default_margin": "baseline",
+  "declared_by": "TASK-135 §1.B (both margins); TASK-136 §1.A.1 (which one is the pass criterion)",
+  "how_used": "tools/playtest_player.py `_margin_reading` / `decide_changed` / `summarise`; every step records both readings in `change.strict`; `player.json` carries both verdicts plus `change_margin_edge_steps`, and TASK-136 §1.A.1 adds `counts_as_pass` / `pass` / `pass_criterion` (a run only the baseline passes is written as `PASS(baseline only)` and does NOT count). tools/playability_gate.py `evaluate_model_player_steps` reads the same rule for `gate.json -> model_player_criterion`",
+  "default_margin": "strict",
   "baseline": {
-   "name": "baseline (TASK-132 §1.1 step 5, unchanged; still the default)",
+   "name": "baseline (TASK-132 §1.1 step 5, unchanged; since TASK-136 §1.A.1 the CONTROL reading, not the pass criterion)",
    "gameplay_rule": "the declared gameplay observables must move STRICTLY MORE than in the equal-length no-input control window",
    "gameplay_control_factor": 1.0,
    "gameplay_min_movement": 0.0,
@@ -313,7 +320,7 @@
    "min_pixels": 40
   },
   "strict": {
-   "name": "strict (TASK-135 §1.B; reported beside the baseline, never in place of it)",
+   "name": "strict (TASK-135 §1.B; since TASK-136 §1.A.1 this is the PASS criterion -- only a strict pass is written as PASS)",
    "gameplay_rule": "the declared gameplay observables must move at least gameplay_control_factor times as far as in the equal-length no-input control window, and by at least gameplay_min_movement in absolute terms",
    "gameplay_control_factor": 2.0,
    "gameplay_min_movement": 1.0,
@@ -327,10 +334,22 @@
    "measured: on the only run ever decided by this term (`pong x jev x V3`), the two steps that lose attribution under 2x sat at 1.09x and 1.19x, while the one that keeps it sat at 2.35x"
   ],
   "not_a_loosening": [
-   "the baseline reading and the default verdict are unchanged, and the 22 historical run summaries recompute identically",
+   "TASK-136 §1.A.1: the pass criterion moved from `baseline` to `strict`, i.e. STRICTER, never looser; the baseline reading is still computed for every step and every run and is still reported as `baseline_verdict` / `baseline_accepted_and_changed_rate` / `baseline_fail_steps`",
+   "a run that only the baseline passes is written `PASS(baseline only)` and carries `counts_as_pass: false`, so it cannot be counted as a pass by a reader that looks for the string `PASS`",
    "the strict reading can only ever turn a baseline 'changed' into a 'not changed'; it can never turn a 'not changed' into a 'changed' (the strict term implies the baseline term)",
    "when the strict margin drops a run out of PASS the report says so; the number is not tuned to keep anything green"
-  ]
+  ],
+  "default_margin_change": {
+   "declared_by": "TASK-136 §1.A.1",
+   "was": "baseline",
+   "now": "strict",
+   "why": [
+    "the task's decision: only the strict margin may PASS a run; `baseline` is kept as the control reading",
+    "TASK-135 measured that the baseline rule passed `pong x jev x V3` on steps whose gameplay movement beat the control window by 1.088x and 1.195x -- ratios indistinguishable from a game that animates by itself",
+    "the strict term is provably implied by no looser term (see `not_a_loosening`), so making it the criterion cannot pass anything the old rule failed"
+   ],
+   "effect": "`player.json -> verdict` and `gate.json -> model_player_criterion.pass` use `strict`; `counts_as_pass` is true only for a literal `PASS`"
+  }
  },
  "games": {
   "asteroids": {

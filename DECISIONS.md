@@ -7525,3 +7525,183 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
     （因为它们的零输入对照窗是**静止**的，比值不是 1.x 而是「无穷大」量级）。
   回滚点：`--change-margin baseline` 即回到旧口径；删掉 `model_player_change_margin`
   声明块则退回代码里的同名常量（同样的 1.0 / 2.0）。
+
+---
+
+## D192 — TASK-136 §1.A.1：**`strict` 升为 PASS 的默认判据**，`baseline` 降为对照读数
+
+- 日期：2026-09-28
+- 触发问题：D191 把 strict 做成「另开一把尺子」之后，默认判决**仍是 baseline**，
+  于是 `pong × jev × V3` 照样是 `PASS`——而那一步的余量只有 **1.088×**（D191 实测）。
+  判据的**默认值**才是真正的球门：另开一把尺子、却在过不了它时仍判 PASS，
+  等于加严没有生效。TASK-136 §1.A.1 直接裁决：**只有 strict 通过才算 PASS**。
+- 选项：
+  1. **`default_margin` 改成 `strict`（声明文件里改），`baseline` 保留为对照；
+     仅 baseline 通过者写 `PASS(baseline only)` 且带 `counts_as_pass: false`**（选中）
+  2. 删掉 baseline，只留 strict —— 否决：D191 的「两把尺子并列留痕」正是为了让
+     「哪把尺子松了」永远可查；删掉对照会丢掉全部历史可比性
+  3. 把 `PASS(baseline only)` 也标成 `PASS`，只在报告里注明 —— 否决：那正是
+     §1.A.1 明文禁止的「仅 baseline 通过者不许计入通过数」
+  4. 只改判据侧不改 gate 侧 —— 否决：`gate.json -> model_player_criterion` 与
+     `player.json` 必须说同一句话，否则「P1..P7 不是判决」的那套纪律会出现两个版本
+- 选择：选项 1。落点：
+  `tools/playability_controls.json -> model_player_change_margin.default_margin = "strict"`
+  （`load_change_margins()` 读它，常量只是文件不可读时的兜底）；
+  `tools/playtest_player.py -> summarise()` 三步判定：strict PASS → `PASS`；
+  否则 baseline PASS → `PASS(baseline only)` + `counts_as_pass=false`；
+  否则 → strict 的 `FAIL` / `INCONCLUSIVE`。新增 `pass` / `pass_criterion` /
+  `pass_criterion_reading` / `counts_as_pass` 字段（`player.json`）。
+  `tools/playability_gate.py -> evaluate_model_player_steps()` 用同一份声明做同一件事
+  （`pass_baseline` / `pass_strict` / `fail_steps_strict` / `verdict` / `counts_as_pass`）。
+- 理由：**strict 的条件蕴含 baseline 的条件**（`mv ≥ 2·cmv` 且 `mv ≥ 1.0` ⇒ `mv > cmv`；
+  像素项两边完全相同），所以把默认换成 strict **只可能把 PASS 变少、不可能变多**——
+  这是「收紧」而不是「移动球门」。同时 baseline 的公式与全部历史读数一字未动，
+  `--change-margin baseline` 仍能取回旧口径。
+- 预期影响与回滚点：`tools/playtest_player.py selftest` 与
+  `tools/tests/test_playability_model_player.py` 的旧断言里
+  「默认就是 baseline」的四条被**改成新语义的断言**（并新增 gate 侧的一致性与
+  `PASS(baseline only)` 计数断言）；`PASS(baseline only)` 的实例见 D197 与报告 §2。
+  回滚点：`default_margin` 改回 `"baseline"`（一行），或对某次运行显式
+  `--change-margin baseline`。
+
+---
+
+## D193 — TASK-136 §1.A.2：把「没用重定向」变成**可核数字**（命令台账 + 扫描器）
+
+- 日期：2026-09-28
+- 触发问题：TASK-135 §7.1 自曝「只读排查里用了几次 `2>&1` / `2>/dev/null`」，
+  同时写明「**我无法保证把每一条控制台重定向都枚举干净**」。一句「我记得没用」
+  或「我无法枚举」都不是证据；任务书 §2.1 要的是**命中条数 + 逐条原文**。
+- 选项：
+  1. **所有命令经一个包装器执行；包装器在执行前把逐字 argv + cwd + 时间戳追加进
+     `t136_commands.jsonl`；再用扫描器逐条扫命中**（选中）
+  2. 事后在报告里凭记忆列命令 —— 否决：不可核，正是 TASK-135 暴露的那个洞
+  3. 靠「我用的都是 Python 句柄」自证 —— 否决：它证明不了**没写**重定向
+- 选择：选项 1。落点：
+  `runs/model-player/_scripts/t136_cmd.py`（`shell=False`，stdout/stderr 各走一条
+  Python 管道，绝不合并；未加 `--cwd` 时 cwd = 仓库根）、
+  `runs/model-player/_scripts/t136_scan_redirects.py`（扫台账 + 扫本批驱动脚本源码里的
+  重定向字面量与 `shell=True`，并把脚本命中分成 code / comment / string-literal）。
+  包装器存在**之前**用交互终端跑过的命令**人工逐条转录**进台账，标
+  `source: manual-backfill`——**包括那两条真的命中的**（一条 `2>&1`、一条 `2>nul`），
+  它们只影响我自己的控制台、没有参与任何测量或判决，但按 §2.1 的字面要求就是违规，
+  如实计入命中数。
+- 理由：把「我保证没违规」换成「我扫了 N 条命令，命中 M 条，原文如下」。
+  机械化的东西才能被别人复核；无法枚举的部分必须**点名**而不是被话术吞掉。
+- 预期影响与回滚点：命中数字与逐条原文见报告 §3；包装器与扫描器都在 `runs/**`
+  （被 `.gitignore:43` 忽略），不进提交。回滚点：不用包装器（但那就回到「不可核」）。
+
+---
+
+## D194 — TASK-136 §1.B：脚本臂扩到 **20/20**（新增 15 款人样策略 + 15 款可读状态），
+并确立「**策略产物 vs 游戏缺陷**」的区分口径
+
+- 日期：2026-09-28
+- 触发问题：TASK-134/135 的脚本臂只为 5 款（pong/snake/tetris/game2048/puzzlebobble）
+  声明了策略，其余 15 款一律回 `wait`（「no scripted policy is declared for this game」），
+  注入步数为 0 ⇒ 那 15 款的游戏侧判决**根本不存在**。「脚本臂覆盖 20 款」在
+  TASK-136 之前是个未验证的口号。
+- 选项：
+  1. **为 15 款各写一条确定性人样策略，同时给它们补 `READABLE_STATE_FIELDS`**（选中）
+  2. 用「随机选一个已声明动作」当通用策略 —— 否决：随机策略撞墙、撞非法操作，
+     产出的 FAIL 说的是策略而不是游戏，会让「游戏侧结论」失去意义
+  3. 只跑 5 款，其余 15 款写「未测」 —— 否决：任务书 §1.B 要求 20/20
+- 选择：选项 1。每条策略的字段名都从**游戏自己导出的状态**里读出来
+  （`runs/model-player/_scripts/t136_fields.py` 从 `runs/playability/<game>/states/`
+  导出实测字段），不是猜的；`_act()` 仍然只接受该游戏 InputMap 里真有的动作名。
+  V3 的候选描述也补了一条**按游戏自己 `capabilities[].need/observable` 生成**的句子
+  （`declared_capability_text()`），避免 V3 在新增的 15 款上退化成一个动作名列表。
+- 理由：脚本臂回答的是「**这个游戏**能不能被玩」，所以策略必须是**人样的**
+  （朝目标走、用核心机制），否则测出来的是策略的笨。同时必须承认：
+  人样策略也会撞上**合法拒绝**（撞墙、非法交换、已翻开的格子、金币不够），
+  这些步在判据里就是「接受了输入而画面没变」，**不是游戏缺陷**。
+- 预期影响与回滚点：20/20 逐款数字与三态见报告 §4。按上面的口径区分：
+  * **真游戏缺陷**：bomberman（炸弹引信永不燃烧 + 已放炸弹不可见）、flappy（世界不自走）、
+    frogger（一次按键连丢三条命）、platformer（物理时钟为 0，玩家永不动）
+  * **策略产物（游戏机制本身已被同一批 run 证明可用）**：
+    match3（第 8 步一次成功交换：`TotalCleared 3`、`Score 30`、`Board` 变、
+    像素差 39549——其余是非法交换被游戏**正确地**拒绝）、
+    minesweeper（第 1 步一次翻开 **59** 格洪泛、像素差 159724——其余是翻开已翻开的格子）、
+    pacman（吃豆子 `Score 0→90`、`PelletsEaten 0→9`——其余是撞墙 `RejectedSteps`）、
+    sokoban（`Pushes 1`、`Steps 0→8`——其余是撞墙）、
+    towerdefense（`TowersPlaced 2`、`Gold 100→0`——其余是金币为 0 时放塔被拒）
+  * **判据/声明交互（建议下一轮处理）**：这 5 款的「合法拒绝」没有被判据识别，
+    因为它们的拒绝计数器（`RejectedMoves` / `InputRejectedSwaps` / `RejectedSteps`）
+    **不在**各自 `refusal_evidence.keys` 的声明里；把它们声明进去属于**声明修正**，
+    不是放宽判据，本轮**没有**擅自改声明（避免动到别的批次的判决）。
+  回滚点：删掉 15 条策略与 15 条 `READABLE_STATE_FIELDS` 即回到 5 款覆盖。
+
+---
+
+## D195 — TASK-136 §1.B：20 款扫描揭出的**世界时钟缺陷**——platformer 修，flappy/bomberman 试后回退（登记未修）
+
+- 日期：2026-09-28
+- 触发问题：脚本臂逐款跑完，四款游戏的**世界根本不动**（TASK-134/135 的同一类硬阻塞）：
+  flappy（`AutoRun=false`，鸟只改 `BirdVelocity`、`BirdY` 永不变，12 步只 1 步变化）、
+  platformer（`AutoClock=0`，只改 `VelX/VelY`、`PlayerX/PlayerY` 永不变，2/12）、
+  bomberman（`AutoClock=0`，引信永不燃烧：`Detonations=0`、`BricksDestroyed=0`，
+  已放的炸弹在画面上**也看不见**，6/12）、
+  lunarlander（`AutoClock=0`，着陆器永不落）。
+- 选项：
+  1. **照 D189（puzzlebobble 的 `AutoClock=20`）的先例，把默认时钟打开**（选中，**逐款实测后决定**）
+  2. 全部保持原样、只登记 —— 否决：任务书 §1.B 明确「发现游戏侧阻塞就修」
+  3. 由判据侧替它们推帧 —— 否决：D189 已经否决过同一个念头
+- 选择与实测（这一步是 spike，结论按**实测**而不是按推理）：
+  * **platformer：改（`AutoClock` 默认 0 → 20）。** 修前 2/12 FAIL；
+    修后 **7/9 步变化、baseline PASS、strict 2 个边缘步（1.717× / 1.721×）→
+    `PASS(baseline only)`**。读图确认玩家真的在动：`TILE 2,27 → 4,27`（右移两格），
+    随后 `TILE 2,23`、`LIVES 3→2`（跳到平台上，掉了一次血）。
+    ——「世界会自己走」与「输入可分辨」在这里**同时**成立，所以修对了。
+  * **flappy：改后回退（登记未修）。** 改 `AutoRun=true` 后出现一个**测量结构**问题：
+    对照窗是在注入**之前**采的，而世界已经在跑，于是鸟在**对照窗内**就落到地面
+    `GameOver`；随后注入的 `flap` 打在一条已结束的局面上，必然「接受但无变化」。
+    实测 12 步里 6 步「变化」，全部来自 `flappy_restart`（重置世界）而不是飞行的输入；
+    偶数步的 `px == ctl_px` **逐位相同**（`30050 == 30050`），即动作窗与对照窗走了
+    同一条轨迹。这**不是**更可玩，只是把冻结换成了「一局 1 秒的必死」。
+    ⇒ 回退到 `AutoRun=false`，作为**未修的已知缺陷**登记；修它需要先决定
+    「短命世界如何与『先对照窗、后注入』的测量顺序共存」——那是判据侧的设计问题。
+  * **bomberman：改后回退（登记未修）。** `AutoClock=20` 一开，引信 3 tick = **0.15 s**，
+    玩家放完弹根本走不开：settle 时 `Lives` 已经从 3 掉到 2（还没出任何输入就被打死），
+    一次 `bomb_place` 之后 `Detonations=1`、`Lives 2→1`，第三次输入整局 `GameOver`，
+    随后 `ResetGame` 又把 `AutoClock` 归零、世界重新冻结。⇒ 回退。
+    修它要同时动**引信时长 / 出生保护 / 重置策略**，是改玩法而不是改时钟，不做。
+  * **lunarlander：不改（登记）。** 它靠 `AngleDeg` / `Fuel` / `ThrustCount` 等
+    **已声明观测量**的变化拿到 8/8 PASS，但 `Lx/Ly` 全程不变——着陆器其实没动。
+    这是**判据的一个盲区**（零对照窗 + 下限 1.0 会把「一个计数器动了」当成「画面变了」），
+    留给决策者；本轮不在报告之外改动判据。
+- 理由：三款游戏用同一条「把时钟打开」的处方，**结果却不同**——platformer 变好，
+  flappy/bomberman 变差。这正是 spike 的价值：**先测再改**，并且**改坏了就回退**，
+  而不是为了「修了几个」的数目把世界改成另一种不可玩。
+- 预期影响与回滚点：`projects/platformer/src/PlatformerGame.cs`（默认值 + `ResetGame`）已改，
+  `dotnet build` 0 错误 0 警告（`runs/model-player/t136-build/`），修前代码副本在
+  `runs/model-player/t136-copies/platformer/`（由 `git show HEAD:` 还原，`HEAD` 未动）。
+  flappy 与 bomberman 的源码**已回退为 HEAD 版本**（`git checkout`），
+  它们「改后」的实测证据分别留在 `runs/model-player/t136-flappy-autorun/` 与
+  `runs/model-player/t136-bomberman-clockon/`。
+  回滚点：platformer 的 `AutoClock` 改回 `0.0f`（两处）。
+
+---
+
+## D196 — TASK-136 §1.B：frogger 的硬阻塞是「**一次按键 = 三条命**」（登记未修）
+
+- 日期：2026-09-28
+- 触发问题：脚本臂在 frogger 上只跑出 **1 个注入步**：`frog_up` 之后游戏立刻
+  `Lives 3 → 0` + `GameOver`，回路按终局规则停止。
+- 实测（读图 + 状态）：出生点 (col 6, row 14) 的**正上方一格**停着一辆车
+  （`Car_4` 画在 x=384，正是该列），而 `InputRepeat = 0.12 s` +
+  「按住即重复迈步」的实现让**一次注入（hold 350 ms）连迈 3 步**：
+  迈上去被撞 → 回到出生点 → 键还按着 → 再迈 → 再撞，0.36 s 内三条命全没。
+  证据：`runs/model-player/t136-scripted/frogger/scripted/frames/002_01_before.png`
+  （`LIVES 3`）→ `004_01_after.png`（`LIVES 0`、`GAME OVER`），frog 始终停在出生格。
+- 选项：
+  1. **登记为未修的游戏侧阻塞，交给决策者**（选中）
+  2. 把 `InputRepeat` 改成「必须松开再按才迈一步」（边沿触发）—— 否决：这会改变
+     TASK-116 已验收的 `PollInput` 语义与门的 P2 结论，属于**跨批次**的输入模型改动，
+     不是一个尾巴任务能顺手做的
+  3. 把出生点正上方那辆车挪开 —— 否决：只治标；车是循环移动的，玩家在别的列
+     照样会被「一次按三下」打死
+- 理由：这是**输入模型**（按住重复）与**玩法规则**（撞车即死）的组合后果，
+  修它要重新定义「一个注入动作算几步」，牵动门侧与历史判决——**必须由决策者定**，
+  不该由实现者在尾巴任务里顺手改掉。
+- 预期影响与回滚点：无代码改动。游戏侧三态如实记为 `INCONCLUSIVE`（可注入步数 1 < 8）。
+  回滚点：不适用。
