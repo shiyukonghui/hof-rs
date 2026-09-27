@@ -387,6 +387,12 @@ D:\Anaconda\python.exe tools\_t138_tmp_playtest_player_HEAD.py run --game astero
 
 ## 6. 关键产物的绝对路径 + sha256（本批）
 
+> **怎么复算**：`certutil -hashfile "<路径>" SHA256`（Windows 自带），或
+> `D:\Anaconda\python.exe runs\model-player\_scripts\t138_final_hashes.py`。
+> 下表里的"绝对路径"以 `F:\moonbit-hof-rs\` 开头；`...\` 开头的省略号部分 =
+> `F:\moonbit-hof-rs\godot-mcp\`。**完整 224 文件清单**见
+> `...\runs\model-player\_index\ARTIFACTS-TASK-138.{json,md}`（已提交进仓）。
+
 | 产物 | sha256（全） | 大小(B) | 绝对路径 |
 |---|---|---|---|
 | 判据工具（改后） | `1c3431360b3ecde1f6efa02c815eb1161b4a929f4ec50b759c6d20ab1e2b21d8` | 228472 | `F:\moonbit-hof-rs\godot-mcp\tools\playtest_player.py` |
@@ -410,6 +416,7 @@ D:\Anaconda\python.exe tools\_t138_tmp_playtest_player_HEAD.py run --game astero
 | 新模型臂 asteroids | `aa3b9b07d189e814933296a73867fbe67ea7fa7ab3d49c7c4e4360fda1abfafa` | 236365 | `...\runs\model-player\t138-jev-v3\asteroids\jev\player.json` |
 | 旧规则对照 1/2 | `3caaa54c1d8df3ca728a91209bfc45d5784e97d85d4147e9eafda5ea4c4d0197` / `3aeec386a1ffe595d27e37d6b761358eda95cff1ef8c435858f1e11ff426e850` | 9390 / 11046 | `...\runs\model-player\t138-oldctl{,-2}\asteroids\scripted\player.json` |
 | 未改动的旧工具（对照用） | `8a1bba419488f3f6ed316acb665d437340abdb32d966ccbc44535ac818efe447` | 198034 | `...\runs\model-player\t138-oldcode\playtest_player_HEAD.py` |
+| **本报告（被提交的那一版）** | blob `2d15afc56561abd0720ab95491022ff40704c745`（`648b94c:` 下的版本；内容 sha256 **故意不写**，见 §7.4 与勘误 ⑤） | — | `F:\moonbit-hof-rs\godot-mcp\recovery\reports\TASK-138-REPORT.md` |
 
 （完整 224 文件清单见 `_index\ARTIFACTS-TASK-138.{json,md}`。）
 
@@ -485,6 +492,34 @@ $ git -C F:\moonbit-hof-rs\godot-mcp\godot status --short
 **没有**代提交 `ACCEPTANCE-TASK-137.md` / `TASK-137-ACCEPT.md`（它们是上一位决策者的输入）。
 `_t138_tmp_playtest_player_HEAD.py` 在提交前**删除**（保留 `runs/model-player/t138-oldcode/` 里的副本，
 其 sha256 与 TASK-136 报告记录的判据工具哈希逐字相同）。
+
+### 7.4 交付提交
+
+```
+$ git -C F:\moonbit-hof-rs commit -F ...\t138_commit_msg.txt
+[master 648b94c] TASK-138: align the two measurement windows on ACTUAL drawn frames, forbid the pre-injection ack fallback, require a machine-checkable anchor for every image read, and commit the run-artifact index
+ 10 files changed, 5528 insertions(+), 33 deletions(-)
+ create mode 100644 godot-mcp/recovery/reports/TASK-138-REPORT.md
+ create mode 100644 godot-mcp/recovery/tasks/TASK-138.md
+ create mode 100644 godot-mcp/runs/model-player/_index/ARTIFACTS-TASK-138.json
+ create mode 100644 godot-mcp/runs/model-player/_index/ARTIFACTS-TASK-138.md
+ create mode 100644 godot-mcp/tools/playtest_artifact_index.py
+```
+
+* 交付提交号：**`648b94c`**（父提交 `5a3da2e` = TASK-136 的收尾文档提交）。
+* 提交后 `git status --short` 只剩 `?? godot-mcp/recovery/reports/ACCEPTANCE-TASK-137.md`
+  与 `?? godot-mcp/recovery/tasks/TASK-137-ACCEPT.md`（**上一位决策者的输入，本批不代提交**）。
+* **本报告自己的可核身份**：用**提交号 `648b94c` + git blob 哈希**定位，
+  **不再声称"报告的内容 sha256 可核"**（勘误 ⑤ 就是这么定的）：
+  `git rev-parse 648b94c:godot-mcp/recovery/reports/TASK-138-REPORT.md` 给出**被提交的那一版**
+  的 blob 哈希 = **`2d15afc56561abd0720ab95491022ff40704c745`**（本 §7.4 追加前的版本）；
+  同一提交里判据工具的 blob 哈希 =
+  `git rev-parse 648b94c:godot-mcp/tools/playtest_player.py` = `cc0ba53b08c4610a2ab07924fdb00e7f8bd377a5`，
+  完整提交 =
+  `648b94c960b2c2274c36be0c2d96cc983600ac0e`。
+  本报告此后若被追加改写，blob 哈希会变，而 `648b94c` 里的那一版**永远可复得**。
+  另：**产出本报告引用的那批 run 的工具版本**就是上表的
+  `playtest_player.py sha256 = 1c343136…`（工作树版 = 提交版的内容，仅行尾在 git 侧会被归一）。
 
 ---
 
