@@ -6068,3 +6068,112 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
     3 条 + H1 的 5 条，而不是继续扩大新族。
   * 回滚点：主仓侧 `git revert <TASK-113 提交>`（台账/声明/登记表/练习工程/报告）；
     引擎侧**无提交**，无需重建或重跑十道门。20 款正式工程与它们的 `runs/` 只读未动。
+
+---
+
+## D159 — TASK-114：SAC 拦截的用户报告落地为「只读诊断 + 不可逆警告」工具包；C# 到 Web 导出「不可能」由实测钉死；H8 两条 export-read 工具上线；并**更正**「Godot 官方 Windows 构建未签名」这一前提
+
+* 日期：2026-09-27
+* 触发问题：用户报告打包 exe 在 Windows 11 上被**智能应用控制（SAC）**拦下、DLL 无法加载。
+  任务同时要求（A）用实测回答「C# 游戏能否导出到 Web」、（B）产出交给用户在自己机器上跑的
+  SAC 只读工具包、（C）有余量则补覆盖尾巴。
+* 考虑的选项（含被否决者及理由）：
+  * **A 段：怎么回答「C# → Web」**
+    * 只给结论（否决：任务明确要「结论，不要观点」，且本仓的既有纪律是「逐字证据」）；
+    * 只做运行时实验、不读引擎源码（否决：拿不到「为什么」，且模板缺失时实验无法区分
+      「缺模板」与「.NET 不支持」）；
+    * **源码定位 `#ifdef` 闸门 + 三组运行时对照实验**（采纳）。
+  * **A 段：模板怎么来**
+    * 直接用 `scons platform=web` 跑（采纳为第一步；实测本机 `can_build()` 要求 `emcc` 在 PATH 上）；
+    * 放弃构建、只报「缺模板」（否决：那样控制组不成立）；
+    * **装 emsdk 再构建**（采纳：emsdk 官方引导在 `unzip_temp -> upstream` 的搬运上
+      对 `install/emscripten/test/test_other.py` 连续 3 次 `WinError 5`；改为用 Python
+      `zipfile` 手工展开 + 手写 `.emscripten` 配置绕过，`emcc 6.0.10` 可用）。
+  * **B 段：SAC 工具怎么给**
+    * 脚本里自动改注册表/关 SAC（**否决：本任务铁律明令禁止改动用户机器的安全设置**，
+      且关 SAC 不可逆，这个决定只能由用户在人机界面上做）；
+    * 只写一份说明文档（否决：用户无法自证问题在自己机器上的形态）；
+    * **只读诊断 + 显式 `-Apply` 才动的 MOTW 清理 + 中文 README 三条出路**（采纳）。
+  * **B 段：`dist/README-SAC.md` 里「为什么换 Godot 官方二进制也无效」怎么写**
+    * 照抄任务书给的因果「官方 Windows 构建同样未签名」（**否决：与实测冲突**）；
+    * **照抄 + 附更正**（采纳）：实测本机安装的 Godot 官方 4.7.1-stable mono Windows 编辑器
+      exe 的 Authenticode 状态是 **Valid**，签名主体 `CN=Prehensile Tales B.V.`、
+      签发者 `CN=Certum Code Signing 2021 CA`、有效期至 2028-06-16；
+      而**我们自建**的 6 个编辑器 exe 与导出模板 `windows_release_x86_64.exe`
+      （82198528 字节，sha256 `AA883610…`）全部 **NotSigned**。于是把「换官方二进制也无效」的
+      理由改成三条实测能站住的：被拦的是**导出的游戏 exe**（= 导出模板 + 追加的 PCK），换编辑器
+      不换模板；本包是 **custom build**，官方没有对应二进制；**签名是发布者动作**，官方编辑器
+      重新导一遍得到的 exe 依旧未签名。
+  * **C 段：余量怎么花**
+    * 先补 H1 5 条 + TASK-113 被降级的 3 条见证（任务书排在第 1、2 位，需要重跑 h1 与 c4/c5 会话）；
+    * **先做 H8 的两条「只需 `export_presets.cfg`」**（采纳：任务书 C④ 自己点名「先试」，
+      且门槛最低、当场能闭环）；
+    * H7 15 条（否决本轮做：需要先建 `ex_editor` 并分清「结构性不可达 vs 可达未做」，
+      比 H8 两条大一个数量级）。
+  * **D 段：改不改引擎**
+    * 为了让 H8 跑起来顺手修点什么（否决：**没有发现缺陷**，为改而改违反最小改动）；
+    * **引擎零改动，因此不触发两变体重建与十道门**（采纳）。
+* 选择：
+  * A 段结论：**在 Godot 4 上，用 .NET/C# 编辑器构建 Web 版本是「不可能」**——不是配置问题。
+    引擎源码里写着一道**编译期**闸门 `godot/platform/web/export/export_plugin.cpp:424-429`：
+    `#ifdef MODULE_MONO_ENABLED` → `has_valid_export_configuration()` 直接 `return false`
+    （注释原文：`Don't check for additional errors, as this particular error cannot be resolved.`）。
+    因为它是**编辑器构建**的属性，**与项目里有没有 C# 无关**。
+  * B 段交付：`dist/tools/sac_diagnose.ps1`（只读）、`dist/tools/unblock_package.ps1`
+    （默认干跑，`-Apply` 才 `Unblock-File`）、`dist/README-SAC.md`（三条出路 + 不可逆警告
+    + 更正后的「换官方二进制」）。两个 `.ps1` **纯 ASCII** 写（避免 PS 5.1 的编码/BOM 差异）。
+  * C 段交付：H8 两条 export-read 工具上线（`ex_export` 有 2 个预设 → 真成功分支、两端口；
+    `ex_export_np` 无 `export_presets.cfg` → capability-missing 分支；空 schema 的
+    未知参数闸门 → `-32602 accepts no parameters`）。台账 `readback` 87→89、`no_calls` 20→18、
+    达标 102→104、出现过 157→159；登记表 `reclassified` 54→56（不删成员）。
+* 理由：
+  * 「不可能」这个判断必须**可被第三方复算**：源码闸门给了「为什么」，三组实验给了
+    「在本机确实如此」，两者互为独立证据。特别是**实验 2**（纯 GDScript 最小工程 + mono 编辑器
+    → 同一条报错）单独就足以排除「是项目里的 C# 触发的」。
+  * SAC 工具必须是**只读**的：本任务铁律 6 禁止改动用户机器的安全设置，而「关 SAC 不可逆」意味着
+    任何自动化都会把不可逆后果外包给用户而不给他阅读警告的机会。所以工具只回答「是不是 SAC」，
+    决定权与操作权留在用户手上。
+  * 前提错误必须当场更正，**不能顺着任务书的措辞写**：D159 存在的意义之一就是留下
+    「`NotSigned` vs `Valid`」这组实测值与它的签发者，供以后核对。
+* 做法与结果（全部实测）：
+  * **A①** `scons platform=web target=template_release -j8`（不加 mono）→
+    `ERROR: Invalid target platform "web". The following platforms are available: windows`；
+    根因在源码：`godot/platform/web/detect.py:29-30` 的 `can_build()` 要求 `WhereIs("emcc")`，
+    本机无 emsdk。装 emsdk 后 `emcc 6.0.10` 可用，构建进到编译阶段（详见 §A 的证据段与报告）。
+  * **A②** C# 真游戏（`projects/pong` 的拷贝 `cs_web_probe`，含 `pong.csproj` + `src/*.cs`）
+    + mono 编辑器 `--export-release "Web"` →
+    `ERROR: Cannot export project with preset "Web" due to configuration errors:
+     Godot 4 中目前尚不支持使用 C#/.NET 导出到 Web。要在 Web 目标上使用 C#/Mono，请改用 Godot 3。`
+    再一行：`如果这个项目不使用 C#，请使用非 C# 版本的编辑器来导出项目。`
+  * **A③** 控制组一：**纯 GDScript 最小工程**（`gd_web_probe`，一行 C# 都没有）+ **同一个 mono 编辑器**
+    → **逐字相同的报错**。
+    控制组二：同一个 GDScript 工程 + **非 mono 编辑器**（`godot.windows.editor.x86_64.console.exe`）
+    → 通过了 .NET 闸门，只报缺模板：`在预期路径处未找到导出模板：
+     …\export_templates\4.8.dev\web_nothreads_release.zip`。
+  * **B** `check_sac_tools.py` 16 项检查全 PASS（ASCII-only / 无 BOM / 只读脚本里无任何写动词 /
+    `Unblock-File` 在 `-Apply` 之后 / README 的注册表写动词只出现在「不做」清单里）；
+    PS 5.1 `[Parser]::ParseFile` 两个脚本 **PARSE_OK**（双解析）；
+    真机上跑通：SAC 状态 `VerifiedAndReputablePolicyState=0`、`godot\bin` 59 个 exe/dll（7 个签名
+    全 `NotSigned`）、`-Json` 输出可被 `ConvertFrom-Json` 解出；
+    造了一个带 MOTW 的临时 fixture：干跑列出 2 个文件、`-Apply` 后 2/2 成功且复核 0 个残留、
+    第二次干跑「无事可做」（幂等）。
+  * **C④** H8 两条：`project_get_export_info` 13 次调用（11 ok / 2 边界）、
+    `project_list_export_presets` 14 次（12 ok / 2 边界）；编辑器侧
+    `capabilities={editor_export:true,editor_process:true,presets_source:"editor_export"}`、
+    游戏侧 `{false,false,"export_presets.cfg"}`；无文件工程的
+    `presets_file_present:false / count:0 / message:"'res://export_presets.cfg' does not exist…"`。
+* 预期影响与回滚点：
+  * **A 段是结论性证据**，不是「本轮没做」：`projects/*` 全是 C# 工程，这条结论意味着
+    **本仓的 20 款游戏不可能有 Web 版本**，除非改写成 GDScript 或退回 Godot 3。
+    这条要写进交付说明，避免以后有人再花一次同样的时间。
+  * **B 段只回答「是不是 SAC」，不修问题**：三条出路里只有 ② 是工程解法，① 和 ③ 是环境解法。
+    工具永远不会替用户关 SAC——这是刻意的。
+  * **H8 剩余 3 条**（`os_list_android_devices` / `os_deploy_to_android_device` /
+    `project_get_android_preset_info`）仍需真机或 Android SDK，登记表口径沿用「需要外部设备」；
+    H7 的 15 条与 H1 的 5 条、TASK-113 被降级的 3 条**本轮仍未做**（§C 只吃了 H8 的两条）。
+  * 回滚点：主仓侧 `git revert <TASK-114 主仓提交>`；引擎侧**无提交**，无需重建或重跑十道门。
+    20 款正式工程与它们的历史 `runs/` 只读未动；本轮的 run 全部落在
+    `runs/_exercises/{ex_export,ex_export_np}/` 下。
+  * **一次铁律 1 的失误（如实披露）**：本任务早期有两条只读探查命令用到了 `2>nul` 重定向，
+    发现后立即改用无重定向写法；本轮所有构建/运行/会话**均无重定向**（日志由
+    `run_game_session.ps1` 自己的 `Start-Process -RedirectStandardOutput/Error` 产生）。
