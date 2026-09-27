@@ -430,4 +430,53 @@ runs\gates\task106\                        十道门的 summary.txt 与 g01..g10
 
 > **边界说明**：本节的两段账是**本报告那次提交之后、携带本节的纯文档提交之前**的那一刻。此后任何纯文档追加都只让主仓 `git log` 顶部多出文档提交；`§D1` 的引擎锚点（`1f9d0cb1c`）与 `§D4` 的两条脏文件不会因此改变。
 
-（待提交后回填 —— 见本次提交之后的追加。）
+（以下两段账取自本报告那次提交之后的那一刻：主仓 `HEAD=32fef85`、引擎仓 `HEAD=1f9d0cb1c`。）
+
+### G1 主仓 `F:\moonbit-hof-rs`（分支 `master`，无远端）
+
+`git log --oneline -8`（逐字）：
+
+```
+32fef85 fix(godot-mcp): TASK-106 (D153) - TASK-105's fail is fixed at the root: Snake's self-collision board walked the head away from its own body (dir=1,0 sent 10,10 -> 11,10), so the engine's stdout never carried SNAKE_SELF and g19/g22 failed without being declared; g19 now starts from its own board, g20 aims LEFT into the neck and dumps the board before asserting, the project is archived (sha256 manifest written first, Move-Item, zero deletion) and re-instantiated from the template before the re-run (SNAKE_SELF head=9,10, scenario_assertion_failed 2 -> 0, two declared must-fail rows only, undeclared failing assertions 0, pixel diffs 12/53 independently recomputed with 0 mismatches); the statements that contradicted the products now carry both time points instead of one of them being silently rewritten; and game_report.py totals passed/failed/errors from the run's own saved responses and prints a single 未声明失败 cell (the old run reproduces the 3 the verifier found, the new run prints 0). Module untouched, so no rebuild and no push - the ten gates were nevertheless run in full: g01..g10 all exit 0, accept_m1 22/22.
+f25960c docs(godot-mcp): TASK-104 - housekeeping: the amended commit message and the helper-owned logs of the closing commits are committed after the fact so the record matches
+70869bf docs(godot-mcp): TASK-104 - the closing summary names the report's own commits so the HEAD it quotes is not one commit stale
+e5caf63 docs(godot-mcp): TASK-104 - the report gains F4, the three self-correction commits it took to make its own numbers survive a re-derivation
+e3b8b57 docs(godot-mcp): TASK-104 - the final audit script re-derives every headline number from the run products and the ledger, and one wording fix
+8cf0227 docs(godot-mcp): TASK-104 - the --import cumulative denominator is corrected to 3/38 (it was written as 3/48 from a mis-read base)
+4ea0da5 docs(godot-mcp): TASK-104 - the assertion tallies and the twenty-game call total are corrected against the run products instead of left as first written
+60bc9fb docs(godot-mcp): TASK-104 - the report: the three new C# games with their real call counts, verdict distributions, assertion tallies and independently recomputed pixel columns, the one session defect their first runs caught, the two defects of the evidence tool itself, the twenty-game milestone, and the honest statement that no module byte changed so the ten gates and accept_m1 were NOT re-run
+```
+
+`git status --short`（逐字）—— 只剩 §D4 那两条**本任务未碰**的 task104 日志：
+
+```
+ M godot-mcp/recovery/work/task104/logs/git-housekeeping.err.txt
+ M godot-mcp/recovery/work/task104/logs/git-housekeeping.out.txt
+```
+
+本任务自身产生的改动 **0 条未提交、0 条未跟踪**（50 个文件已全部进 `32fef85`）。
+
+### G2 引擎仓 `F:\moonbit-hof-rs\godot-mcp\godot`（分支 `feature/mcp-server-module-rebuild`）
+
+`git log --oneline -8`（逐字）：
+
+```
+1f9d0cb1c9 modules/mcp_server: task103 - REBUILT-2C-MANIFEST gains the 2c-12 section: the runtime-error contract of running_game_execute_gdscript (the -32000 code and why the two neighbouring codes are wrong for it, the reconstructed script identity and why Script::get_path() cannot be it, the two boundaries that remain - no column from the handler, and a release template reporting nothing because both VM sites are inside DEBUG_ENABLED), the append-only description override with the contract's six shape quantities unchanged (177/6/1.22.0/154/73/idempotent, sha bd68e804), the minimal same-batch reproduction with its before/after answers and its three controls, the ten gates with their real exit codes and accept_m1 22/22 on the binary rebuilt at 1c7f5c07a, the deliberate boundary that leaves the editor executor alone, and the iron rules as they were actually followed
+1c7f5c07a1 modules/mcp_server: task103 (X-1) - a GDScript body that compiles and then fails while it runs is a structured refusal now (-32000 + data.script_error + data.suggestion) instead of an ok with a null result, and a successful body that returned no value carries a note, so "ok" can no longer be read as "the script ran"
+e041cae270 modules/mcp_server: task099 - REBUILT-2C-MANIFEST gains the 2c-11 section: the gate runner's doc-only preflight (one classifier, dot-sourced from the module's own anchor judge, anchor taken from the built binary's --version, committed range plus working tree, and the two measured cases with all ten gates green in the compile-input one), the third live --import shutdown access violation with its 24 controlled probes at 0 crashes, and the explicit reason why the change to tools/run_gates.ps1 cannot reach either variant (it is a main-repository script, so the engine tree has no byte to rebuild)
+0fbd5ec4cb modules/mcp_server: task098 - MCP-TRACEABILITY section 7 is aligned with the D-1 closure
+094b071f9b modules/mcp_server: task097 - REBUILT-2C-MANIFEST gains the 2c-10 section: the name-conflict policy the section registers (the default refusal with its complete conflict list, its error code and its opt-in rename), the contract's six shape quantities after the append-only override (177/6/1.22.0/154/73/idempotent, sha 64ddce9f), the ten gates and accept_m1 22/22 with their real exit codes, and the three iron-rule deviations of this task recorded rather than hidden
+2385fe2fb5 modules/mcp_server: task097 (D-3) - a requested node name the target parent already carries is now refused instead of silently renamed, so a replayed editor phase can no longer write a whole duplicate node layer into a scene; editor_save_scene reports the duplicates a batch made under an explicit rename instead of saving them silently
+95aa1d8984 modules/mcp_server: task096 - MCP-TRACEABILITY gains section 7: what the evidence chain is when the pixel diff is unavailable, and how the ledger is to be read then; the section also carries the re-localisation of D-1 (the duplicate node layer a replayed editor phase writes into a scene), which is why the three older games' pixel column says unavailable rather than 0
+8b9dd9a72b modules/mcp_server: task094 - D-2 is a load-sensitive readiness predicate, not a defect: the accept_m1 wait now asks the main loop to advance (frame_count strictly increasing six samples in a row) instead of asking it to be faster than 20 fps, so the suite is 22/22 solo and 22/22 under eight CPU burners
+```
+
+`git status --short`：**空**（逐字无输出）。
+`git rev-parse HEAD` = `git rev-parse refs/remotes/origin/feature/mcp-server-module-rebuild` = **`1f9d0cb1c983301d4efa575c16986c551df23600`**。
+
+**本任务没有向引擎仓提交、也没有 push**：本任务改的是主仓的文件（会话 JSON、`tools\game_report.py`、文档、`projects\snake` 由 MCP 重写的场景），`git -C godot status --short` 自始至终为空，没有任何编译输入变化 —— 因此没有可 push 的提交，`HEAD` 与 `origin` 同级。十道门（`§D2`）是在**盘上这个二进制**（`4.8.dev.mono.custom_build.1c7f5c07a`）上跑满的，预检的 `ANCHOR_STRUCTURAL_EQUIVALENT` 只说明它与 `1f9d0cb1c` 的差集是一个声明过的非编译 `.md`。
+
+### G3 收尾后的进程与端口
+
+门 10 之后：无 `Godot*` / `dotnet*` 进程，`9888 / 9889 / 9930 / 9931` 均无监听（`tasklist` + `netstat`，逐字见 `§A4` 与本任务 `check_ports.ps1` 的输出）。**未改变机器显示或串流状态**（未停 `GameViewer`、未动设备/注册表/电源、未接触显示拓扑）。
+
