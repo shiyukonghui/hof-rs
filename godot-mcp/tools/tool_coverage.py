@@ -69,8 +69,20 @@ REGISTRY = os.path.join("tools", "tool_coverage_unreachable.json")
 # assertion verdict, the value an executed snippet computed) - a read never moves
 # a pixel or a byte, so demanding a screen/file delta from it would report a
 # working reader as ineffective.
+#
+# TASK-111 rule clarification: `capture` joins the read side, on the same ground.
+# The four capture tools (editor_capture_screenshot, running_game_capture_screenshot,
+# running_game_capture_frames, running_game_capture_signal_emissions) take a
+# snapshot of a live stream and answer *with that snapshot*: frames inline as
+# base64, or the emission records they observed. The handlers write no persistent
+# state - `running_game_capture_screenshot` may additionally drop a file, which the
+# file-effect verdict already reports when it happens. Judging them by
+# `ok_effect_observed` therefore demanded a screen/file delta from a reader whose
+# payload is the delta itself, which is why TASK-110 reported the two running_game
+# rows as "counter met, evidence missing" with 5/5 substantive payloads each.
 READ_VERBS = {"get", "read", "search", "list", "find", "analyze", "detect",
-              "convert", "validate", "check", "assert", "execute", "evaluate"}
+              "convert", "validate", "check", "assert", "execute", "evaluate",
+              "capture"}
 EFFECT_VERDICTS = {"ok_effect_observed", "ok_file_effect_observed"}
 NEGATIVE_FLAGS = {"assertion_failed", "created_conflict",
                   "scenario_assertion_failed", "scenario_errors"}
@@ -185,7 +197,19 @@ def verb_of(name, verbs):
 
 
 def classify(row, verb):
-    """(effective, boundary) for one ledger row."""
+    """(effective, boundary) for one ledger row.
+
+    TASK-111 fix: a read verb's payload is its evidence, and for a body larger
+    than the trace's inline budget the payload is *not* on the call line - the
+    line carries its first 4096 bytes plus `result_json_truncated: true` and a
+    sidecar entry (`result_json_sidecar` + sha256) that `mcp_trace_ledger.build`
+    has already found, re-hashed and re-measured (`result_json_evidence ==
+    "sidecar_verified"`). Parsing the truncated inline copy can only ever fail,
+    so `editor_get_tilemap_used_cells` (6 591 B) was reported
+    `result_unparseable` / ineffective although its complete answer was on disk
+    the whole time. A verified sidecar means the body exists and is larger than
+    the inline budget, i.e. it is non-empty by construction.
+    """
     if not row["ok"]:
         return False, True
     flags = set(row.get("result_flags") or [])
@@ -193,7 +217,8 @@ def classify(row, verb):
         return False, False
     if row["verdict"] in EFFECT_VERDICTS:
         return True, False
-    if verb in READ_VERBS and substantive(row.get("result_json")):
+    if verb in READ_VERBS and (row.get("result_json_evidence") == "sidecar_verified"
+                               or substantive(row.get("result_json"))):
         return True, False
     return False, False
 

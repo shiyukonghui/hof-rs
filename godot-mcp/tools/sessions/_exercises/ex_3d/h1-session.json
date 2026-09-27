@@ -1,0 +1,456 @@
+{
+  "_comment": "TASK-111 batch h1 -- the H1 family (3D content pipeline) against a project that ships a Node3D scene. Refutes the 'structurally unreachable' inference with a real scene rather than a corpus argument; see tools/tool_coverage_unreachable.json.",
+  "game": "_exercises_ex_3d",
+  "import": true,
+  "calls": [
+    {
+      "tag": "h1-001-project_create_resource-ok",
+      "port": "editor",
+      "tool": "project_create_resource",
+      "arguments": {
+        "path": "res://assets/mat3d.tres",
+        "type": "StandardMaterial3D",
+        "properties": {
+          "albedo_color": {
+            "r": 0.9,
+            "g": 0.2,
+            "b": 0.2,
+            "a": 1.0
+          }
+        }
+      },
+      "note": "the material editor_set_material_3d assigns"
+    },
+    {
+      "tag": "h1-002-editor_open_scene-ok",
+      "port": "editor",
+      "tool": "editor_open_scene",
+      "arguments": {
+        "path": "res://scenes/probe3d.tscn"
+      },
+      "note": "Node3D root + one MeshInstance3D carrying a BoxMesh"
+    },
+    {
+      "tag": "h1-003-editor_add_mesh_instance-ok",
+      "port": "editor",
+      "tool": "editor_add_mesh_instance",
+      "arguments": {
+        "name": "MeshA",
+        "parent_path": "."
+      },
+      "note": "editor_add_mesh_instance call 1/5. five MeshInstance3D nodes under two Node3D parents"
+    },
+    {
+      "tag": "h1-004-editor_add_mesh_instance-ok",
+      "port": "editor",
+      "tool": "editor_add_mesh_instance",
+      "arguments": {
+        "name": "MeshB",
+        "parent_path": "."
+      },
+      "note": "editor_add_mesh_instance call 2/5. five MeshInstance3D nodes under two Node3D parents"
+    },
+    {
+      "tag": "h1-005-editor_add_mesh_instance-ok",
+      "port": "editor",
+      "tool": "editor_add_mesh_instance",
+      "arguments": {
+        "name": "MeshC",
+        "parent_path": "Body"
+      },
+      "note": "editor_add_mesh_instance call 3/5. five MeshInstance3D nodes under two Node3D parents"
+    },
+    {
+      "tag": "h1-006-editor_add_mesh_instance-ok",
+      "port": "editor",
+      "tool": "editor_add_mesh_instance",
+      "arguments": {
+        "name": "MeshD",
+        "parent_path": "."
+      },
+      "note": "editor_add_mesh_instance call 4/5. five MeshInstance3D nodes under two Node3D parents"
+    },
+    {
+      "tag": "h1-007-editor_add_mesh_instance-ok",
+      "port": "editor",
+      "tool": "editor_add_mesh_instance",
+      "arguments": {
+        "name": "MeshE",
+        "parent_path": "Body"
+      },
+      "note": "editor_add_mesh_instance call 5/5. five MeshInstance3D nodes under two Node3D parents"
+    },
+    {
+      "tag": "h1-008-editor_add_mesh_instance-probe",
+      "port": "editor",
+      "tool": "editor_add_mesh_instance",
+      "arguments": {
+        "name": "MeshX",
+        "parent_path": "NoSuchParent"
+      },
+      "note": "editor_add_mesh_instance boundary: parent_path does not exist"
+    },
+    {
+      "tag": "h1-009-editor_set_material_3d-ok",
+      "port": "editor",
+      "tool": "editor_set_material_3d",
+      "arguments": {
+        "node_path": "Body",
+        "material_path": "res://assets/mat3d.tres"
+      },
+      "note": "editor_set_material_3d call 1/5. the created material into the one surface Body has"
+    },
+    {
+      "tag": "h1-010-editor_set_material_3d-ok",
+      "port": "editor",
+      "tool": "editor_set_material_3d",
+      "arguments": {
+        "node_path": "Body",
+        "material_path": "res://assets/mat3d.tres",
+        "material_slot": 0
+      },
+      "note": "editor_set_material_3d call 2/5. the created material into the one surface Body has"
+    },
+    {
+      "tag": "h1-011-editor_set_material_3d-ok",
+      "port": "editor",
+      "tool": "editor_set_material_3d",
+      "arguments": {
+        "node_path": "MeshA",
+        "material_path": "res://assets/mat3d.tres"
+      },
+      "note": "editor_set_material_3d call 3/5. the created material into the one surface Body has"
+    },
+    {
+      "tag": "h1-012-editor_set_material_3d-ok",
+      "port": "editor",
+      "tool": "editor_set_material_3d",
+      "arguments": {
+        "node_path": "MeshC",
+        "material_path": "res://assets/mat3d.tres"
+      },
+      "note": "editor_set_material_3d call 4/5. the created material into the one surface Body has"
+    },
+    {
+      "tag": "h1-013-editor_set_material_3d-ok",
+      "port": "editor",
+      "tool": "editor_set_material_3d",
+      "arguments": {
+        "node_path": "Body",
+        "material_path": "res://assets/mat3d.tres",
+        "material_slot": 0
+      },
+      "note": "editor_set_material_3d call 5/5. the created material into the one surface Body has"
+    },
+    {
+      "tag": "h1-014-editor_set_material_3d-probe",
+      "port": "editor",
+      "tool": "editor_set_material_3d",
+      "arguments": {
+        "node_path": "Body",
+        "material_path": "res://assets/no_such_material.tres"
+      },
+      "note": "editor_set_material_3d boundary: material_path does not exist"
+    },
+    {
+      "tag": "h1-015-editor_setup_camera_3d-ok",
+      "port": "editor",
+      "tool": "editor_setup_camera_3d",
+      "arguments": {
+        "node_path": "."
+      },
+      "note": "editor_setup_camera_3d call 1/5. creates a Camera3D on a Node3D parent, and re-marks an existing one current"
+    },
+    {
+      "tag": "h1-016-editor_setup_camera_3d-ok",
+      "port": "editor",
+      "tool": "editor_setup_camera_3d",
+      "arguments": {
+        "node_path": "."
+      },
+      "note": "editor_setup_camera_3d call 2/5. creates a Camera3D on a Node3D parent, and re-marks an existing one current"
+    },
+    {
+      "tag": "h1-017-editor_setup_camera_3d-ok",
+      "port": "editor",
+      "tool": "editor_setup_camera_3d",
+      "arguments": {
+        "node_path": "Body"
+      },
+      "note": "editor_setup_camera_3d call 3/5. creates a Camera3D on a Node3D parent, and re-marks an existing one current"
+    },
+    {
+      "tag": "h1-018-editor_setup_camera_3d-ok",
+      "port": "editor",
+      "tool": "editor_setup_camera_3d",
+      "arguments": {
+        "node_path": "MeshA"
+      },
+      "note": "editor_setup_camera_3d call 4/5. creates a Camera3D on a Node3D parent, and re-marks an existing one current"
+    },
+    {
+      "tag": "h1-019-editor_setup_camera_3d-ok",
+      "port": "editor",
+      "tool": "editor_setup_camera_3d",
+      "arguments": {
+        "node_path": "MeshB"
+      },
+      "note": "editor_setup_camera_3d call 5/5. creates a Camera3D on a Node3D parent, and re-marks an existing one current"
+    },
+    {
+      "tag": "h1-020-editor_setup_camera_3d-probe",
+      "port": "editor",
+      "tool": "editor_setup_camera_3d",
+      "arguments": {
+        "node_path": "NoSuchNode"
+      },
+      "note": "editor_setup_camera_3d boundary: node_path does not exist"
+    },
+    {
+      "tag": "h1-021-editor_set_viewport_3d_camera-ok",
+      "port": "editor",
+      "tool": "editor_set_viewport_3d_camera",
+      "arguments": {
+        "position": {
+          "x": 0.0,
+          "y": 2.0,
+          "z": 5.0
+        }
+      },
+      "note": "editor_set_viewport_3d_camera call 1/5."
+    },
+    {
+      "tag": "h1-022-editor_set_viewport_3d_camera-ok",
+      "port": "editor",
+      "tool": "editor_set_viewport_3d_camera",
+      "arguments": {
+        "fov": 60.0
+      },
+      "note": "editor_set_viewport_3d_camera call 2/5."
+    },
+    {
+      "tag": "h1-023-editor_set_viewport_3d_camera-ok",
+      "port": "editor",
+      "tool": "editor_set_viewport_3d_camera",
+      "arguments": {
+        "rotation_degrees": {
+          "x": -20.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "note": "editor_set_viewport_3d_camera call 3/5."
+    },
+    {
+      "tag": "h1-024-editor_set_viewport_3d_camera-ok",
+      "port": "editor",
+      "tool": "editor_set_viewport_3d_camera",
+      "arguments": {
+        "look_at": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        }
+      },
+      "note": "editor_set_viewport_3d_camera call 4/5."
+    },
+    {
+      "tag": "h1-025-editor_set_viewport_3d_camera-ok",
+      "port": "editor",
+      "tool": "editor_set_viewport_3d_camera",
+      "arguments": {
+        "position": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "fov": 75.0
+      },
+      "note": "editor_set_viewport_3d_camera call 5/5."
+    },
+    {
+      "tag": "h1-026-editor_set_viewport_3d_camera-probe",
+      "port": "editor",
+      "tool": "editor_set_viewport_3d_camera",
+      "arguments": {
+        "fov": "wide"
+      },
+      "note": "editor_set_viewport_3d_camera boundary: fov is typed number, not string"
+    },
+    {
+      "tag": "h1-027-editor_get_viewport_3d_camera-ok",
+      "port": "editor",
+      "tool": "editor_get_viewport_3d_camera",
+      "arguments": {},
+      "note": "editor_get_viewport_3d_camera call 1/5."
+    },
+    {
+      "tag": "h1-028-editor_get_viewport_3d_camera-ok",
+      "port": "editor",
+      "tool": "editor_get_viewport_3d_camera",
+      "arguments": {},
+      "note": "editor_get_viewport_3d_camera call 2/5."
+    },
+    {
+      "tag": "h1-029-editor_get_viewport_3d_camera-ok",
+      "port": "editor",
+      "tool": "editor_get_viewport_3d_camera",
+      "arguments": {},
+      "note": "editor_get_viewport_3d_camera call 3/5."
+    },
+    {
+      "tag": "h1-030-editor_get_viewport_3d_camera-ok",
+      "port": "editor",
+      "tool": "editor_get_viewport_3d_camera",
+      "arguments": {},
+      "note": "editor_get_viewport_3d_camera call 4/5."
+    },
+    {
+      "tag": "h1-031-editor_get_viewport_3d_camera-ok",
+      "port": "editor",
+      "tool": "editor_get_viewport_3d_camera",
+      "arguments": {},
+      "note": "editor_get_viewport_3d_camera call 5/5."
+    },
+    {
+      "tag": "h1-032-editor_get_viewport_3d_camera-probe",
+      "port": "editor",
+      "tool": "editor_get_viewport_3d_camera",
+      "arguments": {
+        "bogus_argument": 1
+      },
+      "note": "editor_get_viewport_3d_camera boundary: out-of-contract argument"
+    },
+    {
+      "tag": "h1-033-editor_setup_lighting-ok",
+      "port": "editor",
+      "tool": "editor_setup_lighting",
+      "arguments": {
+        "light_type": "directional"
+      },
+      "note": "editor_setup_lighting call 1/5."
+    },
+    {
+      "tag": "h1-034-editor_setup_lighting-ok",
+      "port": "editor",
+      "tool": "editor_setup_lighting",
+      "arguments": {
+        "light_type": "omni",
+        "parent_path": "."
+      },
+      "note": "editor_setup_lighting call 2/5."
+    },
+    {
+      "tag": "h1-035-editor_setup_lighting-ok",
+      "port": "editor",
+      "tool": "editor_setup_lighting",
+      "arguments": {
+        "light_type": "spot"
+      },
+      "note": "editor_setup_lighting call 3/5."
+    },
+    {
+      "tag": "h1-036-editor_setup_lighting-ok",
+      "port": "editor",
+      "tool": "editor_setup_lighting",
+      "arguments": {
+        "light_type": "directional",
+        "parent_path": "Body"
+      },
+      "note": "editor_setup_lighting call 4/5."
+    },
+    {
+      "tag": "h1-037-editor_setup_lighting-ok",
+      "port": "editor",
+      "tool": "editor_setup_lighting",
+      "arguments": {
+        "light_type": "omni",
+        "parent_path": "MeshA"
+      },
+      "note": "editor_setup_lighting call 5/5."
+    },
+    {
+      "tag": "h1-038-editor_setup_lighting-probe",
+      "port": "editor",
+      "tool": "editor_setup_lighting",
+      "arguments": {
+        "light_type": "lava"
+      },
+      "note": "editor_setup_lighting boundary: light_type is outside the supported set"
+    },
+    {
+      "tag": "h1-039-editor_setup_world_environment-ok",
+      "port": "editor",
+      "tool": "editor_setup_world_environment",
+      "arguments": {},
+      "note": "editor_setup_world_environment call 1/5."
+    },
+    {
+      "tag": "h1-040-editor_setup_world_environment-ok",
+      "port": "editor",
+      "tool": "editor_setup_world_environment",
+      "arguments": {
+        "bg_color": {
+          "r": 0.1,
+          "g": 0.1,
+          "b": 0.2
+        }
+      },
+      "note": "editor_setup_world_environment call 2/5."
+    },
+    {
+      "tag": "h1-041-editor_setup_world_environment-ok",
+      "port": "editor",
+      "tool": "editor_setup_world_environment",
+      "arguments": {
+        "ambient_color": {
+          "r": 0.4,
+          "g": 0.4,
+          "b": 0.4
+        }
+      },
+      "note": "editor_setup_world_environment call 3/5."
+    },
+    {
+      "tag": "h1-042-editor_setup_world_environment-ok",
+      "port": "editor",
+      "tool": "editor_setup_world_environment",
+      "arguments": {
+        "bg_color": {
+          "r": 0.2,
+          "g": 0.0,
+          "b": 0.0
+        },
+        "ambient_color": {
+          "r": 0.1,
+          "g": 0.1,
+          "b": 0.1
+        }
+      },
+      "note": "editor_setup_world_environment call 4/5."
+    },
+    {
+      "tag": "h1-043-editor_setup_world_environment-ok",
+      "port": "editor",
+      "tool": "editor_setup_world_environment",
+      "arguments": {},
+      "note": "editor_setup_world_environment call 5/5."
+    },
+    {
+      "tag": "h1-044-editor_setup_world_environment-probe",
+      "port": "editor",
+      "tool": "editor_setup_world_environment",
+      "arguments": {
+        "bg_color": "red"
+      },
+      "note": "editor_setup_world_environment boundary: bg_color is typed object, not string"
+    },
+    {
+      "tag": "h1-045-editor_save_scene-ok",
+      "port": "editor",
+      "tool": "editor_save_scene",
+      "arguments": {},
+      "note": "persist the 3D scene the family built"
+    }
+  ]
+}

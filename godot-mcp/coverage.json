@@ -1,18 +1,18 @@
 {
-  "generated_utc": "2026-09-27T02:04:14Z",
+  "generated_utc": "2026-09-27T02:28:00Z",
   "mode": "all-runs",
   "root": "F:\\moonbit-hof-rs\\godot-mcp",
   "runs_dir": "runs",
   "excludes": [],
   "corpus": {
-    "trace_files": 148,
-    "run_dirs": 87,
-    "calls": 7280,
+    "trace_files": 162,
+    "run_dirs": 97,
+    "calls": 8286,
     "malformed_lines": 0,
-    "ok": 6951,
-    "failed": 329,
-    "distinct_tools": 92,
-    "sidecars_verified": 226
+    "ok": 7718,
+    "failed": 568,
+    "distinct_tools": 137,
+    "sidecars_verified": 272
   },
   "fingerprints": {
     "godot\\modules\\mcp_server\\docs\\tools_list.renamed.json": {
@@ -29,15 +29,13 @@
     }
   },
   "buckets": {
-    ">=5": 89,
-    "0": 85,
-    "1-4": 3
+    ">=5": 137,
+    "0": 40
   },
   "status_counts": {
-    "达标": 66,
-    "计数达标缺证据": 23,
-    "未达(0)": 85,
-    "未达(1-4)": 3
+    "达标": 92,
+    "计数达标缺证据": 45,
+    "未达(0)": 40
   },
   "scope_counts": {
     "both": {
@@ -48,9 +46,9 @@
     },
     "editor": {
       "tools": 104,
-      "called": 28,
-      ">=5": 25,
-      "0": 76
+      "called": 73,
+      ">=5": 73,
+      "0": 31
     },
     "game": {
       "tools": 23,
@@ -105,7 +103,7 @@
       "calls": 6,
       "ok": 5,
       "boundary": 1,
-      "effective": 2,
+      "effective": 5,
       "facts_complete": 6,
       "bucket": ">=5",
       "status": "达标",
@@ -210,7 +208,7 @@
       "calls": 7,
       "ok": 6,
       "boundary": 1,
-      "effective": 4,
+      "effective": 6,
       "facts_complete": 7,
       "bucket": ">=5",
       "status": "达标",
@@ -345,24 +343,30 @@
       "tool": "editor_get_scene_tree",
       "scope": "editor",
       "verb": "get",
-      "calls": 83,
-      "ok": 83,
-      "boundary": 0,
-      "effective": 50,
-      "facts_complete": 83,
+      "calls": 108,
+      "ok": 104,
+      "boundary": 4,
+      "effective": 104,
+      "facts_complete": 108,
       "bucket": ">=5",
-      "status": "计数达标缺证据",
+      "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 83
+        "ok_no_effect_observed": 104,
+        "failed": 4
       },
       "file_effects": {
-        "none": 83
+        "none": 108
       },
       "flags": {
-        "result_unparseable": 33
+        "result_unparseable": 54,
+        "error_suggestion": 4
       },
       "evidence": [
+        {
+          "run": "runs/_exercises/ex_write5/c4-v5-task111",
+          "calls": 7
+        },
         {
           "run": "runs/_exercises/ex_scene/c23-task110",
           "calls": 6
@@ -372,21 +376,17 @@
           "calls": 6
         },
         {
-          "run": "runs/breakout/breakout-clean-task097",
-          "calls": 3
+          "run": "runs/_exercises/ex_write/c4-task111",
+          "calls": 6
         },
         {
-          "run": "runs/pong/pong-clean-task097",
-          "calls": 3
-        },
-        {
-          "run": "runs/snake/snake-clean-task097",
-          "calls": 3
+          "run": "runs/_exercises/ex_write3/c4c-task111",
+          "calls": 6
         }
       ],
       "first_ts_ms": 1790435679973,
-      "last_ts_ms": 1790474325298,
-      "gate": false
+      "last_ts_ms": 1790475654377,
+      "gate": true
     },
     {
       "tool": "project_read_scene_file_content",
@@ -424,20 +424,20 @@
       "tool": "editor_open_scene",
       "scope": "editor",
       "verb": "open",
-      "calls": 66,
-      "ok": 66,
+      "calls": 76,
+      "ok": 76,
       "boundary": 0,
-      "effective": 2,
-      "facts_complete": 66,
+      "effective": 5,
+      "facts_complete": 76,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 64,
-        "ok_effect_observed": 2
+        "ok_no_effect_observed": 71,
+        "ok_effect_observed": 5
       },
       "file_effects": {
-        "none": 66
+        "none": 76
       },
       "flags": {},
       "evidence": [
@@ -454,16 +454,16 @@
           "calls": 2
         },
         {
-          "run": "runs/_exercises/ex_scene/c23-task110",
+          "run": "runs/_exercises/ex_3d/h1-task111",
           "calls": 1
         },
         {
-          "run": "runs/_exercises/ex_scene2/c23-after-task110",
+          "run": "runs/_exercises/ex_anim/h2-task111",
           "calls": 1
         }
       ],
       "first_ts_ms": 1790435678487,
-      "last_ts_ms": 1790474308157,
+      "last_ts_ms": 1790476022589,
       "gate": false
     },
     {
@@ -511,20 +511,48 @@
       "tool": "editor_add_scene_instance",
       "scope": "editor",
       "verb": "add",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 30,
+      "ok": 25,
+      "boundary": 5,
       "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "facts_complete": 30,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
       "unreachable_category": null,
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "verdicts": {
+        "ok_no_effect_observed": 25,
+        "failed": 5
+      },
+      "file_effects": {
+        "none": 30
+      },
+      "flags": {
+        "error_suggestion": 5
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_write/c4-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write2/c4b-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write3/c4c-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write4/c4-final-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write5/c4-v5-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475124994,
+      "last_ts_ms": 1790475643756,
       "gate": false
     },
     {
@@ -603,20 +631,20 @@
       "tool": "editor_save_scene",
       "scope": "editor",
       "verb": "save",
-      "calls": 114,
-      "ok": 114,
+      "calls": 122,
+      "ok": 122,
       "boundary": 0,
-      "effective": 68,
-      "facts_complete": 114,
+      "effective": 76,
+      "facts_complete": 122,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
       "verdicts": {
-        "ok_file_effect_observed": 68,
+        "ok_file_effect_observed": 76,
         "ok_no_effect_observed": 46
       },
       "file_effects": {
-        "changed": 68,
+        "changed": 76,
         "unchanged": 46
       },
       "flags": {},
@@ -643,27 +671,27 @@
         }
       ],
       "first_ts_ms": 1790435679865,
-      "last_ts_ms": 1790474315542,
+      "last_ts_ms": 1790475875246,
       "gate": false
     },
     {
       "tool": "project_create_scene_file",
       "scope": "both",
       "verb": "create",
-      "calls": 15,
-      "ok": 13,
+      "calls": 20,
+      "ok": 18,
       "boundary": 2,
-      "effective": 13,
-      "facts_complete": 15,
+      "effective": 18,
+      "facts_complete": 20,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_file_effect_observed": 13,
+        "ok_file_effect_observed": 18,
         "failed": 2
       },
       "file_effects": {
-        "changed": 13,
+        "changed": 18,
         "none": 2
       },
       "flags": {
@@ -679,41 +707,70 @@
           "calls": 6
         },
         {
-          "run": "runs/pong/d3-after",
+          "run": "runs/_exercises/ex_write/c4-task111",
           "calls": 1
         },
         {
-          "run": "runs/pong/d3-after-r2",
+          "run": "runs/_exercises/ex_write2/c4b-task111",
           "calls": 1
         },
         {
-          "run": "runs/pong/d3-before",
+          "run": "runs/_exercises/ex_write3/c4c-task111",
           "calls": 1
         }
       ],
       "first_ts_ms": 1790447492857,
-      "last_ts_ms": 1790473589055,
+      "last_ts_ms": 1790475641915,
       "gate": true
     },
     {
       "tool": "editor_add_node",
       "scope": "editor",
       "verb": "add",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "calls": 30,
+      "ok": 25,
+      "boundary": 5,
+      "effective": 10,
+      "facts_complete": 30,
+      "bucket": ">=5",
+      "status": "达标",
       "unreachable_category": null,
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "verdicts": {
+        "ok_no_effect_observed": 15,
+        "ok_effect_observed": 10,
+        "failed": 5
+      },
+      "file_effects": {
+        "none": 30
+      },
+      "flags": {
+        "error_suggestion": 5
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_write/c4-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write2/c4b-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write3/c4c-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write4/c4-final-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write5/c4-v5-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475123423,
+      "last_ts_ms": 1790475643202,
+      "gate": true
     },
     {
       "tool": "editor_delete_node",
@@ -757,20 +814,48 @@
       "tool": "editor_rename_node",
       "scope": "editor",
       "verb": "rename",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 30,
+      "ok": 23,
+      "boundary": 7,
       "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "facts_complete": 30,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
       "unreachable_category": null,
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "verdicts": {
+        "ok_no_effect_observed": 23,
+        "failed": 7
+      },
+      "file_effects": {
+        "none": 30
+      },
+      "flags": {
+        "error_suggestion": 7
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_write/c4-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write2/c4b-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write3/c4c-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write4/c4-final-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write5/c4-v5-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475128695,
+      "last_ts_ms": 1790475646134,
       "gate": false
     },
     {
@@ -823,24 +908,24 @@
       "tool": "editor_get_node_properties",
       "scope": "editor",
       "verb": "get",
-      "calls": 68,
-      "ok": 57,
-      "boundary": 11,
-      "effective": 55,
-      "facts_complete": 68,
+      "calls": 72,
+      "ok": 60,
+      "boundary": 12,
+      "effective": 60,
+      "facts_complete": 72,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 57,
-        "failed": 11
+        "ok_no_effect_observed": 60,
+        "failed": 12
       },
       "file_effects": {
-        "none": 68
+        "none": 72
       },
       "flags": {
         "result_unparseable": 2,
-        "error_suggestion": 11
+        "error_suggestion": 12
       },
       "evidence": [
         {
@@ -865,160 +950,298 @@
         }
       ],
       "first_ts_ms": 1790435680078,
-      "last_ts_ms": 1790474325935,
+      "last_ts_ms": 1790475654283,
       "gate": true
     },
     {
       "tool": "editor_duplicate_node",
       "scope": "editor",
       "verb": "duplicate",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "calls": 30,
+      "ok": 23,
+      "boundary": 7,
+      "effective": 5,
+      "facts_complete": 30,
+      "bucket": ">=5",
+      "status": "达标",
       "unreachable_category": null,
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "verdicts": {
+        "ok_no_effect_observed": 18,
+        "ok_effect_observed": 5,
+        "failed": 7
+      },
+      "file_effects": {
+        "none": 30
+      },
+      "flags": {
+        "error_suggestion": 7
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_write/c4-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write2/c4b-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write3/c4c-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write4/c4-final-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write5/c4-v5-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475127766,
+      "last_ts_ms": 1790475645592,
+      "gate": true
     },
     {
       "tool": "editor_connect_signal",
       "scope": "editor",
       "verb": "connect",
-      "calls": 4,
-      "ok": 4,
-      "boundary": 0,
+      "calls": 39,
+      "ok": 33,
+      "boundary": 6,
       "effective": 0,
-      "facts_complete": 4,
-      "bucket": "1-4",
-      "status": "未达(1-4)",
+      "facts_complete": 39,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 4
+        "ok_no_effect_observed": 33,
+        "failed": 6
       },
       "file_effects": {
-        "none": 4
+        "none": 39
       },
-      "flags": {},
+      "flags": {
+        "error_suggestion": 6
+      },
       "evidence": [
         {
-          "run": "runs/_exercises/ex_scene/c23-task110",
-          "calls": 2
+          "run": "runs/_exercises/ex_write/c4-task111",
+          "calls": 6
         },
         {
-          "run": "runs/_exercises/ex_scene2/c23-after-task110",
-          "calls": 2
+          "run": "runs/_exercises/ex_write2/c4b-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write3/c4c-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write4/c4-final-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write5/c4-v5-task111",
+          "calls": 6
         }
       ],
       "first_ts_ms": 1790473679616,
-      "last_ts_ms": 1790474310660,
+      "last_ts_ms": 1790476023172,
       "gate": false
     },
     {
       "tool": "editor_disconnect_signal",
       "scope": "editor",
       "verb": "disconnect",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 6,
+      "ok": 5,
+      "boundary": 1,
       "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "facts_complete": 6,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
       "unreachable_category": null,
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 6
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_write6/c5-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790476023279,
+      "last_ts_ms": 1790476023820,
       "gate": false
     },
     {
       "tool": "editor_reparent_node",
       "scope": "editor",
       "verb": "reparent",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "calls": 30,
+      "ok": 16,
+      "boundary": 14,
+      "effective": 3,
+      "facts_complete": 30,
+      "bucket": ">=5",
+      "status": "达标",
       "unreachable_category": null,
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "verdicts": {
+        "failed": 14,
+        "ok_no_effect_observed": 13,
+        "ok_effect_observed": 3
+      },
+      "file_effects": {
+        "none": 30
+      },
+      "flags": {
+        "error_suggestion": 14
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_write/c4-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write2/c4b-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write3/c4c-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write4/c4-final-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write5/c4-v5-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475129977,
+      "last_ts_ms": 1790475646674,
+      "gate": true
     },
     {
       "tool": "editor_add_resource_to_node_property",
       "scope": "editor",
       "verb": "add",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "calls": 32,
+      "ok": 12,
+      "boundary": 20,
+      "effective": 12,
+      "facts_complete": 32,
+      "bucket": ">=5",
+      "status": "达标",
       "unreachable_category": null,
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "verdicts": {
+        "failed": 20,
+        "ok_effect_observed": 12
+      },
+      "file_effects": {
+        "none": 32
+      },
+      "flags": {
+        "error_suggestion": 20
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_write4/c4-final-task111",
+          "calls": 7
+        },
+        {
+          "run": "runs/_exercises/ex_write5/c4-v5-task111",
+          "calls": 7
+        },
+        {
+          "run": "runs/_exercises/ex_write/c4-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write2/c4b-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write3/c4c-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475127125,
+      "last_ts_ms": 1790475645045,
+      "gate": true
     },
     {
       "tool": "editor_set_anchor_preset",
       "scope": "editor",
       "verb": "set",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "calls": 24,
+      "ok": 19,
+      "boundary": 5,
+      "effective": 5,
+      "facts_complete": 24,
+      "bucket": ">=5",
+      "status": "达标",
       "unreachable_category": null,
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "verdicts": {
+        "ok_no_effect_observed": 14,
+        "failed": 5,
+        "ok_effect_observed": 5
+      },
+      "file_effects": {
+        "none": 24
+      },
+      "flags": {
+        "error_suggestion": 5
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_write/c4-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write3/c4c-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write4/c4-final-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write5/c4-v5-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475137295,
+      "last_ts_ms": 1790475651693,
+      "gate": true
     },
     {
       "tool": "editor_get_node_groups",
       "scope": "editor",
       "verb": "get",
-      "calls": 12,
-      "ok": 10,
+      "calls": 13,
+      "ok": 11,
       "boundary": 2,
-      "effective": 10,
-      "facts_complete": 12,
+      "effective": 11,
+      "facts_complete": 13,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 10,
+        "ok_no_effect_observed": 11,
         "failed": 2
       },
       "file_effects": {
-        "none": 12
+        "none": 13
       },
       "flags": {
         "error_suggestion": 2
@@ -1031,43 +1254,62 @@
         {
           "run": "runs/_exercises/ex_scene2/c23-after-task110",
           "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write5/c4-v5-task111",
+          "calls": 1
         }
       ],
       "first_ts_ms": 1790473686850,
-      "last_ts_ms": 1790474318893,
+      "last_ts_ms": 1790475654466,
       "gate": true
     },
     {
       "tool": "editor_set_node_groups",
       "scope": "editor",
       "verb": "set",
-      "calls": 4,
-      "ok": 4,
-      "boundary": 0,
+      "calls": 36,
+      "ok": 25,
+      "boundary": 11,
       "effective": 0,
-      "facts_complete": 4,
-      "bucket": "1-4",
-      "status": "未达(1-4)",
+      "facts_complete": 35,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 4
+        "ok_no_effect_observed": 25,
+        "failed": 11
       },
       "file_effects": {
-        "none": 4
+        "none": 36
       },
-      "flags": {},
+      "flags": {
+        "error_suggestion": 11
+      },
       "evidence": [
         {
-          "run": "runs/_exercises/ex_scene/c23-task110",
-          "calls": 2
+          "run": "runs/_exercises/ex_write/c4-task111",
+          "calls": 7
         },
         {
-          "run": "runs/_exercises/ex_scene2/c23-after-task110",
-          "calls": 2
+          "run": "runs/_exercises/ex_write3/c4c-task111",
+          "calls": 7
+        },
+        {
+          "run": "runs/_exercises/ex_write4/c4-final-task111",
+          "calls": 7
+        },
+        {
+          "run": "runs/_exercises/ex_write5/c4-v5-task111",
+          "calls": 7
+        },
+        {
+          "run": "runs/_exercises/ex_write2/c4b-task111",
+          "calls": 4
         }
       ],
       "first_ts_ms": 1790473679389,
-      "last_ts_ms": 1790474310396,
+      "last_ts_ms": 1790475648937,
       "gate": false
     },
     {
@@ -1268,21 +1510,24 @@
       "tool": "editor_get_output_log",
       "scope": "editor",
       "verb": "get",
-      "calls": 12,
-      "ok": 12,
-      "boundary": 0,
-      "effective": 12,
-      "facts_complete": 12,
+      "calls": 36,
+      "ok": 32,
+      "boundary": 4,
+      "effective": 32,
+      "facts_complete": 36,
       "bucket": ">=5",
-      "status": "计数达标缺证据",
+      "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 12
+        "ok_no_effect_observed": 32,
+        "failed": 4
       },
       "file_effects": {
-        "none": 12
+        "none": 36
       },
-      "flags": {},
+      "flags": {
+        "error_suggestion": 4
+      },
       "evidence": [
         {
           "run": "runs/_exercises/ex_scene/c23-task110",
@@ -1291,11 +1536,23 @@
         {
           "run": "runs/_exercises/ex_scene2/c23-after-task110",
           "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write/c4-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write3/c4c-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write4/c4-final-task111",
+          "calls": 6
         }
       ],
       "first_ts_ms": 1790473690676,
-      "last_ts_ms": 1790474322719,
-      "gate": false
+      "last_ts_ms": 1790475653376,
+      "gate": true
     },
     {
       "tool": "editor_capture_screenshot",
@@ -1304,7 +1561,7 @@
       "calls": 25,
       "ok": 25,
       "boundary": 0,
-      "effective": 15,
+      "effective": 25,
       "facts_complete": 25,
       "bucket": ">=5",
       "status": "计数达标缺证据",
@@ -1351,7 +1608,7 @@
       "calls": 298,
       "ok": 298,
       "boundary": 0,
-      "effective": 165,
+      "effective": 298,
       "facts_complete": 298,
       "bucket": ">=5",
       "status": "计数达标缺证据",
@@ -1535,40 +1792,64 @@
       "tool": "editor_get_viewport_3d_camera",
       "scope": "editor",
       "verb": "get",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H1",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "calls": 6,
+      "ok": 5,
+      "boundary": 1,
+      "effective": 5,
+      "facts_complete": 6,
+      "bucket": ">=5",
+      "status": "达标",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 6
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_3d/h1-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475724260,
+      "last_ts_ms": 1790475724765,
+      "gate": true
     },
     {
       "tool": "editor_set_viewport_3d_camera",
       "scope": "editor",
       "verb": "set",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 6,
+      "ok": 5,
+      "boundary": 1,
       "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H1",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "facts_complete": 6,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 6
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_3d/h1-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475723594,
+      "last_ts_ms": 1790475724149,
       "gate": false
     },
     {
@@ -1578,7 +1859,7 @@
       "calls": 122,
       "ok": 122,
       "boundary": 0,
-      "effective": 60,
+      "effective": 122,
       "facts_complete": 122,
       "bucket": ">=5",
       "status": "计数达标缺证据",
@@ -1626,7 +1907,7 @@
       "calls": 52,
       "ok": 50,
       "boundary": 2,
-      "effective": 48,
+      "effective": 50,
       "facts_complete": 52,
       "bucket": ">=5",
       "status": "达标",
@@ -1722,25 +2003,25 @@
       "tool": "running_game_capture_frames",
       "scope": "game",
       "verb": "capture",
-      "calls": 12,
-      "ok": 10,
-      "boundary": 2,
-      "effective": 0,
-      "facts_complete": 10,
+      "calls": 36,
+      "ok": 30,
+      "boundary": 6,
+      "effective": 30,
+      "facts_complete": 30,
       "bucket": ">=5",
-      "status": "计数达标缺证据",
+      "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 10,
-        "failed": 2
+        "ok_no_effect_observed": 30,
+        "failed": 6
       },
       "file_effects": {
-        "none": 10,
-        "not_recorded": 2
+        "none": 30,
+        "not_recorded": 6
       },
       "flags": {
-        "result_unparseable": 10,
-        "error_suggestion": 2
+        "result_unparseable": 24,
+        "error_suggestion": 6
       },
       "evidence": [
         {
@@ -1750,11 +2031,23 @@
         {
           "run": "runs/_exercises/ex_scene2/c23-after-task110",
           "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write/c4-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write3/c4c-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write4/c4-final-task111",
+          "calls": 6
         }
       ],
       "first_ts_ms": 1790473726080,
-      "last_ts_ms": 1790474367692,
-      "gate": false
+      "last_ts_ms": 1790475671812,
+      "gate": true
     },
     {
       "tool": "running_game_get_node_property_samples",
@@ -1763,7 +2056,7 @@
       "calls": 122,
       "ok": 122,
       "boundary": 0,
-      "effective": 118,
+      "effective": 122,
       "facts_complete": 118,
       "bucket": ">=5",
       "status": "计数达标缺证据",
@@ -1992,22 +2285,24 @@
       "tool": "running_game_get_node_properties_batch",
       "scope": "game",
       "verb": "get",
-      "calls": 12,
-      "ok": 12,
-      "boundary": 0,
-      "effective": 10,
-      "facts_complete": 12,
+      "calls": 36,
+      "ok": 32,
+      "boundary": 4,
+      "effective": 32,
+      "facts_complete": 36,
       "bucket": ">=5",
-      "status": "计数达标缺证据",
+      "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 12
+        "ok_no_effect_observed": 32,
+        "failed": 4
       },
       "file_effects": {
-        "none": 12
+        "none": 36
       },
       "flags": {
-        "result_unparseable": 2
+        "result_unparseable": 6,
+        "error_suggestion": 4
       },
       "evidence": [
         {
@@ -2017,11 +2312,23 @@
         {
           "run": "runs/_exercises/ex_scene2/c23-after-task110",
           "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write/c4-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write3/c4c-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write4/c4-final-task111",
+          "calls": 6
         }
       ],
       "first_ts_ms": 1790473719270,
-      "last_ts_ms": 1790474353630,
-      "gate": false
+      "last_ts_ms": 1790475675629,
+      "gate": true
     },
     {
       "tool": "running_game_find_ui_elements",
@@ -2203,24 +2510,24 @@
       "tool": "running_game_capture_signal_emissions",
       "scope": "game",
       "verb": "capture",
-      "calls": 12,
-      "ok": 10,
-      "boundary": 2,
-      "effective": 0,
-      "facts_complete": 10,
+      "calls": 36,
+      "ok": 26,
+      "boundary": 10,
+      "effective": 26,
+      "facts_complete": 26,
       "bucket": ">=5",
-      "status": "计数达标缺证据",
+      "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 10,
-        "failed": 2
+        "ok_no_effect_observed": 26,
+        "failed": 10
       },
       "file_effects": {
-        "none": 10,
-        "not_recorded": 2
+        "none": 26,
+        "not_recorded": 10
       },
       "flags": {
-        "error_suggestion": 2
+        "error_suggestion": 10
       },
       "evidence": [
         {
@@ -2230,11 +2537,23 @@
         {
           "run": "runs/_exercises/ex_scene2/c23-after-task110",
           "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write/c4-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write3/c4c-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write4/c4-final-task111",
+          "calls": 6
         }
       ],
       "first_ts_ms": 1790473737001,
-      "last_ts_ms": 1790474374823,
-      "gate": false
+      "last_ts_ms": 1790475675280,
+      "gate": true
     },
     {
       "tool": "editor_get_performance_monitors",
@@ -2311,7 +2630,7 @@
       "calls": 8,
       "ok": 6,
       "boundary": 2,
-      "effective": 5,
+      "effective": 6,
       "facts_complete": 8,
       "bucket": ">=5",
       "status": "达标",
@@ -2345,21 +2664,21 @@
       "tool": "project_create_script",
       "scope": "both",
       "verb": "create",
-      "calls": 71,
-      "ok": 70,
+      "calls": 76,
+      "ok": 75,
       "boundary": 1,
-      "effective": 38,
-      "facts_complete": 71,
+      "effective": 43,
+      "facts_complete": 76,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_file_effect_observed": 38,
+        "ok_file_effect_observed": 43,
         "failed": 1,
         "ok_no_effect_observed": 32
       },
       "file_effects": {
-        "changed": 38,
+        "changed": 43,
         "none": 1,
         "unchanged": 32
       },
@@ -2389,7 +2708,7 @@
         }
       ],
       "first_ts_ms": 1790435674904,
-      "last_ts_ms": 1790474308415,
+      "last_ts_ms": 1790475641454,
       "gate": true
     },
     {
@@ -2443,20 +2762,48 @@
       "tool": "editor_set_node_script",
       "scope": "editor",
       "verb": "set",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 30,
+      "ok": 25,
+      "boundary": 5,
       "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "facts_complete": 30,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
       "unreachable_category": null,
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "verdicts": {
+        "ok_no_effect_observed": 25,
+        "failed": 5
+      },
+      "file_effects": {
+        "none": 30
+      },
+      "flags": {
+        "error_suggestion": 5
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_write/c4-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write2/c4b-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write3/c4c-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write4/c4-final-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write5/c4-v5-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475132130,
+      "last_ts_ms": 1790475648305,
       "gate": false
     },
     {
@@ -2758,40 +3105,69 @@
       "tool": "editor_set_node_property_batch",
       "scope": "editor",
       "verb": "set",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "calls": 30,
+      "ok": 25,
+      "boundary": 5,
+      "effective": 15,
+      "facts_complete": 30,
+      "bucket": ">=5",
+      "status": "达标",
       "unreachable_category": null,
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "verdicts": {
+        "ok_effect_observed": 15,
+        "ok_no_effect_observed": 10,
+        "failed": 5
+      },
+      "file_effects": {
+        "none": 30
+      },
+      "flags": {
+        "error_suggestion": 5
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_write/c4-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write2/c4b-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write3/c4c-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write4/c4-final-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write5/c4-v5-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475130609,
+      "last_ts_ms": 1790475647216,
+      "gate": true
     },
     {
       "tool": "editor_list_signal_connections",
       "scope": "editor",
       "verb": "list",
-      "calls": 12,
-      "ok": 8,
+      "calls": 13,
+      "ok": 9,
       "boundary": 4,
-      "effective": 5,
-      "facts_complete": 12,
+      "effective": 9,
+      "facts_complete": 13,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_no_effect_observed": 8,
+        "ok_no_effect_observed": 9,
         "failed": 4
       },
       "file_effects": {
-        "none": 12
+        "none": 13
       },
       "flags": {
         "result_unparseable": 3,
@@ -2805,34 +3181,38 @@
         {
           "run": "runs/_exercises/ex_scene2/c23-after-task110",
           "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write6/c5-task111",
+          "calls": 1
         }
       ],
       "first_ts_ms": 1790473688771,
-      "last_ts_ms": 1790474320819,
+      "last_ts_ms": 1790476023923,
       "gate": true
     },
     {
       "tool": "editor_add_nodes_batch",
       "scope": "editor",
       "verb": "add",
-      "calls": 101,
-      "ok": 61,
-      "boundary": 40,
+      "calls": 106,
+      "ok": 64,
+      "boundary": 42,
       "effective": 47,
-      "facts_complete": 101,
+      "facts_complete": 106,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
       "verdicts": {
         "ok_effect_observed": 47,
-        "failed": 40,
-        "ok_no_effect_observed": 14
+        "failed": 42,
+        "ok_no_effect_observed": 17
       },
       "file_effects": {
-        "none": 101
+        "none": 106
       },
       "flags": {
-        "error_suggestion": 38,
+        "error_suggestion": 40,
         "error_data_truncated": 2,
         "result_unparseable": 7
       },
@@ -2859,7 +3239,7 @@
         }
       ],
       "first_ts_ms": 1790435678580,
-      "last_ts_ms": 1790474308660,
+      "last_ts_ms": 1790475642011,
       "gate": true
     },
     {
@@ -2976,241 +3356,410 @@
       "tool": "editor_list_animations",
       "scope": "editor",
       "verb": "list",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H2",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "calls": 12,
+      "ok": 10,
+      "boundary": 2,
+      "effective": 10,
+      "facts_complete": 12,
+      "bucket": ">=5",
+      "status": "达标",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 10,
+        "failed": 2
+      },
+      "file_effects": {
+        "none": 12
+      },
+      "flags": {
+        "error_suggestion": 2
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_anim/h2-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_anim2/h2b-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475764754,
+      "last_ts_ms": 1790475827731,
+      "gate": true
     },
     {
       "tool": "editor_create_animation",
       "scope": "editor",
       "verb": "create",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 18,
+      "ok": 16,
+      "boundary": 2,
       "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H2",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "facts_complete": 18,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 16,
+        "failed": 2
+      },
+      "file_effects": {
+        "none": 18
+      },
+      "flags": {
+        "error_suggestion": 2
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_anim/h2-task111",
+          "calls": 9
+        },
+        {
+          "run": "runs/_exercises/ex_anim2/h2b-task111",
+          "calls": 9
+        }
+      ],
+      "first_ts_ms": 1790475762699,
+      "last_ts_ms": 1790475825992,
       "gate": false
     },
     {
       "tool": "editor_add_animation_track",
       "scope": "editor",
       "verb": "add",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 12,
+      "ok": 10,
+      "boundary": 2,
       "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H2",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "facts_complete": 12,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 10,
+        "failed": 2
+      },
+      "file_effects": {
+        "none": 12
+      },
+      "flags": {
+        "error_suggestion": 2
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_anim/h2-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_anim2/h2b-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475763608,
+      "last_ts_ms": 1790475826565,
       "gate": false
     },
     {
       "tool": "editor_set_animation_keyframe",
       "scope": "editor",
       "verb": "set",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 12,
+      "ok": 10,
+      "boundary": 2,
       "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H2",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "facts_complete": 12,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 10,
+        "failed": 2
+      },
+      "file_effects": {
+        "none": 12
+      },
+      "flags": {
+        "error_suggestion": 2
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_anim/h2-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_anim2/h2b-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475764183,
+      "last_ts_ms": 1790475827135,
       "gate": false
     },
     {
       "tool": "editor_get_animation_info",
       "scope": "editor",
       "verb": "get",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H2",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "calls": 12,
+      "ok": 10,
+      "boundary": 2,
+      "effective": 10,
+      "facts_complete": 12,
+      "bucket": ">=5",
+      "status": "达标",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 10,
+        "failed": 2
+      },
+      "file_effects": {
+        "none": 12
+      },
+      "flags": {
+        "error_suggestion": 2
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_anim/h2-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_anim2/h2b-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475765364,
+      "last_ts_ms": 1790475828336,
+      "gate": true
     },
     {
       "tool": "editor_remove_animation",
       "scope": "editor",
       "verb": "remove",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 12,
+      "ok": 10,
+      "boundary": 2,
       "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H2",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "facts_complete": 12,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 10,
+        "failed": 2
+      },
+      "file_effects": {
+        "none": 12
+      },
+      "flags": {
+        "error_suggestion": 2
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_anim/h2-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_anim2/h2b-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475771473,
+      "last_ts_ms": 1790475835108,
       "gate": false
     },
     {
       "tool": "editor_get_tilemap_info",
       "scope": "editor",
       "verb": "get",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H3",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "calls": 6,
+      "ok": 5,
+      "boundary": 1,
+      "effective": 5,
+      "facts_complete": 6,
+      "bucket": ">=5",
+      "status": "达标",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 6
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_grid/h3-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475872298,
+      "last_ts_ms": 1790475872801,
+      "gate": true
     },
     {
       "tool": "editor_get_tilemap_used_cells",
       "scope": "editor",
       "verb": "get",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H3",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "calls": 6,
+      "ok": 5,
+      "boundary": 1,
+      "effective": 5,
+      "facts_complete": 6,
+      "bucket": ">=5",
+      "status": "达标",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 6
+      },
+      "flags": {
+        "result_unparseable": 5,
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_grid/h3-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475872906,
+      "last_ts_ms": 1790475873423,
+      "gate": true
     },
     {
       "tool": "editor_remove_all_tilemap_cells",
       "scope": "editor",
       "verb": "remove",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H3",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "calls": 6,
+      "ok": 5,
+      "boundary": 1,
+      "effective": 5,
+      "facts_complete": 6,
+      "bucket": ">=5",
+      "status": "达标",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_effect_observed": 5,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 6
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_grid/h3-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475874145,
+      "last_ts_ms": 1790475875116,
+      "gate": true
     },
     {
       "tool": "editor_set_tilemap_cell",
       "scope": "editor",
       "verb": "set",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H3",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "calls": 10,
+      "ok": 9,
+      "boundary": 1,
+      "effective": 9,
+      "facts_complete": 10,
+      "bucket": ">=5",
+      "status": "达标",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_effect_observed": 9,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 10
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_grid/h3-task111",
+          "calls": 10
+        }
+      ],
+      "first_ts_ms": 1790475871126,
+      "last_ts_ms": 1790475874901,
+      "gate": true
     },
     {
       "tool": "editor_set_tilemap_cells_in_rect",
       "scope": "editor",
       "verb": "set",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H3",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "calls": 6,
+      "ok": 5,
+      "boundary": 1,
+      "effective": 5,
+      "facts_complete": 6,
+      "bucket": ">=5",
+      "status": "达标",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_effect_observed": 5,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 6
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_grid/h3-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475871714,
+      "last_ts_ms": 1790475872203,
+      "gate": true
     },
     {
       "tool": "editor_get_tilemap_cell",
       "scope": "editor",
       "verb": "get",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H3",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "calls": 6,
+      "ok": 5,
+      "boundary": 1,
+      "effective": 5,
+      "facts_complete": 6,
+      "bucket": ">=5",
+      "status": "达标",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 6
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_grid/h3-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475873526,
+      "last_ts_ms": 1790475874042,
+      "gate": true
     },
     {
       "tool": "project_read_resource",
@@ -3355,20 +3904,20 @@
       "tool": "project_create_resource",
       "scope": "both",
       "verb": "create",
-      "calls": 6,
-      "ok": 5,
+      "calls": 7,
+      "ok": 6,
       "boundary": 1,
-      "effective": 5,
-      "facts_complete": 6,
+      "effective": 6,
+      "facts_complete": 7,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_file_effect_observed": 5,
+        "ok_file_effect_observed": 6,
         "failed": 1
       },
       "file_effects": {
-        "changed": 5,
+        "changed": 6,
         "none": 1
       },
       "flags": {
@@ -3378,10 +3927,14 @@
         {
           "run": "runs/_exercises/ex_files/c1-task110",
           "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_3d/h1-task111",
+          "calls": 1
         }
       ],
       "first_ts_ms": 1790473257438,
-      "last_ts_ms": 1790473258061,
+      "last_ts_ms": 1790475720302,
       "gate": true
     },
     {
@@ -3500,20 +4053,20 @@
       "tool": "project_create_shader",
       "scope": "both",
       "verb": "create",
-      "calls": 7,
-      "ok": 6,
+      "calls": 12,
+      "ok": 11,
       "boundary": 1,
-      "effective": 6,
-      "facts_complete": 7,
+      "effective": 11,
+      "facts_complete": 12,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_file_effect_observed": 6,
+        "ok_file_effect_observed": 11,
         "failed": 1
       },
       "file_effects": {
-        "changed": 6,
+        "changed": 11,
         "none": 1
       },
       "flags": {
@@ -3527,30 +4080,42 @@
         {
           "run": "runs/_exercises/ex_files/c1-smoke",
           "calls": 1
+        },
+        {
+          "run": "runs/_exercises/ex_write/c4-task111",
+          "calls": 1
+        },
+        {
+          "run": "runs/_exercises/ex_write2/c4b-task111",
+          "calls": 1
+        },
+        {
+          "run": "runs/_exercises/ex_write3/c4c-task111",
+          "calls": 1
         }
       ],
       "first_ts_ms": 1790473214743,
-      "last_ts_ms": 1790473254042,
+      "last_ts_ms": 1790475641563,
       "gate": true
     },
     {
       "tool": "project_edit_shader",
       "scope": "both",
       "verb": "edit",
-      "calls": 6,
-      "ok": 5,
+      "calls": 8,
+      "ok": 7,
       "boundary": 1,
-      "effective": 5,
-      "facts_complete": 6,
+      "effective": 7,
+      "facts_complete": 8,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_file_effect_observed": 5,
+        "ok_file_effect_observed": 7,
         "failed": 1
       },
       "file_effects": {
-        "changed": 5,
+        "changed": 7,
         "none": 1
       },
       "flags": {
@@ -3560,51 +4125,109 @@
         {
           "run": "runs/_exercises/ex_files/c1-task110",
           "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write4/c4-final-task111",
+          "calls": 1
+        },
+        {
+          "run": "runs/_exercises/ex_write5/c4-v5-task111",
+          "calls": 1
         }
       ],
       "first_ts_ms": 1790473254313,
-      "last_ts_ms": 1790473255583,
+      "last_ts_ms": 1790475641684,
       "gate": true
     },
     {
       "tool": "editor_set_shader_material",
       "scope": "editor",
       "verb": "set",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "calls": 24,
+      "ok": 18,
+      "boundary": 6,
+      "effective": 3,
+      "facts_complete": 24,
+      "bucket": ">=5",
+      "status": "达标",
       "unreachable_category": null,
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "verdicts": {
+        "ok_no_effect_observed": 15,
+        "failed": 6,
+        "ok_effect_observed": 3
+      },
+      "file_effects": {
+        "none": 24
+      },
+      "flags": {
+        "error_suggestion": 6
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_write/c4-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write3/c4c-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write4/c4-final-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write5/c4-v5-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475138091,
+      "last_ts_ms": 1790475652295,
+      "gate": true
     },
     {
       "tool": "editor_set_shader_param",
       "scope": "editor",
       "verb": "set",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "calls": 24,
+      "ok": 10,
+      "boundary": 14,
+      "effective": 1,
+      "facts_complete": 24,
+      "bucket": ">=5",
+      "status": "达标",
       "unreachable_category": null,
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "verdicts": {
+        "failed": 14,
+        "ok_no_effect_observed": 9,
+        "ok_effect_observed": 1
+      },
+      "file_effects": {
+        "none": 24
+      },
+      "flags": {
+        "error_suggestion": 14
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_write/c4-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write3/c4c-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write4/c4-final-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write5/c4-v5-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475139037,
+      "last_ts_ms": 1790475652839,
+      "gate": true
     },
     {
       "tool": "project_get_shader_params",
@@ -3642,73 +4265,142 @@
       "tool": "editor_add_raycast",
       "scope": "editor",
       "verb": "add",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "calls": 33,
+      "ok": 24,
+      "boundary": 9,
+      "effective": 16,
+      "facts_complete": 33,
+      "bucket": ">=5",
+      "status": "达标",
       "unreachable_category": null,
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "verdicts": {
+        "ok_effect_observed": 16,
+        "failed": 9,
+        "ok_no_effect_observed": 8
+      },
+      "file_effects": {
+        "none": 33
+      },
+      "flags": {
+        "error_suggestion": 9
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_write3/c4c-task111",
+          "calls": 7
+        },
+        {
+          "run": "runs/_exercises/ex_write4/c4-final-task111",
+          "calls": 7
+        },
+        {
+          "run": "runs/_exercises/ex_write5/c4-v5-task111",
+          "calls": 7
+        },
+        {
+          "run": "runs/_exercises/ex_write/c4-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write2/c4b-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475126416,
+      "last_ts_ms": 1790475644388,
+      "gate": true
     },
     {
       "tool": "editor_setup_collision_shape",
       "scope": "editor",
       "verb": "setup",
-      "calls": 2,
-      "ok": 2,
-      "boundary": 0,
-      "effective": 2,
-      "facts_complete": 2,
-      "bucket": "1-4",
-      "status": "未达(1-4)",
+      "calls": 31,
+      "ok": 20,
+      "boundary": 11,
+      "effective": 9,
+      "facts_complete": 31,
+      "bucket": ">=5",
+      "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_effect_observed": 2
+        "ok_effect_observed": 9,
+        "failed": 11,
+        "ok_no_effect_observed": 11
       },
       "file_effects": {
-        "none": 2
+        "none": 31
       },
-      "flags": {},
+      "flags": {
+        "error_suggestion": 11
+      },
       "evidence": [
         {
-          "run": "runs/_exercises/ex_scene/c23-task110",
-          "calls": 1
+          "run": "runs/_exercises/ex_write/c4-task111",
+          "calls": 7
         },
         {
-          "run": "runs/_exercises/ex_scene2/c23-after-task110",
+          "run": "runs/_exercises/ex_write3/c4c-task111",
+          "calls": 7
+        },
+        {
+          "run": "runs/_exercises/ex_write4/c4-final-task111",
+          "calls": 7
+        },
+        {
+          "run": "runs/_exercises/ex_write5/c4-v5-task111",
+          "calls": 7
+        },
+        {
+          "run": "runs/_exercises/ex_scene/c23-task110",
           "calls": 1
         }
       ],
       "first_ts_ms": 1790473678099,
-      "last_ts_ms": 1790474309087,
-      "gate": false
+      "last_ts_ms": 1790475650032,
+      "gate": true
     },
     {
       "tool": "editor_set_physics_layers",
       "scope": "editor",
       "verb": "set",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 24,
+      "ok": 18,
+      "boundary": 6,
       "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "facts_complete": 24,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
       "unreachable_category": null,
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "verdicts": {
+        "ok_no_effect_observed": 18,
+        "failed": 6
+      },
+      "file_effects": {
+        "none": 24
+      },
+      "flags": {
+        "error_suggestion": 6
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_write/c4-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write3/c4c-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write4/c4-final-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write5/c4-v5-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475135719,
+      "last_ts_ms": 1790475650570,
       "gate": false
     },
     {
@@ -3751,20 +4443,44 @@
       "tool": "editor_setup_physics_body",
       "scope": "editor",
       "verb": "setup",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 24,
+      "ok": 17,
+      "boundary": 7,
       "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "facts_complete": 24,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
       "unreachable_category": null,
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "verdicts": {
+        "ok_no_effect_observed": 17,
+        "failed": 7
+      },
+      "file_effects": {
+        "none": 24
+      },
+      "flags": {
+        "error_suggestion": 7
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_write/c4-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write3/c4c-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write4/c4-final-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write5/c4-v5-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475134294,
+      "last_ts_ms": 1790475649484,
       "gate": false
     },
     {
@@ -3807,120 +4523,192 @@
       "tool": "editor_add_mesh_instance",
       "scope": "editor",
       "verb": "add",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 6,
+      "ok": 5,
+      "boundary": 1,
       "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H1",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "facts_complete": 6,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 6
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_3d/h1-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475720488,
+      "last_ts_ms": 1790475721046,
       "gate": false
     },
     {
       "tool": "editor_setup_camera_3d",
       "scope": "editor",
       "verb": "setup",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 6,
+      "ok": 5,
+      "boundary": 1,
       "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H1",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "facts_complete": 6,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 6
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_3d/h1-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475722829,
+      "last_ts_ms": 1790475723494,
       "gate": false
     },
     {
       "tool": "editor_setup_lighting",
       "scope": "editor",
       "verb": "setup",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 6,
+      "ok": 5,
+      "boundary": 1,
       "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H1",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "facts_complete": 6,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 6
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_3d/h1-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475724866,
+      "last_ts_ms": 1790475725436,
       "gate": false
     },
     {
       "tool": "editor_set_material_3d",
       "scope": "editor",
       "verb": "set",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 6,
+      "ok": 3,
+      "boundary": 3,
       "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H1",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "facts_complete": 6,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 3,
+        "failed": 3
+      },
+      "file_effects": {
+        "none": 6
+      },
+      "flags": {
+        "error_suggestion": 3
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_3d/h1-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475721147,
+      "last_ts_ms": 1790475722714,
       "gate": false
     },
     {
       "tool": "editor_setup_world_environment",
       "scope": "editor",
       "verb": "setup",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 6,
+      "ok": 5,
+      "boundary": 1,
       "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H1",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "facts_complete": 6,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 6
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_3d/h1-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475725537,
+      "last_ts_ms": 1790475726135,
       "gate": false
     },
     {
       "tool": "editor_add_gridmap",
       "scope": "editor",
       "verb": "add",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 6,
+      "ok": 5,
+      "boundary": 1,
       "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H3",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "facts_complete": 6,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 1
+      },
+      "file_effects": {
+        "none": 6
+      },
+      "flags": {
+        "error_suggestion": 1
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_grid/h3-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475870448,
+      "last_ts_ms": 1790475871025,
       "gate": false
     },
     {
@@ -4047,20 +4835,20 @@
       "tool": "project_create_theme",
       "scope": "both",
       "verb": "create",
-      "calls": 6,
-      "ok": 5,
+      "calls": 11,
+      "ok": 10,
       "boundary": 1,
-      "effective": 5,
-      "facts_complete": 6,
+      "effective": 10,
+      "facts_complete": 11,
       "bucket": ">=5",
       "status": "达标",
       "unreachable_category": null,
       "verdicts": {
-        "ok_file_effect_observed": 5,
+        "ok_file_effect_observed": 10,
         "failed": 1
       },
       "file_effects": {
-        "changed": 5,
+        "changed": 10,
         "none": 1
       },
       "flags": {
@@ -4070,10 +4858,26 @@
         {
           "run": "runs/_exercises/ex_files/c1-task110",
           "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write/c4-task111",
+          "calls": 1
+        },
+        {
+          "run": "runs/_exercises/ex_write2/c4b-task111",
+          "calls": 1
+        },
+        {
+          "run": "runs/_exercises/ex_write3/c4c-task111",
+          "calls": 1
+        },
+        {
+          "run": "runs/_exercises/ex_write4/c4-final-task111",
+          "calls": 1
         }
       ],
       "first_ts_ms": 1790473255844,
-      "last_ts_ms": 1790473257150,
+      "last_ts_ms": 1790475641795,
       "gate": true
     },
     {
@@ -4212,20 +5016,44 @@
       "tool": "editor_set_control_theme",
       "scope": "editor",
       "verb": "set",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 24,
+      "ok": 19,
+      "boundary": 5,
       "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "facts_complete": 24,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
       "unreachable_category": null,
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "verdicts": {
+        "ok_no_effect_observed": 19,
+        "failed": 5
+      },
+      "file_effects": {
+        "none": 24
+      },
+      "flags": {
+        "error_suggestion": 5
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_write/c4-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write3/c4c-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write4/c4-final-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write5/c4-v5-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475136339,
+      "last_ts_ms": 1790475651148,
       "gate": false
     },
     {
@@ -4264,160 +5092,289 @@
       "tool": "editor_create_animation_tree",
       "scope": "editor",
       "verb": "create",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 12,
+      "ok": 10,
+      "boundary": 2,
       "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H2",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "facts_complete": 12,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 10,
+        "failed": 2
+      },
+      "file_effects": {
+        "none": 12
+      },
+      "flags": {
+        "error_suggestion": 2
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_anim/h2-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_anim2/h2b-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475765978,
+      "last_ts_ms": 1790475828984,
       "gate": false
     },
     {
       "tool": "editor_get_animation_tree_structure",
       "scope": "editor",
       "verb": "get",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H2",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "calls": 12,
+      "ok": 10,
+      "boundary": 2,
+      "effective": 10,
+      "facts_complete": 12,
+      "bucket": ">=5",
+      "status": "达标",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 10,
+        "failed": 2
+      },
+      "file_effects": {
+        "none": 12
+      },
+      "flags": {
+        "result_unparseable": 2,
+        "error_suggestion": 2
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_anim/h2-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_anim2/h2b-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475770889,
+      "last_ts_ms": 1790475834480,
+      "gate": true
     },
     {
       "tool": "editor_add_state_machine_state",
       "scope": "editor",
       "verb": "add",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 18,
+      "ok": 16,
+      "boundary": 2,
       "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H2",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "facts_complete": 18,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 16,
+        "failed": 2
+      },
+      "file_effects": {
+        "none": 18
+      },
+      "flags": {
+        "error_suggestion": 2
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_anim2/h2b-task111",
+          "calls": 12
+        },
+        {
+          "run": "runs/_exercises/ex_anim/h2-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475766634,
+      "last_ts_ms": 1790475830248,
       "gate": false
     },
     {
       "tool": "editor_remove_state_machine_state",
       "scope": "editor",
       "verb": "remove",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 12,
+      "ok": 5,
+      "boundary": 7,
       "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H2",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "facts_complete": 12,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 7
+      },
+      "file_effects": {
+        "none": 12
+      },
+      "flags": {
+        "error_suggestion": 7
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_anim/h2-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_anim2/h2b-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475769050,
+      "last_ts_ms": 1790475832689,
       "gate": false
     },
     {
       "tool": "editor_add_state_machine_transition",
       "scope": "editor",
       "verb": "add",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 22,
+      "ok": 20,
+      "boundary": 2,
       "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H2",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "facts_complete": 22,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 20,
+        "failed": 2
+      },
+      "file_effects": {
+        "none": 22
+      },
+      "flags": {
+        "error_suggestion": 2
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_anim/h2-task111",
+          "calls": 11
+        },
+        {
+          "run": "runs/_exercises/ex_anim2/h2b-task111",
+          "calls": 11
+        }
+      ],
+      "first_ts_ms": 1790475767266,
+      "last_ts_ms": 1790475831420,
       "gate": false
     },
     {
       "tool": "editor_remove_state_machine_transition",
       "scope": "editor",
       "verb": "remove",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 12,
+      "ok": 10,
+      "boundary": 2,
       "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H2",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "facts_complete": 12,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 10,
+        "failed": 2
+      },
+      "file_effects": {
+        "none": 12
+      },
+      "flags": {
+        "error_suggestion": 2
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_anim/h2-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_anim2/h2b-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475768420,
+      "last_ts_ms": 1790475832051,
       "gate": false
     },
     {
       "tool": "editor_set_blend_tree_node",
       "scope": "editor",
       "verb": "set",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 12,
+      "ok": 5,
+      "boundary": 7,
       "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H2",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "facts_complete": 12,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 5,
+        "failed": 7
+      },
+      "file_effects": {
+        "none": 12
+      },
+      "flags": {
+        "error_suggestion": 7
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_anim/h2-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_anim2/h2b-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475769685,
+      "last_ts_ms": 1790475833274,
       "gate": false
     },
     {
       "tool": "editor_set_animation_tree_parameter",
       "scope": "editor",
       "verb": "set",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
+      "calls": 12,
+      "ok": 8,
+      "boundary": 4,
       "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
-      "unreachable_category": "H2",
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
+      "facts_complete": 12,
+      "bucket": ">=5",
+      "status": "计数达标缺证据",
+      "unreachable_category": null,
+      "verdicts": {
+        "ok_no_effect_observed": 8,
+        "failed": 4
+      },
+      "file_effects": {
+        "none": 12
+      },
+      "flags": {
+        "error_suggestion": 4
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_anim/h2-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_anim2/h2b-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475770304,
+      "last_ts_ms": 1790475833861,
       "gate": false
     },
     {
@@ -5107,20 +6064,20 @@
       "tool": "project_build_csharp",
       "scope": "both",
       "verb": "build",
-      "calls": 62,
-      "ok": 62,
+      "calls": 66,
+      "ok": 66,
       "boundary": 0,
-      "effective": 58,
-      "facts_complete": 58,
+      "effective": 62,
+      "facts_complete": 62,
       "bucket": ">=5",
       "status": "计数达标缺证据",
       "unreachable_category": null,
       "verdicts": {
-        "ok_file_effect_observed": 58,
+        "ok_file_effect_observed": 62,
         "ok_effect_unavailable": 4
       },
       "file_effects": {
-        "changed": 58,
+        "changed": 62,
         "not_tracked": 4
       },
       "flags": {
@@ -5140,16 +6097,16 @@
           "calls": 1
         },
         {
-          "run": "runs/asteroids/ast-task098-r1",
+          "run": "runs/_exercises/ex_write/c4-task111",
           "calls": 1
         },
         {
-          "run": "runs/asteroids/ast-task098-r2",
+          "run": "runs/_exercises/ex_write3/c4c-task111",
           "calls": 1
         }
       ],
       "first_ts_ms": 1790435678313,
-      "last_ts_ms": 1790474315358,
+      "last_ts_ms": 1790475658032,
       "gate": false
     },
     {
@@ -5196,7 +6153,7 @@
       "calls": 84,
       "ok": 84,
       "boundary": 0,
-      "effective": 59,
+      "effective": 80,
       "facts_complete": 84,
       "bucket": ">=5",
       "status": "计数达标缺证据",
@@ -5285,21 +6242,50 @@
       "tool": "editor_set_node_property_updates",
       "scope": "editor",
       "verb": "set",
-      "calls": 0,
-      "ok": 0,
-      "boundary": 0,
-      "effective": 0,
-      "facts_complete": 0,
-      "bucket": "0",
-      "status": "未达(0)",
+      "calls": 30,
+      "ok": 23,
+      "boundary": 7,
+      "effective": 3,
+      "facts_complete": 30,
+      "bucket": ">=5",
+      "status": "达标",
       "unreachable_category": null,
-      "verdicts": {},
-      "file_effects": {},
-      "flags": {},
-      "evidence": [],
-      "first_ts_ms": null,
-      "last_ts_ms": null,
-      "gate": false
+      "verdicts": {
+        "ok_no_effect_observed": 20,
+        "failed": 7,
+        "ok_effect_observed": 3
+      },
+      "file_effects": {
+        "none": 30
+      },
+      "flags": {
+        "error_suggestion": 7
+      },
+      "evidence": [
+        {
+          "run": "runs/_exercises/ex_write/c4-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write2/c4b-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write3/c4c-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write4/c4-final-task111",
+          "calls": 6
+        },
+        {
+          "run": "runs/_exercises/ex_write5/c4-v5-task111",
+          "calls": 6
+        }
+      ],
+      "first_ts_ms": 1790475131409,
+      "last_ts_ms": 1790475647755,
+      "gate": true
     },
     {
       "tool": "project_read_text_file",
@@ -5308,7 +6294,7 @@
       "calls": 86,
       "ok": 85,
       "boundary": 1,
-      "effective": 80,
+      "effective": 85,
       "facts_complete": 86,
       "bucket": ">=5",
       "status": "达标",
@@ -5505,6 +6491,454 @@
     "members_total": 74,
     "drift": [
       {
+        "tool": "editor_add_mesh_instance",
+        "scope": "editor",
+        "category": "H1",
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_3d/h1-task111",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_get_viewport_3d_camera",
+        "scope": "editor",
+        "category": "H1",
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_3d/h1-task111",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_set_material_3d",
+        "scope": "editor",
+        "category": "H1",
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_3d/h1-task111",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_set_viewport_3d_camera",
+        "scope": "editor",
+        "category": "H1",
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_3d/h1-task111",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_setup_camera_3d",
+        "scope": "editor",
+        "category": "H1",
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_3d/h1-task111",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_setup_lighting",
+        "scope": "editor",
+        "category": "H1",
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_3d/h1-task111",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_setup_world_environment",
+        "scope": "editor",
+        "category": "H1",
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_3d/h1-task111",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_add_animation_track",
+        "scope": "editor",
+        "category": "H2",
+        "measured_calls": 12,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_add_state_machine_state",
+        "scope": "editor",
+        "category": "H2",
+        "measured_calls": 18,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            12
+          ],
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_add_state_machine_transition",
+        "scope": "editor",
+        "category": "H2",
+        "measured_calls": 22,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            11
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            11
+          ]
+        ]
+      },
+      {
+        "tool": "editor_create_animation",
+        "scope": "editor",
+        "category": "H2",
+        "measured_calls": 18,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            9
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            9
+          ]
+        ]
+      },
+      {
+        "tool": "editor_create_animation_tree",
+        "scope": "editor",
+        "category": "H2",
+        "measured_calls": 12,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_get_animation_info",
+        "scope": "editor",
+        "category": "H2",
+        "measured_calls": 12,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_get_animation_tree_structure",
+        "scope": "editor",
+        "category": "H2",
+        "measured_calls": 12,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_list_animations",
+        "scope": "editor",
+        "category": "H2",
+        "measured_calls": 12,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_remove_animation",
+        "scope": "editor",
+        "category": "H2",
+        "measured_calls": 12,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_remove_state_machine_state",
+        "scope": "editor",
+        "category": "H2",
+        "measured_calls": 12,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_remove_state_machine_transition",
+        "scope": "editor",
+        "category": "H2",
+        "measured_calls": 12,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_set_animation_keyframe",
+        "scope": "editor",
+        "category": "H2",
+        "measured_calls": 12,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_set_animation_tree_parameter",
+        "scope": "editor",
+        "category": "H2",
+        "measured_calls": 12,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_set_blend_tree_node",
+        "scope": "editor",
+        "category": "H2",
+        "measured_calls": 12,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_add_gridmap",
+        "scope": "editor",
+        "category": "H3",
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_grid/h3-task111",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_get_tilemap_cell",
+        "scope": "editor",
+        "category": "H3",
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_grid/h3-task111",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_get_tilemap_info",
+        "scope": "editor",
+        "category": "H3",
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_grid/h3-task111",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_get_tilemap_used_cells",
+        "scope": "editor",
+        "category": "H3",
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_grid/h3-task111",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_remove_all_tilemap_cells",
+        "scope": "editor",
+        "category": "H3",
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_grid/h3-task111",
+            6
+          ]
+        ]
+      },
+      {
+        "tool": "editor_set_tilemap_cell",
+        "scope": "editor",
+        "category": "H3",
+        "measured_calls": 10,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_grid/h3-task111",
+            10
+          ]
+        ]
+      },
+      {
+        "tool": "editor_set_tilemap_cells_in_rect",
+        "scope": "editor",
+        "category": "H3",
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_grid/h3-task111",
+            6
+          ]
+        ]
+      },
+      {
         "tool": "editor_get_open_scripts",
         "scope": "editor",
         "category": "H7",
@@ -5526,7 +6960,7 @@
         "tool": "editor_get_output_log",
         "scope": "editor",
         "category": "H7",
-        "measured_calls": 12,
+        "measured_calls": 36,
         "drift": true,
         "reclassified": true,
         "evidence": [
@@ -5536,6 +6970,10 @@
           ],
           [
             "runs/_exercises/ex_scene2/c23-after-task110",
+            6
+          ],
+          [
+            "runs/_exercises/ex_write/c4-task111",
             6
           ]
         ]
@@ -5580,7 +7018,7 @@
         "tool": "running_game_capture_frames",
         "scope": "game",
         "category": "H9",
-        "measured_calls": 12,
+        "measured_calls": 36,
         "drift": true,
         "reclassified": true,
         "evidence": [
@@ -5590,6 +7028,10 @@
           ],
           [
             "runs/_exercises/ex_scene2/c23-after-task110",
+            6
+          ],
+          [
+            "runs/_exercises/ex_write/c4-task111",
             6
           ]
         ]
@@ -5598,7 +7040,7 @@
         "tool": "running_game_capture_signal_emissions",
         "scope": "game",
         "category": "H9",
-        "measured_calls": 12,
+        "measured_calls": 36,
         "drift": true,
         "reclassified": true,
         "evidence": [
@@ -5608,6 +7050,10 @@
           ],
           [
             "runs/_exercises/ex_scene2/c23-after-task110",
+            6
+          ],
+          [
+            "runs/_exercises/ex_write/c4-task111",
             6
           ]
         ]
@@ -5649,6 +7095,230 @@
         "from": "H9",
         "why": "it registers the watch itself and reports what fired inside duration_ms (measured: 1 and 2 emissions for Tick.timeout).",
         "evidence": "runs/_exercises/ex_scene/c23-task110/trace-game.jsonl"
+      },
+      {
+        "tool": "editor_add_mesh_instance",
+        "from": "H1",
+        "why": "the corpus has no 3D scene, but the family needs only a project that ships one: projects/_exercises/ex_3d carries scenes/probe3d.tscn (Node3D root + a MeshInstance3D with a BoxMesh) and every member of H1 then ran for real - the camera tools answer with the engine's own viewport read-back, the lighting/environment tools create their nodes, and editor_set_material_3d assigns a StandardMaterial3D to the surface.",
+        "evidence": "runs/_exercises/ex_3d/h1-task111/trace-editor.jsonl",
+        "batch": "h1",
+        "task": "TASK-111"
+      },
+      {
+        "tool": "editor_set_material_3d",
+        "from": "H1",
+        "why": "the corpus has no 3D scene, but the family needs only a project that ships one: projects/_exercises/ex_3d carries scenes/probe3d.tscn (Node3D root + a MeshInstance3D with a BoxMesh) and every member of H1 then ran for real - the camera tools answer with the engine's own viewport read-back, the lighting/environment tools create their nodes, and editor_set_material_3d assigns a StandardMaterial3D to the surface.",
+        "evidence": "runs/_exercises/ex_3d/h1-task111/trace-editor.jsonl",
+        "batch": "h1",
+        "task": "TASK-111"
+      },
+      {
+        "tool": "editor_setup_camera_3d",
+        "from": "H1",
+        "why": "the corpus has no 3D scene, but the family needs only a project that ships one: projects/_exercises/ex_3d carries scenes/probe3d.tscn (Node3D root + a MeshInstance3D with a BoxMesh) and every member of H1 then ran for real - the camera tools answer with the engine's own viewport read-back, the lighting/environment tools create their nodes, and editor_set_material_3d assigns a StandardMaterial3D to the surface.",
+        "evidence": "runs/_exercises/ex_3d/h1-task111/trace-editor.jsonl",
+        "batch": "h1",
+        "task": "TASK-111"
+      },
+      {
+        "tool": "editor_set_viewport_3d_camera",
+        "from": "H1",
+        "why": "the corpus has no 3D scene, but the family needs only a project that ships one: projects/_exercises/ex_3d carries scenes/probe3d.tscn (Node3D root + a MeshInstance3D with a BoxMesh) and every member of H1 then ran for real - the camera tools answer with the engine's own viewport read-back, the lighting/environment tools create their nodes, and editor_set_material_3d assigns a StandardMaterial3D to the surface.",
+        "evidence": "runs/_exercises/ex_3d/h1-task111/trace-editor.jsonl",
+        "batch": "h1",
+        "task": "TASK-111"
+      },
+      {
+        "tool": "editor_get_viewport_3d_camera",
+        "from": "H1",
+        "why": "the corpus has no 3D scene, but the family needs only a project that ships one: projects/_exercises/ex_3d carries scenes/probe3d.tscn (Node3D root + a MeshInstance3D with a BoxMesh) and every member of H1 then ran for real - the camera tools answer with the engine's own viewport read-back, the lighting/environment tools create their nodes, and editor_set_material_3d assigns a StandardMaterial3D to the surface.",
+        "evidence": "runs/_exercises/ex_3d/h1-task111/trace-editor.jsonl",
+        "batch": "h1",
+        "task": "TASK-111"
+      },
+      {
+        "tool": "editor_setup_lighting",
+        "from": "H1",
+        "why": "the corpus has no 3D scene, but the family needs only a project that ships one: projects/_exercises/ex_3d carries scenes/probe3d.tscn (Node3D root + a MeshInstance3D with a BoxMesh) and every member of H1 then ran for real - the camera tools answer with the engine's own viewport read-back, the lighting/environment tools create their nodes, and editor_set_material_3d assigns a StandardMaterial3D to the surface.",
+        "evidence": "runs/_exercises/ex_3d/h1-task111/trace-editor.jsonl",
+        "batch": "h1",
+        "task": "TASK-111"
+      },
+      {
+        "tool": "editor_setup_world_environment",
+        "from": "H1",
+        "why": "the corpus has no 3D scene, but the family needs only a project that ships one: projects/_exercises/ex_3d carries scenes/probe3d.tscn (Node3D root + a MeshInstance3D with a BoxMesh) and every member of H1 then ran for real - the camera tools answer with the engine's own viewport read-back, the lighting/environment tools create their nodes, and editor_set_material_3d assigns a StandardMaterial3D to the surface.",
+        "evidence": "runs/_exercises/ex_3d/h1-task111/trace-editor.jsonl",
+        "batch": "h1",
+        "task": "TASK-111"
+      },
+      {
+        "tool": "editor_create_animation",
+        "from": "H2",
+        "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+        "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+        "batch": "h2b",
+        "task": "TASK-111"
+      },
+      {
+        "tool": "editor_add_animation_track",
+        "from": "H2",
+        "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+        "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+        "batch": "h2b",
+        "task": "TASK-111"
+      },
+      {
+        "tool": "editor_set_animation_keyframe",
+        "from": "H2",
+        "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+        "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+        "batch": "h2b",
+        "task": "TASK-111"
+      },
+      {
+        "tool": "editor_remove_animation",
+        "from": "H2",
+        "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+        "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+        "batch": "h2b",
+        "task": "TASK-111"
+      },
+      {
+        "tool": "editor_list_animations",
+        "from": "H2",
+        "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+        "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+        "batch": "h2b",
+        "task": "TASK-111"
+      },
+      {
+        "tool": "editor_get_animation_info",
+        "from": "H2",
+        "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+        "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+        "batch": "h2b",
+        "task": "TASK-111"
+      },
+      {
+        "tool": "editor_create_animation_tree",
+        "from": "H2",
+        "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+        "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+        "batch": "h2b",
+        "task": "TASK-111"
+      },
+      {
+        "tool": "editor_get_animation_tree_structure",
+        "from": "H2",
+        "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+        "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+        "batch": "h2b",
+        "task": "TASK-111"
+      },
+      {
+        "tool": "editor_add_state_machine_state",
+        "from": "H2",
+        "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+        "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+        "batch": "h2b",
+        "task": "TASK-111"
+      },
+      {
+        "tool": "editor_add_state_machine_transition",
+        "from": "H2",
+        "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+        "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+        "batch": "h2b",
+        "task": "TASK-111"
+      },
+      {
+        "tool": "editor_remove_state_machine_state",
+        "from": "H2",
+        "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+        "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+        "batch": "h2b",
+        "task": "TASK-111"
+      },
+      {
+        "tool": "editor_remove_state_machine_transition",
+        "from": "H2",
+        "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+        "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+        "batch": "h2b",
+        "task": "TASK-111"
+      },
+      {
+        "tool": "editor_set_blend_tree_node",
+        "from": "H2",
+        "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+        "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+        "batch": "h2b",
+        "task": "TASK-111"
+      },
+      {
+        "tool": "editor_set_animation_tree_parameter",
+        "from": "H2",
+        "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+        "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+        "batch": "h2b",
+        "task": "TASK-111"
+      },
+      {
+        "tool": "editor_add_gridmap",
+        "from": "H3",
+        "why": "the write half's own contract said the caller must supply a TileSet that already holds a TileSetAtlasSource, and none of the 20 games does. projects/_exercises/ex_grid supplies exactly that (assets/tileset.tres + scenes/grid.tscn, built by mk_probe.gd from the engine's own ResourceSaver, plus assets/meshlib.tres for editor_add_gridmap). With it, editor_set_tilemap_cell and editor_set_tilemap_cells_in_rect succeed - the exact precondition the description names - and the readers report the cells back.",
+        "evidence": "runs/_exercises/ex_grid/h3-task111/trace-editor.jsonl",
+        "batch": "h3",
+        "task": "TASK-111"
+      },
+      {
+        "tool": "editor_get_tilemap_cell",
+        "from": "H3",
+        "why": "the write half's own contract said the caller must supply a TileSet that already holds a TileSetAtlasSource, and none of the 20 games does. projects/_exercises/ex_grid supplies exactly that (assets/tileset.tres + scenes/grid.tscn, built by mk_probe.gd from the engine's own ResourceSaver, plus assets/meshlib.tres for editor_add_gridmap). With it, editor_set_tilemap_cell and editor_set_tilemap_cells_in_rect succeed - the exact precondition the description names - and the readers report the cells back.",
+        "evidence": "runs/_exercises/ex_grid/h3-task111/trace-editor.jsonl",
+        "batch": "h3",
+        "task": "TASK-111"
+      },
+      {
+        "tool": "editor_get_tilemap_info",
+        "from": "H3",
+        "why": "the write half's own contract said the caller must supply a TileSet that already holds a TileSetAtlasSource, and none of the 20 games does. projects/_exercises/ex_grid supplies exactly that (assets/tileset.tres + scenes/grid.tscn, built by mk_probe.gd from the engine's own ResourceSaver, plus assets/meshlib.tres for editor_add_gridmap). With it, editor_set_tilemap_cell and editor_set_tilemap_cells_in_rect succeed - the exact precondition the description names - and the readers report the cells back.",
+        "evidence": "runs/_exercises/ex_grid/h3-task111/trace-editor.jsonl",
+        "batch": "h3",
+        "task": "TASK-111"
+      },
+      {
+        "tool": "editor_get_tilemap_used_cells",
+        "from": "H3",
+        "why": "the write half's own contract said the caller must supply a TileSet that already holds a TileSetAtlasSource, and none of the 20 games does. projects/_exercises/ex_grid supplies exactly that (assets/tileset.tres + scenes/grid.tscn, built by mk_probe.gd from the engine's own ResourceSaver, plus assets/meshlib.tres for editor_add_gridmap). With it, editor_set_tilemap_cell and editor_set_tilemap_cells_in_rect succeed - the exact precondition the description names - and the readers report the cells back.",
+        "evidence": "runs/_exercises/ex_grid/h3-task111/trace-editor.jsonl",
+        "batch": "h3",
+        "task": "TASK-111"
+      },
+      {
+        "tool": "editor_remove_all_tilemap_cells",
+        "from": "H3",
+        "why": "the write half's own contract said the caller must supply a TileSet that already holds a TileSetAtlasSource, and none of the 20 games does. projects/_exercises/ex_grid supplies exactly that (assets/tileset.tres + scenes/grid.tscn, built by mk_probe.gd from the engine's own ResourceSaver, plus assets/meshlib.tres for editor_add_gridmap). With it, editor_set_tilemap_cell and editor_set_tilemap_cells_in_rect succeed - the exact precondition the description names - and the readers report the cells back.",
+        "evidence": "runs/_exercises/ex_grid/h3-task111/trace-editor.jsonl",
+        "batch": "h3",
+        "task": "TASK-111"
+      },
+      {
+        "tool": "editor_set_tilemap_cell",
+        "from": "H3",
+        "why": "the write half's own contract said the caller must supply a TileSet that already holds a TileSetAtlasSource, and none of the 20 games does. projects/_exercises/ex_grid supplies exactly that (assets/tileset.tres + scenes/grid.tscn, built by mk_probe.gd from the engine's own ResourceSaver, plus assets/meshlib.tres for editor_add_gridmap). With it, editor_set_tilemap_cell and editor_set_tilemap_cells_in_rect succeed - the exact precondition the description names - and the readers report the cells back.",
+        "evidence": "runs/_exercises/ex_grid/h3-task111/trace-editor.jsonl",
+        "batch": "h3",
+        "task": "TASK-111"
+      },
+      {
+        "tool": "editor_set_tilemap_cells_in_rect",
+        "from": "H3",
+        "why": "the write half's own contract said the caller must supply a TileSet that already holds a TileSetAtlasSource, and none of the 20 games does. projects/_exercises/ex_grid supplies exactly that (assets/tileset.tres + scenes/grid.tscn, built by mk_probe.gd from the engine's own ResourceSaver, plus assets/meshlib.tres for editor_add_gridmap). With it, editor_set_tilemap_cell and editor_set_tilemap_cells_in_rect succeed - the exact precondition the description names - and the readers report the cells back.",
+        "evidence": "runs/_exercises/ex_grid/h3-task111/trace-editor.jsonl",
+        "batch": "h3",
+        "task": "TASK-111"
       }
     ],
     "members": [
@@ -5656,253 +7326,449 @@
         "tool": "editor_add_mesh_instance",
         "scope": "editor",
         "category": "H1",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_3d/h1-task111",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_get_viewport_3d_camera",
         "scope": "editor",
         "category": "H1",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_3d/h1-task111",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_set_material_3d",
         "scope": "editor",
         "category": "H1",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_3d/h1-task111",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_set_viewport_3d_camera",
         "scope": "editor",
         "category": "H1",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_3d/h1-task111",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_setup_camera_3d",
         "scope": "editor",
         "category": "H1",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_3d/h1-task111",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_setup_lighting",
         "scope": "editor",
         "category": "H1",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_3d/h1-task111",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_setup_world_environment",
         "scope": "editor",
         "category": "H1",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_3d/h1-task111",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_add_animation_track",
         "scope": "editor",
         "category": "H2",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 12,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_add_state_machine_state",
         "scope": "editor",
         "category": "H2",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 18,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            12
+          ],
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_add_state_machine_transition",
         "scope": "editor",
         "category": "H2",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 22,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            11
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            11
+          ]
+        ]
       },
       {
         "tool": "editor_create_animation",
         "scope": "editor",
         "category": "H2",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 18,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            9
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            9
+          ]
+        ]
       },
       {
         "tool": "editor_create_animation_tree",
         "scope": "editor",
         "category": "H2",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 12,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_get_animation_info",
         "scope": "editor",
         "category": "H2",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 12,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_get_animation_tree_structure",
         "scope": "editor",
         "category": "H2",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 12,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_list_animations",
         "scope": "editor",
         "category": "H2",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 12,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_remove_animation",
         "scope": "editor",
         "category": "H2",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 12,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_remove_state_machine_state",
         "scope": "editor",
         "category": "H2",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 12,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_remove_state_machine_transition",
         "scope": "editor",
         "category": "H2",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 12,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_set_animation_keyframe",
         "scope": "editor",
         "category": "H2",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 12,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_set_animation_tree_parameter",
         "scope": "editor",
         "category": "H2",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 12,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_set_blend_tree_node",
         "scope": "editor",
         "category": "H2",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 12,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_anim/h2-task111",
+            6
+          ],
+          [
+            "runs/_exercises/ex_anim2/h2b-task111",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_add_gridmap",
         "scope": "editor",
         "category": "H3",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_grid/h3-task111",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_get_tilemap_cell",
         "scope": "editor",
         "category": "H3",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_grid/h3-task111",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_get_tilemap_info",
         "scope": "editor",
         "category": "H3",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_grid/h3-task111",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_get_tilemap_used_cells",
         "scope": "editor",
         "category": "H3",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_grid/h3-task111",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_remove_all_tilemap_cells",
         "scope": "editor",
         "category": "H3",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_grid/h3-task111",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_set_tilemap_cell",
         "scope": "editor",
         "category": "H3",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 10,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_grid/h3-task111",
+            10
+          ]
+        ]
       },
       {
         "tool": "editor_set_tilemap_cells_in_rect",
         "scope": "editor",
         "category": "H3",
-        "measured_calls": 0,
-        "drift": false,
-        "reclassified": false,
-        "evidence": []
+        "measured_calls": 6,
+        "drift": true,
+        "reclassified": true,
+        "evidence": [
+          [
+            "runs/_exercises/ex_grid/h3-task111",
+            6
+          ]
+        ]
       },
       {
         "tool": "editor_bake_navigation_mesh",
@@ -6088,7 +7954,7 @@
         "tool": "editor_get_output_log",
         "scope": "editor",
         "category": "H7",
-        "measured_calls": 12,
+        "measured_calls": 36,
         "drift": true,
         "reclassified": true,
         "evidence": [
@@ -6098,6 +7964,10 @@
           ],
           [
             "runs/_exercises/ex_scene2/c23-after-task110",
+            6
+          ],
+          [
+            "runs/_exercises/ex_write/c4-task111",
             6
           ]
         ]
@@ -6313,7 +8183,7 @@
         "tool": "running_game_capture_frames",
         "scope": "game",
         "category": "H9",
-        "measured_calls": 12,
+        "measured_calls": 36,
         "drift": true,
         "reclassified": true,
         "evidence": [
@@ -6323,6 +8193,10 @@
           ],
           [
             "runs/_exercises/ex_scene2/c23-after-task110",
+            6
+          ],
+          [
+            "runs/_exercises/ex_write/c4-task111",
             6
           ]
         ]
@@ -6331,7 +8205,7 @@
         "tool": "running_game_capture_signal_emissions",
         "scope": "game",
         "category": "H9",
-        "measured_calls": 12,
+        "measured_calls": 36,
         "drift": true,
         "reclassified": true,
         "evidence": [
@@ -6341,6 +8215,10 @@
           ],
           [
             "runs/_exercises/ex_scene2/c23-after-task110",
+            6
+          ],
+          [
+            "runs/_exercises/ex_write/c4-task111",
             6
           ]
         ]

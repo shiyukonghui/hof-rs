@@ -1,0 +1,97 @@
+{
+  "batch": "c5",
+  "project": "_exercises/ex_write6",
+  "calls": [
+    {
+      "tag": "c5-001-editor_open_scene-ok",
+      "tool": "editor_open_scene",
+      "port": "editor",
+      "intent": "setup",
+      "note": "the scene holding the signal sources"
+    },
+    {
+      "tag": "c5-002-editor_connect_signal-ok",
+      "tool": "editor_connect_signal",
+      "port": "editor",
+      "intent": "setup",
+      "note": "a real connection for editor_disconnect_signal to remove"
+    },
+    {
+      "tag": "c5-003-editor_connect_signal-ok",
+      "tool": "editor_connect_signal",
+      "port": "editor",
+      "intent": "setup",
+      "note": "a real connection for editor_disconnect_signal to remove"
+    },
+    {
+      "tag": "c5-004-editor_connect_signal-ok",
+      "tool": "editor_connect_signal",
+      "port": "editor",
+      "intent": "setup",
+      "note": "a real connection for editor_disconnect_signal to remove"
+    },
+    {
+      "tag": "c5-005-editor_connect_signal-ok",
+      "tool": "editor_connect_signal",
+      "port": "editor",
+      "intent": "setup",
+      "note": "a real connection for editor_disconnect_signal to remove"
+    },
+    {
+      "tag": "c5-006-editor_connect_signal-ok",
+      "tool": "editor_connect_signal",
+      "port": "editor",
+      "intent": "setup",
+      "note": "a real connection for editor_disconnect_signal to remove"
+    },
+    {
+      "tag": "c5-007-editor_disconnect_signal-ok",
+      "tool": "editor_disconnect_signal",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_disconnect_signal call 1/5. the five connections the setup phase made, removed by the pair that names them"
+    },
+    {
+      "tag": "c5-008-editor_disconnect_signal-ok",
+      "tool": "editor_disconnect_signal",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_disconnect_signal call 2/5. the five connections the setup phase made, removed by the pair that names them"
+    },
+    {
+      "tag": "c5-009-editor_disconnect_signal-ok",
+      "tool": "editor_disconnect_signal",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_disconnect_signal call 3/5. the five connections the setup phase made, removed by the pair that names them"
+    },
+    {
+      "tag": "c5-010-editor_disconnect_signal-ok",
+      "tool": "editor_disconnect_signal",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_disconnect_signal call 4/5. the five connections the setup phase made, removed by the pair that names them"
+    },
+    {
+      "tag": "c5-011-editor_disconnect_signal-ok",
+      "tool": "editor_disconnect_signal",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_disconnect_signal call 5/5. the five connections the setup phase made, removed by the pair that names them"
+    },
+    {
+      "tag": "c5-012-editor_disconnect_signal-probe",
+      "tool": "editor_disconnect_signal",
+      "port": "editor",
+      "intent": "probe",
+      "note": "editor_disconnect_signal boundary: that method was never connected from that signal"
+    },
+    {
+      "tag": "c5-013-editor_list_signal_connections-ok",
+      "tool": "editor_list_signal_connections",
+      "port": "editor",
+      "intent": "setup",
+      "note": "read-back: Ball has no user connection left"
+    }
+  ]
+}

@@ -1,0 +1,162 @@
+[gd_scene format=3 uid="uid://dk1x85xuqpjd0"]
+
+[sub_resource type="Animation" id="Animation_6s1pw"]
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Target:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 1),
+"transitions": PackedFloat32Array(1, 2),
+"update": 0,
+"values": [{
+"x": 0.0,
+"y": 0.0
+}, {
+"x": 100.0,
+"y": 0.0
+}]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Target:scale")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0.5),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [{
+"x": 2.0,
+"y": 2.0
+}]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Target:rotation")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0.25),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [1.5]
+}
+
+[sub_resource type="Animation" id="Animation_o3ku1"]
+length = 2.0
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Target:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [{
+"x": 0.0,
+"y": 0.0
+}]
+}
+
+[sub_resource type="Animation" id="Animation_4ok32"]
+length = 0.5
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Target:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(),
+"transitions": PackedFloat32Array(),
+"update": 1,
+"values": []
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_d01iv"]
+_data = {
+&"Anim1": SubResource("Animation_6s1pw"),
+&"Anim2": SubResource("Animation_o3ku1"),
+&"Anim3": SubResource("Animation_4ok32")
+}
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_l4fxx"]
+animation = &"Anim2"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_vikqt"]
+animation = &"Anim1"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_j2eu2"]
+animation = &"Anim1"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_yemyt"]
+animation = &"Anim3"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_g34y1"]
+animation = &"Anim2"
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_kvgys"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_71u5f"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_xnwyc"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_e50hk"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_xxdym"]
+
+[sub_resource type="AnimationNodeStateMachine" id="AnimationNodeStateMachine_iplow"]
+states/Fall/node = SubResource("AnimationNodeAnimation_l4fxx")
+states/Fall/position = Vector2(0, 0)
+states/Idle/node = SubResource("AnimationNodeAnimation_vikqt")
+states/Idle/position = Vector2(0, 0)
+states/Jump/node = SubResource("AnimationNodeAnimation_j2eu2")
+states/Jump/position = Vector2(0, 0)
+states/Run/node = SubResource("AnimationNodeAnimation_yemyt")
+states/Run/position = Vector2(0, 0)
+states/Walk/node = SubResource("AnimationNodeAnimation_g34y1")
+states/Walk/position = Vector2(0, 0)
+transitions = ["Idle", "Jump", SubResource("AnimationNodeStateMachineTransition_kvgys"), "Walk", "Fall", SubResource("AnimationNodeStateMachineTransition_71u5f"), "Run", "Idle", SubResource("AnimationNodeStateMachineTransition_xnwyc"), "Jump", "Walk", SubResource("AnimationNodeStateMachineTransition_e50hk"), "Fall", "Run", SubResource("AnimationNodeStateMachineTransition_xxdym")]
+
+[sub_resource type="AnimationNodeStateMachine" id="AnimationNodeStateMachine_1lwb7"]
+
+[sub_resource type="AnimationNodeStateMachine" id="AnimationNodeStateMachine_bs4vi"]
+
+[sub_resource type="AnimationNodeStateMachine" id="AnimationNodeStateMachine_obvc0"]
+
+[sub_resource type="AnimationNodeStateMachine" id="AnimationNodeStateMachine_aa7pr"]
+
+[node name="AnimRoot" type="Node2D" unique_id=1773688383]
+
+[node name="Target" type="Node2D" parent="." unique_id=66320927]
+scale = Vector2(1e-05, 1e-05)
+
+[node name="Player" type="AnimationPlayer" parent="." unique_id=495393594]
+libraries/ = SubResource("AnimationLibrary_d01iv")
+
+[node name="AT1" type="AnimationTree" parent="." unique_id=2073339655]
+tree_root = SubResource("AnimationNodeStateMachine_iplow")
+anim_player = NodePath("../Player")
+
+[node name="AT2" type="AnimationTree" parent="." unique_id=1856368231]
+tree_root = SubResource("AnimationNodeStateMachine_1lwb7")
+anim_player = NodePath("../Player")
+
+[node name="AT3" type="AnimationTree" parent="." unique_id=189663244]
+tree_root = SubResource("AnimationNodeStateMachine_bs4vi")
+anim_player = NodePath("../Player")
+
+[node name="AT4" type="AnimationTree" parent="." unique_id=483323320]
+tree_root = SubResource("AnimationNodeStateMachine_obvc0")
+anim_player = NodePath("../Player")
+
+[node name="AT5" type="AnimationTree" parent="." unique_id=299309301]
+tree_root = SubResource("AnimationNodeStateMachine_aa7pr")
+anim_player = NodePath("../Player")

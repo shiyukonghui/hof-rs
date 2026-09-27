@@ -523,7 +523,7 @@
     }
   ],
   "total": 74,
-  "_reclassified_comment": "TASK-110 batch c23 called these six for real (>=5 calls each, with an effective call and a boundary probe). They are removed from the 'unreachable' set that tool_coverage.py reports, and kept here with the run that did it.",
+  "_reclassified_comment": "TASK-110 batch c23 called six of the register's 'structurally unreachable' tools for real; TASK-111 batches h1/h2/h3 added 28 more (all of H1, H2 and H3). Every entry stays here with the run that demonstrated it instead of being deleted silently, so the inference's error stays auditable.",
   "reclassified": [
     {
       "tool": "editor_get_selection",
@@ -560,6 +560,230 @@
       "from": "H9",
       "why": "it registers the watch itself and reports what fired inside duration_ms (measured: 1 and 2 emissions for Tick.timeout).",
       "evidence": "runs/_exercises/ex_scene/c23-task110/trace-game.jsonl"
+    },
+    {
+      "tool": "editor_add_mesh_instance",
+      "from": "H1",
+      "why": "the corpus has no 3D scene, but the family needs only a project that ships one: projects/_exercises/ex_3d carries scenes/probe3d.tscn (Node3D root + a MeshInstance3D with a BoxMesh) and every member of H1 then ran for real - the camera tools answer with the engine's own viewport read-back, the lighting/environment tools create their nodes, and editor_set_material_3d assigns a StandardMaterial3D to the surface.",
+      "evidence": "runs/_exercises/ex_3d/h1-task111/trace-editor.jsonl",
+      "batch": "h1",
+      "task": "TASK-111"
+    },
+    {
+      "tool": "editor_set_material_3d",
+      "from": "H1",
+      "why": "the corpus has no 3D scene, but the family needs only a project that ships one: projects/_exercises/ex_3d carries scenes/probe3d.tscn (Node3D root + a MeshInstance3D with a BoxMesh) and every member of H1 then ran for real - the camera tools answer with the engine's own viewport read-back, the lighting/environment tools create their nodes, and editor_set_material_3d assigns a StandardMaterial3D to the surface.",
+      "evidence": "runs/_exercises/ex_3d/h1-task111/trace-editor.jsonl",
+      "batch": "h1",
+      "task": "TASK-111"
+    },
+    {
+      "tool": "editor_setup_camera_3d",
+      "from": "H1",
+      "why": "the corpus has no 3D scene, but the family needs only a project that ships one: projects/_exercises/ex_3d carries scenes/probe3d.tscn (Node3D root + a MeshInstance3D with a BoxMesh) and every member of H1 then ran for real - the camera tools answer with the engine's own viewport read-back, the lighting/environment tools create their nodes, and editor_set_material_3d assigns a StandardMaterial3D to the surface.",
+      "evidence": "runs/_exercises/ex_3d/h1-task111/trace-editor.jsonl",
+      "batch": "h1",
+      "task": "TASK-111"
+    },
+    {
+      "tool": "editor_set_viewport_3d_camera",
+      "from": "H1",
+      "why": "the corpus has no 3D scene, but the family needs only a project that ships one: projects/_exercises/ex_3d carries scenes/probe3d.tscn (Node3D root + a MeshInstance3D with a BoxMesh) and every member of H1 then ran for real - the camera tools answer with the engine's own viewport read-back, the lighting/environment tools create their nodes, and editor_set_material_3d assigns a StandardMaterial3D to the surface.",
+      "evidence": "runs/_exercises/ex_3d/h1-task111/trace-editor.jsonl",
+      "batch": "h1",
+      "task": "TASK-111"
+    },
+    {
+      "tool": "editor_get_viewport_3d_camera",
+      "from": "H1",
+      "why": "the corpus has no 3D scene, but the family needs only a project that ships one: projects/_exercises/ex_3d carries scenes/probe3d.tscn (Node3D root + a MeshInstance3D with a BoxMesh) and every member of H1 then ran for real - the camera tools answer with the engine's own viewport read-back, the lighting/environment tools create their nodes, and editor_set_material_3d assigns a StandardMaterial3D to the surface.",
+      "evidence": "runs/_exercises/ex_3d/h1-task111/trace-editor.jsonl",
+      "batch": "h1",
+      "task": "TASK-111"
+    },
+    {
+      "tool": "editor_setup_lighting",
+      "from": "H1",
+      "why": "the corpus has no 3D scene, but the family needs only a project that ships one: projects/_exercises/ex_3d carries scenes/probe3d.tscn (Node3D root + a MeshInstance3D with a BoxMesh) and every member of H1 then ran for real - the camera tools answer with the engine's own viewport read-back, the lighting/environment tools create their nodes, and editor_set_material_3d assigns a StandardMaterial3D to the surface.",
+      "evidence": "runs/_exercises/ex_3d/h1-task111/trace-editor.jsonl",
+      "batch": "h1",
+      "task": "TASK-111"
+    },
+    {
+      "tool": "editor_setup_world_environment",
+      "from": "H1",
+      "why": "the corpus has no 3D scene, but the family needs only a project that ships one: projects/_exercises/ex_3d carries scenes/probe3d.tscn (Node3D root + a MeshInstance3D with a BoxMesh) and every member of H1 then ran for real - the camera tools answer with the engine's own viewport read-back, the lighting/environment tools create their nodes, and editor_set_material_3d assigns a StandardMaterial3D to the surface.",
+      "evidence": "runs/_exercises/ex_3d/h1-task111/trace-editor.jsonl",
+      "batch": "h1",
+      "task": "TASK-111"
+    },
+    {
+      "tool": "editor_create_animation",
+      "from": "H2",
+      "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+      "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+      "batch": "h2b",
+      "task": "TASK-111"
+    },
+    {
+      "tool": "editor_add_animation_track",
+      "from": "H2",
+      "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+      "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+      "batch": "h2b",
+      "task": "TASK-111"
+    },
+    {
+      "tool": "editor_set_animation_keyframe",
+      "from": "H2",
+      "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+      "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+      "batch": "h2b",
+      "task": "TASK-111"
+    },
+    {
+      "tool": "editor_remove_animation",
+      "from": "H2",
+      "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+      "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+      "batch": "h2b",
+      "task": "TASK-111"
+    },
+    {
+      "tool": "editor_list_animations",
+      "from": "H2",
+      "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+      "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+      "batch": "h2b",
+      "task": "TASK-111"
+    },
+    {
+      "tool": "editor_get_animation_info",
+      "from": "H2",
+      "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+      "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+      "batch": "h2b",
+      "task": "TASK-111"
+    },
+    {
+      "tool": "editor_create_animation_tree",
+      "from": "H2",
+      "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+      "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+      "batch": "h2b",
+      "task": "TASK-111"
+    },
+    {
+      "tool": "editor_get_animation_tree_structure",
+      "from": "H2",
+      "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+      "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+      "batch": "h2b",
+      "task": "TASK-111"
+    },
+    {
+      "tool": "editor_add_state_machine_state",
+      "from": "H2",
+      "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+      "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+      "batch": "h2b",
+      "task": "TASK-111"
+    },
+    {
+      "tool": "editor_add_state_machine_transition",
+      "from": "H2",
+      "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+      "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+      "batch": "h2b",
+      "task": "TASK-111"
+    },
+    {
+      "tool": "editor_remove_state_machine_state",
+      "from": "H2",
+      "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+      "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+      "batch": "h2b",
+      "task": "TASK-111"
+    },
+    {
+      "tool": "editor_remove_state_machine_transition",
+      "from": "H2",
+      "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+      "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+      "batch": "h2b",
+      "task": "TASK-111"
+    },
+    {
+      "tool": "editor_set_blend_tree_node",
+      "from": "H2",
+      "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+      "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+      "batch": "h2b",
+      "task": "TASK-111"
+    },
+    {
+      "tool": "editor_set_animation_tree_parameter",
+      "from": "H2",
+      "why": "the corpus drives motion with its own integer kinematics, but the family needs only an AnimationPlayer with a default library plus a node for a track to address: projects/_exercises/ex_anim2 carries scenes/anim.tscn (AnimRoot / Target / Player). All 14 members ran: 8 animations, 3 value tracks with keys, 5 AnimationTrees whose root the tool makes an AnimationNodeStateMachine, 11 states, 10 transitions, 5 blend-tree nodes and 5 parameter writes, each with a boundary probe.",
+      "evidence": "runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl",
+      "batch": "h2b",
+      "task": "TASK-111"
+    },
+    {
+      "tool": "editor_add_gridmap",
+      "from": "H3",
+      "why": "the write half's own contract said the caller must supply a TileSet that already holds a TileSetAtlasSource, and none of the 20 games does. projects/_exercises/ex_grid supplies exactly that (assets/tileset.tres + scenes/grid.tscn, built by mk_probe.gd from the engine's own ResourceSaver, plus assets/meshlib.tres for editor_add_gridmap). With it, editor_set_tilemap_cell and editor_set_tilemap_cells_in_rect succeed - the exact precondition the description names - and the readers report the cells back.",
+      "evidence": "runs/_exercises/ex_grid/h3-task111/trace-editor.jsonl",
+      "batch": "h3",
+      "task": "TASK-111"
+    },
+    {
+      "tool": "editor_get_tilemap_cell",
+      "from": "H3",
+      "why": "the write half's own contract said the caller must supply a TileSet that already holds a TileSetAtlasSource, and none of the 20 games does. projects/_exercises/ex_grid supplies exactly that (assets/tileset.tres + scenes/grid.tscn, built by mk_probe.gd from the engine's own ResourceSaver, plus assets/meshlib.tres for editor_add_gridmap). With it, editor_set_tilemap_cell and editor_set_tilemap_cells_in_rect succeed - the exact precondition the description names - and the readers report the cells back.",
+      "evidence": "runs/_exercises/ex_grid/h3-task111/trace-editor.jsonl",
+      "batch": "h3",
+      "task": "TASK-111"
+    },
+    {
+      "tool": "editor_get_tilemap_info",
+      "from": "H3",
+      "why": "the write half's own contract said the caller must supply a TileSet that already holds a TileSetAtlasSource, and none of the 20 games does. projects/_exercises/ex_grid supplies exactly that (assets/tileset.tres + scenes/grid.tscn, built by mk_probe.gd from the engine's own ResourceSaver, plus assets/meshlib.tres for editor_add_gridmap). With it, editor_set_tilemap_cell and editor_set_tilemap_cells_in_rect succeed - the exact precondition the description names - and the readers report the cells back.",
+      "evidence": "runs/_exercises/ex_grid/h3-task111/trace-editor.jsonl",
+      "batch": "h3",
+      "task": "TASK-111"
+    },
+    {
+      "tool": "editor_get_tilemap_used_cells",
+      "from": "H3",
+      "why": "the write half's own contract said the caller must supply a TileSet that already holds a TileSetAtlasSource, and none of the 20 games does. projects/_exercises/ex_grid supplies exactly that (assets/tileset.tres + scenes/grid.tscn, built by mk_probe.gd from the engine's own ResourceSaver, plus assets/meshlib.tres for editor_add_gridmap). With it, editor_set_tilemap_cell and editor_set_tilemap_cells_in_rect succeed - the exact precondition the description names - and the readers report the cells back.",
+      "evidence": "runs/_exercises/ex_grid/h3-task111/trace-editor.jsonl",
+      "batch": "h3",
+      "task": "TASK-111"
+    },
+    {
+      "tool": "editor_remove_all_tilemap_cells",
+      "from": "H3",
+      "why": "the write half's own contract said the caller must supply a TileSet that already holds a TileSetAtlasSource, and none of the 20 games does. projects/_exercises/ex_grid supplies exactly that (assets/tileset.tres + scenes/grid.tscn, built by mk_probe.gd from the engine's own ResourceSaver, plus assets/meshlib.tres for editor_add_gridmap). With it, editor_set_tilemap_cell and editor_set_tilemap_cells_in_rect succeed - the exact precondition the description names - and the readers report the cells back.",
+      "evidence": "runs/_exercises/ex_grid/h3-task111/trace-editor.jsonl",
+      "batch": "h3",
+      "task": "TASK-111"
+    },
+    {
+      "tool": "editor_set_tilemap_cell",
+      "from": "H3",
+      "why": "the write half's own contract said the caller must supply a TileSet that already holds a TileSetAtlasSource, and none of the 20 games does. projects/_exercises/ex_grid supplies exactly that (assets/tileset.tres + scenes/grid.tscn, built by mk_probe.gd from the engine's own ResourceSaver, plus assets/meshlib.tres for editor_add_gridmap). With it, editor_set_tilemap_cell and editor_set_tilemap_cells_in_rect succeed - the exact precondition the description names - and the readers report the cells back.",
+      "evidence": "runs/_exercises/ex_grid/h3-task111/trace-editor.jsonl",
+      "batch": "h3",
+      "task": "TASK-111"
+    },
+    {
+      "tool": "editor_set_tilemap_cells_in_rect",
+      "from": "H3",
+      "why": "the write half's own contract said the caller must supply a TileSet that already holds a TileSetAtlasSource, and none of the 20 games does. projects/_exercises/ex_grid supplies exactly that (assets/tileset.tres + scenes/grid.tscn, built by mk_probe.gd from the engine's own ResourceSaver, plus assets/meshlib.tres for editor_add_gridmap). With it, editor_set_tilemap_cell and editor_set_tilemap_cells_in_rect succeed - the exact precondition the description names - and the readers report the cells back.",
+      "evidence": "runs/_exercises/ex_grid/h3-task111/trace-editor.jsonl",
+      "batch": "h3",
+      "task": "TASK-111"
     }
   ]
 }

@@ -1,0 +1,55 @@
+[gd_scene format=3 uid="uid://jyoofpwnsqh6"]
+
+[ext_resource type="Material" uid="uid://pssr3ffdcvet" path="res://assets/mat3d.tres" id="1_tgeik"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_2cu3r"]
+
+[sub_resource type="Environment" id="Environment_j55w6"]
+background_mode = 1
+background_color = Color(0.2, 0, 0, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.1, 0.1, 0.1, 1)
+
+[node name="Probe3D" type="Node3D" unique_id=39860694]
+
+[node name="Body" type="MeshInstance3D" parent="." unique_id=1233674853]
+mesh = SubResource("BoxMesh_2cu3r")
+surface_material_override/0 = ExtResource("1_tgeik")
+
+[node name="MeshC" type="MeshInstance3D" parent="Body" unique_id=105619484]
+
+[node name="MeshE" type="MeshInstance3D" parent="Body" unique_id=1135098913]
+
+[node name="Camera3D" type="Camera3D" parent="Body" unique_id=1281620913]
+current = true
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="Body" unique_id=254221572]
+
+[node name="MeshA" type="MeshInstance3D" parent="." unique_id=916826919]
+
+[node name="Camera3D" type="Camera3D" parent="MeshA" unique_id=2098006101]
+current = true
+
+[node name="OmniLight3D" type="OmniLight3D" parent="MeshA" unique_id=1414369341]
+
+[node name="MeshB" type="MeshInstance3D" parent="." unique_id=629862308]
+
+[node name="Camera3D" type="Camera3D" parent="MeshB" unique_id=86216798]
+current = true
+
+[node name="MeshD" type="MeshInstance3D" parent="." unique_id=844172930]
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=1868440051]
+current = true
+
+[node name="@Camera3D@20956" type="Camera3D" parent="." unique_id=799044752]
+current = true
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=356878117]
+
+[node name="OmniLight3D" type="OmniLight3D" parent="." unique_id=574047346]
+
+[node name="SpotLight3D" type="SpotLight3D" parent="." unique_id=1375036]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1694613387]
+environment = SubResource("Environment_j55w6")

@@ -1,0 +1,706 @@
+{
+  "batch": "h2",
+  "project": "_exercises/ex_anim",
+  "calls": [
+    {
+      "tag": "h2-001-editor_open_scene-ok",
+      "tool": "editor_open_scene",
+      "port": "editor",
+      "intent": "setup",
+      "note": "Node2D root + AnimationPlayer (default library) + a Node2D track target"
+    },
+    {
+      "tag": "h2-002-editor_create_animation-ok",
+      "tool": "editor_create_animation",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_create_animation call 1/5. five animations in the default library"
+    },
+    {
+      "tag": "h2-003-editor_create_animation-ok",
+      "tool": "editor_create_animation",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_create_animation call 2/5. five animations in the default library"
+    },
+    {
+      "tag": "h2-004-editor_create_animation-ok",
+      "tool": "editor_create_animation",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_create_animation call 3/5. five animations in the default library"
+    },
+    {
+      "tag": "h2-005-editor_create_animation-ok",
+      "tool": "editor_create_animation",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_create_animation call 4/5. five animations in the default library"
+    },
+    {
+      "tag": "h2-006-editor_create_animation-ok",
+      "tool": "editor_create_animation",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_create_animation call 5/5. five animations in the default library"
+    },
+    {
+      "tag": "h2-007-editor_create_animation-probe",
+      "tool": "editor_create_animation",
+      "port": "editor",
+      "intent": "probe",
+      "note": "editor_create_animation boundary: a negative length is refused by the tool before the engine sees it"
+    },
+    {
+      "tag": "h2-008-editor_create_animation-ok",
+      "tool": "editor_create_animation",
+      "port": "editor",
+      "intent": "setup",
+      "note": "an animation editor_remove_animation will really remove"
+    },
+    {
+      "tag": "h2-009-editor_create_animation-ok",
+      "tool": "editor_create_animation",
+      "port": "editor",
+      "intent": "setup",
+      "note": "an animation editor_remove_animation will really remove"
+    },
+    {
+      "tag": "h2-010-editor_create_animation-ok",
+      "tool": "editor_create_animation",
+      "port": "editor",
+      "intent": "setup",
+      "note": "an animation editor_remove_animation will really remove"
+    },
+    {
+      "tag": "h2-011-editor_add_animation_track-ok",
+      "tool": "editor_add_animation_track",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_add_animation_track call 1/5. three tracks on Anim1 (one with an explicit update_mode), one each on Anim2/Anim3"
+    },
+    {
+      "tag": "h2-012-editor_add_animation_track-ok",
+      "tool": "editor_add_animation_track",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_add_animation_track call 2/5. three tracks on Anim1 (one with an explicit update_mode), one each on Anim2/Anim3"
+    },
+    {
+      "tag": "h2-013-editor_add_animation_track-ok",
+      "tool": "editor_add_animation_track",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_add_animation_track call 3/5. three tracks on Anim1 (one with an explicit update_mode), one each on Anim2/Anim3"
+    },
+    {
+      "tag": "h2-014-editor_add_animation_track-ok",
+      "tool": "editor_add_animation_track",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_add_animation_track call 4/5. three tracks on Anim1 (one with an explicit update_mode), one each on Anim2/Anim3"
+    },
+    {
+      "tag": "h2-015-editor_add_animation_track-ok",
+      "tool": "editor_add_animation_track",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_add_animation_track call 5/5. three tracks on Anim1 (one with an explicit update_mode), one each on Anim2/Anim3"
+    },
+    {
+      "tag": "h2-016-editor_add_animation_track-probe",
+      "tool": "editor_add_animation_track",
+      "port": "editor",
+      "intent": "probe",
+      "note": "editor_add_animation_track boundary: track_type is outside the engine's track-type set"
+    },
+    {
+      "tag": "h2-017-editor_set_animation_keyframe-ok",
+      "tool": "editor_set_animation_keyframe",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_set_animation_keyframe call 1/5. keys on three different tracks, one with a non-default easing"
+    },
+    {
+      "tag": "h2-018-editor_set_animation_keyframe-ok",
+      "tool": "editor_set_animation_keyframe",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_set_animation_keyframe call 2/5. keys on three different tracks, one with a non-default easing"
+    },
+    {
+      "tag": "h2-019-editor_set_animation_keyframe-ok",
+      "tool": "editor_set_animation_keyframe",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_set_animation_keyframe call 3/5. keys on three different tracks, one with a non-default easing"
+    },
+    {
+      "tag": "h2-020-editor_set_animation_keyframe-ok",
+      "tool": "editor_set_animation_keyframe",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_set_animation_keyframe call 4/5. keys on three different tracks, one with a non-default easing"
+    },
+    {
+      "tag": "h2-021-editor_set_animation_keyframe-ok",
+      "tool": "editor_set_animation_keyframe",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_set_animation_keyframe call 5/5. keys on three different tracks, one with a non-default easing"
+    },
+    {
+      "tag": "h2-022-editor_set_animation_keyframe-probe",
+      "tool": "editor_set_animation_keyframe",
+      "port": "editor",
+      "intent": "probe",
+      "note": "editor_set_animation_keyframe boundary: track_index is outside the animation's track range"
+    },
+    {
+      "tag": "h2-023-editor_list_animations-ok",
+      "tool": "editor_list_animations",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_list_animations call 1/5. the library as the engine holds it"
+    },
+    {
+      "tag": "h2-024-editor_list_animations-ok",
+      "tool": "editor_list_animations",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_list_animations call 2/5. the library as the engine holds it"
+    },
+    {
+      "tag": "h2-025-editor_list_animations-ok",
+      "tool": "editor_list_animations",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_list_animations call 3/5. the library as the engine holds it"
+    },
+    {
+      "tag": "h2-026-editor_list_animations-ok",
+      "tool": "editor_list_animations",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_list_animations call 4/5. the library as the engine holds it"
+    },
+    {
+      "tag": "h2-027-editor_list_animations-ok",
+      "tool": "editor_list_animations",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_list_animations call 5/5. the library as the engine holds it"
+    },
+    {
+      "tag": "h2-028-editor_list_animations-probe",
+      "tool": "editor_list_animations",
+      "port": "editor",
+      "intent": "probe",
+      "note": "editor_list_animations boundary: node does not exist"
+    },
+    {
+      "tag": "h2-029-editor_get_animation_info-ok",
+      "tool": "editor_get_animation_info",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_get_animation_info call 1/5. read back the tracks and keys written above"
+    },
+    {
+      "tag": "h2-030-editor_get_animation_info-ok",
+      "tool": "editor_get_animation_info",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_get_animation_info call 2/5. read back the tracks and keys written above"
+    },
+    {
+      "tag": "h2-031-editor_get_animation_info-ok",
+      "tool": "editor_get_animation_info",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_get_animation_info call 3/5. read back the tracks and keys written above"
+    },
+    {
+      "tag": "h2-032-editor_get_animation_info-ok",
+      "tool": "editor_get_animation_info",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_get_animation_info call 4/5. read back the tracks and keys written above"
+    },
+    {
+      "tag": "h2-033-editor_get_animation_info-ok",
+      "tool": "editor_get_animation_info",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_get_animation_info call 5/5. read back the tracks and keys written above"
+    },
+    {
+      "tag": "h2-034-editor_get_animation_info-probe",
+      "tool": "editor_get_animation_info",
+      "port": "editor",
+      "intent": "probe",
+      "note": "editor_get_animation_info boundary: animation does not exist"
+    },
+    {
+      "tag": "h2-035-editor_create_animation_tree-ok",
+      "tool": "editor_create_animation_tree",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_create_animation_tree call 1/5. five AnimationTrees whose animation_player NodePath is resolved by the engine"
+    },
+    {
+      "tag": "h2-036-editor_create_animation_tree-ok",
+      "tool": "editor_create_animation_tree",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_create_animation_tree call 2/5. five AnimationTrees whose animation_player NodePath is resolved by the engine"
+    },
+    {
+      "tag": "h2-037-editor_create_animation_tree-ok",
+      "tool": "editor_create_animation_tree",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_create_animation_tree call 3/5. five AnimationTrees whose animation_player NodePath is resolved by the engine"
+    },
+    {
+      "tag": "h2-038-editor_create_animation_tree-ok",
+      "tool": "editor_create_animation_tree",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_create_animation_tree call 4/5. five AnimationTrees whose animation_player NodePath is resolved by the engine"
+    },
+    {
+      "tag": "h2-039-editor_create_animation_tree-ok",
+      "tool": "editor_create_animation_tree",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_create_animation_tree call 5/5. five AnimationTrees whose animation_player NodePath is resolved by the engine"
+    },
+    {
+      "tag": "h2-040-editor_create_animation_tree-probe",
+      "tool": "editor_create_animation_tree",
+      "port": "editor",
+      "intent": "probe",
+      "note": "editor_create_animation_tree boundary: animation_player_path does not exist"
+    },
+    {
+      "tag": "h2-041-editor_add_state_machine_state-ok",
+      "tool": "editor_add_state_machine_state",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_add_state_machine_state call 1/5. five animation states on AT1"
+    },
+    {
+      "tag": "h2-042-editor_add_state_machine_state-ok",
+      "tool": "editor_add_state_machine_state",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_add_state_machine_state call 2/5. five animation states on AT1"
+    },
+    {
+      "tag": "h2-043-editor_add_state_machine_state-ok",
+      "tool": "editor_add_state_machine_state",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_add_state_machine_state call 3/5. five animation states on AT1"
+    },
+    {
+      "tag": "h2-044-editor_add_state_machine_state-ok",
+      "tool": "editor_add_state_machine_state",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_add_state_machine_state call 4/5. five animation states on AT1"
+    },
+    {
+      "tag": "h2-045-editor_add_state_machine_state-ok",
+      "tool": "editor_add_state_machine_state",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_add_state_machine_state call 5/5. five animation states on AT1"
+    },
+    {
+      "tag": "h2-046-editor_add_state_machine_state-probe",
+      "tool": "editor_add_state_machine_state",
+      "port": "editor",
+      "intent": "probe",
+      "note": "editor_add_state_machine_state boundary: state_type is outside the set the tool accepts"
+    },
+    {
+      "tag": "h2-047-editor_add_state_machine_state-ok",
+      "tool": "editor_add_state_machine_state",
+      "port": "editor",
+      "intent": "ok",
+      "note": "the state editor_set_blend_tree_node writes into"
+    },
+    {
+      "tag": "h2-048-editor_add_state_machine_state-ok",
+      "tool": "editor_add_state_machine_state",
+      "port": "editor",
+      "intent": "ok",
+      "note": "a state editor_remove_state_machine_state will really remove"
+    },
+    {
+      "tag": "h2-049-editor_add_state_machine_state-ok",
+      "tool": "editor_add_state_machine_state",
+      "port": "editor",
+      "intent": "ok",
+      "note": "a state editor_remove_state_machine_state will really remove"
+    },
+    {
+      "tag": "h2-050-editor_add_state_machine_state-ok",
+      "tool": "editor_add_state_machine_state",
+      "port": "editor",
+      "intent": "ok",
+      "note": "a state editor_remove_state_machine_state will really remove"
+    },
+    {
+      "tag": "h2-051-editor_add_state_machine_state-ok",
+      "tool": "editor_add_state_machine_state",
+      "port": "editor",
+      "intent": "ok",
+      "note": "a state editor_remove_state_machine_state will really remove"
+    },
+    {
+      "tag": "h2-052-editor_add_state_machine_state-ok",
+      "tool": "editor_add_state_machine_state",
+      "port": "editor",
+      "intent": "ok",
+      "note": "a state editor_remove_state_machine_state will really remove"
+    },
+    {
+      "tag": "h2-053-editor_add_state_machine_transition-ok",
+      "tool": "editor_add_state_machine_transition",
+      "port": "editor",
+      "intent": "setup",
+      "note": "a transition editor_remove_state_machine_transition will really remove"
+    },
+    {
+      "tag": "h2-054-editor_add_state_machine_transition-ok",
+      "tool": "editor_add_state_machine_transition",
+      "port": "editor",
+      "intent": "setup",
+      "note": "a transition editor_remove_state_machine_transition will really remove"
+    },
+    {
+      "tag": "h2-055-editor_add_state_machine_transition-ok",
+      "tool": "editor_add_state_machine_transition",
+      "port": "editor",
+      "intent": "setup",
+      "note": "a transition editor_remove_state_machine_transition will really remove"
+    },
+    {
+      "tag": "h2-056-editor_add_state_machine_transition-ok",
+      "tool": "editor_add_state_machine_transition",
+      "port": "editor",
+      "intent": "setup",
+      "note": "a transition editor_remove_state_machine_transition will really remove"
+    },
+    {
+      "tag": "h2-057-editor_add_state_machine_transition-ok",
+      "tool": "editor_add_state_machine_transition",
+      "port": "editor",
+      "intent": "setup",
+      "note": "a transition editor_remove_state_machine_transition will really remove"
+    },
+    {
+      "tag": "h2-058-editor_add_state_machine_transition-ok",
+      "tool": "editor_add_state_machine_transition",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_add_state_machine_transition call 1/5. five ordered pairs the setup phase did not already connect"
+    },
+    {
+      "tag": "h2-059-editor_add_state_machine_transition-ok",
+      "tool": "editor_add_state_machine_transition",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_add_state_machine_transition call 2/5. five ordered pairs the setup phase did not already connect"
+    },
+    {
+      "tag": "h2-060-editor_add_state_machine_transition-ok",
+      "tool": "editor_add_state_machine_transition",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_add_state_machine_transition call 3/5. five ordered pairs the setup phase did not already connect"
+    },
+    {
+      "tag": "h2-061-editor_add_state_machine_transition-ok",
+      "tool": "editor_add_state_machine_transition",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_add_state_machine_transition call 4/5. five ordered pairs the setup phase did not already connect"
+    },
+    {
+      "tag": "h2-062-editor_add_state_machine_transition-ok",
+      "tool": "editor_add_state_machine_transition",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_add_state_machine_transition call 5/5. five ordered pairs the setup phase did not already connect"
+    },
+    {
+      "tag": "h2-063-editor_add_state_machine_transition-probe",
+      "tool": "editor_add_state_machine_transition",
+      "port": "editor",
+      "intent": "probe",
+      "note": "editor_add_state_machine_transition boundary: from_state is not a state of the machine"
+    },
+    {
+      "tag": "h2-064-editor_remove_state_machine_transition-ok",
+      "tool": "editor_remove_state_machine_transition",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_remove_state_machine_transition call 1/5. the five setup transitions, removed by the pair that names them"
+    },
+    {
+      "tag": "h2-065-editor_remove_state_machine_transition-ok",
+      "tool": "editor_remove_state_machine_transition",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_remove_state_machine_transition call 2/5. the five setup transitions, removed by the pair that names them"
+    },
+    {
+      "tag": "h2-066-editor_remove_state_machine_transition-ok",
+      "tool": "editor_remove_state_machine_transition",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_remove_state_machine_transition call 3/5. the five setup transitions, removed by the pair that names them"
+    },
+    {
+      "tag": "h2-067-editor_remove_state_machine_transition-ok",
+      "tool": "editor_remove_state_machine_transition",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_remove_state_machine_transition call 4/5. the five setup transitions, removed by the pair that names them"
+    },
+    {
+      "tag": "h2-068-editor_remove_state_machine_transition-ok",
+      "tool": "editor_remove_state_machine_transition",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_remove_state_machine_transition call 5/5. the five setup transitions, removed by the pair that names them"
+    },
+    {
+      "tag": "h2-069-editor_remove_state_machine_transition-probe",
+      "tool": "editor_remove_state_machine_transition",
+      "port": "editor",
+      "intent": "probe",
+      "note": "editor_remove_state_machine_transition boundary: that ordered pair was never connected"
+    },
+    {
+      "tag": "h2-070-editor_remove_state_machine_state-ok",
+      "tool": "editor_remove_state_machine_state",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_remove_state_machine_state call 1/5. the five extra states on AT4"
+    },
+    {
+      "tag": "h2-071-editor_remove_state_machine_state-ok",
+      "tool": "editor_remove_state_machine_state",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_remove_state_machine_state call 2/5. the five extra states on AT4"
+    },
+    {
+      "tag": "h2-072-editor_remove_state_machine_state-ok",
+      "tool": "editor_remove_state_machine_state",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_remove_state_machine_state call 3/5. the five extra states on AT4"
+    },
+    {
+      "tag": "h2-073-editor_remove_state_machine_state-ok",
+      "tool": "editor_remove_state_machine_state",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_remove_state_machine_state call 4/5. the five extra states on AT4"
+    },
+    {
+      "tag": "h2-074-editor_remove_state_machine_state-ok",
+      "tool": "editor_remove_state_machine_state",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_remove_state_machine_state call 5/5. the five extra states on AT4"
+    },
+    {
+      "tag": "h2-075-editor_remove_state_machine_state-probe",
+      "tool": "editor_remove_state_machine_state",
+      "port": "editor",
+      "intent": "probe",
+      "note": "editor_remove_state_machine_state boundary: state does not exist"
+    },
+    {
+      "tag": "h2-076-editor_set_blend_tree_node-ok",
+      "tool": "editor_set_blend_tree_node",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_set_blend_tree_node call 1/5. a Blend2, two Animation leaves and two utility nodes inside the BT state"
+    },
+    {
+      "tag": "h2-077-editor_set_blend_tree_node-ok",
+      "tool": "editor_set_blend_tree_node",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_set_blend_tree_node call 2/5. a Blend2, two Animation leaves and two utility nodes inside the BT state"
+    },
+    {
+      "tag": "h2-078-editor_set_blend_tree_node-ok",
+      "tool": "editor_set_blend_tree_node",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_set_blend_tree_node call 3/5. a Blend2, two Animation leaves and two utility nodes inside the BT state"
+    },
+    {
+      "tag": "h2-079-editor_set_blend_tree_node-ok",
+      "tool": "editor_set_blend_tree_node",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_set_blend_tree_node call 4/5. a Blend2, two Animation leaves and two utility nodes inside the BT state"
+    },
+    {
+      "tag": "h2-080-editor_set_blend_tree_node-ok",
+      "tool": "editor_set_blend_tree_node",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_set_blend_tree_node call 5/5. a Blend2, two Animation leaves and two utility nodes inside the BT state"
+    },
+    {
+      "tag": "h2-081-editor_set_blend_tree_node-probe",
+      "tool": "editor_set_blend_tree_node",
+      "port": "editor",
+      "intent": "probe",
+      "note": "editor_set_blend_tree_node boundary: blend_tree_state is not a state of the machine"
+    },
+    {
+      "tag": "h2-082-editor_set_animation_tree_parameter-ok",
+      "tool": "editor_set_animation_tree_parameter",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_set_animation_tree_parameter call 1/5. the tree's own parameters/<state>/<param> addresses, both a float and a bool"
+    },
+    {
+      "tag": "h2-083-editor_set_animation_tree_parameter-ok",
+      "tool": "editor_set_animation_tree_parameter",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_set_animation_tree_parameter call 2/5. the tree's own parameters/<state>/<param> addresses, both a float and a bool"
+    },
+    {
+      "tag": "h2-084-editor_set_animation_tree_parameter-ok",
+      "tool": "editor_set_animation_tree_parameter",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_set_animation_tree_parameter call 3/5. the tree's own parameters/<state>/<param> addresses, both a float and a bool"
+    },
+    {
+      "tag": "h2-085-editor_set_animation_tree_parameter-ok",
+      "tool": "editor_set_animation_tree_parameter",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_set_animation_tree_parameter call 4/5. the tree's own parameters/<state>/<param> addresses, both a float and a bool"
+    },
+    {
+      "tag": "h2-086-editor_set_animation_tree_parameter-ok",
+      "tool": "editor_set_animation_tree_parameter",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_set_animation_tree_parameter call 5/5. the tree's own parameters/<state>/<param> addresses, both a float and a bool"
+    },
+    {
+      "tag": "h2-087-editor_set_animation_tree_parameter-probe",
+      "tool": "editor_set_animation_tree_parameter",
+      "port": "editor",
+      "intent": "probe",
+      "note": "editor_set_animation_tree_parameter boundary: the tree's property list has no such parameter"
+    },
+    {
+      "tag": "h2-088-editor_get_animation_tree_structure-ok",
+      "tool": "editor_get_animation_tree_structure",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_get_animation_tree_structure call 1/5. the state machine, the blend tree and the parameters read back"
+    },
+    {
+      "tag": "h2-089-editor_get_animation_tree_structure-ok",
+      "tool": "editor_get_animation_tree_structure",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_get_animation_tree_structure call 2/5. the state machine, the blend tree and the parameters read back"
+    },
+    {
+      "tag": "h2-090-editor_get_animation_tree_structure-ok",
+      "tool": "editor_get_animation_tree_structure",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_get_animation_tree_structure call 3/5. the state machine, the blend tree and the parameters read back"
+    },
+    {
+      "tag": "h2-091-editor_get_animation_tree_structure-ok",
+      "tool": "editor_get_animation_tree_structure",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_get_animation_tree_structure call 4/5. the state machine, the blend tree and the parameters read back"
+    },
+    {
+      "tag": "h2-092-editor_get_animation_tree_structure-ok",
+      "tool": "editor_get_animation_tree_structure",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_get_animation_tree_structure call 5/5. the state machine, the blend tree and the parameters read back"
+    },
+    {
+      "tag": "h2-093-editor_get_animation_tree_structure-probe",
+      "tool": "editor_get_animation_tree_structure",
+      "port": "editor",
+      "intent": "probe",
+      "note": "editor_get_animation_tree_structure boundary: node does not exist"
+    },
+    {
+      "tag": "h2-094-editor_remove_animation-ok",
+      "tool": "editor_remove_animation",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_remove_animation call 1/5. two animations created as targets and three created only to be removed"
+    },
+    {
+      "tag": "h2-095-editor_remove_animation-ok",
+      "tool": "editor_remove_animation",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_remove_animation call 2/5. two animations created as targets and three created only to be removed"
+    },
+    {
+      "tag": "h2-096-editor_remove_animation-ok",
+      "tool": "editor_remove_animation",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_remove_animation call 3/5. two animations created as targets and three created only to be removed"
+    },
+    {
+      "tag": "h2-097-editor_remove_animation-ok",
+      "tool": "editor_remove_animation",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_remove_animation call 4/5. two animations created as targets and three created only to be removed"
+    },
+    {
+      "tag": "h2-098-editor_remove_animation-ok",
+      "tool": "editor_remove_animation",
+      "port": "editor",
+      "intent": "ok",
+      "note": "editor_remove_animation call 5/5. two animations created as targets and three created only to be removed"
+    },
+    {
+      "tag": "h2-099-editor_remove_animation-probe",
+      "tool": "editor_remove_animation",
+      "port": "editor",
+      "intent": "probe",
+      "note": "editor_remove_animation boundary: animation does not exist"
+    },
+    {
+      "tag": "h2-100-editor_save_scene-ok",
+      "tool": "editor_save_scene",
+      "port": "editor",
+      "intent": "setup",
+      "note": "persist the animations and the trees"
+    }
+  ]
+}

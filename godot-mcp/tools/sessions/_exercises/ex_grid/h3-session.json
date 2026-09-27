@@ -1,0 +1,596 @@
+{
+  "_comment": "TASK-111 batch h3 -- the H3 family (TileMap / GridMap) against a project that ships a TileSet with a TileSetAtlasSource and a MeshLibrary. The write half was registered unreachable on the strength of the tool's own description; this batch supplies what that description names as the caller's precondition.",
+  "game": "_exercises_ex_grid",
+  "import": true,
+  "calls": [
+    {
+      "tag": "h3-001-editor_open_scene-ok",
+      "port": "editor",
+      "tool": "editor_open_scene",
+      "arguments": {
+        "path": "res://scenes/grid.tscn"
+      },
+      "note": "Node2D root + TileMapLayer whose TileSet holds a TileSetAtlasSource (source 0)"
+    },
+    {
+      "tag": "h3-002-editor_add_gridmap-ok",
+      "port": "editor",
+      "tool": "editor_add_gridmap",
+      "arguments": {
+        "mesh_library_path": "res://assets/meshlib.tres",
+        "name": "GM1",
+        "parent_path": "."
+      },
+      "note": "editor_add_gridmap call 1/5. five GridMaps backed by the created MeshLibrary"
+    },
+    {
+      "tag": "h3-003-editor_add_gridmap-ok",
+      "port": "editor",
+      "tool": "editor_add_gridmap",
+      "arguments": {
+        "mesh_library_path": "res://assets/meshlib.tres",
+        "name": "GM2",
+        "parent_path": "."
+      },
+      "note": "editor_add_gridmap call 2/5. five GridMaps backed by the created MeshLibrary"
+    },
+    {
+      "tag": "h3-004-editor_add_gridmap-ok",
+      "port": "editor",
+      "tool": "editor_add_gridmap",
+      "arguments": {
+        "mesh_library_path": "res://assets/meshlib.tres",
+        "name": "GM3",
+        "parent_path": "."
+      },
+      "note": "editor_add_gridmap call 3/5. five GridMaps backed by the created MeshLibrary"
+    },
+    {
+      "tag": "h3-005-editor_add_gridmap-ok",
+      "port": "editor",
+      "tool": "editor_add_gridmap",
+      "arguments": {
+        "mesh_library_path": "res://assets/meshlib.tres",
+        "name": "GM4",
+        "parent_path": "."
+      },
+      "note": "editor_add_gridmap call 4/5. five GridMaps backed by the created MeshLibrary"
+    },
+    {
+      "tag": "h3-006-editor_add_gridmap-ok",
+      "port": "editor",
+      "tool": "editor_add_gridmap",
+      "arguments": {
+        "mesh_library_path": "res://assets/meshlib.tres",
+        "name": "GM5",
+        "parent_path": "."
+      },
+      "note": "editor_add_gridmap call 5/5. five GridMaps backed by the created MeshLibrary"
+    },
+    {
+      "tag": "h3-007-editor_add_gridmap-probe",
+      "port": "editor",
+      "tool": "editor_add_gridmap",
+      "arguments": {
+        "mesh_library_path": "res://assets/no_such_library.tres",
+        "name": "GMX"
+      },
+      "note": "editor_add_gridmap boundary: mesh_library_path does not exist"
+    },
+    {
+      "tag": "h3-008-editor_set_tilemap_cell-ok",
+      "port": "editor",
+      "tool": "editor_set_tilemap_cell",
+      "arguments": {
+        "node_path": "Tiles",
+        "source_id": 0,
+        "x": 0,
+        "y": 0,
+        "atlas_coords": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "note": "editor_set_tilemap_cell call 1/5. five cells written through the project-provided atlas source"
+    },
+    {
+      "tag": "h3-009-editor_set_tilemap_cell-ok",
+      "port": "editor",
+      "tool": "editor_set_tilemap_cell",
+      "arguments": {
+        "node_path": "Tiles",
+        "source_id": 0,
+        "x": 2,
+        "y": 2,
+        "atlas_coords": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "note": "editor_set_tilemap_cell call 2/5. five cells written through the project-provided atlas source"
+    },
+    {
+      "tag": "h3-010-editor_set_tilemap_cell-ok",
+      "port": "editor",
+      "tool": "editor_set_tilemap_cell",
+      "arguments": {
+        "node_path": "Tiles",
+        "source_id": 0,
+        "x": 4,
+        "y": 4,
+        "atlas_coords": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "note": "editor_set_tilemap_cell call 3/5. five cells written through the project-provided atlas source"
+    },
+    {
+      "tag": "h3-011-editor_set_tilemap_cell-ok",
+      "port": "editor",
+      "tool": "editor_set_tilemap_cell",
+      "arguments": {
+        "node_path": "Tiles",
+        "source_id": 0,
+        "x": 6,
+        "y": 6,
+        "atlas_coords": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "note": "editor_set_tilemap_cell call 4/5. five cells written through the project-provided atlas source"
+    },
+    {
+      "tag": "h3-012-editor_set_tilemap_cell-ok",
+      "port": "editor",
+      "tool": "editor_set_tilemap_cell",
+      "arguments": {
+        "node_path": "Tiles",
+        "source_id": 0,
+        "x": 8,
+        "y": 8,
+        "atlas_coords": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "note": "editor_set_tilemap_cell call 5/5. five cells written through the project-provided atlas source"
+    },
+    {
+      "tag": "h3-013-editor_set_tilemap_cell-probe",
+      "port": "editor",
+      "tool": "editor_set_tilemap_cell",
+      "arguments": {
+        "node_path": "Tiles",
+        "source_id": 7,
+        "x": 0,
+        "y": 0,
+        "atlas_coords": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "note": "editor_set_tilemap_cell boundary: the TileSet has no source with that id (-32602, as the description says)"
+    },
+    {
+      "tag": "h3-014-editor_set_tilemap_cells_in_rect-ok",
+      "port": "editor",
+      "tool": "editor_set_tilemap_cells_in_rect",
+      "arguments": {
+        "node_path": "Tiles",
+        "source_id": 0,
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "width": 4,
+          "height": 4
+        },
+        "atlas_coords": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "note": "editor_set_tilemap_cells_in_rect call 1/5. five rectangles filled through the same source"
+    },
+    {
+      "tag": "h3-015-editor_set_tilemap_cells_in_rect-ok",
+      "port": "editor",
+      "tool": "editor_set_tilemap_cells_in_rect",
+      "arguments": {
+        "node_path": "Tiles",
+        "source_id": 0,
+        "rect": {
+          "x": 10,
+          "y": 10,
+          "width": 2,
+          "height": 2
+        },
+        "atlas_coords": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "note": "editor_set_tilemap_cells_in_rect call 2/5. five rectangles filled through the same source"
+    },
+    {
+      "tag": "h3-016-editor_set_tilemap_cells_in_rect-ok",
+      "port": "editor",
+      "tool": "editor_set_tilemap_cells_in_rect",
+      "arguments": {
+        "node_path": "Tiles",
+        "source_id": 0,
+        "rect": {
+          "x": 20,
+          "y": 20,
+          "width": 1,
+          "height": 3
+        },
+        "atlas_coords": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "note": "editor_set_tilemap_cells_in_rect call 3/5. five rectangles filled through the same source"
+    },
+    {
+      "tag": "h3-017-editor_set_tilemap_cells_in_rect-ok",
+      "port": "editor",
+      "tool": "editor_set_tilemap_cells_in_rect",
+      "arguments": {
+        "node_path": "Tiles",
+        "source_id": 0,
+        "rect": {
+          "x": 30,
+          "y": 30,
+          "width": 3,
+          "height": 1
+        },
+        "atlas_coords": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "note": "editor_set_tilemap_cells_in_rect call 4/5. five rectangles filled through the same source"
+    },
+    {
+      "tag": "h3-018-editor_set_tilemap_cells_in_rect-ok",
+      "port": "editor",
+      "tool": "editor_set_tilemap_cells_in_rect",
+      "arguments": {
+        "node_path": "Tiles",
+        "source_id": 0,
+        "rect": {
+          "x": 40,
+          "y": 40,
+          "width": 2,
+          "height": 2
+        },
+        "atlas_coords": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "note": "editor_set_tilemap_cells_in_rect call 5/5. five rectangles filled through the same source"
+    },
+    {
+      "tag": "h3-019-editor_set_tilemap_cells_in_rect-probe",
+      "port": "editor",
+      "tool": "editor_set_tilemap_cells_in_rect",
+      "arguments": {
+        "node_path": "Tiles",
+        "source_id": 9,
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "width": 2,
+          "height": 2
+        },
+        "atlas_coords": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "note": "editor_set_tilemap_cells_in_rect boundary: no source with that id"
+    },
+    {
+      "tag": "h3-020-editor_get_tilemap_info-ok",
+      "port": "editor",
+      "tool": "editor_get_tilemap_info",
+      "arguments": {
+        "node_path": "Tiles"
+      },
+      "note": "editor_get_tilemap_info call 1/5. read back the layer that now holds cells"
+    },
+    {
+      "tag": "h3-021-editor_get_tilemap_info-ok",
+      "port": "editor",
+      "tool": "editor_get_tilemap_info",
+      "arguments": {
+        "node_path": "Tiles"
+      },
+      "note": "editor_get_tilemap_info call 2/5. read back the layer that now holds cells"
+    },
+    {
+      "tag": "h3-022-editor_get_tilemap_info-ok",
+      "port": "editor",
+      "tool": "editor_get_tilemap_info",
+      "arguments": {
+        "node_path": "Tiles"
+      },
+      "note": "editor_get_tilemap_info call 3/5. read back the layer that now holds cells"
+    },
+    {
+      "tag": "h3-023-editor_get_tilemap_info-ok",
+      "port": "editor",
+      "tool": "editor_get_tilemap_info",
+      "arguments": {
+        "node_path": "Tiles"
+      },
+      "note": "editor_get_tilemap_info call 4/5. read back the layer that now holds cells"
+    },
+    {
+      "tag": "h3-024-editor_get_tilemap_info-ok",
+      "port": "editor",
+      "tool": "editor_get_tilemap_info",
+      "arguments": {
+        "node_path": "Tiles"
+      },
+      "note": "editor_get_tilemap_info call 5/5. read back the layer that now holds cells"
+    },
+    {
+      "tag": "h3-025-editor_get_tilemap_info-probe",
+      "port": "editor",
+      "tool": "editor_get_tilemap_info",
+      "arguments": {
+        "node_path": "NoSuchNode"
+      },
+      "note": "editor_get_tilemap_info boundary: node does not exist"
+    },
+    {
+      "tag": "h3-026-editor_get_tilemap_used_cells-ok",
+      "port": "editor",
+      "tool": "editor_get_tilemap_used_cells",
+      "arguments": {
+        "node_path": "Tiles"
+      },
+      "note": "editor_get_tilemap_used_cells call 1/5. the cells written above are really there"
+    },
+    {
+      "tag": "h3-027-editor_get_tilemap_used_cells-ok",
+      "port": "editor",
+      "tool": "editor_get_tilemap_used_cells",
+      "arguments": {
+        "node_path": "Tiles"
+      },
+      "note": "editor_get_tilemap_used_cells call 2/5. the cells written above are really there"
+    },
+    {
+      "tag": "h3-028-editor_get_tilemap_used_cells-ok",
+      "port": "editor",
+      "tool": "editor_get_tilemap_used_cells",
+      "arguments": {
+        "node_path": "Tiles"
+      },
+      "note": "editor_get_tilemap_used_cells call 3/5. the cells written above are really there"
+    },
+    {
+      "tag": "h3-029-editor_get_tilemap_used_cells-ok",
+      "port": "editor",
+      "tool": "editor_get_tilemap_used_cells",
+      "arguments": {
+        "node_path": "Tiles"
+      },
+      "note": "editor_get_tilemap_used_cells call 4/5. the cells written above are really there"
+    },
+    {
+      "tag": "h3-030-editor_get_tilemap_used_cells-ok",
+      "port": "editor",
+      "tool": "editor_get_tilemap_used_cells",
+      "arguments": {
+        "node_path": "Tiles"
+      },
+      "note": "editor_get_tilemap_used_cells call 5/5. the cells written above are really there"
+    },
+    {
+      "tag": "h3-031-editor_get_tilemap_used_cells-probe",
+      "port": "editor",
+      "tool": "editor_get_tilemap_used_cells",
+      "arguments": {
+        "node_path": "NoSuchNode"
+      },
+      "note": "editor_get_tilemap_used_cells boundary: node does not exist"
+    },
+    {
+      "tag": "h3-032-editor_get_tilemap_cell-ok",
+      "port": "editor",
+      "tool": "editor_get_tilemap_cell",
+      "arguments": {
+        "node_path": "Tiles",
+        "x": 0,
+        "y": 0
+      },
+      "note": "editor_get_tilemap_cell call 1/5. five occupied cells read one by one"
+    },
+    {
+      "tag": "h3-033-editor_get_tilemap_cell-ok",
+      "port": "editor",
+      "tool": "editor_get_tilemap_cell",
+      "arguments": {
+        "node_path": "Tiles",
+        "x": 2,
+        "y": 2
+      },
+      "note": "editor_get_tilemap_cell call 2/5. five occupied cells read one by one"
+    },
+    {
+      "tag": "h3-034-editor_get_tilemap_cell-ok",
+      "port": "editor",
+      "tool": "editor_get_tilemap_cell",
+      "arguments": {
+        "node_path": "Tiles",
+        "x": 10,
+        "y": 10
+      },
+      "note": "editor_get_tilemap_cell call 3/5. five occupied cells read one by one"
+    },
+    {
+      "tag": "h3-035-editor_get_tilemap_cell-ok",
+      "port": "editor",
+      "tool": "editor_get_tilemap_cell",
+      "arguments": {
+        "node_path": "Tiles",
+        "x": 30,
+        "y": 30
+      },
+      "note": "editor_get_tilemap_cell call 4/5. five occupied cells read one by one"
+    },
+    {
+      "tag": "h3-036-editor_get_tilemap_cell-ok",
+      "port": "editor",
+      "tool": "editor_get_tilemap_cell",
+      "arguments": {
+        "node_path": "Tiles",
+        "x": 40,
+        "y": 40
+      },
+      "note": "editor_get_tilemap_cell call 5/5. five occupied cells read one by one"
+    },
+    {
+      "tag": "h3-037-editor_get_tilemap_cell-probe",
+      "port": "editor",
+      "tool": "editor_get_tilemap_cell",
+      "arguments": {
+        "node_path": "Tiles",
+        "x": "zero",
+        "y": 0
+      },
+      "note": "editor_get_tilemap_cell boundary: x is typed integer, not string"
+    },
+    {
+      "tag": "h3-038-editor_remove_all_tilemap_cells-ok",
+      "port": "editor",
+      "tool": "editor_remove_all_tilemap_cells",
+      "arguments": {
+        "node_path": "Tiles"
+      },
+      "note": "clear #1 (the map holds 5 singles + 4+4+3+3+4 rect cells)"
+    },
+    {
+      "tag": "h3-039-editor_set_tilemap_cell-ok",
+      "port": "editor",
+      "tool": "editor_set_tilemap_cell",
+      "arguments": {
+        "node_path": "Tiles",
+        "source_id": 0,
+        "x": 50,
+        "y": 50,
+        "atlas_coords": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "note": "re-seed one cell so the next clear is a real change"
+    },
+    {
+      "tag": "h3-040-editor_remove_all_tilemap_cells-ok",
+      "port": "editor",
+      "tool": "editor_remove_all_tilemap_cells",
+      "arguments": {
+        "node_path": "Tiles"
+      },
+      "note": "clear #2"
+    },
+    {
+      "tag": "h3-041-editor_set_tilemap_cell-ok",
+      "port": "editor",
+      "tool": "editor_set_tilemap_cell",
+      "arguments": {
+        "node_path": "Tiles",
+        "source_id": 0,
+        "x": 51,
+        "y": 50,
+        "atlas_coords": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "note": "re-seed one cell so the next clear is a real change"
+    },
+    {
+      "tag": "h3-042-editor_remove_all_tilemap_cells-ok",
+      "port": "editor",
+      "tool": "editor_remove_all_tilemap_cells",
+      "arguments": {
+        "node_path": "Tiles"
+      },
+      "note": "clear #3"
+    },
+    {
+      "tag": "h3-043-editor_set_tilemap_cell-ok",
+      "port": "editor",
+      "tool": "editor_set_tilemap_cell",
+      "arguments": {
+        "node_path": "Tiles",
+        "source_id": 0,
+        "x": 52,
+        "y": 50,
+        "atlas_coords": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "note": "re-seed one cell so the next clear is a real change"
+    },
+    {
+      "tag": "h3-044-editor_remove_all_tilemap_cells-ok",
+      "port": "editor",
+      "tool": "editor_remove_all_tilemap_cells",
+      "arguments": {
+        "node_path": "Tiles"
+      },
+      "note": "clear #4"
+    },
+    {
+      "tag": "h3-045-editor_set_tilemap_cell-ok",
+      "port": "editor",
+      "tool": "editor_set_tilemap_cell",
+      "arguments": {
+        "node_path": "Tiles",
+        "source_id": 0,
+        "x": 53,
+        "y": 50,
+        "atlas_coords": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "note": "re-seed one cell so the next clear is a real change"
+    },
+    {
+      "tag": "h3-046-editor_remove_all_tilemap_cells-ok",
+      "port": "editor",
+      "tool": "editor_remove_all_tilemap_cells",
+      "arguments": {
+        "node_path": "Tiles"
+      },
+      "note": "clear #5"
+    },
+    {
+      "tag": "h3-047-editor_remove_all_tilemap_cells-probe",
+      "port": "editor",
+      "tool": "editor_remove_all_tilemap_cells",
+      "arguments": {
+        "node_path": "NoSuchNode"
+      },
+      "note": "node does not exist"
+    },
+    {
+      "tag": "h3-048-editor_save_scene-ok",
+      "port": "editor",
+      "tool": "editor_save_scene",
+      "arguments": {},
+      "note": "persist the tile edits"
+    }
+  ]
+}

@@ -1,0 +1,158 @@
+{
+  "_comment": "TASK-111 batch c5 -- closes the one node-lifecycle tool c4's own list named but did not call. Connect five, disconnect five, read one source back.",
+  "game": "_exercises_ex_write6",
+  "import": true,
+  "calls": [
+    {
+      "tag": "c5-001-editor_open_scene-ok",
+      "port": "editor",
+      "tool": "editor_open_scene",
+      "arguments": {
+        "path": "res://scenes/main.tscn"
+      },
+      "note": "the scene holding the signal sources"
+    },
+    {
+      "tag": "c5-002-editor_connect_signal-ok",
+      "port": "editor",
+      "tool": "editor_connect_signal",
+      "arguments": {
+        "source_path": "Ball",
+        "signal": "visibility_changed",
+        "target_path": "Main",
+        "method": "_d1"
+      },
+      "note": "a real connection for editor_disconnect_signal to remove"
+    },
+    {
+      "tag": "c5-003-editor_connect_signal-ok",
+      "port": "editor",
+      "tool": "editor_connect_signal",
+      "arguments": {
+        "source_path": "PaddleLeft",
+        "signal": "visibility_changed",
+        "target_path": "Main",
+        "method": "_d2"
+      },
+      "note": "a real connection for editor_disconnect_signal to remove"
+    },
+    {
+      "tag": "c5-004-editor_connect_signal-ok",
+      "port": "editor",
+      "tool": "editor_connect_signal",
+      "arguments": {
+        "source_path": "ScoreLeft",
+        "signal": "visibility_changed",
+        "target_path": "Main",
+        "method": "_d3"
+      },
+      "note": "a real connection for editor_disconnect_signal to remove"
+    },
+    {
+      "tag": "c5-005-editor_connect_signal-ok",
+      "port": "editor",
+      "tool": "editor_connect_signal",
+      "arguments": {
+        "source_path": "WinLabel",
+        "signal": "visibility_changed",
+        "target_path": "Main",
+        "method": "_d4"
+      },
+      "note": "a real connection for editor_disconnect_signal to remove"
+    },
+    {
+      "tag": "c5-006-editor_connect_signal-ok",
+      "port": "editor",
+      "tool": "editor_connect_signal",
+      "arguments": {
+        "source_path": "MidLine",
+        "signal": "visibility_changed",
+        "target_path": "Main",
+        "method": "_d5"
+      },
+      "note": "a real connection for editor_disconnect_signal to remove"
+    },
+    {
+      "tag": "c5-007-editor_disconnect_signal-ok",
+      "port": "editor",
+      "tool": "editor_disconnect_signal",
+      "arguments": {
+        "source_path": "Ball",
+        "signal": "visibility_changed",
+        "target_path": "Main",
+        "method": "_d1"
+      },
+      "note": "editor_disconnect_signal call 1/5. the five connections the setup phase made, removed by the pair that names them"
+    },
+    {
+      "tag": "c5-008-editor_disconnect_signal-ok",
+      "port": "editor",
+      "tool": "editor_disconnect_signal",
+      "arguments": {
+        "source_path": "PaddleLeft",
+        "signal": "visibility_changed",
+        "target_path": "Main",
+        "method": "_d2"
+      },
+      "note": "editor_disconnect_signal call 2/5. the five connections the setup phase made, removed by the pair that names them"
+    },
+    {
+      "tag": "c5-009-editor_disconnect_signal-ok",
+      "port": "editor",
+      "tool": "editor_disconnect_signal",
+      "arguments": {
+        "source_path": "ScoreLeft",
+        "signal": "visibility_changed",
+        "target_path": "Main",
+        "method": "_d3"
+      },
+      "note": "editor_disconnect_signal call 3/5. the five connections the setup phase made, removed by the pair that names them"
+    },
+    {
+      "tag": "c5-010-editor_disconnect_signal-ok",
+      "port": "editor",
+      "tool": "editor_disconnect_signal",
+      "arguments": {
+        "source_path": "WinLabel",
+        "signal": "visibility_changed",
+        "target_path": "Main",
+        "method": "_d4"
+      },
+      "note": "editor_disconnect_signal call 4/5. the five connections the setup phase made, removed by the pair that names them"
+    },
+    {
+      "tag": "c5-011-editor_disconnect_signal-ok",
+      "port": "editor",
+      "tool": "editor_disconnect_signal",
+      "arguments": {
+        "source_path": "MidLine",
+        "signal": "visibility_changed",
+        "target_path": "Main",
+        "method": "_d5"
+      },
+      "note": "editor_disconnect_signal call 5/5. the five connections the setup phase made, removed by the pair that names them"
+    },
+    {
+      "tag": "c5-012-editor_disconnect_signal-probe",
+      "port": "editor",
+      "tool": "editor_disconnect_signal",
+      "arguments": {
+        "source_path": "Ball",
+        "signal": "visibility_changed",
+        "target_path": "Main",
+        "method": "_never_connected"
+      },
+      "note": "editor_disconnect_signal boundary: that method was never connected from that signal"
+    },
+    {
+      "tag": "c5-013-editor_list_signal_connections-ok",
+      "port": "editor",
+      "tool": "editor_list_signal_connections",
+      "arguments": {
+        "node_path": "Ball",
+        "scope": "user"
+      },
+      "note": "read-back: Ball has no user connection left"
+    }
+  ]
+}
