@@ -523,6 +523,10 @@ playjev 臂的 `pacman`（`...\t139-playjev-v3-w30\pacman\playjev\player.json`�
    这类中间产物保留在库，读者看到多份结果文件时应以 `t139_coverage.py` 的覆盖检查为准。
 7. **同 sha 的两帧是"静止"的证据，不是"内容是游戏终局"的证据**：`GameOver` 为 `false`（§A.3），
    所以本报告只用它证明"世界不再更新"，不据此断言游戏自认为结束。
+8. **一次 `git add -f` 误暂存了整个 `_scripts/` 目录**（含 TASK-134/135/136/138 的历史脚本与
+   `__pycache__`）。**发现后立即 `git reset HEAD -- <dir>` 撤销**，改成逐文件暂存，只有本批文件进入 `455626c`。
+   `git status --short` 的两个未跟踪文件（`ACCEPTANCE-TASK-137.md`、`TASK-137-ACCEPT.md`）属 TASK-137，
+   **全程未暂存**。
 
 ---
 
@@ -642,11 +646,23 @@ M  godot-mcp/tools/tests/test_playability_model_player.py
 
 * 交付提交：**`455626c`**
   （`TASK-139: declare a minimum measurement window, recognise legal refusals, and re-run 20x2`）
-* 提交信息文件：`...\runs\model-player\_scripts\t139_commit_msg.txt`（随提交入库，便于核对提交说了什么）
-* **本报告本身**：以**另一次提交**入库；定位方式用**提交号**，**不写自身内容哈希**
+* **本报告 + 第三轮重复性 + 报告口径的更新**：**`849601c`**
+  （`TASK-139: the report, and the third repeat round that changed its most important finding`）
+* 提交信息文件：`t139_commit_msg.txt` / `t139_commit_msg2.txt`（随各自提交入库，便于核对提交说了什么）
+* `git log --oneline -3`（定稿时）：
+
+```
+849601c TASK-139: the report, and the third repeat round that changed its most important finding
+455626c TASK-139: declare a minimum measurement window, recognise legal refusals, and re-run 20x2
+926ac5e docs(godot-mcp): TASK-138 - state that the report's own later revisions are located by commit id, not by an embedded hash (docs-only)
+```
+
+* **本报告本身**以 `849601c` 入库；定位方式用**提交号**，**不写自身内容哈希**
   （写入动作会改变哈希，定义上不可核；与 TASK-138 勘误 ⑤ 的口径一致）。
-* `git add -f` 的两个路径（`runs/**` 被忽略）：`ARTIFACTS-TASK-139.json` / `.md`，
+* `git add -f` 的路径（`runs/**` 被忽略）：`ARTIFACTS-TASK-139.json` / `.md`，
   以及本批自己的 `_scripts/t139_*`（涉及台账可核性与结论复算，属"小而不可再生的判定依据"）。
+  **提交前逐条核对了清单**：曾有一次 `git add -f` 误把整个 `_scripts/` 目录（含 TASK-134/135/136/138 的
+  历史脚本与 `__pycache__`）暂存，**已 `git reset` 撤销并改为逐文件暂存**，见 §G.6 的口径。
 * **`.gitignore` 未改**。
 
 ---
