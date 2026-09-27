@@ -504,9 +504,32 @@ post-h8  netstat LISTENING 9877/9888/9889 -> NONE ; tasklist godot -> NONE
 
 ## F. 提交
 
-主仓 `F:\moonbit-hof-rs` 的提交与工作树状态见本报告末尾的提交段（提交信息对应
-`DECISIONS.md` D159）。**引擎仓（`F:\moonbit-hof-rs\godot-mcp\godot`）本轮无提交**：
-`godot/modules/mcp_server/` 一个字节未改，`bin/` 下的 web 构建半成品不入库。
+```
+$ cd F:\moonbit-hof-rs && git log --oneline -3
+64d4d71 docs(godot-mcp): TASK-114 - the report and the D159 decision record
+0b61eb3 feat(godot-mcp): TASK-114 (D159) - the SAC toolkit, the C#->Web verdict,
+        and two H8 tools
+9a6f6a6 chore(godot-mcp): TASK-113 - refresh the ledger once more; ...
+```
+
+* 提交顺序是有意的：**先落工具包 / 会话 / 台账 / 登记表 / 派生脚本**（`0b61eb3`），
+  再落**报告与决策**（`64d4d71`），这样「改动 → 提交 → 决策日志」三者可互查。
+* `dist/` 只显式加了三个文件（`dist\README-SAC.md`、`dist\tools\sac_diagnose.ps1`、
+  `dist\tools\unblock_package.ps1`），**没有**把 1.26 GB 的 zip 与 3.09 GB 的 exe 拖进 git。
+* A 段的临时材料（emsdk 1.5 GB / MOTW fixture / pong 拷贝 / emcc 编译产物）用
+  `recovery\work\task114\.gitignore` 挡掉，复现方式写在 `recovery\work\task114\README.md`。
+
+**引擎仓（`F:\moonbit-hof-rs\godot-mcp\godot`）本轮无提交、无 push**：
+
+```
+$ cd /d F:\moonbit-hof-rs\godot-mcp\godot && git status --short
+?? uid_cache.bin          ← 跑编辑器产生的 UID 缓存，不是源码改动
+$ git log --oneline -1
+ba1587c71e fix(mcp_server): TASK-112 - the three engine defects ...
+```
+
+`godot/modules/mcp_server/` 一个字节未改（已改的是**主仓**，引擎仓只多了一个未跟踪的
+`uid_cache.bin`），因此按铁律 7 **不重建、不跑十道门、不 push**。
 
 未纳入工作树的主仓条目（**都不是本任务的产物，一律未删除**）：
 `godot-mcp/dist/` 里除本任务三个文件以外的既有产物（TASK-107/109）、
