@@ -1,0 +1,42 @@
+{
+ "task": "TASK-129 D-D",
+ "variant": "neg_ui_offscreen",
+ "failure_mode": "required UI present but moved out of the viewport (the HUD is off screen while `visible` is still true)",
+ "source_project": "flappy",
+ "construction": "copy of projects/flappy with the `Hud` Label (the score/passed/frame readout, 560x38 px at x=20) moved to x=-2000 by rewriting its two horizontal offsets in main.tscn.  The node still exists, still has `visible = true` and the engine still reports `is_visible_in_tree() == true`; it simply has no intersection with the 800x600 viewport, so the player cannot see it.  This is the 'the required label was moved away / collapsed' mode, and it exercises P7's on-screen-area clause rather than its visibility clause.",
+ "patch": {
+  "file": "scenes\\main.tscn",
+  "edits": [
+   {
+    "node": "Hud",
+    "property": "offset_left",
+    "value": "-2000.0",
+    "already_present": true
+   },
+   {
+    "node": "Hud",
+    "property": "offset_right",
+    "value": "-1420.0",
+    "already_present": true
+   }
+  ],
+  "patch_applied_this_run": false,
+  "scene_sha256_before_patch": "f162e7fb46536cd20341f89751bf449ba00b8614a65b5401a3a575ebc07b93ba",
+  "scene_sha256_after_patch": "11d6f61acf780dc24bcd6de2d24e7535083f1ff836af606f6725c7f7251718c2",
+  "csharp_sources_copied_unchanged": true
+ },
+ "expected_gate_criteria": {
+  "P1": "PASS (the playfield, the pipes and the status line are still drawn)",
+  "P2": "PASS",
+  "P3": "PASS",
+  "P4": "PASS",
+  "P5": "PASS (the InputMap and the README are untouched)",
+  "P6": "PASS (every capability still moves its observable)",
+  "P7": "FAIL (TASK-130): `hud` exists and is visible_in_tree, but its rect (-2000,8,580x38) does not intersect the viewport",
+  "gate": "not_playable after TASK-130"
+ },
+ "engine": "F:\\moonbit-hof-rs\\godot-mcp\\godot\\bin\\godot.windows.editor.x86_64.mono.console.exe",
+ "runnable_with": "python tools/playability_gate.py --exercise neg_ui_offscreen --games neg_ui_offscreen --agent=jev --visual-agent=playjev --out-root runs/playability/negatives",
+ "no_build_needed": "the .tscn declaration is read at load time and no C# is changed, so the copied .NET assembly is still the source project's -- verified by csharp_sources_copied_unchanged",
+ "projects_dir_untouched": true
+}

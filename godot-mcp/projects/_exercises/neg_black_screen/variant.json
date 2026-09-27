@@ -11,9 +11,10 @@
     "node": "Main",
     "property": "visible",
     "value": "false",
-    "already_present": false
+    "already_present": true
    }
   ],
+  "patch_applied_this_run": false,
   "scene_sha256_before_patch": "f3b51df1d089c0cd933378a806ea908ab9cfeb4b2bf95cbc1b5faa78bf78306d",
   "scene_sha256_after_patch": "e1f41c349e4f9493bad8c6e0f50a39e4218b7a4523b77e00b303bce919fae8af",
   "csharp_sources_copied_unchanged": true
@@ -25,6 +26,7 @@
   "P4": "PASS",
   "P5": "PASS (the InputMap and the README still agree)",
   "P6": "PASS (the capabilities still move their observables)",
+  "P7": "FAIL (TASK-130, measured): hiding the root hides the declared required UI with it -- field/food/head are all `visible_in_tree == false`.  P1 and P7 both catch this mode; P7 catches it for a different reason (the nodes are missing from the tree's visible set, not the pixels)",
   "gate": "not_playable"
  },
  "engine": "F:\\moonbit-hof-rs\\godot-mcp\\godot\\bin\\godot.windows.editor.x86_64.mono.console.exe",

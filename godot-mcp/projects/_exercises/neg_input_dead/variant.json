@@ -11,9 +11,10 @@
     "node": "Main",
     "property": "PollInput",
     "value": "false",
-    "already_present": false
+    "already_present": true
    }
   ],
+  "patch_applied_this_run": false,
   "scene_sha256_before_patch": "1fcc873e8ce5b7f66ee13c09a8c18bb7f24098d6a5556bd88dd3e115e34b3845",
   "scene_sha256_after_patch": "8f6ad289ad6f1d8fe0ab4e31a1296de1696546cae6c653905342383efd2dc458",
   "csharp_sources_copied_unchanged": true
@@ -25,6 +26,7 @@
   "P4": "PASS",
   "P5": "FAIL (the documented controls do nothing)",
   "P6": "FAIL (no capability is delivered)",
+  "P7": "PASS (TASK-130, measured: the HUD is still present, visible and on screen -- this mode is not a UI mode)",
   "gate": "not_playable"
  },
  "engine": "F:\\moonbit-hof-rs\\godot-mcp\\godot\\bin\\godot.windows.editor.x86_64.mono.console.exe",

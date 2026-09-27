@@ -11,9 +11,10 @@
     "node": "Main",
     "property": "process_mode",
     "value": "4",
-    "already_present": false
+    "already_present": true
    }
   ],
+  "patch_applied_this_run": false,
   "scene_sha256_before_patch": "db616eb2d0efdc02e224103c2582e5f3d0a9c346ad1bfa6380f62d0d234b56a7",
   "scene_sha256_after_patch": "bfa0144a7f1eb88a3a80414ad01e06a6e99edda03c27bc87e3ef5871b8c8bc8e",
   "csharp_sources_copied_unchanged": true
@@ -25,6 +26,7 @@
   "P4": "PASS (the process is alive, no dialog)",
   "P5": "FAIL (the documented controls do nothing)",
   "P6": "FAIL (no capability is delivered)",
+  "P7": "PASS (TASK-130, measured: a frozen game still HAS its interface -- freezing is not a UI mode, and P7 must not double-count P3's failure)",
   "gate": "not_playable"
  },
  "engine": "F:\\moonbit-hof-rs\\godot-mcp\\godot\\bin\\godot.windows.editor.x86_64.mono.console.exe",

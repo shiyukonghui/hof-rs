@@ -4,7 +4,7 @@
 
 What this is
 ------------
-Four failure modes, each a COPY of a real project under `projects/_exercises/neg_*`, with
+Five failure modes, each a COPY of a real project under `projects/_exercises/neg_*`, with
 exactly ONE declaration changed in the copy's `scenes/main.tscn` -- no C# is edited and
 nothing is rebuilt, so the variant is a real build of a real game that fails in a declared
 way.  `projects/<game>/` is never written to (iron rule 2).
@@ -29,10 +29,13 @@ The four modes
                      continues (`Engine.get_frames_drawn()` still advances) while nothing
                      in the game advances.  Expected: P3 FAIL, and P2 fails with it.
 4. neg_hud_missing   (tetris)      `visible = false` on the HUD nodes only: the game field
-                     is intact and playable, the interface is gone.  Expected: NO machine
-                     criterion catches it -- P1..P6 all PASS -- which is the gate's blind
-                     spot and the reason a VISION backend is worth wiring in.  Declared as
-                     an expectation, measured in the report.
+                     is intact and playable, the interface is gone.  Declared before
+                     TASK-130 as "no machine criterion catches it"; TASK-130's P7 does
+                     catch it, which is the point of that criterion.
+5. neg_ui_offscreen  (flappy)      (TASK-130) the HUD Label keeps `visible = true` and is
+                     moved to x=-2000: present, "visible", and outside the viewport.  A
+                     second UI-loss variant, on a different game, through a different P7
+                     clause than #4 uses.
 
 Reproduce (from godot-mcp, cmd, no shell redirection):
     D:\\Anaconda\\python.exe projects\\_exercises\\neg_BUILD_VARIANTS.py
@@ -77,6 +80,8 @@ VARIANTS = {
             "P4": "PASS",
             "P5": "FAIL (the documented controls do nothing)",
             "P6": "FAIL (no capability is delivered)",
+            "P7": "PASS (TASK-130, measured: the HUD is still present, visible and on "
+                  "screen -- this mode is not a UI mode)",
             "gate": "not_playable",
         },
     },
@@ -98,6 +103,10 @@ VARIANTS = {
             "P4": "PASS",
             "P5": "PASS (the InputMap and the README still agree)",
             "P6": "PASS (the capabilities still move their observables)",
+            "P7": "FAIL (TASK-130, measured): hiding the root hides the declared required "
+                  "UI with it -- field/food/head are all `visible_in_tree == false`.  P1 "
+                  "and P7 both catch this mode; P7 catches it for a different reason (the "
+                  "nodes are missing from the tree's visible set, not the pixels)",
             "gate": "not_playable",
         },
     },
@@ -119,6 +128,8 @@ VARIANTS = {
             "P4": "PASS (the process is alive, no dialog)",
             "P5": "FAIL (the documented controls do nothing)",
             "P6": "FAIL (no capability is delivered)",
+            "P7": "PASS (TASK-130, measured: a frozen game still HAS its interface -- "
+                  "freezing is not a UI mode, and P7 must not double-count P3's failure)",
             "gate": "not_playable",
         },
     },
@@ -140,9 +151,40 @@ VARIANTS = {
             "P4": "PASS",
             "P5": "PASS (P5 is about the InputMap and the README, not about pixels)",
             "P6": "PASS",
-            "gate": "playable -- DECLARED AS A BLIND SPOT: no machine criterion we "
-                    "implemented asks whether the interface a player needs is on screen.  "
-                    "The variant is kept as a real frame a VISION model can be asked about.",
+            "P7": "FAIL (TASK-130): the declared required UI (`SidePanel`, `HudLabel`, "
+                  "`PanelEdge`) is not visible_in_tree",
+            "gate": "not_playable after TASK-130 (before it: playable -- the declared "
+                    "blind spot P7 was added for)",
+        },
+    },
+    # TASK-130: the SECOND declarative UI-loss variant, on a different game and through a
+    # DIFFERENT clause of P7 than `neg_hud_missing` uses.  `neg_hud_missing` sets
+    # `visible = false`; this one leaves `visible` true and moves the node out of the
+    # viewport, so a P7 that only looked at the `visible` flag would still pass it.
+    "neg_ui_offscreen": {
+        "source": "flappy",
+        "failure_mode": "required UI present but moved out of the viewport (the HUD is off "
+                        "screen while `visible` is still true)",
+        "node": "Hud",
+        "properties": [("offset_left", "-2000.0"), ("offset_right", "-1420.0")],
+        "construction": (
+            "copy of projects/flappy with the `Hud` Label (the score/passed/frame readout, "
+            "560x38 px at x=20) moved to x=-2000 by rewriting its two horizontal offsets in "
+            "main.tscn.  The node still exists, still has `visible = true` and the engine "
+            "still reports `is_visible_in_tree() == true`; it simply has no intersection "
+            "with the 800x600 viewport, so the player cannot see it.  This is the 'the "
+            "required label was moved away / collapsed' mode, and it exercises P7's "
+            "on-screen-area clause rather than its visibility clause."),
+        "expected": {
+            "P1": "PASS (the playfield, the pipes and the status line are still drawn)",
+            "P2": "PASS",
+            "P3": "PASS",
+            "P4": "PASS",
+            "P5": "PASS (the InputMap and the README are untouched)",
+            "P6": "PASS (every capability still moves its observable)",
+            "P7": "FAIL (TASK-130): `hud` exists and is visible_in_tree, but its rect "
+                  "(-2000,8,580x38) does not intersect the viewport",
+            "gate": "not_playable after TASK-130",
         },
     },
 }
@@ -169,7 +211,18 @@ def write_text(path, text):
 
 
 def patch_scene(text, node, properties):
-    """Append `key = value` lines to the `[node name="node" ...]` block.  Idempotent."""
+    """Append `key = value` lines to the `[node name="node" ...]` block.  Idempotent.
+
+    TASK-130 fixed two real defects here, both found by re-running the builder:
+
+      * the old version rewrote the block (`body + [""]`) even when every property was
+        already present, so the second run appended an extra blank line to every variant
+        and the N-th run added N of them.  Now the text is left byte-identical when there
+        is nothing to add.
+      * `already_present` is recorded per property, and `build()` carries the ORIGINAL
+        pre-patch hash over from the previous `variant.json` when nothing was applied --
+        otherwise a re-run re-hashed the already-patched file and "before" became "after".
+    """
     lines = text.split("\n")
     starts = [i for i, ln in enumerate(lines) if ln.startswith("[")]
     changed = []
@@ -192,7 +245,8 @@ def patch_scene(text, node, properties):
             body.append(line)
             changed.append({"node": node, "property": key, "value": value,
                             "already_present": False})
-        lines[start + 1:end] = body + [""]
+        if any(not c["already_present"] for c in changed):
+            lines[start + 1:end] = body + [""]
         break
     else:
         raise RuntimeError("node %r not found in the scene" % node)
@@ -219,8 +273,23 @@ def build(verify=False):
         for node in nodes:
             text, ch = patch_scene(text, node, spec["properties"])
             patches.extend(ch)
-        write_text(scene, text)
+        applied = any(not c["already_present"] for c in patches)
+        if applied:
+            write_text(scene, text)
         after_sha = sha256_file(scene)
+
+        # TASK-130: never pretend the current file is the pristine one.  When nothing was
+        # applied this time, the pre-patch hash is carried over from the previous record.
+        prev_path = os.path.join(dest, "variant.json")
+        prev = {}
+        if os.path.isfile(prev_path):
+            try:
+                prev = json.loads(read_text(prev_path)) or {}
+            except Exception:  # noqa: BLE001
+                prev = {}
+        prev_before = ((prev.get("patch") or {}).get("scene_sha256_before_patch")
+                       if isinstance(prev, dict) else None)
+        before_sha = original_sha if applied else (prev_before or original_sha)
 
         # the copy's own C# must still be byte-identical to the real project's
         src_cs = os.path.join(PROJECTS, spec["source"], "src")
@@ -239,7 +308,8 @@ def build(verify=False):
             "source_project": spec["source"],
             "construction": spec["construction"],
             "patch": {"file": SCENE_REL, "edits": patches,
-                      "scene_sha256_before_patch": original_sha,
+                      "patch_applied_this_run": bool(applied),
+                      "scene_sha256_before_patch": before_sha,
                       "scene_sha256_after_patch": after_sha,
                       "csharp_sources_copied_unchanged": cs_same},
             "expected_gate_criteria": spec["expected"],
@@ -256,9 +326,9 @@ def build(verify=False):
         write_text(os.path.join(dest, "variant.json"),
                    json.dumps(manifest, ensure_ascii=False, indent=1, sort_keys=False))
 
-        entry = {"variant": name, "copy": action, "scene_sha256_before": original_sha,
-                 "scene_sha256_after": after_sha, "patches": patches,
-                 "csharp_unchanged": cs_same}
+        entry = {"variant": name, "copy": action, "scene_sha256_before": before_sha,
+                 "scene_sha256_after": after_sha, "patch_applied_this_run": bool(applied),
+                 "patches": patches, "csharp_unchanged": cs_same}
         if verify:
             entry["headless"] = verify_headless(dest)
         results.append(entry)

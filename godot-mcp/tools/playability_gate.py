@@ -58,6 +58,18 @@ a human can look at:
                      *actually* exercised (P2's result is reused), so the answer is
                      "a human can find the controls and they do something", not
                      "the InputMap has entries".
+  P6 capability      the curated capability table names, for every thing a player must be
+                     able to do, the declared action that delivers it and the observable
+                     that must move -- and P2's measured result is checked against it.
+  P7 required UI     TASK-130: the game's own `required_ui` declaration names the UI/control
+                     nodes a player needs (HUD readout, board container, next-piece
+                     indicator, the food a snake must see ...).  A probe reads those nodes
+                     out of the LIVE tree and every item must exist, be the declared class,
+                     be visible IN THE TREE, keep an alpha above P7_MIN_ALPHA, cover at
+                     least its declared area inside the viewport, and (where declared) not
+                     be blank.  This is the criterion for the failure mode P1..P6 cannot
+                     see: the interface is gone while the game itself is fine.
+                     `--only-p7` runs just this one (and says so in the artifact).
 
 Nothing here is a shell redirect, and nothing is deleted outside this tool's own
 output directory: iron rule 1 (the game's stdout/stderr are owned by
@@ -145,6 +157,12 @@ Two ways to reach PlayJev 0.8B, the model that was actually fine-tuned on pixels
     python tools\\playability_gate.py --games pong --agent=jev --base-url http://127.0.0.1:8080 --agent-state-budget 2000 --visual-agent=playjev
     python tools\\playability_gate.py --exercise neg_frozen --games neg_frozen --agent=jev --visual-agent=playjev --out-root runs\\playability\\negatives
 
+    :: TASK-130: the declarative required-UI criterion alone, over every game (fast):
+    python tools\\playability_gate.py --all --only-p7 --out-root runs\\playability\\t130-p7
+
+    :: TASK-130 B: the same vision backend, but shown the CONTENT CROP of each frame:
+    python tools\\playability_gate.py --games pong --visual-agent=playjev --visual-input-form crop
+
 Declarative negative variants (TASK-129 D-D)
 --------------------------------------------
 `projects\\_exercises\\neg_*` holds COPIES of real projects whose scene file declares one
@@ -158,7 +176,9 @@ Outputs
     runs\\playability\\<game>\\frames.json                per-frame geometry + metrics
     runs\\playability\\<game>\\filmstrip.png              all frames in one image
     runs\\playability\\<game>\\states\\NN_<label>.json    sampled game state
-    runs\\playability\\<game>\\gate.json                  P1..P6 verdicts + evidence
+    runs\\playability\\<game>\\gate.json                  P1..P7 verdicts + evidence
+                                                        (P7 carries `p7_probe`, the raw
+                                                        node read it was judged from)
     runs\\playability\\<game>\\agent.json                 the text backend: every call,
                                                         every state it judged (D-B), and
                                                         every 422 budget retry (D-C)
@@ -233,6 +253,11 @@ P1_MIN_BBOX_COVERAGE = 0.12       # content bbox spans >=12% of the window area
 P2_FRAMES = 45                    # "within N frames": 45 drawn frames (~0.75 s @60)
 P2_SETTLE_S = 0.45
 P3_MIN_CHANGED_PIXELS = 40        # a genuine frame-to-frame change, not noise
+# TASK-130 P7: a declared required-UI node whose modulate alpha is at or below this is
+# treated as "not on screen" (the engine reports it visible_in_tree, the player sees
+# nothing).  Basis: modulate.a is exactly 1.0 for every declared node of all 20 games
+# measured at settle; 0.01 only separates "fully transparent" from "faded".
+P7_MIN_ALPHA = 0.01
 DEFAULT_PORT = 9911
 STATE_NODE_CAP = 4000
 
@@ -534,6 +559,58 @@ return out
 """ % cap
 
 
+def probe_required_ui_source(paths):
+    """TASK-130 P7: read the DECLARED required UI nodes out of the running game's tree.
+
+    Machine-only: it resolves each declared node path inside the game process and reports
+    what the engine itself says about it -- `exists`, its class, whether it is visible IN
+    THE TREE (not just its own `visible` flag), its modulate alpha, its global rect and
+    whether any ancestor has been hidden.  Nothing here asks a model; the verdict is a
+    comparison against the declaration in `tools/playability_controls.json`.
+
+    `paths` is a list of node paths from `/root` (e.g. `/root/Main/Hud`).  JSON string
+    arrays are valid GDScript array literals, so the paths are carried through verbatim.
+    """
+    return """
+var out = {"items": {}, "viewport": [], "root": str(get_tree().root.get_path())}
+var vr = get_viewport().get_visible_rect()
+out["viewport"] = [float(vr.position.x), float(vr.position.y),
+                   float(vr.size.x), float(vr.size.y)]
+var wanted = %s
+for p in wanted:
+    var n = get_node_or_null(NodePath(p))
+    var e = {"path": p, "exists": false}
+    if n != null:
+        e["exists"] = true
+        e["name"] = str(n.name)
+        e["class"] = n.get_class()
+        e["is_canvas_item"] = n is CanvasItem
+        e["is_control"] = n is Control
+        e["is_label"] = n is Label
+        e["visible"] = n.visible if n is CanvasItem else true
+        e["visible_in_tree"] = n.is_visible_in_tree() if n is CanvasItem else true
+        e["modulate_a"] = float(n.modulate.a) if n is CanvasItem else 1.0
+        e["text"] = str(n.text) if n is Label else null
+        e["node_path"] = str(n.get_path())
+        if n is Control:
+            var r = n.get_global_rect()
+            e["global_rect"] = [float(r.position.x), float(r.position.y),
+                                float(r.size.x), float(r.size.y)]
+            e["size"] = [float(n.size.x), float(n.size.y)]
+            e["anchor"] = [float(n.anchor_left), float(n.anchor_top),
+                           float(n.anchor_right), float(n.anchor_bottom)]
+        var hidden_by = []
+        var par = n.get_parent()
+        while par != null:
+            if par is CanvasItem and not par.visible:
+                hidden_by.append(str(par.get_path()))
+            par = par.get_parent()
+        e["hidden_by_ancestors"] = hidden_by
+    out["items"][p] = e
+return out
+""" % json.dumps(list(paths or []), ensure_ascii=False)
+
+
 def probe_key_event(keycode, pressed, channel="viewport_push_input"):
     if channel == "parse_input_event":
         send = "Input.parse_input_event(ev)"
@@ -817,6 +894,90 @@ def analyse_frame(path):
     return res
 
 
+def content_bbox_crop(src, dst, margin=0, pad=0, min_side=0):
+    """TASK-130 B: crop a frame to its CONTENT bounding box, with the rule written down.
+
+    The rule is the one P1 already uses to decide what "content" is -- no new constant, so
+    a frame's crop and its P1 metrics cannot disagree:
+
+      1. the background colour is the frame's modal colour, computed on a 4-bit-quantised
+         histogram (`analyse_frame`), so a dithered/anti-aliased background still finds
+         itself;
+      2. a pixel is content when it differs from that colour by more than `PIXEL_DELTA`
+         (16) in ANY channel;
+      3. the box is the tight bounding box of the content pixels;
+      4. it is then padded by `pad` px and kept only where the remaining box is at least
+         `min_side` px on each side (a degenerate box is not a useful crop);
+      5. `margin` first ignores a border band of that many pixels (it is the "the window
+         frame / the editor gutter is content too" escape hatch; 0 by default);
+      6. a frame with NO content pixels is returned as the whole frame, and that is
+         recorded as `flat: true` instead of silently producing a 0x0 crop.
+
+    Returns the crop description (source/dest size, box, sha256 of the result), so the
+    input a model saw can be reconstructed from the artifact instead of from this code.
+    """
+    img = Image.open(src).convert("RGB")
+    a = np.asarray(img).astype(np.int16)
+    h, w = a.shape[0], a.shape[1]
+    flat = a.reshape(-1, 3)
+    q = (flat >> 4)
+    key = ((q[:, 0].astype(np.int32) << 8) | (q[:, 1].astype(np.int32) << 4)
+           | q[:, 2].astype(np.int32))
+    vals, counts = np.unique(key, return_counts=True)
+    bg_key = int(vals[int(np.argmax(counts))])
+    bg_q = np.array([(bg_key >> 8) & 0xF, (bg_key >> 4) & 0xF, bg_key & 0xF], dtype=np.int16)
+    bg = bg_q * 16 + 8
+    diff = np.abs(a - bg.reshape(1, 1, 3)).max(axis=2)
+    mask = diff > PIXEL_DELTA
+    if margin > 0 and 2 * margin < min(h, w):
+        keep = np.zeros_like(mask)
+        keep[margin:h - margin, margin:w - margin] = True
+        mask = mask & keep
+    info = {"rule": "modal-colour (4-bit quantised) + PIXEL_DELTA>%d content mask, "
+                    "tight bbox, then pad=%d margin=%d min_side=%d"
+                    % (PIXEL_DELTA, pad, margin, min_side),
+            "source": os.path.abspath(src), "source_size": [w, h],
+            "background_rgb": [int(v) for v in bg],
+            "margin": margin, "pad": pad, "min_side": min_side}
+    if not mask.any():
+        info.update({"flat": True, "box": [0, 0, w, h], "dest": os.path.abspath(dst),
+                     "dest_size": [w, h], "cropped": False,
+                     "why": "no content pixel at all: the whole frame is its own "
+                            "background, so there is nothing to crop to"})
+        if os.path.abspath(src) != os.path.abspath(dst):
+            shutil.copyfile(src, dst)
+        info["sha256"] = sha256_file(dst)
+        return info
+    ys, xs = np.nonzero(mask)
+    x0, x1 = int(xs.min()), int(xs.max()) + 1
+    y0, y1 = int(ys.min()), int(ys.max()) + 1
+    x0 = max(0, x0 - pad)
+    y0 = max(0, y0 - pad)
+    x1 = min(w, x1 + pad)
+    y1 = min(h, y1 + pad)
+    degenerate = (x1 - x0) < max(1, min_side) or (y1 - y0) < max(1, min_side)
+    if degenerate:
+        info.update({"degenerate": True, "box": [0, 0, w, h],
+                     "why": "the content box (%dx%d) is smaller than min_side=%d; the "
+                            "whole frame is kept so the crop is not a hole"
+                            % (x1 - x0, y1 - y0, min_side),
+                     "dest": os.path.abspath(dst), "dest_size": [w, h], "cropped": False})
+        if os.path.abspath(src) != os.path.abspath(dst):
+            shutil.copyfile(src, dst)
+        info["sha256"] = sha256_file(dst)
+        return info
+    cropped = img.crop((x0, y0, x1, y1))
+    cropped.save(dst, format="PNG")
+    info.update({"flat": False, "box": [x0, y0, x1 - x0, y1 - y0],
+                 "dest": os.path.abspath(dst), "dest_size": [x1 - x0, y1 - y0],
+                 "cropped": True,
+                 "box_fraction_of_source": [round((x1 - x0) / float(w), 4),
+                                            round((y1 - y0) / float(h), 4)],
+                 "area_fraction_of_source": round(((x1 - x0) * (y1 - y0)) / float(w * h), 4)})
+    info["sha256"] = sha256_file(dst)
+    return info
+
+
 def png_changed(a_path, b_path):
     a = np.asarray(Image.open(a_path).convert("RGB")).astype(np.int16)
     b = np.asarray(Image.open(b_path).convert("RGB")).astype(np.int16)
@@ -916,6 +1077,40 @@ def state_delta(a, b):
         if path not in na and not ignorable(path, eb):
             changed.append({"key": path, "why": "node appeared"})
     return changed
+
+
+def run_required_ui_probe(paths, gd):
+    """TASK-130 P7: run the required-UI probe inside the game process.
+
+    `gd(code, at)` is `run_gate`'s GDScript caller, so the call is recorded in the gate's
+    own `errors` list exactly like every other probe.  The answer is returned verbatim
+    (per-node class/visibility/rect/text + the viewport rect); the judging happens in
+    `verdict_p7`, never here.
+    """
+    out = {"source": "running_game_execute_gdscript (live tree inside the game process)",
+           "probe": "probe_required_ui_source", "declared_paths": list(paths or []),
+           "items": {}, "viewport": None, "root": None, "error": None}
+    if not paths:
+        return out
+    res = gd(probe_required_ui_source(paths), "p7_required_ui")
+    if not isinstance(res, dict):
+        out["error"] = "the required-UI probe returned %r, not a dictionary" % (res,)
+        return out
+    out["items"] = res.get("items") or {}
+    out["viewport"] = res.get("viewport")
+    out["root"] = res.get("root")
+    return out
+
+
+class OnlyP7Done(Exception):
+    """TASK-130: raised by `run_gate` when `--only-p7` has collected what it came for.
+
+    It is NOT an error path: it unwinds out of the `try` so the `finally` still stops the
+    game process and the tail still writes `gate.json` / `frames.json`, exactly as a full
+    run would.  `--only-p7` exists because the declarative required-UI check needs a real
+    running game but none of P2..P6, so verifying the declaration across all 20 games does
+    not have to pay for a full sweep.
+    """
 
 
 def run_gate(game, args):
@@ -1084,7 +1279,8 @@ def run_gate(game, args):
                                 "P3": {"pass": False, "why": "no game process"},
                                 "P4": {"pass": False, "why": "process never served"},
                                 "P5": {"pass": False, "why": "no game process"},
-                                "P6": {"pass": False, "why": "no game process"}}
+                                "P6": {"pass": False, "why": "no game process"},
+                                "P7": {"pass": False, "why": "no game process"}}
             return gate
 
         mcp = Mcp(port, calls_dir)
@@ -1123,6 +1319,36 @@ def run_gate(game, args):
         # ---------------- P1 + P3a: autonomous frames ----------------
         s0 = sample_state("00_settle", mcp)
         f0 = capture("settle", mcp, s0, note="first frame after %ss" % args.settle)
+
+        # ---------------- TASK-130 P7: the DECLARED required UI ----------------
+        # Machine check, no model: the declaration in tools/playability_controls.json names
+        # the nodes a player needs (HUD readout, board container, next-piece indicator,
+        # the food a snake must see ...).  The probe reads those very nodes out of the live
+        # tree and `verdict_p7` compares.  This is the criterion for the failure mode P1..P6
+        # could not see: a game whose interface is gone but whose logic is fine.
+        ui_decl, ui_items = required_ui_items(controls, game)
+        gate["required_ui_declaration"] = {
+            "declared": bool(ui_items),
+            "what": ui_decl.get("what"),
+            "rule": ui_decl.get("rule"),
+            "items": [dict(i) for i in ui_items],
+            "source": os.path.join(HERE, "playability_controls.json"),
+            "key": "games.%s.required_ui" % game}
+        gate["p7_probe"] = run_required_ui_probe(
+            [i.get("node") for i in ui_items if i.get("node")],
+            lambda code, at: gd(mcp, code, at))
+        log("    P7 probe: %d declared item(s), %d node(s) resolved in the live tree"
+            % (len(ui_items), sum(1 for v in (gate["p7_probe"].get("items") or {}).values()
+                                  if v.get("exists"))))
+        if getattr(args, "only_p7", False):
+            gate["criteria"] = {"P7": verdict_p7(game, controls, gate["p7_probe"])}
+            gate["criteria_scope"] = ("P7 only (--only-p7): the declarative required-UI "
+                                      "check; P1..P6 were deliberately not run")
+            log("    P7 (only run): %s -- %s"
+                % ("PASS" if gate["criteria"]["P7"]["pass"] else "FAIL",
+                   gate["criteria"]["P7"]["why"]))
+            raise OnlyP7Done()
+
         auto_states = []
         for i in range(1, args.auto_frames + 1):
             time.sleep(args.auto_gap)
@@ -1427,6 +1653,8 @@ def run_gate(game, args):
                                    "traceback": traceback.format_exc()[-2000:]}
                 log("    playjev pass FAILED: %s: %s" % (type(e).__name__, e))
 
+    except OnlyP7Done:
+        pass
     except Exception as e:  # noqa: BLE001
         import traceback
         gate["errors"].append({"at": "run", "error": "%s: %s" % (type(e).__name__, e),
@@ -1451,19 +1679,24 @@ def run_gate(game, args):
                     proj["declared_viewport"],
                     "MATCH" if (gate.get("window_conformance") or {}).get("matches_declared") else "MISMATCH")
             verdict = gate.get("criteria", {})
-            note = "P1..P6 = %s" % " ".join(
-                "%s:%s" % (k, "pass" if (verdict.get(k) or {}).get("pass") else "FAIL")
-                for k in ("P1", "P2", "P3", "P4", "P5", "P6"))
+            note = "P1..P7 = %s" % " ".join(
+                "%s:%s" % (k, "pass" if (verdict.get(k) or {}).get("pass") else
+                           ("n/a" if k not in verdict else "FAIL"))
+                for k in CRITERIA_ORDER)
             build_filmstrip(frames, os.path.join(outdir, "filmstrip.png"),
                             "%s -- full-window frames (game endpoint, real game process)" % game,
                             note=(oc or "") + "   " + note)
     except Exception as e:  # noqa: BLE001
         gate["errors"].append({"at": "filmstrip", "error": "%s: %s" % (type(e).__name__, e)})
     write_json(os.path.join(outdir, "gate.json"), gate)
+    # TASK-130: report the criteria this run actually measured.  An `--only-p7` run covers
+    # P7 alone and says so; printing P1..P6 as FAIL there would report untested criteria as
+    # failures.
+    measured = [k for k in CRITERIA_ORDER if k in gate["criteria"]]
     log("=== %s : %s" % (game, " ".join(
         "%s=%s" % (k, "PASS" if (gate["criteria"].get(k) or {}).get("pass") else "FAIL")
-        for k in ("P1", "P2", "P3", "P4", "P5", "P6"))))
-    for k in ("P1", "P2", "P3", "P4", "P5", "P6"):
+        for k in measured)))
+    for k in measured:
         c = gate["criteria"].get(k) or {}
         if not c.get("pass"):
             log("      %s FAIL: %s" % (k, c.get("why")))
@@ -1752,8 +1985,19 @@ def run_visual_agent(game, args, goal, frames, playjev_thresholds, log_fn):
     except Exception as e:  # noqa: BLE001
         questions = {"error": "%s: %s" % (type(e).__name__, e)}
     out = {"backend": "playjev",
-           "task": "TASK-129 C/D-E",
+           "task": "TASK-129 C/D-E (+ TASK-130 B input form)",
            "one_image_plus_n_questions": True,
+           # TASK-130 B: WHICH PIXELS the model was shown.  `native` is the frame exactly
+           # as captured (the TASK-129 baseline); `crop` is the same frame cut down to its
+           # content bounding box by `content_bbox_crop` (rule + box + sha256 recorded per
+           # frame below), so "the game was a small part of what the model saw" stops being
+           # an assumption and becomes a recorded, reproducible property of the input.
+           "visual_input_form": getattr(args, "visual_input_form", "native"),
+           "visual_input_form_note": (
+               "native = the captured full-window frame, byte-identical to TASK-129"
+               if getattr(args, "visual_input_form", "native") == "native" else
+               "crop = content-bbox crop of the captured frame (%s)"
+               % content_bbox_crop.__doc__.split("\n")[0].strip()),
            "playable_key": agent.playable_key,
            "score_in_decision_path": False,
            "score_direction_note": PLAYJEV_SCORE_DIRECTION_NOTE,
@@ -1785,9 +2029,30 @@ def run_visual_agent(game, args, goal, frames, playjev_thresholds, log_fn):
                       "bbox", "bbox_coverage", "background_rgb", "window",
                       "changed_pixels_vs_prev")}
         frame_rec["label"] = f.get("label")
+        # TASK-130 B: hand the model the pixels the input form asks for, and keep the
+        # provenance of BOTH images (the captured one and the derived one).
+        crop_info = None
+        form = getattr(args, "visual_input_form", "native")
+        if form == "crop":
+            crop_dir = os.path.join(RUNS, game, "frames_crop")
+            if not os.path.isdir(crop_dir):
+                os.makedirs(crop_dir)
+            dst = os.path.join(crop_dir, os.path.basename(f.get("path") or "frame.png"))
+            crop_info = content_bbox_crop(
+                f["path"], dst,
+                margin=int(getattr(args, "visual_crop_margin", 0)),
+                pad=int(getattr(args, "visual_crop_pad", 0)),
+                min_side=int(getattr(args, "visual_crop_min_side", 0)))
+            frame_rec["path"] = dst
+            frame_rec["sha256"] = crop_info.get("sha256")
+            frame_rec["width"], frame_rec["height"] = crop_info.get("dest_size") or [None, None]
         out["frames_used"].append({"label": f.get("label"), "index": f.get("index"),
                                    "file": os.path.basename(f.get("path") or ""),
-                                   "path": f.get("path"), "sha256": f.get("sha256")})
+                                   "path": f.get("path"), "sha256": f.get("sha256"),
+                                   "input_form": form,
+                                   "model_image_path": frame_rec.get("path"),
+                                   "model_image_sha256": frame_rec.get("sha256"),
+                                   "crop": crop_info})
         t0 = time.time()
         action = agent.decide([frame_rec], {}, goal)
         wall = round(time.time() - t0, 3)
@@ -1797,6 +2062,10 @@ def run_visual_agent(game, args, goal, frames, playjev_thresholds, log_fn):
         obs = {"frame_label": f.get("label"), "frame_index": f.get("index"),
                "frame_file": os.path.basename(f.get("path") or ""),
                "frame_path": f.get("path"), "frame_sha256": f.get("sha256"),
+               "input_form": form,
+               "model_image_path": frame_rec.get("path"),
+               "model_image_sha256": frame_rec.get("sha256"),
+               "crop": crop_info,
                "content_fraction": f.get("content_fraction"), "bbox": f.get("bbox"),
                "http_status": (ev.get("transport") or {}).get("status"),
                "seconds": wall, "model": ev.get("model"), "timing": ev.get("timing"),
@@ -1993,6 +2262,147 @@ def visual_thresholds_for_agent(block):
         if isinstance(v, (int, float)):
             t["score_max_expected"] = float(v)
     return t
+
+
+def required_ui_items(controls, game):
+    """The declaration half of P7: `games.<game>.required_ui.items` (TASK-130)."""
+    decl = (controls.get(game) or {}).get("required_ui") or {}
+    items = decl.get("items")
+    return decl, (items if isinstance(items, list) else [])
+
+
+def rect_intersection_area(rect, viewport):
+    """Overlap of two [x, y, w, h] rects, clamped at 0.  None when either is missing."""
+    if not rect or not viewport:
+        return None
+    x0 = max(float(rect[0]), float(viewport[0]))
+    y0 = max(float(rect[1]), float(viewport[1]))
+    x1 = min(float(rect[0]) + float(rect[2]), float(viewport[0]) + float(viewport[2]))
+    y1 = min(float(rect[1]) + float(rect[3]), float(viewport[1]) + float(viewport[3]))
+    return max(0.0, x1 - x0) * max(0.0, y1 - y0)
+
+
+def verdict_p7(game, controls, probe):
+    """TASK-130 P7: is the DECLARED required UI actually on screen, right now?
+
+    The declaration in `tools/playability_controls.json` says which nodes a player needs
+    (a HUD readout, the board container, the next-piece indicator, the food the snake must
+    see ...).  This function only compares a runtime read of those nodes (see
+    `probe_required_ui_source`) against that declaration, clause by clause:
+
+        exists            the path resolves in the live tree
+        class             the node is the declared class
+        visible_in_tree   the engine says it is visible (an ancestor being hidden counts)
+        alpha             modulate.a is not ~0 (fading to nothing is invisible too)
+        on_screen         its global rect overlaps the viewport by >= min_area_px
+        text_nonempty     a Label declared to carry text is not blank
+
+    Every check is recorded with the observed value, and `missing` names the items that
+    failed -- "which declared thing is gone" is part of the verdict, not a footnote.
+    """
+    decl, items = required_ui_items(controls, game)
+    out = {"pass": False, "criterion": "P7",
+           "what": (decl.get("what") or
+                    "the UI/controls a player needs on screen must exist and be visible"),
+           "declaration_source": os.path.join(HERE, "playability_controls.json"),
+           "declaration_rule": decl.get("rule"),
+           "declared_items": [i.get("id") or i.get("node") for i in items],
+           "items": [], "missing": []}
+    if not items:
+        out["why"] = ("no `required_ui.items` declaration for this game: nothing states "
+                      "which UI a player needs, so 'the required UI is present' cannot be "
+                      "claimed (same rule as P6's capability table)")
+        return out
+    if not isinstance(probe, dict) or not probe.get("items"):
+        out["why"] = ("the runtime required-UI probe produced no answer, so the "
+                      "declaration was not checked: %s"
+                      % ((probe or {}).get("error") or "no probe result"))
+        out["probe_error"] = (probe or {}).get("error")
+        return out
+    viewport = probe.get("viewport")
+    out["probe_source"] = probe.get("source")
+    out["root"] = probe.get("root")
+    out["viewport"] = viewport
+    seen = probe.get("items") or {}
+
+    for it in items:
+        path = it.get("node")
+        iid = it.get("id") or path
+        obs = seen.get(path) or {"path": path, "exists": False}
+        checks = []
+
+        def add(name, ok, why):
+            checks.append({"check": name, "pass": bool(ok), "why": why})
+
+        exists = bool(obs.get("exists"))
+        add("exists", exists,
+            ("the node is at %s" % path) if exists else "no node at %s in the live tree" % path)
+        if exists:
+            want_class = it.get("class")
+            if want_class:
+                got = obs.get("class")
+                add("class", got == want_class,
+                    "class is %r (declared %r)" % (got, want_class))
+            if it.get("must_be_visible", True):
+                vit = bool(obs.get("visible_in_tree"))
+                hidden = obs.get("hidden_by_ancestors") or []
+                add("visible_in_tree", vit,
+                    ("is_visible_in_tree() is true (own visible=%s)" % obs.get("visible"))
+                    if vit else
+                    ("is_visible_in_tree() is false (own visible=%s; hidden by %s)"
+                     % (obs.get("visible"), hidden or "the node itself")))
+                alpha = obs.get("modulate_a")
+                if isinstance(alpha, (int, float)):
+                    add("alpha", alpha > P7_MIN_ALPHA,
+                        "modulate.a = %.4f (must be > %.4f)" % (alpha, P7_MIN_ALPHA))
+            min_area = it.get("min_area_px")
+            if min_area:
+                area = rect_intersection_area(obs.get("global_rect") or obs.get("rect"),
+                                              viewport)
+                add("on_screen", (area is not None) and area >= float(min_area),
+                    "the part of its rect inside the viewport is %s px^2 (declared >= %s), "
+                    "rect=%s" % (None if area is None else round(area, 1), min_area,
+                                 obs.get("global_rect")))
+            min_size = it.get("min_size_px")
+            if min_size:
+                size = obs.get("size") or [0, 0]
+                add("size", size[0] >= min_size[0] and size[1] >= min_size[1],
+                    "size is %s (declared >= %s)" % (size, min_size))
+            if it.get("text_nonempty"):
+                text = obs.get("text")
+                add("text_nonempty", bool(text and str(text).strip()),
+                    "text is %r" % (text,))
+            if it.get("text_regex"):
+                text = obs.get("text") or ""
+                add("text_regex", re.search(it["text_regex"], str(text)) is not None,
+                    "text %r against regex %r" % (text, it["text_regex"]))
+        failed = [c for c in checks if not c["pass"]]
+        row = {"id": iid, "need": it.get("need"), "node": path,
+               "declared_class": it.get("class"),
+               "declared_min_area_px": it.get("min_area_px"),
+               "pass": not failed and exists,
+               "observed": {k: obs.get(k) for k in
+                            ("exists", "class", "visible", "visible_in_tree", "modulate_a",
+                             "global_rect", "size", "text", "hidden_by_ancestors")},
+               "checks": checks}
+        if failed or not exists:
+            row["failed_checks"] = [c["check"] for c in failed]
+            out["missing"].append({"id": iid, "need": it.get("need"), "node": path,
+                                   "failed_checks": row["failed_checks"],
+                                   "why": "; ".join(c["why"] for c in failed)})
+        out["items"].append(row)
+
+    ok = sum(1 for r in out["items"] if r["pass"])
+    out["pass"] = bool(ok == len(out["items"]))
+    if out["pass"]:
+        out["why"] = ("all %d declared UI item(s) are present, visible and on screen: %s"
+                      % (len(out["items"]), ", ".join(r["id"] for r in out["items"])))
+    else:
+        out["why"] = ("%d/%d declared UI item(s) are NOT usable: %s"
+                      % (len(out["items"]) - ok, len(out["items"]),
+                         "; ".join("%s -> %s" % (m["id"], ",".join(m["failed_checks"]))
+                                   for m in out["missing"])))
+    return out
 
 
 def verdict_p6(game, controls, tested):
@@ -2237,6 +2647,13 @@ def verdicts(game, gate, proj, frames, s0, s1, s_end, controls=None):
 
     # ---- P6: does the game let a human actually do the things it is about? ----
     crit["P6"] = verdict_p6(game, controls or {}, tested)
+
+    # ---- P7: is the DECLARED required UI present, visible and on screen? (TASK-130)
+    # Machine-read from the live tree by the probe run just after the settle frame; this
+    # is the criterion for the failure mode P1..P6 are blind to (the interface is gone,
+    # the game is not).  Its evidence travels with the gate: gate["p7_probe"] holds the
+    # raw node read the verdict was computed from.
+    crit["P7"] = verdict_p7(game, controls or {}, gate.get("p7_probe"))
     return crit
 
 
@@ -2318,6 +2735,23 @@ def static_audit(games):
 # ---------------------------------------------------------------------------
 # reports
 # ---------------------------------------------------------------------------
+CRITERIA_ORDER = ("P1", "P2", "P3", "P4", "P5", "P6", "P7")
+
+
+def criteria_verdict(crit):
+    """The overall verdict over the criteria that are PRESENT.
+
+    TASK-130 added P7 and, with it, `--only-p7` runs whose gate.json carries P7 alone.
+    Judging such a run against absent P1..P6 would report a failure that was never
+    measured, so what the run covered is stated next to the verdict instead.
+    """
+    present = [k for k in CRITERIA_ORDER if k in (crit or {})]
+    if not present:
+        return "unjudged", []
+    ok = all((crit.get(k) or {}).get("pass") for k in present)
+    return ("playable" if ok else "not_playable"), present
+
+
 def write_reports(gates, audit, args):
     all_games = [g["game"] for g in gates]
     summary = {"task": "TASK-116", "generated": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -2330,7 +2764,10 @@ def write_reports(gates, audit, args):
                    "P1_min_bbox_coverage": P1_MIN_BBOX_COVERAGE,
                    "P1_pixel_delta": PIXEL_DELTA,
                    "P2_frames": P2_FRAMES,
-                   "P3_min_changed_pixels": P3_MIN_CHANGED_PIXELS},
+                   "P3_min_changed_pixels": P3_MIN_CHANGED_PIXELS,
+                   # TASK-130 P7: the only threshold is the alpha floor; the per-item
+                   # area/class/text requirements come from the game's own declaration.
+                   "P7_min_alpha": P7_MIN_ALPHA},
                "games": [], "static_audit": audit,
                # TASK-124 C: the model-in-the-loop thresholds are configurable and
                # explicitly UNCALIBRATED; copied into the summary so a verdict is never
@@ -2347,11 +2784,15 @@ def write_reports(gates, audit, args):
     for g in gates:
         crit = g.get("criteria") or {}
         pj = g.get("playjev") or {}
+        verdict, covered = criteria_verdict(crit)
         summary["games"].append({
             "game": g["game"],
             "target": g.get("target"),
-            "verdict": "playable" if all((crit.get(k) or {}).get("pass") for k in
-                                         ("P1", "P2", "P3", "P4", "P5", "P6")) else "not_playable",
+            "verdict": verdict,
+            # TASK-130: which criteria this run actually measured (a --only-p7 run covers
+            # P7 and says so, rather than being read as a P1..P6 failure).
+            "criteria_covered": covered,
+            "criteria_scope": g.get("criteria_scope"),
             # TASK-129 D-B: how many INDEPENDENT model observations this game produced.
             "agent_sample_size": ((g.get("agent") or {}).get("sample_size")),
             "agent_sample_size_required": ((g.get("agent") or {}).get("sample_size_required")),
@@ -2381,8 +2822,12 @@ def write_reports(gates, audit, args):
                                   "why": (crit.get(k) or {}).get("why")},
                                  **({"capabilities": (crit.get(k) or {}).get("capabilities"),
                                      "goal": (crit.get(k) or {}).get("goal")}
-                                    if k == "P6" else {}))
-                         for k in ("P1", "P2", "P3", "P4", "P5", "P6")},
+                                    if k == "P6" else {}),
+                                 **({"declared_items": (crit.get(k) or {}).get("declared_items"),
+                                     "missing": (crit.get(k) or {}).get("missing"),
+                                     "items": (crit.get(k) or {}).get("items")}
+                                    if k == "P7" else {}))
+                         for k in CRITERIA_ORDER},
             "window": (g.get("window") or {}),
             "window_conformance": g.get("window_conformance"),
             "tools_list_count": g.get("tools_list_count"),
@@ -2404,9 +2849,15 @@ def write_reports(gates, audit, args):
         "games": len(gates),
         "playable": sum(1 for x in summary["games"] if x["verdict"] == "playable"),
         "not_playable": sum(1 for x in summary["games"] if x["verdict"] != "playable"),
+        "criteria_covered": sorted(set(k for x in summary["games"]
+                                       for k in (x["criteria_covered"] or []))),
         "per_criterion_fail": {k: sum(1 for x in summary["games"]
-                                      if not x["criteria"][k]["pass"])
-                               for k in ("P1", "P2", "P3", "P4", "P5", "P6")},
+                                      if k in (x["criteria_covered"] or [])
+                                      and not (x["criteria"].get(k) or {}).get("pass"))
+                               for k in CRITERIA_ORDER},
+        "per_criterion_measured": {k: sum(1 for x in summary["games"]
+                                          if k in (x["criteria_covered"] or []))
+                                   for k in CRITERIA_ORDER},
     }
     write_json(os.path.join(RUNS, "playability.json"), summary)
     with io.open(os.path.join(RUNS, "summary.txt"), "w", encoding="utf-8") as fh:
@@ -2476,6 +2927,26 @@ def main(argv=None):
                          "`projects/_exercises/<name>` and is then addressable exactly "
                          "like a game (--games <name>).  Nothing under "
                          "projects/<game>/ is touched by this.")
+    ap.add_argument("--only-p7", dest="only_p7", action="store_true",
+                    help="TASK-130: run ONLY the declarative required-UI criterion (P7).  "
+                         "The game is started, settled, probed and stopped, but P1..P6 are "
+                         "not measured; gate.json and playability.json record that scope "
+                         "(`criteria_scope` / `criteria_covered`) so an --only-p7 run is "
+                         "never mistaken for a full verdict.")
+    ap.add_argument("--visual-input-form", default="native", choices=("native", "crop"),
+                    help="TASK-130 B: the pixels the VISION backend is shown.  `native` "
+                         "(default) is the captured full-window frame -- byte-identical to "
+                         "the TASK-129 baseline.  `crop` cuts each frame down to its "
+                         "content bounding box first, using the same modal-colour rule P1 "
+                         "uses (`content_bbox_crop`), and records box/sha256 per frame.")
+    ap.add_argument("--visual-crop-margin", type=int, default=0,
+                    help="TASK-130 B: ignore a border band of N px before looking for "
+                         "content (0 = the whole frame is searched).")
+    ap.add_argument("--visual-crop-pad", type=int, default=0,
+                    help="TASK-130 B: pad the content box by N px (0 = the tight box).")
+    ap.add_argument("--visual-crop-min-side", type=int, default=0,
+                    help="TASK-130 B: if the content box is thinner than N px on a side, "
+                         "keep the whole frame instead of a hole.")
     ap.add_argument("--decision-path", default="",
                     help="TASK-124: the jev backend's decision endpoint "
                          "(/v1/systemone default, or /v1/decision; env "
@@ -2567,9 +3038,16 @@ def main(argv=None):
     if GAME_DIRS:
         log("exercises: %s" % ", ".join("%s -> %s" % (k, v) for k, v in sorted(GAME_DIRS.items())))
     log("thresholds: P1 content>=%.4f bbox>=%.4f delta>%d | P2 %d frames | P3 %d px | "
-        "P6 from tools/playability_controls.json"
+        "P6 capabilities and P7 required_ui from tools/playability_controls.json "
+        "(P7 alpha>%.4f)"
         % (P1_MIN_CONTENT_FRACTION, P1_MIN_BBOX_COVERAGE, PIXEL_DELTA, P2_FRAMES,
-           P3_MIN_CHANGED_PIXELS))
+           P3_MIN_CHANGED_PIXELS, P7_MIN_ALPHA))
+    if args.only_p7:
+        log("scope    : --only-p7 -- the declarative required-UI criterion (P7) only; "
+            "P1..P6 are NOT run and the gate.json records that scope")
+    if args.visual_input_form != "native":
+        log("vision input form: %s (+ --visual-crop-margin %d, --visual-crop-pad %d)"
+            % (args.visual_input_form, args.visual_crop_margin, args.visual_crop_pad))
 
     gates = []
     for g in games:

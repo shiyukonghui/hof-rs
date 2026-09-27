@@ -200,6 +200,16 @@
  },
  "games": {
   "asteroids": {
+   "required_ui": {
+    "declared_by": "TASK-130 P7",
+    "what": "the UI/controls a player needs on screen for this game to be usable; the declaration is the judgement, the check is machine-run",
+    "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
+    "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
+    "items": [
+     {"id": "hud", "need": "score / lives / rocks readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 13200, "text_nonempty": true},
+     {"id": "status", "need": "the game's status line", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 5100, "text_nonempty": true}
+    ]
+   },
    "goal": "fly the ship, shoot the rocks, survive",
    "capabilities": [
     {"need": "turn left", "action": "ast_left", "observable": "ShipAngle"},
@@ -209,6 +219,16 @@
    ]
   },
   "bomberman": {
+   "required_ui": {
+    "declared_by": "TASK-130 P7",
+    "what": "the UI/controls a player needs on screen for this game to be usable; the declaration is the judgement, the check is machine-run",
+    "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
+    "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
+    "items": [
+     {"id": "hud", "need": "bricks / enemies / lives readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 10000, "text_nonempty": true},
+     {"id": "status", "need": "the game's status line", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 3300, "text_nonempty": true}
+    ]
+   },
    "goal": "walk the grid, place bombs, blow up the bricks without dying",
    "capabilities": [
     {"need": "walk up", "action": "bomb_up", "observable": "PlayerRow|RejectedMoves"},
@@ -218,6 +238,16 @@
     {"need": "place a bomb", "action": "bomb_place", "observable": "BombsPlaced|BombsActive"}
    ]
   },  "breakout": {
+   "required_ui": {
+    "declared_by": "TASK-130 P7",
+    "what": "the UI/controls a player needs on screen for this game to be usable; the declaration is the judgement, the check is machine-run",
+    "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
+    "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
+    "items": [
+     {"id": "hud_score", "need": "score readout", "node": "/root/Main/HudScore", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 7600, "text_nonempty": true},
+     {"id": "hud_status", "need": "the status line above the playfield", "node": "/root/Main/HudStatus", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 7400}
+    ]
+   },
    "goal": "keep the ball alive with the paddle and clear the bricks",
    "capabilities": [
     {"need": "move the paddle left", "action": "breakout_left", "observable": "Paddle|MinX"},
@@ -226,6 +256,16 @@
    ]
   },
   "flappy": {
+   "required_ui": {
+    "declared_by": "TASK-130 P7",
+    "what": "the UI/controls a player needs on screen for this game to be usable; the declaration is the judgement, the check is machine-run",
+    "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
+    "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
+    "items": [
+     {"id": "hud", "need": "score / passed / frame readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 10600, "text_nonempty": true},
+     {"id": "status", "need": "pipes readout", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 4500, "text_nonempty": true}
+    ]
+   },
    "goal": "flap through the gaps and keep the bird alive",
    "capabilities": [
     {"need": "flap", "action": "flap", "observable": "BirdVelocity|BirdY"},
@@ -233,6 +273,16 @@
    ]
   },
   "frogger": {
+   "required_ui": {
+    "declared_by": "TASK-130 P7",
+    "what": "the UI/controls a player needs on screen for this game to be usable; the declaration is the judgement, the check is machine-run",
+    "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
+    "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
+    "items": [
+     {"id": "hud", "need": "score / lives / homes readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 10300, "text_nonempty": true},
+     {"id": "status", "need": "homes readout", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 4500, "text_nonempty": true}
+    ]
+   },
    "goal": "hop the frog across the road and the river",
    "hold_ms": 150,
    "capabilities": [
@@ -243,6 +293,17 @@
    ]
   },
   "game2048": {
+   "required_ui": {
+    "declared_by": "TASK-130 P7",
+    "what": "the UI/controls a player needs on screen for this game to be usable; the declaration is the judgement, the check is machine-run",
+    "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
+    "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
+    "items": [
+     {"id": "hud", "need": "score / moves / max readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 10300, "text_nonempty": true},
+     {"id": "board", "need": "the 4x4 tile board container", "node": "/root/Main/Board", "class": "ColorRect", "must_exist": true, "must_be_visible": true, "min_area_px": 104000},
+     {"id": "status", "need": "the game's status line", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 4500, "text_nonempty": true}
+    ]
+   },
    "goal": "merge tiles to reach 2048",
    "capabilities": [
     {"need": "slide up", "action": "m2048_up", "observable": "MoveCount|MovesRejected|GridHash"},
@@ -252,6 +313,16 @@
    ]
   },
   "lunarlander": {
+   "required_ui": {
+    "declared_by": "TASK-130 P7",
+    "what": "the UI/controls a player needs on screen for this game to be usable; the declaration is the judgement, the check is machine-run",
+    "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
+    "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
+    "items": [
+     {"id": "hud", "need": "altitude / velocity / fuel readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 13200, "text_nonempty": true},
+     {"id": "status", "need": "the objective line", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 8300, "text_nonempty": true}
+    ]
+   },
    "goal": "steer the lander onto a pad without crashing",
    "capabilities": [
     {"need": "burn (thrust)", "action": "ll_thrust", "observable": "Fuel|ThrustCount"},
@@ -260,6 +331,16 @@
    ]
   },
   "match3": {
+   "required_ui": {
+    "declared_by": "TASK-130 P7",
+    "what": "the UI/controls a player needs on screen for this game to be usable; the declaration is the judgement, the check is machine-run",
+    "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
+    "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
+    "items": [
+     {"id": "hud", "need": "target / score / moves readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 12300, "text_nonempty": true},
+     {"id": "status", "need": "the game's status line", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 3500, "text_nonempty": true}
+    ]
+   },
    "goal": "swap two adjacent gems to line up three or more",
    "capabilities": [
     {"need": "move the cursor left", "action": "m3_left", "observable": "CursorCol"},
@@ -271,6 +352,16 @@
    ]
   },
   "minesweeper": {
+   "required_ui": {
+    "declared_by": "TASK-130 P7",
+    "what": "the UI/controls a player needs on screen for this game to be usable; the declaration is the judgement, the check is machine-run",
+    "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
+    "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
+    "items": [
+     {"id": "hud", "need": "mines / flags / safe-left readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 10800, "text_nonempty": true},
+     {"id": "status", "need": "the game's status line", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 4500, "text_nonempty": true}
+    ]
+   },
    "goal": "reveal every safe cell without hitting a mine",
    "capabilities": [
     {"need": "move the cursor left", "action": "mine_left", "observable": "CursorCol"},
@@ -284,6 +375,16 @@
    ]
   },
   "missilecommand": {
+   "required_ui": {
+    "declared_by": "TASK-130 P7",
+    "what": "the UI/controls a player needs on screen for this game to be usable; the declaration is the judgement, the check is machine-run",
+    "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
+    "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
+    "items": [
+     {"id": "hud", "need": "wave / cities / ammo readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 13000, "text_nonempty": true},
+     {"id": "status", "need": "the objective line at the bottom", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 8800, "text_nonempty": true}
+    ]
+   },
    "goal": "intercept the incoming missiles before they land on the cities",
    "capabilities": [
     {"need": "aim left", "action": "mc_left", "observable": "CursorX"},
@@ -292,6 +393,16 @@
    ]
   },
   "pacman": {
+   "required_ui": {
+    "declared_by": "TASK-130 P7",
+    "what": "the UI/controls a player needs on screen for this game to be usable; the declaration is the judgement, the check is machine-run",
+    "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
+    "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
+    "items": [
+     {"id": "hud", "need": "score / lives / pellets readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 10800, "text_nonempty": true},
+     {"id": "status", "need": "pellets readout", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 4400, "text_nonempty": true}
+    ]
+   },
    "goal": "eat every pellet and dodge the ghosts",
    "capabilities": [
     {"need": "move up", "action": "pac_up", "observable": "PacRow|PacCol|RejectedSteps"},
@@ -301,6 +412,16 @@
    ]
   },
   "platformer": {
+   "required_ui": {
+    "declared_by": "TASK-130 P7",
+    "what": "the UI/controls a player needs on screen for this game to be usable; the declaration is the judgement, the check is machine-run",
+    "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
+    "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
+    "items": [
+     {"id": "hud", "need": "gems / score / lives readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 10600, "text_nonempty": true},
+     {"id": "status", "need": "the objective line", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 2800, "text_nonempty": true}
+    ]
+   },
    "goal": "run and jump to the goal, collecting the gems",
    "capabilities": [
     {"need": "run left", "action": "plat_left", "observable": "PlayerX|VelX|Facing"},
@@ -309,6 +430,16 @@
    ]
   },
   "pong": {
+   "required_ui": {
+    "declared_by": "TASK-130 P7",
+    "what": "the UI/controls a player needs on screen for this game to be usable; the declaration is the judgement, the check is machine-run",
+    "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
+    "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
+    "items": [
+     {"id": "score_left", "need": "the left player's score", "node": "/root/Main/ScoreLeft", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 3400, "text_nonempty": true},
+     {"id": "score_right", "need": "the right player's score", "node": "/root/Main/ScoreRight", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 3400, "text_nonempty": true}
+    ]
+   },
    "goal": "keep the ball in play and score five points",
    "capabilities": [
     {"need": "move the left paddle up", "action": "pong_left_up", "observable": "PaddleLeft"},
@@ -319,6 +450,17 @@
    ]
   },
   "puzzlebobble": {
+   "required_ui": {
+    "declared_by": "TASK-130 P7",
+    "what": "the UI/controls a player needs on screen for this game to be usable; the declaration is the judgement, the check is machine-run",
+    "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
+    "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
+    "items": [
+     {"id": "hud", "need": "shot / colour / next readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 13200, "text_nonempty": true},
+     {"id": "next_bubble", "need": "the NEXT-piece indicator the player aims with", "node": "/root/Main/NextBubble", "class": "ColorRect", "must_exist": true, "must_be_visible": true, "min_area_px": 300},
+     {"id": "status", "need": "the aim/fire prompt", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 10100, "text_nonempty": true}
+    ]
+   },
    "goal": "aim and shoot bubbles to clear the board",
    "capabilities": [
     {"need": "aim left", "action": "pb_left", "observable": "AngleIndex|ShooterCol"},
@@ -327,6 +469,16 @@
    ]
   },
   "rtype": {
+   "required_ui": {
+    "declared_by": "TASK-130 P7",
+    "what": "the UI/controls a player needs on screen for this game to be usable; the declaration is the judgement, the check is machine-run",
+    "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
+    "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
+    "items": [
+     {"id": "hud", "need": "wave / lives / score readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 13200, "text_nonempty": true},
+     {"id": "status", "need": "the sector line", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 10600, "text_nonempty": true}
+    ]
+   },
    "goal": "fly the ship, shoot the wave, survive",
    "capabilities": [
     {"need": "fly left", "action": "rt_left", "observable": "PlayerX|RejectedMoves"},
@@ -337,6 +489,17 @@
    ]
   },
   "snake": {
+   "required_ui": {
+    "declared_by": "TASK-130 P7",
+    "what": "the UI/controls a player needs on screen for this game to be usable; the declaration is the judgement, the check is machine-run",
+    "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
+    "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
+    "items": [
+     {"id": "field", "need": "the playing field", "node": "/root/Main/Background", "class": "ColorRect", "must_exist": true, "must_be_visible": true, "min_area_px": 240000},
+     {"id": "food", "need": "the food the player steers to", "node": "/root/Main/Food", "class": "ColorRect", "must_exist": true, "must_be_visible": true, "min_area_px": 300},
+     {"id": "head", "need": "the snake's head", "node": "/root/Main/SnakeSeg00", "class": "ColorRect", "must_exist": true, "must_be_visible": true, "min_area_px": 300}
+    ]
+   },
    "goal": "eat the food and grow without hitting the wall or yourself",
    "capabilities": [
     {"need": "turn up", "action": "snake_up", "observable": "DirectionX|DirectionY|LastRefusedInput"},
@@ -347,6 +510,16 @@
    ]
   },
   "sokoban": {
+   "required_ui": {
+    "declared_by": "TASK-130 P7",
+    "what": "the UI/controls a player needs on screen for this game to be usable; the declaration is the judgement, the check is machine-run",
+    "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
+    "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
+    "items": [
+     {"id": "hud", "need": "level / boxes / steps readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 10900, "text_nonempty": true},
+     {"id": "status", "need": "the objective line", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 3300, "text_nonempty": true}
+    ]
+   },
    "goal": "push every box onto a goal",
    "capabilities": [
     {"need": "walk up", "action": "soko_up", "observable": "PlayerRow|RejectedMoves"},
@@ -356,6 +529,16 @@
    ]
   },
   "spaceinvaders": {
+   "required_ui": {
+    "declared_by": "TASK-130 P7",
+    "what": "the UI/controls a player needs on screen for this game to be usable; the declaration is the judgement, the check is machine-run",
+    "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
+    "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
+    "items": [
+     {"id": "hud", "need": "score readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 7200, "text_nonempty": true},
+     {"id": "status", "need": "invaders-left readout", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 7400, "text_nonempty": true}
+    ]
+   },
    "goal": "shoot the invaders before they reach the bottom",
    "capabilities": [
     {"need": "move left", "action": "si_left", "observable": "PlayerX"},
@@ -364,6 +547,17 @@
    ]
   },
   "tetris": {
+   "required_ui": {
+    "declared_by": "TASK-130 P7",
+    "what": "the UI/controls a player needs on screen for this game to be usable; the declaration is the judgement, the check is machine-run",
+    "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
+    "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
+    "items": [
+     {"id": "side_panel", "need": "the HUD side panel", "node": "/root/Main/SidePanel", "class": "ColorRect", "must_exist": true, "must_be_visible": true, "min_area_px": 57600},
+     {"id": "hud_label", "need": "the panel's title text", "node": "/root/Main/HudLabel", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 26200, "text_nonempty": true},
+     {"id": "panel_edge", "need": "the border that separates HUD from playfield", "node": "/root/Main/PanelEdge", "class": "ColorRect", "must_exist": true, "must_be_visible": true, "min_area_px": 500}
+    ]
+   },
    "goal": "stack the falling pieces and clear lines",
    "capabilities": [
     {"need": "move left", "action": "tetris_left", "observable": "PieceX"},
@@ -374,6 +568,16 @@
    ]
   },
   "towerdefense": {
+   "required_ui": {
+    "declared_by": "TASK-130 P7",
+    "what": "the UI/controls a player needs on screen for this game to be usable; the declaration is the judgement, the check is machine-run",
+    "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
+    "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
+    "items": [
+     {"id": "hud", "need": "wave / lives / gold readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 13000, "text_nonempty": true},
+     {"id": "status", "need": "the objective line at the bottom", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 10600, "text_nonempty": true}
+    ]
+   },
    "goal": "place towers on the map so the enemies never reach the exit",
    "capabilities": [
     {"need": "move the cursor left", "action": "td_left", "observable": "CursorCol"},
@@ -385,6 +589,17 @@
    ]
   },
   "neg_input_dead": {
+   "required_ui": {
+    "declared_by": "TASK-130 P7",
+    "what": "the UI/controls a player needs on screen for this game to be usable; the declaration is the judgement, the check is machine-run",
+    "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
+    "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
+    "note": "copy of the minesweeper declaration: this variant is a copy of projects/minesweeper and the point of P7 is that it must FAIL this declaration",
+    "items": [
+     {"id": "hud", "need": "mines / flags / safe-left readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 10800, "text_nonempty": true},
+     {"id": "status", "need": "the game's status line", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 4500, "text_nonempty": true}
+    ]
+   },
    "_negative_variant": {
     "task": "TASK-129 D-D",
     "failure_mode": "input disconnected (the game never reads the InputMap)",
@@ -405,6 +620,18 @@
    ]
   },
   "neg_black_screen": {
+   "required_ui": {
+    "declared_by": "TASK-130 P7",
+    "what": "the UI/controls a player needs on screen for this game to be usable; the declaration is the judgement, the check is machine-run",
+    "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
+    "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
+    "note": "copy of the snake declaration: this variant is a copy of projects/snake and the point of P7 is that it must FAIL this declaration",
+    "items": [
+     {"id": "field", "need": "the playing field", "node": "/root/Main/Background", "class": "ColorRect", "must_exist": true, "must_be_visible": true, "min_area_px": 240000},
+     {"id": "food", "need": "the food the player steers to", "node": "/root/Main/Food", "class": "ColorRect", "must_exist": true, "must_be_visible": true, "min_area_px": 300},
+     {"id": "head", "need": "the snake's head", "node": "/root/Main/SnakeSeg00", "class": "ColorRect", "must_exist": true, "must_be_visible": true, "min_area_px": 300}
+    ]
+   },
    "_negative_variant": {
     "task": "TASK-129 D-D",
     "failure_mode": "not rendering / blank window (the scene is never drawn)",
@@ -422,6 +649,17 @@
    ]
   },
   "neg_frozen": {
+   "required_ui": {
+    "declared_by": "TASK-130 P7",
+    "what": "the UI/controls a player needs on screen for this game to be usable; the declaration is the judgement, the check is machine-run",
+    "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
+    "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
+    "note": "copy of the breakout declaration: this variant is a copy of projects/breakout and the point of P7 is that it must FAIL this declaration",
+    "items": [
+     {"id": "hud_score", "need": "score readout", "node": "/root/Main/HudScore", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 7600, "text_nonempty": true},
+     {"id": "hud_status", "need": "the status line above the playfield", "node": "/root/Main/HudStatus", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 7400}
+    ]
+   },
    "_negative_variant": {
     "task": "TASK-129 D-D",
     "failure_mode": "frozen (frames do not advance the game)",
@@ -436,7 +674,52 @@
     {"need": "launch the ball", "action": "breakout_launch", "observable": "Launched|Ball"}
    ]
   },
+  "neg_ui_offscreen": {
+   "required_ui": {
+    "declared_by": "TASK-130 P7",
+    "what": "the UI/controls a player needs on screen for this game to be usable; the declaration is the judgement, the check is machine-run",
+    "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
+    "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
+    "note": "copy of the flappy declaration: this variant is a copy of projects/flappy and the point of P7 is that it must FAIL this declaration",
+    "items": [
+     {"id": "hud", "need": "score / passed / frame readout", "node": "/root/Main/Hud", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 10600, "text_nonempty": true},
+     {"id": "status", "need": "pipes readout", "node": "/root/Main/Status", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 4500, "text_nonempty": true}
+    ]
+   },
+   "_negative_variant": {
+    "task": "TASK-130",
+    "failure_mode": "required UI present but moved out of the viewport (the HUD is off screen while `visible` is still true)",
+    "source_project": "flappy",
+    "construction": "copy of projects/flappy with the `Hud` Label moved to x=-2000 by rewriting `offset_left`/`offset_right` in scenes/main.tscn (no C# edited); `visible` stays true and the engine still reports is_visible_in_tree() == true",
+    "expected_criteria": "P7 FAIL (the `hud` item exists and is visible_in_tree but does not intersect the viewport); P1..P6 PASS"
+   },
+   "goal": "flap through the pipes -- with the SCORE/PASSED HUD MOVED OFF SCREEN (negative variant)",
+   "capabilities": [
+    {
+     "need": "flap",
+     "action": "flap",
+     "observable": "BirdVelocity|BirdY"
+    },
+    {
+     "need": "restart after dying",
+     "action": "flappy_restart",
+     "observable": "Restarts|GameOver|Score"
+    }
+   ]
+  },
   "neg_hud_missing": {
+   "required_ui": {
+    "declared_by": "TASK-130 P7",
+    "what": "the UI/controls a player needs on screen for this game to be usable; the declaration is the judgement, the check is machine-run",
+    "rule": "every item must (1) resolve at the declared node path in the live tree, (2) be the declared class, (3) be visible_in_tree (an ancestor hidden counts), (4) keep modulate.a > 0.01, (5) overlap the viewport by >= min_area_px, and (6) where text_nonempty is set, not be blank.  min_area_px is half of the node's measured settle rect, rounded to 100 px^2 -- wide enough to survive a font/layout change, narrow enough to catch a collapsed or moved-away control",
+    "how_measured": "probe_required_ui_source() in tools/playability_gate.py, executed inside the game process right after the settle frame; the raw node read the verdict used is kept in <out-root>/<game>/gate.json -> p7_probe",
+    "note": "copy of the tetris declaration: this variant is a copy of projects/tetris and the point of P7 is that it must FAIL this declaration",
+    "items": [
+     {"id": "side_panel", "need": "the HUD side panel", "node": "/root/Main/SidePanel", "class": "ColorRect", "must_exist": true, "must_be_visible": true, "min_area_px": 57600},
+     {"id": "hud_label", "need": "the panel's title text", "node": "/root/Main/HudLabel", "class": "Label", "must_exist": true, "must_be_visible": true, "min_area_px": 26200, "text_nonempty": true},
+     {"id": "panel_edge", "need": "the border that separates HUD from playfield", "node": "/root/Main/PanelEdge", "class": "ColorRect", "must_exist": true, "must_be_visible": true, "min_area_px": 500}
+    ]
+   },
    "_negative_variant": {
     "task": "TASK-129 D-D",
     "failure_mode": "UI/controls missing (the HUD is removed)",

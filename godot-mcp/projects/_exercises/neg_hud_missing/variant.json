@@ -11,21 +11,22 @@
     "node": "SidePanel",
     "property": "visible",
     "value": "false",
-    "already_present": false
+    "already_present": true
    },
    {
     "node": "PanelEdge",
     "property": "visible",
     "value": "false",
-    "already_present": false
+    "already_present": true
    },
    {
     "node": "HudLabel",
     "property": "visible",
     "value": "false",
-    "already_present": false
+    "already_present": true
    }
   ],
+  "patch_applied_this_run": false,
   "scene_sha256_before_patch": "71a962e18eee31cd81d01344e278c0580b35a8a9e24e5ec22eba8990e194dc57",
   "scene_sha256_after_patch": "8d97a04a49f375954b6d339ca87c9b4d6166a157ae73b930e5f10e6c1cb606f1",
   "csharp_sources_copied_unchanged": true
@@ -37,7 +38,8 @@
   "P4": "PASS",
   "P5": "PASS (P5 is about the InputMap and the README, not about pixels)",
   "P6": "PASS",
-  "gate": "playable -- DECLARED AS A BLIND SPOT: no machine criterion we implemented asks whether the interface a player needs is on screen.  The variant is kept as a real frame a VISION model can be asked about."
+  "P7": "FAIL (TASK-130): the declared required UI (`SidePanel`, `HudLabel`, `PanelEdge`) is not visible_in_tree",
+  "gate": "not_playable after TASK-130 (before it: playable -- the declared blind spot P7 was added for)"
  },
  "engine": "F:\\moonbit-hof-rs\\godot-mcp\\godot\\bin\\godot.windows.editor.x86_64.mono.console.exe",
  "runnable_with": "python tools/playability_gate.py --exercise neg_hud_missing --games neg_hud_missing --agent=jev --visual-agent=playjev --out-root runs/playability/negatives",
