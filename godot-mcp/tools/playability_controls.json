@@ -28,6 +28,37 @@
   "it as a FAIL and the defect register carries it with a proposed patch. Rows are removed",
   "from 'missing' only when the action really exists and really responds."
  ],
+ "_agent_thresholds_comment": [
+  "TASK-124 C -- the model-in-the-loop playability thresholds for --agent=jev.",
+  "",
+  "A NeoHorse-Jev answer is typed, not free text: `noul` returns a P(true) and `score`",
+  "returns an expected level on an ORDERED criteria list. Those two numbers are the",
+  "model's opinion, so they only become a gate verdict through a threshold -- and a",
+  "threshold is a choice, so it is configurable here rather than hard-coded in the agent.",
+  "",
+  "*** These defaults are PRIOR ONLY AND UNCALIBRATED ***. The vendor reports no",
+  "NLL/Brier/ECE calibration for NeoHorse-Jev and warns: 'Set thresholds on an",
+  "independent dataset.' Do not treat a passing threshold_verdict as a calibrated",
+  "probability statement.",
+  "",
+  "Calibration plan (TASK-124-REPORT.md section C): we already own a labelled set --",
+  "positives are the 20 fixed games (runs/playability/<game>/, all P1..P6 green), and",
+  "negatives are dist/exe-task109-pre-fix (the pre-fix builds whose input was disabled).",
+  "Run the same jev probes over both, sweep noul_min_p_true and score_max_expected for",
+  "the cut that separates them (e.g. Youden index), then write the fitted values here and",
+  "flip `uncalibrated` to false with the measured ECE.",
+  "",
+  "'noul_min_p_true'  : every invariant's P(true) must be >= this value.",
+  "'score_max_expected': expected brokenness level (1 = working .. 5 = unusable) must be",
+  "                      <= this value."
+ ],
+ "agent_thresholds": {
+  "backend": "jev",
+  "noul_min_p_true": 0.5,
+  "score_max_expected": 2.5,
+  "uncalibrated": true,
+  "note": "PRIOR ONLY, NOT CALIBRATED. Vendor: 'NLL, Brier, and ECE calibration results have not been reported. Set thresholds on an independent dataset.' Calibrate with positives = the 20 fixed games, negatives = dist/exe-task109-pre-fix."
+ },
  "games": {
   "asteroids": {
    "goal": "fly the ship, shoot the rocks, survive",

@@ -6627,3 +6627,63 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
   * 被忽略/不忽略的判定用 `git check-ignore -v` 逐条验证过（exe、zip、pyc、ex_write2 命中规则；
     `dist/MANIFEST.txt` 与 `_exercises/ex_nav/project.godot` 保持可入库）；
   * **回滚点**：`git checkout -- .gitignore` 即恢复；本决策不移动/不删除任何文件。
+
+## D166 — 为 NeoHorse-Jev 单独开 `--agent=jev` 原生决策后端，并用哑服务验证协议层（TASK-124）
+
+* **日期**：2026-09-27
+* **触发问题**：用户要"让本地模型试玩游戏"。指定模型 NeoHorse-Jev 是**结构化决策模型**
+  （prefill-only、不生成文本、无 GGUF、服务端无 OpenAI 兼容端点，只有 `/health`、
+  `/v1/decision`、`/v1/systemone`），而 `tools/playtest_agent.py` 的文档与 `openai` 后端
+  假设的是 chat-completions 协议 —— 旧文档给的两条启动命令（vLLM 的 OpenAI api_server
+  指向 Jev 模型、llama-server 加载 Jev GGUF）对 Jev **不可能工作**。本轮不下载权重
+  （约 9.15 GB，HuggingFace 在本机不可达；Windows 可行性待用户决定）。
+* **考虑的选项（含被否决者及理由）**：
+  1. **把 Jev 硬塞进 `--agent=openai`**（改模型名/提示词）—— 否决：Jev 服务端没有
+     `/v1/chat/completions`、不生成 `choices[].message.content`，这条路只能靠哑服务假装
+     成功，等于把"协议不对"藏起来。
+  2. **等 TASK-125 权重下载完再实现**—— 否决：协议层正确性与权重无关；哑服务能在无权重、
+     无 GPU、无网络下逐条验证请求形状、响应解析、限值与错误/退避，权重到位后只换 base URL。
+  3. **在 `OpenAIAgent` 里加分支复用传输**—— 否决：请求体（`state`/`questions` vs
+     `messages`）与响应体（`answers.<key>` vs `choices`）形状完全不同，混在一个类里会让
+     "openai = 真 OpenAI 兼容"的语义失效，也让 429/529/422 的退避策略互相污染。
+  4. **新建 `JevAgent` + `tools/tests/jev_dumb_server.py` 哑服务 + 独立测试文件**—— 选中。
+  5. **超长 `state` 静默截断**—— 否决：厂商明文"超限直接拒绝，不静默截断"；默认改为
+     `state_overflow="error"`（明确报错），只有显式 `clip` 才裁剪**并逐项声明丢了什么**。
+  6. **图请求带多问题时自动降级为单问题**—— 否决为默认：那正是"把多问题请求悄悄发成图请求"；
+     默认给清晰错误，只有显式 `image_multi_question="trim"`（并把被丢问题写进证据）才裁剪。
+  7. **把可玩性阈值硬编码进 agent**—— 否决：厂商没有报告 NLL/Brier/ECE 校准，阈值只能是先验；
+     改为放进 `tools/playability_controls.json` 的 `agent_thresholds`，带 `uncalibrated` 标注。
+  8. **`jev` 默认发图**—— 否决为默认：厂商自己的数字是状态文本强（text-state Doom
+     10.60–14.40）、视觉弱（image-Doom 接近随机；`vision_finetuning: false`），所以图片改为
+     显式 opt-in。
+* **最终选择**：
+  * `tools/playtest_agent.py` 新增 `JevAgent`（`--agent=jev`）：`PLAYTEST_BASE_URL` 作为**根 URL**，
+    `POST /v1/systemone`（`--decision-path`/`PLAYTEST_DECISION_PATH` 可切 `/v1/decision`），
+    `GET /health` 就绪检查（**不打 `/v1/models`**）；typed `questions`（动作 = `choice`，
+    不变量 = `noul`，损坏度 = `score`）；`answers` → 现有动作字典（复用 `normalise_action`/
+    `keycode_of`）；probabilities/confidence/usage/image_tokens 全量进证据；429/529 按
+    `Retry-After` 退避（次数可配、有上限）；401/413/422 明确映射；未配置/服务不通降级为
+    `wait` 并记录；传输用 `threading.Lock` 串行化（服务无动态批处理）。
+  * 头部文档把两条错误命令替换为两条**逐字来源**的正确路径（原生 `neohorse-decision serve`、
+    vLLM pooling 适配器），并注明"Jev 无 GGUF、HuggingFace 在本机不可达、Windows 可行性未验证"。
+  * `tools/tests/jev_dumb_server.py`：stdlib 哑服务，**按文档逐条校验**请求（未知字段、
+    `criteria` 基数、`state` 2048 token、1 图 1 问题、1 MiB 体），可重放 429+`Retry-After: 1`、
+    422、不健康 `/health`；`/v1/models` 故意 404。
+  * `tools/tests/test_jev_agent.py`：34 项检查（D1–D7 + 回归），证据写
+    `runs/playability/agent-probe-jev.json`（`runs/` 按既有规则不入库）。
+  * `tools/playability_gate.py`：`--decision-path`；把 `agent_thresholds` 传给 agent 并把
+    `threshold_verdict` 记进 `gate["agent"]` 与 summary —— 记录，不静默采信。
+* **选择理由**：把"模型怎么答"和"我们怎么问/怎么读"分开。协议层是被厂商文档钉死的事实，
+  可以用哑服务在**无权重**时证明；权重与 Windows 可行性是另一件事，不该阻塞前者。宁可让
+  `jev` 与 `openai` 并列成两个后端，也不要让任一端点的形状被另一个带偏。
+* **预期影响与回滚点**：
+  * `scripted`/`openai` 行为不变（回归项 `R_scripted_unchanged`、`R_openai_still_available`
+    通过；`--probe` 仍 ok=true）。
+  * 新增文件：`tools/tests/jev_dumb_server.py`、`tools/tests/test_jev_agent.py`；改动：
+    `tools/playtest_agent.py`、`tools/playability_gate.py`、`tools/playability_controls.json`。
+  * **未做**：不下载权重、不装 GPU 依赖、未验证 Windows 上 Jev 能否真跑、未跑真·游戏门的
+    `--agent=jev`（需要 Godot 全窗运行；协议层已由哑服务覆盖）。
+  * **回滚点**：`git revert` 本任务的功能提交即回到 TASK-120 状态；`runs/playability/`
+    产物不入库，随时可重跑。
+  * **引擎未动**：`godot/modules/mcp_server/` 一个字节未改，按铁律 7 未触发两变体重建/十道门/
+    accept_m1/引擎 push。

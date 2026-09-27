@@ -841,6 +841,7 @@ def run_gate(game, args):
 
     proj = parse_project(game)
     controls = load_controls()
+    agent_thresholds = load_agent_thresholds()
     write_json(os.path.join(outdir, "project.json"), proj)
     try:
         audit = audit_one(game)
@@ -1180,7 +1181,9 @@ def run_gate(game, args):
                     "actions": {k: v["keys"] for k, v in proj["actions"].items()},
                     "keys": proj["readme_keys"]}
             agent = build_agent(args.agent, game, goal["objective"],
-                                {"plan": None, "hold_ms": int(args.hold * 1000)})
+                                {"plan": None, "hold_ms": int(args.hold * 1000),
+                                 "decision_path": getattr(args, "decision_path", "") or "",
+                                 "thresholds": agent_thresholds})
             acts = []
             action = agent.decide(frames_for_agent(frames), (s_end or {}), goal)
             acts.append({"action": action, "why": "first decision"})
@@ -1197,8 +1200,21 @@ def run_gate(game, args):
                 capture("agent%02d" % step, mcp, None, note="after the agent's action")
                 action = agent.decide(frames_for_agent(frames), (s_end or {}), goal)
             judge = agent.judge(frames_for_agent(frames), (s_end or {}), goal)
+            threshold_verdict = None
+            if hasattr(agent, "threshold_verdict"):
+                try:
+                    threshold_verdict = agent.threshold_verdict()
+                except Exception as e:  # noqa: BLE001
+                    threshold_verdict = {"error": "%s: %s" % (type(e).__name__, e)}
             gate["agent"] = {"report": agent.report(), "decisions": acts,
-                             "judge": judge}
+                             "judge": judge,
+                             # TASK-124 C: noul P(true) / score expected level against
+                             # the CONFIGURABLE thresholds in tools/playability_controls.json
+                             # (`agent_thresholds`).  Recorded, not silently trusted: the
+                             # verdict carries its own `uncalibrated` flag.
+                             "threshold_verdict": threshold_verdict,
+                             "thresholds_source": os.path.join(HERE,
+                                                               "playability_controls.json")}
             write_json(os.path.join(outdir, "agent.json"), gate["agent"])
 
     except Exception as e:  # noqa: BLE001
@@ -1295,6 +1311,22 @@ def load_controls(path=None):
         return {}
     doc = json.load(io.open(p, encoding="utf-8"))
     return doc.get("games") or {}
+
+
+def load_agent_thresholds(path=None):
+    """TASK-124 C: the configurable playability thresholds for the model-in-the-loop.
+
+    They live next to the capability table because they answer a neighbouring question:
+    P1..P6 are machine checks, while a `noul` P(true) / `score` expected level is a
+    model opinion.  The values are PRIOR ONLY -- the vendor reports no NLL/Brier/ECE
+    calibration and says to set thresholds on an independent dataset -- so the block
+    carries an explicit `uncalibrated` flag and the calibration plan.
+    """
+    p = path or os.path.join(HERE, "playability_controls.json")
+    if not os.path.isfile(p):
+        return {}
+    doc = json.load(io.open(p, encoding="utf-8"))
+    return doc.get("agent_thresholds") or {}
 
 
 def verdict_p6(game, controls, tested):
@@ -1633,7 +1665,11 @@ def write_reports(gates, audit, args):
                    "P1_pixel_delta": PIXEL_DELTA,
                    "P2_frames": P2_FRAMES,
                    "P3_min_changed_pixels": P3_MIN_CHANGED_PIXELS},
-               "games": [], "static_audit": audit}
+               "games": [], "static_audit": audit,
+               # TASK-124 C: the model-in-the-loop thresholds are configurable and
+               # explicitly UNCALIBRATED; copied into the summary so a verdict is never
+               # separated from the numbers that produced it.
+               "agent_thresholds": load_agent_thresholds()}
     for g in gates:
         crit = g.get("criteria") or {}
         summary["games"].append({
@@ -1684,8 +1720,17 @@ def main(argv=None):
     ap.add_argument("--all", action="store_true")
     ap.add_argument("--calibrate", action="store_true",
                     help="run the frames/metrics only; no verdict report is trusted")
-    ap.add_argument("--agent", default="scripted")
+    ap.add_argument("--agent", default="scripted",
+                    help="scripted | openai | jev | none.  `jev` is NeoHorse-Jev's "
+                         "native structured-decision protocol (TASK-124): root URL in "
+                         "PLAYTEST_BASE_URL, GET /health readiness, POST /v1/systemone "
+                         "(or --decision-path /v1/decision).  `openai` is only for a "
+                         "model that really speaks OpenAI chat-completions.")
     ap.add_argument("--agent-steps", type=int, default=2)
+    ap.add_argument("--decision-path", default="",
+                    help="TASK-124: the jev backend's decision endpoint "
+                         "(/v1/systemone default, or /v1/decision; env "
+                         "PLAYTEST_DECISION_PATH)" )
     ap.add_argument("--objective", default="")
     ap.add_argument("--port", type=int, default=DEFAULT_PORT)
     ap.add_argument("--ready-timeout", type=float, default=240)

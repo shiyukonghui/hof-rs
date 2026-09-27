@@ -38,36 +38,65 @@ Backends
              requires a JSON action back; in `judge` mode it asks the very same
              endpoint the question a human reviewer would ask -- "does this frame
              look playable, is anything wrong?".
+  jev      : NeoHorse-Jev's *native* structured-decision protocol (TASK-124).  Jev
+             is not a chat model; see the next section.  It posts typed questions
+             (`noul` / `choice` / `score`) to `POST <base>/v1/systemone` (or
+             `/v1/decision`), checks readiness with `GET <base>/health`, and maps the
+             answers back to the same action dict the other backends return.
 
-    env var            meaning                          example
-    -----------------  -------------------------------  -------------------------------
-    PLAYTEST_BASE_URL  OpenAI-compatible base URL       http://127.0.0.1:8000/v1
-    PLAYTEST_API_KEY   bearer token (may be empty)      sk-local
-    PLAYTEST_MODEL     model name                       neo-horse-jev
+    env var                meaning                        example
+    ---------------------  -----------------------------  ------------------------------
+    PLAYTEST_BASE_URL      root URL of the model server   http://127.0.0.1:8080
+                           (`jev`: a ROOT url -- the path  (no /v1 suffix for jev)
+                            is /v1/systemone by default)
+    PLAYTEST_API_KEY       bearer token (may be empty)    sk-local
+    PLAYTEST_MODEL         model name                     NeoHorse-Jev-4B
+    PLAYTEST_DECISION_PATH jev decision endpoint           /v1/systemone
+    PLAYTEST_STATE_OVERFLOW  error | clip                 error
 
-Wiring a local model such as NeoHorse-Jev (documented contract, item D)
-----------------------------------------------------------------------
-    :: 1. start the model as an OpenAI-compatible server (pick the one you have)
-    ::    vLLM:
-    D:\\Anaconda\\Scripts\\python.exe -m vllm.entrypoints.openai.api_server ^
-         --model <path-or-hf-id-of-NeoHorse-Jev> --served-model-name neo-horse-jev ^
-         --port 8000 --host 127.0.0.1
-    ::    llama.cpp:  llama-server.exe -m NeoHorse-Jev.gguf --port 8000 --host 127.0.0.1
-    ::    (llama.cpp serves /v1/chat/completions too; it ignores the api key.)
-    ::
-    :: 2. point the gate at it
-    set PLAYTEST_BASE_URL=http://127.0.0.1:8000/v1
-    set PLAYTEST_API_KEY=sk-local
-    set PLAYTEST_MODEL=neo-horse-jev
-    ::
-    :: 3. run the gate with the model in the loop
-    D:\\Anaconda\\Scripts\\python.exe F:\\moonbit-hof-rs\\godot-mcp\\tools\\playability_gate.py ^
-         --games pong --agent=openai
+NeoHorse-Jev is NOT an OpenAI model (corrected in TASK-124)
+-----------------------------------------------------------
+Jev (ModelScope `TokenRhythm/NeoHorse-Jev-4B`; source github.com/TokenRhythm/NeoHorse)
+is a *structured decision* model: prefill-only, it generates no text, it is not a chat
+causal LM, it ships no GGUF, and the vendor explicitly documents that **its server has no
+OpenAI-compatible endpoint** ("Only the endpoints and protocol scope described here are
+supported; `/v1/models` is not provided.").  So `--agent=openai` pointed at Jev cannot
+work.  Earlier revisions of this header told you to start Jev either through an
+OpenAI-compatible launcher (vLLM's `api_server` with a Jev model id) or through a
+`llama-server` GGUF launch -- **both are impossible for Jev** (no chat causal LM, no
+GGUF: `model_manifest.json` says "unified multimodal backbone + independent decision
+pointer head; NOT chat causal LM").  Those two wrong recipes are replaced by the two
+real paths (commands verbatim from the vendor's documentation, read as first-party
+sources in TASK-123; see `recovery/tasks/TASK-124.md` §1):
+
+    :: A. NeoHorse-Jev through its native runtime -- the supported path (text, or
+    ::    text + exactly one image).  Source: NeoHorse README / decision API docs.
+    neohorse-decision serve --model-dir "<MODEL_DIR>" --port 8080
+    ::    endpoints: GET /health, POST /v1/decision, POST /v1/systemone.
+    ::    No /v1/models, no /v1/chat/completions, no GGUF, no quantised Jev.
+    ::    Weights: ModelScope TokenRhythm/NeoHorse-Jev-4B (Apache-2.0, ~9.15 GB).
+    ::    HuggingFace is UNREACHABLE from this machine (measured HTTP 000 / connect
+    ::    timeout); the vendor's recorded runtime is Linux (python 3.12 / torch 2.8 /
+    ::    CUDA 12.8); Windows feasibility on this box is UNVERIFIED and is a pending
+    ::    user decision.  TASK-124 downloads no weights.
+    set PLAYTEST_BASE_URL=http://127.0.0.1:8080
+    set PLAYTEST_MODEL=NeoHorse-Jev-4B
+    D:\\Anaconda\\Scripts\\python.exe tools\\playability_gate.py --games pong --agent=jev
+
+    :: B. Alternative: the vLLM 0.28.0 *pooling* adapter -- the decision head is
+    ::    computed on the client's CPU (`infer.py` posts /pooling for token embeddings)
+    CUDA_VISIBLE_DEVICES=0 python infer/vllm/launch.py --bundle /path/to/model --port 30000
+
+    :: --agent=openai remains available, but ONLY for a model that really speaks
+    :: OpenAI chat-completions -- e.g. the sibling NeoHorse-1-4B/9B (text-only, real
+    :: /v1/chat/completions, GGUF quantisations exist).  It is not a Jev path.
 
     That is *all* the coupling there is: the backend speaks/consumes JSON over
     HTTP and nothing in the gate knows the model's name.  A vision-less model
     still works -- the state JSON is always sent and the images become optional
-    when `--no-images` is passed.
+    when `--no-images` is passed.  For `jev`, images are opt-in (there the vendor's own
+    numbers say the text state is the strong path and the vision head is weak), and an
+    image request is limited to exactly one question, one image.
 
 Self-test without any model
 ---------------------------
@@ -78,6 +107,14 @@ Self-test without any model
         model is absent.  Exit code 0 means: request built, auth header sent,
         image part attached, JSON action extracted, server error reported as an
         error (and *not* as a silent success).
+
+    python tools\\tests\\test_jev_agent.py
+        the same idea for the `jev` backend: `tools/tests/jev_dumb_server.py` is a
+        stdlib dumb `/v1/systemone` + `/health` service that VALIDATES every request
+        against the documented protocol (unknown fields, question cardinalities, the
+        2048-token `state` limit, the 1-image/1-question rule) and can replay 429 +
+        `Retry-After: 1`, 422 and an unhealthy `/health`.  Evidence is written to
+        `runs/playability/agent-probe-jev.json`.  No weights, no GPU, stdlib only.
 """
 
 from __future__ import print_function
@@ -442,6 +479,668 @@ class OpenAIAgent(PlaytestAgent):
 
 
 # ---------------------------------------------------------------------------
+# backend 3: jev -- NeoHorse-Jev's NATIVE structured-decision protocol (TASK-124)
+# ---------------------------------------------------------------------------
+# Every protocol constant below is a first-party fact from TASK-123's read-only
+# research of the vendor documentation (URL + HTTP 200; verbatim excerpts in
+# recovery/tasks/TASK-124.md §1).  In particular:
+#   * the server has exactly three endpoints: POST /v1/decision, POST /v1/systemone,
+#     GET /health -- and "/v1/models is not provided";
+#   * the request fields are ONLY model/state/questions/image; unknown fields raise
+#     `ValueError('Unknown request fields: ...')`;
+#   * question types are noul | choice | score, with per-type `criteria` rules;
+#   * confidence is a local distribution statistic, NOT a calibrated probability;
+#   * limits: state 2048 tokens, 16 questions/request, 1 MiB body, exactly 1 image +
+#     1 question per image request; busy => 429/529 + `Retry-After: 1`;
+#   * no dynamic batching: "HTTP text and image requests share the same backbone,
+#     decision head, and GPU lock, without dynamic batching." => serialize.
+JEV_ANSWER_MODEL = "NeoHorse-Jev-4B"
+JEV_ACCEPTED_MODELS = ("neohorse-jev", "NeoHorse-Jev-4B", "NeoHorse-JEV-4B",
+                       "TokenRhythm/NeoHorse-Jev-4B")
+JEV_HEALTH_PATH = "/health"
+JEV_DECISION_PATHS = ("/v1/systemone", "/v1/decision")
+JEV_LIMITS = {
+    "state_max_tokens": 2048,
+    "branch_max_tokens": 8192,
+    "request_max_tokens": 32768,
+    "max_questions": 16,
+    "request_max_bytes": 1048576,          # 1 MiB
+    "image_request_max_bytes": 8388608,    # 8 MiB
+    "image_decoded_max_bytes": 4194304,    # 4 MiB
+    "image_max_pixels": 4194304,
+    "image_max_tokens": 1024,
+    "image_request_max_tokens": 12288,
+    "choice_max_candidates": 255,
+    "score_min_levels": 2,
+    "score_max_levels_decision": 255,
+    "score_max_levels_systemone": 10,      # /v1/systemone caps score at 2..10
+}
+
+# The default text request: one action choice + N invariants + one score question.
+# "Does this frame clearly look playable, with no visual corruption or freeze?"
+JEV_INVARIANT_QUESTIONS = [
+    ("playable_frame",
+     "Does this frame clearly look playable, with no visual corruption or freeze?"),
+    ("no_render_failure",
+     "Is the frame free of an error dialog, a blank/flat screen, or an obvious "
+     "rendering failure?"),
+    ("responds_to_input",
+     "Did the game visibly respond to the last injected input (its exported state or "
+     "its pixels changed)?"),
+    ("loop_running",
+     "Is the game loop still running, i.e. the screen is not frozen on the same frame "
+     "count?"),
+]
+# score criteria is an ORDERED list, low -> high.  Here the ordering is brokenness,
+# so the expected level is an upper bound: lower is better.
+JEV_BROKENNESS_LEVELS = [
+    "1 = fully working: content is drawn, input responds, nothing looks wrong",
+    "2 = minor glitches only; still clearly playable",
+    "3 = partially broken: some documented capability is missing or unresponsive",
+    "4 = badly broken: the game barely responds or renders garbage",
+    "5 = unusable: flat/blank screen, error dialog, or frozen",
+]
+
+# Thresholds are PRIOR values and are explicitly NOT calibrated.  The vendor reports
+# no calibration and warns: "NLL, Brier, and ECE calibration results have not been
+# reported. Set thresholds on an independent dataset."  TASK-124 §C wires these into
+# the gate as *configurable* values and documents the labelling plan (our 20 fixed
+# games = positive, dist/exe-task109-pre-fix = negative) in TASK-124-REPORT.md.
+DEFAULT_JEV_THRESHOLDS = {
+    "noul_min_p_true": 0.5,       # every invariant's P(true) must be >= this
+    "score_max_expected": 2.5,    # expected brokenness level must be <= this
+}
+JEV_THRESHOLD_NOTE = (
+    "PRIOR ONLY, NOT CALIBRATED. The vendor reports no NLL/Brier/ECE calibration for "
+    "NeoHorse-Jev and warns: 'Set thresholds on an independent dataset.' Replace these "
+    "defaults with thresholds fitted on our own labelled frames (positives: the 20 "
+    "fixed games; negatives: dist/exe-task109-pre-fix, the pre-fix builds whose input "
+    "was disabled) before any threshold is treated as a verdict."
+)
+
+
+class JevProtocolError(Exception):
+    """A request that must not be sent (or an answer that cannot be trusted)."""
+
+
+def jev_estimate_tokens(text):
+    """A conservative token estimate, used to *refuse* rather than silently truncate.
+
+    Basis (documented in the report): no Jev tokenizer exists on this machine, so the
+    estimate must be an upper bound.  BPE tokenizers of this family pack roughly four
+    ASCII characters per token, and every non-ASCII character (CJK is 3 bytes in
+    UTF-8) is charged one full token.  The estimate therefore never *under*-counts an
+    English/Chinese request, which means a request that passes the check is smaller
+    than the documented limit -- the safe direction for an over-limit rejection.
+    """
+    ascii_n = 0
+    other_n = 0
+    for ch in text:
+        if ord(ch) < 128:
+            ascii_n += 1
+        else:
+            other_n += 1
+    return (ascii_n + 3) // 4 + other_n
+
+
+def jev_render_state(state):
+    """The runtime flattens fields into a labelled text form; JSON is equivalent.
+
+    `state` may be a string, object or array (verbatim: "state can be a string, object
+    or array; render() flattens field names as labels"), so our structured state JSON
+    is passed through almost verbatim -- no translation layer is needed.
+    """
+    if isinstance(state, str):
+        return state
+    return json.dumps(state, ensure_ascii=False, sort_keys=True)
+
+
+def action_from_choice(choice, goal, hold_ms, why):
+    """`answers.<action key>.choice` -> the existing action dict.
+
+    Reuses `OpenAIAgent.normalise_action` / `keycode_of` so the gate sees exactly the
+    same shapes as the other backends.
+    """
+    if choice is None:
+        return None
+    acts = (goal or {}).get("actions") or {}
+    if choice in acts:
+        return OpenAIAgent.normalise_action({"type": "action", "action": choice,
+                                             "pressed": True, "hold_ms": int(hold_ms),
+                                             "why": why})
+    low = str(choice).strip().lower()
+    if low in ("wait", "noop", "no_op", "none", "observe", "hold"):
+        return {"type": "wait", "ms": int(hold_ms or 200), "why": why}
+    if low in ("done", "finish", "stop", "end"):
+        return {"type": "done", "why": why}
+    kc = keycode_of(choice)
+    if kc is not None:
+        return OpenAIAgent.normalise_action({"type": "key", "keycode": kc,
+                                             "pressed": True, "hold_ms": int(hold_ms),
+                                             "why": why})
+    return None
+
+
+class JevAgent(PlaytestAgent):
+    """NeoHorse-Jev native decision backend.
+
+    It never raises out of `decide`: an unconfigured endpoint, an unreachable service,
+    an over-limit request, a busy worker or a rejected request all become a safe `wait`
+    action plus a recorded reason -- never a silent success.
+    """
+
+    name = "jev"
+
+    def __init__(self, game=None, objective="", options=None):
+        PlaytestAgent.__init__(self, game, objective, options)
+        o = self.options
+        self.base_url = (o.get("base_url") or os.environ.get("PLAYTEST_BASE_URL", "")
+                         ).rstrip("/")
+        self.api_key = o.get("api_key")
+        if self.api_key is None:
+            self.api_key = os.environ.get("PLAYTEST_API_KEY", "")
+        self.model = (o.get("model") or os.environ.get("PLAYTEST_MODEL", "")
+                      or JEV_ANSWER_MODEL)
+        self.decision_path = (o.get("decision_path")
+                              or os.environ.get("PLAYTEST_DECISION_PATH", "")
+                              or "/v1/systemone")
+        self.health_path = o.get("health_path") or JEV_HEALTH_PATH
+        self.timeout = float(o.get("timeout", 60))
+        self.send_images = bool(o.get("send_images", False))   # text state is the strong path
+        self.require_health = bool(o.get("require_health", True))
+        self.max_retries = max(0, int(o.get("max_retries", 2)))
+        self.retry_backoff = float(o.get("retry_backoff", 1.0))
+        self.retry_backoff_max = float(o.get("retry_backoff_max", 10.0))
+        self.hold_ms = int(o.get("hold_ms", 300))
+        self.state_overflow = (o.get("state_overflow")
+                               or os.environ.get("PLAYTEST_STATE_OVERFLOW", "error")).lower()
+        self.max_questions = min(int(o.get("max_questions", JEV_LIMITS["max_questions"])),
+                                 JEV_LIMITS["max_questions"])
+        self.invariant_questions = max(0, int(o.get("invariant_questions", 3)))
+        self.score_question = bool(o.get("score_question", True))
+        self.action_key = o.get("action_key") or "move"
+        self.score_key = o.get("score_key") or "brokenness"
+        self.image_multi_question = str(o.get("image_multi_question", "error")).lower()
+        self.score_levels = list(o.get("score_levels") or JEV_BROKENNESS_LEVELS)
+        self.thresholds = dict(DEFAULT_JEV_THRESHOLDS)
+        self.thresholds.update(o.get("thresholds") or {})
+
+        self.errors = []
+        self.calls = []            # request/response evidence for the gate
+        self.attempts = []         # every transport attempt (proves the retries)
+        self.health = None
+        self.last_evidence = None
+        self.last_noul = {}
+        self.last_scores = {}
+        self._ready = None
+        # The service has no dynamic batching, so requests are serialized here.
+        self._lock = threading.Lock()
+
+    # ---- error/evidence bookkeeping -------------------------------------
+    def _error(self, kind, message, **extra):
+        rec = {"kind": kind, "error": message}
+        rec.update(extra)
+        self.errors.append(rec)
+        return rec
+
+    # ---- transport -------------------------------------------------------
+    def _request(self, method, path, payload=None):
+        """One transport attempt.  The lock is intentional: the service serializes."""
+        url = self.base_url + path
+        body = json.dumps(payload).encode("utf-8") if payload is not None else None
+        req = Request(url, data=body, method=method)
+        req.add_header("Content-Type", "application/json")
+        if self.api_key:
+            req.add_header("Authorization", "Bearer %s" % self.api_key)
+        rec = {"method": method, "url": url, "status": None, "headers": {},
+               "body": "", "seconds": 0.0, "lock": "serialized"}
+        t0 = time.time()
+        with self._lock:
+            try:
+                resp = urlopen(req, timeout=self.timeout)
+                raw = resp.read().decode("utf-8", "replace")
+                rec["status"] = getattr(resp, "status", 200)
+                rec["headers"] = dict((k.lower(), v) for k, v in resp.headers.items())
+                rec["body"] = raw
+            except HTTPError as e:
+                raw = e.read().decode("utf-8", "replace") if hasattr(e, "read") else ""
+                rec["status"] = e.code
+                try:
+                    rec["headers"] = dict((k.lower(), v) for k, v in e.headers.items())
+                except Exception:  # noqa: BLE001
+                    rec["headers"] = {}
+                rec["body"] = raw
+                rec["error"] = "HTTPError"
+            except URLError as e:
+                rec["error"] = "URLError: %s" % e
+            except Exception as e:  # noqa: BLE001 - the gate must never die on a model
+                rec["error"] = "%s: %s" % (type(e).__name__, e)
+        rec["seconds"] = round(time.time() - t0, 3)
+        return rec
+
+    def check_health(self):
+        """`GET /health` -- the only readiness probe Jev has (there is no /v1/models)."""
+        rec = self._request("GET", self.health_path)
+        parsed = None
+        if rec.get("status") == 200 and rec.get("body"):
+            try:
+                parsed = json.loads(rec["body"])
+            except Exception as e:  # noqa: BLE001
+                rec["parse_error"] = "%s: %s" % (type(e).__name__, e)
+        rec["json"] = parsed
+        self.health = {"url": rec["url"], "status": rec.get("status"),
+                       "seconds": rec.get("seconds"), "json": parsed,
+                       "input_modalities": (parsed or {}).get("input_modalities")
+                       if isinstance(parsed, dict) else None,
+                       "error": rec.get("error")}
+        return rec
+
+    def _post_decision(self, payload):
+        """POST with the documented busy protocol: 429/529 honour `Retry-After`."""
+        attempts = []
+        delay = self.retry_backoff
+        max_attempts = self.max_retries + 1
+        rec = None
+        for i in range(1, max_attempts + 1):
+            rec = self._request("POST", self.decision_path, payload)
+            status = rec.get("status")
+            retry_after = (rec.get("headers") or {}).get("retry-after")
+            attempts.append({"attempt": i, "status": status, "seconds": rec.get("seconds"),
+                             "retry_after": retry_after, "error": rec.get("error")})
+            if status == 200:
+                break
+            if status in (429, 529):
+                wait = delay
+                try:
+                    wait = float(retry_after)
+                except (TypeError, ValueError):
+                    pass
+                wait = min(max(0.0, wait), self.retry_backoff_max)
+                if i < max_attempts:
+                    time.sleep(wait)
+                    delay = min(delay * 2.0, self.retry_backoff_max)
+                continue
+            break  # 401/413/422/... are hard errors: no retry, report them
+        rec["attempts"] = attempts
+        self.attempts.extend(attempts)
+        return rec
+
+    # ---- request construction -------------------------------------------
+    def build_action_criteria(self, goal):
+        crit = {}
+        acts = (goal or {}).get("actions") or {}
+        for name in sorted(acts):
+            keys = acts.get(name)
+            if isinstance(keys, (list, tuple)):
+                keys_s = ",".join(str(k) for k in keys)
+            elif keys is None:
+                keys_s = ""
+            else:
+                keys_s = str(keys)
+            crit[name] = ("hold the game's InputMap action '%s' (bound key(s): %s)"
+                          % (name, keys_s or "?"))
+        for k in ((goal or {}).get("keys") or []):
+            if keycode_of(k) is None:
+                continue
+            ck = "key_%s" % str(k).strip().upper()
+            crit.setdefault(ck, "press and release the key %s" % k)
+        crit.setdefault("wait", "do nothing this step (hold position / observe)")
+        crit.setdefault("done", "stop probing: no further action is likely to help")
+        return crit
+
+    def build_questions(self, goal, with_image=False):
+        """The typed `questions` object.  Image requests carry EXACTLY one question."""
+        q = {}
+        q[self.action_key] = {
+            "type": "choice",
+            "instructions": self.options.get(
+                "action_instructions",
+                "Choose the single next input that best serves the objective."),
+            "criteria": self.build_action_criteria(goal),
+        }
+        if with_image:
+            # Documented as hard: an image request carries exactly 1 image + 1 question.
+            if len(q) != 1:
+                raise JevProtocolError("an image request must carry exactly 1 question")
+            return q
+        for key, text in JEV_INVARIANT_QUESTIONS[:self.invariant_questions]:
+            q[key] = {"type": "noul", "instructions": text}
+        if self.score_question:
+            q[self.score_key] = {
+                "type": "score",
+                "instructions": ("Rate how broken this frame is, from 1 (fully working) "
+                                 "to %d (unusable)." % len(self.score_levels)),
+                "criteria": list(self.score_levels),
+            }
+        if len(q) > self.max_questions:
+            raise JevProtocolError("built %d questions, over the %d-per-request limit"
+                                   % (len(q), self.max_questions))
+        if not (JEV_LIMITS["score_min_levels"] <= len(self.score_levels)
+                <= JEV_LIMITS["score_max_levels_systemone"]):
+            raise JevProtocolError("score criteria needs 2..%d ordered levels for "
+                                   "/v1/systemone, got %d"
+                                   % (JEV_LIMITS["score_max_levels_systemone"],
+                                      len(self.score_levels)))
+        return q
+
+    def prepare_state(self, state):
+        """Enforce the 2048-token `state` limit; never truncate silently.
+
+        Returns (state_value, evidence).  `state_overflow="error"` (the default)
+        refuses the request; `"clip"` drops whole fields/items/trailing characters and
+        records exactly what was dropped in the returned evidence.
+        """
+        text = jev_render_state(state) if not isinstance(state, str) else state
+        n = jev_estimate_tokens(text)
+        ev = {"state_tokens_estimate": n, "state_bytes": len(text.encode("utf-8")),
+              "limit": JEV_LIMITS["state_max_tokens"], "clipped": None}
+        if n <= JEV_LIMITS["state_max_tokens"]:
+            return state, ev
+        limit = JEV_LIMITS["state_max_tokens"]
+        if self.state_overflow != "clip":
+            raise JevProtocolError(
+                "state is ~%d tokens (estimated), over the %d-token documented limit; "
+                "the service REJECTS over-limit requests rather than truncating. Pass "
+                "state_overflow='clip' to drop whole fields and record what was dropped."
+                % (n, limit))
+        kept, dropped = self._clip_state(state, limit)
+        kept_text = jev_render_state(kept) if not isinstance(kept, str) else kept
+        ev["clipped"] = dropped
+        ev["state_tokens_estimate"] = jev_estimate_tokens(kept_text)
+        ev["state_bytes"] = len(kept_text.encode("utf-8"))
+        return kept, ev
+
+    @staticmethod
+    def _clip_state(state, limit):
+        """Explicit clipping: drop whole fields/items/trailing chars, record each."""
+        dropped = {"reason": "state over the %d-token limit; explicit clip "
+                             "(NOT a silent truncation)" % limit,
+                   "dropped_keys": [], "dropped_items": 0, "dropped_chars": 0}
+        if isinstance(state, dict):
+            kept = dict(state)
+            order = sorted(kept, key=lambda k: len(json.dumps(kept[k], ensure_ascii=False)),
+                           reverse=True)
+            for k in order:
+                if jev_estimate_tokens(jev_render_state(kept)) <= limit:
+                    break
+                dropped["dropped_keys"].append(
+                    {"key": k, "estimated_tokens":
+                     jev_estimate_tokens(json.dumps(kept[k], ensure_ascii=False))})
+                kept.pop(k, None)
+            return kept, dropped
+        if isinstance(state, list):
+            kept = list(state)
+            while kept and jev_estimate_tokens(jev_render_state(kept)) > limit:
+                kept.pop()
+                dropped["dropped_items"] += 1
+            return kept, dropped
+        text = state if isinstance(state, str) else jev_render_state(state)
+        lo, hi = 0, len(text)
+        while lo < hi:
+            mid = (lo + hi + 1) // 2
+            if jev_estimate_tokens(text[:mid]) <= limit:
+                lo = mid
+            else:
+                hi = mid - 1
+        dropped["dropped_chars"] = len(text) - lo
+        dropped["dropped_tail_preview"] = text[lo:lo + 120]
+        return text[:lo], dropped
+
+    def build_request(self, frames, state, goal, want="action"):
+        """Build the typed request and its limits evidence (raises JevProtocolError)."""
+        usable = [f for f in (frames or [])
+                  if f.get("path") and os.path.isfile(f["path"])]
+        with_image = bool(self.send_images and usable)
+        questions = self.build_questions(goal or {}, with_image=False)
+        image_question_policy = None
+        if with_image:
+            # Documented as hard: exactly 1 image + 1 question.  Sending several
+            # questions "as an image request" is what the task forbids, so the default
+            # policy is a CLEAR ERROR, not a silent trim.
+            if len(questions) > 1:
+                if self.image_multi_question != "trim":
+                    raise JevProtocolError(
+                        "an image request carries exactly 1 image + 1 question, but this "
+                        "agent built %d questions (%s); the service would reject it. "
+                        "Build a single question (invariant_questions=0, score_question="
+                        "False) or explicitly opt into image_multi_question='trim' (which "
+                        "records the questions it drops)."
+                        % (len(questions), sorted(questions)))
+                image_question_policy = {
+                    "policy": "trim", "dropped_questions": sorted(
+                        k for k in questions if k != self.action_key),
+                    "kept_questions": [self.action_key]}
+                questions = {self.action_key: questions[self.action_key]}
+        state_value, state_ev = self.prepare_state(state)
+        payload = {"model": self.model, "state": state_value, "questions": questions}
+        if with_image:
+            path = usable[-1]["path"]
+            with open(path, "rb") as fh:
+                data = fh.read()
+            if len(data) > JEV_LIMITS["image_decoded_max_bytes"]:
+                raise JevProtocolError(
+                    "image %s is %d bytes, over the documented %d-byte decoded limit"
+                    % (path, len(data), JEV_LIMITS["image_decoded_max_bytes"]))
+            payload["image"] = "data:image/png;base64,%s" % base64.b64encode(data).decode("ascii")
+
+        body = json.dumps(payload).encode("utf-8")
+        meta = {
+            "decision_path": self.decision_path,
+            "with_image": with_image,
+            "question_count": len(questions),
+            "question_keys": list(questions.keys()),
+            "question_types": {k: v.get("type") for k, v in questions.items()},
+            "image_question_policy": image_question_policy,
+            "body_bytes": len(body),
+            "body_tokens_estimate": jev_estimate_tokens(
+                json.dumps(payload, ensure_ascii=False)),
+            "state": state_ev,
+        }
+        cap = JEV_LIMITS["image_request_max_bytes"] if with_image \
+            else JEV_LIMITS["request_max_bytes"]
+        if len(body) > cap:
+            raise JevProtocolError("request body is %d bytes, over the %d-byte limit"
+                                   % (len(body), cap))
+        tok_cap = JEV_LIMITS["image_request_max_tokens"] if with_image \
+            else JEV_LIMITS["request_max_tokens"]
+        if meta["body_tokens_estimate"] > tok_cap:
+            raise JevProtocolError(
+                "request is ~%d tokens (estimated), over the %d-token limit for this "
+                "endpoint%s" % (meta["body_tokens_estimate"], tok_cap,
+                                " (image request)" if with_image else ""))
+        return payload, meta
+
+    # ---- response parsing ------------------------------------------------
+    def parse_response(self, body):
+        if not body:
+            raise JevProtocolError("the service returned an empty body")
+        try:
+            data = json.loads(body)
+        except Exception as e:  # noqa: BLE001
+            raise JevProtocolError("the response body is not JSON: %s" % e)
+        if not isinstance(data, dict) or not isinstance(data.get("answers"), dict):
+            raise JevProtocolError("the response has no `answers` object: %s"
+                                   % list(data)[:8])
+        return data
+
+    def collect_answers(self, answers):
+        """Split the answers into the action choice, the noul P(true)s and the scores."""
+        noul, scores, choice = {}, {}, None
+        for key, a in (answers or {}).items():
+            if not isinstance(a, dict):
+                continue
+            t = a.get("type")
+            if t == "noul":
+                noul[key] = a
+            elif t == "score":
+                scores[key] = a
+            elif t == "choice" and (choice is None or key == self.action_key):
+                choice = (key, a)
+        return choice, noul, scores
+
+    # ---- the interface ---------------------------------------------------
+    def decide(self, frames, state, goal):
+        if not self.base_url:
+            self._error("unconfigured", "PLAYTEST_BASE_URL is not set")
+            return {"type": "wait", "ms": 100,
+                    "why": "jev backend unconfigured: PLAYTEST_BASE_URL is not set "
+                           "(recorded, not a success)"}
+        if self.decision_path not in JEV_DECISION_PATHS:
+            self._error("unconfigured",
+                        "unknown decision path %r; Jev only provides %s"
+                        % (self.decision_path, list(JEV_DECISION_PATHS)))
+            return {"type": "wait", "ms": 100,
+                    "why": "jev backend misconfigured: decision path %r"
+                           % self.decision_path}
+        if self.require_health and self._ready is not True:
+            rec = self.check_health()
+            if rec.get("status") != 200:
+                self._error("health", "GET %s failed: status=%s error=%s"
+                            % (self.health_path, rec.get("status"), rec.get("error")),
+                            body=(rec.get("body") or "")[:400])
+                self._ready = False
+                return {"type": "wait", "ms": 200,
+                        "why": "jev service is not reachable/ready (see recorded "
+                               "health error); degraded to wait"}
+
+        try:
+            payload, meta = self.build_request(frames, state, goal, "action")
+        except JevProtocolError as e:
+            self._error("request", str(e))
+            return {"type": "wait", "ms": 200,
+                    "why": "jev request refused before sending: %s" % e}
+        except Exception as e:  # noqa: BLE001
+            self._error("request", "%s: %s" % (type(e).__name__, e))
+            return {"type": "wait", "ms": 200, "why": "jev request build failed: %s" % e}
+
+        rec = self._post_decision(payload)
+        evidence = {"kind": "decision", "transport": rec, "request_meta": meta,
+                    "request_payload": payload}
+        if rec.get("status") != 200:
+            msg = self._map_http_error(rec)
+            self._error("http", msg, status=rec.get("status"))
+            evidence["error"] = msg
+            self.calls.append(evidence)
+            self.last_evidence = evidence
+            return {"type": "wait", "ms": 200, "why": msg}
+
+        try:
+            data = self.parse_response(rec.get("body"))
+        except JevProtocolError as e:
+            msg = "jev response could not be parsed: %s" % e
+            self._error("response", msg)
+            evidence["error"] = msg
+            self.calls.append(evidence)
+            self.last_evidence = evidence
+            return {"type": "wait", "ms": 200, "why": msg}
+
+        answers = data["answers"]
+        choice, noul, scores = self.collect_answers(answers)
+        evidence.update({
+            "response_status": rec.get("status"),
+            "model": data.get("model"),
+            "usage": data.get("usage"),
+            "input_tokens": data.get("input_tokens"),
+            "image_tokens": data.get("image_tokens"),
+            "answers_raw": answers,
+            "choice": choice[1] if choice else None,
+            "noul": noul,
+            "scores": scores,
+            "confidence_header": (rec.get("headers") or {}).get("x-neohorse-confidence"),
+            "usage_header": (rec.get("headers") or {}).get("x-neohorse-usage"),
+            "probabilities": {k: a.get("probabilities") for k, a in list(noul.items())
+                              + list(scores.items())},
+            "confidences": {k: a.get("confidence") for k, a in list(noul.items())
+                            + list(scores.items())},
+        })
+        self.last_noul = noul
+        self.last_scores = scores
+        act = None
+        if choice:
+            why = ("jev choice=%r confidence=%s probabilities=%s"
+                   % (choice[1].get("choice"), choice[1].get("confidence"),
+                      choice[1].get("probabilities")))
+            act = action_from_choice(choice[1].get("choice"), goal, self.hold_ms, why)
+        if act is None:
+            msg = ("jev returned no usable choice (answers=%s)"
+                   % list(answers.keys())[:8])
+            self._error("response", msg)
+            evidence["error"] = msg
+            act = {"type": "wait", "ms": 200, "why": msg}
+        evidence["action"] = act
+        self.calls.append(evidence)
+        self.last_evidence = evidence
+        return act
+
+    def _map_http_error(self, rec):
+        status = rec.get("status")
+        detail = (rec.get("body") or "")[:300]
+        n = len(rec.get("attempts") or [])
+        if status == 401:
+            return ("jev service rejected the credentials (401): set PLAYTEST_API_KEY. "
+                    "body=%s" % detail)
+        if status == 413:
+            return ("jev service refused the request body as too large (413); the "
+                    "documented caps are 1 MiB text / 8 MiB image. body=%s" % detail)
+        if status == 422:
+            return ("jev service rejected the request as invalid/unsupported (422): "
+                    "%s" % detail)
+        if status in (429, 529):
+            return ("jev worker is busy (HTTP %s) and still busy after %d attempts; "
+                    "`Retry-After` was honoured. body=%s" % (status, n, detail))
+        if status is None:
+            return ("jev service is not reachable (%s)" % rec.get("error"))
+        return "jev service returned HTTP %s: %s" % (status, detail)
+
+    def judge(self, frames, state, goal):
+        """A machine-readable playability verdict from the noul/score answers.
+
+        If `decide()` already ran, this reuses that evidence instead of paying for a
+        second forward pass (the service has no dynamic batching).  The verdict is
+        explicitly marked UNCALIBRATED.
+        """
+        if self.last_evidence is None:
+            self.decide(frames, state, goal)
+        return self.threshold_verdict()
+
+    def threshold_verdict(self):
+        crit = []
+        for key, a in sorted(self.last_noul.items()):
+            val = a.get("noul")
+            ok = isinstance(val, (int, float)) and val >= self.thresholds["noul_min_p_true"]
+            crit.append({"id": "noul:%s" % key, "value": val,
+                         "rule": "P(true) >= %.3f" % self.thresholds["noul_min_p_true"],
+                         "pass": bool(ok)})
+        for key, a in sorted(self.last_scores.items()):
+            val = a.get("score")
+            ok = isinstance(val, (int, float)) and val <= self.thresholds["score_max_expected"]
+            crit.append({"id": "score:%s" % key, "value": val,
+                         "rule": "expected level <= %.3f"
+                                 % self.thresholds["score_max_expected"],
+                         "pass": bool(ok)})
+        verdict = all(c["pass"] for c in crit) if crit else None
+        return {"backend": "jev", "pass": verdict,
+                "why": ("no noul/score answer was captured: no threshold verdict is "
+                        "possible" if verdict is None else
+                        ("%d/%d threshold criteria passed"
+                         % (sum(1 for c in crit if c["pass"]), len(crit)))),
+                "criteria": crit,
+                "thresholds": dict(self.thresholds),
+                "uncalibrated": True,
+                "note": JEV_THRESHOLD_NOTE,
+                "source": ("last decision response" if self.last_evidence else "none")}
+
+    def report(self):
+        rep = PlaytestAgent.report(self)
+        rep.update({"base_url": self.base_url, "model": self.model,
+                    "decision_path": self.decision_path, "health": self.health,
+                    "errors": self.errors, "attempts": self.attempts,
+                    "thresholds": dict(self.thresholds),
+                    "threshold_verdict": self.threshold_verdict()})
+        return rep
+
+
+# ---------------------------------------------------------------------------
 # factory
 # ---------------------------------------------------------------------------
 def build_agent(name, game=None, objective="", options=None):
@@ -450,7 +1149,9 @@ def build_agent(name, game=None, objective="", options=None):
         return ScriptedAgent(game, objective, options)
     if n == "openai":
         return OpenAIAgent(game, objective, options)
-    raise ValueError("unknown agent backend %r (expected scripted|openai)" % name)
+    if n == "jev":
+        return JevAgent(game, objective, options)
+    raise ValueError("unknown agent backend %r (expected scripted|openai|jev)" % name)
 
 
 # ---------------------------------------------------------------------------
@@ -613,13 +1314,21 @@ def main(argv):
     if args[0] == "--probe":
         r = probe()
         return 0 if r["ok"] else 1
+    if args[0] == "--probe-jev":
+        # TASK-124 D: the jev dumb-service verification lives in tools/tests/ so it is
+        # also runnable on its own.  No weights, no GPU, stdlib only.
+        tests_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tests")
+        sys.path.insert(0, tests_dir)
+        import test_jev_agent
+        r = test_jev_agent.run_all(verbose=True, argv=args[1:])
+        return 0 if r["ok"] else 1
     if args[0] == "--selfcheck":
         # interface shape only, no network
         ag = build_agent("scripted", "demo", "demo")
         act = ag.decide([], {}, {"keys": ["W", "SPACE"]})
         print(json.dumps(act, ensure_ascii=False))
         return 0
-    print("unknown arguments: %r (try --probe or --help)" % (args,))
+    print("unknown arguments: %r (try --probe, --probe-jev or --help)" % (args,))
     return 2
 
 
