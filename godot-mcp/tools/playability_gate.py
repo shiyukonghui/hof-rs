@@ -2569,6 +2569,54 @@ def record_model_player_criterion(gate, args, game):
     return gate["model_player_criterion"]
 
 
+def _model_fixed_point_steps(injected_steps, min_run=3):
+    """TASK-133 §1.C.1: the MODEL's fixed point, as a separate conclusion.
+
+    `>= min_run` consecutive injected steps answering the SAME action on a
+    byte-identical before-frame means the model is stuck.  It is a fact about the model:
+    it is reported under its own key (`MODEL_FIXED_POINT`), it is never counted as a
+    game defect, and it can never make a game PASS.  This is the gate-side twin of
+    `playtest_player.model_fixed_point` (the same rule, so `gate.json` and `player.json`
+    cannot disagree).
+    """
+    best = {"found": False, "min_run": int(min_run), "length": 0, "steps": [],
+            "action": None, "frame_sha": None}
+    run_len, run_steps, run_action, run_sha = 0, [], None, None
+    # The run must be over INPUTTED, consecutive steps: a step the model answered with
+    # `wait` (not injected) breaks it.  This walks the FULL step list -- not a
+    # pre-filtered one -- so the gap is visible, exactly as in the loop's own
+    # `model_fixed_point` (a first draft filtered first and reported 7 for a run broken in
+    # the middle, while the loop-side twin reported 4; the two halves of one rule must
+    # not disagree).
+    for r in injected_steps or []:
+        if not (r.get("ack") or {}).get("injected"):
+            run_len, run_steps, run_action, run_sha = 0, [], None, None
+            continue
+        act = ((r.get("action") or {}).get("action"))
+        sha = r.get("frame_before_sha")
+        if act is not None and act == run_action and sha is not None and sha == run_sha:
+            run_len += 1
+            run_steps.append(r.get("step"))
+        else:
+            run_len, run_steps, run_action, run_sha = 1, [r.get("step")], act, sha
+        if run_len > best["length"]:
+            best.update({"found": run_len >= int(min_run), "length": run_len,
+                         "steps": list(run_steps), "action": run_action,
+                         "frame_sha": run_sha})
+    if not best["found"]:
+        best["reading"] = ("no run of >= %d consecutive steps shared one action AND one "
+                           "byte-identical frame" % int(min_run))
+    else:
+        best["reading"] = ("the MODEL is stuck: %d consecutive steps all answered '%s' on "
+                           "the byte-identical frame %s"
+                           % (best["length"], best["action"],
+                              (best["frame_sha"] or "")[:8]))
+    best["what"] = ("TASK-133 §1.C.1: a model-side fixed point.  It is NOT a game defect "
+                    "(do not fail the game for it) and NOT a PASS (do not accept it as "
+                    "evidence the game is playable).  Reported separately from FAIL.")
+    return best
+
+
 def evaluate_model_player_steps(steps, game=None):
     """The TASK-132 rule, applied to a recorded `steps.jsonl` list.
 
@@ -2596,6 +2644,11 @@ def evaluate_model_player_steps(steps, game=None):
     fixed_point = bool(len(fail) >= 2 and len(fail_actions) == 1 and
                        (len(fail_reqs) <= 1 or len(fail_frames) <= 1))
     terminal = any((r.get("markers") or {}).get("GameOver") is True for r in steps)
+    # TASK-133 §1.C.1: the model's fixed point, on ITS OWN threshold (>= 3 consecutive
+    # steps with the same action AND the same before-frame hash).  It is recorded as its
+    # own conclusion beside the game verdict -- never folded into `pass`, because it says
+    # nothing about the game.
+    mp_fixed = _model_fixed_point_steps(steps, 3)
     out = {"criterion": "MODEL_PLAYER", "what": MODEL_PLAYER_CRITERION_NOTE,
            "game": game, "evidence_source": "runs/model-player/<game>/<backend>/steps.jsonl",
            "steps": len(steps), "injected_steps": len(injected),
@@ -2604,12 +2657,15 @@ def evaluate_model_player_steps(steps, game=None):
                                          if accepted else None),
            "fail_steps": fail, "distinct_actions": sorted(set(actions)),
            "one_action_loop": same_action,
+           "MODEL_FIXED_POINT": bool(mp_fixed.get("found")),
+           "model_fixed_point": mp_fixed,
            "fail_evidence": {"distinct_actions_in_the_failing_steps": fail_actions,
                              "distinct_request_bodies_in_the_failing_steps": len(fail_reqs),
                              "distinct_before_frames_in_the_failing_steps": len(fail_frames),
                              "same_action_fixed_point": fixed_point},
            "declared_terminal_seen": bool(terminal),
-           "thresholds": {"min_steps": 8, "min_rate": 0.75},
+           "thresholds": {"min_steps": 8, "min_rate": 0.75,
+                          "model_fixed_point_min_run": 3},
            "pass": None, "why": ""}
     if fail and not fixed_point and not terminal:
         out["pass"] = False
@@ -2629,6 +2685,17 @@ def evaluate_model_player_steps(steps, game=None):
     elif len(injected) < 8:
         out["pass"] = None
         out["why"] = ("only %d injected step(s): the rule needs >= 8" % len(injected))
+    elif mp_fixed.get("found"):
+        # TASK-133 §1.C.1: the run is (mostly) the model's fixed point.  That is not a
+        # statement about the game, so it is filed as MODEL_FIXED_POINT and the game
+        # criterion stays unmeasured -- it can neither fail the game nor pass it.  This
+        # branch is checked BEFORE `same_action` on purpose: `same_action` is the same
+        # observation read more loosely, and the explicit fixed-point conclusion (with its
+        # length threshold and its steps) must be the one a reader sees.
+        out["pass"] = None
+        out["why"] = ("MODEL_FIXED_POINT: %s.  A model-side fixed point is not a game "
+                      "defect and is not a PASS; the game criterion stays unmeasured"
+                      % mp_fixed.get("reading"))
     elif same_action:
         out["pass"] = None
         out["why"] = ("the model repeated ONE action over every injected step, so 'the game "

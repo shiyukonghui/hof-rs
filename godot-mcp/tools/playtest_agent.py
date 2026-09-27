@@ -674,7 +674,15 @@ def action_from_choice(choice, goal, hold_ms, why):
     if low in ("wait", "noop", "no_op", "none", "observe", "hold"):
         return {"type": "wait", "ms": int(hold_ms or 200), "why": why}
     if low in ("done", "finish", "stop", "end"):
-        return {"type": "done", "why": why}
+        # TASK-133 §1.C.2: `done` is no longer offered in the option set, but a service
+        # can still answer it (a cached/older model, a hand-written replay), and a live
+        # game has no "stop probing" input. It therefore degrades to `wait` -- the real
+        # move that means "do nothing this step" -- instead of producing an action type
+        # no game can accept. The `type` is still honoured downstream for recorded runs.
+        return {"type": "wait", "ms": int(hold_ms or 200),
+                "why": ("%s (TASK-133: the model answered a `done` option that the probe "
+                        "no longer offers; a live game has no stop input, so this is a "
+                        "`wait`)" % why)}
     kc = keycode_of(choice)
     if kc is not None:
         return OpenAIAgent.normalise_action({"type": "key", "keycode": kc,
@@ -688,10 +696,21 @@ def action_criteria(goal):
 
     A pure function shared by the two decision backends (`jev`, `playjev`), which
     differ in the wire shape of a question but not in what an option means: one
-    option per declared InputMap action, one per documented key, plus `wait` and
-    `done`.  TASK-127 lifted this out of `JevAgent` unchanged so `PlayJevAgent`
+    option per declared InputMap action, one per documented key, plus `wait`.
+    TASK-127 lifted this out of `JevAgent` unchanged so `PlayJevAgent`
     could reuse it verbatim; `JevAgent.build_action_criteria` still returns exactly
     the same dict it always did.
+
+    `done` was REMOVED here by TASK-133 §1.C.2 (the TASK-132 §N.4 decision, applied
+    to the probe instead of only to the player).  It asked the model to "stop
+    probing", which is a statement about the PROBE, not an input a real game accepts:
+    a live game has no stop button, so offering one makes the option set say something
+    untrue about the game.  TASK-132 measured what that costs -- Jev answered `done`
+    with P=0.61 for nine consecutive steps (`runs/model-player/_prefix-abandoned/
+    pong-wallclock-and-done/`, the request body byte-identical across those steps),
+    i.e. the run stopped measuring the game and started measuring the model's
+    stop-seeking.  `wait` is kept: it IS a real move (deal with a ball already in
+    flight, watch a projectile).
     """
     crit = {}
     acts = (goal or {}).get("actions") or {}
@@ -711,7 +730,6 @@ def action_criteria(goal):
         ck = "key_%s" % str(k).strip().upper()
         crit.setdefault(ck, "press and release the key %s" % k)
     crit.setdefault("wait", "do nothing this step (hold position / observe)")
-    crit.setdefault("done", "stop probing: no further action is likely to help")
     return crit
 
 

@@ -17,6 +17,31 @@
 `W`/`S` 控制左板，`↑`/`↓` 控制右板，`Space` 发球。
 一局开始时球停在中央**不动**，等一次发球。
 
+**TASK-133 修的两条规则 + 一个对手**（原实现让比赛在无人操作时自己 5:0 结束）：
+
+1. **`AutoServe` 默认改为 `false`**。原实现每得一分自动重发球，而右板没有任何
+   输入会让它跟球，于是球径直飞出右侧；stdout 实测 `pong/jev` 在 **23 s** 内
+   `PONG_SCORE scored_by=LEFT`×5 → `PONG_OVER winner=LEFT left=5 right=0`
+   （真实键臂 12 s），TASK-132 的模型玩家回路因此只有 1–5 步落在「还活着的比赛」里。
+   改成 `false` 后，每一分都把球**停在中央**（stdout `PONG_PARKED`），
+   下一球由一次显式 `pong_serve`（SPACE）发出 —— 这正是本 README 第 18 行一直
+   写的规则，比赛不再能在没有人操作的情况下自己打完。
+2. **球在飞时发球被拒绝**（旧实现会把球瞬移回中央、`Velocity` 直接重置，
+   于是「按了 SPACE」看起来等于没按；TASK-132 记了 10 步里 9 步如此）。
+   现在 `Ball.Velocity != 0` 时 `Serve()` 只说「不行」：
+   `LastRejectedAction="serve: the ball is already in flight"` +
+   stdout `PONG_SERVE_REFUSED`，球的位置与速度一个字节都不动。
+3. **右板对手**（`RightPaddleAutoFollow` 默认 `true`，`OpponentSpeed=340`、
+   `OpponentSkill=0.78`）：球**正在朝右飞**时，右板以有限速度追球中心；球停在中央时
+   两块板都不动。这是**单人** pong 缺的那一半——没有它，右板永远漏球，
+   玩家做什么都改变不了 5:0。**设 `false` 即回到全手动双人**（右板只由
+   `pong_right_up`/`pong_right_down` 驱动，那两个键仍然有效）。
+   **它做到了**：回合能来回打（实测 `pong/playjev` 一次 46 s 未结束、只丢 1 分）。
+   **它没做到**：在模型只会连按 SPACE、从不操作左板的那次跑里，比赛仍在 18 s 内
+   以 `RIGHT 5:0` 结束（模型自己那一侧漏球）——可玩窗口没有因此变长，这是本轮
+   如实登记的未达标项，见 `recovery/reports/TASK-133-REPORT.md` §4.2。
+
+
 ## 构建（离线）
 
 ```cmd

@@ -64,9 +64,11 @@ Self-test without a game and without a model
 
     python tools\\playtest_player.py selftest
         exercises the pure decision helpers (`decide_changed`, `step_record`,
-        `summarise`) on constructed records: a "game accepted it and NOTHING moved"
-        record must come back FAIL, a moving record must come back PASS, and a record
-        whose control window moved just as much must NOT count as a change.
+        `summarise`, `model_fixed_point`) on constructed records: a "game accepted it and
+        NOTHING moved" record must come back FAIL, a moving record must come back PASS, a
+        record whose control window moved just as much must NOT count as a change, and a
+        record whose model repeated one action on one frame must come back
+        MODEL_FIXED_POINT (reported on its own, never a game FAIL and never a PASS).
 """
 
 from __future__ import print_function
@@ -103,6 +105,11 @@ DEFAULT_BACKENDS = {
 # TASK-132 §1.2: the user's thresholds, written down where the code can be held to them.
 PASS_MIN_STEPS = 8
 PASS_MIN_RATE = 0.75
+# TASK-133 §1.C.1: the model's own fixed point, on its own scale.  The task's ruling
+# names the threshold: with the same action AND the same frame hash for >= 3
+# consecutive steps, the model is stuck, and that conclusion is kept separate from the
+# game's FAIL (it is reported, never counted as a game defect, and never a PASS).
+MODEL_FIXED_POINT_MIN_RUN = 3
 # A frame-to-frame change counts only if it beats the equal-length no-input control window.
 # Two independent margins, both recorded per step:
 #   * pixels   -- `> max(2.5 * control, 40)`.  The factor is higher than the gate's
@@ -399,6 +406,52 @@ def step_verdict(ack, change):
     return "no_ack_no_change"
 
 
+def model_fixed_point(records, min_run=MODEL_FIXED_POINT_MIN_RUN):
+    """TASK-133 §1.C.1 (TASK-132 §N.3): the MODEL's fixed point, on its own.
+
+    A model that answers the SAME action and is handed a byte-identical frame for
+    `min_run` consecutive steps is stuck.  That is a fact about the MODEL, not about the
+    game: it is reported as its own conclusion (`MODEL_FIXED_POINT`), it is never
+    counted as a game defect, and it must never be quoted as evidence that the game is
+    playable either.  The run that motivated it: PlayJev answered `tetris_left` (P=0.58)
+    for nine straight steps and `pong_right_down` (P=0.63) for nine straight steps, each
+    time on a byte-identical frame, so "the game ignored my input" and "I stopped
+    playing" could not be told apart (TASK-132 §N.3).
+
+    Returns the longest run as `{found, min_run, length, steps, action, frame_sha,
+    confidence, reading}`.  Counted over the steps that carried an injected action.
+    """
+    best = {"found": False, "min_run": int(min_run), "length": 0, "steps": [],
+            "action": None, "frame_sha": None, "confidence": None}
+    cur_len, cur_steps, cur_action, cur_sha = 0, [], None, None
+    for r in records or []:
+        if not (r.get("ack") or {}).get("injected"):
+            cur_len, cur_steps, cur_action, cur_sha = 0, [], None, None
+            continue
+        act = (r.get("action") or {}).get("action")
+        sha = r.get("frame_before_sha")
+        if act is not None and act == cur_action and sha is not None and sha == cur_sha:
+            cur_len += 1
+            cur_steps.append(r.get("step"))
+        else:
+            cur_len, cur_steps, cur_action, cur_sha = 1, [r.get("step")], act, sha
+        if cur_len > best["length"]:
+            best.update({"found": cur_len >= int(min_run), "length": cur_len,
+                         "steps": list(cur_steps), "action": cur_action,
+                         "frame_sha": cur_sha, "confidence": r.get("confidence")})
+    if not best["found"]:
+        best["reading"] = ("no run of >= %d consecutive steps shared one action AND one "
+                           "byte-identical frame" % int(min_run))
+    else:
+        best["reading"] = ("the MODEL is stuck: %d consecutive steps all answered '%s' on "
+                           "the byte-identical frame %s (confidence %s).  This is a fact "
+                           "about the model, NOT about the game -- it is not a game defect, "
+                           "and it is not evidence that the game is playable either"
+                           % (best["length"], best["action"],
+                              (best["frame_sha"] or "")[:8], best["confidence"]))
+    return best
+
+
 def summarise(records, backend=None, game=None, state=None):
     """`steps.jsonl` -> the TASK-132 §1.2 three-state verdict.
 
@@ -440,8 +493,15 @@ def summarise(records, backend=None, game=None, state=None):
     same_action_fixed_point = bool(
         len(fail_steps) >= 2 and len(fail_actions) == 1 and
         (len(fail_reqs) <= 1 or len(fail_frames) <= 1))
+    # TASK-133 §1.C.1: the model's fixed point as its OWN conclusion, on its own
+    # threshold (>= 3 identical action + identical frame).  It is a statement about the
+    # model, so it lives beside the game verdict instead of inside it.
+    fixed = model_fixed_point(steps)
     out = {
         "backend": backend, "game": game, "steps": n,
+        "model_fixed_point": fixed,
+        "MODEL_FIXED_POINT": bool(fixed.get("found")),
+        "MODEL_FIXED_POINT_reading": fixed.get("reading"),
         "steps_without_an_action_from_the_model": no_action,
         "injected_steps": len(model_steps),
         "accepted_steps": len(accepted), "changed_steps_of_accepted": len(changed),
@@ -464,11 +524,15 @@ def summarise(records, backend=None, game=None, state=None):
         },
         "distinct_actions": distinct,
         "one_action_loop": bool(len(model_steps) >= PASS_MIN_STEPS and len(distinct) <= 1),
-        "thresholds": {"min_steps": PASS_MIN_STEPS, "min_rate": PASS_MIN_RATE},
+        "thresholds": {"min_steps": PASS_MIN_STEPS, "min_rate": PASS_MIN_RATE,
+                       "model_fixed_point_min_run": MODEL_FIXED_POINT_MIN_RUN},
         "rule": "PASS = >=%d injected steps AND accepted-and-changed rate >= %.2f AND the "
                 "reader confirmed the changes match the game's declared logic; FAIL = an "
                 "accepted input left the viewport unchanged; INCONCLUSIVE = the evidence "
-                "cannot separate the two" % (PASS_MIN_STEPS, PASS_MIN_RATE),
+                "cannot separate the two.  MODEL_FIXED_POINT is a separate conclusion about "
+                "the MODEL (>= %d steps of the same action on the same frame): it is never "
+                "a game defect and never a PASS"
+                % (PASS_MIN_STEPS, PASS_MIN_RATE, MODEL_FIXED_POINT_MIN_RUN),
     }
     if fail_steps and not same_action_fixed_point and not unchanged_terminal:
         out["verdict"] = "FAIL"
@@ -481,13 +545,22 @@ def summarise(records, backend=None, game=None, state=None):
                       "byte-identical frame, so the evidence cannot separate 'the game "
                       "ignores this input' from 'the model stopped playing' (TASK-132 §1.2)"
                       % (fail_steps, fail_actions))
-    elif fail_steps and unchanged_terminal:
+    elif unchanged_terminal:
         out["verdict"] = "INCONCLUSIVE"
-        out["why"] = ("the user's FAIL condition did occur on step(s) %s, but the game "
-                      "declared a TERMINAL state at step %s, so every later frame is frozen "
-                      "by the game's own rule and the run cannot show what the model could "
-                      "have done with a live game (TASK-132 §1.2)"
-                      % (fail_steps, (unchanged_terminal or {}).get("step")))
+        out["why"] = ("the game declared a TERMINAL state at step %s, so every later frame "
+                      "is frozen by the game's own rule and the run cannot show what the "
+                      "model could have done with a live game (TASK-132 §1.2)%s"
+                      % ((unchanged_terminal or {}).get("step"),
+                         ("" if not fail_steps else
+                          "; the FAIL condition also occurred on step(s) %s" % fail_steps)))
+    elif fixed.get("found"):
+        # TASK-133 §1.C.1: a run that is mostly the model's fixed point cannot produce a
+        # game verdict.  The fixed point is reported, the game verdict says why it is not
+        # a FAIL.
+        out["verdict"] = "INCONCLUSIVE"
+        out["why"] = ("the MODEL reached a fixed point (%s), so this run cannot produce a "
+                      "verdict about the GAME: %s"
+                      % (fixed.get("steps"), fixed.get("reading")))
     elif out["one_action_loop"]:
         out["verdict"] = "INCONCLUSIVE"
         out["why"] = ("the model produced the SAME action (%s) on every one of %d injected "
@@ -1590,6 +1663,57 @@ def selftest():
                           step_verdict="no_ack_no_change") for r in recs]
     check("8 steps but the model never acted -> INCONCLUSIVE",
           summarise(recs_noaction, "jev", "g")["verdict"], "INCONCLUSIVE")
+
+    # 7. TASK-133 §1.C.1: the MODEL's fixed point, as its own conclusion
+    recs_fp = []
+    for i in range(1, 9):
+        recs_fp.append({"step": i, "action": {"action": "same"},
+                        "ack": {"accepted": True, "injected": True},
+                        "change": {"changed": True},
+                        "frame_before_sha": "fpframe", "confidence": 0.58,
+                        "step_verdict": "ok_ack_and_changed"})
+    fp = model_fixed_point(recs_fp)
+    check("8 identical action+frame steps -> fixed point found", fp["found"], True)
+    check("fixed-point run length", fp["length"], 8)
+    check("fixed-point steps", fp["steps"], [1, 2, 3, 4, 5, 6, 7, 8])
+    check("fixed-point action", fp["action"], "same")
+    # the threshold is 3: two identical steps are not a fixed point
+    check("2 identical steps -> NOT a fixed point", model_fixed_point(recs_fp[:2])["found"],
+          False)
+    check("3 identical steps -> a fixed point", model_fixed_point(recs_fp[:3])["found"],
+          True)
+    # the same action on DIFFERENT frames is not a fixed point (the model is answering
+    # the picture, the picture is moving)
+    recs_moving = [dict(r) for r in recs_fp]
+    for i, r in enumerate(recs_moving):
+        r["frame_before_sha"] = "frame%02d" % i
+    check("same action on different frames -> NOT a fixed point",
+          model_fixed_point(recs_moving)["found"], False)
+    # a non-injected step (the model answered `wait`) breaks the run
+    recs_wait = [dict(r) for r in recs_fp]
+    recs_wait[4] = dict(recs_wait[4], ack={"accepted": False, "injected": False},
+                        action={"action": None})
+    fp2 = model_fixed_point(recs_wait)
+    check("a `wait` step breaks the run (4 = longest)", fp2["length"], 4)
+    # the fixed point is REPORTED on the summary and does NOT make the game FAIL
+    s_fp = summarise(recs_fp, "jev", "g")
+    check("summary carries MODEL_FIXED_POINT", s_fp["MODEL_FIXED_POINT"], True)
+    check("summary carries the fixed-point reading",
+          isinstance(s_fp["MODEL_FIXED_POINT_reading"], str) and
+          bool(s_fp["MODEL_FIXED_POINT_reading"]), True)
+    check("fixed point is not a game FAIL", s_fp["verdict"], "INCONCLUSIVE")
+    check("fixed point is not a game PASS", s_fp["verdict"] == "PASS", False)
+    # a clean run has no fixed point at all
+    check("clean run -> no fixed point", summarise(recs, "jev", "g")["MODEL_FIXED_POINT"],
+          False)
+    check("clean run -> still PASS", summarise(recs, "jev", "g")["verdict"], "PASS")
+
+    # 8. TASK-133 §1.C.2: `done` is gone from the option set the probe offers
+    from playtest_agent import action_criteria as _ac
+    crit = _ac({"actions": {"a_up": ["W"]}, "keys": []})
+    check("probe criteria no longer offer `done`", "done" in crit, False)
+    check("probe criteria still offer `wait`", "wait" in crit, True)
+    check("probe criteria still offer the declared action", "a_up" in crit, True)
 
     log("selftest %s" % ("PASSED" if ok else "FAILED"))
     return 0 if ok else 1

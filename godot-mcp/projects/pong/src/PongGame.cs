@@ -23,8 +23,21 @@ public partial class PongGame : Node2D
     /// <summary>Points needed to win. Exported so a session can shorten the match.</summary>
     [Export] public int WinScore = 5;
 
-    /// <summary>Whether a point re-serves by itself (a human game) or parks.</summary>
-    [Export] public bool AutoServe = true;
+    /// <summary>
+    /// Whether a point re-serves by itself (a human game) or parks.
+    ///
+    /// <para><b>TASK-133: the default is now false, and that is the structural fix.</b>
+    /// With it true, the right paddle -- which no key in this game can be told to track
+    /// the ball -- let every auto-served ball fly straight out, so the match reached
+    /// `PONG_OVER winner=LEFT 5:0` in about 12 s with no human input at all (TASK-132
+    /// measured only 1-5 model steps inside a live match). A match that plays itself to
+    /// a 5:0 conclusion before the player can act is not a match. With it false the
+    /// rule is the one this game's own README already documents -- a point parks the
+    /// ball in the middle and the next serve is an explicit `pong_serve` (SPACE) -- so
+    /// the length of a match is controlled by the player, and a serve is a real action
+    /// with a real, visible consequence.</para>
+    /// </summary>
+    [Export] public bool AutoServe = false;
 
     /// <summary>Top of the ball's travel (ball top edge, inclusive).</summary>
     [Export] public float TopLimit = 8.0f;
@@ -50,6 +63,27 @@ public partial class PongGame : Node2D
     /// </summary>
     [Export] public float InjectedStepSeconds = 0.25f;
 
+    /// <summary>
+    /// Whether the right paddle tracks the ball when it is coming toward it -- the
+    /// OPPONENT. Default true, because this build ships as a ONE-player game: with it
+    /// false the right paddle never moves and every ball that survives the left paddle
+    /// simply flies out of the right edge, so the left side wins 5:0 no matter what the
+    /// player does (the pre-TASK-133 behaviour, measured at ~12 s).
+    ///
+    /// <para>It is a plain exported flag, not a hidden rule: set it false for two-player
+    /// play and the right paddle is again driven only by `pong_right_up` /
+    /// `pong_right_down`. The tracking runs only while the ball is IN FLIGHT and moving
+    /// toward the right paddle, so a parked ball (the start, and every point now that
+    /// `AutoServe` is off) leaves both paddles still.</para>
+    /// </summary>
+    [Export] public bool RightPaddleAutoFollow = true;
+
+    /// <summary>Pixels per second the opponent paddle may travel.</summary>
+    [Export] public float OpponentSpeed = 340.0f;
+
+    /// <summary>Fraction of the opponent's travel that is applied (a beatable opponent).</summary>
+    [Export] public float OpponentSkill = 0.78f;
+
     private const float ServeSpeedX = 280.0f;
     private const float ServeSpeedY = 180.0f;
 
@@ -65,6 +99,13 @@ public partial class PongGame : Node2D
     private bool _over;
     private float _serveDirection = 1.0f;
     private float _logTimer;
+
+    /// <summary>
+    /// The last mode action the game itself REFUSED, in the shape this project's
+    /// convention uses (`<name>: <why>`). TASK-133: serving a ball that is already in
+    /// flight is refused and recorded here rather than silently obeyed.
+    /// </summary>
+    [Export] public string LastRejectedAction = "";
 
     public override void _Ready()
     {
@@ -111,6 +152,16 @@ public partial class PongGame : Node2D
         if (Input.IsActionPressed("pong_left_down")) { _left.Step(1.0f, dt); }
         if (Input.IsActionPressed("pong_right_up")) { _right.Step(-1.0f, dt); }
         if (Input.IsActionPressed("pong_right_down")) { _right.Step(1.0f, dt); }
+        // TASK-133: the opponent. Only while the ball is actually inbound, so a parked
+        // ball leaves both paddles (and the picture) still.
+        if (RightPaddleAutoFollow && _ball.Velocity.X > 0.0f)
+        {
+            var target = _ball.Position.Y + Ball.Size * 0.5f - Paddle.Height * 0.5f;
+            var gap = target - _right.Position.Y;
+            var step = OpponentSpeed * dt;
+            var want = Mathf.Clamp(gap, -step, step) * OpponentSkill;
+            _right.MoveBy(want);
+        }
 
         var next = _ball.Position + _ball.Velocity * dt;
 
@@ -160,11 +211,32 @@ public partial class PongGame : Node2D
     {
         _ball.Position = new Vector2(392.0f, 268.0f);
         _ball.Velocity = Vector2.Zero;
+        LastRejectedAction = "";
     }
 
-    /// <summary>Puts the ball back in the middle and sends it off again.</summary>
+    /// <summary>
+    /// Serves the ball: puts it back in the middle and sends it off.
+    ///
+    /// <para><b>TASK-133: serving a ball that is already in flight is REFUSED and
+    /// recorded, instead of silently teleporting it back to the middle.</b> The old
+    /// version always reset `Position` and `Velocity`, so pressing SPACE mid-rally was a
+    /// no-op that looked like a teleport: the ball snapped back to the centre and the
+    /// net movement over the measurement window could be *smaller* than the no-input
+    /// window's, which is precisely the "the model acted, the game accepted it, and the
+    /// picture did not change in a way attributable to the input" state TASK-132 recorded
+    /// on 9 of 10 pong steps. Refusing it makes the action honest (the game saw the
+    /// input and says no) and makes the state unambiguous: `Ball.Velocity == 0` is the
+    /// only state in which a serve does anything.</para>
+    /// </summary>
     public void Serve()
     {
+        if (_ball.Velocity != Vector2.Zero)
+        {
+            LastRejectedAction = "serve: the ball is already in flight";
+            GD.Print($"PONG_SERVE_REFUSED ball={_ball.Position} v={_ball.Velocity} "
+                     + "reason=already_in_flight");
+            return;
+        }
         _ball.Position = new Vector2(392.0f, 268.0f);
         _ball.Velocity = new Vector2(ServeSpeedX * _serveDirection, ServeSpeedY);
         GD.Print($"PONG_SERVE ball={_ball.Position} v={_ball.Velocity}");

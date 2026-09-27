@@ -223,11 +223,13 @@ public partial class PuzzleBobbleGame : Node2D
     private ColorRect _projectile;
     private ColorRect _shooterSprite;
     private ColorRect _nextSprite;
+    private readonly List<ColorRect> _aimDots = new List<ColorRect>();
     private float _autoAccum;
     private bool _prevShoot;
     private bool _prevAimLeft;
     private bool _prevAimRight;
     private const int MaxChain = 24;
+    private const int AimDotCount = 6;
     private static readonly int[] AngleDc = { -2, -1, 0, 1, 2 };
     private static readonly int[] AngleDr = { -1, -1, -1, -1, -1 };
     private static readonly Color[] Palette =
@@ -629,6 +631,15 @@ public partial class PuzzleBobbleGame : Node2D
         _projectile = null;
         _shooterSprite = null;
         _nextSprite = null;
+        foreach (var node in _aimDots)
+        {
+            if (GodotObject.IsInstanceValid(node))
+            {
+                node.GetParent()?.RemoveChild(node);
+                node.QueueFree();
+            }
+        }
+        _aimDots.Clear();
     }
 
     /// <summary>Builds the grid sprites, the failure line, the shooter and the projectile (all runtime-created).</summary>
@@ -696,6 +707,88 @@ public partial class PuzzleBobbleGame : Node2D
             Visible = false,
         };
         AddChild(_projectile);
+        // TASK-133 §1.A.4: the AIM INDICATOR. `pb_left`/`pb_right` only changed the
+        // `AngleIndex` property, so a player could not see where the shot would go and a
+        // pixel diff over an aim press was exactly 0 (recorded in TASK-131: P2 red, the
+        // criterion deliberately NOT relaxed). These dots trace the same integer ray
+        // `Tick()` walks -- same `AngleDc`/`AngleDr` table, same side-wall reflection --
+        // so what is drawn is what a fired bubble actually does, not an approximation.
+        for (var i = 0; i < AimDotCount; i++)
+        {
+            var dot = new ColorRect
+            {
+                Name = $"AimDot{i}",
+                Size = new Vector2(14, 14),
+                Color = new Color(1.0f, 1.0f, 1.0f, 0.55f),
+                Visible = false,
+            };
+            AddChild(dot);
+            _aimDots.Add(dot);
+        }
+    }
+
+    /// <summary>
+    /// The grid cells the next shot would occupy, in order, starting one step away from
+    /// the shooter -- the same walk <see cref="Tick"/> performs (one cell per step, side
+    /// walls reflect) with no projectile state written.
+    /// </summary>
+    private List<int> AimPath()
+    {
+        var outPath = new List<int>();
+        if (GameOver || ProjActive)
+        {
+            return outPath;
+        }
+        var dc = AngleDc[AngleIndex];
+        var dr = AngleDr[AngleIndex];
+        var col = ShooterCol;
+        var row = Rows - 1;
+        for (var step = 0; step < AimDotCount; step++)
+        {
+            col += dc;
+            row += dr;
+            if (col < 0 || col >= Cols)
+            {
+                dc = -dc;
+                col += 2 * dc;
+            }
+            if (row < 0 || Occupied(col, row))
+            {
+                break;
+            }
+            outPath.Add(Idx(col, row));
+        }
+        return outPath;
+    }
+
+    /// <summary>
+    /// Paints the aim dots (or hides them while a shot is in the air / the game is over).
+    /// Called from <see cref="ApplyBoard"/>, so an aim change is on screen in the same
+    /// frame the property changed.
+    /// </summary>
+    private void ApplyAimIndicator()
+    {
+        var path = AimPath();
+        for (var i = 0; i < _aimDots.Count; i++)
+        {
+            var dot = _aimDots[i];
+            if (dot == null || !GodotObject.IsInstanceValid(dot))
+            {
+                continue;
+            }
+            if (i >= path.Count)
+            {
+                dot.Visible = false;
+                continue;
+            }
+            var col = path[i] % Cols;
+            var row = path[i] / Cols;
+            dot.Position = new Vector2(GridOffsetX + col * Cell + 13, GridOffsetY + row * Cell + 13);
+            dot.Color = new Color(Palette[ShooterColor % Palette.Length].R,
+                                  Palette[ShooterColor % Palette.Length].G,
+                                  Palette[ShooterColor % Palette.Length].B, 0.75f);
+            dot.Visible = true;
+        }
     }
 
     /// <summary>Puts every sprite where the model says it is, and rewrites the HUD.</summary>
@@ -735,6 +828,7 @@ public partial class PuzzleBobbleGame : Node2D
         {
             _nextSprite.Color = Palette[NextColor % Palette.Length];
         }
+        ApplyAimIndicator();
         if (_hud != null)
         {
             _hud.Text = $"SHOT {Shots}  COLOR {ShooterColor}  NEXT {NextColor}  ANGLE {AngleIndex}  "
@@ -827,7 +921,26 @@ public partial class PuzzleBobbleGame : Node2D
         return LastEvent;
     }
 
-    /// <summary>Sets one of the five integer aim directions, clamped to the table.</summary>
+    /// <summary>
+    /// Sets one of the five integer aim directions, clamped to the table.
+    ///
+    /// <para><b>TASK-133 §1.A.4: the aim is now VISIBLE, and it WRAPS.</b> Two changes,
+    /// both required by the measured defect (<c>pb_left</c>/<c>pb_right</c> changed only
+    /// the <c>AngleIndex</c> property, pixel diff 0):</para>
+    ///
+    /// <list type="number">
+    /// <item>the call repaints (<see cref="ApplyBoard"/> -> <see cref="ApplyAimIndicator"/>),
+    /// so the aim dots move on the frame the angle changed instead of waiting for the next
+    /// shot -- a player can see where the bubble will go, which is the whole point of an
+    /// aim control;</item>
+    /// <item>the five-entry table is a CYCLE: aiming left at the steepest-left entry
+    /// wraps to the steepest-right one (and vice versa) instead of being silently dropped.
+    /// The old clamp recorded such a press as a refusal and moved nothing, which meant the
+    /// control had a dead stop at each end and the usability gate correctly saw a
+    /// meta-only action. <see cref="Aim"/> called with an out-of-range index still clamps
+    /// (that is the programmatic hook's contract); the keyboard path walks the cycle.</item>
+    /// </list>
+    /// </summary>
     public string Aim(int index)
     {
         if (GameOver)
@@ -836,16 +949,19 @@ public partial class PuzzleBobbleGame : Node2D
             LastEvent = $"rejected reason=game_over aim={index}";
             return LastEvent;
         }
+        // a relative step (the keyboard path's press edge) crosses the ends; an absolute
+        // index is clamped exactly as before
+        var stepped = index < 0 || index >= AngleDc.Length;
         var value = index;
         if (value < 0)
         {
-            value = 0;
+            value = AngleDc.Length - 1;
         }
         if (value >= AngleDc.Length)
         {
-            value = AngleDc.Length - 1;
+            value = 0;
         }
-        if (value == AngleIndex)
+        if (value == AngleIndex && !stepped)
         {
             RejectedMoves++;
             LastEvent = $"rejected reason=same_angle aim={index}";
@@ -853,6 +969,8 @@ public partial class PuzzleBobbleGame : Node2D
         }
         AngleIndex = value;
         Moves++;
+        Recompute();
+        ApplyBoard();
         LastEvent = $"aim={AngleIndex} dc={AngleDc[AngleIndex]} dr={AngleDr[AngleIndex]}";
         return LastEvent;
     }

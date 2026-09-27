@@ -33,4 +33,17 @@ public partial class Paddle : ColorRect
         p.Y = Mathf.Clamp(p.Y + direction * Speed * delta, MinY, MaxY);
         Position = p;
     }
+
+    /// <summary>
+    /// Moves the paddle by an exact number of pixels (clamped). TASK-133: the opponent
+    /// controller needs "travel this far, no further", which is a pixel distance and not
+    /// a direction-times-time; keeping it a named method (rather than reaching into
+    /// `Position` from `PongGame`) keeps the clamped travel in one place.
+    /// </summary>
+    public void MoveBy(float pixels)
+    {
+        var p = Position;
+        p.Y = Mathf.Clamp(p.Y + pixels, MinY, MaxY);
+        Position = p;
+    }
 }

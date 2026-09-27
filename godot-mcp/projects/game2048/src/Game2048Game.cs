@@ -192,11 +192,46 @@ public partial class Game2048Game : Node2D
         _status = GetNodeOrNull<Label>("Status");
         CreateNodes();
         ResetBoard();
+        SpawnOpeningTiles();
         Recompute();
         ApplyTiles();
         UpdateHud();
         GD.Print($"GAME2048_READY cols={Cols} rows={Rows} tiles={TilesInUse} max={MaxTile} "
-                 + $"score={Score} auto={AutoPlay} poll={PollInput}");
+                 + $"score={Score} grid={GridString} auto={AutoPlay} poll={PollInput}");
+    }
+
+    /// <summary>
+    /// The two tiles 2048 deals at the start of a game (TASK-133 §1.A.2).
+    ///
+    /// <para><b>The defect this removes.</b> `_Ready` only reset the empty board, so a
+    /// fresh process showed a 4x4 field of empty cells: `GridString` was all zeros,
+    /// `TilesInUse=0`, and all four declared directions answered
+    /// `rejected reason=no_change`. The usability gate's P2/P3 turned red for exactly
+    /// that (TASK-131), and no model-player run could ever do anything: an empty board
+    /// has no legal move by definition, so the game was unplayable rather than merely
+    /// hard.</para>
+    ///
+    /// <para><b>The rule.</b> 2048 deals TWO tiles at the start (the real game deals 2s;
+    /// that is the rule this implements), and they are placed at fixed cells rather than
+    /// drawn from a random generator -- the game's own determinism rule ("nothing moves
+    /// on its own ... a board is pinned with ONE ForceTestState call") must hold for the
+    /// opening deal too, so a replayed session and a screenshot compare bit-for-bit.
+    /// `_Ready` therefore always starts from the SAME board:
+    /// <c>0,0,0,0/0,0,0,0/0,2,2,0/0,0,0,0</c>.</para>
+    ///
+    /// <para><b>Why this placement.</b> Two 2s side by side in the middle row are movable
+    /// in all four directions and merge in two of them, so every declared action has a
+    /// legal first move: left/right merge them into a 4 (a real merge and a real score
+    /// gain), up/down drop them to the top/bottom row. The board is 75% empty, so the
+    /// opening is a normal 2048 opening rather than a puzzle.</para>
+    /// </summary>
+    private void SpawnOpeningTiles()
+    {
+        var row = Rows / 2;
+        var col = Cols / 2;
+        SetCell(row, col - 1, 2);
+        SetCell(row, col, 2);
+        LastEvent = $"opening_deal tiles={TilesInUse} grid={GridString} can_move={CanMoveAny}";
     }
 
     private ColorRect MakeRect(string name, Vector2 position, Vector2 size, Color color)

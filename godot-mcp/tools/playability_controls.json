@@ -2105,6 +2105,11 @@
      "need": "pause",
      "action": "snake_pause",
      "observable": "Paused"
+    },
+    {
+     "need": "restart a finished or paused run (TASK-133: the InputMap had no restart key at all, so a lost run could never be replayed)",
+     "action": "snake_restart",
+     "observable": "HeadX|HeadY|Score|Status"
     }
    ],
    "gameplay_observables": {
@@ -2162,7 +2167,7 @@
      {
       "field": "GameOver",
       "value": true,
-      "means": "the snake had already hit a wall or itself BEFORE the settle frame (the recorded log says `SNAKE_WALL head=25,10 cols=25 rows=21 score=10 ticks=19`, i.e. 1.52 s of game time at StepSeconds 0.08): the first picture the player is shown is the losing screen, and `_Process` returns immediately, so the board cannot move again"
+      "means": "the snake hit a wall or itself BY PLAYER STEERING.  TASK-131/132 recorded the pre-fix defect as `GameOver=true` at the SETTLE frame with stdout `SNAKE_WALL head=25,10 cols=25 rows=21 score=10 ticks=19` (1.52 s of game time at the old `StepSeconds` 0.08): the first picture a player was shown was the losing screen and the run could never be replayed, because the InputMap had no restart key.  TASK-133 fixed both: a fresh run parks (`WaitingForStart=true`, `StepSeconds=0`, so `Ticks` stays 0 with no input) and `snake_restart` (R) puts a finished/paused run back to that parked start.  `GameOver` is still a real terminal state -- steering into the right wall at column 25 ends the run exactly as before."
      }
     ],
     "what": "the condition under which the game is over; the gate evaluates it on the SETTLE state, because a game that is already over before the first input cannot be judged by asking whether its picture changes afterwards",

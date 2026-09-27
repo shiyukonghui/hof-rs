@@ -14,6 +14,10 @@
 
 800×600。目标：eat the food and grow without hitting the wall or yourself。
 
+**开局是「等待开始」**：新进程把蛇画在场上但**不动**（`WaitingForStart=true`，
+`Ticks` 保持 0），按一次方向键才开始走。这是 TASK-133 的修复：旧版开局自带
+`dir=(1,0)` 且立刻步进，1.52 s（19 步 × 0.08 s）就自己撞右墙，第一帧就是失败画面。
+
 | 操作 | 动作名 | 键 |
 |---|---|---|
 | turn up | `snake_up` | `W` |
@@ -21,9 +25,17 @@
 | turn left | `snake_left` | `A` |
 | turn right | `snake_right` | `D` |
 | pause | `snake_pause` | `P` |
+| restart | `snake_restart` | `R` |
+
+`snake_restart` 的规则（TASK-133）：**正在进行的这一局拒绝重开**（记
+`LastRejectedAction="restart: the run is still live"`，不悄悄清掉玩家的进度）；
+已结束 / 已暂停 / 还在等待开始时，重开把比分、蛇身、方向、计时器都归零，
+并回到同样的「等待开始」状态。
 
 > 动作名就是 `project.godot` 的 `[input]` 里的名字，可用 `running_game_capture_screenshot` + `Input.action_press` 由 MCP 端点精确复现；
 > 可玩性门（`tools/playability_gate.py`）会逐条注入这些键，并要求**确实出现可归因的状态或像素变化**。
+> 上表与 `project.godot` 的 `[input]` 段、`tools/playability_controls.json ->
+> games.snake.required_ui` 三处必须一致（Z1 的核对口径）。
 
 ## 构建（离线）
 

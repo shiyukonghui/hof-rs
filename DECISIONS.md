@@ -7172,3 +7172,168 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
   * 回滚点：`--ack-read-delay-ms 0` 复现旧行为（证据保留在
     `runs/model-player/realkey/pong/jev/steps.jsonl` 的 `ack_after_keydown` 里，
     旧读数仍可对照）。
+
+
+---
+
+## D181 — TASK-133：snake 的「自动走到墙」与「无重开键」都是真缺陷；修法是**转向即迈一步 + `StepSeconds=0`**
+
+- 日期：2026-09-27
+- 触发问题：１）`ResetSnake` 置 `dir=(1,0)` 且 `_Process` 每 0.08 s
+  自动步进，新进程 **1.52 s（19 步）自撞右墙**，stdout
+  `SNAKE_WALL head=25,10 cols=25 rows=21 score=10 ticks=19`，settle 帧就是失败画面；
+  ２）InputMap 里**没有重开键**，一局结束就无法重玩。
+  ３）TASK-133 本轮另一个实测：只要保留自动时钟，
+  一次注入按键之后会有数百帧自动步进，可用性门 P2
+  的「动作窗 vs 同帧预算零输入对照窗」无法把输入与时钟分开
+  （两窗移动量相等）。
+- 选项：
+  1. **起局停机（`WaitingForStart`）+ 转向被接受时走一步（`StepSeconds=0`）+
+     `snake_restart`（R）回到停机起局**（选中）
+  2. 只加 `WaitingForStart`，第一次输入后恢复连续时钟 —— 否决：
+     会原样重现第 3 条实测（P2 无法归因），而且单次输入仍会带出
+     不可归因的自动步进
+  3. 把 `StepSeconds` 改成很大的值让蛇「慢」下来 —— 否决：
+     它只是把自撞墙推到后面，盐治不治本，且把 12.5 格/s 降到
+     0.4 格/s 就不再是原来那个游戏
+  4. 「永远不死」类掩盖 —— 否决：任务书 §1.A.1③ 明令禁止
+- 选择：选项 1。
+- 理由：这是**最小的、不掩盖死亡的**状态：移动/吃食物/计分/
+  自撞/撞墙判负一字未改，只是把「何时迈一步」从
+  「时钟」换成「玩家的转向」。它同时满足这个工程自己的
+  确定性规则（“nothing moves until a step says so”），并且把已有 session
+  的「力设盘面 → 等 0.6 s → 断言吃到食物」语义用
+  `AutoAdvance`（仅 `ForceTestState` 打开）原样保留。
+- 预期影响与回滚点：
+  * 实测（`runs/model-player/_scripts/zk_snake_start/z1_snake_start.json`）：
+    空转 **8 s** 后 `Ticks=0 / GameOver=false / HeadX=5`，与 t0 逐字节相同；
+    第一次 `snake_right` → `HeadX 5→6, Ticks 1`；`snake_up` → `HeadY 10→9`；
+    交替（up/right）推进至 `HeadY=-1` 时 `GameOver=true, LoseReason="wall", Ticks=21`；
+    `snake_restart` 从结束局回到 `WaitingForStart=true / HeadX=5 / Score=0 / Ticks=0`。
+  * 回滚点：把 `StepSeconds` 设回 `0.08` 并删掉 `TrySetDirection` 里的
+    `SimulateStep()` 即回到旧行为（证据仍可从录制的 steps 重算）。
+
+---
+
+## D182 — TASK-133：game2048 开局必须发牌（至少 2 张），且四个方向都要真正可动
+
+- 日期：2026-09-27
+- 触发问题：`_Ready` 只清空盘面，新进程 `GridString` 全 0、
+  `TilesInUse=0`，四个方向全部 `rejected reason=no_change`。空盘按 2048
+  的规则**就没有合法走法**，所以这是不可玩（不是难）。
+- 选项：
+  1. **固定位置发两张 2：`0,0,0,0/0,0,0,0/0,2,2,0/0,0,0,0`**（选中）
+  2. 随机发牌 —— 否决：本工程的确定性规则要求同一录制
+     可逐字节重现，随机会把录制
+     证据变成一次性
+  3. 只发一张 —— 否决：任务书 §1.A.2 要求至少 2 个，
+     且一张牌在某些方向上会 `no_change`
+- 选择：选项 1。
+- 理由：中间行并排的两张 2 使**四个方向都有合法首步**
+  （左/右 合并成 4 并得分，up/down 落到上/下行），盘面 75%
+  空，是正常的 2048 开局；`ForceTestState` 仍然先 `ResetBoard()`，
+  所以所有既有测试其实靠自己的力设盘面（测试只在开头断言过空盘，
+  该断言随修复更新为 2 张，见报告 §留痕）。
+- 预期影响与回滚点：`TilesInUse=2 / EmptyCells=14 / MaxTile=2 /
+  CanMoveAny=true`，四方向注入都产生真实移动；回滚点：删掉
+  `SpawnOpeningTiles()` 的调用。
+
+---
+
+## D183 — TASK-133：pong 的「无人操作也 5:0 自己打完」是结构缺陷；`AutoServe` 默认改 false，发球向飞行中的球**拒绝**
+
+- 日期：2026-09-27
+- 触发问题：在没有人按右档板的前提下，`AutoServe=true`
+  让每一分自动重发，球径直飞出右侧，约 **12 s** 就 `PONG_OVER
+  winner=LEFT left=5 right=0`；模型可玩窗口只剩 1–5 步。另外 `Serve()`
+  在球已在飞时依然把球瞬移回中央、直接重置 `Velocity`，
+  于是「按了 SPACE」看起来等于没按（TASK-132：10 步里 9 步如此）。
+- 选项：
+  1. **`AutoServe=false`（一分一停，下一球需显式 `pong_serve`）+
+     `Serve()` 在 `Velocity != 0` 时拒绝并记 `LastRejectedAction`**（选中）
+  2. 保留 `AutoServe`，给右档板加一个跟随球的简单 AI —— 本轮未选：
+     它会把「全手动双人」改成「六成自动」，影响面比
+     改一个默认值大得多，而且在本轮里不必要
+  3. 把 `pong_serve` 从动作集里删掉 —— 否决：任务书 §1.A.3 说明了
+     「要么给可见反馈，要么移出动作集（并说明依据）」；
+     而发球在停机时是必需的真动作，删它会把游戏变不可玩
+  4. 把 `WinScore` 调大 —— 否决：只是把速死推迟，
+     「匹配长度不由玩家控制」这个结构性问题一步都没解决
+- 选择：选项 1。
+- 理由：它把比赛长度交回玩家手里，并且让「发球」回到它本来的
+  语义（`Ball.Velocity == 0` 时才有意义）；这也正是 README 第 18 行
+  一直写的规则（一局开始球停在中央、等一次发球）。
+- 预期影响与回滚点：
+  * P2 实测：五个动作全部 `responds=True`；`pong_serve` 当球停在
+    中央时产生真实 `Ball.Velocity` 与位置变化。
+  * 未选选项 2 的后果：右档板仍然完全手动（`pong_right_up/down`），
+    模型可以操控它；这是本报告必须点名的取舍。
+  * 回滚点：`AutoServe = true` 反转到旧行为（字段是 `[Export]`，
+    会话也可直接 set）。
+
+---
+
+## D184 — TASK-133：puzzlebobble 的「矅准不可见」修法：重画矅准点串，且五个档位成循环
+
+- 日期：2026-09-27
+- 触发问题：`pb_left`/`pb_right` 只改 `AngleIndex` 属性、不重画，
+  按一次的像素差是 **0**；玩家看不见自己在矅准哪里
+  （TASK-131 记 P2 红，当时刻意没放宽判据）。
+- 选项：
+  1. **加 `AimDot0..5` 矅准点串（沿 `Tick()` 同一条整数射线、含侧墙反射），
+     并在 `Aim()` 里重画；同时把五个档位改成循环**（选中）
+  2. 只重画、不改档位循环 —— 否决：两端仍是死点，
+     在最左档再按左依然是「接受了但画面不动」
+  3. 用一个 HUD 字段显示 `ANGLE N` 而不画射线 —— 否决：
+     文字读数不算「可见的矅准指示」，用户要的是看得出方向
+- 选择：选项 1。
+- 理由：画的就是发出去的泡泡真会走的路径（同一张
+  `AngleDc`/`AngleDr` 表、同一侧墙反射），不是近似；档位循环消除了两端的
+  「按了没反应」。这两步都是显示/输入语义，不触及
+  `Resolve()`/`CheckEnd()` 的规则。
+- 预期影响与回滚点：P2 实测 `pb_left`/`pb_right` 都有可归因
+  像素变化；P6 3/3。回滚点：删掉 `ApplyAimIndicator()` 的调用
+  与 `_aimDots` 创建即回到旧行为（循环可单独回退）。
+
+---
+
+## D185 — TASK-133：判据细化：`MODEL_FIXED_POINT` 独立结论（不算游戏缺陷）+ 统一移除 `done`
+
+- 日期：2026-09-27
+- 触发问题：TASK-132 §N.3 / §N.4 的遗留。
+  （1）PlayJev 会在同一帧上无限重复同一动作（`tetris_left` P≈0.58
+  连选 9 步、`pong_right_down` P≈0.63 连选 9 步），导致「游戏忽略了输入」
+  与「模型不再玩了」无法区分；（2）`done`（“stop probing”）不是现实游戏里存在的输入，
+  却一直在候选里（TASK-132 已在玩家侧去掉，但探针侧仍保留）。
+- 选项：
+  1. **`MODEL_FIXED_POINT` 做独立结论（阈值：连续 ≥ 3 步同动作 + 同帧ハッシュ），
+     与 FAIL 分开记；`done` 在 `action_criteria` 里统一移除，
+     保留 `wait`（选中）
+  2. 继续把固定点折进 INCONCLUSIVE 的理由里 —— 否决：
+     用户明确要求它是**独立结论**，且不得据此判游戏 PASS/FAIL
+  3. 把模型固定点当作可玩性信号 —— 否决：那是模型侧的失败，
+     分数不应记在游戏账上
+- 选择：选项 1。
+- 理由：同一套规则在回路（`playtest_player.summarise`）与门
+  （`playability_gate.evaluate_model_player_steps`）两侧各实现一次，
+  并用 `tools/tests/test_playability_model_player.py`（28 条）钉住“两侧一致”。
+- 预期影响与回滚点：`player.json` 与 `gate.json -> model_player_criterion`
+  都多了 `MODEL_FIXED_POINT` 字段；`playtest_player.py selftest` 39 条全绿。
+  回滚点：删掉 `model_fixed_point` / `_model_fixed_point_steps` 与对应分支。
+
+---
+
+## D186 — TASK-133：`runs/**` 继续不入库，但报告必须给关键产物的完整路径 + sha256
+
+- 日期：2026-09-27
+- 触发问题：TASK-132 §N.8 的遗留：证据落在 `runs/**`，而
+  `.gitignore:43`（`godot-mcp/runs/`）将它整个忽略，与 D165
+  「大块可再生产物不入库」一致，但审阅者就无法核对「你说的那张图到底是哪张」。
+- 选项：1. **维持忽略，但报告里给每个关键产物的绝对路径 + sha256**（选中）
+  2. 把 `runs/model-player/**` 强制入库 —— 否决：背离 D165，且这些是可重生产物
+  3. 只给路径不给哈希 —— 否决：无法判断文件是否被改过
+- 选择：选项 1。
+- 理由：保持仓库干净的同时让结论**可复核**；报告 §产物
+  列了每个文件的绝对路径与 sha256。
+- 预期影响与回滚点：无代码影响；回滚点是「不再给哈希」，
+  但会丢掉可核对性。
