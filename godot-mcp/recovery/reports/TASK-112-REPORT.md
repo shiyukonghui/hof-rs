@@ -191,22 +191,27 @@ vector/colour**」——它点名的写法正是它拒绝的写法；同目标�
 | 纯引擎 | `modules\mcp_server\scripts\build_local.cmd -Force` | **0** | `4.8.dev.custom_build.3fdabe2d9` |
 | mono | `modules\mcp_server\scripts\mcp057_build_mono.cmd` | **0** | `4.8.dev.mono.custom_build.3fdabe2d9` |
 
-`HEAD` = `3fdabe2d9`（引擎仓本轮**未提交**，二进制与工作树同源；`g09` 判 `ANCHOR_EQUAL`）。
+`HEAD` = `3fdabe2d9`（**二进制锚点与工作树同源**；`g09` 判 `ANCHOR_EQUAL`，
+`ANCHOR=3fdabe2d9 ANCHOR_REPORTED=3fdabe2d9 HEAD=3fdabe2d9`）。
+模块改动在**十门全绿之后**才提交为 `ba1587c71e`，并 push 到 fork
+（`3fdabe2d9a..ba1587c71e`）；下一次重建后 `--version` 才会变成 `ba1587c71e`，
+所以本报告的锚点与二进制是**同一个** `3fdabe2d9`，不是漂移。
 
-十道门（`runs/gates/task112/summary.txt`，每条都是子进程里的 `!ERRORLEVEL!`）：
+十道门（`runs/gates/task112b/summary.txt`，每条都是子进程里的 `!ERRORLEVEL!`；第一次跑的是
+`task112` tag，当时 **g02 = exit 1**，见 §A1 那条 `update_file` 的失败与改正）：
 
-| 门 | 命令 | exit |
-|---|---|---|
-| g01 | `--headless --test --test-case=[MCPServer]*` | **0**（159/159 通过、6779 断言） |
-| g02 | `--headless --test` | **0** |
-| g03 | `check_tool_groups.py` | 0 |
-| g04 | `check_contract_subset.ps1` | 0（editor 154 / game 73 契约子集 3/3 PASS，含新 enum） |
-| g05 | `check_rename_map.py` | 0（177 == 174 − 2 − 1 + 6） |
-| g06 | `check_tautologies.py` | 0 |
-| g07 | `check_exit_propagation.py --probes` | 0（10/10） |
-| g08 | `check_hardcoded_counts.py` | 0 |
-| g09 | `check_engine_anchor.ps1` | 0（**ANCHOR_EQUAL**） |
-| g10 | `accept_m1.ps1` | 0（**22/22 cases passed**） |
+| 门 | 命令 | exit | 证据 |
+|---|---|---|---|
+| g01 | `--headless --test --test-case=[MCPServer]*` | **0** | 159/159 cases、6779/6779 断言 |
+| g02 | `--headless --test` | **0** | **1585/1585 cases、431092/431092 断言、3 skipped** |
+| g03 | `check_tool_groups.py` | 0 | TOOL-GROUPS CHECK PASS |
+| g04 | `check_contract_subset.ps1` | 0 | editor 154 / game 73 契约子集 **3/3 PASS**（含新 enum）、`guard_user_port_9877` pid −1/−1 |
+| g05 | `check_rename_map.py` | 0 | 177 == 174 − 2 − 1 + 6，契约 sha `fd00c75e…` |
+| g06 | `check_tautologies.py` | 0 | 恒真门 PASS |
+| g07 | `check_exit_propagation.py --probes` | 0 | PROBES 10/10 |
+| g08 | `check_hardcoded_counts.py` | 0 | UNCLASSIFIED = 0 |
+| g09 | `check_engine_anchor.ps1` | 0 | **ANCHOR_EQUAL**（anchor = HEAD = `3fdabe2d9`） |
+| g10 | `accept_m1.ps1` | 0 | **22/22 cases passed** |
 
 ### A5. 如实说明：哪一条缺陷的「修后」证据是哪一种
 
@@ -381,10 +386,42 @@ pixel_effect  >  file_effect  >  readback  >  count_only          （0 次 → n
 
 ## F. 提交与跑后的进程/端口检查
 
-### F1. 提交
+### F1. 两个仓库的真实提交
 
-* 引擎仓（`godot-mcp/godot`）：见 §F3。
-* 主仓（`F:\moonbit-hof-rs`）：见 §F3。
+```
+$ cd F:\moonbit-hof-rs\godot-mcp\godot && git log --oneline -1
+ba1587c71e  fix(mcp_server): TASK-112 - the three engine defects TASK-111 registered are fixed at the root
+            (one of them blocking and silent), plus one schema override
+            7 files changed, 527 insertions(+), 13 deletions(-)
+
+$ cd F:\moonbit-hof-rs\godot-mcp\godot && git push origin feature/mcp-server-module-rebuild
+To github.com:shiyukonghui/godot.git
+   3fdabe2d9a..ba1587c71e  feature/mcp-server-module-rebuild -> feature/mcp-server-module-rebuild
+
+$ cd F:\moonbit-hof-rs && git log --oneline -1
+6029f43  feat(godot-mcp): TASK-112 - the evidence-tier ladder for the coverage ledger, the three engine
+         defect fixes it drove, and the third batch's account
+         15 files changed, 3526 insertions(+), 383 deletions(-)
+```
+
+提交顺序是有意的：**先十门全绿，再提交引擎**，然后提交主仓（报告 / 台账 / 声明 / 决策 /
+派生脚本）。引擎提交在十门之后，所以 `g09` 的锚点仍是二进制里那个 `3fdabe2d9`——
+这一点在 §A4 里已说明，不是锚点漂移。
+
+### F1b. 提交后仍未纳入工作树的主仓条目（都不是本任务的产物）
+
+```
+$ git status --porcelain
+ M godot-mcp/recovery/work/task104/logs/git-housekeeping.err.txt   <- TASK-104 收尾时的既有状态
+ M godot-mcp/recovery/work/task104/logs/git-housekeeping.out.txt   <- 同上
+?? godot-mcp/dist/                                                 <- TASK-107/109 的产物
+?? godot-mcp/projects/_exercises/ex_write2/                        <- TASK-111 被主动终止的运行留下的半成品
+?? godot-mcp/projects/_exercises/ex_write3/                        <- 同上（会话修好前的尝试）
+?? godot-mcp/projects/_exercises/ex_write4/                        <- 同上
+?? godot-mcp/recovery/reports/ACCEPTANCE-TASK-107.md               <- TASK-107 的产物
+```
+
+与 TASK-111 §F2 逐条相同；**没有删除任何一条**（破坏性命令默认拒绝）。
 
 ### F2. 构建与运行的进程/端口检查（铁律 4）
 
@@ -397,4 +434,20 @@ post-gates  netstat LISTENING 9888/9889/9877 -> NONE ;  tasklist godot -> NONE
 （`g04` 的 `guard_user_port_9877` 报 `pid_before=-1 pid_after=-1`、`g10` 的
 `guard_user_port_9877` 同样通过），用户端口 **9877** 全程未被占用。
 
-### F3. 两仓的真实提交（见报告末尾的 `git log` 输出）
+### F3. 铁律执行与一条日志观察
+
+```
+$ netstat -ano | findstr "LISTENING" | findstr "9888 9889 9877"   ->  NO_LISTENERS
+$ tasklist  | findstr /I godot                                    ->  NO_GODOT_PROC
+```
+
+铁律 4 在本轮**每次**构建/测试前都执行（5 次纯引擎构建、2 次 mono 构建、2 次十门、6 次
+`--test` 直跑），全部在 `F:\moonbit-hof-rs\godot-mcp\godot` 下、全部由 **cmd** 启动
+（铁律 3），**没有一次 shell 重定向**（铁律 1：构建脚本自己写日志文件，
+我自己的运行一律用 `Start-Process -RedirectStandardOutput/Error`）。
+
+另记一条**观察**（不是本任务的缺陷）：`build_local.cmd` / `mcp057_build_mono.cmd` 的日志
+默认落在 `%TEMP%` 且是**追加**的（`>>`），所以旧机器的历史错误行（路径是
+`F:\RustProjects\godot-mcp-pro\...`）会留在同一份日志里，第一次看容易把历史错误当成当次错误。
+本轮改用 `set MCP_BUILD_LOG=<task112 专用路径>` 与 `recovery/logs/task112-build-*.log` 隔离，
+并在读日志时按**当前文件的真实行号**过滤。
