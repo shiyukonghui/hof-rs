@@ -554,3 +554,34 @@ D:\Anaconda\python.exe runs\model-player\_scripts\t135_artifacts.py
 5. **【环境】`runs/**` 仍被 `.gitignore:43` 忽略**，所以本任务的全部运行证据
    （16 个 run、探针、17 张帧、门的 gate.json）只在磁盘上；路径 + sha256 已给全（§7.4），
    与 D186 的口径一致。是否把关键 JSON/帧入库仍留给决策者。
+
+---
+
+## 10. 交付补记（docs-only）
+
+* **交付提交：`6999626`**（`12 files changed, 1661 insertions(+), 72 deletions(-)`），
+  提交信息逐条对应本报告 §1/§2/§6/§7；提交内容**只含**本任务独占清单里的文件
+  （`DECISIONS.md`、三款游戏的 `src` + `README`、`tools/playtest_player.py`、
+  `tools/playability_controls.json`、`tools/tests/test_playability_model_player.py`、
+  `recovery/tasks/TASK-135.md`、本报告）。
+* 本报告**首版**（随 `6999626` 提交的那一版）：
+  `sha256 = f4f47e7a6fc4116e666b57d822fa7e6bee5753c2964d0c08207021b757c8e5ca`，43881 bytes。
+* 提交后的两仓状态：
+
+```
+$ git -C F:\moonbit-hof-rs log --oneline -2
+6999626 feat(godot-mcp): TASK-135 - fix the three game-side hard blockers the scripted arm exposed, …
+84103ae docs(godot-mcp): TASK-134 - correct the read_image count in the report …
+
+$ git -C F:\moonbit-hof-rs status --short
+(clean)
+
+$ git -C F:\moonbit-hof-rs\godot-mcp\godot log --oneline -1
+ba1587c71e fix(mcp_server): TASK-112 - …
+$ git -C F:\moonbit-hof-rs\godot-mcp\godot status --short
+?? uid_cache.bin        <- 仍然只在原地，未提交（非本轮引入）
+```
+
+* 这次补记是**第 2 次、只动这一份文档**的提交（与 TASK-132/133/134 的
+  「docs-only invariant」做法一致：报告先落地，再把交付提交号与最终两仓状态写回报告）。
+
