@@ -482,15 +482,17 @@ $ cd F:\moonbit-hof-rs && git log --oneline -3
           order in the report
 ```
 
-三个提交、顺序与 TASK-114 同构（**正文只按消息引用、不写哈希**：本报告自己就在其中一次提交里，
+四个提交、顺序与 TASK-114 同构（**正文只按消息引用、不写哈希**：本报告自己就在其中一次提交里，
 任何写进正文的哈希都会被「写哈希」这个动作本身改掉；准确哈希请用 `git log --oneline`）：
 
-1. **功能提交**（`HEAD~2`）—— 工程 / 会话 / 清单 / 台账 / 登记表 / 派生脚本；
-2. **报告与决策**（`HEAD~1`）—— 本报告 + `DECISIONS.md` D160；
-3. **再刷一次台账**（`HEAD`）—— 原因是 `tool_coverage.py` 把登记表的 `reclassified` 当**输入**：
+1. **功能提交** —— 工程 / 会话 / 清单 / 台账 / 登记表 / 派生脚本；
+2. **报告与决策** —— 本报告 + `DECISIONS.md` D160；
+3. **再刷一次台账** —— 原因是 `tool_coverage.py` 把登记表的 `reclassified` 当**输入**：
    第一次刷新跑在 `reclassify_h7.py` 之前，所以 `TOOL-COVERAGE.md` §4 里那 10 条新漂移还标着
    「待复核」。重刷后是 **74 成员 / 66 漂移 / 66 已改判 / 0 条未改判漂移**，语料数字不变
    （109 run / 177 trace / 8665 调用 / 169 工具）。
+4. **幂等修复** —— `reclassify_h7.py` 第一版只让 `reclassified` 数组幂等、分类正文不幂等
+   （见 §D3 的披露）；修完重刷台账，数字仍然不变。
 
 这样「改动 → 提交 → 决策日志」三者可互查。
 * 显式入库的东西：`projects/_exercises/ex_editor/`（含 `export_presets.cfg` —— 该工程自己的
