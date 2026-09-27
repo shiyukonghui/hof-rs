@@ -536,7 +536,33 @@ cc57989 feat(godot-mcp): TASK-128 (D167) - fit the jev playability thresholds ..
 
 ---
 
-## 13. 提交后追记
+## 13. 提交记录（提交后追记）
 
-* 本任务提交：`<见下一条提交哈希>`（提交信息 `feat(godot-mcp): TASK-129 (D168) - wire the PlayJev vision verdict into the gate, multi-state sampling, calibrated token estimate + 422 halving retry, four declarative negative variants`）
-* 提交后 `git log --oneline -5` / `git status --short` 见下（`git status` 应为**干净**，除 `.gitignore` 忽略的 `runs/`）。
+**本任务的实质提交：`b5ce09d`**
+
+```
+feat(godot-mcp): TASK-129 (D168/D169/D170) - wire PlayJev into the gate, sample independent
+states, fix the token estimate, add real negative variants
+```
+
+提交前用 `git status --short` 逐项核对：**只暂存了 §9.2 列出的独占文件 + §9.3 点名的 9 份遗留文件**
+（`git add` 的路径逐个显式给出，未用 `-A` 全量暂存；`git status --short` 显示的 72 条全部是本次
+预期的那 72 条，没有多出任何第三方改动）。负变体目录里被 `.gitignore` 的 `.godot/`、`bin/`、`obj/`
+没有进入提交（`git add --dry-run` 已确认只加源码/场景/`variant.json`，共 53 个文件）。
+
+提交后：
+
+```
+> git -C F:\moonbit-hof-rs status --short
+（空 —— 工作区干净）
+
+> git -C F:\moonbit-hof-rs log --oneline -5
+b5ce09d feat(godot-mcp): TASK-129 (D168/D169/D170) - wire PlayJev into the gate, sample independent states, fix the token estimate, add real negative variants
+f01d23f docs(tasks): strict single-threading supersedes the worktree plan
+90ac351 docs(tasks): require git worktrees for concurrent subagents
+887640c docs(godot-mcp): TASK-128 - record the final commit id in the report
+cc57989 feat(godot-mcp): TASK-128 (D167) - fit the jev playability thresholds on 20 fixed games vs 16 pre-fix negatives, keep uncalibrated=true
+```
+
+> 说明：`f01d23f`/`90ac351` 是决策者在本次执行前落下的两条"任务纪律"提交（后者推翻前者的 worktree 方案，
+> 即 D169 的来源），**不是我的产出**，我没有改动它们。
