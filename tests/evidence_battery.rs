@@ -118,17 +118,23 @@ fn collision_from_ground(node_path: &str, node_type: &str, shape_count: u32) -> 
 // The fixture-driven channel
 // ---------------------------------------------------------------------------
 
-/// DR-30: how the mocked `running_game_capture_screenshot` / `running_game_capture_frames` behave.
+/// DR-30/DR-49: how the mocked `running_game_capture_screenshot` /
+/// `running_game_capture_frames` behave.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum ScreenshotMode {
-    /// The tool writes the PNG the battery asked for.
-    WritesFile,
+    /// DR-49: the contract shape — the engine answers an inline base64 PNG when
+    /// the call carries no `save_path` (`running_game_capture.cpp:56-60`).
+    InlineImage,
     /// The tool answers `ok` but nothing lands on disk and no image is carried
     /// inline (`smoke-t3` reported `path` for a file that did not exist).
     ReportsSuccessButNoFile,
     /// The primary tool fails and `running_game_capture_frames` answers with an inline
     /// base64 PNG, which the runtime must materialize itself.
     InlineBase64Fallback,
+    /// DR-49: the primary tool answers success without an image, while the
+    /// `running_game_capture_frames` fallback *does* carry one.  A stale file on
+    /// disk used to suppress that fallback.
+    SilentPrimaryFramesInline,
 }
 
 /// DR-33: what `editor_get_input_actions` says about the InputMap.
@@ -187,7 +193,7 @@ impl FixtureChannel {
             player_shape_count: 1,
             hud_label: true,
             moving: true,
-            screenshot: ScreenshotMode::WritesFile,
+            screenshot: ScreenshotMode::InlineImage,
             input_actions: InputActionsMode::Bound,
             game_input: GameInputMode::Ok,
             pressed_in_game: Mutex::new(false),
@@ -271,6 +277,31 @@ fn inline_png_bytes() -> Vec<u8> {
 /// The `running_game_capture_screenshot` "I saved it" reply (no image inline).
 fn screenshot_ok_payload() -> Value {
     json!({"content": [{"type": "text", "text": "{\"path\": \"frame\", \"size\": 686}"}]})
+}
+
+/// DR-49: the engine's reply when the call carries **no** `save_path` — the
+/// picture travels inline, exactly as `running_game_capture.cpp:120-127` writes
+/// it.
+fn screenshot_inline_payload() -> Value {
+    let inner = json!({
+        "format": "png",
+        "height": 1,
+        "width": 1,
+        "image_base64": INLINE_PNG_TEXT,
+    });
+    json!({"content": [{"type": "text", "text": inner.to_string()}]})
+}
+
+/// DR-49: the `-32602` the engine answers when `save_path` is not a `res://` or
+/// `user://` path (`running_game_capture.cpp:62-63`; the message is the one
+/// `smoke-t6` captured three times).
+fn invalid_save_path(save_path: &str) -> McpError {
+    McpError::new(
+        -32602,
+        format!(
+            "Parameter 'save_path' must start with 'res://' or 'user://', got '{save_path}'"
+        ),
+    )
 }
 
 /// The `running_game_capture_frames` reply captured in `smoke-t3`: the image travels inline
@@ -374,23 +405,24 @@ impl ToolChannel for FixtureChannel {
             "editor_play_scene" => fixture("play_scene_ok.json"),
             "running_game_get_scene_tree" => node_tree_payload(self.hud_label),
             "editor_get_input_actions" => input_actions_payload(self.input_actions),
-            "running_game_capture_screenshot" => match self.screenshot {
-                ScreenshotMode::WritesFile => {
-                    if let Some(save_path) = args.get("save_path").and_then(Value::as_str) {
-                        if let Some(parent) = Path::new(save_path).parent() {
-                            std::fs::create_dir_all(parent)?;
-                        }
-                        std::fs::write(save_path, inline_png_bytes())?;
+            "running_game_capture_screenshot" => {
+                // DR-49: the double enforces the engine's **value domain** before
+                // it enforces anything else, so a regression to a filesystem
+                // `save_path` cannot pass the battery unnoticed.
+                if let Some(save_path) = args.get("save_path").and_then(Value::as_str) {
+                    if !(save_path.starts_with("res://") || save_path.starts_with("user://")) {
+                        return Err(invalid_save_path(save_path).into());
                     }
-                    screenshot_ok_payload()
                 }
-                // The smoke-t3 shape: an `ok` reply naming a file that was never
-                // written.
-                ScreenshotMode::ReportsSuccessButNoFile => screenshot_ok_payload(),
-                ScreenshotMode::InlineBase64Fallback => {
-                    return Err(captured_error("screenshot_failure.txt").into());
+                match self.screenshot {
+                    ScreenshotMode::InlineImage => screenshot_inline_payload(),
+                    ScreenshotMode::ReportsSuccessButNoFile
+                    | ScreenshotMode::SilentPrimaryFramesInline => screenshot_ok_payload(),
+                    ScreenshotMode::InlineBase64Fallback => {
+                        return Err(captured_error("screenshot_failure.txt").into());
+                    }
                 }
-            },
+            }
             "running_game_capture_frames" => match self.screenshot {
                 ScreenshotMode::ReportsSuccessButNoFile => json!({
                     "content": [{"type": "text", "text":
@@ -1446,7 +1478,130 @@ async fn screenshot_materializes_an_inline_base64_png() {
     assert_eq!(png, inline_png_bytes(), "the decoded bytes must be exact");
 }
 
-/// DR-30: the scene tree needs node paths **and** types.
+// ---------------------------------------------------------------------------
+// DR-49 — the screenshot must be *this run's* artifact
+// ---------------------------------------------------------------------------
+
+/// The stale PNG `smoke-t6` found on disk: a 2026-09-21 file that made the step
+/// report success while the engine had refused the call three times.
+const STALE_PNG: &[u8] = b"a PNG from an earlier round, never this run's\n";
+
+fn place_stale_screenshot(workspace: &Path) {
+    let target = workspace.join(".hoh/evidence/frame-00.png");
+    std::fs::create_dir_all(target.parent().unwrap()).unwrap();
+    std::fs::write(&target, STALE_PNG).unwrap();
+}
+
+/// DR-49 ①/②: the call must use the contract's writable form, never a
+/// filesystem path — `running_game_capture.cpp:62-63` refuses anything but
+/// `res://`/`user://` with `-32602` (three times in `smoke-t6`).
+#[tokio::test]
+async fn the_screenshot_call_carries_no_filesystem_path() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel = Arc::new(FixtureChannel::green());
+    let run = run_battery(root, channel.clone(), 30).await;
+
+    let calls = channel.calls_of("running_game_capture_screenshot");
+    assert!(!calls.is_empty(), "the step must have called the tool");
+    for args in &calls {
+        match args.get("save_path").and_then(Value::as_str) {
+            None => {}
+            Some(save_path) => assert!(
+                save_path.starts_with("res://") || save_path.starts_with("user://"),
+                "a filesystem `save_path` is a contract violation (DR-49): {save_path}"
+            ),
+        }
+    }
+    // The contract shape this batch commits to: no `save_path` at all, with the
+    // runtime materializing the inline image.
+    assert_eq!(
+        calls[0],
+        json!({}),
+        "the call must not carry a filesystem `save_path` (DR-49)"
+    );
+
+    let record = step(&run.records, "screenshot");
+    assert!(record.ok, "{:?}", record.record);
+    assert_eq!(
+        record.record.path.as_deref(),
+        Some(".hoh/evidence/frame-00.png")
+    );
+}
+
+/// DR-49 ②/③: a pre-existing PNG must not satisfy the step.  This is the
+/// `smoke-t6` reproduction: the engine refuses the call (or answers without an
+/// image) and a stale file is the only thing on disk.
+#[tokio::test]
+async fn a_stale_png_is_never_mistaken_for_this_runs_screenshot() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel =
+        Arc::new(FixtureChannel::green().with_screenshot(ScreenshotMode::ReportsSuccessButNoFile));
+    place_stale_screenshot(&root.join("workspace"));
+
+    let run = run_battery(root, channel, 30).await;
+
+    let record = step(&run.records, "screenshot");
+    assert!(
+        !record.ok,
+        "a PNG that was already on disk is not this run's evidence (DR-49): {:?}",
+        record.record
+    );
+    assert!(
+        record.record.path.is_none(),
+        "no path may be claimed from a stale file: {:?}",
+        record.record
+    );
+    assert!(
+        record.record.observation.contains("UNAVAILABLE"),
+        "{}",
+        record.record.observation
+    );
+    assert!(
+        !run.workspace.join(".hoh/evidence/frame-00.png").exists(),
+        "the stale file must have been invalidated before the call (DR-49)"
+    );
+}
+
+/// DR-49 ④: a stale file used to **suppress** the `running_game_capture_frames`
+/// fallback (`godot.rs:1081` tested `is_file()`), so a real inline image was
+/// never materialized.  The fallback is now decided by "do we have this run's
+/// image yet?", not by the disk.
+#[tokio::test]
+async fn a_stale_png_does_not_suppress_the_frames_fallback() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel = Arc::new(
+        FixtureChannel::green().with_screenshot(ScreenshotMode::SilentPrimaryFramesInline),
+    );
+    place_stale_screenshot(&root.join("workspace"));
+
+    let run = run_battery(root, channel.clone(), 30).await;
+
+    assert_eq!(
+        channel.call_count("running_game_capture_frames"),
+        1,
+        "the fallback must be attempted even when a file already exists (DR-49)"
+    );
+    let record = step(&run.records, "screenshot");
+    assert!(
+        record.ok,
+        "the fallback carried a real image: {:?}",
+        record.record
+    );
+    assert_eq!(
+        record.record.path.as_deref(),
+        Some(".hoh/evidence/frame-00.png")
+    );
+    assert_eq!(
+        std::fs::read(run.workspace.join(".hoh/evidence/frame-00.png"))
+            .expect("the fallback image must be on disk"),
+        inline_png_bytes(),
+        "the artifact must be the fallback's image, not the stale bytes (DR-49)"
+    );
+}
+
 #[tokio::test]
 async fn scene_tree_requires_node_paths_and_types() {
     let temp = tempfile::tempdir().unwrap();

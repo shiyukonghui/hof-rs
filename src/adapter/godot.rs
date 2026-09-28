@@ -1045,9 +1045,22 @@ impl<'a> BatterySession<'a> {
 
     /// 4. Screenshot, stored under `.hoh/evidence/` and referenced relatively.
     ///
-    /// DR-30: a `path` may only be written when the PNG **really exists**.  When
-    /// the server hands the image back inline as base64 (what `running_game_capture_frames`
-    /// does), the runtime materializes it first.
+    /// DR-30: a `path` may only be written when the PNG **really exists**.
+    ///
+    /// DR-49: it must also be **this run's** PNG.
+    ///
+    /// * the call carries **no** `save_path` — the engine accepts only
+    ///   `res://`/`user://` (`running_game_capture.cpp:62-63`) and hof-rs used to
+    ///   send a filesystem path, which was refused with `-32602` three times in
+    ///   `smoke-t6`; without it the engine answers the image inline
+    ///   (`running_game_capture.cpp:56-60`) and the runtime materializes it;
+    /// * whatever is already at the target path is invalidated **before** the
+    ///   call (`*.stale-<ts>`), so `smoke-t6`'s 2026-09-21 PNG cannot be
+    ///   mistaken for this run's evidence;
+    /// * the step's `ok` is decided on **freshness** (the artifact state changed
+    ///   across the call), never on `is_file()`;
+    /// * the `running_game_capture_frames` fallback is chosen by "we have no
+    ///   image from this run", so a stale file can no longer suppress it.
     async fn step_screenshot(&mut self) -> anyhow::Result<()> {
         let step = BatteryStep {
             id: "screenshot".to_string(),
@@ -1065,12 +1078,27 @@ impl<'a> BatterySession<'a> {
         if let Some(parent) = absolute.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        let save_path = absolute.to_string_lossy().into_owned();
-        let args = json!({"save_path": save_path});
         let mut calls = Vec::new();
         let mut notes: Vec<String> = Vec::new();
         let mut materialized = false;
 
+        // DR-49 ②: the state before the call, and the invalidation that makes
+        // "the path is occupied" impossible to inherit from an earlier round.
+        let before = artifact_fingerprint(&absolute);
+        match invalidate_artifact(&absolute) {
+            Ok(Some(stale)) => {
+                notes.push(format!("invalidated a pre-existing {stale} before the call"))
+            }
+            Ok(None) => {}
+            Err(error) => notes.push(format!(
+                "FAILED to invalidate the pre-existing artifact at {}: {error}",
+                absolute.display()
+            )),
+        }
+
+        // DR-49 ①: no `save_path` — the contract's writable forms are the only
+        // accepted ones, and the inline form needs none.
+        let args = json!({});
         match self.call("running_game_capture_screenshot", args.clone()).await {
             Ok(call) => {
                 calls.push(call_ok(
@@ -1079,18 +1107,16 @@ impl<'a> BatterySession<'a> {
                     &call.payload,
                     &call.correlation,
                 ));
-                if absolute.is_file() {
-                    // The tool wrote it itself.
-                } else if let Some(bytes) = extract_inline_image(&unwrap_mcp_payload(&call.payload))
-                {
-                    write_png(&absolute, &bytes)?;
-                    materialized = true;
-                } else {
-                    notes.push(format!(
-                        "FAILED running_game_capture_screenshot reported success but no file exists at {} \
-                         and the payload carried no inline image",
-                        absolute.display()
-                    ));
+                let parsed = unwrap_mcp_payload(&call.payload);
+                match extract_inline_image(&parsed) {
+                    Some(bytes) => {
+                        write_png(&absolute, &bytes)?;
+                        materialized = true;
+                    }
+                    None => notes.push(format!(
+                        "FAILED running_game_capture_screenshot reported success but carried no \
+                         inline image: {parsed}"
+                    )),
                 }
             }
             Err(failure) => {
@@ -1099,7 +1125,9 @@ impl<'a> BatterySession<'a> {
             }
         }
 
-        if !absolute.is_file() {
+        // DR-49 ④: the fallback is about "this run has no image yet" — it is
+        // never short-circuited by a file that happened to be on disk.
+        if !materialized {
             let frames_args = json!({"count": 1, "frame_interval": 10});
             match self.call("running_game_capture_frames", frames_args.clone()).await {
                 Ok(call) => {
@@ -1127,28 +1155,33 @@ impl<'a> BatterySession<'a> {
             }
         }
 
-        // One decision point, and it is about the disk, not about a reply.
-        let (ok, path, observation) = if absolute.is_file() {
+        // DR-49 ③: one decision point, and it is about **freshness**, not about
+        // the mere existence of a file.
+        let after = artifact_fingerprint(&absolute);
+        let (ok, path, observation) = if artifact_is_fresh(before.as_ref(), after.as_ref()) {
             let size = std::fs::metadata(&absolute).map(|m| m.len()).unwrap_or(0);
+            let provenance = if materialized {
+                "; materialized from an inline base64 image"
+            } else {
+                ""
+            };
+            let extra = if notes.is_empty() {
+                String::new()
+            } else {
+                format!("; {}", notes.join(" / "))
+            };
             (
                 true,
                 Some(relative.clone()),
-                format!(
-                    "screenshot written to {relative} ({size} byte(s)){}",
-                    if materialized {
-                        "; materialized from an inline base64 image"
-                    } else {
-                        ""
-                    }
-                ),
+                format!("screenshot written to {relative} ({size} byte(s)){provenance}{extra}"),
             )
         } else {
             (
                 false,
                 None,
                 format!(
-                    "FAILED screenshot unavailable: {} (UNAVAILABLE: no PNG exists on disk, so no \
-                     path may be claimed)",
+                    "FAILED screenshot unavailable: {} (UNAVAILABLE: no PNG produced by this run \
+                     exists at {relative}; DR-49 decides on freshness, not on `is_file()`)",
                     notes.join(" / ")
                 ),
             )
@@ -2108,6 +2141,95 @@ fn write_png(path: &Path, bytes: &[u8]) -> anyhow::Result<()> {
     }
     std::fs::write(path, bytes)?;
     Ok(())
+}
+
+/// DR-49: what an artifact looked like at one instant.
+///
+/// Freshness is decided on the artifact **state**, so "a file exists at the
+/// target" can never be enough on its own: a PNG left behind by an earlier
+/// round has the same path but not the same bytes/metadata.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ArtifactFingerprint {
+    pub size: u64,
+    /// Modification time in nanoseconds since the Unix epoch.
+    pub mtime_unix_nanos: u128,
+    pub sha256: String,
+}
+
+/// DR-49: the fingerprint of `path`, or `None` when there is no readable file.
+pub fn artifact_fingerprint(path: &Path) -> Option<ArtifactFingerprint> {
+    let metadata = std::fs::metadata(path).ok()?;
+    if !metadata.is_file() {
+        return None;
+    }
+    let bytes = std::fs::read(path).ok()?;
+    let mtime_unix_nanos = metadata
+        .modified()
+        .ok()
+        .and_then(|time| {
+            time.duration_since(std::time::UNIX_EPOCH)
+                .ok()
+                .map(|duration| duration.as_nanos())
+        })
+        .unwrap_or(0);
+    Some(ArtifactFingerprint {
+        size: metadata.len(),
+        mtime_unix_nanos,
+        sha256: crate::runtime::policy::sha256_hex(&bytes),
+    })
+}
+
+/// DR-49 ③: did **this** call produce the artifact?
+///
+/// * nothing on disk — never fresh (a `path` may not be claimed);
+/// * nothing before, something now — fresh;
+/// * something before and after — fresh only when the bytes or the timestamp
+///   actually changed, i.e. when this call rewrote it.
+pub fn artifact_is_fresh(
+    before: Option<&ArtifactFingerprint>,
+    after: Option<&ArtifactFingerprint>,
+) -> bool {
+    match (before, after) {
+        (_, None) => false,
+        (None, Some(_)) => true,
+        (Some(before), Some(after)) => before != after,
+    }
+}
+
+/// DR-49 ②: get a pre-existing artifact out of the target path **before** the
+/// call, so "the file exists" cannot be satisfied by an older round.
+///
+/// It is renamed to `<name>.stale-<unix seconds>` rather than deleted: the old
+/// artifact stays auditable (it is hidden from the artifact hash — `.hoh` is
+/// excluded — and from the hygiene scans, which ignore `.hoh`), while the
+/// target itself is empty for the duration of the call.  `None` means there was
+/// nothing to invalidate.
+pub fn invalidate_artifact(path: &Path) -> std::io::Result<Option<String>> {
+    if !path.is_file() {
+        return Ok(None);
+    }
+    let base = path
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "artifact".to_string());
+    let stamp = crate::adapter::engine::now_seconds();
+    for attempt in 0..64u32 {
+        let suffix = if attempt == 0 {
+            format!(".stale-{stamp}")
+        } else {
+            format!(".stale-{stamp}-{attempt}")
+        };
+        let candidate = path.with_file_name(format!("{base}{suffix}"));
+        if !candidate.exists() {
+            std::fs::rename(path, &candidate)?;
+            return Ok(Some(format!("{base}{suffix}")));
+        }
+    }
+    // The name space is a per-second window of 64 names; if it is exhausted the
+    // invalidation must still happen, so the file is removed instead of being
+    // silently left in place (which would let a stale file be claimed).
+    std::fs::remove_file(path)?;
+    Ok(Some(format!("{base} (removed: no free .stale-{stamp} name)")))
 }
 
 /// Decode standard-alphabet base64 (padding optional).
@@ -3420,6 +3542,58 @@ mod tests {
             non_banner_editor_errors(only_banners.as_array().unwrap()).is_empty(),
             "only the engine's own banners were reported"
         );
+    }
+
+    /// DR-49: freshness is a property of the artifact **state**, and a
+    /// pre-existing file is invalidated rather than trusted.
+    #[test]
+    fn freshness_is_decided_on_the_artifact_state_not_on_existence() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("frame-00.png");
+
+        // Nothing before, nothing after: never fresh.
+        assert!(!artifact_is_fresh(None, None));
+        // Created by the call.
+        std::fs::write(&path, b"one").unwrap();
+        let first = artifact_fingerprint(&path).expect("fingerprint");
+        assert!(artifact_is_fresh(None, Some(&first)));
+        // Unchanged across the call: not this run's artifact.
+        assert!(!artifact_is_fresh(Some(&first), Some(&first)));
+        // Rewritten with different bytes: fresh.
+        std::fs::write(&path, b"two").unwrap();
+        let second = artifact_fingerprint(&path).expect("fingerprint");
+        assert!(artifact_is_fresh(Some(&first), Some(&second)));
+        // Deleted: never fresh, and no path may be claimed.
+        std::fs::remove_file(&path).unwrap();
+        assert!(!artifact_is_fresh(Some(&first), None));
+        assert!(artifact_fingerprint(&path).is_none());
+    }
+
+    /// DR-49 ②: the pre-existing artifact is renamed out of the way, not left in
+    /// place, and the operation is idempotent/`None` when there is nothing.
+    #[test]
+    fn invalidating_an_artifact_moves_it_aside() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("frame-00.png");
+        assert_eq!(invalidate_artifact(&path).unwrap(), None);
+
+        std::fs::write(&path, b"2026-09-21 stale png").unwrap();
+        let stale = invalidate_artifact(&path)
+            .unwrap()
+            .expect("a pre-existing file must be moved aside");
+        assert!(stale.starts_with("frame-00.png.stale-"), "{stale}");
+        assert!(
+            !path.exists(),
+            "the target must be empty for the duration of the call"
+        );
+        let moved = temp.path().join(&stale);
+        assert_eq!(
+            std::fs::read(&moved).unwrap(),
+            b"2026-09-21 stale png",
+            "the stale artifact stays auditable under its new name"
+        );
+        // A second invalidation has nothing left to do.
+        assert_eq!(invalidate_artifact(&path).unwrap(), None);
     }
 
     /// DR-6: the editor-scope limitation is published as an explicit,
