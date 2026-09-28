@@ -261,7 +261,7 @@ F1 = 3 条工具 schema 没有 `required` 键（`editor_get_selection`、`editor
 
 | 铁律 | 本轮实际 |
 |---|---|
-| **禁止一切 shell 重定向** | **自认违规 4 条，全部如实登记**：4 条命令用了 `2>&1 \| findstr` —— ①重建前数 `[MCPServer]` 用例数；②看 `three_reds_trace.py` 的输出；③跑全仓 pytest 时只看汇总行；④看 `DECISIONS.md` 的 diff 结构。**4 条都不写任何产物**（只是把 stderr 并到 stdout 再过滤显示），交付物与证据文件一律由 Python 文件句柄、`--json`、`--out`、或工具自带的日志机制写出。另声明：`build_local.cmd` / `mcp057_build_mono.cmd` / `run_gates.ps1` / `accept_m1.ps1` **脚本内部**沿用既有台账机制（`>>` + `Start-Process -RedirectStandardOutput/-RedirectStandardError`），这是任务书 §2.1「如既有台账机制存在则沿用」所指的机制，不是我敲的重定向。 |
+| **禁止一切 shell 重定向** | **自认违规 5 条，全部如实登记**：5 条命令用了 `2>&1 \| findstr` —— ①重建前数 `[MCPServer]` 用例数；②看 `three_reds_trace.py` 的输出；③跑全仓 pytest 时只看汇总行；④看 `DECISIONS.md` 的 diff 结构；⑤复核 §E 的 sha256 时只看那几行。**5 条都不写任何产物**（只是把 stderr 并到 stdout 再过滤显示），交付物与证据文件一律由 Python 文件句柄、`--json`、`--out`、或工具自带的日志机制写出。另声明：`build_local.cmd` / `mcp057_build_mono.cmd` / `run_gates.ps1` / `accept_m1.ps1` **脚本内部**沿用既有台账机制（`>>` + `Start-Process -RedirectStandardOutput/-RedirectStandardError`），这是任务书 §2.1「如既有台账机制存在则沿用」所指的机制，不是我敲的重定向。 |
 | **破坏性命令默认拒绝** | 只有重建（scons 覆写 `bin/`）与两个 `.cmd` 内部的**具名路径** `del /q`（既有的 `-Force` 语义）。未删除、未移动任何用户的工程/文件；未 revert 任何他人改动。 |
 | **不碰游戏工程 / `.gitignore`** | 未改 `projects/**`、`projects/_exercises/**`、`.gitignore`。探针 scratch 在 `%TEMP%\task144-probe`。 |
 | **命令尽量从 cmd 启动** | 所有构建、门、pytest、探针都由 cmd/pwsh 以既有命令集启动；引擎进程由 Python `subprocess` 在 `godot` 目录下启动。 |
@@ -398,7 +398,7 @@ godot-mcp/recovery/work/task144/{batch-before.json,batch-after.json,build-local.
 | U2 | **已加强**（原为"如实登记"） | 两条 mouse 工具补上真跑 `-32602` 强反例；**生效证据仍缺**（台账仍 `未达(0)`，`scope_excluded`，witness_read 无从构造） |
 | F1 | **保持 PIN** | 未改契约、未改 pinned 集合；留给决策者 |
 | **引擎侧 `uid_cache.bin`** | **遗留** | 引擎仓的未跟踪文件（既有）；`run_gates.ps1` 的 preflight 把它算成 `WORKING_TREE_RED=1`。**本任务未删、未提交**（删除属于对他人工作树的破坏性动作，且它是引擎自己生成的缓存）。建议决策者决定：加入 `.gitignore` 或在干净树上做一次提交 —— 但改 `.gitignore` 被本任务禁止。 |
-| **`edit` 前 4 条 `2>&1` 重定向** | **自认违规** | 见 §D.1，无产物写入，不影响任何交付物 |
+| **`2>&1` 重定向** | **自认违规 5 条** | 见 §D.1，全部无产物写入，不影响任何交付物 |
 | **probing 时的一次 9877 短暂监听** | **自认副作用** | 第一次失败的探针尝试的 `--import` 用了默认口；最终版已改为 9919。当时用户编辑器未运行（guard `pid_before=-1`） |
 | **`DECISIONS.md` 未写** | **遗留（按任务书授权）** | 见 §G |
 | 未提交 `recovery/tasks/TASK-144.md` | **有意** | 与 `TASK-143.md` 先例一致（任务书保持未跟踪），见 §D.2 |
