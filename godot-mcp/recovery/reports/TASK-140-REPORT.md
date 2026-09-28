@@ -584,8 +584,11 @@ ledger lines: 696   this batch's commands from that index: 195（切点探针 t1
 |---|---|---|
 | **`ac4d554`** | 主批次：判据可靠性（A）+ 4 款修法（B）+ 100 run 重跑与证据（C）+ 记录（D） | **180 files changed, 67265 insertions(+), 57 deletions(-)** |
 | **`8214025`** | 报告收尾：最终重定向自查数字、`gate`/归因阅读器、§C/§E/§F/§I/§J | **4 files changed, 150 insertions(+), 12 deletions(-)** |
-| **`（第三个，极小）`** | §J.3 的最终工作区状态与本报告最后校对 | 见 `git log --oneline -3` |
+| **`a46d278`** | §J.3 的最终工作区状态（当时 `M t140_redirect_scan.json` 已并入上一提交） | 1 file changed, 9 insertions(+), 5 deletions(-) |
+| **`c2adcc1`** | 报告准确性：§G.3 改成"撞击→重生已由 §C.5 的定向探针补齐" | 1 file changed, 12 insertions(+), 7 deletions(-) |
 
+其余是**报告文字/自查数字的极小收尾提交**（每个都能在 `git log` 看到；**全程没有 `--amend`、
+没有 rebase、没有强推**，所以每个提交号都是历史事实）。完整列表见 `git log --oneline -6`。
 提交信息全文见 `runs\model-player\_scripts\commit_msg_task140*.txt`（`git commit -F`，中文/长文本
 不经 shell 引号）。提交信息与 `DECISIONS.md` 的 **D205–D209**、本报告的 §A–§C 一一对应。
 
