@@ -8635,3 +8635,53 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
     `ACCEPTANCE.md`（过期工件）在本轮收尾时更新。
   - 回滚点：每个 DR 单独 revert；`runs/smoke-t6` 作为**换代后基线**保留，**不得**被后续轮次覆盖写入。
 
+## D222 — 修复包 DR-48..DR-53 交付；DR-50 判为**引擎侧上游缺陷**（上报）与绕行方案的采纳
+
+- 日期：2026-09-29
+- 触发问题：修复批（`TASK-DR48-FIX.md`）交付报告 `.spec/hof-rs/tasks/TASK-DR48-REPORT.md`。
+- 交付事实（一手）：6 个提交（DR-48 `9d71a17`、DR-49 `777254d`、DR-50A `d8fc107`、DR-51 `987ef15`、
+  DR-52 `f6fead9`、DR-53 `d8e347e`，均未 push；`master` 领先 `origin/master` 20 个提交）；
+  `cargo test --offline` **exit 0，passed=328 / failed=0 / ignored=7**
+  （7 条是既有的 `tests/godot_smoke.rs` 真机门控）。DR-48/49/51/52/53 各项都留了**反例测试**。
+- **DR-50 的定性（本条最重的产出，我逐条读过报告 §4）**：
+  1. **A：hof-rs 侧调用形态缺陷（已证、已修）**。`running_game_execute_gdscript` 的 `code` 是 GDScript
+     **函数体**（`tools/running_game_script_execution.cpp:57-59`），**值只能靠 `return` 传出**。
+     hof-rs 发的是裸表达式 ⇒ 4 次传输成功的调用**全部**回答 `{"result":null,"result_type":"Nil"}`；
+     第 5 条 body `str(Input.action_press("move_right"))` 更甚：`action_press` 返回 `void`，
+     作值在本引擎里是**编译错误**（`modules/gdscript/gdscript_analyzer.cpp:3498`）。引擎自己的游戏态脚本
+     一律写 `return …`（活证据在 `mcp013_editor_input_evidence.ps1:626`）。⇒ **与挂死无关，但不修则游戏态
+     读数永远拿不到、E3 不可判定**。已修。
+  2. **B：游戏端点挂死 = 引擎侧可用性缺陷（BLOCKER，`godot-mcp/**` 未改）**。判据链：
+     ①hof-rs 的 JSON-RPC **合规**且前 4 次被正常应答；②失败在**传输层**——连接建立、请求已发出、
+     **状态行始终没来**（`10060`，ureq "Error encountered in the status line"），3 次重试 × 每次 120s；
+     ③随后**监听消失**（`10061` 连接被拒）——首次 `10060` 到首次 `10061` 约 **730 s**；
+     ④**编辑器端点全程健康**（同轮 ids 31–43 的 `editor_*` 全 `ok`，`editor_stop_scene` 还回了
+     `game_endpoint_invalidated` 的真实记录）⇒ 故障**只局限在游戏进程**；
+     ⑤**两轮可复现**（pass1 `65333/pid 109964`，pass2 `63698/pid 101872`）；
+     ⑥唯一与挂死**同时出现**的差别是"第 5 条是第一条**编译不过**的 code"，而引擎对编译不过的
+     **书面答案**是 `-32602`（带 `data.parse_error_line`），**绝不是一个不答的挂死**。
+     ⇒ 结论：**引擎侧缺陷**（对"故障在引擎那一侧"置信度高；**内部机制未定**属推断，离线不可证）。
+- 我的裁决：
+  1. **修复批实现予以接收**（判据见上），但**仍须独立验收**——已派**全新子代理**
+     （`.spec/hof-rs/tasks/TASK-DR48-ACCEPT.md`），重点复算 DR-50 的定性链条。
+  2. **DR-50B 作为上游缺陷上报**（`godot-mcp/**` **不改**）。最小化复现（由修复批给出、待我活体执行）：
+     `editor_play_scene` 后**第一件事**就发 `running_game_execute_gdscript{code:"this is not gdscript"}`，
+     预期 `-32602`；若挂死 ⇒ 引擎缺陷被**孤立确认**。**我决定亲自跑这个 spike**（见下）。
+  3. **绕行方案 2/3/4 全部采纳，但要先回设计**（属设计变更，不在实现里偷偷绕）：
+     - **绕行 2（采纳，重要）**：把 **E3 的关键路径从 `execute_gdscript` 上移走**，改用语义专用工具
+       （`running_game_get_node_property_samples` / `running_game_create_input_recording` +
+       `running_game_play_input_recording` / `running_game_run_test_scenario` /
+       `running_game_assert_node_state` / `running_game_move_player_to_target`）。
+       理由：**当契约已提供语义工具时，harness 不该由模型/编排器去拼 GDScript**——那既把可判定性
+       押在"字符串是否能编译"上，又恰好踩中引擎的挂死路径。
+     - **绕行 3（采纳）**：同一端点连续两次**传输层**失败 ⇒ 后续 `running_game_*` 直接判 `UNAVAILABLE`
+       （本轮在 `input_replay` + `node_and_collision_assertions` 上白烧约 12 分钟）。
+     - **绕行 4（采纳）**：**业务错误**（如 `-32602`）**不得重试**；重试只保留给传输层/幂等安全的情形
+       （本轮截图调用把同一个 `-32602` 重试了 3 次，语义可疑）。
+  4. `editor_status` 由 `{}` 收紧为 `null`：**采纳**（§13.4 要求 `null`；仓内无消费者依赖 `{}`，全测绿）。
+- 预期影响与回滚点：
+  - 影响：新增设计修订（§15，DR-54..DR-56 对应绕行 2/3/4），随后实现 + 独立验收 + **再跑一轮真机 T=1**。
+  - 影响（诚实）：本批所有修复**都没有真机验证**；E2/E3 能否真正 met 必须等下一轮真机。
+    修复批亦如实列出未验证项（内联 `image_base64` 截图应答、`user://` 备选、`-32602` 重试语义等）。
+  - 回滚点：`d8fc107`（DR-50A）可单独 revert 而不影响其余五项；各 DR 均单独 revert。
+
