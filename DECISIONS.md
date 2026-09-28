@@ -8522,3 +8522,61 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
   - 回滚点：新增件是**新增文件**，删除它即回到原判据（但原判据已被本条证伪，不建议）。
   - **纪律**：编辑器 PID 108432 必须活到批次二结束；**任何**子代理不得杀/重启/抢占它。
 
+## D220 — 批次二（真机 T=1 冒烟）结果与裁决；并纠正我 D219 的端点分区推断错误
+
+- 日期：2026-09-29
+- 触发问题：批次二（DR-47）交付报告 `.spec/hof-rs/tasks/TASK-DR47-SMOKE-REPORT.md`。
+- 一手事实（报告 §1–§3，均为真机实测）：
+  - 四项前置**全过**；契约准入门（D219 修正后）**全过**：`E ⊆ F` 无多出、`|F \ E| = 23` 且全为
+    `running_game_*`、`name`/`description` **154/154 逐字一致**、`inputSchema` 152/154（2 处差异已逐条列出）、
+    无夹具专用键；`PRD sha256 = 4c81c3a9…` 未变；密钥在 `runs/**` 与报告中出现 **0 次**。
+  - 命令 `target/release/hoh.exe run --iterations 1 --run-id smoke-t6`，**真实退出码 6**，
+    **26,805,473 tokens / 1 小时 52 分**；`meta.json.engine.listener.matches_binary = true`、
+    `version_string = 4.8.dev.mono.custom_build.ba1587c71`。
+- E1..E6 判定：**E1 not_met / E2 not_met / E3 not_met / E4 met / E5 met / E6 met**。
+  1. **E1 not_met**：三角色真跑、`D_1`/`E_1` 合法（8 verified + 22 gap，绑定 candidate），
+     但 **Developer 零工程增量**（`A0 version_id == A1 version_id == fc78d299…`）。
+  2. **E2 not_met，但根因是假阴性（DEF-A）**：唯一"错误"是引擎自身的信息行
+     `[MCP] capture=off (default; use --mcp-capture=on_error|every_call …)`；本轮 `play_scene` 与
+     `running_game_get_scene_tree` **确实成功**（游戏真启动了）。该假阴性还**白烧了 60 步 / 6.4M tokens 的修复重试**。
+  3. **E3 not_met，但 DR-43 双端点在真机上被证明可用**：`editor_play_scene` 回了
+     `endpoint`/`mcp_port`/`pid`/`mcp_port_source=auto_free_port`，首次 `running_game_get_scene_tree`
+     **成功**（50 节点）；随后**游戏端点挂死（os 10060）并死亡（os 10061）**，**两轮可复现**
+     （端口 65333/pid 109964、63698/pid 101872）。输入注入只到编辑器侧 ⇒ 核心行为无一被证实。
+  4. **E5 met（强证据）**：验收者**自己重实现了 `hash_tree`**，对 workspace / candidate / 存储的 `A_1`
+     三棵树算出同值 `fc78d299…`（17 文件逐字节同）。
+  5. **E6 met**：QA 把所有未达成如实落 gap；实现者另构造 **2 个反例**（V7 依赖一张 2026-09-21 的**旧 PNG**；
+     V8 是建立在 `ok=false` 步骤上的 verified claim）——两者都**未推翻**结论，因 QA 的偏差方向是保守的。
+- 6 条缺陷：**DEF-A**（major，引擎 MCP 信息行 ⇒ 可启动闸门假阴性）、**DEF-B**（major，
+  `running_game_capture_screenshot` 的 `save_path` 只收 `res://`/`user://`，hof-rs 传的是文件系统路径 ⇒
+  三次 `-32602`；而该步仍被判 `ok=true`，**只因为那个路径上早躺着一张 2026-09-21 的旧 PNG** ⇒ **假证据**）、
+  **DEF-C**（major，游戏端点注册成功后挂死并消失，两轮可复现）、**DEF-D**（minor→moderate，
+  `meta.json.engine.mcp.game_endpoint=null` 的 reason 与事实矛盾、`editor_status` 未落盘）、
+  **DEF-E**（minor，`deterministic.json` 与自己的原始记录矛盾）、
+  **DEF-F**（minor，步骤 `ok` 语义允许旧文件冒充本次产物）。
+- **我自己的推断错误（必须认账）**：D219 我写"契约 177 = 108 editor-only + 46 共享 + 23 game-only（game 69）"，
+  依据是 M 线 171 条时代的 102/23/46 **外推** + 假设"新增 6 条全是 editor-only"。
+  **实测是 104 editor-only + 50 共享 + 23 game-only（E=154、G=73、E∩G=50、E∪G=177）**。
+  ⇒ 我假设错了：新增 6 条实际是 **2 editor-only + 4 共享**。
+  **并集仍恰为 177、两条硬门仍通过 ⇒ 不是合约漂移，是我的数字错。**
+  教训（与 D218 的"推断 vs 实测"同源）：**能从文档推出的等式，不等于能被引用的等式**；
+  `renamed.json` 里**没有 scope 字段**，分区只可**实测**。我已在 addendum 里把该等式写成"参照点"而非判据，
+  因此错值**没有**造成误判——这是"把推断降格为参照"的一次实际收益。
+- 裁决：
+  1. 批次二**结论成立且判定被采纳**（E1/E2/E3 = not_met 如实记录，E4/E5/E6 = met）。
+     **本批不因 E2/E3 not_met 判实现者失败**：E2 的根因是 DEF-A（集成假阴性），
+     E3 的根因是 DEF-C（游戏端点可用性），两者都不是"模型没写代码"，也都有两轮可复现证据。
+  2. **DEF-A 是 hof-rs 侧必须修的缺陷**：引擎的 `editor_get_errors` 会把含子串 `error` 的
+     `[MCP] capture=off …on_error…` 判成错误（M 线一直用 `capture=every_call`，那行不含 `on_error`，
+     故引擎侧从未暴露）⇒ hof-rs 的 `editor_errors_baseline` 必须**只**忽略**引擎自身 `[MCP]` 前缀的 INFO 行**，
+     且**必须**有反例测试证明真正的 GDScript 错误仍会被抓住。**不得**放宽成"忽略任何含 error 的行"。
+  3. **DEF-B 揭示一类被 DR-42 漏掉的迁移面**：契约换代不只是**改名**，还有**参数形状**。
+     `TEST-CASES.md` 的 177 条 `TC-TOOL-*` 已载明各工具的参数形式 ⇒ 修复批必须以它为准逐工具核对
+     hof-rs 的**调用形态**，而不是只对名字。**同时**：`ok=true` 不得与"路径上已有文件"混同（DEF-F）。
+  4. **DEF-C 交由修复批定性**（引擎侧挂死 vs hof-rs 调用形态）；**禁止**改 `godot-mcp/**`，
+     若定为引擎缺陷则**上报用户**再定（可能触发"回阶段二/三修设计"）。
+  5. **DEF-D/E/F** 与批次一的 **DEF-2/3/4** 一并进同一修复批（均为"保守性与取证正确性"问题）。
+- 预期影响与回滚点：
+  - 影响：新增修复包（编号自 **DR-48** 起），需先出设计修订；`ACCEPTANCE.md`（过期工件）待本次一并更新。
+  - 回滚点：`runs/smoke-t6` 全量保留（可为基线）；修复批的每个 DR 单独 revert。
+
