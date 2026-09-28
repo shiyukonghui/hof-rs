@@ -582,10 +582,11 @@ ledger lines: 696   this batch's commands from that index: 195（切点探针 t1
 | 提交 | 内容 | 规模 |
 |---|---|---|
 | **`ac4d554`** | 主批次：判据可靠性（A）+ 4 款修法（B）+ 100 run 重跑与证据（C）+ 记录（D） | **180 files changed, 67265 insertions(+), 57 deletions(-)** |
+| **`8214025`** | 报告收尾：最终重定向自查数字、`gate`/归因阅读器、§C/§E/§F/§I/§J | **4 files changed, 150 insertions(+), 12 deletions(-)** |
+| **`（第三个，极小）`** | §J.3 的最终工作区状态与本报告最后校对 | 见 `git log --oneline -3` |
 
-提交信息全文见 `runs\model-player\_scripts\commit_msg_task140.txt`（`git commit -F`，中文/长文本
+提交信息全文见 `runs\model-player\_scripts\commit_msg_task140*.txt`（`git commit -F`，中文/长文本
 不经 shell 引号）。提交信息与 `DECISIONS.md` 的 **D205–D209**、本报告的 §A–§C 一一对应。
-第二次提交（本报告收尾：把最终重定向自查数字与 §J 写回）见 `git log --oneline -2`。
 
 ### J.2 逐文件暂存（铁律 9）
 
@@ -606,9 +607,12 @@ ledger lines: 696   this batch's commands from that index: 195（切点探针 t1
 因此"两仓状态"= 该仓库工作区状态 + 两个被跟踪域的清单：
 
 * 已跟踪域：`godot-mcp/**`（工具/游戏/恢复文档）与仓库根的 `DECISIONS.md`；
-* 提交后工作区：`M godot-mcp/runs/model-player/_scripts/t140_redirect_scan.json`（扫描器产物，
-  在提交后用最终数字重跑了一次）+ 两个 TASK-137 未跟踪文件；**没有**其它改动；
-* 未初始化/不支持的 git 功能：无（`git log` 正常，`--amend` 未使用）。
+* 提交后的**最终**工作区（本报告最后一次校对的瞬间）：**只有两个未跟踪文件**
+  `godot-mcp/recovery/reports/ACCEPTANCE-TASK-137.md` 与 `godot-mcp/recovery/tasks/TASK-137-ACCEPT.md`
+  （TASK-137 的，按本批清单**不代提交**），**没有任何 `M`/`A`**；
+  第一个提交之后曾短暂出现 `M godot-mcp/runs/model-player/_scripts/t140_redirect_scan.json`
+  （扫描器产物在提交后用最终数字重跑），已随第二个提交 `8214025` 入库；
+* 未初始化/不支持的 git 功能：无（`git log` 正常，未使用 `--amend`、未 rebase、未强推）。
 
 ---
 
