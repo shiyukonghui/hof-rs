@@ -3,6 +3,7 @@
 > 生成：`recovery/work/task143/render.py`，输入 `inventory.json` / `analysis.json` / `traces.json` / `probe-live.json` / `negative-demo.json`（同一目录）。
 > **编号稳定**：`TC-TOOL-<工具名>`、`TC-GATE-gNN`、`TC-M1-<case id>`、`TC-ENG-NNN`、`TC-PY-<文件>:<条目>`、`TC-CONS-<脚本>`。后续任务只引用这些编号。
 > 事实来源分级：**一手实测**=本轮真跑（§8）或落在 trace/JSON 里的原始记录；**派生**=从这些原始记录机械计算；**声明**=契约/文档里写的。冲突时以代码与实测为准。
+> **TASK-144 更新（2026-09-28）**：本文件由 TASK-143 生成；TASK-144 只更新了与 U4（`verify_coverage_batch.py` 陈旧）、U1（g09 锚点漂移）、U2（两条 simulate 工具无失败观察）相关的行与统计，变更清单见 §10.5。矩阵其余部分未重写。
 
 ## 0. 盘点口径与范围
 
@@ -16,7 +17,7 @@
 | 引擎断言套件 | `godot/modules/mcp_server/tests/test_mcp_server.h` | 159 个 `[MCPServer]` TEST_CASE | g01/g02 的断言来源，逐条进矩阵 C |
 | 十道门 | `tools/run_gates.ps1` | g01..g10 | 引擎侧的唯一回归门集；逐条真跑（§8） |
 | M1 验收 | `godot/modules/mcp_server/scripts/accept_m1.ps1` | 22 个 case + 1 guard | 端到端验收；逐条真跑 |
-| tools/tests/** | `tools/tests/*.py` | 8 个 .py（2 个是测试替身）；pytest 收集 23 条；逐条 case 400 条（jev 33 + playjev 49 + p7 23 + model_player 272 + pytest 23） | 工具侧 pytest 与自测 |
+| tools/tests/** | `tools/tests/*.py` | 8 个 .py（2 个是测试替身）；pytest 收集 27 条；逐条 case 404 条（jev 33 + playjev 49 + p7 23 + model_player 272 + pytest 27） | 工具侧 pytest 与自测 |
 | 一致性/回归脚本 | `check_tool_groups.py`、`check_rename_map.py`、`check_tautologies.py`、`check_exit_propagation.py`、`check_hardcoded_counts.py`、`check_engine_anchor.ps1`、`check_contract_subset.ps1`、`verify_coverage_batch.py`、`gen_coverage_session.py`、`playability_gate.py`、`playability_rescore.py` | 11 个 | 台账/清单/门的一致性机制 |
 | trace 语料 | `runs/**/trace-*.jsonl` | 182 文件 | 逐工具的**实际输出**（错误码/消息/回包结构）都从这里取 |
 
@@ -51,9 +52,9 @@
 | `TC-GATE-gNN` | 10 | 十道门 |
 | `TC-M1-*` | 22 | accept_m1 的 22 个 case/guard |
 | `TC-ENG-NNN` | 159 | 引擎 `[MCPServer]` TEST_CASE |
-| `TC-PY-*` | 400 | tools/tests/** 的 pytest 条目 + 脚本内 check |
+| `TC-PY-*` | 404 | tools/tests/** 的 pytest 条目 + 脚本内 check |
 | `TC-CONS-*` | 13 | 一致性/回归脚本 |
-| **合计** | **781** | |
+| **合计** | **785** | |
 
 ### 1.2 逐工具输入/输出/反例覆盖
 
@@ -66,8 +67,8 @@
 | 声明了 enum 的工具 | 4 |
 | 被至少一个引擎 TEST_CASE 点名的工具 | 83 |
 | **未被任何引擎 TEST_CASE 点名**的工具 | **94** |
-| **强**反例（真跑失败调用含真实错误码 / 活体探针 -32602 / 台账 boundary≥1） | 175 |
-| 只有**弱**反例（仅一个“提及该工具且正文含非法断言文本”的引擎用例） | **2**（editor_simulate_mouse_click, editor_simulate_mouse_move） |
+| **强**反例（真跑失败调用含真实错误码 / 活体探针 -32602 / 台账 boundary≥1） | 177（**TASK-144 C** 把原两条弱反例补成真跑 -32602 后满额） |
+| 只有**弱**反例（仅一个“提及该工具且正文含非法断言文本”的引擎用例） | **0**（TASK-143 时有 2 条：editor_simulate_mouse_click, editor_simulate_mouse_move；TASK-144 C 已用活体探针补成强反例） |
 | **完全无反例**的工具 | **0** |
 | （其中）trace 语料里真的有失败调用的工具 | 172 |
 | （其中）本轮活体探针真的收到 -32602 的工具 | 142 |
@@ -89,12 +90,12 @@
 
 | 缺口 | 数字 | 处置 |
 |---|---|---|
-| 缺强反例的工具 | 2 / 177（其中 2 条只有弱反例，0 条完全无） | 见 §9 U2（只有弱反例的 2 条） |
+| 缺强反例的工具 | 0 / 177（TASK-143 时有 2 条只有弱反例；TASK-144 **C** 用只触发参数门、不触发 handler 的活体探针补成强反例） | 见 §9 U2 |
 | 缺**引擎侧**非法输入断言的契约工具 | 94（上面“未被点名”的 94 条） | 142 条由**本轮活体探针**补上真跑负例（§8.5a）；其余见 §9 |
 | 缺状态证据的工具（台账 `channel_evidence_ok=false`） | 8 | 见 §6 与 §9（editor_set_auto_dismiss_dialogs, editor_simulate_key, editor_simulate_mouse_click, editor_simulate_mouse_move, editor_simulate_input_action, editor_simulate_input_sequence, project_get_android_preset_info, os_deploy_to_android_device） |
 | 契约 schema 形态分歧（缺 `required`） | 3 条（已 PIN） | `tools/tests/test_contract_forms.py` 钉住集合；登记为 F1 |
-| 陈旧一致性脚本 | 1（`verify_coverage_batch.py`） | 已用可执行测试钉住分歧（F2） |
-| 继承来的红门 | 1（g09） | §9 U1 如实登记，未擅自重建引擎 |
+| 陈旧一致性脚本 | 0（`verify_coverage_batch.py` 已由 TASK-144 **A** 对齐现行通道规则；TASK-143 时是 1） | 已修：`118 pass/48 fail` → `163 pass/3 fail`，误红 45 → **0**（见 F2） |
+| 继承来的红门 | 0（g09 已由 TASK-144 **B** 经两变体重建转绿；TASK-143 时是 1） | 见 §9 U1 与 §8.2 的 TASK-144 更新 |
 
 ---
 
@@ -184,8 +185,8 @@
 | TC-TOOL-editor_get_open_scripts | `editor_get_open_scripts` | 契约一致 + 输入/输出形式 + 反例 | godot/modules/mcp_server/docs/tools_list.renamed.json:1447; `tools/tool_channels.json:207`; `godot/modules/mcp_server/tests/test_mcp_server.h:2918`; `runs/_exercises/ex_scene2/c23-after-task110/trace-editor.jsonl:146` | 合法=0 成员（req 0 / opt 0）; 必填=无; 可选=无; 默认=无; 非法=未探（write-class tool with no required argument: an illegal in...）; 边界=台账 boundary=2 | 成功={count, scripts}; 错误码=-32602 Unknown parameter 'bogus_argument' for tool 'editor_get_o...; 回读=payload/readback; 副作用=no_mutation=12; 幂等=见引擎用例 | 真跑失败调用 `runs/_exercises/ex_scene2/c23-after-task110/trace-editor.jsonl:146` → code=-32602 msg="Unknown parameter 'bogus_argumen... | present | 引擎仅提及用例（弱）：the analysis tools never write to the project |
 | TC-TOOL-project_validate_script | `project_validate_script` | 契约一致 + 输入/输出形式 + 反例 | godot/modules/mcp_server/docs/tools_list.renamed.json:1462; `tools/tool_channels.json:767`; `godot/modules/mcp_server/tests/test_mcp_server.h:8903`; `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:374` | 合法=1 成员（req 1 / opt 0）; 必填=path; 可选=无; 默认=无; 非法=真跑 -32602 (Missing required parameter: path); 边界=台账 boundary=15 | 成功={message, path, valid}; 错误码=-32000 Cannot validate 'res://src/PongGame.cs': no build of this...; 回读=payload/readback; 副作用=no_mutation=18; 幂等=见引擎用例 | 真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:374` → code=-32000 msg="Cannot validate 'res://src/PongGame.cs':... | present | 引擎仅提及用例（弱）：project_validate_script distinguishes valid and broken code |
 | TC-TOOL-editor_simulate_key | `editor_simulate_key` | 契约一致 + 输入/输出形式 + 反例 | godot/modules/mcp_server/docs/tools_list.renamed.json:1493; `tools/tool_channels.json:512`; `godot/modules/mcp_server/tests/test_mcp_server.h:1469` | 合法=5 成员（req 1 / opt 4）; 必填=keycode; 可选=alt, ctrl, pressed, shift; 默认=alt=false, ctrl=false, pressed=true, shift=false; 非法=真跑 -32602 (Missing required parameter: keycode); 边界=台账 boundary=0 | 成功=corpus 里无 ok 回包; 错误码=corpus 里无失败回包; 回读=state/no_calls; 副作用=无文件副作用记录; 幂等=见引擎用例 | corpus 里没有该工具的失败调用；本轮活体探针 → -32602 msg="Missing required parameter: keycode"；强度=strong | present | 台账无生效证据（未达(0)）; 引擎仅提及用例（弱）：tools of later batches are not registered |
-| TC-TOOL-editor_simulate_mouse_click | `editor_simulate_mouse_click` | 契约一致 + 输入/输出形式 + 反例 | godot/modules/mcp_server/docs/tools_list.renamed.json:1519; `tools/tool_channels.json:517`; `godot/modules/mcp_server/tests/test_mcp_server.h:1469` | 合法=4 成员（req 0 / opt 4）; 必填=无; 可选=button, pressed, x, y; 默认=button=1, pressed=true, x=0, y=0; 非法=未探（write-class tool with no required argument: an illegal in...）; 边界=台账 boundary=0 | 成功=corpus 里无 ok 回包; 错误码=corpus 里无失败回包; 回读=state/no_calls; 副作用=无文件副作用记录; 幂等=见引擎用例 | corpus 里没有该工具的失败调用；强度=weak | **weak** | 台账无生效证据（未达(0)）; 引擎仅提及用例（弱）：tools of later batches are not registered; **无任何真实失败观察**（见 §9 U2） |
-| TC-TOOL-editor_simulate_mouse_move | `editor_simulate_mouse_move` | 契约一致 + 输入/输出形式 + 反例 | godot/modules/mcp_server/docs/tools_list.renamed.json:1537; `tools/tool_channels.json:522`; `godot/modules/mcp_server/tests/test_mcp_server.h:1469` | 合法=2 成员（req 0 / opt 2）; 必填=无; 可选=x, y; 默认=x=0, y=0; 非法=未探（write-class tool with no required argument: an illegal in...）; 边界=台账 boundary=0 | 成功=corpus 里无 ok 回包; 错误码=corpus 里无失败回包; 回读=state/no_calls; 副作用=无文件副作用记录; 幂等=见引擎用例 | corpus 里没有该工具的失败调用；强度=weak | **weak** | 台账无生效证据（未达(0)）; 引擎仅提及用例（弱）：tools of later batches are not registered; **无任何真实失败观察**（见 §9 U2） |
+| TC-TOOL-editor_simulate_mouse_click | `editor_simulate_mouse_click` | 契约一致 + 输入/输出形式 + 反例 | godot/modules/mcp_server/docs/tools_list.renamed.json:1519; `tools/tool_channels.json:517`; `godot/modules/mcp_server/tests/test_mcp_server.h:1469`; **TASK-144 C** `recovery/work/task144/probe-u2.json` | 合法=4 成员（req 0 / opt 4）; 必填=无; 可选=button, pressed, x, y; 默认=button=1, pressed=true, x=0, y=0; 非法=**TASK-144 C 活体探针真跑 `-32602 Unknown parameter 'mcp144_undeclared_probe'`**（端点 9919）；边界=台账 boundary=0（corpus） | 成功=corpus 里无 ok 回包; 错误码=**活体探针 `-32602` + suggestion "Accepted parameters of editor_simulate_mouse_click: button, pressed, x, y"**; 回读=state/no_calls; 副作用=无文件副作用记录; 幂等=见引擎用例 | **TASK-144 C**：声明外参数名 ⇒ 注册器未声明参数门（`tool_registry.cpp:864`，在 `handler` 之前）真跑拒绝 `-32602`，见 `probe-u2.json`；强度=**strong** | **present** | 台账无生效证据（未达(0)，`scope_excluded`）；**真实失败观察**已由 TASK-144 C 补上（见 §9 U2） |
+| TC-TOOL-editor_simulate_mouse_move | `editor_simulate_mouse_move` | 契约一致 + 输入/输出形式 + 反例 | godot/modules/mcp_server/docs/tools_list.renamed.json:1537; `tools/tool_channels.json:522`; `godot/modules/mcp_server/tests/test_mcp_server.h:1469`; **TASK-144 C** `recovery/work/task144/probe-u2.json` | 合法=2 成员（req 0 / opt 2）; 必填=无; 可选=x, y; 默认=x=0, y=0; 非法=**TASK-144 C 活体探针真跑 `-32602 Unknown parameter 'mcp144_undeclared_probe'`**（端点 9919）；边界=台账 boundary=0（corpus） | 成功=corpus 里无 ok 回包; 错误码=**活体探针 `-32602` + suggestion "Accepted parameters of editor_simulate_mouse_move: x, y"**; 回读=state/no_calls; 副作用=无文件副作用记录; 幂等=见引擎用例 | **TASK-144 C**：声明外参数名 ⇒ 注册器未声明参数门（`tool_registry.cpp:864`，在 `handler` 之前）真跑拒绝 `-32602`，见 `probe-u2.json`；强度=**strong** | **present** | 台账无生效证据（未达(0)，`scope_excluded`）；**真实失败观察**已由 TASK-144 C 补上（见 §9 U2） |
 | TC-TOOL-editor_simulate_input_action | `editor_simulate_input_action` | 契约一致 + 输入/输出形式 + 反例 | godot/modules/mcp_server/docs/tools_list.renamed.json:1560; `tools/tool_channels.json:502`; `godot/modules/mcp_server/tests/test_mcp_server.h:1469` | 合法=3 成员（req 1 / opt 2）; 必填=action; 可选=pressed, strength; 默认=pressed=true, strength=1.0; 非法=真跑 -32602 (Missing required parameter: action); 边界=台账 boundary=0 | 成功=corpus 里无 ok 回包; 错误码=corpus 里无失败回包; 回读=state/no_calls; 副作用=无文件副作用记录; 幂等=见引擎用例 | corpus 里没有该工具的失败调用；本轮活体探针 → -32602 msg="Missing required parameter: action"；强度=strong | present | 台账无生效证据（未达(0)）; 引擎仅提及用例（弱）：tools of later batches are not registered |
 | TC-TOOL-editor_get_input_actions | `editor_get_input_actions` | 契约一致 + 输入/输出形式 + 反例 | godot/modules/mcp_server/docs/tools_list.renamed.json:1569; `tools/tool_channels.json:182`; `godot/modules/mcp_server/tests/test_mcp_server.h:1469`; `runs/_exercises/ex_scene2/c23-after-task110/trace-editor.jsonl:74` | 合法=0 成员（req 0 / opt 0）; 必填=无; 可选=无; 默认=无; 非法=未探（write-class tool with no required argument: an illegal in...）; 边界=台账 boundary=2 | 成功={actions, count}; 错误码=-32602 Unknown parameter 'bogus_argument' for tool 'editor_get_i...; 回读=payload/readback; 副作用=no_mutation=12; 幂等=见引擎用例 | 真跑失败调用 `runs/_exercises/ex_scene2/c23-after-task110/trace-editor.jsonl:74` → code=-32602 msg="Unknown parameter 'bogus_argument... | present | 引擎仅提及用例（弱）：tools of later batches are not registered |
 | TC-TOOL-editor_add_input_action | `editor_add_input_action` | 契约一致 + 输入/输出形式 + 反例 | godot/modules/mcp_server/docs/tools_list.renamed.json:1587; `tools/tool_channels.json:37`; `godot/modules/mcp_server/tests/test_mcp_server.h:1469`; `runs/_exercises/ex_grid/c8-task120/trace-editor.jsonl:16` | 合法=2 成员（req 1 / opt 1）; 必填=action; 可选=key; 默认=无; 非法=真跑 -32602 (Missing required parameter: action); 边界=台账 boundary=1 | 成功={action, action_state, created, event_count, key, persisted}...; 错误码=-32602 Unknown parameter 'undeclared_probe' for tool 'editor_add...; 回读=file/file_effect; 副作用=no_mutation=1, observed_changed=122, observed_no_change=67; 幂等=见引擎用例 | 真跑失败调用 `runs/_exercises/ex_grid/c8-task120/trace-editor.jsonl:16` → code=-32602 msg="Unknown parameter 'undeclared_probe' for t... | present | 引擎仅提及用例（弱）：tools of later batches are not registered |
@@ -303,7 +304,7 @@
 | TC-GATE-g06 | `g06` | 恒真式检查（TASK-059 D-2 类） | `python modules\mcp_server\scripts\check_tautologies.py` | 合法=声明过的 9+5 种恒真拼写; 非法=未声明的恒真; 边界=pinned 例外; 必填可选=-; 默认=- | 成功='TAUTOLOGY CHECK PASS'; 错误码=pinned/UNPINNED 列表 | 未 pinned 的恒真命中 ⇒ exit 1（本轮 1 处 pinned，0 未 pin） | exit=0 present | TAUTOLOGY CHECK PASS（9 powershell + 5 python spellings，1 pinned，扫描 2 类文件/2 根） |
 | TC-GATE-g07 | `g07` | 聚合脚本的退出码传播（TASK-069） | `python modules\mcp_server\scripts\check_exit_propagation.py --probes` | 合法=10 个插入探针; 非法=未 guarded 的聚合形状; 边界=-; 必填可选=scan/probes 两种模式 | 成功='PROBES: 10/10'; 错误码=逐探针 PASS/FAIL | 任一探针 FAIL ⇒ exit 1；另有 mcp069 的红相演示脚本 | exit=0 present | PROBES: 10/10（另有 scan 模式 exit 0） |
 | TC-GATE-g08 | `g08` | 硬编码计数普查（TASK-068 §1b） | `python modules\mcp_server\scripts\check_hardcoded_counts.py` | 合法=185 文件里 116 处旧计数; 非法=UNCLASSIFIED 行; 边界=每桶计数; 必填可选=7 个数字; 默认=- | 成功='UNCLASSIFIED = 0'; 错误码=逐桶计数 | 任一处不可分类 ⇒ exit 1 | exit=0 present | RESULT: PASS（116 处 171/173/175/176/152/72/153，UNCLASSIFIED=0） |
-| TC-GATE-g09 | `g09` | 二进制锚点判据（TASK-072）——**红**，见 §9 未达标项 U1 | `powershell -NoProfile -ExecutionPolicy Bypass -File modules\mcp_server\scripts\check_engine_anchor.ps1 -VersionText 4.8.dev.mon...` | 合法=二进制自报锚点 vs HEAD; 非法=非祖先/伪造锚点; 边界=diff 里有编译输入; 必填可选=whitelist; 默认=- | 成功=ANCHOR_EQUAL/ANCHOR_STRUCTURAL_EQUIVALENT; 错误码=verdict+diff 清单 | **本轮真跑红**：ANCHOR_STALE_COMPILED，R 行列出 5 个编译输入（实际输出见 §8.2） | exit=1 **红** | ANCHOR_STALE_COMPILED：A=3fdabe2d9 HEAD=ba1587c71，A..H 有 5 个编译输入 (tests/test_mcp_server.h, tools/{editor_node_instantiate,editor... |
+| TC-GATE-g09 | `g09` | 二进制锚点判据（TASK-072）——**TASK-144 B 已转绿** | `powershell -NoProfile -ExecutionPolicy Bypass -File modules\mcp_server\scripts\check_engine_anchor.ps1 -VersionText 4.8.dev.mono.custom_build.ba1587c71` | 合法=二进制自报锚点 vs HEAD; 非法=非祖先/伪造锚点; 边界=diff 里有编译输入; 必填可选=whitelist; 默认=- | 成功=ANCHOR_EQUAL/ANCHOR_STRUCTURAL_EQUIVALENT; 错误码=verdict+diff 清单 | **TASK-144 B 真跑绿**：`ANCHOR_EQUAL`，A=H=ba1587c71、`DIFF_COUNT=0`（实际输出见 §8.2 的 TASK-144 更新） | exit=0 **绿** | TASK-143 的红是锚点记账漂移：二进制自报 3fdabe2d9、HEAD 已是 ba1587c71；两变体重建后二进制自报 ba1587c71 |
 | TC-GATE-g10 | `g10` | M1 独立验收 22 例 | `powershell -NoProfile -ExecutionPolicy Bypass -File modules\mcp_server\scripts\accept_m1.ps1` | 合法=22 例；非法=case5/6/7（-32602/-32601/-32700）；边界=case11/17/18/19（413/431/400/UTF-8）；必填可选=case13/14 端口 | 成功=22/22；错误码=逐例 body 原文 | 每例自带负例断言（如 case5 要求 -32602）；任一处不符 ⇒ 该例 FAIL 且 exit 1 | exit=0 present | 22/22 cases passed（editor=154, game=73） |
 
 ## 4. 矩阵 B2：accept_m1 的 22 个 case（`TC-M1-*`）
@@ -923,10 +924,10 @@
 | TC-CONS-check_tautologies.py | `scripts/check_tautologies.py` | 恒真式检查（含插入探针） | `scripts/check_tautologies.py` | 合法+非法+边界（脚本自带分类/探针） | 成功=退出码 0 + 汇总行; 错误码=非 0 + 逐项清单 | 任一未分类/未 guarded/不一致项 ⇒ exit != 0 | present | exit 0 · 1 pinned / 0 unpinned |
 | TC-CONS-check_exit_propagation.py | `scripts/check_exit_propagation.py` | 聚合脚本退出码传播（scan + --probes） | `scripts/check_exit_propagation.py` | 合法+非法+边界（脚本自带分类/探针） | 成功=退出码 0 + 汇总行; 错误码=非 0 + 逐项清单 | 任一未分类/未 guarded/不一致项 ⇒ exit != 0 | present | exit 0 · PROBES 10/10 |
 | TC-CONS-check_hardcoded_counts.py | `scripts/check_hardcoded_counts.py` | 硬编码计数普查（7 个数字，5 桶） | `scripts/check_hardcoded_counts.py` | 合法+非法+边界（脚本自带分类/探针） | 成功=退出码 0 + 汇总行; 错误码=非 0 + 逐项清单 | 任一未分类/未 guarded/不一致项 ⇒ exit != 0 | present | exit 0 · UNCLASSIFIED=0 |
-| TC-CONS-check_engine_anchor.ps1 | `scripts/check_engine_anchor.ps1` | 二进制锚点判据（4 个 verdict） | `scripts/check_engine_anchor.ps1` | 合法+非法+边界（脚本自带分类/探针） | 成功=退出码 0 + 汇总行; 错误码=非 0 + 逐项清单 | 任一未分类/未 guarded/不一致项 ⇒ exit != 0 | stale | **exit 1 · ANCHOR_STALE_COMPILED**（U1） |
+| TC-CONS-check_engine_anchor.ps1 | `scripts/check_engine_anchor.ps1` | 二进制锚点判据（4 个 verdict） | `scripts/check_engine_anchor.ps1` | 合法+非法+边界（脚本自带分类/探针） | 成功=退出码 0 + 汇总行; 错误码=非 0 + 逐项清单 | 任一未分类/未 guarded/不一致项 ⇒ exit != 0 | present | **TASK-144 B：exit 0 · ANCHOR_EQUAL**（TASK-143 时为 exit 1 · ANCHOR_STALE_COMPILED） |
 | TC-CONS-check_contract_subset.ps1 | `scripts/check_contract_subset.ps1` | 活体 tools/list 对契约逐字 | `scripts/check_contract_subset.ps1` | 合法+非法+边界（脚本自带分类/探针） | 成功=退出码 0 + 汇总行; 错误码=非 0 + 逐项清单 | 任一未分类/未 guarded/不一致项 ⇒ exit != 0 | present | exit 0 · 3/3 |
 | TC-CONS-tool_coverage.py | `tools/tool_coverage.py` | 覆盖台账重生成（channel/tier/readback） | `tools/tool_coverage.py` | 合法+非法+边界（脚本自带分类/探针） | 成功=退出码 0 + 汇总行; 错误码=非 0 + 逐项清单 | 任一未分类/未 guarded/不一致项 ⇒ exit != 0 | present | exit 0 · 与已提交 coverage.json 逐行一致 |
-| TC-CONS-verify_coverage_batch.py | `tools/verify_coverage_batch.py` | 批量覆盖门（calls/effective/boundary） | `tools/verify_coverage_batch.py` | 合法+非法+边界（脚本自带分类/探针） | 成功=退出码 0 + 汇总行; 错误码=非 0 + 逐项清单 | 任一未分类/未 guarded/不一致项 ⇒ exit != 0 | stale | **exit 1 · 166 目标 48 fail，其中 45 条误红（F2）** |
+| TC-CONS-verify_coverage_batch.py | `tools/verify_coverage_batch.py` | 批量覆盖门（calls/**声明通道证据**/boundary；TASK-144 A 已对齐 TASK-118 的通道规则） | `tools/verify_coverage_batch.py` | 合法+非法+边界（脚本自带分类/探针） | 成功=退出码 0 + 汇总行; 错误码=非 0 + 逐项清单 | 任一未分类/未 guarded/不一致项 ⇒ exit != 0 | present | **exit 1 · 166 目标 163 pass / 3 fail（0 条误红；3 条真实缺证据逐条点名，见 F2）** |
 | TC-CONS-gen_coverage_session.py | `tools/gen_coverage_session.py` | 生成 coverage 会话与 manifest | `tools/gen_coverage_session.py` | 合法+非法+边界（脚本自带分类/探针） | 成功=退出码 0 + 汇总行; 错误码=非 0 + 逐项清单 | 任一未分类/未 guarded/不一致项 ⇒ exit != 0 | not-run | 未跑（会话已存在，重生成会覆盖 runs/_exercises；只读本任务不触发） |
 | TC-CONS-playability_gate.py | `tools/playability_gate.py` | gate 判据实现（P1..P7 + 模型玩家） | `tools/playability_gate.py` | 合法+非法+边界（脚本自带分类/探针） | 成功=退出码 0 + 汇总行; 错误码=非 0 + 逐项清单 | 任一未分类/未 guarded/不一致项 ⇒ exit != 0 | present | 由 §8.1 的 4 个脚本套件间接覆盖（23+52+45+67+108 断言） |
 | TC-CONS-playability_rescore.py | `tools/playability_rescore.py` | 从已记录 gate.json 重算 P2/P3（旧/新两套规则） | `tools/playability_rescore.py` | 合法+非法+边界（脚本自带分类/探针） | 成功=退出码 0 + 汇总行; 错误码=非 0 + 逐项清单 | 任一未分类/未 guarded/不一致项 ⇒ exit != 0 | not-run | 未跑（需要 runs/playability 的 gate.json 语料；不属本任务范围） |
@@ -940,13 +941,13 @@
 
 | 原始命令 | exit | 通过/失败/跳过 | 摘要 |
 |---|---|---|---|
-| `python -m pytest tools/tests -q --no-header -p no:cacheprovider` | 0 | 23 passed（含本任务新增的 20 条） | 23 passed（含本任务新增的 20 条） |
+| `python -m pytest tools/tests -q --no-header -p no:cacheprovider` | 0 | 27 passed（含 TASK-143 新增的 20 条与 TASK-144 A 新增的 4 条） | 27 passed（含 TASK-143 新增的 20 条与 TASK-144 A 新增的 4 条） |
 | `python tools/tests/test_playability_p7.py` | 0 | 23/23 checks passed | 23/23 checks passed |
 | `python tools/tests/test_playability_model_player.py` | 0 | task142 52 assertions PASSED / task140 45 / task139 67 / model-player 108 断言全 ok | task142 52 assertions PASSED / task140 45 / task139 67 / model-player 108 断言全 ok |
 | `python tools/tests/test_jev_agent.py --port 55124 --out recovery/work/task143/agent-probe-jev.json` | 0 | ok=true, 33/33 checks（D1..D7 + R_*） | ok=true, 33/33 checks（D1..D7 + R_*） |
 | `python -c "...test_playjev_agent.run_all(evidence_path=...)"` | 0 | ok=true, 49/49 checks | ok=true, 49/49 checks |
 | `python tools/tool_coverage.py --md ... --json recovery/work/task143/coverage.regen.json` | 0 | mode=all-runs runs=112 trace_files=182 calls=8729 distinct=172; 达标169 缺证据3 未达0=5; 重生成与已提交 coverage.json **逐行一致（0 differing rows）** | mode=all-runs runs=112 trace_files=182 calls=8729 distinct=172; 达标169 缺证据3 未达0=5; 重生成与已提交 coverage.json **逐行一致（0 differing rows）** |
-| `python tools/verify_coverage_batch.py --manifest &lt;20 个 exercise manifest&gt; --json ...` | 1 | targets=166 pass=118 fail=48（45 条为陈旧规则误红 + 3 条真实缺证据）→ 见 F2 | targets=166 pass=118 fail=48（45 条为陈旧规则误红 + 3 条真实缺证据）→ 见 F2 |
+| `python tools/verify_coverage_batch.py --manifest &lt;20 个 exercise manifest&gt; --json ...` | 1 | **TASK-144 A 修前**：targets=166 pass=118 fail=48（45 条为陈旧 `effective>=1` 规则误红 + 3 条真实缺证据）；**修后**：targets=166 **pass=163 fail=3**（0 条误红）→ 见 F2 | 同左（修后为现行结果） |
 | `python recovery/work/task143/probe.py（活体非法输入探针, 端口 9899/9898）` | 0 | probed=142 refused_-32602=142 other_error=0 ok_unexpected=0 transport_error=0 not_probed=35 | probed=142 refused_-32602=142 other_error=0 ok_unexpected=0 transport_error=0 not_probed=35 |
 | `python recovery/work/task143/negative-demo.py` | 0 | 7/7 negatives fired; positive control clean | 7/7 negatives fired; positive control clean |
 
@@ -964,10 +965,10 @@
 | g06 | `python modules\mcp_server\scripts\check_tautologies.py` | **0** | TAUTOLOGY CHECK PASS（9 powershell + 5 python spellings，1 pinned，扫描 2 类文件/2 根） |
 | g07 | `python modules\mcp_server\scripts\check_exit_propagation.py --probes` | **0** | PROBES: 10/10（另有 scan 模式 exit 0） |
 | g08 | `python modules\mcp_server\scripts\check_hardcoded_counts.py` | **0** | RESULT: PASS（116 处 171/173/175/176/152/72/153，UNCLASSIFIED=0） |
-| g09 | `powershell -NoProfile -ExecutionPolicy Bypass -File modules\mcp_server\scripts\check_engine_anchor.ps1 -VersionText 4.8.dev.mon...` | **1** | ANCHOR_STALE_COMPILED：A=3fdabe2d9 HEAD=ba1587c71，A..H 有 5 个编译输入 (tests/test_mcp_server.h, tools/{editor_node_instantiate,editor... |
+| g09 | `powershell -NoProfile -ExecutionPolicy Bypass -File modules\mcp_server\scripts\check_engine_anchor.ps1 -VersionText 4.8.dev.mono.custom_build.ba1587c71` | **0** | **TASK-144 B 转绿**：`ANCHOR_EQUAL`，A=ANCHOR=ba1587c71 H=ba1587c71，`DIFF_COUNT=0 SAFE_COUNT=0 RED_COUNT=0`（TASK-143 时为 exit 1 `ANCHOR_STALE_COMPILED`） |
 | g10 | `powershell -NoProfile -ExecutionPolicy Bypass -File modules\mcp_server\scripts\accept_m1.ps1` | **0** | 22/22 cases passed（editor=154, game=73） |
 
-g09 的完整实际输出（这是唯一红的门，原样贴出）：
+g09 的完整实际输出 —— **TASK-143 时（红，保留作对照）**：
 
 ```
 ANCHOR_JUDGE VERDICT=ANCHOR_STALE_COMPILED
@@ -985,9 +986,33 @@ ANCHOR_JUDGE RESULT FAIL
 G09_EXIT=1
 ```
 
+**TASK-144 B 更新（两变体重建之后，真跑，原样贴出；账在 `runs/gates/task144/summary.txt`、逐门 stdout 在 `runs/gates/task144/g09.stdout.txt`）**：
+
+```
+ANCHOR_JUDGE VERDICT=ANCHOR_EQUAL
+ANCHOR_JUDGE ANCHOR=ba1587c71 ANCHOR_REPORTED=ba1587c71 HEAD=ba1587c71
+ANCHOR_JUDGE ANCESTOR=yes
+ANCHOR_JUDGE CRITERION=A is an ancestor of H (A == H counts) and git diff --name-only A..H contains no compile input (safe = declared non-compiling whitelist, everything else red)
+ANCHOR_JUDGE DIFF_COUNT=0 SAFE_COUNT=0 RED_COUNT=0
+ANCHOR_JUDGE REASON=the binary self-reports the very commit HEAD points at; the diff is empty by construction
+ANCHOR_JUDGE RESULT PASS
+GATE_EXIT=0
+```
+
+**TASK-144 B 的两变体重建（真跑，exit 0，`--version` 已是 HEAD）**：
+
+| 变体 | 命令（cmd 启动） | 墙钟 | exit | 重建后 `--version` |
+|---|---|---|---|---|
+| plain（单精度，非 mono） | `modules\mcp_server\scripts\build_local.cmd -Force`（内部 `scons platform=windows target=editor module_mono_enabled=no tests=yes -j8`） | 1m45s | 0 | `4.8.dev.custom_build.ba1587c71` |
+| mono | `modules\mcp_server\scripts\mcp057_build_mono.cmd`（内部 `… module_mono_enabled=yes tests=yes -j8`） | 1m42s | 0 | `4.8.dev.mono.custom_build.ba1587c71` |
+
+重建在 HEAD `ba1587c71e` 上**串行**执行（先 plain、后 mono，无并发 scons）。重建前两个二进制都自报 `3fdabe2d9`。**十道门 `g01`…`g10` 全部 exit=0**（`g09` `ANCHOR_EQUAL`、`g10` `accept_m1` `22/22 cases passed`、`g04` 3/3、`g02` 1585/1585 cases / 431092 assertions）。引擎仓 `git push origin feature/mcp-server-module-rebuild` 的真实输出是 `Everything up-to-date`——本地 `HEAD` 与 `origin/feature/mcp-server-module-rebuild` 都已是 `ba1587c71eba34c1a6576b08f9f26aad8d2ffd36`（TASK-112 提交时已推送），本次**没有新提交可推**；未 force、未切分支。
+
 ### 8.3 十门包装器的 preflight（不跑门，只看分类）
 
 `powershell -NoProfile -ExecutionPolicy Bypass -File tools\run_gates.ps1 -Tag task143-preflight -PreflightOnly` → exit 0，**VERDICT=RUN_GATES**，REASON="the engine working tree carries 1 compile input(s) that are not in any built binary"（WORKING_TREE_RED=1 SAFE=0）。因此包装器不会走 SKIP_REBUILD 路径；其结果与上表逐条真跑一致（其中 g09 会红）。
+
+**TASK-144 B 更新**：重建后 `tools\run_gates.ps1 -Tag task144 -RunGates` 的 preflight 已经报 **`ANCHOR=ba1587c71 HEAD=ba1587c71 ANCHOR_REPORTED=ba1587c71 verdict=ANCHOR_EQUAL ancestor=yes diff_count=0`**（与 HEAD 相等）；`WORKING_TREE_RED=1` 指的是引擎仓那个**既有的未跟踪文件 `uid_cache.bin`**（在 TASK-144 开工前的 `git -C godot status --short` 里就已经存在，不是本任务产生，也未提交）。`-RunGates` 是显式要求无条件跑十门。
 
 ### 8.4 accept_m1
 
@@ -1049,7 +1074,7 @@ negatives all fired: True ; control clean: True
 
 **F1（契约形态分歧，3 条，已 PIN）**：`editor_get_selection`、`editor_set_node_selection`、`editor_remove_node_selection` 的 `inputSchema` **没有 `required` 键**，而其余 174 条都带（哪怕为空数组）。其中 `editor_set_node_selection` 的约束是 **one-of(node_path, node_paths)**，当前 schema 方言表达不出来，所以纯 schema 驱动的客户端会以为它不需要入参，而服务端对空参数回 `-32602 "node_paths or node_path"`（引擎用例 `test_mcp_server.h:4342` 起有断言）。活体 `tools/list` 发布的就是这三个 schema（accept_m1 case3 逐字 154/154 通过），所以这**不是服务端与契约的冲突，而是契约自身的形态约定不一致**。处置：不擅自改冻结契约（它就是 accept_m1 的比对基准）；在 `test_contract_forms.py` 里把这三条 **PIN** 住。
 
-**F2（陈旧一致性脚本，1 个，已用测试钉住）**：`tools/verify_coverage_batch.py` 的批量门仍是 `calls>=5 and effective>=1 and (boundary>=1 or edge)`。`effective` 是 **TASK-118 之前**的量（只有像素/文件真的动了才算），而台账自 TASK-118 起按**声明通道**判定并另存 `channel_evidence` + `channel_evidence_ok`。于是所有 `editor_state` 通道的工具 `effective` 恒为 0，批量门对它们系统性误红。实测：**166 个目标、118 pass、48 fail；48 个 fail 里 45 个是误红（台账 `status=达标` 且 `channel_evidence_ok=true`，通道全部是 `editor_state`），只有 3 个是真的缺证据**：`editor_set_auto_dismiss_dialogs`（引擎里就没有成功分支，7 次全是 -32000/-32602）、`project_get_android_preset_info`、`os_deploy_to_android_device`（缺 Android preset/设备）。处置：该脚本**不在**本任务声明的独占文件清单里，故不改它；改为新增 `tools/tests/test_coverage_batch_consistency.py`：它调用真正的 `verify_coverage_batch.py`（不是复制一份规则），把 166/118/45/3 四个数字与“45 条误红全部是 editor_state 通道”这条解释钉住；脚本一旦被修好，这个测试会要求**显式**改 pin。
+**F2（陈旧一致性脚本，1 个，TASK-144 A 已修，测试升级为“修后 + 负例”）**：`tools/verify_coverage_batch.py` 的批量门原本是 `calls>=5 and effective>=1 and (boundary>=1 or edge)`。`effective` 是 **TASK-118 之前**的量（只有像素/文件真的动了才算），而台账自 TASK-118 起按**声明通道**判定并另存 `channel_evidence` + `channel_evidence_ok`。于是所有 `editor_state` 通道的工具 `effective` 恒为 0，批量门对它们系统性误红。**TASK-143 实测（修前）**：166 个目标、118 pass、48 fail；48 个 fail 里 45 个是误红（台账 `status=达标` 且 `channel_evidence_ok=true`，通道全部是 `editor_state`），只有 3 个是真的缺证据。**TASK-144 A 修法**：判据改成 `calls>=5 and channel_evidence>=1 and (boundary>=1 or declared edge)`，且**不重写**通道证据的定义——脚本 `import tools/tool_coverage.py`，直接调用台账自己的 `channel_evidence_count()` / `load_channels()`（代码优先于文档），并额外要求 `coverage.json` 快照与 `tool_channels.json` 声明自洽（通道名、`channel_evidence`、`channel_evidence_ok` 三者都要能被行内计数复现），不一致即判红并逐条打印分歧。**TASK-144 实测（修后）**：166 个目标、**163 pass / 3 fail**、**误红 0**；3 条真实缺证据逐条点名并说明缺什么：`editor_set_auto_dismiss_dialogs`（`editor_state`：本引擎没有成功分支，5×`-32000 Not implemented` + 2×`-32602` 参数拒绝，没有“另一读调用逐字读回被写的值”的机会）、`os_deploy_to_android_device`（`file_effect`：5×`-32001 Export preset 'NoSuchAndroidPreset' not found` + 1×`-32602` 非 Android preset，且 6/6 调用的 `file_effect=not_recorded`、facts_complete 0/6 —— 没有 Android preset/真机，盘上文件不会真的变）、`project_get_android_preset_info`（`payload`：5×`-32000 No Android export preset is configured in this project` + 1×`-32001`，没有一条 `ok=true` 的实质载荷）。**判据只收紧不放宽**：没有任何通道门槛被放松，`effective` 降级为仅供对照打印的信息列，不再是门槛。测试 `tools/tests/test_coverage_batch_consistency.py` 同步升级：钉住 166/163/3 与“误红 0”，并新增 4 条 pytest 负例——①某通过工具被声明成错误通道（`editor_state`→`pixel_effect`）必须判红（同一条未变异时为正向对照 pass）、②`coverage.json` 里存的通道证据与行内计数不符必须判红、③把动作词工具声明成 `payload` 必须被台账的动词守卫拒绝（exit 2）、④台账内部自洽性检查不得恒真。
 
 **F3（契约工具的引擎侧覆盖缺口）**：177 个工具里只有 83 个被至少一个 `[MCPServer]` TEST_CASE 点名，**94 个没有任何引擎用例点名**（大多是后加的 B3/B4/B5 组）。本轮用活体探针把其中 142 个的“非法输入被拒”补成真跑证据；余下 35 个（写类且无必填参数，或契约里根本没有输入成员）**没有**可控的非法输入，未探，理由逐条记在 `probe-live.json`。
 
@@ -1057,19 +1082,29 @@ negatives all fired: True ; control clean: True
 
 ### 9.3 未达标项（U）
 
-**U1 — g09 红（继承状态，非本任务造成，未擅自修）**
+**U1 — g09 红（TASK-143 的登记；TASK-144 B 已按既有流程收口转绿）**
 
-`check_engine_anchor.ps1` 对当前树判 `ANCHOR_STALE_COMPILED`：二进制自报锚点 `3fdabe2d9`，引擎仓 HEAD 是 `ba1587c71`，两者之间 7 个文件里有 5 个编译输入。这是 **TASK-112 自己记录过的状态**：`recovery/reports/TASK-112-REPORT.md:196-198` 明写“模块改动在十门全绿之后才提交为 `ba1587c71e`…下一次重建后 `--version` 才会变成 `ba1587c71e`”。
+TASK-143 的现场：`check_engine_anchor.ps1` 对当时的树判 `ANCHOR_STALE_COMPILED` —— 二进制自报锚点 `3fdabe2d9`，引擎仓 HEAD 是 `ba1587c71`，两者之间 7 个文件里有 5 个编译输入。这是 **TASK-112 自己记录过的状态**：`recovery/reports/TASK-112-REPORT.md:196-198` 明写“模块改动在十门全绿之后才提交为 `ba1587c71e`…下一次重建后 `--version` 才会变成 `ba1587c71e`”。
 
-补充实测（供判断红门的性质）：磁盘上的 mono 控制台二进制里 `[MCPServer]` 用例是 **159** 个，而 `3fdabe2d9` 的 `test_mcp_server.h` 只有 **157** 个、HEAD 有 **159** 个 —— 即二进制**包含** TASK-112 的改动，只是 `--version` 里烘的锚点字符串没跟着换。所以这是**锚点记账漂移**，不是“缺了 TASK-112 的修复”。
+补充实测（供判断红门的性质）：TASK-143 时磁盘上的 mono 控制台二进制里 `[MCPServer]` 用例是 **159** 个，而 `3fdabe2d9` 的 `test_mcp_server.h` 只有 **157** 个、HEAD 有 **159** 个 —— 即二进制**包含** TASK-112 的改动，只是 `--version` 里烘的锚点字符串没跟着换。所以这是**锚点记账漂移**，不是“缺了 TASK-112 的修复”。
 
-为什么不修：清掉它需要**重建两变体 + 十门 + accept_m1 + push**（任务书 §2.5 的既有流程）。本任务没有改任何引擎模块，重建属于产品发布动作、且会改动嵌套仓的历史，超出“测试用例盘查与补齐”的范围。**如实登记为未达标项，交由决策者决定是否发起重建。**
+**TASK-144 B 的收口（真跑）**：按既有流程执行 **两变体重建 → 十道门 → `accept_m1` → push**。重建在 HEAD `ba1587c71e` 上串行完成（`build_local.cmd -Force` 1m45s exit 0 → `4.8.dev.custom_build.ba1587c71`；`mcp057_build_mono.cmd` 1m42s exit 0 → `4.8.dev.mono.custom_build.ba1587c71`）。十道门 `g01`…`g10` **全部 exit=0**，`g09` 判 **`ANCHOR_EQUAL`**（A=ANCHOR=HEAD=ba1587c71，`DIFF_COUNT=0`），`g10` `accept_m1` **22/22**。push 的真实输出是 `Everything up-to-date`：本地 `HEAD` 与 `origin/feature/mcp-server-module-rebuild` 都已是 `ba1587c71eba34c1a6576b08f9f26aad8d2ffd36`（TASK-112 提交时已推送），**本次没有新提交可推**，未 force、未换分支。**重建没有暴露任何“非纯记账漂移”的迹象**：重建前后唯二变化就是两个二进制的 `--version` 锚点串，其余九道门与 `accept_m1` 的结果与重建前逐条一致。新锚点：**`ba1587c71`**（plain 与 mono 同锚）。
 
-**U2 — 35 个工具没有活体非法输入证据，其中 2 个连“强反例”都没有**
+**U2 — 35 个工具没有活体非法输入证据（TASK-143 的登记），其中 2 个连“强反例”都没有 —— TASK-144 C 已把 2 个补齐，其余 33 个保持登记**
 
-写类且无必填参数的工具（以及契约里 `properties` 为空的工具）无法在不冒“真的改状态”风险的前提下构造非法输入，故本轮**未探**而非记 pass。逐条理由在 `probe-live.json` 的 `tools.<name>.why`。它们的非法输入断言大多仍由 trace 语料覆盖（见矩阵 A 的“错误码”列）。
+写类且无必填参数的工具（以及契约里 `properties` 为空的工具）无法在不冒“真的改状态”风险的前提下构造非法输入，故 TASK-143 **未探**而非记 pass。逐条理由在 `probe-live.json` 的 `tools.<name>.why`。它们的非法输入断言大多仍由 trace 语料覆盖（见矩阵 A 的“错误码”列）。
 
-其中 **2 个工具既没有 trace 失败调用、也没有活体探针、台账 boundary 也是 0**：`editor_simulate_mouse_click`、`editor_simulate_mouse_move`。它们在 `coverage.json` 里是 `未达(0)`（0 次调用，被 SCOPE 排除），所以本任务能给它们的“反例判据”只有一条**弱**证据：一个提到它们、正文含非法断言文本的引擎用例（`tools of later batches are not registered`，`test_mcp_server.h:1469`）—— 那条断言**不是**关于这两个工具的。**如实记为“无反例可判”，不写成 pass。** 要补上它们，需要让 `editor_simulate_*` 这一组在某个会里被真正调用（台账 `scope_excluded` 已说明为什么现在没有）。
+其中 2 个工具既没有 trace 失败调用、也没有活体探针、台账 boundary 也是 0：`editor_simulate_mouse_click`、`editor_simulate_mouse_move`。TASK-143 只能给一条**弱**证据（一个提及它们但正文断言与它们无关的引擎用例 `tools of later batches are not registered`，`test_mcp_server.h:1469`），并如实记为“无反例可判”。
+
+**TASK-144 C 的更强尝试（真跑，已成功）**：TASK-143 的 `not_probed` 理由（“无必填参数 ⇒ 构造非法输入就可能真的改状态”）对**值**探针成立、对**名**探针不成立。`tool_registry.cpp:857-866` 的 `_reject_unknown_arguments()` 在 `def->handler(...)`（`:880`）**之前**运行，而这两个工具在 `editor_input_simulation.cpp:1172/1201` 注册时声明的是 `{button,pressed,x,y}` / `{x,y}`（无 `required`）。因此只带**一个未声明成员名**的参数袋会被注册器当场拒为 `-32602 Unknown parameter ...`，真正注入编辑器输入事件的 handler（`mutating(true)`）**根本不会执行**。`recovery/work/task144/probe_u2.py` 在**一个**私有高位端口（9919，只起 editor 端点，无游戏端点）上真跑：
+
+```
+editor_simulate_mouse_click      refused_-32602 code=-32602 message=Unknown parameter 'mcp144_undeclared_probe' for tool 'editor_simulate_mouse_click'
+editor_simulate_mouse_move       refused_-32602 code=-32602 message=Unknown parameter 'mcp144_undeclared_probe' for tool 'editor_simulate_mouse_move'
+harness: {"import": true, "import_listen": ["[MCP] listening on 127.0.0.1:9919 (editor=true, tools=154)"], "port_up": true, "tools_list_count": 154, "both_targets_registered": true}
+```
+
+脚本自带护栏：请求参数袋**断言只含那一个未声明键**；回答若不是 `jsonrpc_error` 就抛异常、拒绝写进证据（不会把“偷跑成功”写成 pass）。原始记录 `recovery/work/task144/probe-u2.json`。**边界如实说明**：这补的是“非法输入被拒”的**强反例**（矩阵 A 的“非法/错误码”格与 §1.2 的 175→177），**不是**这两个工具的**生效证据**——台账仍是 `未达(0)`、`scope_excluded`，`editor_state` 通道的 witness_read 依旧无从构造（登记表的 `measurable_when` 自己写着“这样的批次买得到计数与边界，买不到 tier”）。**其余 33 个 `not_probed` 工具没有变**。
 
 **U3 — 矩阵 C 的“合法 / 必填可选 / 默认值”三格是空（`·`）**
 
@@ -1112,3 +1147,20 @@ negatives all fired: True ; control clean: True
 生成矩阵：`python recovery/work/task143/inventory.py` → `analyze.py` → `traces.py` → `render.py`（`probe.py`、`negative-demo.py` 另跑）。全部脚本与中间 JSON 在 `recovery/work/task143/`。
 
 _矩阵生成时间戳（本地）：2026-09-28 13:10:29_
+
+---
+
+### 10.5 TASK-144 对本文件的更新（**只改上列相关行与统计，未重写矩阵**）
+
+TASK-144 只动了这些部分：§0.1 的 `tools/tests/**` 计数行、§1.1 的 `TC-PY-*`/合计、§1.2 的强/弱反例两格、§1.4 的缺口两行、§2 里 `editor_simulate_mouse_click` / `editor_simulate_mouse_move` 两行、§7 的 `check_engine_anchor.ps1` 与 `verify_coverage_batch.py` 两行、§8.1 的 pytest 与 `verify_coverage_batch.py` 两行、§8.2 的 g09 行与 g09 输出块（新增 TASK-144 B 更新）、§8.3 的 preflight 段（新增 TASK-144 B 更新）、§9.2 的 F2 段、§9.3 的 U1/U2 两段。**其余矩阵行、统计与叙述一字未动。**
+
+| TASK-144 声明独占的路径 | 动作 |
+|---|---|
+| `tools/verify_coverage_batch.py` | 改：判据改为 `calls>=5 and channel_evidence>=1 and (boundary>=1 or declared edge)`，复用 `tools/tool_coverage.py` 的 `channel_evidence_count()` / `load_channels()` |
+| `tools/tests/**` | 改：`test_coverage_batch_consistency.py` 由 5 条 pytest 升为 9 条（重钉修后结果 + 3 条负例 + 1 条恒真守卫） |
+| `recovery/work/task144/**` | 新建：脚本与中间产物 |
+| `recovery/TEST-CASES.md` | 只更新上列行（本 §10.5 为唯一新增区块） |
+| `recovery/reports/TASK-144-REPORT.md` | 新建 |
+| 引擎仓 `godot/` | 只**重建**两个二进制（源码一个字节未改，故未产生新提交）：`ba1587c71` plain + mono |
+
+新增真跑证据：`recovery/work/task144/{batch-before.json,batch-after.json,probe-u2.json,check_recompute.py,three_reds.py,three_reds_trace.py,probe_u2.py,build-local.log,build-mono.log}`、`runs/gates/task144/**`。**`DECISIONS.md` 因 TASK-142 残留无法干净分离，本任务未改它**（决策日志条目写在报告里，留给决策者）。

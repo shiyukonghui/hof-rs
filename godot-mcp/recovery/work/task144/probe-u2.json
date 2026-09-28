@@ -1,0 +1,51 @@
+{
+ "port": 9919,
+ "exe": "F:\\moonbit-hof-rs\\godot-mcp\\godot\\bin\\godot.windows.editor.x86_64.mono.console.exe",
+ "scratch": "C:\\Users\\wyl\\AppData\\Local\\Temp\\task144-probe",
+ "probe_kind": "undeclared_argument_name (refused by the registry's unknown-argument gate, before any handler runs)",
+ "targets": [
+  "editor_simulate_mouse_click",
+  "editor_simulate_mouse_move"
+ ],
+ "undeclared_argument": "mcp144_undeclared_probe",
+ "tools": {
+  "editor_simulate_mouse_click": {
+   "request_arguments": {
+    "mcp144_undeclared_probe": 1
+   },
+   "http_status": 200,
+   "response_excerpt": "{\"error\":{\"code\":-32602,\"data\":{\"suggestion\":\"Accepted parameters of editor_simulate_mouse_click: button, pressed, x, y\"},\"message\":\"Unknown parameter 'mcp144_undeclared_probe' for tool 'editor_simulate_mouse_click'\"},\"id\":1,\"jsonrpc\":\"2.0\"}",
+   "error_code": -32602,
+   "error_message": "Unknown parameter 'mcp144_undeclared_probe' for tool 'editor_simulate_mouse_click'",
+   "error_data": {
+    "suggestion": "Accepted parameters of editor_simulate_mouse_click: button, pressed, x, y"
+   },
+   "response_kind": "jsonrpc_error",
+   "verdict": "refused_-32602"
+  },
+  "editor_simulate_mouse_move": {
+   "request_arguments": {
+    "mcp144_undeclared_probe": 1
+   },
+   "http_status": 200,
+   "response_excerpt": "{\"error\":{\"code\":-32602,\"data\":{\"suggestion\":\"Accepted parameters of editor_simulate_mouse_move: x, y\"},\"message\":\"Unknown parameter 'mcp144_undeclared_probe' for tool 'editor_simulate_mouse_move'\"},\"id\":2,\"jsonrpc\":\"2.0\"}",
+   "error_code": -32602,
+   "error_message": "Unknown parameter 'mcp144_undeclared_probe' for tool 'editor_simulate_mouse_move'",
+   "error_data": {
+    "suggestion": "Accepted parameters of editor_simulate_mouse_move: x, y"
+   },
+   "response_kind": "jsonrpc_error",
+   "verdict": "refused_-32602"
+  }
+ },
+ "harness": {
+  "import": true,
+  "import_listen": [
+   "[MCP] listening on 127.0.0.1:9919 (editor=true, tools=154)"
+  ],
+  "port_up": true,
+  "status": "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 195\r\nAccess-Control-Allow-Origin: *\r\nConnection: keep-alive\r\n\r\n{\"connections\":1,\"frame_count\":8,\"is_editor\":true,\"listening\":true,\"pending\":0,\"pending_connections\":0,\"port\":9919,\"server\":\"godot-mcp-rs\",\"status\":\"ok\",\"tools\":154,\"transport\":\"streamable-http\"}",
+  "tools_list_count": 154,
+  "both_targets_registered": true
+ }
+}
