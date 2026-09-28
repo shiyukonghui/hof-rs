@@ -2439,32 +2439,50 @@ pub const PROBE_FRAME_COUNT: u64 = 30;
 /// See D29 裁决 6 for the measurement; that is exactly why a probe failure must
 /// be recorded as `ACTION_BINDING_UNKNOWN` instead of being read as
 /// `ACTION_NOT_BOUND`.
+///
+/// DR-50: `running_game_execute_gdscript`'s `code` is a GDScript **function
+/// body** (`running_game_script_execution.cpp:57-59`), so a value leaves the
+/// body only through `return`.  `smoke-t6` sent bare expressions, so all four
+/// transport-successful probe calls answered
+/// `{"result":null,"result_type":"Nil"}` and the channel could never be read.
+/// Two shapes follow, and they are different on purpose:
+///
+/// * a **reading** (`has_action`, `is_action_pressed`, `axis`, `position`) is
+///   `return <expression>`;
+/// * a **mutation** (`action_press`, `action_release`) stays a statement,
+///   because those engine calls return `void` and this engine refuses to use a
+///   void call as a value (`gdscript_analyzer.cpp:3498`: `Cannot get return
+///   value of call to "action_press()" because it returns "void".`).
 pub mod probe_scripts {
     use super::PROBE_ACTION;
 
     /// `InputMap.has_action(<action>)` inside the game process.
     pub fn has_action(action: &str) -> String {
-        format!("str(InputMap.has_action(\"{action}\"))")
+        format!("return str(InputMap.has_action(\"{action}\"))")
     }
 
     /// `Input.is_action_pressed(<action>)` inside the game process.
     pub fn is_action_pressed(action: &str) -> String {
-        format!("str(Input.is_action_pressed(\"{action}\"))")
+        format!("return str(Input.is_action_pressed(\"{action}\"))")
     }
 
     /// `Input.get_axis("move_left", "move_right")` inside the game process.
     pub fn axis() -> String {
-        "str(Input.get_axis(\"move_left\", \"move_right\"))".to_string()
+        "return str(Input.get_axis(\"move_left\", \"move_right\"))".to_string()
     }
 
     /// `Input.action_press(<action>)` inside the game process.
+    ///
+    /// A statement: the engine call returns `void`, so `return`/`str()` on it
+    /// would not compile (DR-50).
     pub fn press(action: &str) -> String {
-        format!("str(Input.action_press(\"{action}\"))")
+        format!("Input.action_press(\"{action}\")")
     }
 
-    /// `Input.action_release(<action>)` inside the game process.
+    /// `Input.action_release(<action>)` inside the game process.  A statement,
+    /// like [`press`].
     pub fn release(action: &str) -> String {
-        format!("str(Input.action_release(\"{action}\"))")
+        format!("Input.action_release(\"{action}\")")
     }
 
     /// `Player.position` inside the game process.
@@ -2474,7 +2492,7 @@ pub mod probe_scripts {
     /// reachable at all?" half of the probe, kept apart from the
     /// "is `Input` reachable?" half.
     pub fn player_position() -> String {
-        "str(get_tree().current_scene.get_node_or_null(\"Player\").position.x) + \",\" + \
+        "return str(get_tree().current_scene.get_node_or_null(\"Player\").position.x) + \",\" + \
          str(get_tree().current_scene.get_node_or_null(\"Player\").position.y)"
             .to_string()
     }
@@ -3544,6 +3562,44 @@ mod tests {
         );
     }
 
+    /// DR-50: `running_game_execute_gdscript` takes a GDScript **function body**,
+    /// so a reading is `return <expr>` and a void mutation stays a statement.
+    ///
+    /// `smoke-t6`'s four transport-successful probe calls all answered
+    /// `{"result":null,"result_type":"Nil"}`, because the scripts were bare
+    /// expressions.  A regression here silently un-reads the whole game channel
+    /// (the double in `tests/evidence_battery.rs` models the engine's Nil answer,
+    /// so it also fails the end-to-end battery).
+    #[test]
+    fn the_game_probe_scripts_are_body_shaped() {
+        for reading in [
+            probe_scripts::has_action("move_right"),
+            probe_scripts::is_action_pressed("move_right"),
+            probe_scripts::axis(),
+            probe_scripts::player_position(),
+        ] {
+            assert!(
+                reading.trim_start().starts_with("return "),
+                "a value-reading probe must `return` its reading: {reading}"
+            );
+        }
+        for mutation in [
+            probe_scripts::press("move_right"),
+            probe_scripts::release("move_right"),
+        ] {
+            assert!(
+                !mutation.trim_start().starts_with("return "),
+                "`Input.action_press`/`action_release` return void: a `return` would not compile: \
+                 {mutation}"
+            );
+            assert!(
+                !mutation.contains("str("),
+                "a void call may not be used as a value (`str(Input.action_press(...))` is a \
+                 compile error, gdscript_analyzer.cpp:3498): {mutation}"
+            );
+        }
+    }
+
     /// DR-49: freshness is a property of the artifact **state**, and a
     /// pre-existing file is invalidated rather than trusted.
     #[test]
@@ -3669,32 +3725,47 @@ mod tests {
     // DR-35: the game-process probe
     // -----------------------------------------------------------------------
 
-    /// Every probe script is one `str(...)`-wrapped GDScript expression, because
-    /// the addon evaluates it with `Expression::execute` and reports
-    /// `{"result": str(value)}`.
+    /// DR-50: the probe scripts are one-line GDScript **bodies**.
+    ///
+    /// The pre-DR-50 form was derived from the retired GDExtension addon, which
+    /// evaluated a single `Expression` and stringified it (`str(...)`, no
+    /// `return`).  The MCP-native engine compiles `code` into a function body
+    /// instead (`running_game_script_execution.cpp:57-82`), so the reading half
+    /// is `return str(...)` and the void mutation half is a plain statement.
+    /// Every assertion the old test made about one-line-ness, the `get_tree()`
+    /// reachability of the position read and the absence of engine singletons in
+    /// it is kept; the obsolete `starts_with("str(")`/`!contains("return ")`
+    /// pair is replaced by the body-shaped form.
     #[test]
-    fn the_probe_scripts_are_single_expression_readings() {
+    fn the_probe_scripts_are_single_line_bodies() {
         for script in [
             probe_scripts::has_action("move_right"),
             probe_scripts::is_action_pressed("move_right"),
             probe_scripts::axis(),
-            probe_scripts::press("move_right"),
-            probe_scripts::release("move_right"),
             probe_scripts::player_position(),
         ] {
-            assert!(script.starts_with("str("), "{script}");
+            assert!(script.starts_with("return str("), "{script}");
             assert!(
                 !script.contains('\n'),
-                "an expression is one line: {script}"
+                "a probe body is one line: {script}"
             );
-            assert!(!script.contains("return "), "{script}");
+        }
+        for script in [
+            probe_scripts::press("move_right"),
+            probe_scripts::release("move_right"),
+        ] {
+            assert!(script.starts_with("Input.action_"), "{script}");
+            assert!(
+                !script.contains('\n'),
+                "a probe body is one line: {script}"
+            );
         }
         assert_eq!(
             probe_scripts::has_action("jump"),
-            "str(InputMap.has_action(\"jump\"))"
+            "return str(InputMap.has_action(\"jump\"))"
         );
         // The position read must stay reachable: it uses `get_tree()` on the
-        // addon's base node, never an engine singleton.
+        // generated body's base node, never an engine singleton.
         let position = probe_scripts::player_position();
         assert!(position.contains("get_tree()"), "{position}");
         assert!(!position.contains("Engine"), "{position}");

@@ -370,6 +370,20 @@ fn game_script_payload(reading: &str) -> Value {
     json!({"content": [{"type": "text", "text": inner.to_string()}]})
 }
 
+/// DR-50: the engine's answer to a body that has **no** `return`, verbatim from
+/// `running_game_script_execution.cpp:399-404` (`smoke-t6` received this four
+/// times, once per value-reading probe).
+fn void_script_payload() -> Value {
+    let inner = json!({
+        "note": "The body returned no value (result is null / result_type \"Nil\"). This is not \
+                 evidence that the body had an effect: it is also what a body with no `return`, \
+                 and what a body whose statements were all no-ops, answer.",
+        "result": null,
+        "result_type": "Nil",
+    });
+    json!({"content": [{"type": "text", "text": inner.to_string()}]})
+}
+
 #[async_trait::async_trait]
 impl ToolChannel for FixtureChannel {
     fn allowed(&self, _role: Role, _tool: &str) -> bool {
@@ -439,18 +453,31 @@ impl ToolChannel for FixtureChannel {
             // DR-35: the game-process input channel.  The probe scripts are the
             // real ones (`str(InputMap.has_action(...))` and friends), so this
             // branch keys on them.
+            //
+            // DR-50: the double models the engine's *body* semantics
+            // (`running_game_script_execution.cpp:57-82`): `code` is compiled
+            // into a function body, so a body with **no** `return` answers
+            // `{"result":null,"result_type":"Nil"}` and nothing can be read from
+            // it.  A mutation stays a statement; a reading needs its `return`.
             "running_game_execute_gdscript" => {
                 if self.game_input == GameInputMode::ProbeFails {
                     return Err(captured_error("game_script_input_unreachable.txt").into());
                 }
                 let code = args.get("code").and_then(Value::as_str).unwrap_or("");
                 let bound = self.game_input == GameInputMode::Ok;
-                if code.contains("action_press") {
+                let returns_a_value = code.trim_start().starts_with("return ");
+                // The mutation marker is `Input.action_press(`, not `action_press`:
+                // `Input.is_action_pressed(...)` contains the latter as a substring.
+                if code.contains("Input.action_press(") {
                     *self.pressed_in_game.lock().unwrap() = true;
-                    game_script_payload("<null>")
-                } else if code.contains("action_release") {
+                    void_script_payload()
+                } else if code.contains("Input.action_release(") {
                     *self.pressed_in_game.lock().unwrap() = false;
-                    game_script_payload("<null>")
+                    void_script_payload()
+                } else if !returns_a_value {
+                    // A value-reading probe without `return` is what `smoke-t6`
+                    // sent: the engine answers Nil, so the reading is absent.
+                    void_script_payload()
                 } else if code.contains("has_action") {
                     game_script_payload(if bound { "true" } else { "false" })
                 } else if code.contains("get_axis") {
@@ -1160,6 +1187,76 @@ async fn input_replay_reports_an_action_that_is_not_bound() {
 // ---------------------------------------------------------------------------
 // DR-35 — the input channel is the *game* process, not the editor
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// DR-50 — `running_game_execute_gdscript` takes a GDScript *body*
+// ---------------------------------------------------------------------------
+
+/// DR-50: the recorded probe calls must be body-shaped.
+///
+/// `code` is compiled into a function body
+/// (`running_game_script_execution.cpp:57-59`), so a value only travels through
+/// `return`; a bare expression is answered with `{"result":null,
+/// "result_type":"Nil"}` — which is exactly what all four transport-successful
+/// probe calls returned in `smoke-t6`.  And a **void** call may not be used as a
+/// value at all: `str(Input.action_press(…))` is a compile error in this engine
+/// (`gdscript_analyzer.cpp:3498`, `Cannot get return value of call to
+/// "action_press()" because it returns "void".`).
+#[tokio::test]
+async fn the_game_probe_calls_are_gdscript_bodies() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel = Arc::new(FixtureChannel::green());
+    let run = run_battery(root, channel.clone(), 30).await;
+
+    let raw: Value = serde_json::from_str(&read(
+        &run.run_dir
+            .join("iter-1/candidate/.hoh/deterministic/raw/input_channel_probe.json"),
+    ))
+    .unwrap();
+    let scripts: Vec<String> = raw["calls"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|call| call["tool"] == json!("running_game_execute_gdscript"))
+        .filter_map(|call| call["args"]["code"].as_str().map(ToOwned::to_owned))
+        .collect();
+    assert!(!scripts.is_empty(), "the probe must have run scripts: {raw}");
+
+    let mut readings = 0;
+    for script in &scripts {
+        let trimmed = script.trim_start();
+        let mutation = script.contains("Input.action_press(") || script.contains("Input.action_release(");
+        if mutation {
+            assert!(
+                !trimmed.starts_with("return "),
+                "a void mutation must stay a statement (DR-50): {script}"
+            );
+            assert!(
+                !script.contains("str("),
+                "wrapping a void call in `str()` does not compile (DR-50): {script}"
+            );
+        } else {
+            readings += 1;
+            assert!(
+                trimmed.starts_with("return "),
+                "a value-reading probe must `return` its reading (DR-50): {script}"
+            );
+        }
+    }
+    assert!(readings >= 4, "expected the reading probes: {scripts:?}");
+
+    // And the readings must actually arrive: a body without `return` answers Nil,
+    // which the double reproduces, so the capability verdict proves it.
+    assert!(
+        step(&run.records, "input_channel_probe")
+            .record
+            .observation
+            .contains("GAME_INPUT_CHANNEL_OK"),
+        "the readings must be readable: {:?}",
+        step(&run.records, "input_channel_probe").record.observation
+    );
+}
 
 /// DR-35 ①: the game process reports the action, the press moves `get_axis` and
 /// the player: the channel is usable and the replay is green.
