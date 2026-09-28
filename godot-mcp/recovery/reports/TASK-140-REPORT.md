@@ -476,6 +476,22 @@ strict 的 2× 余量对一次 flap 不可达）——如实报，未调参凑�
 
 ---
 
+## D. 目标 D —— 记录
+
+* `DECISIONS.md` 追加 **D205–D209**（编号顺延）：
+  * **D205**：报告档位 `reporting_frames=90` 与 `BELOW_REPORTING_WINDOW` 语义（含依据与"只能收紧"边界）。
+  * **D206**：verdict 必须带档位+轮次；`UNSTABLE` 的类别比较、分歧点、永不进 PASS、与 `SENSITIVE` 的分工。
+  * **D207**：4 款游戏侧修法与取舍。
+  * **D208**：flappy 的结构性发现（横向滚动世界被声明为玩法观测量 ⇒ strict 的 2× 对玩家动作不可达）。
+  * **D209**：本批两轮重跑的分布、`UNSTABLE`/`SENSITIVE`/`CROSS-BATCH` 名单，以及
+    "w90 的第三次读数与前两次不一致（breakout）"这一新判据认识。
+* `recovery\tasks\TEMPLATE-logic-feedback.md` 同步：
+  * 新增 **§1.2d**（报告档位 / verdict 带档位+轮次 / `UNSTABLE` 不进 PASS / 两轮一致 ≠ 不敏感）；
+  * 反例清单追加 **26–32 条**（不写档位与轮次、把一轮当结论、用两轮一致开脱敏感性、
+    低于报告档位混进通过数、拒绝不留痕、可见性只靠肉眼、"同批两轮一致"当成"这一档可复现"）。
+
+---
+
 ## E. 验收判据逐条（Y1–Y10）
 
 | 编号 | 判据 | 结果 | 证据落点 |
@@ -522,6 +538,83 @@ strict 的 2× 余量对一次 flap 不可达）——如实报，未调参凑�
 | `t140-respawn-probe\probe.json` | 撞击→重生的 24×2 个逐样本读数 |
 
 ---
+
+## G. 未达标项 / 已知限制（如实报）
+
+1. **`w90` 不是零方差**（本批的新实测，也是最重要的一条）：脚本臂 `breakout` 在本批 w90 的**两轮**
+   都读 `INCONCLUSIVE`，而 TASK-139 的 w90 读 `FAIL`——**同一档的第三次独立完整运行与前两次不一致**，
+   分歧点是 `ack` 丢失（`no_ack_no_change` vs `ok_ack_and_changed`，步 2/3/4）。
+   因此 `reporting_frames=90` 是**必要**纪律，不是"这一档可复现"的保证；
+   `UNSTABLE` 只有在**把所有可得的同档独立完整运行**都喂给 `stability` 时才会把它标出来
+   （本报告就是这么做的，产物 `t140_unstable_breakout.json`）。**未达标项**：本批的两轮 sweep
+   按"本批两轮"定义 `UNSTABLE`，跨批不一致单列一列（`CROSS-BATCH`），没有把它写进工具的自动判定。
+2. **`flappy` 脚本臂仍不是 PASS**（`PASS(baseline only)`）；确切原因是**结构性**的（D208）：
+   横向滚动的世界被声明为玩法观测量后，strict 的 `mv ≥ 2×cmv` 对一次 flap 不可达。
+   本批**没有**为此调参、改声明或改尺子（§B.4）。**未达标项**：TASK-140 §1.B.5 的
+   "脚本臂从 FAIL/INCONCLUSIVE → PASS" 在 `flappy` 上**未达成**，按 §1.B.5 的第二种收口如实报原因。
+3. **`asteroids` 的"撞击 → 重生"在跑测/模型臂里没被自然触发**：修正后本批的 asteroids **跑测** run
+   （脚本两轮、模型两轮）里飞船都没被撞到（模型 w90 r1 8 步全为飞行/开火，无 `Lives` 变化），
+   所以那四条 run 只覆盖"飞行/开火"路径。
+   **已用定向探针补齐**（§C.5，`t140_respawn_probe.py`，用游戏自己的 `ForceTestState` 把船放到岩石上）：
+   撞击 → 掉一命 → `RespawnTimer` 倒数 → 1.0 s 后 `Respawns 0→1` + 护盾闪烁（`pixel_diff=484`）→
+   重生帧与死亡窗口帧的 sha256 都给出；`RespawnDelay=0` 的变体则把修前行为**按需复现**为
+   "24 个样本 `ShipAlive=False`、最长 23 个零变化样本"，且**死亡窗口那一帧与 TASK-139 的冻结帧
+   逐字节相同**（同一 sha256）。⇒ 这条**已补齐**，残留风险只剩"探针走的是游戏自己的钩子，
+   而不是玩家自然撞上去"这一条形态差异（§B.1 里 TASK-139 的旧读数正是玩家自然撞上的那次）。
+4. **`AutoRun=true` 的副作用**：flappy 的计分规则（"管子越过鸟的 x 就记一分"）在世界真的跑起来后
+   会让 `PipesPassed`/`Score` 在鸟停在地面时自增，甚至把课程"cleared"（run 因此在 9 步结束）。
+   本批没有改计分，只登记。
+5. **`frogger` 的"≤1 命"没有在修后 run 里被直接触发**：修后 run 全程没掉命（`Lives 3` 不变），
+   所以"≤1 命"的证据形态是：修前**一次注入掉 3 命**（`Lives 3 → 0`、`hit by car at=6,13`）
+   + 修后**一次注入只走一格**（8/8 步）+ 代码里两道锁（按下边沿 + `DeathGrace`）。
+   **未达标项**：没有一帧"修后一次注入恰好掉 1 命"的实测。
+6. **`bomberman` 的 `Detonations` 在 playtest run 里仍恒为 0**（`AutoClock=0` 的取舍，§B.3）。
+   可见性已修并有数字（`BombMinContrast=0.8`、`BombsVisible=1`、`px 0→138`），但"炸弹会炸"这件事
+   在 playtest 通道上**没有**被观测到。
+7. **历史 run 的标称窗**：TASK-139 及更早的 `player.json` 没有 `verdict_context` ⇒
+   本批工具在读它们时写 `unrecorded` 并**不**判 `BELOW_REPORTING_WINDOW`（不发明测量）。
+   本批在链后追加了 `session.json -> measurement_window.frames` 的回退（TASK-139 确实记过它），
+   使历史 w30 run 也能被正确标为参考读数；**该回退不改变本批任何 run 的判定**（本批 run 自带
+   `verdict_context.window_frames`），故本批两轮 sweep 的读数与之一致、无需重跑。
+8. **`UNSTABLE` 的轮次标签**：TASK-139 的 run 没有 `round`，在 `stability` 输出里显示为 `None`
+   （如实显示，不编号、不猜）。
+9. **本批的 tool 修订与 run 的对应关系**：全部 sweep 命令都以 `t140_cmd.py` 入台账
+   （`source=t140-wrapper-call`），每条命令的时间戳可证明哪一版工具产生了哪个 run；
+   链后对 `playtest_player.py` 的追加修改**只**影响"读历史 run"的回退路径（§7）。
+
+---
+
+## H. 铁律逐条自查（§2）
+
+| # | 铁律 | 本批执行情况 |
+|---|---|---|
+| 1 | **禁止一切 shell 重定向**；沿用台账 + 扫描器并给自查数字 | ✅ 自查数字与逐条原文见 §I；所有命令经 `t140_cmd.py`（`shell=False`），写盘一律用 Python 句柄 / `-o` / `-OutFile` |
+| 2 | 破坏性命令默认拒绝；**只改这 4 款**，其余 16 款与 `_exercises/` 禁触 | ✅ `git status --short` 只有 4 款游戏源码改动；`_exercises/`、其余 16 款、`F:\models\**`、两个 venv、8080/8081 服务全程未触 |
+| 3 | 命令尽量**从 cmd 启动**；中文写盘乱码用 cmd/bash 或 Python UTF-8 | ✅ 所有命令经 wrapper；写盘用 `io.open(..., encoding="utf-8")`；commit message 用 `-F <文件>` |
+| 4 | 禁止第三方端点；只用 8080/8081；**串行**；429/529 退避 | ✅ 只调 `127.0.0.1:8080`（jev）/`:8081`（playjev）；三个臂**串行**、每个臂内逐款串行；本批**未出现** 429/529 |
+| 5 | 不得杀服务、不动两个 venv、不动 `F:\models\**` | ✅ 未触碰；服务全程健康（§F 的 health 读数） |
+| 6 | 端口：唯一高位端口；w30/w90（或两轮）探针**必须用不同端口** | ✅ 本批用 9971–9988，**每个 (臂, 轮次) 一个端口**（`t140_runall.py` 的 PLAN 表），任何时刻只有一个 run 在跑；TASK-139 的"共用端口互杀"没有重演 |
+| 7 | **不许放宽判据**：`UNSTABLE` 只能拿掉 PASS；为让某款 PASS 的改动必须走可开关变体 + 逐字证据 | ✅ `reporting_frames` / `UNSTABLE` 只会把 PASS 拿掉（单测 + 实测）；4 款修法**全部可开关**（`RespawnDelay=0` / `RepeatHold=0`+`DeathGrace=0` / `AutoClock` / `IdleHover=false`+`GroundIsFatal=true`），且**没有**为 flappy 调参 |
+| 8 | 改引擎模块才触发两变体重建 + 十道门 + `accept_m1` + push | **未触发**：本批只改 `godot-mcp/tools/**`、4 款 `projects/*/src/*.cs`、`DECISIONS.md`、模板、报告与 `runs/model-player/**`，**未改 `godot-mcp/godot/**` 任何引擎模块** |
+| 9 | 提交前 `git status --short` 只暂存独占清单的文件（**逐文件暂存**） | ✅ 见 §J.2（逐文件 `git add`，未 `git add` 目录；TASK-137 的两个未跟踪文件不代提交） |
+| 10 | 事实来源分级；代码与文档冲突以代码为准并显式纠正；未达标项如实报 | ✅ §H.3 分级；发现并如实报 9 条未达标/限制（§G）与 3 处本批自身更正（§I.3、§C.2 的跨批不一致、§G.3） |
+
+### H.1 文件所有权自查
+
+| 类别 | 路径 | 本批动作 |
+|---|---|---|
+| **独占（已改）** | `tools/playtest_player.py`、`tools/playability_gate.py`、`tools/playability_controls.json`、`tools/tests/test_playability_model_player.py`、`tools/playtest_artifact_index.py` | 修改，逐文件暂存 |
+| **独占（已改）** | `projects/asteroids/src/AsteroidsGame.cs`、`projects/frogger/src/FroggerGame.cs`、`projects/bomberman/src/BombermanGame.cs`、`projects/flappy/src/FlappyBirdGame.cs` | 修改，逐文件暂存 |
+| **独占（已改）** | `runs/model-player/**`（脚本、数据、run 产物、索引）、`recovery/tasks/TEMPLATE-logic-feedback.md`、`DECISIONS.md`、`recovery/tasks/TASK-140.md` | 修改/新增；`runs/model-player/**` 按 `.gitignore` 不入库，只有 `_scripts/**` 与 `_index/**` 的本批文件 `git add -f` |
+| **未触碰（禁触）** | 其余 **16 款**正式工程、`projects/_exercises/{neg_*,prefix_*}`、`recovery/reports/TASK-136/137/138/139*` 的历史内容、`F:\models\**`、`/opt/jev-venv`、`/opt/playjev-venv`、8080/8081 服务、`.gitignore`、`recovery/tasks/README.md` | 全部未动 |
+
+### H.2 事实来源分级（本报告采用）
+
+* **A 级（实测，可复算）**：`player.json` / `steps.jsonl` / `frames/*.png` 的哈希与字段、
+  两轮 sweep 的逐款类别、`stability` 的分歧点、`dotnet build` 的退出码与告警数、扫描器命中数。
+* **B 级（声明，可争辩）**：`reporting_frames=90`、`min_rounds=2`、`min_frames=20`、
+  `min_real_progress_steps=4`、两把尺子的系数、4 款修法的参数（`RespawnDelay` 等）。
+* **C 级（引用）**：TASK-136/138/139 的历史读数（标明出处文件与提交）。
 
 ## I. 铁律 ①：命令台账与重定向自查（数字）
 
@@ -619,97 +712,4 @@ ledger lines: 696   this batch's commands from that index: 195（切点探针 t1
 * 未初始化/不支持的 git 功能：无（`git log` 正常，未使用 `--amend`、未 rebase、未强推）。
 
 ---
-
-## D. 目标 D —— 记录
-
-* `DECISIONS.md` 追加 **D205–D209**（编号顺延）：
-  * **D205**：报告档位 `reporting_frames=90` 与 `BELOW_REPORTING_WINDOW` 语义（含依据与"只能收紧"边界）。
-  * **D206**：verdict 必须带档位+轮次；`UNSTABLE` 的类别比较、分歧点、永不进 PASS、与 `SENSITIVE` 的分工。
-  * **D207**：4 款游戏侧修法与取舍。
-  * **D208**：flappy 的结构性发现（横向滚动世界被声明为玩法观测量 ⇒ strict 的 2× 对玩家动作不可达）。
-  * **D209**：本批两轮重跑的分布、`UNSTABLE`/`SENSITIVE`/`CROSS-BATCH` 名单，以及
-    "w90 的第三次读数与前两次不一致（breakout）"这一新判据认识。
-* `recovery\tasks\TEMPLATE-logic-feedback.md` 同步：
-  * 新增 **§1.2d**（报告档位 / verdict 带档位+轮次 / `UNSTABLE` 不进 PASS / 两轮一致 ≠ 不敏感）；
-  * 反例清单追加 **26–32 条**（不写档位与轮次、把一轮当结论、用两轮一致开脱敏感性、
-    低于报告档位混进通过数、拒绝不留痕、可见性只靠肉眼、"同批两轮一致"当成"这一档可复现"）。
-
----
-
-## G. 未达标项 / 已知限制（如实报）
-
-1. **`w90` 不是零方差**（本批的新实测，也是最重要的一条）：脚本臂 `breakout` 在本批 w90 的**两轮**
-   都读 `INCONCLUSIVE`，而 TASK-139 的 w90 读 `FAIL`——**同一档的第三次独立完整运行与前两次不一致**，
-   分歧点是 `ack` 丢失（`no_ack_no_change` vs `ok_ack_and_changed`，步 2/3/4）。
-   因此 `reporting_frames=90` 是**必要**纪律，不是"这一档可复现"的保证；
-   `UNSTABLE` 只有在**把所有可得的同档独立完整运行**都喂给 `stability` 时才会把它标出来
-   （本报告就是这么做的，产物 `t140_unstable_breakout.json`）。**未达标项**：本批的两轮 sweep
-   按"本批两轮"定义 `UNSTABLE`，跨批不一致单列一列（`CROSS-BATCH`），没有把它写进工具的自动判定。
-2. **`flappy` 脚本臂仍不是 PASS**（`PASS(baseline only)`）；确切原因是**结构性**的（D208）：
-   横向滚动的世界被声明为玩法观测量后，strict 的 `mv ≥ 2×cmv` 对一次 flap 不可达。
-   本批**没有**为此调参、改声明或改尺子（§B.4）。**未达标项**：TASK-140 §1.B.5 的
-   "脚本臂从 FAIL/INCONCLUSIVE → PASS" 在 `flappy` 上**未达成**，按 §1.B.5 的第二种收口如实报原因。
-3. **`asteroids` 的"撞击 → 重生"在跑测/模型臂里没被自然触发**：修正后本批的 asteroids **跑测** run
-   （脚本两轮、模型两轮）里飞船都没被撞到（模型 w90 r1 8 步全为飞行/开火，无 `Lives` 变化），
-   所以那四条 run 只覆盖"飞行/开火"路径。
-   **已用定向探针补齐**（§C.5，`t140_respawn_probe.py`，用游戏自己的 `ForceTestState` 把船放到岩石上）：
-   撞击 → 掉一命 → `RespawnTimer` 倒数 → 1.0 s 后 `Respawns 0→1` + 护盾闪烁（`pixel_diff=484`）→
-   重生帧与死亡窗口帧的 sha256 都给出；`RespawnDelay=0` 的变体则把修前行为**按需复现**为
-   "24 个样本 `ShipAlive=False`、最长 23 个零变化样本"，且**死亡窗口那一帧与 TASK-139 的冻结帧
-   逐字节相同**（同一 sha256）。⇒ 这条**已补齐**，残留风险只剩"探针走的是游戏自己的钩子，
-   而不是玩家自然撞上去"这一条形态差异（§B.1 里 TASK-139 的旧读数正是玩家自然撞上的那次）。
-4. **`AutoRun=true` 的副作用**：flappy 的计分规则（"管子越过鸟的 x 就记一分"）在世界真的跑起来后
-   会让 `PipesPassed`/`Score` 在鸟停在地面时自增，甚至把课程"cleared"（run 因此在 9 步结束）。
-   本批没有改计分，只登记。
-5. **`frogger` 的"≤1 命"没有在修后 run 里被直接触发**：修后 run 全程没掉命（`Lives 3` 不变），
-   所以"≤1 命"的证据形态是：修前**一次注入掉 3 命**（`Lives 3 → 0`、`hit by car at=6,13`）
-   + 修后**一次注入只走一格**（8/8 步）+ 代码里两道锁（按下边沿 + `DeathGrace`）。
-   **未达标项**：没有一帧"修后一次注入恰好掉 1 命"的实测。
-6. **`bomberman` 的 `Detonations` 在 playtest run 里仍恒为 0**（`AutoClock=0` 的取舍，§B.3）。
-   可见性已修并有数字（`BombMinContrast=0.8`、`BombsVisible=1`、`px 0→138`），但"炸弹会炸"这件事
-   在 playtest 通道上**没有**被观测到。
-7. **历史 run 的标称窗**：TASK-139 及更早的 `player.json` 没有 `verdict_context` ⇒
-   本批工具在读它们时写 `unrecorded` 并**不**判 `BELOW_REPORTING_WINDOW`（不发明测量）。
-   本批在链后追加了 `session.json -> measurement_window.frames` 的回退（TASK-139 确实记过它），
-   使历史 w30 run 也能被正确标为参考读数；**该回退不改变本批任何 run 的判定**（本批 run 自带
-   `verdict_context.window_frames`），故本批两轮 sweep 的读数与之一致、无需重跑。
-8. **`UNSTABLE` 的轮次标签**：TASK-139 的 run 没有 `round`，在 `stability` 输出里显示为 `None`
-   （如实显示，不编号、不猜）。
-9. **本批的 tool 修订与 run 的对应关系**：全部 sweep 命令都以 `t140_cmd.py` 入台账
-   （`source=t140-wrapper-call`），每条命令的时间戳可证明哪一版工具产生了哪个 run；
-   链后对 `playtest_player.py` 的追加修改**只**影响"读历史 run"的回退路径（§7）。
-
----
-
-## H. 铁律逐条自查（§2）
-
-| # | 铁律 | 本批执行情况 |
-|---|---|---|
-| 1 | **禁止一切 shell 重定向**；沿用台账 + 扫描器并给自查数字 | ✅ 自查数字与逐条原文见 §I；所有命令经 `t140_cmd.py`（`shell=False`），写盘一律用 Python 句柄 / `-o` / `-OutFile` |
-| 2 | 破坏性命令默认拒绝；**只改这 4 款**，其余 16 款与 `_exercises/` 禁触 | ✅ `git status --short` 只有 4 款游戏源码改动；`_exercises/`、其余 16 款、`F:\models\**`、两个 venv、8080/8081 服务全程未触 |
-| 3 | 命令尽量**从 cmd 启动**；中文写盘乱码用 cmd/bash 或 Python UTF-8 | ✅ 所有命令经 wrapper；写盘用 `io.open(..., encoding="utf-8")`；commit message 用 `-F <文件>` |
-| 4 | 禁止第三方端点；只用 8080/8081；**串行**；429/529 退避 | ✅ 只调 `127.0.0.1:8080`（jev）/`:8081`（playjev）；三个臂**串行**、每个臂内逐款串行；本批**未出现** 429/529 |
-| 5 | 不得杀服务、不动两个 venv、不动 `F:\models\**` | ✅ 未触碰；服务全程健康（§F 的 health 读数） |
-| 6 | 端口：唯一高位端口；w30/w90（或两轮）探针**必须用不同端口** | ✅ 本批用 9971–9988，**每个 (臂, 轮次) 一个端口**（`t140_runall.py` 的 PLAN 表），任何时刻只有一个 run 在跑；TASK-139 的"共用端口互杀"没有重演 |
-| 7 | **不许放宽判据**：`UNSTABLE` 只能拿掉 PASS；为让某款 PASS 的改动必须走可开关变体 + 逐字证据 | ✅ `reporting_frames` / `UNSTABLE` 只会把 PASS 拿掉（单测 + 实测）；4 款修法**全部可开关**（`RespawnDelay=0` / `RepeatHold=0`+`DeathGrace=0` / `AutoClock` / `IdleHover=false`+`GroundIsFatal=true`），且**没有**为 flappy 调参 |
-| 8 | 改引擎模块才触发两变体重建 + 十道门 + `accept_m1` + push | **未触发**：本批只改 `godot-mcp/tools/**`、4 款 `projects/*/src/*.cs`、`DECISIONS.md`、模板、报告与 `runs/model-player/**`，**未改 `godot-mcp/godot/**` 任何引擎模块** |
-| 9 | 提交前 `git status --short` 只暂存独占清单的文件（**逐文件暂存**） | ✅ 见 §J.2（逐文件 `git add`，未 `git add` 目录；TASK-137 的两个未跟踪文件不代提交） |
-| 10 | 事实来源分级；代码与文档冲突以代码为准并显式纠正；未达标项如实报 | ✅ §H.3 分级；发现并如实报 9 条未达标/限制（§G）与 3 处本批自身更正（§I.3、§C.2 的跨批不一致、§G.3） |
-
-### H.1 文件所有权自查
-
-| 类别 | 路径 | 本批动作 |
-|---|---|---|
-| **独占（已改）** | `tools/playtest_player.py`、`tools/playability_gate.py`、`tools/playability_controls.json`、`tools/tests/test_playability_model_player.py`、`tools/playtest_artifact_index.py` | 修改，逐文件暂存 |
-| **独占（已改）** | `projects/asteroids/src/AsteroidsGame.cs`、`projects/frogger/src/FroggerGame.cs`、`projects/bomberman/src/BombermanGame.cs`、`projects/flappy/src/FlappyBirdGame.cs` | 修改，逐文件暂存 |
-| **独占（已改）** | `runs/model-player/**`（脚本、数据、run 产物、索引）、`recovery/tasks/TEMPLATE-logic-feedback.md`、`DECISIONS.md`、`recovery/tasks/TASK-140.md` | 修改/新增；`runs/model-player/**` 按 `.gitignore` 不入库，只有 `_scripts/**` 与 `_index/**` 的本批文件 `git add -f` |
-| **未触碰（禁触）** | 其余 **16 款**正式工程、`projects/_exercises/{neg_*,prefix_*}`、`recovery/reports/TASK-136/137/138/139*` 的历史内容、`F:\models\**`、`/opt/jev-venv`、`/opt/playjev-venv`、8080/8081 服务、`.gitignore`、`recovery/tasks/README.md` | 全部未动 |
-
-### H.2 事实来源分级（本报告采用）
-
-* **A 级（实测，可复算）**：`player.json` / `steps.jsonl` / `frames/*.png` 的哈希与字段、
-  两轮 sweep 的逐款类别、`stability` 的分歧点、`dotnet build` 的退出码与告警数、扫描器命中数。
-* **B 级（声明，可争辩）**：`reporting_frames=90`、`min_rounds=2`、`min_frames=20`、
-  `min_real_progress_steps=4`、两把尺子的系数、4 款修法的参数（`RespawnDelay` 等）。
-* **C 级（引用）**：TASK-136/138/139 的历史读数（标明出处文件与提交）。
 
