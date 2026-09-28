@@ -375,23 +375,87 @@
   "resolution), and at ~60 Hz it is about a third of a second -- 1/3 of the 1.0 s the change",
   "test compares against.  A window shorter than 20 drawn frames cannot contain a full",
   "input-release -> game-loop -> observable read-back cycle with any margin, which is exactly",
-  "the judgement this state refuses to make."
+  "the judgement this state refuses to make.",
+  "",
+  "TASK-140 §1.A.1 adds a SECOND, higher number to the same block: `reporting_frames`.  The",
+  "two are not the same statement.  `min_frames` says 'below this, no judgement at all may be",
+  "made'.  `reporting_frames` says 'below this, a judgement may be made and reported, but it",
+  "may not be reported AS A PASS', because TASK-139 §A.4 measured that at w30 the same game",
+  "with the same command and the same code changed verdict class between rounds (4 of 5 probed",
+  "games), while w90 did not.  A run below `reporting_frames` keeps its measured verdict, its",
+  "per-step evidence and its frames; it carries `reporting_window.at_reporting_window: false`",
+  "and `counts_as_pass: false`, and `qualified_verdict` appends '[reference only: ...]'."
  ],
  "model_player_window": {
-  "declared_by": "TASK-139 §1.A",
+  "declared_by": "TASK-139 §1.A: the minimum.  TASK-140 §1.A.1: the reporting window.",
   "min_frames": 20,
+  "reporting_frames": 90,
+  "reporting_state": "BELOW_REPORTING_WINDOW",
+  "reporting_counts_as_pass": false,
+  "reporting_basis": "MEASURED (TASK-139 §A.4: three complete w30 probes and two complete w90 probes of the same five games, same command, same code): at w30 the per-game verdict was NOT reproducible across rounds -- asteroids, tetris, pong and breakout each changed class between rounds (4 of 5), with the mechanism located per step (Engine.get_frames_drawn() span jitter plus an occasionally missing ack_result); at w90 the two complete rounds agreed per game on the same five games.  The reporting window is therefore 90: below it a verdict is still measured, still recorded and still printed, but it is a REFERENCE reading and can never count as a pass.",
   "applies_to": [
    "control_window",
    "action_window"
   ],
   "state": "WINDOW_TOO_SHORT",
   "state_counts_as_pass": false,
-  "how_used": "tools/playtest_player.py `load_window_declaration` / `window_frames_of` / `summarise` writes `player.json -> window_frames` (per step: the two measured spans, `too_short`, `short_windows`) and prefixes the verdict with `WINDOW_TOO_SHORT ` when any measured span is below `min_frames`; `counts_as_pass` and `pass` are forced false.  `gate.json -> model_player_criterion` reads the same block.",
+  "how_used": "tools/playtest_player.py `load_window_declaration` / `window_frames_of` / `summarise` writes `player.json -> window_frames` (per step: the two measured spans, `too_short`, `short_windows`) and prefixes the verdict with `WINDOW_TOO_SHORT ` when any measured span is below `min_frames`; `counts_as_pass` and `pass` are forced false.  The SAME loader reads `reporting_frames` and `summarise` writes `player.json -> reporting_window` / `-> verdict_context` / `-> qualified_verdict`, forcing `counts_as_pass = false` for a run whose nominal `--window-frames` is below it.  `gate.json -> model_player_criterion` reads the same block and the run's `player.json -> verdict_context`.",
   "basis": "MEASURED: TASK-138 recorded 61 steps over its 20 games and the achieved span of both windows ran 29..34 drawn frames (nothing below 29); 20 sits below that floor, above one MCP round trip (30..120 frames, TASK-138 defect ⑧), and at ~60 Hz is about 1/3 s of game time.",
   "not_a_loosening": [
    "the check only ever removes a PASS; it can never create one",
    "`--window-frames` and both rulers' formulas are unchanged from TASK-135/TASK-136",
-   "the spans it judges are the game's own `Engine.get_frames_drawn()` deltas, not a wall-clock estimate"
+   "the spans it judges are the game's own `Engine.get_frames_drawn()` deltas, not a wall-clock estimate",
+   "TASK-140 §1.A.1: `reporting_frames = 90` is a SECOND, independent removal of PASS and it only removes -- a run at or above 90 frames is unaffected, and a run below 90 keeps its measured verdict and its per-step evidence"
+  ]
+ },
+ "_model_player_stability_comment": [
+  "TASK-140 §1.A.2 -- `UNSTABLE`: the cross-round judgement, and the reason it exists.",
+  "",
+  "TASK-139 §A.4 measured that the SAME game, at the SAME window, with the SAME command and",
+  "the SAME code, can read a different verdict in a second independent complete run (w30: 4 of",
+  "5 probed games changed class).  A verdict that is not reproducible is not evidence of a",
+  "class, so a single run may no longer be reported as a PASS on its own: >= 2 independent",
+  "complete runs at the same window are compared, and any disagreement makes the game",
+  "UNSTABLE.",
+  "",
+  "The comparison is on the verdict CLASS, not on the string: `PASS` and `PASS(baseline only)`",
+  "are different classes (TASK-136), and the measurement states `WINDOW_TOO_SHORT ...` /",
+  "`MODEL_FIXED_POINT` / `MODEL_NO_PROGRESS` are classes of their own, so a flip between any",
+  "two of them is a disagreement and cannot be hidden.",
+  "",
+  "`UNSTABLE` can only ever REMOVE a pass.  It never turns a non-PASS into a PASS, it does not",
+  "rewrite any run's own `player.json`, and the per-step divergence points it lists are the",
+  "place to look for the mechanism (`injected` / `accepted` / `ack_missing` / `changed` /",
+  "`changed_strict` / `step_verdict`), not a re-reading of the game.",
+  "",
+  "Two things `UNSTABLE` is NOT:",
+  "  * it is NOT a window-length judgement.  `SENSITIVE` (TASK-139) compares TWO WINDOWS of one",
+  "    game; `UNSTABLE` compares TWO ROUNDS at one window.  They are reported side by side and",
+  "    neither may be used to excuse the other.",
+  "  * it is NOT a replacement for the per-step evidence.  A stable PASS at the reporting",
+  "    window still carries its `steps.jsonl`, its frames and its anchors."
+ ],
+ "model_player_stability": {
+  "declared_by": "TASK-140 §1.A.2",
+  "min_rounds": 2,
+  "state": "UNSTABLE",
+  "state_counts_as_pass": false,
+  "comparable_classes": [
+   "PASS",
+   "PASS(baseline only)",
+   "FAIL",
+   "INCONCLUSIVE",
+   "WINDOW_TOO_SHORT ...",
+   "MODEL_FIXED_POINT",
+   "MODEL_NO_PROGRESS"
+  ],
+  "rule": "the same game at the same window, run for >= `min_rounds` INDEPENDENT complete rounds, is UNSTABLE when its verdict class is not identical in every round; an UNSTABLE game is listed with the divergent rounds and with the per-step divergence points (which step, which criterion), and it NEVER counts as a pass.  Fewer rounds than `min_rounds` is INSUFFICIENT_ROUNDS, which is not a judgement and is not a pass either.",
+  "how_used": "`tools/playtest_player.py` -> `stability_summary` / `stability_from_paths` / `verdict_class` / `divergence_between`, driven by `playtest_player.py stability --run <player.json> --run <player.json> [--out FILE]`; this batch's sweeps write `player.json -> verdict_context` with `window_frames` and `round` per run, which is what the comparison reads.",
+  "basis": "MEASURED: TASK-139 §A.4, three complete w30 probes of five games (4 of 5 flip) against two complete w90 probes (0 of 5 flip).",
+  "not_a_loosening": [
+   "an UNSTABLE set can never pass: `counts_as_pass` is false unless EVERY round is a literal PASS",
+   "no verdict string is rewritten; the per-round `player.json` files keep their own readings",
+   "the class comparison is over the classes TASK-136/TASK-139 already defined, so a flip between `PASS` and `PASS(baseline only)` counts as a disagreement"
   ]
  },
  "_model_player_refusal_comment": [
@@ -669,22 +733,32 @@
     "how_used": "tools/playability_gate.py `terminal_conditions_met`; the gate writes gate.json -> settle_liveness and P3 fails when a condition holds"
    },
    "refusal_evidence": {
-    "declared_by": "TASK-131 X12",
+    "declared_by": "TASK-131 X12; TASK-140 §1.B.3 narrows it to the two exact counters",
     "what": "how this project records a DELIBERATE refusal of an input (a wall, the board edge, an illegal direction).  Used only as P2's carve-out: an action with no gameplay change is accepted when one of these moved AND at least one other action of the same game did move a gameplay observable -- so 'everything was refused because the game is dead' still fails.",
     "keys": [
+     "RejectedMoves",
+     "RejectedPlaces"
+    ],
+    "value_words": [],
+    "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
+    "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
+    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence",
+    "game_side_fields": [
+     "RejectedMoves",
+     "RejectedPlaces"
+    ],
+    "keys_before_task140": [
      "LastRefusedInput",
      "Rejected"
     ],
-    "value_words": [
+    "value_words_before_task140": [
      "rejected",
      "blocked",
      "refused",
      "no_change",
      "cannot"
     ],
-    "rule": "an arm is `refused` when one of `keys` is among its changed state keys (or a changed string value contains one of `value_words`), the same was NOT true of its own no-input control window, and the arm moved neither a gameplay observable nor pixels",
-    "provenance": "TASK-116 wrote the convention down: where a game had no exported refusal counter one was added (`frogger.RejectedSteps`, `pacman.RejectedSteps`, `flappy.Restarts`)",
-    "how_used": "tools/playability_gate.py `refusal_hit` / `arm_evidence`; recorded per action in gate.json -> criteria.P2.gameplay_evidence"
+    "task140_note": "TASK-140 §1.B.3: `RejectedPlaces` is NEW.  Before it, a refused placement (a bomb already on the cell, or MaxBombs reached) changed NOTHING at all -- measured: pre-fix steps 5/7/9 of `t140-prefix4-w90-r1/bomberman/scripted` were `accepted and nothing changed` with an EMPTY state delta.  A refusal is a real answer to the player's key and must be an observable property (TASK-116 convention #1), so the silent guard in `HandleInput` was removed and `PlaceBomb`'s own refusal paths now record it."
    }
   },
   "breakout": {

@@ -41,9 +41,10 @@ sys.path.insert(0, TOOLS)
 from playability_gate import evaluate_model_player_steps  # noqa: E402
 from playtest_agent import action_criteria  # noqa: E402
 from playtest_player import (  # noqa: E402
-    change_margin_edge_steps, changed_of, decide_changed, load_change_margins,
-    load_refusal_boundary, load_window_declaration, model_fixed_point, model_no_progress,
-    step_refusal_record, summarise, window_frames_of,
+    STABILITY_STATE_UNSTABLE, WINDOW_REPORTING_FRAMES, change_margin_edge_steps, changed_of,
+    decide_changed, divergence_between, load_change_margins, load_refusal_boundary,
+    load_window_declaration, model_fixed_point, model_no_progress, qualified_verdict,
+    stability_summary, step_refusal_record, summarise, verdict_class, window_frames_of,
 )
 
 
@@ -685,9 +686,172 @@ def test_task139_window_and_refusal():
     assert task139_cases() == 0
 
 
+def _windowed_run(n=8, frames=30, changed=True, action="act"):
+    """A clean run whose steps carry the two measured window spans (TASK-139's shape)."""
+    recs = clean_run(n) if changed else [step(i, "%s%d" % (action, i), "frame%d" % i,
+                                              changed=False) for i in range(1, n + 1)]
+    for r in recs:
+        r["frame_budget"] = {"achieved_delta": frames, "action_frames": frames}
+        r["control_diff"] = {"frame_budget": {"achieved_delta": frames}}
+    return recs
+
+
+def task140_cases():
+    """TASK-140 §1.A: the reporting window, the window+round attribution, and UNSTABLE."""
+    cases = []
+
+    def check(name, got, want):
+        cases.append((got == want, name, "got=%r want=%r" % (got, want)))
+
+    # ---- §1.A.1: the reporting window is DECLARED, with a basis ---------------------------
+    w = load_window_declaration()
+    check("reporting: a reporting window is declared",
+          isinstance(w.get("reporting_frames"), int), True)
+    check("reporting: it is at or above the minimum window",
+          w["reporting_frames"] >= w["min_frames"], True)
+    check("reporting: the declaration carries its own basis", bool(w.get("reporting_basis")),
+          True)
+    check("reporting: the module constant is the declared number",
+          WINDOW_REPORTING_FRAMES, w["reporting_frames"])
+    check("reporting: the state is named", w.get("reporting_state"), "BELOW_REPORTING_WINDOW")
+
+    # ---- §1.A.1: a run BELOW the reporting window is a reference, never a pass -------------
+    at_report = _windowed_run(8, frames=WINDOW_REPORTING_FRAMES)
+    s_at = summarise(at_report, "jev", "pong", nominal_frames=WINDOW_REPORTING_FRAMES,
+                     round_index=1)
+    check("reporting: a run AT the reporting window is still a PASS", s_at["verdict"], "PASS")
+    check("reporting: ... and still counts as a pass", s_at["counts_as_pass"], True)
+    check("reporting: ... and is marked as at the reporting window",
+          s_at["reporting_window"]["at_reporting_window"], True)
+
+    low = _windowed_run(8, frames=30)
+    s_low = summarise(low, "jev", "pong", nominal_frames=30, round_index=1)
+    check("reporting: a run BELOW it keeps its measured verdict", s_low["verdict"], "PASS")
+    check("reporting: ... but does NOT count as a pass", s_low["counts_as_pass"], False)
+    check("reporting: ... the raw verdict is preserved beside it",
+          s_low["verdict_before_reporting_check"], "PASS")
+    check("reporting: ... the state is named",
+          s_low["reporting_window"]["state"], "BELOW_REPORTING_WINDOW")
+    check("reporting: ... it is flagged reference-only in the label",
+          "reference only" in s_low["qualified_verdict"], True)
+    check("reporting: the removal is one-way (it cannot create a pass)",
+          summarise(_windowed_run(8, changed=False), "jev", "pong", nominal_frames=30,
+                    round_index=1)["counts_as_pass"], False)
+
+    # ---- §1.A.3: every verdict carries its window and its round ---------------------------
+    ctx = s_at["verdict_context"]
+    check("attribution: the context names the window", ctx["window_frames"],
+          WINDOW_REPORTING_FRAMES)
+    check("attribution: the context names the round", ctx["round"], 1)
+    check("attribution: the label carries both", s_at["qualified_verdict"],
+          "PASS @w%d r1" % WINDOW_REPORTING_FRAMES)
+    check("attribution: an unrecorded window/round is admitted, not invented",
+          "unrecorded" in summarise(clean_run(8), "jev", "pong")["qualified_verdict"], True)
+    check("attribution: the label is a pure function of (verdict, context)",
+          qualified_verdict("FAIL", {"window_frames": 90, "round": 2}), "FAIL @w90 r2")
+
+    # ---- §1.A.2: UNSTABLE is computed from >= 2 INDEPENDENT rounds ------------------------
+    check("unstable: fewer rounds than the minimum is NOT a judgement",
+          stability_summary([{"verdict": "PASS", "round": 1, "window_frames": 90}])["state"],
+          "INSUFFICIENT_ROUNDS")
+    same = stability_summary([
+        {"verdict": "PASS", "counts_as_pass": True, "round": 1, "window_frames": 90,
+         "game": "pong"},
+        {"verdict": "PASS", "counts_as_pass": True, "round": 2, "window_frames": 90,
+         "game": "pong"}])
+    check("unstable: two identical rounds are STABLE", same["state"], "STABLE")
+    check("unstable: ... and a stable all-PASS pair counts as a pass",
+          same["counts_as_pass"], True)
+    check("unstable: ... the per-round labels are kept",
+          same["qualified_verdicts_by_round"], {"1": "PASS @w90 r1", "2": "PASS @w90 r2"})
+
+    diff = stability_summary([
+        {"verdict": "PASS", "counts_as_pass": True, "round": 1, "window_frames": 90,
+         "game": "pong", "records": _windowed_run(8, frames=90)},
+        {"verdict": "FAIL", "counts_as_pass": False, "round": 2, "window_frames": 90,
+         "game": "pong", "records": _windowed_run(8, frames=90, changed=False)}])
+    check("unstable: two rounds that disagree are UNSTABLE", diff["state"],
+          STABILITY_STATE_UNSTABLE)
+    check("unstable: ... and it does NOT count as a pass", diff["counts_as_pass"], False)
+    check("unstable: ... both divergent rounds are listed", diff["divergent_rounds"], [1, 2])
+    check("unstable: ... the classes are named", diff["distinct_classes"], ["FAIL", "PASS"])
+    check("unstable: ... the disagreement is named to the STEP and the CRITERION",
+          sorted(set((p["step"], p["criterion"]) for p in diff["divergence_points"]))[:3],
+          [(1, "changed"), (1, "step_verdict"), (2, "changed")])
+
+    # A stable pair may still contain a non-pass: only an all-PASS pair passes.
+    mixed = stability_summary([
+        {"verdict": "FAIL", "counts_as_pass": False, "round": 1, "window_frames": 90},
+        {"verdict": "FAIL", "counts_as_pass": False, "round": 2, "window_frames": 90}])
+    check("unstable: a stable all-FAIL pair is STABLE", mixed["state"], "STABLE")
+    check("unstable: ... and does not count as a pass", mixed["counts_as_pass"], False)
+
+    # TASK-136 made `PASS` and `PASS(baseline only)` different readings; a round-to-round
+    # flip between exactly those two strings is a disagreement (pong did this in TASK-139).
+    check("unstable: PASS vs PASS(baseline only) IS a disagreement",
+          stability_summary([
+              {"verdict": "PASS", "counts_as_pass": True, "round": 1, "window_frames": 90},
+              {"verdict": "PASS(baseline only)", "counts_as_pass": False, "round": 2,
+               "window_frames": 90}])["state"], STABILITY_STATE_UNSTABLE)
+    # ... and a window flip (TASK-139's `WINDOW_TOO_SHORT`) is one too, not a pass.
+    check("unstable: WINDOW_TOO_SHORT vs PASS IS a disagreement",
+          stability_summary([
+              {"verdict": "PASS", "counts_as_pass": True, "round": 1, "window_frames": 90},
+              {"verdict": "WINDOW_TOO_SHORT PASS", "counts_as_pass": False, "round": 2,
+               "window_frames": 90}])["state"], STABILITY_STATE_UNSTABLE)
+    check("unstable: MODEL_NO_PROGRESS is its own class",
+          verdict_class("MODEL_NO_PROGRESS"), "MODEL_NO_PROGRESS")
+    check("unstable: an UNSTABLE set is never a pass even if a round was a PASS",
+          stability_summary([
+              {"verdict": "PASS", "counts_as_pass": True, "round": 1, "window_frames": 90},
+              {"verdict": "INCONCLUSIVE", "counts_as_pass": False, "round": 2,
+               "window_frames": 90}])["counts_as_pass"], False)
+
+    # the divergence helper reads the recorded per-step criteria, and pixel counts are
+    # CONTEXT, never the disagreement itself (they always differ between rounds).
+    a = _windowed_run(2, frames=90)
+    b = [dict(r) for r in a]
+    b[0]["ack"] = {"accepted": False, "injected": True}
+    b[1]["ack"] = {"accepted": True, "injected": True, "ack_missing": True}
+    pts = divergence_between(a, b)
+    check("unstable: an ack that vanished is named as the criterion",
+          [p["criterion"] for p in pts], ["accepted", "ack_missing"])
+
+    # ---- GATE SIDE: the same reporting rule, and the same attribution ---------------------
+    ev_low = evaluate_model_player_steps(low, "pong",
+                                         run_context={"window_frames": 30, "round": 4})
+    check("gate reporting: a run below the reporting window does not count",
+          ev_low["counts_as_pass"], False)
+    check("gate reporting: the criterion names the state",
+          ev_low["reporting_window"]["state"], "BELOW_REPORTING_WINDOW")
+    check("gate reporting: the attribution carries window and round",
+          (ev_low["verdict_context"]["window_frames"], ev_low["verdict_context"]["round"]),
+          (30, 4))
+    check("gate reporting: the label carries both",
+          ev_low["qualified_verdict"], "PASS @w30 r4 [reference only: window 30 < reporting 90]")
+    ev_at = evaluate_model_player_steps(at_report, "pong",
+                                        run_context={"window_frames": 90, "round": 1})
+    check("gate reporting: a run at the reporting window is unaffected",
+          ev_at["counts_as_pass"], True)
+    check("gate reporting: with no context nothing is invented",
+          evaluate_model_player_steps(low, "pong")["verdict_context"]["window_frames"], None)
+
+    ok = True
+    for good, name, detail in cases:
+        ok = ok and good
+        print("%-58s %s%s" % (name[:58], "OK" if good else "MISMATCH",
+                              "" if good else "  " + detail))
+    print("task140_cases %s (%d assertions)" % ("PASSED" if ok else "FAILED", len(cases)))
+    return 0 if ok else 1
+
+
+def test_task140_reporting_window_and_unstable():
+    assert task140_cases() == 0
+
+
 def test_model_player_rules():
     assert main() == 0
 
 
 if __name__ == "__main__":
-    sys.exit(task139_cases() or main())
+    sys.exit(task140_cases() or task139_cases() or main())

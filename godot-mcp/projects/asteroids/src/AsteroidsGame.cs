@@ -114,6 +114,40 @@ public partial class AsteroidsGame : Node2D
     /// <summary>False after a rock hit, until <see cref="RespawnShip"/> or a forced state.</summary>
     [Export] public bool ShipAlive = true;
 
+    // --- TASK-140 §1.B.1: the RESPAWN, which used to be missing entirely --------------------
+    // Measured by TASK-139 (registered, unfixed): a rock hit at step 5 of a long window left
+    // `ShipAlive = false` for the rest of the run -- `Lives` stayed 2, `GameOver` stayed false,
+    // and SEVEN consecutive steps recorded `pixel_diff = 0` with three frames sharing one
+    // sha256.  The world did not end; it stopped, because nothing ever put the ship back.
+    //
+    // The rule is the arcade rule: a hit costs a life and takes the ship off the field for
+    // `RespawnDelay` seconds; the replacement arrives with `RespawnInvuln` seconds of shield,
+    // so it is not hit again by the same rock on the frame it appears (the field is static by
+    // default -- `DriftSpeed = 0` -- so "the same rock" is exact, not a figure of speech).
+    // Everything is a real Godot property, so the whole cycle is machine-checkable.
+    /// <summary>Seconds the ship is off the field after a hit (0 = never respawn: the old
+    /// pre-TASK-140 behaviour, kept as a switchable variant).</summary>
+    [Export] public float RespawnDelay = 1.0f;
+
+    /// <summary>Seconds of shield after the ship reappears (hit-checking is suspended and the
+    /// ship blinks, so the shield is visible as well as readable).</summary>
+    [Export] public float RespawnInvuln = 1.5f;
+
+    /// <summary>Seconds left before the ship reappears (0 when it is flying).</summary>
+    [Export] public float RespawnTimer = 0.0f;
+
+    /// <summary>Seconds of shield left (0 when the ship is unprotected).</summary>
+    [Export] public float InvulnTimer = 0.0f;
+
+    /// <summary>True while the ship is protected by a respawn shield.</summary>
+    [Export] public bool ShipInvulnerable = false;
+
+    /// <summary>True while the ship's node is actually drawn (the blink makes this move).</summary>
+    [Export] public bool ShipVisible = true;
+
+    /// <summary>How many times the ship has come back after a hit.</summary>
+    [Export] public int Respawns = 0;
+
     /// <summary>Bullet centre x.</summary>
     [Export] public float BulletX = -100.0f;
 
@@ -175,6 +209,9 @@ public partial class AsteroidsGame : Node2D
     private float _bulletSpeed;
     private float _bulletAge;
     private int _rockSeq;
+    /// <summary>TASK-140 §1.B.1: the shield blink's phase (0..1), so "the shield is on" is
+    /// visible in the picture and not only in a boolean.</summary>
+    private float _shieldPhase;
 
     /// <summary>The deterministic starting field: four large rocks in the four quadrants.</summary>
     private static readonly float[,] StartRocks =
@@ -286,7 +323,10 @@ public partial class AsteroidsGame : Node2D
         {
             return;
         }
-        _ship.Visible = ShipAlive;
+        // TASK-140 §1.B.1: the shield blink reads through this one place, and `ShipVisible`
+        // records what was actually drawn (a boolean in the state, not a claim about it).
+        ShipVisible = ShipAlive && (InvulnTimer <= 0.0f || _shieldPhase < 0.5f);
+        _ship.Visible = ShipVisible;
         _ship.Position = new Vector2(ShipX - ShipSize / 2.0f, ShipY - ShipSize / 2.0f);
         _ship.Rotation = Mathf.DegToRad(ShipAngle);
     }
@@ -356,6 +396,51 @@ public partial class AsteroidsGame : Node2D
         if (GameOver)
         {
             return;
+        }
+
+        // --- TASK-140 §1.B.1: the respawn clock, which is what makes the world keep going --
+        // A game that stops when the player is hit is not a game: `Lives` exists so the ship
+        // comes back.  The countdown runs on the game's own frame clock (the same clock the
+        // measurement windows count), and `RespawnDelay = 0` switches back to the pre-fix
+        // behaviour ("the ship never returns") for the variant evidence.
+        if (!ShipAlive)
+        {
+            if (RespawnDelay > 0.0f)
+            {
+                RespawnTimer -= dt;
+                if (RespawnTimer <= 0.0f)
+                {
+                    RespawnNow();
+                }
+            }
+            // A ship that is off the field cannot fly; the rest of the world still updates.
+            MoveBullet(dt);
+            if (DriftSpeed > 0.0f)
+            {
+                MoveRocks(dt);
+            }
+            if (BulletActive)
+            {
+                CheckBulletHits();
+            }
+            return;
+        }
+        if (InvulnTimer > 0.0f)
+        {
+            InvulnTimer -= dt;
+            ShipInvulnerable = InvulnTimer > 0.0f;
+            if (!ShipInvulnerable)
+            {
+                InvulnTimer = 0.0f;
+            }
+            // the shield blinks: a hit that cannot hurt is still something the player can see
+            ShipVisible = _shieldPhase < 0.5f;
+            _shieldPhase += dt * 8.0f;
+            while (_shieldPhase >= 1.0f)
+            {
+                _shieldPhase -= 1.0f;
+            }
+            ApplyShip();
         }
 
         // --- the input path, off unless a test switches it on (determinism rule) ---
@@ -509,7 +594,7 @@ public partial class AsteroidsGame : Node2D
     /// <summary>Charges one life when a rock overlaps the ship. Checked every frame.</summary>
     private void CheckShipHits()
     {
-        if (!ShipAlive || GameOver)
+        if (!ShipAlive || GameOver || InvulnTimer > 0.0f)
         {
             return;
         }
@@ -531,7 +616,13 @@ public partial class AsteroidsGame : Node2D
             ShipX = FieldW / 2.0f;
             ShipY = FieldH / 2.0f;
             ShipAngle = 0.0f;
-            LastEvent = $"ship hit lives={Lives} rocks={_rocks.Count}";
+            // TASK-140 §1.B.1: start the respawn countdown and drop the shield.  With
+            // `RespawnDelay = 0` the ship stays down exactly as it did before this batch.
+            RespawnTimer = Mathf.Max(0.0f, RespawnDelay);
+            InvulnTimer = 0.0f;
+            ShipInvulnerable = false;
+            LastEvent = $"ship hit lives={Lives} rocks={_rocks.Count} "
+                        + $"respawn_in={RespawnTimer:F2}";
             if (Lives <= 0)
             {
                 GameOver = true;
@@ -597,15 +688,34 @@ public partial class AsteroidsGame : Node2D
     /// <summary>Puts the ship back in the middle with a clean shield state.</summary>
     public string RespawnShip()
     {
+        // TASK-140 §1.B.1: the AUTOMATIC respawn and this hook are the same operation, so a
+        // session that calls the hook and a run that waits for the clock produce one state.
+        RespawnNow();
+        return LastEvent;
+    }
+
+    /// <summary>The one respawn implementation: middle of the field, no velocity, shield up.</summary>
+    private void RespawnNow()
+    {
+        if (GameOver || Lives <= 0)
+        {
+            LastEvent = "respawn refused: no lives left";
+            return;
+        }
         ShipAlive = true;
         ShipVelX = 0.0f;
         ShipVelY = 0.0f;
         ShipX = FieldW / 2.0f;
         ShipY = FieldH / 2.0f;
         ShipAngle = 0.0f;
+        RespawnTimer = 0.0f;
+        InvulnTimer = Mathf.Max(0.0f, RespawnInvuln);
+        ShipInvulnerable = InvulnTimer > 0.0f;
+        _shieldPhase = 0.0f;
+        Respawns++;
+        LastEvent = $"respawned at={ShipX},{ShipY} lives={Lives} invuln={InvulnTimer:F2} "
+                    + $"respawns={Respawns}";
         ApplyShip();
-        LastEvent = $"respawned at={ShipX},{ShipY} lives={Lives}";
-        return LastEvent;
     }
 
     /// <summary>Fires from the ship's nose along its facing. One bullet at a time.</summary>
@@ -697,6 +807,13 @@ public partial class AsteroidsGame : Node2D
         ShipAngle = 0.0f;
         ShipVelX = 0.0f;
         ShipVelY = 0.0f;
+        // TASK-140 §1.B.1: a forced state starts with the respawn clock and shield at rest, so
+        // a recorded session can never inherit a countdown from a previous life.
+        RespawnTimer = 0.0f;
+        InvulnTimer = 0.0f;
+        ShipInvulnerable = false;
+        Respawns = 0;
+        _shieldPhase = 0.0f;
         _bulletAge = 0.0f;
         BuildStartField();
         foreach (var part in spec.Split(';'))
@@ -796,6 +913,8 @@ public partial class AsteroidsGame : Node2D
         return $"rocks={AsteroidsRemaining} split={AsteroidsSplit} destroyed={AsteroidsDestroyed} "
                + $"score={Score} lives={Lives} over={GameOver} won={Won} ship={ShipX:F2},{ShipY:F2} "
                + $"angle={ShipAngle:F2} vel={ShipVelX:F2},{ShipVelY:F2} alive={ShipAlive} "
+               + $"respawn_timer={RespawnTimer:F2} invuln={InvulnTimer:F2} "
+               + $"invulnerable={ShipInvulnerable} ship_visible={ShipVisible} respawns={Respawns} "
                + $"thrust={Thrusting} bullet={BulletActive} bullet_at={BulletX:F2},{BulletY:F2} "
                + $"shots={ShotsFired} ticks={Ticks} drift={DriftSpeed} poll={PollInput} "
                + $"last={LastEvent}";

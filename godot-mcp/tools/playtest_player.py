@@ -160,6 +160,22 @@ PASS_BASELINE_ONLY = "PASS(baseline only)"
 # is not a PASS either; it is the "the evidence cannot answer the question" state, and the
 # step is excluded from the accepted rate by `ack.accepted = False`.
 STEP_VERDICT_ACK_MISSING = "INCONCLUSIVE_ack_missing"
+# TASK-140 §1.A.1: the DECLARED REPORTING WINDOW.  `model_player_window.min_frames` (TASK-139)
+# is the FLOOR below which no judgement may be made at all; this is the level at which a
+# judgement may be REPORTED AS A PASS.  The difference is the measured TASK-139 finding:
+# `w30` verdicts were NOT reproducible across rounds (4 of 5 probed games changed class for
+# the same command and the same code), while `w90` was consistent across both rounds.
+# A run whose nominal `--window-frames` is below this declaration is kept, reported, and
+# marked `BELOW_REPORTING_WINDOW`: it can never count as a pass (`counts_as_pass` is forced
+# false), exactly like `WINDOW_TOO_SHORT` and `PASS(baseline only)`.
+WINDOW_REPORTING_FRAMES_FALLBACK = 90
+STEP_VERDICT_BELOW_REPORTING = "BELOW_REPORTING_WINDOW"
+# TASK-140 §1.A.2: the cross-round judgement.  It is computed by aggregating >= 2 INDEPENDENT
+# complete runs of the same game at the same window; a disagreement makes the run's class
+# `UNSTABLE`, which can only ever REMOVE a pass (the `UNSTABLE` state is never a pass).
+STABILITY_STATE_STABLE = "STABLE"
+STABILITY_STATE_UNSTABLE = "UNSTABLE"
+STABILITY_MIN_ROUNDS = 2
 
 
 def load_change_margins(path=None):
@@ -260,8 +276,19 @@ def load_window_declaration(path=None):
         min_frames = int(declared.get("min_frames", WINDOW_MIN_FRAMES_FALLBACK))
     except Exception:  # noqa: BLE001
         min_frames = WINDOW_MIN_FRAMES_FALLBACK
+    # TASK-140 §1.A.1: the reporting window lives in the SAME declaration block, so the tool
+    # and the gate quote one number instead of two copies of it.
+    try:
+        reporting_frames = int(declared.get("reporting_frames",
+                                            WINDOW_REPORTING_FRAMES_FALLBACK))
+    except Exception:  # noqa: BLE001
+        reporting_frames = WINDOW_REPORTING_FRAMES_FALLBACK
     return {
         "min_frames": min_frames,
+        "reporting_frames": reporting_frames,
+        "reporting_basis": declared.get("reporting_basis"),
+        "reporting_state": STEP_VERDICT_BELOW_REPORTING,
+        "reporting_counts_as_pass": False,
         "declared_by": declared.get("declared_by", "TASK-139 §1.A"),
         "basis": declared.get("basis"),
         "applies_to": declared.get("applies_to") or ["control_window", "action_window"],
@@ -274,6 +301,7 @@ def load_window_declaration(path=None):
 
 WINDOW_DECLARATION = load_window_declaration()
 WINDOW_MIN_FRAMES = WINDOW_DECLARATION["min_frames"]
+WINDOW_REPORTING_FRAMES = WINDOW_DECLARATION["reporting_frames"]
 
 
 def window_frames_of(control_frames, action_frames, min_frames=WINDOW_MIN_FRAMES):
@@ -913,7 +941,7 @@ def model_no_progress(records, min_run=MODEL_NO_PROGRESS_MIN_RUN):
 
 
 def summarise(records, backend=None, game=None, state=None, player="model",
-              margin=None):
+              margin=None, nominal_frames=None, round_index=None):
     """`steps.jsonl` -> the TASK-132 §1.2 three-state verdict, under BOTH margins.
 
     TASK-135 §1.B: the verdict is computed twice from the same records -- once with the
@@ -1127,7 +1155,331 @@ def summarise(records, backend=None, game=None, state=None, player="model",
         out["window_why"] = ("every measured window spans >= %d drawn frames (declared "
                              "minimum); the verdict is not a WINDOW_TOO_SHORT"
                              % WINDOW_MIN_FRAMES)
+
+    # -- TASK-140 §1.A.1: the REPORTING WINDOW, applied after the short-window check ---------
+    # `min_frames` refuses to judge below 20 drawn frames; `reporting_frames` refuses to
+    # REPORT A PASS below its own level (declared 90, on the measured ground that w30 verdicts
+    # were not reproducible across rounds while w90's were).  Same discipline as every other
+    # boundary in this file: it can only take a run OUT of PASS.
+    nominal = None
+    if nominal_frames is not None:
+        try:
+            nominal = int(nominal_frames)
+        except Exception:  # noqa: BLE001
+            nominal = None
+    below_reporting = bool(nominal is not None and nominal < WINDOW_REPORTING_FRAMES)
+    out["reporting_window"] = {
+        "declared_by": WINDOW_DECLARATION.get("declared_by"),
+        "required_frames": WINDOW_REPORTING_FRAMES,
+        "nominal_frames": nominal,
+        "at_reporting_window": (None if nominal is None else (not below_reporting)),
+        "state": (("unrecorded" if nominal is None else
+                   (STEP_VERDICT_BELOW_REPORTING if below_reporting else "ok"))),
+        "counts_as_pass": (False if below_reporting else None),
+        "basis": WINDOW_DECLARATION.get("reporting_basis"),
+        "rule": ("TASK-140 §1.A.1: a verdict produced at a nominal `--window-frames` below "
+                 "the declared reporting window is REPORTED (as reference) and can never be "
+                 "a PASS.  It is a statement about the MEASUREMENT's reproducibility -- "
+                 "TASK-139 measured that w30 verdicts changed class between rounds for the "
+                 "same command and the same code, while w90's did not."),
+        "not_a_loosening": [
+            "the check can only take a run OUT of PASS, never put one in",
+            "it does not change `--window-frames`, `min_frames`, or either ruler's formula",
+            "a run at or above the reporting window is byte-for-byte unaffected",
+        ],
+    }
+    out["verdict_before_reporting_check"] = out.get("verdict")
+    if below_reporting:
+        out["counts_as_pass"] = False
+        out["pass"] = False
+        out["reporting_why"] = ("the run's nominal window is %d frames, below the declared "
+                                "reporting window of %d, so its verdict is reported as a "
+                                "REFERENCE and cannot count as a pass (TASK-140 §1.A.1)"
+                                % (nominal, WINDOW_REPORTING_FRAMES))
+    elif nominal is None:
+        out["reporting_why"] = ("the nominal window was not recorded for this run, so the "
+                                "reporting-window rule could not be applied (no PASS is "
+                                "created or removed by a missing measurement)")
+    else:
+        out["reporting_why"] = ("the run's nominal window is %d frames >= the declared "
+                                "reporting window of %d" % (nominal,
+                                                            WINDOW_REPORTING_FRAMES))
+
+    # -- TASK-140 §1.A.3: EVERY verdict carries its window and its round --------------------
+    # A bare `PASS` is not attributable: TASK-139 measured that the same game can read PASS in
+    # one round and INCONCLUSIVE in the next at w30.  The machine string in `verdict` is left
+    # byte-for-byte alone (readers match on it), and the attribution lives beside it in
+    # `verdict_context` / `qualified_verdict`.
+    ctx = {
+        "verdict": out.get("verdict"),
+        "window_frames": nominal,
+        "round": round_index,
+        "reporting_frames": WINDOW_REPORTING_FRAMES,
+        "at_reporting_window": (None if nominal is None else (not below_reporting)),
+        "backend": backend,
+        "player": player,
+        "game": game,
+        "change_margin": margin,
+        "counts_as_pass": out.get("counts_as_pass"),
+        "what": ("TASK-140 §1.A.3: a verdict is only attributable together with the window "
+                 "budget it was measured at and the round (independent complete run) it came "
+                 "from; TASK-139 measured that w30 verdicts were not reproducible across "
+                 "rounds, so a bare verdict string is not evidence of a class"),
+    }
+    out["verdict_context"] = ctx
+    out["qualified_verdict"] = qualified_verdict(out.get("verdict"), ctx)
     return out
+
+
+def verdict_class(verdict):
+    """The CLASS a verdict string belongs to (the thing `UNSTABLE` compares).
+
+    TASK-140 §1.A.2: two runs are INCONSISTENT when their class differs.  `PASS` and
+    `PASS(baseline only)` are deliberately different classes -- TASK-136 made the second one
+    `counts_as_pass: false`, and TASK-139 measured `pong` flipping between exactly those two
+    strings across rounds.  The prefix states (`WINDOW_TOO_SHORT ...`, `MODEL_*`) are classes
+    of their own, as §1.A.2 requires.
+    """
+    v = "%s" % (verdict if verdict is not None else "")
+    if v.startswith(STEP_VERDICT_WINDOW_TOO_SHORT):
+        return STEP_VERDICT_WINDOW_TOO_SHORT
+    for prefix in ("MODEL_FIXED_POINT", "MODEL_NO_PROGRESS"):
+        if v.startswith(prefix):
+            return prefix
+    if v == PASS_BASELINE_ONLY:
+        return PASS_BASELINE_ONLY
+    if v == "PASS":
+        return "PASS"
+    if v.startswith("FAIL"):
+        return "FAIL"
+    if v.startswith("INCONCLUSIVE") or v.startswith(STEP_VERDICT_ACK_MISSING):
+        return "INCONCLUSIVE"
+    return v or "NONE"
+
+
+def step_criterion_reading(rec):
+    """The per-step criteria `UNSTABLE` names when two rounds disagree (TASK-140 §1.A.2)."""
+    ack = rec.get("ack") or {}
+    ch = rec.get("change") or {}
+    strict = ch.get("strict") if isinstance(ch.get("strict"), dict) else {}
+    return {
+        "injected": ack.get("injected"),
+        "accepted": ack.get("accepted"),
+        "ack_missing": ack.get("ack_missing"),
+        "changed": ch.get("changed"),
+        "changed_strict": strict.get("changed"),
+        "step_verdict": rec.get("step_verdict"),
+        "pixel_diff": rec.get("pixel_diff"),
+    }
+
+
+def divergence_between(records_a, records_b, limit=40):
+    """Which STEP and which CRITERION the two rounds disagree about (TASK-140 §1.A.2).
+
+    Only the ATTRIBUTABLE per-step criteria are compared: whether the injection landed
+    (`injected`), whether the game accepted it (`accepted`), whether the ack survived
+    (`ack_missing`), and whether the picture moved under each margin (`changed` /
+    `changed_strict` / `step_verdict`).  Raw pixel counts are recorded as CONTEXT, never as
+    the disagreement itself -- they are expected to differ between rounds (TASK-139 measured
+    6-12 `step_diffs` even inside one round).
+    """
+    by_a = dict((r.get("step"), r) for r in (records_a or []) if r.get("step"))
+    by_b = dict((r.get("step"), r) for r in (records_b or []) if r.get("step"))
+    out = []
+    for s in sorted(set(list(by_a) + list(by_b))):
+        ra, rb = by_a.get(s), by_b.get(s)
+        if ra is None or rb is None:
+            out.append({"step": s, "criterion": "step_present",
+                        "round_a": ra is not None, "round_b": rb is not None})
+            continue
+        ca, cb = step_criterion_reading(ra), step_criterion_reading(rb)
+        for k in ("injected", "accepted", "ack_missing", "changed", "changed_strict",
+                  "step_verdict"):
+            if ca.get(k) != cb.get(k):
+                out.append({"step": s, "criterion": k, "round_a": ca.get(k),
+                            "round_b": cb.get(k),
+                            "context": {"pixel_diff": [ca.get("pixel_diff"),
+                                                       cb.get("pixel_diff")]}})
+        if len(out) >= limit:
+            break
+    return out[:limit]
+
+
+def stability_summary(runs, min_rounds=STABILITY_MIN_ROUNDS):
+    """TASK-140 §1.A.2: `UNSTABLE` -- do >= 2 independent rounds of ONE game agree?
+
+    `runs` is a list of run summaries.  Each may carry `verdict_context` (written by
+    `summarise`, TASK-140) and/or explicit `round` / `window_frames`; a run may also carry its
+    per-step `records` (or a `steps_path`, which is read) so the disagreement can be named to
+    the STEP and the CRITERION rather than merely counted.
+
+    The rule, in full:
+      * fewer than `min_rounds` runs                -> `INSUFFICIENT_ROUNDS` (no judgement);
+      * every round in the same verdict CLASS       -> `STABLE`;
+      * any round in a different class              -> `UNSTABLE`, with the divergent rounds
+        and the per-step divergence points listed.
+
+    `counts_as_pass` is true only for a STABLE set whose every round is a literal `PASS`; an
+    `UNSTABLE` set can never pass -- the judgement can only REMOVE a pass (TASK-140 §2.7).
+    """
+    rounds = []
+    for r in runs or []:
+        ctx = r.get("verdict_context") or {}
+        recs = r.get("records")
+        if recs is None and r.get("steps_path") and os.path.isfile(r["steps_path"]):
+            recs = load_jsonl(r["steps_path"])
+        rounds.append({
+            "round": r.get("round", ctx.get("round")),
+            "window_frames": r.get("window_frames", ctx.get("window_frames")),
+            "game": r.get("game", ctx.get("game")),
+            "verdict": r.get("verdict", ctx.get("verdict")),
+            "counts_as_pass": r.get("counts_as_pass", ctx.get("counts_as_pass")),
+            "records": recs,
+            "source": r.get("player_json") or r.get("source"),
+        })
+    rounds.sort(key=lambda x: (x["round"] is None, x["round"]))
+    game = next((x["game"] for x in rounds if x.get("game")), None)
+    windows = sorted(set(x["window_frames"] for x in rounds
+                         if x.get("window_frames") is not None))
+    out = {
+        "state": None,
+        "game": game,
+        "window_frames": windows[0] if len(windows) == 1 else windows,
+        "rounds": [x["round"] for x in rounds],
+        "round_count": len(rounds),
+        "min_rounds": int(min_rounds),
+        "verdicts_by_round": dict((str(x["round"]), x["verdict"]) for x in rounds),
+        "classes_by_round": dict((str(x["round"]), verdict_class(x["verdict"]))
+                                 for x in rounds),
+        "qualified_verdicts_by_round": dict(
+            (str(x["round"]),
+             qualified_verdict(x["verdict"], {"window_frames": x["window_frames"],
+                                              "round": x["round"]})) for x in rounds),
+        "counts_as_pass": False,
+        "rule": ("TASK-140 §1.A.2: the same game run at the same window for >= %d independent "
+                 "rounds is UNSTABLE when its verdict CLASS is not identical in every round; "
+                 "an UNSTABLE game is listed with the divergent rounds and the step/criterion "
+                 "they disagree about, and it NEVER counts as a pass" % int(min_rounds)),
+        "not_a_loosening": [
+            "the judgement can only REMOVE a pass: a stable all-PASS set passes, everything "
+            "else fails to count, and an UNSTABLE set is never a pass",
+            "the per-round verdicts are left untouched in their own `player.json`",
+            "the class comparison includes `PASS(baseline only)` and `WINDOW_TOO_SHORT ...` "
+            "as classes of their own, so a window-vs-window flip is not hidden",
+        ],
+    }
+    if len(rounds) < int(min_rounds):
+        out["state"] = "INSUFFICIENT_ROUNDS"
+        out["why"] = ("only %d round(s) recorded; %d independent complete runs at the same "
+                      "window are required before a stability judgement is made"
+                      % (len(rounds), int(min_rounds)))
+        return out
+    classes = [verdict_class(x["verdict"]) for x in rounds]
+    distinct = sorted(set(classes))
+    out["distinct_classes"] = distinct
+    if len(distinct) == 1:
+        out["state"] = STABILITY_STATE_STABLE
+        out["divergent_rounds"] = []
+        out["divergence_points"] = []
+        out["counts_as_pass"] = bool(distinct[0] == "PASS" and
+                                     all(x.get("counts_as_pass") for x in rounds))
+        out["why"] = ("all %d round(s) read the same class %r" % (len(rounds), distinct[0]))
+        return out
+    out["state"] = STABILITY_STATE_UNSTABLE
+    out["counts_as_pass"] = False
+    out["divergent_rounds"] = [x["round"] for x in rounds]
+    pts = []
+    base = rounds[0]
+    for other in rounds[1:]:
+        if verdict_class(other["verdict"]) == verdict_class(base["verdict"]):
+            continue
+        pts.extend(divergence_between(base.get("records"), other.get("records")))
+    out["divergence_points"] = pts
+    out["divergence_point_count"] = len(pts)
+    out["compared_round_pair"] = [base["round"], [x["round"] for x in rounds[1:]]]
+    out["why"] = ("the rounds disagree: %s -- the same game at the same window is not "
+                  "reproducible, so its verdict is %s and cannot count as a pass"
+                  % (", ".join("%s=%s" % (k, v) for k, v in
+                               sorted(out["classes_by_round"].items())),
+                     STABILITY_STATE_UNSTABLE))
+    return out
+
+
+def stability_from_paths(paths, min_rounds=STABILITY_MIN_ROUNDS):
+    """`stability_summary` over a list of `player.json` paths (or run directories)."""
+    runs = []
+    for p in paths or []:
+        pj = p
+        if os.path.isdir(p):
+            pj = os.path.join(p, "player.json")
+        with io.open(pj, encoding="utf-8") as fh:
+            doc = json.load(fh)
+        steps_path = os.path.join(os.path.dirname(os.path.abspath(pj)), "steps.jsonl")
+        runs.append({"player_json": os.path.abspath(pj),
+                     "steps_path": steps_path if os.path.isfile(steps_path) else None,
+                     "verdict": doc.get("verdict"),
+                     "counts_as_pass": doc.get("counts_as_pass"),
+                     "verdict_context": doc.get("verdict_context") or {},
+                     "game": (doc.get("verdict_context") or {}).get("game")})
+    return stability_summary(runs, min_rounds=min_rounds)
+
+
+def nominal_frames_of_run(run_dir, context=None, player_doc=None):
+    """The NOMINAL `--window-frames` a run was measured at -- including for OLD runs.
+
+    `verdict_context.window_frames` is the first source (TASK-140 §1.A.3).  A run recorded
+    before this batch does not have it, but it is still a FACT about that run: TASK-139's
+    `session.json -> measurement_window.frames` carries the very budget the loop used.
+    Reading it closes the hole where a historical `--window-frames 30` run kept counting as a
+    pass because the new field was absent -- the absence of a field is not evidence that the
+    window was long enough.
+
+    Returns `(frames, source)`; `(None, None)` when the run really did not record it (then no
+    reporting-window judgement is made: the tool may not invent a measurement).
+    """
+    ctx = context or {}
+    if ctx.get("window_frames") is not None:
+        try:
+            return int(ctx["window_frames"]), "player.json->verdict_context"
+        except Exception:  # noqa: BLE001
+            pass
+    vc = (player_doc or {}).get("verdict_context") or {}
+    if vc.get("window_frames") is not None:
+        try:
+            return int(vc["window_frames"]), "player.json->verdict_context"
+        except Exception:  # noqa: BLE001
+            pass
+    p = os.path.join(run_dir or "", "session.json")
+    if run_dir and os.path.isfile(p):
+        try:
+            with io.open(p, encoding="utf-8") as fh:
+                doc = json.load(fh)
+            f = (doc.get("measurement_window") or {}).get("frames")
+            if f is not None:
+                return int(f), "session.json->measurement_window.frames"
+        except Exception:  # noqa: BLE001
+            pass
+    return None, None
+
+
+def qualified_verdict(verdict, context):
+    """`PASS @w90 r2` -- the verdict string with its window and round appended.
+
+    TASK-140 §1.A.3.  The plain `verdict` is never rewritten (`counts_as_pass` and every
+    existing reader depend on its exact spelling); this is the human/audit-facing label, and
+    it is written into `player.json`, printed by the tool, and quoted by the report.
+    """
+    ctx = context or {}
+    v = "%s" % (verdict,)
+    w = ctx.get("window_frames")
+    r = ctx.get("round")
+    if w is None and r is None:
+        return "%s (@window unrecorded, round unrecorded)" % v
+    label = "%s @w%s r%s" % (v, "?" if w is None else w, "?" if r is None else r)
+    if ctx.get("at_reporting_window") is False:
+        label += " [reference only: window %s < reporting %s]" % (w,
+                                                                 ctx.get("reporting_frames"))
+    return label
 
 
 def _summarise_core(records, backend=None, game=None, state=None, player="model",
@@ -3350,6 +3702,11 @@ class Player(object):
                 "frames": args.window_frames,
                 "min_frames": WINDOW_MIN_FRAMES,
                 "min_frames_declaration": WINDOW_DECLARATION,
+                # TASK-140 §1.A.1/§1.A.3: the level a verdict may be REPORTED AS A PASS at,
+                # and the round this run is (an independent complete run of this game).
+                "reporting_frames": WINDOW_REPORTING_FRAMES,
+                "round": getattr(args, "round", None),
+                "reporting_state": STEP_VERDICT_BELOW_REPORTING,
                 "too_short_state": STEP_VERDICT_WINDOW_TOO_SHORT,
                 "wall_clock_cap_s": args.window_timeout,
                 "poll_gap_s": args.window_poll_gap,
@@ -3470,7 +3827,9 @@ class Player(object):
         summary = summarise(self.steps, self.backend, self.game,
                             state={"terminal_stop": self.terminal_stop},
                             player=self.player,
-                            margin=getattr(args, "change_margin", CHANGE_MARGIN_DEFAULT))
+                            margin=getattr(args, "change_margin", CHANGE_MARGIN_DEFAULT),
+                            nominal_frames=getattr(args, "window_frames", None),
+                            round_index=getattr(args, "round", None))
         summary["player"] = self.player
         summary["variant"] = self.variant
         summary["variant_note"] = VARIANT_NOTES.get(self.variant)
@@ -3515,8 +3874,11 @@ class Player(object):
                        proj=self.proj)
         except Exception as e:  # noqa: BLE001
             self.errors.append({"at": "demo", "error": "%s: %s" % (type(e).__name__, e)})
-        log("VERDICT %s/%s: %s -- %s" % (self.game, self.backend, summary["verdict"],
+        log("VERDICT %s/%s: %s -- %s" % (self.game, self.backend,
+                                         summary.get("qualified_verdict"),
                                          summary["why"]))
+        log("  verdict_context: %s" % json.dumps(summary.get("verdict_context"),
+                                                ensure_ascii=False))
         return summary
 
     def find_game_window(self):
@@ -3703,7 +4065,14 @@ def resummarise(root):
         s = summarise(steps, backend, game,
                       state={"terminal_stop": pj.get("terminal_stop")},
                       player=pj.get("player") or "model",
-                      margin=pj.get("change_margin_selected") or CHANGE_MARGIN_DEFAULT)
+                      margin=pj.get("change_margin_selected") or CHANGE_MARGIN_DEFAULT,
+                      # TASK-140 §1.A.3: the window/round a verdict belongs to are FACTS about
+                      # the run, not derived quantities -- they are carried over from the
+                      # run's own record (or, for a pre-TASK-140 run, from its `session.json`)
+                      # so a resummarise cannot strip a verdict's attribution and silently
+                      # promote a w30 reference reading into a pass.
+                      nominal_frames=nominal_frames_of_run(dirpath, None, pj)[0],
+                      round_index=(pj.get("verdict_context") or {}).get("round"))
         for k in ("prep_actions", "prep", "terminal_stop", "settle_liveness_terminal",
                   "stop", "errors", "agent_errors", "channel", "counts",
                   "terminal_at_settle_before_the_first_model_call",
@@ -4402,7 +4771,18 @@ def main(argv=None):
                    help="the measurement window, in DRAWN GAME FRAMES (default 30 = ~0.5 s "
                         "at 60 Hz).  The no-input control window and the action window use "
                         "the SAME budget, so a game that animates by itself cannot pass by "
-                        "accident")
+                        "accident.  TASK-140 §1.A.3: the run RECORDS this nominal budget, "
+                        "and a run below the declared reporting window (%d) cannot count as "
+                        "a pass" % WINDOW_REPORTING_FRAMES)
+    r.add_argument("--round", type=int, default=None,
+                   help="TASK-140 §1.A.3: which INDEPENDENT COMPLETE RUN of this game at this "
+                        "window this is (round 1, round 2, ...).  It is recorded in "
+                        "`player.json -> verdict_context` and printed beside the verdict, so "
+                        "no verdict in an artifact or a report is unattributed.  Two rounds "
+                        "of the same game at the same window are what "
+                        "`playtest_player.py stability` compares for the UNSTABLE judgement.  "
+                        "The default (None) means 'unrecorded', which neither creates nor "
+                        "removes a pass")
     r.add_argument("--window-timeout", type=float, default=8.0,
                    help="wall-clock cap while waiting for --window-frames to elapse")
     r.add_argument("--window-poll-gap", type=float, default=0.005,
@@ -4446,6 +4826,19 @@ def main(argv=None):
     rs = sub.add_parser("resummarise", help="recompute every player.json from steps.jsonl")
     rs.add_argument("--root", default=RUNS_PLAYER)
 
+    st = sub.add_parser("stability",
+                        help="TASK-140 §1.A.2: UNSTABLE -- do >= 2 rounds of one game agree?")
+    st.add_argument("--run", action="append", default=[],
+                    help="a run's player.json (or its evidence directory); give it once per "
+                         "round.  At least two independent complete runs at the SAME window "
+                         "are required before a stability judgement is made")
+    st.add_argument("--min-rounds", type=int, default=STABILITY_MIN_ROUNDS)
+    st.add_argument("--out", default="",
+                    help="write the judgement here (default: print only)")
+    st.add_argument("--require-engine-state", action="store_true",
+                    help="exit 1 when the judgement is UNSTABLE (for a caller that must not "
+                         "count an unstable game as a pass)")
+
     f = sub.add_parser("failcase", help="Y5: render the FAIL condition from a run's records")
     f.add_argument("--path", required=True, help="a <game>/<backend> evidence directory")
     f.add_argument("--out", default="", help="default <path>/failcase.png")
@@ -4455,6 +4848,24 @@ def main(argv=None):
         return prep()
     if args.cmd == "selftest":
         return selftest()
+    if args.cmd == "stability":
+        if len(args.run) < args.min_rounds:
+            log("stability: %d run(s) given; at least %d are required (TASK-140 §1.A.2)"
+                % (len(args.run), args.min_rounds))
+        out = stability_from_paths(args.run, min_rounds=args.min_rounds)
+        log("STABILITY %s/%s: %s -- %s" % (out.get("game"), out.get("window_frames"),
+                                           out.get("state"), out.get("why")))
+        for p in out.get("divergence_points") or []:
+            log("  divergence step %s criterion %s: round %s vs round %s"
+                % (p.get("step"), p.get("criterion"), p.get("round_a"), p.get("round_b")))
+        if args.out:
+            write_json(args.out, out)
+            log("wrote %s" % os.path.abspath(args.out))
+        else:
+            log(json.dumps(out, ensure_ascii=False, indent=1))
+        if args.require_engine_state and out.get("state") == STABILITY_STATE_UNSTABLE:
+            return 1
+        return 0
     if args.cmd == "summary":
         p = os.path.join(args.path, "steps.jsonl")
         recs = load_jsonl(p)

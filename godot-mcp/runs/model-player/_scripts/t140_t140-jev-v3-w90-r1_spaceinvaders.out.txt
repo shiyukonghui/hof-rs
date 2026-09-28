@@ -1,0 +1,19 @@
+$ D:\Anaconda\python.exe F:\moonbit-hof-rs\godot-mcp\tools\playtest_player.py run --game spaceinvaders --backend jev --player model --variant V3 --image-form full --steps 12 --port 9983 --window-frames 90 --round 1 --change-margin strict --out-prefix t140-jev-v3-w90-r1
+----- stdout -----
+  step 01 action=si_fire            conf=0.5180912812550863 http=200 | ack=True(action_pressed) px=1544 vs ctl=0 mv=1117.0/0.0 | ok_ack_and_changed
+  step 02 action=si_fire            conf=0.45937490463256836 http=200 | ack=True(action_pressed) px=1217 vs ctl=0 mv=106.953/0.0 | ok_ack_and_changed
+  step 03 action=si_fire            conf=0.38002761205037433 http=200 | ack=True(action_pressed) px=1191 vs ctl=0 mv=93.042/0.0 | ok_ack_and_changed
+  step 04 action=si_fire            conf=0.33993999163309735 http=200 | ack=True(action_pressed) px=1275 vs ctl=0 mv=108.972/0.0 | ok_ack_and_changed
+  step 05 action=si_fire            conf=0.37096285820007324 http=200 | ack=True(action_pressed) px=1236 vs ctl=0 mv=98.33/0.0 | ok_ack_and_changed
+  step 06 action=si_fire            conf=0.3952132860819499 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=245.324/0.0 | ok_ack_and_changed
+  step 07 action=si_fire            conf=0.3952132860819499 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+  step 08 action=si_fire            conf=0.3952132860819499 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.003/0.0 | ok_ack_and_changed
+  step 09 action=si_fire            conf=0.3952132860819499 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.003/0.0 | ok_ack_and_changed
+  step 10 action=si_fire            conf=0.3952132860819499 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+  step 11 action=si_fire            conf=0.3952132860819499 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+  step 12 action=si_fire            conf=0.3952132860819499 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+VERDICT spaceinvaders/jev: INCONCLUSIVE @w90 r1 -- the user's FAIL condition did occur on step(s) [7, 8, 9, 10, 11, 12], but every failing step shows the SAME action (['si_fire']) and the model was handed a byte-identical frame, so the evidence cannot separate 'the game ignores this input' from 'the model stopped playing' (TASK-132 §1.2)
+  verdict_context: {"verdict": "INCONCLUSIVE", "window_frames": 90, "round": 1, "reporting_frames": 90, "at_reporting_window": true, "backend": "jev", "player": "model", "game": "spaceinvaders", "change_margin": "strict", "counts_as_pass": false, "what": "TASK-140 §1.A.3: a verdict is only attributable together with the window budget it was measured at and the round (independent complete run) it came from; TASK-139 measured that w30 verdicts were not reproducible across rounds, so a bare verdict string is not evidence of a class"}
+
+----- stderr -----
+

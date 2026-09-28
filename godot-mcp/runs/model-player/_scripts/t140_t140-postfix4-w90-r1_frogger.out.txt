@@ -1,0 +1,16 @@
+$ D:\Anaconda\python.exe F:\moonbit-hof-rs\godot-mcp\tools\playtest_player.py run --game frogger --backend scripted --player scripted --variant V1 --image-form full --steps 12 --port 9978 --window-frames 90 --round 1 --change-margin strict --out-prefix t140-postfix4-w90-r1
+----- stdout -----
+  step 01 action=frog_up            conf=None    http=None | ack=True(action_pressed) px=1152 vs ctl=0 mv=72.0/0.0 | ok_ack_and_changed
+  step 02 action=frog_up            conf=None    http=None | ack=True(action_pressed) px=1152 vs ctl=0 mv=72.0/0.0 | ok_ack_and_changed
+  step 03 action=frog_right         conf=None    http=None | ack=True(action_pressed) px=1152 vs ctl=0 mv=73.0/0.0 | ok_ack_and_changed
+  step 04 action=frog_up            conf=None    http=None | ack=True(action_pressed) px=1152 vs ctl=0 mv=72.0/0.0 | ok_ack_and_changed
+  step 05 action=frog_up            conf=None    http=None | ack=True(action_pressed) px=1152 vs ctl=0 mv=72.0/0.0 | ok_ack_and_changed
+  step 06 action=frog_left          conf=None    http=None | ack=True(action_pressed) px=1152 vs ctl=0 mv=73.0/0.0 | ok_ack_and_changed
+  step 07 action=frog_up            conf=None    http=None | ack=True(action_pressed) px=1152 vs ctl=0 mv=72.0/0.0 | ok_ack_and_changed
+  step 08 action=frog_up            conf=None    http=None | ack=True(action_pressed) px=1152 vs ctl=0 mv=72.0/0.0 | ok_ack_and_changed
+  early stop: 8 consecutive accepted+changed steps with distinct actions
+VERDICT frogger/scripted: PASS @w90 r1 -- 8/8 rated steps changed the viewport (1.0000) over 8 step(s); the reader's per-frame check corroborates it
+  verdict_context: {"verdict": "PASS", "window_frames": 90, "round": 1, "reporting_frames": 90, "at_reporting_window": true, "backend": "scripted", "player": "scripted", "game": "frogger", "change_margin": "strict", "counts_as_pass": true, "what": "TASK-140 §1.A.3: a verdict is only attributable together with the window budget it was measured at and the round (independent complete run) it came from; TASK-139 measured that w30 verdicts were not reproducible across rounds, so a bare verdict string is not evidence of a class"}
+
+----- stderr -----
+

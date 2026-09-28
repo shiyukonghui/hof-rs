@@ -205,6 +205,21 @@ def index_run(prefix, game, backend, d, cmds, full=False):
                                     "step_count": fa.get("step_count"),
                                     "all_matched": fa.get("all_matched")}
         entry["ack_missing_count"] = (s.get("ack_missing") or {}).get("count")
+        # TASK-140 §1.A.1/§1.A.3: every indexed run carries the window budget and the round its
+        # verdict belongs to, plus the reference-only state when it was measured below the
+        # declared reporting window.  An index row without these would re-introduce exactly the
+        # unattributed verdict D205/D206 exist to remove.
+        vc = s.get("verdict_context") or {}
+        entry["verdict_context"] = {"window_frames": vc.get("window_frames"),
+                                    "round": vc.get("round"),
+                                    "reporting_frames": vc.get("reporting_frames"),
+                                    "at_reporting_window": vc.get("at_reporting_window")}
+        entry["qualified_verdict"] = s.get("qualified_verdict")
+        rw = s.get("reporting_window") or {}
+        entry["reporting_window"] = {"required_frames": rw.get("required_frames"),
+                                    "nominal_frames": rw.get("nominal_frames"),
+                                    "state": rw.get("state"),
+                                    "at_reporting_window": rw.get("at_reporting_window")}
     return entry
 
 
@@ -272,6 +287,13 @@ def main(argv):
         lines.append("* verdict：`%s`（counts_as_pass=%s，strict=%s，baseline=%s，game_side=%s）"
                      % (e.get("verdict"), e.get("counts_as_pass"), e.get("strict_verdict"),
                         e.get("baseline_verdict"), e.get("game_side_verdict")))
+        vc = e.get("verdict_context") or {}
+        rw = e.get("reporting_window") or {}
+        lines.append("* 档位+轮次：`%s`（window=%s，round=%s，reporting=%s，"
+                     "at_reporting_window=%s，reporting_state=%s）"
+                     % (e.get("qualified_verdict"), vc.get("window_frames"), vc.get("round"),
+                        vc.get("reporting_frames"), vc.get("at_reporting_window"),
+                        rw.get("state")))
         lines.append("* 注入/接受后变化/rate：%s / %s / %s"
                      % (e.get("injected_steps"), e.get("changed_steps_of_accepted"),
                         e.get("accepted_and_changed_rate")))

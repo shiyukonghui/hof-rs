@@ -1,0 +1,19 @@
+$ D:\Anaconda\python.exe F:\moonbit-hof-rs\godot-mcp\tools\playtest_player.py run --game pacman --backend jev --player model --variant V3 --image-form full --steps 12 --port 9984 --window-frames 90 --round 2 --change-margin strict --out-prefix t140-jev-v3-w90-r2
+----- stdout -----
+  step 01 action=pac_right          conf=0.08152569085359572 http=200 | ack=True(action_pressed) px=4197 vs ctl=0 mv=282.0/0.0 | ok_ack_and_changed
+  step 02 action=pac_right          conf=0.12550114095211026 http=200 | ack=True(action_pressed) px=2217 vs ctl=0 mv=282.0/0.0 | ok_ack_and_changed
+  step 03 action=pac_right          conf=0.13735963404178617 http=200 | ack=True(action_pressed) px=1886 vs ctl=0 mv=188.0/0.0 | ok_ack_and_changed
+  step 04 action=pac_right          conf=0.1450138762593269 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+  step 05 action=pac_right          conf=0.1450138762593269 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+  step 06 action=pac_right          conf=0.1450138762593269 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+  step 07 action=pac_right          conf=0.1450138762593269 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+  step 08 action=pac_right          conf=0.1450138762593269 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+  step 09 action=pac_right          conf=0.1450138762593269 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+  step 10 action=pac_right          conf=0.1450138762593269 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+  step 11 action=pac_right          conf=0.1450138762593269 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+  step 12 action=pac_right          conf=0.1450138762593269 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+VERDICT pacman/jev: INCONCLUSIVE @w90 r2 -- the model produced the SAME action (['pac_right']) on every one of 12 injected steps, so 'did it accept / did it change' cannot be told apart from 'the model never really played'
+  verdict_context: {"verdict": "INCONCLUSIVE", "window_frames": 90, "round": 2, "reporting_frames": 90, "at_reporting_window": true, "backend": "jev", "player": "model", "game": "pacman", "change_margin": "strict", "counts_as_pass": false, "what": "TASK-140 §1.A.3: a verdict is only attributable together with the window budget it was measured at and the round (independent complete run) it came from; TASK-139 measured that w30 verdicts were not reproducible across rounds, so a bare verdict string is not evidence of a class"}
+
+----- stderr -----
+

@@ -2594,12 +2594,43 @@ def record_model_player_criterion(gate, args, game):
     try:
         with io.open(p, encoding="utf-8") as fh:
             mp_steps = [json.loads(line) for line in fh if line.strip()]
+        # TASK-140 §1.A.3: the run's OWN attribution (nominal window + round) lives beside its
+        # `steps.jsonl` in `player.json -> verdict_context`.  Reading it here is what lets
+        # `gate.json` quote a verdict together with the window and round it belongs to; if the
+        # file is absent the gate records `unrecorded` and applies no reporting-window
+        # removal, so a missing file cannot silently create OR remove a pass.
+        run_context = None
+        run_dir = os.path.dirname(os.path.abspath(p))
+        pj = os.path.join(run_dir, "player.json")
+        if os.path.isfile(pj):
+            try:
+                with io.open(pj, encoding="utf-8") as fh:
+                    pjc = json.load(fh).get("verdict_context") or {}
+                run_context = dict(pjc)
+                run_context["source"] = os.path.abspath(pj)
+            except Exception:  # noqa: BLE001
+                run_context = None
+        # TASK-140 §1.A.1: a run recorded BEFORE this batch has no `verdict_context`, but its
+        # `session.json -> measurement_window.frames` records the very budget it was measured
+        # at.  Reading it is what stops a historical `--window-frames 30` pass from counting
+        # just because the new field is absent.
+        try:
+            from playtest_player import nominal_frames_of_run
+            frames, src = nominal_frames_of_run(run_dir, run_context)
+            if frames is not None:
+                run_context = dict(run_context or {})
+                run_context["window_frames"] = frames
+                run_context["window_frames_source"] = src
+        except Exception:  # noqa: BLE001
+            pass
         gate["model_player_criterion"] = {
             "note": MODEL_PLAYER_CRITERION_NOTE,
             "steps_file": os.path.abspath(p),
-            "evidence": evaluate_model_player_steps(mp_steps, game)}
-        log("    model-player criterion: pass=%s (%s)"
+            "evidence": evaluate_model_player_steps(mp_steps, game,
+                                                    run_context=run_context)}
+        log("    model-player criterion: pass=%s %s (%s)"
             % (gate["model_player_criterion"]["evidence"]["pass"],
+               gate["model_player_criterion"]["evidence"].get("qualified_verdict"),
                gate["model_player_criterion"]["evidence"]["why"][:110]))
     except Exception as e:  # noqa: BLE001
         gate["model_player_criterion"]["error"] = "%s: %s" % (type(e).__name__, e)
@@ -2700,7 +2731,7 @@ def _model_no_progress_steps(steps, min_run=3):
     return best
 
 
-def evaluate_model_player_steps(steps, game=None):
+def evaluate_model_player_steps(steps, game=None, run_context=None):
     """The TASK-132 rule, applied to a recorded `steps.jsonl` list.
 
     This is the gate-side reading of the model-player evidence: it states the rule in the
@@ -2714,6 +2745,12 @@ def evaluate_model_player_steps(steps, game=None):
         a PASS), read from the same per-step measured spans the loop records;
       * a step the game's own counters recorded as a deliberate refusal is dropped from the
         FAIL set and the denominator, and a run refused everywhere cannot PASS.
+
+    TASK-140 §1.A.1/§1.A.3: `run_context` is the run's own `player.json` context (its
+    `verdict_context`: nominal window + round).  When it is given, the gate applies the same
+    reporting-window rule the loop applied (a nominal window below the declared reporting
+    window cannot count as a PASS) and writes the window/round attribution into the
+    criterion, so `gate.json` can never quote a verdict whose window and round are unknown.
     """
     steps = [r for r in (steps or []) if isinstance(r, dict) and r.get("step")]
     injected = [r for r in steps if (r.get("ack") or {}).get("injected")]
@@ -2730,7 +2767,7 @@ def evaluate_model_player_steps(steps, game=None):
         refusal_boundary = {"min_real_progress_steps": 4, "min_real_progress_rate": 0.5,
                             "declared_by": "TASK-139 §1.B", "load_error": str(e)}
         window_decl = {"min_frames": 20, "declared_by": "TASK-139 §1.A",
-                       "load_error": str(e)}
+                       "reporting_frames": 90, "load_error": str(e)}
 
         def step_refusal_record(rec, decl):
             return None
@@ -2967,10 +3004,56 @@ def evaluate_model_player_steps(steps, game=None):
     out["window_too_short"] = bool(short)
     out["window_too_short_steps"] = [w["step"] for w in short]
     out["verdict_before_window_check"] = verdict
+
+    # -- TASK-140 §1.A.1/§1.A.3, GATE SIDE: the reporting window and the attribution ---------
+    ctx = dict(run_context or {})
+    nominal = ctx.get("window_frames")
+    try:
+        nominal = None if nominal is None else int(nominal)
+    except Exception:  # noqa: BLE001
+        nominal = None
+    reporting_frames = int(window_decl.get("reporting_frames", 90))
+    below_reporting = bool(nominal is not None and nominal < reporting_frames)
+    out["verdict_context"] = {
+        "verdict": verdict,
+        "window_frames": nominal,
+        "round": ctx.get("round"),
+        "reporting_frames": reporting_frames,
+        "at_reporting_window": (None if nominal is None else (not below_reporting)),
+        "source": ctx.get("source"),
+        "what": ("TASK-140 §1.A.3: the gate-side attribution of the verdict it quotes -- the "
+                 "nominal window budget the run was measured at and the round it came from.  "
+                 "It is read from the run's own `player.json -> verdict_context` beside the "
+                 "`steps.jsonl`, so the gate never invents either number"),
+    }
+    out["reporting_window"] = {
+        "declared_by": window_decl.get("declared_by"),
+        "required_frames": reporting_frames,
+        "nominal_frames": nominal,
+        "at_reporting_window": (None if nominal is None else (not below_reporting)),
+        "state": ("unrecorded" if nominal is None else
+                  ("BELOW_REPORTING_WINDOW" if below_reporting else "ok")),
+        "basis": window_decl.get("reporting_basis"),
+        "rule": ("TASK-140 §1.A.1: a run whose nominal window is below the declared reporting "
+                 "window is a REFERENCE reading and can never be a PASS"),
+    }
     if short:
         out["verdict"] = "WINDOW_TOO_SHORT %s" % verdict
         out["counts_as_pass"] = False
         out["pass"] = False
+    if below_reporting:
+        out["counts_as_pass"] = False
+        out["pass"] = False
+        out["reporting_why"] = ("nominal window %d < declared reporting window %d: the verdict "
+                                "is reported as a reference and cannot count as a pass "
+                                "(TASK-140 §1.A.1)" % (nominal, reporting_frames))
+    out["verdict_context"]["verdict"] = out["verdict"]
+    try:
+        from playtest_player import qualified_verdict  # deferred, like the declarations above
+        out["qualified_verdict"] = qualified_verdict(out["verdict"], out["verdict_context"])
+    except Exception:  # noqa: BLE001
+        out["qualified_verdict"] = ("%s @w%s r%s"
+                                    % (out["verdict"], nominal, ctx.get("round")))
     out["reader_judgement_required"] = True
     out["reader_judgement_note"] = (
         "the machine half above can only say whether the picture moved; the other half of "

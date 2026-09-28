@@ -159,6 +159,50 @@ public partial class FroggerGame : Node2D
     /// <summary>Seconds between two input-driven cell moves, so a held key is a range and not a race.</summary>
     [Export] public float InputRepeat = 0.12f;
 
+    // --- TASK-140 §1.B.2: ONE KEY PRESS = ONE HOP, and a life can only be lost once per press -
+    // Measured by TASK-136 (registered, unfixed): the frog starts at (6, 14) and the car of lane
+    // 13 started at column 6 -- exactly the cell above the start -- while `InputRepeat = 0.12 s`
+    // and "held key repeats the step" turned ONE 350 ms injection into THREE hops: hop onto the
+    // car (life 3 -> 2), reset to the start bank, the key is still down, hop again (2 -> 1),
+    // reset, hop again (1 -> 0, GAME OVER).  The scripted arm therefore measured ONE step for
+    // the whole run.  A player cannot lose three lives to one key press.
+    //
+    // The fix is the arcade rule with three parts, all of them real Godot properties:
+    //   * the FIRST hop happens on the press (an edge), and the key must then be RELEASED
+    //     before it can hop again (`KeyHeld` / `PressConsumed` record this);
+    //   * a still-held key may auto-repeat, but only after `InputRepeat` seconds of CONTINUOUS
+    //     hold (default 0.5 s, longer than any single injection's hold), which is the "held key
+    //     is a range, not a race" property kept without the three-hops-per-press defect;
+    //   * losing a life starts `DeathGrace` seconds during which the frog cannot move and
+    //     cannot lose another life (`GraceTimer`), so even a pathological repeat cannot take
+    //     two lives out of one press.
+    // `InputRepeat = 0` disables the auto-repeat entirely (a switchable variant), and
+    // `DeathGrace = 0` switches the cooldown off, so the pre-TASK-140 behaviour is reproducible.
+    /// <summary>Seconds a HELD key must keep being held before it hops again (0 = never).</summary>
+    [Export] public float RepeatHold = 0.5f;
+
+    /// <summary>Seconds after losing a life during which the frog cannot move or die again.</summary>
+    [Export] public float DeathGrace = 0.6f;
+
+    /// <summary>Seconds of death-grace left (0 when the frog is free to move).</summary>
+    [Export] public float GraceTimer = 0.0f;
+
+    /// <summary>True while the frog's movement key is down (the edge detector's state).</summary>
+    [Export] public bool KeyHeld = false;
+
+    /// <summary>True once the current press has produced its first hop.</summary>
+    [Export] public bool PressConsumed = false;
+
+    /// <summary>Hops this key press has produced (the "one press, one hop" evidence).</summary>
+    [Export] public int HopsThisPress = 0;
+
+    /// <summary>Lives lost since the key went down (the "<= 1 life per press" evidence).</summary>
+    [Export] public int LivesLostThisPress = 0;
+
+    /// <summary>True when no car occupies the start cell or the cell directly above it -- the
+    /// "the spawn point is not under a car" claim, as a machine-readable property.</summary>
+    [Export] public bool StartCellClear = true;
+
     /// <summary>Hops the game refused (off the grid, or after the game was over). TASK-116 D11:
     /// a refusal is a real answer to the player's key and must be an observable property.</summary>
     [Export] public int RejectedSteps = 0;
@@ -196,9 +240,12 @@ public partial class FroggerGame : Node2D
     private float _inputAccum;
 
     /// <summary>Where the five cars start: one per road lane, alternating direction.</summary>
+    // TASK-140 §1.B.2: lane 13's car used to start at column 6 -- the start column -- so the
+    // frog's very first hop up landed on it and cost a life every time.  The lane still has a
+    // car (the road is not made safe); it just no longer spawns exactly above the frog.
     private static readonly int[,] CarStart =
     {
-        { 0, 9, 1 }, { 12, 10, -1 }, { 3, 11, 1 }, { 9, 12, -1 }, { 6, 13, 1 },
+        { 0, 9, 1 }, { 12, 10, -1 }, { 3, 11, 1 }, { 9, 12, -1 }, { 1, 13, 1 },
     };
 
     /// <summary>Where the five logs start: one per river row, alternating direction.</summary>
@@ -356,8 +403,7 @@ public partial class FroggerGame : Node2D
         else
         {
             Car0Col = -1;
-            Car0Row = -1;
-            Car0X = -1.0f;
+            Car0Row = -1;            Car0X = -1.0f;
         }
     }
 
@@ -389,6 +435,20 @@ public partial class FroggerGame : Node2D
 
     private void UpdateHud()
     {
+        // TASK-140 §1.B.2: "the spawn point is not under a car" as a machine-readable property.
+        // The start cell itself and the cell directly above it (the frog's first hop) are both
+        // checked against every car, every time the cars are re-drawn; `StartCellClear` is what
+        // the run reads back.
+        StartCellClear = true;
+        foreach (var car in _cars)
+        {
+            if ((car.Row == StartRow && car.Col == StartCol) ||
+                (car.Row == StartRow - 1 && car.Col == StartCol))
+            {
+                StartCellClear = false;
+                break;
+            }
+        }
         if (_hud != null)
         {
             _hud.Text = $"SCORE {Score}  LIVES {Lives}  HOMES {HomesReached}/{TotalHomes}";
@@ -407,6 +467,14 @@ public partial class FroggerGame : Node2D
         if (GameOver)
         {
             return;
+        }
+        if (GraceTimer > 0.0f)
+        {
+            GraceTimer -= dt;
+            if (GraceTimer < 0.0f)
+            {
+                GraceTimer = 0.0f;
+            }
         }
         if (PollInput)
         {
@@ -428,17 +496,50 @@ public partial class FroggerGame : Node2D
             {
                 dr = 1;
             }
-            if (dc != 0 || dr != 0)
+            var held = dc != 0 || dr != 0;
+            // TASK-140 §1.B.2: the edge detector.  Nothing moves while the frog is in its
+            // death grace, and a press produces at most one hop until the key is released.
+            if (!held)
             {
-                _inputAccum += dt;
-                if (_inputAccum >= InputRepeat)
+                _inputAccum = 0.0f;
+                KeyHeld = false;
+                PressConsumed = false;
+                HopsThisPress = 0;
+                LivesLostThisPress = 0;
+            }
+            else if (GraceTimer <= 0.0f)
+            {
+                KeyHeld = true;
+                if (!PressConsumed)
+                {
+                    PressConsumed = true;
+                    _inputAccum = 0.0f;
+                    HopsThisPress = 0;
+                    LivesLostThisPress = 0;
+                    StepFrog(dc, dr);
+                    HopsThisPress++;
+                }
+                else if (RepeatHold > 0.0f)
+                {
+                    _inputAccum += dt;
+                    while (_inputAccum >= Mathf.Max(RepeatHold, InputRepeat) && GraceTimer <= 0.0f)
+                    {
+                        _inputAccum -= Mathf.Max(RepeatHold, InputRepeat);
+                        StepFrog(dc, dr);
+                        HopsThisPress++;
+                    }
+                }
+                else
                 {
                     _inputAccum = 0.0f;
-                    StepFrog(dc, dr);
                 }
             }
             else
             {
+                // the key is held but the frog is in its death grace: no hop, and the press is
+                // marked consumed so releasing it is what arms the next hop
+                KeyHeld = true;
+                PressConsumed = true;
                 _inputAccum = 0.0f;
             }
         }
@@ -498,8 +599,11 @@ public partial class FroggerGame : Node2D
     /// the goal line fills a home.</summary>
     private void CheckFrogSafety()
     {
-        if (GameOver)
+        if (GameOver || GraceTimer > 0.0f)
         {
+            // TASK-140 §1.B.2: during the death grace the frog cannot be hit or drowned, so a
+            // car that happens to sit on the start cell when the frog is reset there cannot
+            // take a second life out of the same press.
             return;
         }
         if (FrogRow == GoalRow)
@@ -550,7 +654,13 @@ public partial class FroggerGame : Node2D
     private void LoseLife(string reason)
     {
         Lives--;
-        LastEvent = $"lives lost reason={reason} lives={Lives}";
+        // TASK-140 §1.B.2: one press may cost at most one life.  The death grace starts here,
+        // so a held key cannot take a second life before the player has released it, and the
+        // counter records how many lives THIS press has cost.
+        LivesLostThisPress++;
+        GraceTimer = Mathf.Max(0.0f, DeathGrace);
+        LastEvent = $"lives lost reason={reason} lives={Lives} grace={GraceTimer:F2} "
+                    + $"lost_this_press={LivesLostThisPress}";
         ResetFrog();
         if (Lives <= 0)
         {
@@ -702,6 +812,9 @@ public partial class FroggerGame : Node2D
         }
         return $"board={sb} frog={FrogCol},{FrogRow} frog_px={FrogX:F1},{FrogY:F1} score={Score} "
                + $"lives={Lives} homes={HomesReached}/{TotalHomes} over={GameOver} won={Won} "
+               + $"grace={GraceTimer:F2} key_held={KeyHeld} press_consumed={PressConsumed} "
+               + $"hops_this_press={HopsThisPress} lives_lost_this_press={LivesLostThisPress} "
+               + $"start_clear={StartCellClear} repeat_hold={RepeatHold} death_grace={DeathGrace} "
                + $"cars={CarCount} car0={Car0Col},{Car0Row} logs={LogCount} log0={Log0Col},{Log0Row}:{Log0Len} "
                + $"traffic={TrafficSteps} last_traffic={LastTrafficSteps} ticks={Ticks} speed={CarSpeed} "
                + $"poll={PollInput} last={LastEvent}";
@@ -730,6 +843,13 @@ public partial class FroggerGame : Node2D
         PollInput = false;
         _trafficAccum = 0.0f;
         _inputAccum = 0.0f;
+        // TASK-140 §1.B.2: a forced state also clears the per-press edge detector, so no
+        // session inherits "this key was already consumed" from an earlier press.
+        GraceTimer = 0.0f;
+        KeyHeld = false;
+        PressConsumed = false;
+        HopsThisPress = 0;
+        LivesLostThisPress = 0;
         Ticks = 0;
         Score = 0;
         Lives = 3;

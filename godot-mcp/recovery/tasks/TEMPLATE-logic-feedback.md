@@ -150,6 +150,38 @@
   ⇒ **报告里引用某款的 verdict 时，必须同时说明是哪一档、哪一轮**；
   不得把一次 w30 抽样当成可复现读数，也不得把"抖动翻档"记到窗口长度的账上。
 
+### 1.2d 报告档位、`verdict` 必须带「档位 + 轮次」、`UNSTABLE` 不进 PASS（TASK-140 §1.A）
+
+§1.2c 只拦"窗口短到装不下一次反应"（`min_frames`）。它拦不住**第二件事**：同一款、同一档、
+同一命令、**同一份代码**，换一轮跑就可能给出不同的 verdict（TASK-139 §A.4 实测：三轮完整 w30
+里 5 款有 4 款翻档；w90 两轮逐款一致）。因此本系列追加三条硬要求：
+
+1. **声明报告档位**：`tools/playability_controls.json -> model_player_window.reporting_frames`
+   （本系列 = **90**，依据 = 上面那条实测）。一个 run 的**标称** `--window-frames` 低于它 ⇒
+   verdict 照常测量、照常记录、照常打印，但**只能作参考**：`player.json -> reporting_window`
+   写 `state = BELOW_REPORTING_WINDOW`、`at_reporting_window = false`，
+   **`counts_as_pass = false`**，`qualified_verdict` 追加
+   `[reference only: window N < reporting M]`。它**只能拿走 PASS，永不补上**；
+   `min_frames` / `--window-frames` / 两把尺子的公式**一律不动**。
+2. **每处 verdict 必须带「档位 + 轮次」**：`player.json -> verdict_context`
+   （`window_frames` / `round` / `reporting_frames` / `at_reporting_window`）与
+   `qualified_verdict`（`PASS @w90 r2`）是每个 run 的必填项，工具的最后一行输出也打印它，
+   `gate.json -> model_player_criterion.evidence.verdict_context` 读同一份
+   （来自 `steps.jsonl` 旁边的 `player.json`）。**没有档位与轮次的 verdict 不作为证据**：
+   报告、模板、决策日志里引用任何一款的判定，都必须写出"哪个档、第几轮"。
+3. **`UNSTABLE`**：同一款、同一档、**≥2 轮独立完整运行**，verdict **类别**只要不完全一致
+   ⇒ 标 `UNSTABLE`（`playtest_player.py stability --run <player.json> --run <player.json>`），
+   **列出分歧的轮次与分歧点**（哪一步、哪个判据项：`injected`/`accepted`/`ack_missing`/
+   `changed`/`changed_strict`/`step_verdict`），并且**永不计入 PASS**
+   （只有"每一轮都是字面 `PASS`"才算通过）。不足两轮写 `INSUFFICIENT_ROUNDS`——那不是判断，
+   也不是通过。类别比较包含 `PASS(baseline only)`、`WINDOW_TOO_SHORT ...`、`MODEL_*`，
+   所以"两个字符串不完全相同"这种事**不会**被藏起来。
+4. **两轮一致 ≠ 不敏感**：`UNSTABLE` 是**同一档两轮**的比较；`SENSITIVE` 是**同一轮两档**的比较
+   （§A.2 的窗口敏感性矩阵）。两者必须**并列**标出，谁也不能拿来替谁开脱：
+   一款可以既 `SENSITIVE` 又 `STABLE`，也可以两轮一致却对窗口敏感。
+5. **不许用"两轮一致"掩盖敏感性，也不许用"敏感性"掩盖抖动**：报告里给**逐款两轮对照表**，
+   同时给 `UNSTABLE` 名单与 `SENSITIVE` 名单，并说明每一款的两个读数各自来自哪一轮/哪一档。
+
 ### 1.2b `ack` 缺失 ⇒ 该步 INCONCLUSIVE，**禁止**回退到注入前的读数（TASK-138 defect ⑨）
 
 `ack` 的语义是"游戏**在这一次注入之后**读回 InputMap 说 pressed"。注入工具若返回了但
@@ -478,3 +510,28 @@
 25. **拒绝集不进"模型固定点"的判据**（TASK-139 §1.B）⇒ 一局里被拒绝的步与"模型卡住"是两回事，
     把前者混进后者会把"游戏明确看见并拒绝了输入"错报成 INCONCLUSIVE。
     修法：拒绝步从固定点/无进展的样本里排除，**原始逐步 verdict 保留不改**。
+26. **引一个 verdict 却不写档位与轮次**（TASK-140 §1.A.3）⇒ 同一款同一代码在两轮之间就翻过档，
+    裸 `PASS` 不是类别证据。修法：`verdict_context` 必填、`qualified_verdict` 逐处打印，
+    报告/模板/决策日志引用时写"哪一档、第几轮"。
+27. **把一轮的读数当结论**（TASK-140 §1.A.2）⇒ 一次抽样无法区分"这款就是这样"与"这一轮恰好这样"。
+    修法：同档 ≥2 轮独立完整运行；不一致 ⇒ `UNSTABLE`，列出分歧轮次与分歧点，**不进 PASS**。
+28. **用"两轮一致"给敏感性开脱**（TASK-140 §1.A.5）⇒ 两轮一致与两档一致是**两个不同的问题**。
+    修法：`UNSTABLE`（同档两轮）与 `SENSITIVE`（同轮两档）**并列**标出，逐条说明读数出处。
+29. **低于报告档位的 verdict 混进通过数**（TASK-140 §1.A.1）⇒ 标称 30 帧的判定与标称 90 帧的
+    判定会给出同样的字符串，而前者不可复现。修法：`reporting_frames` 声明 + 
+    `BELOW_REPORTING_WINDOW` + `counts_as_pass=false` + `[reference only]` 标签；只能拿走 PASS。
+30. **"游戏允许按下的键没有反应"与"键没接上"不可区分**（TASK-140 §1.B.3 / TASK-116 约定 #1）⇒
+    bomberman 的 `HandleInput` 静默丢掉被规则拒绝的投放（`BombsActive < MaxBombs` 守卫在函数外），
+    实测那三步 `accepted and nothing changed`、状态差分**为空**。修法：把决定交回游戏自己的
+    `PlaceBomb()`，让它把每一次拒绝写进导出计数器（`RejectedMoves` + 新的 `RejectedPlaces`），
+    并把这**两个精确计数器**声明进 `refusal_evidence.game_side_fields`。
+31. **"画面上看得见"只靠肉眼说，不给数字**（TASK-140 §1.B.3）⇒ 炸弹被画成
+    `(0.15,0.15,0.20)`、地板是 `(0.15,0.17,0.21)`，肉眼"看不见"但状态里 `BombsActive=2` 很好。
+    修法：导出**对比度**（`BombMinContrast`，逐通道与所压格子的最小差）与**可见计数**
+    （`BombsVisible`），并让它们与 `pixel_diff` 一起进逐 step 证据。
+32. **把"同批两轮一致"当成"这个档位可复现"**（TASK-140 §C.5）⇒ TASK-139 的 w90 两轮逐款一致，
+    本批在**同一档**又跑了两次：脚本臂 `breakout` 两次都读 `INCONCLUSIVE`，而 TASK-139 的 w90 读
+    `FAIL`（`stability --run` 三次并排 ⇒ `UNSTABLE`，分歧点指名到步 2/3/4 的
+    `step_verdict: ok_ack_and_changed vs no_ack_no_change`）。修法：`UNSTABLE` 要在**所有可得的
+    同档独立完整 run** 上算（跨批也计入），并把"这次两轮一致"写成"这两轮一致"，
+    不要写成"这一档可复现"。

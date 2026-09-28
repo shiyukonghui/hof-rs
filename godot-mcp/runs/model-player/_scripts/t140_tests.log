@@ -1,0 +1,6 @@
+model-player unit tests exit=0
+   task140_cases PASSED (41 assertions)
+   task139_cases PASSED (67 assertions)
+   test_playability_model_player PASSED (108 assertions)
+playtest_player selftest exit=0
+   selftest PASSED

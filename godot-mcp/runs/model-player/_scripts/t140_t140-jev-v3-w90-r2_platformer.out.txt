@@ -1,0 +1,12 @@
+$ D:\Anaconda\python.exe F:\moonbit-hof-rs\godot-mcp\tools\playtest_player.py run --game platformer --backend jev --player model --variant V3 --image-form full --steps 12 --port 9984 --window-frames 90 --round 2 --change-margin strict --out-prefix t140-jev-v3-w90-r2
+----- stdout -----
+  step 01 action=plat_right         conf=0.30873990058898926 http=200 | ack=True(action_pressed) px=978 vs ctl=0 mv=176.0/0.0 | ok_ack_and_changed
+  step 02 action=plat_right         conf=0.34583036104838055 http=200 | ack=True(action_pressed) px=712 vs ctl=1047 mv=43.112/211.022 | FAIL_no_change_after_accepted_input
+  step 03 action=plat_right         conf=0.32959556579589844 http=200 | ack=True(action_pressed) px=1098 vs ctl=1083 mv=33.0/201.0 | FAIL_no_change_after_accepted_input
+  step 04 action=plat_right         conf=0.3434518178304036 http=200 | ack=True(action_pressed) px=2364 vs ctl=2364 mv=91.322/91.322 | FAIL_no_change_after_accepted_input
+  STOP at step 04: game declared terminal [{'field': 'GameOver', 'value': True, 'means': 'the game ended'}, {'field': 'Lives', 'value': 0, 'means': 'no lives left'}]
+VERDICT platformer/jev: INCONCLUSIVE @w90 r2 -- the game declared a TERMINAL state at step 4, so every later frame is frozen by the game's own rule and the run cannot show what the model could have done with a live game (TASK-132 §1.2); the FAIL condition also occurred on step(s) [2, 3, 4]
+  verdict_context: {"verdict": "INCONCLUSIVE", "window_frames": 90, "round": 2, "reporting_frames": 90, "at_reporting_window": true, "backend": "jev", "player": "model", "game": "platformer", "change_margin": "strict", "counts_as_pass": false, "what": "TASK-140 §1.A.3: a verdict is only attributable together with the window budget it was measured at and the round (independent complete run) it came from; TASK-139 measured that w30 verdicts were not reproducible across rounds, so a bare verdict string is not evidence of a class"}
+
+----- stderr -----
+

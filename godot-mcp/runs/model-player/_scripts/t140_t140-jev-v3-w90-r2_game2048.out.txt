@@ -1,0 +1,19 @@
+$ D:\Anaconda\python.exe F:\moonbit-hof-rs\godot-mcp\tools\playtest_player.py run --game game2048 --backend jev --player model --variant V3 --image-form full --steps 12 --port 9984 --window-frames 90 --round 2 --change-margin strict --out-prefix t140-jev-v3-w90-r2
+----- stdout -----
+  step 01 action=m2048_left         conf=0.16868764907121656 http=200 | ack=True(action_pressed) px=42078 vs ctl=0 mv=10.0/0.0 | ok_ack_and_changed
+  step 02 action=m2048_up           conf=0.19140346348285672 http=200 | ack=True(action_pressed) px=52099 vs ctl=0 mv=5.0/0.0 | ok_ack_and_changed
+  step 03 action=m2048_right        conf=0.16274927556514737 http=200 | ack=True(action_pressed) px=52238 vs ctl=0 mv=8.0/0.0 | ok_ack_and_changed
+  step 04 action=m2048_right        conf=0.11345142871141432 http=200 | ack=True(action_pressed) px=33738 vs ctl=0 mv=16.0/0.0 | ok_ack_and_changed
+  step 05 action=m2048_up           conf=0.18716195970773694 http=200 | ack=True(action_pressed) px=52138 vs ctl=0 mv=5.0/0.0 | ok_ack_and_changed
+  step 06 action=None               conf=0.18716195970773694 http=200 | ack=False(nothing) px=0 vs ctl=0 mv=0.0/0.0 | no_ack_no_change
+  step 07 action=None               conf=0.18716195970773694 http=200 | ack=False(nothing) px=0 vs ctl=0 mv=0.0/0.0 | no_ack_no_change
+  step 08 action=None               conf=0.18716195970773694 http=200 | ack=False(nothing) px=0 vs ctl=0 mv=0.0/0.0 | no_ack_no_change
+  step 09 action=None               conf=0.18716195970773694 http=200 | ack=False(nothing) px=0 vs ctl=0 mv=0.0/0.0 | no_ack_no_change
+  step 10 action=None               conf=0.18716195970773694 http=200 | ack=False(nothing) px=0 vs ctl=0 mv=0.0/0.0 | no_ack_no_change
+  step 11 action=None               conf=0.18716195970773694 http=200 | ack=False(nothing) px=0 vs ctl=0 mv=0.0/0.0 | no_ack_no_change
+  step 12 action=None               conf=0.18716195970773694 http=200 | ack=False(nothing) px=0 vs ctl=0 mv=0.0/0.0 | no_ack_no_change
+VERDICT game2048/jev: INCONCLUSIVE @w90 r2 -- only 5 step(s) carried an injectable action (of 12 run); the user's PASS rule needs >= 8.  
+  verdict_context: {"verdict": "INCONCLUSIVE", "window_frames": 90, "round": 2, "reporting_frames": 90, "at_reporting_window": true, "backend": "jev", "player": "model", "game": "game2048", "change_margin": "strict", "counts_as_pass": false, "what": "TASK-140 §1.A.3: a verdict is only attributable together with the window budget it was measured at and the round (independent complete run) it came from; TASK-139 measured that w30 verdicts were not reproducible across rounds, so a bare verdict string is not evidence of a class"}
+
+----- stderr -----
+

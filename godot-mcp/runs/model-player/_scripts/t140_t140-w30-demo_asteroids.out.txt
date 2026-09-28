@@ -1,0 +1,16 @@
+$ D:\Anaconda\python.exe F:\moonbit-hof-rs\godot-mcp\tools\playtest_player.py run --game asteroids --backend scripted --player scripted --variant V1 --image-form full --steps 12 --port 9987 --window-frames 30 --round 1 --change-margin strict --out-prefix t140-w30-demo
+----- stdout -----
+  step 01 action=ast_left           conf=None    http=None | ack=True(action_pressed) px=24 vs ctl=0 mv=86.061/0.0 | ok_ack_and_changed
+  step 02 action=ast_fire           conf=None    http=None | ack=True(action_pressed) px=16 vs ctl=0 mv=1802.948/0.0 | ok_ack_and_changed
+  step 03 action=ast_right          conf=None    http=None | ack=True(action_pressed) px=64 vs ctl=0 mv=79.483/0.0 | ok_ack_and_changed
+  step 04 action=ast_thrust         conf=None    http=None | ack=True(action_pressed) px=968 vs ctl=0 mv=291.33/0.0 | ok_ack_and_changed
+  step 05 action=ast_left           conf=None    http=None | ack=True(action_pressed) px=970 vs ctl=968 mv=349.081/133.757 | ok_ack_and_changed
+  step 06 action=ast_fire           conf=None    http=None | ack=True(action_pressed) px=6408 vs ctl=805 mv=868.369/53.789 | ok_ack_and_changed
+  step 07 action=ast_right          conf=None    http=None | ack=True(action_pressed) px=628 vs ctl=312 mv=123.208/20.121 | ok_ack_and_changed
+  step 08 action=ast_thrust         conf=None    http=None | ack=True(action_pressed) px=967 vs ctl=108 mv=291.535/6.881 | ok_ack_and_changed
+  early stop: 8 consecutive accepted+changed steps with distinct actions
+VERDICT asteroids/scripted: PASS @w30 r1 [reference only: window 30 < reporting 90] -- 8/8 rated steps changed the viewport (1.0000) over 8 step(s); the reader's per-frame check corroborates it
+  verdict_context: {"verdict": "PASS", "window_frames": 30, "round": 1, "reporting_frames": 90, "at_reporting_window": false, "backend": "scripted", "player": "scripted", "game": "asteroids", "change_margin": "strict", "counts_as_pass": false, "what": "TASK-140 §1.A.3: a verdict is only attributable together with the window budget it was measured at and the round (independent complete run) it came from; TASK-139 measured that w30 verdicts were not reproducible across rounds, so a bare verdict string is not evidence of a class"}
+
+----- stderr -----
+

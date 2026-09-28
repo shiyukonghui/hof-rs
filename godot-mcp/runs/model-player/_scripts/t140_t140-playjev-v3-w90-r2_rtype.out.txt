@@ -1,0 +1,19 @@
+$ D:\Anaconda\python.exe F:\moonbit-hof-rs\godot-mcp\tools\playtest_player.py run --game rtype --backend playjev --player model --variant V3 --image-form full --steps 12 --port 9986 --window-frames 90 --round 2 --change-margin strict --out-prefix t140-playjev-v3-w90-r2
+----- stdout -----
+  step 01 action=rt_down            conf=0.42132 http=200 | ack=True(action_pressed) px=768 vs ctl=0 mv=128.0/0.0 | ok_ack_and_changed
+  step 02 action=rt_down            conf=0.338274 http=200 | ack=True(action_pressed) px=768 vs ctl=0 mv=128.0/0.0 | ok_ack_and_changed
+  step 03 action=rt_down            conf=0.23876 http=200 | ack=True(action_pressed) px=768 vs ctl=0 mv=144.0/0.0 | ok_ack_and_changed
+  step 04 action=rt_right           conf=0.116039 http=200 | ack=True(action_pressed) px=768 vs ctl=0 mv=128.0/0.0 | ok_ack_and_changed
+  step 05 action=rt_down            conf=0.27908 http=200 | ack=True(action_pressed) px=768 vs ctl=0 mv=144.0/0.0 | ok_ack_and_changed
+  step 06 action=rt_right           conf=0.120432 http=200 | ack=True(action_pressed) px=768 vs ctl=0 mv=144.0/0.0 | ok_ack_and_changed
+  step 07 action=rt_down            conf=0.320303 http=200 | ack=True(action_pressed) px=576 vs ctl=0 mv=24.0/0.0 | ok_ack_and_changed
+  step 08 action=rt_down            conf=0.379931 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+  step 09 action=rt_down            conf=0.379931 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+  step 10 action=rt_down            conf=0.379931 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+  step 11 action=rt_down            conf=0.379931 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+  step 12 action=rt_down            conf=0.379931 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+VERDICT rtype/playjev: PASS @w90 r2 -- 6/6 rated steps changed the viewport (1.0000) over 12 step(s), with 6 step(s) ([7, 8, 9, 10, 11, 12]) dropped as LEGAL REFUSALS recorded by the game's own counters (they are not counted as progress either); the reader's per-frame check corroborates it
+  verdict_context: {"verdict": "PASS", "window_frames": 90, "round": 2, "reporting_frames": 90, "at_reporting_window": true, "backend": "playjev", "player": "model", "game": "rtype", "change_margin": "strict", "counts_as_pass": true, "what": "TASK-140 §1.A.3: a verdict is only attributable together with the window budget it was measured at and the round (independent complete run) it came from; TASK-139 measured that w30 verdicts were not reproducible across rounds, so a bare verdict string is not evidence of a class"}
+
+----- stderr -----
+

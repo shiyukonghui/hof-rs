@@ -81,6 +81,9 @@ public partial class FlappyBirdGame : Node2D
     /// <summary>World height; falling past it is the ground hit.</summary>
     [Export] public float WorldHeight = 600.0f;
 
+    /// <summary>World width; the ground strip spans it (TASK-140 §1.B.4).</summary>
+    [Export] public float WorldWidth = 800.0f;
+
     // --- observable state, all of it a real Godot property ---------------------
     /// <summary>Points: 10 per pipe passed.</summary>
     [Export] public int Score = 0;
@@ -110,7 +113,43 @@ public partial class FlappyBirdGame : Node2D
     [Export] public bool Won = false;
 
     /// <summary>When false (the default) the world only advances through the step hooks.</summary>
-    [Export] public bool AutoRun = false;
+    [Export] public bool AutoRun = true;
+
+    // --- TASK-140 §1.B.4: the world runs, and BOTH measurement windows see it running --------
+    // TASK-136 tried `AutoRun = true` and reverted it (registered, unfixed): with the clock on,
+    // the bird fell and was already dead by the time the CONTROL window ended, so the injected
+    // flap landed on a finished game and the even steps read `px == ctl_px == 30050`,
+    // `mv == cmv == 647.333`.  Its conclusion -- "the short-lived world cannot coexist with
+    // 'control window first, injection second'" -- is right about the symptom and the fix is
+    // not to switch the world off (that was the old default, and it made `FrameCount` stay 0).
+    //
+    // The fix is the get-ready hover plus a landing instead of a ground death:
+    //   * `IdleHover` (default true): while the bird is in its READY phase its altitude does
+    //     not change, so a no-input control window moves the PIPES (the world is visibly
+    //     running) while the declared gameplay observables stay still -- which is what makes
+    //     the next flap attributable;
+    //   * `GroundIsFatal` (default false): touching the ground lands the bird (ready again)
+    //     instead of ending the game, so a long window cannot kill the world between two
+    //     steps.  A PIPE still ends the game, and the course can still be won.
+    // Both are switches: `IdleHover = false` + `GroundIsFatal = true` is the pre-TASK-140
+    // behaviour, and the run that demonstrates it is recorded as the variant evidence.
+    /// <summary>When true the bird holds its altitude while it is in the ready phase.</summary>
+    [Export] public bool IdleHover = true;
+
+    /// <summary>When true touching the ground ends the game (the pre-TASK-140 rule).</summary>
+    [Export] public bool GroundIsFatal = false;
+
+    /// <summary>True while the bird is in the ready phase (never flapped, or landed).</summary>
+    [Export] public bool BirdReady = true;
+
+    /// <summary>Landings since the last reset (the "the ground is a landing" evidence).</summary>
+    [Export] public int Landings = 0;
+
+    /// <summary>Height of the ground strip at the bottom of the screen.</summary>
+    // TASK-140 §1.B.4: the strip is where the bird can LAND, so the pipes stop above it (a pipe
+    // body that reached into the ground would hit a resting bird and end the run the moment it
+    // touched down -- the same "short-lived world" the hover was introduced to avoid).
+    [Export] public float GroundHeight = 84.0f;
 
     /// <summary>When true the game reads its player's keyboard. The test driver switches this
     /// OFF explicitly (<see cref="SetPollInput"/>, <see cref="ForceTestState"/>) when it needs
@@ -207,6 +246,11 @@ public partial class FlappyBirdGame : Node2D
             DropNode(node);
         }
         _pipes.Clear();
+        // TASK-140 §1.B.4: the ground strip the bird can land on, drawn so the picture says
+        // what the collision rule does.
+        var ground = MakeRect("GroundStrip", new Vector2(WorldWidth, Mathf.Max(0.0f, GroundHeight)),
+                              new Color(0.20f, 0.36f, 0.18f));
+        ground.Position = new Vector2(0.0f, GroundTop());
         for (var i = 0; i < PipeStart.GetLength(0); i++)
         {
             var pipe = new Pipe { X = PipeStart[i, 0], GapY = PipeStart[i, 1], Passed = false };
@@ -221,8 +265,13 @@ public partial class FlappyBirdGame : Node2D
             _bird = MakeRect("Bird", new Vector2(BirdSize, BirdSize), new Color(0.98f, 0.80f, 0.15f));
         }
         PipeCount = _pipes.Count;
-        BirdY = 300.0f;
+        // TASK-140 §1.B.4: with the perch on, the bird starts resting on the ground strip; with
+        // it off, the pre-TASK-140 start altitude is kept (the switchable variant).
+        BirdY = IdleHover ? WorldHeight - BirdSize : 300.0f;
         BirdVelocity = 0.0f;
+        // TASK-140 §1.B.4: a rebuilt world starts in the ready phase, so it hovers while the
+        // pipes scroll instead of falling out of an unannounced sky.
+        BirdReady = true;
         ApplyBird();
         ApplyPipes();
     }
@@ -239,6 +288,7 @@ public partial class FlappyBirdGame : Node2D
     /// <summary>Places both halves of every pipe from its x and gap centre.</summary>
     private void ApplyPipes()
     {
+        var groundTop = GroundTop();
         foreach (var pipe in _pipes)
         {
             var gapTop = pipe.GapY - GapSize / 2.0f;
@@ -250,8 +300,11 @@ public partial class FlappyBirdGame : Node2D
             }
             if (pipe.Bottom != null)
             {
+                // TASK-140 §1.B.4: the lower half stops at the ground strip, so the drawn pipes
+                // and the collision rule are the same shape.
                 pipe.Bottom.Position = new Vector2(pipe.X, gapBottom);
-                pipe.Bottom.Size = new Vector2(PipeWidth, WorldHeight - gapBottom);
+                pipe.Bottom.Size = new Vector2(PipeWidth,
+                                               Mathf.Max(0.0f, groundTop - gapBottom));
             }
         }
         if (_pipes.Count > 0)
@@ -288,7 +341,9 @@ public partial class FlappyBirdGame : Node2D
             // counter it only wrote values that were already at their defaults, so "the R key
             // restarts" had no evidence a machine (or a player) could see.
             Restarts++;
-            AutoRun = false;
+            // TASK-140 §1.B.4: the restart no longer switches the world's clock OFF.  TASK-136
+            // measured why the old `AutoRun = false` here mattered: a restart put the world
+            // back into the frozen state, so the frames after it were identical again.
             _autoAccum = 0.0f;
             Score = 0;
             PipesPassed = 0;
@@ -298,6 +353,8 @@ public partial class FlappyBirdGame : Node2D
             LastPassDelta = 0;
             GameOver = false;
             Won = false;
+            BirdReady = true;
+            Landings = 0;
             BuildWorld();
             UpdateHud();
             LastEvent = "restarted by the declared action";
@@ -337,6 +394,13 @@ public partial class FlappyBirdGame : Node2D
         {
             return false;
         }
+        // TASK-140 §1.B.4: the ground strip is not pipe territory.  A bird resting on the
+        // ground is below every pipe body, so it is not a hit -- otherwise "landing" would be
+        // a slower way of dying and the measurement windows would still end in a dead world.
+        if (top >= GroundTop())
+        {
+            return false;
+        }
         var gapTop = pipe.GapY - GapSize / 2.0f;
         var gapBottom = pipe.GapY + GapSize / 2.0f;
         if (bottom <= gapTop)
@@ -350,12 +414,36 @@ public partial class FlappyBirdGame : Node2D
         return false;
     }
 
+    /// <summary>The top edge of the ground strip; the pipes stop here.</summary>
+    private float GroundTop()
+    {
+        return WorldHeight - Mathf.Max(0.0f, GroundHeight);
+    }
+
     /// <summary>One exact 1/60 s frame of the whole world.</summary>
     private void StepOnce()
     {
         var dt = 1.0f / FixedFps;
-        BirdVelocity += Gravity * dt;
-        BirdY += BirdVelocity * dt;
+        // TASK-140 §1.B.4: the world RUNS in every phase -- the pipes scroll whether or not the
+        // bird is flying -- and while the bird is in its READY phase it PERCHES on the ground
+        // strip.  The perch (rather than a mid-air hover) is the measured correction: a bird
+        // parked at y=300 is hit by whichever pipe's gap does not contain its altitude (the
+        // pipe with the 130..290 gap hits it, because the bird's box is 300..336 and
+        // `top >= gapBottom` is 300 >= 290), so the run ended one or two windows in and the
+        // "both windows inside a running world" property could not be measured at all.  A bird
+        // RESTING on the ground is below every pipe body (the pipes stop at the ground strip),
+        // so the world keeps running while the bird's own altitude stays exactly still -- which
+        // is what makes the next flap attributable.
+        if (!(IdleHover && BirdReady))
+        {
+            BirdVelocity += Gravity * dt;
+            BirdY += BirdVelocity * dt;
+        }
+        else
+        {
+            BirdY = WorldHeight - BirdSize;
+            BirdVelocity = 0.0f;
+        }
         if (BirdY < 0.0f)
         {
             BirdY = 0.0f;
@@ -416,9 +504,28 @@ public partial class FlappyBirdGame : Node2D
         if (!GameOver && BirdY + BirdSize >= WorldHeight)
         {
             BirdY = WorldHeight - BirdSize;
-            GameOver = true;
-            Won = false;
-            LastEvent = $"ground hit bird_y={BirdY:F1} frames={FrameCount}";
+            if (GroundIsFatal)
+            {
+                GameOver = true;
+                Won = false;
+                LastEvent = $"ground hit bird_y={BirdY:F1} frames={FrameCount}";
+            }
+            else
+            {
+                // TASK-140 §1.B.4: the ground is a LANDING, not a death.  Only a pipe ends the
+                // game; touching the ground puts the bird back into its ready phase, where it
+                // holds its altitude until the next flap.  That keeps the rule "the bird's
+                // own altitude must not change while the player gives no input" true for every
+                // control window -- the property the change test needs in order to attribute
+                // a flap -- without switching the world off (the pipes still scroll).
+                BirdVelocity = 0.0f;
+                if (!BirdReady)
+                {
+                    BirdReady = true;
+                    Landings++;
+                }
+                LastEvent = $"landed bird_y={BirdY:F1} frames={FrameCount} landings={Landings}";
+            }
         }
         ApplyBird();
         ApplyPipes();
@@ -435,8 +542,9 @@ public partial class FlappyBirdGame : Node2D
             LastEvent = "flap refused: game over";
             return LastEvent;
         }
+        BirdReady = false;   // TASK-140 §1.B.4: a flap ends the ready phase; gravity applies again
         BirdVelocity = -FlapImpulse;
-        LastEvent = $"flap velocity={BirdVelocity:F0} bird_y={BirdY:F1}";
+        LastEvent = $"flap velocity={BirdVelocity:F0} bird_y={BirdY:F1} ready={BirdReady}";
         return LastEvent;
     }
 
@@ -522,7 +630,9 @@ public partial class FlappyBirdGame : Node2D
                + $"gap={GapSize:F0} width={PipeWidth:F0} speed={PipeSpeed:F0} gravity={Gravity:F0} "
                + $"score={Score} passed={PipesPassed}/{PipesToClear} recycled={PipesRecycled} "
                + $"frame={FrameCount} frames_hook={LastPassFrames} delta_hook={LastPassDelta} "
-               + $"over={GameOver} won={Won} auto={AutoRun} ticks={Ticks} last={LastEvent}";
+               + $"over={GameOver} won={Won} auto={AutoRun} ready={BirdReady} landings={Landings} "
+               + $"idle_hover={IdleHover} ground_is_fatal={GroundIsFatal} "
+               + $"ground_top={GroundTop():F1} ticks={Ticks} last={LastEvent}";
     }
 
     /// <summary>The readback shortcuts: where the bird is and where pipe 0 is.</summary>
@@ -553,6 +663,10 @@ public partial class FlappyBirdGame : Node2D
         LastPassDelta = 0;
         GameOver = false;
         Won = false;
+        // TASK-140 §1.B.4: a forced state starts in the ready phase, and the landing counter is
+        // part of the state it resets (the hover rule reads `BirdReady`, so it must not be inherited).
+        BirdReady = true;
+        Landings = 0;
         BuildWorld();
         foreach (var part in spec.Split(';'))
         {

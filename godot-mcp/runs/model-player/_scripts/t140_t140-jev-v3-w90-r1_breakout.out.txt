@@ -1,0 +1,19 @@
+$ D:\Anaconda\python.exe F:\moonbit-hof-rs\godot-mcp\tools\playtest_player.py run --game breakout --backend jev --player model --variant V3 --image-form full --steps 12 --port 9983 --window-frames 90 --round 1 --change-margin strict --out-prefix t140-jev-v3-w90-r1
+----- stdout -----
+  step 01 action=breakout_launch    conf=0.7883807023366293 http=200 | ack=True(action_pressed) px=392 vs ctl=0 mv=749.719/0.0 | ok_ack_and_changed
+  step 02 action=breakout_launch    conf=0.7901763121287028 http=200 | ack=True(action_pressed) px=168 vs ctl=168 mv=49.14/14.0 | ok_ack_and_changed
+  step 03 action=breakout_launch    conf=0.7765366236368815 http=200 | ack=True(action_pressed) px=168 vs ctl=280 mv=1228.08/1253.536 | FAIL_no_change_after_accepted_input
+  step 04 action=breakout_launch    conf=0.7624853452046713 http=200 | ack=True(action_pressed) px=378 vs ctl=140 mv=59.248/1214.08 | ok_ack_and_changed
+  step 05 action=breakout_launch    conf=0.7857494354248047 http=200 | ack=True(action_pressed) px=28 vs ctl=384 mv=28.0/1241.525 | FAIL_no_change_after_accepted_input
+  step 06 action=breakout_launch    conf=0.7809966405232748 http=200 | ack=True(action_pressed) px=392 vs ctl=184 mv=707.869/714.255 | FAIL_no_change_after_accepted_input
+  step 07 action=breakout_launch    conf=0.7765366236368815 http=200 | ack=True(action_pressed) px=392 vs ctl=280 mv=1233.911/54.869 | ok_ack_and_changed
+  step 08 action=breakout_launch    conf=0.7624853452046713 http=200 | ack=True(action_pressed) px=366 vs ctl=140 mv=59.638/1213.08 | ok_ack_and_changed
+  step 09 action=breakout_launch    conf=0.7734752496083578 http=200 | ack=True(action_pressed) px=392 vs ctl=392 mv=28.0/14.0 | ok_ack_and_changed
+  step 10 action=breakout_launch    conf=0.7809966405232748 http=200 | ack=True(action_pressed) px=386 vs ctl=140 mv=39.4/1252.085 | ok_ack_and_changed
+  step 11 action=breakout_launch    conf=0.7624853452046713 http=200 | ack=True(action_pressed) px=196 vs ctl=140 mv=28.0/14.0 | ok_ack_and_changed
+  step 12 action=breakout_launch    conf=0.773155689239502 http=200 | ack=True(action_pressed) px=328 vs ctl=328 mv=1266.085/1272.716 | FAIL_no_change_after_accepted_input
+VERDICT breakout/jev: FAIL @w90 r1 -- 4 step(s) had an ACCEPTED input and an unchanged viewport (user's FAIL condition): [3, 5, 6, 12]
+  verdict_context: {"verdict": "FAIL", "window_frames": 90, "round": 1, "reporting_frames": 90, "at_reporting_window": true, "backend": "jev", "player": "model", "game": "breakout", "change_margin": "strict", "counts_as_pass": false, "what": "TASK-140 §1.A.3: a verdict is only attributable together with the window budget it was measured at and the round (independent complete run) it came from; TASK-139 measured that w30 verdicts were not reproducible across rounds, so a bare verdict string is not evidence of a class"}
+
+----- stderr -----
+

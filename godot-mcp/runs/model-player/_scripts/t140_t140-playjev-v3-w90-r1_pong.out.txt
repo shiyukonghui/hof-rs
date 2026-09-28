@@ -1,0 +1,19 @@
+$ D:\Anaconda\python.exe F:\moonbit-hof-rs\godot-mcp\tools\playtest_player.py run --game pong --backend playjev --player model --variant V3 --image-form full --steps 12 --port 9985 --window-frames 90 --round 1 --change-margin strict --out-prefix t140-playjev-v3-w90-r1
+----- stdout -----
+  step 01 action=pong_right_down    conf=0.593809 http=200 | ack=True(action_pressed) px=3200 vs ctl=0 mv=226.0/0.0 | ok_ack_and_changed
+  step 02 action=pong_right_down    conf=0.576107 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+  step 03 action=pong_right_down    conf=0.576107 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+  step 04 action=pong_right_down    conf=0.576107 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+  step 05 action=pong_right_down    conf=0.576107 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+  step 06 action=pong_right_down    conf=0.576107 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+  step 07 action=pong_right_down    conf=0.576107 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+  step 08 action=pong_right_down    conf=0.576107 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+  step 09 action=pong_right_down    conf=0.576107 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+  step 10 action=pong_right_down    conf=0.576107 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+  step 11 action=pong_right_down    conf=0.576107 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+  step 12 action=pong_right_down    conf=0.576107 http=200 | ack=True(action_pressed) px=0 vs ctl=0 mv=0.0/0.0 | FAIL_no_change_after_accepted_input
+VERDICT pong/playjev: INCONCLUSIVE @w90 r1 -- the user's FAIL condition did occur on step(s) [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], but every failing step shows the SAME action (['pong_right_down']) and the model was handed a byte-identical frame, so the evidence cannot separate 'the game ignores this input' from 'the model stopped playing' (TASK-132 §1.2)
+  verdict_context: {"verdict": "INCONCLUSIVE", "window_frames": 90, "round": 1, "reporting_frames": 90, "at_reporting_window": true, "backend": "playjev", "player": "model", "game": "pong", "change_margin": "strict", "counts_as_pass": false, "what": "TASK-140 §1.A.3: a verdict is only attributable together with the window budget it was measured at and the round (independent complete run) it came from; TASK-139 measured that w30 verdicts were not reproducible across rounds, so a bare verdict string is not evidence of a class"}
+
+----- stderr -----
+

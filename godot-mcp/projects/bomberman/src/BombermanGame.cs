@@ -40,6 +40,20 @@ namespace bomberman;
 /// a caught player loses a life and respawns at the spawn cell, and the loss of the last life ends
 /// the game. Every brick gone AND every enemy gone is the win.</para>
 ///
+/// <para><b>TASK-140 §1.B.3: the `AutoClock` trade-off, written down.</b> A bomb has always been
+/// DRAWN (one <c>ColorRect</c> per slot), but until this batch it was drawn in
+/// <c>Color(0.15, 0.15, 0.20)</c> on an empty-floor cell of <c>Color(0.15, 0.17, 0.21)</c> -- a
+/// visible-in-the-tree, invisible-on-the-screen 0.02 difference. That is fixed here, and the
+/// contrast is exported (<see cref="BombsVisible"/>, <see cref="BombMinContrast"/>). The
+/// <see cref="AutoClock"/> choice is NOT changed: it stays 0, because the determinism rule above
+/// is what makes the blast cells recomputable, and TASK-136 measured the alternative (clock on)
+/// to be worse in the only way that matters here -- the bomb went off next to the player, the
+/// player lost lives and the run was over in 3 injected steps ("一按就死", TASK-136 §6.2).
+/// The consequence is stated plainly rather than hidden: with the clock off,
+/// <see cref="Detonations"/> stays 0 in a playtest run and only a driver that calls
+/// <see cref="StepFuse"/> (or switches the clock on) produces a blast. Visibility does not
+/// depend on the fuse: the bomb appears on the frame it is placed.</para>
+///
 /// <para><b>All cells are runtime-created.</b> <see cref="_Ready"/> builds one <c>ColorRect</c> per
 /// cell plus one <c>ColorRect</c> per unit; the scene file carries only the three static nodes
 /// (Background, Hud, Status). That keeps the edited scene small, keeps it immune to the D-3
@@ -123,6 +137,37 @@ public partial class BombermanGame : Node2D
 
     /// <summary>Live bombs, "r,c,fuse|..." in placement order.</summary>
     [Export] public string BombList = "";
+
+    // --- TASK-140 §1.B.3: the placed bomb has to be VISIBLE --------------------------------
+    // Measured by TASK-136 (registered, unfixed): after two `bomb_place` steps the HUD read
+    // `BOMBS 2` while the screen showed only the floor -- the bomb's rect was drawn with
+    // `Color(0.15, 0.15, 0.20)` on top of an empty floor cell painted `Color(0.15, 0.17, 0.21)`,
+    // i.e. a difference of 0.02 in one channel: a bomb nobody can see.  A player cannot avoid
+    // (or use) what is not on the screen.
+    //
+    // The bomb now has its own contrast and the contrast is EXPORTED, so "the bomb is visible"
+    // is a machine-checked number and not a description of a screenshot: `BombMinContrast` is
+    // the smallest per-channel difference between a live bomb's rect and the cell under it, and
+    // `BombsVisible` counts the bomb rects that are actually visible in the tree.
+    /// <summary>Bomb colour while the fuse has more than one tick left.</summary>
+    [Export] public Color BombColor = new Color(0.95f, 0.35f, 0.10f);
+
+    /// <summary>Bomb colour on the last tick before the blast (the "it is about to go" read).</summary>
+    [Export] public Color BombColorDue = new Color(1.0f, 0.94f, 0.25f);
+
+    /// <summary>Live bombs whose rect is actually visible in the tree.</summary>
+    [Export] public int BombsVisible = 0;
+
+    /// <summary>Smallest per-channel difference between a live bomb rect and the cell under it
+    /// (0 when no bomb is live).  The TASK-140 §1.B.3 evidence number.</summary>
+    [Export] public float BombMinContrast = 0.0f;
+
+    /// <summary>Placements the game REFUSED (a bomb already on the cell, or the limit
+    /// reached).  TASK-140 §1.B.3: without this counter a refused `bomb_place` changed
+    /// NOTHING at all, so "the key is not wired" and "the rule said no" were the same
+    /// evidence -- the project's own convention #1 (observable state must be a Godot
+    /// property) applied to the one refusal path this game had missed.</summary>
+    [Export] public int RejectedPlaces = 0;
 
     /// <summary>Row of the most recently placed bomb.</summary>
     [Export] public int LastBombRow = -1;
@@ -389,6 +434,11 @@ public partial class BombermanGame : Node2D
         BombsPlaced = 0;
         BombsActive = 0;
         BombList = "";
+        RejectedPlaces = 0;
+        // TASK-140 §1.B.3: the visibility readings belong to the board, so a reset clears them
+        // with it (a stale contrast would otherwise read as "a bomb is visible" on an empty field).
+        BombsVisible = 0;
+        BombMinContrast = 0.0f;
         LastBombRow = -1;
         LastBombCol = -1;
         LastBlast = "";
@@ -494,7 +544,10 @@ public partial class BombermanGame : Node2D
             var rect = new ColorRect();
             rect.Name = $"Bomb_{i}";
             rect.Size = new Vector2(Cell - 18, Cell - 18);
-            rect.Color = new Color(0.15f, 0.15f, 0.20f);
+            // TASK-140 §1.B.3: the OLD colour here was (0.15, 0.15, 0.20) -- two hundredths
+            // away from the empty-floor cell it is drawn on.  The declared colours are used
+            // instead, and `ApplyBoard` reports their measured contrast.
+            rect.Color = BombColor;
             rect.Visible = false;
             AddChild(rect);
             _bombRect.Add(rect);
@@ -564,11 +617,43 @@ public partial class BombermanGame : Node2D
             {
                 rect.Position = new Vector2(OriginX + _bombCol[i] * Cell + 10,
                                             OriginY + _bombRow[i] * Cell + 10);
-                rect.Color = _bombFuse[i] <= 1
-                    ? new Color(0.95f, 0.55f, 0.15f)
-                    : new Color(0.15f, 0.15f, 0.20f);
+                rect.Color = _bombFuse[i] <= 1 ? BombColorDue : BombColor;
             }
         }
+        // TASK-140 §1.B.3: the visibility evidence, measured from the rects and the cells they
+        // sit on -- not from a screenshot description.
+        BombsVisible = 0;
+        var minContrast = 0.0f;
+        for (var i = 0; i < _bombRow.Count; i++)
+        {
+            if (i >= _bombRect.Count)
+            {
+                continue;
+            }
+            var rect = _bombRect[i];
+            if (rect == null || !IsInstanceValid(rect))
+            {
+                continue;
+            }
+            if (rect.Visible)
+            {
+                BombsVisible++;
+            }
+            var cellIdx = Idx(_bombRow[i], _bombCol[i]);
+            var cell = (cellIdx >= 0 && cellIdx < _cellRect.Count) ? _cellRect[cellIdx] : null;
+            var c = rect.Color;
+            if (cell != null && IsInstanceValid(cell))
+            {
+                var k = cell.Color;
+                var d = Mathf.Max(Mathf.Abs(c.R - k.R),
+                                  Mathf.Max(Mathf.Abs(c.G - k.G), Mathf.Abs(c.B - k.B)));
+                if (minContrast == 0.0f || d < minContrast)
+                {
+                    minContrast = d;
+                }
+            }
+        }
+        BombMinContrast = minContrast;
         if (_playerRect != null && IsInstanceValid(_playerRect))
         {
             _playerRect.Position = new Vector2(OriginX + PlayerCol * Cell + 6,
@@ -807,20 +892,25 @@ public partial class BombermanGame : Node2D
         if (GameOver)
         {
             RejectedMoves++;
-            LastEvent = $"rejected reason=game_over at={PlayerRow},{PlayerCol} over={GameOver}";
+            RejectedPlaces++;
+            LastEvent = $"rejected reason=game_over at={PlayerRow},{PlayerCol} over={GameOver} "
+                        + $"rejected_places={RejectedPlaces}";
             return LastEvent;
         }
         if (BombAt(PlayerRow, PlayerCol) >= 0)
         {
             RejectedMoves++;
+            RejectedPlaces++;
             LastEvent = $"rejected reason=bomb_already_here at={PlayerRow},{PlayerCol} "
-                        + $"rejected={RejectedMoves}";
+                        + $"rejected={RejectedMoves} rejected_places={RejectedPlaces}";
             return LastEvent;
         }
         if (_bombRow.Count >= MaxBombs)
         {
             RejectedMoves++;
-            LastEvent = $"rejected reason=max_bombs active={_bombRow.Count} rejected={RejectedMoves}";
+            RejectedPlaces++;
+            LastEvent = $"rejected reason=max_bombs active={_bombRow.Count} "
+                        + $"rejected={RejectedMoves} rejected_places={RejectedPlaces}";
             return LastEvent;
         }
         _bombRow.Add(PlayerRow);
@@ -1178,11 +1268,21 @@ public partial class BombermanGame : Node2D
         {
             InputMoves++;
         }
-        if (place && !_prevBomb && BombsActive < MaxBombs && BombAt(PlayerRow, PlayerCol) < 0
-            && !GameOver)
+        // TASK-140 §1.B.3: a REFUSED placement must leave a trace.  This guard used to drop
+        // the key silently (`place && !_prevBomb && BombsActive < MaxBombs && BombAt(...) < 0`)
+        // when the limit was reached or the cell already held a bomb: measured on the
+        // TASK-140 pre-fix run, steps 5/7/9 were `accepted and nothing changed` with an EMPTY
+        // state delta -- indistinguishable from an unwired key.  `PlaceBomb` already records
+        // every refusal (RejectedMoves + the new RejectedPlaces), so the edge is handed to it
+        // and the decision is the game's, not this guard's.
+        if (place && !_prevBomb && !GameOver)
         {
+            var placedBefore = BombsPlaced;
             PlaceBomb();
-            InputBombs++;
+            if (BombsPlaced > placedBefore)
+            {
+                InputBombs++;
+            }
         }
         _prevUp = up;
         _prevRight = right;
@@ -1285,12 +1385,15 @@ public partial class BombermanGame : Node2D
                + $"fuse={FuseSteps} bricks_total={BricksTotal} bricks_left={BricksRemaining} "
                + $"bricks_destroyed={BricksDestroyed} grid_hash={GridHash} unit_hash={UnitHash} "
                + $"bombs_placed={BombsPlaced} bombs_active={BombsActive} bomb_list={BombList} "
+               + $"bombs_visible={BombsVisible} bomb_min_contrast={BombMinContrast:F3} "
+               + $"bomb_color={BombColor} bomb_color_due={BombColorDue} "
                + $"last_bomb={LastBombRow},{LastBombCol} last_blast={LastBlast} "
                + $"blast_count={LastBlastCount} blast_hash={BlastHash} detonations={Detonations} "
                + $"enemies_total={EnemiesTotal} enemies_alive={EnemiesAlive} "
                + $"enemies_killed={EnemiesKilled} enemy_list={EnemyList} lives={Lives} "
                + $"deaths={Deaths} score={Score} player={PlayerRow},{PlayerCol} moves={Moves} "
-               + $"rejected={RejectedMoves} exploded={Exploded} dead_by_enemy={DeadByEnemy} "
+               + $"rejected={RejectedMoves} rejected_places={RejectedPlaces} "
+               + $"exploded={Exploded} dead_by_enemy={DeadByEnemy} "
                + $"won={Won} over={GameOver} probe={ProbeRow},{ProbeCol}:{ProbeState} "
                + $"auto={AutoClock} auto_ticks={AutoTicks} last_auto={LastAutoSteps} "
                + $"last_hook={LastHookSteps} input_moves={InputMoves} input_bombs={InputBombs} "

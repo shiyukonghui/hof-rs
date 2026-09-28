@@ -7918,3 +7918,149 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
   本批只测量并登记，不擅自改判据。已写进 `TEMPLATE-logic-feedback.md §1.2c` 与报告 §A.4。
 - 回滚点：本批对分布的可提交工件只有 `player.json`（`runs/**` 不入库）与
   `runs/model-player/_index/ARTIFACTS-TASK-139.json` 的哈希清单；删掉清单即回到无索引状态。
+
+## D205 — TASK-140 §1.A.1：**报告档位**`reporting_frames`——低于它的 verdict 只能作参考，永不进 PASS
+
+- 触发问题：TASK-139 §A.4 的实测结论——同一款、同一档、同一命令、**同一份代码**，换一轮跑就
+  可能给出不同的 verdict（三轮完整 w30 里 5 款有 4 款翻档；w90 两轮逐款一致）。
+  TASK-139 §1.A 的 `min_frames=20` 只拦"短到装不下一次反应"，拦不住"抖动"：一个不可复现的
+  读数被当成 PASS 报出去，判据就失去意义。
+- 选项：
+  1. **在 `model_player_window` 里加声明 `reporting_frames = 90`，标称窗低于它的 run 写
+     `BELOW_REPORTING_WINDOW` / `at_reporting_window: false` / `counts_as_pass: false`，
+     并在 `qualified_verdict` 上追加 `[reference only: ...]`（选中）**
+  2. 直接把 w30 的 verdict 从工具里删掉 —— 否决：那会销毁测量结果与历史可比性；
+     本仓的纪律是"保留读数、改类别"，不是"删掉不好看的读数"
+  3. 把默认 `--window-frames` 改成 90 并在报告里要求大家用 90 —— 否决：那是约定，不是机器状态；
+     TASK-140 §3.Y1 要求"低于该档的 verdict **不得**作为 PASS 依据"，必须可机检
+- 最终选择：选项 1。落点：`tools/playability_controls.json -> model_player_window`
+  （`reporting_frames` / `reporting_state` / `reporting_counts_as_pass` / `reporting_basis`，
+  并同步 `_model_player_window_comment`）；`tools/playtest_player.py` 的
+  `load_window_declaration`（读同一块）与 `summarise`（新增 `nominal_frames` 参数，
+  写 `player.json -> reporting_window` / `verdict_before_reporting_check` / `reporting_why`）；
+  `tools/playability_gate.py -> evaluate_model_player_steps(..., run_context=)` 与
+  `record_model_player_criterion`（从 `steps.jsonl` 旁边的 `player.json -> verdict_context`
+  读回，写 `gate.json -> model_player_criterion.evidence.reporting_window`）；
+  断言在 `tools/tests/test_playability_model_player.py -> task140_cases`（41 条，其中
+  reporting 段 14 条）。
+- 理由（**取值 90 的依据，实测**）：w30 的跨轮不可复现已由 TASK-139 用三轮完整探针与逐 step
+  机制（帧跨度抖动 + `ack_result` 偶发缺失）实证；w90 的两轮完整运行在同样 5 款上逐款一致。
+  90 不是"更大就更好"的猜测：它是**当前证据里唯一被证明可复现的档位**。
+- 边界（写进 `not_a_loosening`）：只拿掉 PASS，永不补上；`--window-frames`、`min_frames`、
+  两把尺子的公式一律不动；**未记录标称窗（`None`）时不判**（缺测量既不加也不减）。
+- 预期影响与回滚点：所有 w30 的历史 run 从此只能作参考读。回滚点：删掉
+  `reporting_frames` 字段即回到"只看 min_frames"的状态（`reporting_window` 字段对老读者是新增）。
+
+## D206 — TASK-140 §1.A.2/§1.A.3：verdict 必须带**档位 + 轮次**，`UNSTABLE` 不进 PASS
+
+- 触发问题：D205 的同一条实测。一个裸 `PASS` 既没说是哪一档测的，也没说是第几轮，
+  于是"这一次恰好 PASS"和"这一款就是 PASS"在工件里长得一模一样。
+- 选项：
+  1. **新增 `--round`、`verdict_context`、`qualified_verdict`；再加跨轮聚合 `stability`
+     （≥2 轮同档独立完整运行，verdict **类别**不一致即 `UNSTABLE`，列出分歧轮次与分歧点，
+     永不计入 PASS）（选中）**
+  2. 只要求在报告里写轮次 —— 否决：报告不是机器可核的；TASK-140 §3.Y2 要求"有测试/实测触发"
+  3. 把 `UNSTABLE` 实现成"再跑一遍看结果" —— 否决：那只是又一次抽样，不是跨轮判断
+- 最终选择：选项 1。落点：`tools/playtest_player.py` 的 `verdict_class` / `divergence_between`
+  / `stability_summary` / `stability_from_paths` / `qualified_verdict`，`summarise` 写
+  `verdict_context` 与 `qualified_verdict`，`Player.run` 传 `--round` 并打印带档位+轮次的
+  VERDICT 行，`resummarise` 从旧 `player.json` 继承档位/轮次（防止重算把参考读数升格为通过）；
+  CLI `playtest_player.py stability --run <player.json> --run <player.json> [--out FILE]
+  [--require-engine-state]`；声明块 `model_player_stability`；断言 22 条。
+- 理由：类别比较（而非字符串比较）把 TASK-136 的 `PASS(baseline only)` 与 TASK-139 的
+  `WINDOW_TOO_SHORT ...` 都当成**独立类别**——`pong` 在 TASK-139 里正是"这两个字符串之间翻转"的一种；
+  若只比字符串会不会漏掉？不会，但把它当类别能让"翻档"这件事在报告里逐条点名到**哪一步、哪个判据项**。
+- 边界（写进 `not_a_loosening`）：`UNSTABLE` 只在"每一轮都是字面 `PASS`"时才允许通过；
+  它不重写任何一轮自己的 `player.json`；不足两轮是 `INSUFFICIENT_ROUNDS`（不是判断，也不是通过）。
+- 与 `SENSITIVE` 的关系（写进模板 §1.2d 第 4/5 条）：`UNSTABLE` 比**同一档的两轮**，
+  `SENSITIVE` 比**同一轮的两档**；两者必须并列标出，谁也不能替谁开脱。
+- 预期影响与回滚点：`player.json` / `gate.json` 各新增一组字段，老读者不受影响。
+  回滚点：删掉 `model_player_stability` 块与 `--round` 参数即回到"单轮读数"的状态。
+
+## D207 — TASK-140 §1.B：4 款游戏侧缺陷的修法与取舍（每处都给修前→修后证据）
+
+- 触发问题：TASK-136 §6 / TASK-139 §A.3 登记未修的四处游戏侧硬阻塞：
+  `asteroids` 死亡后不重生（连续 7 步零变化、三帧同 sha）、`frogger` 一次按键连丢三条命、
+  `bomberman` 已放置的炸弹在画面上不可见且被规则拒绝的投放**什么都不写**、
+  `flappy` 世界不自走（`FrameCount` 恒 0），而 `AutoRun=true` 会让对照窗在注入前就死掉。
+- 选项（每款都列了被否决项）：
+  1. **asteroids**：加自动重生 + 重生无敌（`RespawnDelay=1.0` / `RespawnInvuln=1.5`，
+     导出 `RespawnTimer` / `InvulnTimer` / `ShipInvulnerable` / `ShipVisible` / `Respawns`）（选中）。
+     否决：只加"重开键"——那要求玩家知道键位，而模型玩家的动作集里没有它，缺陷仍然存在。
+  2. **frogger**：①把第 13 车道那辆车从出生列挪开（出生格与其上一格不再被车压住，
+     导出 `StartCellClear` 断言）；②**按键边沿触发**（一次按下只走一步，`PressConsumed`），
+     按住自动重复需要 `RepeatHold=0.5 s` 的**连续**按住（长于任何一次注入的 350 ms）；
+     ③掉命后 `DeathGrace=0.6 s` 冷却（不移动、也不再掉命）（选中）。
+     否决：只挪车——车是循环移动的，只治标；否决：只加冷却——按住的重复步进频率仍然不合理。
+  3. **bomberman**：①炸弹色改成有对比度的声明色（导出 `BombsVisible` / `BombMinContrast`，
+     逐通道与所压格子的最小差）；②`HandleInput` 里那个**静默**守卫
+     （`place && !_prevBomb && BombsActive < MaxBombs && BombAt(...) < 0`）删掉，把决定交回
+     `PlaceBomb()`，让被规则拒绝的投放写进导出计数器（`RejectedMoves` + 新的 `RejectedPlaces`），
+     并把这两个**精确计数器**声明进 `refusal_evidence.game_side_fields`（选中）。
+     否决：`AutoClock` 打开——TASK-136 §6.2 实测"一按就死"（炸弹在玩家旁边炸，3 步内整局结束），
+     而且它破坏了"世界是状态字符串的纯函数"这条可复算性；**取舍写明**：`AutoClock` 保持 0，
+     因此 playtest run 里 `Detonations` 仍恒 0，只有显式调 `StepFuse`/打开时钟的驱动才有爆炸。
+  4. **flappy**：①`AutoRun=true`（世界在跑）；②`IdleHover`＝READY 相位**停在触地条上**
+     （不是悬在半空：实测悬在 y=300 的鸟会被 gap 130..290 的那根管子撞死，一两个窗口内世界就结束）；
+     ③`GroundIsFatal=false`：触地是**着陆**（回到 READY），只有撞管子才结束（选中）。
+     否决：把游戏关掉（那是修前的默认，`FrameCount` 恒 0）；否决：悬停——实测会被管子撞死。
+- 最终选择：如上四处，全部**可开关**（`RespawnDelay=0` / `RepeatHold=0`+`DeathGrace=0` /
+  `AutoClock` / `IdleHover=false`+`GroundIsFatal=true` 都能回到修前行为），
+  修前证据留在 `runs/model-player/t140-prefix4-w90-r1/`，修后证据在
+  `t140-postfix4-w90-r3/`（4 款）与本批两轮全量 sweep。
+- 理由：四处都是**可观测性**缺陷（"世界停止更新"、"一次按键三条命"、"东西画不出来"、
+  "拒绝不留痕"），修法都是把状态变成 Godot 属性，符合本工程约定 #1；**没有一处放宽判据**。
+- 预期影响与回滚点：4 款游戏的行为变化都写进了各自的 `Dump()`，可逐字段核。回滚点：把四个开关
+  设回修前默认即恢复旧行为（并且每个开关的修前读数都已入库）。
+
+## D208 — TASK-140 §1.B.4：flappy 的**结构性发现**——横向滚动的世界被声明为玩法观测量时，strict 余量对玩家动作不可达
+
+- 触发问题：把 flappy 修成"世界真的在跑、两窗都在运行背景下测量"之后（Y7 已达到，
+  见报告 §B.4 的逐 step 证据：对照窗 `ctl_px` 42k–74k、`cmv≈2470`，同时鸟的 `BirdY`/`BirdVelocity`
+  **静止**；动作窗 `px` 上升到 114k 且鸟真的飞起来），脚本臂仍读成 `PASS(baseline only)`。
+- 实测的机制（不是推断）：`flappy` 的 `gameplay_observables.items` 含 `/root/Main/Pipe`，
+  于是**三根管子的六个矩形每一窗都移动 270 px**，`mv`/`cmv` 里各占约 **2446**；
+  strict 要求 `mv ≥ 2 × cmv`，而一次 flap 在同一窗里的贡献只有 **< 1000**（鸟的 `|Δy|+节点位移
+  +|Δv|`，飞行本身只有约 0.6 s，窗长 90 帧 ≈ 1.5 s）。也就是说：**世界自己的动画量超过了
+  玩家动作能贡献的量**，而它在两个窗口里都存在——差值被消掉，比值消不掉。
+- 选项：
+  1. **如实登记，不改判据也不调参**（选中）：报告写明"Y7 已达成（两窗都在世界运行下成立）"，
+     并给出"仍不 PASS 的确切原因"（TASK-140 §1.B.5 允许的第二种收口）。
+  2. 把 `/root/Main/Pipe` 从 `gameplay_observables` 里删掉 ⇒ **否决**：那正是"为让某款 PASS 而
+     放宽声明"，而且管子滚动是真的世界在动，声明口径（TASK-131 X12）没有错。
+  3. 把 `PipeSpeed` 调慢到 strict 可达（实测需 ≤ ~28 px/s）⇒ **否决**：那是为判据调游戏难度，
+     不是修缺陷；世界会慢到接近静止。
+  4. 把尺子从"比值"改成"差值（`mv - cmv`）"⇒ **否决**：那是改判据（TASK-135/136 的两把尺子
+     在本批一字未动），而且会同时放宽其它 19 款。
+- 最终选择：选项 1。落点：本条目 + 报告 §B.4 + 模板反例 31。
+- 预期影响与回滚点：这是**判据层面的已知边界**（一个"世界自走量 > 玩家动作量"的横版卷轴游戏
+  在 strict 下不可能 PASS），本批只登记不改；若将来要改，必须另开任务并同时重算 20 款。
+
+## D209 — TASK-140 §1.C：报告档位下 6 段（100 run）重跑的读数，以及"w90 的第三次读数与前两次不一致"
+
+- 触发问题：TASK-139 §A.4 用"w30 三轮不一致 + w90 两轮一致"选出了 `reporting_frames=90`。
+  本批要在**同一档**上把重跑做到 ≥2 轮（脚本 20×2、jev 20×2、playjev 10×2），并逐款给出
+  `UNSTABLE` 名单。实测结果**推翻了"这一档可复现"的强读法**。
+- 考虑的选项：把两次重跑写成"w90 可复现"（否决：与实测不符）；把 `reporting_frames` 再调高
+  （否决：没有证据支持更高档，且 90 已是时间预算的上限）；**如实分列
+  `UNSTABLE`（同档两轮）/`SENSITIVE`（两档）/`CROSS-BATCH`（跨批同档）三个概念（选中）**。
+- 最终选择与理由（实测，均有 run 与 sha/字段支撑）：
+  1. **脚本臂两轮完全一致**：`17 PASS / 1 baseline-only / 0 FAIL / 2 INCONCLUSIVE`，`UNSTABLE` **空**
+     —— 这是 TASK-139 "w90 两轮一致"的第二次独立确认（新代码、新工具、新端口）。
+  2. **模型臂有一款 `UNSTABLE`：`asteroids`**（r1 `PASS` ↔ r2 `PASS(baseline only)`）。分歧点被工具
+     点名到 **step 6 的 `changed_strict`**（`pixel_diff` 965 vs 968，**差 3 个像素**）与 step 9–12 的
+     `step_present`（r1 触发耐心提前停止、r2 跑到 12 步；工具把它单列，不混进 `changed`）。
+  3. **跨批不一致（本批最重要的新认识）**：脚本臂 `breakout` 在本批 w90 两轮都读 `INCONCLUSIVE`，
+     而 TASK-139 的 w90 读 `FAIL`；把三次独立完整运行并排交给新 `stability` 子命令，判定
+     **`UNSTABLE`**，分歧点是 **`ack` 丢失**（`no_ack_no_change` vs `ok_ack_and_changed`）。
+     ⇒ `reporting_frames=90` 是**必要**纪律，不是"这一档可复现"的充分保证；
+     `UNSTABLE` 应在**所有可得的同档独立完整运行**上计算（跨批计入）。
+  4. playjev（10 款 ×2）两轮同类、`UNSTABLE` 空；分布 `4/0/1/5`。
+  5. `frogger`/`bomberman` 从 INCONCLUSIVE 变 PASS（脚本臂 15→17）是**修游戏**的结果；
+     `flappy` 仍是 `PASS(baseline only)`（D208 的结构性原因）；`asteroids` 的模型臂类别也从 FAIL
+     变到 PASS/PASS(baseline only)（D207 的重生修复）。
+- 落点：报告 §C（三张逐款两轮表 + 分布）、`runs/model-player/_scripts/t140_stability_*.json`、
+  `t140_unstable_breakout.json`、模板 §1.2d 与反例 32。
+- 预期影响与回滚点：任何引用"某款 PASS"的地方都必须同时给出档位+轮次（本批已把
+  `verdict_context` 写进 `player.json`/`gate.json`/索引）；回滚点是把 `model_player_stability`
+  从声明里拿掉——但那样 `UNSTABLE` 会被当成可计数的 PASS，属于**收紧方向的回滚**，不建议。
