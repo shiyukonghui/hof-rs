@@ -529,22 +529,27 @@ stdout-stderr 落盘路径写进 `runs\model-player\_scripts\t140_command_ledger
 `_scripts\t140_scan_redirects.py`（扫描器，产物 `t140_redirect_scan.json`）。
 
 ```
-COMMANDS SCANNED (this batch): 186   COMMANDS WITH A REDIRECTION HIT: 0
+COMMANDS SCANNED (this batch): 194   COMMANDS WITH A REDIRECTION HIT: 0
 REAL HITS: 0   false positives: 0
-DRIVER SCRIPTS SCANNED: 27   shell=True: 0
-literal redirect tokens: 1376 (python-code:100 csharp-source:969 comment/string:307)
+DRIVER SCRIPTS SCANNED: 29   shell=True: 0
+literal redirect tokens: 1378 (python-code:102 csharp-source:969 comment/string:307)
 cut: first_task140_index=501  this_batch_first_ts=2026-09-28T07:02:21
+ledger lines: 696   this batch's commands from that index: 195（切点探针 t140_cut_probe.py）
 ```
 
-* **本批 186 条命令，含重定向的 0 条**；驱动器脚本 27 个，`shell=True` **0** 处。
+* **本批 194 条命令（被扫时刻；按 `source` 切出 195 条，含扫描器自身），含重定向的 0 条**；
+  驱动器脚本 29 个，`shell=True` **0** 处。
 * 台账切点：`by source = t140-wrapper-call` 的第一条是 **idx=501**（ts `2026-09-28T07:02:21`）；
   之前的 idx 属于 TASK-138/139 的命令。按 `source` 切是**权威**切法
-  （按 `argv` 切会被本批复用 `t139_anchors.py` 干扰，见 `t140_ledger_grep.py`）。
-* 源码里的 1376 个 `>`-类 token 全部是：C# 源码的 `>`/`=>`（969）、注释/文档字符串（307）、
-  以及 **100 条被归到 `code` 的**。这 100 条我**逐条看过**（`_scripts\t140_scan_show.py` 全量打印）：
+  （按 `argv` 切会被本批复用 `t139_anchors.py` 干扰，见 `t140_ledger_grep.py`；
+  `t140_cut_probe.py` 给出的 argv 切点是 idx=506、190 条，**偏少**，故不采用）。
+* 源码里的 1378 个 `>`-类 token 全部是：C# 源码的 `>`/`=>`（969）、注释/文档字符串（307）、
+  以及 **102 条被归到 `code` 的**。这 102 条我**逐条看过**（`_scripts\t140_scan_show.py` 全量打印）：
   全是 `usage: ... -- <py> ...`、`<game>/<backend>` 这类**文档里的尖括号**、`flat >> 4` 位移、
   字符串里写着的 `"PIXEL_DELTA>%d"`/`"content>=%.4f"` 与比较运算符，
   **没有一条是把输出写进文件的 shell 重定向**。
+* 提交与收尾命令（`git add -f` / `git commit -F` / 本报告的收尾提交）同样经 wrapper 入台账，
+  因此台账最后几条在扫描之后；它们按构造不含任何重定向（argv 里只有路径与 `-F` 文件）。
 
 ### I.3 本批的两处台账外例外（如实报）
 
@@ -567,6 +572,43 @@ cut: first_task140_index=501  this_batch_first_ts=2026-09-28T07:02:21
 * `t140_scan_redirects.py` 2 次、`t140_index.py` 2 次、`t140_hash_table.py` 2 次。
 * **端口纪律（铁律 6）**：本批用 9971–9990 的**唯一高位端口**，每个 (臂, 轮次) 一个，
   任何时刻只有**一个** run 在跑（`t140_runall.py` 串行链，六段各自 rc=0）。
+
+---
+
+## J. 提交与仓库状态
+
+### J.1 本批的提交
+
+| 提交 | 内容 | 规模 |
+|---|---|---|
+| **`ac4d554`** | 主批次：判据可靠性（A）+ 4 款修法（B）+ 100 run 重跑与证据（C）+ 记录（D） | **180 files changed, 67265 insertions(+), 57 deletions(-)** |
+
+提交信息全文见 `runs\model-player\_scripts\commit_msg_task140.txt`（`git commit -F`，中文/长文本
+不经 shell 引号）。提交信息与 `DECISIONS.md` 的 **D205–D209**、本报告的 §A–§C 一一对应。
+第二次提交（本报告收尾：把最终重定向自查数字与 §J 写回）见 `git log --oneline -2`。
+
+### J.2 逐文件暂存（铁律 9）
+
+`git add` 的 180 个路径全部**逐个具名**（`git add -f <path> ...` 一次列出 180 个路径，
+或 `$(ls .../t140_*)` 展开成本批自己的 167 个文件），**没有** `git add <目录>`：
+
+* 独占的可提交改动 13 个文件（工具 5、游戏源码 4、`DECISIONS.md`、模板、任务书、报告）；
+* 本批 `runs/model-player/_scripts/t140_*`（167 个：脚本、结果、对照表、逐款 stdout、运行日志）
+  与 `_index/ARTIFACTS-TASK-140.{json,md}`，均以 `git add -f` 入库（`runs/` 被 `.gitignore` 忽略）；
+* **未代提交别人的文件**：`godot-mcp/recovery/reports/ACCEPTANCE-TASK-137.md` 与
+  `godot-mcp/recovery/tasks/TASK-137-ACCEPT.md` 仍是**未跟踪**（它们属于 TASK-137，不在本批清单里）；
+  提交后 `git status --short` 只剩这两条（加上本报告收尾前的那一个改动）。
+
+### J.3 两仓状态
+
+本工作区是**单一仓库**（`git rev-parse --show-toplevel` 在 `F:\moonbit-hof-rs` 与
+`F:\moonbit-hof-rs\godot-mcp` 下同答 `F:/moonbit-hof-rs`；不存在第二个 git 仓库或 submodule），
+因此"两仓状态"= 该仓库工作区状态 + 两个被跟踪域的清单：
+
+* 已跟踪域：`godot-mcp/**`（工具/游戏/恢复文档）与仓库根的 `DECISIONS.md`；
+* 提交后工作区：`M godot-mcp/runs/model-player/_scripts/t140_redirect_scan.json`（扫描器产物，
+  在提交后用最终数字重跑了一次）+ 两个 TASK-137 未跟踪文件；**没有**其它改动；
+* 未初始化/不支持的 git 功能：无（`git log` 正常，`--amend` 未使用）。
 
 ---
 

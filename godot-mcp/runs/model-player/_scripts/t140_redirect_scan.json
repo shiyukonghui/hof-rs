@@ -1,9 +1,9 @@
 {
  "scanner": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t140_scan_redirects.py",
  "ledger": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t136_commands.jsonl",
- "ledger_sha256_at_scan": "4383a9e73c72bf7f25fa5d1d725a0453da8bbc286edb88c1b3e8fec944af22d7",
- "ledger_bytes_at_scan": 246461,
- "ledger_lines_total": 687,
+ "ledger_sha256_at_scan": "67b4f7da138cec0f895a653345731543cca38f36d8532c404e6f178e38610efd",
+ "ledger_bytes_at_scan": 261421,
+ "ledger_lines_total": 695,
  "cut": {
   "first_task140_index": 501,
   "first_task140_entry": {
@@ -30,9 +30,9 @@
   },
   "what": "the first ledger entry that names a `t140_*` script or carries `source == t140-wrapper-call`; this batch's commands are that entry and everything after it"
  },
- "this_batch_commands": 186,
+ "this_batch_commands": 194,
  "this_batch_first_ts": "2026-09-28T07:02:21",
- "this_batch_last_ts": "2026-09-28T09:42:44",
+ "this_batch_last_ts": "2026-09-28T09:49:05",
  "hits": 0,
  "hit_lines": [],
  "false_positives": [],
@@ -90,6 +90,10 @@
    "kind": "python"
   },
   {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t140_hash_table.py",
+   "kind": "python"
+  },
+  {
    "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t140_index.py",
    "kind": "python"
   },
@@ -112,6 +116,10 @@
   {
    "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t140_scan_redirects.py",
    "skipped": "this scanner's own pattern table and shell=True regex"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t140_scan_show.py",
+   "kind": "python"
   },
   {
    "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t140_sha.py",
@@ -7078,6 +7086,13 @@
    "text": "t140_cmd.py --cwd F:\\\\moonbit-hof-rs\\\\godot-mcp -- <py> runs\\\\model-player\\\\_scripts\\\\t140_gateshow.py <gate.json...>"
   },
   {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t140_hash_table.py",
+   "line": 8,
+   "token": ">",
+   "kind": "code",
+   "text": "t140_cmd.py --cwd F:\\\\moonbit-hof-rs\\\\godot-mcp -- <py> runs\\\\model-player\\\\_scripts\\\\t140_hash_table.py"
+  },
+  {
    "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t140_index.py",
    "line": 11,
    "token": ">",
@@ -7139,6 +7154,13 @@
    "token": ">",
    "kind": "code",
    "text": "t140_cmd.py --cwd F:\\\\moonbit-hof-rs\\\\godot-mcp -- <py> runs\\\\model-player\\\\_scripts\\\\t140_runall.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t140_scan_show.py",
+   "line": 5,
+   "token": ">",
+   "kind": "code",
+   "text": "t140_cmd.py --cwd F:\\\\moonbit-hof-rs\\\\godot-mcp -- <py> runs\\\\model-player\\\\_scripts\\\\t140_scan_show.py"
   },
   {
    "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t140_sha.py",
@@ -9909,6 +9931,13 @@
    "text": "t140_cmd.py --cwd F:\\\\moonbit-hof-rs\\\\godot-mcp -- <py> runs\\\\model-player\\\\_scripts\\\\t140_gateshow.py <gate.json...>"
   },
   {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t140_hash_table.py",
+   "line": 8,
+   "token": ">",
+   "kind": "code",
+   "text": "t140_cmd.py --cwd F:\\\\moonbit-hof-rs\\\\godot-mcp -- <py> runs\\\\model-player\\\\_scripts\\\\t140_hash_table.py"
+  },
+  {
    "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t140_index.py",
    "line": 11,
    "token": ">",
@@ -9949,6 +9978,13 @@
    "token": ">",
    "kind": "code",
    "text": "t140_cmd.py --cwd F:\\\\moonbit-hof-rs\\\\godot-mcp -- <py> runs\\\\model-player\\\\_scripts\\\\t140_runall.py"
+  },
+  {
+   "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t140_scan_show.py",
+   "line": 5,
+   "token": ">",
+   "kind": "code",
+   "text": "t140_cmd.py --cwd F:\\\\moonbit-hof-rs\\\\godot-mcp -- <py> runs\\\\model-player\\\\_scripts\\\\t140_scan_show.py"
   },
   {
    "file": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\model-player\\_scripts\\t140_sha.py",
