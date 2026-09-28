@@ -170,70 +170,12 @@ STEP_VERDICT_ACK_MISSING = "INCONCLUSIVE_ack_missing"
 # false), exactly like `WINDOW_TOO_SHORT` and `PASS(baseline only)`.
 WINDOW_REPORTING_FRAMES_FALLBACK = 90
 STEP_VERDICT_BELOW_REPORTING = "BELOW_REPORTING_WINDOW"
-# TASK-140 §1.A.2: the cross-round judgement.  TASK-142 §1.A raised the minimum and added the
-# DISTRIBUTION and the insufficient state: it is computed by aggregating >= `min_rounds`
-# INDEPENDENT complete runs of the same game at the same window; a disagreement in ANY round
-# makes the run's class `UNSTABLE`, and fewer rounds than the minimum is `ROUNDS_INSUFFICIENT`.
-# Neither state can ever be a pass: only a distribution whose EVERY round is a literal `PASS`
-# sets `counts_as_pass`.
+# TASK-140 §1.A.2: the cross-round judgement.  It is computed by aggregating >= 2 INDEPENDENT
+# complete runs of the same game at the same window; a disagreement makes the run's class
+# `UNSTABLE`, which can only ever REMOVE a pass (the `UNSTABLE` state is never a pass).
 STABILITY_STATE_STABLE = "STABLE"
 STABILITY_STATE_UNSTABLE = "UNSTABLE"
-# TASK-142 §1.4: the exact state name for "N < min_rounds".  It is NOT a judgement and NOT a
-# pass.  `INSUFFICIENT_ROUNDS` is TASK-140's old spelling; it is kept only as a legacy alias
-# this tool still READS (an artifact written by the previous revision must not be misread).
-STABILITY_STATE_INSUFFICIENT = "ROUNDS_INSUFFICIENT"
-STABILITY_STATE_INSUFFICIENT_LEGACY = "INSUFFICIENT_ROUNDS"
-# TASK-142 §1.A.1: the BASE rule -- fewer than this many independent complete rounds at one
-# window is `ROUNDS_INSUFFICIENT`.  The DECLARATION (`playability_controls.json ->
-# model_player_stability.min_rounds`) is the source of truth; this constant is only the
-# fallback for a missing/unreadable file, exactly like the window and margin fallbacks above.
-STABILITY_MIN_ROUNDS_FALLBACK = 4
-
-
-def load_stability_declaration(path=None):
-    """`model_player_stability` -- the declared minimum round count and its states.
-
-    TASK-142 §1.A.1: the minimum is DECLARED (not hard-coded) and its basis is MEASURED:
-    TASK-141 §F-2 ran FOUR byte-identical `pong scripted @w90` rounds and read three distinct
-    verdict classes, so two rounds is not a reproducibility guarantee.
-
-    The fallback is the declared number so the tool still behaves correctly on a bare checkout;
-    an unreadable file is a recorded state (`fallback_used`), never an excuse to skip the check.
-    """
-    declared = {}
-    p = path or os.path.join(HERE, "playability_controls.json")
-    try:
-        with io.open(p, encoding="utf-8") as fh:
-            doc = json.load(fh)
-        declared = doc.get("model_player_stability") or {}
-    except Exception:  # noqa: BLE001
-        declared = {}
-    try:
-        min_rounds = int(declared.get("min_rounds", STABILITY_MIN_ROUNDS_FALLBACK))
-    except Exception:  # noqa: BLE001
-        min_rounds = STABILITY_MIN_ROUNDS_FALLBACK
-    return {
-        "min_rounds": min_rounds,
-        "state": declared.get("state", STABILITY_STATE_UNSTABLE),
-        "state_counts_as_pass": False,
-        "insufficient_state": declared.get("insufficient_state",
-                                           STABILITY_STATE_INSUFFICIENT),
-        "insufficient_counts_as_pass": False,
-        "legacy_insufficient_alias": declared.get("legacy_insufficient_alias",
-                                                  STABILITY_STATE_INSUFFICIENT_LEGACY),
-        "distribution_required": bool(declared.get("distribution_required", True)),
-        "declared_by": declared.get("declared_by", "TASK-140 §1.A.2"),
-        "basis": declared.get("basis"),
-        "why_4_not_2": declared.get("why_4_not_2") or [],
-        "comparable_classes": declared.get("comparable_classes") or [],
-        "rule": declared.get("rule"),
-        "source": os.path.abspath(p),
-        "fallback_used": not bool(declared),
-    }
-
-
-STABILITY_DECLARATION = load_stability_declaration()
-STABILITY_MIN_ROUNDS = STABILITY_DECLARATION["min_rounds"]
+STABILITY_MIN_ROUNDS = 2
 
 
 def load_change_margins(path=None):
@@ -1301,10 +1243,6 @@ def verdict_class(verdict):
     v = "%s" % (verdict if verdict is not None else "")
     if v.startswith(STEP_VERDICT_WINDOW_TOO_SHORT):
         return STEP_VERDICT_WINDOW_TOO_SHORT
-    if v == STABILITY_STATE_INSUFFICIENT or v == STABILITY_STATE_INSUFFICIENT_LEGACY:
-        return STABILITY_STATE_INSUFFICIENT
-    if v == STABILITY_STATE_UNSTABLE:
-        return STABILITY_STATE_UNSTABLE
     for prefix in ("MODEL_FIXED_POINT", "MODEL_NO_PROGRESS"):
         if v.startswith(prefix):
             return prefix
@@ -1368,24 +1306,21 @@ def divergence_between(records_a, records_b, limit=40):
 
 
 def stability_summary(runs, min_rounds=STABILITY_MIN_ROUNDS):
-    """TASK-140 §1.A.2 / TASK-142 §1.A: the N-round DISTRIBUTION and its two states.
+    """TASK-140 §1.A.2: `UNSTABLE` -- do >= 2 independent rounds of ONE game agree?
 
     `runs` is a list of run summaries.  Each may carry `verdict_context` (written by
     `summarise`, TASK-140) and/or explicit `round` / `window_frames`; a run may also carry its
     per-step `records` (or a `steps_path`, which is read) so the disagreement can be named to
     the STEP and the CRITERION rather than merely counted.
 
-    The rule, in full (TASK-142 §1.A.2):
-      * fewer than `min_rounds` runs at one window     -> `ROUNDS_INSUFFICIENT`: NOT a judgement;
-      * every round in the same verdict CLASS          -> `STABLE`, with the distribution;
-      * any round in a different class                 -> `UNSTABLE`, with the divergent rounds
+    The rule, in full:
+      * fewer than `min_rounds` runs                -> `INSUFFICIENT_ROUNDS` (no judgement);
+      * every round in the same verdict CLASS       -> `STABLE`;
+      * any round in a different class              -> `UNSTABLE`, with the divergent rounds
         and the per-step divergence points listed.
 
-    `counts_as_pass` is true ONLY for a distribution whose EVERY round is a literal `PASS`;
-    `UNSTABLE`, a stable non-PASS set and `ROUNDS_INSUFFICIENT` can only REMOVE a pass
-    (TASK-140 §2.7, TASK-142 §2.4).  The reported shape is the DISTRIBUTION -- per-round
-    verdict, per-round class, class counts and `all_rounds_agree` -- so a reader never sees a
-    bare `PASS` that came out of a sample (TASK-142 §1.A.3).
+    `counts_as_pass` is true only for a STABLE set whose every round is a literal `PASS`; an
+    `UNSTABLE` set can never pass -- the judgement can only REMOVE a pass (TASK-140 §2.7).
     """
     rounds = []
     for r in runs or []:
@@ -1393,10 +1328,6 @@ def stability_summary(runs, min_rounds=STABILITY_MIN_ROUNDS):
         recs = r.get("records")
         if recs is None and r.get("steps_path") and os.path.isfile(r["steps_path"]):
             recs = load_jsonl(r["steps_path"])
-        # TASK-142 §1.A.4: a round that ALREADY carries a stability state (e.g. an artifact
-        # written by TASK-140's `INSUFFICIENT_ROUNDS`) is read under that state's own class
-        # rather than assumed to be a verdict about the game.
-        prior_state = r.get("stability_state") or ctx.get("stability_state")
         rounds.append({
             "round": r.get("round", ctx.get("round")),
             "window_frames": r.get("window_frames", ctx.get("window_frames")),
@@ -1404,23 +1335,12 @@ def stability_summary(runs, min_rounds=STABILITY_MIN_ROUNDS):
             "verdict": r.get("verdict", ctx.get("verdict")),
             "counts_as_pass": r.get("counts_as_pass", ctx.get("counts_as_pass")),
             "records": recs,
-            "prior_stability_state": prior_state,
             "source": r.get("player_json") or r.get("source"),
         })
     rounds.sort(key=lambda x: (x["round"] is None, x["round"]))
     game = next((x["game"] for x in rounds if x.get("game")), None)
     windows = sorted(set(x["window_frames"] for x in rounds
                          if x.get("window_frames") is not None))
-
-    def _class_of(x):
-        if x.get("prior_stability_state"):
-            return verdict_class(x["prior_stability_state"])
-        return verdict_class(x["verdict"])
-
-    classes = [_class_of(x) for x in rounds]
-    distribution = {}
-    for c in classes:
-        distribution[c] = distribution.get(c, 0) + 1
     out = {
         "state": None,
         "game": game,
@@ -1429,50 +1349,33 @@ def stability_summary(runs, min_rounds=STABILITY_MIN_ROUNDS):
         "round_count": len(rounds),
         "min_rounds": int(min_rounds),
         "verdicts_by_round": dict((str(x["round"]), x["verdict"]) for x in rounds),
-        "classes_by_round": dict((str(x["round"]), _class_of(x))
+        "classes_by_round": dict((str(x["round"]), verdict_class(x["verdict"]))
                                  for x in rounds),
         "qualified_verdicts_by_round": dict(
             (str(x["round"]),
              qualified_verdict(x["verdict"], {"window_frames": x["window_frames"],
                                               "round": x["round"]})) for x in rounds),
-        # TASK-142 §1.A.2: the DISTRIBUTION is the verdict's shape, not a decoration.
-        "distribution": distribution,
-        "distinct_class_count": len(distribution),
-        "all_rounds_agree": (len(distribution) == 1 if rounds else None),
-        "distribution_required": True,
         "counts_as_pass": False,
-        "rule": ("TASK-142 §1.A.2: the same game run at the same window for >= %d independent "
-                 "rounds is UNSTABLE when its verdict CLASS is not identical in every round, "
-                 "and ROUNDS_INSUFFICIENT when fewer than %d rounds were available; only a "
-                 "distribution whose EVERY round is a literal PASS counts as a pass, and an "
-                 "UNSTABLE game is listed with the divergent rounds and the step/criterion "
-                 "they disagree about" % (int(min_rounds), int(min_rounds))),
+        "rule": ("TASK-140 §1.A.2: the same game run at the same window for >= %d independent "
+                 "rounds is UNSTABLE when its verdict CLASS is not identical in every round; "
+                 "an UNSTABLE game is listed with the divergent rounds and the step/criterion "
+                 "they disagree about, and it NEVER counts as a pass" % int(min_rounds)),
         "not_a_loosening": [
             "the judgement can only REMOVE a pass: a stable all-PASS set passes, everything "
             "else fails to count, and an UNSTABLE set is never a pass",
-            "the insufficient state is never a pass either: fewer rounds can only remove a "
-            "pass, never create one",
             "the per-round verdicts are left untouched in their own `player.json`",
             "the class comparison includes `PASS(baseline only)` and `WINDOW_TOO_SHORT ...` "
             "as classes of their own, so a window-vs-window flip is not hidden",
         ],
-        "declaration": {
-            "min_rounds": int(min_rounds),
-            "source": STABILITY_DECLARATION.get("source"),
-            "declared_by": STABILITY_DECLARATION.get("declared_by"),
-            "basis": STABILITY_DECLARATION.get("basis"),
-        },
     }
     if len(rounds) < int(min_rounds):
-        out["state"] = STABILITY_STATE_INSUFFICIENT
-        out["counts_as_pass"] = False
-        out["all_rounds_agree"] = None
+        out["state"] = "INSUFFICIENT_ROUNDS"
         out["why"] = ("only %d round(s) recorded; %d independent complete runs at the same "
-                      "window are required before a stability judgement is made -- this is "
-                      "%s, which is not a judgement and not a pass"
-                      % (len(rounds), int(min_rounds), STABILITY_STATE_INSUFFICIENT))
+                      "window are required before a stability judgement is made"
+                      % (len(rounds), int(min_rounds)))
         return out
-    distinct = sorted(distribution)
+    classes = [verdict_class(x["verdict"]) for x in rounds]
+    distinct = sorted(set(classes))
     out["distinct_classes"] = distinct
     if len(distinct) == 1:
         out["state"] = STABILITY_STATE_STABLE
@@ -1480,8 +1383,7 @@ def stability_summary(runs, min_rounds=STABILITY_MIN_ROUNDS):
         out["divergence_points"] = []
         out["counts_as_pass"] = bool(distinct[0] == "PASS" and
                                      all(x.get("counts_as_pass") for x in rounds))
-        out["why"] = ("all %d round(s) read the same class %r (distribution %s)"
-                      % (len(rounds), distinct[0], distribution))
+        out["why"] = ("all %d round(s) read the same class %r" % (len(rounds), distinct[0]))
         return out
     out["state"] = STABILITY_STATE_UNSTABLE
     out["counts_as_pass"] = False
@@ -1489,16 +1391,15 @@ def stability_summary(runs, min_rounds=STABILITY_MIN_ROUNDS):
     pts = []
     base = rounds[0]
     for other in rounds[1:]:
-        if _class_of(other) == _class_of(base):
+        if verdict_class(other["verdict"]) == verdict_class(base["verdict"]):
             continue
         pts.extend(divergence_between(base.get("records"), other.get("records")))
     out["divergence_points"] = pts
     out["divergence_point_count"] = len(pts)
     out["compared_round_pair"] = [base["round"], [x["round"] for x in rounds[1:]]]
-    out["why"] = ("the %d rounds disagree (distribution %s): %s -- the same game at the same "
-                  "window is not reproducible, so its verdict is %s and cannot count as a pass"
-                  % (len(rounds), distribution,
-                     ", ".join("%s=%s" % (k, v) for k, v in
+    out["why"] = ("the rounds disagree: %s -- the same game at the same window is not "
+                  "reproducible, so its verdict is %s and cannot count as a pass"
+                  % (", ".join("%s=%s" % (k, v) for k, v in
                                sorted(out["classes_by_round"].items())),
                      STABILITY_STATE_UNSTABLE))
     return out
@@ -2333,13 +2234,6 @@ class ScriptedPlayerAgent(object):
         self.calls = []
         self.last_evidence = None
         self._mem = {}
-        # TASK-142 §1.B: the pong policy's state for the "the velocity reading is not
-        # trustworthy" case.  `_prev_pos` is where the ball was last seen; `_serve_seen`
-        # counts how many times this policy has already answered `pong_serve` and
-        # `_serve_actions` is the action sequence it walks after that (see `_pong`).
-        self._prev_pos = {}
-        self._serve_seen = {}
-        self._serve_actions = {}
         self.policy = {
             "pong": self._pong, "snake": self._snake, "tetris": self._tetris,
             "game2048": self._m2048, "puzzlebobble": self._pb,
@@ -2388,19 +2282,6 @@ class ScriptedPlayerAgent(object):
         except (TypeError, ValueError, IndexError):
             return default
 
-    @staticmethod
-    def _pos_of(v):
-        """The first two numbers of a rect/vector, or (None, None) if they are not readable.
-
-        TASK-142 §1.B: the pong policy compares the ball's position between two decisions to
-        decide whether a (0,0) velocity reading describes a really parked ball.  An
-        unreadable position must make the check ABSTAIN, not look like "it did not move".
-        """
-        try:
-            return (round(float(v[0]), 3), round(float(v[1]), 3))
-        except (TypeError, ValueError, IndexError, KeyError):
-            return (None, None)
-
     # -- policies ----------------------------------------------------------
     def _pong(self, v, goal):
         ball = v.get("Ball.pos") or [0, 0, 16, 16]
@@ -2408,64 +2289,9 @@ class ScriptedPlayerAgent(object):
         pl = v.get("PaddleLeft.pos") or [24, 0, 16, 100]
         by = self._f(ball, 1) + self._f(ball, 3, 16) / 2.0
         py = self._f(pl, 1) + self._f(pl, 3, 100) / 2.0
-        pos = self._pos_of(ball)
-        # TASK-142 §1.B: BEFORE this, the two branches below were a DEGENERATE POLICY.
-        # TASK-141 §F-2 measured it: the exported `Ball.Velocity` can read (0,0) at the
-        # sampling instant even while the ball is in flight, and this policy then returned
-        # `pong_serve` for EVERY remaining step.  Two things followed, both measured:
-        #   * the game's own `Serve()` REFUSES a serve while `Velocity != 0` (so the prompt
-        #     was wrong), and
-        #   * the loop's "8 consecutive accepted+changed steps with >1 distinct action"
-        #     early stop could never fire (every step had the SAME action), so the run went
-        #     to 12 steps, only 6 of them injectable (`pong_serve` while parked), and the
-        #     verdict came out `INCONCLUSIVE` for a game the same command had just read
-        #     `PASS` on.  Same bytes, same code, different class.
-        # The fix has two parts, both inside this policy (no game code, no ruler moves):
-        #   1. "the ball looks parked" is only believed when the BALL HAS NOT MOVED since
-        #      the previous decision -- a real parked ball is stationary, a mis-sampled
-        #      velocity with a moving ball is not;
-        #   2. after answering `pong_serve` once, this policy does not answer it again until
-        #      it has seen the ball move (or unless Serve() refused, i.e. the ball is really
-        #      parked), and at most once per step index, so the action sequence cannot
-        #      degenerate to one name.
-        self._mem["pong_serve_attempts"] = int(self._mem.get("pong_serve_attempts", 0))
-        attempts = int(self._mem.get("pong_serve_attempts", 0))
-        if attempts and all(x is not None for x in pos):
-            if self._prev_pos.get("pong") == pos:
-                self._mem["pong_zero_reads_same_pos"] = \
-                    int(self._mem.get("pong_zero_reads_same_pos", 0)) + 1
-        self._prev_pos["pong"] = pos
-        zero = abs(self._f(vel, 0)) < 0.5 and abs(self._f(vel, 1)) < 0.5
-        if zero:
-            self._mem["pong_zero_reads"] = int(self._mem.get("pong_zero_reads", 0)) + 1
-            if attempts == 0:
-                self._mem["pong_serve_attempts"] = attempts + 1
-                return self._act("pong_serve", goal,
-                                 "the ball is parked (Velocity=0,0); a human serves with SPACE")
-            # TASK-142 §1.B: the rotation is BOUNDED BY CONSECUTIVE ZERO-VELOCITY STEPS, not
-            # tied to whether the ball moved.  TASK-141's own measurement is why: one of its
-            # runs served `pong_serve` on SIX consecutive steps.  A "reset when the ball moved"
-            # rule still lets two serves land back to back whenever the ball happens to have
-            # moved between the two samples, so the LOOP the task names survives the fix.
-            # This counter only ever advances while the velocity reading says (0,0).
-            idx = int(self._serve_seen.get("pong", 0))
-            acts = set((goal or {}).get("actions") or {})
-            candidates = self._serve_actions.get("pong")
-            if not candidates:
-                candidates = [a for a in ("pong_left_down", "pong_left_up")
-                              if not acts or a in acts] or ["pong_left_down", "pong_left_up"]
-            # the declared-actions check is re-applied per step: a policy may not emit an
-            # action the game does not declare, and `_act` would turn it into a `wait`.
-            candidate = candidates[idx % len(candidates)]
-            if acts and candidate not in acts:
-                candidate = sorted(acts)[0]
-            self._serve_seen["pong"] = idx + 1
-            return self._act(candidate, goal,
-                             "Velocity reads (0,0) but step %d of a RUN of such readings is "
-                             "already serving (TASK-142 §1.B: %d consecutive zero-velocity "
-                             "steps so far, %d serve answers), so answer %r instead of "
-                             "repeating the serve" % (idx + 1, attempts, idx, candidate))
-        self._serve_seen["pong"] = 0
+        if abs(self._f(vel, 0)) < 0.5 and abs(self._f(vel, 1)) < 0.5:
+            return self._act("pong_serve", goal,
+                             "the ball is parked (Velocity=0,0); a human serves with SPACE")
         if self._f(vel, 0) > 0:
             # the ball is travelling AWAY: re-centre, exactly as a human prepares
             target = 276.0
@@ -5001,21 +4827,17 @@ def main(argv=None):
     rs.add_argument("--root", default=RUNS_PLAYER)
 
     st = sub.add_parser("stability",
-                        help="TASK-142 §1.A: the N>=%d round DISTRIBUTION -- do the rounds of "
-                             "one game at one window agree?" % STABILITY_MIN_ROUNDS)
+                        help="TASK-140 §1.A.2: UNSTABLE -- do >= 2 rounds of one game agree?")
     st.add_argument("--run", action="append", default=[],
                     help="a run's player.json (or its evidence directory); give it once per "
-                         "round.  At least %d independent complete runs at the SAME window are "
-                         "required before a stability judgement is made (fewer is "
-                         "ROUNDS_INSUFFICIENT, which is not a judgement and not a pass)"
-                         % STABILITY_MIN_ROUNDS)
+                         "round.  At least two independent complete runs at the SAME window "
+                         "are required before a stability judgement is made")
     st.add_argument("--min-rounds", type=int, default=STABILITY_MIN_ROUNDS)
     st.add_argument("--out", default="",
                     help="write the judgement here (default: print only)")
     st.add_argument("--require-engine-state", action="store_true",
-                    help="exit 1 when the judgement can NOT count as a pass (UNSTABLE or "
-                         "ROUNDS_INSUFFICIENT) -- for a caller that must not count an unstable "
-                         "or under-sampled game as a pass")
+                    help="exit 1 when the judgement is UNSTABLE (for a caller that must not "
+                         "count an unstable game as a pass)")
 
     f = sub.add_parser("failcase", help="Y5: render the FAIL condition from a run's records")
     f.add_argument("--path", required=True, help="a <game>/<backend> evidence directory")
@@ -5028,14 +4850,11 @@ def main(argv=None):
         return selftest()
     if args.cmd == "stability":
         if len(args.run) < args.min_rounds:
-            log("stability: %d run(s) given; at least %d are required (TASK-142 §1.A.2 -> %s)"
-                % (len(args.run), args.min_rounds, STABILITY_STATE_INSUFFICIENT))
+            log("stability: %d run(s) given; at least %d are required (TASK-140 §1.A.2)"
+                % (len(args.run), args.min_rounds))
         out = stability_from_paths(args.run, min_rounds=args.min_rounds)
-        log("STABILITY %s/%s N=%s %s -> %s (counts_as_pass=%s)"
-            % (out.get("game"), out.get("window_frames"), out.get("round_count"),
-               out.get("distribution") or out.get("state"), out.get("state"),
-               out.get("counts_as_pass")))
-        log("  %s" % out.get("why"))
+        log("STABILITY %s/%s: %s -- %s" % (out.get("game"), out.get("window_frames"),
+                                           out.get("state"), out.get("why")))
         for p in out.get("divergence_points") or []:
             log("  divergence step %s criterion %s: round %s vs round %s"
                 % (p.get("step"), p.get("criterion"), p.get("round_a"), p.get("round_b")))
@@ -5044,8 +4863,7 @@ def main(argv=None):
             log("wrote %s" % os.path.abspath(args.out))
         else:
             log(json.dumps(out, ensure_ascii=False, indent=1))
-        if args.require_engine_state and out.get("state") in (STABILITY_STATE_UNSTABLE,
-                                                              STABILITY_STATE_INSUFFICIENT):
+        if args.require_engine_state and out.get("state") == STABILITY_STATE_UNSTABLE:
             return 1
         return 0
     if args.cmd == "summary":

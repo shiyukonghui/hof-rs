@@ -8064,3 +8064,99 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 - 预期影响与回滚点：任何引用"某款 PASS"的地方都必须同时给出档位+轮次（本批已把
   `verdict_context` 写进 `player.json`/`gate.json`/索引）；回滚点是把 `model_player_stability`
   从声明里拿掉——但那样 `UNSTABLE` 会被当成可计数的 PASS，属于**收紧方向的回滚**，不建议。
+
+## D210 — TASK-142 §1.A：最低轮数 2 → **4**；verdict 以 **N≥4 轮分布**给出；`ROUNDS_INSUFFICIENT` 不进 PASS
+
+- 日期：2026-09-28
+- 触发问题：TASK-141（独立验收，`verdict=pass`）的 **major F-2**：用**逐字相同**的
+  `pong scripted @w90` 命令（脚本臂、报告档位）跑了 **4 轮**，读到 **三个类别** ——
+  `INCONCLUSIVE` / `INCONCLUSIVE` / `PASS` / `PASS(baseline only)`。
+  也就是说 TASK-140 的 `min_rounds: 2` 所认证的"两轮一致"，在同一条命令的下一次运行里就可能
+  自相矛盾；报告 §C.2 把 pong 标成"两轮 PASS/STABLE"**只属于那两次抽样**。
+- 核查事实（逐条可复算）：
+  - TASK-141 §B.1 的 4 次独立运行落点：`runs/accept-141/run_scripted-pong*.out.txt`，
+    r1/r2 = `INCONCLUSIVE`（6/12 可注入步）、r3 = `PASS`（8/8 提前停止）、r4 = `PASS(baseline only)`；
+    端口 9421/9422/9431/9432（唯一高位端口、串行）；
+  - 机制已定位到脚本策略：`Ball.Velocity` 采样为 0 时恒选 `pong_serve`
+    （见 D211），于是"8 步里动作需多于 1 种"的提前停止永不成立、run 走满 12 步、可注入步 6 < 8；
+  - TASK-142 §1.D 在报告档位下按新门槛重跑脚本臂与 jev 臂**各 20 款 × 4 轮**，
+    逐款分布与 `UNSTABLE`/`STABLE`/`ROUNDS_INSUFFICIENT` 判定见 `TASK-142-REPORT.md`。
+- 选项：
+  1. **`min_rounds = 4` + 轮数不足单列 `ROUNDS_INSUFFICIENT` + verdict 以 N 轮分布给出（选中）**：
+     把"样本多大"变成声明，把"判定"从一次 run 的字符串变成分布，工具输出/`player.json`/`gate.json`/
+     模板四处都带「档位 + 轮数 + 分布」。
+  2. 保持 2 轮、只把"两轮一致"的措辞改成"这两轮一致"（否决）：措辞改了，**判据没改**——
+     报告与模板仍会给出一个看起来像类别的字符串，读者仍会把它当结论。
+  3. 把 `min_rounds` 调高到 6 或 8（否决）：没有任何测量支持更高门槛，纯属加预算；
+     4 是 TASK-141 **实际跑过**的轮数，也是让"全体一致"这件事第一次被真正检查过的最小轮数。
+  4. 保留 `INSUFFICIENT_ROUNDS` 旧名（否决）：与 TASK-142 §1.4 的判据名冲突；
+     旧名只作为**读入别名**保留（读旧产物不会误升级成 PASS）。
+- 最终选择：选项 1。落点：
+  - 声明：`tools/playability_controls.json -> model_player_stability`
+    （`min_rounds: 4`、`insufficient_state: ROUNDS_INSUFFICIENT`、`distribution_required: true`、
+    `why_4_not_2`、`basis` = TASK-141 的四轮三类别实测、`not_a_loosening` 五条）；
+  - 实现：`tools/playtest_player.py -> load_stability_declaration`（读声明，模块常量只兜底）+
+    `stability_summary` 输出 `distribution` / `distinct_class_count` / `all_rounds_agree` /
+    `round_count` / `min_rounds`，`verdict_class` 认识两个稳定态名字，CLI `stability`
+    的 `--require-engine-state` 在 `UNSTABLE` 与 `ROUNDS_INSUFFICIENT` 下都退出 1；
+  - 测试：`tools/tests/test_playability_model_player.py -> task142_cases`（**50 条断言**，
+    红/绿证据见 `runs/model-player/_scripts/t142_tdd_red.txt`：同一份 shipped 测试
+    在**冻结的修前代码**上 FAILED（18 条 MISMATCH），在修后代码上 PASSED）。
+- 理由：判据只能**拿掉** PASS —— `UNSTABLE`、稳定的非全 PASS、`ROUNDS_INSUFFICIENT` 三者
+  `counts_as_pass` 都是 false，只有"每一轮都是字面 `PASS`"的 N≥4 分布才算通过；门槛是**向上**抬
+  （2 → 4），两把尺子的公式、`min_frames`、`reporting_frames` 一律未动。
+- 预期影响与回滚点：所有引用 verdict 的地方必须写「档位 + 轮数 + 分布」；
+  **历史产物仍可读**（旧 `INSUFFICIENT_ROUNDS` 是别名，旧 `min_rounds: 2` 的读数不会因此变成 PASS）。
+  回滚点：把 `min_rounds` 设回 2 —— 但那会重新允许"两轮一致"被当结论，属于**放宽**方向的回滚，不建议。
+
+## D211 — TASK-142 §1.B：`--player scripted` 的 pong 策略在速度读数不可靠时**退化**（恒选 `pong_serve`）；修法与同类款普查
+
+- 日期：2026-09-28
+- 触发问题：TASK-141 **major F-2** 的机制根因：`runs/accept-141/indep_cmp_pong.txt` 与
+  `run_scripted-pong*.out.txt` 显示，同一字节相同的命令在不同轮次给出不同类别；
+  TASK-141 把它定位到 `tools/playtest_player.py` 的 `_pong`（旧行 2286–2308）：
+  **`Ball.Velocity` 在采样瞬间读到 (0,0) 时，策略无条件返回 `pong_serve`**。
+- 测量到的事实（不是推断）：
+  1. 游戏自己的 `Serve()` 在 `Velocity != 0` 时**拒绝**服务并打 `PONG_SERVE_REFUSED`
+     （`projects/pong/src/PongGame.cs:231-241`），所以"球还在飞"时这一串 `pong_serve`
+     是**无效动作**：`player.json -> real_progress_step_count` 只有 1–2 步、可注入步 6 < 8；
+  2. 循环的"连续 8 步 accepted+changed 且动作 >1 种"提前停止因此**永不成立**
+     （`playtest_player.py` 的 patience 分支按构造要求 `len(set(actions)) > 1`），run 走满 12 步；
+  3. TASK-142 的修前四轮复现（**冻结的修前代码**，端口 9701–9704，w90）：
+     `r1 = PASS(baseline only)`（12 步、real 9、rate 0.75）、`r2 = PASS`（8 步、real 8）、
+     `r3 = PASS`（8 步、real 8）、`r4 = FAIL`（12 步、real 10、rate 0.8333）——
+     **同一个命令、同一份代码，4 轮读出 3 个类别**（分布 `{PASS(baseline only):1, PASS:2, FAIL:1}`），
+     机制与 TASK-141 的定位一致；逐轮 `pong_serve` 计数 = 6/4/6/6（共 12 步），
+     且 r2 的 **step 5–8 是连续四次 `pong_serve`**（TASK-141 自己那次是连续六次）。
+     修后（同一命令，端口 9711–9714）：**四轮全部 FAIL**（分布 `{FAIL:4}`，STABLE），
+     连续零速步不再重复 serve（动作在 `pong_serve`/`pong_left_down`/`pong_left_up` 之间轮换），
+     每轮 ≥8 个可注入步（11/11/11/11）且动作 >1 种。
+  - **诚实结论（两条分开写）**：修法**修掉了"退化"**（不再有恒选 serve 的连续段），
+    也让**脚本臂的判定变得可复现**（修前 4 轮 3 类 → 修后 4 轮 1 类，`STABLE`）；
+    但**它没有让 pong 通过**（修后是稳定 FAIL，因为它每次都会在"连续两次同一方向键"的
+    重复步上真地没有变化）。**"稳定 FAIL" 与 "稳定 PASS" 都是可复现的读数**，
+    判据没有被放宽，也没有为凑绿改任何门槛。
+- 选项：
+  1. **让策略对"速度读数不可靠"有明确处理（选中）**：①用 `Ball.pos` 的**位置差**判断球是否
+     真的停着（两次决策之间球动过 ⇒ 速度读数不可信，不能当成"停着"）；②`pong_serve`
+     一次决策最多一次、且在声明动作集里**有界轮换**（`pong_left_down`/`pong_left_up`）；
+     ③球真的停着（位置不变）时仍允许重复 serve（此时游戏的拒绝是**真事实**）。
+  2. 把 `pong_serve` 从脚本臂的动作集里去掉（否决）：那是删掉一个**合法的**玩家动作，
+     而且"球停着必须有人发球"这件事就没人做了（run 会退化成 `wait`）。
+  3. 让脚本臂读另一个字段（`BallActive`/`Ticks`）来判断球是否在飞（否决）：
+     读的是"另一个可能同样不可靠的导出量"；位置差用的是**同一份状态**里最不可能骗人的量
+     （球在屏幕上真的动了）。
+  4. 改游戏（例如让 `Velocity` 永不为 0 或被导出得更早）（否决）：这是**只测不改**的款，
+     而且真要改也是游戏侧缺陷，不是测量侧策略缺陷；本批不碰 20 款游戏逻辑。
+- 最终选择：选项 1，全部落在 `tools/playtest_player.py -> ScriptedPlayerAgent._pong`
+  （外加 `self._prev_pos` / `self._serve_seen` / `self._serve_actions` 三个策略内状态与
+  `_pos_of` 辅助）。**只改测量侧**，不碰任何游戏代码、不改两把尺子。
+- 理由：脚本臂测的是**游戏**能不能被玩；策略退化时它测的是**自己**。把"读数不可靠"显式处理，
+  既恢复"动作 >1 种"（提前停止可成立、注入步回到 ≥8），也让 `INCONCLUSIVE` 只在游戏真的
+  不可玩时出现。
+- 预期影响与回滚点：pong 的脚本臂读数会变（本批逐轮给出修前/修后对照）；
+  同类款普查（每个脚本策略对"读数退化"的敏感性）见 `TASK-142-REPORT.md` §B。
+  回滚点：还原 `_pong` 的两个分支即可回到修前行为（冻结副本
+  `tools/playtest_player_t142_prefix.py` 与 `runs/model-player/_scripts/t142_prefix_code/`
+  都保留了修前字节，sha256 见 `_scripts/t142_code_revision.json`）。
+

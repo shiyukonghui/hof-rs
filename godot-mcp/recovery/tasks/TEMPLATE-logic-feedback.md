@@ -169,18 +169,48 @@
    `gate.json -> model_player_criterion.evidence.verdict_context` 读同一份
    （来自 `steps.jsonl` 旁边的 `player.json`）。**没有档位与轮次的 verdict 不作为证据**：
    报告、模板、决策日志里引用任何一款的判定，都必须写出"哪个档、第几轮"。
-3. **`UNSTABLE`**：同一款、同一档、**≥2 轮独立完整运行**，verdict **类别**只要不完全一致
-   ⇒ 标 `UNSTABLE`（`playtest_player.py stability --run <player.json> --run <player.json>`），
-   **列出分歧的轮次与分歧点**（哪一步、哪个判据项：`injected`/`accepted`/`ack_missing`/
-   `changed`/`changed_strict`/`step_verdict`），并且**永不计入 PASS**
-   （只有"每一轮都是字面 `PASS`"才算通过）。不足两轮写 `INSUFFICIENT_ROUNDS`——那不是判断，
-   也不是通过。类别比较包含 `PASS(baseline only)`、`WINDOW_TOO_SHORT ...`、`MODEL_*`，
+3. **`UNSTABLE`**：同一款、同一档、**≥4 轮独立完整运行**（`min_rounds`，见 §1.2e），verdict
+   **类别**只要不完全一致 ⇒ 标 `UNSTABLE`（`playtest_player.py stability --run <player.json>`
+   给四次以上），**列出分歧的轮次与分歧点**（哪一步、哪个判据项：`injected`/`accepted`/
+   `ack_missing`/`changed`/`changed_strict`/`step_verdict`），并且**永不计入 PASS**
+   （只有"每一轮都是字面 `PASS`"才算通过）。**轮数不足写 `ROUNDS_INSUFFICIENT`**——那不是判断，
+   也不是通过（TASK-140 的旧写法是 `INSUFFICIENT_ROUNDS`、旧门槛是 2 轮，TASK-142 §1.A 已改）。
+   类别比较包含 `PASS(baseline only)`、`WINDOW_TOO_SHORT ...`、`MODEL_*`，
    所以"两个字符串不完全相同"这种事**不会**被藏起来。
 4. **两轮一致 ≠ 不敏感**：`UNSTABLE` 是**同一档两轮**的比较；`SENSITIVE` 是**同一轮两档**的比较
    （§A.2 的窗口敏感性矩阵）。两者必须**并列**标出，谁也不能拿来替谁开脱：
    一款可以既 `SENSITIVE` 又 `STABLE`，也可以两轮一致却对窗口敏感。
 5. **不许用"两轮一致"掩盖敏感性，也不许用"敏感性"掩盖抖动**：报告里给**逐款两轮对照表**，
    同时给 `UNSTABLE` 名单与 `SENSITIVE` 名单，并说明每一款的两个读数各自来自哪一轮/哪一档。
+
+### 1.2e `N≥4 轮分布`：**两轮一致**不是可复现性保证；不足轮数是 `ROUNDS_INSUFFICIENT`；脚本策略本身也会退化（TASK-142 §1.A/§1.B）
+
+§1.2d 的 `UNSTABLE` 是对的，但它把门槛定成了 **2 轮**。TASK-141 的独立验收用**逐字相同**的
+`pong scripted @w90` 命令跑了 **4 轮**，读到 **三个类别**：
+`INCONCLUSIVE` / `PASS` / `PASS(baseline only)`（`INCONCLUSIVE` 出现两次）。
+也就是说 2 轮一致的样本，在同一条命令的下一次运行里就可能自相矛盾——**"这两轮一致"不等于
+"这一档可复现"**。因此本系列追加五条硬要求：
+
+1. **声明最低轮数**：`tools/playability_controls.json -> model_player_stability.min_rounds`
+   （本系列 = **4**，依据 = 上面那次四轮三类别实测）。工具从声明里读它（`load_stability_declaration`），
+   模块常量只是兜底。
+2. **被判定的 verdict 必须是 N≥4 轮的分布**，不是一次 run 的字符串：`stability` 输出
+   `verdicts_by_round` / `classes_by_round` / `distribution`（类别计数）/ `all_rounds_agree` /
+   `round_count` / `window_frames` / `qualified_verdicts_by_round`。引用任何一款的判定时，
+   必须同时写出**档位 + 轮数 + 分布**（例如
+   `pong scripted @w90 N=4 {INCONCLUSIVE:2, PASS:1, PASS(baseline only):1} -> UNSTABLE`）。
+3. **`UNSTABLE` 的新语义** = **N≥4 轮中不全体一致**（任何一轮类别不同即触发），
+   列出每轮的类别与分歧步；**只有全体一致的 `PASS` 才 `counts_as_pass=true`**。
+   稳定但非全 PASS（全 FAIL / 全 INCONCLUSIVE）同样 `counts_as_pass=false`。
+4. **不足轮数 ⇒ `ROUNDS_INSUFFICIENT`**：那不是判断，**不进 PASS**，也**不是** PASS 的证据。
+   `--require-engine-state` 在 `UNSTABLE` 与 `ROUNDS_INSUFFICIENT` 两种状态下都退出 1。
+5. **脚本臂的策略也会退化，它退化时测的是策略不是游戏**：TASK-141 把 pong 的四轮三类别定位到
+   `--player scripted` 在 `Ball.Velocity` 采样为 0 时**恒选 `pong_serve`**：于是
+   "8 步里动作需多于 1 种"的提前停止永不成立、run 走满 12 步、可注入步只有 6 < 8 ⇒
+   一个刚被同一命令读成 `PASS` 的局被读成 `INCONCLUSIVE`。修法是让策略对"速度读数不可靠"
+   有明确处理（**按位置差判断球是否真的停着** + 限制重复 serve + 有界轮换动作），
+   并给出修前/修后证据（修前 6 步 / 修后 ≥8 步且动作 >1 种）与"同类款普查"。
+   **这类退化只能说"测量侧缺陷"，不得当作游戏缺陷，也不得因此放宽任何判据。**
 
 ### 1.2b `ack` 缺失 ⇒ 该步 INCONCLUSIVE，**禁止**回退到注入前的读数（TASK-138 defect ⑨）
 
@@ -535,3 +565,19 @@
     `step_verdict: ok_ack_and_changed vs no_ack_no_change`）。修法：`UNSTABLE` 要在**所有可得的
     同档独立完整 run** 上算（跨批也计入），并把"这次两轮一致"写成"这两轮一致"，
     不要写成"这一档可复现"。
+33. **把"两轮一致"当成可复现性保证（门槛定成 2 轮）**（TASK-142 §1.A）⇒ TASK-141 用**逐字相同**的
+    `pong scripted @w90` 跑了 **4 轮**，读到 **三个类别**（`INCONCLUSIVE`/`INCONCLUSIVE`/`PASS`/
+    `PASS(baseline only)`）；2 轮一致在这份数据里只是 6 个轮对中恰好一致的那一对。
+    修法：声明 `min_rounds=4`，verdict 以 **N≥4 轮分布**给出（每轮类别 + 计数 + 一致性），
+    只有**全体一致的 PASS** 才 `counts_as_pass=true`。
+34. **轮数不足却把它当结论**（TASK-142 §1.A.4）⇒ "没跑到 4 轮"不是"这款稳定"，也不是"这款通过"。
+    修法：标 `ROUNDS_INSUFFICIENT`（旧名 `INSUFFICIENT_ROUNDS`），**不进 PASS**，
+    且 `--require-engine-state` 在它与 `UNSTABLE` 下都退出 1。
+35. **脚本臂策略退化被当成游戏缺陷**（TASK-142 §1.B）⇒ `--player scripted` 在 `Ball.Velocity` 采样为 0
+    时**恒选 `pong_serve`**（游戏自己的 `Serve()` 还会拒绝），"8 步 >1 种动作"的提前停止永不成立，
+    可注入步只有 **6 < 8** ⇒ 同一命令刚读成 `PASS` 的款读成 `INCONCLUSIVE`。
+    修法：策略必须对"读数不可靠"有明确处理（按 `Ball.pos` 的**位置差**判断球是否真的停着、
+    限制重复 serve、有界轮换动作），并给修前 6 步 → 修后 ≥8 步且动作 >1 种的证据与同类款普查。
+36. **同一份报告里同一个数字有两个来源**（TASK-142 §1.C）⇒ TASK-140 的报告同时写 `194` 与 `186` 条
+    命令，读者无法判断哪个是权威口径。修法：一个数字只允许**一个来源**（台账/产物路径 + 重算命令），
+    更正走**只增不改**的勘误小节，逐条给"原文 / 更正 / 依据 / 可机检锚点"。

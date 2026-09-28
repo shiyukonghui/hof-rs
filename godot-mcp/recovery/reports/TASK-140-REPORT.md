@@ -6,6 +6,11 @@
 > 铁律 ①：本批**禁止一切 shell 重定向** ⇒ 自查数字见 §I（命令台账 + 扫描器，逐条原文）。
 > 本报告每个数字都能用下文给出的**绝对路径 + sha256**或生成脚本复算；**判据一条没有放宽**。
 > 可提交工件见 §J 的提交号。
+> **勘误（TASK-142 §1.C，只增不改）**：本报告有 6 处数字/描述不自洽或不够精确，
+> 已在**文末**追加 **§K 勘误小节**（原文 / 更正 / 依据 / 可机检锚点逐条给出），
+> 其中最关键的一条是命令条数：本文档正文同时写了 `194` 与 `186`，**权威口径是 194**
+> （见 `runs/model-player/_scripts/t142_redirect_scan.json -> task140_ledger_erratum`）。
+> **本节以前的正文一字未改**——勘误只追加，读者可自行并排比对。
 
 ---
 
@@ -712,4 +717,111 @@ ledger lines: 696   this batch's commands from that index: 195（切点探针 t1
 * 未初始化/不支持的 git 功能：无（`git log` 正常，未使用 `--amend`、未 rebase、未强推）。
 
 ---
+
+## K. 勘误（TASK-142 §1.C —— **只增不改**）
+
+> **本小节是追加的**：上面的正文（§0–§J）**一字未动**，读者可以把每一条的"原文"与"更正"并排比对。
+> 依据来自 `TASK-141` 的独立验收（`recovery/reports/ACCEPTANCE-TASK-141.md` 的 `F-1`–`F-6`）与
+> TASK-142 自己的复算。**每个更正数字只有一个来源**（给出台账/产物路径 + 重算命令），
+> 本批的全部数字集中在 `runs/model-player/_scripts/t142_numbers.json`（重算器
+> `_scripts/t142_numbers.py`）与 `runs/model-player/_scripts/t142_redirect_scan.json`（重算器
+> `_scripts/t142_scan_redirects.py`）。
+
+### K.1 命令条数：**权威口径是 194**（§I 顶部 / §E.Y10 对；§I.3 两处与 §F 表的 186 错）
+
+* **原文**：§I 顶部与 §E.Y10 写"**194** 条命令 / 0 命中"；§I.3 两处（"它们不在 **186** 条台账内"、
+  "所有写盘与所有启动游戏的命令都经 `t140_cmd.py` 入台账（**186** 条）"）与 §F 表
+  （`t140_redirect_scan.json | 186 条命令 / 0 命中`）写 **186**。同一份报告两个数字。
+* **更正**：**一个数字，194**。定义写清"从哪里切、数到哪里"：
+  切点 = 共享台账 `t136_commands.jsonl` 里**第一条** `source == "t140-wrapper-call"`（idx **501**，
+  ts `2026-09-28T07:02:21`）；终点 = **最后一条** `t140_scan_redirects.py` 条目（idx **694**）。
+  `694 − 501 + 1 = 194`。**186 没有对应任何切法**：按 argv 切是 190（TASK-140 自己就否掉了），
+  按"末次扫描之后不再计数"的另一种读法给不出 186。台账在扫描之后又多了 **15** 条收尾命令
+  （`t140_cut_probe.py`、7 条 `git add/commit`、`t140_tests.py`、`t140_reorder_report.py`、
+  `t140_build_info.py` 等），所以"现在"从头到尾数是 **209** —— 194 与 209 的差额就是这 15 条。
+* **依据 / 可机检锚点**：
+  `runs/model-player/_scripts/t142_redirect_scan.json -> task140_ledger_erratum`
+  （`first_task140_index: 501`、`last_scan_entry_index: 694`、
+  `authoritative_count_at_last_scan: 194`、`authoritative_scan_at_last_scan.redirect_hits: 0`、
+  `count_now: 209`、`after_scan_count: 15`，且 `commands_after_the_last_scan` 逐条列出那 15 条）。
+  重算命令（无 shell 重定向）：
+  `D:\Anaconda\python.exe runs\model-player\_scripts\t142_cmd.py --cwd F:\moonbit-hof-rs\godot-mcp -- D:\Anaconda\python.exe runs\model-player\_scripts\t142_scan_redirects.py`
+* **§I.3 的两处台账外例外本身不变**（预台账 ~39 条只读侦察、1 条直接正则改写 `Ready→BirdReady`）；
+  变的只是那个总数。
+
+### K.2 `task140_cases` 的分段断言数：**unstable 段是 16 条，不是 22 条**
+
+* **原文**：§A.1 写"reporting 段 **14 条**"（对）；§A.2 写"`task140_cases` 的 unstable 段 **22 条**"，
+  且 §A.2 与 `DECISIONS.md` D205/D206 把这句当作断言清单的依据。
+* **更正**：分段是
+  **5 / 9 / 5 / 16 / 6 = 41 条**（声明 / 低于报告档 / 档位+轮次 / `UNSTABLE` / gate 侧）。
+  `reporting` 段 = 5 + 9 = **14 条**（原文这一条是对的）；`unstable` 段 = **16 条**；
+  `task140_cases` 总数 = **41 条**（TASK-140 自己写的 41 总数也是对的）。**"22"不对应任何分段**。
+  TASK-142 在 unstable 段按 §1.A 追加了 4 条 N≥4 断言后，该段是 **20 条**、`task140_cases` 是 **45 条**；
+  新增的 `task142_cases` 是 **50 条**（运行时计数；按行计 `check(` 是 43 条，差额是跨行调用）。
+* **依据 / 可机检锚点**：
+  `runs/model-player/_scripts/t142_numbers.json -> assertions`
+  （`task140_reporting_segment_1A1: 14`、`task140_unstable_segment_1A2: 16`、
+  `task140_cases_total: 41` 的**当时**读法见 TASK-141 报告；本批复算是 45/20）。
+  重算命令：`... \t142_cmd.py -- <py> runs\model-player\_scripts\t142_numbers.py`
+* **同时更正 §A.2 引用的 `INSUFFICIENT_ROUNDS`**：TASK-142 §1.A 把它改名成
+  **`ROUNDS_INSUFFICIENT`**，门槛 2 → **4**（见 TASK-142 §1.C 与 `DECISIONS.md` D210）。
+
+### K.3 `refusal_evidence`：**6 款**已声明（任务书口径的 5 款是过去时）
+
+* **原文**：§0/§A/§D 沿用"`refusal_evidence` **5 款**"的口径。
+* **更正**：**6 款** —— `bomberman` / `match3` / `minesweeper` / `pacman` / `sokoban` /
+  `towerdefense`（字段共 6 个：`RejectedMoves`、`RejectedPlaces`、`InputRejectedSwaps`、
+  `InputRejectedCursorActions`、`RejectedSteps`、`InputRejectedPlaces`）。
+  多出的一款是 `towerdefense[InputRejectedPlaces]`；`bomberman` 的 `RejectedPlaces` 是本批新增。
+  **这不放松判据**：多声明一款只会让 carve-out 更严格（TASK-141 §A.5 独立复核过）。
+* **依据 / 可机检锚点**：`runs/model-player/_scripts/t142_numbers.json -> refusal_evidence`
+  （`game_count: 6`、`games: [...]`、`fields_by_game`、`total_fields`）。
+  重算命令：`t142_numbers.py`。
+
+### K.4 §C.7 两处描述与图不符：**逐条更正 + 可机检锚点**
+
+TASK-141 §F-5 点名的两处，TASK-142 用像素测量重算（重算器
+`_scripts/t142_anchors.py`，产物 `_scripts/t142_anchors.json`）：
+
+| # | §C.7 原文 | 更正 | 可机检锚点（重算值） |
+|---|---|---|---|
+| (a) | 第 2 行："青蛙**上移一格**（**y≈536**）" | **位置本身正确**，只是原文**没给可机检锚点**：像素测量给出青蛙的 bbox 与游戏自己导出的 `FrogY`/`Frog.pos` **完全吻合** | 帧 `runs/model-player/t140-postfix4-w90-r2/frogger/scripted/frames/004_01_after.png`（sha256 `fa3cc225e8b609e87…`，800×600，11329 B）；青蛙亮绿 blob bbox **[388,524,411,547]**（24×24，576 px，色 `[89,242,89]`）；同一步 `FrogRow 14→13`、**`FrogY 572.0→536.0`**、**`Frog.pos [388,560,24,24]→[388,524,24,24]`**（`t140-postfix4-w90-r2/frogger/scripted/steps.jsonl` step 1）。⇒ 中心 y = **536.0**，与原文 `y≈536` 一致；bbox 跨度 524–547 也解释了"≈530–538"这类肉眼读数。 |
+| (b) | 第 6 行："**三组**管子分布在不同位置" | **更正为"屏内 3 列完整管柱（另有第 4 列在右缘被裁）"**：像素测量给出 3 条完整绿色柱（centres 61.5 / 361.5 / 661.5，各约 272–310 px 高），另有 x≈695 处的右缘残柱；底部满宽绿带是地面（rows 516–599），不是管柱 | 帧 `runs/model-player/t140-postfix4-w90-r2/flappy/scripted/frames/002_01_before.png`（sha256 `9082895f8df88d99…`，800×600，8643 B）；`t142_anchors.json -> flappy_post.pipe_columns`（`count: 3`、`columns: [[27,96],[327,396],[627,696]]`、`ground_band_rows: [516,599]`）。**TASK-141 当时读到"4 列"**：4 是"3 个完整列 + 1 个右缘残柱"的总数读法，两者指的同一张图，差别在"整列 vs 含残柱"。本条目不替任何一方下结论，只把**可机检的数字**写下来供复核。 |
+
+* 两处都**不影响** §C.7 的结论（该表用 sha256 锚定，行文与图的方向都正确）；修的是**描述精度**。
+
+### K.5 报告正文缺的聚合：**两窗相等步数与差值分布**
+
+* **原文**：模板 §1.2 要求报告给"**相等步数与差值分布**"；TASK-140 只给了机制说明与单测引用
+  （TASK-141 §F-6 复核：正文里 `matched` / `residual` **0 命中**）。
+* **更正**：补上聚合，并给**口径**与**自己的重算**：
+  * **口径**：每一步的"对照窗实际达成帧数"与"动作窗实际达成帧数"，取该步自己的
+    `steps.jsonl -> control_diff.frame_budget.achieved_delta` 与
+    `steps.jsonl -> frame_budget.achieved_delta`，差值 `Δ = action − control`；
+  * **TASK-141 的重算（须引用其报告）**：6 个前缀 / **1053 步**，`matched = 564`（**53.6%**），
+    残差直方图 `{0:564, +1:379, +2:105, +3:4, +23:1}`，**`max|Δ| = 23`**（唯一的大偏差那一步
+    `t140-scripted-w90-r2/sokoban step 5`，control 91 / action 114，判"未变化"= **反向**，不构成虚高）；
+  * **TASK-142 自己的重算**：见 §K.6 与 TASK-142 报告 —— 本批在**报告档位 w90** 下按新门槛重跑，
+    聚合数字由 `runs/model-player/_scripts/t142_frame_alignment.json` 给出（同一口径、同一字段）。
+* **依据 / 可机检锚点**：`runs/model-player/_scripts/t142_frame_alignment.json`
+  （`steps` / `matched` / `matched_pct` / `residual_histogram` / `max_abs_delta` / `worst_10`）。
+  重算命令：`t142_analyse.py`（读取每个 run 的 `steps.jsonl`，不读任何批次汇总文件）。
+
+### K.6 本批（TASK-142）数字的自洽约定
+
+从本勘误小节起，**同一个数字只允许一个来源**：
+
+| 数字 | 唯一来源（产物路径） | 重算命令 |
+|---|---|---|
+| 命令条数（本批） | `runs/model-player/_scripts/t142_commands.jsonl` + `t142_redirect_scan.json -> this_batch` | `t142_scan_redirects.py` |
+| TASK-140 的 194 | `t142_redirect_scan.json -> task140_ledger_erratum` | `t142_scan_redirects.py` |
+| 断言条数 | `t142_numbers.json -> assertions` | `t142_numbers.py` |
+| `refusal_evidence` 款数 | `t142_numbers.json -> refusal_evidence` | `t142_numbers.py` |
+| 两窗差值分布 | `t142_frame_alignment.json` | `t142_analyse.py` |
+| §C.7 两处锚点 | `t142_anchors.json` | `t142_anchors.py` |
+| 逐款 N 轮分布 | `t142_stability_<arm>.json` / `.md` | `t142_analyse.py` |
+
+（本报告 §K 里出现的 194 / 209 / 15 / 41 / 45 / 50 / 16 / 14 / 6 这组数字，全部来自上表两个文件的
+同一次运行；它们**不引用** TASK-140 正文任何自报数字。）
 

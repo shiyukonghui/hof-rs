@@ -31,6 +31,7 @@ No engine, no service, no network, no file writes.  Run:
 """
 from __future__ import print_function
 
+import json
 import os
 import sys
 
@@ -41,10 +42,12 @@ sys.path.insert(0, TOOLS)
 from playability_gate import evaluate_model_player_steps  # noqa: E402
 from playtest_agent import action_criteria  # noqa: E402
 from playtest_player import (  # noqa: E402
-    STABILITY_STATE_UNSTABLE, WINDOW_REPORTING_FRAMES, change_margin_edge_steps, changed_of,
-    decide_changed, divergence_between, load_change_margins, load_refusal_boundary,
-    load_window_declaration, model_fixed_point, model_no_progress, qualified_verdict,
-    stability_summary, step_refusal_record, summarise, verdict_class, window_frames_of,
+    STABILITY_MIN_ROUNDS, STABILITY_STATE_UNSTABLE, WINDOW_REPORTING_FRAMES,
+    ScriptedPlayerAgent, change_margin_edge_steps, changed_of, decide_changed,
+    divergence_between, load_change_margins, load_refusal_boundary,
+    load_stability_declaration, load_window_declaration, model_fixed_point,
+    model_no_progress, qualified_verdict, stability_summary, step_refusal_record,
+    summarise, verdict_class, window_frames_of,
 )
 
 
@@ -696,6 +699,12 @@ def _windowed_run(n=8, frames=30, changed=True, action="act"):
     return recs
 
 
+def four_rounds(verdict, counts_as_pass=False, window_frames=90, game="pong"):
+    """TASK-142 §1.A.2: the minimum judgement is now N >= 4 identical-window rounds."""
+    return [{"verdict": verdict, "counts_as_pass": counts_as_pass, "round": i,
+             "window_frames": window_frames, "game": game} for i in range(1, 5)]
+
+
 def task140_cases():
     """TASK-140 §1.A: the reporting window, the window+round attribution, and UNSTABLE."""
     cases = []
@@ -750,40 +759,56 @@ def task140_cases():
     check("attribution: the label is a pure function of (verdict, context)",
           qualified_verdict("FAIL", {"window_frames": 90, "round": 2}), "FAIL @w90 r2")
 
-    # ---- §1.A.2: UNSTABLE is computed from >= 2 INDEPENDENT rounds ------------------------
+    # ---- §1.A.2: UNSTABLE is computed from >= min_rounds INDEPENDENT rounds ----------------
+    # TASK-142 §1.A.2: the minimum is DECLARED (>= 4) because TASK-141 measured three distinct
+    # verdict classes in four byte-identical rounds of one game at the reporting window.
     check("unstable: fewer rounds than the minimum is NOT a judgement",
           stability_summary([{"verdict": "PASS", "round": 1, "window_frames": 90}])["state"],
-          "INSUFFICIENT_ROUNDS")
-    same = stability_summary([
-        {"verdict": "PASS", "counts_as_pass": True, "round": 1, "window_frames": 90,
-         "game": "pong"},
-        {"verdict": "PASS", "counts_as_pass": True, "round": 2, "window_frames": 90,
-         "game": "pong"}])
-    check("unstable: two identical rounds are STABLE", same["state"], "STABLE")
-    check("unstable: ... and a stable all-PASS pair counts as a pass",
+          "ROUNDS_INSUFFICIENT")
+    check("unstable: ... and an insufficient set is not a pass either",
+          stability_summary([{"verdict": "PASS", "counts_as_pass": True, "round": 1,
+                              "window_frames": 90}])["counts_as_pass"], False)
+    check("unstable: ... the minimum is reported with the judgement",
+          stability_summary([{"verdict": "PASS", "round": 1, "window_frames": 90}])["min_rounds"],
+          STABILITY_MIN_ROUNDS)
+    check("unstable: the minimum is 4 or more independent rounds",
+          STABILITY_MIN_ROUNDS >= 4, True)
+    # TASK-142 §1.A.2: the defect TASK-141 found -- two rounds agreeing is NOT enough.
+    check("unstable: two agreeing rounds are NOT a verdict (the batch needs >= 4)",
+          stability_summary([
+              {"verdict": "PASS", "counts_as_pass": True, "round": 1, "window_frames": 90},
+              {"verdict": "PASS", "counts_as_pass": True, "round": 2, "window_frames": 90}
+          ])["state"], "ROUNDS_INSUFFICIENT")
+    same = stability_summary(four_rounds("PASS", counts_as_pass=True))
+    check("unstable: four identical rounds are STABLE", same["state"], "STABLE")
+    check("unstable: ... and a stable all-PASS set counts as a pass",
           same["counts_as_pass"], True)
     check("unstable: ... the per-round labels are kept",
-          same["qualified_verdicts_by_round"], {"1": "PASS @w90 r1", "2": "PASS @w90 r2"})
+          same["qualified_verdicts_by_round"],
+          {"1": "PASS @w90 r1", "2": "PASS @w90 r2", "3": "PASS @w90 r3", "4": "PASS @w90 r4"})
 
     diff = stability_summary([
         {"verdict": "PASS", "counts_as_pass": True, "round": 1, "window_frames": 90,
          "game": "pong", "records": _windowed_run(8, frames=90)},
-        {"verdict": "FAIL", "counts_as_pass": False, "round": 2, "window_frames": 90,
+        {"verdict": "PASS", "counts_as_pass": True, "round": 2, "window_frames": 90,
+         "game": "pong", "records": _windowed_run(8, frames=90)},
+        {"verdict": "PASS", "counts_as_pass": True, "round": 3, "window_frames": 90,
+         "game": "pong", "records": _windowed_run(8, frames=90)},
+        {"verdict": "FAIL", "counts_as_pass": False, "round": 4, "window_frames": 90,
          "game": "pong", "records": _windowed_run(8, frames=90, changed=False)}])
-    check("unstable: two rounds that disagree are UNSTABLE", diff["state"],
+    check("unstable: four rounds that disagree are UNSTABLE", diff["state"],
           STABILITY_STATE_UNSTABLE)
     check("unstable: ... and it does NOT count as a pass", diff["counts_as_pass"], False)
-    check("unstable: ... both divergent rounds are listed", diff["divergent_rounds"], [1, 2])
+    check("unstable: ... every round is listed as a divergent round",
+          diff["divergent_rounds"], [1, 2, 3, 4])
     check("unstable: ... the classes are named", diff["distinct_classes"], ["FAIL", "PASS"])
     check("unstable: ... the disagreement is named to the STEP and the CRITERION",
           sorted(set((p["step"], p["criterion"]) for p in diff["divergence_points"]))[:3],
           [(1, "changed"), (1, "step_verdict"), (2, "changed")])
 
-    # A stable pair may still contain a non-pass: only an all-PASS pair passes.
-    mixed = stability_summary([
-        {"verdict": "FAIL", "counts_as_pass": False, "round": 1, "window_frames": 90},
-        {"verdict": "FAIL", "counts_as_pass": False, "round": 2, "window_frames": 90}])
-    check("unstable: a stable all-FAIL pair is STABLE", mixed["state"], "STABLE")
+    # A stable set may still contain a non-pass: only an all-PASS set passes.
+    mixed = stability_summary(four_rounds("FAIL", counts_as_pass=False))
+    check("unstable: a stable all-FAIL set is STABLE", mixed["state"], "STABLE")
     check("unstable: ... and does not count as a pass", mixed["counts_as_pass"], False)
 
     # TASK-136 made `PASS` and `PASS(baseline only)` different readings; a round-to-round
@@ -791,20 +816,26 @@ def task140_cases():
     check("unstable: PASS vs PASS(baseline only) IS a disagreement",
           stability_summary([
               {"verdict": "PASS", "counts_as_pass": True, "round": 1, "window_frames": 90},
-              {"verdict": "PASS(baseline only)", "counts_as_pass": False, "round": 2,
+              {"verdict": "PASS", "counts_as_pass": True, "round": 2, "window_frames": 90},
+              {"verdict": "PASS", "counts_as_pass": True, "round": 3, "window_frames": 90},
+              {"verdict": "PASS(baseline only)", "counts_as_pass": False, "round": 4,
                "window_frames": 90}])["state"], STABILITY_STATE_UNSTABLE)
     # ... and a window flip (TASK-139's `WINDOW_TOO_SHORT`) is one too, not a pass.
     check("unstable: WINDOW_TOO_SHORT vs PASS IS a disagreement",
           stability_summary([
               {"verdict": "PASS", "counts_as_pass": True, "round": 1, "window_frames": 90},
-              {"verdict": "WINDOW_TOO_SHORT PASS", "counts_as_pass": False, "round": 2,
+              {"verdict": "PASS", "counts_as_pass": True, "round": 2, "window_frames": 90},
+              {"verdict": "PASS", "counts_as_pass": True, "round": 3, "window_frames": 90},
+              {"verdict": "WINDOW_TOO_SHORT PASS", "counts_as_pass": False, "round": 4,
                "window_frames": 90}])["state"], STABILITY_STATE_UNSTABLE)
     check("unstable: MODEL_NO_PROGRESS is its own class",
           verdict_class("MODEL_NO_PROGRESS"), "MODEL_NO_PROGRESS")
     check("unstable: an UNSTABLE set is never a pass even if a round was a PASS",
           stability_summary([
               {"verdict": "PASS", "counts_as_pass": True, "round": 1, "window_frames": 90},
-              {"verdict": "INCONCLUSIVE", "counts_as_pass": False, "round": 2,
+              {"verdict": "PASS", "counts_as_pass": True, "round": 2, "window_frames": 90},
+              {"verdict": "PASS", "counts_as_pass": True, "round": 3, "window_frames": 90},
+              {"verdict": "INCONCLUSIVE", "counts_as_pass": False, "round": 4,
                "window_frames": 90}])["counts_as_pass"], False)
 
     # the divergence helper reads the recorded per-step criteria, and pixel counts are
@@ -845,8 +876,215 @@ def task140_cases():
     return 0 if ok else 1
 
 
+def _pong_state(ball_y, vel=(0, 0), paddle_y=250.0):
+    """A pong state whose exported `Ball.Velocity` reads (0,0) while the ball is elsewhere."""
+    return {"Ball.pos": [392.0, ball_y, 16, 16],
+            "Ball.Velocity": [vel[0], vel[1]],
+            "PaddleLeft.pos": [24.0, paddle_y, 16, 100]}
+
+
+def _pong_goal():
+    return {"actions": {"pong_serve": {}, "pong_left_up": {}, "pong_left_down": {},
+                        "pong_right_up": {}, "pong_right_down": {}}}
+
+
+def _pong_action(agent, state):
+    return (agent._pong(state, _pong_goal()) or {}).get("action")
+
+
+def _pong_live(agent, n, step=40.0, y0=120.0):
+    """`n` decisions on a LIVE ball whose velocity field keeps reading (0,0).
+
+    TASK-141's mechanism in one helper: the ball's position changes (it is flying) while the
+    exported `Ball.Velocity` reads (0,0) at every sample.
+    """
+    return [_pong_action(agent, _pong_state(y0 + step * i)) for i in range(n)]
+
+
+def _pong_served(agent, n, y0=114.0):
+    """`n` decisions on a ball that is REALLY parked: `Serve()` gives it speed, so the reading
+    is (0,0) at the first decision and non-zero at every later one."""
+    first = _pong_action(agent, _pong_state(y0))
+    rest = [_pong_action(agent, _pong_state(y0 + 60.0 * i, vel=(280.0, 180.0)))
+            for i in range(1, n)]
+    return [first] + rest
+
+
+def task142_cases():
+    """TASK-142 §1.A / §Z1-Z2: the N>=4 round DISTRIBUTION and its two states.
+
+    TASK-141 measured the defect this section exists for: FOUR byte-identical rounds of
+    `pong scripted @w90` produced THREE distinct verdict classes, so "two rounds agreed" was
+    never a reproducibility guarantee.  The minimum is now declared at 4, an insufficient set
+    is its own state that is NOT a judgement, and only an all-PASS N>=4 distribution counts.
+    """
+    cases = []
+
+    def check(name, got, want):
+        cases.append((got == want, name, "got=%r want=%r" % (got, want)))
+
+    # ---- §1.A.1: the minimum is DECLARED, with its basis ----------------------------------
+    dec = load_stability_declaration()
+    check("stability: a minimum round count is declared",
+          isinstance(dec.get("min_rounds"), int), True)
+    check("stability: the minimum is at least 4 (TASK-141's four-round measurement)",
+          dec["min_rounds"] >= 4, True)
+    check("stability: the declaration carries its own basis (measured, not guessed)",
+          bool(dec.get("basis")), True)
+    check("stability: the declaration names who declared it", bool(dec.get("declared_by")), True)
+    check("stability: the module constant is the declared number",
+          STABILITY_MIN_ROUNDS, dec["min_rounds"])
+    check("stability: the insufficient state is named as the task requires",
+          dec.get("insufficient_state"), "ROUNDS_INSUFFICIENT")
+    check("stability: neither state can count as a pass",
+          (dec.get("state_counts_as_pass"), dec.get("insufficient_counts_as_pass")),
+          (False, False))
+    check("stability: the declaration says 4 rounds, not 2",
+          "4" in json.dumps(dec.get("basis", "")) or dec["min_rounds"] >= 4, True)
+
+    # ---- §1.A.2 / §1.A.4: N < min_rounds is ROUNDS_INSUFFICIENT, and it is NOT a pass ------
+    for n in (1, 2, 3):
+        ins = stability_summary(four_rounds("PASS", counts_as_pass=True)[:n])
+        check("stability: %d rounds is ROUNDS_INSUFFICIENT (not a judgement)" % n,
+              ins["state"], "ROUNDS_INSUFFICIENT")
+        check("stability: ... %d rounds does NOT count as a pass" % n,
+              ins["counts_as_pass"], False)
+        check("stability: ... %d rounds reports the minimum it needed" % n,
+              ins["min_rounds"], STABILITY_MIN_ROUNDS)
+        check("stability: ... %d rounds reports how many it got" % n,
+              ins["round_count"], n)
+    check("stability: the insufficient state never becomes a PASS even for all-PASS rounds",
+          stability_summary(four_rounds("PASS", counts_as_pass=True)[:2])["state"],
+          "ROUNDS_INSUFFICIENT")
+
+    # ---- §1.A.2: N >= 4, all identical -----------------------------------------------------
+    stable = stability_summary(four_rounds("PASS", counts_as_pass=True))
+    check("stability: four identical PASS rounds are STABLE", stable["state"], "STABLE")
+    check("stability: ... and the all-PASS distribution counts as a pass",
+          stable["counts_as_pass"], True)
+    check("stability: ... the round count is reported", stable["round_count"], 4)
+    check("stability: ... the per-round verdicts are reported",
+          stable["verdicts_by_round"],
+          {"1": "PASS", "2": "PASS", "3": "PASS", "4": "PASS"})
+    check("stability: ... the DISTRIBUTION is reported",
+          stable["distribution"], {"PASS": 4})
+    check("stability: ... the consistency flag is reported", stable["all_rounds_agree"], True)
+    check("stability: ... the classes by round are reported",
+          stable["classes_by_round"],
+          {"1": "PASS", "2": "PASS", "3": "PASS", "4": "PASS"})
+    check("stability: four identical FAIL rounds are STABLE but never a pass",
+          (stability_summary(four_rounds("FAIL"))["state"],
+           stability_summary(four_rounds("FAIL"))["counts_as_pass"]), ("STABLE", False))
+    check("stability: four INCONCLUSIVE rounds are STABLE but never a pass",
+          (stability_summary(four_rounds("INCONCLUSIVE"))["state"],
+           stability_summary(four_rounds("INCONCLUSIVE"))["counts_as_pass"]),
+          ("STABLE", False))
+
+    # ---- §1.A.2: N >= 4, ANY disagreement is UNSTABLE --------------------------------------
+    # TASK-141's measured shape: INCONCLUSIVE / PASS / PASS(baseline only) in four rounds.
+    t141 = stability_summary([
+        {"verdict": "INCONCLUSIVE", "counts_as_pass": False, "round": 1,
+         "window_frames": 90, "game": "pong"},
+        {"verdict": "INCONCLUSIVE", "counts_as_pass": False, "round": 2,
+         "window_frames": 90, "game": "pong"},
+        {"verdict": "PASS", "counts_as_pass": True, "round": 3,
+         "window_frames": 90, "game": "pong"},
+        {"verdict": "PASS(baseline only)", "counts_as_pass": False, "round": 4,
+         "window_frames": 90, "game": "pong"}])
+    check("stability: TASK-141's four-round shape is UNSTABLE", t141["state"],
+          STABILITY_STATE_UNSTABLE)
+    check("stability: ... and it does NOT count as a pass", t141["counts_as_pass"], False)
+    check("stability: ... the DISTRIBUTION names all three classes",
+          t141["distribution"],
+          {"INCONCLUSIVE": 2, "PASS": 1, "PASS(baseline only)": 1})
+    check("stability: ... the consistency flag is false", t141["all_rounds_agree"], False)
+    check("stability: ... the divergent rounds are listed", t141["divergent_rounds"], [1, 2, 3, 4])
+    check("stability: ... the classes by round are listed",
+          t141["classes_by_round"],
+          {"1": "INCONCLUSIVE", "2": "INCONCLUSIVE", "3": "PASS", "4": "PASS(baseline only)"})
+    # The divergence POINTS name step + criterion when the rounds carry their per-step records.
+    pts = stability_summary([
+        {"verdict": "PASS", "counts_as_pass": True, "round": 1, "window_frames": 90,
+         "game": "pong", "records": _windowed_run(8, frames=90)},
+        {"verdict": "PASS", "counts_as_pass": True, "round": 2, "window_frames": 90,
+         "game": "pong", "records": _windowed_run(8, frames=90)},
+        {"verdict": "PASS", "counts_as_pass": True, "round": 3, "window_frames": 90,
+         "game": "pong", "records": _windowed_run(8, frames=90)},
+        {"verdict": "FAIL", "counts_as_pass": False, "round": 4, "window_frames": 90,
+         "game": "pong", "records": _windowed_run(8, frames=90, changed=False)}])
+    check("stability: the four-round divergence names the step and the criterion",
+          sorted(set((p["step"], p["criterion"]) for p in pts["divergence_points"]))[:2],
+          [(1, "changed"), (1, "step_verdict")])
+
+    # ---- §1.A.3: every reported judgement carries window + round count + distribution -------
+    check("stability: the judgement carries the window it was measured at",
+          stable["window_frames"], 90)
+    check("stability: the judgement carries the round LABELS",
+          stable["rounds"], [1, 2, 3, 4])
+    check("stability: the judgement carries the qualified per-round labels",
+          stable["qualified_verdicts_by_round"]["4"], "PASS @w90 r4")
+    check("stability: UNSTABLE can only REMOVE a pass (never create one)",
+          stability_summary([
+              {"verdict": "FAIL", "counts_as_pass": False, "round": 1, "window_frames": 90},
+              {"verdict": "PASS", "counts_as_pass": True, "round": 2, "window_frames": 90},
+              {"verdict": "FAIL", "counts_as_pass": False, "round": 3, "window_frames": 90},
+              {"verdict": "INCONCLUSIVE", "counts_as_pass": False, "round": 4,
+               "window_frames": 90}])["counts_as_pass"], False)
+    check("stability: a legacy 'INSUFFICIENT_ROUNDS' input is still read as insufficient",
+          stability_summary([
+              {"verdict": "PASS", "counts_as_pass": True, "round": 1, "window_frames": 90,
+               "stability_state": "INSUFFICIENT_ROUNDS"}])["state"], "ROUNDS_INSUFFICIENT")
+
+    # ---- §1.B: the scripted pong policy must not degenerate to ONE action ------------------
+    # TASK-141 §F-2's mechanism: `Ball.Velocity` reads (0,0) while the ball is LIVE, and the
+    # old policy then answered `pong_serve` on every remaining step (one of its recorded runs
+    # served on SIX consecutive steps).  Two effects measured: the game's own `Serve()` refuses
+    # a serve on a moving ball, and the loop's "8 consecutive accepted+changed steps with > 1
+    # distinct action" early stop is fed a constant action name.
+    agent = ScriptedPlayerAgent("pong")
+    live = _pong_live(agent, 12)
+    check("pong policy: a live ball with a (0,0) velocity reading is NOT served every step",
+          live.count("pong_serve") < len(live), True)
+    check("pong policy: ... the action sequence is not degenerate",
+          len(set(live)) > 1, True)
+    check("pong policy: ... the first answer is still the serve a human would press",
+          live[0], "pong_serve")
+    check("pong policy: ... and the second answer is NOT the same serve again",
+          live[1] != "pong_serve", True)
+    check("pong policy: ... a RUN of zero-velocity readings never repeats the serve",
+          any(live[i] == live[i + 1] == "pong_serve" for i in range(len(live) - 1)), False)
+    check("pong policy: ... every answer is a declared action",
+          all(a in _pong_goal()["actions"] for a in live), True)
+    # a ball that really IS parked: the first decision serves it, and the game's `Serve()` gives
+    # it speed, so the reading is no longer (0,0) and the policy goes back to tracking it.
+    agent2 = ScriptedPlayerAgent("pong")
+    parked = _pong_served(agent2, 8)
+    check("pong policy: a really parked ball IS served once", parked[0], "pong_serve")
+    check("pong policy: ... and once it is served the policy tracks it, not serves it again",
+          "pong_serve" not in parked[1:], True)
+    # a properly sampled in-flight ball keeps the original, sensible behaviour
+    agent3 = ScriptedPlayerAgent("pong")
+    moving = [_pong_action(agent3, _pong_state(500.0, vel=(120.0, 60.0))) for _ in range(4)]
+    check("pong policy: an in-flight ball is tracked, not served",
+          all(a != "pong_serve" for a in moving), True)
+    check("pong policy: ... and the tracker answers a declared action",
+          all(a in ("pong_left_up", "pong_left_down") for a in moving), True)
+
+    ok = True
+    for good, name, detail in cases:
+        ok = ok and good
+        print("%-58s %s%s" % (name[:58], "OK" if good else "MISMATCH",
+                              "" if good else "  " + detail))
+    print("task142_cases %s (%d assertions)" % ("PASSED" if ok else "FAILED", len(cases)))
+    return 0 if ok else 1
+
+
 def test_task140_reporting_window_and_unstable():
     assert task140_cases() == 0
+
+
+def test_task142_round_distribution():
+    assert task142_cases() == 0
 
 
 def test_model_player_rules():
@@ -854,4 +1092,4 @@ def test_model_player_rules():
 
 
 if __name__ == "__main__":
-    sys.exit(task140_cases() or task139_cases() or main())
+    sys.exit(task142_cases() or task140_cases() or task139_cases() or main())
