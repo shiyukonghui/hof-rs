@@ -1,7 +1,7 @@
 {
   "content": [
     {
-      "text": "{\"mode\":\"main\",\"playing\":true}",
+      "text": "{\"endpoint\":\"http://127.0.0.1:9878/mcp\",\"mcp_port\":9878,\"mcp_port_source\":\"auto_free_port\",\"mode\":\"main\",\"pid\":4242,\"playing\":true}",
       "type": "text"
     }
   ]

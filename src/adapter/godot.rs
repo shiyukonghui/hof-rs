@@ -11,6 +11,7 @@ use serde_json::{json, Value};
 use crate::adapter::{BatteryRecord, BatteryStep, DoctorItem, ProjectAdapter};
 use crate::config::GodotConfig;
 use crate::model::{ExecKind, ExecRecord, Role};
+use crate::tools::endpoint::{self, GameEndpointRecord};
 use crate::tools::mcp::{RpcCorrelation, SessionSyncReport, PROBE_TOOL};
 use crate::tools::reliable::{
     call_with_retries_traced, wait_for_game_ready, McpErrorLog, McpFailure, ReadyOutcome,
@@ -822,19 +823,53 @@ impl<'a> BatterySession<'a> {
         let play = self.call("editor_play_scene", play_args.clone()).await;
         match play {
             Ok(call) => {
-                // DR-30: `editor_play_scene`'s own reply is **not** readiness evidence.
-                // It is recorded, and then a scene tree is demanded.
+                // DR-30: `editor_play_scene`'s own reply is **not** readiness
+                // evidence.  It is recorded, and then a scene tree is demanded.
                 calls.push(call_ok(
                     "editor_play_scene",
                     &play_args,
                     &call.payload,
                     &call.correlation,
                 ));
+                // DR-43: the same reply is the **only** source of the game
+                // endpoint.  Registering it must succeed; a failure fails the
+                // step instead of falling back to the editor endpoint.
+                let endpoint = parse_game_endpoint(&call.payload);
+                let registered = match &endpoint {
+                    Ok(record) => self.tools.register_game_endpoint(record.clone()).await,
+                    Err(problem) => Err(anyhow::anyhow!(problem.clone())),
+                };
+                if let Err(error) = registered {
+                    let endpoint = endpoint.ok();
+                    calls.push(json!({
+                        "tool": "editor_play_scene",
+                        "ok": false,
+                        "game_endpoint": endpoint,
+                        "error": {"code": Value::Null, "message": error.to_string()},
+                    }));
+                    let observation = format!(
+                        "FAILED editor_play_scene did not register a game endpoint: {error} \
+                         (UNAVAILABLE: running_game_* tools have no endpoint, so this step fails \
+                         -- silently falling back to the editor endpoint is forbidden, DR-43)"
+                    );
+                    self.finish(
+                        step,
+                        ExecKind::RuntimeTrace,
+                        None,
+                        observation,
+                        false,
+                        calls,
+                    )
+                    .await?;
+                    return Ok(None);
+                }
             }
             Err(failure) => {
                 calls.push(call_fail("editor_play_scene", &play_args, &failure));
-                let observation =
-                    format!("FAILED editor_play_scene: {} (UNAVAILABLE)", failure.observation());
+                let observation = format!(
+                    "FAILED editor_play_scene: {} (UNAVAILABLE)",
+                    failure.observation()
+                );
                 self.finish(
                     step,
                     ExecKind::RuntimeTrace,
@@ -1846,6 +1881,15 @@ impl<'a> BatterySession<'a> {
                 call_fail("editor_stop_scene", &args, &failure),
             ),
         };
+        // DR-43: whatever the stop reported, the game endpoint is not a valid
+        // destination any more.  Dropping it here means a later
+        // `running_game_*` call fails loudly instead of reaching a stale port.
+        let invalidated = self.tools.game_endpoint().await;
+        self.tools.clear_game_endpoint().await;
+        let mut call = call;
+        if let Some(record) = invalidated {
+            call["game_endpoint_invalidated"] = json!(record);
+        }
         self.finish(
             step,
             ExecKind::RuntimeTrace,
@@ -1879,6 +1923,59 @@ pub fn desync_warning(report: &SessionSyncReport) -> String {
          different request id; the client re-correlated with read-only `{PROBE_TOOL}` probes)",
         report.probes
     )
+}
+
+// ---------------------------------------------------------------------------
+// DR-43: the game endpoint
+// ---------------------------------------------------------------------------
+
+/// DR-43: read the game endpoint out of an `editor_play_scene` reply.
+///
+/// The contract lets the engine announce it in one of two ways, in this order:
+/// an explicit `endpoint`, or an `mcp_port` the endpoint is derived from.
+/// `mcp_port_source` is recorded **verbatim** when the engine declares one of
+/// the two documented values; when it declares none, the record says
+/// `undeclared` rather than inventing `argument`/`auto_free_port`.
+///
+/// A reply that announces neither is an error: the caller registers nothing and
+/// the step fails, because a guessed endpoint would route every later
+/// `running_game_*` call somewhere that cannot answer it.
+pub fn parse_game_endpoint(payload: &Value) -> Result<GameEndpointRecord, String> {
+    let inner = unwrap_mcp_payload(payload);
+    let announced = inner
+        .get("endpoint")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned);
+    let port = inner
+        .get("mcp_port")
+        .and_then(Value::as_u64)
+        .and_then(|port| u16::try_from(port).ok())
+        .or_else(|| announced.as_deref().and_then(endpoint::port_of_endpoint));
+    let Some(endpoint) = announced.or_else(|| port.map(endpoint::endpoint_for_port)) else {
+        return Err(format!(
+            "the reply announced neither an `endpoint` nor an `mcp_port`, so the game endpoint \
+             cannot be registered (DR-43): {inner}"
+        ));
+    };
+    let source = match inner.get("mcp_port_source").and_then(Value::as_str) {
+        Some(declared) if declared == endpoint::SOURCE_ARGUMENT => endpoint::SOURCE_ARGUMENT,
+        Some(declared) if declared == endpoint::SOURCE_AUTO_FREE_PORT => {
+            endpoint::SOURCE_AUTO_FREE_PORT
+        }
+        _ => endpoint::SOURCE_UNDECLARED,
+    };
+    let pid = inner
+        .get("pid")
+        .and_then(Value::as_u64)
+        .and_then(|pid| u32::try_from(pid).ok());
+    Ok(GameEndpointRecord {
+        endpoint,
+        port,
+        source: source.to_string(),
+        pid,
+    })
 }
 
 // ---------------------------------------------------------------------------

@@ -388,7 +388,7 @@ fn battery_replies() -> HashMap<String, Value> {
 /// The per-tool replies, with `running_game_get_node_property_samples` synthesized from the last
 /// simulated action.
 fn battery_server(mode: Mode) -> FakeMcp {
-    match mode {
+    let server = match mode {
         Mode::Normal => FakeMcp::normal(battery_replies()),
         Mode::Lag => FakeMcp::lagging(
             battery_replies(),
@@ -402,7 +402,20 @@ fn battery_server(mode: Mode) -> FakeMcp {
             }],
         ),
         Mode::Stale { id, payload } => FakeMcp::stale(battery_replies(), id, payload),
-    }
+    };
+    // DR-43: this double plays *both* channels, so the endpoint it announces is
+    // itself.  The real engine starts a child process on a fresh port.
+    let port = server.addr.port();
+    server.state.lock().unwrap().replies.insert(
+        "editor_play_scene".to_string(),
+        json!({"content": [{"type": "text", "text": json!({
+            "playing": true,
+            "mcp_port": port,
+            "mcp_port_source": "auto_free_port",
+            "pid": 4242,
+        }).to_string()}]}),
+    );
+    server
 }
 
 // ---------------------------------------------------------------------------

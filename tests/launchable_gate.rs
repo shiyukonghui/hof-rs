@@ -106,7 +106,12 @@ impl ToolChannel for GateChannel {
                     .into());
                 }
             }
-            "editor_play_scene" => json!({"playing": true}),
+            // DR-43: `editor_play_scene` announces the game endpoint it created.
+            // This double plays both channels, so it announces a port that the
+            // registration records while the double keeps answering itself.
+            "editor_play_scene" => {
+                json!({"playing": true, "mcp_port": 9878, "mcp_port_source": "auto_free_port"})
+            }
             "running_game_get_scene_tree" => {
                 if self.scene_valid() {
                     json!({

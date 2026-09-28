@@ -4,12 +4,14 @@
 //! code, never by prompt convention.
 
 pub mod bridge;
+pub mod endpoint;
 pub mod index;
 pub mod mcp;
 pub mod policy;
 pub mod reliable;
 
 use crate::model::Role;
+use endpoint::{GameEndpointRecord, ToolScope};
 use mcp::{McpClient, RpcCorrelation, SessionSyncReport};
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -54,6 +56,26 @@ pub trait ToolChannel: Send + Sync {
     async fn session_sync_probe(&self) -> SessionSyncReport {
         SessionSyncReport::unavailable("this tool channel exposes no JSON-RPC correlation probe")
     }
+
+    /// DR-43: register the game endpoint `editor_play_scene` announced.
+    ///
+    /// A channel that serves exactly one endpoint — a test double, or
+    /// `ShellOnlyChannel` — accepts the registration without routing anything:
+    /// it has no second endpoint to route to.  The real [`McpChannel`] routes
+    /// `running_game_*` there, and **fails** a game call when nothing is
+    /// registered (never silently falls back to the editor endpoint).
+    async fn register_game_endpoint(&self, _record: GameEndpointRecord) -> anyhow::Result<()> {
+        Ok(())
+    }
+
+    /// DR-43: the game endpoint is gone (`editor_stop_scene`).  Later
+    /// `running_game_*` calls must fail rather than reach a stale port.
+    async fn clear_game_endpoint(&self) {}
+
+    /// DR-43: the game endpoint this channel currently routes to.
+    async fn game_endpoint(&self) -> Option<GameEndpointRecord> {
+        None
+    }
 }
 
 /// A channel that exposes no MCP tools at all (used for offline/dry runs).
@@ -81,27 +103,76 @@ impl ToolChannel for ShellOnlyChannel {
     }
 }
 
-/// The real channel: Godot MCP Pro over JSON-RPC, filtered by the role matrix.
+/// The real channel: the engine's native MCP module over JSON-RPC, filtered by
+/// the role matrix and routed per scope (DR-43).
+///
+/// One channel object owns **both** endpoints: the editor endpoint it was
+/// constructed with, and the game endpoint `editor_play_scene` announced.  The
+/// game route is created lazily and dropped by `editor_stop_scene`, so its
+/// JSON-RPC id counter survives a whole game session (DR-29) without outliving
+/// it.
 #[derive(Clone, Debug)]
 pub struct McpChannel {
+    editor: McpClient,
+    game: std::sync::Arc<std::sync::Mutex<Option<GameRoute>>>,
+    timeout_seconds: u64,
+    max_retries: u32,
+    max_sync_retries: u32,
+}
+
+/// DR-43: a registered game endpoint plus the client that talks to it.
+#[derive(Clone, Debug)]
+struct GameRoute {
+    record: GameEndpointRecord,
     client: McpClient,
 }
 
 impl McpChannel {
     pub fn new(endpoint: impl Into<String>, timeout_seconds: u64, max_retries: u32) -> Self {
         Self {
-            client: McpClient::new(endpoint, timeout_seconds, max_retries),
+            editor: McpClient::new(endpoint, timeout_seconds, max_retries),
+            game: std::sync::Arc::new(std::sync::Mutex::new(None)),
+            timeout_seconds,
+            max_retries,
+            max_sync_retries: mcp::DEFAULT_MAX_SYNC_RETRIES,
         }
     }
 
     /// DR-29: set `tools.max_sync_retries`.
     pub fn with_max_sync_retries(mut self, max_sync_retries: u32) -> Self {
-        self.client = self.client.with_max_sync_retries(max_sync_retries);
+        self.max_sync_retries = max_sync_retries;
+        self.editor = self.editor.with_max_sync_retries(max_sync_retries);
         self
     }
 
     pub fn client(&self) -> &McpClient {
-        &self.client
+        &self.editor
+    }
+
+    /// DR-43: the client for one call, chosen by the tool's scope.
+    ///
+    /// A `running_game_*` tool without a registered game endpoint is a **hard
+    /// error**: falling back to the editor endpoint would send the call to a
+    /// server that does not implement it and dress the failure up as evidence.
+    fn client_for(&self, tool: &str) -> anyhow::Result<McpClient> {
+        match endpoint::scope_of(tool) {
+            ToolScope::Editor => Ok(self.editor.clone()),
+            ToolScope::Game => {
+                let guard = self
+                    .game
+                    .lock()
+                    .map_err(|_| anyhow::anyhow!("the game endpoint registry is poisoned"))?;
+                match guard.as_ref() {
+                    Some(route) => Ok(route.client.clone()),
+                    None => anyhow::bail!(
+                        "game_endpoint_unavailable: `{tool}` runs in the game process and only \
+                         the game endpoint serves it; no game endpoint is registered yet \
+                         (`editor_play_scene` must have answered with `endpoint` or `mcp_port`). \
+                         Falling back to the editor endpoint is not allowed (DR-43)."
+                    ),
+                }
+            }
+        }
     }
 }
 
@@ -116,7 +187,7 @@ impl ToolChannel for McpChannel {
     /// reachable and from the embedded snapshot otherwise.  A role that has the
     /// schema never has to read the harness sources to guess an API.
     fn index_markdown(&self, role: Role) -> String {
-        match self.client.list_tool_schemas() {
+        match self.editor.list_tool_schemas() {
             Ok(schemas) if !schemas.is_empty() => index::render_tools_markdown(role, &schemas),
             _ => index::render_tools_markdown(role, &index::embedded_tool_schemas()),
         }
@@ -140,7 +211,8 @@ impl ToolChannel for McpChannel {
         if !self.allowed(role, tool) {
             anyhow::bail!("tool_not_permitted: role={} tool={tool}", role.as_str());
         }
-        let client = self.client.clone();
+        // DR-43: the scope decides the endpoint *before* any request is sent.
+        let client = self.client_for(tool)?;
         let tool_name = tool.to_string();
         let (payload, correlation) =
             tokio::task::spawn_blocking(move || client.call_traced(&tool_name, args)).await??;
@@ -148,9 +220,33 @@ impl ToolChannel for McpChannel {
     }
 
     async fn session_sync_probe(&self) -> SessionSyncReport {
-        let client = self.client.clone();
+        let client = self.editor.clone();
         tokio::task::spawn_blocking(move || client.session_sync_probe())
             .await
             .unwrap_or_else(|error| SessionSyncReport::unavailable(error.to_string()))
+    }
+
+    async fn register_game_endpoint(&self, record: GameEndpointRecord) -> anyhow::Result<()> {
+        let client = McpClient::new(record.endpoint.clone(), self.timeout_seconds, self.max_retries)
+            .with_max_sync_retries(self.max_sync_retries);
+        let mut guard = self
+            .game
+            .lock()
+            .map_err(|_| anyhow::anyhow!("the game endpoint registry is poisoned"))?;
+        *guard = Some(GameRoute { record, client });
+        Ok(())
+    }
+
+    async fn clear_game_endpoint(&self) {
+        if let Ok(mut guard) = self.game.lock() {
+            *guard = None;
+        }
+    }
+
+    async fn game_endpoint(&self) -> Option<GameEndpointRecord> {
+        self.game
+            .lock()
+            .ok()
+            .and_then(|guard| guard.as_ref().map(|route| route.record.clone()))
     }
 }
