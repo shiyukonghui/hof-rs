@@ -152,6 +152,47 @@ fn init_refuses_a_non_empty_workspace_without_force() {
     );
 }
 
+/// DR-53 (DEF-2): an `[editor_plugins]` section whose `enabled` line is **not**
+/// a `PackedStringArray(...)` (here `enabled=true`) must not be modified at all,
+/// and `hoh init` must say why instead of silently deleting the section.  The
+/// pre-DR-53 code read a parse failure as "the list became empty" and rewrote
+/// the file down to `config_version=5\n\n`.
+#[test]
+fn init_leaves_a_malformed_enabled_line_untouched_and_says_why() {
+    let temp = tempfile::tempdir().unwrap();
+    let workspace = temp.path().join("workspace");
+    let text = "config_version=5\n\n[application]\n\nconfig/name=\"x\"\n\n[editor_plugins]\n\n\
+                enabled=true\n\n[rendering]\n\nrenderer/rendering_method=\"gl_compatibility\"\n";
+    write(&workspace.join("project.godot"), text);
+
+    let args = vec![
+        "init".to_string(),
+        "--project".to_string(),
+        workspace.display().to_string(),
+    ];
+    let output = run(&args);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "a malformed plugin list is not a fatal error; stdout: {stdout} stderr: {stderr}"
+    );
+    assert_eq!(
+        std::fs::read_to_string(workspace.join("project.godot")).unwrap(),
+        text,
+        "the file must be byte-identical (DR-53)"
+    );
+    assert!(
+        format!("{stdout}{stderr}").contains("PackedStringArray"),
+        "the reason must say what could not be parsed; stdout: {stdout} stderr: {stderr}"
+    );
+    assert!(
+        format!("{stdout}{stderr}").contains("left untouched"),
+        "the reason must say the file was not modified; stdout: {stdout} stderr: {stderr}"
+    );
+}
+
 /// DR-40: `hoh init --force-init` is the documented way through, and it works
 /// offline too.
 #[test]

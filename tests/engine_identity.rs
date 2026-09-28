@@ -405,6 +405,75 @@ async fn the_gate_stays_open_when_the_listener_is_the_configured_binary() {
     assert!(gate.launchable, "{gate:?}");
 }
 
+/// DR-53 (DEF-3): the **third** gate case — the listener could not be read
+/// (`matches_binary == None`).  "Silence is failure" (§0.2): an unverifiable
+/// identity must close the gate, and its observation must be distinguishable
+/// from a mismatch so the reader is never misled.
+#[tokio::test]
+async fn the_gate_closes_when_the_listener_cannot_be_read() {
+    let temp = tempfile::tempdir().unwrap();
+    let expected = temp_binary(temp.path());
+
+    // `netstat` answers, but no listener on the editor port.
+    let env = FakeEnv::with(&[(netstat_command().as_str(), "", 0)]);
+    let identity = probe_identity(
+        &env,
+        Some(&expected),
+        Some("http://127.0.0.1:9877/mcp"),
+        None,
+        Value::Null,
+    )
+    .await;
+    assert_eq!(
+        identity.listener.matches_binary, None,
+        "an unreadable listener is never a match: {identity:?}"
+    );
+
+    let step = gate_record(&identity).expect("a configured binary yields a gate step");
+    assert!(
+        !step.ok,
+        "an unverifiable identity must close the gate: {step:?}"
+    );
+    let observation = step.record.observation.clone();
+    assert!(
+        observation.contains("no TCP listener"),
+        "the observation must name why it could not verify: {observation}"
+    );
+    assert!(
+        observation.contains("UNAVAILABLE"),
+        "the observation must be explicit about the gap: {observation}"
+    );
+    // Distinguishable from a mismatch: a mismatch names the actual listener.
+    let mismatch = mismatching_identity(&expected).await;
+    let mismatch_step = gate_record(&mismatch).expect("a gate step");
+    assert!(
+        mismatch_step
+            .record
+            .observation
+            .contains("engine identity mismatch"),
+        "{:?}",
+        mismatch_step.record.observation
+    );
+    assert_ne!(
+        observation, mismatch_step.record.observation,
+        "the two failures must not read alike"
+    );
+
+    // And the gate really closes.
+    let mut battery = gate_support();
+    battery.push(step);
+    let gate = hof_rs::adapter::evaluate_launchable(&battery);
+    assert!(
+        !gate.launchable,
+        "an unreadable listener must not freeze as launchable: {gate:?}"
+    );
+    assert!(
+        gate.reasons.join(" ").contains(ENGINE_IDENTITY_STEP_ID),
+        "{:?}",
+        gate.reasons
+    );
+}
+
 /// The step id must be part of the gate's vocabulary (DR-44 ⑤).
 #[test]
 fn the_engine_identity_step_is_a_gate_step() {

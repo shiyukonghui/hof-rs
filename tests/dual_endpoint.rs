@@ -27,7 +27,7 @@ use hof_rs::config::GodotConfig;
 use hof_rs::model::Role;
 use hof_rs::tools::endpoint::{
     endpoint_for_port, scope_of, GameEndpointRecord, ToolScope, SOURCE_ARGUMENT,
-    SOURCE_AUTO_FREE_PORT,
+    SOURCE_AUTO_FREE_PORT, SOURCE_UNDECLARED,
 };
 use hof_rs::tools::{McpChannel, ToolChannel, ToolResult};
 use serde_json::{json, Value};
@@ -343,6 +343,49 @@ fn the_play_scene_reply_is_parsed_into_the_game_endpoint() {
         .expect_err("a reply without an endpoint must not produce one");
     assert!(error.contains("mcp_port"), "{error}");
     assert!(error.contains("endpoint"), "{error}");
+}
+
+/// DR-53 (DEF-3): `mcp_port_source`'s third value.  The engine may announce an
+/// endpoint without a port source, or with one this contract does not know; both
+/// must be recorded as `undeclared` rather than invented as
+/// `argument`/`auto_free_port`.  (`smoke-t6` only exercised `auto_free_port`.)
+#[test]
+fn an_endpoint_without_a_declared_port_source_is_undeclared() {
+    let envelope = |inner: Value| {
+        json!({"content": [{"type": "text", "text": inner.to_string()}]})
+    };
+
+    // The field is absent.
+    let record = parse_game_endpoint(&envelope(json!({
+        "endpoint": "http://127.0.0.1:9899/mcp",
+        "pid": 77,
+        "playing": true,
+    })))
+    .expect("an explicit endpoint needs no port source");
+    assert_eq!(record.source, SOURCE_UNDECLARED);
+    assert_eq!(record.port, Some(9899));
+
+    // The field carries a value this contract does not document.
+    let record = parse_game_endpoint(&envelope(json!({
+        "mcp_port": 9900,
+        "mcp_port_source": "invented_source",
+    })))
+    .expect("an mcp_port needs no documented source");
+    assert_eq!(record.source, SOURCE_UNDECLARED);
+
+    // And the two documented values are still recorded verbatim.
+    assert_eq!(
+        parse_game_endpoint(&envelope(json!({"mcp_port": 9900, "mcp_port_source": "argument"})))
+            .unwrap()
+            .source,
+        SOURCE_ARGUMENT
+    );
+    assert_eq!(
+        parse_game_endpoint(&envelope(json!({"mcp_port": 9900, "mcp_port_source": "auto_free_port"})))
+            .unwrap()
+            .source,
+        SOURCE_AUTO_FREE_PORT
+    );
 }
 
 // ---------------------------------------------------------------------------

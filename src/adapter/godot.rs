@@ -2739,18 +2739,48 @@ fn remove_bundled_addon_dir(workspace: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// `enabled=PackedStringArray(...)` minus one quoted entry.
+/// DR-41/DR-53: what one `enabled=` line's edit does.
 ///
-/// * `Some(same)` — the entry was not present (the caller must not write).
-/// * `Some(updated)` — the entry was removed and other entries remain.
-/// * `None` — the list became empty, so the line has to go.
-fn packed_string_array_without(line: &str, entry: &str) -> Option<String> {
-    let open = line.find('(')?;
-    let close = line.rfind(')')?;
+/// The pre-DR-53 signature was `Option<String>`, where `None` meant *both*
+/// "the list became empty" and "this line is not a `PackedStringArray` at all".
+/// `enabled=true` was therefore treated as an emptied list and deleted the whole
+/// `[editor_plugins]` section — a parse failure silently modifying the file,
+/// which violates DR-41's byte-conservative rule.
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum PackedArrayEdit {
+    /// The entry is not in the list: the caller must not write.
+    Absent,
+    /// The entry was removed and other entries remain.
+    Updated(String),
+    /// The list became empty, so the line (and its section) has to go.
+    Emptied,
+    /// The line is not a `PackedStringArray(...)`; the outcome cannot be known,
+    /// so nothing may be touched.
+    Unrecognised,
+}
+
+/// `enabled=PackedStringArray(...)` minus one quoted entry.
+fn packed_string_array_without(line: &str, entry: &str) -> PackedArrayEdit {
+    let Some(open) = line.find('(') else {
+        return PackedArrayEdit::Unrecognised;
+    };
+    let Some(close) = line.rfind(')') else {
+        return PackedArrayEdit::Unrecognised;
+    };
     if close <= open {
-        return None;
+        return PackedArrayEdit::Unrecognised;
     }
     let inner = &line[open + 1..close];
+    // The keyword must be `PackedStringArray` (or a bare `enabled=` list) and
+    // nothing may follow the closing parenthesis but whitespace.
+    let keyword = line[..open].trim();
+    let tail = line[close + 1..].trim();
+    let known_keyword = keyword.ends_with("PackedStringArray")
+        || keyword == "enabled"
+        || keyword.ends_with("enabled");
+    if !known_keyword || !tail.is_empty() {
+        return PackedArrayEdit::Unrecognised;
+    }
     let quoted = format!("\"{entry}\"");
     let items: Vec<&str> = inner
         .split(',')
@@ -2759,17 +2789,46 @@ fn packed_string_array_without(line: &str, entry: &str) -> Option<String> {
         .collect();
     let kept: Vec<&str> = items.iter().copied().filter(|item| *item != quoted).collect();
     if kept.len() == items.len() {
-        return Some(line.to_string());
+        return PackedArrayEdit::Absent;
     }
     if kept.is_empty() {
-        return None;
+        return PackedArrayEdit::Emptied;
     }
-    Some(format!(
+    PackedArrayEdit::Updated(format!(
         "{}({}){}",
         &line[..open],
         kept.join(", "),
         &line[close + 1..]
     ))
+}
+
+/// DR-41/DR-53: the outcome of the reverse-cleanup pass.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum AddonCleanup {
+    /// Nothing named the retired plugin: the file is byte-identical.
+    Untouched(&'static str),
+    /// The retired entry was removed (and the section, if it became empty).
+    Removed,
+    /// The `[editor_plugins]` section could not be parsed: the file is
+    /// byte-identical, and this is why.
+    Unparseable(String),
+}
+
+impl AddonCleanup {
+    /// Was the file rewritten?
+    pub fn changed(&self) -> bool {
+        matches!(self, AddonCleanup::Removed)
+    }
+
+    /// Why the file was left alone, when it was left alone for a reason worth
+    /// reporting (DR-53).
+    pub fn reason(&self) -> Option<&str> {
+        match self {
+            AddonCleanup::Untouched(_) => None,
+            AddonCleanup::Removed => None,
+            AddonCleanup::Unparseable(reason) => Some(reason),
+        }
+    }
 }
 
 /// Reverse of the retired DR-4 behaviour: guarantee the bundled GDExtension
@@ -2780,7 +2839,10 @@ fn packed_string_array_without(line: &str, entry: &str) -> Option<String> {
 /// is left exactly as it is; when it does, only the offending entry is removed
 /// from the `enabled` list and every sibling stays byte-for-byte.  A list that
 /// becomes empty takes the whole section with it.
-fn ensure_bundled_addon_disabled(project_file: &Path) -> anyhow::Result<()> {
+///
+/// DR-53: a **malformed** `enabled=` line (one that is not a
+/// `PackedStringArray(...)`) is `Unparseable`, and the file is left untouched.
+fn ensure_bundled_addon_disabled(project_file: &Path) -> anyhow::Result<AddonCleanup> {
     let raw = std::fs::read_to_string(project_file)?;
     let lines: Vec<&str> = raw.split_inclusive('\n').collect();
 
@@ -2788,7 +2850,9 @@ fn ensure_bundled_addon_disabled(project_file: &Path) -> anyhow::Result<()> {
         .iter()
         .position(|line| line.trim_end() == EDITOR_PLUGINS_HEADER)
     else {
-        return Ok(());
+        return Ok(AddonCleanup::Untouched(
+            "there is no `[editor_plugins]` section",
+        ));
     };
     let end = (header + 1..lines.len())
         .find(|&index| lines[index].trim_start().starts_with('['))
@@ -2796,36 +2860,49 @@ fn ensure_bundled_addon_disabled(project_file: &Path) -> anyhow::Result<()> {
     let Some(enabled) = (header + 1..end)
         .find(|&index| lines[index].trim_start().starts_with("enabled"))
     else {
-        return Ok(());
+        return Ok(AddonCleanup::Untouched(
+            "the `[editor_plugins]` section declares no `enabled` list",
+        ));
     };
 
-    let Some(updated) = packed_string_array_without(lines[enabled], MCP_PLUGIN_PATH) else {
-        // The list is empty now: the section must go entirely.
-        let mut kept: Vec<&str> = Vec::with_capacity(lines.len());
-        kept.extend_from_slice(&lines[..header]);
-        kept.extend_from_slice(&lines[end..]);
-        // Removing the section must not leave a doubled blank separator.
-        if header > 0
-            && kept[header - 1].trim().is_empty()
-            && kept.get(header).map(|line| line.trim().is_empty()) == Some(true)
-        {
-            kept.remove(header);
+    match packed_string_array_without(lines[enabled], MCP_PLUGIN_PATH) {
+        PackedArrayEdit::Unrecognised => Ok(AddonCleanup::Unparseable(format!(
+            "the `[editor_plugins]` `enabled=` line is not a `PackedStringArray(...)`, so whether \
+             it names {MCP_PLUGIN_PATH} cannot be decided; the file was left untouched (DR-53): {}",
+            lines[enabled].trim_end()
+        ))),
+        PackedArrayEdit::Absent => Ok(AddonCleanup::Untouched(
+            "the `enabled` list does not name the retired plugin",
+        )),
+        PackedArrayEdit::Updated(updated) => {
+            if updated == lines[enabled] {
+                // Already satisfied: never touch the file.
+                return Ok(AddonCleanup::Untouched("the file is already clean"));
+            }
+            let mut kept = lines.clone();
+            kept[enabled] = updated.as_str();
+            std::fs::write(project_file, kept.concat())?;
+            Ok(AddonCleanup::Removed)
         }
-        if kept.concat() == raw {
-            return Ok(());
+        PackedArrayEdit::Emptied => {
+            // The list is empty now: the section must go entirely.
+            let mut kept: Vec<&str> = Vec::with_capacity(lines.len());
+            kept.extend_from_slice(&lines[..header]);
+            kept.extend_from_slice(&lines[end..]);
+            // Removing the section must not leave a doubled blank separator.
+            if header > 0
+                && kept[header - 1].trim().is_empty()
+                && kept.get(header).map(|line| line.trim().is_empty()) == Some(true)
+            {
+                kept.remove(header);
+            }
+            if kept.concat() == raw {
+                return Ok(AddonCleanup::Untouched("the file is already clean"));
+            }
+            std::fs::write(project_file, kept.concat())?;
+            Ok(AddonCleanup::Removed)
         }
-        std::fs::write(project_file, kept.concat())?;
-        return Ok(());
-    };
-
-    if updated == lines[enabled] {
-        // Already satisfied: never touch the file.
-        return Ok(());
     }
-    let mut kept = lines.clone();
-    kept[enabled] = updated.as_str();
-    std::fs::write(project_file, kept.concat())?;
-    Ok(())
 }
 
 #[async_trait::async_trait]
@@ -2838,7 +2915,13 @@ impl ProjectAdapter for GodotAdapter {
             // version still carries the retired GDExtension channel, so the
             // reverse cleanup is enforced in place — idempotently, and without
             // touching a project that never had it.
-            ensure_bundled_addon_disabled(&project_file)?;
+            //
+            // DR-53: a file whose `enabled=` line cannot be parsed is left
+            // byte-identical, and the reason is reported instead of hidden.
+            let cleanup = ensure_bundled_addon_disabled(&project_file)?;
+            if let Some(reason) = cleanup.reason() {
+                tracing::warn!("{reason}");
+            }
             remove_bundled_addon_dir(workspace)?;
             remove_stale_extension_cache(workspace)?;
             return Ok(());
@@ -3479,6 +3562,113 @@ mod tests {
         );
         assert!(!workspace.join(".godot").exists());
         assert!(!workspace.join("addons").exists());
+    }
+
+    /// DR-53 (DEF-2): a **malformed** `enabled=` line — one that is not a
+    /// `PackedStringArray(...)` at all — must not modify the file.
+    ///
+    /// The pre-DR-53 parser returned `None` for a line without parentheses, and
+    /// `None` meant "the list became empty"; so `enabled=true` deleted the whole
+    /// `[editor_plugins]` section.  Parsing failure is now its own outcome with
+    /// a reason, and the file stays byte-identical.
+    #[test]
+    fn a_malformed_enabled_line_leaves_the_project_untouched() {
+        let temp = tempfile::tempdir().unwrap();
+        let workspace = temp.path().join("mario");
+        std::fs::create_dir_all(&workspace).unwrap();
+        let text = "config_version=5\n\n[application]\n\nconfig/name=\"x\"\n\n[editor_plugins]\n\n\
+                    enabled=true\n";
+        std::fs::write(workspace.join("project.godot"), text).unwrap();
+
+        let outcome = ensure_bundled_addon_disabled(&workspace.join("project.godot")).unwrap();
+        assert!(
+            !outcome.changed(),
+            "a file it cannot parse must never be rewritten (DR-53): {outcome:?}"
+        );
+        let reason = outcome.reason().unwrap_or_default();
+        assert!(
+            reason.contains("PackedStringArray"),
+            "the reason must name what it could not read: {reason}"
+        );
+        assert!(reason.contains("enabled"), "{reason}");
+        assert_eq!(
+            std::fs::read_to_string(workspace.join("project.godot")).unwrap(),
+            text,
+            "the file must be byte-identical (DR-53)"
+        );
+
+        // The same through the public entry point.
+        adapter(&temp.path().join("no-such-addon"))
+            .initialize(&workspace)
+            .unwrap();
+        assert_eq!(
+            std::fs::read_to_string(workspace.join("project.godot")).unwrap(),
+            text,
+            "`initialize` must not modify it either (DR-53)"
+        );
+    }
+
+    /// DR-53 (DEF-2): the three parse outcomes, and the fourth that refuses to
+    /// guess.
+    #[test]
+    fn the_enabled_line_edit_distinguishes_absent_updated_emptied_and_malformed() {
+        let entry = MCP_PLUGIN_PATH;
+        // The entry is not in the list: the caller must not write.
+        assert_eq!(
+            packed_string_array_without(
+                &format!("enabled=PackedStringArray(\"{}\")", "res://addons/other/plugin.cfg"),
+                entry
+            ),
+            PackedArrayEdit::Absent
+        );
+        // The entry is one of several: only it goes.
+        assert_eq!(
+            packed_string_array_without(
+                &format!(
+                    "enabled=PackedStringArray(\"{}\", \"{entry}\")",
+                    "res://addons/other/plugin.cfg"
+                ),
+                entry
+            ),
+            PackedArrayEdit::Updated(format!(
+                "enabled=PackedStringArray(\"{}\")",
+                "res://addons/other/plugin.cfg"
+            ))
+        );
+        // The entry was the only one: the line goes.
+        assert_eq!(
+            packed_string_array_without(&format!("enabled=PackedStringArray(\"{entry}\")"), entry),
+            PackedArrayEdit::Emptied
+        );
+        // Malformed shapes are refused, never guessed at.
+        for line in [
+            "enabled=true",
+            "enabled=",
+            "enabled=PackedStringArray",
+            "enabled=PackedStringArray)",
+            "enabled=PackedStringArray()extra",
+        ] {
+            if line == "enabled=PackedStringArray()extra" {
+                // `()extra` has no `)` *after* the `(`; it is malformed too.
+                assert_eq!(
+                    packed_string_array_without(line, entry),
+                    PackedArrayEdit::Unrecognised,
+                    "{line}"
+                );
+                continue;
+            }
+            assert_eq!(
+                packed_string_array_without(line, entry),
+                PackedArrayEdit::Unrecognised,
+                "{line}"
+            );
+        }
+        // `enabled=PackedStringArray()` (a legal empty list) is *not* malformed:
+        // the retired entry is simply absent.
+        assert_eq!(
+            packed_string_array_without("enabled=PackedStringArray()", entry),
+            PackedArrayEdit::Absent
+        );
     }
 
     /// DR-5: editor errors are decided by the parsed `errors` array length, not

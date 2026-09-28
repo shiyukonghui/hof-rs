@@ -256,15 +256,28 @@ pub fn render_tools_markdown(role: Role, schemas: &[Value]) -> String {
 mod tests {
     use super::*;
 
+    /// DR-53 (DEF-4): the embedded snapshot is the **177-tool** four-channel
+    /// contract — the old name said 174 and its `>= 100` assertion never
+    /// noticed when the fixture changed.  Every entry must also be named, so a
+    /// tool cannot silently disappear from the index the roles read.
     #[test]
-    fn the_snapshot_is_the_real_174_tool_list() {
+    fn the_snapshot_is_the_real_177_tool_contract() {
         let schemas = embedded_tool_schemas();
-        assert!(
-            schemas.len() >= 100,
-            "the embedded snapshot must carry the real tool list, got {}",
+        assert_eq!(
+            schemas.len(),
+            177,
+            "the embedded snapshot must be the whole 177-tool contract, got {}",
             schemas.len()
         );
+        for tool in &schemas {
+            assert!(
+                !tool_name(tool).is_empty(),
+                "a snapshot entry without a name: {tool}"
+            );
+        }
         assert!(schemas.iter().any(|tool| tool_name(tool) == "editor_play_scene"));
+        assert!(schemas.iter().any(|tool| tool_name(tool) == "running_game_capture_screenshot"));
+        assert!(schemas.iter().any(|tool| tool_name(tool) == "project_get_info"));
     }
 
     #[test]
