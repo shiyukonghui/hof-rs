@@ -335,8 +335,27 @@ ba1587c71e fix(mcp_server): TASK-112 - the three engine defects TASK-111 registe
 ```
 
 * `uid_cache.bin` 是**既有的**未跟踪文件（本任务开工前就存在，未提交、未删除）。
-* `DECISIONS.md`、`TASK-140-REPORT.md`、`TEMPLATE-logic-feedback.md`、`playability_*.json/py`、`test_playability_model_player.py`、
-  `playtest_player_t142_prefix.py`、`TASK-142*`、`ACCEPTANCE-TASK-137/141*`、`TASK-143*` **都是 TASK-142/143 的残留，未代提交、未 revert**。
+
+### D.4 提交（逐文件暂存）
+
+主提交 **`e9d17f9`**（branch `master`，parent `8c562d4`），**15 个文件**：
+
+```
+godot-mcp/tools/verify_coverage_batch.py
+godot-mcp/tools/tests/test_coverage_batch_consistency.py
+godot-mcp/recovery/TEST-CASES.md
+godot-mcp/recovery/reports/TASK-144-REPORT.md
+godot-mcp/recovery/work/task144/{batch-before.json,batch-after.json,build-local.log,build-mono.log,
+    check_recompute.py,hashes.py,probe-u2.json,probe_u2.py,three_reds.py,three_reds_trace.py,u2_probe.py}
+```
+
+暂存方式：`git add <逐个具名路径>`（**没有** `git add -A`/`git add .`/`git commit -a`）。
+提交后仍未暂存、未提交、**未 revert** 的（都是别人的残留，一律不代提交）：
+`DECISIONS.md`、`recovery/reports/TASK-140-REPORT.md`、`recovery/tasks/TEMPLATE-logic-feedback.md`、
+`tools/playability_controls.json`、`tools/playtest_player.py`、`tools/tests/test_playability_model_player.py`、
+`tools/playtest_player_t142_prefix.py`、`recovery/reports/{TASK-142-REPORT.md,ACCEPTANCE-TASK-137.md,ACCEPTANCE-TASK-141.md}`、
+`recovery/tasks/{TASK-142.md,TASK-143.md,TASK-144.md,TASK-137-ACCEPT.md,TASK-141-ACCEPT.md}`。
+引擎仓本批**无提交**（源码零改动）。
 
 ---
 
