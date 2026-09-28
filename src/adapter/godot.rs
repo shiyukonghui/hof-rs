@@ -780,12 +780,33 @@ impl<'a> BatterySession<'a> {
                 // DR-30: an `errors` array is what makes this payload an editor
                 // report at all.  `smoke-t3` received the *scene text* here and
                 // the observation blamed the wrong thing.
+                //
+                // DR-48: the engine's own informational `[MCP]` startup banners
+                // are stripped first — `smoke-t6` closed the gate on
+                // `[MCP] capture=off (…on_error…)` while the same round booted
+                // the scene and returned a 50-node tree.  Only the **exact**
+                // banner shapes are exempt; everything else keeps the original
+                // conservative verdict.
                 let (ok, observation) = match parsed.get("errors").and_then(Value::as_array) {
                     Some(errors) if errors.is_empty() => (true, observation),
-                    Some(_) => (
-                        false,
-                        format!("{observation} (UNAVAILABLE: the editor is not clean)"),
-                    ),
+                    Some(errors) => {
+                        let reported = non_banner_editor_errors(errors);
+                        if reported.is_empty() {
+                            (
+                                true,
+                                format!(
+                                    "{observation} (only the engine's own informational banner(s) \
+                                     were reported; {} line(s) exempted by DR-48)",
+                                    errors.len()
+                                ),
+                            )
+                        } else {
+                            (
+                                false,
+                                format!("{observation} (UNAVAILABLE: the editor is not clean)"),
+                            )
+                        }
+                    }
                     None => (
                         false,
                         format!(
@@ -2966,6 +2987,54 @@ $HOH_HOH_BIN tools call running_game_assert_node_state --args-file $HOH_ARTIFACT
     }
 }
 
+/// DR-48: the engine's own informational `[MCP]` startup banners, **verbatim**.
+///
+/// They are byte-identical to the engine's literals in this checkout
+/// (`godot-mcp/godot/modules/mcp_server/mcp_server.cpp:605` and `:645`) and to
+/// the lines the `smoke-t6` round's log carried.  They exist as **data** so the
+/// exemption is one auditable list with one matcher, never a scattering of
+/// special-case `if`s.
+///
+/// Why they arrive as "errors" at all: the engine classifies an editor log line
+/// as an error with a case-insensitive `contains("ERROR")`
+/// (`tools/editor_read_scene_inspector.cpp:249`), and the capture banner
+/// contains `on_error`.  The banner is information, not a defect.
+pub const ENGINE_INFO_BANNERS: &[&str] = &[
+    "[MCP] trace=off (default; use --mcp-trace=<path> or godot_mcp/trace_file to enable)",
+    "[MCP] capture=off (default; use --mcp-capture=on_error|every_call together with --mcp-trace=<path>)",
+];
+
+/// DR-48: is this editor log line one of the engine's informational banners?
+///
+/// The match is **exact** (after trimming the line): the banners are fixed
+/// literals with no variable component, so anything else — including a genuine
+/// `ERROR: [MCP] SceneTree never became available; MCP server disabled.`, which
+/// the engine also prints — is **not** exempt and keeps the original
+/// "the editor is not clean" verdict (fail closed).
+///
+/// A `[MCP]` **prefix** test is deliberately forbidden here: the engine prints
+/// real errors under that prefix.
+pub fn is_engine_info_banner(line: &str) -> bool {
+    let line = line.trim();
+    ENGINE_INFO_BANNERS.contains(&line)
+}
+
+/// DR-48: the reported lines that are **not** engine info banners.
+///
+/// A non-string entry, an unknown line and any real error are all kept, so the
+/// gate stays conservative: only an exactly known banner is ignored.
+pub fn non_banner_editor_errors(errors: &[serde_json::Value]) -> Vec<&serde_json::Value> {
+    errors
+        .iter()
+        .filter(|line| {
+            !line
+                .as_str()
+                .map(is_engine_info_banner)
+                .unwrap_or(false)
+        })
+        .collect()
+}
+
 /// DR-5: turn a `editor_get_errors` payload into an observation.
 ///
 /// The editor's answer is the authoritative signal.  A payload that is not an
@@ -3288,6 +3357,68 @@ mod tests {
             record.observation.contains("treated as errors"),
             "{}",
             record.observation
+        );
+    }
+
+    /// DR-48: the exemption is an **exact** banner list with one named matcher.
+    ///
+    /// The counterexamples matter more than the positive cases: the engine
+    /// prints a real `ERROR: [MCP] …` line, so a `[MCP]`-prefix rule would be a
+    /// silent regression of the gate.
+    #[test]
+    fn only_the_exact_engine_info_banners_are_exempt() {
+        for banner in ENGINE_INFO_BANNERS {
+            assert!(
+                is_engine_info_banner(banner),
+                "the engine's own banner must be exempt: {banner}"
+            );
+            // Trailing whitespace (a log line may end in `\r`) does not hide it.
+            assert!(is_engine_info_banner(&format!("{banner}\r\n")));
+        }
+
+        for line in [
+            // A real engine error that carries the `[MCP]` prefix — the trap
+            // D221 names explicitly.
+            "ERROR: [MCP] SceneTree never became available; MCP server disabled.",
+            // A real GDScript/parse error.
+            r#"SCRIPT ERROR: Parse Error: Unexpected identifier "using" in class body."#,
+            r#"ERROR: res://scripts/main.gd:1 - Parse Error: Unexpected identifier "using" in class body."#,
+            // The `[MCP]` prefix alone, a truncated banner, and an *unknown*
+            // `[MCP]` line: none of them may be guessed at (fail closed).
+            "[MCP] capture=off",
+            "[MCP] capture=enabled: mode=every_call viewport=2d dir=/tmp diff_image=false scale=2",
+            "[MCP] role=game configured_port=63698 source=cmdline listen=true",
+            "[MCP] listening on 127.0.0.1:63698 (editor=false, tools=73)",
+            "[MCP] SceneTree never became available; MCP server disabled.",
+            "error",
+            "",
+        ] {
+            assert!(
+                !is_engine_info_banner(line),
+                "this line must NOT be exempt (DR-48 fails closed): {line}"
+            );
+        }
+    }
+
+    /// DR-48: the classification keeps every line except an exact banner, and a
+    /// payload that is *only* banners is clean.
+    #[test]
+    fn the_banner_filter_keeps_every_other_line() {
+        let banner = ENGINE_INFO_BANNERS[1];
+        let error = "ERROR: [MCP] SceneTree never became available; MCP server disabled.";
+        let mixed = serde_json::json!([banner, error, 42, {"message": "x"}]);
+        let reported = non_banner_editor_errors(mixed.as_array().unwrap());
+        assert_eq!(
+            reported.len(),
+            3,
+            "a real error, a non-string and an object all survive: {reported:?}"
+        );
+        assert!(reported.iter().any(|line| line.as_str() == Some(error)));
+
+        let only_banners = serde_json::json!([ENGINE_INFO_BANNERS[0], banner]);
+        assert!(
+            non_banner_editor_errors(only_banners.as_array().unwrap()).is_empty(),
+            "only the engine's own banners were reported"
         );
     }
 

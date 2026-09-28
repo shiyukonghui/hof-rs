@@ -45,9 +45,24 @@ const SCENE_WITH_ROOT: &str = r#"[gd_scene load_steps=2 format=3]
 // A scripted channel that answers from the scene really present on disk
 // ---------------------------------------------------------------------------
 
+/// DR-48: the two informational `[MCP]` startup banners, **verbatim** — they are
+/// byte-identical to the engine's own literals
+/// (`godot-mcp/godot/modules/mcp_server/mcp_server.cpp:605` and `:645`) and to
+/// what the `smoke-t6` round's log carried.
+const ENGINE_TRACE_BANNER: &str =
+    "[MCP] trace=off (default; use --mcp-trace=<path> or godot_mcp/trace_file to enable)";
+const ENGINE_CAPTURE_BANNER: &str = "[MCP] capture=off (default; use --mcp-capture=on_error|every_call together with --mcp-trace=<path>)";
+
+/// DR-48: the genuine engine error the exemption must **never** swallow.  It
+/// carries the `[MCP]` prefix and is a real ERROR line.
+const ENGINE_MCP_ERROR: &str = "ERROR: [MCP] SceneTree never became available; MCP server disabled.";
+
 struct GateChannel {
     workspace: PathBuf,
     calls: Mutex<Vec<(String, Value)>>,
+    /// DR-48: an `editor_get_errors` payload answered verbatim instead of the
+    /// scene-derived one.
+    editor_errors: Option<Value>,
 }
 
 impl GateChannel {
@@ -55,6 +70,16 @@ impl GateChannel {
         Self {
             workspace: workspace.to_path_buf(),
             calls: Mutex::new(Vec::new()),
+            editor_errors: None,
+        }
+    }
+
+    /// DR-48: answer `editor_get_errors` with `errors` verbatim.
+    fn with_editor_errors(workspace: &Path, errors: &[&str]) -> Self {
+        Self {
+            workspace: workspace.to_path_buf(),
+            calls: Mutex::new(Vec::new()),
+            editor_errors: Some(json!({"available": true, "count": errors.len(), "errors": errors})),
         }
     }
 
@@ -96,7 +121,9 @@ impl ToolChannel for GateChannel {
                 }
             },
             "editor_get_errors" => {
-                if self.scene_valid() {
+                if let Some(payload) = &self.editor_errors {
+                    payload.clone()
+                } else if self.scene_valid() {
                     json!({"errors": []})
                 } else {
                     return Err(McpError::new(
@@ -160,6 +187,15 @@ fn adapter(_root: &Path) -> GodotAdapter {
 }
 
 async fn run_gate(root: &Path, script: Vec<FakeStep>) -> GateRun {
+    run_gate_with_errors(root, script, None).await
+}
+
+/// DR-48: the same run, with `editor_get_errors` answered from a fixed payload.
+async fn run_gate_with_errors(
+    root: &Path,
+    script: Vec<FakeStep>,
+    editor_errors: Option<Vec<&str>>,
+) -> GateRun {
     let mut cfg: HohConfig = test_config(root, 1);
     cfg.runtime.spec = root.join("spec.md");
     let spec = write_spec(root);
@@ -167,7 +203,10 @@ async fn run_gate(root: &Path, script: Vec<FakeStep>) -> GateRun {
     let observer = harness.clone();
     let workspace = cfg.runtime.workspace.clone();
     let run_dir = cfg.runtime.runs_dir.join("run-1");
-    let channel = Arc::new(GateChannel::new(&workspace));
+    let channel = Arc::new(match &editor_errors {
+        Some(errors) => GateChannel::with_editor_errors(&workspace, errors),
+        None => GateChannel::new(&workspace),
+    });
     let orchestrator = hof_rs::runtime::run_loop::Orchestrator {
         harness: Box::new(harness),
         adapter: Box::new(adapter(root)),
@@ -427,11 +466,177 @@ async fn a_launchable_project_never_invokes_a_repair() {
     )
     .await;
 
-    assert_eq!(
-        run.records.iter().map(|r| r.role).collect::<Vec<_>>(),
+    assert_eq!(run.records.iter().map(|r| r.role).collect::<Vec<_>>(),
         vec![Role::Planner, Role::Developer, Role::Tester]
     );
     assert_eq!(run.result["artifact_gate"]["launchable"], json!(true));
     assert_eq!(run.result["repair_retry_used"], json!(false));
     assert_eq!(run.result["battery_passes"].as_array().unwrap().len(), 1);
 }
+
+// ---------------------------------------------------------------------------
+// ⑤ DR-48 — the engine's own INFO banners must not close the gate
+// ---------------------------------------------------------------------------
+
+/// DR-48: `smoke-t6` closed the gate on the engine's informational banner
+/// (`[MCP] capture=off (…on_error…)`), because the **engine** classifies a log
+/// line as an error with a case-insensitive `contains("ERROR")`
+/// (`editor_read_scene_inspector.cpp:249`) and `on_error` matches.  The editor
+/// was in fact clean: the same round booted the scene and answered
+/// `running_game_get_scene_tree` with 50 nodes.
+#[tokio::test]
+async fn an_engine_info_banner_does_not_close_the_gate() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let run = run_gate_with_errors(
+        root,
+        vec![
+            plan_step(),
+            developer_writes(SCENE_WITH_ROOT),
+            tester_step(), // never consumed: no repair may be triggered
+        ],
+        Some(vec![ENGINE_CAPTURE_BANNER, ENGINE_TRACE_BANNER]),
+    )
+    .await;
+
+    assert_eq!(
+        run.result["artifact_gate"]["launchable"],
+        json!(true),
+        "the engine's own INFO banner is not an editor error (DR-48): {:?}",
+        run.result["artifact_gate"]["reasons"]
+    );
+    assert_eq!(
+        run.result["repair_retry_used"],
+        json!(false),
+        "an exempted banner must never burn the repair budget (DR-48)"
+    );
+    assert_eq!(
+        run.records.iter().map(|r| r.role).collect::<Vec<_>>(),
+        vec![Role::Planner, Role::Developer, Role::Tester]
+    );
+
+    // The raw payload is still recorded verbatim: the exemption changes the
+    // verdict, never the evidence.
+    let battery: Vec<Value> = serde_json::from_str(&read(
+        &run.run_dir
+            .join("iter-1/candidate/.hoh/deterministic/battery.json"),
+    ))
+    .unwrap();
+    let baseline = battery
+        .iter()
+        .find(|record| record["step_id"] == json!("editor_errors_baseline"))
+        .expect("the baseline step must exist");
+    assert_eq!(baseline["ok"], json!(true));
+    let observation = baseline["record"]["observation"].as_str().unwrap();
+    assert!(
+        observation.contains("capture=off"),
+        "the observation must carry the verbatim banner: {observation}"
+    );
+    let raw: Value = serde_json::from_str(&read(
+        &run.run_dir
+            .join("iter-1/candidate/.hoh/deterministic/raw/editor_errors_baseline.json"),
+    ))
+    .unwrap();
+    assert_eq!(raw["calls"][0]["ok"], json!(true));
+    assert!(
+        raw["calls"][0]["payload"]
+            .to_string()
+            .contains("capture=off"),
+        "the raw record must keep the payload: {raw}"
+    );
+}
+
+/// DR-48 counterexample ①: a real `ERROR:` line still closes the gate.
+#[tokio::test]
+async fn a_real_editor_error_still_closes_the_gate() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let run = run_gate_with_errors(
+        root,
+        vec![
+            plan_step(),
+            developer_writes(SCENE_WITH_ROOT),
+            developer_writes(SCENE_WITH_ROOT), // the one targeted repair
+            tester_step(),
+        ],
+        Some(vec![
+            ENGINE_CAPTURE_BANNER,
+            r#"ERROR: res://scripts/main.gd:1 - Parse Error: Unexpected identifier "using" in class body."#,
+        ]),
+    )
+    .await;
+
+    assert_eq!(
+        run.result["artifact_gate"]["launchable"],
+        json!(false),
+        "a real ERROR line must still close the gate (DR-48)"
+    );
+    assert_eq!(run.result["repair_retry_used"], json!(true));
+    let reasons = run.result["artifact_gate"]["reasons"].as_array().unwrap();
+    assert!(
+        reasons
+            .iter()
+            .any(|reason| reason.as_str().unwrap_or("").contains("Parse Error")),
+        "the reason must carry the surviving error: {reasons:?}"
+    );
+}
+
+/// DR-48 counterexample ②: the engine also prints an `ERROR:` line **with** the
+/// `[MCP]` prefix (`mcp_server.cpp`, "SceneTree never became available").  A
+/// `[MCP]`-prefix whitelist would swallow it; the exact-banner rule must not.
+#[tokio::test]
+async fn an_error_carrying_the_mcp_prefix_still_closes_the_gate() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let run = run_gate_with_errors(
+        root,
+        vec![
+            plan_step(),
+            developer_writes(SCENE_WITH_ROOT),
+            developer_writes(SCENE_WITH_ROOT),
+            tester_step(),
+        ],
+        Some(vec![ENGINE_MCP_ERROR]),
+    )
+    .await;
+
+    assert_eq!(
+        run.result["artifact_gate"]["launchable"],
+        json!(false),
+        "`ERROR: [MCP] …` is a real error; only the exact INFO banner is exempt (DR-48)"
+    );
+    let reasons = run.result["artifact_gate"]["reasons"].as_array().unwrap();
+    assert!(
+        reasons.iter().any(|reason| reason
+            .as_str()
+            .unwrap_or("")
+            .contains("SceneTree never became available")),
+        "the reason must quote the real error: {reasons:?}"
+    );
+}
+
+/// DR-48 counterexample ③: a `[MCP]`-prefixed line that is **not** one of the
+/// known banners is not exempt either (no prefix rule, and no shape guessing).
+#[tokio::test]
+async fn an_unknown_mcp_prefixed_line_still_closes_the_gate() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let run = run_gate_with_errors(
+        root,
+        vec![
+            plan_step(),
+            developer_writes(SCENE_WITH_ROOT),
+            developer_writes(SCENE_WITH_ROOT),
+            tester_step(),
+        ],
+        Some(vec!["[MCP] capture=off"]),
+    )
+    .await;
+
+    assert_eq!(
+        run.result["artifact_gate"]["launchable"],
+        json!(false),
+        "a truncated/unknown `[MCP]` line is not the known banner: fail closed (DR-48)"
+    );
+}
+
