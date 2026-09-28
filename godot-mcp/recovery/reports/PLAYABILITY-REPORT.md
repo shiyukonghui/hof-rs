@@ -1,5 +1,14 @@
 # TASK-116 — 可玩性门（PLAYABILITY GATE）报告
 
+> **TASK-149 校对注（2026-09-28，只增不改）**：本文件属**游戏侧（可玩性）**那一批的规范类文档。
+> 主线已于 2026-09-28 校正为「**交付物 = MCP 工具及其测试用例矩阵**」，可玩性/模型玩家支线
+> **中止**（见 `DECISIONS.md` **D212**）。因此 TASK-149 对本文件**不做逐条数字校对**——
+> 它的每个数字都以 `runs/playability/**` 的产物为依据，而 `runs/**` **被 `.gitignore` 忽略、
+> 不进提交**（只存在于本机），改动本文件既无法从 git 复算、也不改变任何主线结论。
+> TASK-149 只做了两件事：①确认**每一条引用的路径在本机都存在**（无失效路径）；
+> ②在 `recovery/reports/ERRATA.md` 里建立**老报告勘误索引**，供将来需要时逐条落账。
+> **本文件的其他内容一字未动。**
+
 > 生成时间：2026-09-27 13:46:56 ｜ 机器可读原始数据：`runs/playability/playability.json`
 > 门工具：`tools/playability_gate.py` ｜ 试玩代理接口：`tools/playtest_agent.py`
 > 逐款证据：`runs/playability/<game>/{frames/*.png, frames.json, filmstrip.png, gate.json}`

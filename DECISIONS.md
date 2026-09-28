@@ -8160,3 +8160,164 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
   `tools/playtest_player_t142_prefix.py` 与 `runs/model-player/_scripts/t142_prefix_code/`
   都保留了修前字节，sha256 见 `_scripts/t142_code_revision.json`）。
 
+---
+
+## D212 — 主线校正（2026-09-28）：本项目的交付物是 **MCP 工具**，不是小游戏；**中止 TASK-142 支线**
+
+- 日期：2026-09-28
+- 触发问题：TASK-131..142 这条支线把资源投在「20 款小游戏能不能被模型玩」上，而**用户的目标
+  从头到尾是**「好用的 MCP 工具」。支线越走越细（模型玩家判据、可玩性分数、逐帧读图），
+  与本项目的**交付物定义**发生漂移：工具的**测试用例矩阵**（`recovery/TEST-CASES.md`）
+  反而没有一条硬纪律把它与实物钉在一起——TASK-145 的独立验收因此判 `fail`，而缺陷纯粹是
+  「统计与正文失步」，与本主线最有价值的东西直接相关。
+- 用户裁定（2026-09-28）：
+  1. **主线 = MCP 工具**：交付物是工具、契约、证据通道、用例矩阵与它们的一致性机制；
+     「小游戏 + 可玩性评分」这条支线**中止**，TASK-142 被中断。
+  2. **已中止支线的改动「保留」**，作为**一个独立提交**入库，**不得 revert / 丢弃**。
+  3. **文档校对范围 = 规范类 + 最新报告**；老报告只进 `recovery/reports/ERRATA.md` 勘误索引。
+- 核查事实（逐条可复算）：
+  * 中止时 TASK-142 的残留**未入库**：3 个 `tools/**` 文件已修改未提交、`DECISIONS.md` 已修改未提交；
+    TASK-149 §B 已把它们作为一个提交入库（**`71f92e8`**），提交信息逐字写明
+    「已中止支线 / 仅作参考 / 不属于本主线交付 / 被测状态」；
+  * 它们的**被测状态**由 TASK-143 记录：`task142_cases` 52 断言 PASSED，**未让任何测试变红**；
+    TASK-149 入库前后各自复跑 `python -m pytest tools\tests -q --no-header -p no:cacheprovider`
+    → **30 passed**（两次相同）；
+  * TASK-142 的改动**只落在测量侧**（`tools/playtest_player.py` 的 `_pong` +
+    `playability_controls.json` 的 `model_player_stability` + 模板 + DECISIONS），
+    **一个字节都没碰** `godot/**`（引擎）与 `projects/**`（游戏工程）。
+- 选项：
+  1. **保留、独立提交、显式标注来源（选中）**：历史可追、可回滚、读者不会被误导；
+  2. 丢弃 / `git checkout --` 还原（否决）：用户明令「保留」，且那会让"修前字节"这一
+     可复现性资产消失（D211 的回滚点正依赖它）；
+  3. 与主线文档混在一个提交里（否决）：读者无法分辨哪条决策属于已中止支线。
+- 最终选择：选项 1。**重要：本文件里以下两条条目来自已中止支线，不是本主线的决策** ——
+  **D210**（最低轮数 2 → 4、N≥4 轮分布、`ROUNDS_INSUFFICIENT` 不进 PASS）与
+  **D211**（`--player scripted` 的 pong 策略在速度读数不可靠时退化；修法与同类款普查）。
+  它们与 `recovery/reports/TASK-140-REPORT.md` 的 §K 勘误、
+  `recovery/tasks/TEMPLATE-logic-feedback.md` 的 §1.2e 与反例 33–36、
+  `tools/playability_controls.json` 的 `model_player_stability`、
+  `tools/playtest_player.py` 的 `load_stability_declaration` 属于**同一个已中止支线的同一次改动**，
+  全部由 **`71f92e8`** 入库。**在主线里引用它们时必须同时写明"来自已中止支线 TASK-142"**。
+- 理由：主线校正的价值在于**定义交付物**。把"交付了什么"写死，才能让后续任务书、
+  独占清单与验收判据都对齐；把已中止支线的条目显式标记来源，才能让决策日志继续作为
+  「为什么代码长这样」的权威来源，而不是让读者以为这些都还在做。
+- 预期影响与回滚点：`recovery/TEST-CASES.md` 成为主线的**主交付物**（D213/D214 记录的
+  口径与守护都围绕它）；已中止支线的文件仍在仓里但**不再演进**。
+  回滚点：`git revert 71f92e8` 会删掉那批保留物 —— **与用户裁定相反，不建议**。
+
+## D213 — TASK-143：测试用例矩阵的**口径**（781 条、6 族、编号稳定）与"派生"必须声明
+
+- 日期：2026-09-28
+- 触发问题：本主线此前没有一份**可逐条引用**的用例清单；每批报告各说各话，数字无法互查。
+  TASK-143 被要求把「契约工具 / 十道门 / accept_m1 / 引擎断言 / `tools/tests/**` /
+  一致性脚本」六个来源盘成一张矩阵，并给每条用例**输入形式 / 输出形式 / 反例判据**。
+- 核查事实（TASK-143 一手实测，见 `recovery/reports/TASK-143-REPORT.md`）：
+  * 6 族合计 **781 条**：`TC-TOOL-*` 177、`TC-GATE-gNN` 10、`TC-M1-*` 22、
+    `TC-ENG-NNN` 159、`TC-PY-*` 400、`TC-CONS-*` 13；
+  * 活体非法输入探针：**142 个工具真的收到 `-32602`**，`not_probed=35`（写类且无必填参数，
+    构造非法输入就可能真的改状态 ⇒ **不探、也不记 pass**）；
+  * 交付时产品/引擎代码改动 **0**（因此未触发两变体重建）。
+- 选项：
+  1. **编号稳定 + 来源分级 + 派生格声明（选中）**：`TC-TOOL-<工具名>` / `TC-GATE-gNN` /
+     `TC-M1-<case id>` / `TC-ENG-NNN` / `TC-PY-<文件>:<条目>` / `TC-CONS-<脚本>`；
+     每格区分**一手实测 / 派生 / 声明**，矩阵 C 的关键词派生格一律写 `·` 并说明
+     "`·` 表示关键词表没命中，不是该形式已被证明不存在"；
+  2. 只给汇总数字、不给逐条编号（否决）：后续任务无法逐条引用，数字无法互查；
+  3. 把"没命中的格"填成 `pass`（否决）：那是**假绿**。
+- 最终选择：选项 1。口径后来由 TASK-146 收紧为 **788**（`TC-PY-*` 407）——
+  见 D214，**781 是 TASK-143 交付当时的正文口径，788 是现行口径**。
+- 理由：矩阵的价值在于**可引用、可复算、可判红**，而不是好看。来源分级让"声明"与"实测"
+  不会混成一句话；"派生"的下限被写清，读者不会把关键词命中当成证明。
+- 预期影响与回滚点：后续每一批任务书都可以直接引用 `TC-*` 编号；任何一族增删用例
+  都必须**同时**改正文与 §1.1（TASK-146 把它做成了 pytest 守护，见 D214）。
+  回滚点：不需要——矩阵是**新增**交付物，不改任何既有行为。
+
+## D214 — TASK-144 / TASK-146：**判据只收紧**（通道口径对齐 + 矩阵自洽守护 + 反例口径 175/177）
+
+- 日期：2026-09-28
+- 触发问题（TASK-144）：`tools/verify_coverage_batch.py` 的批量门判据还是 TASK-118 之前的
+  `effective>=1`，而台账自 TASK-118 起按**声明通道**判定并另存 `channel_evidence` ⇒
+  所有 `editor_state` 通道的工具被**系统性误红**（实测 118 pass / 48 fail，其中 45 条误红）。
+  同时引擎二进制自报锚点 `3fdabe2d9` 落后 HEAD `ba1587c71`（7 个文件里 5 个编译输入）⇒
+  g09 红。
+- 触发问题（TASK-146）：TASK-145 的独立验收判 `fail`，唯一 blocker 是
+  **`recovery/TEST-CASES.md` 的 §1.1 声明与正文逐条行数不符**（声明 `TC-PY=404`/合计 785，
+  正文只有 400/781），另有 2 条行名指向已改名的测试、全篇 25 处 stale 的 `23 passed`、
+  以及"强反例 177/177"口径偏宽。
+- 核查事实与最终选择：
+  1. **TASK-144 A（`e9d17f9`）——判据对齐现行通道**：批量门改为
+     `calls>=5 and channel_evidence>=1 and (boundary>=1 or declared edge)`，并**复用**
+     `tools/tool_coverage.py` 的 `channel_evidence_count()` / `load_channels()`（**代码优先于文档**），
+     另加"快照与声明自洽"检查。实测 **118 pass / 48 fail → 163 pass / 3 fail，误红 45 → 0**；
+     3 条真实缺证据逐条点名（`editor_set_auto_dismiss_dialogs` / `os_deploy_to_android_device` /
+     `project_get_android_preset_info`）。**没有任何通道门槛被放松**，`effective` 降级为对照信息列。
+  2. **TASK-144 B——锚点复位**：在 HEAD `ba1587c71` 上**串行**重建两个变体
+     （plain `1m45s` → `4.8.dev.custom_build.ba1587c71`；mono `1m42s` →
+     `4.8.dev.mono.custom_build.ba1587c71`），十道门 `g01`…`g10` **全部 exit=0**、
+     `g09` 判 `ANCHOR_EQUAL`（`DIFF_COUNT=0`）、`accept_m1` **22/22**。
+     `push` 的真实输出是 `Everything up-to-date`（本地与 origin 都已是 `ba1587c71e`），
+     **未 force、未换分支、未产生新提交**。
+  3. **TASK-146（`03839a5`）——把"矩阵自洽"做成 pytest**：新增
+     `tools/tests/test_matrix_self_consistency.py`（3 条）：①从正文重算各族计数与合计并与
+     §1.1 比对；②逐条解析每个 `TC-PY` 行引用的测试名，按行自述的产生方式
+     （pytest / 脚本内 check / 自打印）在仓库里重解，并要求"某 pytest 文件的 `def test_*` 条数
+     == 它的编号行数"；③**非空转守卫**：把故意不一致的矩阵文本喂给同一对检查器，要求它们**必须抱怨**。
+     该守卫在 TASK-146 里被**先证红再恢复**（合计 +1 / 删行 / 改指向不存在的测试名 三类
+     分别判红，`2 failed, 1 passed`），恢复后 `TEST-CASES.md` 逐位未变。
+  4. **口径收紧**：§1.1 改为**由正文严格重算**（`TC-PY-*` 400→407、合计 781→788）；
+     强反例 `177/177` → **`175/177` + 2 条弱**（两条 `editor_simulate_*` 的活体探针只到
+     `tool_registry.cpp:864` 的注册器未知参数门，在 `def->handler`（`:880`）**之前**，
+     因此只证明参数门）；`27 passed`/`23 passed` 全部归一到**唯一来源** §8.1 的 `30 passed`。
+  5. **TASK-149 的子计数更正**：§1.2/§9.3 原来写的"**121** 条 `missing_required` + 21 条
+     `wrong_type`"**不可复现**。从 `recovery/work/task143/probe-live.json` 逐条重算那 142 条
+     `refused_-32602`，实测是 **119 条 `Missing required parameter: <k>`（带冒号，
+     `godot/modules/mcp_server/tools/tool_builder.cpp:207-232`）+ 21 条 `Parameter '<k>' must be …`（同源）+
+     2 条无冒号的 `Missing required parameter '<k>'`（`godot/modules/mcp_server/tools/editor_node_write.cpp:1040` /
+     `godot/modules/mcp_server/tools/editor_node_property_updates.cpp:435`）**，`119+21+2 = 142`。
+     **定性结论不变**（140 条在 handler 内属行为反例；2 条 mouse 只到参数门），
+     承重的 `175/177 + 2 弱` 不依赖该子数字。勘误索引见 `recovery/reports/ERRATA.md` E-2。
+- 理由：这三件事同属**一个方向**——把"我们说数字是自洽的"从**声明**变成**可执行**。
+  判据只收紧（通道门槛、反例强度、统计来源），从未为凑绿放宽；守卫先证红再恢复，
+  证明它不是恒真式。
+- 预期影响与回滚点：任何一族增删用例都必须在**同一次改动**里同时改正文与 §1.1，否则
+  `pytest tools/tests` 判红（这是特性，不是负担）；`TC-PY` 行的测试名必须真实存在。
+  回滚点：`git revert 03839a5` 会退回"统计与正文失步"的状态——**不建议**。
+
+## D215 — TASK-148：打包**偏离**旧口径（单卷 / MANIFEST 增列 / `UseSharedCompilation=false` 根因）
+
+- 日期：2026-09-28
+- 触发问题：TASK-148 被要求「从 CURRENT 源码重新打包 20 款游戏的 Windows exe」。
+  旧包（TASK-109）的口径是**两卷**、MANIFEST 三列（`sha256 bytes path`）、RUN-CHECK 只做
+  「headless 退出码 + 3 款窗口抽查」。本批沿用了目录结构、命名规则与 RUN-CHECK 的**位置**，
+  但在三处**偏离**了旧口径，必须写清「偏离了什么、为什么、怎么复现旧的」。
+- 核查事实（`recovery/reports/TASK-148-REPORT.md`，一手实测）：
+  1. **单卷 `part1of1` vs 旧的两卷**：旧包给出两卷的理由是「压缩前约 3.2 GB，超过单文件
+     2 GB 的常用上限」；实测**单卷压缩后 1264863973 B（1.178 GB）**，远在 2 GB 之下，
+     而旧口径的"两卷"是按**字母序前 10 / 后 10 款**切（`recovery/work/task109/package.py`
+     的 `SPLIT_INDEX = 10`）——它切的是**压缩前**的载荷，不是 zip 分卷大小。因此本批
+     **单卷**，并把载荷统计写进清单头（3780 个载荷文件 / 3239466195 B 解压后）。
+  2. **MANIFEST 增列"分卷归属"**：由 `sha256 bytes path` → `sha256 bytes **part** path`，
+     使"每个文件属于哪一卷"在单卷与多卷两种布局下都可机读；清单头另写
+     `# volumes: 1 (single volume: whole archive fits well under the 2 GB mark)`。
+  3. **`UseSharedCompilation=false` 的根因**（不是偏好，是实测）：导出时若让 MSBuild 编译
+     **服务器**常驻，同一款 `--export-release` 会**挂住不退出**；把
+     `UseSharedCompilation=false`、`MSBUILDDISABLENODEREUSE=1`、`DOTNET_CLI_USE_MSBUILD_SERVER=0`
+     写进每条导出 argv 之后，**同一条命令 11.7 s 跑完并正常退出**，20/20 都拿到真实退出码。
+     编译产物本身不受影响（只是编译器住在进程内而非常驻服务器）。
+  4. RUN-CHECK **加强**（任务书 B.5/P3 要求）：由"3 款窗口抽查"改为**逐款 cmd 启动冒烟**
+     （存活 ≥3 s + 主窗口），并从**交付的那个 zip** 里解出 pong/snake 整款重算 sha256
+     （378/378 全中）后 `--headless --quit-after 120` 运行通过。
+- 选项：
+  1. **偏离并逐条给出前后对照与复现路径（选中）**：`recovery/work/task148/package_task148.py`
+     里把 `SPLIT_INDEX = None` 改成 `10` 即可原样复现旧的两卷划分；
+  2. 为"不偏离"而强行切两卷（否决）：旧理由（超 2 GB）在实测下不成立，仅为一致而一致；
+  3. 保留旧 MANIFEST 三列（否决）：单卷布局下"文件属于哪一卷"就无处可写。
+- 最终选择：选项 1。**旧包一个字节未删、未改**（`recovery/reports/TASK-148-REPORT.md` §6.2 的
+  sha256 证据）；大包 zip 按既有规则不入库，入库的是包的**身份**
+  （`*.MANIFEST.txt` / `*.sha256.txt` / `PACKAGE-INFO-TASK148.txt`）。
+- 理由：偏离必须**有实测根因**且**可回退到旧口径**；把根因（编译服务器挂住）与复现路径
+  （`SPLIT_INDEX`）都写下来，后来者才不需要重新踩一遍。
+- 预期影响与回滚点：后续重打包默认**单卷 + 四列清单 + 三个环境变量 + 逐款冒烟**。
+  回滚点：`SPLIT_INDEX = 10` 回到两卷；去掉三个环境变量则回到"编译服务器可能挂住"的旧行为
+  ——那会**丢失退出码**（`Start-Process -PassThru` 取不到 ExitCode 的老问题），不建议。
+

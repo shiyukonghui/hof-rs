@@ -9,6 +9,42 @@
 > `_exercises/neg_*` 与 `prefix_*`。
 > **本报告里的每一个数字都是我自己重算的**：实施者报告里出现的任何数字（含任务书转述的
 > "模型臂 1/1/3/15""脚本臂 9/1/4/6""111 条命令"）都只作待核对项。
+>
+> **TASK-149 追加（2026-09-28，只增不改）：本报告 §1/§3 里所有 `tools/playtest_player.py:NNN`
+> 行号指针，指向的是本报告验收当时的冻结版本，而不是现在仓里的版本。**
+> 原因可复算：TASK-142 那批改动（`tools/playtest_player.py` 的 `load_stability_declaration` /
+> `ROUNDS_INSUFFICIENT` / 分布等）在该文件里插入了几段新代码；那批残余已由 TASK-149 §B 作为
+> 「已中止支线」入库（`71f92e8`），其原版字节冻结在 `tools/playtest_player_t142_prefix.py`
+> （= `71f92e8^:godot-mcp/tools/playtest_player.py`，**4905 行**，277930 B）。
+> 因此**结论一字未变**（本报告核对的是判据与证据，不是行号），变的是行号。
+>
+> **位移不是常数**：文件里有 4 处插入点，所以从冻结版到现在的位移分段是
+> **+58 行**（第 173 行之前 → `summarise()` 内部）、**+99**（`_summarise_core` /
+> `ScriptedPlayerAgent` 一段）、**+119**（`_2048_*` → `_pong` 一段）、**+174**
+> （`_snake`/`ack_after_inject` 一段）。下表覆盖本报告**实际引用过的每一个**
+> `playtest_player.py:NNN`，逐条是**实算**的（同一符号在冻结版与当前版的 `grep -n`；
+> 复算脚本 `recovery/work/task149_stalepointers.py` / `task149_frozenmap.py`）：
+
+| 本报告写的指针（冻结版） | 冻结版里实际是什么 | 现在的位置 | 位移 |
+|---|---|---|---|
+| `:211-214` 用声明文件覆盖常量 | `:181` 的 `def load_change_margins` 一带 | `:239` 起 | **+58** |
+| `:234-235` | 模块级声明区 | `:292-293` 一带 | +58 |
+| `:469-525` `ack_verdict()` | `:690` 的 `def ack_verdict` | `:748` 起 | **+58** |
+| `:722-801` `summarise()` | `:943` 的 `def summarise` | `:1001` 起 | **+58** |
+| `:785-793` / `:785-791` strict 分支写 verdict | `:1004-1012`（`if margin == "strict":` 起） | `:1064-1071`（`counts_as_pass` 在 `:1071`） | **+58** |
+| `:824-826` | `:766` 的 `def changed_of` | `:824` 起 | **+58** |
+| `:881-1048` `_summarise_core()` | `:1485` 的 `def _summarise_core` | `:1584` 起 | **+99** |
+| `:927` | `:869` 的 `def step_made_progress` | `:927` | **+58** |
+| `:950-981` `one_action_loop` / `same_action_fixed_point` | **这个指针是错的**：冻结版里这两个名字在 `_summarise_core` 体内，`same_action_fixed_point` 在 `:1579`、`one_action_loop` 在 `:1722`（`:950-981` 在冻结版里是 `summarise()` 的文档字符串） | `:1678` / `:1821`（**+99**） | — |
+| `:2264-2270` | `:2185` 的 `def _2048_moved` 一带 | `:2284` 起 | **+99** |
+| `:2326` `ack_state_for_verdict = inj.get("ack_result") or pre_ack` | **冻结版里这条兜底已经不存在**（TASK-138 defect ⑨ 已删；`grep -c "or pre_ack" tools/playtest_player_t142_prefix.py` = 0）。TASK-137 验收当时它存在 | 现在 `:3426-3450` 明确**不回退 `pre_ack`**，`:3428` 的注释逐字点名旧 `:2326` | — |
+| `:2476-2478`「两窗 same length in game frames 的注释」 | **这个指针是错的**：冻结版 `:2476-2478` 是 `_breakout` 的策略分支；那句话的**真实位置**在冻结版 `:3732` | 现在 `:3906` | +174 |
+| `:812`（注册器名门） | 引擎文件，非本文件 | `godot/modules/mcp_server/tool_registry.cpp:864`（TASK-145/146 独立复算过） | — |
+
+> 只对本表里**被指名核对过**的这些指针做了说明；§1 表格中其余零散行号未逐条改写（改写等于把
+> 一次事后推断混进一次当时的验收记录）。要复算任一指针，用
+> `python recovery\work\task149_stalepointers.py ACCEPTANCE-TASK-137` 会打印每个指针**今天**
+> 落在哪一行、以及它前后 60 行内的符号，读者可自行比对。
 
 ---
 

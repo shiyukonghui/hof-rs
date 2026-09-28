@@ -1,5 +1,12 @@
 # TASK-116 — 可玩性缺陷登记（PLAYABILITY-DEFECTS）
 
+> **TASK-149 校对注（2026-09-28，只增不改）**：同 `PLAYABILITY-REPORT.md` 的同类注记——
+> 本文件属**游戏侧（可玩性）**那一批的规范类文档，而可玩性/模型玩家支线已于 2026-09-28
+> **中止**（见 `DECISIONS.md` **D212**）。TASK-149 **不做逐条数字校对**（它的依据都在
+> `runs/playability/**`，而 `runs/**` 被 `.gitignore` 忽略、只存在于本机），只确认引用路径
+> 在本机存在，并把老报告的不自洽集中进 `recovery/reports/ERRATA.md`。
+> **本文件的其他内容一字未动。**
+
 > 生成时间：2026-09-27 13:46:56 ｜ 每一条都由 `runs/playability/<game>/gate.json` 的机检事实或源码 `file:line` 支撑。
 > 现象 / 证据 / 根因 / 建议修法，四栏齐全；没有「应该可以」的转述。
 > **登记来源是修复前那一轮**（`runs/playability/playability.before.json`）；每条后面的

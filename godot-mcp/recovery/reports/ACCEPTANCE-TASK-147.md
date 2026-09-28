@@ -8,6 +8,15 @@
   * `recovery/TEST-CASES.md` = `b433b0ffeb84eb3f2e2d0aa5a0da62dae05361648afc8eca57fdbf5be67e6cc0`（522467 B，1210 行）
   * `tools/tests/test_matrix_self_consistency.py` = `e800be60f7e5ef30b1adc1f61668f397a33a76305d782b8faccbdb24c12519c7`（14214 B）
   * 与实施报告 §E 登记值**逐位一致**。
+* **TASK-149 校对注（2026-09-28，只增不改）**：本报告的 sha256 与行数指的是它验收当时的
+  `recovery/TEST-CASES.md`；TASK-149 §E 对该文件做了三处**只改失效数字、不增删编号行**的更正
+  （`121` → `119+21+2`；`not_probed` 的 `33` → `35`；§8.3 的 `WORKING_TREE_RED` 说明），
+  因此该文件的 sha256 与行数**现已改变**（TASK-146 的统计自洽不受影响：TASK-149 改完复跑
+  `tools/tests` **30 passed**、`recount.py` **SELF_CONSISTENT=YES**）。
+  **本报告点名的 Y1 已被 TASK-149 落实**（见 `ERRATA.md` **E-2** 与 `TEST-CASES.md` §10.7）；
+  **X5（`model_player 272` 标签）与 X6（E4 的"25 处"）经复核后保留**，理由写在
+  `ERRATA.md` **E-12**：X5 的组成式本身自洽（272 若改 276 会与 §1.1 的 407 冲突），
+  X6 是他批的变更清单（TASK-149 的纪律是不重写他批的叙述）。本报告其余结论一字未变。
 
 ---
 

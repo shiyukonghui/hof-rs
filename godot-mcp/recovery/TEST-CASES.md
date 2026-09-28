@@ -5,6 +5,7 @@
 > 事实来源分级：**一手实测**=本轮真跑（§8）或落在 trace/JSON 里的原始记录；**派生**=从这些原始记录机械计算；**声明**=契约/文档里写的。冲突时以代码与实测为准。
 > **TASK-144 更新（2026-09-28）**：本文件由 TASK-143 生成；TASK-144 只更新了与 U4（`verify_coverage_batch.py` 陈旧）、U1（g09 锚点漂移）、U2（两条 simulate 工具无失败观察）相关的行与统计，变更清单见 §10.5。矩阵其余部分未重写。
 > **TASK-146 修复（2026-09-28）**：TASK-145 独立验收判 `fail`（1 blocker），**只针对本文件的统计与正文不符**（收口部分已被 TASK-145 独立复现为真绿，未重做）。本轮的更正：①补齐 TASK-144 新增的 4 条 pytest 用例的编号行；②**§1.1 声明值改为由正文严格重算得到**（`TC-PY-*` 400→407、合计 781→788，多出的 3 条是本轮新增的自洽校验测试），并新增 `tools/tests/test_matrix_self_consistency.py` **从正文重算并比对 §1.1，不等即判红**；③替换 2 条已改名、当前不存在的测试行名；④全篇 stale 的 "23 passed" → 与 §8.1 一致的 **30 passed**（唯一来源）；⑤§1.2/§1.4 的强反例口径由 `177/177` **收紧为 `175/177` + 2 条弱**（两条 `editor_simulate_*` 只到注册器参数门）。变更清单见 §10.6。矩阵其余部分未重写。
+> **TASK-149 校对（2026-09-28）**：按 `ACCEPTANCE-TASK-147` 的 Y1（major）与 X5/X6（minor）做事后核对，**只改两处失效的子计数**（`121+21` → `119+21+2`；`not_probed` 的 `33` → `35`）、就地注明 §8.3 的 `WORKING_TREE_RED` 已因 TASK-149 §C 修好（引擎仓 `.gitignore` 加 `uid_cache.bin`，提交 `15bbf1f50e`），并新增 §10.7。**没有增删任何编号行**，§1.1 六族与合计（177/10/22/159/407/13 = 788）逐位未变，改完复跑 `tools/tests` **30 passed**。其余依赖该子计数的定性结论（140 条在 handler 内、`175/177 + 2 弱`）不受影响；老报告的同类勘误进 `recovery/reports/ERRATA.md`。
 
 ## 0. 盘点口径与范围
 
@@ -83,7 +84,12 @@
 
 **对抗性结论（TASK-145 D10 提出、TASK-146 落进口径）——`-32602` 的来源要分开看，不能一律叫"参数门"**：
 
-* **活的 `-32602` 里有 121 条 `missing_required` + 21 条 `wrong_type` 不是注册器参数门发出的**：`Missing required parameter: <k>` 与 `Parameter '<k>' must be a …` 由 **handler 侧**的共享读取器 `require_string()` / `require_int()` 发出（`godot/modules/mcp_server/tools/tool_builder.cpp:207-232`，由各工具自己的 handler 调用）。它们发生在 **handler 执行路径内**（`tool_registry.cpp:880` 的 `def->handler(p_args, r_error)` 之后）⇒ **属于行为反例**（准确地说：是该工具自己的**契约级入参校验**行为，不是状态级/副作用级行为）。
+* **活的 `-32602` 里 140 条不是注册器参数门发出的，要拆成三段**（`119 + 21 + 2 = 142`；TASK-149 更正，见 `recovery/reports/ERRATA.md` E-2）：
+  * **119 条 `missing_required`（带冒号）**：消息逐字是 `Missing required parameter: <k>`，由 **handler 侧**的共享读取器 `require_string()` / `require_int()` 发出（`godot/modules/mcp_server/tools/tool_builder.cpp:207-232`，由各工具自己的 handler 调用）；
+  * **21 条 `wrong_type`**：消息逐字是 `Parameter '<k>' must be a …, got …`，同一批 `tool_builder.cpp` 读取器发出；
+  * **2 条 `missing_required`（无冒号）**：消息逐字是 `Missing required parameter '<k>'`，**不是** `tool_builder.cpp` 发的——`editor_set_auto_dismiss_dialogs` 出自 `godot/modules/mcp_server/tools/editor_node_write.cpp:1040`，`editor_set_node_property_updates` 出自 `godot/modules/mcp_server/tools/editor_node_property_updates.cpp:435`（两个工具自己的 handler 内联写的消息）。
+
+  三段都发生在 **handler 执行路径内**（`tool_registry.cpp:880` 的 `def->handler(p_args, r_error)` 之后）⇒ **都属于行为反例**（准确地说：是该工具自己的**契约级入参校验**行为，不是状态级/副作用级行为）。**旧写法 `121 + 21` 拆不开 142**：`121` 不可复现，正确划分是 `119 + 21 + 2`。
 * **`editor_simulate_mouse_click` / `editor_simulate_mouse_move` 这 2 条只能证明参数门**：`recovery/work/task144/probe-u2.json` 逐字记着 `probe_kind = "undeclared_argument_name (refused by the registry's unknown-argument gate, before any handler runs)"`，消息是 `Unknown parameter 'mcp144_undeclared_probe'`，发出点是 `tool_registry.cpp:864` 的 `_reject_unknown_arguments()`，**在 `handler` 之前**。因此它们是**参数门反例（弱）**，不能计入强反例。
 * 所以强反例是 **175 / 177**（不是 177/177），这 2 条留在弱反例；`完全无反例 = 0` 仍然成立。
 
@@ -1032,6 +1038,19 @@ GATE_EXIT=0
 
 **TASK-144 B 更新**：重建后 `tools\run_gates.ps1 -Tag task144 -RunGates` 的 preflight 已经报 **`ANCHOR=ba1587c71 HEAD=ba1587c71 ANCHOR_REPORTED=ba1587c71 verdict=ANCHOR_EQUAL ancestor=yes diff_count=0`**（与 HEAD 相等）；`WORKING_TREE_RED=1` 指的是引擎仓那个**既有的未跟踪文件 `uid_cache.bin`**（在 TASK-144 开工前的 `git -C godot status --short` 里就已经存在，不是本任务产生，也未提交）。`-RunGates` 是显式要求无条件跑十门。
 
+**TASK-149 更新（2026-09-28，就地更正上面这条 stale 读数）**：`uid_cache.bin` 已由 TASK-149 §C 加进**引擎仓** `godot/.gitignore`（**非破坏：文件不删、不动**）并在引擎仓提交 `15bbf1f50e`（分支 `feature/mcp-server-module-rebuild`，未 force）。此后 preflight **不再因它而红**：
+
+```
+GATES_PREFLIGHT ANCHOR=ba1587c71 HEAD=15bbf1f50 ANCHOR_REPORTED=ba1587c71
+GATES_PREFLIGHT WORKING_TREE_RED=0 WORKING_TREE_SAFE=0 COMMITTED_DIFF_SAFE=1
+GATES_PREFLIGHT VERDICT=ANCHOR_STRUCTURAL_EQUIVALENT
+GATES_PREFLIGHT NONCOMPILING_COUNT=1
+GATES_PREFLIGHT NONCOMPILING .gitignore
+GATES_PREFLIGHT RESULT=SKIP_REBUILD
+```
+
+判据：`.gitignore` 是 `check_engine_anchor.ps1` 声明的非编译白名单成员，所以它只让锚点从 `ANCHOR_EQUAL` 变成 `ANCHOR_STRUCTURAL_EQUIVALENT`（`HEAD=15bbf1f50` 相对锚点 `ba1587c71` 的唯一 diff），**不**产生新的 RED。TASK-144 当时的 `WORKING_TREE_RED=1` 是那一次的原始读数，按「只增不改」保留在上面。
+
 ### 8.4 accept_m1
 
 `powershell -NoProfile -ExecutionPolicy Bypass -File modules\mcp_server\scripts\accept_m1.ps1` → **exit 0，22/22 cases passed**；`guard_user_port_9877` PASS（pid_before=-1 pid_after=-1）。
@@ -1122,7 +1141,7 @@ editor_simulate_mouse_move       refused_-32602 code=-32602 message=Unknown para
 harness: {"import": true, "import_listen": ["[MCP] listening on 127.0.0.1:9919 (editor=true, tools=154)"], "port_up": true, "tools_list_count": 154, "both_targets_registered": true}
 ```
 
-脚本自带护栏：请求参数袋**断言只含那一个未声明键**；回答若不是 `jsonrpc_error` 就抛异常、拒绝写进证据（不会把“偷跑成功”写成 pass）。原始记录 `recovery/work/task144/probe-u2.json`。**口径（TASK-145 D10 收紧、TASK-146 落账）**：这补的是**参数门反例（弱）**，不是这两个工具的行为反例——**只有 2 条**，发出点是 `tool_registry.cpp:864` 的 `_reject_unknown_arguments()`，在 `handler`（`:880`）之前；与之相对，活体探针里的 **121 条 `missing_required` + 21 条 `wrong_type` 由 handler 侧的 `require_string()/require_int()`（`tools/tool_builder.cpp:207-232`）发出，属于行为反例**。所以 §1.2 的强反例是 **175 / 177**、弱反例 2 条（不再是 177/177）。这**不是**这两个工具的**生效证据**——台账仍是 `未达(0)`、`scope_excluded`，`editor_state` 通道的 witness_read 依旧无从构造（登记表的 `measurable_when` 自己写着“这样的批次买得到计数与边界，买不到 tier”）。**其余 33 个 `not_probed` 工具没有变**。
+脚本自带护栏：请求参数袋**断言只含那一个未声明键**；回答若不是 `jsonrpc_error` 就抛异常、拒绝写进证据（不会把“偷跑成功”写成 pass）。原始记录 `recovery/work/task144/probe-u2.json`。**口径（TASK-145 D10 收紧、TASK-146 落账、TASK-149 更正子计数）**：这补的是**参数门反例（弱）**，不是这两个工具的行为反例——**只有 2 条**，发出点是 `tool_registry.cpp:864` 的 `_reject_unknown_arguments()`，在 `handler`（`:880`）之前；与之相对，活体探针里那 **140 条**由 handler 侧发出、属于行为反例，拆开是 **119 条 `Missing required parameter: <k>` + 21 条 `Parameter '<k>' must be … got …`（`godot/modules/mcp_server/tools/tool_builder.cpp:207-232` 的 `require_string()/require_int()`）+ 2 条无冒号的 `Missing required parameter '<k>'`（`godot/modules/mcp_server/tools/editor_node_write.cpp:1040` / `godot/modules/mcp_server/tools/editor_node_property_updates.cpp:435`）**，`119+21+2 = 142`。所以 §1.2 的强反例是 **175 / 177**、弱反例 2 条（不再是 177/177）。这**不是**这两个工具的**生效证据**——台账仍是 `未达(0)`、`scope_excluded`，`editor_state` 通道的 witness_read 依旧无从构造（登记表的 `measurable_when` 自己写着“这样的批次买得到计数与边界，买不到 tier”）。**其余 35 个 `not_probed` 工具没有变**（`probe-live.json -> counters.not_probed = 35`，TASK-149 重算；此处旧文写“33 个”是笔误）。
 
 **U3 — 矩阵 C 的“合法 / 必填可选 / 默认值”三格是空（`·`）**
 
@@ -1195,7 +1214,8 @@ TASK-144 只动了这些部分：§0.1 的 `tools/tests/**` 计数行、§1.1 �
 | E2 补 4 条编号行 | §6 的 `test_coverage_batch_consistency.py` 由 5 行补到 **9 行**（新增 TASK-144 A 的 `test_the_number_of_false_reds_is_now_zero_and_the_legacy_number_is_recorded` + 3 条负例），字段齐全 |
 | E3 失效行名 | `test_the_batch_gate_disagreement_is_exactly_the_pinned_one` → **`test_the_batch_gate_judges_the_declared_channel`**；`test_every_false_red_is_an_editor_state_channel_tool` → **`test_every_fail_is_a_real_shortage_on_its_own_channel`**；同时改掉这 5 行的失效**行号指针**（150/155/170/174/190 → 230/235/250/254/272） |
 | E4 stale 数字 | 全篇 **25 处 "23 passed" → 30 passed**（§6 的 23 个 TC-PY 行 + §9.2 的 F1 一行 + §10.3 一行），与 §8.1 同源；§8.1 的 `27 passed` → **30 passed**（并注明 TASK-146 新增 3 条）；§0.1 的 "pytest 收集 27 条" → **30 条**；§9.2 的 F2 行 "5 条 pytest" → **9 条** |
-| E5 口径收紧 | §1.2 强反例 177→**175/177**、弱反例 0→**2**；§1.4 缺强反例 0/177→**2/177**；§2 两条 `editor_simulate_*` 行的 `强度=strong` → **`weak（参数门反例）`**；§1.2 新增"对抗性结论"段（121+21 由 handler 侧 `tool_builder.cpp:207-232` 发出 = 行为反例；2 条只到 `tool_registry.cpp:864` = 参数门反例）；§9.3 U2 同步改写 |
+| E5 口径收紧 | §1.2 强反例 177→**175/177**、弱反例 0→**2**；§1.4 缺强反例 0/177→**2/177**；§2 两条 `editor_simulate_*` 行的 `强度=strong` → **`weak（参数门反例）`**；§1.2 新增"对抗性结论"段（handler 侧 `tool_builder.cpp:207-232` 发出的 `-32602` = 行为反例；2 条只到 `tool_registry.cpp:864` = 参数门反例）；§9.3 U2 同步改写 |
+| E5a 子计数更正（TASK-149） | §1.2 与 §9.3 U2 的「**121** 条 `missing_required` + 21 条 `wrong_type`」**不可复现**（`121` 不对应任何实测划分）。TASK-149 从 `recovery/work/task143/probe-live.json` 逐条重算那 142 条 `refused_-32602`，实测是 **119 条 `Missing required parameter: <k>`（带冒号，`godot/modules/mcp_server/tools/tool_builder.cpp:207-232`）+ 21 条 `Parameter '<k>' must be …`（同源）+ 2 条无冒号的 `Missing required parameter '<k>'`（`godot/modules/mcp_server/tools/editor_node_write.cpp:1040` / `godot/modules/mcp_server/tools/editor_node_property_updates.cpp:435`）**，`119+21+2 = 142`。定性结论（140 条在 handler 内、2 条 mouse 只到参数门）**不受影响**，承重的 `175/177 + 2 弱` 不依赖该子数字。复算脚本 `recovery/work/task149_docaudit.py c1`；勘误索引 `recovery/reports/ERRATA.md` E-2 |
 | E6 自洽校验 | 新建 `tools/tests/test_matrix_self_consistency.py`（3 条 pytest：统计重算、引用重解、非空转守卫）；§6 新增它的 3 行 |
 | 附带更正 | §1.2/§1.4 的"活体探针 142" → **144**（TASK-143 的 142 + TASK-144 C 的 2 条），与 TASK-145 的 minor 一致 |
 
@@ -1208,3 +1228,24 @@ TASK-144 只动了这些部分：§0.1 的 `tools/tests/**` 计数行、§1.1 �
 | `recovery/tasks/TASK-146.md` | 只读，未改 |
 
 未触碰：产品代码、引擎代码、`projects/**`、`_exercises/**`、`F:\models\**`、两个 venv、8080/8081、`.gitignore`、`recovery/tasks/README.md`。**`DECISIONS.md` 上有他人（TASK-142 批次）未提交改动 ⇒ 本轮未整体 add、未改、未 revert**，决策条目写在 TASK-146 报告里留给决策者。
+
+---
+
+### 10.7 TASK-149 对本文件的更新（**只改两处失效子计数与 §8.3 的一条 stale 读数；矩阵主体未重写**）
+
+依据：`recovery/reports/ACCEPTANCE-TASK-147.md` 的 **Y1（major）** 与 **X5/X6（minor）**，
+以及 TASK-149 自己的重算。**没有新增或删除任何编号行**，因此 §1.1 的六族计数与合计
+（177 / 10 / 22 / 159 / 407 / 13 = 788）**逐位未变**——TASK-149 的改动不能、也没有让
+`tools/tests/test_matrix_self_consistency.py` 变红（改完复跑 **30 passed**，见 §8.1）。
+
+| 判据 | 动作 | 复算命令 |
+|---|---|---|
+| F1 `121` 不可复现（Y1） | §1.2 对抗性结论段与 §9.3 U2 的「121 条 `missing_required` + 21 条 `wrong_type`」→ **`119`（带冒号，`godot/modules/mcp_server/tools/tool_builder.cpp:207-232`）+ `21`（同源）+ `2`（无冒号，`godot/modules/mcp_server/tools/editor_node_write.cpp:1040` / `godot/modules/mcp_server/tools/editor_node_property_updates.cpp:435`）**，并写明 `119+21+2 = 142`；§10.6 增补 E5a 行 | `python recovery\work\task149_docaudit.py c1` |
+| F2 `not_probed` 子计数笔误 | §9.3 U2 行末的「其余 **33** 个 `not_probed` 工具没有变」→ **35**（`probe-live.json -> counters.not_probed = 35`；全文其余各处的 35 本来就对） | 同上（脚本另打印 `counters`） |
+| F3 §8.3 的 `WORKING_TREE_RED=1` 已失效 | TASK-144 时那 1 条 RED 是引擎仓未跟踪的 `uid_cache.bin`；TASK-149 §C 把它加进引擎仓 `.gitignore`（**不删文件**）并提交 `15bbf1f50e`，preflight 现已 `WORKING_TREE_RED=0`、`VERDICT=ANCHOR_STRUCTURAL_EQUIVALENT`、`RESULT=SKIP_REBUILD`。§8.3 就地注明这一变化，不改写 TASK-144 当时的原始读数 | `powershell -NoProfile -ExecutionPolicy Bypass -File tools\run_gates.ps1 -PreflightOnly -Tag task149_preflight_after` |
+| F4 `§1.1` 的「唯一来源」表述 | 保留原文（TASK-147 X6 只要求记录，不改口径）：全文另有 §0.1、§9.2 的 F1/F2 行、§10.3 各出现一次 `30 passed`，同值同源、不冲突 | `python -m pytest tools\tests -q --no-header -p no:cacheprovider` |
+
+**TASK-149 声明独占的路径**：`recovery/TEST-CASES.md`（本 §10.7 为唯一新增区块 + 上列两处就地更正）、
+`recovery/reports/ERRATA.md`（新建）、`recovery/reports/TASK-149-REPORT.md`（新建）、
+`recovery/work/task149_*`（只读审计脚本）。**未触碰**：`tools/**`（产品与测试代码，只读）、
+引擎模块、`projects/**`、`dist/**`、两个 venv、8080/8081。

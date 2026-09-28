@@ -8,6 +8,30 @@
 > stdout/stderr 由 Python 句柄写盘；台账 `runs/accept-141/accept141_commands.jsonl`（`source=accept141-own-run`）。
 > `git status --short` 复扫：**只有 3 个既有未跟踪文件**（TASK-137 的两件 + 本任务书），**无任何 `M`/`A`**。
 > 本人产出的证据目录：`godot-mcp/runs/accept-141/`（内含本报告引用的每一个数字）。
+>
+> **TASK-149 追加（2026-09-28，只增不改）：本报告里 `tools/playtest_player.py:NNN` 的行号指针
+> 指向本报告验收当时的冻结版本，不是现在仓里的版本。** 原因与 ACCEPTANCE-TASK-137 的同类注记
+> 完全相同：TASK-142 那批改动（已由 TASK-149 §B 作为「已中止支线」入库，`71f92e8`）在该文件里
+> 插了几段新代码，原版字节冻结在 `tools/playtest_player_t142_prefix.py`
+> （= `71f92e8^:godot-mcp/tools/playtest_player.py`，**4905 行**，277930 B）。**结论一字未变**，
+> 变的是行号；而且**位移不是常数**（插了 4 段），实测分段为 **+58 / +99 / +119 / +174**。
+> 本报告被点名引用过的指针，逐条实算如下：
+
+| 本报告写的指针（冻结版） | 现在的位置 | 位移 |
+|---|---|---|
+| `:2286-2308` **`_pong`**（F-2 的机制代码） | `:2405` 起，同一分支 `:2476-2489` 一带 | **+119** |
+| `:3804-3813` patience 提前停止（`ok_ack_and_changed` + 动作多于 1 种） | `:3978` 起 | **+174** |
+| `:349` `MODEL_PLAYER_REFUSAL_FALLBACK` | `:407` | +58 |
+| `:1170` `below_reporting = bool(...)` | `:1228` | **+58** |
+| `:1213-1230` `verdict_context` 的写入 | `:1270` 的注释 / `:1271` 的 `ctx = {` / `:1287` 的 `out["verdict_context"] = ctx` | **+58** |
+| `:1234` `def verdict_class(verdict)` | `:1292` | **+58** |
+| `:387` `def step_refusal_record`；`:400-404` / `:407-416` 的字段筛选 | 分别 `:445` / `:458-462` / `:465-474` | **+58** |
+| `:3253`（TASK-138 defect ⑨ 的注释） | `:3428`（`ack_state_for_verdict` 不回退 `pre_ack`） | **+175** |
+
+> 复算任一指针：`python recovery\work\task149_stalepointers.py ACCEPTANCE-TASK-141`（打印每个
+> 指针**今天**落在哪一行、该行原文、以及前后 60 行内的 `def`/`class` 符号，读者可自行比对）；
+> 冻结版与当前版的符号行号对照另见 `python recovery\work\task149_frozenmap.py`。
+> **本报告没有逐条改写行号**——改写等于把事后推断混进当时的验收记录。
 
 ---
 

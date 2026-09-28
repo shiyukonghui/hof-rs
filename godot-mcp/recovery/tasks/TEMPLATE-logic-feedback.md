@@ -185,6 +185,15 @@
 
 ### 1.2e `N≥4 轮分布`：**两轮一致**不是可复现性保证；不足轮数是 `ROUNDS_INSUFFICIENT`；脚本策略本身也会退化（TASK-142 §1.A/§1.B）
 
+> **来源标注（TASK-149 追加，2026-09-28）**：本节与本节之下的反例 **33–36**，
+> 以及 `tools/playability_controls.json -> model_player_stability` 的 `min_rounds: 4`、
+> `tools/playtest_player.py` 的 `load_stability_declaration` / `ROUNDS_INSUFFICIENT`，
+> 都来自**已中止的支线 TASK-142**（主线已于 2026-09-28 校正为「交付物 = MCP 工具及其
+> 测试用例矩阵」，不是小游戏/可玩性评分）。它们由 TASK-149 §B 作为「已中止支线 / 仅作参考 /
+> 不属于本主线交付」**保留**入库（提交 `71f92e8`），**不是本主线的硬要求**。
+> 本模板的其余部分（§0–§1.2d、§2–§8）是主线口径，不受影响。
+> 决策日志对应条目：`DECISIONS.md` **D210/D211**（同属该支线）。
+
 §1.2d 的 `UNSTABLE` 是对的，但它把门槛定成了 **2 轮**。TASK-141 的独立验收用**逐字相同**的
 `pong scripted @w90` 命令跑了 **4 轮**，读到 **三个类别**：
 `INCONCLUSIVE` / `PASS` / `PASS(baseline only)`（`INCONCLUSIVE` 出现两次）。

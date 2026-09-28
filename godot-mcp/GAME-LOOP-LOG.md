@@ -1,5 +1,14 @@
 # GAME-LOOP-LOG — 跨轮进度台账（每轮更新）
 
+> **TASK-149 校对注（2026-09-28，只增不改）**：本文件的**路径**是 `godot-mcp/GAME-LOOP-LOG.md`，
+> 不在 `recovery/reports/` 下（TASK-149 任务书 §E.9 把它与 `PLAYABILITY-*` 并列，故在此登记归属）。
+> 它属**游戏侧**那一批的规范类文档，而可玩性/模型玩家支线已于 2026-09-28 **中止**
+> （见 `DECISIONS.md` **D212**）：主线交付物是 **MCP 工具及其测试用例矩阵**
+> （`recovery/TEST-CASES.md`），本文件**不再是主线的进度台账**。
+> TASK-149 **不做逐条数字校对**——它的依据都在 `runs\<game>\...`，而 `runs/**` 被 `.gitignore`
+> 忽略、只存在于本机。**本文件的其他内容一字未动**；老报告里已发现的不自洽集中在
+> `recovery/reports/ERRATA.md`。
+
 * 目标口径：**D138** —— 轮次不设限，**至少 20 个经典小游戏、全部 C#**，每款都要有可复算的
   「操作有效性」证据（像素差 / 文件 sha / 断言 / 场景树快照），不接受「应该动了」。
 * 证据根：`godot-mcp\runs\<game>\<run-tag>\`（`trace-*.jsonl` / `ledger-*.{txt,json}` /
