@@ -266,6 +266,42 @@ async fn stop_scene_invalidates_the_game_endpoint() {
     );
 }
 
+/// DR-51: `editor_stop_scene` invalidates the **route**, not the fact that this
+/// run registered a game endpoint.  Without this, `smoke-t6`'s
+/// `meta.json.engine.mcp.game_endpoint` was structurally always `null`: the
+/// battery's stop step cleared the registration before the run loop ever looked
+/// at it.
+#[tokio::test]
+async fn the_registered_game_endpoint_survives_the_route_being_cleared() {
+    let channel = McpChannel::new("http://127.0.0.1:1/mcp", 5, 0);
+    let record = GameEndpointRecord {
+        endpoint: "http://127.0.0.1:63698/mcp".to_string(),
+        port: Some(63698),
+        source: SOURCE_AUTO_FREE_PORT.to_string(),
+        pid: Some(101872),
+    };
+
+    assert!(channel.game_endpoint_history().await.is_none());
+    channel
+        .register_game_endpoint(record.clone())
+        .await
+        .expect("registration");
+
+    assert_eq!(channel.game_endpoint().await, Some(record.clone()));
+    assert_eq!(channel.game_endpoint_history().await, Some(record.clone()));
+
+    channel.clear_game_endpoint().await;
+    assert!(
+        channel.game_endpoint().await.is_none(),
+        "the *route* must be gone so a later call fails loudly (DR-43)"
+    );
+    assert_eq!(
+        channel.game_endpoint_history().await,
+        Some(record),
+        "the identity of the endpoint this run used must not be erased (DR-51)"
+    );
+}
+
 // ---------------------------------------------------------------------------
 // ② the `editor_play_scene` reply is the only source of the game endpoint
 // ---------------------------------------------------------------------------

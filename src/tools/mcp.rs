@@ -36,6 +36,28 @@ pub const PROBE_TOOL: &str = "project_get_info";
 /// is still waiting for it, not to be a cache.
 const PENDING_CAPACITY: usize = 32;
 
+/// DR-51: the engine's `GET <endpoint>` status document, verbatim.
+///
+/// This is the body `meta.json.engine.mcp.editor_status` is supposed to carry
+/// (`{"connections":…,"is_editor":…,"port":…,"tools":…}` — the live `smoke-t6`
+/// shape); before DR-51 the field was hard-wired to `Value::Null` and therefore
+/// **never** populated (`engine_identity.rs:44`).
+///
+/// It is a plain `GET` on the same endpoint the JSON-RPC calls use: one request,
+/// no retries, and any failure is reported as a `String` so the caller can fall
+/// back to the `null` + `reason` contract without failing the run.
+pub fn fetch_editor_status(endpoint: &str, timeout_seconds: u64) -> Result<Value, String> {
+    let agent = ureq::AgentBuilder::new()
+        .timeout(Duration::from_secs(timeout_seconds.max(1)))
+        .build();
+    match agent.get(endpoint).call() {
+        Ok(response) => response
+            .into_json::<Value>()
+            .map_err(|error| format!("`GET {endpoint}` did not answer JSON: {error}")),
+        Err(error) => Err(format!("`GET {endpoint}` failed: {error}")),
+    }
+}
+
 /// DR-20: a JSON-RPC business error, kept as a concrete type so callers can
 /// recover the `code`/`message` instead of parsing a formatted string.  The
 /// first real smoke run produced three distinct `-32603` failures that all had

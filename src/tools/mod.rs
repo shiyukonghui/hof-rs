@@ -76,6 +76,18 @@ pub trait ToolChannel: Send + Sync {
     async fn game_endpoint(&self) -> Option<GameEndpointRecord> {
         None
     }
+
+    /// DR-51: the last game endpoint this channel ever **registered**, even
+    /// after [`ToolChannel::clear_game_endpoint`] invalidated the route.
+    ///
+    /// The route and the identity are two different facts: `editor_stop_scene`
+    /// legitimately drops the route (a later `running_game_*` call must fail),
+    /// but "which game endpoint did this run use?" must survive, or
+    /// `meta.json.engine.mcp.game_endpoint` is structurally always `null` —
+    /// which is exactly `smoke-t6`'s DEF-D.
+    async fn game_endpoint_history(&self) -> Option<GameEndpointRecord> {
+        None
+    }
 }
 
 /// A channel that exposes no MCP tools at all (used for offline/dry runs).
@@ -115,6 +127,9 @@ impl ToolChannel for ShellOnlyChannel {
 pub struct McpChannel {
     editor: McpClient,
     game: std::sync::Arc<std::sync::Mutex<Option<GameRoute>>>,
+    /// DR-51: the last endpoint that was registered, kept after the route is
+    /// cleared so the run's identity record does not lose it.
+    game_history: std::sync::Arc<std::sync::Mutex<Option<GameEndpointRecord>>>,
     timeout_seconds: u64,
     max_retries: u32,
     max_sync_retries: u32,
@@ -132,6 +147,7 @@ impl McpChannel {
         Self {
             editor: McpClient::new(endpoint, timeout_seconds, max_retries),
             game: std::sync::Arc::new(std::sync::Mutex::new(None)),
+            game_history: std::sync::Arc::new(std::sync::Mutex::new(None)),
             timeout_seconds,
             max_retries,
             max_sync_retries: mcp::DEFAULT_MAX_SYNC_RETRIES,
@@ -233,7 +249,15 @@ impl ToolChannel for McpChannel {
             .game
             .lock()
             .map_err(|_| anyhow::anyhow!("the game endpoint registry is poisoned"))?;
-        *guard = Some(GameRoute { record, client });
+        *guard = Some(GameRoute {
+            record: record.clone(),
+            client,
+        });
+        // DR-51: the identity is captured **at registration time**, before
+        // anything may clear the route.
+        if let Ok(mut history) = self.game_history.lock() {
+            *history = Some(record);
+        }
         Ok(())
     }
 
@@ -248,5 +272,9 @@ impl ToolChannel for McpChannel {
             .lock()
             .ok()
             .and_then(|guard| guard.as_ref().map(|route| route.record.clone()))
+    }
+
+    async fn game_endpoint_history(&self) -> Option<GameEndpointRecord> {
+        self.game_history.lock().ok().and_then(|guard| guard.clone())
     }
 }

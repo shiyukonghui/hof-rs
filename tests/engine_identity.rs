@@ -480,6 +480,135 @@ async fn a_missing_binary_fails_the_items_without_executing_anything() {
 }
 
 // ---------------------------------------------------------------------------
+// ⑥ DR-51 — the MCP endpoint facts must be real, recorded values
+// ---------------------------------------------------------------------------
+
+/// The `GET /mcp` status document the engine answers (the `smoke-t6` live shape,
+/// abbreviated).
+const STATUS_BODY: &str = "{\"connections\":1,\"is_editor\":true,\"port\":9877,\"tools\":154}";
+
+/// A one-shot loopback double that answers `GET /mcp` with `body`.
+fn status_double(body: &'static str) -> (String, std::thread::JoinHandle<()>) {
+    use std::io::{Read, Write};
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("loopback listener");
+    let addr = listener.local_addr().expect("bound address");
+    let handle = std::thread::spawn(move || {
+        let (mut stream, _) = listener.accept().expect("a status request");
+        let mut buffer = [0u8; 2048];
+        let _ = stream.read(&mut buffer);
+        let response = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\
+             Connection: close\r\n\r\n{body}",
+            body.len()
+        );
+        let _ = stream.write_all(response.as_bytes());
+        let _ = stream.flush();
+    });
+    (format!("http://{addr}/mcp"), handle)
+}
+
+/// DR-51: a real `GET /mcp` is performed and its **verbatim** body is what the
+/// identity records.
+#[tokio::test]
+async fn the_editor_status_is_the_verbatim_get_mcp_body() {
+    let (url, handle) = status_double(STATUS_BODY);
+    let body = hof_rs::tools::mcp::fetch_editor_status(&url, 5).expect("the status body");
+    handle.join().expect("the double must finish");
+
+    assert_eq!(body["is_editor"], json!(true));
+    assert_eq!(body["tools"], json!(154));
+    assert_eq!(body["port"], json!(9877));
+    assert_eq!(
+        body.to_string(),
+        serde_json::from_str::<Value>(STATUS_BODY).unwrap().to_string(),
+        "the body must be recorded verbatim"
+    );
+}
+
+/// DR-51: an unreachable endpoint yields `null` + a reason and never fails the
+/// run (`smoke-t6`'s reason text was wrong precisely where the value was not).
+#[tokio::test]
+async fn an_unreachable_endpoint_yields_no_status_and_no_failure() {
+    let error = hof_rs::tools::mcp::fetch_editor_status("http://127.0.0.1:1/mcp", 1)
+        .expect_err("a closed port has no status body");
+    assert!(error.contains("127.0.0.1:1"), "{error}");
+
+    let mut identity = probe_identity(
+        &FakeEnv::default(),
+        Some(Path::new(CONFIGURED)),
+        Some("http://127.0.0.1:1/mcp"),
+        None,
+        Value::Null,
+    )
+    .await;
+    // The block still carries the fixed shape with a reason for the null.
+    let block = serde_json::to_value(&identity).unwrap();
+    assert_eq!(block["mcp"]["editor_status"], json!(null));
+    assert!(block["mcp"]["editor_status_reason"].is_string());
+    // And a status that *is* known fills the field and clears the reason.
+    identity.mcp.editor_status = serde_json::from_str(STATUS_BODY).unwrap();
+    identity.mcp.editor_status_reason = None;
+    let block = serde_json::to_value(&identity).unwrap();
+    assert_eq!(block["mcp"]["editor_status"]["tools"], json!(154));
+    assert_eq!(block["mcp"]["editor_status_reason"], json!(null));
+}
+
+/// DR-51: the status is only fetched for an adapter that drives an engine — an
+/// adapter without a binary must not touch the network, and a failed fetch must
+/// degrade to `null`, never to an error.
+#[test]
+fn the_status_fetch_is_gated_on_the_adapter_driving_an_engine() {
+    let fetch = |endpoint: &str| -> Result<Value, String> {
+        Ok(json!({"endpoint": endpoint, "tools": 154}))
+    };
+    assert_eq!(
+        hof_rs::runtime::engine_identity::editor_status_for(false, "http://x/mcp", |_| panic!(
+            "an adapter without an engine binary must not fetch"
+        )),
+        Value::Null
+    );
+    assert_eq!(
+        hof_rs::runtime::engine_identity::editor_status_for(true, "http://x/mcp", fetch),
+        json!({"endpoint": "http://x/mcp", "tools": 154})
+    );
+    assert_eq!(
+        hof_rs::runtime::engine_identity::editor_status_for(true, "http://x/mcp", |_| Err(
+            "closed".to_string()
+        )),
+        Value::Null,
+        "a failed fetch is a reason, never a run failure"
+    );
+}
+
+/// DR-51: folding a registered game endpoint into the block fills the field and
+/// removes the reason (and is idempotent).
+#[tokio::test]
+async fn recording_a_game_endpoint_fills_the_identity_block() {
+    let record = hof_rs::tools::endpoint::GameEndpointRecord {
+        endpoint: "http://127.0.0.1:63698/mcp".to_string(),
+        port: Some(63698),
+        source: hof_rs::tools::endpoint::SOURCE_AUTO_FREE_PORT.to_string(),
+        pid: Some(101872),
+    };
+    let mut identity = EngineIdentity::unavailable("nothing was probed");
+    assert!(identity.mcp.game_endpoint.is_none());
+    assert!(identity.mcp.game_endpoint_reason.is_some());
+
+    assert!(
+        hof_rs::adapter::engine::record_game_endpoint(&mut identity, &record),
+        "the first record changes the block"
+    );
+    let block = serde_json::to_value(&identity).unwrap();
+    assert_eq!(block["mcp"]["game_endpoint"]["port"], json!(63698));
+    assert_eq!(block["mcp"]["game_endpoint"]["source"], json!("auto_free_port"));
+    assert_eq!(block["mcp"]["game_endpoint_reason"], json!(null));
+    assert!(
+        !hof_rs::adapter::engine::record_game_endpoint(&mut identity, &record),
+        "recording the same endpoint twice is a no-op"
+    );
+}
+
+// ---------------------------------------------------------------------------
 // ⑤ `meta.json` carries the block (DR-44 ③, C11 hygiene)
 // ---------------------------------------------------------------------------
 

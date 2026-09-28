@@ -113,7 +113,10 @@ impl EngineIdentity {
             mcp: EngineMcp {
                 editor_endpoint: None,
                 game_endpoint: None,
-                editor_status: Value::Object(Default::default()),
+                // DR-44 ③ / DR-51: an unobtainable value is `null`, never an
+                // empty object, so the two paths (`unavailable` and a failed
+                // probe) serialize identically and the reason is authoritative.
+                editor_status: Value::Null,
                 game_endpoint_reason: Some(reason.clone()),
                 editor_status_reason: Some(reason.clone()),
             },
@@ -484,6 +487,24 @@ pub async fn probe_identity(
         listener,
         checked_at: now_seconds(),
     }
+}
+
+/// DR-51: fold a game endpoint into the identity block.
+///
+/// Returns `true` when the block changed (so the caller only rewrites
+/// `meta.json` when there is something new).  The endpoint is a fact of the
+/// **run**, not of the binary, so it is recorded even when the rest of the block
+/// could not be established: every other field keeps its `null` + `reason`.
+pub fn record_game_endpoint(
+    identity: &mut EngineIdentity,
+    record: &GameEndpointRecord,
+) -> bool {
+    if identity.mcp.game_endpoint.as_ref() == Some(record) {
+        return false;
+    }
+    identity.mcp.game_endpoint = Some(record.clone());
+    identity.mcp.game_endpoint_reason = None;
+    true
 }
 
 /// The port of `http://127.0.0.1:9877/mcp`, when it names one.

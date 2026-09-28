@@ -63,6 +63,10 @@ struct GateChannel {
     /// DR-48: an `editor_get_errors` payload answered verbatim instead of the
     /// scene-derived one.
     editor_errors: Option<Value>,
+    /// DR-51: the game endpoint registrations, and whether the battery has
+    /// already invalidated the route (`editor_stop_scene`).
+    registrations: Mutex<Vec<hof_rs::tools::endpoint::GameEndpointRecord>>,
+    route_cleared: std::sync::atomic::AtomicBool,
 }
 
 impl GateChannel {
@@ -71,6 +75,8 @@ impl GateChannel {
             workspace: workspace.to_path_buf(),
             calls: Mutex::new(Vec::new()),
             editor_errors: None,
+            registrations: Mutex::new(Vec::new()),
+            route_cleared: std::sync::atomic::AtomicBool::new(false),
         }
     }
 
@@ -80,7 +86,14 @@ impl GateChannel {
             workspace: workspace.to_path_buf(),
             calls: Mutex::new(Vec::new()),
             editor_errors: Some(json!({"available": true, "count": errors.len(), "errors": errors})),
+            registrations: Mutex::new(Vec::new()),
+            route_cleared: std::sync::atomic::AtomicBool::new(false),
         }
+    }
+
+    /// DR-51: did the battery's `editor_stop_scene` step clear the route?
+    fn route_cleared(&self) -> bool {
+        self.route_cleared.load(std::sync::atomic::Ordering::SeqCst)
     }
 
     fn scene_text(&self) -> Option<String> {
@@ -157,6 +170,34 @@ impl ToolChannel for GateChannel {
         };
         Ok(ToolResult { ok: true, payload })
     }
+
+    /// DR-51: the route is what `running_game_*` calls use, and the battery's
+    /// `editor_stop_scene` clears it.
+    async fn register_game_endpoint(
+        &self,
+        record: hof_rs::tools::endpoint::GameEndpointRecord,
+    ) -> anyhow::Result<()> {
+        self.registrations.lock().unwrap().push(record);
+        self.route_cleared
+            .store(false, std::sync::atomic::Ordering::SeqCst);
+        Ok(())
+    }
+
+    async fn clear_game_endpoint(&self) {
+        self.route_cleared
+            .store(true, std::sync::atomic::Ordering::SeqCst);
+    }
+
+    async fn game_endpoint(&self) -> Option<hof_rs::tools::endpoint::GameEndpointRecord> {
+        if self.route_cleared() {
+            return None;
+        }
+        self.registrations.lock().unwrap().last().cloned()
+    }
+
+    async fn game_endpoint_history(&self) -> Option<hof_rs::tools::endpoint::GameEndpointRecord> {
+        self.registrations.lock().unwrap().last().cloned()
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -168,6 +209,8 @@ struct GateRun {
     workspace: PathBuf,
     records: Vec<InvocationRecord>,
     result: Value,
+    /// DR-51: the tool double, so a test can see what `editor_stop_scene` did.
+    channel: Arc<GateChannel>,
 }
 
 fn adapter(_root: &Path) -> GodotAdapter {
@@ -227,6 +270,7 @@ async fn run_gate_with_errors(
         workspace,
         records: observer.records(),
         result,
+        channel,
     }
 }
 
@@ -475,7 +519,61 @@ async fn a_launchable_project_never_invokes_a_repair() {
 }
 
 // ---------------------------------------------------------------------------
-// ⑤ DR-48 — the engine's own INFO banners must not close the gate
+// ⑤ DR-51 — the endpoint facts must reach `meta.json`
+// ---------------------------------------------------------------------------
+
+/// DR-51: `smoke-t6`'s `meta.json.engine.mcp.game_endpoint` was structurally
+/// always `null`: the battery registered the endpoint, then its own
+/// `editor_stop_scene` step cleared the registration, and only afterwards did
+/// the run loop look at it.  The endpoint is now captured when it is registered
+/// and persisted even though the route is gone.
+#[tokio::test]
+async fn the_run_meta_keeps_the_game_endpoint_the_battery_registered() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let run = run_gate(
+        root,
+        vec![
+            plan_step(),
+            developer_writes(SCENE_WITH_ROOT),
+            tester_step(),
+        ],
+    )
+    .await;
+
+    assert!(
+        run.channel.route_cleared(),
+        "the battery must have run editor_stop_scene (the condition that used to erase the field)"
+    );
+    assert!(
+        run.channel.game_endpoint().await.is_none(),
+        "the route itself must be gone (DR-43)"
+    );
+
+    let meta: Value = serde_json::from_str(&read(&run.run_dir.join("meta.json"))).unwrap();
+    let endpoint = &meta["engine"]["mcp"]["game_endpoint"];
+    assert_eq!(
+        endpoint["endpoint"],
+        json!("http://127.0.0.1:9878/mcp"),
+        "the announced game endpoint must be recorded (DR-51): {meta}"
+    );
+    assert_eq!(endpoint["port"], json!(9878));
+    assert_eq!(endpoint["source"], json!("auto_free_port"));
+    assert_eq!(
+        meta["engine"]["mcp"]["game_endpoint_reason"],
+        json!(null),
+        "a known endpoint has no reason: {meta}"
+    );
+
+    // DR-51: this adapter declares no engine binary, so no `GET /mcp` is
+    // attempted at all and the null+reason contract still holds for the status.
+    assert_eq!(meta["engine"]["mcp"]["editor_status"], json!(null));
+    assert!(meta["engine"]["mcp"]["editor_status_reason"].is_string());
+}
+
+
+// ---------------------------------------------------------------------------
+// ⑥ DR-48 — the engine's own INFO banners must not close the gate
 // ---------------------------------------------------------------------------
 
 /// DR-48: `smoke-t6` closed the gate on the engine's informational banner

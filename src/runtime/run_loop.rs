@@ -782,12 +782,14 @@ pub async fn run(
             &meta.engine,
         )
         .await?;
-        // DR-43/DR-44: the game endpoint only exists after `editor_play_scene`
-        // has run, so it is written back into `meta.json` as soon as it is known.
-        if let Some(registered) = orchestrator.tools.game_endpoint().await {
-            if meta.engine.mcp.game_endpoint.as_ref() != Some(&registered) {
-                meta.engine.mcp.game_endpoint = Some(registered);
-                meta.engine.mcp.game_endpoint_reason = None;
+        // DR-43/DR-44/DR-51: the game endpoint only exists after
+        // `editor_play_scene` has run, so it is written back into `meta.json` as
+        // soon as the pass that registered it is over.  The **history** is used,
+        // not the live route: the battery's own `editor_stop_scene` step clears
+        // the route before this line runs, which is exactly how the field was
+        // structurally always `null` in `smoke-t6`.
+        if let Some(registered) = orchestrator.tools.game_endpoint_history().await {
+            if crate::adapter::engine::record_game_endpoint(&mut meta.engine, &registered) {
                 let _ = write_run_meta(&run_dir, &meta);
             }
         }
@@ -855,6 +857,14 @@ pub async fn run(
                 &meta.engine,
             )
             .await?;
+            // DR-51: the second pass registers its own game endpoint (a new port
+            // and pid); fold it in immediately, before its own stop step can
+            // clear the route.
+            if let Some(registered) = orchestrator.tools.game_endpoint_history().await {
+                if crate::adapter::engine::record_game_endpoint(&mut meta.engine, &registered) {
+                    let _ = write_run_meta(&run_dir, &meta);
+                }
+            }
             // DR-29: the second pass runs its own session probe.
             note_mcp_desync(&mut iter_warnings, &workspace);
             launch_gate = crate::adapter::evaluate_launchable(&battery);
