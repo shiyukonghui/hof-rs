@@ -4,6 +4,7 @@
 > **编号稳定**：`TC-TOOL-<工具名>`、`TC-GATE-gNN`、`TC-M1-<case id>`、`TC-ENG-NNN`、`TC-PY-<文件>:<条目>`、`TC-CONS-<脚本>`。后续任务只引用这些编号。
 > 事实来源分级：**一手实测**=本轮真跑（§8）或落在 trace/JSON 里的原始记录；**派生**=从这些原始记录机械计算；**声明**=契约/文档里写的。冲突时以代码与实测为准。
 > **TASK-144 更新（2026-09-28）**：本文件由 TASK-143 生成；TASK-144 只更新了与 U4（`verify_coverage_batch.py` 陈旧）、U1（g09 锚点漂移）、U2（两条 simulate 工具无失败观察）相关的行与统计，变更清单见 §10.5。矩阵其余部分未重写。
+> **TASK-146 修复（2026-09-28）**：TASK-145 独立验收判 `fail`（1 blocker），**只针对本文件的统计与正文不符**（收口部分已被 TASK-145 独立复现为真绿，未重做）。本轮的更正：①补齐 TASK-144 新增的 4 条 pytest 用例的编号行；②**§1.1 声明值改为由正文严格重算得到**（`TC-PY-*` 400→407、合计 781→788，多出的 3 条是本轮新增的自洽校验测试），并新增 `tools/tests/test_matrix_self_consistency.py` **从正文重算并比对 §1.1，不等即判红**；③替换 2 条已改名、当前不存在的测试行名；④全篇 stale 的 "23 passed" → 与 §8.1 一致的 **30 passed**（唯一来源）；⑤§1.2/§1.4 的强反例口径由 `177/177` **收紧为 `175/177` + 2 条弱**（两条 `editor_simulate_*` 只到注册器参数门）。变更清单见 §10.6。矩阵其余部分未重写。
 
 ## 0. 盘点口径与范围
 
@@ -17,7 +18,7 @@
 | 引擎断言套件 | `godot/modules/mcp_server/tests/test_mcp_server.h` | 159 个 `[MCPServer]` TEST_CASE | g01/g02 的断言来源，逐条进矩阵 C |
 | 十道门 | `tools/run_gates.ps1` | g01..g10 | 引擎侧的唯一回归门集；逐条真跑（§8） |
 | M1 验收 | `godot/modules/mcp_server/scripts/accept_m1.ps1` | 22 个 case + 1 guard | 端到端验收；逐条真跑 |
-| tools/tests/** | `tools/tests/*.py` | 8 个 .py（2 个是测试替身）；pytest 收集 27 条；逐条 case 404 条（jev 33 + playjev 49 + p7 23 + model_player 272 + pytest 27） | 工具侧 pytest 与自测 |
+| tools/tests/** | `tools/tests/*.py` | 9 个 .py（2 个是测试替身）；pytest 收集 30 条；逐条 case 407 条（jev 33 + playjev 49 + p7 23 + model_player 272 + pytest 30） | 工具侧 pytest 与自测 |
 | 一致性/回归脚本 | `check_tool_groups.py`、`check_rename_map.py`、`check_tautologies.py`、`check_exit_propagation.py`、`check_hardcoded_counts.py`、`check_engine_anchor.ps1`、`check_contract_subset.ps1`、`verify_coverage_batch.py`、`gen_coverage_session.py`、`playability_gate.py`、`playability_rescore.py` | 11 个 | 台账/清单/门的一致性机制 |
 | trace 语料 | `runs/**/trace-*.jsonl` | 182 文件 | 逐工具的**实际输出**（错误码/消息/回包结构）都从这里取 |
 
@@ -52,9 +53,13 @@
 | `TC-GATE-gNN` | 10 | 十道门 |
 | `TC-M1-*` | 22 | accept_m1 的 22 个 case/guard |
 | `TC-ENG-NNN` | 159 | 引擎 `[MCPServer]` TEST_CASE |
-| `TC-PY-*` | 404 | tools/tests/** 的 pytest 条目 + 脚本内 check |
+| `TC-PY-*` | 407 | tools/tests/** 的 pytest 条目 + 脚本内 check |
 | `TC-CONS-*` | 13 | 一致性/回归脚本 |
-| **合计** | **785** | |
+| **合计** | **788** | |
+
+**本表的每个数字都是"正文实际编号行数"，不是声明**（TASK-146 修复 TASK-145 的 blocker）：一行 = 一个以 `| TC-<族>-` 开头的表格行；用 `python recovery\work\task146\recount.py` 可随时重算并逐族与本节比对（旧值 `TC-PY=404 / 合计 785` 是 TASK-144 改了声明却没补行造成的，已按正文口径改回并补齐行）。
+
+**强制机制**：`tools/tests/test_matrix_self_consistency.py` 在 pytest 里**从本文件正文重算**各族计数与合计，与本节声明值不等即判红（且校验每条 `TC-PY` 行引用的测试名在仓库里真实存在、每个 pytest 文件的 `def test_*` 条数与它的编号行数相等）。**本节是唯一来源，任何一族增删用例都必须同时改正文与本节。**
 
 ### 1.2 逐工具输入/输出/反例覆盖
 
@@ -67,14 +72,20 @@
 | 声明了 enum 的工具 | 4 |
 | 被至少一个引擎 TEST_CASE 点名的工具 | 83 |
 | **未被任何引擎 TEST_CASE 点名**的工具 | **94** |
-| **强**反例（真跑失败调用含真实错误码 / 活体探针 -32602 / 台账 boundary≥1） | 177（**TASK-144 C** 把原两条弱反例补成真跑 -32602 后满额） |
-| 只有**弱**反例（仅一个“提及该工具且正文含非法断言文本”的引擎用例） | **0**（TASK-143 时有 2 条：editor_simulate_mouse_click, editor_simulate_mouse_move；TASK-144 C 已用活体探针补成强反例） |
+| **强**反例（真跑失败调用含真实错误码 / 活体探针 -32602 / 台账 boundary≥1） | **175 / 177**（TASK-145 D10 把口径**收紧**：TASK-144 C 的活体探针只到注册器参数门，见下一行） |
+| 只有**弱**反例（**只**证明注册器未声明参数门，或仅一个"提及该工具且正文含非法断言文本"的引擎用例） | **2**（`editor_simulate_mouse_click`、`editor_simulate_mouse_move`：`probe-u2.json` 逐字自述 `undeclared_argument_name`，拒绝发生在 `tool_registry.cpp:864` 的 `_reject_unknown_arguments()`，**在 `def->handler(...)`（`:880`）之前**，所以它证明的是**参数门**、不是这两个工具的行为） |
 | **完全无反例**的工具 | **0** |
 | （其中）trace 语料里真的有失败调用的工具 | 172 |
-| （其中）本轮活体探针真的收到 -32602 的工具 | 142 |
+| （其中）本轮活体探针真的收到 -32602 的工具 | 144（TASK-143 的 142 + TASK-144 C 的 2 条 mouse 工具；后者只见参数门） |
 | 有“状态真的变了/被读回”证据的工具 | 169 |
 | **缺状态证据**的工具 | **8** |
 | 契约/channel/台账三方名单不一致 | 0（`contract_vs_channels=0`, `contract_vs_coverage=0`, `channel_mismatch=0`） |
+
+**对抗性结论（TASK-145 D10 提出、TASK-146 落进口径）——`-32602` 的来源要分开看，不能一律叫"参数门"**：
+
+* **活的 `-32602` 里有 121 条 `missing_required` + 21 条 `wrong_type` 不是注册器参数门发出的**：`Missing required parameter: <k>` 与 `Parameter '<k>' must be a …` 由 **handler 侧**的共享读取器 `require_string()` / `require_int()` 发出（`godot/modules/mcp_server/tools/tool_builder.cpp:207-232`，由各工具自己的 handler 调用）。它们发生在 **handler 执行路径内**（`tool_registry.cpp:880` 的 `def->handler(p_args, r_error)` 之后）⇒ **属于行为反例**（准确地说：是该工具自己的**契约级入参校验**行为，不是状态级/副作用级行为）。
+* **`editor_simulate_mouse_click` / `editor_simulate_mouse_move` 这 2 条只能证明参数门**：`recovery/work/task144/probe-u2.json` 逐字记着 `probe_kind = "undeclared_argument_name (refused by the registry's unknown-argument gate, before any handler runs)"`，消息是 `Unknown parameter 'mcp144_undeclared_probe'`，发出点是 `tool_registry.cpp:864` 的 `_reject_unknown_arguments()`，**在 `handler` 之前**。因此它们是**参数门反例（弱）**，不能计入强反例。
+* 所以强反例是 **175 / 177**（不是 177/177），这 2 条留在弱反例；`完全无反例 = 0` 仍然成立。
 
 ### 1.3 矩阵 C（159 个引擎用例）的派生覆盖
 
@@ -90,8 +101,8 @@
 
 | 缺口 | 数字 | 处置 |
 |---|---|---|
-| 缺强反例的工具 | 0 / 177（TASK-143 时有 2 条只有弱反例；TASK-144 **C** 用只触发参数门、不触发 handler 的活体探针补成强反例） | 见 §9 U2 |
-| 缺**引擎侧**非法输入断言的契约工具 | 94（上面“未被点名”的 94 条） | 142 条由**本轮活体探针**补上真跑负例（§8.5a）；其余见 §9 |
+| 缺强反例的工具 | 2 / 177（`editor_simulate_mouse_click`、`editor_simulate_mouse_move`：TASK-144 **C** 的活体探针只触发**注册器参数门** `tool_registry.cpp:864`、不触发 handler，故只算弱反例；口径见 §1.2 的对抗性结论） | 见 §9 U2 |
+| 缺**引擎侧**非法输入断言的契约工具 | 94（上面“未被点名”的 94 条） | 144 条由活体探针补上真跑负例（TASK-143 的 142 条 + TASK-144 **C** 的 2 条参数门探针；§8.5a）；其余见 §9 |
 | 缺状态证据的工具（台账 `channel_evidence_ok=false`） | 8 | 见 §6 与 §9（editor_set_auto_dismiss_dialogs, editor_simulate_key, editor_simulate_mouse_click, editor_simulate_mouse_move, editor_simulate_input_action, editor_simulate_input_sequence, project_get_android_preset_info, os_deploy_to_android_device） |
 | 契约 schema 形态分歧（缺 `required`） | 3 条（已 PIN） | `tools/tests/test_contract_forms.py` 钉住集合；登记为 F1 |
 | 陈旧一致性脚本 | 0（`verify_coverage_batch.py` 已由 TASK-144 **A** 对齐现行通道规则；TASK-143 时是 1） | 已修：`118 pass/48 fail` → `163 pass/3 fail`，误红 45 → **0**（见 F2） |
@@ -185,8 +196,8 @@
 | TC-TOOL-editor_get_open_scripts | `editor_get_open_scripts` | 契约一致 + 输入/输出形式 + 反例 | godot/modules/mcp_server/docs/tools_list.renamed.json:1447; `tools/tool_channels.json:207`; `godot/modules/mcp_server/tests/test_mcp_server.h:2918`; `runs/_exercises/ex_scene2/c23-after-task110/trace-editor.jsonl:146` | 合法=0 成员（req 0 / opt 0）; 必填=无; 可选=无; 默认=无; 非法=未探（write-class tool with no required argument: an illegal in...）; 边界=台账 boundary=2 | 成功={count, scripts}; 错误码=-32602 Unknown parameter 'bogus_argument' for tool 'editor_get_o...; 回读=payload/readback; 副作用=no_mutation=12; 幂等=见引擎用例 | 真跑失败调用 `runs/_exercises/ex_scene2/c23-after-task110/trace-editor.jsonl:146` → code=-32602 msg="Unknown parameter 'bogus_argumen... | present | 引擎仅提及用例（弱）：the analysis tools never write to the project |
 | TC-TOOL-project_validate_script | `project_validate_script` | 契约一致 + 输入/输出形式 + 反例 | godot/modules/mcp_server/docs/tools_list.renamed.json:1462; `tools/tool_channels.json:767`; `godot/modules/mcp_server/tests/test_mcp_server.h:8903`; `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:374` | 合法=1 成员（req 1 / opt 0）; 必填=path; 可选=无; 默认=无; 非法=真跑 -32602 (Missing required parameter: path); 边界=台账 boundary=15 | 成功={message, path, valid}; 错误码=-32000 Cannot validate 'res://src/PongGame.cs': no build of this...; 回读=payload/readback; 副作用=no_mutation=18; 幂等=见引擎用例 | 真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:374` → code=-32000 msg="Cannot validate 'res://src/PongGame.cs':... | present | 引擎仅提及用例（弱）：project_validate_script distinguishes valid and broken code |
 | TC-TOOL-editor_simulate_key | `editor_simulate_key` | 契约一致 + 输入/输出形式 + 反例 | godot/modules/mcp_server/docs/tools_list.renamed.json:1493; `tools/tool_channels.json:512`; `godot/modules/mcp_server/tests/test_mcp_server.h:1469` | 合法=5 成员（req 1 / opt 4）; 必填=keycode; 可选=alt, ctrl, pressed, shift; 默认=alt=false, ctrl=false, pressed=true, shift=false; 非法=真跑 -32602 (Missing required parameter: keycode); 边界=台账 boundary=0 | 成功=corpus 里无 ok 回包; 错误码=corpus 里无失败回包; 回读=state/no_calls; 副作用=无文件副作用记录; 幂等=见引擎用例 | corpus 里没有该工具的失败调用；本轮活体探针 → -32602 msg="Missing required parameter: keycode"；强度=strong | present | 台账无生效证据（未达(0)）; 引擎仅提及用例（弱）：tools of later batches are not registered |
-| TC-TOOL-editor_simulate_mouse_click | `editor_simulate_mouse_click` | 契约一致 + 输入/输出形式 + 反例 | godot/modules/mcp_server/docs/tools_list.renamed.json:1519; `tools/tool_channels.json:517`; `godot/modules/mcp_server/tests/test_mcp_server.h:1469`; **TASK-144 C** `recovery/work/task144/probe-u2.json` | 合法=4 成员（req 0 / opt 4）; 必填=无; 可选=button, pressed, x, y; 默认=button=1, pressed=true, x=0, y=0; 非法=**TASK-144 C 活体探针真跑 `-32602 Unknown parameter 'mcp144_undeclared_probe'`**（端点 9919）；边界=台账 boundary=0（corpus） | 成功=corpus 里无 ok 回包; 错误码=**活体探针 `-32602` + suggestion "Accepted parameters of editor_simulate_mouse_click: button, pressed, x, y"**; 回读=state/no_calls; 副作用=无文件副作用记录; 幂等=见引擎用例 | **TASK-144 C**：声明外参数名 ⇒ 注册器未声明参数门（`tool_registry.cpp:864`，在 `handler` 之前）真跑拒绝 `-32602`，见 `probe-u2.json`；强度=**strong** | **present** | 台账无生效证据（未达(0)，`scope_excluded`）；**真实失败观察**已由 TASK-144 C 补上（见 §9 U2） |
-| TC-TOOL-editor_simulate_mouse_move | `editor_simulate_mouse_move` | 契约一致 + 输入/输出形式 + 反例 | godot/modules/mcp_server/docs/tools_list.renamed.json:1537; `tools/tool_channels.json:522`; `godot/modules/mcp_server/tests/test_mcp_server.h:1469`; **TASK-144 C** `recovery/work/task144/probe-u2.json` | 合法=2 成员（req 0 / opt 2）; 必填=无; 可选=x, y; 默认=x=0, y=0; 非法=**TASK-144 C 活体探针真跑 `-32602 Unknown parameter 'mcp144_undeclared_probe'`**（端点 9919）；边界=台账 boundary=0（corpus） | 成功=corpus 里无 ok 回包; 错误码=**活体探针 `-32602` + suggestion "Accepted parameters of editor_simulate_mouse_move: x, y"**; 回读=state/no_calls; 副作用=无文件副作用记录; 幂等=见引擎用例 | **TASK-144 C**：声明外参数名 ⇒ 注册器未声明参数门（`tool_registry.cpp:864`，在 `handler` 之前）真跑拒绝 `-32602`，见 `probe-u2.json`；强度=**strong** | **present** | 台账无生效证据（未达(0)，`scope_excluded`）；**真实失败观察**已由 TASK-144 C 补上（见 §9 U2） |
+| TC-TOOL-editor_simulate_mouse_click | `editor_simulate_mouse_click` | 契约一致 + 输入/输出形式 + 反例 | godot/modules/mcp_server/docs/tools_list.renamed.json:1519; `tools/tool_channels.json:517`; `godot/modules/mcp_server/tests/test_mcp_server.h:1469`; **TASK-144 C** `recovery/work/task144/probe-u2.json` | 合法=4 成员（req 0 / opt 4）; 必填=无; 可选=button, pressed, x, y; 默认=button=1, pressed=true, x=0, y=0; 非法=**TASK-144 C 活体探针真跑 `-32602 Unknown parameter 'mcp144_undeclared_probe'`**（端点 9919，**只到注册器参数门，handler 未执行**）；边界=台账 boundary=0（corpus） | 成功=corpus 里无 ok 回包; 错误码=**活体探针 `-32602` + suggestion "Accepted parameters of editor_simulate_mouse_click: button, pressed, x, y"**; 回读=state/no_calls; 副作用=无文件副作用记录; 幂等=见引擎用例 | **TASK-144 C**：声明外参数名 ⇒ 注册器未声明参数门（`tool_registry.cpp:864`，在 `handler` 之前）真跑拒绝 `-32602`，见 `probe-u2.json`；**强度=weak（参数门反例，不是该工具的行为反例）** | **present** | 台账无生效证据（未达(0)，`scope_excluded`）；**失败观察**已由 TASK-144 C 补上但只到参数门（口径见 §1.2 对抗性结论、§9 U2） |
+| TC-TOOL-editor_simulate_mouse_move | `editor_simulate_mouse_move` | 契约一致 + 输入/输出形式 + 反例 | godot/modules/mcp_server/docs/tools_list.renamed.json:1537; `tools/tool_channels.json:522`; `godot/modules/mcp_server/tests/test_mcp_server.h:1469`; **TASK-144 C** `recovery/work/task144/probe-u2.json` | 合法=2 成员（req 0 / opt 2）; 必填=无; 可选=x, y; 默认=x=0, y=0; 非法=**TASK-144 C 活体探针真跑 `-32602 Unknown parameter 'mcp144_undeclared_probe'`**（端点 9919，**只到注册器参数门，handler 未执行**）；边界=台账 boundary=0（corpus） | 成功=corpus 里无 ok 回包; 错误码=**活体探针 `-32602` + suggestion "Accepted parameters of editor_simulate_mouse_move: x, y"**; 回读=state/no_calls; 副作用=无文件副作用记录; 幂等=见引擎用例 | **TASK-144 C**：声明外参数名 ⇒ 注册器未声明参数门（`tool_registry.cpp:864`，在 `handler` 之前）真跑拒绝 `-32602`，见 `probe-u2.json`；**强度=weak（参数门反例，不是该工具的行为反例）** | **present** | 台账无生效证据（未达(0)，`scope_excluded`）；**失败观察**已由 TASK-144 C 补上但只到参数门（口径见 §1.2 对抗性结论、§9 U2） |
 | TC-TOOL-editor_simulate_input_action | `editor_simulate_input_action` | 契约一致 + 输入/输出形式 + 反例 | godot/modules/mcp_server/docs/tools_list.renamed.json:1560; `tools/tool_channels.json:502`; `godot/modules/mcp_server/tests/test_mcp_server.h:1469` | 合法=3 成员（req 1 / opt 2）; 必填=action; 可选=pressed, strength; 默认=pressed=true, strength=1.0; 非法=真跑 -32602 (Missing required parameter: action); 边界=台账 boundary=0 | 成功=corpus 里无 ok 回包; 错误码=corpus 里无失败回包; 回读=state/no_calls; 副作用=无文件副作用记录; 幂等=见引擎用例 | corpus 里没有该工具的失败调用；本轮活体探针 → -32602 msg="Missing required parameter: action"；强度=strong | present | 台账无生效证据（未达(0)）; 引擎仅提及用例（弱）：tools of later batches are not registered |
 | TC-TOOL-editor_get_input_actions | `editor_get_input_actions` | 契约一致 + 输入/输出形式 + 反例 | godot/modules/mcp_server/docs/tools_list.renamed.json:1569; `tools/tool_channels.json:182`; `godot/modules/mcp_server/tests/test_mcp_server.h:1469`; `runs/_exercises/ex_scene2/c23-after-task110/trace-editor.jsonl:74` | 合法=0 成员（req 0 / opt 0）; 必填=无; 可选=无; 默认=无; 非法=未探（write-class tool with no required argument: an illegal in...）; 边界=台账 boundary=2 | 成功={actions, count}; 错误码=-32602 Unknown parameter 'bogus_argument' for tool 'editor_get_i...; 回读=payload/readback; 副作用=no_mutation=12; 幂等=见引擎用例 | 真跑失败调用 `runs/_exercises/ex_scene2/c23-after-task110/trace-editor.jsonl:74` → code=-32602 msg="Unknown parameter 'bogus_argument... | present | 引擎仅提及用例（弱）：tools of later batches are not registered |
 | TC-TOOL-editor_add_input_action | `editor_add_input_action` | 契约一致 + 输入/输出形式 + 反例 | godot/modules/mcp_server/docs/tools_list.renamed.json:1587; `tools/tool_channels.json:37`; `godot/modules/mcp_server/tests/test_mcp_server.h:1469`; `runs/_exercises/ex_grid/c8-task120/trace-editor.jsonl:16` | 合法=2 成员（req 1 / opt 1）; 必填=action; 可选=key; 默认=无; 非法=真跑 -32602 (Missing required parameter: action); 边界=台账 boundary=1 | 成功={action, action_state, created, event_count, key, persisted}...; 错误码=-32602 Unknown parameter 'undeclared_probe' for tool 'editor_add...; 回读=file/file_effect; 副作用=no_mutation=1, observed_changed=122, observed_no_change=67; 幂等=见引擎用例 | 真跑失败调用 `runs/_exercises/ex_grid/c8-task120/trace-editor.jsonl:16` → code=-32602 msg="Unknown parameter 'undeclared_probe' for t... | present | 引擎仅提及用例（弱）：tools of later batches are not registered |
@@ -512,25 +523,29 @@
 
 | 用例ID | 文件 | 条目 | 证据指针 | 输入形式 | 输出形式 | 反例判据 | 现状 | 备注 |
 |---|---|---|---|---|---|---|---|---|
-| TC-PY-test_contract_forms.py:test_the_contract_carries_177_tools | `tools/tests/test_contract_forms.py` | `test_the_contract_carries_177_tools` | `tools/tests/test_contract_forms.py:215` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 23 passed | present | pytest 条目 |
-| TC-PY-test_contract_forms.py:test_the_three_tables_cover_the_same_names | `tools/tests/test_contract_forms.py` | `test_the_three_tables_cover_the_same_names` | `tools/tests/test_contract_forms.py:219` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 23 passed | present | pytest 条目 |
-| TC-PY-test_contract_forms.py:test_every_tool_name_passes_the_naming_lint | `tools/tests/test_contract_forms.py` | `test_every_tool_name_passes_the_naming_lint` | `tools/tests/test_contract_forms.py:223` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 23 passed | present | pytest 条目 |
-| TC-PY-test_contract_forms.py:test_every_input_schema_is_internally_consistent | `tools/tests/test_contract_forms.py` | `test_every_input_schema_is_internally_consistent` | `tools/tests/test_contract_forms.py:227` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 23 passed | present | pytest 条目 |
-| TC-PY-test_contract_forms.py:test_the_tools_without_a_required_list_are_exactly_the_pinned_ones | `tools/tests/test_contract_forms.py` | `test_the_tools_without_a_required_list_are_exactly_the_pinned_ones` | `tools/tests/test_contract_forms.py:231` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 23 passed | present | pytest 条目 |
-| TC-PY-test_contract_forms.py:test_every_declared_enum_and_type_is_well_formed | `tools/tests/test_contract_forms.py` | `test_every_declared_enum_and_type_is_well_formed` | `tools/tests/test_contract_forms.py:238` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 23 passed | present | pytest 条目 |
-| TC-PY-test_contract_forms.py:test_every_tool_declares_one_known_evidence_channel | `tools/tests/test_contract_forms.py` | `test_every_tool_declares_one_known_evidence_channel` | `tools/tests/test_contract_forms.py:242` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 23 passed | present | pytest 条目 |
-| TC-PY-test_contract_forms.py:test_negative_naming_lint_rejects_a_banned_verb | `tools/tests/test_contract_forms.py` | `test_negative_naming_lint_rejects_a_banned_verb` | `tools/tests/test_contract_forms.py:255` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 23 passed | present | pytest 条目 |
-| TC-PY-test_contract_forms.py:test_negative_schema_check_rejects_a_required_member_outside_properties | `tools/tests/test_contract_forms.py` | `test_negative_schema_check_rejects_a_required_member_outside_properties` | `tools/tests/test_contract_forms.py:266` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 23 passed | present | pytest 条目 |
-| TC-PY-test_contract_forms.py:test_negative_schema_check_rejects_a_required_member_with_a_default | `tools/tests/test_contract_forms.py` | `test_negative_schema_check_rejects_a_required_member_with_a_default` | `tools/tests/test_contract_forms.py:275` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 23 passed | present | pytest 条目 |
-| TC-PY-test_contract_forms.py:test_negative_schema_check_rejects_a_new_required_omission | `tools/tests/test_contract_forms.py` | `test_negative_schema_check_rejects_a_new_required_omission` | `tools/tests/test_contract_forms.py:292` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 23 passed | present | pytest 条目 |
-| TC-PY-test_contract_forms.py:test_negative_enum_check_rejects_an_empty_enum | `tools/tests/test_contract_forms.py` | `test_negative_enum_check_rejects_an_empty_enum` | `tools/tests/test_contract_forms.py:304` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 23 passed | present | pytest 条目 |
-| TC-PY-test_contract_forms.py:test_negative_channel_check_rejects_an_unknown_channel | `tools/tests/test_contract_forms.py` | `test_negative_channel_check_rejects_an_unknown_channel` | `tools/tests/test_contract_forms.py:323` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 23 passed | present | pytest 条目 |
-| TC-PY-test_contract_forms.py:test_negative_table_check_rejects_a_dropped_tool | `tools/tests/test_contract_forms.py` | `test_negative_table_check_rejects_a_dropped_tool` | `tools/tests/test_contract_forms.py:333` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 23 passed | present | pytest 条目 |
-| TC-PY-test_coverage_batch_consistency.py:test_the_ledger_is_internally_consistent | `tools/tests/test_coverage_batch_consistency.py` | `test_the_ledger_is_internally_consistent` | `tools/tests/test_coverage_batch_consistency.py:150` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 23 passed | present | pytest 条目 |
-| TC-PY-test_coverage_batch_consistency.py:test_the_negative_the_internal_check_is_not_vacuous | `tools/tests/test_coverage_batch_consistency.py` | `test_the_negative_the_internal_check_is_not_vacuous` | `tools/tests/test_coverage_batch_consistency.py:155` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 23 passed | present | pytest 条目 |
-| TC-PY-test_coverage_batch_consistency.py:test_the_manifests_exist | `tools/tests/test_coverage_batch_consistency.py` | `test_the_manifests_exist` | `tools/tests/test_coverage_batch_consistency.py:170` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 23 passed | present | pytest 条目 |
-| TC-PY-test_coverage_batch_consistency.py:test_the_batch_gate_disagreement_is_exactly_the_pinned_one | `tools/tests/test_coverage_batch_consistency.py` | `test_the_batch_gate_disagreement_is_exactly_the_pinned_one` | `tools/tests/test_coverage_batch_consistency.py:174` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 23 passed | present | pytest 条目 |
-| TC-PY-test_coverage_batch_consistency.py:test_every_false_red_is_an_editor_state_channel_tool | `tools/tests/test_coverage_batch_consistency.py` | `test_every_false_red_is_an_editor_state_channel_tool` | `tools/tests/test_coverage_batch_consistency.py:190` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 23 passed | present | pytest 条目 |
+| TC-PY-test_contract_forms.py:test_the_contract_carries_177_tools | `tools/tests/test_contract_forms.py` | `test_the_contract_carries_177_tools` | `tools/tests/test_contract_forms.py:215` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 30 passed | present | pytest 条目 |
+| TC-PY-test_contract_forms.py:test_the_three_tables_cover_the_same_names | `tools/tests/test_contract_forms.py` | `test_the_three_tables_cover_the_same_names` | `tools/tests/test_contract_forms.py:219` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 30 passed | present | pytest 条目 |
+| TC-PY-test_contract_forms.py:test_every_tool_name_passes_the_naming_lint | `tools/tests/test_contract_forms.py` | `test_every_tool_name_passes_the_naming_lint` | `tools/tests/test_contract_forms.py:223` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 30 passed | present | pytest 条目 |
+| TC-PY-test_contract_forms.py:test_every_input_schema_is_internally_consistent | `tools/tests/test_contract_forms.py` | `test_every_input_schema_is_internally_consistent` | `tools/tests/test_contract_forms.py:227` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 30 passed | present | pytest 条目 |
+| TC-PY-test_contract_forms.py:test_the_tools_without_a_required_list_are_exactly_the_pinned_ones | `tools/tests/test_contract_forms.py` | `test_the_tools_without_a_required_list_are_exactly_the_pinned_ones` | `tools/tests/test_contract_forms.py:231` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 30 passed | present | pytest 条目 |
+| TC-PY-test_contract_forms.py:test_every_declared_enum_and_type_is_well_formed | `tools/tests/test_contract_forms.py` | `test_every_declared_enum_and_type_is_well_formed` | `tools/tests/test_contract_forms.py:238` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 30 passed | present | pytest 条目 |
+| TC-PY-test_contract_forms.py:test_every_tool_declares_one_known_evidence_channel | `tools/tests/test_contract_forms.py` | `test_every_tool_declares_one_known_evidence_channel` | `tools/tests/test_contract_forms.py:242` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 30 passed | present | pytest 条目 |
+| TC-PY-test_contract_forms.py:test_negative_naming_lint_rejects_a_banned_verb | `tools/tests/test_contract_forms.py` | `test_negative_naming_lint_rejects_a_banned_verb` | `tools/tests/test_contract_forms.py:255` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 30 passed | present | pytest 条目 |
+| TC-PY-test_contract_forms.py:test_negative_schema_check_rejects_a_required_member_outside_properties | `tools/tests/test_contract_forms.py` | `test_negative_schema_check_rejects_a_required_member_outside_properties` | `tools/tests/test_contract_forms.py:266` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 30 passed | present | pytest 条目 |
+| TC-PY-test_contract_forms.py:test_negative_schema_check_rejects_a_required_member_with_a_default | `tools/tests/test_contract_forms.py` | `test_negative_schema_check_rejects_a_required_member_with_a_default` | `tools/tests/test_contract_forms.py:275` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 30 passed | present | pytest 条目 |
+| TC-PY-test_contract_forms.py:test_negative_schema_check_rejects_a_new_required_omission | `tools/tests/test_contract_forms.py` | `test_negative_schema_check_rejects_a_new_required_omission` | `tools/tests/test_contract_forms.py:292` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 30 passed | present | pytest 条目 |
+| TC-PY-test_contract_forms.py:test_negative_enum_check_rejects_an_empty_enum | `tools/tests/test_contract_forms.py` | `test_negative_enum_check_rejects_an_empty_enum` | `tools/tests/test_contract_forms.py:304` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 30 passed | present | pytest 条目 |
+| TC-PY-test_contract_forms.py:test_negative_channel_check_rejects_an_unknown_channel | `tools/tests/test_contract_forms.py` | `test_negative_channel_check_rejects_an_unknown_channel` | `tools/tests/test_contract_forms.py:323` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 30 passed | present | pytest 条目 |
+| TC-PY-test_contract_forms.py:test_negative_table_check_rejects_a_dropped_tool | `tools/tests/test_contract_forms.py` | `test_negative_table_check_rejects_a_dropped_tool` | `tools/tests/test_contract_forms.py:333` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 30 passed | present | pytest 条目 |
+| TC-PY-test_coverage_batch_consistency.py:test_the_ledger_is_internally_consistent | `tools/tests/test_coverage_batch_consistency.py` | `test_the_ledger_is_internally_consistent` | `tools/tests/test_coverage_batch_consistency.py:230` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 30 passed | present | pytest 条目 |
+| TC-PY-test_coverage_batch_consistency.py:test_the_negative_the_internal_check_is_not_vacuous | `tools/tests/test_coverage_batch_consistency.py` | `test_the_negative_the_internal_check_is_not_vacuous` | `tools/tests/test_coverage_batch_consistency.py:235` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 30 passed | present | pytest 条目 |
+| TC-PY-test_coverage_batch_consistency.py:test_the_manifests_exist | `tools/tests/test_coverage_batch_consistency.py` | `test_the_manifests_exist` | `tools/tests/test_coverage_batch_consistency.py:250` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 30 passed | present | pytest 条目 |
+| TC-PY-test_coverage_batch_consistency.py:test_the_batch_gate_judges_the_declared_channel | `tools/tests/test_coverage_batch_consistency.py` | `test_the_batch_gate_judges_the_declared_channel` | `tools/tests/test_coverage_batch_consistency.py:254` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 30 passed | present | pytest 条目 |
+| TC-PY-test_coverage_batch_consistency.py:test_every_fail_is_a_real_shortage_on_its_own_channel | `tools/tests/test_coverage_batch_consistency.py` | `test_every_fail_is_a_real_shortage_on_its_own_channel` | `tools/tests/test_coverage_batch_consistency.py:272` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 30 passed | present | pytest 条目 |
+| TC-PY-test_coverage_batch_consistency.py:test_the_number_of_false_reds_is_now_zero_and_the_legacy_number_is_recorded | `tools/tests/test_coverage_batch_consistency.py` | `test_the_number_of_false_reds_is_now_zero_and_the_legacy_number_is_recorded` | `tools/tests/test_coverage_batch_consistency.py:286` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 30 passed | present | pytest 条目（TASK-144 A 新增：钉住误红 0 并把 118+45=163 的算式留在测试里） |
+| TC-PY-test_coverage_batch_consistency.py:test_negative_a_tool_declared_on_the_wrong_channel_is_red | `tools/tests/test_coverage_batch_consistency.py` | `test_negative_a_tool_declared_on_the_wrong_channel_is_red` | `tools/tests/test_coverage_batch_consistency.py:299` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 30 passed | present | pytest 条目（TASK-144 A 新增负例：错通道声明必须判红，带正向对照） |
+| TC-PY-test_coverage_batch_consistency.py:test_negative_a_snapshot_that_contradicts_its_own_counters_is_red | `tools/tests/test_coverage_batch_consistency.py` | `test_negative_a_snapshot_that_contradicts_its_own_counters_is_red` | `tools/tests/test_coverage_batch_consistency.py:337` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 30 passed | present | pytest 条目（TASK-144 A 新增负例：快照与行内计数自相矛盾必须判红） |
+| TC-PY-test_coverage_batch_consistency.py:test_negative_a_payload_channel_on_an_action_verb_is_rejected | `tools/tests/test_coverage_batch_consistency.py` | `test_negative_a_payload_channel_on_an_action_verb_is_rejected` | `tools/tests/test_coverage_batch_consistency.py:361` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 30 passed | present | pytest 条目（TASK-144 A 新增负例：动词-通道矛盾必须被台账自己的护栏拒（exit 2）） |
 | TC-PY-test_jev_agent.py:D1_health_ok | `tools/tests/test_jev_agent.py` | `D1_health_ok` | `tools/tests/test_jev_agent.py:157` | 合法+非法（脚本内 check 各自构造） | 成功=ok:true; 错误码=逐 check 布尔 | 任一 check false ⇒ 脚本 exit 1 且写入 evidence JSON | present | 脚本内 check（D1_health_ok） |
 | TC-PY-test_jev_agent.py:D1_health_not_models | `tools/tests/test_jev_agent.py` | `D1_health_not_models` | `tools/tests/test_jev_agent.py:162` | 合法+非法（脚本内 check 各自构造） | 成功=ok:true; 错误码=逐 check 布尔 | 任一 check false ⇒ 脚本 exit 1 且写入 evidence JSON | present | 脚本内 check（D1_health_not_models） |
 | TC-PY-test_jev_agent.py:D2_request_shape | `tools/tests/test_jev_agent.py` | `D2_request_shape` | `tools/tests/test_jev_agent.py:239` | 合法+非法（脚本内 check 各自构造） | 成功=ok:true; 错误码=逐 check 布尔 | 任一 check false ⇒ 脚本 exit 1 且写入 evidence JSON | present | 脚本内 check（D2_request_shape） |
@@ -564,10 +579,13 @@
 | TC-PY-test_jev_agent.py:R_scripted_unchanged | `tools/tests/test_jev_agent.py` | `R_scripted_unchanged` | `tools/tests/test_jev_agent.py:438` | 合法+非法（脚本内 check 各自构造） | 成功=ok:true; 错误码=逐 check 布尔 | 任一 check false ⇒ 脚本 exit 1 且写入 evidence JSON | present | 脚本内 check（R_scripted_unchanged） |
 | TC-PY-test_jev_agent.py:R_openai_still_available | `tools/tests/test_jev_agent.py` | `R_openai_still_available` | `tools/tests/test_jev_agent.py:440` | 合法+非法（脚本内 check 各自构造） | 成功=ok:true; 错误码=逐 check 布尔 | 任一 check false ⇒ 脚本 exit 1 且写入 evidence JSON | present | 脚本内 check（R_openai_still_available） |
 | TC-PY-test_jev_agent.py:R_jev_factory | `tools/tests/test_jev_agent.py` | `R_jev_factory` | `tools/tests/test_jev_agent.py:442` | 合法+非法（脚本内 check 各自构造） | 成功=ok:true; 错误码=逐 check 布尔 | 任一 check false ⇒ 脚本 exit 1 且写入 evidence JSON | present | 脚本内 check（R_jev_factory） |
-| TC-PY-test_playability_model_player.py:test_task139_window_and_refusal | `tools/tests/test_playability_model_player.py` | `test_task139_window_and_refusal` | `tools/tests/test_playability_model_player.py:688` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 23 passed | present | pytest 条目 |
-| TC-PY-test_playability_model_player.py:test_task140_reporting_window_and_unstable | `tools/tests/test_playability_model_player.py` | `test_task140_reporting_window_and_unstable` | `tools/tests/test_playability_model_player.py:1082` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 23 passed | present | pytest 条目 |
-| TC-PY-test_playability_model_player.py:test_task142_round_distribution | `tools/tests/test_playability_model_player.py` | `test_task142_round_distribution` | `tools/tests/test_playability_model_player.py:1086` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 23 passed | present | pytest 条目 |
-| TC-PY-test_playability_model_player.py:test_model_player_rules | `tools/tests/test_playability_model_player.py` | `test_model_player_rules` | `tools/tests/test_playability_model_player.py:1090` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 23 passed | present | pytest 条目 |
+| TC-PY-test_matrix_self_consistency.py:test_the_matrix_section_1_1_statistics_equal_its_own_rows | `tools/tests/test_matrix_self_consistency.py` | `test_the_matrix_section_1_1_statistics_equal_its_own_rows` | `tools/tests/test_matrix_self_consistency.py:285` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红：**从 `recovery/TEST-CASES.md` 正文重算各族编号行数与合计，与 §1.1 声明值不等即 AssertionError** | present | pytest 条目（TASK-146 B 新增：防"改了统计不补行/补了行不改统计"复发） |
+| TC-PY-test_matrix_self_consistency.py:test_every_tc_py_row_names_a_test_that_really_exists | `tools/tests/test_matrix_self_consistency.py` | `test_every_tc_py_row_names_a_test_that_really_exists` | `tools/tests/test_matrix_self_consistency.py:292` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红：**每条 `TC-PY` 行引用的测试名必须真实存在**（pytest 行 ⇒ 该文件有 `def <名>`；脚本内 check ⇒ 文件里有 `["<名>"]` 键；自打印 case ⇒ 真跑该文件确实打印这个名字），且每个 pytest 文件的 `def test_*` 条数 == 它的编号行数 | present | pytest 条目（TASK-146 B 新增：防失效引用与"加了测试不补行"） |
+| TC-PY-test_matrix_self_consistency.py:test_the_matrix_checker_goes_red_on_a_deliberately_inconsistent_matrix | `tools/tests/test_matrix_self_consistency.py` | `test_the_matrix_checker_goes_red_on_a_deliberately_inconsistent_matrix` | `tools/tests/test_matrix_self_consistency.py:299` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红（恒真守卫的反面：若校验器对故意构造的不一致矩阵**不**报错，这条自己判红） | present | pytest 条目（TASK-146 B 新增：证伪"校验器是空转的"） |
+| TC-PY-test_playability_model_player.py:test_task139_window_and_refusal | `tools/tests/test_playability_model_player.py` | `test_task139_window_and_refusal` | `tools/tests/test_playability_model_player.py:688` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 30 passed | present | pytest 条目 |
+| TC-PY-test_playability_model_player.py:test_task140_reporting_window_and_unstable | `tools/tests/test_playability_model_player.py` | `test_task140_reporting_window_and_unstable` | `tools/tests/test_playability_model_player.py:1082` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 30 passed | present | pytest 条目 |
+| TC-PY-test_playability_model_player.py:test_task142_round_distribution | `tools/tests/test_playability_model_player.py` | `test_task142_round_distribution` | `tools/tests/test_playability_model_player.py:1086` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 30 passed | present | pytest 条目 |
+| TC-PY-test_playability_model_player.py:test_model_player_rules | `tools/tests/test_playability_model_player.py` | `test_model_player_rules` | `tools/tests/test_playability_model_player.py:1090` | 合法+边界+非法+必填可选（见该函数体） | 成功=断言 0 fail; 错误码=AssertionError | 该 pytest 断言失败即红；§8.1 真跑 30 passed | present | pytest 条目 |
 | TC-PY-test_playability_model_player.py:stability: a minimum round count is declared | `tools/tests/test_playability_model_player.py` | `stability: a minimum round count is declared` | `tools/tests/test_playability_model_player.py（自身运行打印）` | 合法+边界+非法（case 自己构造，源文件见 `tools/tests/test_playability_model_player.py`） | 成功=该 case 打印 `ok`/`OK`; 错误码=打印 `FAIL` 且 exit 1 | 该 case 谓词为假 ⇒ 打印 FAIL、汇总计数下降且 exit 1（本轮真跑全绿） | present | 该文件自打印的 case 名 |
 | TC-PY-test_playability_model_player.py:stability: the minimum is at least 4 (TASK-141's four-roun | `tools/tests/test_playability_model_player.py` | `stability: the minimum is at least 4 (TASK-141's four-roun` | `tools/tests/test_playability_model_player.py（自身运行打印）` | 合法+边界+非法（case 自己构造，源文件见 `tools/tests/test_playability_model_player.py`） | 成功=该 case 打印 `ok`/`OK`; 错误码=打印 `FAIL` 且 exit 1 | 该 case 谓词为假 ⇒ 打印 FAIL、汇总计数下降且 exit 1（本轮真跑全绿） | present | 该文件自打印的 case 名 |
 | TC-PY-test_playability_model_player.py:stability: the declaration carries its own basis (measured | `tools/tests/test_playability_model_player.py` | `stability: the declaration carries its own basis (measured` | `tools/tests/test_playability_model_player.py（自身运行打印）` | 合法+边界+非法（case 自己构造，源文件见 `tools/tests/test_playability_model_player.py`） | 成功=该 case 打印 `ok`/`OK`; 错误码=打印 `FAIL` 且 exit 1 | 该 case 谓词为假 ⇒ 打印 FAIL、汇总计数下降且 exit 1（本轮真跑全绿） | present | 该文件自打印的 case 名 |
@@ -941,7 +959,7 @@
 
 | 原始命令 | exit | 通过/失败/跳过 | 摘要 |
 |---|---|---|---|
-| `python -m pytest tools/tests -q --no-header -p no:cacheprovider` | 0 | 27 passed（含 TASK-143 新增的 20 条与 TASK-144 A 新增的 4 条） | 27 passed（含 TASK-143 新增的 20 条与 TASK-144 A 新增的 4 条） |
+| `python -m pytest tools/tests -q --no-header -p no:cacheprovider` | 0 | 30 passed（含 TASK-143 新增的 20 条、TASK-144 A 新增的 4 条与 **TASK-146 B 新增的 3 条自洽校验**） | 30 passed（含 TASK-143 新增的 20 条、TASK-144 A 新增的 4 条与 **TASK-146 B 新增的 3 条自洽校验**） |
 | `python tools/tests/test_playability_p7.py` | 0 | 23/23 checks passed | 23/23 checks passed |
 | `python tools/tests/test_playability_model_player.py` | 0 | task142 52 assertions PASSED / task140 45 / task139 67 / model-player 108 断言全 ok | task142 52 assertions PASSED / task140 45 / task139 67 / model-player 108 断言全 ok |
 | `python tools/tests/test_jev_agent.py --port 55124 --out recovery/work/task143/agent-probe-jev.json` | 0 | ok=true, 33/33 checks（D1..D7 + R_*） | ok=true, 33/33 checks（D1..D7 + R_*） |
@@ -1063,8 +1081,8 @@ negatives all fired: True ; control clean: True
 
 | 新增产物 | 补的是哪个缺口 | 真跑结果 |
 |---|---|---|
-| `tools/tests/test_contract_forms.py`（14 条 pytest + 12 条脚本自带 check） | 177 工具的**契约层输入形式**从未被当作矩阵检查过：必填⊆属性、必填不得带默认值、enum 合法性、命名 lint（含 `update_` 禁用）、三方名单一致、通道闭集；以及一个可执行的反例组 | `12/12 checks passed`；`-m pytest tools/tests` 23 passed |
-| `tools/tests/test_coverage_batch_consistency.py`（5 条 pytest + 6 条 check） | 台账与批量覆盖门之间的**陈旧不一致**没有任何守卫 | `6/6 checks passed` |
+| `tools/tests/test_contract_forms.py`（14 条 pytest + 12 条脚本自带 check） | 177 工具的**契约层输入形式**从未被当作矩阵检查过：必填⊆属性、必填不得带默认值、enum 合法性、命名 lint（含 `update_` 禁用）、三方名单一致、通道闭集；以及一个可执行的反例组 | `12/12 checks passed`；`-m pytest tools/tests` 30 passed |
+| `tools/tests/test_coverage_batch_consistency.py`（9 条 pytest + 6 条 check） | 台账与批量覆盖门之间的**陈旧不一致**没有任何守卫 | `6/6 checks passed`；`-m pytest tools/tests` 30 passed |
 | `recovery/work/task143/probe.py` + `probe-live.json` | 94 个未被引擎 TEST_CASE 点名的工具缺**运行时**非法输入证据 | 142/142 真跑 -32602 |
 | `recovery/work/task143/negative-demo.py` + `negative-demo.json` | 新增断言“不是恒真”的证据 | 7/7 负例真触发，正向对照干净 |
 
@@ -1090,7 +1108,7 @@ TASK-143 的现场：`check_engine_anchor.ps1` 对当时的树判 `ANCHOR_STALE_
 
 **TASK-144 B 的收口（真跑）**：按既有流程执行 **两变体重建 → 十道门 → `accept_m1` → push**。重建在 HEAD `ba1587c71e` 上串行完成（`build_local.cmd -Force` 1m45s exit 0 → `4.8.dev.custom_build.ba1587c71`；`mcp057_build_mono.cmd` 1m42s exit 0 → `4.8.dev.mono.custom_build.ba1587c71`）。十道门 `g01`…`g10` **全部 exit=0**，`g09` 判 **`ANCHOR_EQUAL`**（A=ANCHOR=HEAD=ba1587c71，`DIFF_COUNT=0`），`g10` `accept_m1` **22/22**。push 的真实输出是 `Everything up-to-date`：本地 `HEAD` 与 `origin/feature/mcp-server-module-rebuild` 都已是 `ba1587c71eba34c1a6576b08f9f26aad8d2ffd36`（TASK-112 提交时已推送），**本次没有新提交可推**，未 force、未换分支。**重建没有暴露任何“非纯记账漂移”的迹象**：重建前后唯二变化就是两个二进制的 `--version` 锚点串，其余九道门与 `accept_m1` 的结果与重建前逐条一致。新锚点：**`ba1587c71`**（plain 与 mono 同锚）。
 
-**U2 — 35 个工具没有活体非法输入证据（TASK-143 的登记），其中 2 个连“强反例”都没有 —— TASK-144 C 已把 2 个补齐，其余 33 个保持登记**
+**U2 — 35 个工具没有活体非法输入证据（TASK-143 的登记），其中 2 个到 TASK-146 为止仍**只有参数门反例** —— 另 33 个保持登记**
 
 写类且无必填参数的工具（以及契约里 `properties` 为空的工具）无法在不冒“真的改状态”风险的前提下构造非法输入，故 TASK-143 **未探**而非记 pass。逐条理由在 `probe-live.json` 的 `tools.<name>.why`。它们的非法输入断言大多仍由 trace 语料覆盖（见矩阵 A 的“错误码”列）。
 
@@ -1104,7 +1122,7 @@ editor_simulate_mouse_move       refused_-32602 code=-32602 message=Unknown para
 harness: {"import": true, "import_listen": ["[MCP] listening on 127.0.0.1:9919 (editor=true, tools=154)"], "port_up": true, "tools_list_count": 154, "both_targets_registered": true}
 ```
 
-脚本自带护栏：请求参数袋**断言只含那一个未声明键**；回答若不是 `jsonrpc_error` 就抛异常、拒绝写进证据（不会把“偷跑成功”写成 pass）。原始记录 `recovery/work/task144/probe-u2.json`。**边界如实说明**：这补的是“非法输入被拒”的**强反例**（矩阵 A 的“非法/错误码”格与 §1.2 的 175→177），**不是**这两个工具的**生效证据**——台账仍是 `未达(0)`、`scope_excluded`，`editor_state` 通道的 witness_read 依旧无从构造（登记表的 `measurable_when` 自己写着“这样的批次买得到计数与边界，买不到 tier”）。**其余 33 个 `not_probed` 工具没有变**。
+脚本自带护栏：请求参数袋**断言只含那一个未声明键**；回答若不是 `jsonrpc_error` 就抛异常、拒绝写进证据（不会把“偷跑成功”写成 pass）。原始记录 `recovery/work/task144/probe-u2.json`。**口径（TASK-145 D10 收紧、TASK-146 落账）**：这补的是**参数门反例（弱）**，不是这两个工具的行为反例——**只有 2 条**，发出点是 `tool_registry.cpp:864` 的 `_reject_unknown_arguments()`，在 `handler`（`:880`）之前；与之相对，活体探针里的 **121 条 `missing_required` + 21 条 `wrong_type` 由 handler 侧的 `require_string()/require_int()`（`tools/tool_builder.cpp:207-232`）发出，属于行为反例**。所以 §1.2 的强反例是 **175 / 177**、弱反例 2 条（不再是 177/177）。这**不是**这两个工具的**生效证据**——台账仍是 `未达(0)`、`scope_excluded`，`editor_state` 通道的 witness_read 依旧无从构造（登记表的 `measurable_when` 自己写着“这样的批次买得到计数与边界，买不到 tier”）。**其余 33 个 `not_probed` 工具没有变**。
 
 **U3 — 矩阵 C 的“合法 / 必填可选 / 默认值”三格是空（`·`）**
 
@@ -1140,7 +1158,7 @@ harness: {"import": true, "import_listen": ["[MCP] listening on 127.0.0.1:9919 (
 
 ### 10.3 TASK-142 残留处置
 
-先记录、不代提交、不擅自 revert。见报告 §G 的 `git status --short` 原文与逐文件点名。本轮实测：TASK-142 的改动（`tools/tests/test_playability_model_player.py`、`tools/playtest_player.py`、`tools/playability_controls.json` 等）**不会**让本任务跑到的任何套件变红 —— `python -m pytest tools/tests` 23 passed、`test_playability_model_player.py` 全部断言 ok，包括其中 TASK-142 自己那组 `task142_cases PASSED (52 assertions)`。
+先记录、不代提交、不擅自 revert。见报告 §G 的 `git status --short` 原文与逐文件点名。本轮实测：TASK-142 的改动（`tools/tests/test_playability_model_player.py`、`tools/playtest_player.py`、`tools/playability_controls.json` 等）**不会**让本任务跑到的任何套件变红 —— `python -m pytest tools/tests` 30 passed、`test_playability_model_player.py` 全部断言 ok，包括其中 TASK-142 自己那组 `task142_cases PASSED (52 assertions)`。（`30` 是 TASK-146 之后的实测值；TASK-143 当时是 23。）
 
 ### 10.4 可复现
 
@@ -1164,3 +1182,29 @@ TASK-144 只动了这些部分：§0.1 的 `tools/tests/**` 计数行、§1.1 �
 | 引擎仓 `godot/` | 只**重建**两个二进制（源码一个字节未改，故未产生新提交）：`ba1587c71` plain + mono |
 
 新增真跑证据：`recovery/work/task144/{batch-before.json,batch-after.json,probe-u2.json,check_recompute.py,three_reds.py,three_reds_trace.py,probe_u2.py,build-local.log,build-mono.log}`、`runs/gates/task144/**`。**`DECISIONS.md` 因 TASK-142 残留无法干净分离，本任务未改它**（决策日志条目写在报告里，留给决策者）。
+
+---
+
+### 10.6 TASK-146 对本文件的更新（**只改统计、口径与相关行；矩阵主体未重写**）
+
+依据：`recovery/reports/ACCEPTANCE-TASK-145.md`（独立验收 `verdict=fail`，唯一 blocker 是本文件的统计与正文不符；收口部分已被该验收独立复现为真绿，TASK-146 **未重做**）。
+
+| 判据 | 动作 |
+|---|---|
+| E1 统计 == 正文 | §1.1：`TC-PY-*` 404→**407**、合计 785→**788**（按正文实际编号行数）；新增注释说明"本表是重算结果，不是声明"；重算命令 `python recovery\work\task146\recount.py` |
+| E2 补 4 条编号行 | §6 的 `test_coverage_batch_consistency.py` 由 5 行补到 **9 行**（新增 TASK-144 A 的 `test_the_number_of_false_reds_is_now_zero_and_the_legacy_number_is_recorded` + 3 条负例），字段齐全 |
+| E3 失效行名 | `test_the_batch_gate_disagreement_is_exactly_the_pinned_one` → **`test_the_batch_gate_judges_the_declared_channel`**；`test_every_false_red_is_an_editor_state_channel_tool` → **`test_every_fail_is_a_real_shortage_on_its_own_channel`**；同时改掉这 5 行的失效**行号指针**（150/155/170/174/190 → 230/235/250/254/272） |
+| E4 stale 数字 | 全篇 **25 处 "23 passed" → 30 passed**（§6 的 23 个 TC-PY 行 + §9.2 的 F1 一行 + §10.3 一行），与 §8.1 同源；§8.1 的 `27 passed` → **30 passed**（并注明 TASK-146 新增 3 条）；§0.1 的 "pytest 收集 27 条" → **30 条**；§9.2 的 F2 行 "5 条 pytest" → **9 条** |
+| E5 口径收紧 | §1.2 强反例 177→**175/177**、弱反例 0→**2**；§1.4 缺强反例 0/177→**2/177**；§2 两条 `editor_simulate_*` 行的 `强度=strong` → **`weak（参数门反例）`**；§1.2 新增"对抗性结论"段（121+21 由 handler 侧 `tool_builder.cpp:207-232` 发出 = 行为反例；2 条只到 `tool_registry.cpp:864` = 参数门反例）；§9.3 U2 同步改写 |
+| E6 自洽校验 | 新建 `tools/tests/test_matrix_self_consistency.py`（3 条 pytest：统计重算、引用重解、非空转守卫）；§6 新增它的 3 行 |
+| 附带更正 | §1.2/§1.4 的"活体探针 142" → **144**（TASK-143 的 142 + TASK-144 C 的 2 条），与 TASK-145 的 minor 一致 |
+
+| TASK-146 声明独占的路径 | 动作 |
+|---|---|
+| `recovery/TEST-CASES.md` | 只更新上列行与统计（本 §10.6 为唯一新增区块） |
+| `tools/tests/test_matrix_self_consistency.py` | **新建**（本轮唯一新增测试文件；未改既有 8 个 .py 文件） |
+| `recovery/work/task146/**` | 新建：重算/核查脚本与中间产物 |
+| `recovery/reports/TASK-146-REPORT.md` | 新建 |
+| `recovery/tasks/TASK-146.md` | 只读，未改 |
+
+未触碰：产品代码、引擎代码、`projects/**`、`_exercises/**`、`F:\models\**`、两个 venv、8080/8081、`.gitignore`、`recovery/tasks/README.md`。**`DECISIONS.md` 上有他人（TASK-142 批次）未提交改动 ⇒ 本轮未整体 add、未改、未 revert**，决策条目写在 TASK-146 报告里留给决策者。
