@@ -420,12 +420,25 @@ $ git status --short
 | `godot-mcp/recovery/work/task149_negclass.py` | `ad19a1796836fabfb1539aca7cd7c8dbf7900630` | `9bad16fbd5f193db53cd41ba3ced1787fbae90cf4560f31102023a975ee972fd` | 4036 | 110 |
 | `godot-mcp/recovery/work/task149_probeshape.py` | `dc27a881cd12d19e69ac6f0cd5bc5e90a12e2e64` | `e5fc70f7f43bfd823d45dc0791048bb721c6f17bf57d1b5fb792eaa3fcb0f75d` | 1591 | 42 |
 | `godot-mcp/recovery/work/task149_stage.py` | `314fc6cefea2a2d66074e73d7cce64299f21fe40` | `945315a11939541068e0c61ce0ba2ad27d16e035a8dbfd0e4a94cac219740e68` | 2951 | 94 |
-| **`godot-mcp/recovery/reports/TASK-149-REPORT.md`（本文件）** | 见提交 `TASK-149 report` 的 blob | `python recovery\work\task149_hashes.py` 可复算 | — | — |
+| **`godot-mcp/recovery/reports/TASK-149-REPORT.md`（本文件）** | 见下方"自指说明" | `78f55e834d6a4213a753c02ed37aaed601f1549bfda4b33fe01f8145de32302a`（**在本文件被提交前**实测，41338 B / 513 行） | 41338 | 513 |
+
+> **自指说明**（这是哈希的定义，不是遗漏）：TASK-149 报告**自己**的 `sha256` 与 git blob
+> 在写入报告的那一刻还不可得——把"本文件的哈希"写进本文件，写入动作本身就会改变该哈希。
+> 因此：
+> * 上表里那一行的 `sha256` 是**本文件被提交前**的实测值（可用
+>   `python godot-mcp\recovery\work\task149_hashes.py` 复算**当前**值）；
+> * **可用于追责的稳定身份**是提交 `4a3cd37` 里的 git blob
+>   `6c750c906d8abb3c36bd542ea8512bbbf90a8b36`，复算方式：
+>   `git rev-parse 4a3cd37:godot-mcp/recovery/reports/TASK-149-REPORT.md`；
+> * 提交 `4a3cd37` 之后若还有人编辑本文件，**以 `git log -1 --format=%H -- <path>` 为准**。
+>
+> 同一道理，`ERRATA.md` 的 `sha256` 是**已提交**版本的值
+> （blob `2121b92329dc91cb56775719a3335342129c3dcb`，在 `c53201e`，之后未被改过），
+> 故它不受自指影响。
 
 > 用 `python godot-mcp\recovery\work\task149_hashes.py` 可一次性复算上表全部
 > `git blob @HEAD` + `sha256` + 字节 + 行数（只读、无重定向）。
-> **本文件自己**的 sha256 与 git blob 在写入报告时还不可得（自指），故由提交
-> `TASK-149 report` 与上面的脚本给出。
+> **本文件自己**的 `sha256` 与 git blob 见上一行的"自指说明"。
 
 ---
 
