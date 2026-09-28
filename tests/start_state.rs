@@ -20,7 +20,7 @@ use hof_rs::runtime::start_state::{fresh_workspace, reset_workspace, StartState,
 use hof_rs::runtime::view::list_tree;
 use serde_json::Value;
 
-fn adapter(addon: &std::path::Path) -> GodotAdapter {
+fn adapter(_addon: &std::path::Path) -> GodotAdapter {
     GodotAdapter::new(
         GodotConfig {
             editor_binary: std::path::PathBuf::new(),

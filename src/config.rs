@@ -128,12 +128,12 @@ pub struct ToolsConfig {
     pub endpoint: String,
     pub timeout_seconds: u64,
     pub max_retries: u32,
-    /// DR-20: how long `play_scene` may take to become observable (the
-    /// `get_game_scene_tree` readiness poll) before the step is recorded as a
+    /// DR-20: how long `editor_play_scene` may take to become observable (the
+    /// `running_game_get_scene_tree` readiness poll) before the step is recorded as a
     /// failure.  Defaults to 30 seconds when the key is absent.
     #[serde(default = "default_ready_timeout_seconds")]
     pub ready_timeout_seconds: u64,
-    /// DR-29: how many read-only `get_project_info` probes one call may spend
+    /// DR-29: how many read-only `project_get_info` probes one call may spend
     /// re-correlating a lagging JSON-RPC response before
     /// `HofError::McpResponseDesync` is returned.  Defaults to 4.
     #[serde(default = "default_max_sync_retries")]

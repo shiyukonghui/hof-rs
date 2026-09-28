@@ -227,7 +227,7 @@ fn deterministic_observations(smoke: &Smoke) -> String {
     text
 }
 
-/// E2: the produced project starts -- `play_scene` succeeded and the editor
+/// E2: the produced project starts -- `editor_play_scene` succeeded and the editor
 /// reported no script errors.
 #[test]
 #[ignore]
@@ -244,7 +244,7 @@ fn e2_project_boots() {
     );
     assert!(
         observations.contains("main scene booted"),
-        "play_scene did not boot the main scene: {observations}"
+        "editor_play_scene did not boot the main scene: {observations}"
     );
 }
 

@@ -103,7 +103,7 @@ async fn readiness_poll_succeeds_after_three_failures() {
     let outcome = wait_for_game_ready(
         &channel,
         Role::Tester,
-        "get_game_scene_tree",
+        "running_game_get_scene_tree",
         json!({}),
         30,
         /* poll interval for the test only */ 5,
@@ -135,7 +135,7 @@ async fn readiness_timeout_is_recorded_verbatim() {
     let outcome = wait_for_game_ready(
         &channel,
         Role::Tester,
-        "get_game_scene_tree",
+        "running_game_get_scene_tree",
         json!({}),
         /* timeout */ 0,
         5,
@@ -156,7 +156,7 @@ async fn readiness_timeout_is_recorded_verbatim() {
     let lines: Vec<&str> = raw.lines().filter(|line| !line.trim().is_empty()).collect();
     assert_eq!(lines.len(), 1, "one failure, one line: {raw}");
     let entry: Value = serde_json::from_str(lines[0]).expect("jsonl line");
-    assert_eq!(entry["tool"], json!("get_game_scene_tree"));
+    assert_eq!(entry["tool"], json!("running_game_get_scene_tree"));
     assert_eq!(entry["code"], json!(-32603));
     assert_eq!(entry["attempt"], json!(1));
     assert!(
@@ -169,7 +169,7 @@ async fn readiness_timeout_is_recorded_verbatim() {
     assert!(entry["timestamp"].is_u64(), "{entry}");
 }
 
-/// DR-20: `get_editor_errors` failures are retried `max_retries` times and the
+/// DR-20: `editor_get_errors` failures are retried `max_retries` times and the
 /// last real error survives; a success short-circuits the retries.
 #[tokio::test]
 async fn retries_are_bounded_and_preserve_the_real_error() {
@@ -182,7 +182,7 @@ async fn retries_are_bounded_and_preserve_the_real_error() {
     let outcome = call_with_retries(
         &channel,
         Role::Tester,
-        "get_editor_errors",
+        "editor_get_errors",
         json!({}),
         2,
         0,
@@ -201,7 +201,7 @@ async fn retries_are_bounded_and_preserve_the_real_error() {
     let value = call_with_retries(
         &channel,
         Role::Tester,
-        "get_editor_errors",
+        "editor_get_errors",
         json!({}),
         2,
         0,

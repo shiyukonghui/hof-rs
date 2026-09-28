@@ -17,7 +17,7 @@
       "request_id": 35,
       "response_id": 35,
       "sync_probes": 1,
-      "tool": "get_input_actions"
+      "tool": "editor_get_input_actions"
     },
     {
       "args": {
@@ -39,7 +39,7 @@
       "request_id": 37,
       "response_id": 37,
       "sync_probes": 1,
-      "tool": "simulate_action"
+      "tool": "editor_simulate_input_action"
     },
     {
       "args": {
@@ -80,7 +80,7 @@
       "request_id": 39,
       "response_id": 39,
       "sync_probes": 1,
-      "tool": "monitor_properties"
+      "tool": "running_game_get_node_property_samples"
     },
     {
       "args": {
@@ -102,7 +102,7 @@
       "request_id": 41,
       "response_id": 41,
       "sync_probes": 1,
-      "tool": "simulate_action"
+      "tool": "editor_simulate_input_action"
     }
   ],
   "mismatched_ids": [

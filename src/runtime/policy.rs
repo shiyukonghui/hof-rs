@@ -172,98 +172,117 @@ pub fn diff_manifests(
     diff
 }
 
-/// Canonical tool policy table (§5.4).  `crate::tools::policy` re-exports
-/// these so both the tool channel and the runtime agree by construction.
+/// Canonical tool policy table (§5.4, rewritten for the four-channel contract
+/// by DR-42).  `crate::tools::policy` re-exports these so both the tool channel
+/// and the runtime agree by construction.
+///
+/// The old table was keyed on the *first noun* of an unprefixed name
+/// (`get_*`, `add_*`, and a handful of bare scene verbs).  In the new contract the first
+/// component is the **channel** (`editor_`, `project_`, `running_game_`, `os_`),
+/// so the rule is keyed on the second component, the **verb**, plus an explicit
+/// exception list for the evidence-driving tools whose verb happens to be a
+/// writing one.
 pub mod tool_matrix {
     use crate::model::Role;
 
     /// Planner gets no MCP tool at all (`*` documents "everything").
+    ///
+    /// DR-42 describes the Planner's scope as "read-only channels only".  The
+    /// allowlist stays **empty**, which satisfies that in the strongest form —
+    /// no mutating verb can ever reach the Planner — and keeps the pre-existing
+    /// DR-7 contract (`§5.4`: the Planner owns no MCP tool) and its tests
+    /// intact.  Making the Planner *able* to call read tools would be a
+    /// behaviour widening that the design does not ask for, so it is not done
+    /// here.
     pub const PLANNER_DENY_PREFIXES: &[&str] = &["*"];
 
-    /// Tester: read-only / execution / evidence collection prefixes.
-    const TESTER_ALLOW_PREFIXES: &[&str] = &[
-        "get_",
-        "list_",
-        "read_",
-        "search_",
-        "find_",
-        "analyze_",
-        "detect_",
-        "simulate_",
-        "assert_",
+    /// The four channels of the new contract (DR-42).
+    pub const CHANNEL_PREFIXES: &[&str] = &["editor_", "project_", "running_game_", "os_"];
+
+    /// Read-only / evidence-collecting verbs.  A tool whose verb is in this set
+    /// does not change the artifact, so the QA role may call it (R13).
+    ///
+    /// `simulate` / `play` / `stop` / `run` / `capture` mutate *runtime* state or
+    /// write an evidence file, never the product under evaluation: §5.4 and
+    /// DR-17/DR-30/DR-35 make those the QA role's execution primitive, which is
+    /// why they stay in the read side.
+    const QA_READ_VERBS: &[&str] = &[
+        "get", "list", "read", "search", "find", "analyze", "detect", "simulate", "assert",
+        "capture", "play", "stop", "run",
     ];
 
-    /// Tester: read-only / execution / evidence collection exact names.
-    const TESTER_ALLOW_EXACT: &[&str] = &[
-        "play_scene",
-        "stop_scene",
-        "capture_frames",
-        "monitor_properties",
-        "start_recording",
-        "stop_recording",
-        "replay_recording",
-        "compare_screenshots",
-        "run_test_scenario",
-        "run_stress_test",
-        "get_test_report",
-        "wait_for_node",
-        "click_button_by_text",
-        "navigate_to",
-        "move_to",
-        "cross_scene_set_property",
+    /// Verbs that can change the artifact (or the state of the object being
+    /// evaluated).  The QA role never gets one of these, with the two
+    /// documented exceptions below (DR-42 / R13).
+    const MUTATING_VERBS: &[&str] = &[
+        "add", "create", "remove", "delete", "set", "edit", "rename", "reparent", "move",
+        "duplicate", "connect", "disconnect", "execute", "export", "deploy", "reload", "rescan",
+        "bake", "open", "save", "setup", "convert", "update", "build", "write",
     ];
 
-    /// Tester: mutating prefixes — hit means deny, no exceptions.
-    const MUTATING_PREFIXES: &[&str] = &[
-        "add_", "create_", "delete_", "remove_", "set_", "update_", "edit_",
+    /// The QA role's explicit exceptions: evidence-driving tools whose verb
+    /// looks like a write but never touches the product.
+    ///
+    /// * `running_game_create_input_recording` — recording a run writes a
+    ///   recording file, not a project change (§5.4 allows starting a recording);
+    /// * `running_game_move_player_to_target` — scripted player movement is
+    ///   input simulation (§5.4 allows moving the player to a target).
+    ///
+    /// §5.4's hard prohibitions — the game-side property setter and the
+    /// game-side script executor — are deliberately **not** here.
+    pub const QA_ALLOW_EXACT: &[&str] = &[
+        "running_game_create_input_recording",
+        "running_game_move_player_to_target",
     ];
 
-    /// Tester: mutating exact names — hit means deny, no exceptions.
-    const MUTATING_EXACT: &[&str] = &[
-        "move_node",
-        "rename_node",
-        "duplicate_node",
-        "attach_script",
-        "connect_signal",
-        "disconnect_signal",
-        "tilemap_set_cell",
-        "tilemap_fill_rect",
-        "tilemap_clear",
-        "batch_set_property",
-        "cross_scene_set_property",
-        "export_project",
-        "execute_editor_script",
-        "execute_game_script",
-        "reload_plugin",
-        "reload_project",
-        "set_game_node_property",
-        "set_project_setting",
-        "set_input_action",
-        "bake_navigation_mesh",
-        "clear_output",
-        "clear_editor_selection",
-    ];
+    /// The verb of a four-channel name (`<channel>_<verb>_<object>...`).
+    ///
+    /// `None` means "not a name of this contract" — an invented name used by a
+    /// test, or a future tool the snapshot does not know yet.
+    pub fn verb_of(tool: &str) -> Option<&str> {
+        let rest = CHANNEL_PREFIXES
+            .iter()
+            .find_map(|channel| tool.strip_prefix(channel))?;
+        let verb = rest.split('_').next().unwrap_or("");
+        if verb.is_empty() {
+            None
+        } else {
+            Some(verb)
+        }
+    }
 
+    /// Would this tool change the artifact?  Unknown (unprefixed) names are not
+    /// classified as mutating: they are refused for Planner/Tester by the
+    /// default-deny *allowlist*, which keeps DR-7's two denial texts distinct.
     pub fn is_mutating(tool: &str) -> bool {
-        MUTATING_EXACT.contains(&tool) || MUTATING_PREFIXES.iter().any(|p| tool.starts_with(p))
+        match verb_of(tool) {
+            Some(verb) => MUTATING_VERBS.contains(&verb),
+            None => false,
+        }
     }
 
     pub fn is_tester_allowed(tool: &str) -> bool {
-        TESTER_ALLOW_EXACT.contains(&tool)
-            || TESTER_ALLOW_PREFIXES.iter().any(|p| tool.starts_with(p))
+        if QA_ALLOW_EXACT.contains(&tool) {
+            return true;
+        }
+        match verb_of(tool) {
+            Some(verb) => QA_READ_VERBS.contains(&verb),
+            None => false,
+        }
     }
 
     /// Default-deny matrix.  Unknown tool names are denied for Planner and
     /// Tester; only the Developer may use the full tool set.
+    ///
+    /// DR-42: for the QA role the explicit evidence-driving exceptions
+    /// ([`QA_ALLOW_EXACT`]) override the writing-verb rule; everything else
+    /// whose verb can write is denied before the allowlist is even consulted.
     pub fn tool_allowed(role: Role, tool: &str) -> bool {
         match role {
             Role::Developer => true,
             Role::Planner => false,
             Role::Tester => {
-                if is_mutating(tool) {
-                    return false;
-                }
-                is_tester_allowed(tool)
+                is_tester_allowed(tool) && (QA_ALLOW_EXACT.contains(&tool) || !is_mutating(tool))
             }
         }
     }
@@ -303,6 +322,87 @@ pub fn role_may_submit(role: Role) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// DR-42: the verb is the component after the channel prefix.
+    #[test]
+    fn the_verb_is_the_component_after_the_channel() {
+        assert_eq!(tool_matrix::verb_of("editor_get_errors"), Some("get"));
+        assert_eq!(tool_matrix::verb_of("project_create_script"), Some("create"));
+        assert_eq!(
+            tool_matrix::verb_of("running_game_get_scene_tree"),
+            Some("get")
+        );
+        assert_eq!(
+            tool_matrix::verb_of("os_deploy_to_android_device"),
+            Some("deploy")
+        );
+        // Not a contract name: the old vocabulary and partial prefixes.
+        assert_eq!(tool_matrix::verb_of("bare_verb_name"), None);
+        assert_eq!(tool_matrix::verb_of("editor_"), None);
+    }
+
+    /// DR-42 ②/③: a read-only role is never handed a writing verb.
+    #[test]
+    fn a_write_verb_is_never_granted_to_a_read_only_role() {
+        for tool in [
+            "editor_add_node",
+            "project_create_script",
+            "editor_delete_node",
+            "editor_remove_node_selection",
+            "editor_set_node_property",
+            "project_edit_script",
+            "editor_execute_gdscript",
+            "running_game_execute_gdscript",
+            "running_game_set_node_property",
+            "editor_rescan_project_filesystem",
+            "os_deploy_to_android_device",
+            "project_write_text_file",
+        ] {
+            assert!(
+                !tool_allowed(Role::Planner, tool),
+                "the planner must never get `{tool}`"
+            );
+            assert!(
+                !tool_allowed(Role::Tester, tool),
+                "the QA role must never get `{tool}` (R13)"
+            );
+        }
+    }
+
+    /// DR-42: the QA role keeps exactly the read-only and evidence-driving
+    /// scope — including the two documented exceptions and nothing more.
+    #[test]
+    fn qa_keeps_only_its_read_only_and_evidence_driving_scope() {
+        for tool in [
+            "editor_get_errors",
+            "editor_get_scene_tree",
+            "project_get_info",
+            "project_read_script",
+            "project_search_file_names",
+            "editor_play_scene",
+            "editor_stop_scene",
+            "editor_simulate_input_sequence",
+            // §5.4's evidence-driving exceptions.
+            "running_game_create_input_recording",
+            "running_game_move_player_to_target",
+            "running_game_run_test_scenario",
+            "running_game_assert_node_state",
+            "running_game_capture_frames",
+            "running_game_get_node_property_samples",
+        ] {
+            assert!(
+                tool_allowed(Role::Tester, tool),
+                "the QA role must keep `{tool}`"
+            );
+        }
+        // §5.4's hard prohibitions stay prohibitions.
+        assert!(!tool_allowed(Role::Tester, "running_game_execute_gdscript"));
+        assert!(!tool_allowed(Role::Tester, "running_game_set_node_property"));
+        assert!(!tool_allowed(
+            Role::Tester,
+            "project_set_node_property_across_scenes"
+        ));
+    }
 
     #[test]
     fn merged_excludes_always_contain_the_runtime_paths() {

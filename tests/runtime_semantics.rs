@@ -322,9 +322,9 @@ async fn no_private_information_in_views() {
     }
 
     // Tool side of R11/R13: the Tester may not mutate anything.
-    assert!(!tool_allowed(Role::Tester, "add_node"));
-    assert!(!tool_allowed(Role::Tester, "execute_editor_script"));
-    assert!(!tool_allowed(Role::Planner, "get_editor_errors"));
+    assert!(!tool_allowed(Role::Tester, "editor_add_node"));
+    assert!(!tool_allowed(Role::Tester, "editor_execute_gdscript"));
+    assert!(!tool_allowed(Role::Planner, "editor_get_errors"));
 }
 
 /// DR-3: `runtime.private_excludes` removes a path from the copied role views

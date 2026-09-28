@@ -25,7 +25,7 @@ candidate. Read these first — they are the primary input to every claim:
 | `input_channel_probe` | F1, F2 (+P3 when the game really has no such action) | the observation says `GAME_INPUT_CHANNEL_OK`; `ACTION_NOT_BOUND` and `ACTION_BINDING_UNKNOWN` are both failures, but they are *different* facts |
 | `input_replay` | F1, F2, F3 | `ok` **and** a `game_process` quadruple whose `after_position` differs from `before_position` |
 | `node_and_collision_assertions` | F5, F6, F10, F13, F14, F16 | `ok`; every named body has `shape_count > 0` and the HUD has a text node |
-| `stop_scene` | N1 | `ok` |
+| `editor_stop_scene` | N1 | `ok` |
 
 `ok = false` means the evidence is **unavailable**. Every claim that depends on
 that step is a `gap` with `player_impact` and `recommended_update` — never
@@ -38,10 +38,10 @@ The running game is a **separate process**; the editor can only talk to it
 through the addon's file IPC. Consequences you must respect:
 
 - Every quadruple and every replay record names its process (`channel`):
-  `game_process` for `monitor_properties` / `get_game_node_properties`, and
-  `editor_process` for `simulate_action` / `get_input_actions`.
+  `game_process` for `running_game_get_node_property_samples` / `running_game_get_node_properties`, and
+  `editor_process` for `editor_simulate_input_action` / `editor_get_input_actions`.
 - Records labelled `EDITOR_SIDE_INJECTION` come from the **editor's** own
-  `InputMap`/`Input` and say nothing about the game. `get_input_actions` lists
+  `InputMap`/`Input` and say nothing about the game. `editor_get_input_actions` lists
   the editor's built-in `ui_*` actions; it is not evidence that a project action
   is missing.
 - `ACTION_BINDING_UNKNOWN` means the game-process channel could not be read.
@@ -72,8 +72,8 @@ invalid. Leave `candidate_id` empty; the runtime stamps and checks it.
 - One `execution_records` entry per observation, carrying the *verbatim*
   value/observation text.
 - When a battery record is ambiguous, you may add a few read-only calls
-  (`get_game_node_properties`, `monitor_properties`, `simulate_action`,
-  `get_collision_info`, `assert_node_state`) — but collection is not your main
+  (`running_game_get_node_properties`, `running_game_get_node_property_samples`, `editor_simulate_input_action`,
+  `editor_get_collision_info`, `running_game_assert_node_state`) — but collection is not your main
   work, and you must never modify the project to make a check pass.
 - Records are only mutually referenceable under the same `candidate_id`.
 - A regression (previously verified, now failing) is its own `gap` record that

@@ -22,31 +22,31 @@ Scripts are the usual cause of "the feature exists but nothing happens": a
 {"path":"res://scripts/player.gd","content":"extends CharacterBody2D\n\n@export var speed: float = 220.0\nvar gravity: float = 980.0\n\nfunc _physics_process(delta: float) -> void:\n\tvar dir := Input.get_axis(\"move_left\", \"move_right\")\n\tvelocity.x = dir * speed\n\tvelocity.y += gravity * delta\n\tmove_and_slide()\n"}
 ```
 ```
-$HOH_HOH_BIN tools call create_script --args-file $HOH_ARTIFACT_DIR/args/create_player.json
-$HOH_HOH_BIN tools call read_script --args-file $HOH_ARTIFACT_DIR/args/read_player.json
+$HOH_HOH_BIN tools call project_create_script --args-file $HOH_ARTIFACT_DIR/args/create_player.json
+$HOH_HOH_BIN tools call project_read_script --args-file $HOH_ARTIFACT_DIR/args/read_player.json
 # args/read_player.json: {"path":"res://scripts/player.gd"}
 ```
-`read_script` must return a non-zero `size` and the content you wrote. Use
-`edit_script` (`{"path":..., "content":...}` to replace everything, or
+`project_read_script` must return a non-zero `size` and the content you wrote. Use
+`project_edit_script` (`{"path":..., "content":...}` to replace everything, or
 `{"path":..., "search":..., "replace":...}`) to change it, then read it back
 again.
 
 ## 2. Give every physics body a collision shape
 A `CharacterBody2D`/`StaticBody2D` without a shape falls through the world.
 ```
-$HOH_HOH_BIN tools call setup_collision --args-file $HOH_ARTIFACT_DIR/args/player_shape.json
+$HOH_HOH_BIN tools call editor_setup_collision_shape --args-file $HOH_ARTIFACT_DIR/args/player_shape.json
 # args/player_shape.json: {"node_path":"Player","shape_type":"RectangleShape2D","shape_params":{"size":{"x":24,"y":32}}}
-$HOH_HOH_BIN tools call setup_collision --args-file $HOH_ARTIFACT_DIR/args/ground_shape.json
+$HOH_HOH_BIN tools call editor_setup_collision_shape --args-file $HOH_ARTIFACT_DIR/args/ground_shape.json
 # args/ground_shape.json: {"node_path":"Ground","shape_type":"RectangleShape2D","shape_params":{"size":{"x":640,"y":32}}}
 ```
-Verify with `get_collision_info` (`{"node_path":"Player"}`) and require
+Verify with `editor_get_collision_info` (`{"node_path":"Player"}`) and require
 `shape_count > 0`.
 
 ## 3. Never leave an Area2D without a body
 `Goal` (and any coin/trigger) is an `Area2D`: without a collision shape its
 `shape_count` is `0` and the win condition can never fire.
 ```
-$HOH_HOH_BIN tools call setup_collision --args-file $HOH_ARTIFACT_DIR/args/goal_shape.json
+$HOH_HOH_BIN tools call editor_setup_collision_shape --args-file $HOH_ARTIFACT_DIR/args/goal_shape.json
 # args/goal_shape.json: {"node_path":"Goal","shape_type":"RectangleShape2D","shape_params":{"size":{"x":32,"y":32}}}
 ```
 Create the shape *and* the `CollisionShape2D` node in the same step; a body with
@@ -56,7 +56,7 @@ an empty child shape still reports `has_shape: false`.
 A `CanvasLayer` alone shows nothing. Add a `Label` under `HUD` and give it a
 non-empty `text`.
 ```
-$HOH_HOH_BIN tools call add_node --args-file $HOH_ARTIFACT_DIR/args/hud_label.json
+$HOH_HOH_BIN tools call editor_add_node --args-file $HOH_ARTIFACT_DIR/args/hud_label.json
 # args/hud_label.json: {"type":"Label","name":"Score","parent_path":"HUD","properties":{"text":"Score: 0","position":{"x":8,"y":8}}}
 ```
 Keep the counter updating from GDScript (`$Score.text = "Score: %d" % coins`), and
@@ -67,11 +67,11 @@ Simulate the input, then monitor the property the requirement talks about. A
 constant `position` means the behaviour is not implemented, whatever the source
 looks like.
 ```
-$HOH_HOH_BIN tools call simulate_action --args-file $HOH_ARTIFACT_DIR/args/press_right.json
+$HOH_HOH_BIN tools call editor_simulate_input_action --args-file $HOH_ARTIFACT_DIR/args/press_right.json
 # args/press_right.json: {"action":"move_right","pressed":true}
-$HOH_HOH_BIN tools call monitor_properties --args-file $HOH_ARTIFACT_DIR/args/monitor.json
+$HOH_HOH_BIN tools call running_game_get_node_property_samples --args-file $HOH_ARTIFACT_DIR/args/monitor.json
 # args/monitor.json: {"node_path":"Player","properties":["position"],"frame_count":60,"frame_interval":1}
-$HOH_HOH_BIN tools call simulate_action --args-file $HOH_ARTIFACT_DIR/args/release_right.json
+$HOH_HOH_BIN tools call editor_simulate_input_action --args-file $HOH_ARTIFACT_DIR/args/release_right.json
 # args/release_right.json: {"action":"move_right","pressed":false}
 ```
 The returned `samples[*].position.x` must change while the key is held. Repeat
@@ -79,13 +79,13 @@ for `jump` (`position.y` must go negative) and `move_left`.
 
 ## 6. Keep the project launchable at all times
 ```
-$HOH_HOH_BIN tools call get_editor_errors --args-file $HOH_ARTIFACT_DIR/args/errors.json
+$HOH_HOH_BIN tools call editor_get_errors --args-file $HOH_ARTIFACT_DIR/args/errors.json
 # args/errors.json: {"max_lines": 50}
-$HOH_HOH_BIN tools call play_scene --args-file $HOH_ARTIFACT_DIR/args/play.json
+$HOH_HOH_BIN tools call editor_play_scene --args-file $HOH_ARTIFACT_DIR/args/play.json
 # args/play.json: {"mode":"main"}
-$HOH_HOH_BIN tools call get_game_scene_tree --args-file $HOH_ARTIFACT_DIR/args/tree.json
+$HOH_HOH_BIN tools call running_game_get_scene_tree --args-file $HOH_ARTIFACT_DIR/args/tree.json
 # args/tree.json: {"max_depth":-1}
-$HOH_HOH_BIN tools call stop_scene --args-file $HOH_ARTIFACT_DIR/args/stop.json
+$HOH_HOH_BIN tools call editor_stop_scene --args-file $HOH_ARTIFACT_DIR/args/stop.json
 # args/stop.json: {}
 ```
 `{"errors": []}` and a running scene tree are the minimum bar (N1). Never end a
@@ -200,6 +200,6 @@ Tester records a gap.
 
 ## Naming and InputMap
 - Named actions only: `move_left`, `move_right`, `jump` must exist in
-  `project.godot` so `simulate_action` can drive them.
+  `project.godot` so `editor_simulate_input_action` can drive them.
 - Stable node names: `Player`, `Enemy1`, `Coin1`, `HUD`, `Goal`, `Ground`.
   QA locates nodes by path, so a rename breaks the evidence.

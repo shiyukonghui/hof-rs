@@ -8,11 +8,11 @@
 //! payload is used.  The third real smoke run (`smoke-t3`) met a server that
 //! answers one request behind (`id=1` → `resp.id=704`, `id=2` → the `id=1`
 //! response, …), and the client silently took `result` — so
-//! `get_scene_file_content` received `open_scene`'s reply, the launch gate
+//! `project_read_scene_file_content` received `editor_open_scene`'s reply, the launch gate
 //! produced a false negative, and 13.4 minutes / 4.35M tokens were spent
 //! repairing a defect that did not exist.  A mis-correlated payload is now
 //! never used: it is parked in a short-lived pending table and a read-only
-//! probe (`get_project_info`) is sent to flush the real response out.
+//! probe (`project_get_info`) is sent to flush the real response out.
 
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -29,7 +29,7 @@ pub const DEFAULT_MAX_SYNC_RETRIES: u32 = 4;
 
 /// DR-29: the **only** tool a synchronization probe may use: it reads the
 /// project description and changes nothing.
-pub const PROBE_TOOL: &str = "get_project_info";
+pub const PROBE_TOOL: &str = "project_get_info";
 
 /// DR-29: at most this many unclaimed responses are remembered.  The table is
 /// short-lived on purpose: it exists to hand a lagging response to the call that
@@ -82,7 +82,7 @@ impl RpcCorrelation {
 }
 
 /// DR-29: the outcome of the session-start synchronization probe — two
-/// consecutive `get_project_info` calls whose ids are checked.
+/// consecutive `project_get_info` calls whose ids are checked.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SessionSyncReport {
     /// Whether the channel can perform the probe at all.
@@ -253,7 +253,7 @@ impl McpClient {
 
     /// DR-29: the session-start synchronization probe.
     ///
-    /// Two consecutive `get_project_info` calls, each of which must receive its
+    /// Two consecutive `project_get_info` calls, each of which must receive its
     /// **own** response.  Any mismatch is reported with the observed id offset
     /// and the number of probes it cost.
     pub fn session_sync_probe(&self) -> SessionSyncReport {
@@ -382,11 +382,11 @@ mod tests {
             "jsonrpc": "2.0",
             "id": 7,
             "method": "tools/call",
-            "params": {"name": "play_scene", "arguments": {}}
+            "params": {"name": "editor_play_scene", "arguments": {}}
         });
         assert_eq!(body["jsonrpc"], json!("2.0"));
         assert_eq!(body["method"], json!("tools/call"));
-        assert_eq!(body["params"]["name"], json!("play_scene"));
+        assert_eq!(body["params"]["name"], json!("editor_play_scene"));
     }
 
     #[test]

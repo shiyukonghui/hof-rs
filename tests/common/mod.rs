@@ -448,7 +448,7 @@ impl ProjectAdapter for FakeAdapter {
     }
 
     fn tool_policy(&self, _role: Role) -> Vec<String> {
-        vec!["get_editor_errors".to_string()]
+        vec!["editor_get_errors".to_string()]
     }
 
     fn doctor(&self, _workspace: &Path) -> anyhow::Result<Vec<DoctorItem>> {
@@ -482,7 +482,7 @@ impl ToolChannel for FakeToolChannel {
     }
 
     fn index_markdown(&self, role: Role) -> String {
-        format!("# Tools for {}\n\n- get_editor_errors\n", role.as_str())
+        format!("# Tools for {}\n\n- editor_get_errors\n", role.as_str())
     }
 
     async fn call(&self, role: Role, tool: &str, args: Value) -> anyhow::Result<ToolResult> {

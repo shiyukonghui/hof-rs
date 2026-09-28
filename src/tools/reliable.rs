@@ -219,7 +219,7 @@ pub struct ReadyOutcome {
     pub correlation: RpcCorrelation,
 }
 
-/// DR-20: after `play_scene`, poll `tool` (normally `get_game_scene_tree`) every
+/// DR-20: after `editor_play_scene`, poll `tool` (normally `running_game_get_scene_tree`) every
 /// `poll_interval_ms` until it answers or `timeout_secs` elapses.
 ///
 /// A zero timeout still performs one attempt, so the reported failure is the

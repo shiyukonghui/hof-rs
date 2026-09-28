@@ -1,74 +1,173 @@
 //! R13 — the role tool boundary.  Default-deny for Planner and Tester, full
 //! access for the Developer, and a structured rejection on the CLI bridge.
+//!
+//! DR-42: every name below is a member of the four-channel contract
+//! (`tests/fixtures/mcp/tools_list.json`); `the_role_lists_only_name_contract_tools`
+//! keeps them from rotting.
 
 use std::path::PathBuf;
 use std::process::Command;
 
 use hof_rs::model::Role;
-use hof_rs::tools::policy::{denial_payload, tool_allowed};
+use hof_rs::tools::policy::{denial_payload, is_mutating, tool_allowed, QA_ALLOW_EXACT};
 
-/// Every mutating tool listed in §5.4 must be refused for the Tester.
+/// The captured contract snapshot, so the lists can be checked against it.
+const FIXTURE: &str = include_str!("fixtures/mcp/tools_list.json");
+
+fn contract_names() -> Vec<String> {
+    let value: serde_json::Value = serde_json::from_str(FIXTURE).expect("fixture json");
+    value
+        .pointer("/result/tools")
+        .and_then(serde_json::Value::as_array)
+        .expect("result.tools")
+        .iter()
+        .filter_map(|tool| tool.get("name").and_then(serde_json::Value::as_str))
+        .map(ToOwned::to_owned)
+        .collect()
+}
+
+/// Every mutating tool of the contract must be refused for the Tester (R13).
+/// A representative name per writing verb of the new vocabulary.
 const TESTER_MUST_BE_DENIED: &[&str] = &[
-    "add_node",
-    "create_scene",
-    "delete_node",
-    "remove_node",
-    "set_property",
-    "update_node",
-    "move_node",
-    "rename_node",
-    "duplicate_node",
-    "edit_script",
-    "attach_script",
-    "connect_signal",
-    "disconnect_signal",
-    "tilemap_set_cell",
-    "tilemap_fill_rect",
-    "tilemap_clear",
-    "batch_set_property",
-    "cross_scene_set_property",
-    "export_project",
-    "execute_editor_script",
-    "execute_game_script",
-    "reload_plugin",
-    "reload_project",
-    "set_game_node_property",
-    "set_project_setting",
-    "set_input_action",
-    "bake_navigation_mesh",
-    "clear_output",
-    "clear_editor_selection",
+    "editor_add_node",
+    "editor_add_input_action",
+    "editor_bake_navigation_mesh",
+    "editor_connect_signal",
+    "editor_delete_node",
+    "editor_disconnect_signal",
+    "editor_duplicate_node",
+    "editor_execute_gdscript",
+    "editor_remove_all_tilemap_cells",
+    "editor_remove_node_selection",
+    "editor_remove_output_log",
+    "editor_rename_node",
+    "editor_reparent_node",
+    "editor_rescan_project_filesystem",
+    "editor_reload_plugin",
+    "editor_set_node_property",
+    "editor_set_node_property_batch",
+    "editor_set_node_property_updates",
+    "editor_set_node_script",
+    "editor_set_tilemap_cell",
+    "editor_set_tilemap_cells_in_rect",
+    "os_deploy_to_android_device",
+    "project_create_scene_file",
+    "project_edit_script",
+    "project_set_node_property_across_scenes",
+    "project_set_setting",
+    "project_write_text_file",
+    "running_game_execute_gdscript",
+    "running_game_set_node_property",
 ];
 
 const TESTER_MUST_BE_ALLOWED: &[&str] = &[
-    "get_editor_errors",
-    "get_game_scene_tree",
-    "get_project_info",
-    "list_nodes",
-    "read_file",
-    "search_nodes",
-    "find_node",
-    "analyze_scene",
-    "detect_collisions",
-    "play_scene",
-    "stop_scene",
-    "simulate_sequence",
-    "simulate_action",
-    "capture_frames",
-    "monitor_properties",
-    "start_recording",
-    "stop_recording",
-    "replay_recording",
-    "assert_node_state",
-    "compare_screenshots",
-    "run_test_scenario",
-    "run_stress_test",
-    "get_test_report",
-    "wait_for_node",
-    "click_button_by_text",
-    "navigate_to",
-    "move_to",
+    // read verbs
+    "editor_get_errors",
+    "editor_get_scene_tree",
+    "editor_find_nodes_by_type",
+    "editor_analyze_screenshot_diff",
+    "editor_get_test_report",
+    "project_get_info",
+    "project_list_scripts",
+    "project_read_script",
+    "project_search_file_names",
+    "project_analyze_scene_complexity",
+    "project_detect_circular_dependencies",
+    "running_game_get_scene_tree",
+    "running_game_find_node_when_available",
+    // execution / assertion verbs
+    "editor_play_scene",
+    "editor_stop_scene",
+    "editor_simulate_input_sequence",
+    "editor_simulate_input_action",
+    "running_game_capture_frames",
+    "running_game_get_node_property_samples",
+    "running_game_run_test_scenario",
+    "running_game_run_stress_test",
+    "running_game_assert_node_state",
+    "running_game_simulate_button_click_by_text",
+    // §5.4's two evidence-driving exceptions (DR-42 QA_ALLOW_EXACT)
+    "running_game_create_input_recording",
+    "running_game_stop_input_recording",
+    "running_game_play_input_recording",
+    "running_game_move_player_to_target",
 ];
+
+/// DR-42 hygiene: the two lists above may only name real contract tools.  A
+/// retired or invented name here would silently test nothing.
+#[test]
+fn the_role_lists_only_name_contract_tools() {
+    let known: std::collections::BTreeSet<String> = contract_names().into_iter().collect();
+    for tool in TESTER_MUST_BE_DENIED
+        .iter()
+        .chain(TESTER_MUST_BE_ALLOWED.iter())
+    {
+        assert!(
+            known.contains(*tool),
+            "`{tool}` is not in the 177-tool contract (DR-42)"
+        );
+    }
+}
+
+/// DR-42 ③: no artifact-changing tool of the *whole contract* is reachable by
+/// the QA role — not just the samples listed above.  The only names exempted
+/// are the two documented evidence-driving exceptions (`QA_ALLOW_EXACT`),
+/// which drive the running game instead of the artifact.
+#[test]
+fn qa_is_denied_every_mutating_tool_of_the_contract() {
+    let mutating: Vec<String> = contract_names()
+        .into_iter()
+        .filter(|name| is_mutating(name))
+        .collect();
+    assert!(
+        mutating.len() > 50,
+        "the contract must contain many writing verbs, found {}",
+        mutating.len()
+    );
+    assert_eq!(
+        QA_ALLOW_EXACT.len(),
+        2,
+        "DR-42 allows exactly two evidence-driving exceptions"
+    );
+    for tool in QA_ALLOW_EXACT {
+        assert!(
+            tool_allowed(Role::Tester, tool),
+            "the documented exception `{tool}` must stay callable"
+        );
+        assert!(
+            is_mutating(tool),
+            "`{tool}` is an exception precisely because its verb looks like a write"
+        );
+    }
+    for tool in &mutating {
+        if QA_ALLOW_EXACT.contains(&tool.as_str()) {
+            continue;
+        }
+        assert!(
+            !tool_allowed(Role::Tester, tool),
+            "the QA role must not be able to call `{tool}` (R13)"
+        );
+    }
+    // Over the whole contract, exactly the two documented names with a writing
+    // verb stay reachable — nothing else.
+    let reachable: Vec<&String> = mutating
+        .iter()
+        .filter(|name| tool_allowed(Role::Tester, name))
+        .collect();
+    assert_eq!(reachable.len(), QA_ALLOW_EXACT.len(), "{reachable:?}");
+}
+
+/// DR-42 ②: the Planner is denied every tool of the contract, and in
+/// particular every writing one.
+#[test]
+fn planner_is_denied_every_tool_of_the_contract() {
+    for tool in contract_names() {
+        assert!(
+            !tool_allowed(Role::Planner, &tool),
+            "the planner is planning-only and must not call `{tool}`"
+        );
+    }
+}
 
 #[test]
 fn tester_denied_mutating_tools() {
@@ -78,8 +177,11 @@ fn tester_denied_mutating_tools() {
             "the tester must not be allowed to call `{tool}`"
         );
     }
-    // The two "debugging" tools are explicitly banned too.
-    for tool in ["set_game_node_property", "execute_game_script"] {
+    // The two "debugging" tools are explicitly banned too (§5.4).
+    for tool in [
+        "running_game_set_node_property",
+        "running_game_execute_gdscript",
+    ] {
         assert!(!tool_allowed(Role::Tester, tool));
     }
     // Read/execute tools stay available.
@@ -145,19 +247,19 @@ fn default_deny_unknown() {
 #[test]
 fn denial_hints_distinguish_mutation_from_allowlist() {
     assert_eq!(
-        denial_payload(Role::Tester, "add_node")["hint"],
+        denial_payload(Role::Tester, "editor_add_node")["hint"],
         serde_json::json!("This role may not mutate the artifact.")
     );
     assert_eq!(
-        denial_payload(Role::Tester, "execute_game_script")["hint"],
+        denial_payload(Role::Tester, "running_game_execute_gdscript")["hint"],
         serde_json::json!("This role may not mutate the artifact.")
     );
     assert_eq!(
-        denial_payload(Role::Planner, "get_editor_errors")["hint"],
+        denial_payload(Role::Planner, "editor_get_errors")["hint"],
         serde_json::json!("Tool not in this role's allowlist.")
     );
     assert_eq!(
-        denial_payload(Role::Planner, "add_node")["hint"],
+        denial_payload(Role::Planner, "editor_add_node")["hint"],
         serde_json::json!("Tool not in this role's allowlist.")
     );
     assert_eq!(
@@ -168,8 +270,8 @@ fn denial_hints_distinguish_mutation_from_allowlist() {
     // The CLI bridge must print the same distinct texts.
     let binary = env!("CARGO_BIN_EXE_hoh");
     for (role, tool, expected) in [
-        ("planner", "get_editor_errors", "allowlist"),
-        ("tester", "add_node", "may not mutate"),
+        ("planner", "editor_get_errors", "allowlist"),
+        ("tester", "editor_add_node", "may not mutate"),
     ] {
         let output = Command::new(binary)
             .args(["tools", "call", tool, "--role", role])
@@ -189,7 +291,7 @@ fn denial_hints_distinguish_mutation_from_allowlist() {
 #[test]
 fn tools_call_denied_exit_code_two() {
     let binary = env!("CARGO_BIN_EXE_hoh");
-    for tool in ["add_node", "totally_new_mcp_tool"] {
+    for tool in ["editor_add_node", "totally_new_mcp_tool"] {
         let output = Command::new(binary)
             .args(["tools", "call", tool, "--role", "tester"])
             .current_dir(PathBuf::from(env!("CARGO_MANIFEST_DIR")))
@@ -211,7 +313,7 @@ fn tools_call_denied_exit_code_two() {
 
     // The Planner is denied every MCP tool as well.
     let output = Command::new(binary)
-        .args(["tools", "call", "get_editor_errors", "--role", "planner"])
+        .args(["tools", "call", "editor_get_errors", "--role", "planner"])
         .current_dir(PathBuf::from(env!("CARGO_MANIFEST_DIR")))
         .output()
         .expect("the hoh binary must be runnable");

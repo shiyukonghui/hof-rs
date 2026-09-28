@@ -19,7 +19,7 @@
       "request_id": 25,
       "response_id": 25,
       "sync_probes": 1,
-      "tool": "get_game_scene_tree"
+      "tool": "running_game_get_scene_tree"
     }
   ],
   "mismatched_ids": [

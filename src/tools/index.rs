@@ -100,15 +100,15 @@ fn category(tool: &str) -> &'static str {
 
 /// The three tools whose complete call is spelled out, in preference order.
 const EXAMPLE_PREFERENCE: &[&str] = &[
-    "get_project_info",
-    "get_editor_errors",
-    "play_scene",
-    "monitor_properties",
-    "get_game_node_properties",
-    "get_collision_info",
-    "create_script",
-    "setup_collision",
-    "simulate_action",
+    "project_get_info",
+    "editor_get_errors",
+    "editor_play_scene",
+    "running_game_get_node_property_samples",
+    "running_game_get_node_properties",
+    "editor_get_collision_info",
+    "project_create_script",
+    "editor_setup_collision_shape",
+    "editor_simulate_input_action",
 ];
 
 fn property_type(property: &Value) -> String {
@@ -264,7 +264,7 @@ mod tests {
             "the embedded snapshot must carry the real tool list, got {}",
             schemas.len()
         );
-        assert!(schemas.iter().any(|tool| tool_name(tool) == "play_scene"));
+        assert!(schemas.iter().any(|tool| tool_name(tool) == "editor_play_scene"));
     }
 
     #[test]
@@ -273,8 +273,8 @@ mod tests {
         let developer = render_tools_markdown(Role::Developer, &schemas);
         let tester = render_tools_markdown(Role::Tester, &schemas);
         let planner = render_tools_markdown(Role::Planner, &schemas);
-        assert!(developer.contains("`create_script`"));
-        assert!(!tester.contains("`create_script`"));
-        assert!(!planner.contains("`get_project_info`"));
+        assert!(developer.contains("`project_create_script`"));
+        assert!(!tester.contains("`project_create_script`"));
+        assert!(!planner.contains("`project_get_info`"));
     }
 }

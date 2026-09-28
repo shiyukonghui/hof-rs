@@ -367,7 +367,7 @@ fn script_resource_ids(text: &str) -> Vec<String> {
     ids
 }
 
-/// The scene text out of a `get_scene_file_content` payload, whatever shape the
+/// The scene text out of a `project_read_scene_file_content` payload, whatever shape the
 /// server chose (a bare string, `content`, `text`, `scene.content`, ...).
 fn scene_text_of(payload: &Value) -> Option<String> {
     match payload {
@@ -493,7 +493,7 @@ impl<'a> BatterySession<'a> {
 
     async fn call(&self, tool: &str, args: Value) -> Result<TracedCall, McpFailure> {
         // DR-24: the battery is the runtime's deterministic stage, not the
-        // Tester.  It must be able to `reload_project`/`open_scene` (which the
+        // Tester.  It must be able to `editor_rescan_project_filesystem`/`editor_open_scene` (which the
         // Tester is forbidden to call) so the editor reflects the on-disk
         // scene before the errors are read.
         call_with_retries_traced(
@@ -630,11 +630,11 @@ impl<'a> BatterySession<'a> {
         Ok(self.records)
     }
 
-    /// DR-24 (new 1). `reload_project` + `open_scene(<main>)`.
+    /// DR-24 (new 1). `editor_rescan_project_filesystem` + `editor_open_scene(<main>)`.
     ///
     /// Without this the editor keeps whatever scene it had in memory, so a
     /// scene that is legal on disk can still report stale errors — and the
-    /// reverse, which is exactly how `play_scene` managed to lie in `smoke-t2`.
+    /// reverse, which is exactly how `editor_play_scene` managed to lie in `smoke-t2`.
     async fn step_project_reload_and_open(&mut self) -> anyhow::Result<()> {
         let step = BatteryStep {
             id: crate::adapter::PROJECT_RELOAD_STEP_ID.to_string(),
@@ -647,33 +647,33 @@ impl<'a> BatterySession<'a> {
         let mut notes: Vec<String> = Vec::new();
 
         let reload_args = json!({});
-        match self.call("reload_project", reload_args.clone()).await {
+        match self.call("editor_rescan_project_filesystem", reload_args.clone()).await {
             Ok(call) => calls.push(call_ok(
-                "reload_project",
+                "editor_rescan_project_filesystem",
                 &reload_args,
                 &call.payload,
                 &call.correlation,
             )),
             Err(failure) => {
-                notes.push(format!("FAILED reload_project: {}", failure.observation()));
-                calls.push(call_fail("reload_project", &reload_args, &failure));
+                notes.push(format!("FAILED editor_rescan_project_filesystem: {}", failure.observation()));
+                calls.push(call_fail("editor_rescan_project_filesystem", &reload_args, &failure));
             }
         }
 
         let open_args = json!({"path": main_scene});
-        match self.call("open_scene", open_args.clone()).await {
+        match self.call("editor_open_scene", open_args.clone()).await {
             Ok(call) => calls.push(call_ok(
-                "open_scene",
+                "editor_open_scene",
                 &open_args,
                 &call.payload,
                 &call.correlation,
             )),
             Err(failure) => {
                 notes.push(format!(
-                    "FAILED open_scene({main_scene}): {}",
+                    "FAILED editor_open_scene({main_scene}): {}",
                     failure.observation()
                 ));
-                calls.push(call_fail("open_scene", &open_args, &failure));
+                calls.push(call_fail("editor_open_scene", &open_args, &failure));
             }
         }
 
@@ -707,7 +707,7 @@ impl<'a> BatterySession<'a> {
         };
         let scene = self.main_scene.clone();
         let args = json!({"path": scene});
-        let (ok, observation, call) = match self.call("get_scene_file_content", args.clone()).await
+        let (ok, observation, call) = match self.call("project_read_scene_file_content", args.clone()).await
         {
             Ok(call) => {
                 let parsed = unwrap_mcp_payload(&call.payload);
@@ -731,7 +731,7 @@ impl<'a> BatterySession<'a> {
                             ok,
                             observation,
                             call_ok(
-                                "get_scene_file_content",
+                                "project_read_scene_file_content",
                                 &args,
                                 &call.payload,
                                 &call.correlation,
@@ -741,11 +741,11 @@ impl<'a> BatterySession<'a> {
                     None => (
                         false,
                         format!(
-                            "FAILED get_scene_file_content returned no scene text for {scene}: \
+                            "FAILED project_read_scene_file_content returned no scene text for {scene}: \
                              {parsed} (UNAVAILABLE: the scene cannot be checked)"
                         ),
                         call_ok(
-                            "get_scene_file_content",
+                            "project_read_scene_file_content",
                             &args,
                             &call.payload,
                             &call.correlation,
@@ -756,7 +756,7 @@ impl<'a> BatterySession<'a> {
             Err(failure) => (
                 false,
                 failure.observation(),
-                call_fail("get_scene_file_content", &args, &failure),
+                call_fail("project_read_scene_file_content", &args, &failure),
             ),
         };
         self.finish(step, ExecKind::Assert, None, observation, ok, vec![call])
@@ -772,7 +772,7 @@ impl<'a> BatterySession<'a> {
             retries: self.limits.max_retries,
         };
         let args = json!({"max_lines": 50});
-        let (ok, observation, call) = match self.call("get_editor_errors", args.clone()).await {
+        let (ok, observation, call) = match self.call("editor_get_errors", args.clone()).await {
             Ok(call) => {
                 let parsed = unwrap_mcp_payload(&call.payload);
                 let observation = describe_editor_errors(&parsed);
@@ -788,7 +788,7 @@ impl<'a> BatterySession<'a> {
                     None => (
                         false,
                         format!(
-                            "FAILED get_editor_errors returned no `errors` array: {parsed} \
+                            "FAILED editor_get_errors returned no `errors` array: {parsed} \
                              (UNAVAILABLE: the payload does not answer the question)"
                         ),
                     ),
@@ -796,20 +796,20 @@ impl<'a> BatterySession<'a> {
                 (
                     ok,
                     observation,
-                    call_ok("get_editor_errors", &args, &call.payload, &call.correlation),
+                    call_ok("editor_get_errors", &args, &call.payload, &call.correlation),
                 )
             }
             Err(failure) => (
                 false,
                 failure.observation(),
-                call_fail("get_editor_errors", &args, &failure),
+                call_fail("editor_get_errors", &args, &failure),
             ),
         };
         self.finish(step, ExecKind::Build, None, observation, ok, vec![call])
             .await
     }
 
-    /// 2. `play_scene` plus the readiness wait (DR-20).
+    /// 2. `editor_play_scene` plus the readiness wait (DR-20).
     async fn step_play_scene(&mut self) -> anyhow::Result<Option<Value>> {
         let step = BatteryStep {
             id: "play_scene_ready".to_string(),
@@ -819,22 +819,22 @@ impl<'a> BatterySession<'a> {
         };
         let play_args = json!({"mode": "main"});
         let mut calls = Vec::new();
-        let play = self.call("play_scene", play_args.clone()).await;
+        let play = self.call("editor_play_scene", play_args.clone()).await;
         match play {
             Ok(call) => {
-                // DR-30: `play_scene`'s own reply is **not** readiness evidence.
+                // DR-30: `editor_play_scene`'s own reply is **not** readiness evidence.
                 // It is recorded, and then a scene tree is demanded.
                 calls.push(call_ok(
-                    "play_scene",
+                    "editor_play_scene",
                     &play_args,
                     &call.payload,
                     &call.correlation,
                 ));
             }
             Err(failure) => {
-                calls.push(call_fail("play_scene", &play_args, &failure));
+                calls.push(call_fail("editor_play_scene", &play_args, &failure));
                 let observation =
-                    format!("FAILED play_scene: {} (UNAVAILABLE)", failure.observation());
+                    format!("FAILED editor_play_scene: {} (UNAVAILABLE)", failure.observation());
                 self.finish(
                     step,
                     ExecKind::RuntimeTrace,
@@ -849,7 +849,7 @@ impl<'a> BatterySession<'a> {
         }
 
         let tree_args = json!({"max_depth": -1});
-        let ready = self.ready("get_game_scene_tree", tree_args.clone()).await;
+        let ready = self.ready("running_game_get_scene_tree", tree_args.clone()).await;
         match ready {
             ReadyOutcome {
                 ok: true,
@@ -860,7 +860,7 @@ impl<'a> BatterySession<'a> {
             } => {
                 let payload = payload.expect("a successful readiness poll carries a payload");
                 calls.push(call_ok(
-                    "get_game_scene_tree",
+                    "running_game_get_scene_tree",
                     &tree_args,
                     &payload,
                     &correlation,
@@ -869,7 +869,7 @@ impl<'a> BatterySession<'a> {
                 match describe_scene_tree_shape(&tree) {
                     Ok(nodes) => {
                         let observation = format!(
-                            "main scene booted; the game answered get_game_scene_tree after \
+                            "main scene booted; the game answered running_game_get_scene_tree after \
                              {attempts} poll(s) with {nodes} node(s) carrying a path and a type"
                         );
                         self.finish(step, ExecKind::RuntimeTrace, None, observation, true, calls)
@@ -879,7 +879,7 @@ impl<'a> BatterySession<'a> {
                     Err(problem) => {
                         let observation = format!(
                             "FAILED the readiness reply is not a scene tree ({problem}): {tree} \
-                             (UNAVAILABLE: `play_scene`'s own reply is never readiness evidence)"
+                             (UNAVAILABLE: `editor_play_scene`'s own reply is never readiness evidence)"
                         );
                         self.finish(
                             step,
@@ -901,8 +901,8 @@ impl<'a> BatterySession<'a> {
                 ..
             } => {
                 let failure = failure
-                    .unwrap_or_else(|| McpFailure::new("get_game_scene_tree", None, "timeout", 0));
-                calls.push(call_fail("get_game_scene_tree", &tree_args, &failure));
+                    .unwrap_or_else(|| McpFailure::new("running_game_get_scene_tree", None, "timeout", 0));
+                calls.push(call_fail("running_game_get_scene_tree", &tree_args, &failure));
                 let observation = format!(
                     "FAILED the main scene was started but never became observable after \
                      {attempts} poll(s): {} (UNAVAILABLE)",
@@ -932,10 +932,10 @@ impl<'a> BatterySession<'a> {
         };
         let args = json!({"max_depth": -1});
         let mut calls = Vec::new();
-        let tree: Option<Value> = match self.call("get_game_scene_tree", args.clone()).await {
+        let tree: Option<Value> = match self.call("running_game_get_scene_tree", args.clone()).await {
             Ok(call) => {
                 calls.push(call_ok(
-                    "get_game_scene_tree",
+                    "running_game_get_scene_tree",
                     &args,
                     &call.payload,
                     &call.correlation,
@@ -943,14 +943,14 @@ impl<'a> BatterySession<'a> {
                 Some(unwrap_mcp_payload(&call.payload))
             }
             Err(failure) => {
-                calls.push(call_fail("get_game_scene_tree", &args, &failure));
+                calls.push(call_fail("running_game_get_scene_tree", &args, &failure));
                 // The readiness poll already captured a tree for this run; it
                 // is a legitimate fallback, but the failed fresh call is never
                 // hidden.
                 match cached {
                     Some(cached) => {
                         calls.push(json!({
-                            "tool": "get_game_scene_tree",
+                            "tool": "running_game_get_scene_tree",
                             "source": "play_scene_ready",
                             "payload": cached,
                         }));
@@ -990,7 +990,7 @@ impl<'a> BatterySession<'a> {
     /// 4. Screenshot, stored under `.hoh/evidence/` and referenced relatively.
     ///
     /// DR-30: a `path` may only be written when the PNG **really exists**.  When
-    /// the server hands the image back inline as base64 (what `capture_frames`
+    /// the server hands the image back inline as base64 (what `running_game_capture_frames`
     /// does), the runtime materializes it first.
     async fn step_screenshot(&mut self) -> anyhow::Result<()> {
         let step = BatteryStep {
@@ -1015,10 +1015,10 @@ impl<'a> BatterySession<'a> {
         let mut notes: Vec<String> = Vec::new();
         let mut materialized = false;
 
-        match self.call("get_game_screenshot", args.clone()).await {
+        match self.call("running_game_capture_screenshot", args.clone()).await {
             Ok(call) => {
                 calls.push(call_ok(
-                    "get_game_screenshot",
+                    "running_game_capture_screenshot",
                     &args,
                     &call.payload,
                     &call.correlation,
@@ -1031,24 +1031,24 @@ impl<'a> BatterySession<'a> {
                     materialized = true;
                 } else {
                     notes.push(format!(
-                        "FAILED get_game_screenshot reported success but no file exists at {} \
+                        "FAILED running_game_capture_screenshot reported success but no file exists at {} \
                          and the payload carried no inline image",
                         absolute.display()
                     ));
                 }
             }
             Err(failure) => {
-                calls.push(call_fail("get_game_screenshot", &args, &failure));
+                calls.push(call_fail("running_game_capture_screenshot", &args, &failure));
                 notes.push(failure.observation());
             }
         }
 
         if !absolute.is_file() {
             let frames_args = json!({"count": 1, "frame_interval": 10});
-            match self.call("capture_frames", frames_args.clone()).await {
+            match self.call("running_game_capture_frames", frames_args.clone()).await {
                 Ok(call) => {
                     calls.push(call_ok(
-                        "capture_frames",
+                        "running_game_capture_frames",
                         &frames_args,
                         &call.payload,
                         &call.correlation,
@@ -1060,12 +1060,12 @@ impl<'a> BatterySession<'a> {
                             materialized = true;
                         }
                         None => notes.push(format!(
-                            "FAILED capture_frames returned no inline image: {parsed}"
+                            "FAILED running_game_capture_frames returned no inline image: {parsed}"
                         )),
                     }
                 }
                 Err(failure) => {
-                    calls.push(call_fail("capture_frames", &frames_args, &failure));
+                    calls.push(call_fail("running_game_capture_frames", &frames_args, &failure));
                     notes.push(failure.observation());
                 }
             }
@@ -1106,12 +1106,12 @@ impl<'a> BatterySession<'a> {
     ///
     /// `smoke-t5` reported `ACTION_NOT_BOUND` for `move_right` even though
     /// `A_1`'s `project.godot` declared it, because the availability probe
-    /// (`get_input_actions`) and the injection tool (`simulate_action`) both live
+    /// (`editor_get_input_actions`) and the injection tool (`editor_simulate_input_action`) both live
     /// in the **editor** process while the game is a separate process behind a
     /// `user://` file IPC.  The recorded verdict poisoned the round: the next
     /// Planner would have gone off to "fix" a non-existent defect.
     ///
-    /// This step asks the game process itself, through `execute_game_script`,
+    /// This step asks the game process itself, through `running_game_execute_gdscript`,
     /// and distinguishes three states:
     ///
     /// * `GAME_INPUT_CHANNEL_OK` — the action exists in the game and pressing it
@@ -1123,7 +1123,7 @@ impl<'a> BatterySession<'a> {
     ///
     /// Note on "press, wait N frames, re-read": the addon evaluates a bare
     /// GDScript *expression*, which cannot `await`.  The frames therefore elapse
-    /// inside the game process through the game-forwarded `monitor_properties`
+    /// inside the game process through the game-forwarded `running_game_get_node_property_samples`
     /// call, and the axis is re-read afterwards — see D29 裁决 6.
     async fn step_input_channel_probe(&mut self) -> anyhow::Result<InputChannelProbe> {
         let mut step = BatteryStep {
@@ -1179,12 +1179,12 @@ impl<'a> BatterySession<'a> {
             "frame_interval": 1,
         });
         let mut moved_while_pressed = false;
-        match self.call("monitor_properties", monitor_args.clone()).await {
+        match self.call("running_game_get_node_property_samples", monitor_args.clone()).await {
             Ok(call) => {
                 let parsed = unwrap_mcp_payload(&call.payload);
                 let quadruple = replay_quadruple(PROBE_ACTION, &parsed, GAME_PROCESS_CHANNEL);
                 let mut entry = call_ok(
-                    "monitor_properties",
+                    "running_game_get_node_property_samples",
                     &monitor_args,
                     &call.payload,
                     &call.correlation,
@@ -1198,9 +1198,9 @@ impl<'a> BatterySession<'a> {
                 calls.push(entry);
             }
             Err(failure) => {
-                calls.push(call_fail("monitor_properties", &monitor_args, &failure));
+                calls.push(call_fail("running_game_get_node_property_samples", &monitor_args, &failure));
                 notes.push(format!(
-                    "monitor_properties failed: {}",
+                    "running_game_get_node_property_samples failed: {}",
                     failure.observation()
                 ));
             }
@@ -1303,7 +1303,7 @@ impl<'a> BatterySession<'a> {
         Ok(probe)
     }
 
-    /// Run one `execute_game_script` expression and record the call.
+    /// Run one `running_game_execute_gdscript` expression and record the call.
     ///
     /// The returned tuple is `(reading, verbatim failure text)`; the text is
     /// what turns a failed probe into a diagnosable `ACTION_BINDING_UNKNOWN`
@@ -1315,13 +1315,13 @@ impl<'a> BatterySession<'a> {
         calls: &mut Vec<Value>,
     ) -> (Option<(f64, f64)>, Option<String>) {
         let args = json!({ "code": code });
-        match self.call("execute_game_script", args.clone()).await {
+        match self.call("running_game_execute_gdscript", args.clone()).await {
             Ok(call) => {
                 let parsed = unwrap_mcp_payload(&call.payload);
                 let reading = game_script_position(&parsed);
                 calls.push(labeled(
                     call_ok(
-                        "execute_game_script",
+                        "running_game_execute_gdscript",
                         &args,
                         &call.payload,
                         &call.correlation,
@@ -1333,7 +1333,7 @@ impl<'a> BatterySession<'a> {
             }
             Err(failure) => {
                 calls.push(labeled(
-                    call_fail("execute_game_script", &args, &failure),
+                    call_fail("running_game_execute_gdscript", &args, &failure),
                     label,
                 ));
                 (None, Some(failure.observation()))
@@ -1349,13 +1349,13 @@ impl<'a> BatterySession<'a> {
         calls: &mut Vec<Value>,
     ) -> (Option<bool>, Option<String>) {
         let args = json!({ "code": code });
-        match self.call("execute_game_script", args.clone()).await {
+        match self.call("running_game_execute_gdscript", args.clone()).await {
             Ok(call) => {
                 let parsed = unwrap_mcp_payload(&call.payload);
                 let reading = game_script_bool(&parsed);
                 calls.push(labeled(
                     call_ok(
-                        "execute_game_script",
+                        "running_game_execute_gdscript",
                         &args,
                         &call.payload,
                         &call.correlation,
@@ -1367,7 +1367,7 @@ impl<'a> BatterySession<'a> {
             }
             Err(failure) => {
                 calls.push(labeled(
-                    call_fail("execute_game_script", &args, &failure),
+                    call_fail("running_game_execute_gdscript", &args, &failure),
                     label,
                 ));
                 (None, Some(failure.observation()))
@@ -1383,13 +1383,13 @@ impl<'a> BatterySession<'a> {
         calls: &mut Vec<Value>,
     ) -> (Option<f64>, Option<String>) {
         let args = json!({ "code": code });
-        match self.call("execute_game_script", args.clone()).await {
+        match self.call("running_game_execute_gdscript", args.clone()).await {
             Ok(call) => {
                 let parsed = unwrap_mcp_payload(&call.payload);
                 let reading = game_script_f64(&parsed);
                 calls.push(labeled(
                     call_ok(
-                        "execute_game_script",
+                        "running_game_execute_gdscript",
                         &args,
                         &call.payload,
                         &call.correlation,
@@ -1401,7 +1401,7 @@ impl<'a> BatterySession<'a> {
             }
             Err(failure) => {
                 calls.push(labeled(
-                    call_fail("execute_game_script", &args, &failure),
+                    call_fail("running_game_execute_gdscript", &args, &failure),
                     label,
                 ));
                 (None, Some(failure.observation()))
@@ -1418,11 +1418,11 @@ impl<'a> BatterySession<'a> {
         calls: &mut Vec<Value>,
     ) -> (bool, Option<String>) {
         let args = json!({ "code": code });
-        match self.call("execute_game_script", args.clone()).await {
+        match self.call("running_game_execute_gdscript", args.clone()).await {
             Ok(call) => {
                 calls.push(labeled(
                     call_ok(
-                        "execute_game_script",
+                        "running_game_execute_gdscript",
                         &args,
                         &call.payload,
                         &call.correlation,
@@ -1433,7 +1433,7 @@ impl<'a> BatterySession<'a> {
             }
             Err(failure) => {
                 calls.push(labeled(
-                    call_fail("execute_game_script", &args, &failure),
+                    call_fail("running_game_execute_gdscript", &args, &failure),
                     label,
                 ));
                 (false, Some(failure.observation()))
@@ -1454,8 +1454,8 @@ impl<'a> BatterySession<'a> {
     /// ignores the input".
     ///
     /// DR-35: the **game process** decides.  Injection happens through
-    /// `execute_game_script` and the position comes from the game-forwarded
-    /// `monitor_properties`; the editor-side `simulate_action` is kept only as a
+    /// `running_game_execute_gdscript` and the position comes from the game-forwarded
+    /// `running_game_get_node_property_samples`; the editor-side `editor_simulate_input_action` is kept only as a
     /// supplementary record and is labelled `EDITOR_SIDE_INJECTION` everywhere it
     /// appears, because it can never reach the game process.
     async fn step_input_replay(&mut self) -> anyhow::Result<()> {
@@ -1477,11 +1477,11 @@ impl<'a> BatterySession<'a> {
         // `move_*` ones, which is how a working project got a false
         // `ACTION_NOT_BOUND`.
         let probe_args = json!({});
-        let editor_bindings = match self.call("get_input_actions", probe_args.clone()).await {
+        let editor_bindings = match self.call("editor_get_input_actions", probe_args.clone()).await {
             Ok(call) => {
                 calls.push(labeled(
                     call_ok(
-                        "get_input_actions",
+                        "editor_get_input_actions",
                         &probe_args,
                         &call.payload,
                         &call.correlation,
@@ -1492,7 +1492,7 @@ impl<'a> BatterySession<'a> {
             }
             Err(failure) => {
                 calls.push(labeled(
-                    call_fail("get_input_actions", &probe_args, &failure),
+                    call_fail("editor_get_input_actions", &probe_args, &failure),
                     "editor_side_injection",
                 ));
                 None
@@ -1515,7 +1515,7 @@ impl<'a> BatterySession<'a> {
                     )
                 }
             }
-            None => "EDITOR_SIDE_INJECTION: get_input_actions was unavailable".to_string(),
+            None => "EDITOR_SIDE_INJECTION: editor_get_input_actions was unavailable".to_string(),
         };
         summaries.push(format!(
             "channel={} ({})",
@@ -1560,11 +1560,11 @@ impl<'a> BatterySession<'a> {
 
             // (b) Editor-side injection: supplementary, never decisive.
             let press_args = json!({"action": action, "pressed": true});
-            let editor_delivered = match self.call("simulate_action", press_args.clone()).await {
+            let editor_delivered = match self.call("editor_simulate_input_action", press_args.clone()).await {
                 Ok(call) => {
                     calls.push(labeled(
                         call_ok(
-                            "simulate_action",
+                            "editor_simulate_input_action",
                             &press_args,
                             &call.payload,
                             &call.correlation,
@@ -1575,7 +1575,7 @@ impl<'a> BatterySession<'a> {
                 }
                 Err(failure) => {
                     calls.push(labeled(
-                        call_fail("simulate_action", &press_args, &failure),
+                        call_fail("editor_simulate_input_action", &press_args, &failure),
                         &format!("{label}:{EDITOR_SIDE_INJECTION_MARKER}"),
                     ));
                     false
@@ -1583,12 +1583,12 @@ impl<'a> BatterySession<'a> {
             };
             let editor_marker = if editor_delivered {
                 format!(
-                    "({EDITOR_SIDE_INJECTION_MARKER}: simulate_action acknowledged on the editor \
+                    "({EDITOR_SIDE_INJECTION_MARKER}: editor_simulate_input_action acknowledged on the editor \
                      side; channel={EDITOR_PROCESS_CHANNEL})"
                 )
             } else {
                 format!(
-                    "({EDITOR_SIDE_INJECTION_MARKER}: simulate_action failed on the editor side; \
+                    "({EDITOR_SIDE_INJECTION_MARKER}: editor_simulate_input_action failed on the editor side; \
                      channel={EDITOR_PROCESS_CHANNEL})"
                 )
             };
@@ -1600,7 +1600,7 @@ impl<'a> BatterySession<'a> {
                 "frame_count": frames,
                 "frame_interval": 1,
             });
-            match self.call("monitor_properties", monitor_args.clone()).await {
+            match self.call("running_game_get_node_property_samples", monitor_args.clone()).await {
                 Ok(call) => {
                     let parsed = unwrap_mcp_payload(&call.payload);
                     let quadruple = replay_quadruple(action, &parsed, GAME_PROCESS_CHANNEL);
@@ -1615,7 +1615,7 @@ impl<'a> BatterySession<'a> {
                         })
                         .unwrap_or(0);
                     let mut entry = call_ok(
-                        "monitor_properties",
+                        "running_game_get_node_property_samples",
                         &monitor_args,
                         &call.payload,
                         &call.correlation,
@@ -1662,7 +1662,7 @@ impl<'a> BatterySession<'a> {
                     }
                 }
                 Err(failure) => {
-                    calls.push(call_fail("monitor_properties", &monitor_args, &failure));
+                    calls.push(call_fail("running_game_get_node_property_samples", &monitor_args, &failure));
                     summaries.push(format!(
                         "{label}: FAILED {} {editor_marker}",
                         failure.observation()
@@ -1690,10 +1690,10 @@ impl<'a> BatterySession<'a> {
 
             // (e) Editor-side release, same supplementary status.
             let release_args = json!({"action": action, "pressed": false});
-            match self.call("simulate_action", release_args.clone()).await {
+            match self.call("editor_simulate_input_action", release_args.clone()).await {
                 Ok(call) => calls.push(labeled(
                     call_ok(
-                        "simulate_action",
+                        "editor_simulate_input_action",
                         &release_args,
                         &call.payload,
                         &call.correlation,
@@ -1701,7 +1701,7 @@ impl<'a> BatterySession<'a> {
                     &format!("{label}:{EDITOR_SIDE_INJECTION_MARKER}:release"),
                 )),
                 Err(failure) => calls.push(labeled(
-                    call_fail("simulate_action", &release_args, &failure),
+                    call_fail("editor_simulate_input_action", &release_args, &failure),
                     &format!("{label}:{EDITOR_SIDE_INJECTION_MARKER}:release"),
                 )),
             }
@@ -1744,11 +1744,11 @@ impl<'a> BatterySession<'a> {
 
         for node in ["Player", "Goal", "HUD"] {
             let args = json!({"node_path": node});
-            match self.call("get_game_node_properties", args.clone()).await {
+            match self.call("running_game_get_node_properties", args.clone()).await {
                 Ok(call) => {
                     let parsed = unwrap_mcp_payload(&call.payload);
                     calls.push(call_ok(
-                        "get_game_node_properties",
+                        "running_game_get_node_properties",
                         &args,
                         &call.payload,
                         &call.correlation,
@@ -1765,7 +1765,7 @@ impl<'a> BatterySession<'a> {
                     }
                 }
                 Err(failure) => {
-                    calls.push(call_fail("get_game_node_properties", &args, &failure));
+                    calls.push(call_fail("running_game_get_node_properties", &args, &failure));
                     property_summary.push(format!("{node}=FAILED"));
                     ok = false;
                 }
@@ -1775,11 +1775,11 @@ impl<'a> BatterySession<'a> {
         let mut shape_summary: Vec<String> = Vec::new();
         for node in ["Ground", "Player", "Goal"] {
             let args = json!({"node_path": node});
-            match self.call("get_collision_info", args.clone()).await {
+            match self.call("editor_get_collision_info", args.clone()).await {
                 Ok(call) => {
                     let parsed = unwrap_mcp_payload(&call.payload);
                     calls.push(call_ok(
-                        "get_collision_info",
+                        "editor_get_collision_info",
                         &args,
                         &call.payload,
                         &call.correlation,
@@ -1796,7 +1796,7 @@ impl<'a> BatterySession<'a> {
                     }
                 }
                 Err(failure) => {
-                    calls.push(call_fail("get_collision_info", &args, &failure));
+                    calls.push(call_fail("editor_get_collision_info", &args, &failure));
                     shape_summary.push(format!("{node}=FAILED"));
                     ok = false;
                 }
@@ -1828,22 +1828,22 @@ impl<'a> BatterySession<'a> {
     /// 7. Stop the running scene so the next stage starts clean.
     async fn step_stop_scene(&mut self) -> anyhow::Result<()> {
         let step = BatteryStep {
-            id: "stop_scene".to_string(),
+            id: "editor_stop_scene".to_string(),
             supports: vec!["N1".to_string()],
             timeout_secs: self.limits.timeout_seconds,
             retries: self.limits.max_retries,
         };
         let args = json!({});
-        let (ok, observation, call) = match self.call("stop_scene", args.clone()).await {
+        let (ok, observation, call) = match self.call("editor_stop_scene", args.clone()).await {
             Ok(call) => (
                 true,
-                format!("stop_scene: {}", unwrap_mcp_payload(&call.payload)),
-                call_ok("stop_scene", &args, &call.payload, &call.correlation),
+                format!("editor_stop_scene: {}", unwrap_mcp_payload(&call.payload)),
+                call_ok("editor_stop_scene", &args, &call.payload, &call.correlation),
             ),
             Err(failure) => (
                 false,
-                format!("FAILED stop_scene: {} (UNAVAILABLE)", failure.observation()),
-                call_fail("stop_scene", &args, &failure),
+                format!("FAILED editor_stop_scene: {} (UNAVAILABLE)", failure.observation()),
+                call_fail("editor_stop_scene", &args, &failure),
             ),
         };
         self.finish(
@@ -1862,7 +1862,7 @@ impl<'a> BatterySession<'a> {
 // DR-29: the session synchronization report
 // ---------------------------------------------------------------------------
 
-/// DR-29: where a battery session records its `get_project_info` correlation
+/// DR-29: where a battery session records its `project_get_info` correlation
 /// probe, relative to the workspace.
 pub const SESSION_SYNC_FILE: &str = ".hoh/deterministic/mcp-sync.json";
 
@@ -1911,7 +1911,7 @@ fn scene_tree_nodes(payload: &Value) -> Vec<&Value> {
 /// DR-30: a payload is a scene tree only when its nodes carry both a `path` and
 /// a `type`.  Returns the node count, or the reason it is not usable.
 ///
-/// `smoke-t3`'s `play_scene_ready` accepted `play_scene`'s reply here; the
+/// `smoke-t3`'s `play_scene_ready` accepted `editor_play_scene`'s reply here; the
 /// difference between the two payloads is exactly this shape.
 fn describe_scene_tree_shape(payload: &Value) -> Result<usize, String> {
     let nodes = scene_tree_nodes(payload);
@@ -1937,7 +1937,7 @@ fn describe_scene_tree_shape(payload: &Value) -> Result<usize, String> {
     Ok(nodes.len())
 }
 
-/// DR-30: the inline image of a `capture_frames`-style payload, decoded from
+/// DR-30: the inline image of a `running_game_capture_frames`-style payload, decoded from
 /// base64.  Returns `None` when the payload carries no image or the bytes are
 /// not a PNG.
 fn extract_inline_image(payload: &Value) -> Option<Vec<u8>> {
@@ -2185,7 +2185,7 @@ pub const PROBE_ACTION: &str = "move_right";
 /// DR-35: how many frames the game gets between `action_press` and the re-read.
 pub const PROBE_FRAME_COUNT: u64 = 30;
 
-/// DR-35: the `execute_game_script` payloads, i.e. GDScript *expressions* run
+/// DR-35: the `running_game_execute_gdscript` payloads, i.e. GDScript *expressions* run
 /// inside the **game** process by the addon's `mcp_runtime_agent.gd`.
 ///
 /// They are wrapped in `str(...)` for two reasons: the addon answers
@@ -2308,7 +2308,7 @@ impl InputChannelProbe {
     }
 }
 
-/// DR-35: the game-process reading of one `execute_game_script` reply.
+/// DR-35: the game-process reading of one `running_game_execute_gdscript` reply.
 ///
 /// The addon answers `{"result": str(value)}`, so the value is normally a
 /// string; a raw boolean/number is accepted too, because an addon that stops
@@ -2646,21 +2646,21 @@ impl ProjectAdapter for GodotAdapter {
     ) -> anyhow::Result<Vec<ExecRecord>> {
         let mut records = Vec::new();
 
-        // 1. reload_project is executed by the runtime because the Tester is
+        // 1. editor_rescan_project_filesystem is executed by the runtime because the Tester is
         //    not allowed to call it; the result is informational only.
         let _ = tools
-            .call(Role::Developer, "reload_project", serde_json::json!({}))
+            .call(Role::Developer, "editor_rescan_project_filesystem", serde_json::json!({}))
             .await;
 
         // 2. Editor errors.  DR-5: decide on the parsed `errors` array, never
         //    on a substring heuristic — an observation may legally contain the
         //    word "error" while the editor is clean, and vice versa.
         let errors = tools
-            .call(Role::Tester, "get_editor_errors", serde_json::json!({}))
+            .call(Role::Tester, "editor_get_errors", serde_json::json!({}))
             .await;
         let observation = match errors {
             Ok(result) => describe_editor_errors(&result.payload),
-            Err(error) => format!("get_editor_errors failed: {error}"),
+            Err(error) => format!("editor_get_errors failed: {error}"),
         };
         records.push(ExecRecord {
             kind: ExecKind::Build,
@@ -2671,23 +2671,23 @@ impl ProjectAdapter for GodotAdapter {
 
         // 3. Boot the main scene, snapshot the tree, then stop it.
         let play_args = serde_json::json!({"scene_path": self.config.main_scene});
-        let play = tools.call(Role::Tester, "play_scene", play_args).await;
+        let play = tools.call(Role::Tester, "editor_play_scene", play_args).await;
         let boot_observation = match play {
             Ok(_) => {
                 let tree = tools
-                    .call(Role::Tester, "get_game_scene_tree", serde_json::json!({}))
+                    .call(Role::Tester, "running_game_get_scene_tree", serde_json::json!({}))
                     .await;
                 let _ = tools
-                    .call(Role::Tester, "stop_scene", serde_json::json!({}))
+                    .call(Role::Tester, "editor_stop_scene", serde_json::json!({}))
                     .await;
                 match tree {
                     Ok(result) => format!("main scene booted; scene tree: {}", result.payload),
                     Err(error) => {
-                        format!("main scene booted but get_game_scene_tree failed: {error}")
+                        format!("main scene booted but running_game_get_scene_tree failed: {error}")
                     }
                 }
             }
-            Err(error) => format!("play_scene failed: {error}"),
+            Err(error) => format!("editor_play_scene failed: {error}"),
         };
         records.push(ExecRecord {
             kind: ExecKind::RuntimeTrace,
@@ -2733,30 +2733,30 @@ arrived for someone else. When `.hoh/deterministic/mcp-sync.json` reports
 | `project_reload_and_open` | N1 | the editor was reloaded and the main scene opened (on-disk truth) |
 | `scene_structure` | N1, F5, F6 | the `.tscn` text has exactly one root node and resolvable `parent=` paths |
 | `editor_errors_baseline` | N1, N3 | the editor opens the project with no script errors |
-| `play_scene_ready` | N1 | `play_scene` succeeded and the game answered `get_game_scene_tree` **with a scene tree** (a reply of another shape is not readiness evidence) |
+| `play_scene_ready` | N1 | `editor_play_scene` succeeded and the game answered `running_game_get_scene_tree` **with a scene tree** (a reply of another shape is not readiness evidence) |
 | `scene_tree` | N2, F5 | the running node tree exists, with a `path` and a `type` on every node |
 | `screenshot` | N2, F4, F13, F16 | a PNG really exists under `.hoh/evidence/` (a reported path alone is not evidence) |
-| `input_channel_probe` | F1, F2 (+P3 when the game process really has no such action) | the **game process** answered `execute_game_script` and reports `GAME_INPUT_CHANNEL_OK`, `ACTION_NOT_BOUND` or `ACTION_BINDING_UNKNOWN`. The raw payload is `.hoh/deterministic/raw/input_channel_probe.json`; its `channel` object carries every reading verbatim |
-| `input_replay` | F1, F2, F3 (+P3 when an InputMap action is missing) | `move_right`/`jump`/`move_left` recordings of `Player.position`, sampled **inside the game process** (`monitor_properties`, game-forwarded). Each call in `raw/input_replay.json` carries the `(action, channel, before_position, after_position, velocity)` quadruple. The editor-side `simulate_action` is recorded for completeness only and is labelled `EDITOR_SIDE_INJECTION`: the editor is a different process and cannot drive the game. `INPUT_HAD_NO_EFFECT` means the action was delivered inside the game and the position did not change; `ACTION_NOT_BOUND` means the game's InputMap does not declare it; `ACTION_BINDING_UNKNOWN` means the channel could not be read and must **not** be read as a missing action |
+| `input_channel_probe` | F1, F2 (+P3 when the game process really has no such action) | the **game process** answered `running_game_execute_gdscript` and reports `GAME_INPUT_CHANNEL_OK`, `ACTION_NOT_BOUND` or `ACTION_BINDING_UNKNOWN`. The raw payload is `.hoh/deterministic/raw/input_channel_probe.json`; its `channel` object carries every reading verbatim |
+| `input_replay` | F1, F2, F3 (+P3 when an InputMap action is missing) | `move_right`/`jump`/`move_left` recordings of `Player.position`, sampled **inside the game process** (`running_game_get_node_property_samples`, game-forwarded). Each call in `raw/input_replay.json` carries the `(action, channel, before_position, after_position, velocity)` quadruple. The editor-side `editor_simulate_input_action` is recorded for completeness only and is labelled `EDITOR_SIDE_INJECTION`: the editor is a different process and cannot drive the game. `INPUT_HAD_NO_EFFECT` means the action was delivered inside the game and the position did not change; `ACTION_NOT_BOUND` means the game's InputMap does not declare it; `ACTION_BINDING_UNKNOWN` means the channel could not be read and must **not** be read as a missing action |
 | `node_and_collision_assertions` | F5, F6, F10, F13, F14, F16 | node properties, `shape_count` per body, HUD text nodes |
-| `stop_scene` | N1 | the game stopped cleanly |
+| `editor_stop_scene` | N1 | the game stopped cleanly |
 
 ## If you need a closer look (read-only / execution only)
 ```
-$HOH_HOH_BIN tools call get_game_node_properties --args-file $HOH_ARTIFACT_DIR/args/props.json
+$HOH_HOH_BIN tools call running_game_get_node_properties --args-file $HOH_ARTIFACT_DIR/args/props.json
 # props.json: {"node_path":"Player","properties":["position"]}
-$HOH_HOH_BIN tools call monitor_properties --args-file $HOH_ARTIFACT_DIR/args/monitor.json
+$HOH_HOH_BIN tools call running_game_get_node_property_samples --args-file $HOH_ARTIFACT_DIR/args/monitor.json
 # monitor.json: {"node_path":"Player","properties":["position"],"frame_count":60,"frame_interval":1}
-$HOH_HOH_BIN tools call simulate_action --args-file $HOH_ARTIFACT_DIR/args/press.json
+$HOH_HOH_BIN tools call editor_simulate_input_action --args-file $HOH_ARTIFACT_DIR/args/press.json
 # press.json: {"action":"move_right","pressed":true}
-$HOH_HOH_BIN tools call simulate_sequence --args-file $HOH_ARTIFACT_DIR/args/seq.json
+$HOH_HOH_BIN tools call editor_simulate_input_sequence --args-file $HOH_ARTIFACT_DIR/args/seq.json
 # seq.json: {"events":[{"type":"action","action":"jump","pressed":true},
 #                      {"type":"action","action":"jump","pressed":false}],"frame_delay":1}
-$HOH_HOH_BIN tools call capture_frames --args-file $HOH_ARTIFACT_DIR/args/frames.json
+$HOH_HOH_BIN tools call running_game_capture_frames --args-file $HOH_ARTIFACT_DIR/args/frames.json
 # frames.json: {"count":1,"frame_interval":10}; frames land under `.hoh/evidence/`
-$HOH_HOH_BIN tools call get_collision_info --args-file $HOH_ARTIFACT_DIR/args/col.json
+$HOH_HOH_BIN tools call editor_get_collision_info --args-file $HOH_ARTIFACT_DIR/args/col.json
 # col.json: {"node_path":"Goal"}
-$HOH_HOH_BIN tools call assert_node_state --args-file $HOH_ARTIFACT_DIR/args/assert.json
+$HOH_HOH_BIN tools call running_game_assert_node_state --args-file $HOH_ARTIFACT_DIR/args/assert.json
 # assert.json: {"node_path":"Player","property":"position:x","operator":"gt","expected":0}
 ```
 
@@ -2781,10 +2781,10 @@ $HOH_HOH_BIN tools call assert_node_state --args-file $HOH_ARTIFACT_DIR/args/ass
                 "list_*".to_string(),
                 "simulate_*".to_string(),
                 "assert_*".to_string(),
-                "capture_frames".to_string(),
-                "play_scene".to_string(),
-                "stop_scene".to_string(),
-                "monitor_properties".to_string(),
+                "running_game_capture_frames".to_string(),
+                "editor_play_scene".to_string(),
+                "editor_stop_scene".to_string(),
+                "running_game_get_node_property_samples".to_string(),
             ],
         }
     }
@@ -2838,7 +2838,7 @@ $HOH_HOH_BIN tools call assert_node_state --args-file $HOH_ARTIFACT_DIR/args/ass
     }
 }
 
-/// DR-5: turn a `get_editor_errors` payload into an observation.
+/// DR-5: turn a `editor_get_errors` payload into an observation.
 ///
 /// The editor's answer is the authoritative signal.  A payload that is not an
 /// object carrying an `errors` array cannot be interpreted as "clean", so it is
@@ -2852,7 +2852,7 @@ fn describe_editor_errors(payload: &serde_json::Value) -> String {
             errors.len()
         ),
         None => format!(
-            "the get_editor_errors payload could not be parsed as JSON (treated as errors):\n{rendered}"
+            "the editor_get_errors payload could not be parsed as JSON (treated as errors):\n{rendered}"
         ),
     }
 }
@@ -2863,7 +2863,7 @@ mod tests {
     use crate::tools::ToolResult;
     use serde_json::Value;
 
-    fn adapter(addon: &Path) -> GodotAdapter {
+    fn adapter(_addon: &Path) -> GodotAdapter {
         GodotAdapter::new(
             GodotConfig {
                 editor_binary: std::path::PathBuf::new(),
@@ -2874,7 +2874,7 @@ mod tests {
         )
     }
 
-    /// Minimal MCP stand-in: `get_editor_errors` returns a canned payload.
+    /// Minimal MCP stand-in: `editor_get_errors` returns a canned payload.
     struct StubChannel {
         errors: Value,
     }
@@ -2891,9 +2891,9 @@ mod tests {
 
         async fn call(&self, _role: Role, tool: &str, _args: Value) -> anyhow::Result<ToolResult> {
             let payload = match tool {
-                "get_editor_errors" => self.errors.clone(),
-                "play_scene" => serde_json::json!({"ok": true}),
-                "get_game_scene_tree" => serde_json::json!({"tree": []}),
+                "editor_get_errors" => self.errors.clone(),
+                "editor_play_scene" => serde_json::json!({"ok": true}),
+                "running_game_get_scene_tree" => serde_json::json!({"tree": []}),
                 _ => serde_json::json!({}),
             };
             Ok(ToolResult { ok: true, payload })
@@ -3204,10 +3204,10 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let playbook = adapter(&temp.path().join("addon")).evidence_playbook();
         for needle in [
-            "simulate_sequence",
-            "capture_frames",
-            "monitor_properties",
-            "assert_node_state",
+            "editor_simulate_input_sequence",
+            "running_game_capture_frames",
+            "running_game_get_node_property_samples",
+            "running_game_assert_node_state",
             ".hoh/evidence/",
         ] {
             assert!(playbook.contains(needle), "playbook is missing {needle}");

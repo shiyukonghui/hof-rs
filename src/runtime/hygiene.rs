@@ -405,7 +405,7 @@ mod tests {
         // The arguments nested inside an action count too.
         let args_only = serde_json::json!({
             "messages": [{"role": "assistant", "extra": {"actions": [
-                {"command": "hoh tools call read_script",
+                {"command": "hoh tools call project_read_script",
                  "args": {"path": "F:\\RustProjects\\godot-mcp-pro\\x.gd"}}
             ]}}]
         })

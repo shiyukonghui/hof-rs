@@ -3,8 +3,8 @@
 //! `smoke-t3` met a server on 9877 that answers **one request behind** and
 //! carries a stale id from a previous session: `id=1` → `resp.id=704`, `id=2` →
 //! the `id=1` response, `id=3` → the `id=2` response.  The client only read
-//! `result`, so `get_scene_file_content` received `open_scene`'s reply and
-//! `get_editor_errors` received the scene text; the launch gate produced a
+//! `result`, so `project_read_scene_file_content` received `editor_open_scene`'s reply and
+//! `editor_get_errors` received the scene text; the launch gate produced a
 //! false negative and 13.4 minutes / 4.35M tokens went into repairing a defect
 //! that did not exist.
 //!
@@ -59,7 +59,7 @@ struct State {
     queue: VecDeque<Pending>,
     replies: HashMap<String, Value>,
     log: Vec<Value>,
-    /// The action of the last `simulate_action`, so `monitor_properties` (which
+    /// The action of the last `editor_simulate_input_action`, so `running_game_get_node_property_samples` (which
     /// does not name one) can answer with a plausible recording.
     last_action: String,
     monitor_frames: u64,
@@ -164,7 +164,7 @@ fn serve(mut stream: TcpStream, state: &Arc<Mutex<State>>) {
         let mut state = state.lock().unwrap();
         state.log.push(request.clone());
         let id = request.get("id").cloned().unwrap_or(json!(0));
-        if request["params"]["name"].as_str() == Some("get_game_screenshot") {
+        if request["params"]["name"].as_str() == Some("running_game_capture_screenshot") {
             if let Some(path) = request["params"]["arguments"]["save_path"].as_str() {
                 if let Some(parent) = Path::new(path).parent() {
                     let _ = std::fs::create_dir_all(parent);
@@ -210,7 +210,7 @@ fn reply_payload(state: &State, request: &Value) -> Value {
         return json!({"tools": []});
     }
     let tool = request["params"]["name"].as_str().unwrap_or("");
-    if tool == "monitor_properties" {
+    if tool == "running_game_get_node_property_samples" {
         // The recording follows the last simulated action, exactly like the
         // real server's.
         let frames = request["params"]["arguments"]["frame_count"]
@@ -328,15 +328,15 @@ fn inline_png_reply() -> Value {
 fn battery_replies() -> HashMap<String, Value> {
     let mut replies: HashMap<String, Value> = HashMap::new();
     replies.insert(
-        "reload_project".to_string(),
+        "editor_rescan_project_filesystem".to_string(),
         json!({"content": [{"type": "text", "text": "{\"reloaded\": true}"}]}),
     );
     replies.insert(
-        "open_scene".to_string(),
+        "editor_open_scene".to_string(),
         json!({"content": [{"type": "text", "text": "{\"opened\": true}"}]}),
     );
     replies.insert(
-        "get_scene_file_content".to_string(),
+        "project_read_scene_file_content".to_string(),
         json!({"content": [{"type": "text", "text": json!({
             "content": "[gd_scene load_steps=2 format=3]\n\n\
                         [node name=\"Main\" type=\"Node2D\"]\n\n\
@@ -344,18 +344,18 @@ fn battery_replies() -> HashMap<String, Value> {
         }).to_string()}]}),
     );
     replies.insert(
-        "get_editor_errors".to_string(),
+        "editor_get_errors".to_string(),
         fixture("editor_errors_clean.json"),
     );
-    replies.insert("play_scene".to_string(), fixture("play_scene_ok.json"));
-    replies.insert("get_game_scene_tree".to_string(), scene_tree_reply());
+    replies.insert("editor_play_scene".to_string(), fixture("play_scene_ok.json"));
+    replies.insert("running_game_get_scene_tree".to_string(), scene_tree_reply());
     replies.insert(
-        "get_game_screenshot".to_string(),
+        "running_game_capture_screenshot".to_string(),
         json!({"content": [{"type": "text", "text": "{\"path\": \"frame\", \"size\": 686}"}]}),
     );
-    replies.insert("capture_frames".to_string(), inline_png_reply());
+    replies.insert("running_game_capture_frames".to_string(), inline_png_reply());
     replies.insert(
-        "get_input_actions".to_string(),
+        "editor_get_input_actions".to_string(),
         json!({"content": [{"type": "text", "text": json!({"actions": [
             {"name": "move_left", "keys": ["A"]},
             {"name": "move_right", "keys": ["D"]},
@@ -363,29 +363,29 @@ fn battery_replies() -> HashMap<String, Value> {
         ]}).to_string()}]}),
     );
     replies.insert(
-        "simulate_action".to_string(),
+        "editor_simulate_input_action".to_string(),
         fixture("simulate_action_ok.json"),
     );
     replies.insert(
-        "get_game_node_properties".to_string(),
+        "running_game_get_node_properties".to_string(),
         fixture("player_properties.json"),
     );
     replies.insert(
-        "get_collision_info".to_string(),
+        "editor_get_collision_info".to_string(),
         fixture("ground_collision.json"),
     );
     replies.insert(
-        "stop_scene".to_string(),
+        "editor_stop_scene".to_string(),
         json!({"content": [{"type": "text", "text": "{\"stopped\": true}"}]}),
     );
     replies.insert(
-        "get_project_info".to_string(),
+        "project_get_info".to_string(),
         json!({"content": [{"type": "text", "text": "{\"project\": \"HoH Mario\"}"}]}),
     );
     replies
 }
 
-/// The per-tool replies, with `monitor_properties` synthesized from the last
+/// The per-tool replies, with `running_game_get_node_property_samples` synthesized from the last
 /// simulated action.
 fn battery_server(mode: Mode) -> FakeMcp {
     match mode {
@@ -394,7 +394,7 @@ fn battery_server(mode: Mode) -> FakeMcp {
             battery_replies(),
             // The stale request the previous session left in the queue: its
             // reply is the scene text, which is exactly what `smoke-t3`'s
-            // `get_editor_errors` received.
+            // `editor_get_errors` received.
             vec![Pending {
                 id: json!(704),
                 payload: json!({"content": [{"type": "text", "text": "{\"content\": \"[gd_scene \
@@ -415,7 +415,7 @@ fn a_correct_server_needs_zero_probes() {
     let client = McpClient::new(server.url(), 5, 0);
 
     let (payload, correlation) = client
-        .call_traced("get_editor_errors", json!({}))
+        .call_traced("editor_get_errors", json!({}))
         .expect("the server answers its own request");
     let inner = hof_rs::adapter::godot::unwrap_mcp_payload(&payload);
     assert_eq!(inner["errors"], json!([]));
@@ -446,7 +446,7 @@ fn a_lagging_server_is_re_correlated() {
     let client = McpClient::new(server.url(), 5, 0);
 
     let (payload, correlation) = client
-        .call_traced("get_game_scene_tree", json!({"max_depth": -1}))
+        .call_traced("running_game_get_scene_tree", json!({"max_depth": -1}))
         .expect("the response is flushed out by one probe");
     assert!(
         text_of(&payload).contains("Main"),
@@ -456,7 +456,7 @@ fn a_lagging_server_is_re_correlated() {
     assert_ne!(correlation.response_id, Some(704));
     assert_eq!(correlation.mismatched_ids, vec![704]);
     assert_eq!(correlation.observed_offset(), Some(703));
-    assert_eq!(server.tool_calls("get_project_info"), 1);
+    assert_eq!(server.tool_calls("project_get_info"), 1);
 }
 
 // ---------------------------------------------------------------------------
@@ -473,7 +473,7 @@ fn a_persistently_desynced_server_returns_a_typed_error() {
     let client = McpClient::new(server.url(), 5, 0).with_max_sync_retries(2);
 
     let error = client
-        .call_traced("get_editor_errors", json!({}))
+        .call_traced("editor_get_errors", json!({}))
         .expect_err("a response that never carries our id is not a result");
     let desync = error
         .downcast_ref::<HofError>()
@@ -492,7 +492,7 @@ fn a_persistently_desynced_server_returns_a_typed_error() {
     }
     assert_eq!(desync.exit_code(), 4, "an unavailable dependency");
     assert_eq!(
-        server.tool_calls("get_project_info"),
+        server.tool_calls("project_get_info"),
         2,
         "the probes are read-only and bounded"
     );
@@ -502,7 +502,7 @@ fn a_persistently_desynced_server_returns_a_typed_error() {
 // ④ a mis-correlated payload is never used, whatever its shape
 // ---------------------------------------------------------------------------
 
-/// The decisive case: the response that arrives for `get_editor_errors` is the
+/// The decisive case: the response that arrives for `editor_get_errors` is the
 /// **scene text** (a completely different shape).  It must never be returned as
 /// this call's result — not as `count=0`, not as anything else.
 #[test]
@@ -519,7 +519,7 @@ fn a_mis_correlated_payload_of_another_shape_is_never_used() {
     let client = McpClient::new(server.url(), 5, 0);
 
     let (payload, correlation) = client
-        .call_traced("get_editor_errors", json!({}))
+        .call_traced("editor_get_errors", json!({}))
         .expect("the real errors arrive after one probe");
     let inner = hof_rs::adapter::godot::unwrap_mcp_payload(&payload);
     assert!(
@@ -537,7 +537,7 @@ fn a_mis_correlated_payload_of_another_shape_is_never_used() {
     let server = FakeMcp::stale(battery_replies(), 704, json!({"errors": [], "count": 0}));
     let client = McpClient::new(server.url(), 5, 0);
     let error = client
-        .call_traced("get_editor_errors", json!({}))
+        .call_traced("editor_get_errors", json!({}))
         .expect_err("an unaligned server must never look like success");
     assert!(
         error.to_string().contains("desync"),
@@ -586,7 +586,7 @@ async fn a_battery_step_never_reports_a_mis_correlated_payload_as_success() {
 // ⑤ the raw payload carries request_id / response_id / sync_probes
 // ---------------------------------------------------------------------------
 
-fn godot_adapter(root: &Path, _workspace: &Path) -> GodotAdapter {
+fn godot_adapter(_root: &Path, _workspace: &Path) -> GodotAdapter {
     GodotAdapter::new(
         GodotConfig {
             editor_binary: std::path::PathBuf::new(),

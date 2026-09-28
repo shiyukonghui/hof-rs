@@ -63,7 +63,7 @@ pub fn repair_context(records: &[BatteryRecord]) -> String {
     let mut text = String::from(
         "LAUNCH GATE FAILED. The deterministic evidence battery could not start the frozen \
          candidate. Fix ONLY what is needed to make the project launchable: repair the main \
-         scene / scripts so that `get_editor_errors` is clean and the main scene boots. Do not \
+         scene / scripts so that `editor_get_errors` is clean and the main scene boots. Do not \
          add features, do not start new work, do not restructure the project.\n\nFailed battery \
          evidence (verbatim):\n",
     );

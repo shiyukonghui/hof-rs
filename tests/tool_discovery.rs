@@ -37,7 +37,7 @@ fn tools_markdown_carries_parameter_names_and_types() {
     );
 
     let developer = hof_rs::tools::index::render_tools_markdown(Role::Developer, &schemas);
-    assert!(developer.contains("`monitor_properties`"), "{developer}");
+    assert!(developer.contains("`running_game_get_node_property_samples`"), "{developer}");
     assert!(developer.contains("`node_path`"));
     assert!(developer.contains("`properties`"));
     assert!(
@@ -60,17 +60,26 @@ fn tools_markdown_never_leaks_a_tool_the_role_may_not_call() {
     let schemas = hof_rs::tools::index::embedded_tool_schemas();
 
     let tester = hof_rs::tools::index::render_tools_markdown(Role::Tester, &schemas);
-    assert!(tester.contains("`monitor_properties`"));
-    assert!(
-        !tester.contains("edit_script") && !tester.contains("add_node"),
-        "a mutating tool must not appear in the tester's index"
-    );
+    assert!(tester.contains("### `running_game_get_node_property_samples`"));
+    for tool in ["project_edit_script", "editor_add_node"] {
+        // A denied tool must not be *listed* for the role.  The claim is about
+        // the entry heading (`### \`name\``), not about the raw document text:
+        // the four-channel contract's descriptions cross-reference other tools
+        // by name (e.g. "use project_edit_script to edit"), and a denial that
+        // leaked a description would still not be a callable entry.
+        assert!(
+            !tester.contains(&format!("### `{tool}`")),
+            "a mutating tool must not be listed in the tester's index: {tool}"
+        );
+    }
 
     let planner = hof_rs::tools::index::render_tools_markdown(Role::Planner, &schemas);
-    assert!(
-        !planner.contains("`get_project_info`") && !planner.contains("`play_scene`"),
-        "the planner owns no MCP tool"
-    );
+    for tool in ["project_get_info", "editor_play_scene"] {
+        assert!(
+            !planner.contains(&format!("### `{tool}`")),
+            "the planner owns no MCP tool: {tool}"
+        );
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -311,7 +320,7 @@ async fn only_a_tool_command_that_reads_a_source_is_recorded() {
         FakeStep::new(Role::Developer)
             .writing("project.godot", "config_version=5\n")
             .trajectory_prompt_containing("never read src/runtime/**")
-            .trajectory_mentioning("grep -n play_scene src/runtime/run_loop.rs"),
+            .trajectory_mentioning("grep -n editor_play_scene src/runtime/run_loop.rs"),
         FakeStep::new(Role::Tester)
             .writing(".hoh/evidence/move.json", "{}\n")
             .writing(".hoh/evidence.json", &ok_evidence(1, "")),

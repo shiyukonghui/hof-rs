@@ -118,7 +118,7 @@ fn collision_from_ground(node_path: &str, node_type: &str, shape_count: u32) -> 
 // The fixture-driven channel
 // ---------------------------------------------------------------------------
 
-/// DR-30: how the mocked `get_game_screenshot` / `capture_frames` behave.
+/// DR-30: how the mocked `running_game_capture_screenshot` / `running_game_capture_frames` behave.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum ScreenshotMode {
     /// The tool writes the PNG the battery asked for.
@@ -126,12 +126,12 @@ enum ScreenshotMode {
     /// The tool answers `ok` but nothing lands on disk and no image is carried
     /// inline (`smoke-t3` reported `path` for a file that did not exist).
     ReportsSuccessButNoFile,
-    /// The primary tool fails and `capture_frames` answers with an inline
+    /// The primary tool fails and `running_game_capture_frames` answers with an inline
     /// base64 PNG, which the runtime must materialize itself.
     InlineBase64Fallback,
 }
 
-/// DR-33: what `get_input_actions` says about the InputMap.
+/// DR-33: what `editor_get_input_actions` says about the InputMap.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum InputActionsMode {
     /// `move_left` / `move_right` / `jump` are bound.
@@ -143,14 +143,14 @@ enum InputActionsMode {
     RealEditorMap,
 }
 
-/// DR-35: what the **game process** answers to `execute_game_script`.
+/// DR-35: what the **game process** answers to `running_game_execute_gdscript`.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum GameInputMode {
     /// The action exists in the game and the press is observable.
     Ok,
     /// The game's `InputMap` really has no such action.
     ActionMissing,
-    /// `execute_game_script` fails the way it did in `smoke-t5`
+    /// `running_game_execute_gdscript` fails the way it did in `smoke-t5`
     /// (`Invalid named index 'Input' for base type Object`).
     ProbeFails,
 }
@@ -172,7 +172,7 @@ struct FixtureChannel {
     game_input: GameInputMode,
     /// DR-35: whether a game-side `action_press` is currently held.
     pressed_in_game: Mutex<bool>,
-    /// The action of the most recent `simulate_action`, so `monitor_properties`
+    /// The action of the most recent `editor_simulate_input_action`, so `running_game_get_node_property_samples`
     /// (which does not name an action) can answer plausibly.
     last_action: Mutex<String>,
 }
@@ -253,7 +253,7 @@ impl FixtureChannel {
     }
 }
 
-/// A PNG payload carrying one inline base64 image (the `capture_frames` shape
+/// A PNG payload carrying one inline base64 image (the `running_game_capture_frames` shape
 /// captured in `smoke-t3`).
 const INLINE_PNG_TEXT: &str =
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==";
@@ -268,12 +268,12 @@ fn inline_png_bytes() -> Vec<u8> {
     ]
 }
 
-/// The `get_game_screenshot` "I saved it" reply (no image inline).
+/// The `running_game_capture_screenshot` "I saved it" reply (no image inline).
 fn screenshot_ok_payload() -> Value {
     json!({"content": [{"type": "text", "text": "{\"path\": \"frame\", \"size\": 686}"}]})
 }
 
-/// The `capture_frames` reply captured in `smoke-t3`: the image travels inline
+/// The `running_game_capture_frames` reply captured in `smoke-t3`: the image travels inline
 /// as base64 and it is the runtime's job to put it on disk.
 fn inline_frames_payload() -> Value {
     let inner = json!({
@@ -283,7 +283,7 @@ fn inline_frames_payload() -> Value {
     json!({"content": [{"type": "text", "text": inner.to_string()}]})
 }
 
-/// A `monitor_properties` recording: either the captured `Player` that never
+/// A `running_game_get_node_property_samples` recording: either the captured `Player` that never
 /// moves (`smoke-t3`: `(60.0, 283.999)` for all 60 frames) or a recording that
 /// responds to `action`.
 fn monitor_payload(action: &str, frames: u64, moving: bool) -> Value {
@@ -311,7 +311,7 @@ fn monitor_payload(action: &str, frames: u64, moving: bool) -> Value {
     json!({"content": [{"type": "text", "text": inner.to_string()}]})
 }
 
-/// The `get_input_actions` reply for the requested mode.
+/// The `editor_get_input_actions` reply for the requested mode.
 fn input_actions_payload(mode: InputActionsMode) -> Value {
     if mode == InputActionsMode::RealEditorMap {
         // The verbatim payload the battery collected in `smoke-t5`: the editor's
@@ -332,7 +332,7 @@ fn input_actions_payload(mode: InputActionsMode) -> Value {
     json!({"content": [{"type": "text", "text": inner.to_string()}]})
 }
 
-/// DR-35: one `execute_game_script` reply, in the addon's
+/// DR-35: one `running_game_execute_gdscript` reply, in the addon's
 /// `{"result": str(value)}` shape.
 fn game_script_payload(reading: &str) -> Value {
     let inner = json!({"result": reading});
@@ -363,18 +363,18 @@ impl ToolChannel for FixtureChannel {
         }
 
         let payload = match tool {
-            "reload_project" => {
+            "editor_rescan_project_filesystem" => {
                 json!({"content": [{"type": "text", "text": "{\"reloaded\": true}"}]})
             }
-            "open_scene" => json!({"content": [{"type": "text", "text": "{\"opened\": true}"}]}),
-            "get_scene_file_content" => json!({
+            "editor_open_scene" => json!({"content": [{"type": "text", "text": "{\"opened\": true}"}]}),
+            "project_read_scene_file_content" => json!({
                 "content": [{"type": "text", "text": json!({"content": VALID_SCENE}).to_string()}]
             }),
-            "get_editor_errors" => fixture("editor_errors_clean.json"),
-            "play_scene" => fixture("play_scene_ok.json"),
-            "get_game_scene_tree" => node_tree_payload(self.hud_label),
-            "get_input_actions" => input_actions_payload(self.input_actions),
-            "get_game_screenshot" => match self.screenshot {
+            "editor_get_errors" => fixture("editor_errors_clean.json"),
+            "editor_play_scene" => fixture("play_scene_ok.json"),
+            "running_game_get_scene_tree" => node_tree_payload(self.hud_label),
+            "editor_get_input_actions" => input_actions_payload(self.input_actions),
+            "running_game_capture_screenshot" => match self.screenshot {
                 ScreenshotMode::WritesFile => {
                     if let Some(save_path) = args.get("save_path").and_then(Value::as_str) {
                         if let Some(parent) = Path::new(save_path).parent() {
@@ -391,14 +391,14 @@ impl ToolChannel for FixtureChannel {
                     return Err(captured_error("screenshot_failure.txt").into());
                 }
             },
-            "capture_frames" => match self.screenshot {
+            "running_game_capture_frames" => match self.screenshot {
                 ScreenshotMode::ReportsSuccessButNoFile => json!({
                     "content": [{"type": "text", "text":
                         "{\"frames\": [\"frame-00.png\"], \"count\": 1}"}]
                 }),
                 _ => inline_frames_payload(),
             },
-            "simulate_action" => {
+            "editor_simulate_input_action" => {
                 if let Some(action) = args.get("action").and_then(Value::as_str) {
                     *self.last_action.lock().unwrap() = action.to_string();
                 }
@@ -407,7 +407,7 @@ impl ToolChannel for FixtureChannel {
             // DR-35: the game-process input channel.  The probe scripts are the
             // real ones (`str(InputMap.has_action(...))` and friends), so this
             // branch keys on them.
-            "execute_game_script" => {
+            "running_game_execute_gdscript" => {
                 if self.game_input == GameInputMode::ProbeFails {
                     return Err(captured_error("game_script_input_unreachable.txt").into());
                 }
@@ -440,26 +440,26 @@ impl ToolChannel for FixtureChannel {
                     panic!("FixtureChannel got an unexpected game script: {code}")
                 }
             }
-            "monitor_properties" => {
+            "running_game_get_node_property_samples" => {
                 let action = self.last_action.lock().unwrap().clone();
                 let frames = args
                     .get("frame_count")
                     .and_then(Value::as_u64)
                     .unwrap_or(60);
                 // DR-35: the game moves only when the **game process** received
-                // the press.  An editor-side `simulate_action` cannot move it,
+                // the press.  An editor-side `editor_simulate_input_action` cannot move it,
                 // which is exactly the `smoke-t5` finding.
                 let pressed_in_game = *self.pressed_in_game.lock().unwrap();
                 let moves = self.moving && self.game_input == GameInputMode::Ok && pressed_in_game;
                 monitor_payload(&action, frames, moves)
             }
-            "get_game_node_properties" => match args["node_path"].as_str().unwrap_or("") {
+            "running_game_get_node_properties" => match args["node_path"].as_str().unwrap_or("") {
                 "Player" => fixture("player_properties.json"),
                 "Goal" => fixture("goal_properties.json"),
                 "HUD" => fixture("hud_properties.json"),
                 other => panic!("no fixture for node {other}"),
             },
-            "get_collision_info" => match args["node_path"].as_str().unwrap_or("") {
+            "editor_get_collision_info" => match args["node_path"].as_str().unwrap_or("") {
                 "Ground" => fixture("ground_collision.json"),
                 "Player" => {
                     collision_from_ground("Player", "CharacterBody2D", self.player_shape_count)
@@ -474,7 +474,7 @@ impl ToolChannel for FixtureChannel {
                 }
                 other => panic!("no collision fixture for node {other}"),
             },
-            "stop_scene" => json!({"content": [{"type": "text", "text": "{\"stopped\": true}"}]}),
+            "editor_stop_scene" => json!({"content": [{"type": "text", "text": "{\"stopped\": true}"}]}),
             other => panic!("FixtureChannel has no reply for `{other}`"),
         };
         Ok(ToolResult { ok: true, payload })
@@ -491,7 +491,7 @@ struct BatteryRun {
     records: Vec<BatteryRecord>,
 }
 
-fn godot_adapter(root: &Path, ready_timeout_seconds: u64) -> GodotAdapter {
+fn godot_adapter(_root: &Path, ready_timeout_seconds: u64) -> GodotAdapter {
     GodotAdapter::new(
         GodotConfig {
             editor_binary: std::path::PathBuf::new(),
@@ -646,7 +646,7 @@ async fn green_battery_records_every_step_and_copies_into_the_candidate() {
             "input_channel_probe",
             "input_replay",
             "node_and_collision_assertions",
-            "stop_scene",
+            "editor_stop_scene",
         ],
         "DR-24 inserts the reload/open and scene-structure steps before the editor errors"
     );
@@ -711,7 +711,7 @@ async fn green_battery_records_every_step_and_copies_into_the_candidate() {
 
     // Readiness waited for the game before touching it.
     assert!(
-        channel.call_count("get_game_scene_tree") >= 2,
+        channel.call_count("running_game_get_scene_tree") >= 2,
         "the readiness poll plus the tree step must both call it"
     );
     // The screenshot artifact is reported as a relative path **and** the bytes
@@ -768,7 +768,7 @@ async fn editor_error_failure_is_recorded_verbatim() {
     let temp = tempfile::tempdir().unwrap();
     let root = temp.path();
     let channel = Arc::new(FixtureChannel::green().fail_always(
-        "get_editor_errors",
+        "editor_get_errors",
         captured_error("editor_errors_failure.txt"),
     ));
     let run = run_battery_with_script(root, channel, 30, repairing_script()).await;
@@ -794,7 +794,7 @@ async fn editor_error_failure_is_recorded_verbatim() {
     let journal = run.workspace.join(".hoh/deterministic/mcp-errors.jsonl");
     let raw = std::fs::read_to_string(&journal).expect("mcp-errors.jsonl");
     let entry: Value = serde_json::from_str(raw.lines().next().unwrap()).unwrap();
-    assert_eq!(entry["tool"], json!("get_editor_errors"));
+    assert_eq!(entry["tool"], json!("editor_get_errors"));
     assert_eq!(entry["code"], json!(-32603));
     assert!(run
         .run_dir
@@ -813,8 +813,8 @@ async fn screenshot_failure_is_not_disguised_as_a_clean_step() {
     let error = captured_error("screenshot_failure.txt");
     let channel = Arc::new(
         FixtureChannel::green()
-            .fail_always("get_game_screenshot", error.clone())
-            .fail_always("capture_frames", error),
+            .fail_always("running_game_capture_screenshot", error.clone())
+            .fail_always("running_game_capture_frames", error),
     );
     let run = run_battery(root, channel, 30).await;
 
@@ -838,7 +838,7 @@ async fn readiness_timeout_fails_the_step_and_is_journalled() {
     let temp = tempfile::tempdir().unwrap();
     let root = temp.path();
     let channel = Arc::new(FixtureChannel::green().fail_always(
-        "get_game_scene_tree",
+        "running_game_get_scene_tree",
         McpError::new(-32603, "等待游戏响应超时 (5秒)"),
     ));
     let run = run_battery_with_script(
@@ -865,7 +865,7 @@ async fn readiness_timeout_fails_the_step_and_is_journalled() {
     let raw = std::fs::read_to_string(run.workspace.join(".hoh/deterministic/mcp-errors.jsonl"))
         .expect("mcp-errors.jsonl");
     assert!(
-        raw.lines().any(|line| line.contains("get_game_scene_tree")),
+        raw.lines().any(|line| line.contains("running_game_get_scene_tree")),
         "{raw}"
     );
 }
@@ -929,7 +929,7 @@ async fn battery_json_has_the_frozen_shape() {
 // DR-30 — a payload's *shape* is the evidence, not "a response arrived"
 // ---------------------------------------------------------------------------
 
-/// `smoke-t3`'s `play_scene_ready` accepted `play_scene`'s own reply
+/// `smoke-t3`'s `play_scene_ready` accepted `editor_play_scene`'s own reply
 /// (`{"mode":"main","playing":true}`) because the readiness poll only asked
 /// whether the call succeeded.  Readiness must be confirmed by a scene tree.
 #[tokio::test]
@@ -937,7 +937,7 @@ async fn play_scene_ready_refuses_a_payload_that_is_not_a_scene_tree() {
     let temp = tempfile::tempdir().unwrap();
     let root = temp.path();
     let channel = Arc::new(FixtureChannel::green().with_reply(
-        "get_game_scene_tree",
+        "running_game_get_scene_tree",
         json!({"content": [{"type": "text", "text": "{\"mode\":\"main\",\"playing\":true}"}]}),
     ));
     let run = run_battery_with_script(root, channel, 1, repairing_script()).await;
@@ -945,7 +945,7 @@ async fn play_scene_ready_refuses_a_payload_that_is_not_a_scene_tree() {
     let record = step(&run.records, "play_scene_ready");
     assert!(
         !record.ok,
-        "play_scene's own reply is not readiness evidence: {:?}",
+        "editor_play_scene's own reply is not readiness evidence: {:?}",
         record.record
     );
     assert!(
@@ -975,7 +975,7 @@ async fn editor_errors_baseline_requires_an_errors_array() {
     let root = temp.path();
     let scene_text = "{\"content\":\"[gd_scene load_steps=2 format=3]\"}";
     let channel = Arc::new(FixtureChannel::green().with_reply(
-        "get_editor_errors",
+        "editor_get_errors",
         json!({"content": [{"type": "text", "text": scene_text}]}),
     ));
     let run = run_battery_with_script(root, channel, 30, repairing_script()).await;
@@ -1000,7 +1000,7 @@ async fn input_replay_without_frame_samples_is_a_failure() {
     let temp = tempfile::tempdir().unwrap();
     let root = temp.path();
     let channel = Arc::new(FixtureChannel::green().with_reply(
-        "monitor_properties",
+        "running_game_get_node_property_samples",
         json!({"content": [{"type": "text", "text": "{\"frame_count\":0,\"samples\":[]}"}]}),
     ));
     let run = run_battery(root, channel, 30).await;
@@ -1014,7 +1014,7 @@ async fn input_replay_without_frame_samples_is_a_failure() {
     );
 }
 
-/// The captured `smoke-t3` recording: `simulate_action` is acknowledged but
+/// The captured `smoke-t3` recording: `editor_simulate_input_action` is acknowledged but
 /// `Player.position` never changes.  That is `INPUT_HAD_NO_EFFECT`, and the
 /// `(action, before, after, velocity)` quadruple must be on record.
 #[tokio::test]
@@ -1115,7 +1115,7 @@ async fn input_replay_reports_an_action_that_is_not_bound() {
     .unwrap();
     let text = raw.to_string();
     assert!(
-        text.contains("get_input_actions"),
+        text.contains("editor_get_input_actions"),
         "the availability probe must be recorded: {text}"
     );
     assert!(
@@ -1166,9 +1166,9 @@ async fn a_usable_game_channel_makes_the_replay_green() {
         "{}",
         replay.record.observation
     );
-    // The game-side injection really went through `execute_game_script`.
+    // The game-side injection really went through `running_game_execute_gdscript`.
     assert!(
-        channel.call_count("execute_game_script") >= 8,
+        channel.call_count("running_game_execute_gdscript") >= 8,
         "the probe and the replay must drive the game process directly"
     );
     // DR-35: the raw probe payload is persisted verbatim.
@@ -1189,7 +1189,7 @@ async fn a_usable_game_channel_makes_the_replay_green() {
             .as_array()
             .unwrap()
             .iter()
-            .filter(|call| call["tool"] == json!("execute_game_script"))
+            .filter(|call| call["tool"] == json!("running_game_execute_gdscript"))
             .count()
             >= 6,
         "every probe reading must be recorded verbatim: {raw}"
@@ -1354,7 +1354,7 @@ async fn every_quadruple_names_its_channel() {
         .as_array()
         .unwrap()
         .iter()
-        .filter(|call| call["tool"] == json!("simulate_action"))
+        .filter(|call| call["tool"] == json!("editor_simulate_input_action"))
         .collect();
     assert!(!editor_calls.is_empty());
     for call in editor_calls {
@@ -1376,7 +1376,7 @@ async fn the_real_game_scene_tree_fixture_is_accepted() {
     let root = temp.path();
     let real: Value = fixture("game_scene_tree_real.json");
     let payload = real["calls"][0]["payload"].clone();
-    let channel = Arc::new(FixtureChannel::green().with_reply("get_game_scene_tree", payload));
+    let channel = Arc::new(FixtureChannel::green().with_reply("running_game_get_scene_tree", payload));
     let run = run_battery(root, channel, 30).await;
 
     let record = step(&run.records, "scene_tree");
@@ -1422,7 +1422,7 @@ async fn screenshot_never_claims_a_path_that_does_not_exist() {
 
 /// DR-30: an inline base64 image must be materialized by the runtime before a
 /// `path` may be written (this is exactly what `smoke-t3` got from
-/// `capture_frames` and then mishandled).
+/// `running_game_capture_frames` and then mishandled).
 #[tokio::test]
 async fn screenshot_materializes_an_inline_base64_png() {
     let temp = tempfile::tempdir().unwrap();
@@ -1453,7 +1453,7 @@ async fn scene_tree_requires_node_paths_and_types() {
     let root = temp.path();
     // Children exist, but no node carries a `path`/`type`.
     let channel = Arc::new(FixtureChannel::green().with_reply(
-        "get_game_scene_tree",
+        "running_game_get_scene_tree",
         json!({"content": [{"type": "text", "text":
             "{\"tree\": {\"children\": [{\"name\": \"Player\"}]}}"}]}),
     ));

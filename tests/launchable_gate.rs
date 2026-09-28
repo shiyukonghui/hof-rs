@@ -1,7 +1,7 @@
 //! DR-24 — the pre-freeze "launchable" gate and the one-shot targeted repair.
 //!
 //! The second real smoke run completed the whole loop with a legal `E_1` while
-//! `scenes/main.tscn` had **no root node** (`Invalid scene`), so `play_scene`
+//! `scenes/main.tscn` had **no root node** (`Invalid scene`), so `editor_play_scene`
 //! lied (`playing: true`) and 6/7 battery steps failed.  The paper's "keep the
 //! project buildable and runnable" must be a *checked gate*, not a request.
 //!
@@ -85,9 +85,9 @@ impl ToolChannel for GateChannel {
             .unwrap()
             .push((tool.to_string(), args.clone()));
         let payload = match tool {
-            "reload_project" => json!({"reloaded": true}),
-            "open_scene" => json!({"opened": args.get("path").cloned().unwrap_or(Value::Null)}),
-            "get_scene_file_content" => match self.scene_text() {
+            "editor_rescan_project_filesystem" => json!({"reloaded": true}),
+            "editor_open_scene" => json!({"opened": args.get("path").cloned().unwrap_or(Value::Null)}),
+            "project_read_scene_file_content" => match self.scene_text() {
                 Some(text) => json!({"path": args["path"], "content": text}),
                 None => {
                     return Err(
@@ -95,7 +95,7 @@ impl ToolChannel for GateChannel {
                     )
                 }
             },
-            "get_editor_errors" => {
+            "editor_get_errors" => {
                 if self.scene_valid() {
                     json!({"errors": []})
                 } else {
@@ -106,8 +106,8 @@ impl ToolChannel for GateChannel {
                     .into());
                 }
             }
-            "play_scene" => json!({"playing": true}),
-            "get_game_scene_tree" => {
+            "editor_play_scene" => json!({"playing": true}),
+            "running_game_get_scene_tree" => {
                 if self.scene_valid() {
                     json!({
                         "tree": {
@@ -138,7 +138,7 @@ struct GateRun {
     result: Value,
 }
 
-fn adapter(root: &Path) -> GodotAdapter {
+fn adapter(_root: &Path) -> GodotAdapter {
     GodotAdapter::new(
         GodotConfig {
             editor_binary: std::path::PathBuf::new(),

@@ -39,7 +39,7 @@ fn developer_prompt_states_the_definition_of_done() {
         "an empty file must be explicitly forbidden: {prompt}"
     );
     assert!(
-        lower.contains("read_script") || lower.contains("read it back"),
+        lower.contains("project_read_script") || lower.contains("read it back"),
         "a written script must be read back for self-verification: {prompt}"
     );
     assert!(
@@ -58,16 +58,16 @@ fn godot_dev_skill_is_a_real_recipe_book() {
         "$HOH_HOH_BIN tools call",
         "--args-file",
         "$HOH_ARTIFACT_DIR",
-        "create_script",
-        "edit_script",
-        "read_script",
+        "project_create_script",
+        "project_edit_script",
+        "project_read_script",
         "CollisionShape2D",
         "RectangleShape2D",
-        "setup_collision",
+        "editor_setup_collision_shape",
         "Area2D",
         "Label",
-        "simulate_action",
-        "monitor_properties",
+        "editor_simulate_input_action",
+        "running_game_get_node_property_samples",
         "non-empty",
     ] {
         assert!(dev.contains(needle), "godot-dev.md is missing `{needle}`");
@@ -81,10 +81,10 @@ fn godot_dev_skill_is_a_real_recipe_book() {
     );
 
     // The argument examples use the real snake_case tool parameters.
-    assert!(dev.contains("\"action\""), "simulate_action uses `action`");
+    assert!(dev.contains("\"action\""), "editor_simulate_input_action uses `action`");
     assert!(
         dev.contains("\"pressed\""),
-        "simulate_action uses `pressed`"
+        "editor_simulate_input_action uses `pressed`"
     );
     assert!(dev.contains("\"node_path\""), "lookups use `node_path`");
     assert!(dev.contains("\"properties\""), "monitor uses `properties`");
@@ -142,5 +142,5 @@ async fn skills_are_injected_into_the_role_views() {
     }
     let candidate = root.join("runs/run-1/iter-1/candidate/.hoh/skills/godot-dev.md");
     assert!(candidate.is_file());
-    assert!(read(&candidate).contains("setup_collision"));
+    assert!(read(&candidate).contains("editor_setup_collision_shape"));
 }
