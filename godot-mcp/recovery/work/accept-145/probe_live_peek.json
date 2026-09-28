@@ -1,0 +1,78 @@
+{
+  "top": {
+    "editor_port": 9899,
+    "game_port": 9898,
+    "exe": "F:\\moonbit-hof-rs\\godot-mcp\\godot\\bin\\godot.windows.editor.x86_64.mono.console.exe",
+    "scratch": "C:\\Users\\wyl\\AppData\\Local\\Temp\\task143-probe",
+    "tools": "<dict len=177>",
+    "harness": "<dict len=6>",
+    "counters": "<dict len=6>"
+  },
+  "first3": [
+    [
+      "project_get_info",
+      {
+        "scope": "both",
+        "verb": "get",
+        "required": [],
+        "optional": [],
+        "verdict": "not_probed",
+        "why": "write-class tool with no required argument: an illegal input cannot be constructed without risking a real mutation, or the contract declares no properties at all"
+      }
+    ],
+    [
+      "project_get_filesystem_tree",
+      {
+        "scope": "both",
+        "verb": "get",
+        "required": [],
+        "optional": [
+          "max_depth",
+          "path"
+        ],
+        "probe_kind": "wrong_type_optional",
+        "probe_why": "read-class tool: 'max_depth' carries a string where an integer is declared",
+        "endpoint": "editor",
+        "request_arguments": {
+          "max_depth": "not-an-integer"
+        },
+        "http_status": 200,
+        "response_kind": "jsonrpc_error",
+        "error_code": -32602,
+        "error_message": "Parameter 'max_depth' must be an integer, got String",
+        "error_data": {
+          "suggestion": "Parameter 'max_depth' accepts an integer, optional (default -1); Accepted parameters of project_get_filesystem_tree: path, max_depth"
+        },
+        "response_excerpt": "{\"error\":{\"code\":-32602,\"data\":{\"suggestion\":\"Parameter 'max_depth' accepts an integer, optional (default -1); Accepted parameters of project_get_filesystem_tree: path, max_depth\"},\"message\":\"Parameter 'max_depth' must be an integer, got String\"},\"id\":1,\"jsonrpc\":\"2.0\"}",
+        "verdict": "refused_-32602"
+      }
+    ],
+    [
+      "project_search_file_names",
+      {
+        "scope": "both",
+        "verb": "search",
+        "required": [
+          "pattern"
+        ],
+        "optional": [
+          "path"
+        ],
+        "probe_kind": "missing_required",
+        "probe_why": "empty arguments: the tool declares required pattern",
+        "endpoint": "editor",
+        "request_arguments": {},
+        "http_status": 200,
+        "response_kind": "jsonrpc_error",
+        "error_code": -32602,
+        "error_message": "Missing required parameter: pattern",
+        "error_data": {
+          "suggestion": "Missing required parameter 'pattern' (a string); Accepted parameters of project_search_file_names: pattern, path"
+        },
+        "response_excerpt": "{\"error\":{\"code\":-32602,\"data\":{\"suggestion\":\"Missing required parameter 'pattern' (a string); Accepted parameters of project_search_file_names: pattern, path\"},\"message\":\"Missing required parameter: pattern\"},\"id\":2,\"jsonrpc\":\"2.0\"}",
+        "verdict": "refused_-32602"
+      }
+    ]
+  ],
+  "not_probed_names": []
+}

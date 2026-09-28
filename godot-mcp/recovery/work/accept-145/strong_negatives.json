@@ -1,0 +1,3402 @@
+{
+  "per_tool": {
+    "project_get_info": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-smoke/trace-editor.jsonl:5` → code=-32602 msg=\"Unknown parameter 'bogus_argument' for tool ..."
+    },
+    "project_get_filesystem_tree": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "wrong_type_optional",
+      "probe_message": "Parameter 'max_depth' must be an integer, got String",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:132` → code=-32001 msg=\"Directory 'res://no_such_dir' not found\"..."
+    },
+    "project_search_file_names": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: pattern",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1b-task110/trace-editor.jsonl:37` → code=-32001 msg=\"Directory 'res://no_such_dir' not found\"..."
+    },
+    "project_search_file_contents": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: pattern",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1b-task110/trace-editor.jsonl:49` → code=-32001 msg=\"Directory 'res://no_such_dir' not found\"..."
+    },
+    "project_get_settings": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "wrong_type_optional",
+      "probe_message": "Parameter 'include_default' must be a boolean, got String",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:108` → code=-32602 msg=\"Parameter 'prefix' must be a string, got..."
+    },
+    "project_set_setting": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: key",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "file_effect",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:456` → code=-32602 msg=\"Parameter 'key' must not be empty\"；本轮活体探..."
+    },
+    "project_convert_uid_to_path": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: uid",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-smoke/trace-editor.jsonl:13` → code=-32602 msg=\"Parameter 'uid' is not a valid UID text: 'n..."
+    },
+    "project_convert_path_to_uid": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:360` → code=-32001 msg=\"File 'res://no/such/file.cs' not found\"；..."
+    },
+    "editor_get_scene_tree": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 4
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "wrong_type_optional",
+      "probe_message": "Parameter 'max_depth' must be an integer, got String",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 4,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_write3/c4c-task111/trace-editor.jsonl:270` → code=-32602 msg=\"Parameter 'max_depth' must be an integ..."
+    },
+    "project_read_scene_file_content": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:276` → code=-32001 msg=\"Scene file 'res://scenes/absent.tscn' no..."
+    },
+    "editor_open_scene": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/c8-task120/trace-editor.jsonl:2` → code=-32602 msg=\"Unknown parameter 'undeclared_probe' for to..."
+    },
+    "project_delete_scene_file": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "file_effect",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:504` → code=-32001 msg=\"Scene file 'res://scenes/absent.tscn' no..."
+    },
+    "editor_add_scene_instance": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 5
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: scene_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 5,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_write2/c4b-task111/trace-editor.jsonl:50` → code=-32001 msg=\"Scene 'res://scenes/no_such_scene.tscn'..."
+    },
+    "project_get_scene_exports": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:300` → code=-32001 msg=\"Scene file 'res://scenes/absent.tscn' no..."
+    },
+    "editor_play_scene": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1,
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_editor/h7-task115/trace-editor.jsonl:144` → code=-32001 msg=\"Scene 'res://scenes/no_such_scene.tscn'..."
+    },
+    "editor_stop_scene": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_editor/h7-task115/trace-editor.jsonl:142` → code=-32602 msg=\"Unknown parameter 'bogus' for tool 'edi..."
+    },
+    "editor_save_scene": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "file_effect",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/c8-task120/trace-editor.jsonl:4` → code=-32602 msg=\"Unknown parameter 'undeclared_probe' for to..."
+    },
+    "project_create_scene_file": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32000": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "file_effect",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:60` → code=-32000 msg=\"Scene file already exists: res://scenes/m..."
+    },
+    "editor_add_node": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 5
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: type",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 5,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_write2/c4b-task111/trace-editor.jsonl:38` → code=-32602 msg=\"Missing required parameter: type\"；本轮活体探..."
+    },
+    "editor_delete_node": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/c8-task120/trace-editor.jsonl:6` → code=-32602 msg=\"Unknown parameter 'undeclared_probe' for to..."
+    },
+    "editor_rename_node": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 7
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 7,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_write2/c4b-task111/trace-editor.jsonl:96` → code=-32001 msg=\"Node 'Dup5' not found\"；本轮活体探针 → -32602 ..."
+    },
+    "editor_set_node_property": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/c8-task120/trace-editor.jsonl:8` → code=-32602 msg=\"Unknown parameter 'undeclared_probe' for to..."
+    },
+    "editor_get_node_properties": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 12
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 12,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_scene2/c23-after-task110/trace-editor.jsonl:218` → code=-32001 msg=\"Node 'NoSuchNode' not found\"；本轮活..."
+    },
+    "editor_duplicate_node": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 7
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 7,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_write2/c4b-task111/trace-editor.jsonl:84` → code=-32001 msg=\"Node 'Panel' not found\"；本轮活体探针 → -32602..."
+    },
+    "editor_connect_signal": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 7
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: source_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 7,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/c6-task118/trace-editor.jsonl:43` → code=-32001 msg=\"Node 'NoSuchNode' not found\"；本轮活体探针 → -326..."
+    },
+    "editor_disconnect_signal": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: source_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_write6/c5-task111/trace-editor.jsonl:24` → code=-32001 msg=\"Connection from signal 'visibility_chang..."
+    },
+    "editor_reparent_node": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 14
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 14,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_write2/c4b-task111/trace-editor.jsonl:100` → code=-32001 msg=\"Parent 'Host' not found\"；本轮活体探针 → -326..."
+    },
+    "editor_add_resource_to_node_property": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 10,
+        "-32602": 10
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 20,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_write2/c4b-task111/trace-editor.jsonl:64` → code=-32001 msg=\"Node 'BodyA/CollisionShape2D' not found..."
+    },
+    "editor_set_anchor_preset": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 3,
+        "-32001": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 5,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_write3/c4c-task111/trace-editor.jsonl:222` → code=-32602 msg=\"Unknown preset: 'no_such_preset'. Avai..."
+    },
+    "editor_get_node_groups": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_scene2/c23-after-task110/trace-editor.jsonl:86` → code=-32001 msg=\"Node 'NoSuchNode' not found\"；本轮活体..."
+    },
+    "editor_set_node_groups": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 11
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 11,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_write2/c4b-task111/trace-editor.jsonl:150` → code=-32001 msg=\"Node 'Panel/C4Rect' not found\"；本轮活体探针 ..."
+    },
+    "editor_find_nodes_in_group": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: group",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_scene2/c23-after-task110/trace-editor.jsonl:50` → code=-32602 msg=\"Parameter 'group' must not be emp..."
+    },
+    "editor_get_selection": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "wrong_type_optional",
+      "probe_message": "Parameter 'top_only' must be a boolean, got String",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_scene2/c23-after-task110/trace-editor.jsonl:170` → code=-32602 msg=\"Unknown parameter 'bogus_argumen..."
+    },
+    "editor_set_node_selection": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_editor/h7-task115/trace-editor.jsonl:40` → code=-32001 msg=\"Node 'NoSuchNode' not found\"；台账 boundary..."
+    },
+    "editor_remove_node_selection": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_editor/h7-task115/trace-editor.jsonl:60` → code=-32602 msg=\"Unknown parameter 'bogus' for tool 'edit..."
+    },
+    "editor_execute_gdscript": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: code",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_scene2/c23-after-task110/trace-editor.jsonl:194` → code=-32602 msg=\"Parameter 'code' does not compil..."
+    },
+    "editor_get_errors": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "wrong_type_optional",
+      "probe_message": "Parameter 'max_lines' must be an integer, got String",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/c8-task120/trace-editor.jsonl:10` → code=-32602 msg=\"Unknown parameter 'undeclared_probe' for t..."
+    },
+    "editor_get_output_log": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 4
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "wrong_type_optional",
+      "probe_message": "Parameter 'filter' must be a string, got float",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 4,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_write3/c4c-task111/trace-editor.jsonl:258` → code=-32602 msg=\"Parameter 'max_lines' must be an integ..."
+    },
+    "editor_capture_screenshot": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "wrong_type_optional",
+      "probe_message": "Parameter 'save_path' must be a string, got float",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/c8-task120/trace-editor.jsonl:12` → code=-32602 msg=\"Unknown parameter 'undeclared_probe' for t..."
+    },
+    "running_game_capture_screenshot": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "wrong_type_optional",
+      "probe_message": "Parameter 'save_path' must be a string, got float",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/c8-task120/trace-game.jsonl:2` → code=-32602 msg=\"Unknown parameter 'undeclared_probe' for tool..."
+    },
+    "editor_remove_output_log": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_editor/h7-task115/trace-editor.jsonl:22` → code=-32602 msg=\"Unknown parameter 'bogus' for tool 'edit..."
+    },
+    "editor_reload_plugin": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_editor/h7-task115/trace-editor.jsonl:72` → code=-32602 msg=\"Unknown parameter 'bogus' for tool 'edit..."
+    },
+    "editor_rescan_project_filesystem": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_editor/h7-task115/trace-editor.jsonl:86` → code=-32602 msg=\"Unknown parameter 'bogus' for tool 'edit..."
+    },
+    "editor_get_node_signals": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_scene2/c23-after-task110/trace-editor.jsonl:98` → code=-32001 msg=\"Node 'NoSuchNode' not found\"；本轮活体..."
+    },
+    "editor_analyze_screenshot_diff": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1,
+        "-32602": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: image_a",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 3,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_editor/h7-task115/trace-editor.jsonl:110` → code=-32001 msg=\"Image 'res://assets/no_such_image.png' ..."
+    },
+    "editor_set_auto_dismiss_dialogs": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32000": 5,
+        "-32602": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter 'enabled'",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 7,
+      "status": "计数达标缺证据",
+      "channel": "editor_state",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_editor/h7-task115/trace-editor.jsonl:148` → code=-32000 msg=\"Not implemented: editor_set_auto_dismis..."
+    },
+    "editor_get_viewport_3d_camera": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_3d/h1-task111/trace-editor.jsonl:63` → code=-32602 msg=\"Unknown parameter 'bogus_argument' for tool ..."
+    },
+    "editor_set_viewport_3d_camera": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_3d/h1-task111/trace-editor.jsonl:51` → code=-32602 msg=\"Parameter 'fov' must be a number, got String..."
+    },
+    "running_game_get_scene_tree": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "wrong_type_optional",
+      "probe_message": "Parameter 'max_depth' must be an integer, got String",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/c8-task120/trace-game.jsonl:4` → code=-32602 msg=\"Unknown parameter 'undeclared_probe' for tool..."
+    },
+    "running_game_get_node_properties": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_scene2/c23-after-task110/trace-game.jsonl:72` → code=-32001 msg=\"Node 'NoSuchNode' not found\"；本轮活体探针..."
+    },
+    "running_game_set_node_property": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/snake/task095-mirror/trace-game.jsonl:6` → code=-32602 msg=\"Unknown parameter 'path' for tool 'running_game_set_no..."
+    },
+    "running_game_capture_frames": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 6
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "wrong_type_optional",
+      "probe_message": "Parameter 'count' must be an integer, got String",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 6,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_scene2/c23-after-task110/trace-game.jsonl:84` → code=-32602 msg=\"Parameter 'count' must be at least ..."
+    },
+    "running_game_get_node_property_samples": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/c8-task120/trace-game.jsonl:6` → code=-32602 msg=\"Unknown parameter 'undeclared_probe' for tool..."
+    },
+    "running_game_execute_gdscript": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32000": 30,
+        "-32602": 3
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: code",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 33,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/match3/task103-x1-after/trace-game.jsonl:2` → code=-32000 msg=\"Parameter 'code' raised a GDScript runtime error at..."
+    },
+    "running_game_create_input_recording": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32000": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_rec/h9-task113/trace-game.jsonl:48` → code=-32000 msg=\"An input recording is already running in this..."
+    },
+    "running_game_stop_input_recording": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/c8-task120/trace-game.jsonl:8` → code=-32602 msg=\"Unknown parameter 'undeclared_probe' for tool..."
+    },
+    "running_game_play_input_recording": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_rec/h9-task113/trace-game.jsonl:52` → code=-32602 msg=\"Parameter 'events' must not be empty: there i..."
+    },
+    "running_game_find_nodes_by_script": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: script",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_scene2/c23-after-task110/trace-game.jsonl:24` → code=-32602 msg=\"Parameter 'script' must be a string..."
+    },
+    "running_game_get_autoload_node": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: name",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_scene2/c23-after-task110/trace-game.jsonl:48` → code=-32001 msg=\"Autoload 'NoSuchAuto' not found\"；本轮..."
+    },
+    "running_game_get_node_properties_batch": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 4
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: nodes",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 4,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_write3/c4c-task111/trace-game.jsonl:36` → code=-32602 msg=\"Parameter 'nodes' must be an array, got S..."
+    },
+    "running_game_find_ui_elements": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "wrong_type_optional",
+      "probe_message": "Parameter 'type_filter' must be a string, got float",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_scene2/c23-after-task110/trace-game.jsonl:36` → code=-32602 msg=\"Unknown parameter 'bogus_argument' ..."
+    },
+    "running_game_simulate_button_click_by_text": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: text",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_scene2/c23-after-task110/trace-game.jsonl:108` → code=-32001 msg=\"A visible Button whose text contai..."
+    },
+    "running_game_find_node_when_available": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32000": 9
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 9,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/c6-task118/trace-game.jsonl:12` → code=-32000 msg=\"Deferred call timed out after 1000 ms: waiti..."
+    },
+    "running_game_find_nearby_nodes": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: position",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_scene2/c23-after-task110/trace-game.jsonl:12` → code=-32602 msg=\"Parameter 'position' must be an obj..."
+    },
+    "running_game_move_player_to_target": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: target",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_nav/h4-task113/trace-game.jsonl:12` → code=-32001 msg=\"Target node 'NoSuchNode' not found\"；本轮活体探针 → ..."
+    },
+    "running_game_capture_signal_emissions": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 10
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_paths",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 10,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_scene2/c23-after-task110/trace-game.jsonl:95` → code=-32001 msg=\"Node 'NoSuchNode' not found\"；本轮活体探针..."
+    },
+    "editor_get_performance_monitors": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_scene2/c23-after-task110/trace-editor.jsonl:182` → code=-32602 msg=\"Unknown parameter 'bogus_argumen..."
+    },
+    "project_list_scripts": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:144` → code=-32602 msg=\"Unknown parameter 'bogus_argument' for t..."
+    },
+    "project_read_script": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-smoke/trace-editor.jsonl:9` → code=-32001 msg=\"File 'res://src/NoSuchFile.cs' not found\"；本轮..."
+    },
+    "project_create_script": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "file_effect",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1c-task110/trace-editor.jsonl:48` → code=-32602 msg=\"Parameter 'path' must be a string, got f..."
+    },
+    "project_edit_script": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "file_effect",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/c8-task120/trace-editor.jsonl:14` → code=-32602 msg=\"Unknown parameter 'undeclared_probe' for t..."
+    },
+    "editor_set_node_script": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 6
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 6,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_write2/c4b-task111/trace-editor.jsonl:146` → code=-32001 msg=\"Script 'res://src/no_such_script.cs' n..."
+    },
+    "editor_get_open_scripts": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_scene2/c23-after-task110/trace-editor.jsonl:146` → code=-32602 msg=\"Unknown parameter 'bogus_argumen..."
+    },
+    "project_validate_script": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32000": 12,
+        "-32001": 3
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 15,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:374` → code=-32000 msg=\"Cannot validate 'res://src/PongGame.cs':..."
+    },
+    "editor_simulate_key": {
+      "has_trace_real_failure": false,
+      "trace_codes": {},
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: keycode",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 0,
+      "status": "未达(0)",
+      "channel": "editor_state",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": false,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "corpus 里没有该工具的失败调用；本轮活体探针 → -32602 msg=\"Missing required parameter: keycode\"；强度=strong"
+    },
+    "editor_simulate_mouse_click": {
+      "has_trace_real_failure": false,
+      "trace_codes": {},
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 0,
+      "status": "未达(0)",
+      "channel": "editor_state",
+      "matrix_state": "**present**",
+      "neg_cell_has_trace_pointer": false,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "**TASK-144 C**：声明外参数名 ⇒ 注册器未声明参数门（`tool_registry.cpp:864`，在 `handler` 之前）真跑拒绝 `-32602`，见 `probe-u2.json`；强度=**strong**"
+    },
+    "editor_simulate_mouse_move": {
+      "has_trace_real_failure": false,
+      "trace_codes": {},
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 0,
+      "status": "未达(0)",
+      "channel": "editor_state",
+      "matrix_state": "**present**",
+      "neg_cell_has_trace_pointer": false,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "**TASK-144 C**：声明外参数名 ⇒ 注册器未声明参数门（`tool_registry.cpp:864`，在 `handler` 之前）真跑拒绝 `-32602`，见 `probe-u2.json`；强度=**strong**"
+    },
+    "editor_simulate_input_action": {
+      "has_trace_real_failure": false,
+      "trace_codes": {},
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: action",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 0,
+      "status": "未达(0)",
+      "channel": "editor_state",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": false,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "corpus 里没有该工具的失败调用；本轮活体探针 → -32602 msg=\"Missing required parameter: action\"；强度=strong"
+    },
+    "editor_get_input_actions": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_scene2/c23-after-task110/trace-editor.jsonl:74` → code=-32602 msg=\"Unknown parameter 'bogus_argument..."
+    },
+    "editor_add_input_action": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: action",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "file_effect",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/c8-task120/trace-editor.jsonl:16` → code=-32602 msg=\"Unknown parameter 'undeclared_probe' for t..."
+    },
+    "editor_simulate_input_sequence": {
+      "has_trace_real_failure": false,
+      "trace_codes": {},
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: events",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 0,
+      "status": "未达(0)",
+      "channel": "editor_state",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": false,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "corpus 里没有该工具的失败调用；本轮活体探针 → -32602 msg=\"Missing required parameter: events\"；强度=strong"
+    },
+    "editor_find_nodes_by_type": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: type",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_scene2/c23-after-task110/trace-editor.jsonl:38` → code=-32602 msg=\"Parameter 'type' must be a string..."
+    },
+    "editor_set_node_property_batch": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 5
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_type",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 5,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_write2/c4b-task111/trace-editor.jsonl:122` → code=-32602 msg=\"Parameter 'node_type' must be a string..."
+    },
+    "editor_list_signal_connections": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 4
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "wrong_type_optional",
+      "probe_message": "Parameter 'node_path' must be a string, got float",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 4,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_scene2/c23-after-task110/trace-editor.jsonl:122` → code=-32602 msg=\"Parameter 'scope' is 'bogus'; th..."
+    },
+    "editor_add_nodes_batch": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 2,
+        "-32000": 40
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: nodes",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 42,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_write2/c4b-task111/trace-editor.jsonl:12` → code=-32001 msg=\"nodes[1]: parent 'Host' not found\"；本轮活体..."
+    },
+    "project_find_files_referencing_symbol": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: pattern",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1b-task110/trace-editor.jsonl:61` → code=-32602 msg=\"Parameter 'pattern' must be a string, go..."
+    },
+    "project_get_scene_dependencies": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:288` → code=-32001 msg=\"File 'res://scenes/absent.tscn' not foun..."
+    },
+    "project_set_node_property_across_scenes": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: type",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "file_effect",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1c-task110/trace-editor.jsonl:24` → code=-32602 msg=\"Parameter 'type' must be a string, got f..."
+    },
+    "editor_list_animations": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl:56` → code=-32001 msg=\"Node 'NoSuchNode' in the edited scene no..."
+    },
+    "editor_create_animation": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl:14` → code=-32602 msg=\"'length' must not be negative: Animation..."
+    },
+    "editor_add_animation_track": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl:32` → code=-32602 msg=\"'track_type' must be one of the engine's..."
+    },
+    "editor_set_animation_keyframe": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl:44` → code=-32001 msg=\"Track index 99 in animation 'Anim1' not ..."
+    },
+    "editor_get_animation_info": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl:68` → code=-32001 msg=\"Animation 'NoSuchAnim' on AnimationPlaye..."
+    },
+    "editor_remove_animation": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 3
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 3,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl:198` → code=-32001 msg=\"Animation 'NoSuchAnim' in the Animation..."
+    },
+    "editor_get_tilemap_info": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/h3-task111/trace-editor.jsonl:50` → code=-32001 msg=\"Node 'NoSuchNode' in the edited scene not ..."
+    },
+    "editor_get_tilemap_used_cells": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/h3-task111/trace-editor.jsonl:62` → code=-32001 msg=\"Node 'NoSuchNode' in the edited scene not ..."
+    },
+    "editor_remove_all_tilemap_cells": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/h3-task111/trace-editor.jsonl:94` → code=-32001 msg=\"Node 'NoSuchNode' in the edited scene not ..."
+    },
+    "editor_set_tilemap_cell": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/h3-task111/trace-editor.jsonl:26` → code=-32602 msg=\"The TileSet of this TileMapLayer has no so..."
+    },
+    "editor_set_tilemap_cells_in_rect": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/h3-task111/trace-editor.jsonl:38` → code=-32602 msg=\"The TileSet of this TileMapLayer has no so..."
+    },
+    "editor_get_tilemap_cell": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/h3-task111/trace-editor.jsonl:74` → code=-32602 msg=\"Parameter 'x' must be an integer, got Stri..."
+    },
+    "project_read_resource": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:324` → code=-32001 msg=\"Resource 'res://resources/absent.tres' n..."
+    },
+    "project_add_autoload": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: name",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "file_effect",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:468` → code=-32001 msg=\"File 'res://src/NoSuchFile.cs' not found..."
+    },
+    "project_remove_autoload": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: name",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "file_effect",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:480` → code=-32001 msg=\"Autoload 'NoSuchAutoload' not found\"；本轮活..."
+    },
+    "project_edit_resource": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "file_effect",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:444` → code=-32001 msg=\"Resource 'res://resources/absent.tres' n..."
+    },
+    "project_create_resource": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32000": 1,
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "file_effect",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_3d/h1b2-task115/trace-editor.jsonl:4` → code=-32000 msg=\"Resource already exists: res://assets/mat3d..."
+    },
+    "project_get_resource_preview": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 5,
+        "-32001": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 7,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:338` → code=-32602 msg=\"Resource type 'PackedScene' does not hav..."
+    },
+    "project_get_export_info": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_export/h8-task114/trace-editor.jsonl:16` → code=-32602 msg=\"Unknown parameter 'preset_name' for tool..."
+    },
+    "project_list_export_presets": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_export/h8-task114/trace-editor.jsonl:14` → code=-32602 msg=\"Unknown parameter 'preset_name' for tool..."
+    },
+    "project_read_shader": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:252` → code=-32001 msg=\"Shader file 'res://shaders/absent.gdshad..."
+    },
+    "project_create_shader": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "file_effect",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:12` → code=-32602 msg=\"Parameter 'path' must name a shader file ..."
+    },
+    "project_edit_shader": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "file_effect",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:24` → code=-32001 msg=\"Shader file 'res://shaders/absent.gdshade..."
+    },
+    "editor_set_shader_material": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 6
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 6,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_write3/c4c-task111/trace-editor.jsonl:234` → code=-32001 msg=\"Shader resource 'res://shaders/no_such..."
+    },
+    "editor_set_shader_param": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 14
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 14,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_write3/c4c-task111/trace-editor.jsonl:236` → code=-32001 msg=\"Shader parameter 'speed' of 'res://sha..."
+    },
+    "project_get_shader_params": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:264` → code=-32001 msg=\"Shader resource 'res://shaders/absent.gd..."
+    },
+    "editor_add_raycast": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 9,
+        "-32602": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 11,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_write2/c4b-task111/trace-editor.jsonl:54` → code=-32001 msg=\"Parent 'BodyA' not found\"；台账 boundary=1..."
+    },
+    "editor_setup_collision_shape": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 7,
+        "-32602": 4
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 11,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_write2/c4b-task111/trace-editor.jsonl:14` → code=-32001 msg=\"Node 'BodyA' not found\"；本轮活体探针 → -32602..."
+    },
+    "editor_set_physics_layers": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 2,
+        "-32602": 4
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 6,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_write3/c4c-task111/trace-editor.jsonl:192` → code=-32001 msg=\"Node 'PB3' in the edited scene not fou..."
+    },
+    "editor_get_physics_layers": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 4,
+        "-32001": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 6,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_scene2/c23-after-task110/trace-editor.jsonl:104` → code=-32602 msg=\"Node '.' is a Node2D and has no ..."
+    },
+    "editor_setup_physics_body": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 5,
+        "-32001": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 7,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_write3/c4c-task111/trace-editor.jsonl:174` → code=-32602 msg=\"Unknown body type: 'NotABodyClass': no..."
+    },
+    "editor_get_collision_info": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 4
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "wrong_type_optional",
+      "probe_message": "Parameter 'node_path' must be a string, got float",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 4,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_scene2/c23-after-task110/trace-editor.jsonl:56` → code=-32001 msg=\"Node 'BodyShape' in the edited sc..."
+    },
+    "editor_add_mesh_instance": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 3
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 3,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_3d/h1-task111/trace-editor.jsonl:15` → code=-32001 msg=\"Parent 'NoSuchParent' not found\"；台账 boundary..."
+    },
+    "editor_setup_camera_3d": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 3
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 3,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_3d/h1-task111/trace-editor.jsonl:39` → code=-32001 msg=\"Parent 'NoSuchNode' not found\"；本轮活体探针 → -326..."
+    },
+    "editor_setup_lighting": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 3
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 3,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_3d/h1-task111/trace-editor.jsonl:75` → code=-32602 msg=\"Unknown light_type: 'lava'. Available: direc..."
+    },
+    "editor_set_material_3d": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32000": 1,
+        "-32001": 4
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 5,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_3d/h1-task111/trace-editor.jsonl:21` → code=-32000 msg=\"MeshInstance3D 'MeshA' has no mesh, so it ha..."
+    },
+    "editor_setup_world_environment": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 3
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 3,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_3d/h1-task111/trace-editor.jsonl:87` → code=-32602 msg=\"Parameter 'bg_color' must be an object with ..."
+    },
+    "editor_add_gridmap": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: mesh_library_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/c6-task118/trace-editor.jsonl:15` → code=-32001 msg=\"MeshLibrary 'res://assets/no_such_library...."
+    },
+    "editor_add_audio_player": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_audio/h5-task113/trace-editor.jsonl:42` → code=-32001 msg=\"Parent node 'NoSuchParent' in the edited ..."
+    },
+    "editor_get_audio_info": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_audio/h5-task113/trace-editor.jsonl:66` → code=-32602 msg=\"Unknown parameter 'bogus_argument' for to..."
+    },
+    "editor_get_audio_bus_layout": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_audio/h5-task113/trace-editor.jsonl:54` → code=-32602 msg=\"Unknown parameter 'bogus_argument' for to..."
+    },
+    "editor_add_audio_bus": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32000": 1,
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: name",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_audio/h5-task113/trace-editor.jsonl:14` → code=-32000 msg=\"A bus named 'Music' already exists\"；本轮活体探..."
+    },
+    "editor_set_audio_bus_property": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 2,
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: bus_index",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 3,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_audio/h5-task113/trace-editor.jsonl:78` → code=-32602 msg=\"Unknown bus property 'no_such_property'. ..."
+    },
+    "editor_add_audio_bus_effect": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1,
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: bus_index",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_audio/h5-task113/trace-editor.jsonl:28` → code=-32602 msg=\"effect_type 'Node' is not an AudioEffect ..."
+    },
+    "project_create_theme": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32000": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "file_effect",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:36` → code=-32000 msg=\"Theme already exists: res://themes/ex1.tr..."
+    },
+    "project_set_theme_color": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: theme_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "file_effect",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:395` → code=-32001 msg=\"Theme resource 'res://themes/absent.tres..."
+    },
+    "project_set_theme_constant": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: theme_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "file_effect",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:408` → code=-32001 msg=\"Theme resource 'res://themes/absent.tres..."
+    },
+    "project_set_theme_font_size": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: theme_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "file_effect",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:420` → code=-32001 msg=\"Theme resource 'res://themes/absent.tres..."
+    },
+    "project_set_theme_stylebox": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: theme_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "file_effect",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:432` → code=-32001 msg=\"Theme resource 'res://themes/absent.tres..."
+    },
+    "editor_set_control_theme": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 6
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 6,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_write3/c4c-task111/trace-editor.jsonl:210` → code=-32001 msg=\"Theme resource 'res://themes/no_such_t..."
+    },
+    "project_get_theme_info": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: theme_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:336` → code=-32001 msg=\"Theme resource 'res://themes/absent.tres..."
+    },
+    "editor_create_animation_tree": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl:80` → code=-32001 msg=\"Node 'NoSuchPlayer' in the edited scene ..."
+    },
+    "editor_get_animation_tree_structure": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl:186` → code=-32001 msg=\"Node 'NoSuchTree' in the edited scene n..."
+    },
+    "editor_add_state_machine_state": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl:92` → code=-32602 msg=\"'state_type' must name the engine class ..."
+    },
+    "editor_remove_state_machine_state": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 7
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 7,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl:150` → code=-32001 msg=\"State 'NoSuchState' in the state machin..."
+    },
+    "editor_add_state_machine_transition": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl:126` → code=-32001 msg=\"State 'NoSuchState' (from_state) in the..."
+    },
+    "editor_remove_state_machine_transition": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl:138` → code=-32001 msg=\"Transition 'Idle' -&gt; 'Fall' not foun..."
+    },
+    "editor_set_blend_tree_node": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 7
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 7,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl:162` → code=-32001 msg=\"State 'NoSuchState' (blend_tree_state) ..."
+    },
+    "editor_set_animation_tree_parameter": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 4
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 4,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_anim2/h2b-task111/trace-editor.jsonl:174` → code=-32001 msg=\"Parameter 'parameters/no_such_parameter..."
+    },
+    "editor_setup_navigation_region": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_nav/h4-task113/trace-editor.jsonl:14` → code=-32001 msg=\"Parent 'NoSuchParent' not found\"；本轮活体探针 → -..."
+    },
+    "editor_bake_navigation_mesh": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: navigation_region_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_nav/h4-task113/trace-editor.jsonl:52` → code=-32602 msg=\"Node 'HUD' is a Label, not a NavigationRegi..."
+    },
+    "editor_setup_navigation_agent": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_nav/h4-task113/trace-editor.jsonl:26` → code=-32602 msg=\"Unknown agent_type: '4D'. Available: 2D, 3D..."
+    },
+    "editor_set_navigation_layers": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_nav/h4-task113/trace-editor.jsonl:38` → code=-32602 msg=\"'layers' must be a 32-bit navigation layer ..."
+    },
+    "editor_get_navigation_info": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "wrong_type_optional",
+      "probe_message": "Parameter 'node_path' must be a string, got float",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_nav/h4-task113/trace-editor.jsonl:64` → code=-32001 msg=\"Node 'NoSuchNode' in the edited scene not f..."
+    },
+    "editor_create_particles": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32000": 1,
+        "-32602": 1,
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 3,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_particles/h6-task113/trace-editor.jsonl:14` → code=-32000 msg=\"Node '.' already has a child named 'P..."
+    },
+    "editor_set_particle_material": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 3
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 3,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_particles/h6-task113/trace-editor.jsonl:44` → code=-32602 msg=\"'material_params' must not be empty: ..."
+    },
+    "editor_set_particle_color_gradient": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 2,
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 3,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_particles/h6-task113/trace-editor.jsonl:60` → code=-32602 msg=\"'colors' must not be empty: a gradien..."
+    },
+    "editor_set_particle_preset": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1,
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_particles/h6-task113/trace-editor.jsonl:30` → code=-32602 msg=\"Unknown preset: 'lava'. Valid presets..."
+    },
+    "editor_get_particle_info": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_particles/h6-task113/trace-editor.jsonl:78` → code=-32001 msg=\"Node 'NoSuchNode' in the edited scene..."
+    },
+    "project_find_unused_resources": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "wrong_type_optional",
+      "probe_message": "Parameter 'include_addons' must be a boolean, got String",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:156` → code=-32001 msg=\"Directory 'res://no_such_dir' not found\"..."
+    },
+    "editor_analyze_signal_flow": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 4
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "wrong_type_optional",
+      "probe_message": "Parameter 'node_path' must be a string, got float",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 4,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_scene2/c23-after-task110/trace-editor.jsonl:128` → code=-32001 msg=\"Node 'Main' not found\"；本轮活体探针 → ..."
+    },
+    "project_analyze_scene_complexity": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "wrong_type_optional",
+      "probe_message": "Parameter 'path' must be a string, got float",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:312` → code=-32001 msg=\"Scene 'res://scenes/absent.tscn' not fou..."
+    },
+    "project_find_script_references": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: query",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1b-task110/trace-editor.jsonl:73` → code=-32001 msg=\"Directory 'res://no_such_dir' not found\"..."
+    },
+    "project_detect_circular_dependencies": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "wrong_type_optional",
+      "probe_message": "Parameter 'include_addons' must be a boolean, got String",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:168` → code=-32001 msg=\"Directory 'res://no_such_dir' not found\"..."
+    },
+    "project_get_statistics": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 2
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "wrong_type_optional",
+      "probe_message": "Parameter 'include_addons' must be a boolean, got String",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 2,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-smoke/trace-editor.jsonl:17` → code=-32001 msg=\"Directory 'res://no_such_dir' not found\"；本轮..."
+    },
+    "running_game_run_test_scenario": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: steps",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/c8-task120/trace-game.jsonl:10` → code=-32602 msg=\"Unknown parameter 'undeclared_probe' for too..."
+    },
+    "running_game_assert_node_state": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 115
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: node_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 115,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/asteroids/ast-task098-r1/trace-game.jsonl:106` → code=-32001 msg=\"Property 'NoSuchProperty' on node '/root/Main' n..."
+    },
+    "running_game_assert_screen_text": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: text",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/c8-task120/trace-game.jsonl:12` → code=-32602 msg=\"Unknown parameter 'undeclared_probe' for too..."
+    },
+    "running_game_run_stress_test": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "missing",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/c8-task120/trace-game.jsonl:14` → code=-32602 msg=\"Unknown parameter 'undeclared_probe' for too..."
+    },
+    "editor_get_test_report": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "wrong_type_optional",
+      "probe_message": "Parameter 'clear' must be a boolean, got String",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_editor/h7-task115/trace-editor.jsonl:98` → code=-32602 msg=\"Parameter 'clear' must be a boolean, got..."
+    },
+    "os_list_android_devices": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/c7-task118/trace-editor.jsonl:12` → code=-32602 msg=\"Unknown parameter 'unexpected' for tool 'o..."
+    },
+    "project_get_android_preset_info": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32000": 5,
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "wrong_type_optional",
+      "probe_message": "Parameter 'preset_index' must be an integer, got String",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 6,
+      "status": "计数达标缺证据",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/c7-task118/trace-editor.jsonl:14` → code=-32000 msg=\"No Android export preset is configured in ..."
+    },
+    "os_deploy_to_android_device": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 5,
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: preset_name",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 6,
+      "status": "计数达标缺证据",
+      "channel": "file_effect",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/c7-task118/trace-editor.jsonl:26` → code=-32001 msg=\"Export preset 'NoSuchAndroidPreset' not fo..."
+    },
+    "project_build_csharp": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "file_effect",
+      "matrix_state": "missing",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/c8-task120/trace-editor.jsonl:18` → code=-32602 msg=\"Unknown parameter 'undeclared_probe' for t..."
+    },
+    "project_write_text_file": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "file_effect",
+      "matrix_state": "present",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:84` → code=-32602 msg=\"Parameter 'path' names a '.tscn' file ('r..."
+    },
+    "project_validate_scripts": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32602": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "not_probed",
+      "probe_kind": null,
+      "probe_message": null,
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/c8-task120/trace-editor.jsonl:20` → code=-32602 msg=\"Unknown parameter 'undeclared_probe' for t..."
+    },
+    "editor_set_node_script_batch": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: script_path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "editor_state",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": true,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_grid/c6-task118/trace-editor.jsonl:29` → code=-32001 msg=\"Node 'NoSuchNode' not found\"；本轮活体探针 → -326..."
+    },
+    "editor_set_node_property_updates": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 2,
+        "-32602": 5
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter 'updates'",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 7,
+      "status": "达标",
+      "channel": "pixel_effect",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_write2/c4b-task111/trace-editor.jsonl:128` → code=-32001 msg=\"updates[0]: Node 'Tick' not found\"；本轮活..."
+    },
+    "project_read_text_file": {
+      "has_trace_real_failure": true,
+      "trace_codes": {
+        "-32001": 1
+      },
+      "trace_soft_failures": false,
+      "probe_verdict": "refused_-32602",
+      "probe_kind": "missing_required",
+      "probe_message": "Missing required parameter: path",
+      "probe_count_unit": null,
+      "u2_probe": null,
+      "boundary": 1,
+      "status": "达标",
+      "channel": "payload",
+      "matrix_state": "missing→由探针补",
+      "neg_cell_has_trace_pointer": true,
+      "neg_cell_mentions_probe": false,
+      "neg_cell": "真跑失败调用 `runs/_exercises/ex_files/c1-task110/trace-editor.jsonl:240` → code=-32001 msg=\"File 'res://src/NoSuchFile.cs' not found..."
+    }
+  },
+  "counts": {
+    "tools": 177,
+    "tools_with_real_trace_failure": 172,
+    "tools_with_probe_32602": 142,
+    "tools_with_boundary_ge1": 172,
+    "tools_with_no_strong_evidence": 2,
+    "no_strong_evidence": [
+      "editor_simulate_mouse_click",
+      "editor_simulate_mouse_move"
+    ],
+    "soft_only": [],
+    "probe_missing_required": 121,
+    "probe_wrong_type": 21,
+    "probe_unknown_parameter": 0,
+    "matrix_rows_with_trace_pointer_in_neg": 172,
+    "matrix_rows_with_probe_mention_in_neg": 35,
+    "matrix_rows_missing": [],
+    "u2_tools": []
+  }
+}

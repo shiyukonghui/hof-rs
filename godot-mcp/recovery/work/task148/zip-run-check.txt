@@ -1,0 +1,39 @@
+delivered zip : F:\moonbit-hof-rs\godot-mcp\dist\godot-mcp-20games-exe-20260928-1528-part1of1.zip
+volume        : godot-mcp-20games-exe-20260928-1528-part1of1
+baseline reserved listeners on [9877, 9888, 9889, 8080, 8081] : [8080, 8081]
+
+==============================================================================
+GAME pong -- 189 files in the archive
+==============================================================================
+extracted files re-hashed against MANIFEST : 189/189 ok
+run command : F:\moonbit-hof-rs\godot-mcp\recovery\work\task148\unzip-test\godot-mcp-20games-exe-20260928-1528-part1of1\games\pong\pong.exe --headless --quit-after 120
+working dir : F:\moonbit-hof-rs\godot-mcp\recovery\work\task148\unzip-test\godot-mcp-20games-exe-20260928-1528-part1of1\games\pong
+exit code   : 0   (1.24 s)
+stdout tail :
+    PONG_READY name=Main ball=(392, 268) ball_v=(0, 0) win_score=5 auto_serve=False
+    [MCP] pending_timeout_ms=30000 (configured=30000) pending_ticks_per_frame=8
+    [MCP] trace=off (default; use --mcp-trace=<path> or godot_mcp/trace_file to enable)
+    [MCP] capture=off (default; use --mcp-capture=on_error|every_call together with --mcp-trace=<path>)
+    [MCP] role=game configured_port=0 source=default listen=false
+    [MCP] not listening (get_port()=0)
+
+==============================================================================
+GAME snake -- 189 files in the archive
+==============================================================================
+extracted files re-hashed against MANIFEST : 189/189 ok
+run command : F:\moonbit-hof-rs\godot-mcp\recovery\work\task148\unzip-test\godot-mcp-20games-exe-20260928-1528-part1of1\games\snake\snake.exe --headless --quit-after 120
+working dir : F:\moonbit-hof-rs\godot-mcp\recovery\work\task148\unzip-test\godot-mcp-20games-exe-20260928-1528-part1of1\games\snake
+exit code   : 0   (1.24 s)
+stdout tail :
+    [MCP] pending_timeout_ms=30000 (configured=30000) pending_ticks_per_frame=8
+    [MCP] trace=off (default; use --mcp-trace=<path> or godot_mcp/trace_file to enable)
+    [MCP] capture=off (default; use --mcp-capture=on_error|every_call together with --mcp-trace=<path>)
+    [MCP] role=game configured_port=0 source=default listen=false
+    [MCP] not listening (get_port()=0)
+    SNAKE_TICK head=5,10 dir=1,0 len=3 score=0 over=False ticks=0 waiting=True
+
+final reserved listeners on [9877, 9888, 9889, 8080, 8081] : [8080, 8081]
+
+ZIP RUN-CHECK VERDICT: PASS
+  both extracted games re-hash 100% against the in-zip MANIFEST and run
+  headless (120 frames) with exit code 0, without opening any MCP port.

@@ -1,0 +1,128 @@
+{
+  "matrix": "F:\\moonbit-hof-rs\\godot-mcp\\recovery\\TEST-CASES.md",
+  "bytes": 510747,
+  "lines": 1167,
+  "sha256": "C7A9A7DC83524716FFFBFFBDA50C648C6AD5A42DE94DD308476244F95C62D9F0",
+  "distinct_ids": {
+    "TC-TOOL": {
+      "distinct": 177,
+      "occurrences": 177,
+      "sample": [
+        "TC-TOOL-editor_add_animation_track",
+        "TC-TOOL-editor_add_audio_bus",
+        "TC-TOOL-editor_add_audio_bus_effect",
+        "TC-TOOL-editor_add_audio_player",
+        "TC-TOOL-editor_add_gridmap"
+      ]
+    },
+    "TC-GATE": {
+      "distinct": 10,
+      "occurrences": 10,
+      "sample": [
+        "TC-GATE-g01",
+        "TC-GATE-g02",
+        "TC-GATE-g03",
+        "TC-GATE-g04",
+        "TC-GATE-g05"
+      ]
+    },
+    "TC-M1": {
+      "distinct": 22,
+      "occurrences": 22,
+      "sample": [
+        "TC-M1-case0_repo_exit_code_propagation",
+        "TC-M1-case10_half_packet",
+        "TC-M1-case11_body_too_large",
+        "TC-M1-case12_game_process_endpoint",
+        "TC-M1-case13_game_without_port"
+      ]
+    },
+    "TC-ENG": {
+      "distinct": 159,
+      "occurrences": 159,
+      "sample": [
+        "TC-ENG-001",
+        "TC-ENG-002",
+        "TC-ENG-003",
+        "TC-ENG-004",
+        "TC-ENG-005"
+      ]
+    },
+    "TC-PY": {
+      "distinct": 157,
+      "occurrences": 404,
+      "sample": [
+        "TC-PY-*",
+        "TC-PY-<文件>:<条目>",
+        "TC-PY-test_contract_forms.py:test_every_declared_enum_and_type_is_well_formed",
+        "TC-PY-test_contract_forms.py:test_every_input_schema_is_internally_consistent",
+        "TC-PY-test_contract_forms.py:test_every_tool_declares_one_known_evidence_channel"
+      ]
+    },
+    "TC-CONS": {
+      "distinct": 13,
+      "occurrences": 13,
+      "sample": [
+        "TC-CONS-check_contract_subset.ps1",
+        "TC-CONS-check_engine_anchor.ps1",
+        "TC-CONS-check_exit_propagation.py",
+        "TC-CONS-check_hardcoded_counts.py",
+        "TC-CONS-check_rename_map.py"
+      ]
+    }
+  },
+  "distinct_sum": 538,
+  "table_rows_by_family": {
+    "TC-TOOL": 177,
+    "TC-GATE": 10,
+    "TC-M1": 22,
+    "TC-ENG": 159,
+    "TC-PY": 400,
+    "TC-CONS": 13
+  },
+  "row_id_counts": {
+    "TC-M1": 22,
+    "TC-ENG": 159,
+    "TC-GATE": 10,
+    "TC-CONS": 13,
+    "TC-PY": 400,
+    "TC-TOOL": 177
+  },
+  "declared_in_section_1_1": {
+    "TOTAL": 785
+  },
+  "sections": [
+    "## 0. 盘点口径与范围",
+    "### 0.1 算入的来源（每条都是本轮亲自读到的文件/产物）",
+    "### 0.2 明确**不**算入的来源与理由",
+    "### 0.3 标注方法（矩阵 C/D 的输入/输出形式是**机械派生**的，不是人写的感觉）",
+    "## 1. 统计",
+    "### 1.1 用例总数（按编号族）",
+    "### 1.2 逐工具输入/输出/反例覆盖",
+    "### 1.3 矩阵 C（159 个引擎用例）的派生覆盖",
+    "### 1.4 缺口汇总（这是本任务想要的那几个数字）",
+    "## 2. 矩阵 A：177 个契约工具（`TC-TOOL-*`）",
+    "## 3. 矩阵 B1：十道门（`TC-GATE-gNN`）",
+    "## 4. 矩阵 B2：accept_m1 的 22 个 case（`TC-M1-*`）",
+    "## 5. 矩阵 C：引擎断言套件（`TC-ENG-NNN`，159 条）",
+    "## 6. 矩阵 D：`tools/tests/**`（`TC-PY-*`）",
+    "## 7. 矩阵 E：一致性/回归脚本（`TC-CONS-*`）",
+    "## 8. 真跑结果（原始命令 + 通过/失败/跳过 + 摘要）",
+    "### 8.1 tools/tests 与相关套件",
+    "### 8.2 十道门逐条",
+    "### 8.3 十门包装器的 preflight（不跑门，只看分类）",
+    "### 8.4 accept_m1",
+    "### 8.5 本轮**产生新证据**的两件事（真跑，不是声明）",
+    "### 8.6 覆盖台账重生成（陈旧性自查）与两个独立读取器的互证",
+    "## 9. 缺口、发现与未达标项（如实登记）",
+    "### 9.1 已补齐（本轮新增，全部真跑）",
+    "### 9.2 发现（按严重度）",
+    "### 9.3 未达标项（U）",
+    "## 10. 护栏、所有权与可复现",
+    "### 10.1 铁律逐条",
+    "### 10.2 文件所有权自查",
+    "### 10.3 TASK-142 残留处置",
+    "### 10.4 可复现",
+    "### 10.5 TASK-144 对本文件的更新（**只改上列相关行与统计，未重写矩阵**）"
+  ]
+}

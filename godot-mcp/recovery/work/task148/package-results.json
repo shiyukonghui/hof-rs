@@ -1,0 +1,36 @@
+[
+ {
+  "part": 1,
+  "zip": "F:\\moonbit-hof-rs\\godot-mcp\\dist\\godot-mcp-20games-exe-20260928-1528-part1of1.zip",
+  "name": "godot-mcp-20games-exe-20260928-1528-part1of1.zip",
+  "pkgname": "godot-mcp-20games-exe-20260928-1528-part1of1",
+  "games": [
+   "asteroids",
+   "bomberman",
+   "breakout",
+   "flappy",
+   "frogger",
+   "game2048",
+   "lunarlander",
+   "match3",
+   "minesweeper",
+   "missilecommand",
+   "pacman",
+   "platformer",
+   "pong",
+   "puzzlebobble",
+   "rtype",
+   "snake",
+   "sokoban",
+   "spaceinvaders",
+   "tetris",
+   "towerdefense"
+  ],
+  "payload_files": 3780,
+  "payload_bytes": 3239466195,
+  "zip_bytes": 1264863973,
+  "zip_sha256": "bc28ad360c105920cf25be9672814659232e76fb859a16cb3ac9c056584a84b4",
+  "manifest_sidecar": "F:\\moonbit-hof-rs\\godot-mcp\\dist\\godot-mcp-20games-exe-20260928-1528.MANIFEST.txt",
+  "sha256_sidecar": "F:\\moonbit-hof-rs\\godot-mcp\\dist\\godot-mcp-20games-exe-20260928-1528.sha256.txt"
+ }
+]

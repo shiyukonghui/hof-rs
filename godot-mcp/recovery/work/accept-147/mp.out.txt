@@ -1,0 +1,276 @@
+stability: a minimum round count is declared               OK
+stability: the minimum is at least 4 (TASK-141's four-roun OK
+stability: the declaration carries its own basis (measured OK
+stability: the declaration names who declared it           OK
+stability: the module constant is the declared number      OK
+stability: the insufficient state is named as the task req OK
+stability: neither state can count as a pass               OK
+stability: the declaration says 4 rounds, not 2            OK
+stability: 1 rounds is ROUNDS_INSUFFICIENT (not a judgemen OK
+stability: ... 1 rounds does NOT count as a pass           OK
+stability: ... 1 rounds reports the minimum it needed      OK
+stability: ... 1 rounds reports how many it got            OK
+stability: 2 rounds is ROUNDS_INSUFFICIENT (not a judgemen OK
+stability: ... 2 rounds does NOT count as a pass           OK
+stability: ... 2 rounds reports the minimum it needed      OK
+stability: ... 2 rounds reports how many it got            OK
+stability: 3 rounds is ROUNDS_INSUFFICIENT (not a judgemen OK
+stability: ... 3 rounds does NOT count as a pass           OK
+stability: ... 3 rounds reports the minimum it needed      OK
+stability: ... 3 rounds reports how many it got            OK
+stability: the insufficient state never becomes a PASS eve OK
+stability: four identical PASS rounds are STABLE           OK
+stability: ... and the all-PASS distribution counts as a p OK
+stability: ... the round count is reported                 OK
+stability: ... the per-round verdicts are reported         OK
+stability: ... the DISTRIBUTION is reported                OK
+stability: ... the consistency flag is reported            OK
+stability: ... the classes by round are reported           OK
+stability: four identical FAIL rounds are STABLE but never OK
+stability: four INCONCLUSIVE rounds are STABLE but never a OK
+stability: TASK-141's four-round shape is UNSTABLE         OK
+stability: ... and it does NOT count as a pass             OK
+stability: ... the DISTRIBUTION names all three classes    OK
+stability: ... the consistency flag is false               OK
+stability: ... the divergent rounds are listed             OK
+stability: ... the classes by round are listed             OK
+stability: the four-round divergence names the step and th OK
+stability: the judgement carries the window it was measure OK
+stability: the judgement carries the round LABELS          OK
+stability: the judgement carries the qualified per-round l OK
+stability: UNSTABLE can only REMOVE a pass (never create o OK
+stability: a legacy 'INSUFFICIENT_ROUNDS' input is still r OK
+pong policy: a live ball with a (0,0) velocity reading is  OK
+pong policy: ... the action sequence is not degenerate     OK
+pong policy: ... the first answer is still the serve a hum OK
+pong policy: ... and the second answer is NOT the same ser OK
+pong policy: ... a RUN of zero-velocity readings never rep OK
+pong policy: ... every answer is a declared action         OK
+pong policy: a really parked ball IS served once           OK
+pong policy: ... and once it is served the policy tracks i OK
+pong policy: an in-flight ball is tracked, not served      OK
+pong policy: ... and the tracker answers a declared action OK
+task142_cases PASSED (52 assertions)
+reporting: a reporting window is declared                  OK
+reporting: it is at or above the minimum window            OK
+reporting: the declaration carries its own basis           OK
+reporting: the module constant is the declared number      OK
+reporting: the state is named                              OK
+reporting: a run AT the reporting window is still a PASS   OK
+reporting: ... and still counts as a pass                  OK
+reporting: ... and is marked as at the reporting window    OK
+reporting: a run BELOW it keeps its measured verdict       OK
+reporting: ... but does NOT count as a pass                OK
+reporting: ... the raw verdict is preserved beside it      OK
+reporting: ... the state is named                          OK
+reporting: ... it is flagged reference-only in the label   OK
+reporting: the removal is one-way (it cannot create a pass OK
+attribution: the context names the window                  OK
+attribution: the context names the round                   OK
+attribution: the label carries both                        OK
+attribution: an unrecorded window/round is admitted, not i OK
+attribution: the label is a pure function of (verdict, con OK
+unstable: fewer rounds than the minimum is NOT a judgement OK
+unstable: ... and an insufficient set is not a pass either OK
+unstable: ... the minimum is reported with the judgement   OK
+unstable: the minimum is 4 or more independent rounds      OK
+unstable: two agreeing rounds are NOT a verdict (the batch OK
+unstable: four identical rounds are STABLE                 OK
+unstable: ... and a stable all-PASS set counts as a pass   OK
+unstable: ... the per-round labels are kept                OK
+unstable: four rounds that disagree are UNSTABLE           OK
+unstable: ... and it does NOT count as a pass              OK
+unstable: ... every round is listed as a divergent round   OK
+unstable: ... the classes are named                        OK
+unstable: ... the disagreement is named to the STEP and th OK
+unstable: a stable all-FAIL set is STABLE                  OK
+unstable: ... and does not count as a pass                 OK
+unstable: PASS vs PASS(baseline only) IS a disagreement    OK
+unstable: WINDOW_TOO_SHORT vs PASS IS a disagreement       OK
+unstable: MODEL_NO_PROGRESS is its own class               OK
+unstable: an UNSTABLE set is never a pass even if a round  OK
+unstable: an ack that vanished is named as the criterion   OK
+gate reporting: a run below the reporting window does not  OK
+gate reporting: the criterion names the state              OK
+gate reporting: the attribution carries window and round   OK
+gate reporting: the label carries both                     OK
+gate reporting: a run at the reporting window is unaffecte OK
+gate reporting: with no context nothing is invented        OK
+task140_cases PASSED (45 assertions)
+window: a minimum frame count is declared                  OK
+window: the declaration carries a basis                    OK
+window: it comes from the controls file                    OK
+window: a 29-frame window is NOT too short                 OK
+window: a 19-frame window IS too short                     OK
+window: the ACTION window is judged too (not just the cont OK
+window: the state is named, not just a boolean             OK
+window: an unrecorded span is 'unmeasured', never 'too sho OK
+window: an unmeasured span is not flagged                  OK
+window: a run measured at 30 frames is a normal PASS       OK
+window: ... and counts as a pass                           OK
+window: the same run at 3 frames is WINDOW_TOO_SHORT       OK
+window: ... and does NOT count as a pass                   OK
+window: ... the underlying verdict is preserved beside it  OK
+window: ... the offending steps are named                  OK
+window: the gate-side reading agrees the shorter run is no OK
+gate window: the raw verdict is preserved                  OK
+refusal: the game's counter is read from the state delta   OK
+refusal: an unrelated change is NOT a refusal              OK
+refusal: a refusal key that did not move is NOT a refusal  OK
+refusal: the evidence names the declared COUNTER, not a fr OK
+refusal: the evidence string is the counter's before -> af OK
+refusal: every declared counter that moved is listed       OK
+refusal: without game_side_fields the broad keys still wor OK
+refusal+progress: the run is a PASS                        OK
+refusal+progress: it counts as a pass                      OK
+refusal+progress: the refused steps are named              OK
+refusal+progress: they are NOT in the FAIL set             OK
+refusal+progress: the raw FAIL set is preserved beside it  OK
+refusal+progress: the rated denominator excludes them      OK
+refusal+progress: the rate is over the rated steps         OK
+refusal+progress: refusals are NOT counted as real progres OK
+refusal+progress: it is not a refusal-only run             OK
+gate agrees: refusal+progress is a PASS                    OK
+gate agrees: the refused steps                             OK
+gate agrees: they are dropped from the FAIL set            OK
+gate agrees: real progress excludes them                   OK
+gate agrees: counts_as_pass                                OK
+all-refused: the verdict is NOT a PASS                     OK
+all-refused: the verdict is FAIL                           OK
+all-refused: counts_as_pass is false                       OK
+all-refused: every step is a refused step                  OK
+all-refused: zero rated steps remain                       OK
+all-refused: zero real progress steps                      OK
+all-refused: it is flagged as a refusal-only run           OK
+all-refused: no model fixed point is claimed (the actions  OK
+all-refused: the why names the boundary                    OK
+gate: all-refused is NOT a PASS                            OK
+gate: all-refused verdict is FAIL                          OK
+gate: all-refused counts_as_pass is false                  OK
+gate: all-refused real progress is zero                    OK
+mostly-refused: not a PASS                                 OK
+mostly-refused: INCONCLUSIVE (too little real progress)    OK
+mostly-refused: real progress is 2                         OK
+no refusals: refused_step_count is 0                       OK
+no refusals: the FAIL set is the raw set                   OK
+no refusals: the rate has the full denominator             OK
+no refusals: still a plain PASS                            OK
+zero refusals: the floor does NOT apply (real progress 2 < OK
+zero refusals: the verdict is the rate's own FAIL          OK
+zero refusals: real progress is reported anyway            OK
+gate: the floor does not apply with zero refusals either   OK
+... but the floor DOES apply once a refusal removed a deno OK
+boundary: the floor is declared                            OK
+boundary: the floor carries a basis                        OK
+boundary: the floor is at least half the minimum step coun OK
+boundary: the floor is below what a no-refusal PASS alread OK
+task139_cases PASSED (67 assertions)
+clean run -> no MODEL_FIXED_POINT                          OK
+clean run -> pass=True                                     OK
+clean run -> fixed-point reading is a string               OK
+8 identical action+frame steps -> MODEL_FIXED_POINT        OK
+fixed point -> pass is NOT False (not a game defect)       OK
+fixed point -> why names it                                OK
+fixed point -> run length                                  OK
+fixed point -> steps listed                                OK
+fixed point -> action named                                OK
+fixed point -> threshold recorded                          OK
+fixed point -> marked as neither defect nor PASS           OK
+2 identical steps -> NOT a fixed point                     OK
+3 identical steps -> a fixed point                         OK
+same action, moving frames -> NOT a fixed point            OK
+a `wait` step breaks the fixed-point run                   OK
+varied actions + one static step -> pass=False (real FAIL) OK
+that FAIL is not relabelled a fixed point                  OK
+loop: MODEL_FIXED_POINT                                    OK
+loop: fixed point is not a PASS                            OK
+loop: fixed point is not a FAIL                            OK
+loop: clean run still PASS                                 OK
+loop: clean run has no fixed point                         OK
+loop and gate agree on the run length                      OK
+loop and gate agree on the steps                           OK
+loop and gate agree on the action                          OK
+probe criteria no longer offer `done`                      OK
+probe criteria still offer `wait`                          OK
+probe criteria still offer the declared action             OK
+mixed actions + no progress -> MODEL_NO_PROGRESS           OK
+... and the run really did vary its action                 OK
+... the whole 9-step run is the no-progress run            OK
+... its steps are listed                                   OK
+... it is NOT reported as a fixed point (the actions diffe OK
+... the game verdict is still the user's FAIL              OK
+... the failing steps are still recorded                   OK
+no-progress is marked neither defect nor PASS              OK
+no-progress threshold recorded                             OK
+same action + same frame -> MODEL_FIXED_POINT              OK
+... and the wider rule sees it too (both conclusions coexi OK
+a progressing run -> no MODEL_NO_PROGRESS                  OK
+a progressing run -> no MODEL_FIXED_POINT                  OK
+a progressing run -> still pass=True                       OK
+2 static steps -> NOT MODEL_NO_PROGRESS                    OK
+3 static steps -> MODEL_NO_PROGRESS                        OK
+a `wait` step breaks the no-progress run                   OK
+one progressing step resets the no-progress run            OK
+loop and gate agree: found                                 OK
+loop and gate agree: length                                OK
+loop and gate agree: steps                                 OK
+loop and gate agree: distinct actions                      OK
+loop: MODEL_NO_PROGRESS reported                           OK
+loop: that run is still FAIL (not softened to INCONCLUSIVE OK
+loop: no-progress is not a PASS                            OK
+margin declaration: baseline factor is 1.0 (the bare `>`)  OK
+margin declaration: strict factor is 2.0                   OK
+margin declaration: strict floor is 1.0                    OK
+margin declaration: the PASS criterion is the strict margi OK
+margin declaration: it comes from the controls file        OK
+1.09x: baseline says changed                               OK
+1.09x: strict says NOT changed                             OK
+1.09x: strict records the ratio                            OK
+1.20x: strict says NOT changed                             OK
+2.35x: strict says changed                                 OK
+strict implies baseline (never the other way round)        OK
+zero control: the floor decides (0.5 -> no)                OK
+zero control: the floor decides (1.0 -> yes)               OK
+margin run: the run is PASS(baseline only), not PASS       OK
+margin run: PASS(baseline only) does not count as a pass   OK
+margin run: the control verdict is preserved               OK
+margin run: the control rate is preserved                  OK
+margin run: strict verdict FAIL (the edge steps)           OK
+margin run: strict fail steps are the two edge steps       OK
+margin run: strict rate is still reported (0.75)           OK
+margin run: the strict margin is the default top-level cri OK
+margin run: the criterion is named in the summary          OK
+margin run: the edge steps are named                       OK
+margin run: the edge-step helper agrees with the summary   OK
+margin run: `changed_of` reads the two margins             OK
+margin=baseline: the control verdict is PASS               OK
+margin=baseline: the strict reading is preserved beside it OK
+margin=baseline: the criterion is named                    OK
+margin=strict: top-level verdict is PASS(baseline only)    OK
+margin=strict: the baseline verdict is preserved beside it OK
+a strict-clean run is a plain PASS                         OK
+a strict-clean run counts as a pass                        OK
+gate: the criterion is the strict margin                   OK
+gate: baseline reading is PASS                             OK
+gate: strict reading is FAIL                               OK
+gate: the criterion follows strict                         OK
+gate: the verdict is PASS(baseline only)                   OK
+gate: PASS(baseline only) does not count                   OK
+gate: the strict failing steps are the two edge steps      OK
+gate: the control reading records no failing step (the bas OK
+gate: a strict-clean run is a plain PASS                   OK
+gate: a strict-clean run counts                            OK
+gate: the declaration source is recorded                   OK
+loop and gate agree on the criterion                       OK
+loop and gate agree on the verdict string                  OK
+loop and gate agree on counts_as_pass                      OK
+loop and gate agree on the strict failing steps            OK
+pre-TASK-135 records: baseline verdict unchanged           OK
+pre-TASK-135 records: strict falls back to the baseline    OK
+pre-TASK-135 records: no edge steps claimed                OK
+gate: an all-ack-missing run is not a pass                 OK
+gate: the run's verdict is not PASS                        OK
+gate: the run's verdict is not FAIL                        OK
+gate: the model-player criterion note names the ack state  OK
+gate: a step carrying an ack_missing marker is not credite OK
+test_playability_model_player PASSED (108 assertions)

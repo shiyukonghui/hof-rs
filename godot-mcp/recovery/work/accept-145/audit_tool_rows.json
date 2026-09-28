@@ -1,0 +1,1899 @@
+{
+  "n_rows": 177,
+  "col_anomalies": [],
+  "mismatches": [
+    {
+      "id": "TC-TOOL-editor_add_animation_track",
+      "tool": "editor_add_animation_track",
+      "line": 203,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={animation, key_count, previous_track_index, track_index, track_path, track_type}...; 错误码=-32602 'track_type' must be one of the engine's own Animation::T...; 回读=state/readback; 副作用=no_mutation=12;"
+    },
+    {
+      "id": "TC-TOOL-editor_add_audio_bus",
+      "tool": "editor_add_audio_bus",
+      "line": 242,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={after_bus_index, bus_count, created, index, name, previous_bus_count}; 错误码=-32000 A bus named 'Music' already exists; 回读=state/readback; 副作用=no_mutation=7; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_add_audio_bus_effect",
+      "tool": "editor_add_audio_bus_effect",
+      "line": 244,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={added, bus_index, bus_name, effect_count, effect_index, effect_type}...; 错误码=-32602 effect_type 'Node' is not an AudioEffect (it is a Node); 回读=state/readback; 副作用=no_mutation=7; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_add_audio_player",
+      "tool": "editor_add_audio_player",
+      "line": 239,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={bus, created, name, node_path, owner, parent_path}...; 错误码=-32001 Parent node 'NoSuchParent' in the edited scene not found; 回读=state/readback; 副作用=no_mutation=6; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_add_gridmap",
+      "tool": "editor_add_gridmap",
+      "line": 238,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={created, mesh_library_path, mesh_library_set, name, node_path, parent_path}...; 错误码=-32001 MeshLibrary 'res://assets/no_such_library.tres' not found; 回读=state/readback; 副作用=no_mutation=12; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_add_input_action",
+      "tool": "editor_add_input_action",
+      "line": 192,
+      "what": "evidence channel not named in 回读",
+      "actual": "file_effect",
+      "out": "成功={action, action_state, created, event_count, key, persisted}...; 错误码=-32602 Unknown parameter 'undeclared_probe' for tool 'editor_add...; 回读=file/file_effect; 副作用=no_mutation=1, observed_changed=12"
+    },
+    {
+      "id": "TC-TOOL-editor_add_mesh_instance",
+      "tool": "editor_add_mesh_instance",
+      "line": 233,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={added, name, node_path, type}; 错误码=-32001 Parent 'NoSuchParent' not found; 回读=state/readback; 副作用=no_mutation=18; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_add_node",
+      "tool": "editor_add_node",
+      "line": 131,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={name, node_path, type}; 错误码=-32602 Missing required parameter: type; 回读=pixel/pixel_effect; 副作用=no_mutation=36; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-editor_add_nodes_batch",
+      "tool": "editor_add_nodes_batch",
+      "line": 197,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={count, created, errors, on_name_conflict, renamed, renamed_count}...; 错误码=-32001 nodes[1]: parent 'Host' not found; 回读=pixel/pixel_effect; 副作用=no_mutation=106; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-editor_add_raycast",
+      "tool": "editor_add_raycast",
+      "line": 227,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={added, name, node_path, type}; 错误码=-32001 Parent 'BodyA' not found; 回读=pixel/pixel_effect; 副作用=no_mutation=36; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-editor_add_resource_to_node_property",
+      "tool": "editor_add_resource_to_node_property",
+      "line": 140,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={node_path, property, resource_type}; 错误码=-32001 Node 'BodyA/CollisionShape2D' not found; 回读=pixel/pixel_effect; 副作用=no_mutation=33; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-editor_add_scene_instance",
+      "tool": "editor_add_scene_instance",
+      "line": 125,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={name, node_path, scene_path}; 错误码=-32001 Scene 'res://scenes/no_such_scene.tscn' not found; 回读=state/readback; 副作用=no_mutation=30; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_add_state_machine_state",
+      "tool": "editor_add_state_machine_state",
+      "line": 254,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={content}; 错误码=-32602 'state_type' must name the engine class the state holds: ...; 回读=state/readback; 副作用=no_mutation=18; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_add_state_machine_transition",
+      "tool": "editor_add_state_machine_transition",
+      "line": 256,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={content}; 错误码=-32001 State 'NoSuchState' (from_state) in the state machine not...; 回读=state/readback; 副作用=no_mutation=22; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_bake_navigation_mesh",
+      "tool": "editor_bake_navigation_mesh",
+      "line": 261,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={bake_signalled_done, baked, before_polygon_count, before_vertex_count, changed, frames_waited}...; 错误码=-32602 Node 'HUD' is a Label, not a NavigationRegion: baking nee...; 回读=pixel/pixel_effect; 副"
+    },
+    {
+      "id": "TC-TOOL-editor_connect_signal",
+      "tool": "editor_connect_signal",
+      "line": 137,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={connected, persisted, signal, source, target}; 错误码=-32001 Node 'NoSuchNode' not found; 回读=state/readback; 副作用=no_mutation=45; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-editor_create_animation",
+      "tool": "editor_create_animation",
+      "line": 202,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={animation_count, created, length, library, name, track_count}; 错误码=-32602 'length' must not be negative: Animation::set_length answ...; 回读=state/readback; 副作用=no_mutation=23; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_create_animation_tree",
+      "tool": "editor_create_animation_tree",
+      "line": 252,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={content}; 错误码=-32001 Node 'NoSuchPlayer' in the edited scene not found; 回读=state/readback; 副作用=no_mutation=12; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_create_particles",
+      "tool": "editor_create_particles",
+      "line": 265,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={amount, created, emitting, lifetime, name, node_path}...; 错误码=-32000 Node '.' already has a child named 'P1'; 回读=state/readback; 副作用=no_mutation=8; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_delete_node",
+      "tool": "editor_delete_node",
+      "line": 132,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={deferred, deleted, path}; 错误码=-32602 Unknown parameter 'undeclared_probe' for tool 'editor_del...; 回读=pixel/pixel_effect; 副作用=no_mutation=66; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-editor_disconnect_signal",
+      "tool": "editor_disconnect_signal",
+      "line": 138,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={disconnected, signal, source, target, was_persistent}; 错误码=-32001 Connection from signal 'visibility_changed' to method '_n...; 回读=state/readback; 副作用=no_mutation=6; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-editor_duplicate_node",
+      "tool": "editor_duplicate_node",
+      "line": 136,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={duplicated, name, node_path}; 错误码=-32001 Node 'Panel' not found; 回读=pixel/pixel_effect; 副作用=no_mutation=30; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-editor_open_scene",
+      "tool": "editor_open_scene",
+      "line": 123,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={opened, path}; 错误码=-32602 Unknown parameter 'undeclared_probe' for tool 'editor_ope...; 回读=pixel/pixel_effect; 副作用=no_mutation=87; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-editor_play_scene",
+      "tool": "editor_play_scene",
+      "line": 127,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={args_deduplicated, args_injected, endpoint, headless, mcp_port, mcp_port_source}...; 错误码=-32001 Scene 'res://scenes/no_such_scene.tscn' not found; 回读=state/readback; 副作用=no_mutation=7; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-editor_reload_plugin",
+      "tool": "editor_reload_plugin",
+      "line": 154,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={message, plugins, reloading}; 错误码=-32602 Unknown parameter 'bogus' for tool 'editor_reload_plugin'; 回读=state/readback; 副作用=no_mutation=6; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-editor_remove_all_tilemap_cells",
+      "tool": "editor_remove_all_tilemap_cells",
+      "line": 209,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={cell_count_before, cleared, node_path, node_type, remaining, removed}; 错误码=-32001 Node 'NoSuchNode' in the edited scene not found; 回读=pixel/pixel_effect; 副作用=no_mutation=6; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_remove_animation",
+      "tool": "editor_remove_animation",
+      "line": 206,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={animation_count, library, name, removed}; 错误码=-32001 Animation 'NoSuchAnim' in the AnimationPlayer's default l...; 回读=state/readback; 副作用=no_mutation=18; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_remove_node_selection",
+      "tool": "editor_remove_node_selection",
+      "line": 147,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={cleared, count, selected}; 错误码=-32602 Unknown parameter 'bogus' for tool 'editor_remove_node_se...; 回读=state/readback; 副作用=no_mutation=6; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-editor_remove_output_log",
+      "tool": "editor_remove_output_log",
+      "line": 153,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={cleared, log_is_empty, log_was_empty}; 错误码=-32602 Unknown parameter 'bogus' for tool 'editor_remove_output_...; 回读=state/readback; 副作用=no_mutation=6; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-editor_remove_state_machine_state",
+      "tool": "editor_remove_state_machine_state",
+      "line": 255,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={content}; 错误码=-32001 State 'NoSuchState' in the state machine not found; 回读=state/readback; 副作用=no_mutation=12; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_remove_state_machine_transition",
+      "tool": "editor_remove_state_machine_transition",
+      "line": 257,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={content}; 错误码=-32001 Transition 'Idle' -&gt; 'Fall' not found; 回读=state/readback; 副作用=no_mutation=12; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_rename_node",
+      "tool": "editor_rename_node",
+      "line": 133,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={new_name, node_path, renamed}; 错误码=-32001 Node 'Dup5' not found; 回读=state/readback; 副作用=no_mutation=30; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-editor_reparent_node",
+      "tool": "editor_reparent_node",
+      "line": 139,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={moved, node_path}; 错误码=-32001 Parent 'Host' not found; 回读=pixel/pixel_effect; 副作用=no_mutation=30; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-editor_rescan_project_filesystem",
+      "tool": "editor_rescan_project_filesystem",
+      "line": 155,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={message, reloaded}; 错误码=-32602 Unknown parameter 'bogus' for tool 'editor_rescan_project...; 回读=state/readback; 副作用=no_mutation=6; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-editor_save_scene",
+      "tool": "editor_save_scene",
+      "line": 129,
+      "what": "evidence channel not named in 回读",
+      "actual": "file_effect",
+      "out": "成功={path, saved}; 错误码=-32602 Unknown parameter 'undeclared_probe' for tool 'editor_sav...; 回读=file/file_effect; 副作用=no_mutation=1, observed_changed=77, observed_no_change=46; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-editor_set_anchor_preset",
+      "tool": "editor_set_anchor_preset",
+      "line": 141,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={node_path, preset}; 错误码=-32602 Unknown preset: 'no_such_preset'. Available: top_left, to...; 回读=pixel/pixel_effect; 副作用=no_mutation=24; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_set_animation_keyframe",
+      "tool": "editor_set_animation_keyframe",
+      "line": 204,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={animation, easing, key_count, key_index, time, track_index}...; 错误码=-32001 Track index 99 in animation 'Anim1' not found; 回读=state/readback; 副作用=no_mutation=12; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_set_animation_tree_parameter",
+      "tool": "editor_set_animation_tree_parameter",
+      "line": 259,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={content}; 错误码=-32001 Parameter 'parameters/no_such_parameter' of this Animatio...; 回读=state/readback; 副作用=no_mutation=12; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_set_audio_bus_property",
+      "tool": "editor_set_audio_bus_property",
+      "line": 243,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={applied, bus_count, bus_index, bus_name, changed, new_value}...; 错误码=-32602 Unknown bus property 'no_such_property'. The writable mem...; 回读=state/readback; 副作用=no_mutation=8; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_set_auto_dismiss_dialogs",
+      "tool": "editor_set_auto_dismiss_dialogs",
+      "line": 158,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功=corpus 里无 ok 回包; 错误码=-32000 Not implemented: editor_set_auto_dismiss_dialogs; 回读=state/count_only; 副作用=no_mutation=7; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-editor_set_blend_tree_node",
+      "tool": "editor_set_blend_tree_node",
+      "line": 258,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={content}; 错误码=-32001 State 'NoSuchState' (blend_tree_state) in the state machi...; 回读=state/readback; 副作用=no_mutation=12; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_set_control_theme",
+      "tool": "editor_set_control_theme",
+      "line": 250,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={applied, cleared, node_path, theme, theme_applied, theme_path}...; 错误码=-32001 Theme resource 'res://themes/no_such_theme.tres' not found; 回读=state/readback; 副作用=no_mutation=30; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_set_material_3d",
+      "tool": "editor_set_material_3d",
+      "line": 236,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={applied, material, material_path, material_slot, node_path, previous_surface_materials}...; 错误码=-32000 MeshInstance3D 'MeshA' has no mesh, so it has no surface ...; 回读=state/readback; 副作用=no_mutat"
+    },
+    {
+      "id": "TC-TOOL-editor_set_navigation_layers",
+      "tool": "editor_set_navigation_layers",
+      "line": 263,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={applied, changed, dimension, layer_bits, layer_count, layer_names}...; 错误码=-32602 'layers' must be a 32-bit navigation layer mask in 0..429...; 回读=state/readback; 副作用=no_mutation=7; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_set_node_groups",
+      "tool": "editor_set_node_groups",
+      "line": 143,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={added, groups, node_path, removed}; 错误码=-32001 Node 'Panel/C4Rect' not found; 回读=state/readback; 副作用=no_mutation=36; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-editor_set_node_property",
+      "tool": "editor_set_node_property",
+      "line": 134,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={ignored, new_value, node_path, old_value, property}; 错误码=-32602 Unknown parameter 'undeclared_probe' for tool 'editor_set...; 回读=pixel/pixel_effect; 副作用=no_mutation=42; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-editor_set_node_property_batch",
+      "tool": "editor_set_node_property_batch",
+      "line": 195,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={count, ignored, ignored_count, node_type, nodes, property}...; 错误码=-32602 Parameter 'node_type' must be a string, got float; 回读=pixel/pixel_effect; 副作用=no_mutation=30; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_set_node_property_updates",
+      "tool": "editor_set_node_property_updates",
+      "line": 288,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={count, failed, results, rolled_back, status, stop_on_error}...; 错误码=-32001 updates[0]: Node 'Tick' not found; 回读=pixel/pixel_effect; 副作用=no_mutation=30; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_set_node_script",
+      "tool": "editor_set_node_script",
+      "line": 184,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={attached, node_path, previous_script_path, script_path}; 错误码=-32001 Script 'res://src/no_such_script.cs' not found; 回读=state/readback; 副作用=no_mutation=36; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_set_node_script_batch",
+      "tool": "editor_set_node_script_batch",
+      "line": 287,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={attached, count, errors, keep_existing, script_path, skipped}...; 错误码=-32001 Node 'NoSuchNode' not found; 回读=state/readback; 副作用=no_mutation=56; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_set_node_selection",
+      "tool": "editor_set_node_selection",
+      "line": 146,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={count, mode, selected}; 错误码=-32001 Node 'NoSuchNode' not found; 回读=state/readback; 副作用=no_mutation=9; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-editor_set_particle_color_gradient",
+      "tool": "editor_set_particle_color_gradient",
+      "line": 267,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={applied, colors, node_path, process_material_slot, requested_count, stop_count}; 错误码=-32602 'colors' must not be empty: a gradient with no stop draws...; 回读=pixel/pixel_effect; 副作用=no_mutation=9; "
+    },
+    {
+      "id": "TC-TOOL-editor_set_particle_material",
+      "tool": "editor_set_particle_material",
+      "line": 266,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={changed, changed_count, ignored, ignored_count, node_path, params}...; 错误码=-32602 'material_params' must not be empty: it is the set of par...; 回读=pixel/pixel_effect; 副作用=no_mutation=8; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_set_particle_preset",
+      "tool": "editor_set_particle_preset",
+      "line": 268,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={applied, changed_count, ignored, ignored_count, is_2d, material_params}...; 错误码=-32602 Unknown preset: 'lava'. Valid presets: fire, smoke, magic...; 回读=pixel/pixel_effect; 副作用=no_mutation=7; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_set_physics_layers",
+      "tool": "editor_set_physics_layers",
+      "line": 229,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={applied, changed, dimension, layer_bits, layer_count, layer_names}...; 错误码=-32001 Node 'PB3' in the edited scene not found; 回读=state/readback; 副作用=no_mutation=24; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_set_shader_material",
+      "tool": "editor_set_shader_material",
+      "line": 224,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={applied, assigned, material_slot, material_slot_kind, material_slots, node_path}...; 错误码=-32001 Shader resource 'res://shaders/no_such_shader.gdshader' n...; 回读=pixel/pixel_effect; 副作用=no_mutation"
+    },
+    {
+      "id": "TC-TOOL-editor_set_shader_param",
+      "tool": "editor_set_shader_param",
+      "line": 225,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={applied, changed, material_slot, new_value, node_path, node_type}...; 错误码=-32001 Shader parameter 'speed' of 'res://shaders/c4.gdshader' n...; 回读=pixel/pixel_effect; 副作用=no_mutation=24; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_set_tilemap_cell",
+      "tool": "editor_set_tilemap_cell",
+      "line": 210,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={alternative_tile, applied, atlas_coords, cell, changed, empty}...; 错误码=-32602 The TileSet of this TileMapLayer has no source 7; it has: 0; 回读=pixel/pixel_effect; 副作用=no_mutation=10; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_set_tilemap_cells_in_rect",
+      "tool": "editor_set_tilemap_cells_in_rect",
+      "line": 211,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={applied, atlas_coords, cell_count, filled, node_path, node_type}...; 错误码=-32602 The TileSet of this TileMapLayer has no source 9; it has: 0; 回读=pixel/pixel_effect; 副作用=no_mutation=6; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_set_viewport_3d_camera",
+      "tool": "editor_set_viewport_3d_camera",
+      "line": 160,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={fov, position, rotation_degrees}; 错误码=-32602 Parameter 'fov' must be a number, got String; 回读=state/readback; 副作用=no_mutation=6; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-editor_setup_camera_3d",
+      "tool": "editor_setup_camera_3d",
+      "line": 234,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={created, current, node_path, setup, type}; 错误码=-32001 Parent 'NoSuchNode' not found; 回读=state/readback; 副作用=no_mutation=18; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_setup_collision_shape",
+      "tool": "editor_setup_collision_shape",
+      "line": 228,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={collision_node_path, collision_node_type, node_path, setup, shape_set, shape_type}; 错误码=-32001 Node 'BodyA' not found; 回读=pixel/pixel_effect; 副作用=no_mutation=31; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_setup_lighting",
+      "tool": "editor_setup_lighting",
+      "line": 235,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={light_type, node_path, setup, type}; 错误码=-32602 Unknown light_type: 'lava'. Available: directional, omni,...; 回读=state/readback; 副作用=no_mutation=18; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_setup_navigation_agent",
+      "tool": "editor_setup_navigation_agent",
+      "line": 262,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={created, max_speed, node_path, radius, setup, type}; 错误码=-32602 Unknown agent_type: '4D'. Available: 2D, 3D (case-sensitive); 回读=state/readback; 副作用=no_mutation=6; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_setup_navigation_region",
+      "tool": "editor_setup_navigation_region",
+      "line": 260,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={agent_radius, cell_size, created, node_path, setup, type}; 错误码=-32001 Parent 'NoSuchParent' not found; 回读=state/readback; 副作用=no_mutation=6; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_setup_physics_body",
+      "tool": "editor_setup_physics_body",
+      "line": 231,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={body_type, created, name, node_path, parent_path, setup}...; 错误码=-32602 Unknown body type: 'NotABodyClass': no such class; 回读=state/readback; 副作用=no_mutation=24; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-editor_setup_world_environment",
+      "tool": "editor_setup_world_environment",
+      "line": 237,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={environment_created, setup, world_environment, world_environment_created, world_environment_path}; 错误码=-32602 Parameter 'bg_color' must be an object with numeric r, g,...; 回读=state/readback; 副作用=n"
+    },
+    {
+      "id": "TC-TOOL-editor_simulate_input_action",
+      "tool": "editor_simulate_input_action",
+      "line": 190,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功=corpus 里无 ok 回包; 错误码=corpus 里无失败回包; 回读=state/no_calls; 副作用=无文件副作用记录; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-editor_simulate_input_sequence",
+      "tool": "editor_simulate_input_sequence",
+      "line": 193,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功=corpus 里无 ok 回包; 错误码=corpus 里无失败回包; 回读=state/no_calls; 副作用=无文件副作用记录; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-editor_simulate_key",
+      "tool": "editor_simulate_key",
+      "line": 187,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功=corpus 里无 ok 回包; 错误码=corpus 里无失败回包; 回读=state/no_calls; 副作用=无文件副作用记录; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-editor_simulate_mouse_click",
+      "tool": "editor_simulate_mouse_click",
+      "line": 188,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功=corpus 里无 ok 回包; 错误码=**活体探针 `-32602` + suggestion \"Accepted parameters of editor_simulate_mouse_click: button, pressed, x, y\"**; 回读=state/no_calls; 副作用=无文件副作用记录; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-editor_simulate_mouse_move",
+      "tool": "editor_simulate_mouse_move",
+      "line": 189,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功=corpus 里无 ok 回包; 错误码=**活体探针 `-32602` + suggestion \"Accepted parameters of editor_simulate_mouse_move: x, y\"**; 回读=state/no_calls; 副作用=无文件副作用记录; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-editor_stop_scene",
+      "tool": "editor_stop_scene",
+      "line": 128,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={message, stopped}; 错误码=-32602 Unknown parameter 'bogus' for tool 'editor_stop_scene'; 回读=state/readback; 副作用=no_mutation=7; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-os_deploy_to_android_device",
+      "tool": "os_deploy_to_android_device",
+      "line": 283,
+      "what": "evidence channel not named in 回读",
+      "actual": "file_effect",
+      "out": "成功=corpus 里无 ok 回包; 错误码=-32001 Export preset 'NoSuchAndroidPreset' not found; 回读=file/count_only; 副作用=无文件副作用记录; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-project_add_autoload",
+      "tool": "project_add_autoload",
+      "line": 214,
+      "what": "evidence channel not named in 回读",
+      "actual": "file_effect",
+      "out": "成功={added, key, name, path, setting_value}; 错误码=-32001 File 'res://src/NoSuchFile.cs' not found; 回读=file/file_effect; 副作用=no_mutation=1, observed_changed=7; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-project_build_csharp",
+      "tool": "project_build_csharp",
+      "line": 284,
+      "what": "evidence channel not named in 回读",
+      "actual": "file_effect",
+      "out": "成功={command, commands, duration_ms, effective_timeout_ms, exit_code, exit_codes}...; 错误码=-32602 Unknown parameter 'undeclared_probe' for tool 'project_bu...; 回读=file/file_effect; 副作用=not_tracked_defer"
+    },
+    {
+      "id": "TC-TOOL-project_create_resource",
+      "tool": "project_create_resource",
+      "line": 217,
+      "what": "evidence channel not named in 回读",
+      "actual": "file_effect",
+      "out": "成功={changed, ignored, ignored_count, path, properties_set, type}; 错误码=-32000 Resource already exists: res://assets/mat3d_b.tres; 回读=file/file_effect; 副作用=no_mutation=2, observed_changed=7; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-project_create_scene_file",
+      "tool": "project_create_scene_file",
+      "line": 130,
+      "what": "evidence channel not named in 回读",
+      "actual": "file_effect",
+      "out": "成功={created, path, root_name, root_type}; 错误码=-32000 Scene file already exists: res://scenes/main.tscn; 回读=file/file_effect; 副作用=no_mutation=2, observed_changed=18; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-project_create_script",
+      "tool": "project_create_script",
+      "line": 182,
+      "what": "evidence channel not named in 回读",
+      "actual": "file_effect",
+      "out": "成功={bytes, created, editor_rescan_triggered, existed_before, path, template}; 错误码=-32602 Parameter 'path' must be a string, got float; 回读=file/file_effect; 副作用=no_mutation=1, observed_changed=44, obse"
+    },
+    {
+      "id": "TC-TOOL-project_create_shader",
+      "tool": "project_create_shader",
+      "line": 222,
+      "what": "evidence channel not named in 回读",
+      "actual": "file_effect",
+      "out": "成功={bytes, created, directive, editor_rescan_triggered, existed_before, lines}...; 错误码=-32602 Parameter 'path' must name a shader file (.gdshader), got...; 回读=file/file_effect; 副作用=no_mutation=1, obse"
+    },
+    {
+      "id": "TC-TOOL-project_create_theme",
+      "tool": "project_create_theme",
+      "line": 245,
+      "what": "evidence channel not named in 回读",
+      "actual": "file_effect",
+      "out": "成功={bytes, created, editor_rescan_triggered, existed_before, name, path}...; 错误码=-32000 Theme already exists: res://themes/ex1.tres; 回读=file/file_effect; 副作用=no_mutation=1, observed_changed=11; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-project_delete_scene_file",
+      "tool": "project_delete_scene_file",
+      "line": 124,
+      "what": "evidence channel not named in 回读",
+      "actual": "file_effect",
+      "out": "成功={deleted, path}; 错误码=-32001 Scene file 'res://scenes/absent.tscn' not found; 回读=file/file_effect; 副作用=no_mutation=2, observed_changed=8; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-project_edit_resource",
+      "tool": "project_edit_resource",
+      "line": 216,
+      "what": "evidence channel not named in 回读",
+      "actual": "file_effect",
+      "out": "成功={changed, ignored, ignored_count, path, properties_set, type}; 错误码=-32001 Resource 'res://resources/absent.tres' not found; 回读=file/file_effect; 副作用=no_mutation=1, observed_changed=5; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-project_edit_script",
+      "tool": "project_edit_script",
+      "line": 183,
+      "what": "evidence channel not named in 回读",
+      "actual": "file_effect",
+      "out": "成功={bytes, changes_made, editor_rescan_triggered, mode, path, replacements}; 错误码=-32602 Unknown parameter 'undeclared_probe' for tool 'project_ed...; 回读=file/file_effect; 副作用=no_mutation=1, observed_c"
+    },
+    {
+      "id": "TC-TOOL-project_edit_shader",
+      "tool": "project_edit_shader",
+      "line": 223,
+      "what": "evidence channel not named in 回读",
+      "actual": "file_effect",
+      "out": "成功={bytes, changes_made, declares_shader_type, edited, editor_rescan_triggered, lines}...; 错误码=-32001 Shader file 'res://shaders/absent.gdshader' not found; 回读=file/file_effect; 副作用=no_mutation=1, obs"
+    },
+    {
+      "id": "TC-TOOL-project_remove_autoload",
+      "tool": "project_remove_autoload",
+      "line": 215,
+      "what": "evidence channel not named in 回读",
+      "actual": "file_effect",
+      "out": "成功={key, name, old_path, removed}; 错误码=-32001 Autoload 'NoSuchAutoload' not found; 回读=file/file_effect; 副作用=no_mutation=1, observed_changed=5; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-project_set_node_property_across_scenes",
+      "tool": "project_set_node_property_across_scenes",
+      "line": 200,
+      "what": "evidence channel not named in 回读",
+      "actual": "file_effect",
+      "out": "成功={dry_run, editor_rescan_triggered, errors, force, message, path_filter}...; 错误码=-32602 Parameter 'type' must be a string, got float; 回读=file/file_effect; 副作用=no_mutation=17, observed_changed=1; 幂等="
+    },
+    {
+      "id": "TC-TOOL-project_set_setting",
+      "tool": "project_set_setting",
+      "line": 118,
+      "what": "evidence channel not named in 回读",
+      "actual": "file_effect",
+      "out": "成功={created, existed_before, key, saved, type, value}; 错误码=-32602 Parameter 'key' must not be empty; 回读=file/file_effect; 副作用=no_mutation=1, observed_changed=5; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-project_set_theme_color",
+      "tool": "project_set_theme_color",
+      "line": 246,
+      "what": "evidence channel not named in 回读",
+      "actual": "file_effect",
+      "out": "成功={changed, color_name, editor_rescan_triggered, ignored, node_type, properties_set}...; 错误码=-32001 Theme resource 'res://themes/absent.tres' not found; 回读=file/file_effect; 副作用=no_mutation=1, observ"
+    },
+    {
+      "id": "TC-TOOL-project_set_theme_constant",
+      "tool": "project_set_theme_constant",
+      "line": 247,
+      "what": "evidence channel not named in 回读",
+      "actual": "file_effect",
+      "out": "成功={changed, constant_name, editor_rescan_triggered, ignored, node_type, properties_set}...; 错误码=-32001 Theme resource 'res://themes/absent.tres' not found; 回读=file/file_effect; 副作用=no_mutation=1, obs"
+    },
+    {
+      "id": "TC-TOOL-project_set_theme_font_size",
+      "tool": "project_set_theme_font_size",
+      "line": 248,
+      "what": "evidence channel not named in 回读",
+      "actual": "file_effect",
+      "out": "成功={changed, editor_rescan_triggered, font_size_name, font_size_readable, ignored, node_type}...; 错误码=-32001 Theme resource 'res://themes/absent.tres' not found; 回读=file/file_effect; 副作用=no_mutation=1"
+    },
+    {
+      "id": "TC-TOOL-project_set_theme_stylebox",
+      "tool": "project_set_theme_stylebox",
+      "line": 249,
+      "what": "evidence channel not named in 回读",
+      "actual": "file_effect",
+      "out": "成功={changed, editor_rescan_triggered, ignored, node_type, properties_set, saved}...; 错误码=-32001 Theme resource 'res://themes/absent.tres' not found; 回读=file/file_effect; 副作用=no_mutation=1, observed_ch"
+    },
+    {
+      "id": "TC-TOOL-project_write_text_file",
+      "tool": "project_write_text_file",
+      "line": 285,
+      "what": "evidence channel not named in 回读",
+      "actual": "file_effect",
+      "out": "成功={bytes, created, path, sha256}; 错误码=-32602 Parameter 'path' names a '.tscn' file ('res://scenes/main...; 回读=file/file_effect; 副作用=no_mutation=1, observed_changed=6; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-running_game_create_input_recording",
+      "tool": "running_game_create_input_recording",
+      "line": 167,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={message, recording}; 错误码=-32000 An input recording is already running in this game process; 回读=state/readback; 副作用=no_mutation=7; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-running_game_move_player_to_target",
+      "tool": "running_game_move_player_to_target",
+      "line": 177,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={arrival_radius, dimension, distance_traveled, final_position, frames, movement}...; 错误码=-32001 Target node 'NoSuchNode' not found; 回读=pixel/pixel_effect; 副作用=no_mutation=5; 幂等=未见"
+    },
+    {
+      "id": "TC-TOOL-running_game_play_input_recording",
+      "tool": "running_game_play_input_recording",
+      "line": 169,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={event_count, injected, replayed, speed}; 错误码=-32602 Parameter 'events' must not be empty: there is nothing to...; 回读=pixel/pixel_effect; 副作用=no_mutation=6; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-running_game_run_stress_test",
+      "tool": "running_game_run_stress_test",
+      "line": 279,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={actions, average_iteration_ms, completed, crashed, elapsed_ms, events_sent}...; 错误码=-32602 Unknown parameter 'undeclared_probe' for tool 'running_ga...; 回读=pixel/pixel_effect; 副作用=no_mutation=23, "
+    },
+    {
+      "id": "TC-TOOL-running_game_run_test_scenario",
+      "tool": "running_game_run_test_scenario",
+      "line": 276,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={all_passed, completed_steps, duration_ms, errors, failed, passed}...; 错误码=-32602 Unknown parameter 'undeclared_probe' for tool 'running_ga...; 回读=pixel/pixel_effect; 副作用=no_mutation=8, not_tracked"
+    },
+    {
+      "id": "TC-TOOL-running_game_set_node_property",
+      "tool": "running_game_set_node_property",
+      "line": 163,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={ignored, new_value, node_path, old_value, property}; 错误码=-32602 Unknown parameter 'path' for tool 'running_game_set_node_...; 回读=pixel/pixel_effect; 副作用=no_mutation=49; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-running_game_simulate_button_click_by_text",
+      "tool": "running_game_simulate_button_click_by_text",
+      "line": 174,
+      "what": "evidence channel not named in 回读",
+      "actual": "pixel_effect",
+      "out": "成功={button_path, button_text, clicked, position}; 错误码=-32001 A visible Button whose text contains 'NoSuchButtonText' n...; 回读=pixel/pixel_effect; 副作用=no_mutation=12; 幂等=见引擎用例"
+    },
+    {
+      "id": "TC-TOOL-running_game_stop_input_recording",
+      "tool": "running_game_stop_input_recording",
+      "line": 168,
+      "what": "evidence channel not named in 回读",
+      "actual": "editor_state",
+      "out": "成功={dropped, duration_ms, event_count, event_types, events, limits}...; 错误码=-32602 Unknown parameter 'undeclared_probe' for tool 'running_ga...; 回读=state/readback; 副作用=no_mutation=8; 幂等=见引擎用例"
+    }
+  ],
+  "checked": 177,
+  "ptr_missing": [
+    {
+      "id": "TC-TOOL-editor_simulate_mouse_click",
+      "tool": "editor_simulate_mouse_click",
+      "line": 188,
+      "pointer": "tool_registry.cpp"
+    },
+    {
+      "id": "TC-TOOL-editor_simulate_mouse_move",
+      "tool": "editor_simulate_mouse_move",
+      "line": 189,
+      "pointer": "tool_registry.cpp"
+    }
+  ],
+  "trace_neg_mismatch": [],
+  "samples": {
+    "TC-TOOL-editor_add_animation_track": {
+      "id": "TC-TOOL-editor_add_animation_track",
+      "tool": "editor_add_animation_track",
+      "line": 203,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_add_audio_bus": {
+      "id": "TC-TOOL-editor_add_audio_bus",
+      "tool": "editor_add_audio_bus",
+      "line": 242,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_add_audio_bus_effect": {
+      "id": "TC-TOOL-editor_add_audio_bus_effect",
+      "tool": "editor_add_audio_bus_effect",
+      "line": 244,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_add_audio_player": {
+      "id": "TC-TOOL-editor_add_audio_player",
+      "tool": "editor_add_audio_player",
+      "line": 239,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_add_gridmap": {
+      "id": "TC-TOOL-editor_add_gridmap",
+      "tool": "editor_add_gridmap",
+      "line": 238,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_add_input_action": {
+      "id": "TC-TOOL-editor_add_input_action",
+      "tool": "editor_add_input_action",
+      "line": 192,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_add_mesh_instance": {
+      "id": "TC-TOOL-editor_add_mesh_instance",
+      "tool": "editor_add_mesh_instance",
+      "line": 233,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_add_node": {
+      "id": "TC-TOOL-editor_add_node",
+      "tool": "editor_add_node",
+      "line": 131,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_add_nodes_batch": {
+      "id": "TC-TOOL-editor_add_nodes_batch",
+      "tool": "editor_add_nodes_batch",
+      "line": 197,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_add_raycast": {
+      "id": "TC-TOOL-editor_add_raycast",
+      "tool": "editor_add_raycast",
+      "line": 227,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_add_resource_to_node_property": {
+      "id": "TC-TOOL-editor_add_resource_to_node_property",
+      "tool": "editor_add_resource_to_node_property",
+      "line": 140,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_add_scene_instance": {
+      "id": "TC-TOOL-editor_add_scene_instance",
+      "tool": "editor_add_scene_instance",
+      "line": 125,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_add_state_machine_state": {
+      "id": "TC-TOOL-editor_add_state_machine_state",
+      "tool": "editor_add_state_machine_state",
+      "line": 254,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_add_state_machine_transition": {
+      "id": "TC-TOOL-editor_add_state_machine_transition",
+      "tool": "editor_add_state_machine_transition",
+      "line": 256,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_analyze_screenshot_diff": {
+      "id": "TC-TOOL-editor_analyze_screenshot_diff",
+      "tool": "editor_analyze_screenshot_diff",
+      "line": 157,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_analyze_signal_flow": {
+      "id": "TC-TOOL-editor_analyze_signal_flow",
+      "tool": "editor_analyze_signal_flow",
+      "line": 271,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_bake_navigation_mesh": {
+      "id": "TC-TOOL-editor_bake_navigation_mesh",
+      "tool": "editor_bake_navigation_mesh",
+      "line": 261,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_capture_screenshot": {
+      "id": "TC-TOOL-editor_capture_screenshot",
+      "tool": "editor_capture_screenshot",
+      "line": 151,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_connect_signal": {
+      "id": "TC-TOOL-editor_connect_signal",
+      "tool": "editor_connect_signal",
+      "line": 137,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_create_animation": {
+      "id": "TC-TOOL-editor_create_animation",
+      "tool": "editor_create_animation",
+      "line": 202,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_create_animation_tree": {
+      "id": "TC-TOOL-editor_create_animation_tree",
+      "tool": "editor_create_animation_tree",
+      "line": 252,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_create_particles": {
+      "id": "TC-TOOL-editor_create_particles",
+      "tool": "editor_create_particles",
+      "line": 265,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_delete_node": {
+      "id": "TC-TOOL-editor_delete_node",
+      "tool": "editor_delete_node",
+      "line": 132,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_disconnect_signal": {
+      "id": "TC-TOOL-editor_disconnect_signal",
+      "tool": "editor_disconnect_signal",
+      "line": 138,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_duplicate_node": {
+      "id": "TC-TOOL-editor_duplicate_node",
+      "tool": "editor_duplicate_node",
+      "line": 136,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_execute_gdscript": {
+      "id": "TC-TOOL-editor_execute_gdscript",
+      "tool": "editor_execute_gdscript",
+      "line": 148,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_find_nodes_by_type": {
+      "id": "TC-TOOL-editor_find_nodes_by_type",
+      "tool": "editor_find_nodes_by_type",
+      "line": 194,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_find_nodes_in_group": {
+      "id": "TC-TOOL-editor_find_nodes_in_group",
+      "tool": "editor_find_nodes_in_group",
+      "line": 144,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_get_animation_info": {
+      "id": "TC-TOOL-editor_get_animation_info",
+      "tool": "editor_get_animation_info",
+      "line": 205,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_get_animation_tree_structure": {
+      "id": "TC-TOOL-editor_get_animation_tree_structure",
+      "tool": "editor_get_animation_tree_structure",
+      "line": 253,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_get_audio_bus_layout": {
+      "id": "TC-TOOL-editor_get_audio_bus_layout",
+      "tool": "editor_get_audio_bus_layout",
+      "line": 241,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_get_audio_info": {
+      "id": "TC-TOOL-editor_get_audio_info",
+      "tool": "editor_get_audio_info",
+      "line": 240,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_get_collision_info": {
+      "id": "TC-TOOL-editor_get_collision_info",
+      "tool": "editor_get_collision_info",
+      "line": 232,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_get_errors": {
+      "id": "TC-TOOL-editor_get_errors",
+      "tool": "editor_get_errors",
+      "line": 149,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_get_input_actions": {
+      "id": "TC-TOOL-editor_get_input_actions",
+      "tool": "editor_get_input_actions",
+      "line": 191,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_get_navigation_info": {
+      "id": "TC-TOOL-editor_get_navigation_info",
+      "tool": "editor_get_navigation_info",
+      "line": 264,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_get_node_groups": {
+      "id": "TC-TOOL-editor_get_node_groups",
+      "tool": "editor_get_node_groups",
+      "line": 142,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_get_node_properties": {
+      "id": "TC-TOOL-editor_get_node_properties",
+      "tool": "editor_get_node_properties",
+      "line": 135,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_get_node_signals": {
+      "id": "TC-TOOL-editor_get_node_signals",
+      "tool": "editor_get_node_signals",
+      "line": 156,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_get_open_scripts": {
+      "id": "TC-TOOL-editor_get_open_scripts",
+      "tool": "editor_get_open_scripts",
+      "line": 185,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_get_output_log": {
+      "id": "TC-TOOL-editor_get_output_log",
+      "tool": "editor_get_output_log",
+      "line": 150,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_get_particle_info": {
+      "id": "TC-TOOL-editor_get_particle_info",
+      "tool": "editor_get_particle_info",
+      "line": 269,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_get_performance_monitors": {
+      "id": "TC-TOOL-editor_get_performance_monitors",
+      "tool": "editor_get_performance_monitors",
+      "line": 179,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_get_physics_layers": {
+      "id": "TC-TOOL-editor_get_physics_layers",
+      "tool": "editor_get_physics_layers",
+      "line": 230,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_get_scene_tree": {
+      "id": "TC-TOOL-editor_get_scene_tree",
+      "tool": "editor_get_scene_tree",
+      "line": 121,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_get_selection": {
+      "id": "TC-TOOL-editor_get_selection",
+      "tool": "editor_get_selection",
+      "line": 145,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_get_test_report": {
+      "id": "TC-TOOL-editor_get_test_report",
+      "tool": "editor_get_test_report",
+      "line": 280,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_get_tilemap_cell": {
+      "id": "TC-TOOL-editor_get_tilemap_cell",
+      "tool": "editor_get_tilemap_cell",
+      "line": 212,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_get_tilemap_info": {
+      "id": "TC-TOOL-editor_get_tilemap_info",
+      "tool": "editor_get_tilemap_info",
+      "line": 207,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_get_tilemap_used_cells": {
+      "id": "TC-TOOL-editor_get_tilemap_used_cells",
+      "tool": "editor_get_tilemap_used_cells",
+      "line": 208,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_get_viewport_3d_camera": {
+      "id": "TC-TOOL-editor_get_viewport_3d_camera",
+      "tool": "editor_get_viewport_3d_camera",
+      "line": 159,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_list_animations": {
+      "id": "TC-TOOL-editor_list_animations",
+      "tool": "editor_list_animations",
+      "line": 201,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_list_signal_connections": {
+      "id": "TC-TOOL-editor_list_signal_connections",
+      "tool": "editor_list_signal_connections",
+      "line": 196,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_open_scene": {
+      "id": "TC-TOOL-editor_open_scene",
+      "tool": "editor_open_scene",
+      "line": 123,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_play_scene": {
+      "id": "TC-TOOL-editor_play_scene",
+      "tool": "editor_play_scene",
+      "line": 127,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_reload_plugin": {
+      "id": "TC-TOOL-editor_reload_plugin",
+      "tool": "editor_reload_plugin",
+      "line": 154,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_remove_all_tilemap_cells": {
+      "id": "TC-TOOL-editor_remove_all_tilemap_cells",
+      "tool": "editor_remove_all_tilemap_cells",
+      "line": 209,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_remove_animation": {
+      "id": "TC-TOOL-editor_remove_animation",
+      "tool": "editor_remove_animation",
+      "line": 206,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_remove_node_selection": {
+      "id": "TC-TOOL-editor_remove_node_selection",
+      "tool": "editor_remove_node_selection",
+      "line": 147,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_remove_output_log": {
+      "id": "TC-TOOL-editor_remove_output_log",
+      "tool": "editor_remove_output_log",
+      "line": 153,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_remove_state_machine_state": {
+      "id": "TC-TOOL-editor_remove_state_machine_state",
+      "tool": "editor_remove_state_machine_state",
+      "line": 255,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_remove_state_machine_transition": {
+      "id": "TC-TOOL-editor_remove_state_machine_transition",
+      "tool": "editor_remove_state_machine_transition",
+      "line": 257,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_rename_node": {
+      "id": "TC-TOOL-editor_rename_node",
+      "tool": "editor_rename_node",
+      "line": 133,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_reparent_node": {
+      "id": "TC-TOOL-editor_reparent_node",
+      "tool": "editor_reparent_node",
+      "line": 139,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_rescan_project_filesystem": {
+      "id": "TC-TOOL-editor_rescan_project_filesystem",
+      "tool": "editor_rescan_project_filesystem",
+      "line": 155,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_save_scene": {
+      "id": "TC-TOOL-editor_save_scene",
+      "tool": "editor_save_scene",
+      "line": 129,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_set_anchor_preset": {
+      "id": "TC-TOOL-editor_set_anchor_preset",
+      "tool": "editor_set_anchor_preset",
+      "line": 141,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_set_animation_keyframe": {
+      "id": "TC-TOOL-editor_set_animation_keyframe",
+      "tool": "editor_set_animation_keyframe",
+      "line": 204,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_set_animation_tree_parameter": {
+      "id": "TC-TOOL-editor_set_animation_tree_parameter",
+      "tool": "editor_set_animation_tree_parameter",
+      "line": 259,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_set_audio_bus_property": {
+      "id": "TC-TOOL-editor_set_audio_bus_property",
+      "tool": "editor_set_audio_bus_property",
+      "line": 243,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_set_auto_dismiss_dialogs": {
+      "id": "TC-TOOL-editor_set_auto_dismiss_dialogs",
+      "tool": "editor_set_auto_dismiss_dialogs",
+      "line": 158,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_set_blend_tree_node": {
+      "id": "TC-TOOL-editor_set_blend_tree_node",
+      "tool": "editor_set_blend_tree_node",
+      "line": 258,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_set_control_theme": {
+      "id": "TC-TOOL-editor_set_control_theme",
+      "tool": "editor_set_control_theme",
+      "line": 250,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_set_material_3d": {
+      "id": "TC-TOOL-editor_set_material_3d",
+      "tool": "editor_set_material_3d",
+      "line": 236,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_set_navigation_layers": {
+      "id": "TC-TOOL-editor_set_navigation_layers",
+      "tool": "editor_set_navigation_layers",
+      "line": 263,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_set_node_groups": {
+      "id": "TC-TOOL-editor_set_node_groups",
+      "tool": "editor_set_node_groups",
+      "line": 143,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_set_node_property": {
+      "id": "TC-TOOL-editor_set_node_property",
+      "tool": "editor_set_node_property",
+      "line": 134,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_set_node_property_batch": {
+      "id": "TC-TOOL-editor_set_node_property_batch",
+      "tool": "editor_set_node_property_batch",
+      "line": 195,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_set_node_property_updates": {
+      "id": "TC-TOOL-editor_set_node_property_updates",
+      "tool": "editor_set_node_property_updates",
+      "line": 288,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_set_node_script": {
+      "id": "TC-TOOL-editor_set_node_script",
+      "tool": "editor_set_node_script",
+      "line": 184,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_set_node_script_batch": {
+      "id": "TC-TOOL-editor_set_node_script_batch",
+      "tool": "editor_set_node_script_batch",
+      "line": 287,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_set_node_selection": {
+      "id": "TC-TOOL-editor_set_node_selection",
+      "tool": "editor_set_node_selection",
+      "line": 146,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_set_particle_color_gradient": {
+      "id": "TC-TOOL-editor_set_particle_color_gradient",
+      "tool": "editor_set_particle_color_gradient",
+      "line": 267,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_set_particle_material": {
+      "id": "TC-TOOL-editor_set_particle_material",
+      "tool": "editor_set_particle_material",
+      "line": 266,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_set_particle_preset": {
+      "id": "TC-TOOL-editor_set_particle_preset",
+      "tool": "editor_set_particle_preset",
+      "line": 268,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_set_physics_layers": {
+      "id": "TC-TOOL-editor_set_physics_layers",
+      "tool": "editor_set_physics_layers",
+      "line": 229,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_set_shader_material": {
+      "id": "TC-TOOL-editor_set_shader_material",
+      "tool": "editor_set_shader_material",
+      "line": 224,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_set_shader_param": {
+      "id": "TC-TOOL-editor_set_shader_param",
+      "tool": "editor_set_shader_param",
+      "line": 225,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_set_tilemap_cell": {
+      "id": "TC-TOOL-editor_set_tilemap_cell",
+      "tool": "editor_set_tilemap_cell",
+      "line": 210,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_set_tilemap_cells_in_rect": {
+      "id": "TC-TOOL-editor_set_tilemap_cells_in_rect",
+      "tool": "editor_set_tilemap_cells_in_rect",
+      "line": 211,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_set_viewport_3d_camera": {
+      "id": "TC-TOOL-editor_set_viewport_3d_camera",
+      "tool": "editor_set_viewport_3d_camera",
+      "line": 160,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-editor_setup_camera_3d": {
+      "id": "TC-TOOL-editor_setup_camera_3d",
+      "tool": "editor_setup_camera_3d",
+      "line": 234,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_setup_collision_shape": {
+      "id": "TC-TOOL-editor_setup_collision_shape",
+      "tool": "editor_setup_collision_shape",
+      "line": 228,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_setup_lighting": {
+      "id": "TC-TOOL-editor_setup_lighting",
+      "tool": "editor_setup_lighting",
+      "line": 235,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_setup_navigation_agent": {
+      "id": "TC-TOOL-editor_setup_navigation_agent",
+      "tool": "editor_setup_navigation_agent",
+      "line": 262,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_setup_navigation_region": {
+      "id": "TC-TOOL-editor_setup_navigation_region",
+      "tool": "editor_setup_navigation_region",
+      "line": 260,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_setup_physics_body": {
+      "id": "TC-TOOL-editor_setup_physics_body",
+      "tool": "editor_setup_physics_body",
+      "line": 231,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_setup_world_environment": {
+      "id": "TC-TOOL-editor_setup_world_environment",
+      "tool": "editor_setup_world_environment",
+      "line": 237,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-editor_simulate_input_action": {
+      "id": "TC-TOOL-editor_simulate_input_action",
+      "tool": "editor_simulate_input_action",
+      "line": 190,
+      "pointers_ok": 2,
+      "neg_no_code": true
+    },
+    "TC-TOOL-editor_simulate_input_sequence": {
+      "id": "TC-TOOL-editor_simulate_input_sequence",
+      "tool": "editor_simulate_input_sequence",
+      "line": 193,
+      "pointers_ok": 2,
+      "neg_no_code": true
+    },
+    "TC-TOOL-editor_simulate_key": {
+      "id": "TC-TOOL-editor_simulate_key",
+      "tool": "editor_simulate_key",
+      "line": 187,
+      "pointers_ok": 2,
+      "neg_no_code": true
+    },
+    "TC-TOOL-editor_simulate_mouse_click": {
+      "id": "TC-TOOL-editor_simulate_mouse_click",
+      "tool": "editor_simulate_mouse_click",
+      "line": 188,
+      "pointers_ok": 2,
+      "neg_no_code": true
+    },
+    "TC-TOOL-editor_simulate_mouse_move": {
+      "id": "TC-TOOL-editor_simulate_mouse_move",
+      "tool": "editor_simulate_mouse_move",
+      "line": 189,
+      "pointers_ok": 2,
+      "neg_no_code": true
+    },
+    "TC-TOOL-editor_stop_scene": {
+      "id": "TC-TOOL-editor_stop_scene",
+      "tool": "editor_stop_scene",
+      "line": 128,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-os_deploy_to_android_device": {
+      "id": "TC-TOOL-os_deploy_to_android_device",
+      "tool": "os_deploy_to_android_device",
+      "line": 283,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-os_list_android_devices": {
+      "id": "TC-TOOL-os_list_android_devices",
+      "tool": "os_list_android_devices",
+      "line": 281,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-project_add_autoload": {
+      "id": "TC-TOOL-project_add_autoload",
+      "tool": "project_add_autoload",
+      "line": 214,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-project_analyze_scene_complexity": {
+      "id": "TC-TOOL-project_analyze_scene_complexity",
+      "tool": "project_analyze_scene_complexity",
+      "line": 272,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-project_build_csharp": {
+      "id": "TC-TOOL-project_build_csharp",
+      "tool": "project_build_csharp",
+      "line": 284,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-project_convert_path_to_uid": {
+      "id": "TC-TOOL-project_convert_path_to_uid",
+      "tool": "project_convert_path_to_uid",
+      "line": 120,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-project_convert_uid_to_path": {
+      "id": "TC-TOOL-project_convert_uid_to_path",
+      "tool": "project_convert_uid_to_path",
+      "line": 119,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-project_create_resource": {
+      "id": "TC-TOOL-project_create_resource",
+      "tool": "project_create_resource",
+      "line": 217,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-project_create_scene_file": {
+      "id": "TC-TOOL-project_create_scene_file",
+      "tool": "project_create_scene_file",
+      "line": 130,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-project_create_script": {
+      "id": "TC-TOOL-project_create_script",
+      "tool": "project_create_script",
+      "line": 182,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-project_create_shader": {
+      "id": "TC-TOOL-project_create_shader",
+      "tool": "project_create_shader",
+      "line": 222,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-project_create_theme": {
+      "id": "TC-TOOL-project_create_theme",
+      "tool": "project_create_theme",
+      "line": 245,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-project_delete_scene_file": {
+      "id": "TC-TOOL-project_delete_scene_file",
+      "tool": "project_delete_scene_file",
+      "line": 124,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-project_detect_circular_dependencies": {
+      "id": "TC-TOOL-project_detect_circular_dependencies",
+      "tool": "project_detect_circular_dependencies",
+      "line": 274,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-project_edit_resource": {
+      "id": "TC-TOOL-project_edit_resource",
+      "tool": "project_edit_resource",
+      "line": 216,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-project_edit_script": {
+      "id": "TC-TOOL-project_edit_script",
+      "tool": "project_edit_script",
+      "line": 183,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-project_edit_shader": {
+      "id": "TC-TOOL-project_edit_shader",
+      "tool": "project_edit_shader",
+      "line": 223,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-project_find_files_referencing_symbol": {
+      "id": "TC-TOOL-project_find_files_referencing_symbol",
+      "tool": "project_find_files_referencing_symbol",
+      "line": 198,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-project_find_script_references": {
+      "id": "TC-TOOL-project_find_script_references",
+      "tool": "project_find_script_references",
+      "line": 273,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-project_find_unused_resources": {
+      "id": "TC-TOOL-project_find_unused_resources",
+      "tool": "project_find_unused_resources",
+      "line": 270,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-project_get_android_preset_info": {
+      "id": "TC-TOOL-project_get_android_preset_info",
+      "tool": "project_get_android_preset_info",
+      "line": 282,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-project_get_export_info": {
+      "id": "TC-TOOL-project_get_export_info",
+      "tool": "project_get_export_info",
+      "line": 219,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-project_get_filesystem_tree": {
+      "id": "TC-TOOL-project_get_filesystem_tree",
+      "tool": "project_get_filesystem_tree",
+      "line": 114,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-project_get_info": {
+      "id": "TC-TOOL-project_get_info",
+      "tool": "project_get_info",
+      "line": 113,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-project_get_resource_preview": {
+      "id": "TC-TOOL-project_get_resource_preview",
+      "tool": "project_get_resource_preview",
+      "line": 218,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-project_get_scene_dependencies": {
+      "id": "TC-TOOL-project_get_scene_dependencies",
+      "tool": "project_get_scene_dependencies",
+      "line": 199,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-project_get_scene_exports": {
+      "id": "TC-TOOL-project_get_scene_exports",
+      "tool": "project_get_scene_exports",
+      "line": 126,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-project_get_settings": {
+      "id": "TC-TOOL-project_get_settings",
+      "tool": "project_get_settings",
+      "line": 117,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-project_get_shader_params": {
+      "id": "TC-TOOL-project_get_shader_params",
+      "tool": "project_get_shader_params",
+      "line": 226,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-project_get_statistics": {
+      "id": "TC-TOOL-project_get_statistics",
+      "tool": "project_get_statistics",
+      "line": 275,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-project_get_theme_info": {
+      "id": "TC-TOOL-project_get_theme_info",
+      "tool": "project_get_theme_info",
+      "line": 251,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-project_list_export_presets": {
+      "id": "TC-TOOL-project_list_export_presets",
+      "tool": "project_list_export_presets",
+      "line": 220,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-project_list_scripts": {
+      "id": "TC-TOOL-project_list_scripts",
+      "tool": "project_list_scripts",
+      "line": 180,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-project_read_resource": {
+      "id": "TC-TOOL-project_read_resource",
+      "tool": "project_read_resource",
+      "line": 213,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-project_read_scene_file_content": {
+      "id": "TC-TOOL-project_read_scene_file_content",
+      "tool": "project_read_scene_file_content",
+      "line": 122,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-project_read_script": {
+      "id": "TC-TOOL-project_read_script",
+      "tool": "project_read_script",
+      "line": 181,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-project_read_shader": {
+      "id": "TC-TOOL-project_read_shader",
+      "tool": "project_read_shader",
+      "line": 221,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-project_read_text_file": {
+      "id": "TC-TOOL-project_read_text_file",
+      "tool": "project_read_text_file",
+      "line": 289,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-project_remove_autoload": {
+      "id": "TC-TOOL-project_remove_autoload",
+      "tool": "project_remove_autoload",
+      "line": 215,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-project_search_file_contents": {
+      "id": "TC-TOOL-project_search_file_contents",
+      "tool": "project_search_file_contents",
+      "line": 116,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-project_search_file_names": {
+      "id": "TC-TOOL-project_search_file_names",
+      "tool": "project_search_file_names",
+      "line": 115,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-project_set_node_property_across_scenes": {
+      "id": "TC-TOOL-project_set_node_property_across_scenes",
+      "tool": "project_set_node_property_across_scenes",
+      "line": 200,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-project_set_setting": {
+      "id": "TC-TOOL-project_set_setting",
+      "tool": "project_set_setting",
+      "line": 118,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-project_set_theme_color": {
+      "id": "TC-TOOL-project_set_theme_color",
+      "tool": "project_set_theme_color",
+      "line": 246,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-project_set_theme_constant": {
+      "id": "TC-TOOL-project_set_theme_constant",
+      "tool": "project_set_theme_constant",
+      "line": 247,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-project_set_theme_font_size": {
+      "id": "TC-TOOL-project_set_theme_font_size",
+      "tool": "project_set_theme_font_size",
+      "line": 248,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-project_set_theme_stylebox": {
+      "id": "TC-TOOL-project_set_theme_stylebox",
+      "tool": "project_set_theme_stylebox",
+      "line": 249,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-project_validate_script": {
+      "id": "TC-TOOL-project_validate_script",
+      "tool": "project_validate_script",
+      "line": 186,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-project_validate_scripts": {
+      "id": "TC-TOOL-project_validate_scripts",
+      "tool": "project_validate_scripts",
+      "line": 286,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-project_write_text_file": {
+      "id": "TC-TOOL-project_write_text_file",
+      "tool": "project_write_text_file",
+      "line": 285,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-running_game_assert_node_state": {
+      "id": "TC-TOOL-running_game_assert_node_state",
+      "tool": "running_game_assert_node_state",
+      "line": 277,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-running_game_assert_screen_text": {
+      "id": "TC-TOOL-running_game_assert_screen_text",
+      "tool": "running_game_assert_screen_text",
+      "line": 278,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-running_game_capture_frames": {
+      "id": "TC-TOOL-running_game_capture_frames",
+      "tool": "running_game_capture_frames",
+      "line": 164,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-running_game_capture_screenshot": {
+      "id": "TC-TOOL-running_game_capture_screenshot",
+      "tool": "running_game_capture_screenshot",
+      "line": 152,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-running_game_capture_signal_emissions": {
+      "id": "TC-TOOL-running_game_capture_signal_emissions",
+      "tool": "running_game_capture_signal_emissions",
+      "line": 178,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-running_game_create_input_recording": {
+      "id": "TC-TOOL-running_game_create_input_recording",
+      "tool": "running_game_create_input_recording",
+      "line": 167,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-running_game_execute_gdscript": {
+      "id": "TC-TOOL-running_game_execute_gdscript",
+      "tool": "running_game_execute_gdscript",
+      "line": 166,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-running_game_find_nearby_nodes": {
+      "id": "TC-TOOL-running_game_find_nearby_nodes",
+      "tool": "running_game_find_nearby_nodes",
+      "line": 176,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-running_game_find_node_when_available": {
+      "id": "TC-TOOL-running_game_find_node_when_available",
+      "tool": "running_game_find_node_when_available",
+      "line": 175,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-running_game_find_nodes_by_script": {
+      "id": "TC-TOOL-running_game_find_nodes_by_script",
+      "tool": "running_game_find_nodes_by_script",
+      "line": 170,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-running_game_find_ui_elements": {
+      "id": "TC-TOOL-running_game_find_ui_elements",
+      "tool": "running_game_find_ui_elements",
+      "line": 173,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-running_game_get_autoload_node": {
+      "id": "TC-TOOL-running_game_get_autoload_node",
+      "tool": "running_game_get_autoload_node",
+      "line": 171,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-running_game_get_node_properties": {
+      "id": "TC-TOOL-running_game_get_node_properties",
+      "tool": "running_game_get_node_properties",
+      "line": 162,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-running_game_get_node_properties_batch": {
+      "id": "TC-TOOL-running_game_get_node_properties_batch",
+      "tool": "running_game_get_node_properties_batch",
+      "line": 172,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-running_game_get_node_property_samples": {
+      "id": "TC-TOOL-running_game_get_node_property_samples",
+      "tool": "running_game_get_node_property_samples",
+      "line": 165,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-running_game_get_scene_tree": {
+      "id": "TC-TOOL-running_game_get_scene_tree",
+      "tool": "running_game_get_scene_tree",
+      "line": 161,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-running_game_move_player_to_target": {
+      "id": "TC-TOOL-running_game_move_player_to_target",
+      "tool": "running_game_move_player_to_target",
+      "line": 177,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-running_game_play_input_recording": {
+      "id": "TC-TOOL-running_game_play_input_recording",
+      "tool": "running_game_play_input_recording",
+      "line": 169,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-running_game_run_stress_test": {
+      "id": "TC-TOOL-running_game_run_stress_test",
+      "tool": "running_game_run_stress_test",
+      "line": 279,
+      "pointers_ok": 3
+    },
+    "TC-TOOL-running_game_run_test_scenario": {
+      "id": "TC-TOOL-running_game_run_test_scenario",
+      "tool": "running_game_run_test_scenario",
+      "line": 276,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-running_game_set_node_property": {
+      "id": "TC-TOOL-running_game_set_node_property",
+      "tool": "running_game_set_node_property",
+      "line": 163,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-running_game_simulate_button_click_by_text": {
+      "id": "TC-TOOL-running_game_simulate_button_click_by_text",
+      "tool": "running_game_simulate_button_click_by_text",
+      "line": 174,
+      "pointers_ok": 4
+    },
+    "TC-TOOL-running_game_stop_input_recording": {
+      "id": "TC-TOOL-running_game_stop_input_recording",
+      "tool": "running_game_stop_input_recording",
+      "line": 168,
+      "pointers_ok": 4
+    }
+  }
+}

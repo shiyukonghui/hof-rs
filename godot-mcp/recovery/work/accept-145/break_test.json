@@ -1,0 +1,106 @@
+{
+  "target": "editor_add_audio_bus",
+  "original_row": {
+    "evidence_channel": "editor_state",
+    "channel_evidence": 1,
+    "channel_evidence_ok": true,
+    "pixel_effect_calls": 0,
+    "file_effect_calls": 0,
+    "read_payload_calls": 0,
+    "readback": {
+      "witness_tool": "editor_get_audio_bus_layout",
+      "witness_verb": "get",
+      "run": "runs/_exercises/ex_audio/h5-task113",
+      "witness_seq": 22,
+      "witness_after_write": true,
+      "witnessed_tool_first_seq": 2,
+      "why": "the bus editor_add_audio_bus created is in the engine's bus layout with the name and the index the layout assigns it; the literal carries the VALUE (TASK-120 A3: the bare name `\"Music\"` was rejected - it is matched by any payload carrying that string)",
+      "declared_in": "tools/sessions/_exercises/ex_audio/h5-manifest.json",
+      "expect": [
+        "\"name\":\"Music\"",
+        "\"index\":2"
+      ],
+      "expect_absent": [],
+      "expect_matched": true,
+      "kind": "witness_read"
+    }
+  },
+  "control": {
+    "exit": 1,
+    "json": "F:\\moonbit-hof-rs\\godot-mcp\\recovery\\work\\accept-145\\break-control.json",
+    "targets": 166,
+    "passed": 163,
+    "failed": 3,
+    "target": {
+      "verdict": "pass",
+      "evidence_channel": "editor_state",
+      "channel_evidence": 1,
+      "channel_evidence_ok": null,
+      "snapshot_drift": [],
+      "checks": {
+        "calls>=5": true,
+        "channel_evidence>=1": true,
+        "boundary>=1": true,
+        "boundary_declared": true,
+        "edge_declared": false,
+        "snapshot_agrees": true
+      }
+    }
+  },
+  "wrong_channel_declared_consistent_snapshot": {
+    "exit": 1,
+    "json": "F:\\moonbit-hof-rs\\godot-mcp\\recovery\\work\\accept-145\\break-wrong-channel.json",
+    "targets": 166,
+    "passed": 162,
+    "failed": 4,
+    "target": {
+      "verdict": "fail",
+      "evidence_channel": "pixel_effect",
+      "channel_evidence": 0,
+      "channel_evidence_ok": null,
+      "snapshot_drift": [],
+      "checks": {
+        "calls>=5": true,
+        "channel_evidence>=1": false,
+        "boundary>=1": true,
+        "boundary_declared": true,
+        "edge_declared": false,
+        "snapshot_agrees": true
+      }
+    },
+    "stdout_has_contradicts_verb": false
+  },
+  "snapshot_drift_only": {
+    "exit": 1,
+    "json": "F:\\moonbit-hof-rs\\godot-mcp\\recovery\\work\\accept-145\\break-drift.json",
+    "targets": 166,
+    "passed": 162,
+    "failed": 4,
+    "target": {
+      "verdict": "fail",
+      "evidence_channel": "editor_state",
+      "channel_evidence": 1,
+      "channel_evidence_ok": null,
+      "snapshot_drift": [
+        "coverage.json stores channel_evidence=2, its counters reproduce 1"
+      ],
+      "checks": {
+        "calls>=5": true,
+        "channel_evidence>=1": true,
+        "boundary>=1": true,
+        "boundary_declared": true,
+        "edge_declared": false,
+        "snapshot_agrees": false
+      }
+    }
+  },
+  "file_hashes_before": {
+    "channels": "72A6616D98AFB614A88726C8B631947521995E05E42E49048242A664A72AAF0B",
+    "coverage": "48017CD5FC2339AA4EF14D3B20955B93238CF9EEA7DD78EB18ACF7D44E47F7FA"
+  },
+  "file_hashes_after": {
+    "channels": "72A6616D98AFB614A88726C8B631947521995E05E42E49048242A664A72AAF0B",
+    "coverage": "48017CD5FC2339AA4EF14D3B20955B93238CF9EEA7DD78EB18ACF7D44E47F7FA"
+  },
+  "tracked_files_restored_exactly": true
+}

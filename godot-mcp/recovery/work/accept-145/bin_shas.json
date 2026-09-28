@@ -1,0 +1,14 @@
+{
+  "F:\\moonbit-hof-rs\\godot-mcp\\godot\\bin\\godot.windows.editor.x86_64.console.exe": {
+    "bytes": 300544,
+    "sha256": "66D0DE9577B14D499FB51792C6DFB87FEDD61671FC14358178CF4FC5C6FF903F"
+  },
+  "F:\\moonbit-hof-rs\\godot-mcp\\godot\\bin\\godot.windows.editor.x86_64.mono.console.exe": {
+    "bytes": 300544,
+    "sha256": "44FB0AA5BE6A8687372133002E31E939D331200CB2AF2AC20229C8916F8436AE"
+  },
+  "claimed": {
+    "plain": "66D0DE9577B14D499FB51792C6DFB87FEDD61671FC14358178CF4FC5C6FF903F",
+    "mono": "44FB0AA5BE6A8687372133002E31E939D331200CB2AF2AC20229C8916F8436AE"
+  }
+}

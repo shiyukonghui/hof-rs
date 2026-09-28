@@ -1,0 +1,41 @@
+{
+  "exit": 0,
+  "ok_lines": 0,
+  "fail_lines": 0,
+  "printed_names": 0,
+  "head": [
+    "stability: a minimum round count is declared               OK\r",
+    "stability: the minimum is at least 4 (TASK-141's four-roun OK\r",
+    "stability: the declaration carries its own basis (measured OK\r",
+    "stability: the declaration names who declared it           OK\r",
+    "stability: the module constant is the declared number      OK\r",
+    "stability: the insufficient state is named as the task req OK\r",
+    "stability: neither state can count as a pass               OK\r",
+    "stability: the declaration says 4 rounds, not 2            OK\r",
+    "stability: 1 rounds is ROUNDS_INSUFFICIENT (not a judgemen OK\r",
+    "stability: ... 1 rounds does NOT count as a pass           OK\r",
+    "stability: ... 1 rounds reports the minimum it needed      OK\r",
+    "stability: ... 1 rounds reports how many it got            OK\r",
+    "stability: 2 rounds is ROUNDS_INSUFFICIENT (not a judgemen OK\r",
+    "stability: ... 2 rounds does NOT count as a pass           OK\r",
+    "stability: ... 2 rounds reports the minimum it needed      OK\r"
+  ],
+  "wanted_present": {
+    "stability: 1 rounds is ROUNDS_INSUFFICIENT": false,
+    "stability: 3 rounds reports how many it got": false
+  },
+  "tail": [
+    "loop and gate agree on counts_as_pass                      OK\r",
+    "loop and gate agree on the strict failing steps            OK\r",
+    "pre-TASK-135 records: baseline verdict unchanged           OK\r",
+    "pre-TASK-135 records: strict falls back to the baseline    OK\r",
+    "pre-TASK-135 records: no edge steps claimed                OK\r",
+    "gate: an all-ack-missing run is not a pass                 OK\r",
+    "gate: the run's verdict is not PASS                        OK\r",
+    "gate: the run's verdict is not FAIL                        OK\r",
+    "gate: the model-player criterion note names the ack state  OK\r",
+    "gate: a step carrying an ack_missing marker is not credite OK\r",
+    "test_playability_model_player PASSED (108 assertions)\r",
+    ""
+  ]
+}

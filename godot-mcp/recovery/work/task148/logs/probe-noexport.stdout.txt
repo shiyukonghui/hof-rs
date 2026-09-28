@@ -1,0 +1,9 @@
+Godot Engine v4.8.dev.mono.custom_build.ba1587c71 (2026-09-27 03:05:30 UTC) - https://godotengine.org
+
+BREAKOUT_READY name=Main bricks=15 score=0 ball=0,0 launched=False
+[MCP] pending_timeout_ms=30000 (configured=30000) pending_ticks_per_frame=8
+[MCP] trace=off (default; use --mcp-trace=<path> or godot_mcp/trace_file to enable)
+[MCP] capture=off (default; use --mcp-capture=on_error|every_call together with --mcp-trace=<path>)
+[MCP] role=game configured_port=19404 source=cmdline listen=true
+[MCP] listening on 127.0.0.1:19404 (editor=false, tools=73)
+[MCP] INFO: MCP server is ready on 127.0.0.1:19404 as the game process (port source=cmdline, tools=73)
