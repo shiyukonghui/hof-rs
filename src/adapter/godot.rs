@@ -1593,14 +1593,21 @@ impl<'a> BatterySession<'a> {
                     .into_iter()
                     .filter(|action| !bindings.contains_key(*action))
                     .collect();
+                // DR-52: the count is published so the sentence can be checked
+                // against the raw `editor_get_input_actions` payload it
+                // describes — `smoke-t6`'s diagnostic contradicted its own record
+                // (92 actions, the three named ones first, reported as absent).
                 if missing.is_empty() {
-                    "EDITOR_SIDE_INJECTION: the editor InputMap lists the three actions (this is \
-                     still not game-process evidence)"
-                        .to_string()
+                    format!(
+                        "EDITOR_SIDE_INJECTION: the editor InputMap lists all three actions \
+                         ({} action(s) read; this is still not game-process evidence)",
+                        bindings.len()
+                    )
                 } else {
                     format!(
-                        "EDITOR_SIDE_INJECTION: the editor InputMap does not list {missing:?} — \
-                         that is the editor's own map, not the game's (DR-35)"
+                        "EDITOR_SIDE_INJECTION: the editor InputMap does not list {missing:?} \
+                         ({} action(s) read) — that is the editor's own map, not the game's (DR-35)",
+                        bindings.len()
                     )
                 }
             }
@@ -2298,6 +2305,17 @@ fn parse_input_actions(payload: &Value) -> Option<std::collections::BTreeMap<Str
         }
         Value::Array(items) => {
             for item in items {
+                // DR-52: the engine's `editor_get_input_actions` answers
+                // `{"actions": ["jump", "move_left", …], "count": N}` — an array
+                // of **names**.  The pre-DR-52 parser only understood the retired
+                // addon's `[{"name": …, "keys": …}]` shape, silently skipped
+                // every string and returned an *empty* map, which made the
+                // `input_replay` diagnostic state the opposite of its own raw
+                // record ("the editor InputMap does not list move_left …").
+                if let Some(name) = item.as_str() {
+                    bindings.insert(name.to_string(), Vec::new());
+                    continue;
+                }
                 let Some(name) = item
                     .get("name")
                     .or_else(|| item.get("action"))
@@ -3560,6 +3578,42 @@ mod tests {
             non_banner_editor_errors(only_banners.as_array().unwrap()).is_empty(),
             "only the engine's own banners were reported"
         );
+    }
+
+    /// DR-52: the engine's `editor_get_input_actions` answers an array of action
+    /// **names** (`{"actions": ["jump", "move_left", …], "count": 92}`); the
+    /// retired addon answered objects.  Both must be read, and a payload whose
+    /// shape is neither must stay `None` (never "no such action").
+    #[test]
+    fn the_input_action_list_is_read_from_the_engine_shape() {
+        // The verbatim smoke-t6 shape (abbreviated to the first entries).
+        let engine = json!({
+            "actions": ["jump", "move_left", "move_right", "spatial_editor/freelook_up", "ui_accept"],
+            "count": 5,
+        });
+        let bindings = parse_input_actions(&engine).expect("an `actions` array is a binding list");
+        assert_eq!(bindings.len(), 5);
+        for action in ["move_left", "move_right", "jump"] {
+            assert!(bindings.contains_key(action), "{action}: {bindings:?}");
+        }
+        // The faithful reading is what removes the `smoke-t6` contradiction: an
+        // empty map claimed the three actions were absent.
+        assert!(!bindings.is_empty());
+
+        // The addon-era object shape still works (name + keys).
+        let addon = json!({"actions": [{"name": "jump", "keys": ["Space", "W"]}]});
+        let bindings = parse_input_actions(&addon).expect("the object shape still parses");
+        assert_eq!(bindings.get("jump").map(Vec::len), Some(2));
+
+        // An object map is accepted as before.
+        let mapped = json!({"actions": {"jump": ["Space"]}});
+        let bindings = parse_input_actions(&mapped).expect("a map parses");
+        assert_eq!(bindings.get("jump").map(Vec::len), Some(1));
+
+        // A payload that is not a binding list at all is `None`, never `{}`.
+        assert!(parse_input_actions(&json!({"count": 92})).is_none());
+        assert!(parse_input_actions(&json!({"actions": 3})).is_none());
+        assert!(parse_input_actions(&json!([])).is_none());
     }
 
     /// DR-50: `running_game_execute_gdscript` takes a GDScript **function body**,

@@ -147,6 +147,12 @@ enum InputActionsMode {
     /// The payload captured in `smoke-t5`: the **editor's** InputMap, which
     /// lists only the engine's built-in `ui_*` actions.
     RealEditorMap,
+    /// DR-52: the payload `smoke-t6` actually received —
+    /// `{"actions": ["jump","move_left","move_right","spatial_editor/…","ui_*"],
+    /// "count": 92}` — an array of **names**.  The pre-DR-52 parser returned an
+    /// empty map for it, which is how the diagnostic came to state the opposite
+    /// of its own raw record.
+    EngineArray,
 }
 
 /// DR-35: what the **game process** answers to `running_game_execute_gdscript`.
@@ -257,6 +263,12 @@ impl FixtureChannel {
     fn call_count(&self, tool: &str) -> usize {
         self.calls_of(tool).len()
     }
+
+    /// Every recorded call, in arrival order — used by the DR-52 parameter-shape
+    /// audit.
+    fn all_calls(&self) -> Vec<(String, Value)> {
+        self.calls.lock().unwrap().clone()
+    }
 }
 
 /// A PNG payload carrying one inline base64 image (the `running_game_capture_frames` shape
@@ -350,6 +362,18 @@ fn input_actions_payload(mode: InputActionsMode) -> Value {
         let real: Value = fixture("input_replay_smoke_t5.json");
         return real["calls"][0]["payload"].clone();
     }
+    if mode == InputActionsMode::EngineArray {
+        // DR-52: the verbatim shape of the `smoke-t6` record — an array of
+        // action **names**, the three project actions first.
+        let inner = json!({
+            "actions": [
+                "jump", "move_left", "move_right",
+                "spatial_editor/freelook_up", "ui_accept", "ui_cancel",
+            ],
+            "count": 6,
+        });
+        return json!({"content": [{"type": "text", "text": inner.to_string()}]});
+    }
     let actions = match mode {
         InputActionsMode::Bound => json!([
             {"name": "move_left", "keys": ["A", "Left"]},
@@ -357,7 +381,9 @@ fn input_actions_payload(mode: InputActionsMode) -> Value {
             {"name": "jump", "keys": ["Space", "W"]},
         ]),
         InputActionsMode::Missing => json!([{"name": "ui_accept", "keys": ["Enter"]}]),
-        InputActionsMode::RealEditorMap => unreachable!("handled above"),
+        InputActionsMode::RealEditorMap | InputActionsMode::EngineArray => {
+            unreachable!("handled above")
+        }
     };
     let inner = json!({"actions": actions});
     json!({"content": [{"type": "text", "text": inner.to_string()}]})
@@ -1182,6 +1208,317 @@ async fn input_replay_reports_an_action_that_is_not_bound() {
         "an unbound action was never delivered: {}",
         record.record.observation
     );
+}
+
+// ---------------------------------------------------------------------------
+// DR-52 — diagnostics must agree with their own raw records, and every call
+//         must conform to the contract's parameter shape
+// ---------------------------------------------------------------------------
+
+/// The recorded `editor_get_input_actions` call of `input_replay`, and the
+/// action list the engine really returned.
+fn recorded_editor_actions(run: &BatteryRun) -> (String, Vec<Value>) {
+    let raw: Value = serde_json::from_str(&read(
+        &run.run_dir
+            .join("iter-1/candidate/.hoh/deterministic/raw/input_replay.json"),
+    ))
+    .unwrap();
+    let call = raw["calls"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|call| call["tool"] == json!("editor_get_input_actions"))
+        .expect("the editor-side InputMap read must be recorded");
+    let text = call["payload"]["content"][0]["text"]
+        .as_str()
+        .expect("the MCP envelope");
+    let inner: Value = serde_json::from_str(text).expect("the payload JSON");
+    let actions = inner["actions"]
+        .as_array()
+        .expect("the engine answers an `actions` array")
+        .clone();
+    (text.to_string(), actions)
+}
+
+/// DR-52 (DEF-E): `deterministic.json` claimed the editor InputMap "does not
+/// list move_left/move_right/jump" while its own `raw/input_replay.json`
+/// recorded an `actions` array whose **first three entries are exactly those
+/// names**.  The diagnostic is now derived from the same parse the record shows,
+/// and it publishes the count it read so the two can be compared.
+#[tokio::test]
+async fn the_editor_input_map_diagnostic_agrees_with_its_own_record() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel = Arc::new(
+        FixtureChannel::green()
+            .with_input_actions(InputActionsMode::EngineArray)
+            .with_game_input(GameInputMode::Ok),
+    );
+    let run = run_battery(root, channel, 30).await;
+
+    let (text, actions) = recorded_editor_actions(&run);
+    let names: Vec<String> = actions
+        .iter()
+        .filter_map(|action| action.as_str().map(ToOwned::to_owned))
+        .collect();
+    for wanted in ["move_left", "move_right", "jump"] {
+        assert!(
+            names.iter().any(|name| name == wanted),
+            "the fixture must really carry `{wanted}`: {names:?}"
+        );
+    }
+
+    let replay = step(&run.records, "input_replay");
+    let observation = &replay.record.observation;
+    assert!(
+        observation.contains("lists all three actions"),
+        "the diagnostic must agree with the record it quotes (DR-52): {observation}"
+    );
+    assert!(
+        !observation.contains("does not list"),
+        "the smoke-t6 contradiction must be gone: {observation}"
+    );
+    assert!(
+        observation.contains(&format!("{} action(s)", names.len())),
+        "the diagnostic must publish the count it read ({}) — raw record: {text}",
+        names.len()
+    );
+
+    // And the same self-consistency holds in the other direction: `move_left`
+    // really absent must still be reported as absent, with the count.
+    let channel = Arc::new(FixtureChannel::green().with_input_actions(InputActionsMode::RealEditorMap));
+    let temp = tempfile::tempdir().unwrap();
+    let run = run_battery(temp.path(), channel, 30).await;
+    let (_, actions) = recorded_editor_actions(&run);
+    let observation = &step(&run.records, "input_replay").record.observation;
+    assert!(
+        observation.contains("does not list"),
+        "an editor map without the project actions must say so: {observation}"
+    );
+    assert!(
+        observation.contains(&format!("{} action(s)", actions.len())),
+        "the count must match the record ({}): {observation}",
+        actions.len()
+    );
+}
+
+/// DR-52: does this argument set conform to the contract's `inputSchema`?
+///
+/// Deliberately a **test-side** checker: it is an audit of the arguments hof-rs
+/// builds against the fixture contract (the same `tools/list` snapshot the
+/// runtime embeds), not a runtime behaviour.
+fn check_arguments(tool: &str, schema: &Value, args: &Value) -> Result<(), String> {
+    let properties = schema
+        .pointer("/inputSchema/properties")
+        .and_then(Value::as_object);
+    let required: Vec<&str> = schema
+        .pointer("/inputSchema/required")
+        .and_then(Value::as_array)
+        .map(|items| items.iter().filter_map(Value::as_str).collect())
+        .unwrap_or_default();
+    let Some(args) = args.as_object() else {
+        return Err(format!("`{tool}`: arguments must be a JSON object"));
+    };
+    for (name, value) in args {
+        let Some(property) = properties.and_then(|properties| properties.get(name)) else {
+            return Err(format!("`{tool}`: `{name}` is not a declared parameter"));
+        };
+        let declared = property.get("type").and_then(Value::as_str).unwrap_or("any");
+        let matches = match declared {
+            "string" => value.is_string(),
+            "integer" => value.is_i64() || value.is_u64(),
+            "number" => value.is_number(),
+            "boolean" => value.is_boolean(),
+            "array" => value.is_array(),
+            "object" => value.is_object(),
+            "any" | _ => true,
+        };
+        if !matches {
+            return Err(format!(
+                "`{tool}`: `{name}` must be {declared}, got {value}"
+            ));
+        }
+    }
+    for name in required {
+        if !args.contains_key(name) {
+            return Err(format!("`{tool}`: required parameter `{name}` is missing"));
+        }
+    }
+
+    // Value domains the JSON Schema cannot express, taken from the engine itself.
+    if tool == "running_game_capture_screenshot" {
+        if let Some(save_path) = args.get("save_path").and_then(Value::as_str) {
+            if !(save_path.starts_with("res://") || save_path.starts_with("user://")) {
+                return Err(format!(
+                    "`{tool}`: `save_path` must start with res:// or user:// \
+                     (running_game_capture.cpp:62-63), got `{save_path}`"
+                ));
+            }
+        }
+    }
+    if tool == "running_game_execute_gdscript" {
+        let code = args.get("code").and_then(Value::as_str).unwrap_or("");
+        if code.trim().is_empty() {
+            return Err(format!("`{tool}`: `code` must not be blank"));
+        }
+        // DR-50: `code` is a GDScript function **body**
+        // (running_game_script_execution.cpp:57-59).  A void call may not be
+        // used as a value — `str(Input.action_press(...))` does not compile
+        // (gdscript_analyzer.cpp:3498), and that is exactly the body `smoke-t6`
+        // sent as its fifth (hanging) call.  Whether a *reading* is actually
+        // `return`-ed is enforced by `the_game_probe_calls_are_gdscript_bodies`.
+        for void_call in ["Input.action_press(", "Input.action_release("] {
+            if let Some(position) = code.find(void_call) {
+                // The void call used as a value looks like `str(<void call>)`.
+                let used_as_value = code[..position].contains("str(");
+                if used_as_value {
+                    return Err(format!(
+                        "`{tool}`: `code` uses the void call `{void_call}…)` as a value; it must \
+                         stay a statement"
+                    ));
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+/// DR-52: the checker must have teeth — the three violations this batch exists
+/// to remove are all rejected by it, on the verbatim `smoke-t6` argument.
+#[test]
+fn the_parameter_shape_checker_rejects_the_smoke_t6_violations() {
+    let schemas = hof_rs::tools::index::embedded_tool_schemas();
+    let schema = |name: &str| {
+        schemas
+            .iter()
+            .find(|tool| tool["name"] == json!(name))
+            .unwrap_or_else(|| panic!("`{name}` must be in the contract"))
+    };
+
+    // DEF-B: the filesystem path the engine refused with -32602 three times.
+    let violation = check_arguments(
+        "running_game_capture_screenshot",
+        schema("running_game_capture_screenshot"),
+        &json!({"save_path": ".workspace/mario\\.hoh/evidence/frame-00.png"}),
+    )
+    .expect_err("a filesystem save_path violates the contract");
+    assert!(violation.contains("res:// or user://"), "{violation}");
+    // …and the fixed shape is accepted.
+    check_arguments(
+        "running_game_capture_screenshot",
+        schema("running_game_capture_screenshot"),
+        &json!({}),
+    )
+    .expect("the inline form takes no save_path");
+
+    // Unknown parameter / missing required parameter / wrong type.
+    let violation = check_arguments(
+        "editor_get_errors",
+        schema("editor_get_errors"),
+        &json!({"bogus": 1}),
+    )
+    .expect_err("an undeclared parameter must be rejected");
+    assert!(violation.contains("not a declared parameter"), "{violation}");
+    let violation = check_arguments(
+        "editor_open_scene",
+        schema("editor_open_scene"),
+        &json!({}),
+    )
+    .expect_err("a missing required parameter must be rejected");
+    assert!(violation.contains("required parameter `path`"), "{violation}");
+    let violation = check_arguments(
+        "editor_get_errors",
+        schema("editor_get_errors"),
+        &json!({"max_lines": "fifty"}),
+    )
+    .expect_err("a wrong type must be rejected");
+    assert!(violation.contains("must be integer"), "{violation}");
+
+    // DR-50: the fifth (`smoke-t6`) `execute_gdscript` body — a void call used as
+    // a value — is rejected, and both fixed forms are accepted.
+    let violation = check_arguments(
+        "running_game_execute_gdscript",
+        schema("running_game_execute_gdscript"),
+        &json!({"code": "str(Input.action_press(\"move_right\"))"}),
+    )
+    .expect_err("a void call may not be used as a value");
+    assert!(violation.contains("must stay a statement"), "{violation}");
+    for code in [
+        "return str(InputMap.has_action(\"move_right\"))",
+        "Input.action_press(\"move_right\")",
+    ] {
+        check_arguments(
+            "running_game_execute_gdscript",
+            schema("running_game_execute_gdscript"),
+            &json!({"code": code}),
+        )
+        .unwrap_or_else(|violation| panic!("the fixed body must be accepted: {violation}"));
+    }
+    let violation = check_arguments(
+        "running_game_execute_gdscript",
+        schema("running_game_execute_gdscript"),
+        &json!({"code": "   "}),
+    )
+    .expect_err("a blank body must be rejected");
+    assert!(violation.contains("must not be blank"), "{violation}");
+}
+
+/// DR-52: **every** tool hof-rs calls, with the arguments it really sends, must
+/// conform to the 177-tool contract's parameter shape.
+///
+/// The list below is the audit's coverage requirement: a new call site (or a
+/// renamed call) makes this test fail until it is covered here.
+#[tokio::test]
+async fn every_tool_call_hof_rs_makes_matches_the_contract_schema() {
+    const AUDITED_TOOLS: &[&str] = &[
+        "editor_get_collision_info",
+        "editor_get_errors",
+        "editor_get_input_actions",
+        "editor_open_scene",
+        "editor_play_scene",
+        "editor_rescan_project_filesystem",
+        "editor_simulate_input_action",
+        "editor_stop_scene",
+        "project_read_scene_file_content",
+        "running_game_capture_frames",
+        "running_game_capture_screenshot",
+        "running_game_execute_gdscript",
+        "running_game_get_node_properties",
+        "running_game_get_node_property_samples",
+        "running_game_get_scene_tree",
+    ];
+
+    let mut recorded: Vec<(String, Value)> = Vec::new();
+    for mode in [
+        ScreenshotMode::InlineImage,
+        ScreenshotMode::InlineBase64Fallback,
+    ] {
+        let temp = tempfile::tempdir().unwrap();
+        let channel = Arc::new(FixtureChannel::green().with_screenshot(mode));
+        run_battery(temp.path(), channel.clone(), 30).await;
+        recorded.extend(channel.all_calls());
+    }
+
+    let schemas = hof_rs::tools::index::embedded_tool_schemas();
+    let mut checked: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    for (tool, args) in &recorded {
+        // The battery's own step ids are not tool calls; the fixture channel
+        // only records tools it was asked to run, so every entry is one.
+        let schema = schemas
+            .iter()
+            .find(|entry| entry["name"] == json!(tool))
+            .unwrap_or_else(|| panic!("`{tool}` is not in the 177-tool contract"));
+        check_arguments(tool, schema, args)
+            .unwrap_or_else(|violation| panic!("parameter shape violation: {violation}"));
+        checked.insert(tool.clone());
+    }
+
+    for tool in AUDITED_TOOLS {
+        assert!(
+            checked.contains(*tool),
+            "`{tool}` is called by hof-rs but was never audited: {checked:?}"
+        );
+    }
 }
 
 // ---------------------------------------------------------------------------
