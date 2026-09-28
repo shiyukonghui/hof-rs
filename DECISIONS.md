@@ -8580,3 +8580,58 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
   - 影响：新增修复包（编号自 **DR-48** 起），需先出设计修订；`ACCEPTANCE.md`（过期工件）待本次一并更新。
   - 回滚点：`runs/smoke-t6` 全量保留（可为基线）；修复批的每个 DR 单独 revert。
 
+## D221 — 批次二独立验收 **pass**；修复包定义（DR-48..DR-53）与必须遵守的修复禁令
+
+- 日期：2026-09-29
+- 触发问题：批次二由**另一批全新子代理**独立验收，交付 `.spec/hof-rs/tasks/TASK-DR47-ACCEPTANCE.md`。
+- 验收结论：**`verdict = pass`**。执行者报告被认定**诚实且实质准确**：未改写结论、未伪造证据、
+  未篡改 `runs/smoke-t6`（135 文件未变）、**无一条缺陷被推翻**；E1/E2/E3 `not_met` **成立**，
+  属**本批的诚实结果**而非本批失败。验收者全程只读：未碰编辑器（PID 108432 存活）、未起游戏进程、
+  未调模型、密钥只打印长度；`PRD sha256` 仍 `4c81c3a9…`。
+- 验收者新增的**独立证据**（都是它自己复现的，且把若干条追到了源码级）：
+  1. **DEF-A 的根因（源码级）**：引擎 `editor_read_scene_inspector.cpp:249` 用
+     `to_upper().contains("ERROR")` 过滤编辑器日志行 ⇒ **只有**含 `on_error` 的那行 INFO 命中
+     （兄弟行 `trace=off` 不命中，故 `count=1`）；hof-rs 侧 `godot.rs:783-796` **没有**任何子串豁免，
+     非空 `errors` 即判"不干净"。**活体交叉验证**：`editor_get_errors` 报 1 条的同时，
+     `project_validate_scripts` 返回 **7/7 compiles successfully** ⇒ **E2 确为假阴性**。
+  2. **修复禁令（必须遵守）**：**不得**按 `[MCP]` 前缀做白名单——引擎另有
+     `ERROR: [MCP] SceneTree never became available; MCP server disabled.`（`task092/logs/*.log.err`），
+     那**是**真错误。豁免必须窄到**引擎信息横幅的确切形态**，并有反例测试证明真 ERROR 仍会被抓。
+  3. **DEF-B 两侧都定位到行**：hof-rs `godot.rs:1042-1048` 传**文件系统路径**；引擎契约
+     `running_game_capture.cpp:62-63` 只收 `res://`/`user://`。旧 PNG：**4,246 B、mtime 2026-09-21 17:55、
+     sha256 `bef0936d…7ea2`**；该步 `ok=true` **纯靠** `absolute.is_file()`（`godot.rs:1109-1124`）。
+     **额外发现（执行者漏报）**：该旧文件**还压制了 `capture_frames` 回退**（`godot.rs:1081`）。
+  4. **DEF-C 时间线纠正**：pass2 的**前四次** `running_game_execute_gdscript` **成功**
+     （transport ok、`result_type=Nil`），**第五次**才挂（一次逻辑调用 ×3 次重试 ⇒ `os 10060`），随后 `os 10061`。
+     "3 次超时"是**重试**不是 3 次调用。pass1 的原始证据**已被 pass2 覆盖**，仅存于
+     `developer.attempt2.json`；**根因仍未定**。
+  5. **DEF-D 升级 minor → moderate（结构性）**：`editor_status` 被**硬写** `Value::Null`
+     （`engine_identity.rs:44`）⇒ **永不填充**；`game_endpoint` 的回写（`run_loop.rs:787-793`）发生在
+     电池**之后**，而电池的 `editor_stop_scene` 已清掉注册（`godot.rs:1887-1888`），pass2 后**无回写**
+     ⇒ **两个字段结构性地永远为空**。
+  6. **DEF-E 逐字确认**；**DEF-F 判 partial**（事实对、机制描述错——规则是显式"磁盘存在"；
+     且其第二个例子不是缺陷证据）⇒ **并入 DEF-B**。
+- **我的 D219 算术错误被两条独立路径确证**：①活体 `tools/list`（验收者的捕获与执行者**逐字节相同**，
+  sha256 `aec1d8de…f744e`）得 `|E|=154、|G|=73、E∩G=50、E\G=104、并集 177`；
+  ②**静态**从 `tool_registry.cpp:267-277` 的 `scope_matches` 与 177 条随附注册推出
+  **EDITOR 104 / BOTH 50 / GAME 23**（无需起游戏进程）。⇒ **104/50/23 为真值，D219 的 108/46/23 为错。**
+- 其它更正（进 errata）：`mcp-errors.jsonl` 是 **39** 行不是 43；新反例 R3——需求级编号
+  （N1/N2/F5/F6/F16）**同时**出现在 verified 与 gap 两侧，"verified ∩ gap = ∅、并集 = 30"**只在 claim-id 级成立**
+  （需求级并集为 24），此细微处**可能被误读成"N2 已 verified"**；`mtime_unix` 差 1 秒是 PowerShell 取整假象；
+  `developer.attempt2.json` 里 66 条真 ERROR 行来自**另一个无关工程**（`MCP074 Platformer`），**不是** mario 产物。
+- **修复包定义（DR-48..DR-53，本条的实质产出）**：
+  | ID | 对应 | 要求（硬） |
+  |---|---|---|
+  | **DR-48** | DEF-A | `editor_errors_baseline` 只豁免**引擎信息横幅的确切形态**（不是 `[MCP]` 前缀）；**必须**有反例测试：真实 `ERROR:`/`SCRIPT ERROR` 仍使闸门失败 |
+  | **DR-49** | DEF-B + DEF-F（并入） | 截图证据必须**本轮真实**：写入 `user://` 或由内联图像落地；**调用前先作废目标路径上的既有文件**，使"存在即 ok"**无法伪造**；`ok` 须以**新鲜度**（hash/mtime）为准而非 `is_file()`；**并修** `godot.rs:1081` 的回退压制 |
+  | **DR-50** | DEF-C | **先定性后修复**：只读、可复现地表征"引擎侧挂死 vs hof-rs 调用形态"；**若定为引擎缺陷 ⇒ 上报用户**（**禁止**改 `godot-mcp/**`），并在 hof-rs 侧给出**不改引擎**的绕行（如改用逐帧采样类工具），否则不得"修" |
+  | **DR-51** | DEF-D | 端点身份**必须真正持久化**：`editor_status` 用真实 `GET /mcp` 响应体填充；`game_endpoint` 在**登记当刻**回写，而不是在电池清掉注册之后 |
+  | **DR-52** | DEF-E + 参数形状 | 诊断文本必须与自己的原始记录一致；**并按 D220.3**：以 `TEST-CASES.md` 的 177 条 `TC-TOOL-*` 为准，逐工具核对 hof-rs 的**调用参数形状**（这是 DR-42 只做改名所漏掉的迁移面） |
+  | **DR-53** | 批次一 DEF-2/3/4 | 畸形 `enabled=` **不得改动文件**（写 reason）；补 `undeclared` 分支与 `None` 关闸的**回归测试**；`the_snapshot_is_the_real_174_tool_list` 改名并收紧断言 |
+  - **顺序**：DR-48/49/51/52/53 是纯 hof-rs 离线改动；**DR-50 以"定性"为第一步**，其结论可能触发
+    "回阶段二/三修设计"，届时按阶段关卡显式回到设计并更新工件，**不在实现里偷偷绕**。
+- 预期影响与回滚点：
+  - 影响：新增设计修订（`DESIGN-DETAIL.md` §14，DR-48..DR-53）；修完须再跑一轮真机 T=1 并**再次独立验收**；
+    `ACCEPTANCE.md`（过期工件）在本轮收尾时更新。
+  - 回滚点：每个 DR 单独 revert；`runs/smoke-t6` 作为**换代后基线**保留，**不得**被后续轮次覆盖写入。
+
