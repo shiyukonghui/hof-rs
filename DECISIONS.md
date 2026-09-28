@@ -8430,3 +8430,51 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
   - 回滚点：`git reset --hard b6d9282~1`（= `9000518`）即回到换代前状态；5 条提交各自对应一个 DR，可单独 revert。
     **不得** push 之前先完成独立验收。
 
+## D218 — 批次一独立验收 **pass**；4 条 minor 缺陷的处置与批次二前置动作
+
+- 日期：2026-09-29
+- 触发问题：批次一（DR-41..DR-45）由**另一批全新子代理**独立验收，交付
+  `.spec/hof-rs/tasks/TASK-DR41-ACCEPTANCE.md`。
+- 验收结论（**机器可读对象在报告 §8**）：`verdict = pass`；47 条 criteria 全过；
+  **无 blocker / 无 major**；4 条 minor/info 缺陷；7 条风险；8 项明确**未验证**（不默认成立）。
+- 关键独立证据（**验收者自己复现**，非抄报告）：
+  1. **头号反例目标（守卫是否空洞）被实测证伪**：在 `src/adapter/godot.rs:823` 植入真实调用
+     `play_scene` → `tool_vocabulary` **转红**（`still appears in 1 place(s) (DR-45): … play_scene`，
+     `3 passed; 1 failed`，exit 101）⇒ **守卫非空洞**；回退后 `git status`/`git diff --stat` 均空，
+     且文件与 HEAD blob **逐字节一致**（sha256 `2a962b5c…`，142,511 B，LF）。
+     （附注：`git checkout --` 因 `core.autocrlf=true` 会把该文件 LF→CRLF，验收者恢复了精确 blob 字节——值得记住的坑。）
+  2. **夹具不是"藏了私货"**：177 条、正则违规 0、**名字集合与顺序**与 `tools_list.renamed.json` 完全一致、
+     逐工具字段 diff **0**、**没有夹具专用键**（仅少了源的顶层 `_meta`），sha256 `50c5fb42…` 与 `PROVENANCE.md` 一致
+     ⇒ 我在 D217 第 3 条担心的"夹具专用字段"**实测不存在**。
+  3. **策略差异被从零重算**：以换代前规则对 174 条全量重算，**恰好**只有 D217 采纳的那 5 条不同，
+     且全是旧拒→新放行的**只读动词**；换代前 `*.rs` 对这 5 条**零引用** ⇒ 没有测试被削弱。
+  4. `cargo test --offline`：34 targets、**passed=300 / failed=0 / ignored=7**、exit 0（7 条 ignored 是既有的
+     `tests/godot_smoke.rs` 门控）。`origin/master` 仍 `4b9bd44`（未 push）；DR-44 = 12 文件、DR-45 = 1 文件
+     （与 D217 的历史纪律核对一致）。
+- 四条缺陷的裁决：
+  1. **DEF-1（minor）**：确定性电池的步 id `stop_scene` 被守卫的整词扫描连带改成 `editor_stop_scene`
+     （非工具标识符）。**采纳为已记录的行为变更**：全仓一致，属"旧词汇归零"的严格解读代价。
+  2. **DEF-2（minor）**：`[editor_plugins]` 里若写**畸形** `enabled=`（无括号），解析返回 `None` 被解释为
+     "列表变空 ⇒ 删整段"，于是整段被删。**采纳并记为已声明边界**：标准 Godot 工程只写
+     `enabled=PackedStringArray(...)`，实测不可达；但**"解析失败就改动文件"违背 DR-41 的逐字节保守原则**，
+     故列为**待修**（见下）。
+  3. **DEF-3（minor）**：`mcp_port_source` 的 `undeclared` 分支、`engine_identity` 在 `None` 时关闸，
+     两条行为**没有仓库内回归测试**（验收者用自己的探针实测两者行为正确）。**列为待修**。
+  4. **DEF-4（info）**：`src/tools/index.rs:260` 的测试名 `the_snapshot_is_the_real_174_tool_list` 已过期
+     （夹具 177 条），且断言偏弱（`>=100`）。**列为待修**。
+- **待修项的统一处置（我的决定，避免把循环拉长）**：DEF-2/3/4 都是**测试与保守性**问题、**不阻塞**真机冒烟，
+  故不插队返工；**批次二验收通过后**用一个小批次一次修完
+  （DEF-2 改为"解析失败则不改文件 + 写 reason"；DEF-3 补两条回归测试；DEF-4 改名并收紧断言），
+  修完仍要独立验收。**在此之前的证据不得读作"这三条已解决"。**
+- **批次二的前置动作（已在本条落地）**：验收者实测活动工作区 `.workspace/mario` **仍带旧通道**
+  （`addons/godot_mcp_rs/`（8 文件，含 `godot_mcp_gdext.dll`）、`.godot/extension_list.cfg` 内容恰为
+  `res://addons/godot_mcp_rs/godot_mcp_rs.gdextension`、`project.godot:26-28` 的 `[editor_plugins]`），
+  且 `hof doctor` 已如实把它们报成 `[FAIL]`。**决定：用已实现的入口做真实清理**
+  —— `hoh init`（DR-40：只调 `ProjectAdapter::initialize`，**不带** `--fresh-workspace` 故**不会清空工作区**，
+  也无模型/MCP 探测）。**不手删、不改代码**：走产品路径，这样"真机清理"本身也成为 DR-41 的活体证据。
+- 预期影响与回滚点：
+  - 影响：批次一admitted 为**已验收通过**（但有 3 条待修 minor 与 8 项未验证）；`.workspace/mario` 的
+    addon/缓存/`[editor_plugins]` 被真实清理（该目录在 `.gitignore` 内，不进版本控制）。
+  - 回滚点：工作区清理**不可逆**（addon 目录已删）——但它是**旧通道**且已按设计废弃，重建只需把
+    `F:\RustProjects\godot-mcp-pro\addons\godot_mcp_rs` 复制回来；仓库侧回滚点同 D217。
+
