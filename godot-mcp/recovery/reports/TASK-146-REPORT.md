@@ -271,7 +271,7 @@ godot-mcp/recovery/reports/TASK-146-REPORT.md
 
 提交后 `git status --short` 里 **本任务独占的 9 个路径全部消失**（已入库），其余 ` M`/`??` 与提交前逐条相同 ⇒ **没有代提交任何他人改动，也没有 revert 任何东西**（见 §G.2 的提交后原文）。`git status --short` 里仍可见的他人改动：`DECISIONS.md`、`recovery/reports/TASK-140-REPORT.md`、`recovery/tasks/TEMPLATE-logic-feedback.md`、`tools/playability_controls.json`、`tools/playtest_player.py`、`tools/tests/test_playability_model_player.py`、`tools/playtest_player_t142_prefix.py`、`recovery/work/accept-145/` 与各 `TASK-14x.md`/`ACCEPTANCE-*`。
 
-### G.2 两仓 `git log --oneline -3` / `git status --short`（真跑）
+### G.2 两仓 `git log --oneline -3` / `git status --short`（真跑；下面这块是**提交前**的原始输出，提交后本任务 9 个路径已入库，其余逐条不变 —— 见 §G.1）
 
 `godot-mcp`（仓库根 = `F:\moonbit-hof-rs`，`git rev-parse --show-toplevel` 确认；`godot` 是**嵌套仓**）：
 
