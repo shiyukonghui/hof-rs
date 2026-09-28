@@ -1,117 +1,105 @@
-# ACCEPTANCE — hof-rs 阶段五验收记录
+# ACCEPTANCE — hof-rs（引擎换代后的验收记录）
 
-- 状态：**离线范围通过（pass）；真实冒烟（E1–E6 / T=1）未执行 → 阶段一整体尚未完成**
-- 依据：`REQUIREMENTS.md` v0.2（R1–R13 / C1–C10 / E1–E6 / A1–A8）、`DESIGN-DETAIL.md` v0.2（含 §12 DR-1..DR-13）、`DECISIONS.md` D1–D14
-- 验收主体：**两批完全独立的验收子代理**（工作流 `hof-rs-acceptance`、`hof-rs-acceptance-2`），均未参与实现、未继承实现者结论
+- 版本：**v2（2026-09-29）**，取代 v1（2026-09-21，已过期：其"E1–E6 未执行"的结论已被
+  `runs/smoke-t1..t6` 与 DR-29..DR-53 取代；v1 原文存于 git 历史 `4fe077d`）。
+- 需求基线 `.spec/hof-rs/REQUIREMENTS.md` **v0.3**；设计基线 `DESIGN-DETAIL.md` **v0.9**（§13/§14）；
+  决策基线 `DECISIONS.md` **D216..D223**。
+- **硬约束**：`PRD-mario.md` 逐字节未改（sha256 `4c81c3a9995f0b3afdf01421a0c3be88573cceefc284ce9bafbfda141f0f5c3a`）；
+  `godot-mcp/**` 未被本线修改。
 
----
+## 1. 验收方法
 
-## 1. 结论
+三类证据缺一不可：**离线确定性**（`cargo test --offline` 全绿 + 反例测试**非空洞**，用受控植入-回退证明）、
+**真机端到端**（真实 T=1 跑在我们的引擎构建上并留证）、**独立验收**（另一批全新子代理只看需求/设计/代码/原始工件，
+自己复现并给结构化 verdict）。三批（批次一、批次二、修复包）**各经一次独立验收，三次 verdict 均为 `pass`**。
 
-| 范围 | 结论 | 依据 |
-|---|---|---|
-| R1–R13（Runtime 语义）、C9/C10、DR-1..DR-12 | **pass** | 第二轮独立验收，无 blocker/major/minor 缺陷，反例由验收方自建 |
-| E1–E6（T=1 真实全链路冒烟） | **未执行（not_verifiable）** | 9877 未监听；仓库仅有一个在 Developer 阶段中断的遗留 run |
-| **阶段一整体** | **未完成** | `REQUIREMENTS.md` §1「阶段一附加要求（用户确认）」明确要求至少一次 T=1 真实 smoke run |
+## 2. 引擎换代（DR-41..DR-47）——已验收
 
-> 口径声明：本文件**不**把「离线测试全绿」当作阶段一通过。用户明确要求阶段一含一次真实 smoke run，该项未完成即阶段一未完成。
-
-## 2. 验收轮次与关键证据
-
-### 2.1 第一轮（verdict = fail）
-
-| 缺陷 | 严重度 | 内容 | 状态 |
+| ID | 判据 | 结果 | 关键证据 |
 |---|---|---|---|
-| A1 | blocker | 证据 `path` 用 `..` 逃逸出候选视图根未被强制（`../outside_secret.txt` → `check_paths=[]`、`bind=Ok`） | 已修（DR-10） |
-| A2 | major | `tests/godot_smoke.rs` E2–E6 在前置缺失时静默 `return` → `5 passed` 且**零断言** | 已修（DR-9） |
-| A3 | minor | Planner 拒绝文案对只读工具误报「may not mutate」 | 已修（DR-7） |
-| A4 | minor | 缺 §6.1 要求的 doctor 人工确认项 | 已修（DR-6） |
-| A5 | minor | `status`/`rollback` 错误出口落 exit 5；unknown usage 打印成 `0` | 已修（DR-8） |
-| A6 | nit | `tools_policy.rs:250` 恒真断言 | 已修（精确断言） |
+| DR-41 | 拆 GDExtension 通道与 `extension_list.cfg` 缓存；`addon_source` 归零 | pass | 自造多插件工程端到端 `hoh init`：addon 目录删除、缓存**恰好**少掉那一行（138→87 B）、其它插件名逐字保留、列表空才整段移除、**连跑两次零字节变化**；`addon_source` 0 命中 |
+| DR-42 | 夹具 174→**177** 四通道前缀；24 文件迁移；角色作用域重写 | pass | 177 条、正则违规 0、**集合与顺序**与 `tools_list.renamed.json` 一致、逐工具字段 diff 0、**无夹具专用键** |
+| DR-43 | 双端点路由 | **pass（真机）** | `editor_play_scene` 真回 `endpoint`/`mcp_port`/`pid`/`mcp_port_source=auto_free_port`；首个 `running_game_get_scene_tree` **成功（50 节点）** |
+| DR-44 | 引擎身份入库 + `engine_identity` 闸门 | **pass（真机）** | `meta.json.engine`：sha256 `25d29eb4…`、`4.8.dev.mono.custom_build.ba1587c71`、**`listener.pid=108432` 且 `matches_binary=true`**；匹配/不匹配/读不到三情形各有测试 |
+| DR-45 | 旧词汇归零 | pass（**非空洞已证**） | 植入 `play_scene` ⇒ `tool_vocabulary` **转红**；回退后与 HEAD blob 逐字节一致；旧名集合与 rename map 174 条**双向差集为空** |
+| DR-46/47 | 禁项与真机前置 | pass | 未启动引擎/未碰端口/未联网；PRD 未改；无新依赖 |
 
-### 2.2 修复轮（`hof-rs-fix-round`，4 次提交）
+**端点集合恒等式（实测，取代 D219 的错值）**：契约 **177 = 104 editor-only + 50 共享 + 23 game-only**；
+编辑器端点 **154**、游戏端点 **73**、并集 177。两条独立路径确证：活体 `tools/list` 逐字节捕获；
+**静态**从 `tool_registry.cpp:267-277` 的 `scope_matches` + 177 条注册推导。
 
-- `971882b` DR-1/DR-2/DR-3/DR-7/DR-10（A1）
-- `74b2d67` DR-4/DR-5/DR-6/DR-8/DR-9/DR-11（A6）
-- `1033aaf` submit 内层闸门拒绝 `..` 逃逸
-- `a351817` 确定性阶段日志随记录复制进冻结候选视图
+## 3. 真机 T=1 冒烟（批次二）——已执行，结论诚实
 
-### 2.3 第二轮（verdict = pass）
+`target/release/hoh.exe run --iterations 1 --run-id smoke-t6`；**退出码 6**；**26,805,473 tokens / 约 112 分钟**；
+四次 attempt 全部 `LimitsExceeded`。
 
-验收方自跑与自建证据（摘要）：
+| ID | 判定 | 依据 |
+|---|---|---|
+| E1 | **not_met** | 三角色真跑、`D_1`/`E_1` 合法（8 verified + 22 gap，绑定 candidate），但 **Developer 零工程增量**（`A0 == A1 == fc78d299…`） |
+| E2 | **not_met（根因是假阴性）** | `artifact_gate.launchable=false`（exit 6），唯一"错误"是引擎信息行；同轮 **`play_scene` 与 `running_game_get_scene_tree` 确实成功**，`project_validate_scripts` 回 **7/7 编译成功** |
+| E3 | **not_met** | 游戏端点**注册成功**（DR-43 由此获真机验证），随后**挂死并消失**（两轮可复现 65333/109964、63698/101872）；输入注入只到编辑器侧 ⇒ 核心行为无一被证实 |
+| E4 | **met** | 8 条 verified 均指向真实存在的可复现公共记录并绑定 `candidate_id`；22 条未证者全落 gap |
+| E5 | **met（强）** | 验收者**自己重实现 `hash_tree`**，workspace / candidate / 版本库三棵树 **17 文件逐字节同、同 hash `fc78d299…`** |
+| E6 | **met** | QA 把未达成全部如实落 gap；验收者另构造反例（V7 依赖**旧 PNG**、V8 建立在 `ok=false` 步骤上）**均未推翻**——偏差方向一律保守 |
 
-| 命令 | 观察 |
+> **E2/E3 的 not_met 不是"模型没写代码"**：E2 是集成假阴性，E3 是引擎侧可用性缺陷（见 §5）。
+
+## 4. 修复包（DR-48..DR-53）——已实现、已独立验收
+
+| ID | 内容 | 离线判据 |
+|---|---|---|
+| DR-48 | 闸门只豁免**引擎信息横幅的确切形态**（常量数据 + 具名匹配） | **非空洞已证**：匹配函数恒真 ⇒ 3 条 ERROR 反例全红；常量加一尾空格 ⇒ 正向测试失败；引擎**真错误**行不被豁免 |
+| DR-49 | 截图证据**本轮真实**：契约形态、调用前作废既有文件、`ok` 基于**新鲜度**、修回退压制 | 反例：预置旧文件**不再**伪造成功；旧文件**不再**压制 `capture_frames` |
+| DR-50A | `execute_gdscript` 的 `code` 必须是 **GDScript 函数体**（值只能靠 `return` 传出） | 已修（原发裸表达式 ⇒ 4 次调用全回 `result_type:"Nil"`） |
+| DR-51 | 端点身份**真正持久化**（`editor_status` 取真实 `GET /mcp`；`game_endpoint` 在**登记当刻**回写） | 有/无端点两条路径各有测试 |
+| DR-52 | 诊断自洽 + **参数形状**逐工具核对 | 验收者独立解析 **177/177** `inputSchema.required` 与 `TC-TOOL-*` **0 处不符**；15 个真实调用点全合规 |
+| DR-53 | 畸形 `enabled=` **不改文件**；补两条回归测试；过期测试名与断言 | 受控实验 + 测试 |
+
+`cargo test --offline`：**EXIT 0，328 passed / 0 failed / 7 ignored**（7 条为既有真机门控）。
+
+## 5. 上游缺陷（**未关闭**）：游戏端点挂死 = 引擎侧可用性缺陷（DR-50B）
+
+- **依据（两轮可复现）**：hof-rs 的 JSON-RPC **合规**且前 4 次被正常应答；失败在**传输层**
+  （连接建立、请求已发、**状态行始终不来**，`10060`，重试 3×120 s）；随后**监听消失**（`10061`）；
+  **编辑器端点全程健康**（同轮 ids 26..43 全 ok，`editor_stop_scene` 还回了 `game_endpoint_invalidated`）；
+  两轮（65333/109964、63698/101872）均如此；唯一与挂死同时出现的差别是"第 5 条是**首条编译不过**的 `code`"，
+  而引擎对编译不过的**书面答案**本应是 `-32602`（带 `data.parse_error_line`）。
+- **机制未定**（推断）："编译错误捕获路径卡住主线程"是假设，离线不可证。
+- **最小复现（待执行）**：`editor_play_scene` 后第一件事发
+  `running_game_execute_gdscript{code:"this is not gdscript"}` ⇒ 预期 `-32602`；若挂死 ⇒ 缺陷**孤立确认**。
+- **纪律**：`godot-mcp/**` **未改、不改**；作为**上游项**单独立项。
+
+## 6. 未关闭项（**不假装已完成**）
+
+1. **DR-50B 最小复现 spike** 未执行；上游缺陷单未提交。
+2. **绕行 2/3/4 未实现**（需先出设计 §15 / DR-54..DR-56）：①把 **E3 关键路径移出 `execute_gdscript`**，
+   改用契约语义工具（`running_game_get_node_property_samples` / `running_game_create_input_recording` +
+   `running_game_play_input_recording` / `running_game_run_test_scenario` / `running_game_assert_node_state` /
+   `running_game_move_player_to_target`）；②同一端点**连续两次传输失败即快速失败**（本轮白烧约 12 分钟）；
+   ③**业务错误（如 `-32602`）不重试**。
+3. **E2/E3 能否真正 met 未验证**：修复包**全部修复都没有真机验证**，必须再跑一轮真机 T=1 + 独立验收。
+4. **minor 缺陷**：`artifact_is_fresh` 的不可达分支；DR-49④ 单独不可证伪；DR-53 受控实验用了别的畸形写法；
+   报告 §4.1 对 730 s 的措辞（首次 `10061` 只比最后一次 `10060` 晚 7 s）。
+5. **`runs/smoke-t6` 目录摘要算法未文档化**（实现者 `3ce19752…` 不可复现，验收者得 `20aca752…`）。
+6. **未验证的形态假设**：内联 `image_base64` 截图应答、`user://` 备选路径、`editor_status` 真机应答形态、
+   引擎对"编译不过"是否**始终**回 `-32602`。
+
+## 7. 残留风险
+
+- **游戏端点的持续可用性是最大风险**：它决定 E3 乃至阶段二能否推进；在绕行 2/3 落地前，任何依赖游戏端点的观测
+  都可能以 730 s 挂死 + 端点消失收场。
+- **E1 零增量成因未定**：Developer 两次 attempt 都 `LimitsExceeded`（150 + 60 步），可能是步数预算不足，
+  也可能是产物门槛过严；本轮未定性。
+- **离线验收覆盖不到真机形态**：参数形状/应答形态的结论都建立在仓库内契约文档与夹具上，活体逐字复核只能由真机轮次提供。
+- `runs/smoke-t1..t5` 属**旧契约时代**证据，**不得**与换代后轮次混用比较。
+
+## 8. 工件索引
+
+| 类别 | 路径 |
 |---|---|
-| `cargo test --all-targets` | **100 passed / 0 failed / 7 ignored**（lib 52 + 9 个集成测试二进制） |
-| `cargo clean -p hof-rs; cargo clippy --all-targets -- -D warnings` | exit 0，0 warning（先 clean 强制重建，排除缓存假绿） |
-| `cargo fmt --check` | exit 0 |
-| `cargo test --test godot_smoke -- --ignored` | **0 passed / 7 failed**（exit 101）→ DR-9 生效，绝非伪绿 |
-| `HOH_SMOKE=1 ... --ignored e2_project_boots` | panic 并打印缺失的 `runs/godot-smoke/iter-1/evidence.json` 绝对路径 |
-| 自建 scratch 反例（已删除） | **18 种逃逸形态全部被拒为 `DanglingEvidence`**；阳性对照被接受 |
-| `git status --short` / `git diff --stat <v0.2冻结点> -- .spec` / 两个外部仓库 `status` | 全部为空 |
-| `runs/godot-smoke` 检查 | 遗留不完整 run：planner 轨迹 `LimitsExceeded`（123 条消息）、developer 无 exit 条目、无 `evidence.json`/`result.json`/`candidate` |
-
-**A1 独立复验的逃逸矩阵**（验收方自建，设计文档未列）：
-`../outside_secret.txt`、`..\outside_secret.txt`、`scripts\..\..\outside_secret.txt`、`a/../outside_secret.txt`、
-`dir_inside/..`、`..`、`C:outside_secret.txt`、`C:..\outside_secret.txt`、`C:/Windows/not-in-the-view.png`、
-`\\server\share\x.png`、`//server/share/x.png`、`\\.\PhysicalDrive0`、绝对路径但文件确在视图内、
-视图内目录、空串、**junction 逃逸（root=cand → 兄弟 cand2，前缀相似）**、**symlink 逃逸**。
-全部 `DanglingEvidence` 且 `bind = Err`；`cand` vs `cand2` 被拒证明用的是按组件比较的 `Path::starts_with`
-而非朴素字符串前缀。
-
-## 3. 逐条验收标准证据（R1–R13 / C9 / C10）
-
-| 标准 | 结果 | 证据（第二轮验收方独立复现） |
-|---|---|---|
-| R1 三次独立调用 | pass | `three_independent_invocations`：恰 3 次、顺序 Planner→Developer→Tester、三者 cwd 互不相同 |
-| R2 只读角色 | pass | `planner_cannot_write_artifact`：绝对路径写 → `ReadOnlyRoleWroteArtifact`，`evidence_diff.added` 恰为该文件 |
-| R3 单写者 | pass | `developer_is_only_writer`：`final_version_id == hash_tree(workspace)`；`index.json` 恰 2 条版本 |
-| R4 冻结候选 | pass | 4 条反例（污染副本 / 直写真实 workspace / 冻结后漂移 / candidate_id 不符）全部按预期类型失败 |
-| R5 双通道 | pass | `no_third_state_channel`：第 2 轮不含 `D_1`；prompt 含禁止重建 `D_{t-1}` 声明 |
-| R6 schema 双闸门 | pass | `plan_retry_then_success`（attempts=2）、`evidence_retry_exhausted`（exit 3）、`missing_artifact_counts_as_attempt` |
-| R7 证据划分 | pass | `verified_gap_partition`：重复 claim_id / gap 缺指引 / verified 空记录 均被拒 |
-| R8 消融纯度 | pass | 三开关逐字节比较，各自只改动一个输入 |
-| R9 每轮记录 | pass | `records_all_artifacts`：plan/evidence/qa_report/usage/result/traj/logs 齐备 |
-| R10 版本与回滚 | pass | 内容寻址、排除项不影响身份、回滚精确复原、篡改快照报错 |
-| R11 公开性边界 | pass | 私有标记不进 prompt 与注入项；`private_excludes` 只作用于视图（不扩大哈希排除集） |
-| R12 用量统计 | pass | 夹具精确数值；无 usage → `usage_known=false` 且字段为 `None`；CLI 显示 `unknown` 而非 0 |
-| R13 工具边界 | pass | 29 写类工具对 Tester 全拒、27 只读类允许、Planner 全 MCP 拒绝、未知工具 default-deny |
-| C9 上线 model id | pass | 假 HTTP 服务实测收到的 `model == "qwen/qwen3.8-27b"`；剥前缀配置 → `ModelIdentityViolation`(exit 2) |
-| C10 显式 provider | pass | `assert_model_identity` 双校验；`provider=aliyun` 被拒 |
-
-**断言调整复核**：4 项既有断言调整全部判为可接受，其中 2 项为**收紧**（`default_deny_unknown` 改精确文案、
-`stdout.contains("ok")` 改精确失败体）；1 项（`rejects_workspace_drift` 注入点后移）系 DR-1 语义变更所必需，
-反例能力未丢且新增 `evidence_diff` 断言；1 项为机械改动（`ViewSpec::default`）。**未发现删除或弱化断言。**
-
-## 4. 未通过 / 未执行项
-
-| 编号 | 状态 | 具体阻塞 |
-|---|---|---|
-| E1 | 未执行 | 需 `9877`（Godot 编辑器）与 `1234`（LM Studio）同时在线；遗留 run 未跑完 |
-| E2–E6 | 未执行 | 同上；离线只能证明这些用例在缺前置时**会真实失败**（DR-9） |
-| DR-13 类事项 | 未判定 | 编辑器副产物对候选身份的影响、真实 27B 的 schema 遵从率、副本耗时与快照体积 |
-
-## 5. 遗留风险（验收方提出 + 我方追认）
-
-1. **阶段二完全未开张**：无任何 E1 证据；「已跑通」的说法没有依据。
-2. **遗留 `runs/godot-smoke/` 需先清理**：`e1` 会因 `assert!(!run_dir.exists())` 直接失败，真实冒烟前必须删除该目录。
-3. **DR-1 引入的唯一无哈希断言的写窗口**：确定性阶段由 Runtime/adapter 自身触发，角色无法注入写操作，
-   当前不构成越权；若将来 `build_check` 接受 agent 可控输入，此窗口会成为盲区。建议在 `build_check` 前后
-   也记录 manifest 并写入确定性日志（可审计补充），列为后续项。
-4. **`evidence_diff` 每类截断 50 条**：大规模越权时清单不完整（哈希仍全量变化），审计存在有界盲区。
-5. **`hoh submit` 的 `view_root` 由 `HOH_ARTIFACT_DIR.parent()` 推导**：若被设为无父目录的相对值会让所有带 path 的证据
-   被过度拒绝（fail-closed，非安全漏洞）。
-6. **D7 的 MCP 作用域限制仍在**：Tester 截图/回放来自编辑器当前工程；靠 `candidate_id` + 双哈希 + doctor 人工确认项绑定，
-   「编辑器打开的就是该 workspace」无法自动判定。
-7. **`godot_smoke` 不校验产物是否为本次真实 run 产生**：放入伪造产物可能让 E2–E6 在非真实链路上通过。
-8. **轮次限额可能不足**：遗留 run 的 planner 以 `LimitsExceeded` 收尾（123 条消息 ≈ 撞上 `step_limit=60`）。
-   真实冒烟若再撞限额，应基于证据调整 `agent.step_limit`（配置项，不需改码）。
-9. **离线验收无法覆盖**：真实 MCP payload 形状、编辑器副作用、本地 27B 的 schema 遵从率。
-
-## 6. 下一步（阻塞于外部前置条件，需用户配合）
-
-1. 用户打开 Godot 4.7 编辑器并打开 `F:\moonbit-hof-rs\.workspace\mario`（`project.godot` 现已含
-   `[editor_plugins] enabled=PackedStringArray("res://addons/godot_mcp_rs/plugin.cfg")`，理论上打开即自动启用插件）；
-   LM Studio 保持 `qwen/qwen3.8-27b` 在线（并卸载实验期残留的裸 `qwen3.8-27b` 实例，见 D6）。
-2. 我方删除遗留 `runs/godot-smoke/` 后，派发 **T=1 真实冒烟**（新子代理执行，我仍不亲自写业务代码）。
-3. 冒烟通过后再补齐 E1–E6 证据，并由**又一批全新验收子代理**复核，届时阶段一才算完成。
+| 需求/设计 | `REQUIREMENTS.md` v0.3、`DESIGN-DETAIL.md` v0.9（§13/§14）、`DESIGN-OVERVIEW.md`、`PRD-mario.md`（冻结） |
+| 任务书 | `tasks/TASK-DR41-IMPL.md`、`TASK-DR41-ACCEPT.md`(+`-ADDENDUM`)、`TASK-DR47-SMOKE.md`(+`-ADDENDUM`)、`TASK-DR47-ACCEPT.md`、`TASK-DR48-FIX.md`、`TASK-DR48-ACCEPT.md` |
+| 实现/执行报告 | `tasks/TASK-DR41-REPORT.md`、`TASK-DR47-SMOKE-REPORT.md`、`TASK-DR48-REPORT.md` |
+| 独立验收报告 | `tasks/TASK-DR41-ACCEPTANCE.md`、`TASK-DR47-ACCEPTANCE.md`、`TASK-DR48-ACCEPTANCE.md` |
+| 真机证据 | `runs/smoke-t6/**`（换代后基线，**不得覆盖**） |
+| 决策 | `DECISIONS.md` D216..D223 |
