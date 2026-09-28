@@ -1,0 +1,1271 @@
+{
+ "ok": true,
+ "passed": 49,
+ "total": 49,
+ "checks": {
+  "dumb_server_validates_clean": true,
+  "posts_to_v1_systemone": true,
+  "health_ok_true": true,
+  "state_frames_is_one_data_url": true,
+  "frame_decodes_to_png": true,
+  "no_toplevel_image_field": true,
+  "one_image_many_questions": true,
+  "all_questions_are_choice": true,
+  "every_question_has_ge_2_options": true,
+  "no_noul_or_score_question_type": true,
+  "action_is_a_real_action": true,
+  "action_probabilities_in_evidence": true,
+  "abstain_flag_recorded": true,
+  "confidence_recorded": true,
+  "timing_recorded": true,
+  "noul_p_true_from_yes_no_choice": true,
+  "score_is_expected_level_le_2": true,
+  "threshold_verdict_passes_on_ok": true,
+  "judge_reuses_decide_evidence": true,
+  "server_rejects_noul_question": true,
+  "server_rejects_score_question": true,
+  "server_rejects_text_state": true,
+  "server_rejects_single_option_choice": true,
+  "server_500_on_bad_base64": true,
+  "declared_abstain_seen": true,
+  "abstain_action_is_wait_not_success": true,
+  "abstain_verdict_is_not_pass": true,
+  "abstain_recorded_as_error": true,
+  "score_only_abstain_keeps_action": true,
+  "score_only_abstain_is_not_a_pass": true,
+  "missing_answer_is_abstain": true,
+  "missing_answer_not_a_success": true,
+  "confidence_threshold_abstains": true,
+  "http_400_reported": true,
+  "http_400_not_a_success": true,
+  "broken_body_reported": true,
+  "broken_body_not_a_success": true,
+  "unhealthy_reported": true,
+  "unhealthy_no_post": true,
+  "send_images_false_refused": true,
+  "no_frame_refused": true,
+  "jev_decision_path_refused": true,
+  "over_26_options_refused": true,
+  "scripted_regression_none": true,
+  "openai_regression_none": true,
+  "jev_regression_none": true,
+  "playjev_wired_in_factory": true,
+  "playjev_default_base_url_8081": true,
+  "unknown_backend_error_names_playjev": true
+ },
+ "evidence": {
+  "ok_mode": {
+   "health": {
+    "url": "http://127.0.0.1:53745/health",
+    "status": 200,
+    "seconds": 0.001,
+    "json": {
+     "ok": true,
+     "model": "playjev-0.8b",
+     "two_frame": false
+    },
+    "ok": true,
+    "model": "playjev-0.8b",
+    "two_frame": false,
+    "error": null
+   },
+   "action": {
+    "type": "action",
+    "action": "pong_left_down",
+    "pressed": true,
+    "hold_ms": 300,
+    "why": "playjev choice='pong_left_down' confidence=0.21879 probabilities={'pong_left_down': 0.348992, 'pong_left_up': 0.209395, 'pong_serve': 0.149568, 'key_W': 0.11633, 'key_S': 0.095179, 'wait': 0.080536}"
+   },
+   "verdict": {
+    "backend": "playjev",
+    "pass": true,
+    "decidable": true,
+    "undecidable": [],
+    "why": "3/3 threshold criteria passed",
+    "criteria": [
+     {
+      "id": "noul:no_render_failure",
+      "value": 0.8,
+      "confidence": 0.6,
+      "probabilities": {
+       "yes": 0.8,
+       "no": 0.2
+      },
+      "abstain": false,
+      "abstain_reasons": [],
+      "rule": "P(true) >= 0.500",
+      "pass": true,
+      "in_decision_path": true
+     },
+     {
+      "id": "noul:playable",
+      "value": 0.8,
+      "confidence": 0.6,
+      "probabilities": {
+       "yes": 0.8,
+       "no": 0.2
+      },
+      "abstain": false,
+      "abstain_reasons": [],
+      "rule": "P(true) >= 0.500",
+      "pass": true,
+      "in_decision_path": true
+     },
+     {
+      "id": "noul:responds_to_input",
+      "value": 0.8,
+      "confidence": 0.6,
+      "probabilities": {
+       "yes": 0.8,
+       "no": 0.2
+      },
+      "abstain": false,
+      "abstain_reasons": [],
+      "rule": "P(true) >= 0.500",
+      "pass": true,
+      "in_decision_path": true
+     }
+    ],
+    "noul_observations": [],
+    "verdict_invariant_keys": null,
+    "score_observations": [
+     {
+      "id": "score:brokenness",
+      "value": 1.7500000000000004,
+      "direction": "suspect",
+      "in_decision_path": false,
+      "levels": [
+       "1",
+       "2",
+       "3",
+       "4",
+       "5"
+      ],
+      "legend_flipped": false,
+      "probabilities": {
+       "1": 0.7,
+       "2": 0.075,
+       "3": 0.075,
+       "4": 0.075,
+       "5": 0.075
+      },
+      "confidence": 0.625,
+      "abstain": false,
+      "abstain_reasons": []
+     }
+    ],
+    "score_in_decision_path": false,
+    "score_direction_note": "OBSERVATION ONLY -- NOT IN THE DECISION PATH.  TASK-127 measured the direction as INVERTED on the deployed PlayJev weights (black screen 2.41 < a real snake frame 3.97 on a 1=working..5=unusable legend), so this expected level is recorded with `direction: suspect` and is never compared with a threshold to produce a verdict. TASK-129 D-E; the flip-legend probe exists to test whether the inversion is a wording/legend-order artefact, and its result never enters the verdict either.",
+    "legend_flipped": false,
+    "thresholds": {
+     "noul_min_p_true": 0.5,
+     "score_max_expected": 2.5
+    },
+    "abstain_min_confidence": 0.0,
+    "uncalibrated": true,
+    "note": "PRIOR ONLY, NOT CALIBRATED. The vendor reports no NLL/Brier/ECE calibration for NeoHorse-Jev and warns: 'Set thresholds on an independent dataset.' Replace these defaults with thresholds fitted on our own labelled frames (positives: the 20 fixed games; negatives: dist/exe-task109-pre-fix, the pre-fix builds whose input was disabled) before any threshold is treated as a verdict.",
+    "abstain_note": "ABSTAIN IS NOT SUCCESS.  PlayJev's serve.py has no abstain field, so this backend derives one: an answer that is absent, or that carries no usable probabilities, or whose confidence is below abstain_min_confidence is recorded as abstain=true and the verdict becomes 'no verdict' (pass=null), never a pass. The upstream `allowed_mass` diagnostic (playjev/model.py:102) would make this much sharper and serve.py drops it -- see the TASK-127 report.",
+    "source": "last decision response"
+   },
+   "request_count": 3,
+   "validation_errors": [],
+   "requests": [
+    {
+     "n": 1,
+     "method": "GET",
+     "path": "/health",
+     "headers": {
+      "accept-encoding": "identity",
+      "host": "127.0.0.1:53745",
+      "user-agent": "Python-urllib/3.9",
+      "content-type": "application/json",
+      "connection": "close"
+     },
+     "payload": null,
+     "validation_errors": [],
+     "validation_notes": [],
+     "responded_status": 200
+    },
+    {
+     "n": 2,
+     "method": "GET",
+     "path": "/health",
+     "headers": {
+      "accept-encoding": "identity",
+      "host": "127.0.0.1:53745",
+      "user-agent": "Python-urllib/3.9",
+      "content-type": "application/json",
+      "connection": "close"
+     },
+     "payload": null,
+     "validation_errors": [],
+     "validation_notes": [],
+     "responded_status": 200
+    },
+    {
+     "n": 3,
+     "method": "POST",
+     "path": "/v1/systemone",
+     "headers": {
+      "accept-encoding": "identity",
+      "content-length": "7677",
+      "host": "127.0.0.1:53745",
+      "user-agent": "Python-urllib/3.9",
+      "content-type": "application/json",
+      "connection": "close"
+     },
+     "payload": {
+      "model": "playjev-0.8b",
+      "state": {
+       "frames": [
+        "data:image/png;base64,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gQUAEBNYAAAxgQUAEBNYAAAxgQUAEBNYAAAxgQUAEBNYAAAxgQUAEBNYAAAxgQUAEBNYAAAxgQUAEBNYAAAxgQUAEBNYAAAxgQUAEBNYAAAxgQUAEBNYAAAxgQUAEBNYAAAxgQUAEBNYAACxpdULXfL1x9/U/LsuPKl6awCAkZIFFgDAqNlx9ZVvav6qm25N3tctQgCAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgtrV7orgtPql4KAGBBywILAGDUrLrp1nl5X7cIAQBiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiS+d7AQAAQ/Lfj1//puafcNKN/7838gkWAEBMYAEAxAQWAEBMYAEAxAQWAEBMYAEAxAQWAEBMYAEAxAQWAEBMYAEAxAQWAEBMYAEAxAQWAEBMYAEAxAQWAEBs6XwvAABgSE446cbhvJFPsAAAYgILACAmsAAAYgILACAmsAAAYgILACAmsAAAYgILACAmsAAAYgILACAmsAAAYgILACAmsAAAYgILACAmsAAAYgILACAmsAAAYgILACAmsAAAYgILACAmsAAAYgILACAmsAAAYgILACAmsAAAYgILACAmsAAAYotWrlk/32sAABgrPsECAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIj9L8zQ7F6UR+uGAAAAAElFTkSuQmCC"
+       ]
+      },
+      "questions": {
+       "move": {
+        "type": "choice",
+        "instructions": "Choose the single next input that best serves the objective.",
+        "criteria": {
+         "pong_left_down": "hold the game's InputMap action 'pong_left_down' (bound key(s): S)",
+         "pong_left_up": "hold the game's InputMap action 'pong_left_up' (bound key(s): W)",
+         "pong_serve": "hold the game's InputMap action 'pong_serve' (bound key(s): SPACE)",
+         "key_W": "press and release the key W",
+         "key_S": "press and release the key S",
+         "wait": "do nothing this step (hold position / observe)"
+        }
+       },
+       "playable": {
+        "type": "choice",
+        "instructions": "Does this frame clearly look playable, with no visual corruption or freeze?",
+        "criteria": {
+         "yes": "the frame does satisfy this statement",
+         "no": "the frame does not satisfy this statement"
+        }
+       },
+       "no_render_failure": {
+        "type": "choice",
+        "instructions": "Is the frame free of an error dialog, a blank/flat screen, or an obvious rendering failure?",
+        "criteria": {
+         "yes": "the frame does satisfy this statement",
+         "no": "the frame does not satisfy this statement"
+        }
+       },
+       "responds_to_input": {
+        "type": "choice",
+        "instructions": "Did the game visibly respond to the last injected input (its exported state or its pixels changed)?",
+        "criteria": {
+         "yes": "the frame does satisfy this statement",
+         "no": "the frame does not satisfy this statement"
+        }
+       },
+       "brokenness": {
+        "type": "choice",
+        "instructions": "Rate how broken this frame is, from 1 (fully working) to 5 (unusable).",
+        "criteria": {
+         "1": "fully working: content is drawn, input responds, nothing looks wrong",
+         "2": "minor glitches only; still clearly playable",
+         "3": "partially broken: some documented capability is missing or unresponsive",
+         "4": "badly broken: the game barely responds or renders garbage",
+         "5": "unusable: flat/blank screen, error dialog, or frozen"
+        }
+       }
+      }
+     },
+     "validation_errors": [],
+     "validation_notes": [],
+     "responded_status": 200
+    }
+   ],
+   "errors": [],
+   "calls": [
+    {
+     "kind": "decision",
+     "transport": {
+      "method": "POST",
+      "url": "http://127.0.0.1:53745/v1/systemone",
+      "status": 200,
+      "headers": {
+       "server": "BaseHTTP/0.6 Python/3.9.7",
+       "date": "Mon, 28 Sep 2026 04:54:55 GMT",
+       "content-type": "application/json",
+       "content-length": "870",
+       "access-control-allow-origin": "*",
+       "access-control-allow-methods": "GET, POST, OPTIONS",
+       "access-control-allow-headers": "Content-Type, Authorization"
+      },
+      "body": "{\"model\": \"playjev-0.8b\", \"answers\": {\"move\": {\"type\": \"choice\", \"choice\": \"pong_left_down\", \"probabilities\": {\"pong_left_down\": 0.348992, \"pong_left_up\": 0.209395, \"pong_serve\": 0.149568, \"key_W\": 0.11633, \"key_S\": 0.095179, \"wait\": 0.080536}, \"confidence\": 0.21879}, \"playable\": {\"type\": \"choice\", \"choice\": \"yes\", \"probabilities\": {\"yes\": 0.8, \"no\": 0.2}, \"confidence\": 0.6}, \"no_render_failure\": {\"type\": \"choice\", \"choice\": \"yes\", \"probabilities\": {\"yes\": 0.8, \"no\": 0.2}, \"confidence\": 0.6}, \"responds_to_input\": {\"type\": \"choice\", \"choice\": \"yes\", \"probabilities\": {\"yes\": 0.8, \"no\": 0.2}, \"confidence\": 0.6}, \"brokenness\": {\"type\": \"choice\", \"choice\": \"1\", \"probabilities\": {\"1\": 0.7, \"2\": 0.075, \"3\": 0.075, \"4\": 0.075, \"5\": 0.075}, \"confidence\": 0.625}}, \"timing\": {\"prep_ms\": 1.0, \"forward_ms\": 2.0, \"input_tokens\": 100, \"visual_tokens\": 64, \"total_ms\": 3.0}}",
+      "seconds": 0.001,
+      "lock": "serialized",
+      "attempts": [
+       {
+        "attempt": 1,
+        "status": 200,
+        "seconds": 0.001,
+        "retry_after": null,
+        "error": null
+       }
+      ]
+     },
+     "request_meta": {
+      "decision_path": "/v1/systemone",
+      "transport": "state.frames (one data URL) -- NOT a top-level `image` field",
+      "frame_path": "F:\\moonbit-hof-rs\\godot-mcp\\runs\\playability-exe\\pong\\frames\\20_post1.png",
+      "frame_bytes": 4365,
+      "frame_sha256": "probe",
+      "frame_index": 0,
+      "question_count": 5,
+      "question_keys": [
+       "move",
+       "playable",
+       "no_render_failure",
+       "responds_to_input",
+       "brokenness"
+      ],
+      "question_types": {
+       "move": "choice",
+       "playable": "choice",
+       "no_render_failure": "choice",
+       "responds_to_input": "choice",
+       "brokenness": "choice"
+      },
+      "option_counts": {
+       "move": 6,
+       "playable": 2,
+       "no_render_failure": 2,
+       "responds_to_input": 2,
+       "brokenness": 5
+      },
+      "question_roles": {
+       "move": "action",
+       "playable": "noul",
+       "no_render_failure": "noul",
+       "responds_to_input": "noul",
+       "brokenness": "score"
+      },
+      "body_bytes": 7677,
+      "image_plus_n_questions": true,
+      "model_field_read_by_server": false
+     },
+     "request_payload": {
+      "model": "playjev-0.8b",
+      "state": {
+       "frames": [
+        "data:image/png;base64,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gQUAEBNYAAAxgQUAEBNYAAAxgQUAEBNYAAAxgQUAEBNYAAAxgQUAEBNYAAAxgQUAEBNYAAAxgQUAEBNYAAAxgQUAEBNYAAAxgQUAEBNYAAAxgQUAEBNYAAAxgQUAEBNYAAAxgQUAEBNYAACxpdULXfL1x9/U/LsuPKl6awCAkZIFFgDAqNlx9ZVvav6qm25N3tctQgCAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgtrV7orgtPql4KAGBBywILAGDUrLrp1nl5X7cIAQBiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiAgsAICawAABiS+d7AQAAQ/Lfj1//puafcNKN/7838gkWAEBMYAEAxAQWAEBMYAEAxAQWAEBMYAEAxAQWAEBMYAEAxAQWAEBMYAEAxAQWAEBMYAEAxAQWAEBMYAEAxAQWAEBs6XwvAABgSE446cbhvJFPsAAAYgILACAmsAAAYgILACAmsAAAYgILACAmsAAAYgILACAmsAAAYgILACAmsAAAYgILACAmsAAAYgILACAmsAAAYgILACAmsAAAYgILACAmsAAAYgILACAmsAAAYgILACAmsAAAYgILACAmsAAAYgILACAmsAAAYotWrlk/32sAABgrPsECAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIgJLACAmMACAIj9L8zQ7F6UR+uGAAAAAElFTkSuQmCC"
+       ]
+      },
+      "questions": {
+       "move": {
+        "type": "choice",
+        "instructions": "Choose the single next input that best serves the objective.",
+        "criteria": {
+         "pong_left_down": "hold the game's InputMap action 'pong_left_down' (bound key(s): S)",
+         "pong_left_up": "hold the game's InputMap action 'pong_left_up' (bound key(s): W)",
+         "pong_serve": "hold the game's InputMap action 'pong_serve' (bound key(s): SPACE)",
+         "key_W": "press and release the key W",
+         "key_S": "press and release the key S",
+         "wait": "do nothing this step (hold position / observe)"
+        }
+       },
+       "playable": {
+        "type": "choice",
+        "instructions": "Does this frame clearly look playable, with no visual corruption or freeze?",
+        "criteria": {
+         "yes": "the frame does satisfy this statement",
+         "no": "the frame does not satisfy this statement"
+        }
+       },
+       "no_render_failure": {
+        "type": "choice",
+        "instructions": "Is the frame free of an error dialog, a blank/flat screen, or an obvious rendering failure?",
+        "criteria": {
+         "yes": "the frame does satisfy this statement",
+         "no": "the frame does not satisfy this statement"
+        }
+       },
+       "responds_to_input": {
+        "type": "choice",
+        "instructions": "Did the game visibly respond to the last injected input (its exported state or its pixels changed)?",
+        "criteria": {
+         "yes": "the frame does satisfy this statement",
+         "no": "the frame does not satisfy this statement"
+        }
+       },
+       "brokenness": {
+        "type": "choice",
+        "instructions": "Rate how broken this frame is, from 1 (fully working) to 5 (unusable).",
+        "criteria": {
+         "1": "fully working: content is drawn, input responds, nothing looks wrong",
+         "2": "minor glitches only; still clearly playable",
+         "3": "partially broken: some documented capability is missing or unresponsive",
+         "4": "badly broken: the game barely responds or renders garbage",
+         "5": "unusable: flat/blank screen, error dialog, or frozen"
+        }
+       }
+      }
+     },
+     "response_status": 200,
+     "model": "playjev-0.8b",
+     "timing": {
+      "prep_ms": 1.0,
+      "forward_ms": 2.0,
+      "input_tokens": 100,
+      "visual_tokens": 64,
+      "total_ms": 3.0
+     },
+     "answers_raw": {
+      "move": {
+       "type": "choice",
+       "choice": "pong_left_down",
+       "probabilities": {
+        "pong_left_down": 0.348992,
+        "pong_left_up": 0.209395,
+        "pong_serve": 0.149568,
+        "key_W": 0.11633,
+        "key_S": 0.095179,
+        "wait": 0.080536
+       },
+       "confidence": 0.21879
+      },
+      "playable": {
+       "type": "choice",
+       "choice": "yes",
+       "probabilities": {
+        "yes": 0.8,
+        "no": 0.2
+       },
+       "confidence": 0.6
+      },
+      "no_render_failure": {
+       "type": "choice",
+       "choice": "yes",
+       "probabilities": {
+        "yes": 0.8,
+        "no": 0.2
+       },
+       "confidence": 0.6
+      },
+      "responds_to_input": {
+       "type": "choice",
+       "choice": "yes",
+       "probabilities": {
+        "yes": 0.8,
+        "no": 0.2
+       },
+       "confidence": 0.6
+      },
+      "brokenness": {
+       "type": "choice",
+       "choice": "1",
+       "probabilities": {
+        "1": 0.7,
+        "2": 0.075,
+        "3": 0.075,
+        "4": 0.075,
+        "5": 0.075
+       },
+       "confidence": 0.625
+      }
+     },
+     "answers_classified": {
+      "move": {
+       "key": "move",
+       "role": "action",
+       "answer": {
+        "type": "choice",
+        "choice": "pong_left_down",
+        "probabilities": {
+         "pong_left_down": 0.348992,
+         "pong_left_up": 0.209395,
+         "pong_serve": 0.149568,
+         "key_W": 0.11633,
+         "key_S": 0.095179,
+         "wait": 0.080536
+        },
+        "confidence": 0.21879
+       },
+       "abstain": false,
+       "abstain_reasons": [],
+       "probabilities": {
+        "pong_left_down": 0.348992,
+        "pong_left_up": 0.209395,
+        "pong_serve": 0.149568,
+        "key_W": 0.11633,
+        "key_S": 0.095179,
+        "wait": 0.080536
+       },
+       "confidence": 0.21879,
+       "choice": "pong_left_down",
+       "action_choice": "pong_left_down"
+      },
+      "playable": {
+       "key": "playable",
+       "role": "noul",
+       "answer": {
+        "type": "choice",
+        "choice": "yes",
+        "probabilities": {
+         "yes": 0.8,
+         "no": 0.2
+        },
+        "confidence": 0.6
+       },
+       "abstain": false,
+       "abstain_reasons": [],
+       "probabilities": {
+        "yes": 0.8,
+        "no": 0.2
+       },
+       "confidence": 0.6,
+       "choice": "yes",
+       "noul": 0.8
+      },
+      "no_render_failure": {
+       "key": "no_render_failure",
+       "role": "noul",
+       "answer": {
+        "type": "choice",
+        "choice": "yes",
+        "probabilities": {
+         "yes": 0.8,
+         "no": 0.2
+        },
+        "confidence": 0.6
+       },
+       "abstain": false,
+       "abstain_reasons": [],
+       "probabilities": {
+        "yes": 0.8,
+        "no": 0.2
+       },
+       "confidence": 0.6,
+       "choice": "yes",
+       "noul": 0.8
+      },
+      "responds_to_input": {
+       "key": "responds_to_input",
+       "role": "noul",
+       "answer": {
+        "type": "choice",
+        "choice": "yes",
+        "probabilities": {
+         "yes": 0.8,
+         "no": 0.2
+        },
+        "confidence": 0.6
+       },
+       "abstain": false,
+       "abstain_reasons": [],
+       "probabilities": {
+        "yes": 0.8,
+        "no": 0.2
+       },
+       "confidence": 0.6,
+       "choice": "yes",
+       "noul": 0.8
+      },
+      "brokenness": {
+       "key": "brokenness",
+       "role": "score",
+       "answer": {
+        "type": "choice",
+        "choice": "1",
+        "probabilities": {
+         "1": 0.7,
+         "2": 0.075,
+         "3": 0.075,
+         "4": 0.075,
+         "5": 0.075
+        },
+        "confidence": 0.625
+       },
+       "abstain": false,
+       "abstain_reasons": [],
+       "probabilities": {
+        "1": 0.7,
+        "2": 0.075,
+        "3": 0.075,
+        "4": 0.075,
+        "5": 0.075
+       },
+       "confidence": 0.625,
+       "choice": "1",
+       "score_mass": 0.9999999999999998,
+       "score": 1.7500000000000004,
+       "score_levels": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5"
+       ],
+       "legend_flipped": false
+      }
+     },
+     "probability_tables": {
+      "move": {
+       "pong_left_down": 0.348992,
+       "pong_left_up": 0.209395,
+       "pong_serve": 0.149568,
+       "key_W": 0.11633,
+       "key_S": 0.095179,
+       "wait": 0.080536
+      },
+      "playable": {
+       "yes": 0.8,
+       "no": 0.2
+      },
+      "no_render_failure": {
+       "yes": 0.8,
+       "no": 0.2
+      },
+      "responds_to_input": {
+       "yes": 0.8,
+       "no": 0.2
+      },
+      "brokenness": {
+       "1": 0.7,
+       "2": 0.075,
+       "3": 0.075,
+       "4": 0.075,
+       "5": 0.075
+      }
+     },
+     "confidences": {
+      "move": 0.21879,
+      "playable": 0.6,
+      "no_render_failure": 0.6,
+      "responds_to_input": 0.6,
+      "brokenness": 0.625
+     },
+     "abstain": false,
+     "abstained_questions": [],
+     "abstain_reasons": {},
+     "unrequested_answers": [],
+     "playable_key": "playable",
+     "score_observation": {
+      "in_decision_path": false,
+      "direction": "suspect",
+      "uncalibrated": true,
+      "note": "OBSERVATION ONLY -- NOT IN THE DECISION PATH.  TASK-127 measured the direction as INVERTED on the deployed PlayJev weights (black screen 2.41 < a real snake frame 3.97 on a 1=working..5=unusable legend), so this expected level is recorded with `direction: suspect` and is never compared with a threshold to produce a verdict. TASK-129 D-E; the flip-legend probe exists to test whether the inversion is a wording/legend-order artefact, and its result never enters the verdict either.",
+      "legend_flipped": false,
+      "values": {
+       "brokenness": 1.7500000000000004
+      }
+     },
+     "action": {
+      "type": "action",
+      "action": "pong_left_down",
+      "pressed": true,
+      "hold_ms": 300,
+      "why": "playjev choice='pong_left_down' confidence=0.21879 probabilities={'pong_left_down': 0.348992, 'pong_left_up': 0.209395, 'pong_serve': 0.149568, 'key_W': 0.11633, 'key_S': 0.095179, 'wait': 0.080536}"
+     }
+    }
+   ]
+  },
+  "protocol_traps": {
+   "noul_question_rejected": [
+    {
+     "field": "questions.q.type",
+     "error": "only type \"choice\" is served",
+     "status": 400
+    }
+   ],
+   "score_question_rejected": [
+    {
+     "field": "questions.q.type",
+     "error": "only type \"choice\" is served",
+     "status": 400
+    }
+   ],
+   "text_state_rejected": [
+    {
+     "field": "state",
+     "error": "state must be {\"frames\": [...]} with at least one frame; text states belong to OpenJev",
+     "status": 400
+    }
+   ],
+   "toplevel_image_not_enough": [],
+   "single_option_rejected": [
+    {
+     "field": "questions.q.criteria",
+     "error": "a choice needs at least two options",
+     "status": 400
+    }
+   ],
+   "bad_base64_is_500": [
+    {
+     "field": "state.frames[0]",
+     "error": "base64 decode failed (Error: Non-base64 digit found) -- serve.py answers 500 for this",
+     "status": 500
+    }
+   ]
+  },
+  "abstain_mode": {
+   "action": {
+    "type": "wait",
+    "ms": 200,
+    "why": "playjev ABSTAINED on move (undecidable, NOT a success): the server declared abstain=true; the answer carries no probabilities"
+   },
+   "verdict": {
+    "backend": "playjev",
+    "pass": null,
+    "decidable": false,
+    "undecidable": [
+     "noul:no_render_failure",
+     "noul:playable",
+     "noul:responds_to_input",
+     "score:brokenness"
+    ],
+    "why": "4 criterion/criteria abstained: no verdict (an abstain is not a pass)",
+    "criteria": [
+     {
+      "id": "noul:no_render_failure",
+      "value": null,
+      "confidence": null,
+      "probabilities": null,
+      "abstain": true,
+      "abstain_reasons": [
+       "the server declared abstain=true",
+       "the answer carries no probabilities"
+      ],
+      "rule": "P(true) >= 0.500",
+      "pass": false,
+      "in_decision_path": true
+     },
+     {
+      "id": "noul:playable",
+      "value": null,
+      "confidence": null,
+      "probabilities": null,
+      "abstain": true,
+      "abstain_reasons": [
+       "the server declared abstain=true",
+       "the answer carries no probabilities"
+      ],
+      "rule": "P(true) >= 0.500",
+      "pass": false,
+      "in_decision_path": true
+     },
+     {
+      "id": "noul:responds_to_input",
+      "value": null,
+      "confidence": null,
+      "probabilities": null,
+      "abstain": true,
+      "abstain_reasons": [
+       "the server declared abstain=true",
+       "the answer carries no probabilities"
+      ],
+      "rule": "P(true) >= 0.500",
+      "pass": false,
+      "in_decision_path": true
+     }
+    ],
+    "noul_observations": [],
+    "verdict_invariant_keys": null,
+    "score_observations": [
+     {
+      "id": "score:brokenness",
+      "value": null,
+      "direction": "suspect",
+      "in_decision_path": false,
+      "levels": null,
+      "legend_flipped": null,
+      "probabilities": null,
+      "confidence": null,
+      "abstain": true,
+      "abstain_reasons": [
+       "the server declared abstain=true",
+       "the answer carries no probabilities"
+      ]
+     }
+    ],
+    "score_in_decision_path": false,
+    "score_direction_note": "OBSERVATION ONLY -- NOT IN THE DECISION PATH.  TASK-127 measured the direction as INVERTED on the deployed PlayJev weights (black screen 2.41 < a real snake frame 3.97 on a 1=working..5=unusable legend), so this expected level is recorded with `direction: suspect` and is never compared with a threshold to produce a verdict. TASK-129 D-E; the flip-legend probe exists to test whether the inversion is a wording/legend-order artefact, and its result never enters the verdict either.",
+    "legend_flipped": false,
+    "thresholds": {
+     "noul_min_p_true": 0.5,
+     "score_max_expected": 2.5
+    },
+    "abstain_min_confidence": 0.0,
+    "uncalibrated": true,
+    "note": "PRIOR ONLY, NOT CALIBRATED. The vendor reports no NLL/Brier/ECE calibration for NeoHorse-Jev and warns: 'Set thresholds on an independent dataset.' Replace these defaults with thresholds fitted on our own labelled frames (positives: the 20 fixed games; negatives: dist/exe-task109-pre-fix, the pre-fix builds whose input was disabled) before any threshold is treated as a verdict.",
+    "abstain_note": "ABSTAIN IS NOT SUCCESS.  PlayJev's serve.py has no abstain field, so this backend derives one: an answer that is absent, or that carries no usable probabilities, or whose confidence is below abstain_min_confidence is recorded as abstain=true and the verdict becomes 'no verdict' (pass=null), never a pass. The upstream `allowed_mass` diagnostic (playjev/model.py:102) would make this much sharper and serve.py drops it -- see the TASK-127 report.",
+    "source": "last decision response"
+   },
+   "abstained_questions": [
+    "brokenness",
+    "move",
+    "no_render_failure",
+    "playable",
+    "responds_to_input"
+   ],
+   "abstain_reasons": {
+    "brokenness": [
+     "the server declared abstain=true",
+     "the answer carries no probabilities"
+    ],
+    "move": [
+     "the server declared abstain=true",
+     "the answer carries no probabilities"
+    ],
+    "no_render_failure": [
+     "the server declared abstain=true",
+     "the answer carries no probabilities"
+    ],
+    "playable": [
+     "the server declared abstain=true",
+     "the answer carries no probabilities"
+    ],
+    "responds_to_input": [
+     "the server declared abstain=true",
+     "the answer carries no probabilities"
+    ]
+   },
+   "errors": [
+    {
+     "kind": "abstain",
+     "error": "playjev ABSTAINED on move (undecidable, NOT a success): the server declared abstain=true; the answer carries no probabilities",
+     "question": "move"
+    }
+   ]
+  },
+  "abstain_score_mode": {
+   "action": {
+    "type": "action",
+    "action": "pong_left_down",
+    "pressed": true,
+    "hold_ms": 300,
+    "why": "playjev choice='pong_left_down' confidence=0.21879 probabilities={'pong_left_down': 0.348992, 'pong_left_up': 0.209395, 'pong_serve': 0.149568, 'key_W': 0.11633, 'key_S': 0.095179, 'wait': 0.080536}"
+   },
+   "verdict": {
+    "backend": "playjev",
+    "pass": null,
+    "decidable": false,
+    "undecidable": [
+     "score:brokenness"
+    ],
+    "why": "1 criterion/criteria abstained: no verdict (an abstain is not a pass)",
+    "criteria": [
+     {
+      "id": "noul:no_render_failure",
+      "value": 0.8,
+      "confidence": 0.6,
+      "probabilities": {
+       "yes": 0.8,
+       "no": 0.2
+      },
+      "abstain": false,
+      "abstain_reasons": [],
+      "rule": "P(true) >= 0.500",
+      "pass": true,
+      "in_decision_path": true
+     },
+     {
+      "id": "noul:playable",
+      "value": 0.8,
+      "confidence": 0.6,
+      "probabilities": {
+       "yes": 0.8,
+       "no": 0.2
+      },
+      "abstain": false,
+      "abstain_reasons": [],
+      "rule": "P(true) >= 0.500",
+      "pass": true,
+      "in_decision_path": true
+     },
+     {
+      "id": "noul:responds_to_input",
+      "value": 0.8,
+      "confidence": 0.6,
+      "probabilities": {
+       "yes": 0.8,
+       "no": 0.2
+      },
+      "abstain": false,
+      "abstain_reasons": [],
+      "rule": "P(true) >= 0.500",
+      "pass": true,
+      "in_decision_path": true
+     }
+    ],
+    "noul_observations": [],
+    "verdict_invariant_keys": null,
+    "score_observations": [
+     {
+      "id": "score:brokenness",
+      "value": null,
+      "direction": "suspect",
+      "in_decision_path": false,
+      "levels": null,
+      "legend_flipped": null,
+      "probabilities": null,
+      "confidence": null,
+      "abstain": true,
+      "abstain_reasons": [
+       "the server declared abstain=true",
+       "the answer carries no probabilities"
+      ]
+     }
+    ],
+    "score_in_decision_path": false,
+    "score_direction_note": "OBSERVATION ONLY -- NOT IN THE DECISION PATH.  TASK-127 measured the direction as INVERTED on the deployed PlayJev weights (black screen 2.41 < a real snake frame 3.97 on a 1=working..5=unusable legend), so this expected level is recorded with `direction: suspect` and is never compared with a threshold to produce a verdict. TASK-129 D-E; the flip-legend probe exists to test whether the inversion is a wording/legend-order artefact, and its result never enters the verdict either.",
+    "legend_flipped": false,
+    "thresholds": {
+     "noul_min_p_true": 0.5,
+     "score_max_expected": 2.5
+    },
+    "abstain_min_confidence": 0.0,
+    "uncalibrated": true,
+    "note": "PRIOR ONLY, NOT CALIBRATED. The vendor reports no NLL/Brier/ECE calibration for NeoHorse-Jev and warns: 'Set thresholds on an independent dataset.' Replace these defaults with thresholds fitted on our own labelled frames (positives: the 20 fixed games; negatives: dist/exe-task109-pre-fix, the pre-fix builds whose input was disabled) before any threshold is treated as a verdict.",
+    "abstain_note": "ABSTAIN IS NOT SUCCESS.  PlayJev's serve.py has no abstain field, so this backend derives one: an answer that is absent, or that carries no usable probabilities, or whose confidence is below abstain_min_confidence is recorded as abstain=true and the verdict becomes 'no verdict' (pass=null), never a pass. The upstream `allowed_mass` diagnostic (playjev/model.py:102) would make this much sharper and serve.py drops it -- see the TASK-127 report.",
+    "source": "last decision response"
+   },
+   "abstained_questions": [
+    "brokenness"
+   ],
+   "abstain_reasons": {
+    "brokenness": [
+     "the server declared abstain=true",
+     "the answer carries no probabilities"
+    ]
+   }
+  },
+  "noanswer_mode": {
+   "action": {
+    "type": "wait",
+    "ms": 200,
+    "why": "playjev ABSTAINED on move (undecidable, NOT a success): the server sent no answer object for this question"
+   },
+   "verdict": {
+    "backend": "playjev",
+    "pass": true,
+    "decidable": true,
+    "undecidable": [],
+    "why": "3/3 threshold criteria passed",
+    "criteria": [
+     {
+      "id": "noul:no_render_failure",
+      "value": 0.8,
+      "confidence": 0.6,
+      "probabilities": {
+       "yes": 0.8,
+       "no": 0.2
+      },
+      "abstain": false,
+      "abstain_reasons": [],
+      "rule": "P(true) >= 0.500",
+      "pass": true,
+      "in_decision_path": true
+     },
+     {
+      "id": "noul:playable",
+      "value": 0.8,
+      "confidence": 0.6,
+      "probabilities": {
+       "yes": 0.8,
+       "no": 0.2
+      },
+      "abstain": false,
+      "abstain_reasons": [],
+      "rule": "P(true) >= 0.500",
+      "pass": true,
+      "in_decision_path": true
+     },
+     {
+      "id": "noul:responds_to_input",
+      "value": 0.8,
+      "confidence": 0.6,
+      "probabilities": {
+       "yes": 0.8,
+       "no": 0.2
+      },
+      "abstain": false,
+      "abstain_reasons": [],
+      "rule": "P(true) >= 0.500",
+      "pass": true,
+      "in_decision_path": true
+     }
+    ],
+    "noul_observations": [],
+    "verdict_invariant_keys": null,
+    "score_observations": [
+     {
+      "id": "score:brokenness",
+      "value": 1.7500000000000004,
+      "direction": "suspect",
+      "in_decision_path": false,
+      "levels": [
+       "1",
+       "2",
+       "3",
+       "4",
+       "5"
+      ],
+      "legend_flipped": false,
+      "probabilities": {
+       "1": 0.7,
+       "2": 0.075,
+       "3": 0.075,
+       "4": 0.075,
+       "5": 0.075
+      },
+      "confidence": 0.625,
+      "abstain": false,
+      "abstain_reasons": []
+     }
+    ],
+    "score_in_decision_path": false,
+    "score_direction_note": "OBSERVATION ONLY -- NOT IN THE DECISION PATH.  TASK-127 measured the direction as INVERTED on the deployed PlayJev weights (black screen 2.41 < a real snake frame 3.97 on a 1=working..5=unusable legend), so this expected level is recorded with `direction: suspect` and is never compared with a threshold to produce a verdict. TASK-129 D-E; the flip-legend probe exists to test whether the inversion is a wording/legend-order artefact, and its result never enters the verdict either.",
+    "legend_flipped": false,
+    "thresholds": {
+     "noul_min_p_true": 0.5,
+     "score_max_expected": 2.5
+    },
+    "abstain_min_confidence": 0.0,
+    "uncalibrated": true,
+    "note": "PRIOR ONLY, NOT CALIBRATED. The vendor reports no NLL/Brier/ECE calibration for NeoHorse-Jev and warns: 'Set thresholds on an independent dataset.' Replace these defaults with thresholds fitted on our own labelled frames (positives: the 20 fixed games; negatives: dist/exe-task109-pre-fix, the pre-fix builds whose input was disabled) before any threshold is treated as a verdict.",
+    "abstain_note": "ABSTAIN IS NOT SUCCESS.  PlayJev's serve.py has no abstain field, so this backend derives one: an answer that is absent, or that carries no usable probabilities, or whose confidence is below abstain_min_confidence is recorded as abstain=true and the verdict becomes 'no verdict' (pass=null), never a pass. The upstream `allowed_mass` diagnostic (playjev/model.py:102) would make this much sharper and serve.py drops it -- see the TASK-127 report.",
+    "source": "last decision response"
+   },
+   "abstained_questions": [
+    "move"
+   ],
+   "abstain_reasons": {
+    "move": [
+     "the server sent no answer object for this question"
+    ]
+   }
+  },
+  "confidence_abstain_mode": {
+   "action": {
+    "type": "wait",
+    "ms": 200,
+    "why": "playjev ABSTAINED on move (undecidable, NOT a success): confidence 0.218790 < abstain_min_confidence 1.010000"
+   },
+   "verdict": {
+    "backend": "playjev",
+    "pass": null,
+    "decidable": false,
+    "undecidable": [
+     "noul:no_render_failure",
+     "noul:playable",
+     "noul:responds_to_input",
+     "score:brokenness"
+    ],
+    "why": "4 criterion/criteria abstained: no verdict (an abstain is not a pass)",
+    "criteria": [
+     {
+      "id": "noul:no_render_failure",
+      "value": 0.8,
+      "confidence": 0.6,
+      "probabilities": {
+       "yes": 0.8,
+       "no": 0.2
+      },
+      "abstain": true,
+      "abstain_reasons": [
+       "confidence 0.600000 < abstain_min_confidence 1.010000"
+      ],
+      "rule": "P(true) >= 0.500",
+      "pass": false,
+      "in_decision_path": true
+     },
+     {
+      "id": "noul:playable",
+      "value": 0.8,
+      "confidence": 0.6,
+      "probabilities": {
+       "yes": 0.8,
+       "no": 0.2
+      },
+      "abstain": true,
+      "abstain_reasons": [
+       "confidence 0.600000 < abstain_min_confidence 1.010000"
+      ],
+      "rule": "P(true) >= 0.500",
+      "pass": false,
+      "in_decision_path": true
+     },
+     {
+      "id": "noul:responds_to_input",
+      "value": 0.8,
+      "confidence": 0.6,
+      "probabilities": {
+       "yes": 0.8,
+       "no": 0.2
+      },
+      "abstain": true,
+      "abstain_reasons": [
+       "confidence 0.600000 < abstain_min_confidence 1.010000"
+      ],
+      "rule": "P(true) >= 0.500",
+      "pass": false,
+      "in_decision_path": true
+     }
+    ],
+    "noul_observations": [],
+    "verdict_invariant_keys": null,
+    "score_observations": [
+     {
+      "id": "score:brokenness",
+      "value": 1.7500000000000004,
+      "direction": "suspect",
+      "in_decision_path": false,
+      "levels": [
+       "1",
+       "2",
+       "3",
+       "4",
+       "5"
+      ],
+      "legend_flipped": false,
+      "probabilities": {
+       "1": 0.7,
+       "2": 0.075,
+       "3": 0.075,
+       "4": 0.075,
+       "5": 0.075
+      },
+      "confidence": 0.625,
+      "abstain": true,
+      "abstain_reasons": [
+       "confidence 0.625000 < abstain_min_confidence 1.010000"
+      ]
+     }
+    ],
+    "score_in_decision_path": false,
+    "score_direction_note": "OBSERVATION ONLY -- NOT IN THE DECISION PATH.  TASK-127 measured the direction as INVERTED on the deployed PlayJev weights (black screen 2.41 < a real snake frame 3.97 on a 1=working..5=unusable legend), so this expected level is recorded with `direction: suspect` and is never compared with a threshold to produce a verdict. TASK-129 D-E; the flip-legend probe exists to test whether the inversion is a wording/legend-order artefact, and its result never enters the verdict either.",
+    "legend_flipped": false,
+    "thresholds": {
+     "noul_min_p_true": 0.5,
+     "score_max_expected": 2.5
+    },
+    "abstain_min_confidence": 1.01,
+    "uncalibrated": true,
+    "note": "PRIOR ONLY, NOT CALIBRATED. The vendor reports no NLL/Brier/ECE calibration for NeoHorse-Jev and warns: 'Set thresholds on an independent dataset.' Replace these defaults with thresholds fitted on our own labelled frames (positives: the 20 fixed games; negatives: dist/exe-task109-pre-fix, the pre-fix builds whose input was disabled) before any threshold is treated as a verdict.",
+    "abstain_note": "ABSTAIN IS NOT SUCCESS.  PlayJev's serve.py has no abstain field, so this backend derives one: an answer that is absent, or that carries no usable probabilities, or whose confidence is below abstain_min_confidence is recorded as abstain=true and the verdict becomes 'no verdict' (pass=null), never a pass. The upstream `allowed_mass` diagnostic (playjev/model.py:102) would make this much sharper and serve.py drops it -- see the TASK-127 report.",
+    "source": "last decision response"
+   },
+   "abstained_questions": [
+    "brokenness",
+    "move",
+    "no_render_failure",
+    "playable",
+    "responds_to_input"
+   ],
+   "abstain_reasons": {
+    "brokenness": [
+     "confidence 0.625000 < abstain_min_confidence 1.010000"
+    ],
+    "move": [
+     "confidence 0.218790 < abstain_min_confidence 1.010000"
+    ],
+    "no_render_failure": [
+     "confidence 0.600000 < abstain_min_confidence 1.010000"
+    ],
+    "playable": [
+     "confidence 0.600000 < abstain_min_confidence 1.010000"
+    ],
+    "responds_to_input": [
+     "confidence 0.600000 < abstain_min_confidence 1.010000"
+    ]
+   }
+  },
+  "error_paths": {
+   "invalid_action": {
+    "type": "wait",
+    "ms": 200,
+    "why": "playjev refused the request as invalid (400) -- it serves choice questions over `state.frames` and nothing else: {\"error\": \"dumb server: simulated 400 (invalid mode)\"}"
+   },
+   "invalid_errors": [
+    {
+     "kind": "http",
+     "error": "playjev refused the request as invalid (400) -- it serves choice questions over `state.frames` and nothing else: {\"error\": \"dumb server: simulated 400 (invalid mode)\"}",
+     "status": 400
+    }
+   ],
+   "broken_action": {
+    "type": "wait",
+    "ms": 200,
+    "why": "playjev response could not be parsed: the response body is not JSON: Expecting value: line 1 column 1 (char 0)"
+   },
+   "broken_errors": [
+    {
+     "kind": "response",
+     "error": "playjev response could not be parsed: the response body is not JSON: Expecting value: line 1 column 1 (char 0)"
+    }
+   ],
+   "unhealthy_action": {
+    "type": "wait",
+    "ms": 200,
+    "why": "playjev service is not reachable/ready (see recorded health error); degraded to wait"
+   },
+   "unhealthy_errors": [
+    {
+     "kind": "health",
+     "error": "GET /health failed: status=503 error=HTTPError",
+     "body": "{\"ok\": false, \"error\": \"dumb server: unhealthy mode\"}"
+    }
+   ],
+   "unhealthy_posts": 0
+  },
+  "pre_wire_refusals": {
+   "no_images": {
+    "type": "wait",
+    "ms": 200,
+    "why": "playjev service is not reachable/ready (see recorded health error); degraded to wait"
+   },
+   "no_frame": {
+    "type": "wait",
+    "ms": 200,
+    "why": "playjev service is not reachable/ready (see recorded health error); degraded to wait"
+   },
+   "jev_path": {
+    "type": "wait",
+    "ms": 100,
+    "why": "playjev backend misconfigured: decision path '/v1/decision'"
+   },
+   "too_many_options": {
+    "type": "wait",
+    "ms": 200,
+    "why": "playjev service is not reachable/ready (see recorded health error); degraded to wait"
+   },
+   "errors": [
+    {
+     "kind": "health",
+     "error": "GET /health failed: status=None error=URLError: <urlopen error [WinError 10049] 在其上下文中，该请求的地址无效。>",
+     "body": ""
+    },
+    {
+     "kind": "health",
+     "error": "GET /health failed: status=None error=URLError: <urlopen error [WinError 10049] 在其上下文中，该请求的地址无效。>",
+     "body": ""
+    },
+    {
+     "kind": "unconfigured",
+     "error": "unknown decision path '/v1/decision'; playjev serve.py provides ['/v1/systemone']"
+    },
+    {
+     "kind": "health",
+     "error": "GET /health failed: status=None error=URLError: <urlopen error [WinError 10049] 在其上下文中，该请求的地址无效。>",
+     "body": ""
+    }
+   ]
+  },
+  "other_backends": {
+   "scripted": true,
+   "openai": true,
+   "jev": true,
+   "playjev": true,
+   "playjev_default_port_is_8081": true,
+   "unknown_backend_raises": true,
+   "jev_still_sends_text_state": true
+  }
+ },
+ "frame_paths": [
+  "C:\\Users\\wyl\\AppData\\Local\\Temp\\playjev_probe_9al3i5bo\\frame_00.png",
+  "F:\\moonbit-hof-rs\\godot-mcp\\runs\\playability-exe\\pong\\frames\\20_post1.png"
+ ]
+}
