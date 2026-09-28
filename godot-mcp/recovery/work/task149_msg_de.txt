@@ -1,0 +1,69 @@
+docs(godot-mcp): TASK-149 D+E - decision-log entries for the corrected mainline, and the normative-document proofread
+
+Sections D and E of recovery/tasks/TASK-149.md, in one commit: the whole batch is the
+mainline correction plus the documentation that has to agree with it. The only files that
+carry NEW untracked content here are ERRATA.md and recovery/work/task149_*; everything else
+is an in-place correction or an append.
+
+D - DECISIONS.md (appends D212-D215, after the aborted branch's D210/D211 already committed
+in 71f92e8):
+
+  D212  the MAINLINE CORRECTION (2026-09-28): the deliverable of this project is the MCP
+        TOOLING, not a small game and not a playability score; the TASK-142 side branch is
+        ABORTED. This entry also NAMES D210/D211 as coming from that aborted branch, so a
+        reader cannot mistake them for mainline decisions (section D item 8).
+  D213  TASK-143: the use-case matrix's stable numbering scheme, its six families and the
+        781-case delivery口径, plus the rule that derived cells must be declared as derived.
+  D214  TASK-144 + TASK-146 + TASK-149: the coverage gate is aligned with the declared
+        evidence channel (118/48 -> 163/3, 45 false reds -> 0), the binary anchor is reset
+        at ba1587c71 with ten green gates and accept_m1 22/22, the matrix's self-consistency
+        becomes an executable pytest guard (proven red before restoring), and the
+        strong-negative figure is tightened to 175/177 + 2 weak. Also records TASK-149's
+        own sub-count correction: 121+21 was not reproducible, the split is 119+21+2.
+  D215  TASK-148: the packaging DEVIATION and its measured root causes -- single volume
+        part1of1 (the old "two volumes" reason does not hold: the archive is 1.178 GB),
+        the MANIFEST gains the `part` column, and `UseSharedCompilation=false` is the fix
+        for the export that hangs when the MSBuild server persists.
+
+E - documentation proofread (normative documents + newest reports; old reports are indexed
+into ERRATA.md instead of edited):
+
+  recovery/TEST-CASES.md        the 121+21 split corrected to 119+21+2 with the exact code
+                                sites; `not_probed` 33 -> 35; section 8.3 now says the
+                                WORKING_TREE_RED=1 reading is fixed (section C of TASK-149);
+                                new section 10.7 records the review per item. NO numbered
+                                row was added or removed, so 177/10/22/159/407/13 = 788 is
+                                unchanged and the guard stays green.
+  recovery/reports/ERRATA.md    NEW: the index of old-report errata, item by item, each with
+                                file / original claim / correction / evidence, plus a list
+                                of the recomputation scripts.
+  reports/ACCEPTANCE-TASK-137.md  appended banner: every tools/playtest_player.py:NNN
+                                pointer belongs to the frozen pre-TASK-142 revision, and the
+                                offset is NOT constant (+58/+99/+119/+174). Includes the
+                                per-pointer table and the one BEHAVIOUR change since then
+                                (TASK-138 removed the pre_ack fallback).
+  reports/ACCEPTANCE-TASK-141.md  same banner for this report's pointers.
+  reports/ACCEPTANCE-TASK-145.md  note that its 27 passed / 404 / 785 are its own true
+                                readings, superseded by TASK-146's 03839a5 (it is stale,
+                                not wrong -- and its fail verdict is why TASK-146 exists).
+  reports/ACCEPTANCE-TASK-147.md  note that its Y1 is now acted on, and why X5/X6 are
+                                deliberately left as recorded items.
+  reports/PLAYABILITY-REPORT.md   provenance note: game-side document, line aborted by
+  reports/PLAYABILITY-DEFECTS.md  D212; TASK-149 does not re-audit its numbers because
+  GAME-LOOP-LOG.md                every one of their sources is under gitignored runs/**.
+  TOOL-COVERAGE.md                note that this file is a GENERATOR PRODUCT (so it is left
+                                alone) plus the TASK-149 cross-checks that DID pass (177
+                                tools, 172 in the >=5 bucket, all citations resolve).
+  tasks/TEMPLATE-logic-feedback.md  source banner on section 1.2e and counter-examples
+                                33-36: they come from the ABORTED branch, preserved by
+                                71f92e8, not a mainline requirement.
+
+Verification after the edits (all re-run, raw output in the report):
+  python -m pytest tools\tests -q --no-header -p no:cacheprovider  -> 30 passed in 1.97s
+  python recovery\work\task146\recount.py                          -> SELF_CONSISTENT=YES
+  python tools\tests\test_matrix_self_consistency.py               -> 6/6 checks passed
+  python recovery\work\task149_pointers.py 900                     -> 627 ptrs checked, 0 beyond EOF
+
+No product code, no test code, no engine module and no game project is touched. The only
+engine-repository change in this whole task is the one-line uid_cache.bin ignore rule, which
+is committed in that repository as 15bbf1f50e.

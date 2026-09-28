@@ -1,0 +1,40 @@
+docs(godot-mcp): TASK-149 A - commit the MCP-tool audit trail (137/141/142/143/144/145/146/147/148/149)
+
+These artifacts were produced by the MCP-tool line and were sitting untracked or
+uncommitted. They belong to these delivery commits:
+
+  8c562d4  TASK-143  full use-case inventory (781 cases in 6 families) + contract-form
+                    and coverage-batch-consistency tests
+  e9d17f9  TASK-144  coverage gate judges the declared evidence channel (118/48 -> 163/3),
+                    both engine variants rebuilt at ba1587c71 (g09 ANCHOR_EQUAL), accept_m1 22/22
+  03839a5  TASK-146  TEST-CASES.md statistics now equal the body's own numbered rows
+                    (TC-PY 400->407, total 781->788) + tools/tests/test_matrix_self_consistency.py
+  91783eb  TASK-148  republish the 20-game Windows release package from CURRENT sources
+
+What this commit contains, and nothing else:
+
+  recovery/reports/ACCEPTANCE-TASK-{137,141,145,147}.md
+        the four independent-acceptance verdicts for those batches (137 and 141 accepted
+        the pre-matrix era; 145 found the TEST-CASES.md blocker TASK-146 later fixed,
+        147 accepted TASK-146)
+  recovery/reports/TASK-142-REPORT.md
+        the report of the ABORTED branch TASK-142 (kept for reference only -- see the
+        immediately following commit, which lands TASK-142's own residue under an
+        explicit "aborted branch / reference only / not part of this line's delivery"
+        heading)
+  recovery/reports/TASK-148-REPORT.md
+        the packaging batch 91783eb's own report
+  recovery/tasks/TASK-{137,141,145,147}-ACCEPT.md
+        the four independent-acceptance task books (the "decision -> execution -> verdict"
+        triple that recovery/tasks/README.md section 4 requires to be committed)
+  recovery/tasks/TASK-{142,143,144,145,146,147,148,149}.md
+        the task books of this batch (145's is TASK-145-ACCEPT.md)
+  recovery/work/accept-145/, recovery/work/accept-147/
+        the acceptance work products (probes, transcripts, recomputation scripts)
+  recovery/work/task144/, recovery/work/task148/
+        the batch work products of TASK-144 and TASK-148 (task143/ and task146/ were
+        already committed with their own batches)
+
+No product code, no test code, no game project and no dist/** package is touched. The
+tools/** residue of the aborted TASK-142 branch is deliberately NOT in this commit: it is
+the subject of the next commit (section B of recovery/tasks/TASK-149.md).

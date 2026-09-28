@@ -1,0 +1,21 @@
+chore(gitignore): TASK-149 - ignore the machine-local `uid_cache.bin`
+
+`uid_cache.bin` is the project-scoped UID cache Godot writes next to
+`project.godot`. It is machine-local state (it caches `res://` UID lookups),
+not a source file, and leaving it untracked made the gate runner's preflight
+report the engine working tree as carrying one compile input that is in no
+built binary:
+
+  GATES_PREFLIGHT WORKING_TREE_RED=1 WORKING_TREE_SAFE=0
+  GATES_PREFLIGHT REASON="the engine working tree carries 1 compile input(s)
+  that are not in any built binary"
+
+The classifier (modules/mcp_server/scripts/check_engine_anchor.ps1) is
+fail-closed on purpose: an unrecognised basename or extension is RED, so a
+`.bin` file can never be whitelisted by extension. Ignoring it is the
+declarative fix and keeps the closure honest.
+
+NON-DESTRUCTIVE: the file is NOT deleted, NOT renamed and NOT modified -- only
+added to `.gitignore`. `git check-ignore -v uid_cache.bin` now answers
+`.gitignore:50:uid_cache.bin`. This is the one engine-tree change TASK-149
+section C permits; no module, script or build file is touched.

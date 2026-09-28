@@ -1,0 +1,22 @@
+# TASK-149 staging manifest: the TASK-142 residue (recovery/tasks/TASK-149.md section B).
+#
+# This batch is ONE commit, per section B item 3: "a single independent commit".
+# It carries the modified files of TASK-149 section 0 plus the frozen pre-fix copy.
+# Paths are relative to F:\moonbit-hof-rs.
+
+# B1. the decision log, whole (section B item 3 forbids splitting it across two commits
+#     for this purpose: D210/D211 are the aborted branch's entries and land here in full)
+DECISIONS.md
+
+# B2. the aborted branch's report errata and its methodology template
+godot-mcp/recovery/reports/TASK-140-REPORT.md
+godot-mcp/recovery/tasks/TEMPLATE-logic-feedback.md
+
+# B3. the aborted branch's own tool/test residue (behaviour change, preserved verbatim;
+#     the conflict with TASK-149 rule 2.3 is REPORTED in the commit message and the report)
+godot-mcp/tools/playability_controls.json
+godot-mcp/tools/playtest_player.py
+godot-mcp/tools/tests/test_playability_model_player.py
+
+# B4. the frozen pre-fix copy, which D211 names as the rollback point
+godot-mcp/tools/playtest_player_t142_prefix.py
