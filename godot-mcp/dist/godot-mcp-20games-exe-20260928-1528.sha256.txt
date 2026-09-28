@@ -1,0 +1,4 @@
+bc28ad360c105920cf25be9672814659232e76fb859a16cb3ac9c056584a84b4  godot-mcp-20games-exe-20260928-1528-part1of1.zip
+# bytes: 1264863973
+# volumes: 1 (single volume: whole archive fits well under the 2 GB mark)
+# manifest: in each volume as MANIFEST.txt; also copied to godot-mcp-20games-exe-20260928-1528.MANIFEST.txt
