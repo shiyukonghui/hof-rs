@@ -1,6 +1,7 @@
 //! The deterministic runtime: views, permission enforcement, schema gates,
 //! evidence binding, snapshots, records and the main loop.
 
+pub mod engine_identity;
 pub mod evidence;
 pub mod hygiene;
 pub mod invoke;

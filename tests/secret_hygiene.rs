@@ -88,6 +88,9 @@ fn meta_json_is_redacted_at_the_sink() {
             "api_key": FAKE_KEY
         }),
         start_state: hof_rs::runtime::start_state::StartState::as_is(),
+        // DR-44: the `engine` block is part of `meta.json` and is covered by the
+        // same no-secret rule as everything else.
+        engine: hof_rs::adapter::EngineIdentity::unavailable("not probed"),
     };
     write_run_meta(&run_dir, &meta).expect("write meta");
 
@@ -100,6 +103,18 @@ fn meta_json_is_redacted_at_the_sink() {
     assert!(
         value["config"]["api_key"].is_null(),
         "meta.json.config.api_key must be null (DR-16): {raw}"
+    );
+    // DR-44: the new `engine` block must be subject to the same hygiene, and it
+    // must actually be present (a missing block is a contract violation).
+    for key in ["kind", "binary", "version_string", "mcp", "listener", "checked_at"] {
+        assert!(
+            value["engine"].get(key).is_some(),
+            "meta.json.engine.{key} must exist (DR-44): {raw}"
+        );
+    }
+    assert!(
+        !value["engine"].to_string().contains(FAKE_KEY),
+        "the engine block must never carry a secret (C11/DR-44): {raw}"
     );
 }
 

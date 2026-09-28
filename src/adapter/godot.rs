@@ -2867,21 +2867,52 @@ $HOH_HOH_BIN tools call running_game_assert_node_state --args-file $HOH_ARTIFACT
         .to_string()
     }
 
+    /// DR-44: the binary the operator configured, or `None` when the key is
+    /// absent/empty (the engine identity then records `null` + a reason).
+    fn engine_binary(&self) -> Option<std::path::PathBuf> {
+        crate::adapter::engine::configured_binary_path(&self.config.editor_binary)
+    }
+
+    fn engine_kind(&self) -> &'static str {
+        crate::adapter::engine::ENGINE_KIND_GODOT
+    }
+
     fn tool_policy(&self, role: Role) -> Vec<String> {
         // The authoritative filter is the role matrix in the tool channel; this
         // list only documents the intent for `TOOLS.md` consumers.
         match role {
             Role::Planner => Vec::new(),
             Role::Developer => vec!["*".to_string()],
+            // DR-42: the four-channel contract's read verbs plus the evidence
+            // ring tools the QA role is allowed to drive (§5.4).
             Role::Tester => vec![
-                "get_*".to_string(),
-                "list_*".to_string(),
-                "simulate_*".to_string(),
-                "assert_*".to_string(),
-                "running_game_capture_frames".to_string(),
+                "editor_get_*".to_string(),
+                "editor_list_*".to_string(),
+                "editor_find_*".to_string(),
+                "editor_analyze_*".to_string(),
+                "editor_assert_*".to_string(),
+                "editor_simulate_*".to_string(),
+                "editor_capture_*".to_string(),
                 "editor_play_scene".to_string(),
                 "editor_stop_scene".to_string(),
-                "running_game_get_node_property_samples".to_string(),
+                "project_get_*".to_string(),
+                "project_list_*".to_string(),
+                "project_read_*".to_string(),
+                "project_search_*".to_string(),
+                "project_find_*".to_string(),
+                "project_analyze_*".to_string(),
+                "project_detect_*".to_string(),
+                "running_game_get_*".to_string(),
+                "running_game_find_*".to_string(),
+                "running_game_capture_*".to_string(),
+                "running_game_assert_*".to_string(),
+                "running_game_run_*".to_string(),
+                "running_game_simulate_*".to_string(),
+                "running_game_create_input_recording".to_string(),
+                "running_game_stop_input_recording".to_string(),
+                "running_game_play_input_recording".to_string(),
+                "running_game_move_player_to_target".to_string(),
+                "os_list_*".to_string(),
             ],
         }
     }

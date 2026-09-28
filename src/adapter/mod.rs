@@ -2,19 +2,29 @@
 //! looks like, how to run a deterministic check, how to collect evidence)
 //! lives behind this trait, so Godot is just the first implementation (A3).
 
+pub mod engine;
 pub mod godot;
 pub mod test_adapter;
 
+pub use engine::EngineIdentity;
 pub use godot::GodotAdapter;
 pub use test_adapter::TestAdapter;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::model::{ArtifactGate, ExecKind, ExecRecord, Role};
 use crate::tools::ToolChannel;
 
-/// DR-24: the two battery steps that decide `launchable`.
-pub const GATE_STEP_IDS: &[&str] = &["editor_errors_baseline", "play_scene_ready"];
+/// DR-24/DR-44: the battery steps that decide `launchable`.
+///
+/// The first two are mandatory — an adapter that declares neither has no gate.
+/// `engine_identity` is a gate step **when the battery declares it**, which is
+/// exactly when the adapter drives a real engine binary (DR-44 ⑤).
+pub const GATE_STEP_IDS: &[&str] = &[
+    "editor_errors_baseline",
+    "play_scene_ready",
+    engine::ENGINE_IDENTITY_STEP_ID,
+];
 /// DR-24: the step that reloads the project and opens the main scene before the
 /// editor is asked for its errors.
 pub const PROJECT_RELOAD_STEP_ID: &str = "project_reload_and_open";
@@ -23,13 +33,14 @@ pub const SCENE_STRUCTURE_STEP_ID: &str = "scene_structure";
 
 /// DR-24: evaluate the pre-freeze gate from one battery pass.
 ///
-/// `launchable := editor_errors_baseline.ok && play_scene_ready.ok`.  When the
-/// battery declares neither step (an adapter without a gate), the gate is
-/// reported as *not applicable* rather than silently "open": a check that did
+/// `launchable := editor_errors_baseline.ok && play_scene_ready.ok` (plus every
+/// other declared gate step, i.e. `engine_identity` — DR-44 ⑤).  When the
+/// battery declares neither required step (an adapter without a gate), the gate
+/// is reported as *not applicable* rather than silently "open": a check that did
 /// not run must never be confused with a check that passed.
 pub fn evaluate_launchable(records: &[BatteryRecord]) -> ArtifactGate {
     let find = |id: &str| records.iter().find(|record| record.step_id == id);
-    let (Some(editor), Some(play)) = (find(GATE_STEP_IDS[0]), find(GATE_STEP_IDS[1])) else {
+    let (Some(_editor), Some(_play)) = (find(GATE_STEP_IDS[0]), find(GATE_STEP_IDS[1])) else {
         return ArtifactGate::not_applicable(format!(
             "gate_not_applicable: this adapter's battery declares no `{}`/`{}` step",
             GATE_STEP_IDS[0], GATE_STEP_IDS[1]
@@ -37,8 +48,11 @@ pub fn evaluate_launchable(records: &[BatteryRecord]) -> ArtifactGate {
     };
 
     let mut reasons = Vec::new();
-    for record in [editor, play] {
-        if !record.ok {
+    // Every declared gate step must be ok.  A gate step the battery did not
+    // declare (an adapter without an engine binary, DR-44) is skipped instead of
+    // being invented.
+    for id in GATE_STEP_IDS {
+        if let Some(record) = find(id).filter(|record| !record.ok) {
             reasons.push(format!("{}: {}", record.step_id, record.record.observation));
         }
     }
@@ -189,6 +203,20 @@ pub trait ProjectAdapter: Send + Sync {
 
     /// Tools visible to a role (used to build `TOOLS.md`).
     fn tool_policy(&self, role: Role) -> Vec<String>;
+
+    /// DR-44: the engine binary this adapter drives, when it has one.
+    ///
+    /// `None` means "this adapter does not identify an engine": the runtime then
+    /// records an all-`null` `meta.json.engine` block (with a reason) and adds
+    /// no `engine_identity` gate step, because there is no identity to check.
+    fn engine_binary(&self) -> Option<PathBuf> {
+        None
+    }
+
+    /// DR-44: the engine kind written into `meta.json.engine.kind`.
+    fn engine_kind(&self) -> &'static str {
+        engine::ENGINE_KIND_UNKNOWN
+    }
 
     fn doctor(&self, workspace: &Path) -> anyhow::Result<Vec<DoctorItem>>;
 }

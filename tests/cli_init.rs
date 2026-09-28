@@ -45,6 +45,8 @@ fn offline_overrides() -> Vec<String> {
     vec![
         "model.base_url=http://127.0.0.1:1/v1".to_string(),
         "tools.endpoint=http://127.0.0.1:1/mcp".to_string(),
+        // DR-44: these tests must not execute an engine binary either.
+        "adapter.godot.editor_binary=".to_string(),
     ]
 }
 

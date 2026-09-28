@@ -25,6 +25,10 @@ pub struct RunMeta {
     /// DR-21: how the workspace was prepared for this run.
     #[serde(default)]
     pub start_state: crate::runtime::start_state::StartState,
+    /// DR-44: which engine binary produced this run's evidence.  The block has a
+    /// fixed shape: an unknown value is `null` plus a reason, never omitted.
+    #[serde(default)]
+    pub engine: crate::adapter::EngineIdentity,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

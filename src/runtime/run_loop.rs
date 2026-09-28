@@ -264,11 +264,21 @@ async fn run_battery_pass(
     workspace: &Path,
     adapter: &dyn ProjectAdapter,
     tools: &dyn ToolChannel,
+    engine: &crate::adapter::EngineIdentity,
 ) -> anyhow::Result<Vec<crate::adapter::BatteryRecord>> {
     let deterministic_dir = workspace.join(".hoh/deterministic");
     let _ = std::fs::remove_dir_all(&deterministic_dir);
     std::fs::create_dir_all(&deterministic_dir)?;
-    adapter.evidence_battery(workspace, tools).await
+    let mut records = adapter.evidence_battery(workspace, tools).await?;
+    // DR-44 ⑤: the engine identity is a **gate step**, so a round whose
+    // evidence came from another binary than the configured one cannot freeze as
+    // launchable.  It is appended only when the adapter drives an engine binary;
+    // an adapter without one has no identity to check (and inventing a failing
+    // step would fail every run of that adapter).
+    if let Some(record) = crate::adapter::engine::gate_record(engine) {
+        records.push(record);
+    }
+    Ok(records)
 }
 
 /// DR-24: the recorded `ok` summary of one battery pass.
@@ -330,7 +340,18 @@ pub async fn run(
     let secrets = crate::runtime::secrets::known_secrets(cfg);
 
     let warnings = vec![MCP_SCOPE_WARNING.to_string()];
-    let meta = RunMeta {
+    // DR-44: which engine binary are we driving?  The probe runs through mini's
+    // `Environment` abstraction (no new dependency), and it is skipped entirely
+    // when the adapter drives no engine binary — an adapter without one has no
+    // identity to check.
+    let engine = crate::runtime::engine_identity::probe(
+        orchestrator.adapter.as_ref(),
+        &workspace,
+        &cfg.tools.endpoint,
+        None,
+    )
+    .await;
+    let mut meta = RunMeta {
         run_id: run_id.to_string(),
         spec: spec.clone(),
         ablation: orchestrator.ablation,
@@ -341,6 +362,7 @@ pub async fn run(
         warnings: warnings.clone(),
         config: cfg.model.clone(),
         start_state: orchestrator.start_state.clone(),
+        engine,
     };
     write_run_meta(&run_dir, &meta)?;
     append_warning(&run_dir, MCP_SCOPE_WARNING)?;
@@ -753,8 +775,22 @@ pub async fn run(
         // editor side effects — is part of the candidate identity instead of
         // surfacing later as pre-QA drift.
         let deterministic_dir = workspace.join(".hoh/deterministic");
-        let mut battery =
-            run_battery_pass(&workspace, &*orchestrator.adapter, &*orchestrator.tools).await?;
+        let mut battery = run_battery_pass(
+            &workspace,
+            &*orchestrator.adapter,
+            &*orchestrator.tools,
+            &meta.engine,
+        )
+        .await?;
+        // DR-43/DR-44: the game endpoint only exists after `editor_play_scene`
+        // has run, so it is written back into `meta.json` as soon as it is known.
+        if let Some(registered) = orchestrator.tools.game_endpoint().await {
+            if meta.engine.mcp.game_endpoint.as_ref() != Some(&registered) {
+                meta.engine.mcp.game_endpoint = Some(registered);
+                meta.engine.mcp.game_endpoint_reason = None;
+                let _ = write_run_meta(&run_dir, &meta);
+            }
+        }
         // DR-29: the session-start probe's verdict travels with the iteration.
         note_mcp_desync(&mut iter_warnings, &workspace);
         // DR-24: the pre-freeze launchable gate.  The paper's "keep the
@@ -812,8 +848,13 @@ pub async fn run(
             )?;
 
             // Re-run the battery on the repaired workspace and judge again.
-            battery =
-                run_battery_pass(&workspace, &*orchestrator.adapter, &*orchestrator.tools).await?;
+            battery = run_battery_pass(
+                &workspace,
+                &*orchestrator.adapter,
+                &*orchestrator.tools,
+                &meta.engine,
+            )
+            .await?;
             // DR-29: the second pass runs its own session probe.
             note_mcp_desync(&mut iter_warnings, &workspace);
             launch_gate = crate::adapter::evaluate_launchable(&battery);

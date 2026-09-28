@@ -161,6 +161,18 @@ pub async fn doctor_checks(
         }),
     }
 
+    // 5b. DR-44: the engine binary and its version.  The version string is
+    //     recorded **verbatim** and never asserted (C12: a version bump must not
+    //     require a code change).  An adapter that drives no engine binary has
+    //     nothing to report here.
+    if let Some(binary) = adapter.engine_binary() {
+        let mut env_config = mini_swe_agent::environments::LocalEnvironmentConfig::default();
+        env_config.cwd = workspace.to_string_lossy().into_owned();
+        env_config.timeout = crate::adapter::engine::PROBE_TIMEOUT_SECONDS;
+        let environment = mini_swe_agent::environments::LocalEnvironment::new(env_config);
+        items.extend(crate::adapter::engine::doctor_items(&environment, &binary).await);
+    }
+
     // 6. The MCP tool server must be reachable and expose at least one tool.
     let channel = bridge::channel_for(config);
     match channel.client().list_tools() {
