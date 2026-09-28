@@ -589,7 +589,7 @@ async fn a_battery_step_never_reports_a_mis_correlated_payload_as_success() {
 fn godot_adapter(root: &Path, _workspace: &Path) -> GodotAdapter {
     GodotAdapter::new(
         GodotConfig {
-            addon_source: root.join("no-such-addon"),
+            editor_binary: std::path::PathBuf::new(),
             cache_excludes: vec![".gotdot".to_string()],
             main_scene: "res://scenes/main.tscn".to_string(),
         },

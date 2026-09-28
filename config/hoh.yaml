@@ -35,7 +35,8 @@ runtime:
 adapter:
   kind: godot                             # godot | test
   godot:
-    addon_source: F:/RustProjects/godot-mcp-pro/addons/godot_mcp_rs
+    # DR-41：配置里不再有插件源目录 —— 工具通道是引擎自带的原生 MCP 模块（C4），
+    # 项目里既不复制 GDExtension 插件，也不会再有 ADDON_MISSING.txt。
     # DR-11：只允许「缓存类」目录（如 .godot / .import）。
     # 这些目录对 hash_tree 与快照同样不可见；把真实产物路径加进来会**同时关闭**
     # R2/R3 的越权检测能力（只读角色改动被排除的文件将不再可见）。

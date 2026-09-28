@@ -312,7 +312,7 @@ fn the_godot_developer_artifact_validity_needs_a_real_entry_script() {
     let workspace = temp.path();
     let adapter = hof_rs::adapter::GodotAdapter::new(
         hof_rs::config::GodotConfig {
-            addon_source: workspace.join("no-such-addon"),
+            editor_binary: std::path::PathBuf::new(),
             cache_excludes: vec![],
             main_scene: "res://scenes/main.tscn".to_string(),
         },

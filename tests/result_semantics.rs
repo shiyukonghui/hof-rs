@@ -157,7 +157,7 @@ async fn a_round_over_a_dead_project_reports_a_closed_gate() {
     ];
     let adapter = GodotAdapter::new(
         GodotConfig {
-            addon_source: root.join("no-such-addon"),
+            editor_binary: std::path::PathBuf::new(),
             cache_excludes: vec![".godot".to_string()],
             main_scene: "res://scenes/main.tscn".to_string(),
         },

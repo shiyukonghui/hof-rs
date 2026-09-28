@@ -908,7 +908,7 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let adapter = GodotAdapter::new(
             crate::config::GodotConfig {
-                addon_source: temp.path().join("addon"),
+                editor_binary: std::path::PathBuf::new(),
                 cache_excludes: vec![],
                 main_scene: "res://scenes/main.tscn".to_string(),
             },

@@ -494,7 +494,7 @@ struct BatteryRun {
 fn godot_adapter(root: &Path, ready_timeout_seconds: u64) -> GodotAdapter {
     GodotAdapter::new(
         GodotConfig {
-            addon_source: root.join("no-such-addon"),
+            editor_binary: std::path::PathBuf::new(),
             cache_excludes: vec![".godot".to_string()],
             main_scene: "res://scenes/main.tscn".to_string(),
         },

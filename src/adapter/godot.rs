@@ -50,7 +50,7 @@ config_version=5
 
 config/name="HoH Mario"
 run/main_scene="res://scenes/main.tscn"
-config/features=PackedStringArray("4.7")
+config/features=PackedStringArray("4.8")
 
 [display]
 
@@ -78,14 +78,20 @@ jump={
 [rendering]
 
 renderer/rendering_method="gl_compatibility"
-
-[editor_plugins]
-
-enabled=PackedStringArray("res://addons/godot_mcp_rs/plugin.cfg")
 "#;
 
-/// The plugin entry `initialize` must guarantee (DR-4).
+/// DR-41: the retired GDExtension channel's plugin entry.  It is no longer
+/// installed; the constant survives because the **reverse cleanup** has to
+/// recognise it in an `A0` inherited from an earlier version.
 pub const MCP_PLUGIN_PATH: &str = "res://addons/godot_mcp_rs/plugin.cfg";
+/// DR-41: the exact directory the retired addon lived in (only this path).
+pub const BUNDLED_ADDON_DIR: &str = "addons/godot_mcp_rs";
+/// DR-41: the stale cache entry that made Godot load the retired GDExtension
+/// even when `[editor_plugins]` did not name it.
+pub const BUNDLED_ADDON_EXTENSION: &str =
+    "res://addons/godot_mcp_rs/godot_mcp_rs.gdextension";
+/// DR-41: the engine's extension cache.
+const EXTENSION_LIST_CACHE: &str = ".godot/extension_list.cfg";
 const EDITOR_PLUGINS_HEADER: &str = "[editor_plugins]";
 
 const MAIN_SCENE: &str = r#"[gd_scene load_steps=2 format=3]
@@ -2422,71 +2428,128 @@ fn visit_nodes(node: &Value, visit: &mut impl FnMut(&Value)) {
     }
 }
 
-/// Write `lines` back as an LF-terminated file.
-fn write_lines(path: &Path, lines: &[String]) -> anyhow::Result<()> {
-    let mut text = lines.join("\n");
-    text.push('\n');
-    std::fs::write(path, text)?;
+/// DR-41: drop the stale GDExtension line from `.godot/extension_list.cfg`.
+///
+/// Every other line survives byte-for-byte (the file is re-assembled from the
+/// original line slices), and a cache that becomes empty is deleted instead of
+/// being left as an empty file that Godot might still read.
+fn remove_stale_extension_cache(workspace: &Path) -> anyhow::Result<()> {
+    let cache = workspace.join(EXTENSION_LIST_CACHE);
+    let Ok(raw) = std::fs::read_to_string(&cache) else {
+        return Ok(());
+    };
+    let kept: String = raw
+        .split_inclusive('\n')
+        .filter(|line| line.trim_end() != BUNDLED_ADDON_EXTENSION)
+        .collect();
+    if kept == raw {
+        // Nothing named the retired extension: never touch the file.
+        return Ok(());
+    }
+    if kept.trim().is_empty() {
+        std::fs::remove_file(&cache)?;
+        return Ok(());
+    }
+    std::fs::write(&cache, kept)?;
     Ok(())
 }
 
-/// Guarantee `[editor_plugins]` + `enabled` contains the MCP plugin (DR-4).
+/// DR-41: remove `<workspace>/addons/godot_mcp_rs/` — that exact path only.
+fn remove_bundled_addon_dir(workspace: &Path) -> anyhow::Result<()> {
+    let addon = workspace.join(BUNDLED_ADDON_DIR);
+    if addon.is_dir() {
+        std::fs::remove_dir_all(&addon)?;
+    }
+    Ok(())
+}
+
+/// `enabled=PackedStringArray(...)` minus one quoted entry.
 ///
-/// Idempotent by construction: when the entry is already present the file is
-/// left byte-for-byte untouched, and an existing `enabled` list keeps every
-/// other plugin it names.
-fn ensure_plugin_enabled(project_file: &Path) -> anyhow::Result<()> {
+/// * `Some(same)` — the entry was not present (the caller must not write).
+/// * `Some(updated)` — the entry was removed and other entries remain.
+/// * `None` — the list became empty, so the line has to go.
+fn packed_string_array_without(line: &str, entry: &str) -> Option<String> {
+    let open = line.find('(')?;
+    let close = line.rfind(')')?;
+    if close <= open {
+        return None;
+    }
+    let inner = &line[open + 1..close];
+    let quoted = format!("\"{entry}\"");
+    let items: Vec<&str> = inner
+        .split(',')
+        .map(str::trim)
+        .filter(|item| !item.is_empty())
+        .collect();
+    let kept: Vec<&str> = items.iter().copied().filter(|item| *item != quoted).collect();
+    if kept.len() == items.len() {
+        return Some(line.to_string());
+    }
+    if kept.is_empty() {
+        return None;
+    }
+    Some(format!(
+        "{}({}){}",
+        &line[..open],
+        kept.join(", "),
+        &line[close + 1..]
+    ))
+}
+
+/// Reverse of the retired DR-4 behaviour: guarantee the bundled GDExtension
+/// channel is **disabled** (DR-41).
+///
+/// Idempotent by construction and byte-conservative: when the file does not
+/// mention the retired plugin (or has no `[editor_plugins]` section at all) it
+/// is left exactly as it is; when it does, only the offending entry is removed
+/// from the `enabled` list and every sibling stays byte-for-byte.  A list that
+/// becomes empty takes the whole section with it.
+fn ensure_bundled_addon_disabled(project_file: &Path) -> anyhow::Result<()> {
     let raw = std::fs::read_to_string(project_file)?;
-    let mut lines: Vec<String> = raw.lines().map(ToOwned::to_owned).collect();
+    let lines: Vec<&str> = raw.split_inclusive('\n').collect();
 
     let Some(header) = lines
         .iter()
-        .position(|line| line.trim() == EDITOR_PLUGINS_HEADER)
+        .position(|line| line.trim_end() == EDITOR_PLUGINS_HEADER)
     else {
-        lines.push(String::new());
-        lines.push(EDITOR_PLUGINS_HEADER.to_string());
-        lines.push(String::new());
-        lines.push(format!("enabled=PackedStringArray(\"{MCP_PLUGIN_PATH}\")"));
-        return write_lines(project_file, &lines);
+        return Ok(());
     };
-
     let end = (header + 1..lines.len())
         .find(|&index| lines[index].trim_start().starts_with('['))
         .unwrap_or(lines.len());
-    let enabled = (header + 1..end).find(|&index| lines[index].trim_start().starts_with("enabled"));
-    let Some(enabled) = enabled else {
-        lines.insert(
-            header + 1,
-            format!("enabled=PackedStringArray(\"{MCP_PLUGIN_PATH}\")"),
-        );
-        return write_lines(project_file, &lines);
+    let Some(enabled) = (header + 1..end)
+        .find(|&index| lines[index].trim_start().starts_with("enabled"))
+    else {
+        return Ok(());
     };
 
-    if lines[enabled].contains(MCP_PLUGIN_PATH) {
-        // Already enabled: never touch the file.
+    let Some(updated) = packed_string_array_without(lines[enabled], MCP_PLUGIN_PATH) else {
+        // The list is empty now: the section must go entirely.
+        let mut kept: Vec<&str> = Vec::with_capacity(lines.len());
+        kept.extend_from_slice(&lines[..header]);
+        kept.extend_from_slice(&lines[end..]);
+        // Removing the section must not leave a doubled blank separator.
+        if header > 0
+            && kept[header - 1].trim().is_empty()
+            && kept.get(header).map(|line| line.trim().is_empty()) == Some(true)
+        {
+            kept.remove(header);
+        }
+        if kept.concat() == raw {
+            return Ok(());
+        }
+        std::fs::write(project_file, kept.concat())?;
+        return Ok(());
+    };
+
+    if updated == lines[enabled] {
+        // Already satisfied: never touch the file.
         return Ok(());
     }
-
-    let line = lines[enabled].clone();
-    match (line.find('('), line.rfind(')')) {
-        (Some(open), Some(close)) if close > open => {
-            let inner = line[open + 1..close].trim();
-            let inner = if inner.is_empty() {
-                format!("\"{MCP_PLUGIN_PATH}\"")
-            } else {
-                format!("{inner}, \"{MCP_PLUGIN_PATH}\"")
-            };
-            lines[enabled] = format!(
-                "{}PackedStringArray({inner}){}",
-                &line[..open],
-                &line[close + 1..]
-            );
-        }
-        _ => {
-            lines[enabled] = format!("enabled=PackedStringArray(\"{MCP_PLUGIN_PATH}\")");
-        }
-    }
-    write_lines(project_file, &lines)
+    let mut kept = lines.clone();
+    kept[enabled] = updated.as_str();
+    std::fs::write(project_file, kept.concat())?;
+    Ok(())
 }
 
 #[async_trait::async_trait]
@@ -2495,10 +2558,14 @@ impl ProjectAdapter for GodotAdapter {
         std::fs::create_dir_all(workspace)?;
         let project_file = workspace.join("project.godot");
         if project_file.is_file() {
-            // Already a Godot project: scaffolding is a no-op, but the MCP
-            // plugin enablement is still enforced (DR-4), so an `A₀` that was
-            // created earlier can be repaired in place.
-            return ensure_plugin_enabled(&project_file);
+            // Already a Godot project.  DR-41: an `A₀` produced by an earlier
+            // version still carries the retired GDExtension channel, so the
+            // reverse cleanup is enforced in place — idempotently, and without
+            // touching a project that never had it.
+            ensure_bundled_addon_disabled(&project_file)?;
+            remove_bundled_addon_dir(workspace)?;
+            remove_stale_extension_cache(workspace)?;
+            return Ok(());
         }
         let non_empty = std::fs::read_dir(workspace)?.next().is_some();
         if non_empty && !self.force_init {
@@ -2518,20 +2585,12 @@ impl ProjectAdapter for GodotAdapter {
             "# Scripts\n\nGDScript sources live here.\n",
         )?;
 
-        let addon_source = &self.config.addon_source;
-        if addon_source.is_dir() {
-            let destination = workspace.join("addons/godot_mcp_rs");
-            crate::runtime::view::copy_tree(addon_source, &destination, &[])?;
-        } else {
-            std::fs::write(
-                workspace.join("ADDON_MISSING.txt"),
-                format!(
-                    "The Godot MCP addon source {} does not exist on this machine.\n",
-                    addon_source.display()
-                ),
-            )?;
-        }
-        ensure_plugin_enabled(&project_file)?;
+        // DR-41 (C4): the MCP tool channel is the engine's **native module**.
+        // Nothing is copied into the project, so there is nothing that could be
+        // missing either — there is nothing copied in and no marker file.  The reverse cleanup still runs so a `--force-init` over an
+        // old directory cannot resurrect the retired channel.
+        remove_bundled_addon_dir(workspace)?;
+        remove_stale_extension_cache(workspace)?;
         Ok(())
     }
 
@@ -2738,11 +2797,29 @@ $HOH_HOH_BIN tools call assert_node_state --args-file $HOH_ARTIFACT_DIR/args/ass
             ok: project.is_file(),
             detail: project.display().to_string(),
         });
-        let addon = workspace.join("addons/godot_mcp_rs");
+        // DR-41: the retired GDExtension channel must not come back.  The item
+        // is reported so a legacy `A0` that still carries it is visible in
+        // `hoh doctor` instead of silently double-binding port 9877.
+        let addon = workspace.join(BUNDLED_ADDON_DIR);
         items.push(DoctorItem {
-            name: "godot.mcp_addon".to_string(),
-            ok: addon.is_dir(),
-            detail: addon.display().to_string(),
+            name: "godot.bundled_addon".to_string(),
+            ok: !addon.exists(),
+            detail: format!(
+                "{} must not exist: the MCP channel is the engine's native module (DR-41)",
+                addon.display()
+            ),
+        });
+        let cache = workspace.join(EXTENSION_LIST_CACHE);
+        let stale_cache = std::fs::read_to_string(&cache)
+            .map(|text| text.contains(BUNDLED_ADDON_EXTENSION))
+            .unwrap_or(false);
+        items.push(DoctorItem {
+            name: "godot.extension_cache".to_string(),
+            ok: !stale_cache,
+            detail: format!(
+                "{} must not reference {BUNDLED_ADDON_EXTENSION} (DR-41)",
+                cache.display()
+            ),
         });
         // DR-6: the editor-scope limitation cannot be verified from the
         // filesystem, so it is published as an explicit human-confirmation item
@@ -2789,7 +2866,7 @@ mod tests {
     fn adapter(addon: &Path) -> GodotAdapter {
         GodotAdapter::new(
             GodotConfig {
-                addon_source: addon.to_path_buf(),
+                editor_binary: std::path::PathBuf::new(),
                 cache_excludes: vec![".godot".to_string(), ".import".to_string()],
                 main_scene: "res://scenes/main.tscn".to_string(),
             },
@@ -2852,7 +2929,154 @@ mod tests {
             assert!(project.contains(action), "missing input action {action}");
         }
         assert!(workspace.join("scenes/main.tscn").is_file());
-        assert!(workspace.join("addons/godot_mcp_rs/plugin.cfg").is_file());
+        // DR-41: the MCP channel is the engine's native module (C4); the
+        // retired GDExtension addon must never be copied into `A0` again.
+        assert!(
+            !workspace.join("addons/godot_mcp_rs/plugin.cfg").exists(),
+            "the bundled GDExtension addon must not be installed (DR-41)"
+        );
+        assert!(
+            !workspace.join("ADDON_MISSING.txt").exists(),
+            "there is no addon to miss any more (DR-41)"
+        );
+    }
+
+    /// DR-41: the project template must not name the retired plugin channel and
+    /// must declare the 4.8 engine generation.
+    #[test]
+    fn the_project_template_drops_the_gdextension_channel() {
+        assert!(
+            !PROJECT_GODOT.contains("[editor_plugins]"),
+            "the template must not enable an editor plugin (DR-41)"
+        );
+        assert!(
+            !PROJECT_GODOT.contains(MCP_PLUGIN_PATH),
+            "the template must not name the retired plugin (DR-41)"
+        );
+        assert!(
+            PROJECT_GODOT.contains("config/features=PackedStringArray(\"4.8\")"),
+            "the template must declare the 4.8 engine generation (DR-41)"
+        );
+        assert!(
+            !PROJECT_GODOT.contains("PackedStringArray(\"4.7\")"),
+            "the 4.7 generation is gone (DR-41)"
+        );
+    }
+
+    /// DR-41: an `A0` created by an earlier version still carries the retired
+    /// channel in three places, and `initialize` must reverse all three
+    /// **idempotently**: the second call must not change a single byte.
+    #[test]
+    fn initialize_removes_a_legacy_bundled_addon_idempotently() {
+        let temp = tempfile::tempdir().unwrap();
+        let workspace = temp.path().join("mario");
+        std::fs::create_dir_all(workspace.join("addons/godot_mcp_rs")).unwrap();
+        std::fs::write(
+            workspace.join("addons/godot_mcp_rs/plugin.cfg"),
+            "[plugin]\n",
+        )
+        .unwrap();
+        std::fs::create_dir_all(workspace.join(".godot")).unwrap();
+        std::fs::write(
+            workspace.join(".godot/extension_list.cfg"),
+            "res://addons/someone_else/other.gdextension\n\
+             res://addons/godot_mcp_rs/godot_mcp_rs.gdextension\n",
+        )
+        .unwrap();
+        std::fs::write(
+            workspace.join("project.godot"),
+            "config_version=5\n\n[editor_plugins]\n\n\
+             enabled=PackedStringArray(\"res://addons/other/plugin.cfg\", \
+             \"res://addons/godot_mcp_rs/plugin.cfg\")\n",
+        )
+        .unwrap();
+
+        adapter(&temp.path().join("no-such-addon"))
+            .initialize(&workspace)
+            .unwrap();
+
+        assert!(
+            !workspace.join("addons/godot_mcp_rs").exists(),
+            "the exact addon directory must be removed (DR-41)"
+        );
+        let cache = std::fs::read_to_string(workspace.join(".godot/extension_list.cfg")).unwrap();
+        assert_eq!(
+            cache, "res://addons/someone_else/other.gdextension\n",
+            "every other cache line must survive byte-for-byte (DR-41)"
+        );
+        let project = std::fs::read_to_string(workspace.join("project.godot")).unwrap();
+        assert_eq!(
+            project,
+            "config_version=5\n\n[editor_plugins]\n\n\
+             enabled=PackedStringArray(\"res://addons/other/plugin.cfg\")\n",
+            "the other enabled plugin must survive byte-for-byte (DR-41)"
+        );
+
+        // Idempotence: the cleanup must be satisfied on the second call.
+        let before = (
+            project.clone(),
+            cache.clone(),
+            std::fs::read(workspace.join(".godot/extension_list.cfg")).unwrap(),
+        );
+        adapter(&temp.path().join("no-such-addon"))
+            .initialize(&workspace)
+            .unwrap();
+        assert_eq!(
+            std::fs::read_to_string(workspace.join("project.godot")).unwrap(),
+            before.0,
+            "a second initialize must not touch project.godot (DR-41)"
+        );
+        assert_eq!(
+            std::fs::read(workspace.join(".godot/extension_list.cfg")).unwrap(),
+            before.2,
+            "a second initialize must not touch the extension cache (DR-41)"
+        );
+    }
+
+    /// DR-41: when the retired plugin is the *only* entry, the empty remains
+    /// must be removed — the section from `project.godot` and the cache file
+    /// itself — instead of being left as an empty husk.
+    #[test]
+    fn initialize_removes_empty_remains_of_the_retired_channel() {
+        let temp = tempfile::tempdir().unwrap();
+        let workspace = temp.path().join("mario");
+        std::fs::create_dir_all(workspace.join(".godot")).unwrap();
+        std::fs::write(
+            workspace.join(".godot/extension_list.cfg"),
+            "res://addons/godot_mcp_rs/godot_mcp_rs.gdextension\n",
+        )
+        .unwrap();
+        std::fs::write(
+            workspace.join("project.godot"),
+            "config_version=5\n\n[application]\n\nconfig/name=\"x\"\n\n[editor_plugins]\n\n\
+             enabled=PackedStringArray(\"res://addons/godot_mcp_rs/plugin.cfg\")\n",
+        )
+        .unwrap();
+
+        adapter(&temp.path().join("no-such-addon"))
+            .initialize(&workspace)
+            .unwrap();
+
+        let project = std::fs::read_to_string(workspace.join("project.godot")).unwrap();
+        assert!(
+            !project.contains(EDITOR_PLUGINS_HEADER),
+            "an empty `[editor_plugins]` section must go entirely (DR-41): {project:?}"
+        );
+        assert!(project.contains("config/name=\"x\""), "{project:?}");
+        assert!(
+            !workspace.join(".godot/extension_list.cfg").exists(),
+            "an emptied extension cache must be deleted (DR-41)"
+        );
+
+        let once = std::fs::read_to_string(workspace.join("project.godot")).unwrap();
+        adapter(&temp.path().join("no-such-addon"))
+            .initialize(&workspace)
+            .unwrap();
+        assert_eq!(
+            once,
+            std::fs::read_to_string(workspace.join("project.godot")).unwrap(),
+            "the cleanup must be idempotent (DR-41)"
+        );
     }
 
     #[test]
@@ -2874,58 +3098,32 @@ mod tests {
         assert!(adapter(&addon).initialize(&foreign).is_err());
     }
 
-    /// DR-4: `initialize` enables the MCP plugin exactly once and never
-    /// rewrites a project file that already lists it.
+    /// DR-41: a project that never carried the retired channel — or an enabled
+    /// list that names other plugins only — must be left byte-for-byte alone.
     #[test]
-    fn initialize_enables_the_mcp_plugin_idempotently() {
+    fn initialize_never_touches_a_project_without_the_retired_channel() {
         let temp = tempfile::tempdir().unwrap();
-        let addon = temp.path().join("addon");
-        std::fs::create_dir_all(&addon).unwrap();
-        std::fs::write(addon.join("plugin.cfg"), "[plugin]\n").unwrap();
-        let workspace = temp.path().join("mario");
-
-        adapter(&addon).initialize(&workspace).unwrap();
-        let first = std::fs::read_to_string(workspace.join("project.godot")).unwrap();
-        assert!(first.contains("[editor_plugins]"), "project: {first}");
-        assert_eq!(
-            first.matches(MCP_PLUGIN_PATH).count(),
-            1,
-            "the plugin entry must appear exactly once: {first}"
-        );
-
-        adapter(&addon).initialize(&workspace).unwrap();
-        let second = std::fs::read_to_string(workspace.join("project.godot")).unwrap();
-        assert_eq!(first, second, "a second initialize must not touch the file");
-        assert_eq!(second.matches(MCP_PLUGIN_PATH).count(), 1);
-    }
-
-    /// DR-4: a pre-existing `enabled` list keeps its other entries.
-    #[test]
-    fn initialize_preserves_other_enabled_plugins() {
-        let temp = tempfile::tempdir().unwrap();
-        let addon = temp.path().join("addon");
         let workspace = temp.path().join("mario");
         std::fs::create_dir_all(&workspace).unwrap();
         std::fs::write(
             workspace.join("project.godot"),
-            "config_version=5\n\n[editor_plugins]\n\n\
+            "config_version=5\n\n[application]\n\nconfig/name=\"x\"\n\n[editor_plugins]\n\n\
              enabled=PackedStringArray(\"res://addons/other/plugin.cfg\")\n",
         )
         .unwrap();
+        let before = std::fs::read(workspace.join("project.godot")).unwrap();
 
-        adapter(&addon).initialize(&workspace).unwrap();
-        let updated = std::fs::read_to_string(workspace.join("project.godot")).unwrap();
-        assert!(
-            updated.contains("res://addons/other/plugin.cfg"),
-            "{updated}"
-        );
-        assert_eq!(updated.matches(MCP_PLUGIN_PATH).count(), 1, "{updated}");
+        adapter(&temp.path().join("no-such-addon"))
+            .initialize(&workspace)
+            .unwrap();
 
-        adapter(&addon).initialize(&workspace).unwrap();
         assert_eq!(
-            updated,
-            std::fs::read_to_string(workspace.join("project.godot")).unwrap()
+            std::fs::read(workspace.join("project.godot")).unwrap(),
+            before,
+            "an unrelated project must be byte-identical afterwards (DR-41)"
         );
+        assert!(!workspace.join(".godot").exists());
+        assert!(!workspace.join("addons").exists());
     }
 
     /// DR-5: editor errors are decided by the parsed `errors` array length, not

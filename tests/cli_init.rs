@@ -75,16 +75,11 @@ fn init_rebuilds_a0_without_mcp_or_a_model_endpoint() {
         &workspace.join("project.godot"),
         "; stale\nconfig_version=5\n",
     );
-    let addon_source = temp.path().join("addon");
-    std::fs::create_dir_all(&addon_source).unwrap();
-
     let args = vec![
         "init".to_string(),
         "--fresh-workspace".to_string(),
         "--project".to_string(),
         workspace.display().to_string(),
-        "-c".to_string(),
-        format!("adapter.godot.addon_source={}", addon_source.display()),
     ];
     let output = run(&args);
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -100,13 +95,23 @@ fn init_rebuilds_a0_without_mcp_or_a_model_endpoint() {
     );
     let project = std::fs::read_to_string(workspace.join("project.godot"))
         .expect("init must write project.godot");
+    // DR-41 (supersedes DR-4): the rebuilt A0 must NOT enable the retired
+    // GDExtension channel; the MCP channel is the engine's native module (C4).
     assert!(
-        project.contains("[editor_plugins]"),
-        "the rebuilt A0 must enable the addon (DR-4): {project}"
+        !project.contains("[editor_plugins]"),
+        "the rebuilt A0 must not enable an editor plugin (DR-41): {project}"
     );
     assert!(
-        project.contains("res://addons/godot_mcp_rs/plugin.cfg"),
-        "the enabled entry must be the MCP plugin: {project}"
+        !project.contains("res://addons/godot_mcp_rs"),
+        "the retired plugin must not be named anywhere (DR-41): {project}"
+    );
+    assert!(
+        !workspace.join("addons/godot_mcp_rs").exists(),
+        "no bundled addon may be installed (DR-41)"
+    );
+    assert!(
+        !workspace.join("ADDON_MISSING.txt").exists(),
+        "there is no addon to miss any more (DR-41)"
     );
     assert!(
         workspace.join("scenes/main.tscn").is_file(),
@@ -126,11 +131,6 @@ fn init_refuses_a_non_empty_workspace_without_force() {
         "init".to_string(),
         "--project".to_string(),
         workspace.display().to_string(),
-        "-c".to_string(),
-        format!(
-            "adapter.godot.addon_source={}",
-            temp.path().join("addon").display()
-        ),
     ];
     let output = run(&args);
     assert_eq!(
@@ -157,16 +157,11 @@ fn init_force_over_a_non_empty_workspace_scaffolds() {
     let temp = tempfile::tempdir().unwrap();
     let workspace = temp.path().join("workspace");
     write(&workspace.join("keep.txt"), "precious\n");
-    let addon_source = temp.path().join("addon");
-    std::fs::create_dir_all(&addon_source).unwrap();
-
     let args = vec![
         "init".to_string(),
         "--force-init".to_string(),
         "--project".to_string(),
         workspace.display().to_string(),
-        "-c".to_string(),
-        format!("adapter.godot.addon_source={}", addon_source.display()),
     ];
     let output = run(&args);
     assert_eq!(
@@ -189,9 +184,6 @@ fn run_fresh_workspace_keeps_the_rebuilt_a0_when_doctor_fails() {
     let temp = tempfile::tempdir().unwrap();
     let workspace = temp.path().join("workspace");
     write(&workspace.join("leftover.txt"), "from an older attempt\n");
-    let addon_source = temp.path().join("addon");
-    std::fs::create_dir_all(&addon_source).unwrap();
-
     let args = vec![
         "run".to_string(),
         "--fresh-workspace".to_string(),
@@ -199,8 +191,6 @@ fn run_fresh_workspace_keeps_the_rebuilt_a0_when_doctor_fails() {
         "1".to_string(),
         "--project".to_string(),
         workspace.display().to_string(),
-        "-c".to_string(),
-        format!("adapter.godot.addon_source={}", addon_source.display()),
     ];
     let output = run(&args);
     assert_eq!(

@@ -23,7 +23,7 @@ use serde_json::Value;
 fn adapter(addon: &std::path::Path) -> GodotAdapter {
     GodotAdapter::new(
         GodotConfig {
-            addon_source: addon.to_path_buf(),
+            editor_binary: std::path::PathBuf::new(),
             cache_excludes: vec![".godot".to_string()],
             main_scene: "res://scenes/main.tscn".to_string(),
         },
