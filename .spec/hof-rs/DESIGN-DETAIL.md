@@ -1497,6 +1497,133 @@ Planner 在首次 `submit` 成功后仍循环提交约 20 次。单轮 T=1 烧�
 ---
 ### 12.1 变更记录
 
+## 13. 修订 v0.8（DR-41..DR-47）——引擎换代：改用我们的 MCP 原生构建与新工具契约
+
+> **本节与 §1–§12 冲突处，以本节为准。** 触发：D216（用户裁决）。
+
+### 13.0 触发、范围与批次
+
+- **换引擎**：由官方 `Godot_v4.7.1-stable_mono_win64` 改为
+  `F:\moonbit-hof-rs\godot-mcp\godot\bin\godot.windows.editor.x86_64.mono.exe`，
+  实测版本串 `4.8.dev.mono.custom_build.ba1587c71`（构建于 anchor `ba1587c71`；
+  引擎 HEAD `15bbf1f50e` 与之只差 1 个 `chore(gitignore)` 提交，且 `modules/mcp_server` 改动文件数 = 0，故**无需重建**）。
+- **已实测的契约断层**（这是本次真正的工程量）：
+  - hof-rs 现夹具 `tests/fixtures/mcp/tools_list.json` = **174 条无前缀名**（`play_scene`、`get_editor_errors`、`capture_frames`、`monitor_properties`、`simulate_action` …）；
+  - 原生构建 `godot/modules/mcp_server/docs/tools_list.renamed.json` = **177 条四通道前缀名**（`editor_play_scene`、`project_get_info` …）；
+  - 旧名在新契约里**全部不存在**（双向核对），且 174→177 含 GDR-17 取消 2 对合并产生的**拆分**与 `update_` 禁用改名，**不是纯改名**。
+  - 耦合量实测：`src/adapter/godot.rs` 97 处、`tests/evidence_battery.rs` 40 处，全仓约 270 行、24 个文件。
+- **批次划分（B1，用户裁决）**：
+  - **批次一 = 纯离线迁移**（本节的 DR-41..DR-46），判据全部是 `cargo test`，**不启动 Godot、不碰 9877、不访问模型端点**；
+  - **批次二 = 真机 T=1 冒烟**（DR-47），由**另一批全新子代理**执行与验收。
+- **两条硬约束（用户裁决）**：
+  1. **不保留旧名兼容层** —— 全仓只存在一套词汇（四通道前缀）。禁止别名映射、禁止"两套都能用"。
+  2. **`PRD-mario.md` 一字不改** —— 它是冻结的 S（A5）。其 P1「Godot 4.7.x」由本节 C3 **取代**，
+     平台版本属硬约束而非产品需求；因此 `meta.json.spec.sha256` 必须仍为
+     `4c81c3a9995f0b3afdf01421a0c3be88573cceefc284ce9bafbfda141f0f5c3a`（改动 PRD 即为违约）。
+
+### 13.1 DR-41 拆除 GDExtension 通道（同端口双绑定 + 缓存残留）
+
+实测依据两条：①`mcp_server.cpp:70` 注释明说默认 **9877 就是"同 GDExtension 插件那个端口"**，两者共存必然有一个 `bind failed`；②工作区 `.godot/extension_list.cfg` 内容**恰好是** `res://addons/godot_mcp_rs/godot_mcp_rs.gdextension` —— Godot 会按该缓存加载 GDExtension，**即使 `[editor_plugins]` 里并没有它**。
+
+1. `PROJECT_GODOT` 模板：删除 `[editor_plugins]` 段（现 82–84 行）；`config/features` 由 `"4.7"` 改为 `"4.8"`。
+2. `initialize()`（新工作区）：**不再**复制 `addon_source`；不再写 `ADDON_MISSING.txt`。
+3. `initialize()`（**既有**工作区，即当前 `.workspace/mario`）：必须**反向清理**，且幂等：
+   - 删 `<workspace>/addons/godot_mcp_rs/`（仅此精确路径）；
+   - 若 `<workspace>/.godot/extension_list.cfg` 含上述扩展开关行 → 移除该行，其余行逐字保留；文件因此为空则删除该文件；
+   - 从 `project.godot` 的 `[editor_plugins]` → `enabled=PackedStringArray(...)` 中移除
+     `res://addons/godot_mcp_rs/plugin.cfg`；**保存列表中其它插件名逐字不变**；列表变空则整段删除；
+     无该段或本无该项时**逐字节不改**。
+4. `ensure_plugin_enabled`（2438–2490）语义反转为 `ensure_bundled_addon_disabled`，保留原有"已满足即不触碰文件"的幂等精神与全部单测覆盖。
+5. 配置：`adapter.godot.addon_source` 从 `GodotConfig` 与 `config/hoh.yaml` 删除；
+   `grep -rn "addon_source" src tests config` 必须 **0 命中**。
+
+### 13.2 DR-42 工具契约换代（唯一事实源 = 引擎侧 rename map）
+
+- **事实源**（按权威度）：
+  `godot-mcp/godot/modules/mcp_server/docs/tool-rename-map.json`（174 条改名表）
+  → `docs/tools_list.renamed.json`（177 条线上契约）
+  → `godot-mcp/recovery/TEST-CASES.md` 的 177 条 `TC-TOOL-*`（逐工具输入/输出形式与反例）。
+- **夹具重采**：`tests/fixtures/mcp/tools_list.json` 换为 177 条新契约（UTF-8 无 BOM）。
+  批次一以**仓库内** `tools_list.renamed.json` 为源（离线）；新增
+  `tests/fixtures/mcp/PROVENANCE.md` 记录来源路径、sha256、条数，并写明"**活体逐字核对留给批次二**"。
+- **改名迁移**：`src/**`、`tests/**`、`src/prompts/**` 的旧名一律换成新名。
+  **必须逐条查表，禁止正则批量替换**（GDR-17 的拆分与 `update_` 禁用使映射非 1:1）。
+- **能力缺口必须上报，不得臆造**：若 hof-rs 用到的某项能力在新契约里**没有**对应工具，
+  在报告里列「旧名 / 无对应 / 影响（哪条证据或闸门失效）」并**停下等裁决**。
+- **角色工具作用域**（`src/runtime/policy.rs`、`src/tools/policy.rs`、`src/adapter/godot.rs:2690–2730`）：
+  按四通道（`editor_`/`project_`/`running_game_`/`os_`）+ 只读动词集重写。
+  Planner 只读 ⇒ 仅允许只读通道动词；**不得**把任何写动词放进只读角色。
+- 报告必须包含**逐条映射表**：`旧名 → 新名 → 作用域（editor/game/通用） → 语义是否变化 → 依据（map 行号）`。
+
+### 13.3 DR-43 双端点契约（GDR-11 的落地）
+
+- **现状**：hof-rs 只用单端点 9877，依赖 addon 的"游戏转发工具"（`get_game_scene_tree`、`monitor_properties`）。
+- **新契约**：编辑器端点 9877 只服务 editor 作用域工具；**游戏进程是独立端点**（`running_game_*`，M 线实测 69 条）；
+  `editor_play_scene` 会向子进程注入 `--mcp-port`，并在响应里回
+  `mcp_port` / `mcp_port_source`（`argument`|`auto_free_port`）/ `endpoint` / `pid`。
+- **要求**：
+  1. `src/tools/` 支持**按作用域路由端点**：`editor_*`/`project_*`/`os_*` → 编辑器端点；`running_game_*` → 游戏端点。
+  2. `step_play_scene` 必须从 `editor_play_scene` 响应中**解析并登记**游戏端点（优先 `endpoint` 字段，否则由 `mcp_port` 拼）；
+     登记失败 ⇒ **该步失败**，不得静默回退到编辑器端点（回退会让 `running_game_*` 打到不支持的端点并产生假证据）。
+  3. `stop_scene` 之后游戏端点必须失效：后续 `running_game_*` 调用**报错**，不得打到旧端口。
+  4. 端点身份入库（见 DR-44）：`engine.mcp.editor_endpoint` 与 `engine.mcp.game_endpoint`（含 `mcp_port_source`）。
+  5. **离线判据**：在假 MCP 上构造**双端点**，断言 ①`running_game_*` 只出现在游戏端点的收到记录里；
+     ②编辑器端点**从未**收到 `running_game_*`；③`editor_play_scene` 未回端口时该步判定失败。
+
+### 13.4 DR-44 引擎身份入库（把"用的是哪个二进制"变成可验证事实）
+
+- 配置新增 `adapter.godot.editor_binary`（绝对路径；`config/hoh.yaml` 填 mono 构建）。
+- `hof doctor` 两项：
+  - `godot.engine_binary`：ok = 路径存在；detail = 路径 + size + mtime；
+  - `godot.engine_version`：ok = `<binary> --version` 退出码 0；detail = **版本串逐字**。
+    版本串只**记录**，**不**写进代码常量、**不**作为判据（换版本不得改 `src/**`，C12）。
+- `meta.json` 新增 `engine` 块。**字段契约固定**；任何一项取不到时必须显式写 `null` 并给 `reason`，
+  **不得省略、不得编造**（与 R12 的 usage-unknown 纪律同源）：
+
+```json
+"engine": {
+  "kind": "godot",
+  "binary": { "path": "...", "size_bytes": 0, "mtime_unix": 0, "sha256": "..." },
+  "version_string": "4.8.dev.mono.custom_build.ba1587c71",
+  "mcp": { "editor_endpoint": "http://127.0.0.1:9877/mcp", "game_endpoint": null,
+           "editor_status": { "…": "GET /mcp 的原样响应体" } },
+  "listener": { "pid": 0, "path": "...", "matches_binary": true, "reason": null },
+  "checked_at": 0
+}
+```
+
+- `listener.matches_binary`：经**既有 `Environment` 抽象**跑一条 Windows 探针（端口 → PID → 可执行体路径），
+  与 `editor_binary`（规范化绝对路径、大小写不敏感）比较。
+  **不新增 crate 依赖** —— 理由：复用既有抽象即可用 `FakeEnvironment` 离线覆盖；为一次预检引入联网依赖反而扩大不可测面。
+- **闸门**：`matches_binary == false` ⇒ **可启动闸门失败**（`GateStep` id = `engine_identity`），
+  错误信息必须同列「配置的二进制 / 实际监听者路径 / PID」。
+  理由：引擎身份错 ⇒ 本轮全部证据作废，属于必须在冻结前拦住的条件。
+- C11 不变式扩展：`secret_hygiene` 必须覆盖 `engine` 块的新键（不得出现密钥明文）。
+
+### 13.5 DR-45 旧词汇归零（迁移完成的机器判据）
+
+新增离线测试 `tests/tool_vocabulary.rs`，三条**必须同时绿**：
+1. 夹具里**每条** `name` 均匹配 `^(editor|project|running_game|os)_[a-z0-9_]+$`；
+2. `src/**`、`tests/**`、`src/prompts/**` 中**不存在任何不在夹具里的工具名**（旧词汇为 0）；
+3. 反向：代码里被调用的**每个**工具名都**必须**在夹具里存在。
+
+> 这是"迁移做完了"的唯一机器判据，用来防止任何人（包括我）用形容词交差。
+
+### 13.6 DR-46 批次一禁项
+
+不启动 Godot / 不占 9877 / 不访问模型端点（纯离线）；不改 `godot-mcp/**`（引擎侧已冻结）；
+不改 `PRD-mario.md`；不 `push`；不引入新依赖。
+
+### 13.7 DR-47 批次二（真机）前置与核对项
+
+- **由决策者**（我）用 mono 构建启动编辑器：
+  `godot.windows.editor.x86_64.mono.exe --path F:\moonbit-hof-rs\.workspace\mario --mcp-port=9877`（**显式端口**，避免默认值歧义）。
+- 批次二必须逐项核对并以真实输出取证：
+  `GET /mcp` 的活体 `tools` 计数 == 夹具条数；`meta.json.engine.listener.matches_binary == true`；
+  `version_string` 以 `4.8.dev.mono` 开头；端口 9877 的监听者是**我们的**二进制而非旧编辑器。
+
+---
+
 | 版本 | 日期 | 变更 | 触发 |
 |---|---|---|---|
 | v0.1 | 2026-09 | 初版（阶段三冻结） | 概要设计确认 |
@@ -1508,3 +1635,4 @@ Planner 在首次 `submit` 成功后仍循环提交约 20 次。单轮 T=1 烧�
 | v0.6 | 2026-09 | 追加 §12（DR-29..DR-33）：JSON-RPC 响应 id 关联与错位修复、电池 payload 形状校验、记录完整性、留痕误报修复、输入证据可判定性 | 第三次真实 T=1 冒烟（`smoke-t3`：exit 6；MCP 慢一拍导致闸门假阴性并触发无效修复；结构合规但 E3 不可判定）（D24/D25） |
 | v0.6a | 2026-09 | 补入 DR-34（相对路径存在性优先的多基准回退），原文本未随 v0.6 入库 | 独立验收发现设计工件与 git 历史不一致（DEF-2） |
 | v0.7 | 2026-09 | 追加 §12（DR-35..DR-40）：游戏进程内输入通道、证据可见性、wrap-up 触发收紧、留痕补齐、gate≠产品达标、`hoh init` | 第四次真实 T=1 冒烟（`smoke-t5`：exit 0，E2/E1/E4/E5/E6 met，E3 因编辑器侧输入注入无法到达游戏进程而不可判定；50.1M tokens）（D27/D28） |
+| v0.8 | 2026-09-28 | 追加 §13（DR-41..DR-47）：换用我们的 MCP 原生构建、拆除 GDExtension 通道与端口双绑定、新工具契约迁移（174→177 四通道前缀）、双端点路由、引擎身份入库与身份闸门、旧词汇归零守卫 | 用户裁决换引擎（D216）；实测到工具契约断层（旧名在新契约里全部不存在，耦合约 270 行 / 24 文件） |

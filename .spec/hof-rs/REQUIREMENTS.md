@@ -1,7 +1,10 @@
 # REQUIREMENTS — hof-rs（Harness-of-Harness 的 Rust 复刻）
 
-- 状态：**v0.2 评审稿，待用户最终确认**（未确认不得进入概要设计）
+- 状态：**v0.3（2026-09-28，引擎换代，D216；v0.2 正文除 §3 硬约束与下列条目外不变）**
 - 变更：v0.2 关闭全部 OPEN 项（用户已确认 OPEN-1/6/7，OPEN-2/3/4/5/8 按建议采纳并实测验证）
+- 变更（v0.3）：**C3/C4/C5 重写**（引擎改为我们的 MCP 原生构建、通道去掉 GDExtension 插件、模型改为配置声明的 OpenAI 兼容端点）；
+  A4、OPEN-4、§1、§7 前置说明、§9 术语 H 同步修订；新增 §10 修订记录。
+  **`PRD-mario.md`（冻结的 S）一字未改**，其 P1「Godot 4.7.x」由 C3 取代（见 §10）。
 - 依据：`2609.01481v1.pdf_by_PaddleOCR-VL-1.6.md`（HoH 论文 1126 行全文）
 - 落点：`F:\moonbit-hof-rs`
 - Agent 核心：`F:\RustProjects\mini-swe-agent-rust-mini\rust`（crate `mini_swe_agent`，本文件简称 mini）
@@ -11,7 +14,7 @@
 ## 1. 目标（自上而下）
 
 **根本目的**：把论文的 Harness-of-Harness **运行时语义**在 Rust 里落地成可运行、可验证、可演化的工程系统，
-使一个固定的 harness–model 配置（mini + 本地 qwen）能被组织进「规划–开发–测试」循环，跨轮携带
+使一个固定的 harness–model 配置（mini + 配置声明的模型端点）能被组织进「规划–开发–测试」循环，跨轮携带
 **产物状态 A_t** 与 **证据状态 E_t**，最终在 Godot 里自主开发出一个马里奥式平台游戏。
 
 **两层目标（用户给定，顺序不可颠倒）**：
@@ -52,9 +55,9 @@
 |---|---|
 | C1 | Rust 实现，Windows 本机可编译可运行（`LocalEnvironment` 在 Windows 走 `cmd.exe`，命令需跨平台或显式 Windows 优先） |
 | C2 | mini 作为 **Cargo path 依赖**复用其 library API（`Model`/`Environment`/`DefaultAgent`/`AgentConfig`/`config`），**零改动** |
-| C3 | Godot 4.7.1 mono：`D:\Program Files\Godot_v4.7.1-stable_mono_win64\Godot_v4.7.1-stable_mono_win64` |
-| C4 | Godot 工具通道：Godot MCP Pro（GDExtension），`POST http://127.0.0.1:9877/mcp`，JSON-RPC 2.0；**需用户保持编辑器打开且插件已启用** |
-| C5 | 模型：LM Studio，`http://127.0.0.1:1234`，模型 `qwen/qwen3.8-27b`；无云端 API key |
+| C3 | **Godot 引擎使用我们自己的 MCP 原生构建**（不是官方发行版）：`F:\moonbit-hof-rs\godot-mcp\godot\bin\godot.windows.editor.x86_64.mono.exe`，实测版本串 `4.8.dev.mono.custom_build.ba1587c71`（构建于 anchor `ba1587c71`）。编辑器端点固定 9877，**启动时必须显式传 `--mcp-port=9877`**。<br>历史（D216 取代）：C3 原钉官方 `Godot_v4.7.1-stable_mono_win64`。**版本串只记录、不写进代码、不作为判据**（C12：换版本不得要求改 `src/**`） |
+| C4 | Godot 工具通道 = **引擎内置的 `modules/mcp_server` 原生模块**（四通道前缀契约，177 工具），`POST http://127.0.0.1:9877/mcp`，JSON-RPC 2.0；**需用户保持该编辑器打开**。<br>**不再使用** GDExtension 插件 `addons/godot_mcp_rs`（它与原生模块争同一端口 9877，且 `.godot/extension_list.cfg` 缓存会让它即使未启用也加载）。<br>**游戏进程是独立端点**：`running_game_*` 类工具只在游戏端点（`editor_play_scene` 注入的 `--mcp-port`）上可达，编辑器端点不提供 |
+| C5 | 模型：**配置声明的 OpenAI 兼容端点**（`model.base_url` / `model.model_name` / `model.wire_model_name`）。当前配置＝远端 `http://100.105.152.101:18080/v1`，模型 `deepseek-v4.1-flash`，实测 `finish_reason=tool_calls` 正常、`usage` 完整。<br>密钥经环境变量 `HOH_MODEL_API_KEY`（其次 `OPENAI_API_KEY`）提供（C11）；**端点可用性与密钥均属配置面**。<br>本地 LM Studio（`http://127.0.0.1:1234/v1`，`qwen/qwen3.8-27b`）仍为受支持备选，换回只改配置 |
 | C6 | 文档中文、代码与标识符英文；每个阶段结束 `git commit`，提交信息对应 `DECISIONS.md` 条目 |
 | C7 | 证据只来自**公开**信息：spec S、D_t、A_t、公开执行记录；私有评分永不进入 prompt 或 E_t |
 | C8 | token 统计必须从 `Message.extra["response"]["usage"]` 提取（mini 已持久化完整 ChatResponse）；不得依赖 `cost` 字段（本地模型无单价，cost 恒为 0） |
@@ -72,7 +75,7 @@
 | A1 | 「复刻 HoH 架构」= 复刻 **Runtime 语义与三角色循环**，不是复现论文数值 | 若要求复现数值，则需接入 benchmark 与云端强模型，本项目范围完全改变 |
 | A2 | mini 是**被包裹的 harness**，HoH 不改它（论文 3.2/3.4 的核心主张） | 若可改，架构耦合方式与可验证性都变 |
 | A3 | 开发能力走**可插拔 project adapter**；Godot 只是第一个 adapter | 若硬编码 Godot，则阶段一可用，长期演化性丧失 |
-| A4 | 真实运行前，用户保证 Godot 编辑器 + MCP 插件在线、LM Studio 在线 | 否则阶段二无法执行，只能停在阶段一 |
+| A4 | 真实运行前，用户保证：①**我们的 mono 构建编辑器**已在 `F:\moonbit-hof-rs\.workspace\mario` 打开并监听 9877；②模型端点在线且密钥已在环境变量里 | 否则阶段二无法执行，只能停在阶段一。**引擎身份由 DR-44 的闸门自动核对**，不再靠人工保证 |
 | A5 | S（马里奥 PRD）是**权威需求源**，其质量直接决定 QA claim 的质量；S 要么用户提供、要么我们起草后经用户确认冻结 | 若 S 模糊，QA 只能产出低价值证据，HoH 退化为普通的「多轮写代码」 |
 | A6 | 单用户、单机、串行运行；不做并发多项目调度 | 若需并发，Runtime 的 workspace/快照/端口策略需重设计 |
 | A7 | 「集成到 Godot 中的 MCP」指的是 **godot-mcp-pro 本身**（已存在的开发者工具），HoH 通过它操作 Godot；**不是**要求把 HoH 做成 Godot 内的 MCP | ✅ **用户已确认**：HoH 是独立编排器，MCP 是它使用的工具通道 |
@@ -124,7 +127,7 @@
 | OPEN-1 | **HoH 是独立 Rust 编排器**，在任意项目上运行；Godot 只是第一个 project adapter；godot-mcp-pro 作为它使用的工具通道 | 用户原话：「godot-mcp-pro 存在 mcp 工具可以用来给 hoh 使用，以便进行游戏开发」 |
 | OPEN-2 | **瘦 CLI 桥**：HoH 提供 `call` 型命令（一条命令 = 一次 JSON-RPC 工具调用到 `127.0.0.1:9877`），Developer/QA 通过 mini 的 shell 动作使用；工具清单按角色裁剪；原生 tool-call 化列为演进项 | 建议采纳 |
 | OPEN-3 | **由我起草马里奥 PRD v1**，交用户确认后冻结为 S；冻结后只读，轮次间不得修改 | 建议采纳 |
-| OPEN-4 | Godot 工程落点 `F:\moonbit-hof-rs\.workspace\mario`（`.gitignore` 排除）；`A_0` = 空 Godot 4.7 工程 + `addons/godot_mcp_rs` 插件骨架 | 建议采纳 |
+| OPEN-4 | Godot 工程落点 `F:\moonbit-hof-rs\.workspace\mario`（`.gitignore` 排除）；`A_0` = 空 Godot 工程（`config/features=("4.8")`），**不含 `addons/godot_mcp_rs`**——MCP 由引擎自带的原生模块提供（C4，D216 修订） | 建议采纳 |
 | OPEN-5 | **tool-calls 模式**。实测 `qwen/qwen3.8-27b`：`finish_reason=tool_calls`，正确产出 `bash` 调用；`usage` 完整回传（327/60/387）且含 `reasoning_tokens`；单次延迟约 2s。无需退化到 text-based | 2026-09 实测 |
 | OPEN-6 | 阶段一验收**必须含 T=1 真实 smoke run** | 用户确认 |
 | OPEN-7 | **HoH 代码单独建仓**（`F:\moonbit-hof-rs`，`git init`，按阶段 commit）；**Godot workspace 不进 git** | 用户确认 |
@@ -155,8 +158,10 @@ F:\moonbit-hof-rs\            <- HoH 代码仓（git；每阶段 commit 对应 D
   src\ ...                    <- Runtime 实现
 ```
 
-> 阶段二真实运行的前置外部条件（用户负责）：Godot 编辑器打开该项目且已启用 `godot_mcp_rs` 插件（9877 监听）；
-> LM Studio 在 `127.0.0.1:1234` 提供 `qwen/qwen3.8-27b`。当前实测：LM Studio ✅ 在线；9877 ❌ 未监听（编辑器未开）。
+> 阶段二真实运行的前置外部条件（用户负责，D216 修订）：**我们的 mono 构建编辑器**打开 `.workspace\mario` 并监听 9877
+> （`godot.windows.editor.x86_64.mono.exe --path <ws> --mcp-port=9877`）；模型端点在线且 `HOH_MODEL_API_KEY` 已在环境变量中。
+> 该编辑器**同时**是 MCP 通道提供者与游戏端点的父进程（`editor_play_scene` 为子进程注入 `--mcp-port`）。
+> 备注：本地 LM Studio 已不再是必需品（C5）。
 
 ---
 
@@ -183,5 +188,43 @@ F:\moonbit-hof-rs\            <- HoH 代码仓（git；每阶段 commit 对应 D
 | A_t | 第 t 轮后的产物状态 | `workspace/mario/`（Godot 工程） |
 | E_t | 第 t 轮的证据包 | `runs/<run>/iter-<t>/evidence.json` + QA 报告 |
 | D_t | 第 t 轮的开发文档 | `runs/<run>/iter-<t>/plan.md` |
-| H | 固定 harness–model 配置 | mini + LM Studio qwen（配置冻结，不随轮次改变） |
+| H | 固定 harness–model 配置 | mini + 配置声明的模型端点（当前远端 `deepseek-v4.1-flash`）（配置冻结，不随轮次改变） |
 | Runtime | 确定性契约执行者 | 本仓库 Rust 代码：权限、冻结、快照、schema、记录 |
+
+---
+
+## 10. 修订 v0.3（D216）：引擎换代与工具契约断层
+
+**触发**：用户裁决改用「我们自己加了 MCP 模块的构建版本」（D216），并要求模型走远端
+`http://100.105.152.101:18080/v1` 的 `deepseek-v4.1-flash`。
+
+**模型半边：本就已就绪，无需改动**（实测取证）：`config/hoh.yaml` 的
+`base_url`/`model_name`/`wire_model_name` 与要求逐字一致；`GET /v1/models` 返回唯一模型
+`deepseek-v4.1-flash`；带 `tools` 的 `POST /v1/chat/completions` 返回
+`finish_reason=tool_calls` 且参数正确。**注意**：密钥只经**环境变量**注入
+（`API_KEY_ENV_VARS = ["HOH_MODEL_API_KEY","OPENAI_API_KEY"]`），hof-rs **不自动读**
+`config/model.secret.env`（该文件只是给人 source 的，已被 `.gitignore` 覆盖）。
+
+**引擎半边：实测到一个必须先解决的契约断层（本次真正的工程量）**：
+
+| | 旧（hof-rs 现用） | 新（我们的构建） |
+|---|---|---|
+| 契约源 | `tests/fixtures/mcp/tools_list.json`（48,749 B） | `godot/modules/mcp_server/docs/tools_list.renamed.json` |
+| 工具数 | 174 | **177** |
+| 命名 | 无前缀（`play_scene`、`get_editor_errors`、`capture_frames`…） | 四通道前缀（`editor_play_scene`、`project_get_info`…） |
+
+双向核对结论：hof-rs 现行使用的工具名在**新契约里全部不存在**；且 174→177 含 GDR-17
+取消合并产生的**拆分**与 `update_` 禁用改名，**不是纯改名**。仓内耦合实测约 **270 行 / 24 个文件**
+（`src/adapter/godot.rs` 97、`tests/evidence_battery.rs` 40、其余分散）。
+
+**附加条款（用户裁决）**：
+1. **不保留旧名兼容层**——全仓只保留一套词汇（四通道前缀）；禁止别名映射。
+2. **`PRD-mario.md` 一字不改**——它是冻结的 S；其 P1「Godot 4.7.x」由 C3 **取代**（引擎版本是硬约束，不是产品需求）。
+   因此 `meta.json.spec.sha256` 必须仍为 `4c81c3a9…5c3a`，改动 PRD 即违约（并会使历史轮次证据不可比）。
+3. 批次落地：**批次一 = 纯离线迁移**（`cargo test` 为判据）；**批次二 = 真机 T=1 冒烟**，两批各自独立验收。
+   设计条款见 `DESIGN-DETAIL.md` §13（DR-41..DR-47）。
+
+**尚未关闭的风险（诚实列账）**：
+- 新契约里 23 个工具是**游戏端点独有**，编辑器端点不可达 ⇒ hof-rs 的输入回放/监控设计必须改为双端点（DR-43）；
+- `.workspace/mario` 里残留的 addon 与 `.godot/extension_list.cfg` 缓存必须先清理，否则仍是双绑定（DR-41）；
+- 「活体 `tools/list` 与夹具逐字一致」这一条**离线批次无法证明**，留给批次二。

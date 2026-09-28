@@ -8321,3 +8321,65 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
   回滚点：`SPLIT_INDEX = 10` 回到两卷；去掉三个环境变量则回到"编译服务器可能挂住"的旧行为
   ——那会**丢失退出码**（`Start-Process -PassThru` 取不到 ExitCode 的老问题），不建议。
 
+## D216 — hof-rs 引擎换代：改用我们的 MCP 原生构建（4.8.dev.mono）+ 工具契约换代（DR-41..DR-47）
+
+- 日期：2026-09-28
+- 触发问题（用户指令）：①「修改 godot 的使用版本，使用我们添加了 mcp 模块的构建版本」；
+  ②「模型使用 `http://100.105.152.101:18080/v1` 的 `deepseek-v4.1-flash`，apikey 已给」；
+  ③随后裁决 **B1 分阶段** 与 **不要兼容层**。
+- 一手核查（**只读**，全部实测）：
+  1. **模型半边本就已就绪，无需改动**：`config/hoh.yaml` 的 `base_url`/`model_name`/`wire_model_name`
+     与要求**逐字一致**；`GET /v1/models` → 唯一模型 `deepseek-v4.1-flash`；带 `tools` 的
+     `POST /v1/chat/completions` → `finish_reason=tool_calls`（`ping{"value": 7}`）。
+     密钥亦已同值存在于 gitignore 覆盖的 `config/model.secret.env`。
+     **纪律要点**：密钥只经**环境变量**注入（代码只有
+     `API_KEY_ENV_VARS = ["HOH_MODEL_API_KEY","OPENAI_API_KEY"]`），`model.secret.env` **不被自动读取**。
+  2. **引擎换代**：我们的构建 = `godot-mcp/godot/bin/godot.windows.editor.x86_64.mono.exe`，
+     `--version` → `4.8.dev.mono.custom_build.ba1587c71`。构建源 anchor `ba1587c71` 与引擎 HEAD
+     `15bbf1f50e` 之间**只有 1 个 `chore(gitignore)` 提交**，且该区间 `modules/mcp_server` 改动
+     **文件数 = 0** ⇒ **无需重建**。（官方 4.7.1 → 4.8.0-dev。）
+  3. **实测到工具契约断层（本次真正的工程量）**：hof-rs 现夹具 `tests/fixtures/mcp/tools_list.json`
+     = **174 条无前缀名**；我们的构建 `docs/tools_list.renamed.json` = **177 条四通道前缀名**。
+     双向核对：hof-rs 正在用的名字（`get_editor_errors`/`play_scene`/`capture_frames`/
+     `monitor_properties`/`simulate_key` …）在新契约里**全部不存在**。且 174→177 含 GDR-17
+     取消 2 对合并产生的**拆分**与 `update_` 禁用改名 ⇒ **非纯改名**。仓内耦合实测
+     **约 270 行 / 24 文件**（`src/adapter/godot.rs` 97、`tests/evidence_battery.rs` 40，余者分散）。
+  4. **端口双绑定（硬事实）**：`mcp_server.cpp:70` 注释明说默认 **9877 就是"同 GDExtension 插件那个端口"**；
+     而 `.workspace/mario` 内既有 `addons/godot_mcp_rs/godot_mcp_gdext.dll`，其
+     `.godot/extension_list.cfg` 内容**恰好就是** `res://addons/godot_mcp_rs/godot_mcp_rs.gdextension`
+     ⇒ 即使停用 `[editor_plugins]`，**缓存仍会让该 GDExtension 加载**。两处都必须清理。
+  5. **23 个工具为游戏端点独有**（M 线实测「editor 148 / game 69，game-only 23」）⇒ hof-rs 的
+     "单端点 + 游戏转发工具"设计必须改为**双端点**（`editor_play_scene` 注入 `--mcp-port` 并回
+     `mcp_port`/`endpoint`/`pid`）。
+- 选项与裁决：
+  1. **B1 分阶段（选中）**：批次一 = 纯离线契约迁移（判据全是 `cargo test`）；批次二 = 真机 T=1 冒烟，
+     由**另一批全新子代理**执行与验收。
+  2. B2 一次做完（迁移 + 真机同批）——**否决**：真机是最贵一步，放在工具名尚未对齐的代码上只会产假红，
+     且失败时离线改动与真机环境混淆，定位面过大。
+  3. B3 只采真机契约、暂不改 hof-rs——**否决**：真名单本已在仓库里，采样的信息增量不足以抵消一次
+     编辑器占用；而 hof-rs 仍不可跑，等于不交付。
+  4. B4 暂不换引擎（只换模型，立即可跑）——**否决**：与用户目标（用我们的构建）直接冲突。
+  5. **兼容别名层**（旧名→新名映射）——**否决（用户裁决）**：两套词汇长期共存会污染 prompt 与证据，
+     并掩盖漂移；换代必须一次做对。
+- 最终选择：**B1 + 无兼容层**。设计条款 = `DESIGN-DETAIL.md` **§13（DR-41..DR-47）**；
+  需求修订 = `REQUIREMENTS.md` **v0.3**（重写 C3/C4/C5，并同步 A4/OPEN-4/§1/§7/§9）。
+- 理由：用户目标是"真用上我们的引擎"，而**引擎换代的价值必须由证据兑现**；把"用的是哪个二进制"
+  这个不可见假设变成可核对的 `meta.json.engine` 与身份闸门，才算落到可验收的地面上。分层
+  （离线迁移 → 真机冒烟）让每一步的红色都能归因。
+- **两条硬约束**（一并冻结）：
+  1. **`PRD-mario.md` 一字不改**：它是冻结的 S（A5）；其 P1「Godot 4.7.x」由 C3 **取代**
+     （引擎版本属硬约束，非产品需求）。故 `meta.json.spec.sha256` 必须仍为 `4c81c3a9…5c3a`，改 PRD 即违约。
+  2. **旧词汇归零**由机器判据守（DR-45：`tests/tool_vocabulary.rs` 三条必须同时绿），不接受形容词交差。
+- 预期影响与回滚点：
+  - 影响：`src/adapter/godot.rs`、`src/tools/{index,policy,mcp,reliable}.rs`、`src/runtime/policy.rs`、
+    `src/prompts/**`、`tests/**`、`config/hoh.yaml`、`tests/fixtures/mcp/tools_list.json`（重采为 177 条）
+    与 `meta.json` 结构（新增 `engine` 块）。`runs/smoke-t1..t5` 属**旧契约时代**的证据，
+    换代前不得与新轮次混用比较。
+  - 回滚点：`git revert` 批次一提交即回到官方 4.7.1 + addon 通道（旧夹具、旧词汇仍在 git 历史里）；
+    引擎侧二进制无需变动（mono 与非 mono 两个构建并存于 `godot-mcp/godot/bin/`）。
+- 自曝两条（本批核查中我自己的错，已纠正）：
+  1. 我第一次探测模型端点报 **401**，是**我的 PowerShell 解析 bug**（`Get-Content` 取值取成空），
+     **不是端点问题**；
+  2. 我此前口头说过"外层仓工作树干净"，**不实**：实际有 3 个 TASK-150 遗留未跟踪项
+     （`godot-mcp/recovery/{reports/TASK-150-REPORT.md,tasks/TASK-150.md,work/task150/}`）。
+
