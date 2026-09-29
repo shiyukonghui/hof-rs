@@ -9775,3 +9775,52 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
   ③**用"`.hoh` 之外的种子"永久固定遍历作用域**（DEF-1）。
 - 回滚点：DR-61 各提交单独 revert；两条真机基线不得覆盖。
 
+## D251 — DR-62 交付：判据**去名字化**（explicit manifest）、`copy_tree` 覆盖、作用域固定；372/0/7；我采纳它的"测试文件植入"偏差
+
+- 日期：2026-09-29。交付 `.spec/hof-rs/tasks/TASK-DR62-REPORT.md`。**被测代码树 = `49b9417`**
+  （其后仅文档提交；`git diff 49b9417..HEAD -- src tests Cargo.toml Cargo.lock` = 空）。**未 push**。
+- **门**：`cargo test --offline` = **39 targets / 372 passed / 0 failed / 7 ignored / 0 warning**
+  （它在 `6a0c9a9` 自跑基线复现 **366/0/7**）；**+6** = lib 111→115 + `evidence_unreachable` 3→5；
+  `#[ignore` 8==8；**断言数全面上升**（view 18→29、hygiene 51→62、godot 114→116、evidence_unreachable 16→30）。
+- **三件事**：
+  1. **判据去名字化**：新增**显式 per-directory JSON manifest `.superseded.json`**
+     （`SupersededSet::load/contains/record`、`is_runtime_bookkeeping`、`is_superseded(root, rel)`
+     **逐级向上查 root 与每一级祖先目录**的 manifest，`hygiene.rs:391/395/403/413/444/450/466`）。
+     生产方**先登记再改名**（`godot.rs:2444` 在 `:2446` rename 之前）；**manifest 畸形 ⇒ 大声报错**。
+     消费方：`view.rs:86`（`copy_tree`）与 `view.rs:142`（`copy_evidence`）。
+     **旧的 `is_expired_name` 已删除（无调用者）**；`stale_name` 仅留作生产侧审计名。
+  2. **`copy_tree` 覆盖**：过滤**做在 `copy_tree` 内部**（`view.rs:69/86`）⇒ `run_loop.rs:991` **无需改调用点**
+     （那段只是注释）。
+  3. **作用域固定**：`tests/evidence_unreachable.rs:109` 的 `OUTSIDE_HOH_SEEDS` + `:123` 种子 +
+     `:267` 正向对照 + **`:439` 新自检**（在 `.hoh` 外埋种、跑**真实一轮**、断言 `walk(&workspace)` 命中
+     而 `walk(&workspace/.hoh)` 不命中）。
+- **TDD 与非空洞**：红 `d338459` = **3 个失败测试**、EXIT=101、各自为**被点名的缺陷**而 panic。
+  植入①（两条复制路径都改回"按名字"）⇒ 3 个 lib 测试 + 轮次级测试红（候选里**只剩** `.hoh/evidence/.superseded.json`）；
+  植入②（关掉 `copy_tree` 过滤）⇒ **恰好**该测试红；**植入③（把 `walk` 收窄回 `.hoh`）⇒ 新自检与既有不变量测试都红**。
+- **轮次级实测（缺口 5）**：由角色写的 `.hoh/evidence/round-one.stale-keep.png` **现在真的到达** Tester 候选；
+  被 manifest 登记的过期件**不会**；过期字节**仍在盘上**。
+- **我对其自曝偏差的裁决（记录为"我的任务书不适用"，不是它的错）**：
+  它**主动声明**植入③是**测试文件**植入而非生产代码，**违反了任务书"三处植入仅生产代码"**，
+  并说"若你要求③必须生产代码，就判未达成"。
+  **我的判断：采纳其做法。** 理由：**不变量本身活在测试里**（`walk` 是**测试的真实文件系统遍历**，DR-61 §5 明确要求如此），
+  **没有任何生产函数**编码"对 workspace 做 cwd 遍历"，**为植入而造一个生产函数才是做戏**。
+  ⇒ 记为**任务书措辞不适用于第③项**（**我的问题**），植入①②仍是纯生产代码。
+- 另一处**必须记录的语义变更（它已如实披露）**：**一个既有测试被"替换"而非删除**——
+  `copy_evidence_skips_superseded_files_and_keeps_them` → `copy_evidence_skips_a_recorded_supersession_and_copies_a_role_named_stale_file`，
+  因为**旧期望（裸 `.stale-` 名必须被跳过）与本批要求的行为直接矛盾**；替换**保留了旧断言点**并**新增**
+  子目录 manifest 与"去名字化"两例；`is_expired_name` 的测试**保留名字但换成更强的结构化断言**。
+  ⇒ **我的裁决：合法**（旧期望正是我们要废除的那条约定），**不是削弱**，且已披露。
+- **D250 的 R-F 已被解释（我据此结案）**：`10:58:15` 与 `10:37:38` 的差异是**口径差异**——
+  `modules/mcp_server` **子树**最新 = **`10:37:38`**（= DR-59 的数），**整树含 `.git` = `10:58:15`**，源码侧 `10:49:37`；
+  且**前后一致**、嵌套 `status` 0、HEAD `fc63af77` 未变、关键文件 sha 未变、**11:00 之后 0 文件**。
+  它明确标注"这是**解释**，不是 DR-59 动作的重放"。⇒ **R-F 结案为测量口径伪影**。
+- 其它诚实项：**第③项没有"修前红"**（它固定的是本已绿的能力），其**灵敏度由植入③的真红体现**；
+  新增运行时文件 `.hoh/evidence/.superseded.json`（**哈希排除**、**永不进视图**、随隔离一起移动）；
+  **CRLF 注意**：`core.autocrlf=true` ⇒ `status`/`diff`/`hash-object` **看不见纯 CRLF 变化**，
+  故字节一致用**植入前备份的 `cmp`** 证明（三个具名检查仍成立）；scratch 已删、原始日志未留
+  （与 DR-61 同口径，但**每个植入都是一行编辑并在 §4 逐字引用、可重放**）。
+- 禁区：mario `4e494547…`/14:32:28、runs `01ff775e…`/14:44:16 **前后一致**；摘要口径**自证**
+  （`runs/smoke-t6` = `c144ef32…` 与 **DR-54/57/59/61 四批**一致）；`PRD` sha 未变；无新依赖；未 stage；未 push；未跑真机；**未声称 E3**。
+- 裁决：**验收已在飞**（`f6893bfa…`）；**推送等它通过**。队列：**DR-62 验收 → DR-60（flake）→ REF2 → §16 → 再跑真机 → E1 → 造游戏**。
+- 回滚点：DR-62 各提交单独 revert；两条真机基线不得覆盖。
+
