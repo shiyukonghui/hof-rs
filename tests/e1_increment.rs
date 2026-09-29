@@ -427,25 +427,21 @@ fn failed_summary() -> RunSummary {
 /// DR-67 (DEF-2): `cli_impl::run_round_in` is the half of the dispatcher that
 /// still runs the loop — the half whose error the caller finalises.
 ///
-/// Not a tautology: it builds a real `Orchestrator` and asserts the function
-/// really is wired to `run_loop::run`.  If it were ever stubbed out, this file's
-/// signature check above would keep passing while the production path quietly
-/// stopped running anything.
+/// Not a tautology: it builds a real `Orchestrator`, runs a **successful** round
+/// through the function, and asserts the artifacts the loop writes exist.  A
+/// function that merely returned an error would fail the first assertion, and one
+/// that did nothing at all would fail all three.
 #[tokio::test]
 async fn run_round_in_still_runs_the_loop() {
     use std::sync::Arc;
 
     let temp = tempfile::tempdir().unwrap();
     let root = temp.path();
-    write(
-        &root.join("workspace/project.godot"),
-        "config_version=5\n",
-    );
     let mut cfg = test_config(root, 1);
     cfg.runtime.spec = root.join("spec.md");
     let spec = write_spec(root);
     let orchestrator = hof_rs::runtime::run_loop::Orchestrator {
-        harness: Box::new(FakeHarness::new(zero_increment_script())),
+        harness: Box::new(FakeHarness::new(happy_script())),
         adapter: Box::new(FakeAdapter::new().with_developer_artifact_valid(true)),
         tools: Arc::new(FakeToolChannel::new()),
         cfg,
@@ -453,10 +449,16 @@ async fn run_round_in_still_runs_the_loop() {
         force_init: true,
         start_state: hof_rs::runtime::start_state::StartState::as_is(),
     };
-    let result = hof_rs::cli_impl::run_round_in(orchestrator, &spec, "run-1").await;
+    let summary = hof_rs::cli_impl::run_round_in(orchestrator, &spec, "run-1")
+        .await
+        .expect("a happy round must complete through the dispatcher's round half");
+    assert_eq!(
+        summary.iterations_completed, 1,
+        "the summary must describe the round that ran"
+    );
     assert!(
-        result.is_err(),
-        "the zero-increment round must still reach the loop and fail there"
+        root.join("runs/run-1/iter-1/result.json").is_file(),
+        "the loop's own per-iteration record must exist"
     );
 }
 
