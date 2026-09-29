@@ -12,6 +12,9 @@ pub mod role;
 pub mod run_loop;
 pub mod schema;
 pub mod secrets;
+/// DR-66: the shell a role's commands run in, and the syntax of the documents
+/// that describe them.
+pub mod shell;
 pub mod snapshot;
 pub mod start_state;
 pub mod usage;

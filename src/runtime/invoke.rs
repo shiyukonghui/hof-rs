@@ -109,14 +109,40 @@ pub fn render_prompt(template: &str, iteration: u32) -> String {
 /// DR-18: same substitution, plus the concrete step budget the role is running
 /// under.  The numbers are rendered into the prompt so the wrap-up discipline
 /// is never a vague instruction.
+///
+/// DR-66: the shell-variable placeholders are rendered for [`ShellFlavor::HOST`]
+/// as well, because the delivered prompt is executed by the role's real shell
+/// and nothing downstream re-renders it.
 pub fn render_prompt_with_budget(
     template: &str,
     iteration: u32,
     limits: &crate::config::AgentLimits,
 ) -> String {
-    render_prompt(template, iteration)
+    render_prompt_with_budget_and_shell(template, iteration, limits, crate::runtime::shell::ShellFlavor::HOST)
+}
+
+/// DR-66 ①: [`render_prompt_with_budget`] with an explicit target shell, so the
+/// platform-specific form is testable without changing the host.
+///
+/// The order is load-bearing: every `{{…}}` placeholder is substituted first
+/// (the budget numbers, the iteration, the DR-66 write deadline) and only then
+/// are the `{{HOH_*}}` command placeholders turned into the shell's variable
+/// syntax — [`assert_fully_rendered`] rejects a prompt that still carries
+/// template syntax, so a missed placeholder cannot reach a role.
+pub fn render_prompt_with_budget_and_shell(
+    template: &str,
+    iteration: u32,
+    limits: &crate::config::AgentLimits,
+    flavor: crate::runtime::shell::ShellFlavor,
+) -> String {
+    let rendered = render_prompt(template, iteration)
         .replace("{{step_limit}}", &limits.step_limit.to_string())
         .replace("{{wrap_up_steps}}", &limits.wrap_up_steps.to_string())
+        .replace(
+            "{{write_deadline_steps}}",
+            &crate::runtime::run_loop::developer_write_deadline(limits).to_string(),
+        );
+    crate::runtime::shell::render_command_vars(&rendered, flavor)
 }
 
 /// DR-18: the retry context handed to a wrap-up retry.  It forbids further

@@ -134,8 +134,21 @@ fn example_value(name: &str, property: &Value) -> Value {
     }
 }
 
-/// Render the role-scoped `TOOLS.md`.
+/// Render the role-scoped `TOOLS.md` for the machine this binary runs on.
+///
+/// DR-66 ①: the document is *executed* by the role, so the variable syntax has
+/// to match the role's real shell (mini's `LocalEnvironment` starts `cmd.exe` on
+/// Windows and `sh` elsewhere).
 pub fn render_tools_markdown(role: Role, schemas: &[Value]) -> String {
+    render_tools_markdown_for(role, schemas, crate::runtime::shell::ShellFlavor::HOST)
+}
+
+/// DR-66 ①: [`render_tools_markdown`] with an explicit target shell.
+pub fn render_tools_markdown_for(
+    role: Role,
+    schemas: &[Value],
+    flavor: crate::runtime::shell::ShellFlavor,
+) -> String {
     let mut visible: Vec<&Value> = schemas
         .iter()
         .filter(|tool| !tool_name(tool).is_empty())
@@ -149,16 +162,16 @@ pub fn render_tools_markdown(role: Role, schemas: &[Value]) -> String {
          when the editor is offline). **Do not read the harness sources to learn the API**: \
          everything you may call is below.\n\n\
          `{}` tool(s) visible. Call one with:\n\n```\n\
-         $HOH_HOH_BIN tools call <tool> --args-file $HOH_ARTIFACT_DIR/args/<name>.json\n```\n\n\
+         {{HOH_HOH_BIN}} tools call <tool> --args-file {{HOH_ARTIFACT_DIR}}/args/<name>.json\n```\n\n\
          The JSON file must use exactly the argument names below. Write temporary files only \
-         under `$HOH_SCRATCH_DIR`.\n\n",
+         under `{{HOH_SCRATCH_DIR}}`.\n\n",
         role.as_str(),
         visible.len()
     );
     if visible.is_empty() {
         markdown
             .push_str("This role may not call any MCP tool. Use read-only shell commands only.\n");
-        return markdown;
+        return crate::runtime::shell::render_command_vars(&markdown, flavor);
     }
 
     // Group by category, categories in a stable (alphabetical) order.
@@ -222,8 +235,8 @@ pub fn render_tools_markdown(role: Role, schemas: &[Value]) -> String {
         };
         examples += 1;
         markdown.push_str(&format!(
-            "{examples}. `$HOH_HOH_BIN tools call {preferred} --args-file \
-             $HOH_ARTIFACT_DIR/args/{preferred}.json`\n\n"
+            "{examples}. `{{{{HOH_HOH_BIN}}}} tools call {preferred} --args-file \
+             {{{{HOH_ARTIFACT_DIR}}}}/args/{preferred}.json`\n\n"
         ));
         let mut arguments = serde_json::Map::new();
         if let Some(properties) = tool
@@ -249,7 +262,8 @@ pub fn render_tools_markdown(role: Role, schemas: &[Value]) -> String {
     if examples == 0 {
         markdown.push_str("_No example is available for this role._\n");
     }
-    markdown
+    // DR-66 ①: one delivery point for every shell-variable form in the document.
+    crate::runtime::shell::render_command_vars(&markdown, flavor)
 }
 
 #[cfg(test)]

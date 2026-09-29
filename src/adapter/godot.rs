@@ -3451,7 +3451,11 @@ impl ProjectAdapter for GodotAdapter {
     }
 
     fn evidence_playbook(&self) -> String {
-        r#"# Evidence playbook (Godot)
+        // DR-66 ①: the playbook is executed by the Tester, whose real shell is
+        // mini's `LocalEnvironment` shell.  The body names every harness path
+        // through a `{{HOH_*}}` placeholder and the flavor is applied once, at
+        // the end, so the delivered text can never spell the wrong dialect.
+        let body = r#"# Evidence playbook (Godot)
 
 The runtime already ran the deterministic battery. Start by reading
 `.hoh/deterministic/battery.json`: each entry names the PRD requirements it
@@ -3494,30 +3498,30 @@ arrived for someone else. When `.hoh/deterministic/mcp-sync.json` reports
 
 ## If you need a closer look (read-only / execution only)
 ```
-$HOH_HOH_BIN tools call running_game_get_node_properties --args-file $HOH_ARTIFACT_DIR/args/props.json
+{{HOH_HOH_BIN}} tools call running_game_get_node_properties --args-file {{HOH_ARTIFACT_DIR}}/args/props.json
 # props.json: {"node_path":"Player","properties":["position"]}
-$HOH_HOH_BIN tools call running_game_get_node_property_samples --args-file $HOH_ARTIFACT_DIR/args/monitor.json
+{{HOH_HOH_BIN}} tools call running_game_get_node_property_samples --args-file {{HOH_ARTIFACT_DIR}}/args/monitor.json
 # monitor.json: {"node_path":"Player","properties":["position"],"frame_count":60,"frame_interval":1}
-$HOH_HOH_BIN tools call running_game_create_input_recording --args '{}'
-$HOH_HOH_BIN tools call running_game_play_input_recording --args-file $HOH_ARTIFACT_DIR/args/play.json
+{{HOH_HOH_BIN}} tools call running_game_create_input_recording --args '{}'
+{{HOH_HOH_BIN}} tools call running_game_play_input_recording --args-file {{HOH_ARTIFACT_DIR}}/args/play.json
 # play.json: {"events":[{"type":"action","action":"move_right","pressed":true}],"speed":1.0}
-$HOH_HOH_BIN tools call running_game_run_test_scenario --args-file $HOH_ARTIFACT_DIR/args/scenario.json
+{{HOH_HOH_BIN}} tools call running_game_run_test_scenario --args-file {{HOH_ARTIFACT_DIR}}/args/scenario.json
 # scenario.json: {"steps":[{"type":"input","action":"move_right","pressed":true},
 #                          {"type":"wait","seconds":0.5},
 #                          {"type":"assert","node_path":"Player","property":"position:x","operator":"gt","expected":0}]}
 # DR-58: never send `scene_path` — the game-scope runner answers -32602 for every
 # value (it runs inside the already-running game); the member list is `steps` only.
-$HOH_HOH_BIN tools call running_game_stop_input_recording --args '{}'
-$HOH_HOH_BIN tools call editor_simulate_input_action --args-file $HOH_ARTIFACT_DIR/args/press.json
+{{HOH_HOH_BIN}} tools call running_game_stop_input_recording --args '{}'
+{{HOH_HOH_BIN}} tools call editor_simulate_input_action --args-file {{HOH_ARTIFACT_DIR}}/args/press.json
 # press.json: {"action":"move_right","pressed":true}
-$HOH_HOH_BIN tools call editor_simulate_input_sequence --args-file $HOH_ARTIFACT_DIR/args/seq.json
+{{HOH_HOH_BIN}} tools call editor_simulate_input_sequence --args-file {{HOH_ARTIFACT_DIR}}/args/seq.json
 # seq.json: {"events":[{"type":"action","action":"jump","pressed":true},
 #                      {"type":"action","action":"jump","pressed":false}],"frame_delay":1}
-$HOH_HOH_BIN tools call running_game_capture_frames --args-file $HOH_ARTIFACT_DIR/args/frames.json
+{{HOH_HOH_BIN}} tools call running_game_capture_frames --args-file {{HOH_ARTIFACT_DIR}}/args/frames.json
 # frames.json: {"count":1,"frame_interval":10}; frames land under `.hoh/evidence/`
-$HOH_HOH_BIN tools call editor_get_collision_info --args-file $HOH_ARTIFACT_DIR/args/col.json
+{{HOH_HOH_BIN}} tools call editor_get_collision_info --args-file {{HOH_ARTIFACT_DIR}}/args/col.json
 # col.json: {"node_path":"Goal"}
-$HOH_HOH_BIN tools call running_game_assert_node_state --args-file $HOH_ARTIFACT_DIR/args/assert.json
+{{HOH_HOH_BIN}} tools call running_game_assert_node_state --args-file {{HOH_ARTIFACT_DIR}}/args/assert.json
 # assert.json: {"node_path":"Player","property":"position:x","operator":"gt","expected":0}
 ```
 
@@ -3527,8 +3531,11 @@ $HOH_HOH_BIN tools call running_game_assert_node_state --args-file $HOH_ARTIFACT
 - Anything you could not observe is a `gap` with `player_impact` and
   `recommended_update`.
 - Never modify the project: use `simulate_*` inputs only.
-"#
-        .to_string()
+"#;
+        crate::runtime::shell::render_command_vars(
+            body,
+            crate::runtime::shell::ShellFlavor::HOST,
+        )
     }
 
     /// DR-44: the binary the operator configured, or `None` when the key is

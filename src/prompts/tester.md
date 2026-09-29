@@ -74,7 +74,7 @@ Write exactly two files:
 Run:
 
 ```
-$HOH_HOH_BIN submit --role tester --file evidence.json
+{{HOH_HOH_BIN}} submit --role tester --file evidence.json
 ```
 
 If it reports issues, fix the file and submit again before you finish.
@@ -94,7 +94,7 @@ Reading those wastes the iteration's budget and is recorded as a
 
 [scratch-discipline]
 Every temporary, probe or scratch file must be written under
-`$HOH_SCRATCH_DIR` (inside `.hoh/`, which is excluded from the artifact hash).
+`{{HOH_SCRATCH_DIR}}` (inside `.hoh/`, which is excluded from the artifact hash).
 Never leave probe files in the candidate: no `_*`, no `tmp_*`, no `*.bak`, no
 `*.tmp`.
 

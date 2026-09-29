@@ -62,7 +62,7 @@ invalid. Leave `candidate_id` empty; the runtime stamps and checks it.
 - **Source code existing is not behaviour verification.** A non-empty
   `player.gd` proves nothing about `F1`; only a recording whose `position`
   changes does.
-- Every temporary file you create goes under `$HOH_SCRATCH_DIR`
+- Every temporary file you create goes under `{{HOH_SCRATCH_DIR}}`
   (`<view>/.hoh/scratch`, excluded from the artifact hash). Never leave `_*`,
   `tmp_*`, `*.bak` or `*.tmp` files in the candidate: the runtime lists them in
   `result.json.artifact_hygiene.suspicious_files` and they are a `gap`.
