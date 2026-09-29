@@ -321,15 +321,17 @@ async fn a_zero_engineering_write_round_fails_instead_of_reporting_ok() {
     );
 
     // …then apply the production failure finalisation, in the same order and
-    // with the same functions `cli_impl::run` uses on its error path, with the
-    // real error object (`finalize_run` is only reached when the round failed,
-    // which is why a success round cannot satisfy the two assertions above).
+    // with the same two production functions `cli_impl::run`'s error branch
+    // calls, on the real error object:
+    //
+    //     let failed = run_loop::failed_run_summary(&run_id, &error);
+    //     let _ = finalize_run(&run_dir, &failed);
+    //
+    // This test cannot call `cli_impl::run` itself (its mandatory doctor pre-check
+    // performs a model/chat probe, which this offline batch may not do), so the
+    // plant that breaks either production function turns the assertions below red.
     let summary = hof_rs::runtime::run_loop::failed_run_summary("run-1", &error);
     assert!(!summary.ok, "the failed summary must not claim success");
-    if !persist_failed_round_exit_code() {
-        // The plant target: `cli_impl::run`'s error branch must persist.
-        return;
-    }
     let code = hof_rs::cli_impl::finalize_run(&root.join("runs/run-1"), &summary).unwrap();
     assert_ne!(code, 0, "a failed round must not exit 0");
     assert_eq!(
@@ -350,19 +352,6 @@ async fn a_zero_engineering_write_round_fails_instead_of_reporting_ok() {
     let meta: Value =
         serde_json::from_str(&read(&root.join("runs/run-1/meta.json"))).unwrap();
     assert_eq!(meta["exit_code"], json!(code));
-}
-
-/// The plant hook for the failure finalisation: a **test-side** switch, stated
-/// explicitly (D253), so the plant that disables it turns the assertions above
-/// red rather than being silently absorbed.
-///
-/// It mirrors `cli_impl::run`'s error branch, which cannot be reached offline
-/// (the doctor pre-check performs a model/chat probe), so this helper is what
-/// makes that branch's behaviour observable.  It is not production code and it
-/// carries no behaviour of its own.
-#[inline(never)]
-fn persist_failed_round_exit_code() -> bool {
-    true
 }
 
 /// DR-67 (DEF-2): the `!ok` branch of `run_exit_code_for` must be reachable from
