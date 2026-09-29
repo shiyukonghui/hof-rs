@@ -9426,3 +9426,42 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 - 预期影响与回滚点：DR-58 是**让 E3 有机会转 met 的关键路径**。回滚点：DR-58/59 各提交单独 revert；
   `runs/smoke-t6`/`smoke-t7` 均为基线，**都不得覆盖**。
 
+## D241 — DR-58 交付（352 passed）：三处载荷形状按**真机字节**修好；`scene_path` 真形状=**整个省略**；派独立验收
+
+- 日期：2026-09-29
+- 交付：`.spec/hof-rs/tasks/TASK-DR58-REPORT.md`。**`cargo test --offline` = 352 passed / 0 failed / 7 ignored，
+  EXIT=0**（基线 342/0/7；**+10 测试、ignored 未增**），构建**零警告**。**E3 未被声称**（正确）。
+- 三处修正（`src/adapter/godot.rs`）：
+  1. **`scene_path`**：真机证据 `runs/smoke-t7/**/raw/input_channel_probe.json` 显示
+     `{"scene_path":"current",…}` → `-32602 "Parameter 'scene_path' ('current') is not supported by the game-scope runner…"`；
+     且 `sc-02`/`sc-03` 表明 **`'main'` 与 `'res://scenes/main.tscn'` 同样被拒**，
+     而 **C1/C4/C5（省略该成员）成功** ⇒ **真形状 = 整个省略 `scene_path`，只发 `steps`**。
+     **这是被证据判定的、不是猜的**；同时修掉了**教坏形状的 Tester playbook 示例**。
+  2. **`get_node_properties` 可达性**：真机应答顶层键**恰为** `{node_path, properties, type}`、**无顶层 `name`**
+     （`name` 只在 `properties.name` 里、且仅部分节点类型有）⇒ 新增**共享判据** `node_properties_read()`
+     （要求非空 `node_path` **且**非空 `properties` 对象）。
+  3. **G20**（原 `:2051-2055`）：同一判据修复；真机原始载荷本就 `ok:true`，而观测却写"Player/Goal/HUD = missing"。
+  4. **全局扫描另发现 2 处同类**：playbook 示例（**已修**）；`build_check`（`:3408`）给 `editor_play_scene` 发
+     `scene_path`，而该工具**真实 schema** 是 `mode/headless/mcp_port/extra_args`、**无 `scene_path`**
+     —— **未修**，因为**没有任何捕获能证明它会被拒**（**停下来上报而不是再猜一次**），且它**不在电池路径上**
+     （`GodotAdapter` 覆写了电池）。另 `playbook` 的 `"property":"position:x"` 被标出
+     （B5 显示 `assert_node_state` 拒绝 `position.x`）——**只标未改**。
+- 测试：7 个捕获文件**逐字节**固化到 `tests/fixtures/dr58/`（配 `MANIFEST.json` 记来源 + sha256）；
+  新增 `tests/dr58_payload_shapes.rs`（5）+ `tests/evidence_battery.rs`（5）。**严格 TDD**：先用真机字节得到**三个红**
+  （记录参数里确实带 `scene_path`；真实字节上确实写 "Player=missing"；真实 `input_axis` 为 null 时确实 `reachable=false`），
+  再最小修复，最后重构成**一个共享判据**。**反例**：错误 `scene_path` 形状被引擎**原文 `-32602`** 拒；
+  **11 个畸形节点载荷**全部判假且仍记 missing；畸形应答仍使 `game_process_reachable=false` + `ACTION_BINDING_UNKNOWN`。
+  **无既有断言被放宽**，且**替身反而变严**（改为服务真实字节）。
+- 诚实项（我逐条采信并记录）：
+  1. **一次未定性的 flake**：基线首次调用 **exit 1 且日志被截断**，**重跑 342/0/7 exit 0**、**无法复现**
+     ⇒ 记为**未定性 flake**（不许当作不存在，也不许当已解释）。
+  2. **一个已冻结的捕获被丢弃**（`semantic_summary.json`），因为其标签会触发 **DR-45 词汇守卫**；
+     它选择**删掉未使用的副本**，而**不是**把该文件从守卫里豁免 ⇒ **优先级正确**（不为方便削弱守卫）。
+  3. **6 个冻结源是 CRLF**；`.gitattributes` 钉 `tests/fixtures/dr58/** -text`，索引保存**精确字节**。
+  4. **未验证（仅推断）**：修好的探针在真机上**是否**给出 `GAME_INPUT_CHANNEL_OK`——
+     因为真机上 `input_axis` **仍为 null/不可读**。⇒ **下一轮真机仍有真实失败风险**，不得预设 E3 必转 met。
+- 裁决：**派独立验收**（`TASK-DR58-ACCEPT.md`），**重点核实 `scene_path` 的"省略"结论是否真被证据唯一确定**
+  （若证据其实允许其它候选形状，则那一步是**猜测**而非判定 ⇒ 应判 fail 或退回补捕获）。
+- 排期：DR-58 验收通过 → 推送 → **DR-57 / DR-59 / REF2** 串行 → **再跑一轮真机**（E3 的最终判定）。
+- 回滚点：DR-58 各提交单独 revert；两条基线 `smoke-t6`/`smoke-t7` 均不得覆盖。
+
