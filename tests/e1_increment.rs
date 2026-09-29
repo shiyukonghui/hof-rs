@@ -354,31 +354,50 @@ async fn a_zero_engineering_write_round_fails_instead_of_reporting_ok() {
     assert_eq!(meta["exit_code"], json!(code));
 }
 
-/// DR-67 (DEF-2): the `!ok` branch of `run_exit_code_for` must be reachable from
-/// production data — it was dead, because the only production `RunSummary` was
-/// built on the success exit with `ok: true`.
+/// DR-67 (DEF-2): the code of a failed round must come from the **real error**,
+/// through the same production functions the dispatcher's error branch calls,
+/// and must reach both persisted locations.
+///
+/// The contract-class error cannot distinguish "carried from the error" from
+/// "re-derived by the `!ok` branch", because both are `2` — so this also drives
+/// an error of a **different class**, whose `4` no constant in that branch could
+/// produce.
 #[test]
-fn a_failed_summary_carries_a_reachable_exit_code() {
-    // A real error through the real converter, exactly as the dispatcher does it.
+fn a_failed_round_persists_the_real_errors_class() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let run_dir = root.join("runs/run-1");
+    std::fs::create_dir_all(&run_dir).unwrap();
+    std::fs::write(run_dir.join("meta.json"), r#"{"run_id":"run-1"}"#).unwrap();
+
+    // (1) The contract class the E1 failure uses.
     let error: anyhow::Error =
         hof_rs::errors::HofError::contract(ContractViolation::NoEngineeringWrite).into();
     let summary = hof_rs::runtime::run_loop::failed_run_summary("run-1", &error);
     assert_eq!(
-        hof_rs::cli_impl::run_exit_code_for(&summary),
-        hof_rs::errors::exit_code_of(&error),
-        "the failure code must come from the error, not from a constant"
-    );
-    assert_eq!(
         summary.failure_exit_code,
-        Some(hof_rs::errors::HofError::contract(ContractViolation::NoEngineeringWrite).exit_code()),
-        "the summary must carry the real code, so nothing has to be re-derived"
+        Some(hof_rs::errors::exit_code_of(&error)),
+        "the summary must carry the code of the error it was built from"
     );
+    let code = hof_rs::cli_impl::finalize_run(&run_dir, &summary).unwrap();
+    assert_eq!(code, 2, "contract violations are class 2");
+    assert_eq!(read(&run_dir.join("exit_code")).trim(), "2");
 
-    // An error of another class keeps its own code, which a hard-coded `2` in
-    // `run_exit_code_for` could not express.
+    // (2) A class the `!ok` branch cannot produce on its own.
     let external: anyhow::Error = hof_rs::errors::HofError::External("endpoint down".into()).into();
     let summary = hof_rs::runtime::run_loop::failed_run_summary("run-1", &external);
-    assert_eq!(hof_rs::cli_impl::run_exit_code_for(&summary), 4, "external => 4");
+    let code = hof_rs::cli_impl::finalize_run(&run_dir, &summary).unwrap();
+    assert_eq!(
+        code, 4,
+        "an external failure is class 4: the code must follow the error, not a literal"
+    );
+    assert_eq!(
+        read(&run_dir.join("exit_code")).trim(),
+        "4",
+        "the persisted code must be the real error's class"
+    );
+    let meta: Value = serde_json::from_str(&read(&run_dir.join("meta.json"))).unwrap();
+    assert_eq!(meta["exit_code"], json!(4));
 }
 
 /// A `RunSummary` with `ok = false` and a *launchable* artifact gate: the exact
