@@ -9173,3 +9173,32 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 - 预期影响与回滚点：引擎仓四条线（TASK-151/152/153/154）全部验收通过并推送；主线转向 hof-rs §15。
   回滚点：各任务提交单独 revert；引擎仓整体 `15bbf1f50e`。
 
+## D235 — 新线：以已发布的 `hoh-lite` 为 hof-rs 提供参考（先证据、后裁决）
+
+- 日期：2026-09-29
+- 触发问题（用户指令）："clone `git@github.com:shiyukonghui/HarnessOfHarness.git`，然后根据他们发布的
+  hof-lite 来为我们的 hof-rs 提供参考。"
+- 已完成：克隆到 **`F:\HarnessOfHarness`**（HEAD `ae7cc6f`，**377 MB**；`assets/` 182 MB、`hoh-lite/` 3.5 MB / 395 文件）。
+- 侦察事实（我读的，不是子代理转述）：`hoh-lite` 是已发布的 Python 包 **`gameloop` v0.1.0**
+  （"General iterative game-development loop with a GameCraft adapter"，**Apache-2.0**、Python ≥3.12、
+  **运行期零依赖**；extras：`gamecraft-bench`=`harbor==0.23.0`、`deepseek-harness`=`deepseek-harness-sdk==0.1.0rc6`）；
+  分层 `src/gameloop/{core,harnesses,policies,adapters,benchmarks,tools,resources,templates}` + `_vendor`；
+  另有 `configs/`、`scripts/`、`tools/`（含 `tools/godot-mcp`）与 `assets/`；console scripts
+  `gameloop`/`gameloop-gamecraft`/`gameloop-summarize`。**其 `policies`/`benchmarks`/`templates` 是我们没有的概念。**
+- 关键待核事项（已写进任务书，交子代理取证）：它 vendored 的 **`godot_mcp`** 与 `tools/godot-mcp`
+  **是否与我方引擎的 `modules/mcp_server` 同源/同契约**（工具名/前缀/scope/schema），以及
+  许可条款（`LICENSE`/`NOTICE`/`THIRD_PARTY_NOTICES.md`）——**必须把"可借的设计概念"与"带许可义务的代码"分开**。
+- 交付安排：任务书 `.spec/hof-rs/tasks/TASK-HOHLITE-REF.md`；由**全新子代理**只读出报告
+  `.spec/hof-rs/tasks/TASK-HOHLITE-REPORT.md`（**11 项**：总览/架构对照/角色循环/证据与验证/工具与 MCP/模型抽象/
+  配置与可观测性/许可合规/**可采纳清单**/**不建议采纳清单**/缺失能力）。
+- **纪律与偏差（据实记录）**：我的既定纪律是"**同一时刻只跑一个子代理**"，本次为响应新指令，
+  **在 §15 实现批次（`539fb289…`）仍在跑时**并行派了侦察子代理 ⇒ **已偏离**。判据：两者**无文件交集**
+  （§15 只动 `src/**`/`tests/**` 与它的报告路径；侦察**只读**、仅写自己的报告），**无端口/构建争用**（侦察不联网、不运行）。
+  我**必须**因此额外警惕一件事：§15 子代理若用 `git add -A` 可能扫进未跟踪的 `.spec` 任务书，
+  我会**逐条核对它的提交内容**。
+- 裁决边界（现在就说清）：**任何采纳都必须满足**①有该报告里的 `路径:行` 证据；②与三条硬约束不冲突
+  （`PRD-mario.md` 冻结、引擎 **177** 条契约逐字冻结、离线批次不联网）；③由我**逐条裁决**并记入本日志。
+  **不因"别人这么做"而采纳**；**不照搬**；**不引入 Python 依赖到 Rust 项目**。
+- 预期影响与回滚点：若报告确有 P0/P1 级可采纳项，将据阶段关卡**显式回到概要/详细设计**新增 `§16`，
+  而不是在实现里悄悄加。克隆体在 `F:\HarnessOfHarness`，**与 hof-rs 仓无耦合**，可直接删除。
+
