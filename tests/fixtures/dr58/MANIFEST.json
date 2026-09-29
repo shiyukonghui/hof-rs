@@ -1,0 +1,48 @@
+{
+  "batch": "DR-58",
+  "engine_version_string": "4.8.dev.mono.custom_build.035edfce7",
+  "captured_by": "TASK-SMOKE-T7 (runs/smoke-t7) and its E3 pre-check experiment (runs/smoke-t7-experiment)",
+  "note": "Byte-for-byte copies of real-machine evidence. runs/** is read-only: these fixtures are the frozen input the DR-58 tests are driven from, so the code is corrected against the engine's real payloads instead of the contract document. The sha256 values are checked by tests/dr58_payload_shapes.rs.",
+  "files": [
+    {
+      "fixture": "smoke_t7_input_channel_probe.json",
+      "source": "runs/smoke-t7/iter-1/candidate/.hoh/deterministic/raw/input_channel_probe.json",
+      "sha256": "ce9ccf9526df7a7a63c42a8f9949a9f838776fcbb44e8629c4672ca28864fdc8"
+    },
+    {
+      "fixture": "smoke_t7_node_and_collision_assertions.json",
+      "source": "runs/smoke-t7/iter-1/candidate/.hoh/deterministic/raw/node_and_collision_assertions.json",
+      "sha256": "f8932726c31e0586577905d09f61dda9e97b1de858dfc070f55cbbb4c9224343"
+    },
+    {
+      "fixture": "smoke_t7_scenario_summary.json",
+      "source": "runs/smoke-t7-experiment/scenario/scenario_summary.json",
+      "sha256": "9bfc568dfff305e369b39c9e760cd52956652a3934e8a04c53e79fe5339efb8e"
+    },
+    {
+      "fixture": "smoke_t7_sc_02_scene_path_main.json",
+      "source": "runs/smoke-t7-experiment/scenario/sc-02.json",
+      "sha256": "a379e4cd0cc8367b0000ce784465199e64ffe3160a88f3a01dafed6c699a84c3"
+    },
+    {
+      "fixture": "smoke_t7_sc_04_scene_path_omitted.json",
+      "source": "runs/smoke-t7-experiment/scenario/sc-04.json",
+      "sha256": "ecbda5b6d107160bdf994ad26b399cf5c5feb0c577f3a089ace15d9151d791ac"
+    },
+    {
+      "fixture": "smoke_t7_sc_05_scene_path_omitted.json",
+      "source": "runs/smoke-t7-experiment/scenario/sc-05.json",
+      "sha256": "481c730379d708ce47a179afad2b9ee724423f89290fb4f4975944c4ba5913e8"
+    },
+    {
+      "fixture": "smoke_t7_sc_07_assert_only_position.json",
+      "source": "runs/smoke-t7-experiment/scenario/sc-07.json",
+      "sha256": "03f86916d428912272a91471ab4c98961377c37c2b346648a3fe0b269f50f7e6"
+    },
+    {
+      "fixture": "smoke_t7_semantic_summary.json",
+      "source": "runs/smoke-t7-experiment/semantic/semantic_summary.json",
+      "sha256": "ad65b2d1e9695097ad8f776dab32f2dc6a53cfec3429e1810b3fe00b5a5e580e"
+    }
+  ]
+}

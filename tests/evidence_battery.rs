@@ -316,6 +316,19 @@ fn invalid_save_path(save_path: &str) -> McpError {
     )
 }
 
+/// DR-58: the `-32602` the real game-scope runner answers for **any**
+/// `scene_path` value, verbatim from
+/// `tests/fixtures/dr58/smoke_t7_input_channel_probe.json` (`'current'`) and the
+/// captured experiment (`'main'`, `'res://scenes/main.tscn'`).
+fn scene_path_refusal(value: &str) -> String {
+    format!(
+        "Parameter 'scene_path' ('{value}') is not supported by the game-scope runner: the \
+         migration source used it to make the *editor* play a scene before the steps ran, and this \
+         tool runs inside the game process that is already running. Use editor_play_scene (editor \
+         endpoint) first, then run the scenario against the running game"
+    )
+}
+
 /// The `running_game_capture_frames` reply captured in `smoke-t3`: the image travels inline
 /// as base64 and it is the runtime's job to put it on disk.
 fn inline_frames_payload() -> Value {
@@ -584,6 +597,14 @@ impl ToolChannel for FixtureChannel {
                         "ACTION_NOT_BOUND: no such action in this InputMap: `move_right`",
                     )
                     .into());
+                }
+                // DR-58: the real game-scope runner refuses **every**
+                // `scene_path` value — captured verbatim in
+                // `tests/fixtures/dr58/smoke_t7_*` (see the manifest).  The
+                // double enforces the engine's own answer, so a regression to
+                // "send a scene_path" cannot pass the battery unnoticed.
+                if let Some(scene_path) = args.get("scene_path").and_then(Value::as_str) {
+                    return Err(McpError::new(-32602, scene_path_refusal(scene_path)).into());
                 }
                 let action = args
                     .get("steps")
@@ -2013,6 +2034,73 @@ async fn a_usable_game_channel_makes_the_replay_green() {
             "`{tool}` must be recorded verbatim: {raw}"
         );
     }
+}
+
+/// DR-58 ①: the scenario runner's **real** request shape.
+///
+/// The engine refuses `scene_path` for every value it was given, so the battery
+/// must omit the member entirely — and the recorded call must then really
+/// succeed.  Non-vacuity: the same engine-modelled double answers the old
+/// `"current"` shape with the engine's verbatim `-32602`, so a test that only
+/// checked "the call happened" could not pass.
+#[tokio::test]
+async fn the_scenario_request_omits_scene_path_because_the_runner_refuses_every_value() {
+    let temp = tempfile::tempdir().unwrap();
+    let channel = Arc::new(FixtureChannel::green());
+    let run = run_battery(temp.path(), channel.clone(), 30).await;
+
+    let scenario_calls = channel.calls_of("running_game_run_test_scenario");
+    assert!(
+        !scenario_calls.is_empty(),
+        "the semantic scenario runner must still be exercised"
+    );
+    for args in &scenario_calls {
+        assert!(
+            args.get("scene_path").is_none(),
+            "the game-scope runner refuses every scene_path value (DR-58): {args}"
+        );
+        assert!(
+            args["steps"].is_array(),
+            "the real shape the runner accepts is `steps` only: {args}"
+        );
+    }
+
+    // … and the recorded call is a real success, not a quoted refusal.
+    let raw: Value = serde_json::from_str(&read(
+        &run.run_dir
+            .join("iter-1/candidate/.hoh/deterministic/raw/input_channel_probe.json"),
+    ))
+    .unwrap();
+    let call = raw["calls"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|call| call["tool"] == json!("running_game_run_test_scenario"))
+        .expect("the scenario call is recorded verbatim");
+    assert_eq!(call["ok"], json!(true), "{call}");
+    assert!(call.get("error").is_none(), "{call}");
+    assert!(
+        call["payload"]["content"].is_array(),
+        "the accepted reply is the per-step result envelope: {call}"
+    );
+    assert!(
+        raw["channel"]["pressed"] == json!(true),
+        "the injection the runner carried must be recorded: {raw}"
+    );
+
+    // Non-vacuity: the *wrong* shape is refused by the same double, in the
+    // engine's own words.
+    let wrong = json!({"scene_path": "current", "steps": [{"type": "wait", "seconds": 0.0}]});
+    let error = channel
+        .call(Role::Tester, "running_game_run_test_scenario", wrong)
+        .await
+        .expect_err("a scene_path-carrying request must be refused");
+    let text = error.to_string();
+    assert!(text.contains("-32602"), "{text}");
+    assert!(
+        text.contains(&scene_path_refusal("current")),
+        "the engine's verbatim refusal must be reproduced: {text}"
+    );
 }
 
 /// DR-35 ③: the probe itself fails (exactly the `smoke-t5` error: the addon's

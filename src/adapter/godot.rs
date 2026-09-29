@@ -1594,8 +1594,19 @@ impl<'a> BatterySession<'a> {
         //     drives the action, a `wait` gives the game a frame, and an `assert`
         //     step names the observable.  The scenario is the contract's
         //     "inject input and observe" capability.
+        //
+        //     DR-58: the member list is `steps` **only**.  The real game-scope
+        //     runner refuses `scene_path` for *every* value — it runs inside the
+        //     already-running game, so there is no scene for it to play.  The
+        //     evidence (frozen under `tests/fixtures/dr58`, sources in
+        //     `runs/smoke-t7/**`): hof-rs's own `"current"` answer was
+        //     `{"code":-32602, "message":"Parameter 'scene_path' ('current') is
+        //     not supported by the game-scope runner …"}`, while the captured
+        //     requests that omit the member all answer per-step results.  The
+        //     contract document advertises `scene_path` as an optional string,
+        //     which is exactly why it can never settle this question (DR-58's
+        //     rule: shapes come from captured payloads, not from the document).
         let axis_args = json!({
-            "scene_path": "current",
             "steps": [
                 {"type": "input", "action": action, "pressed": true},
                 {"type": "wait", "seconds": 0.0},
