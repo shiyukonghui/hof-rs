@@ -1384,7 +1384,6 @@ impl<'a> BatterySession<'a> {
         let probe = InputChannelProbe {
             capability,
             game_process_reachable,
-            has_action: None,
             is_pressed_before: None,
             axis_before,
             axis_after,
@@ -2824,12 +2823,21 @@ impl InputChannelCapability {
 
 /// DR-35: the full outcome of the channel probe, carried into `input_replay` so
 /// both steps tell the same story.
+///
+/// DR-57 (DEF-2): the field `has_action: Option<bool>` was **deleted** here.  It
+/// had been hard-wired to `None` since the semantic migration (the verdict no
+/// longer reads `InputMap.has_action`), nothing in the tree ever read it, yet it
+/// was serialized into the published raw evidence
+/// (`.hoh/deterministic/raw/input_channel_probe.json`), where a consumer could
+/// read `null` as "the action does not exist" — a conclusion this field never
+/// carried.  Deleting it removes the ambiguity at the source; the `pressed`
+/// field below is the semantic evidence that replaced it.  Do not re-add a
+/// field here unless it has a reader.
 #[derive(Clone, Debug, Default, serde::Serialize)]
 pub struct InputChannelProbe {
     pub capability: InputChannelCapability,
     /// The game process answered a `Player.position` read.
     pub game_process_reachable: bool,
-    pub has_action: Option<bool>,
     pub is_pressed_before: Option<bool>,
     pub axis_before: Option<f64>,
     pub axis_after: Option<f64>,
