@@ -9367,3 +9367,62 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 - 预期影响与回滚点：§15 三条语义**已达成**且经独立验收；推送后 `origin/master` = 本批 + 我的文档提交。
   回滚点：DR-54/55/56 各提交单独 revert；`runs/smoke-t6` 仍为基线。
 
+## D240 — 真机 T=1（`smoke-t7`）：**exit 6→0、E2 转 met**；E3 根因换成**我方载荷形状误读**（立 DR-58）；证据污染新发现（立 DR-59）
+
+- 日期：2026-09-29
+- 交付：`.spec/hof-rs/tasks/TASK-SMOKE-T7-REPORT.md`（8 节 + 工件索引）。**判定：E1 not_met｜E2 met（变了）｜E3 not_met（根因已换）｜E4 met｜E5 met（强）｜E6 met。**
+- **前置（我上一轮的坑被避免了）**：串行 `cargo build --release --offline`（exit 0），`hoh.exe` mtime **13:22:54** >
+  `9ff9cd2` 的 ct **12:42:09**、sha256 `dde14218…` ⇒ **确为新鲜、含 DR-54/55/56**。
+  引擎 `4.8.dev.mono.custom_build.035edfce7`（**判据 met**）、监听 pid **75204** = 配置的 mono 二进制、
+  `matches_binary=true`；二进制 sha256 `08483088…`（**仅记录**，非位级可复现）。
+- **本轮**：`hoh run --iterations 1 --run-id smoke-t7`，**exit code 0**、`artifact_gate.launchable` **true**（reasons []）、
+  **22,424,721 tokens**、wall **74m58s**、3 次 attempt 全 `LimitsExceeded`、只用 3 个角色。
+  `runs/smoke-t7` = 115 文件；**`runs/smoke-t6` 未被动**（135 文件、mtime 02:32:01）。
+- **与 `smoke-t6` 的对照（本轮最大成果）**：引擎 `ba1587c71`→`035edfce7`；**exit `6`→`0`**；
+  `launchable` `false`→`true`；**传输错误 36→0**；`-32602` 尝试 3→**1**；`game_endpoint`/`editor_status`
+  `null`→**已填充**（DR-51）；tokens 26.8M→22.4M；wall ~112m→75m。
+- **E2 met**：`editor_errors_baseline ok=true`（"1 line(s) exempted by DR-48"，**只**豁免 `[MCP] capture=off` 横幅）。
+  非空洞性：`cargo test --offline --test launchable_gate` **12 passed**，含
+  `a_real_editor_error_still_closes_the_gate` / `an_error_carrying_the_mcp_prefix_still_closes_the_gate` /
+  `an_unknown_mcp_prefixed_line_still_closes_the_gate`。
+  **诚实边界（子代理自己标注）**：那是**离线执行生产判据**，不是活体注入（活体注入会污染 A_1/E5）——**我接受**该边界。
+- **E3 not_met，但根因已换，且引擎侧修复被真机证实**：
+  1. **TASK-151 修复在真机验证通过**：编译不过的 `code` → **`-32602` 用时 0.01 s**，端点随后**又应答 3 次**
+     （子代理自己的前置实验 `runs/smoke-t7-experiment/raw`）；**整轮 0 次传输失败**、
+     **仅 1 条** MCP 错误行（`-32602`，`attempt=1` ⇒ **DR-56 生效**；**无重试乘法、无 12 分钟干烧**）。
+     ⇒ **我在 D239 记的"判死前最多 6 次尝试/约 12 分钟"这一残留，在本轮条件下未发生**（仅当真出现传输失败才会咬人）。
+  2. **语义工具确实被调用且 5/6 成功**（create/play_input_recording 注入 1、get_node_properties、
+     get_node_property_samples、stop_input_recording）。
+  3. **但两条 DR-54 形状假设在真引擎上为假**：
+     ① `running_game_run_test_scenario` 对**任何** `scene_path` 都回 `-32602`，而
+       `src/adapter/godot.rs:1597-1604`（`6329e5c`）**硬编码 `"current"`** ⇒ 探针终以 `ACTION_BINDING_UNKNOWN`；
+     ② `src/adapter/godot.rs:1253-1257`（`6329e5c`）读顶层 `name`，而 `running_game_get_node_properties`
+       **从不返回**该键（真实键：`node_path`/`properties`/`type`）⇒ `game_process_reachable` **恒 false**。
+     ③ **同类误读早已存在**：`godot.rs:2051-2055`（`00601476`，**2026-09-21**）把 Player/Goal/HUD 的**成功载荷**
+       判为 "missing"；**QA 自己已记为 gap G20**。
+  4. **核心行为无一被证实**：只有玩家向右漂移、y 恒定（**无跳跃**）、`move_left` 段 x 反而增大（**不可归因**）、
+     goal/交互物**未被触及**。
+- **E5 met（强）**：算法无关的**三棵树逐字节**对比（workspace / candidate / 存档 A_1）= 各 17 文件、
+  记录摘要一致 `528cad59…`、集合与内容零差异。**E4**：8/8 verified 记录存在；截图是**本轮新鲜** 5860 B PNG
+  （mtime 14:32:24、sha256 `480a7ce7…`），旧 4246 B（2026-09-21）被改名为 `.stale-…` ⇒ **DR-49 生效**。
+- **新发现（须处置）**：轮次开始时 `.workspace/mario/.hoh/deterministic/**` **仍留着 `smoke-t6` 的证据**，
+  且 **Developer 真的读了它**（`developer.attempt1.json` 的 `.messages[54]` 含 pid 108432 / "the editor is not clean" /
+  os error 10061）。⇒ **上一轮的证据污染了本轮模型上下文**（模型可能被"编辑器不干净"的旧结论带偏）。
+- 裁决：
+  1. **E2 转 met 予以确认**；引擎换代（D216/§13）与修复包（§14）**目标达成**，
+     且**引擎侧 TASK-151 的修复在真机上得到验证**（这是"我们自己造引擎"这条线的直接回报）。
+  2. **立 `TASK-DR58`（关键路径，离线）**：修正**载荷形状误读**——①`run_test_scenario` 的 `scene_path`
+     真形状（须以**真机载荷**为准，不得再猜）；②`get_node_properties` 的键名（`node_path`/`properties`/`type`）；
+     ③**同一类误读的历史点** `godot.rs:2051-2055`（G20），一并修。**测试必须用真机真实载荷**
+     （证据在 `runs/smoke-t7`，可只读引用），**不得**再用"读契约文档猜形状"。
+  3. **立 `TASK-DR59`（卫生，影响模型上下文保真）**：`.hoh/deterministic` 必须**按轮次隔离或开轮即清**
+     （现有 `.stale-` 改名模式可复用），并有一条测试证明"新一轮不会读到上一轮证据"。
+  4. **`TASK-DR57`**（§15 的计数测试 + 报告更正 + DEF-2）**仍欠**，与 DR-58/59 排在同一波内串行处理。
+  5. **E1 仍 not_met**（`A_1 == A_0 == fc78d299…`，3 次 attempt 全 `LimitsExceeded`，`no_progress` 警告）：
+     **没变**，记为本轮未解；与 DR-58 解掉 E3 后应重估（E1 的成因可能是步数预算/产物门槛交互，**本轮未定性**）。
+  6. **设计层教训（记入 D231 的延伸）**：我在 §15.1 **刻意不枚举**映射、要求实现者自己枚举——**结构上是对的**
+     （语义工具替换成功），但**载荷形状不能靠读契约文档推断**，必须来自**活体捕获**。
+     ⇒ 自本条起：**凡涉及引擎应答形状的改造，必须先有一次活体捕获并把原始载荷入库**（可只读引用 `runs/**`）。
+- 预期影响与回滚点：DR-58 是**让 E3 有机会转 met 的关键路径**。回滚点：DR-58/59 各提交单独 revert；
+  `runs/smoke-t6`/`smoke-t7` 均为基线，**都不得覆盖**。
+
