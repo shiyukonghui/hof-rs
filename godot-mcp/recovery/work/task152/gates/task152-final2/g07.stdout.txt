@@ -1,0 +1,13 @@
+PROBE ps1                    PASS  expected=ps_step_exit_line got=['ps_step_exit_line']
+PROBE ps1                    PASS  expected=None got=[]
+PROBE ps1                    PASS  expected=ps_check_printer got=['ps_check_printer']
+PROBE ps1                    PASS  expected=None got=[]
+PROBE ps1                    PASS  expected=None got=[]
+PROBE ps1                    PASS  expected=None got=[]
+PROBE py                     PASS  expected=py_fail_verdict got=['py_fail_verdict']
+PROBE py                     PASS  expected=None got=[]
+PROBE py                     PASS  expected=None got=[]
+PROBE py                     PASS  expected=None got=[]
+
+PROBES: 10/10
+GATE_EXIT=0 

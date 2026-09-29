@@ -1,0 +1,12 @@
+ANCHOR_JUDGE VERDICT=ANCHOR_STRUCTURAL_EQUIVALENT
+ANCHOR_JUDGE ANCHOR=035edfce7 ANCHOR_REPORTED=035edfce7 HEAD=bef4be040
+ANCHOR_JUDGE ANCESTOR=yes
+ANCHOR_JUDGE CRITERION=A is an ancestor of H (A == H counts) and git diff --name-only A..H contains no compile input (safe = declared non-compiling whitelist, everything else red)
+ANCHOR_JUDGE DIFF_COUNT=3 SAFE_COUNT=3 RED_COUNT=0
+ANCHOR_JUDGE SAFE modules/mcp_server/docs/MCP-SERVER-HANDOVER.md
+ANCHOR_JUDGE SAFE modules/mcp_server/docs/rename-baseline-tools-list.json
+ANCHOR_JUDGE SAFE modules/mcp_server/docs/scripts/check_rename_map.py
+ANCHOR_JUDGE REASON=035edfce7 is an ancestor of bef4be040 and all 3 file(s) in the diff are non-compiling; the binary is NOT equal to HEAD, it is structurally equivalent to it
+ANCHOR_JUDGE SUMMARY anchor=035edfce7 anchor_reported=035edfce7 head=bef4be040 verdict=ANCHOR_STRUCTURAL_EQUIVALENT ancestor=yes diff_count=3 safe_count=3 red_count=0 criterion="A is an ancestor of H (A == H counts) and git diff --name-only A..H contains no compile input (safe = declared non-compiling whitelist, everything else red)" reason="035edfce7 is an ancestor of bef4be040 and all 3 file(s) in the diff are non-compiling; the binary is NOT equal to HEAD, it is structurally equivalent to it" diff=[S:modules/mcp_server/docs/MCP-SERVER-HANDOVER.md S:modules/mcp_server/docs/rename-baseline-tools-list.json S:modules/mcp_server/docs/scripts/check_rename_map.py]
+ANCHOR_JUDGE RESULT PASS
+GATE_EXIT=0 

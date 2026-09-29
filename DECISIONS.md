@@ -8871,3 +8871,50 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
   - 影响：TASK-152 完成后该模块应达到**十门全绿**；hof-rs 下一轮真机冒烟将用**修复后的 mono**（`035edfce7`）。
   - 回滚点：TASK-152 的提交单独 revert 即回到"g05 因 hof-rs 夹具而红"的旧状态（不建议）。
 
+## D227 — TASK-152 交付（g05 自包含，十门 10/10）；采纳 g09 判据修正**并加三道护栏**；立 TASK-153
+
+- 日期：2026-09-29
+- 触发问题：TASK-152 实现子代理交付，报告 `godot-mcp/recovery/reports/TASK-152-REPORT.md`。
+- 交付事实：引擎仓 3 个本地提交（**未 push**）：`069a2e2ea8`（g05 自包含）、`e1fbc8ec7f`（记录决定 + 保持计数
+  survey 绿）、`bef4be0407`（修正溯源日期）；最终 HEAD **`bef4be0407`**，`git status` 空。**3 个文件、无编译输入、
+  未做也无需重建**：
+  1. **新增** `modules/mcp_server/docs/rename-baseline-tools-list.json` —— 是 hof-rs 夹具在 **DR-42 重采之前**
+     状态的**逐字节副本**（hof-rs `db2eed7^`，`git cat-file blob` 只读取对象库），**48749 B / 174 条 /
+     sha256 `8f8051c4…`**，**且它在引擎仓里的 blob id 也是 `543b49b2…`**（= hof-rs 那个 blob）
+     —— 这是"逐字节相同"的**机器可核形式**，比我要求的更强。
+  2. `check_rename_map.py`：`DEFAULT_OLD_CONTRACT` 改为**引擎内**路径；常量旁加 26 行溯源
+     （路径/字节/条数/sha/来源 blob/命令/日期）；新增 `OLD_CONTRACT_TOOL_COUNT = 174` 取代 B1 里的字面量；
+     `OLD_CONTRACT_SHA256` **不变**；**B0/B1/B2 强度不变**。
+  3. `MCP-SERVER-HANDOVER.md` §3.10(k)：TASK-151 的原文**逐字保留**，**追加**结案说明
+     （否则那段"g05 三红是已知无关红"的记述**变成会撒谎的文档**）。
+- 门（实现者自跑）：**10/10 exit 0**。`g05` exit=0 **30/30 PASS**（B0 sha 仍 `8f8051c4…`、B1 len=174、
+  B2 两个集合均为空）；`g01` 160/160；`g02` 1586/1586；`g04` 3/3（**editor 154 / game 73 / contract 177**，
+  与 D219 修正后的恒等式**一致**，构成一次独立交叉验证）；`g03/g06` PASS；`g07` 10/10；`g08` UNCLASSIFIED=0；
+  `g10` 22/22。
+- 非空洞性（**两处植入都压红、都逐字节恢复**）：①往基准件植入名字 ⇒ 红在 **B2** 且**点名**该名字
+  （`project_mcp_get_info` contract-only / `get_project_info` map-only），其余 28 检查仍绿；
+  ②往改名表植入错映射 ⇒ 红在**恰好一条**（D1）。恢复三法：`git status` 空 + `git diff --stat` 空 +
+  四文件 `git hash-object` == HEAD blob。
+- 裁决：
+  1. **采纳 g09 判据修正**（实现者提出，我同意其理）**但加三道护栏**：本线判据改为
+     **`ANCHOR_EQUAL` 或 `ANCHOR_STRUCTURAL_EQUIVALENT` 且 `RED_COUNT=0`**，且必须同时满足
+     **(a)** 逐条列出那 3 个 diff 并证明**全是 docs/scripts、无任何编译输入**；
+     **(b)** `git diff 035edfce7f..HEAD -- <编译输入>` 为空；
+     **(c)** `check_engine_anchor.ps1` 与 `run_gates.ps1` 在区间内**零 diff**（判据脚本未被松动）。
+     **理由**：对"只改 docs/scripts"的任务要求 `ANCHOR_EQUAL` 会迫使一次**不含新代码的重建**，
+     其 `--version` 反而会**虚假宣称**该锚点——那是把判据推向**鼓励伪造**。但**放宽判据必须配可证的护栏**，
+     所以我要求上三条由**独立验收**逐一核验（见 `TASK-152-ACCEPT.md` §2.5）；任一不成立 ⇒ fail。
+  2. **立 `TASK-153`（一行级修复）**：`modules/mcp_server/scripts/gen_renamed_contract.py:1800/1804`
+     **仍**指向 hof-rs 夹具并冻结同一 sha256；它**不在 `g05` 的执行路径上**，故 TASK-152 的**目标已达成**，
+     但**"模块不再依赖跨仓输入"这句话不成立**——必须把该生成器也指向
+     `docs/rename-baseline-tools-list.json`，使**契约生成与契约自检共用同一个引擎内基准**。
+     **在此之前，不得把那条更强的说法写成完成态。**
+  3. **它自曝的两处予以记录**（并进 TASK-152 的独立验收核验）：
+     ①`g08` 曾因它自己新增注释的续行（裸 `152`）产生两个 UNCLASSIFIED、它改成不间断注释行后转绿，
+     且**未**改 `check_hardcoded_counts.py` 任何模式（该文件在区间内应零 diff）；
+     ②一处**编造的溯源日期**（2026-02-15）被它自己发现并改为 2026-09-29。**自曝编造属加分，不判违规**，
+     但正因如此，**溯源日期现在是必须被独立核验的项目**。
+- 预期影响与回滚点：
+  - 影响：该模块**已具备十门全绿**；待 TASK-153 落地后，"模块不再依赖跨仓输入"才可写成事实。
+  - 回滚点：TASK-152 三个提交单独 revert（⚠ 会让 g05 **重新**因 hof-rs 夹具而红）；引擎仓整体回滚点仍是 `15bbf1f50e`。
+
