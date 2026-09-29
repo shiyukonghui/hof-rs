@@ -1,0 +1,6 @@
+# DR-58: the frozen real-machine fixtures are referenced **byte for byte** —
+# tests/dr58_payload_shapes.rs re-checks each one against the sha256 recorded in
+# tests/fixtures/dr58/MANIFEST.json and against its read-only source under
+# runs/**.  Git's automatic CRLF conversion would silently change those bytes on
+# checkout, so the directory is pinned to no conversion.
+tests/fixtures/dr58/** -text
