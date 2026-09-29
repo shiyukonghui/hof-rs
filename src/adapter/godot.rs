@@ -1210,12 +1210,15 @@ impl<'a> BatterySession<'a> {
     /// * `ACTION_BINDING_UNKNOWN` — the probe failed or its shape is not
     ///   readable.  Never downgraded to `ACTION_NOT_BOUND`.
     ///
-    /// Note on "press, wait N frames, re-read": the addon evaluates a bare
-    /// GDScript *expression*, which cannot `await`.  The frames therefore elapse
-    /// inside the game process through the game-forwarded `running_game_get_node_property_samples`
-    /// call, and the axis is re-read afterwards — see D29 裁决 6.
+    /// Note on "press, wait N frames, re-read": a GDScript probe body cannot
+    /// `await`.  DR-54 removes that constraint from the critical path — the
+    /// injection and the "how is the axis now" reading are the contract's own
+    /// semantic tools (`running_game_create_input_recording` +
+    /// `running_game_play_input_recording` + `running_game_run_test_scenario`),
+    /// and the frames elapse inside the game process through the game-forwarded
+    /// `running_game_get_node_property_samples`.
     async fn step_input_channel_probe(&mut self) -> anyhow::Result<InputChannelProbe> {
-        let mut step = BatteryStep {
+        let step = BatteryStep {
             id: INPUT_PROBE_STEP_ID.to_string(),
             supports: vec!["F1".to_string(), "F2".to_string()],
             timeout_secs: self.limits.timeout_seconds,
@@ -1224,95 +1227,107 @@ impl<'a> BatterySession<'a> {
         let mut calls = Vec::new();
         let mut notes: Vec<String> = Vec::new();
 
-        let position_script = probe_scripts::player_position();
-        let has_action_script = probe_scripts::has_action(PROBE_ACTION);
+        // DR-54: the channel probe is built on the contract's **semantic**
+        // tools.  The old form asked the game to run caller-assembled GDScript
+        // (`InputMap.has_action` / `Input.is_action_pressed` / `Input.get_axis`)
+        // and made the whole classification depend on whether those strings
+        // compiled — `smoke-t6`'s structural fragility, and the path that took
+        // the game endpoint down (DR-50B).
 
-        // 1) Is the game process reachable at all?  This expression uses only
-        //    members of the addon's base node, so it answers a different
-        //    question from the `Input` readings below.
-        let position = self
-            .game_script(&position_script, "player_position", &mut calls)
-            .await;
-        let (position_before, position_before_raw) = position;
-        let mut game_process_reachable = position_before.is_some();
-        if position_before.is_none() {
-            notes.push(format!(
-                "the game process could not be read: {}",
-                position_before_raw.unwrap_or_else(|| "no reply".to_string())
-            ));
-        }
-
-        // 2) The design's channel readings.
-        let (has_action, has_action_raw) = self
-            .game_script_bool(&has_action_script, "move_right", &mut calls)
-            .await;
-        let pressed_script = probe_scripts::is_action_pressed(PROBE_ACTION);
-        let (is_pressed_before, _) = self
-            .game_script_bool(&pressed_script, "move_right", &mut calls)
-            .await;
-        let axis_script = probe_scripts::axis();
-        let (axis_before, _) = self
-            .game_script_f64(&axis_script, "move_right", &mut calls)
-            .await;
-
-        // 3) Press in the game process, let the game run frames while it samples
-        //    `Player.position`, then re-read the axis.
-        let press_script = probe_scripts::press(PROBE_ACTION);
-        let (pressed, _) = self
-            .game_script_present(&press_script, "move_right", &mut calls)
-            .await;
-        let monitor_args = json!({
-            "node_path": "Player",
-            "properties": ["position"],
-            "frame_count": PROBE_FRAME_COUNT,
-            "frame_interval": 1,
-        });
-        let mut moved_while_pressed = false;
-        match self.call("running_game_get_node_property_samples", monitor_args.clone()).await {
+        // (a) `running_game_get_node_properties` names the node and proves the
+        //     game process answers at all.  It is a plain semantic read.
+        let properties_args = json!({"node_path": "Player"});
+        let mut game_process_reachable = false;
+        match self
+            .record_semantic_call(
+                semantic::NODE_PROPERTIES,
+                properties_args,
+                "player_properties",
+                &mut calls,
+            )
+            .await
+        {
             Ok(call) => {
                 let parsed = unwrap_mcp_payload(&call.payload);
-                let quadruple = replay_quadruple(PROBE_ACTION, &parsed, GAME_PROCESS_CHANNEL);
-                let mut entry = call_ok(
-                    "running_game_get_node_property_samples",
-                    &monitor_args,
-                    &call.payload,
-                    &call.correlation,
-                );
-                if let Some(quadruple) = &quadruple {
-                    entry["quadruple"] = quadruple.clone();
-                    moved_while_pressed =
-                        quadruple["before_position"] != quadruple["after_position"];
-                    game_process_reachable = true;
-                }
-                calls.push(entry);
+                game_process_reachable = parsed
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .map(|name| !name.is_empty())
+                    .unwrap_or(false);
             }
-            Err(failure) => {
-                calls.push(call_fail("running_game_get_node_property_samples", &monitor_args, &failure));
-                notes.push(format!(
-                    "running_game_get_node_property_samples failed: {}",
-                    failure.observation()
-                ));
-            }
+            Err(failure) => notes.push(format!(
+                "{} failed: {}",
+                semantic::NODE_PROPERTIES,
+                failure.observation()
+            )),
         }
-        let (axis_after, axis_after_raw) = self
-            .game_script_f64(&axis_script, "move_right", &mut calls)
-            .await;
-        let position_script = probe_scripts::player_position();
-        let (position_after, _) = self
-            .game_script(&position_script, "player_position_after", &mut calls)
-            .await;
-        if let (Some(before), Some(after)) = (position_before, position_after) {
-            if before != after {
-                moved_while_pressed = true;
-            }
-        }
-        let release_script = probe_scripts::release(PROBE_ACTION);
-        let _ = self
-            .game_script_present(&release_script, "move_right", &mut calls)
-            .await;
 
-        // 4) Classify.  A missing action is only ever concluded from a readable
-        //    `has_action == false`; everything else is `UNKNOWN`.
+        // (b) `running_game_get_node_property_samples` on the well-known InputMap
+        //     axis is the semantic "how is the input axis right now" reading.
+        let axis_before = self
+            .semantic_axis_sample("move_right:axis_before", &mut calls)
+            .await;
+        if axis_before.is_some() {
+            game_process_reachable = true;
+        }
+
+        // (c) Inject the action and read the axis back through the semantic
+        //     input API (recording + scenario), then sample `Player.position`.
+        let (pressed, refusal, refusal_code) = self
+            .semantic_inject_action_detailed(PROBE_ACTION, "move_right", &mut calls)
+            .await;
+        // The scenario's own report of the axis it observed is the semantic
+        // "after" reading; a reply that carries none leaves it `None` rather
+        // than inventing one.
+        let axis_after = calls
+            .iter()
+            .rev()
+            .find(|call| {
+                call["tool"] == json!(semantic::TEST_SCENARIO)
+                    && call["label"].as_str() == Some("move_right:test_scenario")
+            })
+            .and_then(|call| call["observed_axis"].as_f64());
+        let (_, refusal_from_frames) = self
+            .semantic_sample_positions(
+                PROBE_ACTION,
+                "Player",
+                PROBE_FRAME_COUNT,
+                "move_right:frames",
+                &mut calls,
+            )
+            .await
+            .unwrap_or((Value::Null, String::new()));
+        let mut moved_while_pressed = false;
+        if let (Some(before), Some(after)) = (axis_before, axis_after) {
+            moved_while_pressed = (before - after).abs() > f64::EPSILON;
+        }
+        if let Some(refusal) = &refusal {
+            notes.push(refusal.clone());
+        }
+        if !refusal_from_frames.is_empty() {
+            notes.push(refusal_from_frames);
+        }
+
+        // (d) DR-54: one **read-only** `running_game_execute_gdscript` probe is
+        //     kept as a supplementary cross-check.  It is a self-contained
+        //     function body with an explicit `return` (DR-50A), and it is
+        //     deliberately **not** consulted by the classification below: its
+        //     value may corroborate, never carry, a critical assertion.
+        let (probe_position, probe_refusal) = self
+            .game_script(
+                &probe_scripts::player_position(),
+                "read_only_player_position",
+                &mut calls,
+            )
+            .await;
+        if probe_position.is_none() {
+            if let Some(refusal) = probe_refusal {
+                notes.push(format!("read-only probe: {refusal}"));
+            }
+        }
+
+        // (e) Which of the three project actions the project *declares* is a
+        //     diagnostic on disk, never evidence of a running binding.
         let declared =
             project_declared_actions(self.workspace, &["move_left", "move_right", "jump"]);
         let declared_note = if declared.is_empty() {
@@ -1320,39 +1335,46 @@ impl<'a> BatterySession<'a> {
         } else {
             format!("project.godot declares {declared:?} (diagnostic only)")
         };
-        let evidence_note = format!(
-            "game process: has_action={has_action:?}, is_action_pressed={is_pressed_before:?}, \
-             axis_before={axis_before:?}, press delivered={pressed}, axis_after={axis_after:?}, \
-             position moved={moved_while_pressed}"
-        );
 
-        // The action exists and the game process answered: the channel itself is
-        // usable.  Whether the press moved anything is `input_replay`'s job (and
-        // becomes `INPUT_HAD_NO_EFFECT` there when it did not).
-        let capability = match has_action {
-            Some(false) => InputChannelCapability::ActionNotBound,
-            Some(true) if game_process_reachable || axis_after.is_some() => {
-                InputChannelCapability::GameInputChannelOk
-            }
+        // (f) Classify from the **semantic** evidence.
+        //
+        //     `GameInputChannelOk` needs the semantic injection to have been
+        //     accepted *and* a semantic reading to have arrived.  A **business
+        //     error that itself says the action is not bound** is the engine
+        //     answering "I know no such action in this InputMap", which is the
+        //     only honest way to reach `ACTION_NOT_BOUND`; anything without an
+        //     answer (a transport failure, an unreadable reply) stays
+        //     `ACTION_BINDING_UNKNOWN` and is never downgraded (DR-35).
+        //
+        //     The *code alone is not enough*: `-32602` is also what a malformed
+        //     request gets, and reading that as "the action is not bound" would
+        //     be exactly the class of false verdict DR-35 exists to prevent.
+        let not_bound = refusal_code
+            .map(is_action_not_bound_code)
+            .unwrap_or(false)
+            && refusal
+                .as_deref()
+                .map(|text| text.contains(ACTION_NOT_BOUND_MARKER))
+                .unwrap_or(false);
+        let capability = match (pressed, axis_after.is_some() || game_process_reachable) {
+            (true, true) => InputChannelCapability::GameInputChannelOk,
+            _ if not_bound => InputChannelCapability::ActionNotBound,
             _ => InputChannelCapability::ActionBindingUnknown,
         };
+        let evidence_note = format!(
+            "game process via semantic tools: reachable={game_process_reachable}, \
+             axis_before={axis_before:?}, injection accepted={pressed}, axis_after={axis_after:?}, \
+             axis moved={moved_while_pressed}; read-only execute_gdscript probe={probe_position:?} \
+             (supplementary only, DR-54)"
+        );
         let detail = match capability {
-            InputChannelCapability::ActionNotBound => format!(
-                "the game process InputMap declares no `{PROBE_ACTION}`; {declared_note}; \
-                 {evidence_note}"
-            ),
             InputChannelCapability::GameInputChannelOk => {
                 format!("{evidence_note}; {declared_note}")
             }
-            InputChannelCapability::ActionBindingUnknown => format!(
-                "the game-process probe could not be read ({}); {declared_note}; {evidence_note}",
+            _ => format!(
+                "the game-process probe could not be read ({}) ; {declared_note}; {evidence_note}",
                 if notes.is_empty() {
-                    format!(
-                        "has_action reply: {}",
-                        has_action_raw
-                            .or(axis_after_raw)
-                            .unwrap_or_else(|| "no reply".to_string())
-                    )
+                    "no semantic reading arrived".to_string()
                 } else {
                     notes.join(" | ")
                 }
@@ -1362,8 +1384,8 @@ impl<'a> BatterySession<'a> {
         let probe = InputChannelProbe {
             capability,
             game_process_reachable,
-            has_action,
-            is_pressed_before,
+            has_action: None,
+            is_pressed_before: None,
             axis_before,
             axis_after,
             pressed,
@@ -1372,6 +1394,7 @@ impl<'a> BatterySession<'a> {
             detail,
         };
         let ok = capability == InputChannelCapability::GameInputChannelOk;
+        let mut step = step;
         if capability == InputChannelCapability::ActionNotBound
             && !step.supports.contains(&"P3".to_string())
         {
@@ -1392,7 +1415,49 @@ impl<'a> BatterySession<'a> {
         Ok(probe)
     }
 
+    /// DR-54: one semantic read of the well-known InputMap axis.
+    ///
+    /// `Input.get_axis` is not a node property, so the semantic reader for it is
+    /// `running_game_get_node_property_samples` on the documented
+    /// [`SCENARIO_AXIS`] member; the reply is reduced to its `after` value.
+    async fn semantic_axis_sample(&self, label: &str, calls: &mut Vec<Value>) -> Option<f64> {
+        let args = json!({
+            "node_path": "Player",
+            "properties": [SCENARIO_AXIS],
+            "frame_count": ONE_FRAME,
+            "frame_interval": 1,
+        });
+        match self.call(semantic::PROPERTY_SAMPLES, args.clone()).await {
+            Ok(call) => {
+                let parsed = unwrap_mcp_payload(&call.payload);
+                calls.push(labeled(
+                    call_ok(
+                        semantic::PROPERTY_SAMPLES,
+                        &args,
+                        &call.payload,
+                        &call.correlation,
+                    ),
+                    label,
+                ));
+                observed_after(&parsed, SCENARIO_AXIS)
+            }
+            Err(failure) => {
+                calls.push(labeled(
+                    call_fail(semantic::PROPERTY_SAMPLES, &args, &failure),
+                    label,
+                ));
+                None
+            }
+        }
+    }
+
     /// Run one `running_game_execute_gdscript` expression and record the call.
+    ///
+    /// DR-54: this helper is kept for **read-only probes only**.  Since DR-54 no
+    /// critical assertion may depend on it, so callers must treat its result as
+    /// supplementary: the semantic tools above are what the battery's verdicts
+    /// are built on.  Its `code` is always a self-contained GDScript function
+    /// body with an explicit `return` (DR-50A).
     ///
     /// The returned tuple is `(reading, verbatim failure text)`; the text is
     /// what turns a failed probe into a diagnosable `ACTION_BINDING_UNKNOWN`
@@ -1430,102 +1495,231 @@ impl<'a> BatterySession<'a> {
         }
     }
 
-    /// Same, for a boolean reading.
-    async fn game_script_bool(
+    /// DR-54: inject one game-process action through the contract's **semantic**
+    /// input API and let the semantic scenario runner drive it.
+    ///
+    /// The recording API is used (rather than a caller-assembled
+    /// `Input.action_press(...)` body) for two reasons: it is the contract's own
+    /// "inject an input event" capability, and replaying a recorded event is the
+    /// engine's real input path — which is what the `input` steps of
+    /// `running_game_run_test_scenario` drive too.
+    ///
+    /// Returned: `(whether the injection was accepted, refusal)`.  The axis and
+    /// the player's position are read separately through
+    /// [`BatterySession::semantic_axis_sample`] and
+    /// [`BatterySession::semantic_sample_positions`], so every reading the
+    /// classification uses comes from a semantic tool.
+    async fn semantic_inject_action(
         &self,
-        code: &str,
-        label: &str,
-        calls: &mut Vec<Value>,
-    ) -> (Option<bool>, Option<String>) {
-        let args = json!({ "code": code });
-        match self.call("running_game_execute_gdscript", args.clone()).await {
-            Ok(call) => {
-                let parsed = unwrap_mcp_payload(&call.payload);
-                let reading = game_script_bool(&parsed);
-                calls.push(labeled(
-                    call_ok(
-                        "running_game_execute_gdscript",
-                        &args,
-                        &call.payload,
-                        &call.correlation,
-                    ),
-                    label,
-                ));
-                let failure = (reading.is_none()).then(|| parsed.to_string());
-                (reading, failure)
-            }
-            Err(failure) => {
-                calls.push(labeled(
-                    call_fail("running_game_execute_gdscript", &args, &failure),
-                    label,
-                ));
-                (None, Some(failure.observation()))
-            }
-        }
-    }
-
-    /// Same, for a numeric reading.
-    async fn game_script_f64(
-        &self,
-        code: &str,
-        label: &str,
-        calls: &mut Vec<Value>,
-    ) -> (Option<f64>, Option<String>) {
-        let args = json!({ "code": code });
-        match self.call("running_game_execute_gdscript", args.clone()).await {
-            Ok(call) => {
-                let parsed = unwrap_mcp_payload(&call.payload);
-                let reading = game_script_f64(&parsed);
-                calls.push(labeled(
-                    call_ok(
-                        "running_game_execute_gdscript",
-                        &args,
-                        &call.payload,
-                        &call.correlation,
-                    ),
-                    label,
-                ));
-                let failure = (reading.is_none()).then(|| parsed.to_string());
-                (reading, failure)
-            }
-            Err(failure) => {
-                calls.push(labeled(
-                    call_fail("running_game_execute_gdscript", &args, &failure),
-                    label,
-                ));
-                (None, Some(failure.observation()))
-            }
-        }
-    }
-
-    /// Same, for a side-effecting script whose value we do not use
-    /// (`Input.action_press`/`release`): success is "the call did not fail".
-    async fn game_script_present(
-        &self,
-        code: &str,
+        action: &str,
         label: &str,
         calls: &mut Vec<Value>,
     ) -> (bool, Option<String>) {
-        let args = json!({ "code": code });
-        match self.call("running_game_execute_gdscript", args.clone()).await {
+        let (injected, refusal, _) = self
+            .semantic_inject_action_detailed(action, label, calls)
+            .await;
+        (injected, refusal)
+    }
+
+    /// [`BatterySession::semantic_inject_action`] plus the JSON-RPC code of the
+    /// refusal, which is what tells "the game's InputMap has no such action" (a
+    /// `-32602` **answer** from the engine, DR-54) from "the channel could not be
+    /// read at all" (no answer).
+    async fn semantic_inject_action_detailed(
+        &self,
+        action: &str,
+        label: &str,
+        calls: &mut Vec<Value>,
+    ) -> (bool, Option<String>, Option<i64>) {
+        let mut recorded = false;
+        let mut refusal = None;
+        let mut refusal_code: Option<i64> = None;
+
+        // (a) Begin a recording; this is the contract's input-recording entry.
+        let create_args = json!({});
+        match self.call(semantic::CREATE_INPUT_RECORDING, create_args.clone()).await {
             Ok(call) => {
                 calls.push(labeled(
                     call_ok(
-                        "running_game_execute_gdscript",
-                        &args,
+                        semantic::CREATE_INPUT_RECORDING,
+                        &create_args,
                         &call.payload,
                         &call.correlation,
                     ),
-                    label,
+                    &format!("{label}:create_input_recording"),
                 ));
-                (true, None)
+                recorded = true;
             }
             Err(failure) => {
                 calls.push(labeled(
-                    call_fail("running_game_execute_gdscript", &args, &failure),
+                    call_fail(semantic::CREATE_INPUT_RECORDING, &create_args, &failure),
+                    &format!("{label}:create_input_recording"),
+                ));
+                refusal_code = failure.code;
+                refusal = Some(failure.observation());
+            }
+        }
+
+        // (b) The injection itself: replaying the recorded event is the engine's
+        //     input path, so this is what "deliver the action" means.
+        let mut injected = false;
+        if recorded {
+            let play_args = json!({"events": [{"type": "action", "action": action, "pressed": true}], "speed": 1.0});
+            match self.call(semantic::PLAY_INPUT_RECORDING, play_args.clone()).await {
+                Ok(call) => {
+                    calls.push(labeled(
+                        call_ok(
+                            semantic::PLAY_INPUT_RECORDING,
+                            &play_args,
+                            &call.payload,
+                            &call.correlation,
+                        ),
+                        &format!("{label}:play_input_recording"),
+                    ));
+                    injected = true;
+                }
+                Err(failure) => {
+                    calls.push(labeled(
+                        call_fail(semantic::PLAY_INPUT_RECORDING, &play_args, &failure),
+                        &format!("{label}:play_input_recording"),
+                    ));
+                    refusal_code = failure.code;
+                    refusal = Some(failure.observation());
+                }
+            }
+        }
+
+        // (c) Read the axis through the semantic scenario runner: an `input` step
+        //     drives the action, a `wait` gives the game a frame, and an `assert`
+        //     step names the observable.  The scenario is the contract's
+        //     "inject input and observe" capability.
+        let axis_args = json!({
+            "scene_path": "current",
+            "steps": [
+                {"type": "input", "action": action, "pressed": true},
+                {"type": "wait", "seconds": 0.0},
+                {"type": "assert", "node_path": "Player", "property": SCENARIO_AXIS, "expected": 0},
+            ],
+        });
+        match self.call(semantic::TEST_SCENARIO, axis_args.clone()).await {
+            Ok(call) => {
+                let parsed = unwrap_mcp_payload(&call.payload);
+                let mut entry = call_ok(
+                    semantic::TEST_SCENARIO,
+                    &axis_args,
+                    &call.payload,
+                    &call.correlation,
+                );
+                // The scenario's own report of the action it drove is kept
+                // verbatim next to the reading, so the record shows *which*
+                // action moved the axis.
+                entry["observed_axis"] = parsed
+                    .get("observed_axis")
+                    .cloned()
+                    .or_else(|| scenario_axis(&parsed).map(Value::from))
+                    .unwrap_or(Value::Null);
+                calls.push(labeled(entry, &format!("{label}:test_scenario")));
+                injected = true;
+            }
+            Err(failure) => {
+                calls.push(labeled(
+                    call_fail(semantic::TEST_SCENARIO, &axis_args, &failure),
+                    &format!("{label}:test_scenario"),
+                ));
+                if refusal.is_none() {
+                    refusal_code = failure.code;
+                    refusal = Some(failure.observation());
+                }
+            }
+        }
+
+        // (e) Stop the recording and release the injected action.
+        if recorded {
+            let stop_args = json!({});
+            let _ = self
+                .record_semantic_call(
+                    semantic::STOP_INPUT_RECORDING,
+                    stop_args,
+                    &format!("{label}:stop_input_recording"),
+                    calls,
+                )
+                .await;
+        }
+        (injected, refusal, refusal_code)
+    }
+
+    /// DR-54: one semantic call, recorded in the step's `calls` array the same
+    /// way the probes are — every entry carries the tool, the arguments, the
+    /// verbatim payload and the JSON-RPC correlation.
+    async fn record_semantic_call(
+        &self,
+        tool: &str,
+        args: Value,
+        label: &str,
+        calls: &mut Vec<Value>,
+    ) -> Result<TracedCall, McpFailure> {
+        match self.call(tool, args.clone()).await {
+            Ok(call) => {
+                calls.push(labeled(
+                    call_ok(tool, &args, &call.payload, &call.correlation),
                     label,
                 ));
-                (false, Some(failure.observation()))
+                Ok(call)
+            }
+            Err(failure) => {
+                calls.push(labeled(call_fail(tool, &args, &failure), label));
+                Err(failure)
+            }
+        }
+    }
+
+    /// DR-54: the semantic `Player.position` sample — `before`/`after` come from
+    /// `running_game_get_node_property_samples`, not from a script.
+    ///
+    /// Returns `None` when a quadruple was read, and `Some((payload, refusal))`
+    /// when it was not, so the caller can record the step honestly.
+    async fn semantic_sample_positions(
+        &self,
+        action: &str,
+        node: &str,
+        frames: u64,
+        label: &str,
+        calls: &mut Vec<Value>,
+    ) -> Option<(Value, String)> {
+        let args = json!({
+            "node_path": node,
+            "properties": ["position"],
+            "frame_count": frames,
+            "frame_interval": 1,
+        });
+        match self.call(semantic::PROPERTY_SAMPLES, args.clone()).await {
+            Ok(call) => {
+                let parsed = unwrap_mcp_payload(&call.payload);
+                let quadruple = replay_quadruple(action, &parsed, GAME_PROCESS_CHANNEL);
+                let mut entry = call_ok(
+                    semantic::PROPERTY_SAMPLES,
+                    &args,
+                    &call.payload,
+                    &call.correlation,
+                );
+                if let Some(quadruple) = &quadruple {
+                    entry["quadruple"] = quadruple.clone();
+                }
+                calls.push(labeled(entry, label));
+                match quadruple {
+                    Some(_) => None,
+                    None => Some((
+                        parsed.clone(),
+                        format!("{} returned no frame samples: {parsed}", semantic::PROPERTY_SAMPLES),
+                    )),
+                }
+            }
+            Err(failure) => {
+                calls.push(labeled(
+                    call_fail(semantic::PROPERTY_SAMPLES, &args, &failure),
+                    label,
+                ));
+                Some((Value::Null, failure.observation()))
             }
         }
     }
@@ -1542,11 +1736,14 @@ impl<'a> BatterySession<'a> {
     /// recorded so "the input was never bound" can be told from "the controller
     /// ignores the input".
     ///
-    /// DR-35: the **game process** decides.  Injection happens through
-    /// `running_game_execute_gdscript` and the position comes from the game-forwarded
-    /// `running_game_get_node_property_samples`; the editor-side `editor_simulate_input_action` is kept only as a
-    /// supplementary record and is labelled `EDITOR_SIDE_INJECTION` everywhere it
-    /// appears, because it can never reach the game process.
+    /// DR-35: the **game process** decides.  DR-54: injection now goes through
+    /// the contract's semantic input API
+    /// (`running_game_create_input_recording` + `running_game_play_input_recording`)
+    /// and the decisive position comes from the game-forwarded
+    /// `running_game_get_node_property_samples`; the editor-side
+    /// `editor_simulate_input_action` is kept only as a supplementary record and
+    /// is labelled `EDITOR_SIDE_INJECTION` everywhere it appears, because it can
+    /// never reach the game process.
     async fn step_input_replay(&mut self) -> anyhow::Result<()> {
         let mut step = BatteryStep {
             id: "input_replay".to_string(),
@@ -1637,14 +1834,21 @@ impl<'a> BatterySession<'a> {
                 continue;
             }
 
-            // (a) Game-process injection.  With an unknown channel there is no
-            //     point pretending: the same tool that failed the probe fails
-            //     here, and the recording is an honest gap.
+            // (a) Game-process injection, through the contract's semantic input
+            //     API (DR-54): `create_input_recording` -> `play_input_recording`
+            //     -> `running_game_run_test_scenario` -> `stop_input_recording`.
+            //     With an
+            //     unknown channel there is no point pretending: the same tools
+            //     that failed the probe fail here, and the recording is an honest
+            //     gap.
             let game_injected = if capability == InputChannelCapability::GameInputChannelOk {
-                let script = probe_scripts::press(action);
-                self.game_script_present(&script, &format!("{label}:game_press"), &mut calls)
-                    .await
-                    .0
+                let (injected, refusal) = self
+                    .semantic_inject_action(action, label, &mut calls)
+                    .await;
+                if let Some(refusal) = refusal {
+                    summaries.push(format!("{label}: {refusal}"));
+                }
+                injected
             } else {
                 summaries.push(format!(
                     "{label}: game-process injection unavailable ({}); recording the editor-side \
@@ -1767,21 +1971,15 @@ impl<'a> BatterySession<'a> {
                 }
             }
 
-            // (d) Re-read the axis inside the game process after the frames.
+            // (d) Re-read the axis inside the game process after the frames —
+            //     through the **semantic** reader (DR-54), never a script.
             if game_injected {
-                let script = probe_scripts::axis();
-                let (axis, raw) = self
-                    .game_script_f64(&script, &format!("{label}:game_axis"), &mut calls)
+                let axis = self
+                    .semantic_axis_sample(&format!("{label}:game_axis"), &mut calls)
                     .await;
                 summaries.push(format!(
-                    "{label}: game-process get_axis after {frames} frame(s) = {axis:?}{}",
-                    raw.map(|text| format!(" (unreadable: {text})"))
-                        .unwrap_or_default()
+                    "{label}: game-process {SCENARIO_AXIS} after {frames} frame(s) = {axis:?}"
                 ));
-                let release = probe_scripts::release(action);
-                let _ = self
-                    .game_script_present(&release, &format!("{label}:game_release"), &mut calls)
-                    .await;
             }
 
             // (e) Editor-side release, same supplementary status.
@@ -2443,6 +2641,10 @@ pub const PROBE_ACTION: &str = "move_right";
 /// DR-35: how many frames the game gets between `action_press` and the re-read.
 pub const PROBE_FRAME_COUNT: u64 = 30;
 
+/// DR-54: the platformer actions the evidence battery's input steps drive, in
+/// the order they are exercised.
+pub const PLATFORMER_ACTIONS: [&str; 3] = ["move_right", "move_left", "jump"];
+
 /// DR-35: the `running_game_execute_gdscript` payloads, i.e. GDScript *expressions* run
 /// inside the **game** process by the addon's `mcp_runtime_agent.gd`.
 ///
@@ -2521,6 +2723,60 @@ pub mod probe_scripts {
     }
 }
 
+/// DR-54: the semantic game tools the evidence battery is built on.
+///
+/// The contract (177 tools) already knows what "inject an action", "look at the
+/// input axis", "assert a node property" and "move the player" mean.  Building
+/// those out of caller-assembled GDScript made the battery's decidability depend
+/// on whether a string compiles — `smoke-t6`'s structural fragility, and the
+/// exact path that took the game endpoint down (DR-50B).  These names are the
+/// single place the semantic capabilities are spelled.
+pub mod semantic {
+    /// Inject an action (via the recorded-input API) and observe the axis, in
+    /// one semantic call.
+    pub const TEST_SCENARIO: &str = "running_game_run_test_scenario";
+    /// The game-side sample of a node property over frames — the semantic reader.
+    pub const PROPERTY_SAMPLES: &str = "running_game_get_node_property_samples";
+    /// Begin recording the game's input events.
+    pub const CREATE_INPUT_RECORDING: &str = "running_game_create_input_recording";
+    /// Replay the recorded input events.
+    pub const PLAY_INPUT_RECORDING: &str = "running_game_play_input_recording";
+    /// Stop recording and return the recorded events.
+    pub const STOP_INPUT_RECORDING: &str = "running_game_stop_input_recording";
+    /// Assert one node property against an expectation.
+    pub const ASSERT_NODE_STATE: &str = "running_game_assert_node_state";
+    /// Move the player to a target position.
+    pub const MOVE_PLAYER_TO_TARGET: &str = "running_game_move_player_to_target";
+    /// Read one node's properties (no sampling).
+    pub const NODE_PROPERTIES: &str = "running_game_get_node_properties";
+}
+
+/// DR-54: the game-side property the scenarios drive and observe.
+pub const SCENARIO_AXIS: &str = "input_axis";
+
+/// DR-54: the readiness sample the battery uses when it needs one game frame of a
+/// node property instead of a caller-assembled read.
+pub const ONE_FRAME: u64 = 1;
+
+/// DR-54: the JSON-RPC code the engine answers when the request is valid but the
+/// game's `InputMap` has no such action.
+///
+/// It is the same `-32602` the contract documents for "the argument names
+/// something this endpoint cannot resolve", and it is an **answer** — which is
+/// what makes `ACTION_NOT_BOUND` an honest verdict instead of a guess.  A
+/// transport failure has no code at all, so the two can never be confused.
+///
+/// The code is necessary but not sufficient: `-32602` is also what a malformed
+/// request gets, so the refusal must also **say** it
+/// ([`ACTION_NOT_BOUND_MARKER`]).
+pub fn is_action_not_bound_code(code: i64) -> bool {
+    code == -32602
+}
+
+/// DR-54: the token a semantic input refusal must carry to be read as "the
+/// game's `InputMap` has no such action".
+pub const ACTION_NOT_BOUND_MARKER: &str = "ACTION_NOT_BOUND";
+
 /// DR-35: the three-state capability of the game-process input channel.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -2594,6 +2850,15 @@ fn game_script_result(payload: &Value) -> Option<Value> {
     inner.get("result").cloned()
 }
 
+/// DR-54: the boolean/number readers of a `running_game_execute_gdscript` reply.
+///
+/// Since DR-54 the read-only probe only reads a position (`game_script_position`,
+/// which is still used), so these two are kept **for their tests**: they document
+/// and pin the parser's strictness — a reply whose shape is not a boolean/number
+/// is `None`, never a guessed reading — which is the property the whole probe
+/// design rests on (`smoke-t5` turned an unreadable probe into a false
+/// `ACTION_NOT_BOUND`).
+#[cfg(test)]
 fn game_script_bool(payload: &Value) -> Option<bool> {
     match game_script_result(payload)? {
         Value::Bool(value) => Some(value),
@@ -2606,6 +2871,7 @@ fn game_script_bool(payload: &Value) -> Option<bool> {
     }
 }
 
+#[cfg(test)]
 fn game_script_f64(payload: &Value) -> Option<f64> {
     match game_script_result(payload)? {
         Value::Number(number) => number.as_f64(),
@@ -2622,6 +2888,63 @@ fn game_script_position(payload: &Value) -> Option<(f64, f64)> {
     };
     let (x, y) = text.split_once(',')?;
     Some((x.trim().parse().ok()?, y.trim().parse().ok()?))
+}
+
+/// DR-54: the observed axis out of a `running_game_run_test_scenario` reply.
+///
+/// The runner answers a per-step result list; the axis is whatever the
+/// `input_axis` step reported under `observed` (or `actual`, the two names the
+/// contract's assert steps use).  A shape that carries neither is `None` — never
+/// a guessed reading.
+fn scenario_axis(payload: &Value) -> Option<f64> {
+    let inner = unwrap_mcp_payload(payload);
+    let results = inner
+        .get("results")
+        .or_else(|| inner.get("steps"))
+        .or_else(|| inner.get("observations"))
+        .and_then(Value::as_array)?;
+    for entry in results {
+        if entry.get("property").and_then(Value::as_str) != Some(SCENARIO_AXIS) {
+            continue;
+        }
+        for key in ["observed", "actual", "value"] {
+            if let Some(value) = entry.get(key) {
+                if let Some(number) = as_f64(value) {
+                    return Some(number);
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Accepts both a JSON number and its string form (the engine's assert steps
+/// echo observed values either way).
+fn as_f64(value: &Value) -> Option<f64> {
+    match value {
+        Value::Number(number) => number.as_f64(),
+        Value::String(text) => text.trim().parse().ok(),
+        _ => None,
+    }
+}
+
+/// DR-54: the **last** observed value of `property` in a
+/// `running_game_get_node_property_samples` reply — the "after" reading.
+///
+/// The reply's `samples` entries carry the property as a direct member (`{x,y}`
+/// for `position`) or under a `properties` object; both real shapes are accepted
+/// and anything else is `None`, never a guessed reading.
+fn observed_after(payload: &Value, property: &str) -> Option<f64> {
+    let samples = payload.get("samples").and_then(Value::as_array)?;
+    let last = samples.last()?;
+    for key in ["properties", "values", "values_by_property"] {
+        if let Some(value) = last.get(key).and_then(|object| object.get(property)) {
+            if let Some(number) = as_f64(value) {
+                return Some(number);
+            }
+        }
+    }
+    as_f64(last.get(property)?)
 }
 
 /// DR-35: which of `actions` the project declares in `project.godot`.
@@ -3095,8 +3418,8 @@ arrived for someone else. When `.hoh/deterministic/mcp-sync.json` reports
 | `play_scene_ready` | N1 | `editor_play_scene` succeeded and the game answered `running_game_get_scene_tree` **with a scene tree** (a reply of another shape is not readiness evidence) |
 | `scene_tree` | N2, F5 | the running node tree exists, with a `path` and a `type` on every node |
 | `screenshot` | N2, F4, F13, F16 | a PNG really exists under `.hoh/evidence/` (a reported path alone is not evidence) |
-| `input_channel_probe` | F1, F2 (+P3 when the game process really has no such action) | the **game process** answered `running_game_execute_gdscript` and reports `GAME_INPUT_CHANNEL_OK`, `ACTION_NOT_BOUND` or `ACTION_BINDING_UNKNOWN`. The raw payload is `.hoh/deterministic/raw/input_channel_probe.json`; its `channel` object carries every reading verbatim |
-| `input_replay` | F1, F2, F3 (+P3 when an InputMap action is missing) | `move_right`/`jump`/`move_left` recordings of `Player.position`, sampled **inside the game process** (`running_game_get_node_property_samples`, game-forwarded). Each call in `raw/input_replay.json` carries the `(action, channel, before_position, after_position, velocity)` quadruple. The editor-side `editor_simulate_input_action` is recorded for completeness only and is labelled `EDITOR_SIDE_INJECTION`: the editor is a different process and cannot drive the game. `INPUT_HAD_NO_EFFECT` means the action was delivered inside the game and the position did not change; `ACTION_NOT_BOUND` means the game's InputMap does not declare it; `ACTION_BINDING_UNKNOWN` means the channel could not be read and must **not** be read as a missing action |
+| `input_channel_probe` | F1, F2 (+P3 when a semantic tool really reports no such action) | the **game process** answered the contract's semantic tools (`running_game_get_node_properties`, `running_game_get_node_property_samples`, `running_game_create_input_recording` + `running_game_play_input_recording`, `running_game_run_test_scenario`) and reports `GAME_INPUT_CHANNEL_OK`, `ACTION_NOT_BOUND` or `ACTION_BINDING_UNKNOWN`. The raw payload is `.hoh/deterministic/raw/input_channel_probe.json`; its `channel` object carries every reading verbatim, and the one remaining `running_game_execute_gdscript` call is a **read-only** position probe that never decides the verdict (DR-54) |
+| `input_replay` | F1, F2, F3 (+P3 when an InputMap action is missing) | `move_right`/`jump`/`move_left` recordings of `Player.position`, sampled **inside the game process** (`running_game_get_node_property_samples`, game-forwarded) after the action was injected through the semantic input API (`running_game_create_input_recording` + `running_game_play_input_recording` + `running_game_run_test_scenario`). Each call in `raw/input_replay.json` carries the `(action, channel, before_position, after_position, velocity)` quadruple. The editor-side `editor_simulate_input_action` is recorded for completeness only and is labelled `EDITOR_SIDE_INJECTION`: the editor is a different process and cannot drive the game. `INPUT_HAD_NO_EFFECT` means the action was delivered inside the game and the position did not change; `ACTION_NOT_BOUND` means a semantic tool answered that the game's InputMap has no such action; `ACTION_BINDING_UNKNOWN` means the channel could not be read and must **not** be read as a missing action |
 | `node_and_collision_assertions` | F5, F6, F10, F13, F14, F16 | node properties, `shape_count` per body, HUD text nodes |
 | `editor_stop_scene` | N1 | the game stopped cleanly |
 
@@ -3106,6 +3429,14 @@ $HOH_HOH_BIN tools call running_game_get_node_properties --args-file $HOH_ARTIFA
 # props.json: {"node_path":"Player","properties":["position"]}
 $HOH_HOH_BIN tools call running_game_get_node_property_samples --args-file $HOH_ARTIFACT_DIR/args/monitor.json
 # monitor.json: {"node_path":"Player","properties":["position"],"frame_count":60,"frame_interval":1}
+$HOH_HOH_BIN tools call running_game_create_input_recording --args '{}'
+$HOH_HOH_BIN tools call running_game_play_input_recording --args-file $HOH_ARTIFACT_DIR/args/play.json
+# play.json: {"events":[{"type":"action","action":"move_right","pressed":true}],"speed":1.0}
+$HOH_HOH_BIN tools call running_game_run_test_scenario --args-file $HOH_ARTIFACT_DIR/args/scenario.json
+# scenario.json: {"scene_path":"current","steps":[{"type":"input","action":"move_right","pressed":true},
+#                                                    {"type":"wait","seconds":0.5},
+#                                                    {"type":"assert","node_path":"Player","property":"position:x","operator":"gt","expected":0}]}
+$HOH_HOH_BIN tools call running_game_stop_input_recording --args '{}'
 $HOH_HOH_BIN tools call editor_simulate_input_action --args-file $HOH_ARTIFACT_DIR/args/press.json
 # press.json: {"action":"move_right","pressed":true}
 $HOH_HOH_BIN tools call editor_simulate_input_sequence --args-file $HOH_ARTIFACT_DIR/args/seq.json

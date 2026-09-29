@@ -525,17 +525,139 @@ impl ToolChannel for FixtureChannel {
                     panic!("FixtureChannel got an unexpected game script: {code}")
                 }
             }
+            // DR-54: the contract's semantic input API.  The battery injects an
+            // action by recording and replaying it, so the double decides what
+            // the game's `InputMap` holds exactly as it does for the old script
+            // probe: `GameInputMode::ActionMissing` refuses the action.
+            "running_game_create_input_recording" => {
+                if self.game_input == GameInputMode::ProbeFails {
+                    // DR-35/DR-54: the same channel failure `smoke-t5` met — the
+                    // game-process input API is not reachable, so nothing can be
+                    // concluded about the InputMap.
+                    return Err(captured_error("game_script_input_unreachable.txt").into());
+                }
+                json!({"content": [{"type": "text", "text": "{\"recording\": true}"}]})
+            }
+            "running_game_stop_input_recording" => {
+                if self.game_input == GameInputMode::ProbeFails {
+                    return Err(captured_error("game_script_input_unreachable.txt").into());
+                }
+                json!({"content": [{"type": "text", "text": "{\"events\": [], \"count\": 0}"}]})
+            }
+            "running_game_play_input_recording" => {
+                if self.game_input == GameInputMode::ProbeFails {
+                    return Err(captured_error("game_script_input_unreachable.txt").into());
+                }
+                if self.game_input == GameInputMode::ActionMissing {
+                    let action = args
+                        .get("events")
+                        .and_then(Value::as_array)
+                        .and_then(|events| events.first())
+                        .and_then(|event| event.get("action"))
+                        .and_then(Value::as_str)
+                        .unwrap_or("")
+                        .to_string();
+                    return Err(McpError::new(
+                        -32602,
+                        format!("ACTION_NOT_BOUND: no such action in this InputMap: `{action}`"),
+                    )
+                    .into());
+                }
+                let action = args
+                    .get("events")
+                    .and_then(Value::as_array)
+                    .and_then(|events| events.first())
+                    .and_then(|event| event.get("action"))
+                    .and_then(Value::as_str)
+                    .unwrap_or("move_right");
+                *self.last_action.lock().unwrap() = action.to_string();
+                *self.pressed_in_game.lock().unwrap() = true;
+                json!({"content": [{"type": "text", "text": "{\"replayed\": true, \"count\": 1}"}]})
+            }
+            "running_game_run_test_scenario" => {
+                if self.game_input == GameInputMode::ProbeFails {
+                    return Err(captured_error("game_script_input_unreachable.txt").into());
+                }
+                if self.game_input == GameInputMode::ActionMissing {
+                    return Err(McpError::new(
+                        -32602,
+                        "ACTION_NOT_BOUND: no such action in this InputMap: `move_right`",
+                    )
+                    .into());
+                }
+                let action = args
+                    .get("steps")
+                    .and_then(Value::as_array)
+                    .and_then(|steps| {
+                        steps
+                            .iter()
+                            .find(|step| step["type"] == json!("input"))
+                            .and_then(|step| step.get("action"))
+                    })
+                    .and_then(Value::as_str)
+                    .unwrap_or("move_right")
+                    .to_string();
+                *self.last_action.lock().unwrap() = action.clone();
+                *self.pressed_in_game.lock().unwrap() = true;
+                let bound = self.game_input == GameInputMode::Ok;
+                let axis = if bound && self.moving { 1.0 } else { 0.0 };
+                let inner = json!({
+                    "observed_axis": axis,
+                    "results": [
+                        {"index": 0, "type": "input", "action": action, "ok": true},
+                        {"index": 1, "type": "wait", "ok": true, "waited_seconds": 0.0},
+                        {"index": 2, "type": "assert", "node_path": "Player",
+                         "property": "input_axis", "operator": "eq",
+                         "expected": 0, "observed": axis, "ok": true},
+                    ],
+                });
+                json!({"content": [{"type": "text", "text": inner.to_string()}]})
+            }
             "running_game_get_node_property_samples" => {
+                if self.game_input == GameInputMode::ProbeFails {
+                    // The game-process reading itself is unavailable.
+                    return Err(captured_error("game_script_input_unreachable.txt").into());
+                }
                 let action = self.last_action.lock().unwrap().clone();
                 let frames = args
                     .get("frame_count")
                     .and_then(Value::as_u64)
                     .unwrap_or(60);
-                // DR-35: the game moves only when the **game process** received
-                // the press.  An editor-side `editor_simulate_input_action` cannot move it,
-                // which is exactly the `smoke-t5` finding.
                 let pressed_in_game = *self.pressed_in_game.lock().unwrap();
                 let moves = self.moving && self.game_input == GameInputMode::Ok && pressed_in_game;
+                // DR-54: the axis has its own semantic sample shape; the
+                // classification reads it from the **last** sample.
+                let properties: Vec<String> = args
+                    .get("properties")
+                    .and_then(Value::as_array)
+                    .map(|items| {
+                        items
+                            .iter()
+                            .filter_map(Value::as_str)
+                            .map(ToOwned::to_owned)
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                if properties.iter().any(|name| name == "input_axis") {
+                    let axis = if self.game_input == GameInputMode::Ok && pressed_in_game {
+                        if self.moving {
+                            1.0
+                        } else {
+                            0.0
+                        }
+                    } else {
+                        0.0
+                    };
+                    let inner = json!({
+                        "node_path": "Player",
+                        "frame_count": 1,
+                        "samples": [{"frame": 0, "properties": {"input_axis": axis}}],
+                    });
+                    return Ok(ToolResult {
+                        ok: true,
+                        payload: json!({"content": [{"type": "text", "text": inner.to_string()}]}),
+                    });
+                }
                 monitor_payload(&action, frames, moves)
             }
             "running_game_get_node_properties" => match args["node_path"].as_str().unwrap_or("") {
@@ -1482,10 +1604,16 @@ async fn every_tool_call_hof_rs_makes_matches_the_contract_schema() {
         "project_read_scene_file_content",
         "running_game_capture_frames",
         "running_game_capture_screenshot",
+        // DR-54: the semantic capabilities E3's critical path is built on.  A
+        // call site that stops using them (or a renamed one) fails this audit.
+        "running_game_create_input_recording",
         "running_game_execute_gdscript",
         "running_game_get_node_properties",
         "running_game_get_node_property_samples",
         "running_game_get_scene_tree",
+        "running_game_play_input_recording",
+        "running_game_run_test_scenario",
+        "running_game_stop_input_recording",
     ];
 
     let mut recorded: Vec<(String, Value)> = Vec::new();
@@ -1529,59 +1657,62 @@ async fn every_tool_call_hof_rs_makes_matches_the_contract_schema() {
 // DR-50 — `running_game_execute_gdscript` takes a GDScript *body*
 // ---------------------------------------------------------------------------
 
-/// DR-50: the recorded probe calls must be body-shaped.
+/// DR-50A (kept under DR-54): `running_game_execute_gdscript` takes a GDScript
+/// **function body**, so every call hof-rs still makes must be a body that
+/// returns a value.
 ///
-/// `code` is compiled into a function body
-/// (`running_game_script_execution.cpp:57-59`), so a value only travels through
-/// `return`; a bare expression is answered with `{"result":null,
-/// "result_type":"Nil"}` — which is exactly what all four transport-successful
-/// probe calls returned in `smoke-t6`.  And a **void** call may not be used as a
-/// value at all: `str(Input.action_press(…))` is a compile error in this engine
-/// (`gdscript_analyzer.cpp:3498`, `Cannot get return value of call to
-/// "action_press()" because it returns "void".`).
+/// `smoke-t6`'s four transport-successful probe calls all answered
+/// `{"result":null,"result_type":"Nil"}`, because the scripts were bare
+/// expressions.  Since DR-54 the battery's critical path no longer uses this
+/// tool at all — what remains is the read-only position probe — so this test now
+/// asserts the surviving calls are body-shaped **and** that no side-effecting
+/// mutation is a GDScript call any more.  The double in this file models the
+/// engine's Nil answer, so a regression here also fails the end-to-end battery.
 #[tokio::test]
-async fn the_game_probe_calls_are_gdscript_bodies() {
+async fn every_surviving_execute_gdscript_call_is_a_gdscript_body() {
     let temp = tempfile::tempdir().unwrap();
     let root = temp.path();
     let channel = Arc::new(FixtureChannel::green());
     let run = run_battery(root, channel.clone(), 30).await;
 
-    let raw: Value = serde_json::from_str(&read(
-        &run.run_dir
-            .join("iter-1/candidate/.hoh/deterministic/raw/input_channel_probe.json"),
-    ))
-    .unwrap();
-    let scripts: Vec<String> = raw["calls"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .filter(|call| call["tool"] == json!("running_game_execute_gdscript"))
-        .filter_map(|call| call["args"]["code"].as_str().map(ToOwned::to_owned))
-        .collect();
-    assert!(!scripts.is_empty(), "the probe must have run scripts: {raw}");
+    let mut scripts: Vec<String> = Vec::new();
+    for step_id in ["input_channel_probe", "input_replay"] {
+        let raw: Value = serde_json::from_str(&read(
+            &run.run_dir.join(format!(
+                "iter-1/candidate/.hoh/deterministic/raw/{step_id}.json"
+            )),
+        ))
+        .unwrap();
+        scripts.extend(
+            raw["calls"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|call| call["tool"] == json!("running_game_execute_gdscript"))
+                .filter_map(|call| call["args"]["code"].as_str().map(ToOwned::to_owned)),
+        );
+    }
 
-    let mut readings = 0;
+    // DR-54: the read-only probe is still exercised, so the shape guard has real
+    // subjects — but it is the *only* remaining user of this tool on the critical
+    // path.
+    assert!(
+        !scripts.is_empty(),
+        "the read-only position probe must still run: {scripts:?}"
+    );
     for script in &scripts {
         let trimmed = script.trim_start();
-        let mutation = script.contains("Input.action_press(") || script.contains("Input.action_release(");
-        if mutation {
-            assert!(
-                !trimmed.starts_with("return "),
-                "a void mutation must stay a statement (DR-50): {script}"
-            );
-            assert!(
-                !script.contains("str("),
-                "wrapping a void call in `str()` does not compile (DR-50): {script}"
-            );
-        } else {
-            readings += 1;
-            assert!(
-                trimmed.starts_with("return "),
-                "a value-reading probe must `return` its reading (DR-50): {script}"
-            );
-        }
+        assert!(
+            trimmed.starts_with("return "),
+            "a value-reading body must `return` its reading (DR-50A): {script}"
+        );
+        // DR-50: a void call used as a value does not compile — the exact body
+        // that took the game endpoint down in `smoke-t6`.
+        assert!(
+            !script.contains("Input.action_press(") && !script.contains("Input.action_release("),
+            "input injection must not be a caller-assembled script any more (DR-54): {script}"
+        );
     }
-    assert!(readings >= 4, "expected the reading probes: {scripts:?}");
 
     // And the readings must actually arrive: a body without `return` answers Nil,
     // which the double reproduces, so the capability verdict proves it.
@@ -1592,6 +1723,203 @@ async fn the_game_probe_calls_are_gdscript_bodies() {
             .contains("GAME_INPUT_CHANNEL_OK"),
         "the readings must be readable: {:?}",
         step(&run.records, "input_channel_probe").record.observation
+    );
+}
+
+/// DR-54 ①: the input channel's **critical assertion** is built on the
+/// contract's semantic tools, not on caller-assembled GDScript.
+///
+/// `input_channel_probe` classifies `GAME_INPUT_CHANNEL_OK` / `ACTION_NOT_BOUND`
+/// / `ACTION_BINDING_UNKNOWN`, and `input_replay`'s F1/F2/F3 verdict reads that
+/// classification — so this is the load-bearing path.  It must be produced by
+/// the semantic input API (`create_input_recording` + `play_input_recording` +
+/// `running_game_run_test_scenario`) and the semantic reader
+/// (`get_node_property_samples`), with `execute_gdscript` reduced to a read-only
+/// probe whose value is recorded but never the sole evidence.
+#[tokio::test]
+async fn the_input_channel_critical_path_is_built_on_semantic_tools() {
+    let temp = tempfile::tempdir().unwrap();
+    let channel = Arc::new(FixtureChannel::green());
+    let run = run_battery(temp.path(), channel.clone(), 30).await;
+
+    let raw: Value = serde_json::from_str(&read(
+        &run.run_dir
+            .join("iter-1/candidate/.hoh/deterministic/raw/input_channel_probe.json"),
+    ))
+    .unwrap();
+    let tools_of = |raw: &Value| -> Vec<String> {
+        raw["calls"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|call| call["tool"].as_str().map(ToOwned::to_owned))
+            .collect()
+    };
+    let tools = tools_of(&raw);
+    for semantic_tool in [
+        "running_game_create_input_recording",
+        "running_game_play_input_recording",
+        "running_game_run_test_scenario",
+        "running_game_get_node_property_samples",
+    ] {
+        assert!(
+            tools.iter().any(|tool| tool == semantic_tool),
+            "`{semantic_tool}` must carry the probe: {tools:?}"
+        );
+    }
+
+    // The classification came out of the semantic evidence …
+    assert_eq!(raw["channel"]["capability"], json!("GAME_INPUT_CHANNEL_OK"));
+    assert_eq!(raw["channel"]["pressed"], json!(true));
+
+    // … and the supplementary GDScript call is a read-only probe: it returns a
+    // value and it mutates nothing.
+    let script_calls: Vec<&Value> = raw["calls"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|call| call["tool"] == json!("running_game_execute_gdscript"))
+        .collect();
+    assert!(!script_calls.is_empty(), "the read-only probe is kept: {raw}");
+    for call in &script_calls {
+        let code = call["args"]["code"].as_str().unwrap_or("");
+        assert!(
+            code.trim_start().starts_with("return "),
+            "a read-only probe must return its reading: {call}"
+        );
+        assert!(
+            !code.contains("Input.action_press(") && !code.contains("Input.action_release("),
+            "a read-only probe must not inject input (DR-54): {call}"
+        );
+    }
+}
+
+/// DR-54 ① (continued): the replay's injection goes through the semantic input
+/// API too — no `execute_gdscript` call may be the thing that presses a key.
+#[tokio::test]
+async fn the_input_replay_injection_is_semantic_not_gdscript() {
+    let temp = tempfile::tempdir().unwrap();
+    let channel = Arc::new(FixtureChannel::green());
+    let run = run_battery(temp.path(), channel.clone(), 30).await;
+
+    for (action, label) in [
+        ("move_right", "move_right"),
+        ("jump", "jump"),
+        ("move_left", "move_left"),
+    ] {
+        let injected = channel.calls_of("running_game_play_input_recording");
+        assert!(
+            injected.iter().any(|args| args["events"]
+                .as_array()
+                .map(|events| events
+                    .iter()
+                    .any(|event| event["action"] == json!(action)))
+                .unwrap_or(false)),
+            "`{action}` must be injected through the semantic recording API: {injected:?}"
+        );
+        assert!(
+            channel
+                .calls_of("running_game_run_test_scenario")
+                .iter()
+                .any(|args| args["steps"]
+                    .as_array()
+                    .map(|steps| steps
+                        .iter()
+                        .any(|step| step["action"] == json!(action)))
+                    .unwrap_or(false)),
+            "the scenario runner must drive `{action}`: {:?}",
+            channel.calls_of("running_game_run_test_scenario")
+        );
+
+        // The step's own record carries the semantic reader under a label that
+        // names the action, so the reading is attributable.
+        let raw: Value = serde_json::from_str(&read(
+            &run.run_dir
+                .join("iter-1/candidate/.hoh/deterministic/raw/input_replay.json"),
+        ))
+        .unwrap();
+        let labels: Vec<String> = raw["calls"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|call| call["tool"] == json!("running_game_get_node_property_samples"))
+            .map(|call| call["label"].as_str().unwrap_or("<none>").to_string())
+            .collect();
+        assert!(
+            labels
+                .iter()
+                .any(|value| value.starts_with(&format!("{label}:"))),
+            "the `{label}` position samples must be semantic and attributable: {labels:?}"
+        );
+    }
+
+    // The position evidence is the semantic sample's quadruple.
+    let raw: Value = serde_json::from_str(&read(
+        &run.run_dir
+            .join("iter-1/candidate/.hoh/deterministic/raw/input_replay.json"),
+    ))
+    .unwrap();
+    let quadruples: Vec<&Value> = raw["calls"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|call| call.get("quadruple"))
+        .collect();
+    assert!(
+        quadruples.len() >= 4,
+        "at least one game-process quadruple per replayed action (plus the probe's own sample): {raw}"
+    );
+    for quadruple in quadruples {
+        assert_eq!(quadruple["channel"], json!("game_process"));
+    }
+}
+
+/// DR-54 ②: the semantic tool is the load-bearing call.  When the semantic input
+/// API refuses the action and the semantic reader cannot be read, the probe must
+/// report `ACTION_BINDING_UNKNOWN` — the legacy GDScript probe answering happily
+/// must not rescue the verdict.
+#[tokio::test]
+async fn a_semantic_refusal_is_not_rescued_by_the_gdscript_probe() {
+    let temp = tempfile::tempdir().unwrap();
+    let channel = Arc::new(
+        FixtureChannel::green()
+            .fail_always(
+                "running_game_play_input_recording",
+                McpError::new(-32602, "no game endpoint answered the recording replay"),
+            )
+            .fail_always(
+                "running_game_run_test_scenario",
+                McpError::new(-32602, "no game endpoint answered the scenario"),
+            )
+            .fail_always(
+                "running_game_get_node_property_samples",
+                McpError::new(-32602, "no game endpoint answered the samples"),
+            ),
+    );
+    let run = run_battery(temp.path(), channel, 30).await;
+
+    let probe = step(&run.records, "input_channel_probe");
+    assert!(
+        !probe.ok,
+        "a semantic refusal cannot be a usable channel: {:?}",
+        probe.record.observation
+    );
+    assert!(
+        probe.record.observation.contains("ACTION_BINDING_UNKNOWN"),
+        "{}",
+        probe.record.observation
+    );
+    assert!(
+        !probe.record.observation.contains("ACTION_NOT_BOUND"),
+        "an unreadable channel is never downgraded: {}",
+        probe.record.observation
+    );
+    // The read-only GDScript probe *did* answer (the double still serves it), and
+    // that must be visible as supplementary — it changed nothing.
+    assert!(
+        probe.record.observation.contains("read-only execute_gdscript probe=Some"),
+        "the supplementary probe's reading must be recorded: {}",
+        probe.record.observation
     );
 }
 
@@ -1632,10 +1960,27 @@ async fn a_usable_game_channel_makes_the_replay_green() {
         "{}",
         replay.record.observation
     );
-    // The game-side injection really went through `running_game_execute_gdscript`.
+    // The game-side injection really went through the semantic input API
+    // (DR-54), and the legacy script probe is no longer what drives it.
     assert!(
-        channel.call_count("running_game_execute_gdscript") >= 8,
-        "the probe and the replay must drive the game process directly"
+        channel.call_count("running_game_play_input_recording") >= 4,
+        "the probe and the replay must drive the game process through the semantic API"
+    );
+    assert!(
+        channel.call_count("running_game_run_test_scenario") >= 4,
+        "every action must be driven through the semantic scenario runner"
+    );
+    let script_mutations: Vec<Value> = channel
+        .calls_of("running_game_execute_gdscript")
+        .into_iter()
+        .filter(|args| {
+            let code = args["code"].as_str().unwrap_or("");
+            code.contains("Input.action_press(") || code.contains("Input.action_release(")
+        })
+        .collect();
+    assert!(
+        script_mutations.is_empty(),
+        "no input injection may be a caller-assembled script any more (DR-54): {script_mutations:?}"
     );
     // DR-35: the raw probe payload is persisted verbatim.
     let raw: Value = serde_json::from_str(&read(
@@ -1649,17 +1994,25 @@ async fn a_usable_game_channel_makes_the_replay_green() {
         json!("GAME_INPUT_CHANNEL_OK"),
         "{raw}"
     );
-    assert_eq!(raw["channel"]["has_action"], json!(true));
-    assert!(
-        raw["calls"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .filter(|call| call["tool"] == json!("running_game_execute_gdscript"))
-            .count()
-            >= 6,
-        "every probe reading must be recorded verbatim: {raw}"
-    );
+    assert_eq!(raw["channel"]["pressed"], json!(true));
+    // Every semantic step of the probe is recorded verbatim, and the read-only
+    // GDScript probe is recorded too.
+    for tool in [
+        "running_game_create_input_recording",
+        "running_game_play_input_recording",
+        "running_game_run_test_scenario",
+        "running_game_get_node_property_samples",
+        "running_game_execute_gdscript",
+    ] {
+        assert!(
+            raw["calls"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|call| call["tool"] == json!(tool)),
+            "`{tool}` must be recorded verbatim: {raw}"
+        );
+    }
 }
 
 /// DR-35 ③: the probe itself fails (exactly the `smoke-t5` error: the addon's
