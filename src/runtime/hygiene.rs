@@ -319,10 +319,17 @@ pub fn mentions_forbidden_source_in_actions_with_root(
 /// DR-59: the workspace-relative deterministic evidence area (DR-17).
 pub const DETERMINISTIC_EVIDENCE_DIR: &str = ".hoh/deterministic";
 
+/// DR-61: the runtime artifact directory itself — the whole tree a previous
+/// round leaves behind.
+pub const ARTIFACT_DIR: &str = ".hoh";
+
 /// DR-61: the evidence *artifact* area (DR-36 screenshots, replays, recordings).
+/// One of the families a measured two-round replay found reachable inside
+/// [`ARTIFACT_DIR`].
 pub const EVIDENCE_DIR: &str = ".hoh/evidence";
 
-/// DR-61: the single evidence bundle path.
+/// DR-61: the single evidence bundle path.  The Developer rewrites it, but it is
+/// role-writable, so it is inside the quarantined tree like everything else.
 pub const EVIDENCE_BUNDLE: &str = ".hoh/evidence.json";
 
 /// DR-61: the MCP argument payloads roles write for `--args-file`.
@@ -342,23 +349,26 @@ pub const SCRATCH_DIR: &str = ".hoh/scratch";
 /// DR-19 secret scan, which walks `runs/<id>/**`.
 pub const QUARANTINE_DIR: &str = "quarantine";
 
-/// DR-61: every workspace-relative path a round start takes out of the read
-/// path, each one **measured** to be a previous-round leftover a traversal of
-/// `.hoh` can reach (see `TASK-DR61-REPORT.md` §3 for the per-path evidence).
+/// DR-61: what a round start takes out of the read path.
 ///
-/// The paths that are *not* here are not here for a measured reason, not for
-/// convenience: `.hoh/{TASK.md,plan.md,TOOLS.md,EVIDENCE_HISTORY.md,PROJECT_MAP.md}`
-/// and `.hoh/skills/**` are rewritten with this round's content by
-/// `write_inputs(&workspace, …)` (`run_loop.rs:672-697`) **before** the Developer
-/// is invoked, so their previous-round bytes are gone from the cwd by the time
-/// any role can read the workspace.
-pub const QUARANTINE_AREAS: &[&str] = &[
-    DETERMINISTIC_EVIDENCE_DIR,
-    EVIDENCE_DIR,
-    EVIDENCE_BUNDLE,
-    ARGS_DIR,
-    SCRATCH_DIR,
-];
+/// **One entry — the whole [`ARTIFACT_DIR`] tree — and that is a measured
+/// decision, not a shortcut.**  The batch began from a curated list of the areas
+/// a two-round replay measured as reachable leftovers
+/// ([`DETERMINISTIC_EVIDENCE_DIR`], [`EVIDENCE_DIR`], [`EVIDENCE_BUNDLE`],
+/// [`ARGS_DIR`], [`SCRATCH_DIR`]).  The regression test then seeded **every**
+/// `.hoh` sibling a real workspace carries (the `smoke-t7` pre-run inventory
+/// plus `.workspace/mario/.hoh`) and measured what the round overwrites:
+/// `.hoh/{TASK.md,plan.md,TOOLS.md,EVIDENCE_HISTORY.md,PROJECT_MAP.md}` and
+/// `.hoh/skills/**` are rewritten by `write_inputs` before the Developer
+/// (`run_loop.rs:672-697`) — but `.hoh/SCAFFOLD.md`, which the runtime injects
+/// into the *views* only (`run_loop.rs:498`), and any other role-authored
+/// `.hoh/<name>` are **not**.  A curated list therefore cannot make "a walk of
+/// `.hoh` cannot reach the previous round's bytes" true; only moving the whole
+/// tree can.  `.hoh` is the runtime's own artifact directory throughout and is
+/// excluded from the artifact identity (`policy.rs`), so the move cannot perturb
+/// `A_0`/`A_t`; a round tolerates a missing `.hoh`, because every producer and
+/// `write_inputs` create the directories they write into.
+pub const QUARANTINE_AREAS: &[&str] = &[ARTIFACT_DIR];
 
 /// DR-49/DR-59: how many `.stale-` names are tried before the rename gives up.
 const STALE_NAME_ATTEMPTS: u32 = 64;
@@ -710,7 +720,9 @@ mod tests {
         files
     }
 
-    /// The seeds of one finished round, one per quarantined area.
+    /// The seeds of one finished round: the measured at-risk families **and** the
+    /// `.hoh` siblings the round rewrites, so "the whole tree moved" is checked
+    /// against a workspace that looks like a real one.
     fn seed_previous_round(workspace: &Path) {
         write(&workspace.join(".hoh/deterministic/battery.json"), "round one\n");
         write(&workspace.join(".hoh/deterministic/raw/probe.json"), "{}\n");
@@ -718,13 +730,18 @@ mod tests {
         write(&workspace.join(".hoh/evidence.json"), "{}\n");
         write(&workspace.join(".hoh/args/probe.json"), "{}\n");
         write(&workspace.join(".hoh/scratch/probe.txt"), "probe\n");
+        // Measured: the round never rewrites this one (it is injected into the
+        // views only, `run_loop.rs:498`), so a curated list would leave it behind.
+        write(&workspace.join(".hoh/SCAFFOLD.md"), "scaffold\n");
+        write(&workspace.join(".hoh/skills/godot-dev.md"), "skill\n");
     }
 
-    /// DR-61: the previous round's evidence is **moved out of the workspace**
-    /// byte-for-byte, every measured area is isolated, and a walk of `.hoh` can
-    /// no longer reach one byte of it.
+    /// DR-61: the previous round's whole `.hoh` tree is **moved out of the
+    /// workspace** byte-for-byte, including the families a curated list would
+    /// keep moving and the siblings it would miss, and a walk of `.hoh` can no
+    /// longer reach one byte of it.
     #[test]
-    fn quarantine_moves_every_measured_area_out_of_the_workspace() {
+    fn quarantine_moves_the_whole_artifact_tree_out_of_the_workspace() {
         let temp = tempfile::tempdir().unwrap();
         let workspace = temp.path().join("workspace");
         let run_dir = temp.path().join("runs/run-1");
@@ -733,14 +750,12 @@ mod tests {
         let moved = quarantine_previous_evidence(&workspace, &run_dir).unwrap();
 
         let lives: Vec<&str> = moved.iter().map(|area| area.live).collect();
-        assert_eq!(lives, QUARANTINE_AREAS, "every measured area must be moved");
-
-        for area in QUARANTINE_AREAS {
-            assert!(
-                !workspace.join(area).exists(),
-                "the live path {area} must be gone after the quarantine"
-            );
-        }
+        assert_eq!(lives, QUARANTINE_AREAS, "the artifact tree must be moved");
+        assert_eq!(lives, vec![ARTIFACT_DIR]);
+        assert!(
+            !workspace.join(ARTIFACT_DIR).exists(),
+            "the live artifact tree must be gone after the quarantine"
+        );
         for area in &moved {
             assert!(
                 area.target.starts_with(run_dir.join(QUARANTINE_DIR)),
@@ -779,28 +794,36 @@ mod tests {
             kept.keys().collect::<Vec<_>>()
         );
         assert_eq!(
-            preserved("evidence.json.stale-"),
+            preserved("evidence.json"),
             Some(b"{}\n".as_slice()),
-            "the evidence bundle must be moved as a file: {:?}",
+            "the evidence bundle must be moved: {:?}",
             kept.keys().collect::<Vec<_>>()
         );
-        assert_eq!(preserved("args.stale-"), Some(b"{}\n".as_slice()));
         assert_eq!(
-            preserved("scratch.stale-"),
+            preserved("args/probe.json"),
+            Some(b"{}\n".as_slice()),
+            "the args family must be moved: {:?}",
+            kept.keys().collect::<Vec<_>>()
+        );
+        assert_eq!(
+            preserved("scratch/probe.txt"),
             Some(b"probe\n".as_slice())
         );
+        // The sibling a curated list would have left behind is in the quarantine
+        // too: the round never rewrites it.
+        assert_eq!(preserved("SCAFFOLD.md"), Some(b"scaffold\n".as_slice()));
+        assert_eq!(preserved("skills/godot-dev.md"), Some(b"skill\n".as_slice()));
 
-        let reached = walk(&workspace.join(".hoh"));
+        // Nothing is left in the cwd to walk: the workspace held only `.hoh`.
+        let reached = walk(&workspace);
         assert!(
-            !reached
-                .values()
-                .any(|bytes| bytes.as_slice() == b"round one\n"),
-            "a walk of `.hoh` still reaches the previous round's evidence: {:?}",
+            reached.is_empty(),
+            "a walk of the workspace still reaches previous-round bytes: {:?}",
             reached.keys().collect::<Vec<_>>()
         );
         assert!(
             !reached.keys().any(|path| is_expired_name(path)),
-            "a walk of `.hoh` still reaches a `.stale-*` entry: {:?}",
+            "a walk of the workspace still reaches a `.stale-*` entry: {:?}",
             reached.keys().collect::<Vec<_>>()
         );
     }
@@ -851,14 +874,14 @@ mod tests {
         );
         let second = quarantine_previous_evidence(&workspace, &run_dir).unwrap();
 
-        assert_eq!(first[0].live, DETERMINISTIC_EVIDENCE_DIR);
+        assert_eq!(first[0].live, ARTIFACT_DIR);
         assert_ne!(first[0].target, second[0].target);
         assert_eq!(
-            std::fs::read_to_string(first[0].target.join("battery.json")).unwrap(),
+            std::fs::read_to_string(first[0].target.join("deterministic/battery.json")).unwrap(),
             "round one\n"
         );
         assert_eq!(
-            std::fs::read_to_string(second[0].target.join("battery.json")).unwrap(),
+            std::fs::read_to_string(second[0].target.join("deterministic/battery.json")).unwrap(),
             "round two\n"
         );
     }
