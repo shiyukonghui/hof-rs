@@ -9275,3 +9275,47 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 - 预期影响与回滚点：参考线的产出**只**影响后续设计修订（§16 及以后），**不触碰**引擎、契约、协议；
   引擎线（TASK-151..154 已完成）与 §15 主线**不受影响**。回滚点：本条为范围裁决，撤销即回到 D236 的宽口径。
 
+## D238 — §15 批次交付（342 passed）；**我的 push 误发布了它的两个提交**（据实记录）；派独立验收
+
+- 日期：2026-09-29
+- 批次交付（报告 `.spec/hof-rs/tasks/TASK-DR54-REPORT.md`，9 节）：`cargo test --offline` **EXIT 0，
+  342 passed / 0 failed / 7 ignored**（基线 **328/0/7**；`ignored` **未增加**，仍是 `godot_smoke` 真机门控）。
+  提交（批次起点 `53f6f9d`）：`513069c`(DR-56)、`df95339`(DR-55)、`6329e5c`(DR-54)、`b3ccef9`(非空洞证据)、`9ff9cd2`(报告)。
+- 三条实现（据报告，待独立验收）：
+  1. **DR-54**：**11 个** E3 关键路径 `execute_gdscript` 调用点**全部枚举并全部映射**到语义工具（**无不可映射者**）；
+     注入改走 `create_input_recording`+`play_input_recording`+`run_test_scenario`，读数改走
+     `get_node_property_samples`/`get_node_properties`；`execute_gdscript` 降为**唯一一个只读位置探针**，
+     其值**永不进入判决**——并用"语义工具全拒、脚本探针仍应答、判决仍 `ACTION_BINDING_UNKNOWN`"的测试**非空洞证明**。
+     另有一处**收紧**：`ACTION_NOT_BOUND` **只**在"语义工具拒绝 **且** 回包显式说明 `ACTION_NOT_BOUND`"时成立
+     （**裸 `-32602` 也可能是请求格式错**）——这个区分很关键，我认为正确。
+  2. **DR-55**：`EndpointLiveness` **按端点分键**（稳定字段 `state`/`unavailable`/`consecutive_transport_failures`/
+     `transport_failures_at_mark`，阈值 2）；连续 2 次传输失败 ⇒ 带 `UNAVAILABLE`+`endpoint_state` 的类型化拒绝、
+     **零请求零重试**；首次失败不判死；业务错误不计入；就绪轮询仍穿过业务错误（**DR-20 保留**）。
+  3. **DR-56**：单一具名分类器 `reliable::is_retryable_failure`，在 `failure_from` 里**一次判定**，
+     由 `another_attempt_is_allowed` 消费；业务错误**恰一次**、传输仍重试、"最后一次真实失败"语义保留。
+  4. **非空洞性**：**7 处**受控植入-回退（每条必测行为一处）**全部**把目标测试压红（exit 101），
+     回退以 git blob 同一性证明；事后树干净且全suite复验绿。
+  5. **禁区**（真实输出）：`godot-mcp/**` 零 diff 零提交；`runs/` 未动（`smoke-t6` = 135 文件、
+     最新 mtime `2026/9/29 2:32:01`、`frame-00.png` sha256 `bef0936d…7ea2`、批次开始后 `runs/` 下 **0** 文件被改）；
+     `PRD` sha256 未变；`Cargo.toml`/`lock` 零 diff（无新依赖）；全程离线。
+- **我的失误（本条最重的诚实项）**：子代理报告 `origin/master` 在它批次进行中前进到 `82f2da2`，
+  且它的**前两个提交被一并推了出去**、而它**从未执行 `git push`**。**原因是我**：我在提交 D236/D237 时
+  执行了 `git push origin master`，而 git push 会推送**分支尖端可达的全部本地提交**，
+  于是把它当时**已在本地、尚未独立验收**的 `513069c`、`df95339` 一起发布了。
+  ⇒ **这违反了我自己的"验收前不 push"规则**，属**我的操作错误**，据实记录。
+  **处置**：①**不**改写已发布历史（不 rebase、不 force）；②自本条起，在**有其他子代理共享该分支**的情况下，
+  push 前必须先列 `git log origin/master..master --oneline` 并**确认里面没有待验收的批次提交**；
+  ③`6329e5c`/`b3ccef9`/`9ff9cd2` 仍是**本地仅存**（当前领先 `origin/master` **3** 个提交）；
+  ④**在 §15 独立验收通过之前，我不再 push**。
+- **仍未被处理/未验证的实项（据实记录，不让它消失在绿灯里）**：
+  1. **传输层 × 上层重试的"乘法"仍存在**：在端点被判死**之前**，单次调用内部仍可能发生
+     （传输层重试 × 上层重试）——`mcp.rs` 按设计**未改**。⇒ 判死所需**真实时间**可能仍长于设计意图；
+     这是 DR-55 的**残留缺口**，我列为候补修复（记 `DR-57` 候选）。
+  2. **DR-50B 的最小复现 spike 未跑**（离线批次）。它**仍在待办**（我 D225 已决定要跑）。
+  3. **三条**仅属推断的引擎形态假设（报告中如实列出）：引擎对"动作不在 InputMap"的**原文措辞**；
+     `get_node_property_samples` 是否接受**非节点属性名**（如 `input_axis`）；
+     游戏端点是否接受 `events` 里的 `InputEventAction` 形状。**这三条只能由真机轮次证实**。
+  4. **E3 未被声称 met**（正确）：只能由真机 T=1（引擎 `4.8.dev.mono.custom_build.035edfce7`）判定。
+- 裁决：**派 §15 独立验收**（任务书 `TASK-DR54-ACCEPT.md`）；`REF2`（D237）**排在验收之后**派，
+  维持"同一时刻一个子代理"。**推送推迟到验收通过之后。**
+
