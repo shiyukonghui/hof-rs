@@ -48,7 +48,7 @@
     {
       "id": "ENGINE_MTIME",
       "pass": true,
-      "evidence": "嵌套仓：`git -C godot-mcp/godot status --porcelain` = **0 行**；`rev-parse HEAD` = `fc63af77c33368c4a1bb839c95d19750554f63a3`；`sha256sum …/modules/mcp_server/tools/running_game_test_execution.cpp` = `ece4ae63d445719b662a6e9ad99ba80bebba3ea3c94468094c7e9cb820ddff3f`（三者与 DR-59/DR-61 记录逐字一致，本会话两次测得同值）。三个 mtime 口径今天全部复现：整树含 `.git` 最新 `2026-09-29 10:58:15`（`.git/refs/remotes/origin/feature/mcp-server-module-rebuild`）、排除 `.git` 的源码侧最新 `10:49:37`、`modules/mcp_server` 子树最新 `10:37:38`。`find godot-mcp/godot -type f -newermt '2026-09-29 19:00' | wc -l` = **0**。**结论：10:58:15 与 10:37:38 的差异可解释为口径不同，且我找到了 DR-59 侧的一手出处**（`.spec/hof-rs/tasks/TASK-DR59-REPORT.md:411` 与 `TASK-DR59-ACCEPTANCE.md:72/176` 均写明其口径是 `godot-mcp/godot/modules/mcp_server` 子树 = 10:37:38；DR-61 量的是整树含 `.git` = 10:58:15）。**但这不是"确认未改"**：mtime 无法发现"改了又把时间戳改回去"；"引擎内容未改"的正证是嵌套 status 0 行 + HEAD 未变 + 关键 `.cpp` sha 未变 + 无晚于批次窗口的文件，四项都由我今日独立复现（见 §6）。"
+      "evidence": "嵌套仓：`git -C godot-mcp/godot status --porcelain` = **0 行**；`rev-parse HEAD` = `fc63af77c33368c4a1bb839c95d19750554f63a3`；`sha256sum …/modules/mcp_server/tools/running_game_test_execution.cpp` = `ece4ae63d445719b662a6e9ad99ba80bebba3ea3c94468094c7e9cb820ddff3f`（三者与 DR-59/DR-61 记录逐字一致，本会话两次测得同值）。三个 mtime 口径今天全部复现：整树含 `.git` 最新 `2026-09-29 10:58:15`（`.git/refs/remotes/origin/feature/mcp-server-module-rebuild`）、排除 `.git` 的源码侧最新 `10:49:37`、`modules/mcp_server` 子树最新 `10:37:38`。`find godot-mcp/godot -type f -newermt '2026-09-29 19:00' | wc -l` = **0**。**结论：10:58:15 与 10:37:38 的差异可解释为口径不同，且我找到了 DR-59 侧的一手出处**（`.spec/hof-rs/tasks/TASK-DR59-REPORT.md:411` 与 `TASK-DR59-ACCEPTANCE.md:72/176` 均写明其口径是 `godot-mcp/godot/modules/mcp_server` 子树 = 10:37:38；DR-61 量的是整树含 `.git` = 10:58:15）。**但这不是“确认未改”**：mtime 无法发现“改了又把时间戳改回去”；“引擎内容未改”的正证是嵌套 status 0 行 + HEAD 未变 + 关键 `.cpp` sha 未变 + 无晚于批次窗口的文件，四项都由我今日独立复现（见 §6）。"
     },
     {
       "id": "GUARDS",
@@ -58,20 +58,20 @@
     {
       "id": "HONESTY",
       "pass": true,
-      "evidence": "REPORT §8 的 10 条披露逐条核实，全部属实或方向正确（§2 表）。关键两条：§8.2 自认"植入③在测试文件、不在生产代码"——**经我独立确认属实**：全仓没有任何生产代码里的"工作区 cwd 遍历"（`grep -rn 'fn walk' src/` 只有 `src/adapter/godot.rs:2309` 的 JSON 树 `walk(node)` 与 `src/runtime/hygiene.rs:811` 的 `walk(root)`，后者位于 `:630` 的 `#[cfg(test)] mod tests` 内）；§8.3 自认"一条既有测试被替换并加强"——我逐字比对旧体与新体，旧体 5 条断言全部保留，另加"清单记录 vs 名字"两处更强断言，属实。另核实：实现者 scratch 目录 `C:\Users\wyl\AppData\Local\Temp\dr62-scratch` 已删（`Test-Path` = False）；`pwsh` 在本机确实不存在（`where pwsh` 失败，仅 PowerShell 5.1）。少数不精确处见 DEF-62A-2/DEF-62A-4（均为遗漏而非虚报）。"
+      "evidence": "REPORT §8 的 10 条披露逐条核实，全部属实或方向正确（§2 表）。关键两条：§8.2 自认“植入③在测试文件、不在生产代码”——**经我独立确认属实**：全仓没有任何生产代码里的“工作区 cwd 遍历”（`grep -rn 'fn walk' src/` 只有 `src/adapter/godot.rs:2309` 的 JSON 树 `walk(node)` 与 `src/runtime/hygiene.rs:811` 的 `walk(root)`，后者位于 `:630` 的 `#[cfg(test)] mod tests` 内）；§8.3 自认“一条既有测试被替换并加强”——我逐字比对旧体与新体，旧体 5 条断言全部保留，另加“清单记录 vs 名字”两处更强断言，属实。另核实：实现者 scratch 目录 `C:/Users/wyl/AppData/Local/Temp/dr62-scratch` 已删（`Test-Path` = False）；`pwsh` 在本机确实不存在（`where pwsh` 失败，仅 PowerShell 5.1）。少数不精确处见 DEF-62A-2/DEF-62A-4（均为遗漏而非虚报）。"
     }
   ],
   "defects": [
     {
       "id": "DEF-62A-1",
       "severity": "minor",
-      "what": "任务书 §2 字面要求"三处**仅生产代码**的受控植入"，第 ③ 处（收窄 `walk`）落在**测试文件** `tests/evidence_unreachable.rs` 里。这不是实现者的偷懒，而是任务书前提不成立：DEF-1 所指的 `walk` 就是该测试自己的递归遍历（DR-61 明确要求用真实文件系统遍历验证不变量，而非调用某个运行时函数），生产代码里不存在这样一条可被"收窄回 `.hoh`"的 cwd 遍历。收窄后自检与既有不变量测试**同时红**，作用域的固定是**有效的**。",
+      "what": "任务书 §2 字面要求“三处**仅生产代码**的受控植入”，第 ③ 处（收窄 `walk`）落在**测试文件** `tests/evidence_unreachable.rs` 里。这不是实现者的偷懒，而是任务书前提不成立：DEF-1 所指的 `walk` 就是该测试自己的递归遍历（DR-61 明确要求用真实文件系统遍历验证不变量，而非调用某个运行时函数），生产代码里不存在这样一条可被“收窄回 `.hoh`”的 cwd 遍历。收窄后自检与既有不变量测试**同时红**，作用域的固定是**有效的**。",
       "reproduction": "`git diff -- src/runtime/view.rs` = 空 + `git diff -- tests/evidence_unreachable.rs`：把 `:252`/`:448` 的 `let cwd = walk(&workspace);` 改成 `walk(&workspace.join(\".hoh\"));` ⇒ `cargo test --offline --test evidence_unreachable` → `3 passed; 2 failed`（`:276`、`:451`），`INT_EXIT=101`。`grep -rn 'fn walk' src/` 只命中 `godot.rs:2309`（JSON）与 `hygiene.rs:811`（在 `#[cfg(test)] mod tests` 内）。"
     },
     {
       "id": "DEF-62A-2",
       "severity": "minor",
-      "what": "第二件事（给 `run_loop.rs:991` 的 `copy_tree` 补过滤）在**当前生产代码里没有触发路径**，是纯防御纵深：`(a)` `.hoh/deterministic` 在角色之后、候选拷贝之前被 `run_battery_pass`（`src/runtime/run_loop.rs:272-275`，调用点 `:815`）**整体删掉重建**，角色写进去的任何东西（含清单）在拷贝时已不存在；`(b)` 唯一的生产清单写入点 `invalidate_artifact`（`godot.rs:2444`）只由 `step_screenshot`（`godot.rs:1088`）调用，目标固定是 `.hoh/evidence/frame-00.png`，**从不**落在 `.hoh/deterministic`。因此 TASK-DR62 §1.3 设想的"上一轮在 deterministic 留件、被 copy 过滤挡住"并不描述真实机制 —— 真实机制是"整棵 `.hoh` 每轮开轮被隔离" + "battery 重建目录"。过滤器本身确实接上了（P3 与植入②可证），但它的非空洞性**只在单元层**。实现者报告未把这一点说明（§4.2 读起来像有轮次级触发），属**重要遗漏**，不是虚报。",
+      "what": "第二件事（给 `run_loop.rs:991` 的 `copy_tree` 补过滤）在**当前生产代码里没有触发路径**，是纯防御纵深：`(a)` `.hoh/deterministic` 在角色之后、候选拷贝之前被 `run_battery_pass`（`src/runtime/run_loop.rs:272-275`，调用点 `:815`）**整体删掉重建**，角色写进去的任何东西（含清单）在拷贝时已不存在；`(b)` 唯一的生产清单写入点 `invalidate_artifact`（`godot.rs:2444`）只由 `step_screenshot`（`godot.rs:1088`）调用，目标固定是 `.hoh/evidence/frame-00.png`，**从不**落在 `.hoh/deterministic`。因此 TASK-DR62 §1.3 设想的“上一轮在 deterministic 留件、被 copy 过滤挡住”并不描述真实机制 —— 真实机制是“整棵 `.hoh` 每轮开轮被隔离” + “battery 重建目录”。过滤器本身确实接上了（P3 与植入②可证），但它的非空洞性**只在单元层**。实现者报告未把这一点说明（§4.2 读起来像有轮次级触发），属**重要遗漏**，不是虚报。",
       "reproduction": "我的 P2：Developer 写 `.hoh/deterministic/acc-probe-keep.stale-4713.json` 等 ⇒ 轮次结束后该文件**在磁盘上已不存在**（battery 重建），候选 deterministic 键只有运行时自产集 `[\".hoh/deterministic/battery.json\", \"build.json\", \"deterministic.json\", \"deterministic.log\", \"record-00.json\"]`。我的 P4/P5：上一轮留在 `.hoh/deterministic` 的可识别件在新一轮**字节不差地躺在** `runs/<id>/quarantine/**`（恰 1 份），且已从工作区消失 ⇒ 挡住它的是隔离，不是 `copy_tree`。`grep -rn 'SupersededSet::record' src/` 仅 `godot.rs:2444`；`grep -rn 'invalidate_artifact' src/` 的生产调用点仅 `godot.rs:1088`。"
     },
     {
@@ -83,12 +83,12 @@
     {
       "id": "DEF-62A-4",
       "severity": "info",
-      "what": "两处台账措辞需要订正（都不影响 DR-62 的代码结论）：`(i)` D250 记的 cmd `^` 陷阱方向正确，但最简单的形式并非"cmd 返回 OK"——`git cat-file -e HEAD^:<不存在文件>` 在 cmd 与 bash **都是 128**；真正的假绿要在"两个 revision 对同一路径的存在性不同"时才出现。`(ii)` D250 的 R-F"引擎 mtime 差异未解释"**现在可以关账**：差异是口径不同，且 DR-59 侧有一手出处（TASK-DR59-REPORT.md:411 / TASK-DR59-ACCEPTANCE.md:72,176 写明其口径为 `modules/mcp_server` 子树）——这属于调度者的台账更新，不属于本批实现者的代码缺陷。",
+      "what": "两处台账措辞需要订正（都不影响 DR-62 的代码结论）：`(i)` D250 记的 cmd `^` 陷阱方向正确，但最简单的形式并非“cmd 返回 OK”——`git cat-file -e HEAD^:<不存在文件>` 在 cmd 与 bash **都是 128**；真正的假绿要在“两个 revision 对同一路径的存在性不同”时才出现。`(ii)` D250 的 R-F“引擎 mtime 差异未解释”**现在可以关账**：差异是口径不同，且 DR-59 侧有一手出处（TASK-DR59-REPORT.md:411 / TASK-DR59-ACCEPTANCE.md:72,176 写明其口径为 `modules/mcp_server` 子树）——这属于调度者的台账更新，不属于本批实现者的代码缺陷。",
       "reproduction": "`(i)` bash：`git cat-file -e \"fb572ca^:.spec/hof-rs/tasks/TASK-DR62-REPORT.md\"` → **128**（`fatal: path … exists on disk, but not in 'fb572ca^'`）；cmd：`git cat-file -e fb572ca^:.spec/hof-rs/tasks/TASK-DR62-REPORT.md` → **exit 0**（caret 被吃掉，实际查的是 `fb572ca:…`）。`(ii)` 见 §6。"
     }
   ],
   "risks": [
-    "清单是**角色可写**的：任何角色都能在某个被拷贝的目录里写 `.superseded.json`，从而让**本轮**（甚至同伴角色的）产物被判为"已取代"而不进候选 —— 判据的权威性未做强制（不是回归：旧的名字判据同样由角色自选名字触发）。我的 P1 中正是 Developer 自己写下的清单触发了跳过。",
+    "清单是**角色可写**的：任何角色都能在某个被拷贝的目录里写 `.superseded.json`，从而让**本轮**（甚至同伴角色的）产物被判为“已取代”而不进候选 —— 判据的权威性未做强制（不是回归：旧的名字判据同样由角色自选名字触发）。我的 P1 中正是 Developer 自己写下的清单触发了跳过。",
     "清单损坏 = 硬错误：`SupersededSet::load` 对不可解析内容返回 `InvalidData`，`copy_tree`/`copy_evidence` 会把错误上抛 ⇒ 视图构建失败；角色因此可以（有意或无意地）让一轮失败。实现者已记为 R-3，我复核属实。",
     "`.hoh/evidence/.superseded.json` 是新增的落盘运行时文件；无 GC，同目录内取代次数线性增长（体量小，但属新增状态）。",
     "`is_superseded` 对每个条目沿路径分量逐级 `exists()`+读取（每级一次探测），`copy_tree` 现在每文件都要走一遍；测试规模无感（全量套件墙钟与基线同量级），大工作区开销未测量。",
@@ -97,11 +97,11 @@
   ],
   "unverified": [
     "真机：未启动 Godot，未跑任何 E0–E6（`tests/godot_smoke.rs` 7 条仍 ignored、ignored 总数 7→7）；不声称任何条目 met。",
-    "未在真机观测 `.superseded.json` 的实际写入时序与位置（只在 FakeAdapter/单元/集成层验证了"记录发生在 rename 之前"的代码顺序）。",
-    "`record` 写入失败（只读目录/权限拒绝）的分支未打红，也未观测其"大声失败"路径。",
+    "未在真机观测 `.superseded.json` 的实际写入时序与位置（只在 FakeAdapter/单元/集成层验证了“记录发生在 rename 之前”的代码顺序）。",
+    "`record` 写入失败（只读目录/权限拒绝）的分支未打红，也未观测其“大声失败”路径。",
     "未复算 `hash_tree`/A_0 身份哈希（沿用 `.hoh` 被哈希排除 + 既有测试绿的既有结论）。",
-    "未构造"纯换行差异"来实测 `git diff` 对 CRLF 归一化的盲区；只确认了 `core.autocrlf=true` 与 `git hash-object` 会归一化（我另用原始 `sha256sum` + `cmp` 兜底）。",
-    "`runs`/`mario` 的"未改"证据是**当前值 == DR-54/57/59/61 记录值 + 我前后两次自测一致**；我不能独立证明实现者动手**之前**的字节，只能证明口径自洽且现在与历史记录一致。"
+    "未构造“纯换行差异”来实测 `git diff` 对 CRLF 归一化的盲区；只确认了 `core.autocrlf=true` 与 `git hash-object` 会归一化（我另用原始 `sha256sum` + `cmp` 兜底）。",
+    "`runs`/`mario` 的“未改”证据是**当前值 == DR-54/57/59/61 记录值 + 我前后两次自测一致**；我不能独立证明实现者动手**之前**的字节，只能证明口径自洽且现在与历史记录一致。"
   ]
 }
 ```
