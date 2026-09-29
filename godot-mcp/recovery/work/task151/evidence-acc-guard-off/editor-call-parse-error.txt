@@ -1,0 +1,11 @@
+label=editor-call-parse-error port=9888
+elapsed_ms=13 bytes_read=760
+status_line=HTTP/1.1 200 OK
+io_error=<none>
+request=POST /mcp HTTP/1.1
+Host: 127.0.0.1:9888
+Content-Type: application/json
+Content-Length: 135
+
+{"jsonrpc":"2.0","id":12,"method":"tools/call","params":{"name":"editor_execute_gdscript","arguments":{"code":"this is not gdscript"}}}
+response_body={"error":{"code":-32602,"data":{"parse_error":{"generated_line":5,"in_caller_code":true,"line":1,"message":"Parse Error: Identifier \"this\" not declared in the current scope.","messages":["Parse Error: Identifier \"this\" not declared in the current scope.","Parse Error: Could not find type \"gdscript\" in the current scope."]},"parse_error_column":null,"suggestion":"Parameter 'code' accepts a string (required); Accepted parameters of editor_execute_gdscript: code"},"message":"Parameter 'code' does not compile at line 1 of 'code': Parse Error: Identifier \"this\" not declared in the current scope."},"id":12,"jsonrpc":"2.0"}

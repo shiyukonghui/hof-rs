@@ -1,0 +1,100 @@
+[08:24:15.806] === TASK-151 acceptance on the rebuilt binary ===
+[08:24:15.937] engine: 4.8.dev.mono.custom_build.035edfce7
+[08:24:17.871] PORT-GUARD before: 9877 =  | 9888 =  | 9889 = 
+[08:24:17.871] 
+[08:24:17.872] --- Scenario A: game started by hand with --remote-debug to our own peer ---
+[08:24:20.820] STARTED pid=114320 log=gameA
+[08:24:20.821]         cmdline="F:\moonbit-hof-rs\godot-mcp\godot\bin\godot.windows.editor.x86_64.mono.console.exe" --headless --path C:\Users\wyl\AppData\Local\Temp\mcp151\proj --remote-debug tcp://127.0.0.1:6011 --mcp-port=9889 
+[08:24:21.132] [PASS] scenarioA_game_has_remote_debug :: "F:\moonbit-hof-rs\godot-mcp\godot\bin\godot.windows.editor.x86_64.mono.console.exe" --headless --path C:\Users\wyl\AppData\Local\Temp\mcp151\proj --remote-debug tcp://127.0.0.1:6011 --mcp-port=9889 
+[08:24:21.133] [PASS] scenarioA_game_has_no_editor_pid :: no --editor-pid confound
+[08:24:21.168] 9889 is listening
+[08:24:21.250] game-tools-list-before: status_line=HTTP/1.1 200 OK elapsed_ms=40 bytes=31332
+[08:24:21.255]     body={"id":1,"jsonrpc":"2.0","result":{"tools":[{"description":"获取项目信息","inputSchema":{"properties":{},"required":[],"type":"object"},"name":"project_get_info"},{"description":"获取项目设置","inputSchema":{"properties":{"include_default":{"default":false,"type":"boolean"},"prefix":{"type":"string"}},"required":[],"type":"object"},"name":"project_get_settings"},{"description":"获取文件系统树状结构","inputSchema":{"prop...
+[08:24:21.258] [PASS] game_endpoint_healthy_before :: tools/list -> HTTP/1.1 200 OK in 40 ms
+[08:24:21.290] game-call-analyzer-error: status_line=HTTP/1.1 200 OK elapsed_ms=23 bytes=780
+[08:24:21.291]     body={"error":{"code":-32602,"data":{"parse_error":{"generated_line":4,"in_caller_code":true,"line":1,"message":"Parse Error: Cannot get return value of call to \"action_press()\" because it returns \"void\".","messages":["Parse Error: Cannot get return value of call to \"action_press()\" because it returns \"void\"."]},"parse_error_column":null,"suggestion":"Parameter 'code' accepts a string (required...
+[08:24:21.294] [PASS] game_analyzer_error_is_32602_with_parse_error :: HTTP/1.1 200 OK in 23 ms; body={"error":{"code":-32602,"data":{"parse_error":{"generated_line":4,"in_caller_code":true,"line":1,"message":"Parse Error: Cannot get return value of call to \"action_press()\" because it returns \"void
+[08:24:21.295] [PASS] game_analyzer_error_is_answered_not_frozen :: elapsed 23 ms (pre-fix: no status line in 20000 ms)
+[08:24:21.315] game-call-parse-error: status_line=HTTP/1.1 200 OK elapsed_ms=18 bytes=766
+[08:24:21.315]     body={"error":{"code":-32602,"data":{"parse_error":{"generated_line":4,"in_caller_code":true,"line":1,"message":"Parse Error: Identifier \"this\" not declared in the current scope.","messages":["Parse Error: Identifier \"this\" not declared in the current scope.","Parse Error: Could not find type \"gdscript\" in the current scope."]},"parse_error_column":null,"suggestion":"Parameter 'code' accepts a st...
+[08:24:21.317] [PASS] game_parse_error_is_32602_with_parse_error :: HTTP/1.1 200 OK in 18 ms
+[08:24:21.331] game-call-runtime-error: status_line=HTTP/1.1 200 OK elapsed_ms=12 bytes=1191
+[08:24:21.332]     body={"error":{"code":-32000,"data":{"script_error":{"body_script_path":"gdscript://-9223372007159101960.gd","column":null,"error_count":1,"function":"_mcp_execute","generated_line":6,"in_caller_code":true,"in_generated_body":true,"line":3,"message":"Invalid call. Nonexistent function 'NoSuchMethodAtAll' in base 'Node'.","messages":["Invalid call. Nonexistent function 'NoSuchMethodAtAll' in base 'Node'...
+[08:24:21.333] [PASS] game_runtime_error_is_32000_with_script_error :: HTTP/1.1 200 OK in 12 ms; body={"error":{"code":-32000,"data":{"script_error":{"body_script_path":"gdscript://-9223372007159101960.gd","column":null,"error_count":1,"function":"_mcp_execute","generated_line":6,"in_caller_code":true
+[08:24:21.334] [PASS] game_runtime_error_is_answered_not_frozen :: elapsed 12 ms
+[08:24:21.339] game-call-success: status_line=HTTP/1.1 200 OK elapsed_ms=3 bytes=241
+[08:24:21.339]     body={"id":14,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":42,\"result_type\":\"int\"}","type":"text"}]}}
+[08:24:21.340] [PASS] game_success_still_works :: HTTP/1.1 200 OK in 3 ms; body={"id":14,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":42,\"result_type\":\"int\"}","type":"text"}]}}
+[08:24:21.348] game-tools-list-after: status_line=HTTP/1.1 200 OK elapsed_ms=5 bytes=31332
+[08:24:21.349]     body={"id":2,"jsonrpc":"2.0","result":{"tools":[{"description":"获取项目信息","inputSchema":{"properties":{},"required":[],"type":"object"},"name":"project_get_info"},{"description":"获取项目设置","inputSchema":{"properties":{"include_default":{"default":false,"type":"boolean"},"prefix":{"type":"string"}},"required":[],"type":"object"},"name":"project_get_settings"},{"description":"获取文件系统树状结构","inputSchema":{"prop...
+[08:24:21.350] [PASS] game_endpoint_healthy_after :: tools/list -> HTTP/1.1 200 OK in 5 ms
+[08:24:21.359] game-status: status_line=HTTP/1.1 200 OK elapsed_ms=6 bytes=324
+[08:24:21.359]     body={"connections":1,"frame_count":41,"is_editor":false,"listening":true,"pending":0,"pending_connections":0,"port":9889,"server":"godot-mcp-rs","status":"ok","tools":73,"transport":"streamable-http"}
+[08:24:21.361] [PASS] game_status_answers_and_frame_count_is_moving :: {"connections":1,"frame_count":41,"is_editor":false,"listening":true,"pending":0,"pending_connections":0,"port":9889,"server":"godot-mcp-rs","status":"ok","tools":73,"transport":"streamable-http"}
+[08:24:21.887] [PASS] scenarioA_listener_still_present :: 9889 listen pids = 113972
+[08:24:21.920] [PASS] scenarioA_engine_process_alive_at_end :: listener pid(s) 113972 still alive; launcher stub pid 114320 exited=False
+[08:24:21.958] STOPPED pid=114320 (scenario A game)
+[08:24:22.045] 
+[08:24:22.046] --- Scenario B: editor_play_scene (the smoke run's own setup) ---
+[08:24:22.447] STARTED pid=113876 log=editorB
+[08:24:22.447]         cmdline="F:\moonbit-hof-rs\godot-mcp\godot\bin\godot.windows.editor.x86_64.mono.console.exe" --headless -e --path C:\Users\wyl\AppData\Local\Temp\mcp151\proj --mcp-port=9888 
+[08:24:26.111] 9888 is listening
+[08:24:26.151] editor-play-scene: status_line=HTTP/1.1 200 OK elapsed_ms=37 bytes=444
+[08:24:26.152]     body={"id":2,"jsonrpc":"2.0","result":{"content":[{"text":"{\"args_deduplicated\":[],\"args_injected\":[\"--mcp-port=9889\",\"--headless\"],\"endpoint\":\"http://127.0.0.1:9889/mcp\",\"headless\":true,\"mcp_port\":9889,\"mcp_port_source\":\"argument\",\"mode\":\"main\",\"pid\":111464,\"playing\":true}","type":"text"}]}}
+[08:24:26.196] play_scene: {"args_deduplicated":[],"args_injected":["--mcp-port=9889","--headless"],"endpoint":"http://127.0.0.1:9889/mcp","headless":true,"mcp_port":9889,"mcp_port_source":"argument","mode":"main","pid":111464,"playing":true}
+[08:24:26.197] [PASS] scenarioB_play_scene_reported_a_pid :: pid=111464
+[08:24:29.394] GAME pid=111464 cmdline=F:\moonbit-hof-rs\godot-mcp\godot\bin\godot.windows.editor.x86_64.mono.exe --path C:/Users/wyl/AppData/Local/Temp/mcp151/proj --remote-debug tcp://127.0.0.1:6007 --editor-pid 2928 --scene res://scenes/main.tscn "--mcp-port=9889" --headless
+[08:24:29.395] [PASS] scenarioB_game_has_remote_debug_and_editor_pid :: the smoke run's exact shape
+[08:24:29.402] played-tools-list-before: status_line=HTTP/1.1 200 OK elapsed_ms=5 bytes=31332
+[08:24:29.403]     body={"id":1,"jsonrpc":"2.0","result":{"tools":[{"description":"获取项目信息","inputSchema":{"properties":{},"required":[],"type":"object"},"name":"project_get_info"},{"description":"获取项目设置","inputSchema":{"properties":{"include_default":{"default":false,"type":"boolean"},"prefix":{"type":"string"}},"required":[],"type":"object"},"name":"project_get_settings"},{"description":"获取文件系统树状结构","inputSchema":{"prop...
+[08:24:29.404] [PASS] played_endpoint_healthy_before :: tools/list -> HTTP/1.1 200 OK in 5 ms
+[08:24:29.421] played-call-analyzer-error: status_line=HTTP/1.1 200 OK elapsed_ms=16 bytes=780
+[08:24:29.422]     body={"error":{"code":-32602,"data":{"parse_error":{"generated_line":4,"in_caller_code":true,"line":1,"message":"Parse Error: Cannot get return value of call to \"action_press()\" because it returns \"void\".","messages":["Parse Error: Cannot get return value of call to \"action_press()\" because it returns \"void\"."]},"parse_error_column":null,"suggestion":"Parameter 'code' accepts a string (required...
+[08:24:29.423] [PASS] played_analyzer_error_is_32602_with_parse_error :: HTTP/1.1 200 OK in 16 ms; body={"error":{"code":-32602,"data":{"parse_error":{"generated_line":4,"in_caller_code":true,"line":1,"message":"Parse Error: Cannot get return value of call to \"action_press()\" because it returns \"void
+[08:24:29.424] [PASS] played_analyzer_error_is_answered_not_frozen :: elapsed 16 ms (pre-fix: no status line in 20000 ms)
+[08:24:29.430] played-call-parse-error: status_line=HTTP/1.1 200 OK elapsed_ms=4 bytes=766
+[08:24:29.430]     body={"error":{"code":-32602,"data":{"parse_error":{"generated_line":4,"in_caller_code":true,"line":1,"message":"Parse Error: Identifier \"this\" not declared in the current scope.","messages":["Parse Error: Identifier \"this\" not declared in the current scope.","Parse Error: Could not find type \"gdscript\" in the current scope."]},"parse_error_column":null,"suggestion":"Parameter 'code' accepts a st...
+[08:24:29.431] [PASS] played_parse_error_is_32602_with_parse_error :: HTTP/1.1 200 OK in 4 ms
+[08:24:29.437] played-call-runtime-error: status_line=HTTP/1.1 200 OK elapsed_ms=4 bytes=1191
+[08:24:29.437]     body={"error":{"code":-32000,"data":{"script_error":{"body_script_path":"gdscript://-9223372006353795552.gd","column":null,"error_count":1,"function":"_mcp_execute","generated_line":6,"in_caller_code":true,"in_generated_body":true,"line":3,"message":"Invalid call. Nonexistent function 'NoSuchMethodAtAll' in base 'Node'.","messages":["Invalid call. Nonexistent function 'NoSuchMethodAtAll' in base 'Node'...
+[08:24:29.438] [PASS] played_runtime_error_is_32000_with_script_error :: HTTP/1.1 200 OK in 4 ms; body={"error":{"code":-32000,"data":{"script_error":{"body_script_path":"gdscript://-9223372006353795552.gd","column":null,"error_count":1,"function":"_mcp_execute","generated_line":6,"in_caller_code":true
+[08:24:29.439] [PASS] played_runtime_error_is_answered_not_frozen :: elapsed 4 ms
+[08:24:29.442] played-call-success: status_line=HTTP/1.1 200 OK elapsed_ms=2 bytes=241
+[08:24:29.443]     body={"id":14,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":42,\"result_type\":\"int\"}","type":"text"}]}}
+[08:24:29.443] [PASS] played_success_still_works :: HTTP/1.1 200 OK in 2 ms; body={"id":14,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":42,\"result_type\":\"int\"}","type":"text"}]}}
+[08:24:29.451] played-tools-list-after: status_line=HTTP/1.1 200 OK elapsed_ms=5 bytes=31332
+[08:24:29.452]     body={"id":2,"jsonrpc":"2.0","result":{"tools":[{"description":"获取项目信息","inputSchema":{"properties":{},"required":[],"type":"object"},"name":"project_get_info"},{"description":"获取项目设置","inputSchema":{"properties":{"include_default":{"default":false,"type":"boolean"},"prefix":{"type":"string"}},"required":[],"type":"object"},"name":"project_get_settings"},{"description":"获取文件系统树状结构","inputSchema":{"prop...
+[08:24:29.452] [PASS] played_endpoint_healthy_after :: tools/list -> HTTP/1.1 200 OK in 5 ms
+[08:24:29.456] played-status: status_line=HTTP/1.1 200 OK elapsed_ms=2 bytes=325
+[08:24:29.457]     body={"connections":1,"frame_count":186,"is_editor":false,"listening":true,"pending":0,"pending_connections":0,"port":9889,"server":"godot-mcp-rs","status":"ok","tools":73,"transport":"streamable-http"}
+[08:24:29.458] [PASS] played_status_answers_and_frame_count_is_moving :: {"connections":1,"frame_count":186,"is_editor":false,"listening":true,"pending":0,"pending_connections":0,"port":9889,"server":"godot-mcp-rs","status":"ok","tools":73,"transport":"streamable-http"}
+[08:24:29.476] [PASS] scenarioB_game_process_alive_at_end :: pid 111464 still there
+[08:24:30.434] [PASS] scenarioB_game_listener_still_present :: 9889 listen pids = 111464
+[08:24:30.442] editor-tools-list-before: status_line=HTTP/1.1 200 OK elapsed_ms=5 bytes=56664
+[08:24:30.443]     body={"id":1,"jsonrpc":"2.0","result":{"tools":[{"description":"获取项目信息","inputSchema":{"properties":{},"required":[],"type":"object"},"name":"project_get_info"},{"description":"获取项目设置","inputSchema":{"properties":{"include_default":{"default":false,"type":"boolean"},"prefix":{"type":"string"}},"required":[],"type":"object"},"name":"project_get_settings"},{"description":"获取文件系统树状结构","inputSchema":{"prop...
+[08:24:30.444] [PASS] editor_endpoint_healthy_before :: tools/list -> HTTP/1.1 200 OK in 5 ms
+[08:24:30.470] editor-call-analyzer-error: status_line=HTTP/1.1 200 OK elapsed_ms=24 bytes=774
+[08:24:30.470]     body={"error":{"code":-32602,"data":{"parse_error":{"generated_line":5,"in_caller_code":true,"line":1,"message":"Parse Error: Cannot get return value of call to \"action_press()\" because it returns \"void\".","messages":["Parse Error: Cannot get return value of call to \"action_press()\" because it returns \"void\"."]},"parse_error_column":null,"suggestion":"Parameter 'code' accepts a string (required...
+[08:24:30.471] [PASS] editor_analyzer_error_is_32602_with_parse_error :: HTTP/1.1 200 OK in 24 ms; body={"error":{"code":-32602,"data":{"parse_error":{"generated_line":5,"in_caller_code":true,"line":1,"message":"Parse Error: Cannot get return value of call to \"action_press()\" because it returns \"void
+[08:24:30.471] [PASS] editor_analyzer_error_is_answered_not_frozen :: elapsed 24 ms (pre-fix: no status line in 20000 ms)
+[08:24:30.489] editor-call-parse-error: status_line=HTTP/1.1 200 OK elapsed_ms=15 bytes=760
+[08:24:30.490]     body={"error":{"code":-32602,"data":{"parse_error":{"generated_line":5,"in_caller_code":true,"line":1,"message":"Parse Error: Identifier \"this\" not declared in the current scope.","messages":["Parse Error: Identifier \"this\" not declared in the current scope.","Parse Error: Could not find type \"gdscript\" in the current scope."]},"parse_error_column":null,"suggestion":"Parameter 'code' accepts a st...
+[08:24:30.490] [PASS] editor_parse_error_is_32602_with_parse_error :: HTTP/1.1 200 OK in 15 ms
+[08:24:30.505] editor-call-runtime-error: status_line=HTTP/1.1 200 OK elapsed_ms=13 bytes=243
+[08:24:30.505]     body={"id":13,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":null,\"result_type\":\"Nil\"}","type":"text"}]}}
+[08:24:30.506]     (editor runtime error shape, recorded not asserted: HTTP/1.1 200 OK :: {"id":13,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":null,\"result_type\":\"Nil\"}","type":"text"}]}})
+[08:24:30.507] [PASS] editor_runtime_error_is_answered_not_frozen :: elapsed 13 ms
+[08:24:30.513] editor-call-success: status_line=HTTP/1.1 200 OK elapsed_ms=3 bytes=241
+[08:24:30.513]     body={"id":14,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":42,\"result_type\":\"int\"}","type":"text"}]}}
+[08:24:30.514] [PASS] editor_success_still_works :: HTTP/1.1 200 OK in 3 ms; body={"id":14,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":42,\"result_type\":\"int\"}","type":"text"}]}}
+[08:24:30.542] editor-tools-list-after: status_line=HTTP/1.1 200 OK elapsed_ms=6 bytes=56664
+[08:24:30.543]     body={"id":2,"jsonrpc":"2.0","result":{"tools":[{"description":"获取项目信息","inputSchema":{"properties":{},"required":[],"type":"object"},"name":"project_get_info"},{"description":"获取项目设置","inputSchema":{"properties":{"include_default":{"default":false,"type":"boolean"},"prefix":{"type":"string"}},"required":[],"type":"object"},"name":"project_get_settings"},{"description":"获取文件系统树状结构","inputSchema":{"prop...
+[08:24:30.544] [PASS] editor_endpoint_healthy_after :: tools/list -> HTTP/1.1 200 OK in 6 ms
+[08:24:30.547] editor-status: status_line=HTTP/1.1 200 OK elapsed_ms=2 bytes=325
+[08:24:30.547]     body={"connections":1,"frame_count":292,"is_editor":true,"listening":true,"pending":0,"pending_connections":0,"port":9888,"server":"godot-mcp-rs","status":"ok","tools":154,"transport":"streamable-http"}
+[08:24:30.549] [PASS] editor_status_answers_and_frame_count_is_moving :: {"connections":1,"frame_count":292,"is_editor":true,"listening":true,"pending":0,"pending_connections":0,"port":9888,"server":"godot-mcp-rs","status":"ok","tools":154,"transport":"streamable-http"}
+[08:24:30.582] STOPPED pid=111464 (scenario B game child)
+[08:24:30.611] STOPPED pid=113876 (scenario B editor)
+[08:24:31.078] PORT-GUARD after: 9877 = 
+[08:24:31.082] 
+[08:24:31.085] CHECKS: 34/34 passed, 0 failed

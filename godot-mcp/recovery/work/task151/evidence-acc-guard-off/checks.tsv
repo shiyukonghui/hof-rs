@@ -1,0 +1,34 @@
+﻿scenarioA_game_has_remote_debug	True	"F:\moonbit-hof-rs\godot-mcp\godot\bin\godot.windows.editor.x86_64.mono.console.exe" --headless --path C:\Users\wyl\AppData\Local\Temp\mcp151\proj --remote-debug tcp://127.0.0.1:6011 --mcp-port=9889 
+scenarioA_game_has_no_editor_pid	True	no --editor-pid confound
+game_endpoint_healthy_before	True	tools/list -> HTTP/1.1 200 OK in 38 ms
+game_analyzer_error_is_32602_with_parse_error	False	 in 15011 ms; body=
+game_analyzer_error_is_answered_not_frozen	False	elapsed 15011 ms (pre-fix: no status line in 20000 ms)
+game_parse_error_is_32602_with_parse_error	False	 in 15005 ms
+game_runtime_error_is_32000_with_script_error	False	 in 15015 ms; body=
+game_runtime_error_is_answered_not_frozen	False	elapsed 15015 ms
+game_success_still_works	False	 in 15002 ms; body=
+game_endpoint_healthy_after	False	tools/list ->  in 20015 ms
+game_status_answers_and_frame_count_is_moving	False	
+scenarioA_listener_still_present	True	9889 listen pids = 112768
+scenarioA_engine_process_alive_at_end	True	listener pid(s) 112768 still alive; launcher stub pid 110184 exited=False
+scenarioB_play_scene_reported_a_pid	True	pid=15364
+scenarioB_game_has_remote_debug_and_editor_pid	True	the smoke run's exact shape
+played_endpoint_healthy_before	True	tools/list -> HTTP/1.1 200 OK in 5 ms
+played_analyzer_error_is_32602_with_parse_error	False	 in 15004 ms; body=
+played_analyzer_error_is_answered_not_frozen	False	elapsed 15004 ms (pre-fix: no status line in 20000 ms)
+played_parse_error_is_32602_with_parse_error	False	 in 15014 ms
+played_runtime_error_is_32000_with_script_error	False	 in 15009 ms; body=
+played_runtime_error_is_answered_not_frozen	False	elapsed 15009 ms
+played_success_still_works	False	 in 15012 ms; body=
+played_endpoint_healthy_after	False	tools/list ->  in 20008 ms
+played_status_answers_and_frame_count_is_moving	False	
+scenarioB_game_process_alive_at_end	True	pid 15364 still there
+scenarioB_game_listener_still_present	True	9889 listen pids = 15364
+editor_endpoint_healthy_before	True	tools/list -> HTTP/1.1 200 OK in 6 ms
+editor_analyzer_error_is_32602_with_parse_error	True	HTTP/1.1 200 OK in 32 ms; body={"error":{"code":-32602,"data":{"parse_error":{"generated_line":5,"in_caller_code":true,"line":1,"message":"Parse Error: Cannot get return value of call to \"action_press()\" because it returns \"void
+editor_analyzer_error_is_answered_not_frozen	True	elapsed 32 ms (pre-fix: no status line in 20000 ms)
+editor_parse_error_is_32602_with_parse_error	True	HTTP/1.1 200 OK in 13 ms
+editor_runtime_error_is_answered_not_frozen	True	elapsed 13 ms
+editor_success_still_works	True	HTTP/1.1 200 OK in 5 ms; body={"id":14,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":42,\"result_type\":\"int\"}","type":"text"}]}}
+editor_endpoint_healthy_after	True	tools/list -> HTTP/1.1 200 OK in 5 ms
+editor_status_answers_and_frame_count_is_moving	True	{"connections":1,"frame_count":5560,"is_editor":true,"listening":true,"pending":0,"pending_connections":0,"port":9888,"server":"godot-mcp-rs","status":"ok","tools":154,"transport":"streamable-http"}

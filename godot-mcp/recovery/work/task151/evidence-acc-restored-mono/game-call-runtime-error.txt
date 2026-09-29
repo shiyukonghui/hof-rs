@@ -1,0 +1,11 @@
+label=game-call-runtime-error port=9889
+elapsed_ms=13 bytes_read=1191
+status_line=HTTP/1.1 200 OK
+io_error=<none>
+request=POST /mcp HTTP/1.1
+Host: 127.0.0.1:9889
+Content-Type: application/json
+Content-Length: 197
+
+{"jsonrpc":"2.0","id":13,"method":"tools/call","params":{"name":"running_game_execute_gdscript","arguments":{"code":"var box = {}\nbox[\"m\"] = Node.new()\nreturn box[\"m\"].NoSuchMethodAtAll()"}}}
+response_body={"error":{"code":-32000,"data":{"script_error":{"body_script_path":"gdscript://-9223372007159101960.gd","column":null,"error_count":1,"function":"_mcp_execute","generated_line":6,"in_caller_code":true,"in_generated_body":true,"line":3,"message":"Invalid call. Nonexistent function 'NoSuchMethodAtAll' in base 'Node'.","messages":["Invalid call. Nonexistent function 'NoSuchMethodAtAll' in base 'Node'."],"script_path":"gdscript://-9223372007159101960.gd"},"suggestion":"A GDScript runtime error aborts the frame: the statements after the failing one did not run and no side effect of the body can be assumed. Read data.script_error for the engine's own message, the line of 'code', the script path and the GDScript function it blames, then fix the body and call again. If the error names another script, the body reached game code that failed - check that script's own diagnostics."},"message":"Parameter 'code' raised a GDScript runtime error at line 3 of 'code': Invalid call. Nonexistent function 'NoSuchMethodAtAll' in base 'Node'."},"id":13,"jsonrpc":"2.0"}
