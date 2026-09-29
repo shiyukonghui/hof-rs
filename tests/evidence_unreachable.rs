@@ -68,6 +68,30 @@ const SEEDS: &[(&str, &str)] = &[
         ".hoh/evidence.json",
         "DR-61 previous-round evidence bundle\n",
     ),
+    // The remaining `.hoh` siblings a real workspace carries (measured against
+    // the `smoke-t7` pre-run inventory and `.workspace/mario/.hoh`).  These are
+    // the ones this batch deliberately does *not* quarantine, because the round
+    // rewrites them with its own content before the role that reads them runs
+    // (`write_inputs(&workspace, …)`, `run_loop.rs:672-697`).  They are seeded
+    // anyway: "measured as overwritten" is a claim this test now checks instead
+    // of asserting.
+    (".hoh/TASK.md", "DR-61 previous-round task text\n"),
+    (".hoh/plan.md", "DR-61 previous-round plan\n"),
+    (".hoh/TOOLS.md", "DR-61 previous-round tool index\n"),
+    (
+        ".hoh/EVIDENCE_HISTORY.md",
+        "DR-61 previous-round evidence history\n",
+    ),
+    (".hoh/PROJECT_MAP.md", "DR-61 previous-round project map\n"),
+    (".hoh/SCAFFOLD.md", "DR-61 previous-round scaffold\n"),
+    (
+        ".hoh/skills/godot-dev.md",
+        "DR-61 previous-round developer skill\n",
+    ),
+    (
+        ".hoh/skills/godot-testing.md",
+        "DR-61 previous-round testing skill\n",
+    ),
 ];
 
 /// The previous round's evidence harvest in the candidate-view scenario
@@ -202,6 +226,16 @@ async fn a_wildcard_walk_of_hoh_cannot_reach_the_previous_rounds_evidence() {
                 .filter(|key| key.starts_with(".hoh/"))
                 .any(|key| files.get(key).map(String::as_str) == Some(*seed)),
             "DR-61: the Developer's cwd still carries the previous round's {relative}"
+        );
+    }
+
+    // (2b) The Planner is invoked *before* the round writes anything into the
+    // workspace, so its view is where a stale `.hoh` sibling would land first.
+    let planner = role_view(&records, Role::Planner);
+    for (relative, seed) in SEEDS {
+        assert!(
+            !planner.values().any(|content| content.as_str() == *seed),
+            "DR-61: the Planner's view still carries the previous round's {relative}"
         );
     }
 
