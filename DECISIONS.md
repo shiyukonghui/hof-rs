@@ -9736,3 +9736,42 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
   **DR-62 候选**（`.stale-` 判定从名字改为显式清单）**并入下一波**，与 `copy_tree` 的过滤缺口（残余 2）同批。
 - 回滚点：DR-61 各提交单独 revert；两条真机基线不得覆盖。
 
+## D250 — DR-61 独立验收 **pass**（9/9）；DEF-1 钉出"不变量作用域未被永久测试固定"⇒ 入 DR-62；摘要口径已文档化并自证
+
+- 日期：2026-09-29。DR-61 独立验收 **`verdict = pass`**（9 criteria 全 true；**1 minor**）。
+  报告 `.spec/hof-rs/tasks/TASK-DR61-ACCEPTANCE.md`。它判定被测代码 = `be8d115`；
+  验收期间 HEAD 由 `be8d115` 漂到 `6bf654a`（**我的 4 个纯文档提交**，它自己零提交）。
+- 最强证据：
+  1. **`UNREACHABLE_STRUCTURAL`**：两处植入都红——**(A) 在 `cwd/.hoh2/previous-round-battery.json`（`.hoh` 之外）埋种**
+     ⇒ 红在 `tests/evidence_unreachable.rs:233` **并点名 `.hoh2/…`**（EXIT=101）⇒ **不变量真的遍历整个 cwd**；
+     (B) 关掉隔离 ⇒ 红在 `:204`，触达键含 `SCAFFOLD.md` 与 `evidence/frame-00.png`。
+  2. **`NO_OVER_QUARANTINE`（我担心的回归）**：**不是回归**。两轮探测：**第 2 轮 Developer cwd 含第 1 轮的
+     `.hoh/deterministic/build.json`**，第 1 轮不含 ⇒ **轮内反馈保留**。
+  3. **`NOT_DELETE`**：隔离物 `runs/<id>/quarantine`（`hygiene.rs:470`）、唯一调用点 `run_loop.rs:356`（迭代循环之前）、
+     词法 + canonical 双重"必须在 workspace 之外"；它**占满 64 个名字**做探针 ⇒ 返回
+     `Err("could not move … all 64 … taken")` 且**什么都没删**。
+  4. **`NON_VACUITY`**：P1 关隔离、P2 隔离放回 cwd、**P3 关掉 `view.rs:131` 的跳过**（红在 `view.rs:335`），三次逐字节回退。
+  5. **`COPY_EVIDENCE`**：它自建场景（第 1 轮写 `.hoh/evidence/ACCEPT-recognisable.png` → 第 2 轮）⇒
+     **Tester 候选快照不含该键/值**，标记只在 `runs/run-2/quarantine` 存一份。
+  6. **`GUARDS`**：mario 259 文件 `4e494547…` / runs 5147 文件 `01ff775e…` 在它全部工作**前后一致**；
+     **摘要口径被写明并自证**：`runs/smoke-t6` = `c144ef32…` 与 DR-54/57/59 **逐字一致**。
+     引擎树用**嵌套仓**（`ls-files godot-mcp` = 6484 证明 pathspec 命中、`godot-mcp/godot` = **0** ⇒ 外层空判）；未 stage；`origin` 仍 `5abddbd`。
+- **DEF-1（minor，但正合我在意的那类）**：随包发布的 `tests/evidence_unreachable.rs` 的**种子全在 `.hoh` 下**
+  ⇒ 虽然 cwd 宽遍历**存在**且验收者已证"`.hoh` 之外的字节也会红"，但**没有任何**永久种子**固定遍历的作用域**；
+  若将来有人把遍历**收窄回 `.hoh`**，该测试**仍会绿**。
+  ⇒ **入 `DR-62` 第三项**：加一条自检，断言 `walk(&workspace)` **确实**能命中埋在 **`.hoh` 之外**的标记，
+  **把"遍历作用域"与"隔离作用域"解耦**。
+- 其它风险（我记录）：`.hoh` 之外的遗留**未纳入本批不变量**；`copy_tree` 缺 `.stale-` 过滤；
+  Windows rename 句柄失败；隔离物**无 GC**；`.stale-` 是**命名约定**；
+  **R-F：引擎 `mcp_server` 最新 mtime 出现 `10:58:15` 与 DR-59 记的 `10:37:38` 不一致，未解释**
+  ⇒ 记为**未解释观测**（无人写源码，但**不得**当成"已确认未改"），下次触碰引擎时须复核；
+  R-G：验收期间 HEAD 漂移（**是我的文档提交**，良性，但我会尽量缩短这种窗口）。
+- **新增一条陷阱细节（值得记）**：`git cat-file -e HEAD^:file` 在 **cmd** 里返回 OK，在 **bash** 里返回 **128**
+  ⇒ 与 `^` 转义同源。验收者因此**所有 `rev^` 查询都改在 bash 做**。
+  另有 **minor 措辞缺口**：报告 §8.5 只提了 `evidence_isolation.rs`，未提 `hygiene.rs` 那条**改名并加强**的测试
+  （覆盖其实是**增强**了）。
+- 裁决：**DR-61 予以验收通过；推送**（D245 单一推送点），**并立即派 `DR-62`**：
+  ①**`.stale-` 判据去名字化**（改用显式清单/标记，而不是靠文件名）；②补 `copy_tree`（`run_loop.rs:991`）的过滤缺口；
+  ③**用"`.hoh` 之外的种子"永久固定遍历作用域**（DEF-1）。
+- 回滚点：DR-61 各提交单独 revert；两条真机基线不得覆盖。
+
