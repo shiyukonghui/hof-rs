@@ -1,0 +1,11 @@
+label=game-call-after-editor-gone port=9889 connected=False
+elapsed_ms=2049 bytes_read=0
+status_line=<NONE>
+io_error=Exception calling "Wait" with "1" argument(s): "One or more errors occurred."
+request=POST /mcp HTTP/1.1
+Host: 127.0.0.1:9889
+Content-Type: application/json
+Content-Length: 167
+
+{"jsonrpc":"2.0","id":13,"method":"tools/call","params":{"name":"running_game_execute_gdscript","arguments":{"code":"return str(Input.action_press(\"move_right\"))"}}}
+response_body=

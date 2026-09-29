@@ -1,0 +1,40 @@
+fix(mcp_server): TASK-151 - a caller's failing body no longer stops a debugged game in the debugger
+
+The game child of `editor_play_scene` runs with `--remote-debug` and therefore has
+`EngineDebugger::is_active() == true`. Both executors run on the main thread
+inside the frame pump, and with a debugger active the engine turns a compile
+failure (`GDScriptLanguage::debug_break_parse()`, modules/gdscript/gdscript.cpp:
+825/845/867) and an aborted GDScript frame (`debug_break()`,
+modules/gdscript/gdscript_vm.cpp:525/3989) into `EngineDebugger::debug()` - whose
+remote implementation spins in `while (is_peer_connected())`
+(core/debugger/remote_debugger.cpp:444) until the editor resumes the process. The
+endpoint therefore stops answering, and so does the game.
+
+The module answers such a body with a structured refusal built from the captured
+diagnostic (-32602 + data.parse_error, TASK-063/089; -32000 + data.script_error,
+TASK-103). A debugger pause is the one way those diagnostics can still become "no
+answer at all", so the two shared capture helpers now run their one engine call
+with the engine's own error-break switch raised and put back what they found:
+
+  * `tool_helpers.h/.cpp`: `MCPTools::GDScriptErrorBreakGuard`. It takes the
+    `ScriptDebugger *` as an argument (`EngineDebugger::get_script_debugger()` at
+    the two production sites) so that the save/restore pair stays decidable in a
+    process whose debugger wait cannot run - see the red commit.
+  * `reload_gdscript_capturing` covers the compile window;
+    `call_gdscript_capturing` covers the execution window, because
+    `GDScriptFunction::call()` reports an aborted frame the same way. Nothing
+    about either refusal is weakened: the captures and every field they build are
+    untouched.
+  * No debugger (an editor, a plain game, the `--test` harness) means
+    `changed() == false` and nothing is written at all, so the undebugged path is
+    byte for byte what it was.
+  * `tools/running_game_script_execution.cpp`: the observable contract gains the
+    bullet that says so.
+
+Verified live on the rebuilt plain binary (ports 9888/9889, 9877 observed only):
+a game child with a debugger peer attached now answers the compile-failing body
+with `-32602` + `data.parse_error` immediately and stays usable, where the same
+body froze it before. Doctest: `[MCPServer] running_game_execute_gdscript does not
+run caller code with engine error breaks armed`, 22/22 assertions.
+
+(TASK-151)

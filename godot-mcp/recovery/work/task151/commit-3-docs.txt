@@ -1,0 +1,24 @@
+docs(mcp_server): TASK-151 - HANDOVER section 3 gains (k): what the error-break guard guarantees, what it does not, and why g05's three reds are not this batch's
+
+(k) records the TASK-151 boundary: the module raises the engine's
+`ScriptDebugger::ignore_error_breaks` for exactly the window in which it compiles
+and executes a caller's body, so a debugged game (the child of
+`editor_play_scene`, which carries `--remote-debug`) answers `-32602` /
+`-32000` instead of parking the main thread in `RemoteDebugger::debug()`'s
+`while (is_peer_connected())`. It also records what the guard does NOT do (it
+covers this module's window only, it cannot rescue a process already inside the
+wait, and it writes nothing at all when there is no debugger), the pre-fix and
+post-fix measurements, and the measured reason the doctest pins the module's own
+decision instead of the engine's wait: `RemoteDebugger::debug()`'s idle loop
+dereferences a null `DisplayServer` (remote_debugger.cpp:626-632) and
+`Main::test_setup()` creates none.
+
+It also names gate 5's three failing checks (B0/B1/B2) as out of scope with the
+evidence: they compare against the hof-rs frozen fixture
+(`F:\moonbit-hof-rs\tests\fixtures\mcp\tools_list.json`), which the hof-rs batch
+itself re-captured at `db2eed7` (177 tools, sha 50c5fb42...) while the script
+freezes 8f8051c4.../174; no input of gate 5 was touched here. The section says
+explicitly that neither re-freezing that constant nor restoring the fixture is
+allowed, so a later reader does not "fix" the red by weakening the check.
+
+(TASK-151)

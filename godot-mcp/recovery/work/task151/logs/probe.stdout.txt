@@ -1,0 +1,14 @@
+T151PROBE: start
+T151PROBE: input ok
+T151PROBE: listen err=0
+T151PROBE: port=53241
+T151PROBE: initialize returned active=true
+T151PROBE: survived 500ms with the peer attached
+T151PROBE: deinitialized
+T151PROBE: done
+[doctest] doctest version is "2.4.12"
+[doctest] run with "--help" for options
+===============================================================================
+[doctest] test cases: 1 | 1 passed | 0 failed | 1589 skipped
+[doctest] assertions: 0 | 0 passed | 0 failed |
+[doctest] Status: SUCCESS!

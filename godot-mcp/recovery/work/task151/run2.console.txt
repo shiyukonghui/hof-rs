@@ -1,0 +1,62 @@
+﻿[07:33:28.271] === TASK-151 faithful reproduction: compile-failing GDScript on a PLAYED game ===
+[07:33:30.196] PORT-GUARD before: 9877 = 108432 | 9888 =  | 9889 = 
+[07:33:30.725] STARTED pid=94384 log=editor
+[07:33:30.726]         cmdline="F:\moonbit-hof-rs\godot-mcp\godot\bin\godot.windows.editor.x86_64.console.exe" --headless -e --path C:\Users\wyl\AppData\Local\Temp\mcp151\proj --mcp-port=9888 
+[07:33:33.715] editor 9888 is listening
+[07:33:33.795] editor-tools-list: status_line=HTTP/1.1 200 OK elapsed_ms=45 bytes=56664 io_error=<none>
+[07:33:33.801]     body={"id":1,"jsonrpc":"2.0","result":{"tools":[{"description":"获取项目信息","inputSchema":{"properties":{},"required":[],"type":"object"},"name":"project_get_info"},{"description":"获取项目设置","inputSchema":{"properties":{"include_default":{"default":false,"type":"boolean"},"prefix":{"type":"string"}},"required":[],"type":"object"},"name":"project_get_settings"},{"description":"获取文件系统树状结构","inputSchema":{"properties":{"max_depth":{"default":-1,"type":"integer"},"path":{"default":"res://","type":"string"}},"required":[],"type":"object"},"name":"project_get_filesystem_tree"},{"description":"搜索文件 判别点：只匹配文件名子串（大小写不敏感、上限 200），不读文件内容、不返回行号；要搜索文件内容请用 project_search_file_contents。","inputSchema":{"properties":{"path":{"default":"res://","type":"string"},"pattern":{"type":"string"}},"required":["pattern"],"type":"object"},"name":"project_search_file_names"},{"description":"在文件内容中搜索文本 判别点：逐行返回 {file,line,text}...<truncated>
+[07:33:33.862] editor-play-scene: status_line=HTTP/1.1 200 OK elapsed_ms=41 bytes=444 io_error=<none>
+[07:33:33.862]     body={"id":2,"jsonrpc":"2.0","result":{"content":[{"text":"{\"args_deduplicated\":[],\"args_injected\":[\"--mcp-port=9889\",\"--headless\"],\"endpoint\":\"http://127.0.0.1:9889/mcp\",\"headless\":true,\"mcp_port\":9889,\"mcp_port_source\":\"argument\",\"mode\":\"main\",\"pid\":118348,\"playing\":true}","type":"text"}]}}
+[07:33:33.906] play_scene answer: {"args_deduplicated":[],"args_injected":["--mcp-port=9889","--headless"],"endpoint":"http://127.0.0.1:9889/mcp","headless":true,"mcp_port":9889,"mcp_port_source":"argument","mode":"main","pid":118348,"playing":true}
+[07:33:36.772] GAME pid=118348
+[07:33:36.774] GAME cmdline=F:\moonbit-hof-rs\godot-mcp\godot\bin\godot.windows.editor.x86_64.exe --path C:/Users/wyl/AppData/Local/Temp/mcp151/proj --remote-debug tcp://127.0.0.1:6007 --editor-pid 118496 --scene res://scenes/main.tscn "--mcp-port=9889" --headless
+[07:33:36.774] GAME has --remote-debug: True
+[07:33:36.797] game-tools-list-before: status_line=HTTP/1.1 200 OK elapsed_ms=7 bytes=31333 io_error=<none>
+[07:33:36.797]     body={"id":10,"jsonrpc":"2.0","result":{"tools":[{"description":"获取项目信息","inputSchema":{"properties":{},"required":[],"type":"object"},"name":"project_get_info"},{"description":"获取项目设置","inputSchema":{"properties":{"include_default":{"default":false,"type":"boolean"},"prefix":{"type":"string"}},"required":[],"type":"object"},"name":"project_get_settings"},{"description":"获取文件系统树状结构","inputSchema":{"properties":{"max_depth":{"default":-1,"type":"integer"},"path":{"default":"res://","type":"string"}},"required":[],"type":"object"},"name":"project_get_filesystem_tree"},{"description":"搜索文件 判别点：只匹配文件名子串（大小写不敏感、上限 200），不读文件内容、不返回行号；要搜索文件内容请用 project_search_file_contents。","inputSchema":{"properties":{"path":{"default":"res://","type":"string"},"pattern":{"type":"string"}},"required":["pattern"],"type":"object"},"name":"project_search_file_names"},{"description":"在文件内容中搜索文本 判别点：逐行返回 {file,line,text...<truncated>
+[07:33:56.822] game-call-analyzer-error: status_line=<NONE> elapsed_ms=20016 bytes=0 io_error=Exception calling "Read" with "3" argument(s): "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond."
+[07:34:16.836] game-call-2-after-freeze: status_line=<NONE> elapsed_ms=20010 bytes=0 io_error=Exception calling "Read" with "3" argument(s): "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond."
+[07:34:25.280] game-status-01: status_line=<NONE> elapsed_ms=8003 bytes=0 io_error=Exception calling "Read" with "3" argument(s): "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond."
+[07:34:25.282] T+10s alive=True listen=yes listen_pids=118348
+[07:34:44.033] game-status-02: status_line=<NONE> elapsed_ms=8002 bytes=0 io_error=Exception calling "Read" with "3" argument(s): "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond."
+[07:34:44.033] T+20s alive=True listen=yes listen_pids=118348
+[07:35:02.479] game-status-03: status_line=<NONE> elapsed_ms=8014 bytes=0 io_error=Exception calling "Read" with "3" argument(s): "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond."
+[07:35:02.480] T+30s alive=True listen=yes listen_pids=118348
+[07:35:20.963] game-status-04: status_line=<NONE> elapsed_ms=8011 bytes=0 io_error=Exception calling "Read" with "3" argument(s): "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond."
+[07:35:20.963] T+40s alive=True listen=yes listen_pids=118348
+[07:35:39.419] game-status-05: status_line=<NONE> elapsed_ms=8009 bytes=0 io_error=Exception calling "Read" with "3" argument(s): "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond."
+[07:35:39.419] T+50s alive=True listen=yes listen_pids=118348
+[07:35:57.845] game-status-06: status_line=<NONE> elapsed_ms=8015 bytes=0 io_error=Exception calling "Read" with "3" argument(s): "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond."
+[07:35:57.846] T+60s alive=True listen=yes listen_pids=118348
+[07:36:07.857] === CONTROL: stop the editor (the debugger peer) and ask the frozen game again ===
+[07:36:08.197]   child of pid=94384: pid=118496 F:\moonbit-hof-rs\godot-mcp\godot\bin\godot.windows.editor.x86_64.exe --headless -e --path C:\Users\wyl\AppData\Local\Temp\mcp151\proj --mcp-port=9888 
+[07:36:08.217] STOPPED pid=94384 (we started it)
+[07:36:18.284] game-call-after-editor-gone: status_line=<NONE> elapsed_ms=2049 bytes=0 io_error=Exception calling "Wait" with "1" argument(s): "One or more errors occurred."
+[07:36:18.653] game alive after editor gone = False, 9889 listen = 
+[07:36:18.676]   editor.out | 
+[07:36:18.677]   editor.out | [MCP] pending_timeout_ms=30000 (configured=30000) pending_ticks_per_frame=8
+[07:36:18.677]   editor.out | [MCP] trace=off (default; use --mcp-trace=<path> or godot_mcp/trace_file to enable)
+[07:36:18.678]   editor.out | [MCP] capture=off (default; use --mcp-capture=on_error|every_call together with --mcp-trace=<path>)
+[07:36:18.678]   editor.out | [MCP] role=editor configured_port=9888 source=cmdline listen=true
+[07:36:18.679]   editor.out | [MCP] listening on 127.0.0.1:9888 (editor=true, tools=154)
+[07:36:18.679]   editor.out | [MCP] INFO: MCP server is ready on 127.0.0.1:9888 as the editor process (port source=cmdline, tools=154)
+[07:36:18.680]   editor.out | [   0% ] [90m[1mfirst_scan_filesystem[22m | Started 椤圭洰鍒濆鍖?(5 steps)[39m[0m
+[07:36:18.680]   editor.out | [   0% ] [90m[1mfirst_scan_filesystem[22m | 姝ｅ湪鎵弿鏂囦欢缁撴瀯鈥︹€?[39m[0m
+[07:36:18.681]   editor.out | [  16% ] [90m[1mfirst_scan_filesystem[22m | 姝ｅ湪鍔犺浇鍏ㄥ眬绫诲悕鈥︹€?[39m[0m
+[07:36:18.682]   editor.out | [  33% ] [90m[1mfirst_scan_filesystem[22m | 姝ｅ湪鏍￠獙 GDExtension鈥︹€?[39m[0m
+[07:36:18.682]   editor.out | [  50% ] [90m[1mfirst_scan_filesystem[22m | 姝ｅ湪鍒涘缓鑷姩鍔犺浇鑴氭湰鈥︹€?[39m[0m
+[07:36:18.683]   editor.out | [  66% ] [90m[1mfirst_scan_filesystem[22m | 姝ｅ湪鍒濆鍖栨彃浠垛€︹€?[39m[0m
+[07:36:18.683]   editor.out | [  83% ] [90m[1mfirst_scan_filesystem[22m | 姝ｅ湪鍚姩鏂囦欢鎵弿鈥︹€?[39m[0m
+[07:36:18.684]   editor.out | [92m[ DONE ][39m [1mfirst_scan_filesystem[22m
+[07:36:18.684]   editor.out | [0m
+[07:36:18.685]   editor.out | [   0% ] [90m[1mloading_editor_layout[22m | Started 姝ｅ湪鍔犺浇缂栬緫鍣?(5 steps)[39m[0m
+[07:36:18.686]   editor.out | [   0% ] [90m[1mloading_editor_layout[22m | 姝ｅ湪鍔犺浇缂栬緫鍣ㄥ竷灞€鈥︹€?[39m[0m
+[07:36:18.686]   editor.out | [  16% ] [90m[1mloading_editor_layout[22m | 姝ｅ湪鍔犺浇鍋滈潬闈㈡澘鈥︹€?[39m[0m
+[07:36:18.687]   editor.out | [  33% ] [90m[1mloading_editor_layout[22m | 姝ｅ湪閲嶆柊鎵撳紑鍦烘櫙鈥︹€?[39m[0m
+[07:36:18.688]   editor.out | [  50% ] [90m[1mloading_editor_layout[22m | 姝ｅ湪鍔犺浇涓ぎ缂栬緫鍣ㄥ竷灞€鈥︹€?[39m[0m
+[07:36:18.688]   editor.out | [  66% ] [90m[1mloading_editor_layout[22m | 姝ｅ湪鍔犺浇鎻掍欢绐楀彛甯冨眬鈥︹€?[39m[0m
+[07:36:18.689]   editor.out | [  83% ] [90m[1mloading_editor_layout[22m | 缂栬緫鍣ㄥ竷灞€灏辩华銆?[39m[0m
+[07:36:18.690]   editor.out | [92m[ DONE ][39m [1mloading_editor_layout[22m
+[07:36:18.690]   editor.out | [0m
+[07:36:18.953] STOPPED pid=118348 (we started it)
+[07:36:19.301] PORT-GUARD after: 9877 = 108432
+[07:36:19.305] timeline written to F:\moonbit-hof-rs\godot-mcp\recovery\work\task151\evidence-played\timeline.txt

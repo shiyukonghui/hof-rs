@@ -1,0 +1,11 @@
+label=game-call-2-after-freeze port=9889 connected=True
+elapsed_ms=20010 bytes_read=0
+status_line=<NONE>
+io_error=Exception calling "Read" with "3" argument(s): "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond."
+request=POST /mcp HTTP/1.1
+Host: 127.0.0.1:9889
+Content-Type: application/json
+Content-Length: 133
+
+{"jsonrpc":"2.0","id":12,"method":"tools/call","params":{"name":"running_game_execute_gdscript","arguments":{"code":"return 1 + 1"}}}
+response_body=

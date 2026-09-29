@@ -1,0 +1,147 @@
+ERROR: [MCP] SceneTree never became available; MCP server disabled.
+   at: MCPServer::bootstrap (modules\mcp_server\mcp_server.cpp:223)
+Unicode parsing error, some characters were replaced with � (U+FFFD): Invalid UTF-8 leading byte (ff)
+ERROR: MCPToolRegistry: tool name 'project_update_registration_guard' contains the banned verb 'update_' (GDR-16 L4).
+   at: MCPTools::ToolBuilder::register_into (modules\mcp_server\tools\tool_builder.cpp:146)
+ERROR: MCPToolRegistry: tool name 'game_get_x' must match ^(editor|running_game|project|os)_[a-z0-9_]+$ (GDR-16 L1).
+   at: MCPTools::ToolBuilder::register_into (modules\mcp_server\tools\tool_builder.cpp:146)
+ERROR: MCPToolRegistry: tool name 'Editor_get_info' must match ^(editor|running_game|project|os)_[a-z0-9_]+$ (GDR-16 L1).
+   at: MCPTools::ToolBuilder::register_into (modules\mcp_server\tools\tool_builder.cpp:146)
+ERROR: MCPToolRegistry: tool name 'editor_navigate_to_node' has verb 'navigate', which is not in the closed verb set (GDR-16 L2).
+   at: MCPTools::ToolBuilder::register_into (modules\mcp_server\tools\tool_builder.cpp:146)
+ERROR: MCPToolRegistry: tool name 'editor_clear_output_panel' has verb 'clear', which is not in the closed verb set (GDR-16 L2).
+   at: MCPTools::ToolBuilder::register_into (modules\mcp_server\tools\tool_builder.cpp:146)
+ERROR: MCPToolRegistry: tool name 'editor_update_node_property' contains the banned verb 'update_' (GDR-16 L4).
+   at: MCPTools::ToolBuilder::register_into (modules\mcp_server\tools\tool_builder.cpp:146)
+ERROR: MCPToolRegistry: tool name 'editor_get_node_properties' declares channel 'project' but the name says 'editor' (GDR-16 L3).
+   at: MCPTools::ToolBuilder::register_into (modules\mcp_server\tools\tool_builder.cpp:146)
+ERROR: Condition "!unique_ids.has(p_id)" is true.
+   at: ResourceUID::remove_id (core\io\resource_uid.cpp:232)
+ERROR: res://mcp_server_test_fixture/resources/corrupt.tres:5 - Parse Error: Unexpected end of file.
+   at: ResourceLoaderText::open (scene\resources\resource_format_text.cpp:1188)
+ERROR: Failed loading resource: res://mcp_server_test_fixture/resources/corrupt.tres.
+   at: ResourceLoader::_load (core\io\resource_loader.cpp:317)
+SCRIPT ERROR: Parse Error: Expected grouping expression.
+   at: GDScript::reload (gdscript://-9223371815663959547.gd:4)
+ERROR: MCPTools::ToolBuilder: tool 'project_get_two_halves' must declare exactly one of handler / pending_handler (GDR-20).
+   at: MCPTools::ToolBuilder::register_into (modules\mcp_server\tools\tool_builder.cpp:146)
+ERROR: MCPTools::ToolBuilder: tool 'project_get_no_half' must declare handler explicitly (GDR-16 / GDR-18).
+   at: MCPTools::ToolBuilder::register_into (modules\mcp_server\tools\tool_builder.cpp:146)
+WARNING: An input event object is being parsed more than once in the same frame, which is unsafe.
+If you are generating events in a script, you have to instantiate a new event instead of sending the same one more than once, unless the original one was sent on an earlier frame.
+You can call duplicate() on the event to get a new instance with identical values.
+   at: Input::parse_input_event (core\input\input.cpp:1647)
+ERROR: The InputMap action "mcp013_absent_action" doesn't exist. Did you mean "mcp013_probe_action"?
+   at: Input::is_action_pressed (core\input\input.cpp:416)
+ERROR: ConfigFile parse error at res://mcp_server_test_fixture/generated/unparseable.godot:0: Unexpected EOF while parsing simple tag.
+   at: ConfigFile::_parse (core\io\config_file.cpp:293)
+ERROR: ConfigFile parse error at res://mcp_server_test_fixture/generated/unparseable.godot:0: Unexpected EOF while parsing simple tag.
+   at: ConfigFile::_parse (core\io\config_file.cpp:293)
+ERROR: ConfigFile parse error at res://mcp_server_test_fixture/generated/unparseable.godot:0: Unexpected EOF while parsing simple tag.
+   at: ConfigFile::_parse (core\io\config_file.cpp:293)
+SCRIPT ERROR: Parse Error: Expected parameter name.
+   at: GDScript::reload (gdscript://-9223371628514114855.gd:3)
+SCRIPT ERROR: Parse Error: Expected grouping expression.
+   at: GDScript::reload (gdscript://-9223371485219913340.gd:4)
+SCRIPT ERROR: Parse Error: Expected grouping expression.
+   at: GDScript::reload (gdscript://-9223371484934699884.gd:4)
+ERROR: Node not found: "NoSuchChild" (relative to "Main").
+   at: Node::get_node (scene\main\node.cpp:1994)
+   GDScript backtrace (most recent call first):
+       [0] _mcp_execute (gdscript://-9223371484901145447.gd:4)
+SCRIPT ERROR: Invalid access to property or key 'name' on a base object of type 'null instance'.
+   at: _mcp_execute (gdscript://-9223371484901145447.gd:4)
+   GDScript backtrace (most recent call first):
+       [0] _mcp_execute (gdscript://-9223371484901145447.gd:4)
+SCRIPT ERROR: Parse Error: Expected grouping expression.
+   at: GDScript::reload (gdscript://-9223371482736885255.gd:4)
+SCRIPT ERROR: Invalid call. Nonexistent function 'NoSuchMethodAtAll' in base 'Node'.
+   at: _mcp_execute (gdscript://-9223371482703330185.gd:6)
+   GDScript backtrace (most recent call first):
+       [0] _mcp_execute (gdscript://-9223371482703330185.gd:6)
+SCRIPT ERROR: Invalid call. Nonexistent function 'addChild' in base 'Node'.
+   at: _mcp_execute (gdscript://-9223371482636221281.gd:6)
+   GDScript backtrace (most recent call first):
+       [0] _mcp_execute (gdscript://-9223371482636221281.gd:6)
+ERROR: deliberate diagnostic from the body
+   at: VariantUtilityFunctions::push_error (core\variant\variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] _mcp_execute (gdscript://-9223371482485226329.gd:4)
+WARNING: Property not found: 'network/limits/debugger/max_queued_messages'.
+   at: ProjectSettings::get_setting_with_override (core\config\project_settings.cpp:439)
+WARNING: Property not found: 'network/limits/debugger/max_chars_per_second'.
+   at: ProjectSettings::get_setting_with_override (core\config\project_settings.cpp:439)
+WARNING: Property not found: 'network/limits/debugger/max_errors_per_second'.
+   at: ProjectSettings::get_setting_with_override (core\config\project_settings.cpp:439)
+WARNING: Property not found: 'network/limits/debugger/max_warnings_per_second'.
+   at: ProjectSettings::get_setting_with_override (core\config\project_settings.cpp:439)
+ERROR: Failed to retrieve non-existent singleton 'Performance'.
+   at: Engine::get_singleton_object (core\config\engine.cpp:345)
+WARNING: Property not found: 'network/limits/debugger/max_queued_messages'.
+   at: ProjectSettings::get_setting_with_override (core\config\project_settings.cpp:439)
+WARNING: Property not found: 'network/limits/debugger/max_chars_per_second'.
+   at: ProjectSettings::get_setting_with_override (core\config\project_settings.cpp:439)
+WARNING: Property not found: 'network/limits/debugger/max_errors_per_second'.
+   at: ProjectSettings::get_setting_with_override (core\config\project_settings.cpp:439)
+WARNING: Property not found: 'network/limits/debugger/max_warnings_per_second'.
+   at: ProjectSettings::get_setting_with_override (core\config\project_settings.cpp:439)
+ERROR: Failed to retrieve non-existent singleton 'Performance'.
+   at: Engine::get_singleton_object (core\config\engine.cpp:345)
+
+================================================================
+CrashHandlerException: Program crashed
+Engine version: Godot Engine v4.8.dev.custom_build (15bbf1f50ea45146bb4a644ffde9898d1b7ca7ee)
+Dumping the backtrace. Please include this when reporting the bug on: https://github.com/godotengine/godot/issues
+Load address: 7ff7dbb80000
+
+[1] 7ff7e24b231c (main+693231c) - <couldn't map PC to fn name>
+[2] 7ff7e1c5cad5 (main+60dcad5) - <couldn't map PC to fn name>
+[3] 7ff7dcea515e (main+132515e) - <couldn't map PC to fn name>
+[4] 7ff7dcdefe45 (main+126fe45) - <couldn't map PC to fn name>
+[5] 7ff7dd6edcf5 (main+1b6dcf5) - <couldn't map PC to fn name>
+[6] 7ff7dd6d54de (main+1b554de) - <couldn't map PC to fn name>
+[7] 7ff7dd6d51f9 (main+1b551f9) - <couldn't map PC to fn name>
+[8] 7ff7dd6768e3 (main+1af68e3) - <couldn't map PC to fn name>
+[9] 7ff7dbe001c0 (main+2801c0) - <couldn't map PC to fn name>
+[10] 7ff7dc86ce13 (main+cece13) - <couldn't map PC to fn name>
+[11] 7ff7dbeaf967 (main+32f967) - <couldn't map PC to fn name>
+[12] 7ff7dbcc50a1 (main+1450a1) - <couldn't map PC to fn name>
+[13] 7ff7dbc91d57 (main+111d57) - <couldn't map PC to fn name>
+[14] 7ff7dbc91be7 (main+111be7) - <couldn't map PC to fn name>
+[15] 7ff7dbc91e59 (main+111e59) - <couldn't map PC to fn name>
+[16] 7ff7e2733026 (main+6bb3026) - <couldn't map PC to fn name>
+[17] 7ffc26c3e8d7 (kernel32.dll+2e8d7) - <couldn't map PC to fn name>
+-- END OF C++ BACKTRACE --
+================================================================
+ERROR: BUG: Unreferenced static string to 0: Variant
+   at: StringName::unref (core\string\string_name.cpp:118)
+ERROR: BUG: Unreferenced static string to 0: _skip_save_
+   at: StringName::unref (core\string\string_name.cpp:118)
+ERROR: BUG: Unreferenced static string to 0: ..
+   at: StringName::unref (core\string\string_name.cpp:118)
+ERROR: BUG: Unreferenced static string to 0: .
+   at: StringName::unref (core\string\string_name.cpp:118)
+ERROR: Pages in use exist at exit in PagedAllocator: union VariantPools::BucketLarge
+   at: PagedAllocator<union VariantPools::BucketLarge,1,4096>::~PagedAllocator (.\core/templates/paged_allocator.h:170)
+ERROR: Pages in use exist at exit in PagedAllocator: union VariantPools::BucketMedium
+   at: PagedAllocator<union VariantPools::BucketMedium,1,4096>::~PagedAllocator (.\core/templates/paged_allocator.h:170)
+ERROR: Pages in use exist at exit in PagedAllocator: union VariantPools::BucketSmall
+   at: PagedAllocator<union VariantPools::BucketSmall,1,4096>::~PagedAllocator (.\core/templates/paged_allocator.h:170)
+ERROR: BUG: Unreferenced static string to 0: _exists
+   at: StringName::unref (core\string\string_name.cpp:118)
+ERROR: BUG: Unreferenced static string to 0: _get_resource_uid
+   at: StringName::unref (core\string\string_name.cpp:118)
+ERROR: BUG: Unreferenced static string to 0: _recognize_path
+   at: StringName::unref (core\string\string_name.cpp:118)
+ERROR: BUG: Unreferenced static string to 0: _set_path_cache
+   at: StringName::unref (core\string\string_name.cpp:118)
+ERROR: Pages in use exist at exit in PagedAllocator: struct StringName::_Data
+   at: PagedAllocator<struct StringName::_Data,0,4096>::~PagedAllocator (.\core/templates/paged_allocator.h:170)
+ERROR: 6 RID allocations of type 'struct NavMeshGeometryParser3D' were leaked at exit.
+ERROR: 7 RID allocations of type 'struct NavMeshGeometryParser2D' were leaked at exit.
+ERROR: Profiler not registered: 'multiplayer:bandwidth'.
+   at: EngineDebugger::unregister_profiler (core\debugger\engine_debugger.cpp:47)
+ERROR: Profiler not registered: 'multiplayer:rpc'.
+   at: EngineDebugger::unregister_profiler (core\debugger\engine_debugger.cpp:47)
+ERROR: Profiler not registered: 'multiplayer:replication'.
+   at: EngineDebugger::unregister_profiler (core\debugger\engine_debugger.cpp:47)

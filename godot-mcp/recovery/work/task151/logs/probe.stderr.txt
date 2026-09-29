@@ -1,0 +1,20 @@
+WARNING: Property not found: 'network/limits/debugger/max_queued_messages'.
+   at: ProjectSettings::get_setting_with_override (core\config\project_settings.cpp:439)
+WARNING: Property not found: 'network/limits/debugger/max_chars_per_second'.
+   at: ProjectSettings::get_setting_with_override (core\config\project_settings.cpp:439)
+WARNING: Property not found: 'network/limits/debugger/max_errors_per_second'.
+   at: ProjectSettings::get_setting_with_override (core\config\project_settings.cpp:439)
+WARNING: Property not found: 'network/limits/debugger/max_warnings_per_second'.
+   at: ProjectSettings::get_setting_with_override (core\config\project_settings.cpp:439)
+ERROR: Failed to retrieve non-existent singleton 'Performance'.
+   at: Engine::get_singleton_object (core\config\engine.cpp:345)
+ERROR: [MCP] SceneTree never became available; MCP server disabled.
+   at: MCPServer::bootstrap (modules\mcp_server\mcp_server.cpp:223)
+ERROR: Profiler not registered: 'multiplayer:bandwidth'.
+   at: EngineDebugger::unregister_profiler (core\debugger\engine_debugger.cpp:47)
+ERROR: Profiler not registered: 'multiplayer:rpc'.
+   at: EngineDebugger::unregister_profiler (core\debugger\engine_debugger.cpp:47)
+ERROR: Profiler not registered: 'multiplayer:replication'.
+   at: EngineDebugger::unregister_profiler (core\debugger\engine_debugger.cpp:47)
+ERROR: Capture not registered: 'snapshot'.
+   at: EngineDebugger::unregister_message_capture (core\debugger\engine_debugger.cpp:62)

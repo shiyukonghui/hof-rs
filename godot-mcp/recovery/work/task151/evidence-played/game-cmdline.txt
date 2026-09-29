@@ -1,0 +1,1 @@
+F:\moonbit-hof-rs\godot-mcp\godot\bin\godot.windows.editor.x86_64.exe --path C:/Users/wyl/AppData/Local/Temp/mcp151/proj --remote-debug tcp://127.0.0.1:6007 --editor-pid 118496 --scene res://scenes/main.tscn "--mcp-port=9889" --headless

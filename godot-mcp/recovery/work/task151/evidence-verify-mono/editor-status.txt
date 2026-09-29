@@ -1,0 +1,10 @@
+label=editor-status port=9888
+elapsed_ms=7 bytes_read=325
+status_line=HTTP/1.1 200 OK
+io_error=<none>
+request=GET /mcp HTTP/1.1
+Host: 127.0.0.1:9888
+Accept: application/json
+
+
+response_body={"connections":1,"frame_count":300,"is_editor":true,"listening":true,"pending":0,"pending_connections":0,"port":9888,"server":"godot-mcp-rs","status":"ok","tools":154,"transport":"streamable-http"}

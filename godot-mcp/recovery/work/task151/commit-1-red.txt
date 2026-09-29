@@ -1,0 +1,33 @@
+test(mcp_server): TASK-151 - the red doctest for a body that does not compile in a debugged game (does not build until the guard exists)
+
+`running_game_execute_gdscript` answers `-32602` in a plain game process, but
+never answers at all in the game child of `editor_play_scene`, whose command line
+carries `--remote-debug tcp://...` (editor/run/editor_run.cpp:64-68). With a
+debugger active, `GDScript::reload()` reports a compile failure through
+`GDScriptLanguage::debug_break_parse()`, which funnels into
+`RemoteDebugger::debug()`'s `while (is_peer_connected())` and parks the main
+thread - the thread the MCP endpoint is served from.
+
+Measured before this commit (recovery/work/task151, ports 9888/9889 only, 9877
+untouched):
+  * played game, compile-failing body: no status line in 20 s, `GET /mcp`
+    unanswered for 60 s, listener open, process alive;
+  * the same body with the debugger peer released after 25 s: the SAME connection
+    was answered after 23.6 s with `-32602` + `data.parse_error`, which is what
+    identifies the wait rather than a dead socket or a dead process;
+  * editor endpoint, the same two bodies: `-32602` in 11-14 ms.
+
+This case is the red half: it calls for `MCPTools::GDScriptErrorBreakGuard` and
+for the compile-failure contract on the game path. It does not compile yet
+(`error C2065: "GDScriptErrorBreakGuard": undeclared identifier`), which is the
+failure this commit records. It pins the module's own decision rather than the
+engine's wait, because the engine's wait cannot run in this harness:
+`RemoteDebugger::debug()`'s idle loop dereferences a null `DisplayServer`
+(core/debugger/remote_debugger.cpp:626-632) and `Main::test_setup()` creates none
+- measured: a version of this case that attached a real debugger peer and let the
+body fail died with SIGSEGV inside that loop.
+
+The engine-visible half is measured on the wire in
+recovery/work/task151 (repro_played.ps1, repro_peer.ps1, verify_fixed.ps1).
+
+(TASK-151)

@@ -1,0 +1,2 @@
+ERROR: [MCP] SceneTree never became available; MCP server disabled.
+   at: MCPServer::bootstrap (modules\mcp_server\mcp_server.cpp:223)

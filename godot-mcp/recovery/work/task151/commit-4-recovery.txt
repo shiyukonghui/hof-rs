@@ -1,0 +1,29 @@
+chore(recovery): record the TASK-151 debugger-freeze batch (report, reproduction and verification scripts, raw evidence)
+
+The batch closes the engine-side defect where `running_game_execute_gdscript`
+never answers in the game child of `editor_play_scene` when the supplied `code`
+does not compile, and the endpoint eventually loses its listener.
+
+Engine-side commits (nested repo `godot-mcp/godot`, not pushed):
+  c0f2dfba31  test(mcp_server): the red doctest
+  97fc49df4b  fix(mcp_server): `MCPTools::GDScriptErrorBreakGuard`
+  035edfce7f  docs(mcp_server): HANDOVER section 3 (k)
+
+What this commit records:
+  * `reports/TASK-151-REPORT.md` - the eight required sections: the verdict
+    (reproduced on the played game, NOT on a plain game or the editor endpoint),
+    the minimal reproduction with raw responses and timings, the root cause with
+    file:line anchors, the fix and why no existing assertion changed, the gate
+    ledger (canonical mono 9/10 with g05's three reds traced to the hof-rs frozen
+    fixture, plus the plain-console deviation run), the forbidden-zone
+    self-check, the unverified items, and the honesty section;
+  * `work/task151/` - `repro.ps1` (plain game: no reproduction),
+    `repro_played.ps1` (editor_play_scene: 20 s with no status line, `GET /mcp`
+    silent for 60 s, process and listener alive), `repro_peer.ps1` (the
+    confound-free control: the SAME connection answered 23.58 s later when the
+    debugger peer was released), `verify_fixed.ps1` (34 checks, run against both
+    variants), `run_gates_task151.ps1` (the plain-console deviation run) and
+    `run_gates_canonical.ps1` (the canonical mono run), with the raw evidence,
+    timelines, gate logs and the binaries' sha256/mtime.
+
+(TASK-151)
