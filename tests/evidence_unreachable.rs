@@ -217,6 +217,25 @@ async fn a_wildcard_walk_of_hoh_cannot_reach_the_previous_rounds_evidence() {
          role's cwd: {stale:?}"
     );
 
+    // (1b) The role's working directory *is* the workspace, so walk all of it:
+    // moving the quarantine to a sibling of `.hoh` inside the cwd would leave it
+    // reachable (and would even be copied into the role views, which only
+    // exclude `.hoh`/`.git`).
+    let cwd = walk(&workspace);
+    for (relative, seed) in SEEDS {
+        let hits = reaches(&cwd, seed);
+        assert!(
+            hits.is_empty(),
+            "DR-61: a walk of the role's cwd still reaches the previous round's \
+             {relative} at {hits:?}"
+        );
+    }
+    let cwd_stale: Vec<&String> = cwd.keys().filter(|key| key.contains(".stale-")).collect();
+    assert!(
+        cwd_stale.is_empty(),
+        "DR-61: the quarantine is still inside the role's working directory: {cwd_stale:?}"
+    );
+
     // (2) The Developer's own view of its cwd at invocation time agrees.
     let files = developer_view(&records);
     for (relative, seed) in SEEDS {
