@@ -9635,3 +9635,37 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
   4. 队列：**DR-59 → DR-60（flake，先刻画）→ REF2 → §16 → 再跑真机判 E3 → 专攻 E1 → 造游戏**。
 - 回滚点：DR-57 各提交单独 revert；两条真机基线不得覆盖。
 
+## D247 — DR-59 交付：**开轮即隔离（移开，不删除）**；359/0/7；三条实测残留（含我未预见的 `.hoh/evidence/**`）
+
+- 日期：2026-09-29。交付 `.spec/hof-rs/tasks/TASK-DR59-REPORT.md`；提交（起点 `ea1cf07`）
+  `91a28f8`(红测试) → `db145b5`(实现) → `7fab86b`(两轮复现) → `6e4a6a2`(报告)；**未 push**。
+- **选"移开"而非"按轮次命名空间"，理由我认可**：`battery.json` 与 `raw/<step>.json` 被**三个角色的提示词**、
+  冻结候选副本与**约 40 处断言**按**逐字路径**引用 ⇒ 命名空间会改写本轮路径，且旧字节仍可在 `.hoh` 下被发现。
+  实现：`quarantine_previous_evidence()`（`src/runtime/hygiene.rs:363`）在 `run_loop.rs:353` **每轮一次**，
+  位于 `adapter.initialize` **之后**、**A0 与角色之前**；`.hoh` 本在合并哈希排除项（`policy.rs:39`）⇒ A0/A_t 不受影响。
+  `.stale-` 收敛为**一个共享函数**（`hygiene.rs:331`），DR-49 的 `invalidate_artifact` 复用同串。
+  **穷尽时 `bail!` 而不是删除** ⇒ **宁可失败，不销毁用户数据**（正确方向）。
+- **门**：`cargo test --offline` = **359 passed / 0 failed / 7 ignored，EXIT=0**，零警告；逐 target 对照：
+  lib 104→107、新 target `tests/evidence_isolation.rs` 3 测试、**其余逐一致**；`ignored` 7→7。
+- **非空洞性（双向）**：修前红有真实输出（读出 `.hoh/deterministic/battery.json` 等）；
+  隔离**关掉** ⇒ 2/3 红（两轮件列出上一轮证据 = `smoke-t7` 症状）；条件**恒真** ⇒ 单测与集成两层都红（`os error 3`）。
+- **真机对照（最有说服力）**：污染那次读是 `messages[52]` 的 `type "…\deterministic\battery.json"`；
+  `messages[54]` 含 `pid:108432`、`(UNAVAILABLE: the editor is not clean)`、`os error 10061`、`4246 byte(s)`；
+  开轮前该文件 **9314 字节**、与 `runs/smoke-t7-experiment/…/smoke-t6-workspace-baseline/deterministic/battery.json`
+  **标记逐字节一致**；**修后该路径在 Developer cwd 下不存在**。
+- **三条实测残留与处置**：
+  - **R-1（立 DR-61）**：隔离物**仍在角色 cwd 内**（`.hoh/deterministic.stale-<ts>`）⇒
+    "**文档化读取路径为空**"成立，但"**不可达**"未绝对证明（若某角色**遍历** `.hoh` 仍可能拿到）。
+  - **R-2（接受）**：隔离**每轮只一次** ⇒ 迭代 t≥2 仍见**同轮内** t-1 的电池证据 = **刻意的轮内反馈**，非缺陷。
+  - **R-3（并入 DR-61）**：`.hoh/evidence/**` **同族且未改**——开轮前 `.workspace/mario/.hoh/evidence/frame-00.png`
+    是**上一轮的 4246 字节**件（DR-49 只在采集时刻作废目标路径）。
+  ⇒ **DR-61 = "旧轮证据必须**结构上不可达**（移出角色 cwd + 遍历也不得命中）"**，与我"不靠约定、靠结构"的要求一致。
+- 诚实项：**E3 未声称**（未跑真机）；**三条 hygiene 单测是实现之后补的**（新 API 无法先红），
+  非空洞性由植入 B 度量而**非红历史** ⇒ **我不把它算作 TDD 证据**。
+- 禁区（合规；**引擎树用嵌套仓**，符合 D242）：`.workspace/mario` 259 文件、最新 14:32:28、**0 个晚于 18:00**；
+  `runs/smoke-t6` 135 / `smoke-t7` 115、**0 个晚于 18:00**；`PRD` sha 未变；外层 `ls-files godot-mcp/godot` = **0**、
+  嵌套 `status --porcelain` **两变体皆 0 行**、HEAD `fc63af77…`、`mcp_server` 最新 mtime `10:37:38`；无依赖 diff。
+- 裁决：**验收已在飞**（`bb4002dd…`）；**推送等它通过**。队列更新为
+  **DR-59 验收 → DR-61（R-1+R-3）→ DR-60（flake）→ REF2 → §16 → 再跑真机**。
+- 回滚点：DR-59 各提交单独 revert；两条真机基线不得覆盖。
+
