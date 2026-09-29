@@ -301,4 +301,67 @@ mod tests {
             .unwrap()
             .is_empty());
     }
+
+    /// DR-61 / DEF-2: a file carrying the DR-49 `*.stale-*` marker has been
+    /// superseded, so it must never enter the frozen candidate view — the Tester
+    /// judges **this round's** evidence.  Skipping is not deleting: the file
+    /// stays exactly where it was on the real workspace.
+    #[test]
+    fn copy_evidence_skips_superseded_files_and_keeps_them() {
+        let temp = tempfile::tempdir().unwrap();
+        let source = temp.path().join("evidence");
+        write(&source.join("frame-00.png"), "this round\n");
+        write(&source.join("frame-00.png.stale-1790663544"), "stale round\n");
+        write(&source.join("replay/round.json"), "this round\n");
+        write(&source.join("replay/round.json.stale-1790663544"), "stale round\n");
+
+        let destination = temp.path().join("candidate/.hoh/evidence");
+        let oversized = copy_evidence(&source, &destination, 4).unwrap();
+
+        assert!(
+            destination.join("frame-00.png").is_file(),
+            "this round's evidence is still copied"
+        );
+        assert!(
+            !destination.join("frame-00.png.stale-1790663544").exists(),
+            "DR-61: a superseded evidence file must not reach the frozen candidate"
+        );
+        assert!(
+            !destination.join("replay/round.json.stale-1790663544").exists(),
+            "DR-61: a superseded file in a subdirectory must not reach the candidate"
+        );
+        assert!(
+            source.join("frame-00.png.stale-1790663544").is_file(),
+            "DR-61: skipping must never delete the superseded bytes"
+        );
+        assert!(
+            !oversized
+                .iter()
+                .any(|(relative, _)| relative.contains(".stale-")),
+            "DR-61: a skipped file is not reported as copied: {oversized:?}"
+        );
+    }
+
+    /// DR-61: `.hoh` is excluded from the identity hash (`policy.rs`), so
+    /// skipping a superseded evidence file cannot move the frozen candidate's
+    /// hash — the copy and the identity are independent.
+    #[test]
+    fn the_candidate_identity_is_unaffected_by_evidence_copying() {
+        let temp = tempfile::tempdir().unwrap();
+        let candidate = temp.path().join("candidate");
+        write(&candidate.join("project.godot"), "config_version=5\n");
+        let excludes = crate::runtime::policy::HashExcludes::default().merged();
+
+        let before = crate::runtime::policy::hash_tree(&candidate, &excludes).unwrap();
+        let source = temp.path().join("evidence");
+        write(&source.join("frame-00.png"), "0123456789");
+        write(&source.join("frame-00.png.stale-1790663544"), "0123456789");
+        copy_evidence(&source, &candidate.join(".hoh/evidence"), 4).unwrap();
+        let after = crate::runtime::policy::hash_tree(&candidate, &excludes).unwrap();
+
+        assert_eq!(
+            before, after,
+            "the frozen candidate identity must not depend on copied evidence"
+        );
+    }
 }
