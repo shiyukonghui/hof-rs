@@ -4,7 +4,7 @@
 > 上游输入（只当线索，判定以我自己的实测为准）：`.spec/hof-rs/tasks/TASK-DR59-ACCEPTANCE.md`（DEF-1/DEF-2）、
 > `.spec/hof-rs/tasks/TASK-DR59-REPORT.md`（R-1/R-3）、`DECISIONS.md` D240/D247/D248。
 > **离线**：未启动 Godot、未触碰任何外部/MCP 端口、未联网、未调模型端点、未 push。
-> 基线（批次起点）：`5abddbd`（= `origin/master`）。本批 5 个提交，全部未 push。
+> 基线（批次起点）：`5abddbd`（= `origin/master`）。本批 6 个提交（5 个代码/测试 + 1 个本报告），全部未 push。
 > **不声称 E1..E6 中任何一条 met（尤其不声称 E3）** —— 那只能由真机轮次判定。
 
 ---
@@ -49,6 +49,7 @@ EXIT=0                       # bash PIPESTATUS[0]
 | `0d0f391` | **红**：把 seed 加宽到真实工作区里**每一个** `.hoh` 同族路径后，`.hoh/SCAFFOLD.md` 仍可达 |
 | `92e4aff` | 实现 v2：隔离**整个 `.hoh`**（curated 列表实测不完备，见 §3） |
 | `be8d115` | 把不变量加宽到"整个角色 cwd"，任意位置的隔离物都必须红 |
+| `aadbea1` | 本报告（`TASK-DR61-REPORT.md`） |
 
 ---
 
@@ -429,6 +430,11 @@ $ git log --oneline origin/master..HEAD | wc -l => 5                            
    关键源码 sha 与 DR-59 记录相同、**0 个引擎文件晚于 19:00（我的批次起点）**。
 8. **本报告只写实测**：所有引用的命令输出、退出码、路径、摘要均来自本会话真实运行；未编造输出或日期。
    `.spec/hof-rs/PRD-mario.md` 与 `DECISIONS.md` 未改；本批未 push、未 stage 任何东西。
+9. **一处分属文件**：本批运行期间调度者新建了
+   `.spec/hof-rs/tasks/TASK-DR61-ACCEPT.md`（独立验收任务书）。它**不是我的产物**、
+   不在我任何提交里（`git log --all -- …/TASK-DR61-ACCEPT.md` = 0）、我未 touch 它，也未把它 stage/commit。
+   因此现在跑 `git status --porcelain` 会看到**两个**未跟踪文件（本报告 + 该任务书）；§6 里
+   "只有本报告未跟踪"的引文是清理 scratch 那一刻的真实输出（该任务书当时尚未落盘）。
 
 ### scratch 清理记录
 
