@@ -62,7 +62,7 @@ fn the_dr58_fixtures_are_byte_for_byte_copies_of_the_real_payloads() {
     let manifest = manifest();
     let files = manifest["files"].as_array().expect("a files array");
     assert!(
-        files.len() >= 8,
+        files.len() >= 7,
         "the batch's real evidence must be frozen: {files:?}"
     );
     for entry in files {

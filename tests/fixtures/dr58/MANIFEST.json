@@ -2,7 +2,7 @@
   "batch": "DR-58",
   "engine_version_string": "4.8.dev.mono.custom_build.035edfce7",
   "captured_by": "TASK-SMOKE-T7 (runs/smoke-t7) and its E3 pre-check experiment (runs/smoke-t7-experiment)",
-  "note": "Byte-for-byte copies of real-machine evidence. runs/** is read-only: these fixtures are the frozen input the DR-58 tests are driven from, so the code is corrected against the engine's real payloads instead of the contract document. The sha256 values are checked by tests/dr58_payload_shapes.rs.",
+  "note": "Byte-for-byte copies of real-machine evidence. runs/** is read-only: these fixtures are the frozen input the DR-58 tests are driven from, so the code is corrected against the engine's real payloads instead of the contract document. The sha256 values are checked by tests/dr58_payload_shapes.rs. The captured runs/smoke-t7-experiment/semantic/semantic_summary.json is real evidence as well but is deliberately not frozen here: no DR-58 test needs it, and its descriptive labels contain retired GDExtension-era tool names that the DR-45 vocabulary guard (tests/tool_vocabulary.rs) scans for.",
   "files": [
     {
       "fixture": "smoke_t7_input_channel_probe.json",
@@ -38,11 +38,6 @@
       "fixture": "smoke_t7_sc_07_assert_only_position.json",
       "source": "runs/smoke-t7-experiment/scenario/sc-07.json",
       "sha256": "03f86916d428912272a91471ab4c98961377c37c2b346648a3fe0b269f50f7e6"
-    },
-    {
-      "fixture": "smoke_t7_semantic_summary.json",
-      "source": "runs/smoke-t7-experiment/semantic/semantic_summary.json",
-      "sha256": "ad65b2d1e9695097ad8f776dab32f2dc6a53cfec3429e1810b3fe00b5a5e580e"
     }
   ]
 }
