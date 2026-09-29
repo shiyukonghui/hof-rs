@@ -373,23 +373,124 @@ pub const QUARANTINE_AREAS: &[&str] = &[ARTIFACT_DIR];
 /// DR-49/DR-59: how many `.stale-` names are tried before the rename gives up.
 const STALE_NAME_ATTEMPTS: u32 = 64;
 
-/// DR-49/DR-61: does this name carry the "superseded, do not trust" marker?
+/// DR-62: the explicit **supersession manifest**: a JSON list of the paths
+/// (relative to the directory that holds it) the runtime has superseded.
 ///
-/// One predicate, three call sites: DR-49's `invalidate_artifact` *creates* the
-/// marker, DR-59/DR-61's [`quarantine_previous_evidence`] moves a whole area to
-/// the marker and away from the cwd, and `view::copy_evidence` *skips* anything
-/// carrying it — a superseded file is not this round's evidence and must not
-/// enter the frozen candidate (DR-61 / DEF-2).
-pub fn is_expired_name(name: &str) -> bool {
-    name.contains(".stale-")
+/// DR-49/DR-61 decided "a superseded file must not enter the frozen candidate"
+/// with a *filename* predicate (`is_expired_name`, i.e.
+/// `name.contains(".stale-")`).  Independent acceptance measured the defect that
+/// convention creates: a role that names **this round's** artifact `*.stale-*`
+/// has it silently hidden from the Tester.  DR-62 therefore decides on a
+/// structural fact — the explicit record the producer writes — and a name alone
+/// means nothing at all.
+///
+/// The manifest is per-directory, so a lookup consults the manifest of the copy
+/// root and of every directory on the way to the entry (see [`is_superseded`]);
+/// the manifest file itself is runtime bookkeeping, never view content
+/// ([`is_runtime_bookkeeping`]).
+pub const SUPERSEDED_MANIFEST: &str = ".superseded.json";
+
+/// DR-62: is this relative path (or one of its components) the supersession
+/// manifest itself?  Runtime bookkeeping must not be copied into a view.
+pub fn is_runtime_bookkeeping(relative: &str) -> bool {
+    relative
+        .split('/')
+        .any(|component| component == SUPERSEDED_MANIFEST)
+}
+
+/// DR-62: what was superseded, as an explicit record rather than a name shape.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct SupersededSet {
+    entries: BTreeSet<String>,
+}
+
+impl SupersededSet {
+    /// Read the manifest of `directory`.
+    ///
+    /// A missing manifest is the normal case and yields an empty set.  An
+    /// unreadable or malformed one is an **error**: a corrupt record must never
+    /// silently re-admit superseded bytes into a view.
+    pub fn load(directory: &Path) -> std::io::Result<Self> {
+        let path = directory.join(SUPERSEDED_MANIFEST);
+        if !path.exists() {
+            return Ok(Self::default());
+        }
+        let text = std::fs::read_to_string(&path)?;
+        let entries: Vec<String> = serde_json::from_str(&text).map_err(|error| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!(
+                    "DR-62: {} is not a JSON list of superseded paths: {error}",
+                    path.display()
+                ),
+            )
+        })?;
+        Ok(Self {
+            entries: entries.into_iter().collect(),
+        })
+    }
+
+    /// How many supersessions are recorded.
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    /// Is nothing recorded?
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
+    /// Is `relative` (relative to the manifest's directory) recorded?
+    pub fn contains(&self, relative: &str) -> bool {
+        self.entries.contains(relative)
+    }
+
+    /// DR-62: record `relative` as superseded in `directory`'s manifest,
+    /// creating or extending it.  Returns the manifest path it wrote.
+    pub fn record(directory: &Path, relative: &str) -> std::io::Result<PathBuf> {
+        let path = directory.join(SUPERSEDED_MANIFEST);
+        let mut set = Self::load(directory)?;
+        if set.entries.insert(relative.to_string()) {
+            let list: Vec<&str> = set.entries.iter().map(String::as_str).collect();
+            let mut text = serde_json::to_string_pretty(&list)
+                .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error))?;
+            text.push('\n');
+            std::fs::write(&path, text)?;
+        }
+        Ok(path)
+    }
+}
+
+/// DR-62: is `relative` (a path relative to `root`) explicitly recorded as
+/// superseded, by the manifest of `root` or of any directory on the way to it?
+pub fn is_superseded(root: &Path, relative: &str) -> std::io::Result<bool> {
+    let mut directory = root.to_path_buf();
+    let mut remaining = relative;
+    loop {
+        if SupersededSet::load(&directory)?.contains(remaining) {
+            return Ok(true);
+        }
+        match remaining.split_once('/') {
+            Some((head, tail)) => {
+                directory.push(head);
+                remaining = tail;
+            }
+            None => return Ok(false),
+        }
+    }
 }
 
 /// DR-49/DR-59: the name a superseded path is moved to.
 ///
-/// One convention, two call sites: `invalidate_artifact` (DR-49, the
+/// One naming convention, two producer sites: `invalidate_artifact` (DR-49, the
 /// pre-existing screenshot file) and [`quarantine_previous_evidence`] (DR-59,
-/// the whole evidence directory).  Keeping the suffix in one place is what
-/// keeps "superseded" greppable and auditable across the repository.
+/// the whole evidence directory).  Keeping the suffix in one place keeps
+/// "superseded" greppable and auditable across the repository.
+///
+/// DR-62: this is a **producer-side audit name only**.  No consumer decides
+/// anything from it any more — the skip criterion is the explicit
+/// [`SUPERSEDED_MANIFEST`] record — so a file a role happens to name
+/// `*.stale-*` is never hidden (see `view::copy_evidence` / `view::copy_tree`).
 pub fn stale_name(base: &str, stamp: u64, attempt: u32) -> String {
     if attempt == 0 {
         format!("{base}.stale-{stamp}")
@@ -822,7 +923,7 @@ mod tests {
             reached.keys().collect::<Vec<_>>()
         );
         assert!(
-            !reached.keys().any(|path| is_expired_name(path)),
+            !reached.keys().any(|path| path.contains(".stale-")),
             "a walk of the workspace still reaches a `.stale-*` entry: {:?}",
             reached.keys().collect::<Vec<_>>()
         );
@@ -911,13 +1012,67 @@ mod tests {
         );
     }
 
-    /// DR-61: the `*.stale-*` marker is one predicate, shared by the mover and
-    /// the candidate-view copy.
+    /// DR-62: the supersession decision is the **explicit record**, never the
+    /// name.  Same test as DR-61's `is_expired_name` check, re-pointed at the
+    /// structural criterion and strictly extended: the name alone decides
+    /// nothing any more.
     #[test]
     fn the_superseded_marker_is_recognized_by_one_predicate() {
-        assert!(is_expired_name("frame-00.png.stale-1790663544"));
-        assert!(is_expired_name("deterministic.stale-1790663544-1"));
-        assert!(!is_expired_name("frame-00.png"));
-        assert!(!is_expired_name("deterministic"));
+        let temp = tempfile::tempdir().unwrap();
+        let directory = temp.path();
+        assert!(SupersededSet::load(directory).unwrap().is_empty());
+
+        let recorded = stale_name("frame-00.png", 1790663544, 0);
+        assert_eq!(recorded, "frame-00.png.stale-1790663544");
+        SupersededSet::record(directory, &recorded).unwrap();
+
+        let set = SupersededSet::load(directory).unwrap();
+        assert_eq!(set.len(), 1);
+        assert!(set.contains(&recorded), "the recorded path is superseded");
+        assert!(is_superseded(directory, &recorded).unwrap());
+        assert!(
+            !is_superseded(directory, "frame-00.png").unwrap(),
+            "the live path itself is not superseded"
+        );
+        assert!(
+            !is_superseded(directory, "another-file.stale-1790663544").unwrap(),
+            "DR-62: a `.stale-`-shaped name the manifest never recorded is not \
+             superseded — the name alone means nothing"
+        );
+    }
+
+    /// DR-62: the manifest is per-directory, so a path is superseded when the
+    /// manifest of the copy root, or of any directory on the way to it, records
+    /// the remainder of that path.
+    #[test]
+    fn a_supersession_recorded_in_a_subdirectory_manifest_is_found_from_the_root() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        write(&root.join("replay/round.json"), "superseded\n");
+        SupersededSet::record(&root.join("replay"), "round.json").unwrap();
+
+        assert!(is_superseded(root, "replay/round.json").unwrap());
+        assert!(!is_superseded(root, "replay/other.json").unwrap());
+        assert!(std::fs::read_to_string(root.join("replay").join(SUPERSEDED_MANIFEST))
+            .unwrap()
+            .contains("round.json"));
+    }
+
+    /// DR-62: the manifest is runtime bookkeeping, never view content — and a
+    /// malformed record is an error, so a corrupt manifest cannot silently
+    /// re-admit superseded bytes.
+    #[test]
+    fn the_manifest_is_bookkeeping_and_a_malformed_one_is_an_error() {
+        assert!(is_runtime_bookkeeping(SUPERSEDED_MANIFEST));
+        assert!(is_runtime_bookkeeping(&format!(
+            "evidence/{SUPERSEDED_MANIFEST}"
+        )));
+        assert!(!is_runtime_bookkeeping("evidence/frame-00.png"));
+
+        let temp = tempfile::tempdir().unwrap();
+        write(&temp.path().join(SUPERSEDED_MANIFEST), "{not json}\n");
+        let error = SupersededSet::load(temp.path()).unwrap_err();
+        assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
+        assert!(is_superseded(temp.path(), "anything").is_err());
     }
 }

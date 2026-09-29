@@ -988,6 +988,9 @@ pub async fn run(
         })?;
         // DR-1: the deterministic records (and the adapter's own logs) are
         // copied into the frozen view so the Tester can cite them relatively.
+        // DR-62: `copy_tree` applies the same structural supersession criterion
+        // as `copy_evidence`, so a recorded supersession cannot enter through
+        // this copy path either (DR-61 R-3 / acceptance R-B).
         copy_tree(
             &deterministic_dir,
             &candidate.join(".hoh/deterministic"),

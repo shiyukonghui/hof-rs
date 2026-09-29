@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 
 use walkdir::WalkDir;
 
+use crate::runtime::hygiene;
 use crate::runtime::policy::is_excluded;
 
 /// A directory tree handed to one role as its working directory.
@@ -59,6 +60,12 @@ pub fn write_inputs(root: &Path, inputs: &[(String, String)]) -> anyhow::Result<
 }
 
 /// Recursively copy `src` into `dst`, skipping excluded relative paths.
+///
+/// DR-62: the **same** supersession criterion as [`copy_evidence`] applies
+/// here.  `run_loop.rs:991` copies `.hoh/deterministic/**` into the frozen
+/// candidate with this function, so a superseded entry must not slip in through
+/// the copy path that has no evidence-specific reporting (DR-61 R-3, measured
+/// by independent acceptance as R-B: `copy_tree` had no filter at all).
 pub fn copy_tree(src: &Path, dst: &Path, excludes: &[String]) -> anyhow::Result<()> {
     if !src.exists() {
         return Ok(());
@@ -74,6 +81,9 @@ pub fn copy_tree(src: &Path, dst: &Path, excludes: &[String]) -> anyhow::Result<
             .collect::<Vec<_>>()
             .join("/");
         if rel.is_empty() || is_excluded(&rel, excludes) {
+            continue;
+        }
+        if hygiene::is_runtime_bookkeeping(&rel) || hygiene::is_superseded(src, &rel)? {
             continue;
         }
         let target = dst.join(&rel);
@@ -99,12 +109,13 @@ pub fn copy_tree(src: &Path, dst: &Path, excludes: &[String]) -> anyhow::Result<
 /// silently skipped, it is copied and its size is published as
 /// `evidence_too_large`.
 ///
-/// DR-61 (DEF-2): the one thing that *is* skipped is a superseded file — any
-/// path carrying the DR-49 `*.stale-*` marker.  Independent acceptance measured
-/// that this loop used to copy the previous round's evidence (a stale
-/// `frame-00.png`) straight into the frozen candidate; the marker is the single
-/// predicate that says "this is not this round's artifact".  Skipping is not
-/// deleting: the file stays on the real workspace untouched.
+/// DR-61 (DEF-2) established that a superseded file must be skipped; DR-62
+/// decides *what* counts as superseded.  The criterion is **structural**: the
+/// explicit [`hygiene::SupersededSet`] record a producer writes (see
+/// `adapter::godot::invalidate_artifact`), never a filename shape.  DR-61 used
+/// `name.contains(".stale-")`, which silently hid an artifact a role had named
+/// `*.stale-*` for **this** round.  Skipping is not deleting: the file stays on
+/// the real workspace untouched, and the manifest itself is never copied.
 ///
 /// Returns `(relative path, byte size)` for every oversized file, sorted.
 pub fn copy_evidence(src: &Path, dst: &Path, max_bytes: u64) -> anyhow::Result<Vec<(String, u64)>> {
@@ -128,7 +139,7 @@ pub fn copy_evidence(src: &Path, dst: &Path, max_bytes: u64) -> anyhow::Result<V
         if rel.is_empty() {
             continue;
         }
-        if rel.split('/').any(crate::runtime::hygiene::is_expired_name) {
+        if hygiene::is_runtime_bookkeeping(&rel) || hygiene::is_superseded(src, &rel)? {
             continue;
         }
         let target = dst.join(&rel);

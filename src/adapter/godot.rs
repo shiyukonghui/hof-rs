@@ -2418,6 +2418,12 @@ pub fn artifact_is_fresh(
 /// excluded — and from the hygiene scans, which ignore `.hoh`), while the
 /// target itself is empty for the duration of the call.  `None` means there was
 /// nothing to invalidate.
+///
+/// DR-62: the move is accompanied by an explicit [`SupersededSet::record`] in
+/// the directory the artifact lives in, and that record — not the
+/// `.stale-<ts>` name — is what the candidate-view copies consult.  The record
+/// happens **before** the rename: if it cannot be written the invalidation
+/// fails loudly rather than moving the bytes aside with no structural trace.
 pub fn invalidate_artifact(path: &Path) -> std::io::Result<Option<String>> {
     if !path.is_file() {
         return Ok(None);
@@ -2428,11 +2434,15 @@ pub fn invalidate_artifact(path: &Path) -> std::io::Result<Option<String>> {
         .unwrap_or_else(|| "artifact".to_string());
     let stamp = crate::adapter::engine::now_seconds();
     for attempt in 0..64u32 {
-        // DR-59: one naming convention for both call sites — this one and
+        // DR-59: one naming convention for both producer sites — this one and
         // `hygiene::quarantine_previous_evidence`.
         let name = crate::runtime::hygiene::stale_name(&base, stamp, attempt);
         let candidate = path.with_file_name(&name);
         if !candidate.exists() {
+            // DR-62: the structural record first (see the doc comment above).
+            if let Some(directory) = path.parent() {
+                crate::runtime::hygiene::SupersededSet::record(directory, &name)?;
+            }
             std::fs::rename(path, &candidate)?;
             return Ok(Some(name));
         }
@@ -4283,6 +4293,18 @@ mod tests {
             std::fs::read(&moved).unwrap(),
             b"2026-09-21 stale png",
             "the stale artifact stays auditable under its new name"
+        );
+        // DR-62: the move is mirrored by an explicit structural record in the
+        // same directory — the criterion the view copies consult, and the only
+        // one: the `.stale-<ts>` name itself now decides nothing.
+        let recorded = crate::runtime::hygiene::SupersededSet::load(temp.path()).unwrap();
+        assert!(
+            recorded.contains(&stale),
+            "DR-62: the supersession must be recorded in the manifest: {recorded:?}"
+        );
+        assert!(
+            crate::runtime::hygiene::is_superseded(temp.path(), &stale).unwrap(),
+            "DR-62: the recorded supersession must be discoverable from the tree root"
         );
         // A second invalidation has nothing left to do.
         assert_eq!(invalidate_artifact(&path).unwrap(), None);
