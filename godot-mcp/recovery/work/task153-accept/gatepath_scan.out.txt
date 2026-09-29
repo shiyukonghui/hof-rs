@@ -1,0 +1,21 @@
+modules\mcp_server\docs\scripts\check_tool_groups.py       NO hof-rs text at all
+modules\mcp_server\scripts\check_contract_subset.ps1       NO hof-rs text at all
+modules\mcp_server\docs\scripts\check_rename_map.py        8 textual hit(s)
+    :80  [comment/docstring]  # Until TASK-152 this name was bound to the hof-rs working file
+    :81  [comment/docstring]  # `F:\moonbit-hof-rs\tests\fixtures\mcp\tools_list.json`, so the gate's verdict
+    :82  [comment/docstring]  # depended on a file outside the repository it audits. hof-rs re-captured that
+    :83  [comment/docstring]  # fixture in its own DR-42 contract migration (hof-rs commit db2eed7, 174 -> 177
+    :92  [comment/docstring]  #   source: hof-rs `tests/fixtures/mcp/tools_list.json` at the state immediately
+    :93  [comment/docstring]  #           before its DR-42 re-capture (hof-rs commit db2eed7^, git blob
+    :96  [comment/docstring]  #           `git -C F:\moonbit-hof-rs cat-file blob \
+    :98  [comment/docstring]  #           (a pure read of the hof-rs object store; nothing on the hof-rs side
+modules\mcp_server\scripts\check_tautologies.py            NO hof-rs text at all
+modules\mcp_server\scripts\check_exit_propagation.py       NO hof-rs text at all
+modules\mcp_server\scripts\check_hardcoded_counts.py       NO hof-rs text at all
+modules\mcp_server\scripts\check_engine_anchor.ps1         NO hof-rs text at all
+modules\mcp_server\scripts\accept_m1.ps1                   3 textual hit(s)
+    :19  [comment]  #  mechanically from the old hof-rs fixture
+    :20  [comment]  #  `F:\moonbit-hof-rs\tests\fixtures\mcp\tools_list.json` by
+    :32  [comment]  #    * the captured snapshot in hof-rs is the authoritative fixture and is
+
+EXECUTABLE cross-repo references on the ten-gate path: 0

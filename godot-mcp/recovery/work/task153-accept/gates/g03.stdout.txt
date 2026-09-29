@@ -1,0 +1,20 @@
+SOURCE  DESIGN-DETAIL.md section 10: B1 declares 42 old tools, parsed 42/42
+DERIVE  excluded (merge_into) = get_editor_performance
+DERIVE  B1 tools to port = 42 - 1 = 41
+GROUP   project_read_template        channel=project      mutating=False implemented=True  tools=6
+GROUP   project_read_analysis        channel=project      mutating=False implemented=True  tools=7
+GROUP   project_read_files           channel=project      mutating=False implemented=True  tools=6
+GROUP   project_write_resource_scene channel=project      mutating=True  implemented=True  tools=4
+GROUP   editor_read_scene_inspector  channel=editor       mutating=False implemented=True  tools=7
+GROUP   editor_write_scene_editor    channel=editor       mutating=True  implemented=True  tools=10
+GROUP   running_game_read_scene      channel=running_game mutating=False implemented=True  tools=1
+ASSERT  distinct tools in manifest = 41
+ASSERT  B1 tools to port        = 41
+ASSERT  every B1 tool appears exactly once: PASS (duplicates=0, missing=0, foreign=0)
+ASSERT  every name exists in the 171 entry contract: PASS
+ASSERT  every group is one channel + one mutating value: PASS
+ASSERT  41 == 42 - 1: PASS
+BYTES 5681
+SHA256 b83d79d3e3d080ce460b61ca99a46a126d6a6c45eb3d51d7977a52a991b7fbc7
+TOOL-GROUPS CHECK PASS
+GATE_EXIT=0 

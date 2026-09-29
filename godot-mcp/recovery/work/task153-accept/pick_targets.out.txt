@@ -1,0 +1,37 @@
+closed_set: ['get', 'list', 'read', 'find', 'search', 'create', 'add', 'remove', 'delete', 'set', 'edit', 'rename', 'reparent', 'move', 'duplicate', 'connect', 'disconnect', 'play', 'stop', 'run', 'execute', 'evaluate', 'capture', 'assert', 'validate', 'simulate', 'export', 'deploy', 'reload', 'rescan', 'bake', 'open', 'save', 'setup', 'analyze', 'detect', 'convert']
+
+-- entries whose new_name is NOT unique-length (candidates for duplicate plant) --
+   len=17 old=open_scene                                 new=editor_open_scene                              verb=open       ch=editor disp=rename
+   len=17 old=play_scene                                 new=editor_play_scene                              verb=play       ch=editor disp=rename
+   len=17 old=stop_scene                                 new=editor_stop_scene                              verb=stop       ch=editor disp=rename
+   len=17 old=save_scene                                 new=editor_save_scene                              verb=save       ch=editor disp=rename
+   len=17 old=get_editor_errors                          new=editor_get_errors                              verb=get        ch=editor disp=rename
+
+-- entries that are plain 'rename' and whose verb differs from another same-length verb --
+   get_project_info                              verb=get        ch=project      disp=rename       new=project_get_info
+   get_filesystem_tree                           verb=get        ch=project      disp=rename       new=project_get_filesystem_tree
+   search_files                                  verb=search     ch=project      disp=rename       new=project_search_file_names
+   search_in_files                               verb=search     ch=project      disp=rename       new=project_search_file_contents
+   get_project_settings                          verb=get        ch=project      disp=rename       new=project_get_settings
+   set_project_setting                           verb=set        ch=project      disp=rename       new=project_set_setting
+   uid_to_project_path                           verb=convert    ch=project      disp=rename       new=project_convert_uid_to_path
+   project_path_to_uid                           verb=convert    ch=project      disp=rename       new=project_convert_path_to_uid
+
+baseline first 3 names: ['get_project_info', 'get_filesystem_tree', 'search_files']
+baseline names sharing a length exist: True
+   candidate baseline name len=16: get_project_info
+   candidate baseline name len=16: set_auto_dismiss
+   candidate baseline name len=16: replay_recording
+   candidate baseline name len=16: find_ui_elements
+   candidate baseline name len=16: get_open_scripts
+   candidate baseline name len=16: set_input_action
+   candidate baseline name len=16: create_animation
+   candidate baseline name len=16: remove_animation
+   candidate baseline name len=16: tilemap_get_info
+   candidate baseline name len=16: tilemap_set_cell
+   candidate baseline name len=16: tilemap_get_cell
+   candidate baseline name len=16: set_shader_param
+   candidate baseline name len=16: add_audio_player
+   candidate baseline name len=16: create_particles
+baseline tool[0] keys: ['description', 'inputSchema', 'name']
+baseline tool[0] name: get_project_info

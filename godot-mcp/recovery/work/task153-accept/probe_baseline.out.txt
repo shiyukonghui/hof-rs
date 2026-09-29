@@ -1,0 +1,13 @@
+engine baseline  bytes=48749   cr=0 lf=0 sha256=8f8051c4c0f8941089f0b21a193cef7c51fa7c41d7e312b1463ea8593f313c54
+                 tools=174
+engine map       bytes=70917   cr=0 lf=1994 sha256=2f552719f6a23fe328df0a2944c6048824c1b2a750aebc0fe2cabbcd3529c2bd
+                 tools=174
+hof-rs fixture   bytes=71481   cr=0 lf=0 sha256=50c5fb4204ee5b957b017eb994e7f7bd73f9b299e6aa9471d5cf11683e067da0
+                 tools=177
+baseline tools=174 unique=174
+map entries=174
+map first entry keys=['channel', 'disposition', 'mutating', 'new_name', 'object', 'old_name', 'reason', 'scope', 'verb']
+sample old->new:
+   get_project_info -> project_get_info (rename)
+   get_filesystem_tree -> project_get_filesystem_tree (rename)
+   search_files -> project_search_file_names (rename)
