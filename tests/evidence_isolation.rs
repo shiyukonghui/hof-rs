@@ -21,8 +21,13 @@
 mod common;
 
 use std::collections::BTreeMap;
+use std::path::Path;
+use std::sync::Arc;
 
-use common::{happy_script, run_scenario, write, FakeAdapter, InvocationRecord};
+use common::{
+    happy_script, run_scenario, test_config, write, write_spec, FakeAdapter, FakeHarness, FakeStep,
+    FakeToolChannel, InvocationRecord,
+};
 use hof_rs::model::{Ablation, Role};
 
 /// The live read path every prompt and every raw path names.
@@ -157,5 +162,65 @@ async fn a_clean_round_start_quarantines_nothing() {
     assert!(
         quarantined.is_empty(),
         "DR-59: a clean round start must not create a quarantine entry: {quarantined:?}"
+    );
+}
+
+/// One whole round with an explicit run id — the shape of
+/// `common::run_scenario`, but two of them share one workspace here.
+async fn run_round(root: &Path, run_id: &str, script: Vec<FakeStep>) -> Vec<InvocationRecord> {
+    let mut cfg = test_config(root, 1);
+    cfg.runtime.spec = root.join("spec.md");
+    let spec = write_spec(root);
+    let harness = FakeHarness::new(script);
+    let observer = harness.clone();
+    let orchestrator = hof_rs::runtime::run_loop::Orchestrator {
+        harness: Box::new(harness),
+        adapter: Box::new(FakeAdapter::new()),
+        tools: Arc::new(FakeToolChannel::new()),
+        cfg,
+        ablation: Ablation::default(),
+        force_init: true,
+        start_state: hof_rs::runtime::start_state::StartState::as_is(),
+    };
+    hof_rs::runtime::run_loop::run(&orchestrator, &spec, run_id)
+        .await
+        .expect("the round must run");
+    observer.records()
+}
+
+/// DR-59: the faithful reproduction of `smoke-t6` → `smoke-t7`.  Two rounds run
+/// back to back over one workspace; round two must not be able to read the
+/// evidence round one left on disk.
+#[tokio::test]
+async fn round_two_cannot_read_round_one_evidence() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let root = temp.path();
+    let workspace = root.join("workspace");
+
+    run_round(root, "run-1", happy_script()).await;
+    // Round one really did leave deterministic evidence behind: that is the
+    // precondition the leak needs.
+    let left_behind = workspace.join(".hoh/deterministic/build.json");
+    assert!(
+        left_behind.is_file(),
+        "round one must have produced deterministic evidence for this test to mean \
+         anything: {left_behind:?}"
+    );
+
+    let second = run_round(root, "run-2", happy_script()).await;
+    let files = developer_view(&second);
+
+    let live = keys_matching(&files, LIVE_DIR);
+    assert!(
+        live.is_empty(),
+        "DR-59: round two's Developer can still read round one's evidence: {live:?}"
+    );
+    let moved = keys_matching(&files, QUARANTINE_PREFIX);
+    assert!(
+        moved.iter().any(|key| key.ends_with("/build.json")
+            && files
+                .get(*key)
+                .is_some_and(|content| content.contains("fake adapter: build check ok"))),
+        "DR-59: round one's evidence must be moved aside intact, not deleted: {moved:?}"
     );
 }
