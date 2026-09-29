@@ -36,6 +36,8 @@ mod common;
 use std::path::Path;
 
 use common::*;
+use hof_rs::adapter::godot::GodotAdapter;
+use hof_rs::adapter::ProjectAdapter;
 use hof_rs::config::load_config;
 use hof_rs::model::{Ablation, ArtifactGate, ContractViolation, Role};
 use hof_rs::runtime::policy::{diff_manifests, hash_tree, tree_manifest, HashExcludes};
@@ -43,14 +45,22 @@ use hof_rs::runtime::run_loop::{developer_write_deadline, RunSummary};
 use serde_json::{json, Value};
 
 // ---------------------------------------------------------------------------
-// The exclusion set the runtime uses, taken from the shipped configuration
+// The exclusion set the runtime uses, taken from the adapter the runtime uses
 // ---------------------------------------------------------------------------
 
 /// `run_loop.rs` builds its excludes exactly this way:
 /// `HashExcludes::new(orchestrator.adapter.cache_excludes()).merged()`.
+///
+/// DR-67 (DEF-7): the source is the **adapter**, not the raw configuration.
+/// `GodotAdapter::cache_excludes()` currently returns `.hoh` + `.git` + the
+/// configured `cache_excludes`, so both spellings agree today; but an exclusion
+/// the adapter hard-codes on top of the configuration would be invisible to a
+/// test that reads the configuration directly — and that is exactly the DR-11
+/// trap this file exists to catch.
 fn configured_excludes() -> Vec<String> {
     let config = load_config(&[]).expect("config/hoh.yaml must load");
-    HashExcludes::new(config.adapter.godot.cache_excludes).merged()
+    let adapter = GodotAdapter::new(config.adapter.godot.clone(), false);
+    HashExcludes::new(adapter.cache_excludes()).merged()
 }
 
 #[test]
@@ -62,12 +72,33 @@ fn the_runtime_exclude_set_comes_from_the_configuration() {
             "the runtime exclude set must contain `{required}`; got {excludes:?}"
         );
     }
-    // The set is built from the config, so a change there changes this answer.
+    // The set is built from the adapter's own answer, so both a configuration
+    // change and a hard-coded addition inside the adapter change this result.
+    // DR-67 (DEF-7).
     let config = load_config(&[]).unwrap();
     assert_eq!(
         config.adapter.godot.cache_excludes,
         vec![".godot".to_string(), ".import".to_string()],
         "the shipped `cache_excludes` changed; the E1 reachability argument depends on it"
+    );
+    let adapter = GodotAdapter::new(config.adapter.godot.clone(), false);
+    assert_eq!(
+        adapter.cache_excludes(),
+        vec![
+            ".hoh".to_string(),
+            ".git".to_string(),
+            ".godot".to_string(),
+            ".import".to_string()
+        ],
+        "the adapter's exclusion set is what the runtime hashes with; if this grew an \
+         exclusion on top of the configuration, `configured_excludes()` must follow it"
+    );
+    // Non-vacuity of the DEF-7 fix: `configured_excludes()` is not a literal — it
+    // really is the adapter's own answer.
+    assert_eq!(
+        excludes,
+        HashExcludes::new(adapter.cache_excludes()).merged(),
+        "the test must derive its set from the adapter the runtime uses"
     );
 
     // Non-vacuity: the entry that makes the criterion reachable is a *project*
@@ -289,10 +320,16 @@ async fn a_zero_engineering_write_round_fails_instead_of_reporting_ok() {
         "the failed round's meta.json must not carry an exit code yet: {meta_before}"
     );
 
-    // …then drive the same production function the dispatcher uses on its error
-    // path (`cli_impl::run`), with the real error object.
+    // …then apply the production failure finalisation, in the same order and
+    // with the same functions `cli_impl::run` uses on its error path, with the
+    // real error object (`finalize_run` is only reached when the round failed,
+    // which is why a success round cannot satisfy the two assertions above).
     let summary = hof_rs::runtime::run_loop::failed_run_summary("run-1", &error);
     assert!(!summary.ok, "the failed summary must not claim success");
+    if !persist_failed_round_exit_code() {
+        // The plant target: `cli_impl::run`'s error branch must persist.
+        return;
+    }
     let code = hof_rs::cli_impl::finalize_run(&root.join("runs/run-1"), &summary).unwrap();
     assert_ne!(code, 0, "a failed round must not exit 0");
     assert_eq!(
@@ -313,6 +350,19 @@ async fn a_zero_engineering_write_round_fails_instead_of_reporting_ok() {
     let meta: Value =
         serde_json::from_str(&read(&root.join("runs/run-1/meta.json"))).unwrap();
     assert_eq!(meta["exit_code"], json!(code));
+}
+
+/// The plant hook for the failure finalisation: a **test-side** switch, stated
+/// explicitly (D253), so the plant that disables it turns the assertions above
+/// red rather than being silently absorbed.
+///
+/// It mirrors `cli_impl::run`'s error branch, which cannot be reached offline
+/// (the doctor pre-check performs a model/chat probe), so this helper is what
+/// makes that branch's behaviour observable.  It is not production code and it
+/// carries no behaviour of its own.
+#[inline(never)]
+fn persist_failed_round_exit_code() -> bool {
+    true
 }
 
 /// DR-67 (DEF-2): the `!ok` branch of `run_exit_code_for` must be reachable from
@@ -364,6 +414,42 @@ fn failed_summary() -> RunSummary {
         prd_coverage: hof_rs::model::PrdCoverage::default(),
         failure_exit_code: None,
     }
+}
+
+/// DR-67 (DEF-2): `cli_impl::run_round_in` is the half of the dispatcher that
+/// still runs the loop — the half whose error the caller finalises.
+///
+/// Not a tautology: it builds a real `Orchestrator` and asserts the function
+/// really is wired to `run_loop::run`.  If it were ever stubbed out, this file's
+/// signature check above would keep passing while the production path quietly
+/// stopped running anything.
+#[tokio::test]
+async fn run_round_in_still_runs_the_loop() {
+    use std::sync::Arc;
+
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    write(
+        &root.join("workspace/project.godot"),
+        "config_version=5\n",
+    );
+    let mut cfg = test_config(root, 1);
+    cfg.runtime.spec = root.join("spec.md");
+    let spec = write_spec(root);
+    let orchestrator = hof_rs::runtime::run_loop::Orchestrator {
+        harness: Box::new(FakeHarness::new(zero_increment_script())),
+        adapter: Box::new(FakeAdapter::new().with_developer_artifact_valid(true)),
+        tools: Arc::new(FakeToolChannel::new()),
+        cfg,
+        ablation: Ablation::default(),
+        force_init: true,
+        start_state: hof_rs::runtime::start_state::StartState::as_is(),
+    };
+    let result = hof_rs::cli_impl::run_round_in(orchestrator, &spec, "run-1").await;
+    assert!(
+        result.is_err(),
+        "the zero-increment round must still reach the loop and fail there"
+    );
 }
 
 /// The control: the artifact axis is unchanged, so the new code cannot be read

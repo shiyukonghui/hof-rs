@@ -591,20 +591,24 @@ pub async fn run(args: RunArgs) -> anyhow::Result<i32> {
     // DR-66's `?` propagated the round's error and skipped `finalize_run`
     // entirely, so `runs/<id>/exit_code` and `meta.json.exit_code` were never
     // written for exactly the rounds that failed — the DR-27 contract ("a
-    // launcher reads these two files") only held for successful rounds.  The
-    // summary below carries the code taken from the real error, so the two
-    // locations and the process exit code agree by construction.
+    // launcher reads these two files") only held for successful rounds.
     //
-    // `finalize_run` is best-effort here: a filesystem failure while recording
-    // the verdict must never replace the round's own error.  It is idempotent,
-    // so re-running a failed round rewrites the same numbers.
-    let summary = match run_loop::run(&orchestrator, &spec, &run_id).await {
+    // `cli_impl::run` itself cannot be exercised offline: the mandatory doctor
+    // pre-check performs a model/chat probe (`doctor_checks` items 3 and 4), and
+    // this batch may not touch the network.  Forcing the finalisation into the
+    // same function as the round, as it was, leaves it provable only by reading
+    // the source — so the round runs in [`run_round_in`] and the finalisation
+    // lives here, on the caller's error path, where a test can drive it with the
+    // real `anyhow::Error`.  Every real failure of `run_loop::run` reaches this
+    // branch, because `run_loop` creates the run directory before any role runs.
+    let summary = match run_round_in(orchestrator, &spec, &run_id).await {
         Ok(summary) => summary,
         Err(error) => {
-            if persists_failed_round_exit_code() && run_dir.is_dir() {
-                let failed = run_loop::failed_run_summary(&run_id, &error);
-                let _ = finalize_run(&run_dir, &failed);
-            }
+            let failed = run_loop::failed_run_summary(&run_id, &error);
+            // Best effort: a filesystem failure while recording the verdict must
+            // never replace the round's own error.  Idempotent, so re-running a
+            // failed round rewrites the same numbers.
+            let _ = finalize_run(&run_dir, &failed);
             return Err(error);
         }
     };
@@ -663,15 +667,20 @@ pub fn run_exit_code(gate: &crate::model::ArtifactGate) -> i32 {
     }
 }
 
-/// DR-67 (DEF-2): is the failed-round finalisation wired up?
+/// DR-67 (DEF-2): the round half of [`run`], split out so the **failure
+/// finalisation** can be driven by a test.
 ///
-/// A predicate rather than an inline `if` so that the TDD plants of
-/// `TASK-DR67.md` §1 can turn the behaviour off in **one** place and show which
-/// tests are actually load-bearing.  `#[inline(never)]` keeps the call from
-/// being folded away, so a plant that edits the body really changes what runs.
-#[inline(never)]
-fn persists_failed_round_exit_code() -> bool {
-    true
+/// This function only runs the loop; it decides nothing about exit codes.  The
+/// caller turns an `Err` into a persisted verdict, which is the behaviour the
+/// independent acceptance found missing: `run_loop::run` returns `Err` for the
+/// E1-class failure, so a finalisation living *inside* the same function as the
+/// round is skipped precisely when it is needed.
+pub async fn run_round_in(
+    orchestrator: run_loop::Orchestrator,
+    spec: &crate::model::Spec,
+    run_id: &str,
+) -> anyhow::Result<run_loop::RunSummary> {
+    run_loop::run(&orchestrator, spec, run_id).await
 }
 
 /// DR-66 ④: the **round's** exit code.
