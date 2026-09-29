@@ -9692,3 +9692,47 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
      把"残余可达性"从**口头风险**变成**可测断言**（这正是我要的"不靠约定、靠结构"）。
 - 回滚点：DR-59 各提交单独 revert；两条真机基线不得覆盖。
 
+## D249 — DR-61 交付：**隔离移出 cwd（且结构上禁止移回）**、整棵 `.hoh` 隔离、候选视图跳过过期件；366/0/7
+
+- 日期：2026-09-29。交付 `.spec/hof-rs/tasks/TASK-DR61-REPORT.md`；HEAD `6b9d8e8`，**未 push**
+  （`origin/master` 仍 `5abddbd`）。
+- **门**：`cargo test --offline` = **39 targets / 366 passed / 0 failed / 7 ignored / EXIT=0**
+  （基线 38/359/0/7；**+7** = 新集成 target 3 + lib 净 4），**零 `warning` 行**；无测试被删/放宽/加 `#[ignore]`；无新依赖。
+- **三件事**：
+  1. **隔离物移出角色 cwd**：`hygiene.rs:457-533`，调用点 `run_loop.rs:356`（在 `adapter.initialize:337` 之后、
+     **A_0:421 与所有角色之前**）。落点 = `runs/<run_id>/quarantine/<name>.stale-<ts>`——
+     **是 workspace 与 `iter-<n>/` 的兄弟目录** ⇒ **任何 cwd 遍历都到不了**。
+     **只 rename、绝不删除**；64 名字耗尽 `bail`。
+     **而且它把"结构前提"变成强制**：目标若落在 workspace 内 ⇒ **大声失败**（词法 + canonical 双重守卫，
+     `hygiene.rs:422-431/474-492`，单测 `:893`）——**这正是我要的"靠结构、不靠约定"**。
+  2. **`.hoh` 家族整树隔离**：它**先**交付了 curated 5 区域清单（`deterministic`/`evidence`/`evidence.json`/`args`/`scratch`）
+     且**是绿的**；然后**主动把不变量扩宽到真实 workspace 携带的每个 `.hoh` 兄弟**，
+     **实测出反例**：`.hoh/SCAFFOLD.md` 只被注入视图、**本轮并不重写它** ⇒
+     **curated 清单无法让"遍历 `.hoh` 到不了任何东西"成立** ⇒ 最终 `QUARANTINE_AREAS` = **整棵 `.hoh`**（`hygiene.rs:371`）。
+     （`.hoh` 本就在哈希排除项里 `policy.rs:37-45`；两个 adapter 的 initialize 都不往 `.hoh` 写。）
+  3. **候选视图阻断**：`view.rs:131` 跳过任何带 DR-49 `.stale-` 标记的路径（判据 `hygiene.rs:383`）——
+     **跳过≠删除**（源文件保留）；**冻结候选哈希不受影响**（`.hoh` 被哈希排除，`view.rs:359`）。
+- **TDD 证据**（真实输出在报告 §4）：红 `c139194`（遍历到达 `.hoh/deterministic.stale-1790685590/battery.json`；
+  Tester 候选携带上一轮 PNG；`copy_evidence` 复制了 `.stale-` 件）→ **扩宽后的红 `0d0f391`**（`.hoh/SCAFFOLD.md` 可达）
+  → 绿 `ab869e5`/`92e4aff`/`be8d115`。**两处仅生产代码的植入**均逐字节回退（`cmp` + `status` + `diff --stat` + `hash-object`）：
+  P1 关掉隔离 ⇒ 集成 2 红 + lib 3 红；P2 **把隔离放回 cwd 内** ⇒ 不变量红在
+  `quarantine/.hoh.stale-.../deterministic/battery.json`；变体 `<workspace>/.hoh/quarantine` ⇒
+  **整轮大声失败 `os error 5`**（不能把目录 rename 进自己的后代）⇒ **结构守卫真的会开火**。
+- **验收者最关心的那条我担心的回归**：**未发生**——t≥2 的**轮内反馈仍按设计可见**（DR-59 R-2 保留）。
+- **它交给我决策的残余（全部实测，我逐条记录并决定）**：
+  1. **`.stale-` 跳过是"命名约定"**：若某角色把本轮产物命名为 `*.stale-*`，它会被候选视图**隐藏**。
+     ⇒ **真实（虽罕见）的漏洞**，记为 **DR-62 候选**（判据应从**名字**改为**清单/标记**）。
+  2. **`run_loop.rs:991` 用 `view::copy_tree` 复制 `.hoh/deterministic`，而它没有 `.stale-` 过滤（R-3）**。
+  3. **`.hoh` 之外的残留不在本批不变量范围内（未测）**。
+  4. 整树 rename 依赖**没有活进程持有句柄**（与 DR-59 已接受的风险同类，但**面更宽**）；
+     `.hoh.stale-<ts>` **无 GC**（会累积）。
+- 禁区（合规）：引擎树用**嵌套仓**证明（`git ls-files godot-mcp` = 6484 证明 pathspec 命中、
+  `godot-mcp/godot` = **0** ⇒ 外层 diff 是空判；嵌套 `status` **0 行**、HEAD `fc63af77`、
+  关键文件 sha `ece4ae63…ff3f` 未变、`find -newermt '2026-09-29 19:00'` = **0**）；
+  `runs/**` 与 `.workspace/mario/**` **未被跟踪**（`ls-files` = 0）故用**摘要+mtime** 证明：
+  mario 259 文件 `4e494547…`、最新 14:32:28；runs 5147 文件 `01ff775e…`、最新 14:44:16
+  （**与 DR-59 的 `01ff775e…` 一致**，交叉印证）；`PRD` sha 未变；未 stage；scratch 已删；离线。
+- 裁决：**验收已在飞**（`8ae07398…`，含我特别钉的"过度隔离"与"结构性"两条）；**推送等它通过**。
+  **DR-62 候选**（`.stale-` 判定从名字改为显式清单）**并入下一波**，与 `copy_tree` 的过滤缺口（残余 2）同批。
+- 回滚点：DR-61 各提交单独 revert；两条真机基线不得覆盖。
+
