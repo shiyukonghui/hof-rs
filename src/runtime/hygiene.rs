@@ -312,6 +312,81 @@ pub fn mentions_forbidden_source_in_actions_with_root(
     false
 }
 
+// ---------------------------------------------------------------------------
+// DR-59: the previous round's deterministic evidence must not be readable here
+// ---------------------------------------------------------------------------
+
+/// DR-59: the workspace-relative deterministic evidence area (DR-17).
+pub const DETERMINISTIC_EVIDENCE_DIR: &str = ".hoh/deterministic";
+
+/// DR-49/DR-59: how many `.stale-` names are tried before the rename gives up.
+const STALE_NAME_ATTEMPTS: u32 = 64;
+
+/// DR-49/DR-59: the name a superseded path is moved to.
+///
+/// One convention, two call sites: `invalidate_artifact` (DR-49, the
+/// pre-existing screenshot file) and [`quarantine_previous_evidence`] (DR-59,
+/// the whole evidence directory).  Keeping the suffix in one place is what
+/// keeps "superseded" greppable and auditable across the repository.
+pub fn stale_name(base: &str, stamp: u64, attempt: u32) -> String {
+    if attempt == 0 {
+        format!("{base}.stale-{stamp}")
+    } else {
+        format!("{base}.stale-{stamp}-{attempt}")
+    }
+}
+
+/// DR-59: is there anything to move aside?
+///
+/// Whether a round needs to quarantine is decided by the state on disk, never
+/// unconditionally: a clean round start must not litter the workspace with an
+/// empty `*.stale-*` sibling.
+fn should_quarantine(live: &Path) -> bool {
+    live.exists()
+}
+
+/// DR-59: move the previous round's deterministic evidence out of the live read
+/// path before any role of the new round runs.
+///
+/// `smoke-t7` proved the leak is real, not theoretical: that round started with
+/// `smoke-t6`'s `.hoh/deterministic/**` still on disk, the Developer read it, and
+/// `runs/smoke-t7/iter-1/traj/developer.attempt1.json` `.messages[54]` carries
+/// the *previous* round's `pid 108432`, its "the editor is not clean" verdict and
+/// its `os error 10061` transport failure into the new round's model context.
+///
+/// The evidence is **renamed, never deleted**: the previous round's readings stay
+/// on disk — and out of the artifact hash, because `.hoh` is excluded (DR-11) —
+/// under the repository's DR-49 `.stale-<ts>` convention, which is already the
+/// marker this code base uses for "superseded, do not trust".  Returns the
+/// workspace-relative quarantine name when something was moved, and `None` when
+/// the round started clean.
+pub fn quarantine_previous_evidence(workspace: &Path) -> anyhow::Result<Option<String>> {
+    let live = workspace.join(DETERMINISTIC_EVIDENCE_DIR);
+    if !should_quarantine(&live) {
+        return Ok(None);
+    }
+    let base = live
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "deterministic".to_string());
+    let stamp = crate::adapter::engine::now_seconds();
+    for attempt in 0..STALE_NAME_ATTEMPTS {
+        let target = live.with_file_name(stale_name(&base, stamp, attempt));
+        if !target.exists() {
+            std::fs::rename(&live, &target)?;
+            return Ok(Some(relativize(workspace, &target)));
+        }
+    }
+    // DR-49's single-file case may fall back to deleting once its name window is
+    // exhausted.  A whole round of evidence must not be deleted, and must not be
+    // left in the live path either — both outcomes would break this decision —
+    // so the round stops loudly instead.
+    anyhow::bail!(
+        "DR-59: could not move {DETERMINISTIC_EVIDENCE_DIR} aside: all \
+         {STALE_NAME_ATTEMPTS} `.stale-{stamp}` names are taken"
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -486,6 +561,81 @@ mod tests {
         assert!(
             !mentions_forbidden_source_in_actions(&trajectory),
             "without the injected root the command names no marker"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // DR-59
+    // -----------------------------------------------------------------------
+
+    /// DR-59: the previous round's evidence is **moved**, byte-for-byte, and the
+    /// live read path is left empty.
+    #[test]
+    fn quarantine_moves_the_evidence_aside_and_keeps_the_bytes() {
+        let temp = tempfile::tempdir().unwrap();
+        let workspace = temp.path().join("workspace");
+        write(
+            &workspace.join(".hoh/deterministic/battery.json"),
+            "the editor is not clean\n",
+        );
+        write(&workspace.join(".hoh/deterministic/raw/probe.json"), "{}\n");
+
+        let moved = quarantine_previous_evidence(&workspace)
+            .unwrap()
+            .expect("a round over old evidence must move it aside");
+
+        assert!(moved.starts_with(".hoh/deterministic.stale-"), "{moved}");
+        assert!(
+            !workspace.join(DETERMINISTIC_EVIDENCE_DIR).exists(),
+            "the live evidence path must be empty after the quarantine"
+        );
+        assert_eq!(
+            std::fs::read_to_string(workspace.join(&moved).join("battery.json")).unwrap(),
+            "the editor is not clean\n",
+            "the previous round's bytes must survive the move"
+        );
+        assert!(workspace.join(&moved).join("raw/probe.json").is_file());
+    }
+
+    /// DR-59: the counter-direction — a clean start quarantines nothing and
+    /// creates nothing.
+    #[test]
+    fn quarantine_is_a_no_op_on_a_clean_start() {
+        let temp = tempfile::tempdir().unwrap();
+        let workspace = temp.path().join("workspace");
+        std::fs::create_dir_all(&workspace).unwrap();
+
+        assert!(quarantine_previous_evidence(&workspace).unwrap().is_none());
+        let entries: Vec<String> = std::fs::read_dir(&workspace)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        assert!(
+            entries.is_empty(),
+            "a clean round start must not create anything: {entries:?}"
+        );
+    }
+
+    /// DR-59: two quarantines inside the same second must not overwrite each
+    /// other — the `.stale-<ts>-<attempt>` window is what makes the move safe.
+    #[test]
+    fn a_second_quarantine_in_the_same_second_does_not_collide() {
+        let temp = tempfile::tempdir().unwrap();
+        let workspace = temp.path().join("workspace");
+
+        write(&workspace.join(".hoh/deterministic/battery.json"), "round one\n");
+        let first = quarantine_previous_evidence(&workspace).unwrap().unwrap();
+        write(&workspace.join(".hoh/deterministic/battery.json"), "round two\n");
+        let second = quarantine_previous_evidence(&workspace).unwrap().unwrap();
+
+        assert_ne!(first, second);
+        assert_eq!(
+            std::fs::read_to_string(workspace.join(&first).join("battery.json")).unwrap(),
+            "round one\n"
+        );
+        assert_eq!(
+            std::fs::read_to_string(workspace.join(&second).join("battery.json")).unwrap(),
+            "round two\n"
         );
     }
 }

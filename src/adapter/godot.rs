@@ -2428,15 +2428,13 @@ pub fn invalidate_artifact(path: &Path) -> std::io::Result<Option<String>> {
         .unwrap_or_else(|| "artifact".to_string());
     let stamp = crate::adapter::engine::now_seconds();
     for attempt in 0..64u32 {
-        let suffix = if attempt == 0 {
-            format!(".stale-{stamp}")
-        } else {
-            format!(".stale-{stamp}-{attempt}")
-        };
-        let candidate = path.with_file_name(format!("{base}{suffix}"));
+        // DR-59: one naming convention for both call sites — this one and
+        // `hygiene::quarantine_previous_evidence`.
+        let name = crate::runtime::hygiene::stale_name(&base, stamp, attempt);
+        let candidate = path.with_file_name(&name);
         if !candidate.exists() {
             std::fs::rename(path, &candidate)?;
-            return Ok(Some(format!("{base}{suffix}")));
+            return Ok(Some(name));
         }
     }
     // The name space is a per-second window of 64 names; if it is exhausted the
