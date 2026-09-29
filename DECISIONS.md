@@ -9970,3 +9970,48 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 - 若 DR-64 结论是"可达、只是 Developer 侧约束" ⇒ 直接进 SMOKE-T8，并把 DR-64 的量化约束点写进其任务书。
 - 回滚点：本次仅改队列顺序，无代码变更。
 
+## D258 — DR-64 诊断结论 **(B) E1 可达、非测量缺陷**：真因是**提示词用 POSIX 语法而角色 shell 是 cmd**；并抓到**自动化级假绿**
+
+- 日期：2026-09-30。交付 `.spec/hof-rs/tasks/TASK-DR64-REPORT.md`（481 行）。诊断批**未改源码、0 提交**。
+  验收已在飞（`2b03e660…`）。**本条的结论在验收通过前仅作"实现者结论"，不作最终判定。**
+- **头号嫌疑被证伪（它的置信度 ≈0.98，我认为证据充分）**：它**按 `policy.rs:68-97` 独立重实现 `hash_tree`**，
+  在**三棵树**（工作区/candidate/存储）上**逐字复现** `fc78d299…`；离线对照：**加 1 个 8 字节 `scripts/hoh_probe.gd` ⇒ `c541c5bb…`（≠A₀）**、
+  **加 `.hoh/probe.txt` ⇒ 不变** ⇒ **测量对 1 文件/8 字节敏感**。排除集仅 `{.hoh,.git,.godot,.import}`
+  （`policy.rs:38-47` + `godot.rs:3354-3358` + `config/hoh.yaml:47`），被哈希的是 **17 个工程文件**。
+  ⇒ ①"测量排除写入"**证伪**；②"写入前取摘要"**证伪**；④"副本未同步"**证伪**；③"写到排除路径"**确认**。
+- **真因（比 ①–④ 更贴近，且是实测）**：**提示词要求 POSIX 语法**（`$HOH_HOH_BIN …`，`src/prompts/developer.md:23`
+  及 `mod.rs:32/44/60`、`tools/index.rs:152/225`、`godot.rs:3497-3520`），**而角色真实 shell 是 `cmd.exe`**
+  （`rust/src/environments/local.rs:66-76`）⇒ **第一个成功的工具调用迟至第 38 步（25.3% 预算已烧）**、
+  **115/150 步被迫包 `bash -c`**、**17 次 cmd 方言错误（4 类）**（含 `'$HOH_HOH_BIN" tools call …' is not recognized`）。
+- **Q2**：上限 = **`step_limit:150`**（`config/hoh.yaml:14` → `agent.rs:161-173`，第 162 行）；
+  **三角色各恰好 150 次调用**；Developer **3095.2s / 3600s = 86.0%**（**剩 505s 未用**）；
+  `cost_limit` 被 `agent.rs:163` 的 `cost_limit>0.0` 守卫**禁用**；墙钟超限会是字符串 `TimeExceeded`（`lib.rs:204-221`），**未出现**。
+- **Q3**：`no_progress` 唯一发射点 `run_loop.rs:798-807`，**纯哈希相等比较 + 追加一条 warning**；
+  该轮 **`ok=true`、`failed_role=null`、`exit_code=0`** ⇒ 它**既不是因也不是致命项**，而是**描述**。
+- **Q4**：Developer **150 步 / 185 次调用，全是 bash**；**工程写入工具出现 0 次**；
+  **唯一的写动词工具 1 次**（`project_set_setting` ×2，`messages[325]`）**未落地**——
+  `project.godot` 1700B / mtime `2026-09-29 13:21:03` / sha256 `e4855a18…` / **无 `godot_mcp` 键**，
+  与备份 `project.godot.pre_iter1` **逐字节相同**；两个 `--args-file` **从未生成**；整条命令**输出为空**
+  （下一步 `messages[336]` 报同族的 `unexpected EOF` 引号错）；**策略拒绝 0 次**。
+  mtime 普查：Developer 窗口内 `.hoh` 之外**只有 4 个 `.godot/**` 缓存文件**（也是排除路径）、`.hoh/scratch` 22 个、**工程文件 0 个**。
+- **它抓到的两个假绿（我认为这是本批最有价值的副产品）**：
+  1. **自动化级**：该轮 **`ok=true` / 退出码 0 而 E1 not_met** ⇒ **只看 `ok`/退出码会漏报 E1**。
+     ⇒ 这对我的目标**至关重要**：**在修好这一点之前，未来任何"绿"都不足以证明 E1**。
+  2. **测试级**：`tests/artifact_hygiene.rs:112-115` 与 `tests/developer_contract.rs:57-74` **只做字符串包含断言**
+     ⇒ **结构上永远绿**，**修法必须同步改它们**。
+- **两条候选修法**（报告 §4）：
+  ①**首选**：把提示词/工具索引**平台化渲染**，**或**让角色 shell 走 POSIX，并加"**从提示词抽命令、在真实 `LocalEnvironment` 里执行**"的契约测试
+  （**先红**：当前 Windows 上必报 cmd 的 `not recognized`；**对照**：`%HOH_HOH_BIN%` 必须成功）；
+  ②**完成定义降噪**（把电池自身缺陷移出角色责任，`developer.md:35-56`）+ **预算结构化**
+  （前 K 步必须产生一次工程写入，未达成记**独立违约码**，且**让 `result.json` 对 E1 类失败真的变红**）。
+  §5 的最小测试：`tests/e1_reachability.rs`（钉"测量能看见工程写入"）+ `tests/role_shell_contract.rs`（钉"提示词语法在真实 shell 里可用"）。
+- **它自报的未定项（我不当作已定）**：排序（shell 契约 > 预算 > DoD）是**推断（≈0.6）**——
+  三份轨迹的 assistant `content` **全空、无 `reasoning_content`**，模型**没留下任何自述意图**；
+  **`project_set_setting` 被哪一层吞掉未定层**；**"编辑器异步落盘"风险未测**。
+- 另：DR-54 的 `scene_path`/顶层 `name` 两缺陷**在 HEAD 已被 DR-58 修好**，约束点③只针对 `smoke-t7` 当时的二进制（`9ff9cd2` 构建）。
+  它并**用数字收窄**了 D242 的表述：外层仓在 `godot-mcp/` 下跟踪 **6484** 文件，但 `godot-mcp/godot/` 下是 **0**（`.gitignore:33`）——**结论不变，表述更准**。
+- **裁决（在验收通过后执行）**：**E1 的真实障碍是"提示词↔shell 契约"+"完成定义指向不可通过的电池"+"预算允许 0 次工程写入"**，
+  ⇒ **先派 E1 修复批**（含**自动化假绿必须变红**、**两个永远绿的测试必须改**），**再**跑 SMOKE-T8。
+  新队列：**DR-64 验收 → E1 修复批（DR-66）→ E1 修复批验收 → SMOKE-T8 → DR-65 → REF2 → §16 → 造游戏**。
+- 回滚点：诊断批无代码改动；修复批将逐条可 revert。
+
