@@ -59,9 +59,16 @@ function Restore([string]$name) {
 Assert-Clean
 
 # ---------------------------------------------------------------- plant A
+# The needle is the whole guard block, closing brace included, so each plant can
+# replace or delete it without leaving an unbalanced brace behind.
 $guard = @"
         if let Some(liveness) = self.endpoint_state(&endpoint) {
             if liveness.unavailable {
+                return Err(
+                    endpoint::McpEndpointUnavailableError::new(liveness, tool).into(),
+                );
+            }
+        }
 "@ -replace "`r`n", "`n"
 $plantA = @"
         if let Some(liveness) = self.endpoint_state(&endpoint) {
@@ -78,6 +85,11 @@ $plantA = @"
                     })
                     .await;
                 }
+                return Err(
+                    endpoint::McpEndpointUnavailableError::new(liveness, tool).into(),
+                );
+            }
+        }
 "@ -replace "`r`n", "`n"
 if (-not $originalLf.Contains($guard)) { throw "plant A: the dead-endpoint guard was not found verbatim" }
 $planted = $originalLf.Replace($guard, $plantA)
