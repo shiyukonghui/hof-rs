@@ -312,18 +312,34 @@ mod tests {
             .is_empty());
     }
 
-    /// DR-61 / DEF-2: a file carrying the DR-49 `*.stale-*` marker has been
-    /// superseded, so it must never enter the frozen candidate view — the Tester
-    /// judges **this round's** evidence.  Skipping is not deleting: the file
-    /// stays exactly where it was on the real workspace.
+    /// DR-62: the on-disk shape of the supersession manifest — a plain JSON list
+    /// of paths relative to the directory that holds it.  Written literally on
+    /// purpose: the format is part of the contract an auditor can read.
+    fn record_supersession(directory: &Path, relative: &str) {
+        write(
+            &directory.join(".superseded.json"),
+            &format!("[\n  \"{relative}\"\n]\n"),
+        );
+    }
+
+    /// DR-62 (gap 1): a superseded path is skipped because it is **recorded**,
+    /// not because its name carries a substring.  DR-49/DR-61 decided this with
+    /// `name.contains(".stale-")` (`hygiene::is_expired_name`), so a role that
+    /// chose a `.stale-`-looking name for **this** round's artifact had it
+    /// silently hidden from the Tester.  Skipping is still not deleting.
     #[test]
-    fn copy_evidence_skips_superseded_files_and_keeps_them() {
+    fn copy_evidence_skips_a_recorded_supersession_and_copies_a_role_named_stale_file() {
         let temp = tempfile::tempdir().unwrap();
         let source = temp.path().join("evidence");
         write(&source.join("frame-00.png"), "this round\n");
-        write(&source.join("frame-00.png.stale-1790663544"), "stale round\n");
+        write(&source.join("frame-00.png.stale-1790663544"), "superseded\n");
         write(&source.join("replay/round.json"), "this round\n");
-        write(&source.join("replay/round.json.stale-1790663544"), "stale round\n");
+        write(&source.join("replay/round.json.stale-1790663544"), "superseded\n");
+        record_supersession(&source, "frame-00.png.stale-1790663544");
+        record_supersession(&source.join("replay"), "round.json.stale-1790663544");
+        // A name that only *looks* superseded and was never recorded: this is
+        // this round's artifact, and hiding it is exactly the DR-62 defect.
+        write(&source.join("replay.stale-this-round.json"), "this round\n");
 
         let destination = temp.path().join("candidate/.hoh/evidence");
         let oversized = copy_evidence(&source, &destination, 4).unwrap();
@@ -334,21 +350,103 @@ mod tests {
         );
         assert!(
             !destination.join("frame-00.png.stale-1790663544").exists(),
-            "DR-61: a superseded evidence file must not reach the frozen candidate"
+            "DR-62: a recorded supersession must not reach the frozen candidate"
         );
         assert!(
             !destination.join("replay/round.json.stale-1790663544").exists(),
-            "DR-61: a superseded file in a subdirectory must not reach the candidate"
+            "DR-62: a supersession recorded by the manifest of a subdirectory must \
+             not reach the candidate either"
+        );
+        assert!(
+            destination.join("replay.stale-this-round.json").is_file(),
+            "DR-62: a `.stale-` name the runtime never superseded is this round's \
+             artifact and must be copied"
         );
         assert!(
             source.join("frame-00.png.stale-1790663544").is_file(),
-            "DR-61: skipping must never delete the superseded bytes"
+            "DR-62: skipping must never delete the superseded bytes"
         );
         assert!(
             !oversized
                 .iter()
-                .any(|(relative, _)| relative.contains(".stale-")),
-            "DR-61: a skipped file is not reported as copied: {oversized:?}"
+                .any(|(relative, _)| relative.ends_with("frame-00.png.stale-1790663544")),
+            "DR-62: a skipped file is not reported as copied: {oversized:?}"
+        );
+    }
+
+    /// DR-62 (gap 2): `run_loop.rs:991` copies `.hoh/deterministic` with
+    /// [`copy_tree`], which had *no* supersession filter at all while
+    /// `copy_evidence` had one (DR-61 R-3 / independent acceptance R-B).  Both
+    /// copy paths must apply the same structural criterion.
+    #[test]
+    fn copy_tree_applies_the_same_supersession_criterion_as_the_evidence_copy() {
+        let temp = tempfile::tempdir().unwrap();
+        let source = temp.path().join(".hoh/deterministic");
+        write(&source.join("battery.json"), "this round\n");
+        write(&source.join("battery.json.stale-1790663544"), "superseded\n");
+        write(&source.join("replay.stale-this-round.json"), "this round\n");
+        record_supersession(&source, "battery.json.stale-1790663544");
+
+        let destination = temp.path().join("candidate/.hoh/deterministic");
+        copy_tree(&source, &destination, &[]).unwrap();
+
+        assert!(
+            destination.join("battery.json").is_file(),
+            "this round's deterministic evidence is still copied"
+        );
+        assert!(
+            !destination.join("battery.json.stale-1790663544").exists(),
+            "DR-62: copy_tree must skip a recorded supersession exactly as \
+             copy_evidence does"
+        );
+        assert!(
+            destination.join("replay.stale-this-round.json").is_file(),
+            "DR-62: copy_tree must not skip by name either"
+        );
+        assert!(
+            !destination.join(".superseded.json").exists(),
+            "DR-62: runtime bookkeeping is not view content"
+        );
+        assert!(
+            source.join("battery.json.stale-1790663544").is_file(),
+            "DR-62: skipping must never delete the superseded bytes"
+        );
+    }
+
+    /// DR-62: producer and consumer agree end to end.  The real supersession —
+    /// `adapter::godot::invalidate_artifact`, the one production path that
+    /// renames an artifact out of the way in place (DR-49) — is what the real
+    /// evidence copy skips, with no fixture format involved.
+    #[test]
+    fn a_real_invalidation_is_what_the_evidence_copy_skips() {
+        let temp = tempfile::tempdir().unwrap();
+        let source = temp.path().join(".hoh/evidence");
+        write(&source.join("frame-00.png"), "previous round\n");
+        write(&source.join("this-round.stale-keep.png"), "this round\n");
+
+        let stale = crate::adapter::godot::invalidate_artifact(&source.join("frame-00.png"))
+            .unwrap()
+            .expect("a pre-existing artifact must be moved aside");
+        assert!(stale.starts_with("frame-00.png.stale-"), "{stale}");
+        write(&source.join("frame-00.png"), "this round\n");
+
+        let destination = temp.path().join("candidate/.hoh/evidence");
+        copy_evidence(&source, &destination, 4).unwrap();
+
+        assert!(destination.join("frame-00.png").is_file());
+        assert!(
+            !destination.join(&stale).exists(),
+            "DR-62: the supersession the runtime itself recorded must not reach \
+             the frozen candidate"
+        );
+        assert!(
+            destination.join("this-round.stale-keep.png").is_file(),
+            "DR-62: a `.stale-`-looking name the runtime never superseded must be \
+             copied"
+        );
+        assert!(
+            source.join(&stale).is_file(),
+            "DR-62: skipping must never delete the superseded bytes"
         );
     }
 
