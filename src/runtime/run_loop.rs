@@ -14,7 +14,7 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use crate::adapter::ProjectAdapter;
 use crate::config::HohConfig;
-use crate::errors::{as_hof_error, HofError};
+use crate::errors::{as_hof_error, exit_code_of, HofError};
 use crate::harness::Harness;
 use crate::model::{
     empty_evidence, parse_plan, Ablation, ContractViolation, DevelopmentDoc, EvidenceDiff, Role,
@@ -55,6 +55,15 @@ pub const WRAP_UP_RETRY_MAX_STEPS: u64 = 30;
 /// therefore "well before wrap-up begins", the earliest schedule on which a
 /// real increment still leaves room to validate it.  It is capped at
 /// `wrap_up_steps` so the instruction can never contradict the wrap-up rule.
+///
+/// DR-67 (DEF-5): this value is an **instruction published to the Developer**,
+/// and it is the *only* thing it is.  It is rendered into the prompt
+/// (`[budget]`) and into the `no_engineering_write` warning text; the runtime
+/// does **not** compare it against a step counter, and no message may claim it
+/// does.  Turning it into a hard step gate would need its own measurement (an
+/// agent that legitimately starts writing at step 26 would be failed by a
+/// literal counter), which is why the reviewer's option "make the wording
+/// factual" was chosen over "check K".
 pub fn developer_write_deadline(limits: &crate::config::AgentLimits) -> u64 {
     (limits.step_limit / 4).min(limits.wrap_up_steps).max(1)
 }
@@ -94,10 +103,54 @@ pub struct RunSummary {
     /// DR-39: how much of the PRD the last completed iteration's `E_t` accounts
     /// for.  A third, independent axis — `gate ok` is not "the product works".
     pub prd_coverage: crate::model::PrdCoverage,
+    /// DR-67 (DEF-2): the exit code this run must be **finalised** with when the
+    /// loop itself returned an error instead of a summary.
+    ///
+    /// The gap this closes: a failed round returns `Err`, so there is no
+    /// `RunSummary` at all, and the only `finalize_run` call site (on the `Ok`
+    /// path) was therefore unreachable for exactly the failures that matter.
+    /// `runs/<id>/exit_code` and `meta.json.exit_code` were consequently never
+    /// written for a failed round, and the one place that *could* have carried
+    /// the verdict — the `!ok` branch of `run_exit_code_for` — was dead in
+    /// production, because the only production `RunSummary` was built on the
+    /// success exit with `ok: true` hard-coded.
+    ///
+    /// `None` means "no failure to carry"; the code is then derived from the
+    /// artifact gate exactly as before (DR-27).  `Some(code)` is set by the
+    /// dispatcher from the **real** `anyhow::Error`, so what is persisted is the
+    /// same number `hoh::errors::exit_code_of` gives the process, and the
+    /// `!ok` branch is reachable from production data rather than from a
+    /// hand-built object in a test.
+    pub failure_exit_code: Option<i32>,
 }
 
-fn now_seconds() -> u64 {
-    SystemTime::now()
+/// DR-67 (DEF-2): the run summary for a round that **failed**.
+///
+/// Built from the real `anyhow::Error`, never from a test's hand-written object:
+/// the exit code comes from [`exit_code_of`], the same function the process
+/// entry point uses (`src/cli.rs::main_entry`), so the two persisted locations
+/// (`runs/<id>/exit_code`, `meta.json.exit_code`) and the process exit code
+/// cannot diverge.
+///
+/// `artifact_gate` is `not_applicable` because a round that failed before its
+/// loop ended never produced a gate verdict; `finalize_run` stores it, and the
+/// failure code in `failure_exit_code` is what decides the exit code.
+pub fn failed_run_summary(run_id: &str, error: &anyhow::Error) -> RunSummary {
+    RunSummary {
+        run_id: run_id.to_string(),
+        iterations_completed: 0,
+        final_version_id: None,
+        total_usage: Usage::default(),
+        ok: false,
+        artifact_gate: crate::model::ArtifactGate::not_applicable(
+            "the round failed; no artifact gate was produced",
+        ),
+        prd_coverage: crate::model::PrdCoverage::default(),
+        failure_exit_code: Some(exit_code_of(error)),
+    }
+}
+
+fn now_seconds() -> u64 {    SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|duration| duration.as_secs())
         .unwrap_or(0)
@@ -843,12 +896,20 @@ pub async fn run(
         // the **violation**.  The violation is recorded and the round fails, so
         // no future green can be read as "the Developer produced an increment"
         // unless it did.
+        // DR-67 §3 (DEF-3 option A): the gate is about the **measurement**, not
+        // about *why* the Developer stopped.  DR-66 had narrowed it to "the
+        // Developer's last attempt ended with `LimitsExceeded`", justified by
+        // "a wider gate would collide with the existing offline fixtures" — a
+        // reason the independent acceptance disproved: of the 32
+        // `FakeStep::new(Role::Developer)` blocks under `tests/**`, the only one
+        // whose every write lands under `.hoh/**` is the zero-increment fixture
+        // that same batch added.  With the reason gone, so is the narrowing.
+        //
+        // The cost of the narrowing was explicit in DR-66's report §7-3: a round
+        // that finished normally with zero increment still reported `ok = true`
+        // and exit code 0.  That is the very failure class E1 is about, so it is
+        // now closed: equality of the two hashes is the whole condition.
         let h_dev_after = hash_tree(&workspace, &excludes)?;
-        let no_engineering_write_attempt = iter_attempts
-            .iter()
-            .rev()
-            .find(|attempt| attempt.role == Role::Developer)
-            .filter(|attempt| attempt.exit_was_limits);
         if h_dev_before == h_dev_after {
             let warning = ContractViolation::NoProgress.code();
             iter_warnings.push(warning.to_string());
@@ -859,18 +920,20 @@ pub async fn run(
                 ),
             )?;
         }
-        if let (true, Some(attempt)) = (h_dev_before == h_dev_after, no_engineering_write_attempt) {
-            let _ = attempt;
+        if h_dev_before == h_dev_after {
             let violation = ContractViolation::NoEngineeringWrite;
-            let first_write_deadline = developer_write_deadline(&cfg.agent);
+            // DR-67 (DEF-5): this text must describe the condition that is
+            // actually checked.  DR-66 claimed a step-budget/K-step trigger that
+            // nothing tested (`developer_write_deadline` is rendered into the
+            // prompt but never compared against anything here), and a runtime
+            // message may not assert a check that does not exist.
             append_warning(
                 &run_dir,
                 &format!(
-                    "iteration {iteration}: contract violation {} (the developer stage spent its \
-                     whole step budget with no engineering write inside the first \
-                     {first_write_deadline} steps: no file in the artifact tree outside the \
+                    "iteration {iteration}: contract violation {} (the developer stage ended \
+                     with no engineering write: no file in the artifact tree outside the \
                      hash-excluded runtime paths changed; every write went to an excluded path \
-                     such as `.hoh/scratch`)",
+                     such as `.hoh/scratch`, `.godot/**` or `.import/**`)",
                     violation.code()
                 ),
             )?;
@@ -1372,6 +1435,9 @@ pub async fn run(
         artifact_gate: last_gate
             .unwrap_or_else(|| crate::model::ArtifactGate::not_applicable("no iteration ran")),
         prd_coverage: last_coverage,
+        // DR-67 (DEF-2): the loop finished, so there is no failure to carry —
+        // the exit code comes from the artifact gate alone (DR-27).
+        failure_exit_code: None,
     })
 }
 

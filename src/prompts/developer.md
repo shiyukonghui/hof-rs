@@ -34,12 +34,13 @@ beats an unfinished experiment); a call that ends with a broken or half-written
 project is recorded as a failure.
 
 **Within your first {{write_deadline_steps}} steps you must have produced at
-least one real engineering write**: a file in the project (`.hoh/**` does not
-count — it is excluded from the artifact hash, so scratch work there is
-invisible). Exploring, reading, and running probes do not count. A round that
-ends with no engineering write has produced no candidate increment and is
-recorded as `no_engineering_write`, so write a real, non-empty file first and
-improve it afterwards.
+least one real engineering write**: a file in the project that is **not** under
+an artifact-hash exclusion — `.hoh/**`, `.godot/**` and `.import/**` are all
+excluded from the hash, so scratch work, engine caches and imported assets there
+are invisible and do not count as an increment. Exploring, reading, and running
+probes do not count. A round that ends with no engineering write has produced no
+candidate increment and is recorded as `no_engineering_write`, so write a real,
+non-empty file first and improve it afterwards.
 
 [forbidden-sources]
 The tool schemas you need are already in `.hoh/TOOLS.md` and the skills in
@@ -95,8 +96,9 @@ You are done only when all of the following hold:
 1. **Candidate increment.** At least one file inside the project changed because
    of you: a new non-empty script, or a real edit to an existing one. Your
    writes under `{{HOH_SCRATCH_DIR}}` do not count — that directory is excluded
-   from the artifact hash, so a round whose only writes went there is recorded
-   as `no_engineering_write`. "I planned the change" is not done.
+   from the artifact hash, as are `.godot/**` and `.import/**` — so a round whose
+   only writes went to those excluded paths is recorded as
+   `no_engineering_write`. "I planned the change" is not done.
 2. **Non-empty.** No file you wrote is empty. A 0-byte script still counts as an
    existing file and is a failed round: after writing any script with
    `project_create_script` / `project_edit_script`, immediately read it back

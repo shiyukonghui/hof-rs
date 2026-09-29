@@ -586,7 +586,28 @@ pub async fn run(args: RunArgs) -> anyhow::Result<i32> {
         start_state,
     };
 
-    let summary = run_loop::run(&orchestrator, &spec, &run_id).await?;
+    // DR-67 (DEF-2): the failed path must **persist what the process reports**.
+    //
+    // DR-66's `?` propagated the round's error and skipped `finalize_run`
+    // entirely, so `runs/<id>/exit_code` and `meta.json.exit_code` were never
+    // written for exactly the rounds that failed — the DR-27 contract ("a
+    // launcher reads these two files") only held for successful rounds.  The
+    // summary below carries the code taken from the real error, so the two
+    // locations and the process exit code agree by construction.
+    //
+    // `finalize_run` is best-effort here: a filesystem failure while recording
+    // the verdict must never replace the round's own error.  It is idempotent,
+    // so re-running a failed round rewrites the same numbers.
+    let summary = match run_loop::run(&orchestrator, &spec, &run_id).await {
+        Ok(summary) => summary,
+        Err(error) => {
+            if persists_failed_round_exit_code() && run_dir.is_dir() {
+                let failed = run_loop::failed_run_summary(&run_id, &error);
+                let _ = finalize_run(&run_dir, &failed);
+            }
+            return Err(error);
+        }
+    };
     println!(
         "run {} finished: {} iteration(s), final version {:?}, total tokens {:?}",
         summary.run_id,
@@ -642,6 +663,17 @@ pub fn run_exit_code(gate: &crate::model::ArtifactGate) -> i32 {
     }
 }
 
+/// DR-67 (DEF-2): is the failed-round finalisation wired up?
+///
+/// A predicate rather than an inline `if` so that the TDD plants of
+/// `TASK-DR67.md` §1 can turn the behaviour off in **one** place and show which
+/// tests are actually load-bearing.  `#[inline(never)]` keeps the call from
+/// being folded away, so a plant that edits the body really changes what runs.
+#[inline(never)]
+fn persists_failed_round_exit_code() -> bool {
+    true
+}
+
 /// DR-66 ④: the **round's** exit code.
 ///
 /// `2` — the contract-violation class (`HofError::Contract`, `src/errors.rs`) —
@@ -651,7 +683,18 @@ pub fn run_exit_code(gate: &crate::model::ArtifactGate) -> i32 {
 /// measured false green: `smoke-t7`'s iteration ended with `ok = true`,
 /// `artifact_gate.launchable = true` and `exit_code = 0` while the Developer had
 /// produced no increment at all.
+///
+/// DR-67 (DEF-2): the order is now (1) the failure code carried by the summary,
+/// (2) the `!ok` contract class, (3) the artifact gate.  Branch (1) is the one
+/// the production failure path uses, so this function is a single decision point
+/// for "what code does this run end with" instead of a partial view of a
+/// hand-built object.
 pub fn run_exit_code_for(summary: &run_loop::RunSummary) -> i32 {
+    if let Some(code) = summary.failure_exit_code {
+        // The real error's own class, so the persisted number cannot drift away
+        // from `hoh::errors::exit_code_of`'s answer for the same failure.
+        return code;
+    }
     if !summary.ok {
         // The same class as every other contract violation, derived from the
         // violation itself so the number can never drift away from it.

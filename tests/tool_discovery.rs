@@ -347,11 +347,35 @@ async fn only_a_tool_command_that_reads_a_source_is_recorded() {
 
 /// Run one scenario whose Developer ran `command`, and return the iteration
 /// warnings.
+///
+/// DR-67: this helper is called several times over **one** temporary root, and
+/// `FakeStep` writes the same `project.godot` bytes every time — so a repeat call
+/// changed nothing in the project and the DR-67 zero-increment gate correctly
+/// failed it, for a reason unrelated to what these tests measure.  The helper's
+/// real intent is "a Developer *round* ran and the trace is report-only", so it
+/// now also performs one genuine, **call-unique** project write (a counter, not
+/// the command text, so two calls with the same command still differ).  The
+/// fixture is strictly stronger: every round it exercises really did produce an
+/// increment.
 async fn warnings_for_developer_command(root: &std::path::Path, command: &str) -> Vec<Value> {
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let nonce = NEXT.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    // The round's genuine increment is the Developer's own write below, made
+    // **call-unique** by a counter: this helper runs several times over one
+    // temporary root, and a `FakeStep` that writes identical bytes on every call
+    // is — correctly — a zero increment on every call after the first, which
+    // would fail these assertions for a reason they do not measure.
+    write(
+        &root.join("workspace/scripts/command_probe.gd"),
+        &format!("extends Node\n# probe {nonce}: {command}\n"),
+    );
     let script = vec![
         FakeStep::new(Role::Planner).writing(".hoh/plan.md", OK_PLAN),
         FakeStep::new(Role::Developer)
-            .writing("project.godot", "config_version=5\n")
+            .writing(
+                "scripts/developer_write.gd",
+                &format!("extends Node\n# developer write {nonce}\n"),
+            )
             .trajectory_mentioning(command),
         FakeStep::new(Role::Tester)
             .writing(".hoh/evidence/move.json", "{}\n")

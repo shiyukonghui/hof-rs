@@ -274,6 +274,21 @@ async fn round_two_cannot_read_round_one_evidence() {
          anything: {left_behind:?}"
     );
 
+    // DR-67: round two must also be a *real* round.  `happy_script` writes the
+    // same `project.godot` bytes in both rounds, so without this the Developer
+    // stage of round two changes nothing and the new zero-increment gate fails
+    // it — which would make this test fail for a reason unrelated to evidence
+    // isolation.  Changing the project first gives round two a genuine increment
+    // (its Developer write is then a real change), so the isolation invariant is
+    // measured on a round that actually did something: a strengthening of the
+    // fixture, not a relaxation of it.
+    write(&workspace.join("project.godot"), "config_version=5\n# run-two\n");
+    assert_eq!(
+        std::fs::read_to_string(workspace.join("project.godot")).unwrap(),
+        "config_version=5\n# run-two\n",
+        "the fixture must hand round two different project bytes"
+    );
+
     let second = run_round(root, "run-2", happy_script()).await;
     let files = developer_view(&second);
 

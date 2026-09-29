@@ -38,6 +38,11 @@ fn summary_with(gate: ArtifactGate) -> RunSummary {
         artifact_gate: gate,
         // DR-39: the summary carries a third axis; it never affects the exit code.
         prd_coverage: hof_rs::model::PrdCoverage::default(),
+        // DR-67: this fixture describes a *successful* round, so there is no
+        // failure code to carry; the exit code comes from the artifact gate
+        // alone (DR-27).  The failure code is exercised in `e1_increment.rs`
+        // against a real error.
+        failure_exit_code: None,
     }
 }
 

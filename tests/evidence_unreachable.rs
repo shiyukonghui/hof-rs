@@ -361,6 +361,22 @@ async fn the_tester_candidate_view_never_carries_the_previous_rounds_evidence() 
         PREVIOUS_EVIDENCE_REPLAY,
     );
 
+    // DR-67: `happy_script` writes identical `project.godot` bytes in both
+    // rounds, so round two's Developer stage would change nothing and the new
+    // zero-increment gate would fail it for a reason unrelated to what this test
+    // measures (the frozen candidate view).  These two genuine project writes —
+    // which are also the *shape* of the real scenario, where the second round
+    // opens over a project the first round already changed — give round two a
+    // real increment.  A strengthening of the fixture, not a relaxation.
+    write(
+        &workspace.join("project.godot"),
+        "config_version=5\n# second-round probe\n",
+    );
+    write(
+        &workspace.join("scripts/round_two.gd"),
+        "extends Node\n# written before round two opens\n",
+    );
+
     let second = run_round(root, "run-2").await;
 
     let tester = role_view(&second, Role::Tester);

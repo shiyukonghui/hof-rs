@@ -273,11 +273,33 @@ async fn a_zero_engineering_write_round_fails_instead_of_reporting_ok() {
         "the measurement description must survive: {result_json}"
     );
 
-    // The round-level verdict drives the exit code, which is what `smoke-t7`
-    // got wrong (it wrote `0`).
-    let summary = failed_summary();
+    // DR-67 (DEF-2): the two persisted locations must be written by the
+    // **production failure path**, from the round's own error — not by a
+    // `RunSummary` this test builds for itself.  First prove the round really
+    // stopped before the finaliser (so the assertions below cannot pass because
+    // something else already wrote these files)…
+    assert!(
+        !root.join("runs/run-1/exit_code").exists(),
+        "the failed round must not have an exit code yet: that is the DEF-2 gap"
+    );
+    let meta_before: Value =
+        serde_json::from_str(&read(&root.join("runs/run-1/meta.json"))).unwrap();
+    assert!(
+        meta_before.get("exit_code").is_none(),
+        "the failed round's meta.json must not carry an exit code yet: {meta_before}"
+    );
+
+    // …then drive the same production function the dispatcher uses on its error
+    // path (`cli_impl::run`), with the real error object.
+    let summary = hof_rs::runtime::run_loop::failed_run_summary("run-1", &error);
+    assert!(!summary.ok, "the failed summary must not claim success");
     let code = hof_rs::cli_impl::finalize_run(&root.join("runs/run-1"), &summary).unwrap();
     assert_ne!(code, 0, "a failed round must not exit 0");
+    assert_eq!(
+        code,
+        hof_rs::errors::exit_code_of(&error),
+        "the persisted code must be the real error's class, not a literal"
+    );
     assert_eq!(
         code,
         hof_rs::errors::HofError::contract(ContractViolation::NoEngineeringWrite).exit_code(),
@@ -293,9 +315,40 @@ async fn a_zero_engineering_write_round_fails_instead_of_reporting_ok() {
     assert_eq!(meta["exit_code"], json!(code));
 }
 
+/// DR-67 (DEF-2): the `!ok` branch of `run_exit_code_for` must be reachable from
+/// production data — it was dead, because the only production `RunSummary` was
+/// built on the success exit with `ok: true`.
+#[test]
+fn a_failed_summary_carries_a_reachable_exit_code() {
+    // A real error through the real converter, exactly as the dispatcher does it.
+    let error: anyhow::Error =
+        hof_rs::errors::HofError::contract(ContractViolation::NoEngineeringWrite).into();
+    let summary = hof_rs::runtime::run_loop::failed_run_summary("run-1", &error);
+    assert_eq!(
+        hof_rs::cli_impl::run_exit_code_for(&summary),
+        hof_rs::errors::exit_code_of(&error),
+        "the failure code must come from the error, not from a constant"
+    );
+    assert_eq!(
+        summary.failure_exit_code,
+        Some(hof_rs::errors::HofError::contract(ContractViolation::NoEngineeringWrite).exit_code()),
+        "the summary must carry the real code, so nothing has to be re-derived"
+    );
+
+    // An error of another class keeps its own code, which a hard-coded `2` in
+    // `run_exit_code_for` could not express.
+    let external: anyhow::Error = hof_rs::errors::HofError::External("endpoint down".into()).into();
+    let summary = hof_rs::runtime::run_loop::failed_run_summary("run-1", &external);
+    assert_eq!(hof_rs::cli_impl::run_exit_code_for(&summary), 4, "external => 4");
+}
+
 /// A `RunSummary` with `ok = false` and a *launchable* artifact gate: the exact
 /// combination `smoke-t7` produced, and the reason the artifact axis alone
 /// cannot express the failure.
+///
+/// DR-67: kept as a gate-level control (it is also the shape
+/// `run_exit_code_for`'s `!ok` branch describes), but the end-to-end assertions
+/// above no longer use it — they go through `failed_run_summary` on a real error.
 fn failed_summary() -> RunSummary {
     RunSummary {
         run_id: "run-1".to_string(),
@@ -309,6 +362,7 @@ fn failed_summary() -> RunSummary {
             reasons: Vec::new(),
         },
         prd_coverage: hof_rs::model::PrdCoverage::default(),
+        failure_exit_code: None,
     }
 }
 
@@ -326,6 +380,154 @@ fn a_launchable_artifact_still_exits_zero_when_the_round_succeeded() {
         hof_rs::cli_impl::run_exit_code_for(&summary),
         hof_rs::errors::HofError::contract(ContractViolation::NoEngineeringWrite).exit_code()
     );
+}
+
+// ---------------------------------------------------------------------------
+// ②b DEF-3 — the gate must not depend on *why* the Developer stopped
+// ---------------------------------------------------------------------------
+
+/// The residual false green DR-66 left behind, now closed.
+///
+/// DR-66 narrowed the gate to "zero increment **and** the Developer's last
+/// attempt ended with `LimitsExceeded`", and justified the narrowing with
+/// "any zero increment would collide with the existing offline fixtures".  The
+/// independent acceptance disproved that reason: of the **32**
+/// `FakeStep::new(Role::Developer)` blocks under `tests/**`, the only one whose
+/// every write lands under `.hoh/**` is this file's own zero-increment fixture
+/// (`devsteps2.py`, DR-67 §3).  With the reason gone, so is the narrowing: a
+/// Developer stage that touched nothing in the project is the same *measurement*
+/// however it ended, and reporting it green is the failure class E1 is about.
+///
+/// This fixture differs from `zero_increment_script()` in exactly one way: the
+/// Developer **finishes normally** (`Submitted`, the `FakeStep` default) instead
+/// of exhausting its budget.
+fn zero_increment_script_that_finishes_normally() -> Vec<FakeStep> {
+    vec![
+        FakeStep::new(Role::Planner).writing(".hoh/plan.md", OK_PLAN),
+        FakeStep::new(Role::Developer)
+            .writing(".hoh/scratch/experiment.py", "print('probe')\n")
+            .writing(".hoh/scratch/project.godot.pre_iter1", "config_version=5\n"),
+        FakeStep::new(Role::Tester)
+            .writing(".hoh/evidence/move.json", "{}\n")
+            .writing(".hoh/evidence.json", &ok_evidence(1, "")),
+    ]
+}
+
+#[tokio::test]
+async fn a_zero_increment_round_that_finishes_normally_also_fails() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    write(
+        &root.join("workspace/project.godot"),
+        "config_version=5\n",
+    );
+
+    let (result, _records) = run_scenario(
+        root,
+        1,
+        zero_increment_script_that_finishes_normally(),
+        Ablation::default(),
+        FakeAdapter::new().with_developer_artifact_valid(true),
+    )
+    .await;
+
+    // The fixture really is the "finished normally" shape: the recorded attempt
+    // says so (`exit_was_limits = false`, `exit_status = "Submitted"`), so this
+    // test cannot pass merely by re-exercising the smoke-t7 fixture.
+    let attempt: Value = serde_json::from_str(&read(
+        &root.join("runs/run-1/iter-1/logs/developer.attempt1.log"),
+    ))
+    .unwrap();
+    assert_eq!(attempt["exit_was_limits"], json!(false), "{attempt}");
+    assert_eq!(attempt["exit_status"], json!("Submitted"), "{attempt}");
+
+    // …and the round is still a contract violation, not a green run.
+    let error = result
+        .expect_err("a zero-increment Developer round must fail whatever its exit status was");
+    let typed = hof_rs::errors::as_hof_error(&error)
+        .expect("the failure must be a typed HofError, not a harness error");
+    assert!(
+        matches!(
+            typed,
+            hof_rs::errors::HofError::Contract {
+                violation: ContractViolation::NoEngineeringWrite,
+                ..
+            }
+        ),
+        "the violation must be `no_engineering_write`, got {typed:?}"
+    );
+
+    let result_json: Value =
+        serde_json::from_str(&read(&root.join("runs/run-1/iter-1/result.json"))).unwrap();
+    assert_eq!(result_json["ok"], json!(false), "{result_json}");
+    assert!(
+        result_json["warnings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|warning| warning == "no_engineering_write"),
+        "the violation code must be recorded: {result_json}"
+    );
+}
+
+/// The gate's own explanation must describe what the gate checks (DEF-5).
+///
+/// The DR-66 wording claimed the trigger was "inside the first K steps" while
+/// `developer_write_deadline` was never compared against anything at run time.
+/// The delivered prompt may still *state the requirement* (a prompt is an
+/// instruction, and a rigid step-counter would false-positive on an agent that
+/// starts writing at step 26), but no runtime message may claim a check that
+/// does not exist.
+#[test]
+fn the_gate_message_describes_the_condition_the_gate_checks() {
+    let source = std::fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/runtime/run_loop.rs"
+    ))
+    .expect("the runtime source must be readable");
+    let marker = "contract violation {} (the developer stage";
+    let at = source
+        .find(marker)
+        .expect("the gate message must still exist; update this test if it moved");
+    let message: String = source[at..].chars().take(600).collect();
+
+    assert!(
+        !message.contains("step budget") && !message.contains("within the first"),
+        "the gate message must not claim a step-budget or K-step check that does not exist:\n{message}"
+    );
+    assert!(
+        message.contains("no file") && message.contains("excluded"),
+        "the gate message must describe the zero-increment condition it does check:\n{message}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// ②c DEF-6 — the prompt's exclusion account must match the runtime's set
+// ---------------------------------------------------------------------------
+
+/// The prompt may only promise what the hash actually ignores.
+///
+/// DR-66's `[budget]` said "`.hoh/**` does not count", but the runtime excludes
+/// `.godot` and `.import` as well (`config/hoh.yaml` → `cache_excludes`), so a
+/// round that only wrote under `.godot/**` would also be recorded as
+/// `no_engineering_write` while the prompt implied otherwise.
+#[test]
+fn the_prompt_names_every_excluded_path_not_just_the_scratch_dir() {
+    let prompt = delivered_prompt(hof_rs::prompts::DEVELOPER_PROMPT);
+    for excluded in [".hoh", ".godot", ".import"] {
+        assert!(
+            prompt.contains(excluded),
+            "the prompt must account for the `{excluded}` exclusion it is subject to:\n{prompt}"
+        );
+    }
+    // And the set it names is the set the runtime uses, not an aspirational one.
+    let excludes = configured_excludes();
+    for excluded in [".hoh", ".godot", ".import"] {
+        assert!(
+            excludes.contains(&excluded.to_string()),
+            "`{excluded}` must really be excluded; got {excludes:?}"
+        );
+    }
 }
 
 // ---------------------------------------------------------------------------
