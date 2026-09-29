@@ -1,0 +1,1 @@
+{"error":{"code":-32602,"data":{"suggestion":"project_get_info accepts no parameters"},"message":"Unknown parameter 'bogus' for tool 'project_get_info'"},"id":1,"jsonrpc":"2.0"}

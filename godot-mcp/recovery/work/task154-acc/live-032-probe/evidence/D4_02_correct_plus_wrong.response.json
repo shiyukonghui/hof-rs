@@ -1,0 +1,1 @@
+{"error":{"code":-32602,"data":{"suggestion":"Accepted parameters of project_get_settings: prefix, include_default"},"message":"Unknown parameter 'filter' for tool 'project_get_settings'"},"id":1,"jsonrpc":"2.0"}

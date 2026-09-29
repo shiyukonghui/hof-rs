@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"running_game_assert_node_state","arguments":{"expected":123,"operator":"eq","property":"rotation","node_path":"Actor"}}}

@@ -1,0 +1,107 @@
+{
+    "engine":  "4.8.dev.custom_build.97fc49df4",
+    "head":  "fc63af77c3",
+    "checks":  [
+                   {
+                       "id":  "test_ports_only",
+                       "pass":  true,
+                       "evidence":  "editor=9888 game=9889; allowed test ports = [9888, 9889]; the user editor port is refused at launch and is never taught to this script"
+                   },
+                   {
+                       "id":  "port_9888_free",
+                       "pass":  true,
+                       "evidence":  "port 9888 owner=-1"
+                   },
+                   {
+                       "id":  "port_9889_free",
+                       "pass":  true,
+                       "evidence":  "port 9889 owner=-1"
+                   },
+                   {
+                       "id":  "old_fixture_readable",
+                       "pass":  true,
+                       "evidence":  "F:\\moonbit-hof-rs\\godot-mcp\\godot\\modules\\mcp_server\\docs\\rename-baseline-tools-list.json: old description = 获取测试结果报告 | old clear.description = 是否清除结果"
+                   },
+                   {
+                       "id":  "scratch_project_imported",
+                       "pass":  true,
+                       "evidence":  "--import exit=0 after 1 attempt(s); log=F:\\moonbit-hof-rs\\godot-mcp\\recovery\\work\\task154-acc\\live-029\\logs\\import.attempt1.log"
+                   },
+                   {
+                       "id":  "editor_endpoint_ready",
+                       "pass":  true,
+                       "evidence":  "editor on 9888 answered GET /mcp with +20 frames"
+                   },
+                   {
+                       "id":  "tools_list_has_the_tool",
+                       "pass":  true,
+                       "evidence":  "tools/list on 9888: 154 tools, entry found=True"
+                   },
+                   {
+                       "id":  "wire_clear_default_is_false",
+                       "pass":  false,
+                       "evidence":  "live inputSchema.properties.clear.default = true (type Boolean)"
+                   },
+                   {
+                       "id":  "wire_clear_description_kept",
+                       "pass":  true,
+                       "evidence":  "live clear.description = 是否清除结果 (== the frozen old contract\u0027s clear.description: True)"
+                   },
+                   {
+                       "id":  "wire_description_names_shared_file",
+                       "pass":  false,
+                       "evidence":  "live description = 获取测试结果报告"
+                   },
+                   {
+                       "id":  "contract_file_agrees_with_wire",
+                       "pass":  true,
+                       "evidence":  "contract clear.default = false; live description == contract description = True"
+                   },
+                   {
+                       "id":  "game_endpoint_ready",
+                       "pass":  true,
+                       "evidence":  "game on 9889 answered GET /mcp with +20 frames"
+                   },
+                   {
+                       "id":  "game_assertions_recorded",
+                       "pass":  true,
+                       "evidence":  "pass=True fail=False bridge=True"
+                   },
+                   {
+                       "id":  "plain_read_default_is_a_pure_read",
+                       "pass":  true,
+                       "evidence":  "A: total=2 passed=1 failed=1 source=game_process_file cleared=[] report_file_present=True file on disk=True"
+                   },
+                   {
+                       "id":  "second_client_still_sees_the_whole_report",
+                       "pass":  true,
+                       "evidence":  "B: total=2 passed=1 failed=1 source=game_process_file cleared=[] | file after A=True after B=True"
+                   },
+                   {
+                       "id":  "two_plain_reads_are_byte_identical",
+                       "pass":  true,
+                       "evidence":  "sha256(A)=94e6aa7e7cac6c79a7b3fcb22329ea3c1fee9d638d6592ff306fceb44a6124d3 sha256(B)=94e6aa7e7cac6c79a7b3fcb22329ea3c1fee9d638d6592ff306fceb44a6124d3 bytes A=914 B=914"
+                   },
+                   {
+                       "id":  "explicit_false_is_also_a_pure_read",
+                       "pass":  true,
+                       "evidence":  "total=2 cleared=[] file still there=True"
+                   },
+                   {
+                       "id":  "explicit_true_clears_and_says_so",
+                       "pass":  true,
+                       "evidence":  "total=2 cleared=[\"editor_process\",\"game_process_file\"] file left=False"
+                   },
+                   {
+                       "id":  "empty_is_honest",
+                       "pass":  true,
+                       "evidence":  "total=0 no_results=True pass_rate=N/A all_passed=False report_file_present=False reason=\u0027user://mcp_test_report.json\u0027 does not exist source=editor_process"
+                   },
+                   {
+                       "id":  "test_ports_released",
+                       "pass":  true,
+                       "evidence":  "editor 9888 owner=-1; game 9889 owner=-1"
+                   }
+               ],
+    "failed_count":  2
+}

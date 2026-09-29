@@ -1,0 +1,10 @@
+﻿modules/mcp_server/scripts/mcp029_clear_default_evidence.ps1:115:#  The decision-maker's own Godot editor listens on 9877 on this machine, and both
+modules/mcp_server/scripts/mcp029_clear_default_evidence.ps1:134:$portLiteralPattern = [regex]::Escape('9877')
+modules/mcp_server/scripts/mcp029_clear_default_evidence.ps1:288:# TASK-154: the two old `port_9877_owner_before/_after` checks are gone with the
+modules/mcp_server/scripts/mcp029_clear_default_evidence.ps1:296:$userPortLiteralPattern = [regex]::Escape('9877')
+modules/mcp_server/scripts/mcp029_clear_default_evidence.ps1:436:# TASK-154: the `port_9877_owner_after` check that stood here went with
+modules/mcp_server/scripts/mcp032_d3_d4_d6_evidence.ps1:108:#  The decision-maker's own Godot editor listens on 9877 on this machine, and this
+modules/mcp_server/scripts/mcp032_d3_d4_d6_evidence.ps1:132:$portLiteralPattern = [regex]::Escape('9877')
+modules/mcp_server/scripts/mcp032_d3_d4_d6_evidence.ps1:353:# TASK-154: the old six-way 9877 classification (`New-McpPortGuard` /
+modules/mcp_server/scripts/mcp032_d3_d4_d6_evidence.ps1:359:$userPortLiteralPattern = [regex]::Escape('9877')
+modules/mcp_server/scripts/mcp032_d3_d4_d6_evidence.ps1:580:# TASK-154: the old `port_9877_guard` verdict stood here (it classified the state

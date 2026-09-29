@@ -1,0 +1,18 @@
+﻿=== mcp_port_guard.ps1 references in mcp032 (all) ===
+
+LineNumber Line                                                                               
+---------- ----                                                                               
+       119 #  The old TASK-042 `mcp_port_guard.ps1` classification is therefore no longer     
+       255     # `Register-McpPortGuardProcess` bookkeeping is gone with `mcp_port_guard.ps1`.
+       353 # TASK-154: the old six-way 9877 classification (`New-McpPortGuard` /              
+       354 # `Complete-McpPortGuard` from `mcp_port_guard.ps1`) stood here. It is replaced by 
+
+
+=== mcp029 references to port guard ===
+=== mcp_port_guard.ps1 unchanged vs 28432f859f? ===
+worktree blob=cfb7e190d38b6afff7cda3e8028be7990074a6a0
+HEAD blob    =cfb7e190d38b6afff7cda3e8028be7990074a6a0
+baseline blob=cfb7e190d38b6afff7cda3e8028be7990074a6a0
+=== who still dot-sources mcp_port_guard.ps1 (count) ===
+referencing files = 30
+mcp027_object_shape_and_paths_evidence.ps1, mcp032_d3_d4_d6_evidence.ps1, mcp033_b5_animation_evidence.ps1, mcp034_b5_audio_particle_theme_evidence.ps1, mcp035_b5_tilemap_shader_physics_evidence.ps1, mcp036_b5_navigation_theme_export_android_evidence.ps1, mcp042_port_guard_probes.ps1, mcp042_projectrewrite_and_honesty_evidence.ps1, mcp043_description_evidence.ps1, mcp043_reload_plugin_rewrite_probe.ps1, mcp047_graceful_exit_flush.ps1, mcp047_m3_mono_check.ps1, mcp049_subpath_closure_evidence.ps1, mcp050_parameter_guidance_evidence.ps1, mcp051_b_tier_evidence.ps1, mcp052_added_tools_evidence.ps1, mcp053_added_tools_evidence.ps1, mcp053_m5_baseline_capture.ps1, mcp054_forensics_and_csharp_evidence.ps1, mcp055_csharp_compile_verdict_evidence.ps1, mcp056_evidence.ps1, mcp059_section_switch_evidence.ps1, mcp063_product_defects_evidence.ps1, mcp070_mono_csharp_evidence.ps1, mcp070_windowed_preserve_evidence.ps1, mcp071_gate2_live_evidence.ps1, mcp075_d4_staleness.ps1, mcp075_live_evidence.ps1, mcp077_live_evidence.ps1, probe037_d2_d1_r1r2.ps1

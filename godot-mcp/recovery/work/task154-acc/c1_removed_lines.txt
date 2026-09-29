@@ -1,0 +1,27 @@
+﻿-$UserPort = 9877
+-# from code points, and the *old* wording is read out of the frozen fixture with an
+-$OldFixture = 'F:\moonbit-hof-rs\tests\fixtures\mcp\tools_list.json'
+-$userPidBefore = Get-ListenerPid -Port_ $UserPort
+-Check 'port_9877_owner_before' ($userPidBefore -gt 0) ("user Godot on {0}: pid={1} (never touched)" -f $UserPort, $userPidBefore)
+-# wording; if the frozen fixture cannot be read, that check must fail loudly
+-$userPidAfter = Get-ListenerPid -Port_ $UserPort
+-Check 'port_9877_owner_after' ($userPidAfter -eq $userPidBefore) ("pid before={0} after={1}" -f $userPidBefore, $userPidAfter)
+-#  `ConvertTo-Json` and sent with `--data-binary @file`; ports 9888/9889 only, and
+-#  the user's own editor on 9877 is asserted to keep the same pid. This file is
+-#  contract / the frozen fixture with an explicit UTF-8 decoder, never written as
+-$OldFixture = 'F:\moonbit-hof-rs\tests\fixtures\mcp\tools_list.json'
+-$UserPort = 9877
+-# TASK-042 section 1: the shared 9877 classification (see mcp_port_guard.ps1).
+-. (Join-Path $PSScriptRoot 'mcp_port_guard.ps1')
+-    $handle = Start-Process -FilePath $Engine -ArgumentList $Arguments -PassThru `
+-    # TASK-042 section 1: record the pid *and* the arguments, so "did this script
+-    # ever ask for the user's port" is read off the real command line.
+-    Register-McpPortGuardProcess -Guard $script:McpPortGuard -EnginePid $handle.Id -Arguments $Arguments
+-    return $handle
+-# TASK-042 section 1: the 9877 judgement is the shared six-way classification,
+-# not "a listener must exist" - see mcp_port_guard.ps1 for why that was an
+-# environment precondition rather than a regression.
+-$script:McpPortGuard = New-McpPortGuard -Port $UserPort -PidBefore (Get-ListenerPid -Port_ $UserPort)
+-Register-McpPortGuardCommandLine -Guard $script:McpPortGuard -CommandLine $import.command
+-$portGuardResult = Complete-McpPortGuard -Guard $script:McpPortGuard -PidAfter (Get-ListenerPid -Port_ $UserPort)
+-Check 'port_9877_guard' $portGuardResult.pass $portGuardResult.evidence

@@ -1,0 +1,202 @@
+{
+    "engine":  "4.8.dev.custom_build.97fc49df4",
+    "head":  "fc63af77c3",
+    "checks":  [
+                   {
+                       "id":  "d3_parser_positive_control",
+                       "pass":  true,
+                       "evidence":  "hand-built {\u0027Material\u0027,\u0027material\u0027} JSON: ConvertFrom-Json threw = True; message=\u0027Cannot convert the JSON string because a dictionary that was converted from the string contains the duplicated keys \u0027Material\u0027 and \u0027material\u0027.\u0027"
+                   },
+                   {
+                       "id":  "d3_parser_control_names_the_pair",
+                       "pass":  true,
+                       "evidence":  "the refusal names both keys: Material=True material=True"
+                   },
+                   {
+                       "id":  "test_ports_only",
+                       "pass":  true,
+                       "evidence":  "editor=9888 game=9889; allowed test ports = [9888, 9889]; the user editor port is refused at launch and is never taught to this script"
+                   },
+                   {
+                       "id":  "port_9888_free",
+                       "pass":  true,
+                       "evidence":  "port 9888 owner=-1"
+                   },
+                   {
+                       "id":  "port_9889_free",
+                       "pass":  true,
+                       "evidence":  "port 9889 owner=-1"
+                   },
+                   {
+                       "id":  "scratch_project_imported",
+                       "pass":  true,
+                       "evidence":  "--import exit=0 after 1 attempt(s); log=F:\\moonbit-hof-rs\\godot-mcp\\recovery\\work\\task154-acc\\live-032-probe\\logs\\import.attempt1.log"
+                   },
+                   {
+                       "id":  "editor_endpoint_ready",
+                       "pass":  true,
+                       "evidence":  "editor on 9888 answered GET /mcp with +20 frames"
+                   },
+                   {
+                       "id":  "d3_scene_opened",
+                       "pass":  true,
+                       "evidence":  "editor_open_scene -\u003e {\"opened\":true,\"path\":\"res://scenes/main.tscn\"}"
+                   },
+                   {
+                       "id":  "d3_probe_ran",
+                       "pass":  true,
+                       "evidence":  "engine probe: labels=13 values=42 labels=[Node, Process, Thread Group, Physics Interpolation, Auto Translate, Editor Description, CanvasItem, Visibility, Ordering, Texture, Material, Node2D, Transform]"
+                   },
+                   {
+                       "id":  "d3_probe_has_the_colliding_label",
+                       "pass":  true,
+                       "evidence":  "PROPERTY_USAGE_GROUP entry \u0027Material\u0027 present in the raw table: True"
+                   },
+                   {
+                       "id":  "d3_before_had_the_case_collisions",
+                       "pass":  true,
+                       "evidence":  "reconstructed pre-fix key set: 55 keys, case-insensitive duplicates=[material, transform] (Material/material and Transform/transform; the old set was not parsable by a case-insensitive client)"
+                   },
+                   {
+                       "id":  "d3_after_has_no_case_collision",
+                       "pass":  true,
+                       "evidence":  "answered key set: 42 keys, case-insensitive duplicates=[]"
+                   },
+                   {
+                       "id":  "d3_no_label_is_answered_as_a_property",
+                       "pass":  true,
+                       "evidence":  "13 label(s) in the engine table, 0 of them present in the answer (case sensitive): []"
+                   },
+                   {
+                       "id":  "d3_the_real_property_survives",
+                       "pass":  true,
+                       "evidence":  "answer contains \u0027material\u0027=True and \u0027Material\u0027=False (case sensitive)"
+                   },
+                   {
+                       "id":  "d3_answer_is_exactly_the_value_set",
+                       "pass":  true,
+                       "evidence":  "engine values=42 answered=42 diff=[]"
+                   },
+                   {
+                       "id":  "d3_whole_envelope_parses",
+                       "pass":  true,
+                       "evidence":  "WIRE JSON-RPC envelope: envelope parsed, result present; sha256=ded65596bfaa0641d6fda9c9921eed76872c1069ac17a5f3101c3a7c67382666"
+                   },
+                   {
+                       "id":  "d3_inner_payload_parses",
+                       "pass":  true,
+                       "evidence":  "WIRE content[0].text: content[0].text parsed, property count=42"
+                   },
+                   {
+                       "id":  "d3_named_label_is_32001",
+                       "pass":  true,
+                       "evidence":  "properties=[\u0027Material\u0027] -\u003e code=-32001 message=\u0027Property \u0027Material\u0027 on node \u0027Actor\u0027 is an inspector group/category label, not a property not found\u0027"
+                   },
+                   {
+                       "id":  "d3_named_label_message_names_it",
+                       "pass":  true,
+                       "evidence":  "message names the label: \u0027Property \u0027Material\u0027 on node \u0027Actor\u0027 is an inspector group/category label, not a property not found\u0027"
+                   },
+                   {
+                       "id":  "d3_named_property_is_answered",
+                       "pass":  true,
+                       "evidence":  "properties=[\u0027material\u0027] -\u003e code=0 (==0: True) keys=[material] count_ok=True exact_spelling_ok=True"
+                   },
+                   {
+                       "id":  "d4_documented_spelling_still_works",
+                       "pass":  true,
+                       "evidence":  "{prefix:\u0027application/config/name\u0027} -\u003e code=0 count=2"
+                   },
+                   {
+                       "id":  "d4_unknown_name_is_32602",
+                       "pass":  true,
+                       "evidence":  "{filter:...} -\u003e code=-32602 message=\u0027Unknown parameter \u0027filter\u0027 for tool \u0027project_get_settings\u0027\u0027 suggestion=\u0027Accepted parameters of project_get_settings: prefix, include_default\u0027"
+                   },
+                   {
+                       "id":  "d4_message_names_the_unknown_parameter",
+                       "pass":  true,
+                       "evidence":  "message = \u0027Unknown parameter \u0027filter\u0027 for tool \u0027project_get_settings\u0027\u0027"
+                   },
+                   {
+                       "id":  "d4_suggestion_lists_the_accepted_names",
+                       "pass":  true,
+                       "evidence":  "suggestion = \u0027Accepted parameters of project_get_settings: prefix, include_default\u0027"
+                   },
+                   {
+                       "id":  "d4_no_settings_payload_came_back",
+                       "pass":  true,
+                       "evidence":  "payload is null (the old behaviour was 981 settings): True"
+                   },
+                   {
+                       "id":  "d4_mixed_call_is_refused_too",
+                       "pass":  true,
+                       "evidence":  "{prefix, filter} -\u003e code=-32602 message=\u0027Unknown parameter \u0027filter\u0027 for tool \u0027project_get_settings\u0027\u0027"
+                   },
+                   {
+                       "id":  "d4_no_parameter_tool_says_so",
+                       "pass":  true,
+                       "evidence":  "project_get_info {bogus:1} -\u003e code=-32602 suggestion=\u0027project_get_info accepts no parameters\u0027"
+                   },
+                   {
+                       "id":  "d4_declared_parameter_is_not_the_gate_business",
+                       "pass":  true,
+                       "evidence":  "{include_default:true} is declared, so it is answered: code=0 message=\u0027\u0027 (a *declared* parameter a tool cannot honour stays the handler\u0027s business - pinned by the doctest for running_game_run_test_scenario.scene_path)"
+                   },
+                   {
+                       "id":  "game_endpoint_ready",
+                       "pass":  true,
+                       "evidence":  "game on 9889 answered GET /mcp with +20 frames"
+                   },
+                   {
+                       "id":  "d6_scene_tree_returns_the_absolute_path",
+                       "pass":  true,
+                       "evidence":  "running_game_get_scene_tree path of Actor = \u0027/root/Main/Actor\u0027 (SceneTree absolute, from /root)"
+                   },
+                   {
+                       "id":  "d6_tree_answer_is_fed_back_verbatim",
+                       "pass":  true,
+                       "evidence":  "running_game_get_scene_tree answered path=\u0027/root/Main/Actor\u0027; that exact string was used as node_path -\u003e code=0 payload={\"node_path\":\"/root/Main/Actor\",\"properties\":{\"position\":{\"x\":1.0,\"y\":2.0}},\"type\":\"Node2D\"}"
+                   },
+                   {
+                       "id":  "d6_relative_spelling_accepted",
+                       "pass":  true,
+                       "evidence":  "node_path=\u0027Actor\u0027 -\u003e code=0 payload={\"node_path\":\"/root/Main/Actor\",\"properties\":{\"position\":{\"x\":1.0,\"y\":2.0}},\"type\":\"Node2D\"}"
+                   },
+                   {
+                       "id":  "d6_absolute_spelling_accepted",
+                       "pass":  true,
+                       "evidence":  "node_path=\u0027/root/Main/Actor\u0027 -\u003e code=0 payload={\"node_path\":\"/root/Main/Actor\",\"properties\":{\"position\":{\"x\":1.0,\"y\":2.0}},\"type\":\"Node2D\"}"
+                   },
+                   {
+                       "id":  "d6_both_spellings_answer_the_same_node",
+                       "pass":  true,
+                       "evidence":  "relative node_path=\u0027/root/Main/Actor\u0027 absolute node_path=\u0027/root/Main/Actor\u0027 properties equal=True"
+                   },
+                   {
+                       "id":  "d6_old_wording_readable",
+                       "pass":  true,
+                       "evidence":  "frozen fixture get_game_node_properties.description = \u0027获取运行中游戏指定节点的属性\u0027"
+                   },
+                   {
+                       "id":  "d6_live_description_keeps_the_old_wording",
+                       "pass":  false,
+                       "evidence":  "live description starts with the pre-override wording + space: False"
+                   },
+                   {
+                       "id":  "d6_live_description_declares_the_shape",
+                       "pass":  false,
+                       "evidence":  "live description = \u0027获取运行中游戏指定节点的属性\u0027"
+                   },
+                   {
+                       "id":  "d6_contract_agrees_with_the_wire",
+                       "pass":  true,
+                       "evidence":  "contract description == live description = True"
+                   },
+                   {
+                       "id":  "test_ports_released",
+                       "pass":  true,
+                       "evidence":  "editor 9888 owner=-1; game 9889 owner=-1"
+                   }
+               ],
+    "failed_count":  2
+}

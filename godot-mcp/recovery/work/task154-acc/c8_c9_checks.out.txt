@@ -1,0 +1,63 @@
+﻿=== C8a: encoding of the two edited scripts (bytes / BOM / non-ASCII) ===
+  mcp029_clear_default_evidence.ps1: bytes=26174 BOM=False non-ASCII bytes=0 CR count=0
+     L63: isComment=False : $sharedWord = -join ([char]0x5171, [char]0x4EAB) # the word "shared"
+  mcp032_d3_d4_d6_evidence.ps1: bytes=35879 BOM=False non-ASCII bytes=0 CR count=0
+
+=== C9a: engine origin / push state ===
+fc63af77c33368c4a1bb839c95d19750554f63a3
+28432f859fdbf1a88d15c72bd71b91ffb55db7d3
+0	4
+engine status lines = 0
+outer status lines  = 1
+?? godot-mcp/recovery/work/task154-acc/
+
+=== C9b: engine commits (author/commit dates) ===
+fc63af77c3 2026-09-29 10:37:49 +0800 2026-09-29 10:37:49 +0800 evid: fix a comment typo in the mcp029 guard block (TASK-154)
+bdf654b108 2026-09-29 10:18:56 +0800 2026-09-29 10:18:56 +0800 docs: record _meta.generated_from as history, not current input (TASK-154)
+627aeacee4 2026-09-29 10:18:48 +0800 2026-09-29 10:18:48 +0800 evid: drop the cross-repo fixture path and the user port from mcp032 (TASK-154)
+56f93ca180 2026-09-29 10:18:40 +0800 2026-09-29 10:18:40 +0800 evid: read the pre-override wording from the engine baseline (TASK-154)
+machine now = 2026-09-29 10:49:30 +08:00  tz = China Standard Time
+
+=== C9c: hof-rs side: HEAD, tracked changes, fixture ===
+f829dc2
+--- porcelain (all) ---
+?? godot-mcp/recovery/work/task154-acc/
+--- tracked-file diff names (excludes untracked) ---
+fixture exists=True bytes=71481 sha256=50c5fb4204ee5b957b017eb994e7f7bd73f9b299e6aa9471d5cf11683e067da0
+fixture blob = fe420c811eef34c09b5b679098e4fecd7b2d9574
+fixture HEAD blob = fe420c811eef34c09b5b679098e4fecd7b2d9574
+
+=== C9d: provenance of the historical _meta field / commit 54200f0d77 ===
+--- which repo has 54200f0d77 ? ---
+engine: commit
+outer : fatal: Not a valid object name 54200f0d77
+powershell : fatal: ambiguous argument '54200f0d77': unknown revision or path not in the working tree.
+At line:1 char:358
++ ... ask154-acc; powershell -NoProfile -ExecutionPolicy Bypass -File .\c8_ ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (fatal: ambiguou...e working tree.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Use '--' to separate paths from revisions, like this:
+'git <command> [<revision>...] -- [<file>...]'
+--- does the frozen artifact really carry the hof-rs path in _meta.generated_from ? ---
+_meta.generated_from excerpt: e"
+      }
+    ]
+  },
+  "_meta": {
+    "generated_from": "F:\\moonbit-hof-rs\\tests\\fixtures\\mcp\\tools_list.json",
+    "generated_from_sha256": "8f8051c4c0f8941089f0b21a193cef7c51fa7c41d7e312b1463ea8593f313c54",
+    "
+--- git log -S for that string in the artifact ---
+--- blob of the artifact at 54200f0d77 (if present) and at HEAD~4..HEAD ---
+  HEAD~4 -> 3b1b191dc42f1cec8bc7cdd3504247c935b52f5e
+  HEAD~3 -> 3b1b191dc42f1cec8bc7cdd3504247c935b52f5e
+  HEAD~2 -> 3b1b191dc42f1cec8bc7cdd3504247c935b52f5e
+  HEAD~1 -> 3b1b191dc42f1cec8bc7cdd3504247c935b52f5e
+  HEAD -> 3b1b191dc42f1cec8bc7cdd3504247c935b52f5e
+
+=== C9e: dependencies / new files in the batch ===
+M	modules/mcp_server/docs/MCP-SERVER-HANDOVER.md
+M	modules/mcp_server/scripts/mcp029_clear_default_evidence.ps1
+M	modules/mcp_server/scripts/mcp032_d3_d4_d6_evidence.ps1
