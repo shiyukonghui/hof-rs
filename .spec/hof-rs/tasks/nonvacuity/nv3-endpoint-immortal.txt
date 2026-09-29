@@ -1,0 +1,30 @@
+﻿EXIT=101
+cargo.exe :    Compiling hof-rs v0.1.0 (F:\moonbit-hof-rs)
+At F:\moonbit-hof-rs\.spec\hof-rs\tasks\nonvacuity.ps1:75 char:15
++ ...   $output = & cargo test --offline --test $TestTarget $TestName 2>&1  ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling ho...moonbit-hof-rs):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.43s
+     Running tests\endpoint_liveness.rs (target\debug\deps\endpoint_liveness-d8e3fbf20bc74977.exe)
+
+running 1 test
+test two_transport_failures_kill_the_endpoint_and_later_calls_do_not_retry ... FAILED
+
+failures:
+
+---- two_transport_failures_kill_the_endpoint_and_later_calls_do_not_retry stdout ----
+
+thread 'two_transport_failures_kill_the_endpoint_and_later_calls_do_not_retry' (114096) panicked at tests\endpoint_liveness.rs:229:5:
+two consecutive transport failures must kill the endpoint: EndpointLiveness { endpoint: "http://127.0.0.1:63869/mcp", state: Alive, unavailable: false, consecutive_transport_failures: 2, transport_failures_at_mark: 0 }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    two_transport_failures_kill_the_endpoint_and_later_calls_do_not_retry
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 6 filtered out; finished in 4.13s
+
+error: test failed, to rerun pass `--test endpoint_liveness`
+

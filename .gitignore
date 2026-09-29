@@ -11,7 +11,9 @@ config/*.key
 .workspace/
 runs/
 
-# Rust
+# 批次执行期的临时抓屏（原始 `cargo test` 输出）：报告里引用的是其**结论**与
+# 逐字失败行，原始文件随时可重跑再生 → 不入库。
+.spec/hof-rs/tasks/_scratch_*.txt
 target/
 **/*.rs.bk
 

@@ -1,0 +1,32 @@
+﻿EXIT=101
+cargo.exe :    Compiling hof-rs v0.1.0 (F:\moonbit-hof-rs)
+At F:\moonbit-hof-rs\.spec\hof-rs\tasks\nonvacuity.ps1:75 char:15
++ ...   $output = & cargo test --offline --test $TestTarget $TestName 2>&1  ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling ho...moonbit-hof-rs):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.87s
+     Running tests\mcp_reliability.rs (target\debug\deps\mcp_reliability-361eb4fe505efc48.exe)
+
+running 1 test
+test retries_are_bounded_and_preserve_the_real_error ... FAILED
+
+failures:
+
+---- retries_are_bounded_and_preserve_the_real_error stdout ----
+
+thread 'retries_are_bounded_and_preserve_the_real_error' (107644) panicked at tests\mcp_reliability.rs:206:5:
+assertion `left == right` failed: 1 try + 2 retries
+  left: 1
+ right: 3
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    retries_are_bounded_and_preserve_the_real_error
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--test mcp_reliability`
+

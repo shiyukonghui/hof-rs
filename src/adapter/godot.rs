@@ -1200,13 +1200,14 @@ impl<'a> BatterySession<'a> {
     /// `user://` file IPC.  The recorded verdict poisoned the round: the next
     /// Planner would have gone off to "fix" a non-existent defect.
     ///
-    /// This step asks the game process itself, through `running_game_execute_gdscript`,
-    /// and distinguishes three states:
+    /// DR-54: this step asks the game process through the contract's **semantic**
+    /// tools, and distinguishes three states:
     ///
-    /// * `GAME_INPUT_CHANNEL_OK` — the action exists in the game and pressing it
-    ///   moved `get_axis` away from 0;
-    /// * `ACTION_NOT_BOUND` — the game's `InputMap` really has no such action
-    ///   (the only honest way to reach this verdict);
+    /// * `GAME_INPUT_CHANNEL_OK` — the action exists in the game and the semantic
+    ///   input injection was accepted, with a semantic reading arriving;
+    /// * `ACTION_NOT_BOUND` — a semantic tool **answered** that the game's
+    ///   `InputMap` has no such action (the only honest way to reach this
+    ///   verdict);
     /// * `ACTION_BINDING_UNKNOWN` — the probe failed or its shape is not
     ///   readable.  Never downgraded to `ACTION_NOT_BOUND`.
     ///

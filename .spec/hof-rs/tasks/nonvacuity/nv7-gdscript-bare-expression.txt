@@ -1,0 +1,30 @@
+﻿EXIT=101
+cargo.exe :    Compiling hof-rs v0.1.0 (F:\moonbit-hof-rs)
+At F:\moonbit-hof-rs\.spec\hof-rs\tasks\nonvacuity.ps1:75 char:15
++ ...   $output = & cargo test --offline --test $TestTarget $TestName 2>&1  ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling ho...moonbit-hof-rs):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.97s
+     Running tests\evidence_battery.rs (target\debug\deps\evidence_battery-1903957a4bf0b011.exe)
+
+running 1 test
+test every_surviving_execute_gdscript_call_is_a_gdscript_body ... FAILED
+
+failures:
+
+---- every_surviving_execute_gdscript_call_is_a_gdscript_body stdout ----
+
+thread 'every_surviving_execute_gdscript_call_is_a_gdscript_body' (115744) panicked at tests\evidence_battery.rs:1705:9:
+a value-reading body must `return` its reading (DR-50A): str(get_tree().current_scene.get_node_or_null("Player").position.x) + "," + str(get_tree().current_scene.get_node_or_null("Player").position.y)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    every_surviving_execute_gdscript_call_is_a_gdscript_body
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 32 filtered out; finished in 12.09s
+
+error: test failed, to rerun pass `--test evidence_battery`
+

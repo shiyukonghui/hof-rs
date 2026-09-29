@@ -1,0 +1,79 @@
+﻿[
+    {
+        "id":  "nv1-business-error-retryable",
+        "file":  "src/tools/reliable.rs",
+        "test":  "mcp_reliability::retries_are_class_aware_business_errors_are_never_retried",
+        "planted_blob":  "9c34ee5085dfa36fe746d2e60597f205ad591bdb",
+        "restored_blob":  "f52d3ade1d504bee46f84c6daea0ff5da32c3e54",
+        "exit":  101,
+        "expect":  "the business error must be attempted once, not three times",
+        "verdict":  "RED (as required)",
+        "log":  ".spec\\hof-rs\\tasks\\nonvacuity\\nv1-business-error-retryable.txt"
+    },
+    {
+        "id":  "nv2-transport-not-retryable",
+        "file":  "src/tools/reliable.rs",
+        "test":  "mcp_reliability::the_retry_classifier_is_the_single_decider",
+        "planted_blob":  "511fd93dfcfd456a6f3bd054ce60ae7470036834",
+        "restored_blob":  "f52d3ade1d504bee46f84c6daea0ff5da32c3e54",
+        "exit":  101,
+        "expect":  "a transport failure must still be retried (call_count == 4)",
+        "verdict":  "RED (as required)",
+        "log":  ".spec\\hof-rs\\tasks\\nonvacuity\\nv2-transport-not-retryable.txt"
+    },
+    {
+        "id":  "nv3-endpoint-immortal",
+        "file":  "src/tools/endpoint.rs",
+        "test":  "endpoint_liveness::two_transport_failures_kill_the_endpoint_and_later_calls_do_not_retry",
+        "planted_blob":  "0c7d772ea8194937601e989494b8811e53bfc39e",
+        "restored_blob":  "bb0035e2942fd032d26260af3d76d68859ab5105",
+        "exit":  101,
+        "expect":  "the endpoint must be marked unavailable after two failures",
+        "verdict":  "RED (as required)",
+        "log":  ".spec\\hof-rs\\tasks\\nonvacuity\\nv3-endpoint-immortal.txt"
+    },
+    {
+        "id":  "nv4-first-failure-kills",
+        "file":  "src/tools/endpoint.rs",
+        "test":  "endpoint_liveness::a_single_transport_failure_does_not_kill_the_endpoint",
+        "planted_blob":  "a2910ec71af042677afa6ca21dce2414933d5c38",
+        "restored_blob":  "bb0035e2942fd032d26260af3d76d68859ab5105",
+        "exit":  101,
+        "expect":  "one failure must not mark the endpoint unavailable",
+        "verdict":  "RED (as required)",
+        "log":  ".spec\\hof-rs\\tasks\\nonvacuity\\nv4-first-failure-kills.txt"
+    },
+    {
+        "id":  "nv5-business-error-counts",
+        "file":  "src/tools/mod.rs",
+        "test":  "endpoint_liveness::business_errors_never_count_toward_the_streak",
+        "planted_blob":  "e14e2266b2da02d286636b3c26b5bf8e0d59740b",
+        "restored_blob":  "ddf6f4e4de1080e02863e84295febf821772af1b",
+        "exit":  101,
+        "expect":  "the business errors must not add to the streak",
+        "verdict":  "RED (as required)",
+        "log":  ".spec\\hof-rs\\tasks\\nonvacuity\\nv5-business-error-counts.txt"
+    },
+    {
+        "id":  "nv6-first-failure-returned",
+        "file":  "src/tools/reliable.rs",
+        "test":  "mcp_reliability::retries_are_bounded_and_preserve_the_real_error",
+        "planted_blob":  "ea7f553179a711fbafcd73cbf0ab24d1e2dda9af",
+        "restored_blob":  "f52d3ade1d504bee46f84c6daea0ff5da32c3e54",
+        "exit":  101,
+        "expect":  "the failure must carry the LAST attempt count (3), not the first (1)",
+        "verdict":  "RED (as required)",
+        "log":  ".spec\\hof-rs\\tasks\\nonvacuity\\nv6-first-failure-returned.txt"
+    },
+    {
+        "id":  "nv7-gdscript-bare-expression",
+        "file":  "src/adapter/godot.rs",
+        "test":  "evidence_battery::every_surviving_execute_gdscript_call_is_a_gdscript_body",
+        "planted_blob":  "423752e29836036c5e3f401d002d85dbba1bca65",
+        "restored_blob":  "fae0060a70edc07e50f663cb3b6e784af05f9c7c",
+        "exit":  101,
+        "expect":  "a value-reading body must return its reading",
+        "verdict":  "RED (as required)",
+        "log":  ".spec\\hof-rs\\tasks\\nonvacuity\\nv7-gdscript-bare-expression.txt"
+    }
+]
