@@ -196,6 +196,19 @@ enum GameInputMode {
     ProbeFails,
 }
 
+/// DR-58: what the **real** engine answered for the `input_axis` property.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum AxisMode {
+    /// The double's synthetic reading, which the battery's own movement
+    /// scenario uses.
+    Value,
+    /// The real `smoke-t7` reading: `input_axis` is `null` in every sample and
+    /// the scenario's assert says the node "does not have the property", so the
+    /// axis can carry no evidence at all.  Reachability must then come from
+    /// `running_game_get_node_properties` — the DR-58 fix under test.
+    Unreadable,
+}
+
 struct FixtureChannel {
     calls: Mutex<Vec<(String, Value)>>,
     /// `tool -> sticky error`.
@@ -211,6 +224,8 @@ struct FixtureChannel {
     input_actions: InputActionsMode,
     /// DR-35: the game-process input channel.
     game_input: GameInputMode,
+    /// DR-58: how the `input_axis` property is read.
+    axis: AxisMode,
     /// DR-35: whether a game-side `action_press` is currently held.
     pressed_in_game: Mutex<bool>,
     /// The action of the most recent `editor_simulate_input_action`, so `running_game_get_node_property_samples`
@@ -231,6 +246,7 @@ impl FixtureChannel {
             screenshot: ScreenshotMode::InlineImage,
             input_actions: InputActionsMode::Bound,
             game_input: GameInputMode::Ok,
+            axis: AxisMode::Value,
             pressed_in_game: Mutex::new(false),
             last_action: Mutex::new("move_right".to_string()),
         }
@@ -266,6 +282,12 @@ impl FixtureChannel {
     /// DR-35: choose what the **game process** answers.
     fn with_game_input(mut self, mode: GameInputMode) -> Self {
         self.game_input = mode;
+        self
+    }
+
+    /// DR-58: choose what the `input_axis` reading looks like.
+    fn with_axis_mode(mut self, mode: AxisMode) -> Self {
+        self.axis = mode;
         self
     }
 
@@ -356,6 +378,18 @@ fn scene_path_refusal(value: &str) -> String {
          tool runs inside the game process that is already running. Use editor_play_scene (editor \
          endpoint) first, then run the scenario against the running game"
     )
+}
+
+/// DR-58: the real accepted `running_game_run_test_scenario` reply, frozen from
+/// `smoke-t7` — `in_input_map: true` / `injected: 1` for the input step, and no
+/// `observed`/`actual` for the `input_axis` assert, because the node does not
+/// have that property.
+fn real_scenario_payload() -> Value {
+    let entry: Value =
+        serde_json::from_str(&dr58_fixture_raw("smoke_t7_sc_04_scene_path_omitted.json")).unwrap();
+    json!({
+        "content": [{"type": "text", "text": entry["parsed"]["result"]["content"][0]["text"].clone()}]
+    })
 }
 
 /// The `running_game_capture_frames` reply captured in `smoke-t3`: the image travels inline
@@ -635,6 +669,15 @@ impl ToolChannel for FixtureChannel {
                 if let Some(scene_path) = args.get("scene_path").and_then(Value::as_str) {
                     return Err(McpError::new(-32602, scene_path_refusal(scene_path)).into());
                 }
+                // DR-58: when the axis is unreadable the double answers the
+                // engine's **real** frozen reply — `in_input_map: true,
+                // injected: 1`, and no `observed`/`actual` reading at all.
+                if self.axis == AxisMode::Unreadable {
+                    return Ok(ToolResult {
+                        ok: true,
+                        payload: real_scenario_payload(),
+                    });
+                }
                 let action = args
                     .get("steps")
                     .and_then(Value::as_array)
@@ -689,6 +732,20 @@ impl ToolChannel for FixtureChannel {
                     })
                     .unwrap_or_default();
                 if properties.iter().any(|name| name == "input_axis") {
+                    if self.axis == AxisMode::Unreadable {
+                        // DR-58: the engine's real `smoke-t7` sample —
+                        // `{"frame_count":1,"node_path":"/root/Main/Player",
+                        //   "samples":[{"frame":0,"input_axis":null}]}`.
+                        let inner = json!({
+                            "node_path": "/root/Main/Player",
+                            "frame_count": 1,
+                            "samples": [{"frame": 0, "input_axis": null}],
+                        });
+                        return Ok(ToolResult {
+                            ok: true,
+                            payload: json!({"content": [{"type": "text", "text": inner.to_string()}]}),
+                        });
+                    }
                     let axis = if self.game_input == GameInputMode::Ok && pressed_in_game {
                         if self.moving {
                             1.0
@@ -1251,6 +1308,91 @@ async fn a_malformed_node_properties_payload_is_still_scored_as_missing() {
             record.record.observation
         );
     }
+}
+
+// ---------------------------------------------------------------------------
+// DR-58 — game-process reachability from the real node-properties reply
+// ---------------------------------------------------------------------------
+
+/// DR-58 ①: with the engine's **real** `input_axis` reading (`null`) the axis can
+/// prove nothing, so `game_process_reachable` must come from
+/// `running_game_get_node_properties` — and it must come out `true`.
+#[tokio::test]
+async fn a_real_node_properties_reply_makes_the_game_process_reachable() {
+    let temp = tempfile::tempdir().unwrap();
+    let channel = Arc::new(FixtureChannel::green().with_axis_mode(AxisMode::Unreadable));
+    let run = run_battery(temp.path(), channel, 30).await;
+
+    let raw: Value = serde_json::from_str(&read(
+        &run.run_dir
+            .join("iter-1/candidate/.hoh/deterministic/raw/input_channel_probe.json"),
+    ))
+    .unwrap();
+    // The axis really carried nothing, so reachability cannot have come from it.
+    assert_eq!(raw["channel"]["axis_before"], json!(null), "{raw}");
+    assert_eq!(
+        raw["channel"]["game_process_reachable"],
+        json!(true),
+        "the real node-properties reply proves the game process: {}",
+        raw["channel"]["detail"]
+    );
+    assert_eq!(
+        raw["channel"]["capability"],
+        json!("GAME_INPUT_CHANNEL_OK"),
+        "{}",
+        raw["channel"]["detail"]
+    );
+
+    // …and the reading is the engine's own semantic payload.
+    let call = raw["calls"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|call| call["tool"] == json!("running_game_get_node_properties"))
+        .expect("the semantic node read is recorded");
+    assert_eq!(call["ok"], json!(true), "{call}");
+    let payload: Value =
+        serde_json::from_str(call["payload"]["content"][0]["text"].as_str().unwrap()).unwrap();
+    assert!(
+        payload["node_path"].as_str().unwrap().starts_with("/root/Main/"),
+        "the resolved path is what proves the read: {payload}"
+    );
+    assert!(payload["properties"].is_object(), "{payload}");
+}
+
+/// DR-58 ④ — the counterexample: a payload that does **not** prove the node must
+/// not establish reachability either.  A predicate made constant `true` (to make
+/// the round look better) would pass the test above and fail here.
+#[tokio::test]
+async fn a_malformed_node_properties_reply_does_not_prove_the_game_process() {
+    let temp = tempfile::tempdir().unwrap();
+    let channel = Arc::new(
+        FixtureChannel::green()
+            .with_axis_mode(AxisMode::Unreadable)
+            .with_reply(
+                "running_game_get_node_properties",
+                json!({"content": [{"type": "text", "text": "{\"name\":\"Player\"}"}]}),
+            ),
+    );
+    let run = run_battery(temp.path(), channel, 30).await;
+
+    let raw: Value = serde_json::from_str(&read(
+        &run.run_dir
+            .join("iter-1/candidate/.hoh/deterministic/raw/input_channel_probe.json"),
+    ))
+    .unwrap();
+    assert_eq!(
+        raw["channel"]["game_process_reachable"],
+        json!(false),
+        "a top-level name proves nothing: {}",
+        raw["channel"]["detail"]
+    );
+    assert_eq!(
+        raw["channel"]["capability"],
+        json!("ACTION_BINDING_UNKNOWN"),
+        "an unreadable channel is never upgraded: {}",
+        raw["channel"]["detail"]
+    );
 }
 
 // ---------------------------------------------------------------------------

@@ -1250,11 +1250,10 @@ impl<'a> BatterySession<'a> {
         {
             Ok(call) => {
                 let parsed = unwrap_mcp_payload(&call.payload);
-                game_process_reachable = parsed
-                    .get("name")
-                    .and_then(Value::as_str)
-                    .map(|name| !name.is_empty())
-                    .unwrap_or(false);
+                // DR-58: the real reply proves the read by its `node_path` +
+                // `properties`; there is no top-level `name` (reading one made
+                // this a constant `false`).  See `node_properties_read`.
+                game_process_reachable = node_properties_read(&parsed);
             }
             Err(failure) => notes.push(format!(
                 "{} failed: {}",
