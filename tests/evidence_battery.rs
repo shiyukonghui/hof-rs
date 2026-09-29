@@ -49,6 +49,35 @@ fn fixture(name: &str) -> Value {
     serde_json::from_str(&fixture_raw(name)).unwrap_or_else(|error| panic!("{name}: {error}"))
 }
 
+/// DR-58: the frozen **real-machine** payloads (`tests/fixtures/dr58`; source
+/// files and their sha256 are in `MANIFEST.json`).  Where a reply shape is what
+/// the batch corrects, the double must answer with the engine's own bytes
+/// rather than with a hand-written idea of the shape.
+fn dr58_fixture_raw(name: &str) -> String {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/dr58")
+        .join(name);
+    std::fs::read_to_string(&path).unwrap_or_else(|error| panic!("{path:?}: {error}"))
+}
+
+/// DR-58: the exact `payload` envelope the engine answered for `node`, lifted
+/// verbatim out of the captured `node_and_collision_assertions` record.
+fn real_node_properties(node: &str) -> Value {
+    let raw: Value =
+        serde_json::from_str(&dr58_fixture_raw("smoke_t7_node_and_collision_assertions.json"))
+            .unwrap();
+    raw["calls"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|call| {
+            call["tool"] == json!("running_game_get_node_properties")
+                && call["args"]["node_path"] == json!(node)
+        })
+        .map(|call| call["payload"].clone())
+        .unwrap_or_else(|| panic!("no real payload for node `{node}`"))
+}
+
 /// The real MCP `tools/call` envelope wraps the payload in `content[0].text`.
 fn text_of(payload: &Value) -> String {
     payload["content"][0]["text"]
@@ -681,12 +710,13 @@ impl ToolChannel for FixtureChannel {
                 }
                 monitor_payload(&action, frames, moves)
             }
-            "running_game_get_node_properties" => match args["node_path"].as_str().unwrap_or("") {
-                "Player" => fixture("player_properties.json"),
-                "Goal" => fixture("goal_properties.json"),
-                "HUD" => fixture("hud_properties.json"),
-                other => panic!("no fixture for node {other}"),
-            },
+            // DR-58: the engine's **real** reply, verbatim from `smoke-t7`:
+            // `{"node_path":"/root/Main/…","properties":{…},"type":…}` — there is
+            // no top-level `name`, so the old predicate (which read one) is a
+            // constant `false` here.  Driven by the frozen bytes on purpose.
+            "running_game_get_node_properties" => {
+                real_node_properties(args["node_path"].as_str().unwrap_or(""))
+            }
             "editor_get_collision_info" => match args["node_path"].as_str().unwrap_or("") {
                 "Ground" => fixture("ground_collision.json"),
                 "Player" => {
@@ -1127,6 +1157,100 @@ async fn goal_without_a_collision_shape_fails_the_assertion_step() {
         "the Goal assertion supports the victory requirement: {:?}",
         record.supports
     );
+}
+
+// ---------------------------------------------------------------------------
+// DR-58 — the real `running_game_get_node_properties` reply shape (G20)
+// ---------------------------------------------------------------------------
+
+/// DR-58 ③/G20: the **real** payloads the engine sent for `Player` / `Goal` /
+/// `HUD` must be scored as resolved nodes, not as `missing`.  The double answers
+/// with the engine's own bytes, so this is the exact failure `smoke-t7`'s QA
+/// recorded as gap G20.
+#[tokio::test]
+async fn real_node_properties_payloads_are_not_scored_as_missing() {
+    let temp = tempfile::tempdir().unwrap();
+    let channel = Arc::new(FixtureChannel::green());
+    let run = run_battery(temp.path(), channel, 30).await;
+
+    let record = step(&run.records, "node_and_collision_assertions");
+    assert!(record.ok, "{:?}", record.record);
+    for node in ["Player", "Goal", "HUD"] {
+        assert!(
+            record
+                .record
+                .observation
+                .contains(&format!("{node}=ok")),
+            "{node} must be read as resolved: {}",
+            record.record.observation
+        );
+        assert!(
+            !record
+                .record
+                .observation
+                .contains(&format!("{node}=missing")),
+            "{node} was scored missing on a successful payload: {}",
+            record.record.observation
+        );
+    }
+
+    // …and it is really the engine's shape that was judged, not a repaired one.
+    let raw: Value = serde_json::from_str(&read(
+        &run.run_dir
+            .join("iter-1/candidate/.hoh/deterministic/raw/node_and_collision_assertions.json"),
+    ))
+    .unwrap();
+    for node in ["Player", "Goal", "HUD"] {
+        let call = raw["calls"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|call| {
+                call["tool"] == json!("running_game_get_node_properties")
+                    && call["args"]["node_path"] == json!(node)
+            })
+            .unwrap_or_else(|| panic!("no recorded call for {node}"));
+        assert_eq!(call["ok"], json!(true), "{call}");
+        let payload: Value =
+            serde_json::from_str(call["payload"]["content"][0]["text"].as_str().unwrap()).unwrap();
+        assert!(
+            payload.get("name").is_none(),
+            "the real reply has no top-level name: {payload}"
+        );
+        assert!(payload["properties"].is_object(), "{payload}");
+    }
+}
+
+/// DR-58 ④ — the counterexample at the step level: a payload that does **not**
+/// prove a resolved node must still be `missing` and must still fail the step.
+/// A predicate that was made constant `true` to make the round look better would
+/// pass the test above and fail here.
+#[tokio::test]
+async fn a_malformed_node_properties_payload_is_still_scored_as_missing() {
+    let temp = tempfile::tempdir().unwrap();
+    let channel = Arc::new(FixtureChannel::green().with_reply(
+        "running_game_get_node_properties",
+        // Exactly the shape the pre-DR-58 code read: a top-level `name`.
+        json!({"content": [{"type": "text", "text": "{\"name\":\"Player\"}"}]}),
+    ));
+    let run = run_battery(temp.path(), channel, 30).await;
+
+    let record = step(&run.records, "node_and_collision_assertions");
+    assert!(
+        !record.ok,
+        "an unresolved payload is not evidence: {:?}",
+        record.record
+    );
+    for node in ["Player", "Goal", "HUD"] {
+        assert!(
+            record
+                .record
+                .observation
+                .contains(&format!("{node}=missing")),
+            "{node} must stay missing: {}",
+            record.record.observation
+        );
+    }
 }
 
 // ---------------------------------------------------------------------------

@@ -2059,11 +2059,10 @@ impl<'a> BatterySession<'a> {
                         &call.payload,
                         &call.correlation,
                     ));
-                    let present = parsed
-                        .get("name")
-                        .and_then(Value::as_str)
-                        .map(|name| !name.is_empty())
-                        .unwrap_or(false);
+                    // DR-58/G20: the real reply proves the node by its
+                    // `node_path` + `properties`, not by a top-level `name` it
+                    // never carries (see `node_properties_read`).
+                    let present = node_properties_read(&parsed);
                     property_summary
                         .push(format!("{node}={}", if present { "ok" } else { "missing" }));
                     if !present {
@@ -2957,6 +2956,49 @@ fn observed_after(payload: &Value, property: &str) -> Option<f64> {
         }
     }
     as_f64(last.get(property)?)
+}
+
+// ---------------------------------------------------------------------------
+// DR-58: the engine's **real** reply shapes (captured, not inferred)
+// ---------------------------------------------------------------------------
+
+/// DR-58: is this `running_game_get_node_properties` payload a **resolved node
+/// read**?
+///
+/// The real shape was captured on the real machine and is frozen under
+/// `tests/fixtures/dr58/` (`MANIFEST.json` names each source under `runs/**`
+/// and its sha256); engine `4.8.dev.mono.custom_build.035edfce7`.  The payload
+/// is
+///
+/// ```json
+/// {"node_path": "/root/Main/Player", "properties": { "name": "Player", … }, "type": "CharacterBody2D"}
+/// ```
+///
+/// There is **no top-level `name`**: the node's name is a member of
+/// `properties`, and only for node types that have one.  Reading `name`
+/// (DR-54 at the channel probe, and the older `00601476` at the node assertions)
+/// therefore made the predicate a constant `false` and scored successful
+/// payloads as `missing` (QA gap G20).
+///
+/// A reply counts as a resolved read when it names a **non-empty** `node_path`
+/// *and* carries a **non-empty** `properties` dictionary.  Both are required so
+/// the predicate is not vacuous: `{}`, `{"name":"Player"}`,
+/// `{"node_path":"/root/Main/Player"}`, and
+/// `{"node_path":"/root/Main/Player","properties":{}}` all stay `false`.  The
+/// pre-DR-58 top-level-`name` fixture shape stays `false` as well — DR-58 keeps
+/// no compatibility layer for a shape the real engine does not send.
+pub fn node_properties_read(payload: &Value) -> bool {
+    let resolved = payload
+        .get("node_path")
+        .and_then(Value::as_str)
+        .map(|path| !path.is_empty())
+        .unwrap_or(false);
+    let properties = payload
+        .get("properties")
+        .and_then(Value::as_object)
+        .map(|properties| !properties.is_empty())
+        .unwrap_or(false);
+    resolved && properties
 }
 
 /// DR-35: which of `actions` the project declares in `project.godot`.

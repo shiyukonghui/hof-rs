@@ -245,3 +245,87 @@ fn the_real_node_properties_reply_has_no_top_level_name() {
     }
     assert_eq!(seen, vec!["Player", "Goal", "HUD"]);
 }
+
+/// DR-58 ②: the production predicate must accept every real payload and reject
+/// every shape that does not prove a resolved node — including the exact
+/// top-level-`name` read the pre-DR-58 code performed.
+#[test]
+fn a_real_node_properties_reply_is_a_resolved_read() {
+    let raw = fixture("smoke_t7_node_and_collision_assertions.json");
+    for call in raw["calls"].as_array().unwrap() {
+        if call["tool"] != json!("running_game_get_node_properties") {
+            continue;
+        }
+        let payload = inner(&call["payload"]);
+        assert!(
+            hof_rs::adapter::godot::node_properties_read(&payload),
+            "a successful real payload must prove the node: {payload}"
+        );
+    }
+    // The probe's own real reply (`raw/input_channel_probe.json`) is the same
+    // shape, so it counts too.
+    let probe = fixture("smoke_t7_input_channel_probe.json");
+    let player = call_with_tool(&probe, "running_game_get_node_properties");
+    let payload = inner(&player["payload"]);
+    assert!(
+        hof_rs::adapter::godot::node_properties_read(&payload),
+        "the probe's real reply must prove the game process is reachable: {payload}"
+    );
+}
+
+/// DR-58 ④ — the **non-vacuity** counterexample.  Making the predicate constant
+/// `true` (to make the round look better) or constant `false` (the DR-54 bug)
+/// must both fail here.
+#[test]
+fn an_unresolved_or_malformed_node_read_is_not_a_resolved_read() {
+    use hof_rs::adapter::godot::node_properties_read;
+
+    // The exact payload shape the pre-DR-58 code read: a top-level `name`.
+    let old_read = json!({"name": "Player", "node_path": "Player"});
+    // The same fixture shape the retired compatibility fixtures used.
+    let retired_fixture = json!({
+        "name": "Player",
+        "node_path": "Player",
+        "position": {"x": 60.0, "y": 283.999},
+    });
+    for (label, payload) in [
+        ("empty object", json!({})),
+        ("top-level name only", old_read),
+        ("retired flattened fixture", retired_fixture),
+        ("node_path without properties", json!({"node_path": "/root/Main/Player"})),
+        (
+            "empty properties dictionary",
+            json!({"node_path": "/root/Main/Player", "properties": {}}),
+        ),
+        (
+            "properties without node_path",
+            json!({"properties": {"name": "Player"}}),
+        ),
+        (
+            "blank node_path",
+            json!({"node_path": "", "properties": {"name": "Player"}}),
+        ),
+        (
+            "node_path is not a string",
+            json!({"node_path": 7, "properties": {"name": "Player"}}),
+        ),
+        (
+            "properties is not an object",
+            json!({"node_path": "/root/Main/Player", "properties": "Player"}),
+        ),
+        ("null payload", json!(null)),
+        ("array payload", json!([])),
+    ] {
+        assert!(
+            !node_properties_read(&payload),
+            "`{label}` does not prove a resolved node: {payload}"
+        );
+    }
+
+    // …and the real payload does, from the same call site the malformed ones go
+    // through, so the counterexample is not a predicate that is simply always
+    // false.
+    let raw = fixture("smoke_t7_node_and_collision_assertions.json");
+    let real = inner(&call_with_tool(&raw, "running_game_get_node_properties")["payload"]);
+    assert!(node_properties_read(&real), "{real}");
+}
