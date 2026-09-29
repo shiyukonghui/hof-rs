@@ -4,7 +4,7 @@
 > 上游输入（只当线索，判定以我自己的实测为准）：`.spec/hof-rs/tasks/TASK-DR59-ACCEPTANCE.md`（DEF-1/DEF-2）、
 > `.spec/hof-rs/tasks/TASK-DR59-REPORT.md`（R-1/R-3）、`DECISIONS.md` D240/D247/D248。
 > **离线**：未启动 Godot、未触碰任何外部/MCP 端口、未联网、未调模型端点、未 push。
-> 基线（批次起点）：`5abddbd`（= `origin/master`）。本批 6 个提交（5 个代码/测试 + 1 个本报告），全部未 push。
+> 基线（批次起点）：`5abddbd`（= `origin/master`）。本批 = 5 个代码/测试提交 + 报告文档提交（含定稿小修），全部未 push。
 > **不声称 E1..E6 中任何一条 met（尤其不声称 E3）** —— 那只能由真机轮次判定。
 
 ---
@@ -49,7 +49,7 @@ EXIT=0                       # bash PIPESTATUS[0]
 | `0d0f391` | **红**：把 seed 加宽到真实工作区里**每一个** `.hoh` 同族路径后，`.hoh/SCAFFOLD.md` 仍可达 |
 | `92e4aff` | 实现 v2：隔离**整个 `.hoh`**（curated 列表实测不完备，见 §3） |
 | `be8d115` | 把不变量加宽到"整个角色 cwd"，任意位置的隔离物都必须红 |
-| `aadbea1` | 本报告（`TASK-DR61-REPORT.md`） |
+| `aadbea1`（+ 定稿小修） | 本报告 `TASK-DR61-REPORT.md` |
 
 ---
 
