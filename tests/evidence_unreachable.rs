@@ -32,8 +32,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use common::{
-    happy_script, test_config, write, write_spec, FakeAdapter, FakeHarness, FakeToolChannel,
-    InvocationRecord,
+    happy_script, ok_evidence, test_config, write, write_spec, FakeAdapter, FakeHarness, FakeStep,
+    FakeToolChannel, InvocationRecord, OK_PLAN,
 };
 use hof_rs::model::{Ablation, Role};
 
@@ -99,8 +99,29 @@ const SEEDS: &[(&str, &str)] = &[
 const PREVIOUS_EVIDENCE_PNG: &str = "DR-61 previous-round frame-00.png: 4246 bytes of smoke-t6\n";
 const PREVIOUS_EVIDENCE_REPLAY: &str = "DR-61 previous-round replay: round-one payload\n";
 
+/// DR-62 (DEF-1): every seed above lives **under `.hoh`**, so nothing in this
+/// file permanently pinned the *scope* of the walk — a future narrowing of the
+/// workspace walk back to `.hoh` would have stayed green.  This marker therefore
+/// lives outside `.hoh`, where the quarantine never reaches, so a walk of the
+/// workspace **must** still find it.  Independent acceptance measured exactly
+/// this shape with a scratch probe (its E1); this makes the measurement a
+/// permanent regression pin instead.
+const OUTSIDE_HOH_SEEDS: &[(&str, &str)] = &[(
+    "previous-round/out-of-hoh-battery.json",
+    "DR-62 previous-round marker seeded OUTSIDE `.hoh`\n",
+)];
+
 fn seed_previous_round(workspace: &Path) {
     for (relative, content) in SEEDS {
+        write(&workspace.join(relative), content);
+    }
+}
+
+/// DR-62: the previous round's residue that the quarantine does **not** touch
+/// (DR-61 R-A: the invariant's scope is the `.hoh` family).  It is here to fix
+/// the walk's scope, not to be isolated.
+fn seed_outside_hoh(workspace: &Path) {
+    for (relative, content) in OUTSIDE_HOH_SEEDS {
         write(&workspace.join(relative), content);
     }
 }
@@ -158,12 +179,13 @@ fn role_view(records: &[InvocationRecord], role: Role) -> BTreeMap<String, Strin
         .clone()
 }
 
-/// One whole round with an explicit run id, over the shared workspace.
-async fn run_round(root: &Path, run_id: &str) -> Vec<InvocationRecord> {
+/// One whole round with an explicit run id and script, over the shared
+/// workspace.
+async fn run_round_with(root: &Path, run_id: &str, script: Vec<FakeStep>) -> Vec<InvocationRecord> {
     let mut cfg = test_config(root, 1);
     cfg.runtime.spec = root.join("spec.md");
     let spec = write_spec(root);
-    let harness = FakeHarness::new(happy_script());
+    let harness = FakeHarness::new(script);
     let observer = harness.clone();
     let orchestrator = hof_rs::runtime::run_loop::Orchestrator {
         harness: Box::new(harness),
@@ -180,6 +202,11 @@ async fn run_round(root: &Path, run_id: &str) -> Vec<InvocationRecord> {
     observer.records()
 }
 
+/// One whole round with an explicit run id, over the shared workspace.
+async fn run_round(root: &Path, run_id: &str) -> Vec<InvocationRecord> {
+    run_round_with(root, run_id, happy_script()).await
+}
+
 fn quarantine_dir(root: &Path, run_id: &str) -> PathBuf {
     root.join("runs").join(run_id).join("quarantine")
 }
@@ -194,6 +221,7 @@ async fn a_wildcard_walk_of_hoh_cannot_reach_the_previous_rounds_evidence() {
     let root = temp.path();
     let workspace = root.join("workspace");
     seed_previous_round(&workspace);
+    seed_outside_hoh(&workspace);
 
     let records = run_round(root, "run-1").await;
 
@@ -235,6 +263,34 @@ async fn a_wildcard_walk_of_hoh_cannot_reach_the_previous_rounds_evidence() {
         cwd_stale.is_empty(),
         "DR-61: the quarantine is still inside the role's working directory: {cwd_stale:?}"
     );
+
+    // (1c) DR-62 / DEF-1 — the positive control that fixes the walk's **scope**.
+    // `cwd` above is a walk of the whole workspace; these markers sit outside
+    // `.hoh` and are never quarantined, so this walk must reach them, while the
+    // `.hoh`-rooted walk above must not.  If someone narrows the workspace walk
+    // back to `.hoh`, both this assertion and
+    // `the_workspace_walk_reaches_a_marker_seeded_outside_hoh` turn red instead
+    // of the invariant silently losing its scope.
+    for (relative, seed) in OUTSIDE_HOH_SEEDS {
+        let reached = reaches(&cwd, seed);
+        assert_eq!(
+            reached.len(),
+            1,
+            "DR-62: a walk of the role's cwd must reach the marker outside `.hoh` \
+             at {relative}: {reached:?}; walked keys: {:?}",
+            cwd.keys().collect::<Vec<_>>()
+        );
+        assert_eq!(
+            reached[0].as_str(),
+            *relative,
+            "DR-62: the outside marker must be found at its own path"
+        );
+        assert!(
+            reaches(&hoh, seed).is_empty(),
+            "DR-62: the marker at {relative} is outside `.hoh`, so a `.hoh`-rooted \
+             walk must not reach it"
+        );
+    }
 
     // (2) The Developer's own view of its cwd at invocation time agrees.
     let files = developer_view(&records);
@@ -366,5 +422,119 @@ async fn a_clean_round_start_creates_no_quarantine_directory() {
     assert!(
         !quarantine_dir(root, "run-1").exists(),
         "DR-61: a clean round start must not create a quarantine directory"
+    );
+}
+
+/// DR-62 (task item 3, DEF-1): the **self-check** for the walk's scope.
+///
+/// The quarantine's scope is the `.hoh` family; the invariant's scope is the
+/// whole working directory.  DR-61's suite only ever seeded `.hoh`, so the two
+/// scopes were indistinguishable in the delivered tests and a future narrowing
+/// of the walk back to `.hoh` would have stayed green.  This test decouples
+/// them: it runs a *real* round (quarantine and all) over a workspace whose
+/// marker sits outside `.hoh`, and asserts that a walk of the workspace reaches
+/// it while a walk of `.hoh` does not.  Deliberately no assertion here depends
+/// on the quarantine: this is about the walk, not about isolation.
+#[tokio::test]
+async fn the_workspace_walk_reaches_a_marker_seeded_outside_hoh() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let root = temp.path();
+    let workspace = root.join("workspace");
+    seed_previous_round(&workspace);
+    seed_outside_hoh(&workspace);
+
+    run_round(root, "run-1").await;
+
+    let cwd = walk(&workspace);
+    for (relative, seed) in OUTSIDE_HOH_SEEDS {
+        let reached = reaches(&cwd, seed);
+        assert_eq!(
+            reached.len(),
+            1,
+            "DR-62: a walk of the workspace must reach the marker outside `.hoh` at \
+             {relative}: {reached:?}; walked keys: {:?}",
+            cwd.keys().collect::<Vec<_>>()
+        );
+        assert_eq!(reached[0].as_str(), *relative);
+        assert!(
+            cwd.contains_key(*relative),
+            "DR-62: the marker must survive the round at its own path"
+        );
+    }
+
+    let hoh = walk(&workspace.join(".hoh"));
+    for (relative, seed) in OUTSIDE_HOH_SEEDS {
+        assert!(
+            reaches(&hoh, seed).is_empty(),
+            "DR-62: `{relative}` is outside `.hoh`, so the `.hoh`-rooted walk must \
+             not see it"
+        );
+    }
+}
+
+/// DR-62 (gap 1, measured at round level): a role that names **this round's**
+/// artifact with the DR-49 `.stale-` substring must not have it hidden from the
+/// Tester — the criterion is the explicit supersession record, not the name.
+///
+/// The Developer's own working directory *is* the workspace, so its scripted
+/// writes land exactly where a role's real writes would: one file whose name
+/// merely looks superseded (never recorded), one superseded file that the
+/// manifest records, and the manifest itself.
+#[tokio::test]
+async fn a_role_named_stale_artifact_is_not_hidden_from_the_tester() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let root = temp.path();
+    let workspace = root.join("workspace");
+    let this_round = ".hoh/evidence/round-one.stale-keep.png";
+    let marker = "DR-62 this round's own `.stale-`-named evidence\n";
+    let superseded = ".hoh/evidence/superseded.stale-1790663544.png";
+
+    let records = run_round_with(
+        root,
+        "run-1",
+        vec![
+            FakeStep::new(Role::Planner).writing(".hoh/plan.md", OK_PLAN),
+            FakeStep::new(Role::Developer)
+                .writing("project.godot", "config_version=5\n")
+                .writing(this_round, marker)
+                .writing(superseded, "DR-62 superseded bytes\n")
+                .writing(
+                    ".hoh/evidence/.superseded.json",
+                    "[\n  \"superseded.stale-1790663544.png\"\n]\n",
+                ),
+            FakeStep::new(Role::Tester)
+                .writing(".hoh/evidence/move.json", "{\"moved\":true}\n")
+                .writing(".hoh/evidence.json", &ok_evidence(1, "")),
+        ],
+    )
+    .await;
+
+    let tester = role_view(&records, Role::Tester);
+    assert_eq!(
+        tester.get(this_round).map(String::as_str),
+        Some(marker),
+        "DR-62: a `.stale-`-named artifact the runtime never superseded must reach \
+         the frozen candidate; the candidate holds: {:?}",
+        tester
+            .keys()
+            .filter(|key| key.starts_with(".hoh/evidence/"))
+            .collect::<Vec<_>>()
+    );
+    assert!(
+        !tester.contains_key(superseded),
+        "DR-62: a supersession recorded in the manifest must not reach the frozen \
+         candidate: {:?}",
+        tester
+            .keys()
+            .filter(|key| key.starts_with(".hoh/evidence/"))
+            .collect::<Vec<_>>()
+    );
+    assert!(
+        !tester.contains_key(".hoh/evidence/.superseded.json"),
+        "DR-62: the manifest is runtime bookkeeping, not view content"
+    );
+    assert!(
+        workspace.join(superseded).is_file(),
+        "DR-62: skipping must never delete the superseded bytes"
     );
 }
