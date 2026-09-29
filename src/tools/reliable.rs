@@ -16,6 +16,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use serde_json::Value;
 
 use crate::model::Role;
+use crate::tools::endpoint::McpEndpointUnavailableError;
 use crate::tools::mcp::{McpError, McpTransportError, RpcCorrelation};
 use crate::tools::ToolChannel;
 
@@ -41,6 +42,11 @@ pub struct McpFailure {
     /// [`failure_from`], so the retry ring never re-derives it and a business
     /// error can never be retried by accident.  See [`is_retryable_failure`].
     pub retryable: bool,
+    /// DR-55: whether this failure **is** the endpoint's liveness verdict (the
+    /// endpoint was already declared unavailable, so nothing was sent).  A
+    /// readiness poll ends on it; a business error — which is an answer — does
+    /// not carry it.
+    pub endpoint_verdict: bool,
 }
 
 impl McpFailure {
@@ -52,6 +58,7 @@ impl McpFailure {
             attempts,
             correlation: Box::new(RpcCorrelation::default()),
             retryable: false,
+            endpoint_verdict: false,
         }
     }
 
@@ -149,6 +156,13 @@ fn failure_from(tool: &str, error: &anyhow::Error, attempt: u32) -> McpFailure {
     if let Some(transport) = error.downcast_ref::<McpTransportError>() {
         let mut failure = McpFailure::new(tool, None, transport.to_string(), attempt);
         failure.retryable = true;
+        return failure;
+    }
+    if let Some(refusal) = error.downcast_ref::<McpEndpointUnavailableError>() {
+        // DR-55: nothing was sent, so there is nothing to retry and no point
+        // polling — the endpoint's verdict is already recorded.
+        let mut failure = McpFailure::new(tool, None, refusal.message.clone(), attempt);
+        failure.endpoint_verdict = true;
         return failure;
     }
     // DR-29: a desync knows exactly which ids it saw; keep them.
@@ -274,6 +288,13 @@ pub struct ReadyOutcome {
 ///
 /// A zero timeout still performs one attempt, so the reported failure is the
 /// real one instead of a synthetic "not tried".
+///
+/// DR-55/DR-56: polling continues on **business** errors on purpose — a game
+/// that is still starting up legitimately answers `-32603 等待游戏响应超时` until
+/// it is ready, and `smoke-t3` showed the cost of ending a poll early.  What
+/// stops a poll instantly is the DR-55 verdict: once the channel has marked the
+/// endpoint unavailable, every attempt is refused before a request is sent, so
+/// the poll returns after exactly one refusal instead of burning its deadline.
 pub async fn wait_for_game_ready(
     tools: &dyn ToolChannel,
     role: Role,
@@ -306,6 +327,21 @@ pub async fn wait_for_game_ready(
             }
         };
         if Instant::now() >= deadline {
+            return ReadyOutcome {
+                ok: false,
+                attempts,
+                payload: None,
+                failure: Some(failure),
+                correlation: RpcCorrelation::default(),
+            };
+        }
+        // DR-55: a poll must not keep knocking on an endpoint that has already
+        // been declared dead.  The refusal carries the endpoint verdict and no
+        // retryable class (nothing was sent), so the poll ends on it instead of
+        // burning its whole deadline — exactly the readiness budget `smoke-t6`
+        // wasted.  A **business** error still polls: a game that is merely not
+        // ready yet answers like that until it is.
+        if failure.endpoint_verdict {
             return ReadyOutcome {
                 ok: false,
                 attempts,

@@ -11,8 +11,8 @@ pub mod policy;
 pub mod reliable;
 
 use crate::model::Role;
-use endpoint::{GameEndpointRecord, ToolScope};
-use mcp::{McpClient, RpcCorrelation, SessionSyncReport};
+use endpoint::{EndpointLiveness, GameEndpointRecord, ToolScope};
+use mcp::{McpClient, McpTransportError, RpcCorrelation, SessionSyncReport};
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ToolResult {
@@ -88,6 +88,15 @@ pub trait ToolChannel: Send + Sync {
     async fn game_endpoint_history(&self) -> Option<GameEndpointRecord> {
         None
     }
+
+    /// DR-55: the recorded liveness of one endpoint, when the channel tracks it.
+    ///
+    /// A channel that serves exactly one endpoint (a test double,
+    /// `ShellOnlyChannel`) has no such verdict to report and answers `None`
+    /// rather than inventing a healthy one.
+    async fn endpoint_liveness(&self, _endpoint: &str) -> Option<EndpointLiveness> {
+        None
+    }
 }
 
 /// A channel that exposes no MCP tools at all (used for offline/dry runs).
@@ -130,6 +139,8 @@ pub struct McpChannel {
     /// DR-51: the last endpoint that was registered, kept after the route is
     /// cleared so the run's identity record does not lose it.
     game_history: std::sync::Arc<std::sync::Mutex<Option<GameEndpointRecord>>>,
+    /// DR-55: the per-endpoint liveness verdict, keyed by the JSON-RPC URL.
+    liveness: std::sync::Arc<std::sync::Mutex<std::collections::BTreeMap<String, EndpointLiveness>>>,
     timeout_seconds: u64,
     max_retries: u32,
     max_sync_retries: u32,
@@ -148,6 +159,9 @@ impl McpChannel {
             editor: McpClient::new(endpoint, timeout_seconds, max_retries),
             game: std::sync::Arc::new(std::sync::Mutex::new(None)),
             game_history: std::sync::Arc::new(std::sync::Mutex::new(None)),
+            liveness: std::sync::Arc::new(std::sync::Mutex::new(
+                std::collections::BTreeMap::new(),
+            )),
             timeout_seconds,
             max_retries,
             max_sync_retries: mcp::DEFAULT_MAX_SYNC_RETRIES,
@@ -170,16 +184,16 @@ impl McpChannel {
     /// A `running_game_*` tool without a registered game endpoint is a **hard
     /// error**: falling back to the editor endpoint would send the call to a
     /// server that does not implement it and dress the failure up as evidence.
-    fn client_for(&self, tool: &str) -> anyhow::Result<McpClient> {
+    fn client_for(&self, tool: &str) -> anyhow::Result<(McpClient, String)> {
         match endpoint::scope_of(tool) {
-            ToolScope::Editor => Ok(self.editor.clone()),
+            ToolScope::Editor => Ok((self.editor.clone(), self.editor.endpoint.clone())),
             ToolScope::Game => {
                 let guard = self
                     .game
                     .lock()
                     .map_err(|_| anyhow::anyhow!("the game endpoint registry is poisoned"))?;
                 match guard.as_ref() {
-                    Some(route) => Ok(route.client.clone()),
+                    Some(route) => Ok((route.client.clone(), route.record.endpoint.clone())),
                     None => anyhow::bail!(
                         "game_endpoint_unavailable: `{tool}` runs in the game process and only \
                          the game endpoint serves it; no game endpoint is registered yet \
@@ -188,6 +202,36 @@ impl McpChannel {
                     ),
                 }
             }
+        }
+    }
+
+    /// DR-55: fold one call outcome into the endpoint's liveness record.
+    ///
+    /// `Ok` covers **every** answer, a JSON-RPC business error included: a
+    /// business error is not a transport failure and must never count toward the
+    /// streak (DR-56's classification is what keeps them apart).
+    fn observe_liveness(&self, endpoint: &str, outcome: Result<(), ()>) {
+        let Ok(mut map) = self.liveness.lock() else {
+            return;
+        };
+        map.entry(endpoint.to_string())
+            .or_insert_with(|| EndpointLiveness::new(endpoint))
+            .observe(outcome);
+    }
+
+    /// DR-55: the liveness verdict of one endpoint.
+    pub fn endpoint_state(&self, endpoint: &str) -> Option<EndpointLiveness> {
+        self.liveness.lock().ok()?.get(endpoint).cloned()
+    }
+
+    /// DR-55: register a freshly announced endpoint so it starts from a clean
+    /// slate.  A verdict about the previous address must not leak onto this one.
+    fn arm_endpoint(&self, endpoint: &str) {
+        if let Ok(mut map) = self.liveness.lock() {
+            map.insert(
+                endpoint.to_string(),
+                EndpointLiveness::new(endpoint.to_string()),
+            );
         }
     }
 }
@@ -228,11 +272,37 @@ impl ToolChannel for McpChannel {
             anyhow::bail!("tool_not_permitted: role={} tool={tool}", role.as_str());
         }
         // DR-43: the scope decides the endpoint *before* any request is sent.
-        let client = self.client_for(tool)?;
+        let (client, endpoint) = self.client_for(tool)?;
+        // DR-55: an endpoint that has already been declared dead is not attempted
+        // again — no request, no retry, no waiting.  The refusal carries
+        // `UNAVAILABLE` and the stable `endpoint_state` field.
+        if let Some(liveness) = self.endpoint_state(&endpoint) {
+            if liveness.unavailable {
+                return Err(
+                    endpoint::McpEndpointUnavailableError::new(liveness, tool).into(),
+                );
+            }
+        }
         let tool_name = tool.to_string();
-        let (payload, correlation) =
-            tokio::task::spawn_blocking(move || client.call_traced(&tool_name, args)).await??;
-        Ok((ToolResult { ok: true, payload }, correlation))
+        let outcome = tokio::task::spawn_blocking(move || client.call_traced(&tool_name, args))
+            .await
+            .map_err(|error| anyhow::anyhow!("the MCP call task failed: {error}"))?;
+        match outcome {
+            Ok((payload, correlation)) => {
+                self.observe_liveness(&endpoint, Ok(()));
+                Ok((ToolResult { ok: true, payload }, correlation))
+            }
+            Err(error) => {
+                let is_transport = error.downcast_ref::<McpTransportError>().is_some();
+                if is_transport {
+                    self.observe_liveness(&endpoint, Err(()));
+                } else {
+                    // A business error is an answer: the endpoint is alive.
+                    self.observe_liveness(&endpoint, Ok(()));
+                }
+                Err(error)
+            }
+        }
     }
 
     async fn session_sync_probe(&self) -> SessionSyncReport {
@@ -245,6 +315,9 @@ impl ToolChannel for McpChannel {
     async fn register_game_endpoint(&self, record: GameEndpointRecord) -> anyhow::Result<()> {
         let client = McpClient::new(record.endpoint.clone(), self.timeout_seconds, self.max_retries)
             .with_max_sync_retries(self.max_sync_retries);
+        // DR-55: a fresh endpoint starts alive, whatever happened to the address
+        // it replaces.
+        self.arm_endpoint(&record.endpoint);
         let mut guard = self
             .game
             .lock()
@@ -276,5 +349,9 @@ impl ToolChannel for McpChannel {
 
     async fn game_endpoint_history(&self) -> Option<GameEndpointRecord> {
         self.game_history.lock().ok().and_then(|guard| guard.clone())
+    }
+
+    async fn endpoint_liveness(&self, endpoint: &str) -> Option<EndpointLiveness> {
+        self.endpoint_state(endpoint)
     }
 }
