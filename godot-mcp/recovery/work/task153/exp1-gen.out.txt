@@ -1,0 +1,8 @@
+﻿python : FATAL: old contract sha256 6a2ffe6800d43450f77ba211808f3f181cf9c252dc9fe3463d9e6e4482f5dd4c != the frozen 8f80
+51c4c0f8941089f0b21a193cef7c51fa7c41d7e312b1463ea8593f313c54
+At line:5 char:1
++ python modules/mcp_server/scripts/gen_renamed_contract.py --out "$w\e ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (FATAL: old cont...63ea8593f313c54:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

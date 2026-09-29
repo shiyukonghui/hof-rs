@@ -1,0 +1,7 @@
+=== hof-rs side (must show no modification of the fixture) ===
+fixture path  = F:\moonbit-hof-rs\tests\fixtures\mcp\tools_list.json
+fixture bytes = 71481
+fixture sha256= 50c5fb4204ee5b957b017eb994e7f7bd73f9b299e6aa9471d5cf11683e067da0
+fixture mtime = 2026-09-28 22:37:34
+--- hof-rs git status --porcelain ---
+?? godot-mcp/recovery/work/task153/

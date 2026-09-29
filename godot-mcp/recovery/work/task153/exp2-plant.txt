@@ -1,0 +1,9 @@
+﻿PLANT2 map bytes           : 70917
+PLANT2 map sha256          : 2f552719f6a23fe328df0a2944c6048824c1b2a750aebc0fe2cabbcd3529c2bd
+PLANT2 map entries         : 174
+PLANT2 victim new_name     : 'editor_add_animation_track'
+PLANT2 needle occurrences  : 1
+PLANT2 injected new_name   : 'add_animation_track'
+PLANT2 map bytes 70917 -> 70910
+PLANT2 planted sha256      : e17a2df08b27e030300fa4688640c24ae473a06308d406b8a7a089f649f4fe49
+PLANT2 JSON still parses   : True

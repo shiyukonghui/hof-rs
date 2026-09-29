@@ -8961,3 +8961,40 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
      "模块不再依赖跨仓输入"才允许写成完成态。
   - 回滚点：TASK-153 提交单独 revert；引擎仓整体回滚点 `15bbf1f50e`。
 
+## D229 — TASK-153 交付（生成器去耦，行为逐字节保持）；三条裁决；立 TASK-154
+
+- 日期：2026-09-29
+- 触发问题：TASK-153 实现子代理交付，报告 `recovery/reports/TASK-153-REPORT.md`。
+- 交付事实：引擎仓 **1 个本地提交**，最终 HEAD **`28432f859f`**（**未 push**）。改动 **1 文件 +33/−3**
+  （`gen_renamed_contract.py`）：新增 `DOCS` 派生（`:1764`）、**29 行溯源注释**（`:1801-1829`）、
+  `DEFAULT_OLD_CONTRACT` 改指 `docs/rename-baseline-tools-list.json`（`:1830`）、`DEFAULT_MAP`/`DEFAULT_OUT`
+  同源重写（`:1831-1832`，**字面值不变**）、`OLD_CONTRACT_SHA256` **不变**。无 docstring/`--help` 需改（已 grep+`--help` 核）。
+- **行为保持（关键）**：改前生成器（`--old-contract` 指向引擎基准）与改后生成器（默认）
+  ⇒ 输出**逐字节相同**（**154311 B / `8461b6ee…e5373`**）。⇒ 这不是"改行为"，是"改输入来源"。
+- **非空洞性（两处都 `exit 1`、都逐字节恢复）**：①基准件等长改名（`add_animation_track→…tracx`，48749→48749 B、合法 JSON）
+  ⇒ `exit 1`，`FATAL: old contract sha256 6a2ffe68… != the frozen 8f8051c4…`，**未写输出**；
+  ②改名表错映射 ⇒ `exit 1`，`FATAL: L1 pattern mismatch`。恢复三法（`status` 空、`diff --stat` 空、
+  `hash-object` == blob `543b49b2…`）。
+- 门：**10/10 exit 0**（外层 `godot-mcp/tools/run_gates.ps1 -RunGates`，无重建）；
+  `g01` 160/160、`g02` 1586/1586、`g04` 3/3（154/73/177）、`g05` exit 0 **30 PASS / 0 FAIL**、
+  `g07` 10/10、`g08` UNCLASSIFIED=0、`g10` 22/22；`g09` **ANCHOR_STRUCTURAL_EQUIVALENT + RED_COUNT=0 + PASS**
+  （anchor `035edfce7`、HEAD `28432f859`、DIFF_COUNT=4 SAFE_COUNT=4；TASK-153 区间只 1 个 SAFE `.py` diff）。
+- 三条裁决：
+  1. **`_meta.generated_from` 仍写 hof-rs 路径 —— 不重新生成该工件（我的决定）。**
+     理由：①该字段记录的是**生成当时的事实**，不是谎言；②`docs/tools_list.renamed.json` 是**被门锚定的冻结工件**
+     （`g04` 契约逐字 3/3、`g05` B0/B1/B2、`check_contract_subset`、`TC-TOOL-*` 与 hof-rs 夹具溯源都指着它），
+     为一个**纯元数据字段**重生成它，收益极小、风险落在最强的几道门上；③它**不是输入**，不影响任何判据。
+     **处置**：**不重生成**；改为在**下一次触碰 docs 的任务**里加一句"该字段为历史溯源、生成器现已指向引擎内基准"
+     的说明（并入 TASK-154），防止有人据此误判生成器还依赖 hof-rs。**禁止**在无完整重验证（契约逐字 + g05 + 溯源）
+     的情况下重生成该工件。
+  2. **两个历史一次性取证脚本仍含跨仓可执行引用**（`mcp029_clear_default_evidence.ps1:62`、
+     `mcp032_d3_d4_d6_evidence.ps1:63` 的 `$OldFixture = 'F:\moonbit-hof-rs\...'`；后者**还用 `$UserPort=9877`**）
+     —— **立 `TASK-154`**：改成参数化/引擎内基准，并把 `9877` 改为测试端口**或**加显式拒绝运行的守卫。
+     **同时修正我的说法边界**：**"生成器/门这一线不再依赖跨仓输入"成立；"整个模块不再依赖跨仓输入"不成立**，
+     除非 TASK-154 落地。
+  3. **任务书模板更正（采纳）**：`run_gates.ps1` 位于**外层仓** `godot-mcp/tools/run_gates.ps1`，
+     **不在**引擎仓内——我此前任务书里写的 `tools/run_gates.ps1` 是**引擎根相对**、**会误导**。
+     自本条起，所有引擎任务书写**绝对/外层仓相对**路径。
+- 预期影响与回滚点：影响：TASK-154 收口后，"模块不再依赖跨仓输入"才可作为**事实**写入。
+  回滚点：TASK-153 提交单独 revert（⚠ 会让生成器重新读 hof-rs 夹具）；引擎仓整体 `15bbf1f50e`。
+

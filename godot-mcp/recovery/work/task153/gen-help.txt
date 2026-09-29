@@ -1,0 +1,10 @@
+﻿usage: gen_renamed_contract.py [-h] [--old-contract OLD_CONTRACT] [--map MAP]
+                               [--out OUT]
+
+Generate the renamed tools/list contract.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --old-contract OLD_CONTRACT
+  --map MAP
+  --out OUT

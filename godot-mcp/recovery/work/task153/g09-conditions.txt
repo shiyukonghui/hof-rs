@@ -1,0 +1,10 @@
+=== condition 1/2: every file in bef4be0407..HEAD (TASK-153 range) ===
+  modules/mcp_server/scripts/gen_renamed_contract.py -> SAFE
+=== every file in 035edfce7..HEAD (binary anchor range) ===
+  modules/mcp_server/docs/MCP-SERVER-HANDOVER.md -> SAFE
+  modules/mcp_server/docs/rename-baseline-tools-list.json -> SAFE
+  modules/mcp_server/docs/scripts/check_rename_map.py -> SAFE
+  modules/mcp_server/scripts/gen_renamed_contract.py -> SAFE
+=== git diff bef4be0407..HEAD (raw) ===
+ modules/mcp_server/scripts/gen_renamed_contract.py | 36 ++++++++++++++++++++--
+ 1 file changed, 33 insertions(+), 3 deletions(-)

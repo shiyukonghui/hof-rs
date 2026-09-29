@@ -1,0 +1,22 @@
+upstream = bef4be04077e855918013355b03ce7a6795a910a
+--- upstream last 3 ---
+bef4be0407 gates: correct the baseline provenance date in check_rename_map.py (TASK-152)
+e1fbc8ec7f gates: record the TASK-152 self-containment decision and keep the count survey green (TASK-152)
+069a2e2ea8 gates: make g05 self-contained inside the engine repository (TASK-152)
+origin contains bef4be0407 =   origin/feature/mcp-server-module-rebuild
+origin contains 28432f859f = 
+--- branch -vv ---
+* feature/mcp-server-module-rebuild 28432f859f [origin/feature/mcp-server-module-rebuild: ahead 1] gates: point gen_renamed_contract.py at the engine-internal contract baseline (TASK-153)
+  master                            57277407e7 [origin/master] Merge pull request #123585 from m4gr3d/fix_debug_keystore_generation
+--- reflog last 6 ---
+28432f859f HEAD@{0}: commit: gates: point gen_renamed_contract.py at the engine-internal contract baseline (TASK-153)
+bef4be0407 HEAD@{1}: commit: gates: correct the baseline provenance date in check_rename_map.py (TASK-152)
+e1fbc8ec7f HEAD@{2}: commit: gates: record the TASK-152 self-containment decision and keep the count survey green (TASK-152)
+069a2e2ea8 HEAD@{3}: commit: gates: make g05 self-contained inside the engine repository (TASK-152)
+035edfce7f HEAD@{4}: commit: docs(mcp_server): TASK-151 - HANDOVER section 3 gains (k): what the error-break guard guarantees, what it does not, and why g05's three reds are not this batch's
+97fc49df4b HEAD@{5}: commit: fix(mcp_server): TASK-151 - a caller's failing body no longer stops a debugged game in the debugger
+--- outer repo (hof-rs) status for the runner ---
+--- outer repo log last 3 ---
+6a003bd docs(engine): D228 - TASK-152 independently accepted (PASS, guardrails verified); engine branch pushed; open TASK-153 for the generator
+5020239 docs(engine): D227 - TASK-152 delivered (g05 self-contained, ten gates 10/10); adopt the g09 criterion fix with three guardrails; open TASK-153
+5190f54 docs(engine): D226 - TASK-151 independently accepted (PASS, fix proven load-bearing: guard removed -> 16/34 wire checks red, restored -> 34/34); open TASK-152 for g05 self-containment
