@@ -1,0 +1,15 @@
+SURVEY root             = F:\moonbit-hof-rs\godot-mcp\godot\modules\mcp_server
+SURVEY files scanned    = 185
+SURVEY SKIPPED (self)   = scripts/check_hardcoded_counts.py
+SURVEY numbers          = 171, 173, 175, 176, 152, 72, 153
+
+BUCKET DERIVED      = 41
+BUCKET CHECKED      = 6
+BUCKET PINNED       = 5
+BUCKET LIVE         = 4
+BUCKET FROZEN       = 63
+BUCKET UNCLASSIFIED = 0
+BUCKET total        = 119
+
+RESULT: PASS (every occurrence of 171/173/175/176/152/72/153 is classified; none is UNCLASSIFIED)
+GATE_EXIT=0 

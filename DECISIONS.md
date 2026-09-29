@@ -8918,3 +8918,46 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
   - 影响：该模块**已具备十门全绿**；待 TASK-153 落地后，"模块不再依赖跨仓输入"才可写成事实。
   - 回滚点：TASK-152 三个提交单独 revert（⚠ 会让 g05 **重新**因 hof-rs 夹具而红）；引擎仓整体回滚点仍是 `15bbf1f50e`。
 
+## D228 — TASK-152 独立验收 **pass**（护栏全过）；推送引擎仓；立 TASK-153 并派发
+
+- 日期：2026-09-29
+- 触发问题：TASK-152 由**另一批全新子代理**独立验收，交付 `recovery/reports/TASK-152-ACCEPTANCE.md`。
+  **结论 `verdict = pass`**；**无 blocker/major**，3 条 info。
+- 独立复核（全部由验收者自产）：
+  1. **自包含成立**：`check_rename_map.py:102` 的 `DEFAULT_OLD_CONTRACT` = `DOCS/rename-baseline-tools-list.json`；
+     **非注释**的 hof-rs 命中 **0**（8 处命中全在 `:78-99` 注释里）；它另做 **AST 扫描**得 0 个路径字面量、
+     `open()` 仅 4 处且都由 DOCS 派生；**从 `C:\` 重跑 `g05` 仍 PASS**（证明无 CWD 依赖）。
+  2. **基准字节**：48749 B、sha256 `8f8051c4…`、`git hash-object` = `543b49b2…`、174 条、LF=0/CR=0；
+     并与 hof-rs `db2eed7^` 的 blob 做 **`cmp` = `CMP_IDENTICAL`**（比 sha 比对更硬）。
+  3. **十道门**：用 `tools/run_gates.ps1:214-225` 的**字面命令集**重跑，全 `GATE_EXIT=0`；
+     `g05` PASS=30 FAIL=0；`g01` 160/160、`g02` 1586/1586、`g04` 3/3（154/73/177，9877 守卫 −1/−1）、
+     `g07` 10/10、`g08` UNCLASSIFIED=0、`g10` 22/22、`g09` STRUCTURAL_EQUIVALENT RED_COUNT=0。
+  4. **非空洞性**：验收者用自己的植入（**与实现者不同的**两处）——基准件
+     `get_filesystem_tree→legacy_get_filesystem_tree` ⇒ B2 红且点名（连带预期的 B0）；
+     改名表 `project_get_statistics→get_statistics` ⇒ **恰好一条** FAIL（D1，点名 `get_statistics`）；
+     恢复三法（`status` 空、`diff --stat` 空、四文件 `hash-object` == HEAD blob）。
+  5. **我放宽 `g09` 的三道护栏全过**：区间 3 个 diff = `MCP-SERVER-HANDOVER.md` /
+     `rename-baseline-tools-list.json` / `check_rename_map.py`（**全无编译输入**）；
+     `git diff 035edfce7f..HEAD -- <编译输入>` = **0**；`check_engine_anchor.ps1` 与
+     `check_hardcoded_counts.py` **零 diff**；外层 `tools/run_gates.ps1` blob `b3c5ea65…`、mtime 2026-09-27 **未动**
+     ⇒ 裁决：**本批放宽是安全的**（这正是我要求"放宽必须配可证护栏"的用意）。
+  6. **它确认了 D227 的判断**：`gen_renamed_contract.py:1800` 仍写死 hof-rs 绝对路径、`:1804` 仍是同一 sha256
+     （**不在 `g05` 执行路径上**）⇒ **"模块不再依赖跨仓输入"现在不成立**，**不得**写成完成态，直到 `TASK-153` 落地。
+  7. 自曝项已核：`check_hardcoded_counts.py` 零 diff、`g08` 现 UNCLASSIFIED=0、溯源日期 2026-09-29 与基准提交
+     `069a2e2e`（08:48:49）一致。禁区：`9877` 从未监听、`9888/9889` 前后空闲、引擎 `origin` 仍 `15bbf1f50e`（未 push）、
+     hof-rs 夹具仍 `50c5fb42…`/177/mtime 未变、无新 import。
+- 3 条 info 缺陷：①生成器仍跨仓（→ TASK-153）；②`g05` 的 B0 与 B2 会**同时**红，这是**按设计的字节钉**，不是缺陷；
+  ③报告里关于 AST 扫描的一句话措辞对模式敏感（措辞问题）。
+  未验证（验收者如实列）：基于重建的 `ANCHOR_EQUAL`（本批不需要）、`g08` 的历史中间态红、plain-console 变体。
+- 裁决：
+  1. **TASK-152 予以验收通过。**
+  2. **推送引擎仓**：TASK-151 与 TASK-152 **各自都过了独立验收**，故按"验收前不 push"的约束解除
+     （推送 6 个提交到 `feature/mcp-server-module-rebuild`；`origin` 从 `15bbf1f50e` 前进到 `bef4be0407`）。
+  3. **立并派发 `TASK-153`**：把 `gen_renamed_contract.py` 的跨仓输入改指引擎内基准
+     （`docs/rename-baseline-tools-list.json`），并在常量旁写明溯源；**必须**保留"若真出现与基准的差异则失败"的
+     原有能力（不得改成永绿）。完成后仍须独立验收。任务书：`godot-mcp/recovery/tasks/TASK-153.md`。
+- 预期影响与回滚点：
+  - 影响：TASK-153 落地后，"契约生成与契约自检共用同一个引擎内基准"才成为**事实**，
+     "模块不再依赖跨仓输入"才允许写成完成态。
+  - 回滚点：TASK-153 提交单独 revert；引擎仓整体回滚点 `15bbf1f50e`。
+
