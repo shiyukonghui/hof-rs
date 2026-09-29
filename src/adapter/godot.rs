@@ -3486,9 +3486,11 @@ $HOH_HOH_BIN tools call running_game_create_input_recording --args '{}'
 $HOH_HOH_BIN tools call running_game_play_input_recording --args-file $HOH_ARTIFACT_DIR/args/play.json
 # play.json: {"events":[{"type":"action","action":"move_right","pressed":true}],"speed":1.0}
 $HOH_HOH_BIN tools call running_game_run_test_scenario --args-file $HOH_ARTIFACT_DIR/args/scenario.json
-# scenario.json: {"scene_path":"current","steps":[{"type":"input","action":"move_right","pressed":true},
-#                                                    {"type":"wait","seconds":0.5},
-#                                                    {"type":"assert","node_path":"Player","property":"position:x","operator":"gt","expected":0}]}
+# scenario.json: {"steps":[{"type":"input","action":"move_right","pressed":true},
+#                          {"type":"wait","seconds":0.5},
+#                          {"type":"assert","node_path":"Player","property":"position:x","operator":"gt","expected":0}]}
+# DR-58: never send `scene_path` — the game-scope runner answers -32602 for every
+# value (it runs inside the already-running game); the member list is `steps` only.
 $HOH_HOH_BIN tools call running_game_stop_input_recording --args '{}'
 $HOH_HOH_BIN tools call editor_simulate_input_action --args-file $HOH_ARTIFACT_DIR/args/press.json
 # press.json: {"action":"move_right","pressed":true}
