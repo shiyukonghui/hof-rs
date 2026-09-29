@@ -9465,3 +9465,50 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 - 排期：DR-58 验收通过 → 推送 → **DR-57 / DR-59 / REF2** 串行 → **再跑一轮真机**（E3 的最终判定）。
 - 回滚点：DR-58 各提交单独 revert；两条基线 `smoke-t6`/`smoke-t7` 均不得覆盖。
 
+## D242 — DR-58 独立验收 **pass**；`scene_path` 结论被**引擎源码**钉死；**DEF-1 推翻了我惯用的"godot-mcp 零 diff"验证法**
+
+- 日期：2026-09-29
+- DR-58 由**另一批全新子代理**独立验收：**`verdict = pass`**（9/9 criteria；5 minor/info；无 blocker）。
+  报告 `.spec/hof-rs/tasks/TASK-DR58-ACCEPTANCE.md`。
+- **头号反例目标（我自己钉的）已闭合：`scene_path` 必须"省略"是判定、不是猜测。** 四条独立证据：
+  ①冻结捕获的拒绝正文**点名** `scene_path`；②**3 个不同取值**全被拒，而**省略该成员**的 **5 个**捕获成功，
+  其中 C4 的参数**恰为** `{steps:[hof-rs 自己的 steps]}`、`in_input_map:true`/`injected:1`
+  ⇒ **排除"还缺别的必填成员"**；③真实 `tools/list` schema **只有 `scene_path`+`steps`、`required=["steps"]`**
+  ⇒ **排除"替代参数名"**；④**决定性**：引擎源码
+  `godot-mcp/godot/modules/mcp_server/tools/running_game_test_execution.cpp:711-726` **拒绝任何非空 `scene_path`**，
+  且 `git -C godot-mcp/godot merge-base --is-ancestor 035edfce7 HEAD` = 0、该文件在 `035edfce7..HEAD` **零改动**
+  ⇒ **该源码即 smoke-t7 所用构建**。
+  **残余（如实记录）**：**空/纯空白** 的 `scene_path` 也会被接受（源码 `:718`），捕获未排除该替代；
+  但因"省略"已被直接捕获为**被接受**，故不影响结论。
+- 复现：套件**跑 4 次**全 exit 0；3 次完整合计 **352/0/7**；新增 `#[test]` **恰 10 个**；`#[ignore]` 计数基线与 HEAD **相同**。
+  **实现者那次"首跑 exit 1"flake 未复现**；全仓唯一挂钟敏感断言是 `tests/endpoint_liveness.rs:498`（**仅为假设**）。
+  恒真植入（`node_properties_read → true`）在 **3 处**转红、逐字节恢复；它**自造 6 个**畸形载荷全判假；
+  7 个夹具与 `runs` 来源 **`cmp` 一致且 sha256 与 `MANIFEST` 相符**；`runs/**` 未动；**无既有断言被放宽**
+  （仅 14+6 处删除，全部是"收紧"）；PRD/Cargo 零 diff；未 stage；`origin/master` 仍 `3c10663`；两个假绿陷阱均实测。
+- **DEF-1（minor 级别，但对我的习惯是"推翻"级，必须记）**：实现者报告的"`godot-mcp/**` 零 diff"证据
+  **对引擎树在方法论上是无效的**——`godot-mcp/godot` 是**被 gitignore 的嵌套克隆**（`.gitignore:33`），
+  **外层 git 在那里跟踪 0 个文件**。⇒ **我、以及此前多轮验收，反复用外层仓 `git diff` 断言"godot-mcp 零 diff"，
+  对引擎树都是空判**（vacuous）。它改用别的方式确认未被改（`mcp_server` 最新 mtime `10:37:38`、
+  嵌套 `status --porcelain -uno` = 0）。
+  **自本条起的硬纪律**：**凡涉及引擎树的"未变更"证据，必须用 `git -C godot-mcp/godot …`（嵌套仓）或 mtime/摘要，
+  不得用外层仓的 `git diff`/`git status`**；并**先证明 pathspec 真能命中**（与 D233 的假绿陷阱同族，这是**第三个**成员）。
+  **存量更正**：此前 D-条目与验收任务书里凡以"外层 `godot-mcp` 零 diff"为据的表述，**其证据强度应降级为"未证实"**，
+  除非另有嵌套仓证据；引擎线（TASK-151..154）的验收报告本身**都用了嵌套仓 `git -C`**，故其结论**不受影响**。
+- 其它缺陷：**DEF-2**（minor）测试替身的 `scene_path` 拒绝文本是**手写字面量**（今日字节相等，但**无机制捕获漂移**），
+  而同文件的 `real_scenario_payload()` 是**读字节**的；**DEF-3**（minor）名为
+  `refuses_every_scene_path_value` 的测试**由 3 个样本推广**，普遍性依赖引擎源码而**测试未编码**该依赖；
+  **DEF-4**（info）`build_check:3408` 仍给 `editor_play_scene` 发 `scene_path`——真实 schema 无此成员，
+  且**正确形状 `{"mode":…}` 已在仓内被捕获**（`:842` + `play_scene_ready.json`）⇒
+  实现者"没有捕获能证明会被拒"**比听起来弱**；本批不修**仍是正确克制**（不在电池路径上：`GodotAdapter` 覆写电池、
+  生产调用方为 0），**但必须用一次活体捕获 + 对该调用参数的断言来关闭**；**DEF-5**（info）
+  判据接受**纯空白 `node_path`** 与**全 null 的 properties 成员**（仅刻画，非缺陷）。
+- **下一轮真机的两条风险旗（我采纳，写进下一轮任务书）**：
+  1. 修好后，输入通道探针的 `GAME_INPUT_CHANNEL_OK` 将**仅由节点读取的可达性承载**（`src/adapter/godot.rs:1359`），
+     而 `axis_after` 仍为 `None`、`moved_while_pressed` 为 false ⇒ **不得把这个 OK 当作 E3 的行为证据**；
+  2. 夹具/清单**有意排除** `semantic_summary.json`（与守卫冲突）——可以，且**守卫未被削弱**
+     （`tool_vocabulary.rs` 零 diff、4/4 pass）。
+- 裁决：**DR-58 予以验收通过；推送**（9 个提交）。**队列不变**：**DR-57**（§15 计数测试 + 报告更正 + DEF-2）
+  → **DR-59**（`.hoh/deterministic` 轮次隔离）→ **REF2** → **§16**；**随后再跑一轮真机**判定 E3，
+  且**必须**把上面两条风险旗写进那一轮的任务书。
+- 回滚点：各提交单独 revert；两条基线不得覆盖。
+
