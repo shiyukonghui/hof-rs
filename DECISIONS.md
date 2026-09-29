@@ -10037,3 +10037,77 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 - 队列：**DR-66 → 其独立验收 → SMOKE-T8（判 E1/E3）→ DR-65 → REF2 → §16 → 造游戏**。
 - 回滚点：本批无代码改动；DR-66 将逐条可 revert。
 
+## D260 — DR-64 验收收尾：**自动化假绿被确证**（`candidate==version==A_0` 而全绿）；**三处数字/引文更正**（含我 D259 的计数错误）；两条测试设计缺口已转向 DR-66
+
+- 日期：2026-09-30。来源：DR-64 验收者完成消息 + `.spec/hof-rs/tasks/TASK-DR64-ACCEPTANCE.md`。
+- **最重要的确证（假绿的具体形状）**：同一份 `result.json` 里 **`ok=true`、`exit_code=0`、
+  `artifact_gate.launchable=true`**，且 **`candidate_id == version_id == A_0`**，而 `REQUIREMENTS.md:112` 的 E1
+  要求 Developer 产生工程增量 ⇒ **没有任何布尔量会变红** ⇒ **一轮可以在 E1 失败的同时"全绿"**。
+  验收者称此为 **"最重要的发现"**——与我的判断一致，也正是 **DR-66 的最高价值项**。
+- **一条纠正 DR-64 的因果表述（我采纳）**：**测试级假绿（两个字符串包含断言）对 E1 的失败"因果贡献为零"**，
+  它只是**检测缺口**（盲于 cmd-vs-POSIX 的提示词错配），**不是失败的成因**。
+  ⇒ 我 D258 把两者并列陈述，现按验收者的判定**区分开**：**自动化假绿 = 会漏报；测试级假绿 = 检测不到**。
+- **三处更正（含更正我自己）**：
+  1. **DR-64 报"第一个成功工具调用在第 38 步/25.3%"不准确**：第 38 步的输出是
+     **CLI 报"找不到 `config/hoh.yaml` 配置文件"**；**第一个真实工具结果在第 46 步（约 30.7%）**。
+  2. 写动词调用数是 **2 次**（DR-64 某表记为 1）。
+  3. 哈希/排除集的引文应为 **`src/adapter/godot.rs:3345-3358`**（`policy.rs` 只有 **452 行**，故 `policy.rs:3348` 是错的）。
+  4. **我自己的错误**：**D259 我写"6 minor + 2 info"是从 `grep severity` 数出来的，不可靠**——
+     用**经过滤的 grep 统计条目数**本身就是我反复要求别人避免的那种粗糙做法。
+     ⇒ **更正**：以**直接读 JSON 块的枚举**为准（验收者自述 **1 minor + 7 info**，与我的 grep 计数亦不符）；
+     **该计数在未直接核对 JSON 前不得当作权威**（下一批我直接读块核对）。
+- **两条测试设计缺口（我据此向正在跑的 DR-66 发去 steer）**：
+  ① `e1_reachability.rs` 若**把排除集写死在测试里**，其宣称的植入**不会让它变红** ⇒ **必须从运行时配置
+  （`config/hoh.yaml` / Godot 适配器配置）派生排除集**并断言**合并后的集合**；
+  ② `role_shell_contract.rs` 需要**显式的占位符抽取规则**与**平台门控**，否则又是一个永远绿的测试。
+- 另一处**计量口径**问题（DEF-6）：**DR-64 报告里的 runs 摘要口径自洽但非规范口径**
+  （`6bfc3e62…`/`e741d61d…`），**不可与历史交叉核对**；验收者用**规范口径**给了 `c144ef32…` 的证明。
+  ⇒ **记入我的取证实务**：任何"摘要未变"的主张必须**用仓内既有规范口径**并自证（我用 `c144ef32…` 自证）。
+- 其它：三个假绿陷阱复现（`bash HEAD^ = bdf654b1` vs `cmd` 的 caret 得 HEAD；空 pathspec 的 `git diff` 退出 0）；
+  禁区全清；其临时目录两处均已删；验收期间 HEAD 因我的提交而移动，**记为并发活动，非守卫违例**。
+- 裁决：**DR-64 验收通过**（结论不变）；**DR-66 继续跑**（已转向两条测试设计修正与三处事实更正）。
+- 回滚点：本批无代码改动。
+
+## D261 — DR-66 交付：**E1 类失败真的变红**（含两处反例植入）、shell 契约平台化、完成定义降噪；392/0/7
+
+- 日期：2026-09-30。交付 `.spec/hof-rs/tasks/TASK-DR66-REPORT.md`。**4 个 `(DR-66)` 提交，未 push**。
+- **门**：`cargo test --offline` = **exit 0 / 392 passed / 0 failed / 7 ignored**（基线 372，**+20**；`ignored` 未增）。
+- **本批最重要的一件事（已完成且有反例）**：**零工程增量的轮次不再报 `ok=true`/退出码 0**。
+  新增 `ContractViolation::NoEngineeringWrite`（**`no_progress` 保留** = 描述，新码 = **判定**）；
+  门在 `run_loop.rs:862`（零增量 **且** 最后一次 Developer attempt `exit_was_limits`）；
+  `ok=true` 只在**成功出口**；`run_exit_code_for` 给契约类退出码 **2**，而 **`run_exit_code(gate)` 一行未动**；
+  `runs/<id>/exit_code` 与 `meta.json.exit_code` **不再是常量 0**。
+  **夹具正是 `smoke-t7` 形状**，且**故意保留 Tester 步** ⇒ 门一旦被移除，轮次会**跑完并在该测试真正关心的断言上失败**
+  （而非因夹具缺步而失败）——**这是正确的夹具设计**。
+  **两处反例植入都真红**：①关门 ⇒ 红在 `tests/e1_increment.rs:221`；②退出码层退回 ⇒ 红在 `:280`
+  （`a failed round must not exit 0`）⇒ **"只看 `ok`/退出码会漏报 E1"已不可复现**。
+- **事一（选 (a) 平台化渲染）**：新增 **`src/runtime/shell.rs`（176 行）**：`ShellFlavor{Windows,Posix}`、
+  `HOST` 按 `cfg(windows)` **编译期**选定、`{{HOH_*}}` 渲染、`rewrite_var_dialect` 供**控制组**；
+  **外来方言必须失败且必须是 shell 自己的方言错**（否则说明夹具坏、不是语法坏）。
+  **拒绝 (b)** 的理由我认可：让 `LocalEnvironment` 走 `sh` 需要改**引擎侧 `F:/RustProjects/mini-swe-agent-rust-mini`（本仓之外，D242 禁止）**，
+  且会改变角色**已经做对**的命令方言。
+- **事三**：`[budget]` 写明 `Within your first {{write_deadline_steps}} steps you must have produced at least one real engineering write` + 点名 `no_engineering_write`；
+  `{{write_deadline_steps}}` 由 `run_loop::developer_write_deadline()` 渲染 = **25**；增量要求**保留并前置**，
+  `[separation of duties]` 把电池/evidence.json/QA 判定划到 harness 侧。
+- **事五**：两条"永远绿"测试改成**可执行契约**，植入 4 使其红在 `artifact_hygiene.rs:114`。
+- **非空洞性**：**4 处植入（3 生产 + 1 测试载体）各 exit 101**，并用**四种独立方式**证明逐字节回退；
+  **它实测到一次真实行尾事故**（Python 批量改写把 `run_loop.rs` 的 CRLF 变 LF ⇒ `git diff --stat` 暴涨），
+  处置是 `git checkout --` 后改用**保留原行尾**的脚本；并给出**为何 `git hash-object` 单独不够**
+  （过滤器规范化可能掩盖纯行尾变化）⇒ 必须 `cmp`。**这正是我一直在要求的取证纪律，它自己也栽过一次并如实写下。**
+  我转向的修正（**排除集来自运行时配置**，`§5.4`）已落实。
+- **它如实标注的残余（我逐条采纳，不视为已完成）**：
+  1. **门的触发被有意收窄**：只在最后一次 Developer attempt `exit_was_limits=true` 时触发
+     ⇒ **正常结束但零增量的轮次仍不会红**——**已知残余假绿面，它显式写出而非掩饰**；关闭它需迁移若干离线夹具（另一逻辑改动）。
+  2. **编辑器异步落盘风险仍未测**（本批零增量轮次是 **FakeHarness 合成**，未经真实编辑器）
+     ⇒ 真机轮应补"写入后立刻 `hash_tree`、下一帧再 `hash_tree`"的对照。
+  3. **非 Windows 的 `HOST` 分支只在编译期被选择**，未在真机 POSIX 上跑过。
+  4. **构建缓存陷阱（已解释、非代码问题）**：`git reset --mixed` 保留旧 mtime ⇒ cargo 复用旧 rlib ⇒ **假红/假绿**
+     （`run_exit_code_for` 一度返回 6/0 而非 2）；处置是 `touch src/**/*.rs tests/*.rs` 后重编，此后每次门先 `touch`。
+     ⇒ **我把这条写进后续任务书的取证要求**（"门之前先 `touch` 或等价地强制重编"）。
+- **我注意到并要求验收者查证的一点**：本批**尾提交哈希在实现期间多次变化**（我先后读到 `e8a3d93`→`18bf417`→`cb50575`）
+  ⇒ 它**改写了自己的本地（未推送）提交**。**未推送的改写不违规，但必须披露**；已把"报告是否披露、reflog 是否留痕、
+  旧哈希是否作废、当前树是否即报告所述之树"列为验收项。
+- 裁决：**独立验收已在飞**（`71b04caf…`）；**推送等它通过**。
+  队列：**DR-66 验收 → SMOKE-T8（判 E1/E3）→ DR-65 → REF2 → §16 → 造游戏**。
+- 回滚点：4 个 `(DR-66)` 提交各自可单独 revert；两条真机基线不得覆盖。
+
