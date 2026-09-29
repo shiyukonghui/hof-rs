@@ -47,7 +47,7 @@ EXIT=0
 | `d338459` | **红**：`copy_evidence` 按名字隐藏 `.stale-` 命名的本轮产物；`copy_tree` 完全没有过期过滤 |
 | `6dc12b5` | 实现：显式清单 `.superseded.json` + 两条拷贝路径统一判据 + 生产者在改名**之前**写记录 |
 | `49b9417` | 遍历作用域自检 + `.hoh` 外常驻种子 + 轮次级"不再被误跳过"实测 |
-| 本报告提交 | `TASK-DR62-REPORT.md`（文档，无代码改动） |
+| 本报告提交 `fb572ca` | `TASK-DR62-REPORT.md`（纯文档：`git diff --stat 49b9417..HEAD -- src tests Cargo.toml Cargo.lock` = 空；最终全量套件跑在代码树 `49b9417` 上） |
 
 ---
 
@@ -401,8 +401,8 @@ $ git status --porcelain                                          => (空)
     # 其一是本报告、其二是调度者在批次尾声新建的 TASK-DR62-ACCEPT.md（不是我的产物，见 §8.11）
 $ git diff --cached --stat                                        => (空，未 stage)
 $ git rev-parse origin/master  => 6a0c9a9ae7c02a842619690c60693b96151e087b   # 批次起点，未 push
-$ git rev-parse HEAD           => 49b9417c1ae6a2b635c9a820eaf7cf9989b8c488
-$ git log --oneline origin/master..HEAD | wc -l                   => 3      # 未 push
+$ git rev-parse HEAD           => 49b9417c1ae6a2b635c9a820eaf7cf9989b8c488   # 代码树 HEAD（本报告提交后为 fb572ca…，纯文档）
+$ git log --oneline origin/master..HEAD | wc -l                   => 3      # 未 push（报告提交后 4）
 $ grep -rn '#\[ignore' src tests | wc -l                          => 8      # 起点同为 8（7 属性 + 1 注释）
 ```
 
