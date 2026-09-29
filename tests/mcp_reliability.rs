@@ -10,7 +10,7 @@ use std::path::Path;
 use std::sync::Mutex;
 
 use hof_rs::model::Role;
-use hof_rs::tools::mcp::McpError;
+use hof_rs::tools::mcp::{McpError, McpTransportError};
 use hof_rs::tools::reliable::{
     call_with_retries, wait_for_game_ready, McpErrorLog, READY_POLL_INTERVAL_MS, RETRY_INTERVAL_MS,
 };
@@ -35,6 +35,10 @@ fn captured_message(name: &str) -> String {
 enum Reply {
     Ok(Value),
     Err(McpError),
+    /// DR-56: a transport-layer failure — the class the retry ring may retry.
+    Transport(McpTransportError),
+    /// DR-56: a failure with no classified class at all.
+    Plain(String),
 }
 
 #[derive(Default)]
@@ -77,6 +81,8 @@ impl ToolChannel for ScriptedChannel {
         match reply {
             Reply::Ok(payload) => Ok(ToolResult { ok: true, payload }),
             Reply::Err(error) => Err(error.into()),
+            Reply::Transport(error) => Err(error.into()),
+            Reply::Plain(message) => Err(anyhow::anyhow!(message)),
         }
     }
 }
@@ -169,15 +175,22 @@ async fn readiness_timeout_is_recorded_verbatim() {
     assert!(entry["timestamp"].is_u64(), "{entry}");
 }
 
-/// DR-20: `editor_get_errors` failures are retried `max_retries` times and the
-/// last real error survives; a success short-circuits the retries.
+/// DR-20 (revised by DR-56): transport failures are retried `max_retries` times
+/// and the last **real** failure survives; a success short-circuits the retries.
+///
+/// The reply is a transport failure rather than a JSON-RPC business error: since
+/// DR-56 the retry ring is class-aware and a business error is attempted exactly
+/// once, so the only failure class that can still exhaust a retry budget is the
+/// transport one.  `retries_are_class_aware_business_errors_are_never_retried`
+/// covers the other half.
 #[tokio::test]
 async fn retries_are_bounded_and_preserve_the_real_error() {
     let message = captured_message("editor_errors_failure.txt");
+    let transport = || McpTransportError::new("http://127.0.0.1:9877/mcp", message.clone());
     let channel = ScriptedChannel::new(vec![
-        Reply::Err(McpError::new(-32603, message.clone())),
-        Reply::Err(McpError::new(-32603, message.clone())),
-        Reply::Err(McpError::new(-32603, message.clone())),
+        Reply::Transport(transport()),
+        Reply::Transport(transport()),
+        Reply::Transport(transport()),
     ]);
     let outcome = call_with_retries(
         &channel,
@@ -191,11 +204,16 @@ async fn retries_are_bounded_and_preserve_the_real_error() {
     .await;
     let failure = outcome.expect_err("all attempts failed");
     assert_eq!(failure.attempts, 3, "1 try + 2 retries");
-    assert_eq!(failure.code, Some(-32603));
+    // A transport failure carries no JSON-RPC code — nothing may invent one.
+    assert_eq!(failure.code, None);
+    assert!(
+        failure.message.contains(&message),
+        "the last real failure must survive verbatim: {failure:?}"
+    );
     assert_eq!(channel.call_count(), 3);
 
     let channel = ScriptedChannel::new(vec![
-        Reply::Err(McpError::new(-32603, message)),
+        Reply::Transport(transport()),
         Reply::Ok(json!({"errors": []})),
     ]);
     let value = call_with_retries(
@@ -211,6 +229,114 @@ async fn retries_are_bounded_and_preserve_the_real_error() {
     .expect("the second attempt succeeds");
     assert_eq!(value, json!({"errors": []}));
     assert_eq!(channel.call_count(), 2);
+}
+
+/// DR-56 ①: a JSON-RPC **business** error is a verdict, not a hiccup.
+///
+/// `smoke-t6` retried the very same `-32602` three times because
+/// `call_with_retries_traced` retried every failure alike.  A contract/argument
+/// error cannot become a success by asking again, so it must be attempted
+/// **exactly once** — and the returned failure must still be that real error.
+#[tokio::test]
+async fn retries_are_class_aware_business_errors_are_never_retried() {
+    let temp = tempfile::tempdir().unwrap();
+    let workspace = temp.path().join("workspace");
+    std::fs::create_dir_all(&workspace).unwrap();
+    let log = McpErrorLog::new(&workspace);
+
+    // `-32602` is the code the engine really answered for the malformed
+    // `save_path`, and the code `smoke-t6` burned three attempts on.
+    let parse_error = "-32602 Invalid params: `save_path` must be a res:// or user:// path";
+    let channel = ScriptedChannel::new(vec![
+        Reply::Err(McpError::new(-32602, parse_error)),
+        Reply::Err(McpError::new(-32602, parse_error)),
+        Reply::Err(McpError::new(-32602, parse_error)),
+    ]);
+    let outcome = call_with_retries(
+        &channel,
+        Role::Tester,
+        "running_game_capture_screenshot",
+        json!({}),
+        2,
+        0,
+        Some(&log),
+    )
+    .await;
+    let failure = outcome.expect_err("the business error is returned");
+    assert_eq!(
+        failure.code,
+        Some(-32602),
+        "the real JSON-RPC code must survive: {failure:?}"
+    );
+    assert!(
+        failure.message.contains("Invalid params"),
+        "the real message must survive: {failure:?}"
+    );
+    assert_eq!(failure.attempts, 1, "a business error is attempted once");
+    assert_eq!(
+        channel.call_count(),
+        1,
+        "no second attempt may be made for a business error"
+    );
+
+    // Only the single real attempt is journalled — the journal is per failed
+    // attempt, so a phantom retry would show up here.
+    let raw = std::fs::read_to_string(log.path()).expect("mcp-errors.jsonl");
+    let lines: Vec<&str> = raw.lines().filter(|line| !line.trim().is_empty()).collect();
+    assert_eq!(lines.len(), 1, "one attempt, one journal line: {raw}");
+    let entry: Value = serde_json::from_str(lines[0]).unwrap();
+    assert_eq!(entry["code"], json!(-32602));
+    assert_eq!(entry["attempt"], json!(1));
+}
+
+/// DR-56 ②: the classification is the single decider, and it is asserted on the
+/// failure objects the retry ring really builds.
+///
+/// A classifier that answers "retry" unconditionally is exactly the `smoke-t6`
+/// defect, so it is asserted from both directions here (and re-proved
+/// non-vacuously by plant-and-revert in the batch report).
+#[tokio::test]
+async fn the_retry_classifier_is_the_single_decider() {
+    // Transport failures: retryable.
+    let transport = McpTransportError::new(
+        "http://127.0.0.1:65333/mcp",
+        "MCP transport failure: Error encountered in the status line",
+    );
+    let channel = ScriptedChannel::new(vec![
+        Reply::Transport(transport.clone()),
+        Reply::Transport(transport.clone()),
+        Reply::Transport(transport.clone()),
+        Reply::Transport(transport),
+    ]);
+    let failure = call_with_retries(&channel, Role::Tester, "running_game_get_scene_tree", json!({}), 3, 0, None)
+        .await
+        .expect_err("every attempt is a transport failure");
+    assert_eq!(
+        channel.call_count(),
+        4,
+        "a transport failure is retryable, so the ring really retries (DR-56 ②)"
+    );
+    assert_eq!(failure.attempts, 4, "the last real failure is reported");
+    assert_eq!(failure.code, None, "a transport failure has no JSON-RPC code");
+    assert!(
+        failure.message.contains("Error encountered in the status line"),
+        "the transport text survives verbatim: {failure:?}"
+    );
+
+    // A failure with no classified class is not retryable: a real, unclassified
+    // error is reported once instead of being laundered through retries.
+    let channel = ScriptedChannel::new(vec![Reply::Plain(
+        "game_endpoint_unavailable: no game endpoint is registered".to_string(),
+    )]);
+    let failure = call_with_retries(&channel, Role::Tester, "running_game_get_scene_tree", json!({}), 3, 0, None)
+        .await
+        .expect_err("the unclassified failure is returned");
+    assert_eq!(
+        channel.call_count(),
+        1,
+        "an unclassified failure must not be retried (DR-56)"
+    );
+    assert_eq!(failure.attempts, 1);
 }
 
 /// DR-20: `--args-file` accepts an absolute path, and a missing file names the

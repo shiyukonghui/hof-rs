@@ -78,6 +78,34 @@ impl McpError {
     }
 }
 
+/// DR-55/DR-56: a **transport**-layer failure, as a concrete type.
+///
+/// The distinction is not cosmetic.  `smoke-t6` burned three 120 s attempts on
+/// the *same* `-32602` and another five on a game endpoint that had already
+/// stopped answering, because every failure was just an `anyhow` string and
+/// nothing could tell the two classes apart.  A typed marker is what lets
+/// [`crate::tools::reliable::is_retryable_failure`] answer once, in one place,
+/// and what lets the endpoint-liveness state count *consecutive transport
+/// failures* instead of guessing from a message.
+#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
+#[error("MCP transport failure to {endpoint}: {message}")]
+pub struct McpTransportError {
+    /// The endpoint that did not answer at the transport layer.
+    pub endpoint: String,
+    /// The verbatim transport text (`ureq`'s `Error encountered in the status
+    /// line`, `Connection refused`, …).
+    pub message: String,
+}
+
+impl McpTransportError {
+    pub fn new(endpoint: impl Into<String>, message: impl Into<String>) -> Self {
+        Self {
+            endpoint: endpoint.into(),
+            message: message.into(),
+        }
+    }
+}
+
 /// DR-29: the request/response identity of one JSON-RPC call.
 ///
 /// It is written into every battery step's raw payload so a human can tell
@@ -181,10 +209,14 @@ impl McpClient {
                     std::thread::sleep(Duration::from_millis(delay));
                 }
                 Err(error) => {
-                    return Err(anyhow::anyhow!(
-                        "MCP request to {} failed: {error}",
-                        self.endpoint
-                    ))
+                    // DR-56: the classified marker travels with the failure, so
+                    // the retry ring above can tell a transport hiccup from a
+                    // JSON-RPC verdict without reading this message.
+                    return Err(McpTransportError::new(
+                        self.endpoint.clone(),
+                        format!("{error}"),
+                    )
+                    .into())
                 }
             }
         }

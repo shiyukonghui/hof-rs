@@ -16,7 +16,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use serde_json::Value;
 
 use crate::model::Role;
-use crate::tools::mcp::{McpError, RpcCorrelation};
+use crate::tools::mcp::{McpError, McpTransportError, RpcCorrelation};
 use crate::tools::ToolChannel;
 
 /// The documented readiness poll interval (DR-20).
@@ -37,6 +37,10 @@ pub struct McpFailure {
     /// `McpResponseDesync` knows which ids it saw).  Boxed so the failure stays
     /// small enough to travel inside a `Result`.
     pub correlation: Box<RpcCorrelation>,
+    /// DR-56: the classified retry verdict of this failure.  Set once, by
+    /// [`failure_from`], so the retry ring never re-derives it and a business
+    /// error can never be retried by accident.  See [`is_retryable_failure`].
+    pub retryable: bool,
 }
 
 impl McpFailure {
@@ -47,6 +51,7 @@ impl McpFailure {
             message: message.into(),
             attempts,
             correlation: Box::new(RpcCorrelation::default()),
+            retryable: false,
         }
     }
 
@@ -117,11 +122,34 @@ impl McpErrorLog {
     }
 }
 
+/// DR-56: **the** classifier the retry ring consults.
+///
+/// One named function, no scattered special cases: a failure is retryable only
+/// when it is a *transport* failure ([`McpTransportError`]).  A JSON-RPC business
+/// error (`-32602`, `-32603`, …) is a verdict — asking again cannot turn it into
+/// a success, and `smoke-t6` proved the cost of pretending otherwise: the same
+/// `-32602` was retried three times.
+///
+/// An error that carries no classification is treated as non-retryable on
+/// purpose: in a system whose failure records must be trustworthy, the
+/// conservative direction is to report the real failure once instead of
+/// laundering it through retries.
+pub fn is_retryable_failure(error: &McpFailure) -> bool {
+    error.retryable
+}
+
 /// Turn an opaque channel error into a structured failure, recovering the
-/// JSON-RPC identity when the error carries one (DR-20/DR-29).
+/// JSON-RPC identity when the error carries one (DR-20/DR-29) and classifying it
+/// for the retry ring (DR-56).
 fn failure_from(tool: &str, error: &anyhow::Error, attempt: u32) -> McpFailure {
     if let Some(mcp) = error.downcast_ref::<McpError>() {
+        // A JSON-RPC business error is a verdict: never retryable.
         return McpFailure::new(tool, Some(mcp.code), mcp.message.clone(), attempt);
+    }
+    if let Some(transport) = error.downcast_ref::<McpTransportError>() {
+        let mut failure = McpFailure::new(tool, None, transport.to_string(), attempt);
+        failure.retryable = true;
+        return failure;
     }
     // DR-29: a desync knows exactly which ids it saw; keep them.
     if let Some(crate::errors::HofError::McpResponseDesync {
@@ -149,10 +177,13 @@ pub struct TracedCall {
     pub correlation: RpcCorrelation,
 }
 
-/// Call one MCP tool, retrying a failure up to `max_retries` extra times.
+/// Call one MCP tool, retrying a **retryable** (transport) failure up to
+/// `max_retries` extra times.
 ///
 /// The returned error is the *last* real failure: retrying never launders a
-/// `-32603` into an empty success.
+/// `-32603` into an empty success.  DR-56: the ring is also **class-aware** — a
+/// JSON-RPC business error is returned after exactly one attempt (see
+/// [`is_retryable_failure`]).
 #[allow(clippy::too_many_arguments)]
 pub async fn call_with_retries(
     tools: &dyn ToolChannel,
@@ -168,6 +199,20 @@ pub async fn call_with_retries(
             .await?
             .payload,
     )
+}
+
+/// DR-56: may a second attempt be made after this failure?
+///
+/// `total` is the budget for this call (`1 + max_retries`); the ring stops early
+/// when the budget is spent **or** when the failure's class says retrying cannot
+/// help.
+fn another_attempt_is_allowed(attempt: u32, total: u32, last: Option<&McpFailure>) -> bool {
+    if attempt >= total {
+        return false;
+    }
+    // No recorded failure cannot happen on this path, and if it somehow does,
+    // stopping is the conservative direction.
+    last.map(is_retryable_failure).unwrap_or(false)
 }
 
 /// DR-29: [`call_with_retries`] plus the `request_id`/`response_id`/probe
@@ -201,8 +246,13 @@ pub async fn call_with_retries_traced(
                 last = Some(failure);
             }
         }
-        if attempt < total && retry_delay_ms > 0 {
+        if another_attempt_is_allowed(attempt, total, last.as_ref()) && retry_delay_ms > 0 {
             tokio::time::sleep(Duration::from_millis(retry_delay_ms)).await;
+        }
+        if !another_attempt_is_allowed(attempt, total, last.as_ref()) {
+            // Either the budget is spent or the class forbids a retry; both mean
+            // the ring ends here, with `last` still holding the real failure.
+            break;
         }
     }
     Err(last.unwrap_or_else(|| McpFailure::new(tool, None, "no attempt was made", 0)))
