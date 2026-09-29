@@ -99,6 +99,13 @@ pub fn copy_tree(src: &Path, dst: &Path, excludes: &[String]) -> anyhow::Result<
 /// silently skipped, it is copied and its size is published as
 /// `evidence_too_large`.
 ///
+/// DR-61 (DEF-2): the one thing that *is* skipped is a superseded file — any
+/// path carrying the DR-49 `*.stale-*` marker.  Independent acceptance measured
+/// that this loop used to copy the previous round's evidence (a stale
+/// `frame-00.png`) straight into the frozen candidate; the marker is the single
+/// predicate that says "this is not this round's artifact".  Skipping is not
+/// deleting: the file stays on the real workspace untouched.
+///
 /// Returns `(relative path, byte size)` for every oversized file, sorted.
 pub fn copy_evidence(src: &Path, dst: &Path, max_bytes: u64) -> anyhow::Result<Vec<(String, u64)>> {
     let mut oversized = Vec::new();
@@ -119,6 +126,9 @@ pub fn copy_evidence(src: &Path, dst: &Path, max_bytes: u64) -> anyhow::Result<V
             .collect::<Vec<_>>()
             .join("/");
         if rel.is_empty() {
+            continue;
+        }
+        if rel.split('/').any(crate::runtime::hygiene::is_expired_name) {
             continue;
         }
         let target = dst.join(&rel);

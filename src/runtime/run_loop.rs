@@ -50,8 +50,8 @@ pub const MCP_SCOPE_WARNING: &str =
      evaluates a frozen copy; the runtime binds both to one candidate identity with pre-QA and \
      around-QA hash assertions (D7).";
 
-/// DR-59: the round started over the previous round's deterministic evidence and
-/// moved it out of the live read path before any role ran.
+/// DR-59/DR-61: the round started over the previous round's evidence and moved
+/// it out of every role's working directory before any role ran.
 pub const PREVIOUS_EVIDENCE_QUARANTINED: &str = "previous_evidence_quarantined";
 
 pub struct Orchestrator {
@@ -337,8 +337,9 @@ pub async fn run(
     orchestrator.adapter.initialize(&workspace)?;
     let _ = orchestrator.force_init; // the adapter decides what "already exists" means
 
-    // DR-59: a new round must not be able to read the previous round's
-    // deterministic evidence.  `smoke-t7` proves the leak is real: that round
+    // DR-59/DR-61: a new round must not be able to read the previous round's
+    // evidence — not through the prompt-named paths and not through a wildcard
+    // walk of `.hoh` either.  `smoke-t7` proves the leak is real: that round
     // started with `smoke-t6`'s `.hoh/deterministic/**` still on disk, the
     // Developer read it, and `runs/smoke-t7/iter-1/traj/developer.attempt1.json`
     // `.messages[54]` carries the *previous* round's `pid 108432`, its "the editor
@@ -346,11 +347,13 @@ pub async fn run(
     // new round's model context.
     //
     // This runs before the `A_0` snapshot and before any role, so the live
-    // evidence path is empty for the whole round.  The previous round's bytes are
-    // moved aside under the DR-49 `.stale-<ts>` name, never deleted, and `.hoh`
-    // is excluded from the artifact hash (DR-11), so the move cannot perturb
-    // `A_0`/`A_t`.
-    let quarantined = crate::runtime::hygiene::quarantine_previous_evidence(&workspace)?;
+    // evidence paths are empty for the whole round.  DR-61 moves every measured
+    // previous-round area (`hygiene::QUARANTINE_AREAS`) to
+    // `runs/<run_id>/quarantine/…` — **outside** the workspace, i.e. outside the
+    // Developer's cwd and outside both view roots (`iter-<n>/{planner-view,candidate}`)
+    // — under the DR-49 `.stale-<ts>` name, never deleted.  `.hoh` is excluded
+    // from the artifact hash (DR-11), so the move cannot perturb `A_0`/`A_t`.
+    let quarantined = crate::runtime::hygiene::quarantine_previous_evidence(&workspace, &run_dir)?;
 
     let excludes = HashExcludes::new(orchestrator.adapter.cache_excludes()).merged();
     let store = VersionStore::new(run_dir.join("versions"));
@@ -359,15 +362,20 @@ pub async fn run(
     let secrets = crate::runtime::secrets::known_secrets(cfg);
 
     let mut warnings = vec![MCP_SCOPE_WARNING.to_string()];
-    if let Some(name) = &quarantined {
+    if !quarantined.is_empty() {
         warnings.push(PREVIOUS_EVIDENCE_QUARANTINED.to_string());
-        append_warning(
-            &run_dir,
-            &format!(
-                "DR-59: moved the previous round's deterministic evidence aside to {name}; this \
-                 round's read path cannot reach it (the bytes are kept, not deleted)"
-            ),
-        )?;
+        for area in &quarantined {
+            append_warning(
+                &run_dir,
+                &format!(
+                    "DR-61: moved the previous round's {} out of this round's read path to {}; \
+                     no role's working directory can reach those bytes (they are kept, not \
+                     deleted)",
+                    area.live,
+                    area.target.display()
+                ),
+            )?;
+        }
     }
     // DR-44: which engine binary are we driving?  The probe runs through mini's
     // `Environment` abstraction (no new dependency), and it is skipped entirely

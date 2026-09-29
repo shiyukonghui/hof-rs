@@ -313,14 +313,66 @@ pub fn mentions_forbidden_source_in_actions_with_root(
 }
 
 // ---------------------------------------------------------------------------
-// DR-59: the previous round's deterministic evidence must not be readable here
+// DR-59/DR-61: the previous round's evidence must not be READABLE here
 // ---------------------------------------------------------------------------
 
 /// DR-59: the workspace-relative deterministic evidence area (DR-17).
 pub const DETERMINISTIC_EVIDENCE_DIR: &str = ".hoh/deterministic";
 
+/// DR-61: the evidence *artifact* area (DR-36 screenshots, replays, recordings).
+pub const EVIDENCE_DIR: &str = ".hoh/evidence";
+
+/// DR-61: the single evidence bundle path.
+pub const EVIDENCE_BUNDLE: &str = ".hoh/evidence.json";
+
+/// DR-61: the MCP argument payloads roles write for `--args-file`.
+pub const ARGS_DIR: &str = ".hoh/args";
+
+/// DR-61: the DR-28 probe scratch area.
+pub const SCRATCH_DIR: &str = ".hoh/scratch";
+
+/// DR-61: the run-directory child the previous round's bytes are moved under.
+///
+/// It is a child of `runs/<run_id>` — **outside** the workspace, outside every
+/// role's working directory (`workspace`, `runs/<id>/iter-<n>/planner-view`,
+/// `runs/<id>/iter-<n>/candidate`), and outside the run directory's own
+/// iteration tree.  Being the run directory's child (rather than a sibling of
+/// it) keeps `hoh status`'s `latest_run_id` — which lists the *directories* of
+/// `runs/` — from mistaking a quarantine for a run, and puts the bytes under the
+/// DR-19 secret scan, which walks `runs/<id>/**`.
+pub const QUARANTINE_DIR: &str = "quarantine";
+
+/// DR-61: every workspace-relative path a round start takes out of the read
+/// path, each one **measured** to be a previous-round leftover a traversal of
+/// `.hoh` can reach (see `TASK-DR61-REPORT.md` §3 for the per-path evidence).
+///
+/// The paths that are *not* here are not here for a measured reason, not for
+/// convenience: `.hoh/{TASK.md,plan.md,TOOLS.md,EVIDENCE_HISTORY.md,PROJECT_MAP.md}`
+/// and `.hoh/skills/**` are rewritten with this round's content by
+/// `write_inputs(&workspace, …)` (`run_loop.rs:672-697`) **before** the Developer
+/// is invoked, so their previous-round bytes are gone from the cwd by the time
+/// any role can read the workspace.
+pub const QUARANTINE_AREAS: &[&str] = &[
+    DETERMINISTIC_EVIDENCE_DIR,
+    EVIDENCE_DIR,
+    EVIDENCE_BUNDLE,
+    ARGS_DIR,
+    SCRATCH_DIR,
+];
+
 /// DR-49/DR-59: how many `.stale-` names are tried before the rename gives up.
 const STALE_NAME_ATTEMPTS: u32 = 64;
+
+/// DR-49/DR-61: does this name carry the "superseded, do not trust" marker?
+///
+/// One predicate, three call sites: DR-49's `invalidate_artifact` *creates* the
+/// marker, DR-59/DR-61's [`quarantine_previous_evidence`] moves a whole area to
+/// the marker and away from the cwd, and `view::copy_evidence` *skips* anything
+/// carrying it — a superseded file is not this round's evidence and must not
+/// enter the frozen candidate (DR-61 / DEF-2).
+pub fn is_expired_name(name: &str) -> bool {
+    name.contains(".stale-")
+}
 
 /// DR-49/DR-59: the name a superseded path is moved to.
 ///
@@ -339,14 +391,39 @@ pub fn stale_name(base: &str, stamp: u64, attempt: u32) -> String {
 /// DR-59: is there anything to move aside?
 ///
 /// Whether a round needs to quarantine is decided by the state on disk, never
-/// unconditionally: a clean round start must not litter the workspace with an
-/// empty `*.stale-*` sibling.
+/// unconditionally: a clean round start must not litter the workspace *or the
+/// run directory* with an empty `*.stale-*` sibling / `quarantine/` directory.
 fn should_quarantine(live: &Path) -> bool {
     live.exists()
 }
 
-/// DR-59: move the previous round's deterministic evidence out of the live read
-/// path before any role of the new round runs.
+/// DR-61: one workspace-relative area moved out of the round's read path.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct QuarantinedArea {
+    /// The workspace-relative live path that was moved, e.g. `.hoh/deterministic`.
+    pub live: &'static str,
+    /// Where it now lives — outside every role's working directory.
+    pub target: PathBuf,
+}
+
+/// DR-61: is `destination` inside `workspace` (lexically, and — when both ends
+/// exist — after canonicalization, so a symlink or junction cannot smuggle the
+/// destination back into the role's cwd)?
+fn destination_is_inside_workspace(workspace: &Path, destination: &Path) -> bool {
+    let lexical = crate::runtime::invoke::absolute_path(destination)
+        .starts_with(crate::runtime::invoke::absolute_path(workspace));
+    let canonical = match (
+        std::fs::canonicalize(workspace),
+        std::fs::canonicalize(destination),
+    ) {
+        (Ok(workspace), Ok(destination)) => destination.starts_with(&workspace),
+        _ => false,
+    };
+    lexical || canonical
+}
+
+/// DR-59/DR-61: move the previous round's evidence **out of the role's working
+/// directory** before any role of the new round runs.
 ///
 /// `smoke-t7` proved the leak is real, not theoretical: that round started with
 /// `smoke-t6`'s `.hoh/deterministic/**` still on disk, the Developer read it, and
@@ -354,37 +431,88 @@ fn should_quarantine(live: &Path) -> bool {
 /// the *previous* round's `pid 108432`, its "the editor is not clean" verdict and
 /// its `os error 10061` transport failure into the new round's model context.
 ///
+/// DR-59 moved those bytes to `<workspace>/.hoh/deterministic.stale-<ts>/` —
+/// still inside the role's cwd, so a wildcard read (`ls .hoh`) still reached
+/// them; independent acceptance measured exactly that (DEF-1) and measured that
+/// `.hoh/evidence/**` was never isolated at all (DEF-2).  DR-61 therefore moves
+/// every [`QUARANTINE_AREAS`] entry to `runs/<run_id>/quarantine/<name>.stale-<ts>`,
+/// which a traversal of the working directory cannot reach.
+///
 /// The evidence is **renamed, never deleted**: the previous round's readings stay
 /// on disk — and out of the artifact hash, because `.hoh` is excluded (DR-11) —
 /// under the repository's DR-49 `.stale-<ts>` convention, which is already the
-/// marker this code base uses for "superseded, do not trust".  Returns the
-/// workspace-relative quarantine name when something was moved, and `None` when
-/// the round started clean.
-pub fn quarantine_previous_evidence(workspace: &Path) -> anyhow::Result<Option<String>> {
-    let live = workspace.join(DETERMINISTIC_EVIDENCE_DIR);
-    if !should_quarantine(&live) {
-        return Ok(None);
+/// marker this code base uses for "superseded, do not trust".  Returns one
+/// [`QuarantinedArea`] per area that was moved, and an empty vector when the
+/// round started clean.
+pub fn quarantine_previous_evidence(
+    workspace: &Path,
+    run_dir: &Path,
+) -> anyhow::Result<Vec<QuarantinedArea>> {
+    let existing: Vec<&'static str> = QUARANTINE_AREAS
+        .iter()
+        .copied()
+        .filter(|area| should_quarantine(&workspace.join(area)))
+        .collect();
+    if existing.is_empty() {
+        return Ok(Vec::new());
     }
-    let base = live
-        .file_name()
-        .map(|name| name.to_string_lossy().into_owned())
-        .unwrap_or_else(|| "deterministic".to_string());
+
+    let root = run_dir.join(QUARANTINE_DIR);
+    // DR-61: structural precondition.  A destination inside the workspace would
+    // reproduce exactly the defect this decision removes, so the round stops
+    // loudly instead of pretending to isolate.
+    if crate::runtime::invoke::absolute_path(&root)
+        .starts_with(crate::runtime::invoke::absolute_path(workspace))
+    {
+        anyhow::bail!(
+            "DR-61: refusing to quarantine into {} — it is inside the workspace {}; the \
+             previous round's evidence would still be reachable from every role's cwd",
+            root.display(),
+            workspace.display()
+        );
+    }
+    std::fs::create_dir_all(&root)?;
+    if destination_is_inside_workspace(workspace, &root) {
+        // Remove the empty directory this call just created before failing.
+        let _ = std::fs::remove_dir(&root);
+        anyhow::bail!(
+            "DR-61: refusing to quarantine into {} — it resolves inside the workspace {}",
+            root.display(),
+            workspace.display()
+        );
+    }
+
     let stamp = crate::adapter::engine::now_seconds();
-    for attempt in 0..STALE_NAME_ATTEMPTS {
-        let target = live.with_file_name(stale_name(&base, stamp, attempt));
-        if !target.exists() {
-            std::fs::rename(&live, &target)?;
-            return Ok(Some(relativize(workspace, &target)));
+    let mut moved = Vec::new();
+    for area in existing {
+        let live = workspace.join(area);
+        let base = live
+            .file_name()
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_else(|| area.rsplit('/').next().unwrap_or(area).to_string());
+        let mut target = None;
+        for attempt in 0..STALE_NAME_ATTEMPTS {
+            let candidate = root.join(stale_name(&base, stamp, attempt));
+            if !candidate.exists() {
+                target = Some(candidate);
+                break;
+            }
         }
+        // DR-49's single-file case may fall back to deleting once its name window
+        // is exhausted.  A whole round of evidence must not be deleted, and must
+        // not be left in the live path either — both outcomes would break this
+        // decision — so the round stops loudly instead.
+        let Some(target) = target else {
+            anyhow::bail!(
+                "DR-61: could not move {area} aside: all {STALE_NAME_ATTEMPTS} \
+                 `.stale-{stamp}` names under {} are taken",
+                root.display()
+            )
+        };
+        std::fs::rename(&live, &target)?;
+        moved.push(QuarantinedArea { live: area, target });
     }
-    // DR-49's single-file case may fall back to deleting once its name window is
-    // exhausted.  A whole round of evidence must not be deleted, and must not be
-    // left in the live path either — both outcomes would break this decision —
-    // so the round stops loudly instead.
-    anyhow::bail!(
-        "DR-59: could not move {DETERMINISTIC_EVIDENCE_DIR} aside: all \
-         {STALE_NAME_ATTEMPTS} `.stale-{stamp}` names are taken"
-    )
+    Ok(moved)
 }
 
 #[cfg(test)]
@@ -565,47 +693,131 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // DR-59
+    // DR-59 / DR-61
     // -----------------------------------------------------------------------
 
-    /// DR-59: the previous round's evidence is **moved**, byte-for-byte, and the
-    /// live read path is left empty.
-    #[test]
-    fn quarantine_moves_the_evidence_aside_and_keeps_the_bytes() {
-        let temp = tempfile::tempdir().unwrap();
-        let workspace = temp.path().join("workspace");
-        write(
-            &workspace.join(".hoh/deterministic/battery.json"),
-            "the editor is not clean\n",
-        );
-        write(&workspace.join(".hoh/deterministic/raw/probe.json"), "{}\n");
-
-        let moved = quarantine_previous_evidence(&workspace)
-            .unwrap()
-            .expect("a round over old evidence must move it aside");
-
-        assert!(moved.starts_with(".hoh/deterministic.stale-"), "{moved}");
-        assert!(
-            !workspace.join(DETERMINISTIC_EVIDENCE_DIR).exists(),
-            "the live evidence path must be empty after the quarantine"
-        );
-        assert_eq!(
-            std::fs::read_to_string(workspace.join(&moved).join("battery.json")).unwrap(),
-            "the editor is not clean\n",
-            "the previous round's bytes must survive the move"
-        );
-        assert!(workspace.join(&moved).join("raw/probe.json").is_file());
+    /// Every file under `root`, as `relative path -> bytes`.
+    fn walk(root: &Path) -> BTreeMap<String, Vec<u8>> {
+        let mut files = BTreeMap::new();
+        for entry in walkdir::WalkDir::new(root).follow_links(false) {
+            let Ok(entry) = entry else { continue };
+            if !entry.file_type().is_file() {
+                continue;
+            }
+            let relative = relativize(root, entry.path());
+            files.insert(relative, std::fs::read(entry.path()).unwrap_or_default());
+        }
+        files
     }
 
-    /// DR-59: the counter-direction — a clean start quarantines nothing and
-    /// creates nothing.
+    /// The seeds of one finished round, one per quarantined area.
+    fn seed_previous_round(workspace: &Path) {
+        write(&workspace.join(".hoh/deterministic/battery.json"), "round one\n");
+        write(&workspace.join(".hoh/deterministic/raw/probe.json"), "{}\n");
+        write(&workspace.join(".hoh/evidence/frame-00.png"), "png\n");
+        write(&workspace.join(".hoh/evidence.json"), "{}\n");
+        write(&workspace.join(".hoh/args/probe.json"), "{}\n");
+        write(&workspace.join(".hoh/scratch/probe.txt"), "probe\n");
+    }
+
+    /// DR-61: the previous round's evidence is **moved out of the workspace**
+    /// byte-for-byte, every measured area is isolated, and a walk of `.hoh` can
+    /// no longer reach one byte of it.
+    #[test]
+    fn quarantine_moves_every_measured_area_out_of_the_workspace() {
+        let temp = tempfile::tempdir().unwrap();
+        let workspace = temp.path().join("workspace");
+        let run_dir = temp.path().join("runs/run-1");
+        seed_previous_round(&workspace);
+
+        let moved = quarantine_previous_evidence(&workspace, &run_dir).unwrap();
+
+        let lives: Vec<&str> = moved.iter().map(|area| area.live).collect();
+        assert_eq!(lives, QUARANTINE_AREAS, "every measured area must be moved");
+
+        for area in QUARANTINE_AREAS {
+            assert!(
+                !workspace.join(area).exists(),
+                "the live path {area} must be gone after the quarantine"
+            );
+        }
+        for area in &moved {
+            assert!(
+                area.target.starts_with(run_dir.join(QUARANTINE_DIR)),
+                "{} must be moved into the run's quarantine: {:?}",
+                area.live,
+                area.target
+            );
+            assert!(
+                !area.target.starts_with(&workspace),
+                "{} must not be moved back inside the workspace: {:?}",
+                area.live,
+                area.target
+            );
+        }
+
+        // The bytes survive, and a wildcard walk of `.hoh` cannot reach them.
+        // (The moved entry carries the `.stale-<ts>` suffix, so lookups match on
+        // a substring rather than on an exact key.)
+        let kept = walk(&run_dir.join(QUARANTINE_DIR));
+        let preserved = |needle: &str| {
+            kept.iter()
+                .find(|(path, _)| path.contains(needle))
+                .map(|(_, bytes)| bytes.as_slice())
+        };
+        assert_eq!(
+            preserved("battery.json"),
+            Some(b"round one\n".as_slice()),
+            "the previous round's bytes must survive the move: {:?}",
+            kept.keys().collect::<Vec<_>>()
+        );
+        assert_eq!(preserved("raw/probe.json"), Some(b"{}\n".as_slice()));
+        assert_eq!(
+            preserved("frame-00.png"),
+            Some(b"png\n".as_slice()),
+            "the evidence dir must be moved: {:?}",
+            kept.keys().collect::<Vec<_>>()
+        );
+        assert_eq!(
+            preserved("evidence.json.stale-"),
+            Some(b"{}\n".as_slice()),
+            "the evidence bundle must be moved as a file: {:?}",
+            kept.keys().collect::<Vec<_>>()
+        );
+        assert_eq!(preserved("args.stale-"), Some(b"{}\n".as_slice()));
+        assert_eq!(
+            preserved("scratch.stale-"),
+            Some(b"probe\n".as_slice())
+        );
+
+        let reached = walk(&workspace.join(".hoh"));
+        assert!(
+            !reached
+                .values()
+                .any(|bytes| bytes.as_slice() == b"round one\n"),
+            "a walk of `.hoh` still reaches the previous round's evidence: {:?}",
+            reached.keys().collect::<Vec<_>>()
+        );
+        assert!(
+            !reached.keys().any(|path| is_expired_name(path)),
+            "a walk of `.hoh` still reaches a `.stale-*` entry: {:?}",
+            reached.keys().collect::<Vec<_>>()
+        );
+    }
+
+    /// DR-59/DR-61: the counter-direction — a clean start quarantines nothing,
+    /// creates nothing, and does not even create the run's quarantine directory.
     #[test]
     fn quarantine_is_a_no_op_on_a_clean_start() {
         let temp = tempfile::tempdir().unwrap();
         let workspace = temp.path().join("workspace");
+        let run_dir = temp.path().join("runs/run-1");
         std::fs::create_dir_all(&workspace).unwrap();
+        std::fs::create_dir_all(&run_dir).unwrap();
 
-        assert!(quarantine_previous_evidence(&workspace).unwrap().is_none());
+        assert!(quarantine_previous_evidence(&workspace, &run_dir)
+            .unwrap()
+            .is_empty());
         let entries: Vec<String> = std::fs::read_dir(&workspace)
             .unwrap()
             .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
@@ -614,28 +826,75 @@ mod tests {
             entries.is_empty(),
             "a clean round start must not create anything: {entries:?}"
         );
+        assert!(
+            !run_dir.join(QUARANTINE_DIR).exists(),
+            "a clean round start must not create an empty quarantine directory"
+        );
     }
 
-    /// DR-59: two quarantines inside the same second must not overwrite each
-    /// other — the `.stale-<ts>-<attempt>` window is what makes the move safe.
+    /// DR-59/DR-61: two quarantines inside the same second must not overwrite
+    /// each other — the `.stale-<ts>-<attempt>` window is what makes the move safe.
     #[test]
     fn a_second_quarantine_in_the_same_second_does_not_collide() {
         let temp = tempfile::tempdir().unwrap();
         let workspace = temp.path().join("workspace");
+        let run_dir = temp.path().join("runs/run-1");
 
-        write(&workspace.join(".hoh/deterministic/battery.json"), "round one\n");
-        let first = quarantine_previous_evidence(&workspace).unwrap().unwrap();
-        write(&workspace.join(".hoh/deterministic/battery.json"), "round two\n");
-        let second = quarantine_previous_evidence(&workspace).unwrap().unwrap();
+        write(
+            &workspace.join(".hoh/deterministic/battery.json"),
+            "round one\n",
+        );
+        let first = quarantine_previous_evidence(&workspace, &run_dir).unwrap();
+        write(
+            &workspace.join(".hoh/deterministic/battery.json"),
+            "round two\n",
+        );
+        let second = quarantine_previous_evidence(&workspace, &run_dir).unwrap();
 
-        assert_ne!(first, second);
+        assert_eq!(first[0].live, DETERMINISTIC_EVIDENCE_DIR);
+        assert_ne!(first[0].target, second[0].target);
         assert_eq!(
-            std::fs::read_to_string(workspace.join(&first).join("battery.json")).unwrap(),
+            std::fs::read_to_string(first[0].target.join("battery.json")).unwrap(),
             "round one\n"
         );
         assert_eq!(
-            std::fs::read_to_string(workspace.join(&second).join("battery.json")).unwrap(),
+            std::fs::read_to_string(second[0].target.join("battery.json")).unwrap(),
             "round two\n"
         );
+    }
+
+    /// DR-61: when the destination would be inside the workspace — the defect
+    /// this decision removes — the round must stop loudly, not isolate in name
+    /// only.  Nothing may have been moved by the failed call.
+    #[test]
+    fn quarantine_refuses_a_destination_inside_the_workspace() {
+        let temp = tempfile::tempdir().unwrap();
+        let workspace = temp.path().join("workspace");
+        write(
+            &workspace.join(".hoh/deterministic/battery.json"),
+            "round one\n",
+        );
+        let run_dir = workspace.join("nested-run");
+
+        let error = quarantine_previous_evidence(&workspace, &run_dir)
+            .expect_err("a destination inside the workspace must be refused");
+
+        let message = error.to_string();
+        assert!(message.contains("DR-61"), "{message}");
+        assert!(message.contains("inside the workspace"), "{message}");
+        assert!(
+            workspace.join(".hoh/deterministic/battery.json").is_file(),
+            "a refused quarantine must not have moved anything"
+        );
+    }
+
+    /// DR-61: the `*.stale-*` marker is one predicate, shared by the mover and
+    /// the candidate-view copy.
+    #[test]
+    fn the_superseded_marker_is_recognized_by_one_predicate() {
+        assert!(is_expired_name("frame-00.png.stale-1790663544"));
+        assert!(is_expired_name("deterministic.stale-1790663544-1"));
+        assert!(!is_expired_name("frame-00.png"));
+        assert!(!is_expired_name("deterministic"));
     }
 }
