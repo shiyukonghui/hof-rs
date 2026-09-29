@@ -1,0 +1,55 @@
+﻿
+run=1 start=23:26:27 exit=0 :: test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.08s
+run=2 start=23:26:32 exit=0 :: test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.07s
+run=3 start=23:26:36 exit=0 :: test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.13s
+run=4 start=23:26:41 exit=0 :: test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.18s
+run=5 start=23:26:46 exit=0 :: test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.07s
+run=6 start=23:26:50 exit=0 :: test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.09s
+run=7 start=23:26:55 exit=0 :: test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.10s
+run=8 start=23:27:00 exit=0 :: test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.09s
+run=9 start=23:27:04 exit=0 :: test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.07s
+run=10 start=23:27:09 exit=0 :: test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.09s
+run=11 start=23:27:14 exit=0 :: test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.19s
+run=12 start=23:27:19 exit=0 :: test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.10s
+run=13 start=23:27:23 exit=0 :: test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.11s
+run=14 start=23:27:28 exit=0 :: test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.20s
+run=15 start=23:27:33 exit=0 :: test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.10s
+run=16 start=23:27:37 exit=101 :: test result: FAILED. 6 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.20s
+----- BEGIN VERBATIM OUTPUT run=16 -----
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.44s
+     Running tests\endpoint_liveness.rs (target\debug\deps\endpoint_liveness-d8e3fbf20bc74977.exe)
+
+running 7 tests
+test a_single_transport_failure_does_not_kill_the_endpoint ... ok
+test business_errors_never_count_toward_the_streak ... ok
+test the_endpoint_state_is_a_stable_evidence_field ... ok
+test two_transport_failures_kill_the_endpoint_and_later_calls_do_not_retry ... ok
+test a_dead_endpoint_stops_the_readiness_poll ... ok
+test the_editor_endpoint_state_is_separate ... FAILED
+test registering_a_new_endpoint_re_arms_the_route ... ok
+
+failures:
+
+---- the_editor_endpoint_state_is_separate stdout ----
+
+thread 'the_editor_endpoint_state_is_separate' (109004) panicked at tests\endpoint_liveness.rs:435:10:
+the editor endpoint is alive: MCP transport failure to http://127.0.0.1:50655/mcp: http://127.0.0.1:50655/mcp: Network Error: 你的主机中的软件中止了一个已建立的连接。 (os error 10053)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    the_editor_endpoint_state_is_separate
+
+test result: FAILED. 6 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.20s
+
+error: test failed, to rerun pass `--test endpoint_liveness`
+----- END VERBATIM OUTPUT run=16 -----
+run=17 start=23:27:42 exit=0 :: test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.21s
+run=18 start=23:27:47 exit=0 :: test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.12s
+run=19 start=23:27:52 exit=0 :: test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.09s
+run=20 start=23:27:56 exit=0 :: test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.09s
+run=21 start=23:28:01 exit=0 :: test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.10s
+run=22 start=23:28:06 exit=0 :: test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.04s
+run=23 start=23:28:10 exit=0 :: test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.08s
+run=24 start=23:28:15 exit=0 :: test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.10s
+run=25 start=23:28:20 exit=0 :: test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.08s

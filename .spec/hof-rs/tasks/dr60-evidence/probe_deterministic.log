@@ -1,0 +1,3 @@
+old_shape first_read=Err(Os { code: 10035, kind: WouldBlock, message: "无法立即完成一个非阻止性套接字操作。" })
+fixed_shape first_frame="GET / HTTP/1.1\r\n\r\n"
+old_shape closed without answering

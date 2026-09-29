@@ -1,0 +1,26 @@
+docs(spec): DR-60 report - the endpoint_liveness flake is a non-blocking accept socket, fixed at the cause (DR-60)
+
+Conclusion: the flake is a defect of the test's own ScriptedMcp loopback double,
+not of the product. The listener is non-blocking only so its accept loop can poll
+the shutdown flag, and on Windows a socket accepted from a non-blocking listener
+inherits that mode; serve() is written as a blocking reader, so its read could
+return WouldBlock before the client's request landed, after which serve took
+Err(_) => return and closed the connection without answering. The client (ureq)
+reported that as "Error encountered in the status line" (os error 10053/10054).
+
+Measured, not inferred: 65 direct runs of the endpoint_liveness target failed 2
+times (3.1%), so it is NOT limited to full-suite concurrency; an instrumented
+probe of the exact failing call shape recorded served=1 would_block=1
+read_error=0 on every failure, i.e. the double did receive the connection and
+gave up before reading the request. A deterministic trigger reproduces both
+directions on demand: reading an accepted non-blocking stream while the request
+is still in flight yields Err(WouldBlock, 10035) and no answer, while the fixed
+stream blocks and receives the full request.
+
+Fix: one statement at the accept site (set_nonblocking(false) on the accepted
+stream), committed separately as 0f78bb0. No lengthened sleep, no retry, no
+relaxed assertion, no test weakened or ignored; ignored stays 7. After the fix:
+325 probe iterations with 0 failures and 0 WouldBlock events, then ten
+consecutive full cargo test --offline suites, each exit 0 / 372 passed / 0 failed
+/ 7 ignored, with zero occurrences of panicked/FAILED/os error across all ten
+logs. E3 is not claimed: only a real-machine round can decide it.

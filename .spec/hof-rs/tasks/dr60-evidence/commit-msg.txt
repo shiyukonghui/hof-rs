@@ -1,0 +1,22 @@
+test(endpoint_liveness): state the accepted socket's blocking mode so the double always answers (DR-60)
+
+The ScriptedMcp listener is non-blocking only so its accept loop can poll the
+shutdown flag. On Windows a socket accepted from a non-blocking listener
+inherits that mode, and serve() below is written as a blocking reader, so its
+read could return WouldBlock before the client's request landed; serve then
+took Err(_) => return and the connection was closed without an answer. The
+client (ureq) reported exactly that as "Error encountered in the status line"
+(os error 10053/10054), which is the flake this batch was opened for: about 3%
+of direct endpoint_liveness runs failed this way, alone as well as in the full
+suite.
+
+The mode is now set explicitly at the accept site: one statement, no lengthened
+sleep, no retry, no relaxed assertion. Recorded measurement: 300 iterations of
+the failing call shape with the double counting its own WouldBlock events ->
+0 failures, 0 WouldBlock events (before the fix the same probe failed with
+would_block=1 on every failure, the first at iteration 37). A deterministic
+trigger reproduces both directions: reading an accepted non-blocking stream
+with the request still in flight yields Err(WouldBlock, 10035) and no answer,
+while the fixed stream blocks and receives the full request.
+
+Tested tree: ef74c6092f4ea053aedd8bd94b69b84dd64719d4 plus this file only.
