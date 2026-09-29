@@ -1,0 +1,76 @@
+﻿############################################################
+# TASK-154 final self-checks (real output, no paraphrase)
+############################################################
+
+=== 1. engine repo state ===
+HEAD   = fc63af77c33368c4a1bb839c95d19750554f63a3
+branch = feature/mcp-server-module-rebuild
+git status --porcelain lines = 0  (0 = clean)
+the three TASK-154 commits:
+   56f93ca180e249a7fd8d50814fc8034794464ce6  2026-09-29 10:18:40 +0800  evid: read the pre-override wording from the engine baseline (TASK-154)
+   627aeacee47d835b3a13e0fcaee86bc8c027f825  2026-09-29 10:18:48 +0800  evid: drop the cross-repo fixture path and the user port from mcp032 (TASK-154)
+   bdf654b1086d27999e2a278ad187fadc40ce034c  2026-09-29 10:18:56 +0800  docs: record _meta.generated_from as history, not current input (TASK-154)
+remote-tracking refs in the engine repo = 3  (0 => no remote configured => nothing could have been pushed)
+   refs/remotes/origin/HEAD
+   refs/remotes/origin/feature/mcp-server-module-rebuild
+   refs/remotes/origin/master
+
+=== 2. forbidden literals in the two edited scripts ===
+--- modules/mcp_server/scripts/mcp029_clear_default_evidence.ps1
+    L69 moonbit-hof-rs isComment=True : # `F:\moonbit-hof-rs\tests\fixtures\mcp\tools_list.json` - a file outside the
+    L83 moonbit-hof-rs isComment=True : # the state this script always intended (`git -C F:\moonbit-hof-rs show
+    L115 9877 isComment=True : #  The decision-maker's own Godot editor listens on 9877 on this machine, and both
+    L134 9877 isComment=False : $portLiteralPattern = [regex]::Escape('9877')
+    L288 9877 isComment=True : # TASK-154: the two old `port_9877_owner_before/_after` checks are gone with the
+    L296 9877 isComment=False : $userPortLiteralPattern = [regex]::Escape('9877')
+    L436 9877 isComment=True : # TASK-154: the `port_9877_owner_after` check that stood here went with
+    totals: moonbit-hof-rs=2 (non-comment 0) ; 9877=5 (non-comment 2)
+    bytes=26174  BOM=False  non-ASCII bytes=0
+--- modules/mcp_server/scripts/mcp032_d3_d4_d6_evidence.ps1
+    L70 moonbit-hof-rs isComment=True : # `F:\moonbit-hof-rs\tests\fixtures\mcp\tools_list.json` - a file outside the
+    L85 moonbit-hof-rs isComment=True : # `git -C F:\moonbit-hof-rs show db2eed7^:tests/fixtures/mcp/tools_list.json` (a
+    L108 9877 isComment=True : #  The decision-maker's own Godot editor listens on 9877 on this machine, and this
+    L132 9877 isComment=False : $portLiteralPattern = [regex]::Escape('9877')
+    L353 9877 isComment=True : # TASK-154: the old six-way 9877 classification (`New-McpPortGuard` /
+    L359 9877 isComment=False : $userPortLiteralPattern = [regex]::Escape('9877')
+    L580 9877 isComment=True : # TASK-154: the old `port_9877_guard` verdict stood here (it classified the state
+    totals: moonbit-hof-rs=2 (non-comment 0) ; 9877=5 (non-comment 2)
+    bytes=35879  BOM=False  non-ASCII bytes=0
+
+=== 3. frozen artifacts: worktree blob vs HEAD blob ===
+tools_list.renamed.json (engine)
+    bytes=154272 sha256=fd00c75e5174ec923d5a91c0323afa0804f523b385eae3d4f78d8c71e1f895df
+    worktree blobs=3b1b191dc42f1cec8bc7cdd3504247c935b52f5e  HEAD blob=3b1b191dc42f1cec8bc7cdd3504247c935b52f5e  IDENTICAL=True
+rename-baseline-tools-list.json (engine)
+    bytes=48749 sha256=8f8051c4c0f8941089f0b21a193cef7c51fa7c41d7e312b1463ea8593f313c54
+    worktree blobs=543b49b2583bf06c3aba2a320649a31eda272e3e  HEAD blob=543b49b2583bf06c3aba2a320649a31eda272e3e  IDENTICAL=True
+godot-mcp/tools/run_gates.ps1 (OUTER repo F:\moonbit-hof-rs)
+    bytes=13180 sha256=23853de248642d2440adde1d2003b54c1c3fd5209420c0e5d0180582c1a2b5b7
+    worktree blobs=b3c5ea655b949836f7dc640fc54c255bc526cb16  HEAD blob=b3c5ea655b949836f7dc640fc54c255bc526cb16  IDENTICAL=True
+check_engine_anchor.ps1 (engine)
+    bytes=21235 sha256=1ff3f865b8dc843585a54f98ff94c98db28fcf29ca8c07d12320f532116042ef
+    worktree blobs=8f048b31ff049bc8ec394a86b0b0d37ac72823d4  HEAD blob=8f048b31ff049bc8ec394a86b0b0d37ac72823d4  IDENTICAL=True
+check_hardcoded_counts.py (engine)
+    bytes=10174 sha256=6d312b17d225a6bfaa373be9622d916bf8c2f0a8a59b278f10158191cfa92394
+    worktree blobs=07283d48866a119d4bf9be13843a6c0ec7fd0456  HEAD blob=07283d48866a119d4bf9be13843a6c0ec7fd0456  IDENTICAL=True
+
+=== 4. hof-rs side untouched (except the sanctioned evidence directory) ===
+hof-rs HEAD = a5038e0
+hof-rs git status --porcelain lines = 1  (0 = clean)
+   ?? godot-mcp/recovery/work/task154/
+hof-rs last 3 commits:
+   a5038e0 2026-09-29 docs(engine): D232 - agree not to mechanise the g09 guardrails (two of them already are the criterion; the third cannot be strengthened from inside the engine repo); mcp029's hardcoded 9877 was my inventory miss
+   ad9540b 2026-09-29 docs(spec): D231 - design revision 15 (v0.10): E3 must rest on the contract's semantic tools, a dead game endpoint must fail fast, and retries must be class-aware
+   c6233b6 2026-09-29 docs(engine): open TASK-154 - decouple the two legacy evidence scripts (one hardcodes port 9877), document the frozen artifact's historical _meta field, and optionally machine-ise the g09 guardrails
+the forbidden fixture path: exists=True bytes=71481 sha256=50c5fb4204ee5b957b017eb994e7f7bd73f9b299e6aa9471d5cf11683e067da0
+
+=== 5. guardrail 3 evidence (dot-sources the anchor judge; runs last on purpose) ===
+g09 judgement: verdict=ANCHOR_STRUCTURAL_EQUIVALENT anchor=035edfce7 head=fc63af77c red_count=0 ok=True
+    git -C <engine> diff --name-only 035edfce7..fc63af77c -- modules/mcp_server/scripts/check_engine_anchor.ps1 => 0 line(s) []
+    git -C <engine> diff --name-only 035edfce7..fc63af77c -- modules/mcp_server/scripts/check_hardcoded_counts.py => 0 line(s) []
+    git -C <outer F:\moonbit-hof-rs> diff --name-only -- godot-mcp/tools/run_gates.ps1 => 0 line(s) []
+    outer runner blob: worktree=b3c5ea655b949836f7dc640fc54c255bc526cb16 HEAD=b3c5ea655b949836f7dc640fc54c255bc526cb16 IDENTICAL=True
+
+=== 6. ports 9870..9889 listener state at the end ===
+LISTENING rows in 9870..9889 = 0
+DONE
