@@ -23,6 +23,10 @@ New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 $path = Join-Path $root $file
 $headBlob = (git rev-parse "HEAD:$file").Trim()
 $original = [System.IO.File]::ReadAllText($path)
+# The working tree is CRLF; the here-strings below are LF.  Normalising the file
+# text to LF lets the needles be written as ordinary LF blocks.  The revert is
+# never string surgery: it is `git checkout --`, proven by blob identity.
+$originalLf = $original.Replace("`r`n", "`n")
 
 function Assert-Clean {
     $porcelain = git status --porcelain
@@ -75,8 +79,8 @@ $plantA = @"
                     .await;
                 }
 "@ -replace "`r`n", "`n"
-if (-not $original.Contains($guard)) { throw "plant A: the dead-endpoint guard was not found verbatim" }
-$planted = $original.Replace($guard, $plantA)
+if (-not $originalLf.Contains($guard)) { throw "plant A: the dead-endpoint guard was not found verbatim" }
+$planted = $originalLf.Replace($guard, $plantA)
 if ($planted -eq $original) { throw "plant A: the plant did not change the file" }
 [System.IO.File]::WriteAllText($path, $planted)
 $plantedBlob = (git hash-object $file).Trim()
@@ -88,8 +92,8 @@ Restore 'A'
 $plantB = @"
         let tool_name = tool.to_string();
 "@ -replace "`r`n", "`n"
-if (-not $original.Contains($guard)) { throw "plant B: the dead-endpoint guard was not found verbatim" }
-$plantedB = $original.Replace($guard, $plantB)
+if (-not $originalLf.Contains($guard)) { throw "plant B: the dead-endpoint guard was not found verbatim" }
+$plantedB = $originalLf.Replace($guard, $plantB)
 if ($plantedB -eq $original) { throw "plant B: the plant did not change the file" }
 [System.IO.File]::WriteAllText($path, $plantedB)
 $plantedBlobB = (git hash-object $file).Trim()
