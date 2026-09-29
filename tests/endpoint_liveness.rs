@@ -40,6 +40,12 @@ fn a_closed_loopback_endpoint() -> (String, u16) {
 
 /// A loopback JSON-RPC double that answers exactly the scripted replies, counts
 /// the requests it served, and can be switched to business errors on demand.
+///
+/// The listener is non-blocking only so this accept loop can poll `shutdown`
+/// with a 2 ms back-off; `Drop` wakes it with one connection.  The socket is
+/// put back into **blocking** mode before it is served — see the comment at
+/// that call.  `serve` below is a blocking reader and must be allowed to wait
+/// for the client's request.
 struct ScriptedMcp {
     addr: SocketAddr,
     served: Arc<AtomicUsize>,
@@ -68,6 +74,12 @@ impl ScriptedMcp {
                 match listener.accept() {
                     Ok((stream, _)) => {
                         thread_served.fetch_add(1, Ordering::SeqCst);
+                        // DR-60: state the mode instead of inheriting the
+                        // listener's non-blocking flag — `serve` below is a
+                        // blocking reader.
+                        stream
+                            .set_nonblocking(false)
+                            .expect("an accepted stream must block on reads");
                         serve(stream, thread_business.load(Ordering::SeqCst) != 0);
                     }
                     Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
