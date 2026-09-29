@@ -9202,3 +9202,49 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 - 预期影响与回滚点：若报告确有 P0/P1 级可采纳项，将据阶段关卡**显式回到概要/详细设计**新增 `§16`，
   而不是在实现里悄悄加。克隆体在 `F:\HarnessOfHarness`，**与 hof-rs 仓无耦合**，可直接删除。
 
+## D236 — hoh-lite 侦察报告到手：血统判为**异源**（只借概念）；P0/P1 的处置与排期
+
+- 日期：2026-09-29
+- 侦察交付：`.spec/hof-rs/tasks/TASK-HOHLITE-REPORT.md`（804 行 / 10 节；只读、未运行对方脚本、未联网）。
+- **血统（决定性；我另做独立复核）**：它 vendored 的 Godot MCP **不是**我们这一支 ——
+  `satelliteoflove/godot-mcp` **v4.1.0**（`_vendor/godot-mcp.lock.json:2-8`，commit `15794ee9…`，**MIT**，
+  266 文件 + 342 KB overlay patch），**Node/TS MCP server（stdio）+ GDScript addon（`ws://127.0.0.1:6550`）**，
+  复用 Godot 调试器协议，工具有 `godot_animation_edit`/`godot_editor_read`/`godot_exec` 之类形态。
+  我方：引擎内 `modules/mcp_server`、**HTTP POST `127.0.0.1:9877/mcp` JSON-RPC 2.0**、**177 条四前缀**。
+  **我的复核**：夹具 **177** 条、`editor_/project_/running_game_/os_` 四前缀齐全、对方 `godot_*` 标识符 **47** 个
+  （报告说的 21 是"工具"子集）⇒ **两侧命名空间不相交**；我方夹具中 `godot_` 仅 1 次出现且**不在任何工具名上**
+  （见本条末）。**碰撞风险**：它的 addon 目录叫 `addons/godot_mcp`，与我方**已拆除**的 `addons/godot_mcp_rs`
+  形近 ⇒ **须在文档中显式区分**。
+  ⇒ **只借概念、不借代码**（借代码同时带 **Apache-2.0 + MIT** 义务，且与**冻结契约语义冲突**）。
+- **P0（4 条，原则同意纳入，但必须走设计闸门，不抢跑）**：
+  ① **工具调用回执** + 按角色**类别覆盖闸门** + debug cycle 定义 + **源文件新鲜度闸门** + 硬闸门/**过程警告双层**
+     （`core/mcp_evidence.py`；**以回执文件为输入 ⇒ 离线可测**，正对 E2/E3 与 DR-49/DR-54）；
+  ② **私有无损证据槽**与"模型可见**有界预览**"分离（overlay `:6183-6190/:5430-5510/:5244-5248`）——
+     **限制**：它做在 MCP server **内部**，**我们不可改引擎** ⇒ 必须落到 hof-rs **ToolChannel 侧**
+     （收到 image payload 由 Runtime 写盘 + 哈希）；
+  ③ **绕过通道封锁**（`local_env.py:31-60`：非 `--headless` 直接 **exit 126**、屏蔽 `xdotool`/`ydotool`）——
+     我们只有"**拒绝表**"、没有"**不可达**"；E3 的"输入注入只到编辑器侧"正是此形态；
+  ④ **"本轮真实"通用判据**（报告文件 mtime+size 前后比对 `runner.py:462-522`；源新鲜度闸门
+     `mcp_evidence.py:227-273`，**显式豁免** `project.godot` 与 import/Runtime 托管产物）。
+- **P1（属设计变更 ⇒ 必须先过阶段关卡）**：Tester 拆两阶段 —— 内环 `acceptance`
+  （`acceptance_checklist`/`mismatches`/`repair_required`，同环 Developer 修复 **≤2 次**）+ 外环 `next_loop`
+  （`remaining_bugs`/`next_loop_goals`/`preserve`），且**修复失败保留最后有效候选**
+  （`runner.py:2904-2951/3181-3186`；`prompts.py:61-115`）。**会改 `E_t` 语义与退出码** ⇒
+  裁决：**单独一批，先改 `DESIGN-DETAIL` 再实现；作为固定语义，不做可选开关。**
+- **不建议采纳 12 条**（含 benchmark 神谕评分、把权限外包给第三方 CLI 的 `--sandbox`、per-role 多模型/
+  `reasoning_effort`、vendor+overlay 演进、其"usage 缺失即 None"——**弱于我们 R12**）；
+  **完全缺失能力 10 条**已按价值排序并给最小落地。许可取证：仓根 **MIT**、hoh-lite **Apache-2.0**、
+  vendored godot-mcp **MIT**；**"可采概念"与"带义务代码"已分开**。
+- **不得当成已核事实的 10 项**（`assets/` 182 MB 许可未读、**无 schema 级逐字段比对**、`harbor`/GameCraft-Bench
+  外部 checkout 未读、未联网无法核对 PyPI sdist 等）。
+- 裁决与排期（**不抢跑**）：
+  1. **"参考"交付完成**；**不立即采纳**任何条目。
+  2. **P0 四条 ⇒ 下一轮设计修订（§16）**：先改设计、再实现、再独立验收；其中 ② 必须按"落到 ToolChannel 侧"
+     改写（**不得**依赖改引擎）。
+  3. **P1 单独一批**，**不得**混进当前 §15 批次。
+  4. **P0/P1 一律排在 §15 完成 + 真机 T=1 复测之后** —— 当前唯一能让 E2/E3 转 met 的仍是 §15 + 真机，
+     **不得**因"有新参考"而插入未验证的大改。
+- 纪律：本条续 D235 的偏差记录；另我**违反了自己"不用 shell 重定向"的规矩**，首次复核写坏并输出了一个
+  **无意义的 `intersection count: 0`**（两个中间文件根本没生成），随即用单行无重定向重做；
+  **无意义结果不得采信**记在此。
+
