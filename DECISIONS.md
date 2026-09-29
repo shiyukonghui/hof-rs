@@ -9248,3 +9248,30 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
   **无意义的 `intersection count: 0`**（两个中间文件根本没生成），随即用单行无重定向重做；
   **无意义结果不得采信**记在此。
 
+## D237 — 参考范围收窄：**只参考 hoh-lite 的非 godot-mcp 部分**；Godot MCP **以我方引擎集成方式为准**
+
+- 日期：2026-09-29
+- 触发问题（用户指令）："我们只参考 hof 其他部分，godot-mcp 部分使用我们的 godot 引擎集成 mcp 的方式。"
+- 裁决（生效于本条）：
+  1. **参考范围 = hoh-lite 的 `core`/`harnesses`/`policies`/`benchmarks`/`templates`/`adapters` 等非 godot-mcp 部分。**
+  2. **Godot MCP 部分整体排除**：其 vendored `satelliteoflove/godot-mcp` v4.1.0、`tools/godot-mcp`、
+     GDScript addon、`ws://127.0.0.1:6550`、21 个 `godot_*` 工具、以及所有 **overlay patch** 内实现在其
+     MCP server 里的机制 —— **一律不作为参考来源**（连概念也不借）。
+  3. **我方引擎集成方式为准**：引擎内 `modules/mcp_server`、HTTP POST `127.0.0.1:9877/mcp` JSON-RPC 2.0、
+     **177 条四前缀**契约（冻结、逐字受门保护）。**任何建议都不得要求改引擎、不得要求换协议、不得动契约。**
+- **对 D236 的逐条重定**（这是本条最实用的部分）：
+  | 项 | 原判 | 重定后 |
+  |---|---|---|
+  | P0① 工具调用回执 / 类别覆盖闸门 / debug cycle / 源新鲜度闸门 / 硬闸门+过程警告双层（`core/mcp_evidence.py`） | 采纳候选 | **仍成立**（属 `core`，非 godot-mcp） |
+  | P0② 私有无损证据槽 vs 有界模型可见预览 | 采纳候选（须落到 ToolChannel 侧） | **改判**：其**实现**在**它的 MCP server**里 ⇒ **按新范围不再作为参考来源**；但该**需求本身**由**我方** DR-49/DR-54 已经蕴含 ⇒ **保留为 hof-rs 侧需求，去掉"来自 hoh-lite"的出处** |
+  | P0③ 让绕过通道"不可达"而非只"拒绝"（`local_env.py:31-60`） | 采纳候选 | **仍成立**（`local_env.py` 属其 harness，非 godot-mcp） |
+  | P0④ "本轮真实"通用判据（`runner.py:462-522`、`mcp_evidence.py:227-273`） | 采纳候选 | **仍成立**（`core`/`runner`） |
+  | P1 Tester 两阶段（`runner.py`/`prompts.py`） | 单独一批、先设计 | **仍成立**（`core`） |
+  | 命名碰撞（`addons/godot_mcp` vs 我方已拆除的 `addons/godot_mcp_rs`） | 文档中区分 | **仍保留为纯文档说明**（不引入任何其产物） |
+- 交付调整：**原 804 行报告仍有效但需按新范围重榨**——已写 `TASK-HOHLITE-REF2.md`，
+  要求**排除一切 godot-mcp 材料**、并把重心放到我们**完全没有**的
+  `policies`/`benchmarks`/`templates` 与 `core` 的循环/证据机制上；由**全新子代理**执行，
+  **等当前 §15 实现批次交付后立即派发**（不并行，遵守"同一时刻一个子代理"，避免再次偏差）。
+- 预期影响与回滚点：参考线的产出**只**影响后续设计修订（§16 及以后），**不触碰**引擎、契约、协议；
+  引擎线（TASK-151..154 已完成）与 §15 主线**不受影响**。回滚点：本条为范围裁决，撤销即回到 D236 的宽口径。
+
