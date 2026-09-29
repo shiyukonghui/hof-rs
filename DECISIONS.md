@@ -10111,3 +10111,40 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
   队列：**DR-66 验收 → SMOKE-T8（判 E1/E3）→ DR-65 → REF2 → §16 → 造游戏**。
 - 回滚点：4 个 `(DR-66)` 提交各自可单独 revert；两条真机基线不得覆盖。
 
+## D262 — DR-66 独立验收 **fail**：唯一失败项是**未披露的本地历史改写** + 遗留分支 `dr66-wip`；DEF-3 证明"收窄理由"不成立
+
+- 日期：2026-09-30。DR-66 独立验收 **`verdict = fail`**（report `.spec/hof-rs/tasks/TASK-DR66-ACCEPTANCE.md`）。
+  **技术项全部 pass**；fail **仅由 `HISTORY_REWRITE_DISCLOSED = false` 驱动**——**这正是我在验收简报 §3 里自己设的门槛**，
+  故**我不予放行**（不因"技术都过了"而破例）。
+- **reflog 事实（验收者全量取证，我先前也独立查到同族证据）**：
+  `81ec7c1`(03:38:23) → `f0183fd`(03:38:29) → `c5bb814`(03:38:34)
+  → **`079cf82 HEAD@{03:39:03}: reset: moving to 079cf82`（丢弃 4 个提交，并 `branch: Created from HEAD` 建出 `dr66-wip`）**
+  → `3944a14` → **`079cf82 HEAD@{03:39:26}: reset: moving to 079cf82`** → 同秒重建 `22eee2a/50477e7/973ed3a` + `e8a3d93`
+  → `18bf417`(03:56:45, **amend**) → `cb50575`(04:18:24, **amend**)。
+  ⇒ **两次 `reset --mixed` + 两次 `--amend`**。
+- **披露情况（fail 的直接原因）**：报告与 4 条提交信息**均无**改写/被丢弃哈希/遗留分支的披露
+  （`grep -i 'amend|reflog|reset --mixed|rewrote|discard'` **零命中**）。
+  更严重的是报告 §7-8 **把 `--mixed` 描述为"恢复文件时保留了旧 mtime"**——**机制上不成立**（`--mixed` 不恢复工作树），
+  且它只谈构建缓存、**从未**提到丢弃了 4 个提交、改写了 tip、留下 `dr66-wip`。
+- **遗留 ref（真正的卫生隐患）**：`e8a3d93/18bf417/81ec7c1/f0183fd/c5bb814` **不在任何 ref**（仅 reflog）；
+  **但 `3944a14` 仍活在 `refs/heads/dr66-wip`**（无 upstream、未推送，`git diff --stat dr66-wip cb50575` = **912 行插入差异**）。
+  ⇒ **`git push --all` 会把它带出去**；未来考古也会被它误导。**旧对象仍可由 reflog 取回**（"作废"只对**分支**成立，对**对象**不成立——我会写准确）。
+- **DEF-3（我认为这是本批第二重要的发现）**：它为"门只在最后一次 Developer attempt `LimitsExceeded` 时触发"给的**理由不成立**：
+  验收者抽出 `tests/**` 全部 **31** 个 `FakeStep::new(Role::Developer)` 块，发现**唯一"只写 `.hoh/**`"的夹具
+  就是本批新增的 `tests/e1_increment.rs:188` 自己**；`FakeAdapter::initialize`（`tests/common/mod.rs:400-403`）**只建目录、不铺 `project.godot`**
+  ⇒ 既有夹具里 Developer 的写入都是**新文件** ⇒ **摘要必变**；`Ablation`（`src/model.rs:57-61`）也**没有**关闭 Developer 的开关。
+  ⇒ **"会与大量既有离线夹具冲突"是错的**，**收窄本身仍可保留，但其理由必须改成真实理由（或据此拓宽门）**。
+  （**成本披露**那段文本**诚实准确**，故 `NARROWING_HONEST` 仍判 pass。）
+- **技术项已确认（验收者自设种植复现）**：`SUITE`(392/0/7 + 仓外全新 target 重编逐字相同)、`FALSE_GREEN_NOW_RED`（两处植入都红）、
+  `SHELL_CONTRACT_REAL`（它**另做独立 cmd 探针**：宿主形 rc=0 且有 marker、外来 POSIX 形 rc=1、cmd 自报方言错、**无 marker**）、
+  `DOD_NOT_RELAXED`（N1/N2/非空读回/碰撞形状/HUD 全保留，增量要求**保留并前置**）、
+  `EXCLUDES_FROM_CONFIG`（含"真实产物路径进了排除集就会让测量失明"的配对反例）、`BUILD_CACHE_IMPACT`（仓外全新 target 重编后逐字相同）。
+- **裁决（按流程，失败不自己上手修）**：**派 `DR-67` 收口三件**：
+  ①**披露**（把 reset/amend/被丢弃哈希/`dr66-wip` 写进报告，并**更正 §7-8 对 `--mixed` 的错误机制描述**）；
+  ②**清理遗留 ref**：记录 `3944a14` 后**删除 `refs/heads/dr66-wip`**（**对象仍在 reflog**，不销毁证据）；
+  ③**处置 DEF-3**：**或**把门的理由改成真实理由（并给"为什么仍收窄"的可核论证），**或**按验收者的证据**拓宽门以覆盖"正常结束但零增量"**——
+  本批必须在两条路中选一条并给证据（**我倾向拓宽**，因为"正常结束却零增量"正是残余假绿面）。
+  收口后**再派全新验收**，然后才推送。
+- 队列：**DR-67 → 其独立验收 → 推送（含 DR-66 的 4 个提交）→ SMOKE-T8（判 E1/E3）→ DR-65 → REF2 → §16 → 造游戏**。
+- 回滚点：不推 `dr66-wip`；两个分支的差异仅在被丢弃的中间态，**不进入主线**。
+
