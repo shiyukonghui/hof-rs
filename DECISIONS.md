@@ -8773,3 +8773,60 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
     成功后应能解掉 E3 的一大障碍（但要与 hof-rs 侧的 §15 绕行**一起**才能让 E3 有机会转 met）。
   - 回滚点：引擎仓逐条 revert 到 `15bbf1f50e`；hof-rs 侧不受影响。
 
+## D225 — TASK-151 交付：游戏进程挂死的根因是**调试器断点等待**（非模块缺陷），修法与裁决
+
+- 日期：2026-09-29
+- 触发问题：`TASK-151` 实现子代理交付报告 `godot-mcp/recovery/reports/TASK-151-REPORT.md`。
+- **根因（实测，非常干净）**：
+  1. `running_game_execute_gdscript` 在**普通游戏进程**里**没有缺陷**：parse 错误 **16 ms** 回 `-32602`，
+     analyzer 错误 `str(Input.action_press("move_right"))` **12 ms** 回 `-32602` + `data.parse_error`。
+  2. 它**只**在 `editor_play_scene` 起的游戏子进程里冻结——因为 `EditorRun::run()` **总是**给该子进程追加
+     `--remote-debug tcp://127.0.0.1:6007 --editor-pid <editor>`（`editor/run/editor_run.cpp:64-71`）。
+  3. 有调试器时，`GDScript::reload()` 的失败路径会调 `debug_break_parse()` →
+     `RemoteDebugger::debug()` 的 `while (is_peer_connected())`（`core/debugger/remote_debugger.cpp:444`），
+     **把主线程停在那里**——而 MCP 端点正是主线程在泵帧。运行期路径（`gdscript_vm.cpp:3988-3989` → `debug_break`）同形。
+  4. **判别性对照实验**：手工起游戏、`--remote-debug` 指向自己的监听器、**不带 `--editor-pid`** ⇒
+     **同一个连接在 23.58 s 后得到应答，正好是 peer 关闭那一刻** ⇒ 明确区分"在等调试器"与"死套接字/死进程"。
+- **我此前解读的更正（子代理已按我的要求在报告 §3.4 落地）**：hof-rs 把 730 s 后的 `10061` 读成
+  "监听消失/进程死亡"是**下游症状**；实测冻结期间 60 s 采样里进程与监听**全程存活**（`alive=True listen=yes`），
+  只是 `GET /mcp` 不应答。另测得：`--editor-pid` 会让子进程在其编辑器消失后**约 2 s 自行退出**。
+  **未复现 730 s 那个时长本身**（子代理如实列为未验证项）。
+- **修法**：`MCPTools::GDScriptErrorBreakGuard` 在那**一次**引擎调用外抬升
+  引擎自己的 `ScriptDebugger::ignore_error_breaks` 并**还原其原值**；无调试器时**零写入**。
+  **线上契约/描述/schema 一字未改。** 引擎提交（未 push）：`c0f2dfba31`（红测试）、`97fc49df4b`（修复）、
+  `035edfce7f`（HANDOVER §3(k)）。
+- **门与回归（全新 mono 二进制上）**：mono 版本 `4.8.dev.mono.custom_build.035edfce7`；
+  `g01` exit=0 **160/160**（6801 断言）、`g02` **1586/1586**、`g03`..`g10` 全部 exit=0
+  （`g10` **22/22**、`g04` **3/3** 契约逐字、`g09` ANCHOR_EQUAL）。release 前后各变体的 sha256+mtime 都在报告 §5.4。
+  **实机验收 34/34 检查在 mono 与 plain-console 两个变体上都通过**：被玩的游戏 3 ms 回 `-32602`
+  （mono 16 ms），运行期错误仍 `-32000` + `data.script_error`（4 ms / mono 3 ms），端点与进程存活。
+- 裁决：
+  1. **修法予以接收**（待独立验收）。
+  2. **执行窗口（`call_gdscript_capturing`）也在守卫范围内——保留，不放宽。** 理由：MCP 端点是**服务**，
+     调用方提供的 body **不得**把编辑器"暂停在调试器里"（那是一条可用性缺陷，且接近拒绝服务）；
+     运行期错误的**书面语义**本就是 `-32000` + `data.script_error`，新行为正是契约要求；
+     且守卫**还原**原值 ⇒ MCP 之外的交互式调试**不受影响**。子代理已给出"若嫌过强只需移除一个 scope 块"
+     的可回退点（报告 §7.2），**我的判断是保留**。
+  3. **`g05` 仍 exit=1，但与本批无关，且根因在 `hof-rs` 侧（我造成的跨仓耦合）**：
+     `g05` 的 B0/B1/B2 拿 **hof-rs 的冻结夹具** `tests/fixtures/mcp/tools_list.json` 作基准，
+     而 hof-rs 自己在 `db2eed7`（DR-42）把它重采成 `50c5fb42…`/177 条，脚本里冻的是旧值
+     `8f8051c4…`/174 条。`git diff 15bbf1f50e..HEAD -- tool-rename-map.json tools_list.renamed.json` 为**空**
+     ⇒ TASK-151 **未触碰 g05 的任何输入**；`g05` 其余检查（A/G/F/G1..G6）全过。
+     **处置（我的决定）**：**不要**重冻常量、**不要**动 hof-rs 的夹具；改为**让 g05 自包含于引擎仓**
+     （基准指向引擎自己的 `modules/mcp_server/docs/tools_list.renamed.json` 与其记录 sha），
+     按惯例另立 **TASK-152**。理由：一道引擎门**跨仓依赖 hof-rs 的工作文件**是结构性错误——
+     hof-rs 一旦合法演进（DR-42 正是），引擎门就会无缘由变红，这会训练人忽略红色。
+  4. **doctest / wire 的分工**：接受（报告 §7.1 已按要求如实标注）。doctest **只**钉模块自身决策
+     （守卫抬升与还原、无调试器零写入、game 路径仍 `-32602` 且之后仍可用，22 断言）；
+     "真游戏里不冻结"这半边**明示为单测未覆盖**，原因是 `RemoteDebugger::debug()` 的空闲循环会调
+     `DisplayServer::get_singleton()->force_process_and_drop_events()`（`remote_debugger.cpp:626-632`）
+     而 `Main::test_setup()` 不建 display server ⇒ 试图在 doctest 内挂真调试器 peer 的版本死于 **SIGSEGV**；
+     该半边以线上 `verify_fixed.ps1`（34 检查）为证据。
+- 预期影响与回滚点：
+  - 影响：**引擎 mono 二进制已是修复后版本**（`4.8.dev.mono.custom_build.035edfce7`），
+    hof-rs 下一轮真机冒烟将自动用上它；E3 的一大障碍由此解掉（但仍需 hof-rs 侧设计 §15 的绕行配合）。
+    我启动的编辑器（PID 108432）已**优雅退出**（`CloseMainWindow()` 成功、后台作业 exit 0、9877 无监听）——
+    这正是为了释放 mono 二进制以便重链接；**该编辑器不再需要**。
+  - 回滚点：引擎仓 `git revert 97fc49df4b`（并连带 `c0f2dfba31`/`035edfce7f`）即回到旧行为；
+    hof-rs 侧无需变动。
+
