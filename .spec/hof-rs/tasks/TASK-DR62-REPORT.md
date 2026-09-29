@@ -4,7 +4,8 @@
 > 上游输入（只当线索，判定以我自己的实测为准）：`.spec/hof-rs/tasks/TASK-DR61-ACCEPTANCE.md`（DEF-1 / R-B / R-E、
 > 以及 R-F 的未解释 mtime 差异）、`.spec/hof-rs/tasks/TASK-DR61-REPORT.md`、`DECISIONS.md` D249/D250。
 > **离线**：未启动 Godot、未触碰任何外部/MCP 端口、未联网、未调模型端点、未 push。
-> 批次起点 = `6a0c9a9`（= `origin/master`）；本批 = 3 个代码/测试提交 + 本报告提交（全部未 push）。
+> 批次起点 = `6a0c9a9`（= `origin/master`）；本批 = 3 个代码/测试提交（`d338459`/`6dc12b5`/`49b9417`）
+> + 本报告及其定稿小修的纯文档提交（`fb572ca` 及之后一个），**全部未 push**。
 > **不声称 E1..E6 中任何一条 met（尤其不声称 E3）** —— 那只能由真机轮次判定。
 
 ---
@@ -47,7 +48,7 @@ EXIT=0
 | `d338459` | **红**：`copy_evidence` 按名字隐藏 `.stale-` 命名的本轮产物；`copy_tree` 完全没有过期过滤 |
 | `6dc12b5` | 实现：显式清单 `.superseded.json` + 两条拷贝路径统一判据 + 生产者在改名**之前**写记录 |
 | `49b9417` | 遍历作用域自检 + `.hoh` 外常驻种子 + 轮次级"不再被误跳过"实测 |
-| 本报告提交 `fb572ca` | `TASK-DR62-REPORT.md`（纯文档：`git diff --stat 49b9417..HEAD -- src tests Cargo.toml Cargo.lock` = 空；最终全量套件跑在代码树 `49b9417` 上） |
+| 本报告提交 `fb572ca` + 定稿小修 | `TASK-DR62-REPORT.md`（纯文档：`git diff --stat 49b9417..HEAD -- src tests Cargo.toml Cargo.lock` = 空；最终全量套件跑在代码树 `49b9417` 上） |
 
 ---
 
