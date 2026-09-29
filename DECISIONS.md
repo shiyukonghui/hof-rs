@@ -9604,3 +9604,34 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
   在**验收未通过**前，`master` 上不应再出现新的本地提交被推出去的现象。
 - 与目标的关系：这条属**过程纪律**，不影响 `goal-470a7ce4…` 的完成判据，但**降低"用绿灯代替证据"的风险**。
 
+## D246 — DR-57 独立验收 **pass**；**我更正 D244 里的错误数字**；flake 被独立量化为既有；派 DR-59
+
+- 日期：2026-09-29
+- DR-57 由**另一批全新子代理**独立验收：**`verdict = pass`**（8 项 criteria）。报告
+  `.spec/hof-rs/tasks/TASK-DR57-ACCEPTANCE.md`。
+- **我更正自己的错误（DEF-6，major 级，且主题就是本批的主题）**：
+  我在 **D244** 里沿用了实现者的"**实测 5 == 5**"。验收者指出那是**植入态**的失败输出数字；
+  pristine 上可复现的观测是 **`accepted_at_death=2`、post-death `2`、re-arm `3`** ⇒ **应为 `2 == 2`（重注册后 3）**。
+  ⇒ **D244 该处数字错误，以此条更正**（D244 原文**保留不改**，以保持可追溯；
+  "证据陈述必须可复现"这条要求，**对我也一样适用**）。
+  同时它要求更正 `TASK-DR57-REPORT.md:114`/`:263`、`TASK-DR54-REPORT.md` 的更正块里的同一数字——**列为本轮收尾项**。
+- **flake 的独立判定（我认为这是本轮最有价值的独立证据）**：
+  - 它跑 **4 次全量** `cargo test --offline` 全部 `EXIT=0 / 353 passed / 0 failed / 7 ignored`（0 次 flake）；
+  - 但**直接运行已构建的** `endpoint_liveness` target（不启动 cargo、**不运行本批新增的 target**）：
+    **111 次 → 2 次失败（≈1.8%）**，并抓到**逐字输出**：
+    `panicked at tests\endpoint_liveness.rs:435:10: … Error encountered in the status line: 远程主机强迫关闭了一个现有的连接。 (os error 10054)`；
+  - **归因（判为既有，非本批引入）**：该文件在 `ba32de6` 与 HEAD **blob 逐字节相同**（`2e5b95c7…`，区间零提交零 diff），
+    且**新 target 缺席时仍复现**；失败点与实现者报告的 `:435:10` / os error **10053 同一行、同一"status line"传输层形态**
+    （10053/10054 都是 abort/reset）。
+  - **机制仍属假设**：它给出的"替身 `write_all` 写完即 `return`、socket 随即 drop ⇒ 客户端在读到状态行前收到 RST"
+    是**假设未钉死**，且**未构造确定性触发**。⇒ **DR-60 必须先刻画再修因**（与我给它的任务书一致）。
+- 其它已验证：`SUITE`（353/0/7，37 targets）、`COUNTER_LAYER`（计数器确在不会被门冻住的层）、
+  `NON_VACUITY`（它**自己另做两处设计不同**的植入复现非空洞性）、`REPORT_CORRECTION`、`DEF2`、`GUARDS`、`TRAPS` 全 pass。
+  它**未逐条复跑**实现者的 `dr57-plants.ps1`（读了真实日志），并**如实声明**；`is_pressed_before` 同形残留仍留待后续批次。
+- 裁决：
+  1. **DR-57 予以验收通过**。
+  2. **推送**（D245 的单一推送点到达：本地 5 个提交含本条的**一次性推送**）。
+  3. **立即派 DR-59**（`.hoh/deterministic` 轮次隔离，任务书已就绪）。
+  4. 队列：**DR-59 → DR-60（flake，先刻画）→ REF2 → §16 → 再跑真机判 E3 → 专攻 E1 → 造游戏**。
+- 回滚点：DR-57 各提交单独 revert；两条真机基线不得覆盖。
+
