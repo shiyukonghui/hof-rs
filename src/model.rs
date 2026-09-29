@@ -343,6 +343,13 @@ pub enum ContractViolation {
     PlanUpdateForbidden,
     /// Warning only: the Developer produced no change.
     NoProgress,
+    /// DR-66 ④: **failure.** The Developer stage produced no change to the
+    /// artifact tree at all — no new file, no edit, nothing outside the
+    /// hash-excluded runtime paths (`.hoh/**`).  `E1` requires a Godot project
+    /// increment from the Developer, so a round in that state cannot satisfy
+    /// the criterion.  Until DR-66 this condition was only a `warnings` string
+    /// and the round still reported `ok = true` / `exit_code = 0`.
+    NoEngineeringWrite,
 }
 
 impl ContractViolation {
@@ -354,6 +361,7 @@ impl ContractViolation {
             ContractViolation::CandidateIdMismatch => "candidate_id_mismatch",
             ContractViolation::PlanUpdateForbidden => "plan_update_forbidden",
             ContractViolation::NoProgress => "no_progress",
+            ContractViolation::NoEngineeringWrite => "no_engineering_write",
         }
     }
 }

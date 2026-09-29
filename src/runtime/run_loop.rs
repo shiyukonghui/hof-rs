@@ -23,7 +23,7 @@ use crate::model::{
 use crate::prompts;
 use crate::runtime::evidence::write_evidence;
 use crate::runtime::invoke::{
-    attempt_trajectory, invoke_once, is_limits_exceeded, render_prompt_with_budget, role_env,
+    attempt_trajectory, invoke_once, is_limits_exceeded, render_prompt_with_budget_and_shell, role_env,
     WRAP_UP_RETRY_CONTEXT,
 };
 use crate::runtime::policy::{
@@ -43,6 +43,21 @@ use crate::tools::ToolChannel;
 /// DR-18: the wrap-up retry never gets more than this many steps, whatever
 /// `agent.wrap_up_steps` says.
 pub const WRAP_UP_RETRY_MAX_STEPS: u64 = 30;
+
+/// DR-66 ④: the step by which the Developer must already have produced at
+/// least one engineering write.
+///
+/// The number is derived from the budget the runtime already imposes, not
+/// invented: a quarter of the call is the band in which the measured
+/// `smoke-t7` Developer had still produced nothing while spending its steps on
+/// shell dialect errors - and from `wrap_up_steps` on, the Developer's own
+/// prompt already orders it to stop exploring and write.  The deadline is
+/// therefore "well before wrap-up begins", the earliest schedule on which a
+/// real increment still leaves room to validate it.  It is capped at
+/// `wrap_up_steps` so the instruction can never contradict the wrap-up rule.
+pub fn developer_write_deadline(limits: &crate::config::AgentLimits) -> u64 {
+    (limits.step_limit / 4).min(limits.wrap_up_steps).max(1)
+}
 
 /// The D7 scope limitation is recorded, never hidden.
 pub const MCP_SCOPE_WARNING: &str =
@@ -148,10 +163,13 @@ fn evidence_history(run_dir: &Path, iteration: u32) -> String {
     text
 }
 
+/// DR-66 ①: the skills as delivered - the `{{HOH_*}}` placeholders are
+/// resolved for the role's real shell, exactly like the prompts.  A skill that
+/// spells a POSIX call into a cmd shell is the `smoke-t7` defect.
 fn skill_inputs() -> Vec<(String, String)> {
-    prompts::skills()
+    prompts::skill_documents(crate::runtime::shell::ShellFlavor::HOST)
         .into_iter()
-        .map(|(name, content)| (format!(".hoh/skills/{name}"), content.to_string()))
+        .map(|(name, content)| (format!(".hoh/skills/{name}"), content))
         .collect()
 }
 
@@ -511,12 +529,16 @@ pub async fn run(
             let base = RoleInvocation {
                 role: Role::Planner,
                 iteration,
-                system_prompt: render_prompt_with_budget(
+                system_prompt: render_prompt_with_budget_and_shell(
                     prompts::PLANNER_PROMPT,
                     iteration,
                     &cfg.agent,
+                    crate::runtime::shell::ShellFlavor::HOST,
                 ),
-                task_prompt: prompts::planner_task(iteration),
+                task_prompt: prompts::planner_task_with_shell(
+                    iteration,
+                    crate::runtime::shell::ShellFlavor::HOST,
+                ),
                 cwd: planner_view.clone(),
                 env: role_env(cfg, run_id, Role::Planner, iteration, &planner_view),
                 limits: cfg.agent.clone(),
@@ -550,10 +572,11 @@ pub async fn run(
                         let mut wrap_base = base.clone();
                         wrap_base.limits.step_limit =
                             cfg.agent.wrap_up_steps.min(WRAP_UP_RETRY_MAX_STEPS);
-                        wrap_base.system_prompt = render_prompt_with_budget(
+                        wrap_base.system_prompt = render_prompt_with_budget_and_shell(
                             prompts::PLANNER_PROMPT,
                             iteration,
                             &wrap_base.limits,
+                            crate::runtime::shell::ShellFlavor::HOST,
                         );
                         wrap_base.retry_context = Some(WRAP_UP_RETRY_CONTEXT.to_string());
                         let first = planner_attempts.len() as u32 + 1;
@@ -708,12 +731,16 @@ pub async fn run(
         let developer = RoleInvocation {
             role: Role::Developer,
             iteration,
-            system_prompt: render_prompt_with_budget(
+            system_prompt: render_prompt_with_budget_and_shell(
                 prompts::DEVELOPER_PROMPT,
                 iteration,
                 &cfg.agent,
+                crate::runtime::shell::ShellFlavor::HOST,
             ),
-            task_prompt: prompts::developer_task(iteration),
+            task_prompt: prompts::developer_task_with_shell(
+                iteration,
+                crate::runtime::shell::ShellFlavor::HOST,
+            ),
             cwd: workspace.clone(),
             env: role_env(cfg, run_id, Role::Developer, iteration, &workspace),
             limits: cfg.agent.clone(),
@@ -756,7 +783,12 @@ pub async fn run(
             let mut wrap_base = developer.clone();
             wrap_base.limits.step_limit = cfg.agent.wrap_up_steps.min(WRAP_UP_RETRY_MAX_STEPS);
             wrap_base.system_prompt =
-                render_prompt_with_budget(prompts::DEVELOPER_PROMPT, iteration, &wrap_base.limits);
+                render_prompt_with_budget_and_shell(
+                prompts::DEVELOPER_PROMPT,
+                iteration,
+                &wrap_base.limits,
+                crate::runtime::shell::ShellFlavor::HOST,
+            );
             wrap_base.retry_context = Some(WRAP_UP_RETRY_CONTEXT.to_string());
             wrap_base.trajectory_path = attempt_trajectory(&traj_dir, Role::Developer, 2);
             developer_outcome = invoke_once(&*orchestrator.harness, &wrap_base).await?;
@@ -794,7 +826,29 @@ pub async fn run(
         // DR-19: scrub after the developer (the only writer) too.
         iter_secret_redactions += crate::runtime::secrets::redact_tree(&run_dir, &secrets)?;
 
+        // DR-66 ④: **this is the signal that used to be a mere warning.**
+        //
+        // `h_dev_before`/`h_dev_after` bracket the whole Developer stage,
+        // including the wrap-up retry, and `.hoh/**` is hash-excluded, so
+        // equality means: not one byte of the project changed because of this
+        // stage.  `REQUIREMENTS.md` E1 requires "the Developer produces a Godot
+        // project increment", so a round in that state cannot satisfy the
+        // criterion.  In `smoke-t7` the round nevertheless reported
+        // `ok = true`, `exit_code = 0` and `artifact_gate.launchable = true`,
+        // with `no_progress` only in `warnings` - a green run that proved
+        // nothing.
+        //
+        // DR-66 splits the two meanings apart: `no_progress` stays the
+        // *description* of the same measurement, and `no_engineering_write` is
+        // the **violation**.  The violation is recorded and the round fails, so
+        // no future green can be read as "the Developer produced an increment"
+        // unless it did.
         let h_dev_after = hash_tree(&workspace, &excludes)?;
+        let no_engineering_write_attempt = iter_attempts
+            .iter()
+            .rev()
+            .find(|attempt| attempt.role == Role::Developer)
+            .filter(|attempt| attempt.exit_was_limits);
         if h_dev_before == h_dev_after {
             let warning = ContractViolation::NoProgress.code();
             iter_warnings.push(warning.to_string());
@@ -804,6 +858,40 @@ pub async fn run(
                     "iteration {iteration}: {warning} (the developer stage produced no change)"
                 ),
             )?;
+        }
+        if let (true, Some(attempt)) = (h_dev_before == h_dev_after, no_engineering_write_attempt) {
+            let _ = attempt;
+            let violation = ContractViolation::NoEngineeringWrite;
+            let first_write_deadline = developer_write_deadline(&cfg.agent);
+            append_warning(
+                &run_dir,
+                &format!(
+                    "iteration {iteration}: contract violation {} (the developer stage spent its \
+                     whole step budget with no engineering write inside the first \
+                     {first_write_deadline} steps: no file in the artifact tree outside the \
+                     hash-excluded runtime paths changed; every write went to an excluded path \
+                     such as `.hoh/scratch`)",
+                    violation.code()
+                ),
+            )?;
+            let mut warnings = iter_warnings.clone();
+            warnings.push(violation.code().to_string());
+            finalize_failure(
+                &run_dir,
+                iteration,
+                Role::Developer,
+                "contract_violation",
+                Vec::new(),
+                warnings,
+                iter_usage.clone(),
+                durations.clone(),
+                EvidenceDiff::default(),
+                iter_wrap_up_retry_used,
+                iter_attempts.clone(),
+                iter_secret_redactions,
+                iter_out_of_tree.iter().cloned().collect(),
+            )?;
+            return Err(HofError::contract(violation).into());
         }
 
         // ---------------- Deterministic evidence battery (DR-1/DR-17) ------
@@ -852,7 +940,12 @@ pub async fn run(
             let mut repair = developer.clone();
             repair.limits.step_limit = cfg.agent.repair_steps;
             repair.system_prompt =
-                render_prompt_with_budget(prompts::DEVELOPER_PROMPT, iteration, &repair.limits);
+                render_prompt_with_budget_and_shell(
+                prompts::DEVELOPER_PROMPT,
+                iteration,
+                &repair.limits,
+                crate::runtime::shell::ShellFlavor::HOST,
+            );
             repair.retry_context = Some(context);
             repair.trajectory_path = attempt_trajectory(&traj_dir, Role::Developer, repair_attempt);
             let repair_outcome = invoke_once(&*orchestrator.harness, &repair).await?;
@@ -1061,8 +1154,16 @@ pub async fn run(
         let tester_base = RoleInvocation {
             role: Role::Tester,
             iteration,
-            system_prompt: render_prompt_with_budget(prompts::TESTER_PROMPT, iteration, &cfg.agent),
-            task_prompt: prompts::tester_task(iteration),
+            system_prompt: render_prompt_with_budget_and_shell(
+                prompts::TESTER_PROMPT,
+                iteration,
+                &cfg.agent,
+                crate::runtime::shell::ShellFlavor::HOST,
+            ),
+            task_prompt: prompts::tester_task_with_shell(
+                iteration,
+                crate::runtime::shell::ShellFlavor::HOST,
+            ),
             cwd: candidate.clone(),
             env: role_env(cfg, run_id, Role::Tester, iteration, &candidate),
             limits: cfg.agent.clone(),
@@ -1096,10 +1197,11 @@ pub async fn run(
                     let mut wrap_base = tester_base.clone();
                     wrap_base.limits.step_limit =
                         cfg.agent.wrap_up_steps.min(WRAP_UP_RETRY_MAX_STEPS);
-                    wrap_base.system_prompt = render_prompt_with_budget(
+                    wrap_base.system_prompt = render_prompt_with_budget_and_shell(
                         prompts::TESTER_PROMPT,
                         iteration,
                         &wrap_base.limits,
+                        crate::runtime::shell::ShellFlavor::HOST,
                     );
                     wrap_base.retry_context = Some(WRAP_UP_RETRY_CONTEXT.to_string());
                     let first = tester_attempts.len() as u32 + 1;
@@ -1261,6 +1363,11 @@ pub async fn run(
         iterations_completed: cfg.runtime.iterations,
         final_version_id,
         total_usage,
+        // DR-66 ④: the verdict, not a constant.  A round that reached this
+        // point has no failed iteration; a failed one returns its own summary
+        // and never reaches the loop's end.  `finalize_run` turns `ok = false`
+        // into a non-zero exit code, which is what makes the E1-class failure
+        // visible to anything that only reads `result.json.ok` or the exit code.
         ok: true,
         artifact_gate: last_gate
             .unwrap_or_else(|| crate::model::ArtifactGate::not_applicable("no iteration ran")),

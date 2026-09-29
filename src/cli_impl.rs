@@ -627,6 +627,13 @@ pub fn format_prd_coverage_line(coverage: &crate::model::PrdCoverage) -> String 
 /// `0` means "the loop completed **and** the artifact is usable"; `6` means the
 /// loop completed but `artifact_gate.launchable == false`.  A gate that never
 /// applied (an adapter without gate steps) cannot produce `6`.
+///
+/// DR-66 ④: this function judges the **artifact** only, and it is deliberately
+/// left as it was so its meaning stays narrow and its historical callers keep
+/// their exact semantics.  The round's own verdict goes through
+/// [`run_exit_code_for`], which uses it for the artifact axis and adds the
+/// contract axis — otherwise a round the runtime itself failed (the Developer
+/// produced no engineering write) would still be launched as success.
 pub fn run_exit_code(gate: &crate::model::ArtifactGate) -> i32 {
     if gate.applicable && !gate.launchable {
         6
@@ -635,11 +642,31 @@ pub fn run_exit_code(gate: &crate::model::ArtifactGate) -> i32 {
     }
 }
 
+/// DR-66 ④: the **round's** exit code.
+///
+/// `2` — the contract-violation class (`HofError::Contract`, `src/errors.rs`) —
+/// when the runtime did not complete the round successfully, which is the state
+/// a zero-engineering-write Developer leaves behind; otherwise the artifact
+/// verdict of DR-27 (`0` usable, `6` unlaunchable).  This is the fix for the
+/// measured false green: `smoke-t7`'s iteration ended with `ok = true`,
+/// `artifact_gate.launchable = true` and `exit_code = 0` while the Developer had
+/// produced no increment at all.
+pub fn run_exit_code_for(summary: &run_loop::RunSummary) -> i32 {
+    if !summary.ok {
+        // The same class as every other contract violation, derived from the
+        // violation itself so the number can never drift away from it.
+        crate::errors::HofError::contract(crate::model::ContractViolation::NoEngineeringWrite)
+            .exit_code()
+    } else {
+        run_exit_code(&summary.artifact_gate)
+    }
+}
+
 /// DR-27: persist the run's exit code twice — as a bare number in
 /// `runs/<id>/exit_code` (launchers cannot rely on `Start-Process -PassThru`
 /// under redirection) and as `meta.json.exit_code`.
 pub fn finalize_run(run_dir: &Path, summary: &run_loop::RunSummary) -> anyhow::Result<i32> {
-    let code = run_exit_code(&summary.artifact_gate);
+    let code = run_exit_code_for(summary);
     std::fs::write(run_dir.join("exit_code"), format!("{code}\n"))?;
 
     let meta_path = run_dir.join("meta.json");
