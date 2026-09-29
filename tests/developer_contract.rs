@@ -13,12 +13,7 @@ use common::*;
 use hof_rs::model::Ablation;
 
 fn skill(name: &str) -> String {
-    hof_rs::prompts::skills()
-        .into_iter()
-        .find(|(file, _)| *file == name)
-        .unwrap_or_else(|| panic!("skill {name} is not embedded"))
-        .1
-        .to_string()
+    delivered_skill(name)
 }
 
 #[test]
@@ -54,10 +49,17 @@ fn developer_prompt_states_the_definition_of_done() {
 fn godot_dev_skill_is_a_real_recipe_book() {
     let dev = skill("godot-dev.md");
 
+    // DR-66: the needles are the **delivered** forms, so the recipe book is
+    // asserted in the syntax the role's shell actually executes.  The old
+    // `"$HOH_HOH_BIN tools call"` needle passed on Windows while the very line
+    // it matched was the one cmd rejected in `smoke-t7`
+    // (`'$HOH_HOH_BIN" tools call …' is not recognized …`).
+    let bin = hof_rs::runtime::shell::ShellFlavor::HOST.var("HOH_HOH_BIN");
+    let artifact = hof_rs::runtime::shell::ShellFlavor::HOST.var("HOH_ARTIFACT_DIR");
     for needle in [
-        "$HOH_HOH_BIN tools call",
+        &format!("{bin} tools call") as &str,
         "--args-file",
-        "$HOH_ARTIFACT_DIR",
+        &artifact,
         "project_create_script",
         "project_edit_script",
         "project_read_script",
@@ -71,6 +73,12 @@ fn godot_dev_skill_is_a_real_recipe_book() {
         "non-empty",
     ] {
         assert!(dev.contains(needle), "godot-dev.md is missing `{needle}`");
+    }
+    if cfg!(windows) {
+        assert!(
+            !dev.contains("$HOH_HOH_BIN"),
+            "the recipe book still spells a cmd call with a POSIX variable"
+        );
     }
 
     // At least six numbered recipes.

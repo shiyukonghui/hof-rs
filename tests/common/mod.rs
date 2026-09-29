@@ -501,6 +501,33 @@ impl ToolChannel for FakeToolChannel {
 // Helpers
 // ---------------------------------------------------------------------------
 
+/// DR-66 ①: a role prompt as the role actually receives it — shell placeholders
+/// resolved for the machine's real shell.
+///
+/// Reading `hof_rs::prompts::DEVELOPER_PROMPT` directly gives the *template*
+/// (it still carries `{{HOH_SCRATCH_DIR}}` / `{{step_limit}}`); asserting on the
+/// template is how `tests/artifact_hygiene.rs` and `tests/tool_discovery.rs`
+/// became structurally blind to the `smoke-t7` dialect defect.  Every test that
+/// makes a claim about what a role is told must go through this function.
+pub fn delivered_prompt(template: &str) -> String {
+    hof_rs::runtime::invoke::render_prompt_with_budget_and_shell(
+        template,
+        1,
+        &AgentLimits::default(),
+        hof_rs::runtime::shell::ShellFlavor::HOST,
+    )
+}
+
+/// DR-66 ①: a skill body as it is injected into a role view
+/// (`.hoh/skills/<name>`), i.e. with shell placeholders resolved.
+pub fn delivered_skill(name: &str) -> String {
+    hof_rs::prompts::skill_documents(hof_rs::runtime::shell::ShellFlavor::HOST)
+        .into_iter()
+        .find(|(file, _)| file == name)
+        .unwrap_or_else(|| panic!("skill {name} is not embedded"))
+        .1
+}
+
 pub fn test_config(root: &Path, iterations: u32) -> HohConfig {
     let mut config = hof_rs::config::load_config(&[]).expect("config");
     config.runtime.iterations = iterations;

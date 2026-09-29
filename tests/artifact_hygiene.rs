@@ -104,24 +104,43 @@ async fn files_under_the_scratch_directory_are_never_flagged() {
 
 #[test]
 fn prompts_and_skills_confine_temporary_files_to_the_scratch_dir() {
+    // DR-66: the claim is about what a role is *told*, so the delivered text is
+    // what gets asserted — the raw template still carries `{{HOH_SCRATCH_DIR}}`.
     for (name, prompt) in [
-        ("planner.md", hof_rs::prompts::PLANNER_PROMPT),
-        ("developer.md", hof_rs::prompts::DEVELOPER_PROMPT),
-        ("tester.md", hof_rs::prompts::TESTER_PROMPT),
+        ("planner.md", delivered_prompt(hof_rs::prompts::PLANNER_PROMPT)),
+        ("developer.md", delivered_prompt(hof_rs::prompts::DEVELOPER_PROMPT)),
+        ("tester.md", delivered_prompt(hof_rs::prompts::TESTER_PROMPT)),
     ] {
         assert!(
-            prompt.contains("$HOH_SCRATCH_DIR"),
-            "{name} must name the scratch directory"
+            prompt.contains(&scratch_var()),
+            "{name} must name the scratch directory in its real shell syntax"
         );
         assert!(
             prompt.contains("tmp_") && prompt.contains(".bak"),
             "{name} must name the forbidden litter patterns"
         );
+        // The old assertion was a bare `contains("$HOH_SCRATCH_DIR")`; on a cmd
+        // shell that string expands to nothing, so it could be present and the
+        // instruction still be unrunnable.  Pin the syntax to the host.
+        if cfg!(windows) {
+            assert!(
+                !prompt.contains("$HOH_SCRATCH_DIR"),
+                "{name} still hands the role a POSIX variable reference"
+            );
+        }
     }
-    for (name, content) in hof_rs::prompts::skills() {
+    for (name, content) in [
+        ("godot-dev.md", delivered_skill("godot-dev.md")),
+        ("godot-testing.md", delivered_skill("godot-testing.md")),
+    ] {
         assert!(
             content.contains("HOH_SCRATCH_DIR"),
             "skill {name} must explain where temporary files go"
         );
     }
+}
+
+/// `%HOH_SCRATCH_DIR%` on Windows, `$HOH_SCRATCH_DIR` elsewhere.
+fn scratch_var() -> String {
+    hof_rs::runtime::shell::ShellFlavor::HOST.var("HOH_SCRATCH_DIR")
 }

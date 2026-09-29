@@ -16,12 +16,7 @@ use hof_rs::model::{Ablation, Role};
 use serde_json::Value;
 
 fn skill(name: &str) -> String {
-    hof_rs::prompts::skills()
-        .into_iter()
-        .find(|(file, _)| *file == name)
-        .unwrap_or_else(|| panic!("skill {name} is not embedded"))
-        .1
-        .to_string()
+    delivered_skill(name)
 }
 
 // ---------------------------------------------------------------------------
@@ -205,10 +200,17 @@ fn the_godot_dev_skeleton_is_a_valid_scene() {
 
 #[test]
 fn every_role_prompt_forbids_the_harness_sources() {
+    // DR-66: the delivered prompt, not the template — the scratch-directory
+    // needle below is a shell variable, so it must be checked in the syntax the
+    // role's real shell understands.
+    let scratch = hof_rs::runtime::shell::ShellFlavor::HOST.var("HOH_SCRATCH_DIR");
     for (name, prompt) in [
-        ("planner", hof_rs::prompts::PLANNER_PROMPT),
-        ("developer", hof_rs::prompts::DEVELOPER_PROMPT),
-        ("tester", hof_rs::prompts::TESTER_PROMPT),
+        ("planner", delivered_prompt(hof_rs::prompts::PLANNER_PROMPT)),
+        (
+            "developer",
+            delivered_prompt(hof_rs::prompts::DEVELOPER_PROMPT),
+        ),
+        ("tester", delivered_prompt(hof_rs::prompts::TESTER_PROMPT)),
     ] {
         for needle in [
             "src/**",
@@ -216,7 +218,7 @@ fn every_role_prompt_forbids_the_harness_sources() {
             "tests/**",
             ".git/**",
             "F:\\RustProjects\\**",
-            "$HOH_SCRATCH_DIR",
+            scratch.as_str(),
         ] {
             assert!(
                 prompt.contains(needle),
