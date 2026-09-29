@@ -9543,3 +9543,43 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 - 预期影响与回滚点：目标态是"可用 + 能造游戏"；回滚点仍是各批次单独 revert，
   两条真机基线 `smoke-t6`/`smoke-t7` 均**不得覆盖**。
 
+## D244 — DR-57 交付：计数测试落在**不可能被门冻住**的 TCP 层；报告更正与 DEF-2 删除；新增"flake 单独成批"候选
+
+- 日期：2026-09-29
+- 交付：`.spec/hof-rs/tasks/TASK-DR57-REPORT.md`（9 节）。提交（起点 `ba32de6`）：`440fc89`(计数测试)、
+  `05efd7f`/`580b86c`/`ae7a45e`/`f4f18cb`(可重跑植入脚本 + 两处自纠)、`23304a1`(删 DEF-2 字段)、
+  `c1586e1`(更正报告)、`29fc265`(报告)。**工作树完全干净（含未跟踪）**。
+- **门**：基线 **352/0/7**（36 targets）→ 本批 **353/0/7（37 targets，+1 恰为新测试）EXIT=0**，
+  **连续 3 次全量复现**；`ignored` 仍 7、**无测试被削弱/删除/加进 `#[ignore]`**；无新依赖。
+- **计数测试的设计（我认为这是正确解法）**：`tests/endpoint_request_count.rs`
+  `::a_dead_endpoint_sends_zero_requests_to_the_transport_layer` 的计数器是**回环替身的 TCP accept 计数**，
+  位于 **`call_with_meta` 之下、DR-55 早退之下、`McpClient::post` 之下** ⇒ **不可能被"判死后直接 return"冻住**；
+  有连接**只能**因为真实 HTTP 尝试到达。形状：黑洞阶段（accept+计数、不应答）以 **2 次真实传输失败**判死 →
+  把替身切成**完全健康** → 3 次调用（`max_retries=3`）必须仍被拒且计数**不动（实测 5 == 5）**；
+  **重注册对照**证明计数器**能再动（+1）**；自证断言判死时 `accepted==2`。
+- **非空洞性（两处植入，均在生产代码）**：`dr57-plants.ps1` 植入 `src/tools/mod.rs`
+  ①"判死前仍发一次请求" ⇒ 红在 `endpoint_request_count.rs:345`，`left:5 right:2`（"accepted 3 new connection(s)"），EXIT=101；
+  ②**删除整个判死守卫** ⇒ 健康对端**应答了死端点**，EXIT=101。两次都逐字节回退
+  （`status` 空、`diff --stat` 空、`hash-object src/tools/mod.rs` == HEAD blob `ddf6f4e4…`）；原始日志在 `%TEMP%\dr57-plant\`（仓外）。
+- **报告更正**：`TASK-DR54-REPORT.md` §3.2 **引述原文**→新文（传输层计数替身，**实测而非推断**）→
+  **写明原推理为何无效**（判死后 `observe()` 直接返回、`call_with_meta` 不再到达 ⇒
+  `consecutive_transport_failures` 是**结构性恒等**）→ 指向新测试；**未删改其它结论**；
+  另在 §6 给出"以观测充因果"的段落清单。
+- **DEF-2**：**删除** `InputChannelProbe.has_action`（含其唯一写入方）并加结构体文档注释说明理由
+  （无读者却会被序列化进**已发布证据**，`null` 会被读成"动作不存在"）；**改动不含任何有读者的字段**。
+  它**主动报出同形残留** `is_pressed_before`（恒 `None`、无读者）⇒ 进下一批。
+- **新增候选（据它如实报告）：`DR-60` = 既有 flake 单独成批**。事实：一次全量运行中
+  `tests/endpoint_liveness.rs::the_editor_endpoint_state_is_separate` **panic**（`:435:10`，编辑器端点调用得
+  **os error 10053**）；该文件**字节未改**；单跑该 target **7/7 通过（3 次）**；随后全量 **3/3 过**
+  ⇒ **6 次全量中 1 次失败**。它**没有**去动那条既有测试。**我的裁决**：这是**真实的测试脆弱性**（真传输 flake），
+  **不允许长期留在绿灯里**；立 **DR-60** 单独处理（离线：把该断言的时序/重试假设改稳，或明确标记为真机门控），
+  但**排在 DR-59 之后**（先做完队列里已定的卫生项）。
+- 禁区（据其报告，已用**嵌套仓**证据）：引擎树 `git -C godot-mcp/godot status --porcelain -uno` = 0 行、
+  HEAD `fc63af77c3`、`running_game_test_execution.cpp` mtime 2026-09-27、sha256 `ece4ae63…`；
+  `runs/**` 最新 mtime **14:44:16** < 其首个改动 **17:50:53** 且 0 文件更新；`runs/smoke-t6` 135 文件摘要
+  `c144ef32…7a9c03` 与验收基线**一致**；`PRD` sha 未变；`Cargo` 零 diff；未 push。
+  它并**主动标注** `afb649a`（"open DR-59"）是**我的**提交、非它所为——**归属清楚，值得记**。
+- 裁决：**派 DR-57 独立验收**（`TASK-DR57-ACCEPT.md`，重点：计数器是否真在不可冻结层、自设 ≥2 处植入、flake 归因）；
+  **验收通过后再推送**。队列更新为：**DR-59 → DR-60（flake）→ REF2 → §16 → 再跑真机 → E1 → 造游戏**。
+- 回滚点：DR-57 各提交单独 revert；两条真机基线不得覆盖。
+
