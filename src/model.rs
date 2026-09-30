@@ -619,6 +619,13 @@ pub fn validate_plan(doc: &DevelopmentDoc) -> Result<(), Vec<SchemaIssue>> {
 /// Shape check on the raw JSON before typed deserialization.  This is what
 /// turns a missing `planner_handoff` into `MissingField` instead of a generic
 /// serde failure.
+///
+/// DR-68 ①: the check also covers the **record level**, and it reports *every*
+/// missing field at once.  `smoke-t8`'s artifact was rejected by serde with
+/// `missing field \`type\`` and nothing else, even though `claim_id` was missing
+/// too: serde stops at the first field it cannot fill, so "supply only `type`"
+/// looked like the whole fix and the next attempt was rejected again.  Listing
+/// the complete set turns one at a time into one clear contract error.
 pub fn validate_evidence_shape(value: &serde_json::Value) -> Vec<SchemaIssue> {
     let mut issues = Vec::new();
     let Some(object) = value.as_object() else {
@@ -662,6 +669,56 @@ pub fn validate_evidence_shape(value: &serde_json::Value) -> Vec<SchemaIssue> {
                 IssueCode::MissingField,
                 "`planner_handoff` must be an object",
             )),
+        }
+    }
+    for list in ["verified_records", "gap_records"] {
+        let Some(records) = object.get(list).and_then(serde_json::Value::as_array) else {
+            continue;
+        };
+        for (index, record) in records.iter().enumerate() {
+            let Some(record) = record.as_object() else {
+                issues.push(SchemaIssue::new(
+                    IssueCode::MissingField,
+                    format!("`{list}[{index}]` must be an object"),
+                ));
+                continue;
+            };
+            for key in ["claim_id", "claim", "execution_records", "status"] {
+                if !record.contains_key(key) {
+                    issues.push(SchemaIssue::new(
+                        IssueCode::MissingField,
+                        format!("`{list}[{index}]` is missing the required field `{key}`"),
+                    ));
+                }
+            }
+            let Some(executions) = record
+                .get("execution_records")
+                .and_then(serde_json::Value::as_array)
+            else {
+                continue;
+            };
+            for (position, execution) in executions.iter().enumerate() {
+                let Some(execution) = execution.as_object() else {
+                    issues.push(SchemaIssue::new(
+                        IssueCode::MissingField,
+                        format!(
+                            "`{list}[{index}].execution_records[{position}]` must be an object"
+                        ),
+                    ));
+                    continue;
+                };
+                for key in ["type", "observation"] {
+                    if !execution.contains_key(key) {
+                        issues.push(SchemaIssue::new(
+                            IssueCode::MissingField,
+                            format!(
+                                "`{list}[{index}].execution_records[{position}]` is missing the \
+                                 required field `{key}`"
+                            ),
+                        ));
+                    }
+                }
+            }
         }
     }
     issues
@@ -996,6 +1053,53 @@ mod tests {
         assert_eq!(
             codes(validate_evidence_shape(&value)),
             vec![IssueCode::MissingField, IssueCode::MissingField]
+        );
+    }
+
+    /// DR-68 ①: serde reports one missing field per attempt, so the record-level
+    /// shape pre-check must report **every** missing field at once —
+    /// `smoke-t8` was told only `type` and would have been rejected next for
+    /// `claim_id`.
+    #[test]
+    fn the_record_shape_report_names_every_missing_field_at_once() {
+        let value: serde_json::Value = serde_json::json!({
+            "iteration": 1,
+            "qa_status": "partial",
+            "verified_records": [{
+                "claim": "player moves right",
+                "execution_records": [
+                    {"path": ".hoh/evidence/move.json", "observation": "x increased"}
+                ],
+                "status": "verified"
+            }],
+            "gap_records": [],
+            "planner_handoff": {
+                "preservation_constraints": [],
+                "update_targets": [],
+                "validation_requirements": []
+            }
+        });
+        let issues = validate_evidence_shape(&value);
+        let text = issues
+            .iter()
+            .map(|issue| issue.message.clone())
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(
+            text.contains("`claim_id`"),
+            "the claim's own missing key must be reported: {text}"
+        );
+        assert!(
+            text.contains("`type`"),
+            "the execution record's missing key must be reported: {text}"
+        );
+        assert!(
+            text.contains("execution_records[0]"),
+            "the report must locate the offending record: {text}"
+        );
+        assert!(
+            issues.len() >= 2,
+            "one at a time is the defect being fixed: {text}"
         );
     }
 

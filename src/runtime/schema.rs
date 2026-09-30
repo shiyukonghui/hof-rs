@@ -68,6 +68,38 @@ fn retry_context(expected: &std::path::Path, issues: &[SchemaIssue], skeleton: &
     )
 }
 
+/// DR-68 ①: the **shape** block, delivered on every attempt — including the
+/// first.
+///
+/// `smoke-t8` showed why: `EVIDENCE_SKELETON` was only ever attached as *retry
+/// context*, so a role that never got a retry was never told the structure it
+/// was being validated against.  The Tester's artifact was rejected for
+/// `missing field \`type\`` after 150 steps, and the very retry that would have
+/// carried the skeleton was suppressed — one mechanism, two independent gaps.
+/// Telling the model the shape up front costs one paragraph and removes the
+/// first of them.
+fn shape_context(expected: &std::path::Path, skeleton: &str) -> String {
+    format!(
+        "REQUIRED ARTIFACT SHAPE. The runtime validates `{}` against this exact structure. \
+         Produce it from your **first** attempt; do not wait to be told it was wrong. The field \
+         names are case-sensitive; every key shown below is required, and a placeholder means \
+         \"replace it\":\n\n{}\n",
+        expected.display(),
+        skeleton
+    )
+}
+
+/// DR-68 ①: the first attempt's context.  `base` is whatever the caller already
+/// wanted the attempt to see (a wrap-up instruction, a repair context); the
+/// shape block is appended so it can never be the thing that is missing.
+fn first_attempt_context(base: Option<&str>, expected: &std::path::Path, skeleton: &str) -> String {
+    let shape = shape_context(expected, skeleton);
+    match base {
+        Some(extra) if !extra.is_empty() => format!("{extra}\n\n---\n\n{shape}"),
+        _ => shape,
+    }
+}
+
 /// Run the Planner until `D_t` validates, or fail after `1 + max_retries`.
 pub async fn gate_plan(
     harness: &dyn Harness,
@@ -106,7 +138,14 @@ pub async fn gate_plan_traced(
     let total = 1 + max_retries;
     let mut attempts: Vec<AttemptOutcome> = Vec::new();
     let mut issues_log: Vec<Vec<SchemaIssue>> = Vec::new();
-    let mut context: Option<String> = base.retry_context.clone();
+    // DR-68 ①: the shape travels with the **first** attempt too.
+    let mut context: Option<String> = Some(first_attempt_context(
+        base.retry_context.as_deref(),
+        &expected,
+        PLAN_SKELETON,
+    ));
+    // DR-68 ①(b): at most one shape-carrying retry after a `LimitsExceeded`.
+    let mut shape_retry_spent = false;
 
     for index in 0..total {
         let attempt = first_attempt + index;
@@ -155,9 +194,15 @@ pub async fn gate_plan_traced(
         }
         context = Some(retry_context(&expected, &issues, PLAN_SKELETON));
         issues_log.push(issues);
-        if limits {
+        if limits && (shape_retry_spent || !expected.is_file()) {
             // DR-18: more schema retries would only exhaust the same budget.
+            // DR-68 ①(b): unless the artifact is **present but invalid** — then
+            // exactly one retry with the shape is still a concrete repair
+            // rather than a re-run of the same budget.
             break;
+        }
+        if limits {
+            shape_retry_spent = true;
         }
     }
 
@@ -209,7 +254,15 @@ pub async fn gate_evidence_traced(
     let total = 1 + max_retries;
     let mut attempts: Vec<AttemptOutcome> = Vec::new();
     let mut issues_log: Vec<Vec<SchemaIssue>> = Vec::new();
-    let mut context: Option<String> = base.retry_context.clone();
+    // DR-68 ①: `EVIDENCE_SKELETON` reaches the **first** attempt, not only a
+    // retry.  `smoke-t8`'s Tester never saw it at all.
+    let mut context: Option<String> = Some(first_attempt_context(
+        base.retry_context.as_deref(),
+        &expected,
+        EVIDENCE_SKELETON,
+    ));
+    // DR-68 ①(b): at most one shape-carrying retry after a `LimitsExceeded`.
+    let mut shape_retry_spent = false;
 
     for index in 0..total {
         let attempt = first_attempt + index;
@@ -240,8 +293,17 @@ pub async fn gate_evidence_traced(
         }
         context = Some(retry_context(&expected, &issues, EVIDENCE_SKELETON));
         issues_log.push(issues);
-        if limits {
+        if limits && (shape_retry_spent || !expected.is_file()) {
+            // DR-18: more schema retries would only exhaust the same budget.
+            // DR-68 ①(b): unless the artifact is **present but invalid** — then
+            // exactly one retry with the complete shape is a concrete repair.
+            // `smoke-t8` broke here with a present, shape-invalid artifact, so
+            // the retry that could have fixed it never ran and the round ended
+            // with `schema failure for role Tester after 1 attempt(s)`.
             break;
+        }
+        if limits {
+            shape_retry_spent = true;
         }
     }
 

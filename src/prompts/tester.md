@@ -53,13 +53,38 @@ loop. Review the updated artifact as a player-facing product.
 [output-contract]
 Write exactly two files:
 
-1. `.hoh/evidence.json` with this structure:
+1. `.hoh/evidence.json` with this structure. **Every key shown is required**;
+   the runtime rejects the file if one is missing, and an empty array is not the
+   same as an absent key:
 ```json
 {
   "iteration": {{iteration}},
   "qa_status": "pass|partial|fail",
-  "verified_records": [],
-  "gap_records": [],
+  "verified_records": [
+    {
+      "claim_id": "F1",
+      "claim": "<checkable claim derived from the public spec>",
+      "execution_records": [
+        {
+          "type": "screenshot|replay|runtime_trace|assert|build|log",
+          "path": ".hoh/deterministic/raw/<step>.json",
+          "observation": "<verbatim observation>",
+          "candidate_id": ""
+        }
+      ],
+      "status": "verified"
+    }
+  ],
+  "gap_records": [
+    {
+      "claim_id": "F2",
+      "claim": "<unmet or unobservable requirement>",
+      "execution_records": [],
+      "status": "gap",
+      "player_impact": "<what the player loses>",
+      "recommended_update": "<smallest next step>"
+    }
+  ],
   "planner_handoff": {
     "preservation_constraints": [],
     "update_targets": [],
@@ -67,6 +92,11 @@ Write exactly two files:
   }
 }
 ```
+   Record rules: `claim_id` is required on **every** record in both lists and must
+   be unique across them. Every entry of `execution_records` needs `type` (one of
+   the six values above, spelled exactly) and `observation`; `verified_records`
+   entries additionally need at least one execution record, and `gap_records`
+   entries need `player_impact` and `recommended_update`.
 2. `.hoh/qa_report.md`: a short human-readable report (what was checked, what was
    observed, what remains open).
 
