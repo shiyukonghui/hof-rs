@@ -60,7 +60,7 @@
     {
       "id": "Q3.frames-and-arithmetic",
       "pass": true,
-      "evidence": "我从 `…/deterministic/raw/input_replay.json`（48 次调用：**39 running_game_\* + 9 editor_\***，see T10A-6）逐帧自抽：move_right 60 样本 x 184.666702→400.999725（Δ=+216.333023，59 个间隔 ⇒ 3.6666614 px/帧）；move_right_release 10 样本 415.666351→448.666260（Δ=+32.999908，3.6666565/帧）；move_left 60 样本 448.666260→232.333389（Δ=−216.332870，−3.6666588/帧）；jump 30 样本 y 269.980835→214.258606(f17 峰)→242.591965，逐帧 dy 严格按 **+0.388885/帧** 递增（= gravity 1400 × (1/60)² = 0.388889，与 `.workspace/mario/scripts/player.gd` 的 `gravity=1400.0` 自洽），起升 55.722229、峰后在窗内回落 28.333359、x 恒定。`player.gd` 的 `speed=220.0` ⇒ 220/60 = 3.666667 px/帧，与引擎自己报的 `velocity.x=3.666656`（×60=219.9994 px/s）逐位吻合。来源是**游戏进程通道**：四条位置断言的 quadruple 都标 `channel=game_process`，且 `input_axis` 在真机恒 `null`（4 次 `…\"input_axis\":null`，`run_test_scenario` 的轴断言原始回包写 `does not have the property 'input_axis'`）⇒ 承重的确是位置证据。"
+      "evidence": "我从 `…/deterministic/raw/input_replay.json`（48 次调用：**39 running_game_* + 9 editor_***，see T10A-6）逐帧自抽：move_right 60 样本 x 184.666702→400.999725（Δ=+216.333023，59 个间隔 ⇒ 3.6666614 px/帧）；move_right_release 10 样本 415.666351→448.666260（Δ=+32.999908，3.6666565/帧）；move_left 60 样本 448.666260→232.333389（Δ=−216.332870，−3.6666588/帧）；jump 30 样本 y 269.980835→214.258606(f17 峰)→242.591965，逐帧 dy 严格按 **+0.388885/帧** 递增（= gravity 1400 × (1/60)² = 0.388889，与 `.workspace/mario/scripts/player.gd` 的 `gravity=1400.0` 自洽），起升 55.722229、峰后在窗内回落 28.333359、x 恒定。`player.gd` 的 `speed=220.0` ⇒ 220/60 = 3.666667 px/帧，与引擎自己报的 `velocity.x=3.666656`（×60=219.9994 px/s）逐位吻合。来源是**游戏进程通道**：四条位置断言的 quadruple 都标 `channel=game_process`，且 `input_axis` 在真机恒 `null`（4 次 `…\"input_axis\":null`，`run_test_scenario` 的轴断言原始回包写 `does not have the property 'input_axis'`）⇒ 承重的确是位置证据。"
     },
     {
       "id": "Q3.assertions-accepted-and-PNGs",
@@ -132,7 +132,7 @@
     {
       "id": "T10A-6",
       "severity": "minor（措辞）",
-      "what": "报告 §4.5 写“轨迹里 48 次 replay 调用的工具名**全部**是 `running_game_*`”，同一句的括号里又承认注入走 `editor_simulate_input_action`。实测 48 次 = **39 running_game_\* + 9 editor_\***（1 `editor_get_input_actions` + 8 `editor_simulate_input_action`）。实质主张（读数与断言都在游戏端点）正确。",
+      "what": "报告 §4.5 写“轨迹里 48 次 replay 调用的工具名**全部**是 `running_game_*`”，同一句的括号里又承认注入走 `editor_simulate_input_action`。实测 48 次 = **39 running_game_* + 9 editor_***（1 `editor_get_input_actions` + 8 `editor_simulate_input_action`）。实质主张（读数与断言都在游戏端点）正确。",
       "reproduction": "`Counter(x['tool'] for x in json.load(open('…/raw/input_replay.json'))['calls'])`。"
     },
     {
