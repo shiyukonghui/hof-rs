@@ -67,6 +67,8 @@ pub const COMMAND_VARS: &[&str] = &[
     "HOH_SCRATCH_DIR",
     "HOH_VIEW_DIR",
     "HOH_RUN_DIR",
+    // DR-69 ①: the path of the run's published game route.
+    crate::tools::endpoint::GAME_ROUTE_ENV,
 ];
 
 /// Render one reference to `name` for `flavor`.

@@ -45,6 +45,55 @@ fn developer_prompt_states_the_definition_of_done() {
     assert!(!prompt.contains("{{step_limit}}") || prompt.contains("{{step_limit}}"));
 }
 
+/// DR-69 ②: the order of work, and the contradiction `smoke-t9` measured.
+///
+/// The old definition-of-done item 4 told the Developer to prove its own work
+/// with `running_game_get_node_property_samples` — the very channel that was
+/// structurally unreachable (`F-T9-1`) — so the one instruction the role read as
+/// "verify yourself" pointed at a game endpoint only the Tester and the
+/// deterministic battery drive.  The role then spent 175 calls hand-rolling an
+/// MCP client and probing ports over raw HTTP.
+///
+/// The delivered prompt must therefore say: change the project code first; the
+/// in-round observation of the running game is not the Developer's prerequisite
+/// and belongs to the Tester and the battery; and none of the workarounds the
+/// round actually used may be suggested anywhere in it.
+#[test]
+fn the_developer_changes_the_code_first_and_leaves_observation_to_the_tester() {
+    let prompt = delivered_prompt(hof_rs::prompts::DEVELOPER_PROMPT);
+    let lower = prompt.to_lowercase();
+
+    for needle in [
+        "change the project code first",
+        "not your prerequisite",
+        "tester",
+        "battery",
+    ] {
+        assert!(
+            lower.contains(&needle.to_lowercase()),
+            "developer.md must tell the Developer its order of work; missing `{needle}`"
+        );
+    }
+
+    // The measured workarounds must not be suggested, and the unreachable
+    // channel must no longer be the Developer's own proof obligation.
+    for forbidden in [
+        "running_game_get_node_property_samples",
+        "build your own mcp client",
+        "write your own mcp client",
+        "python -c",
+        "invoke-restmethod",
+        "netstat",
+        "curl ",
+        "raw http",
+    ] {
+        assert!(
+            !lower.contains(forbidden),
+            "developer.md still points the Developer at `{forbidden}`"
+        );
+    }
+}
+
 #[test]
 fn godot_dev_skill_is_a_real_recipe_book() {
     let dev = skill("godot-dev.md");

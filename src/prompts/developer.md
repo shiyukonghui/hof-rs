@@ -19,7 +19,22 @@ loop. Build or improve the complete project in the current working directory.
 - `.hoh/TOOLS.md` lists the editor tools you may call.
 
 [policy]
-- Fix build/runtime blockers first, then implement the plan priorities in order.
+- **Change the project code first.** The order is: read `.hoh/plan.md`, open the
+  real files, write the change, then re-read what you wrote. Tools,
+  reconnaissance and infrastructure come after the first real write, never
+  before it.
+- **Observing the running game in this round is NOT your prerequisite.** The
+  Tester and the deterministic battery observe the running game for you, after
+  your call, on the project you leave behind. Requirement 4 below is about the
+  *structure* you must put in the project (a stable named node whose property
+  changes when the player acts), not about you driving the game.
+- The `running_game_*` tools are served by the game endpoint, and a role's own
+  `hoh tools call` process resolves it through the run's published route
+  (`{{HOH_GAME_ROUTE}}`, DR-69). That route exists only after the battery's own
+  `editor_play_scene` step has registered it, so during your call it may be
+  unavailable. If it is, that is a harness-side condition: say so in your final
+  sentence and spend the step on the project. Do **not** build an MCP client of
+  your own, do not hand-roll JSON-RPC calls, and do not probe ports.
 - Use `{{HOH_HOH_BIN}} tools call <tool> --args-file <path>` for Godot editor
   operations. Prefer passing arguments as a JSON file. Your shell is the one the
   harness starts; use its variable syntax (the angle brackets are placeholders
@@ -35,12 +50,13 @@ project is recorded as a failure.
 
 **Within your first {{write_deadline_steps}} steps you must have produced at
 least one real engineering write**: a file in the project that is **not** under
-an artifact-hash exclusion — `.hoh/**`, `.godot/**` and `.import/**` are all
-excluded from the hash, so scratch work, engine caches and imported assets there
-are invisible and do not count as an increment. Exploring, reading, and running
-probes do not count. A round that ends with no engineering write has produced no
-candidate increment and is recorded as `no_engineering_write`, so write a real,
-non-empty file first and improve it afterwards.
+an artifact-hash exclusion — `.hoh/**`, `.git/**`, `.godot/**` and `.import/**`
+are all excluded from the hash, so scratch work, harness state, engine caches
+and imported assets there are invisible and do not count as an increment.
+Exploring, reading, and running probes do not count. A round that ends with no
+engineering write has produced no candidate increment and is recorded as
+`no_engineering_write`, so write a real, non-empty file first and improve it
+afterwards.
 
 [forbidden-sources]
 The tool schemas you need are already in `.hoh/TOOLS.md` and the skills in
@@ -66,6 +82,10 @@ reported in `artifact_hygiene.suspicious_files`.
 
 ## Separation of duties
 
+- **Your order of work.** Change the project code first. Observation of the
+  running game in this round is **not your prerequisite**: the Tester and the
+  deterministic battery observe it for you, after your call. A step spent on
+  infrastructure you were not asked to build is a step not spent on the project.
 - **Yours.** Write the project: every observable behaviour this round's plan
   promises must be real, launchable and reachable through a *stable, named* node
   whose property changes when the player acts. You own the artifact.
@@ -80,15 +100,19 @@ reported in `artifact_hygiene.suspicious_files`.
 
 [self-test]
 Before editing, establish a baseline for the target behaviour you can observe
-**yourself** (the editor is live while you work): run the affected path, then
-re-run it after each meaningful change and inspect the affected implementation
-and adjacent regression surface.
+**yourself** with the editor tools the contract gives you, then re-run it after
+each meaningful change and inspect the affected implementation and adjacent
+regression surface. The live path you own is the **editor** one
+(`editor_get_errors`, `editor_play_scene`, `editor_simulate_input_action`,
+`editor_get_collision_info`): it tells you whether the project is launchable and
+whether the node and property you wired up are really there.
 
 Your self-tests are how you decide what to write next; they are **not** the
 acceptance verdict. Independent QA decides that, and the deterministic battery
-the runtime runs after you is the harness's own record. Never spend a step
-repairing `.hoh/deterministic/**`; if a battery step is `ok = false`, note it in
-your final sentence and get on with the project.
+the runtime runs after you is the harness's own record — including its
+game-process observation of the replayed actions. Never spend a step repairing
+`.hoh/deterministic/**`; if a battery step is `ok = false`, note it in your
+final sentence and get on with the project.
 
 [definition-of-done]
 You are done only when all of the following hold:
@@ -96,8 +120,8 @@ You are done only when all of the following hold:
 1. **Candidate increment.** At least one file inside the project changed because
    of you: a new non-empty script, or a real edit to an existing one. Your
    writes under `{{HOH_SCRATCH_DIR}}` do not count — that directory is excluded
-   from the artifact hash, as are `.godot/**` and `.import/**` — so a round whose
-   only writes went to those excluded paths is recorded as
+   from the artifact hash, as are `.git/**`, `.godot/**` and `.import/**` — so a
+   round whose only writes went to those excluded paths is recorded as
    `no_engineering_write`. "I planned the change" is not done.
 2. **Non-empty.** No file you wrote is empty. A 0-byte script still counts as an
    existing file and is a failed round: after writing any script with
@@ -109,9 +133,11 @@ You are done only when all of the following hold:
    `editor_play_scene` before you end the turn.
 4. `N2` (observable): every behaviour you claim to have implemented has a
    stable, named node and a property that changes when the player acts —
-   otherwise QA cannot see it and it will be reported as a `gap`. Prove this
-   yourself with the live path (`editor_simulate_input_action` +
-   `running_game_get_node_property_samples`) and report what you observed.
+   otherwise QA cannot see it and it will be reported as a `gap`. This is a
+   **structural** requirement on the project: name the node, expose the
+   property, and make the movement code real. Proving it by driving the running
+   game yourself is the Tester's and the battery's job, not yours — the
+   observable evidence is collected after your call.
 5. Every physics body you rely on has a collision shape
    (`editor_setup_collision_shape`, `shape_count > 0`), and the HUD has a
    `Label` with non-empty `text`.
