@@ -233,6 +233,31 @@ pub fn channel_for(config: &HohConfig) -> McpChannel {
     .with_max_sync_retries(config.tools.max_sync_retries)
 }
 
+/// DR-69 ① (road A): adopt the game route the run published, and return what
+/// was adopted.
+///
+/// A role's `hoh tools call` is a **new process** whose channel starts with no
+/// game route, so `running_game_*` used to be unreachable no matter that the
+/// game was running (`smoke-t9`: `mcp_port=61183` announced, still
+/// `game_endpoint_unavailable`, exit 5).  The run publishes
+/// `<run dir>/game_endpoint.json` and hands every role the path in
+/// `HOH_GAME_ROUTE`; this is where a role process picks it up.
+///
+/// `path` is a parameter for the same reason [`parse_args_with_bases`] takes
+/// its bases: the resolution is testable without touching the process
+/// environment.  `None` reads the environment.
+pub fn adopt_published_game_route(
+    channel: &dyn ToolChannel,
+    path: Option<PathBuf>,
+) -> Option<crate::tools::endpoint::GameEndpointRecord> {
+    let path = path.or_else(|| {
+        std::env::var(crate::tools::endpoint::GAME_ROUTE_ENV)
+            .ok()
+            .map(PathBuf::from)
+    })?;
+    channel.use_game_route_file(path)
+}
+
 /// `hoh tools call <tool>`: deny first, then call.
 pub async fn tools_call(
     channel: &dyn ToolChannel,

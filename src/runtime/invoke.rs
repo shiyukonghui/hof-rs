@@ -67,6 +67,17 @@ pub fn role_env(
             .into_owned(),
     );
     env.insert("HOH_TOOLS_ENDPOINT".to_string(), cfg.tools.endpoint.clone());
+    // DR-69 ①: where this run publishes its game endpoint, so a role's own
+    // `hoh tools call` process can resolve `running_game_*` at all.  Absolute
+    // like every other path-shaped variable here.
+    env.insert(
+        crate::tools::endpoint::GAME_ROUTE_ENV.to_string(),
+        absolute_path(&crate::tools::endpoint::game_route_path(
+            &cfg.runtime.runs_dir.join(run_id),
+        ))
+        .to_string_lossy()
+        .into_owned(),
+    );
     env.insert("HOH_TOOLS_POLICY".to_string(), role.as_str().to_string());
     env.insert(
         "HOH_HOH_BIN".to_string(),
@@ -236,11 +247,19 @@ mod tests {
             "HOH_TOOLS_ENDPOINT",
             "HOH_TOOLS_POLICY",
             "HOH_HOH_BIN",
+            crate::tools::endpoint::GAME_ROUTE_ENV,
         ] {
             assert!(env.contains_key(key), "missing {key}");
         }
         assert_eq!(env.get("HOH_ROLE").unwrap(), "tester");
         assert_eq!(env.get("HOH_ITERATION").unwrap(), "2");
         assert!(env.get("HOH_ARTIFACT_DIR").unwrap().ends_with(".hoh"));
+        // DR-69 ①: the route file is absolute and lives in this run's directory.
+        let route = env.get(crate::tools::endpoint::GAME_ROUTE_ENV).unwrap();
+        assert!(
+            route.ends_with(crate::tools::endpoint::GAME_ROUTE_FILE),
+            "{route}"
+        );
+        assert!(!std::path::Path::new(route).is_relative(), "{route}");
     }
 }

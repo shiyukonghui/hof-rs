@@ -77,6 +77,20 @@ pub trait ToolChannel: Send + Sync {
         None
     }
 
+    /// DR-69 ①: tell this channel where the run publishes its game route, and
+    /// adopt what is already published there.
+    ///
+    /// A role's `hoh tools call` is a **separate process** from the run that
+    /// started the game, so the in-memory route alone can never be reached
+    /// (`smoke-t9`: `mcp_port=61183` announced, and still
+    /// `game_endpoint_unavailable`, exit 5).  The channel that registers the
+    /// endpoint publishes it to `path`; a channel pointed at the same path
+    /// resolves it again.  The default implementation accepts the path and
+    /// adopts nothing, which is what a single-endpoint double wants.
+    fn use_game_route_file(&self, _path: std::path::PathBuf) -> Option<GameEndpointRecord> {
+        None
+    }
+
     /// DR-51: the last game endpoint this channel ever **registered**, even
     /// after [`ToolChannel::clear_game_endpoint`] invalidated the route.
     ///
@@ -139,6 +153,9 @@ pub struct McpChannel {
     /// DR-51: the last endpoint that was registered, kept after the route is
     /// cleared so the run's identity record does not lose it.
     game_history: std::sync::Arc<std::sync::Mutex<Option<GameEndpointRecord>>>,
+    /// DR-69 ①: where the run publishes the game route so a **later process**
+    /// (a role's `hoh tools call`) can resolve it.
+    game_route_file: std::sync::Arc<std::sync::Mutex<Option<std::path::PathBuf>>>,
     /// DR-55: the per-endpoint liveness verdict, keyed by the JSON-RPC URL.
     liveness:
         std::sync::Arc<std::sync::Mutex<std::collections::BTreeMap<String, EndpointLiveness>>>,
@@ -160,6 +177,7 @@ impl McpChannel {
             editor: McpClient::new(endpoint, timeout_seconds, max_retries),
             game: std::sync::Arc::new(std::sync::Mutex::new(None)),
             game_history: std::sync::Arc::new(std::sync::Mutex::new(None)),
+            game_route_file: std::sync::Arc::new(std::sync::Mutex::new(None)),
             liveness: std::sync::Arc::new(std::sync::Mutex::new(std::collections::BTreeMap::new())),
             timeout_seconds,
             max_retries,
@@ -232,6 +250,44 @@ impl McpChannel {
                 EndpointLiveness::new(endpoint.to_string()),
             );
         }
+    }
+
+    /// DR-69 ①: adopt `record` as this channel's game route **without**
+    /// publishing it again.
+    ///
+    /// The single place both [`ToolChannel::register_game_endpoint`] (the run
+    /// that announced the endpoint) and [`ToolChannel::use_game_route_file`] (a
+    /// later process reading the published record) go through, so the two
+    /// cannot drift apart.
+    fn install_game_route(&self, record: GameEndpointRecord) -> anyhow::Result<()> {
+        let client = McpClient::new(
+            record.endpoint.clone(),
+            self.timeout_seconds,
+            self.max_retries,
+        )
+        .with_max_sync_retries(self.max_sync_retries);
+        // DR-55: a fresh endpoint starts alive, whatever happened to the address
+        // it replaces.
+        self.arm_endpoint(&record.endpoint);
+        let mut guard = self
+            .game
+            .lock()
+            .map_err(|_| anyhow::anyhow!("the game endpoint registry is poisoned"))?;
+        *guard = Some(GameRoute {
+            record: record.clone(),
+            client,
+        });
+        // DR-51: the identity is captured **at registration time**, before
+        // anything may clear the route.
+        if let Ok(mut history) = self.game_history.lock() {
+            *history = Some(record);
+        }
+        Ok(())
+    }
+
+    /// DR-69 ①: the path this channel publishes its game route to, if any.
+    fn route_file(&self) -> Option<std::path::PathBuf> {
+        self.game_route_file.lock().ok()?.clone()
     }
 }
 
@@ -310,35 +366,42 @@ impl ToolChannel for McpChannel {
     }
 
     async fn register_game_endpoint(&self, record: GameEndpointRecord) -> anyhow::Result<()> {
-        let client = McpClient::new(
-            record.endpoint.clone(),
-            self.timeout_seconds,
-            self.max_retries,
-        )
-        .with_max_sync_retries(self.max_sync_retries);
-        // DR-55: a fresh endpoint starts alive, whatever happened to the address
-        // it replaces.
-        self.arm_endpoint(&record.endpoint);
-        let mut guard = self
-            .game
-            .lock()
-            .map_err(|_| anyhow::anyhow!("the game endpoint registry is poisoned"))?;
-        *guard = Some(GameRoute {
-            record: record.clone(),
-            client,
-        });
-        // DR-51: the identity is captured **at registration time**, before
-        // anything may clear the route.
-        if let Ok(mut history) = self.game_history.lock() {
-            *history = Some(record);
+        // DR-69 ①: the route is published **before** the registration is
+        // returned, so a role process that starts the moment the battery
+        // registered the endpoint can already resolve it.  A publish failure is
+        // best effort: it must not fail the battery step that announced the
+        // endpoint, and the in-process route below still works.
+        if let Some(path) = self.route_file() {
+            let _ = endpoint::publish_game_route(&path, &record);
         }
-        Ok(())
+        self.install_game_route(record)
     }
 
     async fn clear_game_endpoint(&self) {
         if let Ok(mut guard) = self.game.lock() {
             *guard = None;
         }
+        // DR-69 ①: a stopped game must not stay resolvable through the published
+        // file either, or a later process would reach a dead port.
+        if let Some(path) = self.route_file() {
+            endpoint::withdraw_game_route(&path);
+        }
+    }
+
+    /// DR-69 ①: point this channel at the run's published route and adopt what
+    /// is already there.
+    ///
+    /// This is the whole of road (A): `HOH_GAME_ROUTE` names the file, and a
+    /// fresh process resolves the same route the run registered.
+    fn use_game_route_file(&self, path: std::path::PathBuf) -> Option<GameEndpointRecord> {
+        if let Ok(mut guard) = self.game_route_file.lock() {
+            *guard = Some(path.clone());
+        }
+        let record = endpoint::load_game_route(&path)?;
+        // A malformed record cannot be adopted; `load_game_route` already
+        // refuses one, and the caller keeps failing loudly (DR-43).
+        self.install_game_route(record.clone()).ok()?;
+        Some(record)
     }
 
     async fn game_endpoint(&self) -> Option<GameEndpointRecord> {

@@ -11,6 +11,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use std::path::{Path, PathBuf};
+
 /// The channel a tool belongs to, derived from its name.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ToolScope {
@@ -74,8 +76,59 @@ pub struct GameEndpointRecord {
     pub pid: Option<u32>,
 }
 
-/// DR-55: how many **consecutive transport-layer failures** kill an endpoint.
+/// DR-69 ①: the file name a run publishes its game route under.
 ///
+/// The route a run registers lives in that run's process memory, but the roles
+/// reach it only through the `hoh tools call` **CLI bridge**, which is a fresh
+/// process every time (`src/cli_impl.rs:53` → `bridge::channel_for`).  Road (A)
+/// of `TASK-DR69.md` makes the route resolvable across processes: the run
+/// publishes the record to this file next to its other artifacts, and a later
+/// process adopts it.
+pub const GAME_ROUTE_FILE: &str = "game_endpoint.json";
+
+/// DR-69 ①: the environment variable that tells a role process where the run
+/// published its game route (`<run dir>/game_endpoint.json`).
+pub const GAME_ROUTE_ENV: &str = "HOH_GAME_ROUTE";
+
+/// DR-69 ①: the published route's path inside a run directory.
+pub fn game_route_path(run_dir: &Path) -> PathBuf {
+    run_dir.join(GAME_ROUTE_FILE)
+}
+
+/// DR-69 ①: publish `record` so another process can resolve the game route.
+///
+/// Written through a temporary file and renamed, so a reader never sees a
+/// half-written record.  The caller decides whether a failure is fatal.
+pub fn publish_game_route(path: &Path, record: &GameEndpointRecord) -> std::io::Result<()> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let serialized = serde_json::to_string(record).unwrap_or_else(|_| "{}".to_string());
+    let temp = path.with_extension("json.tmp-publish");
+    std::fs::write(&temp, serialized.as_bytes())?;
+    if path.exists() {
+        std::fs::remove_file(path)?;
+    }
+    std::fs::rename(&temp, path)
+}
+
+/// DR-69 ①: read a published route, or `None` when nothing is published.
+///
+/// An unreadable or malformed file is `None`, never a guess: the alternative
+/// (sending a `running_game_*` call to an invented port) is exactly what DR-43
+/// forbids.
+pub fn load_game_route(path: &Path) -> Option<GameEndpointRecord> {
+    let raw = std::fs::read_to_string(path).ok()?;
+    serde_json::from_str(&raw).ok()
+}
+
+/// DR-69 ①: withdraw the published route, so no later process can reach a port
+/// whose game has stopped (DR-43's guarantee, one process wider).
+pub fn withdraw_game_route(path: &Path) {
+    let _ = std::fs::remove_file(path);
+}
+
+/// DR-55: how many **consecutive transport-layer failures** kill an endpoint.
 /// Two, not one: the first failure is still retried as before (a hiccup must not
 /// cost a whole round), but a second consecutive one is a verdict.  `smoke-t6`
 /// burned about 12 minutes re-attempting a game endpoint that had already

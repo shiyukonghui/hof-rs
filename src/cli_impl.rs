@@ -51,6 +51,11 @@ pub async fn tools(args: ToolsArgs) -> anyhow::Result<i32> {
             let config = load_with(&call.config_spec)?;
             let args = bridge::parse_args(call.args.as_deref(), call.args_file.as_deref())?;
             let channel = bridge::channel_for(&config);
+            // DR-69 ①: this process is not the run.  The run publishes the game
+            // route it registered (`HOH_GAME_ROUTE`), and without adopting it a
+            // `running_game_*` tool can never be reached from here — which is
+            // what `smoke-t9` measured (exit 5 with the game running).
+            bridge::adopt_published_game_route(&channel, None);
             bridge::tools_call(&channel, role, &call.tool, args).await
         }
         ToolsCommand::List(list) => {

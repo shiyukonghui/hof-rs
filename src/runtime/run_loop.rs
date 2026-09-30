@@ -430,6 +430,14 @@ pub async fn run(
 
     let workspace = cfg.runtime.workspace.clone();
     std::fs::create_dir_all(&workspace)?;
+    // DR-69 ① (road A): the game route is published here for the whole run, so
+    // a role's own `hoh tools call` process can resolve `running_game_*`.  It
+    // lives in the run directory — outside the artifact tree, outside every
+    // role view and outside the Developer's working tree — and
+    // `editor_stop_scene` withdraws it again.
+    orchestrator
+        .tools
+        .use_game_route_file(crate::tools::endpoint::game_route_path(&run_dir));
     orchestrator.adapter.initialize(&workspace)?;
     let _ = orchestrator.force_init; // the adapter decides what "already exists" means
 
