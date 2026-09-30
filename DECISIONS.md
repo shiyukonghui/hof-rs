@@ -10478,3 +10478,46 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 - 队列：**DR-69 验收 → 推送 → 再造一轮真机 → REF2 → §16 → 造游戏**。
 - 回滚点：脱敏可 `git revert 3adab37`；其余 5 个提交可各自 revert；四条真机基线不得覆盖。
 
+## D273 — DR-69 验收 **fail**（正确）：选路 (A) **放错时机**（发布窗口与角色窗口**不相交**）；另五处 fail；**我的新设计决定**（整轮发布 + 新鲜度校验 + 三处交付材料一致性 + 接线覆盖 + 恢复被毁证据）
+
+- 日期：2026-09-30。`TASK-DR69-ACCEPTANCE.md`：**`verdict = fail`**（1 major + 1 moderate + 6 minor + 3 info）。
+  **我裁定 fail 成立且重要**——它揭示的是**设计层**错误，不是实现瑕疵。
+- **D1（major）：选路 (A) 在当前流程里帮不到任何角色。** 事实（验收者给到 file:line）：
+  发布点 `src/adapter/godot.rs:903` `register_game_endpoint` **只在电池的 `step_play_scene()`（`:623`）内被调用**；
+  撤下点是同一 pass 末的 `step_stop_scene()`（`:629`，`clear_game_endpoint` 无条件调用）。
+  而 **`run_loop.rs` 阶段序 = Planner(`:673`) → Developer(`:884`) → 电池(`:1111`) → 冻结(`:1263`) → Tester(`:1373`)**
+  ⇒ **正常路径下没有任何角色进程在 route 文件存在期间运行**（角色是串行独立 `hoh` 进程）。
+  且 `McpChannel::call`（`src/tools/mod.rs:329-358`）**在 `editor_play_scene` 之后不注册** ⇒ **角色无法自行引导 route**。
+  **唯一**能碰到的情形是**电池中途 Err**（`?` 跳 `stop_scene`）⇒ **错误路径副产品，非设计**。
+  ⇒ **"让角色 CLI 到达游戏端点"这一要求并未满足**；而报告 §6 却给出**≈0.85「真机会成功」**的推断，
+  **且未披露"两个窗口不相交"** ⇒ 该推断**无依据**（这也是 C8 判 fail 的一条）。
+- **其余 fail 项（我都认可）**：
+  - **路由不校验 `pid`/新鲜度**：`use_game_route_file` **无条件安装**；验收者反例（自己 bind 后立刻 close 的回环端口）
+    把陈旧 route 交给真实 `hoh.exe tools call running_game_get_scene_tree` ⇒ **exit 5 的传输失败**，**输出里没有 `game_endpoint_unavailable`**
+    ⇒ **陈旧 route 把 DR-43 的明确拒绝变成一次不透明传输错误**；且 **`run_loop.rs:537` 用同一函数** ⇒ harness 自身也可能路由到死端点。
+    另：**一轮结束时不清理**（`withdraw_game_route` 只有一处调用）。
+  - **同一矛盾仍存在于"交付给角色的技能"**：`src/prompts/skills/godot-dev.md:65-78`（§5 标题就是"Self-test the behaviour before you finish"）
+    仍指示 `running_game_get_node_property_samples` 且要求 `samples[*].position.x` 在按键期间变化；§6（`:80-92`）仍要求 `editor_play_scene` 后调 `running_game_get_scene_tree`；
+    且 **`tests/developer_contract.rs:121` 仍"要求"该技能含此工具名**（本批未改）⇒ **我只在 `developer.md` 里删了指令，交付材料里的正向指令还在**。
+  - **生产接线无覆盖（与 DEF-A 同类）**：植入删掉 `src/harness/mini.rs:66-69` 的 `CappedEnvironment::new(...)` 包装 ⇒
+    `--test tool_output_ceiling` **4/4 全绿**、全量套件 **0 failed** ⇒ 报告"真 `LocalEnvironment` 测试证明改的是 harness 真正用的边界"**不准确**（该测试自己 `CappedEnvironment::new`，从未过 `MiniHarness::invoke`）。
+  - **脱敏破坏了冻结证据**：`experiment/dev1_commands.txt` 52200 → **52359 B**、**LF 184 → CRLF 183**（新增 183 个 `\r`）、**记录数 184 → 183**
+    （`s008` 两条**被并成一行**），且 **`dir /b -p` 这个字符串从全文消失**——**而它正是 `-p` 缺陷的证据**。
+    更严重的是 **`REDACTION.md` 自称"只移除 53 字节、文件别处未被触碰"，与字节事实不符** ⇒ **"自述与实测不符"**。
+  - **密钥路径仍在已提交文件**（`TASK-SMOKE-T9-ACCEPTANCE.md:73/:102`、`TASK-SMOKE-T9-REPORT.md:421`）——**明文密钥 0 命中**（通过），
+    此条**我已裁定保留**（缺陷披露本身），属**已披露的未达标**，非静默遗漏。
+- **我的新设计决定（DR-70 必须按此做，先设计后实现）**：
+  1. **路由生命周期 = 整轮**：**在游戏场景为整轮启动时发布**（而非电池的 `play_scene` 内），
+     **每轮开始时（或每次游戏启动时）刷新记录**，**在轮次收尾统一撤下**（不只 `stop_scene`）；
+     ⇒ 目标是 **Developer/Tester 执行期间 route 一定存在且指向本轮活着的游戏**。
+  2. **采纳时必须校验新鲜度与 `pid`**：陈旧/不属于本轮活进程的 route 必须**回到 DR-43 的 `game_endpoint_unavailable` 明确拒绝**，
+     **不得**变成不透明传输失败；`run_loop.rs:537` 同一函数同样受此约束。
+  3. **一致性：三处交付材料必须同步**——`developer.md`、**`src/prompts/skills/godot-dev.md`（§5/§6）**、**`tests/developer_contract.rs:121`**；
+     并**新增测试**：**任何交付文本都不得指示角色使用"够不到的通道"**（当前必红）。
+  4. **接线覆盖**：为 `MiniHarness` 的 `CappedEnvironment` 包装加**经过 `MiniHarness::invoke` 的**测试
+     （使"删掉包装仍全绿"不再可能）。
+  5. **恢复被毁证据**：从 git 历史取回 `dev1_commands.txt` 原文，**按记录边界与行尾逐字节保持的方式**做**外科式**脱敏，
+     或改用**旁注**（新增一份说明文件而不改原文）；并**更正 `REDACTION.md` 的失实自述**（旧文字保留并标注）。
+- **裁决**：**不推送**（验收 fail）；**DR-70 = 上列五项**（含设计决定先落文），随后独立验收，再**推送**，再**真机**。
+- 回滚点：DR-69 的 7 个提交可各自 revert；被毁证据可由 git 历史恢复；四条真机基线不得覆盖。
+
