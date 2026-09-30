@@ -46,6 +46,29 @@
 **要做**：失败路径也要写出**真实**的 `battery_passes`、`candidate_id`/`version_id`（以及既有的两个退出码位置）。
 **测试（先红）**：一次失败轮次后，`result.json` 的这三个字段**如实**（当前必红）。
 
+### ⑤（真机新发现，见 `TASK-SMOKE-T8-REPORT.md`）shell 修复的**盲区**：单花括号占位符不可解析
+真机：`%HOH_*%` 已成主流（`$HOH_HOH_BIN` **0 次**、`bash` 包裹 **120→0**、首个工具调用 **34→15 步**），
+但**三个 TASK 提示词**与 **`TOOLS.md` 头部示例**仍给出**不可解析的单花括号 `{HOH_HOH_BIN}`**
+（`format!` 里的 `{{…}}`：`src/prompts/mod.rs:72/93/96/121`、`src/tools/index.rs:165/167`；
+渲染器只匹配 `{{…}}`；`assert_fully_rendered`（`src/runtime/invoke.rs:164-172`）只查 `{{`/`{%`；
+`tests/role_shell_contract.rs:173-193` 只抽以 `%HOH_`/`$HOH_` 开头的行）。
+**要做**：修掉这些残留占位符，**并让"完整性断言"覆盖单花括号形态**（否则同类残留会再溜过去）。
+**测试（先红）**：断言**任何交付文本**都不含不可解析的 `{HOH_*}`（当前必红）。
+
+### ⑥（真机新发现）提示词缺**合法终止符** ⇒ planner 提前死亡
+真机：**planner 在第 35 步提交后 `RepeatedFormatError` 死掉**，因为 planner/tester 提示词**没有合法的 `COMPLETE_TASK` 终止符**。
+**要做**：给 planner/tester 提示词**写明合法终止形式**，并加测试：**提交后应当正常终止**（当前必红）。
+
+### ⑦（真机新发现）失败轮的门状态自相矛盾
+真机：失败轮的 `meta.json.artifact_gate.launchable=true`，且 `is_open()` **忽略 `applicable`**。
+**要做**：让失败轮的 `artifact_gate` **如实**（不适用即不适用、不得报 `launchable=true`）；`is_open()` 必须考虑 `applicable`。
+**测试（先红）**：失败轮 ⇒ 断言门字段自洽。
+
+## 1.8 关于 `runs/**` 的规则收紧（**上一轮真机违反过一次**）
+`smoke-t8` 执行者**曾把 3 个分析 JSON 写进只读的 `runs/smoke-t7`**，随后删除并逐字节恢复摘要（它主动披露）。
+⇒ **本批及其后**：**对 `runs/**` 任何路径一律不得写入——即使是临时文件、即使随后删除**。
+所有分析产物**只能放在仓外**（`%TEMP%`）或 `.spec/hof-rs/tasks/<批名>-evidence/`。
+
 ## 2. TDD 与非空洞性（硬要求）
 
 - 每件**先写会失败的最小测试**并确认它**因当前行为而红**（贴真实失败输出），再最小实现转绿。
