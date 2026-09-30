@@ -1,0 +1,8 @@
+{
+  "content": [
+    {
+      "text": "{\"message\":\"Playback stopped\",\"stopped\":true}",
+      "type": "text"
+    }
+  ]
+}

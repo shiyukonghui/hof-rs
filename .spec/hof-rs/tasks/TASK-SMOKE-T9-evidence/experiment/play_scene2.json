@@ -1,0 +1,8 @@
+{
+  "content": [
+    {
+      "text": "{\"args_deduplicated\":[],\"args_injected\":[\"--mcp-port=62306\"],\"endpoint\":\"http://127.0.0.1:62306/mcp\",\"headless\":false,\"mcp_port\":62306,\"mcp_port_source\":\"auto_free_port\",\"mode\":\"main\",\"pid\":115160,\"playing\":true}",
+      "type": "text"
+    }
+  ]
+}

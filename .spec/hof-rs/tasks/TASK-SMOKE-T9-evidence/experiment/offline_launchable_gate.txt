@@ -1,0 +1,22 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.51s
+     Running tests\launchable_gate.rs (target\debug\deps\launchable_gate-02d77508fcc543d7.exe)
+
+running 14 tests
+test a_parent_path_that_resolves_to_nothing_is_rejected ... ok
+test a_child_without_a_parent_attribute_is_rejected ... ok
+test a_scene_without_a_root_node_is_rejected_with_an_executable_hint ... ok
+test a_well_formed_scene_passes_the_structure_check ... ok
+test the_run_meta_keeps_the_game_endpoint_the_battery_registered ... ok
+test an_engine_info_banner_does_not_close_the_gate ... ok
+test a_launchable_project_never_invokes_a_repair ... ok
+test a_stale_editor_log_line_does_not_close_the_gate ... ok
+test an_error_carrying_the_mcp_prefix_still_closes_the_gate ... ok
+test a_successful_repair_freezes_with_the_gate_open ... ok
+test a_reproducible_parse_error_still_closes_the_gate ... ok
+test a_real_editor_error_still_closes_the_gate ... ok
+test an_unknown_mcp_prefixed_line_still_closes_the_gate ... ok
+test a_broken_scene_triggers_exactly_one_targeted_repair ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 35.39s
+
+GATE_EXIT=0

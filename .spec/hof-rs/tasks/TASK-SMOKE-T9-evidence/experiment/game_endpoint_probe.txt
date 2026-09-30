@@ -1,0 +1,1 @@
+hoh: game_endpoint_unavailable: `running_game_get_scene_tree` runs in the game process and only the game endpoint serves it; no game endpoint is registered yet (`editor_play_scene` must have answered with `endpoint` or `mcp_port`). Falling back to the editor endpoint is not allowed (DR-43).

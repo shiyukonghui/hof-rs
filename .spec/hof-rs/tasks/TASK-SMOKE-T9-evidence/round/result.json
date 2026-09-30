@@ -1,0 +1,147 @@
+{
+  "ok": false,
+  "failed_role": "developer",
+  "reason": "contract_violation",
+  "issues": [],
+  "warnings": [
+    "qa_scope: MCP acts on the project open in the editor (the real workspace) while the Tester evaluates a frozen copy; the runtime binds both to one candidate identity with pre-QA and around-QA hash assertions (D7).",
+    "harness_source_read",
+    "no_progress",
+    "no_engineering_write"
+  ],
+  "candidate_id": null,
+  "version_id": null,
+  "usage": [
+    {
+      "role": "planner",
+      "iteration": 1,
+      "calls": 44,
+      "prompt_tokens": 545019,
+      "completion_tokens": 16375,
+      "total_tokens": 561394,
+      "cache_hit_tokens": null,
+      "cache_miss_tokens": null,
+      "usage_known": true
+    },
+    {
+      "role": "developer",
+      "iteration": 1,
+      "calls": 175,
+      "prompt_tokens": 7412764,
+      "completion_tokens": 119961,
+      "total_tokens": 7532725,
+      "cache_hit_tokens": null,
+      "cache_miss_tokens": null,
+      "usage_known": true
+    }
+  ],
+  "durations_ms": [
+    [
+      "planner",
+      119606
+    ],
+    [
+      "developer",
+      932145
+    ],
+    [
+      "developer_wrap_up",
+      63321
+    ]
+  ],
+  "evidence_diff": {
+    "added": [],
+    "modified": [],
+    "removed": []
+  },
+  "wrap_up_retry_used": true,
+  "attempts": [
+    {
+      "role": "planner",
+      "iteration": 1,
+      "attempt": 1,
+      "exit_status": "RepeatedFormatError",
+      "duration_ms": 119603,
+      "usage": {
+        "role": "planner",
+        "iteration": 1,
+        "calls": 44,
+        "prompt_tokens": 545019,
+        "completion_tokens": 16375,
+        "total_tokens": 561394,
+        "cache_hit_tokens": null,
+        "cache_miss_tokens": null,
+        "usage_known": true
+      },
+      "trajectory_path": "runs\\smoke-t9\\iter-1\\traj\\planner.attempt1.json",
+      "artifact_path": "runs\\smoke-t9\\iter-1\\planner-view\\.hoh/plan.md",
+      "artifact_valid": true,
+      "exit_was_limits": false
+    },
+    {
+      "role": "developer",
+      "iteration": 1,
+      "attempt": 1,
+      "exit_status": "LimitsExceeded",
+      "duration_ms": 932145,
+      "usage": {
+        "role": "developer",
+        "iteration": 1,
+        "calls": 150,
+        "prompt_tokens": 7191007,
+        "completion_tokens": 114233,
+        "total_tokens": 7305240,
+        "cache_hit_tokens": null,
+        "cache_miss_tokens": null,
+        "usage_known": true
+      },
+      "trajectory_path": "runs\\smoke-t9\\iter-1\\traj\\developer.attempt1.json",
+      "artifact_path": ".workspace/mario",
+      "artifact_valid": false,
+      "exit_was_limits": true
+    },
+    {
+      "role": "developer",
+      "iteration": 1,
+      "attempt": 2,
+      "exit_status": "LimitsExceeded",
+      "duration_ms": 63321,
+      "usage": {
+        "role": "developer",
+        "iteration": 1,
+        "calls": 25,
+        "prompt_tokens": 221757,
+        "completion_tokens": 5728,
+        "total_tokens": 227485,
+        "cache_hit_tokens": null,
+        "cache_miss_tokens": null,
+        "usage_known": true
+      },
+      "trajectory_path": "runs\\smoke-t9\\iter-1\\traj\\developer.attempt2.json",
+      "artifact_path": ".workspace/mario",
+      "artifact_valid": false,
+      "exit_was_limits": true
+    }
+  ],
+  "secret_redactions": 0,
+  "artifact_gate": {
+    "applicable": false,
+    "launchable": false,
+    "reasons": [
+      "no launchable gate was evaluated for this iteration"
+    ]
+  },
+  "repair_retry_used": false,
+  "battery_passes": [],
+  "out_of_tree_writes": [],
+  "artifact_hygiene": {
+    "suspicious_files": []
+  },
+  "prd_coverage": {
+    "verified": 0,
+    "gap": 0,
+    "verified_ids": [],
+    "gap_ids": []
+  },
+  "wrap_up_retry_reason": "artifact_missing"
+}

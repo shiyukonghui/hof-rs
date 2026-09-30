@@ -1,0 +1,29 @@
+==== TRAP 1: git diff on a non-existent pathspec ====
+--- git diff --stat -- definitely/not/a/real/path ---
+stdout+stderr=[] exit=0
+
+==== TRAP 2: cmd eats ^ (rev^ queries must be in bash) ====
+bash : git cat-file -e HEAD^:.spec/hof-rs/tasks/TASK-SMOKE-T9.md ->
+  exit=128
+bash : git cat-file -e HEAD:.spec/hof-rs/tasks/TASK-SMOKE-T9.md ->
+  exit=128
+control (both revisions have DECISIONS.md):
+  bash HEAD^:DECISIONS.md exit=0
+  bash HEAD:DECISIONS.md exit=0
+control (path in neither):
+  bash exit=128
+--- now through cmd (^ is eaten) ---
+  cmd exit=128
+  cmd exit=128
+
+==== TRAP 3: outer repo does not track the engine tree ====
+outer ls-files godot-mcp        = 6484
+outer ls-files godot-mcp/godot  = 0
+.gitignore:33:godot-mcp/godot/	godot-mcp/godot
+git diff --stat -- godot-mcp/godot/bin ->
+  [] exit=0
+nested HEAD = fc63af77c33368c4a1bb839c95d19750554f63a3
+nested status --porcelain -uall lines = 0
+
+==== TRAP 3b: runs/** is gitignored too ====
+.gitignore:12:runs/	runs/smoke-t9/meta.json

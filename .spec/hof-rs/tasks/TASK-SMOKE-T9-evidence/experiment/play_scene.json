@@ -1,0 +1,8 @@
+{
+  "content": [
+    {
+      "text": "{\"args_deduplicated\":[],\"args_injected\":[\"--mcp-port=61183\"],\"endpoint\":\"http://127.0.0.1:61183/mcp\",\"headless\":false,\"mcp_port\":61183,\"mcp_port_source\":\"auto_free_port\",\"mode\":\"main\",\"pid\":106368,\"playing\":true}",
+      "type": "text"
+    }
+  ]
+}

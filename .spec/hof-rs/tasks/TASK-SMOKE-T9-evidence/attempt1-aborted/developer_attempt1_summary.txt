@@ -1,0 +1,18 @@
+hoh= null
+n messages 223
+largest messages: [(221, 15570803), (167, 74724), (181, 69435), (32, 58708), (163, 57264), (107, 46994), (186, 21529), (20, 20031), (43, 19779), (220, 11767)]
+--- msg 217 assistant keys ['content', 'extra', 'role', 'tool_calls']
+   content[:800]= ''
+   TC= [{"function": {"arguments": "{\"command\": \"cd \\\"F:\\\\moonbit-hof-rs\\\" && echo {\\\"node_path\\\":\\\"Player\\\",\\\"properties\\\":[\\\"position\\\",\\\"facing\\\",\\\"velocity\\\"],\\\"frame_count\\\":30,\\\"frame_interval\\\":1} > .workspace\\\\mario\\\\.hoh\\\\scratch\\\\args\\\\samples.json && target\\\\release\\\\hoh.exe tools call running_game_get_node_property_samples --args-file .workspace\\\\mario\\\\.hoh\\\\scratch\\\\args\\\\samples.json\"}", "name": "bash"}, "id": "chatcmpl-to
+--- msg 218 tool keys ['content', 'extra', 'role', 'tool_call_id']
+   content[:800]= '<returncode>5</returncode>\n<output>\nhoh: game_endpoint_unavailable: `running_game_get_node_property_samples` runs in the game process and only the game endpoint serves it; no game endpoint is registered yet (`editor_play_scene` must have answered with `endpoint` or `mcp_port`). Falling back to the editor endpoint is not allowed (DR-43).\n</output>'
+--- msg 219 assistant keys ['content', 'extra', 'role', 'tool_calls']
+   content[:800]= ''
+   TC= [{"function": {"arguments": "{\"command\": \"cd \\\"F:\\\\moonbit-hof-rs\\\" && dir /s /b runs\\\\smoke-t9\"}", "name": "bash"}, "id": "chatcmpl-tool-a8434e9202727939", "type": "function"}, {"function": {"arguments": "{\"command\": \"cd \\\"F:\\\\moonbit-hof-rs\\\" && dir /s /b /a \\\"%TEMP%\\\" 2>nul | findstr /i \\\"hoh mcp endpoint\\\" \"}", "name": "bash"}, "id": "chatcmpl-tool-a77c02615b8c92a3", "type": "function"}]
+--- msg 220 tool keys ['content', 'extra', 'role', 'tool_call_id']
+   content[:800]= '<returncode>0</returncode>\n<output>\nF:\\moonbit-hof-rs\\runs\\smoke-t9\\iter-1\nF:\\moonbit-hof-rs\\runs\\smoke-t9\\meta.json\nF:\\moonbit-hof-rs\\runs\\smoke-t9\\TOOLS.md\nF:\\moonbit-hof-rs\\runs\\smoke-t9\\versions\nF:\\moonbit-hof-rs\\runs\\smoke-t9\\warnings.log\nF:\\moonbit-hof-rs\\runs\\smoke-t9\\iter-1\\logs\nF:\\moonbit-hof-rs\\runs\\smoke-t9\\iter-1\\plan.md\nF:\\moonbit-hof-rs\\runs\\smoke-t9\\iter-1\\planner-view\nF:\\moonbit-hof-rs\\runs\\smoke-t9\\iter-1\\traj\nF:\\moonbit-hof-rs\\runs\\smoke-t9\\iter-1\\logs\\planner.attempt1.log\nF:\\moonbit-hof-rs\\runs\\smoke-t9\\iter-1\\planner-view\\.hoh\nF:\\moonbit-hof-rs\\runs\\smoke-t9\\iter-1\\planner-view\\addons\nF:\\moonbit-hof-rs\\runs\\smoke-t9\\iter-1\\planner-view\\project.godot\nF:\\moonbit-hof-rs\\runs\\smoke-t9\\iter-1
+--- msg 221 tool keys ['content', 'extra', 'role', 'tool_call_id']
+   content[:800]= "<returncode>0</returncode>\n<output>\nC:\\Users\\wyl\\AppData\\Local\\Temp\\godot-mcp-m1-logs\nC:\\Users\\wyl\\AppData\\Local\\Temp\\godot-mcp-m1-scratch\nC:\\Users\\wyl\\AppData\\Local\\Temp\\godot-mcp-subset-logs\nC:\\Users\\wyl\\AppData\\Local\\Temp\\godot-mcp-subset-scratch\nC:\\Users\\wyl\\AppData\\Local\\Temp\\hoh_t7\nC:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-breakout\nC:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-breakout-cs\nC:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-breakout-obs-namediff.py\nC:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-findings\nC:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-observer\nC:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-platformer\nC:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-racing-evid\nC:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-racing-mono-build.cmd\nC:\\Users\\wyl\\AppD
+--- msg 222 exit keys ['content', 'extra', 'role']
+   content[:800]= 'llm-connector chat request failed'
+assistant steps with tool_calls: 93

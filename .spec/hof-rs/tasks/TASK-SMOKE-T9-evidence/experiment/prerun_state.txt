@@ -1,0 +1,45 @@
+=== DATE ===
+2026-09-30 10:48:26 +0800
+=== HEAD ===
+509ec0cd3093215fba35816e5b072d408f3f2e20
+509ec0c docs(spec): D268 - the offline batch passes acceptance cleanly, the three accepted batches are pushed, and the decisive real-machine round is dispatched
+fe129a1 docs(spec): commit the DR-68 acceptance report, which passes with no criterion failing
+7cb53eb docs(spec): D267 - DR-68 lands all eight items at 414 passing with a clean format gate, and I resolve the workspace-digest discrepancy in my own ledger
+=== STATUS -uall ===
+ M .spec/hof-rs/tasks/TASK-DR68-ACCEPTANCE.md
+=== ORIGIN ===
+fe129a163d6ca22e5e4b48b81e7229c4260b1291
+ahead=1
+=== BINARY ===
+-rwxr-xr-x 2 wyl 197609 12404224 2026-09-30 10:48:17.918160300 +0800 target/release/hoh.exe
+2825bda9e809c2d928618efae06ffb8483ebae979d804b24ab8c60927f74623d *target/release/hoh.exe
+=== FMT ===
+fmt_exit=0
+=== PRD SHA ===
+4c81c3a9995f0b3afdf01421a0c3be88573cceefc284ce9bafbfda141f0f5c3a *.spec/hof-rs/PRD-mario.md
+=== DECISIONS SHA ===
+01b9f1571b57c18691aab2210f3925a33771cd5f01b0ae9a2a9c16083252a18d *DECISIONS.md
+=== NESTED ENGINE ===
+fc63af77c33368c4a1bb839c95d19750554f63a3
+nested_status_lines=0
+outer_ls_files_godot_mcp=6484
+outer_ls_files_engine_tree=0
+=== CARGO MANIFESTS ===
+(empty above = no change)
+=== EDITOR PID/CMDLINE ===
+F:\moonbit-hof-rs\godot-mcp\godot\bin\godot.windows.editor.x86_64.mono.exe -e --path .workspace/mario --mcp-port=9877
+=== LISTENERS ===
+  TCP    127.0.0.1:9877         0.0.0.0:0              LISTENING       75204
+  TCP    127.0.0.1:9877         127.0.0.1:62337        TIME_WAIT       0
+  TCP    127.0.0.1:9877         127.0.0.1:62338        TIME_WAIT       0
+  UDP    10.13.2.142:60076      *:*                                    6176
+=== GODOT PROCS ===
+godot.windows.editor.x86_    75204 Console                    1    940,972 K
+=== ENGINE VERSION ===
+4.8.dev.mono.custom_build.035edfce7
+=== ENGINE TREE MTIME (today) ===
+count=0
+=== KEY LEN ===
+KEY NAMES: ['HOH_MODEL_API_KEY']
+HOH_MODEL_API_KEY len= 51
+EXPORTED_LEN 51

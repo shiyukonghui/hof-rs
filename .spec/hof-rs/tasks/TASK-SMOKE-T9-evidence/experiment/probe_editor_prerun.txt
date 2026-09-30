@@ -1,0 +1,5 @@
+tools_count= 154
+running_game_* count= 0
+has_get_node_property_samples= False
+has_play_input_recording= False
+GET /mcp: {"connections":1,"frame_count":4629725,"is_editor":true,"listening":true,"pending":0,"pending_connections":0,"port":9877,"server":"godot-mcp-rs","status":"ok","tools":154,"transport":"streamable-http"}

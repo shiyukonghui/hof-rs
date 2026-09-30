@@ -1,0 +1,77 @@
+{
+  "attempts": [
+    {
+      "artifact_path": "runs\\smoke-t9\\iter-1\\planner-view\\.hoh/plan.md",
+      "artifact_valid": true,
+      "attempt": 1,
+      "cache_hit_tokens": null,
+      "cache_miss_tokens": null,
+      "calls": 44,
+      "completion_tokens": 16375,
+      "duration_ms": 119603,
+      "exit_status": "RepeatedFormatError",
+      "iteration": 1,
+      "prompt_tokens": 545019,
+      "role": "planner",
+      "total_tokens": 561394,
+      "usage_known": true
+    },
+    {
+      "artifact_path": ".workspace/mario",
+      "artifact_valid": false,
+      "attempt": 1,
+      "cache_hit_tokens": null,
+      "cache_miss_tokens": null,
+      "calls": 150,
+      "completion_tokens": 114233,
+      "duration_ms": 932145,
+      "exit_status": "LimitsExceeded",
+      "iteration": 1,
+      "prompt_tokens": 7191007,
+      "role": "developer",
+      "total_tokens": 7305240,
+      "usage_known": true
+    },
+    {
+      "artifact_path": ".workspace/mario",
+      "artifact_valid": false,
+      "attempt": 2,
+      "cache_hit_tokens": null,
+      "cache_miss_tokens": null,
+      "calls": 25,
+      "completion_tokens": 5728,
+      "duration_ms": 63321,
+      "exit_status": "LimitsExceeded",
+      "iteration": 1,
+      "prompt_tokens": 221757,
+      "role": "developer",
+      "total_tokens": 227485,
+      "usage_known": true
+    }
+  ],
+  "schema": 1,
+  "summary": [
+    {
+      "cache_hit_tokens": null,
+      "cache_miss_tokens": null,
+      "calls": 44,
+      "completion_tokens": 16375,
+      "iteration": 1,
+      "prompt_tokens": 545019,
+      "role": "planner",
+      "total_tokens": 561394,
+      "usage_known": true
+    },
+    {
+      "cache_hit_tokens": null,
+      "cache_miss_tokens": null,
+      "calls": 175,
+      "completion_tokens": 119961,
+      "iteration": 1,
+      "prompt_tokens": 7412764,
+      "role": "developer",
+      "total_tokens": 7532725,
+      "usage_known": true
+    }
+  ]
+}
