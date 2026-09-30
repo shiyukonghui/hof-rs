@@ -210,6 +210,20 @@ enum AxisMode {
     Unreadable,
 }
 
+/// DR-68 ③/⑧: how the replayed `Player` moves, so a fixture can reproduce the
+/// two masking shapes separately.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum MovementMode {
+    /// Each action moves the axis it is supposed to move (the green double).
+    Intended,
+    /// The **target** axis never moves while the other one does — the shape
+    /// gravity produces in `smoke-t8`, where a horizontally dead `move_left`
+    /// still changed `y` and the whole-vector predicate called it movement.
+    OtherAxisOnly,
+    /// Nothing moves at all (`smoke-t3`/`smoke-t5`).
+    None,
+}
+
 struct FixtureChannel {
     calls: Mutex<Vec<(String, Value)>>,
     /// `tool -> sticky error`.
@@ -219,16 +233,20 @@ struct FixtureChannel {
     goal_shape_count: u32,
     player_shape_count: u32,
     hud_label: bool,
-    /// DR-30/DR-33: whether the replayed `Player` actually moves.
-    moving: bool,
+    /// DR-30/DR-33: whether (and how) the replayed `Player` actually moves.
+    movement: MovementMode,
     screenshot: ScreenshotMode,
     input_actions: InputActionsMode,
     /// DR-35: the game-process input channel.
     game_input: GameInputMode,
     /// DR-58: how the `input_axis` property is read.
     axis: AxisMode,
-    /// DR-35: whether a game-side `action_press` is currently held.
-    pressed_in_game: Mutex<bool>,
+    /// DR-68 ③: the actions the **game process** is really holding, in press
+    /// order.  The pre-DR-68 double kept a single bool, so it could not model
+    /// the defect at all: once `move_right` had been injected it silently stayed
+    /// held, and `Input.get_axis("move_left","move_right")` returned 0 for every
+    /// later direction.
+    held_in_game: Mutex<Vec<String>>,
     /// The action of the most recent `editor_simulate_input_action`, so `running_game_get_node_property_samples`
     /// (which does not name an action) can answer plausibly.
     last_action: Mutex<String>,
@@ -243,14 +261,47 @@ impl FixtureChannel {
             goal_shape_count: 1,
             player_shape_count: 1,
             hud_label: true,
-            moving: true,
+            movement: MovementMode::Intended,
             screenshot: ScreenshotMode::InlineImage,
             input_actions: InputActionsMode::Bound,
             game_input: GameInputMode::Ok,
             axis: AxisMode::Value,
-            pressed_in_game: Mutex::new(false),
+            held_in_game: Mutex::new(Vec::new()),
             last_action: Mutex::new("move_right".to_string()),
         }
+    }
+
+    /// DR-68 ③: the game's `Input.get_axis("move_left","move_right")`, computed
+    /// from what the game process is really holding.  **Both held ⇒ 0** — that
+    /// single line is the `smoke-t8` artifact.
+    fn game_axis(&self) -> f64 {
+        let held = self.held_in_game.lock().unwrap();
+        let left = held.iter().any(|action| action == "move_left");
+        let right = held.iter().any(|action| action == "move_right");
+        match (left, right) {
+            (true, true) | (false, false) => 0.0,
+            (false, true) => 1.0,
+            (true, false) => -1.0,
+        }
+    }
+
+    fn press_in_game(&self, action: &str) {
+        let mut held = self.held_in_game.lock().unwrap();
+        if !held.iter().any(|existing| existing == action) {
+            held.push(action.to_string());
+        }
+        *self.last_action.lock().unwrap() = action.to_string();
+    }
+
+    fn release_in_game(&self, action: &str) {
+        self.held_in_game
+            .lock()
+            .unwrap()
+            .retain(|existing| existing != action);
+    }
+
+    fn anything_held(&self) -> bool {
+        !self.held_in_game.lock().unwrap().is_empty()
     }
 
     fn fail_always(mut self, tool: &str, error: McpError) -> Self {
@@ -293,7 +344,17 @@ impl FixtureChannel {
     }
 
     fn with_moving(mut self, moving: bool) -> Self {
-        self.moving = moving;
+        self.movement = if moving {
+            MovementMode::Intended
+        } else {
+            MovementMode::None
+        };
+        self
+    }
+
+    /// DR-68 ⑧: only the *other* axis moves — the masking shape gravity gives.
+    fn with_movement(mut self, movement: MovementMode) -> Self {
+        self.movement = movement;
         self
     }
 
@@ -401,19 +462,37 @@ fn inline_frames_payload() -> Value {
     json!({"content": [{"type": "text", "text": inner.to_string()}]})
 }
 
-/// A `running_game_get_node_property_samples` recording: either the captured `Player` that never
-/// moves (`smoke-t3`: `(60.0, 283.999)` for all 60 frames) or a recording that
-/// responds to `action`.
-fn monitor_payload(action: &str, frames: u64, moving: bool) -> Value {
+/// A `running_game_get_node_property_samples` recording: the captured `Player`
+/// that never moves (`smoke-t3`: `(60.0, 283.999)` for all 60 frames), one that
+/// responds to `action` on the axis that action is supposed to move, or one
+/// where only the other axis moves (`smoke-t8`'s gravity).
+///
+/// DR-68 ③: `axis` is the game's real
+/// `Input.get_axis("move_left","move_right")`.  When it is `0` while a move
+/// action is held — both directions held at once, the `smoke-t8` artifact — the
+/// horizontal position **cannot** change, and only gravity moves `y`.
+fn monitor_payload(action: &str, frames: u64, movement: MovementMode, axis: f64) -> Value {
     let mut samples = Vec::new();
     for frame in 0..frames {
-        let (x, y) = if !moving {
-            (60.0, 283.998992919922)
-        } else {
-            match action {
-                "move_left" => (100.0 - frame as f64, 283.0),
-                "jump" => (60.0, (frame as f64 * 2.0) % 80.0),
-                _ => (frame as f64 * 2.0, 283.0),
+        let frame = frame as f64;
+        let (x, y) = match movement {
+            MovementMode::None => (60.0, 283.998992919922),
+            MovementMode::OtherAxisOnly => (60.0, 283.0 + frame),
+            MovementMode::Intended if action == "jump" => (60.0, (frame * 2.0) % 80.0),
+            MovementMode::Intended if action == "move_left" => {
+                if axis < 0.0 {
+                    (100.0 - frame, 283.0)
+                } else {
+                    // Dead axis: the x position is pinned and gravity moves y.
+                    (100.0, 283.0 + frame)
+                }
+            }
+            MovementMode::Intended => {
+                if axis > 0.0 {
+                    (frame * 2.0, 283.0)
+                } else {
+                    (60.0, 283.0 + frame)
+                }
             }
         };
         samples.push(json!({
@@ -572,10 +651,11 @@ impl ToolChannel for FixtureChannel {
                 // The mutation marker is `Input.action_press(`, not `action_press`:
                 // `Input.is_action_pressed(...)` contains the latter as a substring.
                 if code.contains("Input.action_press(") {
-                    *self.pressed_in_game.lock().unwrap() = true;
+                    self.press_in_game("legacy_script");
                     void_script_payload()
                 } else if code.contains("Input.action_release(") {
-                    *self.pressed_in_game.lock().unwrap() = false;
+                    self.release_in_game("legacy_script");
+                    self.held_in_game.lock().unwrap().clear();
                     void_script_payload()
                 } else if !returns_a_value {
                     // A value-reading probe without `return` is what `smoke-t6`
@@ -584,19 +664,18 @@ impl ToolChannel for FixtureChannel {
                 } else if code.contains("has_action") {
                     game_script_payload(if bound { "true" } else { "false" })
                 } else if code.contains("get_axis") {
-                    let pressed = *self.pressed_in_game.lock().unwrap();
-                    let moving = bound && pressed && self.moving;
-                    game_script_payload(if moving { "1.0" } else { "0.0" })
+                    let reading = if bound { self.game_axis() } else { 0.0 };
+                    game_script_payload(&format!("{reading}"))
                 } else if code.contains("is_action_pressed") {
-                    let pressed = *self.pressed_in_game.lock().unwrap();
-                    game_script_payload(if bound && pressed { "true" } else { "false" })
-                } else if code.contains("position") {
-                    let pressed = *self.pressed_in_game.lock().unwrap();
-                    let x = if bound && pressed && self.moving {
-                        80.0
+                    game_script_payload(if bound && self.anything_held() {
+                        "true"
                     } else {
-                        60.0
-                    };
+                        "false"
+                    })
+                } else if code.contains("position") {
+                    let moved =
+                        bound && self.anything_held() && self.movement == MovementMode::Intended;
+                    let x = if moved { 80.0 } else { 60.0 };
                     game_script_payload(&format!("{x},283.999"))
                 } else {
                     panic!("FixtureChannel got an unexpected game script: {code}")
@@ -646,9 +725,23 @@ impl ToolChannel for FixtureChannel {
                     .and_then(|events| events.first())
                     .and_then(|event| event.get("action"))
                     .and_then(Value::as_str)
-                    .unwrap_or("move_right");
-                *self.last_action.lock().unwrap() = action.to_string();
-                *self.pressed_in_game.lock().unwrap() = true;
+                    .unwrap_or("move_right")
+                    .to_string();
+                // DR-68 ③: an event really is a press **or** a release.  The old
+                // double always answered `pressed = true`, which is precisely why
+                // it could not show that the previous direction stayed held.
+                let pressed = args
+                    .get("events")
+                    .and_then(Value::as_array)
+                    .and_then(|events| events.first())
+                    .and_then(|event| event.get("pressed"))
+                    .and_then(Value::as_bool)
+                    .unwrap_or(true);
+                if pressed {
+                    self.press_in_game(&action);
+                } else {
+                    self.release_in_game(&action);
+                }
                 json!({"content": [{"type": "text", "text": "{\"replayed\": true, \"count\": 1}"}]})
             }
             "running_game_run_test_scenario" => {
@@ -691,10 +784,26 @@ impl ToolChannel for FixtureChannel {
                     .and_then(Value::as_str)
                     .unwrap_or("move_right")
                     .to_string();
-                *self.last_action.lock().unwrap() = action.clone();
-                *self.pressed_in_game.lock().unwrap() = true;
+                // DR-68 ③: the scenario's `input` step carries `pressed` too, and
+                // a release step must really release.
+                let pressed = args
+                    .get("steps")
+                    .and_then(Value::as_array)
+                    .and_then(|steps| {
+                        steps
+                            .iter()
+                            .find(|step| step["type"] == json!("input"))
+                            .and_then(|step| step.get("pressed"))
+                    })
+                    .and_then(Value::as_bool)
+                    .unwrap_or(true);
+                if pressed {
+                    self.press_in_game(&action);
+                } else {
+                    self.release_in_game(&action);
+                }
                 let bound = self.game_input == GameInputMode::Ok;
-                let axis = if bound && self.moving { 1.0 } else { 0.0 };
+                let axis = if bound { self.game_axis() } else { 0.0 };
                 let inner = json!({
                     "observed_axis": axis,
                     "results": [
@@ -717,8 +826,6 @@ impl ToolChannel for FixtureChannel {
                     .get("frame_count")
                     .and_then(Value::as_u64)
                     .unwrap_or(60);
-                let pressed_in_game = *self.pressed_in_game.lock().unwrap();
-                let moves = self.moving && self.game_input == GameInputMode::Ok && pressed_in_game;
                 // DR-54: the axis has its own semantic sample shape; the
                 // classification reads it from the **last** sample.
                 let properties: Vec<String> = args
@@ -747,12 +854,11 @@ impl ToolChannel for FixtureChannel {
                             payload: json!({"content": [{"type": "text", "text": inner.to_string()}]}),
                         });
                     }
-                    let axis = if self.game_input == GameInputMode::Ok && pressed_in_game {
-                        if self.moving {
-                            1.0
-                        } else {
-                            0.0
-                        }
+                    // DR-68 ③: the reading is the game's real axis — both
+                    // directions held ⇒ `0`, which is what made `smoke-t8`'s
+                    // `move_left` window immobile whichever implementation it had.
+                    let axis = if self.game_input == GameInputMode::Ok {
+                        self.game_axis()
                     } else {
                         0.0
                     };
@@ -766,7 +872,13 @@ impl ToolChannel for FixtureChannel {
                         payload: json!({"content": [{"type": "text", "text": inner.to_string()}]}),
                     });
                 }
-                monitor_payload(&action, frames, moves)
+                let moves = self.game_input == GameInputMode::Ok;
+                monitor_payload(
+                    &action,
+                    frames,
+                    self.movement,
+                    if moves { self.game_axis() } else { 0.0 },
+                )
             }
             // DR-58: the engine's **real** reply, verbatim from `smoke-t7`:
             // `{"node_path":"/root/Main/…","properties":{…},"type":…}` — there is
@@ -2533,6 +2645,189 @@ async fn an_editor_side_success_without_game_movement_is_labelled_and_fails() {
     assert!(
         replay.record.observation.contains("editor_process"),
         "the editor-side channel must be named: {}",
+        replay.record.observation
+    );
+}
+
+// ---------------------------------------------------------------------------
+// DR-68 ③/⑧ — the replay must release the previous input, and movement is judged
+//               on the action's own axis
+// ---------------------------------------------------------------------------
+
+/// The `input_replay` step's raw call list, in arrival order.
+fn replay_calls(run: &BatteryRun) -> Vec<Value> {
+    let raw: Value = serde_json::from_str(&read(
+        &run.run_dir
+            .join("iter-1/candidate/.hoh/deterministic/raw/input_replay.json"),
+    ))
+    .unwrap();
+    raw["calls"].as_array().cloned().unwrap_or_default()
+}
+
+/// The position quadruple the replay recorded for `action` (the samples call
+/// carries no label of its own; the quadruple names its action).
+fn quadruple_of(calls: &[Value], action: &str) -> Value {
+    calls
+        .iter()
+        .filter_map(|call| call.get("quadruple"))
+        .find(|quadruple| quadruple["action"] == json!(action))
+        .cloned()
+        .unwrap_or_else(|| panic!("no quadruple for `{action}` in {calls:?}"))
+}
+
+/// DR-68 ③(a): `smoke-t8` injected **every** direction with `pressed = true` and
+/// never released one inside the game process, so by the `move_left` window
+/// `move_right` was still held.  `Input.get_axis("move_left","move_right")`
+/// therefore returned `0` and the character could not move on `x` whichever
+/// implementation it had — the two directions cancelled.  The replay must clear
+/// the previous input **inside the game** before testing a new direction, and
+/// the axis reading must show the change.
+#[tokio::test]
+async fn the_input_replay_releases_the_previous_direction_before_the_next_one() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel = Arc::new(FixtureChannel::green());
+    let run = run_battery(root, channel.clone(), 30).await;
+
+    let calls = replay_calls(&run);
+    let event_matches = |call: &Value, action: &str, pressed: bool| -> bool {
+        call["tool"] == json!("running_game_play_input_recording")
+            && call["args"]["events"]
+                .as_array()
+                .map(|events| {
+                    events.iter().any(|event| {
+                        event["action"] == json!(action) && event["pressed"] == json!(pressed)
+                    })
+                })
+                .unwrap_or(false)
+    };
+
+    // The release really went through the **game-process** semantic API (the
+    // editor-side `editor_simulate_input_action` release cannot reach the game).
+    let releases: Vec<&Value> = calls
+        .iter()
+        .filter(|call| {
+            call["tool"] == json!("running_game_play_input_recording")
+                && call["args"]["events"]
+                    .as_array()
+                    .map(|events| events.iter().any(|event| event["pressed"] == json!(false)))
+                    .unwrap_or(false)
+        })
+        .collect();
+    assert!(
+        !releases.is_empty(),
+        "DR-68 ③(a): the replay must release the previous input inside the game: {calls:?}"
+    );
+    let released: Vec<&str> = releases
+        .iter()
+        .flat_map(|call| call["args"]["events"].as_array().unwrap())
+        .filter(|event| event["pressed"] == json!(false))
+        .filter_map(|event| event["action"].as_str())
+        .collect();
+    assert!(
+        released.contains(&"move_right"),
+        "the held `move_right` must be released before another direction is tested: {released:?}"
+    );
+
+    // …and the release precedes the `move_left` press, in playback order.
+    let release_index = calls
+        .iter()
+        .position(|call| event_matches(call, "move_right", false))
+        .expect("`move_right` is released through the semantic API");
+    let press_index = calls
+        .iter()
+        .position(|call| event_matches(call, "move_left", true))
+        .expect("`move_left` is injected through the semantic API");
+    assert!(
+        release_index < press_index,
+        "the release must come first (release at {release_index}, move_left press at \
+         {press_index}): {calls:?}"
+    );
+
+    // The consequence: `move_left` really moves on `x`, and the step stays green.
+    let replay = step(&run.records, "input_replay");
+    assert!(
+        replay.ok,
+        "the replay is green: {}",
+        replay.record.observation
+    );
+    let quadruple = quadruple_of(&calls, "move_left");
+    let before = quadruple["before_position"]["x"].as_f64().unwrap();
+    let after = quadruple["after_position"]["x"].as_f64().unwrap();
+    assert!(
+        after < before,
+        "with the previous direction released, `move_left` must move -x: {quadruple}"
+    );
+
+    // The axis reading, when the engine gives one, must have changed too.
+    let axis_readings: Vec<&Value> = calls
+        .iter()
+        .filter(|call| {
+            call["tool"] == json!("running_game_get_node_property_samples")
+                && call["label"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .contains("game_axis")
+        })
+        .collect();
+    assert!(
+        !axis_readings.is_empty(),
+        "the replay records its game-process axis readings: {calls:?}"
+    );
+    assert!(
+        axis_readings
+            .iter()
+            .filter(|call| call["label"]
+                .as_str()
+                .unwrap_or_default()
+                .starts_with("move_left"))
+            .all(|call| {
+                let text = call["payload"]["content"][0]["text"]
+                    .as_str()
+                    .unwrap_or("{}");
+                text.contains("\"input_axis\":-1") || text.contains("\"input_axis\":null")
+            }),
+        "the `move_left` axis reading must be -1 (or unreadable, as the real engine \
+         answers): {axis_readings:?}"
+    );
+}
+
+/// DR-68 ⑧: the movement predicate must judge the **intended axis**.  `smoke-t8`
+/// scored `move_left` as `ok = true` because `before_position != after_position`
+/// compared the whole vector and gravity had moved `y` while `x` was pinned at
+/// `584.363` for all 60 frames.
+#[tokio::test]
+async fn a_dead_target_axis_is_not_movement_even_when_the_other_axis_moves() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel = Arc::new(FixtureChannel::green().with_movement(MovementMode::OtherAxisOnly));
+    let run = run_battery(root, channel, 30).await;
+
+    let calls = replay_calls(&run);
+    let quadruple = quadruple_of(&calls, "move_left");
+    assert_eq!(
+        quadruple["before_position"]["x"], quadruple["after_position"]["x"],
+        "the fixture must reproduce the artifact: x is pinned: {quadruple}"
+    );
+    assert_ne!(
+        quadruple["before_position"]["y"], quadruple["after_position"]["y"],
+        "…while the other axis moved (gravity): {quadruple}"
+    );
+
+    let replay = step(&run.records, "input_replay");
+    assert!(
+        !replay.ok,
+        "a dead `x` axis is not movement, however much `y` moved: {}",
+        replay.record.observation
+    );
+    assert!(
+        replay.record.observation.contains("INPUT_HAD_NO_EFFECT"),
+        "{}",
+        replay.record.observation
+    );
+    assert!(
+        replay.record.observation.contains("axis=x"),
+        "the observation must name the axis it judged: {}",
         replay.record.observation
     );
 }

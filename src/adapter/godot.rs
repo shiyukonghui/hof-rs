@@ -1755,6 +1755,30 @@ impl<'a> BatterySession<'a> {
         }
     }
 
+    /// DR-68 ③(a): release one action **inside the game process**.
+    ///
+    /// The four "release" calls `smoke-t8` recorded all went through
+    /// `editor_simulate_input_action` — a different process that cannot drive
+    /// the game — so the game never let go of `move_right`, and every later
+    /// direction was tested with its opposite still held.  This is the same
+    /// semantic input path the press uses
+    /// (`running_game_play_input_recording`), carrying `pressed: false`.
+    ///
+    /// Returns whether the game-process API accepted the release.  A refusal is
+    /// recorded and reported but never silently dropped; the caller's summary
+    /// says so next to the direction it was clearing for.
+    async fn semantic_release_action(
+        &self,
+        action: &str,
+        label: &str,
+        calls: &mut Vec<Value>,
+    ) -> bool {
+        let args = json!({"events": [{"type": "action", "action": action, "pressed": false}], "speed": 1.0});
+        self.record_semantic_call(semantic::PLAY_INPUT_RECORDING, args, label, calls)
+            .await
+            .is_ok()
+    }
+
     /// DR-54: the semantic `Player.position` sample — `before`/`after` come from
     /// `running_game_get_node_property_samples`, not from a script.
     ///
@@ -1906,6 +1930,15 @@ impl<'a> BatterySession<'a> {
         summaries.push(editor_note);
 
         // `(label, action, frames, expected to move the node)`.
+        //
+        // DR-68 ③(a): every direction is tested from a **clean** game input
+        // state.  `smoke-t8` injected every direction with `pressed = true` and
+        // never released one *inside the game process* (the four releases all
+        // went through `editor_simulate_input_action`, which cannot drive the
+        // game), so by the `move_left` window `move_right` was still held:
+        // `Input.get_axis("move_left","move_right")` returned 0 and the
+        // character could not move horizontally whatever the game's code did.
+        let mut held_in_game: Vec<&str> = Vec::new();
         for (label, action, frames, expect_movement) in [
             ("move_right", "move_right", 60u64, true),
             ("move_right_release", "move_right", 10, false),
@@ -1922,6 +1955,18 @@ impl<'a> BatterySession<'a> {
                 continue;
             }
 
+            // DR-68 ③(a): reset the previous input **inside the game** before
+            // testing a new direction, so two directions can never cancel.
+            for previous in held_in_game.drain(..) {
+                let released = self
+                    .semantic_release_action(previous, &format!("{label}:reset"), &mut calls)
+                    .await;
+                summaries.push(format!(
+                    "{label}: released `{previous}` in the game process before testing \
+                     `{action}` (accepted={released})"
+                ));
+            }
+
             // (a) Game-process injection, through the contract's semantic input
             //     API (DR-54): `create_input_recording` -> `play_input_recording`
             //     -> `running_game_run_test_scenario` -> `stop_input_recording`.
@@ -1934,6 +1979,9 @@ impl<'a> BatterySession<'a> {
                     self.semantic_inject_action(action, label, &mut calls).await;
                 if let Some(refusal) = refusal {
                     summaries.push(format!("{label}: {refusal}"));
+                }
+                if injected {
+                    held_in_game.push(action);
                 }
                 injected
             } else {
@@ -2029,14 +2077,20 @@ impl<'a> BatterySession<'a> {
                             ));
                         }
                         Some(quadruple) => {
-                            let moved = quadruple["before_position"] != quadruple["after_position"];
-                            if expect_movement && !moved {
+                            // DR-68 ⑧: judge the action's **own** axis.  The old
+                            // whole-vector `before != after` comparison scored
+                            // `move_left` as movement in `smoke-t8` because
+                            // gravity moved `y` while `x` was pinned at 584.363
+                            // for all 60 frames — a masking false green.
+                            let movement = movement_on_intended_axis(&quadruple);
+                            if expect_movement && !movement.moved {
                                 ok = false;
                                 if capability == InputChannelCapability::GameInputChannelOk {
                                     summaries.push(format!(
                                         "{label}: {frames_seen} frame(s) \
                                          channel={GAME_PROCESS_CHANNEL} {quadruple} \
-                                         INPUT_HAD_NO_EFFECT {editor_marker}"
+                                         axis={} delta={:.6} INPUT_HAD_NO_EFFECT {editor_marker}",
+                                        movement.axis, movement.delta
                                     ));
                                 } else {
                                     // DR-35: both failure modes are still possible.
@@ -2044,14 +2098,18 @@ impl<'a> BatterySession<'a> {
                                     summaries.push(format!(
                                         "{label}: {frames_seen} frame(s) \
                                          channel={GAME_PROCESS_CHANNEL} {quadruple} \
+                                         axis={} delta={:.6} \
                                          ACTION_BINDING_UNKNOWN + INPUT_HAD_NO_EFFECT \
-                                         {editor_marker}"
+                                         {editor_marker}",
+                                        movement.axis, movement.delta
                                     ));
                                 }
                             } else {
                                 summaries.push(format!(
                                     "{label}: {frames_seen} frame(s) \
-                                     channel={GAME_PROCESS_CHANNEL} {quadruple} {editor_marker}"
+                                     channel={GAME_PROCESS_CHANNEL} {quadruple} axis={} \
+                                     delta={:.6} {editor_marker}",
+                                    movement.axis, movement.delta
                                 ));
                             }
                         }
@@ -2073,6 +2131,13 @@ impl<'a> BatterySession<'a> {
 
             // (d) Re-read the axis inside the game process after the frames —
             //     through the **semantic** reader (DR-54), never a script.
+            //
+            //     DR-68 ③(a): "the previous input was released" is only half the
+            //     claim; the axis reading must show the change, otherwise a
+            //     still-cancelling pair of held directions reads as a green
+            //     replay.  When the engine answers `null` (its real behaviour for
+            //     `input_axis`, DR-58) there is no reading to assert on, and the
+            //     position samples above stay the decisive evidence.
             if game_injected {
                 let axis = self
                     .semantic_axis_sample(&format!("{label}:game_axis"), &mut calls)
@@ -2080,6 +2145,15 @@ impl<'a> BatterySession<'a> {
                 summaries.push(format!(
                     "{label}: game-process {SCENARIO_AXIS} after {frames} frame(s) = {axis:?}"
                 ));
+                if let (Some(reading), Some(expected)) = (axis, expected_axis_sign(action)) {
+                    if reading.signum() != expected {
+                        ok = false;
+                        summaries.push(format!(
+                            "{label}: INPUT_AXIS_NOT_CHANGED (expected sign {expected}, read \
+                             {reading}; a still-held opposite direction cancels the axis)"
+                        ));
+                    }
+                }
             }
 
             // (e) Editor-side release, same supplementary status.
@@ -2690,6 +2764,60 @@ fn position_of(value: &Value) -> Value {
         "x": value.get("x").and_then(Value::as_f64).unwrap_or(0.0),
         "y": value.get("y").and_then(Value::as_f64).unwrap_or(0.0),
     })
+}
+
+/// DR-68 ⑧: what one replayed action did to the axis it is supposed to move.
+#[derive(Clone, Copy, Debug)]
+pub struct AxisMovement {
+    /// `"x"` for the horizontal actions, `"y"` for `jump`.
+    pub axis: &'static str,
+    /// `after - before` **on that axis only**.
+    pub delta: f64,
+    /// Any change on that axis counts; a change on another axis never does.
+    pub moved: bool,
+}
+
+/// DR-68 ⑧: judge the replay on the action's **intended axis**.
+///
+/// The predicate this replaces was `before_position != after_position`, i.e. a
+/// whole-vector comparison.  `smoke-t8` scored `move_left` as `ok = true` that
+/// way: the character was falling (`y` 270.94 → 283.99) while `x` stayed exactly
+/// `584.363` for all 60 frames, so gravity alone produced "movement".  A
+/// horizontally dead action scored as a success next to the same action's real
+/// failure in the QA gap list — the masking false green the acceptance found.
+///
+/// The comparison is exact (no epsilon): the question is "did this axis move at
+/// all", and a pinned axis repeats the same float verbatim.
+pub fn movement_on_intended_axis(quadruple: &Value) -> AxisMovement {
+    let axis = intended_axis(quadruple["action"].as_str().unwrap_or(""));
+    let component = |position: &Value, key: &str| position[key].as_f64().unwrap_or(0.0);
+    let delta = component(&quadruple["after_position"], axis)
+        - component(&quadruple["before_position"], axis);
+    AxisMovement {
+        axis,
+        delta,
+        moved: delta != 0.0,
+    }
+}
+
+/// The axis an action is supposed to move.
+fn intended_axis(action: &str) -> &'static str {
+    if action == "jump" {
+        "y"
+    } else {
+        "x"
+    }
+}
+
+/// DR-68 ③(a): the sign `Input.get_axis("move_left","move_right")` must show
+/// while `action` is held.  `None` for an action that is not part of that axis
+/// (`jump`), where the reading carries no expectation.
+fn expected_axis_sign(action: &str) -> Option<f64> {
+    match action {
+        "move_left" => Some(-1.0),
+        "move_right" => Some(1.0),
+        _ => None,
+    }
 }
 
 fn velocity_of(value: &Value) -> Value {
