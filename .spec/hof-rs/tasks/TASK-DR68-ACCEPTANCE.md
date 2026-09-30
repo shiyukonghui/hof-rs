@@ -45,7 +45,7 @@
     {
       "id": "ITEM-5 报告就地更正（③c）",
       "pass": true,
-      "evidence": "`.spec/hof-rs/tasks/TASK-SMOKE-T8-REPORT.md` 在 `5baa801` 就地更正（`2c47727..5baa801`：+80/−7）。文件头 16-41 行是『⚠ 就地更正声明』索引 C1..C8，C1 的『原文字』列逐字引了旧旗舰论断 `move_left 被实测证否（左移不产生位移）`。**『被证否』→『not established』**：C1 + §0/§1.3/§2/§2.2/§2.3/§3.1/§5/§6.4/§10 各就地位置都有 `【DR-68 更正 Cn】`；§2.2 标题改为『是"没被证到"还是"被证否"』并写明『正确读法是 not established（未证到），不是 falsified（被证否）』。**缺失字段清单**：C2 与 §1.3 第 3 条均写明**同时缺 `type` 与 `claim_id`**。**验收点名的另外两处**：C3（『只有 `.workspace/mario/.hoh` 留证』改为『冻结的 `runs/smoke-t8/iter-1/candidate/.hoh/deterministic/**` 同样留证』）与 C4（`origin/master` 由 `079cf82` 更正为 `ce22e18`；我 `git rev-parse origin/master` = `ce22e181b1619c8fa5cf6adc670f7de48d2a3198`）。7 个被替换的行都保留了原句并追加标注（diff 的 7 条删除行逐条核对）。"
+      "evidence": "`.spec/hof-rs/tasks/TASK-SMOKE-T8-REPORT.md` 在 `5baa801` 就地更正（`2c47727..5baa801`：+80/−7）。文件头 16-41 行是『⚠ 就地更正声明』索引 C1..C8，C1 的『原文字』列逐字引了旧旗舰论断 `move_left 被实测证否（左移不产生位移）`。**『被证否』→『not established』**：C1 + §0/§1.3/§2/§2.2/§2.3/§3.1/§5/§6.4/§10 各就地位置都有 `【DR-68 更正 Cn】`；§2.2 标题改为『是“没被证到”还是“被证否”』并写明『正确读法是 not established（未证到），不是 falsified（被证否）』。**缺失字段清单**：C2 与 §1.3 第 3 条均写明**同时缺 `type` 与 `claim_id`**。**验收点名的另外两处**：C3（『只有 `.workspace/mario/.hoh` 留证』改为『冻结的 `runs/smoke-t8/iter-1/candidate/.hoh/deterministic/**` 同样留证』）与 C4（`origin/master` 由 `079cf82` 更正为 `ce22e18`；我 `git rev-parse origin/master` = `ce22e181b1619c8fa5cf6adc670f7de48d2a3198`）。7 个被替换的行都保留了原句并追加标注（diff 的 7 条删除行逐条核对）。"
     },
     {
       "id": "ITEM-6 其余四项（⑤⑥⑦④）",
