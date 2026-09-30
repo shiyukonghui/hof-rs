@@ -31,6 +31,11 @@ use serde_json::{json, Value};
 /// phase asserts that the production constant equals this string.
 const ROUTE_FILE: &str = "game_endpoint.json";
 
+/// DR-70 ②: the freshness window, pinned as a literal for the same reason: the
+/// test needs no production constant to compile, and it still binds the
+/// production rule — a route older than this must be refused.
+const ROUTE_MAX_AGE: u64 = 6 * 60 * 60;
+
 /// A loopback JSON-RPC double that records the tool names it was asked for.
 struct RecordingMcp {
     addr: SocketAddr,
@@ -152,17 +157,64 @@ fn find(haystack: &[u8], needle: &[u8]) -> Option<usize> {
 }
 
 /// The published route file, in the exact shape the runtime writes.
+///
+/// DR-70 ②: the record now carries a **live** pid, because adoption validates it.
 fn publish_route(run_dir: &Path, game: &RecordingMcp) -> PathBuf {
+    write_route(
+        run_dir,
+        &game.url(),
+        Some(game.addr.port()),
+        std::process::id(),
+    )
+}
+
+/// DR-70 ②: write an arbitrary route record, so a counter-example can name a
+/// closed port, a dead pid, or an old file.
+fn write_route(run_dir: &Path, endpoint: &str, port: Option<u16>, pid: u32) -> PathBuf {
     std::fs::create_dir_all(run_dir).expect("run dir");
     let path = run_dir.join(ROUTE_FILE);
     let record = json!({
-        "endpoint": game.url(),
-        "port": game.addr.port(),
+        "endpoint": endpoint,
+        "port": port,
         "source": "auto_free_port",
-        "pid": 4242,
+        "pid": pid,
     });
     std::fs::write(&path, serde_json::to_string(&record).unwrap()).expect("route file");
     path
+}
+
+/// DR-70 ②: a loopback port that is bound and immediately released, i.e. one a
+/// connect is *refused* on.  Nothing external is touched.
+fn a_closed_loopback_port() -> u16 {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("loopback listener");
+    let port = listener.local_addr().expect("bound address").port();
+    drop(listener);
+    port
+}
+
+/// DR-70 ②: a pid that is certainly not running: a child that has been reaped.
+fn a_dead_pid() -> u32 {
+    let mut child = Command::new(env!("CARGO_BIN_EXE_hoh"))
+        .arg("--version")
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .expect("the hoh binary must be runnable");
+    let pid = child.id();
+    let _ = child.wait();
+    pid
+}
+
+/// DR-70 ②: make a published route old, so the freshness rule has something to
+/// judge.  `File::set_modified` is std-only; no dependency is added.
+fn age_route(path: &Path, seconds: u64) {
+    let file = std::fs::OpenOptions::new()
+        .write(true)
+        .open(path)
+        .expect("the route file must be openable");
+    let when = std::time::SystemTime::now() - Duration::from_secs(seconds);
+    file.set_modified(when)
+        .expect("the route file's mtime must be settable");
 }
 
 /// Run the real `hoh` binary as a role's shell would: a **fresh process**.
@@ -240,6 +292,116 @@ fn a_role_shell_reaches_the_published_game_endpoint_across_processes() {
     );
 }
 
+/// DR-70 ②: a route whose port is **closed** must come back as DR-43's explicit
+/// refusal, not as a transport accident.
+///
+/// This is the acceptance's own counter-example (D6): the record's pid is live,
+/// only the destination is gone.  With adoption unvalidated the role's call ended
+/// as `MCP transport failure … (os error 10061)` — an explicit
+/// `game_endpoint_unavailable` turned into an opaque connect error.
+#[test]
+fn a_route_pointing_at_a_closed_port_is_refused_explicitly() {
+    let editor = RecordingMcp::start();
+    let dead_port = a_closed_loopback_port();
+    let temp = tempfile::tempdir().unwrap();
+    let route = write_route(
+        &temp.path().join("runs/run-1"),
+        &format!("http://127.0.0.1:{dead_port}/mcp"),
+        Some(dead_port),
+        std::process::id(),
+    );
+
+    let output = role_tools_call("running_game_get_scene_tree", &editor.url(), Some(&route));
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert_ne!(
+        output.status.code(),
+        Some(0),
+        "a dead route must not be reported as success: {combined}"
+    );
+    assert!(
+        combined.contains("game_endpoint_unavailable"),
+        "the refusal must be DR-43's explicit one: {combined}"
+    );
+    assert!(
+        !combined.contains("MCP transport failure") && !combined.contains("10061"),
+        "a stale route must not degrade into an opaque transport failure: {combined}"
+    );
+    assert!(
+        editor.tools().is_empty(),
+        "no request may be sent to the editor for a game tool: {:?}",
+        editor.tools()
+    );
+}
+
+/// DR-70 ②: the recorded **pid** is validated too.  A game process that is gone
+/// means the route is stale even when something else answers on that port — the
+/// case the acceptance named ("if the port is later taken by another MCP service,
+/// the call is answered by *another* endpoint").
+#[test]
+fn a_route_whose_recorded_game_process_is_gone_is_refused_even_when_the_port_answers() {
+    let editor = RecordingMcp::start();
+    let game = RecordingMcp::start();
+    let temp = tempfile::tempdir().unwrap();
+    let route = write_route(
+        &temp.path().join("runs/run-1"),
+        &game.url(),
+        Some(game.addr.port()),
+        a_dead_pid(),
+    );
+
+    let output = role_tools_call("running_game_get_scene_tree", &editor.url(), Some(&route));
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert_ne!(output.status.code(), Some(0), "{combined}");
+    assert!(
+        combined.contains("game_endpoint_unavailable"),
+        "a route for a dead game process must be refused explicitly: {combined}"
+    );
+    assert!(
+        game.tools().is_empty(),
+        "the live-looking endpoint must not be asked anything once the pid check fails: {:?}",
+        game.tools()
+    );
+}
+
+/// DR-70 ②: an **expired** record is refused even when pid and port are both
+/// alive: a leftover file from a crashed round must not be inherited.
+#[test]
+fn an_expired_route_is_refused_even_when_it_still_answers() {
+    let editor = RecordingMcp::start();
+    let game = RecordingMcp::start();
+    let temp = tempfile::tempdir().unwrap();
+    let route = publish_route(&temp.path().join("runs/run-1"), &game);
+    age_route(&route, ROUTE_MAX_AGE + 60);
+
+    let output = role_tools_call("running_game_get_scene_tree", &editor.url(), Some(&route));
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert_ne!(output.status.code(), Some(0), "{combined}");
+    assert!(
+        combined.contains("game_endpoint_unavailable"),
+        "an expired published route must be refused explicitly: {combined}"
+    );
+    assert!(
+        game.tools().is_empty(),
+        "an expired route must not be used: {:?}",
+        game.tools()
+    );
+}
+
 /// DR-43 is **not** weakened: with no published route, a `running_game_*` call
 /// from a fresh process must still fail loudly and must not fall back to the
 /// editor endpoint.
@@ -270,11 +432,14 @@ fn without_a_published_route_the_game_call_still_fails_loudly() {
 /// DR-69 ①: the run that registers the endpoint publishes it — and
 /// `editor_stop_scene` withdraws it again, so a later process can never reach a
 /// **stale** port (DR-43's guarantee, one process wider).
+///
+/// DR-70 ②: the record must now name a **live** game, because adoption validates
+/// pid and reachability.  The endpoint is a real loopback double and the pid is
+/// this test process's own.
 #[tokio::test]
 async fn registering_publishes_the_route_and_stopping_withdraws_it() {
     use hof_rs::tools::endpoint::{
-        endpoint_for_port, game_route_path, GameEndpointRecord, GAME_ROUTE_FILE,
-        SOURCE_AUTO_FREE_PORT,
+        game_route_path, GameEndpointRecord, GAME_ROUTE_FILE, SOURCE_AUTO_FREE_PORT,
     };
     use hof_rs::tools::{McpChannel, ToolChannel};
 
@@ -288,11 +453,13 @@ async fn registering_publishes_the_route_and_stopping_withdraws_it() {
     let channel = McpChannel::new("http://127.0.0.1:1/mcp", 5, 0);
     channel.use_game_route_file(published.clone());
 
+    // A live endpoint for the adoption checks, and this process's live pid.
+    let game = RecordingMcp::start();
     let record = GameEndpointRecord {
-        endpoint: endpoint_for_port(63999),
-        port: Some(63999),
+        endpoint: game.url(),
+        port: Some(game.addr.port()),
         source: SOURCE_AUTO_FREE_PORT.to_string(),
-        pid: Some(11),
+        pid: Some(std::process::id()),
     };
     channel
         .register_game_endpoint(record.clone())

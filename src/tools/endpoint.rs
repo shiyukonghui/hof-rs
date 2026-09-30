@@ -128,6 +128,248 @@ pub fn withdraw_game_route(path: &Path) {
     let _ = std::fs::remove_file(path);
 }
 
+// ---------------------------------------------------------------------------
+// DR-70 ②: a published route is **checked** before it is adopted
+// ---------------------------------------------------------------------------
+
+/// DR-70 ②: how old a published record may be before adoption refuses it.
+///
+/// The window is generous on purpose — a long Developer or Tester phase must not
+/// invalidate a live route — so expiry is the **weakest** of the three checks.
+/// It exists for the one case the other two cannot see: a leftover file whose
+/// port has since been taken by another server and whose pid has since been
+/// reused.
+pub const ROUTE_MAX_AGE_SECONDS: u64 = 6 * 60 * 60;
+
+/// DR-70 ②: why a published route was **not** adopted.
+///
+/// The variant is recorded on the channel and travels into the refusal text, so
+/// a role that reaches a stale route is told *why* instead of being handed the
+/// generic "nothing registered yet" message — and, above all, instead of being
+/// handed a transport failure.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum RouteRefusal {
+    /// The record is older than [`ROUTE_MAX_AGE_SECONDS`].
+    Expired {
+        age_seconds: u64,
+        max_age_seconds: u64,
+    },
+    /// The record names a game process that is not running.
+    OwnerGone { pid: u32 },
+    /// The destination refused the connection.
+    Unreachable { endpoint: String },
+}
+
+impl RouteRefusal {
+    /// The stable, human-readable reason recorded on the channel.
+    pub fn reason(&self) -> String {
+        match self {
+            RouteRefusal::Expired {
+                age_seconds,
+                max_age_seconds,
+            } => format!(
+                "the published record is {age_seconds}s old, past the {max_age_seconds}s \
+                 freshness window, so it cannot be this round's route"
+            ),
+            RouteRefusal::OwnerGone { pid } => format!(
+                "the game process the record names is not running (pid {pid}), so the route \
+                 belongs to an earlier round"
+            ),
+            RouteRefusal::Unreachable { endpoint } => format!(
+                "nothing accepts a connection at {endpoint} (the destination refused it), so \
+                 the published route points at a stopped game"
+            ),
+        }
+    }
+}
+
+impl std::fmt::Display for RouteRefusal {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(&self.reason())
+    }
+}
+
+/// DR-70 ②: is `pid` a live process on this machine?
+///
+/// `pid` is **recorded by the engine**, not owned by this crate, so it is a
+/// hint: a pid that cannot be validated (see the fallback below) is not treated
+/// as proof that the route is stale.  A pid that *is* observed to be gone,
+/// however, is decisive — that is the whole point of the check.
+///
+/// Windows: `OpenProcess` + `GetExitCodeProcess` through three hand-written
+/// `kernel32` declarations.  One boolean does not justify a new dependency, and
+/// shelling out to `tasklist` would make every `hoh tools call` depend on a
+/// locale-bearing subprocess.
+///
+/// Unix: `kill(pid, 0)` — the portable existence probe.
+///
+/// Everywhere else the answer is "cannot tell", which never manufactures a
+/// refusal.
+pub fn process_is_alive(pid: u32) -> bool {
+    if pid == 0 {
+        return false;
+    }
+    process_liveness::is_alive(pid)
+}
+
+#[cfg(windows)]
+mod process_liveness {
+    use std::ffi::c_void;
+
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn OpenProcess(desired_access: u32, inherit_handle: i32, process_id: u32) -> *mut c_void;
+        fn GetExitCodeProcess(process: *mut c_void, exit_code: *mut u32) -> i32;
+        fn CloseHandle(object: *mut c_void) -> i32;
+    }
+
+    /// `PROCESS_QUERY_LIMITED_INFORMATION`: enough to read the exit code, and
+    /// less privileged than the full query right.
+    const QUERY_LIMITED_INFORMATION: u32 = 0x1000;
+    /// Windows reports a running process with this exit code.
+    const STILL_ACTIVE: u32 = 259;
+
+    pub fn is_alive(pid: u32) -> bool {
+        // SAFETY: the three signatures are the documented `kernel32` ones; the
+        // handle is closed on every path that opened it, and no memory is
+        // borrowed from the caller.
+        unsafe {
+            let handle = OpenProcess(QUERY_LIMITED_INFORMATION, 0, pid);
+            if handle.is_null() {
+                return false;
+            }
+            let mut exit_code = 0u32;
+            let read = GetExitCodeProcess(handle, &mut exit_code);
+            CloseHandle(handle);
+            read != 0 && exit_code == STILL_ACTIVE
+        }
+    }
+}
+
+#[cfg(unix)]
+mod process_liveness {
+    extern "C" {
+        fn kill(pid: i32, signal: i32) -> i32;
+    }
+
+    pub fn is_alive(pid: u32) -> bool {
+        if pid > i32::MAX as u32 {
+            return false;
+        }
+        // SAFETY: `kill` with signal 0 performs error checking only and never
+        // delivers a signal; the pid is range-checked above.
+        unsafe { kill(pid as i32, 0) == 0 }
+    }
+}
+
+#[cfg(not(any(windows, unix)))]
+mod process_liveness {
+    /// No portable probe here: refusing on a guess would be worse than the
+    /// staleness this check exists to catch.
+    pub fn is_alive(_pid: u32) -> bool {
+        true
+    }
+}
+
+/// The `host:port` authority of an endpoint URL, when it carries one.
+fn endpoint_authority(endpoint: &str) -> Option<&str> {
+    let rest = endpoint
+        .split_once("://")
+        .map(|(_, rest)| rest)
+        .unwrap_or(endpoint);
+    let authority = rest.split('/').next().unwrap_or(rest);
+    (!authority.is_empty()).then_some(authority)
+}
+
+/// DR-70 ②: does the destination **explicitly refuse** a connection?
+///
+/// Only `ConnectionRefused` counts, and only for a **loopback** destination.
+/// Two deliberate limits:
+///
+/// * A non-loopback authority is never probed.  The documented endpoint form is
+///   loopback (`endpoint_for_port`), and off-loopback a refused connect can hang
+///   for the operating system's whole SYN timeout — an inconclusive probe must
+///   not become a refusal.
+/// * Every other error (timeout, resolution failure, permission) is "cannot
+///   tell": inventing a refusal out of it would take a working route away from a
+///   role.
+///
+/// The call is a plain blocking `connect`.  On this platform
+/// `TcpStream::connect_timeout` reports a **refused loopback connect as
+/// `TimedOut`** (measured: `kind=TimedOut raw=None`), so it cannot see the
+/// distinction this check exists for; the blocking form reports
+/// `ConnectionRefused` (measured: `raw=Some(10061)`, about two seconds, which is
+/// the wait the transport failure would have cost anyway).
+fn destination_refuses_connections(endpoint: &str) -> bool {
+    use std::net::ToSocketAddrs;
+
+    let Some(authority) = endpoint_authority(endpoint) else {
+        return false;
+    };
+    let Ok(addresses) = authority.to_socket_addrs() else {
+        return false;
+    };
+    for address in addresses {
+        if !address.ip().is_loopback() {
+            continue;
+        }
+        match std::net::TcpStream::connect(address) {
+            Ok(_) => return false,
+            Err(error) if error.kind() == std::io::ErrorKind::ConnectionRefused => return true,
+            Err(_) => return false,
+        }
+    }
+    false
+}
+
+/// DR-70 ②: the age of a published record, in seconds, when it can be measured.
+///
+/// An unreadable timestamp is `None`, i.e. "cannot tell": a file system that
+/// will not report an mtime must not turn into a refusal.
+fn route_age_seconds(path: &Path) -> Option<u64> {
+    let modified = std::fs::metadata(path).ok()?.modified().ok()?;
+    std::time::SystemTime::now()
+        .duration_since(modified)
+        .ok()
+        .map(|age| age.as_secs())
+}
+
+/// DR-70 ②: may this published route be adopted?
+///
+/// Three questions, in the order that produces the most specific answer:
+/// **is the record fresh**, **is the game process it names still running**, and
+/// **does anything still answer there**.  The caller refuses the route (and keeps
+/// DR-43's explicit `game_endpoint_unavailable`) when this returns `Err`.
+///
+/// What this deliberately does **not** establish: that the endpoint is *this*
+/// round's game rather than a different live MCP server that happens to sit at
+/// the same address with a live pid.  That is the trust boundary DR-69's R4
+/// already names, and it is not closable from a file a role can write.
+pub fn validate_published_route(
+    path: &Path,
+    record: &GameEndpointRecord,
+) -> Result<(), RouteRefusal> {
+    if let Some(age) = route_age_seconds(path) {
+        if age > ROUTE_MAX_AGE_SECONDS {
+            return Err(RouteRefusal::Expired {
+                age_seconds: age,
+                max_age_seconds: ROUTE_MAX_AGE_SECONDS,
+            });
+        }
+    }
+    if let Some(pid) = record.pid {
+        if !process_is_alive(pid) {
+            return Err(RouteRefusal::OwnerGone { pid });
+        }
+    }
+    if destination_refuses_connections(&record.endpoint) {
+        return Err(RouteRefusal::Unreachable {
+            endpoint: record.endpoint.clone(),
+        });
+    }
+    Ok(())
+}
+
 /// DR-55: how many **consecutive transport-layer failures** kill an endpoint.
 /// Two, not one: the first failure is still retried as before (a hiccup must not
 /// cost a whole round), but a second consecutive one is a verdict.  `smoke-t6`
@@ -350,5 +592,78 @@ mod tests {
         assert_eq!(port_of_endpoint("http://127.0.0.1:9877/mcp"), Some(9877));
         assert_eq!(port_of_endpoint("127.0.0.1:9999/mcp"), Some(9999));
         assert_eq!(port_of_endpoint("http://127.0.0.1/mcp"), None);
+    }
+
+    /// DR-70 ②: a bound-then-released loopback port refuses connections, and the
+    /// probe must *see* that — it is the only check that can catch a route whose
+    /// pid is still alive but whose game is gone.
+    #[test]
+    fn a_released_loopback_port_is_recognised_as_refusing_connections() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("loopback listener");
+        let port = listener.local_addr().expect("bound address").port();
+        drop(listener);
+        assert!(
+            destination_refuses_connections(&endpoint_for_port(port)),
+            "the destination on port {port} refuses connections; the probe must report it \
+             rather than treating the route as adoptable"
+        );
+    }
+
+    /// DR-70 ②: a destination that answers is *not* refused, and neither is one
+    /// the probe cannot conclude about — an inconclusive probe must never take a
+    /// working route away from a role.
+    #[test]
+    fn an_answering_or_unjudgeable_destination_is_not_refused() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("loopback listener");
+        let port = listener.local_addr().expect("bound address").port();
+        assert!(!destination_refuses_connections(&endpoint_for_port(port)));
+        drop(listener);
+
+        // No port at all: cannot be judged, so it is not reported as a refusal.
+        assert!(!destination_refuses_connections("http://127.0.0.1/mcp"));
+        assert!(!destination_refuses_connections("not a url"));
+    }
+
+    /// DR-70 ②: the liveness probe answers `true` for a process that is running
+    /// (this one) and `false` for a pid that cannot be running.
+    #[test]
+    fn the_process_liveness_probe_separates_a_live_pid_from_a_gone_one() {
+        assert!(
+            process_is_alive(std::process::id()),
+            "the test process is running, so its own pid must read as alive"
+        );
+        assert!(!process_is_alive(0), "pid 0 is not a live process");
+
+        // A reaped child's pid is gone (Windows may reuse pids eventually, but
+        // not before this assertion runs).
+        let mut child = std::process::Command::new(std::env::current_exe().expect("test exe"))
+            .arg("--help")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .expect("the test binary must be runnable");
+        let pid = child.id();
+        let _ = child.wait();
+        assert!(
+            !process_is_alive(pid),
+            "pid {pid} belonged to a reaped child, so it must read as gone"
+        );
+    }
+
+    /// DR-70 ②: the refusal text names the reason, so a role is told *why* the
+    /// published route was not used.
+    #[test]
+    fn a_refusal_states_which_check_failed() {
+        let expired = RouteRefusal::Expired {
+            age_seconds: 100,
+            max_age_seconds: 50,
+        };
+        assert!(expired.reason().contains("100"));
+        let gone = RouteRefusal::OwnerGone { pid: 4242 };
+        assert!(gone.reason().contains("4242"));
+        let unreachable = RouteRefusal::Unreachable {
+            endpoint: "http://127.0.0.1:1/mcp".to_string(),
+        };
+        assert!(unreachable.reason().contains("127.0.0.1:1"));
     }
 }

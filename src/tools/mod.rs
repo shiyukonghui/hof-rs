@@ -156,6 +156,10 @@ pub struct McpChannel {
     /// DR-69 ①: where the run publishes the game route so a **later process**
     /// (a role's `hoh tools call`) can resolve it.
     game_route_file: std::sync::Arc<std::sync::Mutex<Option<std::path::PathBuf>>>,
+    /// DR-70 ②: why the published route was **not** adopted, when it was not.
+    /// The reason travels into the refusal so a stale route is never reported as
+    /// "nothing is registered yet".
+    route_refusal: std::sync::Arc<std::sync::Mutex<Option<String>>>,
     /// DR-55: the per-endpoint liveness verdict, keyed by the JSON-RPC URL.
     liveness:
         std::sync::Arc<std::sync::Mutex<std::collections::BTreeMap<String, EndpointLiveness>>>,
@@ -178,6 +182,7 @@ impl McpChannel {
             game: std::sync::Arc::new(std::sync::Mutex::new(None)),
             game_history: std::sync::Arc::new(std::sync::Mutex::new(None)),
             game_route_file: std::sync::Arc::new(std::sync::Mutex::new(None)),
+            route_refusal: std::sync::Arc::new(std::sync::Mutex::new(None)),
             liveness: std::sync::Arc::new(std::sync::Mutex::new(std::collections::BTreeMap::new())),
             timeout_seconds,
             max_retries,
@@ -211,12 +216,34 @@ impl McpChannel {
                     .map_err(|_| anyhow::anyhow!("the game endpoint registry is poisoned"))?;
                 match guard.as_ref() {
                     Some(route) => Ok((route.client.clone(), route.record.endpoint.clone())),
-                    None => anyhow::bail!(
-                        "game_endpoint_unavailable: `{tool}` runs in the game process and only \
-                         the game endpoint serves it; no game endpoint is registered yet \
-                         (`editor_play_scene` must have answered with `endpoint` or `mcp_port`). \
-                         Falling back to the editor endpoint is not allowed (DR-43)."
-                    ),
+                    None => {
+                        // DR-70 ②: when a published route *was* found and refused,
+                        // say why.  "a stale route degraded into a transport
+                        // failure" is exactly what DR-43's explicit refusal must
+                        // prevent, and a refusal that hides its reason is only
+                        // half a refusal.
+                        let refused = self
+                            .route_refusal
+                            .lock()
+                            .ok()
+                            .and_then(|refusal| refusal.clone());
+                        match refused {
+                            Some(reason) => anyhow::bail!(
+                                "game_endpoint_unavailable: `{tool}` runs in the game process \
+                                 and only the game endpoint serves it; the published route was \
+                                 found and **refused**: {reason}. No request was sent, so this \
+                                 is an explicit refusal, not a transport failure. Falling back \
+                                 to the editor endpoint is not allowed (DR-43)."
+                            ),
+                            None => anyhow::bail!(
+                                "game_endpoint_unavailable: `{tool}` runs in the game process \
+                                 and only the game endpoint serves it; no game endpoint is \
+                                 registered yet (`editor_play_scene` must have answered with \
+                                 `endpoint` or `mcp_port`). Falling back to the editor endpoint \
+                                 is not allowed (DR-43)."
+                            ),
+                        }
+                    }
                 }
             }
         }
@@ -393,6 +420,12 @@ impl ToolChannel for McpChannel {
     ///
     /// This is the whole of road (A): `HOH_GAME_ROUTE` names the file, and a
     /// fresh process resolves the same route the run registered.
+    ///
+    /// DR-70 ②: adoption is **checked** first (freshness, the recorded pid's
+    /// liveness, and whether anything still answers there).  A stale record is
+    /// refused here, so the caller keeps DR-43's explicit
+    /// `game_endpoint_unavailable` instead of sending the call into an opaque
+    /// transport failure — the acceptance's own counter-example (D6).
     fn use_game_route_file(&self, path: std::path::PathBuf) -> Option<GameEndpointRecord> {
         if let Ok(mut guard) = self.game_route_file.lock() {
             *guard = Some(path.clone());
@@ -400,6 +433,16 @@ impl ToolChannel for McpChannel {
         let record = endpoint::load_game_route(&path)?;
         // A malformed record cannot be adopted; `load_game_route` already
         // refuses one, and the caller keeps failing loudly (DR-43).
+        let refused = match endpoint::validate_published_route(&path, &record) {
+            Ok(()) => None,
+            Err(refusal) => Some(refusal.reason()),
+        };
+        if let Ok(mut guard) = self.route_refusal.lock() {
+            *guard = refused.clone();
+        }
+        if refused.is_some() {
+            return None;
+        }
         self.install_game_route(record.clone()).ok()?;
         Some(record)
     }
