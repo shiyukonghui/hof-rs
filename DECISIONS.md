@@ -10376,3 +10376,37 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 - 队列：**SMOKE-T9 验收 → D270/DR-69（头号 + E3 证据形态 + 携带项）→ 其验收 → 再造一轮真机 → REF2 → §16 → 造游戏**。
 - 回滚点：SMOKE-T9 只新增 `runs/smoke-t9/**`（gitignore 内）；四条真机基线均不得覆盖。
 
+## D270 — SMOKE-T9 收尾：**真根因 = 角色 CLI 结构性够不到游戏端点**（`game_endpoint_unavailable`）；工具输出无上限导致一次 16.4MB 回放致轮次失败；闸门本轮未评估且无修复尝试
+
+- 日期：2026-09-30。补记 SMOKE-T9 执行者完成消息中的关键事实（它按规则**不得**写 `DECISIONS.md`，故由我记）。
+- **真根因（一级架构缺陷，推翻我 D269 的"提示词/波动"猜测）**：**角色 CLI 结构性够不到游戏端点**——
+  `hoh tools call running_game_*` **总是** `game_endpoint_unavailable`，因为**游戏路由只存在于 harness 进程的内存里**
+  （`src/tools/mod.rs:138/186-205/312`、`src/tools/bridge.rs:227-234`、`src/cli_impl.rs:53`）。
+  **现场证明**：游戏在跑、端点已发布（`mcp_port=61183`）、`hoh tools call running_game_get_scene_tree` **仍失败、EXIT=5**。
+  ⇒ Developer 只能花 **175 次调用 / 150+25 步**在 `.hoh/scratch` **自造 Python MCP 客户端 + 裸 HTTP 探端口**
+  （184 条命令里**只有 4 条**提到工程源文件且**全是读**）⇒ **零工程增量** ⇒ 新闸门触发（退出码 2）。
+  ⇒ **这是"任何计划需要观测游戏的迭代都会烧光预算"的结构性阻塞**，很可能是 t7 同族痛的根源。
+- **可靠性缺陷（新）**：**工具输出无大小上限**——Developer 第 93 步的 `dir /s /b /a "%TEMP%" | findstr …`
+  返回 **15,570,803 字节**结果并被**回放进下一次 chat 请求** ⇒ **尝试 A 以 exit 5 `llm-connector chat request failed` 死亡**。
+  执行者处置：把 A 的证据留在仓外、**删掉自己的轮目录**、重试一次；
+  **A 的 16.4 MB 轨迹未能保留（不可恢复，如实披露）**；并**清理了 A 遗留的孤儿游戏进程 77708**（`editor_stop_scene` → `{"stopped":true}`）。
+  ⇒ **我的规则（写进后续任务书）**：①**工具结果必须设上限**（超限截断并标注，且**绝不把超长结果回放进后续请求**）；
+  ②**任何被中止的尝试，其证据必须先复制到受控位置再删轮目录**（"先保存、后清理"），不得出现不可恢复的缺口。
+- **本轮闸门从未被评估**（无电池）：两字段自洽（`applicable=false, launchable=false`），
+  **且没有任何修复尝试**（`repair_retry_used=false`、无 `developer.attempt3`）⇒ **不存在"修了却零写入"**（与 t8 的 F1 不同）。
+  离线反核 `cargo test --offline --test launchable_gate` = **14/14 exit 0**（含 `a_stale_editor_log_line_does_not_close_the_gate`
+  与 `a_reproducible_parse_error`/`a_real_editor_error_still_closes_the_gate`）⇒ **DR-68 ② 双向都成立**。
+- **失败路径 `result.json`**：`battery_passes=[]`/`candidate_id=null`/`version_id=null` 是**诚实的空**（无 `A_1`、无电池），
+  **与 t8 的"桩"性质不同**；`evidence_diff` 仍空，但本轮**无法区分"诚实空"与"未实现"**（DR-68 的 R7 仍开）。
+- **基线未变**：`runs/smoke-t6` `c144ef32…7a9c03`、`t7` `6e4c1595…20fb7`、`t8` `6d11b2c6…bdf5a7`；PRD sha 未变；嵌套引擎 `fc63af77…` 干净。
+- **裁决：下一批（`TASK-DR69.md`）优先级（按阻塞程度）**
+  1. **一级：修"角色 CLI 够不到游戏端点"**——要么让 game 路由**可跨进程解析**（把端点持久化/经编辑器中转），
+     要么**在计划阶段就禁止把"轮内游戏观测"当作 Developer 的前置**（把观测归给 Tester/电池）；
+     **本批必须先诊断、给出可核的机制解释，再选一条并实现**（**我倾向"让路由可解析"**，因为它是根因）；
+  2. **Developer 指令顺序**："**先改代码，观测属于 Tester/电池**"——不得再出现"先造客户端探端口"的路径；
+  3. **工具输出上限**（含"超限结果不得回放"）与**被中止尝试的证据保全**（先保存后清理）；
+  4. **让 E3 的证据形态在轮内可达**（电池产出**前后截图**与 `assert_node_state`）——把"产品可用"转成"判据 met"的关键；
+  5. 携带 **DEF-1（轴断言无覆盖）**、DR-67 的 **DEF-A/B/C/D/E**、**DR-65**。
+- 队列：**SMOKE-T9 验收 → DR-69（上列五项）→ 其验收 → 再造一轮真机 → REF2 → §16 → 造游戏**。
+- 回滚点：SMOKE-T9 只新增 `runs/smoke-t9/**`（gitignore 内）+ `.spec/hof-rs/tasks/TASK-SMOKE-T9-evidence/**`（持久副本）。
+
