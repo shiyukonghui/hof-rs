@@ -1477,6 +1477,146 @@ impl<'a> BatterySession<'a> {
         Ok(probe)
     }
 
+    /// DR-69 ④: capture one replay frame and materialize it under
+    /// `.hoh/evidence/`.
+    ///
+    /// `REQUIREMENTS.md:114` fixes E3's evidence form as a replay **with
+    /// before/after screenshots**, and `smoke-t9` showed the round could never
+    /// satisfy it: the battery produced frames only in its own `screenshot`
+    /// step, never around a replayed action.  The capture follows DR-49 exactly:
+    /// no `save_path` (the engine accepts only `res://`/`user://` and answers the
+    /// image inline without one), the target is invalidated first so an earlier
+    /// round's PNG cannot be inherited, and `running_game_capture_frames` is the
+    /// fallback when this run has no image yet.
+    async fn capture_replay_frame(
+        &self,
+        label: &str,
+        phase: &str,
+        calls: &mut Vec<Value>,
+    ) -> Option<String> {
+        let relative = format!(".hoh/evidence/replay-{label}-{phase}.png");
+        let absolute = self.workspace.join(&relative);
+        if let Some(parent) = absolute.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let _ = invalidate_artifact(&absolute);
+        let call_label = format!("{label}:replay_frame_{phase}");
+        let mut materialized: Option<String> = None;
+
+        let args = json!({});
+        match self
+            .call("running_game_capture_screenshot", args.clone())
+            .await
+        {
+            Ok(call) => {
+                let parsed = unwrap_mcp_payload(&call.payload);
+                calls.push(labeled(
+                    call_ok(
+                        "running_game_capture_screenshot",
+                        &args,
+                        &call.payload,
+                        &call.correlation,
+                    ),
+                    &call_label,
+                ));
+                if let Some(bytes) = extract_inline_image(&parsed) {
+                    if write_png(&absolute, &bytes).is_ok() {
+                        materialized = Some(relative.clone());
+                    }
+                }
+            }
+            Err(failure) => {
+                calls.push(labeled(
+                    call_fail("running_game_capture_screenshot", &args, &failure),
+                    &call_label,
+                ));
+            }
+        }
+        if materialized.is_none() {
+            let frames_args = json!({"count": 1, "frame_interval": 10});
+            match self
+                .call("running_game_capture_frames", frames_args.clone())
+                .await
+            {
+                Ok(call) => {
+                    let parsed = unwrap_mcp_payload(&call.payload);
+                    calls.push(labeled(
+                        call_ok(
+                            "running_game_capture_frames",
+                            &frames_args,
+                            &call.payload,
+                            &call.correlation,
+                        ),
+                        &call_label,
+                    ));
+                    if let Some(bytes) = extract_inline_image(&parsed) {
+                        if write_png(&absolute, &bytes).is_ok() {
+                            materialized = Some(relative.clone());
+                        }
+                    }
+                }
+                Err(failure) => {
+                    calls.push(labeled(
+                        call_fail("running_game_capture_frames", &frames_args, &failure),
+                        &call_label,
+                    ));
+                }
+            }
+        }
+        materialized
+    }
+
+    /// DR-69 ④: assert **inside the game process** that the player's position
+    /// differs from `expected`.
+    ///
+    /// The reading is positional on purpose.  `input_axis` answers `null` on real
+    /// hardware (DR-58, re-measured in `smoke-t9`), so an axis-value assertion is
+    /// not something E3 can rest on; the engine's own `position` property is.
+    /// `expected` is the window's **first sample**, not the pre-injection
+    /// reading, so the verdict does not depend on how many frames pass between
+    /// the injection and the first sample (the ~14-frame lag the SMOKE-T9
+    /// acceptance measured).
+    ///
+    /// Returns `Some(passed)` when the engine answered a verdict, and `None` when
+    /// the assertion could not be made at all (a missing node or property, or an
+    /// unreachable game process).  The two must not be confused.
+    async fn assert_replay_moved(
+        &self,
+        label: &str,
+        expected: &Value,
+        calls: &mut Vec<Value>,
+    ) -> Option<bool> {
+        let args = json!({
+            "node_path": "Player",
+            "property": "position",
+            "operator": "neq",
+            "expected": expected,
+        });
+        let call_label = format!("{label}:replay_assert_moved");
+        match self.call(semantic::ASSERT_NODE_STATE, args.clone()).await {
+            Ok(call) => {
+                let parsed = unwrap_mcp_payload(&call.payload);
+                calls.push(labeled(
+                    call_ok(
+                        semantic::ASSERT_NODE_STATE,
+                        &args,
+                        &call.payload,
+                        &call.correlation,
+                    ),
+                    &call_label,
+                ));
+                parsed.get("passed").and_then(Value::as_bool)
+            }
+            Err(failure) => {
+                calls.push(labeled(
+                    call_fail(semantic::ASSERT_NODE_STATE, &args, &failure),
+                    &call_label,
+                ));
+                None
+            }
+        }
+    }
+
     /// DR-54: one semantic read of the well-known InputMap axis.
     ///
     /// `Input.get_axis` is not a node property, so the semantic reader for it is
@@ -1967,6 +2107,19 @@ impl<'a> BatterySession<'a> {
                 ));
             }
 
+            // DR-69 ④: the BEFORE frame of this window, captured while the
+            // game is in the state the samples below are compared against.
+            let before_frame = self.capture_replay_frame(label, "before", &mut calls).await;
+            if before_frame.is_none() {
+                summaries.push(format!(
+                    "{label}: REPLAY_FRAME_MISSING (the before frame of this window could not \
+                     be produced)"
+                ));
+                if expect_movement {
+                    ok = false;
+                }
+            }
+
             // (a) Game-process injection, through the contract's semantic input
             //     API (DR-54): `create_input_recording` -> `play_input_recording`
             //     -> `running_game_run_test_scenario` -> `stop_input_recording`.
@@ -2111,6 +2264,54 @@ impl<'a> BatterySession<'a> {
                                      delta={:.6} {editor_marker}",
                                     movement.axis, movement.delta
                                 ));
+                            }
+                            // DR-69 ④: the AFTER frame of this window.
+                            let after_frame =
+                                self.capture_replay_frame(label, "after", &mut calls).await;
+                            if after_frame.is_none() {
+                                summaries.push(format!(
+                                    "{label}: REPLAY_FRAME_MISSING (the after frame of this \
+                                     window could not be produced)"
+                                ));
+                                if expect_movement {
+                                    ok = false;
+                                }
+                            }
+
+                            // DR-69 ④: the positional assertion the E3 evidence form
+                            // requires, made inside the game process.  The expectation is
+                            // this window's **first sample**, so the ~14-frame
+                            // injection/sampling lag cannot make the verdict depend on its
+                            // own offset.
+                            let expected_position = quadruple["before_position"].clone();
+                            match self
+                                .assert_replay_moved(label, &expected_position, &mut calls)
+                                .await
+                            {
+                                Some(true) => summaries.push(format!(
+                                    "{label}: POSITION_ASSERT_PASSED \
+                                     (position:neq {expected_position} in the game process)"
+                                )),
+                                Some(false) => {
+                                    summaries.push(format!(
+                                        "{label}: POSITION_UNCHANGED (the assertion \
+                                         position:neq {expected_position} failed inside the game \
+                                         process)"
+                                    ));
+                                    if expect_movement {
+                                        ok = false;
+                                    }
+                                }
+                                None => {
+                                    summaries.push(format!(
+                                        "{label}: POSITION_ASSERTION_UNAVAILABLE (the game \
+                                         process could not answer `position:neq`; no \
+                                         behavioural evidence for this window)"
+                                    ));
+                                    if expect_movement {
+                                        ok = false;
+                                    }
+                                }
                             }
                         }
                     }
@@ -3739,7 +3940,7 @@ arrived for someone else. When `.hoh/deterministic/mcp-sync.json` reports
 | `scene_tree` | N2, F5 | the running node tree exists, with a `path` and a `type` on every node |
 | `screenshot` | N2, F4, F13, F16 | a PNG really exists under `.hoh/evidence/` (a reported path alone is not evidence) |
 | `input_channel_probe` | F1, F2 (+P3 when a semantic tool really reports no such action) | the **game process** answered the contract's semantic tools (`running_game_get_node_properties`, `running_game_get_node_property_samples`, `running_game_create_input_recording` + `running_game_play_input_recording`, `running_game_run_test_scenario`) and reports `GAME_INPUT_CHANNEL_OK`, `ACTION_NOT_BOUND` or `ACTION_BINDING_UNKNOWN`. The raw payload is `.hoh/deterministic/raw/input_channel_probe.json`; its `channel` object carries every reading verbatim, and the one remaining `running_game_execute_gdscript` call is a **read-only** position probe that never decides the verdict (DR-54) |
-| `input_replay` | F1, F2, F3 (+P3 when an InputMap action is missing) | `move_right`/`jump`/`move_left` recordings of `Player.position`, sampled **inside the game process** (`running_game_get_node_property_samples`, game-forwarded) after the action was injected through the semantic input API (`running_game_create_input_recording` + `running_game_play_input_recording` + `running_game_run_test_scenario`). Each call in `raw/input_replay.json` carries the `(action, channel, before_position, after_position, velocity)` quadruple. The editor-side `editor_simulate_input_action` is recorded for completeness only and is labelled `EDITOR_SIDE_INJECTION`: the editor is a different process and cannot drive the game. `INPUT_HAD_NO_EFFECT` means the action was delivered inside the game and the position did not change; `ACTION_NOT_BOUND` means a semantic tool answered that the game's InputMap has no such action; `ACTION_BINDING_UNKNOWN` means the channel could not be read and must **not** be read as a missing action |
+| `input_replay` | F1, F2, F3 (+P3 when an InputMap action is missing) | `move_right`/`jump`/`move_left` recordings of `Player.position`, sampled **inside the game process** (`running_game_get_node_property_samples`, game-forwarded) after the action was injected through the semantic input API (`running_game_create_input_recording` + `running_game_play_input_recording` + `running_game_run_test_scenario`). Each call in `raw/input_replay.json` carries the `(action, channel, before_position, after_position, velocity)` quadruple. The editor-side `editor_simulate_input_action` is recorded for completeness only and is labelled `EDITOR_SIDE_INJECTION`: the editor is a different process and cannot drive the game. `INPUT_HAD_NO_EFFECT` means the action was delivered inside the game and the position did not change; `ACTION_NOT_BOUND` means a semantic tool answered that the game's InputMap has no such action; `ACTION_BINDING_UNKNOWN` means the channel could not be read and must **not** be read as a missing action. **DR-69 ④**: E3's evidence form (`REQUIREMENTS.md:114`) needs before/after frames and a node-state assertion, so each window also captures `.hoh/evidence/replay-<action>-before.png` and `-after.png` (`running_game_capture_screenshot`, inline form, labelled `<action>:replay_frame_before` / `_after`) and asserts `Player.position != <first sample>` with the engine's own `running_game_assert_node_state` (`property: position`, `operator: neq`, labelled `<action>:replay_assert_moved`). The assertion is **positional on purpose**: `input_axis` answers `null` on real hardware (DR-58) and the ~14-frame injection/sampling lag makes a total-displacement assertion untrustworthy, so the expectation is the window's own first sample. `POSITION_UNCHANGED` / `POSITION_ASSERTION_UNAVAILABLE` / `REPLAY_FRAME_MISSING` are the three honest failures of that form |
 | `node_and_collision_assertions` | F5, F6, F10, F13, F14, F16 | node properties, `shape_count` per body, HUD text nodes |
 | `editor_stop_scene` | N1 | the game stopped cleanly |
 

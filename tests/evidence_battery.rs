@@ -473,6 +473,36 @@ fn inline_frames_payload() -> Value {
 /// horizontal position **cannot** change, and only gravity moves `y`.
 fn monitor_payload(action: &str, frames: u64, movement: MovementMode, axis: f64) -> Value {
     let mut samples = Vec::new();
+    for (index, (x, y)) in sample_positions(action, frames, movement, axis)
+        .into_iter()
+        .enumerate()
+    {
+        samples.push(json!({
+            "frame": index,
+            "position": {"x": x, "y": y},
+        }));
+    }
+    let inner = json!({
+        "frame_count": frames,
+        "node_path": "Player",
+        "samples": samples,
+    });
+    json!({"content": [{"type": "text", "text": inner.to_string()}]})
+}
+
+/// DR-69 ④: the per-frame `Player.position` a replay window really observes.
+///
+/// Extracted from [`monitor_payload`] so the `running_game_assert_node_state`
+/// double reports the **same** reading the sampler returns: the assertion is
+/// about the position the replayed action produced, and a double whose two
+/// answers disagreed would make the test prove nothing.
+fn sample_positions(
+    action: &str,
+    frames: u64,
+    movement: MovementMode,
+    axis: f64,
+) -> Vec<(f64, f64)> {
+    let mut samples = Vec::new();
     for frame in 0..frames {
         let frame = frame as f64;
         let (x, y) = match movement {
@@ -495,17 +525,9 @@ fn monitor_payload(action: &str, frames: u64, movement: MovementMode, axis: f64)
                 }
             }
         };
-        samples.push(json!({
-            "frame": frame,
-            "position": {"x": x, "y": y},
-        }));
+        samples.push((x, y));
     }
-    let inner = json!({
-        "frame_count": frames,
-        "node_path": "Player",
-        "samples": samples,
-    });
-    json!({"content": [{"type": "text", "text": inner.to_string()}]})
+    samples
 }
 
 /// The `editor_get_input_actions` reply for the requested mode.
@@ -884,6 +906,69 @@ impl ToolChannel for FixtureChannel {
             // `{"node_path":"/root/Main/…","properties":{…},"type":…}` — there is
             // no top-level `name`, so the old predicate (which read one) is a
             // constant `false` here.  Driven by the frozen bytes on purpose.
+            // DR-69 ④: the positional assertion, in the engine's own verdict shape
+            // (`running_game_assertion.cpp:95-162`): `node_path`, `property`,
+            // `operator`, `expected` in; `passed` + `actual` + `reason` out.  A
+            // property the node does not have is `-32001`, which is what makes an
+            // assertion on a missing property diagnosable instead of a
+            // `passed:false` against `null`.
+            "running_game_assert_node_state" => {
+                let node_path = args
+                    .get("node_path")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_string();
+                let property = args
+                    .get("property")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_string();
+                if property != "position" {
+                    return Err(hof_rs::tools::mcp::McpError::new(
+                        -32001,
+                        format!(
+                            "Property '{property}' on node '{node_path}': Use \
+                             running_game_get_node_properties to list the properties the node \
+                             really has"
+                        ),
+                    )
+                    .into());
+                }
+                let operator = args
+                    .get("operator")
+                    .and_then(Value::as_str)
+                    .unwrap_or("eq")
+                    .to_string();
+                let action = self.last_action.lock().unwrap().clone();
+                let axis = if self.game_input == GameInputMode::Ok {
+                    self.game_axis()
+                } else {
+                    0.0
+                };
+                let positions = sample_positions(&action, 60, self.movement, axis);
+                let last = positions.last().copied().unwrap_or((0.0, 0.0));
+                let expected = args.get("expected").cloned().unwrap_or(Value::Null);
+                let actual = json!({"x": last.0, "y": last.1});
+                let passed = match operator.as_str() {
+                    "neq" => actual != expected,
+                    "gt" => last.0 > expected.as_f64().unwrap_or(0.0),
+                    "lt" => last.0 < expected.as_f64().unwrap_or(0.0),
+                    _ => actual == expected,
+                };
+                let reason = format!("expected {property} {operator} {expected}, found {actual}");
+                let inner = json!({
+                    "assertion": "node_state",
+                    "node_path": node_path,
+                    "resolved_node_path": "/root/Main/Player",
+                    "property": property,
+                    "operator": operator,
+                    "expected": expected,
+                    "actual": actual,
+                    "passed": passed,
+                    "reason": reason,
+                });
+                json!({"content": [{"type": "text", "text": inner.to_string()}]})
+            }
             "running_game_get_node_properties" => {
                 real_node_properties(args["node_path"].as_str().unwrap_or(""))
             }
@@ -3058,10 +3143,26 @@ async fn a_stale_png_does_not_suppress_the_frames_fallback() {
 
     let run = run_battery(root, channel.clone(), 30).await;
 
+    // DR-69 ④: the count is scoped to the `screenshot` step's own raw record.
+    // Since DR-69 the `input_replay` step also captures frames (before/after per
+    // replayed action) and therefore also falls back, so a battery-wide counter
+    // no longer identifies this step's fallback.  The requirement -- **exactly
+    // one** fallback for the screenshot step -- is unchanged and is now asserted
+    // on the record that belongs to it.
+    let screenshot_raw: Value = serde_json::from_str(&read(
+        &run.workspace.join(".hoh/deterministic/raw/screenshot.json"),
+    ))
+    .expect("raw/screenshot.json");
+    let fallbacks = screenshot_raw["calls"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default()
+        .iter()
+        .filter(|call| call["tool"] == json!("running_game_capture_frames"))
+        .count();
     assert_eq!(
-        channel.call_count("running_game_capture_frames"),
-        1,
-        "the fallback must be attempted even when a file already exists (DR-49)"
+        fallbacks, 1,
+        "the fallback must be attempted even when a file already exists (DR-49): {screenshot_raw}"
     );
     let record = step(&run.records, "screenshot");
     assert!(
@@ -3188,6 +3289,163 @@ async fn an_aborted_battery_pass_is_preserved_before_its_directory_is_cleared() 
         frozen.is_file(),
         "the frozen candidate still keeps the current pass: {}",
         frozen.display()
+    );
+}
+
+// ---------------------------------------------------------------------------
+// DR-69 ④: the E3 evidence form must be reachable inside a round
+// ---------------------------------------------------------------------------
+
+/// DR-69 ④: `REQUIREMENTS.md:114` fixes E3's **evidence form** as a replay
+/// plus **before/after screenshots** plus a node-state assertion.  `smoke-t9`'s
+/// independent experiment observed all four behaviours on real hardware, yet the
+/// round itself could never have judged E3 `met`: the battery's `input_replay`
+/// produced neither the frames nor the assertion.
+///
+/// The load-bearing reading must be **positional**: the engine answers `null`
+/// for the axis query on real hardware (DR-58), so an axis-value assertion
+/// cannot be what E3 rests on.
+#[tokio::test]
+async fn the_input_replay_produces_before_and_after_frames_and_a_positional_assertion() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel = Arc::new(FixtureChannel::green());
+    let run = run_battery(root, channel.clone(), 30).await;
+
+    let raw = read(
+        &run.workspace
+            .join(".hoh/deterministic/raw/input_replay.json"),
+    );
+    let parsed: Value = serde_json::from_str(&raw).expect("raw input_replay.json");
+    let calls = parsed["calls"].as_array().cloned().unwrap_or_default();
+
+    let labels: Vec<String> = calls
+        .iter()
+        .filter_map(|call| call["label"].as_str().map(ToOwned::to_owned))
+        .collect();
+
+    for label in ["move_right", "move_left", "jump"] {
+        assert!(
+            labels.contains(&format!("{label}:replay_frame_before")),
+            "the replay of `{label}` must capture a BEFORE frame: {labels:?}"
+        );
+        assert!(
+            labels.contains(&format!("{label}:replay_frame_after")),
+            "the replay of `{label}` must capture an AFTER frame: {labels:?}"
+        );
+        assert!(
+            labels
+                .iter()
+                .any(|entry| entry == &format!("{label}:replay_assert_moved")),
+            "the replay of `{label}` must assert the position in the game process: {labels:?}"
+        );
+    }
+
+    // Both frames really exist, byte for byte, as this run's PNGs.
+    for label in ["move_right", "move_left", "jump"] {
+        for phase in ["before", "after"] {
+            let relative = format!(".hoh/evidence/replay-{label}-{phase}.png");
+            let on_disk = run.workspace.join(&relative);
+            assert!(
+                on_disk.is_file(),
+                "the {phase} frame of `{label}` must be on disk: {relative}"
+            );
+            assert_eq!(
+                std::fs::read(&on_disk).unwrap(),
+                inline_png_bytes(),
+                "{relative} must be the PNG the tool produced"
+            );
+            assert!(
+                run.run_dir
+                    .join("iter-1/candidate")
+                    .join(&relative)
+                    .is_file(),
+                "E3's evidence form must reach the frozen candidate: {relative}"
+            );
+        }
+    }
+
+    // The assertion is positional and uses the engine's own argument names.
+    let mut assertions = 0;
+    for call in &calls {
+        if call["tool"] != json!("running_game_assert_node_state") {
+            continue;
+        }
+        assertions += 1;
+        assert_eq!(call["ok"], json!(true), "{call}");
+        assert_eq!(call["args"]["node_path"], json!("Player"), "{call}");
+        assert_eq!(call["args"]["property"], json!("position"), "{call}");
+        assert_eq!(call["args"]["operator"], json!("neq"), "{call}");
+        assert!(
+            call["args"]["expected"]["x"].is_number(),
+            "the expectation must be the sampled starting position: {call}"
+        );
+        assert!(
+            call["payload"]["content"][0]["text"]
+                .as_str()
+                .unwrap_or("")
+                .contains("\"passed\":true"),
+            "the positional assertion must pass for a moving replay: {call}"
+        );
+    }
+    assert!(
+        assertions >= 3,
+        "one positional assertion per moving window: {assertions}"
+    );
+
+    assert!(
+        channel.call_count("running_game_assert_node_state") >= 3,
+        "the assertion must really have been called"
+    );
+    assert!(
+        channel
+            .calls_of("running_game_capture_screenshot")
+            .iter()
+            .filter(|args| args.get("save_path").is_none())
+            .count()
+            >= 6,
+        "every replay frame must use the engine's inline form (no `save_path`, DR-49)"
+    );
+}
+
+/// DR-69 ④: a replay whose position never changes must be red in the
+/// **positional assertion** as well as in the sample deltas, and the record must
+/// say which of the two failed.
+#[tokio::test]
+async fn a_dead_axis_is_red_in_the_positional_assertion_too() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel = Arc::new(FixtureChannel::green().with_movement(MovementMode::None));
+    let run = run_battery(root, channel, 30).await;
+
+    let replay = step(&run.records, "input_replay");
+    assert!(!replay.ok, "a dead axis must be red: {:?}", replay.record);
+    let raw = read(
+        &run.workspace
+            .join(".hoh/deterministic/raw/input_replay.json"),
+    );
+    let parsed: Value = serde_json::from_str(&raw).expect("raw input_replay.json");
+    let failed_asserts = parsed["calls"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|call| {
+            call["tool"] == json!("running_game_assert_node_state")
+                && call["payload"]["content"][0]["text"]
+                    .as_str()
+                    .unwrap_or("")
+                    .contains("\"passed\":false")
+        })
+        .count();
+    assert!(
+        failed_asserts >= 3,
+        "the positional assertion must fail when nothing moves: {failed_asserts}"
+    );
+    assert!(
+        replay.record.observation.contains("POSITION_UNCHANGED")
+            || replay.record.observation.contains("INPUT_HAD_NO_EFFECT"),
+        "the observation must name the failure: {}",
+        replay.record.observation
     );
 }
 
