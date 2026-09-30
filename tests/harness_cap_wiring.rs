@@ -71,7 +71,9 @@ fn spawn_scripted_chat_server(response_model: String) -> (u16, mpsc::Receiver<Re
                     header_end = Some(position + 4);
                 }
             }
-            let Some(header_end) = header_end else { continue };
+            let Some(header_end) = header_end else {
+                continue;
+            };
             let headers = String::from_utf8_lossy(&raw[..header_end]).to_string();
             let content_length = headers
                 .lines()
@@ -97,7 +99,10 @@ fn spawn_scripted_chat_server(response_model: String) -> (u16, mpsc::Receiver<Re
             let response_body = if index == 0 {
                 tool_call_completion(&response_model, "type big.txt")
             } else {
-                tool_call_completion(&response_model, "echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT")
+                tool_call_completion(
+                    &response_model,
+                    "echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT",
+                )
             };
             index += 1;
             let response = format!(
@@ -194,7 +199,10 @@ async fn the_harness_itself_bounds_what_the_next_request_carries() {
     };
 
     let harness = MiniHarness::new();
-    let outcome = harness.invoke(&invocation).await.expect("the harness must run");
+    let outcome = harness
+        .invoke(&invocation)
+        .await
+        .expect("the harness must run");
     assert_eq!(outcome.role, Role::Developer);
 
     // The first request is the prompt; the **second** one carries the oversized

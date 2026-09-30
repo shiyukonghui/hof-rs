@@ -25,7 +25,8 @@ fn repo_root() -> PathBuf {
 }
 
 fn command_dump() -> (PathBuf, Vec<u8>) {
-    let path = repo_root().join(".spec/hof-rs/tasks/TASK-SMOKE-T9-evidence/experiment/dev1_commands.txt");
+    let path =
+        repo_root().join(".spec/hof-rs/tasks/TASK-SMOKE-T9-evidence/experiment/dev1_commands.txt");
     let bytes = std::fs::read(&path)
         .unwrap_or_else(|error| panic!("the frozen command dump must exist at {path:?}: {error}"));
     (path, bytes)
@@ -47,7 +48,10 @@ fn the_frozen_command_dump_keeps_its_line_endings_and_record_count() {
     );
 
     let newlines = bytes.iter().filter(|byte| **byte == b'\n').count();
-    let records = bytes.split(|byte| *byte == b'\n').filter(|l| !l.is_empty()).count();
+    let records = bytes
+        .split(|byte| *byte == b'\n')
+        .filter(|l| !l.is_empty())
+        .count();
     assert_eq!(
         newlines, 184,
         "{path:?} must keep all 184 line terminators; the DR-69 redaction ate one (DR-70 ⑤)"
