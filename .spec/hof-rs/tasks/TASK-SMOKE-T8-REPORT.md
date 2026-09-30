@@ -5,8 +5,10 @@
 - 轮次：**真机 T=1**，命令 `target/release/hoh.exe run --iterations 1 --run-id smoke-t8`
 - 时间：**2026-09-30 06:52:59 → 07:58:28（+0800），墙钟 65 分 27 秒**
 - 本轮基线：`runs/smoke-t8/**`（**358 文件**，全新目录）；自有实验与脚本在 `runs/smoke-t8-experiment/**`
-- 只读基线：`runs/smoke-t6`（135 文件 `c144ef32…7a9c03`）、`runs/smoke-t7`（115 文件 `6e4c1595…20fb7`）**逐字未变**（§6.4）
-- 我**未改**任何受控文件：`git status --porcelain -uall` 为空（工作树 HEAD `0f37105`）；
+- 只读基线：`runs/smoke-t6`（135 文件 `c144ef32…7a9c03`）、`runs/smoke-t7`（115 文件 `6e4c1595…20fb7`）**收工时逐字未变**
+  （**中途我曾误写 3 个文件并已删除复原，全文见 §11.1**）
+- 我**未改**任何受控文件：`git status --porcelain -uall` 为空（**跑轮时的 HEAD 是 `0f37105`**；
+  我工作期间调度者又提交了 `40aa6fe`(D265) 与 `559d531`(DR-68 任务书)，两者都不是我做的）；
   `godot-mcp/**` 零改动；`PRD-mario.md` sha256 仍 `4c81c3a9…5c3a`；`DECISIONS.md` **未由我编辑**；未 push
 
 ---
@@ -36,7 +38,7 @@ tokens **22.42M → 24.46M**，墙钟 **74:58 → 65:27**。
 | 要件 | 结果 | 证据 |
 |---|---|---|
 | Planner 产出合法 `D_1` | **成立** | `runs/smoke-t8/iter-1/plan.md`（3986 B）含 `### Priority Order`/`### Preservation Gate`/`### Acceptance Gate`；`runs/smoke-t8/iter-1/logs/planner.attempt1.log` → `"artifact_valid": true` |
-| Developer 产出 Godot 工程增量 | **成立** | 我自算 `A_0 → A_1`：**41ce 三个文件**（下表）；版本索引 `runs/smoke-t8/versions/index.json`：`A0 = fc78d299e6dcc9711d5d38c6d04191e586def586d9d0daec70358f3353579d3c`、`A1 = 1f3d20ed50b472e422832c4fa2c8d7b72ae04ee11fa4c5ace65fb20a43997fd8`（`parent = A0`） |
+| Developer 产出 Godot 工程增量 | **成立** | 我自算 `A_0 → A_1`：**3 个工程文件**（下表）；版本索引 `runs/smoke-t8/versions/index.json`：`A0 = fc78d299e6dcc9711d5d38c6d04191e586def586d9d0daec70358f3353579d3c`、`A1 = 1f3d20ed50b472e422832c4fa2c8d7b72ae04ee11fa4c5ace65fb20a43997fd8`（`parent = A0`） |
 | QA 产出合法 `E_1` | **不成立** | `runs/smoke-t8/iter-1/result.json`：`ok=false`、`failed_role="tester"`、`reason="schema_failure"`、`issues=[{"code":"json","message":"evidence does not match the required structure: missing field \`type\`"}]`；`runs/smoke-t8/iter-1/` 下**没有** `evidence.json`、**没有** `qa_report.md`；控制台 `hoh: schema failure for role Tester after 1 attempt(s)` |
 
 增量（我用 `runs/smoke-t8-experiment/diff_trees.py` 自算，不看运行时自报）：
@@ -52,7 +54,7 @@ INCREMENT PRESENT: True
 ```
 
 写入时刻（mtime）：`main.gd 07:16:30`、`main.tscn 07:17:58`、`player.gd 07:19:25` —— 全在 Developer 阶段内。
-`run_loop.rs` 的零增量闸门（见 §1.2 第 1 条）**未触发**：`warnings.log` 无 `no_progress`、无 `no_engineering_write`；
+`run_loop.rs` 的零增量闸门（文件:行见 §1.4）**未触发**：`warnings.log` 无 `no_progress`、无 `no_engineering_write`；
 `result.json.warnings` 只有 `qa_scope` 与 `harness_source_read`。
 
 ### 1.2 为什么上轮零增量、本轮有增量（**实测**，不是猜测）
@@ -68,9 +70,22 @@ INCREMENT PRESENT: True
 | 交付的 system prompt 里 `$HOH_HOH_BIN` / `%HOH_HOH_BIN%` | 1 / 0 | **0 / 1** |
 | 本轮交付的 `.hoh/TOOLS.md` | POSIX | **`%HOH_ARTIFACT_DIR%`×3、`%HOH_HOH_BIN%`×3、`$HOH_` 零处** |
 
-⇒ **"角色读到的文档"与"角色真实 shell"已同号**（`src/runtime/shell.rs:73-89` 渲染，`developer.md:23`、`planner.md:59`、`tester.md:77`、`TOOLS.md` 全部走 `{{HOH_*}}` 占位）。
+⇒ **交付文档的平台化在 system prompt 与 TOOLS.md 正文上已同号**（`src/runtime/shell.rs:73-89` 渲染，`developer.md:23`、`planner.md:59`、`tester.md:77`）；
+task prompt 一侧仍有 F9 的盲区（紧随本条）。
 文件:行证据：`src/prompts/developer.md:23`（`{{HOH_HOH_BIN}} tools call …`）、`src/runtime/shell.rs:49-54`（Windows=`%NAME%`）、
 `src/runtime/run_loop.rs:790-796`（按 `ShellFlavor::HOST` 渲染后交付）。
+
+**残留缺陷 F9（本轮新发现，实测）**：DR-66 ① 的修复**只覆盖了 system prompt 与 TOOLS.md 的正文**；
+   三个角色的 **task prompt** 与 `TOOLS.md` 的头部示例仍交付**不可解析的单花括号占位符** `{HOH_HOH_BIN}`：
+   `{{HOH_*}}` 被写在 **`format!`** 字面量里（`src/prompts/mod.rs:72/93/96/121`、`src/tools/index.rs:165/167`），
+   `{{` 被 Rust 折叠成 `{`，而渲染器只认 `{{NAME}}`（`src/runtime/shell.rs:83-89` + `:124-126`），
+   守卫只查 `{{`/`{%`（`src/runtime/invoke.rs:164-172`）⇒ 双方都看不见它。
+   交付实测：`planner.attempt1.json` msg1 出现 1 处、`developer.attempt1.json` msg1 出现 2 处
+   （`{HOH_HOH_BIN}`、`{HOH_SCRATCH_DIR}`）、`tester.attempt1.json` msg1 出现 1 处；
+   `runs/smoke-t8/TOOLS.md:12` 与 `:15` 同；`runs/smoke-t8/**` 下共 **42 处**单花括号 HOH 记号。
+   （本轮未造成可见损害：同一角色在 **system prompt** 里拿到了正确渲染的 `%HOH_HOH_BIN%` 并按它执行。）
+   测试为何没拦住：`tests/role_shell_contract.rs:173-193` 的抽取器**只接受首词以 `%HOH_`/`$HOH_` 开头的行**，
+   单花括号行永远抽不到；TOOLS.md 的断言只查"含平台标记 / 不含 POSIX 标记"，故仍然全绿。
 
 **结论（实测）**：上轮"预算在第一次有效工具调用前烧掉 1/4、115/150 步拿去包 bash"的机制**本轮不复现**（0 次 bash 包裹，首次 `hoh` 工具调用提前到第 15 步）。
 "Developer 没有产生工程增量"的直接原因（提示词↔shell 契约）**已被消除**。
@@ -319,8 +334,9 @@ THREE TREES BYTE-IDENTICAL: True
 1. **严格口径（首个成功工具结果）没变**（都 step 2）——**这个口径本身无信息量**（两条 `cat` 都会成功）；
    有意义的口径是"**首个成功的 `hoh tools call`**"：**34 → 15 步**（预算的前 10% 内而非 23%）。
 2. **显式 `bash -c` 包裹：120 → 0**（developer）；整轮 t8 合计 **1 次**（developer.attempt3 的 1 次），t7 合计 120。
-3. **文档已同号**：t8 三个角色交付的 system prompt 都**只**含 `%HOH_HOH_BIN%`（0 处 `$HOH_HOH_BIN`），
-   本轮 `.hoh/TOOLS.md` 同理（`%HOH_ARTIFACT_DIR%`×3、`%HOH_HOH_BIN%`×3、`$HOH_` 零处）。
+3. **文档已同号（system prompt 与 TOOLS.md 正文）**：t8 三个角色交付的 system prompt 都**只**含 `%HOH_HOH_BIN%`（0 处 `$HOH_HOH_BIN`），
+   本轮 `.hoh/TOOLS.md` 正文同理（`%HOH_ARTIFACT_DIR%`×3、`%HOH_HOH_BIN%`×3、`$HOH_` 零处）。
+**但 task prompt 与 TOOLS.md 头部仍有不可解析的 `{HOH_HOH_BIN}`（F9，§1.2 的"残留缺陷 F9"）** ⇒ 该修复应判"**大部分生效、有盲区**"。
 4. **残留（换因了）**：t8 的 3 次 developer 方言错误**不是** `$HOH_HOH_BIN`，而是模型自己在 raw-curl 探测里写 POSIX 赋值：
    `G=51263; curl … $G`（result #103）、`S=…; --data-binary "@$S/jump.json"`（#109）、`P=http://…; curl … $P`（#149）；
    planner 的那 1 次是 step 34 `"$HOH_HOH_BIN" submit --role planner --file plan.md` → 立刻在第 35 步用 `%HOH_HOH_BIN%` 成功。
@@ -395,7 +411,7 @@ HEAD = 0f37105d2f1f4425bef3ed12814905c4395dc851  2026-09-30 06:50:39 +0800
 
 | 编号 | 级别 | 内容 | 证据 |
 |---|---|---|---|
-| **F1** | **major** | **启动闸门被"过期编辑器日志行"弄成假阴性**：07:19:33 的 `editor_errors_baseline` 读到 `count=2`，其中 `ERROR: res://scripts/player.gd:31 - Parse Error: Function "_update_facing_visual()" not found in base self.`；但 `player.gd` 自 07:19:25 起（此后**再未被写**）内容是 `_apply_facing_visual()` 且该函数已定义；~07:31:00 同一调用返回 `count=1`（仅横幅）。闸门因此判 `launchable=false`，触发 **DR-24 定向修复 attempt3**（60 步 / 4,022,698 tokens / 11 分 24 秒），**该修复对工程树零写入**（`artifact_valid` 用 `workspace.is_dir()`，`run_loop.rs:1024`）。`editor_get_errors` 读的是**编辑器日志**，不是当前工程 ⇒ 中间态错误可以关门到日志滚出为止 | `runs/smoke-t8/iter-1/candidate/.hoh/deterministic/raw/editor_errors_baseline.json`（我保留了第一遍的原文副本，见 §12）、`logs/developer.attempt3.log`（`notes: launch_gate_repair…`）、`traj/developer.attempt3.json` msg[146-151]、工程树 mtime 普查 |
+| **F1** | **major** | **启动闸门被"过期编辑器日志行"弄成假阴性**：07:19:33 的 `editor_errors_baseline` 读到 `count=2`，其中 `ERROR: res://scripts/player.gd:31 - Parse Error: Function "_update_facing_visual()" not found in base self.`；但 `player.gd` 自 07:19:25 起（此后**再未被写**）内容是 `_apply_facing_visual()` 且该函数已定义；~07:31:00 同一调用返回 `count=1`（仅横幅）。闸门因此判 `launchable=false`，触发 **DR-24 定向修复 attempt3**（60 步 / 4,022,698 tokens / 11 分 24 秒），**该修复对工程树零写入**（`artifact_valid` 用 `workspace.is_dir()`，`run_loop.rs:1024`）。`editor_get_errors` 读的是**编辑器日志**，不是当前工程 ⇒ 中间态错误可以关门到日志滚出为止 | `runs/smoke-t8-experiment/first_pass_gate_context.txt`（第一遍 `count=2` 的原文；正式的 raw 文件已被第二遍覆写）、`logs/developer.attempt3.log`（`notes: launch_gate_repair…`）、`traj/developer.attempt3.json` msg[146-151]、工程树 mtime 普查 |
 | **F2** | **major** | Tester 证据形状契约缺口（E1 的当前障碍）：骨架只在 retry context 下发 + `if limits { break; }` 抑制重试 + `tester.md:56-70` 无记录形状 ⇒ §1.3 | `src/model.rs:436-465`、`src/runtime/schema.rs:241/243-245/284-288`、`src/prompts/tester.md:56-70`、`traj/tester.attempt1.json` step 50/140 |
 | **F3** | minor | 失败存根丢事实（`evidence_diff` 空、`battery_passes` 空、`candidate_id/version_id` null） | `runs/smoke-t8/iter-1/result.json`；`src/runtime/run_loop.rs:1355-1369` |
 | **F4** | minor | 失败轮 `meta.json.artifact_gate.launchable == true`；`is_open()` 忽略 `applicable` | `runs/smoke-t8/meta.json`；`src/model.rs:293-303` |
@@ -403,6 +419,7 @@ HEAD = 0f37105d2f1f4425bef3ed12814905c4395dc851  2026-09-30 06:50:39 +0800
 | **F6** | info | Tester 遗留**孤儿游戏进程** pid 118332（`--path .workspace/mario --mcp-port=65442`，父进程=编辑器 75204，启动 07:35:22），轮末仍 LISTENING；我用 `editor_stop_scene` 清理（返回 `{"message":"Playback stopped","stopped":true}`），清理后端口关闭、编辑器存活 | §7 |
 | **F7** | info | wrap-up retry 的 `artifact_valid` 是**陈旧值**（attempt1 后算一次，`run_loop.rs:815`，retry 时原样复用 `:864`） | `logs/developer.attempt2.log`（`artifact_valid:false` 而该次确实又写了 `player.gd`） |
 | **F8** | info | DR-61 隔离在真机上生效：`warnings.log` 有 `DR-61: moved the previous round's .hoh …`、`meta.json.warnings` 有 `previous_evidence_quarantined`；t7 的 `mcp-errors.jsonl` 被移到 `runs/smoke-t8/quarantine/.hoh.stale-1790722380/` ⇒ **t7 报告的"跨轮陈旧证据污染"遗留项已由运行时机制关闭** | `runs/smoke-t8/warnings.log`、`runs/smoke-t8/quarantine/`、`meta.json.warnings` |
+| **F9** | **major** | **DR-66 ① 的 shell 契约修复有盲区**：task prompt（三角色）与 `TOOLS.md` 头部示例交付**不可解析的** `{HOH_HOH_BIN}`（`format!` 把 `{{` 折叠成 `{`；渲染器只认 `{{}}`；`assert_fully_rendered` 只查 `{{`/`{%`；契约测试抽取器只认 `%HOH_`/`$HOH_` 首词） | `src/prompts/mod.rs:72/93/96/121`、`src/tools/index.rs:165/167`、`src/runtime/shell.rs:83-89/124-126`、`src/runtime/invoke.rs:164-172`、`tests/role_shell_contract.rs:173-193`；交付实测见 §1.2 第 6 条（42 处） |
 
 ---
 
@@ -616,10 +633,13 @@ cmd   : git cat-file -e ef74c60^:<该文件> -> exit 0   ; git cat-file -e ef74c
 2. **F2（major）**：Tester 证据形状契约（骨架只在 retry 下发 + `if limits { break; }` 抑制重试 + 提示词形状块不完整）。
 3. **F3/F4（minor）**：失败存根丢事实；失败轮 `meta.json.artifact_gate.launchable=true` 与 `is_open()` 忽略 `applicable`。
 4. **F5（minor）**：planner/tester 提示词没有合法终止符（只有 developer 有）。
-5. **风险旗 1 的代码层**：`godot.rs:1359` 与 `:1206-1207` 的文档矛盾应二选一（收紧代码或改口径），否则"绿"仍不可信。
-6. **E3 的产品侧缺口**：`move_left` 失效、金币/终点从未被驱动（`Coin1..4`、`Goal` 只是"存在"）。
-7. **孤儿进程**：Tester 阶段起的游戏实例未被收尾（我手工清了；机制上属运行时收尾缺失）。
-8. `input_replay` 的"release"序列从不注入 release（`semantic_inject_action` 恒 `pressed:true`），
+5. **F9（major）**：DR-66 ① 的修复在 task prompt / `TOOLS.md` 头部残留不可解析的 `{HOH_HOH_BIN}`（§1.2"残留缺陷 F9"、§4.5）；
+   修法要同时改三处（`format!` 里的 `{{HOH_*}}`、渲染器或守卫的花括号接受面、契约测试的抽取条件），
+   **否则"文档已平台化"这一条只能算"部分成立"**。
+6. **风险旗 1 的代码层**：`godot.rs:1359` 与 `:1206-1207` 的文档矛盾应二选一（收紧代码或改口径），否则"绿"仍不可信。
+7. **E3 的产品侧缺口**：`move_left` 失效、金币/终点从未被驱动（`Coin1..4`、`Goal` 只是"存在"）。
+8. **孤儿进程**：Tester 阶段起的游戏实例未被收尾（我手工清了；机制上属运行时收尾缺失）。
+9. `input_replay` 的"release"序列从不注入 release（`semantic_inject_action` 恒 `pressed:true`），
    因此"按下→释放→静止"这条最关键的输入语义永远是缺口 ⇒ 建议 `input_replay` 补 release 事件。
 
 ---
@@ -655,7 +675,7 @@ cmd   : git cat-file -e ef74c60^:<该文件> -> exit 0   ; git cat-file -e ef74c
 | 本轮控制台原文 | `runs/smoke-t8-console.txt` |
 | 我的脚本与输出 | `runs/smoke-t8-experiment/`：`digest.ps1`、`analyze_traj.py`、`diff_trees.py`、`hash_tree_check.py`、`show_frames.py`、`show_claims.py`、`evidence_shape.py`、`e4_paths.py`、`gap_check.py`、`tally_calls.py`、`traps.sh`、`probe_editor.py`、`accounting.py`、`stop_orphan.py`、`e3_probe*.py` |
 | 关键原始输出 | `prerun_state.txt`、`prerun_workspace.txt`、`editor_cmdline.txt`、`doctor.txt`、`traps/traps_output.txt`、`e3_attrib_console.txt`、`e3_pairs_console.txt`、`traj_metrics.txt`、`qa_claims.txt`、`stop_orphan.txt`、`e3_attrib/**`、`e3_pairs/**` |
-| 冻结前**第一遍**电池（含 F1 的假阴性原文） | `runs/smoke-t8/iter-1/candidate/.hoh/deterministic/raw/editor_errors_baseline.json`（`ok=false` 版本在我的实验目录副本中另存，见下） |
+| 冻结前**第一遍**电池（含 F1 的假阴性原文） | **`runs/smoke-t8-experiment/first_pass_gate_context.txt`**（我逐字保存的定向修复上下文，内含 `count=2` 的 `editor_errors_baseline` 原文与 Gate verdict）；注意 `candidate/.hoh/deterministic/raw/editor_errors_baseline.json` 与 `.workspace/mario/.hoh/deterministic/raw/…` 保存的是**第二遍**（`ok=true`）——第一遍的原件被第二遍覆写，只在上面的上下文与 `traj/developer.attempt3.json` msg[1] 里存活 |
 | 上一轮只读基线（**未改动**） | `runs/smoke-t6/**`（135 文件 `c144ef32…`）、`runs/smoke-t7/**`（115 文件 `6e4c1595…`） |
 | 规范/需求 | `.spec/hof-rs/REQUIREMENTS.md` v0.3（E1..E6 原文在第 110-119 行）、`.spec/hof-rs/tasks/TASK-SMOKE-T8.md` |
 | 上轮对照 | `.spec/hof-rs/tasks/TASK-SMOKE-T7-REPORT.md` |
