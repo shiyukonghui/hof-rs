@@ -4,3 +4,10 @@
 # runs/**.  Git's automatic CRLF conversion would silently change those bytes on
 # checkout, so the directory is pinned to no conversion.
 tests/fixtures/dr58/** -text
+
+# DR-70 ⑤: the frozen `smoke-t9` evidence bundle is read as bytes too —
+# tests/frozen_evidence.rs asserts the record boundaries and the pure-LF line
+# endings of `experiment/dev1_commands.txt`.  DR-69's byte accounting came apart
+# precisely because the committed blob (pure LF) and the working tree (CRLF, via
+# `core.autocrlf=true`) disagreed, so the tree is pinned to no conversion.
+.spec/hof-rs/tasks/TASK-SMOKE-T9-evidence/** -text
