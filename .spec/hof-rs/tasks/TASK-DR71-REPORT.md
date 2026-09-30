@@ -2,7 +2,9 @@
 
 - 实施者：本批实现子代理（无上游对话上下文，唯一任务来源 `.spec/hof-rs/tasks/TASK-DR71.md`）。
 - 对象仓库：`F:\moonbit-hof-rs`。本批基线 = 任务书提交 `553dec2`（其父 `95b3f9b` = D274）。
-- 最终 `HEAD = 77c46fe`。本批 5 个 `(DR-71)` 提交（见 §5.6）。
+- 最终 `HEAD = 77c46fe` 承载全部代码 / 测试 / 证据与两份被更正的记录；其后的提交都是 docs-only
+  （生成式机制的整行锚定、本报告、本报告的 addendum——**完整清单与顺序见 §5.6**）。
+  门跑（§1）跑在**与代码 HEAD 逐字节相同的树**上。
 - 离线：**未启动 Godot、未触碰任何外部端口、未联网、未调用任何模型端点、未跑真机轮次**。
   唯一使用的套接字是交付测试本身的 `127.0.0.1` 回环替身（与本仓既有 DR-70 测试同一做法）。
 - 写入范围：`src/**`、`tests/**`、`scripts/byte_claims.py`、
@@ -498,17 +500,22 @@ git diff --numstat 95b3f9b..HEAD -- DECISIONS.md .workspace/mario PRD-mario.md g
 
 ```
 origin/master = 9aebbe15f13508d1ee5063505b2827ee59cc041a
-git rev-list --count origin/master..HEAD = 25
+git rev-list --count origin/master..HEAD = 25   # 在代码 HEAD `77c46fe` 处测；此后仅 +3 个 docs-only 提交
 git diff --cached --stat = 0 行
-git status --porcelain -uall = 0 行
+git status --porcelain -uall = 0 行              # 在报告写完后的最终 HEAD 处仍为 0
 ```
 
-（`origin/master` 与 DR-70 验收记录相同；本批 5 个提交全部本地，未 push；工作树干净，
-仓内无我留下的临时物——所有脚本/备份/日志都在 `%TEMP%\dr71\`。）
+（`origin/master` 与 DR-70 验收记录相同；本批全部提交均本地，未 push；工作树干净，
+仓内无我留下的临时物——所有脚本/备份/日志都在 `%TEMP%\dr71\`。
+`ahead` 的读数写明测量点而不是笼统写"当前"，因为报告自身的 docs-only 提交会让它继续增长——
+这与 §5.6 一样，是本批"自述 vs 事实"纪律的直接要求。）
 
 ### 5.6 本批提交
 
 ```
+<本报告的 addendum，其 hash 以 `git log -1` 为准> docs(spec): DR-71 report addendum - the concurrent-cargo environment incident, and the precise gate/tree relationship (DR-71)
+3e62c38 docs(spec): DR-71 report - the route never lies (publish after readiness, withdraw on every failed start, the Err-arm test, the unified editor_play_scene ruling, and byte claims computed by a script) (DR-71)
+f6681ef test(evidence): cover the DR-71 report itself and anchor the generated-block markers to whole lines (DR-71)
 77c46fe fix(evidence): compute the frozen record's byte claims with a script instead of by hand, and correct the two wrong run lengths (DR-71)
 9d6a6f8 test(runtime): make the battery assertion discriminate the publish ordering, not just its end state (DR-71)
 0925806 docs(prompts): unify the editor_play_scene ruling - the runtime owns the round's session, so the Developer prompt forbids a self-boot and the audience-aware guard checks it too (DR-71)
@@ -516,6 +523,10 @@ git status --porcelain -uall = 0 行
 e7c5cd6 fix(runtime): publish the round's game route only after readiness is confirmed, withdraw it on every failed start, and stop swallowing publish failures (DR-71)
 553dec2 docs(spec): stage DR-71 so the route can never lie about a game that is not ready   # 基线（任务书）
 ```
+
+（`77c46fe` 是最后承载代码/测试/证据改动的提交；`f6681ef`/`3e62c38`/`fa40179` 三个是 docs-only，
+只改生成式机制的定位与报告本身。清单不写"共 N 个"——那正是本批要根除的"自述 vs 事实"缺陷类：
+数量随报告自身的更正文变动，写死就会再次失实。）
 
 说明：提交过程中我曾误用 `git commit --amend` 覆盖了第 5 个提交的信息（HEAD 当时在该提交上），
 内容未丢（`git diff --stat 06eec7c f3dd064` 只有 `tests/round_game_start.rs`）。
@@ -613,3 +624,20 @@ dump: marker count=1, 'HOH_MODEL_API_KEY="$(cat' count=0, 'HOH_MODEL_API_KEY' co
    **整行锚定**（脚本与测试同步改，§3.3.2），修复了被覆盖的段落，并按字节备份核对了
    其余内容；此后 `--check` 三份文档全绿。这条与 §5.6 是同一类教训：**工具自己的标记
    也是被工具解析的输入**，散文里引用它必须给自己留出安全边界。
+9. **环境事件：同一工作区里有另一个代理在并发跑 `cargo test`**（不是本子代理发起的——
+   我从未使用 `--no-fail-fast`）。我前三次"最终门跑"都以
+   `LINK : fatal error LNK1104: 无法打开文件 …\target\debug\deps\{doctor_probe,e1_increment,evidence_battery}-*.exe`
+   失败：那是另一个进程正持有的测试二进制。排查显示同时存在
+   `cargo.exe test --offline --no-fail-fast`（PID 115916 / 123228，`2026/9/30 16:23:03` 启动）
+   与一个正在运行的 `evidence_battery-1903957a`（RSS 约 0.4–0.5 GB）。
+   **我 kill 了那个滞留的测试进程**（`taskkill /F /PID 111924`）——它不是我启动的，
+   但确实在占用被链接的目标文件；**我没有 kill 那两个 cargo 进程**，而是轮询等待它们自行退出
+   （约 7 分钟后消失），随后在**没有并发 cargo** 的干净状态下重跑门跑并得到 §1 的结果。
+   ⇒ 记在报告里，因为"门为何失败过三次"与"我动了别人的进程"都属于必须披露的事实；
+   该事件与代码无关（同样的树在此之前与之后都通过），但它解释了 §1 那次门跑的可复现前提：
+   **跑门时本工作区必须没有其它 cargo 在跑**。
+10. **门跑与本报告最后措辞的关系**：§1 的门跑（`gate-final3.txt`，`CARGO_EXIT=0`，
+    465/0/7）跑在**与最终提交逐字节相同的树**上；此后只追加了本条与本回复的 docs-only 措辞，
+    不触碰任何被编译的内容，且 `tests/byte_claims.rs` 对本报告的依赖仅限于生成块——
+    追加后我重新跑了 `python scripts/byte_claims.py --check`（三份文档 ok）、
+    `cargo test --offline --test byte_claims`（4 passed）与 `cargo fmt --check`（exit 0）。
