@@ -81,6 +81,42 @@ fn generated_tool_index(role: Role) -> String {
     channel.index_markdown(role)
 }
 
+/// Any sentence of `text` that mentions `editor_play_scene` **without negating
+/// it**, i.e. a sentence that orders the Developer to boot a game.
+///
+/// DR-71 ③: the ruling is one sentence ("do not start a game of your own
+/// (`editor_play_scene`)"), and the delivered documents are prose, so a raw
+/// substring match cannot tell an order from a prohibition.  Sentence-scoped
+/// negation is the smallest rule that can: a writer who wants to name the tool has
+/// to put a negation in the same sentence, which is exactly the form both
+/// documents must share.
+fn imperative_play_scene_sentence(text: &str) -> Option<String> {
+    for sentence in text.split(['.', '!', '?', '\n']) {
+        if !sentence.contains("editor_play_scene") {
+            continue;
+        }
+        let negated = [
+            "do not",
+            "don't",
+            "does not",
+            "never ",
+            "must not",
+            "cannot",
+            "can not",
+            "without ",
+            "instead of",
+            "rather than",
+            "not ",
+        ]
+        .iter()
+        .any(|marker| sentence.contains(marker));
+        if !negated {
+            return Some(sentence.trim().to_string());
+        }
+    }
+    None
+}
+
 /// The Developer-facing materials must not name a game-process tool as the
 /// Developer's own evidence channel.
 #[test]
@@ -103,8 +139,53 @@ fn no_developer_facing_material_sends_the_role_to_the_game_process() {
     }
 }
 
+/// DR-71 ③: the *unified* ruling on `editor_play_scene`, checked on **both**
+/// audience-aware sides.
+///
+/// DR-70 made the three sites agree about the game process but left them split
+/// about booting one: `developer.md`'s `[self-test]` listed `editor_play_scene`
+/// among the Developer's own tools and definition-of-done #3 ordered it to "boot
+/// the scene with `editor_play_scene`", while the delivered skill forbade the same
+/// call — and the guard DR-70 added only ever inspected the skill.
+///
+/// The decision is (i): **the runtime owns the round's session**.  A second boot
+/// would replace the session the Tester is meant to reach, and the session the
+/// runtime started predates the Developer's edits, so a self-booted game can never
+/// be the Developer's evidence.  The test therefore requires the same prohibition
+/// in both documents, and rejects an imperative mention of the tool on either side.
+#[test]
+fn the_developer_prompt_and_the_skill_forbid_booting_a_game_the_same_way() {
+    let prompt = delivered_prompt(hof_rs::prompts::DEVELOPER_PROMPT);
+    let skill = delivered_skill("godot-dev.md");
+
+    for (label, text) in [("developer.md", &prompt), ("godot-dev.md", &skill)] {
+        let lower = normalized(text);
+        assert!(
+            lower.contains("editor_play_scene"),
+            "{label} must name the command the ruling is about, or the ruling is invisible:\
+             \n{text}"
+        );
+        assert!(
+            lower.contains("do not start a game of your own"),
+            "{label} must carry the unified ruling verbatim (`do not start a game of your \
+             own`), so the two Developer-facing documents cannot drift apart again:\n{text}"
+        );
+        if let Some(sentence) = imperative_play_scene_sentence(&lower) {
+            panic!(
+                "{label} still orders the Developer to boot a game (`editor_play_scene`): \
+                 `{sentence}`\nDR-71 ③: the runtime owns the round's session, so the only legal \
+                 mention is a prohibition in the same sentence."
+            );
+        }
+    }
+}
+
 /// …and the skill must say *why*, because "do not use it" without a reason is the
 /// kind of instruction a role reads as a puzzle to solve.
+///
+/// DR-71 ③: the audience-aware guard is extended to the Developer **prompt** as
+/// well.  DR-70 checked only the skill, which is how `developer.md` was left
+/// ordering a boot the skill forbade without any test noticing.
 #[test]
 fn the_developer_skill_explains_why_the_game_process_is_not_its_self_test() {
     let skill = delivered_skill("godot-dev.md");
@@ -118,11 +199,15 @@ fn the_developer_skill_explains_why_the_game_process_is_not_its_self_test() {
         lower.contains("editor_get_errors"),
         "godot-dev.md must give the Developer the editor-side substitute"
     );
-    assert!(
-        !lower.contains("tools call editor_play_scene"),
-        "godot-dev.md must not tell the Developer to boot a second game while the runtime owns \
-         the round's session (DR-70 ①)"
-    );
+
+    let prompt = normalized(&delivered_prompt(hof_rs::prompts::DEVELOPER_PROMPT));
+    for (label, text) in [("godot-dev.md", &lower), ("developer.md", &prompt)] {
+        assert!(
+            !text.contains("tools call editor_play_scene"),
+            "{label} must not tell the Developer to boot a second game while the runtime owns \
+             the round's session (DR-70 ①/DR-71 ③)"
+        );
+    }
 }
 
 /// The non-vacuity half: the Tester's materials keep the game-process recipe.

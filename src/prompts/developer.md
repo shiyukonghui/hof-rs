@@ -106,12 +106,14 @@ Before editing, establish a baseline for the target behaviour you can observe
 **yourself** with the editor tools the contract gives you, then re-run it after
 each meaningful change and inspect the affected implementation and adjacent
 regression surface. The live path you own is the **editor** one
-(`editor_get_errors`, `editor_play_scene`, `editor_simulate_input_action`,
+(`editor_get_errors`, `editor_simulate_input_action`,
 `editor_get_collision_info`): it tells you whether the project is launchable and
 whether the node and property you wired up are really there. The runtime owns the
-round's game session (DR-70); if you boot one yourself, the battery restarts it on
-your frozen candidate anyway, so nothing you observe there is evidence about your
-edit.
+round's game session (DR-70/DR-71) and starts it before your first step, so do not
+start a game of your own (`editor_play_scene`): a second boot replaces the session
+the Tester is meant to reach, and the one the runtime started is running the
+revision from **before your edits** anyway, so nothing you observe there is
+evidence about your edit.
 
 Your self-tests are how you decide what to write next; they are **not** the
 acceptance verdict. Independent QA decides that, and the deterministic battery
@@ -135,8 +137,10 @@ You are done only when all of the following hold:
    with `project_read_script` and confirm the content and a non-zero size before
    moving on.
 3. `N1` (launchable): the project still opens and the main scene still starts.
-   Check `editor_get_errors` for `{"errors": []}` and boot the scene with
-   `editor_play_scene` before you end the turn.
+   Check `editor_get_errors` for `{"errors": []}`, and leave the project in a
+   state the runtime can boot itself: the runtime owns the round's game session
+   (DR-70/DR-71), so do not start a game of your own (`editor_play_scene`) before
+   you end the turn.
 4. `N2` (observable): every behaviour you claim to have implemented has a
    stable, named node and a property that changes when the player acts —
    otherwise QA cannot see it and it will be reported as a `gap`. This is a

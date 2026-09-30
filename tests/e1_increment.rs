@@ -777,7 +777,30 @@ fn the_completion_definition_keeps_the_increment_and_drops_the_battery_ownership
     );
     assert!(lower.contains("non-empty"), "an empty file stays forbidden");
     assert!(lower.contains("n1") && lower.contains("n2"));
-    assert!(prompt.contains("editor_get_errors") && prompt.contains("editor_play_scene"));
+    assert!(prompt.contains("editor_get_errors"));
+    // DR-71 ③: **requirement-driven update of this assertion.**  The pre-DR-71
+    // form required the prompt to *contain* `editor_play_scene`, which pinned the
+    // string but not its polarity — and the delivered prompt used that latitude to
+    // order the Developer to boot a scene of its own while the skill it is handed
+    // forbade exactly that call.  The ruling is (i): the runtime owns the round's
+    // session, so the completion definition may name the command only to forbid
+    // it.  This is not a loosened assertion: the `N1` item now has to carry the
+    // prohibition verbatim instead of merely containing a tool name, and
+    // `delivered_materials.rs` pins the same polarity on both Developer-facing
+    // documents.
+    let definition_of_done = lower
+        .split("[definition-of-done]")
+        .nth(1)
+        .expect("developer.md must carry a definition-of-done section");
+    assert!(
+        definition_of_done.contains("do not start a game of your own"),
+        "N1 must forbid the Developer's own game boot (the runtime owns the round's session):\
+         \n{prompt}"
+    );
+    assert!(
+        !definition_of_done.contains("boot the scene with"),
+        "N1 must not order the Developer to boot the scene itself:\n{prompt}"
+    );
     // The Developer must still prove observability itself, on the live path it
     // can actually reach.
     assert!(prompt.contains("editor_simulate_input_action"));
