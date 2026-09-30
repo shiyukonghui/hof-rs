@@ -191,10 +191,12 @@ followed a fresh edit (mtime bumped) and each red matched the planted change.
 | **P5** | **delete `roots.push(iter_dir.join("traj"))`** from `frozen_evidence_roots` | `the_production_sealed_areas_cover_every_frozen_root` | `` `iter-1/traj/tester.attempt1.json` is frozen evidence and must be sealed by the production list `` | `cmp` equal |
 
 After P5: `diff -r src /f/dr74-work/src` → **identical**, `diff -r tests /f/dr74-work/tests` →
-**identical**, `grep -rn PLANT src tests` → **0**. After the single commit: `git status --porcelain
--uall` = **0 lines**, `git diff --stat` empty, `git hash-object <path>` == `HEAD:<path>` for every
-edited source, and `cmp` of each against `/f/dr74-work` (plus `cmp` of `env.original.txt` against the
-pre-DR-74 backup) is equal. ④ is proved non-vacuous by P1 and ⑤ by P5, as the task requires.
+**identical**, `grep -rn PLANT src tests` → **0**. After the commits: `git status --porcelain -uall` =
+**0 lines**, `git diff --stat` empty, `git diff --cached --stat` empty, `git hash-object <path>` ==
+`HEAD:<path>` for every edited file (15/15 checked), and `cmp`/`diff -r` against the final
+out-of-repo snapshot `/f/dr74-final` (taken from the committed tree) is equal for `src` and `tests`
+(plus `cmp` of `env.original.txt` against the pre-DR-74 backup, equal). ④ is proved non-vacuous by P1
+and ⑤ by P5, as the task requires.
 
 ## 6. Forbidden-zone self-check (real output)
 
@@ -225,9 +227,9 @@ pre-DR-74 backup) is equal. ④ is proved non-vacuous by P1 and ⑤ by P5, as th
 - **No new dependency**: `git diff HEAD --stat -- Cargo.toml Cargo.lock` empty.
 - **Not pushed**: `HEAD = 42ecc2a…` (commit A) vs `origin/master = 9e7f8ea…`; nothing staged after
   the commit.
-- **No temp files in the repo**: `git status --porcelain -uall` contained only the 13 intended
-  entries before commit A and 0 after it; no `*.tmp*`/debug relics; the only untracked directory
-  used is `target/` (gitignored).
+- **No temp files in the repo**: `git status --porcelain -uall` contained only the **14** intended
+  entries before commit A (11 modified + 3 new sample files) and **0** after it; no `*.tmp*`/debug
+  relics; the only untracked directory used is `target/` (gitignored).
 - **Three false-green traps measured**:
   1. `git diff --stat -- definitely/not/a/real/path` → **empty, exit 0**, while the same command on
      `src/runtime/secrets.rs` prints a diff ⇒ an empty diff over a wrong path proves nothing;
