@@ -274,11 +274,18 @@ async fn the_wrong_parameter_name_is_refused_with_the_accepted_names() {
         message.contains(ENGINE_REFUSAL),
         "the engine's own refusal must survive verbatim: {message}"
     );
-    // …and the guidance names the real parameter.
-    assert!(
-        message.contains("`path`"),
-        "the refusal must name the accepted parameter `path`: {message}"
-    );
+    // …and the guidance names the real parameter.  The names it must name are
+    // **derived from the fixture** (the same `include_str!` snapshot
+    // `accepted_parameters` reads), not the literal `path`, so this cannot pass
+    // with a hardcoded parameter list (DR-74 ⑥/D9).
+    let accepted = hof_rs::tools::index::accepted_parameters(TOOL)
+        .unwrap_or_else(|| panic!("the captured tools/list must declare `{TOOL}`"));
+    for name in &accepted {
+        assert!(
+            message.contains(&format!("`{name}`")),
+            "the refusal must name the accepted parameter `{name}`: {message}"
+        );
+    }
     assert!(
         message.contains(TOOL),
         "the refusal must name the tool it is about: {message}"
@@ -301,7 +308,13 @@ fn the_hint_turns_a_terse_refusal_into_an_actionable_one() {
     hof_rs::tools::mcp::record_parameter_hint(TOOL, &accepted);
     let message = unknown_parameter_message(TOOL, ENGINE_REFUSAL);
     assert!(message.contains(ENGINE_REFUSAL), "{message}");
-    assert!(message.contains("`path`"), "{message}");
+    // Derived from the fixture, not the literal `path` (DR-74 ⑥/D9).
+    for name in &accepted {
+        assert!(
+            message.contains(&format!("`{name}`")),
+            "the guidance must name the accepted parameter `{name}`: {message}"
+        );
+    }
     assert!(
         hof_rs::tools::mcp::parameter_hint(TOOL).is_some(),
         "the hint must be readable while it is installed"

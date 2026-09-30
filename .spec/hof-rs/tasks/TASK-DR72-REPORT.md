@@ -7,6 +7,26 @@
 - 受控证据：`.spec/hof-rs/tasks/TASK-DR72-evidence/`（5 文件）
 - 只读摘要脚本：`scripts/dr72-digest.ps1`（可复跑，只读）
 
+> **DR-74 corrections (2026-10-01, TASK-DR74-REPORT.md).**  The DR-72 acceptance
+> (`TASK-DR72-ACCEPTANCE.md`, `verdict=fail`) falsified five statements below; they
+> are corrected, not deleted, so the record of what was believed stays readable.
+> **F-DR72-2 (line 50) is false as written**: a user name **does** survive — in a
+> later `;`-separated `PATH` element, and (as a DR-72 regression) when the path
+> contains a `\r` component before the user directory.  The predicate itself was
+> wrong (it fired on the second byte of a doubled backslash), and the fix is in
+> `src/runtime/secrets.rs` (`escape_starts_at`).  **§1.1's gate tally is wrong**:
+> the committed tree yields **484 passed / 0 failed / 7 ignored** (`cargo test
+> --offline -- --list` = 491), the pre-batch baseline is **465**, so the net is
+> **+19** (lib +7, not +5) — see the DR-74 report's reproducible arithmetic.
+> **§2.1's rationale for not consuming the terminator is false** (the control
+> character came from a physical newline left inside an unterminated string, not
+> from deleting a backslash) — corrected in the code comment and
+> `REDACTION-POLICY.md` §3.  **§2.3's `a_windows_path_value_is_not_mistaken_for_an_escape`
+> was vacuous** (its span ended at a `;`) and has been rewritten.  **D7/D8** doc
+> overstatements in `tests/frozen_evidence.rs` and `tests/e1_increment.rs` are
+> corrected.  `DECISIONS.md` D280's tally cannot be corrected here (that file is
+> out of DR-74's write scope); `D281` already records the acceptance.
+
 ---
 
 ## 1. 结论 + 门

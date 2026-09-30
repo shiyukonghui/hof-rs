@@ -857,12 +857,16 @@ fn the_completion_definition_keeps_the_increment_and_drops_the_battery_ownership
 /// ever filled in by a **contract-violation** path.  A reader could not tell
 /// "honestly nothing changed" from "nobody ever filled this in".
 ///
-/// This test drives a round that changes several files and re-derives the diff
-/// from the artifacts the runtime itself uses (the frozen `versions/<id>`
-/// snapshot and the workspace's starting state), then asserts the recorded field
-/// is non-empty and equal to that independent computation — with a
-/// **non-vacuity** companion (`the_zero_increment_round_records_an_evidence_
-/// diff_that_is_honestly_empty`) so an always-empty field cannot pass.
+/// This test drives a round that changes the fixture's known files and asserts
+/// the recorded field is non-empty and equal to that known change set — the
+/// expected `added`/`modified` lists below are **hardcoded literals of the
+/// fixture**, not an independent recomputation (DR-74 ⑥/D8: the earlier doc
+/// claimed an independent re-derivation the body does not perform).  What *is*
+/// independent is the frozen artifact check: the `versions/<version_id>`
+/// snapshot's own bytes must carry the Developer's rewrite, and the run must
+/// really have made both the `A_0` and the `A_t` snapshots.  A **non-vacuity**
+/// companion (`the_zero_increment_round_records_an_evidence_
+/// diff_that_is_honestly_empty`) keeps an always-empty field from passing.
 #[tokio::test]
 async fn a_round_that_changes_files_records_the_real_evidence_diff() {
     let temp = tempfile::tempdir().unwrap();
@@ -920,16 +924,17 @@ async fn a_round_that_changes_files_records_the_real_evidence_diff() {
          be empty — that is exactly the F-T10-3 defect: {recorded}"
     );
 
-    // Independent derivation: the runtime measures the increment from the
-    // iteration's starting workspace to the frozen `A_t` snapshot, with its own
-    // exclusion set.  Both trees are still on disk after the run.
+    // The fixture's known change set (DR-74 ⑥/D8: these are literals, not an
+    // independent recomputation).  What the artifacts independently prove is
+    // checked below: the frozen `A_t` snapshot carries the Developer's bytes and
+    // both the `A_0` and `A_1` snapshots exist.
     let version_id = result_json["version_id"]
         .as_str()
         .expect("a completed round records its version id");
     let frozen = root.join(format!("runs/run-1/versions/{version_id}"));
     assert!(
         frozen.is_dir(),
-        "the frozen artifact must exist for the recomputation: {frozen:?}"
+        "the frozen artifact the round recorded must exist: {frozen:?}"
     );
     // `A_0` is the round's own starting snapshot: the first `versions/` entry the
     // run made, which for a fresh workspace is the seeded project.

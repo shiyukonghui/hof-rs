@@ -322,66 +322,128 @@ fn the_batch_evidence_products_carry_no_environment_values() {
 /// Regenerate `samples/env.redacted.txt` with the **production** pass, so the
 /// committed sample is an artifact rather than a hand edit.
 ///
-/// It is a test because it needs the production code, but it is not part of the
-/// suite's verdict: the gate's `ignored` count must not grow (`TASK-DR72.md` §3),
-/// so it runs only when the sample is deliberately regenerated:
+/// DR-74 ⑥(D7): this test **does run in every gate** — it is not `#[ignore]`d
+/// (`ignored` must not grow, and the sample must be checked) — and it does
+/// therefore take part in the suite's verdict: the committed sample has to equal
+/// what the production pass produces, byte for byte, including the span report.
+/// It writes the freshly produced result into the crate's untracked build
+/// directory `target/dr72-redaction-sample/` so that a mismatch is one `cp` away
+/// from being fixed without hand-editing an escape; `target/` is a build
+/// directory, never a tracked artifact, so writing there is acceptable.  The
+/// earlier comment claimed the test was outside the verdict and ran only on
+/// deliberate regeneration, which was false.
 ///
 /// ```text
 /// cargo test --offline --test frozen_evidence -- --exact \
 ///     the_redacted_sample_is_regenerable_from_the_production_pass
 /// ```
+///
+/// Two sample pairs are checked.  `env.original.txt` is the DR-72 sample's
+/// **authored, frozen input**: DR-74 does not edit its bytes, because evidence is
+/// never rewritten in place (that is the whole policy this batch implements).
+/// `env-real.original.txt` is the **new** pair added by DR-74 for the real
+/// encoding measured from
+/// `runs/smoke-t10/iter-1/traj/tester.attempt1.json` — doubled path backslashes
+/// and real `\` + `n` escapes ending each dump line.  Correcting the sample's
+/// encoding is done by adding a file, not by rewriting the one already shipped.
 #[test]
 fn the_redacted_sample_is_regenerable_from_the_production_pass() {
+    let secret = "test-key-not-a-secret".to_string();
     let root = repo_root().join(".spec/hof-rs/tasks/TASK-DR72-evidence/samples");
-    let input = std::fs::read_to_string(root.join("env.original.txt")).expect("sample input");
-    let report =
-        hof_rs::runtime::secrets::scrub_text(&input, &["test-key-not-a-secret".to_string()]);
-    assert!(
-        report.changed(),
-        "the sample must demonstrate a redaction: {report:?}"
-    );
-    assert!(report.refused.is_none(), "{:?}", report.refused);
-    assert_eq!(
-        hof_rs::runtime::secrets::bytes_changed_outside_spans(&report),
-        Some(0),
-        "the sample must be a pure splice"
-    );
-    serde_json::from_str::<serde_json::Value>(&report.redacted)
-        .expect("the redacted sample must still be valid JSON");
-
     // Publish what this run produced into the crate's own `target/` (never into
     // the tracked evidence), so a mismatch is one `cp` away from being fixed
     // without hand-editing an escape.
     let out = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/dr72-redaction-sample");
     std::fs::create_dir_all(&out).expect("out dir");
-    std::fs::write(out.join("env.redacted.txt"), &report.redacted).expect("write redacted");
-    let spans = report
-        .spans
-        .iter()
-        .map(|span| {
-            format!(
-                "{} [{}..{}) -> {}",
-                span.name, span.start, span.end, span.replacement
-            )
-        })
-        .collect::<Vec<_>>()
-        .join("\n");
-    std::fs::write(out.join("env.spans.txt"), &spans).expect("write spans");
 
-    let committed = std::fs::read_to_string(root.join("env.redacted.txt")).expect("sample output");
-    assert_eq!(
-        committed,
-        report.redacted,
-        "the committed sample must be exactly what the production pass produces; copy {} over it \
-         (or report the difference) — see the batch report's disclosure section",
-        out.join("env.redacted.txt").display()
+    for name in ["env", "env-real"] {
+        let input = std::fs::read_to_string(root.join(format!("{name}.original.txt")))
+            .unwrap_or_else(|error| panic!("the {name} sample input must exist: {error}"));
+        let report = hof_rs::runtime::secrets::scrub_text(&input, &[secret.clone()]);
+        assert!(
+            report.changed(),
+            "the {name} sample must demonstrate a redaction: {report:?}"
+        );
+        assert!(report.refused.is_none(), "{name}: {:?}", report.refused);
+        assert_eq!(
+            hof_rs::runtime::secrets::bytes_changed_outside_spans(&report),
+            Some(0),
+            "the {name} sample must be a pure splice"
+        );
+        serde_json::from_str::<serde_json::Value>(&report.redacted).unwrap_or_else(|error| {
+            panic!("the {name} redacted sample must still be valid JSON: {error}")
+        });
+
+        std::fs::write(out.join(format!("{name}.redacted.txt")), &report.redacted)
+            .expect("write redacted");
+        let spans = report
+            .spans
+            .iter()
+            .map(|span| {
+                format!(
+                    "{} [{}..{}) -> {}",
+                    span.name, span.start, span.end, span.replacement
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        std::fs::write(out.join(format!("{name}.spans.txt")), &spans).expect("write spans");
+
+        let committed = std::fs::read_to_string(root.join(format!("{name}.redacted.txt")))
+            .unwrap_or_else(|error| panic!("the {name} committed sample must exist: {error}"));
+        assert_eq!(
+            committed,
+            report.redacted,
+            "the committed {name} sample must be exactly what the production pass produces; copy \
+             {} over it (or report the difference) — see the batch report's disclosure section",
+            out.join(format!("{name}.redacted.txt")).display()
+        );
+        let committed_spans = std::fs::read_to_string(root.join(format!("{name}.spans.txt")))
+            .unwrap_or_else(|error| panic!("the {name} span report must exist: {error}"));
+        assert_eq!(
+            committed_spans,
+            spans,
+            "the committed {name} span report must match the pass exactly; copy {} over it",
+            out.join(format!("{name}.spans.txt")).display()
+        );
+    }
+
+    // DR-74 ①/②: the real-encoding pair is the controlled-artifact proof of the
+    // headline fix — no control character is injected, no path tail survives, and
+    // the element after the escape is intact.
+    let input = std::fs::read_to_string(root.join("env-real.original.txt")).expect("real input");
+    assert!(
+        input.contains("\\\\runs") && input.contains("\\\\node_modules") && input.contains(";"),
+        "the real sample must carry the doubled-backslash `runs`/`node_modules` components and a \
+         `;`-separated PATH tail: {input}"
     );
-    let committed_spans = std::fs::read_to_string(root.join("env.spans.txt")).expect("span report");
+    let report = hof_rs::runtime::secrets::scrub_text(&input, &[secret]);
+    let value: serde_json::Value =
+        serde_json::from_str(&report.redacted).expect("the real sample stays valid JSON");
+    let content = value["content"].as_str().expect("content is a string");
+    assert!(
+        !content.contains('\r'),
+        "a carriage return was injected into the controlled sample: {content:?}"
+    );
+    for tail in ["runs", "node_modules", "stand-in\\repo", "stand-in\\user"] {
+        assert!(
+            !content.contains(tail),
+            "the path tail `{tail}` survived in the controlled sample: {content:?}"
+        );
+    }
+    assert!(
+        content.contains("</output>"),
+        "what followed the escapes must survive: {content:?}"
+    );
+    let parsed_input: serde_json::Value =
+        serde_json::from_str(&input).expect("the real sample input is valid JSON");
+    let before = parsed_input["content"]
+        .as_str()
+        .expect("content is a string");
     assert_eq!(
-        committed_spans,
-        spans,
-        "the committed span report must match the pass exactly; copy {} over it",
-        out.join("env.spans.txt").display()
+        content.matches('\n').count(),
+        before.matches('\n').count(),
+        "the real sample must keep exactly the line separators it started with"
     );
 }
 

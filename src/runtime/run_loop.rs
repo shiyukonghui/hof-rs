@@ -1899,3 +1899,54 @@ fn fail_contract(
     )?;
     Err(HofError::contract(violation).into())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// DR-74 ⑤: the sealed-area list must be the **production** list.
+    ///
+    /// The DR-72 acceptance planted the removal of
+    /// `roots.push(iter_dir.join("traj"))` (DR-74 ⑤) and every suite stayed
+    /// green: the only test that built a `SealedAreas` built its own list, so
+    /// "a trajectory is never rewritten" was invisible to a future edit.  This
+    /// test drives [`frozen_evidence_roots`] itself, so deleting any root —
+    /// `traj` included — reddens it.
+    #[test]
+    fn the_production_sealed_areas_cover_every_frozen_root() {
+        let run_dir = Path::new("runs/run-1");
+        let sealed = frozen_evidence_roots(run_dir, 2);
+        assert!(
+            !sealed.is_empty(),
+            "the production sealed list must never be empty"
+        );
+
+        for relative in [
+            "versions/aaaa/env.json",
+            "quarantine/.hoh.stale-1/deterministic/raw/x.json",
+            "iter-1/candidate/.hoh/evidence.json",
+            "iter-1/traj/tester.attempt1.json",
+            "iter-2/candidate/.hoh/evidence.json",
+            "iter-2/traj/planner.attempt1.json",
+        ] {
+            assert!(
+                sealed.contains(&run_dir.join(relative)),
+                "`{relative}` is frozen evidence and must be sealed by the production list"
+            );
+        }
+
+        // The deliberate exception (DR-19, DR-74 ⑥/D4): a role's own
+        // planner-view dump is erased **in place**, so it must NOT be sealed.
+        // Sealing it reddens `secret_isolation::a_leaked_secret_is_erased_and_counted`.
+        assert!(
+            !sealed.contains(&run_dir.join("iter-1/planner-view/env-dump.txt")),
+            "`iter-*/planner-view` is deliberately not sealed (DR-19)"
+        );
+        // Containment is component-wise: a sibling whose name shares a prefix is
+        // not inside a sealed root.
+        assert!(!sealed.contains(&run_dir.join("iter-1/candidate-evil/x.json")));
+        assert!(!sealed.contains(&run_dir.join("versions-evil/x.json")));
+        // Only the iterations that exist are sealed.
+        assert!(!sealed.contains(&run_dir.join("iter-3/traj/x.json")));
+    }
+}

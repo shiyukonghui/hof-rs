@@ -300,11 +300,15 @@ pub fn write_log(run_dir: &Path, iteration: u32, role: &str, text: &str) -> anyh
     Ok(())
 }
 
-/// DR-72 ②: how many `iter-<n>` directories a run directory currently has.
+/// DR-72 ② / DR-74 ⑥(D4): how many `iter-<n>` directories a run directory
+/// currently has.
 ///
-/// The redaction sweep seals every `iter-*/{planner-view,candidate,traj}` it can
-/// see, so it has to know the highest iteration that exists rather than the
-/// configured iteration count (a failed first iteration has no `iter-2`).
+/// The redaction sweep seals every `iter-*/{candidate,traj}` it can see — it
+/// deliberately does **not** seal `iter-*/planner-view`, because DR-19 requires a
+/// role's own environment dump to be erased in place (see
+/// `run_loop::frozen_evidence_roots`) — so it has to know the highest iteration
+/// that exists rather than the configured iteration count (a failed first
+/// iteration has no `iter-2`).
 pub fn iteration_directories(run_dir: &Path) -> u32 {
     let mut highest = 0u32;
     let Ok(entries) = std::fs::read_dir(run_dir) else {

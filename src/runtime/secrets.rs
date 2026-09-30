@@ -31,6 +31,16 @@
 //! became invalid JSON at char 412862.  The scan is now **escape-aware**,
 //! records the exact byte spans it replaced, and a JSON splice is only applied
 //! when the result still parses.
+//!
+//! DR-74 ①③: the DR-72 predicate was still wrong in the shape the real
+//! trajectories actually use.  Every Windows path there is written with
+//! **doubled** backslashes, so `…\\runs…` made the predicate fire on the second
+//! byte of the pair: it deleted one backslash, the surviving `\r` decoded to a
+//! carriage return, and the rest of the path stayed visible.  An escape now
+//! starts only at a backslash preceded by an **even** run, escape awareness is
+//! limited to JSON, and every real escape family (`\t`, `\uXXXX`, `\"`, …) ends
+//! the value rather than running it to the physical line end (where the splice
+//! would be refused and the assignment rule silently dropped).
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -147,24 +157,73 @@ impl RedactionReport {
     }
 }
 
-/// DR-72 ①: the terminator that ends an unquoted value.
+/// DR-74 ②: the variables whose **entire** value is one sensitive value.
 ///
-/// `;`, a physical `\n`/`\r`, and the JSON escape form `\` + `n` / `\` + `r`.
+/// A `;`-separated `PATH` is a single environment value that discloses a whole
+/// list of directories; the user name that actually leaked travelled in its
+/// **tail** (only the first element was redacted).  Segment-by-segment redaction
+/// would need one span per element for the same assignment and would still leave
+/// the delimiters and element count readable; treating the whole value as
+/// sensitive is the rule the other assignments already follow ("the variable's
+/// value is the sensitive thing") and cannot miss an element.  `Path` is the
+/// spelling `cmd` prints.
+pub const WHOLE_VALUE_VARS: &[&str] = &["PATH", "Path"];
+
+/// DR-74 ①: how many backslashes immediately precede `index`?
 ///
-/// The escape is what the old scan missed: Rust's `'\n'` is a **physical**
-/// newline, while a JSON string's newline is two characters, so the scan ran past
-/// the escape, on to the physical line ending, and the replacement deleted the
-/// rest of the string, its closing quote and the comma — `runs/smoke-t10/iter-1/
-/// traj/tester.attempt1.json` is the file that proves it (invalid JSON at char
-/// 412862).
+/// Used for the two "is this byte escaped?" questions: an escape starts only at a
+/// backslash preceded by an **even** run, and a `"` ends a JSON string only when
+/// it is preceded by an **even** run.
+fn preceding_backslashes(bytes: &[u8], index: usize) -> usize {
+    let mut count = 0usize;
+    let mut cursor = index;
+    while cursor > 0 && bytes[cursor - 1] == b'\\' {
+        count += 1;
+        cursor -= 1;
+    }
+    count
+}
+
+/// DR-74 ①: does an escape sequence begin at `index`?
+///
+/// Only a backslash that is **not itself escaped** starts an escape, i.e. one
+/// preceded by an even number of backslashes.  The JSON encoder writes a literal
+/// backslash as `\\`, so a Windows path component named `runs` arrives as
+/// `…\\runs…`; the DR-72 predicate fired on the **second** byte of that pair
+/// (a backslash followed by `r`), deleted one backslash, and let the surviving
+/// `\r` decode back to a carriage return.
+fn escape_starts_at(bytes: &[u8], index: usize) -> bool {
+    bytes.get(index) == Some(&b'\\') && preceding_backslashes(bytes, index) % 2 == 0
+}
+
+/// DR-72 ① / DR-74 ①③: the terminator that ends an unquoted value.
+///
+/// * `;` — unless the variable is one of [`WHOLE_VALUE_VARS`], whose whole value
+///   is sensitive (DR-74 ②);
+/// * a physical `\n`/`\r` — the plain-text dump's line ending;
+/// * **inside JSON**, an unescaped backslash that does not begin the literal
+///   escape `\\`: every real escape (`\n`, `\r`, `\t`, `\uXXXX`, `\"`, …) ends the
+///   value, while an escaped backslash (a path separator) does not (DR-74 ①③);
+/// * **inside JSON**, an unescaped `"` — the closing quote of the containing
+///   string, which is the end of the value when the assignment is the last thing
+///   in it.
+///
+/// Escape awareness is deliberately limited to JSON: in a plain-text dump (`set`
+/// output) a backslash is just a byte, and treating `\r` in `\repo` as an escape
+/// is what cut the value short and left a user name visible (DR-74 ②).
 ///
 /// **The terminator is not consumed** ([`assignment_value_end`] returns its
-/// index): for the escape that is exactly right, because deleting its leading
-/// backslash is what turns a valid string into a raw control character.
-fn is_value_terminator(bytes: &[u8], index: usize) -> bool {
+/// index), so the escape's own bytes survive and the string keeps its closing
+/// quote, its comma and the field after it.  The damage DR-72 stopped came from
+/// the opposite mistake: the scan ran **past** the escape to the physical line
+/// ending, leaving a physical newline inside an unterminated string — that, not
+/// the deletion of a backslash, is what produced the control character.
+fn is_value_terminator(bytes: &[u8], index: usize, json: bool, whole_value: bool) -> bool {
     match bytes[index] {
-        b';' | b'\n' | b'\r' => true,
-        b'\\' => matches!(bytes.get(index + 1), Some(b'n') | Some(b'r')),
+        b'\n' | b'\r' => true,
+        b';' => !whole_value,
+        b'"' if json => preceding_backslashes(bytes, index) % 2 == 0,
+        b'\\' if json => escape_starts_at(bytes, index) && bytes.get(index + 1) != Some(&b'\\'),
         _ => false,
     }
 }
@@ -194,9 +253,11 @@ fn looks_like_json(raw: &str) -> bool {
 ///   inside its own replacement text;
 /// * a `"`-quoted value ends at the closing quote, which is **not** consumed
 ///   (the DR-69 shape `NAME="$(cat …)"`);
-/// * an unquoted value ends at [`is_value_terminator`], which now also stops on
-///   the JSON escape, so an escaped newline is never mistaken for the end of the
-///   physical line.
+/// * an unquoted value ends at [`is_value_terminator`], which stops on any real
+///   JSON escape and on the string's closing quote, so an escape is never
+///   mistaken for the end of the physical line and no backslash is ever deleted;
+/// * the whole value of a [`WHOLE_VALUE_VARS`] variable (a `;`-separated `PATH`)
+///   is inside one span, so its tail cannot leak a user name (DR-74 ②).
 pub fn redact_secret_assignments_traced(text: &str) -> RedactionReport {
     let report = splice_assignments(text);
     // DR-72 ③ (option c): validate before accepting.  A splice that breaks a
@@ -220,6 +281,7 @@ pub fn redact_secret_assignments_traced(text: &str) -> RedactionReport {
 
 /// DR-72 ①: the splice itself, with no policy applied.
 fn splice_assignments(text: &str) -> RedactionReport {
+    let json = looks_like_json(text);
     let mut spans: Vec<RedactionSpan> = Vec::new();
     for name in SECRET_ENV_VARS
         .iter()
@@ -236,7 +298,8 @@ fn splice_assignments(text: &str) -> RedactionReport {
                 continue;
             }
             let value_start = start + needle.len();
-            let value_end = assignment_value_end(text, value_start);
+            let value_end =
+                assignment_value_end(text, value_start, json, WHOLE_VALUE_VARS.contains(&name));
             spans.push(RedactionSpan {
                 name: name.to_string(),
                 start,
@@ -266,13 +329,17 @@ fn splice_assignments(text: &str) -> RedactionReport {
     }
 }
 
-/// DR-72 ①: where an unquoted value ends.
+/// DR-72 ① / DR-74 ①③: where an unquoted value ends.
 ///
 /// Inside a JSON string (which is where a trajectory records an environment
-/// dump) the scan stops at the same terminators as before, **and** at the
-/// JSON escape `\n`, so the escape's own bytes survive and the string's
-/// closing quote and the comma after it are never eaten.
-fn assignment_value_end(text: &str, value_start: usize) -> usize {
+/// dump) the scan stops at every real escape and at the closing quote, so the
+/// escape's own bytes survive and the string's closing quote and the comma after
+/// it are never eaten.  Escape awareness is limited to JSON: in a plain-text dump
+/// a backslash is just a byte (DR-74 ②).
+///
+/// `whole_value` marks a variable whose entire value is sensitive
+/// ([`WHOLE_VALUE_VARS`]): its `;`-separated elements are all inside the span.
+fn assignment_value_end(text: &str, value_start: usize, json: bool, whole_value: bool) -> usize {
     let bytes = text.as_bytes();
     if bytes.get(value_start) == Some(&b'"') {
         // The DR-69 `NAME="$(cat …)"` shape: the value ends at the closing
@@ -288,12 +355,32 @@ fn assignment_value_end(text: &str, value_start: usize) -> usize {
         }
         return text.len();
     }
+    if json && bytes.get(value_start) == Some(&b'\\') && bytes.get(value_start + 1) == Some(&b'"') {
+        // DR-74 ③: the same DR-69 shape as a JSON encoder writes it
+        // (`NAME=\"$(cat …)\"`): the value is quoted, so it ends at the closing
+        // escaped quote, which is not consumed.
+        let mut index = value_start + 2;
+        while index < bytes.len() {
+            if bytes[index] == b'\\'
+                && bytes.get(index + 1) == Some(&b'"')
+                && preceding_backslashes(bytes, index) % 2 == 0
+            {
+                return index;
+            }
+            if bytes[index] == b'\\' {
+                index += 2;
+                continue;
+            }
+            index += 1;
+        }
+        return text.len();
+    }
     let mut index = value_start;
     while index < bytes.len() {
-        if is_value_terminator(bytes, index) {
-            // The terminator is **not** consumed.  For the escape that is the
-            // whole point: the escape's two bytes survive, so the JSON string
-            // stays closed, keeps its comma and keeps the field after it.
+        if is_value_terminator(bytes, index, json, whole_value) {
+            // The terminator is **not** consumed.  For an escape that is the
+            // whole point: its two bytes survive, so the JSON string stays
+            // closed, keeps its comma and keeps the field after it.
             return index;
         }
         index += 1;
@@ -696,33 +783,251 @@ mod tests {
             .ends_with("</output>"));
     }
 
-    /// DR-72 ①: a Windows path in a JSON string is written with **doubled**
-    /// backslashes (`C:\\Users\\u`), so a scan that stopped at any separator would
-    /// cut the value at its first byte.  Only the exact escape form `\` + `n`/
-    /// `\` + `r` and the real delimiters end the value.
+    /// DR-72 ① / DR-74 ①: a Windows path in a JSON string is written with
+    /// **doubled** backslashes (`C:\\Users\\u`), so a scan that stopped at the
+    /// second byte of such a pair would cut the value in half and delete one
+    /// backslash — turning the surviving `\` + `r`/`n` into a real JSON escape.
+    ///
+    /// The fixture is the **real encoding**: doubled path separators and a real
+    /// `\` + `n` escape that ends the assignment's logical line.  The value also
+    /// crosses a `;`, so the terminator that decides it is the escape, not the
+    /// semicolon (the DR-72 test this replaces was decided by a `;` before any
+    /// escape was consulted — DR-74 ④).
     #[test]
     fn a_windows_path_value_is_not_mistaken_for_an_escape() {
-        let original =
-            "{\"env\": \"PATH=C:\\\\\\\\Users\\\\\\\\u\\\\\\\\bin;C:\\\\\\\\stand-in\\\\\\\\bin\\\\nnext\"}\n";
+        let original = "{\"env\": \"PATH=C:\\\\Users\\\\u\\\\node_modules\\\\.bin;C:\\\\stand-in\\\\bin\\\\runs\\\\run-1\\nnext\"}\n";
         serde_json::from_str::<serde_json::Value>(original).expect("the fixture is valid JSON");
+        assert!(
+            original.contains("\\\\runs"),
+            "the fixture must carry the doubled-backslash `runs` component: {original}"
+        );
+
         let report = redact_secret_assignments_traced(original);
         assert!(
             report.changed(),
             "the assignment must be replaced: {report:?}"
         );
-        assert!(report.refused.is_none(), "{:?}", report.refused);
+        assert!(
+            report.refused.is_none(),
+            "a bounded value must never be refused: {:?}",
+            report.refused
+        );
+        assert_eq!(report.spans.len(), 1, "{report:?}");
+        // Non-vacuity of the escape predicate: the span must end **on the escape**
+        // (`\` + `n`), i.e. the scan really consulted it rather than a `;`.
+        let end = report.spans[0].end;
+        let bytes = original.as_bytes();
+        assert_eq!(
+            (bytes[end], bytes.get(end + 1)),
+            (b'\\', Some(&b'n')),
+            "the value must end at the real escape, not at a semicolon: {:?}",
+            &original[report.spans[0].start..end + 2]
+        );
+
         let value: serde_json::Value =
             serde_json::from_str(&report.redacted).expect("still valid JSON");
         let env = value["env"].as_str().expect("env is a string");
-        assert!(
-            env.starts_with("PATH=<redacted>"),
-            "the assignment must be replaced without cutting the path short: {env}"
+        assert_eq!(
+            env,
+            format!("PATH={REDACTED}\nnext"),
+            "the whole path value must be gone and only the field after the escape must survive"
         );
-        assert!(!env.contains("Users"), "the value must be gone: {env}");
-        assert!(
-            env.ends_with("next"),
-            "what followed the escape must survive: {env}"
+        assert_eq!(
+            bytes_changed_outside_spans(&report),
+            Some(0),
+            "the repair must be a pure splice"
         );
+    }
+
+    /// DR-74 ①: the headline defect, in the **real encoding** of a trajectory.
+    ///
+    /// Every Windows path in `runs/<id>/iter-*/traj/*.json` is written with
+    /// doubled backslashes, and the assignment's logical line ends with a real
+    /// `\` + `n` escape.  The DR-72 predicate fired on the **second** byte of the
+    /// `\\runs` pair: it deleted one backslash, the surviving `\` + `r` decoded to
+    /// a carriage return, and the rest of the path stayed visible while the JSON
+    /// validation gate could not refuse it (the result still parsed).  This test
+    /// asserts the three facts the acceptance demanded: no CR/LF is **injected**,
+    /// no path tail survives, and every byte outside the reported span is
+    /// unchanged.
+    #[test]
+    fn a_doubled_backslash_path_does_not_inject_a_control_character() {
+        // Real encoding: `\\` for every path separator, one real `\n` escape.
+        let original = "{\"env\": \"HOH_GAME_ROUTE=F:\\\\moonbit-hof-rs\\\\runs\\\\smoke-t10\\\\iter-1\\\\node_modules\\\\pkg\\\\index.js\\nHOH_HOH_BIN=F:\\\\moonbit-hof-rs\\\\target\\\\release\\\\hoh.exe\\n</output>\"}\n";
+        let parsed: serde_json::Value =
+            serde_json::from_str(original).expect("the fixture is valid JSON");
+        let before = parsed["env"].as_str().expect("env").to_string();
+        assert!(
+            original.contains("\\\\runs\\\\smoke-t10") && original.contains("\\\\node_modules"),
+            "the fixture must use the real doubled-backslash encoding: {original}"
+        );
+
+        let report = redact_secret_assignments_traced(original);
+        assert!(report.changed(), "{report:?}");
+        assert!(
+            report.refused.is_none(),
+            "the real shape must be bounded, not refused: {:?}",
+            report.refused
+        );
+        let output: serde_json::Value =
+            serde_json::from_str(&report.redacted).expect("still valid JSON");
+        let after = output["env"].as_str().expect("env").to_string();
+
+        // (i) no control character is injected: the decoded value carries exactly
+        // the line breaks it carried before, no more.
+        assert_eq!(
+            after.matches('\r').count(),
+            before.matches('\r').count(),
+            "a carriage return was injected into the decoded value: {after:?}"
+        );
+        assert_eq!(
+            after.matches('\n').count(),
+            before.matches('\n').count(),
+            "a newline was injected into the decoded value: {after:?}"
+        );
+        assert!(!after.contains('\r'), "{after:?}");
+        // (ii) no path tail survives.
+        assert!(
+            after.starts_with(&format!("HOH_GAME_ROUTE={REDACTED}")),
+            "the assignment must be replaced: {after:?}"
+        );
+        for tail in ["runs", "smoke-t10", "node_modules", "moonbit-hof-rs\\runs"] {
+            assert!(
+                !after.contains(tail),
+                "the path tail `{tail}` survived: {after:?}"
+            );
+        }
+        // The field after the escape is untouched.
+        assert!(after.ends_with("</output>"), "{after:?}");
+        // (iii) zero bytes changed outside the reported span.
+        assert_eq!(
+            bytes_changed_outside_spans(&report),
+            Some(0),
+            "the repair must be a pure splice"
+        );
+
+        // The acceptance's exact p14 shape: the value is the last thing in the
+        // JSON string, so the **unescaped closing quote** must bound it — a
+        // bounded value, not a refusal, and the tail is gone.
+        let quoted =
+            "{\"env\": \"HOH_ARTIFACT_DIR=F:\\\\moonbit-hof-rs\\\\runs\\\\smoke-t10\\\\iter-1\"}";
+        let report = redact_secret_assignments_traced(quoted);
+        assert!(
+            report.refused.is_none(),
+            "the closing-quote shape must be bounded, not refused: {:?}",
+            report.refused
+        );
+        let value: serde_json::Value =
+            serde_json::from_str(&report.redacted).expect("still valid JSON");
+        let env = value["env"].as_str().expect("env is a string");
+        assert_eq!(
+            env,
+            format!("HOH_ARTIFACT_DIR={REDACTED}"),
+            "the whole value must be replaced, with no path tail and no injected control character"
+        );
+        assert!(!env.contains('\r') && !env.contains('\n'), "{env:?}");
+        assert_eq!(bytes_changed_outside_spans(&report), Some(0));
+    }
+
+    /// DR-74 ②: a user name in a **later** element of a `;`-separated `PATH` is
+    /// the same disclosure as one in the first element.  The whole `PATH` value is
+    /// treated as one sensitive value (see [`assignment_value_end`]).
+    #[test]
+    fn a_user_name_in_a_semicolon_separated_path_tail_is_redacted() {
+        let original = "PATH=C:\\Windows\\system32;C:\\Program Files\\nodejs;C:\\Users\\wyl\\AppData\\Roaming\\npm\n";
+        let report = redact_secret_assignments_traced(original);
+        assert!(report.changed(), "{report:?}");
+        assert!(
+            !report.redacted.contains("wyl"),
+            "the user name must not survive anywhere in the value: {}",
+            report.redacted
+        );
+        assert!(
+            !report.redacted.contains("C:\\Users"),
+            "every `;`-separated element is part of the same sensitive value: {}",
+            report.redacted
+        );
+        assert!(
+            report.redacted.contains(&format!("PATH={REDACTED}")),
+            "{}",
+            report.redacted
+        );
+    }
+
+    /// DR-74 ②: a plain-text dump is **not** JSON, so backslashes in it are not
+    /// escapes.  The DR-72 predicate read the `\r` of `\repo`/`\runs` as an escape
+    /// and stopped there — a regression against the old scanner, which ran to the
+    /// physical line end and removed the whole value, user name included.
+    #[test]
+    fn a_path_with_a_backslash_r_component_still_redacts_the_user_name() {
+        let original = "HOH_ARTIFACT_DIR=F:\\repo\\Users\\wyl\\runs\\run-1\n";
+        let report = redact_secret_assignments_traced(original);
+        assert!(report.changed(), "{report:?}");
+        assert!(
+            !report.redacted.contains("wyl") && !report.redacted.contains("Users"),
+            "the whole plain-text value must go, as the pre-DR-72 scanner did: {}",
+            report.redacted
+        );
+        assert_eq!(
+            report.redacted,
+            format!("HOH_ARTIFACT_DIR={REDACTED}\n"),
+            "only the physical line ending may bound the value in plain text"
+        );
+    }
+
+    /// DR-74 ③: an escape family other than `\n`/`\r` (`\t`, `\"`, `\uXXXX`) must
+    /// not silently drop the assignment rule.  The DR-72 scanner ran such a value
+    /// to the physical line end, produced invalid JSON and **refused**, leaving
+    /// `NAME=` in the evidence for a perfectly legitimate JSON file.  Any escape
+    /// that is not the literal-backslash escape `\\` now ends the value.
+    #[test]
+    fn other_json_escape_families_do_not_drop_the_assignment_redaction() {
+        let secret = "test-key-not-a-secret";
+        let cases = [
+            (
+                "\\t",
+                "{\"a\": \"HOH_MODEL_API_KEY=test-key-not-a-secret\\tX\"}\n",
+            ),
+            (
+                "\\\"",
+                "{\"a\": \"HOH_MODEL_API_KEY=test-key-not-a-secret\\\"X\"}\n",
+            ),
+            (
+                "\\uXXXX",
+                "{\"a\": \"HOH_MODEL_API_KEY=test-key-not-a-secret\\u0041X\"}\n",
+            ),
+        ];
+        for (label, original) in cases {
+            serde_json::from_str::<serde_json::Value>(original)
+                .unwrap_or_else(|error| panic!("the {label} fixture must be valid JSON: {error}"));
+            let report = redact_secret_assignments_traced(original);
+            assert!(
+                report.refused.is_none(),
+                "the {label} family must be handled, not refused: {:?}",
+                report.refused
+            );
+            assert!(report.changed(), "the {label} family must be redacted");
+            let value: serde_json::Value = serde_json::from_str(&report.redacted)
+                .unwrap_or_else(|error| panic!("the {label} splice must stay valid JSON: {error}"));
+            let text = value["a"].as_str().expect("a");
+            assert!(
+                !text.contains(secret),
+                "the {label} family left the credential value visible: {text}"
+            );
+            assert!(
+                text.starts_with(&format!("HOH_MODEL_API_KEY={REDACTED}")),
+                "the {label} family left the assignment name visible: {text}"
+            );
+            assert!(
+                text.ends_with('X'),
+                "the {label} family must not eat what followed the escape: {text}"
+            );
+            assert_eq!(
+                bytes_changed_outside_spans(&report),
+                Some(0),
+                "the {label} splice must be pure"
+            );
+        }
     }
 
     /// DR-72 ①: what followed the assignment **inside the same JSON string**
