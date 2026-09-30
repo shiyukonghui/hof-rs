@@ -40,6 +40,11 @@ struct RpcDouble {
     tools: Arc<Mutex<Vec<String>>>,
     shutdown: Arc<AtomicBool>,
     handle: Option<JoinHandle<()>>,
+    /// DR-71 ①: an optional file whose existence is recorded at every request, so a
+    /// test can ask "was the route already visible to a role while this call was in
+    /// flight?" — the ordering property itself, not just its end state.
+    watch: Arc<Mutex<Option<PathBuf>>>,
+    sightings: Arc<Mutex<Vec<(String, bool)>>>,
 }
 
 impl RpcDouble {
@@ -52,12 +57,22 @@ impl RpcDouble {
         let tools = Arc::new(Mutex::new(Vec::new()));
         let shutdown = Arc::new(AtomicBool::new(false));
         let replies = Arc::new(replies);
+        let sightings = Arc::new(Mutex::new(Vec::new()));
+        let watch = Arc::new(Mutex::new(None));
         let thread_tools = tools.clone();
         let thread_shutdown = shutdown.clone();
+        let thread_sightings = sightings.clone();
+        let thread_watch = watch.clone();
         let handle = std::thread::spawn(move || {
             while !thread_shutdown.load(Ordering::SeqCst) {
                 match common::accept_blocking(&listener) {
-                    Some(stream) => serve(stream, &thread_tools, &replies),
+                    Some(stream) => serve(
+                        stream,
+                        &thread_tools,
+                        &replies,
+                        &thread_watch,
+                        &thread_sightings,
+                    ),
                     None => std::thread::sleep(Duration::from_millis(2)),
                 }
             }
@@ -67,7 +82,19 @@ impl RpcDouble {
             tools,
             shutdown,
             handle: Some(handle),
+            watch,
+            sightings,
         }
+    }
+
+    /// Watch `path`: every later request records whether it exists.
+    fn watching(self, path: PathBuf) -> Self {
+        *self.watch.lock().expect("watch lock") = Some(path);
+        self
+    }
+
+    fn sightings(&self) -> Vec<(String, bool)> {
+        self.sightings.lock().expect("sightings lock").clone()
     }
 
     fn url(&self) -> String {
@@ -97,6 +124,8 @@ fn serve(
     mut stream: TcpStream,
     tools: &Arc<Mutex<Vec<String>>>,
     replies: &Arc<Vec<(String, Value)>>,
+    watch: &Arc<Mutex<Option<PathBuf>>>,
+    sightings: &Arc<Mutex<Vec<(String, bool)>>>,
 ) {
     let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
     let mut buffer = Vec::new();
@@ -136,6 +165,13 @@ fn serve(
         .unwrap_or_default()
         .to_string();
     tools.lock().expect("tools lock").push(name.clone());
+    // DR-71 ①: record what a role process would have seen at this instant.
+    if let Some(path) = watch.lock().expect("watch lock").as_ref() {
+        sightings
+            .lock()
+            .expect("sightings lock")
+            .push((name.clone(), path.exists()));
+    }
 
     let inner = replies
         .iter()
@@ -331,16 +367,29 @@ async fn a_publish_failure_is_reported_instead_of_swallowed() {
 /// polled readiness there too — a play that never becomes observable would have
 /// left a route for the Tester window (the round stops its own session before the
 /// battery, so the battery's route is the only one in that window).
+///
+/// The game double here **answers**, but not with a scene tree, so the step is
+/// unconfirmed while the game endpoint is genuinely in the call path — and the
+/// double records whether the route file existed at the moment each request
+/// arrived.  Asserting the end state alone would not discriminate: the battery's
+/// own `editor_stop_scene` step withdraws the file at the end either way.
 #[tokio::test]
-async fn a_battery_play_that_never_becomes_ready_leaves_no_route() {
+async fn an_unconfirmed_battery_play_never_exposes_a_route() {
     let root = tempfile::tempdir().expect("tempdir");
     let workspace = root.path().join("workspace");
     std::fs::create_dir_all(&workspace).expect("workspace");
     let route = game_route_path(&run_dir(root.path()));
-    let port = closed_port();
+
+    let game = RpcDouble::start(vec![(
+        "running_game_get_scene_tree".to_string(),
+        // `editor_play_scene`'s own reply is never readiness evidence, and neither
+        // is an answer that is not a scene tree.
+        json!({"tree": "not a scene tree at all"}),
+    )])
+    .watching(route.clone());
     let editor = RpcDouble::start(vec![(
         "editor_play_scene".to_string(),
-        play_scene_reply(format!("http://127.0.0.1:{port}/mcp"), port),
+        play_scene_reply(game.url(), game.port()),
     )]);
 
     let channel = McpChannel::new(editor.url(), 5, 0);
@@ -356,11 +405,27 @@ async fn a_battery_play_that_never_becomes_ready_leaves_no_route() {
         .unwrap_or_else(|| panic!("the battery must declare `play_scene_ready`: {records:?}"));
     assert!(
         !play.ok,
-        "a play that never becomes observable must not be recorded as ok: {play:?}"
+        "a play whose readiness reply is not a scene tree must not be recorded as ok: {play:?}"
+    );
+
+    let sightings = game.sightings();
+    assert!(
+        !sightings.is_empty(),
+        "the readiness poll must have reached the announced game endpoint"
+    );
+    let exposed: Vec<_> = sightings
+        .iter()
+        .filter(|(_, existed)| *existed)
+        .map(|(tool, _)| tool.clone())
+        .collect();
+    assert!(
+        exposed.is_empty(),
+        "the battery published the route before it confirmed readiness, so the game endpoint saw \
+         it in flight during {exposed:?}; the whole sequence was {sightings:?}"
     );
     assert!(
         !route.exists(),
-        "the battery's unconfirmed play must not leave a route for the Tester window: {:?}",
+        "the unconfirmed battery play must not leave a route for the Tester window: {:?}",
         std::fs::read_to_string(&route)
     );
     assert!(
