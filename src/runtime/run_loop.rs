@@ -357,17 +357,96 @@ fn manifest_or_empty(
     tree_manifest(root, excludes).unwrap_or_default()
 }
 
+/// DR-69 ③: move an aborted attempt's evidence out of the way **before** its
+/// directory is deleted ("save first, then clean").
+///
+/// `smoke-t9`' attempt A ended with `llm-connector chat request failed`, and the
+/// only way to retry was to delete the round's own `runs/smoke-t9` directory —
+/// which is how a 16.4 MB trajectory became unrecoverable.  The runtime has the
+/// same shape one level down: a battery pass rebuilds `.hoh/deterministic` from
+/// scratch (DR-24), so the first pass's raw payloads used to be destroyed the
+/// moment a repair started a second pass.
+///
+/// The bytes are *moved*, never copied and never deleted: `preserved` names
+/// where they went, and the caller may recreate the directory it needs.
+pub fn preserve_then_clear(dir: &Path, preserve_root: &Path, label: &str) -> Option<PathBuf> {
+    if !dir.exists() {
+        return None;
+    }
+    let has_content = std::fs::read_dir(dir)
+        .map(|entries| entries.into_iter().next().is_some())
+        .unwrap_or(false);
+    if !has_content {
+        let _ = std::fs::remove_dir_all(dir);
+        return None;
+    }
+    let target = preserve_root.join(format!("{label}.stale-{}", now_seconds()));
+    if std::fs::create_dir_all(preserve_root).is_err() {
+        return None;
+    }
+    match std::fs::rename(dir, &target) {
+        Ok(()) => Some(target),
+        Err(_) => {
+            // A rename can fail across volumes; a recursive copy is the fallback
+            // and it is still "save first, then clean".
+            if copy_dir_recursive(dir, &target).is_err() {
+                return None;
+            }
+            let _ = std::fs::remove_dir_all(dir);
+            Some(target)
+        }
+    }
+}
+
+/// DR-69 ③: the fallback copy used when `rename` cannot move a directory.
+fn copy_dir_recursive(from: &Path, to: &Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(to)?;
+    for entry in std::fs::read_dir(from)? {
+        let entry = entry?;
+        let target = to.join(entry.file_name());
+        if entry.file_type()?.is_dir() {
+            copy_dir_recursive(&entry.path(), &target)?;
+        } else {
+            std::fs::copy(entry.path(), &target)?;
+        }
+    }
+    Ok(())
+}
+
 /// DR-24: one battery pass.  The directory is rebuilt from scratch so a
 /// second (post-repair) pass never leaves the first pass's raw payloads
 /// behind to be mistaken for the frozen `A_t` evidence.
+///
+/// DR-69 ③: "rebuilt from scratch" used to mean "destroyed".  The aborted
+/// pass's bytes are now preserved under `runs/<id>/quarantine/` **before** the
+/// directory is cleared.
 async fn run_battery_pass(
     workspace: &Path,
+    run_dir: &Path,
+    pass: u32,
     adapter: &dyn ProjectAdapter,
     tools: &dyn ToolChannel,
     engine: &crate::adapter::EngineIdentity,
 ) -> anyhow::Result<Vec<crate::adapter::BatteryRecord>> {
     let deterministic_dir = workspace.join(".hoh/deterministic");
-    let _ = std::fs::remove_dir_all(&deterministic_dir);
+    // The label names the pass whose evidence is being **replaced**, so the
+    // preserved directory says which attempt those bytes belong to.
+    let preserved = preserve_then_clear(
+        &deterministic_dir,
+        &run_dir.join("quarantine"),
+        &format!("deterministic-pass-{}", pass.saturating_sub(1)),
+    );
+    if let Some(target) = preserved {
+        append_warning(
+            run_dir,
+            &format!(
+                "DR-69: battery pass {pass} replaced pass {}'s evidence; those bytes were \
+                 preserved at {} (first saved, then cleared)",
+                pass.saturating_sub(1),
+                target.display()
+            ),
+        )?;
+    }
     std::fs::create_dir_all(&deterministic_dir)?;
     let mut records = adapter.evidence_battery(workspace, tools).await?;
     // DR-44 ⑤: the engine identity is a **gate step**, so a round whose
@@ -1002,6 +1081,8 @@ pub async fn run(
         let deterministic_dir = workspace.join(".hoh/deterministic");
         let mut battery = run_battery_pass(
             &workspace,
+            &run_dir,
+            1,
             &*orchestrator.adapter,
             &*orchestrator.tools,
             &meta.engine,
@@ -1081,6 +1162,8 @@ pub async fn run(
             // Re-run the battery on the repaired workspace and judge again.
             battery = run_battery_pass(
                 &workspace,
+                &run_dir,
+                2,
                 &*orchestrator.adapter,
                 &*orchestrator.tools,
                 &meta.engine,

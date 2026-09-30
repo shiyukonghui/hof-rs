@@ -1,7 +1,9 @@
 //! The harness boundary: "turn a role invocation into one agent execution".
 
+pub mod cap;
 pub mod mini;
 
+pub use cap::{cap_tool_output, CappedEnvironment, CappedOutput};
 pub use mini::MiniHarness;
 
 use crate::runtime::role::{RoleInvocation, RoleOutcome};

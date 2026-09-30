@@ -60,6 +60,13 @@ impl Harness for MiniHarness {
                 .collect(),
         };
         let environment = LocalEnvironment::new(env_config);
+        // DR-69 ③: bound every tool result before it can become the next
+        // request's observation.  Attempt A of `smoke-t9` died because a single
+        // 15,570,803-byte result was replayed in full.
+        let environment = crate::harness::cap::CappedEnvironment::new(
+            Box::new(environment),
+            inv.limits.max_tool_output_bytes as usize,
+        );
 
         let config = AgentConfig {
             system_template: "{{hoh_system_prompt}}".to_string(),

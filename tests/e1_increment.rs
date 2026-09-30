@@ -697,9 +697,22 @@ fn the_completion_definition_keeps_the_increment_and_drops_the_battery_ownership
     assert!(lower.contains("non-empty"), "an empty file stays forbidden");
     assert!(lower.contains("n1") && lower.contains("n2"));
     assert!(prompt.contains("editor_get_errors") && prompt.contains("editor_play_scene"));
-    // The Developer must still prove observability itself, on the live path.
+    // The Developer must still prove observability itself, on the live path it
+    // can actually reach.
     assert!(prompt.contains("editor_simulate_input_action"));
-    assert!(prompt.contains("running_game_get_node_property_samples"));
+    // DR-69 ②: **requirement-driven update of this assertion.**  The pre-DR-69
+    // form required `running_game_get_node_property_samples` in the Developer's
+    // own definition of done — the structurally unreachable channel `smoke-t9`
+    // measured (`F-T9-1`), and the contradiction the round's zero increment came
+    // from.  The Developer's duty is the *structure* (a named node and a
+    // property that changes); driving the running game belongs to the Tester and
+    // the deterministic battery.  This is not a loosened assertion: it names the
+    // channel that must be absent, and `developer_contract.rs` pins the positive
+    // direction (the ordering sentence and the forbidden workarounds).
+    assert!(
+        !prompt.contains("running_game_get_node_property_samples"),
+        "the Developer's definition of done must not point at the game endpoint: {prompt}"
+    );
 
     // …and the battery is now stated as harness-side, not as the role's gate.
     assert!(

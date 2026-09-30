@@ -44,6 +44,16 @@ pub struct AgentLimits {
     pub wall_time_limit_seconds: u64,
     pub max_consecutive_format_errors: u64,
     pub command_timeout_seconds: u64,
+    /// DR-69 ③: the ceiling on one tool result, in bytes.  A result above it is
+    /// truncated with an explicit annotation and never replayed in full
+    /// (`smoke-t9`' attempt A died on a 15,570,803-byte result).
+    #[serde(default = "default_max_tool_output_bytes")]
+    pub max_tool_output_bytes: u64,
+}
+
+/// DR-69 ③: 64 KiB — see [`crate::harness::cap::DEFAULT_MAX_TOOL_OUTPUT_BYTES`].
+fn default_max_tool_output_bytes() -> u64 {
+    crate::harness::cap::DEFAULT_MAX_TOOL_OUTPUT_BYTES as u64
 }
 
 fn default_wrap_up_steps() -> u64 {
@@ -66,6 +76,7 @@ impl Default for AgentLimits {
             wall_time_limit_seconds: 3600,
             max_consecutive_format_errors: 3,
             command_timeout_seconds: 180,
+            max_tool_output_bytes: default_max_tool_output_bytes(),
         }
     }
 }

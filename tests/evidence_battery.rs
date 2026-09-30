@@ -3112,9 +3112,88 @@ async fn scene_tree_requires_node_paths_and_types() {
 }
 
 // ---------------------------------------------------------------------------
-// DR-36 — the evidence has to be visible inside the frozen candidate
+// DR-69 ③ — the aborted battery pass is saved before it is cleared
 // ---------------------------------------------------------------------------
 
+/// DR-69 ③: a round that spends its one repair retry runs the battery **twice**,
+/// and DR-24 rebuilds `.hoh/deterministic` for the second pass.  The first
+/// pass's bytes must therefore be moved to `runs/<id>/quarantine/**` before the
+/// directory is cleared — `smoke-t9`' lesson ("save first, then clean") applied
+/// one level down.
+#[tokio::test]
+async fn an_aborted_battery_pass_is_preserved_before_its_directory_is_cleared() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    // The scene tree never arrives, so the launchable gate stays closed and
+    // DR-24 spends exactly one targeted repair — the second battery pass.
+    let channel = Arc::new(FixtureChannel::green().fail_always(
+        "running_game_get_scene_tree",
+        captured_error("editor_errors_failure.txt"),
+    ));
+    let run = run_battery_with_script(root, channel, 1, repairing_script()).await;
+
+    let result: Value =
+        serde_json::from_str(&read(&run.run_dir.join("iter-1/result.json"))).expect("result.json");
+    assert_eq!(
+        result["repair_retry_used"],
+        json!(true),
+        "the fixture must really have run a second battery pass: {result}"
+    );
+
+    let quarantine = run.run_dir.join("quarantine");
+    let listing: Vec<String> = walkdir::WalkDir::new(&run.run_dir)
+        .into_iter()
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.path().to_string_lossy().into_owned())
+        .collect();
+    let preserved: Vec<std::path::PathBuf> = walkdir::WalkDir::new(&quarantine)
+        .into_iter()
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| {
+            entry.file_type().is_dir()
+                && entry
+                    .file_name()
+                    .to_string_lossy()
+                    .starts_with("deterministic-pass-1.stale-")
+        })
+        .map(|entry| entry.into_path())
+        .collect();
+    assert_eq!(
+        preserved.len(),
+        1,
+        "the aborted first pass must be preserved exactly once under {}\nrun dir listing: {listing:#?}",
+        quarantine.display()
+    );
+    let first = &preserved[0];
+    assert!(
+        first.join("raw/play_scene_ready.json").is_file(),
+        "the aborted pass's raw payloads must survive: {}",
+        first.display()
+    );
+    assert!(
+        first.join("raw/input_replay.json").is_file(),
+        "every raw payload of the aborted pass must survive, not only the first: {}",
+        first.display()
+    );
+    assert!(
+        first.join("mcp-errors.jsonl").is_file(),
+        "the aborted pass's transport journal must survive: {}",
+        first.display()
+    );
+    // And the frozen candidate still carries the **second** pass, not the first.
+    let frozen = run
+        .run_dir
+        .join("iter-1/candidate/.hoh/deterministic/battery.json");
+    assert!(
+        frozen.is_file(),
+        "the frozen candidate still keeps the current pass: {}",
+        frozen.display()
+    );
+}
+
+// ---------------------------------------------------------------------------
+// DR-36 — the evidence has to be visible inside the frozen candidate
+// ---------------------------------------------------------------------------
 /// DR-36 ①/②: `smoke-t5` wrote a real 4246-byte PNG into
 /// `<workspace>/.hoh/evidence/` and the Tester reported "file does not exist"
 /// (gap G19) because the candidate view only copied `.hoh/deterministic/**`.
