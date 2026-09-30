@@ -1,0 +1,25 @@
+=== TRAP 1: nonexistent pathspec ===
+trap1 exit=0
+=== TRAP 2: rev^ in bash ===
+fatal: path '.spec/hof-rs/tasks/TASK-DR68-ACCEPTANCE.md' exists on disk, but not in 'fe129a1^'
+bash fe129a1^:DR68ACC exit=128
+bash fe129a1:DR68ACC exit=0
+bash HEAD^:DECISIONS exit=0
+bash HEAD:DECISIONS exit=0
+fatal: path 'definitely/not/here' does not exist in 'fe129a1^'
+bash fe129a1^:nothere exit=128
+=== TRAP 3: engine tree untracked by outer ===
+outer ls-files godot-mcp = 6484
+outer ls-files godot-mcp/godot = 0
+.gitignore:33:godot-mcp/godot/	godot-mcp/godot
+enginebin diff exit=0
+.gitignore:12:runs/	runs/smoke-t10/meta.json
+=== nested engine ===
+nested HEAD = fc63af77c33368c4a1bb839c95d19750554f63a3
+nested porcelain lines = 0
+=== TRAP 2 cmd side (one command per process) ===
+cmd: git cat-file -e fe129a1^:TASK-DR68-ACCEPTANCE.md -> exit 0 (CMD_EXIT_ON_SUCCESS)
+cmd: git cat-file -e fe129a1:TASK-DR68-ACCEPTANCE.md  -> exit 0
+cmd: git cat-file -e fe129a1^:definitely/not/here     -> exit 0
+cmd: git rev-parse fe129a1^                          -> fe129a163d6ca22e5e4b48b81e7229c4260b1291 (caret eaten)
+reading: only bash carries evidential force for rev^ queries

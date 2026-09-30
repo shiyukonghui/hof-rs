@@ -1,0 +1,23 @@
+{
+  "artifact_path": ".workspace/mario",
+  "artifact_valid": false,
+  "attempt": 1,
+  "duration_ms": 2107594,
+  "exit_status": "LimitsExceeded",
+  "exit_was_limits": true,
+  "iteration": 1,
+  "notes": "",
+  "role": "developer",
+  "trajectory_enriched": true,
+  "usage": {
+    "cache_hit_tokens": null,
+    "cache_miss_tokens": null,
+    "calls": 150,
+    "completion_tokens": 231754,
+    "iteration": 1,
+    "prompt_tokens": 17205682,
+    "role": "developer",
+    "total_tokens": 17437436,
+    "usage_known": true
+  }
+}

@@ -1,0 +1,5 @@
+﻿Content of runs/smoke-t10/game_endpoint.json, read at ~17:47 mid-round (file is DELETED at round teardown):
+{"endpoint":"http://127.0.0.1:61826/mcp","port":61826,"source":"auto_free_port","pid":109308}
+file mtime 2026-09-30 17:29:01 (before the planner trajectory was written at 17:30:23)
+game process pid 109308 was alive at 17:28:59 (observed in Get-Process during the round)
+at round end the file did not exist (editor_stop_scene record carries game_endpoint_invalidated 65144/pid 109040)

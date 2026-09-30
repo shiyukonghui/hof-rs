@@ -1,0 +1,23 @@
+{
+  "artifact_path": "runs\\smoke-t10\\iter-1\\candidate\\.hoh/evidence.json",
+  "artifact_valid": true,
+  "attempt": 1,
+  "duration_ms": 770818,
+  "exit_status": "Submitted",
+  "exit_was_limits": false,
+  "iteration": 1,
+  "notes": "",
+  "role": "tester",
+  "trajectory_enriched": true,
+  "usage": {
+    "cache_hit_tokens": null,
+    "cache_miss_tokens": null,
+    "calls": 94,
+    "completion_tokens": 72644,
+    "iteration": 1,
+    "prompt_tokens": 7182475,
+    "role": "tester",
+    "total_tokens": 7255119,
+    "usage_known": true
+  }
+}

@@ -1,0 +1,65 @@
+﻿===== F:\moonbit-hof-rs\runs\smoke-t10\iter-1\traj\developer.attempt1.json
+  n_messages: 349  roles: {'system': 1, 'user': 24, 'assistant': 127, 'tool': 196, 'exit': 1}
+  '-32602': 4
+  'JSON-RPC error': 14
+  'hoh_output_truncated': 1
+  'game_endpoint_unavailable': 0
+  'No tool calls found': 23
+  'RepeatedFormatError': 0
+  'POSITION_ASSERT_PASSED': 0
+  'rmdir': 6
+  'rd /s': 0
+  '-p': 81
+  tool calls: {'bash': 196}
+  n_bash: 196
+    cmd 'running_game_': 0
+    cmd 'editor_': 135
+    cmd 'rmdir': 2
+    cmd 'del ': 0
+    cmd '%HOH_': 418
+    cmd 'python -c': 63
+    cmd 'bash -c': 3
+    cmd '-p': 8
+  largest messages: [(65886, 181, 'tool'), (52270, 148, 'tool'), (29858, 142, 'tool'), (27826, 12, 'tool'), (22335, 198, 'tool')]
+   DELCMD: cd /d F:\moonbit-hof-rs\.workspace\mario && rmdir "-p" 2>nul & echo RC=%errorlevel% & dir /b
+   DELCMD: cd /d F:\moonbit-hof-rs\.workspace\mario && rmdir "-p" 2>nul & dir /b /a & echo === & python -c "import os;print(sorted(os.listdir('.')))"
+===== F:\moonbit-hof-rs\runs\smoke-t10\iter-1\traj\developer.attempt2.json
+  n_messages: 68  roles: {'system': 1, 'user': 1, 'assistant': 25, 'tool': 40, 'exit': 1}
+  '-32602': 0
+  'JSON-RPC error': 2
+  'hoh_output_truncated': 0
+  'game_endpoint_unavailable': 0
+  'No tool calls found': 0
+  'RepeatedFormatError': 0
+  'POSITION_ASSERT_PASSED': 0
+  'rmdir': 0
+  'rd /s': 0
+  '-p': 6
+  tool calls: {'bash': 40}
+  n_bash: 40
+    cmd 'running_game_': 0
+    cmd 'editor_': 5
+    cmd 'rmdir': 0
+    cmd 'del ': 1
+    cmd '%HOH_': 70
+    cmd 'python -c': 0
+    cmd 'bash -c': 0
+    cmd '-p': 0
+  largest messages: [(27826, 18, 'tool'), (22058, 38, 'tool'), (10341, 16, 'tool'), (9843, 30, 'tool'), (9558, 15, 'tool')]
+   DELCMD: cd /d "%HOH_WORKSPACE%" & del "%HOH_SCRATCH_DIR%\patch.py" 2>nul & echo import io>> "%HOH_SCRATCH_DIR%\patch.py" & echo p='scenes/main.tscn'>> "%HOH_SCRATCH_DIR%\patch.py" & echo s=io.open(p,encoding='utf-8').read()>> "%HOH_SCRATCH_DIR%\patch.py" & e
+python : Traceback (most recent call last):
+At line:15 char:1
++ python "$T\counts.py" "$PWD\runs\smoke-t10\iter-1\traj\developer.atte ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "C:\Users\wyl\AppData\Local\Temp\smoke-t10\counts.py", line 5, in <module>
+    d = json.loads(raw0, strict=False)
+  File "D:\Anaconda\lib\json\__init__.py", line 359, in loads
+    return cls(**kw).decode(s)
+  File "D:\Anaconda\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "D:\Anaconda\lib\json\decoder.py", line 353, in raw_decode
+    obj, end = self.scan_once(s, idx)
+json.decoder.JSONDecodeError: Expecting ',' delimiter: line 2205 column 8 (char 412870)

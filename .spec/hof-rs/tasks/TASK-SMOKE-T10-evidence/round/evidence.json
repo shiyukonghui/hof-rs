@@ -1,0 +1,307 @@
+{
+  "iteration": 1,
+  "qa_status": "partial",
+  "verified_records": [
+    {
+      "claim_id": "F1",
+      "claim": "Holding move_right or move_left changes the Player horizontal position (game-process replay quadruples)",
+      "execution_records": [
+        {
+          "type": "replay",
+          "path": ".hoh/deterministic/raw/input_replay.json",
+          "observation": "move_right: 60 frame(s) channel=game_process before_position x=184.667 after_position x=401.0 velocity x=3.667; move_left: before x=448.666 after x=232.333 delta=-216.33; move_right: POSITION_ASSERT_PASSED",
+          "candidate_id": "ed98d1b80be945c6d8e8a40fc3b5114dd9e1d33b1c29d576d050255a7fa1a1e1"
+        },
+        {
+          "type": "replay",
+          "path": ".hoh/deterministic/battery.json",
+          "observation": "step input_replay ok=true, supports F1,F2,F3",
+          "candidate_id": "ed98d1b80be945c6d8e8a40fc3b5114dd9e1d33b1c29d576d050255a7fa1a1e1"
+        }
+      ],
+      "status": "verified"
+    },
+    {
+      "claim_id": "F2",
+      "claim": "Pressing jump gives upward velocity; the player leaves the ground and can land again",
+      "execution_records": [
+        {
+          "type": "replay",
+          "path": ".hoh/deterministic/raw/input_replay.json",
+          "observation": "jump: 30 frame(s) channel=game_process before_position {x:455.9996,y:269.9808} after_position {x:455.9996,y:242.592} velocity {x:0,y:4.5} axis=y delta=-27.389; jump: POSITION_ASSERT_PASSED",
+          "candidate_id": "ed98d1b80be945c6d8e8a40fc3b5114dd9e1d33b1c29d576d050255a7fa1a1e1"
+        }
+      ],
+      "status": "verified"
+    },
+    {
+      "claim_id": "F4",
+      "claim": "A camera follows the player so the player stays inside the visible area",
+      "execution_records": [
+        {
+          "type": "screenshot",
+          "path": ".hoh/deterministic/raw/screenshot.json",
+          "observation": "screenshot written to .hoh/evidence/frame-00.png; materialized from an inline base64 image",
+          "candidate_id": "ed98d1b80be945c6d8e8a40fc3b5114dd9e1d33b1c29d576d050255a7fa1a1e1"
+        },
+        {
+          "type": "assert",
+          "path": ".hoh/evidence/camera-node.json",
+          "observation": "Player/Camera is a Camera2D child of Player with enabled=true, anchor_mode=1",
+          "candidate_id": "ed98d1b80be945c6d8e8a40fc3b5114dd9e1d33b1c29d576d050255a7fa1a1e1"
+        }
+      ],
+      "status": "verified"
+    },
+    {
+      "claim_id": "F5",
+      "claim": "Player rests on the ground on a body with a collision shape without sinking",
+      "execution_records": [
+        {
+          "type": "assert",
+          "path": ".hoh/deterministic/raw/node_and_collision_assertions.json",
+          "observation": "collision shape_count: Ground=1, Player=1, Goal=1; Player grounded=true at y~284 and x stable",
+          "candidate_id": "ed98d1b80be945c6d8e8a40fc3b5114dd9e1d33b1c29d576d050255a7fa1a1e1"
+        }
+      ],
+      "status": "verified"
+    },
+    {
+      "claim_id": "F14",
+      "claim": "Losing all lives or falling out of the level enters an observable failure state with a visible result label",
+      "execution_records": [
+        {
+          "type": "assert",
+          "path": ".hoh/evidence/failure-state.json",
+          "observation": "HUD/Result Label text = 'GAME OVER - press Jump to restart', visible=true (observed in the round game process)",
+          "candidate_id": "ed98d1b80be945c6d8e8a40fc3b5114dd9e1d33b1c29d576d050255a7fa1a1e1"
+        }
+      ],
+      "status": "verified"
+    },
+    {
+      "claim_id": "F15",
+      "claim": "After failure the jump action restarts the level with position reset",
+      "execution_records": [
+        {
+          "type": "assert",
+          "path": ".hoh/evidence/restart-state.json",
+          "observation": "after GAME OVER, jump restarted: Player back at spawn x=60, y=283.98, controllable=true, HUD Result label cleared to ''",
+          "candidate_id": "ed98d1b80be945c6d8e8a40fc3b5114dd9e1d33b1c29d576d050255a7fa1a1e1"
+        }
+      ],
+      "status": "verified"
+    },
+    {
+      "claim_id": "F16",
+      "claim": "The HUD permanently shows lives, coins and time information",
+      "execution_records": [
+        {
+          "type": "assert",
+          "path": ".hoh/evidence/hud-labels.json",
+          "observation": "HUD/Lives='Lives: 3', HUD/Coins='Coins: 0', HUD/Time='Time: 0', all visible=true",
+          "candidate_id": "ed98d1b80be945c6d8e8a40fc3b5114dd9e1d33b1c29d576d050255a7fa1a1e1"
+        },
+        {
+          "type": "assert",
+          "path": ".hoh/deterministic/raw/node_and_collision_assertions.json",
+          "observation": "HUD visible text node(s): 5",
+          "candidate_id": "ed98d1b80be945c6d8e8a40fc3b5114dd9e1d33b1c29d576d050255a7fa1a1e1"
+        }
+      ],
+      "status": "verified"
+    },
+    {
+      "claim_id": "N1",
+      "claim": "The project opens and the main scene boots with no script compile errors",
+      "execution_records": [
+        {
+          "type": "build",
+          "path": ".hoh/deterministic/raw/project_reload_and_open.json",
+          "observation": "reloaded the project and opened res://scenes/main.tscn",
+          "candidate_id": "ed98d1b80be945c6d8e8a40fc3b5114dd9e1d33b1c29d576d050255a7fa1a1e1"
+        },
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/deterministic/raw/play_scene_ready.json",
+          "observation": "main scene booted; game answered running_game_get_scene_tree with 53 nodes",
+          "candidate_id": "ed98d1b80be945c6d8e8a40fc3b5114dd9e1d33b1c29d576d050255a7fa1a1e1"
+        },
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/deterministic/raw/editor_stop_scene.json",
+          "observation": "editor_stop_scene: Playback stopped, stopped=true",
+          "candidate_id": "ed98d1b80be945c6d8e8a40fc3b5114dd9e1d33b1c29d576d050255a7fa1a1e1"
+        }
+      ],
+      "status": "verified"
+    },
+    {
+      "claim_id": "N2",
+      "claim": "Runtime nodes are observable with stable names and paths",
+      "execution_records": [
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/deterministic/raw/scene_tree.json",
+          "observation": "53 node(s) with a path and a type: Player, Ground, Coin1..4, Enemy1..2, QuestionBlock, Brick1, Goal, HUD/Score,Lives,Coins,Time,Result",
+          "candidate_id": "ed98d1b80be945c6d8e8a40fc3b5114dd9e1d33b1c29d576d050255a7fa1a1e1"
+        }
+      ],
+      "status": "verified"
+    }
+  ],
+  "gap_records": [
+    {
+      "claim_id": "F3",
+      "claim": "Player facing follows the last horizontal input and is observable as a node/animation state",
+      "execution_records": [
+        {
+          "type": "replay",
+          "path": ".hoh/deterministic/raw/input_replay.json",
+          "observation": "input replay records only position quadruples plus input_axis=None; it never reports Player.facing, so facing is not observable from the deterministic battery",
+          "candidate_id": "ed98d1b80be945c6d8e8a40fc3b5114dd9e1d33b1c29d576d050255a7fa1a1e1"
+        },
+        {
+          "type": "replay",
+          "path": ".hoh/evidence/facing-scenario.json",
+          "observation": "a read-only face check: move_right reported facing=1 (passed); a move_left injection also reported facing=1 (expected -1, failed) in the round game process",
+          "candidate_id": "ed98d1b80be945c6d8e8a40fc3b5114dd9e1d33b1c29d576d050255a7fa1a1e1"
+        }
+      ],
+      "status": "gap",
+      "player_impact": "The character never turns when walking left, so direction is not a readable player-facing state",
+      "recommended_update": "Make facing follow the sign of the horizontal axis and add a deterministic facing assertion to the battery replay"
+    },
+    {
+      "claim_id": "F6",
+      "claim": "Hitting a wall blocks horizontal movement with no tunnelling",
+      "execution_records": [],
+      "status": "gap",
+      "player_impact": "The player may pass through walls or get stuck; the corridor does not delimit the play area",
+      "recommended_update": "Replay move_right into the Wall node and assert Player.position.x stays below the wall's left face"
+    },
+    {
+      "claim_id": "F7",
+      "claim": "At least one enemy patrols a platform and turns at its edges or on walls",
+      "execution_records": [],
+      "status": "gap",
+      "player_impact": "Enemies stand still, so there is no patrol obstacle to time jumps against",
+      "recommended_update": "Sample Enemy1.position over 120 frames and assert its x changes and then reverses"
+    },
+    {
+      "claim_id": "F8",
+      "claim": "Side or bottom contact with an enemy costs a life or starts the death flow",
+      "execution_records": [],
+      "status": "gap",
+      "player_impact": "Running into an enemy has no consequence, so the core risk/reward loop is missing",
+      "recommended_update": "Drive the player into Enemy1 from the side and assert HUD/Lives decreases or the death flow fires"
+    },
+    {
+      "claim_id": "F9",
+      "claim": "Landing on an enemy from above destroys it and bounces the player up",
+      "execution_records": [],
+      "status": "gap",
+      "player_impact": "The player cannot defeat enemies, losing the main platformer affordance",
+      "recommended_update": "Replay a jump onto Enemy1 and assert the enemy is freed/queued_free and Player.velocity.y becomes negative"
+    },
+    {
+      "claim_id": "F10",
+      "claim": "Touching a coin removes it and increments the HUD coin count by one",
+      "execution_records": [
+        {
+          "type": "assert",
+          "path": ".hoh/evidence/hud-labels.json",
+          "observation": "HUD/Coins text is 'Coins: 0' and stayed 0 while the player was driven across the level",
+          "candidate_id": "ed98d1b80be945c6d8e8a40fc3b5114dd9e1d33b1c29d576d050255a7fa1a1e1"
+        }
+      ],
+      "status": "gap",
+      "player_impact": "Collecting coins does nothing, so the score loop never advances",
+      "recommended_update": "Move the player through Coin1 and assert the node is gone and the Coins label reads +1"
+    },
+    {
+      "claim_id": "F11",
+      "claim": "Hitting the question block from below yields a collectible and marks the block used",
+      "execution_records": [],
+      "status": "gap",
+      "player_impact": "The question block never produces a reward, so a classic interaction is dead",
+      "recommended_update": "Jump under QuestionBlock and assert its used flag and the spawned reward"
+    },
+    {
+      "claim_id": "F12",
+      "claim": "Hitting a brick from below destroys it and it stops blocking",
+      "execution_records": [],
+      "status": "gap",
+      "player_impact": "Bricks cannot be broken, so under-blocking does nothing",
+      "recommended_update": "Jump under Brick1 and assert the node is removed and the player passes through"
+    },
+    {
+      "claim_id": "F13",
+      "claim": "Reaching the Goal node enters a visible victory state with a visible result",
+      "execution_records": [
+        {
+          "type": "assert",
+          "path": ".hoh/deterministic/raw/node_and_collision_assertions.json",
+          "observation": "Goal node exists with shape_count 1 but reached=false; no victory state was ever driven",
+          "candidate_id": "ed98d1b80be945c6d8e8a40fc3b5114dd9e1d33b1c29d576d050255a7fa1a1e1"
+        },
+        {
+          "type": "assert",
+          "path": ".hoh/evidence/failure-state.json",
+          "observation": "the only result text ever observed was 'GAME OVER - press Jump to restart'; no victory text was seen",
+          "candidate_id": "ed98d1b80be945c6d8e8a40fc3b5114dd9e1d33b1c29d576d050255a7fa1a1e1"
+        }
+      ],
+      "status": "gap",
+      "player_impact": "The player can never win, so the level has no completion reward",
+      "recommended_update": "Drive the player into Goal and assert Goal.reached and a visible victory label"
+    },
+    {
+      "claim_id": "F17",
+      "claim": "A full clear is expected to take 30-120 seconds on a one-way side-scrolling level",
+      "execution_records": [],
+      "status": "gap",
+      "player_impact": "Level length/duration is unproven; the level may be too short or unwinnable to time",
+      "recommended_update": "After F13 works, time a full run from spawn to Goal and record it"
+    },
+    {
+      "claim_id": "N3",
+      "claim": "A continuous 60 second run does not crash or spam script errors",
+      "execution_records": [
+        {
+          "type": "build",
+          "path": ".hoh/deterministic/raw/editor_errors_baseline.json",
+          "observation": "editor reported 1 informational MCP banner only (DR-48 exempted); no script errors",
+          "candidate_id": "ed98d1b80be945c6d8e8a40fc3b5114dd9e1d33b1c29d576d050255a7fa1a1e1"
+        }
+      ],
+      "status": "gap",
+      "player_impact": "Long-session stability is unverified; a crash mid-level would end play",
+      "recommended_update": "Add a battery step that keeps the scene running 60s and records the error log delta"
+    }
+  ],
+  "planner_handoff": {
+    "preservation_constraints": [
+      "Keep res://scenes/main.tscn the main scene and openable by the editor (N1)",
+      "Keep scripts under scripts/ free of compile errors so the scene still boots",
+      "Keep the named nodes Player, Ground, Coin1..4, Enemy1..2, QuestionBlock, Brick1, Goal, HUD/Score,Lives,Coins,Time,Result unchanged so QA can locate them",
+      "Keep the InputMap actions move_left, move_right and jump bound (P3)"
+    ],
+    "update_targets": [
+      "scripts/player.gd facing: make facing follow the sign of the horizontal axis (F3)",
+      "Coin/coin.gd: connect body_entered so the coin frees and HUD/Coins increments (F10)",
+      "Enemy/enemy.gd: patrol turn-around plus stomp/side-contact handling (F7,F8,F9)",
+      "question_block.gd and brick.gd: under-hit behaviour (F11,F12)",
+      "goal.gd: set reached and show a victory label (F13)",
+      "main.gd: wall blocking and the death/restart flow already partially present (F6,F14,F15)"
+    ],
+    "validation_requirements": [
+      "Re-run play_scene and confirm 0 script errors after the edits (N1,N3)",
+      "Deterministic replay of move_left and read Player.facing (F3)",
+      "Replay into Coin1 and assert Coins label +1 and Coin1 gone (F10)",
+      "Replay jump onto Enemy1 and into Enemy1 sideways; assert enemy removal and Lives decrement (F8,F9)",
+      "Drive the player into Goal and assert reached=true plus a visible victory label (F13)",
+      "Keep the scene alive 60s with an error-log delta check (N3)"
+    ]
+  }
+}

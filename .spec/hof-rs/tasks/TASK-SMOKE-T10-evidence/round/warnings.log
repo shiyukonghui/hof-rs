@@ -1,0 +1,2 @@
+DR-61: moved the previous round's .hoh out of this round's read path to runs\smoke-t10\quarantine\.hoh.stale-1790760534; no role's working directory can reach those bytes (they are kept, not deleted)
+qa_scope: MCP acts on the project open in the editor (the real workspace) while the Tester evaluates a frozen copy; the runtime binds both to one candidate identity with pre-QA and around-QA hash assertions (D7).
