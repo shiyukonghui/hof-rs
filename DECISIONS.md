@@ -10213,3 +10213,47 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 - 队列：**SMOKE-T8（在飞，`77e92b2f…`，它真实执行 DEF-A 的粘合层）→ 离线批（DEF-A/B/C/D/E + DR-65 同形竞态 + `cargo fmt --check` 入门口）→ REF2 → §16 → 造游戏**。
 - 回滚点：`ce22e18` 已推送；如需回退用 revert（不改写已发布历史）。
 
+## D265 — **SMOKE-T8 真机判定**：`A_1 ≠ A_0`（增量真的出现了！）、shell 修复被证实、**E3 首次有游戏内语义证据**；但 E1 仍 not_met（障碍换成 Tester schema）
+
+- 日期：2026-09-30。交付 `.spec/hof-rs/tasks/TASK-SMOKE-T8-REPORT.md`（58,327 B）。验收在飞（`04cda261…`）；
+  **本条为"实现者结论"，最终判定待验收**。
+- **判据逐条（本轮）**：**E1 not_met** | **E2 met（实质，首次 11/11 全绿）** | **E3 not_met（部分）** |
+  **E4 not_met** | **E5 met（强）** | **E6 met**（对照 t7：`not_met / met / not_met / met / met / met`）。
+- **里程碑 1（最重要）：`A_1 = 1f3d20ed…` ≠ `A_0 = fc78d299…`，3 个工程文件变更**
+  （写入时刻 07:16:30 / 07:17:58 / 07:19:25；`versions/index.json` 记 `A1` 的 `parent = A0`）
+  ⇒ **"Developer 零工程增量"这个长期根因已在真机上消失**。**判据(1) 的核心条件成立**。
+- **里程碑 2：DR-66 的 shell 契约修复被真机证实**——**`bash` 包裹 115 次 → 0 次**，
+  **首个 `hoh` 调用从第 34 步提前到第 15 步** ⇒ 上轮"25–30% 预算烧在方言错"的浪费消失。
+- **里程碑 3：E3 首次拿到"游戏进程内语义工具"的逐帧证据**（`channel=game_process`；工具为契约内的
+  `running_game_get_node_property_samples` / `play_input_recording`）：
+  **右移** 60 帧 188.33→404.67，恒 **3.6667 px/帧**，与 `scripts/player.gd` 的 `speed=220` **数值自洽**（3.6667×60=220）；
+  **跳跃** y 270.0→峰值 214.27@f17→242.61；**`move_left` 60 帧 `dx=0`（被证否）**；
+  可交互对象/终点胜负**仍为 gap**。⇒ **E3 = not_met（部分）**，且**暴露出游戏本身的真缺陷**。
+- **里程碑 4：DR-67 那 6 行"未测粘合层"（`cli_impl::run` 的 Err 分支）本轮被真机真实执行，两处落盘都写了**（AD-3）
+  ⇒ **DEF-A 的区域实际工作**（其风险是"可被静默改回"，而非"当前是坏的"）。
+- **E1 现在的障碍（新根因，F2）**：**Tester 提交的证据被 schema 拒绝（`missing field 'type'`）** ⇒
+  `ok=false` / `failed_role=tester` / **退出码 3** ⇒ **无合法 `E_1`**，连带 **E4**（依赖 `E_1`）not_met。
+  机制：骨架**只在 retry context 下发** + `if limits { break; }` **抑制重试** + `tester.md:56-70` **无记录形状**
+  （`src/model.rs:436-465`、`src/runtime/schema.rs:241/243-245/284-288`）。
+- **F1（major，新的产品侧缺陷）**：**启动闸门被"过期编辑器日志行"弄成假阴性**——
+  07:19:33 的 `editor_errors_baseline` 读到 `count=2`，含 `player.gd:31 Parse Error: Function "_update_facing_visual()" not found`，
+  但 `player.gd` **自 07:19:25 起内容已是 `_apply_facing_visual()` 且该函数已定义**；~07:31:00 同一调用返回 `count=1`。
+  闸门据此判 `launchable=false`，**触发 DR-24 定向修复 attempt3：60 步 / 4,022,698 tokens / 11 分 24 秒，且对工程树零写入**。
+  ⇒ **`editor_get_errors` 读的是编辑器日志、不是当前工程** ⇒ **中间态错误能把闸门关到日志滚出为止**。
+- **可复现性隐患**：**失败路径上的 `result.json` 信息不全**——`battery_passes: []`（真实 11/11 且 `launchable=true`）、
+  `candidate_id`/`version_id` 为 `null`（真实 `A_1=1f3d20ed…`）⇒ **"读一次 `result.json` 即知本轮发生了什么"在失败路径上不成立**；
+  E1/E2 的证据只存在于**被测 workspace 的 `.hoh/deterministic/**`**。
+- 其它：**F6（info）Tester 遗留孤儿游戏进程 pid 118332**，它**用 `editor_stop_scene` 清理**
+  （`{"message":"Playback stopped","stopped":true}`），清理后端口关闭、**编辑器存活**——**处置得当**。
+  **AD-1**：`no_engineering_write` **本轮未触发**（增量确实出现），如实报告。
+  **风险旗 1 真的发生了**：`verified` 里出现一条**由可达性撑起**的记录；**它没有把它当作 E3 的行为证据**（符合我的要求）。
+  **风险旗 2**：E3 证据全部来自**契约内**语义工具原始回包，**未需要** `semantic_summary.json`（未放宽守卫）。
+- **裁决：下一批修复清单（按优先级）**：
+  1. **F2（Tester 证据形状契约）**——**E1 当前障碍**，且它同时**抑制重试**，修它才可能拿到 `E_1`；
+  2. **F1（闸门不得被过期编辑器日志关门）**——要能区分"**当前工程错误**"与"**日志残留**"（例如按 mtime/工程重载后重读，或让 `editor_get_errors` 反映当前工程）；这是**真实产品缺陷且白烧 11 分钟/4M tokens**；
+  3. **E3 的产品侧缺陷**（**左移失效**、**金币/终点从未被驱动**）——**决定"游戏是否真能被玩"**；
+  4. **失败路径 `result.json` 完整性**（让"读一次即知发生了什么"成立）——关系到判据(4) 的可复现性；
+  5. 携带 **DEF-A/B/C/D/E**（DR-67 遗留）+ **DR-65**（同形竞态）+ **`cargo fmt --check` 入门**。
+- 队列：**SMOKE-T8 验收 → 修复批（F2 + F1 + E3 产品缺陷 + `result.json` 完整性）→ 其验收 → DR-65/DEF 批 → REF2 → §16 → 再造一轮真机 / 最后造游戏**。
+- 回滚点：`runs/smoke-t8/**` 为**新基线**（358 文件），三条真机基线均**不得覆盖**。
+
