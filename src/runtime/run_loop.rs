@@ -515,26 +515,90 @@ fn qa_report_fallback(bundle: &crate::model::EvidenceBundle) -> String {
     text
 }
 
+/// DR-70 ①: start the round's game session, publishing the route with it.
+///
+/// A failure here is **not** fatal.  The battery's `play_scene_ready` step is
+/// still the gate that decides whether the artifact is launchable, and a round
+/// whose editor cannot start a game must record that honestly instead of failing
+/// at a new, earlier point that nothing else understands.  What the failure must
+/// not do is stay silent: `game_endpoint_unavailable` for every role of the round
+/// is then the *expected* outcome, and the warning says so.
+async fn start_round_game(orchestrator: &Orchestrator, workspace: &Path, run_dir: &Path) {
+    match orchestrator
+        .adapter
+        .start_round_game(workspace, &*orchestrator.tools)
+        .await
+    {
+        Ok(_) => {}
+        Err(error) => {
+            let _ = append_warning(
+                run_dir,
+                &format!(
+                    "DR-70: the round's game session could not be started ({error}); the game \
+                     route stays withdrawn until the battery starts its own game, so every \
+                     `running_game_*` call from a role shell fails with \
+                     `game_endpoint_unavailable` (DR-43) for this window"
+                ),
+            );
+        }
+    }
+}
+
+/// DR-70 ①: stop the round's game session and withdraw its published route.
+async fn stop_round_game(orchestrator: &Orchestrator, run_dir: &Path) {
+    if let Err(error) = orchestrator
+        .adapter
+        .stop_round_game(&*orchestrator.tools)
+        .await
+    {
+        let _ = append_warning(
+            run_dir,
+            &format!("DR-70: stopping the round's game session failed: {error}"),
+        );
+    }
+    // Belt and braces: the session must not outlive the window it was started
+    // for, whatever the adapter managed (DR-70 ①, "withdraw on error paths too").
+    crate::tools::endpoint::withdraw_game_route(&crate::tools::endpoint::game_route_path(run_dir));
+}
+
 /// Run the whole HoH loop.
+///
+/// DR-70 ①: the game route lives for the **whole round**.  `run_inner` starts the
+/// round's game before the first role; this wrapper tears the session down on
+/// every exit path — the summary, an `Err` from any stage, and the contract-gate
+/// returns — so no role's window falls outside the publish window and no error
+/// path leaves a route behind pointing at a stopped game.
 pub async fn run(
     orchestrator: &Orchestrator,
     spec: &Spec,
     run_id: &str,
 ) -> anyhow::Result<RunSummary> {
+    let outcome = run_inner(orchestrator, spec, run_id).await;
+    let run_dir = orchestrator.cfg.runtime.runs_dir.join(run_id);
+    stop_round_game(orchestrator, &run_dir).await;
+    outcome
+}
+
+async fn run_inner(
+    orchestrator: &Orchestrator,
+    spec: &Spec,
+    run_id: &str,
+) -> anyhow::Result<RunSummary> {
     let cfg = &orchestrator.cfg;
+
     let run_dir = cfg.runtime.runs_dir.join(run_id);
     std::fs::create_dir_all(&run_dir)?;
 
     let workspace = cfg.runtime.workspace.clone();
     std::fs::create_dir_all(&workspace)?;
-    // DR-69 ① (road A): the game route is published here for the whole run, so
-    // a role's own `hoh tools call` process can resolve `running_game_*`.  It
-    // lives in the run directory — outside the artifact tree, outside every
-    // role view and outside the Developer's working tree — and
-    // `editor_stop_scene` withdraws it again.
-    orchestrator
-        .tools
-        .use_game_route_file(crate::tools::endpoint::game_route_path(&run_dir));
+    // DR-70 ①/②: the run's route file is **not inherited**.  Whatever a previous
+    // round — or a crash, or a deliberately reused `--run-id` — left at this
+    // path is withdrawn before anything can adopt it, and only then is the
+    // channel pointed at the path so every registration publishes there.  The
+    // route then exists only for windows this round itself opened.
+    let route_path = crate::tools::endpoint::game_route_path(&run_dir);
+    crate::tools::endpoint::withdraw_game_route(&route_path);
+    orchestrator.tools.use_game_route_file(route_path);
     orchestrator.adapter.initialize(&workspace)?;
     let _ = orchestrator.force_init; // the adapter decides what "already exists" means
 
@@ -645,6 +709,13 @@ pub async fn run(
         out_of_tree_root.clone(),
         Some(crate::runtime::invoke::absolute_path(&workspace)),
     );
+
+    // DR-70 ①: the round's game session is started **here**, before the Planner,
+    // so the published route covers the whole window in which the Developer and
+    // the Tester run.  DR-69 published it inside the battery's `editor_play_scene`
+    // step — after the Developer and before the Tester — which is why the
+    // acceptance found that no role process ever overlapped it (D1).
+    start_round_game(orchestrator, &workspace, &run_dir).await;
 
     for iteration in 1..=cfg.runtime.iterations {
         let iter_dir = run_dir.join(format!("iter-{iteration}"));
@@ -1108,6 +1179,13 @@ pub async fn run(
             return Err(HofError::contract(violation).into());
         }
 
+        // DR-70 ①: the battery starts its own game on the **frozen candidate**
+        // (the Developer has just changed the code), so the round's session is
+        // stopped first — two `editor_play_scene` calls must never overlap — and
+        // the route is withdrawn with it.  It is started again below, so the
+        // freeze and the Tester keep running inside a published window.
+        stop_round_game(orchestrator, &run_dir).await;
+
         // ---------------- Deterministic evidence battery (DR-1/DR-17) ------
         // It runs on the *real workspace* (the project the editor has open,
         // D7) and before `A_t` is frozen: whatever it produces — including
@@ -1144,6 +1222,11 @@ pub async fn run(
         let mut battery_passes = vec![battery_summary(1, &battery, &launch_gate)];
         let mut iter_repair_retry_used = false;
         if launch_gate.applicable && !launch_gate.launchable {
+            // DR-70 ①: the repair retry is a **Developer** call, so it runs
+            // inside the round's window: its game session is started again for
+            // it, and stopped again before the second battery pass restarts the
+            // game on the repaired candidate.
+            start_round_game(orchestrator, &workspace, &run_dir).await;
             // DR-24: at most ONE targeted repair per iteration.  A false gate
             // is never silently frozen as a success.
             iter_repair_retry_used = true;
@@ -1195,6 +1278,7 @@ pub async fn run(
             )?;
 
             // Re-run the battery on the repaired workspace and judge again.
+            stop_round_game(orchestrator, &run_dir).await;
             battery = run_battery_pass(
                 &workspace,
                 &run_dir,
@@ -1217,6 +1301,11 @@ pub async fn run(
             launch_gate = crate::adapter::evaluate_launchable(&battery);
             battery_passes.push(battery_summary(2, &battery, &launch_gate));
         }
+        // DR-70 ①: the battery's pass(es) are over and its own `editor_stop_scene`
+        // has withdrawn the route.  The round's session is started again here so
+        // the freeze and the Tester run inside a published window that points at
+        // a game built from the candidate the battery just measured.
+        start_round_game(orchestrator, &workspace, &run_dir).await;
         if launch_gate.applicable && !launch_gate.launchable {
             // DR-24: the second failure is honest, not fatal — the round still
             // advances, and `result.json.artifact_gate.launchable = false`

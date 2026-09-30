@@ -31,7 +31,11 @@ impl UsageFixture {
     }
 }
 
-#[derive(Clone, Debug)]
+/// DR-70 ①: a probe a scripted step can run **while the runtime is inside that
+/// step**, e.g. spawning a real role shell to see what a role can reach at that
+/// moment.  The result is captured by the closure itself.
+pub type StepProbe = Arc<dyn Fn() + Send + Sync>;
+
 pub struct FakeStep {
     pub role: Role,
     /// `(path relative to the invocation cwd, content)`.
@@ -50,6 +54,37 @@ pub struct FakeStep {
     /// exactly the false positive `smoke-t3` produced: the prompt's list of
     /// forbidden paths was itself treated as evidence of a source read.
     pub trajectory_prompt_probe: Option<String>,
+    /// DR-70 ①: a side effect that runs **during** this step.
+    pub probe: Option<StepProbe>,
+}
+
+impl std::fmt::Debug for FakeStep {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("FakeStep")
+            .field("role", &self.role)
+            .field("writes", &self.writes)
+            .field("exit_status", &self.exit_status)
+            .field("has_probe", &self.probe.is_some())
+            .finish()
+    }
+}
+
+impl Clone for FakeStep {
+    fn clone(&self) -> Self {
+        Self {
+            role: self.role,
+            writes: self.writes.clone(),
+            exit_status: self.exit_status.clone(),
+            submission: self.submission.clone(),
+            usage: self.usage.clone(),
+            write_outside_view: self.write_outside_view.clone(),
+            sleep_ms: self.sleep_ms,
+            trajectory_probe: self.trajectory_probe.clone(),
+            trajectory_prompt_probe: self.trajectory_prompt_probe.clone(),
+            probe: self.probe.clone(),
+        }
+    }
 }
 
 impl FakeStep {
@@ -64,7 +99,14 @@ impl FakeStep {
             sleep_ms: 0,
             trajectory_probe: None,
             trajectory_prompt_probe: None,
+            probe: None,
         }
+    }
+
+    /// DR-70 ①: run `probe` while the runtime is inside this step.
+    pub fn probing(mut self, probe: impl Fn() + Send + Sync + 'static) -> Self {
+        self.probe = Some(Arc::new(probe));
+        self
     }
 
     pub fn writing(mut self, rel: &str, content: &str) -> Self {
@@ -290,6 +332,12 @@ impl Harness for FakeHarness {
         if step.sleep_ms > 0 {
             tokio::time::sleep(std::time::Duration::from_millis(step.sleep_ms)).await;
         }
+        // DR-70 ①: the probe runs **inside** the step, i.e. while the runtime
+        // believes this role is executing.  That is the only moment at which
+        // "what can a role reach right now?" can honestly be asked.
+        if let Some(probe) = &step.probe {
+            probe();
+        }
 
         if let Some(parent) = inv.trajectory_path.parent() {
             std::fs::create_dir_all(parent)?;
@@ -355,6 +403,41 @@ pub struct FakeAdapter {
     /// DR-37: what [`ProjectAdapter::developer_artifact_valid`] answers.
     /// `false` by default, so every pre-DR-37 scenario keeps its behaviour.
     pub developer_artifact_valid: bool,
+    /// DR-70 ①: the game session the round is given, when a test wants one.
+    pub round_game: Option<Arc<RoundGameStub>>,
+}
+
+/// DR-70 ①: a scripted round game.  It registers a route record pointing at a
+/// real loopback endpoint (so DR-70 ②'s checks can pass) and counts the
+/// start/stop calls the runtime makes, which is how "the publish window contains
+/// the role window" becomes checkable.
+#[derive(Debug)]
+pub struct RoundGameStub {
+    pub endpoint: String,
+    pub port: u16,
+    pub pid: u32,
+    pub starts: Mutex<u32>,
+    pub stops: Mutex<u32>,
+}
+
+impl RoundGameStub {
+    pub fn new(endpoint: String, port: u16, pid: u32) -> Self {
+        Self {
+            endpoint,
+            port,
+            pid,
+            starts: Mutex::new(0),
+            stops: Mutex::new(0),
+        }
+    }
+
+    pub fn starts(&self) -> u32 {
+        *self.starts.lock().expect("starts lock")
+    }
+
+    pub fn stops(&self) -> u32 {
+        *self.stops.lock().expect("stops lock")
+    }
 }
 
 impl FakeAdapter {
@@ -365,7 +448,14 @@ impl FakeAdapter {
             drift_after_freeze: None,
             excludes: vec!["cache".to_string()],
             developer_artifact_valid: false,
+            round_game: None,
         }
+    }
+
+    /// DR-70 ①: give the round a game session that publishes a real route.
+    pub fn with_round_game(mut self, stub: Arc<RoundGameStub>) -> Self {
+        self.round_game = Some(stub);
+        self
     }
 
     pub fn with_drift(mut self, workspace: PathBuf, rel: &str, content: &str) -> Self {
@@ -449,6 +539,39 @@ impl ProjectAdapter for FakeAdapter {
 
     fn tool_policy(&self, _role: Role) -> Vec<String> {
         vec!["editor_get_errors".to_string()]
+    }
+
+    /// DR-70 ①: the round's game session, when the test asked for one.  It
+    /// registers through the channel, so the *production* publication path
+    /// writes the route file.
+    async fn start_round_game(
+        &self,
+        _workspace: &Path,
+        tools: &dyn ToolChannel,
+    ) -> anyhow::Result<Option<hof_rs::tools::endpoint::GameEndpointRecord>> {
+        use hof_rs::tools::endpoint::{GameEndpointRecord, SOURCE_AUTO_FREE_PORT};
+
+        let Some(stub) = self.round_game.as_ref() else {
+            return Ok(None);
+        };
+        *stub.starts.lock().expect("starts lock") += 1;
+        let record = GameEndpointRecord {
+            endpoint: stub.endpoint.clone(),
+            port: Some(stub.port),
+            source: SOURCE_AUTO_FREE_PORT.to_string(),
+            pid: Some(stub.pid),
+        };
+        tools.register_game_endpoint(record.clone()).await?;
+        Ok(Some(record))
+    }
+
+    async fn stop_round_game(&self, tools: &dyn ToolChannel) -> anyhow::Result<()> {
+        let Some(stub) = self.round_game.as_ref() else {
+            return Ok(());
+        };
+        *stub.stops.lock().expect("stops lock") += 1;
+        tools.clear_game_endpoint().await;
+        Ok(())
     }
 
     fn doctor(&self, _workspace: &Path) -> anyhow::Result<Vec<DoctorItem>> {
@@ -634,6 +757,40 @@ async fn run_scenario_inner(
         harness: Box::new(harness),
         adapter: Box::new(adapter),
         tools: Arc::new(FakeToolChannel::new()),
+        cfg,
+        ablation,
+        force_init: true,
+        start_state: hof_rs::runtime::start_state::StartState::as_is(),
+    };
+    let result = hof_rs::runtime::run_loop::run(&orchestrator, &spec, "run-1").await;
+    (result, observer.records())
+}
+
+/// DR-70 ①: the same scenario, driven with a **supplied** tool channel.
+///
+/// The published game route is a property of the channel, so a test that has to
+/// observe it — or that has to exercise the real `McpChannel` — cannot use the
+/// fixed `FakeToolChannel` of [`run_scenario`].
+pub async fn run_scenario_with_tools(
+    root: &Path,
+    iterations: u32,
+    script: Vec<FakeStep>,
+    ablation: hof_rs::model::Ablation,
+    adapter: FakeAdapter,
+    tools: Arc<dyn ToolChannel>,
+) -> (
+    anyhow::Result<hof_rs::runtime::run_loop::RunSummary>,
+    Vec<InvocationRecord>,
+) {
+    let mut cfg = test_config(root, iterations);
+    cfg.runtime.spec = root.join("spec.md");
+    let spec = write_spec(root);
+    let harness = FakeHarness::new(script);
+    let observer = harness.clone();
+    let orchestrator = hof_rs::runtime::run_loop::Orchestrator {
+        harness: Box::new(harness),
+        adapter: Box::new(adapter),
+        tools,
         cfg,
         ablation,
         force_init: true,

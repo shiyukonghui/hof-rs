@@ -183,6 +183,37 @@ pub trait ProjectAdapter: Send + Sync {
             .collect())
     }
 
+    /// DR-70 ①: start the game session that lives for the **whole round**.
+    ///
+    /// DR-69 published the game route inside the battery's `editor_play_scene` step,
+    /// i.e. *after* the Developer and *before* the Tester, so in the normal flow
+    /// no role process ever overlapped the published route (the acceptance's D1,
+    /// major).  The runtime now starts the round's game **before the first role**
+    /// and keeps the route published for the window in which the Developer and
+    /// the Tester run; the battery starts its own instance later, because it must
+    /// observe the candidate the Developer just produced.
+    ///
+    /// The adapter that registers the endpoint is the one that publishes the
+    /// route, so this is where the publish happens.  `Ok(None)` means "this
+    /// adapter has no game session to offer" — the default, which is what every
+    /// non-engine adapter and every test double wants.
+    async fn start_round_game(
+        &self,
+        _workspace: &Path,
+        _tools: &dyn ToolChannel,
+    ) -> anyhow::Result<Option<crate::tools::endpoint::GameEndpointRecord>> {
+        Ok(None)
+    }
+
+    /// DR-70 ①: stop that session and withdraw the published route.
+    ///
+    /// Called by the runtime on **every** exit path of a round — the summary, an
+    /// `Err` from any stage, and the contract-gate returns — so no error path
+    /// leaves a route pointing at a stopped game.
+    async fn stop_round_game(&self, _tools: &dyn ToolChannel) -> anyhow::Result<()> {
+        Ok(())
+    }
+
     /// DR-37: is the Developer role's artifact (the project itself) at least
     /// *usable*?
     ///

@@ -3828,6 +3828,69 @@ impl ProjectAdapter for GodotAdapter {
         .await
     }
 
+    /// DR-70 ①: the game session the whole round runs against.
+    ///
+    /// It is started before the first role, so the route a role's `hoh tools
+    /// call` adopts is published for the entire window in which the Planner,
+    /// the Developer and (after the battery restarts it) the Tester run.  The
+    /// readiness poll is not decoration: DR-70 ② refuses a published route whose
+    /// destination does not answer, so the record must be published only next to
+    /// a game that is actually answering.
+    async fn start_round_game(
+        &self,
+        _workspace: &Path,
+        tools: &dyn ToolChannel,
+    ) -> anyhow::Result<Option<crate::tools::endpoint::GameEndpointRecord>> {
+        let play_args = json!({"mode": "main"});
+        let call = tools
+            .call(Role::Developer, "editor_play_scene", play_args)
+            .await
+            .map_err(|error| anyhow::anyhow!("editor_play_scene: {error}"))?;
+        let record = parse_game_endpoint(&call.payload).map_err(anyhow::Error::msg)?;
+        // Registering publishes the route (DR-69 ①) — that is the point of the
+        // round session.  A registration failure is fatal here: a round whose
+        // game runs but whose route is not published is exactly the DR-69 defect.
+        tools.register_game_endpoint(record.clone()).await?;
+
+        let tree_args = json!({"max_depth": -1});
+        let ready = wait_for_game_ready(
+            tools,
+            Role::Developer,
+            "running_game_get_scene_tree",
+            tree_args,
+            self.battery.ready_timeout_seconds,
+            READY_POLL_INTERVAL_MS,
+            None,
+        )
+        .await;
+        if !ready.ok {
+            let problem = ready
+                .failure
+                .map(|failure| failure.observation())
+                .unwrap_or_else(|| "no attempt was made".to_string());
+            anyhow::bail!(
+                "the round's game did not answer `running_game_get_scene_tree` after {} poll(s): \
+                 {problem}",
+                ready.attempts
+            );
+        }
+        Ok(Some(record))
+    }
+
+    /// DR-70 ①: stop the round's game and withdraw the route.
+    ///
+    /// Whatever the stop reports, the route is withdrawn: the runtime calls this
+    /// on every exit path, including the ones where the battery never reached its
+    /// own `editor_stop_scene` (the `?` that skipped it is exactly the error path
+    /// DR-69's acceptance found leaving a file behind).
+    async fn stop_round_game(&self, tools: &dyn ToolChannel) -> anyhow::Result<()> {
+        let _ = tools
+            .call(Role::Developer, "editor_stop_scene", json!({}))
+            .await;
+        tools.clear_game_endpoint().await;
+        Ok(())
+    }
+
     async fn build_check(
         &self,
         _workspace: &Path,
