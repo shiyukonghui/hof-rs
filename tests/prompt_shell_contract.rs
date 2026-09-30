@@ -311,6 +311,79 @@ fn first_concrete_recipe(skill: &str) -> (String, String) {
 }
 
 // ---------------------------------------------------------------------------
+// ③ DR-68 — the completion protocol is the only legal end of a role call
+// ---------------------------------------------------------------------------
+
+/// DR-68 ⑥: mini's `LocalEnvironment` has exactly **one** legal exit
+/// (`mini-swe-agent-rust-mini/rust/src/environments/local.rs:118-128`): a
+/// command whose first line is `COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT` with
+/// returncode 0.  Anything else — including a reply with no tool call — is an
+/// `AgentError::Format`.
+///
+/// This is the mechanism the prompt-side test below depends on, executed
+/// against the real environment type; without it the test could be green for a
+/// string that does nothing.
+#[tokio::test]
+async fn only_a_first_line_completion_protocol_ends_a_role_call() {
+    let (_temp, view) = view_with_scratch();
+    let environment = LocalEnvironment::new(mini_swe_agent::environments::LocalEnvironmentConfig {
+        cwd: view.to_string_lossy().into_owned(),
+        env: serde_json::Map::new(),
+        timeout: 30,
+    });
+
+    let interrupt = environment
+        .execute(
+            &Action::new("echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT"),
+            None,
+            Some(30),
+        )
+        .await
+        .expect_err("the completion protocol must end the call");
+    match interrupt {
+        mini_swe_agent::AgentError::Interrupt(flow) => {
+            assert_eq!(
+                flow.kind,
+                mini_swe_agent::InterruptKind::Submitted,
+                "the protocol is the *submitted* interrupt, not a failure"
+            );
+        }
+        other => panic!("expected a flow interrupt, got {other:?}"),
+    }
+
+    // The control: a command that merely looks like work is **not** a legal end,
+    // so naming the protocol is the only way a prompt can let a role finish.
+    environment
+        .execute(&Action::new("echo submit"), None, Some(30))
+        .await
+        .expect("a plain command must not terminate the call");
+}
+
+/// DR-68 ⑥: `smoke-t8`'s Planner submitted successfully at step 35 and then died
+/// with `RepeatedFormatError`, because `planner.md` and `tester.md` never named
+/// the completion protocol — only `developer.md` did.  A submitted artifact is
+/// not the end of the call; this asserts every role prompt says what is.
+#[test]
+fn every_role_prompt_names_the_legal_completion_protocol() {
+    const PROTOCOL: &str = "COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT";
+    for (label, template) in [
+        ("planner.md", prompts::PLANNER_PROMPT),
+        ("tester.md", prompts::TESTER_PROMPT),
+        ("developer.md", prompts::DEVELOPER_PROMPT),
+    ] {
+        let text = delivered(template);
+        assert!(
+            text.contains(PROTOCOL),
+            "{label} does not name the only legal completion protocol"
+        );
+        assert!(
+            text.to_lowercase().contains("completion") || text.to_lowercase().contains("finish"),
+            "{label} must say that the protocol is how the call ends"
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
 // helpers
 // ---------------------------------------------------------------------------
 

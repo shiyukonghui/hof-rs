@@ -113,3 +113,11 @@ One successful `submit` is enough: as soon as it succeeds, finish this phase
 immediately and do not submit again. Repeated submissions buy nothing and burn
 the budget.
 
+[completion]
+A successful `submit` is **not** the end of the call, and a reply with no tool
+call is not a legal end either. When `.hoh/evidence.json` is valid and you have
+nothing further to add, end your run with the completion protocol
+`COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT` and one sentence describing what you
+judged. The only legal exit is that command; a call that ends any other way is
+recorded as a format failure.
+
