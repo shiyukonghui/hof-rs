@@ -703,10 +703,14 @@ async fn the_real_round_path_persists_a_failing_rounds_verdict() {
 /// `.godot` and `.import` as well (`config/hoh.yaml` → `cache_excludes`), so a
 /// round that only wrote under `.godot/**` would also be recorded as
 /// `no_engineering_write` while the prompt implied otherwise.
+///
+/// DR-69 (DR-67 DEF-C): `.git` is in the runtime's exclude set too, and the
+/// prompt did not name it, so this test's own name (`names_every_excluded_path`)
+/// overclaimed.  Both halves now cover the whole set the runtime uses.
 #[test]
 fn the_prompt_names_every_excluded_path_not_just_the_scratch_dir() {
     let prompt = delivered_prompt(hof_rs::prompts::DEVELOPER_PROMPT);
-    for excluded in [".hoh", ".godot", ".import"] {
+    for excluded in [".hoh", ".git", ".godot", ".import"] {
         assert!(
             prompt.contains(excluded),
             "the prompt must account for the `{excluded}` exclusion it is subject to:\n{prompt}"
@@ -714,7 +718,7 @@ fn the_prompt_names_every_excluded_path_not_just_the_scratch_dir() {
     }
     // And the set it names is the set the runtime uses, not an aspirational one.
     let excludes = configured_excludes();
-    for excluded in [".hoh", ".godot", ".import"] {
+    for excluded in [".hoh", ".git", ".godot", ".import"] {
         assert!(
             excludes.contains(&excluded.to_string()),
             "`{excluded}` must really be excluded; got {excludes:?}"
