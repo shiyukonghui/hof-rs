@@ -215,9 +215,31 @@ pub mod tool_matrix {
     /// evaluated).  The QA role never gets one of these, with the two
     /// documented exceptions below (DR-42 / R13).
     const MUTATING_VERBS: &[&str] = &[
-        "add", "create", "remove", "delete", "set", "edit", "rename", "reparent", "move",
-        "duplicate", "connect", "disconnect", "execute", "export", "deploy", "reload", "rescan",
-        "bake", "open", "save", "setup", "convert", "update", "build", "write",
+        "add",
+        "create",
+        "remove",
+        "delete",
+        "set",
+        "edit",
+        "rename",
+        "reparent",
+        "move",
+        "duplicate",
+        "connect",
+        "disconnect",
+        "execute",
+        "export",
+        "deploy",
+        "reload",
+        "rescan",
+        "bake",
+        "open",
+        "save",
+        "setup",
+        "convert",
+        "update",
+        "build",
+        "write",
     ];
 
     /// The QA role's explicit exceptions: evidence-driving tools whose verb
@@ -327,7 +349,10 @@ mod tests {
     #[test]
     fn the_verb_is_the_component_after_the_channel() {
         assert_eq!(tool_matrix::verb_of("editor_get_errors"), Some("get"));
-        assert_eq!(tool_matrix::verb_of("project_create_script"), Some("create"));
+        assert_eq!(
+            tool_matrix::verb_of("project_create_script"),
+            Some("create")
+        );
         assert_eq!(
             tool_matrix::verb_of("running_game_get_scene_tree"),
             Some("get")
@@ -397,7 +422,10 @@ mod tests {
         }
         // §5.4's hard prohibitions stay prohibitions.
         assert!(!tool_allowed(Role::Tester, "running_game_execute_gdscript"));
-        assert!(!tool_allowed(Role::Tester, "running_game_set_node_property"));
+        assert!(!tool_allowed(
+            Role::Tester,
+            "running_game_set_node_property"
+        ));
         assert!(!tool_allowed(
             Role::Tester,
             "project_set_node_property_across_scenes"

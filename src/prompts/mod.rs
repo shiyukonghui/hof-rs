@@ -52,12 +52,7 @@ pub fn skill_document(name: &str, flavor: ShellFlavor) -> Option<String> {
 pub fn skill_documents(flavor: ShellFlavor) -> Vec<(String, String)> {
     skills()
         .into_iter()
-        .map(|(name, body)| {
-            (
-                name.to_string(),
-                shell::render_command_vars(body, flavor),
-            )
-        })
+        .map(|(name, body)| (name.to_string(), shell::render_command_vars(body, flavor)))
         .collect()
 }
 

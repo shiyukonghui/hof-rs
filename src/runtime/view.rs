@@ -343,9 +343,15 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let source = temp.path().join("evidence");
         write(&source.join("frame-00.png"), "this round\n");
-        write(&source.join("frame-00.png.stale-1790663544"), "superseded\n");
+        write(
+            &source.join("frame-00.png.stale-1790663544"),
+            "superseded\n",
+        );
         write(&source.join("replay/round.json"), "this round\n");
-        write(&source.join("replay/round.json.stale-1790663544"), "superseded\n");
+        write(
+            &source.join("replay/round.json.stale-1790663544"),
+            "superseded\n",
+        );
         record_supersession(&source, "frame-00.png.stale-1790663544");
         record_supersession(&source.join("replay"), "round.json.stale-1790663544");
         // A name that only *looks* superseded and was never recorded: this is
@@ -364,7 +370,9 @@ mod tests {
             "DR-62: a recorded supersession must not reach the frozen candidate"
         );
         assert!(
-            !destination.join("replay/round.json.stale-1790663544").exists(),
+            !destination
+                .join("replay/round.json.stale-1790663544")
+                .exists(),
             "DR-62: a supersession recorded by the manifest of a subdirectory must \
              not reach the candidate either"
         );
@@ -394,7 +402,10 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let source = temp.path().join(".hoh/deterministic");
         write(&source.join("battery.json"), "this round\n");
-        write(&source.join("battery.json.stale-1790663544"), "superseded\n");
+        write(
+            &source.join("battery.json.stale-1790663544"),
+            "superseded\n",
+        );
         write(&source.join("replay.stale-this-round.json"), "this round\n");
         record_supersession(&source, "battery.json.stale-1790663544");
 

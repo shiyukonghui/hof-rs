@@ -825,7 +825,10 @@ mod tests {
     /// `.hoh` siblings the round rewrites, so "the whole tree moved" is checked
     /// against a workspace that looks like a real one.
     fn seed_previous_round(workspace: &Path) {
-        write(&workspace.join(".hoh/deterministic/battery.json"), "round one\n");
+        write(
+            &workspace.join(".hoh/deterministic/battery.json"),
+            "round one\n",
+        );
         write(&workspace.join(".hoh/deterministic/raw/probe.json"), "{}\n");
         write(&workspace.join(".hoh/evidence/frame-00.png"), "png\n");
         write(&workspace.join(".hoh/evidence.json"), "{}\n");
@@ -906,14 +909,14 @@ mod tests {
             "the args family must be moved: {:?}",
             kept.keys().collect::<Vec<_>>()
         );
-        assert_eq!(
-            preserved("scratch/probe.txt"),
-            Some(b"probe\n".as_slice())
-        );
+        assert_eq!(preserved("scratch/probe.txt"), Some(b"probe\n".as_slice()));
         // The sibling a curated list would have left behind is in the quarantine
         // too: the round never rewrites it.
         assert_eq!(preserved("SCAFFOLD.md"), Some(b"scaffold\n".as_slice()));
-        assert_eq!(preserved("skills/godot-dev.md"), Some(b"skill\n".as_slice()));
+        assert_eq!(
+            preserved("skills/godot-dev.md"),
+            Some(b"skill\n".as_slice())
+        );
 
         // Nothing is left in the cwd to walk: the workspace held only `.hoh`.
         let reached = walk(&workspace);
@@ -1053,9 +1056,11 @@ mod tests {
 
         assert!(is_superseded(root, "replay/round.json").unwrap());
         assert!(!is_superseded(root, "replay/other.json").unwrap());
-        assert!(std::fs::read_to_string(root.join("replay").join(SUPERSEDED_MANIFEST))
-            .unwrap()
-            .contains("round.json"));
+        assert!(
+            std::fs::read_to_string(root.join("replay").join(SUPERSEDED_MANIFEST))
+                .unwrap()
+                .contains("round.json")
+        );
     }
 
     /// DR-62: the manifest is runtime bookkeeping, never view content — and a

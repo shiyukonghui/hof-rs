@@ -212,11 +212,9 @@ impl McpClient {
                     // DR-56: the classified marker travels with the failure, so
                     // the retry ring above can tell a transport hiccup from a
                     // JSON-RPC verdict without reading this message.
-                    return Err(McpTransportError::new(
-                        self.endpoint.clone(),
-                        format!("{error}"),
-                    )
-                    .into())
+                    return Err(
+                        McpTransportError::new(self.endpoint.clone(), format!("{error}")).into(),
+                    );
                 }
             }
         }

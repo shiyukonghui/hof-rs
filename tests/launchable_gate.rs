@@ -55,7 +55,8 @@ const ENGINE_CAPTURE_BANNER: &str = "[MCP] capture=off (default; use --mcp-captu
 
 /// DR-48: the genuine engine error the exemption must **never** swallow.  It
 /// carries the `[MCP]` prefix and is a real ERROR line.
-const ENGINE_MCP_ERROR: &str = "ERROR: [MCP] SceneTree never became available; MCP server disabled.";
+const ENGINE_MCP_ERROR: &str =
+    "ERROR: [MCP] SceneTree never became available; MCP server disabled.";
 
 struct GateChannel {
     workspace: PathBuf,
@@ -85,7 +86,9 @@ impl GateChannel {
         Self {
             workspace: workspace.to_path_buf(),
             calls: Mutex::new(Vec::new()),
-            editor_errors: Some(json!({"available": true, "count": errors.len(), "errors": errors})),
+            editor_errors: Some(
+                json!({"available": true, "count": errors.len(), "errors": errors}),
+            ),
             registrations: Mutex::new(Vec::new()),
             route_cleared: std::sync::atomic::AtomicBool::new(false),
         }
@@ -124,7 +127,9 @@ impl ToolChannel for GateChannel {
             .push((tool.to_string(), args.clone()));
         let payload = match tool {
             "editor_rescan_project_filesystem" => json!({"reloaded": true}),
-            "editor_open_scene" => json!({"opened": args.get("path").cloned().unwrap_or(Value::Null)}),
+            "editor_open_scene" => {
+                json!({"opened": args.get("path").cloned().unwrap_or(Value::Null)})
+            }
             "project_read_scene_file_content" => match self.scene_text() {
                 Some(text) => json!({"path": args["path"], "content": text}),
                 None => {
@@ -510,7 +515,8 @@ async fn a_launchable_project_never_invokes_a_repair() {
     )
     .await;
 
-    assert_eq!(run.records.iter().map(|r| r.role).collect::<Vec<_>>(),
+    assert_eq!(
+        run.records.iter().map(|r| r.role).collect::<Vec<_>>(),
         vec![Role::Planner, Role::Developer, Role::Tester]
     );
     assert_eq!(run.result["artifact_gate"]["launchable"], json!(true));
@@ -570,7 +576,6 @@ async fn the_run_meta_keeps_the_game_endpoint_the_battery_registered() {
     assert_eq!(meta["engine"]["mcp"]["editor_status"], json!(null));
     assert!(meta["engine"]["mcp"]["editor_status_reason"].is_string());
 }
-
 
 // ---------------------------------------------------------------------------
 // ⑥ DR-48 — the engine's own INFO banners must not close the gate
@@ -737,4 +742,3 @@ async fn an_unknown_mcp_prefixed_line_still_closes_the_gate() {
         "a truncated/unknown `[MCP]` line is not the known banner: fail closed (DR-48)"
     );
 }
-

@@ -140,7 +140,8 @@ pub struct McpChannel {
     /// cleared so the run's identity record does not lose it.
     game_history: std::sync::Arc<std::sync::Mutex<Option<GameEndpointRecord>>>,
     /// DR-55: the per-endpoint liveness verdict, keyed by the JSON-RPC URL.
-    liveness: std::sync::Arc<std::sync::Mutex<std::collections::BTreeMap<String, EndpointLiveness>>>,
+    liveness:
+        std::sync::Arc<std::sync::Mutex<std::collections::BTreeMap<String, EndpointLiveness>>>,
     timeout_seconds: u64,
     max_retries: u32,
     max_sync_retries: u32,
@@ -159,9 +160,7 @@ impl McpChannel {
             editor: McpClient::new(endpoint, timeout_seconds, max_retries),
             game: std::sync::Arc::new(std::sync::Mutex::new(None)),
             game_history: std::sync::Arc::new(std::sync::Mutex::new(None)),
-            liveness: std::sync::Arc::new(std::sync::Mutex::new(
-                std::collections::BTreeMap::new(),
-            )),
+            liveness: std::sync::Arc::new(std::sync::Mutex::new(std::collections::BTreeMap::new())),
             timeout_seconds,
             max_retries,
             max_sync_retries: mcp::DEFAULT_MAX_SYNC_RETRIES,
@@ -278,9 +277,7 @@ impl ToolChannel for McpChannel {
         // `UNAVAILABLE` and the stable `endpoint_state` field.
         if let Some(liveness) = self.endpoint_state(&endpoint) {
             if liveness.unavailable {
-                return Err(
-                    endpoint::McpEndpointUnavailableError::new(liveness, tool).into(),
-                );
+                return Err(endpoint::McpEndpointUnavailableError::new(liveness, tool).into());
             }
         }
         let tool_name = tool.to_string();
@@ -313,8 +310,12 @@ impl ToolChannel for McpChannel {
     }
 
     async fn register_game_endpoint(&self, record: GameEndpointRecord) -> anyhow::Result<()> {
-        let client = McpClient::new(record.endpoint.clone(), self.timeout_seconds, self.max_retries)
-            .with_max_sync_retries(self.max_sync_retries);
+        let client = McpClient::new(
+            record.endpoint.clone(),
+            self.timeout_seconds,
+            self.max_retries,
+        )
+        .with_max_sync_retries(self.max_sync_retries);
         // DR-55: a fresh endpoint starts alive, whatever happened to the address
         // it replaces.
         self.arm_endpoint(&record.endpoint);
@@ -348,7 +349,10 @@ impl ToolChannel for McpChannel {
     }
 
     async fn game_endpoint_history(&self) -> Option<GameEndpointRecord> {
-        self.game_history.lock().ok().and_then(|guard| guard.clone())
+        self.game_history
+            .lock()
+            .ok()
+            .and_then(|guard| guard.clone())
     }
 
     async fn endpoint_liveness(&self, endpoint: &str) -> Option<EndpointLiveness> {

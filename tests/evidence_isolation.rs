@@ -88,19 +88,13 @@ fn developer_view(records: &[InvocationRecord]) -> BTreeMap<String, String> {
         .clone()
 }
 
-fn keys_matching<'a>(
-    files: &'a BTreeMap<String, String>,
-    prefix: &str,
-) -> Vec<&'a String> {
+fn keys_matching<'a>(files: &'a BTreeMap<String, String>, prefix: &str) -> Vec<&'a String> {
     files.keys().filter(|key| key.starts_with(prefix)).collect()
 }
 
 /// Keys whose path contains `needle` (the DR-49 `.stale-` marker is a suffix,
 /// not a prefix).
-fn keys_containing<'a>(
-    files: &'a BTreeMap<String, String>,
-    needle: &str,
-) -> Vec<&'a String> {
+fn keys_containing<'a>(files: &'a BTreeMap<String, String>, needle: &str) -> Vec<&'a String> {
     files.keys().filter(|key| key.contains(needle)).collect()
 }
 
@@ -123,7 +117,10 @@ fn walk(root: &Path) -> BTreeMap<String, String> {
             .map(|component| component.as_os_str().to_string_lossy().into_owned())
             .collect::<Vec<_>>()
             .join("/");
-        files.insert(relative, std::fs::read_to_string(entry.path()).unwrap_or_default());
+        files.insert(
+            relative,
+            std::fs::read_to_string(entry.path()).unwrap_or_default(),
+        );
     }
     files
 }
@@ -282,7 +279,10 @@ async fn round_two_cannot_read_round_one_evidence() {
     // (its Developer write is then a real change), so the isolation invariant is
     // measured on a round that actually did something: a strengthening of the
     // fixture, not a relaxation of it.
-    write(&workspace.join("project.godot"), "config_version=5\n# run-two\n");
+    write(
+        &workspace.join("project.godot"),
+        "config_version=5\n# run-two\n",
+    );
     assert_eq!(
         std::fs::read_to_string(workspace.join("project.godot")).unwrap(),
         "config_version=5\n# run-two\n",

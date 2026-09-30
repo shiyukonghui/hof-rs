@@ -63,9 +63,10 @@ fn dr58_fixture_raw(name: &str) -> String {
 /// DR-58: the exact `payload` envelope the engine answered for `node`, lifted
 /// verbatim out of the captured `node_and_collision_assertions` record.
 fn real_node_properties(node: &str) -> Value {
-    let raw: Value =
-        serde_json::from_str(&dr58_fixture_raw("smoke_t7_node_and_collision_assertions.json"))
-            .unwrap();
+    let raw: Value = serde_json::from_str(&dr58_fixture_raw(
+        "smoke_t7_node_and_collision_assertions.json",
+    ))
+    .unwrap();
     raw["calls"]
         .as_array()
         .unwrap()
@@ -361,9 +362,7 @@ fn screenshot_inline_payload() -> Value {
 fn invalid_save_path(save_path: &str) -> McpError {
     McpError::new(
         -32602,
-        format!(
-            "Parameter 'save_path' must start with 'res://' or 'user://', got '{save_path}'"
-        ),
+        format!("Parameter 'save_path' must start with 'res://' or 'user://', got '{save_path}'"),
     )
 }
 
@@ -513,7 +512,9 @@ impl ToolChannel for FixtureChannel {
             "editor_rescan_project_filesystem" => {
                 json!({"content": [{"type": "text", "text": "{\"reloaded\": true}"}]})
             }
-            "editor_open_scene" => json!({"content": [{"type": "text", "text": "{\"opened\": true}"}]}),
+            "editor_open_scene" => {
+                json!({"content": [{"type": "text", "text": "{\"opened\": true}"}]})
+            }
             "project_read_scene_file_content" => json!({
                 "content": [{"type": "text", "text": json!({"content": VALID_SCENE}).to_string()}]
             }),
@@ -789,7 +790,9 @@ impl ToolChannel for FixtureChannel {
                 }
                 other => panic!("no collision fixture for node {other}"),
             },
-            "editor_stop_scene" => json!({"content": [{"type": "text", "text": "{\"stopped\": true}"}]}),
+            "editor_stop_scene" => {
+                json!({"content": [{"type": "text", "text": "{\"stopped\": true}"}]})
+            }
             other => panic!("FixtureChannel has no reply for `{other}`"),
         };
         Ok(ToolResult { ok: true, payload })
@@ -1180,7 +1183,8 @@ async fn readiness_timeout_fails_the_step_and_is_journalled() {
     let raw = std::fs::read_to_string(run.workspace.join(".hoh/deterministic/mcp-errors.jsonl"))
         .expect("mcp-errors.jsonl");
     assert!(
-        raw.lines().any(|line| line.contains("running_game_get_scene_tree")),
+        raw.lines()
+            .any(|line| line.contains("running_game_get_scene_tree")),
         "{raw}"
     );
 }
@@ -1234,10 +1238,7 @@ async fn real_node_properties_payloads_are_not_scored_as_missing() {
     assert!(record.ok, "{:?}", record.record);
     for node in ["Player", "Goal", "HUD"] {
         assert!(
-            record
-                .record
-                .observation
-                .contains(&format!("{node}=ok")),
+            record.record.observation.contains(&format!("{node}=ok")),
             "{node} must be read as resolved: {}",
             record.record.observation
         );
@@ -1354,7 +1355,10 @@ async fn a_real_node_properties_reply_makes_the_game_process_reachable() {
     let payload: Value =
         serde_json::from_str(call["payload"]["content"][0]["text"].as_str().unwrap()).unwrap();
     assert!(
-        payload["node_path"].as_str().unwrap().starts_with("/root/Main/"),
+        payload["node_path"]
+            .as_str()
+            .unwrap()
+            .starts_with("/root/Main/"),
         "the resolved path is what proves the read: {payload}"
     );
     assert!(payload["properties"].is_object(), "{payload}");
@@ -1695,7 +1699,8 @@ async fn the_editor_input_map_diagnostic_agrees_with_its_own_record() {
 
     // And the same self-consistency holds in the other direction: `move_left`
     // really absent must still be reported as absent, with the count.
-    let channel = Arc::new(FixtureChannel::green().with_input_actions(InputActionsMode::RealEditorMap));
+    let channel =
+        Arc::new(FixtureChannel::green().with_input_actions(InputActionsMode::RealEditorMap));
     let temp = tempfile::tempdir().unwrap();
     let run = run_battery(temp.path(), channel, 30).await;
     let (_, actions) = recorded_editor_actions(&run);
@@ -1732,7 +1737,10 @@ fn check_arguments(tool: &str, schema: &Value, args: &Value) -> Result<(), Strin
         let Some(property) = properties.and_then(|properties| properties.get(name)) else {
             return Err(format!("`{tool}`: `{name}` is not a declared parameter"));
         };
-        let declared = property.get("type").and_then(Value::as_str).unwrap_or("any");
+        let declared = property
+            .get("type")
+            .and_then(Value::as_str)
+            .unwrap_or("any");
         let matches = match declared {
             "string" => value.is_string(),
             "integer" => value.is_i64() || value.is_u64(),
@@ -1827,14 +1835,16 @@ fn the_parameter_shape_checker_rejects_the_smoke_t6_violations() {
         &json!({"bogus": 1}),
     )
     .expect_err("an undeclared parameter must be rejected");
-    assert!(violation.contains("not a declared parameter"), "{violation}");
-    let violation = check_arguments(
-        "editor_open_scene",
-        schema("editor_open_scene"),
-        &json!({}),
-    )
-    .expect_err("a missing required parameter must be rejected");
-    assert!(violation.contains("required parameter `path`"), "{violation}");
+    assert!(
+        violation.contains("not a declared parameter"),
+        "{violation}"
+    );
+    let violation = check_arguments("editor_open_scene", schema("editor_open_scene"), &json!({}))
+        .expect_err("a missing required parameter must be rejected");
+    assert!(
+        violation.contains("required parameter `path`"),
+        "{violation}"
+    );
     let violation = check_arguments(
         "editor_get_errors",
         schema("editor_get_errors"),
@@ -1964,11 +1974,9 @@ async fn every_surviving_execute_gdscript_call_is_a_gdscript_body() {
 
     let mut scripts: Vec<String> = Vec::new();
     for step_id in ["input_channel_probe", "input_replay"] {
-        let raw: Value = serde_json::from_str(&read(
-            &run.run_dir.join(format!(
-                "iter-1/candidate/.hoh/deterministic/raw/{step_id}.json"
-            )),
-        ))
+        let raw: Value = serde_json::from_str(&read(&run.run_dir.join(format!(
+            "iter-1/candidate/.hoh/deterministic/raw/{step_id}.json"
+        ))))
         .unwrap();
         scripts.extend(
             raw["calls"]
@@ -2067,7 +2075,10 @@ async fn the_input_channel_critical_path_is_built_on_semantic_tools() {
         .iter()
         .filter(|call| call["tool"] == json!("running_game_execute_gdscript"))
         .collect();
-    assert!(!script_calls.is_empty(), "the read-only probe is kept: {raw}");
+    assert!(
+        !script_calls.is_empty(),
+        "the read-only probe is kept: {raw}"
+    );
     for call in &script_calls {
         let code = call["args"]["code"].as_str().unwrap_or("");
         assert!(
@@ -2098,9 +2109,7 @@ async fn the_input_replay_injection_is_semantic_not_gdscript() {
         assert!(
             injected.iter().any(|args| args["events"]
                 .as_array()
-                .map(|events| events
-                    .iter()
-                    .any(|event| event["action"] == json!(action)))
+                .map(|events| events.iter().any(|event| event["action"] == json!(action)))
                 .unwrap_or(false)),
             "`{action}` must be injected through the semantic recording API: {injected:?}"
         );
@@ -2110,9 +2119,7 @@ async fn the_input_replay_injection_is_semantic_not_gdscript() {
                 .iter()
                 .any(|args| args["steps"]
                     .as_array()
-                    .map(|steps| steps
-                        .iter()
-                        .any(|step| step["action"] == json!(action)))
+                    .map(|steps| steps.iter().any(|step| step["action"] == json!(action)))
                     .unwrap_or(false)),
             "the scenario runner must drive `{action}`: {:?}",
             channel.calls_of("running_game_run_test_scenario")
@@ -2204,7 +2211,10 @@ async fn a_semantic_refusal_is_not_rescued_by_the_gdscript_probe() {
     // The read-only GDScript probe *did* answer (the double still serves it), and
     // that must be visible as supplementary — it changed nothing.
     assert!(
-        probe.record.observation.contains("read-only execute_gdscript probe=Some"),
+        probe
+            .record
+            .observation
+            .contains("read-only execute_gdscript probe=Some"),
         "the supplementary probe's reading must be recorded: {}",
         probe.record.observation
     );
@@ -2549,7 +2559,8 @@ async fn the_real_game_scene_tree_fixture_is_accepted() {
     let root = temp.path();
     let real: Value = fixture("game_scene_tree_real.json");
     let payload = real["calls"][0]["payload"].clone();
-    let channel = Arc::new(FixtureChannel::green().with_reply("running_game_get_scene_tree", payload));
+    let channel =
+        Arc::new(FixtureChannel::green().with_reply("running_game_get_scene_tree", payload));
     let run = run_battery(root, channel, 30).await;
 
     let record = step(&run.records, "scene_tree");

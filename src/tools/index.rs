@@ -289,9 +289,15 @@ mod tests {
                 "a snapshot entry without a name: {tool}"
             );
         }
-        assert!(schemas.iter().any(|tool| tool_name(tool) == "editor_play_scene"));
-        assert!(schemas.iter().any(|tool| tool_name(tool) == "running_game_capture_screenshot"));
-        assert!(schemas.iter().any(|tool| tool_name(tool) == "project_get_info"));
+        assert!(schemas
+            .iter()
+            .any(|tool| tool_name(tool) == "editor_play_scene"));
+        assert!(schemas
+            .iter()
+            .any(|tool| tool_name(tool) == "running_game_capture_screenshot"));
+        assert!(schemas
+            .iter()
+            .any(|tool| tool_name(tool) == "project_get_info"));
     }
 
     #[test]

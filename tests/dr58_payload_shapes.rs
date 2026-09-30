@@ -292,7 +292,10 @@ fn an_unresolved_or_malformed_node_read_is_not_a_resolved_read() {
         ("empty object", json!({})),
         ("top-level name only", old_read),
         ("retired flattened fixture", retired_fixture),
-        ("node_path without properties", json!({"node_path": "/root/Main/Player"})),
+        (
+            "node_path without properties",
+            json!({"node_path": "/root/Main/Player"}),
+        ),
         (
             "empty properties dictionary",
             json!({"node_path": "/root/Main/Player", "properties": {}}),

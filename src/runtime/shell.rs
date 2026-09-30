@@ -157,7 +157,8 @@ mod tests {
 
     #[test]
     fn rendering_replaces_every_placeholder_and_leaves_no_template_behind() {
-        let template = "call `{{HOH_HOH_BIN}} tools call x --args-file {{HOH_ARTIFACT_DIR}}/a.json`";
+        let template =
+            "call `{{HOH_HOH_BIN}} tools call x --args-file {{HOH_ARTIFACT_DIR}}/a.json`";
         let windows = render_command_vars(template, ShellFlavor::Windows);
         assert_eq!(
             windows,
@@ -176,10 +177,16 @@ mod tests {
     fn the_host_flavor_matches_the_platform() {
         if cfg!(windows) {
             assert_eq!(ShellFlavor::HOST, ShellFlavor::Windows);
-            assert_eq!(render_var("HOH_VIEW_DIR", ShellFlavor::HOST), "%HOH_VIEW_DIR%");
+            assert_eq!(
+                render_var("HOH_VIEW_DIR", ShellFlavor::HOST),
+                "%HOH_VIEW_DIR%"
+            );
         } else {
             assert_eq!(ShellFlavor::HOST, ShellFlavor::Posix);
-            assert_eq!(render_var("HOH_VIEW_DIR", ShellFlavor::HOST), "$HOH_VIEW_DIR");
+            assert_eq!(
+                render_var("HOH_VIEW_DIR", ShellFlavor::HOST),
+                "$HOH_VIEW_DIR"
+            );
         }
     }
 

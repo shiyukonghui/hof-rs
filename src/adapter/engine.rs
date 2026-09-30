@@ -332,7 +332,9 @@ fn probe_binary(binary: Option<&Path>) -> EngineBinary {
             size_bytes: None,
             mtime_unix: None,
             sha256: None,
-            reason: Some("no engine binary is configured (adapter.godot.editor_binary)".to_string()),
+            reason: Some(
+                "no engine binary is configured (adapter.godot.editor_binary)".to_string(),
+            ),
         };
     };
     let path = Some(binary.to_string_lossy().into_owned());
@@ -367,9 +369,7 @@ fn probe_binary(binary: Option<&Path>) -> EngineBinary {
             size_bytes,
             mtime_unix,
             sha256: None,
-            reason: Some(format!(
-                "the engine binary could not be hashed: {error}"
-            )),
+            reason: Some(format!("the engine binary could not be hashed: {error}")),
         },
     }
 }
@@ -418,7 +418,10 @@ async fn probe_version(
         ),
         Err(error) => (
             None,
-            Some(format!("`{}` could not be run: {error}", version_command(binary))),
+            Some(format!(
+                "`{}` could not be run: {error}",
+                version_command(binary)
+            )),
         ),
     }
 }
@@ -450,7 +453,9 @@ pub async fn probe_identity(
             pid: None,
             path: None,
             matches_binary: None,
-            reason: Some("no engine binary is configured, so no listener could be compared".to_string()),
+            reason: Some(
+                "no engine binary is configured, so no listener could be compared".to_string(),
+            ),
         },
     };
     let (game_endpoint, game_endpoint_reason) = match game_endpoint {
@@ -466,9 +471,7 @@ pub async fn probe_identity(
     let editor_status_reason = if editor_status.is_null()
         || editor_status.as_object().map(|object| object.is_empty()) == Some(true)
     {
-        Some(
-            "no `GET /mcp` body was recorded for the editor endpoint in this run".to_string(),
-        )
+        Some("no `GET /mcp` body was recorded for the editor endpoint in this run".to_string())
     } else {
         None
     };
@@ -495,10 +498,7 @@ pub async fn probe_identity(
 /// `meta.json` when there is something new).  The endpoint is a fact of the
 /// **run**, not of the binary, so it is recorded even when the rest of the block
 /// could not be established: every other field keeps its `null` + `reason`.
-pub fn record_game_endpoint(
-    identity: &mut EngineIdentity,
-    record: &GameEndpointRecord,
-) -> bool {
+pub fn record_game_endpoint(identity: &mut EngineIdentity, record: &GameEndpointRecord) -> bool {
     if identity.mcp.game_endpoint.as_ref() == Some(record) {
         return false;
     }
@@ -525,7 +525,10 @@ pub fn gate_record(identity: &EngineIdentity) -> Option<BatteryRecord> {
     identity.binary.path.as_ref()?;
     let listener = &identity.listener;
     let configured = identity.binary.path.clone().unwrap_or_default();
-    let actual = listener.path.clone().unwrap_or_else(|| "<unknown>".to_string());
+    let actual = listener
+        .path
+        .clone()
+        .unwrap_or_else(|| "<unknown>".to_string());
     let pid = listener
         .pid
         .map(|pid| pid.to_string())
@@ -567,10 +570,7 @@ pub fn gate_record(identity: &EngineIdentity) -> Option<BatteryRecord> {
 ///
 /// `godot.engine_version` records the version string **verbatim**; nothing in
 /// the code base is allowed to depend on its value (C12).
-pub async fn doctor_items(
-    env: &dyn mini_swe_agent::Environment,
-    binary: &Path,
-) -> Vec<DoctorItem> {
+pub async fn doctor_items(env: &dyn mini_swe_agent::Environment, binary: &Path) -> Vec<DoctorItem> {
     let mut items = Vec::new();
     let exists = std::fs::metadata(binary)
         .map(|metadata| metadata.is_file())
@@ -650,7 +650,8 @@ mod tests {
         assert_eq!(parse_listener_pid(table, 1), None);
 
         // A localised state column still yields a pid: the port is the anchor.
-        let localized = "  TCP    127.0.0.1:9877         0.0.0.0:0              ABHOEREN        4321\n";
+        let localized =
+            "  TCP    127.0.0.1:9877         0.0.0.0:0              ABHOEREN        4321\n";
         assert_eq!(parse_listener_pid(localized, 9877), Some(4321));
 
         // IPv6 listeners are shaped the same way.
@@ -673,22 +674,14 @@ mod tests {
         ] {
             assert!(value.get(key).is_some(), "missing `{key}`: {value}");
         }
-        for key in [
-            "path",
-            "size_bytes",
-            "mtime_unix",
-            "sha256",
-            "reason",
-        ] {
+        for key in ["path", "size_bytes", "mtime_unix", "sha256", "reason"] {
             assert!(value["binary"].get(key).is_some(), "missing binary.{key}");
         }
-        for key in [
-            "pid",
-            "path",
-            "matches_binary",
-            "reason",
-        ] {
-            assert!(value["listener"].get(key).is_some(), "missing listener.{key}");
+        for key in ["pid", "path", "matches_binary", "reason"] {
+            assert!(
+                value["listener"].get(key).is_some(),
+                "missing listener.{key}"
+            );
         }
         for key in [
             "editor_endpoint",
@@ -709,8 +702,14 @@ mod tests {
 
     #[test]
     fn path_normalisation_is_case_and_separator_insensitive() {
-        assert_eq!(normalize_windows_path("F:\\A\\B"), normalize_windows_path("f:/a/b"));
-        assert_eq!(normalize_windows_path("//?/C:\\x"), normalize_windows_path("c:/x"));
+        assert_eq!(
+            normalize_windows_path("F:\\A\\B"),
+            normalize_windows_path("f:/a/b")
+        );
+        assert_eq!(
+            normalize_windows_path("//?/C:\\x"),
+            normalize_windows_path("c:/x")
+        );
     }
 
     #[test]

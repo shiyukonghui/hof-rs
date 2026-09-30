@@ -308,9 +308,7 @@ async fn the_registered_game_endpoint_survives_the_route_being_cleared() {
 
 #[test]
 fn the_play_scene_reply_is_parsed_into_the_game_endpoint() {
-    let envelope = |inner: Value| {
-        json!({"content": [{"type": "text", "text": inner.to_string()}]})
-    };
+    let envelope = |inner: Value| json!({"content": [{"type": "text", "text": inner.to_string()}]});
 
     // `endpoint` wins; `mcp_port_source` is recorded verbatim.
     let record = parse_game_endpoint(&envelope(json!({
@@ -351,9 +349,7 @@ fn the_play_scene_reply_is_parsed_into_the_game_endpoint() {
 /// `argument`/`auto_free_port`.  (`smoke-t6` only exercised `auto_free_port`.)
 #[test]
 fn an_endpoint_without_a_declared_port_source_is_undeclared() {
-    let envelope = |inner: Value| {
-        json!({"content": [{"type": "text", "text": inner.to_string()}]})
-    };
+    let envelope = |inner: Value| json!({"content": [{"type": "text", "text": inner.to_string()}]});
 
     // The field is absent.
     let record = parse_game_endpoint(&envelope(json!({
@@ -375,15 +371,19 @@ fn an_endpoint_without_a_declared_port_source_is_undeclared() {
 
     // And the two documented values are still recorded verbatim.
     assert_eq!(
-        parse_game_endpoint(&envelope(json!({"mcp_port": 9900, "mcp_port_source": "argument"})))
-            .unwrap()
-            .source,
+        parse_game_endpoint(&envelope(
+            json!({"mcp_port": 9900, "mcp_port_source": "argument"})
+        ))
+        .unwrap()
+        .source,
         SOURCE_ARGUMENT
     );
     assert_eq!(
-        parse_game_endpoint(&envelope(json!({"mcp_port": 9900, "mcp_port_source": "auto_free_port"})))
-            .unwrap()
-            .source,
+        parse_game_endpoint(&envelope(
+            json!({"mcp_port": 9900, "mcp_port_source": "auto_free_port"})
+        ))
+        .unwrap()
+        .source,
         SOURCE_AUTO_FREE_PORT
     );
 }
@@ -551,13 +551,11 @@ async fn the_play_scene_step_fails_when_no_endpoint_is_announced() {
     );
     // The raw payload must carry the failed registration attempt itself (the
     // observation lives in the record, asserted above).
-    let raw = std::fs::read_to_string(
-        workspace.join(".hoh/deterministic/raw/play_scene_ready.json"),
-    )
-    .expect("the raw payload exists");
+    let raw =
+        std::fs::read_to_string(workspace.join(".hoh/deterministic/raw/play_scene_ready.json"))
+            .expect("the raw payload exists");
     assert!(
-        raw.contains("neither an `endpoint` nor an `mcp_port`")
-            && raw.contains("\"ok\": false"),
+        raw.contains("neither an `endpoint` nor an `mcp_port`") && raw.contains("\"ok\": false"),
         "the raw payload must record the failure: {raw}"
     );
 }

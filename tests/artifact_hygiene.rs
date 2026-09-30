@@ -107,9 +107,18 @@ fn prompts_and_skills_confine_temporary_files_to_the_scratch_dir() {
     // DR-66: the claim is about what a role is *told*, so the delivered text is
     // what gets asserted — the raw template still carries `{{HOH_SCRATCH_DIR}}`.
     for (name, prompt) in [
-        ("planner.md", delivered_prompt(hof_rs::prompts::PLANNER_PROMPT)),
-        ("developer.md", delivered_prompt(hof_rs::prompts::DEVELOPER_PROMPT)),
-        ("tester.md", delivered_prompt(hof_rs::prompts::TESTER_PROMPT)),
+        (
+            "planner.md",
+            delivered_prompt(hof_rs::prompts::PLANNER_PROMPT),
+        ),
+        (
+            "developer.md",
+            delivered_prompt(hof_rs::prompts::DEVELOPER_PROMPT),
+        ),
+        (
+            "tester.md",
+            delivered_prompt(hof_rs::prompts::TESTER_PROMPT),
+        ),
     ] {
         assert!(
             prompt.contains(&scratch_var()),

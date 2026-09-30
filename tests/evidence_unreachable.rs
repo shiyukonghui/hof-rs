@@ -399,7 +399,9 @@ async fn the_tester_candidate_view_never_carries_the_previous_rounds_evidence() 
     // The copy machinery is still alive: this round's own deterministic evidence
     // reaches the candidate exactly as DR-36 requires.
     assert!(
-        tester.keys().any(|key| key.starts_with(".hoh/deterministic/")),
+        tester
+            .keys()
+            .any(|key| key.starts_with(".hoh/deterministic/")),
         "DR-61: this round's own deterministic evidence must still be copied into \
          the candidate: {:?}",
         tester.keys().collect::<Vec<_>>()

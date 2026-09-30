@@ -20,7 +20,7 @@ use std::sync::Mutex;
 
 use hof_rs::adapter::engine::{
     binary_matches, doctor_items, gate_record, netstat_command, normalize_windows_path,
-    process_path_command, probe_identity, probe_listener, version_command, EngineIdentity,
+    probe_identity, probe_listener, process_path_command, version_command, EngineIdentity,
     ENGINE_IDENTITY_STEP_ID, ENGINE_KIND_GODOT,
 };
 use hof_rs::adapter::BatteryRecord;
@@ -85,7 +85,8 @@ impl Environment for FakeEnv {
     }
 }
 
-const CONFIGURED: &str = "F:/moonbit-hof-rs/godot-mcp/godot/bin/godot.windows.editor.x86_64.mono.exe";
+const CONFIGURED: &str =
+    "F:/moonbit-hof-rs/godot-mcp/godot/bin/godot.windows.editor.x86_64.mono.exe";
 
 fn configured_binary() -> PathBuf {
     PathBuf::from(CONFIGURED)
@@ -145,7 +146,10 @@ async fn a_listener_that_is_the_configured_binary_matches() {
 
 #[tokio::test]
 async fn a_listener_that_is_another_binary_is_a_mismatch() {
-    let env = listener_env(12345, "C:\\Other\\Godot_v4.7.1-stable_mono_win64\\godot.exe");
+    let env = listener_env(
+        12345,
+        "C:\\Other\\Godot_v4.7.1-stable_mono_win64\\godot.exe",
+    );
 
     let listener = probe_listener(&env, 9877, &configured_binary()).await;
     assert_eq!(listener.matches_binary, Some(false), "{listener:?}");
@@ -183,10 +187,7 @@ fn path_comparison_is_separator_and_case_insensitive() {
         normalize_windows_path("F:\\A\\B\\c.EXE"),
         normalize_windows_path("f:/a/b/C.exe")
     );
-    assert!(binary_matches(
-        Path::new("F:/A/B/c.exe"),
-        "f:\\a\\b\\C.EXE"
-    ));
+    assert!(binary_matches(Path::new("F:/A/B/c.exe"), "f:\\a\\b\\C.EXE"));
     assert!(!binary_matches(Path::new("F:/A/B/c.exe"), "F:/A/B/d.exe"));
     // `//?/` long-path prefixes and `.`/`..` components are the same file.
     assert!(binary_matches(
@@ -231,7 +232,11 @@ async fn the_engine_block_has_the_fixed_shape() {
     let env = FakeEnv::with(&[
         (netstat_command().as_str(), netstat_output().as_str(), 0),
         ("-Id 12345", &binary.to_string_lossy(), 0),
-        (&version_command(&binary), "4.8.dev.mono.custom_build.ba1587c71\n", 0),
+        (
+            &version_command(&binary),
+            "4.8.dev.mono.custom_build.ba1587c71\n",
+            0,
+        ),
     ]);
 
     let identity = probe_identity(
@@ -253,7 +258,12 @@ async fn the_engine_block_has_the_fixed_shape() {
     let block = serde_json::to_value(&identity).unwrap();
     assert_eq!(block["binary"]["path"], json!(binary.to_string_lossy()));
     assert_eq!(block["binary"]["size_bytes"], json!(26));
-    assert_eq!(block["binary"]["sha256"], json!(hof_rs::runtime::policy::sha256_hex(b"an engine binary stand-in\n")));
+    assert_eq!(
+        block["binary"]["sha256"],
+        json!(hof_rs::runtime::policy::sha256_hex(
+            b"an engine binary stand-in\n"
+        ))
+    );
     assert!(block["binary"]["mtime_unix"].is_u64());
     assert_eq!(block["binary"]["reason"], json!(null));
     // DR-44/C12: the version string is *recorded verbatim*, never asserted.
@@ -262,7 +272,10 @@ async fn the_engine_block_has_the_fixed_shape() {
         json!("4.8.dev.mono.custom_build.ba1587c71")
     );
     assert_eq!(block["version_reason"], json!(null));
-    assert_eq!(block["mcp"]["editor_endpoint"], json!("http://127.0.0.1:9877/mcp"));
+    assert_eq!(
+        block["mcp"]["editor_endpoint"],
+        json!("http://127.0.0.1:9877/mcp")
+    );
     assert_eq!(block["mcp"]["game_endpoint"], json!(null));
     assert!(
         block["mcp"]["game_endpoint_reason"].is_string(),
@@ -293,7 +306,9 @@ async fn a_missing_binary_is_null_plus_a_reason_never_a_guess() {
     );
     assert!(block["version_reason"].is_string(), "{block}");
     assert!(
-        !env.commands().iter().any(|command| command.contains("--version")),
+        !env.commands()
+            .iter()
+            .any(|command| command.contains("--version")),
         "an absent binary must not be executed: {:?}",
         env.commands()
     );
@@ -383,7 +398,10 @@ async fn the_gate_closes_when_the_listener_is_another_binary() {
         reasons.contains("godot.exe"),
         "the reason must name the actual listener: {reasons}"
     );
-    assert!(reasons.contains("12345"), "the reason must name the pid: {reasons}");
+    assert!(
+        reasons.contains("12345"),
+        "the reason must name the pid: {reasons}"
+    );
 }
 
 #[tokio::test]
@@ -540,7 +558,10 @@ async fn a_missing_binary_fails_the_items_without_executing_anything() {
         .find(|item| item.name == "godot.engine_version")
         .expect("godot.engine_version must be reported");
     assert!(!version_item.ok, "{version_item:?}");
-    assert!(version_item.detail.contains("does not exist"), "{version_item:?}");
+    assert!(
+        version_item.detail.contains("does not exist"),
+        "{version_item:?}"
+    );
     assert!(
         env.commands().is_empty(),
         "an absent binary must never be executed: {:?}",
@@ -589,7 +610,9 @@ async fn the_editor_status_is_the_verbatim_get_mcp_body() {
     assert_eq!(body["port"], json!(9877));
     assert_eq!(
         body.to_string(),
-        serde_json::from_str::<Value>(STATUS_BODY).unwrap().to_string(),
+        serde_json::from_str::<Value>(STATUS_BODY)
+            .unwrap()
+            .to_string(),
         "the body must be recorded verbatim"
     );
 }
@@ -669,7 +692,10 @@ async fn recording_a_game_endpoint_fills_the_identity_block() {
     );
     let block = serde_json::to_value(&identity).unwrap();
     assert_eq!(block["mcp"]["game_endpoint"]["port"], json!(63698));
-    assert_eq!(block["mcp"]["game_endpoint"]["source"], json!("auto_free_port"));
+    assert_eq!(
+        block["mcp"]["game_endpoint"]["source"],
+        json!("auto_free_port")
+    );
     assert_eq!(block["mcp"]["game_endpoint_reason"], json!(null));
     assert!(
         !hof_rs::adapter::engine::record_game_endpoint(&mut identity, &record),
@@ -719,10 +745,7 @@ async fn meta_json_carries_the_engine_block_and_no_secret() {
     let run_dir = temp.path().join("runs/run-1");
     write_run_meta(
         &run_dir,
-        &meta_with(
-            identity,
-            json!({"model_name": "m", "api_key": FAKE_KEY}),
-        ),
+        &meta_with(identity, json!({"model_name": "m", "api_key": FAKE_KEY})),
     )
     .expect("write meta");
 

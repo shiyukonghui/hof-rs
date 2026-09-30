@@ -118,7 +118,12 @@ pub fn render_prompt_with_budget(
     iteration: u32,
     limits: &crate::config::AgentLimits,
 ) -> String {
-    render_prompt_with_budget_and_shell(template, iteration, limits, crate::runtime::shell::ShellFlavor::HOST)
+    render_prompt_with_budget_and_shell(
+        template,
+        iteration,
+        limits,
+        crate::runtime::shell::ShellFlavor::HOST,
+    )
 }
 
 /// DR-66 ①: [`render_prompt_with_budget`] with an explicit target shell, so the

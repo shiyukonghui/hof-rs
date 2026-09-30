@@ -89,7 +89,10 @@ fn godot_dev_skill_is_a_real_recipe_book() {
     );
 
     // The argument examples use the real snake_case tool parameters.
-    assert!(dev.contains("\"action\""), "editor_simulate_input_action uses `action`");
+    assert!(
+        dev.contains("\"action\""),
+        "editor_simulate_input_action uses `action`"
+    );
     assert!(
         dev.contains("\"pressed\""),
         "editor_simulate_input_action uses `pressed`"

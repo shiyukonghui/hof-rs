@@ -32,7 +32,10 @@ fn tools_markdown_carries_parameter_names_and_types() {
     );
 
     let developer = hof_rs::tools::index::render_tools_markdown(Role::Developer, &schemas);
-    assert!(developer.contains("`running_game_get_node_property_samples`"), "{developer}");
+    assert!(
+        developer.contains("`running_game_get_node_property_samples`"),
+        "{developer}"
+    );
     assert!(developer.contains("`node_path`"));
     assert!(developer.contains("`properties`"));
     assert!(

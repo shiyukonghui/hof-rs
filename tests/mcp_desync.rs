@@ -347,13 +347,22 @@ fn battery_replies() -> HashMap<String, Value> {
         "editor_get_errors".to_string(),
         fixture("editor_errors_clean.json"),
     );
-    replies.insert("editor_play_scene".to_string(), fixture("play_scene_ok.json"));
-    replies.insert("running_game_get_scene_tree".to_string(), scene_tree_reply());
+    replies.insert(
+        "editor_play_scene".to_string(),
+        fixture("play_scene_ok.json"),
+    );
+    replies.insert(
+        "running_game_get_scene_tree".to_string(),
+        scene_tree_reply(),
+    );
     replies.insert(
         "running_game_capture_screenshot".to_string(),
         json!({"content": [{"type": "text", "text": "{\"path\": \"frame\", \"size\": 686}"}]}),
     );
-    replies.insert("running_game_capture_frames".to_string(), inline_png_reply());
+    replies.insert(
+        "running_game_capture_frames".to_string(),
+        inline_png_reply(),
+    );
     replies.insert(
         "editor_get_input_actions".to_string(),
         json!({"content": [{"type": "text", "text": json!({"actions": [

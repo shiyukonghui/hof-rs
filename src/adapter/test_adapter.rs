@@ -76,7 +76,10 @@ impl ProjectAdapter for TestAdapter {
 
     fn tool_policy(&self, role: Role) -> Vec<String> {
         match role {
-            Role::Developer => vec!["editor_get_errors".to_string(), "editor_add_node".to_string()],
+            Role::Developer => vec![
+                "editor_get_errors".to_string(),
+                "editor_add_node".to_string(),
+            ],
             Role::Tester => vec![
                 "editor_get_errors".to_string(),
                 "running_game_assert_node_state".to_string(),

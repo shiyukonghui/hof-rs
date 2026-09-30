@@ -40,41 +40,181 @@ use std::path::{Path, PathBuf};
 /// sha256 of that file at DR-42 is
 /// `2f552719f6a23fe328df0a2944c6048824c1b2a750aebc0fe2cabbcd3529c2bd`).
 const OLD_VOCABULARY: &[&str] = &[
-    "get_project_info", "get_filesystem_tree", "search_files", "search_in_files", "get_project_settings",
-    "set_project_setting", "uid_to_project_path", "project_path_to_uid", "get_scene_tree", "get_scene_file_content",
-    "open_scene", "delete_scene", "add_scene_instance", "get_scene_exports", "play_scene",
-    "stop_scene", "save_scene", "create_scene", "add_node", "delete_node",
-    "rename_node", "update_property", "get_node_properties", "duplicate_node", "connect_signal",
-    "disconnect_signal", "move_node", "add_resource", "set_anchor_preset", "get_node_groups",
-    "set_node_groups", "find_nodes_in_group", "get_editor_selection", "select_nodes", "clear_editor_selection",
-    "execute_editor_script", "get_editor_errors", "get_output_log", "get_editor_screenshot", "get_game_screenshot",
-    "clear_output", "reload_plugin", "reload_project", "get_signals", "compare_screenshots",
-    "set_auto_dismiss", "get_editor_camera", "set_editor_camera", "get_game_scene_tree", "get_game_node_properties",
-    "set_game_node_property", "capture_frames", "monitor_properties", "execute_game_script", "start_recording",
-    "stop_recording", "replay_recording", "find_nodes_by_script", "get_autoload", "batch_get_properties",
-    "find_ui_elements", "click_button_by_text", "wait_for_node", "find_nearby_nodes", "navigate_to",
-    "move_to", "watch_signals", "get_performance_monitors", "get_editor_performance", "list_scripts",
-    "read_script", "create_script", "edit_script", "attach_script", "get_open_scripts",
-    "validate_script", "simulate_key", "simulate_mouse_click", "simulate_mouse_move", "simulate_action",
-    "get_input_actions", "set_input_action", "simulate_sequence", "find_nodes_by_type", "batch_set_property",
-    "find_signal_connections", "batch_add_nodes", "find_node_references", "get_scene_dependencies", "cross_scene_set_property",
-    "list_animations", "create_animation", "add_animation_track", "set_animation_keyframe", "get_animation_info",
-    "remove_animation", "tilemap_get_info", "tilemap_get_used_cells", "tilemap_clear", "tilemap_set_cell",
-    "tilemap_fill_rect", "tilemap_get_cell", "read_resource", "add_autoload", "remove_autoload",
-    "edit_resource", "create_resource", "get_resource_preview", "get_export_info", "list_export_presets",
-    "export_project", "read_shader", "create_shader", "edit_shader", "assign_shader_material",
-    "set_shader_param", "get_shader_params", "add_raycast", "setup_collision", "set_physics_layers",
-    "get_physics_layers", "setup_physics_body", "get_collision_info", "add_mesh_instance", "setup_camera_3d",
-    "setup_lighting", "set_material_3d", "setup_environment", "add_gridmap", "add_audio_player",
-    "get_audio_info", "get_audio_bus_layout", "add_audio_bus", "set_audio_bus", "add_audio_bus_effect",
-    "create_theme", "set_theme_color", "set_theme_constant", "set_theme_font_size", "set_theme_stylebox",
-    "setup_control", "get_theme_info", "create_animation_tree", "get_animation_tree_structure", "add_state_machine_state",
-    "remove_state_machine_state", "add_state_machine_transition", "remove_state_machine_transition", "set_blend_tree_node", "set_tree_parameter",
-    "setup_navigation_region", "bake_navigation_mesh", "setup_navigation_agent", "set_navigation_layers", "get_navigation_info",
-    "create_particles", "set_particle_material", "set_particle_color_gradient", "apply_particle_preset", "get_particle_info",
-    "find_unused_resources", "analyze_signal_flow", "analyze_scene_complexity", "find_script_references", "detect_circular_dependencies",
-    "get_project_statistics", "run_test_scenario", "assert_node_state", "assert_screen_text", "run_stress_test",
-    "get_test_report", "list_android_devices", "get_android_preset_info", "deploy_to_android",];
+    "get_project_info",
+    "get_filesystem_tree",
+    "search_files",
+    "search_in_files",
+    "get_project_settings",
+    "set_project_setting",
+    "uid_to_project_path",
+    "project_path_to_uid",
+    "get_scene_tree",
+    "get_scene_file_content",
+    "open_scene",
+    "delete_scene",
+    "add_scene_instance",
+    "get_scene_exports",
+    "play_scene",
+    "stop_scene",
+    "save_scene",
+    "create_scene",
+    "add_node",
+    "delete_node",
+    "rename_node",
+    "update_property",
+    "get_node_properties",
+    "duplicate_node",
+    "connect_signal",
+    "disconnect_signal",
+    "move_node",
+    "add_resource",
+    "set_anchor_preset",
+    "get_node_groups",
+    "set_node_groups",
+    "find_nodes_in_group",
+    "get_editor_selection",
+    "select_nodes",
+    "clear_editor_selection",
+    "execute_editor_script",
+    "get_editor_errors",
+    "get_output_log",
+    "get_editor_screenshot",
+    "get_game_screenshot",
+    "clear_output",
+    "reload_plugin",
+    "reload_project",
+    "get_signals",
+    "compare_screenshots",
+    "set_auto_dismiss",
+    "get_editor_camera",
+    "set_editor_camera",
+    "get_game_scene_tree",
+    "get_game_node_properties",
+    "set_game_node_property",
+    "capture_frames",
+    "monitor_properties",
+    "execute_game_script",
+    "start_recording",
+    "stop_recording",
+    "replay_recording",
+    "find_nodes_by_script",
+    "get_autoload",
+    "batch_get_properties",
+    "find_ui_elements",
+    "click_button_by_text",
+    "wait_for_node",
+    "find_nearby_nodes",
+    "navigate_to",
+    "move_to",
+    "watch_signals",
+    "get_performance_monitors",
+    "get_editor_performance",
+    "list_scripts",
+    "read_script",
+    "create_script",
+    "edit_script",
+    "attach_script",
+    "get_open_scripts",
+    "validate_script",
+    "simulate_key",
+    "simulate_mouse_click",
+    "simulate_mouse_move",
+    "simulate_action",
+    "get_input_actions",
+    "set_input_action",
+    "simulate_sequence",
+    "find_nodes_by_type",
+    "batch_set_property",
+    "find_signal_connections",
+    "batch_add_nodes",
+    "find_node_references",
+    "get_scene_dependencies",
+    "cross_scene_set_property",
+    "list_animations",
+    "create_animation",
+    "add_animation_track",
+    "set_animation_keyframe",
+    "get_animation_info",
+    "remove_animation",
+    "tilemap_get_info",
+    "tilemap_get_used_cells",
+    "tilemap_clear",
+    "tilemap_set_cell",
+    "tilemap_fill_rect",
+    "tilemap_get_cell",
+    "read_resource",
+    "add_autoload",
+    "remove_autoload",
+    "edit_resource",
+    "create_resource",
+    "get_resource_preview",
+    "get_export_info",
+    "list_export_presets",
+    "export_project",
+    "read_shader",
+    "create_shader",
+    "edit_shader",
+    "assign_shader_material",
+    "set_shader_param",
+    "get_shader_params",
+    "add_raycast",
+    "setup_collision",
+    "set_physics_layers",
+    "get_physics_layers",
+    "setup_physics_body",
+    "get_collision_info",
+    "add_mesh_instance",
+    "setup_camera_3d",
+    "setup_lighting",
+    "set_material_3d",
+    "setup_environment",
+    "add_gridmap",
+    "add_audio_player",
+    "get_audio_info",
+    "get_audio_bus_layout",
+    "add_audio_bus",
+    "set_audio_bus",
+    "add_audio_bus_effect",
+    "create_theme",
+    "set_theme_color",
+    "set_theme_constant",
+    "set_theme_font_size",
+    "set_theme_stylebox",
+    "setup_control",
+    "get_theme_info",
+    "create_animation_tree",
+    "get_animation_tree_structure",
+    "add_state_machine_state",
+    "remove_state_machine_state",
+    "add_state_machine_transition",
+    "remove_state_machine_transition",
+    "set_blend_tree_node",
+    "set_tree_parameter",
+    "setup_navigation_region",
+    "bake_navigation_mesh",
+    "setup_navigation_agent",
+    "set_navigation_layers",
+    "get_navigation_info",
+    "create_particles",
+    "set_particle_material",
+    "set_particle_color_gradient",
+    "apply_particle_preset",
+    "get_particle_info",
+    "find_unused_resources",
+    "analyze_signal_flow",
+    "analyze_scene_complexity",
+    "find_script_references",
+    "detect_circular_dependencies",
+    "get_project_statistics",
+    "run_test_scenario",
+    "assert_node_state",
+    "assert_screen_text",
+    "run_stress_test",
+    "get_test_report",
+    "list_android_devices",
+    "get_android_preset_info",
+    "deploy_to_android",
+];
 
 /// Quoted tokens that match the four-channel shape, whose verb is a real
 /// contract verb, and which are nevertheless not tool names.
@@ -128,9 +268,9 @@ fn is_four_channel_name(name: &str) -> bool {
     !rest.is_empty()
         && !rest.starts_with('_')
         && !rest.ends_with('_')
-        && rest
-            .chars()
-            .all(|character| character.is_ascii_lowercase() || character.is_ascii_digit() || character == '_')
+        && rest.chars().all(|character| {
+            character.is_ascii_lowercase() || character.is_ascii_digit() || character == '_'
+        })
 }
 
 /// The verbs the contract itself uses, i.e. the second component of every
@@ -205,8 +345,16 @@ fn contains_whole_word(text: &str, needle: &str) -> bool {
     while let Some(offset) = text[from..].find(needle) {
         let start = from + offset;
         let end = start + needle.len();
-        let before_ok = text[..start].chars().next_back().map(|c| !is_word(c)).unwrap_or(true);
-        let after_ok = text[end..].chars().next().map(|c| !is_word(c)).unwrap_or(true);
+        let before_ok = text[..start]
+            .chars()
+            .next_back()
+            .map(|c| !is_word(c))
+            .unwrap_or(true);
+        let after_ok = text[end..]
+            .chars()
+            .next()
+            .map(|c| !is_word(c))
+            .unwrap_or(true);
         if before_ok && after_ok {
             return true;
         }
@@ -241,7 +389,11 @@ fn quoted_tool_tokens(text: &str, verbs: &std::collections::BTreeSet<String>) ->
         let is_tool_shaped = is_four_channel_name(&token)
             && second_component(&token).is_some_and(|verb| verbs.contains(verb));
         if is_tool_shaped {
-            let before = if start > 0 { characters[start - 1] } else { ' ' };
+            let before = if start > 0 {
+                characters[start - 1]
+            } else {
+                ' '
+            };
             let after = if end < characters.len() {
                 characters[end]
             } else {
@@ -337,8 +489,14 @@ fn every_quoted_tool_name_exists_in_the_contract() {
 /// cannot pass by being blind.
 #[test]
 fn the_guard_recognises_both_vocabularies() {
-    assert!(contains_whole_word("self.call(\"play_scene\")", "play_scene"));
-    assert!(!contains_whole_word("self.call(\"editor_play_scene\")", "play_scene"));
+    assert!(contains_whole_word(
+        "self.call(\"play_scene\")",
+        "play_scene"
+    ));
+    assert!(!contains_whole_word(
+        "self.call(\"editor_play_scene\")",
+        "play_scene"
+    ));
     assert!(is_four_channel_name("running_game_get_scene_tree"));
     assert!(is_four_channel_name("os_list_android_devices"));
     assert!(!is_four_channel_name("project_declared_actions("));

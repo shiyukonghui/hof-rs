@@ -231,10 +231,7 @@ async fn a_zero_engineering_write_round_fails_instead_of_reporting_ok() {
     let temp = tempfile::tempdir().unwrap();
     let root = temp.path();
     // `smoke-t7`: the workspace's project.godot already exists at A_0.
-    write(
-        &root.join("workspace/project.godot"),
-        "config_version=5\n",
-    );
+    write(&root.join("workspace/project.godot"), "config_version=5\n");
 
     let (result, _records) = run_scenario(
         root,
@@ -272,7 +269,10 @@ async fn a_zero_engineering_write_round_fails_instead_of_reporting_ok() {
                 found.push(entry.path().to_string_lossy().into_owned());
             }
         }
-        panic!("could not read {}: {error}; under runs/: {found:?}", result_path.display())
+        panic!(
+            "could not read {}: {error}; under runs/: {found:?}",
+            result_path.display()
+        )
     });
     let result_json: Value = serde_json::from_str(&raw).unwrap();
     assert_eq!(
@@ -349,8 +349,7 @@ async fn a_zero_engineering_write_round_fails_instead_of_reporting_ok() {
         code.to_string(),
         "`runs/<id>/exit_code` must carry the round's code"
     );
-    let meta: Value =
-        serde_json::from_str(&read(&root.join("runs/run-1/meta.json"))).unwrap();
+    let meta: Value = serde_json::from_str(&read(&root.join("runs/run-1/meta.json"))).unwrap();
     assert_eq!(meta["exit_code"], json!(code));
 }
 
@@ -513,10 +512,7 @@ fn zero_increment_script_that_finishes_normally() -> Vec<FakeStep> {
 async fn a_zero_increment_round_that_finishes_normally_also_fails() {
     let temp = tempfile::tempdir().unwrap();
     let root = temp.path();
-    write(
-        &root.join("workspace/project.godot"),
-        "config_version=5\n",
-    );
+    write(&root.join("workspace/project.godot"), "config_version=5\n");
 
     let (result, _records) = run_scenario(
         root,
@@ -692,7 +688,11 @@ fn the_completion_definition_keeps_the_increment_and_drops_the_battery_ownership
         "the prompt must name the battery directory it must not repair"
     );
     let battery_at = lower.find("battery").unwrap_or(0);
-    let window: String = lower.chars().skip(battery_at.saturating_sub(200)).take(600).collect();
+    let window: String = lower
+        .chars()
+        .skip(battery_at.saturating_sub(200))
+        .take(600)
+        .collect();
     let normalized = lower.split_whitespace().collect::<Vec<_>>().join(" ");
     assert!(
         normalized.contains("runs the battery after your call"),
@@ -701,7 +701,9 @@ fn the_completion_definition_keeps_the_increment_and_drops_the_battery_ownership
     );
     // The removed sentence pointed at a battery that had not run yet.
     assert!(
-        !lower.contains("can be observed from the **deterministic evidence battery that runs after you**"),
+        !lower.contains(
+            "can be observed from the **deterministic evidence battery that runs after you**"
+        ),
         "the impossible completion condition must be gone:\n{prompt}"
     );
 }
@@ -713,10 +715,7 @@ fn the_completion_definition_keeps_the_increment_and_drops_the_battery_ownership
 async fn the_same_harness_script_reports_ok_when_the_developer_writes() {
     let temp = tempfile::tempdir().unwrap();
     let root = temp.path();
-    write(
-        &root.join("workspace/project.godot"),
-        "config_version=5\n",
-    );
+    write(&root.join("workspace/project.godot"), "config_version=5\n");
     let script: Vec<FakeStep> = vec![
         FakeStep::new(Role::Planner).writing(".hoh/plan.md", OK_PLAN),
         FakeStep::new(Role::Developer)

@@ -353,7 +353,11 @@ async fn business_errors_never_count_toward_the_streak() {
             "round {round}: three business errors are not a dead endpoint: {state:?}"
         );
     }
-    assert_eq!(double.served(), 4, "all four calls really reached the endpoint");
+    assert_eq!(
+        double.served(),
+        4,
+        "all four calls really reached the endpoint"
+    );
 
     // The endpoint dies.  One real transport failure leaves the streak at 1 —
     // which is only possible if the three business errors above added nothing.
@@ -433,12 +437,7 @@ async fn the_editor_endpoint_state_is_separate() {
     call_game(&channel, "running_game_get_scene_tree", 1)
         .await
         .expect_err("the game endpoint is dead");
-    assert!(
-        channel
-            .endpoint_state(&game_endpoint)
-            .unwrap()
-            .unavailable
-    );
+    assert!(channel.endpoint_state(&game_endpoint).unwrap().unavailable);
 
     // The editor is alive and keeps working, and it is not marked dead.
     channel

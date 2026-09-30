@@ -23,8 +23,8 @@ use crate::model::{
 use crate::prompts;
 use crate::runtime::evidence::write_evidence;
 use crate::runtime::invoke::{
-    attempt_trajectory, invoke_once, is_limits_exceeded, render_prompt_with_budget_and_shell, role_env,
-    WRAP_UP_RETRY_CONTEXT,
+    attempt_trajectory, invoke_once, is_limits_exceeded, render_prompt_with_budget_and_shell,
+    role_env, WRAP_UP_RETRY_CONTEXT,
 };
 use crate::runtime::policy::{
     assert_unchanged, diff_manifests, hash_tree, tree_manifest, HashExcludes,
@@ -150,7 +150,8 @@ pub fn failed_run_summary(run_id: &str, error: &anyhow::Error) -> RunSummary {
     }
 }
 
-fn now_seconds() -> u64 {    SystemTime::now()
+fn now_seconds() -> u64 {
+    SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|duration| duration.as_secs())
         .unwrap_or(0)
@@ -835,8 +836,7 @@ pub async fn run(
                 crate::runtime::record::WRAP_UP_ARTIFACT_MISSING.to_string();
             let mut wrap_base = developer.clone();
             wrap_base.limits.step_limit = cfg.agent.wrap_up_steps.min(WRAP_UP_RETRY_MAX_STEPS);
-            wrap_base.system_prompt =
-                render_prompt_with_budget_and_shell(
+            wrap_base.system_prompt = render_prompt_with_budget_and_shell(
                 prompts::DEVELOPER_PROMPT,
                 iteration,
                 &wrap_base.limits,
@@ -1002,8 +1002,7 @@ pub async fn run(
             let repair_attempt = developer_attempts.len() as u32 + 1;
             let mut repair = developer.clone();
             repair.limits.step_limit = cfg.agent.repair_steps;
-            repair.system_prompt =
-                render_prompt_with_budget_and_shell(
+            repair.system_prompt = render_prompt_with_budget_and_shell(
                 prompts::DEVELOPER_PROMPT,
                 iteration,
                 &repair.limits,

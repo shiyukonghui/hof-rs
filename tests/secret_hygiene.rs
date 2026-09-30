@@ -106,7 +106,14 @@ fn meta_json_is_redacted_at_the_sink() {
     );
     // DR-44: the new `engine` block must be subject to the same hygiene, and it
     // must actually be present (a missing block is a contract violation).
-    for key in ["kind", "binary", "version_string", "mcp", "listener", "checked_at"] {
+    for key in [
+        "kind",
+        "binary",
+        "version_string",
+        "mcp",
+        "listener",
+        "checked_at",
+    ] {
         assert!(
             value["engine"].get(key).is_some(),
             "meta.json.engine.{key} must exist (DR-44): {raw}"

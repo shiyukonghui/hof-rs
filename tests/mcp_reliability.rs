@@ -308,18 +308,31 @@ async fn the_retry_classifier_is_the_single_decider() {
         Reply::Transport(transport.clone()),
         Reply::Transport(transport),
     ]);
-    let failure = call_with_retries(&channel, Role::Tester, "running_game_get_scene_tree", json!({}), 3, 0, None)
-        .await
-        .expect_err("every attempt is a transport failure");
+    let failure = call_with_retries(
+        &channel,
+        Role::Tester,
+        "running_game_get_scene_tree",
+        json!({}),
+        3,
+        0,
+        None,
+    )
+    .await
+    .expect_err("every attempt is a transport failure");
     assert_eq!(
         channel.call_count(),
         4,
         "a transport failure is retryable, so the ring really retries (DR-56 ②)"
     );
     assert_eq!(failure.attempts, 4, "the last real failure is reported");
-    assert_eq!(failure.code, None, "a transport failure has no JSON-RPC code");
+    assert_eq!(
+        failure.code, None,
+        "a transport failure has no JSON-RPC code"
+    );
     assert!(
-        failure.message.contains("Error encountered in the status line"),
+        failure
+            .message
+            .contains("Error encountered in the status line"),
         "the transport text survives verbatim: {failure:?}"
     );
 
@@ -328,9 +341,17 @@ async fn the_retry_classifier_is_the_single_decider() {
     let channel = ScriptedChannel::new(vec![Reply::Plain(
         "game_endpoint_unavailable: no game endpoint is registered".to_string(),
     )]);
-    let failure = call_with_retries(&channel, Role::Tester, "running_game_get_scene_tree", json!({}), 3, 0, None)
-        .await
-        .expect_err("the unclassified failure is returned");
+    let failure = call_with_retries(
+        &channel,
+        Role::Tester,
+        "running_game_get_scene_tree",
+        json!({}),
+        3,
+        0,
+        None,
+    )
+    .await
+    .expect_err("the unclassified failure is returned");
     assert_eq!(
         channel.call_count(),
         1,

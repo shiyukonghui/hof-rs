@@ -89,8 +89,16 @@ fn fixture_env(view: &Path) -> BTreeMap<String, String> {
 /// `sh` script.  It writes the nonce it was given, so a marker can only exist
 /// if *this* command line really ran.
 fn stub_path(view: &Path) -> String {
-    let name = if cfg!(windows) { "hoh_stub.cmd" } else { "hoh_stub.sh" };
-    view.join(".hoh").join("stub").join(name).to_string_lossy().into_owned()
+    let name = if cfg!(windows) {
+        "hoh_stub.cmd"
+    } else {
+        "hoh_stub.sh"
+    };
+    view.join(".hoh")
+        .join("stub")
+        .join(name)
+        .to_string_lossy()
+        .into_owned()
 }
 
 fn write_stub(view: &Path) -> PathBuf {
@@ -234,7 +242,11 @@ fn materialize_args_files(command: &str, view: &Path) {
             continue;
         }
         let path = PathBuf::from(&resolved);
-        let path = if path.is_absolute() { path } else { view.join(path) };
+        let path = if path.is_absolute() {
+            path
+        } else {
+            view.join(path)
+        };
         std::fs::create_dir_all(path.parent().unwrap_or(view)).unwrap();
         std::fs::write(&path, b"{}").unwrap();
     }
