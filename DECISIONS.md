@@ -10626,3 +10626,42 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 - 队列：**（等 SMOKE-T10 完成消息 → 提交报告 → 派独立验收）→ 按验收结论决定 DR-72（F-T10-1 + `node_path` + D1/D2/竞态）→ 然后向用户确认"全新空白工程用哪份 spec" → 再跑真机**。
 - 回滚点：SMOKE-T10 只新增 `runs/smoke-t10/**`（232 文件）与 `.spec/hof-rs/tasks/TASK-SMOKE-T10-evidence/**`；五条真机基线均不得覆盖。
 
+## D277 — **用户已确认的两个范围决定** + SMOKE-T10 的闭合项 + **我的模式更正**（结论性决策移到验收之后）
+
+- 日期：2026-09-30。**本条只记"用户已确认的范围决定"与本轮**完成消息确认的事实**，不含对未验收结论的裁决**（见末尾的规则更正）。
+- **用户决定 1（我按此执行）**：**判据(1) 的"全新空白工程"沿用已冻结的 `PRD-mario.md`**
+  ⇒ **不引入新 PRD ⇒ 无目标范围变更**；`PRD-mario.md` **逐字节冻结**这条硬约束**继续成立**。
+  ⇒ 判据(1) 的满足方式明确为：**同一份 PRD + 一个真正全新的空工程**上重跑整轮。
+- **用户决定 2（我按此执行）**：**E3 的两个缺口按产品缺陷处理**——**金币从未被拾取**（`Coins: 0` 全程不变）、
+  **胜利从未被驱动**（`Goal.reached=false`）⇒ **先诊断根因（游戏脚本缺陷 / 工具契约 / 计划覆盖），再让流水线自己产出正确行为**；
+  **禁止手工替它写游戏**（那会绕开"流水线可用"这一目标本身）。
+- **SMOKE-T10 完成消息确认的闭合项（这些是"完成消息+原始证据"，非我的裁决）**：
+  1. **头号诊断由红转绿（真机）**：route 在 **17:29:01（第一个角色之前）** 发布且 pid 存活、`HOH_GAME_ROUTE` 交付给角色、**轮末 route 文件不存在**；
+     **Tester 执行 23 次 `hoh tools call running_game_*`** 并拿到真实引擎回包（如 `running_game_get_node_properties` → `Coins: 0` 的 Label）；
+     **整棵 run 树 0 次 `game_endpoint_unavailable`**；**Developer 只用 `editor_*`（0 次 `running_game`、0 次裸 HTTP）**。
+     ⇒ **DR-69（跨进程发布）/DR-70（整轮生命周期）/DR-71（就绪后发布 + 失败必清）三批的路由工作在真机上被证实**；
+     **Developer"自造客户端烧光预算"的行为模式消失**。
+  2. **DR-68 的 Tester 证据形状修复首次真机生效**：仅 `tester.attempt1.json`、`exit_status=Submitted`、`artifact_valid=true`、
+     **0 次 `schema_failure`、0 次 `RepeatedFormatError`** ⇒ **DR-68 的 R-1 以真机证据闭合**。
+  3. **无任何修复尝试**（`repair_retry_used=false`、无 `developer.attempt3`、无 `launch_gate_repair`）；
+     **闸门被评估且开启**（`applicable=true, launchable=true, reasons=[]`）；**无过期编辑器日志关门**（`editor_errors_baseline count=1`，仅信息性 banner）
+     ⇒ **DR-68 ② 双向都不空**；`wrap_up_retry_used=true` 是**步数预算收尾**（`artifact_missing`）且**确实写了工程**。
+  4. **64 KiB 上限生效**：`main.gd` 80800→65536（`original_bytes=80800`）、`input_replay.json` 147809→65536；
+     **任一轨迹最大消息 65,886 B**；**t9 的 15.5 MB 回放未复现**（DR-68 ③ 兑现）。
+  5. **零增量未发生**：`warnings.log` 仅 2 行（DR-61 隔离 + qa_scope），**无 `Zero-increment shape`、无 `no_progress`、无 `no_engineering_write`**。
+  6. **F-T10-1（新 major，根因精确）**：`src/runtime/secrets.rs:70-98` 用 `find([';','\n','\r'])` 定位值尾，**不识别 JSON 转义的 `\n`**；
+     当赋值位于 JSON 字符串内且后随物理换行时，**吃到行尾并删掉字符串其余部分、闭引号与逗号**
+     ⇒ `runs/smoke-t10/iter-1/traj/tester.attempt1.json` **非法 JSON**（char 412870，正是 `HOH_MODEL_API_KEY=<redacted>` 处）；
+     **它用逐行模拟复现了该损坏**。**建议**：把 `\n`/`\r` 也纳入匹配、或 **parse-rewrite-serialize**、或**改写前先验证可解析性**，并加对抗性测试。
+     ⇒ **印证 D276 的裁决**：**今后一律"旁注/生成式"脱敏，禁止就地改写被冻结或被轮次读取的证据**。
+  7. **F-T10-3**：`evidence_diff` **仍为空而实际改了 7 个文件** ⇒ **DR-68 的 R7 现在可判"未实现"**（t9 时无法区分）。
+  8. **`.workspace/mario/-p` 已被本轮 Developer `rmdir` 清掉**（活工作区干净；**历史 `A0` 快照与 planner-view 仍含它**，属只读证据，不改）。
+- **我的模式更正（接受验收者的批评）**：这条批评成立——**我反复在"该轮验收之前"就往 `DECISIONS.md` 写结论性条目**（T9、T10 皆然）。
+  ⇒ **新规则**：`DECISIONS.md` 里**写在验收之前**的条目**只允许**包含
+  **（i）用户已确认的范围/优先级决定**、**（ii）子代理完成消息中的事实转述**（明确标注"待验收"）；
+  **任何"判定/裁决/结论"必须等独立验收到达之后再写**，且**须与验收结论对照**（冲突时以验收为准并更正）。
+  本条即按此规则书写。
+- 队列：**等 SMOKE-T10 验收 → 若 pass 推送** → **DR-72（F-T10-1 + F-T10-3 + `node_path` 参数契约 + D1/D2/竞态）** →
+  **DR-73（E3 产品缺陷：金币可拾取、胜利可达——先诊断后修，禁止手工写游戏）** → **全新空白工程真机轮（沿用 `PRD-mario.md`）**。
+- 回滚点：五条真机基线不得覆盖；`DECISIONS.md` 本条可在验收后按结论增补而**不得静默改写**。
+
