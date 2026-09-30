@@ -497,6 +497,30 @@ impl ToolChannel for FakeToolChannel {
     }
 }
 
+/// DR-65: accept one connection from a **polling** accept loop and put the
+/// socket back into blocking mode.
+///
+/// On Windows an `accept()`ed socket inherits the listener's non-blocking flag,
+/// so a double whose read path assumes blocking returns `WouldBlock` before the
+/// client's request has arrived, closes the connection and never answers.  The
+/// client then reports a "status line" transport error (10053/10054).  Every
+/// loopback JSON-RPC double in this repository goes through this one function,
+/// so the shape cannot come back in one file while the others are fixed.
+///
+/// `None` means "nothing to accept right now" (the polling case); a genuine
+/// accept error is also `None`, because the callers' loops are stop-flag driven.
+pub fn accept_blocking(listener: &std::net::TcpListener) -> Option<std::net::TcpStream> {
+    match listener.accept() {
+        Ok((stream, _peer)) => {
+            stream
+                .set_nonblocking(false)
+                .expect("an accepted stream must block on reads");
+            Some(stream)
+        }
+        Err(_) => None,
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------

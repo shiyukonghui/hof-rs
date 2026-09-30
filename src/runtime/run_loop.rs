@@ -357,6 +357,24 @@ fn manifest_or_empty(
     tree_manifest(root, excludes).unwrap_or_default()
 }
 
+/// DR-69: how many files are under `root` (0 when it does not exist).
+///
+/// Used only to say *which* zero-increment shape a round produced: "the
+/// Developer wrote, but only outside the project" and "the Developer wrote
+/// nothing at all" are two different facts, and the artifact hash is silent
+/// about both.
+fn count_files(root: &Path) -> u64 {
+    let mut count = 0u64;
+    for entry in walkdir::WalkDir::new(root).follow_links(false) {
+        if let Ok(entry) = entry {
+            if entry.file_type().is_file() {
+                count += 1;
+            }
+        }
+    }
+    count
+}
+
 /// DR-69 ③: move an aborted attempt's evidence out of the way **before** its
 /// directory is deleted ("save first, then clean").
 ///
@@ -1040,13 +1058,30 @@ pub async fn run(
             // nothing tested (`developer_write_deadline` is rendered into the
             // prompt but never compared against anything here), and a runtime
             // message may not assert a check that does not exist.
+            // DR-69: the gate is a measurement of the artifact tree, and the
+            // task book asks which zero-increment shape a round produced.  The
+            // hash cannot answer that on its own, but "did the Developer write
+            // anywhere at all?" can be measured: the scratch directory is where
+            // DR-28 sends every probe.  Both facts are recorded, and the
+            // ambiguity that remains is stated rather than hidden.
+            let scratch_files = count_files(&workspace.join(".hoh/scratch"));
+            let shape = if scratch_files == 0 {
+                "the Developer produced no write at all"
+            } else {
+                "the Developer wrote, but every write went to an excluded path"
+            };
             append_warning(
                 &run_dir,
                 &format!(
                     "iteration {iteration}: contract violation {} (the developer stage ended \
                      with no engineering write: no file in the artifact tree outside the \
                      hash-excluded runtime paths changed; every write went to an excluded path \
-                     such as `.hoh/scratch`, `.godot/**` or `.import/**`)",
+                     such as `.hoh/scratch`, `.godot/**` or `.import/**`). Zero-increment shape: \
+                     {scratch_files} file(s) under `.hoh/scratch` at the gate, so {shape}. \
+                     This gate measures the artifact tree, so it cannot distinguish `the \
+                     project needed no change` from `the Developer changed nothing`: both are \
+                     the same measurement, and the criterion it serves (E1) is stated for a \
+                     project the Developer is meant to change.",
                     violation.code()
                 ),
             )?;
@@ -1552,6 +1587,9 @@ pub async fn run(
         // DR-28: report-only hygiene of the frozen `A_t`.
         result.artifact_hygiene = crate::model::ArtifactHygiene {
             suspicious_files: crate::runtime::hygiene::suspicious_files(&workspace),
+            // DR-69: the `-p` directory a `mkdir -p` under cmd leaves behind is
+            // invisible to the file scan and to the hash.
+            suspicious_directories: crate::runtime::hygiene::suspicious_directories(&workspace),
         };
         // DR-39: the PRD coverage travels with the gate, so `exit 0 + gate ok`
         // can never be read as "the product is good" on its own.

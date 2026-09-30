@@ -37,6 +37,8 @@
 //! Everything here is offline: one loopback port the kernel assigns
 //! (`127.0.0.1:0`), no Godot, no engine port, no network.
 
+mod common;
+
 use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -111,8 +113,8 @@ impl CountingJsonRpc {
         let thread_stop = stop_signal.clone();
         let handle = std::thread::spawn(move || {
             while thread_stop.load(Ordering::SeqCst) == 0 {
-                match listener.accept() {
-                    Ok((stream, _peer)) => {
+                match common::accept_blocking(&listener) {
+                    Some(stream) => {
                         // THE COUNTER: one real connection reached this endpoint.
                         thread_accepted.fetch_add(1, Ordering::SeqCst);
                         if Mode::from_usize(thread_mode.load(Ordering::SeqCst))
@@ -123,10 +125,12 @@ impl CountingJsonRpc {
                             serve_one(stream);
                         }
                     }
-                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                    None => {
+                        if thread_stop.load(Ordering::SeqCst) != 0 {
+                            break;
+                        }
                         std::thread::sleep(Duration::from_millis(2));
                     }
-                    Err(_) => break,
                 }
             }
         });

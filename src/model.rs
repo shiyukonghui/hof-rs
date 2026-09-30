@@ -338,6 +338,12 @@ pub struct BatteryPassSummary {
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ArtifactHygiene {
     pub suspicious_files: Vec<String>,
+    /// DR-69: suspicious **directories**.  `smoke-t9` left a literal `-p`
+    /// directory in the project root under cmd (`mkdir -p` treats `-p` as a
+    /// name); it is invisible to the content hash and to a file-only scan, and
+    /// it was copied into every version snapshot.
+    #[serde(default)]
+    pub suspicious_directories: Vec<String>,
 }
 
 /// Contract violations detected by the runtime (never silently ignored).

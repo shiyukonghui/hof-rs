@@ -619,6 +619,83 @@ fn the_gate_message_describes_the_condition_the_gate_checks() {
 // ---------------------------------------------------------------------------
 // ②c DEF-6 — the prompt's exclusion account must match the runtime's set
 // ---------------------------------------------------------------------------
+// DR-69 (DR-67 DEF-A) -- the failure finalisation is reachable from a test
+// ---------------------------------------------------------------------------
+
+/// DR-67's independent acceptance measured the gap: the persistence was correct,
+/// but its **only** call site was inside `cli_impl::run`, whose mandatory doctor
+/// pre-check needs the model endpoint -- so no offline test could execute the
+/// branch that writes `runs/<id>/exit_code` and `meta.json.exit_code`, and
+/// deleting it would have reopened DEF-2 silently (their `caller-glue-off` plant
+/// left the whole suite green).
+///
+/// The branch now lives in `cli_impl::run_round_and_finalize`, and this test
+/// drives it with a real round that really fails: a zero-increment Developer,
+/// the same fixture `a_zero_increment_round_that_finishes_normally_also_fails`
+/// uses.
+#[tokio::test]
+async fn the_real_round_path_persists_a_failing_rounds_verdict() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    write(&root.join("workspace/project.godot"), "config_version=5\n");
+
+    let mut cfg = test_config(root, 1);
+    cfg.runtime.spec = root.join("spec.md");
+    let spec = write_spec(root);
+    let run_dir = cfg.runtime.runs_dir.join("run-1");
+    let orchestrator = hof_rs::runtime::run_loop::Orchestrator {
+        harness: Box::new(FakeHarness::new(
+            zero_increment_script_that_finishes_normally(),
+        )),
+        adapter: Box::new(FakeAdapter::new().with_developer_artifact_valid(true)),
+        tools: std::sync::Arc::new(FakeToolChannel::new()),
+        cfg,
+        ablation: Ablation::default(),
+        force_init: true,
+        start_state: hof_rs::runtime::start_state::StartState::as_is(),
+    };
+
+    let error = hof_rs::cli_impl::run_round_and_finalize(orchestrator, &spec, "run-1", &run_dir)
+        .await
+        .expect_err("a zero-increment round must fail");
+    assert!(
+        matches!(
+            hof_rs::errors::as_hof_error(&error),
+            Some(hof_rs::errors::HofError::Contract {
+                violation: ContractViolation::NoEngineeringWrite,
+                ..
+            })
+        ),
+        "the failure must be the contract class, got {error:?}"
+    );
+
+    // Both files the DR-27 contract promises exist **because** the failure
+    // branch ran, and they carry the class the error itself has.
+    let code = read(&root.join("runs/run-1/exit_code"));
+    assert_eq!(
+        code.trim(),
+        "2",
+        "the persisted code must be the contract class"
+    );
+    let meta: Value =
+        serde_json::from_str(&read(&root.join("runs/run-1/meta.json"))).expect("meta.json");
+    assert_eq!(meta["exit_code"], json!(2), "{meta}");
+    assert_eq!(meta["artifact_gate"]["applicable"], json!(false), "{meta}");
+
+    // DR-69: the gate's own message now also states which zero-increment shape
+    // it measured, and the ambiguity it cannot resolve.
+    let warnings = read(&root.join("runs/run-1/warnings.log"));
+    assert!(
+        warnings.contains("Zero-increment shape:"),
+        "the gate must say which zero-increment shape it measured: {warnings}"
+    );
+    assert!(
+        warnings.contains("cannot distinguish"),
+        "and it must state the ambiguity it cannot resolve: {warnings}"
+    );
+}
+
+// ---------------------------------------------------------------------------
 
 /// The prompt may only promise what the hash actually ignores.
 ///

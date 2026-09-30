@@ -56,13 +56,58 @@ pub fn known_secrets(cfg: &HohConfig) -> Vec<String> {
     secrets
 }
 
+/// DR-69: erase the **assignment** to a known secret variable, not only the
+/// secret's value.
+///
+/// The round that exposed this never leaked a key: the Developer ran
+/// `set | findstr /i "HOH"`, and the harness's own `DSH_TERM_CMD` was written
+/// into the trajectory and then into a committed evidence file as
+/// `export HOH_MODEL_API_KEY="$(cat /c/Users/.../keyval.txt)"; ...`.  No file
+/// contained the credential, but every file recorded **where it lives**.  A
+/// value-substitution scan cannot see that: the dangling reference contains no
+/// secret.  The variable name is the thing that must not survive, so the whole
+/// assignment is replaced.
+pub fn redact_secret_assignments(text: &str) -> String {
+    let mut out = text.to_string();
+    for name in SECRET_ENV_VARS {
+        let needle = format!("{name}=");
+        let mut search_from = 0usize;
+        loop {
+            let Some(found) = out[search_from..].find(needle.as_str()) else {
+                break;
+            };
+            let start = search_from + found;
+            let value_start = start + needle.len();
+            let value_end = if out.as_bytes().get(value_start) == Some(&b'"') {
+                match out[value_start + 1..].find('"') {
+                    Some(relative) => value_start + 1 + relative + 1,
+                    None => out.len(),
+                }
+            } else {
+                out[value_start..]
+                    .find([';', '\n', '\r'])
+                    .map(|relative| value_start + relative)
+                    .unwrap_or(out.len())
+            };
+            let replacement = format!("{needle}{REDACTED}");
+            out.replace_range(start..value_end, &replacement);
+            search_from = start + replacement.len();
+        }
+    }
+    out
+}
+
 /// Scan every file under `root` and replace every occurrence of a known secret
 /// with `<redacted>`.
 ///
 /// Returns the number of **files** that contained at least one secret.  The
 /// secret value itself is never printed.
 pub fn redact_tree(root: &Path, secrets: &[String]) -> anyhow::Result<u64> {
-    if secrets.is_empty() || !root.exists() {
+    // DR-69: the assignment rule needs no secret value, so the scan runs even
+    // when no credential is configured -- the credential's *location* is what
+    // leaked in `smoke-t9`, and that leak has nothing to do with whether this
+    // process can resolve the key itself.
+    if !root.exists() {
         return Ok(0);
     }
     let mut hits = 0u64;
@@ -77,14 +122,16 @@ pub fn redact_tree(root: &Path, secrets: &[String]) -> anyhow::Result<u64> {
         let Ok(text) = String::from_utf8(bytes) else {
             continue;
         };
-        let mut redacted = text.clone();
-        let mut changed = false;
+        let before = text.clone();
+        let mut redacted = text;
         for secret in secrets {
             if redacted.contains(secret.as_str()) {
                 redacted = redacted.replace(secret.as_str(), REDACTED);
-                changed = true;
             }
         }
+        // DR-69: and the assignment itself, whatever the value was.
+        redacted = redact_secret_assignments(&redacted);
+        let changed = redacted != before;
         if changed {
             std::fs::write(entry.path(), redacted.as_bytes())?;
             hits += 1;
@@ -104,6 +151,44 @@ mod tests {
         for name in SECRET_ENV_VARS {
             assert_eq!(env.get(*name).map(String::as_str), Some(""));
         }
+    }
+
+    /// DR-69: an environment dump must not record where the credential lives.
+    #[test]
+    fn an_environment_dump_does_not_leak_the_credential_channel() {
+        let dumped = "cd /f/x; export HOH_MODEL_API_KEY=\"$(cat /c/Users/u/AppData/Local/\
+                      Temp/t9/keyval.txt)\"; set HOH=1";
+        let redacted = redact_secret_assignments(dumped);
+        assert!(
+            !redacted.contains("keyval.txt"),
+            "the key file's path must not survive: {redacted}"
+        );
+        assert!(
+            redacted.contains(&format!("HOH_MODEL_API_KEY={REDACTED}")),
+            "{redacted}"
+        );
+        // The bare `cmd` spelling (`set NAME=value`) is the same leak.
+        let redacted = redact_secret_assignments("set OPENAI_API_KEY=abc123; echo hi");
+        assert!(!redacted.contains("abc123"), "{redacted}");
+        assert!(redacted.contains("echo hi"), "{redacted}");
+        // Text that assigns nothing is untouched, byte for byte.
+        assert_eq!(redact_secret_assignments("echo hello\n"), "echo hello\n");
+    }
+
+    /// DR-69: the file-level scan applies both rules, and reports one hit per
+    /// changed file.
+    #[test]
+    fn the_tree_scan_redacts_an_assignment_without_a_known_value() {
+        let temp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            temp.path().join("dump.txt"),
+            "export HOH_MODEL_API_KEY=\"$(cat /secret/path/keyval.txt)\";\n",
+        )
+        .unwrap();
+        let hits = redact_tree(temp.path(), &[]).expect("the scan runs without secrets");
+        assert_eq!(hits, 1);
+        let text = std::fs::read_to_string(temp.path().join("dump.txt")).unwrap();
+        assert!(!text.contains("keyval.txt"), "{text}");
     }
 
     #[test]

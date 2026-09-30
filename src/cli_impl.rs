@@ -606,17 +606,12 @@ pub async fn run(args: RunArgs) -> anyhow::Result<i32> {
     // lives here, on the caller's error path, where a test can drive it with the
     // real `anyhow::Error`.  Every real failure of `run_loop::run` reaches this
     // branch, because `run_loop` creates the run directory before any role runs.
-    let summary = match run_round_in(orchestrator, &spec, &run_id).await {
-        Ok(summary) => summary,
-        Err(error) => {
-            let failed = run_loop::failed_run_summary(&run_id, &error);
-            // Best effort: a filesystem failure while recording the verdict must
-            // never replace the round's own error.  Idempotent, so re-running a
-            // failed round rewrites the same numbers.
-            let _ = finalize_run(&run_dir, &failed);
-            return Err(error);
-        }
-    };
+    // DR-69 (DR-67 DEF-A): the branch is not written here any more -- it lives
+    // in [`run_round_and_finalize`], where an offline test can execute it.  The
+    // defect was that the *only* caller of `failed_run_summary` + `finalize_run`
+    // was this function, whose mandatory doctor pre-check needs the model
+    // endpoint, so no test could reach it.
+    let summary = run_round_and_finalize(orchestrator, &spec, &run_id, &run_dir).await?;
     println!(
         "run {} finished: {} iteration(s), final version {:?}, total tokens {:?}",
         summary.run_id,
@@ -686,6 +681,36 @@ pub async fn run_round_in(
     run_id: &str,
 ) -> anyhow::Result<run_loop::RunSummary> {
     run_loop::run(&orchestrator, spec, run_id).await
+}
+
+/// DR-69 (DR-67 DEF-A): the round **and** its failure finalisation, in one
+/// callable function.
+///
+/// DR-67 made the persistence correct but left its single call site
+/// (`cli_impl::run`'s `match`) with no executable coverage: that function
+/// performs the mandatory doctor probe, which needs the model endpoint, so an
+/// offline test can never reach the branch that persists a failed round's
+/// verdict -- and deleting the branch would have reopened DEF-2 silently.  The
+/// branch lives here now, and `tests/e1_increment.rs` drives it with a real
+/// round that really fails.
+///
+/// Best effort on the write: a filesystem failure while recording the verdict
+/// must never replace the round's own error.  Idempotent, so re-running a failed
+/// round rewrites the same numbers.
+pub async fn run_round_and_finalize(
+    orchestrator: run_loop::Orchestrator,
+    spec: &crate::model::Spec,
+    run_id: &str,
+    run_dir: &Path,
+) -> anyhow::Result<run_loop::RunSummary> {
+    match run_round_in(orchestrator, spec, run_id).await {
+        Ok(summary) => Ok(summary),
+        Err(error) => {
+            let failed = run_loop::failed_run_summary(run_id, &error);
+            let _ = finalize_run(run_dir, &failed);
+            Err(error)
+        }
+    }
 }
 
 /// DR-66 ④: the **round's** exit code.

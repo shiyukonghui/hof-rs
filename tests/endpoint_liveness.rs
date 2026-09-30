@@ -15,6 +15,8 @@
 //! Everything here is offline: the endpoints are loopback doubles, and the dead
 //! one is a loopback port that was bound and closed.
 
+mod common;
+
 use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -71,21 +73,20 @@ impl ScriptedMcp {
         let thread_shutdown = shutdown.clone();
         let handle = std::thread::spawn(move || {
             while thread_shutdown.load(Ordering::SeqCst) == 0 {
-                match listener.accept() {
-                    Ok((stream, _)) => {
+                match common::accept_blocking(&listener) {
+                    Some(stream) => {
                         thread_served.fetch_add(1, Ordering::SeqCst);
-                        // DR-60: state the mode instead of inheriting the
-                        // listener's non-blocking flag — `serve` below is a
-                        // blocking reader.
-                        stream
-                            .set_nonblocking(false)
-                            .expect("an accepted stream must block on reads");
+                        // DR-60/DR-65: the mode is stated by `accept_blocking`,
+                        // never inherited from the listener's flag -- `serve`
+                        // below is a blocking reader.
                         serve(stream, thread_business.load(Ordering::SeqCst) != 0);
                     }
-                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                    None => {
+                        if thread_shutdown.load(Ordering::SeqCst) != 0 {
+                            break;
+                        }
                         std::thread::sleep(Duration::from_millis(2));
                     }
-                    Err(_) => break,
                 }
             }
         });

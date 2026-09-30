@@ -13,6 +13,8 @@
 //!
 //! Everything here is offline: the endpoints are loopback HTTP doubles.
 
+mod common;
+
 use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::path::Path;
@@ -56,12 +58,14 @@ impl RecordingMcp {
         let thread_shutdown = shutdown.clone();
         let handle = std::thread::spawn(move || {
             while !thread_shutdown.load(Ordering::SeqCst) {
-                match listener.accept() {
-                    Ok((stream, _)) => serve(stream, &thread_tools),
-                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                match common::accept_blocking(&listener) {
+                    Some(stream) => serve(stream, &thread_tools),
+                    None => {
+                        if thread_shutdown.load(Ordering::SeqCst) {
+                            break;
+                        }
                         std::thread::sleep(Duration::from_millis(2));
                     }
-                    Err(_) => break,
                 }
             }
         });

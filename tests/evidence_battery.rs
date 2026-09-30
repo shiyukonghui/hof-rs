@@ -203,6 +203,11 @@ enum AxisMode {
     /// The double's synthetic reading, which the battery's own movement
     /// scenario uses.
     Value,
+    /// DR-69: a reading that **contradicts** the held direction -- the engine
+    /// reports `+1` while `move_left` is held.  Nothing else in the battery can
+    /// catch this shape: the sampled positions are unaffected, so only the
+    /// `INPUT_AXIS_NOT_CHANGED` branch can be red for it.
+    WrongSign,
     /// The real `smoke-t7` reading: `input_axis` is `null` in every sample and
     /// the scenario's assert says the node "does not have the property", so the
     /// axis can carry no evidence at all.  Reachability must then come from
@@ -879,7 +884,10 @@ impl ToolChannel for FixtureChannel {
                     // DR-68 ③: the reading is the game's real axis — both
                     // directions held ⇒ `0`, which is what made `smoke-t8`'s
                     // `move_left` window immobile whichever implementation it had.
-                    let axis = if self.game_input == GameInputMode::Ok {
+                    let axis = if self.axis == AxisMode::WrongSign {
+                        // DR-69 (DEF-1): a reading that contradicts `move_left`.
+                        1.0
+                    } else if self.game_input == GameInputMode::Ok {
                         self.game_axis()
                     } else {
                         0.0
@@ -3445,6 +3453,41 @@ async fn a_dead_axis_is_red_in_the_positional_assertion_too() {
         replay.record.observation.contains("POSITION_UNCHANGED")
             || replay.record.observation.contains("INPUT_HAD_NO_EFFECT"),
         "the observation must name the failure: {}",
+        replay.record.observation
+    );
+}
+
+// ---------------------------------------------------------------------------
+// DR-69 (DEF-1) -- the axis cross-check has its own coverage
+// ---------------------------------------------------------------------------
+
+/// DR-69 (DEF-1): `INPUT_AXIS_NOT_CHANGED` (`godot.rs`) had **no** coverage --
+/// deleting the branch left all 41 battery tests green, because no fixture ever
+/// produced a reading that contradicted the held direction.  This one does.
+///
+/// The sampled positions stay correct on purpose: the failure can only come from
+/// the axis cross-check, so this test is red for that branch and nothing else.
+#[tokio::test]
+async fn an_axis_reading_that_contradicts_the_held_direction_is_red() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel = Arc::new(FixtureChannel::green().with_axis_mode(AxisMode::WrongSign));
+    let run = run_battery(root, channel, 30).await;
+
+    let replay = step(&run.records, "input_replay");
+    assert!(
+        !replay.ok,
+        "a contradictory axis reading must be red: {:?}",
+        replay.record
+    );
+    assert!(
+        replay.record.observation.contains("INPUT_AXIS_NOT_CHANGED"),
+        "the observation must name the branch that failed: {}",
+        replay.record.observation
+    );
+    assert!(
+        !replay.record.observation.contains("INPUT_HAD_NO_EFFECT"),
+        "the movement itself was correct; only the axis reading contradicted it: {}",
         replay.record.observation
     );
 }

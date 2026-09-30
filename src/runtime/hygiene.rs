@@ -170,6 +170,49 @@ pub fn suspicious_files(root: &Path) -> Vec<String> {
     found.into_iter().take(SUSPICIOUS_LIMIT).collect()
 }
 
+/// DR-69: probe/litter **directories** inside a frozen `A_t`, relative to its
+/// root.
+///
+/// `smoke-t9` produced one under `cmd`: `mkdir -p "<scratch>/args"` does not have
+/// POSIX semantics there, so it created a literal directory named `-p` next to
+/// the intended one.  The empty directory is invisible to the content hash and
+/// to [`suspicious_files`] (which only ever looks at files), and it was carried
+/// into `A_0` and every snapshot that follows.  A name that only a shell
+/// accident or an unexpanded variable can produce is reported here.
+pub fn suspicious_directories(root: &Path) -> Vec<String> {
+    let mut found = BTreeSet::new();
+    if !root.exists() {
+        return Vec::new();
+    }
+    let walker = walkdir::WalkDir::new(root)
+        .follow_links(false)
+        .into_iter()
+        .filter_entry(|entry| {
+            entry.depth() == 0 || !hygiene_ignored(&entry.file_name().to_string_lossy())
+        });
+    for entry in walker.flatten() {
+        if !entry.file_type().is_dir() || entry.depth() == 0 {
+            continue;
+        }
+        let name = entry.file_name().to_string_lossy().into_owned();
+        let lower = name.to_ascii_lowercase();
+        // A leading `-` is a shell option that was taken as a name (`-p`, `-r`);
+        // `%VAR%`/`$VAR` is an unexpanded variable; the rest are the DR-28 probe
+        // shapes applied to a directory.
+        let pattern_hit = lower.starts_with('-')
+            || lower.starts_with('_')
+            || lower.starts_with("tmp_")
+            || lower.ends_with(".bak")
+            || lower.ends_with(".tmp")
+            || name.contains('%')
+            || name.contains('$');
+        if pattern_hit {
+            found.insert(relativize(root, entry.path()));
+        }
+    }
+    found.into_iter().take(SUSPICIOUS_LIMIT).collect()
+}
+
 /// DR-26/DR-32/DR-38: does this **tool command or argument** mention the harness
 /// sources, the harness repository root, or an external repository checkout?
 /// Report-only: behaviour never changes.
@@ -728,6 +771,35 @@ mod tests {
 
         // A trajectory that is not JSON yields no evidence (never a guess).
         assert!(!mentions_forbidden_source_in_actions("not json"));
+    }
+
+    /// DR-69: the directory-shaped litter a file-only scan cannot see.  The
+    /// `-p` name is the measured one (`smoke-t9`; `mkdir -p` under cmd).
+    #[test]
+    fn suspicious_directories_sees_the_shell_accident_a_file_scan_misses() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        std::fs::create_dir_all(root.join("-p")).unwrap();
+        std::fs::create_dir_all(root.join("scripts/_helpers")).unwrap();
+        std::fs::create_dir_all(root.join("scenes")).unwrap();
+        std::fs::create_dir_all(root.join(".hoh/scratch/tmp_probe")).unwrap();
+        std::fs::create_dir_all(root.join("%TEMP%")).unwrap();
+
+        let found = suspicious_directories(root);
+        assert_eq!(
+            found,
+            vec![
+                "%TEMP%".to_string(),
+                "-p".to_string(),
+                "scripts/_helpers".to_string(),
+            ],
+            "the `-p`/`_`/`%VAR%` shapes are litter; `scenes` is content and `.hoh` is the runtime's own tree"
+        );
+        // The measured blind spot: a file-only scan reports nothing at all.
+        assert!(
+            suspicious_files(root).is_empty(),
+            "the file scan is blind to directories -- that is the defect"
+        );
     }
 
     #[test]
