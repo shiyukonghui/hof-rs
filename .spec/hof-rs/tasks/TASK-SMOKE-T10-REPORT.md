@@ -381,8 +381,10 @@ qa_scope: MCP acts on the project open in the editor (the real workspace) while 
    }
    </output>
    ```
-   计数：Tester 的轨迹里共 **46 条真正执行**的 bash 链调用 `hoh tools call running_game_*`（其余 90 处是**技能/交付文本**里的示例），
-   逐条配到的 `returncode` 以 **0** 为主；**全轮 `game_endpoint_unavailable` = 0 处**；
+   计数（精确，`scripts/tester_execcount2.py`：按每条工具结果的 `extra.actions[0].command` 取**真正执行**的命令，避免把同一命令在
+   assistant 参数与 `extra.actions` 里的两份文本重复计数）：Tester **执行了 89 条 bash 命令**，其中 **23 条**是
+   `hoh tools call running_game_*`（`get_node_properties` 11、`run_test_scenario` 10、`get_node_property_samples` 4、
+   `create/play/stop_input_recording` 各 2），命令文本里 `game_endpoint_unavailable` **0** 次。
    `.hoh/evidence/{hud-labels,camera-node,failure-state,restart-state,facing-scenario}.json` 的内容
    （`/root/Main/HUD/Lives`、`anchor_mode:1`、`GLOBAL_POSITION` 浮点、`GAME OVER - press Jump to restart`、spawn `x=60.0`）
    **只可能来自活着的游戏进程**。原文：`analysis/tester_live_cli_payload.txt`、`analysis/tester_cli.txt`。
@@ -580,7 +582,7 @@ git check-ignore -v runs/smoke-t10/meta.json → .gitignore:12:runs/
 **实测（本轮有证据）**
 
 1. E1 met：`A_0≠A_1`（7 文件）、`E_1` 被接受、整轮跑完、退出码 0 三方一致。
-2. **角色 CLI 在真机上成功到达游戏端点**（Tester 46 条 `hoh tools call running_game_*`，回包是真游戏载荷；全轮 `game_endpoint_unavailable`=0）；
+2. **角色 CLI 在真机上成功到达游戏端点**（Tester 执行 23 条 `hoh tools call running_game_*`，回包是真游戏载荷；全轮 `game_endpoint_unavailable`=0）；
    轮级路由 17:29:01 发布（第一个角色之前）、轮末撤下。
 3. **Tester 证据形状一次通过**（attempt1、Submitted、artifact_valid=true、0 schema 失败）。
 4. **E3 证据形态轮内成形、引擎接受 `position:neq`（4/4 passed）**；左右移动与跳跃成立；可交互对象不成立；胜负只失败半边成立。
