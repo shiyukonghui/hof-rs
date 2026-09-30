@@ -8,7 +8,8 @@
 - 只读基线（开工/收工逐字未变，§11.2）：`runs/smoke-t6`（135 / `c144ef32…7a9c03`）、`smoke-t7`（115 / `6e4c1595…20fb7`）、
   `smoke-t8`（358 / `6d11b2c6…bdf5a7`）、`smoke-t9`（83 / `541e2d81…36ca9d`）
 - 开工=收工 HEAD **`c932fcb38343b1e66604acc6e7bbfbbf5f15b37b`**；`origin/master` == HEAD（**ahead 0，未 push 任何东西**）
-- 我**未改**任何受控文件：`godot-mcp/**` 零改动（嵌套仓 0 行）、`PRD-mario.md` sha 未变、`DECISIONS.md` sha 开工=收工、
+- 我**未改**任何受控文件：`godot-mcp/**` 零改动（嵌套仓 0 行）、`PRD-mario.md` sha 未变、`DECISIONS.md` 我全程只读
+  （它在报告提交后由**调度者的并发提交 `87adbea`/D276** 改动，见 §11.3 与 §16.11）、
   `.workspace/mario/**` 只被**本轮 Developer 按角色权限**改（那是剧本内的写，不是我），我全程只读它
 
 ---
