@@ -242,6 +242,7 @@ fn finalize_failure(
     attempts: Vec<AttemptOutcome>,
     secret_redactions: u64,
     out_of_tree_writes: Vec<String>,
+    facts: FailureFacts,
 ) -> anyhow::Result<()> {
     write_usage(run_dir, iteration, &usage, &attempts)?;
     let result = IterResult {
@@ -250,8 +251,8 @@ fn finalize_failure(
         reason: reason.to_string(),
         issues,
         warnings,
-        candidate_id: None,
-        version_id: None,
+        candidate_id: facts.candidate_id,
+        version_id: facts.version_id,
         usage,
         durations_ms: durations,
         evidence_diff,
@@ -266,9 +267,32 @@ fn finalize_failure(
         attempts,
         secret_redactions,
         out_of_tree_writes,
+        battery_passes: facts.battery_passes,
         ..IterResult::ok()
     };
     write_iter_result(run_dir, iteration, &result)
+}
+
+/// DR-68 ④: the facts a **failed** round really produced, when it failed after
+/// they existed.
+///
+/// `smoke-t8` failed at the Tester's schema gate — i.e. after the battery had
+/// run 11/11 and after `A_1` was frozen — yet `iter-1/result.json` persisted
+/// `candidate_id: null`, `version_id: null` and `battery_passes: []`.  A reader
+/// of that one file therefore concluded "nothing happened", which is false and
+/// which breaks the reproducibility criterion on exactly the path that needs it.
+///
+/// The failure sites that run *before* the freeze (the Planner, the Developer's
+/// zero-write gate) genuinely have none of these and pass
+/// [`FailureFacts::default`]: there the stub is truthful, not lazy.
+#[derive(Clone, Debug, Default)]
+pub struct FailureFacts {
+    /// `A_t`'s content hash, once it exists.
+    pub candidate_id: Option<String>,
+    /// The snapshot store's id for that same artifact.
+    pub version_id: Option<String>,
+    /// Every battery pass the round ran, with its per-step verdicts.
+    pub battery_passes: Vec<crate::model::BatteryPassSummary>,
 }
 
 /// DR-26/DR-32/DR-38: report-only trace of a role reading the harness sources,
@@ -698,6 +722,7 @@ pub async fn run(
                         iter_attempts.clone(),
                         iter_secret_redactions,
                         iter_out_of_tree.iter().cloned().collect(),
+                        FailureFacts::default(),
                     )?;
                     return Err(error);
                 }
@@ -746,6 +771,7 @@ pub async fn run(
                 iter_attempts.clone(),
                 iter_secret_redactions,
                 iter_out_of_tree.iter().cloned().collect(),
+                FailureFacts::default(),
             )?;
             return Err(HofError::contract(violation).into());
         }
@@ -953,6 +979,9 @@ pub async fn run(
                 iter_attempts.clone(),
                 iter_secret_redactions,
                 iter_out_of_tree.iter().cloned().collect(),
+                // DR-68 ④: no freeze, no battery yet — the empty facts are the
+                // truth here, not a stub (see `FailureFacts`).
+                FailureFacts::default(),
             )?;
             return Err(HofError::contract(violation).into());
         }
@@ -1204,6 +1233,13 @@ pub async fn run(
                 iter_attempts.clone(),
                 iter_secret_redactions,
                 iter_out_of_tree.iter().cloned().collect(),
+                // DR-68 ④: the freeze and the battery already happened, so this
+                // failure must not erase them from `result.json`.
+                FailureFacts {
+                    candidate_id: Some(version.candidate_id.clone()),
+                    version_id: Some(version.version_id.clone()),
+                    battery_passes: battery_passes.clone(),
+                },
             )?;
             return Err(HofError::contract(ContractViolation::WorkspaceDriftBeforeQa).into());
         }
@@ -1323,6 +1359,11 @@ pub async fn run(
                 iter_attempts,
                 iter_secret_redactions,
                 iter_out_of_tree.iter().cloned().collect(),
+                FailureFacts {
+                    candidate_id: Some(version.candidate_id.clone()),
+                    version_id: Some(version.version_id.clone()),
+                    battery_passes: battery_passes.clone(),
+                },
             );
         }
         if let Err(violation) = assert_unchanged("tester/workspace", &h_ws_before, &h_ws_after) {
@@ -1339,6 +1380,11 @@ pub async fn run(
                 iter_attempts,
                 iter_secret_redactions,
                 iter_out_of_tree.iter().cloned().collect(),
+                FailureFacts {
+                    candidate_id: Some(version.candidate_id.clone()),
+                    version_id: Some(version.version_id.clone()),
+                    battery_passes: battery_passes.clone(),
+                },
             );
         }
 
@@ -1365,6 +1411,14 @@ pub async fn run(
                     iter_attempts.clone(),
                     iter_secret_redactions,
                     iter_out_of_tree.iter().cloned().collect(),
+                    // DR-68 ④: this is the `smoke-t8` failure class — the round
+                    // froze `A_t` and ran the whole battery before the Tester's
+                    // evidence was rejected.  Persist what really happened.
+                    FailureFacts {
+                        candidate_id: Some(version.candidate_id.clone()),
+                        version_id: Some(version.version_id.clone()),
+                        battery_passes: battery_passes.clone(),
+                    },
                 )?;
                 return Err(error);
             }
@@ -1453,6 +1507,7 @@ fn fail_contract(
     attempts: Vec<AttemptOutcome>,
     secret_redactions: u64,
     out_of_tree_writes: Vec<String>,
+    facts: FailureFacts,
 ) -> anyhow::Result<RunSummary> {
     // DR-22: the violation is a note on the attempt log, not a side file.
     record_attempts(
@@ -1483,6 +1538,7 @@ fn fail_contract(
         attempts,
         secret_redactions,
         out_of_tree_writes,
+        facts,
     )?;
     Err(HofError::contract(violation).into())
 }

@@ -903,6 +903,38 @@ async fn run_battery_opts(
     }
 }
 
+/// DR-68 ④: run one iteration that is **expected to fail after the freeze**, and
+/// hand back the round's error plus its `result.json`.  `run_battery_opts`
+/// unwraps the result; this one must not, because the failure *is* the subject.
+async fn run_failing_battery(
+    root: &Path,
+    channel: Arc<FixtureChannel>,
+    ready_timeout_seconds: u64,
+    script: Vec<FakeStep>,
+    max_schema_retries: u32,
+) -> (anyhow::Error, PathBuf) {
+    let mut cfg: HohConfig = test_config(root, 1);
+    cfg.runtime.spec = root.join("spec.md");
+    cfg.runtime.max_schema_retries = max_schema_retries;
+    let spec = write_spec(root);
+    let harness = FakeHarness::new(script);
+    let adapter = godot_adapter(root, ready_timeout_seconds);
+    let run_dir = cfg.runtime.runs_dir.join("run-1");
+    let orchestrator = hof_rs::runtime::run_loop::Orchestrator {
+        harness: Box::new(harness),
+        adapter: Box::new(adapter),
+        tools: channel,
+        cfg,
+        ablation: Ablation::default(),
+        force_init: true,
+        start_state: hof_rs::runtime::start_state::StartState::as_is(),
+    };
+    let error = hof_rs::runtime::run_loop::run(&orchestrator, &spec, "run-1")
+        .await
+        .expect_err("this scenario is the failure path");
+    (error, run_dir)
+}
+
 /// The happy path plus the one targeted repair call DR-24 issues when the gate
 /// closes (the scripted channel below fails a gate step on purpose).
 fn repairing_script() -> Vec<FakeStep> {
@@ -2865,5 +2897,93 @@ async fn an_oversized_evidence_file_is_copied_and_reported() {
                 && warning.contains("frame-00.png")
                 && warning.contains(&size.to_string())),
         "the oversize must be reported with its size: {warnings:?}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// DR-68 ④ — the failure stub must carry the facts the round really produced
+// ---------------------------------------------------------------------------
+
+/// `smoke-t8` failed at the **Tester's schema gate**, i.e. *after* the battery
+/// had run 11/11 and after `A_1` was frozen, yet `iter-1/result.json` persisted
+/// `battery_passes: []`, `candidate_id: null` and `version_id: null`.  Read on
+/// its own — which is how a launcher, `status`, or the next batch reads it —
+/// that stub says "nothing happened", so the round's reproducibility criterion
+/// fails exactly where it matters.
+///
+/// This test drives the real adapter and the real battery through that failure
+/// and asserts the three fields are the round's own values, not a default.
+#[tokio::test]
+async fn a_failed_rounds_result_json_carries_the_real_battery_and_candidate() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel = Arc::new(FixtureChannel::green());
+    let script = vec![
+        FakeStep::new(Role::Planner).writing(".hoh/plan.md", OK_PLAN),
+        FakeStep::new(Role::Developer)
+            .writing("project.godot", "config_version=5\n")
+            .writing("scripts/player.gd", "extends CharacterBody2D\n"),
+        // Present but structurally invalid: the runtime rejects it, and the
+        // round fails *after* the freeze — the `smoke-t8` failure class.
+        FakeStep::new(Role::Tester).writing(".hoh/evidence.json", &bad_evidence()),
+    ];
+    let (error, run_dir) = run_failing_battery(root, channel.clone(), 30, script, 0).await;
+    let typed = hof_rs::errors::as_hof_error(&error).expect("a typed failure");
+    assert!(
+        matches!(typed, hof_rs::errors::HofError::SchemaFailure { .. }),
+        "the scenario must fail on the Tester's schema gate, got {typed:?}"
+    );
+
+    let result: Value = serde_json::from_str(&read(&run_dir.join("iter-1/result.json"))).unwrap();
+    assert_eq!(result["ok"], json!(false), "{result}");
+    assert_eq!(result["failed_role"], json!("tester"), "{result}");
+
+    // ① the candidate identity the round really froze.
+    let candidate_id = result["candidate_id"]
+        .as_str()
+        .unwrap_or_else(|| panic!("candidate_id must be the real A_1, not null: {result}"));
+    assert_eq!(
+        candidate_id.len(),
+        64,
+        "A_1 is a sha256 hex digest: {candidate_id}"
+    );
+    let version_id = result["version_id"]
+        .as_str()
+        .unwrap_or_else(|| panic!("version_id must be the real snapshot, not null: {result}"));
+
+    // …and it is the same identity the version index stores, so the value is not
+    // merely well-shaped.
+    let index: Value = serde_json::from_str(&read(&run_dir.join("versions/index.json"))).unwrap();
+    let versions = index["versions"].as_array().expect("versions");
+    assert!(
+        versions
+            .iter()
+            .any(|entry| entry["version_id"] == json!(version_id)
+                && entry["candidate_id"] == json!(candidate_id)),
+        "result.json must name the version the store actually wrote: {index}"
+    );
+
+    // ② the battery the round really ran (11 steps, all ok in this fixture).
+    let passes = result["battery_passes"].as_array().unwrap_or_else(|| {
+        panic!("battery_passes must not be empty on the failure path: {result}")
+    });
+    assert_eq!(passes.len(), 1, "one pass ran: {passes:?}");
+    let steps = passes[0]["steps"].as_array().expect("step list");
+    assert!(
+        steps.len() >= 10,
+        "the persisted pass must list every battery step, not a stub: {steps:?}"
+    );
+    assert!(
+        steps.iter().all(|step| step[1] == json!(true)),
+        "this fixture's battery is green; the failure is the Tester's: {steps:?}"
+    );
+
+    // The report's §5 "after" evidence is this line, printed by the same run
+    // that makes the assertions (`cargo test … -- --nocapture`).
+    println!(
+        "DR-68 failure stub (after): candidate_id={candidate_id} version_id={version_id} \
+         battery_passes={} steps={}",
+        passes.len(),
+        steps.len()
     );
 }
