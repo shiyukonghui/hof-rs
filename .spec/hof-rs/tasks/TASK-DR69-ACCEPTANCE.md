@@ -7,6 +7,7 @@
   仓外工作目录：`C:\Users\wyl\AppData\Local\Temp\dr69acc\`（`digest.ps1`、`ws_check.py`、`plants.py`、`stale_route.py`、`redaction_diff.py`、`secret_scan.py`、`testnames.py`、`summarize.py`、`suite-final.txt`、`suite-PB2.txt`、`bak/P*.bak`）。**植入全部在 `src/**` 生产代码**，每一次都用仓外逐字节备份还原。
 - **仓库状态在我验收期间发生变化（并发活动，非被验收对象所为）**：我开工时 `HEAD=03b35dd`（7 个 DR-69 提交）；验收中新增 **`6ebb75d`（2026-09-30 13:14:51，`docs(spec): D272`）**，由**调度者**把 `TASK-DR69-REPORT.md` 与 D272 入库 ⇒ 我的门/守卫是在 `03b35dd` 上测的，文件/摘要判定在 `6ebb75d` 上复核过（`03b35dd..6ebb75d` 只加报告与 `DECISIONS.md`，不动任何被验收的 `src/tests` 字节）。`origin/master` 全程 `9aebbe15…`（未 push），ahead 7 → 8。
 - 摘要口径见 §7.1（PowerShell 5.1 / zh-CN / 文化排序 / 仓根相对小写 POSIX 路径 + 字节数 + SHA256）。
+- **验收者对自身报告的最小修正（显式披露）**：本报告首次写入后，我按 D271 的教训用 `json.loads` 校验 §0 的结构化块，发现 `C1-route-realflow` 的 `evidence` 里有两个**未转义的 ASCII 双引号**（`…没有披露"发布窗口…"这一事实…`）导致整块不可解析；我把那两个引号改成 `『』`（**唯一改动，语义不变**）。之后未再修改本文件。
 
 ---
 

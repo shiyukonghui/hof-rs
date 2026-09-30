@@ -10480,7 +10480,7 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 
 ## D273 — DR-69 验收 **fail**（正确）：选路 (A) **放错时机**（发布窗口与角色窗口**不相交**）；另五处 fail；**我的新设计决定**（整轮发布 + 新鲜度校验 + 三处交付材料一致性 + 接线覆盖 + 恢复被毁证据）
 
-- 日期：2026-09-30。`TASK-DR69-ACCEPTANCE.md`：**`verdict = fail`**（1 major + 1 moderate + 6 minor + 3 info）。
+- 日期：2026-09-30。`TASK-DR69-ACCEPTANCE.md`：**`verdict = fail`**（1 major + 1 moderate + **5 minor + 3 info**；criteria 19 条，11 pass / 8 fail）。
   **我裁定 fail 成立且重要**——它揭示的是**设计层**错误，不是实现瑕疵。
 - **D1（major）：选路 (A) 在当前流程里帮不到任何角色。** 事实（验收者给到 file:line）：
   发布点 `src/adapter/godot.rs:903` `register_game_endpoint` **只在电池的 `step_play_scene()`（`:623`）内被调用**；
