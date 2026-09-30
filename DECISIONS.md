@@ -10286,3 +10286,43 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
   4. **下一批 = DR-68（含报告更正）**，随后独立验收，再**推送**。
 - 回滚点：`runs/smoke-t8/**` 为新基线；报告更正是**文本级**，不影响任何工件字节。
 
+## D267 — DR-68 交付：**414/0/7 + fmt 干净**，八项全落；`runs/**` 零写入守规；**R6 的解析**（mario 参考值是 t8 之前的口径）
+
+- 日期：2026-09-30。交付 `.spec/hof-rs/tasks/TASK-DR68-REPORT.md`；**验收在飞**（`ac6323e1…`）；**报告完成消息已到**，故一并提交。
+- **门**：`git ls-files '*.rs' | xargs touch`（**78 个已存在文件、无通配符**、`git ls-files build.rs` = **0**）后
+  `cargo test --offline` ⇒ **EXIT=0 / 414 passed / 0 failed / 7 ignored**（≥397，`ignored` 未增）；
+  **`cargo fmt --check` exit 0**。**重要**：**开工时 fmt 并不干净（145 处 diff / 30 文件）**，
+  它加了专门的格式化提交（`d482794`）⇒ **DR-67 的 DEF-D 把范围说小了**（原以为只有 `run_loop.rs:153` 一处）。
+- **八项全落（关键落点）**：
+  ① 证据形状**首次尝试即下发**（`schema.rs:81-105/259`）；limits-break 现在允许"**在场但非法**的工件得到**恰好一次**形状重试"（`schema.rs:296`）；
+  `validate_evidence_shape` **一次列出全部记录级缺失字段**（`model.rs:629-725`）；`tester.md` 写明形状。
+  ② `editor_error_is_stale`（`godot.rs:3980`）+ `partition_editor_errors`（`:4003`）：**只有当前字节仍能复现的日志行**才关门/触发修复；**无法解释的行 fail-closed**。
+  ③ **在游戏进程内释放上一输入**（`semantic_release_action`，`godot.rs:1770`；循环 `:1958`），并在有读数时**断言轴值改变**（`:2140`）；
+  **它从冻结的 t8 原始数据复现了"注入时序假象"**：所有游戏通道注入 `pressed:true`、四个释放均为 `editor_simulate_input_action`（编辑器进程）、
+  **跳跃四元组 #22 仍在空中显示 `velocity.x=3.6667`** ⇒ `move_right` 一直按住 ⇒ `get_axis=0` ⇒ **`dx=0` 非产品缺陷**。
+  ⑧ **按目标轴**判位移 `movement_on_intended_axis`（`:2791`）：**y 上的重力不再把死掉的 x 判成位移**。
+  ④ `FailureFacts`（`run_loop.rs:289`）在冻结后的失败路径写出**真实**的 `battery_passes`/`candidate_id`/`version_id`
+  （修前全 null/[]；修后 `candidate_id=version_id=4f76c437…016d`、`battery_passes=1` 且 10 steps）。
+  ⑤ 单花括号 `{HOH_*}` 在 **3 处 `format!` 站点 + `TOOLS.md`** 修掉，且 `contains_unresolved_command_var`/`assert_fully_rendered`
+  **同时覆盖两种花括号形态**。⑥ `planner.md`/`tester.md` 写明 `COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`，
+  并用**可执行测试**证明它是 mini 唯一的合法出口。⑦ `not_applicable` 不再报 `launchable=true`，`is_open()=applicable&&launchable`，
+  未评估的门在状态里打印 `unknown`。**并就地更正 `TASK-SMOKE-T8-REPORT.md`**（旧文字保留 + 【DR-68 更正 Cn】索引）：
+  左移 ⇒"**未证实/注入时序假象**"、缺失字段 ⇒ **`type` 与 `claim_id` 两者**、E2 证据在冻结 run 目录也有、`origin/master` ⇒ `ce22e18`。
+- **非空洞性**：**9 处受控植入，全在生产代码**（无一在承载不变量的测试），各自红（含真实输出）、各自逐字节回退；
+  **`cmp` 对仓外备份是强制项**——它给出更锐利的理由：**`core.autocrlf=true` 会让行尾改写对 git 不可见**（比"hash 可能不够"更准确）。
+- **守规（实测）**：`runs/smoke-t6` 135/`c144ef32…7a9c03`、`runs/smoke-t7` 115/`6e4c1595…20fb7` **与记录相符**（自证口径），
+  `runs/smoke-t8` 358/`6d11b2c6…ff5a7`、**最新 mtime 07:58:28**（其窗口内无文件被动过）⇒ **`runs/**` 零写入：连一个"写过再删"的临时文件都没有**（我已收紧的那条规则被遵守）。
+  PRD sha 未变；嵌套引擎 `fc63af77…` 干净；**并复现了我点名的陷阱**（`ls-files godot-mcp`=6484 而 `godot-mcp/godot`=0）；无 Cargo 变更；**未推送**；树干净。
+- **R6（它请我确认的台账问题）——我的解析**：D264 里 `.workspace/mario` = **259 文件 / `4e494547…`** 是**t8 真机轮之前**测的口径；
+  **t8 轮正是以 `.workspace/mario` 为工作区**（其 `A_1` = **live mario 的工程树**，17 个工程文件 / `1f3d20ed…`）
+  ⇒ **该目录在 t8 期间被真机轮合法改动**，故现在测得 **148 文件**、且无法复现旧摘要，**是预期的**，
+  **不是第三方删除**。⇒ **台账口径更正：凡引用 `.workspace/mario` 的摘要，必须注明"t8 前/后"**；
+  DR-68 拒绝声称自己写了它是**正确**的（删除不动 mtime，它无法自证，如实上报）。
+- **它如实标注的残余（我采纳）**：**不声称 E1/E3 met**；**自愈与释放事件验收都只在离线验证，未上真机**；
+  **轴值改变断言在真机上很少触发**（引擎对 `input_axis` 答 `null`，DR-58）⇒ **真机上承重的断言是按轴的位置断言**（对 E3 重要）；
+  **过期日志规则只覆盖 `Function "X()" not found in base self.` 这一种形状**（其余 fail-closed）；
+  失败路径 `evidence_diff` 仍为空（超出本批范围）；**风险旗 1（`GAME_HOH`… 即 `godot.rs` 的 `GAME_INPUT_CHANNEL_OK` 代码与文档矛盾）未动**；
+  它改动了共享的 `FixtureChannel` 测试替身（held-action 集合 + 按轴位移）——**纯测试用，为复现验收的 D1/D3**，并加了一个 `--nocapture` println 作为 §5 证据来源（⇒ **验收须核该测试替身的改动是否削弱了任何断言**）。
+- 队列：**DR-68 验收 → 推送（含 DR-66/67/68 三批）→ 再造一轮真机（判 E1/E3）→ DR-65/DEF/REF2/§16/造游戏**。
+- 回滚点：DR-68 的 10 个提交可各自 revert；三条真机基线不得覆盖。
+
