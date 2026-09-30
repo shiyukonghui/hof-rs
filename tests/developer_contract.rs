@@ -118,7 +118,19 @@ fn godot_dev_skill_is_a_real_recipe_book() {
         "Area2D",
         "Label",
         "editor_simulate_input_action",
-        "running_game_get_node_property_samples",
+        // DR-70 ③: the recipe this needle used to require was
+        // `running_game_get_node_property_samples`, i.e. exactly the instruction
+        // the acceptance's D5 kept finding in the delivered skill.  DR-70 ①
+        // publishes the route for the whole round, but the game it names was
+        // started **before** the Developer's edits, so the recipe could not
+        // confirm them.  The needle now requires the editor-side substitute, and
+        // `delivered_materials.rs` pins the *absence* of the game-process
+        // instruction on the Developer's side.  This is a requirement-driven
+        // swap, not a loosened assertion: one concrete tool name left the list
+        // and two concrete requirements (`editor_get_errors`,
+        // `before you changed the code`) entered it.
+        "editor_get_errors",
+        "before you changed the code",
         "non-empty",
     ] {
         assert!(dev.contains(needle), "godot-dev.md is missing `{needle}`");

@@ -62,34 +62,42 @@ non-empty `text`.
 Keep the counter updating from GDScript (`$Score.text = "Score: %d" % coins`), and
 keep the node named and stable so QA can find it.
 
-## 5. Self-test the behaviour before you finish
-Simulate the input, then monitor the property the requirement talks about. A
-constant `position` means the behaviour is not implemented, whatever the source
-looks like.
+## 5. Self-test on the editor side before you finish
+The round's game process **is** reachable from your shell — the runtime publishes
+its route for the whole round (DR-70) — but the game it names was started
+**before you changed the code**: it is still running the previous revision, so a
+`running_game_*` reading taken now cannot confirm the change you just wrote. The
+deterministic battery restarts the game on the frozen candidate and the Tester
+judges that; the live path **you** own is the editor side.
 ```
-{{HOH_HOH_BIN}} tools call editor_simulate_input_action --args-file {{HOH_ARTIFACT_DIR}}/args/press_right.json
-# args/press_right.json: {"action":"move_right","pressed":true}
-{{HOH_HOH_BIN}} tools call running_game_get_node_property_samples --args-file {{HOH_ARTIFACT_DIR}}/args/monitor.json
-# args/monitor.json: {"node_path":"Player","properties":["position"],"frame_count":60,"frame_interval":1}
-{{HOH_HOH_BIN}} tools call editor_simulate_input_action --args-file {{HOH_ARTIFACT_DIR}}/args/release_right.json
-# args/release_right.json: {"action":"move_right","pressed":false}
+{{HOH_HOH_BIN}} tools call editor_get_errors --args-file {{HOH_ARTIFACT_DIR}}/args/errors.json
+# args/errors.json: {"max_lines": 50}
+{{HOH_HOH_BIN}} tools call editor_get_output_log --args-file {{HOH_ARTIFACT_DIR}}/args/log.json
+# args/log.json: {"max_lines": 100}
+{{HOH_HOH_BIN}} tools call project_read_script --args-file {{HOH_ARTIFACT_DIR}}/args/read_player.json
+# args/read_player.json: {"path":"res://scripts/player.gd"}
 ```
-The returned `samples[*].position.x` must change while the key is held. Repeat
-for `jump` (`position.y` must go negative) and `move_left`.
+`{"errors": []}` means the project parses and the scene opens; a non-empty `errors`
+array names the file and the line to fix. Read the script back and confirm it is
+**non-empty** and contains the movement you meant to write. A constant value in
+the source is not implemented behaviour, whatever the plan says.
+
+`editor_simulate_input_action` exists and drives the game the runtime already
+started (its arguments are `{"action":"move_right","pressed":true}`), but it
+reaches that same previous revision: it is an instrument of the battery's replay,
+not a proof you can run on your own edit. Do not start a game of your own
+(`editor_play_scene`): the runtime owns the round's session, and a second boot
+would replace the one the Tester is meant to reach.
 
 ## 6. Keep the project launchable at all times
 ```
 {{HOH_HOH_BIN}} tools call editor_get_errors --args-file {{HOH_ARTIFACT_DIR}}/args/errors.json
 # args/errors.json: {"max_lines": 50}
-{{HOH_HOH_BIN}} tools call editor_play_scene --args-file {{HOH_ARTIFACT_DIR}}/args/play.json
-# args/play.json: {"mode":"main"}
-{{HOH_HOH_BIN}} tools call running_game_get_scene_tree --args-file {{HOH_ARTIFACT_DIR}}/args/tree.json
-# args/tree.json: {"max_depth":-1}
-{{HOH_HOH_BIN}} tools call editor_stop_scene --args-file {{HOH_ARTIFACT_DIR}}/args/stop.json
-# args/stop.json: {}
 ```
-`{"errors": []}` and a running scene tree are the minimum bar (N1). Never end a
-turn with a script that does not compile.
+`{"errors": []}` is the minimum bar (N1). The runtime opens the project and boots
+the main scene itself — it owns the round's game session, and the battery reports
+whether it starts — so never end a turn with a script that does not compile and
+never leave a half-applied change that breaks startup.
 
 ## 7. Known-good minimal platform game skeleton (copy this whole file)
 This is a **complete, already-valid** main scene. The runtime validates it with

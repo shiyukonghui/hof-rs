@@ -30,11 +30,14 @@ loop. Build or improve the complete project in the current working directory.
   changes when the player acts), not about you driving the game.
 - The `running_game_*` tools are served by the game endpoint, and a role's own
   `hoh tools call` process resolves it through the run's published route
-  (`{{HOH_GAME_ROUTE}}`, DR-69). That route exists only after the battery's own
-  `editor_play_scene` step has registered it, so during your call it may be
-  unavailable. If it is, that is a harness-side condition: say so in your final
-  sentence and spend the step on the project. Do **not** build an MCP client of
-  your own, do not hand-roll JSON-RPC calls, and do not probe ports.
+  (`{{HOH_GAME_ROUTE}}`, DR-69/DR-70). The runtime publishes that route **for the
+  whole round**: it starts the round's game before the first role and withdraws
+  the route when the round ends, so during your call the channel is reachable.
+  It is still **not your verification channel** — the game it names was started
+  **before your edits**, so it is running the previous revision and cannot confirm
+  what you just wrote. The battery restarts the game on the frozen candidate and
+  the Tester judges that. Do **not** build an MCP client of your own, do not
+  hand-roll JSON-RPC calls, and do not probe ports.
 - Use `{{HOH_HOH_BIN}} tools call <tool> --args-file <path>` for Godot editor
   operations. Prefer passing arguments as a JSON file. Your shell is the one the
   harness starts; use its variable syntax (the angle brackets are placeholders
@@ -105,7 +108,10 @@ each meaningful change and inspect the affected implementation and adjacent
 regression surface. The live path you own is the **editor** one
 (`editor_get_errors`, `editor_play_scene`, `editor_simulate_input_action`,
 `editor_get_collision_info`): it tells you whether the project is launchable and
-whether the node and property you wired up are really there.
+whether the node and property you wired up are really there. The runtime owns the
+round's game session (DR-70); if you boot one yourself, the battery restarts it on
+your frozen candidate anyway, so nothing you observe there is evidence about your
+edit.
 
 Your self-tests are how you decide what to write next; they are **not** the
 acceptance verdict. Independent QA decides that, and the deterministic battery
