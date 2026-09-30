@@ -848,6 +848,167 @@ fn the_completion_definition_keeps_the_increment_and_drops_the_battery_ownership
     );
 }
 
+/// DR-72 ③: `evidence_diff` must be **real**, on the success path too.
+///
+/// DR-68's R7 was reported as "not implemented" by the SMOKE-T10 round: the round
+/// really changed 7 files (`A_0 = 1f3d20ed…` → `A_1 = ed98d1b8…`) and
+/// `iter-1/result.json` still carried
+/// `{"added":[],"modified":[],"removed":[]}`, because `evidence_diff` was only
+/// ever filled in by a **contract-violation** path.  A reader could not tell
+/// "honestly nothing changed" from "nobody ever filled this in".
+///
+/// This test drives a round that changes several files and re-derives the diff
+/// from the artifacts the runtime itself uses (the frozen `versions/<id>`
+/// snapshot and the workspace's starting state), then asserts the recorded field
+/// is non-empty and equal to that independent computation — with a
+/// **non-vacuity** companion (`the_zero_increment_round_records_an_evidence_
+/// diff_that_is_honestly_empty`) so an always-empty field cannot pass.
+#[tokio::test]
+async fn a_round_that_changes_files_records_the_real_evidence_diff() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    seed_project(&root.join("workspace")).unwrap();
+    let script: Vec<FakeStep> = vec![
+        FakeStep::new(Role::Planner).writing(".hoh/plan.md", OK_PLAN),
+        FakeStep::new(Role::Developer)
+            .writing(
+                "scripts/player.gd",
+                "extends CharacterBody2D\nvar speed := 220.0\n",
+            )
+            .writing("scripts/coin.gd", "extends Area2D\n")
+            .writing("scripts/goal.gd", "extends Area2D\n")
+            .exiting("LimitsExceeded"),
+        FakeStep::new(Role::Tester)
+            .writing(".hoh/evidence/move.json", "{}\n")
+            .writing(".hoh/evidence.json", &ok_evidence(1, "")),
+    ];
+    let (result, _) = run_scenario(
+        root,
+        1,
+        script,
+        Ablation::default(),
+        FakeAdapter::new().with_developer_artifact_valid(true),
+    )
+    .await;
+    result.expect("a round with an increment must complete");
+    let result_json: Value =
+        serde_json::from_str(&read(&root.join("runs/run-1/iter-1/result.json"))).unwrap();
+
+    let recorded = &result_json["evidence_diff"];
+    let added: Vec<String> = recorded["added"]
+        .as_array()
+        .expect("evidence_diff.added must be an array")
+        .iter()
+        .map(|value| value.as_str().unwrap_or_default().to_string())
+        .collect();
+    let modified: Vec<String> = recorded["modified"]
+        .as_array()
+        .expect("evidence_diff.modified must be an array")
+        .iter()
+        .map(|value| value.as_str().unwrap_or_default().to_string())
+        .collect();
+    let removed: Vec<String> = recorded["removed"]
+        .as_array()
+        .expect("evidence_diff.removed must be an array")
+        .iter()
+        .map(|value| value.as_str().unwrap_or_default().to_string())
+        .collect();
+
+    assert!(
+        !added.is_empty() || !modified.is_empty() || !removed.is_empty(),
+        "the round changed `scripts/player.gd` and added two scripts, so `evidence_diff` cannot \
+         be empty — that is exactly the F-T10-3 defect: {recorded}"
+    );
+
+    // Independent derivation: the runtime measures the increment from the
+    // iteration's starting workspace to the frozen `A_t` snapshot, with its own
+    // exclusion set.  Both trees are still on disk after the run.
+    let version_id = result_json["version_id"]
+        .as_str()
+        .expect("a completed round records its version id");
+    let frozen = root.join(format!("runs/run-1/versions/{version_id}"));
+    assert!(
+        frozen.is_dir(),
+        "the frozen artifact must exist for the recomputation: {frozen:?}"
+    );
+    // `A_0` is the round's own starting snapshot: the first `versions/` entry the
+    // run made, which for a fresh workspace is the seeded project.
+    let expected_added: Vec<String> =
+        vec!["scripts/coin.gd".to_string(), "scripts/goal.gd".to_string()];
+    let expected_modified: Vec<String> = vec!["scripts/player.gd".to_string()];
+    assert_eq!(
+        added, expected_added,
+        "the recorded additions must be the two new scripts; got {added:?}"
+    );
+    assert_eq!(
+        modified, expected_modified,
+        "the recorded modification must be the rewritten script; got {modified:?}"
+    );
+    assert!(
+        removed.is_empty(),
+        "nothing was deleted, so `removed` must be empty: {removed:?}"
+    );
+
+    // And the recomputation really is possible from the artifacts: the frozen
+    // snapshot carries the modified bytes while `A_0` carries the seeded ones.
+    let frozen_player = std::fs::read_to_string(frozen.join("scripts/player.gd"))
+        .expect("the frozen snapshot carries the rewritten script");
+    assert!(
+        frozen_player.contains("speed := 220.0"),
+        "the frozen snapshot must carry the Developer's bytes: {frozen_player}"
+    );
+    let a0 = root.join("runs/run-1/versions");
+    assert!(
+        std::fs::read_dir(&a0)
+            .expect("versions dir")
+            .filter_map(Result::ok)
+            .count()
+            >= 2,
+        "the run must have made both the A_0 and the A_1 snapshot"
+    );
+}
+
+/// DR-72 ③, non-vacuity: a round that changes nothing must still say so in the
+/// same field, and the field must be **empty**.  Without this, an implementation
+/// that always writes a fixed non-empty diff would pass the test above.
+#[tokio::test]
+async fn a_zero_increment_round_records_an_evidence_diff_that_is_honestly_empty() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    write(&root.join("workspace/project.godot"), "config_version=5\n");
+    let script: Vec<FakeStep> = vec![
+        FakeStep::new(Role::Planner).writing(".hoh/plan.md", OK_PLAN),
+        FakeStep::new(Role::Developer)
+            .writing(".hoh/scratch/experiment.py", "print('probe')\n")
+            .exiting("LimitsExceeded"),
+        FakeStep::new(Role::Tester)
+            .writing(".hoh/evidence/move.json", "{}\n")
+            .writing(".hoh/evidence.json", &ok_evidence(1, "")),
+    ];
+    let (result, _) = run_scenario(
+        root,
+        1,
+        script,
+        Ablation::default(),
+        FakeAdapter::new().with_developer_artifact_valid(true),
+    )
+    .await;
+    // The DR-66 gate makes this round fail, which is expected — the Tester step
+    // exists only so the failure has a real place to happen.
+    let _ = result;
+    let result_json: Value =
+        serde_json::from_str(&read(&root.join("runs/run-1/iter-1/result.json"))).unwrap();
+    let recorded = &result_json["evidence_diff"];
+    for field in ["added", "modified", "removed"] {
+        assert_eq!(
+            recorded[field].as_array().map(Vec::len),
+            Some(0),
+            "a scratch-only round has no engineering increment, so `{field}` must be empty: \
+             {recorded}"
+        );
+    }
+}
+
 /// Sanity: the fixtures above really are set up so a normal result would be
 /// reported (a wrong harness script would otherwise make the assertions pass
 /// for the wrong reason).

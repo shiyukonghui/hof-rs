@@ -487,3 +487,137 @@ async fn registering_publishes_the_route_and_stopping_withdraws_it() {
     let third = McpChannel::new("http://127.0.0.1:1/mcp", 5, 0);
     assert!(third.use_game_route_file(published).is_none());
 }
+
+/// DR-72 ⑤: the publication race, measured instead of assumed.
+///
+/// `publish_game_route` writes a temporary file and renames it, so **content** is
+/// atomic: a reader that opens the route never sees half a record.  **Existence**
+/// is not atomic — `remove_file` then `rename` (the Windows-safe order, since
+/// `rename` onto an existing file fails there) leaves a window in which the path
+/// does not exist at all.  The DR-71 acceptance measured the consequence on the
+/// real machine: 9,658 reads, 7,074 misses, **0 torn records**.
+///
+/// This test reproduces that shape offline and pins the **loss mode**: every
+/// observation is either a complete, valid record or `None`, and `None` is an
+/// explicit refusal (`game_endpoint_unavailable`), never an invented port.  A
+/// torn read — the failure that would make a role adopt a garbage endpoint —
+/// must be zero.
+#[test]
+fn concurrent_publish_and_read_never_yields_a_torn_record() {
+    use hof_rs::tools::endpoint::{
+        load_game_route, publish_game_route, withdraw_game_route, GameEndpointRecord,
+        SOURCE_AUTO_FREE_PORT,
+    };
+    use std::sync::atomic::AtomicU64;
+
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("game_endpoint.json");
+    // A payload big enough that a non-atomic write would be observable as a
+    // truncated document, and distinct per round so a stale read is detectable.
+    let filler: String = "x".repeat(4096);
+    let stop = Arc::new(AtomicBool::new(false));
+    let reads = Arc::new(AtomicU64::new(0));
+    let hits = Arc::new(AtomicU64::new(0));
+    let misses = Arc::new(AtomicU64::new(0));
+    let torn = Arc::new(Mutex::new(Vec::<String>::new()));
+    let rounds = Arc::new(AtomicU64::new(0));
+
+    let mut handles = Vec::new();
+    {
+        let path = path.clone();
+        let stop = stop.clone();
+        let rounds = rounds.clone();
+        let filler = filler.clone();
+        handles.push(std::thread::spawn(move || {
+            while !stop.load(Ordering::SeqCst) {
+                let round = rounds.fetch_add(1, Ordering::SeqCst);
+                let record = GameEndpointRecord {
+                    endpoint: format!("http://127.0.0.1:{}/mcp", 60000 + (round % 1000)),
+                    port: Some(60000 + (round % 1000) as u16),
+                    source: format!("{SOURCE_AUTO_FREE_PORT}|{filler}"),
+                    pid: Some(std::process::id()),
+                };
+                let _ = publish_game_route(&path, &record);
+                if round % 3 == 0 {
+                    // The withdraw/publish alternation is what opens the
+                    // existence window; the content remains whole either way.
+                    withdraw_game_route(&path);
+                }
+            }
+        }));
+    }
+    for _ in 0..4 {
+        let path = path.clone();
+        let stop = stop.clone();
+        let reads = reads.clone();
+        let hits = hits.clone();
+        let misses = misses.clone();
+        let torn = torn.clone();
+        handles.push(std::thread::spawn(move || {
+            while !stop.load(Ordering::SeqCst) {
+                reads.fetch_add(1, Ordering::SeqCst);
+                let raw = std::fs::read_to_string(&path).ok();
+                match raw {
+                    // Nothing published at this instant: an explicit refusal.
+                    None => {
+                        misses.fetch_add(1, Ordering::SeqCst);
+                    }
+                    Some(text) => {
+                        match serde_json::from_str::<GameEndpointRecord>(&text) {
+                            Ok(record) => {
+                                // Non-vacuity: the record really is the published
+                                // one, not a default that happens to parse.
+                                if record.pid == Some(std::process::id()) {
+                                    hits.fetch_add(1, Ordering::SeqCst);
+                                } else {
+                                    torn.lock().unwrap().push(text);
+                                }
+                            }
+                            Err(_) => torn.lock().unwrap().push(text),
+                        }
+                    }
+                }
+            }
+        }));
+    }
+    std::thread::sleep(Duration::from_millis(400));
+    stop.store(true, Ordering::SeqCst);
+    for handle in handles {
+        let _ = handle.join();
+    }
+
+    let reads = reads.load(Ordering::SeqCst);
+    let hits = hits.load(Ordering::SeqCst);
+    let misses = misses.load(Ordering::SeqCst);
+    let torn = torn.lock().unwrap().clone();
+    assert!(
+        reads > 0,
+        "the readers must have run: {reads} read(s), {hits} hit(s), {misses} miss(es)"
+    );
+    assert!(
+        hits > 0,
+        "the race must actually publish sometimes, otherwise this proves nothing: {hits} hit(s) \
+         out of {reads} read(s)"
+    );
+    assert!(
+        torn.is_empty(),
+        "a reader must never see a partial record — the loss mode has to be an explicit `None` \
+         (DR-43's refusal), never a torn record a role could adopt. {} torn read(s), first: {:?}",
+        torn.len(),
+        torn.first()
+    );
+    // The loss mode is "the route is not there yet", which
+    // `use_game_route_file` turns into the documented refusal — never into a
+    // guess at a port.
+    let channel = hof_rs::tools::McpChannel::new("http://127.0.0.1:1/mcp", 5, 0);
+    use hof_rs::tools::ToolChannel as _;
+    withdraw_game_route(&path);
+    assert!(
+        channel.use_game_route_file(path.clone()).is_none(),
+        "a missing route must adopt as nothing"
+    );
+    assert!(
+        load_game_route(&path).is_none(),
+        "a missing route must read as nothing, not as an invented port"
+    );
+}

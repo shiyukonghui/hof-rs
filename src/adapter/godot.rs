@@ -14,7 +14,7 @@ use crate::model::{ExecKind, ExecRecord, Role};
 use crate::tools::endpoint::{self, GameEndpointRecord};
 use crate::tools::mcp::{RpcCorrelation, SessionSyncReport, PROBE_TOOL};
 use crate::tools::reliable::{
-    call_with_retries_traced, wait_for_game_ready, McpErrorLog, McpFailure, ReadyOutcome,
+    call_with_retries_traced, wait_for_ready_matching, McpErrorLog, McpFailure, ReadyOutcome,
     TracedCall, READY_POLL_INTERVAL_MS, RETRY_INTERVAL_MS,
 };
 use crate::tools::ToolChannel;
@@ -509,7 +509,9 @@ impl<'a> BatterySession<'a> {
     }
 
     async fn ready(&self, tool: &str, args: Value) -> ReadyOutcome {
-        wait_for_game_ready(
+        // DR-72 ⑤ (D1): the battery's readiness predicate is the **scene-tree
+        // shape** check, and it is now the same one the round's start uses.
+        wait_for_ready_matching(
             self.tools,
             Role::Developer,
             tool,
@@ -517,6 +519,7 @@ impl<'a> BatterySession<'a> {
             self.limits.ready_timeout_seconds,
             READY_POLL_INTERVAL_MS,
             Some(&self.log),
+            scene_tree_readiness,
         )
         .await
     }
@@ -2692,6 +2695,14 @@ fn scene_tree_nodes(payload: &Value) -> Vec<&Value> {
 ///
 /// `smoke-t3`'s `play_scene_ready` accepted `editor_play_scene`'s reply here; the
 /// difference between the two payloads is exactly this shape.
+///
+/// DR-72 ⑤ (D1): this is also the **readiness predicate** both poll paths use
+/// (`wait_for_ready_matching(… , scene_tree_readiness)`), so "the game answered"
+/// can never mean two different things in two places again.
+fn scene_tree_readiness(payload: &Value) -> Result<usize, String> {
+    describe_scene_tree_shape(&unwrap_mcp_payload(payload))
+}
+
 fn describe_scene_tree_shape(payload: &Value) -> Result<usize, String> {
     let nodes = scene_tree_nodes(payload);
     if nodes.is_empty() {
@@ -3898,7 +3909,9 @@ impl ProjectAdapter for GodotAdapter {
         tools.install_game_endpoint(record.clone()).await?;
 
         let tree_args = json!({"max_depth": -1});
-        let ready = wait_for_game_ready(
+        // DR-72 ⑤ (D1): the round's readiness predicate is the battery's, so a
+        // reply that is not a scene tree can never confirm the round's route.
+        let ready = wait_for_ready_matching(
             tools,
             Role::Developer,
             "running_game_get_scene_tree",
@@ -3906,6 +3919,7 @@ impl ProjectAdapter for GodotAdapter {
             self.battery.ready_timeout_seconds,
             READY_POLL_INTERVAL_MS,
             None,
+            scene_tree_readiness,
         )
         .await;
         if !ready.ok {

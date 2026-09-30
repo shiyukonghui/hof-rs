@@ -300,6 +300,28 @@ pub fn write_log(run_dir: &Path, iteration: u32, role: &str, text: &str) -> anyh
     Ok(())
 }
 
+/// DR-72 ②: how many `iter-<n>` directories a run directory currently has.
+///
+/// The redaction sweep seals every `iter-*/{planner-view,candidate,traj}` it can
+/// see, so it has to know the highest iteration that exists rather than the
+/// configured iteration count (a failed first iteration has no `iter-2`).
+pub fn iteration_directories(run_dir: &Path) -> u32 {
+    let mut highest = 0u32;
+    let Ok(entries) = std::fs::read_dir(run_dir) else {
+        return 0;
+    };
+    for entry in entries.flatten() {
+        let name = entry.file_name();
+        let name = name.to_string_lossy();
+        if let Some(digits) = name.strip_prefix("iter-") {
+            if let Ok(number) = digits.parse::<u32>() {
+                highest = highest.max(number);
+            }
+        }
+    }
+    highest
+}
+
 /// Append a warning line to the run-level warning log (`warnings.log`).
 pub fn append_warning(run_dir: &Path, warning: &str) -> anyhow::Result<()> {
     use std::io::Write;

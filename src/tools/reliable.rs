@@ -304,20 +304,78 @@ pub async fn wait_for_game_ready(
     poll_interval_ms: u64,
     log: Option<&McpErrorLog>,
 ) -> ReadyOutcome {
+    wait_for_ready_matching(
+        tools,
+        role,
+        tool,
+        args,
+        timeout_secs,
+        poll_interval_ms,
+        log,
+        // The permissive predicate: a successful answer is enough, and the
+        // count it reports is not consulted here.
+        |_| Ok(1usize),
+    )
+    .await
+}
+
+/// DR-72 ⑤ (D1): readiness is **an answer of the right shape**, not merely an
+/// answer.
+///
+/// DR-70's round-game start polled `running_game_get_scene_tree` and accepted
+/// any successful reply, while the battery's own `play_scene_ready` step applied
+/// `describe_scene_tree_shape` to the same payload.  Two readiness predicates
+/// for one question is a defect: a stub or half-started game could confirm the
+/// round's route while the battery refused the very same reply.
+///
+/// `shape` receives the raw payload of every successful poll (before any
+/// unwrapping — the caller decides what to unwrap) and returns the node count or
+/// the reason the payload is not a scene tree.  A wrong-but-successful answer
+/// keeps the poll going, because a game that is still starting legitimately
+/// answers like that for a while; when the deadline is reached the last failure
+/// **is** the shape refusal, so the verdict names the real problem instead of a
+/// generic timeout.#[allow(clippy::too_many_arguments)]
+pub async fn wait_for_ready_matching(
+    tools: &dyn ToolChannel,
+    role: Role,
+    tool: &str,
+    args: Value,
+    timeout_secs: u64,
+    poll_interval_ms: u64,
+    log: Option<&McpErrorLog>,
+    shape: impl Fn(&Value) -> Result<usize, String>,
+) -> ReadyOutcome {
     let deadline = Instant::now() + Duration::from_secs(timeout_secs);
     let mut attempts = 0u32;
     loop {
         attempts += 1;
+        let mut shape_failure: Option<McpFailure> = None;
         let failure = match tools.call_with_meta(role, tool, args.clone()).await {
-            Ok((result, correlation)) => {
-                return ReadyOutcome {
-                    ok: true,
-                    attempts,
-                    payload: Some(result.payload),
-                    failure: None,
-                    correlation,
+            Ok((result, correlation)) => match shape(&result.payload) {
+                Ok(_) => {
+                    return ReadyOutcome {
+                        ok: true,
+                        attempts,
+                        payload: Some(result.payload),
+                        failure: None,
+                        correlation,
+                    }
                 }
-            }
+                Err(problem) => {
+                    let failure = McpFailure::new(
+                        tool,
+                        None,
+                        format!("the payload answered but it is not readiness evidence: {problem}"),
+                        attempts,
+                    )
+                    .with_correlation(correlation);
+                    if let Some(log) = log {
+                        let _ = log.record(tool, &failure);
+                    }
+                    shape_failure = Some(failure.clone());
+                    failure
+                }
+            },
             Err(error) => {
                 let failure = failure_from(tool, &error, attempts);
                 if let Some(log) = log {
@@ -331,10 +389,18 @@ pub async fn wait_for_game_ready(
                 ok: false,
                 attempts,
                 payload: None,
-                failure: Some(failure),
+                // A shape refusal is the *specific* answer, so it wins over the
+                // generic "the deadline passed": the verdict names what was
+                // wrong with the payload rather than blaming the clock.
+                failure: Some(shape_failure.unwrap_or(failure)),
                 correlation: RpcCorrelation::default(),
             };
         }
+        // A wrong shape is a **successful answer** but not readiness: the game is
+        // reachable, so the poll keeps asking — a game that has just been started
+        // may answer with a stub for a moment — and gives up at the deadline with
+        // the shape refusal rather than accepting it.
+        //
         // DR-55: a poll must not keep knocking on an endpoint that has already
         // been declared dead.  The refusal carries the endpoint verdict and no
         // retryable class (nothing was sent), so the poll ends on it instead of

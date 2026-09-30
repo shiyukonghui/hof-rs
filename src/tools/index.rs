@@ -36,6 +36,26 @@ fn tool_name(tool: &Value) -> &str {
     tool.get("name").and_then(Value::as_str).unwrap_or("")
 }
 
+/// DR-72 ④: the parameter names a tool's schema declares, sorted, or `None` when
+/// the snapshot has no entry for it.
+///
+/// This is the same source `TOOLS.md` is rendered from, and it is what makes a
+/// parameter refusal actionable: the engine's `-32602` names the parameter it
+/// rejected but not the ones it accepts, and the model that guessed
+/// `node_path` for `editor_get_node_properties` (whose schema names it `path`)
+/// otherwise has nothing to correct against.
+pub fn accepted_parameters(tool: &str) -> Option<Vec<String>> {
+    let schemas = embedded_tool_schemas();
+    let entry = schemas.iter().find(|entry| tool_name(entry) == tool)?;
+    let mut names: Vec<String> = entry
+        .pointer("/inputSchema/properties")
+        .and_then(Value::as_object)
+        .map(|properties| properties.keys().cloned().collect())
+        .unwrap_or_default();
+    names.sort();
+    Some(names)
+}
+
 /// The first sentence of a description (the full text is far too long for an
 /// index a role reads on every step).
 fn first_sentence(description: &str) -> String {

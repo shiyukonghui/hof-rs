@@ -407,7 +407,10 @@ impl ToolChannel for McpChannel {
                     // A business error is an answer: the endpoint is alive.
                     self.observe_liveness(&endpoint, Ok(()));
                 }
-                Err(error)
+                // DR-72 ④: the caller's thread is the one that can see the
+                // parameter hint the CLI installed, so a parameter refusal is
+                // named here rather than on the transport worker.
+                Err(mcp::augment_parameter_error(tool, error))
             }
         }
     }

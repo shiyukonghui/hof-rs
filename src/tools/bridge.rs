@@ -269,7 +269,17 @@ pub async fn tools_call(
         println!("{}", denial_payload(role, tool));
         return Ok(2);
     }
-    let result = channel.call(role, tool, args).await?;
+    // DR-72 ④: this process is the one place a role's parameter mistake can be
+    // answered with the parameter names the tool really declares.  The hint is
+    // installed for the duration of this call only, from the same `tools/list`
+    // snapshot `.hoh/TOOLS.md` is rendered from.
+    crate::tools::mcp::clear_parameter_hints();
+    if let Some(accepted) = crate::tools::index::accepted_parameters(tool) {
+        crate::tools::mcp::record_parameter_hint(tool, &accepted);
+    }
+    let result = channel.call(role, tool, args).await;
+    crate::tools::mcp::clear_parameter_hints();
+    let result = result?;
     println!("{}", serde_json::to_string_pretty(&result.payload)?);
     Ok(0)
 }

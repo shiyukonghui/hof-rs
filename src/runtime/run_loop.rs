@@ -357,6 +357,99 @@ fn manifest_or_empty(
     tree_manifest(root, excludes).unwrap_or_default()
 }
 
+/// DR-72 ③: the engineering increment of one iteration is `A_{t-1} -> A_t`.
+///
+/// `evidence_diff` used to be populated **only** on a contract-violation path,
+/// so a real round that changed 7 files still persisted
+/// `{"added":[],"modified":[],"removed":[]}` and could not be told apart from an
+/// honest "nothing changed" (the DR-68 R7 finding, `F-T10-3`).  This computes
+/// the same projection the violation paths use, from the iteration's **starting**
+/// manifest to the **frozen** artifact, and records it on the success path too.
+///
+/// The diff is of the *project tree* under the runtime's own exclusion rule, so
+/// it is reproducible: a re-runner walks the frozen `versions/<version_id>/`
+/// snapshot and its predecessor with the same excluding walk and gets the same
+/// lists.
+fn iteration_evidence_diff(
+    before: &std::collections::BTreeMap<String, String>,
+    root: &Path,
+    excludes: &[String],
+) -> EvidenceDiff {
+    let after = manifest_or_empty(root, excludes);
+    diff_manifests(before, &after)
+}
+
+/// DR-72 ②: the areas of a run directory that must never be rewritten in place.
+///
+/// D276: three rounds have now been damaged by "redact the evidence in place".
+/// The frozen areas are exactly the ones a consumer parses or cites:
+///
+/// * `iter-*/candidate/**` — the frozen `A_t` view the Tester reads and cites;
+/// * `versions/**` — the content-addressed snapshots;
+/// * `iter-*/traj/**` — the role trajectories, which the runtime itself reads
+///   back (usage extraction, attempt enrichment, source-read tracing) and which
+///   `TASK-SMOKE-T10-ACCEPTANCE.md` names as E1's evidence form;
+/// * `quarantine/**` — a previous round's bytes, kept for audit.
+///
+/// **`iter-*/planner-view/**` is deliberately not here.**  DR-19 still requires
+/// the credential's *location* not to survive anywhere under `runs/<id>`, a role
+/// can write an environment dump into its own view, and nothing parses a
+/// planner-view file — so that is the one view where an in-place rewrite is both
+/// necessary and harmless (`secret_isolation.rs`:
+/// `a_leaked_secret_is_erased_and_counted` is the test that pins it).
+fn frozen_evidence_roots(run_dir: &Path, iterations: u32) -> crate::runtime::secrets::SealedAreas {
+    let mut roots = vec![run_dir.join("versions"), run_dir.join("quarantine")];
+    for iteration in 1..=iterations {
+        let iter_dir = run_dir.join(format!("iter-{iteration}"));
+        roots.push(iter_dir.join("candidate"));
+        roots.push(iter_dir.join("traj"));
+    }
+    crate::runtime::secrets::SealedAreas::new(roots)
+}
+
+/// DR-19/DR-72 ②: one redaction sweep over the run directory.
+///
+/// The frozen evidence areas are sealed, so this never rewrites a trajectory,
+/// a frozen candidate or a snapshot in place; a hit inside a sealed area is
+/// materialized as a generated `<name>.redacted.<ext>` copy next to the
+/// original, which is left byte-for-byte unchanged.  A splice that would break a
+/// JSON document is refused and reported as a warning instead of being written.
+///
+/// Returns the number of scrubbed files, i.e. the value DR-19's
+/// `secret_redactions` has always reported.
+fn redaction_sweep(
+    run_dir: &Path,
+    secrets: &[String],
+    warnings: &mut Vec<String>,
+) -> anyhow::Result<u64> {
+    let iterations = crate::runtime::record::iteration_directories(run_dir);
+    let sealed = frozen_evidence_roots(run_dir, iterations);
+    let report = crate::runtime::secrets::redact_tree_traced(run_dir, secrets, &sealed)?;
+    for (path, problem) in &report.refusals {
+        let warning = format!(
+            "{}: {}",
+            path.strip_prefix(run_dir).unwrap_or(path).display(),
+            problem
+        );
+        if !warnings.iter().any(|existing| existing == &warning) {
+            warnings.push(warning.clone());
+        }
+    }
+    for copy in &report.copies {
+        let warning = format!(
+            "frozen evidence kept in place; the redacted form was generated as {} (the original \
+             is byte-unchanged, DR-72 ②)",
+            copy.file_name()
+                .map(|name| name.to_string_lossy().into_owned())
+                .unwrap_or_else(|| crate::runtime::secrets::REDACTED_COPY_SUFFIX.to_string())
+        );
+        if !warnings.iter().any(|existing| existing == &warning) {
+            warnings.push(warning);
+        }
+    }
+    Ok(report.hits())
+}
+
 /// DR-69: how many files are under `root` (0 when it does not exist).
 ///
 /// Used only to say *which* zero-increment shape a round produced: "the
@@ -709,6 +802,12 @@ async fn run_inner(
     let mut first_plan: Option<PathBuf> = None;
     let mut last_gate: Option<crate::model::ArtifactGate> = None;
     let mut last_coverage = crate::model::PrdCoverage::default();
+    // DR-72 ③: the manifest this iteration started from (`A_{t-1}`), so the
+    // success path can state the engineering increment it produced.  It is
+    // assigned at the top of every iteration and read at the end of one, which
+    // the compiler's flow analysis cannot see across the loop boundary.
+    #[allow(unused_assignments)]
+    let mut iteration_start_manifest: Option<std::collections::BTreeMap<String, String>> = None;
 
     // DR-25: watch HoH's own working directory (outside the project) for writes
     // a role should never make.  Report-only; the baseline advances once per
@@ -863,7 +962,7 @@ async fn run_inner(
             iter_out_of_tree.extend(out_of_tree_watch.observe());
             // DR-19: scrub the run directory after the role has run, before its
             // output is recorded as an artifact.
-            iter_secret_redactions += crate::runtime::secrets::redact_tree(&run_dir, &secrets)?;
+            iter_secret_redactions += redaction_sweep(&run_dir, &secrets, &mut iter_warnings)?;
             if wrap_up_retry_used {
                 iter_wrap_up_retry_used = true;
             }
@@ -971,6 +1070,11 @@ async fn run_inner(
         if !orchestrator.ablation.warm_start && iteration > 1 {
             store.rollback(&workspace, &excludes, &a0.version_id)?;
         }
+        // DR-72 ③: the increment this iteration is about to produce starts here,
+        // measured with the runtime's own walk and exclusion rule.  The Planner's
+        // pre-check above already covers iteration 1; re-measuring after the
+        // rollback keeps the same definition for every iteration.
+        iteration_start_manifest = Some(manifest_or_empty(&workspace, &excludes));
         let mut developer_inputs = vec![
             (".hoh/TASK.md".to_string(), total_text.clone()),
             (".hoh/plan.md".to_string(), doc.raw.clone()),
@@ -1094,7 +1198,7 @@ async fn run_inner(
         // DR-25: the Developer may only write inside the project.
         iter_out_of_tree.extend(out_of_tree_watch.observe());
         // DR-19: scrub after the developer (the only writer) too.
-        iter_secret_redactions += crate::runtime::secrets::redact_tree(&run_dir, &secrets)?;
+        iter_secret_redactions += redaction_sweep(&run_dir, &secrets, &mut iter_warnings)?;
 
         // DR-66 ④: **this is the signal that used to be a mere warning.**
         //
@@ -1284,7 +1388,7 @@ async fn run_inner(
             );
             durations.push(("developer_repair".to_string(), repair_outcome.duration_ms));
             iter_out_of_tree.extend(out_of_tree_watch.observe());
-            iter_secret_redactions += crate::runtime::secrets::redact_tree(&run_dir, &secrets)?;
+            iter_secret_redactions += redaction_sweep(&run_dir, &secrets, &mut iter_warnings)?;
             record_attempts(
                 &run_dir,
                 iteration,
@@ -1568,7 +1672,7 @@ async fn run_inner(
         let tester_usage = usage_from_attempts(&traj_dir, Role::Tester, iteration)?;
         iter_usage.push(tester_usage);
         // DR-19: scrub after the tester before any of its output is recorded.
-        iter_secret_redactions += crate::runtime::secrets::redact_tree(&run_dir, &secrets)?;
+        iter_secret_redactions += redaction_sweep(&run_dir, &secrets, &mut iter_warnings)?;
 
         // Detection comes first: a contaminated round is a failure no matter
         // how good the evidence looks.
@@ -1671,7 +1775,7 @@ async fn run_inner(
 
         // DR-19: one last sweep, so nothing written between the last stage and
         // here can leave a credential behind.
-        iter_secret_redactions += crate::runtime::secrets::redact_tree(&run_dir, &secrets)?;
+        iter_secret_redactions += redaction_sweep(&run_dir, &secrets, &mut iter_warnings)?;
         let mut result = IterResult::ok();
         result.warnings = iter_warnings;
         result.candidate_id = Some(version.candidate_id.clone());
@@ -1682,6 +1786,22 @@ async fn run_inner(
         result.wrap_up_retry_reason = iter_wrap_up_retry_reason;
         result.attempts = iter_attempts;
         result.secret_redactions = iter_secret_redactions;
+        // DR-72 ③: the real engineering increment, on the **success** path too.
+        // It is measured from the iteration's starting manifest to the frozen
+        // `A_t` snapshot, i.e. from the same two trees the contract-violation
+        // paths use, so "nothing changed" and "the field was never filled in" are
+        // finally distinguishable.
+        result.evidence_diff = match iteration_start_manifest.as_ref() {
+            Some(before) => {
+                iteration_evidence_diff(before, &store.root.join(&version.version_id), &excludes)
+            }
+            // Unreachable: the success path only exists after an iteration ran,
+            // which is exactly where the manifest is captured.  An empty
+            // starting manifest would be a lie, so say so instead.
+            None => unreachable!(
+                "the success path cannot run without an iteration start manifest (DR-72 ③)"
+            ),
+        };
         // DR-24/DR-27: the gate verdict travels with the iteration result, so
         // a completed loop over an unlaunchable artifact can never look green.
         result.artifact_gate = launch_gate.clone();
@@ -1705,7 +1825,11 @@ async fn run_inner(
 
     // DR-19: run-level sweep for anything written outside the per-iteration
     // windows (warnings.log, meta.json, version snapshots).
-    crate::runtime::secrets::redact_tree(&run_dir, &secrets)?;
+    let mut sweep_warnings: Vec<String> = Vec::new();
+    redaction_sweep(&run_dir, &secrets, &mut sweep_warnings)?;
+    for warning in &sweep_warnings {
+        append_warning(&run_dir, warning)?;
+    }
 
     Ok(RunSummary {
         run_id: run_id.to_string(),

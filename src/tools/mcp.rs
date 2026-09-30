@@ -383,6 +383,11 @@ impl McpClient {
     }
 
     /// DR-29: [`McpClient::call`] plus the correlation facts of the round trip.
+    ///
+    /// DR-72 ④: the parameter guidance is deliberately **not** applied here.
+    /// This method runs on the `spawn_blocking` worker, so the thread-local hint
+    /// the CLI installed on the caller's thread is not visible; the channel's
+    /// `call_with_meta` applies it where the caller actually observes the error.
     pub fn call_traced(&self, tool: &str, args: Value) -> anyhow::Result<(Value, RpcCorrelation)> {
         self.rpc("tools/call", Some(json!({"name": tool, "arguments": args})))
     }
@@ -407,6 +412,15 @@ fn response_id_of(response: &Value) -> Option<u64> {
 }
 
 /// A matching response still has to be a *successful* one.
+///
+/// DR-72 ④: when the server refuses a **parameter name** (`-32602` with
+/// `Unknown parameter 'x'`), the refusal is the harness's only chance to name
+/// the parameters that *are* accepted — the engine's own message stops at the
+/// name it rejected, and a role that has to guess again burns a step.  The hint
+/// comes from the same `tools/list` schema the harness publishes in `TOOLS.md`;
+/// the caller installs it with [`record_parameter_hint`], so this function stays
+/// a pure formatter and the error is still a real `McpError` whose `code` is
+/// unchanged (DR-54's `-32602` classification must not move).
 fn extract_result(response: &Value) -> anyhow::Result<Value> {
     if let Some(error) = response.get("error").filter(|error| !error.is_null()) {
         let code = error.get("code").and_then(Value::as_i64).unwrap_or(0);
@@ -417,6 +431,90 @@ fn extract_result(response: &Value) -> anyhow::Result<Value> {
         return Err(McpError::new(code, message).into());
     }
     Ok(response.get("result").cloned().unwrap_or(Value::Null))
+}
+
+// DR-72 ④: the parameter names the harness believes a tool accepts, for the
+// thread that is currently making a call.
+//
+// A thread-local is the right scope here because the only writer is the CLI
+// bridge's own `hoh tools call`, which sets the hint immediately before the
+// call and clears it straight after; no runtime call path installs one, so a
+// `-32602` inside the harness itself is never rewritten.
+thread_local! {
+    static PARAMETER_HINTS: std::cell::RefCell<std::collections::BTreeMap<String, Vec<String>>> =
+        std::cell::RefCell::new(std::collections::BTreeMap::new());
+}
+
+/// DR-72 ④: install the accepted-parameter list for `tool` on this thread.
+pub fn record_parameter_hint(tool: &str, parameters: &[String]) {
+    PARAMETER_HINTS.with(|hints| {
+        hints
+            .borrow_mut()
+            .insert(tool.to_string(), parameters.to_vec());
+    });
+}
+
+/// DR-72 ④: drop every hint installed on this thread.
+pub fn clear_parameter_hints() {
+    PARAMETER_HINTS.with(|hints| hints.borrow_mut().clear());
+}
+
+/// DR-72 ④: the accepted parameters recorded for `tool` on this thread.
+pub fn parameter_hint(tool: &str) -> Option<Vec<String>> {
+    PARAMETER_HINTS.with(|hints| hints.borrow().get(tool).cloned())
+}
+
+/// DR-72 ④: is this the engine's "you named a parameter I do not have" refusal?
+pub fn is_unknown_parameter_error(code: i64, message: &str) -> bool {
+    code == -32602 && message.to_ascii_lowercase().contains("unknown parameter")
+}
+
+/// DR-72 ④: the message a role sees when it used a parameter name the tool does
+/// not accept.
+///
+/// The engine's verbatim text comes first — a judge must never lose it — and the
+/// accepted names follow, because "Unknown parameter 'node_path' for tool
+/// 'editor_get_node_properties'" alone sends the next step back to guessing.
+pub fn parameter_guidance(tool: &str, accepted: &[String]) -> String {
+    if accepted.is_empty() {
+        return format!(
+            "the tool `{tool}` refused a parameter name and the harness has no schema for it; \
+             read `.hoh/TOOLS.md` and use only the argument names it lists"
+        );
+    }
+    let listed = accepted
+        .iter()
+        .map(|name| format!("`{name}`"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!(
+        "tool `{tool}` accepts exactly these parameter(s): {listed}. Use one of them and re-issue \
+         the call; `.hoh/TOOLS.md` carries the same list with types and required flags."
+    )
+}
+
+/// DR-72 ④: the message for a `-32602` refusal, extended with the accepted
+/// parameter names when the harness knows them.
+///
+/// An unknown tool still gets an actionable sentence: "the harness has no schema
+/// for this name" is itself the information the caller needs, and it is true.
+pub fn unknown_parameter_message(tool: &str, message: &str) -> String {
+    match parameter_hint(tool) {
+        Some(accepted) => format!("{message} — {}", parameter_guidance(tool, &accepted)),
+        None => format!("{message} — {}", parameter_guidance(tool, &[])),
+    }
+}
+
+/// DR-72 ④: wrap a channel error so a parameter refusal names the parameters the
+/// tool accepts.  Every other error class passes through untouched, so DR-55's
+/// transport/business classification and DR-54's `-32602` reading cannot move.
+pub fn augment_parameter_error(tool: &str, error: anyhow::Error) -> anyhow::Error {
+    match error.downcast_ref::<McpError>() {
+        Some(inner) if is_unknown_parameter_error(inner.code, &inner.message) => {
+            McpError::new(inner.code, unknown_parameter_message(tool, &inner.message)).into()
+        }
+        _ => error,
+    }
 }
 
 fn is_transport(error: &ureq::Error) -> bool {

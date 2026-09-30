@@ -45,6 +45,12 @@ struct RpcDouble {
     /// flight?" — the ordering property itself, not just its end state.
     watch: Arc<Mutex<Option<PathBuf>>>,
     sightings: Arc<Mutex<Vec<(String, bool)>>>,
+    /// DR-72 ⑤ (D1): when non-empty, `running_game_get_scene_tree` is answered
+    /// from this queue, one payload per poll, so a test can make the first N
+    /// answers *not* a scene tree and the next one the real thing.  That is the
+    /// only way to tell "the poll accepted the first answer" apart from "the poll
+    /// kept asking until the answer was usable".
+    queue: Arc<Mutex<Vec<Value>>>,
 }
 
 impl RpcDouble {
@@ -59,10 +65,12 @@ impl RpcDouble {
         let replies = Arc::new(replies);
         let sightings = Arc::new(Mutex::new(Vec::new()));
         let watch = Arc::new(Mutex::new(None));
+        let queue = Arc::new(Mutex::new(Vec::new()));
         let thread_tools = tools.clone();
         let thread_shutdown = shutdown.clone();
         let thread_sightings = sightings.clone();
         let thread_watch = watch.clone();
+        let thread_queue = queue.clone();
         let handle = std::thread::spawn(move || {
             while !thread_shutdown.load(Ordering::SeqCst) {
                 match common::accept_blocking(&listener) {
@@ -72,6 +80,7 @@ impl RpcDouble {
                         &replies,
                         &thread_watch,
                         &thread_sightings,
+                        &thread_queue,
                     ),
                     None => std::thread::sleep(Duration::from_millis(2)),
                 }
@@ -84,12 +93,21 @@ impl RpcDouble {
             handle: Some(handle),
             watch,
             sightings,
+            queue,
         }
     }
 
     /// Watch `path`: every later request records whether it exists.
     fn watching(self, path: PathBuf) -> Self {
         *self.watch.lock().expect("watch lock") = Some(path);
+        self
+    }
+
+    /// DR-72 ⑤ (D1): answer the readiness tool from `queue`, one payload per
+    /// poll.  When the queue is exhausted the *last* payload repeats, so a test
+    /// that wants "never a scene tree" queues exactly one wrong answer.
+    fn sequencing(self, queue: Vec<Value>) -> Self {
+        *self.queue.lock().expect("queue lock") = queue;
         self
     }
 
@@ -126,6 +144,7 @@ fn serve(
     replies: &Arc<Vec<(String, Value)>>,
     watch: &Arc<Mutex<Option<PathBuf>>>,
     sightings: &Arc<Mutex<Vec<(String, bool)>>>,
+    queue: &Arc<Mutex<Vec<Value>>>,
 ) {
     let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
     let mut buffer = Vec::new();
@@ -178,6 +197,20 @@ fn serve(
         .find(|(tool, _)| tool == &name)
         .map(|(_, payload)| payload.clone())
         .unwrap_or_else(|| json!({"ok": true}));
+    // DR-72 ⑤ (D1): a queued answer wins, so the readiness poll can be driven
+    // through a sequence of payloads instead of one fixed reply.
+    let inner = {
+        let mut queue = queue.lock().expect("queue lock");
+        match queue.first().cloned() {
+            Some(next) => {
+                if queue.len() > 1 {
+                    queue.remove(0);
+                }
+                next
+            }
+            None => inner,
+        }
+    };
     let id = request.get("id").cloned().unwrap_or(json!(0));
     let text = serde_json::to_string(&inner).unwrap_or_default();
     let response = json!({
@@ -286,7 +319,9 @@ async fn a_ready_game_is_published_with_the_record_the_start_confirmed() {
     let route = game_route_path(&run_dir(root.path()));
     let game = RpcDouble::start(vec![(
         "running_game_get_scene_tree".to_string(),
-        json!({"tree": {"name": "Main", "path": "/root/Main"}}),
+        // DR-72 ⑤ (D1): a *scene tree* — every node carries `path` and `type` —
+        // because the round's readiness predicate is now the battery's.
+        scene_tree_reply(),
     )]);
     let editor = RpcDouble::start(vec![(
         "editor_play_scene".to_string(),
@@ -328,7 +363,7 @@ async fn a_publish_failure_is_reported_instead_of_swallowed() {
     std::fs::create_dir_all(&route).expect("obstacle directory");
     let game = RpcDouble::start(vec![(
         "running_game_get_scene_tree".to_string(),
-        json!({"tree": {"name": "Main", "path": "/root/Main"}}),
+        scene_tree_reply(),
     )]);
     let editor = RpcDouble::start(vec![(
         "editor_play_scene".to_string(),
@@ -359,6 +394,139 @@ async fn a_publish_failure_is_reported_instead_of_swallowed() {
             .filter_map(Result::ok)
             .any(|entry| entry.file_name().to_string_lossy().contains("tmp-publish")),
         "a failed publish must not leave its temporary file behind"
+    );
+}
+
+/// The engine's `running_game_get_scene_tree` reply in the shape DR-30 accepts:
+/// every node carries both a `path` and a `type`.
+fn scene_tree_reply() -> Value {
+    json!({
+        "tree": {
+            "name": "Main",
+            "path": "/root/Main",
+            "type": "Node2D",
+            "children": [
+                {"name": "Player", "path": "/root/Main/Player", "type": "CharacterBody2D"},
+            ],
+        }
+    })
+}
+
+/// DR-72 ⑤ (D1): the round's readiness predicate must be the **battery's**.
+///
+/// `wait_for_game_ready` used to report `ok` for any successful answer, and the
+/// round's start stopped there, while the battery's `play_scene_ready` step then
+/// applied `describe_scene_tree_shape` to the same payload.  Two definitions of
+/// "ready" for one question is a defect: a game that answers with something that
+/// is *not* a scene tree could confirm the round's route while the battery
+/// refused the very same reply.
+///
+/// The double answers three polls with a non-tree payload and only then with a
+/// real tree.  A predicate that stops at the first answer returns immediately
+/// (and the test's call count is 1); the fixed predicate keeps polling and the
+/// record is the one the fourth answer confirmed.
+#[tokio::test]
+async fn the_round_readiness_poll_requires_a_scene_tree_not_merely_an_answer() {
+    let root = tempfile::tempdir().expect("tempdir");
+    let route = game_route_path(&run_dir(root.path()));
+    let not_a_tree = json!({"tree": "not a scene tree at all"});
+    let game = RpcDouble::start(vec![]).sequencing(vec![
+        not_a_tree.clone(),
+        not_a_tree.clone(),
+        not_a_tree,
+        scene_tree_reply(),
+    ]);
+    let editor = RpcDouble::start(vec![(
+        "editor_play_scene".to_string(),
+        play_scene_reply(game.url(), game.port()),
+    )]);
+
+    let channel = McpChannel::new(editor.url(), 5, 0);
+    channel.use_game_route_file(route.clone());
+    let outcome = adapter()
+        .start_round_game(root.path(), &channel as &dyn ToolChannel)
+        .await;
+
+    let record = outcome
+        .expect("a game that eventually answers with a scene tree must start")
+        .expect("the Godot adapter offers a round game");
+    let polls = game
+        .tools()
+        .iter()
+        .filter(|tool| *tool == "running_game_get_scene_tree")
+        .count();
+    assert!(
+        polls >= 4,
+        "the readiness poll must have kept asking past the non-tree answers, so the round's \
+         predicate is the battery's; it stopped after {polls} poll(s)"
+    );
+    let published = load_game_route(&route).expect("the confirmed route must be published");
+    assert_eq!(
+        published, record,
+        "the published record must be the one the readiness poll confirmed"
+    );
+}
+
+/// DR-72 ⑤ (D1/D2): the round-game start must not expose the route **while** it
+/// polls.
+///
+/// The battery has this assertion (`an_unconfirmed_battery_play_never_exposes_a_route`) but the
+/// round path did not: the DR-71 acceptance showed that an implementation which
+/// publishes at install time and only cleans up on failure keeps all the
+/// round-path tests green, because they assert the end state and the end state is
+/// correct either way.
+///
+/// This double records whether the route file existed at the instant each
+/// readiness request arrived — the ordering property itself.  The game never
+/// answers with a scene tree, so the start fails; the failure is not the point,
+/// the sightings are.
+#[tokio::test]
+async fn the_round_readiness_poll_never_exposes_the_route_while_it_runs() {
+    let root = tempfile::tempdir().expect("tempdir");
+    let route = game_route_path(&run_dir(root.path()));
+    let game = RpcDouble::start(vec![(
+        "running_game_get_scene_tree".to_string(),
+        json!({"tree": "not a scene tree at all"}),
+    )])
+    .watching(route.clone());
+    let editor = RpcDouble::start(vec![(
+        "editor_play_scene".to_string(),
+        play_scene_reply(game.url(), game.port()),
+    )]);
+
+    let channel = McpChannel::new(editor.url(), 5, 0);
+    channel.use_game_route_file(route.clone());
+    let outcome = adapter()
+        .start_round_game(root.path(), &channel as &dyn ToolChannel)
+        .await;
+
+    assert!(
+        outcome.is_err(),
+        "a game that never answers with a scene tree must fail the start: {outcome:?}"
+    );
+    let sightings = game.sightings();
+    assert!(
+        !sightings.is_empty(),
+        "the readiness poll must have reached the announced game endpoint"
+    );
+    let exposed: Vec<_> = sightings
+        .iter()
+        .filter(|(_, existed)| *existed)
+        .map(|(tool, _)| tool.clone())
+        .collect();
+    assert!(
+        exposed.is_empty(),
+        "the round published the route before it confirmed readiness, so the game endpoint saw it \
+         in flight during {exposed:?}; the whole sequence was {sightings:?}"
+    );
+    assert!(
+        !route.exists(),
+        "the failed start must not leave a route: {:?}",
+        std::fs::read_to_string(&route)
+    );
+    assert!(
+        channel.game_endpoint().await.is_none(),
+        "the failed start must not leave an in-process route either"
     );
 }
 
