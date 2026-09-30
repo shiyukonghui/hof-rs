@@ -477,7 +477,7 @@ runs/smoke-t10  232  319555896964ce1526f72a33cb239bf389fe29bcde23841764d13c57dfb
 |---|---|
 | 四条 `runs/**` 基线未被覆盖 | 摘要 + newest mtime 与记录逐字一致（§11.2）；**我全程只在 `runs/smoke-t10/**` 写入**，连临时文件都没在别处建过 |
 | `PRD-mario.md` 逐字节冻结 | sha256 `4c81c3a9995f0b3afdf01421a0c3be88573cceefc284ce9bafbfda141f0f5c3a`（开工=收工= `meta.json.spec.sha256`） |
-| `DECISIONS.md` 未由我编辑 | sha256 开工 `024fb22d2bd0f3bb5b7a9b380a87dd1edf3c11d25b2900bc8217a4dbe4bb5ef0` = 收工同值；我全程只读 |
+| `DECISIONS.md` 未由我编辑 | 我全程只读、零 `git add` 该文件；**我最后一次测量（提交前）** 的 sha256 为 `024fb22d2bd0f3bb5b7a9b380a87dd1edf3c11d25b2900bc8217a4dbe4bb5ef0`，开工值同。**其后它变了**（现为 `4db9c006…64b6`）——变更是**调度者的并发提交 `87adbea`（D276，+30 行）**，不是本次真机轮所为（§16.11） |
 | `godot-mcp/**` 零改动 | 嵌套仓 `git -C godot-mcp/godot rev-parse HEAD = fc63af77c33368c4a1bb839c95d19750554f63a3`、`status --porcelain -uall` **0 行**、引擎树内晚于 `2026-09-30 00:00` 的文件 **0**；外层 `git ls-files godot-mcp`=**6484**（真命中）vs `godot-mcp/godot`=**0**（空判） |
 | `.workspace/mario` 我只读 | 工程树：开工 `5971b484…e463`（=A0）→ 收工 `c781cf81…034a`（=A1）；**变更是本轮 Developer 按角色的写**，不是我；我未写任何工程文件 |
 | 无新依赖 / 未 stage / 未 push | HEAD == `origin/master` == `c932fcb…`（**ahead 0**）；`git status --porcelain -uall` 在我提交前为空 |
@@ -638,6 +638,11 @@ git check-ignore -v runs/smoke-t10/meta.json → .gitignore:12:runs/
 8. **我没有用 t7/t8/t9 的任何 raw 冒充本轮证据**；所有轮内事实都指到 `runs/smoke-t10/**`。
 9. **`-p` 的清理者是本轮 Developer，不是运行时**——我没有把它算作"运行时卫生生效"的证据。
 10. 报告写完后不再修改；**未 push**。
+11. **并发活动（如实记账，非我所致）**：我提交报告时 HEAD 为 `c932fcb` + 我的两个提交（`15e071f` 证据、`224250b` 报告）；
+    **随后调度者在同一工作区落了 `87adbea`（D276，只改 `DECISIONS.md` +30 行）**，我的更正提交落在它之上（`1345a33`）。
+    ⇒ 收工 HEAD 为 **`1345a33`**、`origin/master` 仍是 **`c932fcb`（ahead 4，未 push）**；
+    `DECISIONS.md` 的 sha 变化**来自 `87adbea`**。这一条与 T9 轮的 R8 同族：**决策日志在被验收之前就写下了结论**，
+    若本报告被验收判 fail，`D276` 需要回改。**我只执行了"跑一轮 + 取证 + 报告"**，未参与该提交。
 
 ---
 
