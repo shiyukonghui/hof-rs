@@ -98,18 +98,26 @@ pub fn game_route_path(run_dir: &Path) -> PathBuf {
 /// DR-69 ①: publish `record` so another process can resolve the game route.
 ///
 /// Written through a temporary file and renamed, so a reader never sees a
-/// half-written record.  The caller decides whether a failure is fatal.
+/// half-written record.  The caller decides whether a failure is fatal — since
+/// DR-71 ① that caller treats it as one, so the temporary file is cleaned up
+/// instead of being left next to the route a later attempt would use.
 pub fn publish_game_route(path: &Path, record: &GameEndpointRecord) -> std::io::Result<()> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
     let serialized = serde_json::to_string(record).unwrap_or_else(|_| "{}".to_string());
     let temp = path.with_extension("json.tmp-publish");
-    std::fs::write(&temp, serialized.as_bytes())?;
-    if path.exists() {
-        std::fs::remove_file(path)?;
+    let published = (|| -> std::io::Result<()> {
+        std::fs::write(&temp, serialized.as_bytes())?;
+        if path.exists() {
+            std::fs::remove_file(path)?;
+        }
+        std::fs::rename(&temp, path)
+    })();
+    if published.is_err() {
+        let _ = std::fs::remove_file(&temp);
     }
-    std::fs::rename(&temp, path)
+    published
 }
 
 /// DR-69 ①: read a published route, or `None` when nothing is published.

@@ -64,7 +64,34 @@ pub trait ToolChannel: Send + Sync {
     /// it has no second endpoint to route to.  The real [`McpChannel`] routes
     /// `running_game_*` there, and **fails** a game call when nothing is
     /// registered (never silently falls back to the editor endpoint).
-    async fn register_game_endpoint(&self, _record: GameEndpointRecord) -> anyhow::Result<()> {
+    ///
+    /// DR-71 ①: registration is now the **composition** of two steps, so a caller
+    /// that must not publish yet (the round-game start, which may only publish
+    /// next to a confirmed-ready game) can install first and publish later.  The
+    /// default is the composition of the two defaults, so an existing
+    /// implementation that overrides only this method keeps its behaviour.
+    async fn register_game_endpoint(&self, record: GameEndpointRecord) -> anyhow::Result<()> {
+        self.install_game_endpoint(record).await?;
+        self.publish_game_endpoint().await
+    }
+
+    /// DR-71 ①: make `record` this channel's game route **without publishing it**.
+    ///
+    /// In-process routing only: the published route file is untouched, so no other
+    /// process can adopt an endpoint whose readiness has not been confirmed.  The
+    /// round-game start uses this to poll the announced game before it publishes.
+    async fn install_game_endpoint(&self, _record: GameEndpointRecord) -> anyhow::Result<()> {
+        Ok(())
+    }
+
+    /// DR-71 ①: publish the route this channel currently holds.
+    ///
+    /// This is the step that makes the route visible to a role's separate process,
+    /// so its failure is a **result, not a discarded value**: a round that
+    /// believes it published while every role gets `game_endpoint_unavailable` is
+    /// the DR-69 defect (A5).  A channel with no published-route file has nothing
+    /// to publish and succeeds.
+    async fn publish_game_endpoint(&self) -> anyhow::Result<()> {
         Ok(())
     }
 
@@ -392,16 +419,47 @@ impl ToolChannel for McpChannel {
             .unwrap_or_else(|error| SessionSyncReport::unavailable(error.to_string()))
     }
 
-    async fn register_game_endpoint(&self, record: GameEndpointRecord) -> anyhow::Result<()> {
-        // DR-69 ①: the route is published **before** the registration is
-        // returned, so a role process that starts the moment the battery
-        // registered the endpoint can already resolve it.  A publish failure is
-        // best effort: it must not fail the battery step that announced the
-        // endpoint, and the in-process route below still works.
-        if let Some(path) = self.route_file() {
-            let _ = endpoint::publish_game_route(&path, &record);
-        }
+    /// DR-71 ①: adopt the announced endpoint for **in-process routing only**.
+    ///
+    /// Nothing is written: the round-game start must be able to poll the announced
+    /// game before any other process can adopt it.  DR-69 published here, which is
+    /// how a start that failed its readiness poll still left a route behind for the
+    /// first role (DR-70 acceptance A1).
+    async fn install_game_endpoint(&self, record: GameEndpointRecord) -> anyhow::Result<()> {
         self.install_game_route(record)
+    }
+
+    /// DR-71 ①: publish the installed route, and **surface a failure**.
+    ///
+    /// DR-69's `let _ = endpoint::publish_game_route(...)` made "the route is
+    /// published" silently false while a comment beside it called the same failure
+    /// fatal (A5).  The caller now decides: the round-game start treats it as a
+    /// failed start and withdraws, so a role never sees a route the runtime could
+    /// not publish.
+    async fn publish_game_endpoint(&self) -> anyhow::Result<()> {
+        let Some(path) = self.route_file() else {
+            // No published-route file was configured (a single-endpoint double, or
+            // a run that never pointed the channel at one): there is nothing to
+            // publish, and that is not a failure.
+            return Ok(());
+        };
+        let record = self
+            .game
+            .lock()
+            .map_err(|_| anyhow::anyhow!("the game endpoint registry is poisoned"))?
+            .as_ref()
+            .map(|route| route.record.clone())
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "no game endpoint is installed, so there is nothing to publish to {path:?}"
+                )
+            })?;
+        endpoint::publish_game_route(&path, &record).map_err(|error| {
+            anyhow::anyhow!(
+                "the game route {path:?} could not be published for endpoint `{}`: {error}",
+                record.endpoint
+            )
+        })
     }
 
     async fn clear_game_endpoint(&self) {

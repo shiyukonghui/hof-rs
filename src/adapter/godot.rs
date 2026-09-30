@@ -898,9 +898,15 @@ impl<'a> BatterySession<'a> {
                 // DR-43: the same reply is the **only** source of the game
                 // endpoint.  Registering it must succeed; a failure fails the
                 // step instead of falling back to the editor endpoint.
+                //
+                // DR-71 ①: the announced endpoint is installed for in-process
+                // routing only.  The route becomes visible to another process
+                // **after** the readiness poll below, so a battery play that never
+                // becomes observable cannot publish a route a later role would
+                // adopt (the same lie DR-70's acceptance measured, one step over).
                 let endpoint = parse_game_endpoint(&call.payload);
                 let registered = match &endpoint {
-                    Ok(record) => self.tools.register_game_endpoint(record.clone()).await,
+                    Ok(record) => self.tools.install_game_endpoint(record.clone()).await,
                     Err(problem) => Err(anyhow::anyhow!(problem.clone())),
                 };
                 if let Err(error) = registered {
@@ -969,6 +975,31 @@ impl<'a> BatterySession<'a> {
                 let tree = unwrap_mcp_payload(&payload);
                 match describe_scene_tree_shape(&tree) {
                     Ok(nodes) => {
+                        // DR-71 ①: readiness is confirmed, so this is the first
+                        // moment the route may become visible to a role process.
+                        if let Err(error) = self.tools.publish_game_endpoint().await {
+                            self.tools.clear_game_endpoint().await;
+                            calls.push(json!({
+                                "tool": "publish_game_route",
+                                "ok": false,
+                                "error": {"code": Value::Null, "message": error.to_string()},
+                            }));
+                            let observation = format!(
+                                "FAILED the main scene booted but its route could not be \
+                                 published: {error} (UNAVAILABLE: every `running_game_*` call \
+                                 would have to be refused, so the step must not report success)"
+                            );
+                            self.finish(
+                                step,
+                                ExecKind::RuntimeTrace,
+                                None,
+                                observation,
+                                false,
+                                calls,
+                            )
+                            .await?;
+                            return Ok(None);
+                        }
                         let observation = format!(
                             "main scene booted; the game answered running_game_get_scene_tree after \
                              {attempts} poll(s) with {nodes} node(s) carrying a path and a type"
@@ -978,6 +1009,8 @@ impl<'a> BatterySession<'a> {
                         Ok(Some(tree))
                     }
                     Err(problem) => {
+                        // DR-71 ①: an unconfirmed play leaves no route behind.
+                        self.tools.clear_game_endpoint().await;
                         let observation = format!(
                             "FAILED the readiness reply is not a scene tree ({problem}): {tree} \
                              (UNAVAILABLE: `editor_play_scene`'s own reply is never readiness evidence)"
@@ -1001,6 +1034,9 @@ impl<'a> BatterySession<'a> {
                 failure,
                 ..
             } => {
+                // DR-71 ①: a play that never became observable must not leave a
+                // route for a later role to adopt.
+                self.tools.clear_game_endpoint().await;
                 let failure = failure.unwrap_or_else(|| {
                     McpFailure::new("running_game_get_scene_tree", None, "timeout", 0)
                 });
@@ -3836,6 +3872,13 @@ impl ProjectAdapter for GodotAdapter {
     /// readiness poll is not decoration: DR-70 ② refuses a published route whose
     /// destination does not answer, so the record must be published only next to
     /// a game that is actually answering.
+    ///
+    /// DR-71 ①: "only next to a game that is actually answering" is now the
+    /// **order of the two steps**, not a hope about their timing.  The announced
+    /// endpoint is installed for in-process routing, the readiness poll runs
+    /// against it, and publication happens afterwards — so a poll that fails
+    /// cannot leave a route behind, and a publication that fails fails the start
+    /// instead of being swallowed.
     async fn start_round_game(
         &self,
         _workspace: &Path,
@@ -3847,10 +3890,12 @@ impl ProjectAdapter for GodotAdapter {
             .await
             .map_err(|error| anyhow::anyhow!("editor_play_scene: {error}"))?;
         let record = parse_game_endpoint(&call.payload).map_err(anyhow::Error::msg)?;
-        // Registering publishes the route (DR-69 ①) — that is the point of the
-        // round session.  A registration failure is fatal here: a round whose
-        // game runs but whose route is not published is exactly the DR-69 defect.
-        tools.register_game_endpoint(record.clone()).await?;
+        // DR-71 ①: the announced endpoint is installed for **in-process routing
+        // only**; it is not published yet.  DR-70 published it here and polled
+        // readiness afterwards, so a poll that failed at `:3871` left a route the
+        // first role could adopt — the DR-70 acceptance observed exactly that
+        // (probe case B/C: `Some(true)` inside the first role's window).
+        tools.install_game_endpoint(record.clone()).await?;
 
         let tree_args = json!({"max_depth": -1});
         let ready = wait_for_game_ready(
@@ -3868,11 +3913,27 @@ impl ProjectAdapter for GodotAdapter {
                 .failure
                 .map(|failure| failure.observation())
                 .unwrap_or_else(|| "no attempt was made".to_string());
+            // The route must not survive a start that was never confirmed:
+            // `clear_game_endpoint` drops the in-process route and withdraws the
+            // published file, so there is nothing for a role to adopt.
+            tools.clear_game_endpoint().await;
             anyhow::bail!(
                 "the round's game did not answer `running_game_get_scene_tree` after {} poll(s): \
                  {problem}",
                 ready.attempts
             );
+        }
+
+        // Readiness is confirmed: only now may the route become visible to another
+        // process.  A publish failure is a **failed start**, not a discarded value
+        // (DR-70 acceptance A5): the round would otherwise believe a route exists
+        // that every role fails to reach.
+        if let Err(error) = tools.publish_game_endpoint().await {
+            tools.clear_game_endpoint().await;
+            return Err(error.context(
+                "the round's game is ready but its route could not be published, so no role \
+                 could reach it",
+            ));
         }
         Ok(Some(record))
     }

@@ -188,6 +188,19 @@ impl ToolChannel for GateChannel {
         Ok(())
     }
 
+    /// DR-71 ①: the battery now installs the announced endpoint for in-process
+    /// routing and publishes it only after the readiness poll, so the identity
+    /// DR-51 captures is recorded here.  The DR-51 assertions are unchanged.
+    async fn install_game_endpoint(
+        &self,
+        record: hof_rs::tools::endpoint::GameEndpointRecord,
+    ) -> anyhow::Result<()> {
+        self.registrations.lock().unwrap().push(record);
+        self.route_cleared
+            .store(false, std::sync::atomic::Ordering::SeqCst);
+        Ok(())
+    }
+
     async fn clear_game_endpoint(&self) {
         self.route_cleared
             .store(true, std::sync::atomic::Ordering::SeqCst);

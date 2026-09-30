@@ -445,6 +445,15 @@ impl ToolChannel for RegistrationChannel {
         Ok(())
     }
 
+    /// DR-71 ①: the battery installs the announced endpoint for in-process routing
+    /// and publishes it only after the readiness poll, so the "the step registered
+    /// the announced endpoint" observation is taken here.  The assertions are
+    /// unchanged: the same record, with the same endpoint/port/source/pid.
+    async fn install_game_endpoint(&self, record: GameEndpointRecord) -> anyhow::Result<()> {
+        self.registrations.lock().unwrap().push(record);
+        Ok(())
+    }
+
     async fn clear_game_endpoint(&self) {
         *self.clears.lock().unwrap() += 1;
     }

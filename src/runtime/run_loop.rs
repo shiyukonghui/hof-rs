@@ -523,6 +523,15 @@ fn qa_report_fallback(bundle: &crate::model::EvidenceBundle) -> String {
 /// at a new, earlier point that nothing else understands.  What the failure must
 /// not do is stay silent: `game_endpoint_unavailable` for every role of the round
 /// is then the *expected* outcome, and the warning says so.
+///
+/// DR-71 ①: the failure must also leave **no route**.  The adapter is the one
+/// that publishes, and an adapter that published before it confirmed readiness
+/// (DR-70's shape, and still the order inside the battery) would otherwise hand
+/// the first role a route the start could not confirm — the acceptance observed
+/// exactly that (`Some(true)` inside the first role's window).  Withdrawing here
+/// makes "start failed ⇒ no route" true for *every* adapter, including one whose
+/// own failure path forgets: the channel drops the in-process route and the file
+/// is removed (DR-43's explicit refusal stays what a role sees).
 async fn start_round_game(orchestrator: &Orchestrator, workspace: &Path, run_dir: &Path) {
     match orchestrator
         .adapter
@@ -531,6 +540,12 @@ async fn start_round_game(orchestrator: &Orchestrator, workspace: &Path, run_dir
     {
         Ok(_) => {}
         Err(error) => {
+            // Idempotent, and deliberately not conditional on what the adapter
+            // managed to do before it failed.
+            orchestrator.tools.clear_game_endpoint().await;
+            crate::tools::endpoint::withdraw_game_route(&crate::tools::endpoint::game_route_path(
+                run_dir,
+            ));
             let _ = append_warning(
                 run_dir,
                 &format!(
