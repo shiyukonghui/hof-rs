@@ -10596,3 +10596,33 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 - 裁决：**DR-71 验收在飞**（`e052f2b7…`，**注意：它的 cargo 运行可能与实现者争用过** ⇒ 待其完成后**须评估是否需重跑**）。
 - 回滚点：DR-71 的 8 个提交可各自 revert；四条真机基线不得覆盖。
 
+## D276 — 🎯 **SMOKE-T10：E1 首次 `met`**（`A_1 = ed98d1b8…` ≠ `A_0`，7 脚本，exit 0 三方一致，`E_1` 被接受）；E2/E4/E5/E6 亦 met；**E3 仍 not_met（4 类中 2 类）**；**新 major：脱敏写坏 Tester 轨迹 JSON**
+
+- 日期：2026-09-30。交付 `.spec/hof-rs/tasks/TASK-SMOKE-T10-REPORT.md`（52,990 B）。**验收尚未派发**（按 D275 规则：**必须等其完成消息到达**）。
+- **判据（本轮）**：**E1 `met`** | **E2 `met`** | **E3 `not_met`（部分）** | **E4 `met`** | **E5 `met`** | **E6 `met`**
+  （对照 t7/t8/t9：`not_met/met/not_met|部分/…`、`not_met/met/not_met/met/met/met`、`not_met/不可判×5`）。
+- **E1 = met（目标开始以来的决定性突破）**：Planner `artifact_valid=true`；
+  **Developer 真的写了工程文件**：`A_0 = 1f3d20ed…`（17 文件/18397 B）→ **`A_1 = ed98d1b8…`（17 文件/21679 B，7 个脚本被改）**；
+  Tester `Submitted`/`artifact_valid=true`，**合法 `E_1` 被接受**（**9 verified + 11 gap**）；**整轮跑完**（Planner→Developer×2→电池→冻结→Tester，**54m14s**），
+  **退出码 0 三方一致**（`exit_code` 字节 `30 0A`、`meta.json.exit_code=0`、控制台 `ROUND_EXIT=0`）。
+- **同轮证实的三件事（都是我长期盯的点）**：
+  ① **Tester 证据形状修复首次在真机被走到并被接受**（t8 正是在此处被 schema 拒）；
+  ② **E3 的轮内证据形态真的成形且引擎接受**：每窗 **before/after PNG（8 张）** +
+     `running_game_assert_node_state{Player,position,neq,期望=窗口首样本}` **4/4 `passed=true`**，**无 `POSITION_ASSERTION_UNAVAILABLE`**；
+     且**承重的是"按位置"证据**（`input_axis` 真机恒 null 的告诫被遵守）；
+  ③ **"只看 ok/退出码会漏报"的历史彻底结束**：本轮 exit 0 是**真成功**（有 `E_1`、有增量）。
+- **E3 仍 not_met（4 类中 2 类）**：**左右移动、跳跃成立**；
+  **"≥1 可交互对象"不成立**（**金币从未被拾取，`Coins: 0` 全程不变**，F6–F12 全 gap）；
+  **"终点/胜负"只完成失败半边**（GAME OVER + 跳跃重开，F14/F15），**胜利从未被驱动**（F13 gap，`Goal.reached=false`）。
+- **新 major 缺陷（F-T10-1）**：**DR-69 的密钥赋值脱敏把 Tester 轨迹 JSON 写坏** ⇒ **脱敏机制伤到了轮次本身要用的证据**。
+  ⇒ 与 D272/D273 的脱敏史连起来看：**"就地改写证据"这条路已经三次出问题**（DR-69 合并记录+改行尾、DR-70 字节数失实、本轮写坏 JSON）。
+  ⇒ **我的裁决**：**今后一律"旁注/生成式"脱敏，禁止就地改写任何被冻结或被轮次读取的证据**；
+  若必须就地改，**须先证明目标文件不被任何消费者解析**。
+- 另记一处**参数契约摩擦**：`-32602: Unknown parameter 'node_path' for tool 'editor_get_node_properties'`（returncode 5）
+  ⇒ 角色与引擎工具的**参数名不一致**（这是**角色侧用法**问题还是**工具契约**表述问题，待 DR-72 诊断）。
+- **我必须指出的关键界限（判据解读）**：本轮工作区**不是"全新空白工程"**——起点是 t8/t9 的成品状态（`A_0` 已含完成品）
+  ⇒ **判据(1) 的"`hoh init` 一个全新空白工程"这一条仍未满足**；**E3 未 met** ⇒ **判据(2)（E1..E6 全 met）亦未满足**。
+  ⇒ 这正是我此前**故意留待此刻**的问题：**新工程用哪份 spec 建**（引入新 PRD 属**目标范围变更**，须**问用户**）。
+- 队列：**（等 SMOKE-T10 完成消息 → 提交报告 → 派独立验收）→ 按验收结论决定 DR-72（F-T10-1 + `node_path` + D1/D2/竞态）→ 然后向用户确认"全新空白工程用哪份 spec" → 再跑真机**。
+- 回滚点：SMOKE-T10 只新增 `runs/smoke-t10/**`（232 文件）与 `.spec/hof-rs/tasks/TASK-SMOKE-T10-evidence/**`；五条真机基线均不得覆盖。
+
