@@ -382,6 +382,100 @@ async fn a_failing_round_still_withdraws_the_published_route() {
     );
 }
 
+/// DR-71 ①/②: a round-game start that **fails after it published its record** must
+/// leave no route behind — and the round must still proceed, with the role getting
+/// DR-43's explicit refusal instead of a route that lies.
+///
+/// This is the shipped-suite form of the DR-70 acceptance's A1/A4: the real
+/// `GodotAdapter` registered the endpoint *before* it polled readiness, so a fresh
+/// or not-yet-ready project could expose a route the start never confirmed.  The
+/// acceptance could only reach that path with an out-of-repo probe crate; the stub
+/// now reproduces its exact shape (`failing_after_publish`).
+#[tokio::test]
+async fn a_failed_round_game_start_leaves_no_route_and_the_round_proceeds() {
+    let root = run_root();
+    let editor = LoopbackMcp::start();
+    let game = LoopbackMcp::start();
+    let route = route_of(root.path());
+    let stub = Arc::new(
+        RoundGameStub::new(game.url(), game.port(), std::process::id()).failing_after_publish(),
+    );
+
+    let observed: Arc<Mutex<Vec<RoleProbe>>> = Arc::new(Mutex::new(Vec::new()));
+    let script = vec![
+        FakeStep::new(Role::Planner).writing(".hoh/plan.md", common::OK_PLAN),
+        FakeStep::new(Role::Developer)
+            .writing("project.godot", "config_version=5\n")
+            .probing(recording_probe(
+                route.clone(),
+                editor.url(),
+                observed.clone(),
+            )),
+        FakeStep::new(Role::Tester)
+            .writing(".hoh/evidence/move.json", "{\"moved\":true}\n")
+            .writing(".hoh/evidence.json", &common::ok_evidence(1, "")),
+    ];
+
+    let channel: Arc<dyn ToolChannel> = Arc::new(McpChannel::new(editor.url(), 5, 0));
+    let adapter = FakeAdapter::new().with_round_game(stub.clone());
+    let (result, _records) = run_scenario_with_tools(
+        root.path(),
+        1,
+        script,
+        Ablation::default(),
+        adapter,
+        channel,
+    )
+    .await;
+
+    // (b) the round does not fail because its game session could not start.
+    assert!(
+        result.is_ok(),
+        "a failed round-game start must not fail the round: {result:?}"
+    );
+
+    // (a) nothing published survives into the role's window, and nothing survives
+    // the round either.
+    let probes = observed.lock().expect("sink lock").clone();
+    assert_eq!(probes.len(), 1, "the Developer step must have probed once");
+    assert!(
+        !probes[0].route_exists,
+        "a start that failed after publishing must leave no route for the first role: {:?}",
+        probes[0]
+    );
+    assert!(
+        !route.exists(),
+        "the failed start's record must not outlive the round either"
+    );
+
+    // (c) the role is told the truth: an explicit `game_endpoint_unavailable`,
+    // not a route that answers for a start that never confirmed anything.
+    assert_ne!(
+        probes[0].exit_code,
+        Some(0),
+        "the role must not be handed a game route the start could not confirm: {}",
+        probes[0].combined()
+    );
+    assert!(
+        probes[0].combined().contains("game_endpoint_unavailable"),
+        "the failure must be DR-43's explicit refusal: {}",
+        probes[0].combined()
+    );
+    assert!(
+        game.tools().is_empty(),
+        "a start that never confirmed readiness must not be adopted by a role: {:?}",
+        game.tools()
+    );
+
+    // …and the round records the failure instead of hiding it.
+    let warnings = std::fs::read_to_string(root.path().join("runs/run-1/warnings.log"))
+        .expect("the round must write warnings.log");
+    assert!(
+        warnings.contains("could not be started"),
+        "the failed start must be recorded in warnings.log: {warnings}"
+    );
+}
+
 /// A route left behind by an earlier round must **not** be inherited, however
 /// healthy it looks: the runtime withdraws the file before anything can adopt it,
 /// so a role never reaches another round's game.

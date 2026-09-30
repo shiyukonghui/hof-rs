@@ -418,6 +418,13 @@ pub struct RoundGameStub {
     pub pid: u32,
     pub starts: Mutex<u32>,
     pub stops: Mutex<u32>,
+    /// DR-71 ①/②: when set, the start **publishes the route and then fails**,
+    /// which is the exact shape the real `GodotAdapter` had (it registered the
+    /// endpoint at `godot.rs:3853` and only then polled readiness at
+    /// `:3856-3876`, bailing at `:3871` without withdrawing).  A double that
+    /// only ever returned `Ok` could not drive the failure path DR-71 ② has to
+    /// cover.
+    pub fail_after_publish: bool,
 }
 
 impl RoundGameStub {
@@ -428,7 +435,15 @@ impl RoundGameStub {
             pid,
             starts: Mutex::new(0),
             stops: Mutex::new(0),
+            fail_after_publish: false,
         }
+    }
+
+    /// DR-71 ②: make the next start announce the endpoint, publish it, and then
+    /// report the failure a readiness poll would have reported.
+    pub fn failing_after_publish(mut self) -> Self {
+        self.fail_after_publish = true;
+        self
     }
 
     pub fn starts(&self) -> u32 {
@@ -562,6 +577,14 @@ impl ProjectAdapter for FakeAdapter {
             pid: Some(stub.pid),
         };
         tools.register_game_endpoint(record.clone()).await?;
+        if stub.fail_after_publish {
+            // DR-71 ②: the published record is left in place on purpose — that is
+            // the defect the runtime now has to clean up.
+            anyhow::bail!(
+                "the round's game did not answer `running_game_get_scene_tree` after 3 poll(s): \
+                 simulated readiness failure"
+            );
+        }
         Ok(Some(record))
     }
 
