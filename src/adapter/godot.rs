@@ -812,10 +812,42 @@ impl<'a> BatterySession<'a> {
                                 ),
                             )
                         } else {
-                            (
-                                false,
-                                format!("{observation} (UNAVAILABLE: the editor is not clean)"),
-                            )
+                            // DR-68 ②: `editor_get_errors` answers from the
+                            // editor's **append-only log**.  A line whose
+                            // `res://file:line` no longer mentions the symbol the
+                            // error names cannot be produced by the project on
+                            // disk, so it must neither close the gate nor burn
+                            // the one targeted repair (`smoke-t8`: 60 steps /
+                            // 4.02M tokens / 11m24s, zero engineering writes).
+                            let (fresh, stale) = partition_editor_errors(&reported, self.workspace);
+                            let dismissed = if stale.is_empty() {
+                                String::new()
+                            } else {
+                                format!(
+                                    "; {} stale editor-log line(s) dismissed as no longer \
+                                     reproducible against the current project (DR-68)",
+                                    stale.len()
+                                )
+                            };
+                            if fresh.is_empty() {
+                                (
+                                    true,
+                                    format!(
+                                        "{observation} (only stale editor-log line(s) were \
+                                         reported{dismissed}; {} line(s) exempted by DR-48)",
+                                        errors.len() - reported.len()
+                                    ),
+                                )
+                            } else {
+                                (
+                                    false,
+                                    format!(
+                                        "{observation} (UNAVAILABLE: the editor is not clean; \
+                                         {} line(s) still reproducible{dismissed})",
+                                        fresh.len()
+                                    ),
+                                )
+                            }
                         }
                     }
                     None => (
@@ -3764,6 +3796,97 @@ pub fn non_banner_editor_errors(errors: &[serde_json::Value]) -> Vec<&serde_json
         .collect()
 }
 
+/// DR-68 ②: the `res://<path>:<line>` a GDScript editor error points at.
+///
+/// The path is returned **relative** (as written, so `scripts/player.gd`), which
+/// is what [`crate::adapter::godot`]'s workspace joins need.
+fn res_source_position(line: &str) -> Option<(String, usize)> {
+    let rest = line.split("res://").nth(1)?;
+    let colon = rest.find(':')?;
+    let (path, after) = rest.split_at(colon);
+    let digits: String = after[1..]
+        .chars()
+        .take_while(|character| character.is_ascii_digit())
+        .collect();
+    if path.is_empty() || digits.is_empty() {
+        return None;
+    }
+    Some((path.to_string(), digits.parse().ok()?))
+}
+
+/// DR-68 ②: the symbol a `Function "name()"` parse error names, without `()`.
+fn quoted_function_name(line: &str) -> Option<String> {
+    let start = line.find("Function \"")? + "Function \"".len();
+    let rest = &line[start..];
+    let end = rest.find('"')?;
+    let symbol = rest[..end].trim_end_matches("()").trim();
+    if symbol.is_empty() {
+        None
+    } else {
+        Some(symbol.to_string())
+    }
+}
+
+/// DR-68 ②: is this editor-log error line **stale** — i.e. can the project on
+/// disk no longer produce it?
+///
+/// The mechanism this closes: `editor_get_errors` reads the editor's append-only
+/// **log**, not the current project.  `smoke-t8` read
+/// `ERROR: res://scripts/player.gd:31 - Parse Error: Function
+/// "_update_facing_visual()" not found in base self.` at 07:19:33, twelve
+/// minutes after `player.gd` had been rewritten to call
+/// `_apply_facing_visual()`; the gate closed, DR-24 spent 60 steps / 4.02M
+/// tokens / 11m24s on a repair, and that repair wrote nothing.
+///
+/// The rule is deliberately **narrow and fail-closed**: it returns `true` only
+/// for the exact shape the real round produced — a `res://<file>:<line>` that
+/// exists, a `Function "…()"` symbol, and a current line 31 that does **not**
+/// mention that symbol.  Everything else (an unparseable line, a missing file, a
+/// line number out of range, another message shape) is **kept**, because "I
+/// cannot interpret this" must never read as "this is fine".
+///
+/// Why the symbol test is the right freshness probe: a *genuine* current
+/// `Function "X()" not found in base self.` means the file calls `X()` at that
+/// position — so the symbol **is** on the line.  Only a line that has since been
+/// rewritten to something else fails the test.
+pub fn editor_error_is_stale(line: &str, workspace: &Path) -> bool {
+    let Some((relative, number)) = res_source_position(line) else {
+        return false;
+    };
+    let Some(symbol) = quoted_function_name(line) else {
+        return false;
+    };
+    let Ok(text) = std::fs::read_to_string(workspace.join(&relative)) else {
+        // Cannot check it: keep it (fail closed).
+        return false;
+    };
+    let Some(current) = text.lines().nth(number.saturating_sub(1)) else {
+        // The file is shorter than the log claims: cannot check it, keep it.
+        return false;
+    };
+    !current.contains(&symbol)
+}
+
+/// DR-68 ②: split the reported editor lines into `(still reproducible, stale)`.
+///
+/// Used by the `editor_errors_baseline` gate step, so a log line that no longer
+/// describes the project cannot close the gate **or** trigger the one allowed
+/// repair.
+pub fn partition_editor_errors<'a>(
+    reported: &[&'a serde_json::Value],
+    workspace: &Path,
+) -> (Vec<&'a serde_json::Value>, Vec<&'a serde_json::Value>) {
+    let mut fresh = Vec::new();
+    let mut stale = Vec::new();
+    for line in reported {
+        match line.as_str() {
+            Some(text) if editor_error_is_stale(text, workspace) => stale.push(*line),
+            _ => fresh.push(*line),
+        }
+    }
+    (fresh, stale)
+}
+
 /// DR-5: turn a `editor_get_errors` payload into an observation.
 ///
 /// The editor's answer is the authoritative signal.  A payload that is not an
@@ -4259,6 +4382,77 @@ mod tests {
             non_banner_editor_errors(only_banners.as_array().unwrap()).is_empty(),
             "only the engine's own banners were reported"
         );
+    }
+
+    /// DR-68 ②: the staleness probe, against a real `player.gd` on disk.
+    ///
+    /// Positive: the log names `_update_facing_visual()` at line 31 while the
+    /// current line 31 calls `_apply_facing_visual()` — the `smoke-t8` case.
+    /// Negative (fail closed): a line the current bytes still reproduce, another
+    /// message shape, a missing file, and a line number past the end of the file.
+    #[test]
+    fn a_log_line_is_stale_only_when_the_current_bytes_cannot_reproduce_it() {
+        let temp = tempfile::tempdir().unwrap();
+        let workspace = temp.path();
+        std::fs::create_dir_all(workspace.join("scripts")).unwrap();
+        let mut player = String::from("extends CharacterBody2D\n\n");
+        while player.lines().count() < 30 {
+            player.push_str("\tpass\n");
+        }
+        player.push_str("\t_apply_facing_visual()\n");
+        assert_eq!(player.lines().count(), 31);
+        std::fs::write(workspace.join("scripts/player.gd"), &player).unwrap();
+
+        let stale = r#"ERROR: res://scripts/player.gd:31 - Parse Error: Function "_update_facing_visual()" not found in base self."#;
+        assert!(
+            editor_error_is_stale(stale, workspace),
+            "the log quotes a symbol the current line 31 no longer has"
+        );
+
+        // The same line rewritten to call the missing symbol: a *current* error,
+        // because a real `not found in base self` means the call is on the line.
+        let mut current = player.clone();
+        current.truncate(current.len() - "\t_apply_facing_visual()\n".len());
+        current.push_str("\t_missing_from_this_file()\n");
+        std::fs::write(workspace.join("scripts/player.gd"), &current).unwrap();
+        let reproducible = r#"ERROR: res://scripts/player.gd:31 - Parse Error: Function "_missing_from_this_file()" not found in base self."#;
+        assert!(
+            !editor_error_is_stale(reproducible, workspace),
+            "the current bytes still produce this complaint"
+        );
+
+        // Everything the probe cannot interpret is kept (fail closed).
+        for kept in [
+            // A real error with no `res://` position at all.
+            "ERROR: [MCP] SceneTree never became available; MCP server disabled.",
+            // Another message shape at the same position.
+            r#"ERROR: res://scripts/player.gd:31 - Parse Error: Unexpected identifier "using" in class body."#,
+            // A file that does not exist in the workspace.
+            r#"ERROR: res://scripts/absent.gd:31 - Parse Error: Function "_x()" not found in base self."#,
+            // A line number past the end of the file.
+            r#"ERROR: res://scripts/player.gd:900 - Parse Error: Function "_x()" not found in base self."#,
+        ] {
+            assert!(
+                !editor_error_is_stale(kept, workspace),
+                "an uninterpretable line must never be dismissed: {kept}"
+            );
+        }
+
+        // And the split keeps the reported order while classifying each line.
+        let banner = ENGINE_INFO_BANNERS[0];
+        let reported = serde_json::json!([current_line_error(), banner]);
+        let (fresh, dismissed) = partition_editor_errors(
+            &non_banner_editor_errors(reported.as_array().unwrap()),
+            workspace,
+        );
+        assert_eq!(fresh.len(), 1, "the banner is filtered first: {fresh:?}");
+        assert!(dismissed.is_empty());
+    }
+
+    fn current_line_error() -> serde_json::Value {
+        serde_json::json!(
+            r#"ERROR: res://scripts/player.gd:31 - Parse Error: Function "_missing_from_this_file()" not found in base self."#
+        )
     }
 
     /// DR-52: the engine's `editor_get_input_actions` answers an array of action

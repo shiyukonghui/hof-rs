@@ -742,3 +742,134 @@ async fn an_unknown_mcp_prefixed_line_still_closes_the_gate() {
         "a truncated/unknown `[MCP]` line is not the known banner: fail closed (DR-48)"
     );
 }
+
+// ---------------------------------------------------------------------------
+// ⑦ DR-68 ② — the launch gate may not be closed by a stale editor log line
+// ---------------------------------------------------------------------------
+
+/// The line `smoke-t8` read at 07:19:33 — naming `_update_facing_visual`, which
+/// exists in **neither** `A_0` nor `A_1` of the round.
+const STALE_PLAYER_ERROR: &str = r#"ERROR: res://scripts/player.gd:31 - Parse Error: Function "_update_facing_visual()" not found in base self."#;
+
+/// A `player.gd` whose **line 31** is `body`, padded with real-looking lines, so
+/// the fixtures can name the same `res://…:31` position the real log did.
+fn player_gd_line_31(body: &str) -> String {
+    let mut text = String::from("extends CharacterBody2D\n\n");
+    while text.lines().count() < 30 {
+        text.push_str("\tpass\n");
+    }
+    text.push_str(body);
+    text.push('\n');
+    assert_eq!(text.lines().count(), 31, "the fixture must have 31 lines");
+    text
+}
+
+fn developer_writes_scene_and_player(scene: &str, player: &str) -> FakeStep {
+    FakeStep::new(Role::Developer)
+        .writing("scenes/main.tscn", scene)
+        .writing("scripts/player.gd", player)
+}
+
+/// `smoke-t8`: the editor's **append-only log** still carried a parse error for
+/// `player.gd:31` twelve minutes after the file had been rewritten, so the gate
+/// closed, DR-24 spent a 60-step repair (4.02M tokens, 11m24s) and the repair
+/// wrote nothing.  The line the log quoted is no longer the line the file has,
+/// so the current project cannot reproduce the error.
+#[tokio::test]
+async fn a_stale_editor_log_line_does_not_close_the_gate() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let run = run_gate_with_errors(
+        root,
+        vec![
+            plan_step(),
+            developer_writes_scene_and_player(
+                SCENE_WITH_ROOT,
+                &player_gd_line_31("\t_apply_facing_visual()"),
+            ),
+            // Never consumed: no repair may be triggered by log residue.
+            tester_step(),
+        ],
+        Some(vec![STALE_PLAYER_ERROR]),
+    )
+    .await;
+
+    assert_eq!(
+        run.result["artifact_gate"]["launchable"],
+        json!(true),
+        "the current project cannot produce this error, so it must not close the gate: {:?}",
+        run.result["artifact_gate"]["reasons"]
+    );
+    assert_eq!(
+        run.result["repair_retry_used"],
+        json!(false),
+        "log residue must never burn the one repair retry"
+    );
+    assert_eq!(
+        run.records.iter().map(|r| r.role).collect::<Vec<_>>(),
+        vec![Role::Planner, Role::Developer, Role::Tester],
+        "no second Developer call may be triggered by a stale line"
+    );
+
+    // The raw payload keeps the line verbatim: the verdict changes, not the
+    // evidence — and the observation says what was dismissed.
+    let battery: Vec<Value> = serde_json::from_str(&read(
+        &run.run_dir
+            .join("iter-1/candidate/.hoh/deterministic/battery.json"),
+    ))
+    .unwrap();
+    let baseline = battery
+        .iter()
+        .find(|record| record["step_id"] == json!("editor_errors_baseline"))
+        .expect("the baseline step must exist");
+    assert_eq!(baseline["ok"], json!(true));
+    let observation = baseline["record"]["observation"].as_str().unwrap();
+    assert!(
+        observation.contains("_update_facing_visual"),
+        "the dismissed line must stay verbatim in the observation: {observation}"
+    );
+    assert!(
+        observation.contains("stale"),
+        "the observation must say the line was dismissed as not reproducible: {observation}"
+    );
+}
+
+/// The reverse control: the same call, the same file, and the log line names the
+/// symbol that really is on line 31 — i.e. the error describes the current bytes
+/// (a call to a function the file never defines).  It must still close the gate.
+#[tokio::test]
+async fn a_reproducible_parse_error_still_closes_the_gate() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let run = run_gate_with_errors(
+        root,
+        vec![
+            plan_step(),
+            developer_writes_scene_and_player(
+                SCENE_WITH_ROOT,
+                &player_gd_line_31("\t_missing_from_this_file()"),
+            ),
+            developer_writes_scene_and_player(
+                SCENE_WITH_ROOT,
+                &player_gd_line_31("\t_missing_from_this_file()"),
+            ),
+            tester_step(),
+        ],
+        Some(vec![
+            r#"ERROR: res://scripts/player.gd:31 - Parse Error: Function "_missing_from_this_file()" not found in base self."#,
+        ]),
+    )
+    .await;
+
+    assert_eq!(
+        run.result["artifact_gate"]["launchable"],
+        json!(false),
+        "a log line the current bytes still reproduce must close the gate: {:?}",
+        run.result["artifact_gate"]["reasons"]
+    );
+    assert_eq!(
+        run.result["repair_retry_used"],
+        json!(true),
+        "a reproducible parse error must still trigger the one targeted repair"
+    );
+}
