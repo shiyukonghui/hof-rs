@@ -45,6 +45,7 @@ END = "<!-- DR-71-BYTE-CLAIMS-END -->"
 DOCUMENTS = [
     ".spec/hof-rs/tasks/TASK-SMOKE-T9-evidence/REDACTION.md",
     ".spec/hof-rs/tasks/TASK-DR70-REPORT.md",
+    ".spec/hof-rs/tasks/TASK-DR71-REPORT.md",
 ]
 
 HEADER = (
@@ -141,20 +142,35 @@ def block_text(newline):
     return newline.join(lines) + newline
 
 
-def split_document(raw):
-    """(before, block, after) around the markers, or None when absent."""
+def split_document(raw, begin=BEGIN, end=END):
+    """(before, block, after) around a marker pair that owns a whole line.
+
+    The markers must be **standalone lines**: a report may legitimately quote them
+    inside prose or inside a pasted `--emit` sample, and such a quotation must not
+    be mistaken for the generated block (that mistake cost this batch one repair).
+    """
     text = raw.decode("utf-8")
-    start = text.find(BEGIN)
-    end = text.find(END)
-    if start < 0 or end < 0 or end < start:
+    newline = "\r\n" if "\r\n" in text else "\n"
+    lines = text.split(newline)
+    start = end_index = None
+    for index, line in enumerate(lines):
+        if line.strip() == begin and start is None:
+            start = index
+        elif line.strip() == end and start is not None:
+            end_index = index
+            break
+    if start is None or end_index is None:
         return None
-    return text[: start + len(BEGIN)], text[start + len(BEGIN) : end], text[end:]
+    block = newline.join(lines[start + 1 : end_index])
+    before = newline.join(lines[: start + 1])
+    after = newline.join(lines[end_index:])
+    return before, block, after
 
 
 def document_block(raw):
     parts = split_document(raw)
     if parts is None:
-        raise SystemExit("FATAL: a DR-71 byte-claims marker pair is missing")
+        raise SystemExit("FATAL: a standalone DR-71 byte-claims marker pair is missing")
     _, block, _ = parts
     return block.strip("\r\n")
 
@@ -185,7 +201,7 @@ def write():
             raw = handle.read()
         parts = split_document(raw)
         if parts is None:
-            raise SystemExit("FATAL: %s has no DR-71 byte-claims marker pair" % relative)
+            raise SystemExit("FATAL: %s has no standalone DR-71 byte-claims marker pair" % relative)
         before, _, after = parts
         newline = "\r\n" if b"\r\n" in raw else "\n"
         updated = before + newline + block_text(newline) + after
