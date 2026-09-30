@@ -13,19 +13,47 @@
 
 ---
 
+## ⚠ 就地更正声明（DR-68 追加，2026-09-30；**旧文字一律保留并在其上标注**）
+
+独立验收 `.spec/hof-rs/tasks/TASK-SMOKE-T8-ACCEPTANCE.md`（`verdict = fail`，**范围仅限本报告的诊断**）
+复核了本报告的六条产品级判定与两个 major 发现，**全部成立**；但它推翻了本报告的三处诊断/事实，
+另外登记了四处次级不准确。**本文件的原始文字一字未删**；下列更正以 `【DR-68 更正】` 就地标注，
+并以本节作为更正索引。**产品级判定（E1..E6）与两个 major 发现均未被本次更正改动。**
+
+| # | 原文字 | 【DR-68 更正】 | 依据 |
+|---|---|---|---|
+| C1 | §0/§2 的旗舰论断：**“`move_left` 被实测证否（左移不产生位移）”** | **不成立，改为“左移 not established（未被证到），且未观测到注入时序假象之前不应写成产品缺陷”**。轮内**每一次游戏通道注入都是 `pressed=true`**，四个 release 全部走 `editor_simulate_input_action`（编辑器进程，到不了游戏），所以 `move_right` 在游戏进程内**始终被按住**；`Input.get_axis("move_left","move_right")` 因左右同时按住而返回 **0**，无论左移实现对错都不会产生水平位移。**产品结论未知**——这是**注入时序假象**，不是游戏缺陷。 | 验收 D1；本报告 §2.1 的 `calls[22]`（jump 窗口 x 仍以 3.6667 px/帧 增加）与 §2.2 实验 #2 里 D→F 窗口之间的 **−3.667 px** 反证 |
+| C2 | §1.1/§1.3 与 §0 的症状描述：被拒证据 **`missing field 'type'`（只说缺一个字段）** | **同时缺 `type` 与 `claim_id` 两个字段**。被拒件 `execution_records[*]` 只有 `{path, observation}`，其 claim 层也没有 `claim_id`（`src/model.rs:104-108` 的 `ClaimRecord.claim_id` **无** `#[serde(default)]`）。serde 解 `execution_records` 时先撞上嵌套的 `type` 就返回，所以**运行时报的只有 `type`**，**只补 `type` 下一次仍会被拒**。本报告**逐字引用的运行时错误消息**（`result.json.issues`、§1.1 表格与 §4.5 F2）保持原样，因为那是运行时原话；被更正的是**本报告自己的根因清单**。 | 验收 D2；`src/model.rs:87-94`/`:104-108`；`src/prompts/tester.md:53-68`（契约块既无 `type` 也无 `claim_id`） |
+| C3 | §3.1 与 §0 的 E2 行：“E2 的判定**只有在** `.workspace/mario/.hoh/deterministic/**`（会被下一轮隔离的目录）留证” | **偏绝对**：同一份 `deterministic.log`/`battery.json`/`raw/**` 也在**冻结的** `runs/smoke-t8/iter-1/candidate/.hoh/deterministic/**` 里（验收者逐字节比过 `raw/input_replay.json` 两侧 md5 相同 `401d575194abf61cb3b98da8f9d710a6`）。**仍然成立的那半**是：`result.json`/`meta.json` 读不到它（F3/F4）。 | 验收 D6 |
+| C4 | §6.4 引 `git rev-parse origin/master` = **`079cf82`** | 真值是 **`ce22e18`**（D263 的推送点；`git reflog show origin/master` = `079cf82 → ce22e18 update by push`）。**“未 push”的结论不变**（轮内 HEAD `0f37105` 在 `ce22e18` 之后，本地领先 5）。原值疑似把任务书里的 `079cf82..HEAD` 起点误当远端值。 | 验收 D5 |
+| C5 | 本报告未提的电池缺陷（§2 只把它写成 QA 的 gap） | **电池 `input_replay` 存在“掩蔽型假绿”**：`src/adapter/godot.rs:1946`（DR-68 前的行号）用**整向量**不等判“有位移”，于是 `move_left` 因**重力改了 y** 被判 `ok=true`——目标轴零位移被另一轴的运动掩蔽。**这一点在原报告里是缺失的**，不是错误；在此登记并已在 DR-68 修复（按目标轴判定）。 | 验收 D3；`src/adapter/godot.rs:1831-1836`/`:1945-1972`（DR-68 前行号） |
+| C6 | §5 对照表把 `repair_retry_used` 的 t8 值写成 `true` | **未区分层级**：`deterministic.log` 里的 `repair_retry_used=true` 是**电池内部**修一遍，而 `result.json.repair_retry_used` 是 **false**（轮级定向修复）。两个指标不同层，原表未说明。 | 验收 D4 |
+| C7 | §4.2 的计数（`bash -c` 120→0、首个 `hoh` 调用 34→15、`$HOH_`/`%HOH_` 33/1→4/162） | **口径相关**，验收者用更粗口径复核**方向一致但数字不能逐一对上**（t7 `bash -c` 360 → t8 0；t8 `$HOH_`=16、`%HOH_`=567）。**不是 E1..E6 的判据**，仅作对照。 | 验收 D9 |
+| C8 | §6.4 的 “`git status --porcelain -uall` 为空” | 在本报告写下之后即不再成立（报告自身是未跟踪文件，现已入库）；且 `runs/**` 被 `.gitignore` 排除 ⇒ 外层 `git status`/`git diff` 对**本轮全部证据**都是空判（与陷阱③同族）。**“未变”只能用目录摘要**（本报告 §6.3 就是这么做的）。 | 验收 D7 |
+
+**补充处置（DR-68 已据此修复，供后续读者对接）：**
+① 证据形状契约 → 完整形状（`type` + `claim_id`）**首次尝试即下发**；`if limits { break; }` 改为
+   “**存在但非法**的工件可得到一次带形状的重试”；`validate_evidence_shape` 现在**一次列全**记录级缺失字段。
+② 启动闸门 → 只认**当前工程字节仍能复现**的日志行（`editor_error_is_stale`），日志残留不再关门、不再触发修复。
+③ E3 方法论 → 每个方向测试前**在游戏进程内**释放上一输入并**断言轴值改变**；位移判据改为**按目标轴**。
+④ 失败路径 `result.json` → 写出**真实**的 `battery_passes`/`candidate_id`/`version_id`。
+⑤⑥⑦ 与报告文本无关，见 `TASK-DR68-REPORT.md`。
+
+---
+
 ## 0. 结论摘要（E1..E6 逐条）
 
 | 编号 | 判定 | 一句话依据（详见对应小节） |
 |---|---|---|
-| **E1** | **not_met（但"零增量"之因已被修掉）** | `D_1` 合法、**Developer 真的产生了工程增量**（`A_1 = 1f3d20ed… ≠ A_0 = fc78d299…`，3 个工程文件变更），**但 Tester 提交的证据被 schema 拒绝**（`missing field 'type'`），本轮 **`ok=false` / `failed_role=tester` / 退出码 3**，`E_1` 从未被接受 ⇒ "QA 产出合法 `E_1`"一条不成立（§1） |
-| **E2** | **met（实质），但持久化工件丢失了它** | 冻结前电池 **11/11 步 ok、`launchable=true`**（`battery pass(es): 2, repair_retry_used=true`）；`editor_errors_baseline` 仅剩 1 行引擎横幅（DR-48 豁免）、`play_scene_ready` 53 节点。**但失败路径把 `meta.json.artifact_gate` 覆写成 `not_applicable`、`result.json.battery_passes = []`** ⇒ 判定只在 `.hoh/deterministic/**` 里（§3.1） |
-| **E3** | **not_met（部分：5 类行为中 2 类首次被游戏进程内语义工具证实）** | `input_replay` 的 `channel=game_process` 四元组给出**右移**（60 帧 188.33→404.67，恒 3.6667 px/帧 = 脚本 `speed` 220）与**跳跃**（y 270.0→峰值 214.27@f17→242.61）**真机证据**；`move_left` 60 帧 `dx=0`（我的独立实验同结论）；**可交互对象(F10)/终点胜负(F13) 全落 gap**（§2） |
+| **E1** | **not_met（但"零增量"之因已被修掉）** | `D_1` 合法、**Developer 真的产生了工程增量**（`A_1 = 1f3d20ed… ≠ A_0 = fc78d299…`，3 个工程文件变更），**但 Tester 提交的证据被 schema 拒绝**（`missing field 'type'`），本轮 **`ok=false` / `failed_role=tester` / 退出码 3**，`E_1` 从未被接受 ⇒ "QA 产出合法 `E_1`"一条不成立（§1）**【DR-68 更正 C2】**：被拒件**同时缺 `type` 与 `claim_id`**，运行时的错误串只报前者；产品级判定不变。 |
+| **E2** | **met（实质），但持久化工件丢失了它** | 冻结前电池 **11/11 步 ok、`launchable=true`**（`battery pass(es): 2, repair_retry_used=true`）；`editor_errors_baseline` 仅剩 1 行引擎横幅（DR-48 豁免）、`play_scene_ready` 53 节点。**但失败路径把 `meta.json.artifact_gate` 覆写成 `not_applicable`、`result.json.battery_passes = []`** ⇒ 判定只在 `.hoh/deterministic/**` 里（§3.1）**【DR-68 更正 C3】**：**除 `.workspace/mario/.hoh/**` 外，冻结的 `runs/smoke-t8/iter-1/candidate/.hoh/deterministic/**` 也留了同一份**（逐字节相同）；原句偏绝对。 |
+| **E3** | **not_met（部分：5 类行为中 2 类首次被游戏进程内语义工具证实）** | `input_replay` 的 `channel=game_process` 四元组给出**右移**（60 帧 188.33→404.67，恒 3.6667 px/帧 = 脚本 `speed` 220）与**跳跃**（y 270.0→峰值 214.27@f17→242.61）**真机证据**；`move_left` 60 帧 `dx=0`（我的独立实验同结论）**【DR-68 更正 C1】**：`dx=0` 是**观测事实**，但**不能读成“左移被证否”**——游戏通道里 `move_right` 从未被释放，左右同时按住使 `get_axis` 恒为 0；左移**是否有效未被证到**（注入时序假象）；**可交互对象(F10)/终点胜负(F13) 全落 gap**（§2） |
 | **E4** | **not_met（无被接受的 `E_1`）** | 内容层可核：8 verified 全部带 `execution_records`、**38/38 被引路径实存**、17 gap 全部带 `player_impact`+`recommended_update`；但该工件**被运行时拒绝**，故"`E_1` 中每个 verified claim…"不成立（§3.3） |
 | **E5** | **met（强）** | 我自实现三棵树字节级比对：workspace / candidate / 存储 `A_1` 各 **17 文件、同一摘要 `44ce9d2d…`、集合与内容差异 0**；且工程树最后一次写入是 `player.gd` **07:19:25**（早于 07:31:11 的冻结），Tester 期间工程树**零写入**（§3.4） |
 | **E6** | **met（内容层）** | 17 条 gap 如实列出全部未达成（左移、金币、终点、敌人、相机、墙体、长时稳定…），无一条未达成被写成 verified；QA 甚至把"要复现的行为缺记录"写成 gap 而非推断。（**保留**：其 verified#3 对探针 OK 的读法偏宽，见 §2.4） |
 
 **与 `smoke-t7` 相比的净变化**：**E1 的"Developer 零工程增量"已消失**（这是本轮最重要的正面事实）；
-**E2 实质 met**（t7 也是 met，但本轮首次 11/11 全绿）；**E3 由"什么都没证实"推进到"右移+跳跃被游戏内语义工具证实、左移被实测证否"**；
+**E2 实质 met**（t7 也是 met，但本轮首次 11/11 全绿）；**E3 由"什么都没证实"推进到"右移+跳跃被游戏内语义工具证实、左移被实测证否"**【DR-68 更正 C1】：后半句改为**“左移 not established（未证到），既有观测是注入时序假象的产物”**——`move_right` 在游戏进程内从未释放，`get_axis` 恒 0；
 **但整轮从 0 变成 3**，因为**Tester 的证据工件形状错误**（新根因，§1.3）。
 tokens **22.42M → 24.46M**，墙钟 **74:58 → 65:27**。
 
@@ -110,6 +138,10 @@ task prompt 一侧仍有 F9 的盲区（紧随本条）。
    对照 `smoke-t7` 被接受的 `E_1`：`exec_keys=['candidate_id','observation','path','type']`。
 3. 运行时按 `src/runtime/schema.rs:284-288` 反序列化 ⇒ serde 在解 `execution_records` 时先报**嵌套** `missing field 'type'`。
    运行时的原话在 `runs/smoke-t8/iter-1/result.json.issues`（见 §1.1 表）与控制台末行。
+   **【DR-68 更正 C2】**：**被拒件同时缺 `claim_id`**——上面第 2 条的 `exec_keys=['observation','path']` 已经证明记录没有 `type`，
+   而同一批 claim 的 keys（`['claim','execution_records','requirement','status','type']`）里**没有 `claim_id`**；
+   `ClaimRecord.claim_id`（`src/model.rs:104-108`）**没有** `#[serde(default)]`，所以**只补 `type`，下一次会被 `missing field \`claim_id\`` 拒**。
+   serde 一次只报一个字段，这正是"假修复"的放大器；DR-68 已让 `validate_evidence_shape` **一次列全**所有记录级缺失字段。
 4. **正确的骨架本来存在**：`src/model.rs:436-465` `EVIDENCE_SKELETON` 里逐字写着
    `{"type": "screenshot|replay|runtime_trace|assert|build|log", "path": …, "observation": …}`；
    但它**只作为 retry context** 下发（`src/runtime/schema.rs:241`）。
@@ -153,7 +185,15 @@ task prompt 一侧仍有 F9 的盲区（紧随本条）。
 | `move_right`（按下） | **60** | 188.333 → **404.667** | 283.999 恒定 | **右移成立**：x 严格单调，速度恒 `3.6667 px/帧` = 220 px/s |
 | `move_right`（"release" 序列） | 10 | 423.000 → 456.000 | 283.999 恒定 | **释放未被注入**（该记录的 events 只有 pressed=true） |
 | `jump`（按下） | **30** | 470.696 → 577.030 | 269.996 → **峰 214.274（第 17 帧）** → 242.607 | **跳跃成立**：先升 55.7 px 再回落，之后落到地面 y≈283.995 |
-| `move_left`（按下） | **60** | 584.363 → **584.363** | 270.941 → 283.995 后恒定 | **左移未发生**（x 60 帧零变化，`velocity.x = 0.0`） |
+| `move_left`（按下） | **60** | 584.363 → **584.363** | 270.941 → 283.995 后恒定 | **左移未发生**（x 60 帧零变化，`velocity.x = 0.0`）**【DR-68 更正 C1】**：这是**观测**，不是产品结论——见 §2.2′ |
+
+**【DR-68 更正 C1】**（对 §2 全节的更正，原文保留在上方）：上表第 4 行的 `dx=0` **不能读成"左移被证否"**。
+轮内**全部**游戏通道注入都是 `pressed=true`（`raw/input_replay.json` 的 `running_game_play_input_recording`
+调用 #2/#10/#18/#26 与 `run_test_scenario` 的 input 步），**四个 release 全部走 `editor_simulate_input_action`**
+（#8/#16/#24/#32），而本报告自己在上表第 2 行承认"释放未被注入"、在 §2.1 承认编辑器侧"cannot drive the game"。
+第 3 行（jump）还留着反证：**jump 窗口里 x 仍以 3.6667 px/帧 增加**（470.696→577.030），即采样时 `move_right`
+**仍被按住**。三条合起来唯一自洽的解释是：游戏进程内 `move_left` 与 `move_right` **同时按住** ⇒
+`Input.get_axis("move_left","move_right")` = **0** ⇒ `velocity.x = 0` ⇒ x 恒定。**左移是否有效未知。**
 
 - 数值自洽性（**强证据**）：`3.6667 px/帧 × 60 帧/s = 220 px/s`，与 A_1 的 `scripts/player.gd`
   `@export var speed: float = 220.0` 逐字吻合 ⇒ 位移来自游戏自己的 `move_right` 代码路径，而非引擎空转。
@@ -181,22 +221,38 @@ task prompt 一侧仍有 F9 的盲区（紧随本条）。
   ⇒ **右移可复现、左移在同一进程内反复为零、释放有效、跳跃确实把角色抬起来**。
   `controllable=True`、注入前 `velocity=(0,0)`，排除了"角色不可控/仍有残留速度"这两种解释。
 
+  **【DR-68 更正 C1】**：**这个实验不能支撑"左移被证否"**。它的清场步骤（"把 `move_right/move_left` 都先 release"）
+  确实做了，但**随后的注入序列里没有任何一步把 `move_right` 重新按下又释放**——而实验 #2 的
+  **B/C 两步恰恰把 `move_right` 按下了**，之后 **D 窗口测 `move_left` 时 `move_right` 是否已被释放，实验没有记录**。
+  更关键的反证就留在它自己的输出里：**D 窗口结束 x=375.333、F 窗口开始 x=371.666，恰好一帧 −3.667 px 的左移**
+  出现在采样窗口边界——与"左移完全无效"矛盾，与"左移有效但被仍按住的右移抵消"一致。
+  ⇒ 正确读法是 **not established（未证到）**，不是 **falsified（被证否）**；两个实验共享同一个混淆因子，
+  **不能互相独立**（本报告原文把它们当作两个独立佐证，此处更正）。
+  正确的实验必须先 `running_game_play_input_recording(move_right, pressed=false)` **在游戏进程内**清场，
+  再测左移，并断言轴值确实改变——DR-68 已把这条做进了 `input_replay` 本身。
+
 **实测**：`move_left` 不产生任何水平位移（60 帧轮内 + 40 帧独立）。
 **推断（≈0.85，未证）**：根因在**被开发产物一侧**（`project.godot` 的 `move_left` 绑定或 `player.gd` 读 axis 的方式），
 不是运行时通道；依据是"同一注入形状对 `move_right` 有效、对 `move_left` 无效"这一**不对称**。
 我**没有**把 `project.godot` 与 A_0 的 diff 当证据（两者逐字节相同，`project.godot` 自 t7 起未被改动）。
+**【DR-68 更正 C1】**：**这条推断作废**——"不对称"的成因是 `move_right` 仍被按住使 `get_axis` 恒 0，
+即**注入时序假象**，不是产物缺陷。据此得出的"根因在产物一侧"没有任何支撑；左移的产物侧结论**未知**。
 
 ### 2.3 判据逐项
 
 | REQUIREMENTS E3 要件 | 结果 | 证据 |
 |---|---|---|
 | 玩家左右移动 | **一半**：右移成立、左移被实测证否 | §2.1 第 1/4 行 + §2.2 实验 #2 |
+| 玩家左右移动（**【DR-68 更正 C1】**） | **右移成立，左移 `not established`（未证到）** | 同左；但 `move_right` 在游戏进程内从未释放，`get_axis` 恒 0 ⇒ 原"被证否"是注入时序假象（见 §2 的更正框） |
 | 跳跃 | **成立** | §2.1 第 3 行（逐帧抛物线） |
 | ≥1 个可交互对象 | **未观测** | QA `gap`（F10 金币：`Coin1..4` 存在但无任何记录显示被移除；HUD 仍 `Coins: 0`） |
 | 一个终点/胜负条件 | **未观测** | QA `gap`（F13：`Goal` 存在但无到达/胜利态记录；唯一截图在 t=0 出生点附近） |
 
 ⇒ **E3 = not_met（部分）**：不是"什么都没证到"（t7 的状态），而是"**两类行为已在游戏进程内被语义工具确证，另两类仍为 gap，且左移方向上出现反例**"。
 按任务书"不得声称 E3 已 met 除非有游戏进程内、语义工具的观测证据"——我有了其中一部分的这类证据，但**判据是合取，故不给 met**。
+**【DR-68 更正 C1】**：末句的"左移方向上出现反例"改为"**左移方向上只有被注入时序污染的观测，产品结论未知**"；
+另加一条本报告当时**缺失**的电池缺陷：`input_replay` 用**整向量**不等判"有位移"，于是这次 `dx=0` 的
+`move_left` 因**重力改了 y** 而被记为 **`ok=true`**（掩蔽型假绿，验收 D3；DR-68 已改为按目标轴判定）。
 
 ### 2.4 风险旗 1 的落地结果：**它在本轮真的发生了**
 
@@ -249,6 +305,12 @@ launchable=true (battery pass(es): 2, repair_retry_used=true)
 `result.json.artifact_gate = {"applicable":false,"launchable":true,"reasons":["no launchable gate was evaluated for this iteration"]}`、
 `meta.json.artifact_gate = {"applicable":false,"launchable":true,"reasons":["the round failed; no artifact gate was produced"]}`。
 ⇒ 现状是"**E2 实质 met，但只有 `.workspace/mario/.hoh/deterministic/**`（一个被测 workspace 内部的、会被下一轮隔离的目录）留证**"。
+**【DR-68 更正 C3】**：这句话**偏绝对**。同一份电池原文（`deterministic.log`/`battery.json`/`raw/**`）**也留在冻结的
+`runs/smoke-t8/iter-1/candidate/.hoh/deterministic/**`**——验收者逐字节比过两侧 `raw/input_replay.json` 的 md5 相同
+（`401d575194abf61cb3b98da8f9d710a6`），故"evidence 只存在于被测 workspace"不成立。
+**仍然成立的那半**是：`result.json`/`meta.json` 两个**概要工件**读不到它（F3/F4），这才是可复现性问题本身。
+（另：`result.json.artifact_gate.launchable=true` 这条在 DR-68 之后不再出现——`not_applicable` 现在写
+`applicable=false, launchable=false`，且 `is_open()` 也看 `applicable`。）
 
 ### 3.2 E2 的构成（与 t7 同判据）
 
@@ -443,7 +505,7 @@ HEAD = 0f37105d2f1f4425bef3ed12814905c4395dc851  2026-09-30 06:50:39 +0800
 | 传输层失败（`10060/10061`） | **0** | **0** | 未变 |
 | `-32602` 尝试 | 1 | **0** | 变了 |
 | attempts | 3（planner/developer/tester），全 `LimitsExceeded` | **6**：planner `RepeatedFormatError`(1) + developer `LimitsExceeded`(3：1/2=wrap-up/3=repair) + tester `LimitsExceeded`(2) | 变了：多了 wrap-up 与 repair 各一次 |
-| `repair_retry_used` | `false` | **`true`**（因 F1 的假阴性而消耗 60 步 / 4.02M tokens，**零工程写入**） | 变了 |
+| `repair_retry_used` | `false` | **`true`**（因 F1 的假阴性而消耗 60 步 / 4.02M tokens，**零工程写入**） | 变了 。**【DR-68 更正 C6】**：这里的 `true` 来自 `deterministic.log` 的**电池级** `repair_retry_used`；`result.json.repair_retry_used` 是 **`false`**（轮级定向修复）。**两个指标不同层**，原表未区分。 |
 | **工程增量** | `A_1 == A_0 == fc78d299…`（**零增量**） | **`A_1 = 1f3d20ed…` ≠ `A_0 = fc78d299…`（3 文件）** | **变了：E1 的"零增量"真因已修（DR-66 ①）** |
 | `E_1` | 有（被接受）：8 verified + 20 gap | **无**：candidate 工件 8 verified + 17 gap 但**被 schema 拒绝** | 变了 |
 | tokens | 22,424,721 | **24,462,425**（+2.04M） | 变了：多出的 wrap-up/repair + Tester 150 步 |
@@ -515,7 +577,7 @@ runs/smoke-t7   files=115 digest=6e4c1595753c2cdefb16e4d2e5f05242ca202c70c81a93e
 | `PRD-mario.md` 逐字节冻结 | sha256 `4c81c3a9995f0b3afdf01421a0c3be88573cceefc284ce9bafbfda141f0f5c3a`、mtime `2026-09-20 23:21:21` |
 | `DECISIONS.md` 未由我编辑 | 我全程只读；开工时它已是 `M`（**调度者**在 06:50:38 写入 D264 并在 06:51 提交为 `0f37105`），我可核的唯一值是 sha256 `0fd6b4af…2d7e` |
 | `godot-mcp/**` 零改动 | §6.2（嵌套仓 0 行 + mtime 普查） |
-| 未引入依赖 / 未 stage / 未 push | `git diff --stat 079cf82..HEAD -- Cargo.toml Cargo.lock` 空；`git diff --cached --stat` 空；`git rev-parse origin/master` = `079cf82`（我未 push） |
+| 未引入依赖 / 未 stage / 未 push | `git diff --stat 079cf82..HEAD -- Cargo.toml Cargo.lock` 空；`git diff --cached --stat` 空；`git rev-parse origin/master` = `079cf82`（我未 push）**【DR-68 更正 C4】**：远端真值是 **`ce22e18`**（D263 推送点；`079cf82` 是任务书里 `079cf82..HEAD` 的**起点**，被误当远端值）。"未 push"的结论不变：轮内 HEAD `0f37105` 在 `ce22e18` 之后。 |
 | 密钥卫生 | 导出为 `HOH_MODEL_API_KEY`（**只报长度 51**）；`grep -roF <key> runs/smoke-t8` = **0 处**、console 0 处；`result.json.secret_redactions = 0` |
 
 ---
@@ -619,6 +681,8 @@ cmd   : git cat-file -e ef74c60^:<该文件> -> exit 0   ; git cat-file -e ef74c
 
 1. **`move_left` 失效的根因在产物侧**（≈0.85）：依据是"同一注入形状对右有效、对左无效"的不对称；我**没有**定位到
    `project.godot` 的具体绑定或 `player.gd` 的具体缺陷（`project.godot` 与 A_0 逐字节相同，自 t7 起未被改动）。
+   **【DR-68 更正 C1】作废**：该"不对称"由 `move_right` 仍在游戏进程内被按住解释（`get_axis` 恒 0），
+   与产物实现无关；本条推断**没有支撑**。
 2. **F1 的"过期日志"机制**：工程树在 07:19:25 之后再无写入，而 07:19:33 的日志里出现 `_update_facing_visual` 的解析错误
    ⇒ 该错误行描述的是**中间态**；但"文件当时是否短暂处于该状态"mtime 分辨率无法证明 ⇒ 机制为推断，**现象为实测**。
 3. **实验 #1 与 #2 的窗口滞后**：30 帧窗口在按压后未观察到位移、40 帧窗口观察到 143 px，我推断 30 帧窗口的采样时序
@@ -627,6 +691,13 @@ cmd   : git cat-file -e ef74c60^:<该文件> -> exit 0   ; git cat-file -e ef74c
    "node '/root/Main/Player' does not have the property 'input_axis'" ⇒ 只能证"读不到"。
 
 **未关闭（应回上游/回设计，本报告不修）**
+
+> **【DR-68 处置标注】**下列 1–7、9 已在 DR-68 修复或更正，逐条见 `TASK-DR68-REPORT.md`：
+> 1 → 过期日志行不再关门（`editor_error_is_stale`）；2 → 完整形状首次下发 + 一次带形状的重试 + 缺失字段一次列全；
+> 3 → 失败存根写真实 `battery_passes`/candidate 身份，`not_applicable` 不再报 `launchable=true`、`is_open()` 看 `applicable`；
+> 4 → planner/tester 提示词写明合法终止符 `COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`；
+> 5 → 单花括号占位符修复且完整性断言覆盖两种花括号；6 与 9 **未在 DR-68 范围内**（仍是遗留）；
+> 7 → **更正为"左移 not established"**，产品侧缺口仍未观测（需真机）。
 
 1. **F1（major）**：`editor_errors_baseline` 读编辑器日志 ⇒ 中间态错误可关门、并触发昂贵且无写入的定向修复。
    需要"门只看与当前冻结字节一致的错误"或"评估前清除日志基线"的设计决定。
@@ -638,6 +709,8 @@ cmd   : git cat-file -e ef74c60^:<该文件> -> exit 0   ; git cat-file -e ef74c
    **否则"文档已平台化"这一条只能算"部分成立"**。
 6. **风险旗 1 的代码层**：`godot.rs:1359` 与 `:1206-1207` 的文档矛盾应二选一（收紧代码或改口径），否则"绿"仍不可信。
 7. **E3 的产品侧缺口**：`move_left` 失效、金币/终点从未被驱动（`Coin1..4`、`Goal` 只是"存在"）。
+   **【DR-68 更正 C1】**：`move_left` **失效**这一条**不成立**——观测值是注入时序假象的产物（`get_axis` 恒 0），
+   产品侧结论**未知**；金币/终点"从未被驱动"这半仍成立。
 8. **孤儿进程**：Tester 阶段起的游戏实例未被收尾（我手工清了；机制上属运行时收尾缺失）。
 9. `input_replay` 的"release"序列从不注入 release（`semantic_inject_action` 恒 `pressed:true`），
    因此"按下→释放→静止"这条最关键的输入语义永远是缺口 ⇒ 建议 `input_replay` 补 release 事件。
