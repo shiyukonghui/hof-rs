@@ -161,11 +161,27 @@ pub fn is_limits_exceeded(exit_status: &str) -> bool {
 
 /// The harness only ever receives fully rendered text: leftover jinja syntax
 /// would be re-parsed as a template and silently change the prompt.
+///
+/// DR-68 ⑤: the check also covers **unresolved shell placeholders in both brace
+/// forms**.  `{{`/`{%` only catches the template writer's own syntax; a
+/// `format!` literal that wrote `{{HOH_X}}` collapses it to `{HOH_X}`, which is
+/// not jinja, not a `{{HOH_*}}` template, and not resolvable by anything — so it
+/// used to reach the role in the three task prompts and in the `TOOLS.md`
+/// header (`smoke-t8`, 42 occurrences).  A prompt that still carries one is not
+/// a prompt a role can execute, so refusing it here is the same contract, one
+/// brace form wider.
 pub fn assert_fully_rendered(label: &str, prompt: &str) -> anyhow::Result<()> {
     if prompt.contains("{{") || prompt.contains("{%") {
         anyhow::bail!(
             "{label} still contains template syntax after rendering; role text must be passed as \
              template variable values, never as template source"
+        );
+    }
+    if crate::runtime::shell::contains_unresolved_command_var(prompt) {
+        anyhow::bail!(
+            "{label} still contains an unresolved shell placeholder after rendering; a `{{{{HOH_*}}}}` \
+             template spelled inside a `format!` literal collapses to the single-brace form and no \
+             renderer resolves it"
         );
     }
     Ok(())
@@ -186,6 +202,20 @@ mod tests {
         assert_eq!(rendered, "iteration 3 of the loop");
         assert!(assert_fully_rendered("system", &rendered).is_ok());
         assert!(assert_fully_rendered("system", "{{oops}}").is_err());
+    }
+
+    /// DR-68 ⑤: the single-brace form is not jinja, so the old `{{`/`{%` check
+    /// let it through; the completeness assertion must refuse it too.
+    #[test]
+    fn a_single_brace_shell_placeholder_is_not_fully_rendered() {
+        assert!(assert_fully_rendered("system", "call %HOH_HOH_BIN% tools call x").is_ok());
+        let error = assert_fully_rendered("system", "call {HOH_HOH_BIN} tools call x")
+            .expect_err("the folded single-brace form is not a rendered prompt");
+        assert!(
+            error.to_string().contains("unresolved shell placeholder"),
+            "{error}"
+        );
+        assert!(assert_fully_rendered("system", "{{HOH_HOH_BIN}} tools call x").is_err());
     }
 
     #[test]

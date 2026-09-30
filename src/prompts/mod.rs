@@ -11,6 +11,14 @@
 //! shell's syntax (`%HOH_NAME%` for cmd, `$HOH_NAME` for sh) through
 //! [`crate::runtime::shell`].  `tests/role_shell_contract.rs` extracts a command
 //! from the delivered text and executes it in a real `LocalEnvironment`.
+//!
+//! DR-68 ⑤: a template written **inside a `format!` literal** must be escaped as
+//! `{{{{HOH_NAME}}}}`.  `{{HOH_NAME}}` is folded to the single-brace form
+//! `{HOH_NAME}` by `format!` *before* [`shell::render_command_vars`] runs, and
+//! that renderer only matches the double-brace form, so the role would receive a
+//! placeholder nothing resolves (`smoke-t8` shipped exactly that in the three
+//! task prompts and in the `TOOLS.md` header).  `assert_fully_rendered` and the
+//! shell contract test now reject both spellings.
 
 use crate::runtime::shell::{self, ShellFlavor};
 
@@ -69,7 +77,7 @@ pub fn planner_task_with_shell(iteration: u32, flavor: ShellFlavor) -> String {
              3. Read the document scaffold at `.hoh/SCAFFOLD.md`.\n\
              4. Select at most three priorities: blockers and regressions first.\n\
              5. Write `.hoh/plan.md` and submit it with \
-             `{{HOH_HOH_BIN}} submit --role planner --file plan.md`.\n\n\
+             `{{{{HOH_HOH_BIN}}}} submit --role planner --file plan.md`.\n\n\
              Do not implement, edit or test production code. Do not write any other file."
         ),
         flavor,
@@ -90,10 +98,10 @@ pub fn developer_task_with_shell(iteration: u32, flavor: ShellFlavor) -> String 
              2. Read `.hoh/plan.md` (this iteration's priorities and gates).\n\
              3. Read `.hoh/EVIDENCE_HISTORY.md` (previously verified and unresolved behaviour).\n\
              4. Fix build/runtime blockers first, then implement the priorities in order.\n\
-             5. Use `{{HOH_HOH_BIN}} tools call <tool> --args-file <path>` for editor operations.\n\
+             5. Use `{{{{HOH_HOH_BIN}}}} tools call <tool> --args-file <path>` for editor operations.\n\
              6. Keep the project launchable at all times; validate each change with a quick check.\n\
              7. Write a real file in the project early (see [budget] in your system prompt): a\n\
-             round whose only writes went to `{{HOH_SCRATCH_DIR}}` produces no candidate\n\
+             round whose only writes went to `{{{{HOH_SCRATCH_DIR}}}}` produces no candidate\n\
              increment and is recorded as `no_engineering_write`.\n\n\
              Do not call `submit`. The artifact is the project itself."
         ),
@@ -118,7 +126,7 @@ pub fn tester_task_with_shell(iteration: u32, flavor: ShellFlavor) -> String {
              4. Read `.hoh/EVIDENCE_PLAYBOOK.md` and `.hoh/TOOLS.md`.\n\
              5. Derive checkable claims, collect public execution records, and write \
              `.hoh/evidence.json` plus `.hoh/qa_report.md`.\n\
-             6. Submit with `{{HOH_HOH_BIN}} submit --role tester --file evidence.json`.\n\n\
+             6. Submit with `{{{{HOH_HOH_BIN}}}} submit --role tester --file evidence.json`.\n\n\
              Never modify production code or any file outside `.hoh/`. Unobservable behaviour is a \
              gap, not a pass."
         ),

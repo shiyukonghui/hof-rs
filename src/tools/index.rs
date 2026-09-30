@@ -162,9 +162,9 @@ pub fn render_tools_markdown_for(
          when the editor is offline). **Do not read the harness sources to learn the API**: \
          everything you may call is below.\n\n\
          `{}` tool(s) visible. Call one with:\n\n```\n\
-         {{HOH_HOH_BIN}} tools call <tool> --args-file {{HOH_ARTIFACT_DIR}}/args/<name>.json\n```\n\n\
+         {{{{HOH_HOH_BIN}}}} tools call <tool> --args-file {{{{HOH_ARTIFACT_DIR}}}}/args/<name>.json\n```\n\n\
          The JSON file must use exactly the argument names below. Write temporary files only \
-         under `{{HOH_SCRATCH_DIR}}`.\n\n",
+         under `{{{{HOH_SCRATCH_DIR}}}}`.\n\n",
         role.as_str(),
         visible.len()
     );

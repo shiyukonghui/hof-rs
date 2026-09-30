@@ -424,3 +424,76 @@ fn the_generated_tools_index_uses_the_target_shell_syntax() {
         assert!(!shell::contains_unresolved_command_var(&rendered));
     }
 }
+
+// ---------------------------------------------------------------------------
+// ④ DR-68 — the completeness contract must also cover the single-brace form
+// ---------------------------------------------------------------------------
+
+/// The detector itself, on both spellings.  Without this the test below could be
+/// green because the detector looks for the wrong bytes.
+#[test]
+fn the_unresolved_placeholder_detector_sees_both_brace_forms() {
+    let double = "{{HOH_HOH_BIN}} tools call x";
+    let single = "{HOH_HOH_BIN} tools call x";
+    let rendered = "%%HOH_HOH_BIN%% tools call x";
+    assert!(
+        shell::contains_unresolved_command_var(double),
+        "the template form must be reported"
+    );
+    assert!(
+        shell::contains_unresolved_command_var(single),
+        "DR-68 ⑤: the single-brace form the `format!` literals left behind must be reported too"
+    );
+    assert!(
+        !shell::contains_unresolved_command_var(&rendered),
+        "a rendered document must not be reported"
+    );
+}
+
+/// DR-68 ⑤: `smoke-t8` delivered **unresolvable** `{HOH_*}` placeholders in the
+/// three role *task* prompts and in the `TOOLS.md` header (42 occurrences under
+/// `runs/smoke-t8/**`).  The cause is mechanical: those templates are written
+/// inside `format!` literals, where `{{HOH_X}}` is collapsed to `{HOH_X}`
+/// *before* [`shell::render_command_vars`] (which only matches the double-brace
+/// form) ever runs.  Neither the old detector nor `assert_fully_rendered`
+/// (which only looked for `{{`/`{%`) could see it.
+///
+/// The assertion is over **every delivered document** — the three system
+/// prompts, the three task prompts, the two skills, the evidence playbook and
+/// the generated `TOOLS.md` — because a fix that only covers the paths that were
+/// measured is exactly how the `smoke-t8` blind spot appeared.
+#[test]
+fn no_delivered_document_carries_an_unresolvable_command_placeholder() {
+    let mut documents = developer_documents(ShellFlavor::HOST);
+    documents.push((
+        "TOOLS.md (developer)".to_string(),
+        hof_rs::tools::index::render_tools_markdown_for(
+            hof_rs::model::Role::Developer,
+            &hof_rs::tools::index::embedded_tool_schemas(),
+            ShellFlavor::HOST,
+        ),
+    ));
+    documents.push((
+        "TOOLS.md (tester)".to_string(),
+        hof_rs::tools::index::render_tools_markdown_for(
+            hof_rs::model::Role::Tester,
+            &hof_rs::tools::index::embedded_tool_schemas(),
+            ShellFlavor::HOST,
+        ),
+    ));
+
+    let mut offenders: Vec<String> = Vec::new();
+    for (label, text) in &documents {
+        for name in shell::COMMAND_VARS {
+            for spelling in [format!("{{{name}}}"), format!("{{{{{name}}}}}")] {
+                if text.contains(&spelling) {
+                    offenders.push(format!("{label}: {spelling}"));
+                }
+            }
+        }
+    }
+    assert!(
+        offenders.is_empty(),
+        "delivered documents still carry unresolvable placeholders: {offenders:?}"
+    );
+}

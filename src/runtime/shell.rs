@@ -93,10 +93,21 @@ pub fn render_command_vars(document: &str, flavor: ShellFlavor) -> String {
 /// A leftover placeholder reaching a role is a contract failure on its own: it
 /// is not a runnable command, and the extraction rule in
 /// `tests/role_shell_contract.rs` keys on exactly that token shape.
+///
+/// DR-68 ⑤: **both** brace forms are unresolved placeholders.
+///
+/// The template form `{{HOH_X}}` is what the documents are written in; the
+/// single-brace form `{HOH_X}` is what survives when a template is spelled
+/// inside a `format!` literal (where `{{HOH_X}}` is folded to `{HOH_X}` before
+/// this module ever runs).  `smoke-t8` delivered the folded form in the three
+/// role task prompts and in the `TOOLS.md` header because this check only
+/// looked for the double-brace form — so the detector and the completeness
+/// assertion must cover both.  They are *both* unresolvable, so treating them
+/// together is exact, not conservative.
 pub fn contains_unresolved_command_var(document: &str) -> bool {
-    COMMAND_VARS
-        .iter()
-        .any(|name| document.contains(&placeholder(name)))
+    COMMAND_VARS.iter().any(|name| {
+        document.contains(&placeholder(name)) || document.contains(&bare_placeholder(name))
+    })
 }
 
 /// Rewrite a **rendered** command from one shell's variable dialect into the
@@ -123,6 +134,15 @@ pub fn rewrite_var_dialect(command: &str, flavor: ShellFlavor) -> String {
 /// The placeholder a template writes for `name`.
 fn placeholder(name: &str) -> String {
     format!("{{{{{name}}}}}")
+}
+
+/// DR-68 ⑤: the **single-brace** spelling `{HOH_NAME}`.
+///
+/// It is not a placeholder any renderer resolves — [`render_command_vars`] only
+/// rewrites the double-brace form — so a delivered document that carries it is
+/// broken in exactly the same way as one that carries the template form.
+fn bare_placeholder(name: &str) -> String {
+    format!("{{{name}}}")
 }
 
 #[cfg(test)]
