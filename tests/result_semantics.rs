@@ -104,6 +104,86 @@ fn a_gate_that_did_not_apply_never_exits_six() {
     assert_eq!(hof_rs::cli_impl::run_exit_code(&open_gate()), 0);
 }
 
+// ---------------------------------------------------------------------------
+// ①b DR-68 ⑦ — a gate that did not apply is not an open gate
+// ---------------------------------------------------------------------------
+
+/// `smoke-t8`'s **failed** round persisted
+/// `artifact_gate = {"applicable": false, "launchable": true}` — the shape
+/// `ArtifactGate::not_applicable` builds — and `ArtifactGate::is_open()` looked
+/// only at `launchable`, so a failure read as a pass.  "Not applicable" is not
+/// "open": nothing was checked, so nothing may be reported as passable.
+#[test]
+fn a_gate_that_did_not_apply_is_not_open() {
+    let gate = ArtifactGate::not_applicable("the round failed; no artifact gate was produced");
+    assert!(!gate.applicable, "the honest not-applicable answer");
+    assert!(
+        !gate.launchable,
+        "DR-68 ⑦: a gate that did not apply must not report launchable=true"
+    );
+    assert!(
+        !gate.is_open(),
+        "DR-68 ⑦: is_open() must consider `applicable`, not only `launchable`"
+    );
+
+    // The raw field combination is the one a future reader can still meet; it
+    // must not read as open either.
+    let forged = ArtifactGate {
+        applicable: false,
+        launchable: true,
+        reasons: Vec::new(),
+    };
+    assert!(
+        !forged.is_open(),
+        "applicability decides, even when launchable=true"
+    );
+
+    // The control: an applicable, launchable gate is still open, so the fix
+    // cannot be read as "every gate is closed now".
+    assert!(open_gate().is_open());
+    assert!(!closed_gate().is_open());
+}
+
+/// The `status` column is the other reader of the same field.  A result that
+/// says "no gate was evaluated" must not print `gate=ok`; it is neither a pass
+/// nor a fail.
+#[test]
+fn status_does_not_report_an_unevaluated_gate_as_ok() {
+    let temp = tempfile::tempdir().unwrap();
+    let runs = temp.path().join("runs");
+    let iter = runs.join("demo-run/iter-1");
+    std::fs::create_dir_all(&iter).unwrap();
+    std::fs::write(
+        iter.join("result.json"),
+        r#"{"ok":false,"failed_role":"tester","reason":"schema_failure","issues":[],"warnings":[],
+            "candidate_id":null,"version_id":null,"usage":[],"durations_ms":[],
+            "artifact_gate":{"applicable":false,"launchable":true,
+                             "reasons":["the round failed; no artifact gate was produced"]}}"#,
+    )
+    .unwrap();
+
+    let output = Command::new(binary())
+        .args([
+            "status",
+            "--runs-dir",
+            runs.to_str().unwrap(),
+            "--run-id",
+            "demo-run",
+        ])
+        .current_dir(manifest())
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("gate=unknown"),
+        "an unevaluated gate is unknown, not ok: {stdout}"
+    );
+    assert!(
+        !stdout.contains("gate=ok"),
+        "DR-68 ⑦: a non-applicable gate must never be printed as ok: {stdout}"
+    );
+}
+
 #[test]
 fn finalize_run_records_the_code_in_meta_json() {
     let temp = tempfile::tempdir().unwrap();

@@ -850,13 +850,22 @@ pub async fn status(args: StatusArgs) -> anyhow::Result<i32> {
         } else {
             "fail"
         };
-        let gate = match result
-            .pointer("/artifact_gate/launchable")
-            .and_then(Value::as_bool)
-        {
-            Some(true) => "ok",
-            Some(false) => "fail",
-            None => "unknown",
+        // DR-68 ⑦: applicability is read first.  A result whose gate was never
+        // evaluated (`applicable = false`) answered nothing, so it is `unknown`
+        // — never `ok`.  `smoke-t8`'s failed round persisted exactly that shape
+        // (`applicable: false, launchable: true`) and this column printed `ok`.
+        let gate = match (
+            result
+                .pointer("/artifact_gate/applicable")
+                .and_then(Value::as_bool),
+            result
+                .pointer("/artifact_gate/launchable")
+                .and_then(Value::as_bool),
+        ) {
+            (Some(false), _) => "unknown",
+            (_, Some(true)) => "ok",
+            (_, Some(false)) => "fail",
+            _ => "unknown",
         };
         // DR-39: `gate ok` and `prd=…` are different claims.  The PRD column is
         // derived from the Tester's own `E_t`, never judged by the runtime.

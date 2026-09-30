@@ -290,16 +290,29 @@ pub struct ArtifactGate {
 
 impl ArtifactGate {
     /// The honest "this adapter has no gate" answer.
+    ///
+    /// DR-68 ⑦: it reports `launchable = false`, not `true`.  The old value was
+    /// a *false green* in exactly the place a failure is read: `smoke-t8`'s
+    /// failed round persisted `{"applicable": false, "launchable": true}` (the
+    /// shape this constructor builds), so any reader that looked only at
+    /// `launchable` — or at [`ArtifactGate::is_open`], which did the same — saw
+    /// a pass.  "Not applicable" means nothing was checked, so nothing may be
+    /// reported as passable.
     pub fn not_applicable(reason: impl Into<String>) -> Self {
         Self {
             applicable: false,
-            launchable: true,
+            launchable: false,
             reasons: vec![reason.into()],
         }
     }
 
+    /// Is the artifact usable?  **Only an applicable, launchable gate is open.**
+    ///
+    /// DR-68 ⑦: a gate that was never evaluated cannot answer "yes", so
+    /// applicability is part of the predicate rather than a separate field a
+    /// reader is trusted to remember.
     pub fn is_open(&self) -> bool {
-        self.launchable
+        self.applicable && self.launchable
     }
 }
 

@@ -304,6 +304,22 @@ async fn a_zero_engineering_write_round_fails_instead_of_reporting_ok() {
         "the measurement description must survive: {result_json}"
     );
 
+    // DR-68 ⑦: a failed round evaluated no artifact gate at all, so the gate
+    // must be honestly *not applicable* — and a not-applicable gate must not
+    // say `launchable = true`.  `smoke-t8`'s failed round carried exactly that
+    // combination, so a reader that only looked at `launchable` read a failure
+    // as a pass.
+    assert_eq!(
+        result_json["artifact_gate"]["applicable"],
+        json!(false),
+        "no gate was evaluated for this round: {result_json}"
+    );
+    assert_eq!(
+        result_json["artifact_gate"]["launchable"],
+        json!(false),
+        "DR-68 ⑦: a failed round must not report a launchable gate: {result_json}"
+    );
+
     // DR-67 (DEF-2): the two persisted locations must be written by the
     // **production failure path**, from the round's own error — not by a
     // `RunSummary` this test builds for itself.  First prove the round really
@@ -351,6 +367,13 @@ async fn a_zero_engineering_write_round_fails_instead_of_reporting_ok() {
     );
     let meta: Value = serde_json::from_str(&read(&root.join("runs/run-1/meta.json"))).unwrap();
     assert_eq!(meta["exit_code"], json!(code));
+    // DR-68 ⑦: the production finaliser writes the same honest gate into
+    // `meta.json` — `smoke-t8`'s failure persisted `launchable = true` there.
+    assert_eq!(
+        meta["artifact_gate"]["launchable"],
+        json!(false),
+        "the failed round's meta.json must not advertise a launchable gate: {meta}"
+    );
 }
 
 /// DR-67 (DEF-2): the code of a failed round must come from the **real error**,
