@@ -111,7 +111,10 @@ fn between(text: &str, begin: &str, end: &str) -> String {
 /// The message with the renderer's line continuations folded away, so a claim about
 /// the message's own wording is not a claim about Rust's string-literal indentation.
 fn collapsed(text: &str) -> String {
-    text.replace("\n", " ").split_whitespace().collect::<Vec<_>>().join(" ")
+    text.replace("\n", " ")
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 /// The one line of an observation that carries `token` — the verdict line, which
@@ -223,10 +226,9 @@ fn the_blocked_verdict_line_carries_its_own_shortfall() {
     );
     // The drive line renders `player max x=..., coverage_shortfall_px=...` too, so the
     // pin starts at wording only the verdict line carries (`still unspent; `).
-    let tail = "still unspent; player max x=Some(1160.0), goal.position=Some(Object {\"x\": Number(6400.0), \
-                \"y\": Number(280.0)}), "
-        .to_string()
-        + expected;
+    let needle = "still unspent; player max x=Some(1160.0), goal.position=Some(Object {\"x\": Number(6400.0), \
+                 \"y\": Number(280.0)}), ";
+    let tail = needle.replace("\n", " ") + expected;
     assert!(
         pinned.contains(&tail),
         "the `{BLOCKED_VERDICT}` line itself must carry `{expected}` as its own concrete value: a \
@@ -252,16 +254,57 @@ fn the_coverage_verdict_line_carries_its_own_shortfall() {
          {observation}"
     );
     // `stayed false; ` is the coverage verdict's own wording.
-    let tail = "stayed false; player max x=Some(28660.0), goal.position=Some(Object {\"x\": Number(30000.0), \
-                \"y\": Number(280.0)}), "
-        .to_string()
-        + expected;
+    // The renderer breaks the message across source lines; joining them gives exactly one
+    // space per source newline, which is what the record contains (folding with
+    // `split_whitespace` would eat the space inside `..., \"y\"`).
+    let needle = "stayed false; player max x=Some(28660.0), goal.position=Some(Object {\"x\": Number(30000.0), \
+                 \"y\": Number(280.0)}), ";
+    let tail = needle.replace("\n", " ") + expected;
     assert!(
         pinned.contains(&tail),
         "the coverage verdict line itself must carry `{expected}` as its own concrete value:\n\
          {observation}"
     );
     assert_eq!(pinned, collapsed(&read_observation(COVERAGE_FIXTURE)));
+}
+
+/// ②c The blocked pin has to be false when the field is deleted **from the verdict
+/// line**, even though the drive line still carries it.
+///
+/// Editing the frozen fixture to show this would be editing the evidence, so the
+/// proof is a mutation of the string the pin reads: delete the shortfall from the
+/// run that begins at the verdict's own token (the verdict line), leave the drive
+/// line's copy alone, and require the pin's predicate to be false.
+#[test]
+fn the_blocked_pin_reddens_when_the_field_is_deleted_from_the_verdict_line() {
+    let observation = read_observation(BLOCKED_FIXTURE);
+    let pinned = collapsed(&observation);
+    let expected = "coverage_shortfall_px=Some(5240.0)";
+    let needle = "still unspent; player max x=Some(1160.0), goal.position=Some(Object {\"x\": \
+                 Number(6400.0), \"y\": Number(280.0)}), ";
+    let tail = needle.replace("\n", " ") + expected;
+    assert!(
+        pinned.contains(&tail),
+        "the unmutated read must satisfy the pin"
+    );
+
+    let verdict_at = pinned
+        .find(BLOCKED_VERDICT)
+        .expect("the verdict line is in the read");
+    let (before, after) = pinned.split_at(verdict_at);
+    let mutant = before.to_string()
+        + &after.replacen(expected, &expected.replace("Some(5240.0)", "None"), 1);
+    // The drive line's own copy is still there: the mutation is verdict-local.
+    assert_eq!(
+        mutant.matches("coverage_shortfall_px=None").count(),
+        1,
+        "the mutant must differ from the read exactly on the verdict line"
+    );
+    assert!(
+        !mutant.contains(&tail),
+        "the pin must be false when the field is gone from the verdict line, even though the \
+         drive line still carries it"
+    );
 }
 
 /// ③ The token must not promise more than the window measured.

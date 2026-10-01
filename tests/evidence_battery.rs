@@ -4121,7 +4121,10 @@ fn interaction_raw(run: &BatteryRun) -> Value {
 /// claim about the message's own wording is not a claim about Rust's string-literal
 /// indentation.
 fn collapsed(text: &str) -> String {
-    text.replace("\n", " ").split_whitespace().collect::<Vec<_>>().join(" ")
+    text.replace("\n", " ")
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 /// DR-77 ②: the one line of an observation that carries `token` — the **verdict**
@@ -4132,9 +4135,7 @@ fn verdict_line<'a>(observation: &'a str, token: &str) -> &'a str {
     observation
         .split("; ")
         .find(|part| collapsed(part).contains(token))
-        .unwrap_or_else(|| {
-            panic!("the observation must carry the `{token}` line:\n{observation}")
-        })
+        .unwrap_or_else(|| panic!("the observation must carry the `{token}` line:\n{observation}"))
 }
 
 /// DR-77 ①/②: the frozen observation a standing pin reads must stay the window's
@@ -4515,10 +4516,9 @@ async fn a_level_whose_goal_is_unreachable_fails_only_the_win_half() {
          line: {observation}"
     );
     // `stayed false; ` is the coverage verdict's own wording.
-    let tail = "stayed false; player max x=Some(28660.0), goal.position=Some(Object {\"x\": Number(30000.0), \
-                \"y\": Number(280.0)}), "
-        .to_string()
-        + expected;
+    let needle = "stayed false; player max x=Some(28660.0), goal.position=Some(Object {\"x\": Number(30000.0), \
+                 \"y\": Number(280.0)}), ";
+    let tail = needle.replace("\n", " ") + expected;
     assert!(
         pinned.contains(&tail),
         "the coverage verdict line itself must carry `{expected}` as its own concrete value; the \
@@ -4572,10 +4572,9 @@ async fn a_player_that_stops_advancing_with_budget_left_is_a_geometric_verdict()
     // The drive line renders `player max x=..., coverage_shortfall_px=...` too, so the
     // pin has to start at wording only the verdict line carries (`still unspent; `).
     // A needle that starts at `player max x=` is satisfied by the drive line alone.
-    let tail = "still unspent; player max x=Some(1160.0), goal.position=Some(Object {\"x\": Number(6400.0), \
-                \"y\": Number(280.0)}), "
-        .to_string()
-        + expected;
+    let needle = "still unspent; player max x=Some(1160.0), goal.position=Some(Object {\"x\": Number(6400.0), \
+                 \"y\": Number(280.0)}), ";
+    let tail = needle.replace("\n", " ") + expected;
     assert!(
         pinned.contains(&tail),
         "the `{BLOCKED_VERDICT}` line itself must carry `{expected}` as its own concrete value; the \
