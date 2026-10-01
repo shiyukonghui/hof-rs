@@ -232,6 +232,7 @@ fn the_blocked_verdict_line_carries_its_own_shortfall() {
         "the `{BLOCKED_VERDICT}` line itself must carry `{expected}` as its own concrete value: a \
          `contains` over the whole observation is also satisfied by the drive line:\n{observation}"
     );
+    assert_eq!(pinned, collapsed(&read_observation(BLOCKED_FIXTURE)));
 }
 
 /// ②b The coverage verdict is pinned the same way, with its own fixture value.
@@ -260,6 +261,7 @@ fn the_coverage_verdict_line_carries_its_own_shortfall() {
         "the coverage verdict line itself must carry `{expected}` as its own concrete value:\n\
          {observation}"
     );
+    assert_eq!(pinned, collapsed(&read_observation(COVERAGE_FIXTURE)));
 }
 
 /// ③ The token must not promise more than the window measured.

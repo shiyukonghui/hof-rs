@@ -4524,6 +4524,7 @@ async fn a_level_whose_goal_is_unreachable_fails_only_the_win_half() {
         "the coverage verdict line itself must carry `{expected}` as its own concrete value; the \
          drive line is the only other place this text begins: {observation}"
     );
+    assert_observation_matches_fixture(observation, "tests/fixtures/dr77/coverage_observation.txt");
 }
 
 /// DR-76 ②: the other half of the split.  A level that lets the player advance and
@@ -4580,6 +4581,7 @@ async fn a_player_that_stops_advancing_with_budget_left_is_a_geometric_verdict()
         "the `{BLOCKED_VERDICT}` line itself must carry `{expected}` as its own concrete value; the \
          drive line is the only other place this text begins: {observation}"
     );
+    assert_observation_matches_fixture(observation, "tests/fixtures/dr77/blocked_observation.txt");
 }
 
 /// DR-76 ②: the budget is a promise about the specification, and it is pinned.
