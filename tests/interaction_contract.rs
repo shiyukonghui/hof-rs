@@ -32,8 +32,37 @@ use hof_rs::adapter::godot::{
 /// level the window cannot make.  Earlier round records still carry the old
 /// token, so both names stay deliverable: the new one as the verdict, the old
 /// one only inside a stated mapping (in the DR-73 report's ledger).
-const SUPERSEDED_GEOMETRIC_TOKEN: &str = BLOCKED_VERDICT;
+///
+/// DR-78 ④ (D77-A): this constant must be the **old** name.  It was briefly
+/// defined as `BLOCKED_VERDICT`, which made every "a paragraph that mentions the
+/// old name must also give the new one" assertion true by construction — the
+/// vacuity family this whole file exists to remove, reintroduced inside the guard
+/// against it.  The DR-77 acceptance found it (its counter-example: a skill
+/// paragraph whose only token was the old one passed).  It is not visible from
+/// the assertions themselves, so it is asserted directly, right below.
+const SUPERSEDED_GEOMETRIC_TOKEN: &str = "WIN_UNREACHABLE_GEOMETRICALLY";
 const BLOCKED_VERDICT: &str = "WIN_BLOCKED_UNDER_MOVE_RIGHT";
+
+/// DR-78 ④ (D77-A): the guard's own constant, checked directly.
+///
+/// A guard that reads `SUPERSEDED_GEOMETRIC_TOKEN` is only as strong as what that
+/// name holds.  `assert_ne!` is the part that cannot be satisfied by writing the
+/// new token twice; `assert_eq!` is the part that keeps the literal the historical
+/// records carry.  Both are here because the DR-77 defect was exactly a one-line
+/// definition, not an assertion.
+#[test]
+fn the_superseded_token_is_the_old_name_and_not_a_copy_of_the_new_one() {
+    assert_ne!(
+        SUPERSEDED_GEOMETRIC_TOKEN, BLOCKED_VERDICT,
+        "the superseded token and the current verdict are two different strings: a guard whose \
+         old name *is* the new name asserts `x ∈ S ⇒ x ∈ S`"
+    );
+    assert_eq!(
+        SUPERSEDED_GEOMETRIC_TOKEN, "WIN_UNREACHABLE_GEOMETRICALLY",
+        "the superseded token must be the wording the historical records actually carry"
+    );
+    assert_eq!(BLOCKED_VERDICT, "WIN_BLOCKED_UNDER_MOVE_RIGHT");
+}
 
 /// The two behaviours `REQUIREMENTS.md:114` names that the round never produced.
 const REQUIRED_BEHAVIOURS: [&str; 2] = ["a collectible picked up", "a reachable win condition"];
@@ -274,7 +303,14 @@ fn the_godot_dev_skill_retracts_the_impassable_level_claim() {
         "the skill must state that the window never jumps, so the verdict cannot be a \
          geometry proof:\n{skill}"
     );
-    for paragraph in skill.split("\n\n") {
+    // DR-78 ④ (D77-A): the delivered skill is **CRLF** (see the comment on the
+    // "no ground past" block below), so splitting the raw text on `"\n\n"` finds
+    // no boundary at all and the whole document becomes one paragraph.  That is
+    // the same vacuity that made the constant a copy of the new token: a guard
+    // that can only ever look at the whole file cannot tell "this paragraph maps
+    // the old name" from "the file mentions both names somewhere".
+    let normalized_skill = skill.replace("\r\n", "\n").replace('\r', "\n");
+    for paragraph in normalized_skill.split("\n\n") {
         if !paragraph.contains(SUPERSEDED_GEOMETRIC_TOKEN) {
             continue;
         }
@@ -289,10 +325,20 @@ fn the_godot_dev_skill_retracts_the_impassable_level_claim() {
             .join(".spec/hof-rs/tasks/TASK-DR73-REPORT.md"),
     )
     .expect("the DR-73 report is readable");
+    // DR-78 ④ (D77-A): the mapping is a paragraph that carries **both** names.
+    // The ledger's §2.2 correction note names the old token without the new one
+    // (it predates the DR-77 rename), so "the first paragraph that mentions the
+    // old token" is not the mapping — requiring both is what makes this assertion
+    // about the mapping instead of about whichever paragraph happens to come
+    // first.
     let mapping = ledger
         .split("\n\n")
-        .find(|paragraph| paragraph.contains(SUPERSEDED_GEOMETRIC_TOKEN))
-        .expect("the ledger must map the old token so historical records stay readable");
+        .find(|paragraph| {
+            paragraph.contains(SUPERSEDED_GEOMETRIC_TOKEN) && paragraph.contains(BLOCKED_VERDICT)
+        })
+        .expect(
+            "the ledger must map the old token to the new one so historical records stay readable",
+        );
     assert!(
         mapping.contains(BLOCKED_VERDICT),
         "the mapping paragraph must name the new verdict:\n{mapping}"

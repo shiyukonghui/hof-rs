@@ -42,6 +42,12 @@ struct RecordingMcp {
     tools: Arc<Mutex<Vec<String>>>,
     shutdown: Arc<AtomicBool>,
     handle: Option<JoinHandle<()>>,
+    /// DR-78 ②: per-tool canned replies.  The default answer (`{"tree": …}`) is
+    /// enough for a route-liveness double, but a role that **plays a scene**
+    /// needs the engine's two different answers: `editor_play_scene` announcing
+    /// an endpoint, and `running_game_get_scene_tree` answering the readiness
+    /// poll with a scene tree.
+    replies: Arc<Mutex<Vec<(String, Value)>>>,
 }
 
 impl RecordingMcp {
@@ -53,8 +59,10 @@ impl RecordingMcp {
             .expect("a non-blocking listener");
         let tools = Arc::new(Mutex::new(Vec::new()));
         let shutdown = Arc::new(AtomicBool::new(false));
+        let replies: Arc<Mutex<Vec<(String, Value)>>> = Arc::new(Mutex::new(Vec::new()));
         let thread_tools = tools.clone();
         let thread_shutdown = shutdown.clone();
+        let thread_replies = replies.clone();
         let handle = std::thread::spawn(move || {
             while !thread_shutdown.load(Ordering::SeqCst) {
                 match listener.accept() {
@@ -62,7 +70,7 @@ impl RecordingMcp {
                         stream
                             .set_nonblocking(false)
                             .expect("an accepted stream must block on reads");
-                        serve(stream, &thread_tools);
+                        serve(stream, &thread_tools, &thread_replies);
                     }
                     Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
                         std::thread::sleep(Duration::from_millis(2));
@@ -76,6 +84,7 @@ impl RecordingMcp {
             tools,
             shutdown,
             handle: Some(handle),
+            replies,
         }
     }
 
@@ -85,6 +94,13 @@ impl RecordingMcp {
 
     fn tools(&self) -> Vec<String> {
         self.tools.lock().unwrap().clone()
+    }
+
+    /// DR-78 ②: answer `tool` with `reply` instead of the default payload.
+    fn answering(&self, tool: &str, reply: Value) {
+        let mut replies = self.replies.lock().unwrap();
+        replies.retain(|(name, _)| name != tool);
+        replies.push((tool.to_string(), reply));
     }
 }
 
@@ -99,7 +115,11 @@ impl Drop for RecordingMcp {
 }
 
 /// A minimal MCP `tools/call` responder: one request, one `result`, close.
-fn serve(mut stream: TcpStream, tools: &Arc<Mutex<Vec<String>>>) {
+fn serve(
+    mut stream: TcpStream,
+    tools: &Arc<Mutex<Vec<String>>>,
+    replies: &Arc<Mutex<Vec<(String, Value)>>>,
+) {
     let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
     let mut buffer = Vec::new();
     let mut chunk = [0u8; 1024];
@@ -127,11 +147,21 @@ fn serve(mut stream: TcpStream, tools: &Arc<Mutex<Vec<String>>>) {
         }
         let body = String::from_utf8_lossy(&buffer[header_end + 4..header_end + 4 + length]);
         let request: Value = serde_json::from_str(&body).unwrap_or(json!({}));
-        if let Some(name) = request["params"]["name"].as_str() {
-            tools.lock().unwrap().push(name.to_string());
+        let name = request["params"]["name"].as_str().unwrap_or("").to_string();
+        if !name.is_empty() {
+            tools.lock().unwrap().push(name.clone());
         }
         let id = request.get("id").cloned().unwrap_or(json!(0));
-        let inner = json!({"tree": {"name": "Main", "path": "/root/Main"}}).to_string();
+        // DR-78 ②: a canned reply wins; the default keeps every existing
+        // route-liveness assertion unchanged.
+        let inner = replies
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|(tool, _)| *tool == name)
+            .map(|(_, reply)| reply.clone())
+            .unwrap_or_else(|| json!({"tree": {"name": "Main", "path": "/root/Main"}}))
+            .to_string();
         let body = json!({
             "jsonrpc": "2.0",
             "id": id,
@@ -219,22 +249,36 @@ fn age_route(path: &Path, seconds: u64) {
 
 /// Run the real `hoh` binary as a role's shell would: a **fresh process**.
 fn role_tools_call(tool: &str, editor_url: &str, route: Option<&Path>) -> std::process::Output {
+    role_tools_call_with(tool, editor_url, route, &[])
+}
+
+/// DR-78 ②: [`role_tools_call`] plus extra `-c key=value` overrides, so the
+/// role-side publish tests can keep their readiness deadline short without
+/// changing what the existing assertions run with.
+fn role_tools_call_with(
+    tool: &str,
+    editor_url: &str,
+    route: Option<&Path>,
+    extra_specs: &[&str],
+) -> std::process::Output {
     let mut command = Command::new(env!("CARGO_BIN_EXE_hoh"));
-    command
-        .args([
-            "tools",
-            "call",
-            tool,
-            "--role",
-            "developer",
-            "-c",
-            &format!("tools.endpoint={editor_url}"),
-            "-c",
-            "tools.max_retries=0",
-            "-c",
-            "tools.timeout_seconds=5",
-        ])
-        .current_dir(PathBuf::from(env!("CARGO_MANIFEST_DIR")));
+    command.args([
+        "tools",
+        "call",
+        tool,
+        "--role",
+        "developer",
+        "-c",
+        &format!("tools.endpoint={editor_url}"),
+        "-c",
+        "tools.max_retries=0",
+        "-c",
+        "tools.timeout_seconds=5",
+    ]);
+    for spec in extra_specs {
+        command.args(["-c", spec]);
+    }
+    command.current_dir(PathBuf::from(env!("CARGO_MANIFEST_DIR")));
     match route {
         Some(path) => {
             command.env("HOH_GAME_ROUTE", path);
@@ -244,6 +288,254 @@ fn role_tools_call(tool: &str, editor_url: &str, route: Option<&Path>) -> std::p
         }
     }
     command.output().expect("the hoh binary must be runnable")
+}
+
+/// DR-78 ②: the engine's `editor_play_scene` announcement, in the documented
+/// shape (`endpoint` + `mcp_port` + `mcp_port_source` + `pid`).
+fn play_scene_reply(endpoint: String, port: u16, pid: u32) -> Value {
+    json!({
+        "endpoint": endpoint,
+        "mcp_port": port,
+        "mcp_port_source": "auto_free_port",
+        "pid": pid,
+    })
+}
+
+/// DR-72 ⑤ (D1): a readiness answer that really is a scene tree — every node
+/// carries a `path` and a `type`, which is the predicate both poll paths use.
+fn scene_tree_reply() -> Value {
+    json!({
+        "tree": {
+            "name": "Main",
+            "path": "/root/Main",
+            "type": "Node2D",
+            "children": [
+                {"name": "Player", "path": "/root/Main/Player", "type": "CharacterBody2D"},
+            ],
+        }
+    })
+}
+
+/// DR-78 ② (F-T11-1): a role that plays its **own** scene must republish the
+/// game route, or the shell that just started a game cannot reach it.
+///
+/// This is `smoke-t11`'s red, offline: the Tester's `editor_play_scene` answered
+/// pid 4784 / port 57902, the very next command still printed the *previous*
+/// round's pid 33536 from `runs/smoke-t11/game_endpoint.json`, and all three
+/// `running_game_*` calls were refused with `game_endpoint_unavailable`.  The
+/// route file here starts out naming a dead game — the same shape — and must name
+/// the game this call really started once it returns.
+#[test]
+fn a_role_started_scene_republishes_the_game_route_for_later_processes() {
+    let temp = tempfile::tempdir().unwrap();
+    let run_dir = temp.path().join("runs/run-1");
+    let editor = RecordingMcp::start();
+    let game = RecordingMcp::start();
+    game.answering("running_game_get_scene_tree", scene_tree_reply());
+
+    // The route the runtime published for an earlier game: dead pid, dead port.
+    let dead_port = a_closed_loopback_port();
+    let route = write_route(
+        &run_dir,
+        &format!("http://127.0.0.1:{dead_port}/mcp"),
+        Some(dead_port),
+        a_dead_pid(),
+    );
+    let stale = std::fs::read_to_string(&route).expect("the stale route must be readable");
+
+    editor.answering(
+        "editor_play_scene",
+        play_scene_reply(game.url(), game.addr.port(), std::process::id()),
+    );
+
+    let output = role_tools_call("editor_play_scene", &editor.url(), Some(&route));
+    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "`editor_play_scene` must succeed\nstdout: {stdout}\nstderr: {stderr}"
+    );
+    assert!(
+        editor
+            .tools()
+            .iter()
+            .any(|tool| tool == "editor_play_scene"),
+        "the editor must have been driven: {:?}",
+        editor.tools()
+    );
+    assert!(
+        game.tools()
+            .iter()
+            .any(|tool| tool == "running_game_get_scene_tree"),
+        "the announced game must be confirmed ready **before** its route is published: {:?}",
+        game.tools()
+    );
+
+    let published = std::fs::read_to_string(&route).unwrap_or_else(|error| {
+        panic!("the role-started game's route must be published at {route:?}: {error}")
+    });
+    assert_ne!(
+        published, stale,
+        "the published route must be the game this call started, not the record that was there"
+    );
+    let record: Value = serde_json::from_str(&published).expect("the published JSON");
+    assert_eq!(record["endpoint"], json!(game.url()), "{record}");
+    assert_eq!(record["pid"], json!(std::process::id()), "{record}");
+
+    // …and a later, separate process reaches **that** game.
+    let probe = role_tools_call("running_game_get_scene_tree", &editor.url(), Some(&route));
+    let probe_out = String::from_utf8_lossy(&probe.stdout).into_owned();
+    assert_eq!(
+        probe.status.code(),
+        Some(0),
+        "a later role process must reach the game the role started\nstdout: {probe_out}"
+    );
+    assert!(
+        !editor
+            .tools()
+            .iter()
+            .any(|tool| tool.starts_with("running_game_")),
+        "a game-scope tool must never be sent to the editor endpoint: {:?}",
+        editor.tools()
+    );
+}
+
+/// DR-78 ②: the refusal semantics are **not** widened by the publisher.
+///
+/// A role-started game that never confirms readiness leaves no route at all (the
+/// DR-71 ① order: install, confirm, publish), and the failure is explicit.  The
+/// counter-example the acceptance cares about is the fallback: a later
+/// `running_game_*` call must meet DR-43's `game_endpoint_unavailable`, and the
+/// editor endpoint must never receive it.
+#[test]
+fn a_role_started_scene_that_never_becomes_ready_is_refused_and_leaves_no_route() {
+    let temp = tempfile::tempdir().unwrap();
+    let run_dir = temp.path().join("runs/run-1");
+    let editor = RecordingMcp::start();
+    let dead_port = a_closed_loopback_port();
+    // The route names a live, answering game — the record that must **not** be
+    // allowed to stand in for the game this call tried to start.
+    let previous = RecordingMcp::start();
+    previous.answering("running_game_get_scene_tree", scene_tree_reply());
+    let route = write_route(
+        &run_dir,
+        &previous.url(),
+        Some(previous.addr.port()),
+        std::process::id(),
+    );
+    editor.answering(
+        "editor_play_scene",
+        play_scene_reply(
+            format!("http://127.0.0.1:{dead_port}/mcp"),
+            dead_port,
+            std::process::id(),
+        ),
+    );
+
+    let output = role_tools_call_with(
+        "editor_play_scene",
+        &editor.url(),
+        Some(&route),
+        &["tools.ready_timeout_seconds=2"],
+    );
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_ne!(
+        output.status.code(),
+        Some(0),
+        "a game that never answers readiness must not be reported as a successful start: {combined}"
+    );
+    assert!(
+        combined.contains("running_game_get_scene_tree")
+            || combined.contains("could not be published"),
+        "the failure must name what could not be confirmed: {combined}"
+    );
+    assert!(
+        previous.tools().is_empty(),
+        "the previous game must not be probed on behalf of the new one: {:?}",
+        previous.tools()
+    );
+
+    // The route is gone (or was never usable), so the next call meets DR-43.
+    let probe = role_tools_call("running_game_get_scene_tree", &editor.url(), Some(&route));
+    let probe_out = format!(
+        "{}{}",
+        String::from_utf8_lossy(&probe.stdout),
+        String::from_utf8_lossy(&probe.stderr)
+    );
+    assert_ne!(probe.status.code(), Some(0), "{probe_out}");
+    assert!(
+        probe_out.contains("game_endpoint_unavailable"),
+        "the refusal must be DR-43's explicit one: {probe_out}"
+    );
+    assert!(
+        !editor
+            .tools()
+            .iter()
+            .any(|tool| tool.starts_with("running_game_")),
+        "falling back to the editor endpoint is forbidden: {:?}",
+        editor.tools()
+    );
+}
+
+/// DR-78 ②: a publish that **fails** is a loud failure, not a silent reuse of
+/// the route that was already there.
+///
+/// The route path is placed under a regular file, so `publish_game_route` cannot
+/// create its parent directory.  The call must exit non-zero with the reason
+/// spelled out (a role told "the scene is playing" while the route was never
+/// written is the `smoke-t11` state), and the reply itself must not be printed as
+/// a success.
+#[test]
+fn a_role_started_scene_whose_route_cannot_be_published_fails_loudly() {
+    let temp = tempfile::tempdir().unwrap();
+    // `runs/run-1` is a **file**, so the route's parent cannot be created.
+    let run_dir = temp.path().join("runs/run-1");
+    std::fs::create_dir_all(run_dir.parent().unwrap()).unwrap();
+    std::fs::write(&run_dir, b"not a directory").unwrap();
+    let route = run_dir.join(ROUTE_FILE);
+
+    let editor = RecordingMcp::start();
+    let game = RecordingMcp::start();
+    game.answering("running_game_get_scene_tree", scene_tree_reply());
+    editor.answering(
+        "editor_play_scene",
+        play_scene_reply(game.url(), game.addr.port(), std::process::id()),
+    );
+
+    let output = role_tools_call("editor_play_scene", &editor.url(), Some(&route));
+    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+    let combined = format!("{stdout}{}", String::from_utf8_lossy(&output.stderr));
+
+    assert_ne!(
+        output.status.code(),
+        Some(0),
+        "an unpublished route must not be reported as a successful scene start: {combined}"
+    );
+    assert!(
+        combined.contains("could not be published"),
+        "the failure must say the route could not be published: {combined}"
+    );
+    assert!(
+        combined.contains("DR-43"),
+        "the failure must name the rule it refuses to break: {combined}"
+    );
+    assert!(
+        !stdout.contains("mcp_port_source"),
+        "the editor's own reply must not be printed as a success: {stdout}"
+    );
+    assert!(
+        game.tools()
+            .iter()
+            .any(|tool| tool == "running_game_get_scene_tree"),
+        "the publish must have been attempted only after readiness was confirmed: {:?}",
+        game.tools()
+    );
 }
 
 // ---------------------------------------------------------------------------

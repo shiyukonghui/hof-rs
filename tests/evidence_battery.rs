@@ -21,7 +21,8 @@ use std::sync::{Arc, Mutex};
 
 use common::*;
 use hof_rs::adapter::godot::{
-    GodotAdapter, INTERACTION_BATCH_FRAMES, INTERACTION_DRIVE_FRAMES, INTERACTION_MAX_BATCHES,
+    GodotAdapter, COIN_CONSUMING_BATTERY_STEPS, COIN_OBSERVING_BATTERY_STEP,
+    INTERACTION_BATCH_FRAMES, INTERACTION_DRIVE_FRAMES, INTERACTION_MAX_BATCHES,
     SPEC_MAX_TRAVERSAL_SECONDS,
 };
 use hof_rs::adapter::BatteryRecord;
@@ -333,8 +334,8 @@ enum InteractionMode {
     NoWin,
     /// DR-76 ②: the level stops the player — it advances and then stops dead
     /// (a wall or a branch the held `move_right` cannot pass) while the budget
-    /// still has batches left.  This is the only cell allowed to answer a
-    /// geometric verdict.
+    /// still has batches left.  This is the only cell allowed to answer
+    /// `WIN_BLOCKED_UNDER_MOVE_RIGHT` — the movement-direction verdict.
     Blocked,
     /// A HUD with no `Coins:` label at all.
     UnreadableCounter,
@@ -450,7 +451,8 @@ impl FixtureChannel {
         // batch — except on the `Blocked` level, where the held action stops
         // moving the player at `FIXTURE_BLOCKED_X`.  A `Blocked` batch is
         // deliberately a *no-progress* batch even though the action was injected,
-        // which is exactly the shape the geometric verdict has to be able to see.
+        // which is exactly the shape the `WIN_BLOCKED_UNDER_MOVE_RIGHT` verdict
+        // has to be able to see.
         if self.interaction == InteractionMode::Blocked && *max_x >= FIXTURE_BLOCKED_X {
             return;
         }
@@ -477,13 +479,37 @@ impl FixtureChannel {
         *self.interactions.lock().unwrap()
     }
 
-    /// DR-73 ③: arm the drive — the interaction step's own switch, so the
+    /// DR-78 ③: arm the drive — the interaction step's own switch, so the
     /// `input_replay` windows before it cannot credit it with a sweep.  The
     /// window arms itself through the `Goal` property read that precedes its
     /// drive, which is the last thing it does before the batches start.
     fn arm_drive(&self) {
         self.driving
             .store(true, std::sync::atomic::Ordering::SeqCst);
+    }
+
+    /// DR-78 ③: the window is over.  The interaction window's own last calls are
+    /// the two **non-positional** assertion shapes (`text` on the counter,
+    /// `reached` on the goal); the replay windows assert on `position`.  Disarming
+    /// there keeps the interaction model from leaking into the windows that DR-78
+    /// now places **after** it.
+    fn disarm_drive(&self) {
+        self.driving
+            .store(false, std::sync::atomic::Ordering::SeqCst);
+    }
+
+    /// DR-78 ③: model a game process that enters the observing window with an
+    /// action already held from an earlier window.  This is the `smoke-t11`
+    /// state, and it is what makes "the window clears what it does not drive" a
+    /// testable property instead of a comment: without the release the axis is
+    /// `0` and the sampled player stands still.
+    fn starting_held(self, actions: &[&str]) -> Self {
+        let mut held = self.held_in_game.lock().unwrap();
+        for action in actions {
+            held.push(action.to_string());
+        }
+        drop(held);
+        self
     }
 
     /// DR-76 ②: where this level's goal sits.  Only `Working` puts it where the
@@ -1278,7 +1304,18 @@ impl ToolChannel for FixtureChannel {
                 // the drive instead of whichever action the replay happened to
                 // hold.  The ramp ends at the position the fixture's own drive
                 // state says the player reached.
-                if self.driving() && moves {
+                //
+                // DR-78 ③: the ramp is **conditional on the game's own axis**,
+                // because the real `player.gd` moves by
+                // `Input.get_axis("move_left", "move_right")` and a stale held
+                // `move_left` therefore cancels a delivered `move_right` outright.
+                // Modelling the injection as "success ⇒ movement" is precisely
+                // what hid `smoke-t11`'s interaction window: 180 of 180 samples
+                // stood at `x=225.000045776367` while the injection was reported
+                // as accepted.  With the axis in the condition the double
+                // reproduces that state, and the delivery of `move_right` alone is
+                // no longer enough to make the window advance.
+                if self.driving() && moves && self.game_axis() > 0.0 {
                     let end = *self.max_x.lock().unwrap();
                     let start = (end - FIXTURE_PX_PER_BATCH).max(0.0);
                     let mut samples = Vec::new();
@@ -1335,6 +1372,12 @@ impl ToolChannel for FixtureChannel {
                     // double answers those two as well.  Every other property
                     // keeps the engine's real `-32001` answer, which is what a
                     // probe on a property the node does not have really gets.
+                    //
+                    // DR-78 ③: those two shapes are also the interaction window's
+                    // own end (`position` belongs to the replay windows), so the
+                    // drive model is disarmed here — otherwise the windows DR-78
+                    // moves after the observing one would inherit its ramp.
+                    self.disarm_drive();
                     return match property.as_str() {
                         "text" => Ok(ToolResult {
                             ok: true,
@@ -1622,9 +1665,11 @@ async fn green_battery_records_every_step_and_copies_into_the_candidate() {
             "play_scene_ready",
             "scene_tree",
             "screenshot",
+            // DR-78 ③: the observing window runs before the windows that can
+            // consume what it observes (F-T11-3).
+            "interaction_evidence",
             "input_channel_probe",
             "input_replay",
-            "interaction_evidence",
             "node_and_collision_assertions",
             "editor_stop_scene",
         ],
@@ -4425,7 +4470,8 @@ async fn a_project_that_never_picks_a_coin_up_is_recorded_as_a_gap() {
     );
     assert!(
         !observation.contains(BLOCKED_VERDICT),
-        "a budget that ran out must never be reported as a geometric verdict: {observation}"
+        "a budget that ran out must never be reported as a movement-direction verdict \
+         ({BLOCKED_VERDICT}): {observation}"
     );
     assert!(
         observation.contains("Coins: 0 -> Coins: 0"),
@@ -4532,7 +4578,7 @@ async fn a_level_whose_goal_is_unreachable_fails_only_the_win_half() {
 /// answer `WIN_BLOCKED_UNDER_MOVE_RIGHT` — and it has to say how much budget was
 /// left, so a reader can tell it from the coverage case above.
 #[tokio::test]
-async fn a_player_that_stops_advancing_with_budget_left_is_a_geometric_verdict() {
+async fn a_player_that_stops_advancing_with_budget_left_is_blocked_under_move_right() {
     let temp = tempfile::tempdir().unwrap();
     let (run, _) = interaction_run(temp.path(), InteractionMode::Blocked).await;
 
@@ -4545,7 +4591,8 @@ async fn a_player_that_stops_advancing_with_budget_left_is_a_geometric_verdict()
     );
     assert!(
         observation.contains(BLOCKED_VERDICT),
-        "a player that stops advancing with budget left is a geometric verdict: {observation}"
+        "a player that stops advancing with budget left is a {BLOCKED_VERDICT} verdict \
+         (movement-direction, not geometry): {observation}"
     );
     assert!(
         !observation.contains("WIN_UNREACHED_WITHIN_BUDGET"),
@@ -4638,4 +4685,169 @@ async fn a_hud_without_a_coin_cell_is_reported_as_unreadable_not_as_zero() {
         !observation.contains("COIN_NOT_PICKED_UP"),
         "an unreadable counter must not be reported as a measured zero: {observation}"
     );
+}
+
+// ---------------------------------------------------------------------------
+// DR-78 ③: the observing window must not be a spectator to a consumed coin
+// ---------------------------------------------------------------------------
+//
+// `smoke-t11` (F-T11-3) measured the structural false negative this section
+// closes.  `Coin1` sits at `x=400`; of the round's eleven frozen frames exactly
+// one carried a coin (`replay-move_right-before.png`, 576 yellow pixels) and the
+// `input_replay` `move_right` window carried the player from
+// `192.000045776367` to `408.333038330078`; the interaction window then started at
+// index 8 with its first counter reading already `Coins: 1`.  `main.gd` starts at
+// `0` and `coin.gd::collect()` is the only increment, so the `0 -> 1` transition
+// F10's claim names could not be observed by any later window on that run.
+//
+// Two rules, two tests.  The first is about **order**: the observing window runs
+// before every window that can consume the coin, and moving it after one reddens.
+// The second is about **self-sufficiency**: the observing window clears the
+// actions it does not drive, so its own drive cannot be cancelled by a state an
+// earlier window left behind.  Neither test reads the source; both run the
+// battery and read the records and raw payloads it produced.
+
+/// DR-78 ③: the order, read off the records the battery really produced.
+#[tokio::test]
+async fn the_coin_observing_window_runs_before_every_consuming_window() {
+    let temp = tempfile::tempdir().unwrap();
+    let channel = Arc::new(FixtureChannel::green());
+    let run = run_battery(temp.path(), channel, 30).await;
+
+    let order: Vec<&str> = run
+        .records
+        .iter()
+        .map(|record| record.step_id.as_str())
+        .collect();
+    let observing = order
+        .iter()
+        .position(|id| *id == COIN_OBSERVING_BATTERY_STEP)
+        .unwrap_or_else(|| {
+            panic!("the observing window `{COIN_OBSERVING_BATTERY_STEP}` must run: {order:?}")
+        });
+    for consuming in COIN_CONSUMING_BATTERY_STEPS {
+        let index = order
+            .iter()
+            .position(|id| *id == consuming)
+            .unwrap_or_else(|| panic!("the consuming window `{consuming}` must run: {order:?}"));
+        assert!(
+            observing < index,
+            "`{COIN_OBSERVING_BATTERY_STEP}` (index {observing}) must run **before** \
+             `{consuming}` (index {index}): it holds a horizontal action and samples the player's \
+             travel, so a coin between spawn and its sweep is consumed before the counter \
+             transition can be observed — the `smoke-t11` false negative.  Order was {order:?}"
+        );
+    }
+}
+
+/// DR-78 ③: the observing window's own drive is not cancelled by a state an
+/// earlier window left in the game process.
+///
+/// The double enters the window with `move_left` already held — the `smoke-t11`
+/// state, where `input_replay`'s last window pressed `move_left` and had no
+/// successor to release it for.  `player.gd` moves by
+/// `Input.get_axis("move_left", "move_right")`, so a window that only presses
+/// `move_right` is cancelled (axis `0`, player standing still) even though the
+/// injection is accepted.  The window must clear what it does not drive, which is
+/// what makes "did not advance" and "could not advance" different observations.
+#[tokio::test]
+async fn the_observing_window_clears_a_stale_opposing_action_by_itself() {
+    let temp = tempfile::tempdir().unwrap();
+    let channel = Arc::new(
+        FixtureChannel::green()
+            .with_interaction(InteractionMode::Working)
+            .starting_held(&["move_left"]),
+    );
+    let run = run_battery(temp.path(), channel, 30).await;
+
+    let step = step(&run.records, "interaction_evidence");
+    let observation = &step.record.observation;
+    assert!(
+        !observation.contains("STALE_ACTION_NOT_RELEASED"),
+        "the window must report a refused release of a stale action instead of driving anyway: \
+         {observation}"
+    );
+    assert!(
+        step.ok && observation.contains("COIN_PICKED_UP"),
+        "a stale `move_left` from an earlier window must not make this window a spectator: the \
+         window has to release the action it does not drive and then pick the coin up.  \
+         Observation: {observation}"
+    );
+    assert!(
+        observation.contains("player max x=Some("),
+        "the drive must still record how far it travelled: {observation}"
+    );
+
+    // The release really happened in the game process, and it happened **before**
+    // the first batch's injection: a release after the sampling would be no use.
+    let raw = interaction_raw(&run);
+    let calls = raw["calls"].as_array().expect("raw call list");
+    let released = calls
+        .iter()
+        .position(|call| {
+            call["tool"] == json!("running_game_play_input_recording")
+                && call["args"]["events"][0]["action"] == json!("move_left")
+                && call["args"]["events"][0]["pressed"] == json!(false)
+        })
+        .unwrap_or_else(|| {
+            panic!("the stale `move_left` must be released in the game process: {calls:?}")
+        });
+    let first_press = calls
+        .iter()
+        .position(|call| {
+            call["tool"] == json!("running_game_play_input_recording")
+                && call["args"]["events"][0]["pressed"] == json!(true)
+                && call["label"]
+                    .as_str()
+                    .map(|label| label.contains("batch1"))
+                    .unwrap_or(false)
+        })
+        .expect("the first batch must inject the drive");
+    assert!(
+        released < first_press,
+        "the release (call {released}) must precede the first injected batch (call {first_press}); \
+         a release after the drive has begun cannot cancel it"
+    );
+}
+
+/// DR-78 ④ (D77-B): the withdrawn wording must not survive in the surfaces a
+/// reader of the evidence sees.  The test function's own name appears in
+/// `cargo test` output and in `cargo test --list`, i.e. it is part of the
+/// evidence a later round reads, so `geometric` there is a claim the DR-77 ③
+/// rename retracted.
+#[test]
+fn the_battery_names_the_blocked_verdict_by_its_movement_direction() {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/evidence_battery.rs");
+    let source = std::fs::read_to_string(&path)
+        .unwrap_or_else(|error| panic!("{}: {error}", path.display()));
+    // Assembled rather than written out, so this guard is not its own
+    // counter-example: a literal copy of the withdrawn wording would make the
+    // file contain it and the assertion below vacuous.
+    let withdrawn_name = concat!("is_a_", "geometric", "_verdict");
+    let withdrawn_wording = concat!("geometric", " verdict");
+    assert!(
+        source.contains(concat!(
+            "fn a_player_that_stops_advancing_with_budget_left_is_blocked_under_move_right"
+        )),
+        "the battery's own test name must carry the movement-direction name"
+    );
+    assert!(
+        !source.contains(withdrawn_name),
+        "the retracted wording must not survive in a test name (it enters `cargo test` output \
+         and `--list`): {path:?}"
+    );
+    assert!(
+        !source.contains(withdrawn_wording),
+        "the retracted wording must not survive in an assertion message: {path:?}"
+    );
+    for (index, line) in source.lines().enumerate() {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with("fn ") || trimmed.starts_with("async fn ") {
+            assert!(
+                !trimmed.contains(withdrawn_name),
+                "line {}: the withdrawn wording is back in a test name: {trimmed}",
+                index + 1
+            );
+        }
+    }
 }

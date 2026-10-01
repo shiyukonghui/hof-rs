@@ -626,9 +626,22 @@ impl<'a> BatterySession<'a> {
         let scene_tree = self.step_play_scene().await?;
         self.step_scene_tree(scene_tree.clone()).await?;
         self.step_screenshot().await?;
+        // DR-78 ③: the **observing** window runs before the windows that can
+        // consume what it observes.  `smoke-t11` measured the defect this
+        // fixes: `input_replay` sat at index 7 and `interaction_evidence` at
+        // index 8, the replay's `move_right` window swept `Coin1` (`x=400`
+        // between `192.000045776367` and `408.333038330078`), and the
+        // interaction window's first reading was therefore `Coins: 1` — with
+        // `main.gd` starting at `0` and `coin.gd::collect()` the only increment,
+        // F10's `0 -> 1` claim was unreachable by construction, not unobserved.
+        //
+        // The order is pinned by
+        // `the_coin_observing_window_runs_before_every_consuming_window` in
+        // `tests/evidence_battery.rs`, which runs the battery and reads the
+        // order of the records it produced.
+        self.step_interaction_evidence(scene_tree.clone()).await?;
         self.channel = self.step_input_channel_probe().await?;
         self.step_input_replay().await?;
-        self.step_interaction_evidence(scene_tree.clone()).await?;
         self.step_node_assertions(scene_tree).await?;
         self.step_stop_scene().await?;
         Ok(self.records)
@@ -2610,6 +2623,33 @@ impl<'a> BatterySession<'a> {
                  the win branch cannot be attributed to this window)"
             ));
         } else {
+            // DR-78 ③: clear the actions this window does not drive, **inside the
+            // game process**, before the first batch.  The window's own drive is
+            // only `INTERACTION_DRIVE_ACTION`, and `player.gd` reads
+            // `Input.get_axis("move_left", "move_right")`: a stale opposite
+            // action left over from an earlier window makes the axis `0`, so the
+            // player stands still while the injection really succeeded.  A
+            // refusal is recorded, never swallowed — an un-cleared action is the
+            // difference between "the window did not advance the player" and "the
+            // player could not advance", and DR-77's lesson is that those two may
+            // not share a sentence.
+            for stale in INTERACTION_STALE_ACTIONS {
+                if !self
+                    .semantic_release_action(
+                        stale,
+                        &format!("interaction:release_stale_{stale}"),
+                        &mut calls,
+                    )
+                    .await
+                {
+                    summaries.push(format!(
+                        "interaction: STALE_ACTION_NOT_RELEASED (the game-process input channel \
+                         refused to release `{stale}` before `{INTERACTION_DRIVE_ACTION}` was \
+                         held; a held `{stale}` cancels the drive, so this run cannot tell \"the \
+                         player did not advance\" from \"the player could not\")"
+                    ));
+                }
+            }
             for batch in 0..INTERACTION_MAX_BATCHES {
                 batches = batch + 1;
                 let label = format!("interaction:batch{}", batch + 1);
@@ -2854,8 +2894,8 @@ impl<'a> BatterySession<'a> {
                 // which is exactly the false diagnosis `4deefc8` committed (the
                 // level is continuous to x=6800; the replay simply never drove
                 // far enough).  The verdict now says which of the two it is, and
-                // the geometric one is only reachable when the budget was **not**
-                // the limit.
+                // the `WIN_BLOCKED_UNDER_MOVE_RIGHT` one is only reachable when
+                // the budget was **not** the limit.
                 if stalled && batches_left > 0 {
                     summaries.push(format!(
                         "interaction: WIN_BLOCKED_UNDER_MOVE_RIGHT (goal.{GOAL_REACHED_PROPERTY} \
@@ -3734,6 +3774,32 @@ fn describe_monitor(label: &str, payload: &Value) -> String {
 /// evidence is collected.
 pub const INPUT_PROBE_STEP_ID: &str = "input_channel_probe";
 
+/// DR-78 ③: the battery step that drives `move_right` and samples the player's
+/// own travel.  Named here because the ordering rule below is about this step.
+pub const INPUT_REPLAY_STEP_ID: &str = "input_replay";
+
+/// DR-78 ③: the battery step that observes the coin counter's transition.
+pub const COIN_OBSERVING_BATTERY_STEP: &str = "interaction_evidence";
+
+/// DR-78 ③: the battery steps that **hold a horizontal action and sample the
+/// player's travel**, and can therefore sweep a coin before the observing window
+/// ever sees the counter move.
+///
+/// This is not a stylistic list.  `smoke-t11` proved the consequence: the
+/// `input_replay` `move_right` window carried the player from `192.000045776367`
+/// to `408.333038330078`, i.e. straight through `Coin1` at `x=400`; the only one
+/// of eleven frames with a coin in it was `replay-move_right-before.png`; and the
+/// interaction window — which runs *after* it — read `Coins: 1` as its first
+/// reading.  `main.gd` starts at `0` and `coin.gd::collect()` is the only
+/// increment, so the `0 -> 1` transition F10's claim names was structurally
+/// unobservable from that point on.
+///
+/// The rule the list encodes: [`COIN_OBSERVING_BATTERY_STEP`] must run **before**
+/// every step in it.  `the_coin_observing_window_runs_before_every_consuming_window`
+/// in `tests/evidence_battery.rs` executes the battery and reddens if the order
+/// is changed, which is what makes the rule a test instead of a comment.
+pub const COIN_CONSUMING_BATTERY_STEPS: [&str; 2] = [INPUT_PROBE_STEP_ID, INPUT_REPLAY_STEP_ID];
+
 /// DR-35: the action the channel probe drives.
 pub const PROBE_ACTION: &str = "move_right";
 /// DR-35: how many frames the game gets between `action_press` and the re-read.
@@ -3883,9 +3949,29 @@ pub const INTERACTION_DRIVE_FRAMES: u64 = INTERACTION_MAX_BATCHES as u64 * INTER
 /// separates "the player is still travelling" from "the player is not".
 pub const INTERACTION_MIN_PROGRESS_PX: f64 = 1.0;
 /// DR-76 ②: how many consecutive stalled batches mean the held action cannot
-/// advance the player — the geometric/logic verdict, only ever reachable with
-/// budget left to spend.
+/// advance the player — the `WIN_BLOCKED_UNDER_MOVE_RIGHT` verdict, only ever
+/// reachable with budget left to spend.
 pub const INTERACTION_STALL_BATCHES: usize = 2;
+
+/// DR-78 ③: the actions the interaction window must **clear inside the game
+/// process** before it starts driving.
+///
+/// The window only ever holds [`INTERACTION_DRIVE_ACTION`]; anything else that is
+/// still held cancels it.  `player.gd` moves by
+/// `Input.get_axis("move_left", "move_right")`, so a leftover `move_left` makes
+/// the axis `0` and the player stand still **while the window is really
+/// pressing** — which is exactly the `smoke-t11` interaction window: 180 of 180
+/// samples at `x=225.000045776367`, a run that had just been travelling left at
+/// full speed (`239.666732788086` was its previous sample, `14.666687011719 px` =
+/// four frames earlier), and a `facing: -1` at the end of the window.
+///
+/// `input_replay` clears the *previous* direction at the start of each of its
+/// windows (`the_input_replay_releases_the_previous_direction_before_the_next_one`),
+/// but its **last** window has no successor to clear for it, so `move_left` was
+/// still held when the next step ran.  Releasing the stale actions here makes the
+/// observing window self-sufficient: it no longer depends on the order of the
+/// steps around it for its own drive to work.
+pub const INTERACTION_STALE_ACTIONS: [&str; 1] = ["move_left"];
 
 /// DR-54: the semantic game tools the evidence battery is built on.
 ///
@@ -4723,6 +4809,84 @@ impl ProjectAdapter for GodotAdapter {
             .await;
         tools.clear_game_endpoint().await;
         Ok(())
+    }
+
+    /// DR-78 ②: publish the route of a game a **role** started.
+    ///
+    /// `smoke-t11` (F-T11-1) is the measurement this closes.  The Tester ran
+    /// `hoh tools call editor_play_scene` and the engine answered pid 4784 /
+    /// port 57902; the very next command in the same shell,
+    /// `type runs\smoke-t11\game_endpoint.json`, still printed pid 33536 /
+    /// port 56821 — a process that no longer existed — and all three
+    /// `running_game_*` calls were refused with DR-43's explicit
+    /// `game_endpoint_unavailable`.  The publisher was only ever the runtime
+    /// battery's own `play_scene_ready` step, so **a route a role starts is a
+    /// route nobody writes**.
+    ///
+    /// The publisher/adopter boundary is now explicit: this method (reached
+    /// through `ProjectAdapter`, driven by `hoh tools call editor_play_scene`)
+    /// is the only role-side publisher, and
+    /// [`crate::tools::bridge::adopt_published_game_route`] is the only adopter.
+    /// They meet at `runs/<id>/game_endpoint.json` and nowhere else.
+    ///
+    /// The order is the round start's order, for the same reason: install for
+    /// in-process routing, confirm readiness against the **installed** route,
+    /// and only then publish — an unconfirmed game must not leave a route for
+    /// another process, and a publish that fails is a failure, not a discarded
+    /// value.  Every failure path withdraws the route (DR-43: the refusal a call
+    /// gets must be the explicit one, never the editor endpoint).
+    async fn publish_role_started_game_route(
+        &self,
+        tools: &dyn ToolChannel,
+        role: Role,
+        announced: &Value,
+    ) -> anyhow::Result<Option<crate::tools::endpoint::GameEndpointRecord>> {
+        // DR-43: the reply is the **only** source of the endpoint.  A reply that
+        // announces neither `endpoint` nor `mcp_port` cannot be published, and a
+        // guessed endpoint would route every later `running_game_*` call
+        // somewhere that cannot answer it.
+        let record = parse_game_endpoint(announced).map_err(anyhow::Error::msg)?;
+        tools.install_game_endpoint(record.clone()).await?;
+
+        let tree_args = json!({"max_depth": -1});
+        // DR-72 ⑤ (D1): the readiness predicate is the battery's own scene-tree
+        // shape check, so "the game answered" cannot mean two things in two
+        // places.  The poll runs as the role that asked for the scene, so a role
+        // that may not read the tree cannot have a route published in its name.
+        let ready = wait_for_ready_matching(
+            tools,
+            role,
+            "running_game_get_scene_tree",
+            tree_args,
+            self.battery.ready_timeout_seconds,
+            READY_POLL_INTERVAL_MS,
+            None,
+            scene_tree_readiness,
+        )
+        .await;
+        if !ready.ok {
+            let problem = ready
+                .failure
+                .map(|failure| failure.observation())
+                .unwrap_or_else(|| "no attempt was made".to_string());
+            // DR-71 ①: no readiness, no route.  The old record must not survive
+            // as a stand-in for the game this call just replaced.
+            tools.clear_game_endpoint().await;
+            anyhow::bail!(
+                "the game the role started with `editor_play_scene` did not answer \
+                 `running_game_get_scene_tree` after {} poll(s): {problem}",
+                ready.attempts
+            );
+        }
+
+        if let Err(error) = tools.publish_game_endpoint().await {
+            tools.clear_game_endpoint().await;
+            return Err(error.context(
+                "the role-started game is ready but its route could not be published, so no later \
+                 process could reach it; the previous route must not stand in for this one (DR-43)",
+            ));
+        }
+        Ok(Some(record))
     }
 
     async fn build_check(

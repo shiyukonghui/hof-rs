@@ -214,6 +214,39 @@ pub trait ProjectAdapter: Send + Sync {
         Ok(())
     }
 
+    /// DR-78 ②: a **role** — not the runtime — started a game with
+    /// `editor_play_scene`.  This is the publisher half of the
+    /// publish/adopt boundary: the reply announced an endpoint, and the adapter
+    /// that can judge readiness is the one that makes that endpoint visible to
+    /// another process.
+    ///
+    /// `smoke-t11` measured the defect this closes: the Tester called
+    /// `editor_play_scene` (pid 4784), the very next
+    /// `type runs\smoke-t11\game_endpoint.json` still printed the *previous*
+    /// round's pid 33536, and all three `running_game_*` CLI calls were refused
+    /// with `game_endpoint_unavailable`.  Before this method the only publisher
+    /// was the runtime battery (`GodotAdapter`'s own `play_scene_ready` step), so
+    /// a role's process could play a scene whose route was never written.
+    ///
+    /// The order is the round start's order and is not a detail: the announced
+    /// endpoint is installed for in-process routing, the readiness poll runs
+    /// against it, and publication happens **after** readiness — so an
+    /// unconfirmed game cannot leave a route behind.  A refusal here is a hard
+    /// error (the caller must exit non-zero): silently keeping the previous
+    /// route is the same lie in a different place, and falling back to the
+    /// editor endpoint is what DR-43 forbids.
+    ///
+    /// The default is `Ok(None)`: an adapter with no game endpoint to publish
+    /// (every non-engine adapter and every test double).
+    async fn publish_role_started_game_route(
+        &self,
+        _tools: &dyn ToolChannel,
+        _role: Role,
+        _announced: &serde_json::Value,
+    ) -> anyhow::Result<Option<crate::tools::endpoint::GameEndpointRecord>> {
+        Ok(None)
+    }
+
     /// DR-37: is the Developer role's artifact (the project itself) at least
     /// *usable*?
     ///

@@ -258,16 +258,68 @@ pub fn adopt_published_game_route(
     channel.use_game_route_file(path)
 }
 
-/// `hoh tools call <tool>`: deny first, then call.
-pub async fn tools_call(
+/// DR-78 ②: the one tool whose successful reply announces a **new** game route.
+///
+/// A role that plays its own scene is starting a game the runtime does not know
+/// about; the reply carries the endpoint, and the route file has to be rewritten
+/// with it or every later `running_game_*` call in that role's shell answers with
+/// DR-43's `game_endpoint_unavailable` for a game that is really running
+/// (`smoke-t11`: `editor_play_scene` answered pid 4784 while the published route
+/// still named the dead pid 33536).
+pub const GAME_START_TOOL: &str = "editor_play_scene";
+
+/// DR-78 ②: what a `hoh tools call` handed back, *before* it is printed.
+///
+/// The CLI needs the reply itself to decide whether the call announced a game
+/// route that has to be published; a bare exit code cannot carry that, and
+/// printing first would tell the role the call succeeded while the route it
+/// needs is still unwritten.
+#[derive(Clone, Debug, PartialEq)]
+pub enum ToolCallReply {
+    /// The role may not call this tool at all: the deny payload, exit 2.  Nothing
+    /// was sent anywhere.
+    Denied(Value),
+    /// The endpoint answered: the tool's payload, exit 0.
+    Answered(Value),
+}
+
+impl ToolCallReply {
+    /// DR-78 ②: the exit code the CLI reports for this reply.
+    pub fn exit_code(&self) -> i32 {
+        match self {
+            ToolCallReply::Denied(_) => 2,
+            ToolCallReply::Answered(_) => 0,
+        }
+    }
+
+    /// DR-78 ②: the body the CLI prints — the same bytes the pre-DR-78
+    /// `tools_call` printed, so a role's parsing of either case is unchanged.
+    pub fn body(&self) -> &Value {
+        match self {
+            ToolCallReply::Denied(payload) | ToolCallReply::Answered(payload) => payload,
+        }
+    }
+
+    /// DR-78 ②: the tool's own reply, when the call reached the endpoint.
+    pub fn answered(&self) -> Option<&Value> {
+        match self {
+            ToolCallReply::Answered(payload) => Some(payload),
+            ToolCallReply::Denied(_) => None,
+        }
+    }
+}
+
+/// `hoh tools call <tool>`: deny first, then call.  The reply is returned rather
+/// than printed, so a caller can act on it before the role is told it succeeded
+/// (DR-78 ②).  [`tools_call`] is the printing form and is what most callers want.
+pub async fn tools_call_with_reply(
     channel: &dyn ToolChannel,
     role: Role,
     tool: &str,
     args: Value,
-) -> anyhow::Result<i32> {
+) -> anyhow::Result<ToolCallReply> {
     if !channel.allowed(role, tool) {
-        println!("{}", denial_payload(role, tool));
-        return Ok(2);
+        return Ok(ToolCallReply::Denied(denial_payload(role, tool)));
     }
     // DR-72 ④: this process is the one place a role's parameter mistake can be
     // answered with the parameter names the tool really declares.  The hint is
@@ -280,8 +332,27 @@ pub async fn tools_call(
     let result = channel.call(role, tool, args).await;
     crate::tools::mcp::clear_parameter_hints();
     let result = result?;
-    println!("{}", serde_json::to_string_pretty(&result.payload)?);
-    Ok(0)
+    Ok(ToolCallReply::Answered(result.payload))
+}
+
+/// `hoh tools call <tool>`: deny first, then call, then print.
+///
+/// The two cases print in the shapes they always have: a denial is the one-line
+/// payload `policy::denial_payload` renders (compact, exit 2), an answer is the
+/// pretty-printed tool payload (exit 0).  Both strings go through the same
+/// branch structure as before DR-78, so nothing a role parses changes.
+pub async fn tools_call(
+    channel: &dyn ToolChannel,
+    role: Role,
+    tool: &str,
+    args: Value,
+) -> anyhow::Result<i32> {
+    let reply = tools_call_with_reply(channel, role, tool, args).await?;
+    match &reply {
+        ToolCallReply::Denied(payload) => println!("{payload}"),
+        ToolCallReply::Answered(payload) => println!("{}", serde_json::to_string_pretty(payload)?),
+    }
+    Ok(reply.exit_code())
 }
 
 /// `hoh submit --role <planner|tester> --file <path>`.

@@ -56,7 +56,44 @@ pub async fn tools(args: ToolsArgs) -> anyhow::Result<i32> {
             // `running_game_*` tool can never be reached from here — which is
             // what `smoke-t9` measured (exit 5 with the game running).
             bridge::adopt_published_game_route(&channel, None);
-            bridge::tools_call(&channel, role, &call.tool, args).await
+            let reply = bridge::tools_call_with_reply(&channel, role, &call.tool, args).await?;
+            // DR-78 ② (F-T11-1): a role that plays its **own** scene is starting
+            // a game the runtime does not know about, so this process — not the
+            // runtime battery — is the publisher of the route that game
+            // announced.  `smoke-t11` measured the gap: `editor_play_scene`
+            // answered pid 4784 while `runs/smoke-t11/game_endpoint.json` still
+            // named the dead pid 33536, and every later `running_game_*` call from
+            // that shell was refused.
+            //
+            // The publish happens **before** the reply is printed: a role told
+            // "the scene is playing" would otherwise reach for
+            // `running_game_*` with an unwritten route.  A failure is a hard
+            // error, never a silent reuse of the old route, and the failing path
+            // withdraws the route so the refusal a role meets later is DR-43's
+            // explicit `game_endpoint_unavailable` — never the editor endpoint.
+            if call.tool == bridge::GAME_START_TOOL {
+                if let Some(announced) = reply.answered() {
+                    let adapter = build_adapter(&config)?;
+                    adapter
+                        .publish_role_started_game_route(&channel, role, announced)
+                        .await
+                        .map_err(|error| {
+                            HofError::External(format!(
+                                "`{}` started a game whose route could not be published, so no \
+                                 later `running_game_*` call could reach it and the previous route \
+                                 must not stand in for it (DR-43): {error}",
+                                call.tool
+                            ))
+                        })?;
+                }
+            }
+            match &reply {
+                bridge::ToolCallReply::Denied(payload) => println!("{payload}"),
+                bridge::ToolCallReply::Answered(payload) => {
+                    println!("{}", serde_json::to_string_pretty(payload)?)
+                }
+            }
+            Ok(reply.exit_code())
         }
         ToolsCommand::List(list) => {
             let role = bridge::resolve_role(list.role.as_deref())?;
