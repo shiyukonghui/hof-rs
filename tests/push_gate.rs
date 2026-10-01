@@ -595,15 +595,23 @@ fn the_bypass_flag_is_a_recorded_known_limit() {
 fn one_unmarked_commit_in_a_multi_commit_range_refuses_the_whole_push() {
     let sandbox = Sandbox::new();
     sandbox.accept(&["init"]).pipe("accept-commit init");
-    let first = sandbox.commit_report("the acceptance report");
-    let second = sandbox.commit_empty("the first accepted change");
-    let third = sandbox.commit_empty("the second change, not accepted yet");
-    sandbox
-        .accept(&["mark", &first, REPORT, "pass"])
-        .pipe("mark the report commit");
-    sandbox
-        .accept(&["mark", &second, REPORT, "pass"])
-        .pipe("mark the first change");
+    let report_commit = sandbox.commit_report("the acceptance report");
+    let accepted = sandbox.commit_empty("an accepted change");
+    // The unmarked commit sits in the *middle* of the range, and a marked commit
+    // follows it.  A gate that only ever looked at the tip would let this through,
+    // so this shape — not "the tip is unmarked" — is what makes the range logic
+    // load-bearing.
+    let unmarked = sandbox.commit_empty("the change nobody accepted");
+    let tip = sandbox.commit_empty("the last accepted change");
+    for (what, commit) in [
+        ("the report commit", &report_commit),
+        ("the accepted change", &accepted),
+        ("the last accepted change", &tip),
+    ] {
+        sandbox
+            .accept(&["mark", commit, REPORT, "pass"])
+            .pipe(&format!("mark {what}"));
+    }
 
     let output = sandbox.push(&["origin", "master"]);
     assert!(
@@ -614,13 +622,15 @@ fn one_unmarked_commit_in_a_multi_commit_range_refuses_the_whole_push() {
     let message = text(&output);
     assert_mentions(
         &message,
-        &third,
-        "the refusal must name the unmarked commit",
+        &unmarked,
+        "the refusal must name the unmarked commit in the middle of the range",
     );
-    assert!(
-        !message.contains(&second),
-        "the accepted commit must not be named as a problem:\n{message}"
-    );
+    for (what, commit) in [("the accepted middle", &accepted), ("the tip", &tip)] {
+        assert!(
+            !message.contains(commit),
+            "{what} is accepted and must not be named as a problem:\n{message}"
+        );
+    }
     // All-or-nothing: the accepted prefix must not have leaked to the remote.
     let remote = sandbox.git_raw_at(&sandbox.bare, &["rev-parse", "--verify", "master"]);
     assert!(
@@ -629,12 +639,12 @@ fn one_unmarked_commit_in_a_multi_commit_range_refuses_the_whole_push() {
     );
 
     sandbox
-        .accept(&["mark", &third, REPORT, "pass"])
-        .pipe("mark the last commit");
+        .accept(&["mark", &unmarked, REPORT, "pass"])
+        .pipe("mark the last unmarked commit");
     sandbox
         .push(&["origin", "master"])
         .pipe("the fully accepted push");
-    assert_eq!(sandbox.bare_ok(&["rev-parse", "master"]), third);
+    assert_eq!(sandbox.bare_ok(&["rev-parse", "master"]), tip);
 }
 
 // ---------------------------------------------------------------------------
