@@ -29,6 +29,17 @@ truth.
 - The Preservation Gate lists working functionality that must not regress.
 - The Acceptance Gate lists the smallest end-to-end validation that proves the
   iteration succeeded.
+- **An acceptance gate that only covers movement and jumping does not prove the
+  iteration succeeded.** The public specification's playable loop includes a
+  collectible the player picks up and a win condition the player can reach, and
+  a gate that never asks for either lets a round end green while the HUD still
+  reads `Coins: 0` and the goal's exported `reached` flag is never true — which
+  is exactly what happened. Every Acceptance Gate must therefore name, in
+  addition to movement:
+  - **the pickup**: an interactive object is touched, disappears and moves the
+    HUD coin counter (a `Label` whose text starts with `Coins:`);
+  - **the win**: the player reaches the goal node and its exported `reached`
+    flag becomes true, with a visible victory result.
 - Prefer small increments: an unfinished priority is worse than a small finished
   one, and the project must stay launchable at all times.
 

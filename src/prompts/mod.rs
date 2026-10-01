@@ -70,7 +70,11 @@ pub fn planner_task_with_shell(iteration: u32, flavor: ShellFlavor) -> String {
              1. Read the public specification at `.hoh/TASK.md`.\n\
              2. Read the evidence bundle at `.hoh/evidence.json` (empty on iteration 1).\n\
              3. Read the document scaffold at `.hoh/SCAFFOLD.md`.\n\
-             4. Select at most three priorities: blockers and regressions first.\n\
+             4. Select at most three priorities: blockers and regressions first. The\n\
+             acceptance gate must cover the whole playable loop the specification names —\n\
+             movement and jumping are not enough: name the collectible pickup (the HUD\n\
+             coin counter must move) and the win condition (the goal's exported `reached`\n\
+             flag must become true and the player must be able to walk there).\n\
              5. Write `.hoh/plan.md` and submit it with \
              `{{{{HOH_HOH_BIN}}}} submit --role planner --file plan.md`.\n\n\
              Do not implement, edit or test production code. Do not write any other file."

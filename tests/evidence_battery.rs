@@ -102,7 +102,9 @@ fn captured_error(name: &str) -> McpError {
 /// The real run's HUD was a bare `CanvasLayer` with no text node, which is one
 /// of the defects DR-23 exists to prevent; the green path therefore needs the
 /// repaired tree while the failure paths use the captured one unchanged.
-fn node_tree_payload(hud_label: bool) -> Value {
+/// DR-73 ③: the scene tree this fixture reports, with the HUD cells the
+/// interaction mode implies (see `FixtureChannel::interaction_properties`).
+fn node_tree_payload(hud_label: bool, interaction: InteractionMode) -> Value {
     let mut payload = fixture("node_tree.json");
     if hud_label {
         let mut tree: Value = serde_json::from_str(&text_of(&payload)).unwrap();
@@ -113,12 +115,54 @@ fn node_tree_payload(hud_label: bool) -> Value {
             .iter_mut()
             .find(|child| child["name"] == json!("HUD"))
             .expect("HUD exists in the captured tree");
-        hud["children"] = json!([{
-            "name": "Score",
-            "path": "/root/Main/HUD/Score",
-            "type": "Label",
-            "children": []
-        }]);
+        // DR-73 ③: the HUD cell the public specification names.  The interaction
+        // window finds the coin counter by the *specification's* wording
+        // (`Coins:`), so the green fixture has to carry it — and the visible text
+        // node count is unaffected because the added cells are labels too.
+        // The interaction mode decides whether the specification's own `Coins:`
+        // cell exists at all; `UnreadableCounter` is the counter-example where the
+        // counter has no readable shape and F10 must be a gap.
+        let cells: Vec<Value> = if interaction == InteractionMode::UnreadableCounter {
+            vec![json!({
+                "name": "Score",
+                "path": "/root/Main/HUD/Score",
+                "type": "Label",
+                "text": "Score: 0",
+                "children": []
+            })]
+        } else {
+            vec![
+                json!({
+                    "name": "Score",
+                    "path": "/root/Main/HUD/Score",
+                    "type": "Label",
+                    "text": "Lives: 3  Coins: 0  Time: 120",
+                    "children": []
+                }),
+                json!({
+                    "name": "Lives",
+                    "path": "/root/Main/HUD/Lives",
+                    "type": "Label",
+                    "text": "Lives: 3",
+                    "children": []
+                }),
+                json!({
+                    "name": "Coins",
+                    "path": "/root/Main/HUD/Coins",
+                    "type": "Label",
+                    "text": "Coins: 0",
+                    "children": []
+                }),
+                json!({
+                    "name": "Time",
+                    "path": "/root/Main/HUD/Time",
+                    "type": "Label",
+                    "text": "Time: 120",
+                    "children": []
+                }),
+            ]
+        };
+        hud["children"] = Value::Array(cells);
         payload["content"][0]["text"] = Value::String(tree.to_string());
     }
     payload
@@ -229,6 +273,28 @@ enum MovementMode {
     None,
 }
 
+/// DR-73 ③: what the fixture reports for the **interaction** observables — the
+/// coin counter and the goal flag.
+///
+/// `smoke-t10` is the `NoPickup` × `NoWin` cell: the Developer's `coin.gd`
+/// connected `body_entered` and the `goal.gd` connected `body_entered` too, the
+/// player physically swept both coins in the rightward window, and the HUD still
+/// read `Coins: 0` for the whole round with `Goal.reached` never true.  A double
+/// that always reported the pickup could not have caught that.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum InteractionMode {
+    /// The green double: a coin is really picked up and the goal is reachable.
+    Working,
+    /// The coin counter never grows and the goal flag never turns — the round's
+    /// own state.
+    NoPickupNoWin,
+    /// A level that lets the player sweep every coin but puts the goal past the
+    /// end of the traversable ground.
+    NoWin,
+    /// A HUD with no `Coins:` label at all.
+    UnreadableCounter,
+}
+
 struct FixtureChannel {
     calls: Mutex<Vec<(String, Value)>>,
     /// `tool -> sticky error`.
@@ -255,6 +321,22 @@ struct FixtureChannel {
     /// The action of the most recent `editor_simulate_input_action`, so `running_game_get_node_property_samples`
     /// (which does not name an action) can answer plausibly.
     last_action: Mutex<String>,
+    /// DR-73 ③: is the interaction window currently driving?  `input_replay` also
+    /// presses `move_right`, and a double that let those windows fill the counter
+    /// would credit the interaction step with coins it never swept.
+    driving: Arc<std::sync::atomic::AtomicBool>,
+    /// DR-73 ③: how many times the interaction window has started a drive — the
+    /// window resets its own starting condition each time it runs.
+    drives: Mutex<u32>,
+    /// DR-73 ③: the drive generation the fixture has already applied.
+    last_drive: Mutex<u32>,
+    /// DR-73 ③: what the interaction observables report.
+    interaction: InteractionMode,
+    /// DR-73 ③: how many sweeps have happened in this session (bumped by the
+    /// game-process replay when `interaction` is `Working`).
+    interactions: Mutex<u32>,
+    /// DR-73 ③: the furthest right the sampled `Player` series has been.
+    max_x: Mutex<f64>,
 }
 
 impl FixtureChannel {
@@ -273,7 +355,213 @@ impl FixtureChannel {
             axis: AxisMode::Value,
             held_in_game: Mutex::new(Vec::new()),
             last_action: Mutex::new("move_right".to_string()),
+            driving: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            drives: Mutex::new(0),
+            last_drive: Mutex::new(0),
+            interaction: InteractionMode::Working,
+            interactions: Mutex::new(0),
+            max_x: Mutex::new(60.0),
         }
+    }
+
+    /// DR-73 ③: choose what the interaction observables report.
+    fn with_interaction(mut self, mode: InteractionMode) -> Self {
+        self.interaction = mode;
+        self
+    }
+
+    /// DR-73 ③: one game-process sweep of `move_right`.  The player travels far
+    /// enough to reach the green level's coin and goal but not an
+    /// `unreachable` one.
+    fn sweep_in_game(&self, action: &str) {
+        if action != "move_right" || !self.driving() {
+            return;
+        }
+        // The interaction window starts a **fresh** drive each time it runs, so
+        // the game-side position advances from the same starting condition the
+        // window observed.  The generation is bumped by the window's own goal
+        // read, which is its last read before it starts driving.
+        let generation = self.drives();
+        {
+            let mut last = self.last_drive.lock().unwrap();
+            if *last != generation {
+                *last = generation;
+                *self.max_x.lock().unwrap() = 60.0;
+            }
+        }
+        let mut max_x = self.max_x.lock().unwrap();
+        *max_x += 260.0;
+        let swept = *max_x > 300.0;
+        drop(max_x);
+        // `NoWin` still picks the coin up (that is what makes it a *separate*
+        // failure); only `NoPickupNoWin` is the round's own "swept but nothing
+        // happened" state.
+        if swept && self.interaction != InteractionMode::NoPickupNoWin {
+            let mut interactions = self.interactions.lock().unwrap();
+            *interactions += 1;
+        }
+    }
+
+    fn driving(&self) -> bool {
+        self.driving.load(std::sync::atomic::Ordering::SeqCst)
+    }
+
+    /// DR-73 ③: how many sweeps have happened.
+    fn interactions(&self) -> u32 {
+        *self.interactions.lock().unwrap()
+    }
+
+    /// DR-73 ③: how many drives the window started.
+    fn drives(&self) -> u32 {
+        *self.drives.lock().unwrap()
+    }
+    /// DR-73 ③: arm the drive — the interaction step's own switch, so the
+    /// `input_replay` windows before it cannot credit it with a sweep.  The
+    /// window arms itself through the `Goal` property read that precedes its
+    /// drive, which is the last thing it does before the batches start.
+    fn arm_drive(&self) {
+        self.driving
+            .store(true, std::sync::atomic::Ordering::SeqCst);
+        let mut drives = self.drives.lock().unwrap();
+        *drives += 1;
+    }
+
+    /// DR-73 ③: has the player been driven far enough to reach the goal?
+    fn goal_reached(&self) -> bool {
+        let goal_x = match self.interaction {
+            InteractionMode::NoWin | InteractionMode::NoPickupNoWin => 100_000.0,
+            _ => 260.0,
+        };
+        *self.max_x.lock().unwrap() >= goal_x
+    }
+
+    /// DR-73 ③: the HUD label a node read is about, or `None` for a node the
+    /// interaction fixture says nothing about.
+    fn interaction_label(&self, node_path: &str) -> Option<String> {
+        let name = node_path.rsplit('/').next().unwrap_or(node_path);
+        match name {
+            "Coins" if self.interaction != InteractionMode::UnreadableCounter => {
+                Some(format!("Coins: {}", self.interactions()))
+            }
+            "Lives" => Some("Lives: 3".to_string()),
+            "Score" if self.interaction != InteractionMode::UnreadableCounter => Some(format!(
+                "Lives: 3  Coins: {}  Time: 120",
+                self.interactions()
+            )),
+            "Time" => Some("Time: 120".to_string()),
+            "Result" => Some(String::new()),
+            _ => None,
+        }
+    }
+
+    /// DR-73 ③: the synthetic `running_game_get_node_properties` reply for the
+    /// interaction reads, or `None` when the node is not one of them (the caller
+    /// then answers with the captured real payload, so the pre-DR-73 checks keep
+    /// their own evidence).
+    fn interaction_properties(&self, node_path: &str) -> Option<Value> {
+        let name = node_path.rsplit('/').next().unwrap_or(node_path);
+        // The engine resolves a read to the node's own absolute path (DR-58);
+        // the fixture answers in the same shape so a caller can tell a resolved
+        // read from a guessed one.
+        let resolved = format!("/root/Main/{name}");
+        if let Some(label) = self.interaction_label(name) {
+            let inner = json!({
+                "node_path": resolved,
+                "properties": {"text": label, "visible": true},
+                "type": "Label",
+            });
+            return Some(json!({"content": [{"type": "text", "text": inner.to_string()}]}));
+        }
+        match name {
+            "Goal" => {
+                // `smoke-t10`'s shape: the flag is at x=6400 while the player's
+                // reachable maximum is about 320.
+                let position_x = match self.interaction {
+                    InteractionMode::NoWin => 6400.0,
+                    _ => 260.0,
+                };
+                let inner = json!({
+                    "node_path": resolved,
+                    "properties": {
+                        "reached": self.goal_reached(),
+                        "position": {"x": position_x, "y": 280.0},
+                    },
+                    "type": "Area2D",
+                });
+                Some(json!({"content": [{"type": "text", "text": inner.to_string()}]}))
+            }
+            "Player" => {
+                let inner = json!({
+                    "node_path": resolved,
+                    "properties": {"position": {"x": 60.0, "y": 283.999}, "facing": 1},
+                    "type": "CharacterBody2D",
+                });
+                Some(json!({"content": [{"type": "text", "text": inner.to_string()}]}))
+            }
+            _ => None,
+        }
+    }
+
+    /// DR-73 ③: the engine's `running_game_assert_node_state` answer for the HUD
+    /// counter's `text`, judged against the **live** label the properties reader
+    /// would return — the same discipline [`sample_positions`] applies to the
+    /// position assertion.
+    fn assert_text(&self, node_path: &str, args: &Value) -> Value {
+        let name = node_path.rsplit('/').next().unwrap_or(node_path);
+        let label = self
+            .interaction_label(name)
+            .unwrap_or_else(|| "<no label>".to_string());
+        let actual = json!(label);
+        let expected = args.get("expected").cloned().unwrap_or(Value::Null);
+        let operator = args
+            .get("operator")
+            .and_then(Value::as_str)
+            .unwrap_or("eq")
+            .to_string();
+        let passed = match operator.as_str() {
+            "neq" => actual != expected,
+            _ => actual == expected,
+        };
+        let inner = json!({
+            "assertion": "node_state",
+            "node_path": node_path,
+            "resolved_node_path": format!("/root/Main/{name}"),
+            "property": "text",
+            "operator": operator,
+            "expected": expected,
+            "actual": actual,
+            "passed": passed,
+            "reason": format!("expected text {operator} {expected}, found {actual}"),
+        });
+        json!({"content": [{"type": "text", "text": inner.to_string()}]})
+    }
+
+    /// DR-73 ③: the same for the goal's `reached` flag.
+    fn assert_reached(&self, node_path: &str, args: &Value) -> Value {
+        let name = node_path.rsplit('/').next().unwrap_or(node_path);
+        let actual = json!(self.goal_reached());
+        let expected = args.get("expected").cloned().unwrap_or(Value::Null);
+        let operator = args
+            .get("operator")
+            .and_then(Value::as_str)
+            .unwrap_or("eq")
+            .to_string();
+        let passed = match operator.as_str() {
+            "neq" => actual != expected,
+            _ => actual == expected,
+        };
+        let inner = json!({
+            "assertion": "node_state",
+            "node_path": node_path,
+            "resolved_node_path": format!("/root/Main/{name}"),
+            "property": "reached",
+            "operator": operator,
+            "expected": expected,
+            "actual": actual,
+            "passed": passed,
+            "reason": format!("expected reached {operator} {expected}, found {actual}"),
+        });
+        json!({"content": [{"type": "text", "text": inner.to_string()}]})
     }
 
     /// DR-68 ③: the game's `Input.get_axis("move_left","move_right")`, computed
@@ -626,7 +914,7 @@ impl ToolChannel for FixtureChannel {
             }),
             "editor_get_errors" => fixture("editor_errors_clean.json"),
             "editor_play_scene" => fixture("play_scene_ok.json"),
-            "running_game_get_scene_tree" => node_tree_payload(self.hud_label),
+            "running_game_get_scene_tree" => node_tree_payload(self.hud_label, self.interaction),
             "editor_get_input_actions" => input_actions_payload(self.input_actions),
             "running_game_capture_screenshot" => {
                 // DR-49: the double enforces the engine's **value domain** before
@@ -831,6 +1119,12 @@ impl ToolChannel for FixtureChannel {
                 }
                 let bound = self.game_input == GameInputMode::Ok;
                 let axis = if bound { self.game_axis() } else { 0.0 };
+                // DR-73 ③: a scenario really drives the game for the frames it
+                // waits, so a sweep happens here too — the interaction window
+                // drives through this same scenario runner.
+                if bound {
+                    self.sweep_in_game(&action);
+                }
                 let inner = json!({
                     "observed_axis": axis,
                     "results": [
@@ -903,6 +1197,35 @@ impl ToolChannel for FixtureChannel {
                     });
                 }
                 let moves = self.game_input == GameInputMode::Ok;
+                // DR-73 ③: while the interaction window is driving, the sampled
+                // series is the game's own rightward travel — the double models
+                // it as a monotone ramp so the recorded `player max x` reflects
+                // the drive instead of whichever action the replay happened to
+                // hold.  The ramp ends at the position the fixture's own drive
+                // state says the player reached.
+                if self.driving() && moves {
+                    let end = *self.max_x.lock().unwrap();
+                    let start = (end - 260.0).max(0.0);
+                    let mut samples = Vec::new();
+                    for frame in 0..frames {
+                        let progress = if frames <= 1 {
+                            1.0
+                        } else {
+                            frame as f64 / (frames - 1) as f64
+                        };
+                        let x = start + (end - start) * progress;
+                        samples.push(json!({"frame": frame, "position": {"x": x, "y": 283.0}}));
+                    }
+                    let inner = json!({
+                        "frame_count": frames,
+                        "node_path": "Player",
+                        "samples": samples,
+                    });
+                    return Ok(ToolResult {
+                        ok: true,
+                        payload: json!({"content": [{"type": "text", "text": inner.to_string()}]}),
+                    });
+                }
                 monitor_payload(
                     &action,
                     frames,
@@ -932,15 +1255,30 @@ impl ToolChannel for FixtureChannel {
                     .unwrap_or("")
                     .to_string();
                 if property != "position" {
-                    return Err(hof_rs::tools::mcp::McpError::new(
-                        -32001,
-                        format!(
-                            "Property '{property}' on node '{node_path}': Use \
-                             running_game_get_node_properties to list the properties the node \
-                             really has"
-                        ),
-                    )
-                    .into());
+                    // DR-73 ③: the interaction window asserts on the HUD
+                    // counter's `text` and on the goal's `reached` flag, so the
+                    // double answers those two as well.  Every other property
+                    // keeps the engine's real `-32001` answer, which is what a
+                    // probe on a property the node does not have really gets.
+                    return match property.as_str() {
+                        "text" => Ok(ToolResult {
+                            ok: true,
+                            payload: self.assert_text(&node_path, &args),
+                        }),
+                        "reached" => Ok(ToolResult {
+                            ok: true,
+                            payload: self.assert_reached(&node_path, &args),
+                        }),
+                        _ => Err(hof_rs::tools::mcp::McpError::new(
+                            -32001,
+                            format!(
+                                "Property '{property}' on node '{node_path}': Use \
+                                 running_game_get_node_properties to list the properties the node \
+                                 really has"
+                            ),
+                        )
+                        .into()),
+                    };
                 }
                 let operator = args
                     .get("operator")
@@ -978,7 +1316,18 @@ impl ToolChannel for FixtureChannel {
                 json!({"content": [{"type": "text", "text": inner.to_string()}]})
             }
             "running_game_get_node_properties" => {
-                real_node_properties(args["node_path"].as_str().unwrap_or(""))
+                let node_path = args["node_path"].as_str().unwrap_or("").to_string();
+                let name = node_path.rsplit('/').next().unwrap_or(&node_path);
+                // DR-73 ③: the interaction window reads `Goal`'s flag last before
+                // it starts driving, so that read is the point at which the
+                // game-side drive state is armed fresh for this window.
+                if name == "Goal" {
+                    self.arm_drive();
+                }
+                match self.interaction_properties(&node_path) {
+                    Some(payload) => payload,
+                    None => real_node_properties(&node_path),
+                }
             }
             "editor_get_collision_info" => match args["node_path"].as_str().unwrap_or("") {
                 "Ground" => fixture("ground_collision.json"),
@@ -1200,6 +1549,7 @@ async fn green_battery_records_every_step_and_copies_into_the_candidate() {
             "screenshot",
             "input_channel_probe",
             "input_replay",
+            "interaction_evidence",
             "node_and_collision_assertions",
             "editor_stop_scene",
         ],
@@ -3660,5 +4010,284 @@ async fn a_failed_rounds_result_json_carries_the_real_battery_and_candidate() {
          battery_passes={} steps={}",
         passes.len(),
         steps.len()
+    );
+}
+
+// ---------------------------------------------------------------------------
+// DR-73 ③ — E3's other two behaviours must be observed in-round
+// ---------------------------------------------------------------------------
+//
+// `REQUIREMENTS.md:114` names four behaviours.  `input_replay` observed two of
+// them, so `smoke-t10` ended with `Coins: 0` for the whole round and
+// `Goal.reached` never true, and E3 was `not_met` for a reason no role could see
+// in the evidence it was handed.  The tests below are the acceptance shape for
+// the window that closes that hole: **the battery's own products must carry a
+// pickup assertion and a win assertion, in the same evidence form the movement
+// windows use** (before/after frames plus an engine-accepted node-state
+// assertion), and a project that does not deliver them must be recorded as a gap
+// rather than passing.
+
+/// The canonical green run for these tests.
+async fn interaction_run(root: &Path, mode: InteractionMode) -> (BatteryRun, Arc<FixtureChannel>) {
+    let channel = Arc::new(FixtureChannel::green().with_interaction(mode));
+    let run = run_battery(root, channel.clone(), 30).await;
+    (run, channel)
+}
+
+fn interaction_raw(run: &BatteryRun) -> Value {
+    serde_json::from_str(&read(
+        &run.run_dir
+            .join("iter-1/candidate/.hoh/deterministic/raw/interaction_evidence.json"),
+    ))
+    .unwrap()
+}
+
+/// DR-73 ③: the battery really produces the pickup evidence — a counter read
+/// that grew, a `text:neq <before>` assertion the engine accepted, and the two
+/// frames of the window.
+#[tokio::test]
+async fn the_interaction_window_records_a_real_coin_pickup_and_its_assertion() {
+    let temp = tempfile::tempdir().unwrap();
+    let (run, channel) = interaction_run(temp.path(), InteractionMode::Working).await;
+
+    let step = step(&run.records, "interaction_evidence");
+    assert!(
+        step.ok,
+        "the interaction window must be green on a project that delivers the behaviour: {}",
+        step.record.observation
+    );
+    for support in ["F10", "F13"] {
+        assert!(
+            step.supports.iter().any(|id| id == support),
+            "the window must declare {support}: {:?}",
+            step.supports
+        );
+    }
+    assert!(
+        step.record.observation.contains("COIN_PICKED_UP"),
+        "the pickup must be named in the observation: {}",
+        step.record.observation
+    );
+    assert!(
+        step.record.observation.contains("WIN_DRIVEN"),
+        "the win must be named in the observation: {}",
+        step.record.observation
+    );
+
+    // The evidence form: before/after frames, really on disk.
+    for phase in ["before", "after"] {
+        let relative = format!(".hoh/evidence/replay-interaction-{phase}.png");
+        let bytes = std::fs::read(run.workspace.join(&relative))
+            .unwrap_or_else(|error| panic!("{relative}: {error}"));
+        assert_eq!(&bytes[..8], b"\x89PNG\r\n\x1a\n", "a real PNG signature");
+    }
+
+    let raw = interaction_raw(&run);
+    let calls = raw["calls"].as_array().expect("raw call list");
+    // The frame captures carry the labels the rest of the battery uses.
+    for phase in ["before", "after"] {
+        assert!(
+            calls.iter().any(|call| {
+                call["label"] == json!(format!("interaction:replay_frame_{phase}"))
+                    && call["tool"] == json!("running_game_capture_screenshot")
+            }),
+            "the {phase} frame must be captured by the window: {calls:?}"
+        );
+    }
+
+    // The pickup assertion is positional/stateful on purpose: `input_axis`
+    // answers `null` on real hardware (DR-58), so the counter's text is the
+    // observable.  The expectation is the **before** reading, and the engine's
+    // answer must be `passed: true`.
+    let pickup = calls
+        .iter()
+        .find(|call| call["label"] == json!("interaction:replay_assert_picked_up"))
+        .unwrap_or_else(|| panic!("no pickup assertion was made: {calls:?}"));
+    assert_eq!(pickup["tool"], json!("running_game_assert_node_state"));
+    assert_eq!(pickup["args"]["property"], json!("text"));
+    assert_eq!(pickup["args"]["operator"], json!("neq"));
+    // The expectation is the window's own **before** reading, taken from the
+    // first coin-counter read the window made — not a constant the test invented.
+    let first_counter_read = calls
+        .iter()
+        .find(|call| {
+            call["tool"] == json!("running_game_get_node_properties")
+                && call["args"]["node_path"]
+                    .as_str()
+                    .map(|path| path.ends_with("Coins"))
+                    .unwrap_or(false)
+        })
+        .expect("the window reads the counter before it drives");
+    let before_payload: Value = serde_json::from_str(
+        first_counter_read["payload"]["content"][0]["text"]
+            .as_str()
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        pickup["args"]["expected"],
+        json!(before_payload["properties"]["text"]
+            .as_str()
+            .unwrap()
+            .to_string()),
+        "the expectation is the window's own before reading"
+    );
+    let payload: Value =
+        serde_json::from_str(pickup["payload"]["content"][0]["text"].as_str().unwrap()).unwrap();
+    assert_eq!(
+        payload["passed"],
+        json!(true),
+        "the engine must accept the pickup assertion: {payload}"
+    );
+    assert_eq!(payload["actual"], json!("Coins: 1"), "{payload}");
+
+    // The win assertion, the same shape against the goal's own flag.
+    let won = calls
+        .iter()
+        .find(|call| call["label"] == json!("interaction:replay_assert_won"))
+        .unwrap_or_else(|| panic!("no win assertion was made: {calls:?}"));
+    assert_eq!(won["tool"], json!("running_game_assert_node_state"));
+    assert_eq!(won["args"]["property"], json!("reached"));
+    assert_eq!(won["args"]["operator"], json!("neq"));
+    assert_eq!(won["args"]["expected"], json!(false));
+    let payload: Value =
+        serde_json::from_str(won["payload"]["content"][0]["text"].as_str().unwrap()).unwrap();
+    assert_eq!(payload["passed"], json!(true), "{payload}");
+
+    // The assertions are about what the game did, not about what the harness
+    // wished: the window never wrote a property, it only read and drove input.
+    let tool_names: Vec<&str> = calls
+        .iter()
+        .filter_map(|call| call["tool"].as_str())
+        .collect();
+    assert!(
+        !tool_names
+            .iter()
+            .any(|name| name.contains("set_node_property")),
+        "the window must not write the behaviour it claims to observe: {tool_names:?}"
+    );
+    assert!(tool_names
+        .iter()
+        .any(|name| name.starts_with("running_game_") && name.contains("assert")));
+    assert!(
+        tool_names.contains(&"running_game_run_test_scenario")
+            || tool_names.contains(&"running_game_play_input_recording"),
+        "the window must drive the game through the contract's semantic input API: {tool_names:?}"
+    );
+
+    // The window stops as soon as the goal is reached instead of spending the
+    // whole batch budget.
+    assert!(
+        channel.interactions() > 0,
+        "the drive really reached the level's coin"
+    );
+    assert!(
+        step.record
+            .observation
+            .contains("stopped as soon as the win was observed"),
+        "the win must end the drive early: {}",
+        step.record.observation
+    );
+}
+
+/// DR-73 ③: the round's own state.  The player sweeps both coins, the HUD never
+/// moves off `Coins: 0` and the goal flag never turns, so the window is a
+/// **gap** with the numbers that say why.
+#[tokio::test]
+async fn a_project_that_never_picks_a_coin_up_is_recorded_as_a_gap() {
+    let temp = tempfile::tempdir().unwrap();
+    let (run, _) = interaction_run(temp.path(), InteractionMode::NoPickupNoWin).await;
+
+    let step = step(&run.records, "interaction_evidence");
+    assert!(
+        !step.ok,
+        "a project with no pickup must not pass the interaction window: {}",
+        step.record.observation
+    );
+    let observation = &step.record.observation;
+    assert!(
+        observation.contains("COIN_NOT_PICKED_UP"),
+        "the coin gap must be named: {observation}"
+    );
+    assert!(
+        observation.contains("WIN_NOT_DRIVEN"),
+        "the win gap must be named: {observation}"
+    );
+    assert!(
+        observation.contains("Coins: 0 -> Coins: 0"),
+        "the counter readings must be in the record: {observation}"
+    );
+    assert!(
+        observation.contains("player max x=") && observation.contains("goal.position="),
+        "the reachability numbers must be in the record: {observation}"
+    );
+    assert!(
+        observation.starts_with("FAILED interaction:") && observation.contains("UNAVAILABLE"),
+        "an unobservable behaviour is unavailable evidence, not a soft pass: {observation}"
+    );
+
+    // The refusal is the engine's: the same assertion that passes on the green
+    // fixture answers `passed: false` here, so the record cannot be explained
+    // away as "the window never asked".
+    let raw = interaction_raw(&run);
+    let calls = raw["calls"].as_array().expect("raw call list");
+    let pickup = calls
+        .iter()
+        .find(|call| call["label"] == json!("interaction:replay_assert_picked_up"))
+        .expect("the window asks even when the answer is no");
+    let payload: Value =
+        serde_json::from_str(pickup["payload"]["content"][0]["text"].as_str().unwrap()).unwrap();
+    assert_eq!(payload["passed"], json!(false), "{payload}");
+    assert_eq!(payload["actual"], json!("Coins: 0"), "{payload}");
+}
+
+/// DR-73 ③: a level whose goal sits past the end of the traversable ground.  The
+/// pickup still happens, so the two behaviours are judged **separately** — a
+/// single "E3 okay" flag could not express this, and `smoke-t10`'s two gaps were
+/// exactly that.
+#[tokio::test]
+async fn a_level_whose_goal_is_unreachable_fails_only_the_win_half() {
+    let temp = tempfile::tempdir().unwrap();
+    let (run, _) = interaction_run(temp.path(), InteractionMode::NoWin).await;
+
+    let observation = &step(&run.records, "interaction_evidence")
+        .record
+        .observation;
+    assert!(
+        observation.contains("COIN_PICKED_UP"),
+        "the pickup must still be observed: {observation}"
+    );
+    assert!(
+        observation.contains("WIN_NOT_DRIVEN"),
+        "the unreachable goal must be reported as a win gap: {observation}"
+    );
+    assert!(
+        observation.contains("goal.position=Some(") && observation.contains("6400"),
+        "the goal's own position must be in the record, so 'unreachable' is measurable: {observation}"
+    );
+    assert!(
+        observation.contains("player max x=Some(320"),
+        "the player's reachable maximum must be in the record: {observation}"
+    );
+}
+
+/// DR-73 ③: no `Coins:` label at all.  The window must say the counter is
+/// unreadable rather than reading a missing cell as "zero coins, no pickup" —
+/// the two are different gaps with different fixes.
+#[tokio::test]
+async fn a_hud_without_a_coin_cell_is_reported_as_unreadable_not_as_zero() {
+    let temp = tempfile::tempdir().unwrap();
+    let (run, _) = interaction_run(temp.path(), InteractionMode::UnreadableCounter).await;
+
+    let observation = &step(&run.records, "interaction_evidence")
+        .record
+        .observation;
+    assert!(
+        observation.contains("COIN_COUNTER_UNREADABLE"),
+        "an unreadable counter is its own verdict: {observation}"
+    );
+    assert!(
+        !observation.contains("COIN_NOT_PICKED_UP"),
+        "an unreadable counter must not be reported as a measured zero: {observation}"
     );
 }

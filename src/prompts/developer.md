@@ -151,8 +151,32 @@ You are done only when all of the following hold:
 5. Every physics body you rely on has a collision shape
    (`editor_setup_collision_shape`, `shape_count > 0`), and the HUD has a
    `Label` with non-empty `text`.
+6. **The two interaction behaviours are part of your definition of done, not of
+   the level you happened to build.** A project whose player can run and jump
+   but never collects anything and can never win has not finished the loop:
 
-If you cannot satisfy all five inside your step budget, leave the project in the
+   - **a collectible picked up.** At least one interactive object must be
+     picked up by the player **and the pickup must be observable**: touching it
+     removes it and changes the HUD coin counter — a `Label` whose text starts
+     with `Coins:` and whose number grows when the player touches the coin. A
+     `body_entered.connect` in the source is **not** the requirement; the
+     counter moving is. This is the defect a real round shipped: `coin.gd` had
+     the signal connected, the player physically swept both coins, and the HUD
+     still read `Coins: 0` for the whole round.
+   - **a reachable win condition.** There must be a win trigger the player can
+     actually walk to: a named goal node exposing an exported `reached` flag
+     (and a visible victory result) that becomes `true` when the player touches
+     it, and which stands **inside the traversable level**. Put it where the
+     player can arrive by holding `move_right` (plus the jumps the terrain
+     needs); a trigger past the end of the ground is not a win condition, and
+     neither is one behind a gap a jump cannot clear.
+
+   The recipes for both — the `Area2D` properties that make a pickup really
+   fire, the group handshake, and how far a jump actually carries — are in the
+   `godot-dev` skill. The battery and the Tester observe the running game for
+   you, after your call, on the project you leave behind.
+
+If you cannot satisfy all six inside your step budget, leave the project in the
 best launchable, observable state you reached and say so in your final sentence
 — but requirement **1** is the minimum: a round that wrote nothing into the
 project is not a partial success, it is no result at all.

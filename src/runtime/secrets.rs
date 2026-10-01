@@ -1170,6 +1170,80 @@ mod tests {
         );
     }
 
+    /// DR-73 ③(c) / D280(c): the **carriage-return boundary, pinned**.
+    ///
+    /// In a plain-text dump a `\r` is a physical line ending, so the assignment
+    /// scanner stops there — the terminator is not consumed and whatever follows
+    /// on the same physical line survives.  That is the recorded cost DR-72
+    /// disclosed and DR-73 was told to **accept and pin, not widen**: if a value
+    /// that can survive this boundary ever turns up, the whole fix has to be
+    /// redone.  The test therefore fixes the exact boundary, the exact span, and
+    /// the exact surviving tail, so a change to the rule has to change this test
+    /// on purpose.
+    #[test]
+    fn a_plain_text_cr_ends_the_value_and_the_carried_rest_is_a_pinned_cost() {
+        let text = "HOH_ARTIFACT_DIR=C:\\repo\\runs\\smoke-t10\rTAIL-INVITATION\n";
+
+        let report = redact_secret_assignments_traced(text);
+        assert!(
+            report.changed(),
+            "the assignment must be replaced: {report:?}"
+        );
+        assert!(report.refused.is_none(), "{:?}", report.refused);
+
+        // The boundary is the physical carriage return, and it is **not**
+        // consumed: the scan's span ends exactly on it.
+        assert_eq!(report.spans.len(), 1, "{:?}", report.spans);
+        let span = &report.spans[0];
+        assert_eq!(span.name, "HOH_ARTIFACT_DIR");
+        assert_eq!(
+            span.end,
+            text.find('\r').expect("the fixture carries a CR"),
+            "the span must end on the carriage return, not past it"
+        );
+        assert_eq!(span.replacement, format!("HOH_ARTIFACT_DIR={REDACTED}"));
+
+        // The tail after the CR survives verbatim — the recorded cost.
+        assert_eq!(
+            report.redacted,
+            format!("HOH_ARTIFACT_DIR={REDACTED}\rTAIL-INVITATION\n")
+        );
+        assert_eq!(
+            bytes_changed_outside_spans(&report),
+            Some(0),
+            "the pin is a pure splice: nothing outside the span may change"
+        );
+        // The **next line** is still scanned, so the cost cannot be read as
+        // "the rest of the dump is unprotected".
+        let following = redact_secret_assignments("HOH_ITERATION=1\rHOH_ARTIFACT_DIR=C:\\repo\n");
+        assert!(
+            !following.contains("C:\\repo"),
+            "the line after the CR must still be redacted: {following:?}"
+        );
+    }
+
+    /// DR-73 ③(c): the same boundary inside a **JSON** string is a `\` + `r`
+    /// escape, which is a real escape family and therefore ends the value — the
+    /// two shapes must not be confused, because only the plain-text one carries
+    /// the "value may survive" cost.
+    #[test]
+    fn a_json_escaped_carriage_return_ends_the_value_without_a_surviving_tail() {
+        let text = "{\"env\":\"HOH_ARTIFACT_DIR=C:\\\\repo\\\\runs\\rtail stays\"}\n";
+        serde_json::from_str::<serde_json::Value>(text).expect("the fixture is valid JSON");
+        let report = redact_secret_assignments_traced(text);
+        assert!(report.refused.is_none(), "{:?}", report.refused);
+        let value: serde_json::Value = serde_json::from_str(&report.redacted).expect("valid JSON");
+        let dump = value["env"].as_str().expect("env is a string");
+        assert!(
+            dump.starts_with(&format!("HOH_ARTIFACT_DIR={REDACTED}")),
+            "the assignment must be gone: {dump:?}"
+        );
+        assert!(
+            dump.ends_with("tail stays"),
+            "the escape and everything after it must survive: {dump:?}"
+        );
+    }
+
     #[test]
     fn the_generated_copy_name_keeps_the_extension() {
         assert_eq!(

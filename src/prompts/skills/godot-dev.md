@@ -52,6 +52,112 @@ Verify with `editor_get_collision_info` (`{"node_path":"Player"}`) and require
 Create the shape *and* the `CollisionShape2D` node in the same step; a body with
 an empty child shape still reports `has_shape: false`.
 
+## 3a. An Area2D that must actually fire `body_entered`
+A pickup that never fires is the single most expensive defect this pipeline has
+shipped: `coin.gd` had `body_entered.connect(_on_body_entered)` and the player
+physically swept the coin, yet the HUD counter never moved. The signal only
+arrives when **all** of the following hold, so check every one:
+
+1. **The area is not monitoring off.** `monitoring` must be `true` (its default);
+   `monitoring = false` is exactly "detect nothing" and the signal is silently
+   never emitted. Read the property back **on the editor side**, which is the
+   live path you own:
+   ```
+   {{HOH_HOH_BIN}} tools call editor_get_node_properties --args-file {{HOH_ARTIFACT_DIR}}/args/coin_props.json
+   # coin_props.json: {"node_path":"Coin1","properties":["monitoring","monitorable","position"]}
+   ```
+2. **The layers match on both sides.** The area's `collision_mask` and the
+   player body's `collision_layer` must share a bit. Read both:
+   ```
+   {{HOH_HOH_BIN}} tools call editor_get_physics_layers --args-file {{HOH_ARTIFACT_DIR}}/args/layers.json
+   # layers.json: {"node_path":"Coin1"}
+   ```
+   `editor_set_node_property` changes them when they do not
+   (`{"node_path":"Coin1","property":"collision_mask","value":1}`).
+3. **The handler accepts the body.** The player must be in a group the handler
+   tests, and the handler must be on the **area**:
+   ```gdscript
+   extends Area2D
+   @export var collected: bool = false
+
+   func _ready() -> void:
+       add_to_group("coins")
+       body_entered.connect(_on_body_entered)
+
+   func _on_body_entered(body: Node) -> void:
+       if collected:
+           return
+       if body.is_in_group("player"):
+           collect()
+
+   func collect() -> void:
+       collected = true
+       get_tree().current_scene.add_coin(1)
+       queue_free()
+   ```
+   with `add_to_group("player")` in the player's `_ready()`. A handler that tests
+   `body.name == "Player"` breaks the moment the node is renamed.
+4. **The collision shape is real and it overlaps.** A radius-11 circle at
+   `(300, 290)` overlaps a 24×32 player rectangle standing on ground whose top is
+   `y = 300` only while the player is at that spot; a coin placed below the
+   ground or inside a wall can never be touched. `editor_get_collision_info`
+   (`{"node_path":"Coin1"}`, `shape_count > 0`) plus the coin's `position` are the
+   check.
+
+**The counter is the observable, not the signal.** Keep one `Label` under the HUD
+whose text starts with `Coins:` and update it from the same code path that
+consumes the coin (`$HUD/Coins.text = "Coins: %d" % coins`). Until that number
+moves, the pickup is not done.
+
+## 3b. A win condition the player can actually reach
+`REQUIREMENTS.md:114` asks for "one end/win condition". Two independent things
+have to be true, and a round can get the first without the second:
+
+- **The trigger fires.** `Goal` is an `Area2D` with a shape and a connected
+  `body_entered` (recipe 3a), exposing the exported flag the shape check reads:
+  ```gdscript
+  extends Area2D
+  @export var reached: bool = false
+
+  func _ready() -> void:
+       add_to_group("goal")
+       body_entered.connect(_on_body_entered)
+
+  func _on_body_entered(body: Node) -> void:
+       if body.is_in_group("player") and not reached:
+           reached = true
+           get_tree().current_scene.win()   # the visible victory result
+  ```
+  `reached` must be false until the player arrives — the battery refuses to
+  credit a flag that was already true, and reports a `gap` instead.
+
+- **The player can walk there.** Design the level against the jump you actually
+  have: the PRD's `speed = 220 px/s` and `jump_velocity = -430 px/s` with
+  `gravity = 1400 px/s²` give an apex of about `66 px` and a hang time of about
+  `0.61 s`, i.e. roughly **`135 px` of horizontal travel per jump**. A gap wider
+  than that is a wall: the player falls out of the level and the win can never be
+  driven. Place `Goal` on ground the player can reach **while holding
+  `move_right`**, and leave the ground continuous under it. A real round shipped
+  the goal at `x = 6400` with no ground past `x ≈ 3800`, so the player's maximum
+  `x` over the whole round was `448` — the flag was correct and the level was
+  not.
+
+Verify the placement from the scene, not from memory:
+```
+{{HOH_HOH_BIN}} tools call editor_get_scene_tree --args-file {{HOH_ARTIFACT_DIR}}/args/tree.json
+# tree.json: {}            — the goal's `position` is the number to compare with the ground's extent
+{{HOH_HOH_BIN}} tools call editor_get_node_properties --args-file {{HOH_ARTIFACT_DIR}}/args/goal_props.json
+# goal_props.json: {"node_path":"Goal","properties":["position"]}
+```
+
+Both behaviours are collected by the runtime's **deterministic battery** and
+judged by the **Tester**, after your call, on the project you leave behind: the
+window holds `move_right`, samples `Player.position`, reads the `Coins:` label
+and the goal's `reached` flag, and asserts both with the engine's own assertion
+tool. You do not observe that yourself — do not start a second game session to
+check it (the runtime owns the round's session, and the game it started is
+running the revision from before your edit).
+
 ## 4. HUD text needs a Label
 A `CanvasLayer` alone shows nothing. Add a `Label` under `HUD` and give it a
 non-empty `text`.

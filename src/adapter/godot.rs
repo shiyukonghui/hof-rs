@@ -628,6 +628,7 @@ impl<'a> BatterySession<'a> {
         self.step_screenshot().await?;
         self.channel = self.step_input_channel_probe().await?;
         self.step_input_replay().await?;
+        self.step_interaction_evidence(scene_tree.clone()).await?;
         self.step_node_assertions(scene_tree).await?;
         self.step_stop_scene().await?;
         Ok(self.records)
@@ -2012,6 +2013,47 @@ impl<'a> BatterySession<'a> {
         }
     }
 
+    /// DR-73 ③: the semantic `Player.position` sample as **raw pairs**, for the
+    /// interaction window.  [`semantic_sample_positions`] reduces the same reply
+    /// to its `(action, channel, before, after, velocity)` quadruple; the
+    /// interaction window needs the per-frame series instead (a maximum rightward
+    /// extent), so both read the one call through one shape.
+    async fn semantic_sample_pairs(
+        &self,
+        frames: u64,
+        label: &str,
+        calls: &mut Vec<Value>,
+    ) -> Option<Vec<(f64, f64)>> {
+        let args = json!({
+            "node_path": "Player",
+            "properties": ["position"],
+            "frame_count": frames,
+            "frame_interval": 1,
+        });
+        match self.call(semantic::PROPERTY_SAMPLES, args.clone()).await {
+            Ok(call) => {
+                let parsed = unwrap_mcp_payload(&call.payload);
+                calls.push(labeled(
+                    call_ok(
+                        semantic::PROPERTY_SAMPLES,
+                        &args,
+                        &call.payload,
+                        &call.correlation,
+                    ),
+                    label,
+                ));
+                required_sample_pairs(&parsed)
+            }
+            Err(failure) => {
+                calls.push(labeled(
+                    call_fail(semantic::PROPERTY_SAMPLES, &args, &failure),
+                    label,
+                ));
+                None
+            }
+        }
+    }
+
     /// 5. Input replay: drive `move_right` / `jump` / `move_left` and record
     ///    the `Player` position over time.
     ///
@@ -2432,6 +2474,438 @@ impl<'a> BatterySession<'a> {
         self.finish(step, ExecKind::Replay, None, observation, ok, calls)
             .await?;
         Ok(())
+    }
+
+    /// DR-73 ③: **interaction evidence** — the two E3 behaviours the battery
+    /// never observed, in the same evidence form the movement windows already
+    /// use (before/after frames plus an engine-accepted node-state assertion).
+    ///
+    /// `REQUIREMENTS.md:114` (E3) names four behaviours: movement, jumping, "at
+    /// least one interactable object" and "one end/win condition".  `input_replay`
+    /// covers the first two; `smoke-t10` therefore ended with E3 `not_met` even
+    /// though the Developer had written coin and goal scripts, because **nothing
+    /// in the round ever asked whether a coin was picked up or whether the win
+    /// branch ran**.  `running_game_assert_node_state` can answer both, and the
+    /// answer is a *closure* assertion on a property the game itself changed:
+    ///
+    /// * the coin counter label's text must grow over the window, and
+    /// * the goal node's [`GOAL_REACHED_PROPERTY`] must still be false before and
+    ///   must be true after (an `eq` on the before-read and a `neq` on it),
+    ///
+    /// Neither is a value the harness writes.  The window only does what a player
+    /// does: it holds [`INTERACTION_DRIVE_ACTION`] and observes.  A project where
+    /// the player can never touch a coin takes the `COIN_NOT_PICKED_UP` branch,
+    /// and one whose goal is past the traversable end takes `WIN_NOT_DRIVEN`;
+    /// both are recorded as honest `ok = false` for this step, which is what
+    /// makes the round's own evidence able to say what E3 still needs.
+    async fn step_interaction_evidence(&mut self, scene_tree: Option<Value>) -> anyhow::Result<()> {
+        let step = BatteryStep {
+            id: "interaction_evidence".to_string(),
+            supports: vec![
+                "F10".to_string(),
+                "F13".to_string(),
+                "F11".to_string(),
+                "F12".to_string(),
+            ],
+            timeout_secs: self.limits.timeout_seconds,
+            retries: self.limits.max_retries,
+        };
+        let mut calls = Vec::new();
+        let mut summaries: Vec<String> = Vec::new();
+
+        // (a) The HUD cell the coin count lives in.  The tree came from the same
+        //     game session this step observes, so the path is a reading, not a
+        //     guess; a label renamed away from the specification's own prefix is
+        //     an explicit "unreadable" rather than a silent zero.
+        let coin_label = scene_tree
+            .as_ref()
+            .and_then(|tree| hud_label_path(tree, COIN_COUNTER_PREFIX));
+
+        // (b) The BEFORE reading of both observables, and the BEFORE frame.
+        let coin_before = self.read_hud_text(coin_label.as_deref(), &mut calls).await;
+        let goal_before = self
+            .read_node_property(GOAL_POSITION_NODE, GOAL_REACHED_PROPERTY, &mut calls)
+            .await;
+        let before_frame = self
+            .capture_replay_frame("interaction", "before", &mut calls)
+            .await;
+        if before_frame.is_none() {
+            summaries.push(format!(
+                "interaction: REPLAY_FRAME_MISSING (the before frame of the interaction window \
+                 could not be produced)"
+            ));
+        }
+
+        // (c) The goal's own position, so "the flag is past the end of the level"
+        //     is a number in the record.
+        let goal_position = self
+            .read_node_property(GOAL_POSITION_NODE, "position", &mut calls)
+            .await;
+        summaries.push(format!(
+            "interaction: before readings coin={coin_before:?} goal.{GOAL_REACHED_PROPERTY}={goal_before:?} \
+             goal.position={goal_position:?}"
+        ));
+
+        // (d) Drive right and sample, batch by batch, until the win is observed
+        //     or the batch budget runs out.  The action is held in the game
+        //     process across batches (`semantic_inject_action` presses it), so
+        //     the player keeps travelling between samples.
+        let mut max_x: Option<f64> = None;
+        let mut batches = 0usize;
+        let mut stopped_early = false;
+        if !is_false(&goal_before) {
+            // The goal already reports `reached` before the drive — either the
+            // round's own condition ran at boot or the property is not a flag at
+            // all.  Either way the window cannot prove the drive caused it.
+            summaries.push(format!(
+                "interaction: GOAL_FLAG_NOT_FALSE_BEFORE (goal.{GOAL_REACHED_PROPERTY}={goal_before:?}: \
+                 the win branch cannot be attributed to this window)"
+            ));
+        } else {
+            for batch in 0..INTERACTION_MAX_BATCHES {
+                batches = batch + 1;
+                let label = format!("interaction:batch{}", batch + 1);
+                let (injected, refusal) = self
+                    .semantic_inject_action(INTERACTION_DRIVE_ACTION, &label, &mut calls)
+                    .await;
+                if let Some(refusal) = refusal {
+                    summaries.push(format!("{label}: {refusal}"));
+                }
+                if !injected {
+                    summaries.push(format!(
+                        "{label}: DRIVE_NOT_INJECTED (the game-process input channel refused \
+                         `{INTERACTION_DRIVE_ACTION}`)"
+                    ));
+                    break;
+                }
+                match self
+                    .semantic_sample_pairs(INTERACTION_BATCH_FRAMES, &label, &mut calls)
+                    .await
+                {
+                    Some(positions) => {
+                        for (x, _) in positions {
+                            max_x = Some(max_x.map_or(x, |current: f64| current.max(x)));
+                        }
+                    }
+                    None => {
+                        summaries.push(format!("{label}: NO_FRAME_SAMPLES"));
+                        break;
+                    }
+                }
+                match self
+                    .read_node_property(GOAL_POSITION_NODE, GOAL_REACHED_PROPERTY, &mut calls)
+                    .await
+                {
+                    Some(Value::Bool(true)) => {
+                        stopped_early = true;
+                        break;
+                    }
+                    Some(Value::Bool(false)) => {}
+                    other => {
+                        summaries.push(format!(
+                            "interaction: GOAL_FLAG_UNREADABLE (goal.{GOAL_REACHED_PROPERTY}={other:?} \
+                             after batch {}: the win state cannot be observed)",
+                            batch + 1
+                        ));
+                        break;
+                    }
+                }
+            }
+        }
+        summaries.push(format!(
+            "interaction: drove `{INTERACTION_DRIVE_ACTION}` for {batches} batch(es) \
+             ({INTERACTION_BATCH_FRAMES} frame(s) each), player max x={max_x:?}{}",
+            if stopped_early {
+                ", stopped as soon as the win was observed"
+            } else {
+                ""
+            }
+        ));
+
+        // (e) The AFTER frame, then the AFTER readings of both observables.
+        let after_frame = self
+            .capture_replay_frame("interaction", "after", &mut calls)
+            .await;
+        if after_frame.is_none() {
+            summaries.push(format!(
+                "interaction: REPLAY_FRAME_MISSING (the after frame of the interaction window \
+                 could not be produced)"
+            ));
+        }
+        let coin_after = self.read_hud_text(coin_label.as_deref(), &mut calls).await;
+        let goal_after = self
+            .read_node_property(GOAL_POSITION_NODE, GOAL_REACHED_PROPERTY, &mut calls)
+            .await;
+
+        let mut ok = true;
+
+        // (f) Coin pickup, in the engine's own verdict shape.  The engine
+        //     answered `Coins: N`; the assertion is `N after > N before`, which
+        //     is false if the counter never grew — the `smoke-t10` state.
+        match (coin_label.as_deref(), coin_before, coin_after) {
+            (Some(path), Some(before), Some(after)) => {
+                summaries.push(format!(
+                    "interaction: coin counter `{path}` {before} -> {after}"
+                ));
+                match (coin_count(&before), coin_count(&after)) {
+                    (Some(before_count), Some(after_count)) => {
+                        // The engine compares **strings**, so the expectation is
+                        // the label's own before text, not a number: a `gt`/`lt`
+                        // on a `text` property would not be the same assertion.
+                        let expected = json!(before.clone());
+                        match self
+                            .assert_property(
+                                path,
+                                "text",
+                                "neq",
+                                expected.clone(),
+                                "interaction:replay_assert_picked_up",
+                                &mut calls,
+                            )
+                            .await
+                        {
+                            Some(true) if after_count > before_count => summaries.push(format!(
+                                "interaction: COIN_PICKED_UP (the counter grew {before_count} -> \
+                                 {after_count}; `text:neq {expected}` accepted in the game process)"
+                            )),
+                            Some(true) => {
+                                ok = false;
+                                summaries.push(format!(
+                                    "interaction: COIN_COUNTER_CHANGED_WITHOUT_A_PICKUP (text \
+                                     changed {before:?} -> {after:?} but the count did not grow)"
+                                ));
+                            }
+                            Some(false) => {
+                                ok = false;
+                                summaries.push(format!(
+                                    "interaction: COIN_NOT_PICKED_UP (the counter stayed \
+                                     {before_count} over {batches} driven batch(es); `text:neq \
+                                     {expected}` was refused inside the game process)"
+                                ));
+                            }
+                            None => {
+                                ok = false;
+                                summaries.push(format!(
+                                    "interaction: COIN_ASSERTION_UNAVAILABLE (the game process \
+                                     could not answer `text:neq {expected}` on `{path}`)"
+                                ));
+                            }
+                        }
+                    }
+                    _ => {
+                        ok = false;
+                        summaries.push(format!(
+                            "interaction: COIN_COUNTER_UNREADABLE (the label `{path}` carries \
+                             {after:?}, which has no `{COIN_COUNTER_PREFIX} <number>` to compare)"
+                        ));
+                    }
+                }
+            }
+            (None, _, _) => {
+                ok = false;
+                summaries.push(format!(
+                    "interaction: COIN_COUNTER_UNREADABLE (no `Label` under `HUD` whose text \
+                     starts with `{COIN_COUNTER_PREFIX}`; F10 cannot be observed)"
+                ));
+            }
+            (Some(path), before, after) => {
+                ok = false;
+                summaries.push(format!(
+                    "interaction: COIN_COUNTER_UNREADABLE (`{path}` could not be read twice; \
+                     before={before:?} after={after:?})"
+                ));
+            }
+        }
+
+        // (g) The win branch, in the same shape: the flag must still be false
+        //     before, and must be true after the drive.
+        let goal_won = is_false(&goal_before) && is_true(&goal_after);
+        let goal_lost = is_false(&goal_before) && is_false(&goal_after);
+        match (goal_before, goal_after) {
+            _ if goal_won => {
+                let expected = json!(false);
+                match self
+                    .assert_property(
+                        GOAL_POSITION_NODE,
+                        GOAL_REACHED_PROPERTY,
+                        "neq",
+                        expected.clone(),
+                        "interaction:replay_assert_won",
+                        &mut calls,
+                    )
+                    .await
+                {
+                    Some(true) => summaries.push(format!(
+                        "interaction: WIN_DRIVEN (goal.{GOAL_REACHED_PROPERTY} false -> true \
+                         while the player drove right; `{GOAL_REACHED_PROPERTY}:neq false` \
+                         accepted in the game process)"
+                    )),
+                    Some(false) => {
+                        ok = false;
+                        summaries.push(format!(
+                            "interaction: WIN_ASSERTION_REFUSED (the reading says the flag \
+                             changed but the engine answered false for \
+                             `{GOAL_REACHED_PROPERTY}:neq false`)"
+                        ));
+                    }
+                    None => {
+                        ok = false;
+                        summaries.push(format!(
+                            "interaction: WIN_ASSERTION_UNAVAILABLE (the game process could not \
+                             answer `{GOAL_REACHED_PROPERTY}:neq false`)"
+                        ));
+                    }
+                }
+            }
+            _ if goal_lost => {
+                ok = false;
+                summaries.push(format!(
+                    "interaction: WIN_NOT_DRIVEN (goal.{GOAL_REACHED_PROPERTY} stayed false over \
+                     {batches} driven batch(es); player max x={max_x:?}, goal.position=\
+                     {goal_position:?} — a goal the player can never reach is not a win condition)"
+                ));
+            }
+            (before, _) if !is_false(&before) => {
+                ok = false;
+                summaries.push(format!(
+                    "interaction: WIN_NOT_OBSERVABLE (goal.{GOAL_REACHED_PROPERTY} was {before:?} \
+                     before the drive, so this window cannot attribute the win to the player)"
+                ));
+            }
+            (_, after) => {
+                ok = false;
+                summaries.push(format!(
+                    "interaction: WIN_NOT_OBSERVABLE (goal.{GOAL_REACHED_PROPERTY}={after:?} \
+                     after the drive; the win state could not be read)"
+                ));
+            }
+        }
+
+        let observation = if ok {
+            format!("interaction: {}", summaries.join("; "))
+        } else {
+            format!(
+                "FAILED interaction: {} (UNAVAILABLE: at least one E3 interaction behaviour is \
+                 not observable on this candidate)",
+                summaries.join("; ")
+            )
+        };
+        self.finish(step, ExecKind::Replay, None, observation, ok, calls)
+            .await?;
+        Ok(())
+    }
+
+    /// DR-73 ③: read one node property through the semantic reader and record the
+    /// call.  `None` means the property could not be read — which is not the same
+    /// as a property that answered `false`.
+    async fn read_node_property(
+        &self,
+        node_path: &str,
+        property: &str,
+        calls: &mut Vec<Value>,
+    ) -> Option<Value> {
+        let args = json!({"node_path": node_path, "properties": [property]});
+        match self.call(semantic::NODE_PROPERTIES, args.clone()).await {
+            Ok(call) => {
+                let parsed = unwrap_mcp_payload(&call.payload);
+                calls.push(labeled(
+                    call_ok(
+                        semantic::NODE_PROPERTIES,
+                        &args,
+                        &call.payload,
+                        &call.correlation,
+                    ),
+                    &format!("interaction:read_{node_path}_{property}"),
+                ));
+                node_property_value(&parsed, property)
+            }
+            Err(failure) => {
+                calls.push(labeled(
+                    call_fail(semantic::NODE_PROPERTIES, &args, &failure),
+                    &format!("interaction:read_{node_path}_{property}"),
+                ));
+                None
+            }
+        }
+    }
+
+    /// DR-73 ③: read a HUD `Label`'s text through the semantic reader.
+    async fn read_hud_text(
+        &self,
+        node_path: Option<&str>,
+        calls: &mut Vec<Value>,
+    ) -> Option<String> {
+        let path = node_path?;
+        let args = json!({"node_path": path, "properties": ["text"]});
+        match self.call(semantic::NODE_PROPERTIES, args.clone()).await {
+            Ok(call) => {
+                let parsed = unwrap_mcp_payload(&call.payload);
+                calls.push(labeled(
+                    call_ok(
+                        semantic::NODE_PROPERTIES,
+                        &args,
+                        &call.payload,
+                        &call.correlation,
+                    ),
+                    &format!("interaction:read_{path}_text"),
+                ));
+                node_property_value(&parsed, "text").and_then(|value| {
+                    value
+                        .as_str()
+                        .map(ToOwned::to_owned)
+                        .or_else(|| Some(value.to_string()))
+                })
+            }
+            Err(failure) => {
+                calls.push(labeled(
+                    call_fail(semantic::NODE_PROPERTIES, &args, &failure),
+                    &format!("interaction:read_{path}_text"),
+                ));
+                None
+            }
+        }
+    }
+
+    /// DR-73 ③: one engine-side node-state assertion, in the shape the movement
+    /// windows already use.  `expected` is the **before** reading, so the
+    /// assertion asks "did this property close while the player acted?".
+    async fn assert_property(
+        &self,
+        node_path: &str,
+        property: &str,
+        operator: &str,
+        expected: Value,
+        label: &str,
+        calls: &mut Vec<Value>,
+    ) -> Option<bool> {
+        let args = json!({
+            "node_path": node_path,
+            "property": property,
+            "operator": operator,
+            "expected": expected,
+        });
+        match self.call(semantic::ASSERT_NODE_STATE, args.clone()).await {
+            Ok(call) => {
+                let parsed = unwrap_mcp_payload(&call.payload);
+                calls.push(labeled(
+                    call_ok(
+                        semantic::ASSERT_NODE_STATE,
+                        &args,
+                        &call.payload,
+                        &call.correlation,
+                    ),
+                    label,
+                ));
+                parsed.get("passed").and_then(Value::as_bool)
+            }
+            Err(failure) => {
+                calls.push(labeled(
+                    call_fail(semantic::ASSERT_NODE_STATE, &args, &failure),
+                    label,
+                ));
+                None
+            }
+        }
     }
 
     /// 6. Node properties, collision shapes, and HUD text.
@@ -3221,6 +3695,44 @@ pub mod probe_scripts {
     }
 }
 
+/// DR-73 ③: the label prefix the public specification uses for the collected
+/// coin counter (`PRD-mario.md` F10: "the HUD coin count +1").
+///
+/// The cell is **declared** here so the interaction step reads the same wording
+/// the product is written against, and a Tester quoting a claim can map it back
+/// to the observation line.  The step matches a `Label` whose text *starts with*
+/// this prefix, so both `Coins: 3` and `Coins: 3/120` are read; a HUD that names
+/// the counter without the prefix is reported as `COIN_COUNTER_UNREADABLE`, not
+/// silently treated as "no pickup".
+pub const COIN_COUNTER_PREFIX: &str = "Coins:";
+
+/// DR-73 ③: the property a goal node exposes when the win branch ran.
+///
+/// The step never sets it: the engine's own assertion tool observes it, so "the
+/// game drove its win branch" is what the record shows rather than what the
+/// harness wished.
+pub const GOAL_REACHED_PROPERTY: &str = "reached";
+
+/// DR-73 ③: the goal's own position, read through the semantic property reader
+/// so "the goal is physically past the end of the level" is measurable instead
+/// of guessed.
+pub const GOAL_POSITION_NODE: &str = "Goal";
+
+/// DR-73 ③: the action that carries the player through the level while the
+/// interaction window observes.  A single named action can reach a coin and a
+/// goal placed anywhere to the right, which is how the PRD lays out the level
+/// (F17: one-way rightward progress).
+pub const INTERACTION_DRIVE_ACTION: &str = "move_right";
+
+/// DR-73 ③: how many drive/sample batches the interaction window is willing to
+/// spend, and how many frames each batch samples.  The window stops early as
+/// soon as the win is observed, so the cost is paid only by a project whose
+/// level is long — which is exactly the project whose reachability is in
+/// question.  `60` frames is one second of game time, i.e. `220 px` of travel
+/// for the PRD's speed, so the loop covers roughly `24 s` of play.
+pub const INTERACTION_MAX_BATCHES: usize = 24;
+pub const INTERACTION_BATCH_FRAMES: u64 = 60;
+
 /// DR-54: the semantic game tools the evidence battery is built on.
 ///
 /// The contract (177 tools) already knows what "inject an action", "look at the
@@ -3575,6 +4087,94 @@ fn visit_nodes(node: &Value, visit: &mut impl FnMut(&Value)) {
             visit_nodes(child, visit);
         }
     }
+}
+
+/// DR-73 ③: the `NodePath` of the first `Label` under `HUD` whose text starts
+/// with `prefix`, or `None`.
+///
+/// The interaction window has to find the coin counter without knowing what the
+/// round named it.  It looks for the **specification's own wording** (`Coins:`,
+/// `PRD-mario.md` F10) on a `Label` inside `HUD`, which is where the HUD cell is
+/// required to be (`N2`), and returns the node's own `/root/...` path — the form
+/// the semantic readers resolve.
+fn hud_label_path(tree: &Value, prefix: &str) -> Option<String> {
+    let root = tree.get("tree")?;
+    let mut found: Option<String> = None;
+    visit_nodes(root, &mut |node| {
+        if found.is_some() {
+            return;
+        }
+        let kind = node.get("type").and_then(Value::as_str).unwrap_or("");
+        if kind != "Label" {
+            return;
+        }
+        let path = node.get("path").and_then(Value::as_str).unwrap_or("");
+        if !path.contains("/HUD/") {
+            return;
+        }
+        let text = node.get("text").and_then(Value::as_str).unwrap_or("");
+        if text.trim_start().starts_with(prefix) {
+            found = Some(path.to_string());
+        }
+    });
+    found
+}
+
+/// DR-73 ③: one property out of a `running_game_get_node_properties` reply.
+///
+/// The real engine answers `{"node_path":..., "properties":{<name>:<value>}}`
+/// (DR-58), so the value is read from `properties`; the flat spelling is
+/// accepted too because the contract's own example uses it.  A property that is
+/// absent answers `None`, which the caller must not confuse with `false`.
+pub fn node_property_value(payload: &Value, property: &str) -> Option<Value> {
+    payload
+        .get("properties")
+        .and_then(|properties| properties.get(property))
+        .cloned()
+        .or_else(|| payload.get(property).cloned())
+}
+
+/// DR-73 ③: the exact `(x, y)` pairs out of a
+/// `running_game_get_node_property_samples` reply, or `None` when it carried no
+/// usable samples.  Unlike [`replay_quadruple`] this keeps the whole series.
+fn required_sample_pairs(payload: &Value) -> Option<Vec<(f64, f64)>> {
+    let samples = payload.get("samples").and_then(Value::as_array)?;
+    let mut pairs = Vec::new();
+    for sample in samples {
+        let position = sample.get("position")?;
+        let x = position.get("x").and_then(Value::as_f64)?;
+        let y = position.get("y").and_then(Value::as_f64)?;
+        pairs.push((x, y));
+    }
+    if pairs.is_empty() {
+        None
+    } else {
+        Some(pairs)
+    }
+}
+
+/// DR-73 ③: the number a `Coins: <n>` label carries, or `None` when the text is
+/// not that shape.  `None` is deliberately distinct from `0`: "the HUD has no
+/// readable counter" is not "the counter says zero".
+pub fn coin_count(text: &str) -> Option<i64> {
+    let rest = text.trim_start().strip_prefix(COIN_COUNTER_PREFIX)?;
+    let digits: String = rest
+        .trim_start()
+        .chars()
+        .take_while(|character| character.is_ascii_digit())
+        .collect();
+    digits.parse::<i64>().ok()
+}
+
+/// DR-73 ③: the boolean a JSON property reading carries, distinguished from "the
+/// property could not be read at all".  `Some(Value::Bool(false))` is a reading;
+/// `None` is the absence of one, and the two take different branches.
+pub fn is_false(value: &Option<Value>) -> bool {
+    matches!(value, Some(Value::Bool(false)))
+}
+
+pub fn is_true(value: &Option<Value>) -> bool {
+    matches!(value, Some(Value::Bool(true)))
 }
 
 /// DR-41: drop the stale GDExtension line from `.godot/extension_list.cfg`.
@@ -4079,6 +4679,7 @@ arrived for someone else. When `.hoh/deterministic/mcp-sync.json` reports
 | `screenshot` | N2, F4, F13, F16 | a PNG really exists under `.hoh/evidence/` (a reported path alone is not evidence) |
 | `input_channel_probe` | F1, F2 (+P3 when a semantic tool really reports no such action) | the **game process** answered the contract's semantic tools (`running_game_get_node_properties`, `running_game_get_node_property_samples`, `running_game_create_input_recording` + `running_game_play_input_recording`, `running_game_run_test_scenario`) and reports `GAME_INPUT_CHANNEL_OK`, `ACTION_NOT_BOUND` or `ACTION_BINDING_UNKNOWN`. The raw payload is `.hoh/deterministic/raw/input_channel_probe.json`; its `channel` object carries every reading verbatim, and the one remaining `running_game_execute_gdscript` call is a **read-only** position probe that never decides the verdict (DR-54) |
 | `input_replay` | F1, F2, F3 (+P3 when an InputMap action is missing) | `move_right`/`jump`/`move_left` recordings of `Player.position`, sampled **inside the game process** (`running_game_get_node_property_samples`, game-forwarded) after the action was injected through the semantic input API (`running_game_create_input_recording` + `running_game_play_input_recording` + `running_game_run_test_scenario`). Each call in `raw/input_replay.json` carries the `(action, channel, before_position, after_position, velocity)` quadruple. The editor-side `editor_simulate_input_action` is recorded for completeness only and is labelled `EDITOR_SIDE_INJECTION`: the editor is a different process and cannot drive the game. `INPUT_HAD_NO_EFFECT` means the action was delivered inside the game and the position did not change; `ACTION_NOT_BOUND` means a semantic tool answered that the game's InputMap has no such action; `ACTION_BINDING_UNKNOWN` means the channel could not be read and must **not** be read as a missing action. **DR-69 ④**: E3's evidence form (`REQUIREMENTS.md:114`) needs before/after frames and a node-state assertion, so each window also captures `.hoh/evidence/replay-<action>-before.png` and `-after.png` (`running_game_capture_screenshot`, inline form, labelled `<action>:replay_frame_before` / `_after`) and asserts `Player.position != <first sample>` with the engine's own `running_game_assert_node_state` (`property: position`, `operator: neq`, labelled `<action>:replay_assert_moved`). The assertion is **positional on purpose**: `input_axis` answers `null` on real hardware (DR-58) and the ~14-frame injection/sampling lag makes a total-displacement assertion untrustworthy, so the expectation is the window's own first sample. `POSITION_UNCHANGED` / `POSITION_ASSERTION_UNAVAILABLE` / `REPLAY_FRAME_MISSING` are the three honest failures of that form |
+| `interaction_evidence` | F10, F13 (and F11/F12 structurally) | **DR-73 ③**: E3 names **four** behaviours, and until this step the battery observed two — `smoke-t10` ended with `Coins: 0` for the whole round and `Goal.reached` never true while the evidence handed to the Tester could not say so. The window reads the HUD `Label` whose text starts with `Coins:` and the goal node's `reached` flag, captures `.hoh/evidence/replay-interaction-{before,after}.png`, holds `move_right` for up to 24 one-second batches of `running_game_get_node_property_samples` (stopping as soon as the win is observed), and then asserts both closures **with the engine's own `running_game_assert_node_state`**: `text:neq <before reading>` on the counter and `reached:neq false` on the goal. `COIN_PICKED_UP` / `WIN_DRIVEN` are the greens; `COIN_NOT_PICKED_UP` (the counter never moved), `WIN_NOT_DRIVEN` (the flag stayed false; the record carries `player max x` and `goal.position` so "unreachable" is measurable), `COIN_COUNTER_UNREADABLE` (no `Coins:` label) and `GOAL_FLAG_NOT_FALSE_BEFORE` (the flag was already true, so the drive cannot be credited) are the honest failures. The window never writes a property: it drives input and reads state, which is what makes "the game drove its own win branch" a reading rather than a wish. **It is a game-process window**, judged exactly like `input_replay` above |
 | `node_and_collision_assertions` | F5, F6, F10, F13, F14, F16 | node properties, `shape_count` per body, HUD text nodes |
 | `editor_stop_scene` | N1 | the game stopped cleanly |
 

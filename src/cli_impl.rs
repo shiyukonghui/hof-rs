@@ -581,6 +581,11 @@ pub async fn run(args: RunArgs) -> anyhow::Result<i32> {
     } else {
         Arc::new(bridge::channel_for(&config))
     };
+    // DR-73 ③(b): hand the round directory to the **process exit** record before
+    // any role runs, so the third reading (the code the process really returns)
+    // lands beside the two `finalize_run` writes.  Exported, not passed: the exit
+    // code is decided at the process boundary, and `ExitCode` carries no number.
+    std::env::set_var(RUN_DIR_ENV, &run_dir);
     let orchestrator = Orchestrator {
         harness: Box::new(harness),
         adapter,
@@ -744,9 +749,88 @@ pub fn run_exit_code_for(summary: &run_loop::RunSummary) -> i32 {
     }
 }
 
+/// DR-73 ③(b) / D280(b): the name of the round-directory artifact that carries
+/// the **process** exit code.
+///
+/// Until this batch the round's exit code was readable in two places only —
+/// `runs/<id>/exit_code` (the bare number) and `meta.json.exit_code` — and the
+/// third reading ("the process really exited 0") lived in whatever wrapper script
+/// launched `hoh`.  `TASK-SMOKE-T10-ACCEPTANCE.md` T10A-4 shows what that costs:
+/// the wrapper's `ROUND_EXIT=0` line was never frozen, so a third of the claim
+/// could not be checked from the artifacts at all.  This file is written from the
+/// **value the process is about to return**, so all three readings are
+/// artifact-backed.
+pub const PROCESS_EXIT_CODE_FILE: &str = "process_exit_code";
+
+/// DR-73 ③(b): the environment variable through which a round's directory is
+/// handed to the **process exit** record.
+///
+/// `cli_impl::run` sets it once the directory is known (before any role runs), and
+/// the process entry point reads it after the round returned, so the reading is
+/// recorded where the code is decided and against the directory the round really
+/// used.  The name follows the harness's own `HOH_*` family; it is registered in
+/// [`crate::runtime::secrets::HARNESS_ENV_VARS`], so its value is redacted
+/// anywhere it could reach an artifact.
+pub const RUN_DIR_ENV: &str = "HOH_RUN_DIR";
+
+/// DR-73 ③(b): persist the process exit code for the round named by
+/// [`RUN_DIR_ENV`], if this process is a round at all.
+///
+/// Best effort: a missing variable (every command except `run`), an empty one, or
+/// a filesystem failure all leave the code untouched.
+///
+/// **What is recorded is the round's own artifact-backed verdict, not a second
+/// computation.**  `finalize_run` has already turned the summary into the single
+/// decision point `run_exit_code_for(summary)` and persisted it as
+/// `runs/<id>/exit_code`; this reads that number back and mirrors it, so the two
+/// artifacts cannot drift and the process code (which `main_entry` derives from
+/// the same `dispatch` result) is the third reading of one number.  The
+/// alternative — recomputing from a summary that is no longer in scope at the
+/// process boundary — is exactly the "two computations that can disagree" shape
+/// this batch exists to remove.  A round that never reached `finalize_run` has no
+/// `exit_code` file and nothing to record, which is honest: there is no third
+/// reading to back up.
+pub fn record_process_exit_code_from_env() {
+    let Ok(run_dir) = std::env::var(RUN_DIR_ENV) else {
+        return;
+    };
+    if run_dir.trim().is_empty() {
+        return;
+    }
+    let path = Path::new(&run_dir).join("exit_code");
+    if let Ok(raw) = std::fs::read_to_string(&path) {
+        if let Ok(code) = raw.trim().parse::<i32>() {
+            let _ = write_process_exit_code(Path::new(&run_dir), code);
+        }
+    }
+}
+
+/// DR-73 ③(b): the process exit code one completed round ends with.
+///
+/// This is the single computation the process entry point and the persisted
+/// artifact both go through: [`finalize_run`] stores `run_exit_code_for(summary)`
+/// as the round's own verdict, and `src/main.rs` hands the same function's answer
+/// to [`write_process_exit_code`] before returning it.  A test can therefore
+/// check the two artifacts against each other without a live round.
+pub fn process_exit_code_for(summary: &run_loop::RunSummary) -> i32 {
+    run_exit_code_for(summary)
+}
+
+/// DR-73 ③(b): persist the process exit code itself.
+///
+/// Best effort on the write, like the failure finalisation in
+/// [`run_round_and_finalize`]: failing to record the reading must never change
+/// the exit code the process returns.  The value is written as the same
+/// `<code>\n` byte shape `runs/<id>/exit_code` uses, so the three readings can be
+/// compared byte for byte.
+pub fn write_process_exit_code(run_dir: &Path, code: i32) -> std::io::Result<()> {
+    std::fs::write(run_dir.join(PROCESS_EXIT_CODE_FILE), format!("{code}\n"))
+}
+
 /// DR-27: persist the run's exit code twice — as a bare number in
 /// `runs/<id>/exit_code` (launchers cannot rely on `Start-Process -PassThru`
-/// under redirection) and as `meta.json.exit_code`.
+/// under redirection) and as `meta.json.exit_code`.  DR-73 ③(b) adds the third
+/// reading, the process code itself, in [`write_process_exit_code`].
 pub fn finalize_run(run_dir: &Path, summary: &run_loop::RunSummary) -> anyhow::Result<i32> {
     let code = run_exit_code_for(summary);
     std::fs::write(run_dir.join("exit_code"), format!("{code}\n"))?;
