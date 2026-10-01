@@ -1,0 +1,32 @@
+plant: P2-release
+why: the window no longer clears the action it does not drive
+file: src/adapter/godot.rs
+test: cargo test --offline --test evidence_battery the_observing_window_clears_a_stale_opposing_action_by_itself -- --exact
+
+=== exit code: 101 ===
+
+=== stdout ===
+
+running 1 test
+test the_observing_window_clears_a_stale_opposing_action_by_itself ... FAILED
+
+failures:
+
+---- the_observing_window_clears_a_stale_opposing_action_by_itself stdout ----
+
+thread 'the_observing_window_clears_a_stale_opposing_action_by_itself' (33492) panicked at tests\evidence_battery.rs:4770:5:
+a stale `move_left` from an earlier window must not make this window a spectator: the window has to release the action it does not drive and then pick the coin up.  Observation: FAILED interaction: interaction: HUD counter candidates (from the scene tree's `name`/`path` only; each text read through `running_game_get_node_properties`) = ["/root/Main/HUD/Score", "/root/Main/HUD/Result", "/root/Main/HUD/Lives", "/root/Main/HUD/Coins", "/root/Main/HUD/Time"]; interaction: before readings coin=Some("Coins: 0") goal.reached=Some(Bool(false)) goal.position=Some(Object {"x": Number(6400.0), "y": Number(280.0)}); interaction: drove `move_right` for 3 of 130 batch(es) (60 frame(s) each, 7800 frames budgeted), player max x=Some(60.0), goal.position=Some(Object {"x": Number(6400.0), "y": Number(280.0)}), coverage_shortfall_px=Some(6340.0), stopped after 2 batch(es) without forward progress with 127 batch(es) of budget left; interaction: coin counter `/root/Main/HUD/Coins` Coins: 0 -> Coins: 1; interaction: COIN_PICKED_UP (the counter grew 0 -> 1; `text:neq "Coins: 0"` accepted in the game process); interaction: WIN_BLOCKED_UNDER_MOVE_RIGHT (goal.reached stayed false and the sampled player x did not advance over 2 consecutive batch(es) of `move_right` while 127 batch(es) of the 130-batch budget were still unspent; player max x=Some(60.0), goal.position=Some(Object {"x": Number(6400.0), "y": Number(280.0)}), coverage_shortfall_px=Some(6340.0) — the bound is the level or the game logic, not the window's coverage; this conclusion is bounded by the movement direction: the window only holds `move_right` and never jumps, so it says nothing about whether a jump or another input could pass) (UNAVAILABLE: at least one E3 interaction behaviour is not observable on this candidate)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    the_observing_window_clears_a_stale_opposing_action_by_itself
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 55 filtered out; finished in 17.37s
+
+
+=== stderr ===
+   Compiling hof-rs v0.1.0 (F:\moonbit-hof-rs)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 7.44s
+     Running tests\evidence_battery.rs (target\debug\deps\evidence_battery-1903957a4bf0b011.exe)
+error: test failed, to rerun pass `--test evidence_battery`

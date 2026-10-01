@@ -1,0 +1,32 @@
+plant: P1-order
+why: the pre-DR78 battery order, restored exactly (HEAD~1's three lines)
+file: src/adapter/godot.rs
+test: cargo test --offline --test evidence_battery the_coin_observing_window_runs_before_every_consuming_window -- --exact
+
+=== exit code: 101 ===
+
+=== stdout ===
+
+running 1 test
+test the_coin_observing_window_runs_before_every_consuming_window ... FAILED
+
+failures:
+
+---- the_coin_observing_window_runs_before_every_consuming_window stdout ----
+
+thread 'the_coin_observing_window_runs_before_every_consuming_window' (32840) panicked at tests\evidence_battery.rs:4733:9:
+`interaction_evidence` (index 8) must run **before** `input_channel_probe` (index 6): it holds a horizontal action and samples the player's travel, so a coin between spawn and its sweep is consumed before the counter transition can be observed — the `smoke-t11` false negative.  Order was ["project_reload_and_open", "scene_structure", "editor_errors_baseline", "play_scene_ready", "scene_tree", "screenshot", "input_channel_probe", "input_replay", "interaction_evidence", "node_and_collision_assertions", "editor_stop_scene"]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    the_coin_observing_window_runs_before_every_consuming_window
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 55 filtered out; finished in 15.87s
+
+
+=== stderr ===
+   Compiling hof-rs v0.1.0 (F:\moonbit-hof-rs)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.72s
+     Running tests\evidence_battery.rs (target\debug\deps\evidence_battery-1903957a4bf0b011.exe)
+error: test failed, to rerun pass `--test evidence_battery`

@@ -1,0 +1,32 @@
+plant: P5-geometric-name
+why: the DR-77 D77-B state, restored exactly: the retracted word in the test name
+file: tests/evidence_battery.rs
+test: cargo test --offline --test evidence_battery the_battery_names_the_blocked_verdict_by_its_movement_direction -- --exact
+
+=== exit code: 101 ===
+
+=== stdout ===
+
+running 1 test
+test the_battery_names_the_blocked_verdict_by_its_movement_direction ... FAILED
+
+failures:
+
+---- the_battery_names_the_blocked_verdict_by_its_movement_direction stdout ----
+
+thread 'the_battery_names_the_blocked_verdict_by_its_movement_direction' (31532) panicked at tests\evidence_battery.rs:4834:5:
+the retracted wording must not survive in a test name (it enters `cargo test` output and `--list`): "F:\\moonbit-hof-rs\\tests/evidence_battery.rs"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    the_battery_names_the_blocked_verdict_by_its_movement_direction
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 55 filtered out; finished in 0.00s
+
+
+=== stderr ===
+   Compiling hof-rs v0.1.0 (F:\moonbit-hof-rs)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.81s
+     Running tests\evidence_battery.rs (target\debug\deps\evidence_battery-1903957a4bf0b011.exe)
+error: test failed, to rerun pass `--test evidence_battery`

@@ -1,0 +1,17 @@
+live .workspace/fresh-t11 projection : 11 file(s), 8830 byte(s)
+frozen A_1 snapshot projection      : 11 file(s), 8830 byte(s)
+only in live     : []
+only in snapshot : []
+differing bytes  : []
+verdict          : IDENTICAL
+    project.godot                  1346 00d02c9c08c3dc4f  same
+    scenes/main.tscn               4358 813c145720d665d8  same
+    scripts/README.md                39 3e7eb12277f26c5f  same
+    scripts/coin.gd                 531 cb9b6ae3539886d6  same
+    scripts/coin.gd.uid              19 eb9956c5999d7169  same
+    scripts/goal.gd                 441 5176c9183455b100  same
+    scripts/goal.gd.uid              20 3eab7750b1c017c3  same
+    scripts/main.gd                 970 c569dffb36d6253a  same
+    scripts/main.gd.uid              20 fbd874839faa2f70  same
+    scripts/player.gd              1067 ae5d836ba4ba5e9b  same
+    scripts/player.gd.uid            19 1f80a3ae5495ea8f  same

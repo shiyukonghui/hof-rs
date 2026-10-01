@@ -1,0 +1,32 @@
+plant: P3-publish
+why: the role-side publish branch never matches, i.e. the pre-DR78 behaviour
+file: src/cli_impl.rs
+test: cargo test --offline --test game_route_across_processes a_role_started_scene_republishes_the_game_route_for_later_processes -- --exact
+
+=== exit code: 101 ===
+
+=== stdout ===
+
+running 1 test
+test a_role_started_scene_republishes_the_game_route_for_later_processes ... FAILED
+
+failures:
+
+---- a_role_started_scene_republishes_the_game_route_for_later_processes stdout ----
+
+thread 'a_role_started_scene_republishes_the_game_route_for_later_processes' (14344) panicked at tests\game_route_across_processes.rs:368:5:
+the announced game must be confirmed ready **before** its route is published: []
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    a_role_started_scene_republishes_the_game_route_for_later_processes
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.83s
+
+
+=== stderr ===
+   Compiling hof-rs v0.1.0 (F:\moonbit-hof-rs)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.58s
+     Running tests\game_route_across_processes.rs (target\debug\deps\game_route_across_processes-fe0ef579c19d82a1.exe)
+error: test failed, to rerun pass `--test game_route_across_processes`

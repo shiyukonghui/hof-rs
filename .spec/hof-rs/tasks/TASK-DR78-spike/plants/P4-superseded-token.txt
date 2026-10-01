@@ -1,0 +1,34 @@
+plant: P4-superseded-token
+why: the DR-77 D77-A state, restored exactly: the old name is defined as the new one
+file: tests/interaction_contract.rs
+test: cargo test --offline --test interaction_contract the_superseded_token_is_the_old_name_and_not_a_copy_of_the_new_one -- --exact
+
+=== exit code: 101 ===
+
+=== stdout ===
+
+running 1 test
+test the_superseded_token_is_the_old_name_and_not_a_copy_of_the_new_one ... FAILED
+
+failures:
+
+---- the_superseded_token_is_the_old_name_and_not_a_copy_of_the_new_one stdout ----
+
+thread 'the_superseded_token_is_the_old_name_and_not_a_copy_of_the_new_one' (18912) panicked at tests\interaction_contract.rs:55:5:
+assertion `left != right` failed: the superseded token and the current verdict are two different strings: a guard whose old name *is* the new name asserts `x ∈ S ⇒ x ∈ S`
+  left: "WIN_BLOCKED_UNDER_MOVE_RIGHT"
+ right: "WIN_BLOCKED_UNDER_MOVE_RIGHT"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    the_superseded_token_is_the_old_name_and_not_a_copy_of_the_new_one
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+
+=== stderr ===
+   Compiling hof-rs v0.1.0 (F:\moonbit-hof-rs)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.64s
+     Running tests\interaction_contract.rs (target\debug\deps\interaction_contract-50321d194f21d09b.exe)
+error: test failed, to rerun pass `--test interaction_contract`

@@ -1,0 +1,1 @@
+removed 60 hof-rs-* fingerprint(s); 354 non-hof-rs left alone

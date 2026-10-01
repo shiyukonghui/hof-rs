@@ -1,0 +1,730 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.67s
+     Running unittests src\lib.rs (target\debug\deps\hof_rs-1cf9dbeb33693001.exe)
+adapter::engine::tests::a_configured_binary_path_helper_treats_empty_as_absent: test
+adapter::engine::tests::no_configured_binary_means_no_gate_step: test
+adapter::engine::tests::path_normalisation_is_case_and_separator_insensitive: test
+adapter::engine::tests::the_engine_block_is_serialized_with_every_field: test
+adapter::engine::tests::the_listener_pid_is_parsed_positionally: test
+adapter::engine::tests::the_version_string_is_never_a_code_constant: test
+adapter::godot::tests::a_log_line_is_stale_only_when_the_current_bytes_cannot_reproduce_it: test
+adapter::godot::tests::a_malformed_enabled_line_leaves_the_project_untouched: test
+adapter::godot::tests::cache_excludes_always_contain_the_runtime_paths: test
+adapter::godot::tests::doctor_publishes_the_editor_scope_confirmation: test
+adapter::godot::tests::editor_errors_are_parsed_as_json: test
+adapter::godot::tests::freshness_is_decided_on_the_artifact_state_not_on_existence: test
+adapter::godot::tests::initialization_is_idempotent_but_never_clobbers_a_foreign_directory: test
+adapter::godot::tests::initialize_never_touches_a_project_without_the_retired_channel: test
+adapter::godot::tests::initialize_removes_a_legacy_bundled_addon_idempotently: test
+adapter::godot::tests::initialize_removes_empty_remains_of_the_retired_channel: test
+adapter::godot::tests::initializes_a_minimal_project: test
+adapter::godot::tests::invalidating_an_artifact_moves_it_aside: test
+adapter::godot::tests::only_the_exact_engine_info_banners_are_exempt: test
+adapter::godot::tests::playbook_covers_the_four_evidence_kinds: test
+adapter::godot::tests::playbook_explains_the_game_process_channel: test
+adapter::godot::tests::project_declared_actions_reads_only_the_input_section: test
+adapter::godot::tests::the_banner_filter_keeps_every_other_line: test
+adapter::godot::tests::the_capability_codes_are_the_searchable_literals: test
+adapter::godot::tests::the_enabled_line_edit_distinguishes_absent_updated_emptied_and_malformed: test
+adapter::godot::tests::the_game_probe_scripts_are_body_shaped: test
+adapter::godot::tests::the_game_script_readings_are_parsed_strictly: test
+adapter::godot::tests::the_input_action_list_is_read_from_the_engine_shape: test
+adapter::godot::tests::the_probe_scripts_are_single_line_bodies: test
+adapter::godot::tests::the_project_template_drops_the_gdextension_channel: test
+adapter::godot::tests::the_quadruple_carries_its_channel: test
+cli::tests::ablation_parsing_is_strict: test
+cli::tests::doctor_rejects_invalid_model_identity: test
+cli_impl::tests::bare_model_name_strips_only_a_vendor_prefix: test
+cli_impl::tests::base_url_host_parsing_is_generic: test
+cli_impl::tests::doctor_report_contains_the_editor_scope_confirmation: test
+cli_impl::tests::run_id_components_are_well_formed: test
+cli_impl::tests::unknown_adapter_is_rejected: test
+config::tests::api_key_resolution_follows_the_documented_priority: test
+config::tests::cli_overrides_win: test
+config::tests::loads_default_config: test
+config::tests::model_fields_are_passed_through_untouched: test
+config::tests::redaction_removes_the_secret_without_mutating_the_original: test
+config::tests::rejects_a_blank_wire_model_name: test
+config::tests::rejects_a_non_empty_config_api_key: test
+config::tests::rejects_missing_provider: test
+errors::tests::anyhow_downcast_finds_the_typed_error: test
+errors::tests::exit_codes_match_the_design: test
+harness::cap::tests::a_result_within_the_ceiling_is_unchanged: test
+harness::cap::tests::a_zero_ceiling_still_carries_the_annotation: test
+harness::cap::tests::the_cut_respects_utf8_boundaries: test
+model::tests::absolute_like_detection_matches_posix_and_drive: test
+model::tests::evidence_accepts_partition: test
+model::tests::evidence_rejects_candidate_mismatch: test
+model::tests::evidence_rejects_duplicate_claim_id: test
+model::tests::evidence_rejects_empty_claim_list: test
+model::tests::evidence_rejects_gap_without_guidance: test
+model::tests::evidence_rejects_status_mismatch: test
+model::tests::evidence_rejects_unsupported_verified: test
+model::tests::evidence_shape_reports_missing_handoff: test
+model::tests::plan_accepts_well_formed_document: test
+model::tests::plan_rejects_empty_gate: test
+model::tests::plan_rejects_empty_priority_order: test
+model::tests::plan_rejects_missing_section: test
+model::tests::plan_rejects_more_than_three_priorities: test
+model::tests::the_record_shape_report_names_every_missing_field_at_once: test
+runtime::hygiene::tests::a_recursive_search_for_the_harness_is_a_harness_read: test
+runtime::hygiene::tests::a_second_quarantine_in_the_same_second_does_not_collide: test
+runtime::hygiene::tests::a_supersession_recorded_in_a_subdirectory_manifest_is_found_from_the_root: test
+runtime::hygiene::tests::quarantine_is_a_no_op_on_a_clean_start: test
+runtime::hygiene::tests::quarantine_moves_the_whole_artifact_tree_out_of_the_workspace: test
+runtime::hygiene::tests::quarantine_refuses_a_destination_inside_the_workspace: test
+runtime::hygiene::tests::suspicious_directories_sees_the_shell_accident_a_file_scan_misses: test
+runtime::hygiene::tests::suspicious_files_ignores_the_runtime_directories: test
+runtime::hygiene::tests::suspicious_files_matches_probe_patterns: test
+runtime::hygiene::tests::the_injected_harness_root_is_matched_in_both_separator_styles: test
+runtime::hygiene::tests::the_manifest_is_bookkeeping_and_a_malformed_one_is_an_error: test
+runtime::hygiene::tests::the_marker_set_covers_config_decisions_and_the_manifest: test
+runtime::hygiene::tests::the_source_read_scan_ignores_prompts_and_reads_tool_commands: test
+runtime::hygiene::tests::the_superseded_marker_is_recognized_by_one_predicate: test
+runtime::hygiene::tests::the_watch_ignores_the_runtime_trees_and_the_project: test
+runtime::hygiene::tests::the_watch_reports_new_and_modified_files_once: test
+runtime::invoke::tests::a_single_brace_shell_placeholder_is_not_fully_rendered: test
+runtime::invoke::tests::render_prompt_replaces_iteration_and_leaves_no_jinja: test
+runtime::invoke::tests::role_env_carries_every_required_variable: test
+runtime::policy::tests::a_write_verb_is_never_granted_to_a_read_only_role: test
+runtime::policy::tests::empty_tree_hashes_deterministically: test
+runtime::policy::tests::exclusion_is_prefix_based: test
+runtime::policy::tests::label_selects_the_contract_violation: test
+runtime::policy::tests::merged_excludes_always_contain_the_runtime_paths: test
+runtime::policy::tests::qa_keeps_only_its_read_only_and_evidence_driving_scope: test
+runtime::policy::tests::the_verb_is_the_component_after_the_channel: test
+runtime::run_loop::tests::the_production_sealed_areas_cover_every_frozen_root: test
+runtime::secrets::tests::a_doubled_backslash_path_does_not_inject_a_control_character: test
+runtime::secrets::tests::a_harness_value_with_a_user_name_is_redacted: test
+runtime::secrets::tests::a_json_escaped_carriage_return_ends_the_value_without_a_surviving_tail: test
+runtime::secrets::tests::a_path_with_a_backslash_r_component_still_redacts_the_user_name: test
+runtime::secrets::tests::a_plain_text_cr_ends_the_value_and_the_carried_rest_is_a_pinned_cost: test
+runtime::secrets::tests::a_sealed_file_is_never_rewritten_in_place: test
+runtime::secrets::tests::a_splice_that_would_break_json_is_refused_and_reported: test
+runtime::secrets::tests::a_user_name_in_a_semicolon_separated_path_tail_is_redacted: test
+runtime::secrets::tests::a_windows_path_value_is_not_mistaken_for_an_escape: test
+runtime::secrets::tests::an_assignment_inside_a_json_string_survives_an_escaped_newline: test
+runtime::secrets::tests::an_environment_dump_does_not_leak_the_credential_channel: test
+runtime::secrets::tests::blocked_env_covers_every_known_variable: test
+runtime::secrets::tests::other_json_escape_families_do_not_drop_the_assignment_redaction: test
+runtime::secrets::tests::redaction_rewrites_only_files_that_contain_a_secret: test
+runtime::secrets::tests::the_generated_copy_name_keeps_the_extension: test
+runtime::secrets::tests::the_tree_scan_redacts_an_assignment_without_a_known_value: test
+runtime::secrets::tests::what_followed_the_assignment_in_the_same_string_survives: test
+runtime::shell::tests::a_rendered_command_can_be_rewritten_into_the_other_dialect: test
+runtime::shell::tests::rendering_replaces_every_placeholder_and_leaves_no_template_behind: test
+runtime::shell::tests::the_host_flavor_matches_the_platform: test
+runtime::shell::tests::the_windows_flavor_is_percent_and_the_posix_flavor_is_dollar: test
+runtime::usage::tests::total_is_refilled_only_when_both_parts_exist: test
+runtime::usage::tests::usage_summary_reads_both_shapes: test
+runtime::view::tests::a_real_invalidation_is_what_the_evidence_copy_skips: test
+runtime::view::tests::build_view_copies_source_and_injects_inputs: test
+runtime::view::tests::build_view_is_idempotent_and_clears_stale_files: test
+runtime::view::tests::build_view_without_source_is_an_empty_scaffold: test
+runtime::view::tests::copy_evidence_copies_everything_and_reports_the_oversized: test
+runtime::view::tests::copy_evidence_skips_a_recorded_supersession_and_copies_a_role_named_stale_file: test
+runtime::view::tests::copy_tree_applies_the_same_supersession_criterion_as_the_evidence_copy: test
+runtime::view::tests::private_excludes_are_not_copied_but_still_hashed: test
+runtime::view::tests::the_candidate_identity_is_unaffected_by_evidence_copying: test
+tools::bridge::tests::args_default_to_an_empty_object: test
+tools::bridge::tests::args_file_wins_over_inline: test
+tools::endpoint::tests::a_refusal_states_which_check_failed: test
+tools::endpoint::tests::a_released_loopback_port_is_recognised_as_refusing_connections: test
+tools::endpoint::tests::an_answering_or_unjudgeable_destination_is_not_refused: test
+tools::endpoint::tests::the_liveness_state_counts_consecutive_transport_failures_only: test
+tools::endpoint::tests::the_loopback_endpoint_round_trips_through_its_port: test
+tools::endpoint::tests::the_process_liveness_probe_separates_a_live_pid_from_a_gone_one: test
+tools::endpoint::tests::the_refusal_names_the_state_and_the_failure_count: test
+tools::endpoint::tests::the_scope_comes_from_the_channel_prefix: test
+tools::index::tests::a_role_only_sees_its_own_tools: test
+tools::index::tests::the_snapshot_is_the_real_177_tool_contract: test
+tools::mcp::tests::request_body_is_built_with_the_requested_id: test
+tools::mcp::tests::request_body_shape_matches_the_jsonrpc_contract: test
+tools::mcp::tests::response_ids_are_read_in_both_encodings: test
+tools::mcp::tests::the_observed_offset_is_signed: test
+tools::mcp::tests::the_pending_table_claims_by_id_and_stays_bounded: test
+tools::policy::tests::denial_payload_has_the_documented_shape: test
+tools::policy::tests::developer_may_use_everything: test
+tools::policy::tests::planner_may_use_nothing: test
+tools::policy::tests::tester_is_default_deny: test
+
+146 tests, 0 benchmarks
+     Running unittests src\main.rs (target\debug\deps\hoh-1887aea4c1a0271d.exe)
+0 tests, 0 benchmarks
+     Running tests\ablation.rs (target\debug\deps\ablation-1147922286a57c01.exe)
+evidence_off_only_changes_evidence: test
+plan_update_off_only_changes_plan: test
+warm_start_off_only_changes_source: test
+
+3 tests, 0 benchmarks
+     Running tests\aborted_attempt_evidence.rs (target\debug\deps\aborted_attempt_evidence-0096eb35ebde99d4.exe)
+an_aborted_attempt_is_moved_aside_before_its_directory_is_cleared: test
+an_empty_or_missing_attempt_is_not_preserved: test
+
+2 tests, 0 benchmarks
+     Running tests\artifact_hygiene.rs (target\debug\deps\artifact_hygiene-6634bc8d4a2cdd01.exe)
+a_clean_artifact_reports_no_suspicious_files: test
+files_under_the_scratch_directory_are_never_flagged: test
+probe_files_inside_the_frozen_artifact_are_reported: test
+prompts_and_skills_confine_temporary_files_to_the_scratch_dir: test
+
+4 tests, 0 benchmarks
+     Running tests\byte_claims.rs (target\debug\deps\byte_claims-50d240e3011be569.exe)
+the_corrected_record_states_no_hand_written_byte_count: test
+the_generated_byte_claims_match_the_computed_facts: test
+the_hand_written_claim_detector_works: test
+the_superseded_byte_counts_are_preserved_and_annotated: test
+
+4 tests, 0 benchmarks
+     Running tests\cli_init.rs (target\debug\deps\cli_init-cf95046004ec97ab.exe)
+init_force_over_a_non_empty_workspace_scaffolds: test
+init_leaves_a_malformed_enabled_line_untouched_and_says_why: test
+init_rebuilds_a0_without_mcp_or_a_model_endpoint: test
+init_refuses_a_non_empty_workspace_without_force: test
+run_fresh_workspace_keeps_the_rebuilt_a0_when_doctor_fails: test
+
+5 tests, 0 benchmarks
+     Running tests\cli_status_rollback.rs (target\debug\deps\cli_status_rollback-220f1aac54425fae.exe)
+rollback_with_a_missing_version_exits_two: test
+status_reports_the_iteration_and_marks_unknown_usage: test
+status_with_a_missing_runs_dir_exits_two: test
+status_with_an_unknown_run_id_exits_two: test
+status_without_any_known_usage_says_unknown: test
+
+5 tests, 0 benchmarks
+     Running tests\delivered_materials.rs (target\debug\deps\delivered_materials-0a00d12d7771ed0c.exe)
+no_developer_facing_material_sends_the_role_to_the_game_process: test
+the_developer_prompt_and_the_skill_forbid_booting_a_game_the_same_way: test
+the_developer_prompt_states_the_round_wide_route_and_its_staleness: test
+the_developer_skill_explains_why_the_game_process_is_not_its_self_test: test
+the_generated_tool_index_is_a_catalogue_not_an_instruction: test
+the_tester_facing_materials_still_receive_the_game_process_recipe: test
+
+6 tests, 0 benchmarks
+     Running tests\developer_contract.rs (target\debug\deps\developer_contract-6c282e88afd87deb.exe)
+developer_prompt_states_the_definition_of_done: test
+godot_dev_skill_is_a_real_recipe_book: test
+godot_testing_skill_explains_the_battery_and_relative_paths: test
+skills_are_injected_into_the_role_views: test
+the_developer_changes_the_code_first_and_leaves_observation_to_the_tester: test
+
+5 tests, 0 benchmarks
+     Running tests\doctor_probe.rs (target\debug\deps\doctor_probe-246cf3bd2a0bfda3.exe)
+chat_probe_fails_when_the_endpoint_reports_a_different_model: test
+chat_probe_sends_the_bearer_token_and_accepts_the_configured_wire_model: test
+chat_probe_without_a_resolvable_key_is_not_ok: test
+doctor_reads_the_wire_name_from_a_values_not_from_a_constant: test
+resident_probe_does_not_invent_a_duplicate_for_an_unprefixed_wire_name: test
+resident_probe_flags_a_bare_duplicate_of_a_prefixed_wire_name: test
+resident_probe_is_skipped_off_loopback_without_blocking_a_run: test
+resident_probe_is_skipped_when_the_endpoint_has_no_models_api: test
+
+8 tests, 0 benchmarks
+     Running tests\dr58_payload_shapes.rs (target\debug\deps\dr58_payload_shapes-4e84f590a8ccac94.exe)
+a_real_node_properties_reply_is_a_resolved_read: test
+an_unresolved_or_malformed_node_read_is_not_a_resolved_read: test
+the_dr58_fixtures_are_byte_for_byte_copies_of_the_real_payloads: test
+the_real_game_scope_runner_refuses_every_scene_path_value: test
+the_real_node_properties_reply_has_no_top_level_name: test
+
+5 tests, 0 benchmarks
+     Running tests\dr76_payload_shapes.rs (target\debug\deps\dr76_payload_shapes-5607c29830bc3fe1.exe)
+every_frozen_scene_tree_label_carries_exactly_the_three_keys_the_engine_sends: test
+the_counter_is_found_from_the_frozen_tree_without_any_text_member: test
+the_derived_fixtures_match_the_sha256_the_manifest_pins: test
+the_frozen_hud_label_read_shows_the_property_reader_is_a_real_path: test
+the_frozen_rounds_maximum_player_x_is_derived_from_the_samples: test
+
+5 tests, 0 benchmarks
+     Running tests\dr77_evidence_tightening.rs (target\debug\deps\dr77_evidence_tightening-dd92500227102516.exe)
+the_blocked_pin_reddens_when_the_field_is_deleted_from_the_verdict_line: test
+the_blocked_token_is_named_for_what_the_window_measured: test
+the_blocked_verdict_line_carries_its_own_shortfall: test
+the_coverage_verdict_line_carries_its_own_shortfall: test
+the_ledger_quotes_the_false_claim_commit_verbatim: test
+the_old_token_keeps_a_mapping_to_the_renamed_one: test
+
+6 tests, 0 benchmarks
+     Running tests\dual_endpoint.rs (target\debug\deps\dual_endpoint-c3eff8f31585f861.exe)
+an_endpoint_without_a_declared_port_source_is_undeclared: test
+running_game_tools_never_reach_the_editor_endpoint: test
+stop_scene_invalidates_the_game_endpoint: test
+the_play_scene_reply_is_parsed_into_the_game_endpoint: test
+the_play_scene_step_fails_when_no_endpoint_is_announced: test
+the_play_scene_step_registers_the_announced_endpoint: test
+the_registered_game_endpoint_survives_the_route_being_cleared: test
+the_scope_of_a_tool_is_decided_by_its_channel_prefix: test
+
+8 tests, 0 benchmarks
+     Running tests\e1_increment.rs (target\debug\deps\e1_increment-36421e4f20c9c2b9.exe)
+a_failed_round_persists_the_real_errors_class: test
+a_launchable_artifact_still_exits_zero_when_the_round_succeeded: test
+a_real_artifact_path_in_the_exclude_set_blinds_the_measurement: test
+a_round_that_changes_files_records_the_real_evidence_diff: test
+a_zero_engineering_write_round_fails_instead_of_reporting_ok: test
+a_zero_increment_round_records_an_evidence_diff_that_is_honestly_empty: test
+a_zero_increment_round_that_finishes_normally_also_fails: test
+run_round_in_still_runs_the_loop: test
+the_completion_definition_keeps_the_increment_and_drops_the_battery_ownership: test
+the_developer_prompt_states_the_write_deadline_the_runtime_computes: test
+the_gate_message_describes_the_condition_the_gate_checks: test
+the_measurement_sees_an_engineering_write_and_ignores_scratch: test
+the_prompt_names_every_excluded_path_not_just_the_scratch_dir: test
+the_real_round_path_persists_a_failing_rounds_verdict: test
+the_runtime_exclude_set_comes_from_the_configuration: test
+the_same_harness_script_reports_ok_when_the_developer_writes: test
+
+16 tests, 0 benchmarks
+     Running tests\endpoint_liveness.rs (target\debug\deps\endpoint_liveness-d8e3fbf20bc74977.exe)
+a_dead_endpoint_stops_the_readiness_poll: test
+a_single_transport_failure_does_not_kill_the_endpoint: test
+business_errors_never_count_toward_the_streak: test
+registering_a_new_endpoint_re_arms_the_route: test
+the_editor_endpoint_state_is_separate: test
+the_endpoint_state_is_a_stable_evidence_field: test
+two_transport_failures_kill_the_endpoint_and_later_calls_do_not_retry: test
+
+7 tests, 0 benchmarks
+     Running tests\endpoint_request_count.rs (target\debug\deps\endpoint_request_count-e4106a854f90217a.exe)
+a_dead_endpoint_sends_zero_requests_to_the_transport_layer: test
+
+1 test, 0 benchmarks
+     Running tests\engine_identity.rs (target\debug\deps\engine_identity-e8d998f986209ea1.exe)
+a_listener_that_is_another_binary_is_a_mismatch: test
+a_listener_that_is_the_configured_binary_matches: test
+a_missing_binary_fails_the_items_without_executing_anything: test
+a_missing_binary_is_null_plus_a_reason_never_a_guess: test
+a_probe_that_cannot_read_the_listener_is_unknown_never_a_match: test
+an_unavailable_engine_is_still_a_complete_block: test
+an_unreachable_endpoint_yields_no_status_and_no_failure: test
+meta_json_carries_the_engine_block_and_no_secret: test
+path_comparison_is_separator_and_case_insensitive: test
+recording_a_game_endpoint_fills_the_identity_block: test
+the_editor_status_is_the_verbatim_get_mcp_body: test
+the_engine_block_has_the_fixed_shape: test
+the_engine_identity_step_is_a_gate_step: test
+the_gate_closes_when_the_listener_cannot_be_read: test
+the_gate_closes_when_the_listener_is_another_binary: test
+the_gate_stays_open_when_the_listener_is_the_configured_binary: test
+the_status_fetch_is_gated_on_the_adapter_driving_an_engine: test
+the_two_engine_doctor_items_report_the_binary_and_its_version: test
+
+18 tests, 0 benchmarks
+     Running tests\evidence_battery.rs (target\debug\deps\evidence_battery-1903957a4bf0b011.exe)
+a_dead_axis_is_red_in_the_positional_assertion_too: test
+a_dead_target_axis_is_not_movement_even_when_the_other_axis_moves: test
+a_failed_probe_is_unknown_never_not_bound: test
+a_failed_rounds_result_json_carries_the_real_battery_and_candidate: test
+a_hand_written_text_member_on_the_tree_cannot_choose_the_counter: test
+a_hud_without_a_coin_cell_is_reported_as_unreadable_not_as_zero: test
+a_level_whose_goal_is_unreachable_fails_only_the_win_half: test
+a_malformed_node_properties_payload_is_still_scored_as_missing: test
+a_malformed_node_properties_reply_does_not_prove_the_game_process: test
+a_player_that_stops_advancing_with_budget_left_is_blocked_under_move_right: test
+a_project_that_never_picks_a_coin_up_is_recorded_as_a_gap: test
+a_real_node_properties_reply_makes_the_game_process_reachable: test
+a_semantic_refusal_is_not_rescued_by_the_gdscript_probe: test
+a_stale_png_does_not_suppress_the_frames_fallback: test
+a_stale_png_is_never_mistaken_for_this_runs_screenshot: test
+a_usable_game_channel_makes_the_replay_green: test
+an_aborted_battery_pass_is_preserved_before_its_directory_is_cleared: test
+an_axis_reading_that_contradicts_the_held_direction_is_red: test
+an_editor_side_success_without_game_movement_is_labelled_and_fails: test
+an_oversized_evidence_file_is_copied_and_reported: test
+battery_json_has_the_frozen_shape: test
+editor_error_failure_is_recorded_verbatim: test
+editor_errors_baseline_requires_an_errors_array: test
+every_quadruple_names_its_channel: test
+every_surviving_execute_gdscript_call_is_a_gdscript_body: test
+every_tool_call_hof_rs_makes_matches_the_contract_schema: test
+goal_without_a_collision_shape_fails_the_assertion_step: test
+green_battery_records_every_step_and_copies_into_the_candidate: test
+input_replay_records_a_delivered_action_without_effect: test
+input_replay_reports_an_action_that_is_not_bound: test
+input_replay_without_frame_samples_is_a_failure: test
+play_scene_ready_refuses_a_payload_that_is_not_a_scene_tree: test
+readiness_timeout_fails_the_step_and_is_journalled: test
+real_node_properties_payloads_are_not_scored_as_missing: test
+scene_tree_requires_node_paths_and_types: test
+screenshot_failure_is_not_disguised_as_a_clean_step: test
+screenshot_materializes_an_inline_base64_png: test
+screenshot_never_claims_a_path_that_does_not_exist: test
+tester_prompt_is_judgement_first: test
+the_battery_evidence_is_copied_into_the_frozen_candidate: test
+the_battery_names_the_blocked_verdict_by_its_movement_direction: test
+the_coin_observing_window_runs_before_every_consuming_window: test
+the_drive_budget_covers_the_specifications_longest_traversal: test
+the_editor_input_map_can_never_claim_an_action_is_not_bound: test
+the_editor_input_map_diagnostic_agrees_with_its_own_record: test
+the_input_channel_critical_path_is_built_on_semantic_tools: test
+the_input_replay_injection_is_semantic_not_gdscript: test
+the_input_replay_produces_before_and_after_frames_and_a_positional_assertion: test
+the_input_replay_releases_the_previous_direction_before_the_next_one: test
+the_interaction_window_finds_the_counter_in_the_real_scene_tree_shape: test
+the_interaction_window_records_a_real_coin_pickup_and_its_assertion: test
+the_observing_window_clears_a_stale_opposing_action_by_itself: test
+the_parameter_shape_checker_rejects_the_smoke_t6_violations: test
+the_real_game_scene_tree_fixture_is_accepted: test
+the_scenario_request_omits_scene_path_because_the_runner_refuses_every_value: test
+the_screenshot_call_carries_no_filesystem_path: test
+
+56 tests, 0 benchmarks
+     Running tests\evidence_binding.rs (target\debug\deps\evidence_binding-5b3e1a86181059e3.exe)
+bind_stamps_candidate_and_preserves_text: test
+contract_violation_reports_a_concrete_diff: test
+deterministic_stage_changes_are_part_of_candidate_identity: test
+gate_evidence_accepts_a_bound_candidate: test
+rejects_absolute_path_evidence_outside_the_view: test
+rejects_candidate_mismatch: test
+rejects_contaminated_candidate: test
+rejects_dangling_evidence: test
+rejects_direct_real_workspace_write: test
+rejects_parent_dir_traversal: test
+rejects_workspace_drift: test
+verified_gap_partition: test
+
+12 tests, 0 benchmarks
+     Running tests\evidence_isolation.rs (target\debug\deps\evidence_isolation-355f49916769fed0.exe)
+a_clean_round_start_quarantines_nothing: test
+a_new_round_cannot_read_the_previous_round_evidence: test
+round_two_cannot_read_round_one_evidence: test
+
+3 tests, 0 benchmarks
+     Running tests\evidence_unreachable.rs (target\debug\deps\evidence_unreachable-06922e9541eb150d.exe)
+a_clean_round_start_creates_no_quarantine_directory: test
+a_role_named_stale_artifact_is_not_hidden_from_the_tester: test
+a_wildcard_walk_of_hoh_cannot_reach_the_previous_rounds_evidence: test
+the_tester_candidate_view_never_carries_the_previous_rounds_evidence: test
+the_workspace_walk_reaches_a_marker_seeded_outside_hoh: test
+
+5 tests, 0 benchmarks
+     Running tests\frozen_evidence.rs (target\debug\deps\frozen_evidence-556f055adc623ed1.exe)
+a_redaction_pass_leaves_frozen_evidence_byte_identical: test
+the_batch_evidence_products_carry_no_environment_values: test
+the_frozen_command_dump_carries_no_credential_channel: test
+the_frozen_command_dump_keeps_its_line_endings_and_record_count: test
+the_frozen_command_dump_keeps_the_record_that_documents_the_p_directory: test
+the_redacted_sample_is_regenerable_from_the_production_pass: test
+
+6 tests, 0 benchmarks
+     Running tests\game_route_across_processes.rs (target\debug\deps\game_route_across_processes-fe0ef579c19d82a1.exe)
+a_role_shell_reaches_the_published_game_endpoint_across_processes: test
+a_role_started_scene_republishes_the_game_route_for_later_processes: test
+a_role_started_scene_that_never_becomes_ready_is_refused_and_leaves_no_route: test
+a_role_started_scene_whose_route_cannot_be_published_fails_loudly: test
+a_route_pointing_at_a_closed_port_is_refused_explicitly: test
+a_route_whose_recorded_game_process_is_gone_is_refused_even_when_the_port_answers: test
+an_expired_route_is_refused_even_when_it_still_answers: test
+concurrent_publish_and_read_never_yields_a_torn_record: test
+registering_publishes_the_route_and_stopping_withdraws_it: test
+without_a_published_route_the_game_call_still_fails_loudly: test
+
+10 tests, 0 benchmarks
+     Running tests\godot_smoke.rs (target\debug\deps\godot_smoke-ca0899427b15ce87.exe)
+e0_initialize_workspace: test
+e1_single_iteration_smoke: test
+e2_project_boots: test
+e3_behaviour_is_evidenced: test
+e4_verified_claims_are_reproducible: test
+e5_qa_did_not_modify_the_artifact: test
+e6_report_is_honest: test
+
+7 tests, 0 benchmarks
+     Running tests\harness_cap_wiring.rs (target\debug\deps\harness_cap_wiring-6b0897594ee2a942.exe)
+the_harness_itself_bounds_what_the_next_request_carries: test
+
+1 test, 0 benchmarks
+     Running tests\interaction_contract.rs (target\debug\deps\interaction_contract-50321d194f21d09b.exe)
+the_developer_definition_of_done_requires_the_two_missing_behaviours: test
+the_godot_dev_skill_carries_an_executable_recipe_for_both_behaviours: test
+the_godot_dev_skill_retracts_the_impassable_level_claim: test
+the_planner_acceptance_gate_must_cover_the_interaction_behaviours: test
+the_superseded_token_is_the_old_name_and_not_a_copy_of_the_new_one: test
+the_tester_is_told_which_battery_steps_prove_the_two_behaviours: test
+
+6 tests, 0 benchmarks
+     Running tests\launchable_gate.rs (target\debug\deps\launchable_gate-02d77508fcc543d7.exe)
+a_broken_scene_triggers_exactly_one_targeted_repair: test
+a_child_without_a_parent_attribute_is_rejected: test
+a_launchable_project_never_invokes_a_repair: test
+a_parent_path_that_resolves_to_nothing_is_rejected: test
+a_real_editor_error_still_closes_the_gate: test
+a_reproducible_parse_error_still_closes_the_gate: test
+a_scene_without_a_root_node_is_rejected_with_an_executable_hint: test
+a_stale_editor_log_line_does_not_close_the_gate: test
+a_successful_repair_freezes_with_the_gate_open: test
+a_well_formed_scene_passes_the_structure_check: test
+an_engine_info_banner_does_not_close_the_gate: test
+an_error_carrying_the_mcp_prefix_still_closes_the_gate: test
+an_unknown_mcp_prefixed_line_still_closes_the_gate: test
+the_run_meta_keeps_the_game_endpoint_the_battery_registered: test
+
+14 tests, 0 benchmarks
+     Running tests\loopback_accept_blocking.rs (target\debug\deps\loopback_accept_blocking-ba9ec094c5ff225b.exe)
+a_delayed_request_is_still_answered: test
+
+1 test, 0 benchmarks
+     Running tests\mcp_desync.rs (target\debug\deps\mcp_desync-03ccafa669c90276.exe)
+a_battery_step_never_reports_a_mis_correlated_payload_as_success: test
+a_correct_server_needs_zero_probes: test
+a_desynchronized_session_is_reported_in_result_json_warnings: test
+a_healthy_session_records_no_desync_warning: test
+a_lagging_server_is_re_correlated: test
+a_mis_correlated_payload_of_another_shape_is_never_used: test
+a_persistently_desynced_server_returns_a_typed_error: test
+every_battery_raw_payload_records_the_jsonrpc_correlation: test
+the_monitor_reply_helper_covers_both_actions: test
+
+9 tests, 0 benchmarks
+     Running tests\mcp_reliability.rs (target\debug\deps\mcp_reliability-361eb4fe505efc48.exe)
+args_file_resolution_is_absolute_and_diagnosable: test
+readiness_poll_succeeds_after_three_failures: test
+readiness_timeout_is_recorded_verbatim: test
+retries_are_bounded_and_preserve_the_real_error: test
+retries_are_class_aware_business_errors_are_never_retried: test
+the_documented_intervals_are_not_negotiable: test
+the_retry_classifier_is_the_single_decider: test
+
+7 tests, 0 benchmarks
+     Running tests\mini_wire_model.rs (target\debug\deps\mini_wire_model-715782fa86b69609.exe)
+wire_model_id_is_exact_and_the_secret_only_travels_in_the_environment: test
+
+1 test, 0 benchmarks
+     Running tests\model_identity_config.rs (target\debug\deps\model_identity_config-4a02a69fc9ee868d.exe)
+harness_refuses_a_model_without_a_declared_wire_name: test
+identity_assertion_accepts_a_generic_openai_compatible_identity: test
+identity_assertion_rejects_a_blank_model_name: test
+identity_assertion_rejects_a_blank_wire_model_name: test
+identity_assertion_rejects_a_non_empty_config_api_key: test
+shipped_config_declares_a_wire_model_name_and_no_api_key: test
+violation_message_carries_config_values_and_no_model_name: test
+
+7 tests, 0 benchmarks
+     Running tests\prd_coverage.rs (target\debug\deps\prd_coverage-c4a17c96a02f66a3.exe)
+result_json_publishes_the_prd_coverage: test
+the_prd_total_is_seventeen_when_functional_ids_are_present: test
+the_run_summary_line_states_the_prd_coverage: test
+
+3 tests, 0 benchmarks
+     Running tests\prompt_shell_contract.rs (target\debug\deps\prompt_shell_contract-56f93b58be5f8c77.exe)
+every_role_prompt_names_the_legal_completion_protocol: test
+only_a_first_line_completion_protocol_ends_a_role_call: test
+the_recipe_books_first_concrete_command_runs_in_the_role_shell: test
+the_scratch_discipline_the_prompts_state_really_works: test
+the_skill_scratch_writer_runs_and_lands_under_scratch: test
+
+5 tests, 0 benchmarks
+     Running tests\push_gate.rs (target\debug\deps\push_gate-c066b906ba0a08d5.exe)
+a_corrupt_marker_source_refuses_every_push: test
+a_marked_push_succeeds: test
+a_missing_marker_source_refuses_every_push: test
+a_new_remote_branch_checks_every_commit_it_adds: test
+a_push_with_nothing_new_is_allowed: test
+an_unknown_remote_object_refuses_instead_of_skipping: test
+an_unmarked_push_is_refused_with_actionable_text: test
+commits_already_on_the_remote_are_not_rechecked: test
+deleting_a_remote_branch_is_allowed_and_carries_no_commit_check: test
+one_unmarked_commit_in_a_multi_commit_range_refuses_the_whole_push: test
+the_bypass_flag_is_a_recorded_known_limit: test
+the_gate_and_the_writer_agree_on_ledger_validity: test
+the_hook_can_be_run_by_hand_on_a_synthetic_ref_line: test
+the_install_step_is_idempotent_and_arms_the_gate: test
+the_installer_refuses_a_checkout_without_the_versioned_hooks: test
+the_ledger_records_the_report_path_and_the_pass_verdict: test
+the_marker_refuses_a_missing_report_and_a_non_pass_verdict: test
+the_shell_artifacts_keep_lf_line_endings_and_a_shebang: test
+
+18 tests, 0 benchmarks
+     Running tests\record_symmetry.rs (target\debug\deps\record_symmetry-025d33b325bdf14e.exe)
+a_developer_wrap_up_retry_never_overwrites_the_first_attempt: test
+every_attempt_has_matching_trajectory_and_log: test
+status_reads_both_usage_shapes: test
+the_usage_summary_is_always_the_sum_of_the_attempts: test
+usage_json_details_every_attempt_and_keeps_the_summary: test
+
+5 tests, 0 benchmarks
+     Running tests\result_semantics.rs (target\debug\deps\result_semantics-ab9bfe155d55ff08.exe)
+a_closed_gate_exits_six_and_writes_the_code: test
+a_gate_that_did_not_apply_is_not_open: test
+a_gate_that_did_not_apply_never_exits_six: test
+a_round_over_a_dead_project_reports_a_closed_gate: test
+an_open_gate_exits_zero_and_writes_the_code: test
+finalize_run_records_the_code_in_meta_json: test
+status_does_not_report_an_unevaluated_gate_as_ok: test
+status_shows_the_harness_and_gate_columns: test
+the_exit_code_helper_matches_the_documented_table: test
+
+9 tests, 0 benchmarks
+     Running tests\role_paths.rs (target\debug\deps\role_paths-b9ac64ec41e2de3e.exe)
+a_developer_style_relative_submit_finds_the_artifact: test
+a_missing_relative_source_lists_every_candidate: test
+a_relative_args_file_is_resolved_against_the_artifact_dir: test
+a_relative_artifact_dir_is_refused_instead_of_nesting: test
+a_relative_source_resolves_to_the_first_existing_base: test
+a_relative_submission_to_another_name_is_refused: test
+a_relative_submit_falls_back_to_the_view_dir_then_reports_all_candidates: test
+a_relative_submit_lands_on_the_canonical_path_from_any_cwd: test
+a_role_writing_outside_the_project_is_reported: test
+every_path_env_var_handed_to_a_role_is_absolute: test
+role_env_absolutizes_a_relative_view: test
+
+11 tests, 0 benchmarks
+     Running tests\role_shell_contract.rs (target\debug\deps\role_shell_contract-e5b4cf73a2f39029.exe)
+no_delivered_document_carries_an_unrendered_shell_placeholder: test
+no_delivered_document_carries_an_unresolvable_command_placeholder: test
+the_command_the_prompt_hands_the_developer_runs_in_the_real_shell: test
+the_generated_tools_index_uses_the_target_shell_syntax: test
+the_other_platforms_syntax_fails_in_the_roles_real_shell: test
+the_platform_correct_form_succeeds_where_the_foreign_one_is_offered: test
+the_unresolved_placeholder_detector_sees_both_brace_forms: test
+
+7 tests, 0 benchmarks
+     Running tests\round_artifacts.rs (target\debug\deps\round_artifacts-26af100749814a86.exe)
+the_entry_point_and_the_round_are_wired_to_the_recorder: test
+the_process_entry_point_records_the_artifact_from_the_exported_run_directory: test
+the_process_exit_code_artifact_has_the_same_byte_shape_as_the_round_artifact: test
+the_three_exit_code_readings_are_the_same_number: test
+
+4 tests, 0 benchmarks
+     Running tests\round_artifacts_sidecar.rs (target\debug\deps\round_artifacts_sidecar-cb7ff5276bd939f1.exe)
+the_sidecar_carries_no_environment_value_and_no_user_name: test
+the_sidecar_is_generated_and_the_original_is_untouched: test
+
+2 tests, 0 benchmarks
+     Running tests\round_game_start.rs (target\debug\deps\round_game_start-0d041a9c329ee5f4.exe)
+a_publish_failure_is_reported_instead_of_swallowed: test
+a_ready_game_is_published_with_the_record_the_start_confirmed: test
+a_start_that_never_becomes_ready_publishes_no_route: test
+an_unconfirmed_battery_play_never_exposes_a_route: test
+the_round_readiness_poll_never_exposes_the_route_while_it_runs: test
+the_round_readiness_poll_requires_a_scene_tree_not_merely_an_answer: test
+
+6 tests, 0 benchmarks
+     Running tests\round_game_window.rs (target\debug\deps\round_game_window-611c792b1da156e6.exe)
+a_failed_round_game_start_leaves_no_route_and_the_round_proceeds: test
+a_failing_round_still_withdraws_the_published_route: test
+a_route_left_by_another_round_is_not_inherited: test
+the_published_route_covers_the_developer_and_tester_windows: test
+
+4 tests, 0 benchmarks
+     Running tests\runtime_semantics.rs (target\debug\deps\runtime_semantics-8afed69c1d73eaca.exe)
+developer_is_only_writer: test
+every_result_json_carries_the_scope_warning: test
+no_private_information_in_views: test
+no_third_state_channel: test
+planner_cannot_write_artifact: test
+private_excludes_stay_out_of_views_but_inside_the_identity: test
+records_all_artifacts: test
+three_independent_invocations: test
+
+8 tests, 0 benchmarks
+     Running tests\schema_gate.rs (target\debug\deps\schema_gate-bcf1c4dac2afacdb.exe)
+a_present_but_invalid_artifact_still_gets_one_shape_retry: test
+evidence_retry_exhausted: test
+missing_artifact_counts_as_attempt: test
+plan_retry_then_success: test
+the_first_tester_attempt_is_told_the_evidence_record_shape: test
+the_tester_prompt_documents_the_evidence_record_shape: test
+
+6 tests, 0 benchmarks
+     Running tests\secret_hygiene.rs (target\debug\deps\secret_hygiene-352bdfa124dc139e.exe)
+a_full_offline_run_never_writes_the_environment_secret: test
+meta_json_is_redacted_at_the_sink: test
+
+2 tests, 0 benchmarks
+     Running tests\secret_isolation.rs (target\debug\deps\secret_isolation-202ca6b8a6eaabdb.exe)
+a_leaked_secret_is_erased_and_counted: test
+every_role_environment_blocks_the_secret_variables: test
+meta_and_trajectories_are_free_of_the_secret: test
+
+3 tests, 0 benchmarks
+     Running tests\snapshot_rollback.rs (target\debug\deps\snapshot_rollback-2ad99519327bf98a.exe)
+rollback_detects_corruption: test
+rollback_restores_exact_tree: test
+snapshot_is_content_addressed: test
+
+3 tests, 0 benchmarks
+     Running tests\start_state.rs (target\debug\deps\start_state-e485ee5ac3405641.exe)
+a0_snapshot_exists_before_the_first_role_call: test
+fresh_workspace_does_not_follow_symlinks_out_of_the_workspace: test
+fresh_workspace_rebuilds_exactly_the_initialize_product: test
+fresh_workspace_refuses_to_guess: test
+meta_reports_the_fresh_start_state: test
+reset_without_an_a0_snapshot_is_a_typed_error: test
+start_state_modes_serialize_as_documented: test
+
+7 tests, 0 benchmarks
+     Running tests\tool_discovery.rs (target\debug\deps\tool_discovery-dd1e78a941999711.exe)
+a_project_only_command_is_not_a_harness_read: test
+a_prompt_that_lists_forbidden_paths_is_not_a_source_read: test
+a_recursive_hoh_search_is_recorded_as_a_warning: test
+enumerating_the_harness_root_is_recorded_as_a_warning: test
+every_role_prompt_forbids_the_harness_sources: test
+only_a_tool_command_that_reads_a_source_is_recorded: test
+project_map_is_injected_into_the_developer_view: test
+reading_harness_sources_is_recorded_as_a_warning: test
+the_godot_dev_skeleton_is_a_valid_scene: test
+the_run_directory_caches_the_generated_tool_index: test
+the_submitting_roles_are_told_one_submit_is_enough: test
+tools_markdown_carries_parameter_names_and_types: test
+tools_markdown_never_leaks_a_tool_the_role_may_not_call: test
+
+13 tests, 0 benchmarks
+     Running tests\tool_output_ceiling.rs (target\debug\deps\tool_output_ceiling-7443e08455ec8442.exe)
+a_result_under_the_ceiling_is_untouched: test
+an_oversized_tool_result_is_truncated_and_annotated: test
+the_capped_environment_bounds_what_a_later_request_would_carry: test
+the_ceiling_holds_for_the_real_local_environment: test
+
+4 tests, 0 benchmarks
+     Running tests\tool_parameter_contract.rs (target\debug\deps\tool_parameter_contract-5b5814a48349cc70.exe)
+the_captured_contract_declares_path_for_the_property_tool: test
+the_correct_parameter_name_succeeds: test
+the_hint_turns_a_terse_refusal_into_an_actionable_one: test
+the_wrong_parameter_name_is_refused_with_the_accepted_names: test
+
+4 tests, 0 benchmarks
+     Running tests\tool_vocabulary.rs (target\debug\deps\tool_vocabulary-7d5bc6eb321556bb.exe)
+every_quoted_tool_name_exists_in_the_contract: test
+the_fixture_is_the_four_channel_contract: test
+the_guard_recognises_both_vocabularies: test
+the_retired_vocabulary_is_gone: test
+
+4 tests, 0 benchmarks
+     Running tests\tools_policy.rs (target\debug\deps\tools_policy-aac02b7f20b9575a.exe)
+default_deny_unknown: test
+denial_hints_distinguish_mutation_from_allowlist: test
+developer_allowed_all: test
+planner_denied_all_mcp: test
+planner_is_denied_every_tool_of_the_contract: test
+qa_is_denied_every_mutating_tool_of_the_contract: test
+submit_developer_is_refused: test
+submit_rejects_an_escaping_evidence_path: test
+submit_validates_and_writes_the_canonical_artifact: test
+tester_denied_mutating_tools: test
+the_role_lists_only_name_contract_tools: test
+tools_call_denied_exit_code_two: test
+
+12 tests, 0 benchmarks
+     Running tests\usage_extraction.rs (target\debug\deps\usage_extraction-9dba1e6f7efc9bb8.exe)
+merges_partial: test
+missing_trajectory_is_an_error: test
+sums_usage_across_messages: test
+unknown_when_absent: test
+
+4 tests, 0 benchmarks
+     Running tests\wrap_up_budget.rs (target\debug\deps\wrap_up_budget-48d6de538feb9569.exe)
+a_missing_artifact_triggers_the_wrap_up_retry_with_a_reason: test
+a_normal_finish_without_an_artifact_keeps_its_existing_retry: test
+a_valid_artifact_does_not_trigger_the_wrap_up_retry: test
+config_carries_the_new_budget_and_readiness_keys: test
+consecutive_limits_failures_stop_after_one_retry: test
+every_role_prompt_renders_the_budget_and_the_discipline: test
+limits_detection_is_case_insensitive_and_narrow: test
+limits_exceeded_then_one_wrap_up_retry_succeeds: test
+tester_prompt_requires_the_early_skeleton: test
+the_godot_developer_artifact_validity_needs_a_real_entry_script: test
+
+10 tests, 0 benchmarks
+   Doc-tests hof_rs
+0 tests, 0 benchmarks
+list_exit=0
