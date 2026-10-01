@@ -10893,3 +10893,21 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 - **推送记录**：#1（本条）：推送 `348c668/18e7f95/77cab70 + 本条`，依据 = **`TASK-DR74-ACCEPTANCE.md`（pass）**。
 - 回滚点：五条真机基线不得覆盖；DR-74 的提交可各自 revert。
 
+## D286 — **更正 D285 的推送措辞**：闸门已满足但**推送未成功**（本机当前连不上 GitHub）；诊断与后续
+
+- 日期：2026-10-01。**更正**：D285 写"本次**推送达闸**"，易被读成"已推送"。**实际**：`git push origin master` **失败三次**，
+  **未推送**（`unpushed = 4`：`348c668 / 18e7f95 / 77cab70 / 0392d2e`）。
+- **诊断（自修已做）**：无 `http_proxy/https_proxy/all_proxy/no_proxy`；
+  `git config http.*` = `sslbackend openssl`、`sslcainfo C:/Program Files/Git/mingw64/etc/ssl/certs/ca-bundle.crt`、
+  `sslbackend schannel`（重复项，后者生效）、`sslverify false`（**既有设置，非本批引入**）；
+  重试三次的错误依次为 `Recv failure: Connection was reset`（×2）、`Failed to connect to github.com port 443 after 21104 ms`；
+  `curl -sS https://github.com/` ⇒ **`http=000`、20s 超时**。
+  ⇒ **结论：本机当前到 GitHub 的 443 不通**（早先 20:32 的推送成功 ⇒ 属**连通性变化**，非 git/证书配置问题）。
+- **影响与处置**：**不阻塞任何后续批次**（DR-75 推送闸门、DR-73 的 E3 产品缺陷、真机轮均只需本地能力）。
+  **闸门状态**：DR-74 验收 `pass` ⇒ **该推送仍属"已授权"**，稍后重试即可；**不降级任何设计、不绕过任何约束**。
+  若 SSH 通道可用，下次可试 `git@github.com` 作为替代传输（远端 URL 暂不改动）。
+- **连带事实**：网络不通 ⇒ **无法再查询远端侧**（这与 DR-74 验收者自述的离线限定一致：推送后再被远端改写不可检出）。
+  就 D283/D284 的越闸推送而言，**本地证据链已完整**，不依赖远端复查。
+- **需要用户（可选）**：若网络需代理/特定网络才能访问 GitHub，请告知；否则我会在后续轮次继续重试。
+- 回滚点：本条仅更正措辞与记录诊断，不改动代码、证据与远端。
+
