@@ -116,6 +116,14 @@ pub fn merge_usage(accumulator: &mut Usage, other: &Usage) {
 }
 
 /// Sum the usage of every attempt trajectory matching `traj/<role>.attempt*.json`.
+///
+/// DR-79 ②: the DR-72 ② redacted sidecar (`<role>.attempt1.redacted.json`) lives
+/// in the same directory and **matches the old name shape**, so its identical
+/// usage block was merged a second time: `smoke-t12` and `smoke-t13` both
+/// reported the Planner's round-level usage as exactly 2× its attempt.  That is
+/// a file-selection defect, not two model calls, so a sidecar is excluded here
+/// (see [`crate::runtime::secrets::REDACTED_COPY_SUFFIX`]).  Every genuine
+/// attempt — `attempt1`, `attempt2`, … — is still merged.
 pub fn usage_from_attempts(traj_dir: &Path, role: Role, iteration: u32) -> anyhow::Result<Usage> {
     let mut merged = Usage {
         role: role.as_str().to_string(),
@@ -127,7 +135,10 @@ pub fn usage_from_attempts(traj_dir: &Path, role: Role, iteration: u32) -> anyho
         for entry in std::fs::read_dir(traj_dir)? {
             let entry = entry?;
             let name = entry.file_name().to_string_lossy().into_owned();
-            if name.starts_with(&format!("{}.attempt", role.as_str())) && name.ends_with(".json") {
+            if name.starts_with(&format!("{}.attempt", role.as_str()))
+                && name.ends_with(".json")
+                && !name.contains(".redacted.")
+            {
                 paths.push(entry.path());
             }
         }

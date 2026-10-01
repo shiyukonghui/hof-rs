@@ -71,6 +71,16 @@ pub const SECRET_ENV_VARS: &[&str] = &[
 /// in a `PATH` tail.  Both spellings are covered, because `cmd` prints `Path`
 /// while a POSIX shell prints `PATH`; nothing else uses either spelling as an
 /// assignment in a project file.
+///
+/// DR-79 ④: `DSH_TERM_CMD` is the **harness's own command line**.  `smoke-t13`'s
+/// role shells inherited it, `env | grep -i hoh` matched it (it names the harness
+/// and the staging directory) and the line was frozen into
+/// `planner.attempt1.json`, `developer.attempt1.json` and their redacted
+/// sidecars, naming `config/model.secret.env` along the way.  It carries no
+/// credential, but it records where the credential lives, which is the same
+/// disclosure class as the `HOH_*` family above and deliberately read by the
+/// DR-69 rule.  Its value is a whole command line, so it is terminated by
+/// [`COMMAND_LINE_VARS`] rather than by the generic path rule.
 pub const HARNESS_ENV_VARS: &[&str] = &[
     "HOH_ARTIFACT_DIR",
     "HOH_GAME_ROUTE",
@@ -83,6 +93,7 @@ pub const HARNESS_ENV_VARS: &[&str] = &[
     "HOH_TOOLS_ENDPOINT",
     "HOH_VIEW_DIR",
     "HOH_SECRET_PATH",
+    "DSH_TERM_CMD",
     "PATH",
     "Path",
 ];
@@ -168,6 +179,23 @@ impl RedactionReport {
 /// value is the sensitive thing") and cannot miss an element.  `Path` is the
 /// spelling `cmd` prints.
 pub const WHOLE_VALUE_VARS: &[&str] = &["PATH", "Path"];
+
+/// DR-79 ④: variables whose value is an entire **command line**.
+///
+/// A command line is neither a path nor a quoted value.  It carries quoted
+/// arguments (written `\"` in a JSON dump), `;`/`&&` separators and `>>`
+/// redirections, so the generic rule — which stops at `;` and at the first
+/// `\"` — leaves the tail of the line visible.  The DR-79 fixture is exactly
+/// that: the `model.secret.env` argument sits after both the first `;` and the
+/// first `\"`.  A command line therefore ends only at the **logical line
+/// boundary**: a physical `\n`/`\r`, the JSON `\n`/`\r` escape, or the closing
+/// quote of the containing JSON string.  Everything in between — separators,
+/// quotes, doubled backslashes — is one sensitive value.
+///
+/// Only the harness's own `DSH_TERM_CMD` is in this set; `PATH` keeps its own
+/// (whole-value) rule, whose `;`-separated elements are still one value but
+/// whose JSON terminator is an escape.
+pub const COMMAND_LINE_VARS: &[&str] = &["DSH_TERM_CMD"];
 
 /// DR-74 ①: how many backslashes immediately precede `index`?
 ///
@@ -298,8 +326,13 @@ fn splice_assignments(text: &str) -> RedactionReport {
                 continue;
             }
             let value_start = start + needle.len();
-            let value_end =
-                assignment_value_end(text, value_start, json, WHOLE_VALUE_VARS.contains(&name));
+            let value_end = assignment_value_end(
+                text,
+                value_start,
+                json,
+                WHOLE_VALUE_VARS.contains(&name),
+                COMMAND_LINE_VARS.contains(&name),
+            );
             spans.push(RedactionSpan {
                 name: name.to_string(),
                 start,
@@ -329,6 +362,31 @@ fn splice_assignments(text: &str) -> RedactionReport {
     }
 }
 
+/// DR-79 ④: where a **command-line** value ends.
+///
+/// Only the logical line boundary ends it:
+/// * a physical `\n` or `\r` (a plain-text `set`/`env` dump prints one variable
+///   per line);
+/// * in JSON, the `\n`/`\r` **escape** the encoder writes for that physical
+///   line ending;
+/// * in JSON, an unescaped closing quote of the containing string.
+///
+/// Deliberately **not** a terminator: `;`, `&&`, `|`, `>>`, a `\"` quoted
+/// argument, or a `\\` path separator.  The DR-79 fixture puts
+/// `config/model.secret.env` after both the first `;` and the first `\"`, so
+/// every one of those had to stop being a boundary for this variable.
+fn command_line_value_ends_at(bytes: &[u8], index: usize, json: bool) -> bool {
+    match bytes[index] {
+        b'\n' | b'\r' => true,
+        b'"' if json => preceding_backslashes(bytes, index) % 2 == 0,
+        b'\\' if json => {
+            escape_starts_at(bytes, index)
+                && matches!(bytes.get(index + 1), Some(b'n') | Some(b'r'))
+        }
+        _ => false,
+    }
+}
+
 /// DR-72 ① / DR-74 ①③: where an unquoted value ends.
 ///
 /// Inside a JSON string (which is where a trajectory records an environment
@@ -339,8 +397,30 @@ fn splice_assignments(text: &str) -> RedactionReport {
 ///
 /// `whole_value` marks a variable whose entire value is sensitive
 /// ([`WHOLE_VALUE_VARS`]): its `;`-separated elements are all inside the span.
-fn assignment_value_end(text: &str, value_start: usize, json: bool, whole_value: bool) -> usize {
+///
+/// `command_line` marks a variable whose value is a whole command line
+/// ([`COMMAND_LINE_VARS`], DR-79 ④).  That value is bounded by nothing but the
+/// logical line end, so it is computed before — and independently of — the
+/// quoted-value and generic rules below.
+fn assignment_value_end(
+    text: &str,
+    value_start: usize,
+    json: bool,
+    whole_value: bool,
+    command_line: bool,
+) -> usize {
     let bytes = text.as_bytes();
+    if command_line {
+        let mut index = value_start;
+        while index < bytes.len() {
+            if command_line_value_ends_at(bytes, index, json) {
+                // The terminator is not consumed, exactly as everywhere else.
+                return index;
+            }
+            index += 1;
+        }
+        return text.len();
+    }
     if bytes.get(value_start) == Some(&b'"') {
         // The DR-69 `NAME="$(cat …)"` shape: the value ends at the closing
         // quote, which is *not* consumed — that keeps any bytes the two rules
@@ -1254,5 +1334,84 @@ mod tests {
             redacted_copy_path(Path::new("a/b/notes")),
             PathBuf::from("a/b/notes.redacted")
         );
+    }
+
+    /// DR-79 ④: the harness's own command line is disclosure even though it is
+    /// not a credential.
+    ///
+    /// `smoke-t13` inherited `DSH_TERM_CMD` into every role shell; a role ran
+    /// `env | grep -i hoh`, the whole command line matched (it names the harness
+    /// and the staging directory), and it was frozen into
+    /// `planner.attempt1.json` / `developer.attempt1.json` and their redacted
+    /// sidecars — naming `config/model.secret.env` on the way.  The key's value
+    /// never leaked; where it lives did.
+    #[test]
+    fn a_harness_command_line_does_not_leak_the_secret_file_it_names() {
+        let line = "DSH_TERM_CMD=cd /f/moonbit-hof-rs && nohup python \
+                    \"F:\\staging\\run_cmd.py\" \"F:\\moonbit-hof-rs\" \
+                    config/model.secret.env target/release/hoh.exe run --iterations 1\n\
+                    next line stays\n";
+        let report = redact_secret_assignments_traced(line);
+        assert!(
+            report.changed(),
+            "the harness command line must be redacted: {report:?}"
+        );
+        assert!(report.refused.is_none(), "{:?}", report.refused);
+        assert!(
+            !report.redacted.contains("model.secret.env"),
+            "the secret file's name must not survive: {}",
+            report.redacted
+        );
+        assert!(
+            !report.redacted.contains("run_cmd.py") && !report.redacted.contains("hoh.exe"),
+            "the whole command line is one value: {}",
+            report.redacted
+        );
+        assert_eq!(
+            report.redacted,
+            format!("DSH_TERM_CMD={REDACTED}\nnext line stays\n"),
+            "the physical newline bounds the command line and the next line survives"
+        );
+        assert_eq!(bytes_changed_outside_spans(&report), Some(0));
+    }
+
+    /// DR-79 ④: the shape that actually reached the artifacts — a JSON string
+    /// whose command line carries escaped quotes and doubled backslashes and ends
+    /// at the `\n` escape of the dump line.  The generic escape rule reads the
+    /// `\"` of a quoted argument as the end of the value, so the command-line
+    /// rule needs its own terminator; the value must still be a **pure splice**
+    /// and the surrounding JSON must still parse.
+    #[test]
+    fn the_real_json_command_line_shape_redacts_the_whole_value() {
+        let original = serde_json::to_string(&serde_json::json!({
+            "content": "<output>\n\
+                        DSH_TERM_CMD=cd /f/moonbit-hof-rs && nohup python \"F:\\staging\\run_cmd.py\" \"F:\\moonbit-hof-rs\" config/model.secret.env target/release/hoh.exe run --iterations 1\n\
+                        </output>"
+        }))
+        .unwrap();
+        serde_json::from_str::<serde_json::Value>(&original).expect("the fixture is valid JSON");
+        let report = redact_secret_assignments_traced(&original);
+        assert!(report.changed(), "{report:?}");
+        assert!(
+            report.refused.is_none(),
+            "the bounded value must not be refused: {:?}",
+            report.refused
+        );
+        let value: serde_json::Value =
+            serde_json::from_str(&report.redacted).expect("the splice stays valid JSON");
+        let dump = value["content"].as_str().expect("content");
+        assert!(
+            dump.starts_with(&format!("<output>\nDSH_TERM_CMD={REDACTED}")),
+            "the assignment must be replaced: {dump:?}"
+        );
+        assert!(
+            !dump.contains("model.secret.env") && !dump.contains("run_cmd.py"),
+            "no part of the command line may survive: {dump:?}"
+        );
+        assert!(
+            dump.ends_with("\n</output>"),
+            "everything after the logical line must survive: {dump:?}"
+        );
+        assert_eq!(bytes_changed_outside_spans(&report), Some(0));
     }
 }

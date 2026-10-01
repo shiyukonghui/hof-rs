@@ -1366,6 +1366,14 @@ async fn run_inner(
             repair.retry_context = Some(context);
             repair.trajectory_path = attempt_trajectory(&traj_dir, Role::Developer, repair_attempt);
             let repair_outcome = invoke_once(&*orchestrator.harness, &repair).await?;
+            // DR-79 ③: the repair is a **new** attempt against a workspace the
+            // model may have changed, so "is the project usable?" is asked again
+            // instead of being answered with `workspace.is_dir()`.  The directory
+            // always exists, so the old expression was unconditionally true: a
+            // repair that broke `scenes/main.tscn` was recorded exactly like one
+            // that fixed it (`smoke-t13` attempt 2 carried `artifact_valid=true`
+            // because of it).  This is the same adapter check attempt 1 uses.
+            let repair_artifact_valid = orchestrator.adapter.developer_artifact_valid(&workspace);
             developer_attempts.push(AttemptOutcome {
                 role: Role::Developer,
                 iteration,
@@ -1375,7 +1383,7 @@ async fn run_inner(
                 usage: repair_outcome.usage.clone(),
                 trajectory_path: repair_outcome.trajectory_path.clone(),
                 artifact_path: workspace.clone(),
-                artifact_valid: workspace.is_dir(),
+                artifact_valid: repair_artifact_valid,
                 exit_was_limits: is_limits_exceeded(&repair_outcome.exit_status),
             });
             iter_attempts.push(developer_attempts.last().cloned().expect("just pushed"));
@@ -1826,6 +1834,26 @@ async fn run_inner(
     // DR-19: run-level sweep for anything written outside the per-iteration
     // windows (warnings.log, meta.json, version snapshots).
     let mut sweep_warnings: Vec<String> = Vec::new();
+    // DR-79 ①: "report-only" was the whole of DR-25, and `smoke-t13` shows the
+    // cost — three untracked `.tmp_*.json` files left in the repository root
+    // with nothing to remove them.  The round now removes **the temporaries it
+    // watched itself create** (the watcher's union across the round, so a file
+    // that pre-dated the round is never touched; the eligibility rule is
+    // `hygiene::is_root_temporary`, one component of a temporary name shape)
+    // and records the removal below.  The write stays in
+    // `out_of_tree_writes`: the fact is evidence, the litter is not.
+    let cleaned = crate::runtime::hygiene::clean_round_temporaries(
+        &out_of_tree_root,
+        &out_of_tree_watch.observed(),
+    );
+    if !cleaned.is_empty() {
+        sweep_warnings.push(format!(
+            "out_of_tree_cleanup: removed {} round-temporary file(s) from {}: {}",
+            cleaned.len(),
+            out_of_tree_root.display(),
+            cleaned.join(", ")
+        ));
+    }
     redaction_sweep(&run_dir, &secrets, &mut sweep_warnings)?;
     for warning in &sweep_warnings {
         append_warning(&run_dir, warning)?;

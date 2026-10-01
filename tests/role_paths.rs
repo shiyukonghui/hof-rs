@@ -486,3 +486,65 @@ async fn a_role_writing_outside_the_project_is_reported() {
     // Report-only: the runtime never deletes anything.
     assert!(stray.is_file());
 }
+
+/// DR-79 ①: a **root-level temporary** the Developer left behind is the one
+/// bounded exception to "the runtime only reports".  The round removes the
+/// temporaries it watched appear, records the removal in `warnings.log`, and
+/// still lists the write in `out_of_tree_writes` — so the record keeps the
+/// fact and the repository root stops accumulating litter.  `smoke-t13` left
+/// `.tmp_coin.json` / `.tmp_goal.json` / `.tmp_hud.json` (108/68/46 B) in
+/// `F:\moonbit-hof-rs` with nothing to clean them.
+#[tokio::test]
+async fn a_round_removes_its_own_root_temporary_and_records_it() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let mut cfg = test_config(root, 1);
+    cfg.runtime.spec = root.join("spec.md");
+    cfg.runtime.out_of_tree_root = Some(root.to_path_buf());
+    let spec = write_spec(root);
+    let stray = root.join(".tmp_probe.json");
+    let script = vec![
+        FakeStep::new(Role::Planner).writing(".hoh/plan.md", OK_PLAN),
+        FakeStep::new(Role::Developer)
+            .writing("project.godot", "config_version=5\n")
+            .outside(stray.clone(), "{}\n"),
+        FakeStep::new(Role::Tester)
+            .writing(".hoh/evidence/move.json", "{}\n")
+            .writing(".hoh/evidence.json", &ok_evidence(1, "")),
+    ];
+    let harness = FakeHarness::new(script);
+    let orchestrator = hof_rs::runtime::run_loop::Orchestrator {
+        harness: Box::new(harness),
+        adapter: Box::new(FakeAdapter::new()),
+        tools: Arc::new(FakeToolChannel::new()),
+        cfg,
+        ablation: Ablation::default(),
+        force_init: true,
+        start_state: hof_rs::runtime::start_state::StartState::as_is(),
+    };
+    hof_rs::runtime::run_loop::run(&orchestrator, &spec, "run-1")
+        .await
+        .expect("the stray write is a report, not a failure");
+
+    assert!(
+        !stray.exists(),
+        "the round's own root temporary must be cleaned at close: {}",
+        stray.display()
+    );
+    let result: Value =
+        serde_json::from_str(&read(&root.join("runs/run-1/iter-1/result.json"))).unwrap();
+    let writes = result["out_of_tree_writes"].as_array().expect("list");
+    assert!(
+        writes.iter().any(|path| path == ".tmp_probe.json"),
+        "the removal must not erase the write from the record: {writes:?}"
+    );
+    let warnings = read(&root.join("runs/run-1/warnings.log"));
+    assert!(
+        warnings.contains("out_of_tree_cleanup"),
+        "the cleanup must leave a trace in the record: {warnings}"
+    );
+    assert!(
+        warnings.contains(".tmp_probe.json"),
+        "the trace must name what was removed: {warnings}"
+    );
+}

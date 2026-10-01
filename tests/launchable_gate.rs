@@ -41,6 +41,15 @@ const SCENE_WITH_ROOT: &str = r#"[gd_scene load_steps=2 format=3]
 [node name="Player" type="CharacterBody2D" parent="."]
 "#;
 
+/// DR-79 ③: the same scene **plus** a non-empty entry script, which is the extra
+/// condition `GodotAdapter::developer_artifact_valid` puts on "a usable
+/// artifact" (`wrap_up_budget.rs`'s `VALID_DEV_SCENE`, kept local here because
+/// that file's constant is private to it).
+const SCENE_WITH_ENTRY_SCRIPT: &str = "[gd_scene load_steps=2 format=3]\n\n\
+[ext_resource type=\"Script\" path=\"res://scripts/player.gd\" id=\"1\"]\n\n\
+[node name=\"Main\" type=\"Node2D\"]\n\
+script = ExtResource(\"1\")\n";
+
 // ---------------------------------------------------------------------------
 // A scripted channel that answers from the scene really present on disk
 // ---------------------------------------------------------------------------
@@ -508,6 +517,80 @@ async fn a_successful_repair_freezes_with_the_gate_open() {
     assert_eq!(passes[1]["launchable"], json!(true));
     // The frozen A_t contains the repaired scene.
     assert!(validate_scene_structure(&read(&run.workspace.join("scenes/main.tscn"))).ok);
+}
+
+// ---------------------------------------------------------------------------
+// ③b the repair attempt's `artifact_valid` is measured again, not assumed
+// ---------------------------------------------------------------------------
+
+/// The developer attempt whose number is `attempt`, as the result recorded it.
+fn developer_attempt_artifact_valid(run: &GateRun, attempt: u32) -> Option<bool> {
+    run.result["attempts"]
+        .as_array()?
+        .iter()
+        .find(|entry| entry["role"] == json!("developer") && entry["attempt"] == json!(attempt))
+        .and_then(|entry| entry["artifact_valid"].as_bool())
+}
+
+/// DR-79 ③: the targeted repair's `artifact_valid` must be the adapter's real
+/// answer for the repaired workspace.
+///
+/// The repair block used to record `artifact_valid: workspace.is_dir()` — an
+/// always-true check — so `smoke-t13`'s attempt 2 reported `true` whatever the
+/// repair had done to the project, and a repair that *broke* the scene would
+/// have looked exactly like one that fixed it.  Both directions are pinned here,
+/// so neither "always true" nor "always false" can pass.
+#[tokio::test]
+async fn the_repair_attempt_artifact_validity_is_measured_not_assumed() {
+    // (a) the repair leaves the scene broken: the flag must be false.
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let broken = run_gate(
+        root,
+        vec![
+            plan_step(),
+            developer_writes(SCENE_WITHOUT_ROOT),
+            developer_writes(SCENE_WITHOUT_ROOT), // the repair changes nothing usable
+            tester_step(),
+        ],
+    )
+    .await;
+    assert_eq!(broken.result["repair_retry_used"], json!(true));
+    assert_eq!(
+        developer_attempt_artifact_valid(&broken, 1),
+        Some(false),
+        "attempt 1 left the scene invalid"
+    );
+    assert_eq!(
+        developer_attempt_artifact_valid(&broken, 2),
+        Some(false),
+        "a repair that leaves the scene invalid must not be recorded as a valid artifact: {:?}",
+        broken.result["attempts"]
+    );
+
+    // (b) the counter-direction: the same field is true when the repair really
+    // produced a usable scene, so the fix cannot pass by hardcoding `false`.
+    // `SCENE_WITH_ENTRY_SCRIPT` is launchable *and* references a non-empty entry
+    // script, which is what `developer_artifact_valid` asks for.
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let repaired = run_gate(
+        root,
+        vec![
+            plan_step(),
+            developer_writes(SCENE_WITHOUT_ROOT),
+            developer_writes_scene_and_player(SCENE_WITH_ENTRY_SCRIPT, "extends Node2D\n"),
+            tester_step(),
+        ],
+    )
+    .await;
+    assert_eq!(repaired.result["repair_retry_used"], json!(true));
+    assert_eq!(
+        developer_attempt_artifact_valid(&repaired, 2),
+        Some(true),
+        "a repair that produced a usable scene must be recorded as valid: {:?}",
+        repaired.result["attempts"]
+    );
 }
 
 // ---------------------------------------------------------------------------

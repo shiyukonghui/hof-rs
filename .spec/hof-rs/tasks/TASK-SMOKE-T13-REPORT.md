@@ -1505,3 +1505,321 @@ SELF-CHECK: fences=64 json_block_count=1 FENCE_AWARE_JSON_LEGAL=PASS BYTE_IDENTI
 | `runs/smoke-t13/iter-1/logs/developer.attempt2.log` | 595 | `c27d299a764c4735` |
 
 索引内文件总数 = **59**；表内列出但**不存在**的路径 = **0**（[]）
+
+---
+
+# 附：DR-79 勘误（**追加式**，2026-10-02）
+
+> **规则**（`DECISIONS.md` **D289** 固化的"验收报告 DOI 式更正"纪律）：对历史报告的更正**只能追加**。
+> 本节**不改原文一字、不改上文机器可读块（741–1408 行）、不改任何证据字符串**；每条先**逐字引用**被更正的原句并标注
+> `superseded`（被取代）/ `incorrect`（明确为错），再给**正确读数**、**证据文件**与**复现命令**。
+> **本节不重跑任何真机轮、未起引擎、未联网**；`runs/**` **零写入**。触发：`TASK-SMOKE-T13-ACCEPTANCE.md`
+> （`verdict=fail`，缺陷 `T13A-1..9`）与本批任务书 `TASK-DR79.md`。
+> 口径：本节数字全部来自我对 `runs/smoke-t13/**` 原始件的**只读复算**（脚本在仓外
+> `C:\Users\wyl\AppData\Local\Temp\dr79\**`，仓内无新增临时物）；被验收报告只用于**定位**。
+>
+> **`D293` 不存在**：任务书要求另读 `DECISIONS.md` **D289 / D293**，但冻结的 `DECISIONS.md`（11,117 行）**最后一条是 D292**，
+> 全文无 `D293`；`DECISIONS.md` 本批**未改**（本勘误的规则依据只有 D289）。如实登记。
+
+## E-1（T13A-1，major）轮内**最初**的起游戏是**成功**的；DR-70 属于**修复期重启**
+
+### 被更正的原句（**incorrect** / **superseded**）
+
+```text
+（§0.1，第 35 行） - **新增的"运行间翻转"（诚实披露，见 §5.3）**：t13 的**轮内游戏会话启动失败**（DR-70，`warnings.log` 逐字），t12 没有；t13 的 developer 用**修复重试**（`repair_retry_used=true`）而 t12 用 **wrap-up 重试**；`artifact_valid` t13 两次都 `true`、t12 两次都 `false`。
+
+（§3.3(d) 时间线，第 449–452 行）
+| 04:17:44 | `start_round_game`：`editor_play_scene` 应答端点 `:55361`，随即 3 次轮询全部失败 ⇒ **路由被撤回**（DR-70） |
+| 04:18 | Planner 运行（角色 shell 有 `HOH_GAME_ROUTE`，但**没有路由可采纳**） |
+| 04:19–04:41 | Developer attempt1 运行（`running_game_*=0`） |
+| 04:31:28 | **Developer 的 live `running_game_get_scene_tree` → exit 5（DR-43 明确拒绝）** |
+
+（§7 机制读数表，第 610 行） | **轮内会话就绪（DR-70）** | **失败**：`:55361` 3 polls 全失败、路由撤回（`warnings.log` 逐字） |
+
+（§10 F-T13-1，第 691 行） 1. **F-T13-1（major，机制侧）**：**轮内会话启动（DR-70）在本轮失败**，导致（a）角色提示词所作的承诺（"the runtime publishes that route for the whole round"）在整个窗口内为**假**；……
+
+（§5.3 C-E，第 546 行） | C-E | 轮内会话启动失败与电池 pass 1 失败是**同一原因** | …… | **实测现象 + 因果未定** |
+```
+
+### 正确读数（本批只读复算）
+
+1. **轮内最初的 `start_round_game`（`src/runtime/run_loop.rs:832`，在 Planner 之前）成功了**，发布的是
+   **`http://127.0.0.1:53068/mcp`**。作者本人对该端点 POST 过两次且**都拿到合法回包**：
+   `tools/list`（25,908 B 回包）与 `running_game_get_scene_tree`（816 B，返回 `/root/Main/Ground|Player|Goal|HUD` 场景树）。
+   两个证据文件的**首行逐字**都是 `POST http://127.0.0.1:53068/mcp`。
+2. **Developer 在 04:44:02 读到了这条活路由**：`developer.attempt2.json` **msg 77** 的输出含
+   `[MCP] role=game configured_port=53068`（该消息 `extra.timestamp = 1790887442.749` → 04:44:02）。
+   ⇒ Planner 与 Developer attempt1 的窗口内**存在已发布且可采纳的路由**；§3.3(d) 把该窗口写成"没有路由可采纳"是错的。
+3. **`warnings.log` 的 DR-70 那条不是 04:17:44 写的**：`developer.attempt2.json` **msg 135**（04:50:46）的
+   `dir` 输出显示 `2026/10/02 04:41  1,110 warnings.log`，即 04:41 时该文件只有 1,110 B
+   （= `qa_scope` 一行 212 B + DR-70 一行 896 B + 换行）；现在磁盘上的 1,849 B 版本是**收尾时**又追加的。
+   04:41:30 / 04:41:37 电池 pass 1 两次 `connection refused`（`quarantine/.../mcp-errors.jsonl`）之后，
+   **唯一可能失败的那次起游戏是修复期重启**（`src/runtime/run_loop.rs:1348`），它应答的端点才是 **`:55361`**。
+4. 因此"逐轮翻转的不变量"必须**收窄**为一句实际发生的事：**同一轮内两次 `start_round_game` 命运不同**——
+   首次成功（`:53068`）；修复期那次以 DR-70 失败（`:55361`，路由被撤回），直到电池 pass 2 在 `:51223` 重新发布。
+   **不是**"轮内起游戏在本轮失败"。
+5. §10 F-T13-1 的后果 (a) 必须收窄：`src/prompts/developer.md:33` 的承诺在**修复窗口内（约 04:41 → 04:54:51）为假**；
+   在 Planner 与 Developer attempt1 期间它**为真**（路由活的、作者探过、角色 shell 看得到 `HOH_GAME_ROUTE`）。
+6. §5.3 C-E 的措辞也要收窄：轮内**首次**起游戏并没有失败，所以"轮内会话启动失败与 pass 1 失败同一原因"这一对里，
+   前项指代的对象应当是**修复期那次起游戏**，而不是轮次开始那次。
+7. **§3.3(d) 的拒绝时间更正**：`04:31:28` → **`04:51:28`**。
+   `developer.attempt2.json` msg 137/138/139 的 `extra.timestamp = 1790887888.17 / …888.41 / …888.41`；
+   `evidence/analysis/epochs.txt` 锚点 `1790888078 = 04:54:38`，反推 `1790887888 = 04:51:28`。
+
+### 证据与复现
+
+```bash
+# ① 两个作者探针都打在 :53068
+grep -l 53068 runs/smoke-t13/evidence/round/*.json
+head -1 runs/smoke-t13/evidence/round/game_endpoint_tools_list_round_author.json
+head -1 runs/smoke-t13/evidence/round/game_endpoint_scene_tree_round_author.json
+# ② Developer 04:44:02 读到 configured_port=53068；04:50:46 的 dir 显示 warnings.log 在 04:41 只有 1,110 B
+python -c "import json,io,time;d=json.load(io.open('runs/smoke-t13/iter-1/traj/developer.attempt2.json',encoding='utf-8'));m=d['messages'][77];print(m['extra']['timestamp'], 'configured_port=53068' in json.dumps(m,ensure_ascii=False));print(d['messages'][135]['content'][-1200:])"
+# ③ 拒绝发生在 04:51:28，不是 04:31:28
+python -c "import json,io,time;d=json.load(io.open('runs/smoke-t13/iter-1/traj/developer.attempt2.json',encoding='utf-8'));[print(i,time.strftime('%H:%M:%S',time.localtime(d['messages'][i]['extra']['timestamp']))) for i in (77,134,135,137,138,139)]"
+# ④ 代码落点：832 = 轮内首次；1306 = 电池前停；1348 = 修复期重启；1427 = 电池后重启
+sed -n '827,832p;1301,1307p;1343,1349p;1423,1428p' src/runtime/run_loop.rs
+```
+
+### 原文保留
+
+**保留**。原文（第 35、449–452、610、691、546 行等）逐字未动；本节即其标有 `superseded`/`incorrect` 的更正。
+
+## E-2（T13A-2，major）64 KiB 截断路径**触发过一次**（该路径的首次真机证据）
+
+### 被更正的原句（**incorrect**）
+
+```text
+（§7 机制读数表，第 608 行） | **64 KiB 上限** | **未被触发**（不是"没生效"）：四条未脱敏轨迹里 `hoh_output_truncated` **0** 次 |
+（§10 F-T13-4，第 695 行） 4. **F-T13-4（minor）**：64 KiB 截断路径仍未被真机触发（与 T11/T12 同）。
+（机器可读块 mechanisms.truncation_64kib.triggered = false —— 见 E-9，按追加式规则保持原样）
+```
+
+### 正确读数（**新获得的正面事实**）
+
+`runs/smoke-t13/iter-1/traj/tester.attempt1.json` **msg 98**（`extra.timestamp = 1790888197.46` → **04:56:37**）是一个工具回包，
+该消息 `extra` 逐字带：
+
+```text
+hoh_output_truncated = true
+hoh_output_limit_bytes = 65536
+hoh_output_original_bytes = 81139
+```
+
+同一条消息的运行时标记文本逐字为
+`[hoh: 65536 of 81139 bytes were carried; the remaining 15603 bytes were dropped …]`（并在其前带
+`[hoh: tool output truncated — the bytes above are only the head of the result]`）。
+被截的是 Tester 读 `.hoh/deterministic/raw/interaction_evidence.json` 的那条 dump 命令的**回包**；
+其余三条未脱敏轨迹（`planner.attempt1` / `developer.attempt1` / `developer.attempt2`）**都没有**该字段。
+
+⇒ 报告写成了"未被触发 / 0 次"，事实是**恰好触发一次**。**这是本路径的首次真机触发**，
+应当登记为机制读数（下游：任何信任角色**上下文内**视图的分析都会静默丢掉尾部 15,603 B 的证据）。
+
+### 证据与复现
+
+```bash
+# 逐条轨迹解析 extra 字段（不是 grep 原始字节），单行版：
+python -c "import json,io,glob;print([(p,i) for p in sorted(glob.glob('runs/smoke-t13/iter-1/traj/*.json')) if not p.endswith('.redacted.json') for i,m in enumerate(json.load(io.open(p,encoding='utf-8'))['messages']) if (m.get('extra') or {}).get('hoh_output_truncated')])"
+# 期望输出恰好一行：[('runs/smoke-t13/iter-1/traj\\tester.attempt1.json', 98)]  —— 其余三条轨迹无该字段
+python -c "import json,io;m=json.load(io.open('runs/smoke-t13/iter-1/traj/tester.attempt1.json',encoding='utf-8'))['messages'][98];print(m['extra']['hoh_output_truncated'],m['extra']['hoh_output_limit_bytes'],m['extra']['hoh_output_original_bytes']);print([l for l in m['extra']['raw_output'].splitlines() if 'bytes were carried' in l])"
+```
+
+### 原文保留
+
+**保留**（第 608、695 行与机器块逐字未动）。
+
+## E-3（T13A-3，medium）`artifact_valid` 松弛点的**真实归因**是启动门修复块（恒真），不是 wrap-up 复用
+
+### 被更正的原句（**incorrect**）
+
+```text
+（§5.1，第 498 行） - **但** attempt2 的 `artifact_valid` 用的是**attempt1 结束时**算出来的值（`run_loop.rs:1137` 只算一次，`1185` 直接复用），修复调用之后**没有重新判定** ⇒ 一行 `artifact_valid` 同时代表两条不同的尝试，**这是测量口径的松动**（`repair` 把项目改坏了也会显示 `true`）。
+（§10 第 7 条，第 698 行） 7. **F-T13-7（info）**：`artifact_valid` 在修复 attempt 上复用 attempt1 的判定（§5.1）。
+```
+
+### 正确读数
+
+- 被引用的 `run_loop.rs:1137`（计算）/ `:1185`（复用）属于 **wrap-up 重试块**，其门槛是
+  `if developer_limits && !developer_artifact_valid`（`:1154`）。本轮 `wrap_up_retry_used=false`、`wrap_up_retry_reason="not_triggered"`
+  ⇒ **该块根本没执行**。
+- T13 的 attempt2 来自 **DR-70 启动门修复块**（`:1343-1422`）。它在 **`:1378`** 用
+  `artifact_valid: workspace.is_dir()` —— **恒真**，不是"复用 attempt1 的值"。
+- ⇒ 结论"该标志太松"**仍然成立，但理由不同且更强**：问题不是"复用了旧判定"，而是"这条尝试的记录位**根本没有判定**"。
+  一个把 `scenes/main.tscn` 改坏的修复，也会被记成 `artifact_valid=true`。
+- **本批已修**（`TASK-DR79` ③）：`:1378` 改为 `orchestrator.adapter.developer_artifact_valid(&workspace)`
+  （与 attempt1 同一条适配器检查），并加**双向**测试钉：修复后仍坏的场景 → `false`；修复后可用（含非空入口脚本）→ `true`。
+  先红证据：改前 `result.attempts` 里 developer attempt2 为 `true`（而 attempt1 已是 `false`），测试红；改后绿。
+
+### 证据与复现
+
+```bash
+grep -n artifact_valid src/runtime/run_loop.rs          # 1137 / 1147 / 1154 / 1185 / 1378
+sed -n '1150,1188p' src/runtime/run_loop.rs             # wrap-up 块（门槛 + 复用）
+sed -n '1340,1398p' src/runtime/run_loop.rs             # 启动门修复块（:1378 恒真）
+python -c "import json,io;d=json.load(io.open('runs/smoke-t13/iter-1/result.json',encoding='utf-8'));print('repair',d['repair_retry_used'],'wrap_up',d['wrap_up_retry_used'],'reason',d['wrap_up_retry_reason'])"
+```
+
+### 原文保留
+
+**保留**（第 498、698 行逐字未动）。
+
+## E-4（T13A-4 / T13A-6 / T13A-7 / T13A-8）计数、作用域与"推断 → 直接观测"
+
+### 4.1 被更正的原句（**incorrect**）
+
+```text
+（§0 摘要表 E4 行，第 23 行） …；**31** 条执行记录（verified-only **10** / gap-only **13**）逐条 stat 存在（`MISSING=[]`）…
+（§2.4，第 295 行） execution_records: verified-only=10, gap-only=13, verified+gap=31   ← 作用域分别写清
+（§11 第 4 条，第 707 行） …（**106** 个文件：round 23 / analysis 28 / gatecheck 5 / scripts 50），暂存目录保留（未删）。
+（§12，第 724 行） | 可复跑脚本 | `runs/smoke-t13/evidence/scripts/**`（37 个：…） |
+（§12，第 725 行） | 分析输出 | `runs/smoke-t13/evidence/analysis/**`（14 个，全部显式 UTF-8） |
+（§12 证据索引，第 1485 行） | `runs/smoke-t13/evidence/analysis/cite_check.txt` | 18189 | `4bbce1a00a26101c` |
+（§7 机制读数表，第 606 行） | **零增量** | **未发生**。`warnings.log` 8 行里 … |
+（§5.3 C-C，第 544 行） …**我把它标为"强推断（证据一致）"而不是"实测"** …
+（§10 推断第 2 条，第 685 行） 2. **（≈0.85）** 角色那次拒绝时 `game_endpoint.json` 确实不存在；… **我没有在同一时刻直接 stat 过该文件**（运行时已撤回）。
+（机器可读块 count_scopes.execution_records_verified_only = 10 / …_gap_only = 13 / round_dir_files = 264 / round_dir_files_before_evidence = 147 —— 见 E-9）
+```
+
+### 4.2 逐条更正
+
+| # | 项 | 原读数 | **正确读数** | 证据 / 复现 |
+|---|---|---|---|---|
+| a | 执行记录作用域（T13A-4） | verified-only **10** / gap-only **13** | verified-only **21** / gap-only **10**（总数 **31** 不变） | `python -c "import json,io;d=json.load(io.open('runs/smoke-t13/iter-1/evidence.json',encoding='utf-8'));print(sum(len(r['execution_records']) for r in d['verified_records']), sum(len(r['execution_records']) for r in d['gap_records']))"` → `21 10` |
+| b | 复制进证据的**文件数**（T13A-6） | **106** = round 23 / analysis 28 / gatecheck 5 / scripts 50 | **110** = round **23** / analysis **31** / gatecheck **5** / scripts **51** | `find runs/smoke-t13/evidence -type f` 计数 → 110；各子目录 23/31/5/51。**机器块 `count_scopes.evidence_files_copied_in_after_close` 本来就是 `110 (23 round + 31 analysis + 5 gatecheck + 51 scripts)`** ⇒ 正文与机器块自相矛盾，**错的是正文** |
+| c | `evidence/scripts/**` 计数（T13A-6） | 37 | **51** | 同上（`find runs/smoke-t13/evidence/scripts -type f` 计数 → 51） |
+| d | `evidence/analysis/**` 计数（T13A-6） | 14 | **31** | 同上 |
+| e | `cite_check.txt` 字节数（T13A-6） | 18189 | **18401** | `stat -c %s runs/smoke-t13/evidence/analysis/cite_check.txt` → 18401；索引里的 sha256 前缀 `4bbce1a00a26101c` 我也**未能核对**（我只核对了字节数） |
+| f | `warnings.log` 行数（T13A-7） | **8 行** | **7** 个以换行结尾的行（1,849 B；按 LF 切成 8 段是**尾换行**造成的） | `python -c "import io;b=io.open('runs/smoke-t13/warnings.log','rb').read();print(len(b), b.count(b'\n'), len(b.split(b'\n')))"` → `1849 7 8` |
+| g | `round_dir_files`（T13A-6） | 264（机器块） | **268** | `find runs/smoke-t13 -type f` 计数 → 268 |
+| h | `round_dir_files_before_evidence`（T13A-6） | 147（机器块） | **158**（= 268 − 110）；原文自身也不自洽：147 + 110 = 257 ≠ 264 | 268 − 110 = 158 |
+| i | 拒绝时的路由文件状态（T13A-8） | **强推断 ≈0.85** | **直接观测**：`developer.attempt2.json` **msg 134**（04:50:45）的命令在 `echo ===ROUTE===` 后紧跟 `if exist "%HOH_GAME_ROUTE%" … else (echo no route file)`，**msg 135**（04:50:46）输出尾部逐字 `===ROUTE=== \nno route file` ⇒ Developer **自己当场**测过该文件不存在。**保留的边界**：这是拒绝（04:51:28）前 **42 s** 的读数，不是同一瞬间 | `python -c "import json,io;d=json.load(io.open('runs/smoke-t13/iter-1/traj/developer.attempt2.json',encoding='utf-8'));print(d['messages'][135]['content'][-160:])"` |
+
+**作用域声明（本节）**：a 是 `iter-1/evidence.json` 的 `execution_records`；b–h 是 `runs/smoke-t13/**` 的**当前**盘上文件；
+i 是 `developer.attempt2.json` 的两条相邻消息。**所有计数只对 `runs/smoke-t13/**`，不外推到别的轮次。**
+
+### 4.3 原文保留
+
+**保留**（第 23、295、606、707、724、725、1485、544、685 行逐字未动；机器块见 E-9）。
+
+## E-5（T13A-5，minor）**非密钥**环境值泄漏：`DSH_TERM_CMD`（密钥值本身 0 泄漏）
+
+### 被更正 / 需补充的原句
+
+```text
+（§10 实测第 10 条，第 680 行） 10. 本轮所有派生文本**合法 UTF-8**，没有密钥泄漏（扫描 327 个文本文件（81 staging + 246 `runs/smoke-t13`）/ `LEAK = 0`）。
+（§11 第 6 条，第 710 行） 6. **密钥卫生**：… 扫描 `219` 个文本文件（staging 74 + `runs/smoke-t13` 145）**0 处**含该值。
+```
+
+### 正确读数
+
+两条对**密钥值**的断言**成立**（我用 51 字节的 `HOH_MODEL_API_KEY` 值扫 `runs/smoke-t13/**` 全部 268 个文件 → **0 命中**）。
+**但它们没有覆盖另一个向量**：角色 shell 继承了 harness 环境，`env | grep -i hoh` 把 **`DSH_TERM_CMD`** 整条命令行
+（含**仓外暂存路径** `F:\moonbit-hof-rs-t13-staging` 与**密钥文件名** `config/model.secret.env`）写进轨迹并冻结：
+
+```text
+runs/smoke-t13/iter-1/traj/planner.attempt1.json              （2 处）
+runs/smoke-t13/iter-1/traj/planner.attempt1.redacted.json     （2 处）
+runs/smoke-t13/iter-1/traj/developer.attempt1.json            （2 处）
+runs/smoke-t13/iter-1/traj/developer.attempt1.redacted.json   （2 处）
+```
+
+⇒ "没有环境值泄漏"这一更强的读法**不成立**；报告只证明了"**密钥值** 0 泄漏"。**本批已修**（`TASK-DR79` ④）：
+`DSH_TERM_CMD` 纳入 `HARNESS_ENV_VARS`，并按新的 `COMMAND_LINE_VARS` 规则把**整条命令行**作为一个值脱敏
+（它含 `;`、`\"`、`>>`，通用规则会停在第一个 `;` 或第一个 `\"` 而漏掉尾部），配两条测试（纯文本行 + 真实 JSON 编码形状）。
+
+### 证据与复现
+
+```bash
+grep -rl DSH_TERM_CMD runs/smoke-t13/            # 上列 4 个文件；每个 2 处
+grep -rl "model.secret.env" runs/smoke-t13/      # 同上 4 个文件
+# 密钥值扫描（只打印长度与命中数，从不打印值）：
+python -c "import io,os;key=[l.split('=',1)[1].strip() for l in io.open('config/model.secret.env',encoding='utf-8') if l.startswith('HOH_MODEL_API_KEY')][0];files=[os.path.join(r,f) for r,_,fs in os.walk('runs/smoke-t13') for f in fs];print('key_len',len(key),'files',len(files),'hits',sum(1 for p in files if key in io.open(p,encoding='utf-8',errors='ignore').read()))"
+# 期望：key_len 51 files 268 hits 0
+```
+
+### 原文保留
+
+**保留**（第 680、710 行逐字未动）。
+
+## E-6（T13A-9，minor）仓根 3 个 `.tmp_*.json`：检出但**未阻止**，本批让其有界可控
+
+### 被更正 / 需补充的原句
+
+```text
+（§7 机制读数表，第 617 行） | **越界写入（DR-25）** | `out_of_tree_writes = [".tmp_coin.json", ".tmp_goal.json", ".tmp_hud.json"]`（**实测存在于仓根** …）；`artifact_hygiene = {"suspicious_files": [], "suspicious_directories": []}` |
+（§10 第 9 条，第 679 行） 9. `out_of_tree_writes` 的 3 个 `.tmp_*.json` **实测仍在仓根**、未跟踪。
+（§10 F-T13-5，第 696 行） 5. **F-T13-5（minor）**：developer 在仓根留下 3 个 `.tmp_*.json`（`out_of_tree_writes` 已记录）；我**按"不删"处理**（它们是本轮的取证对象），但它们会一直出现在 `git status`。
+```
+
+### 正确读数
+
+- 上述三处**实测均属实**：`F:\moonbit-hof-rs\.tmp_coin.json`（108 B）/ `.tmp_goal.json`（68 B）/ `.tmp_hud.json`（46 B），
+  mtime `1790887948.97 / …949.06 / …949.12` → 04:52:28–29，`git status` 显示为未跟踪；它们来自 `developer.attempt2` 的消息 143
+  （此前 msg 140 已 `del .tmp*.json` 删过一轮）。`result.json.out_of_tree_writes` 逐字列了这三个。
+- **缺的那一半是"未阻止"**：DR-25 全程 report-only，`out_of_tree_writes` 只记录，没有任何东西清理或限制它——
+  于是这三文件一直在仓根、一直让 `git status` 变脏。
+- **本批已修**（`TASK-DR79` ①）：轮末对**本轮自己观察到的**根级临时文件做**有界清理**并在 `warnings.log` 留痕
+  （`out_of_tree_cleanup: removed N round-temporary file(s) from <root>: …`），同时**保留** `out_of_tree_writes` 里的事实。
+  界线写死：路径必须来自 `OutOfTreeWatch` 的**轮内并集**（轮前就存在的文件永不触碰）、必须是**单一路径分量**的
+  `is_root_temporary` 形状（`.tmp_*` / `tmp_*` / `*.tmp` / `*.bak`）、只删**文件**、不用通配符、不用 `rm -rf`、
+  不从未展开的变量构造路径。
+- **本报告这 3 个文件仍原样保留**：它们**不是**本批轮内产生的（本批没有跑轮），清理器的定义（"轮内观察到的新增/变更"）
+  不会、也不应该碰它们；本批不做无授权的删除（它们是 T13 的取证对象）。
+
+### 证据与复现
+
+```bash
+git status --porcelain | grep '^?? .tmp_'
+python -c "import os;[print(f, os.path.getsize(f), os.path.getmtime(f)) for f in ('.tmp_coin.json','.tmp_goal.json','.tmp_hud.json')]"
+python -c "import json,io;print(json.load(io.open('runs/smoke-t13/iter-1/result.json',encoding='utf-8'))['out_of_tree_writes'])"
+grep -n is_root_temporary -A 6 src/runtime/hygiene.rs     # 本批新增的有界规则
+```
+
+### 原文保留
+
+**保留**（第 617、679、696 行逐字未动）。
+
+## E-7 诚实登记：T13A-4 的一个子项**未复现**（因此**未更正**）
+
+`T13A-4` 原文称"记录类型表 `{replay:11, runtime_trace:10, build:5, assert:3}` 合计 29、**漏 `screenshot:2`**"。
+**我在报告正文里找不到这样一张表**：§2.4 第 296 行逐字是
+
+```text
+MISSING=[]         record types {replay:11, runtime_trace:10, build:5, assert:3, screenshot:2}
+```
+
+——**5 类、和 = 31**，且与生成它的原始件 `runs/smoke-t13/evidence/analysis/round_facts.txt:161`
+`record-type census over verified+gap (n=31) = {'replay': 11, 'assert': 3, 'runtime_trace': 10, 'screenshot': 2, 'build': 5}` **逐字一致**。
+机器可读块的 `count_scopes` **没有 record-type 条目**，所以"漏 `screenshot:2`"若成立，指的是"机器块缺该项"，
+而**不是**"正文的表漏了一类"。⇒ 本批**不改**这一子项，登记为**未复现**（其余子项 a–i 均已复现并更正）。
+这是一条**对被验收报告的独立判定**，不是对本报告的辩护：正文该行本来就对。
+
+## E-8 与本勘误相关的管线修复（`TASK-DR79` ②③④① 摘要）
+
+| 缺陷 | 落点（本批） | 先红证据 | 回归钉 |
+|---|---|---|---|
+| **② usage 双计** | `src/runtime/usage.rs` 的 `usage_from_attempts` 过滤加 `&& !name.contains(".redacted.")` | 新测试 `a_redacted_sidecar_is_not_a_second_attempt` 改前红（sidecar 被当第二个 attempt：`merged.calls=2` vs `single.calls=1`） | 有旁路副本时 planner ratio **1.0**；同时反向钉住"真 attempt2 仍被合并"（ratio 2.0）。冻结件读数佐证：`planner.attempt1.json` 27 calls/272,378 vs `usage.json` summary planner **54/544,756** |
+| **③ artifact_valid** | `src/runtime/run_loop.rs` 启动门修复块 `:1378` 由 `workspace.is_dir()` 改为 `orchestrator.adapter.developer_artifact_valid(&workspace)` | 新测试 `the_repair_attempt_artifact_validity_is_measured_not_assumed` 改前红（attempt2 = `true`，attempt1 已是 `false`） | **双向**：修复后仍坏 → `false`；修复后可用（含非空入口脚本）→ `true` |
+| **④ 命令行走漏** | `src/runtime/secrets.rs`：`DSH_TERM_CMD` 入 `HARNESS_ENV_VARS`，新增 `COMMAND_LINE_VARS` 与 `command_line_value_ends_at` | 两条新测试改前红（整条命令行原样保留；真实 JSON 形状也保留） | 合成含 `model.secret.env` 的命令行 → 脱敏；真实 JSON 编码形状（`\"` / `\\` / `\n` 转义）→ 只替换该值、仍是合法 JSON、span 外 0 字节变化 |
+| **① 越界写入** | `src/runtime/hygiene.rs` 新增 `is_root_temporary` / `clean_round_temporaries` / `OutOfTreeWatch::observed`；`run_loop.rs` 轮末调用并在 `warnings.log` 留痕 | `the_cleanup_removes_only_the_root_temporaries_the_watch_observed`（规则）与 `a_round_removes_its_own_root_temporary_and_records_it`（接线）改前红 | 规则：只删**单分量**的已知临时形状；接线：轮内 `.tmp_probe.json` 被删、`out_of_tree_writes` 仍记录、`warnings.log` 有 `out_of_tree_cleanup`；**反向**：`stray_dir/probe.txt` 仍在（DR-25 的 report-only 语义保住） |
+
+**这些修复不改变本报告的任何历史读数**：它们是**未来轮**的行为；本勘误只登记它们与本报告三处机制断言的对应关系。
+
+## E-9 机器可读块（**本批一字未改**）
+
+上文 `附：机器可读结论`（第 741–1408 行）与 `runs/smoke-t13/evidence/analysis/machine_block.json` **逐字节相同**，
+本批**未改其一字**（追加式规则）。其中下列字段已被本勘误**取代（superseded）**，其**权威读数以本节为准**：
+
+| machines 块字段 | 原值（保持原样） | 取代它的节 |
+|---|---|---|
+| `mechanisms.truncation_64kib.triggered` | `false` | **E-2**（真值 `true`，一次，81,139 → 65,536） |
+| `count_scopes.execution_records_verified_only` | `10` | **E-4 a**（21） |
+| `count_scopes.execution_records_gap_only` | `13` | **E-4 a**（10） |
+| `count_scopes.round_dir_files` | `264` | **E-4 g**（268） |
+| `count_scopes.round_dir_files_before_evidence` | `147` | **E-4 h**（158） |
+| `mechanisms.round_game_readiness_failure.endpoint` | `http://127.0.0.1:55361/mcp` | **E-1**（属修复期重启；轮内首次是 `:53068` 且成功） |
+| `mechanisms.round_game_readiness_failure.consequence` | `no published route for any role until battery pass 2` | **E-1**（收窄为"修复窗口内无路由"） |
+| `risks[3]`（下划线读作"the round-book text … false for the whole window"） | 逐字原样 | **E-1**（收窄为修复窗口） |
+
+`count_scopes.evidence_files_copied_in_after_close`（`110`，scope `23 round + 31 analysis + 5 gatecheck + 51 scripts`）
+**本来就是对的**，与正文 §11.4 的 `106` 矛盾——**错的是正文**（E-4 b）。

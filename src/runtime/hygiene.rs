@@ -114,6 +114,13 @@ pub struct OutOfTreeWatch {
     root: PathBuf,
     project: Option<PathBuf>,
     last: TreeSnapshot,
+    /// DR-79 ①: every path observed since the round started.
+    ///
+    /// [`observe`](Self::observe)'s return value is consumed by the iteration
+    /// it belongs to, so it cannot also answer the round-close question ("what
+    /// did this round leave in the root?").  Remembering the union here keeps
+    /// that answer independent of the iteration boundary.
+    observed: BTreeSet<String>,
 }
 
 impl OutOfTreeWatch {
@@ -123,6 +130,7 @@ impl OutOfTreeWatch {
             root,
             project,
             last,
+            observed: BTreeSet::new(),
         }
     }
 
@@ -131,8 +139,78 @@ impl OutOfTreeWatch {
         let now = scan(&self.root, self.project.as_deref());
         let changed = changed_paths(&self.last, &now);
         self.last = now;
+        self.observed.extend(changed.iter().cloned());
         changed
     }
+
+    /// DR-79 ①: every path the watch saw appear or change during the round.
+    pub fn observed(&self) -> Vec<String> {
+        self.observed.iter().cloned().collect()
+    }
+}
+
+/// DR-79 ①: is `relative` one of the **root-level temporary** shapes a role
+/// leaves behind in the scanned root?
+///
+/// This is the whole eligibility rule for
+/// [`clean_round_temporaries`], and it is deliberately the narrowest one that
+/// covers the measured litter (`.tmp_coin.json`, `.tmp_goal.json`,
+/// `.tmp_hud.json`): a single path component, and a temporary name shape.  A
+/// project file never matches, and no path with a separator matches, so the
+/// cleanup cannot reach into a project or another directory even if the watcher
+/// reported one.
+pub fn is_root_temporary(relative: &str) -> bool {
+    if relative.is_empty() || relative.contains('/') || relative.contains('\\') {
+        return false;
+    }
+    if relative == "." || relative == ".." {
+        return false;
+    }
+    let lower = relative.to_ascii_lowercase();
+    lower.starts_with(".tmp_")
+        || lower.starts_with("tmp_")
+        || lower.ends_with(".tmp")
+        || lower.ends_with(".bak")
+}
+
+/// DR-79 ①: remove the round's own known temporary files from the scanned root,
+/// returning the relative paths actually removed.
+///
+/// Report-only was the whole of DR-25, and the measured cost is a repository
+/// root that keeps accumulating untracked litter: `smoke-t13`'s Developer left
+/// `.tmp_coin.json` / `.tmp_goal.json` / `.tmp_hud.json` in `F:\moonbit-hof-rs`
+/// and `result.json.out_of_tree_writes` recorded them without anything ever
+/// removing them.  The containment is bounded by construction:
+///
+/// * a path must come from `observed` — the watcher's own diff against the
+///   tree as it was when the round started, so a file that was already there is
+///   never touched;
+/// * [`is_root_temporary`] must accept it: exactly one path component and a
+///   temporary name shape;
+/// * only a **file** is removed (never a directory, never a wildcard, never
+///   `rm`), and the joined path is re-checked to be a direct child of `root`.
+///
+/// The caller records the returned names, so the removal is part of the round's
+/// own record rather than a silent side effect.
+pub fn clean_round_temporaries(root: &Path, observed: &[String]) -> Vec<String> {
+    let mut removed: Vec<String> = Vec::new();
+    for relative in observed {
+        if !is_root_temporary(relative) {
+            continue;
+        }
+        // `is_root_temporary` proved this is one component with no separator, so
+        // the join cannot escape `root`; the parent check states that invariant
+        // in code rather than leaving it to the reader.
+        let path = root.join(relative);
+        if path.parent() != Some(root) {
+            continue;
+        }
+        if path.is_file() && std::fs::remove_file(&path).is_ok() {
+            removed.push(relative.clone());
+        }
+    }
+    removed.sort();
+    removed
 }
 
 /// DR-28: probe/litter files inside a frozen `A_t`, relative to its root.
@@ -810,6 +888,108 @@ mod tests {
         write(&root.join(".godot/_tmp_cache"), "x\n");
         write(&root.join("scenes/main.tscn"), "x\n");
         assert!(suspicious_files(root).is_empty());
+    }
+
+    /// DR-79 ①: the eligibility rule is deliberately narrow — one path
+    /// component, and only the temporary shapes a role actually leaves behind.
+    /// A project file, a nested file and a directory are never eligible, so the
+    /// cleanup can never reach project content.
+    #[test]
+    fn only_root_level_temporary_shapes_are_round_litter() {
+        for name in [
+            ".tmp_coin.json",
+            ".tmp_hud.json",
+            "tmp_args.json",
+            "notes.tmp",
+            "notes.bak",
+        ] {
+            assert!(is_root_temporary(name), "`{name}` is the measured shape");
+        }
+        for name in [
+            "project.godot",
+            "scenes/main.tscn",
+            "runs/x.json",
+            "sub/.tmp_x.json",
+            "sub\\tmp_x.json",
+            ".tmp_dir/probe.txt",
+            "notes.tmp.bak.json",
+            "_probe.gd",
+            "..",
+            ".",
+            "",
+        ] {
+            assert!(
+                !is_root_temporary(name),
+                "`{name}` must never be treated as round litter"
+            );
+        }
+    }
+
+    /// DR-79 ①: the cleanup removes exactly the observed root temporaries, leaves
+    /// everything else byte-for-byte on disk, and reports what it removed so the
+    /// record can name it.
+    #[test]
+    fn the_cleanup_removes_only_the_root_temporaries_the_watch_observed() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        write(&root.join(".tmp_coin.json"), "{}\n");
+        write(&root.join(".tmp_goal.json"), "{}\n");
+        write(&root.join("keep.txt"), "project content\n");
+        write(&root.join("scenes/main.tscn"), "[gd_scene format=3]\n");
+        write(&root.join("stray_dir/probe.txt"), "probe\n");
+        write(&root.join("stray_dir/.tmp_nested.json"), "{}\n");
+
+        let observed: Vec<String> = vec![
+            ".tmp_coin.json",
+            ".tmp_goal.json",
+            "keep.txt",
+            "scenes/main.tscn",
+            "stray_dir/probe.txt",
+            "stray_dir/.tmp_nested.json",
+        ]
+        .into_iter()
+        .map(String::from)
+        .collect();
+
+        let removed = clean_round_temporaries(root, &observed);
+
+        assert_eq!(
+            removed,
+            vec![".tmp_coin.json".to_string(), ".tmp_goal.json".to_string()],
+            "only the observed root temporaries may be removed"
+        );
+        assert!(!root.join(".tmp_coin.json").exists());
+        assert!(!root.join(".tmp_goal.json").exists());
+        assert_eq!(
+            std::fs::read_to_string(root.join("keep.txt")).unwrap(),
+            "project content\n"
+        );
+        assert!(root.join("scenes/main.tscn").is_file());
+        assert!(root.join("stray_dir/probe.txt").is_file());
+        assert!(
+            root.join("stray_dir/.tmp_nested.json").is_file(),
+            "a nested path is out of scope: the cleanup is root-level by construction"
+        );
+    }
+
+    /// DR-79 ①: the watch remembers every path it ever observed, because the
+    /// per-iteration return value is consumed by the iteration record and the
+    /// round-close cleanup runs after the loop.
+    #[test]
+    fn the_watch_remembers_what_it_observed_across_the_round() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        let mut watch = OutOfTreeWatch::new(root.to_path_buf(), None);
+        write(&root.join(".tmp_first.json"), "{}\n");
+        assert_eq!(watch.observe(), vec![".tmp_first.json".to_string()]);
+        write(&root.join(".tmp_second.json"), "{}\n");
+        let _ = watch.observe();
+        let observed = watch.observed();
+        assert!(
+            observed.contains(&".tmp_first.json".to_string())
+                && observed.contains(&".tmp_second.json".to_string()),
+            "both observations must survive: {observed:?}"
+        );
     }
 
     /// DR-38: the marker set has to name the whole harness repository, not just

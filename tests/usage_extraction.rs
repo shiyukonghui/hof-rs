@@ -3,7 +3,7 @@
 //! `None` token fields, never as zeros.
 
 use hof_rs::model::{Role, Usage};
-use hof_rs::runtime::usage::{extract_usage, merge_usage};
+use hof_rs::runtime::usage::{extract_usage, merge_usage, usage_from_attempts};
 
 const FIXTURE: &str = "tests/fixtures/traj_with_usage.json";
 
@@ -90,6 +90,51 @@ fn merges_partial() {
     merge_usage(&mut unknown, &Usage::default());
     assert!(!unknown.usage_known);
     assert_eq!(unknown.calls, 0);
+}
+
+/// DR-79 ②: the DR-72 ② redacted **sidecar** is a copy of one attempt, not a
+/// second attempt.
+///
+/// `smoke-t12` and `smoke-t13` both carried `planner.attempt1.json` **and**
+/// `planner.attempt1.redacted.json`; `usage_from_attempts`'s name filter
+/// (`starts_with("<role>.attempt") && ends_with(".json")`) matched both, so the
+/// same usage block was merged twice and the round-level planner count was
+/// exactly 2× the attempt's (272,378 tokens in `smoke-t13`).  The ratio must be
+/// 1.0 whenever the only extra file is a sidecar, and 2.0 only when a genuine
+/// second attempt exists.
+#[test]
+fn a_redacted_sidecar_is_not_a_second_attempt() {
+    let temp = tempfile::tempdir().unwrap();
+    let traj = temp.path().join("traj");
+    std::fs::create_dir_all(&traj).unwrap();
+    let body = r#"{"messages":[
+        {"role":"assistant","extra":{"response":{"usage":{"prompt_tokens":90000,
+         "completion_tokens":1000,"total_tokens":91000}}}}]}"#;
+    let attempt = traj.join("planner.attempt1.json");
+    std::fs::write(&attempt, body).unwrap();
+    std::fs::write(traj.join("planner.attempt1.redacted.json"), body).unwrap();
+
+    let single = extract_usage(&attempt, Role::Planner, 1).unwrap();
+    assert!(single.calls > 0, "the fixture must carry one usage block");
+    let merged = usage_from_attempts(&traj, Role::Planner, 1).unwrap();
+
+    assert_eq!(
+        merged.calls, single.calls,
+        "the redacted sidecar must not be counted as a second attempt"
+    );
+    assert_eq!(merged.total_tokens, single.total_tokens);
+    let ratio = merged.calls as f64 / single.calls as f64;
+    assert_eq!(ratio, 1.0, "with a sidecar the planner ratio must be 1.0");
+
+    // The counter-direction: a genuine second attempt is still merged, so the
+    // fix cannot pass by ignoring every file.
+    std::fs::write(traj.join("planner.attempt2.json"), body).unwrap();
+    let merged = usage_from_attempts(&traj, Role::Planner, 1).unwrap();
+    assert_eq!(
+        merged.calls,
+        single.calls * 2,
+        "two real attempts must still be summed"
+    );
 }
 
 #[test]
