@@ -215,11 +215,22 @@ fn the_blocked_verdict_line_carries_its_own_shortfall() {
         "the pinned line must be the verdict, not the drive line:\n{verdict}"
     );
     let expected = "coverage_shortfall_px=Some(5240.0)";
+    let pinned = collapsed(&observation);
     assert!(
-        collapsed(&observation).contains(expected),
-        "the `{BLOCKED_VERDICT}` verdict line must carry `{expected}` as a concrete value \
-         of its own.  A `contains` over the whole observation is satisfied by the drive line \
-         alone and pins nothing:\n{verdict}"
+        pinned.contains(BLOCKED_VERDICT),
+        "the observation must carry a `{BLOCKED_VERDICT}` line, not only the drive line:\n\
+         {observation}"
+    );
+    // The drive line renders `player max x=..., coverage_shortfall_px=...` too, so the
+    // pin starts at wording only the verdict line carries (`still unspent; `).
+    let tail = "still unspent; player max x=Some(1160.0), goal.position=Some(Object {\"x\": Number(6400.0), \
+                \"y\": Number(280.0)}), "
+        .to_string()
+        + expected;
+    assert!(
+        pinned.contains(&tail),
+        "the `{BLOCKED_VERDICT}` line itself must carry `{expected}` as its own concrete value: a \
+         `contains` over the whole observation is also satisfied by the drive line:\n{observation}"
     );
 }
 
@@ -233,10 +244,21 @@ fn the_coverage_verdict_line_carries_its_own_shortfall() {
         "the pinned line must be the verdict, not the drive line:\n{verdict}"
     );
     let expected = "coverage_shortfall_px=Some(1340.0)";
+    let pinned = collapsed(&observation);
     assert!(
-        collapsed(&observation).contains(expected),
-        "the coverage verdict line must carry `{expected}` as a concrete value of its \
-         own:\n{verdict}"
+        pinned.contains("WIN_UNREACHED_WITHIN_BUDGET"),
+        "the observation must carry the coverage verdict line, not only the drive line:\n\
+         {observation}"
+    );
+    // `stayed false; ` is the coverage verdict's own wording.
+    let tail = "stayed false; player max x=Some(28660.0), goal.position=Some(Object {\"x\": Number(30000.0), \
+                \"y\": Number(280.0)}), "
+        .to_string()
+        + expected;
+    assert!(
+        pinned.contains(&tail),
+        "the coverage verdict line itself must carry `{expected}` as its own concrete value:\n\
+         {observation}"
     );
 }
 

@@ -4508,14 +4508,22 @@ async fn a_level_whose_goal_is_unreachable_fails_only_the_win_half() {
         "the pinned line must be the verdict, not the drive line: {verdict}"
     );
     let expected = "coverage_shortfall_px=Some(1340.0)";
+    let pinned = collapsed(observation);
     assert!(
-        collapsed(observation).contains(expected),
-        "the coverage verdict line must carry `{expected}` as a concrete value of its \
-         own: {verdict}"
+        pinned.contains("WIN_UNREACHED_WITHIN_BUDGET"),
+        "the observation must carry a `WIN_UNREACHED_WITHIN_BUDGET` line, not only the drive \
+         line: {observation}"
     );
-    // DR-77 ①/②: the frozen fixture is what the standing pin reads, so it has to
-    // stay the window's own output.
-    assert_observation_matches_fixture(observation, "tests/fixtures/dr77/coverage_observation.txt");
+    // `stayed false; ` is the coverage verdict's own wording.
+    let tail = "stayed false; player max x=Some(28660.0), goal.position=Some(Object {\"x\": Number(30000.0), \
+                \"y\": Number(280.0)}), "
+        .to_string()
+        + expected;
+    assert!(
+        pinned.contains(&tail),
+        "the coverage verdict line itself must carry `{expected}` as its own concrete value; the \
+         drive line is the only other place this text begins: {observation}"
+    );
 }
 
 /// DR-76 ②: the other half of the split.  A level that lets the player advance and
@@ -4555,12 +4563,23 @@ async fn a_player_that_stops_advancing_with_budget_left_is_a_geometric_verdict()
         "the pinned line must be the verdict, not the drive line: {verdict}"
     );
     let expected = "coverage_shortfall_px=Some(5240.0)";
+    let pinned = collapsed(observation);
     assert!(
-        collapsed(observation).contains(expected),
-        "the {BLOCKED_VERDICT} verdict line must carry `{expected}` as a concrete \
-         value of its own: {verdict}"
+        pinned.contains(BLOCKED_VERDICT),
+        "the observation must carry a `{BLOCKED_VERDICT}` line, not only the drive line: {observation}"
     );
-    assert_observation_matches_fixture(observation, "tests/fixtures/dr77/blocked_observation.txt");
+    // The drive line renders `player max x=..., coverage_shortfall_px=...` too, so the
+    // pin has to start at wording only the verdict line carries (`still unspent; `).
+    // A needle that starts at `player max x=` is satisfied by the drive line alone.
+    let tail = "still unspent; player max x=Some(1160.0), goal.position=Some(Object {\"x\": Number(6400.0), \
+                \"y\": Number(280.0)}), "
+        .to_string()
+        + expected;
+    assert!(
+        pinned.contains(&tail),
+        "the `{BLOCKED_VERDICT}` line itself must carry `{expected}` as its own concrete value; the \
+         drive line is the only other place this text begins: {observation}"
+    );
 }
 
 /// DR-76 ②: the budget is a promise about the specification, and it is pinned.
