@@ -1,0 +1,133 @@
+#!/bin/sh
+# .githooks/pre-push — DR-75 mechanical "nothing is pushed before an independent
+# acceptance passed" gate.  KEEP LF LINE ENDINGS (see .githooks/README.md).
+#
+# git calls this once per `git push` and feeds the refs on stdin, one per line:
+#     <local ref> <local sha> <remote ref> <remote sha>
+# Every commit that the push would *add* to the remote must carry an `accepted
+# ... pass` record in the acceptance ledger; otherwise the whole push is refused.
+#
+# This is a local, bypassable control, not a cryptographic guarantee.  Its three
+# capability limits are written out in .githooks/README.md — read them before
+# trusting it for anything more than keeping an honest operator honest.
+#
+# fail-closed summary: a missing/unreadable/malformed marker source, an
+# unevaluable commit range, or a malformed protocol line all exit non-zero.
+
+set -u
+
+HOH_HOOK_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd) || {
+    printf '%s\n' "hoh pre-push gate: REFUSED - cannot locate the hook directory (fail closed)" >&2
+    exit 1
+}
+if [ ! -r "$HOH_HOOK_DIR/hoh-acceptance-lib.sh" ]; then
+    printf '%s\n' "hoh pre-push gate: REFUSED - $HOH_HOOK_DIR/hoh-acceptance-lib.sh is missing or unreadable (fail closed)" >&2
+    exit 1
+fi
+. "$HOH_HOOK_DIR/hoh-acceptance-lib.sh"
+
+HOH_ZERO=0000000000000000000000000000000000000000
+HOH_REMOTE_NAME=${1:-}
+HOH_REMOTE_URL=${2:-}
+
+# A gate whose marker source is unusable is not a working gate: refuse outright,
+# before looking at the refs, so a broken ledger can never let a commit through.
+hoh_refuse_ledger() {
+    printf '%s\n' "hoh pre-push gate (DR-75): REFUSED - the acceptance ledger is not usable: $1" >&2
+    printf '%s\n' "  marker source: $HOH_LEDGER" >&2
+    printf '%s\n' "  Nothing may be pushed until the marker source is usable (fail closed)." >&2
+    printf '%s\n' "  Create it and record a passing acceptance with:" >&2
+    printf '%s\n' "      scripts/accept-commit.sh init" >&2
+    printf '%s\n' "      scripts/accept-commit.sh mark <sha> <report.md> pass" >&2
+    printf '%s\n' "  This is a hard constraint, not a suggestion: do not bypass it with" >&2
+    printf '%s\n' "  \`git push --no-verify\` (that hole is documented in .githooks/README.md)." >&2
+    exit 1
+}
+
+if ! hoh_resolve_ledger; then
+    hoh_refuse_ledger "cannot resolve this repository's git directory"
+fi
+if ! hoh_validate_ledger; then
+    hoh_refuse_ledger "$HOH_LEDGER_ERROR"
+fi
+
+HOH_CHECKED=0
+HOH_SEEN=' '
+HOH_REFUSED=
+
+while IFS= read -r hoh_protocol || [ -n "${hoh_protocol:-}" ]; do
+    case $hoh_protocol in
+        '') continue ;;
+    esac
+    set -- $hoh_protocol
+    [ $# -eq 4 ] || {
+        printf '%s\n' "hoh pre-push gate (DR-75): REFUSED - malformed pre-push protocol line (expected 4 fields): $hoh_protocol" >&2
+        exit 1
+    }
+    HOH_LOCAL_REF=$1
+    HOH_LOCAL_SHA=$2
+    HOH_REMOTE_REF=$3
+    HOH_REMOTE_SHA=$4
+
+    if [ "$HOH_LOCAL_SHA" = "$HOH_ZERO" ]; then
+        # Deleting a ref adds no commit to the remote, so there is nothing that
+        # could need an acceptance.  Recorded explicitly rather than left to the
+        # range logic, which cannot express "no object".
+        printf '%s\n' "hoh pre-push gate: $HOH_REMOTE_REF deletion carries no new commit - allowed" >&2
+        continue
+    fi
+
+    if [ "$HOH_REMOTE_SHA" = "$HOH_ZERO" ]; then
+        # A ref the remote does not have yet.  The commits actually transferred are
+        # those reachable from the local ref but not from the target remote's
+        # remote-tracking refs; commits the remote already contains are therefore
+        # not re-judged.  A stale remote-tracking set only widens this range, i.e.
+        # it errs towards refusing.
+        if [ -n "$HOH_REMOTE_NAME" ]; then
+            HOH_RANGE=$(git rev-list "$HOH_LOCAL_SHA" --not "--remotes=$HOH_REMOTE_NAME" 2>/dev/null)
+        else
+            HOH_RANGE=$(git rev-list "$HOH_LOCAL_SHA" --not --remotes 2>/dev/null)
+        fi
+    else
+        # The book's range: everything the push adds to this remote.
+        HOH_RANGE=$(git rev-list "$HOH_REMOTE_SHA..$HOH_LOCAL_SHA" 2>/dev/null)
+    fi
+    HOH_RANGE_STATUS=$?
+
+    if [ "$HOH_RANGE_STATUS" -ne 0 ]; then
+        printf '%s\n' "hoh pre-push gate (DR-75): REFUSED - cannot evaluate the commits this push would add to $HOH_REMOTE_REF." >&2
+        printf '%s\n' "  The remote base $HOH_REMOTE_SHA is not in this repository, so the range is unknowable here." >&2
+        printf '%s\n' "  Run \`git fetch $HOH_REMOTE_NAME\` and push again.  Refusing instead of assuming (fail closed)." >&2
+        exit 1
+    fi
+
+    for HOH_SHA in $HOH_RANGE; do
+        case $HOH_SEEN in
+            *" $HOH_SHA "*) continue ;;
+        esac
+        HOH_SEEN=$HOH_SEEN$HOH_SHA' '
+        HOH_CHECKED=$((HOH_CHECKED + 1))
+        hoh_is_accepted "$HOH_SHA" && continue
+        HOH_SUBJECT=$(git log -1 --format=%s "$HOH_SHA" 2>/dev/null) || HOH_SUBJECT='(subject unavailable)'
+        HOH_REFUSED="$HOH_REFUSED
+    $HOH_SHA  $HOH_SUBJECT"
+    done
+
+done
+
+if [ -n "$HOH_REFUSED" ]; then
+    printf '%s\n' "hoh pre-push gate (DR-75): REFUSED - these commits have no passing acceptance record:" >&2
+    printf '%s\n' "$HOH_REFUSED" >&2
+    printf '%s\n' "  remote: ${HOH_REMOTE_NAME:-?} (${HOH_REMOTE_URL:-?})" >&2
+    printf '%s\n' "  marker source: $HOH_LEDGER" >&2
+    printf '%s\n' "  Once an independent acceptance passes, record it for each commit:" >&2
+    printf '%s\n' "      scripts/accept-commit.sh mark <sha> <report.md> pass" >&2
+    printf '%s\n' "  See what is already recorded: scripts/accept-commit.sh list" >&2
+    printf '%s\n' "  This is the repository's hard constraint: nothing is pushed before an acceptance" >&2
+    printf '%s\n' "  passes.  Do not bypass the gate with \`git push --no-verify\`; that flag is a" >&2
+    printf '%s\n' "  documented hole in this gate, not an authorisation (.githooks/README.md)." >&2
+    exit 1
+fi
+
+printf '%s\n' "hoh pre-push gate: accepted - $HOH_CHECKED commit(s) checked against $HOH_LEDGER" >&2
+exit 0

@@ -5,6 +5,15 @@
 # checkout, so the directory is pinned to no conversion.
 tests/fixtures/dr58/** -text
 
+# DR-75: the versioned `pre-push` gate and the shell scripts around it are shell
+# programs, so their line endings are part of their correctness.  This machine's
+# system gitconfig (C:/Program Files/Git/etc/gitconfig) sets core.autocrlf=true,
+# which would rewrite them to CRLF on checkout for anyone with that setting; a
+# carriage return can break the shebang and corrupt the last token of every line
+# on a shell that does not strip it.  Pinned to no conversion, like the two below.
+.githooks/** -text
+scripts/*.sh -text
+
 # DR-70 ⑤: the frozen `smoke-t9` evidence bundle is read as bytes too —
 # tests/frozen_evidence.rs asserts the record boundaries and the pure-LF line
 # endings of `experiment/dev1_commands.txt`.  DR-69's byte accounting came apart

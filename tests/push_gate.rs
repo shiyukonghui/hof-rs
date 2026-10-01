@@ -126,7 +126,7 @@ struct Sandbox {
 impl Sandbox {
     /// A bare `origin.git` and a `work` repository with one remote and a local
     /// identity.  The gate is *not* installed yet.
-    fn new() -> Sandbox {
+    fn unarmed() -> Sandbox {
         let temp = tempfile::tempdir().expect("a temporary directory outside the repository");
         let root = temp.path().to_path_buf();
         let work = root.join("work");
@@ -150,6 +150,16 @@ impl Sandbox {
         sandbox
             .git(&["remote", "add", "origin", &slash(&sandbox.bare)])
             .pipe("git remote add origin");
+        sandbox
+    }
+
+    /// A sandbox whose push gate is armed by the repository's own installer — the
+    /// state every real operator is in after the documented install step.
+    fn new() -> Sandbox {
+        let sandbox = Sandbox::unarmed();
+        sandbox
+            .install()
+            .pipe("scripts/install-hooks.sh must arm the gate");
         sandbox
     }
 
@@ -469,7 +479,19 @@ fn a_missing_marker_source_refuses_every_push() {
     assert_mentions(&message, "marker source", "missing marker source");
     assert_mentions(&message, "missing", "the reason must say the source is missing");
     assert_mentions(&message, LEDGER_FILE, "the reason must name the missing path");
-    assert_mentions(&message, &sha, "the changed commit is still worth naming");
+    // The marker source is judged *before* the refs are read, so a broken ledger
+    // refuses the push without needing to name a commit — and a ref deletion cannot
+    // slip past it either.  Naming the commit would require trusting the very
+    // configuration whose integrity is in question.
+    assert!(
+        !message.contains(&sha),
+        "a broken marker source is refused on its own account, not commit by commit:\n{message}"
+    );
+    assert_mentions(
+        &message,
+        "accept-commit.sh",
+        "the reason must say how to make the marker source usable",
+    );
 }
 
 #[test]
@@ -495,10 +517,17 @@ fn a_corrupt_marker_source_refuses_every_push() {
         "this line is not a record",
         "the reason must quote the offending line",
     );
-    assert_mentions(
-        &message,
-        &sha,
-        "the push is refused whichever commit was being carried",
+    // The whole ledger is refused as a unit: a malformed line anywhere makes every
+    // push fail closed, so the message is about the source rather than the commit.
+    assert!(
+        !message.contains(&sha),
+        "a malformed ledger refuses every push before the refs are judged:\n{message}"
+    );
+    // It is still refused, and the commit really did not move.
+    let remote = sandbox.git_raw_at(&sandbox.bare, &["rev-parse", "--verify", "master"]);
+    assert!(
+        !remote.status.success(),
+        "a corrupt marker source must not let the commit through"
     );
 }
 
@@ -803,7 +832,7 @@ fn the_marker_refuses_a_missing_report_and_a_non_pass_verdict() {
 
 #[test]
 fn the_install_step_is_idempotent_and_arms_the_gate() {
-    let sandbox = Sandbox::new();
+    let sandbox = Sandbox::unarmed();
     let expected = slash(&repo_root().join(".githooks"));
 
     let first = succeeded(&sandbox.install(), "the first install");
@@ -855,7 +884,7 @@ fn the_install_step_is_idempotent_and_arms_the_gate() {
 fn the_installer_refuses_a_checkout_without_the_versioned_hooks() {
     // A copy of the installer whose sibling `.githooks` does not exist: it must fail
     // loudly rather than arm a directory with no hook in it.
-    let sandbox = Sandbox::new();
+    let sandbox = Sandbox::unarmed();
     let lonely = sandbox.work.join("lonely-scripts");
     std::fs::create_dir_all(&lonely).expect("the lonely directory");
     std::fs::copy(
@@ -873,7 +902,11 @@ fn the_installer_refuses_a_checkout_without_the_versioned_hooks() {
         "an installer without its hooks must fail:\n{}",
         text(&output)
     );
-    assert_mentions(&text(&output), "pre-push", "the failure must name what is missing");
+    assert_mentions(
+        &text(&output),
+        ".githooks",
+        "the failure must name the hooks directory it could not find",
+    );
     assert!(
         !sandbox
             .git(&["config", "--get", "core.hooksPath"])
