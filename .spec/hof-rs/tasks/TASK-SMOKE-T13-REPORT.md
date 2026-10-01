@@ -654,13 +654,13 @@ find .workspace/mario / .workspace/fresh-t11 / .workspace/fresh-t12 -newermt "�
 
 ### (c) 机器可读块由 JSON 序列化器生成 + 栅栏感知 `json.loads` 回读（**已做**）
 
-- **生成**：`evidence/scripts/build_json_block.py`（内部 `json.dump(..., ensure_ascii=False, indent=2)`，并在写盘前 `assert` 了本轮所有承重数字：`runtime_total == 15123294`、`attempt_total == 14850916`、`len(verified)==10`、`len(gap)==13`、`len(records)==31`、`start_state.mode=="fresh"`、`exit_code==0`）⇒ 输出 `evidence/analysis/machine_block.json`（31196 B）。
-- **装配**：`evidence/scripts/assemble_report.py` 把该文件的**字节原样**插入 ```json 栅栏（不做字符串拼接）。
-- **回读**：`evidence/scripts/json_block_check.py`（按 ``` 切块、只对 info string 为 `json` 的块 `json.loads`，核对 9 个必需顶层键，并与 `machine_block.json` 比字节）。转录见 `evidence/analysis/json_block_check.txt`。
+- **生成**：`evidence/scripts/build_json_block.py`（内部 `json.dump(..., ensure_ascii=False, indent=2)`，并在写盘前 `assert` 了本轮所有承重数字：`runtime_total == 15123294`、`attempt_total == 14850916`、`len(verified)==10`、`len(gap)==13`、`len(records)==31`、`start_state.mode=="fresh"`、`exit_code==0`）⇒ 输出 `evidence/analysis/machine_block.json`（**34699 B**，29 个顶层键）。
+- **装配**：`evidence/scripts/assemble_report.py` 把该文件的**字节原样**插入 ```json 栅栏（不做字符串拼接），并把生成好的证据索引追加到文末。
+- **回读**：`evidence/scripts/json_block_check.py`（按 ``` 切块、只对 info string 为 `json` 的块 `json.loads`，核对 9 个必需顶层键，并与 `machine_block.json` 比字节）。转录见 `evidence/analysis/json_block_check.txt`（`RESULT = PASS`、`byte-identical = True`）。
 
 ### (d) 派生物数字与正文一致
 
-正文所有数字都取自同一批脚本产物（`round_facts.txt`、`battery_reads.txt`、`game_route_calls.txt`、`usage_cmp.txt`、`token_totals.txt`、`a0a1_diff.txt`、`anchor_check.txt`、`epochs.txt`、`utf8_scan.txt`、`text_digest_caliber.txt`），且机器块由 `build_json_block.py` 从**同一批冻结件**重读生成、带 `assert` 把关。自查中我改过两处：JSON 里 `player x reached` 一条的引号（语法错误，已修）与一处中文被误写成 `-Term`（已修）——都发生在**报告落盘之前**。
+正文所有数字都取自同一批脚本产物（`round_facts.txt`、`battery_reads.txt`、`game_route_calls.txt`、`called_tools_census.txt`、`recount_tools.txt`、`tester_running_game_invocations.txt`、`usage_cmp.txt`、`token_totals.txt`、`a0a1_diff.txt`、`anchor_check.txt`、`epochs.txt`、`utf8_scan.txt`、`text_digest_caliber.txt`、`cite_check.txt`），且机器块由 `build_json_block.py` 从**同一批冻结件**重读生成、带 `assert` 把关。自查中我修正了四处，**全部发生在报告定稿之前**：① JSON 里 `player x reached` 一条的引号（语法错误）；② 一处中文被误写成 `-Term`；③ **普查在轮次未结束时取的快照把 Tester 数少了**（85 条命令 / 0 次 `running_game_*` ⇒ 最终工件 134 条 / 4 次成功），全部计数已按最终工件重算；④ 机器块的文件数与证据索引一致（`evidence_files_that_exist` 改为分组结构，索引 59 条）。本报告不含"说了但没行为"的措辞：§0.3/§3.3 已把"该分支未触发"与"角色侧 live 路由已被证明可用"两件事分开陈述。
 
 ---
 
