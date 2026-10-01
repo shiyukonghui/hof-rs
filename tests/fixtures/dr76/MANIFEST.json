@@ -1,0 +1,26 @@
+{
+  "batch": "DR-76",
+  "captured_by": "TASK-SMOKE-T10 (runs/smoke-t10), the round whose pickup and win were never observed",
+  "derivation": "python scripts/derive_dr76_fixtures.py",
+  "note": "runs/** is read-only evidence.  These fixtures are the frozen input the DR-76 tests are driven from, so the interaction window is corrected against the engine's real payload shapes instead of a hand-written idea of them (the DR-73 A1/O1 defect).  scene_tree_smoke_t10.json and hud_labels_smoke_t10.json are byte-for-byte copies; the position-sample file is a reduction whose every number is the frozen float.  tests/dr76_payload_shapes.rs checks the copies' sha256 and the real shape.",
+  "files": [
+    {
+      "fixture": "scene_tree_smoke_t10.json",
+      "source": "runs/smoke-t10/iter-1/candidate/.hoh/deterministic/raw/scene_tree.json",
+      "sha256": "5fa1b08387184ca05bffb14a51ab509e3a53660c7604437a036161b35cf5e128",
+      "copy": "byte-for-byte"
+    },
+    {
+      "fixture": "hud_labels_smoke_t10.json",
+      "source": "runs/smoke-t10/iter-1/candidate/.hoh/evidence/hud-labels.json",
+      "sha256": "3bf62ba0bf347f7d617b0edd5a3736d64ca0771ef7d5a9f790c4364223dde64e",
+      "copy": "byte-for-byte"
+    },
+    {
+      "fixture": "interaction_position_samples_smoke_t10.json",
+      "source": "runs/smoke-t10/iter-1/candidate/.hoh/deterministic/raw/input_replay.json",
+      "sha256": "dbd6c5aa1cca6505f197519400ef3cb30b7b181bae6e3dc8fc687a5a176d199c",
+      "copy": "reduced (four windows' position samples + goal geometry)"
+    }
+  ]
+}

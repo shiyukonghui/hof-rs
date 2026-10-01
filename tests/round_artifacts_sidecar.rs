@@ -183,30 +183,95 @@ fn original_occurrences() -> usize {
         .count()
 }
 
+/// DR-76 ⑥: the assignment names the **original** really carries.
+///
+/// The DR-73 check looped over a hard-coded `(marker, leaked)` table and only
+/// fired when the *sidecar* contained the marker.  The sidecar contains none of
+/// those markers — the occurrence lines are replaced wholesale — so every pair
+/// was vacuous: the loop had nothing to inspect, and a sidecar that simply copied
+/// the original's dumps would still have passed it.  (Two of the six names,
+/// `HOH_ARTIFACT_DIR=` and `PATH=`, are not even in the original; the acceptance's
+/// A6 found that too.)  The check below derives its subject from the original's
+/// own bytes instead.
+fn assignment_names(original: &str) -> Vec<String> {
+    let mut names: Vec<String> = Vec::new();
+    let mut rest = original;
+    while let Some(start) = rest.find("HOH_") {
+        let after = &rest[start..];
+        let end = after
+            .find(|character: char| !(character.is_ascii_alphanumeric() || character == '_'))
+            .unwrap_or(after.len());
+        let name = &after[..end];
+        if after[end..].starts_with('=') && !names.iter().any(|existing| existing == name) {
+            names.push(name.to_string());
+        }
+        rest = &after[end.max(1)..];
+    }
+    names
+}
+
+/// The value of `NAME=` on one line, up to the first boundary the recorded
+/// encoding uses (whitespace, a backslash escape, a quote, a `;`), or `None` when
+/// the line does not carry the assignment.
+fn assignment_value_after(line: &str, name: &str) -> Option<String> {
+    let start = line.find(name)? + name.len();
+    let rest = &line[start..];
+    if rest.starts_with("<redacted>") {
+        return Some("<redacted>".to_string());
+    }
+    let end = rest
+        .find(|character: char| {
+            character.is_whitespace() || character == '\\' || character == '"' || character == ';'
+        })
+        .unwrap_or(rest.len());
+    Some(rest[..end].to_string())
+}
+
 /// The disclosure requirement: no environment value survives into the sidecar.
 #[test]
 fn the_sidecar_carries_no_environment_value_and_no_user_name() {
     let (_, sidecar_path, _, _) = build_sidecar();
     let text = std::fs::read_to_string(&sidecar_path).unwrap();
+    let original =
+        std::fs::read_to_string(repo_root().join(SOURCE)).expect("the original is readable");
 
-    // Every assignment the original recorded, and what must be gone with it.
-    for (marker, leaked) in [
-        ("HOH_ARTIFACT_DIR=", "\\\\.workspace/mario"),
-        ("HOH_GAME_ROUTE=", "smoke-t10"),
-        ("HOH_HOH_BIN=", "target"),
-        ("HOH_ITERATION=", "1"),
-        ("HOH_MODEL_API_KEY=", "AppData"),
-        ("PATH=", "node_modules"),
-    ] {
+    // DR-76 ⑥: every assignment the original records must lose its value.
+    // `HOH_MODEL_API_KEY=` survives in the sidecar's own `SIMULATION` block, where
+    // the original already carried `<redacted>`; that is the shape the check
+    // has to allow, and "the value is the redaction marker" is exactly what it
+    // asserts.  A sidecar that copied an occurrence line instead of replacing it
+    // carries `HOH_GAME_ROUTE=F:\\…` and reddens here.
+    let names = assignment_names(&original);
+    assert!(
+        !names.is_empty(),
+        "the original must carry the assignments this check is about, or it proves nothing"
+    );
+    let mut inspected = 0usize;
+    for name in &names {
+        let marker = format!("{name}=");
         for line in text.lines() {
-            if !line.contains(marker) {
+            let Some(value) = assignment_value_after(line, &marker) else {
                 continue;
-            }
+            };
+            inspected += 1;
             assert!(
-                !line.contains(leaked),
-                "`{leaked}` survived next to `{marker}`: {line}"
+                value.starts_with("<redacted"),
+                "the recorded value of `{marker}` survived the sidecar: `{value}` in {line:?}"
             );
         }
+    }
+    assert!(
+        inspected > 0,
+        "no assignment was inspected at all, so the loop above is vacuous again: {text}"
+    );
+    // …and the specific claim A6 falsified is recorded as a fact: the two names
+    // that made the DR-73 table vacuous are not in the original to begin with.
+    for absent in ["HOH_ARTIFACT_DIR=", "PATH="] {
+        assert!(
+            !original.contains(absent),
+            "`{absent}` is not a literal of the original; a check keyed on it can never fire, \
+             which is why the DR-73 loop was vacuous"
+        );
     }
     // The disclosure itself: no user-name path and no environment dump.
     assert!(
@@ -226,8 +291,6 @@ fn the_sidecar_carries_no_environment_value_and_no_user_name() {
         "neither the escaped `;`-joined `PATH` tail nor the environment dump may survive:\n{text}"
     );
     // The scan really saw the file: the values were there to be removed.
-    let original =
-        std::fs::read_to_string(repo_root().join(SOURCE)).expect("the original is readable");
     for survived in ["HOH_GAME_ROUTE=", "HOH_MODEL_API_KEY="] {
         assert!(
             original.contains(survived),

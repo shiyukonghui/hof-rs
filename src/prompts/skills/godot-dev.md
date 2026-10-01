@@ -137,10 +137,30 @@ have to be true, and a round can get the first without the second:
   `0.61 s`, i.e. roughly **`135 px` of horizontal travel per jump**. A gap wider
   than that is a wall: the player falls out of the level and the win can never be
   driven. Place `Goal` on ground the player can reach **while holding
-  `move_right`**, and leave the ground continuous under it. A real round shipped
-  the goal at `x = 6400` with no ground past `x ≈ 3800`, so the player's maximum
-  `x` over the whole round was `448` — the flag was correct and the level was
-  not.
+  `move_right`**, and keep the ground continuous under it — the ground is what
+  makes the goal reachable at all, and it is checked from the scene, not assumed.
+
+  > **Superseded (DR-76 ③).** This section used to say: *"A real round shipped the
+  > goal at `x = 6400` with no ground past `x ≈ 3800`, so the player's maximum `x`
+  > over the whole round was `448` — the flag was correct and the level was
+  > not."* **That was false, and it must not be acted on.** The frozen round's
+  > `Ground` is one `6800 × 40` `RectangleShape2D` centred at `x = 3400` — it
+  > covers `x ∈ [0, 6800]` with an enabled collision shape, i.e. the ground is
+  > **continuous all the way under the goal**. The only obstacle between the
+  > observed maximum and the goal is a `32 × 60` wall whose top is `28 px` above
+  > the walking surface, well inside the `66 px` apex above; the maximum `x` the
+  > whole round really observed is `455.999572753906`, not `448`.
+  > The true cause of "the win was never driven" is **coverage**: the battery's
+  > drive budget was shorter than the distance to the trigger. Do **not** shorten
+  > or re-place a `Goal` because of that sentence.
+  >
+  > The battery can drive for about `130 s` of game time (its budget is the
+  > specification's own `120 s` maximum traversal, F17, plus margin), so a level
+  > the specification allows is inside what the battery can observe. When the
+  > trigger still is not reached the record splits the verdict: a budget that ran
+  > out is `WIN_UNREACHED_WITHIN_BUDGET` — a coverage verdict that says nothing
+  > about the level — and only a player that stops advancing with budget left is
+  > `WIN_UNREACHABLE_GEOMETRICALLY`. Never read the first as the second.
 
 Verify the placement from the scene, not from memory:
 ```

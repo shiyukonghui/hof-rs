@@ -2495,9 +2495,13 @@ impl<'a> BatterySession<'a> {
     /// Neither is a value the harness writes.  The window only does what a player
     /// does: it holds [`INTERACTION_DRIVE_ACTION`] and observes.  A project where
     /// the player can never touch a coin takes the `COIN_NOT_PICKED_UP` branch,
-    /// and one whose goal is past the traversable end takes `WIN_NOT_DRIVEN`;
-    /// both are recorded as honest `ok = false` for this step, which is what
-    /// makes the round's own evidence able to say what E3 still needs.
+    /// and one whose goal is not reached splits into two **different** verdicts
+    /// (DR-76 ②): `WIN_UNREACHED_WITHIN_BUDGET` / `WIN_NOT_DRIVEN` when the
+    /// window's own budget ran out (a coverage verdict, which claims nothing
+    /// about the level) and `WIN_UNREACHABLE_GEOMETRICALLY` when the sampled
+    /// player stopped advancing with budget still unspent.  Both are recorded as
+    /// honest `ok = false` for this step, which is what makes the round's own
+    /// evidence able to say what E3 still needs.
     async fn step_interaction_evidence(&mut self, scene_tree: Option<Value>) -> anyhow::Result<()> {
         let step = BatteryStep {
             id: "interaction_evidence".to_string(),
@@ -2513,16 +2517,44 @@ impl<'a> BatterySession<'a> {
         let mut calls = Vec::new();
         let mut summaries: Vec<String> = Vec::new();
 
-        // (a) The HUD cell the coin count lives in.  The tree came from the same
-        //     game session this step observes, so the path is a reading, not a
-        //     guess; a label renamed away from the specification's own prefix is
-        //     an explicit "unreadable" rather than a silent zero.
-        let coin_label = scene_tree
+        // (a) The HUD cell the coin count lives in.  The scene tree names nodes —
+        //     `name`, `path`, `type` — and carries **no text**: every one of the 10
+        //     frozen scene-tree payloads from five rounds has exactly those three
+        //     keys on a `Label` (DR-76 ①, the DR-73 A1/O1 defect).  The counter
+        //     therefore cannot be identified *from the tree*; the tree is used only
+        //     to enumerate the `Label`s under `HUD`, and each candidate's `text` is
+        //     read through `running_game_get_node_properties`.  The first whose text
+        //     starts with the specification's own prefix is the counter; a HUD
+        //     where nothing reads that way is an explicit "unreadable", never a
+        //     silent zero.
+        let candidates = scene_tree
             .as_ref()
-            .and_then(|tree| hud_label_path(tree, COIN_COUNTER_PREFIX));
+            .map(hud_label_candidates)
+            .unwrap_or_default();
+        summaries.push(format!(
+            "interaction: HUD counter candidates (from the scene tree's `name`/`path` only; each \
+             text read through `{}`) = {candidates:?}",
+            semantic::NODE_PROPERTIES
+        ));
+        let mut coin_label: Option<String> = None;
+        let mut coin_before: Option<String> = None;
+        for candidate in &candidates {
+            let text = self
+                .read_hud_text(Some(candidate.as_str()), &mut calls)
+                .await;
+            if let Some(text) = text {
+                if text.trim_start().starts_with(COIN_COUNTER_PREFIX) {
+                    coin_label = Some(candidate.clone());
+                    coin_before = Some(text);
+                    break;
+                }
+            }
+        }
 
-        // (b) The BEFORE reading of both observables, and the BEFORE frame.
-        let coin_before = self.read_hud_text(coin_label.as_deref(), &mut calls).await;
+        // (b) The BEFORE reading of the other observable, and the BEFORE frame.
+        //     The counter's before-reading is the one the candidate scan just took
+        //     (`coin_before`); it is deliberately not read twice, so the assertion's
+        //     expectation is the very reading the scan selected the cell with.
         let goal_before = self
             .read_node_property(GOAL_POSITION_NODE, GOAL_REACHED_PROPERTY, &mut calls)
             .await;
@@ -2550,9 +2582,19 @@ impl<'a> BatterySession<'a> {
         //     or the batch budget runs out.  The action is held in the game
         //     process across batches (`semantic_inject_action` presses it), so
         //     the player keeps travelling between samples.
+        //
+        //     DR-76 ②: the loop also records **why** it stopped, because "the
+        //     budget ran out" and "the level stopped the player" are different
+        //     diagnoses and must never share a verdict.  A batch that moves the
+        //     sampled maximum by less than [`INTERACTION_MIN_PROGRESS_PX`] is a
+        //     stalled batch; two in a row, with budget left, mean the held action
+        //     cannot advance the player any further.
         let mut max_x: Option<f64> = None;
         let mut batches = 0usize;
         let mut stopped_early = false;
+        let mut stalled_batches = 0usize;
+        let mut stalled = false;
+        let mut drive_incomplete = false;
         if !is_false(&goal_before) {
             // The goal already reports `reached` before the drive — either the
             // round's own condition ran at boot or the property is not a flag at
@@ -2576,8 +2618,10 @@ impl<'a> BatterySession<'a> {
                         "{label}: DRIVE_NOT_INJECTED (the game-process input channel refused \
                          `{INTERACTION_DRIVE_ACTION}`)"
                     ));
+                    drive_incomplete = true;
                     break;
                 }
+                let before_batch = max_x;
                 match self
                     .semantic_sample_pairs(INTERACTION_BATCH_FRAMES, &label, &mut calls)
                     .await
@@ -2589,8 +2633,23 @@ impl<'a> BatterySession<'a> {
                     }
                     None => {
                         summaries.push(format!("{label}: NO_FRAME_SAMPLES"));
+                        drive_incomplete = true;
                         break;
                     }
+                }
+                let advanced = match (max_x, before_batch) {
+                    (Some(now), Some(previous)) => now > previous + INTERACTION_MIN_PROGRESS_PX,
+                    (Some(_), None) => true,
+                    _ => false,
+                };
+                if advanced {
+                    stalled_batches = 0;
+                } else {
+                    stalled_batches += 1;
+                }
+                if stalled_batches >= INTERACTION_STALL_BATCHES {
+                    stalled = true;
+                    break;
                 }
                 match self
                     .read_node_property(GOAL_POSITION_NODE, GOAL_REACHED_PROPERTY, &mut calls)
@@ -2607,18 +2666,41 @@ impl<'a> BatterySession<'a> {
                              after batch {}: the win state cannot be observed)",
                             batch + 1
                         ));
+                        drive_incomplete = true;
                         break;
                     }
                 }
             }
         }
+        // DR-76 ②: the numbers the coverage/geometry split is made of.
+        let goal_x = goal_position
+            .as_ref()
+            .and_then(|value| value.get("x"))
+            .and_then(Value::as_f64);
+        let coverage_shortfall_px = match (max_x, goal_x) {
+            (Some(reached), Some(goal)) => Some(goal - reached),
+            _ => None,
+        };
+        let budget_exhausted =
+            !stopped_early && !stalled && !drive_incomplete && batches >= INTERACTION_MAX_BATCHES;
+        let batches_left = INTERACTION_MAX_BATCHES.saturating_sub(batches);
         summaries.push(format!(
-            "interaction: drove `{INTERACTION_DRIVE_ACTION}` for {batches} batch(es) \
-             ({INTERACTION_BATCH_FRAMES} frame(s) each), player max x={max_x:?}{}",
+            "interaction: drove `{INTERACTION_DRIVE_ACTION}` for {batches} of \
+             {INTERACTION_MAX_BATCHES} batch(es) ({INTERACTION_BATCH_FRAMES} frame(s) each, \
+             {INTERACTION_DRIVE_FRAMES} frames budgeted), player max x={max_x:?}, \
+             goal.position={goal_position:?}, coverage_shortfall_px={coverage_shortfall_px:?}{}{}",
             if stopped_early {
                 ", stopped as soon as the win was observed"
             } else {
                 ""
+            },
+            if stalled {
+                format!(
+                    ", stopped after {INTERACTION_STALL_BATCHES} batch(es) without forward \
+                     progress with {batches_left} batch(es) of budget left"
+                )
+            } else {
+                String::new()
             }
         ));
 
@@ -2759,11 +2841,46 @@ impl<'a> BatterySession<'a> {
             }
             _ if goal_lost => {
                 ok = false;
-                summaries.push(format!(
-                    "interaction: WIN_NOT_DRIVEN (goal.{GOAL_REACHED_PROPERTY} stayed false over \
-                     {batches} driven batch(es); player max x={max_x:?}, goal.position=\
-                     {goal_position:?} — a goal the player can never reach is not a win condition)"
-                ));
+                // DR-76 ②: **coverage is not geometry.**  Two very different
+                // causes used to be reported with the one word `WIN_NOT_DRIVEN`,
+                // and the record's `(player max x, goal.position)` pair then read
+                // like unreachability even when the budget was the only limit —
+                // which is exactly the false diagnosis `4deefc8` committed (the
+                // level is continuous to x=6800; the replay simply never drove
+                // far enough).  The verdict now says which of the two it is, and
+                // the geometric one is only reachable when the budget was **not**
+                // the limit.
+                if stalled && batches_left > 0 {
+                    summaries.push(format!(
+                        "interaction: WIN_UNREACHABLE_GEOMETRICALLY (goal.{GOAL_REACHED_PROPERTY} \
+                         stayed false and the sampled player x did not advance over \
+                         {INTERACTION_STALL_BATCHES} consecutive batch(es) of \
+                         `{INTERACTION_DRIVE_ACTION}` while {batches_left} batch(es) of the \
+                         {INTERACTION_MAX_BATCHES}-batch budget were still unspent; player max \
+                         x={max_x:?}, goal.position={goal_position:?}, \
+                         coverage_shortfall_px={coverage_shortfall_px:?} — the bound is the level \
+                         or the game logic, not the window's coverage)"
+                    ));
+                } else if budget_exhausted {
+                    summaries.push(format!(
+                        "interaction: WIN_UNREACHED_WITHIN_BUDGET / WIN_NOT_DRIVEN (the window \
+                         spent all {INTERACTION_MAX_BATCHES} batch(es) = \
+                         {INTERACTION_DRIVE_FRAMES} frames of `{INTERACTION_DRIVE_ACTION}` and \
+                         goal.{GOAL_REACHED_PROPERTY} stayed false; player max x={max_x:?}, \
+                         goal.position={goal_position:?}, \
+                         coverage_shortfall_px={coverage_shortfall_px:?} — this is a COVERAGE \
+                         verdict, not a geometry verdict: the window did not reach the trigger, \
+                         so nothing is claimed about whether the level is passable)"
+                    ));
+                } else {
+                    summaries.push(format!(
+                        "interaction: WIN_NOT_DRIVEN (the drive could not be completed \
+                         ({batches} of {INTERACTION_MAX_BATCHES} batch(es) ran); player max \
+                         x={max_x:?}, goal.position={goal_position:?}, \
+                         coverage_shortfall_px={coverage_shortfall_px:?}; no conclusion about the \
+                         level is drawn from an incomplete drive)"
+                    ));
+                }
             }
             (before, _) if !is_false(&before) => {
                 ok = false;
@@ -3724,14 +3841,42 @@ pub const GOAL_POSITION_NODE: &str = "Goal";
 /// (F17: one-way rightward progress).
 pub const INTERACTION_DRIVE_ACTION: &str = "move_right";
 
-/// DR-73 ③: how many drive/sample batches the interaction window is willing to
-/// spend, and how many frames each batch samples.  The window stops early as
-/// soon as the win is observed, so the cost is paid only by a project whose
-/// level is long — which is exactly the project whose reachability is in
-/// question.  `60` frames is one second of game time, i.e. `220 px` of travel
-/// for the PRD's speed, so the loop covers roughly `24 s` of play.
-pub const INTERACTION_MAX_BATCHES: usize = 24;
+/// DR-73 ③ / DR-76 ②: how many drive/sample batches the interaction window is
+/// willing to spend, and how many frames each batch samples.
+///
+/// The window stops early as soon as the win is observed, so the cost is paid
+/// only by a project whose level is long — which is exactly the project whose
+/// reachability is in question.
+///
+/// The budget is a **promise about the specification**, not a taste.  `PRD-mario.md`
+/// F17 bounds a full traversal at `30–120` seconds, so a window that cannot drive
+/// for 120 seconds cannot observe the win of a level the specification allows.
+/// The DR-73 budget was `24 × 60 = 1440` frames = 24 s ≈ 5280 px, while the frozen
+/// `smoke-t10` goal's trigger sits 6308 px from spawn: even a flawless game was
+/// recorded as a win gap, and the record's `(player max x, goal.position)` pair
+/// then read like unreachability even though the ground really spans to x=6800
+/// (A2/A3).  `INTERACTION_MAX_BATCHES` is therefore
+/// [`SPEC_MAX_TRAVERSAL_SECONDS`]-worth of one-second batches plus
+/// [`INTERACTION_BUDGET_MARGIN_BATCHES`] of slack, and
+/// `tests/evidence_battery.rs` pins both the arithmetic and the behaviour: a
+/// change here has to redden a test.
+pub const SPEC_MAX_TRAVERSAL_SECONDS: u64 = 120;
+/// DR-76 ②: ten one-second batches (≈2200 px at the frozen 220 px/s) of margin
+/// over the specification's own longest traversal.
+pub const INTERACTION_BUDGET_MARGIN_BATCHES: usize = 10;
+pub const INTERACTION_MAX_BATCHES: usize =
+    SPEC_MAX_TRAVERSAL_SECONDS as usize + INTERACTION_BUDGET_MARGIN_BATCHES;
 pub const INTERACTION_BATCH_FRAMES: u64 = 60;
+/// DR-76 ②: how far the window can drive in total, in frames of game time.
+pub const INTERACTION_DRIVE_FRAMES: u64 = INTERACTION_MAX_BATCHES as u64 * INTERACTION_BATCH_FRAMES;
+/// DR-76 ②: a batch that moves the sampled maximum x by less than this is a
+/// stalled batch.  One frame at the frozen 220 px/s is 3.6667 px, so `1.0` px
+/// separates "the player is still travelling" from "the player is not".
+pub const INTERACTION_MIN_PROGRESS_PX: f64 = 1.0;
+/// DR-76 ②: how many consecutive stalled batches mean the held action cannot
+/// advance the player — the geometric/logic verdict, only ever reachable with
+/// budget left to spend.
+pub const INTERACTION_STALL_BATCHES: usize = 2;
 
 /// DR-54: the semantic game tools the evidence battery is built on.
 ///
@@ -4089,21 +4234,29 @@ fn visit_nodes(node: &Value, visit: &mut impl FnMut(&Value)) {
     }
 }
 
-/// DR-73 ③: the `NodePath` of the first `Label` under `HUD` whose text starts
-/// with `prefix`, or `None`.
+/// DR-76 ①: the `NodePath`s of every `Label` under `HUD`, in tree order.
 ///
 /// The interaction window has to find the coin counter without knowing what the
-/// round named it.  It looks for the **specification's own wording** (`Coins:`,
-/// `PRD-mario.md` F10) on a `Label` inside `HUD`, which is where the HUD cell is
-/// required to be (`N2`), and returns the node's own `/root/...` path — the form
-/// the semantic readers resolve.
-fn hud_label_path(tree: &Value, prefix: &str) -> Option<String> {
-    let root = tree.get("tree")?;
-    let mut found: Option<String> = None;
+/// round named it — but it may **not** do so from the node's text, because the
+/// real `running_game_get_scene_tree` reply does not carry one.  Every one of the
+/// 10 frozen scene-tree payloads from the five rounds that produced them
+/// (`runs/smoke-t5|t6|t7|t8|t10`, `scene_tree.json` and `play_scene_ready.json`)
+/// gives a `Label` exactly `name`, `path` and `type`; the DR-73 window required a
+/// `text` member, so on real hardware it found no counter at all and every round
+/// answered `COIN_COUNTER_UNREADABLE` no matter what the game did (A1/O1).
+///
+/// This function therefore uses the tree only for what the tree really has: the
+/// set of candidate cells, located by their own `/root/...` paths — the form the
+/// semantic reader resolves.  The caller reads each candidate's `text` through
+/// `running_game_get_node_properties` and keeps the one that starts with the
+/// specification's prefix.  A `Label` outside `HUD` is not a candidate, which is
+/// where the HUD cell is required to be (N2).
+pub fn hud_label_candidates(tree: &Value) -> Vec<String> {
+    let Some(root) = tree.get("tree") else {
+        return Vec::new();
+    };
+    let mut found: Vec<String> = Vec::new();
     visit_nodes(root, &mut |node| {
-        if found.is_some() {
-            return;
-        }
         let kind = node.get("type").and_then(Value::as_str).unwrap_or("");
         if kind != "Label" {
             return;
@@ -4112,10 +4265,7 @@ fn hud_label_path(tree: &Value, prefix: &str) -> Option<String> {
         if !path.contains("/HUD/") {
             return;
         }
-        let text = node.get("text").and_then(Value::as_str).unwrap_or("");
-        if text.trim_start().starts_with(prefix) {
-            found = Some(path.to_string());
-        }
+        found.push(path.to_string());
     });
     found
 }
@@ -4679,7 +4829,7 @@ arrived for someone else. When `.hoh/deterministic/mcp-sync.json` reports
 | `screenshot` | N2, F4, F13, F16 | a PNG really exists under `.hoh/evidence/` (a reported path alone is not evidence) |
 | `input_channel_probe` | F1, F2 (+P3 when a semantic tool really reports no such action) | the **game process** answered the contract's semantic tools (`running_game_get_node_properties`, `running_game_get_node_property_samples`, `running_game_create_input_recording` + `running_game_play_input_recording`, `running_game_run_test_scenario`) and reports `GAME_INPUT_CHANNEL_OK`, `ACTION_NOT_BOUND` or `ACTION_BINDING_UNKNOWN`. The raw payload is `.hoh/deterministic/raw/input_channel_probe.json`; its `channel` object carries every reading verbatim, and the one remaining `running_game_execute_gdscript` call is a **read-only** position probe that never decides the verdict (DR-54) |
 | `input_replay` | F1, F2, F3 (+P3 when an InputMap action is missing) | `move_right`/`jump`/`move_left` recordings of `Player.position`, sampled **inside the game process** (`running_game_get_node_property_samples`, game-forwarded) after the action was injected through the semantic input API (`running_game_create_input_recording` + `running_game_play_input_recording` + `running_game_run_test_scenario`). Each call in `raw/input_replay.json` carries the `(action, channel, before_position, after_position, velocity)` quadruple. The editor-side `editor_simulate_input_action` is recorded for completeness only and is labelled `EDITOR_SIDE_INJECTION`: the editor is a different process and cannot drive the game. `INPUT_HAD_NO_EFFECT` means the action was delivered inside the game and the position did not change; `ACTION_NOT_BOUND` means a semantic tool answered that the game's InputMap has no such action; `ACTION_BINDING_UNKNOWN` means the channel could not be read and must **not** be read as a missing action. **DR-69 ④**: E3's evidence form (`REQUIREMENTS.md:114`) needs before/after frames and a node-state assertion, so each window also captures `.hoh/evidence/replay-<action>-before.png` and `-after.png` (`running_game_capture_screenshot`, inline form, labelled `<action>:replay_frame_before` / `_after`) and asserts `Player.position != <first sample>` with the engine's own `running_game_assert_node_state` (`property: position`, `operator: neq`, labelled `<action>:replay_assert_moved`). The assertion is **positional on purpose**: `input_axis` answers `null` on real hardware (DR-58) and the ~14-frame injection/sampling lag makes a total-displacement assertion untrustworthy, so the expectation is the window's own first sample. `POSITION_UNCHANGED` / `POSITION_ASSERTION_UNAVAILABLE` / `REPLAY_FRAME_MISSING` are the three honest failures of that form |
-| `interaction_evidence` | F10, F13 (and F11/F12 structurally) | **DR-73 ③**: E3 names **four** behaviours, and until this step the battery observed two — `smoke-t10` ended with `Coins: 0` for the whole round and `Goal.reached` never true while the evidence handed to the Tester could not say so. The window reads the HUD `Label` whose text starts with `Coins:` and the goal node's `reached` flag, captures `.hoh/evidence/replay-interaction-{before,after}.png`, holds `move_right` for up to 24 one-second batches of `running_game_get_node_property_samples` (stopping as soon as the win is observed), and then asserts both closures **with the engine's own `running_game_assert_node_state`**: `text:neq <before reading>` on the counter and `reached:neq false` on the goal. `COIN_PICKED_UP` / `WIN_DRIVEN` are the greens; `COIN_NOT_PICKED_UP` (the counter never moved), `WIN_NOT_DRIVEN` (the flag stayed false; the record carries `player max x` and `goal.position` so "unreachable" is measurable), `COIN_COUNTER_UNREADABLE` (no `Coins:` label) and `GOAL_FLAG_NOT_FALSE_BEFORE` (the flag was already true, so the drive cannot be credited) are the honest failures. The window never writes a property: it drives input and reads state, which is what makes "the game drove its own win branch" a reading rather than a wish. **It is a game-process window**, judged exactly like `input_replay` above |
+| `interaction_evidence` | F10, F13 (and F11/F12 structurally) | **DR-73 ③**: E3 names **four** behaviours, and until this step the battery observed two — `smoke-t10` ended with `Coins: 0` for the whole round and `Goal.reached` never true while the evidence handed to the Tester could not say so. The window enumerates the `Label`s under `HUD` from the scene tree's `name`/`path` (**the tree itself carries no text** — DR-76 ①) and reads each candidate's `text` through `running_game_get_node_properties`, keeping the one whose text starts with `Coins:`; it reads the goal node's `reached` flag, captures `.hoh/evidence/replay-interaction-{before,after}.png`, holds `move_right` for up to `INTERACTION_MAX_BATCHES` one-second batches of `running_game_get_node_property_samples` — the specification's 120 s maximum traversal (F17) plus margin, DR-76 ② — (stopping as soon as the win is observed), and then asserts both closures **with the engine's own `running_game_assert_node_state`**: `text:neq <before reading>` on the counter and `reached:neq false` on the goal. `COIN_PICKED_UP` / `WIN_DRIVEN` are the greens; `COIN_NOT_PICKED_UP` (the counter never moved), `WIN_NOT_DRIVEN` split into the two diagnoses it has to keep apart — `WIN_UNREACHED_WITHIN_BUDGET` (the window's own budget ran out: a coverage verdict that claims nothing about the level) and `WIN_UNREACHABLE_GEOMETRICALLY` (the sampled player stopped advancing with budget unspent) — with the record carrying `player max x`, `goal.position` and `coverage_shortfall_px`; `COIN_COUNTER_UNREADABLE` (no `Coins:` label) and `GOAL_FLAG_NOT_FALSE_BEFORE` (the flag was already true, so the drive cannot be credited) are the honest failures. The window never writes a property: it drives input and reads state, which is what makes "the game drove its own win branch" a reading rather than a wish. **It is a game-process window**, judged exactly like `input_replay` above |
 | `node_and_collision_assertions` | F5, F6, F10, F13, F14, F16 | node properties, `shape_count` per body, HUD text nodes |
 | `editor_stop_scene` | N1 | the game stopped cleanly |
 

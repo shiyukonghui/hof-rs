@@ -111,7 +111,22 @@ HEAD:src/lib.rs             bytes=534     CR=0  LF=19
 
 ⇒ 两枚金币的圆心区域都被玩家碰撞盒**穿过了**，`Coins:` 仍是 0。
 
-**(A-3) 终点在可走范围之外。** `Goal` @ x=6400，但地面 `Ground` 的 6800 宽居中于 3400 ⇒ 覆盖 x∈[0,6800]，
+**(A-3) 终点在可走范围之外。**
+> **⚠ DR-76 更正（A-3 全段被取代，原措辞保留如下以留证）**：
+> 原文的结论 **"关卡不可通过 / 终点位置不可达 / x≈3800 之后没有地面"** 是**假的**，已被
+> `TASK-DR73-ACCEPTANCE.md` 的 **A3** 用冻结证据推翻：冻结轮次的 `Ground` 是**单个**
+> `6800×40` 的 `RectangleShape2D`，中心 `x=3400` ⇒ 覆盖 `x∈[0,6800]`、碰撞体启用，
+> **地面在终点下方连续**；从观测到的 max x 到 `Goal` 之间唯一的障碍是 `x=1700` 的
+> `32×60` 墙，其顶面比行走面高 `28 px`，在本报告自己算出的 `66 px` 顶点之内。
+> **真因是覆盖不足**：电池的驱动预算（`24×60=1440` 帧）短于到触发器的距离（约 6308 px），
+> 不是关卡几何；且 `WIN_NOT_DRIVEN` 这一措辞把"预算不够"与"几何不可达"混为一谈，
+> DR-76 已把它拆成 `WIN_UNREACHED_WITHIN_BUDGET`（覆盖）与
+> `WIN_UNREACHABLE_GEOMETRICALLY`（几何/逻辑），并修正了交付技能
+> `src/prompts/skills/godot-dev.md` 3b 与 `tests/interaction_contract.rs` 的注释。
+> 同一句还进了 `4deefc8` 的**提交信息**：提交信息不可改写，故**只能在此台账更正**
+> （见本报告 §12；DR-76 报告亦记录此点）。**不要**因为下面这段结论去缩短本来正常的关卡。
+
+下面是被取代的原文（**superseded**）：`Goal` @ x=6400，但地面 `Ground` 的 6800 宽居中于 3400 ⇒ 覆盖 x∈[0,6800]，
 看似够到；决定性的不是这个，而是**玩家全轮可观测 x 的最大值**：`448.666`（±1 帧）。
 用工程自己的常量算**跳跃水平航程**：`speed=220 px/s`、`jump_velocity=-430 px/s`、`gravity=1400 px/s²`
 （`player.gd:7-9`）⇒ 滞空 `2×430/1400 = 0.6143 s`、**单次跳跃水平约 `135 px`**、顶点约 `66 px`。
@@ -119,6 +134,10 @@ HEAD:src/lib.rs             bytes=534     CR=0  LF=19
 从 Platform3 右缘（x=3800）到 Goal（x=6400）之间**没有任何落脚面**：`135 px` 的跳跃跨不过去，
 玩家只会掉出关卡下边界（`player.gd` 无 y 兜底、`main.gd` 的失败分支会把玩家送回 x=60）。
 ⇒ **"终点/胜负条件"在位置上不可达**，这不是"回放没走到"，是**关卡不可通过**。
+（**superseded**：以上为原文，DR-76 已按其更正撤回；`448.666` 也应读作
+`455.999572753906`——冻结样本真值，DR-76 的
+`tests/dr76_payload_shapes.rs::the_frozen_rounds_maximum_player_x_is_derived_from_the_samples`
+从冻结逐帧样本计算该值。）
 
 **(A-4) 生产层的可观测地址是齐的。** 金币计数在 `HUD/Coins`（`scenes/main.tscn:276-281`，`text="Coins: 0"`），
 胜负在 `Goal.reached`（`goal.gd:4`，且是 `@export`）。也就是说：**产物把"可观测点"命名对了，
@@ -412,10 +431,10 @@ D280(c)"接受为已记录代价、但必须加测试钉住、不能悄悄扩大
 
 | # | 植入 | 落点 | 使哪条测试红 | 回退核对 |
 |---|---|---|---|---|
-| 1 | `b'\n' | b'\r'` → `b'\n'` | `src/runtime/secrets.rs:222` | `secrets` CR 钉（§6.1） | `cmp` OK；`git diff --stat` 无植入痕迹；`hash-object` 与备份一致 |
+| 1 | `b'\n' | b'\r'` → `b'\n'` | `src/runtime/secrets.rs:222` → **DR-76 更正：`:223`**（真正的 `b'\n' | b'\r'` 分支在该行） | `secrets` CR 钉（§6.1） | `cmp` OK；`git diff --stat` 无植入痕迹；`hash-object` 与备份一致 |
 | 2 | 金币断言属性 `"text"` → `"visible"` | `src/adapter/godot.rs:2659` | `the_interaction_window_records_a_real_coin_pickup_and_its_assertion` | `cmp` OK；`git diff --stat -- src/adapter/godot.rs` = 601 insertions（与植入前相同） |
 | 3 | DoD 措辞 `"a collectible picked up"` → `"an interactive object"` | `src/prompts/developer.md:158` | `the_developer_definition_of_done_requires_the_two_missing_behaviours` | `cmp` OK；diff 仍为 26+/2- |
-| 4 | 记录器写 `code` → `code + 1` | `src/cli_impl.rs:798` | `the_process_entry_point_records_the_artifact_from_the_exported_run_directory` | `cmp` OK；diff 无植入痕迹 |
+| 4 | 记录器写 `code` → `code + 1` | `src/cli_impl.rs:798` → **DR-76 更正：`:803`**（真正的写入调用在该行） | `the_process_entry_point_records_the_artifact_from_the_exported_run_directory` | `cmp` OK；diff 无植入痕迹 |
 | 5 | `goal_after` 读 `"reached_after_the_drive"`（不存在） | `src/adapter/godot.rs:2637` | `the_interaction_window…` + `a_level_whose_goal…` + `a_project_that_never_picks…` | `cmp` OK；`git diff --stat -- src/adapter/godot.rs` = 601 insertions |
 | 6 | sidecar 整值替换 → 复制 | `tests/round_artifacts_sidecar.rs:68` | `the_sidecar_is_generated_and_the_original_is_untouched`（补强断言后） | `cmp` OK |
 
@@ -432,6 +451,8 @@ D280(c)"接受为已记录代价、但必须加测试钉住、不能悄悄扩大
 ```
 $ cmp /tmp/dr73bak/<file> <file>            → 全部 OK（无输出 + exit 0）
 $ git status --porcelain -uall              → 只有本批的 13 项（9 M + 4 ??）
+  # DR-76 更正：真实变更集是 **14 条路径（9 M + 5 A）**——第 5 个新增就是本报告本身。
+  # 逐字证据：`git diff --name-status 34bd31c..HEAD` 共 14 行（见 TASK-DR73-ACCEPTANCE.md 的 A7）。
 $ git diff --stat -- src/adapter/godot.rs   → 601 insertions(+)   ← 与植入前逐字相同
 $ git diff --stat -- src/runtime/secrets.rs → 74 insertions(+)
 $ git diff --stat -- src/prompts/developer.md → 26 insertions(+), 2 deletions(-)
@@ -577,6 +598,16 @@ $ git ls-files runs | wc -l → 0 ; git ls-files .workspace | wc -l → 0
    运行时 `os error 2`（文件不存在）⇒ 我删掉了那条源码检查（保留对 `main.rs`/`cli_impl.rs` 的接线检查）。
    这恰好说明 T10A-4 说的"第三处读数出自包装脚本"的**包装脚本本身已不在仓里**——本批的
    `process_exit_code` 因而更必要。
+
+   > **⚠ DR-76 更正（superseded）**：这一条**是假的**，已被 `TASK-DR73-ACCEPTANCE.md` 的 **A5** 证伪。
+   > 包装脚本**确实在仓内**：`git ls-files` 命中
+   > `.spec/hof-rs/tasks/TASK-SMOKE-T10-evidence/scripts/run_round.ps1`（由 `15e071f` 加入），
+   > 且其**第 14 行正是 `"ROUND_EXIT=$ec"`**——即 T10A-4 引用的那一行。实现者当时只查了**仓根**的
+   > `scripts/`，于是把"仓根没有"写成了"仓里没有"。
+   > **正确措辞**（取代上面这段）：该行**未随轮次工件冻结入库**——冻结的
+   > `…-evidence/round/console.txt` 只有 13 行 hoh 自己的 stdout、没有 `ROUND_EXIT`，因为包装脚本把它
+   > 打到了**外层控制台**，而外层那段没有被留证。⇒ 携带项 (b) 的必要性不变（该行从未进入冻结工件），
+   > 但**理由不是"脚本不存在"**。DR-76 为此把"外壳脚本存在性"这类树断言列为同类错误。
 6. **我未做真机轮、未启动 Godot、未联网、未调用任何模型端点、未触碰任何端口。**
 7. **`runs/**` 我零写入**（含"写过再删"）；分析产物与备份全部在仓外。
 8. **`cargo test` 的最终读数来自"逐文件 touch 94 个已跟踪 `.rs` + 清 `target/debug/.fingerprint/hof-rs-*`"后的重编**；
@@ -655,3 +686,26 @@ json-fenced blocks = 0 ; all fenced blocks = 16 ; json.loads failures = 0
    （无数据时按设计 `-32000` 拒绝）⇒ 本批**没有**用它。若未来想让电池"通用地"把玩家送到任意目标，
    需要的是**关卡/导航设计**（Developer 侧）或**引擎侧导航支持**（TASK-15x），**不是本批的范围**。
    由于本批的观测不依赖它，**没有提出 TASK-15x 方案**（§2.3 已说明为何不需要）。
+
+---
+
+## 12. DR-76 更正台账（**superseded 标注**，2026-10-01 由 DR-76 追加）
+
+> 本报告的结论部分由 DR-76 按 `TASK-DR73-ACCEPTANCE.md` 的裁定更正。**原措辞保留在文内并逐处标注
+> `superseded`**；本节是"哪些句子被取代、取代成什么、以及哪里改不了"的权威清单。除本节与本报告内
+> 逐处插入的 `⚠ DR-76 更正` 块之外，本报告正文**未做其它改动**（DR-73 当时写下的"本报告写完后不再
+> 修改"因此被显式打破一次，理由与范围都记在这里）。
+
+| # | 被取代的位置 | 原文（superseded） | 更正后的事实 |
+|---|---|---|---|
+| 1 | §2.2(A-3)，本报告 | "x≈3800 之后没有地面 / 关卡不可通过 / 终点位置不可达" | **假的**。`Ground` 是单个 `6800×40` `RectangleShape2D`、中心 `x=3400`、碰撞体启用 ⇒ 覆盖 `x∈[0,6800]`、**在终点下方连续**；唯一障碍是 `x=1700` 的 `32×60` 墙（顶面高 28 px，在 66 px 顶点内）。真因是**驱动覆盖不足**（预算 1440 帧 < 到触发器的约 6308 px），不是几何 |
+| 2 | §2.2(A-3) 与 §3 的引用，本报告 | 全轮 max player x = `448.666` | 冻结样本真值 **`455.999572753906`**（跳跃窗口的恒定 x，引擎自己的断言载荷 `actual.x` 亦为此值）。DR-76 起该数字由 `tests/dr76_payload_shapes.rs` 从冻结逐帧样本**计算** |
+| 3 | §10 披露第 5 条，本报告 | "`scripts/run_round.ps1` 不存在 / 包装脚本已不在仓里" | **假的**。它被跟踪在 `.spec/hof-rs/tasks/TASK-SMOKE-T10-evidence/scripts/run_round.ps1`（`15e071f` 加入），第 14 行正是 `"ROUND_EXIT=$ec"`。正确措辞是：**该行未随轮次工件冻结入库**（包装脚本打到外层控制台，那段没被留证） |
+| 4 | §3 植入表第 1 行、第 4 行 | `secrets.rs:222`、`cli_impl.rs:798` | `secrets.rs:223`（`b'\n' \| b'\r'` 分支）、`cli_impl.rs:803`（`write_process_exit_code` 调用） |
+| 5 | §3 回退自证 | "13 项（9 M + 4 ??）" | **14 条路径（9 M + 5 A）**，第 5 个新增是本报告 |
+| 6 | §6.1 / §3 的判据描述 | `WIN_NOT_DRIVEN` 一词同时表示"预算不够"与"几何不可达" | DR-76 已拆分：`WIN_UNREACHED_WITHIN_BUDGET`（覆盖，**不**对关卡下结论）与 `WIN_UNREACHABLE_GEOMETRICALLY`（有剩余预算却停止前进）；记录新增 `coverage_shortfall_px` |
+| 7 | §6.1 的观测路径 | 用场景树的 `Label.text` 找计数格 | **真机载荷不带 `text`**（10 份冻结场景树、0 个 `text` 键）⇒ 改为枚举 `HUD` 下 `Label` 候选后经 `running_game_get_node_properties` 读 `text` 选取 |
+| 8 | `4deefc8` **提交信息** | "…no ground past x≈3800… the level was not [correct]" | **不可改写**（历史提交的 message 无法在不重写历史的前提下修改）⇒ 只能在本节与 DR-76 报告中更正；下一轮**不得**据此缩短关卡 |
+
+**不可改写的落点**：`4deefc8` 的提交信息（第 8 行）。本报告**不重写历史**，因此该错误陈述仍存在于
+`git log` 中，权威更正以本节的记述为准。

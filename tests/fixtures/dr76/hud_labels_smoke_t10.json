@@ -1,0 +1,30 @@
+{
+  "source": "tester read-only running_game_get_node_properties on HUD labels in the live round game process",
+  "readings": [
+    {
+      "node_path": "/root/Main/HUD/Lives",
+      "properties": {
+        "text": "Lives: 3",
+        "visible": true
+      },
+      "type": "Label"
+    },
+    {
+      "node_path": "/root/Main/HUD/Coins",
+      "properties": {
+        "text": "Coins: 0",
+        "visible": true
+      },
+      "type": "Label"
+    },
+    {
+      "node_path": "/root/Main/HUD/Time",
+      "properties": {
+        "text": "Time: 0",
+        "visible": true
+      },
+      "type": "Label"
+    }
+  ],
+  "observation": "Lives: 3, Coins: 0, Time: 0 all visible=true"
+}

@@ -6,6 +6,15 @@
 > 源码阅读、git/进程只读检查。**我没有启动 Godot、没有联网、没有调用任何模型端点、没有写入 `runs/**` 一个字节。**
 > 验收时刻：HEAD `0ed69cda56e5ded9744742e697e1450f055a85d9`（验收期间调度者在并发提交：`6f72e16`(D277)、`0ed69cd`(TASK-DR72)）。
 
+> **⚠ DR-76 勘误（2026-10-01，追加而非改写）**：本验收正文里的证据字符串**逐字保留**（它们是当时的
+> 真实读数，改写会破坏历史记录），但其中引用的**整轮 max player x = `448.666` 是少报**。
+> 冻结逐帧样本的真值是 **`455.999572753906`**（跳跃窗口的恒定 x；同一值出现在引擎自己的
+> `running_game_assert_node_state` 回包 `actual.x` 中）。差 **7.33 px**，不影响本验收的任何裁定。
+> 该数字现在由 `tests/dr76_payload_shapes.rs::the_frozen_rounds_maximum_player_x_is_derived_from_the_samples`
+> 从冻结样本**计算**并钉住（源：`runs/smoke-t10/iter-1/candidate/.hoh/deterministic/raw/input_replay.json`，
+> 经 `scripts/derive_dr76_fixtures.py` 派生为 `tests/fixtures/dr76/interaction_position_samples_smoke_t10.json`）。
+> 受影响的行：本文件正文中所有出现 `448.666` / `448.7` 的句子（§结构化结论的 D 项与"胜利从未被驱动"一条）。
+
 ## 结构化结论
 
 ```json

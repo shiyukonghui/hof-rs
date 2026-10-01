@@ -102,7 +102,15 @@ fn the_godot_dev_skill_carries_an_executable_recipe_for_both_behaviours() {
     );
 
     // ② a reachable win condition: the trigger has to be inside the traversable
-    //    level, and the round put it at x=6400 with no ground beyond x≈3800.
+    //    level.  DR-76 ③: this comment used to say "the round put it at x=6400
+    //    with no ground beyond x≈3800" — **that was false**.  The frozen
+    //    `Ground` is one 6800x40 `RectangleShape2D` centred at x=3400, covering
+    //    x in [0,6800] with an enabled collision shape, i.e. continuous under the
+    //    goal; the only obstacle before it is a 32x60 wall whose top is 28 px up,
+    //    inside the 66 px jump apex.  The true cause of the missing win was
+    //    **replay coverage**, and the skill now says so (and keeps the old
+    //    wording marked superseded).  `the_godot_dev_skill_retracts_the_
+    //    impassable_level_claim` pins the correction.
     assert!(
         lower.contains("reachable"),
         "the skill must state that the win trigger has to be reachable by walking:\n{skill}"
@@ -192,6 +200,11 @@ fn the_tester_is_told_which_battery_steps_prove_the_two_behaviours() {
         "COIN_NOT_PICKED_UP",
         "WIN_NOT_DRIVEN",
         "COIN_COUNTER_UNREADABLE",
+        // DR-76 ②: the two diagnoses `WIN_NOT_DRIVEN` used to collapse.
+        "WIN_UNREACHED_WITHIN_BUDGET",
+        "WIN_UNREACHABLE_GEOMETRICALLY",
+        // DR-76 ②: the number the split is made of.
+        "coverage_shortfall_px",
     ] {
         assert!(
             source.contains(verdict),
@@ -199,4 +212,72 @@ fn the_tester_is_told_which_battery_steps_prove_the_two_behaviours() {
         );
     }
     assert_eq!(GOAL_POSITION_NODE, "Goal");
+}
+
+/// DR-76 ③: the delivered skill must retract the "the level is impassable" claim.
+///
+/// The DR-73 report and the skill's 3b said the frozen level had "no ground past
+/// x ≈ 3800", that the goal was positionally unreachable and that the level was
+/// impassable.  The acceptance's A3 proved the opposite from the frozen scene: the
+/// `Ground` body is a single `6800 × 40` `RectangleShape2D` centred at `x = 3400`,
+/// covering `x ∈ [0, 6800]` with an enabled collision shape — continuous under the
+/// goal — and the only obstacle before it is a `32 × 60` wall whose top is `28 px`
+/// above the surface, inside the `66 px` apex the same report computed.  The true
+/// cause of "the win was never driven" is **replay coverage**.
+///
+/// This is delivered text: left standing, it would send the next Developer to
+/// shorten a level that was already fine.  The old wording is allowed to survive
+/// only inside a block that marks itself superseded and says it was false.
+#[test]
+fn the_godot_dev_skill_retracts_the_impassable_level_claim() {
+    let skill = delivered_skill("godot-dev.md");
+    let lower = skill.to_lowercase();
+
+    // The fact: the ground is continuous to x=6800, and the recipe says so.
+    assert!(
+        lower.contains("6800"),
+        "the skill must state the ground's real extent (6800 px):\n{skill}"
+    );
+    assert!(
+        lower.contains("continuous"),
+        "the skill must say the ground is continuous under the goal:\n{skill}"
+    );
+    // The cause: coverage, not geometry.
+    assert!(
+        lower.contains("coverage"),
+        "the skill must name replay coverage as the true cause:\n{skill}"
+    );
+    assert!(
+        lower.contains("superseded"),
+        "the retraction must be marked and the old wording preserved as superseded:\n{skill}"
+    );
+    // The split, so the next round cannot read a coverage gap as geometry.
+    assert!(
+        skill.contains("WIN_UNREACHED_WITHIN_BUDGET")
+            && skill.contains("WIN_UNREACHABLE_GEOMETRICALLY"),
+        "the skill must name both verdicts so the Developer/Tester can tell coverage from \
+         geometry:\n{skill}"
+    );
+
+    // The false claim may survive **only** as marked-superseded prose: every
+    // paragraph that carries it must also call it false.
+    //
+    // The delivered skill is a **CRLF** document (`.gitattributes` does not pin
+    // it, and this machine checks it out with CRLF), so the blocks are split on a
+    // normalised copy: splitting the raw text on `"\n\n"` would find no boundary
+    // at all and make the whole file one paragraph — which is exactly the kind of
+    // vacuity that let the DR-73 fixture hide its defect.  (The plant that puts
+    // the old sentence back into the standing bullet reddens this check.)
+    let normalized = skill.replace("\r\n", "\n").replace('\r', "\n");
+    for paragraph in normalized.split("\n\n") {
+        if !paragraph.to_lowercase().contains("no ground past") {
+            continue;
+        }
+        let paragraph_lower = paragraph.to_lowercase();
+        assert!(
+            paragraph_lower.contains("superseded") && paragraph_lower.contains("false"),
+            "the old wording may only survive marked as superseded and called false; this \
+             paragraph still stands as a claim:\n{paragraph}"
+        );
+    }
 }

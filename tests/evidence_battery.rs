@@ -20,7 +20,10 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use common::*;
-use hof_rs::adapter::godot::GodotAdapter;
+use hof_rs::adapter::godot::{
+    GodotAdapter, INTERACTION_BATCH_FRAMES, INTERACTION_DRIVE_FRAMES, INTERACTION_MAX_BATCHES,
+    SPEC_MAX_TRAVERSAL_SECONDS,
+};
 use hof_rs::adapter::BatteryRecord;
 use hof_rs::config::{GodotConfig, HohConfig};
 use hof_rs::model::{Ablation, Role};
@@ -60,6 +63,68 @@ fn dr58_fixture_raw(name: &str) -> String {
     std::fs::read_to_string(&path).unwrap_or_else(|error| panic!("{path:?}: {error}"))
 }
 
+/// DR-76 ①: the frozen `smoke-t10` payloads (`tests/fixtures/dr76`), derived from
+/// `runs/smoke-t10/**` by `scripts/derive_dr76_fixtures.py`; the sources and the
+/// sha256 of every copy are in that directory's `MANIFEST.json`.
+///
+/// The DR-73 interaction fixture **invented** a `text` member on the HUD `Label`
+/// nodes of the scene tree.  The real engine never sends one, so the fixture was
+/// green against a shape that cannot occur and the window it exercised answered
+/// `COIN_COUNTER_UNREADABLE` on every real round.  A fixture may not hand-write
+/// the engine's payload shape; it has to be derived from the frozen bytes.
+fn dr76_fixture_raw(name: &str) -> String {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/dr76")
+        .join(name);
+    std::fs::read_to_string(&path).unwrap_or_else(|error| panic!("{path:?}: {error}"))
+}
+
+/// DR-76 ①: the `HUD` children of the **frozen** `smoke-t10` scene tree, lifted
+/// out of `scene_tree_smoke_t10.json` (a byte-for-byte copy of the round's own
+/// `running_game_get_scene_tree` reply).  Every `Label` here carries the three
+/// keys the engine really sends — `name`, `path`, `type` — and no `text`.
+fn frozen_hud_children() -> Value {
+    let raw: Value =
+        serde_json::from_str(&dr76_fixture_raw("scene_tree_smoke_t10.json")).expect("frozen tree");
+    let tree: Value = serde_json::from_str(&text_of(&raw["calls"][0]["payload"])).expect("tree");
+    tree["tree"]["children"]
+        .as_array()
+        .expect("the frozen tree has children")
+        .iter()
+        .find(|child| child["name"] == json!("HUD"))
+        .expect("the frozen tree declares HUD")["children"]
+        .clone()
+}
+
+/// DR-76 ①: the engine resolves a node read to the node's own absolute path
+/// (DR-58).  A caller that names `Player` gets `/root/Main/Player` back; one that
+/// already names the absolute path (the interaction window, which takes the path
+/// out of the scene tree) gets it back unchanged.
+fn resolve_node_path(node_path: &str) -> String {
+    if node_path.starts_with("/root/") {
+        node_path.to_string()
+    } else {
+        format!("/root/Main/{node_path}")
+    }
+}
+
+/// DR-76 ①: the engine's own `running_game_get_node_properties` reading shape for
+/// a HUD `Label`, from the frozen `hud-labels.json` (the Tester's read-only pass
+/// over the live round's `Lives`/`Coins`/`Time` cells).  Only the `text` value is
+/// the game state under test; the shape — `node_path`, `properties.text`,
+/// `properties.visible`, `type` — is the engine's.
+fn frozen_label_reading() -> Value {
+    let raw: Value =
+        serde_json::from_str(&dr76_fixture_raw("hud_labels_smoke_t10.json")).expect("frozen reads");
+    raw["readings"]
+        .as_array()
+        .expect("frozen readings")
+        .iter()
+        .find(|reading| reading["node_path"] == json!("/root/Main/HUD/Lives"))
+        .expect("the frozen readings carry the Lives label")
+        .clone()
+}
+
 /// DR-58: the exact `payload` envelope the engine answered for `node`, lifted
 /// verbatim out of the captured `node_and_collision_assertions` record.
 fn real_node_properties(node: &str) -> Value {
@@ -97,14 +162,18 @@ fn captured_error(name: &str) -> McpError {
     McpError::new(-32603, rest.to_string())
 }
 
-/// The real scene tree, optionally with a `Label` added under `HUD`.
+/// The real scene tree, optionally with the frozen `smoke-t10` HUD children.
 ///
 /// The real run's HUD was a bare `CanvasLayer` with no text node, which is one
 /// of the defects DR-23 exists to prevent; the green path therefore needs the
 /// repaired tree while the failure paths use the captured one unchanged.
-/// DR-73 ③: the scene tree this fixture reports, with the HUD cells the
-/// interaction mode implies (see `FixtureChannel::interaction_properties`).
-fn node_tree_payload(hud_label: bool, interaction: InteractionMode) -> Value {
+/// DR-76 ①: the repaired cells are the ones the **frozen** `smoke-t10` round
+/// really had, copied out of `tests/fixtures/dr76/scene_tree_smoke_t10.json`.
+/// DR-73 hand-wrote these cells and put a `text` member on them that the engine
+/// never sends; that is the defect this fixture no longer can hide.
+/// `FixtureChannel::interaction_properties` answers each cell's `text` through
+/// the property reader, in the engine's own reading shape.
+fn node_tree_payload(hud_label: bool, _interaction: InteractionMode) -> Value {
     let mut payload = fixture("node_tree.json");
     if hud_label {
         let mut tree: Value = serde_json::from_str(&text_of(&payload)).unwrap();
@@ -115,54 +184,12 @@ fn node_tree_payload(hud_label: bool, interaction: InteractionMode) -> Value {
             .iter_mut()
             .find(|child| child["name"] == json!("HUD"))
             .expect("HUD exists in the captured tree");
-        // DR-73 ③: the HUD cell the public specification names.  The interaction
-        // window finds the coin counter by the *specification's* wording
-        // (`Coins:`), so the green fixture has to carry it — and the visible text
-        // node count is unaffected because the added cells are labels too.
-        // The interaction mode decides whether the specification's own `Coins:`
-        // cell exists at all; `UnreadableCounter` is the counter-example where the
-        // counter has no readable shape and F10 must be a gap.
-        let cells: Vec<Value> = if interaction == InteractionMode::UnreadableCounter {
-            vec![json!({
-                "name": "Score",
-                "path": "/root/Main/HUD/Score",
-                "type": "Label",
-                "text": "Score: 0",
-                "children": []
-            })]
-        } else {
-            vec![
-                json!({
-                    "name": "Score",
-                    "path": "/root/Main/HUD/Score",
-                    "type": "Label",
-                    "text": "Lives: 3  Coins: 0  Time: 120",
-                    "children": []
-                }),
-                json!({
-                    "name": "Lives",
-                    "path": "/root/Main/HUD/Lives",
-                    "type": "Label",
-                    "text": "Lives: 3",
-                    "children": []
-                }),
-                json!({
-                    "name": "Coins",
-                    "path": "/root/Main/HUD/Coins",
-                    "type": "Label",
-                    "text": "Coins: 0",
-                    "children": []
-                }),
-                json!({
-                    "name": "Time",
-                    "path": "/root/Main/HUD/Time",
-                    "type": "Label",
-                    "text": "Time: 120",
-                    "children": []
-                }),
-            ]
-        };
-        hud["children"] = Value::Array(cells);
+        let cells = frozen_hud_children();
+        assert!(
+            cells.as_array().is_some_and(|cells| !cells.is_empty()),
+            "the frozen HUD must carry the cells the round really had"
+        );
+        hud["children"] = cells;
         payload["content"][0]["text"] = Value::String(tree.to_string());
     }
     payload
@@ -283,17 +310,50 @@ enum MovementMode {
 /// that always reported the pickup could not have caught that.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum InteractionMode {
-    /// The green double: a coin is really picked up and the goal is reachable.
+    /// The green double: a coin is really picked up and the goal is reachable —
+    /// and it sits where the **frozen** level puts it (`Goal` at x=6400, so the
+    /// trigger closes at x>=6368; the player spawns near x=60).  That distance,
+    /// 6308 px, is the hardest case the frozen geometry already contains, so a
+    /// drive budget that cannot cover it reddens this mode rather than passing
+    /// silently (DR-76 ②).
     Working,
     /// The coin counter never grows and the goal flag never turns — the round's
     /// own state.
     NoPickupNoWin,
-    /// A level that lets the player sweep every coin but puts the goal past the
-    /// end of the traversable ground.
+    /// A level that lets the player sweep every coin but puts the goal **beyond
+    /// any budget the window could spend** (x=30000, farther than
+    /// `INTERACTION_MAX_BATCHES` batches of the frozen 220 px/s): the drive runs
+    /// out of budget, which must be reported as coverage, never as geometry.
     NoWin,
+    /// DR-76 ②: the level stops the player — it advances and then stops dead
+    /// (a wall or a branch the held `move_right` cannot pass) while the budget
+    /// still has batches left.  This is the only cell allowed to answer a
+    /// geometric verdict.
+    Blocked,
     /// A HUD with no `Coins:` label at all.
     UnreadableCounter,
 }
+
+/// DR-76 ②: the frozen replay's own speed.  `smoke-t10`'s `move_right` window
+/// moved the `Player` from `184.666702270508` to `400.999725341797` over 59
+/// one-frame intervals — `3.6667` px/frame, i.e. exactly `220 px` per
+/// [`INTERACTION_BATCH_FRAMES`]-frame batch.  The double advances by that same
+/// per-batch distance so the budget is spent in the currency the frozen level is
+/// measured in.
+const FIXTURE_PX_PER_BATCH: f64 = 220.0;
+/// DR-76 ②: the frozen spawn x (the round's `move_right` window starts at
+/// 184.666702270508 after the pre-window drive; the level's own start is x=60).
+const FIXTURE_SPAWN_X: f64 = 60.0;
+/// DR-76 ②: the frozen level's win position and trigger.  `Goal` is a 40x80
+/// `Area2D` at x=6400 and the player box is 24 wide, so the trigger closes at
+/// `6400 - 20 - 12 = 6368`.
+const FIXTURE_GOAL_X: f64 = 6400.0;
+const FIXTURE_GOAL_TRIGGER_X: f64 = 6368.0;
+/// DR-76 ②: a level the specification does not allow — longer than any budget
+/// can cover at the frozen speed.
+const FIXTURE_BEYOND_BUDGET_GOAL_X: f64 = 30_000.0;
+/// DR-76 ②: where the `Blocked` level stops the player.
+const FIXTURE_BLOCKED_X: f64 = 1_000.0;
 
 struct FixtureChannel {
     calls: Mutex<Vec<(String, Value)>>,
@@ -325,11 +385,6 @@ struct FixtureChannel {
     /// presses `move_right`, and a double that let those windows fill the counter
     /// would credit the interaction step with coins it never swept.
     driving: Arc<std::sync::atomic::AtomicBool>,
-    /// DR-73 ③: how many times the interaction window has started a drive — the
-    /// window resets its own starting condition each time it runs.
-    drives: Mutex<u32>,
-    /// DR-73 ③: the drive generation the fixture has already applied.
-    last_drive: Mutex<u32>,
     /// DR-73 ③: what the interaction observables report.
     interaction: InteractionMode,
     /// DR-73 ③: how many sweeps have happened in this session (bumped by the
@@ -356,11 +411,9 @@ impl FixtureChannel {
             held_in_game: Mutex::new(Vec::new()),
             last_action: Mutex::new("move_right".to_string()),
             driving: Arc::new(std::sync::atomic::AtomicBool::new(false)),
-            drives: Mutex::new(0),
-            last_drive: Mutex::new(0),
             interaction: InteractionMode::Working,
             interactions: Mutex::new(0),
-            max_x: Mutex::new(60.0),
+            max_x: Mutex::new(FIXTURE_SPAWN_X),
         }
     }
 
@@ -370,35 +423,42 @@ impl FixtureChannel {
         self
     }
 
-    /// DR-73 ③: one game-process sweep of `move_right`.  The player travels far
-    /// enough to reach the green level's coin and goal but not an
-    /// `unreachable` one.
+    /// DR-73 ③ / DR-76 ②: one game-process sweep of `move_right`.  The player
+    /// advances by the frozen 220 px/s per one-second batch — the same currency
+    /// the level's own distance is measured in — until the level stops it.
+    ///
+    /// DR-76 ② removed the generation reset the DR-73 double used: it reset the
+    /// position on *every* `Goal` property read, and the interaction window reads
+    /// `Goal` once per batch, so the player snapped back to spawn after each batch
+    /// and the window could never travel.  The DR-73 fixture hid that because its
+    /// `Working` goal sat 260 px away and the win landed on the first batch; with
+    /// the goal at the frozen 6308 px the reset made every drive stall.  One
+    /// `FixtureChannel` runs one battery, and `driving` is armed only by the
+    /// interaction window's own `Goal` read, so a running position is enough.
     fn sweep_in_game(&self, action: &str) {
         if action != "move_right" || !self.driving() {
             return;
         }
-        // The interaction window starts a **fresh** drive each time it runs, so
-        // the game-side position advances from the same starting condition the
-        // window observed.  The generation is bumped by the window's own goal
-        // read, which is its last read before it starts driving.
-        let generation = self.drives();
-        {
-            let mut last = self.last_drive.lock().unwrap();
-            if *last != generation {
-                *last = generation;
-                *self.max_x.lock().unwrap() = 60.0;
-            }
-        }
         let mut max_x = self.max_x.lock().unwrap();
-        *max_x += 260.0;
+        // DR-76 ②: the player advances by the frozen 220 px/s per one-second
+        // batch — except on the `Blocked` level, where the held action stops
+        // moving the player at `FIXTURE_BLOCKED_X`.  A `Blocked` batch is
+        // deliberately a *no-progress* batch even though the action was injected,
+        // which is exactly the shape the geometric verdict has to be able to see.
+        if self.interaction == InteractionMode::Blocked && *max_x >= FIXTURE_BLOCKED_X {
+            return;
+        }
+        *max_x += FIXTURE_PX_PER_BATCH;
         let swept = *max_x > 300.0;
         drop(max_x);
-        // `NoWin` still picks the coin up (that is what makes it a *separate*
-        // failure); only `NoPickupNoWin` is the round's own "swept but nothing
-        // happened" state.
+        // `NoWin`/`Blocked` still pick the coin up (that is what makes them a
+        // *separate* failure); only `NoPickupNoWin` is the round's own "swept but
+        // nothing happened" state.  One pickup is one counter step: the real
+        // `coin.gd` increments once and frees the coin, so sweeping the same cell
+        // over 29 batches must not read as 29 coins.
         if swept && self.interaction != InteractionMode::NoPickupNoWin {
             let mut interactions = self.interactions.lock().unwrap();
-            *interactions += 1;
+            *interactions = (*interactions).max(1);
         }
     }
 
@@ -411,10 +471,6 @@ impl FixtureChannel {
         *self.interactions.lock().unwrap()
     }
 
-    /// DR-73 ③: how many drives the window started.
-    fn drives(&self) -> u32 {
-        *self.drives.lock().unwrap()
-    }
     /// DR-73 ③: arm the drive — the interaction step's own switch, so the
     /// `input_replay` windows before it cannot credit it with a sweep.  The
     /// window arms itself through the `Goal` property read that precedes its
@@ -422,69 +478,83 @@ impl FixtureChannel {
     fn arm_drive(&self) {
         self.driving
             .store(true, std::sync::atomic::Ordering::SeqCst);
-        let mut drives = self.drives.lock().unwrap();
-        *drives += 1;
     }
 
-    /// DR-73 ③: has the player been driven far enough to reach the goal?
+    /// DR-76 ②: where this level's goal sits.  Only `Working` puts it where the
+    /// frozen level does; the others put it beyond any budget the window could
+    /// spend (a level the specification does not allow) or keep the frozen
+    /// position while the level blocks the player.
+    fn goal_position_x(&self) -> f64 {
+        match self.interaction {
+            InteractionMode::Working | InteractionMode::Blocked => FIXTURE_GOAL_X,
+            InteractionMode::NoWin | InteractionMode::NoPickupNoWin => FIXTURE_BEYOND_BUDGET_GOAL_X,
+            InteractionMode::UnreadableCounter => FIXTURE_GOAL_X,
+        }
+    }
+
+    /// DR-76 ②: has the player been driven far enough to close the goal's trigger?
+    /// The goal is 40 wide and the player box 24, so the trigger is 32 px left of
+    /// the goal's own x — the same arithmetic the frozen level needs.
     fn goal_reached(&self) -> bool {
-        let goal_x = match self.interaction {
-            InteractionMode::NoWin | InteractionMode::NoPickupNoWin => 100_000.0,
-            _ => 260.0,
-        };
-        *self.max_x.lock().unwrap() >= goal_x
+        let trigger = self.goal_position_x() - 32.0;
+        *self.max_x.lock().unwrap() >= trigger
     }
 
-    /// DR-73 ③: the HUD label a node read is about, or `None` for a node the
-    /// interaction fixture says nothing about.
+    /// DR-73 ③ / DR-76 ①: the HUD text a node read answers with, or `None` for a
+    /// node the interaction fixture says nothing about.  Every `Label` the frozen
+    /// HUD carries answers — the counter is found by reading texts, not by any
+    /// `text` member of the scene tree — and in `UnreadableCounter` the cell that
+    /// would be the counter exists but its text carries no `Coins:` prefix, which
+    /// is the "named without the specification's prefix" case.
     fn interaction_label(&self, node_path: &str) -> Option<String> {
         let name = node_path.rsplit('/').next().unwrap_or(node_path);
+        let unreadable = self.interaction == InteractionMode::UnreadableCounter;
         match name {
-            "Coins" if self.interaction != InteractionMode::UnreadableCounter => {
-                Some(format!("Coins: {}", self.interactions()))
-            }
+            "Coins" => Some(if unreadable {
+                "Collected: 0".to_string()
+            } else {
+                format!("Coins: {}", self.interactions())
+            }),
             "Lives" => Some("Lives: 3".to_string()),
-            "Score" if self.interaction != InteractionMode::UnreadableCounter => Some(format!(
-                "Lives: 3  Coins: {}  Time: 120",
-                self.interactions()
-            )),
+            "Score" => Some(if unreadable {
+                "Score: 0".to_string()
+            } else {
+                format!("Lives: 3  Coins: {}  Time: 120", self.interactions())
+            }),
             "Time" => Some("Time: 120".to_string()),
             "Result" => Some(String::new()),
             _ => None,
         }
     }
 
-    /// DR-73 ③: the synthetic `running_game_get_node_properties` reply for the
+    /// DR-73 ③ / DR-76 ①: the `running_game_get_node_properties` reply for the
     /// interaction reads, or `None` when the node is not one of them (the caller
     /// then answers with the captured real payload, so the pre-DR-73 checks keep
     /// their own evidence).
+    ///
+    /// The `Label` reply's **shape** is the engine's own, lifted from the frozen
+    /// `hud-labels.json` (`frozen_label_reading`); only `text` is the game state
+    /// under test.  `node_path` is the engine's **resolved** absolute path — a
+    /// caller that names `Player` gets `/root/Main/Player` back, and one that
+    /// already names the absolute path gets it back unchanged (DR-58).
     fn interaction_properties(&self, node_path: &str) -> Option<Value> {
         let name = node_path.rsplit('/').next().unwrap_or(node_path);
-        // The engine resolves a read to the node's own absolute path (DR-58);
-        // the fixture answers in the same shape so a caller can tell a resolved
-        // read from a guessed one.
-        let resolved = format!("/root/Main/{name}");
+        let resolved = resolve_node_path(node_path);
         if let Some(label) = self.interaction_label(name) {
-            let inner = json!({
-                "node_path": resolved,
-                "properties": {"text": label, "visible": true},
-                "type": "Label",
-            });
-            return Some(json!({"content": [{"type": "text", "text": inner.to_string()}]}));
+            let mut reading = frozen_label_reading();
+            reading["node_path"] = json!(resolved);
+            reading["properties"]["text"] = json!(label);
+            return Some(json!({
+                "content": [{"type": "text", "text": reading.to_string()}]
+            }));
         }
         match name {
             "Goal" => {
-                // `smoke-t10`'s shape: the flag is at x=6400 while the player's
-                // reachable maximum is about 320.
-                let position_x = match self.interaction {
-                    InteractionMode::NoWin => 6400.0,
-                    _ => 260.0,
-                };
                 let inner = json!({
                     "node_path": resolved,
                     "properties": {
                         "reached": self.goal_reached(),
-                        "position": {"x": position_x, "y": 280.0},
+                        "position": {"x": self.goal_position_x(), "y": 280.0},
                     },
                     "type": "Area2D",
                 });
@@ -525,7 +595,7 @@ impl FixtureChannel {
         let inner = json!({
             "assertion": "node_state",
             "node_path": node_path,
-            "resolved_node_path": format!("/root/Main/{name}"),
+            "resolved_node_path": resolve_node_path(node_path),
             "property": "text",
             "operator": operator,
             "expected": expected,
@@ -538,7 +608,6 @@ impl FixtureChannel {
 
     /// DR-73 ③: the same for the goal's `reached` flag.
     fn assert_reached(&self, node_path: &str, args: &Value) -> Value {
-        let name = node_path.rsplit('/').next().unwrap_or(node_path);
         let actual = json!(self.goal_reached());
         let expected = args.get("expected").cloned().unwrap_or(Value::Null);
         let operator = args
@@ -553,7 +622,7 @@ impl FixtureChannel {
         let inner = json!({
             "assertion": "node_state",
             "node_path": node_path,
-            "resolved_node_path": format!("/root/Main/{name}"),
+            "resolved_node_path": resolve_node_path(node_path),
             "property": "reached",
             "operator": operator,
             "expected": expected,
@@ -1205,7 +1274,7 @@ impl ToolChannel for FixtureChannel {
                 // state says the player reached.
                 if self.driving() && moves {
                     let end = *self.max_x.lock().unwrap();
-                    let start = (end - 260.0).max(0.0);
+                    let start = (end - FIXTURE_PX_PER_BATCH).max(0.0);
                     let mut samples = Vec::new();
                     for frame in 0..frames {
                         let progress = if frames <= 1 {
@@ -4190,6 +4259,103 @@ async fn the_interaction_window_records_a_real_coin_pickup_and_its_assertion() {
     );
 }
 
+/// DR-76 ① (red-first): the counter must be read from the **real** scene-tree
+/// shape.
+///
+/// The real `running_game_get_scene_tree` reply gives a `Label` exactly `name`,
+/// `path` and `type` — verified on all 10 frozen payloads from five rounds, zero
+/// `text` keys.  The DR-73 window required a `text` member, so on real hardware
+/// `coin_label` was always `None` and every round answered
+/// `COIN_COUNTER_UNREADABLE` no matter how good the game was; the fixture only
+/// passed because it invented the missing member.  The tree this test drives is
+/// the frozen one (`tests/fixtures/dr76/scene_tree_smoke_t10.json`, copied
+/// byte-for-byte from the round), so the assertion below is about the shape the
+/// engine really sends.
+#[tokio::test]
+async fn the_interaction_window_finds_the_counter_in_the_real_scene_tree_shape() {
+    let temp = tempfile::tempdir().unwrap();
+    let (run, _) = interaction_run(temp.path(), InteractionMode::Working).await;
+
+    let observation = &step(&run.records, "interaction_evidence")
+        .record
+        .observation;
+    assert!(
+        !observation.contains("COIN_COUNTER_UNREADABLE"),
+        "the real tree shape must not make the counter unreadable: {observation}"
+    );
+    assert!(
+        observation.contains("COIN_PICKED_UP"),
+        "the pickup must be observed on the real shape: {observation}"
+    );
+    assert!(
+        observation.contains("/root/Main/HUD/Coins"),
+        "the counter's own path must be named in the record: {observation}"
+    );
+    // The tree supplied the *candidates*; the text came from the property reader.
+    let raw = interaction_raw(&run);
+    let calls = raw["calls"].as_array().expect("raw call list");
+    assert!(
+        calls.iter().any(|call| {
+            call["tool"] == json!("running_game_get_node_properties")
+                && call["args"]["node_path"] == json!("/root/Main/HUD/Coins")
+                && call["args"]["properties"] == json!(["text"])
+        }),
+        "the counter must be read through `running_game_get_node_properties`: {calls:?}"
+    );
+}
+
+/// DR-76 ① (the drift guard): a scene tree that carries a hand-written `text`
+/// member must **not** be what chooses the counter.
+///
+/// This is the counter-example to the DR-73 fixture: a tree whose `Score` cell
+/// says `text = "Coins: 7"` while the cell the game really updates is `Coins`.
+/// A window that picks its node from the tree's text chooses the wrong cell and
+/// reports `COIN_COUNTER_UNREADABLE` (the property reader answers `Score`'s real
+/// text, which does not start with the prefix).  The window must instead read the
+/// candidates' texts and keep the one that reads like a counter.
+#[tokio::test]
+async fn a_hand_written_text_member_on_the_tree_cannot_choose_the_counter() {
+    let temp = tempfile::tempdir().unwrap();
+    let mut payload = node_tree_payload(true, InteractionMode::Working);
+    let mut tree: Value = serde_json::from_str(&text_of(&payload)).unwrap();
+    let hud = tree["tree"]["children"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .find(|child| child["name"] == json!("HUD"))
+        .expect("HUD");
+    for cell in hud["children"].as_array_mut().unwrap() {
+        if cell["name"] == json!("Score") {
+            // The lie the old fixture told: text the engine never sends.
+            cell["text"] = json!("Coins: 7");
+        }
+    }
+    payload["content"][0]["text"] = Value::String(tree.to_string());
+
+    let channel = Arc::new(
+        FixtureChannel::green()
+            .with_interaction(InteractionMode::Working)
+            .with_reply("running_game_get_scene_tree", payload),
+    );
+    let run = run_battery(temp.path(), channel.clone(), 30).await;
+
+    let observation = &step(&run.records, "interaction_evidence")
+        .record
+        .observation;
+    assert!(
+        !observation.contains("COIN_COUNTER_UNREADABLE"),
+        "the tree's hand-written `text` must not make the counter unreadable: {observation}"
+    );
+    assert!(
+        observation.contains("Coins: 0 -> Coins: 1"),
+        "the counter the game really updates must be the one read: {observation}"
+    );
+    assert!(
+        observation.contains("COIN_PICKED_UP"),
+        "the pickup must be observed: {observation}"
+    );
+}
+
 /// DR-73 ③: the round's own state.  The player sweeps both coins, the HUD never
 /// moves off `Coins: 0` and the goal flag never turns, so the window is a
 /// **gap** with the numbers that say why.
@@ -4210,8 +4376,12 @@ async fn a_project_that_never_picks_a_coin_up_is_recorded_as_a_gap() {
         "the coin gap must be named: {observation}"
     );
     assert!(
-        observation.contains("WIN_NOT_DRIVEN"),
-        "the win gap must be named: {observation}"
+        observation.contains("WIN_UNREACHED_WITHIN_BUDGET"),
+        "the win gap must be named as a *coverage* verdict (DR-76 ②): {observation}"
+    );
+    assert!(
+        !observation.contains("WIN_UNREACHABLE_GEOMETRICALLY"),
+        "a budget that ran out must never be reported as a geometric verdict: {observation}"
     );
     assert!(
         observation.contains("Coins: 0 -> Coins: 0"),
@@ -4241,10 +4411,20 @@ async fn a_project_that_never_picks_a_coin_up_is_recorded_as_a_gap() {
     assert_eq!(payload["actual"], json!("Coins: 0"), "{payload}");
 }
 
-/// DR-73 ③: a level whose goal sits past the end of the traversable ground.  The
-/// pickup still happens, so the two behaviours are judged **separately** — a
-/// single "E3 okay" flag could not express this, and `smoke-t10`'s two gaps were
-/// exactly that.
+/// DR-73 ③ / DR-76 ②: a level whose goal sits past anything the window's budget
+/// can buy.  The pickup still happens, so the two behaviours are judged
+/// **separately** — a single "E3 okay" flag could not express this, and
+/// `smoke-t10`'s two gaps were exactly that.
+///
+/// DR-76 ② keeps the name and changes the *verdict*: the same record must now say
+/// **why** the flag stayed false.  Here the window spent its whole budget, so the
+/// answer is `WIN_UNREACHED_WITHIN_BUDGET` with an explicit
+/// `coverage_shortfall_px` — and, critically, it is **not**
+/// `WIN_UNREACHABLE_GEOMETRICALLY`: the DR-73 record's
+/// `(player max x, goal.position)` pair read like unreachability while the only
+/// limit was the harness's own coverage.  The frozen `Ground` really spans to
+/// x=6800, so no window may claim a level is impassable merely because it did not
+/// drive far enough.
 #[tokio::test]
 async fn a_level_whose_goal_is_unreachable_fails_only_the_win_half() {
     let temp = tempfile::tempdir().unwrap();
@@ -4258,16 +4438,95 @@ async fn a_level_whose_goal_is_unreachable_fails_only_the_win_half() {
         "the pickup must still be observed: {observation}"
     );
     assert!(
-        observation.contains("WIN_NOT_DRIVEN"),
-        "the unreachable goal must be reported as a win gap: {observation}"
+        observation.contains("WIN_UNREACHED_WITHIN_BUDGET"),
+        "a goal beyond the budget must be a coverage verdict: {observation}"
     );
     assert!(
-        observation.contains("goal.position=Some(") && observation.contains("6400"),
-        "the goal's own position must be in the record, so 'unreachable' is measurable: {observation}"
+        !observation.contains("WIN_UNREACHABLE_GEOMETRICALLY"),
+        "coverage must never masquerade as geometry: {observation}"
     );
     assert!(
-        observation.contains("player max x=Some(320"),
+        observation.contains("goal.position=Some(") && observation.contains("30000"),
+        "the goal's own position must be in the record, so the shortfall is measurable: {observation}"
+    );
+    assert!(
+        observation.contains("player max x=Some(28660"),
         "the player's reachable maximum must be in the record: {observation}"
+    );
+    // The shortfall is the arithmetic of those two numbers: 30000 - 28660.
+    assert!(
+        observation.contains("coverage_shortfall_px=Some(1340"),
+        "the coverage shortfall must be an explicit number: {observation}"
+    );
+}
+
+/// DR-76 ②: the other half of the split.  A level that lets the player advance and
+/// then stops it dead, **with budget still unspent**, is the only shape that may
+/// answer `WIN_UNREACHABLE_GEOMETRICALLY` — and it has to say how much budget was
+/// left, so a reader can tell it from the coverage case above.
+#[tokio::test]
+async fn a_player_that_stops_advancing_with_budget_left_is_a_geometric_verdict() {
+    let temp = tempfile::tempdir().unwrap();
+    let (run, _) = interaction_run(temp.path(), InteractionMode::Blocked).await;
+
+    let observation = &step(&run.records, "interaction_evidence")
+        .record
+        .observation;
+    assert!(
+        observation.contains("COIN_PICKED_UP"),
+        "the pickup must still be observed before the level blocks the player: {observation}"
+    );
+    assert!(
+        observation.contains("WIN_UNREACHABLE_GEOMETRICALLY"),
+        "a player that stops advancing with budget left is a geometric verdict: {observation}"
+    );
+    assert!(
+        !observation.contains("WIN_UNREACHED_WITHIN_BUDGET"),
+        "the budget was not the limit here, so it must not be blamed: {observation}"
+    );
+    assert!(
+        observation.contains("of the 130-batch budget were still unspent"),
+        "the record must say how much budget was left: {observation}"
+    );
+    assert!(
+        observation.contains("coverage_shortfall_px=Some("),
+        "the shortfall must still be an explicit number: {observation}"
+    );
+}
+
+/// DR-76 ②: the budget is a promise about the specification, and it is pinned.
+///
+/// `PRD-mario.md` F17 bounds a full traversal at 30–120 s, so a window that cannot
+/// drive for 120 s cannot observe the win of a level the specification allows.
+/// The DR-73 budget was 24 one-second batches (≈5280 px), while the frozen
+/// `smoke-t10` goal's trigger sits 6308 px from spawn: every real round was
+/// recorded as a win gap even with a perfect game, and nothing failed when the
+/// constant was cut to 1 (the acceptance's P9 plant).  This test is that missing
+/// pin: reducing `INTERACTION_MAX_BATCHES` below the specification's own bound
+/// reddens it.
+#[test]
+fn the_drive_budget_covers_the_specifications_longest_traversal() {
+    let budgeted_frames = INTERACTION_DRIVE_FRAMES;
+    let spec_frames = SPEC_MAX_TRAVERSAL_SECONDS * 60;
+    assert!(
+        INTERACTION_BATCH_FRAMES == 60,
+        "the budget's arithmetic below assumes one-second batches"
+    );
+    assert!(
+        budgeted_frames >= spec_frames,
+        "the drive budget ({INTERACTION_MAX_BATCHES} batches = {budgeted_frames} frames) must \
+         cover the specification's longest traversal ({SPEC_MAX_TRAVERSAL_SECONDS} s = \
+         {spec_frames} frames); PRD-mario.md F17 allows a level that takes that long, and a \
+         budget below it records a coverage gap as if it were the game's failure"
+    );
+    // …and the frozen level's own distance must be inside it at the measured
+    // speed: 6308 px of travel from spawn to the trigger, 220 px per batch.
+    let frozen_travel_px = FIXTURE_GOAL_TRIGGER_X - FIXTURE_SPAWN_X;
+    let reachable_px = INTERACTION_MAX_BATCHES as f64 * FIXTURE_PX_PER_BATCH;
+    assert!(
+        reachable_px >= frozen_travel_px,
+        "the budget buys {reachable_px} px of travel, but the frozen level needs \
+         {frozen_travel_px} px"
     );
 }
 

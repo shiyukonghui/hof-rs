@@ -20,3 +20,12 @@ scripts/*.sh -text
 # precisely because the committed blob (pure LF) and the working tree (CRLF, via
 # `core.autocrlf=true`) disagreed, so the tree is pinned to no conversion.
 .spec/hof-rs/tasks/TASK-SMOKE-T9-evidence/** -text
+
+# DR-76 ①: same rule for the DR-76 fixtures — `scene_tree_smoke_t10.json` and
+# `hud_labels_smoke_t10.json` are byte-for-byte copies of the frozen
+# `runs/smoke-t10` payloads (the frozen `hud-labels.json` is CRLF), and
+# tests/dr76_payload_shapes.rs re-checks each copy against the sha256 in
+# tests/fixtures/dr76/MANIFEST.json.  Conversion on checkout would silently
+# change those bytes and make the shape the suite is corrected against a
+# different artifact from the one the engine really sent.
+tests/fixtures/dr76/** -text
