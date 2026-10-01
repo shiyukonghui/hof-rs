@@ -10988,3 +10988,43 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 - **队列**：**DR-76 → 其独立验收 → 推送 → 全新空白工程真机轮（沿用冻结 `PRD-mario.md`）→ 判据(3) 复核**。
 - 回滚点：DR-73 的两个提交可各自 revert；五条真机基线不得覆盖。
 
+## D289 — **DR-76 验收 `pass`**（26/26）：三条 major 全部修好且**夹具改为派生**；两条 minor 遗留；**推送达闸并已推**
+
+- 日期：2026-10-01。`TASK-DR76-ACCEPTANCE.md`：**`verdict = pass`**（**26 criteria 全 pass**；**2 minor** + 6 risks；机器可读块栅栏校验通过）。
+- **A1（真机读不到计数）已修**：`hud_label_candidates()` **只用 name/path/type** 从场景树枚举 HUD Label，
+  再**经 `running_game_get_node_properties` 读 `text`**；**夹具由 `scripts/derive_dr76_fixtures.py` 逐字节派生**（sha 钉在 `MANIFEST.json`），
+  并给 `tests/fixtures/dr76/**` 加 **`-text` 行尾钉**（否则 CRLF 副本会被规范化）。**植入 P1 让真形状测试红** ✓
+- **A2（预算与结论分离）已修**：`INTERACTION_MAX_BATCHES` = **PRD F17 的 120 s + 10 = 130 批**（7800 帧），
+  **双重钉住**（常量测试 + 行为），且**绿夹具的目标现在真在冻结的 x=6400 触发点 6368** ⇒ **窗口必须真驱动 29 批**；
+  **`WIN_UNREACHED_WITHIN_BUDGET`（对关卡不作声称）与 `WIN_UNREACHABLE_GEOMETRICALLY`（预算尚余却连续两批停滞）分离**，两者都带 `coverage_shortfall_px`；**P3 让对应测试红** ✓
+- **A3（"关卡不可通过"）已撤回**：`godot-dev.md` 3b、`interaction_contract.rs` 注释、`TASK-DR73-REPORT.md`（内联更正 + 新增 §12 台账）
+  三处更正，**旧措辞保留并标注 superseded**；**`4deefc8` 提交信息不可改写 ⇒ 只在台账更正，未重写历史** ✓
+- **A4/A5/A6/A7**：max x 改由**冻结样本计算**（`455.999572753906`）并加测试；
+  `run_round.ps1` **确实被跟踪**（第 14 行 = `ROUND_EXIT=$ec`），**真因是该行从未被冻结进轮次工件**；
+  sidecar 检查**由原件自己的 `HOH_*=` 名派生**（**实测 6 对标记中 5 对从未运行**）；三处引用漂移已改 ✓
+- **门 533/0/7**（基线 523，**净增 10**，`REMOVED 0`，`#[ignore]` 7→7，`--list` 540）；**7 处植入**各自红、逐字节回退 ✓
+- **强守卫（我要求的最强项）**：`git diff --name-status` **只触及 `.gitattributes`、两份 `.spec` 报告、派生脚本、`godot.rs`、`godot-dev.md`、`tests/**`**
+  ⇒ **无 D、无 R、无游戏文件** ⇒ **"禁止手工写游戏"成立** ✓
+- **遗留 minor（并入后续清理批）**：
+  - **D1**：`TASK-DR73-REPORT.md` §12 对 `4deefc8` 提交信息的**引用不精确**（提交信息实际写的是 "the goal sat at x=6400 past the end of the traversable ground"）；
+  - **D2**：**`coverage_shortfall_px` 未在判定行上被钉住**——测试只断言 `contains("coverage_shortfall_px=Some(")`，
+    属**弱断言、可能因错误原因通过** ⇒ 应断言**具体数值**（并配套植入证明）。
+- **它自曝并修正的两件事（我采纳）**：
+  1. **多数"红"来自重植 DR-76 之前的行为（植入）而非严格先测后码**；**唯一真正的先红是 P4 的第一版，而正是它抓出了一条空转断言**
+     （用 `split("\n\n")` 切 **CRLF** 技能文档 ⇒ 永不匹配 ⇒ 整份文件成一个段落 ⇒ 断言恒真）。⇒ **诚实披露**；
+     我的判断：**这不推翻本轮证据**（7 处植入各自红、逐字节回退、门真实），但**削弱了"测试驱动设计"的过程保证**，
+     故**我只接受其为"有实测支撑的修复"**，并把"D2 的弱断言"作为**同一家族的下一个待清偿项**。
+  2. **它追加式编辑了两份历史记录**：`TASK-DR73-REPORT.md`（按任务）与 **`TASK-SMOKE-T10-ACCEPTANCE.md`**
+     （为 `448.666` 引用加**仅表头的勘误块**，**在其 JSON 块之外**）。验收者被要求核实"JSON 块仍可解析、证据字符串未变"。
+     ⇒ **我的裁决（固化为规则）**：**验收报告的 DOI 式更正**应优先用**独立 sidecar 文件**；
+     若确需就地加勘误，**必须满足**：**仅表头/尾部追加、不改机器可读块、不改证据字符串、原文保留并标注、且在报告中披露**。
+     本次满足上述条件（已披露），故**不要求回退**，但**记录偏好顺序：sidecar > 就地勘误**。
+- **裁决与动作**：**验收 pass ⇒ 推送达闸**；已执行 **`scripts/accept-commit.sh mark`（对 `origin/master..HEAD` 逐提交）+ `git push`**（见下）。
+- **推送记录**：#3：推送 DR-76 及其验收/台账，依据 = **`TASK-DR76-ACCEPTANCE.md`（pass）**，闸门放行 ✓。
+- **队列**：**下一步 = 全新空白工程真机轮（沿用冻结 `PRD-mario.md`）**，其任务书须写清：
+  **① `hoh init` 一个真正全新的空工程**（这是判据(1) 的空白工程条款，T10 未满足）；
+  **② 六条判据逐条判定 + 逐条原始证据**；**③ 新证据形态必须**在本轮**首次真机检验**（`interaction_evidence` 的
+  HUD 计数读取路径、`coverage_shortfall_px`、两类胜负结论）；**④ 退出码三处读数均有工件支撑**；
+  **⑤ 不得用巧合绿代替证据**（T10 的教训）。**并先把 D1/D2 两条 minor 排入一个小清理批**（可与其并行排在真机轮之后）。
+- 回滚点：DR-76 的两个提交可各自 revert；五条真机基线不得覆盖。
+
