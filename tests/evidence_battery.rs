@@ -31,6 +31,12 @@ use hof_rs::tools::mcp::McpError;
 use hof_rs::tools::{ToolChannel, ToolResult};
 use serde_json::{json, Value};
 
+/// DR-77 ③: the verdict a stalled drive answers with.  It used to be called
+/// `WIN_UNREACHABLE_GEOMETRICALLY`, which promised a proof about the level that
+/// this window cannot make: it only ever holds `move_right` and never jumps, so
+/// the evidence supports "blocked under that action" and nothing more.
+const BLOCKED_VERDICT: &str = "WIN_BLOCKED_UNDER_MOVE_RIGHT";
+
 // ---------------------------------------------------------------------------
 // Fixture loading
 // ---------------------------------------------------------------------------
@@ -4111,6 +4117,43 @@ fn interaction_raw(run: &BatteryRun) -> Value {
     .unwrap()
 }
 
+/// The message with the `move_right` renderer's line continuations folded away, so a
+/// claim about the message's own wording is not a claim about Rust's string-literal
+/// indentation.
+fn collapsed(text: &str) -> String {
+    text.replace("\n", " ").split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// DR-77 ②: the one line of an observation that carries `token` — the **verdict**
+/// line.  The drive line carries `coverage_shortfall_px` too, so an assertion that
+/// only says `observation.contains(...)` is satisfied by the drive line alone and
+/// pins nothing about the verdict.
+fn verdict_line<'a>(observation: &'a str, token: &str) -> &'a str {
+    observation
+        .split("; ")
+        .find(|part| collapsed(part).contains(token))
+        .unwrap_or_else(|| {
+            panic!("the observation must carry the `{token}` line:\n{observation}")
+        })
+}
+
+/// DR-77 ①/②: the frozen observation a standing pin reads must stay the window's
+/// own output.  The comparison folds line endings (the fixture is LF, the checkout
+/// may give it CRLF) and is otherwise byte-for-byte.
+fn assert_observation_matches_fixture(observation: &str, fixture: &str) {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(fixture);
+    let frozen = std::fs::read_to_string(&path)
+        .unwrap_or_else(|error| panic!("`{}` must be readable: {error}", path.display()))
+        .replace("\r\n", "\n");
+    let frozen = frozen.trim();
+    let live = observation.replace("\r\n", "\n");
+    assert_eq!(
+        live.trim(),
+        frozen,
+        "`{fixture}` no longer matches what the interaction window writes; the standing pin reads the frozen bytes, so they have to be regenerated deliberately"
+    );
+}
+
 /// DR-73 ③: the battery really produces the pickup evidence — a counter read
 /// that grew, a `text:neq <before>` assertion the engine accepted, and the two
 /// frames of the window.
@@ -4380,7 +4423,7 @@ async fn a_project_that_never_picks_a_coin_up_is_recorded_as_a_gap() {
         "the win gap must be named as a *coverage* verdict (DR-76 ②): {observation}"
     );
     assert!(
-        !observation.contains("WIN_UNREACHABLE_GEOMETRICALLY"),
+        !observation.contains(BLOCKED_VERDICT),
         "a budget that ran out must never be reported as a geometric verdict: {observation}"
     );
     assert!(
@@ -4420,7 +4463,8 @@ async fn a_project_that_never_picks_a_coin_up_is_recorded_as_a_gap() {
 /// **why** the flag stayed false.  Here the window spent its whole budget, so the
 /// answer is `WIN_UNREACHED_WITHIN_BUDGET` with an explicit
 /// `coverage_shortfall_px` — and, critically, it is **not**
-/// `WIN_UNREACHABLE_GEOMETRICALLY`: the DR-73 record's
+/// `WIN_BLOCKED_UNDER_MOVE_RIGHT` (DR-77 ③; it was called
+/// `WIN_UNREACHABLE_GEOMETRICALLY`): the DR-73 record's
 /// `(player max x, goal.position)` pair read like unreachability while the only
 /// limit was the harness's own coverage.  The frozen `Ground` really spans to
 /// x=6800, so no window may claim a level is impassable merely because it did not
@@ -4442,7 +4486,7 @@ async fn a_level_whose_goal_is_unreachable_fails_only_the_win_half() {
         "a goal beyond the budget must be a coverage verdict: {observation}"
     );
     assert!(
-        !observation.contains("WIN_UNREACHABLE_GEOMETRICALLY"),
+        !observation.contains(BLOCKED_VERDICT),
         "coverage must never masquerade as geometry: {observation}"
     );
     assert!(
@@ -4453,16 +4497,30 @@ async fn a_level_whose_goal_is_unreachable_fails_only_the_win_half() {
         observation.contains("player max x=Some(28660"),
         "the player's reachable maximum must be in the record: {observation}"
     );
-    // The shortfall is the arithmetic of those two numbers: 30000 - 28660.
+    // The shortfall is the arithmetic of those two numbers: 30000 - 28660, and
+    // DR-77 ② pins it **on the coverage verdict line**: the drive line carries the
+    // same field unconditionally, so a `contains` over the whole observation is
+    // satisfied by the drive line alone and pins nothing.  Removing the field from
+    // the verdict line has to redden this.
+    let verdict = verdict_line(observation, "WIN_UNREACHED_WITHIN_BUDGET");
     assert!(
-        observation.contains("coverage_shortfall_px=Some(1340"),
-        "the coverage shortfall must be an explicit number: {observation}"
+        !verdict.contains("drove `"),
+        "the pinned line must be the verdict, not the drive line: {verdict}"
     );
+    let expected = "coverage_shortfall_px=Some(1340.0)";
+    assert!(
+        collapsed(observation).contains(expected),
+        "the coverage verdict line must carry `{expected}` as a concrete value of its \
+         own: {verdict}"
+    );
+    // DR-77 ①/②: the frozen fixture is what the standing pin reads, so it has to
+    // stay the window's own output.
+    assert_observation_matches_fixture(observation, "tests/fixtures/dr77/coverage_observation.txt");
 }
 
 /// DR-76 ②: the other half of the split.  A level that lets the player advance and
 /// then stops it dead, **with budget still unspent**, is the only shape that may
-/// answer `WIN_UNREACHABLE_GEOMETRICALLY` — and it has to say how much budget was
+/// answer `WIN_BLOCKED_UNDER_MOVE_RIGHT` — and it has to say how much budget was
 /// left, so a reader can tell it from the coverage case above.
 #[tokio::test]
 async fn a_player_that_stops_advancing_with_budget_left_is_a_geometric_verdict() {
@@ -4477,7 +4535,7 @@ async fn a_player_that_stops_advancing_with_budget_left_is_a_geometric_verdict()
         "the pickup must still be observed before the level blocks the player: {observation}"
     );
     assert!(
-        observation.contains("WIN_UNREACHABLE_GEOMETRICALLY"),
+        observation.contains(BLOCKED_VERDICT),
         "a player that stops advancing with budget left is a geometric verdict: {observation}"
     );
     assert!(
@@ -4488,10 +4546,21 @@ async fn a_player_that_stops_advancing_with_budget_left_is_a_geometric_verdict()
         observation.contains("of the 130-batch budget were still unspent"),
         "the record must say how much budget was left: {observation}"
     );
+    // DR-77 ②: the same pin on **this** verdict line, with this level's own number
+    // (the drive line writes `coverage_shortfall_px` unconditionally, so only a
+    // match on the verdict line can tell whether the verdict carries it).
+    let verdict = verdict_line(observation, BLOCKED_VERDICT);
     assert!(
-        observation.contains("coverage_shortfall_px=Some("),
-        "the shortfall must still be an explicit number: {observation}"
+        !verdict.contains("drove `"),
+        "the pinned line must be the verdict, not the drive line: {verdict}"
     );
+    let expected = "coverage_shortfall_px=Some(5240.0)";
+    assert!(
+        collapsed(observation).contains(expected),
+        "the {BLOCKED_VERDICT} verdict line must carry `{expected}` as a concrete \
+         value of its own: {verdict}"
+    );
+    assert_observation_matches_fixture(observation, "tests/fixtures/dr77/blocked_observation.txt");
 }
 
 /// DR-76 ②: the budget is a promise about the specification, and it is pinned.

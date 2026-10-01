@@ -26,6 +26,15 @@ use hof_rs::adapter::godot::{
     COIN_COUNTER_PREFIX, GOAL_POSITION_NODE, GOAL_REACHED_PROPERTY, INTERACTION_DRIVE_ACTION,
 };
 
+/// The DR-77 ③ rename: the verdict that said `GEOMETRICALLY` is
+/// `WIN_BLOCKED_UNDER_MOVE_RIGHT`, because the window only ever holds
+/// `move_right` and never jumps — so the old name promised a proof about the
+/// level the window cannot make.  Earlier round records still carry the old
+/// token, so both names stay deliverable: the new one as the verdict, the old
+/// one only inside a stated mapping (in the DR-73 report's ledger).
+const SUPERSEDED_GEOMETRIC_TOKEN: &str = BLOCKED_VERDICT;
+const BLOCKED_VERDICT: &str = "WIN_BLOCKED_UNDER_MOVE_RIGHT";
+
 /// The two behaviours `REQUIREMENTS.md:114` names that the round never produced.
 const REQUIRED_BEHAVIOURS: [&str; 2] = ["a collectible picked up", "a reachable win condition"];
 
@@ -202,7 +211,8 @@ fn the_tester_is_told_which_battery_steps_prove_the_two_behaviours() {
         "COIN_COUNTER_UNREADABLE",
         // DR-76 ②: the two diagnoses `WIN_NOT_DRIVEN` used to collapse.
         "WIN_UNREACHED_WITHIN_BUDGET",
-        "WIN_UNREACHABLE_GEOMETRICALLY",
+        // DR-77 ③: renamed to say only what the window measured.
+        BLOCKED_VERDICT,
         // DR-76 ②: the number the split is made of.
         "coverage_shortfall_px",
     ] {
@@ -253,10 +263,39 @@ fn the_godot_dev_skill_retracts_the_impassable_level_claim() {
     );
     // The split, so the next round cannot read a coverage gap as geometry.
     assert!(
-        skill.contains("WIN_UNREACHED_WITHIN_BUDGET")
-            && skill.contains("WIN_UNREACHABLE_GEOMETRICALLY"),
+        skill.contains("WIN_UNREACHED_WITHIN_BUDGET") && skill.contains(BLOCKED_VERDICT),
         "the skill must name both verdicts so the Developer/Tester can tell coverage from \
          geometry:\n{skill}"
+    );
+    // DR-77 ③: the movement-direction limit has to be readable at the token, and
+    // the old name must survive only as a stated mapping.
+    assert!(
+        lower.contains("does not jump") || lower.contains("never jumps"),
+        "the skill must state that the window never jumps, so the verdict cannot be a \
+         geometry proof:\n{skill}"
+    );
+    for paragraph in skill.split("\n\n") {
+        if !paragraph.contains(SUPERSEDED_GEOMETRIC_TOKEN) {
+            continue;
+        }
+        assert!(
+            paragraph.contains(BLOCKED_VERDICT),
+            "the old token `{SUPERSEDED_GEOMETRIC_TOKEN}` may survive only inside a statement \
+             that maps it to `{BLOCKED_VERDICT}`:\n{paragraph}"
+        );
+    }
+    let ledger = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join(".spec/hof-rs/tasks/TASK-DR73-REPORT.md"),
+    )
+    .expect("the DR-73 report is readable");
+    let mapping = ledger
+        .split("\n\n")
+        .find(|paragraph| paragraph.contains(SUPERSEDED_GEOMETRIC_TOKEN))
+        .expect("the ledger must map the old token so historical records stay readable");
+    assert!(
+        mapping.contains(BLOCKED_VERDICT),
+        "the mapping paragraph must name the new verdict:\n{mapping}"
     );
 
     // The false claim may survive **only** as marked-superseded prose: every

@@ -703,9 +703,36 @@ json-fenced blocks = 0 ; all fenced blocks = 16 ; json.loads failures = 0
 | 3 | §10 披露第 5 条，本报告 | "`scripts/run_round.ps1` 不存在 / 包装脚本已不在仓里" | **假的**。它被跟踪在 `.spec/hof-rs/tasks/TASK-SMOKE-T10-evidence/scripts/run_round.ps1`（`15e071f` 加入），第 14 行正是 `"ROUND_EXIT=$ec"`。正确措辞是：**该行未随轮次工件冻结入库**（包装脚本打到外层控制台，那段没被留证） |
 | 4 | §3 植入表第 1 行、第 4 行 | `secrets.rs:222`、`cli_impl.rs:798` | `secrets.rs:223`（`b'\n' \| b'\r'` 分支）、`cli_impl.rs:803`（`write_process_exit_code` 调用） |
 | 5 | §3 回退自证 | "13 项（9 M + 4 ??）" | **14 条路径（9 M + 5 A）**，第 5 个新增是本报告 |
-| 6 | §6.1 / §3 的判据描述 | `WIN_NOT_DRIVEN` 一词同时表示"预算不够"与"几何不可达" | DR-76 已拆分：`WIN_UNREACHED_WITHIN_BUDGET`（覆盖，**不**对关卡下结论）与 `WIN_UNREACHABLE_GEOMETRICALLY`（有剩余预算却停止前进）；记录新增 `coverage_shortfall_px` |
+| 6 | §6.1 / §3 的判据描述 | `WIN_NOT_DRIVEN` 一词同时表示"预算不够"与"几何不可达" | DR-76 已拆分：`WIN_UNREACHED_WITHIN_BUDGET`（覆盖，**不**对关卡下结论）与 `WIN_BLOCKED_UNDER_MOVE_RIGHT`（有剩余预算却停止前进；该 token 在 DR-77 ③ 由 `WIN_UNREACHABLE_GEOMETRICALLY` 改名而来，见第 10 行的映射）；记录新增 `coverage_shortfall_px` |
 | 7 | §6.1 的观测路径 | 用场景树的 `Label.text` 找计数格 | **真机载荷不带 `text`**（10 份冻结场景树、0 个 `text` 键）⇒ 改为枚举 `HUD` 下 `Label` 候选后经 `running_game_get_node_properties` 读 `text` 选取 |
-| 8 | `4deefc8` **提交信息** | "…no ground past x≈3800… the level was not [correct]" | **不可改写**（历史提交的 message 无法在不重写历史的前提下修改）⇒ 只能在本节与 DR-76 报告中更正；下一轮**不得**据此缩短关卡 |
+| 8 | `4deefc8` **提交信息** | **逐字引文（`git show --format=%B -s 4deefc8`）**："Diagnosis (layer A): the produced project never delivered a collected coin or a ／ reachable win, and nothing in the round asked whether it had.  move_right swept ／ both coins in smoke-t10 while the HUD stayed at Coins: 0, and the goal sat at ／ x=6400 past the end of the traversable ground." （`／` = 提交信息自身的硬换行，见本节末的引文块） | **不可改写**（历史提交的 message 无法在不重写历史的前提下修改）⇒ 只能在本节与 DR-76 报告中更正；下一轮**不得**据此缩短关卡。**结论不变**：该提交信息确实含假几何断言 （"past the end of the traversable ground"），被取代的是**引用**，不是结论。DR-77 ① 记：本行原先把提交信息引作 "…no ground past x≈3800… the level was not [correct]" —— **那句不在提交信息里**，旧引用保留在本节的新引文块内并标注 `incorrect / superseded` |
 
 **不可改写的落点**：`4deefc8` 的提交信息（第 8 行）。本报告**不重写历史**，因此该错误陈述仍存在于
 `git log` 中，权威更正以本节的记述为准。
+| 9 | §2.2(A-3) / §12 第 1 行，本报告 | "x≈3800 之后没有地面 / 关卡不可通过 / 终点位置不可达" | 这是**本报告自己的措辞**（原文），不是 `4deefc8` 提交信息的引文；第 1 行此举无误，第 8 行原先把它当成提交信息的原文引用才是错的（DR-77 ①） |
+| 10 | DR-76 与本节第 6 行命名的 token | `WIN_UNREACHABLE_GEOMETRICALLY` | DR-77 ③ 改名 ⇒ `WIN_BLOCKED_UNDER_MOVE_RIGHT`。理由：该判定只由"预算尚余而连续两批采样 x 未推进"得出，窗口**只**按住 `move_right`，因此它只证明**"只按 move_right 推不动"**，**不排除跳跃或其它输入能通过**；旧名承诺了几何证明，新名只说证据所支持的事。**映射**：旧轮次记录里的 `WIN_UNREACHABLE_GEOMETRICALLY` 一律读作 `WIN_BLOCKED_UNDER_MOVE_RIGHT`（且按上述 movement-direction 限定解读） |
+
+### 12.1 `4deefc8` 提交信息的逐字引文与旧错误引用（DR-77 ①）
+
+引文取自 `git show --format=%B -s 4deefc8`，**按提交信息自身的硬换行逐字保留**（不并句、不改写）：
+
+<!-- DR-77-COMMIT-QUOTE-BEGIN -->
+```text
+Diagnosis (layer A): the produced project never delivered a collected coin or a
+reachable win, and nothing in the round asked whether it had.  move_right swept
+both coins in smoke-t10 while the HUD stayed at Coins: 0, and the goal sat at
+x=6400 past the end of the traversable ground.  The tool contract already could
+```
+<!-- DR-77-COMMIT-QUOTE-END -->
+
+最后一句就是那个**假几何断言**："the goal sat at x=6400 past the end of the traversable ground"——
+冻结场景证明 `Ground` 是单个 `6800×40`、中心 `x=3400` 的碰撞体，覆盖 `x∈[0,6800]`，在终点下方**连续**。
+⇒ **结论不变**（提交信息确实含该假断言）；DR-77 修的是**引用**：下表保留被取代的错误引用，标注 `incorrect / superseded`。
+
+<!-- DR-77-INCORRECT-QUOTE-BEGIN -->
+- **被取代（incorrect / superseded，DR-77 ①）**：本节第 8 行原先把 `4deefc8` 的提交信息引作
+  "…no ground past x≈3800… the level was not [correct]"。**那句在提交信息里并不存在**（旧引用里的
+  "no ground past x≈3800" 是本报告 §2.2(A-3) 自己的措辞，被误当成提交信息的原文），因此该引用作废。
+  真实的、确实为假的那句是 "the goal sat at x=6400 past the end of the traversable ground."（见上文引文块）。
+<!-- DR-77-INCORRECT-QUOTE-END -->
+

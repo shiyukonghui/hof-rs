@@ -159,8 +159,21 @@ have to be true, and a round can get the first without the second:
   > the specification allows is inside what the battery can observe. When the
   > trigger still is not reached the record splits the verdict: a budget that ran
   > out is `WIN_UNREACHED_WITHIN_BUDGET` — a coverage verdict that says nothing
-  > about the level — and only a player that stops advancing with budget left is
-  > `WIN_UNREACHABLE_GEOMETRICALLY`. Never read the first as the second.
+  > about the level — and a player that stops advancing with budget left is
+  > `WIN_BLOCKED_UNDER_MOVE_RIGHT`. Never read the first as the second. (This
+  > token was called `WIN_UNREACHABLE_GEOMETRICALLY` until DR-77 ③; the older
+  > name promised a proof about the level that the window cannot make, and older
+  > round records still carry it. Mapping: `WIN_UNREACHABLE_GEOMETRICALLY` =
+  > `WIN_BLOCKED_UNDER_MOVE_RIGHT`.)
+
+  **Read the second token as narrowly as it is named.** The window only ever holds
+  `move_right` — it does not jump, and it does not try any other input — so
+  `WIN_BLOCKED_UNDER_MOVE_RIGHT` means "holding `move_right` did not advance the
+  player while budget remained". It is **not** a proof that the level is
+  impassable: a jump, a moving platform, a second route or any other input the
+  window never sends could still pass, and a level that needs one of those has not
+  been shown to be broken. Diagnose it as a movement-direction limit, never as
+  level geometry.
 
 Verify the placement from the scene, not from memory:
 ```
