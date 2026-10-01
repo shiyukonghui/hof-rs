@@ -140,7 +140,9 @@ impl Sandbox {
         sandbox
             .git_raw_at(&root, &["init", "-q", "--bare", &slash(&sandbox.bare)])
             .pipe("git init --bare");
-        sandbox.git(&["init", "-q", "-b", "master"]).pipe("git init");
+        sandbox
+            .git(&["init", "-q", "-b", "master"])
+            .pipe("git init");
         sandbox
             .git(&["config", "user.name", "DR-75 test"])
             .pipe("git config user.name");
@@ -164,7 +166,10 @@ impl Sandbox {
     }
 
     fn git_raw_at(&self, cwd: &Path, args: &[&str]) -> Output {
-        git_command(cwd).args(args).output().expect("git is runnable")
+        git_command(cwd)
+            .args(args)
+            .output()
+            .expect("git is runnable")
     }
 
     /// git in the working clone.
@@ -300,10 +305,9 @@ fn is_stamp(token: &str) -> bool {
         && bytes[13] == b':'
         && bytes[16] == b':'
         && bytes[19] == b'Z'
-        && bytes
-            .iter()
-            .enumerate()
-            .all(|(index, byte)| matches!(index, 4 | 7 | 10 | 13 | 16 | 19) || byte.is_ascii_digit())
+        && bytes.iter().enumerate().all(|(index, byte)| {
+            matches!(index, 4 | 7 | 10 | 13 | 16 | 19) || byte.is_ascii_digit()
+        })
 }
 
 // ---------------------------------------------------------------------------
@@ -327,7 +331,11 @@ fn an_unmarked_push_is_refused_with_actionable_text() {
     let message = text(&output);
     assert_mentions(&message, "REFUSED", "unmarked push");
     assert_mentions(&message, "hoh pre-push gate", "unmarked push");
-    assert_mentions(&message, &sha, "unmarked push must name the commit it refused");
+    assert_mentions(
+        &message,
+        &sha,
+        "unmarked push must name the commit it refused",
+    );
     assert_mentions(
         &message,
         "a change nobody accepted",
@@ -417,7 +425,11 @@ fn commits_already_on_the_remote_are_not_rechecked() {
         text(&refused)
     );
     let message = text(&refused);
-    assert_mentions(&message, &after, "the refusal must name the new unmarked commit");
+    assert_mentions(
+        &message,
+        &after,
+        "the refusal must name the new unmarked commit",
+    );
     assert!(
         !message.contains(&before),
         "a commit already contained by the remote must not be named again:\n{message}"
@@ -437,9 +449,7 @@ fn a_push_with_nothing_new_is_allowed() {
     let sandbox = Sandbox::new();
     sandbox.accept(&["init"]).pipe("accept-commit init");
     let sha = sandbox.commit_report("the acceptance report");
-    sandbox
-        .accept(&["mark", &sha, REPORT, "pass"])
-        .pipe("mark");
+    sandbox.accept(&["mark", &sha, REPORT, "pass"]).pipe("mark");
     sandbox.push(&["origin", "master"]).pipe("the first push");
 
     let again = sandbox.push(&["origin", "master"]);
@@ -477,8 +487,16 @@ fn a_missing_marker_source_refuses_every_push() {
     let message = text(&output);
     assert_mentions(&message, "REFUSED", "missing marker source");
     assert_mentions(&message, "marker source", "missing marker source");
-    assert_mentions(&message, "missing", "the reason must say the source is missing");
-    assert_mentions(&message, LEDGER_FILE, "the reason must name the missing path");
+    assert_mentions(
+        &message,
+        "missing",
+        "the reason must say the source is missing",
+    );
+    assert_mentions(
+        &message,
+        LEDGER_FILE,
+        "the reason must name the missing path",
+    );
     // The marker source is judged *before* the refs are read, so a broken ledger
     // refuses the push without needing to name a commit — and a ref deletion cannot
     // slip past it either.  Naming the commit would require trusting the very
@@ -594,7 +612,11 @@ fn one_unmarked_commit_in_a_multi_commit_range_refuses_the_whole_push() {
         text(&output)
     );
     let message = text(&output);
-    assert_mentions(&message, &third, "the refusal must name the unmarked commit");
+    assert_mentions(
+        &message,
+        &third,
+        "the refusal must name the unmarked commit",
+    );
     assert!(
         !message.contains(&second),
         "the accepted commit must not be named as a problem:\n{message}"
@@ -609,7 +631,9 @@ fn one_unmarked_commit_in_a_multi_commit_range_refuses_the_whole_push() {
     sandbox
         .accept(&["mark", &third, REPORT, "pass"])
         .pipe("mark the last commit");
-    sandbox.push(&["origin", "master"]).pipe("the fully accepted push");
+    sandbox
+        .push(&["origin", "master"])
+        .pipe("the fully accepted push");
     assert_eq!(sandbox.bare_ok(&["rev-parse", "master"]), third);
 }
 
@@ -686,10 +710,7 @@ fn an_unknown_remote_object_refuses_instead_of_skipping() {
 
     // The remote advertised a tip this clone does not have, so the range cannot be
     // computed.  Anything that cannot be evaluated must be refused.
-    let output = sandbox.hook_by_hand(&line(
-        &local,
-        "1111111111111111111111111111111111111111",
-    ));
+    let output = sandbox.hook_by_hand(&line(&local, "1111111111111111111111111111111111111111"));
     assert!(
         !output.status.success(),
         "an unevaluable range must refuse:\n{}",
@@ -722,12 +743,19 @@ fn the_ledger_records_the_report_path_and_the_pass_verdict() {
         .lines()
         .filter(|line| !line.trim().is_empty() && !line.trim_start().starts_with('#'))
         .collect();
-    assert_eq!(records.len(), 1, "exactly one record was written:\n{ledger}");
+    assert_eq!(
+        records.len(),
+        1,
+        "exactly one record was written:\n{ledger}"
+    );
     let fields: Vec<&str> = records[0].split_whitespace().collect();
     assert_eq!(fields[0], "accepted", "the record kind: {ledger}");
     assert_eq!(fields[1], sha, "the record names the commit: {ledger}");
     assert_eq!(fields[2], REPORT, "the record names the report: {ledger}");
-    assert_eq!(fields[3], "pass", "the record carries the verdict: {ledger}");
+    assert_eq!(
+        fields[3], "pass",
+        "the record carries the verdict: {ledger}"
+    );
     assert!(
         is_stamp(fields[4]),
         "the record carries an ISO-8601 UTC stamp, got `{}`:\n{ledger}",
@@ -740,7 +768,10 @@ fn the_ledger_records_the_report_path_and_the_pass_verdict() {
 
     // Cross-check 1: the report it cites is versioned and reachable from the commit.
     let tracked = sandbox.ok(&["ls-files", "--error-unmatch", REPORT]);
-    assert!(tracked.contains(REPORT), "the report must be tracked: {tracked}");
+    assert!(
+        tracked.contains(REPORT),
+        "the report must be tracked: {tracked}"
+    );
     assert_eq!(
         sandbox.ok(&["log", "-1", "--format=%s", "--", REPORT]),
         "commit the acceptance report",
@@ -865,10 +896,7 @@ fn the_install_step_is_idempotent_and_arms_the_gate() {
         "uninstall must remove the setting"
     );
     succeeded(&sandbox.install(), "reinstalling after the uninstall");
-    assert_eq!(
-        sandbox.ok(&["config", "--get", "core.hooksPath"]),
-        expected
-    );
+    assert_eq!(sandbox.ok(&["config", "--get", "core.hooksPath"]), expected);
 
     // And the installed gate really bites in this sandbox.
     sandbox.commit_empty("a change behind the installed gate");
@@ -887,11 +915,8 @@ fn the_installer_refuses_a_checkout_without_the_versioned_hooks() {
     let sandbox = Sandbox::unarmed();
     let lonely = sandbox.work.join("lonely-scripts");
     std::fs::create_dir_all(&lonely).expect("the lonely directory");
-    std::fs::copy(
-        repo_root().join(INSTALLER),
-        lonely.join("install-hooks.sh"),
-    )
-    .expect("a copy of the installer");
+    std::fs::copy(repo_root().join(INSTALLER), lonely.join("install-hooks.sh"))
+        .expect("a copy of the installer");
 
     let output = command("sh", &sandbox.work)
         .arg(slash(&lonely.join("install-hooks.sh")))
@@ -940,8 +965,7 @@ fn the_shell_artifacts_keep_lf_line_endings_and_a_shebang() {
     // The attributes pin is what keeps a `core.autocrlf=true` checkout (the system
     // gitconfig on this machine) from rewriting them.
     for relative in [HOOK, LIB, INSTALLER, MARKER] {
-        let attrs = repo_root()
-            .pipe_git(&["check-attr", "text", "--", relative]);
+        let attrs = repo_root().pipe_git(&["check-attr", "text", "--", relative]);
         assert!(
             attrs.ends_with("text: unset"),
             "{relative} must be pinned with `-text` in .gitattributes, got: {attrs}"
@@ -1037,10 +1061,7 @@ fn the_gate_and_the_writer_agree_on_ledger_validity() {
 
     let corpus: Vec<(String, bool)> = vec![
         (format!("accepted {marked} {REPORT} pass {stamp}"), true),
-        (
-            format!("accepted\t{marked}\t{REPORT}\tpass\t{stamp}"),
-            true,
-        ),
+        (format!("accepted\t{marked}\t{REPORT}\tpass\t{stamp}"), true),
         (String::new(), true),
         ("# a comment line is not a record".to_string(), true),
         (format!("accepted {short} {REPORT} pass {stamp}"), false),
@@ -1072,7 +1093,8 @@ fn the_gate_and_the_writer_agree_on_ledger_validity() {
         let gate_says_valid = !hook_message.contains("is not usable");
 
         assert_eq!(
-            writer_says_valid, *expected_valid,
+            writer_says_valid,
+            *expected_valid,
             "the writer's verdict on `{record}`:\n{}",
             text(&verify)
         );
