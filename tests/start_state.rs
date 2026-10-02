@@ -75,6 +75,46 @@ fn fresh_workspace_rebuilds_exactly_the_initialize_product() {
     assert!(!workspace.join("mcp").exists());
 }
 
+/// DR-81 ④: `--fresh-workspace` removes the **whole** `.godot` cache tree, and
+/// the `A₀` scaffold never recreates it.
+///
+/// That is the mechanism behind `smoke-t14`'s exit 6: the book's order points the
+/// editor at the project **before** the run, so the running editor holds a handle
+/// to a `.godot/editor/` directory the purge has just removed and its next cache
+/// write fails with `Cannot create file 'res://.godot/editor/filesystem_cache10'`
+/// — a line that names nothing in the produced project.  The gate must classify
+/// that as editor infrastructure (DR-81 ①); this test pins the precondition so
+/// the classification is not folklore.
+#[test]
+fn fresh_workspace_removes_the_editor_cache_and_initialize_never_rebuilds_it() {
+    let temp = tempfile::tempdir().unwrap();
+    let addon = temp.path().join("addon");
+    std::fs::create_dir_all(&addon).unwrap();
+    let workspace = temp.path().join("fresh-t14");
+    adapter(&addon).initialize(&workspace).unwrap();
+
+    // The state every round starts in: the editor has already imported the
+    // project and written its caches.
+    std::fs::create_dir_all(workspace.join(".godot/editor")).unwrap();
+    std::fs::write(
+        workspace.join(".godot/editor/filesystem_cache10"),
+        "cache\n",
+    )
+    .unwrap();
+    std::fs::create_dir_all(workspace.join(".godot/imported")).unwrap();
+
+    fresh_workspace(&workspace, &adapter(&addon)).expect("fresh workspace");
+
+    assert!(
+        !workspace.join(".godot").exists(),
+        "the purge removes the whole `.godot` tree, not only the workspace entries"
+    );
+    // The scaffold rebuilds `project.godot`/`scenes`/`scripts` and nothing else,
+    // so the cache directory the editor had open is simply gone.
+    assert!(!workspace.join(".godot/editor").exists());
+    assert!(workspace.join("project.godot").is_file());
+}
+
 /// DR-21 safety: a missing or non-directory workspace is refused, never purged.
 #[test]
 fn fresh_workspace_refuses_to_guess() {

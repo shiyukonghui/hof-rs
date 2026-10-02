@@ -15,6 +15,7 @@ use std::sync::Mutex;
 use common::*;
 use hof_rs::model::{Ablation, Spec};
 use hof_rs::runtime::record::{write_run_meta, RunMeta};
+use hof_rs::runtime::secrets::{redact_tree_traced, SealedAreas};
 
 const FAKE_KEY: &str = "test-key-not-a-secret";
 static ENV_LOCK: Mutex<()> = Mutex::new(());
@@ -172,6 +173,132 @@ fn a_full_offline_run_never_writes_the_environment_secret() {
         assert!(
             !content.contains(FAKE_KEY),
             "the secret leaked into runs/run-1/{path}"
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// DR-81 ③ — a repeated environment dump must not swallow variable families
+// ---------------------------------------------------------------------------
+
+/// One environment dump exactly as it appears inside a role trajectory: the
+/// harness command line, the published game route, the harness variables and the
+/// credential channel, one assignment per `\n`-separated line.
+///
+/// This is the shape the T14 acceptance proved fatal: the real trajectory
+/// repeated the dump four times, and a **late** occurrence of a name scanned
+/// early (`OPENAI_API_KEY`, at 286080-286095) blocked every earlier occurrence of
+/// every name scanned afterwards, because the guard tested "starts before the
+/// largest span end seen so far" instead of real overlap.
+fn environment_dump(iteration: usize) -> String {
+    format!(
+        "<output>\n\
+         DSH_TERM_CMD=cd /f/moonbit-hof-rs && python \"F:/staging/run.py\" --out pv.json \
+         --env-from-secret HOH_MODEL_API_KEY -- run --iteration {iteration}\n\
+         HOH_GAME_ROUTE=F:\\moonbit-hof-rs\\runs\\smoke-t14\\game_endpoint.json\n\
+         HOH_ROLE=developer\n\
+         HOH_RUN_DIR=F:\\moonbit-hof-rs\\runs\\smoke-t14\n\
+         HOH_ARTIFACT_DIR=F:\\moonbit-hof-rs\\runs\\smoke-t14\\iter-1\n\
+         HOH_MODEL_API_KEY=value-{iteration}-not-a-real-key\n\
+         PATH=C:\\Users\\wyl\\.cargo\\bin;C:\\Windows\\system32\n\
+         </output>\n"
+    )
+}
+
+/// A trajectory whose `content` repeats the environment dump four times, with
+/// the `OPENAI_API_KEY` occurrence that the acceptance's minimal plant names in
+/// the **last** dump only.
+fn repeated_dump_trajectory(with_late_openai_key: bool) -> String {
+    let mut content = String::new();
+    for iteration in 0..4 {
+        content.push_str(&environment_dump(iteration));
+        if iteration == 3 && with_late_openai_key {
+            content.push_str("OPENAI_API_KEY=sk-late-occurrence\n");
+        }
+    }
+    serde_json::to_string_pretty(&serde_json::json!({
+        "messages": [
+            {"role": "system", "content": "system prompt"},
+            {"role": "assistant", "content": content}
+        ]
+    }))
+    .expect("a serializable trajectory")
+}
+
+/// DR-81 ③, through the **real entry point**: a frozen trajectory file is handed
+/// to `redact_tree_traced` with the tree marked sealed, exactly as the runtime
+/// produces the `.redacted.json` sidecar the round freezes (DR-72 ②).
+///
+/// The bounded control is the acceptance's minimal plant: deleting the single
+/// later `OPENAI_API_KEY=` line must not change whether the earlier families are
+/// redacted.  Both directions are asserted, so the test cannot pass by depending
+/// on that line's presence.
+#[test]
+fn a_repeated_environment_dump_redacts_every_variable_family() {
+    for with_late_openai_key in [true, false] {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let root = temp.path().join("runs/smoke-x/iter-1/traj");
+        std::fs::create_dir_all(&root).expect("the trajectory directory");
+
+        let original = repeated_dump_trajectory(with_late_openai_key);
+        let path = root.join("developer.attempt1.json");
+        std::fs::write(&path, &original).expect("the frozen trajectory");
+
+        let sealed = SealedAreas::new([root.clone()]);
+        let report = redact_tree_traced(&root, &[], &sealed).expect("the tree redaction runs");
+
+        let sidecar = root.join("developer.attempt1.redacted.json");
+        assert!(
+            sidecar.is_file(),
+            "the sealed trajectory must get a generated sidecar: {report:?}"
+        );
+        let redacted = std::fs::read_to_string(&sidecar).expect("the sidecar");
+
+        // DR-72 ②: the sealed original keeps every byte.
+        assert_eq!(
+            std::fs::read_to_string(&path).expect("the original"),
+            original,
+            "a sealed file must never be rewritten (with_late_openai_key={with_late_openai_key})"
+        );
+        // DR-72 ③: the splice must not break the document.
+        assert!(
+            serde_json::from_str::<serde_json::Value>(&redacted).is_ok(),
+            "the redacted sidecar must stay valid JSON (with_late_openai_key={with_late_openai_key})"
+        );
+
+        let context = format!("with_late_openai_key={with_late_openai_key}");
+        for (name, expected) in [
+            ("DSH_TERM_CMD", 4),
+            ("HOH_GAME_ROUTE", 4),
+            ("HOH_ROLE", 4),
+            ("HOH_RUN_DIR", 4),
+            ("HOH_ARTIFACT_DIR", 4),
+            ("HOH_MODEL_API_KEY", 4),
+        ] {
+            assert_eq!(
+                redacted.matches(&format!("{name}=<redacted>")).count(),
+                expected,
+                "{name} must be redacted at every occurrence ({context}):\n{redacted}"
+            );
+        }
+
+        // The raw assignment forms the acceptance measured must be gone.
+        for survivor in [
+            "DSH_TERM_CMD=cd",
+            "HOH_GAME_ROUTE=F:",
+            "HOH_ROLE=developer",
+            "HOH_RUN_DIR=F:",
+            "HOH_ARTIFACT_DIR=F:",
+            "value-0-not-a-real-key",
+        ] {
+            assert!(
+                !redacted.contains(survivor),
+                "`{survivor}` must not survive the assignment scan ({context}):\n{redacted}"
+            );
+        }
+        assert!(
+            !redacted.contains("sk-late-occurrence"),
+            "the late credential-shaped assignment must not survive either ({context})"
         );
     }
 }

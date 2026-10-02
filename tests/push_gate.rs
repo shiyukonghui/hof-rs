@@ -214,6 +214,13 @@ impl Sandbox {
         self.commit_all(message)
     }
 
+    /// Writes and commits an arbitrary tracked file — the shape DR-81 ⑤ needs to
+    /// commit a **round report** and try to mark with it.
+    fn commit_path(&self, relative: &str, body: &str, message: &str) -> String {
+        self.write(relative, body);
+        self.commit_all(message)
+    }
+
     fn head(&self) -> String {
         self.ok(&["rev-parse", "HEAD"])
     }
@@ -805,7 +812,12 @@ fn the_marker_refuses_a_missing_report_and_a_non_pass_verdict() {
     sandbox.accept(&["init"]).pipe("accept-commit init");
     let sha = sandbox.commit_report("the acceptance report");
 
-    let missing = sandbox.accept(&["mark", &sha, ".spec/does-not-exist.md", "pass"]);
+    let missing = sandbox.accept(&[
+        "mark",
+        &sha,
+        ".spec/hof-rs/tasks/TASK-DR81-MISSING-ACCEPTANCE.md",
+        "pass",
+    ]);
     assert!(
         !missing.status.success(),
         "recording a report that does not exist must fail:\n{}",
@@ -1114,4 +1126,172 @@ fn the_gate_and_the_writer_agree_on_ledger_validity() {
              and the gate said {gate_says_valid}:\n{hook_message}"
         );
     }
+}
+
+// ---------------------------------------------------------------------------
+// DR-81 ⑤ — the marking source must be an acceptance artifact
+// ---------------------------------------------------------------------------
+
+/// The shape `smoke-t14` used to authorise itself: a **round report**.  Its own
+/// commit `03ee2e3` was recorded against it and reached `origin/master` at
+/// 10:43:21, before the independent acceptance existed.
+const ROUND_REPORT: &str = ".spec/hof-rs/tasks/TASK-DR81-ROUND-REPORT.md";
+const ROUND_REPORT_BODY: &str = "# TASK-DR81 round report\n\n(no verdict of its own)\n";
+
+/// DR-81 ⑤: between the two new requirements the reason must stay specific — a
+/// missing source says it is missing, and a source that is not an acceptance
+/// artifact says so, whether or not it happens to exist.
+#[test]
+fn a_missing_or_wrong_kind_of_source_is_refused_with_its_own_reason() {
+    let sandbox = Sandbox::new();
+    sandbox.accept(&["init"]).pipe("accept-commit init");
+    let sha = sandbox.commit_report("the acceptance report");
+
+    // (a) An acceptance-named source that does not exist: "does not exist".
+    let absent = sandbox.accept(&[
+        "mark",
+        &sha,
+        ".spec/hof-rs/tasks/TASK-DR81-ABSENT-ACCEPTANCE.md",
+        "pass",
+    ]);
+    assert!(!absent.status.success(), "{}", text(&absent));
+    assert_mentions(&text(&absent), "does not exist", "absent acceptance source");
+
+    // (b) A source that is not an acceptance artifact, even though it exists and
+    // is tracked: the name is the reason, not its existence.
+    let wrong_kind = sandbox.commit_path(
+        ".spec/hof-rs/tasks/TASK-DR81-NOTES.md",
+        "# notes\n",
+        "commit a tracked non-acceptance file",
+    );
+    let refused = sandbox.accept(&[
+        "mark",
+        &wrong_kind,
+        ".spec/hof-rs/tasks/TASK-DR81-NOTES.md",
+        "pass",
+    ]);
+    assert!(!refused.status.success(), "{}", text(&refused));
+    assert_mentions(
+        &text(&refused),
+        "ACCEPTANCE",
+        "the reason must name the token an acceptance artifact carries",
+    );
+    assert!(
+        !sandbox.ledger_text().contains(&sha),
+        "no record may have been written:\n{}",
+        sandbox.ledger_text()
+    );
+}
+
+/// DR-81 ⑤ ①: a `*-REPORT.md` source must be refused, and no record may be
+/// written.  Before this rule the only requirement was "a tracked `.md` file",
+/// so the audited object could authorise its own push.
+#[test]
+fn a_round_report_cannot_authorise_its_own_push() {
+    let sandbox = Sandbox::new();
+    sandbox.accept(&["init"]).pipe("accept-commit init");
+    let sha = sandbox.commit_path(ROUND_REPORT, ROUND_REPORT_BODY, "commit the round report");
+
+    let mark = sandbox.accept(&["mark", &sha, ROUND_REPORT, "pass"]);
+    assert!(
+        !mark.status.success(),
+        "a round report must never be accepted as its own acceptance:\n{}",
+        text(&mark)
+    );
+    assert_mentions(
+        &text(&mark),
+        "ACCEPTANCE",
+        "the refusal must say what an acceptance artifact is",
+    );
+    assert!(
+        !sandbox.ledger_text().contains(&sha),
+        "a refused mark must not leave a record:\n{}",
+        sandbox.ledger_text()
+    );
+
+    // And the push stays refused: the gate must not be the only half that knows.
+    let refused = sandbox.push(&["origin", "master"]);
+    assert!(
+        !refused.status.success(),
+        "the round report's commit must not be pushable:\n{}",
+        text(&refused)
+    );
+    assert_mentions(&text(&refused), "REFUSED", "round-report push");
+    let remote = sandbox.git_raw_at(&sandbox.bare, &["rev-parse", "--verify", "master"]);
+    assert!(
+        !remote.status.success(),
+        "nothing may have reached the remote"
+    );
+}
+
+/// DR-81 ⑤ ② (regression pin): a path whose file name contains `ACCEPTANCE` is a
+/// valid marking source, so the strengthening cannot pass by refusing everything.
+#[test]
+fn an_acceptance_artifact_is_accepted_as_the_marking_source() {
+    let sandbox = Sandbox::new();
+    sandbox.accept(&["init"]).pipe("accept-commit init");
+    let sha = sandbox.commit_path(
+        ".spec/hof-rs/tasks/TASK-DR81-ACCEPTANCE.md",
+        "# TASK-DR81 acceptance\n\nverdict: pass\n",
+        "commit the acceptance artifact",
+    );
+
+    sandbox
+        .accept(&[
+            "mark",
+            &sha,
+            ".spec/hof-rs/tasks/TASK-DR81-ACCEPTANCE.md",
+            "pass",
+        ])
+        .pipe("mark with an acceptance artifact");
+    sandbox
+        .push(&["origin", "master"])
+        .pipe("the accepted push");
+    assert_eq!(sandbox.bare_ok(&["rev-parse", "master"]), sha);
+}
+
+/// DR-81 ⑤: the **gate** must enforce the same rule, fail closed.  A hand-written
+/// ledger whose record cites a round report is not usable, so every push is
+/// refused before any commit is judged — the writer cannot be the only guard.
+#[test]
+fn the_gate_refuses_a_ledger_whose_source_is_not_an_acceptance_artifact() {
+    let sandbox = Sandbox::new();
+    sandbox.accept(&["init"]).pipe("accept-commit init");
+    let sha = sandbox.commit_path(ROUND_REPORT, ROUND_REPORT_BODY, "commit the round report");
+
+    // A syntactically perfect record whose source is the audited object itself.
+    let header = sandbox
+        .ledger_text()
+        .lines()
+        .filter(|line| line.starts_with('#'))
+        .collect::<Vec<_>>()
+        .join("\n");
+    std::fs::write(
+        sandbox.ledger_path(),
+        format!("{header}\naccepted {sha} {ROUND_REPORT} pass 2026-10-02T00:00:00Z\n"),
+    )
+    .expect("the hand-written ledger");
+
+    let hook = sandbox.hook_by_hand(&line(&sha, ZERO));
+    assert!(
+        !hook.status.success(),
+        "the gate must refuse a ledger whose source is a round report:\n{}",
+        text(&hook)
+    );
+    let message = text(&hook);
+    assert_mentions(&message, "REFUSED", "non-acceptance source");
+    assert_mentions(
+        &message,
+        "ACCEPTANCE",
+        "the gate's refusal must name the acceptance requirement",
+    );
+
+    // The writer agrees.
+    let verify = sandbox.accept(&["verify"]);
+    assert!(
+        !verify.status.success(),
+        "verify must reject the same ledger:\n{}",
+        text(&verify)
+    );
+    assert_mentions(&text(&verify), "ACCEPTANCE", "verify refusal");
 }

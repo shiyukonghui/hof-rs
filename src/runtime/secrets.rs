@@ -308,6 +308,12 @@ pub fn redact_secret_assignments_traced(text: &str) -> RedactionReport {
 }
 
 /// DR-72 ①: the splice itself, with no policy applied.
+///
+/// DR-81 ③: the span guard is a real interval-overlap test, and a candidate that
+/// contains a recorded span absorbs it.  The previous "starts before the largest
+/// span end seen so far" test let one late occurrence of an early-scanned name
+/// hide every earlier occurrence of every later-scanned one, which is how a
+/// repeated environment dump kept whole variable families raw in `smoke-t14`.
 fn splice_assignments(text: &str) -> RedactionReport {
     let json = looks_like_json(text);
     let mut spans: Vec<RedactionSpan> = Vec::new();
@@ -320,11 +326,6 @@ fn splice_assignments(text: &str) -> RedactionReport {
         let mut cursor = 0usize;
         while let Some(found) = text[cursor..].find(needle.as_str()) {
             let start = cursor + found;
-            // Never re-replace a byte an earlier span already owns.
-            if spans.iter().any(|span| start < span.end) {
-                cursor = start + needle.len();
-                continue;
-            }
             let value_start = start + needle.len();
             let value_end = assignment_value_end(
                 text,
@@ -333,12 +334,62 @@ fn splice_assignments(text: &str) -> RedactionReport {
                 WHOLE_VALUE_VARS.contains(&name),
                 COMMAND_LINE_VARS.contains(&name),
             );
-            spans.push(RedactionSpan {
-                name: name.to_string(),
-                start,
-                end: value_end,
-                replacement: format!("{needle}{REDACTED}"),
-            });
+            // DR-81 ③: a **real interval overlap** test, not a global
+            // "begins before the largest end seen so far" test.
+            //
+            // The old guard `start < span.end` was the whole mechanism of the
+            // `smoke-t14` disclosure: the trajectory repeated its environment
+            // dump four times, one `OPENAI_API_KEY=` occurrence sat late in the
+            // file (286080-286095), and because `OPENAI_API_KEY` is scanned
+            // before the whole `HOH_*`/`DSH_TERM_CMD`/`PATH` family, **every
+            // earlier occurrence of every later-scanned name** was reported
+            // `SKIP(overlap)` against it and survived raw.
+            //
+            // The test is now the interval intersection `[start, value_end) ∩
+            // span ≠ ∅`, and a candidate that **contains** a recorded span
+            // absorbs it: the recorded span's replacement only covered part of
+            // this value, so keeping it would leave the candidate's own tail
+            // raw.  That is exactly the shape a `DSH_TERM_CMD` line takes when
+            // its command line carries an `HOH_ROLE=<value>` argument — the
+            // `HOH_ROLE` span is recorded first (it is earlier in
+            // `HARNESS_ENV_VARS`) and the whole command line must still be
+            // replaced.  A candidate that merely lies *inside* an already
+            // recorded span is left alone, exactly as before: that span already
+            // replaces it, and the DR-73/DR-74 frozen sample pins the surviving
+            // tail of that shape as a documented cost.
+            let absorbed: Vec<usize> = spans
+                .iter()
+                .enumerate()
+                .filter(|(_, span)| {
+                    start <= span.start && span.end <= value_end && start < span.end
+                })
+                .map(|(index, _)| index)
+                .collect();
+            if !absorbed.is_empty() {
+                let kept: Vec<RedactionSpan> = spans
+                    .iter()
+                    .enumerate()
+                    .filter(|(index, _)| !absorbed.contains(index))
+                    .map(|(_, span)| span.clone())
+                    .collect();
+                spans = kept;
+                spans.push(RedactionSpan {
+                    name: name.to_string(),
+                    start,
+                    end: value_end,
+                    replacement: format!("{needle}{REDACTED}"),
+                });
+            } else if !spans
+                .iter()
+                .any(|span| start < span.end && span.start < value_end)
+            {
+                spans.push(RedactionSpan {
+                    name: name.to_string(),
+                    start,
+                    end: value_end,
+                    replacement: format!("{needle}{REDACTED}"),
+                });
+            }
             cursor = value_end.max(start + needle.len());
         }
     }
@@ -1373,6 +1424,73 @@ mod tests {
             "the physical newline bounds the command line and the next line survives"
         );
         assert_eq!(bytes_changed_outside_spans(&report), Some(0));
+    }
+
+    /// DR-81 ③: the repeated-dump plant the acceptance used as its minimal
+    /// control.  A `DSH_TERM_CMD=` line early in the text, followed by an
+    /// `OPENAI_API_KEY=` line later, used to leave the command line **raw** —
+    /// `OPENAI_API_KEY` is scanned before `DSH_TERM_CMD`, and its late span
+    /// blocked every earlier candidate of every later-scanned name.  Deleting the
+    /// one later line changed the outcome, which is what proved the failure was
+    /// positional rather than content-dependent.
+    #[test]
+    fn a_late_occurrence_of_an_early_scanned_name_does_not_hide_an_earlier_candidate() {
+        let with_late = "DSH_TERM_CMD=cd /f/x && python run.py --out x.txt\n\
+                         tail\n\
+                         filler\n\
+                         OPENAI_API_KEY=sk-late\n\
+                         more\n";
+        let without_late = "DSH_TERM_CMD=cd /f/x && python run.py --out x.txt\n\
+                            tail\n\
+                            filler\n\
+                            more\n";
+        for (label, text) in [
+            ("with the late OPENAI_API_KEY line", with_late),
+            ("without it", without_late),
+        ] {
+            let report = redact_secret_assignments_traced(text);
+            assert!(
+                report
+                    .redacted
+                    .starts_with(&format!("DSH_TERM_CMD={REDACTED}\n")),
+                "the command line must be redacted {label}: {:?}",
+                report.redacted
+            );
+            assert!(
+                !report.redacted.contains("run.py"),
+                "the command line's value must be gone {label}: {:?}",
+                report.redacted
+            );
+            assert_eq!(bytes_changed_outside_spans(&report), Some(0), "{label}");
+        }
+    }
+
+    /// DR-81 ③: a candidate that **contains** a recorded span absorbs it.  The
+    /// `HOH_ROLE=` assignment is scanned before `DSH_TERM_CMD` (it is earlier in
+    /// `HARNESS_ENV_VARS`), so the recorded span covers only the middle of the
+    /// command line; if the wider candidate were skipped, the command line's head
+    /// and tail would survive raw.
+    #[test]
+    fn a_command_line_containing_an_assignment_absorbs_it() {
+        let text = "DSH_TERM_CMD=cd /f/x && HOH_ROLE=developer run.py --out x.txt\nnext stays\n";
+        let report = redact_secret_assignments_traced(text);
+        assert!(
+            !report.redacted.contains("developer") && !report.redacted.contains("run.py"),
+            "the whole command line must be one value: {:?}",
+            report.redacted
+        );
+        assert_eq!(
+            report.redacted,
+            format!("DSH_TERM_CMD={REDACTED}\nnext stays\n"),
+            "the absorbed span must not leave a raw tail"
+        );
+        assert_eq!(bytes_changed_outside_spans(&report), Some(0));
+        assert_eq!(
+            report.spans.len(),
+            1,
+            "the absorbed span is replaced by the wider candidate: {:?}",
+            report.spans
+        );
     }
 
     /// DR-79 ④: the shape that actually reached the artifacts — a JSON string

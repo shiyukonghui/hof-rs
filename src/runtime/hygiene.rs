@@ -153,12 +153,15 @@ impl OutOfTreeWatch {
 /// leaves behind in the scanned root?
 ///
 /// This is the whole eligibility rule for
-/// [`clean_round_temporaries`], and it is deliberately the narrowest one that
-/// covers the measured litter (`.tmp_coin.json`, `.tmp_goal.json`,
-/// `.tmp_hud.json`): a single path component, and a temporary name shape.  A
-/// project file never matches, and no path with a separator matches, so the
-/// cleanup cannot reach into a project or another directory even if the watcher
-/// reported one.
+/// [`clean_round_temporaries`], and it is deliberately narrow: a single path
+/// component, and a name shape that reads as round scratch.  A project file
+/// never matches, and no path with a separator matches, so the cleanup cannot
+/// reach into a project or another directory even if the watcher reported one.
+///
+/// DR-81 ④ widens the shape with [`is_round_scratch_name`].  DR-79's four
+/// families (`.tmp_*`, `tmp_*`, `*.tmp`, `*.bak`) could not see `smoke-t14`'s
+/// root litter (`l.json`, `p2.json`, `pv.json`, `r.json` — the Tester's own
+/// scenario/args payloads), so the round left them in the repository root.
 pub fn is_root_temporary(relative: &str) -> bool {
     if relative.is_empty() || relative.contains('/') || relative.contains('\\') {
         return false;
@@ -171,6 +174,50 @@ pub fn is_root_temporary(relative: &str) -> bool {
         || lower.starts_with("tmp_")
         || lower.ends_with(".tmp")
         || lower.ends_with(".bak")
+        || is_round_scratch_name(&lower)
+}
+
+/// DR-81 ④: the extensions a round's own root scratch payload carries.
+///
+/// Measured: every one of `smoke-t14`'s four survivors is a `.json` written for
+/// an MCP `--args-file` / scenario call.  `.txt`, `.log` and the like are
+/// **not** in the set: a text file in the repository root is exactly the shape a
+/// deliberate, content-bearing out-of-tree write takes, and the cleanup must not
+/// be able to destroy one.
+pub const ROOT_SCRATCH_EXTENSIONS: &[&str] = &["json"];
+
+/// DR-81 ④: the longest stem that still reads as a machine-generated scratch name
+/// rather than a deliberate document (`l`, `p2`, `pv`, `r` are 1–2 characters).
+/// The bound is what keeps `analysis.json` / `results.json` — and any other
+/// plausibly hand-authored payload — out of the cleanup.
+pub const ROOT_SCRATCH_STEM_MAX: usize = 4;
+
+/// DR-81 ④: the largest payload a scratch removal may touch.  A real scratch
+/// payload is a small argument file; a large JSON in the repository root is a
+/// product, so it is left alone (and stays reported in `out_of_tree_writes`).
+pub const ROOT_SCRATCH_MAX_BYTES: u64 = 8192;
+
+/// DR-81 ④: is `lower` (already lower-cased) a terse round-scratch name — a short
+/// `[a-z0-9_]` stem plus a [`ROOT_SCRATCH_EXTENSIONS`] extension?
+///
+/// This is a **name-shape** rule inside the bigger eligibility rule: the caller
+/// has already proved the path is one component of the round's scanned root and
+/// that the watcher saw the round create it, and only a regular file is ever
+/// removed.  A directory, a nested path and any file that pre-dates the round can
+/// never match.
+pub fn is_round_scratch_name(lower: &str) -> bool {
+    let Some((stem, extension)) = lower.rsplit_once('.') else {
+        return false;
+    };
+    if stem.is_empty() || stem.len() > ROOT_SCRATCH_STEM_MAX {
+        return false;
+    }
+    if !stem.chars().all(|character| {
+        character.is_ascii_lowercase() || character.is_ascii_digit() || character == '_'
+    }) {
+        return false;
+    }
+    ROOT_SCRATCH_EXTENSIONS.contains(&extension)
 }
 
 /// DR-79 ①: remove the round's own known temporary files from the scanned root,
@@ -186,12 +233,18 @@ pub fn is_root_temporary(relative: &str) -> bool {
 ///   tree as it was when the round started, so a file that was already there is
 ///   never touched;
 /// * [`is_root_temporary`] must accept it: exactly one path component and a
-///   temporary name shape;
+///   temporary name shape (DR-81 ④ adds the terse round-scratch family);
+/// * a path matched only by the DR-81 scratch family must additionally be a
+///   **small regular file** ([`ROOT_SCRATCH_MAX_BYTES`]), never a directory;
 /// * only a **file** is removed (never a directory, never a wildcard, never
 ///   `rm`), and the joined path is re-checked to be a direct child of `root`.
 ///
 /// The caller records the returned names, so the removal is part of the round's
-/// own record rather than a silent side effect.
+/// own record rather than a silent side effect.  A genuine out-of-tree write is
+/// not destroyed: it survives when it pre-dates the round, sits in a
+/// subdirectory, carries a non-scratch extension, has a stem longer than
+/// [`ROOT_SCRATCH_STEM_MAX`], or is larger than [`ROOT_SCRATCH_MAX_BYTES`] — and
+/// in every case the write remains a fact in `out_of_tree_writes`.
 pub fn clean_round_temporaries(root: &Path, observed: &[String]) -> Vec<String> {
     let mut removed: Vec<String> = Vec::new();
     for relative in observed {
@@ -205,7 +258,18 @@ pub fn clean_round_temporaries(root: &Path, observed: &[String]) -> Vec<String> 
         if path.parent() != Some(root) {
             continue;
         }
-        if path.is_file() && std::fs::remove_file(&path).is_ok() {
+        if !path.is_file() {
+            continue;
+        }
+        if is_round_scratch_name(&relative.to_ascii_lowercase()) {
+            let Ok(metadata) = path.metadata() else {
+                continue;
+            };
+            if metadata.len() > ROOT_SCRATCH_MAX_BYTES {
+                continue;
+            }
+        }
+        if std::fs::remove_file(&path).is_ok() {
             removed.push(relative.clone());
         }
     }
@@ -970,6 +1034,107 @@ mod tests {
             root.join("stray_dir/.tmp_nested.json").is_file(),
             "a nested path is out of scope: the cleanup is root-level by construction"
         );
+    }
+
+    /// DR-81 ④: the measured `smoke-t14` litter — the tester's scenario/args
+    /// payloads written to the repository root under terse machine names
+    /// (`l.json`, `p2.json`, `pv.json`, `r.json`).  DR-79's four shapes
+    /// (`.tmp_*`/`tmp_*`/`*.tmp`/`*.bak`) could not see them, so the round left
+    /// them behind.
+    #[test]
+    fn the_terse_round_scratch_names_are_round_litter() {
+        for name in ["l.json", "p2.json", "pv.json", "r.json"] {
+            assert!(
+                is_root_temporary(name),
+                "`{name}` is the measured T14 scratch shape"
+            );
+        }
+        // The bound stays: one component, a scratch extension, and a stem short
+        // enough to be machine-generated.  Everything else is out of scope.
+        for name in [
+            "sub/l.json",
+            "sub\\l.json",
+            "l.txt",
+            "l.log.out",
+            "abcde.json",
+            "analysis.json",
+            "results.json",
+            "project.godot",
+            "l.tmp.bak.json",
+            "_probe.gd",
+            "..",
+            ".",
+            "",
+        ] {
+            assert!(
+                !is_root_temporary(name),
+                "`{name}` must never be treated as round litter"
+            );
+        }
+        // The boundary itself: a four-character stem is still terse scratch.
+        assert!(is_root_temporary("abcd.json"));
+    }
+
+    /// DR-81 ④: the cleanup removes the round's own terse scratch and nothing
+    /// else — a pre-existing file the watcher never observed, a directory with
+    /// the scratch name, a nested path and an oversized payload all survive.
+    #[test]
+    fn the_cleanup_removes_only_the_observed_root_scratch() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        write(&root.join("l.json"), "{}\n");
+        write(&root.join("p2.json"), "{}\n");
+        write(&root.join("pv.json"), "{}\n");
+        write(&root.join("r.json"), "{}\n");
+        // Genuine content that happens to live in the root.
+        write(&root.join("keep.txt"), "project content\n");
+        write(&root.join("project.godot"), "[application]\n");
+        // A pre-existing short-named JSON the round did **not** create: it is on
+        // disk but is deliberately absent from `observed`.
+        write(&root.join("old.json"), "not mine\n");
+        // A directory carrying a scratch name: never removed.
+        std::fs::create_dir_all(root.join("dir_scratch")).unwrap();
+        write(&root.join("dir_scratch/inner.json"), "{}\n");
+        // An oversized payload: bounded out of the scratch family.
+        let big = "x".repeat((ROOT_SCRATCH_MAX_BYTES + 1) as usize);
+        write(&root.join("big.json"), &big);
+
+        let observed: Vec<String> = [
+            "l.json",
+            "p2.json",
+            "pv.json",
+            "r.json",
+            "keep.txt",
+            "project.godot",
+            "dir_scratch",
+            "big.json",
+            "sub/l.json",
+        ]
+        .into_iter()
+        .map(String::from)
+        .collect();
+
+        let removed = clean_round_temporaries(root, &observed);
+
+        assert_eq!(
+            removed,
+            vec![
+                "l.json".to_string(),
+                "p2.json".to_string(),
+                "pv.json".to_string(),
+                "r.json".to_string(),
+            ],
+            "only the observed terse round scratch may be removed"
+        );
+        assert!(!root.join("l.json").exists());
+        assert!(!root.join("r.json").exists());
+        for survivor in ["keep.txt", "project.godot", "old.json", "big.json"] {
+            assert!(
+                root.join(survivor).is_file(),
+                "`{survivor}` must survive the cleanup"
+            );
+        }
+        assert!(root.join("dir_scratch/inner.json").is_file());
     }
 
     /// DR-79 ①: the watch remembers every path it ever observed, because the

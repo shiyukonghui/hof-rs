@@ -123,6 +123,23 @@ fn purge_contents(workspace: &Path) -> anyhow::Result<()> {
 }
 
 /// DR-21 `--fresh-workspace`: empty the workspace and rebuild `A₀`.
+///
+/// DR-81 ④ — the measured precondition: [`purge_contents`] removes **every**
+/// entry, including the whole `.godot/` cache tree, and `adapter.initialize`
+/// rebuilds only the `A₀` product (`project.godot`, `scenes/`, `scripts/`) — it
+/// never recreates `.godot/`.  Godot creates that tree when it (re)imports a
+/// project at startup, so if the editor was already pointed at this workspace
+/// (which is the order the smoke books mandate: empty directory → `init` → point
+/// the editor → `run`) then a `--fresh-workspace` run deletes the directory the
+/// running editor holds open, and its next cache write answers
+/// `Cannot create file 'res://.godot/editor/filesystem_cache10'. Check user
+/// write permissions.` (`smoke-t14`).
+///
+/// The precondition is therefore: **either restart/close the editor after a
+/// `--fresh-workspace` purge, or expect that one editor-infrastructure line on
+/// the editor it left running.**  The line names nothing in the produced project
+/// and is classified as editor infrastructure by the launch gate (DR-81 ①), so it
+/// must not freeze an otherwise clean project.
 pub fn fresh_workspace(workspace: &Path, adapter: &dyn ProjectAdapter) -> anyhow::Result<()> {
     assert_purgeable(workspace)?;
     purge_contents(workspace)?;

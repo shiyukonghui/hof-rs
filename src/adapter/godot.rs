@@ -471,6 +471,14 @@ struct BatterySession<'a> {
     records: Vec<BatteryRecord>,
     /// DR-35: the channel probe's verdict, filled in before `input_replay`.
     channel: InputChannelProbe,
+    /// DR-81 ②: the editor-log tail as it stood **before** the project reload —
+    /// the window anchor the judged reading is compared against.  `None` means the
+    /// anchor could not be taken (the call failed, or the payload was not an
+    /// editor report); the window is then fail-closed.
+    editor_error_anchor: Option<Vec<String>>,
+    /// DR-81 ②: the anchor request and its verbatim answer, recorded next to the
+    /// judged reading so the window criterion is auditable.
+    editor_error_anchor_raw: Value,
 }
 
 impl<'a> BatterySession<'a> {
@@ -488,6 +496,8 @@ impl<'a> BatterySession<'a> {
             log: McpErrorLog::new(workspace),
             records: Vec::new(),
             channel: InputChannelProbe::default(),
+            editor_error_anchor: None,
+            editor_error_anchor_raw: Value::Null,
         }
     }
 
@@ -617,6 +627,12 @@ impl<'a> BatterySession<'a> {
         // DR-29: correlate before collecting anything: a desynchronized server
         // mislabels every payload below.
         self.session_sync_probe().await;
+        // DR-81 ②: the window anchor is read **before** the project is reloaded.
+        // The reload is what makes the editor surface the current on-disk
+        // project, so the anchor is the log tail as it stood before this round's
+        // candidate could contribute to it; the judged reading then splits into
+        // "already there" and "new in this window".
+        self.anchor_editor_error_window().await;
         // DR-24: the editor is forced onto the on-disk truth *before* anything
         // is asked about errors (smoke-t2 showed an in-memory scene that
         // disagreed with the `.tscn` on disk).
@@ -793,6 +809,14 @@ impl<'a> BatterySession<'a> {
     }
 
     /// 3. Editor error baseline — taken *before* the project is started.
+    ///
+    /// DR-81 ①/②: the reading is judged, not taken literally.  DR-48's exact
+    /// banners are information, DR-68 removes lines the on-disk project can no
+    /// longer produce, DR-81 ① removes the editor's own infrastructure failures
+    /// (the `smoke-t14` cache-write line) and DR-81 ② keeps only the lines whose
+    /// occurrence count grew since the window anchor.  The remaining lines are the
+    /// project defect, and they still close the gate — the `smoke-t14` pass-1
+    /// `res://scripts/main.gd:8 - Parse Error` is the regression pin.
     async fn step_editor_errors(&mut self) -> anyhow::Result<()> {
         let step = BatteryStep {
             id: "editor_errors_baseline".to_string(),
@@ -801,80 +825,48 @@ impl<'a> BatterySession<'a> {
             retries: self.limits.max_retries,
         };
         let args = json!({"max_lines": 50});
+        let mut verdict = None;
         let (ok, observation, call) = match self.call("editor_get_errors", args.clone()).await {
             Ok(call) => {
                 let parsed = unwrap_mcp_payload(&call.payload);
-                let observation = describe_editor_errors(&parsed);
                 // DR-30: an `errors` array is what makes this payload an editor
                 // report at all.  `smoke-t3` received the *scene text* here and
                 // the observation blamed the wrong thing.
-                //
-                // DR-48: the engine's own informational `[MCP]` startup banners
-                // are stripped first — `smoke-t6` closed the gate on
-                // `[MCP] capture=off (…on_error…)` while the same round booted
-                // the scene and returned a 50-node tree.  Only the **exact**
-                // banner shapes are exempt; everything else keeps the original
-                // conservative verdict.
-                let (ok, observation) = match parsed.get("errors").and_then(Value::as_array) {
-                    Some(errors) if errors.is_empty() => (true, observation),
-                    Some(errors) => {
-                        let reported = non_banner_editor_errors(errors);
-                        if reported.is_empty() {
-                            (
-                                true,
-                                format!(
-                                    "{observation} (only the engine's own informational banner(s) \
-                                     were reported; {} line(s) exempted by DR-48)",
-                                    errors.len()
-                                ),
-                            )
-                        } else {
-                            // DR-68 ②: `editor_get_errors` answers from the
-                            // editor's **append-only log**.  A line whose
-                            // `res://file:line` no longer mentions the symbol the
-                            // error names cannot be produced by the project on
-                            // disk, so it must neither close the gate nor burn
-                            // the one targeted repair (`smoke-t8`: 60 steps /
-                            // 4.02M tokens / 11m24s, zero engineering writes).
-                            let (fresh, stale) = partition_editor_errors(&reported, self.workspace);
-                            let dismissed = if stale.is_empty() {
-                                String::new()
-                            } else {
-                                format!(
-                                    "; {} stale editor-log line(s) dismissed as no longer \
-                                     reproducible against the current project (DR-68)",
-                                    stale.len()
-                                )
-                            };
-                            if fresh.is_empty() {
-                                (
-                                    true,
-                                    format!(
-                                        "{observation} (only stale editor-log line(s) were \
-                                         reported{dismissed}; {} line(s) exempted by DR-48)",
-                                        errors.len() - reported.len()
-                                    ),
-                                )
-                            } else {
-                                (
-                                    false,
-                                    format!(
-                                        "{observation} (UNAVAILABLE: the editor is not clean; \
-                                         {} line(s) still reproducible{dismissed})",
-                                        fresh.len()
-                                    ),
-                                )
-                            }
-                        }
-                    }
-                    None => (
-                        false,
-                        format!(
+                let judged = match parsed.get("errors").and_then(Value::as_array) {
+                    Some(errors) if errors.is_empty() => EditorErrorVerdict {
+                        ok: true,
+                        observation: format!(
+                            "{} (editor has no errors; editor_infrastructure_failures=0, \
+                             project_defects_new=0)",
+                            describe_editor_errors(&parsed)
+                        ),
+                        banners: 0,
+                        stale: 0,
+                        infrastructure: 0,
+                        new_defects: 0,
+                        pre_existing: 0,
+                    },
+                    Some(errors) => judge_editor_errors(
+                        &parsed,
+                        errors,
+                        self.workspace,
+                        self.editor_error_anchor.as_deref(),
+                    ),
+                    None => EditorErrorVerdict {
+                        ok: false,
+                        observation: format!(
                             "FAILED editor_get_errors returned no `errors` array: {parsed} \
                              (UNAVAILABLE: the payload does not answer the question)"
                         ),
-                    ),
+                        banners: 0,
+                        stale: 0,
+                        infrastructure: 0,
+                        new_defects: 0,
+                        pre_existing: 0,
+                    },
                 };
+                let (ok, observation) = (judged.ok, judged.observation.clone());
+                verdict = Some(judged);
                 (
                     ok,
                     observation,
@@ -887,8 +879,79 @@ impl<'a> BatterySession<'a> {
                 call_fail("editor_get_errors", &args, &failure),
             ),
         };
-        self.finish(step, ExecKind::Build, None, observation, ok, vec![call])
-            .await
+        // DR-81 ②: the window and its counts are part of the evidence, not a
+        // narration: a reader can see when the anchor was taken, what it held and
+        // how the judged reading was split.
+        let window = match &verdict {
+            Some(verdict) => json!({
+                "criterion": EDITOR_ERROR_WINDOW_CRITERION,
+                "anchor": format!(
+                    "editor_get_errors max_lines={EDITOR_ERROR_ANCHOR_MAX_LINES} taken \
+                     immediately before `project_reload_and_open`; the judged reading is \
+                     max_lines=50 taken after it"
+                ),
+                "anchor_line_count": self.editor_error_anchor.as_ref().map(Vec::len),
+                "anchor_request_and_answer": self.editor_error_anchor_raw.clone(),
+                "banners": verdict.banners,
+                "stale": verdict.stale,
+                "editor_infrastructure_failures": verdict.infrastructure,
+                "pre_existing_lines": verdict.pre_existing,
+                "project_defects_new": verdict.new_defects,
+            }),
+            None => json!({
+                "criterion": EDITOR_ERROR_WINDOW_CRITERION,
+                "anchor": format!(
+                    "editor_get_errors max_lines={EDITOR_ERROR_ANCHOR_MAX_LINES} taken \
+                     immediately before `project_reload_and_open`"
+                ),
+                "anchor_line_count": self.editor_error_anchor.as_ref().map(Vec::len),
+                "anchor_request_and_answer": self.editor_error_anchor_raw.clone(),
+                "note": "the judged reading never arrived, so no window split was computed",
+            }),
+        };
+        self.finish_with(
+            step,
+            ExecKind::Build,
+            None,
+            observation,
+            ok,
+            vec![call],
+            json!({"editor_error_window": window}),
+        )
+        .await
+    }
+
+    /// DR-81 ②: read the editor-log tail **before** the project reload and keep it
+    /// as the window anchor.
+    ///
+    /// The call asks for the whole tail ([`EDITOR_ERROR_ANCHOR_MAX_LINES`]) so the
+    /// anchor is a superset of anything the judged reading can contain.  A failed
+    /// call, or a payload that is not an editor report, leaves the anchor `None`;
+    /// [`partition_editor_errors_in_window`] then treats every judged line as new,
+    /// which is the conservative direction.
+    async fn anchor_editor_error_window(&mut self) {
+        let args = json!({"max_lines": EDITOR_ERROR_ANCHOR_MAX_LINES});
+        match self.call("editor_get_errors", args.clone()).await {
+            Ok(call) => {
+                let parsed = unwrap_mcp_payload(&call.payload);
+                self.editor_error_anchor =
+                    parsed
+                        .get("errors")
+                        .and_then(Value::as_array)
+                        .map(|errors| {
+                            errors
+                                .iter()
+                                .filter_map(|line| line.as_str().map(ToString::to_string))
+                                .collect::<Vec<String>>()
+                        });
+                self.editor_error_anchor_raw =
+                    call_ok("editor_get_errors", &args, &call.payload, &call.correlation);
+            }
+            Err(failure) => {
+                self.editor_error_anchor = None;
+                self.editor_error_anchor_raw = call_fail("editor_get_errors", &args, &failure);
+            }
+        }
     }
 
     /// 2. `editor_play_scene` plus the readiness wait (DR-20).
@@ -5276,6 +5339,190 @@ pub fn partition_editor_errors<'a>(
         }
     }
     (fresh, stale)
+}
+
+/// DR-81 ①: the editor's **own cache namespace**.
+///
+/// Every cache file Godot writes for a project lives under `res://.godot/`, and
+/// the runtime already excludes `.godot` from hashing, from snapshots and from
+/// every view (DR-11) — nothing under it is part of the produced project.  A log
+/// line that names a path here and reports an I/O failure is the editor failing
+/// to maintain its own bookkeeping, not the project failing to build.
+pub const EDITOR_CACHE_NAMESPACE: &str = "res://.godot/";
+
+/// DR-81 ①: the **verbatim** failure wordings the editor uses when a write of its
+/// own cache file fails.
+///
+/// `smoke-t14`'s line is `ERROR: Cannot create file
+/// 'res://.godot/editor/filesystem_cache10'. Check user write permissions.`
+/// (`--fresh-workspace` had just removed the `.godot` tree the running editor had
+/// open).  The phrases are matched case-insensitively and only **together with
+/// [`EDITOR_CACHE_NAMESPACE`]**, so the exemption is a named classification of an
+/// editor-infrastructure failure, never a namespace wildcard: a real
+/// `res://scripts/main.gd:8 - Parse Error` carries none of them.
+pub const EDITOR_INFRASTRUCTURE_ERROR_PHRASES: &[&str] = &[
+    "cannot create file",
+    "cannot open file",
+    "can't open file",
+    "error opening file",
+    "failed to write",
+    "check user write permissions",
+];
+
+/// DR-81 ①: is this editor-log line the editor's **own infrastructure** failing?
+///
+/// The rule is deliberately **narrow and additive**: it is true only when the
+/// line names the editor's cache namespace *and* carries one of the named
+/// failure wordings.  Everything else — including every script/compile error —
+/// keeps the original fail-closed verdict, which is what `smoke-t14` pass 1
+/// (`res://scripts/main.gd:8 - Parse Error`) requires.
+pub fn editor_error_is_infrastructure(line: &str) -> bool {
+    let lower = line.to_ascii_lowercase();
+    lower.contains(EDITOR_CACHE_NAMESPACE)
+        && EDITOR_INFRASTRUCTURE_ERROR_PHRASES
+            .iter()
+            .any(|phrase| lower.contains(phrase))
+}
+
+/// DR-81 ①: split fresh editor errors into `(editor infrastructure, project)`.
+///
+/// A non-string entry is never infrastructure: it cannot be classified, so it
+/// stays on the project side (fail closed).
+pub fn partition_editor_infrastructure<'a>(
+    lines: &[&'a serde_json::Value],
+) -> (Vec<&'a serde_json::Value>, Vec<&'a serde_json::Value>) {
+    lines.iter().partition(|line| {
+        line.as_str()
+            .map(editor_error_is_infrastructure)
+            .unwrap_or(false)
+    })
+}
+
+/// DR-81 ②: the `max_lines` window of the **anchor** reading.
+///
+/// The anchor asks for the whole tail (the engine answers everything when the
+/// window is larger than the log), because it must contain every line the judged
+/// reading can possibly contain.
+pub const EDITOR_ERROR_ANCHOR_MAX_LINES: u64 = 2000;
+
+/// DR-81 ②: the criterion the window implements, recorded verbatim in the raw
+/// payload next to the evidence.
+pub const EDITOR_ERROR_WINDOW_CRITERION: &str =
+    "an editor log line closes the gate only when it is not an exact DR-48 engine \
+     banner, not stale by DR-68, not editor infrastructure by DR-81 ①, and its number of \
+     occurrences grew between the pre-reload anchor reading and the judged reading";
+
+/// DR-81 ②: split the project-side lines into `(new in this window, pre-existing)`.
+///
+/// `smoke-t14` measured why a raw log-tail reading cannot be a hard verdict: the
+/// editor's log is append-only, so a line that was already there before the
+/// round's window describes an older state.  The window is anchored by an
+/// `editor_get_errors` reading taken **before** `project_reload_and_open` — the
+/// reload is what makes the editor surface the current on-disk project — and a
+/// judged line is new only when its **occurrence count** exceeds the anchor's.
+///
+/// Counting rather than set membership is load-bearing: a second occurrence of an
+/// identical line means the reload really re-produced it, and only the occurrence
+/// that is *not* in the anchor closes the gate.
+///
+/// `None` (the anchor could not be taken, or was not an editor report) is
+/// **fail-closed**: every line counts as new.
+pub fn partition_editor_errors_in_window<'a>(
+    anchor: Option<&[String]>,
+    judged: &[&'a serde_json::Value],
+) -> (Vec<&'a serde_json::Value>, Vec<&'a serde_json::Value>) {
+    let Some(anchor) = anchor else {
+        return (judged.to_vec(), Vec::new());
+    };
+    let mut remaining: Vec<&str> = anchor.iter().map(String::as_str).collect();
+    let mut new = Vec::new();
+    let mut pre_existing = Vec::new();
+    for line in judged {
+        match line.as_str() {
+            Some(text) => match remaining.iter().position(|candidate| *candidate == text) {
+                Some(index) => {
+                    remaining.swap_remove(index);
+                    pre_existing.push(*line);
+                }
+                None => new.push(*line),
+            },
+            // A non-string entry cannot be compared with the anchor: keep it.
+            None => new.push(*line),
+        }
+    }
+    (new, pre_existing)
+}
+
+/// DR-81 ①/②: the outcome of judging one `editor_get_errors` reading.
+struct EditorErrorVerdict {
+    ok: bool,
+    observation: String,
+    banners: usize,
+    stale: usize,
+    infrastructure: usize,
+    new_defects: usize,
+    pre_existing: usize,
+}
+
+/// DR-81 ①/②: judge an `editor_get_errors` reading.
+///
+/// The order is the whole decision, and each stage is documented where it is
+/// defined: exact DR-48 banners are information; DR-68 removes lines the project
+/// on disk can no longer produce; DR-81 ① removes the editor's own
+/// infrastructure failures; DR-81 ② keeps only lines whose occurrence count grew
+/// since the pre-reload anchor.  Whatever is left is the project defect.
+fn judge_editor_errors(
+    parsed: &serde_json::Value,
+    errors: &[serde_json::Value],
+    workspace: &Path,
+    anchor: Option<&[String]>,
+) -> EditorErrorVerdict {
+    let base = describe_editor_errors(parsed);
+    let reported = non_banner_editor_errors(errors);
+    let banners = errors.len().saturating_sub(reported.len());
+    let (fresh, stale) = partition_editor_errors(&reported, workspace);
+    let (infrastructure, project) = partition_editor_infrastructure(&fresh);
+    let (new_defects, pre_existing) = partition_editor_errors_in_window(anchor, &project);
+
+    let exemptions = format!(
+        "{} engine banner(s) by DR-48, {} stale line(s) by DR-68, {} editor-infrastructure \
+         line(s) by DR-81 ①, {} pre-existing line(s) before the window anchor by DR-81 ②",
+        banners,
+        stale.len(),
+        infrastructure.len(),
+        pre_existing.len()
+    );
+    let window = format!(
+        "window anchored with max_lines={EDITOR_ERROR_ANCHOR_MAX_LINES} before \
+         `project_reload_and_open`, judged with max_lines=50 after it; \
+         editor_infrastructure_failures={}, project_defects_new={}",
+        infrastructure.len(),
+        new_defects.len()
+    );
+    let (ok, observation) = if new_defects.is_empty() {
+        (
+            true,
+            format!("{base} (no line closes the gate: {exemptions}; {window})"),
+        )
+    } else {
+        (
+            false,
+            format!(
+                "{base} (UNAVAILABLE: the editor is not clean; {} line(s) reproducible and new \
+                 in this window; {exemptions}; {window})",
+                new_defects.len()
+            ),
+        )
+    };
+    EditorErrorVerdict {
+        ok,
+        observation,
+        banners,
+        stale: stale.len(),
+        infrastructure: infrastructure.len(),
+        new_defects: new_defects.len(),
+        pre_existing: pre_existing.len(),
+    }
 }
 
 /// DR-5: turn a `editor_get_errors` payload into an observation.

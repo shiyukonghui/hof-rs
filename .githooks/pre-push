@@ -38,7 +38,10 @@ hoh_refuse_ledger() {
     printf '%s\n' "  Nothing may be pushed until the marker source is usable (fail closed)." >&2
     printf '%s\n' "  Create it and record a passing acceptance with:" >&2
     printf '%s\n' "      scripts/accept-commit.sh init" >&2
-    printf '%s\n' "      scripts/accept-commit.sh mark <sha> <report.md> pass" >&2
+    printf '%s\n' "      scripts/accept-commit.sh mark <sha> <ACCEPTANCE.md> pass" >&2
+    printf '%s\n' "  The marking source must be an acceptance artifact (its file name contains" >&2
+    printf '%s\n' "  \`ACCEPTANCE\`): a round report (\`*-REPORT.md\`) or the audited object itself" >&2
+    printf '%s\n' "  may not authorise its own push (DR-81 ⑤)." >&2
     printf '%s\n' "  This is a hard constraint, not a suggestion: do not bypass it with" >&2
     printf '%s\n' "  \`git push --no-verify\` (that hole is documented in .githooks/README.md)." >&2
     exit 1
@@ -121,7 +124,8 @@ if [ -n "$HOH_REFUSED" ]; then
     printf '%s\n' "  remote: ${HOH_REMOTE_NAME:-?} (${HOH_REMOTE_URL:-?})" >&2
     printf '%s\n' "  marker source: $HOH_LEDGER" >&2
     printf '%s\n' "  Once an independent acceptance passes, record it for each commit:" >&2
-    printf '%s\n' "      scripts/accept-commit.sh mark <sha> <report.md> pass" >&2
+    printf '%s\n' "      scripts/accept-commit.sh mark <sha> <ACCEPTANCE.md> pass" >&2
+    printf '%s\n' "  (the source must be an acceptance artifact: its name contains \`ACCEPTANCE\`)" >&2
     printf '%s\n' "  See what is already recorded: scripts/accept-commit.sh list" >&2
     printf '%s\n' "  This is the repository's hard constraint: nothing is pushed before an acceptance" >&2
     printf '%s\n' "  passes.  Do not bypass the gate with \`git push --no-verify\`; that flag is a" >&2

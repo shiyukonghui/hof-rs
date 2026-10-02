@@ -11,6 +11,7 @@
 #   accepted <sha> <report.md> <verdict> <stamp> [note]
 #     sha      40 lowercase hex characters
 #     report   repo-root-relative path of the acceptance report, ending in .md
+#              and carrying the ACCEPTANCE token in its file name (DR-81 ⑤)
 #     verdict  exactly `pass`; only an independent passing acceptance authorises a push
 #     stamp    YYYY-MM-DDTHH:MM:SSZ (UTC)
 #     note     optional free-form trailing text
@@ -54,11 +55,24 @@ hoh_is_stamp() {
     return 1
 }
 
-# True (0) when $1 is a plausible repo-root-relative acceptance report path.
-hoh_is_report() {
+# True (0) when $1 is a plausible repo-root-relative **acceptance artifact** path.
+#
+# DR-81 ⑤: a tracked `.md` was not enough.  `smoke-t14`'s own report commit
+# (`03ee2e3`) was marked against `TASK-SMOKE-T14-REPORT.md` — the audited object
+# itself — and reached `origin/master` before any independent acceptance existed.
+# The marking source must therefore be an acceptance artifact: the final path
+# component must carry the literal token `ACCEPTANCE`.  A round report
+# (`*-REPORT.md`) cannot contain it, and neither can any other object under
+# audit, so the audited thing can never authorise its own push.
+HOH_ACCEPTANCE_TOKEN=ACCEPTANCE
+hoh_is_acceptance_report() {
     case $1 in
         ''|/*|*\\*|.) return 1 ;;
-        */*.md) return 0 ;;
+        */*.md) ;;
+        *) return 1 ;;
+    esac
+    case ${1##*/} in
+        *"$HOH_ACCEPTANCE_TOKEN"*) return 0 ;;
     esac
     return 1
 }
@@ -89,8 +103,8 @@ hoh_check_record() {
         HOH_RECORD_ERROR="\`$HOH_RECORD_SHA\` is not a 40-character lowercase hex commit id"
         return 1
     }
-    hoh_is_report "$HOH_RECORD_REPORT" || {
-        HOH_RECORD_ERROR="\`$HOH_RECORD_REPORT\` is not a repo-root-relative path ending in .md"
+    hoh_is_acceptance_report "$HOH_RECORD_REPORT" || {
+        HOH_RECORD_ERROR="\`$HOH_RECORD_REPORT\` is not an acceptance artifact: the marking source must be a repo-root-relative \`.md\` file whose name contains \`$HOH_ACCEPTANCE_TOKEN\` (e.g. \`...-ACCEPTANCE.md\`); a round report (\`*-REPORT.md\`) or the audited object itself may not authorise its own push"
         return 1
     }
     [ "$HOH_RECORD_VERDICT" = pass ] || {

@@ -71,6 +71,14 @@ Only `pass` may be recorded, the report must be a tracked `.md` file (so
 *commit → report → push* can be cross-checked from git history), and marking the
 same commit twice with the same report is a no-op.
 
+**DR-81 ⑤ — the marking source must be an acceptance artifact.**  The file name
+must contain `ACCEPTANCE` (e.g. `TASK-XX-ACCEPTANCE.md`), and both the writer and
+the gate enforce it.  A round report (`*-REPORT.md`) or the audited object itself
+may not authorise its own push: `smoke-t14`'s report commit `03ee2e3` was marked
+against `TASK-SMOKE-T14-REPORT.md` and reached `origin/master` at 10:43:21,
+before any independent acceptance existed.  A ledger carrying such a record is
+not usable, so the gate refuses *every* push until it is corrected.
+
 In a fresh clone the ledger is empty, so the first push is refused until the
 acceptances of the commits being pushed are re-recorded.
 

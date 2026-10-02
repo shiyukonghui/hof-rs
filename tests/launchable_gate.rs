@@ -73,6 +73,10 @@ struct GateChannel {
     /// DR-48: an `editor_get_errors` payload answered verbatim instead of the
     /// scene-derived one.
     editor_errors: Option<Value>,
+    /// DR-81 ②: the **window anchor** reading — the log tail as it stood before
+    /// the project reload.  `None` models "the anchor window was empty", which is
+    /// the pre-existing behaviour every earlier test relied on.
+    editor_errors_anchor: Option<Value>,
     /// DR-51: the game endpoint registrations, and whether the battery has
     /// already invalidated the route (`editor_stop_scene`).
     registrations: Mutex<Vec<hof_rs::tools::endpoint::GameEndpointRecord>>,
@@ -85,6 +89,7 @@ impl GateChannel {
             workspace: workspace.to_path_buf(),
             calls: Mutex::new(Vec::new()),
             editor_errors: None,
+            editor_errors_anchor: None,
             registrations: Mutex::new(Vec::new()),
             route_cleared: std::sync::atomic::AtomicBool::new(false),
         }
@@ -97,6 +102,27 @@ impl GateChannel {
             calls: Mutex::new(Vec::new()),
             editor_errors: Some(
                 json!({"available": true, "count": errors.len(), "errors": errors}),
+            ),
+            // DR-81 ②: the window anchor stands **before** the reload, so the
+            // configured errors are new in this window.
+            editor_errors_anchor: Some(json!({"available": true, "count": 0, "errors": []})),
+            registrations: Mutex::new(Vec::new()),
+            route_cleared: std::sync::atomic::AtomicBool::new(false),
+        }
+    }
+
+    /// DR-81 ②: a channel whose **anchor** and **judged** readings are both
+    /// scripted, so "the same line was already in the log tail before this
+    /// window" can be reproduced.
+    fn with_windowed_editor_errors(workspace: &Path, anchor: &[&str], judged: &[&str]) -> Self {
+        Self {
+            workspace: workspace.to_path_buf(),
+            calls: Mutex::new(Vec::new()),
+            editor_errors: Some(
+                json!({"available": true, "count": judged.len(), "errors": judged}),
+            ),
+            editor_errors_anchor: Some(
+                json!({"available": true, "count": anchor.len(), "errors": anchor}),
             ),
             registrations: Mutex::new(Vec::new()),
             route_cleared: std::sync::atomic::AtomicBool::new(false),
@@ -148,7 +174,20 @@ impl ToolChannel for GateChannel {
                 }
             },
             "editor_get_errors" => {
-                if let Some(payload) = &self.editor_errors {
+                // DR-81 ②: the battery reads the log tail twice — a wide anchor
+                // before the reload and the judged reading (`max_lines: 50`)
+                // after it.  The double answers each from its own script.
+                let anchor_call = args
+                    .get("max_lines")
+                    .and_then(Value::as_u64)
+                    .map(|lines| lines > 50)
+                    .unwrap_or(false);
+                let configured = if anchor_call {
+                    &self.editor_errors_anchor
+                } else {
+                    &self.editor_errors
+                };
+                if let Some(payload) = configured {
                     payload.clone()
                 } else if self.scene_valid() {
                     json!({"errors": []})
@@ -266,6 +305,17 @@ async fn run_gate_with_errors(
     script: Vec<FakeStep>,
     editor_errors: Option<Vec<&str>>,
 ) -> GateRun {
+    run_gate_with_window(root, script, None, editor_errors).await
+}
+
+/// DR-81 ②: the same run with **both** editor-log readings scripted — the anchor
+/// (before the reload) and the judged reading (after it).
+async fn run_gate_with_window(
+    root: &Path,
+    script: Vec<FakeStep>,
+    anchor: Option<Vec<&str>>,
+    judged: Option<Vec<&str>>,
+) -> GateRun {
     let mut cfg: HohConfig = test_config(root, 1);
     cfg.runtime.spec = root.join("spec.md");
     let spec = write_spec(root);
@@ -273,9 +323,12 @@ async fn run_gate_with_errors(
     let observer = harness.clone();
     let workspace = cfg.runtime.workspace.clone();
     let run_dir = cfg.runtime.runs_dir.join("run-1");
-    let channel = Arc::new(match &editor_errors {
-        Some(errors) => GateChannel::with_editor_errors(&workspace, errors),
-        None => GateChannel::new(&workspace),
+    let channel = Arc::new(match (&anchor, &judged) {
+        (Some(anchor), Some(judged)) => {
+            GateChannel::with_windowed_editor_errors(&workspace, anchor, judged)
+        }
+        (None, Some(judged)) => GateChannel::with_editor_errors(&workspace, judged),
+        _ => GateChannel::new(&workspace),
     });
     let orchestrator = hof_rs::runtime::run_loop::Orchestrator {
         harness: Box::new(harness),
@@ -967,5 +1020,308 @@ async fn a_reproducible_parse_error_still_closes_the_gate() {
         run.result["repair_retry_used"],
         json!(true),
         "a reproducible parse error must still trigger the one targeted repair"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// ⑧ DR-81 ① — an editor *infrastructure* failure is not a project defect
+// ---------------------------------------------------------------------------
+
+/// `smoke-t14`'s one surviving line, verbatim: the editor could not write its
+/// own cache file after `--fresh-workspace` removed the `.godot` directory it had
+/// open.  It names no file in the produced project.
+const CACHE_WRITE_ERROR: &str = "ERROR: Cannot create file \
+    'res://.godot/editor/filesystem_cache10'. Check user write permissions.";
+
+/// A genuine script defect, in the same `ERROR: res://…` shape.  It must never be
+/// exempted by the infrastructure rule.
+const NEW_SCRIPT_ERROR: &str = r#"ERROR: res://scripts/main.gd:12 - Parse Error: Unexpected identifier "using" in class body."#;
+
+/// A line that was already in the editor's append-only log **before** this
+/// window's anchor, in the shape the editor really writes for a parse error
+/// (`main.gd:8`, the `smoke-t14` pass-1 error).  It carries no `Function "X()"`
+/// symbol, so DR-68's staleness rule keeps it — only the time window can
+/// distinguish it from an error the candidate produced.
+const OLD_LOG_TAIL_ERROR: &str =
+    r#"ERROR: res://scripts/main.gd:8 - Parse Error: Expected new line after "\"."#;
+
+/// The `editor_errors_baseline` observation recorded in the frozen candidate.
+fn baseline_observation(run: &GateRun) -> String {
+    let battery: Vec<Value> = serde_json::from_str(&read(
+        &run.run_dir
+            .join("iter-1/candidate/.hoh/deterministic/battery.json"),
+    ))
+    .unwrap();
+    battery
+        .iter()
+        .find(|record| record["step_id"] == json!("editor_errors_baseline"))
+        .expect("the baseline step must exist")["record"]["observation"]
+        .as_str()
+        .expect("an observation string")
+        .to_string()
+}
+
+/// DR-81 ①: the cache-write failure `smoke-t14` froze on is the editor's own
+/// infrastructure, not a defect of the produced project.  The two mandatory gate
+/// steps disagreed (the project booted and answered 22 nodes while the editor log
+/// carried this one line), and the whole round was frozen `launchable=false` and
+/// exited 6.  The exemption is **additive**: it is a named classification of the
+/// text, not a loosening of the predicate.
+#[tokio::test]
+async fn an_editor_infrastructure_failure_does_not_close_the_gate() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let run = run_gate_with_errors(
+        root,
+        vec![
+            plan_step(),
+            developer_writes(SCENE_WITH_ROOT),
+            tester_step(), // never consumed: infrastructure noise may not repair
+        ],
+        Some(vec![CACHE_WRITE_ERROR]),
+    )
+    .await;
+
+    assert_eq!(
+        run.result["artifact_gate"]["launchable"],
+        json!(true),
+        "an editor cache-write failure is not a project defect: {:?}",
+        run.result["artifact_gate"]["reasons"]
+    );
+    assert_eq!(
+        run.result["repair_retry_used"],
+        json!(false),
+        "infrastructure noise must never burn the one repair retry"
+    );
+    assert_eq!(
+        run.records.iter().map(|r| r.role).collect::<Vec<_>>(),
+        vec![Role::Planner, Role::Developer, Role::Tester]
+    );
+
+    // The verdict changes; the evidence does not.  Both the verbatim line and the
+    // classification token are recorded, so the distinction is auditable.
+    let observation = baseline_observation(&run);
+    assert!(
+        observation.contains("filesystem_cache10"),
+        "the verbatim line must survive the exemption: {observation}"
+    );
+    assert!(
+        observation.contains("editor_infrastructure_failures=1"),
+        "the classification must be recorded as its own token: {observation}"
+    );
+    assert!(
+        observation.contains("project_defects_new=0"),
+        "no project defect may be claimed: {observation}"
+    );
+    let raw: Value = serde_json::from_str(&read(
+        &run.run_dir
+            .join("iter-1/candidate/.hoh/deterministic/raw/editor_errors_baseline.json"),
+    ))
+    .unwrap();
+    assert!(
+        raw.to_string().contains("filesystem_cache10"),
+        "the raw payload must keep the line verbatim: {raw}"
+    );
+    let battery: Vec<Value> = serde_json::from_str(&read(
+        &run.run_dir
+            .join("iter-1/candidate/.hoh/deterministic/battery.json"),
+    ))
+    .unwrap();
+    let baseline = battery
+        .iter()
+        .find(|record| record["step_id"] == json!("editor_errors_baseline"))
+        .unwrap();
+    assert_eq!(baseline["ok"], json!(true));
+}
+
+/// DR-81 ① counter-direction: exempting the editor's infrastructure must never
+/// swallow a real script error.  `smoke-t14` pass 1 carried
+/// `res://scripts/main.gd:8 - Parse Error` and only the one-shot repair removed
+/// it, so this is the regression pin DR-48's blunt predicate used to hold.
+#[tokio::test]
+async fn an_infrastructure_failure_does_not_mask_a_real_script_error() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let run = run_gate_with_errors(
+        root,
+        vec![
+            plan_step(),
+            developer_writes(SCENE_WITH_ROOT),
+            developer_writes(SCENE_WITH_ROOT), // the one targeted repair
+            tester_step(),
+        ],
+        Some(vec![NEW_SCRIPT_ERROR, CACHE_WRITE_ERROR]),
+    )
+    .await;
+
+    assert_eq!(
+        run.result["artifact_gate"]["launchable"],
+        json!(false),
+        "a real parse error must still close the gate: {:?}",
+        run.result["artifact_gate"]["reasons"]
+    );
+    assert_eq!(run.result["repair_retry_used"], json!(true));
+    let reasons = run.result["artifact_gate"]["reasons"].as_array().unwrap();
+    assert!(
+        reasons
+            .iter()
+            .any(|reason| reason.as_str().unwrap_or("").contains("Parse Error")),
+        "the reason must quote the surviving script error: {reasons:?}"
+    );
+    let observation = baseline_observation(&run);
+    assert!(
+        observation.contains("editor_infrastructure_failures=1"),
+        "{observation}"
+    );
+    assert!(
+        observation.contains("project_defects_new=1"),
+        "{observation}"
+    );
+}
+
+/// DR-81 ① boundary: a line that merely mentions `.godot` is **not** exempt
+/// unless it also carries the editor's cache/write-failure wording.  This keeps
+/// the rule a named classification instead of a namespace wildcard.
+#[test]
+fn the_infrastructure_classifier_is_narrow() {
+    use hof_rs::adapter::godot::editor_error_is_infrastructure;
+    assert!(editor_error_is_infrastructure(CACHE_WRITE_ERROR));
+    assert!(!editor_error_is_infrastructure(NEW_SCRIPT_ERROR));
+    assert!(!editor_error_is_infrastructure(OLD_LOG_TAIL_ERROR));
+    // The engine's real error under the `[MCP]` prefix is not infrastructure.
+    assert!(!editor_error_is_infrastructure(
+        "ERROR: [MCP] SceneTree never became available; MCP server disabled."
+    ));
+    // A `.godot` mention without failure wording is not an infrastructure error.
+    assert!(!editor_error_is_infrastructure(
+        "ERROR: res://.godot/editor/filesystem_cache10 is stale."
+    ));
+    // The failure wording without the editor's own namespace is not either.
+    assert!(!editor_error_is_infrastructure(
+        "ERROR: Cannot create file 'res://scripts/main.gd'. Check user write permissions."
+    ));
+}
+
+// ---------------------------------------------------------------------------
+// ⑨ DR-81 ② — a log-tail reading is not a hard verdict; the window is
+// ---------------------------------------------------------------------------
+
+/// DR-81 ②: the editor's log is append-only, so a line that was already there
+/// **before this window's anchor** describes an older state, not the candidate.
+/// `smoke-t14` measured the instability directly: the same `editor_get_errors`
+/// call returned this class of line at the freeze and a non-error `[MCP]` line
+/// 48 minutes later.
+#[tokio::test]
+async fn an_old_editor_log_line_outside_the_window_does_not_close_the_gate() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let run = run_gate_with_window(
+        root,
+        vec![
+            plan_step(),
+            developer_writes(SCENE_WITH_ROOT),
+            tester_step(), // never consumed: log residue may not repair
+        ],
+        Some(vec![OLD_LOG_TAIL_ERROR]),
+        Some(vec![OLD_LOG_TAIL_ERROR]),
+    )
+    .await;
+
+    assert_eq!(
+        run.result["artifact_gate"]["launchable"],
+        json!(true),
+        "a line already present before the window anchor is not a verdict on the project: {:?}",
+        run.result["artifact_gate"]["reasons"]
+    );
+    assert_eq!(
+        run.result["repair_retry_used"],
+        json!(false),
+        "pre-existing log residue must never burn the one repair retry"
+    );
+    assert_eq!(
+        run.records.iter().map(|r| r.role).collect::<Vec<_>>(),
+        vec![Role::Planner, Role::Developer, Role::Tester]
+    );
+
+    let observation = baseline_observation(&run);
+    assert!(
+        observation.contains("project_defects_new=0"),
+        "the window criterion must be recorded as its own token: {observation}"
+    );
+    assert!(
+        observation.contains("pre-existing"),
+        "the dismissal must name its reason: {observation}"
+    );
+    assert!(
+        observation.contains("main.gd:8"),
+        "the dismissed line stays verbatim in the observation: {observation}"
+    );
+    // The criterion and the window it used are recorded next to the evidence
+    // (in the raw document's generic `channel` slot, the same one DR-35 uses).
+    let raw: Value = serde_json::from_str(&read(
+        &run.run_dir
+            .join("iter-1/candidate/.hoh/deterministic/raw/editor_errors_baseline.json"),
+    ))
+    .unwrap();
+    let window = &raw["channel"]["editor_error_window"];
+    assert!(
+        window["criterion"].is_string(),
+        "the raw record must state the window criterion: {raw}"
+    );
+    assert!(
+        window["anchor"]
+            .as_str()
+            .unwrap_or("")
+            .contains("project_reload_and_open"),
+        "the raw record must state when the anchor was taken: {raw}"
+    );
+    assert_eq!(window["pre_existing_lines"], json!(1));
+}
+
+/// DR-81 ② counter-direction: an error that is **new since the anchor** is the
+/// candidate's, and it must still close the gate and trigger the repair.
+#[tokio::test]
+async fn a_real_script_error_new_in_the_window_still_closes_the_gate() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let run = run_gate_with_window(
+        root,
+        vec![
+            plan_step(),
+            developer_writes(SCENE_WITH_ROOT),
+            developer_writes(SCENE_WITH_ROOT), // the one targeted repair
+            tester_step(),
+        ],
+        Some(vec![OLD_LOG_TAIL_ERROR]),
+        Some(vec![OLD_LOG_TAIL_ERROR, NEW_SCRIPT_ERROR]),
+    )
+    .await;
+
+    assert_eq!(
+        run.result["artifact_gate"]["launchable"],
+        json!(false),
+        "an error that appeared after the anchor is the candidate's: {:?}",
+        run.result["artifact_gate"]["reasons"]
+    );
+    assert_eq!(
+        run.result["repair_retry_used"],
+        json!(true),
+        "a new error must still trigger the one targeted repair"
+    );
+    let reasons = run.result["artifact_gate"]["reasons"].as_array().unwrap();
+    assert!(
+        reasons
+            .iter()
+            .any(|reason| reason.as_str().unwrap_or("").contains("main.gd:12")),
+        "the reason must quote the new error: {reasons:?}"
+    );
+    let observation = baseline_observation(&run);
+    assert!(
+        observation.contains("project_defects_new=1"),
+        "{observation}"
+    );
+    assert!(
+        observation.contains("pre-existing"),
+        "the pre-existing line must be distinguished from the new one: {observation}"
     );
 }

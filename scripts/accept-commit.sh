@@ -33,7 +33,10 @@ usage: accept-commit.sh init
        accept-commit.sh verify
 
 `mark` writes one `accepted <sha> <report.md> pass <stamp> [note]` record after
-an independent acceptance has passed.  Only `pass` authorises a push.
+an independent acceptance has passed.  Only `pass` authorises a push.  The
+marking source must be an acceptance artifact: its file name must contain
+`ACCEPTANCE` (DR-81 ⑤), so a round report or the audited object itself can never
+authorise its own push.
 EOF
 }
 
@@ -97,7 +100,10 @@ case ${1:-} in
         done
 
         [ "$HOH_VERDICT" = pass ] || hoh_die "verdict \`$HOH_VERDICT\` authorises nothing; only \`pass\` does.  A failed or unverified acceptance must never be recorded as accepted."
-        hoh_is_report "$HOH_REPORT" || hoh_die "\`$HOH_REPORT\` is not a repo-root-relative report path ending in .md"
+        # DR-81 ⑤: the marking source must be an **acceptance artifact**, never the
+        # audited object itself.  `smoke-t14`'s report commit was marked against
+        # its own `*-REPORT.md` and reached the remote before its acceptance.
+        hoh_is_acceptance_report "$HOH_REPORT" || hoh_die "the marking source \`$HOH_REPORT\` is not an acceptance artifact.  It must be a repo-root-relative \`.md\` file whose name contains \`ACCEPTANCE\` (e.g. \`.spec/hof-rs/tasks/TASK-XX-ACCEPTANCE.md\`); a round report (\`*-REPORT.md\`) or the audited object itself may not authorise its own push."
         HOH_SHA=$(git rev-parse --verify --quiet "$HOH_COMMIT^{commit}" 2>/dev/null)
         [ -n "$HOH_SHA" ] || hoh_die "\`$HOH_COMMIT\` is not a commit in this repository"
         hoh_is_sha "$HOH_SHA" || hoh_die "resolved \`$HOH_COMMIT\` to \`$HOH_SHA\`, which is not a 40-character lowercase hex id"
