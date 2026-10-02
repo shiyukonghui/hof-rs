@@ -511,3 +511,21 @@ jump any more, and the ordering is pinned by a named list.
 | `tests/evidence_battery.rs` | `jump_calls` + `interaction_drive_end_x` helpers; four new tests (near-edge grounded arc, the named-list ordering pin, the structural constant pin, the jump self-release) plus the renamed window-level order test; seven jump tests and two mixed tests read `raw/input_jump.json` for the jump half |
 | `tests/append_only_guard.rs` | the DR-82 report + DR-84 correction heading constants and `the_dr82_census_claim_carries_its_dr84_qualifier` |
 | `.spec/hof-rs/tasks/TASK-DR82-REPORT.md` | **append-only**: the DR-84 correction of the census claim (the 44,184 bytes above it are byte-identical) |
+
+## 11. Post-report note (appended by the implementer, after the numbers above were taken)
+
+This report was written with HEAD = `e56b712da0cbd8f7c4fe3a83bfaaec24315320ae`, and the machine block
+above records that reading. After it was written, the dispatcher made one **local** commit,
+`930229bba7cfffb9a5e3964dd36536bd477fb39e` -- `fix(dr84): drive the jump before every window that
+consumes the ground, and append the correction the previous acceptance asked for` -- containing exactly
+this batch's five files (the four listed in section 10 plus this report). `origin/master` is still
+`e56b712d...` and `.git/hoh-accepted-commits.txt` has **no** entry for `930229bb`, so **nothing was
+pushed**: the "nothing pushed" claim holds, and only the *head* reading is a statement about the moment
+the report was written. That is the same stale-head class the DR-82 acceptance recorded as DR82A-5 and
+the DR-83 acceptance as DR83A-2.
+
+The four changed source/test/spec files' hashes are unchanged by that commit and remain the ones the
+gate ran on: `src/adapter/godot.rs` `884b43dcd76c678876384a4401ec74b5fdcad570fa28c3513349259295a84ee5`,
+`tests/evidence_battery.rs` `5d5d0c117735af3ae2a41ec2d60fb61b0b917b2fdf3f4880eb300d026396768d`,
+`tests/append_only_guard.rs` `1557ef8d6a8a4758f4306d88f1adb548d5e68e0a4fd64ed0aa38aea6bd316121`,
+`.spec/hof-rs/tasks/TASK-DR82-REPORT.md` `ee88185054acaade384fd47d2c7ae164606e21f65c0dd1969efdda593fbef691`.
