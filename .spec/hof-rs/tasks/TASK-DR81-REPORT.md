@@ -3,7 +3,8 @@
 - 实现子代理（无上游对话上下文；本文件是唯一任务来源 `F:\moonbit-hof-rs\.spec\hof-rs\tasks\TASK-DR81.md`）
 - 规格来源：`TASK-SMOKE-T14-REPORT.md`（F-T14-1..F-T14-4 与原始证据）与其独立验收 `TASK-SMOKE-T14-ACCEPTANCE.md`（**T14A-1 / R5 / R6 / H8** 与建议 1/2/7），`DECISIONS.md` **D289 / D293**
 - 批次性质：**离线批次**。未启动引擎、未跑任何真机轮、**未联网**；未推送
-- HEAD（开工 = 收工）= `e7480b3`；`origin/master` 仍为 `03ee2e3b4a2c1ef4536ec0108afec2741ce7581a`（**与开工前逐字相同，未推送**）
+- 开工时 HEAD = `e7480b3`；**收工后由派遣方提交** `cb507e8`（2026-10-02 13:20:19 +0800，含本批 12 个代码/测试/闸门文件与本报告，另加 `DECISIONS.md` 的 **D294**）。本报告的**收尾修订**（外部编辑器实测、账本更正后的读数等 19 处）发生在该提交之后，**尚未提交**。
+- `origin/master` 仍为 `03ee2e3b4a2c1ef4536ec0108afec2741ce7581a`（**本批未推送**）
 - 落点：`F:\moonbit-hof-rs`；报告：`.spec/hof-rs/tasks/TASK-DR81-REPORT.md`
 
 ---
@@ -15,6 +16,15 @@
   "task": "TASK-DR81",
   "kind": "implementation subagent report (offline batch: no engine, no real round, no network, no push)",
   "head": "e7480b3",
+  "head_at_start": "e7480b3",
+  "head_at_report_time": "cb507e8",
+  "implementation_commit": {
+    "sha": "cb507e8840daef3a7b0094712f8248c4c280adb7",
+    "when": "2026-10-02 13:20:19 +0800",
+    "by": "dispatcher (starsliving), not this subagent",
+    "contents": "the 12 code/test/hook files of this batch, this report as it stood then, and a DECISIONS.md addition (D294)",
+    "post_commit_report_amendments": "uncommitted at report time: git diff --stat shows the report only, 51 insertions / 18 deletions (the external-editor measurement, the corrected-ledger reading and the commit facts)"
+  },
   "origin_master": "03ee2e3b4a2c1ef4536ec0108afec2741ce7581a",
   "pushed": false,
   "baseline": {
@@ -72,7 +82,8 @@
     "item4a_fresh_workspace_and_godot_editor": {
       "mechanism": "confirmed in code: purge_contents removes every entry including the whole `.godot` tree, and GodotAdapter::initialize rebuilds only project.godot/scenes/scripts and never recreates `.godot`; the editor creates that tree when it imports a project at startup, so the book's order (point the editor first, then run with --fresh-workspace) leaves the running editor writing into a directory that no longer exists",
       "pinned_by": "tests/start_state.rs::fresh_workspace_removes_the_editor_cache_and_initialize_never_rebuilds_it",
-      "documented_precondition": "doc comment on runtime::start_state::fresh_workspace (either restart/close the editor after a purge, or expect that one editor-infrastructure line)"
+      "documented_precondition": "doc comment on runtime::start_state::fresh_workspace (either restart/close the editor after a purge, or expect that one editor-infrastructure line)",
+      "in_batch_measurement": "while this batch ran, an externally started editor (PID 26716, `--path F:/moonbit-hof-rs/.workspace/fresh-t14 -e res://scenes/main.tscn`, created 05:00:30 UTC) recreated .godot/editor/ within ~10 s and wrote filesystem_cache10 (789 B, the same size the T14 acceptance measured in fresh-t13). The T14 editor, already running when --fresh-workspace removed the directory, did not; that is the whole difference."
     },
     "item4b_out_of_tree_cleanup": {
       "extension": "is_root_temporary now also accepts is_round_scratch_name: one root component, extension in {json}, stem at most 4 chars of [a-z0-9_]; clean_round_temporaries additionally refuses anything that is not a regular file and (for the scratch family) anything larger than 8192 bytes",
@@ -150,24 +161,39 @@
   ],
   "forbidden_zone": {
     "runs_files_written": 0,
-    "runs_newest_mtime": "2026-10-02 02:36:58 UTC (runs/smoke-t14/evidence/analysis/json_block_check.txt), older than this batch",
-    "workspace_newest_mtime": "2026-10-02 02:12:24 UTC (.workspace/fresh-t14/.hoh/evidence/qa-victory.png), older than this batch",
+    "runs_newest_mtime": "2026-10-02 02:36:58 UTC (runs/smoke-t14/evidence/analysis/json_block_check.txt), older than this batch; 0 files under runs/** newer than 03:30 UTC",
+    "workspace_writes_by_this_batch": 0,
+    "external_editor_writes_observed": {
+      "process": "PID 26716 F:\\moonbit-hof-rs\\godot-mcp\\godot\\bin\\godot.windows.editor.x86_64.mono.exe --path F:/moonbit-hof-rs/.workspace/fresh-t14 -e res://scenes/main.tscn",
+      "created": "2026-10-02 05:00:30 UTC (13:00:30 +0800)",
+      "wrote": "20 files under .workspace/fresh-t14/.godot/** between 05:00:14 and 05:00:40 UTC, plus a rewrite of .workspace/fresh-t14/project.godot at 05:00:39 UTC",
+      "attribution": "external actor, not this batch: no test here launches the real engine binary (every double sets editor_binary to an empty PathBuf or a temp file) and runs/** has 0 files newer than 03:30 UTC"
+    },
     "pushed": false,
     "prd_sha256": "4c81c3a9995f0b3afdf01421a0c3be88573cceefc284ce9bafbfda141f0f5c3a",
-    "decisions_sha256": "5621b2eaf8cbb36a81d4ed3d4257605c703bbfff0e137c698fcc7fd78e593e69",
+    "decisions_sha256": "245befb7af292c379c161ddc917e996a54a4dceea5e93c5d0226816efbae4a76",
+    "decisions_note": "declared in the task book as byte-frozen and NOT modified by this subagent; the dispatcher appended D294 in cb507e8, which is why the current hash differs from the T14-acceptance value 5621b2ea...",
     "cargo_toml_sha256": "e0c4992bd828729b8514f9cf694925687b726157d45463a636390081a3dadba1",
     "cargo_lock_sha256": "d98fa91565ec72ae998fd9f6fd3838286e287e4baf8020c5114a1e2ac0bfdb36",
     "new_dependencies": 0,
-    "line_endings": "all 12 edited files verified pure LF (CR=0); no CR byte introduced",
+    "line_endings": "all 12 edited files verified pure LF (CR=0); the report itself CR=0; no CR byte introduced",
     "rm_rf_used": false,
     "path_built_from_unexpanded_variable": false
   },
-  "real_ledger_now_fails_closed": {
+  "real_ledger_evidence": {
     "file": ".git/hoh-accepted-commits.txt",
-    "line": 45,
-    "record": "accepted 03ee2e3b4a2c1ef4536ec0108afec2741ce7581a .spec/hof-rs/tasks/TASK-SMOKE-T14-REPORT.md pass 2026-10-02T02:43:17Z",
-    "effect": "scripts/accept-commit.sh verify exits 1 and the pre-push gate REFUSES every push until that record is corrected",
-    "intentional": true
+    "at_observation_time": {
+      "line": 45,
+      "record": "accepted 03ee2e3b4a2c1ef4536ec0108afec2741ce7581a .spec/hof-rs/tasks/TASK-SMOKE-T14-REPORT.md pass 2026-10-02T02:43:17Z",
+      "writer_verify": "exit 1, `INVALID: line 45 is malformed: ... is not an acceptance artifact ...`",
+      "pre_push_gate": "REFUSED every push, quoting that exact record (fail closed)"
+    },
+    "after_dispatcher_correction": {
+      "line": 45,
+      "record": "accepted 03ee2e3b4a2c1ef4536ec0108afec2741ce7581a .spec/hof-rs/tasks/TASK-SMOKE-T14-ACCEPTANCE.md pass 2026-10-02T02:43:17Z",
+      "writer_verify": "exit 0, `OK: 42 record(s)`",
+      "note": "corrected by the dispatcher per DECISIONS.md D294; history is not hidden, the violation is recorded"
+    }
   },
   "risks": [
     "The window anchor asks editor_get_errors for max_lines=2000 and assumes the engine answers the whole tail; I read the engine's tail-window implementation, but no engine was started in this batch, so the real answer length is inferred, not measured.",
@@ -184,7 +210,8 @@
     "I edited one existing test fixture (tests/push_gate.rs::the_marker_refuses_a_missing_report_and_a_non_pass_verdict now marks a missing ACCEPTANCE-named path instead of .spec/does-not-exist.md) so that the missing-report message stays the assertion of record. No test was renamed or deleted.",
     "The strengthened gate makes the repository's real local ledger invalid at line 45 (the G5 record). That is the intended consequence and is left in place rather than hand-edited, so the dispatcher sees it fail closed.",
     "All temporary material (plant backups, scripts, run logs) lives under C:\\Users\\wyl\\AppData\\Local\\Temp\\dr81-plants; nothing temporary was created inside the repository. The only new repository file is this report.",
-    "No engine was started, no round was run, no network call was made, and nothing was committed or pushed."
+    "No engine was started, no round was run, no network call was made, and nothing was committed or pushed.",
+    "An external Godot editor (PID 26716) started during this batch and wrote under .workspace/fresh-t14/.godot/** and project.godot at 05:00:14-05:00:40 UTC. None of that is attributable to this batch, and I neither started nor stopped that process."
   ]
 }
 ```
@@ -303,6 +330,8 @@ OPENAI_API_KEY=<redacted>                        ← 晚出现的名字照旧被
 
 **前置条件已写进代码与交付文本**：`fresh_workspace` 的文档注释明确「清空工作区后需重启/关闭编辑器，或预期那条基础设施日志行」，并指出门已按 ① 分类它，不得据此冻结干净工程。
 
+**本批期间的额外实测（外部行为，非本批写入）**：批次运行期间，一个**外部启动**的编辑器（PID 26716，`--path F:/moonbit-hof-rs/.workspace/fresh-t14 -e res://scenes/main.tscn`，创建于 `05:00:30 UTC`）在 ~10 秒内重建了 `.godot/editor/` 并写出 `filesystem_cache10`（**789 B**，与 T14 验收在 fresh-t13 量到的 789 B 同为字节数）。而 T14 那台**在清空之前就已运行**的编辑器没有重建 ⇒ 差别正是「编辑器是否重新打开/导入工程」。这把 4.1 的机制从「代码级推断」升级为「同批次内被观测到的对照」。
+
 测试：`tests/start_state.rs::fresh_workspace_removes_the_editor_cache_and_initialize_never_rebuilds_it`（写入 `.godot/editor/filesystem_cache10` 后 `fresh_workspace` ⇒ `.godot` 与 `.godot/editor` 均不存在，而 `project.godot` 存在）。
 
 ### 4.2 越界清理模式扩展
@@ -353,10 +382,10 @@ DR-79 只匹配 `.tmp_*`/`tmp_*`/`*.tmp`/`*.bak`，因此 T14 的 `l.json`/`p2.j
 
 | 项 | 证据 |
 |---|---|
-| `runs/**` 零写入 | Python 递归扫描：`runs` 6886 个文件，最新 mtime = `2026-10-02 02:36:58 UTC`（上批的分析产物），**早于本批次开工（约 03:50 UTC）** |
-| 工作区零写入 | `.workspace` 583 个文件，最新 mtime = `2026-10-02 02:12:24 UTC`，同样早于本批 |
+| `runs/**` 零写入 | Python 递归扫描：`runs` 6886 个文件，**晚于 03:30 UTC 的 0 个**；最新 mtime = `2026-10-02 02:36:58 UTC`（上批的分析产物） |
+| 工作区零写入（本批） | 本批**没有**写 `.workspace/**`。同期存在**外部**写入：PID 26716 的真机编辑器（`--path F:/moonbit-hof-rs/.workspace/fresh-t14 -e res://scenes/main.tscn`，创建 `05:00:30 UTC`）在 `05:00:14–05:00:40 UTC` 写了 `.workspace/fresh-t14/.godot/**` 共 20 个文件，并在 `05:00:39 UTC` 重写了 `.workspace/fresh-t14/project.godot`（引擎 `editor_reload_plugin` 的整文件写入行为）。**归因**：本批没有任何测试启动真机引擎（所有 double 的 `editor_binary` 都是空 `PathBuf` 或临时文件），且 `runs/**` 同期零写入 |
 | 未推送 | `git rev-parse origin/master` = `03ee2e3…`；`git reflog show origin/master` 最新条目仍是上批的 `update by push`，本批 0 次 push |
-| 冻结件未动 | `PRD-mario.md` `4c81c3a9…5c3a`；`DECISIONS.md` `5621b2ea…e69`（= T14 验收公布值）；`Cargo.toml` `e0c4992b…ba1`；`Cargo.lock` `d98fa915…6b7`；`godot-mcp/**` 与任何 `.workspace/**` 未出现于 `git status` |
+| 冻结件未动（本子代理） | `PRD-mario.md` `4c81c3a9…5c3a`；`Cargo.toml` `e0c4992b…ba1`；`Cargo.lock` `d98fa915…6b7`；`godot-mcp/**` 与任何 `.workspace/**` 未被本批写入。**`DECISIONS.md` 我一个字未改**；其当前哈希 `245befb7…a76` 与 T14 验收公布值 `5621b2ea…e69` 不同，原因是**派遣方**在 `cb507e8` 里追加了 **D294** |
 | 未加依赖 | `Cargo.toml`/`Cargo.lock` 在 diff 中不存在 |
 | 无新增临时物 | `git status --porcelain` 只列出本批 12 个被改文件 + 4 个**上批遗留**未跟踪文件（`l.json`/`p2.json`/`pv.json`/`r.json`，T14 验收的 G7，本批未触碰）+ 本报告；所有临时材料在 `C:\Users\wyl\AppData\Local\Temp\dr81-plants` |
 | 无 `rm -rf`、无未展开变量构造路径 | 删除只用 `shutil.rmtree`（限定 `target/debug/.fingerprint/hof-rs-*` 的 glob 结果）与 `std::fs::remove_file`；无任何 `rm -rf`；无 `$VAR/...` 拼接 |
@@ -376,7 +405,9 @@ accepted 03ee2e3b4a2c1ef4536ec0108afec2741ce7581a .spec/hof-rs/tasks/TASK-SMOKE-
 - `sh scripts/accept-commit.sh verify` ⇒ **exit 1**，输出 `INVALID: line 45 is malformed: … is not an acceptance artifact …`；
 - `pre-push`（合成 no-op ref 行，真实台账）⇒ **REFUSED**，逐字指出该记录与 ACCEPTANCE 要求 ⇒ **fail closed，每条推送都被拒**。
 
-这是「被审对象不得自我授权」在**真实状态**上的闭环证明。**该行仍留在台账里**（未手改），以便派遣方看到闸门确实咬住。
+这是「被审对象不得自我授权」在**真实状态**上的闭环证明。**该行当时未被手改**，以便派遣方看到闸门确实咬住。
+
+**其后（派遣方提交 `cb507e8` 时）**：派遣方按 `DECISIONS.md` **D294** 把该行来源改为 `.spec/hof-rs/tasks/TASK-SMOKE-T14-ACCEPTANCE.md`（**不删历史、不掩盖**违规事实）。当前读数：`sh scripts/accept-commit.sh verify` ⇒ **exit 0, `OK: 42 record(s)`**。这两条读数一起构成完整证据链：**旧状态被强化后的闸门拒绝 → 记录改正后放行**。台账是本地机状态（在 `.git/` 内），**不是本批产物，也不由本子代理修改**。
 
 ## 6. 遗留风险与未验证项（严格区分实测 / 推断）
 
@@ -385,7 +416,7 @@ accepted 03ee2e3b4a2c1ef4536ec0108afec2741ce7581a .spec/hof-rs/tasks/TASK-SMOKE-
 **推断（未在真机复现）**：
 
 1. 窗口锚 `max_lines=2000` 假设引擎返回整条尾部。我只读了引擎 `_log_tail_lines` 的实现（`max_lines` 大于总行数时 `start=0`），**没有启动引擎**验证真实返回长度。
-2. `.godot/editor` 的机制是**代码级**结论 + 冻结件形状，未在活体编辑器上插桩复现。
+2. `.godot/editor` 的机制是**代码级**结论 + 冻结件形状 + 本批期间观测到的一次**外部**编辑器对照（见 4.1）；我**没有**自己启动引擎或在活体编辑器上插桩落盘时刻。
 3. 基础设施措辞表来自**唯一一条**实测行；其他模块/语言的基础设施文案未验证（会继续 fail-closed）。
 4. 窗口的多重集规则对「失败修复重复产生同一行」的场景只在合成夹具上演练，未在真机验证。
 5. `ROOT_SCRATCH_STEM_MAX=4` 是启发式界：词干 ≤4 的、**故意**写在仓根的 `.json` 会被清理（仍留 `out_of_tree_cleanup` 记录与 `out_of_tree_writes` 事实）。
@@ -397,4 +428,6 @@ accepted 03ee2e3b4a2c1ef4536ec0108afec2741ce7581a .spec/hof-rs/tasks/TASK-SMOKE-
 2. **弱红如实登记**：6 条新测试虽然先写，但首次执行发生在实现之后，其首次可观察失败本应是**编译错误**，我**没有**捕获到；它们在机器块中列在 `compile_error_reds_not_captured`，**不计入真先红**。真先红只有 3 条（`a_repeated_environment_dump_redacts_every_variable_family`、`a_round_report_cannot_authorise_its_own_push`、`the_gate_refuses_a_ledger_whose_source_is_not_an_acceptance_artifact`）。
 3. 我修改了**一条既有测试的夹具路径**（`the_marker_refuses_a_missing_report_and_a_non_pass_verdict` 现在标记一个缺失的 ACCEPTANCE 命名路径，以保住「缺失 ⇒ 明确报不存在」这条断言）；**没有测试被改名或删除**。
 4. **真实台账现在无效**（第 45 行），这是**有意的**：闸门必须在此 fail closed，而不是被绕过。派遣方在推送前需要修正该记录（改用一个真正的验收件，或删除该行）。
-5. 未跑真机轮、未起引擎、未联网、未提交、未推送；`runs/**` 与 `.workspace/**` 一字节未写；临时物全在仓外。
+5. 未跑真机轮、未起引擎、未联网、未提交、未推送；`runs/**` 一字节未写（晚于 03:30 UTC 的文件 **0 个**）；临时物全在仓外。
+6. **本批期间的仓内外部写入，必须与我的写入区分**：一个**外部启动**的真机编辑器（PID 26716）在批次运行期间写了 `.workspace/fresh-t14/.godot/**`（20 文件，05:00:14–05:00:40 UTC）并重写了 `.workspace/fresh-t14/project.godot`（05:00:39 UTC）。这不是我的批次所为（没有任何本批测试启动真机引擎，且 `runs/**` 同期零写入）；我未触碰该进程，也未清理它的产物。派遣方的 `D294` 已独立登记同一进程（`未署名引擎进程`）。
+7. **提交不是我做的**：派遣方在 `2026-10-02 13:20:19 +0800` 提交了 `cb507e8`，其中含本批 12 个文件、**当时版本的报告**与 `DECISIONS.md` 的 D294。此后我对报告做了收尾修订（外部编辑器实测、账本更正后的读数、提交事实等）；**这些修订截至本文件写就时仍未提交**（`git status` 只显示 `M .spec/hof-rs/tasks/TASK-DR81-REPORT.md`）。门读数（575/0/7）跑的是与 `cb507e8` **同一份**代码/测试内容（该提交之后我只改过报告）。
