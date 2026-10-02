@@ -431,3 +431,81 @@ accepted 03ee2e3b4a2c1ef4536ec0108afec2741ce7581a .spec/hof-rs/tasks/TASK-SMOKE-
 5. 未跑真机轮、未起引擎、未联网、未提交、未推送；`runs/**` 一字节未写（晚于 03:30 UTC 的文件 **0 个**）；临时物全在仓外。
 6. **本批期间的仓内外部写入，必须与我的写入区分**：一个**外部启动**的真机编辑器（PID 26716）在批次运行期间写了 `.workspace/fresh-t14/.godot/**`（20 文件，05:00:14–05:00:40 UTC）并重写了 `.workspace/fresh-t14/project.godot`（05:00:39 UTC）。这不是我的批次所为（没有任何本批测试启动真机引擎，且 `runs/**` 同期零写入）；我未触碰该进程，也未清理它的产物。派遣方的 `D294` 已独立登记同一进程（`未署名引擎进程`）。
 7. **提交不是我做的**：派遣方在 `2026-10-02 13:20:19 +0800` 提交了 `cb507e8`，其中含本批 12 个文件、**当时版本的报告**与 `DECISIONS.md` 的 D294。此后我对报告做了收尾修订（外部编辑器实测、账本更正后的读数、提交事实等）；**这些修订截至本文件写就时仍未提交**（`git status` 只显示 `M .spec/hof-rs/tasks/TASK-DR81-REPORT.md`）。门读数（575/0/7）跑的是与 `cb507e8` **同一份**代码/测试内容（该提交之后我只改过报告）。
+# 附：DR-82 ③ 更正（**追加式**，2026-10-02）——“已在运行的编辑器不会重建 `.godot`”被实测削弱
+
+> 本节**只追加**，不改动上面的任何一个字节。上面 §4.1 与机器可读块的
+> `item4a_fresh_workspace_and_godot_editor` 都写着「**已在运行的**编辑器不会重新导入
+> ⇒ 不会重建 `.godot`」（`in_batch_measurement` 更把它抬成「差别正是『编辑器是否重新
+> 打开/导入工程』」）。本轮（`smoke-t15`）的实测**削弱了这条普遍律**，现予更正。
+
+## 1. 触发本轮更正的实测
+
+`TASK-SMOKE-T15-REPORT.md` §4.3（原始件 `runs/smoke-t15/evidence/round/godot_cache_timeline.txt`）
+记录的同一形状是：编辑器**先**指向工程（`13:51:49` 启动、`--path …fresh-t15`），
+**随后** `--fresh-workspace` 在 `13:52:17` 清空工作区；而 `.godot/**` 仍然被**正在运行的
+同一支编辑器**重建 —— **11 个文件**，mtime 全部落在 `14:05:10`–`14:30:51`（**全部晚于
+清空时刻**），其中含 `filesystem_cache10`（911 B）。因此 `editor_errors_baseline` 的
+`anchor_line_count=0`、判定 `count=0`，那条 `Cannot create file
+'res://.godot/editor/filesystem_cache10'` **根本没有出现**。
+
+⇒ 上面 §4.1 的「**不会**重建」**不是一条普遍律**：至少在本轮不成立。
+
+## 2. 更正后的说法（实测结论）
+
+- **实测到的**：`smoke-t14` 的运行中编辑器**没有**重建 `.godot` 并产生了那条缓存写失败行；
+  `smoke-t15` 的运行中编辑器**重建了** `.godot/**` 并且该行没有出现。两种结果都已在真机上出现。
+- **未定的**：运行中的编辑器**何时**重建（本轮它在电池的 `project_reload_and_open`/场景
+  打开阶段才写），**没有插桩** ⇒ 归因保持**推断/未定**，不作为结论。
+- **仍然成立的（代码级，未变）**：`purge_contents` 删除工作区**每一个**条目（含整个
+  `.godot/`），`GodotAdapter::initialize` **从不**重建 `.godot`（
+  `tests/start_state.rs::fresh_workspace_removes_the_editor_cache_and_initialize_never_rebuilds_it` 钉住）。
+  只有「运行中的编辑器不会重建」这半句被削弱。
+
+## 3. 没有任何门或判定依赖该假设（逐条核对）
+
+| 依赖点 | 是否依赖「运行中的编辑器不会重建」 | 依据 |
+|---|---|---|
+| 门的基建分类（DR-81 ①） | **否** | 它只在**该行出现时**把它归为编辑器基础设施；不出现就无需分类 |
+| 门的时间窗（DR-81 ②） | **否** | 窗口比较锚与判定读数的**出现次数**，与缓存树是否重建无关 |
+| `fresh_workspace` 的前置条件文字 | **否** | 「清理后重启/关闭编辑器，**或**预期那一条基建行」在两种结果下都安全 |
+| `start_state.rs` 的文档注释 | **是（已更正）** | DR-82 ③ 把注释改为实测结论并写明机制未定，见该文件 `fresh_workspace` 的文档 |
+
+⇒ 更正只影响叙述，不影响任何判定；`DECISIONS.md` **未被本批改动**。
+
+## 4. 机器可读块与证据字符串未动
+
+本节追加于文件末尾，**上方**（含 ```` ```json ```` 机器可读块与全部证据字符串）逐字节不变；
+`tests/append_only_guard.rs` 新增一条 pin 钉住本节标题之前的**全部字节**的长度与 sha256，
+因此此后再改上方原文会直接使其变红。
+
+# 附：DR-82 ④（A-3）更正（**追加式**，2026-10-02）——修订报告在「真实台账」一处**自相矛盾**
+
+> 本节**只追加**，不改动上面的任何一个字节；上方（含机器可读块与全部证据字符串）逐字节不变。
+> 上面 `honest_disclosure` 的**第 4 条**与 **§5.4** 对同一件事给出两个互斥的现时态说法。
+
+## 1. 矛盾在哪
+
+| 位置 | 原文（要点） | 现时态含义 |
+|---|---|---|
+| 机器可读块 `honest_disclosure[3]` | "The strengthened gate makes the repository's real local ledger invalid at line 45 (the G5 record). That is the intended consequence and is left in place rather than hand-edited…" | 台账**仍然无效**、**未被手改** |
+| §5.4（末段） | 「**其后**（派遣方提交 `cb507e8` 时）：派遣方按 `DECISIONS.md` **D294** 把该行来源改为 `.spec/hof-rs/tasks/TASK-SMOKE-T14-ACCEPTANCE.md`…当前读数：`verify` ⇒ **exit 0, `OK: 42 record(s)`**」 | 台账**已经被改**、**已经有效** |
+
+两条各自在**写下时**都为真，但报告没有把「哪一条是当前状态」写清楚：机器可读块仍以现时态断言台账无效，读者若只读该块会得到与实际相反的结论。这正是验收记的 **DR81A-3**。
+
+## 2. 实测读数（DR-82 批次，2026-10-02，只读）
+
+- `sh scripts/accept-commit.sh verify` ⇒ **exit 0**；
+- 输出：`accept-commit: OK: 48 record(s); ledger: F:/moonbit-hof-rs/.git/hoh-accepted-commits.txt`；
+- `.git/hoh-accepted-commits.txt` 第 45 行现为：
+
+```
+accepted 03ee2e3b4a2c1ef4536ec0108afec2741ce7581a .spec/hof-rs/tasks/TASK-SMOKE-T14-ACCEPTANCE.md pass 2026-10-02T05:47:39Z correction_stamp=2026-10-02T05:47:39Z superseded_source=.spec/hof-rs/tasks/TASK-SMOKE-T14-REPORT.md original_stamp=2026-10-02T02:43:17Z note=DR81A-1_the_earlier_row_named_a_round_report_and_was_repointed_at_the_real_acceptance_after_the_strengthened_gate_refused_it
+```
+
+## 3. 更正
+
+- **`honest_disclosure[3]` 的第一句在写下时为真，现在为假**：该行**已被改正**（来源指向真正的验收件），闸门**不再拒绝**它；「不是被本子代理手改」这一限定仍然成立——改它的是派遣方（`DECISIONS.md` D294）。
+- **§5.4 的读数已过期**：`OK: 42 record(s)` 是当时的条数，本轮实测为 **48** 条。两处数字的差别是**新增记录**，不是任何一条记录被删除（`verify` 对整份台账逐行校验，若有畸形行会直接 exit 1）。
+- **当前状态以本节为准**：台账有效（exit 0）、48 条记录、第 45 行来源为 `…TASK-SMOKE-T14-ACCEPTANCE.md`。
+- 本节**不改动**机器可读块（DR-82 的追加式纪律要求块与证据字符串逐字节冻结），因此上面那块仍然保留着当时为真的旧断言；本节是它的更正说明，`tests/append_only_guard.rs::the_dr81_report_prefix_before_the_dr82_correction_is_frozen` 钉住本节标题之前的全部字节。
+- **本子代理未修改 `.git/hoh-accepted-commits.txt`，也未推送任何东西**；上面的读数是只读观测。

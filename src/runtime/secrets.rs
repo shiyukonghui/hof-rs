@@ -98,6 +98,42 @@ pub const HARNESS_ENV_VARS: &[&str] = &[
     "Path",
 ];
 
+/// DR-82 ②: the harness variables whose **name** is disclosure in the JSON-key
+/// shape, but which the DR-72/DR-79 rule never declared.
+///
+/// `smoke-t15` measured the shape: the harness's own role-config dump writes
+/// every harness variable as a JSON **key** —
+/// `"HOH_GAME_ROUTE": "F:\\moonbit-hof-rs\\runs\\smoke-t15\\game_endpoint.json"` —
+/// in the sealed originals *and* in the sidecars, for every trajectory.
+/// `HARNESS_ENV_VARS` named ten of those twelve keys; `HOH_TOOLS_POLICY` and
+/// `HOH_WORKSPACE` survived every pass because nothing claimed them.  They are
+/// named here **separately** from the declared family so the census of what was
+/// declared before DR-82 stays readable, and so a reader can tell the two sets
+/// apart.
+///
+/// No credential value is involved in either name: the dump carries a policy
+/// role name and a workspace path.  They are in this rule for the same reason
+/// `HOH_ARTIFACT_DIR` is — a path containing a user name is environment
+/// disclosure even without a credential (DR-72, dispatcher addition 1).
+pub const UNDECLARED_HARNESS_ENV_VARS: &[&str] = &["HOH_TOOLS_POLICY", "HOH_WORKSPACE"];
+
+/// DR-82 ②: every variable name whose **JSON-key** occurrence must be redacted.
+///
+/// This is the union of the credential names, the declared harness family and
+/// [`UNDECLARED_HARNESS_ENV_VARS`], because the assignment scan and the JSON-key
+/// scan answer the same question about the same names: *this name must not
+/// survive in a frozen trajectory*.  A credential name whose value is the empty
+/// string is left alone by [`splice_json_keys`] — the empty string carries no
+/// disclosure, and rewriting it would make the redaction look wider than it is.
+pub fn redactable_env_vars() -> Vec<&'static str> {
+    SECRET_ENV_VARS
+        .iter()
+        .chain(HARNESS_ENV_VARS.iter())
+        .chain(UNDECLARED_HARNESS_ENV_VARS.iter())
+        .copied()
+        .collect()
+}
+
 /// The overrides that must be present in *every* role environment so a child
 /// shell cannot inherit a live credential.
 pub fn blocked_env() -> BTreeMap<String, String> {
@@ -287,7 +323,46 @@ fn looks_like_json(raw: &str) -> bool {
 /// * the whole value of a [`WHOLE_VALUE_VARS`] variable (a `;`-separated `PATH`)
 ///   is inside one span, so its tail cannot leak a user name (DR-74 ②).
 pub fn redact_secret_assignments_traced(text: &str) -> RedactionReport {
-    let report = splice_assignments(text);
+    redact_named_assignments_and_keys_traced(text)
+}
+
+/// DR-82 ②: the **combined** name rule — an assignment (`NAME=<value>`) or a
+/// JSON key (`"NAME": "<value>"`) is redacted, whichever shape the text uses.
+///
+/// This is the entry point every caller should use.  `smoke-t15` measured why:
+/// the assignment rule alone left the whole `HOH_*` family raw in the JSON-key
+/// shape the harness's own role-config dump writes, in the sealed originals and
+/// in the generated sidecars, while the assignment shape was fully covered.  The
+/// two scans are merged into **one** span list under the same overlap rule, so a
+/// key value that contains an assignment (`"HOH_RUN_DIR": "…HOH_ROLE=x…"`) is a
+/// single replacement rather than two that could overlap, and
+/// [`bytes_changed_outside_spans`] stays a valid audit of the whole pass.
+///
+/// The JSON post-check of DR-72 ③ is applied once, to the merged result: a splice
+/// that would leave the document unparseable is refused outright, in either
+/// shape.
+pub fn redact_named_assignments_and_keys_traced(text: &str) -> RedactionReport {
+    let keys = splice_json_keys(text);
+    let assignments = splice_assignments(text);
+    if let Some(problem) = keys.refused.clone().or_else(|| assignments.refused.clone()) {
+        return RedactionReport {
+            original: text.to_string(),
+            redacted: text.to_string(),
+            spans: Vec::new(),
+            refused: Some(problem),
+        };
+    }
+    let mut spans = keys.spans;
+    for span in assignments.spans {
+        if spans
+            .iter()
+            .any(|recorded| span.start < recorded.end && recorded.start < span.end)
+        {
+            continue;
+        }
+        spans.push(span);
+    }
+    let report = render_spans(text, spans);
     // DR-72 ③ (option c): validate before accepting.  A splice that breaks a
     // JSON document is refused outright, because an unparseable trajectory is
     // exactly the damage this batch exists to stop.
@@ -298,8 +373,9 @@ pub fn redact_secret_assignments_traced(text: &str) -> RedactionReport {
                 redacted: text.to_string(),
                 spans: Vec::new(),
                 refused: Some(format!(
-                    "the secret-assignment splice was refused because the result is no longer \
-                     valid JSON ({error}); the original text is left byte-for-byte unchanged"
+                    "the secret name splice (assignment and JSON-key shapes) was refused because \
+                     the result is no longer valid JSON ({error}); the original text is left \
+                     byte-for-byte unchanged"
                 )),
             };
         }
@@ -317,11 +393,7 @@ pub fn redact_secret_assignments_traced(text: &str) -> RedactionReport {
 fn splice_assignments(text: &str) -> RedactionReport {
     let json = looks_like_json(text);
     let mut spans: Vec<RedactionSpan> = Vec::new();
-    for name in SECRET_ENV_VARS
-        .iter()
-        .copied()
-        .chain(HARNESS_ENV_VARS.iter().copied())
-    {
+    for name in redactable_env_vars() {
         let needle = format!("{name}=");
         let mut cursor = 0usize;
         while let Some(found) = text[cursor..].find(needle.as_str()) {
@@ -357,42 +429,218 @@ fn splice_assignments(text: &str) -> RedactionReport {
             // recorded span is left alone, exactly as before: that span already
             // replaces it, and the DR-73/DR-74 frozen sample pins the surviving
             // tail of that shape as a documented cost.
-            let absorbed: Vec<usize> = spans
-                .iter()
-                .enumerate()
-                .filter(|(_, span)| {
-                    start <= span.start && span.end <= value_end && start < span.end
-                })
-                .map(|(index, _)| index)
-                .collect();
-            if !absorbed.is_empty() {
-                let kept: Vec<RedactionSpan> = spans
-                    .iter()
-                    .enumerate()
-                    .filter(|(index, _)| !absorbed.contains(index))
-                    .map(|(_, span)| span.clone())
-                    .collect();
-                spans = kept;
-                spans.push(RedactionSpan {
-                    name: name.to_string(),
-                    start,
-                    end: value_end,
-                    replacement: format!("{needle}{REDACTED}"),
-                });
-            } else if !spans
-                .iter()
-                .any(|span| start < span.end && span.start < value_end)
-            {
-                spans.push(RedactionSpan {
-                    name: name.to_string(),
-                    start,
-                    end: value_end,
-                    replacement: format!("{needle}{REDACTED}"),
-                });
-            }
+            record_candidate_span(
+                &mut spans,
+                name,
+                start,
+                value_end,
+                format!("{needle}{REDACTED}"),
+            );
             cursor = value_end.max(start + needle.len());
         }
     }
+    render_spans(text, spans)
+}
+
+/// DR-81 ③ / DR-82 ②: record one candidate replacement under the real
+/// interval-overlap rule the assignment scan established.
+///
+/// Shared by the assignment scan and the JSON-key scan so the two shapes cannot
+/// drift apart: a candidate that **contains** an already recorded span absorbs it
+/// (the wider replacement must win, or its tail would stay raw), a candidate that
+/// merely lies *inside* one is dropped (the recorded span still replaces it), and
+/// anything else is recorded.  [`is_value_terminator`]'s "terminator is not
+/// consumed" rule is what keeps a shared boundary from being rewritten twice.
+fn record_candidate_span(
+    spans: &mut Vec<RedactionSpan>,
+    name: &str,
+    start: usize,
+    context_end: usize,
+    replacement: String,
+) {
+    let absorbed: Vec<usize> = spans
+        .iter()
+        .enumerate()
+        .filter(|(_, span)| start <= span.start && span.end <= context_end && start < span.end)
+        .map(|(index, _)| index)
+        .collect();
+    if !absorbed.is_empty() {
+        let kept: Vec<RedactionSpan> = spans
+            .iter()
+            .enumerate()
+            .filter(|(index, _)| !absorbed.contains(index))
+            .map(|(_, span)| span.clone())
+            .collect();
+        *spans = kept;
+        spans.push(RedactionSpan {
+            name: name.to_string(),
+            start,
+            end: context_end,
+            replacement,
+        });
+    } else if !spans
+        .iter()
+        .any(|span| start < span.end && span.start < context_end)
+    {
+        spans.push(RedactionSpan {
+            name: name.to_string(),
+            start,
+            end: context_end,
+            replacement,
+        });
+    }
+}
+
+/// DR-82 ②: replace the **values** of the named variables when the text writes
+/// them as JSON keys — `"NAME": "<value>"` — and report the spans.
+///
+/// Shape measured in `smoke-t15` by the decision layer (`F-T15-1`): the harness's
+/// own role-config dump writes the whole harness environment as a JSON object,
+/// so the same families the assignment scan redacts survive raw in every sealed
+/// trajectory **and** in every generated sidecar:
+///
+/// ```text
+/// "HOH_GAME_ROUTE": "F:\\moonbit-hof-rs\\runs\\smoke-t15\\game_endpoint.json"
+/// ```
+///
+/// Only the **value** is replaced, and the key, the colon and the surrounding
+/// punctuation stay byte-for-byte, so the document keeps its shape.  Three
+/// properties are deliberate:
+///
+/// * the whole `"NAME":` needle includes the quotes, so a substring inside a
+///   longer word cannot match (`"MY_HOH_RUN_ID"` is a different key);
+/// * a credential name whose value is the **empty** string is skipped: the T15
+///   dump carries the four credential keys as `""`, and rewriting an empty value
+///   would report a redaction that protected nothing;
+/// * the value end reuses [`is_value_terminator`], so the closing quote, the
+///   following comma and the rest of the object survive — the DR-72 damage came
+///   from a scan that ran past the string's own boundary.
+fn splice_json_keys(text: &str) -> RedactionReport {
+    let json = looks_like_json(text);
+    let mut spans: Vec<RedactionSpan> = Vec::new();
+    for name in redactable_env_vars() {
+        // DR-82 ② — **both encodings**.  The same key reaches a trajectory two
+        // ways, and the measured files use the first one:
+        //
+        // * `"NAME": "value"` — the key is a real member of the trajectory's own
+        //   JSON object.  This is what `runs/smoke-t15/iter-1/traj/*.json` and
+        //   `runs/smoke-t14/iter-1/traj/*.json` carry: every one of those files
+        //   has the 16 names as object keys exactly once (measured independently,
+        //   see the batch report's counting section).  A scan that knew only the
+        //   escaped spelling would report these files **clean while they are
+        //   raw** — the false-green shape this batch exists to remove;
+        // * `\"NAME\": \"value\"` — the same object written **inside** a JSON
+        //   string (a role's `content` that embeds a config dump), so the encoder
+        //   escapes the quotes.
+        //
+        // The two needles are tried in turn and the shared span rule keeps a
+        // candidate from being recorded twice when the byte ranges coincide.
+        for needle in [format!("\"{name}\""), format!("\\\"{name}\\\"")] {
+            let mut cursor = 0usize;
+            while let Some(found) = text[cursor..].find(needle.as_str()) {
+                let key_start = cursor + found;
+                let after_key = key_start + needle.len();
+                let Some((value_start, value_end)) = json_key_value_span(text, after_key, json)
+                else {
+                    cursor = after_key;
+                    continue;
+                };
+                if value_end == value_start {
+                    // `"NAME": ""` — an empty value is not disclosure, and a
+                    // zero-length span would be a no-op the audit could not see.
+                    cursor = after_key;
+                    continue;
+                }
+                // The replacement is rooted at the **value**, not at the key, so
+                // the key's own bytes (and the colon and the space the dump uses)
+                // are outside every span.
+                record_candidate_span(
+                    &mut spans,
+                    name,
+                    value_start,
+                    value_end,
+                    REDACTED.to_string(),
+                );
+                cursor = value_end.max(after_key);
+            }
+        }
+    }
+    render_spans(text, spans)
+}
+
+/// DR-82 ②: `Some((value_start, value_end))` when the bytes at `after_key` form
+/// a JSON `:` + string pair, `None` when the key is not followed by a string
+/// value (a number, an object, `null`, or prose rather than a JSON document).
+///
+/// The returned value span is inside the quotes: the opening and closing quote
+/// are **not** part of it, so the raw occurrence of the name in its key form is
+/// replaced while the JSON's punctuation stays intact.
+fn json_key_value_span(text: &str, after_key: usize, json: bool) -> Option<(usize, usize)> {
+    let bytes = text.as_bytes();
+    let mut index = after_key;
+    while index < bytes.len() && matches!(bytes[index], b' ' | b'\t') {
+        index += 1;
+    }
+    if bytes.get(index) != Some(&b':') {
+        return None;
+    }
+    index += 1;
+    while index < bytes.len() && matches!(bytes[index], b' ' | b'\t') {
+        index += 1;
+    }
+    // Inside JSON the dump escapes its quotes, so a key's value is written
+    // `\"F:\\…\"`; accept both spellings.
+    let escaped = json && bytes.get(index) == Some(&b'\\') && bytes.get(index + 1) == Some(&b'"');
+    if bytes.get(index) != Some(&b'"') && !escaped {
+        return None;
+    }
+    let value_start = if escaped { index + 2 } else { index + 1 };
+    let end = if escaped {
+        escaped_string_end(bytes, value_start)?
+    } else {
+        string_end(bytes, value_start)?
+    };
+    Some((value_start, end))
+}
+
+/// The index of the closing, unescaped `"` of a JSON string whose content starts
+/// at `from`.
+fn string_end(bytes: &[u8], from: usize) -> Option<usize> {
+    let mut index = from;
+    while index < bytes.len() {
+        if bytes[index] == b'\\' {
+            index += 2;
+            continue;
+        }
+        if bytes[index] == b'"' {
+            return Some(index);
+        }
+        index += 1;
+    }
+    None
+}
+
+/// The same as [`string_end`] for a string whose delimiters are the escaped pair
+/// `\"` (the shape a JSON dump of a JSON document uses).
+fn escaped_string_end(bytes: &[u8], from: usize) -> Option<usize> {
+    let mut index = from;
+    while index < bytes.len() {
+        if bytes[index] == b'\\' && bytes.get(index + 1) == Some(&b'"') {
+            return Some(index);
+        }
+        if bytes[index] == b'\\' {
+            index += 2;
+            continue;
+        }
+        index += 1;
+    }
+    None
+}
+
+/// DR-72 ①/DR-81 ③/DR-82 ②: apply a span list to `text`, dropping any span that
+/// overlaps one already written (which cannot happen when both scans share the
+/// recorded-span rule, but is stated rather than assumed).
+fn render_spans(text: &str, mut spans: Vec<RedactionSpan>) -> RedactionReport {
     spans.sort_by_key(|span| span.start);
     let mut redacted = String::with_capacity(text.len());
     let mut position = 0usize;

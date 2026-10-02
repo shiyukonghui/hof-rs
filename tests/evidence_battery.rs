@@ -307,6 +307,41 @@ enum MovementMode {
     None,
 }
 
+/// DR-82 ①: the number of frames the battery's pre-jump ground probe asks for.
+///
+/// This is the fixture's copy of `hof_rs::adapter::godot::JUMP_GROUND_PROBE_FRAMES`;
+/// `the_probe_frame_count_matches_the_production_constant` pins the two together,
+/// because the fixture uses it to tell the probe from the judged window.
+const JUMP_PROBE_FRAMES: u64 = 2;
+
+/// DR-82 ①: what the `jump` window's `y` series (and the ground probe that
+/// precedes it) really is.
+///
+/// `smoke-t15` measured the shape that has to be *rejected*: the window was
+/// driven 290 px past the end of the only floor, so the series was a monotone
+/// free fall — `min` at index 0, `rise = 0.0`, velocity `+42` — and the engine's
+/// `position:neq` still answered `passed=true`.  A fixture that could only produce
+/// an arc could never show that the refusal exists.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum JumpMode {
+    /// A real arc: the player rests, is pressed, rises and falls back.
+    Ballistic,
+    /// `smoke-t15` verbatim: the probe already sees a moving `y` (the player has
+    /// run off the ground) and the window is a monotone descent.
+    MonoToneFall,
+    /// The player is airborne when the probe runs, lands before the window, and
+    /// the window then shows an arc.
+    AirborneThenBallistic,
+    /// The player is airborne when the probe runs and stays airborne.
+    AirborneNoGround,
+    /// The probe cannot be read at all (the tool fails).
+    ProbeUnreadable,
+    /// DR-82 ①: the arc is too small to be a jump — `min == first`, `rise == 0`,
+    /// but `y` is not monotone (it wiggles), so only the `rise > 0` half of the
+    /// arc rule can reject it.
+    RiseZero,
+}
+
 /// DR-73 ③: what the fixture reports for the **interaction** observables — the
 /// coin counter and the goal flag.
 ///
@@ -399,6 +434,15 @@ struct FixtureChannel {
     interactions: Mutex<u32>,
     /// DR-73 ③: the furthest right the sampled `Player` series has been.
     max_x: Mutex<f64>,
+    /// DR-82 ①: what the `jump` window (and its ground probe) shows.
+    jump: JumpMode,
+    /// DR-82 ①: has the pre-jump ground probe for this window already been
+    /// answered?  The probe is the only call that is judged with the *before*
+    /// state; everything after it sees the state the jump produced.
+    jump_probe_seen: std::sync::atomic::AtomicBool,
+    /// DR-82 ①: has a jump been pressed in this run?  `AirborneThenBallistic`
+    /// lands at that moment.
+    jump_pressed: std::sync::atomic::AtomicBool,
 }
 
 impl FixtureChannel {
@@ -421,7 +465,95 @@ impl FixtureChannel {
             interaction: InteractionMode::Working,
             interactions: Mutex::new(0),
             max_x: Mutex::new(FIXTURE_SPAWN_X),
+            jump: JumpMode::Ballistic,
+            jump_probe_seen: std::sync::atomic::AtomicBool::new(false),
+            jump_pressed: std::sync::atomic::AtomicBool::new(false),
         }
+    }
+
+    /// DR-82 ①: choose what the `jump` window shows.
+    fn with_jump(mut self, jump: JumpMode) -> Self {
+        self.jump = jump;
+        self
+    }
+
+    /// DR-82 ①: is this sample request the pre-jump **ground probe**?
+    ///
+    /// The battery drives the probe with exactly `JUMP_PROBE_FRAMES` frames and
+    /// the judged window with 30; the frame count is therefore the discriminator,
+    /// and it is asserted against the production constant in
+    /// `the_probe_frame_count_matches_the_production_constant` so the two cannot
+    /// drift apart silently.
+    fn is_ground_probe_request(&self, frames: u64) -> bool {
+        frames == JUMP_PROBE_FRAMES
+    }
+
+    /// DR-82 ①: `(x, y)` series of the pre-jump ground probe.
+    fn ground_probe_positions(&self, frames: u64) -> Vec<(f64, f64)> {
+        match self.jump {
+            // The already-falling player of `smoke-t15`: `y` climbs while the
+            // probe is being taken, so the harness must refuse to press jump.
+            JumpMode::MonoToneFall
+            | JumpMode::AirborneNoGround
+            | JumpMode::AirborneThenBallistic => (0..frames)
+                .map(|frame| (3690.0, 1492.8 + 31.0 * frame as f64))
+                .collect(),
+            // Resting: a player on a floor holds `y` exactly.
+            _ => (0..frames)
+                .map(|frame| (60.0 + frame as f64, 283.0))
+                .collect(),
+        }
+    }
+
+    /// DR-82 ①: `(x, y)` series of the jump window itself.
+    fn jump_window_positions(&self, frames: u64) -> Vec<(f64, f64)> {
+        let base = match self.jump {
+            JumpMode::MonoToneFall | JumpMode::AirborneNoGround => 1492.8,
+            _ => 283.0,
+        };
+        (0..frames)
+            .map(|frame| {
+                let y = match self.jump {
+                    // `smoke-t15`'s window, verbatim: strictly increasing `y`,
+                    // minimum at index 0, `rise = 0.0`.
+                    JumpMode::MonoToneFall | JumpMode::AirborneNoGround => {
+                        base + 31.0 * frame as f64
+                    }
+                    // A jump arc: `min < first` and `y` never returns to the
+                    // window's first sample (a real fall from the apex takes
+                    // longer than the window lasts, and the battery's own
+                    // positional assertion compares the last sample with the
+                    // first — an arc that closed exactly would read as "the
+                    // position did not change").
+                    JumpMode::AirborneThenBallistic | JumpMode::Ballistic => {
+                        let f = frame as f64;
+                        let elapsed = f.min(frames as f64 / 2.0);
+                        let rise = 5.0 * elapsed - 0.2 * elapsed * elapsed;
+                        base - rise.max(0.0)
+                    }
+                    // No arc, but not a fall either: `y` never goes above its
+                    // first sample (`rise == 0`), and it is not monotone — so only
+                    // the `rise > 0` half of the rule can reject it.  The last
+                    // sample differs from the first so the battery's positional
+                    // assertion still passes and this cell is red for the arc rule
+                    // alone.
+                    JumpMode::RiseZero => {
+                        let f = frame as f64;
+                        if f <= frames as f64 / 2.0 {
+                            base
+                        } else if f == (frames - 1) as f64 {
+                            base + 4.0
+                        } else {
+                            base + 20.0
+                        }
+                    }
+                    // The probe could not be read, so the window is never driven;
+                    // the series exists only so the request has an answer.
+                    JumpMode::ProbeUnreadable => base + 20.0,
+                };
+                (60.0, y)
+            })
+            .collect()
     }
 
     /// DR-73 ③: choose what the interaction observables report.
@@ -684,6 +816,14 @@ impl FixtureChannel {
         if !held.iter().any(|existing| existing == action) {
             held.push(action.to_string());
         }
+        drop(held);
+        // DR-82 ①: the jump has really been pressed, so the probe for a *second*
+        // jump window (if the harness ever drove one) must be answered by the
+        // post-jump state.
+        if action == "jump" {
+            self.jump_pressed
+                .store(true, std::sync::atomic::Ordering::SeqCst);
+        }
         *self.last_action.lock().unwrap() = action.to_string();
     }
 
@@ -902,7 +1042,16 @@ fn sample_positions(
         let (x, y) = match movement {
             MovementMode::None => (60.0, 283.998992919922),
             MovementMode::OtherAxisOnly => (60.0, 283.0 + frame),
-            MovementMode::Intended if action == "jump" => (60.0, (frame * 2.0) % 80.0),
+            MovementMode::Intended if action == "jump" => {
+                // DR-82 ①: a real arc would be the right double here, but this
+                // helper is also called by the positional-assertion path, which
+                // answers from a different series.  It returns a series whose
+                // `min == first` and whose `y` is **not** monotone: the shape that
+                // separates the `rise > 0` half of the arc rule from the
+                // monotonicity half.  The arc itself is exercised by the
+                // `with_jump` fixtures.
+                (60.0, (frame * 2.0) % 80.0)
+            }
             MovementMode::Intended if action == "move_left" => {
                 if axis < 0.0 {
                     (100.0 - frame, 283.0)
@@ -1261,6 +1410,38 @@ impl ToolChannel for FixtureChannel {
                             .collect()
                     })
                     .unwrap_or_default();
+                // DR-82 ①: the battery's pre-jump **ground probe** is answered
+                // here, before the action-driven branches, because at probe time
+                // the game is still holding the previous window's action (the
+                // probe runs before the jump is injected).  The two-frame position
+                // request is the probe and nothing else in the battery uses that
+                // shape; `the_probe_frame_count_matches_the_production_constant`
+                // pins the count, and `is_ground_probe_request` is the only reader.
+                if self.is_ground_probe_request(frames)
+                    && properties.iter().any(|name| name == "position")
+                    && !properties.iter().any(|name| name == "input_axis")
+                {
+                    if self.jump == JumpMode::ProbeUnreadable {
+                        return Err(captured_error("game_script_input_unreachable.txt").into());
+                    }
+                    let samples: Vec<Value> = self
+                        .ground_probe_positions(frames)
+                        .into_iter()
+                        .enumerate()
+                        .map(
+                            |(index, (x, y))| json!({"frame": index, "position": {"x": x, "y": y}}),
+                        )
+                        .collect();
+                    let inner = json!({
+                        "frame_count": frames,
+                        "node_path": "Player",
+                        "samples": samples,
+                    });
+                    return Ok(ToolResult {
+                        ok: true,
+                        payload: json!({"content": [{"type": "text", "text": inner.to_string()}]}),
+                    });
+                }
                 if properties.iter().any(|name| name == "input_axis") {
                     if self.axis == AxisMode::Unreadable {
                         // DR-58: the engine's real `smoke-t7` sample —
@@ -1328,6 +1509,31 @@ impl ToolChannel for FixtureChannel {
                         let x = start + (end - start) * progress;
                         samples.push(json!({"frame": frame, "position": {"x": x, "y": 283.0}}));
                     }
+                    let inner = json!({
+                        "frame_count": frames,
+                        "node_path": "Player",
+                        "samples": samples,
+                    });
+                    return Ok(ToolResult {
+                        ok: true,
+                        payload: json!({"content": [{"type": "text", "text": inner.to_string()}]}),
+                    });
+                }
+                // DR-82 ①: the `jump` window itself is answered by the mode the
+                // fixture was built with.
+                if action == "jump" && moves {
+                    if self.jump_pressed.load(std::sync::atomic::Ordering::SeqCst) {
+                        self.jump_probe_seen
+                            .store(false, std::sync::atomic::Ordering::SeqCst);
+                    }
+                    let positions = self.jump_window_positions(frames);
+                    let samples: Vec<Value> = positions
+                        .into_iter()
+                        .enumerate()
+                        .map(
+                            |(index, (x, y))| json!({"frame": index, "position": {"x": x, "y": y}}),
+                        )
+                        .collect();
                     let inner = json!({
                         "frame_count": frames,
                         "node_path": "Player",
@@ -3774,11 +3980,321 @@ async fn an_aborted_battery_pass_is_preserved_before_its_directory_is_cleared() 
 // DR-69 ④: the E3 evidence form must be reachable inside a round
 // ---------------------------------------------------------------------------
 
-/// DR-69 ④: `REQUIREMENTS.md:114` fixes E3's **evidence form** as a replay
-/// plus **before/after screenshots** plus a node-state assertion.  `smoke-t9`'s
-/// independent experiment observed all four behaviours on real hardware, yet the
-/// round itself could never have judged E3 `met`: the battery's `input_replay`
-/// produced neither the frames nor the assertion.
+// ---------------------------------------------------------------------------
+// DR-82 ① — the jump window must be driven from the ground and must show an arc
+// ---------------------------------------------------------------------------
+
+/// The `jump_reading` object of the jump window, if the run produced one.
+fn jump_reading_entry(calls: &[Value]) -> Option<Value> {
+    calls
+        .iter()
+        .find_map(|call| call.get("jump_reading").cloned())
+}
+
+/// DR-82 ①: the number of raw calls that record a jump window showing an arc.
+fn scored_jump_arcs(calls: &[Value]) -> usize {
+    calls
+        .iter()
+        .filter(|call| {
+            call.get("jump_reading")
+                .and_then(|reading| reading.get("shows_an_arc"))
+                .and_then(Value::as_bool)
+                .unwrap_or(false)
+        })
+        .count()
+}
+
+/// DR-82 ① (the required regression): a window over a **gap** must be rejected,
+/// not passed.
+///
+/// This is the `smoke-t15` state modelled exactly: the ground probe (two frames)
+/// already reads a moving `y` — the player has run off the end of the floor — so
+/// the harness must not record the window as an observed jump.  The probe is
+/// asserted first, because the refusal has to come from the ground check and not
+/// from a post-hoc reading; the level itself is never rewritten.
+#[tokio::test]
+async fn a_jump_window_over_a_gap_is_rejected_instead_of_passed() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel = Arc::new(FixtureChannel::green().with_jump(JumpMode::MonoToneFall));
+    let run = run_battery(root, channel.clone(), 30).await;
+
+    let calls = replay_calls(&run);
+    assert!(
+        calls
+            .iter()
+            .any(|call| call["label"] == json!("jump:ground_probe")),
+        "the jump window must be preceded by a game-process ground probe"
+    );
+    assert_eq!(
+        scored_jump_arcs(&calls),
+        0,
+        "a window over a gap must never be scored as an observed jump"
+    );
+    if let Some(reading) = jump_reading_entry(&calls) {
+        assert_eq!(
+            reading["shows_an_arc"],
+            json!(false),
+            "any reading recorded for an airborne window must be a refusal: {reading}"
+        );
+    }
+
+    let replay = step(&run.records, "input_replay");
+    let observation = &replay.record.observation;
+    assert!(
+        observation.contains("JUMP_NOT_DRIVEN"),
+        "the observation must say the jump was not driven: {observation}"
+    );
+    assert!(
+        !observation.contains("JUMP_ARC_OBSERVED"),
+        "an airborne window may never be scored as an observed jump: {observation}"
+    );
+}
+
+/// DR-82 ①: a window whose payload really is a monotone free fall (the shape
+/// `smoke-t15` recorded: `min` at index 0, `rise = 0.0`, `y` strictly increasing)
+/// must be rejected even when the engine's `position:neq` answers `passed=true`.
+#[tokio::test]
+async fn a_monotone_fall_is_not_recorded_as_an_observed_jump() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel = Arc::new(
+        FixtureChannel::green()
+            .with_jump(JumpMode::AirborneNoGround)
+            .starting_held(&[]),
+    );
+    let run = run_battery(root, channel, 30).await;
+
+    let calls = replay_calls(&run);
+    assert_eq!(
+        scored_jump_arcs(&calls),
+        0,
+        "the T15 shape must never be scored as a jump window"
+    );
+    let replay = step(&run.records, "input_replay");
+    let observation = &replay.record.observation;
+    assert!(
+        observation.contains("JUMP_NOT_DRIVEN"),
+        "the observation must name the refusal: {observation}"
+    );
+    assert!(
+        !observation.contains("JUMP_ARC_OBSERVED"),
+        "the observation must not name an arc: {observation}"
+    );
+}
+
+/// DR-82 ①: the green direction — a jump driven from the ground must be recorded
+/// as an observed arc, and the raw document must carry the reading that proves it
+/// (`min < first`, `y` not monotone).
+#[tokio::test]
+async fn a_jump_driven_from_the_ground_is_recorded_as_an_arc() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel = Arc::new(FixtureChannel::green().with_jump(JumpMode::Ballistic));
+    let run = run_battery(root, channel, 30).await;
+
+    let calls = replay_calls(&run);
+    let reading =
+        jump_reading_entry(&calls).expect("a ground-driven jump must carry its own reading");
+    assert_eq!(reading["shows_an_arc"], json!(true), "{reading}");
+    assert_eq!(reading["verdict"], json!("JUMP_ARC_OBSERVED"), "{reading}");
+    let rise = reading["rise"].as_f64().expect("rise is a number");
+    assert!(
+        rise > 0.0,
+        "the arc must rise above the window's first sample: {reading}"
+    );
+    assert_eq!(reading["monotone_fall"], json!(false), "{reading}");
+    assert!(
+        calls
+            .iter()
+            .any(|call| call["label"] == json!("jump:ground_probe")),
+        "the arc must have been driven after a ground probe"
+    );
+
+    let replay = step(&run.records, "input_replay");
+    assert!(
+        replay.record.observation.contains("JUMP_ARC_OBSERVED"),
+        "the observation must name the arc: {}",
+        replay.record.observation
+    );
+    // The three regression pins: the other two movement windows and the two
+    // closure assertions keep their existing verdicts in the same run.
+    assert!(
+        replay.record.observation.contains("move_right:")
+            && replay.record.observation.contains("move_left:"),
+        "the horizontal windows must still be exercised: {}",
+        replay.record.observation
+    );
+    assert!(
+        replay
+            .record
+            .observation
+            .contains("jump: POSITION_ASSERT_PASSED"),
+        "the positional assertion is still necessary evidence for a driven window: {}",
+        replay.record.observation
+    );
+}
+
+/// DR-82 ①: **failing closed** is the rule in both directions — a jump window
+/// driven while the player is airborne is refused, and so is one whose ground
+/// probe could not be read at all.
+///
+/// The fixture's `AirborneThenBallistic` mode is the "the player is falling now
+/// but would land in time" case: the harness cannot know that from a two-frame
+/// probe, so the honest reading is *unobserved* rather than a guess.  Whether a
+/// later batch should cruise back to the ground and re-drive is recorded as a
+/// deliberate non-goal of DR-82 in the batch report.
+#[tokio::test]
+async fn an_airborne_start_and_an_unreadable_probe_both_fail_closed() {
+    for (mode, what) in [
+        (JumpMode::AirborneThenBallistic, "an airborne start"),
+        (JumpMode::ProbeUnreadable, "an unreadable ground probe"),
+    ] {
+        let temp = tempfile::tempdir().unwrap();
+        let channel = Arc::new(FixtureChannel::green().with_jump(mode));
+        let run = run_battery(temp.path(), channel, 30).await;
+
+        let calls = replay_calls(&run);
+        assert_eq!(
+            scored_jump_arcs(&calls),
+            0,
+            "{what} must never be scored as an observed jump"
+        );
+        let replay = step(&run.records, "input_replay");
+        let observation = &replay.record.observation;
+        assert!(
+            observation.contains("JUMP_NOT_DRIVEN"),
+            "{what} must leave the jump unobserved: {observation}"
+        );
+        assert!(
+            !observation.contains("JUMP_ARC_OBSERVED"),
+            "{what} must not be reported as an arc: {observation}"
+        );
+    }
+}
+
+/// DR-82 ①: the two halves of the arc rule are separate, so a fixture that only
+/// violates one of them is red for that half alone.
+#[tokio::test]
+async fn a_jump_window_with_no_rise_is_rejected_too() {
+    let temp = tempfile::tempdir().unwrap();
+    let channel = Arc::new(FixtureChannel::green().with_jump(JumpMode::RiseZero));
+    let run = run_battery(temp.path(), channel, 30).await;
+
+    let calls = replay_calls(&run);
+    let reading =
+        jump_reading_entry(&calls).expect("the window was driven, so its reading is recorded");
+    assert_eq!(
+        reading["rise"].as_f64(),
+        Some(0.0),
+        "this fixture's `y` never goes above its first sample: {reading}"
+    );
+    assert_eq!(
+        reading["monotone_fall"],
+        json!(false),
+        "the series is not monotone, so only the `rise > 0` half can reject it: {reading}"
+    );
+    assert_eq!(reading["shows_an_arc"], json!(false), "{reading}");
+    assert_eq!(reading["verdict"], json!("JUMP_NO_RISE"), "{reading}");
+
+    let replay = step(&run.records, "input_replay");
+    assert!(
+        !replay.record.observation.contains("JUMP_ARC_OBSERVED"),
+        "a window with `rise = 0` may never be scored as an arc: {}",
+        replay.record.observation
+    );
+}
+
+/// DR-82 ①: the arc predicate on its own readings — the exact numbers the T15
+/// acceptance published, so the rule can be checked without running a battery.
+#[test]
+fn the_arc_rule_rejects_the_t15_series_and_accepts_a_real_one() {
+    let t15: Vec<f64> = vec![
+        1492.81433105469,
+        1523.92541503906,
+        1555.42541503906,
+        1587.31433105469,
+        1619.59216308594,
+        1652.25891113281,
+        1685.314453125,
+        1718.75891113281,
+        1752.59228515625,
+        1786.81457519531,
+        1821.42565917969,
+        1856.42565917969,
+        1891.81457519531,
+        1927.59240722656,
+        1963.75903320312,
+        2000.31457519531,
+        2037.25903320312,
+        2074.59228515625,
+        2112.314453125,
+        2150.42553710938,
+        2188.92553710938,
+        2227.814453125,
+        2267.09228515625,
+        2306.75903320312,
+        2346.81469726562,
+        2387.25903320312,
+        2428.09228515625,
+        2469.314453125,
+        2510.92553710938,
+        2552.92553710938,
+    ];
+    let reading = hof_rs::adapter::godot::jump_reading_of(&t15).expect("the series is non-empty");
+    assert_eq!(reading.rise, 0.0, "the T15 rise is exactly zero");
+    assert!(reading.monotone_fall, "the T15 series is a monotone fall");
+    assert!(
+        !reading.shows_an_arc(),
+        "the T15 window must never be accepted as an observed jump"
+    );
+    assert_eq!(reading.verdict(), "JUMP_DEGENERATE_FALL");
+
+    let arc: Vec<f64> = (0..30)
+        .map(|frame| {
+            let f = (frame as f64).min(15.0);
+            283.0 - (5.0 * f - 0.2 * f * f).max(0.0)
+        })
+        .collect();
+    let reading = hof_rs::adapter::godot::jump_reading_of(&arc).expect("the series is non-empty");
+    assert!(
+        reading.rise > 0.0,
+        "a real arc rises above its first sample: {reading:?}"
+    );
+    assert!(!reading.monotone_fall, "a real arc comes back down");
+    assert!(reading.shows_an_arc());
+    assert_eq!(reading.verdict(), "JUMP_ARC_OBSERVED");
+
+    // A resting player holds `y`; `min == first` and the series is monotone.
+    let resting = vec![283.0; 2];
+    assert!(hof_rs::adapter::godot::player_is_resting_on_ground(Some(
+        &resting
+            .iter()
+            .map(|y| (60.0, *y))
+            .collect::<Vec<(f64, f64)>>()
+    )));
+    let falling = vec![(60.0, 283.0), (60.0, 314.0)];
+    assert!(
+        !hof_rs::adapter::godot::player_is_resting_on_ground(Some(&falling)),
+        "a moving `y` is not a player standing on ground"
+    );
+    assert!(
+        !hof_rs::adapter::godot::player_is_resting_on_ground(None),
+        "an unreadable probe must fail closed"
+    );
+}
+
+/// DR-82 ①: the fixture distinguishes the ground probe from the judged window by
+/// frame count, so that count is pinned against the production constant.
+#[test]
+fn the_probe_frame_count_matches_the_production_constant() {
+    assert_eq!(
+        JUMP_PROBE_FRAMES,
+        hof_rs::adapter::godot::JUMP_GROUND_PROBE_FRAMES,
+        "the fixture's probe discriminator must be the count the battery really asks for"
+    );
+}
+
 ///
 /// The load-bearing reading must be **positional**: the engine answers `null`
 /// for the axis query on real hardware (DR-58), so an axis-value assertion

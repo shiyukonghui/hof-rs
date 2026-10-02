@@ -48,6 +48,24 @@ use sha2::{Digest, Sha256};
 const T13_REPORT: &str = ".spec/hof-rs/tasks/TASK-SMOKE-T13-REPORT.md";
 /// The E3-clearance report: it carries the DR-76 correction ledger and DR-77 §12.1.
 const DR73_REPORT: &str = ".spec/hof-rs/tasks/TASK-DR73-REPORT.md";
+/// DR-82 ③: the implementation report whose "**a running** editor does not rebuild
+/// `.godot`" claim `smoke-t15` weakened.  Its correction is append-only too.
+const DR81_REPORT: &str = ".spec/hof-rs/tasks/TASK-DR81-REPORT.md";
+/// DR-82 ③: the seal of `TASK-DR81-REPORT.md` **before the DR-82 correction**.
+///
+/// The 41,045 bytes are byte-identical to `7834f2d7…8efc8`, the value
+/// `TASK-DR81-ACCEPTANCE.md` recorded as `report_sha256_at_review` — i.e. the
+/// frozen prefix is exactly the revision the independent acceptance reviewed, so
+/// this pin also fixes what the correction supersedes.
+const DR81_DR82_HEADING: &str =
+    "# 附：DR-82 ③ 更正（**追加式**，2026-10-02）——“已在运行的编辑器不会重建 `.godot`”被实测削弱";
+/// DR-82 ④ (A-3): the second appended correction, for the report's internal
+/// contradiction about the real acceptance ledger.
+const DR81_A3_HEADING: &str =
+    "# 附：DR-82 ④（A-3）更正（**追加式**，2026-10-02）——修订报告在「真实台账」一处**自相矛盾**";
+const DR81_PRE_DR82_BYTES: usize = 41_045;
+const DR81_PRE_DR82_SHA256: &str =
+    "7834f2d71d970d5a27b95c6fcc5a339525616c3a08bfe23dbf20e9ac8048efc8";
 /// The frozen requirements document: its C3 sentence may never be rewritten.
 const REQUIREMENTS: &str = ".spec/hof-rs/REQUIREMENTS.md";
 
@@ -338,6 +356,50 @@ fn the_dr73_report_prefix_before_its_correction_ledger_is_frozen() {
              quotation next to the true one"
         );
     }
+}
+
+/// DR-82 ③: the `.godot` mechanism claim in `TASK-DR81-REPORT.md` was weakened by
+/// `smoke-t15`'s measurement, so the correction had to be appended to the report
+/// that carries the claim — and appending is only meaningful if the bytes above
+/// the correction cannot move afterwards.
+///
+/// The sealed prefix is the revision `TASK-DR81-ACCEPTANCE.md` reviewed
+/// (`7834f2d7…8efc8`, 41,045 B); this test reddens on an in-place edit, a deleted
+/// line or a reordered paragraph in the report's own text, while the DR-82
+/// erratum after the heading is free to grow.
+#[test]
+fn the_dr81_report_prefix_before_the_dr82_correction_is_frozen() {
+    let bytes = read(DR81_REPORT);
+    assert_no_violations(seal_violations(
+        DR81_REPORT,
+        DR81_DR82_HEADING,
+        DR81_PRE_DR82_BYTES,
+        DR81_PRE_DR82_SHA256,
+        &bytes,
+    ));
+    let text = String::from_utf8_lossy(&bytes);
+    // The corrected claim must be *present* as well: the seal proves nothing if the
+    // erratum was deleted (the offset check would then fail first, but a reader of
+    // this test should see the intent).
+    assert!(
+        text.contains(DR81_DR82_HEADING),
+        "{DR81_REPORT}: the DR-82 correction heading must own a whole line"
+    );
+    assert!(
+        text.contains("smoke-t15") && text.contains("filesystem_cache10"),
+        "{DR81_REPORT}: the correction must name the measurement it rests on"
+    );
+    // DR-82 ④ (A-3): the second appended correction — the report's internal
+    // contradiction about the real ledger — must live in the same append-only
+    // region, so it is covered by the same seal.
+    assert!(
+        text.contains(DR81_A3_HEADING),
+        "{DR81_REPORT}: the A-3 correction must name the contradiction it resolves"
+    );
+    assert!(
+        text.contains("OK: 48 record(s)"),
+        "{DR81_REPORT}: the A-3 correction must carry the reading it measured"
+    );
 }
 
 /// The requirements document keeps C3 **verbatim** and carries the append-only DR-80

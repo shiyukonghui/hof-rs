@@ -81,6 +81,23 @@ struct GateChannel {
     /// already invalidated the route (`editor_stop_scene`).
     registrations: Mutex<Vec<hof_rs::tools::endpoint::GameEndpointRecord>>,
     route_cleared: std::sync::atomic::AtomicBool,
+    /// DR-82 ④: how many judged (`max_lines=50`) `editor_get_errors` readings
+    /// have been taken.  The first judges the round's own candidate; a second only
+    /// exists after DR-24's targeted repair re-ran the battery, which is the "a
+    /// failed repair re-produced the same error line" scenario the window's
+    /// occurrence counting exists for.
+    judged_readings: Mutex<u32>,
+    /// DR-82 ④: the cell where the judged reading reproduces the anchor's line
+    /// **again** on the second pass, so its occurrence count grows.
+    growth_on_second_pass: std::sync::atomic::AtomicBool,
+    /// DR-82 ④: a project that is still broken **on disk** whose error line the
+    /// reload never re-emits — the direction in which the window can open on a
+    /// broken project.
+    breaking_disk_project: Mutex<Option<PathBuf>>,
+    /// DR-82 ④ (A-4): make the wide **anchor** call fail outright, which is the
+    /// only way to reach `partition_editor_errors_in_window`'s `None` branch on
+    /// real code rather than through a plant.
+    anchor_fails: std::sync::atomic::AtomicBool,
 }
 
 impl GateChannel {
@@ -92,6 +109,10 @@ impl GateChannel {
             editor_errors_anchor: None,
             registrations: Mutex::new(Vec::new()),
             route_cleared: std::sync::atomic::AtomicBool::new(false),
+            judged_readings: Mutex::new(0),
+            growth_on_second_pass: std::sync::atomic::AtomicBool::new(false),
+            breaking_disk_project: Mutex::new(None),
+            anchor_fails: std::sync::atomic::AtomicBool::new(false),
         }
     }
 
@@ -108,6 +129,10 @@ impl GateChannel {
             editor_errors_anchor: Some(json!({"available": true, "count": 0, "errors": []})),
             registrations: Mutex::new(Vec::new()),
             route_cleared: std::sync::atomic::AtomicBool::new(false),
+            judged_readings: Mutex::new(0),
+            growth_on_second_pass: std::sync::atomic::AtomicBool::new(false),
+            breaking_disk_project: Mutex::new(None),
+            anchor_fails: std::sync::atomic::AtomicBool::new(false),
         }
     }
 
@@ -126,6 +151,10 @@ impl GateChannel {
             ),
             registrations: Mutex::new(Vec::new()),
             route_cleared: std::sync::atomic::AtomicBool::new(false),
+            judged_readings: Mutex::new(0),
+            growth_on_second_pass: std::sync::atomic::AtomicBool::new(false),
+            breaking_disk_project: Mutex::new(None),
+            anchor_fails: std::sync::atomic::AtomicBool::new(false),
         }
     }
 
@@ -182,6 +211,54 @@ impl ToolChannel for GateChannel {
                     .and_then(Value::as_u64)
                     .map(|lines| lines > 50)
                     .unwrap_or(false);
+                if !anchor_call {
+                    *self.judged_readings.lock().unwrap() += 1;
+                }
+                // DR-82 ④ (A-4): the anchor-absent cell.  A failed wide reading is
+                // exactly the shape the production code treats as "no baseline",
+                // and the only honest way to test that branch is to make the call
+                // fail rather than to plant the failure in the adapter.
+                if anchor_call && self.anchor_fails.load(std::sync::atomic::Ordering::SeqCst) {
+                    return Err(McpError::new(
+                        -32603,
+                        "editor log tail unavailable (the wide anchor reading could not be taken)",
+                    )
+                    .into());
+                }
+                // DR-82 ④: the "a failed repair re-produced the same line" cell.
+                // The anchor stays `[E]` on every pass; each judged reading carries
+                // one **extra** copy of `E`, so the occurrence count grows across
+                // the window of every pass and the gate closes each time.  That is
+                // precisely the case a set comparison would dismiss: the *set* of
+                // texts never changes, only the count does.
+                if self
+                    .growth_on_second_pass
+                    .load(std::sync::atomic::Ordering::SeqCst)
+                    && !anchor_call
+                {
+                    let pass = *self.judged_readings.lock().unwrap();
+                    let base: Vec<Value> = self
+                        .editor_errors
+                        .as_ref()
+                        .and_then(|payload| payload.get("errors"))
+                        .and_then(Value::as_array)
+                        .cloned()
+                        .unwrap_or_default();
+                    let mut errors = base.clone();
+                    if let Some(first) = base.first().cloned() {
+                        for _ in 0..pass {
+                            errors.push(first.clone());
+                        }
+                    }
+                    return Ok(ToolResult {
+                        ok: true,
+                        payload: json!({
+                            "available": true,
+                            "count": errors.len(),
+                            "errors": errors,
+                        }),
+                    });
+                }
                 let configured = if anchor_call {
                     &self.editor_errors_anchor
                 } else {
@@ -316,6 +393,37 @@ async fn run_gate_with_window(
     anchor: Option<Vec<&str>>,
     judged: Option<Vec<&str>>,
 ) -> GateRun {
+    run_gate_with_channel(root, script, anchor, judged, WindowCells::default()).await
+}
+
+/// DR-82 ④, risk (a): an on-disk script that still carries a conflicting
+/// declaration, so "the project is broken" is a fact on the filesystem rather
+/// than a claim about a log line.
+const BROKEN_PROJECT_GD: &str =
+    "class_name Ground\nextends Node2D\n\n# still carries the declaration that the reload no longer reports\n";
+
+/// DR-82 ④: the window cells the two new tests need, kept as one value so the
+/// runner's signature does not grow a parameter per branch.
+#[derive(Clone, Copy, Default)]
+struct WindowCells<'a> {
+    /// Reproduce the anchor's line again on the second (post-repair) pass.
+    growth_on_second_pass: bool,
+    /// Make the wide anchor call fail, which is the anchor-absent branch.
+    anchor_fails: bool,
+    /// A file to leave broken on disk, as `(relative path, body)`.
+    breaking_disk_project: Option<(&'a str, &'a str)>,
+}
+
+/// DR-82 ④: the same run with the extra window cells — a judged reading that
+/// grows on the second pass, an anchor that cannot be taken, and an editor whose
+/// project is broken on disk while its judged reading stays empty.
+async fn run_gate_with_channel(
+    root: &Path,
+    script: Vec<FakeStep>,
+    anchor: Option<Vec<&str>>,
+    judged: Option<Vec<&str>>,
+    cells: WindowCells<'_>,
+) -> GateRun {
     let mut cfg: HohConfig = test_config(root, 1);
     cfg.runtime.spec = root.join("spec.md");
     let spec = write_spec(root);
@@ -330,6 +438,22 @@ async fn run_gate_with_window(
         (None, Some(judged)) => GateChannel::with_editor_errors(&workspace, judged),
         _ => GateChannel::new(&workspace),
     });
+    if cells.growth_on_second_pass {
+        channel
+            .growth_on_second_pass
+            .store(true, std::sync::atomic::Ordering::SeqCst);
+    }
+    if cells.anchor_fails {
+        channel
+            .anchor_fails
+            .store(true, std::sync::atomic::Ordering::SeqCst);
+    }
+    if let Some((relative, body)) = cells.breaking_disk_project {
+        let path = workspace.join(relative);
+        std::fs::create_dir_all(path.parent().expect("the file has a parent")).unwrap();
+        std::fs::write(&path, body).unwrap();
+        channel.breaking_disk_project.lock().unwrap().replace(path);
+    }
     let orchestrator = hof_rs::runtime::run_loop::Orchestrator {
         harness: Box::new(harness),
         adapter: Box::new(adapter(root)),
@@ -1323,5 +1447,182 @@ async fn a_real_script_error_new_in_the_window_still_closes_the_gate() {
     assert!(
         observation.contains("pre-existing"),
         "the pre-existing line must be distinguished from the new one: {observation}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// ⑩ DR-82 ④ (A-4 + risk (a)) — the two untested window branches, and the
+// direction in which the window can open on a broken project
+// ---------------------------------------------------------------------------
+
+/// DR-82 ④ (A-4): the **count-growth** branch, positively.
+///
+/// The window counts occurrences rather than comparing sets, and the reason is
+/// load-bearing: a failed repair re-produces the *same* error line, so a
+/// set-based comparison would dismiss the second occurrence as residue.  This
+/// test drives exactly that cell — the first judged reading carries the anchor's
+/// line once, the second (after DR-24's targeted repair re-ran the battery)
+/// carries it twice — and asserts that the gate closes even though the line's
+/// *set* of texts never changed.
+#[tokio::test]
+async fn a_repair_that_reproduces_the_same_line_still_closes_the_gate() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let run = run_gate_with_channel(
+        root,
+        vec![
+            plan_step(),
+            developer_writes(SCENE_WITH_ROOT),
+            developer_writes(SCENE_WITH_ROOT), // the one targeted repair
+            tester_step(),
+        ],
+        Some(vec![OLD_LOG_TAIL_ERROR]),
+        Some(vec![OLD_LOG_TAIL_ERROR]),
+        WindowCells {
+            growth_on_second_pass: true,
+            ..WindowCells::default()
+        },
+    )
+    .await;
+
+    assert_eq!(
+        run.result["artifact_gate"]["launchable"],
+        json!(false),
+        "a line whose occurrence count grew across the window is the candidate's, even though \
+         its text is the same as before: {:?}",
+        run.result["artifact_gate"]["reasons"]
+    );
+    let observation = baseline_observation(&run);
+    let defects_new = token_count(&observation, "project_defects_new=")
+        .expect("the observation must record the new-defect count");
+    assert!(
+        defects_new >= 1,
+        "a line whose occurrence count grew is new even though its text is unchanged: \
+         {observation}"
+    );
+    assert!(
+        observation.contains("1 pre-existing line(s)"),
+        "the anchor's own copy is still recognised as pre-existing — the rule counts, it does \
+         not blanket-dismiss: {observation}"
+    );
+}
+
+/// DR-82 ④: the integer behind a `name=<n>` token in an observation string.
+fn token_count(observation: &str, token: &str) -> Option<usize> {
+    let rest = observation.split(token).nth(1)?;
+    let digits: String = rest.chars().take_while(char::is_ascii_digit).collect();
+    digits.parse().ok()
+}
+
+/// DR-82 ④ (A-4): the **anchor-absent** branch, fail-closed.
+///
+/// When the pre-reload anchor cannot be taken, every judged line counts as new —
+/// the window must not become an exemption in the one situation where it has no
+/// baseline.  The cell is driven by an editor whose anchor call fails outright.
+#[tokio::test]
+async fn an_absent_window_anchor_fails_closed() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let run = run_gate_with_channel(
+        root,
+        vec![
+            plan_step(),
+            developer_writes(SCENE_WITH_ROOT),
+            developer_writes(SCENE_WITH_ROOT),
+            tester_step(),
+        ],
+        None, // no anchor: the wide reading fails outright, so there is no baseline
+        Some(vec![OLD_LOG_TAIL_ERROR]),
+        WindowCells {
+            anchor_fails: true,
+            ..WindowCells::default()
+        },
+    )
+    .await;
+
+    assert_eq!(
+        run.result["artifact_gate"]["launchable"],
+        json!(false),
+        "without an anchor there is no baseline, so the line must close the gate: {:?}",
+        run.result["artifact_gate"]["reasons"]
+    );
+    let observation = baseline_observation(&run);
+    assert!(
+        observation.contains("project_defects_new=1"),
+        "every judged line counts as new when the anchor is absent: {observation}"
+    );
+}
+
+/// DR-82 ④, risk (a): the direction in which the window can **open on a project
+/// that is still broken**.
+///
+/// The window subtracts what the pre-reload anchor already carried.  A project
+/// that is broken on disk but whose error line the reload never re-emits is
+/// therefore exempted: the anchor holds the line once, the judged reading is
+/// empty, and the gate opens — while `scripts/project.gd` on disk still carries
+/// the broken declaration.  This test documents that limit as an executable fact
+/// instead of leaving it to prose: it **passes only while the limitation exists**
+/// (`launchable == true` with a broken file on disk), so adding a disk-side probe
+/// would make it red on purpose and force the claim to be corrected.
+#[tokio::test]
+async fn the_window_can_still_open_on_a_project_that_is_broken_on_disk() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let run = run_gate_with_channel(
+        root,
+        vec![
+            plan_step(),
+            developer_writes(SCENE_WITH_ROOT),
+            tester_step(),
+        ],
+        Some(vec![OLD_LOG_TAIL_ERROR]),
+        Some(vec![]), // the reload never re-emitted the line
+        WindowCells {
+            breaking_disk_project: Some(("scripts/project.gd", BROKEN_PROJECT_GD)),
+            ..WindowCells::default()
+        },
+    )
+    .await;
+
+    // The premise: the broken file really is on disk after the round.
+    let on_disk = run.workspace.join("scripts/project.gd");
+    assert!(
+        std::fs::read_to_string(&on_disk)
+            .unwrap_or_default()
+            .contains("class_name Ground"),
+        "the fixture's broken project script must really be on disk: {:?}",
+        on_disk
+    );
+    assert_eq!(
+        run.result["artifact_gate"]["launchable"],
+        json!(true),
+        "the measured limit: a pre-existing line the reload does not re-emit is exempted even \
+         though the project is still broken on disk; if a disk-side probe is added this test \
+         must be reddened deliberately, not adjusted quietly"
+    );
+    // The sharp form of the limit: the anchor **did** carry the line, the judged
+    // reading carried nothing, and the verdict is therefore "clean" — the reload
+    // silently dropping the line is enough to open the gate on a broken project.
+    let raw: Value = serde_json::from_str(&read(
+        &run.run_dir
+            .join("iter-1/candidate/.hoh/deterministic/raw/editor_errors_baseline.json"),
+    ))
+    .unwrap();
+    let window = &raw["channel"]["editor_error_window"];
+    assert_eq!(
+        window["anchor_line_count"],
+        json!(1),
+        "the anchor must have carried the error line: {window}"
+    );
+    assert_eq!(
+        window["project_defects_new"],
+        json!(0),
+        "the reload did not re-emit it, so no line was classified as new: {window}"
+    );
+    assert_eq!(
+        window["pre_existing_lines"],
+        json!(0),
+        "nothing was dismissed either — the line simply vanished between the two readings, which \
+         is why the exemption is silent rather than recorded: {window}"
     );
 }

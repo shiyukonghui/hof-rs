@@ -1250,6 +1250,57 @@ fn an_acceptance_artifact_is_accepted_as_the_marking_source() {
     assert_eq!(sandbox.bare_ok(&["rev-parse", "master"]), sha);
 }
 
+/// DR-82 ④ (A-2): the rule and its own refusal message say *a repo-root-relative
+/// `.md` file whose name contains `ACCEPTANCE`*, but the implementation used to
+/// require a directory separator (`*/*.md`), so a root-level `ACCEPTANCE.md` was
+/// refused with a message describing it as valid.  The implementation now accepts
+/// it, and this test is the pin: it fails if the separator requirement returns.
+///
+/// The second half is the control: the token is still required, so the rule was
+/// not merely loosened into "any root-level markdown file".
+#[test]
+fn a_repo_root_level_acceptance_artifact_is_accepted_as_the_marking_source() {
+    const ROOT_ACCEPTANCE: &str = "ACCEPTANCE.md";
+    let sandbox = Sandbox::new();
+    sandbox.accept(&["init"]).pipe("accept-commit init");
+
+    let sha = sandbox.commit_path(
+        ROOT_ACCEPTANCE,
+        "# repository acceptance\n\nverdict: pass\n",
+        "commit a repo-root-level acceptance artifact",
+    );
+    sandbox
+        .accept(&["mark", &sha, ROOT_ACCEPTANCE, "pass"])
+        .pipe("mark with a repo-root-level acceptance artifact");
+
+    // The writer accepted it; the gate must agree, or the two have drifted.
+    let ledger = sandbox.ledger_text();
+    assert!(
+        ledger.contains(ROOT_ACCEPTANCE),
+        "the ledger must record the root-level marking source:\n{ledger}"
+    );
+    let verify = sandbox.accept(&["verify"]);
+    assert!(
+        verify.status.success(),
+        "verify must accept the same ledger:\n{}",
+        text(&verify)
+    );
+    sandbox
+        .push(&["origin", "master"])
+        .pipe("the accepted push");
+    assert_eq!(sandbox.bare_ok(&["rev-parse", "master"]), sha);
+
+    // Control: the token is still required, and so is a `.md` extension.
+    let other = sandbox.commit_path("NOTES.md", "# notes\n", "commit a plain markdown file");
+    let refused = sandbox.accept(&["mark", &other, "NOTES.md", "pass"]);
+    assert!(
+        !refused.status.success(),
+        "a root-level `.md` without the token must still be refused:\n{}",
+        text(&refused)
+    );
+    assert_mentions(&text(&refused), "ACCEPTANCE", "token requirement");
+}
+
 /// DR-81 ⑤: the **gate** must enforce the same rule, fail closed.  A hand-written
 /// ledger whose record cites a round report is not usable, so every push is
 /// refused before any commit is judged — the writer cannot be the only guard.

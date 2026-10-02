@@ -2236,6 +2236,12 @@ impl<'a> BatterySession<'a> {
         // `Input.get_axis("move_left","move_right")` returned 0 and the
         // character could not move horizontally whatever the game's code did.
         let mut held_in_game: Vec<&str> = Vec::new();
+        // DR-82 ①: was the jump window of this pass really driven from the
+        // ground?  A window whose ground probe refused is **unobserved**, and the
+        // raw document must say so — a `jump_reading` attached to a window the
+        // harness declined to drive would let a reader score a fall (or an arc
+        // the game never produced) as evidence.
+        let mut jump_driven = false;
         for (label, action, frames, expect_movement) in [
             ("move_right", "move_right", 60u64, true),
             ("move_right_release", "move_right", 10, false),
@@ -2264,6 +2270,80 @@ impl<'a> BatterySession<'a> {
                 ));
             }
 
+            // DR-82 ①: **a jump window may only be driven from the ground.**
+            //
+            // `smoke-t15` measured what happens otherwise: the interaction and
+            // probe windows had already carried the player 290 px past the end of
+            // the only floor, so the `jump` window was pressed in mid-air, the
+            // recorded series was a monotone free fall (`min` at index 0,
+            // `rise = 0.0`, velocity `+42`) and the engine's `position:neq` still
+            // answered `passed=true` — a delivered input read as an observed
+            // behaviour.  The harness has no ground query, so the question "is
+            // there ground below the player?" is answered by the only reading that
+            // can answer it: a short position sample taken immediately before the
+            // injection, judged by [`player_is_resting_on_ground`].  A player on a
+            // floor holds `y` exactly; a falling one does not.
+            //
+            // A probe that cannot be read **fails closed**: the window is recorded
+            // as unobserved rather than driven blind.
+            let airborne_before_jump = if action == "jump" {
+                let probe_args = json!({
+                    "node_path": "Player",
+                    "properties": ["position"],
+                    "frame_count": JUMP_GROUND_PROBE_FRAMES,
+                    "frame_interval": 1,
+                });
+                let resting = match self
+                    .call("running_game_get_node_property_samples", probe_args.clone())
+                    .await
+                {
+                    Ok(call) => {
+                        let parsed = unwrap_mcp_payload(&call.payload);
+                        let resting =
+                            player_is_resting_on_ground(required_sample_pairs(&parsed).as_deref());
+                        calls.push(labeled(
+                            call_ok(
+                                "running_game_get_node_property_samples",
+                                &probe_args,
+                                &call.payload,
+                                &call.correlation,
+                            ),
+                            "jump:ground_probe",
+                        ));
+                        resting
+                    }
+                    Err(failure) => {
+                        calls.push(labeled(
+                            call_fail(
+                                "running_game_get_node_property_samples",
+                                &probe_args,
+                                &failure,
+                            ),
+                            "jump:ground_probe",
+                        ));
+                        false
+                    }
+                };
+                summaries.push(format!(
+                    "{label}: JUMP_GROUND_PROBE {JUMP_GROUND_PROBE_FRAMES} frame(s) before the \
+                     injection -> resting_on_ground={resting} \
+                     (a window driven off the ground cannot be recorded as an observed jump)"
+                ));
+                if !resting {
+                    summaries.push(format!(
+                        "{label}: {JUMP_NOT_DRIVEN} (the player is not resting on ground in this \
+                         window, so pressing jump could only record gravity; the level is not \
+                         rewritten and the window is left unobserved)"
+                    ));
+                    if expect_movement {
+                        ok = false;
+                    }
+                }
+                !resting
+            } else {
+                false
+            };
+
             // DR-69 ④: the BEFORE frame of this window, captured while the
             // game is in the state the samples below are compared against.
             let before_frame = self.capture_replay_frame(label, "before", &mut calls).await;
@@ -2284,7 +2364,13 @@ impl<'a> BatterySession<'a> {
             //     unknown channel there is no point pretending: the same tools
             //     that failed the probe fail here, and the recording is an honest
             //     gap.
-            let game_injected = if capability == InputChannelCapability::GameInputChannelOk {
+            //
+            //     DR-82 ①: a jump window whose probe said the player is airborne is
+            //     not injected at all — recording "the jump had no effect" would
+            //     blame the project for a drive the harness chose.
+            let game_injected = if airborne_before_jump {
+                false
+            } else if capability == InputChannelCapability::GameInputChannelOk {
                 let (injected, refusal) =
                     self.semantic_inject_action(action, label, &mut calls).await;
                 if let Some(refusal) = refusal {
@@ -2292,6 +2378,9 @@ impl<'a> BatterySession<'a> {
                 }
                 if injected {
                     held_in_game.push(action);
+                }
+                if injected && action == "jump" {
+                    jump_driven = true;
                 }
                 injected
             } else {
@@ -2377,6 +2466,23 @@ impl<'a> BatterySession<'a> {
                     if let Some(quadruple) = &quadruple {
                         entry["quadruple"] = quadruple.clone();
                     }
+                    // DR-82 ①: the window's own `y` shape, recorded next to the
+                    // quadruple so "an arc was observed" is checkable from the raw
+                    // document rather than from the summary sentence.  Only a
+                    // window that was **driven** carries one: an unobserved window
+                    // has no jump reading to score, whatever the game happened to
+                    // do while it was not being driven.
+                    let jump = (action == "jump" && jump_driven)
+                        .then(|| jump_reading(&parsed))
+                        .flatten();
+                    if let Some(reading) = jump {
+                        entry["jump_reading"] = json!({
+                            "rise": reading.rise,
+                            "monotone_fall": reading.monotone_fall,
+                            "shows_an_arc": reading.shows_an_arc(),
+                            "verdict": reading.verdict(),
+                        });
+                    }
                     calls.push(entry);
                     match quadruple {
                         None => {
@@ -2392,10 +2498,35 @@ impl<'a> BatterySession<'a> {
                             // `move_left` as movement in `smoke-t8` because
                             // gravity moved `y` while `x` was pinned at 584.363
                             // for all 60 frames — a masking false green.
+                            //
+                            // DR-82 ①: for a jump the bar is higher than "the
+                            // axis moved": `smoke-t15`'s window moved `y` by
+                            // 1060 px and was still not a jump — it was a fall.
+                            // An observed jump must show an **arc**
+                            // ([`JumpReading::shows_an_arc`]), and a window that
+                            // does not is recorded as unobserved, never as a pass.
                             let movement = movement_on_intended_axis(&quadruple);
-                            if expect_movement && !movement.moved {
+                            let arc_failure = match (action == "jump", jump) {
+                                (true, Some(reading)) if !reading.shows_an_arc() => Some(reading),
+                                _ => None,
+                            };
+                            if expect_movement && (!movement.moved || arc_failure.is_some()) {
                                 ok = false;
-                                if capability == InputChannelCapability::GameInputChannelOk {
+                                if let Some(reading) = arc_failure {
+                                    summaries.push(format!(
+                                        "{label}: {frames_seen} frame(s) \
+                                         channel={GAME_PROCESS_CHANNEL} {quadruple} \
+                                         axis={} delta={:.6} rise={:.6} \
+                                         monotone_fall={} {} (a delivered jump input that only \
+                                         fell is not an observed jump; the window is recorded \
+                                         as unobserved) {editor_marker}",
+                                        movement.axis,
+                                        movement.delta,
+                                        reading.rise,
+                                        reading.monotone_fall,
+                                        reading.verdict()
+                                    ));
+                                } else if capability == InputChannelCapability::GameInputChannelOk {
                                     summaries.push(format!(
                                         "{label}: {frames_seen} frame(s) \
                                          channel={GAME_PROCESS_CHANNEL} {quadruple} \
@@ -2418,8 +2549,18 @@ impl<'a> BatterySession<'a> {
                                 summaries.push(format!(
                                     "{label}: {frames_seen} frame(s) \
                                      channel={GAME_PROCESS_CHANNEL} {quadruple} axis={} \
-                                     delta={:.6} {editor_marker}",
-                                    movement.axis, movement.delta
+                                     delta={:.6} {} {editor_marker}",
+                                    movement.axis,
+                                    movement.delta,
+                                    match jump {
+                                        Some(reading) => format!(
+                                            "rise={:.6} monotone_fall={} {}",
+                                            reading.rise,
+                                            reading.monotone_fall,
+                                            reading.verdict()
+                                        ),
+                                        None => String::new(),
+                                    }
                                 ));
                             }
                             // DR-69 ④: the AFTER frame of this window.
@@ -3758,6 +3899,133 @@ fn intended_axis(action: &str) -> &'static str {
     } else {
         "x"
     }
+}
+
+// ---------------------------------------------------------------------------
+// DR-82 ①: a jump window must be driven from the ground, and its reading must
+// be an arc
+// ---------------------------------------------------------------------------
+
+/// DR-82 ①: how many frames the pre-jump ground probe observes.
+///
+/// Two frames is the smallest series that can distinguish "resting" from
+/// "moving": a single sample says nothing about whether the player is supported.
+pub const JUMP_GROUND_PROBE_FRAMES: u64 = 2;
+
+/// DR-82 ①: the token a jump window that was **not driven** carries.
+///
+/// It is deliberately not `INPUT_HAD_NO_EFFECT`: nothing was delivered, so the
+/// window says nothing about the project's jump — the harness refused to drive it
+/// off the ground.  A reader who wants to know whether the game's jump works must
+/// see "unobserved", not "broken".
+pub const JUMP_NOT_DRIVEN: &str = "JUMP_NOT_DRIVEN";
+
+/// DR-82 ①: how much `y` may vary across the probe and still count as resting.
+///
+/// `Player.position` is a character coordinate, not a physics velocity; a player
+/// walking on a floor holds `y` exactly (the frozen `smoke-t15` interaction
+/// window sampled `263.925201416016` for every one of its 840 frames), while a
+/// falling one changes it by tens of pixels per frame.  The tolerance is
+/// therefore only there to absorb float noise.
+pub const JUMP_GROUND_EPSILON: f64 = 0.001;
+
+/// DR-82 ①: is a sampled `y` series the reading of a player **resting on
+/// ground**?
+///
+/// This is the predicate the pre-jump probe is judged with, and it is
+/// deliberately brittle: a resting player's `y` does not change at all, so a
+/// series whose `y` moves by more than [`JUMP_GROUND_EPSILON`] is *not* resting.
+/// It says nothing about the level's geometry — the harness has no ground query
+/// — but it answers the only question that matters before pressing jump: *is the
+/// player supported right now?*  `smoke-t15`'s jump window was driven 290 px past
+/// the end of the only floor, at `y = 1492.8` and falling at `+42`; a probe there
+/// reads a moving `y` and refuses the window.
+///
+/// `None` (no usable samples) is **not** resting: an unreadable probe must fail
+/// closed exactly like an unreadable channel.
+pub fn player_is_resting_on_ground(samples: Option<&[(f64, f64)]>) -> bool {
+    let Some(samples) = samples else {
+        return false;
+    };
+    if samples.len() < 2 {
+        return false;
+    }
+    let first = samples[0].1;
+    samples
+        .iter()
+        .all(|(_, y)| (y - first).abs() <= JUMP_GROUND_EPSILON)
+}
+
+/// DR-82 ①: what one jump window's `y` series really shows.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct JumpReading {
+    /// How far the player rose **above the window's first sample**, in pixels:
+    /// `first(y) - min(y)`.  Zero means the highest point *is* the first sample,
+    /// i.e. the window started at the top of whatever motion it recorded — which
+    /// is the T15 free fall (`rise = 0.0`, `min` at index 0), and a negative
+    /// value would mean the player never returned to the window's start.
+    ///
+    /// The sign is stated in this comment because the acceptance computed the
+    /// same quantity as `min - first`: `1492.8 - 1492.8 = 0.0` is the same zero,
+    /// and the sign that makes "the player rose" a positive number is this one.
+    pub rise: f64,
+    /// Is `y` non-decreasing across the whole window?
+    pub monotone_fall: bool,
+}
+
+impl JumpReading {
+    /// DR-82 ①: a window may be recorded as an **observed jump** only when it
+    /// shows an upward arc: the player's highest point comes after the window's
+    /// first sample (`rise > 0`) and the series is not a monotone fall.
+    ///
+    /// `smoke-t15`'s window had `min` at index 0 and `rise = 0.0`; it was a free
+    /// fall, and the engine's `position:neq` passed only because the position had
+    /// changed — which is exactly the `injected != moved` confusion this rule
+    /// removes.
+    pub fn shows_an_arc(&self) -> bool {
+        self.rise > 0.0 && !self.monotone_fall
+    }
+
+    /// The one-word name the record uses, so a reader can tell a rejected window
+    /// from an absent one.
+    pub fn verdict(&self) -> &'static str {
+        if self.shows_an_arc() {
+            "JUMP_ARC_OBSERVED"
+        } else if self.monotone_fall {
+            "JUMP_DEGENERATE_FALL"
+        } else {
+            "JUMP_NO_RISE"
+        }
+    }
+}
+
+/// DR-82 ①: read a `running_game_get_node_property_samples` payload's `y`
+/// series as a [`JumpReading`], or `None` when the payload carried no usable
+/// position samples (which must not be confused with a degenerate reading: no
+/// evidence is not evidence of a fall).
+pub fn jump_reading(payload: &Value) -> Option<JumpReading> {
+    let samples = payload.get("samples").and_then(Value::as_array)?;
+    let mut ys: Vec<f64> = Vec::new();
+    for sample in samples {
+        let y = sample.get("position")?.get("y")?.as_f64()?;
+        ys.push(y);
+    }
+    jump_reading_of(&ys)
+}
+
+/// DR-82 ①: the arithmetic of [`JumpReading`] over an explicit `y` series.
+///
+/// `min` and monotonicity are computed by their definitions rather than by
+/// comparing the endpoints, because the T15 window's endpoints *did* differ — it
+/// was the *shape* that made it a free fall.
+pub fn jump_reading_of(ys: &[f64]) -> Option<JumpReading> {
+    let first = *ys.first()?;
+    let min = ys.iter().copied().fold(f64::INFINITY, f64::min);
+    let monotone_fall = ys.windows(2).all(|pair| pair[1] >= pair[0]);
+    Some(JumpReading {
+        rise: first - min,
+        monotone_fall,
+    })
 }
 
 /// DR-68 ③(a): the sign `Input.get_axis("move_left","move_right")` must show

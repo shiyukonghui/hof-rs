@@ -131,9 +131,26 @@ fn purge_contents(workspace: &Path) -> anyhow::Result<()> {
 /// project at startup, so if the editor was already pointed at this workspace
 /// (which is the order the smoke books mandate: empty directory → `init` → point
 /// the editor → `run`) then a `--fresh-workspace` run deletes the directory the
-/// running editor holds open, and its next cache write answers
+/// running editor holds open, and its next cache write can answer
 /// `Cannot create file 'res://.godot/editor/filesystem_cache10'. Check user
 /// write permissions.` (`smoke-t14`).
+///
+/// **DR-82 ③ — the mechanism, corrected to the measurement.**  DR-81 ④ described
+/// that as "a running editor does not re-import, so it does not rebuild
+/// `.godot`".  `smoke-t15` weakened the general claim: in that round the editor
+/// **was already running** when `--fresh-workspace` purged the workspace
+/// (`13:52:17`) and it *did* rebuild `.godot/**` afterwards (11 files, mtimes
+/// `14:05:10`–`14:30:51`, including `filesystem_cache10`), so the cache write
+/// failure never appeared at all (`anchor_line_count=0`, judged `count=0`).
+/// Whether a running editor recreates the tree is therefore **not determined
+/// here** — it depends on when the editor next needs to write (its rescan / scene
+/// open), which is editor behaviour this project does not instrument.  Both
+/// outcomes have been observed on real hardware: `smoke-t14`'s running editor did
+/// not rebuild and produced the line; `smoke-t15`'s did.
+///
+/// Nothing in the gate or the verdict depends on which one happens: the
+/// precondition below is safe under both, and DR-81 ① classifies the line as
+/// editor infrastructure when it does appear.
 ///
 /// The precondition is therefore: **either restart/close the editor after a
 /// `--fresh-workspace` purge, or expect that one editor-infrastructure line on

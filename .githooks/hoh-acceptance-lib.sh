@@ -64,11 +64,22 @@ hoh_is_stamp() {
 # component must carry the literal token `ACCEPTANCE`.  A round report
 # (`*-REPORT.md`) cannot contain it, and neither can any other object under
 # audit, so the audited thing can never authorise its own push.
+#
+# DR-82 ④ (A-2): the rule and this comment both say "a repo-root-relative `.md`
+# file whose name contains the token", but the case pattern used to require
+# `*/*.md`, i.e. **at least one directory separator**.  A root-level
+# `ACCEPTANCE.md` — which the rule's own words accept — was refused with a message
+# that described it as valid, so an operator following the message was surprised
+# (fail-closed, so no security impact, but the implementation disagreed with its
+# documentation).  The pattern is now `*.md`, which admits every repo-root-relative
+# markdown path; absolute paths and backslash paths are still refused, and the
+# final-component token test is unchanged.  `tests/push_gate.rs` pins both the
+# root-level case and the refusal of a round report.
 HOH_ACCEPTANCE_TOKEN=ACCEPTANCE
 hoh_is_acceptance_report() {
     case $1 in
         ''|/*|*\\*|.) return 1 ;;
-        */*.md) ;;
+        *.md) ;;
         *) return 1 ;;
     esac
     case ${1##*/} in
