@@ -22,8 +22,9 @@ use std::sync::{Arc, Mutex};
 use common::*;
 use hof_rs::adapter::godot::{
     GodotAdapter, COIN_CONSUMING_BATTERY_STEPS, COIN_OBSERVING_BATTERY_STEP,
+    GROUND_CONSUMING_BATTERY_STEPS, GROUND_NEEDING_BATTERY_STEP, INPUT_JUMP_STEP_ID,
     INTERACTION_BATCH_FRAMES, INTERACTION_DRIVE_FRAMES, INTERACTION_MAX_BATCHES,
-    SPEC_MAX_TRAVERSAL_SECONDS,
+    JUMP_REPLAY_FRAMES, REPLAY_HORIZONTAL_WINDOWS, SPEC_MAX_TRAVERSAL_SECONDS,
 };
 use hof_rs::adapter::BatteryRecord;
 use hof_rs::config::{GodotConfig, HohConfig};
@@ -420,6 +421,20 @@ const FIXTURE_REPLAY_PX_PER_FRAME: f64 = 216.33813476562 / 60.0;
 /// exists to make: the jump is grounded only if it is driven **before** the
 /// windows that consume the ground.  Nothing here is read back from a level.
 const FIXTURE_LEDGE_X: f64 = 6_600.0;
+
+/// DR-84: where the **interaction window's own drive** ends on the frozen level.
+///
+/// The window presses `move_right`, samples a whole 60-frame
+/// batch and only then reads the goal flag, so its drive ends on the first batch
+/// boundary at or past the goal's trigger:
+/// `60 + ceil((6368 - 60) / 220) * 220 = 6440`.  That is the position a jump
+/// window is left standing at when the interaction drive runs before it — the
+/// geometry a level whose goal sits near its floor's edge has to survive.  It is
+/// derived from the fixture's own constants, never copied from a level.
+fn interaction_drive_end_x() -> f64 {
+    let batches = ((FIXTURE_GOAL_TRIGGER_X - FIXTURE_SPAWN_X) / FIXTURE_PX_PER_BATCH).ceil();
+    FIXTURE_SPAWN_X + batches * FIXTURE_PX_PER_BATCH
+}
 
 struct FixtureChannel {
     calls: Mutex<Vec<(String, Value)>>,
@@ -1977,6 +1992,9 @@ async fn green_battery_records_every_step_and_copies_into_the_candidate() {
             "play_scene_ready",
             "scene_tree",
             "screenshot",
+            // DR-84: the window that needs the ground runs before every window that
+            // consumes it (the jump is driven at the level's own start).
+            "input_jump",
             // DR-78 ③: the observing window runs before the windows that can
             // consume what it observes (F-T11-3).
             "interaction_evidence",
@@ -2040,10 +2058,24 @@ async fn green_battery_records_every_step_and_copies_into_the_candidate() {
     );
     assert!(
         replay.record.observation.contains("move_right")
-            && replay.record.observation.contains("jump")
             && replay.record.observation.contains("move_left"),
-        "all three named actions must be replayed: {}",
+        "the horizontal actions must be replayed: {}",
         replay.record.observation
+    );
+    // DR-84: the jump window is a step of its own now; its observation still names
+    // it in the same shape.
+    let jump = step(&run.records, INPUT_JUMP_STEP_ID);
+    assert_eq!(jump.record.kind, hof_rs::model::ExecKind::Replay);
+    assert!(
+        jump.record.observation.contains("jump"),
+        "the jump window must be replayed: {}",
+        jump.record.observation
+    );
+    assert!(
+        jump.record.observation.contains("before_position")
+            && jump.record.observation.contains("after_position"),
+        "the jump window's before/after positions must be recorded: {}",
+        jump.record.observation
     );
 
     // Readiness waited for the game before touching it.
@@ -3126,10 +3158,10 @@ async fn the_input_replay_injection_is_semantic_not_gdscript() {
     let channel = Arc::new(FixtureChannel::green());
     let run = run_battery(temp.path(), channel.clone(), 30).await;
 
-    for (action, label) in [
-        ("move_right", "move_right"),
-        ("jump", "jump"),
-        ("move_left", "move_left"),
+    for (action, label, raw_step) in [
+        ("move_right", "move_right", "input_replay"),
+        ("jump", "jump", INPUT_JUMP_STEP_ID),
+        ("move_left", "move_left", "input_replay"),
     ] {
         let injected = channel.calls_of("running_game_play_input_recording");
         assert!(
@@ -3152,10 +3184,12 @@ async fn the_input_replay_injection_is_semantic_not_gdscript() {
         );
 
         // The step's own record carries the semantic reader under a label that
-        // names the action, so the reading is attributable.
+        // names the action, so the reading is attributable.  DR-84: the jump
+        // window's raw document is its own step.
         let raw: Value = serde_json::from_str(&read(
             &run.run_dir
-                .join("iter-1/candidate/.hoh/deterministic/raw/input_replay.json"),
+                .join("iter-1/candidate/.hoh/deterministic/raw")
+                .join(format!("{raw_step}.json")),
         ))
         .unwrap();
         let labels: Vec<String> = raw["calls"]
@@ -3173,23 +3207,29 @@ async fn the_input_replay_injection_is_semantic_not_gdscript() {
         );
     }
 
-    // The position evidence is the semantic sample's quadruple.
-    let raw: Value = serde_json::from_str(&read(
-        &run.run_dir
-            .join("iter-1/candidate/.hoh/deterministic/raw/input_replay.json"),
-    ))
-    .unwrap();
-    let quadruples: Vec<&Value> = raw["calls"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .filter_map(|call| call.get("quadruple"))
-        .collect();
+    // The position evidence is the semantic sample's quadruple.  DR-84: the jump
+    // window's quadruple lives in its own step, so both documents are read.
+    let mut quadruples: Vec<Value> = Vec::new();
+    for step_id in [INPUT_JUMP_STEP_ID, "input_replay"] {
+        let raw: Value = serde_json::from_str(&read(
+            &run.run_dir
+                .join("iter-1/candidate/.hoh/deterministic/raw")
+                .join(format!("{step_id}.json")),
+        ))
+        .unwrap();
+        quadruples.extend(
+            raw["calls"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter_map(|call| call.get("quadruple").cloned()),
+        );
+    }
     assert!(
         quadruples.len() >= 4,
-        "at least one game-process quadruple per replayed action (plus the probe's own sample): {raw}"
+        "at least one game-process quadruple per replayed action: {quadruples:?}"
     );
-    for quadruple in quadruples {
+    for quadruple in &quadruples {
         assert_eq!(quadruple["channel"], json!("game_process"));
     }
 }
@@ -3541,6 +3581,20 @@ fn replay_calls(run: &BatteryRun) -> Vec<Value> {
     let raw: Value = serde_json::from_str(&read(
         &run.run_dir
             .join("iter-1/candidate/.hoh/deterministic/raw/input_replay.json"),
+    ))
+    .unwrap();
+    raw["calls"].as_array().cloned().unwrap_or_default()
+}
+
+/// DR-84: the `input_jump` step's raw call list, in arrival order.
+///
+/// The jump window is a battery step of its own from DR-84 on, so the raw
+/// document that carries its ground probe, its injection and its `jump_reading`
+/// is `raw/input_jump.json`.
+fn jump_calls(run: &BatteryRun) -> Vec<Value> {
+    let raw: Value = serde_json::from_str(&read(
+        &run.run_dir
+            .join("iter-1/candidate/.hoh/deterministic/raw/input_jump.json"),
     ))
     .unwrap();
     raw["calls"].as_array().cloned().unwrap_or_default()
@@ -4132,7 +4186,7 @@ async fn a_jump_window_over_a_gap_is_rejected_instead_of_passed() {
     let channel = Arc::new(FixtureChannel::green().with_jump(JumpMode::MonoToneFall));
     let run = run_battery(root, channel.clone(), 30).await;
 
-    let calls = replay_calls(&run);
+    let calls = jump_calls(&run);
     assert!(
         calls
             .iter()
@@ -4152,7 +4206,7 @@ async fn a_jump_window_over_a_gap_is_rejected_instead_of_passed() {
         );
     }
 
-    let replay = step(&run.records, "input_replay");
+    let replay = step(&run.records, INPUT_JUMP_STEP_ID);
     let observation = &replay.record.observation;
     assert!(
         observation.contains("JUMP_NOT_DRIVEN"),
@@ -4178,13 +4232,13 @@ async fn a_monotone_fall_is_not_recorded_as_an_observed_jump() {
     );
     let run = run_battery(root, channel, 30).await;
 
-    let calls = replay_calls(&run);
+    let calls = jump_calls(&run);
     assert_eq!(
         scored_jump_arcs(&calls),
         0,
         "the T15 shape must never be scored as a jump window"
     );
-    let replay = step(&run.records, "input_replay");
+    let replay = step(&run.records, INPUT_JUMP_STEP_ID);
     let observation = &replay.record.observation;
     assert!(
         observation.contains("JUMP_NOT_DRIVEN"),
@@ -4206,7 +4260,7 @@ async fn a_jump_driven_from_the_ground_is_recorded_as_an_arc() {
     let channel = Arc::new(FixtureChannel::green().with_jump(JumpMode::Ballistic));
     let run = run_battery(root, channel, 30).await;
 
-    let calls = replay_calls(&run);
+    let calls = jump_calls(&run);
     let reading =
         jump_reading_entry(&calls).expect("a ground-driven jump must carry its own reading");
     assert_eq!(reading["shows_an_arc"], json!(true), "{reading}");
@@ -4224,19 +4278,26 @@ async fn a_jump_driven_from_the_ground_is_recorded_as_an_arc() {
         "the arc must have been driven after a ground probe"
     );
 
-    let replay = step(&run.records, "input_replay");
+    let replay = step(&run.records, INPUT_JUMP_STEP_ID);
     assert!(
         replay.record.observation.contains("JUMP_ARC_OBSERVED"),
         "the observation must name the arc: {}",
         replay.record.observation
     );
     // The three regression pins: the other two movement windows and the two
-    // closure assertions keep their existing verdicts in the same run.
+    // closure assertions keep their existing verdicts in the same run.  DR-84:
+    // the horizontal windows are the *other* pass, so they are read there.
+    let horizontal = step(&run.records, "input_replay");
     assert!(
-        replay.record.observation.contains("move_right:")
-            && replay.record.observation.contains("move_left:"),
+        horizontal.record.observation.contains("move_right:")
+            && horizontal.record.observation.contains("move_left:"),
         "the horizontal windows must still be exercised: {}",
-        replay.record.observation
+        horizontal.record.observation
+    );
+    assert!(
+        horizontal.ok,
+        "the horizontal pass is still green: {}",
+        horizontal.record.observation
     );
     assert!(
         replay
@@ -4267,13 +4328,13 @@ async fn an_airborne_start_and_an_unreadable_probe_both_fail_closed() {
         let channel = Arc::new(FixtureChannel::green().with_jump(mode));
         let run = run_battery(temp.path(), channel, 30).await;
 
-        let calls = replay_calls(&run);
+        let calls = jump_calls(&run);
         assert_eq!(
             scored_jump_arcs(&calls),
             0,
             "{what} must never be scored as an observed jump"
         );
-        let replay = step(&run.records, "input_replay");
+        let replay = step(&run.records, INPUT_JUMP_STEP_ID);
         let observation = &replay.record.observation;
         assert!(
             observation.contains("JUMP_NOT_DRIVEN"),
@@ -4294,7 +4355,7 @@ async fn a_jump_window_with_no_rise_is_rejected_too() {
     let channel = Arc::new(FixtureChannel::green().with_jump(JumpMode::RiseZero));
     let run = run_battery(temp.path(), channel, 30).await;
 
-    let calls = replay_calls(&run);
+    let calls = jump_calls(&run);
     let reading =
         jump_reading_entry(&calls).expect("the window was driven, so its reading is recorded");
     assert_eq!(
@@ -4310,7 +4371,7 @@ async fn a_jump_window_with_no_rise_is_rejected_too() {
     assert_eq!(reading["shows_an_arc"], json!(false), "{reading}");
     assert_eq!(reading["verdict"], json!("JUMP_NO_RISE"), "{reading}");
 
-    let replay = step(&run.records, "input_replay");
+    let replay = step(&run.records, INPUT_JUMP_STEP_ID);
     assert!(
         !replay.record.observation.contains("JUMP_ARC_OBSERVED"),
         "a window with `rise = 0` may never be scored as an arc: {}",
@@ -4429,7 +4490,7 @@ async fn a_level_whose_ground_ends_before_the_walk_still_shows_a_grounded_jump_a
     let channel = Arc::new(FixtureChannel::green().with_ledge(FIXTURE_LEDGE_X));
     let run = run_battery(root, channel, 30).await;
 
-    let calls = replay_calls(&run);
+    let calls = jump_calls(&run);
     let reading =
         jump_reading_entry(&calls).expect("a grounded jump window must carry its own reading");
     assert_eq!(reading["shows_an_arc"], json!(true), "{reading}");
@@ -4440,7 +4501,7 @@ async fn a_level_whose_ground_ends_before_the_walk_still_shows_a_grounded_jump_a
     );
     assert_eq!(reading["monotone_fall"], json!(false), "{reading}");
 
-    let replay = step(&run.records, "input_replay");
+    let replay = step(&run.records, INPUT_JUMP_STEP_ID);
     assert!(
         replay.ok,
         "the replay is green: {}",
@@ -4461,49 +4522,111 @@ async fn a_level_whose_ground_ends_before_the_walk_still_shows_a_grounded_jump_a
 /// DR-83: the property is the **drive order**, not an accident of one level: the
 /// jump window's own calls must arrive before the first window that drives the
 /// player horizontally — that window is what takes the ground away.
+///
+/// DR-84 generalises this pin: the DR-83 form keyed on the literal action name
+/// `move_right` *inside* the replay pass, and is superseded by
+/// `the_jump_window_is_driven_before_the_windows_that_consume_the_ground` in the
+/// DR-84 section, which reads the named
+/// [`GROUND_NEEDING_BATTERY_STEP`]/[`GROUND_CONSUMING_BATTERY_STEPS`] list off the
+/// battery's own record order.  The DR-83 assertions are kept here, pointed at the
+/// jump step's own raw document, so the window-level claim (the ground probe
+/// precedes every horizontal sample of the *whole battery*) is still pinned as
+/// well as the step-level one.
 #[tokio::test]
-async fn the_jump_window_is_driven_before_the_windows_that_consume_the_ground() {
+async fn the_jump_windows_ground_probe_precedes_every_horizontal_sample_of_the_run() {
     let temp = tempfile::tempdir().unwrap();
     let root = temp.path();
     let channel = Arc::new(FixtureChannel::green().with_ledge(FIXTURE_LEDGE_X));
     let run = run_battery(root, channel, 30).await;
 
-    let calls = replay_calls(&run);
+    let calls = jump_calls(&run);
     let probe = calls
         .iter()
         .position(|call| call["label"] == json!("jump:ground_probe"))
         .expect("the jump window must be preceded by a game-process ground probe");
-    let first_horizontal = calls
-        .iter()
-        .position(|call| {
-            call.get("quadruple")
+
+    // Every sample of the whole run that carries a horizontal quadruple, in the
+    // order the battery really recorded it: none of them may precede the probe.
+    let mut horizontal_positions: Vec<(String, usize)> = Vec::new();
+    for step_id in ["input_jump", "input_replay", "input_channel_probe"] {
+        let raw: Value = serde_json::from_str(&read(
+            &run.run_dir
+                .join("iter-1/candidate/.hoh/deterministic/raw")
+                .join(format!("{step_id}.json")),
+        ))
+        .unwrap();
+        for (index, call) in raw["calls"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default()
+            .iter()
+            .enumerate()
+        {
+            if let Some(action) = call
+                .get("quadruple")
                 .and_then(|quadruple| quadruple["action"].as_str())
-                == Some("move_right")
-        })
-        .expect("the replay must still drive `move_right`");
+            {
+                if action == "move_right" || action == "move_left" {
+                    horizontal_positions.push((step_id.to_string(), index));
+                }
+            }
+        }
+    }
     assert!(
-        probe < first_horizontal,
-        "the jump must be driven before the window that carries the player off the floor \
-         (ground probe at {probe}, first `move_right` sample at {first_horizontal})"
+        !horizontal_positions.is_empty(),
+        "the run must still drive a horizontal window"
     );
+    assert!(
+        probe < calls.len(),
+        "the ground probe must be recorded inside the jump step (probe at {probe})"
+    );
+    // The window-level claim: within the jump step the probe is the first
+    // position reading, and every horizontal sample lives in a *later* step.
+    let order: Vec<&str> = run
+        .records
+        .iter()
+        .map(|record| record.step_id.as_str())
+        .collect();
+    let jump_index = order
+        .iter()
+        .position(|id| *id == INPUT_JUMP_STEP_ID)
+        .expect("the jump step runs");
+    for (step_id, _) in &horizontal_positions {
+        let index = order
+            .iter()
+            .position(|id| id == step_id)
+            .unwrap_or_else(|| panic!("`{step_id}` must be a battery step: {order:?}"));
+        assert!(
+            jump_index < index,
+            "the jump step (index {jump_index}) must run before the step `{step_id}` whose \
+             horizontal sample takes the ground away (index {index}): {order:?}"
+        );
+    }
 }
 
 /// DR-83: the pass starts from a **clean** input state.
 ///
-/// The channel probe presses `move_right` and never releases it, so the first
-/// window of the pass has to clear it on the game-process API before it takes its
-/// reading — otherwise the player keeps walking while the two-frame ground probe
-/// is taken, and on a floor that ends a few pixels further on the probe reads a
-/// fall where the player was still standing.  The pass's own first input call must
-/// therefore be a release, and the release must precede the ground probe.
+/// The channel probe presses `move_right` and never released it (before DR-83), so
+/// the first window of a pass has to clear it on the game-process API before it
+/// takes its reading — otherwise the player keeps walking while the two-frame
+/// ground probe is taken, and on a floor that ends a few pixels further on the
+/// probe reads a fall where the player was still standing.  The pass's own first
+/// input call must therefore be a release, and the release must precede the ground
+/// probe.
+///
+/// DR-84: the window that begins the battery's drive is now the jump step — it is
+/// the first window of the battery, so it is the one that cannot rely on a
+/// preceding step having been bounded (a game process may hold an action for
+/// reasons the harness never saw).  The claim is unchanged; the document it is
+/// read from moved with the window.
 #[tokio::test]
-async fn the_input_replay_pass_clears_the_previous_steps_held_action_first() {
+async fn the_jump_window_clears_the_previous_steps_held_action_first() {
     let temp = tempfile::tempdir().unwrap();
     let root = temp.path();
     let channel = Arc::new(FixtureChannel::green().with_ledge(FIXTURE_LEDGE_X));
     let run = run_battery(root, channel, 30).await;
 
-    let calls = replay_calls(&run);
+    let calls = jump_calls(&run);
     let first_play = calls
         .iter()
         .position(|call| call["tool"] == json!("running_game_play_input_recording"))
@@ -4516,12 +4639,12 @@ async fn the_input_replay_pass_clears_the_previous_steps_held_action_first() {
     assert_eq!(
         first_event["pressed"],
         json!(false),
-        "the pass's first game-process input call must clear the preceding step's held \
-         action, not press a new one: {first_event}"
+        "the pass's first game-process input call must clear the action it did not press, not \
+         press a new one: {first_event}"
     );
     assert!(
         ["move_right", "move_left"].contains(&first_event["action"].as_str().unwrap_or_default()),
-        "the cleared action must be the horizontal one the channel probe held: {first_event}"
+        "the cleared action must be the horizontal one the pass could have inherited: {first_event}"
     );
 
     let probe = calls
@@ -4549,7 +4672,7 @@ async fn a_level_with_no_usable_ground_reports_the_jump_unobserved() {
     let channel = Arc::new(FixtureChannel::green().with_ledge(0.0));
     let run = run_battery(root, channel, 30).await;
 
-    let calls = replay_calls(&run);
+    let calls = jump_calls(&run);
     assert!(
         calls
             .iter()
@@ -4565,7 +4688,7 @@ async fn a_level_with_no_usable_ground_reports_the_jump_unobserved() {
         jump_reading_entry(&calls).is_none(),
         "a window that was not driven must carry no scoreable reading"
     );
-    let replay = step(&run.records, "input_replay");
+    let replay = step(&run.records, INPUT_JUMP_STEP_ID);
     let observation = &replay.record.observation;
     assert!(
         observation.contains("JUMP_NOT_DRIVEN"),
@@ -4631,6 +4754,224 @@ async fn the_channel_probe_releases_its_own_drive_when_its_reading_is_complete()
     );
 }
 
+// ---------------------------------------------------------------------------
+// DR-84 — the jump window runs before every window that consumes the ground
+// ---------------------------------------------------------------------------
+
+/// DR-84: on a level whose goal sits **at the floor's edge**, the jump must still
+/// be driven from the ground.
+///
+/// This is the limit the DR-83 acceptance published as still open.  The DR-83
+/// reorder removed only the replay pass's own 70-frame walk; the interaction drive
+/// and the channel probe still ran first, and between them they carried the player
+/// from where the goal stopped it to
+/// `interaction_drive_end_x() + 30 * FIXTURE_REPLAY_PX_PER_FRAME` — one whole
+/// interaction batch past the goal plus the probe's own sample.  A level whose
+/// floor ends anywhere inside that span therefore lost the ground before the jump
+/// was pressed, and the harness honestly recorded `JUMP_NOT_DRIVEN`.
+///
+/// The floor here ends exactly where the goal's own drive stops it
+/// ([`interaction_drive_end_x`]), so the drive that reaches the goal is still
+/// standing on the floor and only the windows *after* it leave.  The jump can
+/// therefore be grounded only if it is driven before those windows — which is the
+/// ordering rule [`GROUND_NEEDING_BATTERY_STEP`] names.
+#[tokio::test]
+async fn a_level_whose_goal_sits_near_the_floor_edge_still_shows_a_grounded_jump_arc() {
+    let temp = tempfile::tempdir().unwrap();
+    let ledge = interaction_drive_end_x();
+    let channel = Arc::new(FixtureChannel::green().with_ledge(ledge));
+    let run = run_battery(temp.path(), channel, 30).await;
+
+    let calls = jump_calls(&run);
+    let reading = jump_reading_entry(&calls)
+        .expect("a jump window driven at the level's own start must carry a reading");
+    assert_eq!(reading["shows_an_arc"], json!(true), "{reading}");
+    assert_eq!(reading["verdict"], json!("JUMP_ARC_OBSERVED"), "{reading}");
+    assert!(
+        reading["rise"].as_f64().unwrap_or(0.0) > 0.0,
+        "the arc must rise above the window's first sample: {reading}"
+    );
+    assert_eq!(reading["monotone_fall"], json!(false), "{reading}");
+    assert!(
+        calls
+            .iter()
+            .any(|call| call["label"] == json!("jump:ground_probe")),
+        "the arc must have been driven after a ground probe"
+    );
+
+    let jump = step(&run.records, INPUT_JUMP_STEP_ID);
+    assert!(
+        jump.ok,
+        "the jump step is green: {}",
+        jump.record.observation
+    );
+    assert!(
+        jump.record.observation.contains("JUMP_ARC_OBSERVED"),
+        "the observation must name the arc: {}",
+        jump.record.observation
+    );
+    assert!(
+        !jump.record.observation.contains("JUMP_NOT_DRIVEN"),
+        "a window the probe certified must not be recorded as unobserved: {}",
+        jump.record.observation
+    );
+
+    // And the reason it could be grounded: the window ran before the drive that
+    // walks the player to the goal.
+    let order: Vec<&str> = run
+        .records
+        .iter()
+        .map(|record| record.step_id.as_str())
+        .collect();
+    let jumped = order
+        .iter()
+        .position(|id| *id == GROUND_NEEDING_BATTERY_STEP)
+        .unwrap_or_else(|| panic!("`{GROUND_NEEDING_BATTERY_STEP}` must run: {order:?}"));
+    let observing = order
+        .iter()
+        .position(|id| *id == COIN_OBSERVING_BATTERY_STEP)
+        .unwrap_or_else(|| panic!("`{COIN_OBSERVING_BATTERY_STEP}` must run: {order:?}"));
+    assert!(
+        jumped < observing,
+        "the jump window must run before the drive that walks the player to the goal \
+         (jump at {jumped}, interaction at {observing}): {order:?}"
+    );
+}
+
+/// DR-84: **the ordering rule, pinned by the named list.**
+///
+/// This replaces the DR-83 form of the same pin, which keyed on the literal action
+/// name `move_right` *inside* the replay pass.  The rule is now about battery
+/// steps, and the test reads [`GROUND_NEEDING_BATTERY_STEP`] and
+/// [`GROUND_CONSUMING_BATTERY_STEPS`] — so a future ground-consuming step is
+/// covered by adding it to the list, and no test has to be re-encoded.
+#[tokio::test]
+async fn the_jump_window_is_driven_before_the_windows_that_consume_the_ground() {
+    let temp = tempfile::tempdir().unwrap();
+    let channel = Arc::new(FixtureChannel::green().with_ledge(FIXTURE_LEDGE_X));
+    let run = run_battery(temp.path(), channel, 30).await;
+
+    let order: Vec<&str> = run
+        .records
+        .iter()
+        .map(|record| record.step_id.as_str())
+        .collect();
+    let needing = order
+        .iter()
+        .position(|id| *id == GROUND_NEEDING_BATTERY_STEP)
+        .unwrap_or_else(|| {
+            panic!("the ground-needing window `{GROUND_NEEDING_BATTERY_STEP}` must run: {order:?}")
+        });
+    for consuming in GROUND_CONSUMING_BATTERY_STEPS {
+        let index = order
+            .iter()
+            .position(|id| *id == consuming)
+            .unwrap_or_else(|| panic!("the consuming window `{consuming}` must run: {order:?}"));
+        assert!(
+            needing < index,
+            "`{GROUND_NEEDING_BATTERY_STEP}` (index {needing}) must run **before** `{consuming}` \
+             (index {index}): it holds a horizontal action while it samples the player's travel, \
+             so it can take the ground away before the jump is pressed — the `smoke-t15` \
+             mid-air jump.  Order was {order:?}"
+        );
+    }
+}
+
+/// DR-84: the rule is a **named list**, not a re-encoded literal — and the two
+/// passes' window lists are the two halves of that split.
+///
+/// A pure pin, so it is red if any of the three answers drifts:
+///
+/// * the needing window is not one of the consuming windows;
+/// * every consuming window is one of the three battery steps that really hold a
+///   horizontal action (`interaction_evidence`, `input_channel_probe`,
+///   `input_replay`);
+/// * the jump window is not among the horizontal windows the second pass drives.
+#[test]
+fn the_ground_ordering_rule_is_a_named_list_not_a_re_encoded_literal() {
+    assert_eq!(
+        GROUND_NEEDING_BATTERY_STEP, INPUT_JUMP_STEP_ID,
+        "the rule's needing window must be the step that really drives the jump"
+    );
+    assert!(
+        !GROUND_CONSUMING_BATTERY_STEPS.contains(&GROUND_NEEDING_BATTERY_STEP),
+        "a window cannot both need the ground and consume it: {GROUND_CONSUMING_BATTERY_STEPS:?}"
+    );
+    for consuming in GROUND_CONSUMING_BATTERY_STEPS {
+        assert!(
+            matches!(
+                consuming,
+                "interaction_evidence" | "input_channel_probe" | "input_replay"
+            ),
+            "`{consuming}` is not a step that holds a horizontal action; the list must name the \
+             windows that really consume the ground"
+        );
+    }
+    assert!(
+        REPLAY_HORIZONTAL_WINDOWS
+            .iter()
+            .all(|(_, action, _, _)| *action != "jump"),
+        "the horizontal pass must not drive the jump window: {REPLAY_HORIZONTAL_WINDOWS:?}"
+    );
+    assert!(
+        JUMP_REPLAY_FRAMES > 0,
+        "the jump window must sample the game it drives"
+    );
+}
+
+/// DR-84: the jump pass **bounds its own drive**.
+///
+/// The jump window is the only window of its pass now, so no successor window
+/// exists to release what it pressed — and a `jump` left held inside the game
+/// process would leak into the interaction drive and every window after it.  The
+/// same rule DR-83 pinned for the channel probe ("the drive ends where the reading
+/// that justified it ends") therefore applies to it: the step releases the action
+/// after its own frame sample.
+#[tokio::test]
+async fn the_jump_step_releases_its_own_action_when_its_reading_is_complete() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel = Arc::new(FixtureChannel::green());
+    let run = run_battery(root, channel, 30).await;
+
+    let raw: Value = serde_json::from_str(&read(
+        &run.run_dir
+            .join("iter-1/candidate/.hoh/deterministic/raw/input_jump.json"),
+    ))
+    .unwrap();
+    let events: Vec<(String, bool)> = raw["calls"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default()
+        .iter()
+        .flat_map(|call| {
+            call["args"]["events"]
+                .as_array()
+                .cloned()
+                .unwrap_or_default()
+                .into_iter()
+                .filter_map(|event| {
+                    Some((
+                        event["action"].as_str()?.to_string(),
+                        event["pressed"].as_bool()?,
+                    ))
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    let last_press = events
+        .iter()
+        .rposition(|(action, pressed)| action == "jump" && *pressed)
+        .expect("the jump step presses `jump`");
+    assert!(
+        events
+            .iter()
+            .skip(last_press + 1)
+            .any(|(action, pressed)| action == "jump" && !*pressed),
+        "the jump step must release `jump` after its own frame sample; its events were {events:?}"
+    );
+}
+
 ///
 /// The load-bearing reading must be **positional**: the engine answers `null`
 /// for the axis query on real hardware (DR-58), so an axis-value assertion
@@ -4648,27 +4989,38 @@ async fn the_input_replay_produces_before_and_after_frames_and_a_positional_asse
     );
     let parsed: Value = serde_json::from_str(&raw).expect("raw input_replay.json");
     let calls = parsed["calls"].as_array().cloned().unwrap_or_default();
+    // DR-84: the jump window's own raw document is `input_jump.json`; its labels
+    // and its positional assertion are checked there.
+    let jump_raw = read(&run.workspace.join(".hoh/deterministic/raw/input_jump.json"));
+    let jump_parsed: Value = serde_json::from_str(&jump_raw).expect("raw input_jump.json");
+    let jump_window_calls = jump_parsed["calls"].as_array().cloned().unwrap_or_default();
 
-    let labels: Vec<String> = calls
-        .iter()
-        .filter_map(|call| call["label"].as_str().map(ToOwned::to_owned))
-        .collect();
-
-    for label in ["move_right", "move_left", "jump"] {
-        assert!(
-            labels.contains(&format!("{label}:replay_frame_before")),
-            "the replay of `{label}` must capture a BEFORE frame: {labels:?}"
-        );
-        assert!(
-            labels.contains(&format!("{label}:replay_frame_after")),
-            "the replay of `{label}` must capture an AFTER frame: {labels:?}"
-        );
-        assert!(
-            labels
-                .iter()
-                .any(|entry| entry == &format!("{label}:replay_assert_moved")),
-            "the replay of `{label}` must assert the position in the game process: {labels:?}"
-        );
+    for (document, window_calls) in [("input_replay", &calls), ("input_jump", &jump_window_calls)] {
+        let labels: Vec<String> = window_calls
+            .iter()
+            .filter_map(|call| call["label"].as_str().map(ToOwned::to_owned))
+            .collect();
+        for label in ["move_right", "move_left", "jump"] {
+            // The jump window is its own step from DR-84 on.
+            if (document == "input_replay") == (label == "jump") {
+                continue;
+            }
+            assert!(
+                labels.contains(&format!("{label}:replay_frame_before")),
+                "{document}: the replay of `{label}` must capture a BEFORE frame: {labels:?}"
+            );
+            assert!(
+                labels.contains(&format!("{label}:replay_frame_after")),
+                "{document}: the replay of `{label}` must capture an AFTER frame: {labels:?}"
+            );
+            assert!(
+                labels
+                    .iter()
+                    .any(|entry| entry == &format!("{label}:replay_assert_moved")),
+                "{document}: the replay of `{label}` must assert the position in the game process: \
+                 {labels:?}"
+            );
+        }
     }
 
     // Both frames really exist, byte for byte, as this run's PNGs.
@@ -4696,8 +5048,9 @@ async fn the_input_replay_produces_before_and_after_frames_and_a_positional_asse
     }
 
     // The assertion is positional and uses the engine's own argument names.
+    // DR-84: both passes' assertions are checked, so the count is one per window.
     let mut assertions = 0;
-    for call in &calls {
+    for call in calls.iter().chain(jump_window_calls.iter()) {
         if call["tool"] != json!("running_game_assert_node_state") {
             continue;
         }
@@ -4719,12 +5072,12 @@ async fn the_input_replay_produces_before_and_after_frames_and_a_positional_asse
         );
     }
     assert!(
-        assertions >= 3,
-        "one positional assertion per moving window: {assertions}"
+        assertions >= 4,
+        "one positional assertion per moving window (three horizontal plus the jump): {assertions}"
     );
 
     assert!(
-        channel.call_count("running_game_assert_node_state") >= 3,
+        channel.call_count("running_game_assert_node_state") >= 4,
         "the assertion must really have been called"
     );
     assert!(

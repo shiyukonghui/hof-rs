@@ -68,6 +68,13 @@ const DR81_PRE_DR82_SHA256: &str =
     "7834f2d71d970d5a27b95c6fcc5a339525616c3a08bfe23dbf20e9ac8048efc8";
 /// The frozen requirements document: its C3 sentence may never be rewritten.
 const REQUIREMENTS: &str = ".spec/hof-rs/REQUIREMENTS.md";
+/// DR-84: the implementation report whose item 2 published a **key count** as a
+/// census of the redaction.  The DR-82 acceptance reclassified that as report
+/// prose (DR82A-1) and the DR-83 acceptance recorded it as still open (DR83A-1);
+/// DR-84 closes it in the appended region below this heading.
+const DR82_REPORT: &str = ".spec/hof-rs/tasks/TASK-DR82-REPORT.md";
+const DR82_DR84_HEADING: &str =
+    "# 附：DR-84 更正（**追加式**，2026-10-02）——第 2 项的键计数不是「取值已处理」的证据";
 
 /// The DR-79 erratum heading: the seal of the report **as it stood before the first
 /// erratum**.  Everything before it is the round's own text and may not move.
@@ -430,6 +437,38 @@ fn the_requirements_document_keeps_c3_and_carries_the_dr80_note() {
         REQ_PRE_DR80_SHA256,
         &bytes,
     ));
+}
+
+/// DR-84: the census claim in `TASK-DR82-REPORT.md` carries its qualifier.
+///
+/// The DR-82 batch published `real_file_census.names_as_keys_per_file = 16` with
+/// two counting methods that both count **key occurrences**.  A key count is
+/// identical before and after a redaction that preserves the key and replaces only
+/// the value, so it cannot evidence that a value was handled (DR82A-1, still open
+/// as DR83A-1).  The correction is appended below this heading — never edited into
+/// the report's own text — and it must name both the reason and the raw sidecars
+/// that remain.
+#[test]
+fn the_dr82_census_claim_carries_its_dr84_qualifier() {
+    let bytes = read(DR82_REPORT);
+    let offset = whole_line_offset(&bytes, DR82_DR84_HEADING).unwrap_or_else(|problem| {
+        panic!("{DR82_REPORT}: the DR-84 correction heading must own a whole line: {problem}")
+    });
+    let text = String::from_utf8_lossy(&bytes);
+    let correction = &text[offset..];
+    for required in ["names_as_keys_per_file", "键计数", "raw=0", "sidecar"] {
+        assert!(
+            correction.contains(required),
+            "{DR82_REPORT}: the appended correction must carry `{required}`; a reader of the \
+             original claim must be able to see why a key count is not handling evidence"
+        );
+    }
+    // The claim itself is still readable above the correction — the correction is an
+    // append, not a rewrite.
+    assert!(
+        text[..offset].contains("names_as_keys_per_file"),
+        "{DR82_REPORT}: the appended correction must not be a replacement for the claim"
+    );
 }
 
 /// Non-vacuity: the three tamper shapes really do produce violations, on **temporary

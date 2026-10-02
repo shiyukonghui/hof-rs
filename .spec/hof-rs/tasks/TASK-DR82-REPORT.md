@@ -633,3 +633,22 @@ A-4 2 条、风险(a) 1 条）；③ 1 条（`append_only_guard` 的 DR-81 pin�
 | `tests/push_gate.rs` | ④ A-2 1 条 |
 | `tests/append_only_guard.rs` | ③ DR-81 pin + ④ A-3 断言 |
 | `.spec/hof-rs/tasks/TASK-DR81-REPORT.md` | ③ 与 ④ A-3 的**追加式**更正（原文逐字节未动；§3 的 pin 钉住） |
+
+# 附：DR-84 更正（**追加式**，2026-10-02）——第 2 项的键计数不是「取值已处理」的证据
+
+- 触发：`TASK-DR83-ACCEPTANCE.md` 的 **DR83A-1**（其上承 `TASK-DR82-ACCEPTANCE.md` 的 **DR82A-1**）。
+  DR-83 把这条判为「报告散文」并记为「留给后续清理」；本更正**关闭**它。
+- **被更正的句子**（原文逐字节保留在上面 §0 机器块与 §2.3，本文件未做任何就地编辑）：
+  §2.3 的 `real_file_census.names_as_keys_per_file = 16`，以及同一节的两法对照表。
+- **更正**：那两个方法数的都是**键的出现次数**。本批的修复**保留键、只替换取值**（DR-72 ③：
+  键不是 span），因此**键计数在脱敏前后必然相同**——仓外对照（方法抄自 `tests/secret_hygiene.rs`
+  自身的 helper）：在转义与未转义两种编码下 **keys = 3 vs 3**，而**取值 3 vs 0**。
+  ⇒ 「16」**不能**作为「取值已被处理」的证据；能作证据的是**取值感知**的计数（`raw = 0`）。
+- **并且**：冻结的 `runs/smoke-t15/iter-1/traj/*.redacted.json` 旁路里，**键背后的取值仍然原文存活**
+  （`keys_raw = 12`、`keys_redacted = 0`；另有两个新声明名 `HOH_TOOLS_POLICY=` / `HOH_WORKSPACE=`
+  的赋值形各 2 处）。本批**没有**重写冻结证据，所以这是**已接受的遗留**，不是「已修好」。
+- **本更正是纯追加**：上面全部字节（首次更正头之前的 44,184 B，sha256
+  `319397fdb369ea95c63e2eac7d4eaacd25b7825e73313e9afe863f5eb1a8e406`）逐字节未动。
+  机械钉：`tests/append_only_guard.rs::the_dr82_census_claim_carries_its_dr84_qualifier`
+  要求本标题独占一行，且其后的更正文字必须带上 `names_as_keys_per_file`、`键计数`、
+  `raw=0` 与 `sidecar` 四个词。

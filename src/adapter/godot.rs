@@ -655,6 +655,28 @@ impl<'a> BatterySession<'a> {
         // `the_coin_observing_window_runs_before_every_consuming_window` in
         // `tests/evidence_battery.rs`, which runs the battery and reads the
         // order of the records it produced.
+        //
+        // DR-84: the **ground** rule one level up from the window rule.  The jump
+        // is the one window whose evidence needs the player standing on the
+        // ground, and every step below this line holds a horizontal action while
+        // it samples the player's travel, so it can take that ground away.
+        // `smoke-t15` measured the cost of running the jump later even after
+        // DR-83 reordered the replay's own windows: the interaction window stopped
+        // on the goal at `x = 3257`, the channel probe added its 30-frame sample
+        // and the replay's horizontal windows added 70 more frames, and the jump
+        // ended up pressed in mid-air.  DR-83 bounded the replay's own walk, but
+        // the interaction drive and the channel probe still ran first and between
+        // them can carry the player a whole interaction batch (`220 px` on the
+        // frozen level) past the goal plus the probe's own sample, so a level
+        // whose goal sits near its floor's edge still lost the ground.  The jump
+        // window therefore runs **before every window that consumes the ground**:
+        // [`GROUND_NEEDING_BATTERY_STEP`] before
+        // [`GROUND_CONSUMING_BATTERY_STEPS`], pinned by
+        // `evidence_battery::the_jump_window_is_driven_before_the_windows_that_consume_the_ground`.
+        // The coin rule is untouched: the observing window still runs before the
+        // probe and the horizontal replay pass, which are the windows that sweep
+        // coins.  The jump window drives only `jump`, so it consumes neither.
+        self.step_input_jump().await?;
         self.step_interaction_evidence(scene_tree.clone()).await?;
         self.channel = self.step_input_channel_probe().await?;
         self.step_input_replay().await?;
@@ -2174,10 +2196,56 @@ impl<'a> BatterySession<'a> {
     /// `editor_simulate_input_action` is kept only as a supplementary record and
     /// is labelled `EDITOR_SIDE_INJECTION` everywhere it appears, because it can
     /// never reach the game process.
+    /// DR-84: the jump window runs **first** of the battery's driving steps, so it
+    /// is probed at the position the level itself starts the player at.
+    ///
+    /// It is the only window of its pass, and it is driven before the channel
+    /// probe has classified the input channel; the pass therefore reads the
+    /// channel from its own injection instead of being told it (see
+    /// [`Self::run_replay_windows`]).
+    async fn step_input_jump(&mut self) -> anyhow::Result<()> {
+        self.run_replay_windows(
+            INPUT_JUMP_STEP_ID,
+            vec!["F2".to_string()],
+            &[("jump", "jump", JUMP_REPLAY_FRAMES, true)],
+            None,
+        )
+        .await
+    }
+
+    /// DR-68 ③ / DR-82 ① / DR-83: the horizontal replay pass.
+    ///
+    /// It keeps the three horizontal windows the battery has always driven and
+    /// runs after the channel probe, so it is handed the probe's own verdict.
     async fn step_input_replay(&mut self) -> anyhow::Result<()> {
+        self.run_replay_windows(
+            INPUT_REPLAY_STEP_ID,
+            vec!["F1".to_string(), "F2".to_string(), "F3".to_string()],
+            &REPLAY_HORIZONTAL_WINDOWS,
+            Some(self.channel.capability),
+        )
+        .await
+    }
+
+    /// DR-84: one pass of replay windows, shared by the jump window and the
+    /// horizontal pass.
+    ///
+    /// `windows` is the ordered list of `(label, action, frames, expect_movement)`
+    /// the pass drives; `known_channel` is the input-channel verdict the pass
+    /// starts from, or `None` when the pass runs **before** the channel probe (the
+    /// jump window's case, DR-84): it then takes the verdict from its own first
+    /// injection, so a refused action is still reported as a refusal rather than
+    /// as a delivered input with no effect.
+    async fn run_replay_windows(
+        &mut self,
+        step_id: &str,
+        supports: Vec<String>,
+        windows: &[(&str, &str, u64, bool)],
+        known_channel: Option<InputChannelCapability>,
+    ) -> anyhow::Result<()> {
         let mut step = BatteryStep {
-            id: "input_replay".to_string(),
-            supports: vec!["F1".to_string(), "F2".to_string(), "F3".to_string()],
+            id: step_id.to_string(),
+            supports,
             timeout_secs: self.limits.timeout_seconds,
             retries: self.limits.max_retries,
         };
@@ -2185,7 +2253,10 @@ impl<'a> BatterySession<'a> {
         let mut summaries: Vec<String> = Vec::new();
         let mut ok = true;
         let mut needs_p3 = false;
-        let capability = self.channel.capability;
+        // DR-84: the channel the pass judges with.  It is the probe's verdict when
+        // the pass runs after the probe, and the first injection's own reading when
+        // it does not.
+        let mut capability = known_channel;
 
         // DR-33/DR-35: the editor-side InputMap is recorded as **supplementary**
         // evidence only.  `smoke-t5` proved it cannot speak for the game process:
@@ -2245,8 +2316,16 @@ impl<'a> BatterySession<'a> {
         };
         summaries.push(format!(
             "channel={} ({})",
-            capability.code(),
-            self.channel.detail
+            capability
+                .map(InputChannelCapability::code)
+                .unwrap_or("CHANNEL_NOT_YET_READ"),
+            if self.channel.detail.is_empty() {
+                "this pass runs before the channel probe, so it reads the channel from its own \
+                 injection (DR-84)"
+                    .to_string()
+            } else {
+                self.channel.detail.clone()
+            }
         ));
         summaries.push(editor_note);
 
@@ -2276,15 +2355,15 @@ impl<'a> BatterySession<'a> {
         // window whose evidence needs the ground; `move_right` / `move_left` are
         // the windows that take it away.  This is the DR-78 ③ rule ("the observing
         // window runs before the windows that consume what it observes") applied to
-        // the ground instead of to the coin counter, and it is pinned by
-        // `evidence_battery::the_jump_window_is_driven_before_the_windows_that_consume_the_ground`.
-        for (label, action, frames, expect_movement) in [
-            ("jump", "jump", 30u64, true),
-            ("move_right", "move_right", 60, true),
-            ("move_right_release", "move_right", 10, false),
-            ("move_left", "move_left", 60, true),
-        ] {
-            if capability == InputChannelCapability::ActionNotBound {
+        // the ground instead of to the coin counter.
+        //
+        // DR-84: the jump window is no longer a window of this pass at all — it has
+        // its own step ([`INPUT_JUMP_STEP_ID`]) which runs before every step in
+        // [`GROUND_CONSUMING_BATTERY_STEPS`], so the pass below drives only the
+        // horizontal windows and the ground cannot have been taken away before the
+        // jump whatever the level's goal position is.
+        for (label, action, frames, expect_movement) in windows.iter().copied() {
+            if capability == Some(InputChannelCapability::ActionNotBound) {
                 // DR-35: only a *game-process* absence reaches this verdict.
                 needs_p3 = true;
                 ok = false;
@@ -2431,11 +2510,64 @@ impl<'a> BatterySession<'a> {
             //     blame the project for a drive the harness chose.
             let game_injected = if airborne_before_jump {
                 false
-            } else if capability == InputChannelCapability::GameInputChannelOk {
+            } else if capability == Some(InputChannelCapability::GameInputChannelOk) {
                 let (injected, refusal) =
                     self.semantic_inject_action(action, label, &mut calls).await;
                 if let Some(refusal) = refusal {
                     summaries.push(format!("{label}: {refusal}"));
+                }
+                if injected {
+                    held_in_game.push(action);
+                }
+                if injected && action == "jump" {
+                    jump_driven = true;
+                }
+                injected
+            } else if capability.is_none() {
+                // DR-84: the pass runs **before** the channel probe (the jump
+                // window's case), so there is no verdict to be told; it is read
+                // from this window's own injection.  The refusal is classified
+                // with the same discipline the probe uses — the code **and** the
+                // engine's own `ACTION_NOT_BOUND` marker — so an unreadable
+                // channel stays `ACTION_BINDING_UNKNOWN` and is never downgraded
+                // to "the action does not exist" (DR-35/DR-54).
+                let (injected, refusal, refusal_code) = self
+                    .semantic_inject_action_detailed(action, label, &mut calls)
+                    .await;
+                let read = if injected {
+                    InputChannelCapability::GameInputChannelOk
+                } else if refusal_code.map(is_action_not_bound_code).unwrap_or(false)
+                    && refusal
+                        .as_deref()
+                        .map(|text| text.contains(ACTION_NOT_BOUND_MARKER))
+                        .unwrap_or(false)
+                {
+                    InputChannelCapability::ActionNotBound
+                } else {
+                    InputChannelCapability::ActionBindingUnknown
+                };
+                capability = Some(read);
+                if read == InputChannelCapability::ActionNotBound {
+                    needs_p3 = true;
+                    ok = false;
+                    summaries.push(format!(
+                        "{label}: ACTION_NOT_BOUND (the game-process InputMap declares no \
+                         `{action}`)"
+                    ));
+                    // The window cannot be delivered, so there is nothing to
+                    // sample: the same honest skip the pass-level check above
+                    // makes, discovered here because this pass ran first.
+                    continue;
+                }
+                if let Some(refusal) = refusal {
+                    summaries.push(format!("{label}: {refusal}"));
+                }
+                if read == InputChannelCapability::ActionBindingUnknown {
+                    summaries.push(format!(
+                        "{label}: game-process injection unavailable ({}); recording the \
+                         editor-side attempt only",
+                        read.code()
+                    ));
                 }
                 if injected {
                     held_in_game.push(action);
@@ -2587,7 +2719,9 @@ impl<'a> BatterySession<'a> {
                                         reading.monotone_fall,
                                         reading.verdict()
                                     ));
-                                } else if capability == InputChannelCapability::GameInputChannelOk {
+                                } else if capability
+                                    == Some(InputChannelCapability::GameInputChannelOk)
+                                {
                                     summaries.push(format!(
                                         "{label}: {frames_seen} frame(s) \
                                          channel={GAME_PROCESS_CHANNEL} {quadruple} \
@@ -2735,6 +2869,32 @@ impl<'a> BatterySession<'a> {
                     call_fail("editor_simulate_input_action", &release_args, &failure),
                     &format!("{label}:{EDITOR_SIDE_INJECTION_MARKER}:release"),
                 )),
+            }
+
+            // DR-84: **the window bounds its own drive.**  DR-83 fixed this for
+            // the channel probe ("the drive ends where the reading that justified
+            // it ends"); the same rule applies one level down.  Until DR-84 the
+            // release was implicit: each window released the *previous* window's
+            // action at its start, so the pass's **last** action stayed held for
+            // the step after it.  That is now a real leak — the jump window is the
+            // only window of its own pass, and a `jump` left held inside the game
+            // process would still be held through the interaction drive, the
+            // channel probe and the horizontal replay.  Releasing here makes every
+            // window boundary a clean input state on its own, which is what DR-68
+            // ③(a) asks for, and leaves nothing for the next step to inherit.
+            if held_in_game.iter().any(|held| *held == action) {
+                let released = self
+                    .semantic_release_action(
+                        action,
+                        &format!("{label}:release_after_window"),
+                        &mut calls,
+                    )
+                    .await;
+                held_in_game.retain(|held| *held != action);
+                summaries.push(format!(
+                    "{label}: released `{action}` in the game process after its frame sample \
+                     (accepted={released}); the window bounds its own drive"
+                ));
             }
         }
 
@@ -4192,6 +4352,60 @@ pub const INPUT_REPLAY_STEP_ID: &str = "input_replay";
 /// DR-78 ③: the battery step that observes the coin counter's transition.
 pub const COIN_OBSERVING_BATTERY_STEP: &str = "interaction_evidence";
 
+/// DR-84: the battery step that drives the **jump** window.
+///
+/// It is a step of its own, and the **first** of the battery's driving steps,
+/// because the jump is the one window whose evidence needs the player standing on
+/// the ground while every other driving step takes that ground away.  `smoke-t15`
+/// measured the cost of driving it later: the interaction window stopped on the
+/// goal at `x = 3257`, the channel probe and the replay's own `move_right` window
+/// then walked the player to `x = 3411.3544921875` — the floor's last supported
+/// centre is `3412` — and the jump was pressed in mid-air at `x = 3690`, so the
+/// recorded series was a monotone free fall.  DR-83 bounded the replay's own walk
+/// and reordered the pass, but the interaction drive and the channel probe still
+/// ran first and between them carried the player up to a whole interaction batch
+/// (`220 px` on the frozen level) plus the probe's own sample past the goal, so a
+/// level whose goal sits near its floor's edge still lost the ground before the
+/// jump.  Running the jump window **before every window that consumes the ground**
+/// removes the dependency on where the goal sits altogether: the probe is taken
+/// at the position the level itself starts the player at.
+pub const INPUT_JUMP_STEP_ID: &str = "input_jump";
+
+/// DR-84: **the ordering rule, as a named list.**
+///
+/// The rule is the one DR-78 ③ already pinned for the coin counter ("the window
+/// that needs a state runs before the windows that consume it") applied to the
+/// ground the jump needs, and it is now encoded the same way that rule is: a step
+/// named as the *needing* window plus a list of the *consuming* steps, so the
+/// test that pins the order reads the rule instead of a literal action name.
+///
+/// Every step in [`GROUND_CONSUMING_BATTERY_STEPS`] holds a horizontal action
+/// while it samples the player's travel:
+///
+/// * [`COIN_OBSERVING_BATTERY_STEP`] walks the player toward the goal (that is
+///   its whole drive, and on a level whose goal is past the floor's edge it is
+///   the step that walks the player off);
+/// * [`INPUT_PROBE_STEP_ID`] presses `move_right` for its frame sample;
+/// * [`INPUT_REPLAY_STEP_ID`] replays `move_right` / `move_left`.
+pub const GROUND_NEEDING_BATTERY_STEP: &str = INPUT_JUMP_STEP_ID;
+pub const GROUND_CONSUMING_BATTERY_STEPS: [&str; 3] = [
+    COIN_OBSERVING_BATTERY_STEP,
+    INPUT_PROBE_STEP_ID,
+    INPUT_REPLAY_STEP_ID,
+];
+
+/// DR-84: the jump window's own frame count, and the horizontal windows the
+/// `input_replay` pass drives after the ground is no longer needed.
+///
+/// They are named here rather than inline so [`GROUND_CONSUMING_BATTERY_STEPS`]
+/// and the two passes cannot drift apart silently.
+pub const JUMP_REPLAY_FRAMES: u64 = 30;
+pub const REPLAY_HORIZONTAL_WINDOWS: [(&str, &str, u64, bool); 3] = [
+    ("move_right", "move_right", 60, true),
+    ("move_right_release", "move_right", 10, false),
+    ("move_left", "move_left", 60, true),
+];
+
 /// DR-78 ③: the battery steps that **hold a horizontal action and sample the
 /// player's travel**, and can therefore sweep a coin before the observing window
 /// ever sees the counter move.
@@ -5412,7 +5626,8 @@ arrived for someone else. When `.hoh/deterministic/mcp-sync.json` reports
 | `scene_tree` | N2, F5 | the running node tree exists, with a `path` and a `type` on every node |
 | `screenshot` | N2, F4, F13, F16 | a PNG really exists under `.hoh/evidence/` (a reported path alone is not evidence) |
 | `input_channel_probe` | F1, F2 (+P3 when a semantic tool really reports no such action) | the **game process** answered the contract's semantic tools (`running_game_get_node_properties`, `running_game_get_node_property_samples`, `running_game_create_input_recording` + `running_game_play_input_recording`, `running_game_run_test_scenario`) and reports `GAME_INPUT_CHANNEL_OK`, `ACTION_NOT_BOUND` or `ACTION_BINDING_UNKNOWN`. The raw payload is `.hoh/deterministic/raw/input_channel_probe.json`; its `channel` object carries every reading verbatim, and the one remaining `running_game_execute_gdscript` call is a **read-only** position probe that never decides the verdict (DR-54) |
-| `input_replay` | F1, F2, F3 (+P3 when an InputMap action is missing) | `move_right`/`jump`/`move_left` recordings of `Player.position`, sampled **inside the game process** (`running_game_get_node_property_samples`, game-forwarded) after the action was injected through the semantic input API (`running_game_create_input_recording` + `running_game_play_input_recording` + `running_game_run_test_scenario`). Each call in `raw/input_replay.json` carries the `(action, channel, before_position, after_position, velocity)` quadruple. The editor-side `editor_simulate_input_action` is recorded for completeness only and is labelled `EDITOR_SIDE_INJECTION`: the editor is a different process and cannot drive the game. `INPUT_HAD_NO_EFFECT` means the action was delivered inside the game and the position did not change; `ACTION_NOT_BOUND` means a semantic tool answered that the game's InputMap has no such action; `ACTION_BINDING_UNKNOWN` means the channel could not be read and must **not** be read as a missing action. **DR-69 ④**: E3's evidence form (`REQUIREMENTS.md:114`) needs before/after frames and a node-state assertion, so each window also captures `.hoh/evidence/replay-<action>-before.png` and `-after.png` (`running_game_capture_screenshot`, inline form, labelled `<action>:replay_frame_before` / `_after`) and asserts `Player.position != <first sample>` with the engine's own `running_game_assert_node_state` (`property: position`, `operator: neq`, labelled `<action>:replay_assert_moved`). The assertion is **positional on purpose**: `input_axis` answers `null` on real hardware (DR-58) and the ~14-frame injection/sampling lag makes a total-displacement assertion untrustworthy, so the expectation is the window's own first sample. `POSITION_UNCHANGED` / `POSITION_ASSERTION_UNAVAILABLE` / `REPLAY_FRAME_MISSING` are the three honest failures of that form |
+| `input_jump` | F2 (+P3 when an InputMap action is missing) | **DR-84**: the `jump` window, driven **before every step that consumes the ground** (`interaction_evidence`, `input_channel_probe`, `input_replay` — the named list `GROUND_CONSUMING_BATTERY_STEPS`), so its two-frame `jump:ground_probe` is taken at the position the level itself starts the player at rather than after a drive has carried it toward the floor's edge. The raw payload is `.hoh/deterministic/raw/input_jump.json` and its `(action, channel, before_position, after_position, velocity)` quadruple is recorded exactly as `input_replay`'s are. **DR-82 ①**: the window is injected only when the probe certifies the player is resting (`player_is_resting_on_ground`, `y` flat within `JUMP_GROUND_EPSILON`); an unreadable or non-resting probe **fails closed** — nothing is pressed, no `jump_reading` is written and the observation carries `JUMP_NOT_DRIVEN`, never `JUMP_ARC_OBSERVED`. A driven window is an observed jump only when `JumpReading::shows_an_arc` holds (`rise > 0` and `y` not monotone); otherwise it is `JUMP_DEGENERATE_FALL` / `JUMP_NO_RISE` and the window is recorded as unobserved. Since the pass runs before the channel probe it takes its channel verdict from its own injection (`semantic_inject_action_detailed`, classified with the engine's own code **and** the `ACTION_NOT_BOUND` marker, DR-35/DR-54). It is the only window of its pass, so it releases `jump` in the game process when its frame sample is complete (DR-84: the window bounds its own drive, the rule DR-83 fixed for the channel probe) |
+| `input_replay` | F1, F2, F3 (+P3 when an InputMap action is missing) | `move_right`/`move_left` recordings of `Player.position`, sampled **inside the game process** (`running_game_get_node_property_samples`, game-forwarded) after the action was injected through the semantic input API (`running_game_create_input_recording` + `running_game_play_input_recording` + `running_game_run_test_scenario`). Each call in `raw/input_replay.json` carries the `(action, channel, before_position, after_position, velocity)` quadruple. The editor-side `editor_simulate_input_action` is recorded for completeness only and is labelled `EDITOR_SIDE_INJECTION`: the editor is a different process and cannot drive the game. `INPUT_HAD_NO_EFFECT` means the action was delivered inside the game and the position did not change; `ACTION_NOT_BOUND` means a semantic tool answered that the game's InputMap has no such action; `ACTION_BINDING_UNKNOWN` means the channel could not be read and must **not** be read as a missing action. **DR-69 ④**: E3's evidence form (`REQUIREMENTS.md:114`) needs before/after frames and a node-state assertion, so each window also captures `.hoh/evidence/replay-<action>-before.png` and `-after.png` (`running_game_capture_screenshot`, inline form, labelled `<action>:replay_frame_before` / `_after`) and asserts `Player.position != <first sample>` with the engine's own `running_game_assert_node_state` (`property: position`, `operator: neq`, labelled `<action>:replay_assert_moved`). The assertion is **positional on purpose**: `input_axis` answers `null` on real hardware (DR-58) and the ~14-frame injection/sampling lag makes a total-displacement assertion untrustworthy, so the expectation is the window's own first sample. `POSITION_UNCHANGED` / `POSITION_ASSERTION_UNAVAILABLE` / `REPLAY_FRAME_MISSING` are the three honest failures of that form |
 | `interaction_evidence` | F10, F13 (and F11/F12 structurally) | **DR-73 ③**: E3 names **four** behaviours, and until this step the battery observed two — `smoke-t10` ended with `Coins: 0` for the whole round and `Goal.reached` never true while the evidence handed to the Tester could not say so. The window enumerates the `Label`s under `HUD` from the scene tree's `name`/`path` (**the tree itself carries no text** — DR-76 ①) and reads each candidate's `text` through `running_game_get_node_properties`, keeping the one whose text starts with `Coins:`; it reads the goal node's `reached` flag, captures `.hoh/evidence/replay-interaction-{before,after}.png`, holds `move_right` for up to `INTERACTION_MAX_BATCHES` one-second batches of `running_game_get_node_property_samples` — the specification's 120 s maximum traversal (F17) plus margin, DR-76 ② — (stopping as soon as the win is observed), and then asserts both closures **with the engine's own `running_game_assert_node_state`**: `text:neq <before reading>` on the counter and `reached:neq false` on the goal. `COIN_PICKED_UP` / `WIN_DRIVEN` are the greens; `COIN_NOT_PICKED_UP` (the counter never moved), `WIN_NOT_DRIVEN` split into the two diagnoses it has to keep apart — `WIN_UNREACHED_WITHIN_BUDGET` (the window's own budget ran out: a coverage verdict that claims nothing about the level) and `WIN_BLOCKED_UNDER_MOVE_RIGHT` (DR-77 ③ — the player stopped advancing with budget unspent **while the window held `move_right`, the only action it ever sends**; the name it had until then, `WIN_UNREACHABLE_GEOMETRICALLY`, promised a proof about the level that this window cannot make, because it never jumps) — with the record carrying `player max x`, `goal.position` and `coverage_shortfall_px`; `COIN_COUNTER_UNREADABLE` (no `Coins:` label) and `GOAL_FLAG_NOT_FALSE_BEFORE` (the flag was already true, so the drive cannot be credited) are the honest failures. The window never writes a property: it drives input and reads state, which is what makes "the game drove its own win branch" a reading rather than a wish. **It is a game-process window**, judged exactly like `input_replay` above |
 | `node_and_collision_assertions` | F5, F6, F10, F13, F14, F16 | node properties, `shape_count` per body, HUD text nodes |
 | `editor_stop_scene` | N1 | the game stopped cleanly |
