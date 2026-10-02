@@ -675,8 +675,15 @@ impl<'a> BatterySession<'a> {
         // `evidence_battery::the_jump_window_is_driven_before_the_windows_that_consume_the_ground`.
         // The coin rule is untouched: the observing window still runs before the
         // probe and the horizontal replay pass, which are the windows that sweep
-        // coins.  The jump window drives only `jump`, so it consumes neither.
-        self.step_input_jump().await?;
+        // coins **horizontally**.  DR-85 corrects the sentence this comment used to
+        // carry ("the jump window drives only `jump`, so it consumes neither"):
+        // that is true of the ground and false of coins.  The jump moves the player
+        // vertically, and `coin.gd` collects on `body_entered`, so a coin inside the
+        // jump's apex box is consumed by this step — before `interaction_evidence`
+        // has read the counter.  The step therefore observes the counter **before**
+        // it drives (`JUMP_COIN_BASELINE_LABEL`), so the value the jump started from
+        // is on record; see the constant's own note.
+        self.step_input_jump(scene_tree.clone()).await?;
         self.step_interaction_evidence(scene_tree.clone()).await?;
         self.channel = self.step_input_channel_probe().await?;
         self.step_input_replay().await?;
@@ -2203,12 +2210,24 @@ impl<'a> BatterySession<'a> {
     /// probe has classified the input channel; the pass therefore reads the
     /// channel from its own injection instead of being told it (see
     /// [`Self::run_replay_windows`]).
-    async fn step_input_jump(&mut self) -> anyhow::Result<()> {
+    ///
+    /// DR-85: it is also a **coin consumer** (a coin inside the jump's apex is
+    /// swept by the vertical move), and it runs before the coin-observing window.
+    /// It therefore observes the coin counter **before** it drives, and hands those
+    /// calls to the pass as its leading calls, so the counter's pre-jump value sits
+    /// in `raw/input_jump.json` ahead of the injection.
+    async fn step_input_jump(&mut self, scene_tree: Option<Value>) -> anyhow::Result<()> {
+        let mut leading_calls = Vec::new();
+        let coin_baseline = self
+            .observe_coin_counter_before_jump(scene_tree.as_ref(), &mut leading_calls)
+            .await;
         self.run_replay_windows(
             INPUT_JUMP_STEP_ID,
             vec!["F2".to_string()],
             &[("jump", "jump", JUMP_REPLAY_FRAMES, true)],
             None,
+            leading_calls,
+            Some(coin_baseline),
         )
         .await
     }
@@ -2223,8 +2242,63 @@ impl<'a> BatterySession<'a> {
             vec!["F1".to_string(), "F2".to_string(), "F3".to_string()],
             &REPLAY_HORIZONTAL_WINDOWS,
             Some(self.channel.capability),
+            Vec::new(),
+            None,
         )
         .await
+    }
+
+    /// DR-85: read the coin counter **before the jump window drives**.
+    ///
+    /// The counter is found exactly the way `interaction_evidence` finds it — the
+    /// scene tree enumerates the `Label`s under `HUD` and each candidate's `text`
+    /// is read through the semantic reader, keeping the one that starts with
+    /// [`COIN_COUNTER_PREFIX`] — because the tree itself carries no text (DR-76 ①).
+    /// The calls are labelled [`JUMP_COIN_BASELINE_LABEL`] so `raw/input_jump.json`
+    /// puts the pre-jump reading where the jump's own drive can be checked against
+    /// it.  `None` means no readable counter; the caller records that as
+    /// [`JUMP_COIN_BASELINE_UNREADABLE`] rather than as a zero.
+    async fn observe_coin_counter_before_jump(
+        &self,
+        scene_tree: Option<&Value>,
+        calls: &mut Vec<Value>,
+    ) -> Option<String> {
+        let candidates = scene_tree.map(hud_label_candidates).unwrap_or_default();
+        for candidate in &candidates {
+            let args = json!({"node_path": candidate, "properties": ["text"]});
+            match self.call(semantic::NODE_PROPERTIES, args.clone()).await {
+                Ok(call) => {
+                    let parsed = unwrap_mcp_payload(&call.payload);
+                    calls.push(labeled(
+                        call_ok(
+                            semantic::NODE_PROPERTIES,
+                            &args,
+                            &call.payload,
+                            &call.correlation,
+                        ),
+                        JUMP_COIN_BASELINE_LABEL,
+                    ));
+                    let text = node_property_value(&parsed, "text").and_then(|value| {
+                        value
+                            .as_str()
+                            .map(ToOwned::to_owned)
+                            .or_else(|| Some(value.to_string()))
+                    });
+                    if let Some(text) = text {
+                        if text.trim_start().starts_with(COIN_COUNTER_PREFIX) {
+                            return Some(text);
+                        }
+                    }
+                }
+                Err(failure) => {
+                    calls.push(labeled(
+                        call_fail(semantic::NODE_PROPERTIES, &args, &failure),
+                        JUMP_COIN_BASELINE_LABEL,
+                    ));
+                }
+            }
+        }
+        None
     }
 
     /// DR-84: one pass of replay windows, shared by the jump window and the
@@ -2242,6 +2316,8 @@ impl<'a> BatterySession<'a> {
         supports: Vec<String>,
         windows: &[(&str, &str, u64, bool)],
         known_channel: Option<InputChannelCapability>,
+        leading_calls: Vec<Value>,
+        coin_baseline: Option<Option<String>>,
     ) -> anyhow::Result<()> {
         let mut step = BatteryStep {
             id: step_id.to_string(),
@@ -2249,8 +2325,27 @@ impl<'a> BatterySession<'a> {
             timeout_secs: self.limits.timeout_seconds,
             retries: self.limits.max_retries,
         };
-        let mut calls = Vec::new();
+        let mut calls = leading_calls;
         let mut summaries: Vec<String> = Vec::new();
+        // DR-85: the jump pass reports the coin reading it took **before** it
+        // drove.  `Some(None)` is the jump pass with an unreadable counter;
+        // `None` is a pass (the horizontal one) that is not a coin consumer.
+        if let Some(baseline) = coin_baseline {
+            match baseline {
+                Some(text) => summaries.push(format!(
+                    "{JUMP_COIN_BASELINE_LABEL}: the coin counter read {} before the jump window \
+                     drove; a coin inside the jump's apex is therefore counted after a recorded \
+                     reading of what the jump started from, not before it",
+                    text.trim()
+                )),
+                None => summaries.push(format!(
+                    "{JUMP_COIN_BASELINE_LABEL}: {JUMP_COIN_BASELINE_UNREADABLE} (no HUD `Label` \
+                     read a `{COIN_COUNTER_PREFIX}` counter before the jump window drove; no \
+                     counter transition could be observed by any window, and the interaction \
+                     window reports `COIN_COUNTER_UNREADABLE` for the same HUD)"
+                )),
+            }
+        }
         let mut ok = true;
         let mut needs_p3 = false;
         // DR-84: the channel the pass judges with.  It is the probe's verdict when
@@ -2433,47 +2528,102 @@ impl<'a> BatterySession<'a> {
                     "frame_count": JUMP_GROUND_PROBE_FRAMES,
                     "frame_interval": 1,
                 });
-                let resting = match self
-                    .call("running_game_get_node_property_samples", probe_args.clone())
-                    .await
-                {
-                    Ok(call) => {
-                        let parsed = unwrap_mcp_payload(&call.payload);
-                        let resting =
-                            player_is_resting_on_ground(required_sample_pairs(&parsed).as_deref());
-                        calls.push(labeled(
-                            call_ok(
-                                "running_game_get_node_property_samples",
-                                &probe_args,
-                                &call.payload,
-                                &call.correlation,
-                            ),
-                            "jump:ground_probe",
-                        ));
-                        resting
+                // DR-85: the probe **waits for a resting reading** instead of
+                // trusting one two-frame sample.  DR-84 put the jump first, so the
+                // probe is taken at the scene's first frames — where a level that
+                // spawns the player above its floor (the frozen `smoke-t15` starts
+                // it 23.925 px high, about eleven frames of `gravity = 1400` fall)
+                // would be refused although it is on its way to a perfectly valid
+                // ground.  The window therefore re-reads the same two-frame probe
+                // while the reading says the player is still moving, up to
+                // [`JUMP_GROUND_SETTLE_ATTEMPTS`] times.  Two outcomes still fail
+                // closed and are never retried: a probe with no usable samples, and
+                // a window still not resting when the cap is reached — both leave
+                // the window unobserved (`JUMP_NOT_DRIVEN`), never driven blind.
+                let mut resting = false;
+                let mut settle_attempts = 0u64;
+                'probe: while settle_attempts < JUMP_GROUND_SETTLE_ATTEMPTS {
+                    settle_attempts += 1;
+                    match self
+                        .call("running_game_get_node_property_samples", probe_args.clone())
+                        .await
+                    {
+                        Ok(call) => {
+                            let parsed = unwrap_mcp_payload(&call.payload);
+                            let pairs = required_sample_pairs(&parsed);
+                            let attempt_resting = player_is_resting_on_ground(pairs.as_deref());
+                            calls.push(labeled(
+                                call_ok(
+                                    "running_game_get_node_property_samples",
+                                    &probe_args,
+                                    &call.payload,
+                                    &call.correlation,
+                                ),
+                                "jump:ground_probe",
+                            ));
+                            match (pairs.is_some(), attempt_resting) {
+                                // A readable, resting player: this is the reading
+                                // the injection is judged by, and it is the last one
+                                // taken before the press.
+                                (true, true) => {
+                                    resting = true;
+                                    summaries.push(format!(
+                                        "{label}: JUMP_GROUND_PROBE {JUMP_GROUND_PROBE_FRAMES} \
+                                         frame(s) attempt {settle_attempts}/\
+                                         {JUMP_GROUND_SETTLE_ATTEMPTS} before the injection -> \
+                                         resting_on_ground=true (a window driven off the ground \
+                                         cannot be recorded as an observed jump)"
+                                    ));
+                                    break 'probe;
+                                }
+                                // A readable, moving player: the settle wait.  The
+                                // series is not attributed to the level, only to the
+                                // fact that the player has not stopped.
+                                (true, false) => summaries.push(format!(
+                                    "{label}: JUMP_GROUND_PROBE {JUMP_GROUND_PROBE_FRAMES} \
+                                     frame(s) attempt {settle_attempts}/\
+                                     {JUMP_GROUND_SETTLE_ATTEMPTS} -> resting_on_ground=false \
+                                     (the player has not settled yet; waiting for the level's own \
+                                     spawn drop to finish)"
+                                )),
+                                // No usable samples: an unreadable probe is a
+                                // refusal, not a wait.  Retrying a channel that
+                                // answered nothing would only burn the window's
+                                // budget.
+                                (false, _) => {
+                                    summaries.push(format!(
+                                        "{label}: JUMP_GROUND_PROBE attempt {settle_attempts} -> \
+                                         PROBE_UNREADABLE (no usable position samples; an \
+                                         unreadable probe fails closed and is not retried)"
+                                    ));
+                                    break 'probe;
+                                }
+                            }
+                        }
+                        Err(failure) => {
+                            calls.push(labeled(
+                                call_fail(
+                                    "running_game_get_node_property_samples",
+                                    &probe_args,
+                                    &failure,
+                                ),
+                                "jump:ground_probe",
+                            ));
+                            summaries.push(format!(
+                                "{label}: JUMP_GROUND_PROBE attempt {settle_attempts} -> \
+                                 PROBE_UNREADABLE (the game-process sample call failed; an \
+                                 unreadable probe fails closed and is not retried)"
+                            ));
+                            break 'probe;
+                        }
                     }
-                    Err(failure) => {
-                        calls.push(labeled(
-                            call_fail(
-                                "running_game_get_node_property_samples",
-                                &probe_args,
-                                &failure,
-                            ),
-                            "jump:ground_probe",
-                        ));
-                        false
-                    }
-                };
-                summaries.push(format!(
-                    "{label}: JUMP_GROUND_PROBE {JUMP_GROUND_PROBE_FRAMES} frame(s) before the \
-                     injection -> resting_on_ground={resting} \
-                     (a window driven off the ground cannot be recorded as an observed jump)"
-                ));
+                }
                 if !resting {
                     summaries.push(format!(
                         "{label}: {JUMP_NOT_DRIVEN} (the player is not resting on ground in this \
-                         window, so pressing jump could only record gravity; the level is not \
-                         rewritten and the window is left unobserved)"
+                         window after {settle_attempts} probe attempt(s), so pressing jump could \
+                         only record gravity; the level is not rewritten and the window is left \
+                         unobserved)"
                     ));
                     if expect_movement {
                         ok = false;
@@ -4133,6 +4283,29 @@ fn intended_axis(action: &str) -> &'static str {
 /// "moving": a single sample says nothing about whether the player is supported.
 pub const JUMP_GROUND_PROBE_FRAMES: u64 = 2;
 
+/// DR-85: how many times the pre-jump ground probe may be **repeated** while it
+/// reads a player that is still moving — i.e. how long the window waits for the
+/// level's own spawn drop to finish before it refuses.
+///
+/// DR-84 put the jump first, which is what makes its probe read the position the
+/// level starts the player at.  The frozen `smoke-t15` level starts its player at
+/// `y = 240` while the surface it rests on is `y = 263.925201416016`, so a level
+/// may legitimately spawn the player **in the air** and let gravity land it:
+/// `player.gd`'s `1400 px/s²` needs `t = sqrt(2 * 23.925... / 1400) = 0.1849 s`,
+/// about `11.1` physics frames at 60 Hz.  A single two-frame probe (`DR-82`'s
+/// requirement: **the probe was taken at the scene's first frames**) therefore read a
+/// falling player and refused the window in every case but a level that spawns the
+/// player already resting — the report's understated "a few pixels".  The window
+/// now waits, in `JUMP_GROUND_PROBE_FRAMES`-frame steps, until one step reads a
+/// resting player.
+///
+/// The cap is the fail-closed half of the rule: `16` steps of two frames cover
+/// `32` frames, about three times the frozen level's eleven-frame drop, and a
+/// player that is still moving after that is **not** resting — the window is
+/// recorded `JUMP_NOT_DRIVEN` exactly as before.  A probe that cannot be read at
+/// all is not retried: an unreadable channel is a refusal, not a wait.
+pub const JUMP_GROUND_SETTLE_ATTEMPTS: u64 = 16;
+
 /// DR-82 ①: the token a jump window that was **not driven** carries.
 ///
 /// It is deliberately not `INPUT_HAD_NO_EFFECT`: nothing was delivered, so the
@@ -4424,6 +4597,44 @@ pub const REPLAY_HORIZONTAL_WINDOWS: [(&str, &str, u64, bool); 3] = [
 /// in `tests/evidence_battery.rs` executes the battery and reddens if the order
 /// is changed, which is what makes the rule a test instead of a comment.
 pub const COIN_CONSUMING_BATTERY_STEPS: [&str; 2] = [INPUT_PROBE_STEP_ID, INPUT_REPLAY_STEP_ID];
+
+/// DR-85: the battery step that can consume a coin **off the horizontal axis**,
+/// and the observation that keeps its consumption from being silent.
+///
+/// DR-78 ③'s rule ("the observing window runs before the windows that consume
+/// what it observes") is a rule about a **battery step order**, and DR-84 proved
+/// it cannot be the whole rule: the jump window is a coin consumer too.  The
+/// frozen `player.gd` jumps with `jump_velocity = -430` under `gravity = 1400`
+/// (`430² / (2 * 1400) = 66.04 px` of apex) and `coin.gd` collects on
+/// `body_entered` from the `player` group, so a coin placed inside the jumping
+/// player's apex box is collected by a **vertical** move the interaction drive
+/// never makes.  On a level that puts a coin above its spawn, DR-84's reorder
+/// would have the coin counted before `interaction_evidence` read the counter for
+/// the first time — the `0 -> 1` transition F10 names, destroyed before it could
+/// be observed.  That is the same false-negative class `smoke-t11` created the
+/// coin rule to prevent, and it is not reachable by ordering: the ground rule
+/// already forces the jump before `interaction_evidence`.
+///
+/// The rule is therefore applied **inside** the jump step: the step observes the
+/// coin counter **before** it drives, so the value the jump started from is on
+/// record whatever the jump then collects.  `COIN_PICKED_UP`'s before/after pair
+/// inside `interaction_evidence` can still read `1 -> 1` on such a level (the jump
+/// already swept it), but the transition itself is no longer silent: the battery
+/// carries the `0` the jump started from, immediately before the injection, next
+/// to the `1` every later window reads.
+///
+/// [`JUMP_COIN_BASELINE_LABEL`] names the calls that carry that observation, and
+/// `the_jump_step_observes_the_coin_counter_before_it_drives` in
+/// `tests/evidence_battery.rs` runs the battery on a level with a coin in the
+/// jump's apex and reddens if the baseline does not precede the injection.
+pub const JUMP_COIN_BASELINE_LABEL: &str = "jump:coin_baseline";
+
+/// DR-85: the token a jump step carries when it could not read the counter before
+/// it drove.  It is **not** a refusal of the jump: a level whose `Coins:` label is
+/// unreadable cannot observe the transition in any window, and the interaction
+/// window says so itself (`COIN_COUNTER_UNREADABLE`).  The token keeps the
+/// baseline's absence from being silent.
+pub const JUMP_COIN_BASELINE_UNREADABLE: &str = "COIN_BASELINE_UNREADABLE";
 
 /// DR-35: the action the channel probe drives.
 pub const PROBE_ACTION: &str = "move_right";

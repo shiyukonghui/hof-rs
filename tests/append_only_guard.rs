@@ -75,6 +75,25 @@ const REQUIREMENTS: &str = ".spec/hof-rs/REQUIREMENTS.md";
 const DR82_REPORT: &str = ".spec/hof-rs/tasks/TASK-DR82-REPORT.md";
 const DR82_DR84_HEADING: &str =
     "# 附：DR-84 更正（**追加式**，2026-10-02）——第 2 项的键计数不是「取值已处理」的证据";
+/// DR-85: the **seal marker** of the DR-82 report's frozen prefix — the correction
+/// heading *with the line terminator the append starts with*.
+///
+/// The frozen revision is 44,184 bytes and ends with `\n`; the correction was
+/// appended as `\n# 附：DR-84 …`, so the heading's own `#` sits at offset 44,185
+/// and the sealed prefix `bytes[..44_184]` is exactly the revision
+/// `TASK-DR84-ACCEPTANCE.md` reviewed (`319397fd…e406`).  `whole_line_offset` finds
+/// a marker at the offset where the marker *begins*, so the marker used for the
+/// seal carries that leading terminator: it is the first byte the correction
+/// contributed, and it makes the pinned length the reviewed revision's own length
+/// rather than one byte more.  The heading is still separately asserted as a
+/// whole line ([`DR82_DR84_HEADING`]).
+const DR82_DR84_SEAL: &str =
+    "\n# 附：DR-84 更正（**追加式**，2026-10-02）——第 2 项的键计数不是「取值已处理」的证据";
+/// DR-85: the frozen prefix of `TASK-DR82-REPORT.md` — the revision before the
+/// DR-84 correction, byte for byte.
+const DR82_PRE_DR84_BYTES: usize = 44_184;
+const DR82_PRE_DR84_SHA256: &str =
+    "319397fdb369ea95c63e2eac7d4eaacd25b7825e73313e9afe863f5eb1a8e406";
 
 /// The DR-79 erratum heading: the seal of the report **as it stood before the first
 /// erratum**.  Everything before it is the round's own text and may not move.
@@ -454,6 +473,31 @@ fn the_dr82_census_claim_carries_its_dr84_qualifier() {
     let offset = whole_line_offset(&bytes, DR82_DR84_HEADING).unwrap_or_else(|problem| {
         panic!("{DR82_REPORT}: the DR-84 correction heading must own a whole line: {problem}")
     });
+    // DR-85: the prefix really is sealed.  Before this, the pin checked only the
+    // heading's whole-line-ness and three substrings, so an in-place edit of a
+    // value inside the report's machine-readable block, or of any prose byte above
+    // the heading, stayed green (DR84A-1).  `seal_violations` is the helper every
+    // other seal in this file uses; it pins the byte length **and** the sha256 of
+    // the bytes before the correction.
+    assert_no_violations(seal_violations(
+        DR82_REPORT,
+        DR82_DR84_SEAL,
+        DR82_PRE_DR84_BYTES,
+        DR82_PRE_DR84_SHA256,
+        &bytes,
+    ));
+    assert_eq!(
+        whole_line_offset(&bytes, DR82_DR84_SEAL),
+        Ok(DR82_PRE_DR84_BYTES),
+        "the correction — with the blank separator line it starts with — must begin exactly where \
+         the reviewed revision ends ({DR82_PRE_DR84_BYTES} bytes)"
+    );
+    assert_eq!(
+        offset,
+        DR82_PRE_DR84_BYTES + 1,
+        "the heading's own `#` follows the blank separator line, so it sits one byte past the \
+         sealed prefix"
+    );
     let text = String::from_utf8_lossy(&bytes);
     let correction = &text[offset..];
     for required in ["names_as_keys_per_file", "键计数", "raw=0", "sidecar"] {
@@ -464,10 +508,72 @@ fn the_dr82_census_claim_carries_its_dr84_qualifier() {
         );
     }
     // The claim itself is still readable above the correction — the correction is an
-    // append, not a rewrite.
+    // append, not a rewrite.  (The seal above is what proves it was not rewritten;
+    // this assertion names the intent.)
     assert!(
         text[..offset].contains("names_as_keys_per_file"),
         "{DR82_REPORT}: the appended correction must not be a replacement for the claim"
+    );
+}
+
+/// DR-85: the DR-82 seal is **not vacuous** — the two plants the DR-84 acceptance
+/// used to expose the gap redden it now, on in-memory copies of the real bytes.
+///
+/// The first mutant edits a value **inside the machine-readable block** (the block
+/// is part of the sealed prefix, so the prefix hash names it); the second edits an
+/// unrelated prose byte in the prefix.  Both stayed green under the old pin and
+/// both trip `seal_violations` now.  The real report is never written.
+#[test]
+fn the_dr82_seal_reddens_on_a_block_edit_and_a_prose_edit() {
+    let pristine = read(DR82_REPORT);
+    assert!(
+        seal_violations(
+            DR82_REPORT,
+            DR82_DR84_SEAL,
+            DR82_PRE_DR84_BYTES,
+            DR82_PRE_DR84_SHA256,
+            &pristine
+        )
+        .is_empty(),
+        "the guard must accept the pristine report before it is asked to reject mutants"
+    );
+
+    // ① a value inside the report's machine-readable block.  The block sits inside
+    //    the sealed prefix; the fixture edits the `16` of the census claim.
+    let needle = b"\"names_as_keys_per_file\": 16";
+    let at = find_bytes(&pristine, needle)
+        .unwrap_or_else(|| panic!("{DR82_REPORT}: the block claim must be present"));
+    let mut block_edit = pristine.clone();
+    let digit = at + needle.len() - 1;
+    block_edit[digit] = b'7';
+
+    // ② an unrelated prose byte in the prefix.
+    let prose = "逐名普查".as_bytes();
+    let prose_at = find_bytes(&pristine, prose)
+        .unwrap_or_else(|| panic!("{DR82_REPORT}: the prose under test must be present"));
+    let mut prose_edit = pristine.clone();
+    prose_edit[prose_at] = b'X';
+
+    for (what, mutant) in [("a block edit", &block_edit), ("a prose edit", &prose_edit)] {
+        assert_ne!(&pristine, mutant, "{what} must really change a byte");
+        let violations = seal_violations(
+            DR82_REPORT,
+            DR82_DR84_SEAL,
+            DR82_PRE_DR84_BYTES,
+            DR82_PRE_DR84_SHA256,
+            mutant,
+        );
+        assert!(
+            !violations.is_empty(),
+            "{what} inside the sealed prefix must trip the DR-82 seal (DR84A-1)"
+        );
+    }
+
+    // The real report is read-only to this test: its bytes are unchanged.
+    assert_eq!(
+        sha256_hex(&pristine),
+        sha256_hex(&read(DR82_REPORT)),
+        "the real report must not be modified by this test"
     );
 }
 

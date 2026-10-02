@@ -24,7 +24,8 @@ use hof_rs::adapter::godot::{
     GodotAdapter, COIN_CONSUMING_BATTERY_STEPS, COIN_OBSERVING_BATTERY_STEP,
     GROUND_CONSUMING_BATTERY_STEPS, GROUND_NEEDING_BATTERY_STEP, INPUT_JUMP_STEP_ID,
     INTERACTION_BATCH_FRAMES, INTERACTION_DRIVE_FRAMES, INTERACTION_MAX_BATCHES,
-    JUMP_REPLAY_FRAMES, REPLAY_HORIZONTAL_WINDOWS, SPEC_MAX_TRAVERSAL_SECONDS,
+    JUMP_COIN_BASELINE_LABEL, JUMP_GROUND_SETTLE_ATTEMPTS, JUMP_REPLAY_FRAMES,
+    REPLAY_HORIZONTAL_WINDOWS, SPEC_MAX_TRAVERSAL_SECONDS,
 };
 use hof_rs::adapter::BatteryRecord;
 use hof_rs::config::{GodotConfig, HohConfig};
@@ -315,6 +316,24 @@ enum MovementMode {
 /// because the fixture uses it to tell the probe from the judged window.
 const JUMP_PROBE_FRAMES: u64 = 2;
 
+/// DR-85: how many ground probes the `Settling` level answers with a moving `y`
+/// before the player has landed.
+///
+/// The frozen numbers are the reason for the shape: `smoke-t15` spawns the player
+/// `263.925201416016 - 240 = 23.925201416016` px above its floor, and
+/// `player.gd`'s `gravity = 1400` needs `sqrt(2 * 23.925201416016 / 1400) = 0.1849 s`,
+/// i.e. about `11.1` physics frames at 60 Hz, to land.  A two-frame probe therefore
+/// reads a moving `y` for the first `ceil(11.1 / 2) = 6` probe attempts; the
+/// fixture makes the player land after `3` of them, which is **later than a single
+/// probe** and **well inside** the production cap, so the test discriminates the
+/// waiting behaviour from the one-shot behaviour without tuning to the cap.
+///
+/// **No fixture constant is derived from [`JUMP_GROUND_SETTLE_ATTEMPTS`]**: the
+/// level's landing is a fact about the level, and the assertion that the cap
+/// covers it is a separate one
+/// (`a_level_that_spawns_the_player_above_its_floor_still_shows_a_grounded_jump_arc`).
+const SETTLING_PROBES_BEFORE_REST: u64 = 3;
+
 /// DR-82 ①: what the `jump` window's `y` series (and the ground probe that
 /// precedes it) really is.
 ///
@@ -347,6 +366,14 @@ enum JumpMode {
     /// after they have.  Whether the jump window can be driven from the ground is
     /// therefore a fact about the **drive order**, not about the fixture.
     Ledge,
+    /// DR-85: the level **spawns the player above its floor** — the frozen
+    /// `smoke-t15` geometry, where the start is `y = 240` and the surface is
+    /// `y = 263.925201416016` (23.925 px, about eleven frames of `gravity = 1400`
+    /// fall).  The first [`SETTLING_PROBES_BEFORE_REST`] ground probes read a
+    /// moving `y`; from then on the player has landed and holds `y` exactly.  A
+    /// single-probe window therefore refuses a level that is on its way to a
+    /// perfectly valid ground; a window that waits certifies it.
+    Settling,
 }
 
 /// DR-73 ③: what the fixture reports for the **interaction** observables — the
@@ -493,6 +520,25 @@ struct FixtureChannel {
     /// window that was refused is not driven, so the fixture answers the jump
     /// window with the shape the refused player really has.
     ledge_probe_resting: std::sync::atomic::AtomicBool,
+    /// DR-85: how many ground probes have been answered in this session.  The
+    /// `Settling` level uses it to model a player who is still falling for the
+    /// first few probes; every other mode ignores it.
+    ground_probes_seen: std::sync::atomic::AtomicU64,
+    /// DR-85: did the last `Settling` ground probe read the player supported?
+    /// The judged window is answered with the arc only when the *last* probe —
+    /// the one the injection is judged by — said the player had landed.
+    settling_probe_resting: std::sync::atomic::AtomicBool,
+    /// DR-85: does this level place a coin inside the jump's apex box?
+    ///
+    /// The frozen `player.gd` jumps with `jump_velocity = -430` under
+    /// `gravity = 1400`, so the apex is `430² / (2 * 1400) = 66.04 px` above the
+    /// spawn, and `coin.gd` collects on `body_entered` from the `player` group.
+    /// A coin there is reached by the vertical move alone: the interaction drive
+    /// only ever walks right, and this fixture's own counter is bumped by the
+    /// horizontal sweep in every other mode.  With this flag the **jump press**
+    /// is what increments the counter, which is the state DR-84's reorder opened
+    /// and DR-85's baseline observation closes.
+    coin_in_jump_apex: bool,
 }
 
 impl FixtureChannel {
@@ -521,6 +567,9 @@ impl FixtureChannel {
             ledge_x: FIXTURE_LEDGE_X,
             replay_travel: Mutex::new(0.0),
             ledge_probe_resting: std::sync::atomic::AtomicBool::new(false),
+            ground_probes_seen: std::sync::atomic::AtomicU64::new(0),
+            settling_probe_resting: std::sync::atomic::AtomicBool::new(false),
+            coin_in_jump_apex: false,
         }
     }
 
@@ -536,6 +585,21 @@ impl FixtureChannel {
     fn with_ledge(mut self, ledge_x: f64) -> Self {
         self.jump = JumpMode::Ledge;
         self.ledge_x = ledge_x;
+        self
+    }
+
+    /// DR-85: a level that **spawns the player above its floor** and lets gravity
+    /// land it — the frozen `smoke-t15` geometry, whose drop is
+    /// `23.925201416016` px / `~11.1` frames against a two-frame probe.
+    fn with_settling_spawn(mut self) -> Self {
+        self.jump = JumpMode::Settling;
+        self
+    }
+
+    /// DR-85: a level that puts a coin inside the jump's apex box, so the coin is
+    /// collected by the **jump press** and by nothing the horizontal drive does.
+    fn with_coin_in_the_jump_apex(mut self) -> Self {
+        self.coin_in_jump_apex = true;
         self
     }
 
@@ -558,6 +622,10 @@ impl FixtureChannel {
 
     /// DR-82 ①: `(x, y)` series of the pre-jump ground probe.
     fn ground_probe_positions(&self, frames: u64) -> Vec<(f64, f64)> {
+        let attempt = self
+            .ground_probes_seen
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+            + 1;
         match self.jump {
             // The already-falling player of `smoke-t15`: `y` climbs while the
             // probe is being taken, so the harness must refuse to press jump.
@@ -566,6 +634,25 @@ impl FixtureChannel {
             | JumpMode::AirborneThenBallistic => (0..frames)
                 .map(|frame| (3690.0, 1492.8 + 31.0 * frame as f64))
                 .collect(),
+            // DR-85: the level spawns the player above its floor, so the first
+            // probes really read a fall and the later ones read a landed player
+            // holding `y` exactly.  The landing is a property of the level, not of
+            // the number of times the battery asked.
+            JumpMode::Settling => {
+                let landed = attempt > SETTLING_PROBES_BEFORE_REST;
+                self.settling_probe_resting
+                    .store(landed, std::sync::atomic::Ordering::SeqCst);
+                (0..frames)
+                    .map(|frame| {
+                        let y = if landed {
+                            283.0
+                        } else {
+                            (240.0 + 12.0 * (attempt - 1) as f64) + 6.0 * frame as f64
+                        };
+                        (60.0, y)
+                    })
+                    .collect()
+            }
             // DR-83: the level's floor ends at `ledge_x`, and the probe answers
             // with the player's **own** position.  A horizontal action still held
             // in the game process keeps carrying the player while the probe is
@@ -614,6 +701,16 @@ impl FixtureChannel {
             .load(std::sync::atomic::Ordering::SeqCst);
         let base = match self.jump {
             JumpMode::MonoToneFall | JumpMode::AirborneNoGround => 1492.8,
+            // DR-85: a settling level whose *last* probe read a moving `y` was not
+            // certified, so the window it refuses does not jump — the honest
+            // descent, exactly as in the `Ledge` refusal below.
+            JumpMode::Settling
+                if !self
+                    .settling_probe_resting
+                    .load(std::sync::atomic::Ordering::SeqCst) =>
+            {
+                1492.8
+            }
             // DR-83: the window was refused (the probe did not read a supported
             // player), so what the game does while jump is *not* pressed is a
             // descent, exactly as in `smoke-t15`.
@@ -628,6 +725,13 @@ impl FixtureChannel {
                     JumpMode::MonoToneFall | JumpMode::AirborneNoGround => {
                         base + 31.0 * frame as f64
                     }
+                    JumpMode::Settling
+                        if !self
+                            .settling_probe_resting
+                            .load(std::sync::atomic::Ordering::SeqCst) =>
+                    {
+                        base + 31.0 * frame as f64
+                    }
                     JumpMode::Ledge if !ledge_grounded => base + 31.0 * frame as f64,
                     // A jump arc: `min < first` and `y` never returns to the
                     // window's first sample (a real fall from the apex takes
@@ -635,7 +739,10 @@ impl FixtureChannel {
                     // positional assertion compares the last sample with the
                     // first — an arc that closed exactly would read as "the
                     // position did not change").
-                    JumpMode::AirborneThenBallistic | JumpMode::Ballistic | JumpMode::Ledge => {
+                    JumpMode::AirborneThenBallistic
+                    | JumpMode::Ballistic
+                    | JumpMode::Ledge
+                    | JumpMode::Settling => {
                         let f = frame as f64;
                         let elapsed = f.min(frames as f64 / 2.0);
                         let rise = 5.0 * elapsed - 0.2 * elapsed * elapsed;
@@ -933,6 +1040,15 @@ impl FixtureChannel {
         if action == "jump" {
             self.jump_pressed
                 .store(true, std::sync::atomic::Ordering::SeqCst);
+            // DR-85: this level's coin sits inside the jump's apex box, so the
+            // vertical body-entered collection happens **here** — on the press the
+            // jump window injects — and nowhere on the horizontal drive.  It is the
+            // `smoke-t11` false negative one axis over: without a reading before
+            // this press, the first counter any window sees is already `1`.
+            if self.coin_in_jump_apex {
+                let mut interactions = self.interactions.lock().unwrap();
+                *interactions = (*interactions).max(1);
+            }
         }
         *self.last_action.lock().unwrap() = action.to_string();
     }
@@ -6055,4 +6171,164 @@ fn the_battery_names_the_blocked_verdict_by_its_movement_direction() {
             );
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// DR-85 — the coin hazard the reorder opened, and the spawn a two-frame probe
+// could not wait for
+// ---------------------------------------------------------------------------
+
+/// DR-85: **the jump window observes the coin counter before it drives**, so a
+/// coin the jump collects is not silently counted before it is observed.
+///
+/// DR-84's rationale claimed the jump step "drives only `jump`, so it consumes
+/// neither coins nor ground".  That is true of the ground and false of coins: the
+/// frozen `player.gd` jumps `430² / (2 * 1400) = 66.04 px` high and `coin.gd`
+/// collects on `body_entered` from the `player` group, so a coin inside the jump's
+/// apex box is consumed by a **vertical** move the horizontal windows never make —
+/// and DR-84 runs the jump before the window that reads the counter.  On such a
+/// level the first counter any later window sees is already `1`: the `0 -> 1`
+/// transition F10 names, destroyed before it could be observed — the `smoke-t11`
+/// false negative, one axis over.
+///
+/// The fix is the road the DR-84 acceptance named as "observe the coin before the
+/// jump": the jump step reads the counter **first** and carries the reading into
+/// its own raw document, ahead of the press.  The fixture's
+/// `with_coin_in_the_jump_apex` level is exactly that level — with
+/// `NoPickupNoWin` the horizontal sweep is not a coin source at all, so the only
+/// thing that can increment the counter is the jump press.
+///
+/// This test is **red on the pre-DR-85 arrangement**, where the step drives without
+/// reading anything: there is no `jump:coin_baseline` call, no `Coins: 0`
+/// immediately ahead of the press, and the only counter value the run carries is
+/// the `1` the jump already produced.
+#[tokio::test]
+async fn the_jump_step_observes_the_coin_counter_before_it_drives() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel = Arc::new(
+        FixtureChannel::green()
+            .with_interaction(InteractionMode::NoPickupNoWin)
+            .with_coin_in_the_jump_apex(),
+    );
+    let run = run_battery(root, channel, 30).await;
+
+    let jump = step(&run.records, INPUT_JUMP_STEP_ID);
+    let observation = &jump.record.observation;
+    assert!(
+        observation.contains(JUMP_COIN_BASELINE_LABEL),
+        "the jump step must report the counter reading it took before it drove: {observation}"
+    );
+    assert!(
+        observation.contains("Coins: 0"),
+        "the baseline must be the value the jump started from, not the post-jump value: \
+         {observation}"
+    );
+
+    // The reading is a call in the jump step's own raw document and it arrives
+    // before the injection that can collect the coin.
+    let calls = jump_calls(&run);
+    let baseline = calls
+        .iter()
+        .position(|call| call["label"] == json!(JUMP_COIN_BASELINE_LABEL))
+        .unwrap_or_else(|| {
+            panic!(
+                "the jump step must read the coin counter before it drives; its calls were {calls:?}"
+            )
+        });
+    let press = calls
+        .iter()
+        .position(|call| {
+            call["tool"] == json!("running_game_play_input_recording")
+                && call["args"]["events"][0]["action"] == json!("jump")
+                && call["args"]["events"][0]["pressed"] == json!(true)
+        })
+        .unwrap_or_else(|| panic!("the jump window must be injected; its calls were {calls:?}"));
+    assert!(
+        baseline < press,
+        "the counter must be observed **before** the jump press that can collect a coin \
+         (baseline call {baseline}, press call {press})"
+    );
+
+    // And the coin really is collected by that press: every window after the jump
+    // reads `1`, which is why the pre-jump reading is the only place the `0 -> 1`
+    // transition survives.
+    let interaction = step(&run.records, "interaction_evidence");
+    assert!(
+        interaction.record.observation.contains("Coins: 1"),
+        "the jump press must really have collected the apex coin: {}",
+        interaction.record.observation
+    );
+}
+
+/// DR-85: a level that **spawns the player above its floor** is waited for, not
+/// refused.
+///
+/// DR-84 put the jump first, so its ground probe is taken at the scene's first
+/// frames.  The frozen `smoke-t15` level starts its player at `y = 240` while the
+/// surface it rests on is `y = 263.925201416016` — `23.925201416016 px`,
+/// `sqrt(2 * 23.925201416016 / 1400) = 0.1849 s`, about `11.1` physics frames of
+/// `gravity = 1400` fall — against a probe that read only `JUMP_GROUND_PROBE_FRAMES`
+/// `= 2` frames.  Whether the player is resting at that instant was therefore
+/// undetermined, and the DR-84 acceptance recorded the report's "a few pixels"
+/// framing as an understatement of a quarter-second drop.
+///
+/// The fixture's `with_settling_spawn` level models it: the first
+/// [`SETTLING_PROBES_BEFORE_REST`] probes read a moving `y`, then the player has
+/// landed and holds `y` exactly.  The window must now **wait** for the resting
+/// reading — this test is red on the one-shot probe, which refuses the window
+/// (`JUMP_NOT_DRIVEN`) although the level reaches a valid ground.  The wait still
+/// fails closed: the cap is [`JUMP_GROUND_SETTLE_ATTEMPTS`] attempts, and
+/// `a_level_with_no_usable_ground_reports_the_jump_unobserved` shows a player that
+/// never settles is still refused.
+#[tokio::test]
+async fn a_level_that_spawns_the_player_above_its_floor_still_shows_a_grounded_jump_arc() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel = Arc::new(FixtureChannel::green().with_settling_spawn());
+    let run = run_battery(root, channel, 30).await;
+
+    // The fixture's landing is a fact about the level and it must sit strictly
+    // inside the production cap, or the cap would be the thing under test.
+    assert!(
+        SETTLING_PROBES_BEFORE_REST < JUMP_GROUND_SETTLE_ATTEMPTS,
+        "the frozen spawn drop must complete inside the window's probe cap"
+    );
+
+    let calls = jump_calls(&run);
+    let probes = calls
+        .iter()
+        .filter(|call| call["label"] == json!("jump:ground_probe"))
+        .count();
+    assert!(
+        probes > 1,
+        "a player who is still falling must be waited for, not refused: the window took \
+         {probes} probe(s)"
+    );
+
+    let reading =
+        jump_reading_entry(&calls).expect("a settled player must be driven and carry a reading");
+    assert_eq!(reading["shows_an_arc"], json!(true), "{reading}");
+    assert_eq!(reading["verdict"], json!("JUMP_ARC_OBSERVED"), "{reading}");
+    assert!(
+        reading["rise"].as_f64().unwrap_or(0.0) > 0.0,
+        "the arc must rise above the window's first sample: {reading}"
+    );
+
+    let jump = step(&run.records, INPUT_JUMP_STEP_ID);
+    assert!(
+        jump.ok,
+        "a level that lands before the cap must be driven from the ground: {}",
+        jump.record.observation
+    );
+    assert!(
+        jump.record.observation.contains("resting_on_ground=true"),
+        "the accepted reading must be the resting one: {}",
+        jump.record.observation
+    );
+    assert!(
+        !jump.record.observation.contains("JUMP_NOT_DRIVEN"),
+        "the window must not be recorded as unobserved once the player has settled: {}",
+        jump.record.observation
+    );
 }
