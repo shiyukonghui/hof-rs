@@ -340,6 +340,12 @@ enum JumpMode {
     /// but `y` is not monotone (it wiggles), so only the `rise > 0` half of the
     /// arc rule can reject it.
     RiseZero,
+    /// DR-83: the level's only floor **ends** at [`FixtureChannel::ledge_x`].  The
+    /// ground probe reads the player's own position: supported while the
+    /// horizontal windows have not yet carried it past the ledge, in free fall
+    /// after they have.  Whether the jump window can be driven from the ground is
+    /// therefore a fact about the **drive order**, not about the fixture.
+    Ledge,
 }
 
 /// DR-73 ③: what the fixture reports for the **interaction** observables — the
@@ -397,6 +403,24 @@ const FIXTURE_BEYOND_BUDGET_GOAL_X: f64 = 30_000.0;
 /// DR-76 ②: where the `Blocked` level stops the player.
 const FIXTURE_BLOCKED_X: f64 = 1_000.0;
 
+/// DR-83: the frozen replay's own per-frame horizontal travel.  `smoke-t15`'s
+/// `move_right` window moved the `Player` by `+216.33813476562` px over 60 frames,
+/// and that is the currency a level's ledge is crossed in here.
+const FIXTURE_REPLAY_PX_PER_FRAME: f64 = 216.33813476562 / 60.0;
+
+/// DR-83: where the fixture's `Ledge` level ends its only floor.
+///
+/// **Derived, not tuned to one test.**  The interaction window's own goal stops
+/// the drive at `60 + 29 * 220 = 6440`; the channel probe's 30-frame sample adds
+/// `30 * 3.6056 = 108.2`, so a two-frame ground probe taken *after* the probe but
+/// **before** the replay's own windows reads `x = 6548.2`; the replay's
+/// `move_right` and `move_right_release` windows add another `70 * 3.6056 = 252.4`,
+/// leaving the player at `6800.6`.  The ledge sits between those two positions
+/// (`6548.2 <= 6600 < 6800.6`), which is exactly the discrimination this level
+/// exists to make: the jump is grounded only if it is driven **before** the
+/// windows that consume the ground.  Nothing here is read back from a level.
+const FIXTURE_LEDGE_X: f64 = 6_600.0;
+
 struct FixtureChannel {
     calls: Mutex<Vec<(String, Value)>>,
     /// `tool -> sticky error`.
@@ -443,6 +467,17 @@ struct FixtureChannel {
     /// DR-82 ①: has a jump been pressed in this run?  `AirborneThenBallistic`
     /// lands at that moment.
     jump_pressed: std::sync::atomic::AtomicBool,
+    /// DR-83: where the `Ledge` level's only floor ends (world x).
+    ledge_x: f64,
+    /// DR-83: how far the replay's own horizontal windows have carried the player
+    /// since the interaction window stopped.  The `Ledge` ground probe reads the
+    /// position the drive has actually reached, which is what makes the drive
+    /// order observable instead of assumed.
+    replay_travel: Mutex<f64>,
+    /// DR-83: did the last `Ledge` ground probe read the player supported?  A
+    /// window that was refused is not driven, so the fixture answers the jump
+    /// window with the shape the refused player really has.
+    ledge_probe_resting: std::sync::atomic::AtomicBool,
 }
 
 impl FixtureChannel {
@@ -468,6 +503,9 @@ impl FixtureChannel {
             jump: JumpMode::Ballistic,
             jump_probe_seen: std::sync::atomic::AtomicBool::new(false),
             jump_pressed: std::sync::atomic::AtomicBool::new(false),
+            ledge_x: FIXTURE_LEDGE_X,
+            replay_travel: Mutex::new(0.0),
+            ledge_probe_resting: std::sync::atomic::AtomicBool::new(false),
         }
     }
 
@@ -475,6 +513,21 @@ impl FixtureChannel {
     fn with_jump(mut self, jump: JumpMode) -> Self {
         self.jump = jump;
         self
+    }
+
+    /// DR-83: a level whose only floor ends at `ledge_x`.  The default is
+    /// [`FIXTURE_LEDGE_X`]; a `Ledge` level whose floor never supports the player
+    /// is built by choosing a value below its spawn.
+    fn with_ledge(mut self, ledge_x: f64) -> Self {
+        self.jump = JumpMode::Ledge;
+        self.ledge_x = ledge_x;
+        self
+    }
+
+    /// DR-83: the player's own world x — where the interaction drive left it plus
+    /// everything the replay's horizontal windows have carried it since.
+    fn player_x(&self) -> f64 {
+        *self.max_x.lock().unwrap() + *self.replay_travel.lock().unwrap()
     }
 
     /// DR-82 ①: is this sample request the pre-jump **ground probe**?
@@ -498,6 +551,40 @@ impl FixtureChannel {
             | JumpMode::AirborneThenBallistic => (0..frames)
                 .map(|frame| (3690.0, 1492.8 + 31.0 * frame as f64))
                 .collect(),
+            // DR-83: the level's floor ends at `ledge_x`, and the probe answers
+            // with the player's **own** position.  A horizontal action still held
+            // in the game process keeps carrying the player while the probe is
+            // taken — which is why a window that reads the probe before releasing
+            // the preceding window's action can read a fall at the very edge of a
+            // floor it is still standing on.
+            JumpMode::Ledge => {
+                let held = self.held_in_game.lock().unwrap().clone();
+                let drift = if held.iter().any(|action| action == "move_right") {
+                    FIXTURE_REPLAY_PX_PER_FRAME
+                } else if held.iter().any(|action| action == "move_left") {
+                    -FIXTURE_REPLAY_PX_PER_FRAME
+                } else {
+                    0.0
+                };
+                let mut x = self.player_x();
+                let mut resting = frames > 0 && x <= self.ledge_x;
+                let mut samples = Vec::new();
+                for frame in 0..frames {
+                    // The player moves first and is sampled after the move, so
+                    // frame 0 is the position the drive actually left behind.
+                    x += drift;
+                    resting = resting && x <= self.ledge_x;
+                    let y = if x <= self.ledge_x {
+                        283.0
+                    } else {
+                        1492.8 + 31.0 * frame as f64
+                    };
+                    samples.push((x, y));
+                }
+                self.ledge_probe_resting
+                    .store(resting, std::sync::atomic::Ordering::SeqCst);
+                samples
+            }
             // Resting: a player on a floor holds `y` exactly.
             _ => (0..frames)
                 .map(|frame| (60.0 + frame as f64, 283.0))
@@ -507,8 +594,15 @@ impl FixtureChannel {
 
     /// DR-82 ①: `(x, y)` series of the jump window itself.
     fn jump_window_positions(&self, frames: u64) -> Vec<(f64, f64)> {
+        let ledge_grounded = self
+            .ledge_probe_resting
+            .load(std::sync::atomic::Ordering::SeqCst);
         let base = match self.jump {
             JumpMode::MonoToneFall | JumpMode::AirborneNoGround => 1492.8,
+            // DR-83: the window was refused (the probe did not read a supported
+            // player), so what the game does while jump is *not* pressed is a
+            // descent, exactly as in `smoke-t15`.
+            JumpMode::Ledge if !ledge_grounded => 1492.8,
             _ => 283.0,
         };
         (0..frames)
@@ -519,13 +613,14 @@ impl FixtureChannel {
                     JumpMode::MonoToneFall | JumpMode::AirborneNoGround => {
                         base + 31.0 * frame as f64
                     }
+                    JumpMode::Ledge if !ledge_grounded => base + 31.0 * frame as f64,
                     // A jump arc: `min < first` and `y` never returns to the
                     // window's first sample (a real fall from the apex takes
                     // longer than the window lasts, and the battery's own
                     // positional assertion compares the last sample with the
                     // first — an arc that closed exactly would read as "the
                     // position did not change").
-                    JumpMode::AirborneThenBallistic | JumpMode::Ballistic => {
+                    JumpMode::AirborneThenBallistic | JumpMode::Ballistic | JumpMode::Ledge => {
                         let f = frame as f64;
                         let elapsed = f.min(frames as f64 / 2.0);
                         let rise = 5.0 * elapsed - 0.2 * elapsed * elapsed;
@@ -1544,6 +1639,17 @@ impl ToolChannel for FixtureChannel {
                         payload: json!({"content": [{"type": "text", "text": inner.to_string()}]}),
                     });
                 }
+                // DR-83: the replay's horizontal windows really carry the player.
+                // The `Ledge` level's ground probe reads the position they leave
+                // behind, which is how a level whose floor ends early makes the
+                // difference between "the jump was driven from the ground" and
+                // "the walk had already taken the ground away" an observable fact
+                // rather than a claim.  The two-frame request above is the ground
+                // probe itself and never reaches this branch.
+                if action == "move_right" {
+                    *self.replay_travel.lock().unwrap() +=
+                        frames as f64 * FIXTURE_REPLAY_PX_PER_FRAME;
+                }
                 monitor_payload(
                     &action,
                     frames,
@@ -2464,7 +2570,14 @@ async fn input_replay_records_a_delivered_action_without_effect() {
         !quadruples.is_empty(),
         "every replay entry must record its quadruple: {raw}"
     );
-    let first = quadruples[0];
+    // DR-83: the `jump` window is now the pass's **first** window (the window
+    // that needs the ground runs before the windows that consume it), so the
+    // quadruple this test is about is selected by its action rather than by its
+    // position: the subject is a delivered horizontal action with no effect.
+    let first = quadruples
+        .iter()
+        .find(|quadruple| quadruple["action"] == json!("move_right"))
+        .expect("the replay records its `move_right` window");
     for key in ["action", "before_position", "after_position", "velocity"] {
         assert!(
             first.get(key).is_some(),
@@ -4292,6 +4405,229 @@ fn the_probe_frame_count_matches_the_production_constant() {
         JUMP_PROBE_FRAMES,
         hof_rs::adapter::godot::JUMP_GROUND_PROBE_FRAMES,
         "the fixture's probe discriminator must be the count the battery really asks for"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// DR-83 — the jump must be driven from ground the drive has not already consumed
+// ---------------------------------------------------------------------------
+
+/// DR-83: on a level whose only floor ends before the replay's own rightward
+/// walk, the jump must still be driven from the ground — and recorded as an arc.
+///
+/// This is the `smoke-t15` geometry with the drive made honest.  The fixture's
+/// `Ledge` level supports the player up to [`FIXTURE_LEDGE_X`] and nowhere
+/// beyond; the ground probe answers with the player's **own** position, and the
+/// replay's horizontal windows really carry it.  A drive that runs the walk
+/// *before* the jump leaves the player past the ledge, so the probe reads a fall
+/// and the window is refused; the drive must reach the grounded jump window
+/// instead.
+#[tokio::test]
+async fn a_level_whose_ground_ends_before_the_walk_still_shows_a_grounded_jump_arc() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel = Arc::new(FixtureChannel::green().with_ledge(FIXTURE_LEDGE_X));
+    let run = run_battery(root, channel, 30).await;
+
+    let calls = replay_calls(&run);
+    let reading =
+        jump_reading_entry(&calls).expect("a grounded jump window must carry its own reading");
+    assert_eq!(reading["shows_an_arc"], json!(true), "{reading}");
+    assert_eq!(reading["verdict"], json!("JUMP_ARC_OBSERVED"), "{reading}");
+    assert!(
+        reading["rise"].as_f64().unwrap_or(0.0) > 0.0,
+        "the arc must rise above the window's first sample: {reading}"
+    );
+    assert_eq!(reading["monotone_fall"], json!(false), "{reading}");
+
+    let replay = step(&run.records, "input_replay");
+    assert!(
+        replay.ok,
+        "the replay is green: {}",
+        replay.record.observation
+    );
+    assert!(
+        replay.record.observation.contains("JUMP_ARC_OBSERVED"),
+        "the observation must name the arc: {}",
+        replay.record.observation
+    );
+    assert!(
+        !replay.record.observation.contains("JUMP_NOT_DRIVEN"),
+        "a window the probe certified must not be recorded as unobserved: {}",
+        replay.record.observation
+    );
+}
+
+/// DR-83: the property is the **drive order**, not an accident of one level: the
+/// jump window's own calls must arrive before the first window that drives the
+/// player horizontally — that window is what takes the ground away.
+#[tokio::test]
+async fn the_jump_window_is_driven_before_the_windows_that_consume_the_ground() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel = Arc::new(FixtureChannel::green().with_ledge(FIXTURE_LEDGE_X));
+    let run = run_battery(root, channel, 30).await;
+
+    let calls = replay_calls(&run);
+    let probe = calls
+        .iter()
+        .position(|call| call["label"] == json!("jump:ground_probe"))
+        .expect("the jump window must be preceded by a game-process ground probe");
+    let first_horizontal = calls
+        .iter()
+        .position(|call| {
+            call.get("quadruple")
+                .and_then(|quadruple| quadruple["action"].as_str())
+                == Some("move_right")
+        })
+        .expect("the replay must still drive `move_right`");
+    assert!(
+        probe < first_horizontal,
+        "the jump must be driven before the window that carries the player off the floor \
+         (ground probe at {probe}, first `move_right` sample at {first_horizontal})"
+    );
+}
+
+/// DR-83: the pass starts from a **clean** input state.
+///
+/// The channel probe presses `move_right` and never releases it, so the first
+/// window of the pass has to clear it on the game-process API before it takes its
+/// reading — otherwise the player keeps walking while the two-frame ground probe
+/// is taken, and on a floor that ends a few pixels further on the probe reads a
+/// fall where the player was still standing.  The pass's own first input call must
+/// therefore be a release, and the release must precede the ground probe.
+#[tokio::test]
+async fn the_input_replay_pass_clears_the_previous_steps_held_action_first() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel = Arc::new(FixtureChannel::green().with_ledge(FIXTURE_LEDGE_X));
+    let run = run_battery(root, channel, 30).await;
+
+    let calls = replay_calls(&run);
+    let first_play = calls
+        .iter()
+        .position(|call| call["tool"] == json!("running_game_play_input_recording"))
+        .expect("the pass injects at least one action through the game-process API");
+    let first_event = calls[first_play]["args"]["events"]
+        .as_array()
+        .and_then(|events| events.first())
+        .cloned()
+        .unwrap_or(Value::Null);
+    assert_eq!(
+        first_event["pressed"],
+        json!(false),
+        "the pass's first game-process input call must clear the preceding step's held \
+         action, not press a new one: {first_event}"
+    );
+    assert!(
+        ["move_right", "move_left"].contains(&first_event["action"].as_str().unwrap_or_default()),
+        "the cleared action must be the horizontal one the channel probe held: {first_event}"
+    );
+
+    let probe = calls
+        .iter()
+        .position(|call| call["label"] == json!("jump:ground_probe"))
+        .expect("the ground probe is recorded");
+    assert!(
+        first_play < probe,
+        "the release must be taken before the ground probe (release at {first_play}, probe at \
+         {probe})"
+    );
+}
+
+/// DR-83: a level with no usable ground at all is still recorded as
+/// **unobserved**, never as a passed jump.
+///
+/// The refusal has to come from the reading, not from the level: the ground probe
+/// still runs, still answers, and the window it refuses carries no `jump_reading`
+/// that could be scored.
+#[tokio::test]
+async fn a_level_with_no_usable_ground_reports_the_jump_unobserved() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    // The floor ends below the player's own spawn: nothing ever supports it.
+    let channel = Arc::new(FixtureChannel::green().with_ledge(0.0));
+    let run = run_battery(root, channel, 30).await;
+
+    let calls = replay_calls(&run);
+    assert!(
+        calls
+            .iter()
+            .any(|call| call["label"] == json!("jump:ground_probe")),
+        "the ground probe still runs — the refusal has to come from the reading"
+    );
+    assert_eq!(
+        scored_jump_arcs(&calls),
+        0,
+        "a level with no ground may never be scored as an observed jump"
+    );
+    assert!(
+        jump_reading_entry(&calls).is_none(),
+        "a window that was not driven must carry no scoreable reading"
+    );
+    let replay = step(&run.records, "input_replay");
+    let observation = &replay.record.observation;
+    assert!(
+        observation.contains("JUMP_NOT_DRIVEN"),
+        "the observation must name the refusal: {observation}"
+    );
+    assert!(
+        !observation.contains("JUMP_ARC_OBSERVED"),
+        "no arc may be reported: {observation}"
+    );
+}
+
+/// DR-83: **a probe bounds its own drive.**
+///
+/// The channel probe presses `move_right` and takes a 30-frame position sample.
+/// If it never releases it, the player keeps travelling after the reading is
+/// over: `smoke-t15` measured `3389.35 -> 3411.35` between this step's last
+/// sample and the next step's first one, against a floor whose last supported
+/// centre is `3412`.  The probe's drive must stop where its own reading stops, so
+/// the step after it inherits a player standing still.
+#[tokio::test]
+async fn the_channel_probe_releases_its_own_drive_when_its_reading_is_complete() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let channel = Arc::new(FixtureChannel::green());
+    let run = run_battery(root, channel, 30).await;
+
+    let raw: Value = serde_json::from_str(&read(
+        &run.run_dir
+            .join("iter-1/candidate/.hoh/deterministic/raw/input_channel_probe.json"),
+    ))
+    .unwrap();
+    let events: Vec<(String, bool)> = raw["calls"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default()
+        .iter()
+        .flat_map(|call| {
+            call["args"]["events"]
+                .as_array()
+                .cloned()
+                .unwrap_or_default()
+                .into_iter()
+                .filter_map(|event| {
+                    Some((
+                        event["action"].as_str()?.to_string(),
+                        event["pressed"].as_bool()?,
+                    ))
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    let last_press = events
+        .iter()
+        .rposition(|(action, pressed)| action == "move_right" && *pressed)
+        .expect("the probe presses `move_right`");
+    assert!(
+        events
+            .iter()
+            .skip(last_press + 1)
+            .any(|(action, pressed)| action == "move_right" && !*pressed),
+        "the probe must release `move_right` after its own frame sample; its events were \
+         {events:?}"
     );
 }
 

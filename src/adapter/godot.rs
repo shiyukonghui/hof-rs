@@ -1489,6 +1489,29 @@ impl<'a> BatterySession<'a> {
             notes.push(refusal_from_frames);
         }
 
+        // DR-83: **a probe bounds its own drive.**  The probe presses
+        // `PROBE_ACTION` and, until DR-83, never released it: `smoke-t15` measured
+        // the player drifting `3389.35 -> 3411.35` between this step's last sample
+        // and the next step's first one, against a floor whose last supported
+        // centre is `3412`.  That drift is the walk bleeding out of the window
+        // that produced it, and it is what left the pass's first window — the jump
+        // — with 0.65 px of ground to stand on.  Releasing here is the bound: the
+        // drive ends where the reading that justified it ends.  It also means the
+        // step leaves no action held for the step after it, which is the same
+        // self-sufficiency `INTERACTION_STALE_ACTIONS` gives the interaction
+        // window (DR-78 ③).
+        let released_after_probe = self
+            .semantic_release_action(PROBE_ACTION, "move_right:release_after_probe", &mut calls)
+            .await;
+        if !released_after_probe {
+            notes.push(
+                "the game-process input channel refused to release `move_right` after the \
+                 probe's own frame sample; this step then leaves an action held for the step \
+                 after it, and the player keeps travelling while that step takes its reading"
+                    .to_string(),
+            );
+        }
+
         // (d) DR-54: one **read-only** `running_game_execute_gdscript` probe is
         //     kept as a supplementary cross-check.  It is a self-contained
         //     function body with an explicit `return` (DR-50A), and it is
@@ -1543,8 +1566,9 @@ impl<'a> BatterySession<'a> {
         let evidence_note = format!(
             "game process via semantic tools: reachable={game_process_reachable}, \
              axis_before={axis_before:?}, injection accepted={pressed}, axis_after={axis_after:?}, \
-             axis moved={moved_while_pressed}; read-only execute_gdscript probe={probe_position:?} \
-             (supplementary only, DR-54)"
+             axis moved={moved_while_pressed}; released `{PROBE_ACTION}` after the probe's frame \
+             sample={released_after_probe} (DR-83: a probe bounds its own drive); read-only \
+             execute_gdscript probe={probe_position:?} (supplementary only, DR-54)"
         );
         let detail = match capability {
             InputChannelCapability::GameInputChannelOk => {
@@ -2242,10 +2266,22 @@ impl<'a> BatterySession<'a> {
         // harness declined to drive would let a reader score a fall (or an arc
         // the game never produced) as evidence.
         let mut jump_driven = false;
+        // DR-83: the window that needs the ground runs **before** the windows that
+        // consume it.  `smoke-t15` measured what the old order did: the
+        // interaction window stopped on the goal at `x = 3257`, the channel probe
+        // and this pass's own `move_right` window then walked the player to
+        // `x = 3411.35` — the last supported centre is `3412` — and out over the
+        // end of the only floor, so the `jump` window, third in the list, was
+        // pressed in mid-air at `x = 3690`, `y = 1492.8`.  The jump is the one
+        // window whose evidence needs the ground; `move_right` / `move_left` are
+        // the windows that take it away.  This is the DR-78 ③ rule ("the observing
+        // window runs before the windows that consume what it observes") applied to
+        // the ground instead of to the coin counter, and it is pinned by
+        // `evidence_battery::the_jump_window_is_driven_before_the_windows_that_consume_the_ground`.
         for (label, action, frames, expect_movement) in [
-            ("move_right", "move_right", 60u64, true),
+            ("jump", "jump", 30u64, true),
+            ("move_right", "move_right", 60, true),
             ("move_right_release", "move_right", 10, false),
-            ("jump", "jump", 30, true),
             ("move_left", "move_left", 60, true),
         ] {
             if capability == InputChannelCapability::ActionNotBound {
@@ -2287,6 +2323,31 @@ impl<'a> BatterySession<'a> {
             // A probe that cannot be read **fails closed**: the window is recorded
             // as unobserved rather than driven blind.
             let airborne_before_jump = if action == "jump" {
+                // DR-83: clear whatever horizontal action the preceding battery
+                // step left held before reading the ground.  The loop above only
+                // drains this pass's own directions, and the jump is now this
+                // pass's first window, so without this the player could still be
+                // walking while the two-frame probe is taken — at the edge of a
+                // floor that is the difference between "grounded" and "already
+                // falling".  `JUMP_STALE_ACTIONS` says why the window does not
+                // simply trust the step before it to have been bounded.
+                for stale in JUMP_STALE_ACTIONS {
+                    if !self
+                        .semantic_release_action(
+                            stale,
+                            &format!("{label}:clear_{stale}"),
+                            &mut calls,
+                        )
+                        .await
+                    {
+                        summaries.push(format!(
+                            "{label}: STALE_ACTION_NOT_RELEASED (the game-process input channel \
+                             refused to release `{stale}` before the ground probe; a held \
+                             horizontal action carries the player while the probe is taken, so \
+                             this window cannot certify where the player was standing)"
+                        ));
+                    }
+                }
                 let probe_args = json!({
                     "node_path": "Player",
                     "properties": ["position"],
@@ -3919,6 +3980,25 @@ pub const JUMP_GROUND_PROBE_FRAMES: u64 = 2;
 /// off the ground.  A reader who wants to know whether the game's jump works must
 /// see "unobserved", not "broken".
 pub const JUMP_NOT_DRIVEN: &str = "JUMP_NOT_DRIVEN";
+
+/// DR-83: the horizontal actions the jump window clears **inside the game
+/// process** before it takes its ground probe.
+///
+/// The jump window is the first window of the pass (DR-83: the window that needs
+/// the ground runs before the windows that consume it), so the loop's own
+/// "release the previous direction" has nothing to drain: the action still held is
+/// the one the **preceding battery step** left.  A window that begins a pass must
+/// not depend on the step before it having been bounded — `smoke-t15` measured
+/// what the dependency costs: the channel probe held `move_right` for its own
+/// 30-frame sample and the player drifted `3389.35 -> 3411.35` into the pass,
+/// against a floor whose last supported centre is `3412`.  The probe now bounds
+/// its own drive (it releases `PROBE_ACTION` when its reading is complete), but
+/// the jump is the one window whose verdict turns on the player **standing still**
+/// while its two-frame probe is taken, so it clears what it did not press: DR-68
+/// ③(a) already fixes the rule for a window's own directions ("every direction is
+/// tested from a clean game input state"), and `INTERACTION_STALE_ACTIONS` already
+/// applies it to the window that observes the coin counter.
+pub const JUMP_STALE_ACTIONS: [&str; 2] = ["move_right", "move_left"];
 
 /// DR-82 ①: how much `y` may vary across the probe and still count as resting.
 ///
