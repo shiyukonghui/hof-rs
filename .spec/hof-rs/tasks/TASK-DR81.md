@@ -53,6 +53,13 @@
 - **越界清理模式**：DR-79 的 `out_of_tree_cleanup` 只匹配 `.tmp_*`/`tmp_*`/`*.tmp`/`*.bak`，故 T14 的 `l.json`/`p2.json`/`pv.json`/`r.json` 未被清理。
   ⇒ **扩展模式或改为"轮次自产的、位于仓库根的单段临时名"更一般的规则**（**仍须有界、仍须留 `out_of_tree_cleanup` 记录、仍须保留 `out_of_tree_writes` 事实**）。
 
+### ⑤ **G5（流程缺陷，主代理已认领）：闸门必须校验"标记来源是验收件"**
+事实：T14 的**报告提交 `03ee2e3` 被推上 `origin/master`（10:43:21），早于其验收**——因为标记时用的是**报告自身**（`TASK-SMOKE-T14-REPORT.md`），而 `scripts/accept-commit.sh`/pre-push 只校验"该提交有条目"，**不校验条目是不是一份验收件**。
+- **要做**：让闸门与 `accept-commit.sh` **校验标记来源**——**必须是一份验收件**（路径含 `ACCEPTANCE`，例如 `*ACCEPTANCE*.md`），
+  **拒绝**把"被审对象自身"（如 `*-REPORT.md` 或轮次报告）当作验收来源；并给**明确的报错信息**。
+- **测试（先红）**：①用 `*-REPORT.md` 作来源标记 ⇒ **必须被拒**（当前必绿=未拒 ⇒ 先红）；②用 `*ACCEPTANCE*.md` ⇒ **放行**（回归钉）；③来源文件不存在 ⇒ 拒绝。
+- **注意**：`pre-push` 钩子与 `scripts/accept-commit.sh` 都要改，且**不得削弱**既有语义（未验收即拒、逐提交具名）。
+
 ## 2. 硬约束
 
 - **不跑真机轮**；**`runs/**` 零写入**（含 `runs/smoke-t14/**`）；不改 `PRD-mario.md`、`DECISIONS.md`、`godot-mcp/**`、任何既有 `.workspace/**`；不加新依赖。
