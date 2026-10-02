@@ -228,3 +228,88 @@ F:\moonbit-hof-rs\            <- HoH 代码仓（git；每阶段 commit 对应 D
 - 新契约里 23 个工具是**游戏端点独有**，编辑器端点不可达 ⇒ hof-rs 的输入回放/监控设计必须改为双端点（DR-43）；
 - `.workspace/mario` 里残留的 addon 与 `.godot/extension_list.cfg` 缓存必须先清理，否则仍是双绑定（DR-41）；
 - 「活体 `tools/list` 与夹具逐字一致」这一条**离线批次无法证明**，留给批次二。
+
+---
+
+# DR-80 注（追加式，2026-10-02）
+
+> **规则**（`DECISIONS.md` **D289**）：对冻结文档的更正**只能追加**——**只追加、不改原文、不改证据字符串**，
+> 被取代的原句**逐字保留并标注** `superseded` / `incorrect`。本节因此**不动 C3 原句一字**（第 58 行原样），
+> 只在此处给出正确读数、证据与判据口径。触发：目标级验收 `tasks/OBJECTIVE-ACCEPTANCE.md` 的 **OA-4**
+> 与本批任务书 `tasks/TASK-DR80.md` ②。口径：本节数字全部来自 `runs/**` 与 `.spec/**` 的**只读复算**。
+
+## 1. 被取代的原句（C3，第 58 行；逐字保留，标注 `superseded`）
+
+```text
+实测版本串 `4.8.dev.mono.custom_build.ba1587c71`（构建于 anchor `ba1587c71`）
+```
+
+就**当前安装的那支引擎二进制**而言，这半句已**不成立**（`incorrect`）；完整 C3 行仍在第 58 行**一字未改**。
+
+## 2. 差异不是笔误，而是引擎被换过一次
+
+| 构建 | 版本串 | 二进制 sha256 | size |
+|---|---|---|---|
+| `smoke-t6` 及更早（旧构建） | `4.8.dev.mono.custom_build.ba1587c71` | `25d29eb4…` | 194,207,744 |
+| `smoke-t7` 起至今（**现行**） | `4.8.dev.mono.custom_build.035edfce7` | `08483088…` | 194,216,960 |
+
+出处（逐字）：`tasks/TASK-SMOKE-T7-REPORT.md` 第 387 行「引擎 | `4.8.dev.mono.custom_build.ba1587c71`，
+sha256 `25d29eb4…`，size 194,207,744 | **`4.8.dev.mono.custom_build.035edfce7`**，sha256 `08483088…`，
+size 194,216,960 | 变了：换到含 TASK-151 修复的构建」。
+
+C3 的这半句记录的是**换引擎之前**那支构建的真机读数（同一串见 `tasks/TASK-DR41-IMPL.md`、
+`tasks/TASK-DR47-SMOKE-REPORT.md`、`tasks/TASK-DR47-ACCEPTANCE.md`）；引擎在 T7 前被替换时，
+`REQUIREMENTS.md` 没有回头更新，于是 C3 的"实测"停在旧构建上。**这是文档陈旧，不是代码缺陷**：
+`src/**` 从不硬编码版本串（C12；`tasks/TASK-DR41-ACCEPTANCE.md` 的 R9 以 `rustc.exe` 替身实测过 0 命中）。
+
+## 3. 实测值与其证据文件
+
+| 事实 | 实测值 | 证据文件（只读） |
+|---|---|---|
+| 版本串（**身份判据**） | `4.8.dev.mono.custom_build.035edfce7` | `runs/smoke-t11/meta.json`、`runs/smoke-t12/meta.json`、`runs/smoke-t13/meta.json` 的 `.engine.version_string` |
+| 同上（原始捕获，含 `--version` 语义） | 同值 | `runs/smoke-t11/evidence/round/prerun_state.txt` 第 24 行 `VERSION_STRING=…` |
+| 二进制 sha256 | `08483088a4a2772841cd3b4c916b2d45b3cb6255656cf3951598a86fce7e9e6a` | 同上第 23 行 `SHA256=…` |
+| 二进制 size（字节） | `194216960` | 同上第 20 行 `SIZE=…` |
+| 二进制 mtime（unix） | `1790641862` | 同上第 21 行 `MTIME_UNIX=…` |
+| 启动横幅 | `Godot Engine v4.8.dev.mono.custom_build.035edfce7 (2026-09-29 00:01:57 UTC)` | `tasks/TASK-SMOKE-T11-REPORT.md` 第 96 行、`tasks/TASK-SMOKE-T13-REPORT.md` 第 111 行 |
+| 引擎源码锚点存在性 | 提交 `035edfce7f7a18cbd6d2ab79069151d798ce0d86` 是嵌套仓 `HEAD` 的祖先 | `git -C godot-mcp/godot merge-base --is-ancestor 035edfce7 HEAD` → exit 0 |
+
+复现命令：
+
+```bash
+python -c "import json;print(json.load(open(r'runs/smoke-t13/meta.json',encoding='utf-8'))['engine']['version_string'])"
+# -> 4.8.dev.mono.custom_build.035edfce7
+python -c "import json;[print(r, json.load(open('runs/%s/meta.json'%r,encoding='utf-8'))['engine']['version_string']) for r in ('smoke-t11','smoke-t12','smoke-t13')]"
+grep -n 'VERSION_STRING\|SHA256\|SIZE\|MTIME_UNIX' runs/smoke-t11/evidence/round/prerun_state.txt
+git -C godot-mcp/godot merge-base --is-ancestor 035edfce7 HEAD ; echo $?     # 0
+```
+
+## 4. 判据口径：判据(1) 以**实测串** `035edfce7` 为准
+
+**目标原文自己点的就是该串**——`OBJECTIVE-COMPLETION.md` 第 11 行：
+
+```text
+- **必须为真**：在引擎 `4.8.dev.mono.custom_build.035edfce7` 上，`hoh init` 一个**全新空白工程**后，
+```
+
+每一轮任务书（`TASK-SMOKE-T7/T8/T9/T10/T11/T12`）与每一轮报告也都把 `035edfce7` 写作**判据**、
+把二进制 sha256 只作记录（例如 `tasks/TASK-SMOKE-T11.md` 第 35 行：「引擎身份 = `--version` 字符串
+`4.8.dev.mono.custom_build.035edfce7`（**判据**；sha256 仅记录）」）。⇒ 本轮起，
+**C3 的"实测版本串 `ba1587c71`"一律读作 `superseded`（就现行引擎而言亦 `incorrect`），
+判据以 `035edfce7` 为准**。
+
+C3 自带的"版本串只记录、不写进代码、不作为判据"**仍然成立**：它的意思是**代码不得硬编码版本串**
+（C12：换版本不得要求改 `src/**`），**不是**说轮次的引擎身份无需核对——轮次判据一贯是 `--version`
+字符串逐字相符，这也正是本差异必须记下来的原因（否则"引擎身份与规格一致"这类论证会在文档层被削弱）。
+C3 的其余内容（引擎是自建 MCP 原生构建、二进制路径、编辑器端点 9877、`--mcp-port=9877`、
+非官方发行版、D216 取代史）**均不变**。
+
+## 5. 同族未改的陈旧落点（只登记，本批按任务书**不改**）
+
+- `DESIGN-DETAIL.md` 第 1508、1587 行同样记 `ba1587c71`；
+- `tasks/TASK-DR41-IMPL.md` 第 39、140 行同样记 `ba1587c71`；
+- `tasks/TASK-DR41-ACCEPTANCE.md`、`tasks/TASK-DR47-*` 是**当时的**历史记录（它们对**当时**的二进制为真），
+  按追加式规则**不改**。
+
+本批只处理 `REQUIREMENTS.md`；其余同族陈旧读数留待一次显式划定范围的清理，已作为遗留项登记在
+`tasks/TASK-DR80-REPORT.md`。

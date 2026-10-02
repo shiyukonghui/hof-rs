@@ -1823,3 +1823,151 @@ MISSING=[]         record types {replay:11, runtime_trace:10, build:5, assert:3,
 
 `count_scopes.evidence_files_copied_in_after_close`（`110`，scope `23 round + 31 analysis + 5 gatecheck + 51 scripts`）
 **本来就是对的**，与正文 §11.4 的 `106` 矛盾——**错的是正文**（E-4 b）。
+
+---
+
+# 附：DR-80 更正（**追加式**，2026-10-02）
+
+> **规则**（`DECISIONS.md` **D289**）：**只追加**、**不改原文**、**不改机器可读块与证据字符串**；
+> 被更正的原文**逐字保留并标注** `incorrect` / `superseded`，正确读数另给。
+> 触发：`TASK-DR79-ACCEPTANCE.md` 的缺陷 **D-1 / D-2 / D-3 / D-4** 与本批任务书 `TASK-DR80.md` ③④⑤。
+> **本节不改上文一字**：DR-79 勘误节（第 1511–1825 行）逐字保留；机器可读块（第 741–1408 行）
+> 与 `runs/smoke-t13/evidence/analysis/machine_block.json`（34,699 B / `36e34d0d…`）仍**逐字节相同**。
+> 口径：本节数字全部来自我对 `runs/smoke-t13/**` 与相关文档的**只读复算**（脚本在仓外
+> `C:\Users\wyl\AppData\Local\Temp\dr80\**`，仓内无新增临时物）；`runs/**` **零写入**（含"写过再删"）。
+
+## F-1（D-1）两处字节数更正：**回包载荷**与**文件大小**必须分开写
+
+### 被更正的原句（**incorrect**）
+
+第 1548 行（DR-79 勘误 E-1 第 1 条）逐字为：
+
+```text
+   `tools/list`（25,908 B 回包）与 `running_game_get_scene_tree`（816 B，返回 `/root/Main/Ground|Player|Goal|HUD` 场景树）。
+```
+
+### 正确读数（两栏分开，各自带证据）
+
+| 探针 | **回包载荷** B | 回包载荷 sha256 | **文件大小** B | 文件 sha256 |
+|---|---|---|---|---|
+| `tools/list`<br>`runs/smoke-t13/evidence/round/game_endpoint_tools_list_round_author.json` | **31,202** | `980830d3008d07005266e9757b6dc98ef9e5637e0f635be6ee5d59694d042519` | **31,360** | `246a442369259a5db9dce89a82f697d3dd9a8cacd8d6f384436c25049360164b` |
+| `running_game_get_scene_tree`<br>`runs/smoke-t13/evidence/round/game_endpoint_scene_tree_round_author.json` | **589** | `7b80dcbe985349419701caa391b0e55725c9816e4163bd65cb92c66ba09e7d85` | **816** | `302ac4ef6bfca3d29b1f5d9d12a4b19f954dae42fedfacc10fefa443fa8aebb6` |
+
+逐条判定：
+
+- **816 B 本身是真的，但它是 scene-tree 探针的*文件大小*，不是它的*回包载荷***——回包载荷是 **589 B**。
+  原句把"文件大小"当成"回包"写，属**口径混用**。
+- **25,908 B 不匹配 smoke-t13 的任何工件**：`runs/smoke-t13/**` 共 268 个文件，其中**没有**这个大小的文件；
+  它既不是任一探针的文件大小（31,360 / 816），也不是任一探针的回包载荷（31,202 / 589），
+  也不是载荷的 JSON 重排（原验收试过 41,024 / 39,346 / 39,336 三种 `json.dumps` 口径，均不等）。
+  **不把范围说过头**：我另外扫了**整个 `runs/**`**，唯一的 25,908 字节文件是
+  `runs/playability/PlayJev-src/demo/replays/2048/playjev-0.8b-sft_all1_d1_5012.js`——那是另一棵数据树里的
+  无关文件，**不是**本轮工件。准确表述是「**25,908 不匹配本轮的任何工件，也不是那次探针的任何一个读数**」。
+- **读数的边界（防止再被复算出"第三个数"）**：两个证据文件把回包夹在
+  `---- raw reply begin ----` 与 `---- raw reply end ----` 两行之间。两标记之间的**原始区间**是
+  **31,204 / 591 B**，其中含捕获脚本写入的**一个前导 LF 与一个尾随 LF**；去掉这两个换行后才是
+  **回包载荷 31,202 / 589 B**（即上表第二列）。因此本轮共有三个不同口径的数字——**文件 31,360 / 816**、
+  **区间 31,204 / 591**、**载荷 31,202 / 589**——各自都真，**不可混用**；勘误只该用"文件大小"与"回包载荷"两栏。
+
+### 证据与复现
+
+```bash
+python -c "
+import hashlib
+for rel in ('game_endpoint_tools_list_round_author.json','game_endpoint_scene_tree_round_author.json'):
+    b=open('runs/smoke-t13/evidence/round/'+rel,'rb').read()
+    s=b.find(b'---- raw reply begin ----')+len(b'---- raw reply begin ----')
+    e=b.find(b'---- raw reply end ----')
+    raw=b[s:e]; payload=raw.strip()
+    print(rel,'file',len(b),hashlib.sha256(b).hexdigest()[:16],
+          '| between markers',len(raw),'| reply payload',len(payload),hashlib.sha256(payload).hexdigest()[:16])
+"
+# 期望：
+#   game_endpoint_tools_list_round_author.json      file 31360 246a442369259a5d | between markers 31204 | reply payload 31202 980830d3008d0700
+#   game_endpoint_scene_tree_round_author.json      file   816 302ac4ef6bfca3d2 | between markers   591 | reply payload   589 7b80dcbe98534941
+
+python -c "import os;print([os.path.relpath(os.path.join(r,f),'.') for r,_,fs in os.walk('runs/smoke-t13') for f in fs if os.path.getsize(os.path.join(r,f))==25908])"
+# 期望：[]   —— smoke-t13 里没有 25,908 字节的文件
+python -c "import os;print([os.path.relpath(os.path.join(r,f),'.') for r,_,fs in os.walk('runs') for f in fs if os.path.getsize(os.path.join(r,f))==25908])"
+# 期望：['runs\\playability\\PlayJev-src\\demo\\replays\\2048\\playjev-0.8b-sft_all1_d1_5012.js']（另一棵树，与本轮无关）
+```
+
+### 原文保留
+
+**保留**（第 1548 行逐字未动；其所在的 DR-79 勘误节整体处于 F-4 表第二行的封印之下）。
+
+## F-2（D-2）证据索引行的**旧哈希**更正
+
+### 被更正的原句（**incorrect**，且只是**部分**更正过）
+
+第 1485 行（§12 证据索引）逐字为：
+
+```text
+| `runs/smoke-t13/evidence/analysis/cite_check.txt` | 18189 | `4bbce1a00a26101c` |
+```
+
+DR-79 勘误 E-4e（第 1691 行）把**字节数**改成 `18401`，但那一行明文写着 sha256 前缀
+"我也**未能核对**"，并把旧前缀 `4bbce1a00a26101c` 原样复述了一遍 ⇒ 该行现在是
+**正确的大小 + 陈旧的哈希**。
+
+### 正确读数
+
+`runs/smoke-t13/evidence/analysis/cite_check.txt`
+
+- 大小：**18,401 B**（E-4e 已正确）；
+- **sha256 = `21f071f5e0c7ef5ee7374848293f2297f3270207a6bf046b88d97fd506ab455a`**（前 16：`21f071f5e0c7ef5e`）。
+
+旧的 `4bbce1a00a26101c` **不再匹配**该文件。
+
+### 复现命令
+
+```bash
+python -c "import hashlib;b=open('runs/smoke-t13/evidence/analysis/cite_check.txt','rb').read();print(len(b), hashlib.sha256(b).hexdigest())"
+# 期望：18401 21f071f5e0c7ef5ee7374848293f2297f3270207a6bf046b88d97fd506ab455a
+sha256sum runs/smoke-t13/evidence/analysis/cite_check.txt     # 同一值
+# 反证：旧前缀不属于该文件
+python -c "import hashlib;print(hashlib.sha256(open('runs/smoke-t13/evidence/analysis/cite_check.txt','rb').read()).hexdigest().startswith('4bbce1a00a26101c'))"
+# 期望：False
+```
+
+### 原文保留
+
+**保留**（第 1485、1691 行逐字未动）。
+
+## F-3 只登记、不改的同族陈旧落点
+
+- `TASK-DR79-REPORT.md` 第 36 行同样写着 "`tools/list` (25,908 B reply)" —— 与 F-1 的错处同源。
+  本批任务书的范围是**本报告里的勘误节**，故**本批不改那份文件**；登记为遗留项。
+- **D-4**：冻结产品 `runs/smoke-t13/evidence/analysis/round_facts.txt` **第 160 行**仍写
+  `execution records: verified-only = 10, gap-only = 13, verified+gap = 31`，与 DR-79 勘误 E-4a 的
+  `21 / 10`（总数 31 不变）**不同**。`runs/**` 在本约束下**只读**，因此**不改**；
+  权威读数以 E-4a 与本节为准，此处登记它仍在冻结件里。
+
+## F-4 本批把"仅追加"从纪律变成**机械守卫**（D-3 的收口）
+
+DR-79 验收 D-3 的事实：三重检查（前缀 vs HEAD blob、机器块 vs `machine_block.json`、行数差）
+**能抓住**就地改写、删行、块内改写，**但仓库里没有任何自动化在做**——`grep` 过 `*.rs`/`*.py` 零命中，
+`.githooks` 里只有 DR-75 的推送达闸（它授权提交，不比较报告文本）。
+
+本批新增 `tests/append_only_guard.rs`，把"仅追加"钉进测试。它逐文档断言：
+
+1. 勘误/更正 heading **作为整行**存在（散落在正文里的引文不算）；
+2. heading **之前**的字节前缀与**钉住**的长度和 sha256 一致（就地改写、删行、乱序、截断都会红，
+   而**在 seal 之后追加不会**）；
+3. 本报告的 ```json 机器可读块（整行围栏）另有**自己的**长度/sha256 钉，块内改写由**它自己那条测试**点名；
+4. `TASK-DR73-REPORT.md` 的四个 `DR-77-*` 标记必须存活；`REQUIREMENTS.md` 的 C3 原句必须逐字存活。
+
+| 文档 | seal（整行 heading） | seal 前字节数 | seal 前 sha256 |
+|---|---|---|---|
+| 本报告 | `# 附：DR-79 勘误（**追加式**，2026-10-02）` | 107,709 | `9bbe81c8360d481ef01528f99467cd1253921ff713980336da05a32e3ea9fd36` |
+| 本报告 | `# 附：DR-80 更正（**追加式**，2026-10-02）` | 134,085 | `2f2a2418bc3d0785ec47235da7c868ee64f590e73b38f3e3c7619696d74945a9` |
+| `TASK-DR73-REPORT.md` | `## 12. DR-76 更正台账（**superseded 标注**，2026-10-01 由 DR-76 追加）` | 48,811 | `db0a5a7a5c2086b46250582748fd08a27c7764d5f935922655acc4658da1543c` |
+| `REQUIREMENTS.md` | `# DR-80 注（追加式，2026-10-02）` | 20,910 | `7b551ca08c4c5abf15a95cb8edcc4977ce8d03c649654ab4a5ab01f649cae5ae` |
+
+本报告的机器可读块另钉：**34,699 B** / `36e34d0d0436920605fb3f06065c1c8e4303bbf90b92a499d5e37f6f8d6c3c9f`
+（= 第 741–1408 行围栏之间的内容，与 `machine_block.json` 逐字节相同）。
+
+**植入证明（在临时副本上做，真实报告零改动）**：对 `TASK-SMOKE-T13-REPORT.md` 的临时副本分别做
+① 就地改写一个字节、② 删掉一行、③ 改写机器可读块内的一个字节，三者都使该守卫**红**
+（① ② 由 seal 测试点名，③ 另由块测试点名）；完整输出与"真实报告字节未变"的证据见
+`TASK-DR80-REPORT.md`。
