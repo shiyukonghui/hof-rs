@@ -262,6 +262,17 @@ pub trait ProjectAdapter: Send + Sync {
         false
     }
 
+    /// DR-86 ②: the **verbatim** defects behind [`Self::developer_artifact_valid`].
+    ///
+    /// A wrap-up retry that can still rewrite the artifact must be told what is
+    /// wrong; `smoke-t16` proved the cost of the alternative, because the retry
+    /// that wrote the 20-byte scene received only "write the artifact NOW".
+    /// Returning an empty list is honest when no defect was measured — the
+    /// caller states that explicitly instead of inventing one.
+    fn developer_artifact_defects(&self, _workspace: &Path) -> Vec<String> {
+        Vec::new()
+    }
+
     /// Markdown playbook injected into the Tester's view.
     fn evidence_playbook(&self) -> String;
 

@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
-use hof_rs::adapter::{DoctorItem, ProjectAdapter};
+use hof_rs::adapter::{BatteryRecord, DoctorItem, ProjectAdapter};
 use hof_rs::config::{AgentLimits, HohConfig};
 use hof_rs::harness::Harness;
 use hof_rs::model::{ExecKind, ExecRecord, Role, Usage};
@@ -403,6 +403,14 @@ pub struct FakeAdapter {
     /// DR-37: what [`ProjectAdapter::developer_artifact_valid`] answers.
     /// `false` by default, so every pre-DR-37 scenario keeps its behaviour.
     pub developer_artifact_valid: bool,
+    /// DR-86 ②: the verbatim defect list
+    /// [`ProjectAdapter::developer_artifact_defects`] answers, so a scenario can
+    /// observe that a write-capable retry is really handed it.
+    pub developer_artifact_defects: Vec<String>,
+    /// DR-86: when set, `evidence_battery` declares the two DR-24 gate steps and
+    /// fails them with this observation, so the pre-freeze launchable gate is
+    /// applicable-and-red and the targeted repair call runs.
+    pub gate_failure: Option<String>,
     /// DR-70 ①: the game session the round is given, when a test wants one.
     pub round_game: Option<Arc<RoundGameStub>>,
 }
@@ -463,6 +471,8 @@ impl FakeAdapter {
             drift_after_freeze: None,
             excludes: vec!["cache".to_string()],
             developer_artifact_valid: false,
+            developer_artifact_defects: Vec::new(),
+            gate_failure: None,
             round_game: None,
         }
     }
@@ -487,6 +497,20 @@ impl FakeAdapter {
     /// wrap-up retry even when the budget ran out.
     pub fn with_developer_artifact_valid(mut self, valid: bool) -> Self {
         self.developer_artifact_valid = valid;
+        self
+    }
+
+    /// DR-86 ②: the verbatim defects a write-capable retry must be handed.
+    pub fn with_developer_artifact_defects(mut self, defects: Vec<String>) -> Self {
+        self.developer_artifact_defects = defects;
+        self
+    }
+
+    /// DR-86 ①: make the deterministic battery declare the two DR-24 gate steps
+    /// and fail them, so the gate is applicable-and-red and the repair retry
+    /// runs.
+    pub fn with_gate_failure(mut self, observation: &str) -> Self {
+        self.gate_failure = Some(observation.to_string());
         self
     }
 }
@@ -514,6 +538,61 @@ impl ProjectAdapter for FakeAdapter {
     /// DR-37: the scripted answer; `false` unless a test asks otherwise.
     fn developer_artifact_valid(&self, _workspace: &Path) -> bool {
         self.developer_artifact_valid
+    }
+
+    /// DR-86 ②: the scripted defect list.
+    fn developer_artifact_defects(&self, _workspace: &Path) -> Vec<String> {
+        self.developer_artifact_defects.clone()
+    }
+
+    /// DR-86: the declared gate steps, when a test wants an applicable gate.
+    ///
+    /// The two DR-24 gate steps (`editor_errors_baseline`, `play_scene_ready`)
+    /// plus the actionable `scene_structure` reason, so
+    /// `adapter::evaluate_launchable` answers `applicable: true,
+    /// launchable: false` and the runtime spends its one repair call.
+    async fn evidence_battery(
+        &self,
+        workspace: &Path,
+        tools: &dyn ToolChannel,
+    ) -> anyhow::Result<Vec<BatteryRecord>> {
+        let Some(observation) = self.gate_failure.as_ref() else {
+            // The trait's own default: adapt the build check into `build_check_N`
+            // records.  An override cannot call the default, so it is spelled
+            // here, and it is only reached when no gate failure was asked for.
+            let records = self.build_check(workspace, tools).await?;
+            return Ok(records
+                .into_iter()
+                .enumerate()
+                .map(|(index, record)| BatteryRecord {
+                    step_id: format!("build_check_{index}"),
+                    supports: Vec::new(),
+                    ok: record.observation.contains("no errors") || record.path.is_some(),
+                    record,
+                    raw_path: None,
+                })
+                .collect());
+        };
+        let mut records = Vec::new();
+        for step in [
+            "editor_errors_baseline",
+            "play_scene_ready",
+            "scene_structure",
+        ] {
+            records.push(BatteryRecord {
+                step_id: step.to_string(),
+                supports: Vec::new(),
+                record: ExecRecord {
+                    kind: ExecKind::Build,
+                    path: Some(format!(".hoh/deterministic/{step}.json")),
+                    observation: format!("{step}: {observation}"),
+                    candidate_id: String::new(),
+                },
+                ok: false,
+                raw_path: None,
+            });
+        }
+        Ok(records)
     }
 
     async fn build_check(
@@ -613,11 +692,20 @@ impl ProjectAdapter for FakeAdapter {
 #[derive(Debug, Default)]
 pub struct FakeToolChannel {
     pub calls: Mutex<Vec<(Role, String, Value)>>,
+    /// DR-86 ②: every readiness-window transition the poll asked for, in order,
+    /// so "the poll arms the cold-start window and closes it again" is checked
+    /// rather than assumed.
+    pub grace_calls: Mutex<Vec<(String, bool)>>,
 }
 
 impl FakeToolChannel {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// DR-86 ②: the recorded `(tool, armed)` transitions.
+    pub fn grace_calls(&self) -> Vec<(String, bool)> {
+        self.grace_calls.lock().expect("grace lock").clone()
     }
 }
 
@@ -640,6 +728,13 @@ impl ToolChannel for FakeToolChannel {
             ok: true,
             payload: serde_json::json!({"tool": tool, "args": args, "role": role.as_str()}),
         })
+    }
+
+    fn set_cold_start_grace(&self, tool: &str, armed: bool) {
+        self.grace_calls
+            .lock()
+            .expect("grace lock")
+            .push((tool.to_string(), armed));
     }
 }
 

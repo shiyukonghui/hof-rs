@@ -164,11 +164,53 @@ pub fn render_prompt_with_budget_and_shell(
 /// DR-18: the retry context handed to a wrap-up retry.  It forbids further
 /// exploration, because the previous call already proved it cannot finish
 /// inside its budget.
+///
+/// DR-86 ②: this constant is only the *instruction* half.  A retry that can
+/// write the artifact is invoked with [`wrap_up_context`], which appends the
+/// verbatim defect list; the bare constant is kept because it is the frozen
+/// wording other records quote.
 pub const WRAP_UP_RETRY_CONTEXT: &str =
     "STEP BUDGET EXHAUSTED. Your previous call ended with `LimitsExceeded` before it produced a \
      valid artifact. This is a small, final call: write the required artifact NOW, in a valid \
      form, and submit it. Do not explore, do not run experiments, do not start new work. A \
      minimal contract-valid artifact is the only acceptable outcome.";
+
+/// DR-86 ②: the diagnostic half of a wrap-up retry, next to the instruction.
+///
+/// `smoke-t16`'s decisive corruption was written by the wrap-up retry whose
+/// prompt carried **no diagnostic at all** ("write the required artifact NOW"),
+/// while the repair retry that ran later received a verbatim failure list.  A
+/// retry cannot fix what it is not told, so every write-capable retry now
+/// carries the same class of evidence: the exact defects the runtime measured,
+/// or an explicit statement that it measured none.
+///
+/// This is deliberately a *report*, never a repair: it quotes what is wrong and
+/// forbids nothing the instruction above already forbids.
+pub fn wrap_up_context(diagnostics: &[String]) -> String {
+    let mut text = String::from(WRAP_UP_RETRY_CONTEXT);
+    text.push_str("\n\n");
+    if diagnostics.is_empty() {
+        text.push_str(
+            "WHAT IS WRONG (verbatim): the runtime's own checks recorded no quotable defect — it \
+             could not establish that the artifact is usable, and no per-file reason was \
+             measured. Do not go looking for one and do not re-explore the project: rewrite the \
+             whole artifact you meant to deliver, in one write, and submit it.",
+        );
+    } else {
+        text.push_str(
+            "WHAT IS WRONG (verbatim, from the runtime's own checks of the artifact you must \
+             rewrite):\n",
+        );
+        for item in diagnostics {
+            text.push_str(&format!("- {item}\n"));
+        }
+        text.push_str(
+            "Rewrite the **whole** file a defect names; do not patch the fragment you can see and \
+             do not re-emit only one line.",
+        );
+    }
+    text
+}
 
 /// Is this the exit status of a call that ran out of budget?
 pub fn is_limits_exceeded(exit_status: &str) -> bool {
@@ -232,6 +274,34 @@ mod tests {
             "{error}"
         );
         assert!(assert_fully_rendered("system", "{{HOH_HOH_BIN}} tools call x").is_err());
+    }
+
+    /// DR-86 ②: the wrap-up retry carries the instruction **and** the defect
+    /// list; the bare constant is not the whole prompt any more.
+    #[test]
+    fn a_wrap_up_retry_carries_the_verbatim_defect_list() {
+        let none = wrap_up_context(&[]);
+        assert!(none.starts_with(WRAP_UP_RETRY_CONTEXT), "{none}");
+        assert!(
+            none.contains("no quotable defect"),
+            "an empty diagnostic must be stated, not silently omitted: {none}"
+        );
+
+        let diagnostics = vec![
+            "scenes/main.tscn: the delivered text is 20 byte(s) and carries no `[node ...]` \
+             declaration"
+                .to_string(),
+        ];
+        let text = wrap_up_context(&diagnostics);
+        assert!(text.starts_with(WRAP_UP_RETRY_CONTEXT), "{text}");
+        assert!(
+            text.contains(diagnostics[0].as_str()),
+            "the retry must quote the defect the runtime measured: {text}"
+        );
+        assert!(
+            text.contains("Rewrite the **whole** file"),
+            "the retry must ask for a whole write, not a patch: {text}"
+        );
     }
 
     #[test]

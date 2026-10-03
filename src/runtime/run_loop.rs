@@ -22,12 +22,14 @@ use crate::model::{
 };
 use crate::prompts;
 use crate::runtime::evidence::write_evidence;
+use crate::runtime::integrity::IntegrityFinding;
 use crate::runtime::invoke::{
     attempt_trajectory, invoke_once, is_limits_exceeded, render_prompt_with_budget_and_shell,
-    role_env, WRAP_UP_RETRY_CONTEXT,
+    role_env, wrap_up_context,
 };
 use crate::runtime::policy::{
-    assert_unchanged, diff_manifests, hash_tree, tree_manifest, HashExcludes,
+    assert_unchanged, cache_manifest, cache_prefixes, diff_manifests, hash_tree, tree_manifest,
+    HashExcludes,
 };
 use crate::runtime::record::{
     append_warning, record_attempts, write_iter_result, write_run_meta, write_usage, IterResult,
@@ -268,9 +270,64 @@ fn finalize_failure(
         secret_redactions,
         out_of_tree_writes,
         battery_passes: facts.battery_passes,
+        // DR-86 ④: a gate that was really evaluated survives the failure that
+        // came after it; only a round that never reached a gate keeps the
+        // `not_applicable` stub, which is then truthful.
+        artifact_gate: facts.artifact_gate.unwrap_or_else(|| {
+            crate::model::ArtifactGate::not_applicable(
+                "the round failed; no artifact gate was produced",
+            )
+        }),
         ..IterResult::ok()
     };
     write_iter_result(run_dir, iteration, &result)
+}
+
+/// DR-86 ②: the verbatim schema issues a rejected attempt was failed for, as the
+/// lines a write-capable wrap-up retry can act on.
+///
+/// `smoke-t16`'s decisive corruption came from a wrap-up retry whose prompt was
+/// the bare "write the artifact NOW" instruction.  The retry that followed it DID
+/// receive the verbatim failure list — and could not fix it in budget either —
+/// but the one whose write corrupted the artifact received nothing.  This helper
+/// turns the runtime's own rejection into that list, and says so when there is
+/// genuinely nothing to quote rather than pretending there is.
+fn schema_diagnostics(error: &anyhow::Error) -> Vec<String> {
+    if let Some(HofError::SchemaFailure { issues, .. }) = as_hof_error(error) {
+        let lines: Vec<String> = issues
+            .iter()
+            .rev()
+            .find(|attempt| !attempt.is_empty())
+            .map(|attempt| crate::runtime::schema::issue_lines(attempt))
+            .unwrap_or_default();
+        if !lines.is_empty() {
+            return lines;
+        }
+    }
+    vec![error.to_string()]
+}
+
+/// DR-86 ①: record every delivered-fragment / foreign-escape finding in the
+/// iteration's warnings and in the run's warning log, once per finding.
+fn note_integrity_findings(
+    run_dir: &Path,
+    iteration: u32,
+    warnings: &mut Vec<String>,
+    findings: &[IntegrityFinding],
+    when: &str,
+) -> anyhow::Result<()> {
+    for finding in findings {
+        let line = finding.render();
+        if warnings.iter().any(|existing| existing == &line) {
+            continue;
+        }
+        warnings.push(line.clone());
+        append_warning(
+            run_dir,
+            &format!("iteration {iteration}: {when}: DR-86 delivered-artifact integrity: {line}"),
+        )?;
+    }
+    Ok(())
 }
 
 /// DR-68 ④: the facts a **failed** round really produced, when it failed after
@@ -293,6 +350,17 @@ pub struct FailureFacts {
     pub version_id: Option<String>,
     /// Every battery pass the round ran, with its per-step verdicts.
     pub battery_passes: Vec<crate::model::BatteryPassSummary>,
+    /// DR-86 ④: the artifact gate verdict the round had already produced.
+    ///
+    /// `smoke-t16`'s first round failed **after** the battery with
+    /// `reason=contract_violation` (the Tester wrote into the frozen candidate
+    /// view), and its `result.json` carries
+    /// `artifact_gate={"applicable":false,...}` — the gate verdict existed and was
+    /// thrown away by the failure path, so the round ended with a contract
+    /// violation and no gate verdict at all.  A gate that was really evaluated is
+    /// now persisted even when a later stage fails, because a verdict is evidence
+    /// and evidence is never discarded.
+    pub artifact_gate: Option<crate::model::ArtifactGate>,
 }
 
 /// DR-26/DR-32/DR-38: report-only trace of a role reading the harness sources,
@@ -728,6 +796,11 @@ async fn run_inner(
     // from the artifact hash (DR-11), so the move cannot perturb `A_0`/`A_t`.
     let quarantined = crate::runtime::hygiene::quarantine_previous_evidence(&workspace, &run_dir)?;
 
+    // DR-88 ④: the adapter's cache directories are outside the artifact
+    // identity (R10 keeps `version_id` stable), which used to make a write
+    // through one of them invisible to every reading here.  They are observed
+    // separately instead of hashed: see the QA window below.
+    let cache_watch = cache_prefixes(&orchestrator.adapter.cache_excludes());
     let excludes = HashExcludes::new(orchestrator.adapter.cache_excludes()).merged();
     let store = VersionStore::new(run_dir.join("versions"));
 
@@ -946,7 +1019,8 @@ async fn run_inner(
                             &wrap_base.limits,
                             crate::runtime::shell::ShellFlavor::HOST,
                         );
-                        wrap_base.retry_context = Some(WRAP_UP_RETRY_CONTEXT.to_string());
+                        wrap_base.retry_context =
+                            Some(wrap_up_context(&schema_diagnostics(&error)));
                         let first = planner_attempts.len() as u32 + 1;
                         let (retry_result, retry_attempts) =
                             gate_plan_traced(&*orchestrator.harness, &wrap_base, 0, first).await;
@@ -1163,7 +1237,9 @@ async fn run_inner(
                 &wrap_base.limits,
                 crate::runtime::shell::ShellFlavor::HOST,
             );
-            wrap_base.retry_context = Some(WRAP_UP_RETRY_CONTEXT.to_string());
+            wrap_base.retry_context = Some(wrap_up_context(
+                &orchestrator.adapter.developer_artifact_defects(&workspace),
+            ));
             wrap_base.trajectory_path = attempt_trajectory(&traj_dir, Role::Developer, 2);
             developer_outcome = invoke_once(&*orchestrator.harness, &wrap_base).await?;
             developer_limits = is_limits_exceeded(&developer_outcome.exit_status);
@@ -1190,6 +1266,20 @@ async fn run_inner(
         // roles, so every attempt has a trajectory and a log.
         record_attempts(&run_dir, iteration, &developer_attempts, None)?;
         iter_attempts.extend(developer_attempts.clone());
+        // DR-86 ①: **the delivery boundary.**  The Developer (and, when it ran,
+        // the wrap-up retry) has finished writing, so this is where the runtime
+        // decides whether what is on disk is a whole document or the surviving
+        // fragment of one.  The findings are recorded here, before the battery,
+        // so the one targeted repair below can be handed them — a repair cannot
+        // fix a file it is never told about.
+        let mut integrity_findings = crate::runtime::integrity::audit_tree(&workspace, &excludes)?;
+        note_integrity_findings(
+            &run_dir,
+            iteration,
+            &mut iter_warnings,
+            &integrity_findings,
+            "after the developer stage",
+        )?;
         note_source_reads(&mut iter_warnings, &developer_attempts, &out_of_tree_root);
         // One summary entry per role, already carrying every attempt so far; the
         // targeted repair below merges into the same entry (DR-31).
@@ -1354,6 +1444,20 @@ async fn run_inner(
             for reason in &launch_gate.reasons {
                 context.push_str(&format!("- {reason}\n"));
             }
+            // DR-86 ①: the delivered-artifact integrity audit, verbatim, so the
+            // repair call is told *which file* is a fragment and *why* the bytes
+            // cannot be a whole document — the same class of evidence the gate
+            // gives it, one step earlier.
+            if !integrity_findings.is_empty() {
+                context.push_str(
+                    "\nDelivered-artifact integrity audit (DR-86 ①, verbatim — these files are \
+                     fragments or carry a foreign shell escape, and each must be rewritten as a \
+                     whole document):\n",
+                );
+                for finding in &integrity_findings {
+                    context.push_str(&format!("- {}\n", finding.render()));
+                }
+            }
             let repair_attempt = developer_attempts.len() as u32 + 1;
             let mut repair = developer.clone();
             repair.limits.step_limit = cfg.agent.repair_steps;
@@ -1427,6 +1531,47 @@ async fn run_inner(
             note_mcp_desync(&mut iter_warnings, &workspace);
             launch_gate = crate::adapter::evaluate_launchable(&battery);
             battery_passes.push(battery_summary(2, &battery, &launch_gate));
+        }
+        // DR-86 ①: re-measure after the **last** write-capable retry.  Whether or
+        // not a repair ran, a delivered file that is a fragment must not be
+        // treated as a delivered artifact: the finding becomes a gate reason so
+        // `launchable=false` names the truncation itself, not only the editor's
+        // downstream parse error.  This only ever *adds* a reason — the DR-24
+        // classification of real project defects against infrastructure is
+        // untouched, and a project that is genuinely whole is unaffected.
+        integrity_findings = crate::runtime::integrity::audit_tree(&workspace, &excludes)?;
+        note_integrity_findings(
+            &run_dir,
+            iteration,
+            &mut iter_warnings,
+            &integrity_findings,
+            "after the last write-capable retry",
+        )?;
+        if !integrity_findings.is_empty() {
+            if !launch_gate.applicable {
+                // The battery declared no gate step, so its `gate_not_applicable`
+                // note described the *battery*.  The integrity check is a gate
+                // check that always applies, so that note must not survive next
+                // to `applicable: true`.
+                launch_gate
+                    .reasons
+                    .retain(|reason| !reason.starts_with("gate_not_applicable"));
+            }
+            for finding in &integrity_findings {
+                let reason = format!("artifact_integrity: {}", finding.render());
+                if !launch_gate
+                    .reasons
+                    .iter()
+                    .any(|existing| existing == &reason)
+                {
+                    launch_gate.reasons.push(reason);
+                }
+            }
+            launch_gate.applicable = true;
+            launch_gate.launchable = false;
+            if let Some(last) = battery_passes.last_mut() {
+                last.launchable = launch_gate.launchable;
+            }
         }
         // DR-70 ①: the battery's pass(es) are over and its own `editor_stop_scene`
         // has withdrawn the route.  The round's session is started again here so
@@ -1576,11 +1721,13 @@ async fn run_inner(
                 iter_secret_redactions,
                 iter_out_of_tree.iter().cloned().collect(),
                 // DR-68 ④: the freeze and the battery already happened, so this
-                // failure must not erase them from `result.json`.
+                // failure must not erase them from `result.json`.  DR-86 ④ adds
+                // the gate verdict to the same list for the same reason.
                 FailureFacts {
                     candidate_id: Some(version.candidate_id.clone()),
                     version_id: Some(version.version_id.clone()),
                     battery_passes: battery_passes.clone(),
+                    artifact_gate: Some(launch_gate.clone()),
                 },
             )?;
             return Err(HofError::contract(ContractViolation::WorkspaceDriftBeforeQa).into());
@@ -1591,6 +1738,11 @@ async fn run_inner(
         let m_cand_before = tree_manifest(&candidate, &excludes)?;
         let h_ws_before = hash_tree(&workspace, &excludes)?;
         let m_ws_before = tree_manifest(&workspace, &excludes)?;
+        // DR-88 ④: the excluded-path watch, taken from the same moment as the
+        // hashed identity.  The candidate view is copied from the snapshot with
+        // the caches excluded, so it starts with none of these directories: any
+        // path that appears under one of them during QA is a role's write.
+        let cache_before = cache_manifest(&candidate, &cache_watch)?;
         let tester_base = RoleInvocation {
             role: Role::Tester,
             iteration,
@@ -1643,7 +1795,7 @@ async fn run_inner(
                         &wrap_base.limits,
                         crate::runtime::shell::ShellFlavor::HOST,
                     );
-                    wrap_base.retry_context = Some(WRAP_UP_RETRY_CONTEXT.to_string());
+                    wrap_base.retry_context = Some(wrap_up_context(&schema_diagnostics(&error)));
                     let first = tester_attempts.len() as u32 + 1;
                     let (retry_result, retry_attempts) = gate_evidence_traced(
                         &*orchestrator.harness,
@@ -1686,9 +1838,176 @@ async fn run_inner(
         // how good the evidence looks.
         let h_cand_after = hash_tree(&candidate, &excludes)?;
         let h_ws_after = hash_tree(&workspace, &excludes)?;
-        if let Err(violation) = assert_unchanged("tester/candidate", &h_cand_before, &h_cand_after)
-        {
-            let diff = diff_manifests(&m_cand_before, &manifest_or_empty(&candidate, &excludes));
+        // DR-88 ④: the excluded-path watch.  A write through one of the
+        // adapter's configured cache excludes is invisible to `hash_tree` (R10
+        // keeps `version_id` stable, which is exactly why they are excluded),
+        // so before this batch a round could read `ok=true`, carry no
+        // `qa_contaminated_*` warning and still have left a role's bytes in
+        // `.godot/**` of the frozen view.  The directories are therefore
+        // observed on their own, the bytes are preserved as evidence, and the
+        // round is rejected exactly as for a write the hash can see.
+        let cache_after = cache_manifest(&candidate, &cache_watch)?;
+        let candidate_cache_diff = diff_manifests(&cache_before, &cache_after);
+        if !candidate_cache_diff.is_empty() {
+            let preserve_root = iter_dir.join("tester-writes/cache-candidate");
+            let preservation_failures = crate::runtime::frozen_view::preserve_excluded_writes(
+                &candidate,
+                &preserve_root,
+                &candidate_cache_diff,
+            );
+            let mut detail = format!(
+                "added={:?} modified={:?} removed={:?}",
+                candidate_cache_diff.added,
+                candidate_cache_diff.modified,
+                candidate_cache_diff.removed
+            );
+            for failure in &preservation_failures {
+                detail.push_str(&format!("; {failure}"));
+            }
+            let token = "qa_wrote_cache_candidate".to_string();
+            if !iter_warnings.contains(&token) {
+                iter_warnings.push(token.clone());
+            }
+            append_warning(
+                &run_dir,
+                &format!(
+                    "iteration {iteration}: {token} (DR-88 ④): a role wrote into the frozen \
+                     candidate view through the adapter's configured cache excludes \
+                     {cache_watch:?}, which the artifact hash deliberately does not cover \
+                     (R10 keeps `version_id` stable).  {detail}. The added bytes were moved out \
+                     to iter-{iteration}/tester-writes/cache-candidate/; the round is rejected \
+                     exactly as for a write the hash can see."
+                ),
+            )?;
+        }
+        let candidate_violation =
+            assert_unchanged("tester/candidate", &h_cand_before, &h_cand_after).err();
+        let workspace_violation =
+            assert_unchanged("tester/workspace", &h_ws_before, &h_ws_after).err();
+        if candidate_violation.is_some() || workspace_violation.is_some() {
+            // DR-86 ④ / D295(b): the frozen view is re-established from the
+            // immutable A_t snapshot, and every byte a role wrote is
+            // **preserved** — never deleted — under `iter-N/tester-writes/`.
+            // `smoke-t16`'s first round ended right here with
+            // `reason=contract_violation` and `artifact_gate.applicable=false`,
+            // i.e. with **no gate verdict at all**; the property this guard
+            // establishes is that the verdict already produced is never thrown
+            // away.  It is not a licence for the round to pass: the violation is
+            // still reported and still fails the round below.
+            let violation = candidate_violation
+                .or(workspace_violation)
+                .unwrap_or(crate::model::ContractViolation::QaContaminatedCandidate);
+            let frozen_version = store.root.join(&version.version_id);
+            let mut restored: Vec<(&str, crate::runtime::frozen_view::RestoreReport)> = Vec::new();
+            if candidate_violation.is_some() {
+                let report = crate::runtime::frozen_view::restore_frozen_view(
+                    &candidate,
+                    &frozen_version,
+                    &m_cand_before,
+                    &excludes,
+                    &iter_dir.join("tester-writes/candidate"),
+                )?;
+                restored.push(("candidate", report));
+            }
+            if workspace_violation.is_some() {
+                let report = crate::runtime::frozen_view::restore_frozen_view(
+                    &workspace,
+                    &frozen_version,
+                    &m_ws_before,
+                    &excludes,
+                    &iter_dir.join("tester-writes/workspace"),
+                )?;
+                restored.push(("workspace", report));
+            }
+            let mut failures: Vec<String> = Vec::new();
+            for (label, report) in &restored {
+                let token = format!("qa_contaminated_{label}_restored");
+                if !iter_warnings.iter().any(|warning| warning == &token) {
+                    iter_warnings.push(token.clone());
+                }
+                append_warning(
+                    &run_dir,
+                    &format!(
+                        "iteration {iteration}: {token} (DR-86 ④): a role wrote into the frozen \
+                         {label} view; the frozen bytes were restored from the A{iteration} \
+                         snapshot and every stray byte was preserved under \
+                         iter-{iteration}/tester-writes/{label}/. Report: {}",
+                        report.render()
+                    ),
+                )?;
+                failures.extend(report.failures.iter().cloned());
+            }
+            let candidate_restored = crate::runtime::frozen_view::matches_manifest(
+                &candidate,
+                &m_cand_before,
+                &excludes,
+            )?;
+            let workspace_restored =
+                crate::runtime::frozen_view::matches_manifest(&workspace, &m_ws_before, &excludes)?;
+            // A false equality must say *what* is still different: "the restore
+            // did not verify" is only actionable with the residual difference.
+            if !candidate_restored {
+                failures.push(format!(
+                    "the candidate view is not back to its frozen bytes after the restoration: {}",
+                    pretty(&diff_manifests(
+                        &m_cand_before,
+                        &manifest_or_empty(&candidate, &excludes)
+                    ))
+                ));
+            }
+            if !workspace_restored {
+                failures.push(format!(
+                    "the workspace is not back to its frozen bytes after the restoration: {}",
+                    pretty(&diff_manifests(
+                        &m_ws_before,
+                        &manifest_or_empty(&workspace, &excludes)
+                    ))
+                ));
+            }
+            if !failures.is_empty() {
+                // The guard could not put the frozen bytes back, so the round
+                // fails loudly — exactly as it did before this repair — but now
+                // the real gate verdict travels with the failure instead of being
+                // discarded.
+                let mut all = iter_warnings.clone();
+                for (label, report) in &restored {
+                    all.push(format!("qa_restore_failed_{label}: {}", report.render()));
+                }
+                all.push(violation.code().to_string());
+                return fail_contract(
+                    &run_dir,
+                    iteration,
+                    Role::Tester,
+                    violation,
+                    iter_usage,
+                    durations,
+                    all,
+                    diff_manifests(&m_cand_before, &manifest_or_empty(&candidate, &excludes)),
+                    iter_attempts,
+                    iter_secret_redactions,
+                    iter_out_of_tree.iter().cloned().collect(),
+                    FailureFacts {
+                        candidate_id: Some(version.candidate_id.clone()),
+                        version_id: Some(version.version_id.clone()),
+                        battery_passes: battery_passes.clone(),
+                        artifact_gate: Some(launch_gate.clone()),
+                    },
+                );
+            }
+            // D295(b): detection, restoration and preservation are exactly the
+            // acts that make the violation **auditable** — they are not a repair
+            // that makes the round compliant.  `REQUIREMENTS.md` R4/R13 say a QA
+            // write into the frozen snapshot is **rejected**, and a criterion
+            // measures compliance, not repairability, so the round still fails
+            // here; what changed versus `smoke-t16` is that it now fails **with**
+            // the real gate verdict the battery already produced (`artifact_gate`
+            // above) instead of throwing that verdict away and publishing a
+            // `not_applicable` stub.  `result.json.ok` is false and
+            // `reason=contract_violation`; read together with the `qa_*`
+            // warnings that is what distinguishes the round from one in which no
+            // role wrote at all.  The hash alone cannot make that distinction:
+            // it never covers the adapter's configured cache excludes, which the
+            // watch above observes separately.
             return fail_contract(
                 &run_dir,
                 iteration,
@@ -1696,8 +2015,8 @@ async fn run_inner(
                 violation,
                 iter_usage,
                 durations,
-                iter_warnings,
-                diff,
+                iter_warnings.clone(),
+                diff_manifests(&m_cand_before, &manifest_or_empty(&candidate, &excludes)),
                 iter_attempts,
                 iter_secret_redactions,
                 iter_out_of_tree.iter().cloned().collect(),
@@ -1705,20 +2024,29 @@ async fn run_inner(
                     candidate_id: Some(version.candidate_id.clone()),
                     version_id: Some(version.version_id.clone()),
                     battery_passes: battery_passes.clone(),
+                    artifact_gate: Some(launch_gate.clone()),
                 },
             );
         }
-        if let Err(violation) = assert_unchanged("tester/workspace", &h_ws_before, &h_ws_after) {
-            let diff = diff_manifests(&m_ws_before, &manifest_or_empty(&workspace, &excludes));
+
+        // DR-88 ④: a write found **only** by the excluded-path watch is the same
+        // contract violation as one the hash can see — R4/R13 reject a QA write
+        // into the frozen snapshot, and the exclusion is a hash boundary, not a
+        // licence.  The distinction is preserved in the record: this round
+        // carries `qa_wrote_cache_candidate` rather than
+        // `qa_contaminated_candidate_restored`, because the bytes were moved out
+        // as evidence rather than restored from a snapshot that does not hold
+        // them, and the criterion's reading requires that token to be absent.
+        if !candidate_cache_diff.is_empty() {
             return fail_contract(
                 &run_dir,
                 iteration,
                 Role::Tester,
-                violation,
+                ContractViolation::QaContaminatedCandidate,
                 iter_usage,
                 durations,
-                iter_warnings,
-                diff,
+                iter_warnings.clone(),
+                candidate_cache_diff,
                 iter_attempts,
                 iter_secret_redactions,
                 iter_out_of_tree.iter().cloned().collect(),
@@ -1726,6 +2054,7 @@ async fn run_inner(
                     candidate_id: Some(version.candidate_id.clone()),
                     version_id: Some(version.version_id.clone()),
                     battery_passes: battery_passes.clone(),
+                    artifact_gate: Some(launch_gate.clone()),
                 },
             );
         }
@@ -1760,6 +2089,7 @@ async fn run_inner(
                         candidate_id: Some(version.candidate_id.clone()),
                         version_id: Some(version.version_id.clone()),
                         battery_passes: battery_passes.clone(),
+                        artifact_gate: Some(launch_gate.clone()),
                     },
                 )?;
                 return Err(error);

@@ -383,7 +383,38 @@ pub fn validate_published_route(
 /// cost a whole round), but a second consecutive one is a verdict.  `smoke-t6`
 /// burned about 12 minutes re-attempting a game endpoint that had already
 /// stopped answering at the transport layer.
+///
+/// DR-86 ②: this threshold applies to an endpoint that has **answered at least
+/// once**, or that is not inside a readiness window.  See
+/// [`COLD_START_DEATH_THRESHOLD`].
 pub const ENDPOINT_DEATH_THRESHOLD: u32 = 2;
+
+/// DR-86 ②: how many consecutive transport failures a **never-answered** endpoint
+/// tolerates *inside a readiness window*.
+///
+/// The round of record marked its game endpoint unavailable after **two**
+/// transport failures before any `running_game_*` call had succeeded, so every
+/// later semantic call was refused with `attempt(s)=0` and the round produced
+/// zero behaviour readings: the criterion was unjudgeable rather than failed, and
+/// the very evidence the round existed to collect was destroyed by a mechanism
+/// whose only job is to notice that a *starting* process is not listening yet.
+///
+/// A readiness poll is exactly the pattern that means "this process is starting":
+/// `editor_play_scene` answered `playing=true`, and the poll that followed is not
+/// a verdict about a dead server, it is a wait for a listener that has not bound
+/// its port yet.  While such a window is open and the endpoint has never
+/// answered, an endpoint tolerates this many consecutive transport failures
+/// instead of two.
+///
+/// The bound is derived, not invented: the documented readiness poll interval is
+/// [`crate::tools::reliable::READY_POLL_INTERVAL_MS`] (500 ms), so six failures
+/// are three seconds of half-second polls — the window in which a game process
+/// that really is starting opens its MCP listener.  It is still a **bound**: a
+/// seventh consecutive failure marks the endpoint unavailable, with the true
+/// count in `transport_failures_at_mark`, and the refusal keeps saying
+/// `game_endpoint_unavailable`.  A transient failure therefore costs a retry; an
+/// endpoint that truly never answers still gets the honest failure it deserves.
+pub const COLD_START_DEATH_THRESHOLD: u32 = 6;
 
 /// DR-55: the liveness verdict of one endpoint, as a **stable evidence field**.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -417,6 +448,12 @@ impl EndpointState {
 /// `consecutive_transport_failures` and `transport_failures_at_mark`.  A consumer
 /// must be able to tell "the endpoint was declared dead" from "the tool answered
 /// with a business error" without reading prose.
+///
+/// DR-86 ② adds two evidence fields (both `serde(default)`, so a record written
+/// before this change still parses): `successes` — the endpoint answered this
+/// many times, so `0` names "it never answered" — and `cold_start_grace`, whether
+/// the current window is a readiness wait in which
+/// [`COLD_START_DEATH_THRESHOLD`] replaces [`ENDPOINT_DEATH_THRESHOLD`].
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EndpointLiveness {
     /// The endpoint this verdict is about (its JSON-RPC URL).
@@ -431,6 +468,13 @@ pub struct EndpointLiveness {
     /// The streak at the moment the endpoint was marked unavailable, so the
     /// record can always answer "how many failures killed it?".
     pub transport_failures_at_mark: u32,
+    /// DR-86 ②: how many times this endpoint has answered.  `0` means the
+    /// endpoint has never produced a single answer in this session.
+    #[serde(default)]
+    pub successes: u32,
+    /// DR-86 ②: whether a readiness window is open for this endpoint.
+    #[serde(default)]
+    pub cold_start_grace: bool,
 }
 
 impl EndpointLiveness {
@@ -441,6 +485,27 @@ impl EndpointLiveness {
             unavailable: false,
             consecutive_transport_failures: 0,
             transport_failures_at_mark: 0,
+            successes: 0,
+            cold_start_grace: false,
+        }
+    }
+
+    /// DR-86 ②: open or close the readiness window for this endpoint.
+    pub fn arm_cold_start_grace(&mut self, armed: bool) {
+        self.cold_start_grace = armed;
+    }
+
+    /// DR-86 ②: how many consecutive transport failures this endpoint tolerates
+    /// right now.
+    ///
+    /// A readiness window on an endpoint that has **never answered** is the one
+    /// case in which two failures are not a verdict; everywhere else the DR-55
+    /// threshold is unchanged.
+    pub fn death_threshold(&self) -> u32 {
+        if self.cold_start_grace && self.successes == 0 {
+            COLD_START_DEATH_THRESHOLD
+        } else {
+            ENDPOINT_DEATH_THRESHOLD
         }
     }
 
@@ -460,10 +525,13 @@ impl EndpointLiveness {
         match outcome {
             Ok(()) => {
                 self.consecutive_transport_failures = 0;
+                // DR-86 ②: an answer is what "before its first successful call"
+                // is measured against, so it is recorded rather than inferred.
+                self.successes += 1;
             }
             Err(()) => {
                 self.consecutive_transport_failures += 1;
-                if self.consecutive_transport_failures >= ENDPOINT_DEATH_THRESHOLD {
+                if self.consecutive_transport_failures >= self.death_threshold() {
                     self.state = EndpointState::Unavailable;
                     self.unavailable = true;
                     self.transport_failures_at_mark = self.consecutive_transport_failures;
@@ -525,6 +593,93 @@ impl McpEndpointUnavailableError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// DR-86 ②: inside a readiness window, an endpoint that has **never
+    /// answered** tolerates a bounded streak instead of dying on the second
+    /// failure — and when the bound is spent it dies with the true count, so the
+    /// honest failure is kept.
+    #[test]
+    fn a_cold_start_grace_tolerates_a_bounded_streak_and_keeps_the_honest_mark() {
+        let mut liveness = EndpointLiveness::new("http://127.0.0.1:63803/mcp");
+        liveness.arm_cold_start_grace(true);
+        assert_eq!(liveness.successes, 0);
+        assert_eq!(liveness.death_threshold(), COLD_START_DEATH_THRESHOLD);
+
+        // The failures the round of record died on are no longer a verdict.
+        liveness.observe(Err(()));
+        liveness.observe(Err(()));
+        assert!(
+            !liveness.unavailable,
+            "two transport failures inside a readiness window must not kill an endpoint that \
+             has never answered: {liveness:?}"
+        );
+        assert_eq!(liveness.consecutive_transport_failures, 2);
+
+        // Up to the bound minus one: still alive.
+        for _ in 2..(COLD_START_DEATH_THRESHOLD - 1) {
+            liveness.observe(Err(()));
+        }
+        assert!(!liveness.unavailable, "{liveness:?}");
+        assert_eq!(
+            liveness.consecutive_transport_failures,
+            COLD_START_DEATH_THRESHOLD - 1
+        );
+
+        // The bound-th failure: the bound is real, and the mark records how many
+        // failures killed it rather than the old constant.
+        liveness.observe(Err(()));
+        assert!(liveness.unavailable, "{liveness:?}");
+        assert_eq!(
+            liveness.transport_failures_at_mark,
+            COLD_START_DEATH_THRESHOLD
+        );
+        assert!(liveness
+            .refusal("running_game_get_scene_tree")
+            .contains(&format!(
+                "{} consecutive transport failures",
+                COLD_START_DEATH_THRESHOLD
+            )));
+    }
+
+    /// DR-86 ②: the grace is scoped to "before its first successful call".
+    /// Once the endpoint has answered, the DR-55 two-strike rule is back.
+    #[test]
+    fn an_endpoint_that_has_answered_is_back_under_the_two_strike_rule() {
+        let mut liveness = EndpointLiveness::new("http://127.0.0.1:1/mcp");
+        liveness.arm_cold_start_grace(true);
+        liveness.observe(Ok(()));
+        assert_eq!(liveness.successes, 1);
+        assert_eq!(liveness.death_threshold(), ENDPOINT_DEATH_THRESHOLD);
+
+        liveness.observe(Err(()));
+        assert!(!liveness.unavailable);
+        liveness.observe(Err(()));
+        assert!(
+            liveness.unavailable,
+            "an endpoint that has answered keeps the DR-55 verdict: {liveness:?}"
+        );
+        assert_eq!(liveness.transport_failures_at_mark, 2);
+    }
+
+    /// DR-86 ②: the two evidence fields survive a round trip, and the record
+    /// stays readable when they are absent (an older record).
+    #[test]
+    fn the_cold_start_fields_are_additive_and_default_off() {
+        let cold = EndpointLiveness::new("http://127.0.0.1:1/mcp");
+        assert!(!cold.cold_start_grace);
+        assert_eq!(cold.successes, 0);
+        let encoded = serde_json::to_value(&cold).expect("serializable");
+        assert_eq!(encoded["cold_start_grace"], serde_json::json!(false));
+        assert_eq!(encoded["successes"], serde_json::json!(0));
+
+        let legacy = r#"{"endpoint":"http://127.0.0.1:2/mcp","state":"alive","unavailable":false,
+                         "consecutive_transport_failures":1,"transport_failures_at_mark":0}"#;
+        let parsed: EndpointLiveness =
+            serde_json::from_str(legacy).expect("an older record parses");
+        assert_eq!(parsed.consecutive_transport_failures, 1);
+        assert_eq!(parsed.successes, 0);
+        assert!(!parsed.cold_start_grace);
+    }
 
     /// DR-55: two consecutive transport failures kill the endpoint; a success
     /// resets the streak; a business error is not a transport failure at all.

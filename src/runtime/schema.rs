@@ -55,6 +55,18 @@ fn issue_list(issues: &[SchemaIssue]) -> String {
         .join("\n")
 }
 
+/// DR-86 ②: the same rendering, as one string per issue, so a **wrap-up** retry
+/// that writes the artifact carries the verbatim defects its previous attempt was
+/// rejected for.  The wrap-up retry used to be handed the instruction alone, so
+/// it could not fix anything (see
+/// [`crate::runtime::invoke::wrap_up_context`]).
+pub fn issue_lines(issues: &[SchemaIssue]) -> Vec<String> {
+    issues
+        .iter()
+        .map(|issue| format!("[{}] {}", issue.code.as_str(), issue.message))
+        .collect()
+}
+
 fn retry_context(expected: &std::path::Path, issues: &[SchemaIssue], skeleton: &str) -> String {
     format!(
         "SCHEMA VALIDATION FAILED. Your previous submission was rejected by the runtime.\n\n\

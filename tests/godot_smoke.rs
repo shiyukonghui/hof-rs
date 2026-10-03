@@ -345,7 +345,28 @@ fn e4_verified_claims_are_reproducible() {
     }
 }
 
-/// E5: QA did not modify A_1 -- the workspace still hashes to the candidate id.
+/// E5: QA did not modify A_1 -- the workspace still hashes to the candidate id
+/// **and** the round recorded no QA write.
+///
+/// **D295(b): the hash is not enough on its own.**  A round in which the Tester
+/// wrote into the frozen view and the runtime restored the bytes can hash equal
+/// to the candidate id, so `candidate_id == hash_tree(candidate)` alone cannot
+/// tell "the Tester did not write" from "the Tester wrote and the runtime put it
+/// back".  That is why this reading **requires the absence of the write
+/// warnings** as well: any `qa_contaminated_*` token means the round recorded a
+/// write that the hash saw, and (DR-88 ④) any `qa_wrote_cache_*` token means the
+/// round recorded a write through the adapter's configured cache excludes, which
+/// the hash deliberately does not cover (R10 keeps `version_id` stable) and
+/// which a separate watch observes.  The criterion is about compliance, not
+/// repairability.  Together with `ok == true` (a contaminated round rejects with
+/// `contract_violation`) these readings cannot coincide with a round that wrote.
+///
+/// **What this can and cannot claim.**  It establishes that the artifact identity
+/// over the hashed set is unchanged **and** that neither write watch fired.  It
+/// does not establish that a byte-level write is impossible: the excluded cache
+/// directories are observed, not hashed, and a write that neither the hash nor
+/// the watch could finish reading is reported by the round as a loud failure
+/// rather than silently ignored.
 #[test]
 #[ignore]
 fn e5_qa_did_not_modify_the_artifact() {
@@ -355,6 +376,28 @@ fn e5_qa_did_not_modify_the_artifact() {
     )
     .expect("result json");
     assert_eq!(result["ok"], serde_json::json!(true));
+    let warnings: Vec<String> = result["warnings"]
+        .as_array()
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|item| item.as_str())
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default();
+    let contamination: Vec<&String> = warnings
+        .iter()
+        .filter(|warning| {
+            warning.starts_with("qa_contaminated_") || warning.starts_with("qa_wrote_cache_")
+        })
+        .collect();
+    assert!(
+        contamination.is_empty(),
+        "E5 is not met by a round that recorded a QA write: the runtime either restored the \
+         bytes (which is why the hash below would agree) or moved out a write the hash cannot \
+         see -- {contamination:?}"
+    );
     let candidate_id = result["candidate_id"].as_str().expect("candidate id");
     let excludes = HashExcludes::new([".godot", ".import"]).merged();
     let current = hash_tree(&smoke.workspace, &excludes).expect("hash");

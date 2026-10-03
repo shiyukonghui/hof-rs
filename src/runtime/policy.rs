@@ -54,6 +54,55 @@ pub fn is_excluded(rel: &str, excludes: &[String]) -> bool {
         .any(|exclude| rel == exclude || rel.starts_with(&format!("{exclude}/")))
 }
 
+/// The adapter's configured **cache** excludes, normalized and de-duplicated.
+///
+/// These are the directories `hash_tree` deliberately does not see: R10 keeps
+/// `version_id` stable, so they must not enter the artifact identity.  They are
+/// exposed separately so the runtime can *observe* them without hashing them —
+/// a write into a frozen view through one of these prefixes is invisible to that
+/// identity, but it is still a role write, and no reading may report it as "no
+/// role wrote".
+///
+/// The runtime's own always-excluded paths are filtered out: `.hoh/**` is the
+/// Tester's legitimate submission area, not a cache.
+pub fn cache_prefixes(excludes: &[String]) -> Vec<String> {
+    let mut items: Vec<String> = Vec::new();
+    for item in excludes {
+        let normalized = item.replace('\\', "/");
+        let normalized = normalized.trim_end_matches('/');
+        if normalized.is_empty() || normalized == ".hoh" || normalized == ".git" {
+            continue;
+        }
+        if !items.iter().any(|existing| existing == normalized) {
+            items.push(normalized.to_string());
+        }
+    }
+    items
+}
+
+/// Per-file digest of the adapter's configured cache directories, keyed by the
+/// path exactly as `hash_tree` would name it (`<prefix>/<relative>`).
+///
+/// This is a read-only projection for the excluded-path watch.  It is **not** a
+/// second artifact identity and never feeds `hash_tree`, so `version_id` stays
+/// stable (R10) and the frozen snapshot keeps its meaning.
+pub fn cache_manifest(
+    root: &Path,
+    prefixes: &[String],
+) -> anyhow::Result<std::collections::BTreeMap<String, String>> {
+    let mut manifest = std::collections::BTreeMap::new();
+    for prefix in prefixes {
+        let directory = root.join(prefix);
+        if !directory.exists() {
+            continue;
+        }
+        for (relative, digest) in tree_manifest(&directory, &[])? {
+            manifest.insert(format!("{prefix}/{relative}"), digest);
+        }
+    }
+    Ok(manifest)
+}
+
 fn relativize(root: &Path, path: &Path) -> String {
     let rel = path.strip_prefix(root).unwrap_or(path);
     rel.components()
@@ -449,6 +498,54 @@ mod tests {
         assert!(is_excluded("cache/deep/file.bin", &excludes));
         assert!(!is_excluded("scripts/player.gd", &excludes));
         assert!(!is_excluded("cacheable.txt", &excludes));
+    }
+
+    /// DR-88 ④: the cache watch names exactly the adapter's cache directories —
+    /// normalized, de-duplicated, and never the Tester's own submission area.
+    #[test]
+    fn the_cache_watch_names_only_the_adapter_cache_directories() {
+        let excludes = vec![
+            ".godot".to_string(),
+            ".import\\".to_string(),
+            ".godot/".to_string(),
+            ".hoh".to_string(),
+            ".git".to_string(),
+            String::new(),
+        ];
+        assert_eq!(
+            cache_prefixes(&excludes),
+            vec![".godot".to_string(), ".import".to_string()]
+        );
+    }
+
+    /// The cache manifest keeps `hash_tree`'s path names, so a difference names
+    /// the file a reader would look for — and it is a projection, not a second
+    /// identity: the admissibility of the hashed tree is untouched by it.
+    #[test]
+    fn the_cache_manifest_names_the_cache_paths_and_leaves_the_hash_alone() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        std::fs::create_dir_all(root.join(".godot/imported")).unwrap();
+        std::fs::write(root.join(".godot/imported/cache.bin"), b"cache\n").unwrap();
+        std::fs::write(root.join("project.godot"), b"config_version=5\n").unwrap();
+
+        let prefixes = cache_prefixes(&[".godot".to_string()]);
+        let manifest = cache_manifest(root, &prefixes).unwrap();
+        assert_eq!(
+            manifest.keys().cloned().collect::<Vec<_>>(),
+            vec![".godot/imported/cache.bin".to_string()]
+        );
+
+        let excludes = HashExcludes::new([".godot"]).merged();
+        let before = hash_tree(root, &excludes).unwrap();
+        std::fs::write(root.join(".godot/imported/cache.bin"), b"changed\n").unwrap();
+        assert_eq!(
+            hash_tree(root, &excludes).unwrap(),
+            before,
+            "the cache must stay outside the artifact identity (R10)"
+        );
+        let after = cache_manifest(root, &prefixes).unwrap();
+        assert_ne!(manifest, after, "but the watch must see the change");
     }
 
     #[test]

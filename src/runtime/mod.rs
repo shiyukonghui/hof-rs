@@ -3,7 +3,12 @@
 
 pub mod engine_identity;
 pub mod evidence;
+/// DR-86 ④: restoring a frozen view a role wrote into, without deleting the
+/// role's bytes.
+pub mod frozen_view;
 pub mod hygiene;
+/// DR-86 ①: detecting a delivered fragment or a foreign shell escape.
+pub mod integrity;
 pub mod invoke;
 pub mod policy;
 pub mod project_map;

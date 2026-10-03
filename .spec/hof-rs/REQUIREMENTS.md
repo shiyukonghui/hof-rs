@@ -313,3 +313,25 @@ C3 的其余内容（引擎是自建 MCP 原生构建、二进制路径、编辑
 
 本批只处理 `REQUIREMENTS.md`；其余同族陈旧读数留待一次显式划定范围的清理，已作为遗留项登记在
 `tasks/TASK-DR80-REPORT.md`。
+
+# DR-89 注（追加式，2026-10-03）——E5 的读数已强于该行文本；追加不改封印前缀
+
+上方 E5 行（`| E5 | QA 未修改 A_1（快照 hash 前后一致） | 快照 hash 对比 |`）的**文本**只主张
+「快照 hash 前后一致」。自 DR-88 起，**代码强于该口径**（实现的逐条读数见 DR-89 报告）：
+
+- **E5 的实际读数**：一轮通过 E5，当且仅当 `ok == true`，且 `qa_contaminated_*` 与 `qa_wrote_cache_*`
+  两族警告**皆缺席**（`tests/godot_smoke.rs::e5_qa_did_not_modify_the_artifact`；离线同形读数
+  `tests/evidence_binding.rs::qa_write_warnings`，与 E5 用同一条过滤规则）。哈希相等仍是必要条件，
+  但不再是充分条件。
+- **为什么**：适配器配置的被排除目录（`config/hoh.yaml` 的 `.godot`、`.import`；运行时恒定排除的
+  `.hoh`/`.git` 不进观察）不在 `hash_tree` 的覆盖内——R10 要求 `version_id` 稳定，所以它们**不能**进哈希。
+  运行时因此在 QA 窗口两侧各取一次这些目录的**非哈希清单**；候选视图内出现、改变或消失的缓存文件会被
+  移出视图并留证，以 `qa_wrote_cache_candidate` 具名，并以
+  `ContractViolation::QaContaminatedCandidate` **拒绝该轮**（`ok=false` / `reason=contract_violation` /
+  `failed_role=tester`）。**保留拒绝、不放宽**（R4/R13 决定）。
+- **本观察的边界，及其对判据的后果**：清单只覆盖**候选视图**——它是运行时为 QA 构建的、且是 Tester 的
+  cwd、没有其他写者。**工作区**（`.workspace/**`）里同样被排除的缓存目录仍**不被观察**，因为那里的写者
+  可能是用户的长期编辑器（D294）；把 watch 扩到工作区会用非角色的写制造假红，故**不扩**。
+  **后果**：在工作区缓存目录里发生的写仍然读作 `ok=true` 且无 `qa_*` 警告。因此 E5 的合规读数始终是
+  「就哈希所覆盖的集合、以及**候选视图内**的被排除目录而言」，**不是**「字节级不可能有写」。
+- 封印：本文件 20,910 B / `7b551ca0…` 的封印前缀逐字未动，本注按 D289 **追加**在本文件末尾。

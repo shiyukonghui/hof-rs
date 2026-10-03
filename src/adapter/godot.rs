@@ -296,6 +296,118 @@ pub fn validate_scene_structure_in(
     }
 }
 
+/// DR-86 ①②: the **verbatim** reasons `developer_artifact_valid_in` answers
+/// `false`, in the shape a write-capable retry needs.
+///
+/// `smoke-t16`'s decisive corruption was written by the wrap-up retry whose
+/// prompt carried no diagnostic at all, so the one call that still had a budget
+/// to rewrite the file was never told which file, which line or which defect was
+/// wrong.  A boolean cannot be handed to a role; this is the same measurement
+/// rendered as a list, and it is what
+/// [`crate::runtime::invoke::wrap_up_context`] appends.
+///
+/// The list is assembled from the runtime's own checks, in this order: the
+/// delivered-fragment / foreign-escape audit for every audited text file in the
+/// project, then the DR-24 scene-structure verdict for the configured main
+/// scene, then the referenced-entry-script check.  Duplicates are dropped so a
+/// defect is never quoted twice.
+pub fn developer_artifact_defects_in(
+    workspace: &Path,
+    main_scene: &str,
+    excludes: &[String],
+) -> Vec<String> {
+    let mut defects: Vec<String> = Vec::new();
+    let mut push = |defect: String| {
+        if !defects.iter().any(|existing| existing == &defect) {
+            defects.push(defect);
+        }
+    };
+
+    // ① the delivered-shape audit: a fragment or a foreign escape, for every
+    //    audited text file the project holds — not only the main scene, because a
+    //    truncated script is the same defect class.
+    if let Ok(findings) = crate::runtime::integrity::audit_tree(workspace, excludes) {
+        for finding in findings {
+            push(finding.render());
+        }
+    }
+
+    // ② the main scene itself.
+    let Some(relative) = main_scene.strip_prefix("res://") else {
+        push(format!(
+            "the configured main scene `{main_scene}` is not a `res://` path, so it cannot be \
+             located on disk"
+        ));
+        return defects;
+    };
+    let bytes = match std::fs::read(workspace.join(relative)) {
+        Ok(bytes) => bytes,
+        Err(error) => {
+            push(format!(
+                "{relative}: the configured main scene could not be read ({error}), so a usable \
+                 artifact could not be established"
+            ));
+            return defects;
+        }
+    };
+    let Ok(text) = String::from_utf8(bytes) else {
+        push(format!(
+            "{relative}: the file is not valid UTF-8 text, so no `.tscn` document can be read \
+             out of it"
+        ));
+        return defects;
+    };
+    if text.trim().is_empty() {
+        push(format!(
+            "{relative}: the file is empty (0 non-whitespace byte(s)); the main scene was not \
+             written"
+        ));
+        return defects;
+    }
+    let report = validate_scene_structure_in(&text, Some(workspace));
+    for problem in &report.problems {
+        push(format!(
+            "{relative} ({} byte(s) on disk): {problem}",
+            text.len()
+        ));
+    }
+
+    // ③ the entry script the main scene names.
+    let referenced = script_resource_ids(&text);
+    if referenced.is_empty() {
+        push(format!(
+            "{relative}: no `script = ExtResource(\"...\")` reference, so the scene names no \
+             entry script"
+        ));
+    }
+    let resources = ext_resource_paths(&text);
+    for id in referenced {
+        let Some(path) = resources
+            .get(&id)
+            .and_then(|path| path.strip_prefix("res://"))
+        else {
+            push(format!(
+                "{relative}: `script = ExtResource(\"{id}\")` names no `res://` path in this \
+                 file's `[ext_resource ...]` list"
+            ));
+            continue;
+        };
+        match std::fs::metadata(workspace.join(path)) {
+            Ok(meta) if meta.is_file() && meta.len() > 0 => {}
+            Ok(meta) if meta.is_file() => push(format!(
+                "{path}: the entry script the main scene references is empty (0 byte(s))"
+            )),
+            Ok(_) => push(format!(
+                "{path}: the entry script the main scene references is not a file"
+            )),
+            Err(error) => push(format!(
+                "{path}: the entry script the main scene references could not be read ({error})"
+            )),
+        }
+    }
+    defects
+}
+
 /// DR-37: is the Developer's artifact usable?
 ///
 /// The criterion DR-37 pins down: the configured main scene must exist, pass the
@@ -5528,6 +5640,12 @@ impl ProjectAdapter for GodotAdapter {
     /// script.
     fn developer_artifact_valid(&self, workspace: &Path) -> bool {
         developer_artifact_valid_in(workspace, &self.config.main_scene)
+    }
+
+    /// DR-86 ②: the verbatim defect list handed to the Developer's write-capable
+    /// retries (see [`developer_artifact_defects_in`]).
+    fn developer_artifact_defects(&self, workspace: &Path) -> Vec<String> {
+        developer_artifact_defects_in(workspace, &self.config.main_scene, &self.cache_excludes())
     }
 
     /// DR-17: the deterministic evidence battery.

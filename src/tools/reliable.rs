@@ -334,7 +334,20 @@ pub async fn wait_for_game_ready(
 /// keeps the poll going, because a game that is still starting legitimately
 /// answers like that for a while; when the deadline is reached the last failure
 /// **is** the shape refusal, so the verdict names the real problem instead of a
-/// generic timeout.#[allow(clippy::too_many_arguments)]
+/// generic timeout.
+///
+/// DR-86 ②: the poll opens and closes the channel's **cold-start window** around
+/// its loop.  `smoke-t16`'s round of record marked its game endpoint unavailable
+/// after two transport failures *inside this poll* — before any
+/// `running_game_*` call had succeeded — and every later semantic call was then
+/// refused with `attempt(s)=0`, so the round produced no behaviour reading at
+/// all.  A poll is the one place a transport failure means "the process is still
+/// starting"; while this window is open and the endpoint has never answered, the
+/// channel tolerates [`crate::tools::endpoint::COLD_START_DEATH_THRESHOLD`]
+/// consecutive failures instead of two, so a listener that binds a moment later
+/// is still reached.  The bound is kept: an endpoint that truly never answers is
+/// marked unavailable with its true failure count, and the refusal is unchanged.
+#[allow(clippy::too_many_arguments)]
 pub async fn wait_for_ready_matching(
     tools: &dyn ToolChannel,
     role: Role,
@@ -347,13 +360,16 @@ pub async fn wait_for_ready_matching(
 ) -> ReadyOutcome {
     let deadline = Instant::now() + Duration::from_secs(timeout_secs);
     let mut attempts = 0u32;
-    loop {
+    // DR-86 ②: the window is opened before the first attempt and closed on every
+    // exit path below, so no call outside a readiness wait is ever granted it.
+    tools.set_cold_start_grace(tool, true);
+    let outcome = loop {
         attempts += 1;
         let mut shape_failure: Option<McpFailure> = None;
         let failure = match tools.call_with_meta(role, tool, args.clone()).await {
             Ok((result, correlation)) => match shape(&result.payload) {
                 Ok(_) => {
-                    return ReadyOutcome {
+                    break ReadyOutcome {
                         ok: true,
                         attempts,
                         payload: Some(result.payload),
@@ -385,7 +401,7 @@ pub async fn wait_for_ready_matching(
             }
         };
         if Instant::now() >= deadline {
-            return ReadyOutcome {
+            break ReadyOutcome {
                 ok: false,
                 attempts,
                 payload: None,
@@ -408,7 +424,7 @@ pub async fn wait_for_ready_matching(
         // wasted.  A **business** error still polls: a game that is merely not
         // ready yet answers like that until it is.
         if failure.endpoint_verdict {
-            return ReadyOutcome {
+            break ReadyOutcome {
                 ok: false,
                 attempts,
                 payload: None,
@@ -419,5 +435,7 @@ pub async fn wait_for_ready_matching(
         if poll_interval_ms > 0 {
             tokio::time::sleep(Duration::from_millis(poll_interval_ms)).await;
         }
-    }
+    };
+    tools.set_cold_start_grace(tool, false);
+    outcome
 }

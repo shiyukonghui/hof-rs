@@ -137,6 +137,11 @@ const REQ_DR80_HEADING: &str = "# DR-80 注（追加式，2026-10-02）";
 const REQ_PRE_DR80_BYTES: usize = 20_910;
 const REQ_PRE_DR80_SHA256: &str =
     "7b551ca08c4c5abf15a95cb8edcc4977ce8d03c649654ab4a5ab01f649cae5ae";
+/// DR-89 ⑤: the annotation that brings E5's **text** level with the reading the
+/// code has enforced since DR-88.  It is appended after the DR-80 note, so the
+/// 20,910-byte sealed prefix (E5's own row inside it) cannot move.
+const REQ_DR89_HEADING: &str =
+    "# DR-89 注（追加式，2026-10-03）——E5 的读数已强于该行文本；追加不改封印前缀";
 
 /// The C3 sentence, byte-for-byte, that may never be rewritten (only annotated).
 const C3_SENTENCE: &str =
@@ -458,6 +463,87 @@ fn the_requirements_document_keeps_c3_and_carries_the_dr80_note() {
     ));
 }
 
+/// DR-89 ⑤: the E5 row's **text** still claims only hash equality, while the code
+/// has enforced more since DR-88 (a cache-file write inside the frozen candidate
+/// view rejects the round).  The annotation that levels them is an **append**: the
+/// 20,910-byte sealed prefix — E5's own row inside it — stays byte-for-byte, and
+/// the note names both the enforced reading and the one residual it cannot close
+/// (the workspace-side excluded paths, unwatched on purpose, D294).
+#[test]
+fn the_requirements_e5_row_carries_its_dr89_annotation_and_the_seal_still_holds() {
+    let bytes = read(REQUIREMENTS);
+    assert_no_violations(seal_violations(
+        REQUIREMENTS,
+        REQ_DR80_HEADING,
+        REQ_PRE_DR80_BYTES,
+        REQ_PRE_DR80_SHA256,
+        &bytes,
+    ));
+    let offset = whole_line_offset(&bytes, REQ_DR89_HEADING).unwrap_or_else(|problem| {
+        panic!("{REQUIREMENTS}: the DR-89 note heading must own a whole line: {problem}")
+    });
+    assert!(
+        offset > REQ_PRE_DR80_BYTES,
+        "{REQUIREMENTS}: the DR-89 note must sit after the sealed prefix, never inside it"
+    );
+    let text = String::from_utf8_lossy(&bytes);
+    assert!(
+        text[..offset].contains("| E5 | QA 未修改 A_1（快照 hash 前后一致） | 快照 hash 对比 |"),
+        "{REQUIREMENTS}: the sealed E5 row must survive verbatim above the note"
+    );
+    let note = &text[offset..];
+    for required in [
+        "qa_wrote_cache_",
+        "qa_contaminated_",
+        "QaContaminatedCandidate",
+        "hash_tree",
+        "候选视图",
+        "工作区",
+        "7b551ca0",
+    ] {
+        assert!(
+            note.contains(required),
+            "{REQUIREMENTS}: the DR-89 note must carry `{required}`; a reader of the sealed row \
+             must be able to see what the code now enforces and what it still cannot see"
+        );
+    }
+
+    // Non-vacuity, on **in-memory** copies: an edit of the row itself trips the
+    // seal, while an append stays permitted.  The real document is never written.
+    let row = find_bytes(&bytes, "| E5 |".as_bytes()).expect("the sealed E5 row must be present");
+    let mut mutant = bytes.clone();
+    mutant[row + 2] = b'X';
+    assert!(
+        !seal_violations(
+            REQUIREMENTS,
+            REQ_DR80_HEADING,
+            REQ_PRE_DR80_BYTES,
+            REQ_PRE_DR80_SHA256,
+            &mutant
+        )
+        .is_empty(),
+        "an edit inside the sealed prefix must trip the requirements seal"
+    );
+    let mut appended = bytes.clone();
+    appended.extend_from_slice(b"\nmore annotation\n");
+    assert!(
+        seal_violations(
+            REQUIREMENTS,
+            REQ_DR80_HEADING,
+            REQ_PRE_DR80_BYTES,
+            REQ_PRE_DR80_SHA256,
+            &appended
+        )
+        .is_empty(),
+        "appending after the sealed prefix must stay permitted"
+    );
+    assert_eq!(
+        sha256_hex(&bytes),
+        sha256_hex(&read(REQUIREMENTS)),
+        "the real document must not be modified by this test"
+    );
+}
+
 /// DR-84: the census claim in `TASK-DR82-REPORT.md` carries its qualifier.
 ///
 /// The DR-82 batch published `real_file_census.names_as_keys_per_file = 16` with
@@ -577,6 +663,148 @@ fn the_dr82_seal_reddens_on_a_block_edit_and_a_prose_edit() {
     );
 }
 
+/// DR-86 ⑤: the round report whose facts an independent acceptance failed, and
+/// whose correction may only be appended.
+///
+/// `TASK-SMOKE-T16-ACCEPTANCE.md` confirmed the round's product conclusion and
+/// failed the report on factual discipline: it denied the quarantine directory
+/// that exists, mis-stated the gate's first pass, published a wrong round-1 `A_1`
+/// identity, and claimed three stray files were deleted before archiving.  The
+/// correction (DR-86) is appended below this heading; everything above it — the
+/// wrong sentences included — is sealed byte-for-byte, and the machine-readable
+/// block is pinned in its own right.
+const T16_REPORT: &str = ".spec/hof-rs/tasks/TASK-SMOKE-T16-REPORT.md";
+/// The seal: the heading with the line terminator the append starts with, so the
+/// pinned length is the reviewed revision's own length (77,319 B / `ee9d175d…`,
+/// the `reviewed_report_sha256` of the acceptance).
+const T16_DR86_SEAL: &str = "\n# 附：DR-86 追加式更正（2026-10-03）——独立验收指出的四处事实错误";
+const T16_DR86_HEADING: &str = "# 附：DR-86 追加式更正（2026-10-03）——独立验收指出的四处事实错误";
+const T16_PRE_DR86_BYTES: usize = 77_319;
+const T16_PRE_DR86_SHA256: &str =
+    "ee9d175da22f7cf18c31570e31c4dfd807f3afaed7ccc0faf634e0b31381c6f9";
+/// The report's own ```json block, byte-identical to the round's
+/// `machine_block_t16.json` (`06af46d5…`, 25,686 B).
+const T16_BLOCK_BYTES: usize = 25_686;
+const T16_BLOCK_SHA256: &str = "06af46d5dfb05cf3c867b1c52a3828fd48ef5a254e894134c202c485b210b0ad";
+
+/// DR-86 ⑤: the correction is an append — the review revision is sealed, the
+/// machine-readable block is untouched, and the correction states the four
+/// readings that supersede the wrong ones.
+#[test]
+fn the_t16_report_keeps_its_review_revision_and_carries_the_dr86_correction() {
+    let bytes = read(T16_REPORT);
+    assert_no_violations(seal_violations(
+        T16_REPORT,
+        T16_DR86_SEAL,
+        T16_PRE_DR86_BYTES,
+        T16_PRE_DR86_SHA256,
+        &bytes,
+    ));
+    assert_no_violations(block_violations(
+        T16_REPORT,
+        T16_BLOCK_BYTES,
+        T16_BLOCK_SHA256,
+        &bytes,
+    ));
+    let offset = whole_line_offset(&bytes, T16_DR86_SEAL).unwrap_or_else(|problem| {
+        panic!("{T16_REPORT}: the DR-86 correction heading must own a whole line: {problem}")
+    });
+    assert_eq!(
+        whole_line_offset(&bytes, T16_DR86_HEADING),
+        Ok(T16_PRE_DR86_BYTES + 1),
+        "the heading's own `#` must sit one byte past the sealed revision"
+    );
+
+    let text = String::from_utf8_lossy(&bytes);
+    let correction = &text[offset..];
+    for required in [
+        // ① the quarantine directory the report denied.
+        "deterministic-pass-1.stale-1790975400",
+        // ② the first pass's real window.
+        "project_defects_new=0",
+        "editor_infrastructure_failures=5",
+        // ③ the round-1 artifact identity the report got wrong.
+        "11 文件 / 7646 B",
+        // ④ the archive contradicts the deletion claim.
+        "No deletion happens here",
+        // the seal the correction itself publishes.
+        "ee9d175d",
+    ] {
+        assert!(
+            correction.contains(required),
+            "{T16_REPORT}: the appended correction must carry `{required}`"
+        );
+    }
+    // The wrong statements are still readable above the correction: this is an
+    // append, not a rewrite, and the seal above is what proves it.
+    for wrong in ["quarantine/ 不存在", "533c417d"] {
+        assert!(
+            text[..offset].contains(wrong),
+            "{T16_REPORT}: the superseded statement `{wrong}` must survive above the correction"
+        );
+    }
+    assert!(
+        correction.contains("quarantine/ 不存在"),
+        "{T16_REPORT}: the correction must quote the statement it corrects"
+    );
+}
+
+/// Non-vacuity: the DR-86 seal reddens on an edit above it and on a block edit,
+/// on **in-memory copies** — the real report is never written by this test.
+#[test]
+fn the_t16_seal_reddens_on_an_edit_above_it() {
+    let pristine = read(T16_REPORT);
+    assert!(
+        seal_violations(
+            T16_REPORT,
+            T16_DR86_SEAL,
+            T16_PRE_DR86_BYTES,
+            T16_PRE_DR86_SHA256,
+            &pristine
+        )
+        .is_empty(),
+        "the guard must accept the pristine report before it is asked to reject a mutant"
+    );
+
+    // An in-place edit of one prose byte inside the sealed prefix.
+    let needle = "quarantine".as_bytes();
+    let at = find_bytes(&pristine, needle).expect("the report discusses the quarantine directory");
+    let mut mutant = pristine.clone();
+    mutant[at] = b'X';
+    assert!(
+        !seal_violations(
+            T16_REPORT,
+            T16_DR86_SEAL,
+            T16_PRE_DR86_BYTES,
+            T16_PRE_DR86_SHA256,
+            &mutant
+        )
+        .is_empty(),
+        "an edit above the correction must trip the seal"
+    );
+
+    // Appending after the heading stays permitted: the seal is a prefix.
+    let mut appended = pristine.clone();
+    appended.extend_from_slice(b"\nmore correction\n");
+    assert!(
+        seal_violations(
+            T16_REPORT,
+            T16_DR86_SEAL,
+            T16_PRE_DR86_BYTES,
+            T16_PRE_DR86_SHA256,
+            &appended
+        )
+        .is_empty(),
+        "appending inside the correction region must stay permitted"
+    );
+
+    assert_eq!(
+        sha256_hex(&pristine),
+        sha256_hex(&read(T16_REPORT)),
+        "the real report must not be modified by this test"
+    );
+}
+
 /// Non-vacuity: the three tamper shapes really do produce violations, on **temporary
 /// copies**, and the real reports are not touched by this test.
 ///
@@ -687,6 +915,128 @@ fn the_seal_checks_redden_on_temporary_copies() {
     assert_eq!(
         before_sha,
         sha256_hex(&after),
+        "the real report must not be modified by this test"
+    );
+}
+
+/// DR-90 ⑥: the DR-88 report's false clause must survive **only as a labelled
+/// quotation** — the correction-discipline decision, made mechanical.
+///
+/// DR-89 corrected `TASK-DR88-REPORT.md` **in place** (one line, `+1/-1`) although
+/// D289's discipline for a historical report is append-only, and the DR-89
+/// acceptance recorded that as `DR89A-3`.  DR-90's decision (in
+/// `TASK-DR90-REPORT.md`) is that the in-place form is the **better** state here
+/// rather than a violation to be reverted, because DR-89's own accepted criterion
+/// `C7` requires that *no file still asserts* the clause: restoring the original
+/// line — the append-only form — would put a live false assertion back into a
+/// repository file.  D289's purpose is met instead: no claim vanished silently
+/// (the clause survives verbatim as a quotation), the wrong text stays readable,
+/// and the reader is told which reading is wrong.
+///
+/// This test is the pin for that decision.  It does not freeze the file — an
+/// append or a further labelled quotation is permitted — it freezes the
+/// **property**: every line that carries the clause must carry the label that
+/// marks it false, the clause must be present (so deleting the quotation cannot
+/// satisfy the guard vacuously), and the DR-89 correction must name itself.
+const DR88_REPORT: &str = ".spec/hof-rs/tasks/TASK-DR88-REPORT.md";
+/// The clause whose truth DR-88 asserted and DR-89 disproved (the round of
+/// record's five `\$` residues are unquoted code, not string content).
+const DR88_FALSE_CLAUSE: &str = "T16 那一轮的 `\\$` 残渣正落在字符串里";
+/// The labels that mark that clause false, on the same line.
+const DR88_FALSE_LABELS: [&str; 3] = ["不成立", "已由 DR-89 更正", "**假**"];
+/// The sentence that must remain, so the guard is not satisfied by deleting the
+/// quotation together with its label.
+const DR88_CORRECTION_SENTENCE: &str = "**本报告原先在此处写的证据是假的：**";
+
+/// The 1-based lines that carry the false clause **without** a label that marks it
+/// false on the same line.  An empty result is the property under test.
+fn unlabelled_false_clause_lines(bytes: &[u8]) -> Vec<usize> {
+    let text = String::from_utf8_lossy(bytes);
+    let mut found = Vec::new();
+    for (index, line) in text.split('\n').enumerate() {
+        if line.contains(DR88_FALSE_CLAUSE)
+            && !DR88_FALSE_LABELS.iter().any(|label| line.contains(label))
+        {
+            found.push(index + 1);
+        }
+    }
+    found
+}
+
+/// DR-90 ⑥: the pin.  Every occurrence of the clause is labelled false, the
+/// quotation and the sentence that labels it are still present, and the check is
+/// shown to be load-bearing on an **in-memory** copy — the real report is never
+/// written by this test.
+#[test]
+fn the_dr88_false_clause_survives_only_as_a_labelled_quotation() {
+    let bytes = read(DR88_REPORT);
+    let text = String::from_utf8_lossy(&bytes);
+
+    // ① the clause is still readable — the correction is a correction, not a
+    //    deletion of the record.
+    assert!(
+        text.contains(DR88_FALSE_CLAUSE),
+        "{DR88_REPORT}: the false clause must survive as the quotation the correction is about"
+    );
+    // ② ... and it is labelled false, with the sentence that says so.
+    assert!(
+        text.contains(DR88_CORRECTION_SENTENCE),
+        "{DR88_REPORT}: the quotation must carry the sentence that marks it false"
+    );
+    for label in ["不成立", "已由 DR-89 更正", "DR88A-1"] {
+        assert!(
+            text.contains(label),
+            "{DR88_REPORT}: the correction must carry `{label}`"
+        );
+    }
+    // ③ the property: no line asserts the clause unlabelled.
+    let violations = unlabelled_false_clause_lines(&bytes);
+    assert!(
+        violations.is_empty(),
+        "{DR88_REPORT}: line(s) {violations:?} assert the false clause without marking it false; the \
+         in-place correction is only acceptable while the clause survives **as a labelled \
+         quotation** (DR89A-3 / D289)"
+    );
+
+    // ④ non-vacuity, on an in-memory copy: strip the labels from the clause's own
+    //    line — which is what restoring the original 52d73d3 wording does — and the
+    //    predicate must find it.  No historical bytes are needed for that: the
+    //    property under test is "labelled", so removing the label is the mutant.
+    let mut stripped = String::new();
+    let mut changed = false;
+    for (index, line) in text.split('\n').enumerate() {
+        let _ = index;
+        if !stripped.is_empty() {
+            stripped.push('\n');
+        }
+        if line.contains(DR88_FALSE_CLAUSE) {
+            let mut bare = line.to_string();
+            for label in DR88_FALSE_LABELS {
+                bare = bare.replace(label, "");
+            }
+            if bare != line {
+                changed = true;
+            }
+            stripped.push_str(&bare);
+        } else {
+            stripped.push_str(line);
+        }
+    }
+    assert!(
+        changed,
+        "{DR88_REPORT}: the clause's line must actually carry a label for the mutant to mean anything"
+    );
+    let mutant = unlabelled_false_clause_lines(stripped.as_bytes());
+    assert!(
+        !mutant.is_empty(),
+        "the guard is vacuous: stripping the label from the clause's own line must be reported \
+         (that line is exactly what the append-only form would put back)"
+    );
+
+    // ⑤ the real report is read-only to this test.
+    assert_eq!(
+        sha256_hex(&bytes),
+        sha256_hex(&read(DR88_REPORT)),
         "the real report must not be modified by this test"
     );
 }

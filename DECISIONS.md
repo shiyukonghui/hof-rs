@@ -11148,3 +11148,90 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 - **副产品（支持 ④）**：**新启动**的编辑器约 10 s 内重建 `.godot/editor/` 与 `filesystem_cache10`（789 B，与 fresh-t13 同尺寸），而**已在运行的** T14 编辑器没有 ⇒ 证实"编辑器在**打开/启动**工程时重建缓存，而非目录被从底下删除时"。
 - 回滚点：DR-81 的 12 个文件/测试与闸门脚本可各自 revert；`runs/**` 与历史报告不在本批改动内。
 
+
+
+## D295 — DR-86 lands, and I dispatched an acceptance over a still-running implementer
+
+- 日期 / Date: 2026-10-03
+- 触发问题 / Trigger: DR-86 was to close the four causes the sixth real round exposed: a role
+  delivering a truncated file, a wrap-up retry that carried no diagnostic, a transient transport
+  failure that marked the running-game endpoint unavailable before its first call, and a tester
+  able to write into the frozen candidate view; it also had to correct the round report additively.
+- 考虑的选项 / Options considered:
+  1. Fix only the four causes and leave the newly discovered edge cases (`DR86A-2`, `.gd` comments;
+     `DR86A-3`, clean-line-boundary truncation; `DR86A-5`, excluded directories) for later — rejected,
+     because `DR86A-2` makes a legitimate artifact fail the gate, i.e. it manufactures false reds.
+  2. Accept the frozen-view semantics change in `DR86A-4` (a tester write now ends `ok=true` because
+     it is detected, restored and reported) — rejected: `REQUIREMENTS.md` R4/R13 say **reject**, and a
+     criterion measures compliance, not repairability.
+  3. Keep the "reject" semantics and make `E5` distinguish "did not write" from "wrote and was
+     restored" by requiring the `qa_contaminated_*_restored` warning — **chosen**.
+- 最终选择 / Decision: (a) the batch lands as a fix for all four causes, and is **not** rejected — an
+  independent acceptance reproduced the truncation guard as class-driven rather than a pin (its own
+  `.tres` tail, a header-cut `.tscn` and a `.gd` foreign escape are caught; a legitimate 20-byte whole
+  `[gd_scene format=3]` is not falsely rejected), showed all four write-capable retries now carry
+  verbatim diagnostics, confirmed the cold-start threshold against the frozen evidence, and proved the
+  correction is a pure append whose 77319-byte prefix is `cmp`-identical to the reviewed commit while
+  its machine block stays untouched; (b) `DR86A-4` is ruled back to **reject**, with `E5` required to
+  read the restore warning; (c) `DR86A-2`, `DR86A-3` and `DR86A-5` are carried into the next batch;
+  (d) the missing gate numbers (`DR86A-1`) are to be re-run and published.
+- 选择理由 / Why: the four causes are closed with evidence, but two of the new defects would either
+  manufacture false gate failures or let a compliance criterion pass on a repaired violation, and a
+  criterion that can be satisfied by repair stops measuring what it was written to measure.
+- 我的错误，必须记下 / My own error, recorded here: I committed the implementation and dispatched the
+  acceptance **before** the implementer's completion message, because I had resumed that same subagent
+  to finish its gate and report and then did not wait for it to finish. Two agents therefore wrote in
+  the repository at once: the acceptance found three source files carrying an uncommitted flake-hardening
+  patch that was not its own, and its own gate log was truncated and rewritten by a second concurrent
+  cargo run, which destroyed the implementer's gate numbers. The rule this cost me is the one I had
+  already written down: **commit and dispatch only after the implementer reports completion, and while
+  any subagent is working in the repository, touch nothing.**
+- 预期影响与回滚点 / Impact and rollback: the truncation guard, the diagnostics, the cold-start grace
+  and the frozen-view detection stay; the reject semantics for `DR86A-4` are restored in the next batch;
+  rollback is the previous commit `55a0751` for the harness and the reviewed revision `65983d8` for the
+  corrected round report.
+
+
+## D296 — the user switches the target engine from Godot to Bevy, and the Godot side freezes
+
+- 日期 / Date: 2026-10-03
+- 触发问题 / Trigger: 用户直接指示：「停止使用 godot，改为使用 bevy 0.19.1 版本作为游戏开发的适配器」。
+  这是一次**目标范围变更**，不是实现细节，所以我停止实现侧工作、回到需求分析，并把结论记录在此。
+- 事实核验 / Facts checked first: `bevy 0.19.1` 存在于 crates 索引；Bevy 侧已有可用的运行期观测底座
+  ——**Bevy Remote Protocol (BRP)**（运行中的 app 经 `remote_http` 暴露 JSON-RPC，可查实体/组件、读写组件、列资源），
+  且社区已有 MCP-over-BRP 实现（`Nub/bevy_mcp`）与 BRP 检视器（`doup/birp`）。
+  因此「MCP → BRP → 运行中的游戏进程」这条判据 (3) 所需的语义观测通道是**真实可行**的。
+- 用户已确认的取舍 / Decisions confirmed by the user:
+  1. **判据语义不变、仅换引擎**：全新空工程 → Planner→Developer→Tester 三角色流水线真实产出一个可玩小游戏 →
+     关键行为在游戏进程内经语义工具（BRP）观测证实 → 可复现、每批独立验收。Godot 时期证据归档为历史。
+  2. **适配器 trait 化**：新增 Bevy 适配器；**Godot 路径保留为 legacy 不删**（已有本地提交与验收证据链不被摧毁）。
+  3. **运行期工具面自建**：写一层薄 MCP 服务包装 BRP，并**把工具清单冻结为新的契约**（与 godot-mcp 同构，可控、可哈希）。
+  4. **新写一份 Bevy 专用 PRD**，并为其另设冻结哈希（PRD-mario.md 作为 Godot 时期工件保留，不再约束新引擎）。
+  5. **PRD 与模板要求目标游戏在 dev 构建下启用 Bevy remote 插件**（判据 (3) 的进程内观测前提）。
+  6. **构建时长与缓存策略作为适配器契约的显式部分**（Bevy 是编译型，每轮需 cargo 构建）。
+  7. DR-88 验收收尾后**冻结 Godot 侧开发**。
+- 关键架构判断（我先回答用户的反问，再据此定架构）/ Why MCP is still needed:
+  MCP 不是给引擎用的，而是**给三个角色用的手**：判据 (3) 要求观测由**语义工具**完成，
+  禁止模型手写脚本自证。MCP 层承载三件硬性东西——逐字冻结的工具契约、可哈希的版本面（使「模型没有手写证据」可检查）、
+  角色工具调用的统一形状。换引擎即须重建这一层。**并有本质差异需处理：Godot 编辑器优先，Bevy 代码优先**，
+  故 Bevy 侧工具面拆为两段：**编写期 = 文件系统 + cargo**（Bevy 无编辑器可供 MCP 创建场景/资源），
+  **运行期 = BRP 经 MCP 包装**（驱动与语义观测，对应原 `running_game_*` 家族）。
+- DR-88 验收结果与遗留缺陷 / DR-88 acceptance and its carried defects:
+  验收判 **fail**（16 条判据 14 过，B2/B3 挂），两条 medium 必须由 DR-89 处置：
+  **DR88A-2（最要紧）**「跨行携带未闭合字面量」**并非严格更严**——实测碎片类发现从 1 变 0
+  （`[gd_scene format=3]` + 未闭合引号一变体、`.tres`/`.tscn` 同、未闭合原始字面量掩盖其后的转义），
+  **碎片守卫在自己的类别里丢掉了发现**，这是回归；
+  **DR88A-1** 替换后的理由仍为假（记录轮的五处 `\$` 残渣在**未加引号的 `@onready` 表达式**里，不在字符串字面量内）。
+  另有 DR88A-3（缓存 watch 只覆盖 candidate，工作区 `.godot` 仍不可见——**应声明，且不要靠监视工作区关闭**，见 D294）、
+  DR88A-4（字符串内 `\` 后孤立 CR 被误拒）、DR88A-5（从不报告未闭合字面量）。
+  验收对缓存写入严格度的建议被采纳：**保留拒绝、不放宽**（R4/R13 决定），
+  但 **E5 的封印行只声称「快照 hash 前后一致」而代码已超出该口径**，须**追加 D289 式注解**（绝不改写封印前缀）。
+- 最终选择 / Decision: (a) 目标改写为 Bevy 0.19.1 口径，判据语义不变；(b) 先派 **DR-89** 处置上述 harness 侧缺陷
+  （**与引擎无关**，Bevy 适配器同样复用该完整性审计），随后**冻结 Godot 侧开发**并归档为 legacy；
+  (c) 进入 Bevy 轨道的需求与设计阶段，并**先做 spike** 以压低三项不确定性：BRP 在 0.19.1 上的实际动词面、
+  编译/启动的可行预算、以及「dev 构建启用 remote 插件」对游戏形态的影响。
+- 选择理由 / Why: 判据语义、独立验收与可复现要求都不依赖具体引擎，依赖的是**可检查的观测通道**；
+  Bevy 侧该通道（BRP）客观存在，故换引擎可以在不降低标准的前提下进行。而 Godot 侧已发现的回归若不先修，
+  会被 Bevy 适配器原样继承。
+- 预期影响与回滚点 / Impact and rollback: 影响面为适配器层与 PRD，流水线/door 门/电池/完整性审计全部复用；
+  回滚点为 `55a0751`（Godot 时期最后一个已推送修订）与 legacy Godot 路径本身。

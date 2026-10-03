@@ -138,6 +138,18 @@ pub trait ToolChannel: Send + Sync {
     async fn endpoint_liveness(&self, _endpoint: &str) -> Option<EndpointLiveness> {
         None
     }
+
+    /// DR-86 ②: open or close the **readiness window** for the endpoint `tool`
+    /// routes to.
+    ///
+    /// While the window is open and the endpoint has never answered, the
+    /// endpoint tolerates [`endpoint::COLD_START_DEATH_THRESHOLD`] consecutive
+    /// transport failures instead of [`endpoint::ENDPOINT_DEATH_THRESHOLD`].  A
+    /// readiness poll calls this around its loop, so a game process that is
+    /// starting up is waited for instead of being declared dead before its
+    /// first call can succeed.  The default is a no-op: a channel that does not
+    /// track liveness has nothing to arm.
+    fn set_cold_start_grace(&self, _tool: &str, _armed: bool) {}
 }
 
 /// A channel that exposes no MCP tools at all (used for offline/dry runs).
@@ -293,6 +305,21 @@ impl McpChannel {
     /// DR-55: the liveness verdict of one endpoint.
     pub fn endpoint_state(&self, endpoint: &str) -> Option<EndpointLiveness> {
         self.liveness.lock().ok()?.get(endpoint).cloned()
+    }
+
+    /// DR-86 ②: open or close the readiness window on the endpoint a tool routes
+    /// to.  The endpoint is resolved exactly as a call would resolve it, so a
+    /// window can never be armed on an address the call will not use.
+    pub fn arm_cold_start_grace(&self, tool: &str, armed: bool) {
+        let Ok((_client, endpoint)) = self.client_for(tool) else {
+            return;
+        };
+        let Ok(mut map) = self.liveness.lock() else {
+            return;
+        };
+        map.entry(endpoint.clone())
+            .or_insert_with(|| EndpointLiveness::new(endpoint))
+            .arm_cold_start_grace(armed);
     }
 
     /// DR-55: register a freshly announced endpoint so it starts from a clean
@@ -524,5 +551,10 @@ impl ToolChannel for McpChannel {
 
     async fn endpoint_liveness(&self, endpoint: &str) -> Option<EndpointLiveness> {
         self.endpoint_state(endpoint)
+    }
+
+    /// DR-86 ②: a readiness poll opens the cold-start window through this method.
+    fn set_cold_start_grace(&self, tool: &str, armed: bool) {
+        self.arm_cold_start_grace(tool, armed);
     }
 }
