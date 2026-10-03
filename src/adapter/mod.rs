@@ -2,8 +2,10 @@
 //! looks like, how to run a deterministic check, how to collect evidence)
 //! lives behind this trait, so Godot is just the first implementation (A3).
 
+pub mod bevy;
 pub mod engine;
 pub mod godot;
+pub mod mcp;
 pub mod test_adapter;
 
 pub use engine::EngineIdentity;
@@ -294,4 +296,516 @@ pub trait ProjectAdapter: Send + Sync {
     }
 
     fn doctor(&self, workspace: &Path) -> anyhow::Result<Vec<DoctorItem>>;
+}
+
+// ---------------------------------------------------------------------------
+// DESIGN-DETAIL §1: the engine-neutral runtime capability surface
+// ---------------------------------------------------------------------------
+//
+// [`ProjectAdapter`] above is the *build-time* boundary (what `A₀` looks like,
+// what the deterministic battery is).  [`GameAdapter`] is the *runtime*
+// boundary: build the artifact, start the game, observe semantic state inside
+// the running process, inject level-triggered input, and answer "is this
+// artifact deliverable".  It is named after capabilities rather than engines so
+// both Godot and Bevy can implement it, and nothing about Bevy appears in this
+// module (`runtime/**` and this trait stay engine-agnostic).
+//
+// **Failure semantics (binding, DESIGN-DETAIL §1 and §7).**  Every method
+// returns `Result`; **no method may panic**.  There are exactly two failure
+// levels and they are not interchangeable:
+//
+// * **task-level failure → `Err`**: the thing the caller asked the adapter to
+//   *do* did not happen (build, launch, stop, advance frames), or the
+//   infrastructure that would carry the answer is missing (endpoint timeout).
+//   The caller must not treat the round as observed.
+// * **evidence-level failure → a reading that says why**: the adapter *did*
+//   answer, and the answer is "not observed, because …"
+//   ([`Reading::not_observed`], [`InjectionReport::refused`]).  This is what
+//   lets the deterministic battery record a `gap` ("not observed") instead of
+//   inventing proof — E6's honesty requirement is only enforceable if this
+//   distinction exists.
+
+/// The engine an adapter drives.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum EngineId {
+    /// Bevy 0.19.1 (the pinned engine).
+    Bevy0191,
+    /// Godot 4.8, kept as the frozen legacy path (D296).
+    Godot48Legacy,
+}
+
+impl EngineId {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            EngineId::Bevy0191 => "bevy-0.19.1",
+            EngineId::Godot48Legacy => "godot-4.8-legacy",
+        }
+    }
+}
+
+/// The project an adapter works on: a workspace directory.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Project {
+    pub workspace: PathBuf,
+}
+
+impl Project {
+    pub fn at(workspace: impl Into<PathBuf>) -> Self {
+        Self {
+            workspace: workspace.into(),
+        }
+    }
+}
+
+/// The artifact [`GameAdapter::prepare`] produced.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Prepared {
+    pub workspace: PathBuf,
+    /// The executable to launch, when the engine has one (Bevy does, Godot does not).
+    pub artifact: Option<PathBuf>,
+    /// How long the build took, in milliseconds (the build contract's budget input).
+    pub build_millis: u64,
+    /// Free-form, verbatim detail for the round's `build.log` line.
+    pub detail: String,
+}
+
+impl Prepared {
+    pub fn new(workspace: PathBuf) -> Self {
+        Self {
+            workspace,
+            artifact: None,
+            build_millis: 0,
+            detail: String::new(),
+        }
+    }
+}
+
+/// A game process [`GameAdapter::start`] brought up and confirmed observable.
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct RunningGame {
+    pub pid: u32,
+    /// The endpoint readiness was confirmed on (`http://127.0.0.1:15702/` for Bevy).
+    pub endpoint: Option<String>,
+    /// Whether the process was started in the no-window/no-GPU mode (SPIKE-2 C6).
+    pub headless: bool,
+}
+
+/// What [`GameAdapter::stop`] observed while shutting the process down.
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct StopReport {
+    pub exit_code: Option<i32>,
+    pub stderr_tail: String,
+}
+
+/// The four semantic surfaces the deterministic battery reads (DESIGN-DETAIL §2.2).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum SemanticKind {
+    PlayerTransform,
+    Grounded,
+    CoinCounter,
+    WinFlag,
+}
+
+impl SemanticKind {
+    /// The battery's four reads, in the design's order.
+    pub const ALL: &'static [SemanticKind] = &[
+        SemanticKind::PlayerTransform,
+        SemanticKind::Grounded,
+        SemanticKind::CoinCounter,
+        SemanticKind::WinFlag,
+    ];
+
+    /// The evidence file stem (`readings/<as_str>.json`).
+    pub fn as_str(self) -> &'static str {
+        match self {
+            SemanticKind::PlayerTransform => "player_transform",
+            SemanticKind::Grounded => "grounded",
+            SemanticKind::CoinCounter => "coin_counter",
+            SemanticKind::WinFlag => "win_flag",
+        }
+    }
+
+    /// The semantic MCP tool that reads this surface.
+    pub fn tool(self) -> &'static str {
+        match self {
+            SemanticKind::PlayerTransform => "bevy_player_transform",
+            SemanticKind::Grounded => "bevy_grounded",
+            SemanticKind::CoinCounter => "bevy_coin_counter",
+            SemanticKind::WinFlag => "bevy_win_flag",
+        }
+    }
+}
+
+/// One semantic observation.
+///
+/// `failed == true` is the **evidence-level** failure from the module docs: the
+/// read was attempted, and its answer is "not observed", with
+/// [`Reading::reason`] saying why.  `value` is `Value::Null` in that case, so a
+/// battery that ignores `failed` cannot turn a missing observation into data.
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct Reading {
+    pub kind: SemanticKind,
+    pub failed: bool,
+    pub reason: Option<String>,
+    pub value: serde_json::Value,
+    pub frame: u64,
+}
+
+impl Reading {
+    pub fn observed(kind: SemanticKind, frame: u64, value: serde_json::Value) -> Self {
+        Self {
+            kind,
+            failed: false,
+            reason: None,
+            value,
+            frame,
+        }
+    }
+
+    /// The honest "the adapter answered, and the answer is: not observed".
+    pub fn not_observed(kind: SemanticKind, frame: u64, reason: impl Into<String>) -> Self {
+        Self {
+            kind,
+            failed: true,
+            reason: Some(reason.into()),
+            value: serde_json::Value::Null,
+            frame,
+        }
+    }
+
+    pub fn is_observed(&self) -> bool {
+        !self.failed
+    }
+}
+
+/// An injection request: the contract's `InputIntent` field and the value to
+/// write into it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Intent {
+    /// `move_dir`: `-1` left, `0` stop, `1` right (level-triggered).
+    Move { dir: i8 },
+    /// `jump_pressed`: level-triggered, the game clears the edge itself.
+    Jump { press: bool },
+}
+
+impl Intent {
+    /// The `move_dir` rule of the semantic layer's schema (`-1|0|1`), enforced
+    /// once, here, so no caller can write an out-of-range direction.
+    pub fn move_dir(dir: i8) -> anyhow::Result<Self> {
+        if !(-1..=1).contains(&dir) {
+            anyhow::bail!("`dir` must be -1, 0 or 1 (got {dir})");
+        }
+        Ok(Intent::Move { dir })
+    }
+
+    /// The slip of the contract's intent field this intent writes.
+    pub fn field(&self) -> &'static str {
+        match self {
+            Intent::Move { .. } => "move_dir",
+            Intent::Jump { .. } => "jump_pressed",
+        }
+    }
+
+    /// The JSON value written into that field.
+    pub fn value(&self) -> serde_json::Value {
+        match self {
+            Intent::Move { dir } => serde_json::json!(dir),
+            Intent::Jump { press } => serde_json::json!(press),
+        }
+    }
+
+    /// The semantic tool this intent belongs to.
+    pub fn tool(&self) -> &'static str {
+        match self {
+            Intent::Move { .. } => "bevy_inject_move",
+            Intent::Jump { .. } => "bevy_inject_jump",
+        }
+    }
+}
+
+/// What [`GameAdapter::inject`] observed.  `accepted == false` is the
+/// **evidence-level** failure: the input was not delivered, and `reason` says
+/// why — the battery records "not injected" rather than assuming motion.
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct InjectionReport {
+    pub accepted: bool,
+    pub reason: Option<String>,
+    pub frame: u64,
+}
+
+impl InjectionReport {
+    pub fn accepted(frame: u64) -> Self {
+        Self {
+            accepted: true,
+            reason: None,
+            frame,
+        }
+    }
+
+    pub fn refused(frame: u64, reason: impl Into<String>) -> Self {
+        Self {
+            accepted: false,
+            reason: Some(reason.into()),
+            frame,
+        }
+    }
+}
+
+/// The frame the adapter is on after [`GameAdapter::wait_frames`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct FrameMark {
+    pub requested: u32,
+    pub frame: u64,
+}
+
+/// Process liveness plus the tail of its error output (BRP has no log verb, so
+/// the process side is the only place a panic can be seen).
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct Health {
+    pub alive: bool,
+    pub stderr_tail: String,
+}
+
+/// DESIGN-DETAIL §1 names the gate verdict `GateVerdict`; the harness already
+/// has exactly this type, and the design requires the *existing* gate
+/// classification to be reused, so it is an alias rather than a copy.
+pub type GateVerdict = crate::model::ArtifactGate;
+
+/// Task-level adapter failures.  These are the `Err` side of the failure
+/// semantics above: each variant says what class of failure it is, which is what
+/// the gate needs (`EndpointTimeout` is an **infrastructure** failure and must
+/// not be reported as a project defect; `ContractViolation` is a project defect,
+/// because the PRD requires the surface to exist).
+#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
+pub enum AdapterError {
+    /// The engine cannot do this synchronously (Godot's game control is
+    /// editor-mediated and asynchronous, so its `prepare`/`start`/`stop` cannot
+    /// live on this surface without an async bridge).
+    #[error("adapter capability `{capability}` is not supported: {reason}")]
+    Unsupported {
+        capability: &'static str,
+        reason: String,
+    },
+    /// The endpoint never answered inside the readiness budget (DESIGN-DETAIL §7).
+    #[error("endpoint {endpoint} was not ready within {budget_millis} ms")]
+    EndpointTimeout {
+        endpoint: String,
+        budget_millis: u64,
+    },
+    /// The game does not declare what the frozen contract requires (§7).
+    #[error("contract violation: {0}")]
+    ContractViolation(String),
+    /// The transport itself failed (refused, closed, timed out).
+    #[error("BRP transport failure to {endpoint}: {message}")]
+    Transport { endpoint: String, message: String },
+    /// A JSON-RPC error, even though HTTP answered 200 (§7).
+    #[error("JSON-RPC error {code}: {message}")]
+    Rpc { code: i64, message: String },
+    /// The body was not the JSON-RPC document the protocol promises.
+    #[error("malformed BRP reply: {0}")]
+    Malformed(String),
+}
+
+impl AdapterError {
+    /// The honest "this engine cannot do that on this surface" answer.
+    pub fn unsupported(capability: &'static str, reason: impl Into<String>) -> Self {
+        AdapterError::Unsupported {
+            capability,
+            reason: reason.into(),
+        }
+    }
+}
+
+/// The engine-neutral runtime capability surface (DESIGN-DETAIL §1).
+///
+/// Implementors must not panic; see the module docs above for the two failure
+/// levels.  `wait_frames` stays a method of its own (the design's open item ①):
+/// frame advance is an *action* with its own failure class, not a settle
+/// parameter of a read.
+pub trait GameAdapter {
+    /// Which engine this adapter drives.
+    fn engine(&self) -> EngineId;
+
+    /// Build the artifact and validate the build contract (features, lockfile,
+    /// budget).  `Err` is a task-level failure: there is nothing to start.
+    fn prepare(&mut self, project: &Project) -> anyhow::Result<Prepared>;
+
+    /// Start the game and **wait until it is observable** (Bevy: poll 15702
+    /// until `rpc.discover` answers, 30 s budget).  `Err` is task-level.
+    fn start(&mut self, prepared: &Prepared) -> anyhow::Result<RunningGame>;
+
+    /// Stop the game, keeping its output as evidence.  `Err` is task-level.
+    fn stop(&mut self, game: RunningGame) -> anyhow::Result<StopReport>;
+
+    /// Read one semantic surface, **one call at a time** (never a JSON-RPC
+    /// batch: SPIKE-2 C4 measured that a batch is not frame-atomic).  A
+    /// surface that cannot be read comes back as
+    /// [`Reading::not_observed`], not as an `Err`.
+    fn read(&mut self, kind: SemanticKind) -> anyhow::Result<Reading>;
+
+    /// Inject a level-triggered intent (`level == false` means a one-shot edge
+    /// the game still clears itself).  A delivery that did not happen comes
+    /// back as [`InjectionReport::refused`], not as an `Err`.
+    fn inject(&mut self, intent: &Intent, level: bool) -> anyhow::Result<InjectionReport>;
+
+    /// Advance the observation point by `n` frames.  `Err` is task-level.
+    fn wait_frames(&mut self, n: u32) -> anyhow::Result<FrameMark>;
+
+    /// Is the process still alive, and what does its error output end with?
+    fn health(&self) -> anyhow::Result<Health>;
+
+    /// Judge the artifact's deliverability with the harness's existing gate
+    /// classification.
+    fn validate_artifact(&self, project: &Project) -> anyhow::Result<GateVerdict>;
+}
+
+#[cfg(test)]
+mod game_adapter_tests {
+    use super::*;
+    use serde_json::json;
+
+    /// DESIGN-DETAIL §8.3: the contract is exercised against a **fake**
+    /// implementation as well as the real ones, so "nothing panics" and the two
+    /// failure levels are properties of the trait, not of one engine.
+    #[derive(Default)]
+    struct FakeGameAdapter {
+        reads: Vec<SemanticKind>,
+        injections: Vec<(&'static str, serde_json::Value)>,
+        started: Option<RunningGame>,
+    }
+
+    impl GameAdapter for FakeGameAdapter {
+        fn engine(&self) -> EngineId {
+            EngineId::Bevy0191
+        }
+
+        fn prepare(&mut self, project: &Project) -> anyhow::Result<Prepared> {
+            Ok(Prepared::new(project.workspace.clone()))
+        }
+
+        fn start(&mut self, prepared: &Prepared) -> anyhow::Result<RunningGame> {
+            let game = RunningGame {
+                pid: 4242,
+                endpoint: Some("http://127.0.0.1:15702/".to_string()),
+                headless: true,
+            };
+            self.started = Some(game.clone());
+            let _ = prepared;
+            Ok(game)
+        }
+
+        fn stop(&mut self, _game: RunningGame) -> anyhow::Result<StopReport> {
+            Ok(StopReport {
+                exit_code: Some(0),
+                stderr_tail: String::new(),
+            })
+        }
+
+        fn read(&mut self, kind: SemanticKind) -> anyhow::Result<Reading> {
+            self.reads.push(kind);
+            Ok(Reading::not_observed(
+                kind,
+                0,
+                "the fake adapter observes nothing",
+            ))
+        }
+
+        fn inject(&mut self, intent: &Intent, _level: bool) -> anyhow::Result<InjectionReport> {
+            self.injections.push((intent.field(), intent.value()));
+            Ok(InjectionReport::accepted(0))
+        }
+
+        fn wait_frames(&mut self, n: u32) -> anyhow::Result<FrameMark> {
+            Ok(FrameMark {
+                requested: n,
+                frame: u64::from(n),
+            })
+        }
+
+        fn health(&self) -> anyhow::Result<Health> {
+            Ok(Health {
+                alive: true,
+                stderr_tail: String::new(),
+            })
+        }
+
+        fn validate_artifact(&self, _project: &Project) -> anyhow::Result<GateVerdict> {
+            Ok(ArtifactGate {
+                applicable: true,
+                launchable: true,
+                reasons: Vec::new(),
+            })
+        }
+    }
+
+    #[test]
+    fn the_capability_surface_is_object_safe() {
+        let boxed: Box<dyn GameAdapter> = Box::new(FakeGameAdapter::default());
+        assert_eq!(boxed.engine(), EngineId::Bevy0191);
+        assert_eq!(boxed.engine().as_str(), "bevy-0.19.1");
+    }
+
+    #[test]
+    fn an_unobserved_read_says_why_and_never_carries_a_value() {
+        let reading = Reading::not_observed(SemanticKind::CoinCounter, 7, "no such resource");
+        assert!(reading.failed);
+        assert!(!reading.is_observed());
+        assert_eq!(reading.reason.as_deref(), Some("no such resource"));
+        assert_eq!(reading.value, serde_json::Value::Null);
+        assert_eq!(reading.frame, 7);
+
+        let observed = Reading::observed(SemanticKind::CoinCounter, 7, json!({"coins": 2}));
+        assert!(observed.is_observed());
+        assert_eq!(observed.reason, None);
+        assert_eq!(observed.value, json!({"coins": 2}));
+    }
+
+    #[test]
+    fn a_refused_injection_says_why_and_is_not_accepted() {
+        let refused = InjectionReport::refused(3, "no game is running");
+        assert!(!refused.accepted);
+        assert_eq!(refused.reason.as_deref(), Some("no game is running"));
+        assert!(InjectionReport::accepted(3).accepted);
+    }
+
+    #[test]
+    fn the_move_direction_is_validated_once_for_every_adapter() {
+        assert_eq!(Intent::move_dir(-1).unwrap(), Intent::Move { dir: -1 });
+        assert_eq!(Intent::move_dir(0).unwrap(), Intent::Move { dir: 0 });
+        assert_eq!(Intent::move_dir(1).unwrap(), Intent::Move { dir: 1 });
+        assert!(Intent::move_dir(2).is_err());
+        assert!(Intent::move_dir(-7).is_err());
+    }
+
+    #[test]
+    fn an_intent_names_the_contract_field_it_writes() {
+        assert_eq!(Intent::Move { dir: 1 }.field(), "move_dir");
+        assert_eq!(Intent::Move { dir: 1 }.value(), json!(1));
+        assert_eq!(Intent::Jump { press: true }.field(), "jump_pressed");
+        assert_eq!(Intent::Jump { press: true }.value(), json!(true));
+        assert_eq!(Intent::Jump { press: true }.tool(), "bevy_inject_jump");
+    }
+
+    #[test]
+    fn the_semantic_kinds_are_the_designs_four_reads() {
+        assert_eq!(SemanticKind::ALL.len(), 4);
+        assert_eq!(
+            SemanticKind::PlayerTransform.tool(),
+            "bevy_player_transform"
+        );
+        assert_eq!(SemanticKind::Grounded.as_str(), "grounded");
+        assert_eq!(SemanticKind::CoinCounter.tool(), "bevy_coin_counter");
+        assert_eq!(SemanticKind::WinFlag.as_str(), "win_flag");
+    }
+
+    #[test]
+    fn a_task_level_failure_is_typed_not_a_string() {
+        let error = AdapterError::unsupported("start", "the engine has no game process here");
+        assert!(error.to_string().contains("not supported"));
+        let timeout = AdapterError::EndpointTimeout {
+            endpoint: "http://127.0.0.1:15702/".to_string(),
+            budget_millis: 30_000,
+        };
+        assert!(timeout.to_string().contains("30000"));
+    }
 }

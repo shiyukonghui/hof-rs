@@ -8,9 +8,13 @@ use std::path::Path;
 
 use serde_json::{json, Value};
 
-use crate::adapter::{BatteryRecord, BatteryStep, DoctorItem, ProjectAdapter};
+use crate::adapter::{
+    AdapterError, BatteryRecord, BatteryStep, DoctorItem, EngineId, FrameMark, GameAdapter,
+    GateVerdict, Health, InjectionReport, Intent, Prepared, Project, ProjectAdapter, Reading,
+    RunningGame, SemanticKind, StopReport,
+};
 use crate::config::GodotConfig;
-use crate::model::{ExecKind, ExecRecord, Role};
+use crate::model::{ArtifactGate, ExecKind, ExecRecord, Role};
 use crate::tools::endpoint::{self, GameEndpointRecord};
 use crate::tools::mcp::{RpcCorrelation, SessionSyncReport, PROBE_TOOL};
 use crate::tools::reliable::{
@@ -7349,5 +7353,115 @@ mod tests {
             GAME_PROCESS_CHANNEL
         )
         .is_none());
+    }
+}
+
+// ---------------------------------------------------------------------------
+// DESIGN-DETAIL §1: the runtime capability surface, aligned for the legacy path
+// ---------------------------------------------------------------------------
+//
+// D296 freezes the Godot side: it must keep compiling and must not change
+// behaviour.  The engine-neutral `GameAdapter` trait (the *runtime* boundary)
+// therefore has to be implemented here too — but "implemented" cannot mean
+// "reimplemented": the Godot game lifecycle lives in the asynchronous,
+// editor-mediated MCP channel (`ProjectAdapter::start_round_game` /
+// `stop_round_game` over `ToolChannel`), and there is no synchronous bridge to
+// it that would not invent new behaviour.
+//
+// **What was changed in this file, and nothing else:** the `use` list at the top
+// gained the trait's names, and this impl block was appended.  No existing
+// method, constant or behaviour was touched; every pre-existing Godot test still
+// passes unchanged.
+//
+// The alignment is honest about the two failure levels:
+//
+// * `read`/`inject` **answer** — with the evidence-level "not observed" /
+//   "refused" readings DESIGN-DETAIL §1 requires, so a battery records a gap
+//   instead of treating an unobservable surface as zero.
+// * `prepare`/`start`/`stop`/`wait_frames`/`health` **fail** at the task level,
+//   because the Godot adapter never owns the process on this surface.
+// * `validate_artifact` is real: it exposes the existing DR-37/DR-86 artifact
+//   verdict (the same predicates `ProjectAdapter::developer_artifact_valid` and
+//   `developer_artifact_defects` already use) through the engine-neutral shape.
+
+/// Why the Godot path cannot serve the synchronous game lifecycle.
+const GODOT_ASYNC_CHANNEL_REASON: &str = "the Godot game lifecycle runs through the editor's \
+     asynchronous MCP channel (`ProjectAdapter::start_round_game` over `ToolChannel`); this \
+     capability surface is synchronous, and inventing a bridge would change the behaviour D296 \
+     froze";
+
+/// Why a semantic read cannot be answered synchronously.
+const GODOT_READ_REASON: &str = "the Godot adapter does not own a synchronous observation \
+     channel: `running_game_*` calls go through the editor's MCP server, so this read is not \
+     observed here — recorded as not observed rather than as a value";
+
+impl GameAdapter for GodotAdapter {
+    fn engine(&self) -> EngineId {
+        EngineId::Godot48Legacy
+    }
+
+    fn prepare(&mut self, _project: &Project) -> anyhow::Result<Prepared> {
+        Err(AdapterError::unsupported("prepare", GODOT_ASYNC_CHANNEL_REASON).into())
+    }
+
+    fn start(&mut self, _prepared: &Prepared) -> anyhow::Result<RunningGame> {
+        Err(AdapterError::unsupported("start", GODOT_ASYNC_CHANNEL_REASON).into())
+    }
+
+    fn stop(&mut self, _game: RunningGame) -> anyhow::Result<StopReport> {
+        Err(AdapterError::unsupported("stop", GODOT_ASYNC_CHANNEL_REASON).into())
+    }
+
+    fn read(&mut self, kind: SemanticKind) -> anyhow::Result<Reading> {
+        // Evidence-level, not task-level: the question was asked and the honest
+        // answer is that nothing was observed.
+        Ok(Reading::not_observed(kind, 0, GODOT_READ_REASON))
+    }
+
+    fn inject(&mut self, _intent: &Intent, _level: bool) -> anyhow::Result<InjectionReport> {
+        Ok(InjectionReport::refused(0, GODOT_ASYNC_CHANNEL_REASON))
+    }
+
+    fn wait_frames(&mut self, _n: u32) -> anyhow::Result<FrameMark> {
+        Err(AdapterError::unsupported("wait_frames", GODOT_ASYNC_CHANNEL_REASON).into())
+    }
+
+    fn health(&self) -> anyhow::Result<Health> {
+        Err(AdapterError::unsupported(
+            "health",
+            "the Godot adapter never owns the game process (the editor's MCP server does), so \
+             there is no pid or stderr to report on this surface",
+        )
+        .into())
+    }
+
+    fn validate_artifact(&self, project: &Project) -> anyhow::Result<GateVerdict> {
+        let workspace = &project.workspace;
+        // The existing artifact verdict, exposed unchanged: DR-37's validity
+        // predicate and DR-86's verbatim defect list.
+        if developer_artifact_valid_in(workspace, &self.config.main_scene) {
+            return Ok(ArtifactGate {
+                applicable: true,
+                launchable: true,
+                reasons: Vec::new(),
+            });
+        }
+        let mut reasons = developer_artifact_defects_in(
+            workspace,
+            &self.config.main_scene,
+            &self.cache_excludes(),
+        );
+        if reasons.is_empty() {
+            reasons.push(
+                "the Godot artifact is not valid (DR-37) and DR-86 reported no specific defect, \
+                 so the verdict is `not launchable` with no verbatim reason"
+                    .to_string(),
+            );
+        }
+        Ok(ArtifactGate {
+            applicable: true,
+            launchable: false,
+            reasons,
+        })
     }
 }
