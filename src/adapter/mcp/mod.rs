@@ -133,6 +133,13 @@ pub struct ToolSpec {
     pub streaming: bool,
     /// Whether the method changes the world (a write — the policy hook's input).
     pub mutating: bool,
+    /// The tool's declared **return** shape, published as the MCP
+    /// `outputSchema` (D297 (c): the output shape is part of the frozen tool
+    /// list, so a silent semantic change of a return value is not possible).
+    /// `None` means "this tool returns BRP's own reply shape verbatim" — which
+    /// is exactly true of the generic pass-through layer, where BRP owns the
+    /// shape and this layer must not restate it.
+    pub output_schema: Option<&'static str>,
 }
 
 impl ToolSpec {
@@ -163,12 +170,21 @@ impl ToolSpec {
     }
 
     /// The MCP `tools/list` entry.
+    ///
+    /// `outputSchema` is present exactly when the tool declares a return shape.
+    /// It is inside the hashed document, so an output shape is as frozen as a
+    /// name (D297 (c)).
     pub fn to_json(&self) -> Value {
-        json!({
+        let mut entry = json!({
             "name": self.name,
             "description": self.description,
             "inputSchema": self.input_schema(),
-        })
+        });
+        if let Some(schema) = self.output_schema {
+            let parsed: Value = serde_json::from_str(schema).unwrap_or(Value::Null);
+            entry["outputSchema"] = parsed;
+        }
+        entry
     }
 }
 
@@ -194,7 +210,7 @@ pub fn tool_list_sha256() -> String {
 /// The pinned tool-list hash literal.  It is asserted by the test suite, so any
 /// change to a name, a parameter or a return shape fails the gate first.
 pub const TOOL_LIST_SHA256: &str =
-    "e177325fe8b2036c355d37b9373b85b524f4a7f0d999e087711366bca661ae97";
+    "bcf03c0b06295cfd27cc0359a7fa272ed435bdf61525d67b08981c62d30e43b1";
 
 /// The frozen tool count: 23 generic verbs + 8 semantic tools.
 pub const TOOL_COUNT: usize = 31;
@@ -311,6 +327,7 @@ mod tests {
             method: Some("world.get_components"),
             streaming: false,
             mutating: false,
+            output_schema: None,
         };
         let schema = tool.input_schema();
         assert_eq!(schema["type"], json!("object"));
@@ -349,6 +366,7 @@ mod tests {
             method: Some("world.mutate_resources"),
             streaming: false,
             mutating: true,
+            output_schema: None,
         };
         let schema = tool.input_schema();
         assert!(validate_input(&schema, &json!({"resource": "r", "path": "p"})).is_ok());
@@ -394,6 +412,7 @@ mod tests {
             method: None,
             streaming: false,
             mutating: true,
+            output_schema: None,
         }
         .input_schema();
         assert!(validate_input(&schema, &json!({"dir": 1, "level": true})).is_ok());
@@ -421,6 +440,7 @@ mod tests {
             method: Some("world.remove_components"),
             streaming: false,
             mutating: true,
+            output_schema: None,
         }
         .input_schema();
         assert!(validate_input(&schema, &json!({"components": ["a", "b"]})).is_ok());

@@ -13,35 +13,66 @@
 //!
 //! * **Type paths come from [`crate::adapter::bevy::contract`], never from a
 //!   literal here.**  A path change is a contract change, with the hash to make
-//!   it visible.
+//!   it visible, and the binding is *by construction*: every path constant below
+//!   is a `const fn` lookup into the contract table, so no literal is restated.
 //! * **A missing path is a contract violation, not a zero.**  BRP reports an
 //!   unregistered type with `-23402/-23502`, and an empty query result means the
 //!   player does not exist: both become [`AdapterError::ContractViolation`], so
 //!   the battery cannot "observe" 0 coins on a game that never registered a
 //!   counter (SPIKE-1 §6.3: an unregistered observable must fail explicitly,
 //!   never be silently treated as a value).
+//! * **The `frame` in every return shape is the GAME's frame** (D297 (b)): the
+//!   value of the contract's `FrameCounter` resource, read through
+//!   [`frame_read_plan`], never the adapter's observation ordinal.
 
 use serde_json::{json, Value};
 
 use crate::adapter::bevy::brp::BrpError;
-use crate::adapter::bevy::contract::{
-    self, ContractEntry, CONTRACT, ENGINE_TRANSFORM_PATH, GAME_CONTRACT_MODULE,
-};
+use crate::adapter::bevy::contract::{self, ContractEntry, CONTRACT, GAME_CONTRACT_MODULE};
 use crate::adapter::mcp::{Layer, ParamSpec, ParamType, ToolSpec};
 use crate::adapter::AdapterError;
 
-/// The contract's transform path (the engine's own component).
-pub const TRANSFORM_PATH: &str = ENGINE_TRANSFORM_PATH;
-/// The contract's player marker path.
-pub const PLAYER_PATH: &str = "hof_game::contract::Player";
+/// The contract paths this layer addresses, **bound to the contract by
+/// construction** rather than by a restatement (the B1 acceptance's D4: five of
+/// the six paths used to be duplicated string literals held in place only by a
+/// test that compared two copies of the same literal).
+///
+/// Each constant is `contract::contract_path(surface)` — a `const fn` lookup
+/// into `contract::CONTRACT` — so there is exactly **one** literal per path in
+/// the whole crate, and a surface rename becomes a compile-time failure in a
+/// `const` initialiser instead of a red test afterwards.  The constant below
+/// asserts that each surface name resolves, so the lookup's unreachable panic
+/// arm stays unreachable.
+pub const TRANSFORM_PATH: &str = contract::contract_path("player_transform");
+/// The contract's player-marker component path.
+pub const PLAYER_PATH: &str = contract::contract_path("player_marker");
 /// The contract's grounded component path.
-pub const GROUNDED_PATH: &str = "hof_game::contract::Grounded";
+pub const GROUNDED_PATH: &str = contract::contract_path("grounded");
 /// The contract's coin-counter resource path.
-pub const COIN_COUNTER_PATH: &str = "hof_game::contract::CoinCounter";
+pub const COIN_COUNTER_PATH: &str = contract::contract_path("coin_counter");
 /// The contract's win-flag resource path.
-pub const WIN_FLAG_PATH: &str = "hof_game::contract::WinFlag";
+pub const WIN_FLAG_PATH: &str = contract::contract_path("win_flag");
 /// The contract's input-intent resource path.
-pub const INPUT_INTENT_PATH: &str = "hof_game::contract::InputIntent";
+pub const INPUT_INTENT_PATH: &str = contract::contract_path("input_intent");
+/// The contract's game frame-counter resource path (the seventh surface, D297).
+pub const FRAME_COUNTER_PATH: &str = contract::contract_path("frame_counter");
+
+/// The frozen **return** shape of `bevy_player_transform` (D297 (c)).
+pub const PLAYER_TRANSFORM_OUTPUT_SCHEMA: &str = r#"{"type":"object","properties":{"x":{"type":"number","description":"translation.x"},"y":{"type":"number","description":"translation.y"},"frame":{"type":"integer","minimum":0,"description":"the GAME's own frame (hof_game::contract::FrameCounter), never the adapter's observation ordinal"}},"required":["x","y","frame"],"additionalProperties":false}"#;
+/// The frozen return shape of `bevy_grounded`.
+pub const GROUNDED_OUTPUT_SCHEMA: &str = r#"{"type":"object","properties":{"grounded":{"type":"boolean","description":"Grounded.on_ground"},"frame":{"type":"integer","minimum":0,"description":"the GAME's own frame (hof_game::contract::FrameCounter)"}},"required":["grounded","frame"],"additionalProperties":false}"#;
+/// The frozen return shape of `bevy_coin_counter`.
+pub const COIN_COUNTER_OUTPUT_SCHEMA: &str = r#"{"type":"object","properties":{"coins":{"type":"integer","description":"CoinCounter.coins"},"frame":{"type":"integer","minimum":0,"description":"the GAME's own frame (hof_game::contract::FrameCounter)"}},"required":["coins","frame"],"additionalProperties":false}"#;
+/// The frozen return shape of `bevy_win_flag`.
+pub const WIN_FLAG_OUTPUT_SCHEMA: &str = r#"{"type":"object","properties":{"won":{"type":"boolean","description":"WinFlag.won, one-way"},"frame":{"type":"integer","minimum":0,"description":"the GAME's own frame (hof_game::contract::FrameCounter)"}},"required":["won","frame"],"additionalProperties":false}"#;
+/// The frozen return shape of `bevy_inject_move`.
+pub const INJECT_MOVE_OUTPUT_SCHEMA: &str = r#"{"type":"object","properties":{"accepted":{"type":"boolean","description":"the write reached the game"},"frame":{"type":"integer","minimum":0,"description":"the GAME's own frame at which the intent was written"}},"required":["accepted","frame"],"additionalProperties":false}"#;
+/// The frozen return shape of `bevy_inject_jump`.
+pub const INJECT_JUMP_OUTPUT_SCHEMA: &str = r#"{"type":"object","properties":{"accepted":{"type":"boolean","description":"the write reached the game"},"frame":{"type":"integer","minimum":0,"description":"the GAME's own frame at which the intent was written"}},"required":["accepted","frame"],"additionalProperties":false}"#;
+/// The frozen return shape of `bevy_wait_frames`.
+pub const WAIT_FRAMES_OUTPUT_SCHEMA: &str = r#"{"type":"object","properties":{"frame_after":{"type":"integer","minimum":0,"description":"the GAME's own frame after waiting"}},"required":["frame_after"],"additionalProperties":false}"#;
+/// The frozen return shape of `bevy_health`.
+pub const HEALTH_OUTPUT_SCHEMA: &str = r#"{"type":"object","properties":{"alive":{"type":"boolean","description":"the game process is still running"},"stderr_tail":{"type":"string","description":"the tail of the process stderr (a panic is visible here and nowhere else)"}},"required":["alive","stderr_tail"],"additionalProperties":false}"#;
 
 /// The eight semantic tools, in the frozen order of the contract module.
 pub const SEMANTIC_TOOL_SPECS: &[ToolSpec] = &[
@@ -54,6 +85,7 @@ pub const SEMANTIC_TOOL_SPECS: &[ToolSpec] = &[
         method: None,
         streaming: false,
         mutating: false,
+        output_schema: Some(PLAYER_TRANSFORM_OUTPUT_SCHEMA),
     },
     ToolSpec {
         name: "bevy_grounded",
@@ -64,6 +96,7 @@ pub const SEMANTIC_TOOL_SPECS: &[ToolSpec] = &[
         method: None,
         streaming: false,
         mutating: false,
+        output_schema: Some(GROUNDED_OUTPUT_SCHEMA),
     },
     ToolSpec {
         name: "bevy_coin_counter",
@@ -73,6 +106,7 @@ pub const SEMANTIC_TOOL_SPECS: &[ToolSpec] = &[
         method: None,
         streaming: false,
         mutating: false,
+        output_schema: Some(COIN_COUNTER_OUTPUT_SCHEMA),
     },
     ToolSpec {
         name: "bevy_win_flag",
@@ -82,6 +116,7 @@ pub const SEMANTIC_TOOL_SPECS: &[ToolSpec] = &[
         method: None,
         streaming: false,
         mutating: false,
+        output_schema: Some(WIN_FLAG_OUTPUT_SCHEMA),
     },
     ToolSpec {
         name: "bevy_inject_move",
@@ -105,6 +140,7 @@ pub const SEMANTIC_TOOL_SPECS: &[ToolSpec] = &[
         method: None,
         streaming: false,
         mutating: true,
+        output_schema: Some(INJECT_MOVE_OUTPUT_SCHEMA),
     },
     ToolSpec {
         name: "bevy_inject_jump",
@@ -120,6 +156,7 @@ pub const SEMANTIC_TOOL_SPECS: &[ToolSpec] = &[
         method: None,
         streaming: false,
         mutating: true,
+        output_schema: Some(INJECT_JUMP_OUTPUT_SCHEMA),
     },
     ToolSpec {
         name: "bevy_wait_frames",
@@ -135,6 +172,7 @@ pub const SEMANTIC_TOOL_SPECS: &[ToolSpec] = &[
         method: None,
         streaming: false,
         mutating: false,
+        output_schema: Some(WAIT_FRAMES_OUTPUT_SCHEMA),
     },
     ToolSpec {
         name: "bevy_health",
@@ -145,6 +183,7 @@ pub const SEMANTIC_TOOL_SPECS: &[ToolSpec] = &[
         method: None,
         streaming: false,
         mutating: false,
+        output_schema: Some(HEALTH_OUTPUT_SCHEMA),
     },
 ];
 
@@ -229,25 +268,30 @@ pub fn plan(tool: &str, args: &Value) -> Result<Vec<BrpStep>, AdapterError> {
                 json!({"resource": INPUT_INTENT_PATH, "path": "jump_pressed", "value": press}),
             )])
         }
-        // Frame advance is an adapter-local action (SPIKE-1 §6.3: it is not a BRP
-        // verb), and process health comes from the process, not the ECS.
-        "bevy_wait_frames" | "bevy_health" => Ok(Vec::new()),
+        // Frame advance is not a BRP verb (SPIKE-1 §6.3), but the counter it
+        // waits on *is*: the plan here is the counter read the server polls, so
+        // "wait for N frames of the game" is expressible in BRP terms.
+        "bevy_wait_frames" => Ok(vec![frame_read_plan()]),
+        // Process health comes from the process, not from the ECS.
+        "bevy_health" => Ok(Vec::new()),
         other => Err(AdapterError::Malformed(format!(
             "`{other}` is not a semantic tool"
         ))),
     }
 }
 
-/// The tools whose answer needs no BRP call.
+/// The tools whose answer needs no BRP call at all.
 pub fn is_plan_free(tool: &str) -> bool {
-    matches!(tool, "bevy_wait_frames" | "bevy_health")
+    matches!(tool, "bevy_health")
 }
 
 /// Turn the responses of [`plan`] into the tool's frozen return shape.
 ///
-/// `frame` is the adapter's monotone observation ordinal (BRP has no frame verb
-/// and Bevy's `Time` is not reflectable — SPIKE-1 §0.4-3 — so the contract's
-/// frame field is the *adapter's* observation counter; see the batch report).
+/// `frame` is the **game's own frame** (D297 (b)): the value of the contract's
+/// `FrameCounter` resource, read by the server before this projection runs.  It
+/// is never the adapter's observation ordinal.  BRP has no frame verb and Bevy's
+/// `Time` is not reflectable (SPIKE-1 §0.4-3), which is why the counter is part
+/// of the frozen contract.
 pub fn project(tool: &str, responses: &[Value], frame: u64) -> Result<Value, AdapterError> {
     match tool {
         "bevy_player_transform" => {
@@ -294,11 +338,53 @@ pub fn project(tool: &str, responses: &[Value], frame: u64) -> Result<Value, Ada
             };
             Ok(json!({"won": won, "frame": frame}))
         }
-        "bevy_inject_move" | "bevy_inject_jump" => Ok(json!({"accepted": true})),
+        "bevy_inject_move" | "bevy_inject_jump" => Ok(json!({"accepted": true, "frame": frame})),
         other => Err(AdapterError::Malformed(format!(
             "`{other}` has no projection"
         ))),
     }
+}
+
+/// The **one** BRP call that reads the game's own frame counter (D297 (b)):
+/// `world.get_resources` of the contract's `FrameCounter` resource.
+///
+/// It is the only way any tool learns the frame, and it is a read of the game's
+/// state — not of the adapter's own call count.  A game that does not register
+/// the resource gets `-23502` from BRP, which [`classify_brp_error`] turns into
+/// a contract violation, so "the game never declared a frame" can never be
+/// reported as frame zero.
+pub fn frame_read_plan() -> BrpStep {
+    BrpStep::new(
+        "world.get_resources",
+        json!({"resource": FRAME_COUNTER_PATH}),
+    )
+}
+
+/// The integer game frame inside a `world.get_resources` reply of the frame
+/// counter.
+///
+/// Two declarations are accepted, because both are plausible and refusing one
+/// would be an arbitrary restriction: the resource value is either a bare
+/// integer (`FrameCounter = u64`, as in SPIKE-2's frame probe) or an object with
+/// an integer `frames` field (the shape the rest of the contract uses).
+/// Anything else is `Malformed` — a frame that cannot be read is never silently
+/// zero.
+pub fn project_game_frame(response: &Value) -> Result<u64, AdapterError> {
+    let value = response.get("value").ok_or_else(|| {
+        AdapterError::Malformed(format!(
+            "the frame counter reply has no `value` field (got {response})"
+        ))
+    })?;
+    if let Some(frames) = value.as_u64() {
+        return Ok(frames);
+    }
+    if let Some(frames) = value.get("frames").and_then(Value::as_u64) {
+        return Ok(frames);
+    }
+    Err(AdapterError::Malformed(format!(
+        "`{FRAME_COUNTER_PATH}` does not carry an integer frame: expected a bare integer or an \
+         object with an integer `frames` field, got {value}"
+    )))
 }
 
 /// The read tool that reports one [`crate::adapter::SemanticKind`], if any.
@@ -432,7 +518,13 @@ mod tests {
             );
         }
         assert!(contract_entry_for("bevy_grounded").is_some());
-        assert!(contract_entry_for("bevy_wait_frames").is_none());
+        // Since D297 (b) `bevy_wait_frames` is bound too: it waits on the
+        // contract's frame counter, so it is no longer path-free.
+        assert_eq!(
+            contract_entry_for("bevy_wait_frames").unwrap().type_path,
+            FRAME_COUNTER_PATH
+        );
+        assert!(contract_entry_for("bevy_health").is_none());
         assert!(
             contract_entry_for("entity_query").is_none(),
             "no Godot name here"
@@ -534,14 +626,69 @@ mod tests {
     }
 
     #[test]
-    fn frame_advance_and_health_need_no_brp_call() {
-        assert!(plan("bevy_wait_frames", &json!({"n": 30}))
-            .unwrap()
-            .is_empty());
-        assert!(plan("bevy_health", &json!({})).unwrap().is_empty());
-        assert!(is_plan_free("bevy_wait_frames"));
+    fn frame_advance_waits_on_the_frame_counter_and_health_needs_no_call() {
+        let steps = plan("bevy_wait_frames", &json!({"n": 30})).unwrap();
+        assert_eq!(steps.len(), 1);
+        assert_eq!(steps[0].method, "world.get_resources");
+        assert_eq!(steps[0].params["resource"], json!(FRAME_COUNTER_PATH));
+        assert_eq!(plan("bevy_health", &json!({})).unwrap().len(), 0);
+        assert!(!is_plan_free("bevy_wait_frames"));
         assert!(is_plan_free("bevy_health"));
         assert!(!is_plan_free("bevy_grounded"));
+    }
+
+    #[test]
+    fn every_semantic_tool_publishes_a_frozen_output_schema() {
+        for tool in SEMANTIC_TOOL_SPECS {
+            let schema = tool
+                .output_schema
+                .unwrap_or_else(|| panic!("`{}` has no output schema", tool.name));
+            let parsed: Value = serde_json::from_str(schema).unwrap_or_else(|error| {
+                panic!("`{}` output schema is not JSON: {error}", tool.name)
+            });
+            assert_eq!(
+                parsed["type"],
+                json!("object"),
+                "`{}` must publish an object shape",
+                tool.name
+            );
+            assert_eq!(
+                parsed["additionalProperties"],
+                json!(false),
+                "`{}` must not allow undeclared fields",
+                tool.name
+            );
+            assert!(
+                parsed["required"].as_array().map(|r| !r.is_empty()) == Some(true),
+                "`{}` must declare its required fields",
+                tool.name
+            );
+        }
+    }
+
+    #[test]
+    fn the_two_frame_shapes_are_both_read_as_the_games_frame() {
+        assert_eq!(
+            project_game_frame(&json!({"value": 41})).unwrap(),
+            41,
+            "a bare integer counter"
+        );
+        assert_eq!(
+            project_game_frame(&json!({"value": {"frames": 42}})).unwrap(),
+            42,
+            "an object counter with a `frames` field"
+        );
+        for bad in [
+            json!({"value": "soon"}),
+            json!({"value": {"frame": 1}}),
+            json!({"value": -1}),
+            json!({}),
+        ] {
+            assert!(
+                matches!(project_game_frame(&bad), Err(AdapterError::Malformed(_))),
+                "{bad} must not project to a frame"
+            );
+        }
     }
 
     #[test]

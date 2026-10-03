@@ -160,7 +160,15 @@ pub fn meta_json(
 }
 
 /// One MCP→BRP call, raw.
-#[derive(Clone, Debug, PartialEq)]
+///
+/// It is `Serialize` because the battery's observations embed the raw calls: a
+/// reading's evidence has to be written out with its document, or the claim "the
+/// wire carried this" would depend on the process that made the call still being
+/// alive.  It is deliberately **not** `Deserialize`: `layer` is a `&'static str`
+/// (it is one of exactly two values), and reading a `String` back into a static
+/// is not the same value — a round's evidence is written and inspected, never
+/// silently rehydrated into a call record.
+#[derive(Clone, Debug, PartialEq, serde::Serialize)]
 pub struct CallEvidence {
     /// 1-based call ordinal inside the round.
     pub seq: u64,

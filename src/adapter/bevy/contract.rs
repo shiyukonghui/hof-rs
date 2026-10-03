@@ -47,10 +47,68 @@ pub struct ContractEntry {
     pub shape: &'static str,
 }
 
-/// DESIGN-DETAIL §3: the frozen contract.  Six surfaces, in the order of the
-/// design's table; the eight semantic tools split into six bound to an entry
-/// and [`TOOLS_WITHOUT_TYPE_PATH`] (frame advance and process health are not
-/// reflectable state at all).
+impl ContractEntry {
+    /// The type's own name — the last segment of the fully qualified path.  It
+    /// is what a game crate can write in its own source (a crate cannot spell its
+    /// extern path `hof_game::…` for its own types), so it is the name a
+    /// source-level contract reader looks for.
+    pub fn type_name(&self) -> &'static str {
+        self.type_path.rsplit("::").next().unwrap_or(self.type_path)
+    }
+}
+
+/// The contract's own path lookup, usable in a `const` context (D4's fix).
+///
+/// The semantic layer's type-path constants are defined as
+/// `contract_path("…")` rather than as restated string literals, so the binding
+/// between the layer and the contract is **by construction**: there is exactly
+/// one literal for each path, it lives in [`CONTRACT`], and a surface name that
+/// no longer exists is a compile-time error in a `const` initialiser, not a test
+/// failure afterwards.
+///
+/// The panic arm is unreachable for every name the module itself uses — and a
+/// test asserts every one of them resolves — but it is a `panic!` in a search
+/// helper with no other way to report, which is why this is the only such
+/// construct in the Bevy adapter's production code and why it is named here.
+pub const fn contract_path(surface: &str) -> &'static str {
+    let entries = CONTRACT;
+    let mut index = 0;
+    while index < entries.len() {
+        if str_eq(entries[index].surface, surface) {
+            return entries[index].type_path;
+        }
+        index += 1;
+    }
+    panic!("no frozen contract surface with that name")
+}
+
+/// `==` for `&str` in a `const fn` (no `PartialEq` there yet).
+const fn str_eq(left: &str, right: &str) -> bool {
+    let (left, right) = (left.as_bytes(), right.as_bytes());
+    if left.len() != right.len() {
+        return false;
+    }
+    let mut index = 0;
+    while index < left.len() {
+        if left[index] != right[index] {
+            return false;
+        }
+        index += 1;
+    }
+    true
+}
+
+/// DESIGN-DETAIL §3: the frozen contract.  **Seven** surfaces, in the order of
+/// the design's table; the eight semantic tools split into seven bound to an
+/// entry and [`TOOLS_WITHOUT_TYPE_PATH`] (process health is not reflectable
+/// state at all, and it is the only such tool).
+///
+/// The seventh surface is the **game frame counter** (D297 (b)): before it, the
+/// `frame` a reading reported was the adapter's observation ordinal, which only
+/// says how often *we* polled.  E3's jump criterion ("rising **and** falling
+/// steps") is a statement about the game's own frame advance, so the counter has
+/// to exist in the game and be reflectable.  It is a resource under the frozen
+/// crate, incremented by the game every frame.
 pub const CONTRACT: &[ContractEntry] = &[
     ContractEntry {
         surface: "player_marker",
@@ -88,6 +146,14 @@ pub const CONTRACT: &[ContractEntry] = &[
         shape: "bool field `won` (one-way, never resets)",
     },
     ContractEntry {
+        surface: "frame_counter",
+        type_path: "hof_game::contract::FrameCounter",
+        reflect: "Resource",
+        semantic_tool: "bevy_wait_frames",
+        shape: "integer field `frames`, incremented by the game on every frame; this is what a \
+                reading's `frame` reports (never the adapter's observation ordinal)",
+    },
+    ContractEntry {
         surface: "input_intent",
         type_path: "hof_game::contract::InputIntent",
         reflect: "Resource",
@@ -109,9 +175,10 @@ pub const SEMANTIC_TOOLS: &[&str] = &[
     "bevy_health",
 ];
 
-/// The semantic tools that have no reflectable surface: frame advance is an
-/// adapter-local action and process health is read from the process, not the ECS.
-pub const TOOLS_WITHOUT_TYPE_PATH: &[&str] = &["bevy_wait_frames", "bevy_health"];
+/// The semantic tools that have no reflectable surface.  Process health is read
+/// from the operating system, not from the ECS, so it is the only one: every
+/// other semantic tool ends up addressing a frozen type path.
+pub const TOOLS_WITHOUT_TYPE_PATH: &[&str] = &["bevy_health"];
 
 /// BRP error codes that mean "the game did not declare the thing the contract
 /// requires" (SPIKE-1 §1.3's code table): they are contract violations, i.e.
@@ -157,7 +224,35 @@ pub fn contract_sha256() -> String {
 /// fails first and the change must be re-pinned — and, per the design, go
 /// through the decision process.
 pub const CONTRACT_SHA256: &str =
-    "4af153e77af87ceddb162c4b782701ee0b6c066a651d4e4b5d1e71f329649c69";
+    "792001e7e629ccc25d6c486eeb54360d83ffb208befa4ca5e430c6f0e747f4f9";
+/// The contract paths a game declared, reported as missing if any is absent.
+///
+/// The reason **says what it compared**: the declared paths, where they were
+/// read from, and the frozen table they were checked against (B2-1).  A failure
+/// that only says "all seven paths missing" is not a reason a reader can act on.
+pub fn check_declared_contract_paths(
+    declared: &[String],
+    source: &str,
+) -> Result<(), AdapterError> {
+    let missing: Vec<&str> = CONTRACT
+        .iter()
+        .map(|entry| entry.type_path)
+        .filter(|path| !declared.iter().any(|seen| seen == path))
+        .collect();
+    if missing.is_empty() {
+        return Ok(());
+    }
+    Err(AdapterError::ContractViolation(format!(
+        "compared the {} contract type path(s) declared by {source} against the {} frozen path(s) \
+         in `adapter/bevy/contract.rs`: {} missing: {} — every path must be declared with \
+         `register_type` (PRD §3-C2) before any tool can read it",
+        declared.len(),
+        CONTRACT.len(),
+        missing.len(),
+        missing.join(", ")
+    )))
+}
+
 pub fn check_registered_type_paths(registered: &[String]) -> Result<(), AdapterError> {
     let missing: Vec<&str> = CONTRACT
         .iter()
@@ -330,8 +425,10 @@ mod tests {
     }
 
     #[test]
-    fn the_contract_is_six_surfaces_and_the_semantic_tools_are_fully_accounted_for() {
-        assert_eq!(CONTRACT.len(), 6);
+    fn the_contract_is_seven_surfaces_and_the_semantic_tools_are_fully_accounted_for() {
+        // Seven since D297 (b) added the game frame counter: E3's five
+        // observations all report the GAME's frame, so the counter is contract.
+        assert_eq!(CONTRACT.len(), 7);
         let mut bound: Vec<&str> = CONTRACT
             .iter()
             .flat_map(|entry| entry.semantic_tool.split(','))
@@ -364,6 +461,46 @@ mod tests {
     }
 
     #[test]
+    fn the_seventh_surface_is_the_game_frame_counter() {
+        assert_eq!(
+            contract_path("frame_counter"),
+            "hof_game::contract::FrameCounter"
+        );
+        let entry = CONTRACT
+            .iter()
+            .find(|entry| entry.surface == "frame_counter")
+            .expect("the frame counter is a frozen surface");
+        assert_eq!(entry.reflect, "Resource");
+        assert_eq!(entry.semantic_tool, "bevy_wait_frames");
+        assert!(
+            entry.shape.contains("frames"),
+            "the frame field name is part of the contract: {}",
+            entry.shape
+        );
+    }
+
+    #[test]
+    fn every_surface_name_the_layer_looks_up_resolves() {
+        // `contract_path` is a `const fn` whose miss arm panics; this is the
+        // assertion that keeps that arm unreachable, and it is what makes the
+        // semantic layer's binding *by construction* checkable.
+        for surface in [
+            "player_marker",
+            "player_transform",
+            "grounded",
+            "coin_counter",
+            "win_flag",
+            "frame_counter",
+            "input_intent",
+        ] {
+            assert!(
+                !contract_path(surface).is_empty(),
+                "`{surface}` resolves to an empty type path"
+            );
+        }
+    }
+
+    #[test]
     fn a_missing_type_path_is_a_contract_violation() {
         let all: Vec<String> = CONTRACT.iter().map(|e| e.type_path.to_string()).collect();
         assert!(check_registered_type_paths(&all).is_ok());
@@ -382,6 +519,58 @@ mod tests {
             }
             other => panic!("expected a contract violation, got {other:?}"),
         }
+    }
+
+    /// B2-1: the contract check's failure says **what it compared** and names the
+    /// specific missing path, rather than reporting a list it cannot justify.
+    #[test]
+    fn a_declared_contract_failure_says_what_it_compared_and_which_path_is_missing() {
+        let all: Vec<String> = CONTRACT.iter().map(|e| e.type_path.to_string()).collect();
+        assert!(check_declared_contract_paths(&all, "the game source").is_ok());
+        let without_grounded: Vec<String> = all
+            .iter()
+            .filter(|path| path.as_str() != "hof_game::contract::Grounded")
+            .cloned()
+            .collect();
+        let error =
+            check_declared_contract_paths(&without_grounded, "the game source under `F:/game/src`")
+                .unwrap_err();
+        let AdapterError::ContractViolation(message) = error else {
+            panic!("expected a contract violation");
+        };
+        assert!(
+            message.contains("hof_game::contract::Grounded"),
+            "{message}"
+        );
+        assert!(
+            !message.contains("hof_game::contract::Player"),
+            "only the missing path is named: {message}"
+        );
+        assert!(
+            message.contains("the game source under `F:/game/src`"),
+            "the reason must say where the declaration was read from: {message}"
+        );
+        assert!(
+            message.contains("`adapter/bevy/contract.rs`"),
+            "the reason must say what it was compared against: {message}"
+        );
+    }
+
+    #[test]
+    fn the_type_name_is_the_last_segment_of_the_path() {
+        let grounded = CONTRACT
+            .iter()
+            .find(|entry| entry.surface == "grounded")
+            .expect("the grounded surface");
+        assert_eq!(grounded.type_name(), "Grounded");
+        assert_eq!(
+            CONTRACT
+                .iter()
+                .find(|entry| entry.surface == "player_transform")
+                .expect("the transform surface")
+                .type_name(),
+            "Transform"
+        );
     }
 
     #[test]

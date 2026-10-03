@@ -1,6 +1,16 @@
 //! BATCH-B1 cross-module pins: the frozen contract, the frozen tool list, the
 //! legacy adapter's alignment, and the round-evidence layout.
 //!
+//! **BATCH-B2 re-pinned two of these literals deliberately.**  D297 (b) added the
+//! game frame counter as the seventh reflectable surface and D297 (c) put the
+//! semantic layer's return shapes into `tools/list`, and both are contract
+//! changes, so `CONTRACT_SHA256` moved
+//! `4af153e7…` -> `792001e7…` and `TOOL_LIST_SHA256` moved
+//! `e177325f…` -> `bcf03c0b…`.  The assertions below still compare against the
+//! constants, so they are pins, not restatements.  The tool count is unchanged
+//! (no tool was added or removed; the frame counter is read *inside* the calls
+//! that already existed).
+//!
 //! These are integration-level because they are the properties that hold the
 //! *system* together: the contract hash, the tool-list hash and the eight
 //! semantic names must not drift silently, and the Godot path must keep
@@ -39,7 +49,7 @@ fn godot_adapter() -> GodotAdapter {
 fn the_frozen_contract_hash_and_crate_name_are_pinned() {
     assert_eq!(contract_sha256(), CONTRACT_SHA256, "the contract drifted");
     assert_eq!(CONTRACT_SHA256.len(), 64);
-    assert_eq!(CONTRACT.len(), 6);
+    assert_eq!(CONTRACT.len(), 7, "seven surfaces since D297 (b)");
     assert_eq!(GAME_CRATE, "hof_game");
     assert!(contract_value().is_array());
     let paths: Vec<String> = CONTRACT.iter().map(|e| e.type_path.to_string()).collect();

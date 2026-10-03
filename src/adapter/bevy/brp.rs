@@ -132,7 +132,7 @@ pub fn request_body(id: u64, method: &str, params: Option<Value>) -> Value {
 }
 
 /// Split one reply body: a non-null `error` is a tool error; otherwise the
-/// `result` is returned (`null` when absent).
+/// `result` is returned.
 pub fn read_reply(body: &str, endpoint: &str) -> Result<Value, BrpError> {
     let value: Value = serde_json::from_str(body).map_err(|error| BrpError::Malformed {
         endpoint: endpoint.to_string(),
@@ -141,19 +141,67 @@ pub fn read_reply(body: &str, endpoint: &str) -> Result<Value, BrpError> {
     read_document(&value, endpoint)
 }
 
-/// The same reading, on an already-parsed document.  It is the enforcement point
-/// for the two protocol traps: a batch reply is refused (this client never
-/// batches, so receiving one means something else answered), and a non-null
-/// `error` inside an HTTP 200 is a failure.
-pub fn read_document(value: &Value, endpoint: &str) -> Result<Value, BrpError> {
+/// The same reading, on an already-parsed document.
+///
+/// It is the single enforcement point for the shape of a reply, and it is
+/// deliberately strict (the B1 acceptance's D1): a reply must be a **JSON-RPC
+/// document** — an object carrying either a non-null `error` or a `result`
+/// member.  Valid JSON that is not such a document (a number, a string, `null`,
+/// an empty object, an object with neither member) is `Malformed`, never a
+/// successful `null`: "the peer answered something else" and "the call returned
+/// null" are different facts, and only one of them is a success.
+///
+/// A batch reply (an array) is refused outright: this client never batches, so
+/// receiving one means something else answered.
+///
+/// `expected_id` is the id of the request that is waiting for this reply (the
+/// B1 acceptance's D2).  A reply whose `id` is someone else's is `Malformed`:
+/// accepting it would report another call's result under this call's name.
+pub fn read_document_for(
+    value: &Value,
+    endpoint: &str,
+    expected_id: Option<u64>,
+) -> Result<Value, BrpError> {
+    let malformed = |message: String| BrpError::Malformed {
+        endpoint: endpoint.to_string(),
+        message,
+    };
     if let Value::Array(_) = value {
-        return Err(BrpError::Malformed {
-            endpoint: endpoint.to_string(),
-            message: "a batch reply (array) is not acceptable: this client never batches"
-                .to_string(),
-        });
+        return Err(malformed(
+            "a batch reply (array) is not acceptable: this client never batches".to_string(),
+        ));
     }
-    if let Some(error) = value.get("error") {
+    let object = match value.as_object() {
+        Some(object) => object,
+        None => {
+            return Err(malformed(format!(
+                "a JSON-RPC reply must be an object with `result` or `error`, got {value}"
+            )));
+        }
+    };
+    if let Some(expected) = expected_id {
+        match object.get("id") {
+            Some(actual) => {
+                if actual.as_u64() != Some(expected) {
+                    return Err(malformed(format!(
+                        "the reply carries id {actual} but request {expected} is waiting: a reply to \
+                         another call is never this call's result"
+                    )));
+                }
+            }
+            // B2-9: a reply that carries **no** `id` member at all is not
+            // correlated either.  Accepting it would let any uncorrelated
+            // document answer any pending request — the same class as a stale
+            // id, and the same reason D2 exists.
+            None => {
+                return Err(malformed(format!(
+                    "the reply carries no `id` member but request {expected} is waiting: an \
+                     uncorrelated reply is never this call's result"
+                )));
+            }
+        }
+    }
+    if let Some(error) = object.get("error") {
         if !error.is_null() {
             let code = error.get("code").and_then(Value::as_i64).unwrap_or(0);
             let message = error
@@ -164,7 +212,19 @@ pub fn read_document(value: &Value, endpoint: &str) -> Result<Value, BrpError> {
             return Err(BrpError::Rpc { code, message });
         }
     }
-    Ok(value.get("result").cloned().unwrap_or(Value::Null))
+    match object.get("result") {
+        Some(result) => Ok(result.clone()),
+        None => Err(malformed(
+            "the reply is a JSON object but carries neither a `result` nor a non-null `error`"
+                .to_string(),
+        )),
+    }
+}
+
+/// [`read_document_for`] without an id to correlate against (used where the
+/// caller already matched the id, or is reading a recorded document).
+pub fn read_document(value: &Value, endpoint: &str) -> Result<Value, BrpError> {
+    read_document_for(value, endpoint, None)
 }
 
 /// A blocking BRP client.  One instance talks to one endpoint.
@@ -202,7 +262,9 @@ impl BrpClient {
     pub fn call(&self, method: &str, params: Option<Value>) -> Result<Value, BrpError> {
         let id = self.next_id();
         let document = self.call_document(id, method, params)?;
-        read_document(&document, &self.endpoint)
+        // The reply is correlated with *this* request before it is read: a stale
+        // or out-of-order document must not become this call's result (D2).
+        read_document_for(&document, &self.endpoint, Some(id))
     }
 
     /// The next JSON-RPC id (per request, so evidence can correlate).
@@ -235,10 +297,15 @@ impl BrpClient {
         }
         let body = request_body(id, method, params);
         let text = self.post(&body)?;
-        serde_json::from_str(&text).map_err(|error| BrpError::Malformed {
+        let document: Value = serde_json::from_str(&text).map_err(|error| BrpError::Malformed {
             endpoint: self.endpoint.clone(),
             message: format!("not JSON: {error}"),
-        })
+        })?;
+        // Correlate here as well, because this is also the evidence path: a
+        // document that belongs to another request must never be recorded as the
+        // answer to this one (D2).
+        read_document_for(&document, &self.endpoint, Some(id))?;
+        Ok(document)
     }
 
     /// `rpc.discover` — the method the readiness poll uses (SPIKE-1 §1.2).
@@ -332,19 +399,14 @@ impl BrpClient {
     }
 }
 
-/// A minimal HTTP/1.1 request seen by the fake server, kept raw so a test can
-/// prove the shape of what the client sent.
-#[cfg(test)]
-pub(crate) struct RawRequest {
-    pub body: String,
-}
-
 /// The in-process fake BRP server.
 ///
 /// It is deliberately the *only* way the client is tested for transport
 /// behaviour: no engine, no network, no port 15702.  It speaks just enough
 /// HTTP/1.1 (`Content-Length` request bodies, `Connection: close` replies) for
-/// `ureq` to be a real client.
+/// `ureq` to be a real client.  It is `#[cfg(test)]`, so the battery's
+/// end-to-end test lives in this crate's test module rather than in `tests/`
+/// (which cannot see a crate-private double).
 #[cfg(test)]
 pub(crate) mod fake {
     use std::io::{Read, Write};
@@ -354,11 +416,9 @@ pub(crate) mod fake {
     use std::thread::{self, JoinHandle};
     use std::time::Duration;
 
-    use super::RawRequest;
-
     /// What the server answers with, in order; the last entry repeats forever so
     /// a poll loop cannot run out of script.
-    #[derive(Clone, Debug)]
+    #[derive(Clone)]
     pub enum Reply {
         /// HTTP 200 with this JSON body.
         Json(serde_json::Value),
@@ -368,18 +428,38 @@ pub(crate) mod fake {
         Status(u16, String),
         /// Wait, then answer with the inner reply.
         DelayThen(Duration, Box<Reply>),
+        /// Compute the reply from the request body and the bodies that arrived
+        /// before it.  This exists so a server can answer several *different*
+        /// BRP methods deterministically — for example a frame counter's
+        /// `world.get_resources` next to a `world.query` of the player.
+        From(Arc<dyn Fn(&str, &[String]) -> Reply + Send + Sync>),
+    }
+
+    impl std::fmt::Debug for Reply {
+        fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                Reply::Json(value) => write!(formatter, "Json({value})"),
+                Reply::Raw200(body) => write!(formatter, "Raw200({body})"),
+                Reply::Status(status, body) => write!(formatter, "Status({status}, {body})"),
+                Reply::DelayThen(delay, inner) => {
+                    write!(formatter, "DelayThen({delay:?}, {inner:?})")
+                }
+                Reply::From(_) => write!(formatter, "From(<fn>)"),
+            }
+        }
     }
 
     impl Reply {
-        fn render(&self) -> (u16, String) {
+        fn render(self, request: &str, prior: &[String]) -> (u16, String) {
             match self {
                 Reply::Json(value) => (200, value.to_string()),
-                Reply::Raw200(body) => (200, body.clone()),
-                Reply::Status(status, body) => (*status, body.clone()),
+                Reply::Raw200(body) => (200, body),
+                Reply::Status(status, body) => (status, body),
                 Reply::DelayThen(delay, inner) => {
-                    thread::sleep(*delay);
-                    inner.render()
+                    thread::sleep(delay);
+                    inner.render(request, prior)
                 }
+                Reply::From(build) => build(request, prior).render(request, prior),
             }
         }
     }
@@ -388,6 +468,12 @@ pub(crate) mod fake {
         addr: std::net::SocketAddr,
         stop: Arc<AtomicBool>,
         requests: Arc<Mutex<Vec<String>>>,
+        failures: Arc<Mutex<Vec<String>>>,
+        /// How many accepted streams were actually put back to blocking.  It is
+        /// the observability that makes the D3 repair **pinned**: removing the
+        /// `set_nonblocking(false)` call leaves this at zero and the named test
+        /// goes red, instead of the repair disappearing unnoticed (B2-2/B2-11).
+        blocking_restores: Arc<Mutex<usize>>,
         handle: Option<JoinHandle<()>>,
     }
 
@@ -401,26 +487,78 @@ pub(crate) mod fake {
             let addr = listener.local_addr().expect("a bound address");
             let stop = Arc::new(AtomicBool::new(false));
             let requests = Arc::new(Mutex::new(Vec::new()));
+            let failures = Arc::new(Mutex::new(Vec::new()));
+            let blocking_restores = Arc::new(Mutex::new(0usize));
             let handle = {
                 let stop = Arc::clone(&stop);
                 let requests = Arc::clone(&requests);
+                let failures = Arc::clone(&failures);
+                let blocking_restores = Arc::clone(&blocking_restores);
                 thread::spawn(move || {
                     let mut served = 0usize;
                     while !stop.load(Ordering::SeqCst) {
                         match listener.accept() {
                             Ok((stream, _)) => {
-                                let body = read_request(stream.try_clone().expect("a clone"));
-                                if let Ok(mut seen) = requests.lock() {
-                                    seen.push(body);
+                                // The listener is non-blocking so the accept loop
+                                // can be stopped; the accepted stream must be put
+                                // back to blocking, or the client's first read
+                                // becomes a race and the server can answer a
+                                // request it never read (B1 acceptance D3).  The
+                                // successful restore is **recorded**, so the
+                                // repair is observable rather than merely present.
+                                if stream.set_nonblocking(false).is_err() {
+                                    if let Ok(mut seen) = failures.lock() {
+                                        seen.push("the accepted stream stayed non-blocking".into());
+                                    }
+                                    continue;
                                 }
+                                if let Ok(mut count) = blocking_restores.lock() {
+                                    *count += 1;
+                                }
+                                // A request read that fails is **not** answered as
+                                // if it had arrived: the failure is recorded and
+                                // the server replies with an explicit JSON-RPC
+                                // error carrying the reason, so a test that reads
+                                // an empty body fails loudly instead of racing.
+                                let body = match read_request(stream.try_clone().expect("a clone"))
+                                {
+                                    Ok(body) => body,
+                                    Err(reason) => {
+                                        if let Ok(mut seen) = failures.lock() {
+                                            seen.push(reason.clone());
+                                        }
+                                        let (status, text) = Reply::Json(serde_json::json!({
+                                            "jsonrpc": "2.0",
+                                            "id": serde_json::Value::Null,
+                                            "error": {
+                                                "code": -32700,
+                                                "message": format!(
+                                                    "the fake BRP server could not read this                                                      request: {reason}"
+                                                ),
+                                            },
+                                        }))
+                                        .render("", &[]);
+                                        let _ = write_reply(stream, status, &text);
+                                        continue;
+                                    }
+                                };
+                                let prior = {
+                                    let mut seen = requests.lock().expect("the request log");
+                                    let prior = seen.clone();
+                                    seen.push(body.clone());
+                                    prior
+                                };
                                 let reply = script
                                     .get(served)
                                     .or_else(|| script.last())
                                     .cloned()
-                                    .unwrap_or(Reply::Raw200("{}".to_string()));
+                                    .unwrap_or(Reply::Raw200(
+                                        "{\"jsonrpc\":\"2.0\",\"id\":0,\"result\":null}"
+                                            .to_string(),
+                                    ));
                                 served += 1;
-                                let (status, body) = reply.render();
-                                let _ = write_reply(stream, status, &body);
+                                let (status, text) = reply.render(&body, &prior);
+                                let _ = write_reply(stream, status, &text);
                             }
                             Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
                                 thread::sleep(Duration::from_millis(2));
@@ -434,6 +572,8 @@ pub(crate) mod fake {
                 addr,
                 stop,
                 requests,
+                failures,
+                blocking_restores,
                 handle: Some(handle),
             }
         }
@@ -458,6 +598,39 @@ pub(crate) mod fake {
         pub fn request_count(&self) -> usize {
             self.requests().len()
         }
+
+        /// Every request whose read failed.  A test asserts this is empty, which
+        /// is what makes the double deterministic instead of probabilistic: the
+        /// server cannot answer a request it did not read.
+        pub fn read_failures(&self) -> Vec<String> {
+            self.failures
+                .lock()
+                .map(|seen| seen.clone())
+                .unwrap_or_default()
+        }
+
+        /// How many accepted streams were put back to blocking.  It is `0` if
+        /// the accept loop ever answers without restoring blocking behaviour —
+        /// which is exactly what makes the D3 repair observable (B2-2/B2-11).
+        pub fn blocking_restores(&self) -> usize {
+            self.blocking_restores
+                .lock()
+                .map(|count| *count)
+                .unwrap_or(0)
+        }
+
+        /// The bodies of the requests received so far, parsed.
+        pub fn parsed_requests(&self) -> Vec<serde_json::Value> {
+            self.requests()
+                .iter()
+                .filter_map(|body| serde_json::from_str(body).ok())
+                .collect()
+        }
+
+        /// A script that answers the game's frame counter, and nothing else.
+        pub fn frame_counter_script() -> Vec<Reply> {
+            vec![frame_counter_reply()]
+        }
     }
 
     impl Drop for FakeBrp {
@@ -477,47 +650,119 @@ pub(crate) mod fake {
         port
     }
 
-    pub fn read_request(mut stream: TcpStream) -> String {
-        let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
+    /// How long the whole request read may take before it is a failure.
+    pub const REQUEST_READ_DEADLINE: Duration = Duration::from_secs(5);
+
+    /// Read one complete HTTP/1.1 request.  **Any** problem is an `Err` with the
+    /// reason: an incomplete header, a body shorter than `Content-Length`, a
+    /// closed connection, or the deadline.  Nothing here turns a failure into an
+    /// empty request body (B1 acceptance D3).
+    ///
+    /// `WouldBlock` is retried to the deadline rather than treated as a result:
+    /// the timeout on a socket and a moment of scheduling look identical at this
+    /// layer, and only time can tell them apart.
+    pub fn read_request(mut stream: TcpStream) -> Result<String, String> {
+        stream
+            .set_read_timeout(Some(Duration::from_millis(200)))
+            .map_err(|error| format!("the read timeout could not be set: {error}"))?;
+        let started = std::time::Instant::now();
         let mut buffer = Vec::new();
         let mut chunk = [0u8; 4096];
-        let header_end;
-        loop {
+        let header_end = loop {
             match stream.read(&mut chunk) {
-                Ok(0) => return String::new(),
+                Ok(0) if !buffer.is_empty() => {
+                    return Err("the connection closed inside the request headers".to_string());
+                }
+                Ok(0) => {
+                    return Err("the connection closed before any request byte arrived".to_string());
+                }
                 Ok(read) => buffer.extend_from_slice(&chunk[..read]),
-                Err(_) => return String::new(),
+                Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {}
+                Err(error) if error.kind() == std::io::ErrorKind::TimedOut => {}
+                Err(error) if error.kind() == std::io::ErrorKind::Interrupted => {}
+                Err(error) => return Err(format!("the request read failed: {error}")),
             }
             if let Some(position) = find_header_end(&buffer) {
-                header_end = position;
-                break;
+                break position;
             }
-        }
+            if started.elapsed() >= REQUEST_READ_DEADLINE {
+                return Err(format!(
+                    "no complete request header arrived within {:?}",
+                    REQUEST_READ_DEADLINE
+                ));
+            }
+        };
         let headers = String::from_utf8_lossy(&buffer[..header_end]).to_string();
-        let length = content_length(&headers).unwrap_or(0);
+        let length = match content_length(&headers) {
+            Some(length) => length,
+            None if carries_a_body(&headers) => {
+                return Err("the request declares no Content-Length".to_string());
+            }
+            None => 0,
+        };
         let mut body = buffer[header_end + 4..].to_vec();
         while body.len() < length {
             match stream.read(&mut chunk) {
-                Ok(0) => break,
+                Ok(0) => {
+                    return Err(format!(
+                        "the connection closed after {} of {} body bytes",
+                        body.len(),
+                        length
+                    ));
+                }
                 Ok(read) => body.extend_from_slice(&chunk[..read]),
-                Err(_) => break,
+                Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {}
+                Err(error) if error.kind() == std::io::ErrorKind::TimedOut => {}
+                Err(error) if error.kind() == std::io::ErrorKind::Interrupted => {}
+                Err(error) => return Err(format!("the body read failed: {error}")),
+            }
+            if body.len() < length && started.elapsed() >= REQUEST_READ_DEADLINE {
+                return Err(format!(
+                    "the body stalled at {} of {} bytes after {:?}",
+                    body.len(),
+                    length,
+                    REQUEST_READ_DEADLINE
+                ));
             }
         }
-        String::from_utf8_lossy(&body).to_string()
+        Ok(String::from_utf8_lossy(&body).to_string())
     }
 
     fn find_header_end(buffer: &[u8]) -> Option<usize> {
         buffer.windows(4).position(|window| window == b"\r\n\r\n")
     }
 
-    fn content_length(headers: &str) -> Option<usize> {
+    /// The `Content-Length` of a request, if it declares one.
+    ///
+    /// The request line (`POST / HTTP/1.1`) has no colon, and an earlier version
+    /// of this scan returned `None` for the *whole function* on the first
+    /// colon-less line — so every body was read as zero bytes and the fake
+    /// answered requests it had never read.  Skipping colon-less lines is the
+    /// fix, and it is the mechanism behind the B1 acceptance's D3.
+    pub(crate) fn content_length(headers: &str) -> Option<usize> {
         for line in headers.lines() {
-            let (name, value) = line.split_once(':')?;
+            let Some((name, value)) = line.split_once(':') else {
+                continue;
+            };
             if name.eq_ignore_ascii_case("content-length") {
                 return value.trim().parse().ok();
             }
         }
         None
+    }
+
+    /// `true` when the request is a body-carrying method this fake must read
+    /// fully.  A `POST` with no `Content-Length` is a failed read, not a request
+    /// with an empty body.
+    pub(crate) fn carries_a_body(headers: &str) -> bool {
+        headers
+            .lines()
+            .next()
+            .map(|line| {
+                let line = line.trim_start();
+                line.starts_with("POST") || line.starts_with("PUT") || line.starts_with("PATCH")
+            })
+            .unwrap_or(false)
     }
 
     fn write_reply(mut stream: TcpStream, status: u16, body: &str) -> std::io::Result<()> {
@@ -529,14 +774,46 @@ pub(crate) mod fake {
         stream.flush()
     }
 
-    /// The fake also has to be able to stand in for a raw `TcpStream` read test.
-    #[allow(dead_code)]
-    pub fn peek_requests(server: &FakeBrp) -> Vec<RawRequest> {
-        server
-            .requests()
-            .into_iter()
-            .map(|body| RawRequest { body })
-            .collect()
+    /// The synchronous body of [`Reply::From`] that answers the game's frame
+    /// counter, so the same deterministic clock is available to every test that
+    /// needs a game which advances its own frames.
+    ///
+    /// The value advances by one per **counter read**, determined solely by the
+    /// requests the server has already seen, so it is independent of scheduling:
+    /// two runs of the same test see the same frame sequence.  A real game
+    /// advances with wall time; this only has to be deterministic.
+    fn frame_counter_answer(request: &str, prior: &[String]) -> Reply {
+        let is_counter_read = |body: &str| {
+            serde_json::from_str::<serde_json::Value>(body)
+                .ok()
+                .map(|parsed| {
+                    parsed.get("method").and_then(|method| method.as_str())
+                        == Some("world.get_resources")
+                        && parsed
+                            .get("params")
+                            .and_then(|params| params.get("resource"))
+                            .and_then(|resource| resource.as_str())
+                            == Some("hof_game::contract::FrameCounter")
+                })
+                .unwrap_or(false)
+        };
+        let reads = prior.iter().filter(|body| is_counter_read(body)).count() + 1;
+        let id = serde_json::from_str::<serde_json::Value>(request)
+            .ok()
+            .and_then(|parsed| parsed.get("id").cloned())
+            .unwrap_or(serde_json::Value::Null);
+        Reply::Json(serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": id,
+            "result": {"value": {"frames": reads}},
+        }))
+    }
+
+    /// A reply script for a fake that answers **only** the frame counter, using
+    /// [`frame_counter_answer`].  `FakeBrp::frame_counter_script()` is the
+    /// convenient form.
+    pub fn frame_counter_reply() -> Reply {
+        Reply::From(Arc::new(frame_counter_answer))
     }
 }
 
@@ -545,22 +822,65 @@ mod tests {
     use super::fake::{refused_port, FakeBrp, Reply};
     use super::*;
     use serde_json::json;
+    use std::io::Write;
 
     fn client(server: &FakeBrp) -> BrpClient {
         BrpClient::new(server.endpoint(), Duration::from_millis(1_000))
     }
 
+    /// A reply body that carries **the id of the request it answers**, taken off
+    /// the wire.  This is what a real JSON-RPC peer does, and since the client
+    /// now correlates ids (D2) the test doubles have to as well.
+    ///
+    /// The reply is built by inserting the request's id into the given document,
+    /// so a test can still hand in a document with a deliberately wrong id by
+    /// setting the `id` key itself.
+    fn id_echo(document: serde_json::Value) -> Reply {
+        Reply::From(std::sync::Arc::new(
+            move |request: &str, _prior: &[String]| {
+                let id = serde_json::from_str::<serde_json::Value>(request)
+                    .ok()
+                    .and_then(|parsed| parsed.get("id").cloned())
+                    .unwrap_or(serde_json::Value::Null);
+                let mut document = document.clone();
+                if let Some(object) = document.as_object_mut() {
+                    if !object.contains_key("id") {
+                        object.insert("id".to_string(), id);
+                    }
+                }
+                Reply::Json(document)
+            },
+        ))
+    }
+
+    /// A normal success reply, correlated with the request.
+    fn ok_reply(result: serde_json::Value) -> Reply {
+        id_echo(json!({"jsonrpc": "2.0", "result": result}))
+    }
+
+    /// A JSON-RPC error reply, correlated with the request.
+    fn error_reply(code: i64, message: &str) -> Reply {
+        id_echo(json!({"jsonrpc": "2.0", "error": {"code": code, "message": message}}))
+    }
+
+    fn reply_document(body: &str) -> serde_json::Value {
+        serde_json::from_str(body).expect("a JSON reply body")
+    }
+
     #[test]
     fn a_normal_reply_comes_back_as_its_result() {
-        let server = FakeBrp::replying(json!({"jsonrpc": "2.0", "id": 1, "result": {"ok": true}}));
+        let server = FakeBrp::replying(reply_document(
+            r#"{"jsonrpc":"2.0","id":1,"result":{"ok":true}}"#,
+        ));
         let value = client(&server).call("world.list_resources", None).unwrap();
         assert_eq!(value, json!({"ok": true}));
     }
 
     #[test]
     fn a_null_error_with_a_result_is_a_success() {
-        let server =
-            FakeBrp::replying(json!({"jsonrpc": "2.0", "id": 1, "error": null, "result": []}));
+        let server = FakeBrp::replying(reply_document(
+            r#"{"jsonrpc":"2.0","id":1,"error":null,"result":[]}"#,
+        ));
         let value = client(&server)
             .call("world.query", Some(json!({})))
             .unwrap();
@@ -569,11 +889,9 @@ mod tests {
 
     #[test]
     fn an_error_body_under_http_200_is_a_tool_error() {
-        let server = FakeBrp::replying(json!({
-            "jsonrpc": "2.0",
-            "id": 1,
-            "error": {"code": -32601, "message": "Method `world.screenshot` not found"}
-        }));
+        let server = FakeBrp::replying(reply_document(
+            r#"{"jsonrpc":"2.0","id":1,"error":{"code":-32601,"message":"Method `world.screenshot` not found"}}"#,
+        ));
         let error = client(&server).call("world.screenshot", None).unwrap_err();
         assert_eq!(error.code(), Some(-32601));
         assert!(error.is_method_not_found());
@@ -585,11 +903,9 @@ mod tests {
 
     #[test]
     fn a_resource_that_is_not_present_is_a_contract_violation() {
-        let server = FakeBrp::replying(json!({
-            "jsonrpc": "2.0",
-            "id": 1,
-            "error": {"code": -23502, "message": "Unknown resource type: hof_game::contract::WinFlag"}
-        }));
+        let server = FakeBrp::replying(reply_document(
+            r#"{"jsonrpc":"2.0","id":1,"error":{"code":-23502,"message":"Unknown resource type: hof_game::contract::WinFlag"}}"#,
+        ));
         let error = client(&server)
             .call("world.get_resources", Some(json!({"resource": "x"})))
             .unwrap_err();
@@ -601,7 +917,7 @@ mod tests {
     fn a_slow_reply_that_exceeds_the_timeout_is_a_timeout() {
         let server = FakeBrp::spawn(vec![Reply::DelayThen(
             Duration::from_millis(1_500),
-            Box::new(Reply::Json(json!({"result": 1}))),
+            Box::new(ok_reply(json!(1))),
         )]);
         let quick = BrpClient::new(server.endpoint(), Duration::from_millis(250));
         let error = quick.call("rpc.discover", None).unwrap_err();
@@ -664,8 +980,8 @@ mod tests {
     #[test]
     fn readiness_polls_until_discover_answers() {
         let server = FakeBrp::spawn(vec![
-            Reply::Json(json!({"error": {"code": -32601, "message": "not ready"}})),
-            Reply::Json(json!({"result": {"openrpc": "1.3.2", "methodCount": 23}})),
+            error_reply(-32601, "not ready"),
+            ok_reply(json!({"openrpc": "1.3.2", "methodCount": 23})),
         ]);
         let value = client(&server)
             .wait_ready(Duration::from_secs(2), Duration::from_millis(10))
@@ -714,8 +1030,9 @@ mod tests {
 
     #[test]
     fn the_client_puts_exactly_that_object_on_the_wire() {
-        let server =
-            FakeBrp::replying(json!({"result": {"servers": [{"url": "127.0.0.1:15702"}]}}));
+        let server = FakeBrp::spawn(vec![ok_reply(
+            json!({"servers": [{"url": "127.0.0.1:15702"}]}),
+        )]);
         let params = json!({"entity": 4294966889u64, "components": ["a::b::C"], "strict": true});
         let _ = client(&server)
             .call("world.get_components", Some(params.clone()))
@@ -750,7 +1067,7 @@ mod tests {
 
     #[test]
     fn every_request_carries_its_own_id_and_the_raw_document_is_available() {
-        let fake = FakeBrp::spawn(vec![Reply::Json(json!({"result": 1}))]);
+        let fake = FakeBrp::spawn(vec![ok_reply(json!(1))]);
         let client = client(&fake);
         client.call("rpc.discover", None).unwrap();
         client.call("rpc.discover", None).unwrap();
@@ -766,7 +1083,8 @@ mod tests {
         assert_eq!(ids, vec![1, 2], "each request has its own correlation id");
 
         // `call_document` hands back the document itself, so evidence can record
-        // what the engine sent instead of a re-rendered summary.
+        // what the engine sent instead of a re-rendered summary.  The fake echoes
+        // the id it was sent, so request 99 answers as 99.
         let document = client.call_document(99, "rpc.discover", None).unwrap();
         assert_eq!(document["result"], json!(1));
         let last: Value = serde_json::from_str(fake.requests().last().unwrap()).unwrap();
@@ -774,6 +1092,192 @@ mod tests {
             last["id"],
             json!(99),
             "the caller decides the correlation id"
+        );
+    }
+
+    // ---- B1 acceptance D1/D2: the reply must be a JSON-RPC document ----
+
+    #[test]
+    fn valid_json_that_is_not_a_json_rpc_document_is_malformed() {
+        for body in ["42", "\"ok\"", "{}", "null", "{\"jsonrpc\":\"2.0\"}"] {
+            let error = read_reply(body, "http://127.0.0.1:1/").unwrap_err();
+            assert!(
+                matches!(error, BrpError::Malformed { .. }),
+                "`{body}` must be Malformed, got {error:?}"
+            );
+            assert!(
+                !error.is_infrastructure(),
+                "a bad body is not infrastructure"
+            );
+        }
+        // A document with a null result is a success, which is the case the
+        // strict shape rule must not break.
+        assert_eq!(
+            read_reply(
+                "{\"jsonrpc\":\"2.0\",\"result\":null}",
+                "http://127.0.0.1:1/"
+            )
+            .unwrap(),
+            Value::Null
+        );
+        // An `error` member on its own is a JSON-RPC failure, not malformed.
+        assert!(matches!(
+            read_reply(
+                "{\"error\":{\"code\":-1,\"message\":\"x\"}}",
+                "http://127.0.0.1:1/"
+            ),
+            Err(BrpError::Rpc { .. })
+        ));
+    }
+
+    #[test]
+    fn a_reply_whose_id_is_not_the_requests_is_refused() {
+        let document = json!({"jsonrpc": "2.0", "id": 7, "result": {"which": "someone else"}});
+        let error = read_document_for(&document, "http://127.0.0.1:1/", Some(8)).unwrap_err();
+        assert!(matches!(error, BrpError::Malformed { .. }), "{error:?}");
+        assert!(error.to_string().contains("waiting"), "{error}");
+        // The matching id is accepted...
+        assert_eq!(
+            read_document_for(&document, "http://127.0.0.1:1/", Some(7)).unwrap(),
+            json!({"which": "someone else"})
+        );
+        // ...and a caller that passes no id (reading a recorded document) is not
+        // forced to invent one.
+        assert!(read_document_for(&document, "http://127.0.0.1:1/", None).is_ok());
+        // A non-numeric id cannot match a request.
+        let string_id = json!({"jsonrpc": "2.0", "id": "7", "result": 1});
+        assert!(read_document_for(&string_id, "http://127.0.0.1:1/", Some(7)).is_err());
+    }
+
+    /// B2-9: a reply that carries **no** `id` member is not correlated either.
+    /// Accepting it lets any document answer any pending request.
+    #[test]
+    fn a_reply_with_no_id_member_is_refused_when_an_id_is_expected() {
+        let no_id = json!({"jsonrpc": "2.0", "result": 1});
+        let error = read_document_for(&no_id, "http://127.0.0.1:1/", Some(9)).unwrap_err();
+        assert!(matches!(error, BrpError::Malformed { .. }), "{error:?}");
+        assert!(error.to_string().contains("no `id`"), "{error}");
+        assert!(
+            error.to_string().contains("waiting"),
+            "the refusal must say which request was waiting: {error}"
+        );
+        // A caller with no id to correlate against (reading a recorded
+        // document) is still allowed to read it.
+        assert_eq!(
+            read_document_for(&no_id, "http://127.0.0.1:1/", None).unwrap(),
+            json!(1)
+        );
+    }
+
+    /// B2-2 / B2-11: the D3 timing repair is now **observable through the
+    /// in-process fake itself**.  The fake records every accepted stream it put
+    /// back to blocking, so deleting `set_nonblocking(false)` from the accept
+    /// loop leaves this at zero and this test goes red — the defect the
+    /// acceptance could not pin with the `RawServer` defined inside
+    /// `tests/bevy_adapter_b2.rs`.
+    #[test]
+    fn the_fake_restores_blocking_on_every_accepted_stream() {
+        let server = FakeBrp::spawn(vec![ok_reply(json!(1))]);
+        let value = client(&server).call("rpc.discover", None).unwrap();
+        assert_eq!(value, json!(1));
+        assert_eq!(
+            server.read_failures(),
+            Vec::<String>::new(),
+            "no request read failed"
+        );
+        assert!(
+            server.blocking_restores() >= 1,
+            "the accepted stream must have been put back to blocking"
+        );
+    }
+
+    // ---- B1 acceptance D3: the fake is deterministic ----
+
+    #[test]
+    fn the_fake_content_length_scan_skips_the_request_line() {
+        // The colon-less request line used to abort the whole scan, so every body
+        // was read as zero bytes.  That is the mechanism behind D3.
+        let headers = "POST / HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Length: 42\r\n";
+        assert_eq!(fake::content_length(headers), Some(42));
+        assert_eq!(
+            fake::content_length("GET / HTTP/1.1\r\nHost: x\r\n"),
+            None,
+            "a request without the header has no length"
+        );
+        assert!(
+            !fake::carries_a_body("GET / HTTP/1.1\r\n"),
+            "a GET may legitimately carry no body"
+        );
+        assert!(fake::carries_a_body("POST / HTTP/1.1\r\n"));
+    }
+
+    /// A request whose body never arrives must **fail**, not become an empty
+    /// request that the fake then answers.
+    #[test]
+    fn a_request_whose_body_never_arrives_is_a_failed_read() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("a port");
+        let addr = listener.local_addr().expect("an address");
+        let server = std::thread::spawn(move || {
+            let (stream, _) = listener.accept().expect("a connection");
+            fake::read_request(stream)
+        });
+        let mut client = std::net::TcpStream::connect(addr).expect("a connection");
+        // Promise ten bytes and send two, then close.
+        client
+            .write_all(b"POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 10\r\n\r\n{}")
+            .expect("a partial request");
+        client.flush().expect("flush");
+        drop(client);
+        let result = server.join().expect("the reader finishes");
+        let error = result.expect_err("a short body must not be read as a request");
+        assert!(
+            error.contains("closed") || error.contains("stalled"),
+            "the failure must name the reason: {error}"
+        );
+    }
+
+    /// A request with a `POST` line and no `Content-Length` is refused rather
+    /// than treated as bodyless.
+    #[test]
+    fn a_post_without_a_content_length_is_a_failed_read() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("a port");
+        let addr = listener.local_addr().expect("an address");
+        let server = std::thread::spawn(move || {
+            let (stream, _) = listener.accept().expect("a connection");
+            fake::read_request(stream)
+        });
+        let mut client = std::net::TcpStream::connect(addr).expect("a connection");
+        client
+            .write_all(b"POST / HTTP/1.1\r\nHost: x\r\n\r\n")
+            .expect("a request without a length");
+        client.flush().expect("flush");
+        drop(client);
+        let error = server
+            .join()
+            .expect("the reader finishes")
+            .expect_err("a POST without a length is not readable");
+        assert!(error.contains("Content-Length"), "{error}");
+    }
+
+    #[test]
+    fn the_fake_accepts_a_well_formed_request_and_records_it_whole() {
+        let server = FakeBrp::replying(
+            // A reply the client will accept: it carries the id it was sent.
+            serde_json::from_str(r#"{"jsonrpc":"2.0","id":0,"result":1}"#).expect("a document"),
+        );
+        // The recorded reply's id does not matter here; the fake echoes the
+        // request's id for `id_echo` scripts, and this test only checks reading.
+        let listener_client = BrpClient::new(server.endpoint(), Duration::from_millis(500));
+        let _ = listener_client.call("rpc.discover", Some(json!({"probe": true})));
+        let seen = server.requests();
+        assert_eq!(seen.len(), 1, "one request, read whole");
+        let parsed: Value = serde_json::from_str(&seen[0]).expect("a complete body");
+        assert_eq!(parsed["method"], json!("rpc.discover"));
+        assert_eq!(parsed["params"], json!({"probe": true}));
+        assert_eq!(
+            server.read_failures(),
+            Vec::<String>::new(),
+            "no read failed"
         );
     }
 

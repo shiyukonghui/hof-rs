@@ -33,6 +33,7 @@ pub const BRP_VERBS: &[ToolSpec] = &[
         method: Some("rpc.discover"),
         streaming: false,
         mutating: false,
+        output_schema: None,
     },
     ToolSpec {
         name: "world.get_components",
@@ -63,6 +64,7 @@ pub const BRP_VERBS: &[ToolSpec] = &[
         method: Some("world.get_components"),
         streaming: false,
         mutating: false,
+        output_schema: None,
     },
     ToolSpec {
         name: "world.query",
@@ -93,6 +95,7 @@ pub const BRP_VERBS: &[ToolSpec] = &[
         method: Some("world.query"),
         streaming: false,
         mutating: false,
+        output_schema: None,
     },
     ToolSpec {
         name: "world.list_components",
@@ -108,6 +111,7 @@ pub const BRP_VERBS: &[ToolSpec] = &[
         method: Some("world.list_components"),
         streaming: false,
         mutating: false,
+        output_schema: None,
     },
     ToolSpec {
         name: "world.get_components+watch",
@@ -139,6 +143,7 @@ pub const BRP_VERBS: &[ToolSpec] = &[
         method: Some("world.get_components+watch"),
         streaming: true,
         mutating: false,
+        output_schema: None,
     },
     ToolSpec {
         name: "world.list_components+watch",
@@ -154,6 +159,7 @@ pub const BRP_VERBS: &[ToolSpec] = &[
         method: Some("world.list_components+watch"),
         streaming: true,
         mutating: false,
+        output_schema: None,
     },
     ToolSpec {
         name: "world.get_resources",
@@ -169,6 +175,7 @@ pub const BRP_VERBS: &[ToolSpec] = &[
         method: Some("world.get_resources"),
         streaming: false,
         mutating: false,
+        output_schema: None,
     },
     ToolSpec {
         name: "world.list_resources",
@@ -179,6 +186,7 @@ pub const BRP_VERBS: &[ToolSpec] = &[
         method: Some("world.list_resources"),
         streaming: false,
         mutating: false,
+        output_schema: None,
     },
     ToolSpec {
         name: "world.insert_resources",
@@ -201,6 +209,7 @@ pub const BRP_VERBS: &[ToolSpec] = &[
         method: Some("world.insert_resources"),
         streaming: false,
         mutating: true,
+        output_schema: None,
     },
     ToolSpec {
         name: "world.mutate_resources",
@@ -230,6 +239,7 @@ pub const BRP_VERBS: &[ToolSpec] = &[
         method: Some("world.mutate_resources"),
         streaming: false,
         mutating: true,
+        output_schema: None,
     },
     ToolSpec {
         name: "world.remove_resources",
@@ -245,6 +255,7 @@ pub const BRP_VERBS: &[ToolSpec] = &[
         method: Some("world.remove_resources"),
         streaming: false,
         mutating: true,
+        output_schema: None,
     },
     ToolSpec {
         name: "world.insert_components",
@@ -267,6 +278,7 @@ pub const BRP_VERBS: &[ToolSpec] = &[
         method: Some("world.insert_components"),
         streaming: false,
         mutating: true,
+        output_schema: None,
     },
     ToolSpec {
         name: "world.remove_components",
@@ -289,6 +301,7 @@ pub const BRP_VERBS: &[ToolSpec] = &[
         method: Some("world.remove_components"),
         streaming: false,
         mutating: true,
+        output_schema: None,
     },
     ToolSpec {
         name: "world.mutate_components",
@@ -324,6 +337,7 @@ pub const BRP_VERBS: &[ToolSpec] = &[
         method: Some("world.mutate_components"),
         streaming: false,
         mutating: true,
+        output_schema: None,
     },
     ToolSpec {
         name: "world.spawn_entity",
@@ -339,6 +353,7 @@ pub const BRP_VERBS: &[ToolSpec] = &[
         method: Some("world.spawn_entity"),
         streaming: false,
         mutating: true,
+        output_schema: None,
     },
     ToolSpec {
         name: "world.despawn_entity",
@@ -353,6 +368,7 @@ pub const BRP_VERBS: &[ToolSpec] = &[
         method: Some("world.despawn_entity"),
         streaming: false,
         mutating: true,
+        output_schema: None,
     },
     ToolSpec {
         name: "world.reparent_entities",
@@ -376,6 +392,7 @@ pub const BRP_VERBS: &[ToolSpec] = &[
         method: Some("world.reparent_entities"),
         streaming: false,
         mutating: true,
+        output_schema: None,
     },
     ToolSpec {
         name: "world.trigger_event",
@@ -400,6 +417,7 @@ pub const BRP_VERBS: &[ToolSpec] = &[
         method: Some("world.trigger_event"),
         streaming: false,
         mutating: true,
+        output_schema: None,
     },
     ToolSpec {
         name: "world.write_message",
@@ -423,6 +441,7 @@ pub const BRP_VERBS: &[ToolSpec] = &[
         method: Some("world.write_message"),
         streaming: false,
         mutating: true,
+        output_schema: None,
     },
     ToolSpec {
         name: "world.observe+watch",
@@ -446,6 +465,7 @@ pub const BRP_VERBS: &[ToolSpec] = &[
         method: Some("world.observe+watch"),
         streaming: true,
         mutating: false,
+        output_schema: None,
     },
     ToolSpec {
         name: "registry.schema",
@@ -474,6 +494,7 @@ pub const BRP_VERBS: &[ToolSpec] = &[
         method: Some("registry.schema"),
         streaming: false,
         mutating: false,
+        output_schema: None,
     },
     ToolSpec {
         name: "schedule.list",
@@ -483,6 +504,7 @@ pub const BRP_VERBS: &[ToolSpec] = &[
         method: Some("schedule.list"),
         streaming: false,
         mutating: false,
+        output_schema: None,
     },
     ToolSpec {
         name: "schedule.graph",
@@ -497,6 +519,7 @@ pub const BRP_VERBS: &[ToolSpec] = &[
         method: Some("schedule.graph"),
         streaming: false,
         mutating: false,
+        output_schema: None,
     },
 ];
 

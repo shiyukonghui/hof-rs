@@ -595,6 +595,16 @@ pub enum AdapterError {
     /// The game does not declare what the frozen contract requires (§7).
     #[error("contract violation: {0}")]
     ContractViolation(String),
+    /// The build outlived its budget and was killed (DESIGN-DETAIL §7).  It is a
+    /// **budget** fact, not a defect of the game, which is why it is a variant of
+    /// its own and maps onto the gate's `build_budget_exceeded`.
+    #[error(
+        "the build exceeded its {budget_millis} ms budget and was killed after {observed_millis} ms"
+    )]
+    BuildBudgetExceeded {
+        budget_millis: u64,
+        observed_millis: u64,
+    },
     /// The transport itself failed (refused, closed, timed out).
     #[error("BRP transport failure to {endpoint}: {message}")]
     Transport { endpoint: String, message: String },
