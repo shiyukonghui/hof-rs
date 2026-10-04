@@ -67,6 +67,9 @@ pub const COMMAND_VARS: &[&str] = &[
     "HOH_SCRATCH_DIR",
     "HOH_VIEW_DIR",
     "HOH_RUN_DIR",
+    // Round-1 write-path batch: the adapter's warm build cache, so a role's
+    // `cargo build --offline` is a rebuild and not a second cold tree.
+    "HOH_TARGET_DIR",
     // DR-69 ①: the path of the run's published game route.
     crate::tools::endpoint::GAME_ROUTE_ENV,
 ];

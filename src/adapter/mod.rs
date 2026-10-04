@@ -25,6 +25,24 @@ pub const GATE_STEP_IDS: &[&str] = &[
     "play_scene_ready",
     engine::ENGINE_IDENTITY_STEP_ID,
 ];
+
+/// The `adapter.kind` that selects the Bevy 0.19.1 project adapter: a real round
+/// against a real game process.
+pub const ADAPTER_KIND_BEVY: &str = "bevy";
+/// The `adapter.kind` that selects the offline test adapter (the suite's own
+/// double; it never touches a network or an engine).
+pub const ADAPTER_KIND_TEST: &str = "test";
+/// The `adapter.kind` that selects the **editor-mediated MCP tool channel**: an
+/// engine module serving the four-channel tool surface over HTTP at
+/// `tools.endpoint`.
+///
+/// No project adapter registers this kind any more (the adapter that did was
+/// removed with the Godot engine), but the *route* machinery it drove —
+/// DR-69/DR-70/DR-78, the published `game_endpoint.json`, the cross-process
+/// `hoh tools call` — is still harness code with cross-process tests of its own,
+/// and those tests select this channel by name instead of relying on a default
+/// that now belongs to Bevy.
+pub const ADAPTER_KIND_MCP: &str = "mcp";
 /// DR-24: the step that reloads the project and opens the main scene before the
 /// editor is asked for its errors.
 pub const PROJECT_RELOAD_STEP_ID: &str = "project_reload_and_open";
@@ -291,6 +309,20 @@ pub trait ProjectAdapter: Send + Sync {
     /// DR-44: the engine kind written into `meta.json.engine.kind`.
     fn engine_kind(&self) -> &'static str {
         engine::ENGINE_KIND_UNKNOWN
+    }
+
+    /// Round-1 write-path batch: the **shared, warm build cache** this adapter
+    /// builds the candidate into, when it has one.
+    ///
+    /// The runtime exports it into every role's environment (`HOH_TARGET_DIR`
+    /// and cargo's own `CARGO_TARGET_DIR`), because round 1's Developer ran
+    /// `cargo build --offline` with nothing exported: cargo built a second, full
+    /// target tree *inside* the project (~8.5 GB), and a cold build is ~5 minutes
+    /// against the 180-second command timeout, so the round paid for the same
+    /// dependencies twice.  `None` means "this adapter builds nowhere special",
+    /// in which case no variable is exported rather than a guessed one.
+    fn build_target_dir(&self) -> Option<PathBuf> {
+        None
     }
 
     fn doctor(&self, workspace: &Path) -> anyhow::Result<Vec<DoctorItem>>;

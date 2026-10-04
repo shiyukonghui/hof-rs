@@ -21,6 +21,32 @@ use crate::harness::Harness;
 use crate::runtime::role::{RoleInvocation, RoleOutcome};
 use crate::runtime::usage::extract_usage;
 
+/// Round-1 write-path batch: what one finished `agent.run` means.
+///
+/// The three normal terminations (a submit, a limits/time interrupt, a format
+/// error) are not failures of the harness; a fail-fast abort carried in an
+/// `AgentError::Other` is our **own** first-class status; anything else is an
+/// infrastructure failure and stays an error.
+///
+/// It is a free function so the mapping can be pinned without a model: the
+/// branch that turns `HOH_FAIL_FAST <STATUS>` into `RoleOutcome::exit_status` is
+/// the whole point of the sentinel, and a test can build the same
+/// `AgentError::Other` mini would.
+pub fn classify_run_result(
+    result: mini_swe_agent::Result<serde_json::Value>,
+) -> Result<Option<&'static str>, String> {
+    match result {
+        // `Interrupt` is one of the normal termination paths (submit, limits).
+        Ok(_) | Err(AgentError::Interrupt(_)) | Err(AgentError::Format(_)) => Ok(None),
+        Err(AgentError::Other(error)) => {
+            match crate::harness::guard::fail_fast_status(&error.to_string()) {
+                Some(status) => Ok(Some(status)),
+                None => Err(error.to_string()),
+            }
+        }
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct MiniHarness;
 
@@ -67,6 +93,17 @@ impl Harness for MiniHarness {
             Box::new(environment),
             inv.limits.max_tool_output_bytes as usize,
         );
+        // Round-1 write-path batch: the first-class write/read path plus the two
+        // fail-fast guards.  It sits **outside** the cap so a directive's output
+        // is produced by the harness itself and a repeated failing action aborts
+        // the call with our own status instead of the external agent's string.
+        let environment = crate::harness::guard::WriteGuardEnvironment::with_artifact_kind(
+            Box::new(environment),
+            inv.cwd.clone(),
+            inv.limits.max_action_failures as u32,
+            inv.limits.artifact_write_budget_seconds,
+            crate::harness::guard::ArtifactKind::for_role(inv.role),
+        );
 
         let config = AgentConfig {
             system_template: "{{hoh_system_prompt}}".to_string(),
@@ -101,22 +138,30 @@ impl Harness for MiniHarness {
         let result = agent.run(&task_text, Some(kwargs)).await;
         let duration_ms = started.elapsed().as_millis() as u64;
 
-        match result {
-            // Interrupt is one of the normal termination paths (submit, limits).
-            Ok(_) | Err(AgentError::Interrupt(_)) | Err(AgentError::Format(_)) => {}
-            Err(AgentError::Other(error)) => {
+        // Round-1 write-path batch: a fail-fast abort is **our** judgement, not
+        // an infrastructure failure.  `agent.run` reports it as
+        // `AgentError::Other` because that is the only channel an environment
+        // has; the status embedded in the message is recovered here and becomes
+        // the call's `exit_status`, so the round result carries a first-class
+        // fact instead of the external agent's string.
+        let fail_fast = match classify_run_result(result) {
+            Ok(status) => status,
+            Err(message) => {
                 return Err(anyhow::anyhow!(
-                    "harness failed for role {} iteration {}: {error}",
+                    "harness failed for role {} iteration {}: {message}",
                     inv.role.as_str(),
                     inv.iteration
                 ));
             }
-        }
+        };
 
         let last = agent.messages.last();
-        let exit_status = last
-            .map(|message| message.exit_status().to_string())
-            .unwrap_or_default();
+        let exit_status = match fail_fast {
+            Some(status) => status.to_string(),
+            None => last
+                .map(|message| message.exit_status().to_string())
+                .unwrap_or_default(),
+        };
         let submission = last
             .map(|message| message.submission().to_string())
             .unwrap_or_default();
@@ -134,5 +179,53 @@ impl Harness for MiniHarness {
             usage,
             duration_ms,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn fail_fast_error(status: &str) -> AgentError {
+        AgentError::other(anyhow::anyhow!(
+            "{} {status}: the same action failed 3 time(s)",
+            crate::harness::guard::FAIL_FAST_MARKER
+        ))
+    }
+
+    /// The sentinel survives mini's opaque `AgentError::Other` and becomes a
+    /// first-class status — that is the whole reason it exists.
+    #[test]
+    fn a_fail_fast_abort_becomes_a_first_class_exit_status() {
+        for status in [
+            crate::harness::guard::REPEATED_ACTION_STATUS,
+            crate::harness::guard::ARTIFACT_BUDGET_STATUS,
+        ] {
+            assert_eq!(
+                classify_run_result(Err(fail_fast_error(status))),
+                Ok(Some(status)),
+                "`{status}` must be recovered from the message"
+            );
+        }
+    }
+
+    /// A real infrastructure failure stays an error: the harness must not relabel
+    /// it as a role-completion status.
+    #[test]
+    fn an_infrastructure_failure_is_still_an_error() {
+        let error = AgentError::other(anyhow::anyhow!("llm-connector chat request failed"));
+        let message = classify_run_result(Err(error)).expect_err("not a role status");
+        assert!(message.contains("chat request failed"), "{message}");
+    }
+
+    /// The three normal terminations are not failures of the harness.
+    #[test]
+    fn a_normal_termination_carries_no_invented_status() {
+        assert_eq!(classify_run_result(Ok(serde_json::Value::Null)), Ok(None));
+        let interrupt = mini_swe_agent::FlowInterrupt::limits_exceeded();
+        assert_eq!(
+            classify_run_result(Err(AgentError::Interrupt(interrupt))),
+            Ok(None)
+        );
     }
 }

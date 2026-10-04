@@ -35,6 +35,12 @@ pub const SOURCE_AUTO_FREE_PORT: &str = "auto_free_port";
 /// Recorded when the server announces a port but not its provenance.  Writing
 /// one of the two documented values instead would be inventing a fact.
 pub const SOURCE_UNDECLARED: &str = "undeclared";
+/// Recorded when the endpoint is the **engine's own default** on its documented
+/// loopback port, with nothing asked for and nothing negotiated: Bevy's
+/// `RemoteHttpPlugin::default()` binds 15702 for the main world (SPIKE-2 §0.4),
+/// so a Bevy round does not choose a port at all.  It is a third documented
+/// value rather than `undeclared` because the provenance *is* known.
+pub const SOURCE_ENGINE_DEFAULT: &str = "engine_default";
 
 /// The endpoint a tool of this name must be sent to.
 pub fn scope_of(tool: &str) -> ToolScope {

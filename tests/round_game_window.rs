@@ -170,6 +170,12 @@ fn probe_as_role(route: &Path, editor_url: &str) -> RoleProbe {
             "running_game_get_scene_tree",
             "--role",
             "developer",
+            // The subject of this file is the **editor-mediated** route window
+            // (DR-69/DR-70/DR-71/DR-78), so the channel it drives is named
+            // explicitly: `config/hoh.yaml` now selects the Bevy adapter, whose
+            // frozen tool surface has no `running_game_*` names at all.
+            "-c",
+            "adapter.kind=mcp",
             "-c",
             &format!("tools.endpoint={editor_url}"),
             "-c",

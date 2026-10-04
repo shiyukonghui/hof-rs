@@ -39,14 +39,22 @@ use crate::adapter::{Intent, Reading, SemanticKind};
 pub const SETTLE_FRAMES: u32 = 4;
 /// How many frames of the injected input the movement check waits for.
 pub const MOVE_FRAMES: u32 = 12;
+/// Round-1 write-path batch: how many frames the leftward injection is held for.
+pub const LEFT_FRAMES: u32 = 12;
+/// Round-1 write-path batch: how many frames a released input is watched for
+/// residual motion.
+pub const RELEASE_FRAMES: u32 = 8;
 /// How many frames to wait after a possible coin/goal contact.
 pub const CONTACT_SETTLE_FRAMES: u32 = 8;
 /// How many contact rounds the coin/win phase runs.
 pub const CONTACT_ROUNDS: usize = 4;
 /// How long a jump's press is held, in frames.
 pub const JUMP_HOLD_FRAMES: u32 = 2;
-/// How many polls the arc is sampled for.
-pub const ARC_POLLS: u32 = 18;
+/// The most polls one arc is sampled for.  The loop normally stops earlier (see
+/// `phase_jump`): this is the cap, not the length.
+pub const ARC_POLLS: u32 = 32;
+/// The fewest samples an arc may be declared complete after.
+pub const ARC_MIN_SAMPLES: usize = 6;
 /// The smallest displacement that counts as motion, in the game's own units.
 pub const MOTION_EPSILON: f64 = 1e-6;
 
@@ -226,7 +234,12 @@ impl Observation {
     }
 }
 
-/// The five observations.
+/// The nine observations.
+///
+/// The first five are the original E3 criteria; the last four are the **missing
+/// battery steps** round 1's Tester recorded as gaps (`P1-left`, `P1-release`,
+/// `P3-position`, `P5-gate`), so a reported gap now names a behaviour the
+/// battery really did not measure rather than one it never asked about.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct E3Observations {
     pub movement: Observation,
@@ -234,33 +247,88 @@ pub struct E3Observations {
     pub win: Observation,
     pub jump: Observation,
     pub grounded: Observation,
+    /// P1-left: injecting `move_dir = -1` moves `x` in the **negative**
+    /// direction.  One direction is not a movement contract.
+    pub movement_left: Observation,
+    /// P1-release: after `move_dir = 0`, `x` stops changing — the release rule
+    /// the Developer's own definition of done states ("writing `0` stops it (no
+    /// residual velocity)").
+    pub movement_release: Observation,
+    /// P3-position: a `PlayerTransform` sample taken at the frame the win flag
+    /// turned true, so a win is located in the world and not only in a boolean.
+    pub win_position: Observation,
+    /// P5-gate: a `Grounded` **payload** that stands on its own — the semantic
+    /// field, read at rest, as its own observation rather than as the jump's
+    /// supporting basis.
+    pub grounded_payload: Observation,
     /// `None` when the battery ran; `Some(reason)` when it could not run at all
     /// (in which case every observation is "not observed").
     pub aborted: Option<String>,
 }
 
+/// Every named observation, in the order the round records them.
+///
+/// It is one list so `gaps`, `passed`, `all_calls`, `readings_of`,
+/// `summary_line` and `round::battery_records` cannot drift apart when a
+/// criterion is added: a criterion that is missing from this list is missing
+/// from every one of them, which is the failure the round-1 gaps exposed.
+pub const NAMED_OBSERVATIONS: &[(&str, &str)] = &[
+    ("movement", "e3_movement"),
+    ("coins", "e3_coin_counter"),
+    ("win", "e3_win_flag"),
+    ("jump", "e3_jump_arc"),
+    ("grounded", "e3_grounded"),
+    ("movement_left", "e3_movement_left"),
+    ("movement_release", "e3_movement_release"),
+    ("win_position", "e3_win_position"),
+    ("grounded_payload", "e3_grounded_payload"),
+];
+
 impl E3Observations {
+    /// The observation behind a name from [`NAMED_OBSERVATIONS`].
+    pub fn named(&self, name: &str) -> Option<&Observation> {
+        Some(match name {
+            "movement" => &self.movement,
+            "coins" => &self.coins,
+            "win" => &self.win,
+            "jump" => &self.jump,
+            "grounded" => &self.grounded,
+            "movement_left" => &self.movement_left,
+            "movement_release" => &self.movement_release,
+            "win_position" => &self.win_position,
+            "grounded_payload" => &self.grounded_payload,
+            _ => return None,
+        })
+    }
+
+    /// Every observation, in [`NAMED_OBSERVATIONS`] order.
+    pub fn all_observations(&self) -> Vec<&Observation> {
+        NAMED_OBSERVATIONS
+            .iter()
+            .filter_map(|(name, _)| self.named(name))
+            .collect()
+    }
+
     /// Every observation that was not made, with the reason.  This is what a
     /// Tester must consume instead of inventing proof.
     pub fn gaps(&self) -> Vec<(&'static str, String)> {
-        let named: [(&'static str, &Observation); 5] = [
-            ("movement", &self.movement),
-            ("coins", &self.coins),
-            ("win", &self.win),
-            ("jump", &self.jump),
-            ("grounded", &self.grounded),
-        ];
         let mut gaps = Vec::new();
         if let Some(reason) = &self.aborted {
-            for (name, _) in named {
-                gaps.push((name, format!("not observed: the battery aborted: {reason}")));
+            for (name, _) in NAMED_OBSERVATIONS {
+                gaps.push((
+                    *name,
+                    format!("not observed: the battery aborted: {reason}"),
+                ));
             }
             return gaps;
         }
-        for (name, observation) in named {
+        for (name, _) in NAMED_OBSERVATIONS {
+            let Some(observation) = self.named(name) else {
+                continue;
+            };
             if !observation.observed {
                 gaps.push((
-                    name,
+                    *name,
                     observation
                         .failure
                         .clone()
@@ -271,41 +339,40 @@ impl E3Observations {
         gaps
     }
 
-    /// All five criteria met.
+    /// All nine criteria met.
     pub fn passed(&self) -> bool {
         self.aborted.is_none()
-            && self.movement.observed
-            && self.coins.observed
-            && self.win.observed
-            && self.jump.observed
-            && self.grounded.observed
+            && self
+                .all_observations()
+                .iter()
+                .all(|observation| observation.observed)
     }
 
     /// The evidence of every observation, flattened in the frozen order.
     pub fn all_calls(&self) -> Vec<CallEvidence> {
-        let mut calls = Vec::new();
-        for observation in [
-            &self.movement,
-            &self.coins,
-            &self.win,
-            &self.jump,
-            &self.grounded,
-        ] {
-            calls.extend(observation.calls.iter().cloned());
+        let mut calls: Vec<CallEvidence> = Vec::new();
+        // One raw call is one file in `calls/`, whatever it proves.  The
+        // pre-injection baseline window is carried by **two** observations (the
+        // coin counter's "it started at 0" and the win flag's "it started
+        // false"), so the same call can be listed twice; the evidence directory
+        // is keyed by sequence number, and a duplicate would mean two files for
+        // one exchange.
+        let mut seen: std::collections::BTreeSet<u64> = std::collections::BTreeSet::new();
+        for observation in self.all_observations() {
+            for call in &observation.calls {
+                if seen.insert(call.seq) {
+                    calls.push(call.clone());
+                }
+            }
         }
+        calls.sort_by_key(|call| call.seq);
         calls
     }
 
     /// The readings of one surface, in observation order.
     pub fn readings_of(&self, kind: SemanticKind) -> Vec<&Reading> {
         let mut readings = Vec::new();
-        for observation in [
-            &self.movement,
-            &self.coins,
-            &self.win,
-            &self.jump,
-            &self.grounded,
-        ] {
+        for observation in self.all_observations() {
             readings.extend(
                 observation
                     .readings
@@ -321,15 +388,17 @@ impl E3Observations {
         if let Some(reason) = &self.aborted {
             return format!("E3 ABORTED: {reason}");
         }
-        let mark = |observation: &Observation| if observation.observed { "ok" } else { "RED" };
-        format!(
-            "E3 movement={} coins={} win={} jump={} grounded={}",
-            mark(&self.movement),
-            mark(&self.coins),
-            mark(&self.win),
-            mark(&self.jump),
-            mark(&self.grounded)
-        )
+        let marks: Vec<String> = NAMED_OBSERVATIONS
+            .iter()
+            .map(|(name, _)| {
+                let mark = self
+                    .named(name)
+                    .map(|observation| if observation.observed { "ok" } else { "RED" })
+                    .unwrap_or("MISSING");
+                format!("{name}={mark}")
+            })
+            .collect();
+        format!("E3 {}", marks.join(" "))
     }
 }
 
@@ -347,6 +416,20 @@ pub struct BatteryRun<'a> {
     baseline_won: Option<bool>,
     baseline_grounded: Option<bool>,
     baseline_transform: Option<Reading>,
+    /// The baseline readings themselves, and the raw calls that produced them.
+    ///
+    /// They are carried into the coin/win observations so that "the counter
+    /// started at 0" and "the flag started false" are visible **in the
+    /// observation that asserts them**, next to the call that read them — the
+    /// criterion is computed from the pre-injection value, and evidence a reader
+    /// cannot find is evidence a reader cannot check.
+    baseline_coin_reading: Option<Reading>,
+    baseline_win_reading: Option<Reading>,
+    baseline_calls: Vec<CallEvidence>,
+    /// P3-position: the `WinFlag` reading that first reported `true`.
+    win_flag_reading: Option<Reading>,
+    /// P3-position: the `PlayerTransform` read immediately after that frame.
+    win_position_reading: Option<Reading>,
 }
 
 impl<'a> BatteryRun<'a> {
@@ -359,34 +442,49 @@ impl<'a> BatteryRun<'a> {
                 win: Observation::not_observed("the battery has not run", Vec::new()),
                 jump: Observation::not_observed("the battery has not run", Vec::new()),
                 grounded: Observation::not_observed("the battery has not run", Vec::new()),
+                movement_left: Observation::not_observed("the battery has not run", Vec::new()),
+                movement_release: Observation::not_observed("the battery has not run", Vec::new()),
+                win_position: Observation::not_observed("the battery has not run", Vec::new()),
+                grounded_payload: Observation::not_observed("the battery has not run", Vec::new()),
                 aborted: None,
             },
             baseline_coins: None,
             baseline_won: None,
             baseline_grounded: None,
             baseline_transform: None,
+            baseline_coin_reading: None,
+            baseline_win_reading: None,
+            baseline_calls: Vec::new(),
+            win_flag_reading: None,
+            win_position_reading: None,
         }
     }
 
-    /// Run all five phases.  A task-level failure from a read/inject/wait aborts
+    /// Run every phase.  A task-level failure from a read/inject/wait aborts
     /// the battery with the reason; it never panics and never invents a value.
     pub fn run(mut self) -> anyhow::Result<E3Observations> {
         if let Err(error) = self.run_inner() {
             // A task-level failure is not evidence about the game — the round
             // could not be observed at all — so it is recorded as an abort, not
-            // as five failed criteria.
+            // as nine failed criteria.
             let reason = error.to_string();
-            let calls = self.driver.take_evidence();
             self.observations.aborted = Some(reason.clone());
-            self.observations.movement = Observation::not_observed(reason.clone(), calls);
-            self.observations.coins =
-                Observation::not_observed(reason.clone(), self.driver.take_evidence());
-            self.observations.win =
-                Observation::not_observed(reason.clone(), self.driver.take_evidence());
-            self.observations.jump =
-                Observation::not_observed(reason.clone(), self.driver.take_evidence());
-            self.observations.grounded =
-                Observation::not_observed(reason, self.driver.take_evidence());
+            for (name, _) in NAMED_OBSERVATIONS {
+                let call = self.driver.take_evidence();
+                let observation = Observation::not_observed(reason.clone(), call);
+                match *name {
+                    "movement" => self.observations.movement = observation,
+                    "coins" => self.observations.coins = observation,
+                    "win" => self.observations.win = observation,
+                    "jump" => self.observations.jump = observation,
+                    "grounded" => self.observations.grounded = observation,
+                    "movement_left" => self.observations.movement_left = observation,
+                    "movement_release" => self.observations.movement_release = observation,
+                    "win_position" => self.observations.win_position = observation,
+                    "grounded_payload" => self.observations.grounded_payload = observation,
+                    _ => {}
+                }
+            }
         }
         Ok(self.observations)
     }
@@ -394,7 +492,12 @@ impl<'a> BatteryRun<'a> {
     fn run_inner(&mut self) -> anyhow::Result<()> {
         self.phase_baselines()?;
         self.phase_movement()?;
+        // The left/release checks run **after** the coin/win phase on purpose:
+        // they move the player backwards, and the coin/win phase's reachability
+        // depends on how far right the player can get.  Measuring a stop must not
+        // cost the round its win.
         self.phase_coins_and_win()?;
+        self.phase_movement_left_and_release()?;
         self.phase_jump()?;
         Ok(())
     }
@@ -434,15 +537,21 @@ impl<'a> BatteryRun<'a> {
         if !coins.failed {
             self.baseline_coins = coins.value.get("coins").and_then(Value::as_i64);
         }
+        self.baseline_coin_reading = Some(coins);
         let won = self.driver.read(SemanticKind::WinFlag)?;
         if !won.failed {
             self.baseline_won = won.value.get("won").and_then(Value::as_bool);
         }
+        self.baseline_win_reading = Some(won);
         let transform = self.driver.read(SemanticKind::PlayerTransform)?;
         if !transform.failed {
             self.baseline_transform = Some(transform.clone());
         }
         calls.extend(self.driver.take_evidence());
+        // The baseline window's raw calls travel with the coin/win observations
+        // (see `phase_coins_and_win`): the criterion is computed from these
+        // readings, so they are part of that observation's evidence.
+        self.baseline_calls = calls.clone();
         let failure = grounded_before_takeoff(&grounded_flags).err();
         self.observations.grounded = Observation {
             observed: failure.is_none(),
@@ -452,6 +561,39 @@ impl<'a> BatteryRun<'a> {
             calls,
         };
         let _ = transform;
+
+        // P5-gate (round-1 write-path batch): the **payload** of a `Grounded`
+        // read, at rest, as an observation of its own.  It used to exist only as
+        // the jump criterion's supporting basis, so a reader could not tell
+        // "the surface carries a `grounded` boolean the harness can read" from
+        // "the jump happened to have a basis".  Its own evidence window is opened
+        // here, so the calls behind it are exactly the calls that produced it.
+        let mut payload_calls = self.begin();
+        let payload = self.driver.read(SemanticKind::Grounded)?;
+        payload_calls.extend(self.driver.take_evidence());
+        let payload_failure = if payload.failed {
+            Some(format!("{NOT_OBSERVED_PREFIX}: {}", read_gap(&payload)))
+        } else if payload
+            .value
+            .get("grounded")
+            .and_then(Value::as_bool)
+            .is_none()
+        {
+            Some(format!(
+                "the `Grounded` payload carried no boolean `grounded` field, so the surface does \
+                 not stand on its own: {}",
+                payload.value
+            ))
+        } else {
+            None
+        };
+        self.observations.grounded_payload = Observation {
+            observed: payload_failure.is_none(),
+            failure: payload_failure,
+            readings: vec![payload],
+            arc: None,
+            calls: payload_calls,
+        };
         Ok(())
     }
 
@@ -482,9 +624,58 @@ impl<'a> BatteryRun<'a> {
         Ok(())
     }
 
+    /// P1-left and P1-release (round-1 write-path batch): the two movement facts
+    /// one direction cannot prove.
+    ///
+    /// Round 1's Tester recorded both as gaps (`P1-left`, `P1-release`) because
+    /// the battery only ever injected `move_dir = 1` and never checked that
+    /// writing `0` stops the player — while the Developer's own definition of
+    /// done promises exactly that ("writing `0` stops it (no residual
+    /// velocity)").  A one-directional movement check can be satisfied by a game
+    /// that only ever moves right and never stops; these two steps cannot.
+    fn phase_movement_left_and_release(&mut self) -> anyhow::Result<()> {
+        // ---- P1-left: the negative direction really moves the player ----
+        let mut calls = self.begin();
+        let before = self.driver.read(SemanticKind::PlayerTransform)?;
+        let _ = self.driver.inject(&Intent::Move { dir: -1 }, true)?;
+        let _ = self.driver.wait_frames(LEFT_FRAMES)?;
+        let after = self.driver.read(SemanticKind::PlayerTransform)?;
+        // Clear the level again: the release check below must see a game that
+        // was told to stop, not one still coasting on this intent.
+        let _ = self.driver.inject(&Intent::Move { dir: 0 }, true)?;
+        let _ = self.driver.wait_frames(SETTLE_FRAMES)?;
+        calls.extend(self.driver.take_evidence());
+        let failure = leftward_movement(&before, &after).err();
+        self.observations.movement_left = Observation {
+            observed: failure.is_none(),
+            failure,
+            readings: vec![before, after],
+            arc: None,
+            calls,
+        };
+
+        // ---- P1-release: writing `0` stops it ----
+        let mut calls = self.begin();
+        let settled = self.driver.read(SemanticKind::PlayerTransform)?;
+        let _ = self.driver.wait_frames(RELEASE_FRAMES)?;
+        let later = self.driver.read(SemanticKind::PlayerTransform)?;
+        calls.extend(self.driver.take_evidence());
+        let failure = released_stops(&settled, &later).err();
+        self.observations.movement_release = Observation {
+            observed: failure.is_none(),
+            failure,
+            readings: vec![settled, later],
+            arc: None,
+            calls,
+        };
+        Ok(())
+    }
+
     /// ② coins and ③ the win flag: hold right and watch both.
     fn phase_coins_and_win(&mut self) -> anyhow::Result<()> {
-        let mut calls = self.begin();
+        // The evidence window opens here; the baseline window's records are
+        // prepended below, so a reader sees the pre-injection reading first.
+        let _ = self.begin();
         let mut readings = Vec::new();
         let mut counts = Vec::new();
         let mut flags = Vec::new();
@@ -541,23 +732,50 @@ impl<'a> BatteryRun<'a> {
             if flag.failed {
                 win_gap.get_or_insert_with(|| read_gap(&flag));
             } else {
-                flags.push(
-                    flag.value
-                        .get("won")
-                        .and_then(Value::as_bool)
-                        .unwrap_or(false),
-                );
+                let won = flag
+                    .value
+                    .get("won")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false);
+                flags.push(won);
+                // P3-position (round-1 write-path batch): the frame the win flag
+                // first read `true` is located in the world immediately, before
+                // the next settle window can move the player further.  The
+                // transform read is a *second call* — a BRP batch is not
+                // frame-atomic (SPIKE-2 C4), so "at the win frame" can honestly
+                // mean "the first transform read at or after that frame", and the
+                // criterion says exactly that.
+                if won && self.win_flag_reading.is_none() {
+                    self.win_flag_reading = Some(flag.clone());
+                    let at_win = self.driver.read(SemanticKind::PlayerTransform)?;
+                    self.win_position_reading = Some(at_win.clone());
+                    readings.push(at_win);
+                }
             }
             readings.push(flag);
         }
         let _ = self.driver.inject(&Intent::Move { dir: 0 }, true)?;
         let _ = self.driver.wait_frames(SETTLE_FRAMES)?;
-        calls.extend(self.driver.take_evidence());
+        let phase_calls = self.driver.take_evidence();
+        // The pre-injection baseline comes first: a reader of
+        // `readings/<surface>.json` sees "0" / "false" before the readings that
+        // followed the injection, which is exactly what P2/P3 claim.
+        let mut all_readings: Vec<Reading> = Vec::new();
+        if let Some(reading) = self.baseline_coin_reading.clone() {
+            all_readings.push(reading);
+        }
+        if let Some(reading) = self.baseline_win_reading.clone() {
+            all_readings.push(reading);
+        }
+        all_readings.extend(readings);
+        let mut calls = self.baseline_calls.clone();
+        calls.extend(phase_calls);
 
         let coin_failure = coin_gap
             .map(|reason| format!("{NOT_OBSERVED_PREFIX}: {reason}"))
             .or_else(|| coins_increased(&counts).err());
         let win_failure = win_gap
+            .clone()
             .map(|reason| format!("{NOT_OBSERVED_PREFIX}: {reason}"))
             .or_else(|| win_became_true(&flags).err());
         // The same phase reads both surfaces, so both observations keep the same
@@ -566,7 +784,7 @@ impl<'a> BatteryRun<'a> {
         self.observations.coins = Observation {
             observed: coin_failure.is_none(),
             failure: coin_failure,
-            readings: readings
+            readings: all_readings
                 .iter()
                 .filter(|reading| reading.kind == SemanticKind::CoinCounter)
                 .cloned()
@@ -574,15 +792,55 @@ impl<'a> BatteryRun<'a> {
             arc: None,
             calls: calls.clone(),
         };
+        // P3-position: the win, located in the world.  It shares the phase's own
+        // evidence window, because the transform read that answers it happened
+        // inside that window.
+        let win_position_calls = calls.clone();
         self.observations.win = Observation {
             observed: win_failure.is_none(),
             failure: win_failure,
-            readings: readings
+            readings: all_readings
                 .into_iter()
                 .filter(|reading| reading.kind == SemanticKind::WinFlag)
                 .collect(),
             arc: None,
             calls,
+        };
+
+        // P3-position: the win, located in the world.
+        let (win_position_readings, win_position_failure) =
+            match (&self.win_flag_reading, &self.win_position_reading) {
+                (Some(flag), Some(position)) => {
+                    let failure = win_position_at(flag.frame, position).err();
+                    (vec![flag.clone(), position.clone()], failure)
+                }
+                (Some(flag), None) => (
+                    vec![flag.clone()],
+                    Some(format!(
+                        "not observed: the win flag turned true at game frame {} but no transform \
+                         sample followed it",
+                        flag.frame
+                    )),
+                ),
+                (None, _) => {
+                    let failure = match win_gap {
+                        Some(reason) => format!(
+                            "{NOT_OBSERVED_PREFIX}: the win frame could not be established: \
+                             {reason}"
+                        ),
+                        None => "not observed: the win flag never turned true, so there is no win \
+                                 frame to sample the position at"
+                            .to_string(),
+                    };
+                    (Vec::new(), Some(failure))
+                }
+            };
+        self.observations.win_position = Observation {
+            observed: win_position_failure.is_none(),
+            failure: win_position_failure,
+            readings: win_position_readings,
+            arc: None,
+            calls: win_position_calls,
         };
         Ok(())
     }
@@ -614,10 +872,40 @@ impl<'a> BatteryRun<'a> {
         let _ = self.driver.inject(&Intent::Jump { press: false }, true)?;
         let mut sampler = ArcSampler::new();
         sampler.push(&takeoff);
+        // ---- the arc -------------------------------------------------------
+        //
+        // Every BRP call costs about one **game frame** — the server answers from
+        // the app's update loop, and the round's own evidence measured 16.8 ms
+        // per call, i.e. 1.0 frame at 60 FPS — so a sample of two calls is
+        // already ~2 frames apart.  An extra `wait_frames(1)` (which itself costs
+        // one or two calls) would triple that, and the earlier version's evidence
+        // showed exactly that: consecutive samples 5 frames apart, a 30-frame
+        // jump sampled around its peak, and a pass on a single rising step.  So
+        // the arc is sampled as fast as the transport allows, and the loop stops
+        // when the arc has **completed** — the player rose and came back to the
+        // take-off height — so a longer jump is followed rather than truncated.
+        //
+        // The frame in every sample is still the game's own counter, which is
+        // what makes the arc a sequence of game frames rather than of polls.
+        let takeoff_height = takeoff.value.get("y").and_then(Value::as_f64);
+        let mut rose = false;
         for _ in 0..ARC_POLLS {
             let sample = self.driver.read(SemanticKind::PlayerTransform)?;
+            let height = sample.value.get("y").and_then(Value::as_f64);
+            let complete = match (takeoff_height, height) {
+                (Some(first), Some(height)) => {
+                    if height > first + MOTION_EPSILON {
+                        rose = true;
+                    }
+                    rose && height <= first + MOTION_EPSILON
+                }
+                _ => false,
+            };
             sampler.push(&sample);
             readings.push(sample);
+            if complete && readings.len() >= ARC_MIN_SAMPLES {
+                break;
+            }
         }
         calls.extend(self.driver.take_evidence());
 
@@ -734,6 +1022,123 @@ pub fn movement_changed(before: &Reading, after: &Reading) -> Result<f64, String
         ));
     }
     Ok(delta)
+}
+
+/// P1-left (round-1 write-path batch): injecting `move_dir = -1` must move `x`
+/// in the **negative** direction.
+///
+/// It is the mirror of [`movement_changed`] and it is deliberately not "the
+/// position changed": a game that only ever moves right — or that treats `-1`
+/// as `+1` — would pass a change check and fail this one.
+pub fn leftward_movement(before: &Reading, after: &Reading) -> Result<f64, String> {
+    if before.failed {
+        return Err(format!(
+            "not observed: the position before the leftward injection could not be read ({})",
+            before
+                .reason
+                .clone()
+                .unwrap_or_else(|| "no reason given".to_string())
+        ));
+    }
+    if after.failed {
+        return Err(format!(
+            "not observed: the position after the leftward injection could not be read ({})",
+            after
+                .reason
+                .clone()
+                .unwrap_or_else(|| "no reason given".to_string())
+        ));
+    }
+    let (Some(x0), Some(x1)) = (
+        before.value.get("x").and_then(Value::as_f64),
+        after.value.get("x").and_then(Value::as_f64),
+    ) else {
+        return Err("the position reading did not carry an `x` coordinate".to_string());
+    };
+    let delta = x1 - x0;
+    if !delta.is_finite() {
+        return Err(format!("the position delta is not finite: {delta}"));
+    }
+    if delta >= -MOTION_EPSILON {
+        return Err(format!(
+            "injecting `move_dir = -1` changed `x` by {delta} (from {x0} to {x1}), which is not \
+             leftward motion"
+        ));
+    }
+    Ok(delta)
+}
+
+/// P1-release (round-1 write-path batch): after `move_dir = 0`, `x` must stop
+/// changing — the Developer's own definition of done promises "writing `0` stops
+/// it (no residual velocity)".
+///
+/// The window is [`RELEASE_FRAMES`] of the game's own frames, sampled at both
+/// ends, so a game that coasts can be told apart from one that stops.
+pub fn released_stops(settled: &Reading, later: &Reading) -> Result<(), String> {
+    if settled.failed {
+        return Err(format!(
+            "not observed: the position after the release could not be read ({})",
+            settled
+                .reason
+                .clone()
+                .unwrap_or_else(|| "no reason given".to_string())
+        ));
+    }
+    if later.failed {
+        return Err(format!(
+            "not observed: the position later in the release window could not be read ({})",
+            later
+                .reason
+                .clone()
+                .unwrap_or_else(|| "no reason given".to_string())
+        ));
+    }
+    let (Some(x0), Some(x1)) = (
+        settled.value.get("x").and_then(Value::as_f64),
+        later.value.get("x").and_then(Value::as_f64),
+    ) else {
+        return Err("the position reading did not carry an `x` coordinate".to_string());
+    };
+    let delta = x1 - x0;
+    if !delta.is_finite() {
+        return Err(format!("the position delta is not finite: {delta}"));
+    }
+    if delta.abs() > MOTION_EPSILON {
+        return Err(format!(
+            "the player still moved {delta} px (from {x0} to {x1}) after `move_dir = 0` was \
+             written, so writing 0 does not stop it"
+        ));
+    }
+    Ok(())
+}
+
+/// P3-position (round-1 write-path batch): a transform sample taken **at or
+/// after** the frame the win flag turned true.
+///
+/// "At or after" is the honest form: a BRP batch is not frame-atomic (SPIKE-2
+/// C4), so the transform is a second call and the game advances between them.
+/// The criterion is that the win is located in the world at the frame it
+/// happened, not that the two calls shared a frame.
+pub fn win_position_at(win_frame: u64, position: &Reading) -> Result<(), String> {
+    if position.failed {
+        return Err(format!(
+            "not observed: no transform sample followed the win frame ({})",
+            position
+                .reason
+                .clone()
+                .unwrap_or_else(|| "no reason given".to_string())
+        ));
+    }
+    if position.value.get("x").and_then(Value::as_f64).is_none() {
+        return Err("the transform sample at the win frame carried no `x` coordinate".to_string());
+    }
+    if position.frame < win_frame {
+        return Err(format!(
+            "the transform sample is from game frame {}, before the win frame {win_frame}",
+            position.frame
+        ));
+    }
+    Ok(())
 }
 
 /// The coin criterion: from `0` to at least one coin, without ever going back.
@@ -920,6 +1325,68 @@ mod tests {
         let error = movement_changed(&before, &after).unwrap_err();
         assert!(error.starts_with("not observed:"), "{error}");
         assert!(error.contains("no player entity"), "{error}");
+    }
+
+    /// P1-left: the negative direction is its own criterion.  A game that only
+    /// moves right, or that treats `-1` as `+1`, passes `movement_changed` and
+    /// must fail this one.
+    #[test]
+    fn leftward_movement_is_the_negative_direction_and_not_merely_a_change() {
+        let before = position(1, 0.0, -200.0);
+        assert!(leftward_movement(&before, &position(13, -92.0, -200.0)).is_ok());
+        let wrong_way = leftward_movement(&before, &position(13, 92.0, -200.0)).unwrap_err();
+        assert!(wrong_way.contains("not"), "{wrong_way}");
+        let still = leftward_movement(&before, &position(13, 0.0, -200.0)).unwrap_err();
+        assert!(still.contains("leftward"), "{still}");
+        let noise = leftward_movement(&before, &position(13, -1e-9, -200.0)).unwrap_err();
+        assert!(noise.contains("leftward"), "{noise}");
+        let missing = Reading::not_observed(SemanticKind::PlayerTransform, 0, "no player entity");
+        assert!(leftward_movement(&missing, &position(13, -1.0, 0.0))
+            .unwrap_err()
+            .starts_with("not observed:"));
+    }
+
+    /// P1-release: writing `0` must stop the player, and "still moved a little"
+    /// is a measured failure rather than a rounding detail.
+    #[test]
+    fn a_released_input_must_actually_stop_the_player() {
+        assert!(released_stops(&position(40, 10.0, -200.0), &position(48, 10.0, -200.0)).is_ok());
+        let coasting =
+            released_stops(&position(40, 10.0, -200.0), &position(48, 26.0, -200.0)).unwrap_err();
+        assert!(coasting.contains("does not stop it"), "{coasting}");
+        assert!(
+            released_stops(
+                &position(40, 10.0, -200.0),
+                &position(48, 10.0 + 1e-9, -200.0)
+            )
+            .is_ok(),
+            "floating-point noise is not residual velocity"
+        );
+        let missing = Reading::not_observed(SemanticKind::PlayerTransform, 0, "no player entity");
+        assert!(released_stops(&missing, &position(48, 10.0, -200.0))
+            .unwrap_err()
+            .starts_with("not observed:"));
+    }
+
+    /// P3-position: the win is located in the world at (or after) its frame, and
+    /// a sample from *before* the win is refused rather than accepted as "near".
+    #[test]
+    fn the_win_position_must_be_at_or_after_the_win_frame() {
+        let position = observed(
+            SemanticKind::PlayerTransform,
+            90,
+            json!({"x": 72.0, "y": -200.0, "frame": 90}),
+        );
+        assert!(win_position_at(88, &position).is_ok());
+        assert!(win_position_at(90, &position).is_ok());
+        let too_early = win_position_at(91, &position).unwrap_err();
+        assert!(too_early.contains("before the win frame"), "{too_early}");
+        let no_x = observed(SemanticKind::PlayerTransform, 90, json!({"y": -200.0}));
+        assert!(win_position_at(90, &no_x).unwrap_err().contains("no `x`"));
+        let missing = Reading::not_observed(SemanticKind::PlayerTransform, 0, "no player entity");
+        assert!(win_position_at(90, &missing)
+            .unwrap_err()
+            .starts_with("not observed:"));
     }
 
     #[test]
@@ -1341,6 +1808,10 @@ mod tests {
             win: done(),
             jump: done(),
             grounded: done(),
+            movement_left: done(),
+            movement_release: done(),
+            win_position: done(),
+            grounded_payload: done(),
             aborted: None,
         };
         assert!(set.passed());
@@ -1355,7 +1826,7 @@ mod tests {
         assert!(!set.passed());
         assert_eq!(set.gaps().len(), 1);
         set.aborted = Some("the game process died".to_string());
-        assert_eq!(set.gaps().len(), 5, "an aborted battery gapped all five");
+        assert_eq!(set.gaps().len(), 9, "an aborted battery gapped all nine");
         for (name, reason) in set.gaps() {
             assert!(reason.contains("the game process died"), "{name}: {reason}");
         }

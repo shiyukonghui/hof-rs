@@ -803,6 +803,17 @@ impl ContractPathReader for SourceContractPaths {
     }
 }
 
+impl SourceContractPaths {
+    /// The frozen contract paths a workspace's own source declares, callable
+    /// without importing the trait.  It is the same reader
+    /// `BevyAdapter::prepare` uses, so a caller that asks "is this artifact
+    /// usable?" cannot get a different answer from the one the build contract
+    /// gives.
+    pub fn declared_for(workspace: &Path, crate_name: &str) -> Result<Vec<String>, AdapterError> {
+        <Self as ContractPathReader>::declared_contract_paths(&Self, workspace, crate_name)
+    }
+}
+
 /// A contract-path reader that answers from a script.
 #[derive(Clone, Debug, Default)]
 pub struct FakeContractPaths {

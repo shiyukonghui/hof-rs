@@ -16,8 +16,33 @@ agent:
   repair_steps: 60                        # DR-24：冻结前「可启动闸门」失败时，一次性定向修复的步数预算
   cost_limit: 0.0
   wall_time_limit_seconds: 3600
+  # mini 自己的计数器：只对**连续**的格式错误计数，任何一次成功都会把它清零。
+  # 它仍然是格式错误的唯一tripwire（格式错误发生在模型层，环境的 guard 看不到），
+  # 所以保留 3；真正的「同一个动作反复失败」由下面的 max_action_failures 负责。
   max_consecutive_format_errors: 3
   command_timeout_seconds: 180            # LocalEnvironment.timeout
+
+  # ── round-1 write-path batch ────────────────────────────────────────────
+  # 一次真实 round 里 developer 用了 140 次调用、54.4 分钟、10.4M token，
+  # 只为了写一个**它自己已经设计好**的 Rust 文件，最后以 RepeatedFormatError 收场。
+  # 下面三个值就是让这种 grind 不可能再发生：
+  #
+  # max_action_failures：**按动作**（而不是按连续）统计失败。同一条命令失败 3 次
+  #   就立刻中止这次调用，中途的成功不会清零（round-1 里正是「偶尔成功」让
+  #   max_consecutive_format_errors 永远触发不了）。3 是「足以判定该动作不可能
+  #   成功」的最小值：同一命令连续 3 次同样的失败没有信息增量，第 4 次只是烧钱。
+  max_action_failures: 3
+  # artifact_write_budget_seconds：调用开始后，若在 900 s（15 min）内没有写出本项目
+  #   的工程文件，就地中止并记 ArtifactBudgetExceeded。900 s 约为 round-1 developer
+  #   全程（3264 s）的四分之一，且远高于任何一次**成功**写入的实测值（planner 72 s
+  #   就写完了 plan），所以它只可能在 grind 中触发。0 表示关闭。
+  artifact_write_budget_seconds: 900
+  # artifact_write_budget_tokens：同一预算的 token 维度。token 只有在一次模型调用
+  #   返回后才知道，环境里无法实时统计，因此这一半由 runtime 在**已记录**的 attempt
+  #   上判定（role result 的 write_failures）。1_500_000 约为 round-1 developer
+  #   总量（10_379_180）的七分之一，也约等于它实测每次调用 ~74k token 的 20 次调用，
+  #   宽到足够一次真正的「设计 + 写文件 + 编译」，窄到不可能再花掉 10M token。0 表示关闭。
+  artifact_write_budget_tokens: 1500000
 
 runtime:
   iterations: 3
@@ -33,10 +58,16 @@ runtime:
   max_evidence_bytes: 8388608
 
 adapter:
-  # 唯一内置的 ProjectAdapter 是离线测试替身；引擎适配器（Bevy）尚在接入中。
-  kind: test
+  # DR-96: the Bevy 0.19.1 project adapter.  `hoh init` writes the observation
+  # scaffold; `hoh run` builds, launches and observes a real game process, and
+  # the roles reach it through the frozen tool surface on 127.0.0.1:15702.
+  # `--adapter test` selects the offline suite double (`TestAdapter`), which the
+  # default gate depends on.
+  kind: bevy
 
 tools:
+  # Only the editor-mediated adapter uses this endpoint; a Bevy round's tools are
+  # served by the game on 15702 (adapter/bevy/brp.rs).
   endpoint: http://127.0.0.1:9877/mcp
   timeout_seconds: 120
   max_retries: 2

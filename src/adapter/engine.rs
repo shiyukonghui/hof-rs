@@ -35,6 +35,10 @@ pub const ENGINE_IDENTITY_STEP_ID: &str = "engine_identity";
 pub const ENGINE_KIND_GODOT: &str = "godot";
 /// The engine kind of an adapter that does not identify an engine.
 pub const ENGINE_KIND_UNKNOWN: &str = "unknown";
+/// The engine kind of a **compiled-in** engine: Bevy is a crate, not a separate
+/// binary, so there is no engine binary to probe and no `engine_identity` gate
+/// step — but the round still says which engine it drove.
+pub const ENGINE_KIND_BEVY: &str = "bevy-0.19.1";
 /// The timeout of one probe command, in seconds.
 pub const PROBE_TIMEOUT_SECONDS: u64 = 60;
 

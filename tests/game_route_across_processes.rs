@@ -240,6 +240,12 @@ fn role_tools_call_with(
         tool,
         "--role",
         "developer",
+        // The subject of this file is the **editor-mediated** route machinery
+        // (DR-69/DR-70/DR-78), so the channel it drives is named explicitly:
+        // `config/hoh.yaml` now selects the Bevy adapter, whose tool surface has
+        // no `running_game_*` names at all (they are the removed engine's).
+        "-c",
+        "adapter.kind=mcp",
         "-c",
         &format!("tools.endpoint={editor_url}"),
         "-c",

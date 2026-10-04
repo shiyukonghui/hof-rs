@@ -15,6 +15,16 @@ use crate::errors::HofError;
 use crate::model::Spec;
 
 pub const DEFAULT_CONFIG_SPEC: &str = "config/hoh.yaml";
+/// The variable a round exports so a **role's separate process** can find the
+/// configuration file.
+///
+/// DR-96: a role's shell runs in the *project* directory — which for a real
+/// round is a fresh project outside the repository — so the relative
+/// `config/hoh.yaml` of [`DEFAULT_CONFIG_SPEC`] cannot resolve there, and every
+/// `hoh tools call` a role makes fails with `could not find config file for
+/// config/hoh.yaml`.  The round therefore exports the absolute path it loaded,
+/// which the role's shell inherits.
+pub const CONFIG_FILE_ENV: &str = "HOH_CONFIG_FILE";
 /// The only provider string that is accepted (C10).
 pub const REQUIRED_PROVIDER: &str = "openai_compatible";
 /// Environment variables consulted for the model secret, in priority order
@@ -49,6 +59,49 @@ pub struct AgentLimits {
     /// (`smoke-t9`' attempt A died on a 15,570,803-byte result).
     #[serde(default = "default_max_tool_output_bytes")]
     pub max_tool_output_bytes: u64,
+    /// Round-1 write-path batch: the **per-action** failure tripwire.
+    ///
+    /// `max_consecutive_format_errors` counts three *consecutive* format errors
+    /// and is reset by any success, so round 1's Developer — which sometimes
+    /// succeeded — could retry the same broken command forever.  This counts
+    /// failures of one action and is cleared only when **that action** succeeds.
+    #[serde(default = "default_max_action_failures")]
+    pub max_action_failures: u64,
+    /// Round-1 write-path batch: the wall-clock budget for producing the
+    /// artifact this role declares.  A call that has not written a project file
+    /// (or `.hoh/evidence.json`, per role) within it is aborted with the
+    /// first-class `ArtifactBudgetExceeded` status.
+    #[serde(default = "default_artifact_write_budget_seconds")]
+    pub artifact_write_budget_seconds: u64,
+    /// Round-1 write-path batch: the token half of the same budget.  Usage is
+    /// known only after a model call returns, so this one is enforced by the
+    /// runtime on the recorded attempt (`crate::runtime::write_failure`), not
+    /// live inside the environment.
+    #[serde(default = "default_artifact_write_budget_tokens")]
+    pub artifact_write_budget_tokens: u64,
+}
+
+/// Round-1 write-path batch: three failures of one action is enough to conclude
+/// the action cannot succeed — round 1 repeated its file-writing attempts 140
+/// times.
+fn default_max_action_failures() -> u64 {
+    3
+}
+
+/// Round-1 write-path batch: 900 s (15 min) is roughly a quarter of round 1's
+/// 54.4-minute Developer call and comfortably above every measured *successful*
+/// write path (the Planner wrote its plan in 72 s; the Developer's first real
+/// write was minutes in), so it can only fire on a grind.
+fn default_artifact_write_budget_seconds() -> u64 {
+    900
+}
+
+/// Round-1 write-path batch: 1,500,000 tokens is about a seventh of round 1's
+/// 10.4M-token Developer attempt and six model calls at its measured ~74k
+/// tokens per call average — wide enough for a real design-and-write, narrow
+/// enough that one file cannot cost 10M tokens again.
+fn default_artifact_write_budget_tokens() -> u64 {
+    1_500_000
 }
 
 /// DR-69 ③: 64 KiB — see [`crate::harness::cap::DEFAULT_MAX_TOOL_OUTPUT_BYTES`].
@@ -77,6 +130,9 @@ impl Default for AgentLimits {
             max_consecutive_format_errors: 3,
             command_timeout_seconds: 180,
             max_tool_output_bytes: default_max_tool_output_bytes(),
+            max_action_failures: default_max_action_failures(),
+            artifact_write_budget_seconds: default_artifact_write_budget_seconds(),
+            artifact_write_budget_tokens: default_artifact_write_budget_tokens(),
         }
     }
 }

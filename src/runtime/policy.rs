@@ -306,6 +306,51 @@ pub mod tool_matrix {
         "running_game_move_player_to_target",
     ];
 
+    /// The Bevy 0.19.1 tool surface, by name (DESIGN-DETAIL §2).
+    ///
+    /// It needs an explicit list because the four-channel rule above is keyed on
+    /// the *engine module's* `<channel>_<verb>_…` naming, and the Bevy surface is
+    /// not named that way: the semantic tools are `bevy_*` and the generic layer
+    /// passes the BRP verbs through with their own dotted names
+    /// (`world.get_resources`).  Without this list the QA role would be denied
+    /// every observation tool — which is precisely the "the new engine's tools
+    /// are a rename of the old engine's" mistake `REQUIREMENTS.md` §8 warns
+    /// about, in its most damaging direction.
+    ///
+    /// Everything here is either a **read** of the running game's semantic state
+    /// or an **input injection**: none of them can change the frozen candidate
+    /// (the artifact is the project on disk, and the running game is a child
+    /// process the QA window is allowed to drive — §5.4's
+    /// `running_game_move_player_to_target` is the same permission, one engine
+    /// later).
+    pub const BEVY_QA_ALLOW: &[&str] = &[
+        // The semantic layer: read the five observed surfaces.
+        "bevy_player_transform",
+        "bevy_grounded",
+        "bevy_coin_counter",
+        "bevy_win_flag",
+        "bevy_wait_frames",
+        "bevy_health",
+        // The semantic layer: the injection surface (evidence-driving).
+        "bevy_inject_move",
+        "bevy_inject_jump",
+        // The generic layer's read verbs, passed through to BRP unchanged.
+        "rpc.discover",
+        "world.query",
+        "world.get_components",
+        "world.get_resources",
+        "world.list_components",
+        "world.list_resources",
+        "world.list_entities",
+        "world.get_components+watch",
+        "registry.schema",
+    ];
+
+    /// Is this tool one of the Bevy surface's QA-readable/driving tools?
+    pub fn is_bevy_qa_allowed(tool: &str) -> bool {
+        BEVY_QA_ALLOW.contains(&tool)
+    }
+
     /// The verb of a four-channel name (`<channel>_<verb>_<object>...`).
     ///
     /// `None` means "not a name of this contract" — an invented name used by a
@@ -334,6 +379,9 @@ pub mod tool_matrix {
 
     pub fn is_tester_allowed(tool: &str) -> bool {
         if QA_ALLOW_EXACT.contains(&tool) {
+            return true;
+        }
+        if is_bevy_qa_allowed(tool) {
             return true;
         }
         match verb_of(tool) {
@@ -479,6 +527,69 @@ mod tests {
             Role::Tester,
             "project_set_node_property_across_scenes"
         ));
+    }
+
+    /// The Bevy surface is not named `<channel>_<verb>_…`, so the QA role's
+    /// observation tools need an explicit list.  This test is the security half
+    /// of that list: every read/injection the round needs is allowed, and every
+    /// verb that could **change the running world** is refused.
+    #[test]
+    fn the_bevy_surface_gives_the_qa_role_reads_and_injections_but_no_world_writes() {
+        for tool in [
+            "bevy_player_transform",
+            "bevy_grounded",
+            "bevy_coin_counter",
+            "bevy_win_flag",
+            "bevy_wait_frames",
+            "bevy_health",
+            "bevy_inject_move",
+            "bevy_inject_jump",
+            "rpc.discover",
+            "world.query",
+            "world.get_components",
+            "world.get_resources",
+            "world.list_components",
+            "world.list_resources",
+            "world.list_entities",
+            "world.get_components+watch",
+            "registry.schema",
+        ] {
+            assert!(
+                tool_allowed(Role::Tester, tool),
+                "the QA role needs `{tool}` to produce E3 evidence"
+            );
+        }
+        // A world write is not a read: the adapter's own contract check is the
+        // only thing that may change the game, and it drives its own process.
+        for tool in [
+            "world.mutate_resources",
+            "world.mutate_components",
+            "world.insert_components",
+            "world.remove_components",
+            "world.spawn_entity",
+            "world.despawn_entity",
+            "world.reparent_entities",
+            "world.trigger_event",
+            "world.write_message",
+            "world.insert_resource",
+            "world.remove_resource",
+        ] {
+            assert!(
+                !tool_allowed(Role::Tester, tool),
+                "the QA role must never be handed the world write `{tool}`"
+            );
+        }
+        // The full list is exactly the QA allowlist for this engine: a tool that
+        // is not named there is denied, so adding one is a visible decision.
+        for tool in crate::adapter::mcp::all_tools() {
+            if tool.mutating && !tool_matrix::BEVY_QA_ALLOW.contains(&tool.name) {
+                assert!(
+                    !tool_allowed(Role::Tester, tool.name),
+                    "`{}` is declared mutating and must be denied",
+                    tool.name
+                );
+            }
+        }
     }
 
     #[test]

@@ -81,6 +81,12 @@ pub struct IterResult {
     /// `artifact_missing` | `not_triggered`.
     #[serde(default = "default_wrap_up_retry_reason")]
     pub wrap_up_retry_reason: String,
+    /// Round-1 write-path batch: every role attempt that ended **without writing
+    /// the artifact it declared**, as the harness's own fact rather than the
+    /// external agent's exit status.  Empty on a round in which every role wrote
+    /// what it was supposed to.
+    #[serde(default)]
+    pub write_failures: Vec<crate::runtime::write_failure::RoleWriteFailure>,
 }
 
 /// DR-37: the default is the honest one — the retry was not triggered.
@@ -116,6 +122,7 @@ impl IterResult {
             artifact_hygiene: crate::model::ArtifactHygiene::default(),
             prd_coverage: crate::model::PrdCoverage::default(),
             wrap_up_retry_reason: default_wrap_up_retry_reason(),
+            write_failures: Vec::new(),
         }
     }
 }

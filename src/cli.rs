@@ -37,7 +37,7 @@ pub struct RunArgs {
     pub iterations: u32,
     #[arg(long)]
     pub run_id: Option<String>,
-    #[arg(long, default_value = "test")]
+    #[arg(long, default_value = "bevy")]
     pub adapter: String,
     #[arg(short = 'c', long = "config")]
     pub config_spec: Vec<String>,
@@ -70,7 +70,7 @@ pub struct RunArgs {
 pub struct DoctorArgs {
     #[arg(long)]
     pub project: Option<PathBuf>,
-    #[arg(long, default_value = "test")]
+    #[arg(long, default_value = "bevy")]
     pub adapter: String,
     #[arg(short = 'c', long = "config")]
     pub config_spec: Vec<String>,
@@ -88,7 +88,7 @@ pub struct DoctorArgs {
 pub struct InitArgs {
     #[arg(long)]
     pub project: Option<PathBuf>,
-    #[arg(long, default_value = "test")]
+    #[arg(long, default_value = "bevy")]
     pub adapter: String,
     #[arg(short = 'c', long = "config")]
     pub config_spec: Vec<String>,
@@ -180,9 +180,21 @@ pub struct SpecHashArgs {
 
 /// Build the ordered config spec list (file first, CLI overrides last).
 pub fn config_specs(overrides: &[String]) -> Vec<String> {
-    let mut specs = vec![DEFAULT_CONFIG_SPEC.to_string()];
+    let mut specs = vec![config_file_spec()];
     specs.extend(overrides.iter().cloned());
     specs
+}
+
+/// DR-96: the base configuration file a command loads.  A **role's** process
+/// inherits [`crate::config::CONFIG_FILE_ENV`] from the round and reaches the
+/// same file from any working directory; without it the relative default is
+/// used, which is what an operator running `hoh` from the repository root gets.
+pub fn config_file_spec() -> String {
+    std::env::var(crate::config::CONFIG_FILE_ENV)
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| DEFAULT_CONFIG_SPEC.to_string())
 }
 
 /// Entry point used by `main.rs`; never panics, always returns an exit code.

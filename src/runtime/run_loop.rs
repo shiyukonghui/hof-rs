@@ -278,6 +278,10 @@ fn finalize_failure(
                 "the round failed; no artifact gate was produced",
             )
         }),
+        // Round-1 write-path batch: a role that ended without writing the
+        // artifact it declared is a fact this runtime measured, so a failure
+        // path records it exactly like the gate verdict above.
+        write_failures: facts.write_failures,
         ..IterResult::ok()
     };
     write_iter_result(run_dir, iteration, &result)
@@ -361,6 +365,11 @@ pub struct FailureFacts {
     /// now persisted even when a later stage fails, because a verdict is evidence
     /// and evidence is never discarded.
     pub artifact_gate: Option<crate::model::ArtifactGate>,
+    /// Round-1 write-path batch: the role attempts that ended without writing the
+    /// artifact they declared, as the harness's own judgement.  Carried through
+    /// the failure paths for the same reason the gate verdict is: it is a fact
+    /// the runtime measured, so a failure may not erase it.
+    pub write_failures: Vec<crate::runtime::write_failure::RoleWriteFailure>,
 }
 
 /// DR-26/DR-32/DR-38: report-only trace of a role reading the harness sources,
@@ -513,6 +522,35 @@ fn count_files(root: &Path) -> u64 {
         }
     }
     count
+}
+
+/// Round-1 write-path batch: did the role leave a **non-empty** file at the path
+/// its declared artifact lives at?
+///
+/// The measurement is the runtime's own, so a role's claim ("I wrote it") and an
+/// external agent's exit status can neither create nor hide the fact.
+fn wrote_non_empty(path: &Path) -> bool {
+    std::fs::metadata(path)
+        .map(|metadata| metadata.is_file() && metadata.len() > 0)
+        .unwrap_or(false)
+}
+
+/// Round-1 write-path batch: record each write failure in the iteration's
+/// warnings and in the run's warning log, once per failure.
+fn note_write_failures(
+    run_dir: &Path,
+    iteration: u32,
+    warnings: &mut Vec<String>,
+    failures: &[crate::runtime::write_failure::RoleWriteFailure],
+) -> anyhow::Result<()> {
+    for failure in failures {
+        let line = failure.render();
+        if !warnings.iter().any(|existing| existing == &line) {
+            warnings.push(line.clone());
+        }
+        append_warning(run_dir, &format!("iteration {iteration}: {line}"))?;
+    }
+    Ok(())
 }
 
 /// DR-69 ③: move an aborted attempt's evidence out of the way **before** its
@@ -782,6 +820,10 @@ async fn run_inner(
     let cache_watch = cache_prefixes(&orchestrator.adapter.cache_excludes());
     let excludes = HashExcludes::new(orchestrator.adapter.cache_excludes()).merged();
     let store = VersionStore::new(run_dir.join("versions"));
+    // Round-1 write-path batch: the adapter's warm build cache, exported into
+    // every role's environment so a role's `cargo build --offline` reuses it
+    // instead of building a second full tree inside the project.
+    let build_target_dir = orchestrator.adapter.build_target_dir();
 
     // DR-19: the values that must never survive anywhere under `runs/<id>`.
     let secrets = crate::runtime::secrets::known_secrets(cfg);
@@ -960,7 +1002,14 @@ async fn run_inner(
                     crate::runtime::shell::ShellFlavor::HOST,
                 ),
                 cwd: planner_view.clone(),
-                env: role_env(cfg, run_id, Role::Planner, iteration, &planner_view),
+                env: role_env(
+                    cfg,
+                    run_id,
+                    Role::Planner,
+                    iteration,
+                    &planner_view,
+                    build_target_dir.as_deref(),
+                ),
                 limits: cfg.agent.clone(),
                 model: cfg.model.clone(),
                 trajectory_path: attempt_trajectory(&traj_dir, Role::Planner, 1),
@@ -1051,6 +1100,21 @@ async fn run_inner(
                         }
                         _ => Vec::new(),
                     };
+                    // Round-1 write-path batch: the Planner's declared artifact
+                    // is `.hoh/plan.md`; the runtime measures whether it is
+                    // there, and records the miss as its own fact.
+                    let planner_write_failures = crate::runtime::write_failure::assess_all(
+                        &planner_attempts,
+                        wrote_non_empty(&planner_view.join(".hoh/plan.md")),
+                        crate::runtime::write_failure::DECLARED_PLANNER,
+                        cfg.agent.artifact_write_budget_tokens,
+                    );
+                    note_write_failures(
+                        &run_dir,
+                        iteration,
+                        &mut iter_warnings,
+                        &planner_write_failures,
+                    )?;
                     finalize_failure(
                         &run_dir,
                         iteration,
@@ -1065,7 +1129,10 @@ async fn run_inner(
                         iter_attempts.clone(),
                         iter_secret_redactions,
                         iter_out_of_tree.iter().cloned().collect(),
-                        FailureFacts::default(),
+                        FailureFacts {
+                            write_failures: planner_write_failures,
+                            ..FailureFacts::default()
+                        },
                     )?;
                     return Err(error);
                 }
@@ -1170,7 +1237,14 @@ async fn run_inner(
                 crate::runtime::shell::ShellFlavor::HOST,
             ),
             cwd: workspace.clone(),
-            env: role_env(cfg, run_id, Role::Developer, iteration, &workspace),
+            env: role_env(
+                cfg,
+                run_id,
+                Role::Developer,
+                iteration,
+                &workspace,
+                build_target_dir.as_deref(),
+            ),
             limits: cfg.agent.clone(),
             model: cfg.model.clone(),
             trajectory_path: attempt_trajectory(&traj_dir, Role::Developer, 1),
@@ -1300,6 +1374,18 @@ async fn run_inner(
         // and exit code 0.  That is the very failure class E1 is about, so it is
         // now closed: equality of the two hashes is the whole condition.
         let h_dev_after = hash_tree(&workspace, &excludes)?;
+        // Round-1 write-path batch: the harness's **own** judgement about the
+        // Developer stage.  "The artifact tree shows no write" is a measurement
+        // the runtime has; the attempt's exit status and token total are its own
+        // records; together they make "this role never wrote its declared
+        // artifact" a first-class fact instead of an external agent's string.
+        // It is computed here, before any early return can drop it.
+        let developer_write_failures = crate::runtime::write_failure::assess_all(
+            &developer_attempts,
+            h_dev_before != h_dev_after,
+            crate::runtime::write_failure::DECLARED_DEVELOPER,
+            cfg.agent.artifact_write_budget_tokens,
+        );
         if h_dev_before == h_dev_after {
             let warning = ContractViolation::NoProgress.code();
             iter_warnings.push(warning.to_string());
@@ -1310,6 +1396,12 @@ async fn run_inner(
                 ),
             )?;
         }
+        note_write_failures(
+            &run_dir,
+            iteration,
+            &mut iter_warnings,
+            &developer_write_failures,
+        )?;
         if h_dev_before == h_dev_after {
             let violation = ContractViolation::NoEngineeringWrite;
             // DR-67 (DEF-5): this text must describe the condition that is
@@ -1361,8 +1453,13 @@ async fn run_inner(
                 iter_secret_redactions,
                 iter_out_of_tree.iter().cloned().collect(),
                 // DR-68 ④: no freeze, no battery yet — the empty facts are the
-                // truth here, not a stub (see `FailureFacts`).
-                FailureFacts::default(),
+                // truth here, not a stub (see `FailureFacts`).  Round-1
+                // write-path batch: the one fact that *does* exist here is the
+                // Developer's missed artifact, so it is carried.
+                FailureFacts {
+                    write_failures: developer_write_failures.clone(),
+                    ..FailureFacts::default()
+                },
             )?;
             return Err(HofError::contract(violation).into());
         }
@@ -1703,6 +1800,7 @@ async fn run_inner(
                     version_id: Some(version.version_id.clone()),
                     battery_passes: battery_passes.clone(),
                     artifact_gate: Some(launch_gate.clone()),
+                    ..FailureFacts::default()
                 },
             )?;
             return Err(HofError::contract(ContractViolation::WorkspaceDriftBeforeQa).into());
@@ -1732,7 +1830,14 @@ async fn run_inner(
                 crate::runtime::shell::ShellFlavor::HOST,
             ),
             cwd: candidate.clone(),
-            env: role_env(cfg, run_id, Role::Tester, iteration, &candidate),
+            env: role_env(
+                cfg,
+                run_id,
+                Role::Tester,
+                iteration,
+                &candidate,
+                build_target_dir.as_deref(),
+            ),
             limits: cfg.agent.clone(),
             model: cfg.model.clone(),
             trajectory_path: attempt_trajectory(&traj_dir, Role::Tester, 1),
@@ -1966,6 +2071,7 @@ async fn run_inner(
                         version_id: Some(version.version_id.clone()),
                         battery_passes: battery_passes.clone(),
                         artifact_gate: Some(launch_gate.clone()),
+                        ..FailureFacts::default()
                     },
                 );
             }
@@ -2000,6 +2106,7 @@ async fn run_inner(
                     version_id: Some(version.version_id.clone()),
                     battery_passes: battery_passes.clone(),
                     artifact_gate: Some(launch_gate.clone()),
+                    ..FailureFacts::default()
                 },
             );
         }
@@ -2030,6 +2137,7 @@ async fn run_inner(
                     version_id: Some(version.version_id.clone()),
                     battery_passes: battery_passes.clone(),
                     artifact_gate: Some(launch_gate.clone()),
+                    ..FailureFacts::default()
                 },
             );
         }
@@ -2043,6 +2151,21 @@ async fn run_inner(
                     }
                     _ => Vec::new(),
                 };
+                // Round-1 write-path batch: the Tester's declared artifact is
+                // `.hoh/evidence.json`; whether the frozen view really carries a
+                // non-empty one is a measurement, not the agent's claim.
+                let tester_write_failures = crate::runtime::write_failure::assess_all(
+                    &tester_attempts,
+                    wrote_non_empty(&candidate.join(".hoh/evidence.json")),
+                    crate::runtime::write_failure::DECLARED_TESTER,
+                    cfg.agent.artifact_write_budget_tokens,
+                );
+                note_write_failures(
+                    &run_dir,
+                    iteration,
+                    &mut iter_warnings,
+                    &tester_write_failures,
+                )?;
                 finalize_failure(
                     &run_dir,
                     iteration,
@@ -2065,6 +2188,7 @@ async fn run_inner(
                         version_id: Some(version.version_id.clone()),
                         battery_passes: battery_passes.clone(),
                         artifact_gate: Some(launch_gate.clone()),
+                        write_failures: tester_write_failures,
                     },
                 )?;
                 return Err(error);
@@ -2120,6 +2244,9 @@ async fn run_inner(
         result.artifact_gate = launch_gate.clone();
         result.repair_retry_used = iter_repair_retry_used;
         result.battery_passes = battery_passes.clone();
+        // Round-1 write-path batch: the round result states, in its own words,
+        // every role attempt that did not write the artifact it declared.
+        result.write_failures = developer_write_failures.clone();
         result.out_of_tree_writes = iter_out_of_tree.iter().cloned().collect();
         // DR-28: report-only hygiene of the frozen `A_t`.
         result.artifact_hygiene = crate::model::ArtifactHygiene {

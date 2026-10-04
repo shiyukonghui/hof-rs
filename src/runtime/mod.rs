@@ -24,3 +24,6 @@ pub mod snapshot;
 pub mod start_state;
 pub mod usage;
 pub mod view;
+/// Round-1 write-path batch: the harness's own judgement about a role that did
+/// not write the artifact it declared.
+pub mod write_failure;

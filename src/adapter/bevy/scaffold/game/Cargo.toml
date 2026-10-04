@@ -1,0 +1,14 @@
+[package]
+name = "hof_game"
+version = "0.1.0"
+edition = "2021"
+description = "The game the hof-rs three-role pipeline develops; the crate name is part of the frozen observability contract (PRD §3-C2)."
+
+# The feature set is frozen (DESIGN-DETAIL §5): a drift here is what turns a
+# warm build into a 236 s one.  `bevy_remote` is the observation surface.
+[dependencies]
+bevy = { version = "0.19.1", features = ["bevy_remote"] }
+
+# The game is its own workspace root so it can be scaffolded anywhere without
+# cargo trying to attach it to a parent workspace.
+[workspace]

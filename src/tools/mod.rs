@@ -3,6 +3,7 @@
 //! This is the single enforcement point for R13 — a denied tool is refused by
 //! code, never by prompt convention.
 
+pub mod bevy_channel;
 pub mod bridge;
 pub mod endpoint;
 pub mod index;

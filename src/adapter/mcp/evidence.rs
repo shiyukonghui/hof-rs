@@ -253,6 +253,20 @@ pub fn write_round(root: &Path, evidence: &RoundEvidence) -> std::io::Result<Pat
     let directory = round_dir(root, &evidence.round).map_err(|error| {
         std::io::Error::new(std::io::ErrorKind::InvalidInput, error.to_string())
     })?;
+    // A round's directory belongs to **that round**.  `calls/`, `readings/` and
+    // the Tester's `qa/` are regenerated wholesale on every write, so a second
+    // write of the same round — a re-run, or a battery pass after a repair —
+    // cannot leave an earlier write's files behind to be read as this one's
+    // evidence.  (Without this, a re-run with fewer calls kept the previous
+    // run's `calls/<seq>-<tool>.json` files, and two different tools then shared
+    // one sequence number in the directory: exactly the kind of evidence a judge
+    // must be able to trust.)
+    for sub in [CALLS_DIR, READINGS_DIR, QA_DIR] {
+        let path = directory.join(sub);
+        if path.exists() {
+            std::fs::remove_dir_all(&path)?;
+        }
+    }
     std::fs::create_dir_all(directory.join(CALLS_DIR))?;
     std::fs::create_dir_all(directory.join(READINGS_DIR))?;
     std::fs::create_dir_all(directory.join(QA_DIR))?;
@@ -367,6 +381,42 @@ mod tests {
             json!({"kind": "CoinCounter", "failed": false, "value": {"coins": 1}, "frame": 30}),
         ));
         evidence
+    }
+
+    #[test]
+    fn a_second_write_of_the_same_round_leaves_no_stale_evidence() {
+        // The property a judge depends on: the round directory says exactly what
+        // *this* round observed.  A re-run that made fewer calls must not keep
+        // the earlier run's files — otherwise two exchanges share one sequence
+        // number in `calls/`.
+        let directory = tempfile::tempdir().expect("a temporary root");
+        let root = directory.path();
+        let first = sample("round-x");
+        write_round(root, &first).expect("the first write");
+        std::fs::write(root.join("runs/bevy-round-x/qa/note.txt"), "stale\n").unwrap();
+        let mut second = sample("round-x");
+        second.calls.truncate(1);
+        second.readings.clear();
+        let written = write_round(root, &second).expect("the second write");
+        let calls: Vec<String> = std::fs::read_dir(written.join("calls"))
+            .unwrap()
+            .flatten()
+            .map(|entry| entry.file_name().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(
+            calls,
+            vec!["0001-world.get_components+watch.json".to_string()],
+            "only this write's calls may be present"
+        );
+        assert!(
+            !written.join("qa/note.txt").exists(),
+            "the Tester's directory is regenerated, not appended to"
+        );
+        assert_eq!(
+            std::fs::read_dir(written.join("readings")).unwrap().count(),
+            0,
+            "a write with no readings leaves none behind"
+        );
     }
 
     #[test]

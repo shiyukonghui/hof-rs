@@ -228,17 +228,42 @@ pub fn read_document(value: &Value, endpoint: &str) -> Result<Value, BrpError> {
 }
 
 /// A blocking BRP client.  One instance talks to one endpoint.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct BrpClient {
     endpoint: String,
     timeout: Duration,
     next_id: std::sync::Arc<std::sync::atomic::AtomicU64>,
+    /// **One pooled agent per client.**
+    ///
+    /// This is a measured fix, not a micro-optimisation.  Building a fresh
+    /// `ureq::Agent` per call (as this client used to) opens a new TCP connection
+    /// for every request, and on Windows loopback the Nagle/delayed-ACK
+    /// interaction made each call ~40 ms: the arc sampler's own evidence showed
+    /// consecutive samples **5 game frames apart** (83 ms) instead of the one
+    /// frame the pacing asks for, so a 30-frame jump was sampled around its peak
+    /// and the observation passed on a single rising step.  Keeping the agent
+    /// lets ureq reuse the connection, which is what makes "one sample per game
+    /// frame" true and therefore makes criterion ④ about the game instead of
+    /// about the loopback stack.
+    agent: ureq::Agent,
+}
+
+impl std::fmt::Debug for BrpClient {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("BrpClient")
+            .field("endpoint", &self.endpoint)
+            .field("timeout", &self.timeout)
+            .finish_non_exhaustive()
+    }
 }
 
 impl BrpClient {
     pub fn new(endpoint: impl Into<String>, timeout: Duration) -> Self {
+        let endpoint = endpoint.into();
         Self {
-            endpoint: endpoint.into(),
+            agent: ureq::AgentBuilder::new().timeout(timeout).build(),
+            endpoint,
             timeout,
             next_id: std::sync::Arc::new(std::sync::atomic::AtomicU64::new(1)),
         }
@@ -345,8 +370,9 @@ impl BrpClient {
     /// tool bridge is a short-lived process), so this method is not async.
     fn post(&self, body: &Value) -> Result<String, BrpError> {
         let started = Instant::now();
-        let agent = ureq::AgentBuilder::new().timeout(self.timeout).build();
-        match agent
+        // The pooled agent from `new`, not a fresh one: see the field's docs.
+        match self
+            .agent
             .post(&self.endpoint)
             .set("Content-Type", "application/json")
             .send_string(&body.to_string())

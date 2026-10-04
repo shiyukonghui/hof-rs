@@ -25,12 +25,22 @@ pub fn absolute_path(path: &Path) -> std::path::PathBuf {
 ///
 /// DR-25: **every path-shaped variable is absolute.**  A role may be started
 /// from any working directory, so a relative base silently changes meaning.
+///
+/// Round-1 write-path batch: `target_dir` is the adapter's shared build cache
+/// (`ProjectAdapter::build_target_dir`).  Round 1's Developer ran
+/// `cargo build --offline` with nothing exported, so cargo built a *second*,
+/// full target tree inside the project — ~8.5 GB and a ~5-minute cold build
+/// against a 180-second command timeout — instead of reusing the warm one the
+/// adapter already builds into.  It is exported as both `HOH_TARGET_DIR` (the
+/// harness's own name, for the prompt text) and `CARGO_TARGET_DIR` (the name
+/// cargo itself reads).
 pub fn role_env(
     cfg: &HohConfig,
     run_id: &str,
     role: Role,
     iteration: u32,
     cwd: &Path,
+    target_dir: Option<&Path>,
 ) -> BTreeMap<String, String> {
     let mut env: BTreeMap<String, String> = BTreeMap::new();
     env.insert("HOH_ROLE".to_string(), role.as_str().to_string());
@@ -79,6 +89,15 @@ pub fn role_env(
         .into_owned(),
     );
     env.insert("HOH_TOOLS_POLICY".to_string(), role.as_str().to_string());
+    if let Some(target) = target_dir {
+        let absolute = absolute_path(target);
+        let value = absolute.to_string_lossy().into_owned();
+        env.insert("HOH_TARGET_DIR".to_string(), value.clone());
+        // The name cargo itself reads, so `cargo build --offline` inside the
+        // role's shell reuses the adapter's warm directory without the role
+        // having to pass `--target-dir`.
+        env.insert("CARGO_TARGET_DIR".to_string(), value);
+    }
     env.insert(
         "HOH_HOH_BIN".to_string(),
         std::env::current_exe()
@@ -112,9 +131,32 @@ pub async fn invoke_once(
 
 /// Substitute the loop variables of a role prompt.
 pub fn render_prompt(template: &str, iteration: u32) -> String {
+    render_prompt_for_shell(
+        template,
+        iteration,
+        crate::runtime::shell::ShellFlavor::HOST,
+    )
+}
+
+/// Round-1 write-path batch: the same substitution for an explicit target shell.
+///
+/// `{{shell_truth}}` is a whole section — the shell's dialect, the forbidden
+/// command shapes, and the write/read directives — so the three role prompts
+/// cannot drift apart in what they tell a role about its shell.  It is inserted
+/// here, before `{{HOH_*}}` placeholders are resolved, because the section
+/// itself spells the binary as `{{HOH_HOH_BIN}}`.
+fn render_prompt_for_shell(
+    template: &str,
+    iteration: u32,
+    flavor: crate::runtime::shell::ShellFlavor,
+) -> String {
     template
         .replace("{{iteration}}", &iteration.to_string())
         .replace("{{ plan.md }}", ".hoh/plan.md")
+        .replace(
+            crate::prompts::SHELL_TRUTH_PLACEHOLDER,
+            &crate::prompts::shell_truth(flavor),
+        )
 }
 
 /// DR-18: same substitution, plus the concrete step budget the role is running
@@ -151,7 +193,7 @@ pub fn render_prompt_with_budget_and_shell(
     limits: &crate::config::AgentLimits,
     flavor: crate::runtime::shell::ShellFlavor,
 ) -> String {
-    let rendered = render_prompt(template, iteration)
+    let rendered = render_prompt_for_shell(template, iteration, flavor)
         .replace("{{step_limit}}", &limits.step_limit.to_string())
         .replace("{{wrap_up_steps}}", &limits.wrap_up_steps.to_string())
         .replace(
@@ -308,7 +350,7 @@ mod tests {
     fn role_env_carries_every_required_variable() {
         let cfg = crate::config::load_config(&[]).unwrap();
         let cwd = std::path::PathBuf::from("F:/tmp/view");
-        let env = role_env(&cfg, "run-1", Role::Tester, 2, &cwd);
+        let env = role_env(&cfg, "run-1", Role::Tester, 2, &cwd, None);
         for key in [
             "HOH_ROLE",
             "HOH_RUN_ID",
@@ -331,5 +373,28 @@ mod tests {
             "{route}"
         );
         assert!(!std::path::Path::new(route).is_relative(), "{route}");
+    }
+
+    /// Round-1 write-path batch: the adapter's warm build cache must reach the
+    /// role's shell, absolute, under both the harness's name and cargo's.
+    #[test]
+    fn role_env_exports_the_adapters_target_directory() {
+        let cfg = crate::config::load_config(&[]).unwrap();
+        let cwd = std::path::PathBuf::from("F:/tmp/view");
+        let target = std::path::PathBuf::from("F:/tmp/workspace/../hof-bevy-shared-target");
+        let env = role_env(&cfg, "run-1", Role::Developer, 1, &cwd, Some(&target));
+        let exported = env.get("CARGO_TARGET_DIR").expect("cargo's variable");
+        assert_eq!(env.get("HOH_TARGET_DIR"), Some(exported));
+        assert!(
+            !std::path::Path::new(exported).is_relative(),
+            "the target directory must be absolute: {exported}"
+        );
+        assert!(exported.ends_with("hof-bevy-shared-target"), "{exported}");
+
+        // An adapter with no target directory exports neither name: inventing a
+        // value would make cargo build somewhere nobody measured.
+        let none = role_env(&cfg, "run-1", Role::Developer, 1, &cwd, None);
+        assert!(!none.contains_key("CARGO_TARGET_DIR"));
+        assert!(!none.contains_key("HOH_TARGET_DIR"));
     }
 }

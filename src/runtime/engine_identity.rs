@@ -61,10 +61,15 @@ pub async fn probe(
     game_endpoint: Option<crate::tools::endpoint::GameEndpointRecord>,
 ) -> EngineIdentity {
     let Some(binary) = adapter.engine_binary() else {
-        return EngineIdentity::unavailable(format!(
+        let mut identity = EngineIdentity::unavailable(format!(
             "this adapter ({}) drives no engine binary, so there is no identity to check",
             adapter.engine_kind()
         ));
+        // The *kind* is still known and is what tells a reader which engine the
+        // round drove: Bevy is compiled into the game, so "no engine binary" is
+        // the truth about a Bevy round rather than a gap in the record.
+        identity.kind = adapter.engine_kind().to_string();
+        return identity;
     };
     // DR-51: the status is read before the identity is assembled, so the block
     // carries the real body (or `null`, with the reason `probe_identity` adds).

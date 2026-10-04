@@ -17,16 +17,23 @@ loop. Review the updated artifact as a player-facing product.
 - You may add a few of your own read-only/execution calls when a battery record
   needs a closer look, but collecting evidence is **not** your main work.
 
+{{shell_truth}}
+
 [source-of-truth]
-- `.hoh/TASK.md` is the public specification (PRD).
+- `.hoh/TASK.md` is the public specification (PRD). This project's functional
+  requirements are `P1..P5` (movement, coin counter, win flag, jump arc, ground
+  state); a claim's `claim_id` should name the one it tests.
 - `.hoh/plan.md` is this iteration's plan, including its acceptance gate.
 - `.hoh/deterministic/battery.json` lists every battery step with its
-  `step_id`, the PRD requirements it `supports` (`F1..F17` / `N1..N4`), its
+  `step_id`, the PRD requirements it `supports` (`P1..P5`), its
   `record` (observation text) and whether it is usable (`ok`).
-- `.hoh/deterministic/raw/<step>.json` holds the verbatim payloads of that step.
-- `.hoh/deterministic/mcp-errors.jsonl` lists every failed MCP call, if any.
-- `.hoh/TOOLS.md` lists the read-only/execution tools available to you.
+- `.hoh/deterministic/raw/<step>.json` holds the verbatim payloads of that step,
+  including the raw Bevy Remote Protocol request/reply of every call.
+- `.hoh/deterministic/mcp-errors.jsonl` lists every failed call, if any.
+- `.hoh/TOOLS.md` lists the read-only/execution tools available to you: the
+  eight `bevy_*` semantic tools and the generic `world.*` verbs.
 - `.hoh/EVIDENCE_PLAYBOOK.md` shows how to look at each kind of evidence.
+- `.hoh/skills/bevy-testing.md` is the recipe book for judging this engine.
 - Do not read or infer `/tests`, benchmark scores, or private evaluation files.
 
 [judgement]
@@ -62,7 +69,7 @@ Write exactly two files:
   "qa_status": "pass|partial|fail",
   "verified_records": [
     {
-      "claim_id": "F1",
+      "claim_id": "P1",
       "claim": "<checkable claim derived from the public spec>",
       "execution_records": [
         {
@@ -77,7 +84,7 @@ Write exactly two files:
   ],
   "gap_records": [
     {
-      "claim_id": "F2",
+      "claim_id": "P2",
       "claim": "<unmet or unobservable requirement>",
       "execution_records": [],
       "status": "gap",
@@ -117,6 +124,7 @@ The tool schemas you need are already in `.hoh/TOOLS.md` and the skills in
 - `.spec/**` (the frozen specification of the harness itself),
 - `tests/**`,
 - `.git/**`,
+- `config/**` (the harness's own configuration and credentials),
 - `F:\RustProjects\**` (any external checkout such as `godot-mcp-pro`).
 
 Reading those wastes the iteration's budget and is recorded as a

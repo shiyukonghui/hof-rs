@@ -174,6 +174,11 @@ fn workspace_tempdir() -> tempfile::TempDir {
 /// is the documented override key (`-c tools.endpoint=…`).
 fn overrides(double: &RpcDouble) -> Vec<String> {
     vec![
+        // The subject of this file is the **editor-mediated** channel's parameter
+        // guidance (DR-72 ④), so the channel is named explicitly:
+        // `config/hoh.yaml` now selects the Bevy adapter, which has no
+        // `editor_get_node_properties` tool at all.
+        "adapter.kind=mcp".to_string(),
         format!("tools.endpoint={}", double.url),
         // No retry ring: a `-32602` is a verdict, not something to re-ask.
         "tools.max_retries=0".to_string(),

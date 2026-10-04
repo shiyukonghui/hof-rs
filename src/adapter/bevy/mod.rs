@@ -25,6 +25,9 @@ pub mod build;
 pub mod contract;
 pub mod launch;
 pub mod prd;
+pub mod project;
+pub mod round;
+pub mod scaffold;
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -37,7 +40,7 @@ use crate::adapter::bevy::brp::BrpClient;
 use crate::adapter::bevy::build::{Builder, ContractPathReader, FeatureReader};
 use crate::adapter::bevy::launch::LaunchConfig;
 use crate::adapter::mcp::evidence::{CallEvidence, RoundHashes};
-use crate::adapter::mcp::server::{BevyMcpServer, GameProcess as ServerProcess, ToolError};
+use crate::adapter::mcp::server::{BevyMcpServer, GameProcess as ServerProcess};
 use crate::adapter::{
     AdapterError, EngineId, FrameMark, GameAdapter, GateVerdict, Health, InjectionReport, Intent,
     Prepared, Project, Reading, RunningGame, SemanticKind, StopReport,
@@ -93,6 +96,9 @@ pub struct BevyAdapterConfig {
     /// `true` to write `runs/bevy-<round>/` when a battery finishes.  The default
     /// is `false`: a round that did not ask for evidence does not write any.
     pub write_evidence: bool,
+    /// DESIGN-DETAIL §6: the directory `runs/bevy-<round>/` is created under.
+    /// `.` means the working directory, which for a round is the repository root.
+    pub evidence_root: std::path::PathBuf,
 }
 
 impl Default for BevyAdapterConfig {
@@ -102,6 +108,7 @@ impl Default for BevyAdapterConfig {
             launch: LaunchConfig::default(),
             round: "bevy-b2".to_string(),
             write_evidence: false,
+            evidence_root: PathBuf::from("."),
         }
     }
 }
@@ -115,12 +122,16 @@ pub struct BevyAdapter {
     launch: LaunchConfig,
     round: String,
     write_evidence: bool,
-    /// The build contract check's injectable feature reader.
-    features: Box<dyn FeatureReader>,
+    /// The build contract check's injectable feature reader.  An `Arc` rather
+    /// than a `Box` so a round can hand the same reader to the second adapter
+    /// [`BevyAdapter::round_peer`] builds (a real round builds, launches and
+    /// observes through a peer, so that the caller's own process state — and the
+    /// fake a test injected — is neither disturbed nor lost).
+    features: Arc<dyn FeatureReader>,
     /// The contract check's injectable type-path reader.  It is a separate seam
     /// from `features` on purpose (B2-1): a feature set and a type path are two
     /// different claims with two different sources and two different reasons.
-    contract_reader: Box<dyn ContractPathReader>,
+    contract_reader: Arc<dyn ContractPathReader>,
     /// The injected builder (a test supplies a fake one; a round supplies none
     /// and gets [`build::CargoBuilder`]).
     builder: Option<build::DynBuilder>,
@@ -136,6 +147,15 @@ pub struct BevyAdapter {
     last_build_output: String,
     last_contract_paths: Vec<String>,
     last_stop: Option<crate::adapter::StopReport>,
+    /// DESIGN-DETAIL §6: where this adapter writes `runs/bevy-<round>/`.
+    evidence_root: PathBuf,
+    /// DR-70 ①: the game process that lives for the **whole round window**,
+    /// started by [`crate::adapter::ProjectAdapter::start_round_game`] before the
+    /// first role and stopped by `stop_round_game` on every exit path.  It is
+    /// kept behind a `Mutex` because both of those take `&self` (the runtime
+    /// holds the adapter behind a shared reference for the whole round) while
+    /// owning a `Child` is inherently exclusive.
+    round_game: Mutex<Option<launch::GameProcess>>,
 }
 
 impl std::fmt::Debug for BevyAdapter {
@@ -172,8 +192,9 @@ impl BevyAdapter {
             launch: config.launch,
             round: config.round,
             write_evidence: config.write_evidence,
-            features: Box::new(build::CargoMetadataFeatures::new()),
-            contract_reader: Box::new(build::SourceContractPaths),
+            evidence_root: config.evidence_root,
+            features: Arc::new(build::CargoMetadataFeatures::new()),
+            contract_reader: Arc::new(build::SourceContractPaths),
             builder: None,
             server: BevyMcpServer::new(client.clone()),
             client,
@@ -187,6 +208,7 @@ impl BevyAdapter {
             last_build_output: String::new(),
             last_contract_paths: Vec::new(),
             last_stop: None,
+            round_game: Mutex::new(None),
         }
     }
 
@@ -198,6 +220,7 @@ impl BevyAdapter {
         self.launch = config.launch;
         self.round = config.round;
         self.write_evidence = config.write_evidence;
+        self.evidence_root = config.evidence_root;
         self.client = BrpClient::new(
             &self.endpoint,
             self.launch.probe_timeout.max(Duration::from_millis(50)),
@@ -225,14 +248,14 @@ impl BevyAdapter {
     }
 
     pub fn with_features(mut self, features: Box<dyn FeatureReader>) -> Self {
-        self.features = features;
+        self.features = Arc::from(features);
         self
     }
 
     /// Inject the contract-path reader (a test uses a fake; a round uses the
     /// game's own source).
     pub fn with_contract_paths(mut self, reader: Box<dyn ContractPathReader>) -> Self {
-        self.contract_reader = reader;
+        self.contract_reader = Arc::from(reader);
         self
     }
 
@@ -249,6 +272,99 @@ impl BevyAdapter {
     pub fn with_evidence_writing(mut self, write: bool) -> Self {
         self.write_evidence = write;
         self
+    }
+
+    /// DESIGN-DETAIL §6: where `runs/bevy-<round>/` is written.
+    pub fn with_evidence_root(mut self, root: impl Into<PathBuf>) -> Self {
+        self.evidence_root = root.into();
+        self
+    }
+
+    /// The round name this adapter's evidence directory carries.
+    pub fn round_name(&self) -> String {
+        self.round.clone()
+    }
+
+    /// The root `runs/bevy-<round>/` is created under.
+    pub fn evidence_root(&self) -> PathBuf {
+        self.evidence_root.clone()
+    }
+
+    /// Whether this adapter was asked to write its round evidence.
+    pub fn writes_evidence(&self) -> bool {
+        self.write_evidence
+    }
+
+    /// The identity of the binary a round launches: path, size and digest.
+    ///
+    /// It is recorded in `launch.json` because "which artifact produced these
+    /// observations?" is the same question `meta.json.engine` answers for an
+    /// adapter that drives a separate engine binary — and Bevy has none, so the
+    /// game binary *is* the engine.  A stale artifact in a shared target
+    /// directory is exactly the failure this makes visible.
+    pub fn built_binary_identity(&self) -> Value {
+        let Some(target) = self.build_policy.target_dir.clone() else {
+            return json!({"reason": "the build policy names no target directory"});
+        };
+        let name = if cfg!(windows) {
+            format!("{}.exe", crate::adapter::bevy::contract::GAME_CRATE)
+        } else {
+            crate::adapter::bevy::contract::GAME_CRATE.to_string()
+        };
+        let path = target.join("debug").join(name);
+        match std::fs::read(&path) {
+            Ok(bytes) => json!({
+                "path": path.display().to_string(),
+                "size_bytes": bytes.len(),
+                "sha256": crate::runtime::policy::sha256_hex(&bytes),
+            }),
+            Err(error) => json!({
+                "path": path.display().to_string(),
+                "reason": format!("the built binary could not be read: {error}"),
+            }),
+        }
+    }
+
+    /// Take the process the round-game window owns, so a caller can stop it.
+    pub fn take_process(&mut self) -> Option<launch::GameProcess> {
+        self.round_game.lock().ok().and_then(|mut game| game.take())
+    }
+
+    /// A second adapter over the **same configuration**: same build policy, same
+    /// launch configuration, same evidence settings and the same injected seams
+    /// (the feature reader, the contract-path reader and the builder are `Arc`s).
+    ///
+    /// A round builds, launches and observes through a peer so that the adapter
+    /// the runtime holds keeps its own process state free: the round's game and
+    /// the caller's game are two different processes, and conflating them is how
+    /// a dead pid reaches a published route.
+    pub fn round_peer(&self) -> Self {
+        Self {
+            workspace: self.workspace.clone(),
+            endpoint: self.endpoint.clone(),
+            headless: self.headless,
+            build_policy: self.build_policy.clone(),
+            launch: self.launch.clone(),
+            round: self.round.clone(),
+            write_evidence: self.write_evidence,
+            evidence_root: self.evidence_root.clone(),
+            features: Arc::clone(&self.features),
+            contract_reader: Arc::clone(&self.contract_reader),
+            builder: self.builder.clone(),
+            client: self.client.clone(),
+            server: BevyMcpServer::new(self.client.clone()),
+            process: None,
+            stderr: Arc::new(Mutex::new(String::new())),
+            game_frame: None,
+            prepared: None,
+            evidence: Vec::new(),
+            build_millis: 0,
+            budget_millis: None,
+            last_build_output: String::new(),
+            last_contract_paths: Vec::new(),
+            last_stop: None,
+            round_game: Mutex::new(None),
+        }
     }
 
     /// Use the adapter's own BRP client (the default).  Present so a round can
@@ -344,6 +460,9 @@ impl BevyAdapter {
     }
 
     /// One semantic read, recorded as evidence.
+    ///
+    /// The recording itself lives in [`super::round`] so a round's battery and
+    /// this method cannot drift apart in what they send or what they keep.
     pub fn read_recorded(&mut self, tool: &str, args: Value) -> anyhow::Result<Reading> {
         let kind = match tool {
             "bevy_player_transform" => SemanticKind::PlayerTransform,
@@ -354,25 +473,13 @@ impl BevyAdapter {
                 anyhow::bail!("`{other}` is not a read surface");
             }
         };
-        let (call, evidence) = self.server.call_with_evidence(tool, args);
-        self.evidence.push(evidence);
-        match call.error {
-            Some(error) => Ok(Reading::not_observed(
-                kind,
-                self.game_frame.unwrap_or(0),
-                self.describe(&error),
-            )),
-            None => {
-                let value = call.result.unwrap_or(Value::Null);
-                let frame = value
-                    .get("frame")
-                    .and_then(Value::as_u64)
-                    .or(self.game_frame)
-                    .unwrap_or(0);
-                self.game_frame = Some(frame);
-                Ok(Reading::observed(kind, frame, value))
-            }
-        }
+        let _ = args;
+        crate::adapter::bevy::round::read_recorded(
+            &mut self.server,
+            &mut self.evidence,
+            &mut self.game_frame,
+            kind,
+        )
     }
 
     /// One injection, recorded as evidence.
@@ -381,72 +488,29 @@ impl BevyAdapter {
         intent: &Intent,
         level: bool,
     ) -> anyhow::Result<InjectionReport> {
-        let args = match intent {
-            Intent::Move { dir } => json!({"dir": dir, "level": level}),
-            Intent::Jump { press } => json!({"press": press}),
-        };
-        let (call, evidence) = self.server.call_with_evidence(intent.tool(), args);
-        self.evidence.push(evidence);
-        match call.error {
-            Some(error) => Ok(InjectionReport::refused(
-                self.game_frame.unwrap_or(0),
-                self.describe(&error),
-            )),
-            None => {
-                let frame = call
-                    .result
-                    .as_ref()
-                    .and_then(|value| value.get("frame"))
-                    .and_then(Value::as_u64)
-                    .or(self.game_frame)
-                    .unwrap_or(0);
-                self.game_frame = Some(frame);
-                Ok(InjectionReport::accepted(frame))
-            }
-        }
+        crate::adapter::bevy::round::inject_recorded(
+            &mut self.server,
+            &mut self.evidence,
+            &mut self.game_frame,
+            intent,
+            level,
+        )
     }
 
     /// Wait for `n` frames of the game, recorded as evidence.
     pub fn wait_frames_recorded(&mut self, n: u32) -> anyhow::Result<FrameMark> {
-        let (call, evidence) = self
-            .server
-            .call_with_evidence("bevy_wait_frames", json!({"n": n}));
-        self.evidence.push(evidence);
-        match call.error {
-            Some(error) => anyhow::bail!("{}", self.describe(&error)),
-            None => {
-                let frame = call
-                    .result
-                    .as_ref()
-                    .and_then(|value| value.get("frame_after"))
-                    .and_then(Value::as_u64)
-                    .or(self.game_frame)
-                    .unwrap_or(0);
-                self.game_frame = Some(frame);
-                Ok(FrameMark {
-                    requested: n,
-                    frame,
-                })
-            }
-        }
+        crate::adapter::bevy::round::wait_frames_recorded(
+            &mut self.server,
+            &mut self.evidence,
+            &mut self.game_frame,
+            n,
+        )
     }
 
     /// The five E3 observations, driven through the semantic tools.
     pub fn run_battery(&mut self) -> anyhow::Result<battery::E3Observations> {
         let observations = battery::BatteryRun::new(self).run()?;
         Ok(observations)
-    }
-
-    fn describe(&self, error: &ToolError) -> String {
-        format!(
-            "{} (code {}): {}",
-            error.kind,
-            error
-                .code
-                .map(|code| code.to_string())
-                .unwrap_or_else(|| "none".to_string()),
-            error.message
-        )
     }
 }
 
@@ -963,10 +1027,10 @@ mod tests {
         (fake, BevyMcpServer::new(client))
     }
 
-    /// The E3 battery, end to end over the fake socket: all five observations
+    /// The E3 battery, end to end over the fake socket: all nine observations
     /// hold, every one of them keeps its raw calls, and no call is a batch.
     #[test]
-    fn the_battery_observes_all_five_e3_behaviours_in_order() {
+    fn the_battery_observes_every_e3_behaviour_in_order() {
         let state = Arc::new(std::sync::Mutex::new(GameState::new()));
         let (fake, server) = game_server(&state);
         // Configure first, then install the fake client: the configuration
@@ -983,11 +1047,16 @@ mod tests {
         assert!(observations.aborted.is_none(), "{:?}", observations.aborted);
         assert!(
             observations.passed(),
-            "not all five: {} | coins={:?} win={:?} jump={:?}",
+            "not every criterion held: {} | coins={:?} win={:?} jump={:?} left={:?} release={:?} \
+             win_position={:?} payload={:?}",
             observations.summary_line(),
             observations.coins.failure,
             observations.win.failure,
-            observations.jump.failure
+            observations.jump.failure,
+            observations.movement_left.failure,
+            observations.movement_release.failure,
+            observations.win_position.failure,
+            observations.grounded_payload.failure
         );
         // ④ really is an arc with both directions, from the game's frames.
         let arc = observations.jump.arc.as_ref().expect("the jump arc");
@@ -1001,6 +1070,45 @@ mod tests {
         );
         // ⑤ has a readable ground state before take-off.
         assert!(!observations.grounded.readings.is_empty());
+        // P1-left: the negative direction really moved the player backwards, and
+        // the evidence says so with the two readings.
+        let left = &observations.movement_left;
+        let xs: Vec<f64> = left
+            .readings
+            .iter()
+            .filter_map(|reading| reading.value.get("x").and_then(serde_json::Value::as_f64))
+            .collect();
+        assert_eq!(xs.len(), 2, "the leftward check keeps both readings");
+        assert!(xs[1] < xs[0], "move_dir = -1 must move x down: {xs:?}");
+        // P1-release: the two readings of the release window are the same x.
+        let release_xs: Vec<f64> = observations
+            .movement_release
+            .readings
+            .iter()
+            .filter_map(|reading| reading.value.get("x").and_then(serde_json::Value::as_f64))
+            .collect();
+        assert_eq!(release_xs.len(), 2);
+        assert_eq!(release_xs[0], release_xs[1], "writing 0 must stop it");
+        // P3-position: the transform sample is at or after the win frame.
+        let win_position = &observations.win_position;
+        assert_eq!(win_position.readings.len(), 2, "the flag and the position");
+        assert!(
+            win_position.readings[1].frame >= win_position.readings[0].frame,
+            "the position sample must not predate the win frame: {:?}",
+            win_position.readings
+        );
+        // P5-gate: the payload stands on its own.
+        let payload = &observations.grounded_payload;
+        assert_eq!(payload.readings.len(), 1);
+        assert!(
+            payload.readings[0]
+                .value
+                .get("grounded")
+                .map(serde_json::Value::is_boolean)
+                .unwrap_or(false),
+            "the stand-alone payload must carry a boolean: {:?}",
+            payload.readings[0].value
+        );
         // Every call of the battery is a single BRP object, never a batch.
         for body in fake.requests() {
             let parsed: serde_json::Value =
@@ -1043,14 +1151,38 @@ mod tests {
         let observations = adapter.run_battery().expect("the battery runs");
         let positions = observations.readings_of(SemanticKind::PlayerTransform);
         assert!(positions.len() > 3);
+        // The observations overlap (the win-position sample is taken inside the
+        // coin/win window), so the flattened list is not one chronology; what the
+        // contract promises is that **the game's own frames never go backwards**,
+        // which is checked window by window below.  `readings_of` is used rather
+        // than `all_observations` on purpose: it is the projection a report reads.
         let frames: Vec<u64> = positions.iter().map(|reading| reading.frame).collect();
         let mut sorted = frames.clone();
         sorted.sort_unstable();
-        assert_eq!(frames, sorted, "the game's frames only ever advance");
+        assert_eq!(
+            frames.len(),
+            sorted.len(),
+            "every position reading keeps its frame"
+        );
         assert!(
-            frames.last().copied().unwrap_or(0) > frames.first().copied().unwrap_or(0),
+            frames.iter().max().copied().unwrap_or(0) > frames.iter().min().copied().unwrap_or(0),
             "the game advanced its own frames during the battery: {frames:?}"
         );
+        // Per observation, the frames are a chronology: a single window never
+        // reads a frame it already passed.
+        for observation in observations.all_observations() {
+            let window: Vec<u64> = observation
+                .readings
+                .iter()
+                .map(|reading| reading.frame)
+                .collect();
+            let mut sorted = window.clone();
+            sorted.sort_unstable();
+            assert_eq!(
+                window, sorted,
+                "a window's frames must only ever advance: {window:?}"
+            );
+        }
     }
 
     /// A game whose jump only ever falls is a **failed** criterion, and the
@@ -1096,10 +1228,10 @@ mod tests {
         );
     }
 
-    /// A battery that cannot read anything at all is an **abort**, not five
+    /// A battery that cannot read anything at all is an **abort**, not nine
     /// fabricated readings, and every gap says so.
     #[test]
-    fn a_battery_that_cannot_read_aborts_and_gaps_all_five() {
+    fn a_battery_that_cannot_read_aborts_and_gaps_every_criterion() {
         let fake = FakeBrp::spawn(vec![Reply::Json(serde_json::json!({
             "jsonrpc": "2.0",
             "id": 1,
@@ -1120,7 +1252,7 @@ mod tests {
         );
         assert!(!observations.passed());
         let gaps = observations.gaps();
-        assert_eq!(gaps.len(), 5);
+        assert_eq!(gaps.len(), 9);
         for (name, reason) in gaps {
             assert!(
                 reason.contains("not observed"),

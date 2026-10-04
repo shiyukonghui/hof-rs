@@ -233,6 +233,73 @@ pub fn channel_for(config: &HohConfig) -> McpChannel {
     .with_max_sync_retries(config.tools.max_sync_retries)
 }
 
+/// The tool channel the **configured adapter** uses (DR-96).
+///
+/// The engine decides which channel exists: the legacy/editor-mediated path is
+/// an engine module that serves MCP over HTTP ([`channel_for`]), while a Bevy
+/// round's tool surface is this crate's own library talking Bevy Remote Protocol
+/// on the game's port ([`crate::tools::bevy_channel::BevyToolChannel`]).  One
+/// function decides, so a role's `hoh tools call`, the round's own channel and
+/// `hoh doctor` cannot disagree about where a tool goes.
+pub fn channel_for_config(config: &HohConfig) -> Box<dyn ToolChannel> {
+    if config.adapter.kind == crate::adapter::ADAPTER_KIND_BEVY {
+        Box::new(crate::tools::bevy_channel::BevyToolChannel::new())
+    } else {
+        Box::new(channel_for(config))
+    }
+}
+
+/// The tool names the configured adapter's surface declares, without requiring
+/// the engine to be running.
+///
+/// `hoh doctor` must be able to say "the tool surface is there" before a game
+/// process exists — the Bevy surface is a compile-time constant, while the
+/// editor-mediated one has to be asked.
+pub fn tool_surface_names(config: &HohConfig) -> anyhow::Result<Vec<String>> {
+    if config.adapter.kind == crate::adapter::ADAPTER_KIND_BEVY {
+        let mut names: Vec<String> = crate::adapter::mcp::all_tools()
+            .iter()
+            .map(|tool| tool.name.to_string())
+            .collect();
+        names.sort();
+        return Ok(names);
+    }
+    channel_for(config).client().list_tools()
+}
+
+/// The endpoint `hoh doctor` reports for the configured adapter's tool surface.
+pub fn tool_surface_endpoint(config: &HohConfig) -> String {
+    if config.adapter.kind == crate::adapter::ADAPTER_KIND_BEVY {
+        return crate::adapter::bevy::brp::endpoint();
+    }
+    config.tools.endpoint.clone()
+}
+
+/// `hoh tools describe <tool>`'s payload for the configured adapter.
+pub fn describe_tool(config: &HohConfig, tool: &str) -> anyhow::Result<serde_json::Value> {
+    if config.adapter.kind == crate::adapter::ADAPTER_KIND_BEVY {
+        let list = crate::adapter::mcp::tool_list();
+        let entry = list
+            .get("tools")
+            .and_then(serde_json::Value::as_array)
+            .and_then(|tools| {
+                tools.iter().find(|entry| {
+                    entry.get("name").and_then(serde_json::Value::as_str) == Some(tool)
+                })
+            })
+            .cloned()
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "`{tool}` is not in the frozen Bevy tool surface ({} tools); call \
+                     `hoh tools list` for the exact names",
+                    crate::adapter::mcp::TOOL_COUNT
+                )
+            })?;
+        return Ok(entry);
+    }
+    channel_for(config).client().describe(tool)
+}
+
 /// DR-69 ① (road A): adopt the game route the run published, and return what
 /// was adopted.
 ///

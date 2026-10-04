@@ -93,6 +93,7 @@ fn role_env_absolutizes_a_relative_view() {
         Role::Tester,
         1,
         Path::new("relative/view"),
+        None,
     );
     for name in PATH_VARS {
         let value = env.get(*name).unwrap();

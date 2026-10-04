@@ -50,13 +50,14 @@ pub async fn tools(args: ToolsArgs) -> anyhow::Result<i32> {
             }
             let config = load_with(&call.config_spec)?;
             let args = bridge::parse_args(call.args.as_deref(), call.args_file.as_deref())?;
-            let channel = bridge::channel_for(&config);
+            let channel = bridge::channel_for_config(&config);
             // DR-69 ①: this process is not the run.  The run publishes the game
             // route it registered (`HOH_GAME_ROUTE`), and without adopting it a
             // `running_game_*` tool can never be reached from here — which is
             // what `smoke-t9` measured (exit 5 with the game running).
-            bridge::adopt_published_game_route(&channel, None);
-            let reply = bridge::tools_call_with_reply(&channel, role, &call.tool, args).await?;
+            bridge::adopt_published_game_route(channel.as_ref(), None);
+            let reply =
+                bridge::tools_call_with_reply(channel.as_ref(), role, &call.tool, args).await?;
             // DR-78 ② (F-T11-1): a role that plays its **own** scene is starting
             // a game the runtime does not know about, so this process — not the
             // runtime battery — is the publisher of the route that game
@@ -75,7 +76,7 @@ pub async fn tools(args: ToolsArgs) -> anyhow::Result<i32> {
                 if let Some(announced) = reply.answered() {
                     let adapter = build_adapter(&config)?;
                     adapter
-                        .publish_role_started_game_route(&channel, role, announced)
+                        .publish_role_started_game_route(channel.as_ref(), role, announced)
                         .await
                         .map_err(|error| {
                             HofError::External(format!(
@@ -98,10 +99,8 @@ pub async fn tools(args: ToolsArgs) -> anyhow::Result<i32> {
         ToolsCommand::List(list) => {
             let role = bridge::resolve_role(list.role.as_deref())?;
             let config = load_with(&list.config_spec)?;
-            let channel = bridge::channel_for(&config);
-            let mut names: Vec<String> = channel
-                .client()
-                .list_tools()?
+            let channel = bridge::channel_for_config(&config);
+            let mut names: Vec<String> = bridge::tool_surface_names(&config)?
                 .into_iter()
                 .filter(|tool| channel.allowed(role, tool))
                 .collect();
@@ -113,8 +112,7 @@ pub async fn tools(args: ToolsArgs) -> anyhow::Result<i32> {
         }
         ToolsCommand::Describe(describe) => {
             let config = load_with(&describe.config_spec)?;
-            let channel = bridge::channel_for(&config);
-            let description = channel.client().describe(&describe.tool)?;
+            let description = bridge::describe_tool(&config, &describe.tool)?;
             println!("{}", serde_json::to_string_pretty(&description)?);
             Ok(0)
         }
@@ -216,21 +214,23 @@ pub async fn doctor_checks(
     }
 
     // 6. The MCP tool server must be reachable and expose at least one tool.
-    let channel = bridge::channel_for(config);
-    match channel.client().list_tools() {
+    //
+    // DR-96: which surface that is depends on the adapter.  A Bevy round's tool
+    // surface is a compile-time constant (31 frozen names) that is served by the
+    // game process on 15702, so the check asks the adapter which names exist and
+    // reports the endpoint the game will answer on — requiring a *running* game
+    // here would make the pre-flight check depend on a process that starts later.
+    let surface_endpoint = bridge::tool_surface_endpoint(config);
+    match bridge::tool_surface_names(config) {
         Ok(tools) if !tools.is_empty() => items.push(DoctorItem {
             name: "tools.mcp".to_string(),
             ok: true,
-            detail: format!(
-                "{} tools available at {}",
-                tools.len(),
-                config.tools.endpoint
-            ),
+            detail: format!("{} tools available at {}", tools.len(), surface_endpoint),
         }),
         Ok(_) => items.push(DoctorItem {
             name: "tools.mcp".to_string(),
             ok: false,
-            detail: format!("{} exposed no tools", config.tools.endpoint),
+            detail: format!("{surface_endpoint} exposed no tools"),
         }),
         Err(error) => items.push(DoctorItem {
             name: "tools.mcp".to_string(),
@@ -502,14 +502,65 @@ fn build_adapter(config: &HohConfig) -> anyhow::Result<Box<dyn ProjectAdapter>> 
     build_adapter_kind(&config.adapter.kind, config, false)
 }
 
+/// The adapter registry.  `round` is the round name the Bevy adapter's evidence
+/// directory carries; the offline test adapter has no round and ignores it.
 fn build_adapter_kind(
     kind: &str,
-    _config: &HohConfig,
+    config: &HohConfig,
+    force_init: bool,
+) -> anyhow::Result<Box<dyn ProjectAdapter>> {
+    build_adapter_kind_with_round(kind, config, force_init, None)
+}
+
+fn build_adapter_kind_with_round(
+    kind: &str,
+    config: &HohConfig,
     _force_init: bool,
+    round: Option<&str>,
 ) -> anyhow::Result<Box<dyn ProjectAdapter>> {
     match kind {
-        "test" => Ok(Box::new(TestAdapter::new())),
-        other => Err(HofError::Config(format!("unknown adapter `{other}` (expected test)")).into()),
+        crate::adapter::ADAPTER_KIND_TEST => Ok(Box::new(TestAdapter::new())),
+        crate::adapter::ADAPTER_KIND_BEVY => {
+            let workspace = config.runtime.workspace.clone();
+            let adapter = crate::adapter::bevy::BevyAdapter::at(workspace.clone()).with_config(
+                crate::adapter::bevy::BevyAdapterConfig {
+                    // DESIGN-DETAIL §5: the lockfile pin the scaffold ships, and a
+                    // shared persistent target directory **outside** the workspace.
+                    build_policy: crate::adapter::bevy::project::round_build_policy(&workspace),
+                    launch: crate::adapter::bevy::launch::LaunchConfig::default(),
+                    round: round
+                        .map(ToOwned::to_owned)
+                        .unwrap_or_else(|| "bevy-init".to_string()),
+                    // Only a round writes evidence: `hoh init`/`hoh doctor` are
+                    // not rounds and must not create a `runs/` directory.
+                    write_evidence: round.is_some(),
+                    evidence_root: crate::adapter::bevy::project::evidence_root_of(
+                        &config.runtime.runs_dir,
+                    ),
+                },
+            );
+            Ok(Box::new(adapter))
+        }
+        other => Err(HofError::Config(if other == crate::adapter::ADAPTER_KIND_MCP {
+            format!(
+                "`{other}` selects the editor-mediated MCP **tool channel**, not a project adapter: \
+                 the adapter that drove it was removed with the Godot engine, so `hoh run --adapter \
+                 {other}` has nothing to build. Use `{}` (a real round) or `{}` (the offline suite \
+                 double).",
+                crate::adapter::ADAPTER_KIND_BEVY,
+                crate::adapter::ADAPTER_KIND_TEST
+            )
+        } else {
+            format!(
+                "unknown adapter `{other}` (expected {})",
+                [
+                    crate::adapter::ADAPTER_KIND_BEVY,
+                    crate::adapter::ADAPTER_KIND_TEST
+                ]
+                .join(" or ")
+            )
+        })
+        .into()),
     }
 }
 
@@ -532,6 +583,19 @@ pub async fn run(args: RunArgs) -> anyhow::Result<i32> {
         specs.push(format!("runtime.workspace={}", project.display()));
     }
     let config = load_config(&specs)?;
+    // DR-96: the roles run in the **project** directory, which a real round
+    // places outside the repository, so the relative `config/hoh.yaml` cannot
+    // resolve there and every `hoh tools call` from a role would fail before it
+    // reached the tool surface.  Export the absolute path the run loaded; the
+    // role shells inherit this process's environment.
+    if std::env::var(crate::config::CONFIG_FILE_ENV)
+        .map(|value| value.trim().is_empty())
+        .unwrap_or(true)
+    {
+        if let Ok(absolute) = std::path::Path::new(&specs[0]).canonicalize() {
+            std::env::set_var(crate::config::CONFIG_FILE_ENV, absolute);
+        }
+    }
     // DR-16: resolve the secret and put it into the HoH process environment
     // **before** any agent exists.  mini's `resolve_api_key` then picks it up
     // through its own fallback, so the key never enters the model JSON nor a
@@ -539,12 +603,17 @@ pub async fn run(args: RunArgs) -> anyhow::Result<i32> {
     // trajectory).
     let _ = crate::config::export_model_api_key(&config);
     let ablation = parse_ablation(&args.ablate)?;
-    let adapter = build_adapter_kind(&args.adapter, &config, args.force_init)?;
     let workspace = config.runtime.workspace.clone();
 
     let spec = load_spec(&config.runtime.spec)?;
     let run_id = args.run_id.clone().unwrap_or_else(default_run_id);
     let run_dir = config.runtime.runs_dir.join(&run_id);
+    // DR-96: the adapter is built **after** the run id is known, because a Bevy
+    // round's evidence directory is named after it (`runs/bevy-<run-id>/`), and
+    // an adapter that learns its own round name later would have to be mutated
+    // behind the trait object the runtime holds.
+    let adapter =
+        build_adapter_kind_with_round(&args.adapter, &config, args.force_init, Some(&run_id))?;
     if args.fresh_workspace && args.reset_workspace {
         return Err(HofError::Config(
             "--fresh-workspace and --reset-workspace are mutually exclusive".to_string(),
@@ -602,10 +671,13 @@ pub async fn run(args: RunArgs) -> anyhow::Result<i32> {
     };
 
     let harness = crate::harness::MiniHarness::new();
-    let tools: Arc<dyn ToolChannel> = if args.adapter == "test" {
+    // DR-96: the channel follows the adapter.  The offline test adapter has no
+    // engine at all (shell only); a Bevy round talks BRP through this crate's own
+    // tool surface; anything else is the editor-mediated MCP channel.
+    let tools: Arc<dyn ToolChannel> = if args.adapter == crate::adapter::ADAPTER_KIND_TEST {
         Arc::new(crate::tools::ShellOnlyChannel)
     } else {
-        Arc::new(bridge::channel_for(&config))
+        Arc::from(bridge::channel_for_config(&config))
     };
     // DR-73 ③(b): hand the round directory to the **process exit** record before
     // any role runs, so the third reading (the code the process really returns)
