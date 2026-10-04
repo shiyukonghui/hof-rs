@@ -64,6 +64,14 @@ pub struct RunArgs {
     pub reset_workspace: bool,
     #[arg(long)]
     pub resume: bool,
+    /// Round-2 repair (credential batch): read the model secret from this file.
+    ///
+    /// The path must be **outside the repository**: a credential in the tree is
+    /// readable by every role and every archive of the tree, which is exactly how
+    /// `config/model.secret.env` leaked a live key.  A path inside the repository
+    /// is refused before anything is read.
+    #[arg(long)]
+    pub env_from_secret: Option<PathBuf>,
 }
 
 #[derive(clap::Args, Debug, Clone)]
@@ -74,6 +82,10 @@ pub struct DoctorArgs {
     pub adapter: String,
     #[arg(short = 'c', long = "config")]
     pub config_spec: Vec<String>,
+    /// Round-2 repair (credential batch): read the model secret from this file,
+    /// which must be outside the repository (see `RunArgs::env_from_secret`).
+    #[arg(long)]
+    pub env_from_secret: Option<PathBuf>,
 }
 
 /// DR-40: prepare `A₀` **without** the editor or the model.

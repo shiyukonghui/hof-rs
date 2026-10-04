@@ -97,18 +97,37 @@ impl Harness for MiniHarness {
         // fail-fast guards.  It sits **outside** the cap so a directive's output
         // is produced by the harness itself and a repeated failing action aborts
         // the call with our own status instead of the external agent's string.
-        let environment = crate::harness::guard::WriteGuardEnvironment::with_artifact_kind(
+        //
+        // Round-2 repair (cost batch): the guard is constructed with the
+        // repeated-**success** tripwire and with the step budget, so the budget
+        // this call may really use is the one that responds to progress.
+        let environment = crate::harness::guard::WriteGuardEnvironment::with_limits(
             Box::new(environment),
             inv.cwd.clone(),
             inv.limits.max_action_failures as u32,
             inv.limits.artifact_write_budget_seconds,
             crate::harness::guard::ArtifactKind::for_role(inv.role),
+            inv.limits.max_repeated_actions,
+            inv.limits.step_limit,
+            inv.limits.wrap_up_steps,
+            inv.limits.steps_per_artifact,
+        );
+        let effective_step_limit = environment.effective_step_budget();
+        // The prompt's numbers must be the numbers the call is held to: a role
+        // that has written nothing is told its real (gated) budget, not the flat
+        // 150 it cannot spend.  The system prompt was already rendered by the
+        // caller, so this is a **narrow numeric substitution** — re-rendering the
+        // whole template here would apply the shell-variable pass a second time.
+        let system_prompt = crate::harness::guard::state_the_effective_budget(
+            &inv.system_prompt,
+            effective_step_limit,
+            inv.limits.wrap_up_steps,
         );
 
         let config = AgentConfig {
             system_template: "{{hoh_system_prompt}}".to_string(),
             instance_template: "{{task}}".to_string(),
-            step_limit: inv.limits.step_limit,
+            step_limit: effective_step_limit,
             cost_limit: inv.limits.cost_limit,
             wall_time_limit_seconds: inv.limits.wall_time_limit_seconds,
             max_consecutive_format_errors: inv.limits.max_consecutive_format_errors,
@@ -132,7 +151,7 @@ impl Harness for MiniHarness {
             Some(context) => format!("{}\n\n---\n\n{}", inv.task_prompt, context),
             None => inv.task_prompt.clone(),
         };
-        let kwargs = serde_json::json!({ "hoh_system_prompt": inv.system_prompt });
+        let kwargs = serde_json::json!({ "hoh_system_prompt": system_prompt });
 
         let started = Instant::now();
         let result = agent.run(&task_text, Some(kwargs)).await;

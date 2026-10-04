@@ -69,7 +69,11 @@ fn main() {
     app.init_resource::<contract::CoinCounter>()
         .init_resource::<contract::WinFlag>()
         .init_resource::<contract::FrameCounter>()
-        .init_resource::<contract::InputIntent>();
+        .init_resource::<contract::InputIntent>()
+        // Round-2 repair: the launch nonce is *this process's own* value, so it
+        // is inserted rather than defaulted — `init_resource` would install the
+        // empty default and every readiness check would fail.
+        .insert_resource(contract::ProcessNonce::from_env());
     contract::register(&mut app);
     game::add(&mut app);
 

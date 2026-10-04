@@ -34,7 +34,7 @@ use hof_rs::adapter::mcp::semantic::{semantic_tool_names, SEMANTIC_TOOL_SPECS};
 fn the_frozen_contract_hash_and_crate_name_are_pinned() {
     assert_eq!(contract_sha256(), CONTRACT_SHA256, "the contract drifted");
     assert_eq!(CONTRACT_SHA256.len(), 64);
-    assert_eq!(CONTRACT.len(), 7, "seven surfaces since D297 (b)");
+    assert_eq!(CONTRACT.len(), 8, "eight surfaces since the round-2 repair added the process nonce (D297 (b) added the frame counter before it)");
     assert_eq!(GAME_CRATE, "hof_game");
     assert!(contract_value().is_array());
     let paths: Vec<String> = CONTRACT.iter().map(|e| e.type_path.to_string()).collect();

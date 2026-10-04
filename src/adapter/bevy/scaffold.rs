@@ -119,6 +119,7 @@ mod tests {
         check_declared_contract_paths, check_game_crate_name, CONTRACT,
     };
     use crate::adapter::bevy::launch::HEADLESS_ENV;
+    use crate::adapter::bevy::launch::PROCESS_NONCE_ENV;
 
     #[test]
     fn the_scaffold_declares_every_frozen_contract_path() {
@@ -172,6 +173,38 @@ mod tests {
                 .unwrap()
                 .contains(&format!("\"{HEADLESS_ENV}\"")),
             "the game must read `{HEADLESS_ENV}`, the variable the launcher sets"
+        );
+    }
+
+    #[test]
+    fn the_scaffold_publishes_the_launchers_per_launch_nonce() {
+        // Two string literals in two crates: the launcher sets the variable and
+        // the game reads it, so a pin is the only thing that keeps them together.
+        // Without this surface, readiness can only prove reachability, which is
+        // the round-2 defect.
+        let contract = contents("src/contract.rs").expect("a contract module");
+        assert!(
+            contract.contains(&format!("\"{PROCESS_NONCE_ENV}\"")),
+            "the game must read `{PROCESS_NONCE_ENV}`, the variable the launcher sets"
+        );
+        assert!(
+            contract.contains("pub struct ProcessNonce"),
+            "the nonce must be a declared resource"
+        );
+        let main = contents("src/main.rs").expect("a main");
+        assert!(
+            main.contains("ProcessNonce::from_env()"),
+            "main must install this process's own nonce, not the empty default: {main}"
+        );
+        // The contract's own pin still names the surface it must publish.
+        let frozen = CONTRACT
+            .iter()
+            .find(|entry| entry.surface == "process_nonce")
+            .expect("the process nonce is a frozen surface");
+        assert!(
+            frozen.type_path.ends_with("::ProcessNonce"),
+            "{}",
+            frozen.type_path
         );
     }
 

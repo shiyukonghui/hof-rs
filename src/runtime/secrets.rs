@@ -143,6 +143,246 @@ pub fn blocked_env() -> BTreeMap<String, String> {
         .collect()
 }
 
+/// The credential prefixes the shape test recognises, each needing at least
+/// [`KEY_BODY_MINIMUM`] token characters after it.
+pub const KEY_PREFIXES: &[&str] = &[
+    "sk-", "sk_", "pk-", "pk_", "ghp_", "gho_", "xoxb-", "xoxp-", "AKIA", "AIza",
+];
+
+/// The shortest body a prefixed value needs to be key-shaped.
+pub const KEY_BODY_MINIMUM: usize = 16;
+
+/// The assignment names the shape test recognises, each needing a value of at
+/// least [`KEY_VALUE_MINIMUM`] token characters.
+pub const KEY_ASSIGNMENT_NAMES: &[&str] = &[
+    "api_key",
+    "apikey",
+    "api-key",
+    "secret",
+    "access_token",
+    "auth_token",
+    "password",
+];
+
+/// The shortest value an assignment needs to be key-shaped.
+pub const KEY_VALUE_MINIMUM: usize = 32;
+
+/// Round-2 repair (credential batch): every **token** in a piece of text that is
+/// key-shaped by prefix.
+///
+/// It is byte-oriented and returns exact tokens, so a caller can fingerprint a
+/// value without ever reconstructing or printing it.
+///
+/// The prefix must start a token, and a token character is `[A-Za-z0-9_]`: a
+/// **hyphen before the prefix is a boundary**, so `async-task-…` is not a
+/// credential.  That distinction is measured, not stylistic — the recorded
+/// trajectories are full of `async-task-…` and `futures-task-…` (Rust crate
+/// names), and the earlier form of this rule reported them as keys.
+pub fn key_shaped_tokens(text: &str) -> std::collections::BTreeSet<String> {
+    let bytes = text.as_bytes();
+    let mut found = std::collections::BTreeSet::new();
+    for prefix in KEY_PREFIXES {
+        let mut from = 0usize;
+        while let Some(position) = text[from..].find(prefix) {
+            let start = from + position;
+            let starts_a_token = start == 0 || !is_token_character(bytes[start - 1]);
+            let body_start = start + prefix.len();
+            let body: usize = bytes[body_start..]
+                .iter()
+                .take_while(|byte| is_token_byte(**byte))
+                .count();
+            if starts_a_token && body >= KEY_BODY_MINIMUM {
+                found.insert(text[start..body_start + body].to_string());
+            }
+            from = start + prefix.len();
+        }
+    }
+    found
+}
+
+/// Is this byte allowed inside a credential token?
+const fn is_token_byte(byte: u8) -> bool {
+    byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_'
+}
+
+/// Is this byte a **name** character, i.e. one that would make a prefix part of
+/// a longer identifier?  A hyphen is deliberately not one: `async-task` is two
+/// words, and a key never begins mid-name.
+const fn is_token_character(byte: u8) -> bool {
+    byte.is_ascii_alphanumeric() || byte == b'_'
+}
+
+/// Round-2 repair (credential batch): is this text **key-shaped**?
+///
+/// The definition is deliberately narrow and structural, because a scan that
+/// fires on ordinary words is a scan everyone learns to ignore:
+///
+/// * a vendor-style prefix (`sk-`, `sk_`, `pk-`, `ghp_`, `xoxb-`) followed by at
+///   least [`KEY_BODY_MINIMUM`] token characters; or
+/// * an assignment (`api_key`, `apikey`, `secret`, `token`, …) whose value is at
+///   least [`KEY_VALUE_MINIMUM`] token characters long.
+///
+/// It is a *shape* test, so it cannot tell a live credential from a placeholder
+/// that happens to be shaped like one — which is why the repository's own
+/// placeholders are short (`test-key-not-a-secret`) and why a finding must be
+/// reported with its path rather than silently deleted.
+pub fn looks_key_shaped(text: &str) -> bool {
+    if !key_shaped_tokens(text).is_empty() {
+        return true;
+    }
+    // The assignment shape.  The value must be a single long token, so a sentence
+    // that merely contains the word "token" is not a finding.
+    let lowered = text.to_ascii_lowercase();
+    for name in KEY_ASSIGNMENT_NAMES {
+        let mut from = 0usize;
+        while let Some(position) = lowered[from..].find(name) {
+            let start = from + position;
+            let rest = &text[start + name.len()..];
+            let rest = rest.trim_start();
+            let rest = rest.strip_prefix('"').unwrap_or(rest);
+            let rest = rest.strip_prefix('\'').unwrap_or(rest);
+            let rest = rest.trim_start();
+            let Some(rest) = rest.strip_prefix([':', '=']) else {
+                from = start + name.len();
+                continue;
+            };
+            let rest = rest.trim_start();
+            let rest = rest.strip_prefix('"').unwrap_or(rest);
+            let rest = rest.strip_prefix('\'').unwrap_or(rest);
+            let value: usize = rest
+                .as_bytes()
+                .iter()
+                .take_while(|byte| byte.is_ascii_alphanumeric() || **byte == b'-' || **byte == b'_')
+                .count();
+            if value >= KEY_VALUE_MINIMUM {
+                return true;
+            }
+            from = start + name.len();
+        }
+    }
+    false
+}
+
+/// Round-2 repair (credential batch): read a secret from a file that must live
+/// **outside** the repository.
+///
+/// The batch's whole point: `config/model.secret.env` sat inside the tree for
+/// weeks and held a live key, and nothing in the harness refused a secret file
+/// inside the repository because nothing in the harness named secret files at
+/// all.  This is the named mechanism, and its refusal is the fix:
+///
+/// * a file inside the repository (or a path whose nearest existing ancestor is
+///   inside it) is refused with both paths named;
+/// * a file that does not exist is refused;
+/// * the value's *shape* is checked and a file holding no key-shaped line is
+///   refused, so a path typo cannot be mistaken for a loaded credential;
+/// * the value is returned and never logged.
+///
+/// The `KEY=VALUE` lines are read for every name in [`SECRET_ENV_VARS`]; a bare
+/// value is accepted for convenience, and the first key-shaped value wins.
+pub fn read_secret_file(path: &Path, repository_root: &Path) -> Result<(String, String), String> {
+    ensure_secret_file_is_outside(path, repository_root)?;
+    let text = std::fs::read_to_string(path)
+        .map_err(|error| format!("`{}` could not be read: {error}", path.display()))?;
+    let mut bare: Option<String> = None;
+    for line in text.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        if let Some((name, value)) = line.split_once('=') {
+            let name = name.trim();
+            let value = value.trim().trim_matches('"').trim_matches('\'');
+            if !SECRET_ENV_VARS.contains(&name) {
+                continue;
+            }
+            if looks_key_shaped(value) {
+                return Ok((name.to_string(), value.to_string()));
+            }
+            if bare.is_none() && !value.is_empty() {
+                bare = Some(value.to_string());
+            }
+            continue;
+        }
+        if bare.is_none() && !line.is_empty() {
+            bare = Some(line.to_string());
+        }
+    }
+    match bare {
+        Some(value) if looks_key_shaped(&value) => Ok(("HOH_MODEL_API_KEY".to_string(), value)),
+        _ => Err(format!(
+            "`{}` holds no key-shaped `KEY=VALUE` line for any of [{}], so it is not a secret file: \
+             a path typo must not be mistaken for a loaded credential",
+            path.display(),
+            SECRET_ENV_VARS.join(", ")
+        )),
+    }
+}
+
+/// The refusal half of [`read_secret_file`], usable on its own.
+///
+/// The comparison uses the path's nearest **existing** ancestor, because a
+/// secret file need not exist yet when the rule is checked and a lexical
+/// comparison of a relative path against an absolute root would be a lie.
+pub fn ensure_secret_file_is_outside(path: &Path, repository_root: &Path) -> Result<(), String> {
+    let root = canonical_or_absolute(repository_root);
+    let resolved = canonical_or_absolute(path);
+    if resolved.starts_with(&root) {
+        return Err(format!(
+            "a secret file may not live inside the repository: `{}` is inside `{}` — a credential \
+             in the tree is readable by every role and every archive of the tree, which is how \
+             `config/model.secret.env` leaked; move it outside the repository (for example beside \
+             it) and pass that path",
+            resolved.display(),
+            root.display()
+        ));
+    }
+    if root.starts_with(&resolved) {
+        return Err(format!(
+            "a secret file may not be a parent of the repository: `{}` contains `{}`",
+            resolved.display(),
+            root.display()
+        ));
+    }
+    Ok(())
+}
+
+/// `canonicalize` when the path exists, and otherwise the canonical form of its
+/// nearest existing ancestor joined with the remaining components.  A relative
+/// path is made absolute against the process's working directory first.
+fn canonical_or_absolute(path: &Path) -> PathBuf {
+    let absolute = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .join(path)
+    };
+    if let Ok(canonical) = std::fs::canonicalize(&absolute) {
+        return canonical;
+    }
+    let mut ancestor = absolute.clone();
+    let mut tail: Vec<std::ffi::OsString> = Vec::new();
+    while let Some(parent) = ancestor.parent() {
+        match std::fs::canonicalize(&ancestor) {
+            Ok(canonical) => {
+                let mut joined = canonical;
+                for component in tail.iter().rev() {
+                    joined.push(component);
+                }
+                return joined;
+            }
+            Err(_) => {
+                if let Some(name) = ancestor.file_name() {
+                    tail.push(name.to_os_string());
+                }
+                ancestor = parent.to_path_buf();
+            }
+        }
+    }
+    absolute
+}
+
 /// The secret values this process knows about: the resolved configuration key
 /// plus any value currently present in a known variable.
 ///

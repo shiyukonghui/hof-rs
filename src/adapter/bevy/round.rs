@@ -482,8 +482,13 @@ pub fn run(adapter: &mut BevyAdapter, workspace: &Path) -> RoundReport {
     let pid = game.pid;
     let headless = game.headless;
     let endpoint = adapter.endpoint().to_string();
-    // Which artifact produced these observations: the game binary's own digest.
+    // Which artifact produced these observations: the game binary's own digest —
+    // and, since the round-2 repair, **which process actually answered**, which
+    // is what `start` proved before it returned.  A `launch.json` that names
+    // only the pid it hoped for is what let round 2 attribute two batteries to
+    // the A0 scaffold without any file saying so.
     let binary = adapter.built_binary_identity();
+    let launch_facts = adapter.last_launch().cloned();
     let mut launch_json = json!({
         "headless": headless,
         "endpoint": endpoint,
@@ -491,6 +496,29 @@ pub fn run(adapter: &mut BevyAdapter, workspace: &Path) -> RoundReport {
         "ready_millis": ready_millis,
         "binary": binary,
     });
+    // The authority witness: the process that answered, the nonce that proves
+    // it, and the pids the ledger sweep reaped before the launch.
+    if let Some(facts) = launch_facts.as_ref() {
+        launch_json["identity"] = json!({
+            "scheme": "per-launch nonce published by the game as the contract's \
+                       `ProcessNonce` resource and read back over BRP",
+            "spawned_pid": facts.spawned_pid,
+            "nonce": facts.nonce,
+            "launch_image": facts.launch_image,
+            "built_binary": facts.built_binary,
+            "listening_pid": facts.listening_pid,
+            "reaped_pids": facts.reaped_pids,
+            "ledger": facts.ledger,
+            "answering_pid": facts.spawned_pid,
+            "verified": true,
+        });
+    } else {
+        launch_json["identity"] = json!({
+            "verified": false,
+            "reason": "the launch produced no identity facts, so no observation through this \
+                       endpoint can be attributed to a process",
+        });
+    }
 
     // ---- the observations --------------------------------------------------
     let battery_started = Instant::now();
@@ -503,10 +531,16 @@ pub fn run(adapter: &mut BevyAdapter, workspace: &Path) -> RoundReport {
 
     // ---- the stop ----------------------------------------------------------
     let stop = adapter.stop(game).ok();
+    // Round-2 repair: "we asked it to stop" is not "it stopped".  A live game
+    // that outlives this pass is the stale listener the *next* pass would
+    // observe, so the death is verified here and a survivor is killed and, if it
+    // still refuses to die, named in the record.
     launch_json["stop"] = match &stop {
         Some(report) => json!({
             "exit_code": report.exit_code,
             "stderr_tail": report.stderr_tail,
+            "pid_dead": verified_dead(pid, STOP_DEATH_GRACE),
+            "grace_millis": STOP_DEATH_GRACE.as_millis() as u64,
         }),
         None => json!({"error": "the game process could not be stopped"}),
     };
@@ -614,6 +648,7 @@ fn write_round_evidence(
         "pid": facts.launch.get("pid").cloned().unwrap_or(Value::Null),
         "ready_millis": facts.ready_millis,
         "binary": facts.launch.get("binary").cloned().unwrap_or(Value::Null),
+        "identity": facts.launch.get("identity").cloned().unwrap_or(Value::Null),
         "stop": facts.launch.get("stop").cloned().unwrap_or(Value::Null),
     });
     evidence.gate = serde_json::to_value(gate).ok();
@@ -728,6 +763,27 @@ pub const FOREIGN_PROCESS_STDERR: &str =
 
 /// The default timeout for the MCP server a round talks through.
 pub const SESSION_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// Round-2 repair: how long a stopped game is given to actually die before it is
+/// killed, and then before the death is declared unverified.
+pub const STOP_DEATH_GRACE: Duration = Duration::from_secs(5);
+
+/// Round-2 repair: verify that a stopped process is really gone, killing it and
+/// re-verifying when it is not.
+///
+/// It answers one question with evidence: **is the pid dead?**  `stop_process`
+/// already escalates to `kill`, but round 2 proved that a stop can be reported
+/// while a game keeps answering the endpoint — three `hof_game.exe` processes
+/// were alive after the round exited 0.  A survivor is therefore killed by pid
+/// and, when it still survives, the answer is `false` with the reason, which is
+/// what the round records.
+pub fn verified_dead(pid: u32, grace: Duration) -> bool {
+    if crate::adapter::bevy::launch::wait_for_pid_death(pid, grace) {
+        return true;
+    }
+    let _ = crate::adapter::bevy::launch::kill_pid_and_verify(pid, grace);
+    crate::adapter::bevy::launch::wait_for_pid_death(pid, grace)
+}
 
 /// The workspace-side evidence: `.hoh/deterministic/**`.
 ///

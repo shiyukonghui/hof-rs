@@ -6,7 +6,7 @@
 //! change, not a refactor.  Each type is declared once and registered with
 //! [`register`], which `main` calls before the app runs.
 //!
-//! The seven surfaces:
+//! The eight surfaces:
 //!
 //! | surface | type | reflection |
 //! |---|---|---|
@@ -17,6 +17,7 @@
 //! | win flag | `WinFlag` | `Resource` |
 //! | game frame counter | `FrameCounter` | `Resource` |
 //! | input intent | `InputIntent` | `Resource` |
+//! | process nonce | `ProcessNonce` | `Resource` |
 //!
 //! `Transform` is Bevy's own and is registered by the engine, so it is not
 //! declared here — the adapter adds it to the contract on that basis.
@@ -27,6 +28,15 @@ use bevy::prelude::*;
 /// (`PRD.md` §3-C1).  The launcher sets it; a round is **always** headless
 /// (SPIKE-2 measured 4.0 FPS windowed, which is too slow to see a jump arc).
 pub const HEADLESS_ENV: &str = "HOF_GAME_HEADLESS";
+
+/// The per-launch nonce's environment variable, set by the launcher.
+///
+/// Readiness has to prove **which** process answered, not merely that something
+/// answers: two games can both bind 15702 (Windows `SO_REUSEADDR`), and a stale
+/// one answering is how round 2's battery measured the wrong artifact.  The
+/// launcher generates one nonce per launch, puts it here, and the value below is
+/// what it reads back off the wire.
+pub const PROCESS_NONCE_ENV: &str = "HOF_GAME_PROCESS_NONCE";
 
 /// Locates the player entity.  `world.query` filters on this path.
 #[derive(Component, Reflect, Debug, Default)]
@@ -94,6 +104,30 @@ pub struct InputIntent {
     pub jump_pressed: bool,
 }
 
+/// This process's launch nonce (round-2 repair).
+///
+/// The launcher generates one per launch and passes it in
+/// [`PROCESS_NONCE_ENV`]; the value is published here so a reader can prove that
+/// the process answering the endpoint is the one that launch started.  It is
+/// deliberately **read-only state**: the game never derives behaviour from it,
+/// and it must survive a role editing the game, because the observation path
+/// depends on it.
+#[derive(Resource, Reflect, Debug, Clone, Default)]
+#[reflect(Resource)]
+pub struct ProcessNonce {
+    pub value: String,
+}
+
+impl ProcessNonce {
+    /// The nonce this process was launched with, or the empty string when the
+    /// game was started by hand (`cargo run`), which is not a round's launch.
+    pub fn from_env() -> Self {
+        Self {
+            value: std::env::var(PROCESS_NONCE_ENV).unwrap_or_default(),
+        }
+    }
+}
+
 /// Register every game-declared surface.  The adapter's contract check reads the
 /// `register_type::<…>` declarations out of this crate's source, so this
 /// function is what makes the check pass.
@@ -103,5 +137,6 @@ pub fn register(app: &mut App) {
         .register_type::<CoinCounter>()
         .register_type::<WinFlag>()
         .register_type::<FrameCounter>()
-        .register_type::<InputIntent>();
+        .register_type::<InputIntent>()
+        .register_type::<ProcessNonce>();
 }

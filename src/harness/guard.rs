@@ -48,6 +48,12 @@ use crate::harness::directive::{self, Directive};
 pub const FAIL_FAST_MARKER: &str = "HOH_FAIL_FAST";
 
 /// The same action failed `agent.max_action_failures` times.
+///
+/// Round-2 repair (cost batch): the same first-class status also covers the
+/// **successful** grind — the same action succeeding with the same result
+/// `agent.max_repeated_actions` times.  Both say one thing the runtime must act
+/// on: this action is not making progress.  The `FailFast` variant carries which
+/// of the two it was, so the abort message is exact.
 pub const REPEATED_ACTION_STATUS: &str = "RepeatedActionError";
 /// The role did not write its declared artifact inside
 /// `agent.artifact_write_budget_seconds`.
@@ -75,6 +81,21 @@ pub enum FailFast {
         command: String,
         failures: u32,
     },
+    /// Round-2 repair (cost batch): the same action kept **succeeding** in one
+    /// call.  Round 2's Developer ended iteration 1 with about seventy calls of
+    /// one verification loop, every one of them `returncode 0`; the per-action
+    /// counter could not see it because it only counted failures, and a
+    /// *consecutive* counter could not see it either because the loop spelled
+    /// itself with several filters.  The count is therefore the action's total
+    /// successes in the call.
+    RepeatedSuccess {
+        command: String,
+        /// How many times this action succeeded **in this call**.
+        repeats: u32,
+        /// A short fingerprint of the last result, so the abort message says
+        /// *what* came back without replaying it.
+        output_digest: String,
+    },
     ArtifactBudget {
         elapsed_seconds: u64,
         budget_seconds: u64,
@@ -85,7 +106,12 @@ impl FailFast {
     /// The first-class exit status the runtime records for this abort.
     pub fn status(&self) -> &'static str {
         match self {
-            FailFast::RepeatedAction { .. } => REPEATED_ACTION_STATUS,
+            // Both repeat shapes are one status: the runtime acts on them
+            // identically, and a second status would be a second thing every
+            // consumer had to learn.
+            FailFast::RepeatedAction { .. } | FailFast::RepeatedSuccess { .. } => {
+                REPEATED_ACTION_STATUS
+            }
             FailFast::ArtifactBudget { .. } => ARTIFACT_BUDGET_STATUS,
         }
     }
@@ -100,6 +126,18 @@ impl FailFast {
                  time(s) (`agent.max_action_failures`); the action is:\n{}\nStop repeating it. If \
                  you cannot make it succeed, write the artifact you already have and end the call \
                  with the completion protocol.",
+                brief(command)
+            ),
+            FailFast::RepeatedSuccess {
+                command,
+                repeats,
+                output_digest,
+            } => format!(
+                "{FAIL_FAST_MARKER} {REPEATED_ACTION_STATUS}: the same action succeeded {repeats} \
+                 times in this call (last output {output_digest}) \
+                 (`agent.max_repeated_actions`); the action is:\n{}\nIt is not making progress: \
+                 choose a different action, or write the artifact you have and end the call with \
+                 the completion protocol.",
                 brief(command)
             ),
             FailFast::ArtifactBudget {
@@ -148,11 +186,130 @@ struct GuardState {
     /// Failures per action signature.  A success of the *same* signature clears
     /// it; nothing else does, which is the difference from "consecutive".
     failures: BTreeMap<String, u32>,
+    /// Round-2 repair (cost batch): how many times each action has **succeeded**
+    /// in this call.  Unlike [`GuardState::failures`], this counter is never
+    /// cleared by another action: an action that runs four times early and four
+    /// times late is still eight runs of the same action, which is exactly the
+    /// shape round 2's verification loop had (about seventy calls of one loop,
+    /// spelled with several filters so that no *consecutive* counter saw it).
+    successes: BTreeMap<String, u32>,
     /// The first successful write of a **project** file (not `.hoh/**`, not a
     /// cache) — the artifact the budget is about.
     artifact_written: bool,
     /// A successful write of any file, for the record.
     writes: u64,
+}
+
+impl GuardState {
+    fn new() -> Self {
+        Self {
+            failures: BTreeMap::new(),
+            successes: BTreeMap::new(),
+            artifact_written: false,
+            writes: 0,
+        }
+    }
+}
+
+/// A short, stable fingerprint of a tool result, so "the same result again" is a
+/// value rather than a comparison of unbounded text.
+fn output_digest(output: &str) -> String {
+    let bytes = output.as_bytes();
+    format!(
+        "{} ({} byte(s))",
+        &crate::runtime::policy::sha256_hex(bytes)[..12],
+        bytes.len()
+    )
+}
+
+/// Round-2 repair (cost batch): state the **effective** step budget in an
+/// already-rendered system prompt.
+///
+/// The prompt is rendered by the caller (`runtime::invoke`), and re-rendering it
+/// here would apply the shell-variable pass a second time — a rendered prompt
+/// contains `%HOH_…%` text that a second pass would re-expand.  So this appends
+/// one `[budget]` line stating the number the call is really held to and the
+/// rule that produced it, and does nothing at all to a prompt that states no
+/// budget.  A role whose budget is **gated** is told why, because a budget the
+/// model cannot explain is a budget it will blame on the environment; the line
+/// names the flat limit's gate and when it lifts.
+pub fn state_the_effective_budget(
+    prompt: &str,
+    effective_step_limit: u64,
+    wrap_up_steps: u64,
+) -> String {
+    if !states_a_budget(prompt) {
+        return prompt.to_string();
+    }
+    let note = format!(
+        "\n\n[budget] This call's step budget is {effective_step_limit}. The flat limit is \
+         shortened until the call writes the artifact it declares, so a call that produces nothing \
+         cannot spend the whole budget; the first successful project write removes the gate. The \
+         wrap-up discipline begins {wrap_up_steps} steps before the limit.\n"
+    );
+    format!("{prompt}{note}")
+}
+
+/// Round-2 repair (cost batch): does this rendered prompt state a step budget?
+///
+/// The `[budget]` note is only appended to a prompt that talks about a budget,
+/// so a prompt for a role that has none cannot grow a number it does not use.
+pub fn states_a_budget(prompt: &str) -> bool {
+    prompt.contains("step budget")
+}
+
+/// Round-2 repair (cost batch): the key a recorded command is counted under.
+///
+/// It exists so the recorded round-2 trajectories can be **measured** against the
+/// live tripwire instead of the tripwire being asserted to work: the test that
+/// projects what the abort would have saved must use the same identity the guard
+/// uses.  The normalisation folds away spellings that do not change the action —
+/// an absolute `cd /d … &&` prefix, a trailing `& echo NAME=%ERRORLEVEL%`
+/// marker, a `| more`/`| findstr …` filter, and runs of whitespace — while
+/// keeping everything that does (a different flag, a different path, a different
+/// subcommand).
+///
+/// It is deliberately conservative: folding too little only makes the tripwire
+/// quieter, while folding too much would abort work that was making progress.
+pub fn repeated_action_key(command: &str) -> String {
+    let mut text = command.trim().to_string();
+    // An absolute `cd /d <path> &&` prefix: the same command in the same
+    // directory, spelled two ways.
+    if let Some(rest) = strip_ci_prefix(&text, "cd /d ") {
+        if let Some(position) = rest.find("&&") {
+            text = rest[position + 2..].trim().to_string();
+        }
+    }
+    // A trailing exit-code marker (`& echo BUILD_EXIT=%ERRORLEVEL%`).
+    if let Some(position) = find_ci(&text, "& echo ") {
+        let tail = &text[position + "& echo ".len()..];
+        if tail.to_ascii_uppercase().contains("ERRORLEVEL") {
+            text = text[..position].trim().to_string();
+        }
+    }
+    // A trailing output filter (`| more`, `| findstr …`).
+    if let Some(position) = text.rfind('|') {
+        let tail = text[position + 1..].trim().to_ascii_lowercase();
+        if tail == "more" || tail.starts_with("findstr") {
+            text = text[..position].trim().to_string();
+        }
+    }
+    text.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// `strip_prefix`, case-insensitively (Rust has no such method).
+fn strip_ci_prefix<'a>(text: &'a str, prefix: &str) -> Option<&'a str> {
+    if text.len() >= prefix.len() && text[..prefix.len()].eq_ignore_ascii_case(prefix) {
+        Some(&text[prefix.len()..])
+    } else {
+        None
+    }
+}
+
+/// `find`, case-insensitively.
+fn find_ci(text: &str, needle: &str) -> Option<usize> {
+    let haystack = text.to_ascii_lowercase();
+    haystack.find(&needle.to_ascii_lowercase())
 }
 
 /// What counts as "the artifact this role declared" for the write budget.
@@ -186,6 +343,15 @@ pub struct WriteGuardEnvironment {
     inner: Box<dyn Environment>,
     cwd: PathBuf,
     max_action_failures: u32,
+    /// Round-2 repair (cost batch): how many successes of one action are
+    /// tolerated in a call before the call is aborted.  0 disables it.
+    max_repeated_actions: u32,
+    /// Round-2 repair (cost batch): the flat step budget, and the gates that
+    /// make it respond to progress.  See
+    /// [`crate::config::AgentLimits::effective_step_limit`].
+    step_limit: u64,
+    wrap_up_steps: u64,
+    steps_per_artifact: u64,
     artifact_budget: Option<Duration>,
     artifact_kind: ArtifactKind,
     started: Instant,
@@ -215,10 +381,43 @@ impl WriteGuardEnvironment {
         artifact_budget_seconds: u64,
         artifact_kind: ArtifactKind,
     ) -> Self {
+        // A construction that does not name the new limits keeps the old
+        // behaviour exactly: no repeated-success tripwire, no progress gate.
+        Self::with_limits(
+            inner,
+            cwd,
+            max_action_failures,
+            artifact_budget_seconds,
+            artifact_kind,
+            0,
+            0,
+            0,
+            0,
+        )
+    }
+
+    /// Round-2 repair (cost batch): the full construction, with the repeated-
+    /// success tripwire and the progress-responsive step budget.
+    #[allow(clippy::too_many_arguments)]
+    pub fn with_limits(
+        inner: Box<dyn Environment>,
+        cwd: PathBuf,
+        max_action_failures: u32,
+        artifact_budget_seconds: u64,
+        artifact_kind: ArtifactKind,
+        max_repeated_actions: u64,
+        step_limit: u64,
+        wrap_up_steps: u64,
+        steps_per_artifact: u64,
+    ) -> Self {
         Self {
             inner,
             cwd,
             max_action_failures,
+            max_repeated_actions: max_repeated_actions as u32,
+            step_limit,
+            wrap_up_steps,
+            steps_per_artifact,
             artifact_budget: if artifact_budget_seconds == 0 {
                 None
             } else {
@@ -226,12 +425,20 @@ impl WriteGuardEnvironment {
             },
             artifact_kind,
             started: Instant::now(),
-            state: Mutex::new(GuardState {
-                failures: BTreeMap::new(),
-                artifact_written: false,
-                writes: 0,
-            }),
+            state: Mutex::new(GuardState::new()),
         }
+    }
+
+    /// Round-2 repair (cost batch): the step budget this call may really use,
+    /// given whether it has written its artifact yet.
+    pub fn effective_step_budget(&self) -> u64 {
+        let limits = crate::config::AgentLimits {
+            step_limit: self.step_limit,
+            wrap_up_steps: self.wrap_up_steps,
+            steps_per_artifact: self.steps_per_artifact,
+            ..crate::config::AgentLimits::default()
+        };
+        limits.effective_step_limit(self.artifact_written())
     }
 
     /// Has this call made a project write yet?
@@ -247,10 +454,31 @@ impl WriteGuardEnvironment {
         self.state.lock().map(|state| state.writes).unwrap_or(0)
     }
 
-    fn record_success(&self, command: &str) -> Option<FailFast> {
+    fn record_success(&self, command: &str, output: &str) -> Option<FailFast> {
         let mut state = self.state.lock().ok()?;
         state.failures.remove(command);
-        None
+        if self.max_repeated_actions == 0 {
+            return None;
+        }
+        let digest = output_digest(output);
+        let key = repeated_action_key(command);
+        let count = {
+            let entry = state.successes.entry(key).or_insert(0u32);
+            *entry += 1;
+            *entry
+        };
+        if count < self.max_repeated_actions {
+            return None;
+        }
+        // One action may not run the whole call: the abort names the action, how
+        // many times it ran, and the last result, so the record says what the
+        // grind was.
+        state.successes.clear();
+        Some(FailFast::RepeatedSuccess {
+            command: command.to_string(),
+            repeats: count,
+            output_digest: digest,
+        })
     }
 
     fn record_failure(&self, command: &str) -> Option<FailFast> {
@@ -412,7 +640,12 @@ impl Environment for WriteGuardEnvironment {
 
         let output = self.inner.execute(action, cwd, timeout).await?;
         if output.returncode == 0 {
-            let _ = self.record_success(&action.command);
+            if let Some(fail_fast) = self.record_success(&action.command, &output.output) {
+                return Err(mini_swe_agent::AgentError::other(anyhow::anyhow!(
+                    "{}",
+                    fail_fast.message()
+                )));
+            }
         } else if let Some(fail_fast) = self.record_failure(&action.command) {
             return Err(mini_swe_agent::AgentError::other(anyhow::anyhow!(
                 "{}",
@@ -447,10 +680,11 @@ mod tests {
     use crate::harness::directive::render_write;
 
     /// A stand-in for the real shell: records the commands it was asked to run
-    /// and answers with a scripted return code.
+    /// and answers with a scripted return code and output.
     struct FakeShell {
         seen: std::sync::Arc<Mutex<Vec<String>>>,
         returncode: i32,
+        output: String,
     }
 
     impl FakeShell {
@@ -458,7 +692,16 @@ mod tests {
             Self {
                 seen: std::sync::Arc::new(Mutex::new(Vec::new())),
                 returncode,
+                output: "shell output".to_string(),
             }
+        }
+
+        /// The same shell, with a set output: a test can drive the output the
+        /// counter sees without changing the action.
+        #[allow(dead_code)]
+        fn with_output(mut self, output: &str) -> Self {
+            self.output = output.to_string();
+            self
         }
     }
 
@@ -474,7 +717,7 @@ mod tests {
                 .lock()
                 .expect("the fake shell")
                 .push(action.command.clone());
-            Ok(Output::success("shell output", self.returncode))
+            Ok(Output::success(self.output.clone(), self.returncode))
         }
         fn get_template_vars(&self) -> Value {
             Value::Null
@@ -523,6 +766,181 @@ mod tests {
             .build()
             .expect("a test runtime")
             .block_on(future)
+    }
+
+    /// Round-2 repair (cost batch): the grind shape round 2 measured is invisible
+    /// to every older counter — the Developer ended iteration 1 with ~70 calls of
+    /// one verification loop, and **every one of them succeeded**.
+    /// `max_action_failures` only counts failures and
+    /// `max_consecutive_format_errors` only format errors, so this is the
+    /// counter that sees it.
+    ///
+    /// The count is the action's total successes in the call, **not** a
+    /// consecutive run: round 2's loop spelled itself with several filters
+    /// (`| more`, `| findstr …`, `& echo …=%ERRORLEVEL%`), so a consecutive
+    /// counter would have seen runs of at most a few and never fired.  Other
+    /// actions in between do not reset it, and the test uses that: the abort
+    /// still fires when a different command is interleaved.
+    #[test]
+    fn the_same_successful_action_repeated_to_its_cap_aborts_the_call() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let shell = FakeShell::new(0);
+        let environment = WriteGuardEnvironment::with_limits(
+            Box::new(shell),
+            directory.path().to_path_buf(),
+            3,
+            0,
+            ArtifactKind::ProjectFile,
+            3,
+            150,
+            25,
+            8,
+        );
+        futures_lite_block_on(async {
+            for attempt in 1..=2 {
+                let output = environment
+                    .execute(&Action::new("cargo build --offline"), None, None)
+                    .await
+                    .unwrap_or_else(|error| panic!("attempt {attempt} must run: {error}"));
+                assert_eq!(output.returncode, 0);
+            }
+            // A *different* action in between: the counter is per action, so it
+            // neither clears nor advances this one.
+            environment
+                .execute(&Action::new("cargo check --offline"), None, None)
+                .await
+                .expect("a different action runs");
+            let error = environment
+                .execute(&Action::new("cargo build --offline"), None, None)
+                .await
+                .expect_err("the third run of one action is the abort");
+            let message = error.to_string();
+            assert!(
+                message.contains(FAIL_FAST_MARKER) && message.contains(REPEATED_ACTION_STATUS),
+                "{message}"
+            );
+            assert!(message.contains("cargo build --offline"), "{message}");
+            assert!(
+                message.contains("succeeded 3 times in this call"),
+                "the abort must say what happened: {message}"
+            );
+            assert!(
+                fail_fast_status(&message) == Some(REPEATED_ACTION_STATUS),
+                "{message}"
+            );
+        });
+    }
+
+    /// The control for the test above: **different** actions, each run once, are
+    /// progress and must never trip the counter — however many of them there are.
+    #[test]
+    fn many_different_actions_never_abort() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let environment = WriteGuardEnvironment::with_limits(
+            Box::new(FakeShell::new(0)),
+            directory.path().to_path_buf(),
+            3,
+            0,
+            ArtifactKind::ProjectFile,
+            3,
+            150,
+            25,
+            8,
+        );
+        futures_lite_block_on(async {
+            for attempt in 1..=20 {
+                environment
+                    .execute(
+                        &Action::new(format!(
+                            "cargo build --offline --message-format short {attempt}"
+                        )),
+                        None,
+                        None,
+                    )
+                    .await
+                    .unwrap_or_else(|error| {
+                        panic!("attempt {attempt} is a new action and is progress: {error}")
+                    });
+            }
+        });
+    }
+
+    /// Round-2 repair (cost batch): a call that never writes is held to a budget
+    /// that responds to that fact, and the **first** write buys the whole flat
+    /// limit back.
+    #[test]
+    fn the_step_budget_is_gated_until_the_call_writes_its_artifact() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let environment = WriteGuardEnvironment::with_limits(
+            Box::new(FakeShell::new(0)),
+            directory.path().to_path_buf(),
+            3,
+            0,
+            ArtifactKind::ProjectFile,
+            0,
+            150,
+            25,
+            8,
+        );
+        assert_eq!(
+            environment.effective_step_budget(),
+            25 + 150 / 8,
+            "a call that has written nothing gets the wrap-up band plus a step per write it has \
+             not made"
+        );
+        futures_lite_block_on(async {
+            let output = environment
+                .execute(
+                    &Action::new("HOH_WRITE_FILE src/game.rs\nfn main() {}\nHOH_END_WRITE_FILE"),
+                    None,
+                    None,
+                )
+                .await
+                .expect("the write succeeds");
+            assert_eq!(output.returncode, 0);
+        });
+        assert_eq!(
+            environment.effective_step_budget(),
+            150,
+            "the first project write removes the gate"
+        );
+    }
+
+    /// The control: `steps_per_artifact = 0` disables the gate, so the flat
+    /// limit is exactly what it was before the repair.
+    #[test]
+    fn a_disabled_progress_gate_leaves_the_flat_step_limit_alone() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let environment = WriteGuardEnvironment::with_limits(
+            Box::new(FakeShell::new(0)),
+            directory.path().to_path_buf(),
+            3,
+            0,
+            ArtifactKind::ProjectFile,
+            0,
+            150,
+            25,
+            0,
+        );
+        assert_eq!(environment.effective_step_budget(), 150);
+    }
+
+    /// Round-2 repair (cost batch): the prompt is told the effective budget, and
+    /// a prompt that states no budget grows nothing.
+    #[test]
+    fn the_effective_budget_is_stated_in_the_prompt_exactly_once() {
+        let prompt = "You run under a step budget of 150.";
+        let stated = state_the_effective_budget(prompt, 43, 25);
+        assert!(
+            stated.starts_with(prompt),
+            "the prompt is extended, not rewritten"
+        );
+        assert!(stated.contains("43"), "{stated}");
+        assert!(stated.contains("wrap-up discipline begins 25"), "{stated}");
+        assert_eq!(stated.matches("[budget]").count(), 1, "{stated}");
+
+        let silent = "This prompt states no budget.";
+        assert_eq!(state_the_effective_budget(silent, 43, 25), silent);
     }
 
     #[test]

@@ -601,6 +601,6 @@ mod tests {
             2,
             "the lockfile and the contract paths, nothing invented: {joined}"
         );
-        assert_eq!(CONTRACT.len(), 7);
+        assert_eq!(CONTRACT.len(), 8);
     }
 }

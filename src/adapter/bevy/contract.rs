@@ -98,7 +98,7 @@ const fn str_eq(left: &str, right: &str) -> bool {
     true
 }
 
-/// DESIGN-DETAIL §3: the frozen contract.  **Seven** surfaces, in the order of
+/// DESIGN-DETAIL §3: the frozen contract.  **Eight** surfaces, in the order of
 /// the design's table; the eight semantic tools split into seven bound to an
 /// entry and [`TOOLS_WITHOUT_TYPE_PATH`] (process health is not reflectable
 /// state at all, and it is the only such tool).
@@ -109,6 +109,14 @@ const fn str_eq(left: &str, right: &str) -> bool {
 /// steps") is a statement about the game's own frame advance, so the counter has
 /// to exist in the game and be reflectable.  It is a resource under the frozen
 /// crate, incremented by the game every frame.
+///
+/// The eighth surface is the **process nonce** (round-2 repair): round 2 proved
+/// that reachability is not identity — a stale game answered 15702 while a
+/// freshly built one bound the same port, so both battery passes measured the A0
+/// scaffold and the Tester reported a regression the candidate did not have.  A
+/// per-launch nonce that the game publishes as reflectable state is what lets
+/// readiness prove *which* process answered.  It is a resource under the frozen
+/// crate, set from the launcher's environment.
 pub const CONTRACT: &[ContractEntry] = &[
     ContractEntry {
         surface: "player_marker",
@@ -160,6 +168,15 @@ pub const CONTRACT: &[ContractEntry] = &[
         semantic_tool: "bevy_inject_move,bevy_inject_jump",
         shape: "named fields `move_dir: i32` and `jump_pressed: bool`; level-triggered, \
                 the edge is cleared by the game every frame",
+    },
+    ContractEntry {
+        surface: "process_nonce",
+        type_path: "hof_game::contract::ProcessNonce",
+        reflect: "Resource",
+        semantic_tool: "bevy_wait_frames",
+        shape: "string field `value`, set from the launcher's per-launch environment variable \
+                `HOF_GAME_PROCESS_NONCE`; it is how readiness proves *which* process answered, so \
+                a stale game cannot be mistaken for the process a pass launched",
     },
 ];
 
@@ -223,8 +240,15 @@ pub fn contract_sha256() -> String {
 /// by the test suite, so a change to the contract cannot land silently: the test
 /// fails first and the change must be re-pinned — and, per the design, go
 /// through the decision process.
+///
+/// Round-2 repair: re-pinned from
+/// `792001e7e629ccc25d6c486eeb54360d83ffb208befa4ca5e430c6f0e747f4f9` (seven
+/// surfaces) to the value below, because the **process nonce** surface was
+/// added.  That is a contract change by definition, and it is the change that
+/// makes "the battery observed the artifact this round built" checkable at all:
+/// without a per-launch value the readiness probe can only prove reachability.
 pub const CONTRACT_SHA256: &str =
-    "792001e7e629ccc25d6c486eeb54360d83ffb208befa4ca5e430c6f0e747f4f9";
+    "c579a742cea5f2f22b0e34c2ae6ab3bafcb56050310a5d35e95941796bdcf7e9";
 /// The contract paths a game declared, reported as missing if any is absent.
 ///
 /// The reason **says what it compared**: the declared paths, where they were
@@ -425,10 +449,11 @@ mod tests {
     }
 
     #[test]
-    fn the_contract_is_seven_surfaces_and_the_semantic_tools_are_fully_accounted_for() {
-        // Seven since D297 (b) added the game frame counter: E3's five
-        // observations all report the GAME's frame, so the counter is contract.
-        assert_eq!(CONTRACT.len(), 7);
+    fn the_contract_is_eight_surfaces_and_the_semantic_tools_are_fully_accounted_for() {
+        // Eight since the round-2 repair added the process nonce: readiness has
+        // to prove which process answered, and that needs a per-launch value the
+        // game publishes.
+        assert_eq!(CONTRACT.len(), 8);
         let mut bound: Vec<&str> = CONTRACT
             .iter()
             .flat_map(|entry| entry.semantic_tool.split(','))
@@ -492,12 +517,38 @@ mod tests {
             "win_flag",
             "frame_counter",
             "input_intent",
+            "process_nonce",
         ] {
             assert!(
                 !contract_path(surface).is_empty(),
                 "`{surface}` resolves to an empty type path"
             );
         }
+    }
+
+    /// The round-2 repair's surface, pinned: it is the value readiness proves
+    /// identity with, so its path and its field name are both contract.
+    #[test]
+    fn the_eighth_surface_is_the_process_nonce() {
+        assert_eq!(
+            contract_path("process_nonce"),
+            "hof_game::contract::ProcessNonce"
+        );
+        let entry = CONTRACT
+            .iter()
+            .find(|entry| entry.surface == "process_nonce")
+            .expect("the process nonce is a frozen surface");
+        assert_eq!(entry.reflect, "Resource");
+        assert!(
+            entry.shape.contains("value"),
+            "the field name is part of the contract: {}",
+            entry.shape
+        );
+        assert!(
+            entry.shape.contains("HOF_GAME_PROCESS_NONCE"),
+            "the environment variable that feeds it is part of the contract: {}",
+            entry.shape
+        );
     }
 
     #[test]

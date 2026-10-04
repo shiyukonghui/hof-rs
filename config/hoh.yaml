@@ -44,6 +44,39 @@ agent:
   #   宽到足够一次真正的「设计 + 写文件 + 编译」，窄到不可能再花掉 10M token。0 表示关闭。
   artifact_write_budget_tokens: 1500000
 
+  # ── round-2 cost batch ──────────────────────────────────────────────────
+  # round 2 证伪了「写路径就是成本大头」：写指令确实被用上了（iter-1 22 次、
+  # iter-2 9 次，零 cat/heredoc），但 developer 仍然花了 150 calls / 33 min /
+  # 11.3M token 与 104 calls / 60 min / 8.3M token，每次调用的 prompt token
+  # 仍是 ~74k（与 round 1 完全相同 —— 见 .spec/bevy/TRUST-REPORT.md 的
+  # context 测量：代价不是 system prompt，而是**调用次数**乘上逐次累积的
+  # 上下文）。真正的 grind 形状是「同一个动作**成功**地重复」：
+  # iter-1 的末尾约 70 次 `cargo build --offline 2>&1` + findstr 验证循环，
+  # 每一次 returncode 都是 0，所以 max_action_failures（只数失败）与
+  # max_consecutive_format_errors（只数格式错误）都看不见它。
+  #
+  # max_repeated_actions：**同一个动作在一次调用里成功多少次**后中止。
+  #   计数是「该动作在本次调用中的成功总次数」，不是连续次数：记录在案的
+  #   验证循环用 `| more` / `| findstr …` / `& echo …=%ERRORLEVEL%` 等多种
+  #   拼法，任何**连续**计数都看不到它。
+  #   15 是**量出来的**，不是拍的：round-2 证据给出两端 —— iter-2 重复最多的
+  #   动作是 `cargo build --offline 2>&1`，共 14 次，而那一轮是「最后一次构建
+  #   的产物通过了闸门」的正常工程轮（每次构建之间都有编辑与不同的编译输出），
+  #   所以 14 次是**合法重建节奏的上界**；iter-1 的同一动作跑了 39 次，且
+  #   前半段有 22 次写、后半段只有 1 次写。15 = 严格大于 14 的最小整数，因此
+  #   不可能误伤 iter-2，却会在 iter-1 上触发：按记录到的逐次 prompt token
+  #   算术，第 50 次调用中止可只花掉该次调用 11,108,856 token 中的 1,703,158
+  #   （15.3%）—— 证据与「它抓不到什么」都写在 tests/repeated_action.rs。
+  max_repeated_actions: 15
+  # steps_per_artifact：步数预算按「是否写出自己申明的产物」放行。
+  #   未写出时预算为 wrap_up_steps + step_limit/steps_per_artifact
+  #   = 25 + 150/8 = 43 步；第一次成功写入后恢复完整的 150 步。
+  #   8 的依据：round-2 developer 的第一次写入发生在第 14 条消息（150 步的
+  #   ~10%），所以 8 步/产物对「已经在干活」的角色绰绰有余，而 round-1 那种
+  #   140 次调用只产出一个文件的形状会在几分钟内被中止，而不是耗掉一小时。
+  #   0 表示关闭（回到固定的 150 步）。
+  steps_per_artifact: 8
+
 runtime:
   iterations: 3
   max_schema_retries: 2

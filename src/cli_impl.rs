@@ -138,6 +138,38 @@ pub async fn submit(args: SubmitArgs) -> anyhow::Result<i32> {
 // ---------------------------------------------------------------------------
 
 /// The six doctor checks of §8.  Every one must pass before a run starts.
+/// Round-2 repair (credential batch): the repository root the secret-file rule
+/// is measured against.
+///
+/// It is the directory the `hoh` binary's own crate was built from, derived from
+/// the manifest path, so the rule is about **this** repository and does not
+/// depend on the working directory a round happens to run in.
+pub fn harness_repository_root() -> std::path::PathBuf {
+    std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+}
+
+/// Round-2 repair (credential batch): load the model secret from a file that
+/// must live outside the repository, and export it for mini.
+///
+/// The attested mechanism is deliberately tiny: the file is validated (outside
+/// the repository, exists, holds a key-shaped value), the value goes into the
+/// process environment the way `config::export_model_api_key` already does, and
+/// **nothing prints it**.  A path inside the repository is refused with both
+/// paths named, which is the leak this batch removes.
+pub fn load_secret_from_file(path: Option<&std::path::Path>) -> anyhow::Result<Option<String>> {
+    let Some(path) = path else {
+        return Ok(None);
+    };
+    let root = harness_repository_root();
+    let (name, value) = crate::runtime::secrets::read_secret_file(path, &root)
+        .map_err(|reason| anyhow::anyhow!("--env-from-secret: {reason}"))?;
+    // The value is set, never logged: the advice this batch gives an operator is
+    // that the only safe place for it is a variable, and that is where it goes.
+    std::env::set_var(crate::config::MINI_API_KEY_ENV, &value);
+    std::env::set_var(name, &value);
+    Ok(Some(path.display().to_string()))
+}
+
 pub async fn doctor_checks(
     config: &HohConfig,
     adapter: &dyn ProjectAdapter,
@@ -458,6 +490,7 @@ pub async fn init(args: InitArgs) -> anyhow::Result<i32> {
 }
 
 pub async fn doctor(args: DoctorArgs) -> anyhow::Result<i32> {
+    load_secret_from_file(args.env_from_secret.as_deref())?;
     let mut specs = config_specs(&args.config_spec);
     specs.push(format!("adapter.kind={}", args.adapter));
     if let Some(project) = &args.project {
@@ -582,6 +615,10 @@ pub async fn run(args: RunArgs) -> anyhow::Result<i32> {
     if let Some(project) = &args.project {
         specs.push(format!("runtime.workspace={}", project.display()));
     }
+    // Round-2 repair (credential batch): the secret is loaded from an
+    // out-of-repository file **before** the configuration is read, so a path
+    // inside the repository is refused before anything else happens.
+    load_secret_from_file(args.env_from_secret.as_deref())?;
     let config = load_config(&specs)?;
     // DR-96: the roles run in the **project** directory, which a real round
     // places outside the repository, so the relative `config/hoh.yaml` cannot

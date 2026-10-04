@@ -156,6 +156,35 @@ pub struct BevyAdapter {
     /// holds the adapter behind a shared reference for the whole round) while
     /// owning a `Child` is inherently exclusive.
     round_game: Mutex<Option<launch::GameProcess>>,
+    /// Round-2 repair: what the last `start` really did — the executed file, the
+    /// per-launch nonce readiness verified, the pid the OS believes listens and
+    /// what the ledger sweep reaped.
+    ///
+    /// It exists because round 2's `launch.json` named a pid and a binary hash
+    /// and **neither was ever checked against the process that answered**: the
+    /// observations were attributed to a process the round had not started.  The
+    /// round records these facts next to the observations they qualify.
+    last_launch: Option<LaunchFacts>,
+}
+
+/// Round-2 repair: what one `start` really did, in the form the round records.
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize)]
+pub struct LaunchFacts {
+    /// The process the harness spawned.
+    pub spawned_pid: u32,
+    /// The per-launch nonce readiness proved the answering process serves.
+    pub nonce: String,
+    /// The file that was executed (a staged copy, when the round stages).
+    pub launch_image: String,
+    /// The binary the build produced, which the round also hashes.
+    pub built_binary: String,
+    /// The pid the OS's own TCP table names as the `LISTEN`er on the endpoint
+    /// when readiness finished, when it can be read.
+    pub listening_pid: Option<u32>,
+    /// The ledger this launch was written into, when one was configured.
+    pub ledger: Option<String>,
+    /// The pids a sweep over that ledger reaped before this launch.
+    pub reaped_pids: Vec<u32>,
 }
 
 impl std::fmt::Debug for BevyAdapter {
@@ -209,6 +238,7 @@ impl BevyAdapter {
             last_contract_paths: Vec::new(),
             last_stop: None,
             round_game: Mutex::new(None),
+            last_launch: None,
         }
     }
 
@@ -302,6 +332,11 @@ impl BevyAdapter {
     /// adapter that drives a separate engine binary — and Bevy has none, so the
     /// game binary *is* the engine.  A stale artifact in a shared target
     /// directory is exactly the failure this makes visible.
+    ///
+    /// Round-2 repair: the fact that was missing is not the built binary's
+    /// digest but the **executed file's**, because the round now runs a staged
+    /// copy (task 2).  Both are reported, and the round refuses to attribute an
+    /// observation to the built binary unless the two digests agree.
     pub fn built_binary_identity(&self) -> Value {
         let Some(target) = self.build_policy.target_dir.clone() else {
             return json!({"reason": "the build policy names no target directory"});
@@ -312,17 +347,50 @@ impl BevyAdapter {
             crate::adapter::bevy::contract::GAME_CRATE.to_string()
         };
         let path = target.join("debug").join(name);
-        match std::fs::read(&path) {
-            Ok(bytes) => json!({
-                "path": path.display().to_string(),
-                "size_bytes": bytes.len(),
-                "sha256": crate::runtime::policy::sha256_hex(&bytes),
-            }),
-            Err(error) => json!({
-                "path": path.display().to_string(),
-                "reason": format!("the built binary could not be read: {error}"),
-            }),
+        let mut identity = file_identity(&path);
+        // The executed file, when this round ran one: the round's `launch.json`
+        // reports both digests so "the observations belong to the built binary"
+        // is checkable rather than assumed.
+        if let Some(facts) = self.last_launch.as_ref() {
+            let image = std::path::PathBuf::from(&facts.launch_image);
+            let executed = file_identity(&image);
+            if let Some(object) = identity.as_object_mut() {
+                object.insert("executed".to_string(), executed.clone());
+                let same = executed.get("sha256").is_some()
+                    && executed.get("sha256") == object.get("sha256");
+                object.insert("executed_matches_built".to_string(), json!(same));
+                object.insert("executed_path".to_string(), json!(facts.launch_image));
+            }
         }
+        identity
+    }
+
+    /// Round-2 repair: what the last `start` really did.
+    pub fn last_launch(&self) -> Option<&LaunchFacts> {
+        self.last_launch.as_ref()
+    }
+
+    /// The round's launch ledger: one line per process this round started, in
+    /// the round's own evidence directory.  It is what makes "reap the process
+    /// the previous session left" possible without guessing at process names.
+    pub fn launch_ledger(&self) -> Option<PathBuf> {
+        self.build_policy.target_dir.as_ref()?;
+        Some(
+            self.evidence_root
+                .join("runs")
+                .join(format!("bevy-{}", self.round))
+                .join("launch-ledger.jsonl"),
+        )
+    }
+
+    /// Where this round stages the image it executes.
+    pub fn launch_stage_root(&self) -> Option<PathBuf> {
+        Some(
+            self.evidence_root
+                .join("runs")
+                .join(format!("bevy-{}", self.round))
+                .join("launch-image"),
+        )
     }
 
     /// Take the process the round-game window owns, so a caller can stop it.
@@ -364,6 +432,7 @@ impl BevyAdapter {
             last_contract_paths: Vec::new(),
             last_stop: None,
             round_game: Mutex::new(None),
+            last_launch: None,
         }
     }
 
@@ -387,6 +456,10 @@ impl BevyAdapter {
     /// environment and the **readiness probe** are pointed at the adapter's
     /// endpoint: the probe and the adapter must agree, or a test against a fake
     /// endpoint waits 30 s on the wrong port (B2-6).
+    ///
+    /// Round-2 repair: the round's own **ledger** and **stage root** are added
+    /// here, so every launch this adapter makes is recorded before it is spawned
+    /// and runs a staged copy instead of the built binary.
     pub fn launch_config(&self) -> LaunchConfig {
         let mut config = self.launch.clone();
         config.headless = self.headless;
@@ -397,6 +470,8 @@ impl BevyAdapter {
                 self.endpoint.clone(),
             ));
         }
+        config.ledger = self.launch_ledger();
+        config.stage_dir = self.launch_stage_root();
         config
     }
 
@@ -670,6 +745,17 @@ impl GameAdapter for BevyAdapter {
         .map_err(|error| AdapterStepError::Launch(error.to_string()))?;
         let pid = process.pid();
         let headless = process.headless();
+        // Round-2 repair: the identity facts of **this** launch, so the round can
+        // report which process answered instead of which one it hoped for.
+        self.last_launch = Some(LaunchFacts {
+            spawned_pid: pid,
+            nonce: process.nonce().to_string(),
+            launch_image: process.launch_image().display().to_string(),
+            built_binary: binary.display().to_string(),
+            listening_pid: process.answering_pid(),
+            ledger: process.ledger().map(|ledger| ledger.display().to_string()),
+            reaped_pids: process.reap_report().reaped.clone(),
+        });
         self.server.install_process(ServerProcess {
             pid,
             stderr_tail: process.stderr_tail(),
@@ -749,6 +835,23 @@ impl GameAdapter for BevyAdapter {
             },
         };
         Ok(verdict)
+    }
+}
+
+/// One file's identity: path, size and digest, or the reason it could not be
+/// read.  It is a free function so the built binary and the executed image are
+/// measured by exactly the same code.
+pub fn file_identity(path: &Path) -> Value {
+    match std::fs::read(path) {
+        Ok(bytes) => json!({
+            "path": path.display().to_string(),
+            "size_bytes": bytes.len(),
+            "sha256": crate::runtime::policy::sha256_hex(&bytes),
+        }),
+        Err(error) => json!({
+            "path": path.display().to_string(),
+            "reason": format!("the file could not be read: {error}"),
+        }),
     }
 }
 
@@ -1460,6 +1563,7 @@ mod tests {
         "WinFlag",
         "FrameCounter",
         "InputIntent",
+        "ProcessNonce",
     ];
 
     /// B2-1: the **real** reader path reaches the build and the contract check.
@@ -1490,7 +1594,7 @@ mod tests {
         assert_eq!(
             adapter.contract_paths().len(),
             crate::adapter::bevy::contract::CONTRACT.len(),
-            "the contract reader read the seven declared paths: {:?}",
+            "the contract reader read every declared path: {:?}",
             adapter.contract_paths()
         );
         // Neither nonsense reason may appear on a compliant project.

@@ -79,6 +79,69 @@ pub struct AgentLimits {
     /// live inside the environment.
     #[serde(default = "default_artifact_write_budget_tokens")]
     pub artifact_write_budget_tokens: u64,
+    /// Round-2 repair (cost batch): how many times **one action** may succeed in
+    /// a single call before the call is aborted with `RepeatedActionError`.
+    ///
+    /// Round 2 proved the failure shape the older tripwires could not see: the
+    /// Developer ended iteration 1 with about seventy calls of one verification
+    /// loop, each of which **succeeded**.  `max_action_failures` counts failures,
+    /// `max_consecutive_format_errors` counts format errors, and the older
+    /// repeated-action tripwire counted an action only when it failed — so a
+    /// grind made of successful actions was invisible to every counter the round
+    /// had, and it ended at the step limit instead.
+    ///
+    /// The count is the action's **total successes in the call**, not a
+    /// consecutive run: the recorded loop spelled itself with several filters
+    /// (`| more`, `| findstr …`, `& echo …=%ERRORLEVEL%`), so no consecutive run
+    /// in the evidence is longer than a few.
+    ///
+    /// **The number is measured, not chosen.**  The recorded round-2 evidence
+    /// gives both ends: iteration 2 — a call whose *last* build the artifact
+    /// survived, i.e. engineering work with a legitimate rebuild cadence — runs
+    /// its most-repeated action **14** times, and iteration 1 runs its most
+    /// repeated action **39** times while falling from 22 edits in the first half
+    /// to one in the second.  A cap of 15 therefore cannot fire on iteration 2's
+    /// cadence and does fire on iteration 1's, where an abort at that point keeps
+    /// 15% of the call's observed prompt tokens
+    /// (`tests/repeated_action.rs`, which is the evidence for this number and
+    /// states what this counter does **not** catch).
+    #[serde(default = "default_max_repeated_actions")]
+    pub max_repeated_actions: u64,
+    /// Round-2 repair (cost batch): how many steps a role gets per **write of
+    /// the artifact it declares**.
+    ///
+    /// The step budget used to be a flat [`AgentLimits::step_limit`] (150),
+    /// which cannot tell a role that is working from one that is grinding:
+    /// round 2's Developer spent its last seventy calls re-running one
+    /// verification loop until `LimitsExceeded`, and the budget could not
+    /// notice.  With this value set, a role that has not yet produced its
+    /// artifact is limited to
+    /// `wrap_up_steps + step_limit / steps_per_artifact` steps; the moment it
+    /// writes, it earns the whole budget.  Progress therefore buys steps, and a
+    /// call that never writes cannot spend 150 of them.  0 disables the gate
+    /// (the flat limit applies, as before).
+    #[serde(default = "default_steps_per_artifact")]
+    pub steps_per_artifact: u64,
+}
+
+/// Round-2 repair (cost batch): 15 is **measured** from the recorded round-2
+/// evidence, and the two ends of the measurement are named in
+/// [`AgentLimits::max_repeated_actions`]: iteration 2's most-repeated action runs
+/// 14 times, iteration 1's runs 39.  The value is the smallest integer strictly
+/// above the clean iteration's highest repeat, so the tripwire cannot be blamed
+/// for aborting work that was progressing while still firing on the grind.
+fn default_max_repeated_actions() -> u64 {
+    15
+}
+
+/// Round-2 repair: 150 / 8 = 18 steps for a role that has written nothing, plus
+/// the 25 wrap-up steps the prompt already reserves.  Eight steps per write is
+/// generous by the recorded evidence — round 2's Developer made its first write
+/// on message 14 of a 150-step call — and it is what makes the round-1 shape
+/// (140 calls, one artifact, `RepeatedFormatError`) abort in minutes instead of
+/// an hour.
+fn default_steps_per_artifact() -> u64 {
+    8
 }
 
 /// Round-1 write-path batch: three failures of one action is enough to conclude
@@ -133,7 +196,30 @@ impl Default for AgentLimits {
             max_action_failures: default_max_action_failures(),
             artifact_write_budget_seconds: default_artifact_write_budget_seconds(),
             artifact_write_budget_tokens: default_artifact_write_budget_tokens(),
+            max_repeated_actions: default_max_repeated_actions(),
+            steps_per_artifact: default_steps_per_artifact(),
         }
+    }
+}
+
+impl AgentLimits {
+    /// Round-2 repair (cost batch): the step budget this role may really use,
+    /// given whether it has written the artifact it declares.
+    ///
+    /// `has_written = false` is the grind's signature: the role is spending
+    /// calls without producing anything.  It is gated to
+    /// `wrap_up_steps + step_limit / steps_per_artifact` (and never below
+    /// `wrap_up_steps`, so the wrap-up discipline the prompt describes stays
+    /// reachable).  `has_written = true` earns the flat `step_limit`.
+    ///
+    /// `steps_per_artifact = 0` disables the gate and returns `step_limit`,
+    /// which is the pre-repair behaviour.
+    pub fn effective_step_limit(&self, has_written: bool) -> u64 {
+        if has_written || self.steps_per_artifact == 0 {
+            return self.step_limit;
+        }
+        let per_artifact = (self.step_limit / self.steps_per_artifact).max(1);
+        (self.wrap_up_steps + per_artifact).max(self.wrap_up_steps)
     }
 }
 
@@ -461,6 +547,50 @@ mod tests {
         assert_eq!(config.agent.cost_limit, 0.0);
         assert_eq!(config.runtime.iterations, 3);
         assert!(config.runtime.private_excludes.is_empty());
+        // Round-2 repair (cost batch): the two values that make the grind
+        // visible and the budget responsive must be loaded, not merely defaulted.
+        assert_eq!(config.agent.max_repeated_actions, 15);
+        assert_eq!(config.agent.steps_per_artifact, 8);
+    }
+
+    /// Round-2 repair (cost batch): the progress gate's arithmetic, as a fact
+    /// about the configuration rather than about a run.
+    #[test]
+    fn the_step_budget_responds_to_progress() {
+        let limits = AgentLimits {
+            step_limit: 150,
+            wrap_up_steps: 25,
+            steps_per_artifact: 8,
+            ..AgentLimits::default()
+        };
+        assert_eq!(
+            limits.effective_step_limit(false),
+            25 + 150 / 8,
+            "a call that has produced nothing may not spend the flat budget"
+        );
+        assert_eq!(
+            limits.effective_step_limit(true),
+            150,
+            "the first artifact write earns the whole budget"
+        );
+        // `steps_per_artifact = 0` is the pre-repair behaviour, exactly.
+        let disabled = AgentLimits {
+            steps_per_artifact: 0,
+            ..limits.clone()
+        };
+        assert_eq!(disabled.effective_step_limit(false), 150);
+        // A tiny repair budget still keeps the wrap-up band reachable.
+        let repair = AgentLimits {
+            step_limit: 10,
+            wrap_up_steps: 25,
+            steps_per_artifact: 8,
+            ..AgentLimits::default()
+        };
+        assert_eq!(
+            repair.effective_step_limit(false),
+            26,
+            "the gate never goes below the wrap-up band"
+        );
     }
 
     #[test]

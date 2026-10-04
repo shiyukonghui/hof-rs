@@ -220,17 +220,24 @@ fn echoing_id(document: serde_json::Value) -> Arc<dyn Fn(&str) -> String + Send 
 // ---------------------------------------------------------------------------
 
 #[test]
-fn the_repinned_contract_hash_covers_seven_surfaces() {
+fn the_repinned_contract_hash_covers_the_frozen_surfaces() {
     assert_eq!(
         contract_sha256(),
         CONTRACT_SHA256,
-        "the contract drifted; it is re-pinned in BATCH-B2"
+        "the contract drifted; it is re-pinned in BATCH-B2 and again by the round-2 repair"
     );
+    // The pin moved once, on purpose: the round-2 repair added the **process
+    // nonce** surface, because readiness has to prove which process answered
+    // rather than merely that something answers.  B2 published
+    // `792001e7e629ccc25d6c486eeb54360d83ffb208befa4ca5e430c6f0e747f4f9` for the
+    // seven-surface contract; adding a surface is a contract change by
+    // definition, so the literal is re-pinned rather than the new surface
+    // smuggled in beside an unchanged hash.
     assert_eq!(
-        CONTRACT_SHA256, "792001e7e629ccc25d6c486eeb54360d83ffb208befa4ca5e430c6f0e747f4f9",
-        "the pin must be the value this batch published"
+        CONTRACT_SHA256, "c579a742cea5f2f22b0e34c2ae6ab3bafcb56050310a5d35e95941796bdcf7e9",
+        "the pin must be the value the round-2 repair measured"
     );
-    assert_eq!(CONTRACT.len(), 7);
+    assert_eq!(CONTRACT.len(), 8);
     assert_eq!(GAME_CRATE, "hof_game");
     assert_eq!(GAME_CONTRACT_MODULE, "hof_game::contract");
     let frame = CONTRACT
