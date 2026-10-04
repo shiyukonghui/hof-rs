@@ -11,13 +11,8 @@
 mod common;
 
 use common::*;
-use hof_rs::adapter::godot::validate_scene_structure;
 use hof_rs::model::{Ablation, Role};
 use serde_json::Value;
-
-fn skill(name: &str) -> String {
-    delivered_skill(name)
-}
 
 // ---------------------------------------------------------------------------
 // ① TOOLS.md is generated from the real schema
@@ -157,47 +152,6 @@ fn the_run_directory_caches_the_generated_tool_index() {
 }
 
 // ---------------------------------------------------------------------------
-// ③ the known-good skeleton passes the DR-24 structure check
-// ---------------------------------------------------------------------------
-
-/// The scene text of the skill's skeleton: everything from `[gd_scene` to the
-/// closing fence of that code block.
-fn skeleton_scene(dev: &str) -> String {
-    let start = dev
-        .find("[gd_scene")
-        .unwrap_or_else(|| panic!("the skill has no [gd_scene] skeleton:\n{dev}"));
-    let rest = &dev[start..];
-    let end = rest
-        .find("\n```")
-        .expect("the skeleton code block is not closed");
-    rest[..end].to_string()
-}
-
-#[test]
-fn the_godot_dev_skeleton_is_a_valid_scene() {
-    let dev = skill("godot-dev.md");
-    let scene = skeleton_scene(&dev);
-    let report = validate_scene_structure(&scene);
-    assert!(
-        report.ok,
-        "the known-good skeleton must pass DR-24's structure check: {:?}",
-        report.problems
-    );
-    assert!(scene.contains("[node name=\"Main\" type=\"Node2D\"]"));
-    assert!(scene.contains("parent=\".\""));
-    assert!(scene.contains("SubResource(\"RectangleShape2D_player\")"));
-    assert!(scene.contains("ExtResource(\"1_player\")"));
-    assert!(scene.contains("type=\"Label\""));
-    assert!(scene.contains("text = \"Score: 0\""));
-
-    // The GDScript half must be real, not an empty placeholder.
-    assert!(dev.contains("extends CharacterBody2D"));
-    assert!(dev.contains("move_and_slide()"));
-    assert!(dev.contains("Input.is_action_pressed(\"jump\")"));
-    assert!(dev.contains("gravity"));
-}
-
-// ---------------------------------------------------------------------------
 // ④ prompts forbid the source-reading detour and repeated submits
 // ---------------------------------------------------------------------------
 
@@ -293,7 +247,7 @@ async fn a_prompt_that_lists_forbidden_paths_is_not_a_source_read() {
         FakeStep::new(Role::Developer)
             .writing("project.godot", "config_version=5\n")
             .trajectory_prompt_containing(
-                "Do not read src/adapter/godot.rs or F:\\RustProjects\\** .",
+                "Do not read src/adapter/bevy/mod.rs or F:\\RustProjects\\** .",
             ),
         FakeStep::new(Role::Tester)
             .writing(".hoh/evidence/move.json", "{}\n")

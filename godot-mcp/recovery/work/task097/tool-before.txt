@@ -1,4 +1,0 @@
-DESCRIPTION:
-批量添加节点到场景
-SCHEMA:
-{"properties":{"nodes":{"description":"节点数组，每个元素包含 type（必填）、parent_path、name、properties","items":{"properties":{"name":{"description":"节点名称","type":"string"},"parent_path":{"description":"父节点路径，默认 \".\"","type":"string"},"properties":{"description":"要设置的属性字典","type":"object"},"type":{"description":"节点类型","type":"string"}},"required":["type"],"type":"object"},"type":"array"},"resolve_within_batch":{"default":false,"description":"为 true 时元素的 parent_path 可以指向**本批更早的元素**所创建的节点（同一个请求里建父子树）。父元素必须排在子元素之前，父路径指向更后面的元素会被拒绝（父/子循环在按数组顺序应用时就是这个形状）；同一父节点下、同一批内重名会被拒绝（默认 false 时保留引擎自己的重命名）——两种拒绝都仍然整批回滚。默认 false：父路径只按调用到达时的场景树解析，与旧行为逐字相同。响应在每个 created 元素上给出 parent_source（scene/batch），说明父节点来自场景树还是本批","type":"boolean"}},"required":["nodes"],"type":"object"}

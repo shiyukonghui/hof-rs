@@ -1,4 +1,0 @@
-axis sample (input_axis) = {"frame_count": 3, "node_path": "/root/Main/Player", "samples": [{"frame": 0, "input_axis": null}, {"frame": 1, "input_axis": null}, {"frame": 2, "input_axis": null}]}
-test_scenario assert input_axis = {"all_passed": false, "completed_steps": 3, "duration_ms": 125, "errors": 0, "failed": 1, "passed": 0, "results": [{"action": "move_right", "in_input_map": true, "injected": 1, "step": 0, "type": "input"}, {"step": 1, "type": "wait", "waited_seconds": 0.1}, {"expected": 0.0, "node_path": "Player", "operator": "eq", "passed": false, "property": "input_axis", "reason": "node '/root/Main/Player' does not have the property 'input_axis'", "step": 2, "type": "assert"}], "total_steps": 3}
-scene tree node count = 15
-Main props = {"node_path": "/root/Main", "properties": {"coins": 1, "lives": 3, "state": "playing"}, "type": "Node2D"}

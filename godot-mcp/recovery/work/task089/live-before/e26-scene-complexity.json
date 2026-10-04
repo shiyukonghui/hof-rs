@@ -1,1 +1,0 @@
-﻿{"id":126,"jsonrpc":"2.0","result":{"content":[{"text":"{\"issues\":[],\"max_depth\":1,\"nodes_by_type\":{\"ColorRect\":2,\"Label\":1,\"Node2D\":1},\"scene_path\":\"res://main.tscn\",\"scripts_attached\":[{\"node\":\".\",\"script\":\"res://main.gd\"}],\"total_nodes\":4}","type":"text"}]}}

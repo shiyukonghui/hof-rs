@@ -1,1 +1,0 @@
-{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"running_game_assert_node_state","arguments":{"expected":{"y":2,"x":1},"operator":"eq","property":"position","node_path":"Actor"}}}

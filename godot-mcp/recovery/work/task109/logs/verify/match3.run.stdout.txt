@@ -1,8 +1,0 @@
-Godot Engine v4.8.dev.mono.custom_build.1f9d0cb1c (2026-09-26 23:05:35 UTC) - https://godotengine.org
-
-MATCH3_READY cols=8 rows=8 colors=6 target=500 move_limit=30 seed=749508457 auto=0 poll=False
-[MCP] pending_timeout_ms=30000 (configured=30000) pending_ticks_per_frame=8
-[MCP] trace=off (default; use --mcp-trace=<path> or godot_mcp/trace_file to enable)
-[MCP] capture=off (default; use --mcp-capture=on_error|every_call together with --mcp-trace=<path>)
-[MCP] role=game configured_port=0 source=default listen=false
-[MCP] not listening (get_port()=0)

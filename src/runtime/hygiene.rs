@@ -665,10 +665,111 @@ pub fn is_superseded(root: &Path, relative: &str) -> std::io::Result<bool> {
     }
 }
 
+/// DR-49: what an artifact looked like at one instant.
+///
+/// Freshness is decided on the artifact **state**, so "a file exists at the
+/// target" can never be enough on its own: a file left behind by an earlier
+/// round has the same path but not the same bytes/metadata.  This is
+/// engine-neutral: it is the producer half of the DR-49/DR-62 contract every
+/// adapter that writes a file artifact has to honour.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ArtifactFingerprint {
+    pub size: u64,
+    /// Modification time in nanoseconds since the Unix epoch.
+    pub mtime_unix_nanos: u128,
+    pub sha256: String,
+}
+
+/// DR-49: the fingerprint of `path`, or `None` when there is no readable file.
+pub fn artifact_fingerprint(path: &Path) -> Option<ArtifactFingerprint> {
+    let metadata = std::fs::metadata(path).ok()?;
+    if !metadata.is_file() {
+        return None;
+    }
+    let bytes = std::fs::read(path).ok()?;
+    let mtime_unix_nanos = metadata
+        .modified()
+        .ok()
+        .and_then(|time| {
+            time.duration_since(std::time::UNIX_EPOCH)
+                .ok()
+                .map(|duration| duration.as_nanos())
+        })
+        .unwrap_or(0);
+    Some(ArtifactFingerprint {
+        size: metadata.len(),
+        mtime_unix_nanos,
+        sha256: crate::runtime::policy::sha256_hex(&bytes),
+    })
+}
+
+/// DR-49 ③: did **this** call produce the artifact?
+///
+/// * nothing on disk — never fresh (a `path` may not be claimed);
+/// * nothing before, something now — fresh;
+/// * something before and after — fresh only when the bytes or the timestamp
+///   actually changed, i.e. when this call rewrote it.
+pub fn artifact_is_fresh(
+    before: Option<&ArtifactFingerprint>,
+    after: Option<&ArtifactFingerprint>,
+) -> bool {
+    match (before, after) {
+        (_, None) => false,
+        (None, Some(_)) => true,
+        (Some(before), Some(after)) => before != after,
+    }
+}
+
+/// DR-49 ②: get a pre-existing artifact out of the target path **before** the
+/// call, so "the file exists" cannot be satisfied by an older round.
+///
+/// It is renamed to `<name>.stale-<unix seconds>` rather than deleted: the old
+/// artifact stays auditable (it is hidden from the artifact hash — `.hoh` is
+/// excluded — and from the hygiene scans, which ignore `.hoh`), while the
+/// target itself is empty for the duration of the call.  `None` means there was
+/// nothing to invalidate.
+///
+/// DR-62: the move is accompanied by an explicit [`SupersededSet::record`] in
+/// the directory the artifact lives in, and that record — not the
+/// `.stale-<ts>` name — is what the candidate-view copies consult.  The record
+/// happens **before** the rename: if it cannot be written the invalidation
+/// fails loudly rather than moving the bytes aside with no structural trace.
+pub fn invalidate_artifact(path: &Path) -> std::io::Result<Option<String>> {
+    if !path.is_file() {
+        return Ok(None);
+    }
+    let base = path
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "artifact".to_string());
+    let stamp = crate::adapter::engine::now_seconds();
+    for attempt in 0..64u32 {
+        // DR-59: one naming convention for both producer sites — this one and
+        // [`quarantine_previous_evidence`].
+        let name = stale_name(&base, stamp, attempt);
+        let candidate = path.with_file_name(&name);
+        if !candidate.exists() {
+            // DR-62: the structural record first (see the doc comment above).
+            if let Some(directory) = path.parent() {
+                SupersededSet::record(directory, &name)?;
+            }
+            std::fs::rename(path, &candidate)?;
+            return Ok(Some(name));
+        }
+    }
+    // The name space is a per-second window of 64 names; if it is exhausted the
+    // invalidation must still happen, so the file is removed instead of being
+    // silently left in place (which would let a stale file be claimed).
+    std::fs::remove_file(path)?;
+    Ok(Some(format!(
+        "{base} (removed: no free .stale-{stamp} name)"
+    )))
+}
+
 /// DR-49/DR-59: the name a superseded path is moved to.
 ///
-/// One naming convention, two producer sites: `invalidate_artifact` (DR-49, the
-/// pre-existing screenshot file) and [`quarantine_previous_evidence`] (DR-59,
+/// One naming convention, two producer sites: [`invalidate_artifact`] (DR-49,
+/// the pre-existing file artifact) and [`quarantine_previous_evidence`] (DR-59,
 /// the whole evidence directory).  Keeping the suffix in one place keeps
 /// "superseded" greppable and auditable across the repository.
 ///
@@ -1496,5 +1597,69 @@ mod tests {
         let error = SupersededSet::load(temp.path()).unwrap_err();
         assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
         assert!(is_superseded(temp.path(), "anything").is_err());
+    }
+
+    /// DR-49: freshness is a property of the artifact **state**, and a
+    /// pre-existing file is invalidated rather than trusted.
+    #[test]
+    fn freshness_is_decided_on_the_artifact_state_not_on_existence() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("frame-00.png");
+
+        // Nothing before, nothing after: never fresh.
+        assert!(!artifact_is_fresh(None, None));
+        // Created by the call.
+        write(&path, "one");
+        let first = artifact_fingerprint(&path).expect("fingerprint");
+        assert!(artifact_is_fresh(None, Some(&first)));
+        // Unchanged across the call: not this run's artifact.
+        assert!(!artifact_is_fresh(Some(&first), Some(&first)));
+        // Rewritten with different bytes: fresh.
+        write(&path, "two");
+        let second = artifact_fingerprint(&path).expect("fingerprint");
+        assert!(artifact_is_fresh(Some(&first), Some(&second)));
+        // Deleted: never fresh, and no path may be claimed.
+        std::fs::remove_file(&path).unwrap();
+        assert!(!artifact_is_fresh(Some(&first), None));
+        assert!(artifact_fingerprint(&path).is_none());
+    }
+
+    /// DR-49 ②: the pre-existing artifact is renamed out of the way, not left in
+    /// place, and the operation is idempotent/`None` when there is nothing.
+    #[test]
+    fn invalidating_an_artifact_moves_it_aside() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("frame-00.png");
+        assert_eq!(invalidate_artifact(&path).unwrap(), None);
+
+        write(&path, "2026-09-21 stale png");
+        let stale = invalidate_artifact(&path)
+            .unwrap()
+            .expect("a pre-existing file must be moved aside");
+        assert!(stale.starts_with("frame-00.png.stale-"), "{stale}");
+        assert!(
+            !path.exists(),
+            "the target must be empty for the duration of the call"
+        );
+        let moved = temp.path().join(&stale);
+        assert_eq!(
+            std::fs::read(&moved).unwrap(),
+            b"2026-09-21 stale png",
+            "the stale artifact stays auditable under its new name"
+        );
+        // DR-62: the move is mirrored by an explicit structural record in the
+        // same directory — the criterion the view copies consult, and the only
+        // one: the `.stale-<ts>` name itself now decides nothing.
+        let recorded = SupersededSet::load(temp.path()).unwrap();
+        assert!(
+            recorded.contains(&stale),
+            "DR-62: the supersession must be recorded in the manifest: {recorded:?}"
+        );
+        assert!(
+            is_superseded(temp.path(), &stale).unwrap(),
+            "DR-62: the recorded supersession must be discoverable from the tree root"
+        );
+        // A second invalidation has nothing left to do.
+        assert_eq!(invalidate_artifact(&path).unwrap(), None);
     }
 }

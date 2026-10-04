@@ -54,8 +54,8 @@ mod common;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use hof_rs::adapter::ProjectAdapter;
-use hof_rs::config::{AgentLimits, GodotConfig};
+use hof_rs::adapter::{ProjectAdapter, TestAdapter};
+use hof_rs::config::AgentLimits;
 use hof_rs::prompts;
 use hof_rs::runtime::invoke::render_prompt_with_budget_and_shell;
 use hof_rs::runtime::shell::{self, ShellFlavor};
@@ -161,14 +161,7 @@ fn developer_documents(flavor: ShellFlavor) -> Vec<(String, String)> {
         prompts::tester_task_with_shell(1, flavor),
     ));
     documents.extend(prompts::skill_documents(flavor));
-    let adapter = hof_rs::adapter::godot::GodotAdapter::new(
-        GodotConfig {
-            editor_binary: PathBuf::new(),
-            cache_excludes: vec![".godot".into()],
-            main_scene: "res://scenes/main.tscn".into(),
-        },
-        true,
-    );
+    let adapter = TestAdapter::new();
     documents.push((
         "evidence_playbook".to_string(),
         shell::render_command_vars(&adapter.evidence_playbook(), flavor),

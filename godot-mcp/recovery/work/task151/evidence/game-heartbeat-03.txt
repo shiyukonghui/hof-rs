@@ -1,6 +1,0 @@
-label=game-heartbeat-03 port=9889 connected=True connect_error=
-elapsed_ms=3 bytes_read=211
-status_line=HTTP/1.1 400 Bad Request
-io_error=<none>
-request=
-response_body={"error":{"code":-32700,"message":"Parse error"},"id":null,"jsonrpc":"2.0"}

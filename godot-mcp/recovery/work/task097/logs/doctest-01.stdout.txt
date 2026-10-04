@@ -1,8 +1,0 @@
-4.8.dev.mono.custom_build.95aa1d898
-[doctest] doctest version is "2.4.12"
-[doctest] run with "--help" for options
-===============================================================================
-[doctest] test cases:  156 |  156 passed | 0 failed | 1429 skipped
-[doctest] assertions: 6683 | 6683 passed | 0 failed |
-[doctest] Status: SUCCESS!
-TASK097_EXIT=0 

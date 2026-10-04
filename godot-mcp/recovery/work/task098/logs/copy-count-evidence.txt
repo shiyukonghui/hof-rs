@@ -1,7 +1,0 @@
-== F:\moonbit-hof-rs\godot-mcp\runs\pong\pong-clean-task097 / c03-read-before
-   scene bytes: 3391   total [node] entries: 17
-   automatic names (@Type@N): 8
-     @ColorRect@ -> 5
-     @Label@ -> 3
-   named nodes: 9
-   first automatic names: ['@ColorRect@20995', '@ColorRect@20996', '@ColorRect@20997', '@ColorRect@20998', '@ColorRect@20999', '@Label@21000']

@@ -1,8 +1,0 @@
-s004 dir /s /b scenes scripts addons 2>nul; echo "=== project.godot ==="; type project.godot
-s006 type scenes\main.tscn
-s006 type scripts\main.gd; echo "=====PLAYER====="; type scripts\player.gd
----- commands mentioning project source files at all ----
-s004 dir /s /b scenes scripts addons 2>nul; echo "=== project.godot ==="; type project.godot
-s005 type project.godot
-s006 type scenes\main.tscn
-s006 type scripts\main.gd; echo "=====PLAYER====="; type scripts\player.gd

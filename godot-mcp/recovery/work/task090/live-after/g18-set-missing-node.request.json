@@ -1,1 +1,0 @@
-﻿{"method":"tools/call","params":{"arguments":{"property":"color","node_path":"Ghost","value":{"g":0,"r":0,"b":0,"a":1}},"name":"running_game_set_node_property"},"id":318,"jsonrpc":"2.0"}

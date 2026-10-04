@@ -1,1 +1,0 @@
-﻿{"id":601,"jsonrpc":"2.0","result":{"content":[{"text":"{\"all_passed\":false,\"completed_steps\":2,\"duration_ms\":1014,\"errors\":0,\"failed\":0,\"passed\":0,\"results\":[{\"action\":\"pong_serve\",\"in_input_map\":true,\"injected\":1,\"step\":0,\"type\":\"input\"},{\"step\":1,\"type\":\"wait\",\"waited_seconds\":1.0}],\"total_steps\":2}","type":"text"}]}}

@@ -1,9 +1,0 @@
-== lunarlander : 231 response file(s) in F:\moonbit-hof-rs\godot-mcp\runs\lunarlander\ll-task104-r1
-   call order entries : 230
-   DECLARED g227-assert-boundary               -32001 Property 'NoSuchPropertyAtAll' on node '/root/Main' not found
-   literals : 148/148 aligned with the generator's own expectations and passed
-   declared : 1 boundary assertion(s) whose expected answer is the -32001 refusal
-   hash checks        : 2
-   replay   checkpoints compared=17  mismatches=0
-   assertions checked : 148
-   TOTAL RECOMPUTATION MISMATCHES: 0

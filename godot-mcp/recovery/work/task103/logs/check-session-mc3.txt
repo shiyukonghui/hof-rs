@@ -1,5 +1,0 @@
-file      : F:\moonbit-hof-rs\godot-mcp\tools\sessions\missilecommand\session.json
-bytes     : 36917
-calls     : 127 (editor 14 / game 113)
-utf8 json : OK
-CHECK_SESSION OK

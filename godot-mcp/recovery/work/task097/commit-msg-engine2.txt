@@ -1,7 +1,0 @@
-modules/mcp_server: task097 - REBUILT-2C-MANIFEST gains the 2c-10 section: the name-conflict policy the section registers (the default refusal with its complete conflict list, its error code and its opt-in rename), the contract's six shape quantities after the append-only override (177/6/1.22.0/154/73/idempotent, sha 64ddce9f), the ten gates and accept_m1 22/22 with their real exit codes, and the three iron-rule deviations of this task recorded rather than hidden
-
-The section is explicitly not a reconstruction: 2c-3..2c-9 replayed recorded text because
-the module's bytes had been lost, and this task writes new behaviour into the tree those
-batches rebuilt. Every entry therefore names what changed, its basis and its shape impact,
-and the two deliberately untouched surfaces (the single-node adder, and the save path's
-per-session scene uid) are declared as boundaries instead of being silently left out.

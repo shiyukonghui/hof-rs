@@ -1,8 +1,0 @@
-=== g117-shot-t6 ===
-{
- "format": "png",
- "height": 600,
- "saved_path": "user://m3-t6.png",
- "width": 800
-}
-

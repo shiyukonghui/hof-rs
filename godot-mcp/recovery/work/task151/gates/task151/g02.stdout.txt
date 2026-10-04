@@ -1,7 +1,0 @@
-[doctest] doctest version is "2.4.12"
-[doctest] run with "--help" for options
-===============================================================================
-[doctest] test cases:   1586 |   1586 passed | 0 failed | 3 skipped
-[doctest] assertions: 431107 | 431107 passed | 0 failed |
-[doctest] Status: SUCCESS!
-GATE_EXIT=0 

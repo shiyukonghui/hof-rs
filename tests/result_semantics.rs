@@ -12,8 +12,7 @@ use std::process::Command;
 use std::sync::{Arc, Mutex};
 
 use common::*;
-use hof_rs::adapter::godot::{BatteryLimits, GodotAdapter};
-use hof_rs::config::{GodotConfig, HohConfig};
+use hof_rs::config::HohConfig;
 use hof_rs::model::{Ablation, ArtifactGate, Role, Usage};
 use hof_rs::runtime::run_loop::RunSummary;
 use hof_rs::tools::mcp::McpError;
@@ -240,19 +239,11 @@ async fn a_round_over_a_dead_project_reports_a_closed_gate() {
             .writing(".hoh/evidence/move.json", "{}\n")
             .writing(".hoh/evidence.json", &ok_evidence(1, "")),
     ];
-    let adapter = GodotAdapter::new(
-        GodotConfig {
-            editor_binary: std::path::PathBuf::new(),
-            cache_excludes: vec![".godot".to_string()],
-            main_scene: "res://scenes/main.tscn".to_string(),
-        },
-        true,
-    )
-    .with_battery_limits(BatteryLimits {
-        ready_timeout_seconds: 0,
-        max_retries: 0,
-        timeout_seconds: 5,
-    });
+    // A dead project: the deterministic battery declares the DR-24 gate steps
+    // and fails them, so the artifact gate is applicable-and-red and the one
+    // targeted repair call runs.
+    let adapter =
+        FakeAdapter::new().with_gate_failure("the project does not launch (dead project)");
     let channel = Arc::new(DeadChannel {
         calls: Mutex::new(Vec::new()),
     });

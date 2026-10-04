@@ -1,9 +1,0 @@
-== puzzlebobble : 158 response file(s) in F:\moonbit-hof-rs\godot-mcp\runs\puzzlebobble\pb-task104-r1
-   call order entries : 157
-   DECLARED g132-assert-boundary               -32001 Property 'NoSuchPropertyAtAll' on node '/root/Main' not found
-   literals : 85/85 aligned with the generator's own expectations and passed
-   declared : 1 boundary assertion(s) whose expected answer is the -32001 refusal
-   hash checks        : 2
-   initial  g13-readback-t0        board OK  hash OK  bubbles OK
-   assertions checked : 85
-   TOTAL RECOMPUTATION MISMATCHES: 0

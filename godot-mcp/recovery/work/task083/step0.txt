@@ -1,2 +1,0 @@
-tools\editor_node_read.cpp
-tools\running_game_read_scene.cpp

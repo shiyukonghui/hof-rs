@@ -1,5 +1,0 @@
-== runs\missilecommand\mc-task103-r1
-   FAILED g39-assert-screen-win              ? None None  actual=None
-   FAILED g42-input-fire                     ? None None  actual=None
-   ?                          pass=0 fail=2
-   TOTAL: 0 passed, 2 failed

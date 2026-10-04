@@ -396,27 +396,6 @@ fn note_source_reads(warnings: &mut Vec<String>, attempts: &[AttemptOutcome], ha
     }
 }
 
-/// DR-29: turn the battery session's synchronization report into an iteration
-/// warning.  A desynchronized MCP endpoint mislabels every payload it returns,
-/// so the round must say so in `result.json.warnings` instead of quietly
-/// publishing evidence that belongs to another call.
-fn note_mcp_desync(warnings: &mut Vec<String>, workspace: &Path) {
-    let path = workspace.join(crate::adapter::godot::SESSION_SYNC_FILE);
-    let Ok(raw) = std::fs::read_to_string(&path) else {
-        return;
-    };
-    let Ok(report) = serde_json::from_str::<crate::tools::mcp::SessionSyncReport>(&raw) else {
-        return;
-    };
-    if !report.desynced {
-        return;
-    }
-    let warning = crate::adapter::godot::desync_warning(&report);
-    if !warnings.iter().any(|existing| existing == &warning) {
-        warnings.push(warning);
-    }
-}
-
 /// A manifest that could not be produced must not mask the violation itself.
 fn manifest_or_empty(
     root: &Path,
@@ -1421,8 +1400,6 @@ async fn run_inner(
                 let _ = write_run_meta(&run_dir, &meta);
             }
         }
-        // DR-29: the session-start probe's verdict travels with the iteration.
-        note_mcp_desync(&mut iter_warnings, &workspace);
         // DR-24: the pre-freeze launchable gate.  The paper's "keep the
         // project buildable and runnable" is checked here, not requested in a
         // prompt: a battery that cannot open the main scene means `A_t` is not
@@ -1527,8 +1504,6 @@ async fn run_inner(
                     let _ = write_run_meta(&run_dir, &meta);
                 }
             }
-            // DR-29: the second pass runs its own session probe.
-            note_mcp_desync(&mut iter_warnings, &workspace);
             launch_gate = crate::adapter::evaluate_launchable(&battery);
             battery_passes.push(battery_summary(2, &battery, &launch_gate));
         }

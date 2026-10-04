@@ -21,15 +21,28 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 
-use common::*;
-use hof_rs::adapter::godot::{BatteryLimits, GodotAdapter, SESSION_SYNC_FILE};
-use hof_rs::adapter::ProjectAdapter;
-use hof_rs::config::{GodotConfig, HohConfig};
 use hof_rs::errors::HofError;
-use hof_rs::model::Ablation;
-use hof_rs::tools::mcp::{McpClient, SessionSyncReport};
-use hof_rs::tools::McpChannel;
+use hof_rs::tools::mcp::McpClient;
 use serde_json::{json, Value};
+
+/// Unwrap the MCP `tools/call` envelope (`content[*].text`) into the payload the
+/// server actually reported.  Every real evidence fixture has this shape, so the
+/// assertions below read the payload the way a caller does.
+fn unwrap_mcp_payload(payload: &Value) -> Value {
+    let Some(content) = payload.get("content").and_then(Value::as_array) else {
+        return payload.clone();
+    };
+    let texts: Vec<String> = content
+        .iter()
+        .filter_map(|item| item.get("text").and_then(Value::as_str))
+        .map(ToOwned::to_owned)
+        .collect();
+    match texts.len() {
+        0 => payload.clone(),
+        1 => serde_json::from_str(&texts[0]).unwrap_or_else(|_| Value::String(texts[0].clone())),
+        _ => Value::Array(texts.into_iter().map(Value::String).collect()),
+    }
+}
 
 // ---------------------------------------------------------------------------
 // The programmable server
@@ -394,39 +407,6 @@ fn battery_replies() -> HashMap<String, Value> {
     replies
 }
 
-/// The per-tool replies, with `running_game_get_node_property_samples` synthesized from the last
-/// simulated action.
-fn battery_server(mode: Mode) -> FakeMcp {
-    let server = match mode {
-        Mode::Normal => FakeMcp::normal(battery_replies()),
-        Mode::Lag => FakeMcp::lagging(
-            battery_replies(),
-            // The stale request the previous session left in the queue: its
-            // reply is the scene text, which is exactly what `smoke-t3`'s
-            // `editor_get_errors` received.
-            vec![Pending {
-                id: json!(704),
-                payload: json!({"content": [{"type": "text", "text": "{\"content\": \"[gd_scene \
-                    load_steps=2 format=3]\"}"}]}),
-            }],
-        ),
-        Mode::Stale { id, payload } => FakeMcp::stale(battery_replies(), id, payload),
-    };
-    // DR-43: this double plays *both* channels, so the endpoint it announces is
-    // itself.  The real engine starts a child process on a fresh port.
-    let port = server.addr.port();
-    server.state.lock().unwrap().replies.insert(
-        "editor_play_scene".to_string(),
-        json!({"content": [{"type": "text", "text": json!({
-            "playing": true,
-            "mcp_port": port,
-            "mcp_port_source": "auto_free_port",
-            "pid": 4242,
-        }).to_string()}]}),
-    );
-    server
-}
-
 // ---------------------------------------------------------------------------
 // ① a correct server needs no probe
 // ---------------------------------------------------------------------------
@@ -439,7 +419,7 @@ fn a_correct_server_needs_zero_probes() {
     let (payload, correlation) = client
         .call_traced("editor_get_errors", json!({}))
         .expect("the server answers its own request");
-    let inner = hof_rs::adapter::godot::unwrap_mcp_payload(&payload);
+    let inner = unwrap_mcp_payload(&payload);
     assert_eq!(inner["errors"], json!([]));
     assert_eq!(correlation.request_id, Some(1));
     assert_eq!(correlation.response_id, Some(1));
@@ -543,7 +523,7 @@ fn a_mis_correlated_payload_of_another_shape_is_never_used() {
     let (payload, correlation) = client
         .call_traced("editor_get_errors", json!({}))
         .expect("the real errors arrive after one probe");
-    let inner = hof_rs::adapter::godot::unwrap_mcp_payload(&payload);
+    let inner = unwrap_mcp_payload(&payload);
     assert!(
         inner.get("errors").is_some(),
         "the call must receive the editor report: {payload}"
@@ -565,216 +545,4 @@ fn a_mis_correlated_payload_of_another_shape_is_never_used() {
         error.to_string().contains("desync"),
         "the failure must name the reason: {error}"
     );
-}
-
-/// The same, one level up: the battery step must not report a clean editor when
-/// the payload that arrived was the scene text.
-#[tokio::test]
-async fn a_battery_step_never_reports_a_mis_correlated_payload_as_success() {
-    let temp = tempfile::tempdir().unwrap();
-    let workspace = temp.path().join("workspace");
-    std::fs::create_dir_all(&workspace).unwrap();
-    let server = FakeMcp::stale(
-        battery_replies(),
-        704,
-        json!({"content": [{"type": "text", "text":
-            "{\"content\": \"[gd_scene load_steps=2 format=3]\"}"}]}),
-    );
-    let channel = McpChannel::new(server.url(), 5, 0);
-    let adapter = godot_adapter(temp.path(), &workspace);
-
-    let records = adapter
-        .evidence_battery(&workspace, &channel)
-        .await
-        .expect("the battery never fails the round by itself");
-    let editor = records
-        .iter()
-        .find(|record| record.step_id == "editor_errors_baseline")
-        .expect("the gate step exists");
-    assert!(
-        !editor.ok,
-        "an unreachable answer is not a clean editor: {:?}",
-        editor.record
-    );
-    assert!(
-        editor.record.observation.contains("desync")
-            || editor.record.observation.contains("UNAVAILABLE"),
-        "{}",
-        editor.record.observation
-    );
-}
-
-// ---------------------------------------------------------------------------
-// ⑤ the raw payload carries request_id / response_id / sync_probes
-// ---------------------------------------------------------------------------
-
-fn godot_adapter(_root: &Path, _workspace: &Path) -> GodotAdapter {
-    GodotAdapter::new(
-        GodotConfig {
-            editor_binary: std::path::PathBuf::new(),
-            cache_excludes: vec![".gotdot".to_string()],
-            main_scene: "res://scenes/main.tscn".to_string(),
-        },
-        true,
-    )
-    .with_battery_limits(BatteryLimits {
-        ready_timeout_seconds: 2,
-        max_retries: 0,
-        timeout_seconds: 5,
-    })
-}
-
-fn raw_of(workspace: &Path, step: &str) -> Value {
-    let path = workspace.join(format!(".hoh/deterministic/raw/{step}.json"));
-    let raw = std::fs::read_to_string(&path).unwrap_or_else(|error| panic!("{path:?}: {error}"));
-    serde_json::from_str(&raw).expect("raw payload json")
-}
-
-#[tokio::test]
-async fn every_battery_raw_payload_records_the_jsonrpc_correlation() {
-    let temp = tempfile::tempdir().unwrap();
-    let workspace = temp.path().join("workspace");
-    std::fs::create_dir_all(&workspace).unwrap();
-    let server = battery_server(Mode::Lag);
-    let channel = McpChannel::new(server.url(), 5, 0);
-    let adapter = godot_adapter(temp.path(), &workspace);
-
-    let records = adapter
-        .evidence_battery(&workspace, &channel)
-        .await
-        .expect("the battery completes");
-
-    for record in &records {
-        let raw = raw_of(&workspace, &record.step_id);
-        for key in ["request_id", "response_id", "sync_probes"] {
-            assert!(
-                raw.get(key).is_some(),
-                "{}: the raw header is missing `{key}`: {raw}",
-                record.step_id
-            );
-        }
-        assert!(
-            raw["request_id"].is_u64(),
-            "{}: the request id must be recorded: {raw}",
-            record.step_id
-        );
-        assert!(
-            raw["sync_probes"].as_u64().unwrap_or(0) >= 1,
-            "every call needed a probe against the lagging server: {raw}"
-        );
-    }
-
-    // The editor step really saw the editor report, not the stale scene text.
-    let editor = raw_of(&workspace, "editor_errors_baseline");
-    assert!(
-        editor["calls"][0]["payload"]["content"][0]["text"]
-            .as_str()
-            .unwrap_or("")
-            .contains("\"errors\""),
-        "{editor}"
-    );
-    assert!(
-        !editor.to_string().contains("gd_scene"),
-        "the stale payload must not appear as this step's evidence: {editor}"
-    );
-
-    // The session probe left a durable report.
-    let sync: SessionSyncReport = serde_json::from_str(
-        &std::fs::read_to_string(workspace.join(SESSION_SYNC_FILE)).expect("mcp-sync.json"),
-    )
-    .expect("the report parses");
-    assert!(sync.available, "{sync:?}");
-    assert!(
-        sync.desynced,
-        "the lagging server must be detected: {sync:?}"
-    );
-    assert!(sync.probes >= 1, "{sync:?}");
-}
-
-// ---------------------------------------------------------------------------
-// ⑥ the desync reaches result.json.warnings
-// ---------------------------------------------------------------------------
-
-#[tokio::test]
-async fn a_desynchronized_session_is_reported_in_result_json_warnings() {
-    let temp = tempfile::tempdir().unwrap();
-    let root = temp.path();
-    let mut cfg: HohConfig = test_config(root, 1);
-    cfg.runtime.spec = root.join("spec.md");
-    cfg.tools.max_sync_retries = 4;
-    let spec = write_spec(root);
-    let server = battery_server(Mode::Lag);
-
-    let orchestrator = hof_rs::runtime::run_loop::Orchestrator {
-        harness: Box::new(FakeHarness::new(happy_script())),
-        adapter: Box::new(godot_adapter(root, &cfg.runtime.workspace)),
-        tools: Arc::new(McpChannel::new(server.url(), 5, 0)),
-        cfg,
-        ablation: Ablation::default(),
-        force_init: true,
-        start_state: hof_rs::runtime::start_state::StartState::as_is(),
-    };
-    hof_rs::runtime::run_loop::run(&orchestrator, &spec, "run-1")
-        .await
-        .expect("the desync is a warning, not a crash");
-
-    let result: Value = serde_json::from_str(&read(&root.join("runs/run-1/iter-1/result.json")))
-        .expect("result.json");
-    let warnings = result["warnings"].as_array().expect("warnings");
-    let desync = warnings
-        .iter()
-        .filter_map(Value::as_str)
-        .find(|warning| warning.starts_with("mcp_desync_detected"))
-        .unwrap_or_else(|| panic!("mcp_desync_detected must be recorded: {warnings:?}"));
-    // The offset the *session probe itself* observed: by the time the battery
-    // starts, `index_markdown`'s `tools/list` has already consumed the +703
-    // stale entry, so the probe sees the ordinary "one request behind" −1.
-    assert!(desync.contains("id_offset=-1"), "{desync}");
-    assert!(desync.contains("probes="), "{desync}");
-}
-
-/// A healthy session must not produce the warning (no unconditional noise).
-#[tokio::test]
-async fn a_healthy_session_records_no_desync_warning() {
-    let temp = tempfile::tempdir().unwrap();
-    let root = temp.path();
-    let mut cfg: HohConfig = test_config(root, 1);
-    cfg.runtime.spec = root.join("spec.md");
-    let spec = write_spec(root);
-    let server = battery_server(Mode::Normal);
-
-    let orchestrator = hof_rs::runtime::run_loop::Orchestrator {
-        harness: Box::new(FakeHarness::new(happy_script())),
-        adapter: Box::new(godot_adapter(root, &cfg.runtime.workspace)),
-        tools: Arc::new(McpChannel::new(server.url(), 5, 0)),
-        cfg,
-        ablation: Ablation::default(),
-        force_init: true,
-        start_state: hof_rs::runtime::start_state::StartState::as_is(),
-    };
-    hof_rs::runtime::run_loop::run(&orchestrator, &spec, "run-1")
-        .await
-        .expect("the happy path completes");
-
-    let result: Value = serde_json::from_str(&read(&root.join("runs/run-1/iter-1/result.json")))
-        .expect("result.json");
-    let warnings = result["warnings"].as_array().expect("warnings");
-    assert!(
-        !warnings
-            .iter()
-            .filter_map(Value::as_str)
-            .any(|warning| warning.starts_with("mcp_desync_detected")),
-        "a healthy server must not be reported as desynchronized: {warnings:?}"
-    );
-}
-
-/// The monitor replies are synthesized from the last simulated action, which
-/// needs the server to hold no state; the helper is kept honest by asserting
-/// both shapes exist.
-#[test]
-fn the_monitor_reply_helper_covers_both_actions() {
-    let moving = monitor_reply("move_right", 3);
-    let idle = monitor_reply("jump", 3);
-    assert!(text_of(&moving).contains("\"x\":4.0"));
-    assert!(text_of(&idle).contains("\"y\":4.0"));
 }

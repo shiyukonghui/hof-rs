@@ -112,7 +112,7 @@ pub fn copy_tree(src: &Path, dst: &Path, excludes: &[String]) -> anyhow::Result<
 /// DR-61 (DEF-2) established that a superseded file must be skipped; DR-62
 /// decides *what* counts as superseded.  The criterion is **structural**: the
 /// explicit [`hygiene::SupersededSet`] record a producer writes (see
-/// `adapter::godot::invalidate_artifact`), never a filename shape.  DR-61 used
+/// `hygiene::invalidate_artifact`), never a filename shape.  DR-61 used
 /// `name.contains(".stale-")`, which silently hid an artifact a role had named
 /// `*.stale-*` for **this** round.  Skipping is not deleting: the file stays on
 /// the real workspace untouched, and the manifest itself is never copied.
@@ -436,7 +436,7 @@ mod tests {
     }
 
     /// DR-62: producer and consumer agree end to end.  The real supersession —
-    /// `adapter::godot::invalidate_artifact`, the one production path that
+    /// `hygiene::invalidate_artifact`, the one production path that
     /// renames an artifact out of the way in place (DR-49) — is what the real
     /// evidence copy skips, with no fixture format involved.
     #[test]
@@ -446,7 +446,7 @@ mod tests {
         write(&source.join("frame-00.png"), "previous round\n");
         write(&source.join("this-round.stale-keep.png"), "this round\n");
 
-        let stale = crate::adapter::godot::invalidate_artifact(&source.join("frame-00.png"))
+        let stale = crate::runtime::hygiene::invalidate_artifact(&source.join("frame-00.png"))
             .unwrap()
             .expect("a pre-existing artifact must be moved aside");
         assert!(stale.starts_with("frame-00.png.stale-"), "{stale}");

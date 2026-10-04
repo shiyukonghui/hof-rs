@@ -1,2 +1,0 @@
-# DR-60 raw evidence cited by its report; pinned -text so CRLF translation cannot alter the bytes.
-.spec/hof-rs/tasks/dr60-evidence/** -text

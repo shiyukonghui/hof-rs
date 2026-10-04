@@ -112,26 +112,8 @@ fn default_max_evidence_bytes() -> u64 {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct GodotConfig {
-    /// DR-44: the engine binary this adapter drives (absolute path).  Absent or
-    /// empty means "unknown": the engine identity then records `null` plus a
-    /// `reason` instead of inventing a value (R12 discipline).
-    #[serde(default)]
-    pub editor_binary: PathBuf,
-    #[serde(default)]
-    pub cache_excludes: Vec<String>,
-    #[serde(default = "default_main_scene")]
-    pub main_scene: String,
-}
-
-fn default_main_scene() -> String {
-    "res://scenes/main.tscn".to_string()
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AdapterConfig {
     pub kind: String,
-    pub godot: GodotConfig,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

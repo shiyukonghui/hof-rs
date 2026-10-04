@@ -1,1 +1,0 @@
-{"id":1,"jsonrpc":"2.0","result":{"content":[{"text":"{\"node_path\":\"/root/Main/Car\",\"properties\":{\"collision_layer\":1,\"physics_material_override\":null},\"type\":\"CharacterBody2D\"}","type":"text"}]}}

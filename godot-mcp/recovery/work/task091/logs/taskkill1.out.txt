@@ -1,2 +1,0 @@
-SUCCESS: The process with PID 100832 (child process of PID 97152) has been terminated.
-SUCCESS: The process with PID 97152 (child process of PID 54848) has been terminated.

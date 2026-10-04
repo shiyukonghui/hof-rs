@@ -1,6 +1,0 @@
-[gd_scene format=3]
-
-[node name="Main" type="Node2D"]
-
-[node name="Actor" type="Node2D" parent="."]
-position = Vector2(1, 2)

@@ -1,3 +1,0 @@
-wrote F:\moonbit-hof-rs\godot-mcp\tools\sessions\missilecommand\session.json
-calls: 127 (editor 14 / game 113)
-json round-trip: OK (127 calls)

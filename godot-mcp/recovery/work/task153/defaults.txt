@@ -1,3 +1,0 @@
-﻿DEFAULT_OLD_CONTRACT= F:\moonbit-hof-rs\godot-mcp\godot\modules\mcp_server\docs\rename-baseline-tools-list.json
-DEFAULT_MAP= F:\moonbit-hof-rs\godot-mcp\godot\modules\mcp_server\docs\tool-rename-map.json
-DEFAULT_OUT= F:\moonbit-hof-rs\godot-mcp\godot\modules\mcp_server\docs\tools_list.renamed.json

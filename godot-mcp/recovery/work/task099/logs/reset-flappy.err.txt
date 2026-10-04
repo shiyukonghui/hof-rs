@@ -1,5 +1,0 @@
-F:\moonbit-hof-rs\godot-mcp\recovery\work\task099\reset_game_project.ps1 : A positional parameter cannot be found that 
-accepts argument '+'.
-    + CategoryInfo          : InvalidArgument: (:) [reset_game_project.ps1], ParameterBindingException
-    + FullyQualifiedErrorId : PositionalParameterNotFound,reset_game_project.ps1
- 

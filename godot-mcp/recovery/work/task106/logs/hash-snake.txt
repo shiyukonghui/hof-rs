@@ -1,3 +1,0 @@
-manifest: F:\moonbit-hof-rs\godot-mcp\recovery\work\task106\archive\snake-20260927-080911.manifest.json
-files   : 217
-bytes   : 10229425

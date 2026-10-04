@@ -1,7 +1,0 @@
-<Project Sdk="Godot.NET.Sdk/4.8.0-dev">
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <EnableDynamicLoading>true</EnableDynamicLoading>
-    <RootNamespace>Mcp088Csharp</RootNamespace>
-  </PropertyGroup>
-</Project>

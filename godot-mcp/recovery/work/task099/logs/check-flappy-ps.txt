@@ -1,2 +1,0 @@
-PS_PARSE OK: tools\sessions\flappy\session.json
-PS_PARSE calls=92 editor=14 game=78 import=True

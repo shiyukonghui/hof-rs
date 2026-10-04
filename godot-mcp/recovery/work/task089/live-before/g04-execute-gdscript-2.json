@@ -1,1 +1,0 @@
-﻿{"error":{"code":-32602,"data":{"suggestion":"Parameter 'code' accepts a string (required); Accepted parameters of running_game_execute_gdscript: code"},"message":"Parameter 'code' does not compile: Parse error"},"id":204,"jsonrpc":"2.0"}

@@ -1,31 +1,19 @@
-# DR-58: the frozen real-machine fixtures are referenced **byte for byte** —
-# tests/dr58_payload_shapes.rs re-checks each one against the sha256 recorded in
-# tests/fixtures/dr58/MANIFEST.json and against its read-only source under
-# runs/**.  Git's automatic CRLF conversion would silently change those bytes on
-# checkout, so the directory is pinned to no conversion.
-tests/fixtures/dr58/** -text
-
+# Git line-ending pins that are part of a byte contract.
+#
 # DR-75: the versioned `pre-push` gate and the shell scripts around it are shell
 # programs, so their line endings are part of their correctness.  This machine's
 # system gitconfig (C:/Program Files/Git/etc/gitconfig) sets core.autocrlf=true,
 # which would rewrite them to CRLF on checkout for anyone with that setting; a
 # carriage return can break the shebang and corrupt the last token of every line
-# on a shell that does not strip it.  Pinned to no conversion, like the two below.
+# on a shell that does not strip it.
 .githooks/** -text
 scripts/*.sh -text
 
-# DR-70 ⑤: the frozen `smoke-t9` evidence bundle is read as bytes too —
-# tests/frozen_evidence.rs asserts the record boundaries and the pure-LF line
-# endings of `experiment/dev1_commands.txt`.  DR-69's byte accounting came apart
-# precisely because the committed blob (pure LF) and the working tree (CRLF, via
-# `core.autocrlf=true`) disagreed, so the tree is pinned to no conversion.
-.spec/hof-rs/tasks/TASK-SMOKE-T9-evidence/** -text
-
-# DR-76 ①: same rule for the DR-76 fixtures — `scene_tree_smoke_t10.json` and
-# `hud_labels_smoke_t10.json` are byte-for-byte copies of the frozen
-# `runs/smoke-t10` payloads (the frozen `hud-labels.json` is CRLF), and
-# tests/dr76_payload_shapes.rs re-checks each copy against the sha256 in
-# tests/fixtures/dr76/MANIFEST.json.  Conversion on checkout would silently
-# change those bytes and make the shape the suite is corrected against a
-# different artifact from the one the engine really sent.
-tests/fixtures/dr76/** -text
+# BATCH-B2: `.spec/bevy/PRD.md` carries a **sealed prefix** (`src/adapter/bevy/prd.rs`,
+# `SEALED_PREFIX_SHA256`) whose whole point is that its bytes are frozen.  This
+# machine's system gitconfig sets `core.autocrlf=true`, which rewrote the file to
+# CRLF on a fresh checkout (5217 B / 81 CR) while the frozen prefix is the pure-LF
+# blob (5136 B), so the seal failed on a clean checkout and passed in a working
+# tree that had been normalised.  Pinned to no conversion: a documented byte
+# contract must survive checkout.
+.spec/bevy/PRD.md -text

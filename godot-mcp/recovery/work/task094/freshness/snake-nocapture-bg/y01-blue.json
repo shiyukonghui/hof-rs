@@ -1,1 +1,0 @@
-﻿{"id":1,"jsonrpc":"2.0","result":{"content":[{"text":"{\"ignored\":{},\"new_value\":{\"a\":1.0,\"b\":1.0,\"g\":0.0,\"r\":0.0},\"node_path\":\"/root/Main/Background\",\"old_value\":{\"a\":1.0,\"b\":0.0700000002980232,\"g\":0.0900000035762787,\"r\":0.0500000007450581},\"property\":\"color\"}","type":"text"}]}}

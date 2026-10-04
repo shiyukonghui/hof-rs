@@ -1,4 +1,0 @@
-scons: D:\Anaconda\Scripts\scons.exe  (from first `scons` on PATH)
-mcp057_build_mono: exit code = 0
-mcp057_build_mono: log = C:\Users\wyl\AppData\Local\Temp\mcp057\mono_build.log
-TASK097_EXIT=0 

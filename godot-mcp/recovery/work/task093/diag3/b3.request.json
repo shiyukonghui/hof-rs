@@ -1,1 +1,0 @@
-﻿{"jsonrpc":"2.0","id":402,"method":"tools/call","params":{"name":"running_game_capture_screenshot","arguments":{"save_path":"user://diag3-b.png"}}}

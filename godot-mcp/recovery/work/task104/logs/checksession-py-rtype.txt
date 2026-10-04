@@ -1,5 +1,0 @@
-file      : F:\moonbit-hof-rs\godot-mcp\tools\sessions\rtype\session.json
-bytes     : 60755
-calls     : 223 (editor 14 / game 209)
-utf8 json : OK
-CHECK_SESSION OK

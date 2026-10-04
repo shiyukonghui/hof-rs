@@ -1,6 +1,0 @@
-== F:\moonbit-hof-rs\godot-mcp\runs\snake\snake-clean-task097 / c03-read-before
-   scene bytes: 13284   total [node] entries: 75
-   automatic names (@Type@N): 37
-     @ColorRect@ -> 37
-   named nodes: 38
-   first automatic names: ['@ColorRect@20995', '@ColorRect@20996', '@ColorRect@20997', '@ColorRect@20998', '@ColorRect@20999', '@ColorRect@21000']

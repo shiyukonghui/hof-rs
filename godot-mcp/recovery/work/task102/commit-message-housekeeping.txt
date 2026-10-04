@@ -1,1 +1,0 @@
-docs(godot-mcp): TASK-102 - the helper-owned logs of the commit and two-repo capture scripts are committed after the fact so the working tree is clean; no content change

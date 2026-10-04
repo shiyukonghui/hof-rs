@@ -1,8 +1,0 @@
-[gd_scene format=3]
-
-[node name="Main" type="Node2D"]
-
-[node name="ColorRect" type="ColorRect" parent="."]
-offset_right = 600.0
-offset_bottom = 400.0
-color = Color(0.9, 0.1, 0.1, 1)

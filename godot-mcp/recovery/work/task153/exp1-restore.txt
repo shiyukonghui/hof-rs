@@ -1,9 +1,0 @@
-=== git status --porcelain (must be empty) ===
-<empty>
-=== git diff --stat (must be empty) ===
-<empty>
-=== git hash-object vs HEAD blob ===
-work_blob=543b49b2583bf06c3aba2a320649a31eda272e3e
-head_blob=543b49b2583bf06c3aba2a320649a31eda272e3e
-EQUAL=True
-work_sha256=8f8051c4c0f8941089f0b21a193cef7c51fa7c41d7e312b1463ea8593f313c54

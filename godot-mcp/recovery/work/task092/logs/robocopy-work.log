@@ -1,29 +1,0 @@
-
--------------------------------------------------------------------------------
-   ROBOCOPY     ::     Robust File Copy for Windows                              
--------------------------------------------------------------------------------
-
-  Started : 2026年9月26日 23:41:20
-   Source : C:\Users\wyl\AppData\Local\Temp\mcp-recovery\work\
-     Dest : F:\moonbit-hof-rs\godot-mcp\recovery\work\
-
-    Files : *.*
-	    
-  Options : *.* /NDL /NFL /S /E /DCOPY:DAT /COPY:DAT /MT:8 /R:1 /W:1 
-
-------------------------------------------------------------------------------
-  0%    0%    0%    0%    0%  
-
-------------------------------------------------------------------------------
-
-               Total    Copied   Skipped  Mismatch    FAILED    Extras
-    Dirs :       369       369         0         0         0         0
-   Files :      2498      2498         0         0         0         0
-   Bytes :  161.65 m  161.65 m         0         0         0         0
-   Times :   0:00:09   0:00:00                       0:00:00   0:00:00
-
-
-   Speed :           170,877,861 Bytes/sec.
-   Speed :             9,777.710 MegaBytes/min.
-   Ended : 2026年9月26日 23:41:21
-

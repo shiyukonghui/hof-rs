@@ -1,2 +1,0 @@
-appended 5485 bytes to F:\moonbit-hof-rs\godot-mcp\godot\modules\mcp_server\docs\reports\REBUILT-2C-MANIFEST.md
-manifest now 111471 bytes

@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use serde_json::{json, Value};
 
-use crate::adapter::{DoctorItem, GodotAdapter, ProjectAdapter, TestAdapter};
+use crate::adapter::{DoctorItem, ProjectAdapter, TestAdapter};
 use crate::cli::{
     config_specs, parse_ablation, DoctorArgs, InitArgs, RollbackArgs, RunArgs, SpecHashArgs,
     StatusArgs, SubmitArgs, ToolsArgs, ToolsCommand,
@@ -23,7 +23,7 @@ use crate::tools::ToolChannel;
 pub async fn spec_hash(args: SpecHashArgs) -> anyhow::Result<i32> {
     let path = args
         .spec
-        .unwrap_or_else(|| PathBuf::from(".spec/hof-rs/PRD-mario.md"));
+        .unwrap_or_else(|| PathBuf::from(".spec/bevy/PRD.md"));
     let spec = load_spec(&path)?;
     println!("{}", spec.sha256);
     Ok(0)
@@ -504,23 +504,12 @@ fn build_adapter(config: &HohConfig) -> anyhow::Result<Box<dyn ProjectAdapter>> 
 
 fn build_adapter_kind(
     kind: &str,
-    config: &HohConfig,
-    force_init: bool,
+    _config: &HohConfig,
+    _force_init: bool,
 ) -> anyhow::Result<Box<dyn ProjectAdapter>> {
     match kind {
-        "godot" | "godot_mcp" => Ok(Box::new(
-            GodotAdapter::new(config.adapter.godot.clone(), force_init).with_battery_limits(
-                crate::adapter::godot::BatteryLimits {
-                    ready_timeout_seconds: config.tools.ready_timeout_seconds,
-                    max_retries: config.tools.max_retries,
-                    timeout_seconds: config.tools.timeout_seconds,
-                },
-            ),
-        )),
         "test" => Ok(Box::new(TestAdapter::new())),
-        other => {
-            Err(HofError::Config(format!("unknown adapter `{other}` (expected godot|test)")).into())
-        }
+        other => Err(HofError::Config(format!("unknown adapter `{other}` (expected test)")).into()),
     }
 }
 
@@ -1083,8 +1072,13 @@ pub async fn rollback(args: RollbackArgs) -> anyhow::Result<i32> {
         .project
         .or_else(|| std::env::var("HOH_WORKSPACE").ok().map(PathBuf::from))
         .unwrap_or_else(|| PathBuf::from(".workspace/mario"));
-    let config = load_with(&[])?;
-    let excludes = HashExcludes::new(config.adapter.godot.cache_excludes.clone()).merged();
+    // The rollback command has no project adapter to ask (it runs against the
+    // run's own snapshots), so the exclusion set is the runtime's always-excluded
+    // pair (`.hoh`, `.git`) and nothing else: an unconfigured cache prefix must
+    // never silently hide a real artifact from the rollback.  The configuration
+    // is still loaded, so a broken `hoh.yaml` is reported here as everywhere else.
+    let _ = load_with(&[])?;
+    let excludes = HashExcludes::default().merged();
 
     let store = VersionStore::new(runs_dir.join(&args.run_id).join("versions"));
     if !store.root.join(&args.to).is_dir() {
@@ -1150,39 +1144,5 @@ mod tests {
         assert_eq!(bare_model_name("vendor/some-model"), Some("some-model"));
         assert_eq!(bare_model_name("deepseek-v4.1-flash"), None);
         assert_eq!(bare_model_name("vendor/"), None);
-    }
-
-    /// DR-6: `hoh doctor` must print the manual editor-scope confirmation, and
-    /// that item must never be the reason a run is refused (ok = true).
-    #[test]
-    fn doctor_report_contains_the_editor_scope_confirmation() {
-        let temp = tempfile::tempdir().unwrap();
-        let adapter = GodotAdapter::new(
-            crate::config::GodotConfig {
-                editor_binary: std::path::PathBuf::new(),
-                cache_excludes: vec![],
-                main_scene: "res://scenes/main.tscn".to_string(),
-            },
-            false,
-        );
-        let items = adapter.doctor(temp.path()).unwrap();
-        let text = format_doctor(&items);
-        assert!(
-            text.contains("[ok] godot.editor_scope:"),
-            "doctor output: {text}"
-        );
-        assert!(
-            text.contains(crate::runtime::run_loop::MCP_SCOPE_WARNING),
-            "doctor output: {text}"
-        );
-        assert!(text.to_lowercase().contains("confirm manually"));
-        assert!(
-            items
-                .iter()
-                .find(|item| item.name == "godot.editor_scope")
-                .expect("item")
-                .ok,
-            "the confirmation item must not block a run (exit 4 semantics unchanged)"
-        );
     }
 }

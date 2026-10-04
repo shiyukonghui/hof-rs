@@ -1,1 +1,0 @@
-﻿{"method":"tools/call","params":{"arguments":{"code":"return get_parent().AimBall(8.0, -30.0, 0.0, 276.0)"},"name":"running_game_execute_gdscript"},"id":1,"jsonrpc":"2.0"}

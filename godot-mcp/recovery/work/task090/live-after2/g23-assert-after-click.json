@@ -1,1 +1,0 @@
-﻿{"id":323,"jsonrpc":"2.0","result":{"content":[{"text":"{\"actual\":{\"x\":70.0,\"y\":420.0},\"assertion\":\"node_state\",\"expected\":{\"x\":70.0,\"y\":420.0},\"node_path\":\"/root/Main/Player\",\"operator\":\"eq\",\"passed\":true,\"property\":\"position\",\"resolved_node_path\":\"/root/Main/Player\"}","type":"text"}]}}

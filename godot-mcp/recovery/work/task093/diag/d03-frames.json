@@ -1,1 +1,0 @@
-﻿{"error":{"code":-32602,"data":{"suggestion":"Accepted parameters of running_game_capture_frames: count, frame_interval, half_resolution"},"message":"Unknown parameter 'interval_frames' for tool 'running_game_capture_frames'"},"id":202,"jsonrpc":"2.0"}

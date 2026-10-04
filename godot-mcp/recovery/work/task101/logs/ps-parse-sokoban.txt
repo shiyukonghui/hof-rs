@@ -1,2 +1,0 @@
-PS_PARSE OK: tools\sessions\sokoban\session.json
-PS_PARSE calls=190 editor=14 game=176 import=True

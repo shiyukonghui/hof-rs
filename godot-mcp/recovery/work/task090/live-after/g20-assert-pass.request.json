@@ -1,1 +1,0 @@
-﻿{"method":"tools/call","params":{"arguments":{"expected":{"y":420,"x":60},"property":"position","node_path":"Player"},"name":"running_game_assert_node_state"},"id":320,"jsonrpc":"2.0"}

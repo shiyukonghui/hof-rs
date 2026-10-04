@@ -1,2 +1,0 @@
-TASK-154 PORT GUARD: port 1234 is refused. This script uses the test ports only: 9888/9889.
-  (The decision maker's own editor port on this machine is never to be occupied or probed.)

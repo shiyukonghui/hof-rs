@@ -1,15 +1,13 @@
 //! The project adapter boundary: everything project-type specific (what `A₀`
 //! looks like, how to run a deterministic check, how to collect evidence)
-//! lives behind this trait, so Godot is just the first implementation (A3).
+//! lives behind this trait, so the game engine is just one implementation of it.
 
 pub mod bevy;
 pub mod engine;
-pub mod godot;
 pub mod mcp;
 pub mod test_adapter;
 
 pub use engine::EngineIdentity;
-pub use godot::GodotAdapter;
 pub use test_adapter::TestAdapter;
 
 use std::path::{Path, PathBuf};
@@ -164,8 +162,8 @@ pub trait ProjectAdapter: Send + Sync {
     /// Runs on the real workspace before the freeze, writes every raw payload
     /// under `<workspace>/.hoh/deterministic/raw/`, and returns one record per
     /// declared step.  The default implementation adapts [`Self::build_check`]
-    /// so an adapter that has no battery yet still works; `GodotAdapter`
-    /// overrides it with the real seven-step battery.
+    /// so an adapter that has no battery yet still works; an engine adapter
+    /// overrides it with its real, engine-specific battery.
     async fn evidence_battery(
         &self,
         workspace: &Path,
@@ -227,8 +225,8 @@ pub trait ProjectAdapter: Send + Sync {
     /// `type runs\smoke-t11\game_endpoint.json` still printed the *previous*
     /// round's pid 33536, and all three `running_game_*` CLI calls were refused
     /// with `game_endpoint_unavailable`.  Before this method the only publisher
-    /// was the runtime battery (`GodotAdapter`'s own `play_scene_ready` step), so
-    /// a role's process could play a scene whose route was never written.
+    /// was the runtime battery's own game step, so a role's process could play a
+    /// scene whose route was never written.
     ///
     /// The order is the round start's order and is not a detail: the announced
     /// endpoint is installed for in-process routing, the readiness poll runs
@@ -307,8 +305,8 @@ pub trait ProjectAdapter: Send + Sync {
 // boundary: build the artifact, start the game, observe semantic state inside
 // the running process, inject level-triggered input, and answer "is this
 // artifact deliverable".  It is named after capabilities rather than engines so
-// both Godot and Bevy can implement it, and nothing about Bevy appears in this
-// module (`runtime/**` and this trait stay engine-agnostic).
+// nothing about Bevy appears in this module (`runtime/**` and this trait stay
+// engine-agnostic).
 //
 // **Failure semantics (binding, DESIGN-DETAIL §1 and §7).**  Every method
 // returns `Result`; **no method may panic**.  There are exactly two failure
@@ -330,15 +328,12 @@ pub trait ProjectAdapter: Send + Sync {
 pub enum EngineId {
     /// Bevy 0.19.1 (the pinned engine).
     Bevy0191,
-    /// Godot 4.8, kept as the frozen legacy path (D296).
-    Godot48Legacy,
 }
 
 impl EngineId {
     pub fn as_str(self) -> &'static str {
         match self {
             EngineId::Bevy0191 => "bevy-0.19.1",
-            EngineId::Godot48Legacy => "godot-4.8-legacy",
         }
     }
 }
@@ -361,7 +356,7 @@ impl Project {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Prepared {
     pub workspace: PathBuf,
-    /// The executable to launch, when the engine has one (Bevy does, Godot does not).
+    /// The executable to launch, when the engine produces one.
     pub artifact: Option<PathBuf>,
     /// How long the build took, in milliseconds (the build contract's budget input).
     pub build_millis: u64,
@@ -578,9 +573,9 @@ pub type GateVerdict = crate::model::ArtifactGate;
 /// because the PRD requires the surface to exist).
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum AdapterError {
-    /// The engine cannot do this synchronously (Godot's game control is
-    /// editor-mediated and asynchronous, so its `prepare`/`start`/`stop` cannot
-    /// live on this surface without an async bridge).
+    /// The engine cannot do this synchronously (an editor-mediated, asynchronous
+    /// engine cannot offer `prepare`/`start`/`stop` on this surface without an
+    /// async bridge).
     #[error("adapter capability `{capability}` is not supported: {reason}")]
     Unsupported {
         capability: &'static str,

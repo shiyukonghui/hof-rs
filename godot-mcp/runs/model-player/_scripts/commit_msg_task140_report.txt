@@ -1,9 +1,0 @@
-TASK-140: report finalisation (final redirect numbers, gate/attribution readers, git section)
-
-* TASK-140-REPORT.md: section J (commits, per-file staging, single-repo status), the final
-  redirect self-check numbers (194 commands scanned / 0 hits / shell=True 0 / the 102 residual
-  source hits reviewed verbatim), the three extra reader scripts, and section C/E/F/I content.
-* t140_redirect_scan.json re-run after the main commit, so the recorded numbers are the final ones.
-* t140_cut_probe.py: the authoritative source-based cut (idx 501) plus the polluted argv-based
-  cut (idx 506) so the choice is auditable.
-* t140_scan_show.py / t140_gateshow.py: the readers used for the report's §I and Y3 evidence.

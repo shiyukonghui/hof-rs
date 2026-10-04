@@ -1,1 +1,0 @@
-TASK-154 PORT GUARD: the user editor port literal appears in the launch context "F:\moonbit-hof-rs\godot-mcp\recovery\work\task154-acc\path-with-9877-literal"; refusing to run.

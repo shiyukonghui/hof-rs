@@ -1,1 +1,0 @@
-docs(godot-mcp): TASK-097 - the report's closing boundary is restated so it cannot be made stale by the task's own doc-only follow-ups: the snapshot is the state right after the report commit, and the two follow-ups that exist are listed verbatim

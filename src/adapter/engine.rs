@@ -332,9 +332,7 @@ fn probe_binary(binary: Option<&Path>) -> EngineBinary {
             size_bytes: None,
             mtime_unix: None,
             sha256: None,
-            reason: Some(
-                "no engine binary is configured (adapter.godot.editor_binary)".to_string(),
-            ),
+            reason: Some("no engine binary is configured".to_string()),
         };
     };
     let path = Some(binary.to_string_lossy().into_owned());

@@ -1,5 +1,0 @@
-live tools/list bodies extracted from the log: 0
-distinct live tools observed: 0 (contract: 177)
-
-tools where the contract and the live server disagree: 0
-====================================================================================================

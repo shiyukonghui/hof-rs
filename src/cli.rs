@@ -37,7 +37,7 @@ pub struct RunArgs {
     pub iterations: u32,
     #[arg(long)]
     pub run_id: Option<String>,
-    #[arg(long, default_value = "godot")]
+    #[arg(long, default_value = "test")]
     pub adapter: String,
     #[arg(short = 'c', long = "config")]
     pub config_spec: Vec<String>,
@@ -47,8 +47,8 @@ pub struct RunArgs {
     #[arg(long)]
     pub ablate: Vec<String>,
     /// Destructive: scaffold `A0` even when the workspace already contains a
-    /// non-empty, non-Godot directory (existing files can be overwritten).
-    /// Never needed for an already initialized Godot workspace: `initialize`
+    /// non-empty, non-scaffold directory (existing files can be overwritten).
+    /// Never needed for an already initialized workspace: `initialize`
     /// is idempotent (DR-9).
     #[arg(long)]
     pub force_init: bool,
@@ -70,7 +70,7 @@ pub struct RunArgs {
 pub struct DoctorArgs {
     #[arg(long)]
     pub project: Option<PathBuf>,
-    #[arg(long, default_value = "godot")]
+    #[arg(long, default_value = "test")]
     pub adapter: String,
     #[arg(short = 'c', long = "config")]
     pub config_spec: Vec<String>,
@@ -88,14 +88,14 @@ pub struct DoctorArgs {
 pub struct InitArgs {
     #[arg(long)]
     pub project: Option<PathBuf>,
-    #[arg(long, default_value = "godot")]
+    #[arg(long, default_value = "test")]
     pub adapter: String,
     #[arg(short = 'c', long = "config")]
     pub config_spec: Vec<String>,
     /// Empty the configured workspace before rebuilding `A₀` (DR-21 semantics).
     #[arg(long)]
     pub fresh_workspace: bool,
-    /// Allow scaffolding over a non-empty, non-Godot directory.
+    /// Allow scaffolding over a non-empty, non-scaffold directory.
     #[arg(long)]
     pub force_init: bool,
 }

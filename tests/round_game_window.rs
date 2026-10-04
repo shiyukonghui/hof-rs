@@ -1,7 +1,7 @@
 //! DR-70 ①: the game route must cover the **whole round**.
 //!
-//! DR-69 published the route inside the battery's `editor_play_scene` step
-//! (`src/adapter/godot.rs`), which the runtime reaches *after* the Developer and
+//! DR-69 published the route inside the battery's `editor_play_scene` step (an
+//! engine-adapter step), which the runtime reaches *after* the Developer and
 //! *before* the Tester (`src/runtime/run_loop.rs`).  The acceptance measured the
 //! consequence (D1, major): in the normal flow **no role process ever overlapped
 //! the route's lifetime**, so every role's `hoh tools call running_game_*` still
@@ -386,8 +386,8 @@ async fn a_failing_round_still_withdraws_the_published_route() {
 /// leave no route behind — and the round must still proceed, with the role getting
 /// DR-43's explicit refusal instead of a route that lies.
 ///
-/// This is the shipped-suite form of the DR-70 acceptance's A1/A4: the real
-/// `GodotAdapter` registered the endpoint *before* it polled readiness, so a fresh
+/// This is the shipped-suite form of the DR-70 acceptance's A1/A4: an engine
+/// adapter registered the endpoint *before* it polled readiness, so a fresh
 /// or not-yet-ready project could expose a route the start never confirmed.  The
 /// acceptance could only reach that path with an out-of-repo probe crate; the stub
 /// now reproduces its exact shape (`failing_after_publish`).

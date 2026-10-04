@@ -1,1 +1,0 @@
-﻿{"method":"tools/call","params":{"arguments":{"code":"return this_function_does_not_exist()"},"name":"running_game_execute_gdscript"},"id":205,"jsonrpc":"2.0"}

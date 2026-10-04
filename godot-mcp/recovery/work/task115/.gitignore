@@ -1,8 +1,0 @@
-# TASK-115 的临时产物：绝不入库
-# 例外：logs\probe-report.txt 是探针三问的唯一自包含逐字证据，体积很小，随任务书一起入库。
-#       每个引擎调用另外还有 logs\<name>.stdout.txt / .stderr.txt（体积大、内容已并入 report），
-#       那些不入库。
-export_probe/
-logs/*
-!logs/probe-report.txt
-__pycache__/

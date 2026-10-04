@@ -1,5 +1,0 @@
-SnakeSegment.cs    inline   call=79987161BD21A5E3 payload=79987161BD21A5E3 project=79987161BD21A5E3 OK
-Food.cs            inline   call=4841EB57F41C67E8 payload=4841EB57F41C67E8 project=4841EB57F41C67E8 OK
-SnakeGame.cs       sidecar  call=14E88DCB573803A3 payload=14E88DCB573803A3 project=14E88DCB573803A3 OK
-checked: 3 ; problems: 0
-PAYLOAD_CHAIN OK

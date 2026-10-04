@@ -1,6 +1,0 @@
-=== g207-runtime-overlay ===
-{
- "result": "overlay added",
- "result_type": "String"
-}
-

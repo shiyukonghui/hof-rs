@@ -1,1 +1,0 @@
-﻿{"jsonrpc":"2.0","id":501,"method":"tools/call","params":{"name":"running_game_run_stress_test","arguments":{"action":"breakout_right","count":20}}}

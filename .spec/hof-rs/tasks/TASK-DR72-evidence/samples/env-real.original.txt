@@ -1,1 +1,0 @@
-{"content": "<returncode>0</returncode>\n<output>\nHOH_ARTIFACT_DIR=F:\\stand-in\\repo\\runs\\run-1\\iter-1\\candidate\\.hoh\nPATH=C:\\stand-in\\user\\node_modules\\.bin;C:\\stand-in\\bin\n</output>", "extra": {"returncode": 0}}

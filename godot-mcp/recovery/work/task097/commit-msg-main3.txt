@@ -1,1 +1,0 @@
-docs(godot-mcp): TASK-097 - GAME-LOOP-LOG's TASK-096 re-localisation section gains the one-line closure note, so its "unavailable (D-1)" wording is read as the historical record of the runs before the cleanup rather than as the current state of the pixel column

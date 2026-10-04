@@ -1,7 +1,0 @@
-﻿python : FATAL: L1 pattern mismatch: add_animation_track
-At line:5 char:1
-+ python modules/mcp_server/scripts/gen_renamed_contract.py --out "$w\e ...
-+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (FATAL: L1 patte...animation_track:String) [], RemoteException
-    + FullyQualifiedErrorId : NativeCommandError
- 

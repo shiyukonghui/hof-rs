@@ -1,9 +1,0 @@
-﻿script                     : F:\moonbit-hof-rs\godot-mcp\godot\modules\mcp_server\scripts\gen_renamed_contract.py
-docstrings excluded        : 5
-executable string-literal hits naming hof-rs : 0
-open() calls               :
-   line 1855  path
-   line 1991  old_path
-   line 1993  map_path
-   line 2242  out_path
-SCAN_EXIT=0 (no executable hof-rs path)

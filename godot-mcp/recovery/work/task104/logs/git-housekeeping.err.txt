@@ -1,4 +1,0 @@
-warning: in the working copy of 'godot-mcp/recovery/work/task104/commit-message-head.txt', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'godot-mcp/recovery/work/task104/logs/git-head.err.txt', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'godot-mcp/recovery/work/task104/logs/git-head.out.txt', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'godot-mcp/recovery/work/task104/commit-message-housekeeping.txt', LF will be replaced by CRLF the next time Git touches it

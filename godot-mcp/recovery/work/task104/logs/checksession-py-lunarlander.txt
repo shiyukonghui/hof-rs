@@ -1,5 +1,0 @@
-file      : F:\moonbit-hof-rs\godot-mcp\tools\sessions\lunarlander\session.json
-bytes     : 62055
-calls     : 230 (editor 14 / game 216)
-utf8 json : OK
-CHECK_SESSION OK

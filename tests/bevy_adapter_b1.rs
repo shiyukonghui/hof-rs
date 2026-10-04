@@ -1,5 +1,5 @@
-//! BATCH-B1 cross-module pins: the frozen contract, the frozen tool list, the
-//! legacy adapter's alignment, and the round-evidence layout.
+//! BATCH-B1 cross-module pins: the frozen contract, the frozen tool list and the
+//! round-evidence layout.
 //!
 //! **BATCH-B2 re-pinned two of these literals deliberately.**  D297 (b) added the
 //! game frame counter as the seventh reflectable surface and D297 (c) put the
@@ -13,8 +13,7 @@
 //!
 //! These are integration-level because they are the properties that hold the
 //! *system* together: the contract hash, the tool-list hash and the eight
-//! semantic names must not drift silently, and the Godot path must keep
-//! compiling and answering honestly through the new trait.
+//! semantic names must not drift silently.
 
 use std::path::PathBuf;
 use std::time::Duration;
@@ -30,20 +29,6 @@ use hof_rs::adapter::mcp::evidence::{
 };
 use hof_rs::adapter::mcp::generic::{brp_method_names, BRP_VERBS};
 use hof_rs::adapter::mcp::semantic::{semantic_tool_names, SEMANTIC_TOOL_SPECS};
-use hof_rs::adapter::GodotAdapter;
-use hof_rs::adapter::{AdapterError, EngineId, GameAdapter, Intent, Project, SemanticKind};
-use hof_rs::config::GodotConfig;
-
-fn godot_adapter() -> GodotAdapter {
-    GodotAdapter::new(
-        GodotConfig {
-            editor_binary: PathBuf::new(),
-            cache_excludes: Vec::new(),
-            main_scene: "res://scenes/main.tscn".to_string(),
-        },
-        false,
-    )
-}
 
 #[test]
 fn the_frozen_contract_hash_and_crate_name_are_pinned() {
@@ -107,58 +92,6 @@ fn the_generic_layer_keeps_the_verb_names_and_the_old_vocabulary_out() {
             verb.name
         );
     }
-}
-
-#[test]
-fn the_legacy_godot_adapter_implements_the_capability_surface_without_panicking() {
-    let mut adapter = godot_adapter();
-    assert_eq!(adapter.engine(), EngineId::Godot48Legacy);
-    assert_eq!(adapter.engine().as_str(), "godot-4.8-legacy");
-
-    let project = Project::at(PathBuf::from("."));
-
-    // Task-level failures, typed rather than strings.
-    for (what, result) in [
-        ("prepare", adapter.prepare(&project).err()),
-        ("wait_frames", adapter.wait_frames(5).err()),
-        ("health", adapter.health().err()),
-    ] {
-        match result {
-            Some(error) => match error.downcast_ref::<AdapterError>() {
-                Some(AdapterError::Unsupported { capability, .. }) => assert_eq!(*capability, what),
-                other => panic!("`{what}` should be Unsupported, got {other:?}"),
-            },
-            None => panic!("`{what}` must be a task-level failure on the Godot surface"),
-        }
-    }
-
-    // Evidence-level failures: the adapter answers, and the answer is "not
-    // observed" / "refused" — which is what lets the battery record a gap.
-    for kind in SemanticKind::ALL {
-        let reading = adapter.read(*kind).expect("read answers");
-        assert!(reading.failed, "the Godot path cannot observe {kind:?}");
-        assert!(reading.reason.is_some());
-        assert_eq!(reading.value, serde_json::Value::Null);
-    }
-    let injection = adapter
-        .inject(&Intent::Move { dir: 1 }, true)
-        .expect("inject answers");
-    assert!(!injection.accepted);
-    assert!(injection.reason.is_some());
-
-    // And the one real capability: the existing artifact verdict.
-    let temporary = tempfile::tempdir().unwrap();
-    let verdict = adapter
-        .validate_artifact(&Project::at(temporary.path()))
-        .unwrap();
-    assert!(verdict.applicable);
-    assert!(!verdict.launchable, "an empty workspace is not launchable");
-    assert!(!verdict.reasons.is_empty(), "a verdict carries its reasons");
-
-    // Object safe, so a future engine can be selected at runtime.
-    let mut boxed: Box<dyn GameAdapter> = Box::new(godot_adapter());
-    assert_eq!(boxed.engine(), EngineId::Godot48Legacy);
-    let _ = boxed.wait_frames(1);
 }
 
 #[test]

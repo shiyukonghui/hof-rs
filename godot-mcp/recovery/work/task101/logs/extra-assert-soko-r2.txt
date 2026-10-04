@@ -1,6 +1,0 @@
-g165-input-right           all_passed=True  steps=3 passed=1 failed=0 errors=0 duration_ms=507
-g103-assert-screen-win     PASS  screen_text 'LEVEL CLEARED'                  matched='LEVEL CLEARED' source=control_tree
-g134-assert-screen-dead    PASS  screen_text 'STUCK - DEADLOCK'               matched='STUCK - DEADLOCK' source=control_tree
-g165-input-right/step2     PASS  scenario PlayerCol gt 3.0                    actual=4
-------------------------------------------------------------------------------
-extra assertions found: 3  ->  PASS=3

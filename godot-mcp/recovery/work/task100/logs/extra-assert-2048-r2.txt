@@ -1,6 +1,0 @@
-g102-input-left            all_passed=True  steps=3 passed=1 failed=0 errors=0 duration_ms=463
-g102-input-left/step2      PASS  scenario MoveCount gt 0.0                    actual=1
-g67-assert-screen-text-win PASS  screen_text '2048 REACHED'                   matched='2048 REACHED' source=control_tree
-g80-assert-screen-text-loss PASS  screen_text 'NO MOVES LEFT'                  matched='NO MOVES LEFT' source=control_tree
-------------------------------------------------------------------------------
-extra assertions found: 3  ->  PASS=3

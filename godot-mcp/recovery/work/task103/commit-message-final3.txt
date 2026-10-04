@@ -1,7 +1,0 @@
-docs(godot-mcp): TASK-103 - the report's F4 states the closing boundary the way it was measured: the helper's post-commit log/status lines go into the same handle, so a pair stays modified
-
-Measured after the previous commit: `git status --short` reports the last commit's own
-`git-main-<tag>.out.txt` and `.err.txt` as modified, because git_commit.ps1 keeps writing
-into the same stdout handle after the commit (the echo of GIT_EXIT, git log and
-git status). F4 now says that, with a pattern instead of a tag the next commit would
-make stale, and keeps both repositories' final HEADs. No evidence file changed.

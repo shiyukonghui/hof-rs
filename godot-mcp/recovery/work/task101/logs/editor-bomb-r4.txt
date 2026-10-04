@@ -1,8 +1,0 @@
-== runs\bomberman\bomb-task101-r4
-  e05-read-1     sha256=05672aed6e7c6e3e22aeb500a58de8b85dcaa19486733ccf059f26e8dd75cb1c bytes=844
-  e09-read-2     sha256=05672aed6e7c6e3e22aeb500a58de8b85dcaa19486733ccf059f26e8dd75cb1c bytes=844
-  scene file unchanged by the refused batch: True
-  e06 refusal code=-32000 conflicts=3 paths=Background,Hud,Status
-  e07-tree-after-refusal   nodes=4 auto_named=0 []
-  g01-scene-tree           nodes=127 auto_named=0 []
-  g202-final-tree          nodes=128 auto_named=0 []

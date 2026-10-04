@@ -1,5 +1,0 @@
-docs(godot-mcp): TASK-097 - the report's closing section: both repositories' real git logs and status lines, the tracked-versus-untracked accounting (0 tracked changes, 136 untracked entries all left over from TASK-096), the engine branch being level with its remote at 094b071f9b, and the post-run process/port check
-
-This is the doc-only follow-up that carries the snapshot of the state after the report's
-own commit; it changes nothing except the presence of this commit on top of the main
-repository's log.

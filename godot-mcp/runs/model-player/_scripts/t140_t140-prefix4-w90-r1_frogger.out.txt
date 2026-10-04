@@ -1,9 +1,0 @@
-$ D:\Anaconda\python.exe F:\moonbit-hof-rs\godot-mcp\tools\playtest_player.py run --game frogger --backend scripted --player scripted --variant V1 --image-form full --steps 12 --port 9977 --window-frames 90 --round 1 --change-margin strict --out-prefix t140-prefix4-w90-r1
------ stdout -----
-  step 01 action=frog_up            conf=None    http=None | ack=True(action_pressed) px=1639 vs ctl=0 mv=3.0/0.0 | ok_ack_and_changed
-  STOP at step 01: game declared terminal [{'field': 'GameOver', 'value': True, 'means': 'the game ended'}, {'field': 'Lives', 'value': 0, 'means': 'no lives left'}]
-VERDICT frogger/scripted: INCONCLUSIVE @w90 r1 -- the game declared a TERMINAL state at step 1, so every later frame is frozen by the game's own rule and the run cannot show what the model could have done with a live game (TASK-132 §1.2)
-  verdict_context: {"verdict": "INCONCLUSIVE", "window_frames": 90, "round": 1, "reporting_frames": 90, "at_reporting_window": true, "backend": "scripted", "player": "scripted", "game": "frogger", "change_margin": "strict", "counts_as_pass": false, "what": "TASK-140 §1.A.3: a verdict is only attributable together with the window budget it was measured at and the round (independent complete run) it came from; TASK-139 measured that w30 verdicts were not reproducible across rounds, so a bare verdict string is not evidence of a class"}
-
------ stderr -----
-

@@ -1,1 +1,0 @@
-﻿{"method":"tools/call","params":{"arguments":{"code":"var m = get_parent()\nreturn m.ForceTestState(\"23,5|22,5|21,5;dir=1,0;food=0,0\")"},"name":"running_game_execute_gdscript"},"id":1,"jsonrpc":"2.0"}

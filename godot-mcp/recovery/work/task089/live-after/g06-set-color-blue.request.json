@@ -1,1 +1,0 @@
-﻿{"method":"tools/call","params":{"arguments":{"property":"color","node_path":"Player","value":{"g":0.9,"r":0.9,"b":0.1,"a":1}},"name":"running_game_set_node_property"},"id":206,"jsonrpc":"2.0"}

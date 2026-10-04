@@ -1,4 +1,0 @@
-﻿modules/mcp_server/scripts/mcp029_clear_default_evidence.ps1:69:# `F:\moonbit-hof-rs\tests\fixtures\mcp\tools_list.json` - a file outside the
-modules/mcp_server/scripts/mcp029_clear_default_evidence.ps1:83:# the state this script always intended (`git -C F:\moonbit-hof-rs show
-modules/mcp_server/scripts/mcp032_d3_d4_d6_evidence.ps1:70:# `F:\moonbit-hof-rs\tests\fixtures\mcp\tools_list.json` - a file outside the
-modules/mcp_server/scripts/mcp032_d3_d4_d6_evidence.ps1:85:# `git -C F:\moonbit-hof-rs show db2eed7^:tests/fixtures/mcp/tools_list.json` (a

@@ -1,1 +1,0 @@
-qa_scope: MCP acts on the project open in the editor (the real workspace) while the Tester evaluates a frozen copy; the runtime binds both to one candidate identity with pre-QA and around-QA hash assertions (D7).

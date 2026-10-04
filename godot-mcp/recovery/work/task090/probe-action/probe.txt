@@ -1,7 +1,0 @@
-﻿  [p01-baseline] {"id":401,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":[\"\",0],\"result_type\":\"Array\"}","type":"text"}]}}
-  [p02-inputmap-has-action] {"id":402,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":false,\"result_type\":\"bool\"}","type":"text"}]}}
-  [p03-inject-direct] {"id":403,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":\"injected\",\"result_type\":\"String\"}","type":"text"}]}}
-  [p04-after-direct] {"id":404,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":[\"\",0,100.0],\"result_type\":\"Array\"}","type":"text"}]}}
-  [p05-scenario-input] {"id":405,"jsonrpc":"2.0","result":{"content":[{"text":"{\"all_passed\":false,\"completed_steps\":2,\"duration_ms\":348,\"errors\":0,\"failed\":0,\"passed\":0,\"results\":[{\"injected\":1,\"step\":0,\"type\":\"input\"},{\"step\":1,\"type\":\"wait\",\"waited_seconds\":0.3}],\"total_steps\":2}","type":"text"}]}}
-  [p06-after-scenario] {"id":406,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":[\"\",0,100.0],\"result_type\":\"Array\"}","type":"text"}]}}
-  [p07-poll] {"id":407,"jsonrpc":"2.0","result":{"content":[{"text":"{\"result\":false,\"result_type\":\"bool\"}","type":"text"}]}}

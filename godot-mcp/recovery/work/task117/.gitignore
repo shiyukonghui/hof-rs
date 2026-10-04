@@ -1,5 +1,0 @@
-# TASK-117 的临时产物：解包出来的游戏副本约 160 MB/个，绝不入库。
-# （逐款结论的证据在 runs\playability-exe\ 与本目录的 JSON 里，不需要这两份解包副本。）
-unzip-run/
-unzip-test/
-__pycache__/

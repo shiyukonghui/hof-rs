@@ -11,8 +11,8 @@
 //! warnings: ["qa_scope: …", "harness_source_read", "no_progress"]
 //! ```
 //!
-//! while `REQUIREMENTS.md:112`'s E1 requires the Developer to produce a Godot
-//! project increment.  Nothing boolean turned red: `no_progress` was a
+//! while `REQUIREMENTS.md:112`'s E1 requires the Developer to produce a project
+//! increment.  Nothing boolean turned red: `no_progress` was a
 //! `warnings` string, `ok` described "the loop ran to the end", and both the
 //! exit code and `artifact_gate.launchable` stayed green.  A green round that
 //! cannot go red for this failure class makes every future green worthless.
@@ -25,20 +25,17 @@
 //! 2. the automation — a round in exactly `smoke-t7`'s state now reports a
 //!    violation, `ok = false` and a non-zero exit code.
 //!
-//! The exclusion set is **derived from the runtime configuration**
-//! (`config/hoh.yaml` → `adapter.godot.cache_excludes`), never hard-coded:
-//! otherwise moving a real artifact path into `cache_excludes` — the DR-11
-//! failure mode that silently switches off write detection — would leave this
-//! test green.
+//! The exclusion set is **derived from the adapter the runtime is wired to**
+//! (`ProjectAdapter::cache_excludes`), never hard-coded: otherwise moving a real
+//! artifact path into that set — the DR-11 failure mode that silently switches
+//! off write detection — would leave this test green.
 
 mod common;
 
 use std::path::Path;
 
 use common::*;
-use hof_rs::adapter::godot::GodotAdapter;
-use hof_rs::adapter::ProjectAdapter;
-use hof_rs::config::load_config;
+use hof_rs::adapter::{ProjectAdapter, TestAdapter};
 use hof_rs::model::{Ablation, ArtifactGate, ContractViolation, Role};
 use hof_rs::runtime::policy::{diff_manifests, hash_tree, tree_manifest, HashExcludes};
 use hof_rs::runtime::run_loop::{developer_write_deadline, RunSummary};
@@ -52,21 +49,20 @@ use serde_json::{json, Value};
 /// `HashExcludes::new(orchestrator.adapter.cache_excludes()).merged()`.
 ///
 /// DR-67 (DEF-7): the source is the **adapter**, not the raw configuration.
-/// `GodotAdapter::cache_excludes()` currently returns `.hoh` + `.git` + the
-/// configured `cache_excludes`, so both spellings agree today; but an exclusion
-/// the adapter hard-codes on top of the configuration would be invisible to a
-/// test that reads the configuration directly — and that is exactly the DR-11
-/// trap this file exists to catch.
+/// An adapter may hard-code an exclusion on top of anything it is configured
+/// with, and a test that read the configuration directly could not see it — and
+/// that is exactly the DR-11 trap this file exists to catch.  The adapter the
+/// runtime is wired to is the offline `TestAdapter` (`config/hoh.yaml` →
+/// `adapter.kind: test`).
 fn configured_excludes() -> Vec<String> {
-    let config = load_config(&[]).expect("config/hoh.yaml must load");
-    let adapter = GodotAdapter::new(config.adapter.godot.clone(), false);
+    let adapter = TestAdapter::new();
     HashExcludes::new(adapter.cache_excludes()).merged()
 }
 
 #[test]
-fn the_runtime_exclude_set_comes_from_the_configuration() {
+fn the_runtime_exclude_set_comes_from_the_adapter() {
     let excludes = configured_excludes();
-    for required in [".hoh", ".git", ".godot", ".import"] {
+    for required in [".hoh", ".git", "cache"] {
         assert!(
             excludes.contains(&required.to_string()),
             "the runtime exclude set must contain `{required}`; got {excludes:?}"
@@ -75,23 +71,11 @@ fn the_runtime_exclude_set_comes_from_the_configuration() {
     // The set is built from the adapter's own answer, so both a configuration
     // change and a hard-coded addition inside the adapter change this result.
     // DR-67 (DEF-7).
-    let config = load_config(&[]).unwrap();
-    assert_eq!(
-        config.adapter.godot.cache_excludes,
-        vec![".godot".to_string(), ".import".to_string()],
-        "the shipped `cache_excludes` changed; the E1 reachability argument depends on it"
-    );
-    let adapter = GodotAdapter::new(config.adapter.godot.clone(), false);
+    let adapter = TestAdapter::new();
     assert_eq!(
         adapter.cache_excludes(),
-        vec![
-            ".hoh".to_string(),
-            ".git".to_string(),
-            ".godot".to_string(),
-            ".import".to_string()
-        ],
-        "the adapter's exclusion set is what the runtime hashes with; if this grew an \
-         exclusion on top of the configuration, `configured_excludes()` must follow it"
+        vec!["cache".to_string()],
+        "the adapter's exclusion set changed; the E1 reachability argument depends on it"
     );
     // Non-vacuity of the DEF-7 fix: `configured_excludes()` is not a literal — it
     // really is the adapter's own answer.
@@ -700,9 +684,8 @@ async fn the_real_round_path_persists_a_failing_rounds_verdict() {
 /// The prompt may only promise what the hash actually ignores.
 ///
 /// DR-66's `[budget]` said "`.hoh/**` does not count", but the runtime excludes
-/// `.godot` and `.import` as well (`config/hoh.yaml` → `cache_excludes`), so a
-/// round that only wrote under `.godot/**` would also be recorded as
-/// `no_engineering_write` while the prompt implied otherwise.
+/// `.git` as well, so a round that only wrote under `.git/**` would also be
+/// recorded as `no_engineering_write` while the prompt implied otherwise.
 ///
 /// DR-69 (DR-67 DEF-C): `.git` is in the runtime's exclude set too, and the
 /// prompt did not name it, so this test's own name (`names_every_excluded_path`)
@@ -710,7 +693,7 @@ async fn the_real_round_path_persists_a_failing_rounds_verdict() {
 #[test]
 fn the_prompt_names_every_excluded_path_not_just_the_scratch_dir() {
     let prompt = delivered_prompt(hof_rs::prompts::DEVELOPER_PROMPT);
-    for excluded in [".hoh", ".git", ".godot", ".import"] {
+    for excluded in [".hoh", ".git"] {
         assert!(
             prompt.contains(excluded),
             "the prompt must account for the `{excluded}` exclusion it is subject to:\n{prompt}"
@@ -718,7 +701,7 @@ fn the_prompt_names_every_excluded_path_not_just_the_scratch_dir() {
     }
     // And the set it names is the set the runtime uses, not an aspirational one.
     let excludes = configured_excludes();
-    for excluded in [".hoh", ".git", ".godot", ".import"] {
+    for excluded in [".hoh", ".git", "cache"] {
         assert!(
             excludes.contains(&excluded.to_string()),
             "`{excluded}` must really be excluded; got {excludes:?}"

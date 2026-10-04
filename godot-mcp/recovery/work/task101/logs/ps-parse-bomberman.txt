@@ -1,2 +1,0 @@
-PS_PARSE OK: tools\sessions\bomberman\session.json
-PS_PARSE calls=233 editor=14 game=219 import=True

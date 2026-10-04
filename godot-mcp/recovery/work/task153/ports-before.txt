@@ -1,7 +1,0 @@
-=== listening ports BEFORE gates (read-only Get-NetTCPConnection) ===
-port 9877 : <none listening>
-port 9888 : <none listening>
-port 9889 : <none listening>
-binary exists = True
-binary --version = 4.8.dev.mono.custom_build.035edfce7
-binary bytes=300544 mtime=2026-09-29 08:31:03

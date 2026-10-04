@@ -1,1 +1,0 @@
-{"id":1,"jsonrpc":"2.0","result":{"content":[{"text":"{\"actual\":0.0,\"assertion\":\"node_state\",\"expected\":123.0,\"node_path\":\"/root/Main/Actor\",\"operator\":\"eq\",\"passed\":false,\"property\":\"rotation\",\"reason\":\"expected rotation eq 123, found 0\",\"resolved_node_path\":\"/root/Main/Actor\"}","type":"text"}]}}

@@ -1,1 +1,0 @@
-﻿ M modules/mcp_server/docs/rename-baseline-tools-list.json

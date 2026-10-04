@@ -1,7 +1,0 @@
-docs(godot-mcp): TASK-103 - the report's F4 states the closing boundary exactly instead of claiming a clean tree the last commit cannot produce
-
-The commit helper owns its own stdout/stderr by design (iron rule 1), so the files it
-writes land after the commit they belong to: one housekeeping commit therefore always
-leaves one more pair dirty. F4 now says so with the observed file names, points at the
-log for the last commit's own hash rather than inventing one, and records both
-repositories' final HEADs and working-tree states. No evidence file changed.

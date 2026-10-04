@@ -1,5 +1,0 @@
-docs(godot-mcp): TASK-104 - housekeeping: the amended commit message and the helper-owned logs of the closing commits are committed after the fact so the record matches
-
-commit-message-head.txt was re-written after the amend that removed the BOM and fixed the apostrophe, so the committed copy of the message had drifted from the message the commit actually carries; this commit makes them the same file. The git-head and git-f4/git-audit helper logs come with it, because the commit helper owns its stdout/stderr (iron rule 1) and therefore writes its log after its own commit.
-
-This is the boundary TASK-102 and TASK-103 recorded and it is unchanged here: one more housekeeping commit swaps one pair of same-named helper logs for the next, so the working tree after this commit still shows the two files the commit helper writes about itself, and that is where this task stops.

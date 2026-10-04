@@ -24,7 +24,7 @@ runtime:
   max_schema_retries: 2
   workspace: .workspace/mario
   runs_dir: runs
-  spec: .spec/hof-rs/PRD-mario.md
+  spec: .spec/bevy/PRD.md
   # DR-3：只从「角色视图副本」中排除的相对路径/前缀（例如私有测试夹具）。
   # 这些路径**不**进入 hash_tree / 快照的排除集，因此不会削弱 R2/R3 的越权写入检测。
   private_excludes: []
@@ -33,19 +33,8 @@ runtime:
   max_evidence_bytes: 8388608
 
 adapter:
-  kind: godot                             # godot | test
-  godot:
-    # DR-41：配置里不再有插件源目录 —— 工具通道是引擎自带的原生 MCP 模块（C4），
-    # 项目里既不复制 GDExtension 插件，也不会再有 ADDON_MISSING.txt。
-    # DR-44：本机实际使用的引擎二进制（绝对路径）。doctor 的 godot.engine_binary /
-    # godot.engine_version 与 meta.json.engine 都以它为准；版本串只**记录**、
-    # 不写进代码、不作为判据（C12）。
-    editor_binary: F:/moonbit-hof-rs/godot-mcp/godot/bin/godot.windows.editor.x86_64.mono.exe
-    # DR-11：只允许「缓存类」目录（如 .godot / .import）。
-    # 这些目录对 hash_tree 与快照同样不可见；把真实产物路径加进来会**同时关闭**
-    # R2/R3 的越权检测能力（只读角色改动被排除的文件将不再可见）。
-    cache_excludes: [".godot", ".import"]
-    main_scene: res://scenes/main.tscn
+  # 唯一内置的 ProjectAdapter 是离线测试替身；引擎适配器（Bevy）尚在接入中。
+  kind: test
 
 tools:
   endpoint: http://127.0.0.1:9877/mcp

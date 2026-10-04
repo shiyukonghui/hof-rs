@@ -1,4 +1,0 @@
-# TASK-117 -- 20 games, playable re-export (TASK-116 fix included)
-# format: <sha256>  <bytes>  <file>  <verification>
-b573907d9fdcad3125e5cfacf250e0ddb34b6502f5bef5ae19973ea67f69092e  632377243  godot-mcp-20games-playable-20260927-1424-part1of2.zip  MATCHES-package-results
-77fa0501f0e39fd2f206918e1d40ebedc1c0f4982c992908ec535c30831b66f0  632362355  godot-mcp-20games-playable-20260927-1424-part2of2.zip  MATCHES-package-results

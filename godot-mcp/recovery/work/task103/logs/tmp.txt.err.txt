@@ -1,1 +1,0 @@
-D:\Anaconda\python.exe: can't open file 'F:\moonbit-hof-rs\godot-mcp\recovery\work\task103\list_tags.py': [Errno 2] No such file or directory

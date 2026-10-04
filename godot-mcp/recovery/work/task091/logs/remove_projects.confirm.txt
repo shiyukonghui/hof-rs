@@ -1,9 +1,0 @@
-TARGET   : H:\rebuild\projects
-PREFIX   : H:\rebuild (allowed)
-FILES    : 303
-BYTES    : 6029718
-MB       : 5.8
-TOP LEVEL: 2 entries
-   d----- mcpplay
-   d----- mcpplay8
-REMOVED  : H:\rebuild\projects

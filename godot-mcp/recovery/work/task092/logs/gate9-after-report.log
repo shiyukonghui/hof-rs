@@ -1,9 +1,0 @@
-ANCHOR_JUDGE VERDICT=ANCHOR_EQUAL
-ANCHOR_JUDGE ANCHOR=cf554ef58 ANCHOR_REPORTED=cf554ef58 HEAD=cf554ef58
-ANCHOR_JUDGE ANCESTOR=yes
-ANCHOR_JUDGE CRITERION=A is an ancestor of H (A == H counts) and git diff --name-only A..H contains no compile input (safe = declared non-compiling whitelist, everything else red)
-ANCHOR_JUDGE DIFF_COUNT=0 SAFE_COUNT=0 RED_COUNT=0
-ANCHOR_JUDGE REASON=the binary self-reports the very commit HEAD points at; the diff is empty by construction
-ANCHOR_JUDGE SUMMARY anchor=cf554ef58 anchor_reported=cf554ef58 head=cf554ef58 verdict=ANCHOR_EQUAL ancestor=yes diff_count=0 safe_count=0 red_count=0 criterion="A is an ancestor of H (A == H counts) and git diff --name-only A..H contains no compile input (safe = declared non-compiling whitelist, everything else red)" reason="the binary self-reports the very commit HEAD points at; the diff is empty by construction" diff=[<empty>]
-ANCHOR_JUDGE RESULT PASS
-TASK092_EXIT=0 

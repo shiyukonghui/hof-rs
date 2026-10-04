@@ -187,14 +187,7 @@ async fn the_scratch_discipline_the_prompts_state_really_works() {
     );
     // And the promise about the hash is true for that location: `.hoh` is in
     // the runtime's always-excluded set.
-    let excludes = hof_rs::runtime::policy::HashExcludes::new(
-        hof_rs::config::load_config(&[])
-            .unwrap()
-            .adapter
-            .godot
-            .cache_excludes,
-    )
-    .merged();
+    let excludes = hof_rs::runtime::policy::HashExcludes::default().merged();
     assert!(
         hof_rs::runtime::policy::is_excluded(".hoh/scratch/marker.txt", &excludes),
         "`.hoh/scratch/**` must be excluded from the artifact hash, excludes={excludes:?}"
