@@ -1,0 +1,222 @@
+[
+  {
+    "failed": false,
+    "frame": 493,
+    "kind": "PlayerTransform",
+    "reason": null,
+    "value": {
+      "frame": 493,
+      "x": 0.0,
+      "y": -200.0
+    }
+  },
+  {
+    "failed": false,
+    "frame": 513,
+    "kind": "PlayerTransform",
+    "reason": null,
+    "value": {
+      "frame": 513,
+      "x": 54.23064041137695,
+      "y": -200.0
+    }
+  },
+  {
+    "failed": false,
+    "frame": 639,
+    "kind": "PlayerTransform",
+    "reason": null,
+    "value": {
+      "frame": 639,
+      "x": 203.63699340820312,
+      "y": -200.0
+    }
+  },
+  {
+    "failed": false,
+    "frame": 649,
+    "kind": "PlayerTransform",
+    "reason": null,
+    "value": {
+      "frame": 649,
+      "x": 203.63699340820312,
+      "y": -171.76119995117188
+    }
+  },
+  {
+    "failed": false,
+    "frame": 651,
+    "kind": "PlayerTransform",
+    "reason": null,
+    "value": {
+      "frame": 651,
+      "x": 203.63699340820312,
+      "y": -168.1291046142578
+    }
+  },
+  {
+    "failed": false,
+    "frame": 653,
+    "kind": "PlayerTransform",
+    "reason": null,
+    "value": {
+      "frame": 653,
+      "x": 203.63699340820312,
+      "y": -165.87722778320312
+    }
+  },
+  {
+    "failed": false,
+    "frame": 655,
+    "kind": "PlayerTransform",
+    "reason": null,
+    "value": {
+      "frame": 655,
+      "x": 203.63699340820312,
+      "y": -165.01016235351562
+    }
+  },
+  {
+    "failed": false,
+    "frame": 657,
+    "kind": "PlayerTransform",
+    "reason": null,
+    "value": {
+      "frame": 657,
+      "x": 203.63699340820312,
+      "y": -165.51715087890625
+    }
+  },
+  {
+    "failed": false,
+    "frame": 659,
+    "kind": "PlayerTransform",
+    "reason": null,
+    "value": {
+      "frame": 659,
+      "x": 203.63699340820312,
+      "y": -167.37808227539062
+    }
+  },
+  {
+    "failed": false,
+    "frame": 661,
+    "kind": "PlayerTransform",
+    "reason": null,
+    "value": {
+      "frame": 661,
+      "x": 203.63699340820312,
+      "y": -170.6354217529297
+    }
+  },
+  {
+    "failed": false,
+    "frame": 663,
+    "kind": "PlayerTransform",
+    "reason": null,
+    "value": {
+      "frame": 663,
+      "x": 203.63699340820312,
+      "y": -175.30453491210938
+    }
+  },
+  {
+    "failed": false,
+    "frame": 665,
+    "kind": "PlayerTransform",
+    "reason": null,
+    "value": {
+      "frame": 665,
+      "x": 203.63699340820312,
+      "y": -181.3249969482422
+    }
+  },
+  {
+    "failed": false,
+    "frame": 667,
+    "kind": "PlayerTransform",
+    "reason": null,
+    "value": {
+      "frame": 667,
+      "x": 203.63699340820312,
+      "y": -188.8130798339844
+    }
+  },
+  {
+    "failed": false,
+    "frame": 669,
+    "kind": "PlayerTransform",
+    "reason": null,
+    "value": {
+      "frame": 669,
+      "x": 203.63699340820312,
+      "y": -197.65576171875
+    }
+  },
+  {
+    "failed": false,
+    "frame": 671,
+    "kind": "PlayerTransform",
+    "reason": null,
+    "value": {
+      "frame": 671,
+      "x": 203.63699340820312,
+      "y": -200.0
+    }
+  },
+  {
+    "failed": false,
+    "frame": 595,
+    "kind": "PlayerTransform",
+    "reason": null,
+    "value": {
+      "frame": 595,
+      "x": 264.6115417480469,
+      "y": -200.0
+    }
+  },
+  {
+    "failed": false,
+    "frame": 613,
+    "kind": "PlayerTransform",
+    "reason": null,
+    "value": {
+      "frame": 613,
+      "x": 210.34353637695312,
+      "y": -200.0
+    }
+  },
+  {
+    "failed": false,
+    "frame": 623,
+    "kind": "PlayerTransform",
+    "reason": null,
+    "value": {
+      "frame": 623,
+      "x": 203.63699340820312,
+      "y": -200.0
+    }
+  },
+  {
+    "failed": false,
+    "frame": 635,
+    "kind": "PlayerTransform",
+    "reason": null,
+    "value": {
+      "frame": 635,
+      "x": 203.63699340820312,
+      "y": -200.0
+    }
+  },
+  {
+    "failed": false,
+    "frame": 543,
+    "kind": "PlayerTransform",
+    "reason": null,
+    "value": {
+      "frame": 543,
+      "x": 115.19129943847656,
+      "y": -200.0
+    }
+  }
+]

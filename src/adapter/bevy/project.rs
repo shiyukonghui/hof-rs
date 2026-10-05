@@ -72,7 +72,8 @@ pub fn evidence_playbook() -> String {
          about the artifact you are judging.\n\n\
          ### What the battery already observed\n\n\
          - `.hoh/deterministic/battery.json` — one entry per step: `step_id`, the PRD ids it \
-           `supports` (`P1..P5`), `ok`, and the observation text.\n\
+           `supports` (`P1..P5`, and `Q-startup` for the liveness step), `ok`, and the observation \
+           text.\n\
          - `.hoh/deterministic/raw/e3_movement.json`, `raw/e3_coin_counter.json`, \
            `raw/e3_win_flag.json`, `raw/e3_jump_arc.json`, `raw/e3_grounded.json` — each holds the \
            criterion's observation, its readings, and the **verbatim** `bevy_*` requests and BRP \
@@ -81,6 +82,10 @@ pub fn evidence_playbook() -> String {
            `raw/e3_win_position.json`, `raw/e3_grounded_payload.json` — the four steps that were \
            missing in the first real round: the negative direction, the stop after `move_dir = 0`, \
            a transform sample at the win frame, and a `Grounded` payload read on its own.\n\
+         - `.hoh/deterministic/raw/e3_process_liveness.json` — the **late-round liveness** step, \
+           which runs last: the game's own frame counter, read, waited on and read again, with the \
+           advance it made. It is what shows the process was still stepping at the end of the pass \
+           (PRD §4 `启动`), and it carries a `frames` block rather than a `readings` list.\n\
          - `.hoh/deterministic/raw/editor_errors_baseline.json` and `raw/play_scene_ready.json` — \
            the build and the launch: times, the frozen feature hash, the endpoint and the pid.\n\
          - `.hoh/deterministic/mcp-errors.jsonl` — every failed call, one JSON object per line.\n\n\
@@ -252,6 +257,24 @@ impl ProjectAdapter for BevyAdapter {
             ),
             candidate_id: String::new(),
         }])
+    }
+
+    /// Round-1 PRD-coverage batch: the frozen PRD surfaces, decided by this
+    /// adapter's own battery records.
+    ///
+    /// The adapter is where the answer belongs: `round::E3_STEPS` names the
+    /// observations and the registry's deciders name the step ids, so the two
+    /// cannot drift apart without a red test
+    /// (`prd_surfaces::tests::every_step_a_decider_names_is_a_battery_step`).
+    /// The runtime records the result next to the battery pass it came from and
+    /// publishes it as `result.json.prd_coverage.surfaces`, so the denominator
+    /// is a constant and two rounds compare.
+    fn prd_surfaces(&self, battery: &[BatteryRecord]) -> crate::model::PrdSurfaceCoverage {
+        let steps: Vec<(String, bool)> = battery
+            .iter()
+            .map(|record| (record.step_id.clone(), record.ok))
+            .collect();
+        crate::adapter::bevy::prd_surfaces::decide(&steps)
     }
 
     /// DR-17: the real battery — build, launch headless, drive the five E3

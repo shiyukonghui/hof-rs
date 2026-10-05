@@ -11,13 +11,14 @@
 //! not be re-run from the tree.  These tests are that account, in the tree.
 //!
 //! **Where the evidence is.**  Every figure here comes from the raw recorded
-//! trajectories under `runs/`, which the repository **does not track**
-//! (`runs/` is in `.gitignore`): `runs/livecost1/iter-1/traj/developer.attempt1.json`
-//! and `runs/round4/iter-{1,2,3}/traj/developer.attempt1.json`.  The tests
-//! therefore require the evidence to be present and name the missing path if it
-//! is not — a silent pass on a machine without the recordings would be worse
-//! than a failure.  `tests/context_compaction.rs` already depends on the same
-//! recordings the same way.
+//! Developer calls.  Round-1 PRD-coverage batch: the four the cost analysis
+//! reads are now **committed** under `evidence/cost/`, so this test runs from a
+//! clone; the gitignored `runs/**` recordings are still accepted as a fallback
+//! for a machine that has them but not the corpus.  When neither is present the
+//! test names both paths rather than passing silently — a silent pass on a
+//! machine without the recordings would be worse than a failure.
+//! `tests/evidence_reproduction.rs` is the companion that states, for each
+//! headline number, which committed file reproduces it.
 //!
 //! Nothing here runs a round, a model call or a shell command: the accounting is
 //! decided from the recorded action text and the recorded `<returncode>`.
@@ -64,28 +65,51 @@ fn repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
-fn trajectory(relative: &str) -> PathBuf {
-    let path = repo_root().join("runs").join(relative);
+/// One recorded Developer call.
+///
+/// The **committed** corpus is preferred: `evidence/cost/<run>-<iteration>.
+/// developer.attempt1.json` is the same byte sequence the round recorded, added
+/// to the tree by the round-1 PRD-coverage batch so the accounting is
+/// reproducible from a clone.  The gitignored recording is the fallback, and a
+/// missing pair is an error naming both.
+fn trajectory(run: &str, iteration: &str) -> PathBuf {
+    let committed = repo_root()
+        .join("evidence/cost")
+        .join(format!("{run}-{iteration}.developer.attempt1.json"));
+    if committed.is_file() {
+        return committed;
+    }
+    let recorded = repo_root()
+        .join("runs")
+        .join(run)
+        .join(iteration)
+        .join("traj/developer.attempt1.json");
     assert!(
-        path.is_file(),
-        "the recorded evidence this accounting is measured on is not in the tree: {}\n\
-         `runs/` is gitignored, so a checkout without the recordings cannot run this test.  \
-         Copy the recordings there rather than deleting the test: the numbers in \
-         .spec/bevy/WRITE-ACCOUNTING-REPORT.md are these numbers.",
-        path.display()
+        recorded.is_file(),
+        "the recorded evidence this accounting is measured on is in neither place:\n  \
+         committed: {}\n  recorded:  {}\n\
+         `runs/` is gitignored, so a checkout without the recordings relies on `evidence/cost/`; \
+         copy the recordings there rather than deleting the test: the numbers in \
+         .spec/bevy/WRITE-ACCOUNTING-REPORT.md and .spec/bevy/COVERAGE-EVIDENCE-REPORT.md are \
+         these numbers.",
+        committed.display(),
+        recorded.display()
     );
-    path
+    recorded
 }
 
-fn audit_of(relative: &str) -> Audit {
-    let path = trajectory(relative);
+fn audit_of(run: &str, iteration: &str) -> Audit {
+    let path = trajectory(run, iteration);
     let bytes = std::fs::read(&path).unwrap_or_else(|error| panic!("{}: {error}", path.display()));
     let value: Value = serde_json::from_slice(&bytes)
         .unwrap_or_else(|error| panic!("{}: {error}", path.display()));
     audit_trajectory(&value)
 }
 
-const DEVELOPER: &str = "traj/developer.attempt1.json";
+const LIVE: (&str, &str) = ("livecost1", "iter-1");
+const ITER_1: (&str, &str) = ("round4", "iter-1");
+const ITER_2: (&str, &str) = ("round4", "iter-2");
+const ITER_3: (&str, &str) = ("round4", "iter-3");
 
 /// The live call: the one Developer call that was actually run.
 ///
@@ -95,7 +119,7 @@ const DEVELOPER: &str = "traj/developer.attempt1.json";
 /// the project (17, 44, 95, and a failed 139), and no project write after 95.
 #[test]
 fn the_live_calls_write_profile_is_the_corrected_one() {
-    let audit = audit_of(&format!("livecost1/iter-1/{DEVELOPER}"));
+    let audit = audit_of(LIVE.0, LIVE.1);
     assert_eq!(audit.recorded_calls(), 150);
     assert_eq!(audit.total_tokens, 3_651_120);
 
@@ -145,7 +169,7 @@ fn the_live_calls_write_profile_is_the_corrected_one() {
 /// cannot.
 #[test]
 fn the_recorded_iteration_three_write_timeline_is_the_corrected_one() {
-    let audit = audit_of(&format!("round4/iter-3/{DEVELOPER}"));
+    let audit = audit_of(ITER_3.0, ITER_3.1);
     assert_eq!(audit.recorded_calls(), 102);
     assert_eq!(audit.total_tokens, 5_223_211);
 
@@ -197,7 +221,7 @@ fn the_recorded_iteration_three_write_timeline_is_the_corrected_one() {
 /// that the directive-only view cannot see.
 #[test]
 fn the_other_two_recorded_iterations_are_accounted_the_same_way() {
-    let first = audit_of(&format!("round4/iter-1/{DEVELOPER}"));
+    let first = audit_of(ITER_1.0, ITER_1.1);
     assert_eq!(first.recorded_calls(), 69);
     assert_eq!(first.total_tokens, 2_626_195);
     assert_eq!(
@@ -207,7 +231,7 @@ fn the_other_two_recorded_iterations_are_accounted_the_same_way() {
     );
     assert!(first.failed_project_writes().is_empty());
 
-    let second = audit_of(&format!("round4/iter-2/{DEVELOPER}"));
+    let second = audit_of(ITER_2.0, ITER_2.1);
     assert_eq!(second.recorded_calls(), 125);
     assert_eq!(second.total_tokens, 13_091_431);
     assert_eq!(
@@ -244,7 +268,7 @@ fn the_other_two_recorded_iterations_are_accounted_the_same_way() {
 /// ten cut write directives and seven cut project edits.
 #[test]
 fn the_withdrawn_budget_at_k_32_cuts_ten_directives_and_seven_project_edits() {
-    let third = audit_of(&format!("round4/iter-3/{DEVELOPER}"));
+    let third = audit_of(ITER_3.0, ITER_3.1);
     let replay = replay_directive_step_budget(&third, 32);
     assert_eq!(replay.aborted_at_call, Some(39));
     assert_eq!(replay.cumulative_tokens_at_abort, 1_604_038);
@@ -259,8 +283,7 @@ fn the_withdrawn_budget_at_k_32_cuts_ten_directives_and_seven_project_edits() {
         "seven real src/game.rs edits, each run by a .hoh/scratch script the role wrote first"
     );
 
-    let live =
-        replay_directive_step_budget(&audit_of(&format!("livecost1/iter-1/{DEVELOPER}")), 32);
+    let live = replay_directive_step_budget(&audit_of(LIVE.0, LIVE.1), 32);
     assert_eq!(live.aborted_at_call, Some(76));
     assert_eq!(live.cumulative_tokens_at_abort, 1_357_530);
     assert_eq!(live.directive_writes_after_the_end, Vec::<usize>::new());
@@ -270,12 +293,12 @@ fn the_withdrawn_budget_at_k_32_cuts_ten_directives_and_seven_project_edits() {
         "the live call loses its call-95 project write even though every directive predates the abort"
     );
 
-    let first = replay_directive_step_budget(&audit_of(&format!("round4/iter-1/{DEVELOPER}")), 32);
+    let first = replay_directive_step_budget(&audit_of(ITER_1.0, ITER_1.1), 32);
     assert_eq!(first.aborted_at_call, Some(51));
     assert_eq!(first.cumulative_tokens_at_abort, 1_790_635);
     assert!(first.project_writes_after_the_end.is_empty());
 
-    let second = replay_directive_step_budget(&audit_of(&format!("round4/iter-2/{DEVELOPER}")), 32);
+    let second = replay_directive_step_budget(&audit_of(ITER_2.0, ITER_2.1), 32);
     assert_eq!(second.aborted_at_call, None, "iteration 2 never fires");
 }
 
@@ -283,11 +306,12 @@ fn the_withdrawn_budget_at_k_32_cuts_ten_directives_and_seven_project_edits() {
 ///
 /// To reach the cost criterion the rule must end the live call at or before call
 /// 81 (`K <= 37`); to cut nothing it must not fire before round-4 iteration 3's
-/// call 50 (`K >= 43`).  `37 < 43`, so no value of K does both — and with the
-/// corrected accounting the cut side is worse than the round-6 report said.
+/// call 50 (`K >= 43` for that recording's **directive** window).  `37 < 43`, so
+/// no value of K does both — and with the corrected accounting the cut side is
+/// worse than the round-6 report said.
 #[test]
 fn the_two_bands_do_not_overlap() {
-    let live = audit_of(&format!("livecost1/iter-1/{DEVELOPER}"));
+    let live = audit_of(LIVE.0, LIVE.1);
     let reachable = (1..=60)
         .map(|k| replay_directive_step_budget(&live, k))
         .filter_map(|replay| {
@@ -315,7 +339,7 @@ fn the_two_bands_do_not_overlap() {
         "the last cumulative total under the target is call 81"
     );
 
-    let third = audit_of(&format!("round4/iter-3/{DEVELOPER}"));
+    let third = audit_of(ITER_3.0, ITER_3.1);
     for k in 1..=42 {
         let replay = replay_directive_step_budget(&third, k);
         assert!(
@@ -324,7 +348,7 @@ fn the_two_bands_do_not_overlap() {
         );
         assert!(
             !replay.project_writes_after_the_end.is_empty(),
-            "K = {k} cuts real src/game.rs edits, so the safety band starts at 43"
+            "K = {k} cuts real src/game.rs edits, so iteration 3's directive window starts at 43"
         );
     }
     let safe = replay_directive_step_budget(&third, 43);
@@ -336,6 +360,97 @@ fn the_two_bands_do_not_overlap() {
         last_under_target < 43,
         "the two bands do not overlap: {last_under_target} < 43"
     );
+}
+
+/// **Defect D-1 of `.spec/bevy/ACCEPTANCE-ACCOUNTING.md`, pinned.**
+///
+/// The reports said "to cut no recorded work, K >= 43".  That bound is round-4
+/// iteration 3's **directive** window.  Under the corrected *project-write*
+/// accounting the live call's last project write is call 95, and the rule
+/// evaluates `call - last_directive_write > k` with the live call's last
+/// directive write at call 43, so it fires at call `44 + K`:
+///
+/// * `K = 51` fires **at** call 95 — the live call's own last artifact write —
+///   so that write is refused (`project_writes_after(95)` is empty because the
+///   write never happens, which is exactly why the strict convention nearly
+///   hides it);
+/// * `K = 52` fires at call 96, after every recorded project write.
+///
+/// The true global floor is therefore **K >= 52**, or **K >= 51** under the
+/// replay's own strict `> abort` convention.  The conclusion is unchanged and
+/// stronger: the bands are `37 < 43 < 52`, so they still do not overlap and the
+/// lever is worse than the report said.
+#[test]
+fn the_global_safe_floor_is_fifty_two_and_not_forty_three() {
+    let live = audit_of(LIVE.0, LIVE.1);
+    let last_directive_write = *live
+        .directive_write_calls()
+        .last()
+        .expect("the live call wrote directives");
+    assert_eq!(last_directive_write, 43);
+    assert_eq!(live.last_project_write(), Some(95));
+
+    // The rule's own arithmetic in the tail: once the live call has written at
+    // call 43, `last_write` stays 43, so the abort call is `43 + 1 + K`.  The
+    // formula is only reached from K = 52 on: below that the rule fires first in
+    // the call-6..call-43 stretch, where `last_write` was still moving.  That is
+    // precisely the range the "K >= 43" claim was about.
+    for k in 52..=70u64 {
+        let replay = replay_directive_step_budget(&live, k);
+        let expected = last_directive_write + 1 + k as usize;
+        match replay.aborted_at_call {
+            Some(call) => assert_eq!(call, expected, "K = {k} fires at {expected}"),
+            None => assert!(
+                expected > live.recorded_calls(),
+                "K = {k} did not fire, so its threshold {expected} must be past the last call"
+            ),
+        }
+    }
+
+    // K = 50 fires at call 94: the write at 95 is still ahead of it, so the
+    // project-write after-list is non-empty — this bound is *not* the safe edge.
+    let fifty = replay_directive_step_budget(&live, 50);
+    assert_eq!(fifty.aborted_at_call, Some(94));
+    assert_eq!(fifty.project_writes_after_the_end, vec![95]);
+
+    // K = 51 fires at call 95 itself: the write is refused rather than cut
+    // afterwards, so the after-list is empty while the damage is real.  This is
+    // the shape that made "K >= 43" look safe.
+    let fifty_one = replay_directive_step_budget(&live, 51);
+    assert_eq!(fifty_one.aborted_at_call, Some(95));
+    assert!(
+        fifty_one.project_writes_after_the_end.is_empty(),
+        "the write never happens, so nothing is *after* the abort — the strict convention"
+    );
+    let before_the_write = live
+        .calls
+        .iter()
+        .find(|call| call.call == 95)
+        .expect("call 95 is in the recording");
+    assert!(
+        before_the_write.changed_project_file(),
+        "call 95 really is a project write, which is what K = 51 refuses"
+    );
+
+    // K = 52 is the first budget that leaves every recorded project write alone.
+    let fifty_two = replay_directive_step_budget(&live, 52);
+    assert_eq!(fifty_two.aborted_at_call, Some(96));
+    assert!(fifty_two.project_writes_after_the_end.is_empty());
+    assert!(fifty_two.directive_writes_after_the_end.is_empty());
+
+    // And the global floor cannot be lower than 52: every K in 1..=51 either
+    // cuts a write after its abort or fires on the write itself.
+    for k in 1..=51u64 {
+        let replay = replay_directive_step_budget(&live, k);
+        let call = replay
+            .aborted_at_call
+            .unwrap_or_else(|| panic!("K = {k} must fire in the live call"));
+        assert!(
+            call <= 95,
+            "K = {k} fires at {call}, which must be at or before the live call's last project \
+             write (95)"
+        );
+    }
 }
 
 /// The detector's own unit surface, exercised through the public helpers on the

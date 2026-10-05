@@ -1,0 +1,222 @@
+{
+  "ok": true,
+  "failed_role": null,
+  "reason": "ok",
+  "issues": [],
+  "warnings": [
+    "qa_scope: MCP acts on the project open in the editor (the real workspace) while the Tester evaluates a frozen copy; the runtime binds both to one candidate identity with pre-QA and around-QA hash assertions (D7).",
+    "frozen evidence kept in place; the redacted form was generated as developer.attempt1.redacted.json (the original is byte-unchanged, DR-72 ②)",
+    "frozen evidence kept in place; the redacted form was generated as planner.attempt1.redacted.json (the original is byte-unchanged, DR-72 ②)",
+    "frozen evidence kept in place; the redacted form was generated as tester.attempt1.redacted.json (the original is byte-unchanged, DR-72 ②)",
+    "harness_source_read"
+  ],
+  "candidate_id": "ba935abe4e98ea3f851c15a4c5c57598d5d02aa28f7c8e64b48cf26b01d491a2",
+  "version_id": "ba935abe4e98ea3f851c15a4c5c57598d5d02aa28f7c8e64b48cf26b01d491a2",
+  "usage": [
+    {
+      "role": "planner",
+      "iteration": 2,
+      "calls": 11,
+      "prompt_tokens": 98683,
+      "completion_tokens": 2496,
+      "total_tokens": 101179,
+      "cache_hit_tokens": null,
+      "cache_miss_tokens": null,
+      "usage_known": true
+    },
+    {
+      "role": "developer",
+      "iteration": 2,
+      "calls": 125,
+      "prompt_tokens": 12765478,
+      "completion_tokens": 325953,
+      "total_tokens": 13091431,
+      "cache_hit_tokens": null,
+      "cache_miss_tokens": null,
+      "usage_known": true
+    },
+    {
+      "role": "tester",
+      "iteration": 2,
+      "calls": 37,
+      "prompt_tokens": 1384170,
+      "completion_tokens": 24332,
+      "total_tokens": 1408502,
+      "cache_hit_tokens": null,
+      "cache_miss_tokens": null,
+      "usage_known": true
+    }
+  ],
+  "durations_ms": [
+    [
+      "planner",
+      18425
+    ],
+    [
+      "developer",
+      3020012
+    ],
+    [
+      "tester",
+      217255
+    ]
+  ],
+  "evidence_diff": {
+    "added": [],
+    "modified": [
+      "src/game.rs"
+    ],
+    "removed": []
+  },
+  "wrap_up_retry_used": false,
+  "attempts": [
+    {
+      "role": "planner",
+      "iteration": 2,
+      "attempt": 1,
+      "exit_status": "Submitted",
+      "duration_ms": 18422,
+      "usage": {
+        "role": "planner",
+        "iteration": 2,
+        "calls": 11,
+        "prompt_tokens": 98683,
+        "completion_tokens": 2496,
+        "total_tokens": 101179,
+        "cache_hit_tokens": null,
+        "cache_miss_tokens": null,
+        "usage_known": true
+      },
+      "trajectory_path": "runs\\round4\\iter-2\\traj\\planner.attempt1.json",
+      "artifact_path": "runs\\round4\\iter-2\\planner-view\\.hoh/plan.md",
+      "artifact_valid": true,
+      "exit_was_limits": false
+    },
+    {
+      "role": "developer",
+      "iteration": 2,
+      "attempt": 1,
+      "exit_status": "RepeatedActionError",
+      "duration_ms": 3020012,
+      "usage": {
+        "role": "developer",
+        "iteration": 2,
+        "calls": 125,
+        "prompt_tokens": 12765478,
+        "completion_tokens": 325953,
+        "total_tokens": 13091431,
+        "cache_hit_tokens": null,
+        "cache_miss_tokens": null,
+        "usage_known": true
+      },
+      "trajectory_path": "runs\\round4\\iter-2\\traj\\developer.attempt1.json",
+      "artifact_path": "F:/hof-bevy-r4-run/workspace",
+      "artifact_valid": true,
+      "exit_was_limits": false
+    },
+    {
+      "role": "tester",
+      "iteration": 2,
+      "attempt": 1,
+      "exit_status": "RepeatedFormatError",
+      "duration_ms": 217240,
+      "usage": {
+        "role": "tester",
+        "iteration": 2,
+        "calls": 37,
+        "prompt_tokens": 1384170,
+        "completion_tokens": 24332,
+        "total_tokens": 1408502,
+        "cache_hit_tokens": null,
+        "cache_miss_tokens": null,
+        "usage_known": true
+      },
+      "trajectory_path": "runs\\round4\\iter-2\\traj\\tester.attempt1.json",
+      "artifact_path": "runs\\round4\\iter-2\\candidate\\.hoh/evidence.json",
+      "artifact_valid": true,
+      "exit_was_limits": false
+    }
+  ],
+  "secret_redactions": 21,
+  "artifact_gate": {
+    "applicable": true,
+    "launchable": true,
+    "reasons": []
+  },
+  "repair_retry_used": false,
+  "battery_passes": [
+    {
+      "pass": 1,
+      "launchable": true,
+      "steps": [
+        [
+          "editor_errors_baseline",
+          true
+        ],
+        [
+          "play_scene_ready",
+          true
+        ],
+        [
+          "e3_movement",
+          true
+        ],
+        [
+          "e3_coin_counter",
+          true
+        ],
+        [
+          "e3_win_flag",
+          true
+        ],
+        [
+          "e3_jump_arc",
+          true
+        ],
+        [
+          "e3_grounded",
+          true
+        ],
+        [
+          "e3_movement_left",
+          true
+        ],
+        [
+          "e3_movement_release",
+          true
+        ],
+        [
+          "e3_win_position",
+          true
+        ],
+        [
+          "e3_grounded_payload",
+          true
+        ]
+      ]
+    }
+  ],
+  "out_of_tree_writes": [],
+  "artifact_hygiene": {
+    "suspicious_files": [],
+    "suspicious_directories": []
+  },
+  "prd_coverage": {
+    "verified": 6,
+    "gap": 2,
+    "verified_ids": [
+      "C1",
+      "P1",
+      "P2",
+      "P3",
+      "P4",
+      "P5"
+    ],
+    "gap_ids": [
+      "S1",
+      "P3-goal-x"
+    ]
+  },
+  "wrap_up_retry_reason": "not_triggered",
+  "write_failures": []
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "failed": false,
+    "frame": 637,
+    "kind": "Grounded",
+    "reason": null,
+    "value": {
+      "frame": 637,
+      "grounded": true
+    }
+  },
+  {
+    "failed": false,
+    "frame": 473,
+    "kind": "Grounded",
+    "reason": null,
+    "value": {
+      "frame": 473,
+      "grounded": true
+    }
+  },
+  {
+    "failed": false,
+    "frame": 481,
+    "kind": "Grounded",
+    "reason": null,
+    "value": {
+      "frame": 481,
+      "grounded": true
+    }
+  },
+  {
+    "failed": false,
+    "frame": 495,
+    "kind": "Grounded",
+    "reason": null,
+    "value": {
+      "frame": 495,
+      "grounded": true
+    }
+  }
+]

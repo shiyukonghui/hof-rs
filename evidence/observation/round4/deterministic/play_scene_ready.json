@@ -1,0 +1,8 @@
+{
+  "observation": "the game answered on http://127.0.0.1:15702/ after 2706 ms (pid 47624, headless); E3 movement=ok coins=ok win=ok jump=ok grounded=ok movement_left=ok movement_release=ok win_position=ok grounded_payload=ok",
+  "ok": true,
+  "path": ".hoh/deterministic/play_scene_ready.json",
+  "raw_path": null,
+  "step_id": "play_scene_ready",
+  "supports": []
+}

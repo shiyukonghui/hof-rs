@@ -1,0 +1,127 @@
+{
+  "arc": null,
+  "calls": [
+    {
+      "brp_methods": [
+        "world.get_resources",
+        "world.query"
+      ],
+      "error": null,
+      "layer": "semantic",
+      "requests": [
+        {
+          "id": 8,
+          "jsonrpc": "2.0",
+          "method": "world.get_resources",
+          "params": {
+            "resource": "hof_game::contract::FrameCounter"
+          }
+        },
+        {
+          "id": 8,
+          "jsonrpc": "2.0",
+          "method": "world.query",
+          "params": {
+            "data": {
+              "components": [
+                "hof_game::contract::Grounded"
+              ],
+              "option": "all"
+            },
+            "filter": {
+              "with": [
+                "hof_game::contract::Player"
+              ]
+            },
+            "strict": true
+          }
+        }
+      ],
+      "responses": [
+        {
+          "id": 8,
+          "jsonrpc": "2.0",
+          "result": {
+            "value": {
+              "frames": 495
+            }
+          }
+        },
+        {
+          "id": 8,
+          "jsonrpc": "2.0",
+          "result": [
+            {
+              "components": {
+                "bevy_transform::components::global_transform::GlobalTransform": [
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  0.0,
+                  -200.0,
+                  0.0
+                ],
+                "bevy_transform::components::transform::Transform": {
+                  "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ],
+                  "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                  ],
+                  "translation": [
+                    0.0,
+                    -200.0,
+                    0.0
+                  ]
+                },
+                "bevy_transform::components::transform::TransformTreeChanged": null,
+                "hof_game::contract::Grounded": {
+                  "on_ground": true
+                },
+                "hof_game::contract::Player": {},
+                "hof_game::contract::Velocity": {
+                  "x": 0.0,
+                  "y": 0.0
+                }
+              },
+              "entity": 4294966911
+            }
+          ]
+        }
+      ],
+      "result": {
+        "frame": 495,
+        "grounded": true
+      },
+      "seq": 8,
+      "timestamp_ms": 1791177561835,
+      "tool": "bevy_grounded"
+    }
+  ],
+  "criterion": "e3_grounded_payload",
+  "failure": null,
+  "observed": true,
+  "readings": [
+    {
+      "failed": false,
+      "frame": 495,
+      "kind": "Grounded",
+      "reason": null,
+      "value": {
+        "frame": 495,
+        "grounded": true
+      }
+    }
+  ]
+}

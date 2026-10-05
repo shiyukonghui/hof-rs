@@ -1,0 +1,38 @@
+{
+  "binary": {
+    "executed": {
+      "path": "runs\\bevy-round4\\launch-image\\8d228a52-69ad-4b5a-b4c7-20dbee2e839e\\hof_game.exe",
+      "sha256": "93a0cc09d10105f690981136e7ace65130fc70d046971613a0421cd625ef34ec",
+      "size_bytes": 186890240
+    },
+    "executed_matches_built": true,
+    "executed_path": "runs\\bevy-round4\\launch-image\\8d228a52-69ad-4b5a-b4c7-20dbee2e839e\\hof_game.exe",
+    "path": "F:/hof-bevy-r4-run\\hof-bevy-shared-target\\debug\\hof_game.exe",
+    "sha256": "93a0cc09d10105f690981136e7ace65130fc70d046971613a0421cd625ef34ec",
+    "size_bytes": 186890240
+  },
+  "client_generation": 1,
+  "endpoint": "http://127.0.0.1:15702/",
+  "headless": true,
+  "identity": {
+    "answering_pid": 47624,
+    "built_binary": "F:/hof-bevy-r4-run\\hof-bevy-shared-target\\debug\\hof_game.exe",
+    "launch_image": "runs\\bevy-round4\\launch-image\\8d228a52-69ad-4b5a-b4c7-20dbee2e839e\\hof_game.exe",
+    "ledger": "runs\\bevy-round4\\launch-ledger.jsonl",
+    "listening_pid": 47624,
+    "nonce": "faf2adda-c698-48ef-a4f5-f51d1da551c6",
+    "reaped_pids": [],
+    "scheme": "per-launch nonce published by the game as the contract's `ProcessNonce` resource and read back over BRP",
+    "spawned_pid": 47624,
+    "verified": true,
+    "verified_rule": "verified is true only when this launch carries the non-empty per-launch nonce that readiness read back from the game's `hof_game::contract::ProcessNonce` resource; a reply serving any other nonce is refused and the launch fails, so a returned launch proved it. `answering_pid` is the separate, independent reading: the pid the OS TCP table names as the listener on the endpoint, recorded as read (it can be absent, and it can disagree)."
+  },
+  "pid": 47624,
+  "ready_millis": 2706,
+  "stop": {
+    "exit_code": 0,
+    "grace_millis": 5000,
+    "pid_dead": true,
+    "stderr_tail": "2026-10-05T05:19:12.845350Z  INFO bevy_diagnostic::system_information_diagnostics_plugin::internal: SystemInfo { os: \"Windows 11 Pro\", kernel: \"26100\", cpu: \"AMD Ryzen 7 5800X3D 8-Core Processor\", core_count: \"8\", memory: \"127.9 GiB\" }\n2026-10-05T05:19:12.855669Z ERROR bevy_render::extract_resource: Render app did not exist when trying to add `extract_resource` for <bevy_camera::clear_color::ClearColor>.\n2026-10-05T05:19:13.368859Z  WARN bevy_gizmos_render: bevy_render feature is enabled but RenderApp was not detected. Are you sure you loaded GizmoPlugin after RenderPlugin?\n2026-10-05T05:19:13.380077Z  WARN bevy_render::texture: CompressedImageFormatSupport resource not found. It should either be initialized in finish() of RenderPlugin, or manually if not using the RenderPlugin or the WGPU backend.\n2026-10-05T05:19:13.380298Z  WARN bevy_gltf: CompressedImageFormatSupport resource not found. It should either be initialized in finish() of RenderPlugin, or manually if not using the RenderPlugin or the WGPU backend.\nhof_game alive=true health=alive boot frame=0 pid=47624 wall_ms=1791177553382\nhof_game alive=true liveness frame=116 pid=47624 wall_ms=1791177555386 elapsed_ms=2007 coins=0 target=2 won=false x=0.00 y=-200.00 on_ground=true\nhof_game alive=true liveness frame=234 pid=47624 wall_ms=1791177557386 elapsed_ms=4007 coins=0 target=2 won=false x=0.00 y=-200.00 on_ground=true\nhof_game alive=true liveness frame=470 pid=47624 wall_ms=1791177561391 elapsed_ms=8011 coins=0 target=2 won=false x=0.00 y=-200.00 on_ground=true\n"
+  }
+}

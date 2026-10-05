@@ -910,10 +910,15 @@ async fn run_battery_pass(
 }
 
 /// DR-24: the recorded `ok` summary of one battery pass.
+///
+/// Round-1 PRD-coverage batch: `surfaces` is computed from the pass's own
+/// records, so the coverage figure travels with the pass it came from rather
+/// than being recomputed later from something else.
 fn battery_summary(
     pass: u32,
     battery: &[crate::adapter::BatteryRecord],
     gate: &crate::model::ArtifactGate,
+    surfaces: crate::model::PrdSurfaceCoverage,
 ) -> crate::model::BatteryPassSummary {
     crate::model::BatteryPassSummary {
         pass,
@@ -922,6 +927,7 @@ fn battery_summary(
             .iter()
             .map(|record| (record.step_id.clone(), record.ok))
             .collect(),
+        surfaces,
     }
 }
 
@@ -1954,7 +1960,12 @@ async fn run_inner(
         // prompt: a battery that cannot open the main scene means `A_t` is not
         // a usable artifact, however green the rest of the loop is.
         let mut launch_gate = crate::adapter::evaluate_launchable(&battery);
-        let mut battery_passes = vec![battery_summary(1, &battery, &launch_gate)];
+        let mut battery_passes = vec![battery_summary(
+            1,
+            &battery,
+            &launch_gate,
+            orchestrator.adapter.prd_surfaces(&battery),
+        )];
         let mut iter_repair_retry_used = false;
         if launch_gate.applicable && !launch_gate.launchable {
             // DR-70 ①: the repair retry is a **Developer** call, so it runs
@@ -2059,7 +2070,12 @@ async fn run_inner(
                 }
             }
             launch_gate = crate::adapter::evaluate_launchable(&battery);
-            battery_passes.push(battery_summary(2, &battery, &launch_gate));
+            battery_passes.push(battery_summary(
+                2,
+                &battery,
+                &launch_gate,
+                orchestrator.adapter.prd_surfaces(&battery),
+            ));
         }
         // DR-86 ①: re-measure after the **last** write-capable retry.  Whether or
         // not a repair ran, a delivered file that is a fragment must not be
@@ -2714,7 +2730,17 @@ async fn run_inner(
         };
         // DR-39: the PRD coverage travels with the gate, so `exit 0 + gate ok`
         // can never be read as "the product is good" on its own.
-        result.prd_coverage = crate::model::PrdCoverage::from_bundle(&bundle);
+        //
+        // Round-1 PRD-coverage batch: the **comparable** figure is the one the
+        // battery decided (`.spec/bevy/ACCEPTANCE-ROUNDS.md` RA-5); the
+        // derivation over the Tester's own lists still travels with it, labelled
+        // as such.  The last pass is the one whose artifact was frozen.
+        let surfaces = battery_passes
+            .last()
+            .map(|pass| pass.surfaces.clone())
+            .unwrap_or_default();
+        result.prd_coverage =
+            crate::model::PrdCoverage::from_bundle(&bundle).with_surfaces(surfaces);
         last_gate = Some(launch_gate);
         last_coverage = result.prd_coverage.clone();
         write_iter_result(&run_dir, iteration, &result)?;

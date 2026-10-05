@@ -1,0 +1,55 @@
+{
+  "brp_methods": [
+    "world.get_resources",
+    "world.get_resources"
+  ],
+  "error": null,
+  "layer": "semantic",
+  "ok": true,
+  "requests": [
+    {
+      "id": 14,
+      "jsonrpc": "2.0",
+      "method": "world.get_resources",
+      "params": {
+        "resource": "hof_game::contract::FrameCounter"
+      }
+    },
+    {
+      "id": 14,
+      "jsonrpc": "2.0",
+      "method": "world.get_resources",
+      "params": {
+        "resource": "hof_game::contract::CoinCounter"
+      }
+    }
+  ],
+  "responses": [
+    {
+      "id": 14,
+      "jsonrpc": "2.0",
+      "result": {
+        "value": {
+          "frames": 523
+        }
+      }
+    },
+    {
+      "id": 14,
+      "jsonrpc": "2.0",
+      "result": {
+        "value": {
+          "coins": 1,
+          "target": 2
+        }
+      }
+    }
+  ],
+  "result": {
+    "coins": 1,
+    "frame": 523
+  },
+  "seq": 14,
+  "timestamp_ms": 1791177562311,
+  "tool": "bevy_coin_counter"
+}

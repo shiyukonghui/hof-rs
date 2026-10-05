@@ -1,0 +1,71 @@
+{
+  "brp_methods": [
+    "world.get_resources",
+    "world.get_resources",
+    "world.get_resources"
+  ],
+  "error": null,
+  "layer": "semantic",
+  "ok": true,
+  "requests": [
+    {
+      "id": 44,
+      "jsonrpc": "2.0",
+      "method": "world.get_resources",
+      "params": {
+        "resource": "hof_game::contract::FrameCounter"
+      }
+    },
+    {
+      "id": 44,
+      "jsonrpc": "2.0",
+      "method": "world.get_resources",
+      "params": {
+        "resource": "hof_game::contract::FrameCounter"
+      }
+    },
+    {
+      "id": 44,
+      "jsonrpc": "2.0",
+      "method": "world.get_resources",
+      "params": {
+        "resource": "hof_game::contract::FrameCounter"
+      }
+    }
+  ],
+  "responses": [
+    {
+      "id": 44,
+      "jsonrpc": "2.0",
+      "result": {
+        "value": {
+          "frames": 643
+        }
+      }
+    },
+    {
+      "id": 44,
+      "jsonrpc": "2.0",
+      "result": {
+        "value": {
+          "frames": 644
+        }
+      }
+    },
+    {
+      "id": 44,
+      "jsonrpc": "2.0",
+      "result": {
+        "value": {
+          "frames": 646
+        }
+      }
+    }
+  ],
+  "result": {
+    "frame_after": 646
+  },
+  "seq": 44,
+  "timestamp_ms": 1791177564378,
+  "tool": "bevy_wait_frames"
+}

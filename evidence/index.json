@@ -1,0 +1,222 @@
+{
+ "schema": "hof-rs / evidence index for the round-1 PRD-coverage batch",
+ "branch": "bevy-core",
+ "produced_at": "2026-10-05",
+ "what_this_is": "For every headline number in .spec/bevy/WRITE-ACCOUNTING-REPORT.md, .spec/bevy/LIVE-COST-REPORT.md, .spec/bevy/ROUND-4-REPORT-COMPLETE.md and .spec/bevy/COVERAGE-EVIDENCE-REPORT.md: the committed files that reproduce it and the command that does it. Every path here is tracked, so a clone can re-derive the numbers without runs/**.",
+ "corpus": {
+  "root": "evidence/",
+  "files": 118,
+  "bytes": 4771139,
+  "bytes_units": "4.55 MiB",
+  "groups": [
+   {"path": "evidence/cost", "files": 4, "bytes": 4166273, "what": "the four recorded Developer trajectories the cost analysis reads, byte-identical to runs/<run>/iter-<n>/traj/developer.attempt1.json"},
+   {"path": "evidence/observation/round4/deterministic", "files": 37, "bytes": 222299, "what": "the workspace-side battery evidence (.hoh/deterministic/**): one record per step, the verbatim payload behind each criterion, and mcp-errors.jsonl"},
+   {"path": "evidence/observation/round4/round", "files": 70, "bytes": 326506, "what": "the round's own evidence directory (runs/bevy-round4/**): 57 raw MCP->BRP call files, the readings, the gate, the launch facts and the launch ledger"},
+   {"path": "evidence/observation/round4/iter-1", "files": 2, "bytes": 16161, "what": "iteration 1's result.json and the Tester's evidence.json"},
+   {"path": "evidence/observation/round4/iter-2", "files": 2, "bytes": 19128, "what": "iteration 2's result.json and the Tester's evidence.json"},
+   {"path": "evidence/observation/round4/iter-3", "files": 2, "bytes": 18487, "what": "iteration 3's result.json and the Tester's evidence.json"},
+   {"path": "evidence/observation/round4/meta.json", "files": 1, "bytes": 2285, "what": "the round's own meta.json (model identity, spec hash, engine record, artifact gate)"}
+  ],
+  "source_locations_not_committed": [
+   "F:/moonbit-hof-rs/runs/** (gitignored; 11,229 files / 12,775,066,006 bytes / 11.898 GiB on this disk)",
+   "F:/hof-bevy-r4-run/workspace/.hoh/deterministic/** (outside the repository; the round's workspace)"
+  ],
+  "tools": [
+   {"path": "evidence/tools/build_evidence.py", "what": "the copier that produced this corpus; it key-scans every destination with the repository's own shape rule before writing it"},
+   {"path": "evidence/tools/keyscan.py", "what": "a transcription of src/runtime/secrets.rs's key-shape rule, used to refuse a key-shaped file; it fingerprints findings and never prints a value"}
+  ],
+  "key_scan": {
+   "rule": "src/runtime/secrets.rs::{key_shaped_tokens, looks_key_shaped} (KEY_PREFIXES + KEY_BODY_MINIMUM=16, KEY_ASSIGNMENT_NAMES + KEY_VALUE_MINIMUM=32)",
+   "result": "every one of the 118 committed files is CLEAN; no key-shaped token and no key-shaped assignment",
+   "recomputed_by": "cargo test --offline --test credential_scan no_key_shaped_material_is_browsable_in_the_repository_tree"
+  }
+ },
+ "commands": {
+  "gate": "cargo test --offline",
+  "accounting": "cargo test --offline --test write_accounting",
+  "reproduction": "cargo test --offline --test evidence_reproduction",
+  "coverage_registry": "cargo test --offline --test prd_coverage"
+ },
+ "headlines": [
+  {
+   "id": "cost.trajectories_total_bytes",
+   "value": 4166273,
+   "meaning": "the four Developer trajectories this project's cost analysis reads, in bytes",
+   "files": [
+    "evidence/cost/livecost1-iter-1.developer.attempt1.json",
+    "evidence/cost/round4-iter-1.developer.attempt1.json",
+    "evidence/cost/round4-iter-2.developer.attempt1.json",
+    "evidence/cost/round4-iter-3.developer.attempt1.json"
+   ],
+   "command": "cargo test --offline --test evidence_reproduction the_committed_cost_corpus_is_the_recorded_one",
+   "repo_independent": true
+  },
+  {
+   "id": "cost.live.total_tokens",
+   "value": 3651120,
+   "meaning": "the live Developer call's total tokens (150 calls; 3,537,843 prompt + 113,277 completion)",
+   "files": ["evidence/cost/livecost1-iter-1.developer.attempt1.json"],
+   "command": "cargo test --offline --test write_accounting the_live_calls_write_profile_is_the_corrected_one",
+   "repo_independent": true
+  },
+  {
+   "id": "cost.live.ratio_to_target",
+   "value": 2.4341,
+   "meaning": "3,651,120 / 1,500,000; the criterion at .spec/bevy/ROUND-2-REPORT.md:43",
+   "files": ["evidence/cost/livecost1-iter-1.developer.attempt1.json"],
+   "command": "cargo test --offline --test evidence_reproduction the_committed_cost_corpus_is_the_recorded_one",
+   "repo_independent": true
+  },
+  {
+   "id": "cost.round4.iter1.total_tokens",
+   "value": 2626195,
+   "files": ["evidence/cost/round4-iter-1.developer.attempt1.json"],
+   "command": "cargo test --offline --test write_accounting the_other_two_recorded_iterations_are_accounted_the_same_way",
+   "repo_independent": true
+  },
+  {
+   "id": "cost.round4.iter2.total_tokens",
+   "value": 13091431,
+   "files": ["evidence/cost/round4-iter-2.developer.attempt1.json"],
+   "command": "cargo test --offline --test write_accounting the_other_two_recorded_iterations_are_accounted_the_same_way",
+   "repo_independent": true
+  },
+  {
+   "id": "cost.round4.iter3.total_tokens",
+   "value": 5223211,
+   "files": ["evidence/cost/round4-iter-3.developer.attempt1.json"],
+   "command": "cargo test --offline --test write_accounting the_recorded_iteration_three_write_timeline_is_the_corrected_one",
+   "repo_independent": true
+  },
+  {
+   "id": "accounting.live.write_profile",
+   "value": {
+    "directive_write_calls": [6, 14, 17, 19, 43],
+    "project_write_calls": [6, 14, 17, 19, 43, 44, 95],
+    "failed_project_writes": [[139, "src\\game.rs", 1]],
+    "last_project_write": 95,
+    "longest_project_write_free_window": [95, 151, 55]
+   },
+   "files": ["evidence/cost/livecost1-iter-1.developer.attempt1.json"],
+   "command": "cargo test --offline --test write_accounting the_live_calls_write_profile_is_the_corrected_one",
+   "repo_independent": true
+  },
+  {
+   "id": "accounting.iter3.write_profile",
+   "value": {
+    "directive_write_calls": [6, 50, 70, 73, 74, 80, 84, 86, 90, 93, 97],
+    "project_write_calls": [6, 8, 75, 81, 85, 87, 91, 94, 98],
+    "failed_project_writes": [[22, "src\\game.rs", 1], [69, "src\\game.rs", 1]],
+    "undecided": [72],
+    "longest_project_write_free_window": [8, 75, 66]
+   },
+   "files": ["evidence/cost/round4-iter-3.developer.attempt1.json"],
+   "command": "cargo test --offline --test write_accounting the_recorded_iteration_three_write_timeline_is_the_corrected_one",
+   "repo_independent": true
+  },
+  {
+   "id": "accounting.withdrawn_k32.live",
+   "value": {"aborted_at_call": 76, "cumulative_tokens": 1357530, "directive_writes_after": [], "project_writes_after": [95]},
+   "files": ["evidence/cost/livecost1-iter-1.developer.attempt1.json"],
+   "command": "cargo test --offline --test write_accounting the_withdrawn_budget_at_k_32_cuts_ten_directives_and_seven_project_edits",
+   "repo_independent": true
+  },
+  {
+   "id": "accounting.withdrawn_k32.iter3",
+   "value": {"aborted_at_call": 39, "cumulative_tokens": 1604038, "directive_writes_after": [50, 70, 73, 74, 80, 84, 86, 90, 93, 97], "project_writes_after": [75, 81, 85, 87, 91, 94, 98]},
+   "files": ["evidence/cost/round4-iter-3.developer.attempt1.json"],
+   "command": "cargo test --offline --test write_accounting the_withdrawn_budget_at_k_32_cuts_ten_directives_and_seven_project_edits",
+   "repo_independent": true
+  },
+  {
+   "id": "accounting.bands",
+   "value": {"meet_the_criterion_max_k": 37, "cut_no_directive_write_min_k_iter3": 43, "cut_no_recorded_project_write_min_k": 52, "cut_no_recorded_project_write_min_k_strict_convention": 51},
+   "files": ["evidence/cost/livecost1-iter-1.developer.attempt1.json", "evidence/cost/round4-iter-3.developer.attempt1.json"],
+   "command": "cargo test --offline --test write_accounting the_global_safe_floor_is_fifty_two_and_not_forty_three",
+   "repo_independent": true,
+   "corrects": "defect D-1 of .spec/bevy/ACCEPTANCE-ACCOUNTING.md: the older reports' 'K >= 43 to cut nothing recorded' is round-4 iteration 3's directive window only"
+  },
+  {
+   "id": "coverage.registry",
+   "value": {"total": 19, "ids": ["P1", "P2", "P3", "P4", "P5", "C1", "C2", "C3", "C4", "C5", "C6", "Q-scale", "Q-startup", "Q-not-required", "Q-perf", "B2.1", "B2.2", "B2.3", "B2.4"]},
+   "meaning": "the frozen PRD's surfaces, with the stable ids that are the coverage denominator",
+   "files": ["src/adapter/bevy/prd_surfaces.rs", ".spec/bevy/PRD.md"],
+   "command": "cargo test --offline --test prd_coverage the_prd_surface_registry_is_anchored_to_the_frozen_prd",
+   "repo_independent": true
+  },
+  {
+   "id": "coverage.recorded_round4",
+   "value": {"verified": 13, "total": 19, "gap": 2, "unobservable": 4, "gap_ids": ["Q-startup", "B2.1"], "decidable": 15},
+   "meaning": "the recorded round-4 battery evidence scored against the frozen registry; Q-startup and B2.1 are gaps because the round predates the e3_process_liveness step",
+   "files": ["evidence/observation/round4/deterministic/battery.json"],
+   "command": "cargo test --offline --test evidence_reproduction the_recorded_round_four_evidence_scores_against_the_registry",
+   "repo_independent": true
+  },
+  {
+   "id": "coverage.with_the_new_step",
+   "value": {"verified": 15, "total": 19, "gap": 0, "unobservable": 4, "decidable": 15},
+   "meaning": "what a round that runs the ten-step battery scores; the four unobservable items are C5, C6, Q-scale, Q-not-required and are named gaps, not missing claims",
+   "files": ["src/adapter/bevy/prd_surfaces.rs", "src/adapter/bevy/round.rs"],
+   "command": "cargo test --offline --test evidence_reproduction the_full_battery_scores_the_registry",
+   "repo_independent": true
+  },
+  {
+   "id": "observation.round4.battery_steps",
+   "value": {
+    "records": 11,
+    "e3_steps": 9,
+    "all_ok": true,
+    "ids": ["editor_errors_baseline", "play_scene_ready", "e3_movement", "e3_coin_counter", "e3_win_flag", "e3_jump_arc", "e3_grounded", "e3_movement_left", "e3_movement_release", "e3_win_position", "e3_grounded_payload"]
+   },
+   "note": "eleven records: the two gate steps plus the nine E3 steps the round predates the tenth (e3_process_liveness) by",
+   "files": ["evidence/observation/round4/deterministic/battery.json"],
+   "command": "cargo test --offline --test evidence_reproduction the_recorded_round_four_evidence_scores_against_the_registry",
+   "repo_independent": true
+  },
+  {
+   "id": "observation.round4.raw_calls",
+   "value": {"files": 57},
+   "meaning": "the raw MCP->BRP exchanges behind every E3 observation, one JSON-RPC request per file",
+   "files": ["evidence/observation/round4/round/calls"],
+   "command": "cargo test --offline --test evidence_reproduction the_committed_raw_calls_are_single_jsonrpc_requests",
+   "repo_independent": true
+  },
+  {
+   "id": "observation.round4.tester_claims",
+   "value": {"iter-1": {"verified": 6, "gap": 2, "gap_ids": ["P2B", "S1"]}, "iter-2": {"verified": 6, "gap": 2, "gap_ids": ["S1", "P3-goal-x"]}, "iter-3": {"verified": 6, "gap": 2, "gap_ids": ["P3-goal-x", "S1-deterministic-step"]}},
+   "meaning": "the self-referential figure the new registry replaces; kept so a reader can see both",
+   "files": ["evidence/observation/round4/iter-1/result.json", "evidence/observation/round4/iter-2/result.json", "evidence/observation/round4/iter-3/result.json"],
+   "command": "cargo test --offline --test evidence_reproduction the_recorded_tester_figures_are_the_self_referential_ones",
+   "repo_independent": true
+  },
+  {
+   "id": "gate.counts_at_the_start_tree",
+   "value": {"passed": 782, "failed": 0, "ignored": 6, "listed": 788},
+   "files": [".spec/bevy/ACCEPTANCE-ACCOUNTING.md"],
+   "command": "cargo test --offline -- --list",
+   "repo_independent": true
+  }
+ ],
+ "not_reproducible_from_the_repository": [
+  {
+   "conclusion": "the provider's own per-call usage for any call NOT in the four committed trajectories, and every cost figure in .spec/bevy/LIVE-COST-REPORT.md, COST-REPORT.md, FIX-REPORT.md and ROUND-4-REPORT-COMPLETE.md that rests on them",
+   "why": "the 4,166,273 committed bytes are the four Developer trajectories; every other trajectory (the other three roles, rounds 1-3, the five round-4 attempts) stays under the gitignored runs/**"
+  },
+  {
+   "conclusion": "byte-level identity of what a successful shell write put on disk",
+   "why": "the recording proves a write ran and reported success; no committed file holds the file's bytes before and after"
+  },
+  {
+   "conclusion": "the withdrawn step budget's behaviour on a game process, and whether a tree-fingerprint signal reaches the cost target",
+   "why": "both need a live round; no offline replay may execute the recorded shell commands, and this batch ran none"
+  },
+  {
+   "conclusion": "the seven script-driven edits of round-4 iteration 3 as file contents",
+   "why": "the recordings carry the scripts' text and the commands that ran them, and the accounting reads them; the files they wrote are not in the repository"
+  },
+  {
+   "conclusion": "the .hoh/deterministic evidence of the five round-4 attempts other than the final one",
+   "why": "the workspace at F:/hof-bevy-r4-run/workspace was overwritten by each pass; only the last pass's tree survives, and only it is committed"
+  }
+ ]
+}

@@ -25,6 +25,7 @@ pub mod build;
 pub mod contract;
 pub mod launch;
 pub mod prd;
+pub mod prd_surfaces;
 pub mod project;
 pub mod round;
 pub mod scaffold;
@@ -1578,7 +1579,7 @@ mod tests {
         (fake, BevyMcpServer::new(client))
     }
 
-    /// The E3 battery, end to end over the fake socket: all nine observations
+    /// The E3 battery, end to end over the fake socket: all ten observations
     /// hold, every one of them keeps its raw calls, and no call is a batch.
     #[test]
     fn the_battery_observes_every_e3_behaviour_in_order() {
@@ -1779,7 +1780,7 @@ mod tests {
         );
     }
 
-    /// A battery that cannot read anything at all is an **abort**, not nine
+    /// A battery that cannot read anything at all is an **abort**, not ten
     /// fabricated readings, and every gap says so.
     #[test]
     fn a_battery_that_cannot_read_aborts_and_gaps_every_criterion() {
@@ -1803,7 +1804,7 @@ mod tests {
         );
         assert!(!observations.passed());
         let gaps = observations.gaps();
-        assert_eq!(gaps.len(), 9);
+        assert_eq!(gaps.len(), 10);
         for (name, reason) in gaps {
             assert!(
                 reason.contains("not observed"),

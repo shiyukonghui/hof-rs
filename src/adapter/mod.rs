@@ -201,6 +201,20 @@ pub trait ProjectAdapter: Send + Sync {
             .collect())
     }
 
+    /// Round-1 PRD-coverage batch: which of the **frozen PRD's surfaces** this
+    /// adapter's own battery evidence decides.
+    ///
+    /// The figure that `hoh run` used to publish was derived from the Tester's
+    /// claim list, so its denominator was however many claims that Tester wrote
+    /// and two rounds could not be compared (`.spec/bevy/ACCEPTANCE-ROUNDS.md`
+    /// RA-5).  The figure is published next to the battery pass it came from.
+    /// The default is the empty registry, because an adapter with no frozen PRD
+    /// surface list has nothing to decide, and an empty registry is honest where
+    /// an invented denominator would not be.
+    fn prd_surfaces(&self, _battery: &[BatteryRecord]) -> crate::model::PrdSurfaceCoverage {
+        crate::model::PrdSurfaceCoverage::default()
+    }
+
     /// DR-70 ①: start the game session that lives for the **whole round**.
     ///
     /// DR-69 published the game route inside the battery's `editor_play_scene` step,

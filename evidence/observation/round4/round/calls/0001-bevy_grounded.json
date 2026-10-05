@@ -1,0 +1,108 @@
+{
+  "brp_methods": [
+    "world.get_resources",
+    "world.query"
+  ],
+  "error": null,
+  "layer": "semantic",
+  "ok": true,
+  "requests": [
+    {
+      "id": 1,
+      "jsonrpc": "2.0",
+      "method": "world.get_resources",
+      "params": {
+        "resource": "hof_game::contract::FrameCounter"
+      }
+    },
+    {
+      "id": 1,
+      "jsonrpc": "2.0",
+      "method": "world.query",
+      "params": {
+        "data": {
+          "components": [
+            "hof_game::contract::Grounded"
+          ],
+          "option": "all"
+        },
+        "filter": {
+          "with": [
+            "hof_game::contract::Player"
+          ]
+        },
+        "strict": true
+      }
+    }
+  ],
+  "responses": [
+    {
+      "id": 1,
+      "jsonrpc": "2.0",
+      "result": {
+        "value": {
+          "frames": 473
+        }
+      }
+    },
+    {
+      "id": 1,
+      "jsonrpc": "2.0",
+      "result": [
+        {
+          "components": {
+            "bevy_transform::components::global_transform::GlobalTransform": [
+              1.0,
+              0.0,
+              0.0,
+              0.0,
+              1.0,
+              0.0,
+              0.0,
+              0.0,
+              1.0,
+              0.0,
+              -200.0,
+              0.0
+            ],
+            "bevy_transform::components::transform::Transform": {
+              "rotation": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ],
+              "scale": [
+                1.0,
+                1.0,
+                1.0
+              ],
+              "translation": [
+                0.0,
+                -200.0,
+                0.0
+              ]
+            },
+            "bevy_transform::components::transform::TransformTreeChanged": null,
+            "hof_game::contract::Grounded": {
+              "on_ground": true
+            },
+            "hof_game::contract::Player": {},
+            "hof_game::contract::Velocity": {
+              "x": 0.0,
+              "y": 0.0
+            }
+          },
+          "entity": 4294966911
+        }
+      ]
+    }
+  ],
+  "result": {
+    "frame": 473,
+    "grounded": true
+  },
+  "seq": 1,
+  "timestamp_ms": 1791177561461,
+  "tool": "bevy_grounded"
+}

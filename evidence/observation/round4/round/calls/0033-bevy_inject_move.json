@@ -1,0 +1,52 @@
+{
+  "brp_methods": [
+    "world.get_resources",
+    "world.mutate_resources"
+  ],
+  "error": null,
+  "layer": "semantic",
+  "ok": true,
+  "requests": [
+    {
+      "id": 33,
+      "jsonrpc": "2.0",
+      "method": "world.get_resources",
+      "params": {
+        "resource": "hof_game::contract::FrameCounter"
+      }
+    },
+    {
+      "id": 33,
+      "jsonrpc": "2.0",
+      "method": "world.mutate_resources",
+      "params": {
+        "path": "move_dir",
+        "resource": "hof_game::contract::InputIntent",
+        "value": -1
+      }
+    }
+  ],
+  "responses": [
+    {
+      "id": 33,
+      "jsonrpc": "2.0",
+      "result": {
+        "value": {
+          "frames": 597
+        }
+      }
+    },
+    {
+      "id": 33,
+      "jsonrpc": "2.0",
+      "result": null
+    }
+  ],
+  "result": {
+    "accepted": true,
+    "frame": 597
+  },
+  "seq": 33,
+  "timestamp_ms": 1791177563566,
+  "tool": "bevy_inject_move"
+}

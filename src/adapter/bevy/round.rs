@@ -49,14 +49,20 @@ pub const BUILT_STEP_ID: &str = "editor_errors_baseline";
 /// The DR-24 gate step that means "the candidate builds, boots, and answers".
 /// It is `GATE_STEP_IDS[1]`, pinned by a test.
 pub const READY_STEP_ID: &str = "play_scene_ready";
-/// The nine E3 observation steps.  Each carries the PRD id it can produce
+/// The ten E3 observation steps.  Each carries the PRD id it can produce
 /// evidence for, so a Tester's claim has a skeleton to be checked against.
 ///
-/// The last four are the **missing battery steps** round 1's Tester recorded as
-/// gaps: `P1-left` (the negative direction), `P1-release` (writing `0` stops the
-/// player), `P3-position` (a transform sample at the win frame) and `P5-gate` (a
-/// ground-state payload that stands on its own).  The first five keep their ids
-/// and their order, so nothing was renamed or removed to make room.
+/// The last five are additions after the first five.  Four of them are the
+/// **missing battery steps** round 1's Tester recorded as gaps: `P1-left` (the
+/// negative direction), `P1-release` (writing `0` stops the player),
+/// `P3-position` (a transform sample at the win frame) and `P5-gate` (a
+/// ground-state payload that stands on its own).  The fifth,
+/// `e3_process_liveness`, is the **late-round liveness** step round 4's Tester
+/// recorded as `S1-deterministic-step`: it runs last and requires the game's own
+/// frame counter to advance, so "the process is still running at the end of the
+/// pass" is measured and persisted under
+/// `.hoh/deterministic/raw/e3_process_liveness.json`.  The first five keep their
+/// ids and their order, so nothing was renamed or removed to make room.
 pub const E3_STEPS: &[(&str, &str, &str)] = &[
     ("e3_movement", "P1", "movement"),
     ("e3_coin_counter", "P2", "coins"),
@@ -67,6 +73,7 @@ pub const E3_STEPS: &[(&str, &str, &str)] = &[
     ("e3_movement_release", "P1", "movement_release"),
     ("e3_win_position", "P3", "win_position"),
     ("e3_grounded_payload", "P5", "grounded_payload"),
+    ("e3_process_liveness", "Q-startup", "liveness"),
 ];
 
 // ---------------------------------------------------------------------------
@@ -355,7 +362,7 @@ pub fn battery_records(
         };
         // Round-5 repair (defect RA-8): a **definitional** step says so in the
         // record the round writes, not only in the observation it came from.  The
-        // acceptance's point was that two of the nine steps add no discriminating
+        // acceptance's point was that two of the initial steps add no discriminating
         // power; a reader of the round's own records must be able to see that
         // without reading the battery's internals.
         if let Some(reason) = observation.definitional_reason() {
@@ -970,6 +977,7 @@ pub fn write_workspace_payloads(workspace: &Path, report: &RoundReport) -> std::
                 "observed": observation.observed,
                 "failure": observation.failure,
                 "arc": observation.arc,
+                "frames": observation.frames,
                 "readings": observation.readings,
                 "calls": observation.calls,
             });
@@ -1115,7 +1123,7 @@ mod tests {
     }
 
     #[test]
-    fn the_nine_e3_steps_name_the_prds_behaviours_and_keep_the_original_five() {
+    fn the_ten_e3_steps_name_the_prds_behaviours_and_keep_the_original_five() {
         // The four steps added for round 1's open gaps must not have displaced or
         // renamed any of the original five: their ids and their PRD mapping are
         // the skeleton the round-1 evidence is cited against.
@@ -1129,12 +1137,24 @@ mod tests {
                 ("e3_grounded", "P5", "grounded"),
             ]
         );
-        assert_eq!(E3_STEPS.len(), 9);
+        assert_eq!(E3_STEPS.len(), 10);
         let supports: Vec<&str> = E3_STEPS.iter().map(|(_, prd, _)| *prd).collect();
         assert_eq!(
             supports,
-            vec!["P1", "P2", "P3", "P4", "P5", "P1", "P1", "P3", "P5"],
-            "the four additions support P1/P1/P3/P5 and add no new PRD id"
+            vec![
+                "P1",
+                "P2",
+                "P3",
+                "P4",
+                "P5",
+                "P1",
+                "P1",
+                "P3",
+                "P5",
+                "Q-startup"
+            ],
+            "the four earlier additions support P1/P1/P3/P5; the liveness step is the first to \
+             carry the §4 `**启动**` surface, and it adds no new *gameplay* id"
         );
         // Every declared step names an observation the battery really holds, so
         // `write_workspace_payloads` can never be asked for a payload that does
@@ -1160,13 +1180,13 @@ mod tests {
         );
         let gate = RoundReport::evaluate(&records);
         assert!(gate.applicable && !gate.launchable, "{gate:?}");
-        assert_eq!(records.len(), 11, "two gate steps + nine criteria");
+        assert_eq!(records.len(), 12, "two gate steps + ten criteria");
         for record in &records {
             assert!(!record.ok, "{} must be red", record.step_id);
         }
         assert!(records[0].record.observation.contains("could not be built"));
         assert!(records[1].record.observation.contains("could not be built"));
-        assert!(records[10].record.observation.contains("did not run"));
+        assert!(records[11].record.observation.contains("did not run"));
     }
 
     /// A criterion that was **measured false** is a red step; a criterion that
@@ -1215,6 +1235,7 @@ mod tests {
             movement_release: observation(true, None, Vec::new(), None, Vec::new()),
             win_position: observation(true, None, Vec::new(), None, Vec::new()),
             grounded_payload: observation(true, None, Vec::new(), None, Vec::new()),
+            liveness: observation(true, None, Vec::new(), None, Vec::new()),
             aborted: None,
         };
         let records = battery_records(
@@ -1289,6 +1310,7 @@ mod tests {
             movement_release: blank(),
             win_position: blank(),
             grounded_payload: blank(),
+            liveness: blank(),
             aborted: None,
         };
         observations.coins = observation(true, None, Vec::new(), None, Vec::new());

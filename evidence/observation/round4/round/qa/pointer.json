@@ -1,0 +1,34 @@
+{
+  "battery": "E3 movement=ok coins=ok win=ok jump=ok grounded=ok movement_left=ok movement_release=ok win_position=ok grounded_payload=ok",
+  "contract_sha256": "c579a742cea5f2f22b0e34c2ae6ab3bafcb56050310a5d35e95941796bdcf7e9",
+  "evidence_directory": "runs\\bevy-round4",
+  "feature_sha256": "d6a90ba39e67b9e05fd28d97cc570dc989a03e8ec7a15ba93d077d5fe95d1f96",
+  "files": {
+    "build_log": "build.log",
+    "launch": "launch.json",
+    "meta": "meta.json",
+    "step_ids": [
+      "editor_errors_baseline",
+      "play_scene_ready",
+      "e3_movement",
+      "e3_coin_counter",
+      "e3_win_flag",
+      "e3_jump_arc",
+      "e3_grounded",
+      "e3_movement_left",
+      "e3_movement_release",
+      "e3_win_position",
+      "e3_grounded_payload"
+    ]
+  },
+  "gaps": [],
+  "gate": {
+    "applicable": true,
+    "launchable": true,
+    "reasons": []
+  },
+  "harness_run_directory": "runs\\round4",
+  "lock_sha256": "660e7e17b62921ac409d0e2b023273ce1426959cbd386f21832e03745068c8df",
+  "round": "round4",
+  "tester_material": "the harness writes the Tester's evidence.json and QA report under its own run directory (runs/<run-id>/iter-<n>/); this pointer names the round whose raw calls back those claims"
+}

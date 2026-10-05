@@ -804,25 +804,41 @@ pub async fn run(args: RunArgs) -> anyhow::Result<i32> {
 /// acceptance's defect list): the derived form used to say only
 /// `(total=derived …)`, which in round 4 produced `prd coverage: 6/8` — a figure
 /// whose denominator is the **Tester's own claim count** and which therefore
-/// cannot be compared with another round's `7/8`.  The line now says what the
-/// denominator is, in the line itself, so the incomparability travels with the
-/// number instead of living in a report's footnote.
+/// cannot be compared with another round's `7/8`.  Round 5 relabelled that
+/// figure.  The round-1 PRD-coverage batch replaced it as the **headline**: the
+/// denominator is now [`crate::adapter::bevy::prd_surfaces::PRD_SURFACES`], the
+/// frozen PRD's own surfaces, decided by the harness's battery evidence, so two
+/// rounds compare directly.  The Tester-derived figure is still stated on the
+/// same line, with its own honest label, because a reader must be able to see
+/// both and see that they are different questions.
 pub fn format_prd_coverage_line(coverage: &crate::model::PrdCoverage) -> String {
+    let surfaces = &coverage.surfaces;
+    let share = surfaces
+        .verified_share_of_decidable()
+        .map(|percent| format!("{percent:.1}% of the {} decidable", surfaces.decidable()))
+        .unwrap_or_else(|| "no surface is decidable".to_string());
     if coverage.total_is_known() {
         format!(
-            "prd coverage: {}/{} advertised PRD functional requirement(s) (F1..F17, PRD §3) carry \
-             a verified claim; harness/gate describe the runtime contract, not the product",
+            "prd coverage: {}/{} frozen PRD surfaces verified ({share}); {} gap(s), {} \
+             unobservable; the F1..F17 claim count is {}/{} and harness/gate describe the runtime \
+             contract, not the product",
+            surfaces.verified,
+            surfaces.total,
+            surfaces.gap,
+            surfaces.unobservable,
             coverage.verified,
             coverage.total()
         )
     } else {
         format!(
-            "prd coverage: {}/{} = the Tester's OWN claim count ({} verified, {} gap), NOT the \
-             PRD's F1..F17 count — the figure is not comparable with another round's, because the \
-             denominator is whatever the Tester wrote; harness/gate describe the runtime contract, \
-             not the product",
-            coverage.verified,
-            coverage.total(),
+            "prd coverage: {}/{} frozen PRD surfaces verified ({share}); {} gap(s), {} \
+             unobservable; the Tester's OWN claim count is {} verified / {} gap (NOT the PRD \
+             surface count and not comparable with another round's), because the denominator is \
+             whatever the Tester wrote; harness/gate describe the runtime contract, not the product",
+            surfaces.verified,
+            surfaces.total,
+            surfaces.gap,
+            surfaces.unobservable,
             coverage.verified,
             coverage.gap,
         )
@@ -1160,13 +1176,25 @@ pub async fn status(args: StatusArgs) -> anyhow::Result<i32> {
         };
         // DR-39: `gate ok` and `prd=…` are different claims.  The PRD column is
         // derived from the Tester's own `E_t`, never judged by the runtime.
+        //
+        // Round-1 PRD-coverage batch: `surfaces=` is the **comparable** figure —
+        // the frozen PRD's own surfaces, decided by the battery's evidence, with
+        // a denominator that cannot move between rounds.  Both are printed: a
+        // reader must be able to see that they answer different questions.
         let coverage: crate::model::PrdCoverage = result
             .get("prd_coverage")
             .and_then(|value| serde_json::from_value(value.clone()).ok())
             .unwrap_or_default();
         let prd = coverage.label();
+        let surfaces = format!(
+            "surfaces={}/{}(+{}+{})",
+            coverage.surfaces.verified,
+            coverage.surfaces.total,
+            coverage.surfaces.gap,
+            coverage.surfaces.unobservable
+        );
         println!(
-            "{:<8} harness={:<5} gate={:<8} {} ok={:<5} reason={:<20} candidate={} roles={}",
+            "{:<8} harness={:<5} gate={:<8} {} {} ok={:<5} reason={:<20} candidate={} roles={}",
             iter_dir
                 .file_name()
                 .map(|name| name.to_string_lossy().into_owned())
@@ -1174,6 +1202,7 @@ pub async fn status(args: StatusArgs) -> anyhow::Result<i32> {
             harness,
             gate,
             prd,
+            surfaces,
             result.get("ok").and_then(Value::as_bool).unwrap_or(false),
             result
                 .get("reason")

@@ -18,6 +18,7 @@ tools you may call are in `.hoh/TOOLS.md`; the battery's own records are in
 .hoh/deterministic/raw/e3_movement_release.json   # P1-release: `0` stops it
 .hoh/deterministic/raw/e3_win_position.json       # P3-position: a sample at the win frame
 .hoh/deterministic/raw/e3_grounded_payload.json   # P5-gate: the payload on its own
+.hoh/deterministic/raw/e3_process_liveness.json   # Q-startup: the frame counter advanced, last
 .hoh/deterministic/raw/editor_errors_baseline.json  # the build
 .hoh/deterministic/raw/play_scene_ready.json        # the launch and the endpoint
 .hoh/deterministic/mcp-errors.jsonl          # every failed call, one JSON per line
@@ -27,6 +28,13 @@ Each `raw/e3_*.json` carries the criterion's `observed` flag, its failure reason
 (if any), its readings **and the verbatim request/response of every call behind
 them**. That is what a claim cites. `ok = false` in `battery.json` means the
 evidence is **unavailable** — the claim it supports is a `gap`, not `verified`.
+
+`raw/e3_process_liveness.json` is the one step with a `frames` block instead of a
+readings list: `first_frame`, `second_frame` and `requested`, the game's own
+counter before and after a wait. It runs **last**, so it is the evidence that the
+process was still stepping at the end of the pass (PRD §4 `**启动**`, and the
+`Q-startup` surface). `observed = false` there means the counter did not move,
+which is a defect of the candidate and never a `verified`.
 
 ## 1. Reading the evidence
 

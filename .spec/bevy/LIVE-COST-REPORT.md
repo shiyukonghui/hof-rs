@@ -178,10 +178,10 @@
   "why_the_30000_token_window_the_task_expected_does_not_exist": "round-4 iter-3's write-free window is 43 visible-write-free calls (6 -> 50), not 31: the 31 came from counting .hoh scratch writes as artifact progress. The 43 is the binding safety bound. Recomputed from the corrected accounting: the 43 still is the longest window between visible writes, and it is not idle (call 8 really edits src/game.rs); the longest window between PROJECT writes is 66 calls (8 -> 75).",
   "the_two_bands_do_not_overlap": {
    "to_meet_the_criterion": "K <= 37: the live call's last cumulative total under 1,500,000 is call 81 (1,484,934; call 82 is 1,511,382), and the abort call is last_visible_write + K + 1 = 43 + K + 1, so K <= 81 - 44 = 37",
-   "to_cut_no_recorded_work": "K >= 43: round-4 iter-3's 43-call run after its last visible write is not idle - call 8 really edits src/game.rs - so the rule must not fire before call 50. At K = 32 it fires at 39 and cuts ten write directives AND seven real src/game.rs edits. There is no K for which it both fires early enough to pass and cuts nothing.",
+   "to_cut_no_recorded_work": "TWO BOUNDS, and the smaller one is not the safe one. (a) Round-4 iter-3's own directive window: it must not fire before that run's call 50, so K >= 43 for that recording alone. (b) The GLOBAL floor, once the corrected project-write accounting is used: the live call's last project write is call 95 while its last *directive* write is call 43, so the rule fires at call 44 + K and every K <= 51 refuses a recorded project write (K = 50 fires at 94, cutting the write at 95; K = 51 fires at 95, refusing the write itself). The global floor is therefore K >= 52, or K >= 51 under the replay's own strict `> abort` convention - deficiency D-1 of .spec/bevy/ACCEPTANCE-ACCOUNTING.md, restated here. At K = 32 it fires at 39 and cuts ten write directives AND seven real src/game.rs edits. There is no K for which it both fires early enough to pass and cuts nothing.",
    "what_the_constant_32_was_derived_from": "the withdrawn patch's config/hoh.yaml and src/config.rs doc comments said the longest recorded legitimate stretch is round-4 iter-3's 31 calls, 'its write at call 18, its next at 50', hence 32 = 31 + 1. That derivation is FALSE: iter-3 has no write at call 18 and its longest visible-write-free window is 43 calls (6 -> 50). 32 is eleven calls BELOW the only legitimate window in the evidence, not one above it. The margin is -11, not +1. (Defect A-2 of ACCEPTANCE-LIVE-COST.md; the patch itself lives outside the repository at D:/hof-live-work/write-free-budget-WITHDRAWN.patch and still carries the false comment, so it must not be re-applied without correcting it.)",
-   "recomputed_with_the_corrected_accounting": "the two bounds are unchanged (K <= 37, K >= 43; 37 < 43) and the losing side is worse than this report claimed: at K = 32 the live call also cuts its call-95 src/game.rs write, and round-4 iter-3 also loses the seven script-driven edits at 75..98. Measured by tests/write_accounting.rs::the_two_bands_do_not_overlap and ::the_withdrawn_budget_at_k_32_cuts_ten_directives_and_seven_project_edits.",
-   "gap": "37 < 43; the same rule cannot both meet the criterion and leave every recorded call's artifact work intact",
+   "recomputed_with_the_corrected_accounting": "K <= 37 is unchanged; the cut side moves and gets worse. Round-4 iter-3's directive window still starts at K = 43, but the GLOBAL 'cut no recorded work' floor is K >= 52 (K >= 51 under the strict convention), because the live call's last project write is call 95 rather than its last directive write at 43. So 37 < 43 < 52. At K = 32 the live call also cuts its call-95 src/game.rs write, and round-4 iter-3 also loses the seven script-driven edits at 75..98. Measured by tests/write_accounting.rs::the_two_bands_do_not_overlap, ::the_global_safe_floor_is_fifty_two_and_not_forty_three and ::the_withdrawn_budget_at_k_32_cuts_ten_directives_and_seven_project_edits.",
+   "gap": "37 < 43 < 52; the same rule cannot both meet the criterion and leave every recorded call's artifact work intact",
    "source": "D:/hof-live-work/bands.py, D:/hof-live-logs/bands.txt; re-derived from the corrected accounting by src/harness/write_audit.rs"
   },
   "the_other_context_policy_that_would_pass": {
@@ -235,8 +235,8 @@
   "Whether the live call's artifact would have been launchable at the point the withdrawn rule would have ended it (call 76) is not known: the artifact gate recorded launchable=true at call 150, and the corrected last project-file change is call 95, but no gate was evaluated at call 76.",
   "The two known gitignored historical evidence files under runs/** were not re-fingerprinted; the key scan of this batch covers only the browsable tree, and no key was written into the repository, config/hoh.yaml or runs/**."
  ],
- "single_most_important_thing_next_batch": "Build the write-free budget on a signal that can see shell writes - a fingerprint of the artifact tree - because the guard's directive counter is blind to the writes the roles actually make (the live call edited src/game.rs with PowerShell Set-Content at call 95, the last such change in the call; round-4 iter-3 edited src/game.rs with [IO.File]::WriteAllText at call 8; and calls 75 81 85 87 91 94 98 of that iteration each ran a .hoh/scratch script that rewrote it, so the write is not on the command line at all). The cost criterion cannot be met by the visible-write signal without cutting real work: meeting it needs K <= 37 and leaving the recorded calls intact needs K >= 43. That signal, not a smaller number, is the next step, and it needs one live round to measure. CORRECTED by the round-7 write-accounting batch: the earlier wording named call 44 as the live call's last project write (it is call 95) and calls 8 and 22 in round-4 iter-3 (call 22 is recorded as FAILED; the further edits are the script-driven ones at 75-98).",
- "corrected_by_a_later_batch": "This report's machine-readable block was corrected in place by the round-7 write-accounting batch, only where the independent acceptance found it factually wrong: A-1 (the replay's degenerate after-lists), A-2 (the constant's derivation), A-3 (the live call's write profile) and A-5 (the lever pairs' provenance and the crossing). The corrections, the tool that measures them and the four plants that pin them are in .spec/bevy/WRITE-ACCOUNTING-REPORT.md; the decision entry is DECISIONS.md D303. The corrections quote what the block said before, so nothing was quietly rewritten."
+ "single_most_important_thing_next_batch": "Build the write-free budget on a signal that can see shell writes - a fingerprint of the artifact tree - because the guard's directive counter is blind to the writes the roles actually make (the live call edited src/game.rs with PowerShell Set-Content at call 95, the last such change in the call; round-4 iter-3 edited src/game.rs with [IO.File]::WriteAllText at call 8; and calls 75 81 85 87 91 94 98 of that iteration each ran a .hoh/scratch script that rewrote it, so the write is not on the command line at all). The cost criterion cannot be met by the visible-write signal without cutting real work: meeting it needs K <= 37 and leaving the recorded calls intact needs K >= 43 for that iteration's directive window and K >= 52 globally (restated below). That signal, not a smaller number, is the next step, and it needs one live round to measure. CORRECTED by the round-7 write-accounting batch: the earlier wording named call 44 as the live call's last project write (it is call 95) and calls 8 and 22 in round-4 iter-3 (call 22 is recorded as FAILED; the further edits are the script-driven ones at 75-98). RESTATED by the round-1 PRD-coverage batch for defect D-1 of .spec/bevy/ACCEPTANCE-ACCOUNTING.md: the global 'cut no recorded project write' floor is K >= 52 (K >= 51 under the strict convention), because the live call fires at call 44 + K and its last project write is call 95.",
+ "corrected_by_a_later_batch": "This report's machine-readable block was corrected in place by the round-7 write-accounting batch, only where the independent acceptance found it factually wrong: A-1 (the replay's degenerate after-lists), A-2 (the constant's derivation), A-3 (the live call's write profile) and A-5 (the lever pairs' provenance and the crossing). The corrections, the tool that measures them and the four plants that pin them are in .spec/bevy/WRITE-ACCOUNTING-REPORT.md; the decision entry is DECISIONS.md D303. It was corrected again by the round-1 PRD-coverage batch for defect D-1 of .spec/bevy/ACCEPTANCE-ACCOUNTING.md: the 'to cut no recorded work K >= 43' bound is round-4 iteration 3's directive window only, and the global floor under the corrected project-write accounting is K >= 52 (K >= 51 under the strict convention). The corrections quote what the block said before, so nothing was quietly rewritten."
 }
 ```
 
@@ -397,12 +397,20 @@ which edit `src/game.rs`.
 
 **And the two bands do not overlap.** To meet the criterion the budget must end the live call by call
 81 (the last cumulative total under 1,500,000 is 1,484,934; call 82 is 1,511,382), and the abort call
-is `43 + K + 1`, so **K ≤ 37**. To leave every recorded call's artifact work intact it must not fire
-before round-4 iter-3's call 50, so **K ≥ 43**. 37 < 43: *the same rule cannot both meet the criterion
-and leave the recorded work alone.* The honest answer is therefore not "unreachable in principle" —
-it is that the only signal this guard has is the wrong one, and the signal that would work (a
-fingerprint of the artifact tree) cannot be validated offline, because the tree changes were produced
-by shell commands no replay may execute.
+is `43 + K + 1`, so **K ≤ 37**. To leave the recorded work alone there are **two** bounds, and the
+smaller one is not the safe one: round-4 iteration 3's own directive window needs `K ≥ 43` (it must
+not fire before that run's call 50), while the **global** floor — under the corrected project-write
+accounting, because the live call's last project write is call 95 and not its last directive write at
+call 43 — is **K ≥ 52** (K ≥ 51 under the replay's own strict `> abort` convention: at K = 50 the rule
+fires at call 94 and cuts the call-95 write; at K = 51 it fires at call 95 and refuses that write
+itself). So **37 < 43 < 52**: *the same rule cannot both meet the criterion and leave the recorded work
+alone*, and the losing side is worse than this report first said. (This restates defect **D-1** of
+`.spec/bevy/ACCEPTANCE-ACCOUNTING.md`, which found the bound at 43 and returned `pass` because the
+error was in the conservative direction. It is pinned by
+`tests/write_accounting.rs::the_global_safe_floor_is_fifty_two_and_not_forty_three`.) The honest
+answer is therefore not "unreachable in principle" — it is that the only signal this guard has is the
+wrong one, and the signal that would work (a fingerprint of the artifact tree) cannot be validated
+offline, because the tree changes were produced by shell commands no replay may execute.
 
 **So the repository carries no behavioural change.** The implementation is preserved outside the
 repository at `D:/hof-live-work/write-free-budget-WITHDRAWN.patch` (45,735 bytes; 753 insertions), and
@@ -450,8 +458,9 @@ nature. The reduction was implemented and *honestly falsified by its own replay*
 **Does not work.** The criterion: **3,651,120 total tokens against 1,500,000**, 2.43x, and the call was
 ended by the step budget rather than by finishing. And the lever that would meet it — ending a call
 that has stopped writing — is not safe with the signal the guard has, because the roles write through
-the shell where the guard cannot see them. The two bands (K ≤ 37 to meet the criterion, K ≥ 43 to cut
-no recorded work) do not overlap.
+the shell where the guard cannot see them. The two bands (K ≤ 37 to meet the criterion; K ≥ 43 for
+round-4 iteration 3's own directive window, and **K ≥ 52 globally** to cut no recorded **project**
+write) do not overlap: 37 < 43 < 52.
 
 **Could not verify.** Whether an iteration-2-shaped call (24 writes, 125 calls) is now under the
 target — one call was measured, not three. Whether the withdrawn rule's end point would have left a
@@ -475,7 +484,7 @@ the guard's directive counter is blind to the writes the roles actually make —
 `Set-Content` at call 95, a successful `[IO.File]::WriteAllText` at iter-3's call 8, and **seven**
 script-driven `src/game.rs` edits at calls 75–98 that never appear on the command line that ran them.
 If a later batch ever reconsiders a budget on stopping-writes, it must be built on a signal that sees
-the artifact tree, not on the directive counter; and the two bands (K ≤ 37 to pass, K ≥ 43 to cut
-nothing recorded) still do not overlap. But note what this batch's own decision says: the criterion is
-**not met on the shipped tree**, and the only policy measured to pass is the context-narrowing one this
-project refuses.
+the artifact tree, not on the directive counter; and the two bands (K ≤ 37 to pass; K ≥ 43 for round-4
+iteration 3's directive window, K ≥ 52 globally to cut nothing recorded) still do not overlap. But note
+what this batch's own decision says: the criterion is **not met on the shipped tree**, and the only
+policy measured to pass is the context-narrowing one this project refuses.

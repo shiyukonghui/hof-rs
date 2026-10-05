@@ -20,7 +20,7 @@
   },
   "shipped_tree": "no shipped lever changes this: the repository carries no behavioural change from the round-6 batch and this batch adds none",
   "only_policy_measured_to_pass": "keep nothing but the system prompt and the task: live projection 786,685 prompt + 113,277 completion = 899,962 (0.600x) - REFUSED by the project, because it removes what the role just did and this role re-read its own files constantly",
-  "statement": "The criterion is not met on the shipped tree. The withdrawn step-budget family cannot meet it without cutting recorded work (K <= 37 to pass, K >= 43 to cut nothing recorded, and with the corrected accounting the cut side is worse than the round-6 report said). The only policy measured to pass is the context-narrowing one this project refuses. That is the honest state of the project and D303 records it as the decision."
+  "statement": "The criterion is not met on the shipped tree. The withdrawn step-budget family cannot meet it without cutting recorded work (K <= 37 to pass; K >= 43 for round-4 iteration 3's directive window, and K >= 52 globally, or K >= 51 under the strict convention, to cut no recorded PROJECT write - restated for defect D-1 of .spec/bevy/ACCEPTANCE-ACCOUNTING.md; the corrected accounting makes the cut side worse than the round-6 report said). The only policy measured to pass is the context-narrowing one this project refuses. That is the honest state of the project and D303 records it as the decision."
  },
  "gate": {
   "command": "cargo test --offline",
@@ -415,8 +415,10 @@
   },
   "the_two_bands": {
    "to_meet_the_criterion": "K <= 37 (K = 37 ends the live call at call 81 for 1,484,934 tokens; call 82 is 1,511,382)",
-   "to_cut_no_recorded_work": "K >= 43 (at K = 42 and below it cuts real src/game.rs edits; at K = 43 the rule does not fire in round-4 iter-3 at all)",
-   "gap": "37 < 43; unchanged by the corrected accounting, and the cut side is worse than the round-6 report said",
+   "to_cut_no_directive_write": "K >= 43 (at K = 42 and below it cuts real src/game.rs edits in round-4 iteration 3; at K = 43 the rule does not fire in that iteration at all)",
+   "to_cut_no_recorded_project_write": "K >= 52, or K >= 51 under this replay's own strict `> abort` convention: the live call's last directive write is call 43 and its last PROJECT write is call 95, so the rule fires at call 44 + K, and every K <= 51 refuses a recorded project write (K = 50 fires at 94 and cuts the write at 95; K = 51 fires at 95 and refuses the write itself)",
+   "gap": "37 < 43 < 52; the bands do not overlap, and the corrected accounting makes the losing side worse than the round-6 report said",
+   "restated_for_defect_d_1": "This block originally read `to_cut_no_recorded_work: K >= 43`, which is round-4 iteration 3's DIRECTIVE window only. Defect D-1 of .spec/bevy/ACCEPTANCE-ACCOUNTING.md found it and returned pass anyway, because the error is in the conservative direction - it understates how bad the lever is. The bound is restated here and in .spec/bevy/LIVE-COST-REPORT.md; it is pinned by tests/write_accounting.rs::the_global_safe_floor_is_fifty_two_and_not_forty_three and ::the_two_bands_do_not_overlap.",
    "recomputed": true
   },
   "the_false_constant_derivation": {
@@ -676,9 +678,9 @@
   "stays_withdrawn": true,
   "re_introduced": false,
   "evidence": "no configuration key, no guard field, no status, no production call site; the implementation is still preserved outside the repository at D:/hof-live-work/write-free-budget-WITHDRAWN.patch and was NOT modified by this batch",
-  "the_evaluation_still_in_force": "the two bands do not overlap: reaching the cost criterion needs K <= 37, cutting nothing recorded needs K >= 43",
+  "the_evaluation_still_in_force": "the bands do not overlap: reaching the cost criterion needs K <= 37, round-4 iteration 3's directive window starts at K >= 43, and cutting no recorded PROJECT write anywhere needs K >= 52 (K >= 51 under the strict convention) - defect D-1 of .spec/bevy/ACCEPTANCE-ACCOUNTING.md, restated",
   "recomputed_after_the_correction": "the numbers are unchanged (37 and 43) and the losing side is stronger: at K = 32 the live call loses its call-95 project write as well as the ten directives, and round-4 iter-3 loses seven real src/game.rs edits at 75-98",
-  "what_the_recomputation_did_not_change": "K <= 37 and K >= 43, because the rule can only see directives; the corrected accounting changes WHAT it cuts, not the edge of the safe band"
+  "what_the_recomputation_did_not_change_and_what_it_did": "K <= 37 is unchanged, and round-4 iteration 3's binding bound stays 43, because the rule can only see directives. What the corrected accounting DOES move is the GLOBAL floor: the live call's last project write is call 95, so every K <= 51 refuses it and the global floor is K >= 52. The round-6 wording said the recomputation changed nothing; that was only true of the directive window"
  },
  "decision_entry": {
   "file": "DECISIONS.md",
@@ -688,7 +690,7 @@
   "append_only_verified": "DECISIONS.md at HEAD is a byte prefix of the current file; D302's own text is intact",
   "states": [
    "the cost criterion is NOT met on the shipped tree (2.434x the target on the one live Developer call)",
-   "the step-budget family cannot meet it without cutting recorded work (K <= 37 to pass, K >= 43 to cut nothing recorded)",
+   "the step-budget family cannot meet it without cutting recorded work (K <= 37 to pass; K >= 43 for round-4 iteration 3's directive window and K >= 52 globally to cut no recorded project write)",
    "the only policy measured to pass is the context-narrowing one the project refuses",
    "the accounting defect that hid this is now fixed, in the tree, with four plants pinning it",
    "the evidence lives under the gitignored runs/** and is on this disk only"
@@ -858,12 +860,18 @@ Recomputed at K = 32 (the constant the patch shipped):
 | round4-iter-2 | never fires | — | none | none |
 | round4-iter-3 | call 39 | 1,604,038 | **50, 70, 73, 74, 80, 84, 86, 90, 93, 97** | **75, 81, 85, 87, 91, 94, 98** |
 
-The two bands are **unchanged** (the rule can only see directives, so the *edge* of the safe band does
-not move): reaching the criterion needs **K ≤ 37** (K = 37 ends the live call at call 81 for 1,484,934,
-the last cumulative total under 1,500,000; call 82 is 1,511,382), and cutting nothing recorded needs
-**K ≥ 43** (at K = 42 and below it cuts real `src/game.rs` edits; at K = 43 it never fires in round-4
-iter-3). **37 < 43.** What the correction changes is the *damage*: the "none" column was empty because
-the instrument could not see a shell write, and the live call loses a real project write too.
+The cost/cut edges are **unchanged where the rule can see**: reaching the criterion needs **K ≤ 37**
+(K = 37 ends the live call at call 81 for 1,484,934, the last cumulative total under 1,500,000; call 82
+is 1,511,382), and round-4 iteration 3's binding bound is **K ≥ 43** (at K = 42 and below it cuts real
+`src/game.rs` edits; at K = 43 it never fires in round-4 iter-3). What this block got wrong is that
+`K ≥ 43` is *that iteration's* bound and not the **global** one: the rule fires in the live call at call
+`44 + K`, so every K ≤ 51 refuses the live call's call-95 `src/game.rs` write — the last artifact write
+in the recording — and the global floor is **K ≥ 52** (K ≥ 51 under this replay's strict `> abort`
+convention). That is defect **D-1** of `.spec/bevy/ACCEPTANCE-ACCOUNTING.md`, restated here. So
+**37 < 43 < 52**: the bands still do not overlap, and the corrected accounting makes the losing side
+*worse* than the round-6 report said, not better. What the correction changes in the table above is the
+*damage*: the "none" column was empty because the instrument could not see a shell write, and the live
+call loses a real project write too.
 
 ## 5. Gate, plants, files
 
@@ -932,10 +940,11 @@ accounting is broken. The gate is green and the tree was clean at the start.
 
 **Does not work.** The cost criterion: **3,651,120 total tokens against 1,500,000, 2.434x** on the one
 live Developer call, and it was ended by the step budget rather than by finishing. No shipped lever
-changes it, the step-budget family cannot reach it without cutting recorded work (K ≤ 37 to pass, K ≥ 43
-to cut nothing recorded, and the corrected accounting makes the cut side worse), and the project refuses
-the one policy measured to pass. **This is the state the project ships in, and it is now recorded as
-such.**
+changes it, the step-budget family cannot reach it without cutting recorded work (K ≤ 37 to pass,
+K ≥ 43 for round-4 iteration 3's own directive window, and K ≥ 52 globally to cut no recorded project
+write — the bound defect D-1 found missing; the corrected accounting makes the cut side worse), and the
+project refuses the one policy measured to pass. **This is the state the project ships in, and it is now
+recorded as such.**
 
 **Could not verify.** Whether an iteration-2-shaped call is under the target (one live call has ever
 been measured; this batch ran none); the absolute tokens-per-wire-byte constants and the fold's own

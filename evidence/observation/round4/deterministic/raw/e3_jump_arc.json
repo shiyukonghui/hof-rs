@@ -1,0 +1,1905 @@
+{
+  "arc": {
+    "falling": 8,
+    "first": -200.0,
+    "peak": -165.01016235351562,
+    "rising": 4,
+    "samples": [
+      {
+        "frame": 639,
+        "value": -200.0
+      },
+      {
+        "frame": 649,
+        "value": -171.76119995117188
+      },
+      {
+        "frame": 651,
+        "value": -168.1291046142578
+      },
+      {
+        "frame": 653,
+        "value": -165.87722778320312
+      },
+      {
+        "frame": 655,
+        "value": -165.01016235351562
+      },
+      {
+        "frame": 657,
+        "value": -165.51715087890625
+      },
+      {
+        "frame": 659,
+        "value": -167.37808227539062
+      },
+      {
+        "frame": 661,
+        "value": -170.6354217529297
+      },
+      {
+        "frame": 663,
+        "value": -175.30453491210938
+      },
+      {
+        "frame": 665,
+        "value": -181.3249969482422
+      },
+      {
+        "frame": 667,
+        "value": -188.8130798339844
+      },
+      {
+        "frame": 669,
+        "value": -197.65576171875
+      },
+      {
+        "frame": 671,
+        "value": -200.0
+      }
+    ]
+  },
+  "calls": [
+    {
+      "brp_methods": [
+        "world.get_resources",
+        "world.query"
+      ],
+      "error": null,
+      "layer": "semantic",
+      "requests": [
+        {
+          "id": 41,
+          "jsonrpc": "2.0",
+          "method": "world.get_resources",
+          "params": {
+            "resource": "hof_game::contract::FrameCounter"
+          }
+        },
+        {
+          "id": 41,
+          "jsonrpc": "2.0",
+          "method": "world.query",
+          "params": {
+            "data": {
+              "components": [
+                "hof_game::contract::Grounded"
+              ],
+              "option": "all"
+            },
+            "filter": {
+              "with": [
+                "hof_game::contract::Player"
+              ]
+            },
+            "strict": true
+          }
+        }
+      ],
+      "responses": [
+        {
+          "id": 41,
+          "jsonrpc": "2.0",
+          "result": {
+            "value": {
+              "frames": 637
+            }
+          }
+        },
+        {
+          "id": 41,
+          "jsonrpc": "2.0",
+          "result": [
+            {
+              "components": {
+                "bevy_transform::components::global_transform::GlobalTransform": [
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  203.63699340820312,
+                  -200.0,
+                  0.0
+                ],
+                "bevy_transform::components::transform::Transform": {
+                  "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ],
+                  "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                  ],
+                  "translation": [
+                    203.63699340820312,
+                    -200.0,
+                    0.0
+                  ]
+                },
+                "bevy_transform::components::transform::TransformTreeChanged": null,
+                "hof_game::contract::Grounded": {
+                  "on_ground": true
+                },
+                "hof_game::contract::Player": {},
+                "hof_game::contract::Velocity": {
+                  "x": 0.0,
+                  "y": 0.0
+                }
+              },
+              "entity": 4294966911
+            }
+          ]
+        }
+      ],
+      "result": {
+        "frame": 637,
+        "grounded": true
+      },
+      "seq": 41,
+      "timestamp_ms": 1791177564243,
+      "tool": "bevy_grounded"
+    },
+    {
+      "brp_methods": [
+        "world.get_resources",
+        "world.query"
+      ],
+      "error": null,
+      "layer": "semantic",
+      "requests": [
+        {
+          "id": 42,
+          "jsonrpc": "2.0",
+          "method": "world.get_resources",
+          "params": {
+            "resource": "hof_game::contract::FrameCounter"
+          }
+        },
+        {
+          "id": 42,
+          "jsonrpc": "2.0",
+          "method": "world.query",
+          "params": {
+            "data": {
+              "components": [
+                "bevy_transform::components::transform::Transform"
+              ],
+              "option": "all"
+            },
+            "filter": {
+              "with": [
+                "hof_game::contract::Player"
+              ]
+            },
+            "strict": true
+          }
+        }
+      ],
+      "responses": [
+        {
+          "id": 42,
+          "jsonrpc": "2.0",
+          "result": {
+            "value": {
+              "frames": 639
+            }
+          }
+        },
+        {
+          "id": 42,
+          "jsonrpc": "2.0",
+          "result": [
+            {
+              "components": {
+                "bevy_transform::components::global_transform::GlobalTransform": [
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  203.63699340820312,
+                  -200.0,
+                  0.0
+                ],
+                "bevy_transform::components::transform::Transform": {
+                  "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ],
+                  "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                  ],
+                  "translation": [
+                    203.63699340820312,
+                    -200.0,
+                    0.0
+                  ]
+                },
+                "bevy_transform::components::transform::TransformTreeChanged": null,
+                "hof_game::contract::Grounded": {
+                  "on_ground": true
+                },
+                "hof_game::contract::Player": {},
+                "hof_game::contract::Velocity": {
+                  "x": 0.0,
+                  "y": 0.0
+                }
+              },
+              "entity": 4294966911
+            }
+          ]
+        }
+      ],
+      "result": {
+        "frame": 639,
+        "x": 203.63699340820312,
+        "y": -200.0
+      },
+      "seq": 42,
+      "timestamp_ms": 1791177564277,
+      "tool": "bevy_player_transform"
+    },
+    {
+      "brp_methods": [
+        "world.get_resources",
+        "world.mutate_resources"
+      ],
+      "error": null,
+      "layer": "semantic",
+      "requests": [
+        {
+          "id": 43,
+          "jsonrpc": "2.0",
+          "method": "world.get_resources",
+          "params": {
+            "resource": "hof_game::contract::FrameCounter"
+          }
+        },
+        {
+          "id": 43,
+          "jsonrpc": "2.0",
+          "method": "world.mutate_resources",
+          "params": {
+            "path": "jump_pressed",
+            "resource": "hof_game::contract::InputIntent",
+            "value": true
+          }
+        }
+      ],
+      "responses": [
+        {
+          "id": 43,
+          "jsonrpc": "2.0",
+          "result": {
+            "value": {
+              "frames": 641
+            }
+          }
+        },
+        {
+          "id": 43,
+          "jsonrpc": "2.0",
+          "result": null
+        }
+      ],
+      "result": {
+        "accepted": true,
+        "frame": 641
+      },
+      "seq": 43,
+      "timestamp_ms": 1791177564311,
+      "tool": "bevy_inject_jump"
+    },
+    {
+      "brp_methods": [
+        "world.get_resources",
+        "world.get_resources",
+        "world.get_resources"
+      ],
+      "error": null,
+      "layer": "semantic",
+      "requests": [
+        {
+          "id": 44,
+          "jsonrpc": "2.0",
+          "method": "world.get_resources",
+          "params": {
+            "resource": "hof_game::contract::FrameCounter"
+          }
+        },
+        {
+          "id": 44,
+          "jsonrpc": "2.0",
+          "method": "world.get_resources",
+          "params": {
+            "resource": "hof_game::contract::FrameCounter"
+          }
+        },
+        {
+          "id": 44,
+          "jsonrpc": "2.0",
+          "method": "world.get_resources",
+          "params": {
+            "resource": "hof_game::contract::FrameCounter"
+          }
+        }
+      ],
+      "responses": [
+        {
+          "id": 44,
+          "jsonrpc": "2.0",
+          "result": {
+            "value": {
+              "frames": 643
+            }
+          }
+        },
+        {
+          "id": 44,
+          "jsonrpc": "2.0",
+          "result": {
+            "value": {
+              "frames": 644
+            }
+          }
+        },
+        {
+          "id": 44,
+          "jsonrpc": "2.0",
+          "result": {
+            "value": {
+              "frames": 646
+            }
+          }
+        }
+      ],
+      "result": {
+        "frame_after": 646
+      },
+      "seq": 44,
+      "timestamp_ms": 1791177564378,
+      "tool": "bevy_wait_frames"
+    },
+    {
+      "brp_methods": [
+        "world.get_resources",
+        "world.mutate_resources"
+      ],
+      "error": null,
+      "layer": "semantic",
+      "requests": [
+        {
+          "id": 45,
+          "jsonrpc": "2.0",
+          "method": "world.get_resources",
+          "params": {
+            "resource": "hof_game::contract::FrameCounter"
+          }
+        },
+        {
+          "id": 45,
+          "jsonrpc": "2.0",
+          "method": "world.mutate_resources",
+          "params": {
+            "path": "jump_pressed",
+            "resource": "hof_game::contract::InputIntent",
+            "value": false
+          }
+        }
+      ],
+      "responses": [
+        {
+          "id": 45,
+          "jsonrpc": "2.0",
+          "result": {
+            "value": {
+              "frames": 647
+            }
+          }
+        },
+        {
+          "id": 45,
+          "jsonrpc": "2.0",
+          "result": null
+        }
+      ],
+      "result": {
+        "accepted": true,
+        "frame": 647
+      },
+      "seq": 45,
+      "timestamp_ms": 1791177564412,
+      "tool": "bevy_inject_jump"
+    },
+    {
+      "brp_methods": [
+        "world.get_resources",
+        "world.query"
+      ],
+      "error": null,
+      "layer": "semantic",
+      "requests": [
+        {
+          "id": 46,
+          "jsonrpc": "2.0",
+          "method": "world.get_resources",
+          "params": {
+            "resource": "hof_game::contract::FrameCounter"
+          }
+        },
+        {
+          "id": 46,
+          "jsonrpc": "2.0",
+          "method": "world.query",
+          "params": {
+            "data": {
+              "components": [
+                "bevy_transform::components::transform::Transform"
+              ],
+              "option": "all"
+            },
+            "filter": {
+              "with": [
+                "hof_game::contract::Player"
+              ]
+            },
+            "strict": true
+          }
+        }
+      ],
+      "responses": [
+        {
+          "id": 46,
+          "jsonrpc": "2.0",
+          "result": {
+            "value": {
+              "frames": 649
+            }
+          }
+        },
+        {
+          "id": 46,
+          "jsonrpc": "2.0",
+          "result": [
+            {
+              "components": {
+                "bevy_transform::components::global_transform::GlobalTransform": [
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  203.63699340820312,
+                  -171.76119995117188,
+                  0.0
+                ],
+                "bevy_transform::components::transform::Transform": {
+                  "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ],
+                  "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                  ],
+                  "translation": [
+                    203.63699340820312,
+                    -171.76119995117188,
+                    0.0
+                  ]
+                },
+                "bevy_transform::components::transform::TransformTreeChanged": null,
+                "hof_game::contract::Grounded": {
+                  "on_ground": false
+                },
+                "hof_game::contract::Player": {},
+                "hof_game::contract::Velocity": {
+                  "x": 0.0,
+                  "y": 137.58372497558594
+                }
+              },
+              "entity": 4294966911
+            }
+          ]
+        }
+      ],
+      "result": {
+        "frame": 649,
+        "x": 203.63699340820312,
+        "y": -171.76119995117188
+      },
+      "seq": 46,
+      "timestamp_ms": 1791177564446,
+      "tool": "bevy_player_transform"
+    },
+    {
+      "brp_methods": [
+        "world.get_resources",
+        "world.query"
+      ],
+      "error": null,
+      "layer": "semantic",
+      "requests": [
+        {
+          "id": 47,
+          "jsonrpc": "2.0",
+          "method": "world.get_resources",
+          "params": {
+            "resource": "hof_game::contract::FrameCounter"
+          }
+        },
+        {
+          "id": 47,
+          "jsonrpc": "2.0",
+          "method": "world.query",
+          "params": {
+            "data": {
+              "components": [
+                "bevy_transform::components::transform::Transform"
+              ],
+              "option": "all"
+            },
+            "filter": {
+              "with": [
+                "hof_game::contract::Player"
+              ]
+            },
+            "strict": true
+          }
+        }
+      ],
+      "responses": [
+        {
+          "id": 47,
+          "jsonrpc": "2.0",
+          "result": {
+            "value": {
+              "frames": 651
+            }
+          }
+        },
+        {
+          "id": 47,
+          "jsonrpc": "2.0",
+          "result": [
+            {
+              "components": {
+                "bevy_transform::components::global_transform::GlobalTransform": [
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  203.63699340820312,
+                  -168.1291046142578,
+                  0.0
+                ],
+                "bevy_transform::components::transform::Transform": {
+                  "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ],
+                  "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                  ],
+                  "translation": [
+                    203.63699340820312,
+                    -168.1291046142578,
+                    0.0
+                  ]
+                },
+                "bevy_transform::components::transform::TransformTreeChanged": null,
+                "hof_game::contract::Grounded": {
+                  "on_ground": false
+                },
+                "hof_game::contract::Player": {},
+                "hof_game::contract::Velocity": {
+                  "x": 0.0,
+                  "y": 96.8677215576172
+                }
+              },
+              "entity": 4294966911
+            }
+          ]
+        }
+      ],
+      "result": {
+        "frame": 651,
+        "x": 203.63699340820312,
+        "y": -168.1291046142578
+      },
+      "seq": 47,
+      "timestamp_ms": 1791177564480,
+      "tool": "bevy_player_transform"
+    },
+    {
+      "brp_methods": [
+        "world.get_resources",
+        "world.query"
+      ],
+      "error": null,
+      "layer": "semantic",
+      "requests": [
+        {
+          "id": 48,
+          "jsonrpc": "2.0",
+          "method": "world.get_resources",
+          "params": {
+            "resource": "hof_game::contract::FrameCounter"
+          }
+        },
+        {
+          "id": 48,
+          "jsonrpc": "2.0",
+          "method": "world.query",
+          "params": {
+            "data": {
+              "components": [
+                "bevy_transform::components::transform::Transform"
+              ],
+              "option": "all"
+            },
+            "filter": {
+              "with": [
+                "hof_game::contract::Player"
+              ]
+            },
+            "strict": true
+          }
+        }
+      ],
+      "responses": [
+        {
+          "id": 48,
+          "jsonrpc": "2.0",
+          "result": {
+            "value": {
+              "frames": 653
+            }
+          }
+        },
+        {
+          "id": 48,
+          "jsonrpc": "2.0",
+          "result": [
+            {
+              "components": {
+                "bevy_transform::components::global_transform::GlobalTransform": [
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  203.63699340820312,
+                  -165.87722778320312,
+                  0.0
+                ],
+                "bevy_transform::components::transform::Transform": {
+                  "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ],
+                  "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                  ],
+                  "translation": [
+                    203.63699340820312,
+                    -165.87722778320312,
+                    0.0
+                  ]
+                },
+                "bevy_transform::components::transform::TransformTreeChanged": null,
+                "hof_game::contract::Grounded": {
+                  "on_ground": false
+                },
+                "hof_game::contract::Player": {},
+                "hof_game::contract::Velocity": {
+                  "x": 0.0,
+                  "y": 56.10792541503906
+                }
+              },
+              "entity": 4294966911
+            }
+          ]
+        }
+      ],
+      "result": {
+        "frame": 653,
+        "x": 203.63699340820312,
+        "y": -165.87722778320312
+      },
+      "seq": 48,
+      "timestamp_ms": 1791177564514,
+      "tool": "bevy_player_transform"
+    },
+    {
+      "brp_methods": [
+        "world.get_resources",
+        "world.query"
+      ],
+      "error": null,
+      "layer": "semantic",
+      "requests": [
+        {
+          "id": 49,
+          "jsonrpc": "2.0",
+          "method": "world.get_resources",
+          "params": {
+            "resource": "hof_game::contract::FrameCounter"
+          }
+        },
+        {
+          "id": 49,
+          "jsonrpc": "2.0",
+          "method": "world.query",
+          "params": {
+            "data": {
+              "components": [
+                "bevy_transform::components::transform::Transform"
+              ],
+              "option": "all"
+            },
+            "filter": {
+              "with": [
+                "hof_game::contract::Player"
+              ]
+            },
+            "strict": true
+          }
+        }
+      ],
+      "responses": [
+        {
+          "id": 49,
+          "jsonrpc": "2.0",
+          "result": {
+            "value": {
+              "frames": 655
+            }
+          }
+        },
+        {
+          "id": 49,
+          "jsonrpc": "2.0",
+          "result": [
+            {
+              "components": {
+                "bevy_transform::components::global_transform::GlobalTransform": [
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  203.63699340820312,
+                  -165.01016235351562,
+                  0.0
+                ],
+                "bevy_transform::components::transform::Transform": {
+                  "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ],
+                  "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                  ],
+                  "translation": [
+                    203.63699340820312,
+                    -165.01016235351562,
+                    0.0
+                  ]
+                },
+                "bevy_transform::components::transform::TransformTreeChanged": null,
+                "hof_game::contract::Grounded": {
+                  "on_ground": false
+                },
+                "hof_game::contract::Player": {},
+                "hof_game::contract::Velocity": {
+                  "x": 0.0,
+                  "y": 15.26412582397461
+                }
+              },
+              "entity": 4294966911
+            }
+          ]
+        }
+      ],
+      "result": {
+        "frame": 655,
+        "x": 203.63699340820312,
+        "y": -165.01016235351562
+      },
+      "seq": 49,
+      "timestamp_ms": 1791177564548,
+      "tool": "bevy_player_transform"
+    },
+    {
+      "brp_methods": [
+        "world.get_resources",
+        "world.query"
+      ],
+      "error": null,
+      "layer": "semantic",
+      "requests": [
+        {
+          "id": 50,
+          "jsonrpc": "2.0",
+          "method": "world.get_resources",
+          "params": {
+            "resource": "hof_game::contract::FrameCounter"
+          }
+        },
+        {
+          "id": 50,
+          "jsonrpc": "2.0",
+          "method": "world.query",
+          "params": {
+            "data": {
+              "components": [
+                "bevy_transform::components::transform::Transform"
+              ],
+              "option": "all"
+            },
+            "filter": {
+              "with": [
+                "hof_game::contract::Player"
+              ]
+            },
+            "strict": true
+          }
+        }
+      ],
+      "responses": [
+        {
+          "id": 50,
+          "jsonrpc": "2.0",
+          "result": {
+            "value": {
+              "frames": 657
+            }
+          }
+        },
+        {
+          "id": 50,
+          "jsonrpc": "2.0",
+          "result": [
+            {
+              "components": {
+                "bevy_transform::components::global_transform::GlobalTransform": [
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  203.63699340820312,
+                  -165.51715087890625,
+                  0.0
+                ],
+                "bevy_transform::components::transform::Transform": {
+                  "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ],
+                  "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                  ],
+                  "translation": [
+                    203.63699340820312,
+                    -165.51715087890625,
+                    0.0
+                  ]
+                },
+                "bevy_transform::components::transform::TransformTreeChanged": null,
+                "hof_game::contract::Grounded": {
+                  "on_ground": false
+                },
+                "hof_game::contract::Player": {},
+                "hof_game::contract::Velocity": {
+                  "x": 0.0,
+                  "y": -25.156076431274418
+                }
+              },
+              "entity": 4294966911
+            }
+          ]
+        }
+      ],
+      "result": {
+        "frame": 657,
+        "x": 203.63699340820312,
+        "y": -165.51715087890625
+      },
+      "seq": 50,
+      "timestamp_ms": 1791177564582,
+      "tool": "bevy_player_transform"
+    },
+    {
+      "brp_methods": [
+        "world.get_resources",
+        "world.query"
+      ],
+      "error": null,
+      "layer": "semantic",
+      "requests": [
+        {
+          "id": 51,
+          "jsonrpc": "2.0",
+          "method": "world.get_resources",
+          "params": {
+            "resource": "hof_game::contract::FrameCounter"
+          }
+        },
+        {
+          "id": 51,
+          "jsonrpc": "2.0",
+          "method": "world.query",
+          "params": {
+            "data": {
+              "components": [
+                "bevy_transform::components::transform::Transform"
+              ],
+              "option": "all"
+            },
+            "filter": {
+              "with": [
+                "hof_game::contract::Player"
+              ]
+            },
+            "strict": true
+          }
+        }
+      ],
+      "responses": [
+        {
+          "id": 51,
+          "jsonrpc": "2.0",
+          "result": {
+            "value": {
+              "frames": 659
+            }
+          }
+        },
+        {
+          "id": 51,
+          "jsonrpc": "2.0",
+          "result": [
+            {
+              "components": {
+                "bevy_transform::components::global_transform::GlobalTransform": [
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  203.63699340820312,
+                  -167.37808227539062,
+                  0.0
+                ],
+                "bevy_transform::components::transform::Transform": {
+                  "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ],
+                  "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                  ],
+                  "translation": [
+                    203.63699340820312,
+                    -167.37808227539062,
+                    0.0
+                  ]
+                },
+                "bevy_transform::components::transform::TransformTreeChanged": null,
+                "hof_game::contract::Grounded": {
+                  "on_ground": false
+                },
+                "hof_game::contract::Player": {},
+                "hof_game::contract::Velocity": {
+                  "x": 0.0,
+                  "y": -65.47079467773438
+                }
+              },
+              "entity": 4294966911
+            }
+          ]
+        }
+      ],
+      "result": {
+        "frame": 659,
+        "x": 203.63699340820312,
+        "y": -167.37808227539062
+      },
+      "seq": 51,
+      "timestamp_ms": 1791177564615,
+      "tool": "bevy_player_transform"
+    },
+    {
+      "brp_methods": [
+        "world.get_resources",
+        "world.query"
+      ],
+      "error": null,
+      "layer": "semantic",
+      "requests": [
+        {
+          "id": 52,
+          "jsonrpc": "2.0",
+          "method": "world.get_resources",
+          "params": {
+            "resource": "hof_game::contract::FrameCounter"
+          }
+        },
+        {
+          "id": 52,
+          "jsonrpc": "2.0",
+          "method": "world.query",
+          "params": {
+            "data": {
+              "components": [
+                "bevy_transform::components::transform::Transform"
+              ],
+              "option": "all"
+            },
+            "filter": {
+              "with": [
+                "hof_game::contract::Player"
+              ]
+            },
+            "strict": true
+          }
+        }
+      ],
+      "responses": [
+        {
+          "id": 52,
+          "jsonrpc": "2.0",
+          "result": {
+            "value": {
+              "frames": 661
+            }
+          }
+        },
+        {
+          "id": 52,
+          "jsonrpc": "2.0",
+          "result": [
+            {
+              "components": {
+                "bevy_transform::components::global_transform::GlobalTransform": [
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  203.63699340820312,
+                  -170.6354217529297,
+                  0.0
+                ],
+                "bevy_transform::components::transform::Transform": {
+                  "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ],
+                  "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                  ],
+                  "translation": [
+                    203.63699340820312,
+                    -170.6354217529297,
+                    0.0
+                  ]
+                },
+                "bevy_transform::components::transform::TransformTreeChanged": null,
+                "hof_game::contract::Grounded": {
+                  "on_ground": false
+                },
+                "hof_game::contract::Player": {},
+                "hof_game::contract::Velocity": {
+                  "x": 0.0,
+                  "y": -106.18451690673828
+                }
+              },
+              "entity": 4294966911
+            }
+          ]
+        }
+      ],
+      "result": {
+        "frame": 661,
+        "x": 203.63699340820312,
+        "y": -170.6354217529297
+      },
+      "seq": 52,
+      "timestamp_ms": 1791177564649,
+      "tool": "bevy_player_transform"
+    },
+    {
+      "brp_methods": [
+        "world.get_resources",
+        "world.query"
+      ],
+      "error": null,
+      "layer": "semantic",
+      "requests": [
+        {
+          "id": 53,
+          "jsonrpc": "2.0",
+          "method": "world.get_resources",
+          "params": {
+            "resource": "hof_game::contract::FrameCounter"
+          }
+        },
+        {
+          "id": 53,
+          "jsonrpc": "2.0",
+          "method": "world.query",
+          "params": {
+            "data": {
+              "components": [
+                "bevy_transform::components::transform::Transform"
+              ],
+              "option": "all"
+            },
+            "filter": {
+              "with": [
+                "hof_game::contract::Player"
+              ]
+            },
+            "strict": true
+          }
+        }
+      ],
+      "responses": [
+        {
+          "id": 53,
+          "jsonrpc": "2.0",
+          "result": {
+            "value": {
+              "frames": 663
+            }
+          }
+        },
+        {
+          "id": 53,
+          "jsonrpc": "2.0",
+          "result": [
+            {
+              "components": {
+                "bevy_transform::components::global_transform::GlobalTransform": [
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  203.63699340820312,
+                  -175.30453491210938,
+                  0.0
+                ],
+                "bevy_transform::components::transform::Transform": {
+                  "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ],
+                  "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                  ],
+                  "translation": [
+                    203.63699340820312,
+                    -175.30453491210938,
+                    0.0
+                  ]
+                },
+                "bevy_transform::components::transform::TransformTreeChanged": null,
+                "hof_game::contract::Grounded": {
+                  "on_ground": false
+                },
+                "hof_game::contract::Player": {},
+                "hof_game::contract::Velocity": {
+                  "x": 0.0,
+                  "y": -147.11663818359375
+                }
+              },
+              "entity": 4294966911
+            }
+          ]
+        }
+      ],
+      "result": {
+        "frame": 663,
+        "x": 203.63699340820312,
+        "y": -175.30453491210938
+      },
+      "seq": 53,
+      "timestamp_ms": 1791177564683,
+      "tool": "bevy_player_transform"
+    },
+    {
+      "brp_methods": [
+        "world.get_resources",
+        "world.query"
+      ],
+      "error": null,
+      "layer": "semantic",
+      "requests": [
+        {
+          "id": 54,
+          "jsonrpc": "2.0",
+          "method": "world.get_resources",
+          "params": {
+            "resource": "hof_game::contract::FrameCounter"
+          }
+        },
+        {
+          "id": 54,
+          "jsonrpc": "2.0",
+          "method": "world.query",
+          "params": {
+            "data": {
+              "components": [
+                "bevy_transform::components::transform::Transform"
+              ],
+              "option": "all"
+            },
+            "filter": {
+              "with": [
+                "hof_game::contract::Player"
+              ]
+            },
+            "strict": true
+          }
+        }
+      ],
+      "responses": [
+        {
+          "id": 54,
+          "jsonrpc": "2.0",
+          "result": {
+            "value": {
+              "frames": 665
+            }
+          }
+        },
+        {
+          "id": 54,
+          "jsonrpc": "2.0",
+          "result": [
+            {
+              "components": {
+                "bevy_transform::components::global_transform::GlobalTransform": [
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  203.63699340820312,
+                  -181.3249969482422,
+                  0.0
+                ],
+                "bevy_transform::components::transform::Transform": {
+                  "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ],
+                  "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                  ],
+                  "translation": [
+                    203.63699340820312,
+                    -181.3249969482422,
+                    0.0
+                  ]
+                },
+                "bevy_transform::components::transform::TransformTreeChanged": null,
+                "hof_game::contract::Grounded": {
+                  "on_ground": false
+                },
+                "hof_game::contract::Player": {},
+                "hof_game::contract::Velocity": {
+                  "x": 0.0,
+                  "y": -187.7900390625
+                }
+              },
+              "entity": 4294966911
+            }
+          ]
+        }
+      ],
+      "result": {
+        "frame": 665,
+        "x": 203.63699340820312,
+        "y": -181.3249969482422
+      },
+      "seq": 54,
+      "timestamp_ms": 1791177564717,
+      "tool": "bevy_player_transform"
+    },
+    {
+      "brp_methods": [
+        "world.get_resources",
+        "world.query"
+      ],
+      "error": null,
+      "layer": "semantic",
+      "requests": [
+        {
+          "id": 55,
+          "jsonrpc": "2.0",
+          "method": "world.get_resources",
+          "params": {
+            "resource": "hof_game::contract::FrameCounter"
+          }
+        },
+        {
+          "id": 55,
+          "jsonrpc": "2.0",
+          "method": "world.query",
+          "params": {
+            "data": {
+              "components": [
+                "bevy_transform::components::transform::Transform"
+              ],
+              "option": "all"
+            },
+            "filter": {
+              "with": [
+                "hof_game::contract::Player"
+              ]
+            },
+            "strict": true
+          }
+        }
+      ],
+      "responses": [
+        {
+          "id": 55,
+          "jsonrpc": "2.0",
+          "result": {
+            "value": {
+              "frames": 667
+            }
+          }
+        },
+        {
+          "id": 55,
+          "jsonrpc": "2.0",
+          "result": [
+            {
+              "components": {
+                "bevy_transform::components::global_transform::GlobalTransform": [
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  203.63699340820312,
+                  -188.8130798339844,
+                  0.0
+                ],
+                "bevy_transform::components::transform::Transform": {
+                  "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ],
+                  "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                  ],
+                  "translation": [
+                    203.63699340820312,
+                    -188.8130798339844,
+                    0.0
+                  ]
+                },
+                "bevy_transform::components::transform::TransformTreeChanged": null,
+                "hof_game::contract::Grounded": {
+                  "on_ground": false
+                },
+                "hof_game::contract::Player": {},
+                "hof_game::contract::Velocity": {
+                  "x": 0.0,
+                  "y": -228.89256286621097
+                }
+              },
+              "entity": 4294966911
+            }
+          ]
+        }
+      ],
+      "result": {
+        "frame": 667,
+        "x": 203.63699340820312,
+        "y": -188.8130798339844
+      },
+      "seq": 55,
+      "timestamp_ms": 1791177564752,
+      "tool": "bevy_player_transform"
+    },
+    {
+      "brp_methods": [
+        "world.get_resources",
+        "world.query"
+      ],
+      "error": null,
+      "layer": "semantic",
+      "requests": [
+        {
+          "id": 56,
+          "jsonrpc": "2.0",
+          "method": "world.get_resources",
+          "params": {
+            "resource": "hof_game::contract::FrameCounter"
+          }
+        },
+        {
+          "id": 56,
+          "jsonrpc": "2.0",
+          "method": "world.query",
+          "params": {
+            "data": {
+              "components": [
+                "bevy_transform::components::transform::Transform"
+              ],
+              "option": "all"
+            },
+            "filter": {
+              "with": [
+                "hof_game::contract::Player"
+              ]
+            },
+            "strict": true
+          }
+        }
+      ],
+      "responses": [
+        {
+          "id": 56,
+          "jsonrpc": "2.0",
+          "result": {
+            "value": {
+              "frames": 669
+            }
+          }
+        },
+        {
+          "id": 56,
+          "jsonrpc": "2.0",
+          "result": [
+            {
+              "components": {
+                "bevy_transform::components::global_transform::GlobalTransform": [
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  203.63699340820312,
+                  -197.65576171875,
+                  0.0
+                ],
+                "bevy_transform::components::transform::Transform": {
+                  "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ],
+                  "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                  ],
+                  "translation": [
+                    203.63699340820312,
+                    -197.65576171875,
+                    0.0
+                  ]
+                },
+                "bevy_transform::components::transform::TransformTreeChanged": null,
+                "hof_game::contract::Grounded": {
+                  "on_ground": false
+                },
+                "hof_game::contract::Player": {},
+                "hof_game::contract::Velocity": {
+                  "x": 0.0,
+                  "y": -269.7748718261719
+                }
+              },
+              "entity": 4294966911
+            }
+          ]
+        }
+      ],
+      "result": {
+        "frame": 669,
+        "x": 203.63699340820312,
+        "y": -197.65576171875
+      },
+      "seq": 56,
+      "timestamp_ms": 1791177564786,
+      "tool": "bevy_player_transform"
+    },
+    {
+      "brp_methods": [
+        "world.get_resources",
+        "world.query"
+      ],
+      "error": null,
+      "layer": "semantic",
+      "requests": [
+        {
+          "id": 57,
+          "jsonrpc": "2.0",
+          "method": "world.get_resources",
+          "params": {
+            "resource": "hof_game::contract::FrameCounter"
+          }
+        },
+        {
+          "id": 57,
+          "jsonrpc": "2.0",
+          "method": "world.query",
+          "params": {
+            "data": {
+              "components": [
+                "bevy_transform::components::transform::Transform"
+              ],
+              "option": "all"
+            },
+            "filter": {
+              "with": [
+                "hof_game::contract::Player"
+              ]
+            },
+            "strict": true
+          }
+        }
+      ],
+      "responses": [
+        {
+          "id": 57,
+          "jsonrpc": "2.0",
+          "result": {
+            "value": {
+              "frames": 671
+            }
+          }
+        },
+        {
+          "id": 57,
+          "jsonrpc": "2.0",
+          "result": [
+            {
+              "components": {
+                "bevy_transform::components::global_transform::GlobalTransform": [
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0,
+                  203.63699340820312,
+                  -200.0,
+                  0.0
+                ],
+                "bevy_transform::components::transform::Transform": {
+                  "rotation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ],
+                  "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                  ],
+                  "translation": [
+                    203.63699340820312,
+                    -200.0,
+                    0.0
+                  ]
+                },
+                "bevy_transform::components::transform::TransformTreeChanged": null,
+                "hof_game::contract::Grounded": {
+                  "on_ground": true
+                },
+                "hof_game::contract::Player": {},
+                "hof_game::contract::Velocity": {
+                  "x": 0.0,
+                  "y": 0.0
+                }
+              },
+              "entity": 4294966911
+            }
+          ]
+        }
+      ],
+      "result": {
+        "frame": 671,
+        "x": 203.63699340820312,
+        "y": -200.0
+      },
+      "seq": 57,
+      "timestamp_ms": 1791177564819,
+      "tool": "bevy_player_transform"
+    }
+  ],
+  "criterion": "e3_jump_arc",
+  "failure": null,
+  "observed": true,
+  "readings": [
+    {
+      "failed": false,
+      "frame": 637,
+      "kind": "Grounded",
+      "reason": null,
+      "value": {
+        "frame": 637,
+        "grounded": true
+      }
+    },
+    {
+      "failed": false,
+      "frame": 639,
+      "kind": "PlayerTransform",
+      "reason": null,
+      "value": {
+        "frame": 639,
+        "x": 203.63699340820312,
+        "y": -200.0
+      }
+    },
+    {
+      "failed": false,
+      "frame": 649,
+      "kind": "PlayerTransform",
+      "reason": null,
+      "value": {
+        "frame": 649,
+        "x": 203.63699340820312,
+        "y": -171.76119995117188
+      }
+    },
+    {
+      "failed": false,
+      "frame": 651,
+      "kind": "PlayerTransform",
+      "reason": null,
+      "value": {
+        "frame": 651,
+        "x": 203.63699340820312,
+        "y": -168.1291046142578
+      }
+    },
+    {
+      "failed": false,
+      "frame": 653,
+      "kind": "PlayerTransform",
+      "reason": null,
+      "value": {
+        "frame": 653,
+        "x": 203.63699340820312,
+        "y": -165.87722778320312
+      }
+    },
+    {
+      "failed": false,
+      "frame": 655,
+      "kind": "PlayerTransform",
+      "reason": null,
+      "value": {
+        "frame": 655,
+        "x": 203.63699340820312,
+        "y": -165.01016235351562
+      }
+    },
+    {
+      "failed": false,
+      "frame": 657,
+      "kind": "PlayerTransform",
+      "reason": null,
+      "value": {
+        "frame": 657,
+        "x": 203.63699340820312,
+        "y": -165.51715087890625
+      }
+    },
+    {
+      "failed": false,
+      "frame": 659,
+      "kind": "PlayerTransform",
+      "reason": null,
+      "value": {
+        "frame": 659,
+        "x": 203.63699340820312,
+        "y": -167.37808227539062
+      }
+    },
+    {
+      "failed": false,
+      "frame": 661,
+      "kind": "PlayerTransform",
+      "reason": null,
+      "value": {
+        "frame": 661,
+        "x": 203.63699340820312,
+        "y": -170.6354217529297
+      }
+    },
+    {
+      "failed": false,
+      "frame": 663,
+      "kind": "PlayerTransform",
+      "reason": null,
+      "value": {
+        "frame": 663,
+        "x": 203.63699340820312,
+        "y": -175.30453491210938
+      }
+    },
+    {
+      "failed": false,
+      "frame": 665,
+      "kind": "PlayerTransform",
+      "reason": null,
+      "value": {
+        "frame": 665,
+        "x": 203.63699340820312,
+        "y": -181.3249969482422
+      }
+    },
+    {
+      "failed": false,
+      "frame": 667,
+      "kind": "PlayerTransform",
+      "reason": null,
+      "value": {
+        "frame": 667,
+        "x": 203.63699340820312,
+        "y": -188.8130798339844
+      }
+    },
+    {
+      "failed": false,
+      "frame": 669,
+      "kind": "PlayerTransform",
+      "reason": null,
+      "value": {
+        "frame": 669,
+        "x": 203.63699340820312,
+        "y": -197.65576171875
+      }
+    },
+    {
+      "failed": false,
+      "frame": 671,
+      "kind": "PlayerTransform",
+      "reason": null,
+      "value": {
+        "frame": 671,
+        "x": 203.63699340820312,
+        "y": -200.0
+      }
+    }
+  ]
+}

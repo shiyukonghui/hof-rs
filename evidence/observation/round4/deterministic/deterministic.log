@@ -1,0 +1,153 @@
+deterministic evidence battery on the real workspace produced 11 step(s), 11 of them ok; launchable=true (battery pass(es): 1, repair_retry_used=false)
+[
+  {
+    "step_id": "editor_errors_baseline",
+    "supports": [],
+    "record": {
+      "type": "build",
+      "path": ".hoh/deterministic/editor_errors_baseline.json",
+      "observation": "the candidate built (1628 ms, 8 contract type path(s) declared: bevy_transform::components::transform::Transform, hof_game::contract::CoinCounter, hof_game::contract::FrameCounter, hof_game::contract::Grounded, hof_game::contract::InputIntent, hof_game::contract::Player, hof_game::contract::ProcessNonce, hof_game::contract::WinFlag); frozen feature set d6a90ba39e67b9e05fd28d97cc570dc989a03e8ec7a15ba93d077d5fe95d1f96",
+      "candidate_id": ""
+    },
+    "ok": true,
+    "raw_path": null
+  },
+  {
+    "step_id": "play_scene_ready",
+    "supports": [],
+    "record": {
+      "type": "runtime_trace",
+      "path": ".hoh/deterministic/play_scene_ready.json",
+      "observation": "the game answered on http://127.0.0.1:15702/ after 2706 ms (pid 47624, headless); E3 movement=ok coins=ok win=ok jump=ok grounded=ok movement_left=ok movement_release=ok win_position=ok grounded_payload=ok",
+      "candidate_id": ""
+    },
+    "ok": true,
+    "raw_path": null
+  },
+  {
+    "step_id": "e3_movement",
+    "supports": [
+      "P1"
+    ],
+    "record": {
+      "type": "runtime_trace",
+      "path": null,
+      "observation": "e3_movement: observed",
+      "candidate_id": ""
+    },
+    "ok": true,
+    "raw_path": "readings/e3-observations.json"
+  },
+  {
+    "step_id": "e3_coin_counter",
+    "supports": [
+      "P2"
+    ],
+    "record": {
+      "type": "runtime_trace",
+      "path": null,
+      "observation": "e3_coin_counter: observed",
+      "candidate_id": ""
+    },
+    "ok": true,
+    "raw_path": "readings/e3-observations.json"
+  },
+  {
+    "step_id": "e3_win_flag",
+    "supports": [
+      "P3"
+    ],
+    "record": {
+      "type": "runtime_trace",
+      "path": null,
+      "observation": "e3_win_flag: observed",
+      "candidate_id": ""
+    },
+    "ok": true,
+    "raw_path": "readings/e3-observations.json"
+  },
+  {
+    "step_id": "e3_jump_arc",
+    "supports": [
+      "P4"
+    ],
+    "record": {
+      "type": "runtime_trace",
+      "path": null,
+      "observation": "e3_jump_arc: observed",
+      "candidate_id": ""
+    },
+    "ok": true,
+    "raw_path": "readings/e3-observations.json"
+  },
+  {
+    "step_id": "e3_grounded",
+    "supports": [
+      "P5"
+    ],
+    "record": {
+      "type": "runtime_trace",
+      "path": null,
+      "observation": "e3_grounded: observed",
+      "candidate_id": ""
+    },
+    "ok": true,
+    "raw_path": "readings/e3-observations.json"
+  },
+  {
+    "step_id": "e3_movement_left",
+    "supports": [
+      "P1"
+    ],
+    "record": {
+      "type": "runtime_trace",
+      "path": null,
+      "observation": "e3_movement_left: observed",
+      "candidate_id": ""
+    },
+    "ok": true,
+    "raw_path": "readings/e3-observations.json"
+  },
+  {
+    "step_id": "e3_movement_release",
+    "supports": [
+      "P1"
+    ],
+    "record": {
+      "type": "runtime_trace",
+      "path": null,
+      "observation": "e3_movement_release: observed",
+      "candidate_id": ""
+    },
+    "ok": true,
+    "raw_path": "readings/e3-observations.json"
+  },
+  {
+    "step_id": "e3_win_position",
+    "supports": [
+      "P3"
+    ],
+    "record": {
+      "type": "runtime_trace",
+      "path": null,
+      "observation": "e3_win_position: observed",
+      "candidate_id": ""
+    },
+    "ok": true,
+    "raw_path": "readings/e3-observations.json"
+  },
+  {
+    "step_id": "e3_grounded_payload",
+    "supports": [
+      "P5"
+    ],
+    "record": {
+      "type": "runtime_trace",
+      "path": null,
+      "observation": "e3_grounded_payload: observed",
+      "candidate_id": ""
+    },
+    "ok": true,
+    "raw_path": "readings/e3-observations.json"
+  }
+]

@@ -150,6 +150,97 @@ pub struct PrdCoverage {
     pub gap: usize,
     pub verified_ids: Vec<String>,
     pub gap_ids: Vec<String>,
+    /// The **comparable** figure: coverage of the frozen PRD's own surfaces,
+    /// decided by the harness's evidence and not by the Tester's claims.
+    ///
+    /// `verified`/`gap` above are, and stay, a derivation over the Tester's own
+    /// record lists.  That made `prd coverage: 6/8` in round 4 self-referential:
+    /// no claim id was an `F<n>` id, so the denominator was the Tester's claim
+    /// count and two rounds could not be compared
+    /// (`.spec/bevy/ACCEPTANCE-ROUNDS.md` RA-5).  This field is the repair: the
+    /// denominator is [`crate::adapter::bevy::prd_surfaces::PRD_SURFACES`], a
+    /// compile-time constant list of the frozen `PRD.md`'s surfaces, and every
+    /// item carries the evidence that decided it.  It is `serde(default)` so a
+    /// recorded `result.json` written before this field existed still parses.
+    #[serde(default)]
+    pub surfaces: PrdSurfaceCoverage,
+}
+
+/// One frozen PRD surface's verdict: which of the document's requirements the
+/// harness's own evidence decided, and with what.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PrdSurfaceCoverage {
+    /// The frozen registry's size.  **Not** the Tester's claim count.
+    pub total: usize,
+    /// Surfaces that hold on the harness's evidence (including the ones this
+    /// repository's own frozen invariants decide).
+    pub verified: usize,
+    /// Surfaces the harness decided and the evidence does **not** satisfy.
+    pub gap: usize,
+    /// Surfaces the harness cannot decide at all: an explicit, named gap rather
+    /// than a missing claim.
+    pub unobservable: usize,
+    /// One entry per registry item, in registry order.
+    pub items: Vec<PrdSurfaceVerdict>,
+}
+
+impl PrdSurfaceCoverage {
+    /// `total - unobservable`: the surfaces a reader may hold the tree to.
+    pub fn decidable(&self) -> usize {
+        self.total.saturating_sub(self.unobservable)
+    }
+
+    /// `verified/decidable` as a percentage with one decimal, or `None` when
+    /// nothing is decidable (a division that would be a fiction).
+    pub fn verified_share_of_decidable(&self) -> Option<f64> {
+        let decidable = self.decidable();
+        if decidable == 0 {
+            return None;
+        }
+        Some(self.verified as f64 * 100.0 / decidable as f64)
+    }
+}
+
+/// The status of one registry item.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SurfaceStatus {
+    /// The harness's evidence decides it and it holds.
+    Verified,
+    /// The harness's evidence decides it and it does not hold.
+    Gap,
+    /// The harness cannot decide it; `reason` says why, and the item is a named
+    /// gap rather than a claim nobody made.
+    Unobservable,
+}
+
+impl SurfaceStatus {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            SurfaceStatus::Verified => "verified",
+            SurfaceStatus::Gap => "gap",
+            SurfaceStatus::Unobservable => "unobservable",
+        }
+    }
+}
+
+/// One registry item's verdict.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PrdSurfaceVerdict {
+    /// The stable id (`P1`, `C2`, `Q-startup`, `B2.1`, …).
+    pub id: String,
+    pub status: SurfaceStatus,
+    /// What decided it: the battery step ids, the frozen invariant, or the
+    /// reason it cannot be decided.
+    pub evidence: String,
+    /// Present for `gap` and `unobservable`.
+    pub reason: Option<String>,
+}
+
+impl PrdSurfaceVerdict {
+    pub fn is_verified(&self) -> bool {
+        self.status == SurfaceStatus::Verified
+    }
 }
 
 /// The PRD's functional requirement ids are `F1..F17` (PRD §3).
@@ -182,7 +273,19 @@ impl PrdCoverage {
                 .iter()
                 .map(|record| record.claim_id.clone())
                 .collect(),
+            surfaces: PrdSurfaceCoverage::default(),
         }
+    }
+
+    /// Attach the **surface** figure decided by the harness's own evidence.
+    ///
+    /// Kept separate from [`Self::from_bundle`] on purpose: the derivation over
+    /// the Tester's lists needs only the bundle, while the surface figure needs
+    /// the battery.  A caller that has no battery gets the empty registry rather
+    /// than a fabricated one.
+    pub fn with_surfaces(mut self, surfaces: PrdSurfaceCoverage) -> Self {
+        self.surfaces = surfaces;
+        self
     }
 
     /// The denominator of `prd=<verified>/<total>`.
@@ -341,6 +444,12 @@ pub struct BatteryPassSummary {
     pub launchable: bool,
     /// `step_id -> ok`, in battery order.
     pub steps: Vec<(String, bool)>,
+    /// Round-1 PRD-coverage batch: the frozen PRD surfaces this pass's own
+    /// evidence decided.  Recorded **per pass** so a reader can see which of the
+    /// two batteries a coverage figure came from, and `serde(default)` so a
+    /// `result.json` written before this field existed still parses.
+    #[serde(default)]
+    pub surfaces: PrdSurfaceCoverage,
 }
 
 /// DR-28: the artifact-hygiene report for a frozen `A_t`.  Report-only: the

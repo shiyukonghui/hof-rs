@@ -1,0 +1,54 @@
+{
+  "brp_methods": [
+    "world.get_resources",
+    "world.get_resources"
+  ],
+  "error": null,
+  "layer": "semantic",
+  "ok": true,
+  "requests": [
+    {
+      "id": 29,
+      "jsonrpc": "2.0",
+      "method": "world.get_resources",
+      "params": {
+        "resource": "hof_game::contract::FrameCounter"
+      }
+    },
+    {
+      "id": 29,
+      "jsonrpc": "2.0",
+      "method": "world.get_resources",
+      "params": {
+        "resource": "hof_game::contract::WinFlag"
+      }
+    }
+  ],
+  "responses": [
+    {
+      "id": 29,
+      "jsonrpc": "2.0",
+      "result": {
+        "value": {
+          "frames": 585
+        }
+      }
+    },
+    {
+      "id": 29,
+      "jsonrpc": "2.0",
+      "result": {
+        "value": {
+          "won": true
+        }
+      }
+    }
+  ],
+  "result": {
+    "frame": 585,
+    "won": true
+  },
+  "seq": 29,
+  "timestamp_ms": 1791177563363,
+  "tool": "bevy_win_flag"
+}

@@ -1,0 +1,73 @@
+{
+  "ablation": {
+    "evidence_feedback": true,
+    "plan_update": true,
+    "warm_start": true
+  },
+  "artifact_gate": {
+    "applicable": true,
+    "launchable": true,
+    "reasons": []
+  },
+  "config": {
+    "base_url": "http://100.105.152.101:18080/v1",
+    "max_retries": 3,
+    "model_name": "deepseek-v4.1-flash",
+    "provider": "openai_compatible",
+    "request_timeout_secs": 900,
+    "service_name": "openai_compatible",
+    "use_tool_calls": true,
+    "wire_model_name": "deepseek-v4.1-flash"
+  },
+  "engine": {
+    "binary": {
+      "mtime_unix": null,
+      "path": null,
+      "reason": "this adapter (bevy-0.19.1) drives no engine binary, so there is no identity to check",
+      "sha256": null,
+      "size_bytes": null
+    },
+    "checked_at": 1791171095,
+    "kind": "bevy-0.19.1",
+    "listener": {
+      "matches_binary": null,
+      "path": null,
+      "pid": null,
+      "reason": "this adapter (bevy-0.19.1) drives no engine binary, so there is no identity to check"
+    },
+    "mcp": {
+      "editor_endpoint": null,
+      "editor_status": null,
+      "editor_status_reason": "this adapter (bevy-0.19.1) drives no engine binary, so there is no identity to check",
+      "game_endpoint": {
+        "answering_pid": 47624,
+        "endpoint": "http://127.0.0.1:15702/",
+        "nonce": "faf2adda-c698-48ef-a4f5-f51d1da551c6",
+        "pid": 47624,
+        "port": 15702,
+        "source": "launch_verified",
+        "verified": true
+      },
+      "game_endpoint_reason": null
+    },
+    "version_reason": "this adapter (bevy-0.19.1) drives no engine binary, so there is no identity to check",
+    "version_string": null
+  },
+  "exit_code": 0,
+  "hoh_version": "0.1.0",
+  "iterations": 3,
+  "model_identity": "deepseek-v4.1-flash|openai_compatible|deepseek-v4.1-flash",
+  "run_id": "round4",
+  "spec": {
+    "path": ".spec/bevy/PRD.md",
+    "sha256": "93b2ed85af6fa22eccb70f1cd3a0b51ee86bebd3f0f434322d29d869894f8fbe"
+  },
+  "start_state": {
+    "mode": "as_is",
+    "version_id": null
+  },
+  "started_at": 1791171095,
+  "warnings": [
+    "qa_scope: MCP acts on the project open in the editor (the real workspace) while the Tester evaluates a frozen copy; the runtime binds both to one candidate identity with pre-QA and around-QA hash assertions (D7)."
+  ]
+}

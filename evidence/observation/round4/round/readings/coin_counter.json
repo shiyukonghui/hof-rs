@@ -1,0 +1,62 @@
+[
+  {
+    "failed": false,
+    "frame": 489,
+    "kind": "CoinCounter",
+    "reason": null,
+    "value": {
+      "coins": 0,
+      "frame": 489
+    }
+  },
+  {
+    "failed": false,
+    "frame": 523,
+    "kind": "CoinCounter",
+    "reason": null,
+    "value": {
+      "coins": 1,
+      "frame": 523
+    }
+  },
+  {
+    "failed": false,
+    "frame": 539,
+    "kind": "CoinCounter",
+    "reason": null,
+    "value": {
+      "coins": 2,
+      "frame": 539
+    }
+  },
+  {
+    "failed": false,
+    "frame": 555,
+    "kind": "CoinCounter",
+    "reason": null,
+    "value": {
+      "coins": 2,
+      "frame": 555
+    }
+  },
+  {
+    "failed": false,
+    "frame": 569,
+    "kind": "CoinCounter",
+    "reason": null,
+    "value": {
+      "coins": 2,
+      "frame": 569
+    }
+  },
+  {
+    "failed": false,
+    "frame": 583,
+    "kind": "CoinCounter",
+    "reason": null,
+    "value": {
+      "coins": 2,
+      "frame": 583
+    }
+  }
+]

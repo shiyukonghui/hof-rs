@@ -1,0 +1,72 @@
+[
+  {
+    "failed": false,
+    "frame": 491,
+    "kind": "WinFlag",
+    "reason": null,
+    "value": {
+      "frame": 491,
+      "won": false
+    }
+  },
+  {
+    "failed": false,
+    "frame": 525,
+    "kind": "WinFlag",
+    "reason": null,
+    "value": {
+      "frame": 525,
+      "won": false
+    }
+  },
+  {
+    "failed": false,
+    "frame": 541,
+    "kind": "WinFlag",
+    "reason": null,
+    "value": {
+      "frame": 541,
+      "won": true
+    }
+  },
+  {
+    "failed": false,
+    "frame": 557,
+    "kind": "WinFlag",
+    "reason": null,
+    "value": {
+      "frame": 557,
+      "won": true
+    }
+  },
+  {
+    "failed": false,
+    "frame": 571,
+    "kind": "WinFlag",
+    "reason": null,
+    "value": {
+      "frame": 571,
+      "won": true
+    }
+  },
+  {
+    "failed": false,
+    "frame": 585,
+    "kind": "WinFlag",
+    "reason": null,
+    "value": {
+      "frame": 585,
+      "won": true
+    }
+  },
+  {
+    "failed": false,
+    "frame": 541,
+    "kind": "WinFlag",
+    "reason": null,
+    "value": {
+      "frame": 541,
+      "won": true
+    }
+  }
+]

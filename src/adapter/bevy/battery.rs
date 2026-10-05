@@ -55,6 +55,11 @@ pub const JUMP_HOLD_FRAMES: u32 = 2;
 pub const ARC_POLLS: u32 = 32;
 /// The fewest samples an arc may be declared complete after.
 pub const ARC_MIN_SAMPLES: usize = 6;
+/// Round-1 PRD-coverage batch: how many frames the closing liveness wait asks
+/// the game to advance.  Small enough to cost a fraction of a second on the
+/// 60.3 FPS headless build SPIKE-2 measured, large enough that a counter which
+/// did not move cannot be mistaken for one that did.
+pub const LIVENESS_FRAMES: u32 = 8;
 /// The smallest displacement that counts as motion, in the game's own units.
 pub const MOTION_EPSILON: f64 = 1e-6;
 
@@ -190,6 +195,18 @@ pub struct Observation {
     pub arc: Option<JumpArc>,
     /// The raw BRP calls that produced this observation, in order.
     pub calls: Vec<CallEvidence>,
+    /// Round-1 **PRD-coverage** batch: the game-frame advance a liveness
+    /// observation measured.  Two `bevy_wait_frames` calls bracket a wait, and
+    /// the delta between the frames they report is the game's own progress.
+    ///
+    /// It is a field of its own because a liveness observation has no
+    /// [`Reading`]: the frame counter is not one of the four semantic surfaces
+    /// the battery reads, it is what `bevy_wait_frames` answers with.  A step
+    /// with no readings and no arc would otherwise be indistinguishable from one
+    /// that never ran, which is exactly the false-green shape this battery
+    /// exists to prevent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub frames: Option<FrameAdvance>,
     /// Round-5 repair (defect RA-8): this step is **definitional** — it is
     /// satisfied by any in-order battery run, so it adds no discriminating power
     /// on its own.
@@ -197,9 +214,9 @@ pub struct Observation {
     /// The acceptance's RA-8 named two such steps: `e3_win_position` ("a transform
     /// sample at or after the win frame") and `e3_grounded_payload` ("a Grounded
     /// payload carrying a boolean").  Both verdicts are honest, but counting them
-    /// as two of nine *behavioural* proofs overstates what the battery showed, so
-    /// each one is labelled in its own record and in the report rather than
-    /// silently promoted.
+    /// as behavioural proofs overstates what the battery showed, so each one is
+    /// labelled in its own record and in the report rather than silently
+    /// promoted.
     #[serde(default)]
     pub definitional: bool,
     /// Why it is definitional, when it is.  It travels with the record so a
@@ -207,6 +224,54 @@ pub struct Observation {
     /// step's name.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub definitional_note: Option<String>,
+}
+
+/// What two `bevy_wait_frames` calls reported around one wait: the game's own
+/// frame counter before and after, and how many frames were asked for.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+pub struct FrameAdvance {
+    /// The frame the game reported before the wait.
+    pub first_frame: u64,
+    /// The frame the game reported after it.
+    pub second_frame: u64,
+    /// How many frames the second call asked the game to advance.
+    pub requested: u32,
+}
+
+impl FrameAdvance {
+    /// How many frames the game's counter moved.
+    pub fn advanced(&self) -> u64 {
+        self.second_frame.saturating_sub(self.first_frame)
+    }
+
+    /// The liveness verdict: the game advanced **at least** the frames that were
+    /// asked of it, and its counter moved forward at all.
+    ///
+    /// "At least" rather than "exactly": the point is that the process is still
+    /// stepping its own schedule, and a busy machine that also rendered frames
+    /// during the wait cannot make the counter move *backwards*.  A counter that
+    /// did not move at all is the shape `ScheduleRunnerPlugin`-less applications
+    /// have — and `bevy_wait_frames` already refuses to answer without moving.
+    pub fn verdict(&self) -> Result<(), String> {
+        if self.second_frame <= self.first_frame {
+            return Err(format!(
+                "the game's frame counter did not advance ({} -> {}) across a wait for {} frame(s): \
+                 the process is not stepping",
+                self.first_frame, self.second_frame, self.requested
+            ));
+        }
+        if self.advanced() < u64::from(self.requested) {
+            return Err(format!(
+                "the game's frame counter advanced {} frame(s) ({} -> {}) when {} were asked for: \
+                 the counter a reading reports is not the game's own progress",
+                self.advanced(),
+                self.first_frame,
+                self.second_frame,
+                self.requested
+            ));
+        }
+        Ok(())
+    }
 }
 
 /// A plain observation: `readings`, an optional `arc`, the calls and the two
@@ -225,6 +290,7 @@ pub fn observation(
         readings,
         arc,
         calls,
+        frames: None,
         definitional: false,
         definitional_note: None,
     }
@@ -254,6 +320,7 @@ impl Observation {
             readings: Vec::new(),
             arc: None,
             calls,
+            frames: None,
             definitional: false,
             definitional_note: None,
         }
@@ -275,7 +342,7 @@ impl Observation {
         {
             return false;
         }
-        !self.readings.is_empty() || self.arc.is_some()
+        !self.readings.is_empty() || self.arc.is_some() || self.frames.is_some()
     }
 
     /// Did a read fail, and is that why this observation is not met?
@@ -284,12 +351,18 @@ impl Observation {
     }
 }
 
-/// The nine observations.
+/// The ten observations.
 ///
-/// The first five are the original E3 criteria; the last four are the **missing
+/// The first five are the original E3 criteria; the next four are the **missing
 /// battery steps** round 1's Tester recorded as gaps (`P1-left`, `P1-release`,
 /// `P3-position`, `P5-gate`), so a reported gap now names a behaviour the
 /// battery really did not measure rather than one it never asked about.
+///
+/// The tenth is the **late-round liveness step** (round-1 PRD-coverage batch):
+/// round 4's Tester gapped `S1-deterministic-step` because nothing under
+/// `.hoh/deterministic/raw/` proved the process was still stepping late in the
+/// pass.  `liveness` is that proof, and it runs last on purpose — the latest
+/// point in the battery at which the game can still be shown to be alive.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct E3Observations {
     pub movement: Observation,
@@ -311,6 +384,10 @@ pub struct E3Observations {
     /// field, read at rest, as its own observation rather than as the jump's
     /// supporting basis.
     pub grounded_payload: Observation,
+    /// PRD §4 `**启动**` / round-4 gap `S1-deterministic-step`: the game's own
+    /// frame counter advances across a wait at the **end** of the battery, so
+    /// "the process is still running" is a measurement and not an assumption.
+    pub liveness: Observation,
     /// `None` when the battery ran; `Some(reason)` when it could not run at all
     /// (in which case every observation is "not observed").
     pub aborted: Option<String>,
@@ -332,6 +409,7 @@ pub const NAMED_OBSERVATIONS: &[(&str, &str)] = &[
     ("movement_release", "e3_movement_release"),
     ("win_position", "e3_win_position"),
     ("grounded_payload", "e3_grounded_payload"),
+    ("liveness", "e3_process_liveness"),
 ];
 
 impl E3Observations {
@@ -347,6 +425,7 @@ impl E3Observations {
             "movement_release" => &self.movement_release,
             "win_position" => &self.win_position,
             "grounded_payload" => &self.grounded_payload,
+            "liveness" => &self.liveness,
             _ => return None,
         })
     }
@@ -389,7 +468,7 @@ impl E3Observations {
         gaps
     }
 
-    /// All nine criteria met.
+    /// All ten criteria met.
     pub fn passed(&self) -> bool {
         self.aborted.is_none()
             && self
@@ -496,6 +575,7 @@ impl<'a> BatteryRun<'a> {
                 movement_release: Observation::not_observed("the battery has not run", Vec::new()),
                 win_position: Observation::not_observed("the battery has not run", Vec::new()),
                 grounded_payload: Observation::not_observed("the battery has not run", Vec::new()),
+                liveness: Observation::not_observed("the battery has not run", Vec::new()),
                 aborted: None,
             },
             baseline_coins: None,
@@ -516,7 +596,7 @@ impl<'a> BatteryRun<'a> {
         if let Err(error) = self.run_inner() {
             // A task-level failure is not evidence about the game — the round
             // could not be observed at all — so it is recorded as an abort, not
-            // as nine failed criteria.
+            // as ten failed criteria.
             let reason = error.to_string();
             self.observations.aborted = Some(reason.clone());
             for (name, _) in NAMED_OBSERVATIONS {
@@ -532,6 +612,7 @@ impl<'a> BatteryRun<'a> {
                     "movement_release" => self.observations.movement_release = observation,
                     "win_position" => self.observations.win_position = observation,
                     "grounded_payload" => self.observations.grounded_payload = observation,
+                    "liveness" => self.observations.liveness = observation,
                     _ => {}
                 }
             }
@@ -549,6 +630,11 @@ impl<'a> BatteryRun<'a> {
         self.phase_coins_and_win()?;
         self.phase_movement_left_and_release()?;
         self.phase_jump()?;
+        // The liveness step is **last** on purpose: it is the latest point at
+        // which the battery can show the process is still stepping its own
+        // schedule, which is what PRD §4 `**启动**` asks for and what round 4's
+        // `S1-deterministic-step` gap was about.
+        self.phase_liveness()?;
         Ok(())
     }
 
@@ -638,6 +724,7 @@ impl<'a> BatteryRun<'a> {
             readings: vec![payload],
             arc: None,
             calls: payload_calls,
+            frames: None,
             // RA-8: an existence check for a payload shape.  It proves the surface
             // carries the boolean, which `e3_grounded` also reads; it is labelled
             // so a reader does not count it as a second behavioural proof.
@@ -886,6 +973,7 @@ impl<'a> BatteryRun<'a> {
             readings: win_position_readings,
             arc: None,
             calls: win_position_calls,
+            frames: None,
             // RA-8: this step is satisfied by any in-order battery run — the
             // transform read that follows the win flag always is at or after the
             // win frame — so it is labelled rather than counted as one of the
@@ -983,6 +1071,46 @@ impl<'a> BatteryRun<'a> {
             });
         }
         self.observations.jump = observation(failure.is_none(), failure, readings, arc, calls);
+        Ok(())
+    }
+
+    /// The late-round liveness step: the game's own frame counter advances by the
+    /// frames that were asked of it, at the **end** of the battery.
+    ///
+    /// This is the observation round 4's Tester recorded as the gap
+    /// `S1-deterministic-step` ("no persisted late-round liveness step under
+    /// `.hoh/deterministic/raw/`").  It is not a new contract surface and not a
+    /// new tool: `bevy_wait_frames` already exists, is bound to the frozen
+    /// `hof_game::contract::FrameCounter` surface, and already refuses to answer
+    /// without advancing the counter.  What this step adds is the **measurement**:
+    /// two waits bracket a known number of frames, and the delta decides.
+    ///
+    /// Two waits rather than one because the first establishes the counter's
+    /// position; the second asks for [`LIVENESS_FRAMES`] more and its own answer
+    /// is compared against the first.  A battery that ran on a process which had
+    /// stopped stepping would produce a delta of zero, and the record says so
+    /// instead of reporting nine green steps and one silent assumption.
+    fn phase_liveness(&mut self) -> anyhow::Result<()> {
+        let mut calls = self.begin();
+        let first = self.driver.wait_frames(1)?;
+        let second = self.driver.wait_frames(LIVENESS_FRAMES)?;
+        calls.extend(self.driver.take_evidence());
+        let advance = FrameAdvance {
+            first_frame: first.frame,
+            second_frame: second.frame,
+            requested: LIVENESS_FRAMES,
+        };
+        let failure = advance.verdict().err();
+        self.observations.liveness = Observation {
+            observed: failure.is_none(),
+            failure,
+            readings: Vec::new(),
+            arc: None,
+            calls,
+            frames: Some(advance),
+            definitional: false,
+            definitional_note: None,
+        };
         Ok(())
     }
 }
@@ -1602,6 +1730,103 @@ mod tests {
         assert!(unobserved.failure.unwrap().starts_with("not observed:"));
     }
 
+    /// The liveness verdict is a statement about the game's **own** frame
+    /// counter, and each of its failure shapes is a failure of its own.
+    #[test]
+    fn the_liveness_verdict_reads_the_games_own_frame_advance() {
+        let honest = FrameAdvance {
+            first_frame: 100,
+            second_frame: 108,
+            requested: 8,
+        };
+        assert_eq!(honest.advanced(), 8);
+        assert!(honest.verdict().is_ok());
+
+        // A counter that moved further than asked is still alive: the wait is a
+        // floor, not an exact quantity.
+        let fast = FrameAdvance {
+            first_frame: 100,
+            second_frame: 140,
+            requested: 8,
+        };
+        assert!(fast.verdict().is_ok());
+
+        // The shape a schedule-runner-less application has: it does not step.
+        let stopped = FrameAdvance {
+            first_frame: 100,
+            second_frame: 100,
+            requested: 8,
+        };
+        let failure = stopped.verdict().unwrap_err();
+        assert!(failure.contains("not stepping"), "{failure}");
+
+        // The shape B2.1 forbids: the number reported is not the game's advance.
+        let ordinal = FrameAdvance {
+            first_frame: 100,
+            second_frame: 103,
+            requested: 8,
+        };
+        let failure = ordinal.verdict().unwrap_err();
+        assert!(failure.contains("not the game's own progress"), "{failure}");
+    }
+
+    /// An observation with no readings and no arc is still **measured** when the
+    /// liveness step put a frame advance in it — otherwise a step that ran would
+    /// be reported as a step that never happened.
+    #[test]
+    fn a_liveness_observation_counts_as_measured_without_any_reading() {
+        let measured = Observation {
+            observed: true,
+            failure: None,
+            readings: Vec::new(),
+            arc: None,
+            calls: Vec::new(),
+            frames: Some(FrameAdvance {
+                first_frame: 1,
+                second_frame: 9,
+                requested: 8,
+            }),
+            definitional: false,
+            definitional_note: None,
+        };
+        assert!(measured.was_measured());
+        assert!(!measured.was_unobservable());
+        let never = observation(true, None, Vec::new(), None, Vec::new());
+        assert!(!never.was_measured(), "nothing was read and nothing moved");
+    }
+
+    /// The closing step runs on the real phase order and reads the fake game's
+    /// counter: `e3_process_liveness` is the **last** thing the battery does.
+    #[test]
+    fn the_liveness_step_runs_last_and_reports_the_games_progress() {
+        let mut driver = ScriptedReads::new(
+            vec![grounded_obs(1, true), grounded_obs(2, true)],
+            vec![observed(SemanticKind::CoinCounter, 1, json!({"coins": 0}))],
+            vec![observed(SemanticKind::WinFlag, 1, json!({"won": false}))],
+            vec![position(1, 0.0, -200.0), position(2, 1.0, -200.0)],
+        );
+        let observations = BatteryRun::new(&mut driver)
+            .run()
+            .expect("the battery runs");
+        let advance = observations
+            .liveness
+            .frames
+            .expect("the liveness step recorded a frame advance");
+        assert_eq!(advance.requested, LIVENESS_FRAMES);
+        assert!(
+            advance.advanced() >= u64::from(LIVENESS_FRAMES),
+            "the fake game advanced {} frames",
+            advance.advanced()
+        );
+        assert!(observations.liveness.observed);
+        let names: Vec<&str> = NAMED_OBSERVATIONS.iter().map(|(name, _)| *name).collect();
+        assert_eq!(
+            names.last(),
+            Some(&"liveness"),
+            "the step runs last: {names:?}"
+        );
+    }
+
     /// A driver whose reads come from per-kind scripts, with the last entry
     /// repeating.  It exists so the two honesty defects (B2-7 and B2-8) are
     /// pinned in the default gate without an engine: the phases are driven
@@ -1615,6 +1840,11 @@ mod tests {
         coins_at: usize,
         win_at: usize,
         transform_at: usize,
+        /// The fake game's own frame counter.  It moves on every wait, which is
+        /// what the liveness step measures; a driver that never moved would make
+        /// the liveness step red for a reason that has nothing to do with the
+        /// criterion under test.
+        frame: u64,
     }
 
     impl ScriptedReads {
@@ -1633,6 +1863,7 @@ mod tests {
                 coins_at: 0,
                 win_at: 0,
                 transform_at: 0,
+                frame: 0,
             }
         }
 
@@ -1660,13 +1891,14 @@ mod tests {
             _intent: &Intent,
             _level: bool,
         ) -> anyhow::Result<crate::adapter::InjectionReport> {
-            Ok(crate::adapter::InjectionReport::accepted(0))
+            Ok(crate::adapter::InjectionReport::accepted(self.frame))
         }
 
         fn wait_frames(&mut self, n: u32) -> anyhow::Result<crate::adapter::FrameMark> {
+            self.frame += u64::from(n);
             Ok(crate::adapter::FrameMark {
                 requested: n,
-                frame: 0,
+                frame: self.frame,
             })
         }
 
@@ -1856,6 +2088,7 @@ mod tests {
             movement_release: done(),
             win_position: done(),
             grounded_payload: done(),
+            liveness: done(),
             aborted: None,
         };
         assert!(set.passed());
@@ -1870,7 +2103,7 @@ mod tests {
         assert!(!set.passed());
         assert_eq!(set.gaps().len(), 1);
         set.aborted = Some("the game process died".to_string());
-        assert_eq!(set.gaps().len(), 9, "an aborted battery gapped all nine");
+        assert_eq!(set.gaps().len(), 10, "an aborted battery gapped all ten");
         for (name, reason) in set.gaps() {
             assert!(reason.contains("the game process died"), "{name}: {reason}");
         }

@@ -1,0 +1,151 @@
+{
+  "iteration": 1,
+  "qa_status": "pass",
+  "verified_records": [
+    {
+      "claim_id": "P1",
+      "claim": "Injected movement intent drives the player left/right on the frozen Transform surface, and releasing the input (move_dir=0) zeroes the velocity so the x coordinate stops changing (no inertia drift).",
+      "execution_records": [
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/deterministic/raw/e3_movement.json",
+          "observation": "bevy_inject_move {dir:1,level:true} at frame 509 (accepted), bevy_wait_frames -> frame_after 524, then bevy_player_transform at frame 525 reports x=54.39280319213867 vs reading frame 505 x=0.0 (Velocity.x=200.0); the game's own FrameCounter (hof_game::contract::FrameCounter frames=525) is the frame stamp, not a poll count.",
+          "candidate_id": "a8a409d9f0bfcf7384a0d9403e01c4e44d782f18238948807be5327b94dc6bb4"
+        },
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/deterministic/raw/e3_movement_left.json",
+          "observation": "reading frame 607 x=264.606689453125, then bevy_inject_move {dir:-1,level:true} at frame 609, wait -> 624, reading frame 625 x=210.5236663818359 with Velocity.x=-200.0: the negative direction moves the player left.",
+          "candidate_id": "a8a409d9f0bfcf7384a0d9403e01c4e44d782f18238948807be5327b94dc6bb4"
+        },
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/deterministic/raw/e3_movement_release.json",
+          "observation": "after bevy_inject_move {dir:0,level:true} at frame 627, bevy_player_transform reads x=203.7618865966797 at frame 635 and x=203.7618865966797 again at frame 647 (12 frames apart), with Velocity.x=0.0 in both payloads: the player stops, no residual drift.",
+          "candidate_id": "a8a409d9f0bfcf7384a0d9403e01c4e44d782f18238948807be5327b94dc6bb4"
+        }
+      ],
+      "status": "verified"
+    },
+    {
+      "claim_id": "P2",
+      "claim": "A pickable coin exists in the level; the player walking onto it takes the reflectable integer CoinCounter from 0 to 1 and the value never decreases afterwards.",
+      "execution_records": [
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/deterministic/raw/e3_coin_counter.json",
+          "observation": "bevy_coin_counter at frame 501 -> {coins: 0}; after bevy_inject_move {dir:1,level:true} (frame 539) and bevy_wait_frames (->550), bevy_coin_counter at frame 535 -> {coins: 1} and stays 1 at frames 535, 551, 567, 581, 595. Raw BRP reply payload is {\"value\":{\"coins\":1,\"target\":1}}.",
+          "candidate_id": "a8a409d9f0bfcf7384a0d9403e01c4e44d782f18238948807be5327b94dc6bb4"
+        }
+      ],
+      "status": "verified"
+    },
+    {
+      "claim_id": "P3",
+      "claim": "A one-way win condition exists: when the player reaches the goal the reflectable WinFlag flips false -> true and never returns to false, read at a frame where the player is standing at the goal's reachable x.",
+      "execution_records": [
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/deterministic/raw/e3_win_flag.json",
+          "observation": "bevy_win_flag readings: frame 503 -> won=false, frame 537 -> won=false, frame 553 -> won=true (after level move_dir=1 from frame 539), and stays true at frames 569, 583, 597. Raw reply payload {\"value\":{\"won\":true}}.",
+          "candidate_id": "a8a409d9f0bfcf7384a0d9403e01c4e44d782f18238948807be5327b94dc6bb4"
+        },
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/deterministic/raw/e3_win_position.json",
+          "observation": "at the win frame 553 won=true, and bevy_player_transform at frame 555 reads x=115.60417938232422, y=-200.0 with Grounded.on_ground=true and Velocity.x=200.0: the player is standing on the ground plane at the goal's x, not falling.",
+          "candidate_id": "a8a409d9f0bfcf7384a0d9403e01c4e44d782f18238948807be5327b94dc6bb4"
+        }
+      ],
+      "status": "verified"
+    },
+    {
+      "claim_id": "P4",
+      "claim": "Injected jump intent makes the player rise and then fall, and the arc ends back on the ground (a monotone fall alone would not count).",
+      "execution_records": [
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/deterministic/raw/e3_jump_arc.json",
+          "observation": "bevy_inject_jump {press:true} at frame 653, release {press:false} at frame 659. Sampled y: 651=-200.0, 661=-171.71, 663=-168.12, 665=-165.87, 667=-165.01 (peak), 669=-165.54, 671=-167.43, 673=-170.71, 675=-175.32, 677=-181.30, 679=-188.75, 681=-197.49, 683=-200.0; recorded arc = {rising: 4, falling: 8, peak: -165.00985717773438}. The player both rises and falls and returns to y=-200.0.",
+          "candidate_id": "a8a409d9f0bfcf7384a0d9403e01c4e44d782f18238948807be5327b94dc6bb4"
+        }
+      ],
+      "status": "verified"
+    },
+    {
+      "claim_id": "P5",
+      "claim": "The player's reflectable ground state is true while standing on the floor and false while airborne during the jump.",
+      "execution_records": [
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/deterministic/raw/e3_grounded.json",
+          "observation": "bevy_grounded at frame 485 -> {grounded: true} (x=0.0, y=-200.0), at frame 493 -> {grounded: true}; separate step e3_grounded_payload in .hoh/deterministic/raw/e3_grounded_payload.json at frame 507 -> {frame:507, grounded:true} with raw payload Grounded.on_ground=true.",
+          "candidate_id": "a8a409d9f0bfcf7384a0d9403e01c4e44d782f18238948807be5327b94dc6bb4"
+        },
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/deterministic/raw/e3_jump_arc.json",
+          "observation": "before take-off at frame 649 bevy_grounded -> {grounded:true}; during flight the player payloads read Grounded.on_ground=false at frames 661, 663, 665, 667, 669, 671, 673, 675, 677, 679, 681 with Velocity.y going +137.08 -> -269.10, and at frame 683 back on the ground Grounded.on_ground=true, y=-200.0.",
+          "candidate_id": "a8a409d9f0bfcf7384a0d9403e01c4e44d782f18238948807be5327b94dc6bb4"
+        }
+      ],
+      "status": "verified"
+    },
+    {
+      "claim_id": "C1",
+      "claim": "The frozen candidate builds offline with the bevy_remote feature set and, as a single headless binary, binds the BRP endpoint and serves the frozen semantic surface over it.",
+      "execution_records": [
+        {
+          "type": "build",
+          "path": ".hoh/deterministic/raw/editor_errors_baseline.json",
+          "observation": "the candidate built (1589 ms, 8 contract type path(s) declared: bevy_transform::components::transform::Transform, hof_game::contract::CoinCounter, hof_game::contract::FrameCounter, hof_game::contract::Grounded, hof_game::contract::InputIntent, hof_game::contract::Player, hof_game::contract::ProcessNonce, hof_game::contract::WinFlag); frozen feature set d6a90ba39e67b9e05fd28d97cc570dc989a03e8ec7a15ba93d077d5fe95d1f96",
+          "candidate_id": "a8a409d9f0bfcf7384a0d9403e01c4e44d782f18238948807be5327b94dc6bb4"
+        },
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/deterministic/raw/play_scene_ready.json",
+          "observation": "the game answered on http://127.0.0.1:15702/ after 2572 ms (pid 45884, headless); E3 movement=ok coins=ok win=ok jump=ok grounded=ok movement_left=ok movement_release=ok win_position=ok grounded_payload=ok; launch identity verified with the per-launch ProcessNonce read back over BRP.",
+          "candidate_id": "a8a409d9f0bfcf7384a0d9403e01c4e44d782f18238948807be5327b94dc6bb4"
+        }
+      ],
+      "status": "verified"
+    }
+  ],
+  "gap_records": [
+    {
+      "claim_id": "P2B",
+      "claim": "The coin counter can be driven past 1 by a second pickup (PRD P2 says the count increases on pickup, with no cap stated).",
+      "execution_records": [],
+      "status": "gap",
+      "player_impact": "The player can only ever collect the single demonstrated coin; a level with a second pickable would be unverified, so a multi-coin run could silently not increment or could re-trigger on the same coin.",
+      "recommended_update": "Add a second coin at a distinct reachable x beyond the first and record a battery step reading CoinCounter 0 -> 1 -> 2 in one session."
+    },
+    {
+      "claim_id": "S1",
+      "claim": "The headless process stays alive and answering for a whole round (PRD section 4 startup rule), not merely for the 3.4 s deterministic battery.",
+      "execution_records": [],
+      "status": "gap",
+      "player_impact": "If the process can exit after the short battery window, a longer play session would end with the game gone and no further input or reads possible.",
+      "recommended_update": "Persist a live liveness probe (bevy_health plus a bevy_player_transform frame reading) into .hoh/deterministic/raw/ late in the round so continued liveness is a citable record rather than an unrecorded probe."
+    }
+  ],
+  "planner_handoff": {
+    "preservation_constraints": [
+      "Keep crate name hof_game and contract module hof_game::contract; do not rename or re-register the frozen type paths Player, Grounded, FrameCounter, CoinCounter, WinFlag, InputIntent, Velocity.",
+      "Keep RemotePlugin::default() + RemoteHttpPlugin::default() + ScheduleRunnerPlugin::run_loop(1/60) with the headless switch, so the endpoint 127.0.0.1:15702 is bound and the process does not exit after one frame.",
+      "Keep InputIntent level-triggered with per-frame clearing by the game, and keep every reading's frame field sourced from FrameCounter (never from a poll ordinal).",
+      "Keep the win write one-way (won=true is never reset) and the movement release setting Velocity.x to exactly 0."
+    ],
+    "update_targets": [
+      "No change needed for P1/P3/P4/P5 behaviour; treat the observed x/y/coins/won traces as the regression baseline.",
+      "Add a second coin at a reachable x beyond the first (P2B).",
+      "Emit a persisted late-round liveness record (S1)."
+    ],
+    "validation_requirements": [
+      "Re-run the deterministic battery and require ok=true for e3_movement, e3_movement_left, e3_movement_release, e3_jump_arc, e3_grounded, e3_grounded_payload, e3_coin_counter, e3_win_flag and e3_win_position.",
+      "Movement: require x to increase with dir=1, decrease with dir=-1, and be byte-identical across two reads at least 10 frames apart after dir=0.",
+      "Jump: require the recorded arc to carry both rising and falling steps and to end back at the on-ground y, with Grounded true before take-off and false mid-flight.",
+      "Coin/win: require coins to be monotone non-decreasing and won to be one-way false -> true, read at a frame whose player x equals the goal x."
+    ]
+  }
+}

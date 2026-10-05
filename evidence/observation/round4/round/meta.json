@@ -1,0 +1,18 @@
+{
+  "contract_sha256": "c579a742cea5f2f22b0e34c2ae6ab3bafcb56050310a5d35e95941796bdcf7e9",
+  "exit_code": null,
+  "feature_sha256": "d6a90ba39e67b9e05fd28d97cc570dc989a03e8ec7a15ba93d077d5fe95d1f96",
+  "lock_sha256": "660e7e17b62921ac409d0e2b023273ce1426959cbd386f21832e03745068c8df",
+  "round": "round4",
+  "segments": {
+    "battery": "E3 movement=ok coins=ok win=ok jump=ok grounded=ok movement_left=ok movement_release=ok win_position=ok grounded_payload=ok",
+    "battery_millis": 3390,
+    "build_millis": 1628,
+    "endpoint": "http://127.0.0.1:15702/",
+    "exit_code_source": "the harness runtime writes the round's exit code into runs/round4/exit_code (its own run directory); this battery runs before the round ends and cannot know it",
+    "failure": null,
+    "headless": true,
+    "pid": 47624,
+    "ready_millis": 2706
+  }
+}

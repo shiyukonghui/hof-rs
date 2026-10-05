@@ -1,0 +1,109 @@
+{
+  "brp_methods": [
+    "world.get_resources",
+    "world.query"
+  ],
+  "error": null,
+  "layer": "semantic",
+  "ok": true,
+  "requests": [
+    {
+      "id": 46,
+      "jsonrpc": "2.0",
+      "method": "world.get_resources",
+      "params": {
+        "resource": "hof_game::contract::FrameCounter"
+      }
+    },
+    {
+      "id": 46,
+      "jsonrpc": "2.0",
+      "method": "world.query",
+      "params": {
+        "data": {
+          "components": [
+            "bevy_transform::components::transform::Transform"
+          ],
+          "option": "all"
+        },
+        "filter": {
+          "with": [
+            "hof_game::contract::Player"
+          ]
+        },
+        "strict": true
+      }
+    }
+  ],
+  "responses": [
+    {
+      "id": 46,
+      "jsonrpc": "2.0",
+      "result": {
+        "value": {
+          "frames": 649
+        }
+      }
+    },
+    {
+      "id": 46,
+      "jsonrpc": "2.0",
+      "result": [
+        {
+          "components": {
+            "bevy_transform::components::global_transform::GlobalTransform": [
+              1.0,
+              0.0,
+              0.0,
+              0.0,
+              1.0,
+              0.0,
+              0.0,
+              0.0,
+              1.0,
+              203.63699340820312,
+              -171.76119995117188,
+              0.0
+            ],
+            "bevy_transform::components::transform::Transform": {
+              "rotation": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ],
+              "scale": [
+                1.0,
+                1.0,
+                1.0
+              ],
+              "translation": [
+                203.63699340820312,
+                -171.76119995117188,
+                0.0
+              ]
+            },
+            "bevy_transform::components::transform::TransformTreeChanged": null,
+            "hof_game::contract::Grounded": {
+              "on_ground": false
+            },
+            "hof_game::contract::Player": {},
+            "hof_game::contract::Velocity": {
+              "x": 0.0,
+              "y": 137.58372497558594
+            }
+          },
+          "entity": 4294966911
+        }
+      ]
+    }
+  ],
+  "result": {
+    "frame": 649,
+    "x": 203.63699340820312,
+    "y": -171.76119995117188
+  },
+  "seq": 46,
+  "timestamp_ms": 1791177564446,
+  "tool": "bevy_player_transform"
+}

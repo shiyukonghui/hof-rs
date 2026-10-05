@@ -1,0 +1,6 @@
+{
+  "type": "build",
+  "path": ".hoh/deterministic/editor_errors_baseline.json",
+  "observation": "the candidate built (1628 ms, 8 contract type path(s) declared: bevy_transform::components::transform::Transform, hof_game::contract::CoinCounter, hof_game::contract::FrameCounter, hof_game::contract::Grounded, hof_game::contract::InputIntent, hof_game::contract::Player, hof_game::contract::ProcessNonce, hof_game::contract::WinFlag); frozen feature set d6a90ba39e67b9e05fd28d97cc570dc989a03e8ec7a15ba93d077d5fe95d1f96",
+  "candidate_id": ""
+}

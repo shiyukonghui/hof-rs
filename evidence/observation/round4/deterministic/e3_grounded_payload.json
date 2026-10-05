@@ -1,0 +1,10 @@
+{
+  "observation": "e3_grounded_payload: observed",
+  "ok": true,
+  "path": null,
+  "raw_path": "readings/e3-observations.json",
+  "step_id": "e3_grounded_payload",
+  "supports": [
+    "P5"
+  ]
+}

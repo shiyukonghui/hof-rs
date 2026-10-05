@@ -1,0 +1,210 @@
+{
+  "iteration": 3,
+  "qa_status": "partial",
+  "verified_records": [
+    {
+      "claim_id": "P1",
+      "claim": "With an injected level move intent dir=1 the player Transform.translation.x strictly increases, dir=-1 strictly decreases it, and after dir=0 the x is frozen byte-identically across reads many game frames apart.",
+      "execution_records": [
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/deterministic/raw/e3_movement.json",
+          "observation": "readings: frame 493 x=0.0 -> frame 513 x=54.23064041137695 for bevy_inject_move move_dir=1 (frames from hof_game::contract::FrameCounter)",
+          "candidate_id": "24f6ebe277cb335b19ffe9abaa7eb502a86072ae53480d64f0448a9549dff7ee"
+        },
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/deterministic/raw/e3_movement_left.json",
+          "observation": "move_dir=-1: frame 595 x=264.6115417480469 -> frame 613 x=210.34353637695312",
+          "candidate_id": "24f6ebe277cb335b19ffe9abaa7eb502a86072ae53480d64f0448a9549dff7ee"
+        },
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/deterministic/raw/e3_movement_release.json",
+          "observation": "move_dir=0 released: frame 623 x=203.63699340820312 and frame 635 x=203.63699340820312, identical across 12 game frames",
+          "candidate_id": "24f6ebe277cb335b19ffe9abaa7eb502a86072ae53480d64f0448a9549dff7ee"
+        },
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/evidence/qa_transform_after_move.json",
+          "observation": "own call after bevy_inject_move {dir:1,level:true} at frame 4710: frame 4908 x=670.9059448242188 (started at x=0.0, frame 3407)",
+          "candidate_id": "24f6ebe277cb335b19ffe9abaa7eb502a86072ae53480d64f0448a9549dff7ee"
+        },
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/evidence/qa_transform_after_stop.json",
+          "observation": "after bevy_inject_move {dir:0,level:true} at frame 5098: frame 5118 x=1314.651123046875",
+          "candidate_id": "24f6ebe277cb335b19ffe9abaa7eb502a86072ae53480d64f0448a9549dff7ee"
+        },
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/evidence/qa_transform_after_stop2.json",
+          "observation": "later read with no further input: frame 5334 x=1314.651123046875, byte-identical to frame 5118, so no inertial drift",
+          "candidate_id": "24f6ebe277cb335b19ffe9abaa7eb502a86072ae53480d64f0448a9549dff7ee"
+        }
+      ],
+      "status": "verified"
+    },
+    {
+      "claim_id": "P2",
+      "claim": "CoinCounter.coins starts at 0, increases monotonically as the player walks into coins (0 -> 1 -> 2 in one session), and does not re-trigger while standing still.",
+      "execution_records": [
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/deterministic/raw/e3_coin_counter.json",
+          "observation": "readings in one session: frame 489 coins=0, frame 523 coins=1, frame 539 coins=2, frame 555 coins=2, frame 569 coins=2, frame 583 coins=2 (monotone non-decreasing, target=2)",
+          "candidate_id": "24f6ebe277cb335b19ffe9abaa7eb502a86072ae53480d64f0448a9549dff7ee"
+        },
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/evidence/qa_coins_late.json",
+          "observation": "own call in the same batch as the walk to the goal: frame 6066 coins=2, still 2 after standing, no re-trigger",
+          "candidate_id": "24f6ebe277cb335b19ffe9abaa7eb502a86072ae53480d64f0448a9549dff7ee"
+        }
+      ],
+      "status": "verified"
+    },
+    {
+      "claim_id": "P3",
+      "claim": "WinFlag.won reads false before the goal is reached, flips to true once the player walks right to the goal, and stays true on every later read in the session (one-way, no revert).",
+      "execution_records": [
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/deterministic/raw/e3_win_flag.json",
+          "observation": "readings: frame 491 won=false, frame 525 won=false, frame 541 won=true, frame 557 won=true, frame 571 won=true, frame 585 won=true",
+          "candidate_id": "24f6ebe277cb335b19ffe9abaa7eb502a86072ae53480d64f0448a9549dff7ee"
+        },
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/deterministic/raw/e3_win_position.json",
+          "observation": "at the win frame 541 won=true and the sampled player Transform.translation.x=115.19129943847656 with Grounded.on_ground=true in the same payload (frame 543)",
+          "candidate_id": "24f6ebe277cb335b19ffe9abaa7eb502a86072ae53480d64f0448a9549dff7ee"
+        },
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/evidence/qa_win_late.json",
+          "observation": "own independent session: frame 3662 won=false, then after walking right frame 6062 won=true and it stays true",
+          "candidate_id": "24f6ebe277cb335b19ffe9abaa7eb502a86072ae53480d64f0448a9549dff7ee"
+        }
+      ],
+      "status": "verified"
+    },
+    {
+      "claim_id": "P4",
+      "claim": "An injected jump makes translation.y first rise and then fall, and the player returns to the pre-jump on-ground y.",
+      "execution_records": [
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/deterministic/raw/e3_jump_arc.json",
+          "observation": "arc: first=-200.0, peak=-165.01016235351562 with rising=4 samples and falling=8 samples, samples frames 639..671 returning to -200.0 at frame 671 (a monotone fall would be rejected)",
+          "candidate_id": "24f6ebe277cb335b19ffe9abaa7eb502a86072ae53480d64f0448a9549dff7ee"
+        },
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/evidence/qa_j2_c.json",
+          "observation": "own jump: frame 6440 y=-165.00592041015625 then frame 6444 y=-167.32867431640625, frame 6448 y=-175.20578002929688, i.e. a clear descent after the apex",
+          "candidate_id": "24f6ebe277cb335b19ffe9abaa7eb502a86072ae53480d64f0448a9549dff7ee"
+        },
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/evidence/qa_j4_b.json",
+          "observation": "own jump 2: frame 7786 y=-166.815673828125 -> frame 7790 y=-165.0971221923828 while airborne (rising side of the arc reproduced)",
+          "candidate_id": "24f6ebe277cb335b19ffe9abaa7eb502a86072ae53480d64f0448a9549dff7ee"
+        }
+      ],
+      "status": "verified"
+    },
+    {
+      "claim_id": "P5",
+      "claim": "Grounded.on_ground is true before take-off and false while the jump is airborne, and reads true again once the player has landed.",
+      "execution_records": [
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/deterministic/raw/e3_jump_arc.json",
+          "observation": "frame 637 grounded=true (before bevy_inject_jump at frame 641), frame 649 grounded=false at y=-171.76119995117188 mid-flight, frame 671 grounded=true at y=-200.0 after landing",
+          "candidate_id": "24f6ebe277cb335b19ffe9abaa7eb502a86072ae53480d64f0448a9549dff7ee"
+        },
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/deterministic/raw/e3_grounded_payload.json",
+          "observation": "standalone Grounded payload read: frame 495 'hof_game::contract::Grounded': {\"on_ground\": true}",
+          "candidate_id": "24f6ebe277cb335b19ffe9abaa7eb502a86072ae53480d64f0448a9549dff7ee"
+        },
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/evidence/qa_grounded_before_jump.json",
+          "observation": "own read immediately before bevy_inject_jump: frame 5578 grounded=true",
+          "candidate_id": "24f6ebe277cb335b19ffe9abaa7eb502a86072ae53480d64f0448a9549dff7ee"
+        },
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/evidence/qa_g2.json",
+          "observation": "own read after the jump finished: frame 5832 grounded=true",
+          "candidate_id": "24f6ebe277cb335b19ffe9abaa7eb502a86072ae53480d64f0448a9549dff7ee"
+        }
+      ],
+      "status": "verified"
+    },
+    {
+      "claim_id": "S1",
+      "claim": "The headless game process stays alive and keeps answering BRP well after the E3 battery window, with every reply's frame sourced from hof_game::contract::FrameCounter.",
+      "execution_records": [
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/evidence/qa_health_late.json",
+          "observation": "own late read: {\"alive\": true, ...} at frame 6062, long after the battery's e3 steps (which end around frame 671)",
+          "candidate_id": "24f6ebe277cb335b19ffe9abaa7eb502a86072ae53480d64f0448a9549dff7ee"
+        },
+        {
+          "type": "runtime_trace",
+          "path": ".hoh/evidence/qa_j4_b.json",
+          "observation": "answers still arriving at frame 7790 in the same process, and every reply carries the game's own frame value from FrameCounter",
+          "candidate_id": "24f6ebe277cb335b19ffe9abaa7eb502a86072ae53480d64f0448a9549dff7ee"
+        },
+        {
+          "type": "build",
+          "path": ".hoh/deterministic/raw/play_scene_ready.json",
+          "observation": "the game answered on http://127.0.0.1:15702/ after 2706 ms (pid 47624, headless); E3 movement=ok coins=ok win=ok jump=ok grounded=ok movement_left=ok movement_release=ok win_position=ok grounded_payload=ok",
+          "candidate_id": "24f6ebe277cb335b19ffe9abaa7eb502a86072ae53480d64f0448a9549dff7ee"
+        }
+      ],
+      "status": "verified"
+    }
+  ],
+  "gap_records": [
+    {
+      "claim_id": "P3-goal-x",
+      "claim": "The win position cannot be checked against an exposed goal x, because the frozen observable contract exposes no goal entity or goal x value.",
+      "execution_records": [],
+      "status": "gap",
+      "player_impact": "A tester can see that won flips to true while grounded, but cannot prove the goal sits on the walkable ground path from the contract alone; a goal placed off the path would look identical in the records.",
+      "recommended_update": "Keep the goal on the walkable ground path and keep re-citing the grounded win sample (raw/e3_win_position.json); if a real goal x is required later, raise a decision and re-freeze the hash rather than adding an unreflected marker."
+    },
+    {
+      "claim_id": "S1-deterministic-step",
+      "claim": "The plan's priority-1 requirement for a persisted .hoh/deterministic/raw/ late-round liveness step (a bevy_health plus bevy_player_transform read several seconds after the E3 steps) is not satisfied by the battery: no such step exists in battery.json or under deterministic/raw/.",
+      "execution_records": [],
+      "status": "gap",
+      "player_impact": "A mid-round exit or freeze could previously only be shown from non-persisted calls; the deterministic battery alone still cannot refute a late-round hang.",
+      "recommended_update": "Add one deterministic battery step that runs after the E3 steps and persists a bevy_health and bevy_player_transform reply, with the frame field taken from hof_game::contract::FrameCounter, into .hoh/deterministic/raw/."
+    }
+  ],
+  "planner_handoff": {
+    "preservation_constraints": [
+      "Crate name hof_game and module hof_game::contract stay frozen; type paths Player, Grounded, FrameCounter, CoinCounter, WinFlag, InputIntent, ProcessNonce and the registered bevy_transform::components::transform::Transform must not be renamed or re-registered.",
+      "RemotePlugin::default() + RemoteHttpPlugin::default() + ScheduleRunnerPlugin with the headless no-window/no-GPU switch must stay, so http://127.0.0.1:15702/ binds and the process keeps answering.",
+      "InputIntent stays level-triggered with the game clearing it each frame; every reading's frame field stays sourced from FrameCounter.",
+      "Verified iteration-3 behaviour must stay green: dir=1 raises x, dir=-1 lowers it, dir=0 freezes x byte-identically; coins 0 -> 1 -> 2 monotone non-decreasing; won false -> true one-way; jump rises then falls back to the on-ground y with Grounded true before take-off and false mid-flight."
+    ],
+    "update_targets": [
+      "Add the missing persisted late-round liveness battery step (gap S1-deterministic-step) that reads bevy_health and bevy_player_transform after the E3 steps.",
+      "Keep the goal reachable by walking right on the ground path until a goal-x contract decision is made (gap P3-goal-x)."
+    ],
+    "validation_requirements": [
+      "Re-run the whole battery in one fresh headless session and require ok=true for e3_movement, e3_movement_left, e3_movement_release, e3_jump_arc, e3_grounded, e3_grounded_payload, e3_coin_counter, e3_win_flag, e3_win_position.",
+      "In that same session require coins 0 before any pickup then a positive value (and 2 after the second pickup) monotone non-decreasing on every later read.",
+      "In that same session require won false before the goal and true afterwards with Grounded.on_ground true at the sampled translation.x, staying true on every later read.",
+      "Require the new late liveness step's persisted raw record to answer after the E3 steps with a frame value coming from FrameCounter."
+    ]
+  }
+}
