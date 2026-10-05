@@ -38,6 +38,9 @@ fn game_record(endpoint: String, port: u16) -> GameEndpointRecord {
         port: Some(port),
         source: SOURCE_AUTO_FREE_PORT.to_string(),
         pid: Some(std::process::id()),
+        nonce: None,
+        answering_pid: None,
+        verified: None,
     }
 }
 

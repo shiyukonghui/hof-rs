@@ -90,19 +90,24 @@ pub struct AgentLimits {
     /// grind made of successful actions was invisible to every counter the round
     /// had, and it ended at the step limit instead.
     ///
-    /// The count is the action's **total successes in the call**, not a
-    /// consecutive run: the recorded loop spelled itself with several filters
-    /// (`| more`, `| findstr …`, `& echo …=%ERRORLEVEL%`), so no consecutive run
-    /// in the evidence is longer than a few.
+    /// The count is the action's successes **since the call last wrote the
+    /// artifact it declares**, not a consecutive run and no longer a total over
+    /// the whole call: the recorded loop spells itself with several filters, and
+    /// a counter that runs across a write cannot tell "this call is not
+    /// producing" from "this call is editing and rebuilding".  A counted write
+    /// restarts it (round-4 repair).
     ///
-    /// **The number is measured, not chosen.**  The recorded round-2 evidence
-    /// gives both ends: iteration 2 — a call whose *last* build the artifact
-    /// survived, i.e. engineering work with a legitimate rebuild cadence — runs
-    /// its most-repeated action **14** times, and iteration 1 runs its most
-    /// repeated action **39** times while falling from 22 edits in the first half
-    /// to one in the second.  A cap of 15 therefore cannot fire on iteration 2's
-    /// cadence and does fire on iteration 1's, where an abort at that point keeps
-    /// 15% of the call's observed prompt tokens
+    /// **The number is measured, not chosen.**  Both ends come from the recorded
+    /// evidence, re-measured by the round-4 repair: round 2's iteration 2 — a
+    /// call whose *last* build the artifact survived, i.e. engineering work with a
+    /// legitimate rebuild cadence — repeats its most-used action **7** times in a
+    /// post-write window (5, 2 and 4 for round 3's three Developer calls), while
+    /// round 2's iteration 1 reaches **22** in one.  A cap of 15 is more than
+    /// twice the legitimate maximum of every recorded call and still fires on the
+    /// grind — at API call 126 of 150, keeping 77% of that call's observed prompt
+    /// tokens.  That is the honest arithmetic: the tripwire now ends a call that
+    /// has stopped producing rather than removing the costly middle, and the live
+    /// step budget is the mechanism that bounds a call which keeps writing
     /// (`tests/repeated_action.rs`, which is the evidence for this number and
     /// states what this counter does **not** catch).
     #[serde(default = "default_max_repeated_actions")]
@@ -120,16 +125,29 @@ pub struct AgentLimits {
     /// writes, it earns the whole budget.  Progress therefore buys steps, and a
     /// call that never writes cannot spend 150 of them.  0 disables the gate
     /// (the flat limit applies, as before).
+    ///
+    /// Round-4 repair: [`AgentLimits::effective_step_limit`] is only the
+    /// **value**; it is enforced by `harness::guard`, which re-reads it at every
+    /// step.  Round 3 read it once, before the call, and froze it into the
+    /// agent's configuration — so the write could not raise it and every
+    /// Developer call died at the unwritten 43.
+    ///
+    /// A step is one **model call** (`mini_swe_agent`'s `n_calls`), counted by
+    /// `harness::mini::CountingModel` at the point the call is made.  Round 4's
+    /// first attempt counted the guard's *actions* instead, and a Developer call
+    /// whose 30 responses carried 44 actions was cut after 30 model calls against
+    /// a budget its prompt stated as 43 — the round-3 defect in another unit.
     #[serde(default = "default_steps_per_artifact")]
     pub steps_per_artifact: u64,
 }
 
-/// Round-2 repair (cost batch): 15 is **measured** from the recorded round-2
-/// evidence, and the two ends of the measurement are named in
-/// [`AgentLimits::max_repeated_actions`]: iteration 2's most-repeated action runs
-/// 14 times, iteration 1's runs 39.  The value is the smallest integer strictly
-/// above the clean iteration's highest repeat, so the tripwire cannot be blamed
-/// for aborting work that was progressing while still firing on the grind.
+/// Round-2 repair (cost batch): 15 is **measured** from the recorded evidence,
+/// and the two ends of the measurement are named in
+/// [`AgentLimits::max_repeated_actions`]: in the round-4 window (successes in one
+/// stretch between counted writes) round 2's clean iteration 2 repeats its
+/// most-used action 7 times while iteration 1 reaches 22.  The value is more than
+/// twice the clean iteration's highest repeat, so the tripwire cannot be blamed
+/// for aborting work that was progressing while it still fires on the grind.
 fn default_max_repeated_actions() -> u64 {
     15
 }

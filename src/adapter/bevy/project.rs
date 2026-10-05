@@ -293,6 +293,12 @@ impl ProjectAdapter for BevyAdapter {
 
     /// DR-70 ①: start the round's game session — one build, one headless launch,
     /// one published route that covers the Developer's and the Tester's windows.
+    ///
+    /// Round-4 repair: the process `start` produced is moved into the
+    /// round-game slot with [`BevyAdapter::take_started_process`].  The old code
+    /// asked a reader of the **same empty slot** for it, so the slot stayed
+    /// `None`, `stop_round_game` stopped nothing, and round 3 ended with
+    /// `hof_game.exe` pid 54568 still holding 15702 (`ROUND-3-REPORT.md` §5).
     async fn start_round_game(
         &self,
         workspace: &Path,
@@ -300,34 +306,74 @@ impl ProjectAdapter for BevyAdapter {
     ) -> anyhow::Result<Option<GameEndpointRecord>> {
         let mut peer = self.round_peer();
         let prepared = peer.prepare(&Project::at(workspace.to_path_buf()))?;
-        let game = peer.start(&prepared)?;
-        let record = GameEndpointRecord {
-            endpoint: peer.endpoint().to_string(),
-            port: crate::tools::endpoint::port_of_endpoint(peer.endpoint()),
-            source: SOURCE_ENGINE_DEFAULT.to_string(),
-            pid: Some(game.pid),
-        };
+        let _game = peer.start(&prepared)?;
+        // Round-4 repair: the identity this launch proved, not merely the pid it
+        // hoped for.  The published route therefore carries the nonce and the
+        // OS's listener reading too, so a reader of the route can tell.
+        let record = peer
+            .verified_game_endpoint()
+            .unwrap_or_else(|| GameEndpointRecord {
+                endpoint: peer.endpoint().to_string(),
+                port: crate::tools::endpoint::port_of_endpoint(peer.endpoint()),
+                source: SOURCE_ENGINE_DEFAULT.to_string(),
+                pid: None,
+                nonce: None,
+                answering_pid: None,
+                verified: None,
+            });
         // Install first, publish second (DR-71 ①): the route becomes visible to a
         // role's separate process only after this process has confirmed the game
         // answers — `start` returns only once the endpoint has.
         tools.register_game_endpoint(record.clone()).await?;
-        if let Ok(mut slot) = self.round_game.lock() {
-            *slot = peer.take_process();
-        }
+        let owned = peer.take_started_process();
+        self.set_round_game_process(owned);
         Ok(Some(record))
     }
 
     /// DR-70 ①: stop it.  Called on **every** exit path of a round.
+    ///
+    /// Round-4 repair: stopping the owned process is no longer the whole job.  A
+    /// game the round started but no longer owns — a session whose handoff failed,
+    /// a launch whose stop was reported without the process dying — would outlive
+    /// the round and hold the endpoint the next one needs.  Every pid this round
+    /// recorded in its launch ledger is therefore reaped, its death is **verified**,
+    /// and the result is written to `runs/bevy-<round>/round-stop.json`.  A pid
+    /// that survives is an `Err` naming it, so the runtime's warning is a fact
+    /// rather than a silence.
     async fn stop_round_game(&self, tools: &dyn ToolChannel) -> anyhow::Result<()> {
-        let process = self.round_game.lock().ok().and_then(|mut slot| slot.take());
+        let process = self.take_round_game_process();
         if let Some(process) = process {
             // The stop report is the process's own; it is recorded in the round's
             // `launch.json` by the battery that started that game, and a failure
             // here cannot un-stop a game.
             let _ = process.stop();
         }
+        // The sweep runs **after** the owned stop, so a process this call just
+        // asked to exit is not reported as a stray while it is still exiting.
+        let report = self.reap_round_processes();
         tools.clear_game_endpoint().await;
+        if let Some(survivors) = report.survivors() {
+            anyhow::bail!(
+                "DR-70/round-4: {} process(es) this round launched are still alive after the \
+                 stop sweep, so the endpoint can still be held by a game no later round \
+                 should observe: {} (recorded in {})",
+                survivors.len(),
+                survivors
+                    .iter()
+                    .map(|pid| pid.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", "),
+                report.evidence.display()
+            );
+        }
         Ok(())
+    }
+
+    /// Round-4 repair: the verified identity of the last launch, in the shape the
+    /// run's metadata records.  See
+    /// [`crate::adapter::ProjectAdapter::verified_game_endpoint`].
+    fn verified_game_endpoint(&self) -> Option<GameEndpointRecord> {
+        BevyAdapter::verified_game_endpoint(self)
     }
 
     /// DR-78 ②: publish the route of a game a **role** announced.
@@ -369,6 +415,12 @@ impl ProjectAdapter for BevyAdapter {
                 .get("pid")
                 .and_then(serde_json::Value::as_u64)
                 .map(|pid| pid as u32),
+            // A role-announced endpoint has no per-launch nonce to prove: this
+            // path confirms readiness, not identity, and it says so instead of
+            // copying a proof it does not have.
+            nonce: None,
+            answering_pid: None,
+            verified: None,
         };
         tools.install_game_endpoint(record.clone()).await?;
         round::wait_for_endpoint(
@@ -458,6 +510,61 @@ impl ProjectAdapter for BevyAdapter {
 
     fn doctor(&self, workspace: &Path) -> anyhow::Result<Vec<DoctorItem>> {
         Ok(doctor_items(workspace))
+    }
+}
+
+/// Round-4 repair: what one round-stop sweep did, as written to
+/// `runs/bevy-<round>/round-stop.json`.
+///
+/// It answers one question with evidence: **is every process this round started
+/// dead?**  Round 3 ended with `hof_game.exe` pid 54568 holding 15702 after
+/// `hoh run` exited 0, and nothing in the round's evidence said so.
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize)]
+pub struct RoundStopReport {
+    /// When the sweep ran (unix seconds).
+    pub called_at_seconds: u64,
+    /// The launch ledger it swept, when one was configured.
+    pub ledger: Option<String>,
+    /// Where this report was written.
+    pub evidence: PathBuf,
+    /// Every pid the ledger named, in the order it named them.
+    pub recorded: Vec<u32>,
+    /// The pids that were alive and are now verified dead.
+    pub reaped: Vec<u32>,
+    /// The pids that were still alive after a kill and a re-verification.  A
+    /// non-empty list is the round failing to close its own process.
+    pub still_alive: Vec<u32>,
+    /// Who, if anyone, held the round's endpoint when the sweep finished.
+    pub endpoint_holder: Option<u32>,
+    /// The reason the sweep itself could not complete, when it could not.
+    pub failure: Option<String>,
+}
+
+impl RoundStopReport {
+    /// Is every process this round recorded verified dead?
+    ///
+    /// It is deliberately about the pids and not about the port: the OS can still
+    /// report a socket it has not released, and a verdict that flipped on that
+    /// timing would be a coin toss rather than a fact.
+    pub fn verified_dead(&self) -> bool {
+        self.still_alive.is_empty()
+    }
+
+    /// The pids that survived, when any did.
+    pub fn survivors(&self) -> Option<&Vec<u32>> {
+        (!self.still_alive.is_empty()).then_some(&self.still_alive)
+    }
+
+    /// Write the report where the round's evidence lives.  A write failure is not
+    /// allowed to change the verdict — the caller already has the value — so it
+    /// is dropped here and the file's absence is the record of it.
+    pub fn write(&self) {
+        if let Some(parent) = self.evidence.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        if let Ok(text) = serde_json::to_string_pretty(self) {
+            let _ = std::fs::write(&self.evidence, text);
+        }
     }
 }
 

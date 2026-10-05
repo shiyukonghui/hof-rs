@@ -256,7 +256,13 @@ pub fn wrap_up_context(diagnostics: &[String]) -> String {
 
 /// Is this the exit status of a call that ran out of budget?
 pub fn is_limits_exceeded(exit_status: &str) -> bool {
+    // Round-4 repair: `StepBudgetExceeded` is the guard's own step-budget abort —
+    // the live budget was exhausted at the step.  It is a limit in every sense
+    // the wrap-up logic asks about, so it is accepted here; keeping a distinct
+    // status is what lets a round say *which* budget ran out (mini's frozen
+    // `step_limit` vs the guard's progress-responsive one).
     exit_status.eq_ignore_ascii_case("LimitsExceeded")
+        || exit_status.eq_ignore_ascii_case(crate::harness::guard::STEP_BUDGET_STATUS)
 }
 
 /// The harness only ever receives fully rendered text: leftover jinja syntax

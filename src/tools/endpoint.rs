@@ -42,6 +42,12 @@ pub const SOURCE_UNDECLARED: &str = "undeclared";
 /// value rather than `undeclared` because the provenance *is* known.
 pub const SOURCE_ENGINE_DEFAULT: &str = "engine_default";
 
+/// Round-4 repair: the provenance of a record that came from a launch whose
+/// answering process was proved by the per-launch nonce.  It is a distinct value
+/// rather than `engine_default` because the two claims are different: the port is
+/// the engine's default in both cases, but only this one was *verified*.
+pub const SOURCE_LAUNCH_VERIFIED: &str = "launch_verified";
+
 /// The endpoint a tool of this name must be sent to.
 pub fn scope_of(tool: &str) -> ToolScope {
     if tool.starts_with(GAME_CHANNEL_PREFIX) {
@@ -68,6 +74,16 @@ pub fn port_of_endpoint(endpoint: &str) -> Option<u16> {
 }
 
 /// DR-43: what `editor_play_scene` announced about the game endpoint.
+///
+/// Round-4 repair: the last three fields are the **proof** half, and they are
+/// optional so every existing record serialises exactly as it did before.  Round
+/// 3's `meta.json` named a pid that was neither the final battery's nor alive at
+/// the end, while only the battery's own `launch.json` carried a proved answering
+/// process — the run's metadata had a pid and no way to tell whether it meant
+/// anything.  A record written by a launch that proved identity now carries the
+/// per-launch nonce it proved and the OS's own reading of the listener, so the
+/// run's metadata names a process identity that was **verified** rather than
+/// hoped for.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GameEndpointRecord {
     /// The JSON-RPC URL of the running game.
@@ -75,11 +91,26 @@ pub struct GameEndpointRecord {
     /// The injected port, when it can be determined.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub port: Option<u16>,
-    /// `argument` | `auto_free_port` | `undeclared` (see [`SOURCE_UNDECLARED`]).
+    /// `argument` | `auto_free_port` | `undeclared` (see [`SOURCE_UNDECLARED`]);
+    /// since the round-4 repair also [`SOURCE_LAUNCH_VERIFIED`].
     pub source: String,
     /// The game process id, when the engine reported one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pid: Option<u32>,
+    /// Round-4 repair: the per-launch nonce readiness proved the answering
+    /// process serves, when this record came from a launch that proved one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub nonce: Option<String>,
+    /// Round-4 repair: the pid the operating system's own TCP table named as the
+    /// listener when readiness finished.  It is the independent, non-tautological
+    /// half of the identity proof.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub answering_pid: Option<u32>,
+    /// Round-4 repair: `Some(true)` only when readiness refused every reply whose
+    /// `ProcessNonce` was not this launch's nonce; `None` when the record came
+    /// from a path that proved nothing (a role-announced endpoint, a double).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub verified: Option<bool>,
 }
 
 /// DR-69 ①: the file name a run publishes its game route under.

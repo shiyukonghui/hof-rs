@@ -31,7 +31,7 @@ use serde_json::{json, Value};
 use crate::adapter::bevy::battery::{BatteryDriver, E3Observations};
 use crate::adapter::bevy::brp;
 use crate::adapter::bevy::build;
-use crate::adapter::bevy::BevyAdapter;
+use crate::adapter::bevy::{BevyAdapter, LaunchFacts};
 use crate::adapter::mcp::evidence::{
     self, CallEvidence, RoundEvidence, RoundHashes, BUILD_LOG_FILE, LAUNCH_FILE, META_FILE, QA_DIR,
     READINGS_DIR,
@@ -495,10 +495,17 @@ pub fn run(adapter: &mut BevyAdapter, workspace: &Path) -> RoundReport {
         "pid": pid,
         "ready_millis": ready_millis,
         "binary": binary,
+        // Round-4 repair (the transport gap): a launch is a process boundary and
+        // `start` rebuilds the observing client's connection pool at it.  This
+        // counter is that rule's own witness in a real round's evidence: 0 would
+        // mean the pass observed through a pool that outlived the process it was
+        // opened to, which is the shape round 3's `G-transport` failure had.
+        "client_generation": adapter.client_generation(),
     });
     // The authority witness: the process that answered, the nonce that proves
     // it, and the pids the ledger sweep reaped before the launch.
     if let Some(facts) = launch_facts.as_ref() {
+        let (answering_pid, verified) = identity_fields(facts);
         launch_json["identity"] = json!({
             "scheme": "per-launch nonce published by the game as the contract's \
                        `ProcessNonce` resource and read back over BRP",
@@ -509,8 +516,9 @@ pub fn run(adapter: &mut BevyAdapter, workspace: &Path) -> RoundReport {
             "listening_pid": facts.listening_pid,
             "reaped_pids": facts.reaped_pids,
             "ledger": facts.ledger,
-            "answering_pid": facts.spawned_pid,
-            "verified": true,
+            "answering_pid": answering_pid,
+            "verified": verified,
+            "verified_rule": VERIFIED_RULE,
         });
     } else {
         launch_json["identity"] = json!({
@@ -648,6 +656,7 @@ fn write_round_evidence(
         "pid": facts.launch.get("pid").cloned().unwrap_or(Value::Null),
         "ready_millis": facts.ready_millis,
         "binary": facts.launch.get("binary").cloned().unwrap_or(Value::Null),
+        "client_generation": facts.launch.get("client_generation").cloned().unwrap_or(Value::Null),
         "identity": facts.launch.get("identity").cloned().unwrap_or(Value::Null),
         "stop": facts.launch.get("stop").cloned().unwrap_or(Value::Null),
     });
@@ -760,6 +769,40 @@ pub fn wait_for_endpoint(
 pub const FOREIGN_PROCESS_STDERR: &str =
     "the game's stderr is not reachable from this process; it is recorded in the round's \
      launch.json by the process that started the game";
+
+/// Round-4 repair: the two `identity` fields that used to be written as
+/// literals, and are computed here instead.
+///
+/// `ROUND-3-REPORT.md` §1 flagged the pair: `verified` was the constant `true`
+/// and `answering_pid` a **copy of** `spawned_pid`, so both were true whenever an
+/// identity object existed and neither was independent evidence.  They now say
+/// what the round actually has:
+///
+/// * `answering_pid` is the operating system's own TCP-table reading of who
+///   `LISTEN`s on the endpoint — the independent witness round 2 did not have at
+///   all, and the one that makes the run-level gate's
+///   `answering_pid == spawned_pid` a check rather than a tautology;
+/// * `verified` is true only when this launch carries a non-empty nonce, i.e.
+///   when readiness proved the answering process served **this** launch's nonce
+///   (a mismatch is `LaunchError::IdentityMismatch` and `start` never returns).
+///
+/// The two are deliberately different tests, and a round records both so a reader
+/// can tell the proof (the nonce) from the corroboration (the OS reading).  Making
+/// `verified` depend on the TCP table being readable would turn a proof into a
+/// coin toss over an OS query; making `answering_pid` a copy of `spawned_pid`
+/// turns a corroboration into a second copy of the harness's own hope.
+pub fn identity_fields(facts: &LaunchFacts) -> (Option<u32>, bool) {
+    (facts.listening_pid, !facts.nonce.trim().is_empty())
+}
+
+/// What `identity.verified` means, written into the record so a reader does not
+/// have to infer the rule from the field's name.
+pub const VERIFIED_RULE: &str =
+    "verified is true only when this launch carries the non-empty per-launch nonce that readiness \
+     read back from the game's `hof_game::contract::ProcessNonce` resource; a reply serving any \
+     other nonce is refused and the launch fails, so a returned launch proved it. `answering_pid` \
+     is the separate, independent reading: the pid the OS TCP table names as the listener on the \
+     endpoint, recorded as read (it can be absent, and it can disagree).";
 
 /// The default timeout for the MCP server a round talks through.
 pub const SESSION_TIMEOUT: Duration = Duration::from_secs(5);
@@ -956,6 +999,50 @@ mod tests {
 
     fn gate_step_ids() -> [&'static str; 2] {
         [BUILT_STEP_ID, READY_STEP_ID]
+    }
+
+    /// Round-4 repair: the two gate fields round 3 wrote as literals are computed
+    /// here, and the four cases are the ones a reader of `launch.json` has to be
+    /// able to distinguish.  Without this, `verified: true` and
+    /// `answering_pid == spawned_pid` are true by construction and the identity
+    /// gate accepts a copy of the harness's own hope.
+    #[test]
+    fn the_identity_fields_are_computed_from_the_facts_not_asserted() {
+        fn facts(nonce: &str, listening: Option<u32>) -> LaunchFacts {
+            LaunchFacts {
+                spawned_pid: 4242,
+                nonce: nonce.to_string(),
+                launch_image: "image".to_string(),
+                built_binary: "built".to_string(),
+                listening_pid: listening,
+                ledger: None,
+                reaped_pids: vec![17],
+            }
+        }
+        assert_eq!(
+            identity_fields(&facts("5b1d0e2a", Some(4242))),
+            (Some(4242), true),
+            "the proved case: a nonce, and the OS naming the spawned pid"
+        );
+        assert_eq!(
+            identity_fields(&facts("5b1d0e2a", Some(17))),
+            (Some(17), true),
+            "the OS reading is recorded **as read**: a disagreement is not hidden, \
+             which is what makes `answering_pid == spawned_pid` a check"
+        );
+        assert_eq!(
+            identity_fields(&facts("5b1d0e2a", None)),
+            (None, true),
+            "an unreadable TCP table leaves the nonce proof intact and says so"
+        );
+        assert!(
+            !identity_fields(&facts("", Some(4242))).1,
+            "with no nonce there is no proof of identity, whatever the OS says"
+        );
+        assert!(
+            !identity_fields(&facts("   ", Some(4242))).1,
+            "and a blank nonce is no nonce"
+        );
     }
 
     #[test]

@@ -45,6 +45,7 @@ use crate::adapter::{
     AdapterError, EngineId, FrameMark, GameAdapter, GateVerdict, Health, InjectionReport, Intent,
     Prepared, Project, Reading, RunningGame, SemanticKind, StopReport,
 };
+use crate::tools::endpoint::GameEndpointRecord;
 
 /// Why a task-level step failed.  Every variant maps onto [`AdapterError`], so
 /// the gate's classification (`infrastructure_failure` vs a project defect) is
@@ -165,6 +166,20 @@ pub struct BevyAdapter {
     /// observations were attributed to a process the round had not started.  The
     /// round records these facts next to the observations they qualify.
     last_launch: Option<LaunchFacts>,
+    /// Round-4 repair: the same facts, kept where a **peer's** launch can be seen
+    /// from the adapter the runtime holds.  The process that observes is started
+    /// by a peer ([`BevyAdapter::round_peer`]), so a per-instance `last_launch`
+    /// alone leaves the run with no machine-readable identity to name.
+    shared_launch: Arc<Mutex<Option<LaunchFacts>>>,
+    /// Round-4 repair: how many times `start` has rebuilt the observing client.
+    ///
+    /// A BRP client pools keep-alive connections, and a pool that outlives the
+    /// process it was opened to is a socket to a dead game: round 3's second and
+    /// third battery passes both failed their **first** call at the transport
+    /// layer (pass 1, the only one with an empty pool, did not).  `start` is a
+    /// process boundary, so it rebuilds the client; this counter is what lets the
+    /// gate pin that rule.
+    client_generation: u64,
 }
 
 /// Round-2 repair: what one `start` really did, in the form the round records.
@@ -239,6 +254,8 @@ impl BevyAdapter {
             last_stop: None,
             round_game: Mutex::new(None),
             last_launch: None,
+            shared_launch: Arc::new(Mutex::new(None)),
+            client_generation: 0,
         }
     }
 
@@ -393,9 +410,161 @@ impl BevyAdapter {
         )
     }
 
-    /// Take the process the round-game window owns, so a caller can stop it.
-    pub fn take_process(&mut self) -> Option<launch::GameProcess> {
+    /// Take the process the last [`crate::adapter::GameAdapter::start`] produced,
+    /// so the round-game window can own it and stop it.
+    ///
+    /// Round-4 repair: this used to read a `round_game` slot that **nothing ever
+    /// filled** — `start` puts the process in `BevyAdapter::process`, and
+    /// `round_game` was only ever written from `take_process`'s own return value.
+    /// The consequence is in `ROUND-3-REPORT.md` §5: `stop_round_game` could not
+    /// stop the session game it was responsible for, and `hof_game.exe` pid 54568
+    /// was still holding 15702 after `hoh run` exited 0.
+    pub fn take_started_process(&mut self) -> Option<launch::GameProcess> {
+        self.process.take()
+    }
+
+    /// Take the process the round-game window owns, so it can be stopped.
+    ///
+    /// Round-4 repair: the slot is filled by
+    /// [`crate::adapter::ProjectAdapter::start_round_game`] with the process
+    /// `start` really produced (see [`BevyAdapter::take_started_process`]).  Before
+    /// this repair the start path stored the result of a reader that read the
+    /// same empty slot, so the window owned nothing and its stop was a no-op.
+    pub fn take_round_game_process(&self) -> Option<launch::GameProcess> {
         self.round_game.lock().ok().and_then(|mut game| game.take())
+    }
+
+    /// Round-4 repair: hand the process `start` produced to the round-game
+    /// window.  It exists because the window's slot is private to this module
+    /// while the start path lives in [`super::project`], and the previous
+    /// arrangement is exactly how the slot came to be filled with `None`.
+    pub fn set_round_game_process(&self, process: Option<launch::GameProcess>) {
+        if let Ok(mut slot) = self.round_game.lock() {
+            *slot = process;
+        }
+    }
+
+    /// Round-4 repair: the identity facts of the most recent launch **any** peer
+    /// of this adapter made.
+    ///
+    /// The battery observes through a peer, so the runtime's own adapter never saw
+    /// the launch that produced the round's readings.  This is how
+    /// `meta.json.engine.mcp.game_endpoint` can name a process that was actually
+    /// verified instead of one that merely was once hoped for.
+    pub fn shared_launch_facts(&self) -> Option<LaunchFacts> {
+        self.last_launch
+            .clone()
+            .or_else(|| self.shared_launch.lock().ok().and_then(|slot| slot.clone()))
+    }
+
+    /// Round-4 repair: how many times `start` has rebuilt the observing client —
+    /// i.e. how many process boundaries this adapter's connection pool has
+    /// crossed without carrying anything over.
+    pub fn client_generation(&self) -> u64 {
+        self.client_generation
+    }
+
+    /// Round-4 repair: bind the observing client to the process being observed.
+    ///
+    /// A `BrpClient` pools keep-alive connections.  A pool that outlives the
+    /// process it was opened to holds a socket to a dead game, and the next call
+    /// made through it fails at the transport layer before anything reaches the
+    /// new process.  This is where that pool is dropped, and it is called from
+    /// [`crate::adapter::GameAdapter::start`] — every launch.
+    ///
+    /// `tests/brp_real_handover.rs` measures the behaviour against two real game
+    /// processes; this method is the unit that makes the fix callable from a test
+    /// without an engine.
+    pub fn rebind_observing_client(&mut self) -> u64 {
+        self.client = BrpClient::new(&self.endpoint, self.client.timeout());
+        self.server = BevyMcpServer::new(self.client.clone());
+        self.client_generation += 1;
+        self.client_generation
+    }
+
+    /// Round-4 repair: reap every pid the round's launch ledger records, verify
+    /// the deaths, and write the report where the round's evidence lives.
+    ///
+    /// This is the layer that does not depend on the round-game slot being right:
+    /// the ledger is written **before every spawn** by `launch::start_game`, for
+    /// the battery's launches and the round-session's alike, so a live pid in it
+    /// is a process this round started no matter which code path started it.  A
+    /// pid the ledger never named is never touched.
+    pub fn reap_round_processes(&self) -> project::RoundStopReport {
+        let ledger = self.launch_ledger();
+        let mut report = project::RoundStopReport {
+            called_at_seconds: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|duration| duration.as_secs())
+                .unwrap_or(0),
+            ledger: ledger.as_ref().map(|path| path.display().to_string()),
+            evidence: self
+                .evidence_root()
+                .join("runs")
+                .join(format!("bevy-{}", self.round_name()))
+                .join("round-stop.json"),
+            recorded: Vec::new(),
+            reaped: Vec::new(),
+            still_alive: Vec::new(),
+            endpoint_holder: None,
+            failure: None,
+        };
+        let Some(ledger) = ledger else {
+            report.failure = Some(
+                "this adapter has no launch ledger, so no process it started can be named"
+                    .to_string(),
+            );
+            return report;
+        };
+        let sweep = crate::adapter::bevy::launch::reap_ledger(&ledger);
+        report.recorded = sweep.recorded.clone();
+        report.reaped = sweep.reaped.clone();
+        report.failure = sweep.failure.clone();
+        // "we asked it to stop" is not "it stopped": the survivors are re-read
+        // after the sweep, and each one is killed once more and re-verified.
+        for pid in &report.recorded {
+            if crate::adapter::bevy::launch::wait_for_pid_death(*pid, std::time::Duration::ZERO) {
+                continue;
+            }
+            let _ = crate::adapter::bevy::launch::kill_pid_and_verify(
+                *pid,
+                crate::adapter::bevy::round::STOP_DEATH_GRACE,
+            );
+            if !crate::adapter::bevy::launch::wait_for_pid_death(*pid, std::time::Duration::ZERO) {
+                report.still_alive.push(*pid);
+            } else if !report.reaped.contains(pid) {
+                report.reaped.push(*pid);
+            }
+        }
+        // The final reading of who, if anyone, still holds the endpoint.  It is
+        // taken **after** the kills, so it cannot name a process this sweep just
+        // removed; `verified_dead` deliberately does not depend on it, because the
+        // OS can report a socket that has not been released yet.
+        report.endpoint_holder = crate::tools::endpoint::port_of_endpoint(&self.endpoint)
+            .and_then(crate::adapter::bevy::launch::listener_pid);
+        report.write();
+        report
+    }
+
+    /// Round-4 repair: the verified identity of the last launch, in the shape the
+    /// run's metadata records.
+    ///
+    /// `None` when nothing was launched, or when the launch predates the identity
+    /// proof — in which case a caller must not name a pid it cannot vouch for.
+    pub fn verified_game_endpoint(&self) -> Option<GameEndpointRecord> {
+        let facts = self.shared_launch_facts()?;
+        if facts.nonce.trim().is_empty() {
+            return None;
+        }
+        Some(GameEndpointRecord {
+            endpoint: self.endpoint.clone(),
+            port: crate::tools::endpoint::port_of_endpoint(&self.endpoint),
+            source: crate::tools::endpoint::SOURCE_LAUNCH_VERIFIED.to_string(),
+            pid: Some(facts.spawned_pid),
+            nonce: Some(facts.nonce),
+            answering_pid: facts.listening_pid,
+            verified: Some(true),
+        })
     }
 
     /// A second adapter over the **same configuration**: same build policy, same
@@ -433,6 +602,8 @@ impl BevyAdapter {
             last_stop: None,
             round_game: Mutex::new(None),
             last_launch: None,
+            shared_launch: Arc::clone(&self.shared_launch),
+            client_generation: self.client_generation,
         }
     }
 
@@ -745,9 +916,18 @@ impl GameAdapter for BevyAdapter {
         .map_err(|error| AdapterStepError::Launch(error.to_string()))?;
         let pid = process.pid();
         let headless = process.headless();
+        // Round-4 repair: a launch is a **process boundary**, and a BRP client
+        // pools keep-alive connections.  A pool that survives the process it was
+        // opened to holds a socket to a dead game, and the next call made through
+        // it fails at the transport layer before anything reaches the new process
+        // — measured against the real game in `tests/brp_real_handover.rs`:
+        // round 3's passes 2 and 3 both failed their first call that way while
+        // pass 1 (the only one with an empty pool) did not.  Rebuilding the client
+        // here means the observing client is bound to the process observed.
+        self.rebind_observing_client();
         // Round-2 repair: the identity facts of **this** launch, so the round can
         // report which process answered instead of which one it hoped for.
-        self.last_launch = Some(LaunchFacts {
+        let facts = LaunchFacts {
             spawned_pid: pid,
             nonce: process.nonce().to_string(),
             launch_image: process.launch_image().display().to_string(),
@@ -755,7 +935,13 @@ impl GameAdapter for BevyAdapter {
             listening_pid: process.answering_pid(),
             ledger: process.ledger().map(|ledger| ledger.display().to_string()),
             reaped_pids: process.reap_report().reaped.clone(),
-        });
+        };
+        self.last_launch = Some(facts.clone());
+        // Round-4 repair: the same facts are visible from the adapter the runtime
+        // holds, even though this launch happened on a peer.
+        if let Ok(mut slot) = self.shared_launch.lock() {
+            *slot = Some(facts);
+        }
         self.server.install_process(ServerProcess {
             pid,
             stderr_tail: process.stderr_tail(),
@@ -891,6 +1077,214 @@ mod tests {
         CargoMetadataFeatures, FakeBuilder, FakeContractPaths, FakeFeatures,
     };
     use std::sync::atomic::{AtomicU64, Ordering};
+
+    /// The round-game window must receive the process `start` **really produced**.
+    ///
+    /// Round 3's defect was a field mix-up: `start` puts the process in
+    /// `BevyAdapter::process`, while the window's `round_game` slot was filled
+    /// from a reader of that same empty slot — so it stayed `None`,
+    /// `stop_round_game` stopped nothing, and `hof_game.exe` pid 54568 was still
+    /// holding 15702 after `hoh run` exited 0.  This test drives the two calls the
+    /// start path makes, with a real child process, and then proves the window can
+    /// stop what it owns.
+    #[test]
+    fn the_round_game_window_receives_the_process_start_produced() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let script = directory.path().join("stand-in.cmd");
+        std::fs::write(&script, "@echo off\r\nping -n 60 127.0.0.1 >nul\r\n").expect("a stand-in");
+        let mut adapter = BevyAdapter::at(directory.path());
+        // Exactly the state `start` leaves behind.
+        adapter.process = Some(launch::launch_stand_in(&script));
+        let pid = adapter.process.as_ref().expect("a process").pid();
+        assert!(
+            crate::tools::endpoint::process_is_alive(pid),
+            "the stand-in must be alive"
+        );
+
+        let owned = adapter.take_started_process();
+        assert!(
+            owned.is_some(),
+            "the process `start` produced must be reachable by the round-game window"
+        );
+        assert!(
+            adapter.process.is_none(),
+            "and it must have been moved, not copied"
+        );
+        adapter.set_round_game_process(owned);
+        let window = adapter
+            .take_round_game_process()
+            .expect("the round-game window owns the process it was handed");
+        assert_eq!(window.pid(), pid);
+        let stop = window.stop().expect("the window can stop what it owns");
+        assert!(
+            !crate::tools::endpoint::process_is_alive(pid),
+            "and the stop is a real death: {stop:?}"
+        );
+    }
+
+    /// Round-4 repair: the round-stop sweep reaps **every** pid the round's launch
+    /// ledger records and verifies the deaths — the layer that does not depend on
+    /// the round-game slot being right.
+    #[test]
+    fn the_round_stop_sweep_reaps_every_recorded_process_and_writes_its_evidence() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let script = directory.path().join("recorded.cmd");
+        std::fs::write(&script, "@echo off\r\nping -n 60 127.0.0.1 >nul\r\n").expect("a stand-in");
+        let first = launch::launch_stand_in(&script);
+        let second = launch::launch_stand_in(&script);
+        let (first_pid, second_pid) = (first.pid(), second.pid());
+        assert!(crate::tools::endpoint::process_is_alive(first_pid));
+
+        let adapter = BevyAdapter::at(directory.path()).with_config(BevyAdapterConfig {
+            build_policy: build::BuildPolicy {
+                target_dir: Some(directory.path().join("target")),
+                ..build::BuildPolicy::default()
+            },
+            evidence_root: directory.path().to_path_buf(),
+            round: "sweep".to_string(),
+            ..BevyAdapterConfig::default()
+        });
+        let ledger = adapter.launch_ledger().expect("a configured ledger");
+        for (pid, nonce) in [(first_pid, "recorded-one"), (second_pid, "recorded-two")] {
+            launch::append_ledger(
+                &ledger,
+                &launch::ledger_entry(
+                    pid,
+                    &format!("http://127.0.0.1:{}/", brp::fake::refused_port()),
+                    nonce,
+                    &script,
+                ),
+            )
+            .expect("the ledger is writable");
+        }
+
+        let report = adapter.reap_round_processes();
+        assert_eq!(
+            report.recorded.len(),
+            2,
+            "both recorded pids are read: {report:?}"
+        );
+        for pid in [first_pid, second_pid] {
+            assert!(
+                report.reaped.contains(&pid),
+                "pid {pid} must be reaped: {report:?}"
+            );
+            assert!(
+                !crate::tools::endpoint::process_is_alive(pid),
+                "reaping must verify the death, not merely ask for it: pid {pid}"
+            );
+        }
+        assert!(report.verified_dead(), "{report:?}");
+        assert!(
+            report.evidence.is_file(),
+            "the sweep writes its own evidence: {report:?}"
+        );
+        // The processes are gone, so their handles can be dropped without a stop.
+        drop(first);
+        drop(second);
+    }
+
+    /// The control for the sweep above: a live process the ledger never named is
+    /// **not** touched.  "Reap the round's own sessions" must never become "kill
+    /// whatever is running".
+    #[test]
+    fn the_round_stop_sweep_leaves_a_process_the_ledger_never_named() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let script = directory.path().join("unrelated.cmd");
+        std::fs::write(&script, "@echo off\r\nping -n 60 127.0.0.1 >nul\r\n").expect("a stand-in");
+        let unrelated = launch::launch_stand_in(&script);
+        let pid = unrelated.pid();
+
+        let adapter = BevyAdapter::at(directory.path()).with_config(BevyAdapterConfig {
+            build_policy: build::BuildPolicy {
+                target_dir: Some(directory.path().join("target")),
+                ..build::BuildPolicy::default()
+            },
+            evidence_root: directory.path().to_path_buf(),
+            round: "sweep-control".to_string(),
+            ..BevyAdapterConfig::default()
+        });
+        let ledger = adapter.launch_ledger().expect("a configured ledger");
+        launch::append_ledger(
+            &ledger,
+            &launch::ledger_entry(
+                4_000_000_000,
+                &format!("http://127.0.0.1:{}/", brp::fake::refused_port()),
+                "nobody",
+                &script,
+            ),
+        )
+        .expect("the ledger is writable");
+
+        let report = adapter.reap_round_processes();
+        assert!(report.reaped.is_empty(), "{report:?}");
+        assert!(
+            crate::tools::endpoint::process_is_alive(pid),
+            "a pid the ledger never named must be left alone"
+        );
+        let _ = unrelated.stop();
+    }
+
+    /// Round-4 repair: the run's metadata names a **proved** identity.  The facts
+    /// span peers — the battery observes through one — so the shared slot is what
+    /// makes them visible to the adapter the runtime holds.
+    #[test]
+    fn the_verified_endpoint_carries_the_nonce_and_the_listeners_pid() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let adapter = BevyAdapter::at(directory.path());
+        assert!(
+            adapter.verified_game_endpoint().is_none(),
+            "nothing has been launched, so no process may be named"
+        );
+        let peer = adapter.round_peer();
+        let facts = LaunchFacts {
+            spawned_pid: 4242,
+            nonce: "5b1d0e2a-0000-4000-8000-000000000000".to_string(),
+            launch_image: "image".to_string(),
+            built_binary: "built".to_string(),
+            listening_pid: Some(4242),
+            ledger: None,
+            reaped_pids: vec![17],
+        };
+        if let Ok(mut slot) = peer.shared_launch.lock() {
+            *slot = Some(facts);
+        }
+        let endpoint = adapter
+            .verified_game_endpoint()
+            .expect("a peer's launch is visible to the adapter the runtime holds");
+        assert_eq!(endpoint.pid, Some(4242));
+        assert_eq!(endpoint.answering_pid, Some(4242));
+        assert_eq!(endpoint.verified, Some(true));
+        assert_eq!(
+            endpoint.nonce.as_deref(),
+            Some("5b1d0e2a-0000-4000-8000-000000000000")
+        );
+        assert_eq!(
+            endpoint.source,
+            crate::tools::endpoint::SOURCE_LAUNCH_VERIFIED,
+            "the provenance says this one was proved, not merely hoped for"
+        );
+        assert_eq!(endpoint.port, Some(brp::BRP_PORT));
+    }
+
+    /// Round-4 repair: the observing client is rebound at every process boundary.
+    ///
+    /// The gate can only pin the unit here; the call site — that `start` really
+    /// calls it — is pinned by
+    /// `tests/brp_real_handover.rs::the_adapter_rebinds_its_observing_client_at_every_launch`,
+    /// which drives two real launches.  Both are named because neither alone is
+    /// the whole rule.
+    #[test]
+    fn the_observing_client_is_rebound_at_a_process_boundary() {
+        let mut adapter = BevyAdapter::at(".");
+        assert_eq!(adapter.client_generation(), 0, "nothing has been launched");
+        assert_eq!(adapter.rebind_observing_client(), 1);
+        assert_eq!(
+            adapter.rebind_observing_client(),
+            2,
+            "each call drops the previous pool and binds a new client"
+        );
+    }
 
     /// A driver that behaves like the game `PRD.md` describes: the player stands
     /// on the ground, moves when the intent says so, collects one coin when it

@@ -681,6 +681,9 @@ async fn recording_a_game_endpoint_fills_the_identity_block() {
         port: Some(63698),
         source: hof_rs::tools::endpoint::SOURCE_AUTO_FREE_PORT.to_string(),
         pid: Some(101872),
+        nonce: None,
+        answering_pid: None,
+        verified: None,
     };
     let mut identity = EngineIdentity::unavailable("nothing was probed");
     assert!(identity.mcp.game_endpoint.is_none());

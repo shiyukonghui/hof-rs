@@ -232,6 +232,23 @@ pub trait ProjectAdapter: Send + Sync {
         Ok(())
     }
 
+    /// Round-4 repair: the **verified** identity of the game process whose
+    /// answers the last battery was attributed to, when the adapter can prove one.
+    ///
+    /// Round 3's `meta.json.engine.mcp.game_endpoint` named pid 34124 — neither
+    /// the final battery's process nor alive at the end — because it was copied
+    /// from the channel's "last endpoint ever registered" history, which is a pid
+    /// and nothing else.  A record returned here carries the per-launch nonce the
+    /// answering process served back and the operating system's own reading of the
+    /// listener, so the run's metadata names a process identity that was actually
+    /// verified.
+    ///
+    /// The default is `None`: an adapter that proves no identity must not have one
+    /// invented for it, and the caller falls back to what it recorded before.
+    fn verified_game_endpoint(&self) -> Option<crate::tools::endpoint::GameEndpointRecord> {
+        None
+    }
+
     /// DR-78 ②: a **role** — not the runtime — started a game with
     /// `editor_play_scene`.  This is the publisher half of the
     /// publish/adopt boundary: the reply announced an endpoint, and the adapter

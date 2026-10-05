@@ -1486,13 +1486,17 @@ async fn run_inner(
             &meta.engine,
         )
         .await?;
-        // DR-43/DR-44/DR-51: the game endpoint only exists after
-        // `editor_play_scene` has run, so it is written back into `meta.json` as
-        // soon as the pass that registered it is over.  The **history** is used,
-        // not the live route: the battery's own `editor_stop_scene` step clears
-        // the route before this line runs, which is exactly how the field was
-        // structurally always `null` in `smoke-t6`.
-        if let Some(registered) = orchestrator.tools.game_endpoint_history().await {
+        // DR-43/DR-44/DR-51: the run's engine identity records **which process the
+        // battery proved it observed**.  Round-4 repair: round 3 filled this from
+        // the channel's "last endpoint ever registered" history, which is a pid
+        // and no proof — it named 34124, neither the final battery's process nor
+        // alive at the end.  The adapter's proved identity is preferred, and the
+        // history is only a fallback for an adapter that proves nothing.
+        let registered = match orchestrator.adapter.verified_game_endpoint() {
+            Some(proved) => Some(proved),
+            None => orchestrator.tools.game_endpoint_history().await,
+        };
+        if let Some(registered) = registered {
             if crate::adapter::engine::record_game_endpoint(&mut meta.engine, &registered) {
                 let _ = write_run_meta(&run_dir, &meta);
             }
@@ -1593,10 +1597,15 @@ async fn run_inner(
                 &meta.engine,
             )
             .await?;
-            // DR-51: the second pass registers its own game endpoint (a new port
-            // and pid); fold it in immediately, before its own stop step can
-            // clear the route.
-            if let Some(registered) = orchestrator.tools.game_endpoint_history().await {
+            // DR-51: the second pass registers its own game endpoint; fold it in
+            // immediately, before its own stop step can clear the route.
+            // Round-4 repair: same preference as the first pass — the proved
+            // identity, not the history.
+            let registered = match orchestrator.adapter.verified_game_endpoint() {
+                Some(proved) => Some(proved),
+                None => orchestrator.tools.game_endpoint_history().await,
+            };
+            if let Some(registered) = registered {
                 if crate::adapter::engine::record_game_endpoint(&mut meta.engine, &registered) {
                     let _ = write_run_meta(&run_dir, &meta);
                 }

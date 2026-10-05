@@ -36,9 +36,11 @@ pub const DECLARED_TESTER: &str = ".hoh/evidence.json";
 
 /// The exit statuses that mean "this call did not finish the work it was given".
 ///
-/// `RepeatedFormatError` is mini's; `RepeatedActionError` and
-/// `ArtifactBudgetExceeded` are ours (`crate::harness::guard`).  `LimitsExceeded`
-/// and `TimeExceeded` are the two budgets mini itself enforces.
+/// `RepeatedFormatError` is mini's; `RepeatedActionError`,
+/// `ArtifactBudgetExceeded` and `StepBudgetExceeded` are ours
+/// (`crate::harness::guard`).  `LimitsExceeded` and `TimeExceeded` are the two
+/// budgets mini itself enforces; the guard's `StepBudgetExceeded` is the third,
+/// live one (round-4 repair).
 pub fn is_failure_status(status: &str) -> bool {
     matches!(
         status,
@@ -47,6 +49,7 @@ pub fn is_failure_status(status: &str) -> bool {
             | "RepeatedFormatError"
             | "RepeatedActionError"
             | "ArtifactBudgetExceeded"
+            | crate::harness::guard::STEP_BUDGET_STATUS
     )
 }
 

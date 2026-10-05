@@ -482,6 +482,9 @@ async fn registering_publishes_the_route_and_stopping_withdraws_it() {
         port: Some(game.addr.port()),
         source: SOURCE_AUTO_FREE_PORT.to_string(),
         pid: Some(std::process::id()),
+        nonce: None,
+        answering_pid: None,
+        verified: None,
     };
     channel
         .register_game_endpoint(record.clone())
@@ -558,6 +561,9 @@ fn concurrent_publish_and_read_never_yields_a_torn_record() {
                     port: Some(60000 + (round % 1000) as u16),
                     source: format!("{SOURCE_AUTO_FREE_PORT}|{filler}"),
                     pid: Some(std::process::id()),
+                    nonce: None,
+                    answering_pid: None,
+                    verified: None,
                 };
                 let _ = publish_game_route(&path, &record);
                 if round % 3 == 0 {

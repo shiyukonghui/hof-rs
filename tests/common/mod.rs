@@ -654,6 +654,9 @@ impl ProjectAdapter for FakeAdapter {
             port: Some(stub.port),
             source: SOURCE_AUTO_FREE_PORT.to_string(),
             pid: Some(stub.pid),
+            nonce: None,
+            answering_pid: None,
+            verified: None,
         };
         tools.register_game_endpoint(record.clone()).await?;
         if stub.fail_after_publish {

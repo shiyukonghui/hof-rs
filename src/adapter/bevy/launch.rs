@@ -850,6 +850,40 @@ mod platform {
     }
 }
 
+/// Start a stand-in script **directly**, so a test can hold a real pid it did not
+/// go through the launcher for.  It uses the same stdin/stdout/stderr plumbing as
+/// the launcher, minus the readiness probe.
+///
+/// Round-4 repair: it is a `pub(crate)` function rather than a helper inside this
+/// file's test module, because the round-game slot and the round-stop sweep are
+/// pinned in `mod.rs`'s tests and both need a real process to mean anything.
+#[cfg(test)]
+pub(crate) fn launch_stand_in(script: &Path) -> GameProcess {
+    let mut command = Command::new(script);
+    command
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped());
+    if let Some(directory) = script.parent() {
+        command.current_dir(directory);
+    }
+    let child = command.spawn().expect("the stand-in starts");
+    let pid = child.id();
+    GameProcess {
+        child,
+        pid,
+        headless: true,
+        endpoint: String::new(),
+        stderr: Arc::new(Mutex::new(String::new())),
+        asked_to_exit: AtomicBool::new(false),
+        termination_grace: Duration::from_millis(500),
+        nonce: String::new(),
+        launch_image: script.to_path_buf(),
+        ledger: None,
+        reap: ReapReport::default(),
+    }
+}
+
 /// Stop a process in place (the launcher's own cleanup path, and what
 /// [`GameProcess::stop`] uses).
 fn stop_process(process: &mut GameProcess) -> Result<StopEvidence, String> {
@@ -1556,32 +1590,9 @@ mod tests {
 
     /// Start a stand-in script **directly**, so a test can hold a real pid it
     /// did not go through the launcher for: the "a process this round never
-    /// recorded" case.  It uses the same stdin/stdout/stderr plumbing as the
-    /// launcher, minus the readiness probe.
+    /// recorded" case.  It is the same helper `mod.rs`'s tests use.
     fn launch_stand_in(script: &Path) -> GameProcess {
-        let mut command = Command::new(script);
-        command
-            .stdin(Stdio::piped())
-            .stdout(Stdio::null())
-            .stderr(Stdio::piped());
-        if let Some(directory) = script.parent() {
-            command.current_dir(directory);
-        }
-        let child = command.spawn().expect("the stand-in starts");
-        let pid = child.id();
-        GameProcess {
-            child,
-            pid,
-            headless: true,
-            endpoint: String::new(),
-            stderr: Arc::new(Mutex::new(String::new())),
-            asked_to_exit: AtomicBool::new(false),
-            termination_grace: Duration::from_millis(500),
-            nonce: String::new(),
-            launch_image: script.to_path_buf(),
-            ledger: None,
-            reap: ReapReport::default(),
-        }
+        super::launch_stand_in(script)
     }
 
     #[test]

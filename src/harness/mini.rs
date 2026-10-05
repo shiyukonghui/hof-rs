@@ -14,12 +14,76 @@ use std::time::Instant;
 
 use mini_swe_agent::environments::{LocalEnvironment, LocalEnvironmentConfig};
 use mini_swe_agent::models::{ApiMode, LlmConnectorModel};
-use mini_swe_agent::{Agent, AgentConfig, AgentError, AgentMode, DefaultAgent};
+use mini_swe_agent::{
+    Agent, AgentConfig, AgentError, AgentMode, DefaultAgent, Message, Model, Output,
+};
 use serde_json::Value;
 
 use crate::harness::Harness;
 use crate::runtime::role::{RoleInvocation, RoleOutcome};
 use crate::runtime::usage::extract_usage;
+
+/// Round-4 repair: a model that counts its own calls, so the step budget the
+/// guard enforces is stated in the **same unit the prompt uses**.
+///
+/// mini's `DefaultAgent::check_limits` counts model calls (`n_calls`) and
+/// `AgentConfig.step_limit` is written in that unit.  The guard sits one layer
+/// below, where a single model response can carry several actions, so counting
+/// there measures something else — measured, not assumed: round 4's first attempt
+/// cut a Developer call after 30 model calls because its 30 responses emitted 44
+/// actions.  This wrapper is where the count is taken, and the guard reads the
+/// same counter.
+struct CountingModel {
+    inner: Box<dyn Model>,
+    steps: crate::harness::guard::StepCounter,
+}
+
+impl CountingModel {
+    fn new(inner: Box<dyn Model>, steps: crate::harness::guard::StepCounter) -> Self {
+        Self { inner, steps }
+    }
+}
+
+#[async_trait::async_trait]
+impl Model for CountingModel {
+    fn model_name(&self) -> &str {
+        self.inner.model_name()
+    }
+
+    async fn query(
+        &self,
+        messages: &[Message],
+        kwargs: Option<Value>,
+    ) -> mini_swe_agent::Result<Message> {
+        // The count is taken **before** the call, exactly as mini takes it: a
+        // failed query still consumed a step, so a broken provider cannot make a
+        // call's budget disappear.
+        self.steps.increment();
+        self.inner.query(messages, kwargs).await
+    }
+
+    fn format_message(&self, message: Message) -> mini_swe_agent::Result<Message> {
+        self.inner.format_message(message)
+    }
+
+    fn format_observation_messages(
+        &self,
+        message: &Message,
+        outputs: &[Output],
+        template_vars: &Value,
+    ) -> mini_swe_agent::Result<Vec<Message>> {
+        self.inner
+            .format_observation_messages(message, outputs, template_vars)
+    }
+
+    fn get_template_vars(&self) -> Value {
+        self.inner.get_template_vars()
+    }
+
+    fn serialize(&self) -> Value {
+        self.inner.serialize()
+    }
+}
 
 /// Round-1 write-path batch: what one finished `agent.run` means.
 ///
@@ -75,6 +139,10 @@ impl Harness for MiniHarness {
 
         let model = LlmConnectorModel::from_value_with_mode(inv.model.clone(), ApiMode::ToolCalls)
             .map_err(|error| anyhow::anyhow!("could not build the model: {error}"))?;
+        // Round-4 repair: one step is one **model call**, counted where the calls
+        // are made, and the guard enforces the budget on the same count.
+        let steps = crate::harness::guard::StepCounter::new();
+        let model = CountingModel::new(Box::new(model), steps.clone());
 
         let env_config = LocalEnvironmentConfig {
             cwd: inv.cwd.to_string_lossy().into_owned(),
@@ -98,9 +166,10 @@ impl Harness for MiniHarness {
         // is produced by the harness itself and a repeated failing action aborts
         // the call with our own status instead of the external agent's string.
         //
-        // Round-2 repair (cost batch): the guard is constructed with the
-        // repeated-**success** tripwire and with the step budget, so the budget
-        // this call may really use is the one that responds to progress.
+        // Round-2 repair (cost batch), round-4 repair: the guard is constructed
+        // with the repeated-success tripwire and with the step budget, and it is
+        // the guard — not a number frozen into `AgentConfig` before the call —
+        // that **enforces** the progress-responsive budget, at the step.
         let environment = crate::harness::guard::WriteGuardEnvironment::with_limits(
             Box::new(environment),
             inv.cwd.clone(),
@@ -111,23 +180,38 @@ impl Harness for MiniHarness {
             inv.limits.step_limit,
             inv.limits.wrap_up_steps,
             inv.limits.steps_per_artifact,
-        );
-        let effective_step_limit = environment.effective_step_budget();
-        // The prompt's numbers must be the numbers the call is held to: a role
-        // that has written nothing is told its real (gated) budget, not the flat
-        // 150 it cannot spend.  The system prompt was already rendered by the
-        // caller, so this is a **narrow numeric substitution** — re-rendering the
-        // whole template here would apply the shell-variable pass a second time.
+        )
+        // The counter the model increments: the guard's step number is the
+        // prompt's step number, and both are model calls.
+        .sharing_steps(steps);
+        // Round-4 repair: mini's own `step_limit` is the **flat ceiling** — the
+        // number the prompt body calls "at most N steps" — and the progress gate
+        // is enforced by the guard, at the step, against a value it re-reads every
+        // time.  Round 3 set this field to the *gated* 43, so the gate could never
+        // lift: the model was told a write would remove the gate and then the call
+        // was killed at 43 anyway (`ROUND-3-REPORT.md` §2).
+        let flat_step_limit = inv.limits.step_limit;
+        let live_step_limit = if flat_step_limit == 0 {
+            0
+        } else {
+            environment.effective_step_budget().min(flat_step_limit)
+        };
+        // The prompt's numbers must be the numbers the call is held to: the body's
+        // flat ceiling, and the gated budget that is really in force right now.
+        // The system prompt was already rendered by the caller, so this is a
+        // **narrow numeric substitution** — re-rendering the whole template here
+        // would apply the shell-variable pass a second time.
         let system_prompt = crate::harness::guard::state_the_effective_budget(
             &inv.system_prompt,
-            effective_step_limit,
+            live_step_limit,
+            flat_step_limit,
             inv.limits.wrap_up_steps,
         );
 
         let config = AgentConfig {
             system_template: "{{hoh_system_prompt}}".to_string(),
             instance_template: "{{task}}".to_string(),
-            step_limit: effective_step_limit,
+            step_limit: flat_step_limit,
             cost_limit: inv.limits.cost_limit,
             wall_time_limit_seconds: inv.limits.wall_time_limit_seconds,
             max_consecutive_format_errors: inv.limits.max_consecutive_format_errors,
