@@ -389,300 +389,671 @@
    "policy": "keep_last_8192_wire_bytes",
    "kind": "bytes",
    "param": 8192,
-   "projection": {
-    "round4-iter-1": {
-     "total_prompt": 358006,
-     "total_with_recorded_completion": 439638,
-     "mean_prompt_per_call": 5188,
-     "max_prompt_per_call": 8326,
-     "passes_1_5m": true
+   "corrected_projection_exclusive_reading": {
+    "meaning": "the largest whole-step suffix whose byte total is <= B",
+    "projection": {
+     "round4-iter-1": {
+      "total_prompt": 382708,
+      "total_with_recorded_completion": 464340,
+      "max_prompt_per_call": 6258,
+      "mean_prompt_per_call": 5546,
+      "passes_1_5m": true
+     },
+     "round4-iter-2": {
+      "total_prompt": 655800,
+      "total_with_recorded_completion": 981753,
+      "max_prompt_per_call": 6261,
+      "mean_prompt_per_call": 5246,
+      "passes_1_5m": true
+     },
+     "round4-iter-3": {
+      "total_prompt": 605825,
+      "total_with_recorded_completion": 691946,
+      "max_prompt_per_call": 6264,
+      "mean_prompt_per_call": 5939,
+      "passes_1_5m": true
+     },
+     "livecost1-iter-1": {
+      "total_prompt": 1143083,
+      "total_with_recorded_completion": 1256360,
+      "max_prompt_per_call": 7894,
+      "mean_prompt_per_call": 7621,
+      "passes_1_5m": true
+     }
     },
-    "round4-iter-2": {
-     "total_prompt": 723805,
-     "total_with_recorded_completion": 1049758,
-     "mean_prompt_per_call": 5790,
-     "max_prompt_per_call": 15125,
-     "passes_1_5m": true
+    "passes_1_5m_all_four": true
+   },
+   "corrected_projection_inclusive_reading": {
+    "meaning": "keep adding whole steps until the running byte total reaches B",
+    "projection": {
+     "round4-iter-1": {
+      "total_prompt": 486753,
+      "total_with_recorded_completion": 568385,
+      "max_prompt_per_call": 10282,
+      "mean_prompt_per_call": 7054,
+      "passes_1_5m": true
+     },
+     "round4-iter-2": {
+      "total_prompt": 1170308,
+      "total_with_recorded_completion": 1496261,
+      "max_prompt_per_call": 17000,
+      "mean_prompt_per_call": 9362,
+      "passes_1_5m": true
+     },
+     "round4-iter-3": {
+      "total_prompt": 737741,
+      "total_with_recorded_completion": 823862,
+      "max_prompt_per_call": 17778,
+      "mean_prompt_per_call": 7233,
+      "passes_1_5m": true
+     },
+     "livecost1-iter-1": {
+      "total_prompt": 1191075,
+      "total_with_recorded_completion": 1304352,
+      "max_prompt_per_call": 8656,
+      "mean_prompt_per_call": 7940,
+      "passes_1_5m": true
+     }
     },
-    "round4-iter-3": {
-     "total_prompt": 534585,
-     "total_with_recorded_completion": 620706,
-     "mean_prompt_per_call": 5241,
-     "max_prompt_per_call": 16063,
-     "passes_1_5m": true
-    },
-    "livecost1-iter-1": {
-     "total_prompt": 929220,
-     "total_with_recorded_completion": 1042497,
-     "mean_prompt_per_call": 6195,
-     "max_prompt_per_call": 8656,
-     "passes_1_5m": true
-    }
-   }
+    "passes_1_5m_all_four": true
+   },
+   "refuted_projection_kept_as_history": {
+    "round4-iter-1": 439638,
+    "round4-iter-2": 1049758,
+    "round4-iter-3": 620706,
+    "livecost1-iter-1": 1042497
+   },
+   "why_refuted": "the helper accumulated a cumulative slice into an already-inflated counter, so the loop broke early and the window actually kept was smaller than the policy names; every byte row below was optimistic,"
   },
   {
    "policy": "keep_last_16384_wire_bytes",
    "kind": "bytes",
    "param": 16384,
-   "projection": {
-    "round4-iter-1": {
-     "total_prompt": 394075,
-     "total_with_recorded_completion": 475707,
-     "mean_prompt_per_call": 5711,
-     "max_prompt_per_call": 8326,
-     "passes_1_5m": true
+   "corrected_projection_exclusive_reading": {
+    "meaning": "the largest whole-step suffix whose byte total is <= B",
+    "projection": {
+     "round4-iter-1": {
+      "total_prompt": 521649,
+      "total_with_recorded_completion": 603281,
+      "max_prompt_per_call": 8358,
+      "mean_prompt_per_call": 7560,
+      "passes_1_5m": true
+     },
+     "round4-iter-2": {
+      "total_prompt": 785393,
+      "total_with_recorded_completion": 1111346,
+      "max_prompt_per_call": 8333,
+      "mean_prompt_per_call": 6283,
+      "passes_1_5m": true
+     },
+     "round4-iter-3": {
+      "total_prompt": 792417,
+      "total_with_recorded_completion": 878538,
+      "max_prompt_per_call": 8366,
+      "mean_prompt_per_call": 7769,
+      "passes_1_5m": true
+     },
+     "livecost1-iter-1": {
+      "total_prompt": 1505640,
+      "total_with_recorded_completion": 1618917,
+      "max_prompt_per_call": 10543,
+      "mean_prompt_per_call": 10038,
+      "passes_1_5m": false
+     }
     },
-    "round4-iter-2": {
-     "total_prompt": 764015,
-     "total_with_recorded_completion": 1089968,
-     "mean_prompt_per_call": 6112,
-     "max_prompt_per_call": 15125,
-     "passes_1_5m": true
+    "passes_1_5m_all_four": false
+   },
+   "corrected_projection_inclusive_reading": {
+    "meaning": "keep adding whole steps until the running byte total reaches B",
+    "projection": {
+     "round4-iter-1": {
+      "total_prompt": 638101,
+      "total_with_recorded_completion": 719733,
+      "max_prompt_per_call": 12309,
+      "mean_prompt_per_call": 9248,
+      "passes_1_5m": true
+     },
+     "round4-iter-2": {
+      "total_prompt": 1402680,
+      "total_with_recorded_completion": 1728633,
+      "max_prompt_per_call": 19250,
+      "mean_prompt_per_call": 11221,
+      "passes_1_5m": false
+     },
+     "round4-iter-3": {
+      "total_prompt": 981155,
+      "total_with_recorded_completion": 1067276,
+      "max_prompt_per_call": 20077,
+      "mean_prompt_per_call": 9619,
+      "passes_1_5m": true
+     },
+     "livecost1-iter-1": {
+      "total_prompt": 1549272,
+      "total_with_recorded_completion": 1662549,
+      "max_prompt_per_call": 12026,
+      "mean_prompt_per_call": 10328,
+      "passes_1_5m": false
+     }
     },
-    "round4-iter-3": {
-     "total_prompt": 577750,
-     "total_with_recorded_completion": 663871,
-     "mean_prompt_per_call": 5664,
-     "max_prompt_per_call": 16063,
-     "passes_1_5m": true
-    },
-    "livecost1-iter-1": {
-     "total_prompt": 997903,
-     "total_with_recorded_completion": 1111180,
-     "mean_prompt_per_call": 6653,
-     "max_prompt_per_call": 8656,
-     "passes_1_5m": true
-    }
-   }
+    "passes_1_5m_all_four": false
+   },
+   "refuted_projection_kept_as_history": {
+    "round4-iter-1": 475707,
+    "round4-iter-2": 1089968,
+    "round4-iter-3": 663871,
+    "livecost1-iter-1": 1111180
+   },
+   "why_refuted": "the helper accumulated a cumulative slice into an already-inflated counter, so the loop broke early and the window actually kept was smaller than the policy names; every byte row below was optimistic,"
   },
   {
    "policy": "keep_last_32768_wire_bytes",
    "kind": "bytes",
    "param": 32768,
-   "projection": {
-    "round4-iter-1": {
-     "total_prompt": 450434,
-     "total_with_recorded_completion": 532066,
-     "mean_prompt_per_call": 6528,
-     "max_prompt_per_call": 8846,
-     "passes_1_5m": true
+   "corrected_projection_exclusive_reading": {
+    "meaning": "the largest whole-step suffix whose byte total is <= B",
+    "projection": {
+     "round4-iter-1": {
+      "total_prompt": 778970,
+      "total_with_recorded_completion": 860602,
+      "max_prompt_per_call": 12554,
+      "mean_prompt_per_call": 11289,
+      "passes_1_5m": true
+     },
+     "round4-iter-2": {
+      "total_prompt": 1148479,
+      "total_with_recorded_completion": 1474432,
+      "max_prompt_per_call": 12571,
+      "mean_prompt_per_call": 9188,
+      "passes_1_5m": true
+     },
+     "round4-iter-3": {
+      "total_prompt": 1135113,
+      "total_with_recorded_completion": 1221234,
+      "max_prompt_per_call": 12572,
+      "mean_prompt_per_call": 11129,
+      "passes_1_5m": true
+     },
+     "livecost1-iter-1": {
+      "total_prompt": 2135404,
+      "total_with_recorded_completion": 2248681,
+      "max_prompt_per_call": 15843,
+      "mean_prompt_per_call": 14236,
+      "passes_1_5m": false
+     }
     },
-    "round4-iter-2": {
-     "total_prompt": 865640,
-     "total_with_recorded_completion": 1191593,
-     "mean_prompt_per_call": 6925,
-     "max_prompt_per_call": 15125,
-     "passes_1_5m": true
+    "passes_1_5m_all_four": false
+   },
+   "corrected_projection_inclusive_reading": {
+    "meaning": "keep adding whole steps until the running byte total reaches B",
+    "projection": {
+     "round4-iter-1": {
+      "total_prompt": 952267,
+      "total_with_recorded_completion": 1033899,
+      "max_prompt_per_call": 16645,
+      "mean_prompt_per_call": 13801,
+      "passes_1_5m": true
+     },
+     "round4-iter-2": {
+      "total_prompt": 1900856,
+      "total_with_recorded_completion": 2226809,
+      "max_prompt_per_call": 21965,
+      "mean_prompt_per_call": 15207,
+      "passes_1_5m": false
+     },
+     "round4-iter-3": {
+      "total_prompt": 1494357,
+      "total_with_recorded_completion": 1580478,
+      "max_prompt_per_call": 23948,
+      "mean_prompt_per_call": 14651,
+      "passes_1_5m": false
+     },
+     "livecost1-iter-1": {
+      "total_prompt": 2166573,
+      "total_with_recorded_completion": 2279850,
+      "max_prompt_per_call": 16541,
+      "mean_prompt_per_call": 14444,
+      "passes_1_5m": false
+     }
     },
-    "round4-iter-3": {
-     "total_prompt": 642874,
-     "total_with_recorded_completion": 728995,
-     "mean_prompt_per_call": 6303,
-     "max_prompt_per_call": 16063,
-     "passes_1_5m": true
-    },
-    "livecost1-iter-1": {
-     "total_prompt": 1101270,
-     "total_with_recorded_completion": 1214547,
-     "mean_prompt_per_call": 7342,
-     "max_prompt_per_call": 12026,
-     "passes_1_5m": true
-    }
-   }
+    "passes_1_5m_all_four": false
+   },
+   "refuted_projection_kept_as_history": {
+    "round4-iter-1": 532066,
+    "round4-iter-2": 1191593,
+    "round4-iter-3": 728995,
+    "livecost1-iter-1": 1214547
+   },
+   "why_refuted": "the helper accumulated a cumulative slice into an already-inflated counter, so the loop broke early and the window actually kept was smaller than the policy names; every byte row below was optimistic,"
   },
   {
    "policy": "keep_last_49152_wire_bytes",
    "kind": "bytes",
    "param": 49152,
-   "projection": {
-    "round4-iter-1": {
-     "total_prompt": 500706,
-     "total_with_recorded_completion": 582338,
-     "mean_prompt_per_call": 7257,
-     "max_prompt_per_call": 11948,
-     "passes_1_5m": true
+   "corrected_projection_exclusive_reading": {
+    "meaning": "the largest whole-step suffix whose byte total is <= B",
+    "projection": {
+     "round4-iter-1": {
+      "total_prompt": 1008841,
+      "total_with_recorded_completion": 1090473,
+      "max_prompt_per_call": 16743,
+      "mean_prompt_per_call": 14621,
+      "passes_1_5m": true
+     },
+     "round4-iter-2": {
+      "total_prompt": 1645582,
+      "total_with_recorded_completion": 1971535,
+      "max_prompt_per_call": 16779,
+      "mean_prompt_per_call": 13165,
+      "passes_1_5m": false
+     },
+     "round4-iter-3": {
+      "total_prompt": 1446572,
+      "total_with_recorded_completion": 1532693,
+      "max_prompt_per_call": 16774,
+      "mean_prompt_per_call": 14182,
+      "passes_1_5m": false
+     },
+     "livecost1-iter-1": {
+      "total_prompt": 2631035,
+      "total_with_recorded_completion": 2744312,
+      "max_prompt_per_call": 21139,
+      "mean_prompt_per_call": 17540,
+      "passes_1_5m": false
+     }
     },
-    "round4-iter-2": {
-     "total_prompt": 1117668,
-     "total_with_recorded_completion": 1443621,
-     "mean_prompt_per_call": 8941,
-     "max_prompt_per_call": 15777,
-     "passes_1_5m": true
+    "passes_1_5m_all_four": false
+   },
+   "corrected_projection_inclusive_reading": {
+    "meaning": "keep adding whole steps until the running byte total reaches B",
+    "projection": {
+     "round4-iter-1": {
+      "total_prompt": 1225192,
+      "total_with_recorded_completion": 1306824,
+      "max_prompt_per_call": 20380,
+      "mean_prompt_per_call": 17756,
+      "passes_1_5m": true
+     },
+     "round4-iter-2": {
+      "total_prompt": 2386015,
+      "total_with_recorded_completion": 2711968,
+      "max_prompt_per_call": 25380,
+      "mean_prompt_per_call": 19088,
+      "passes_1_5m": false
+     },
+     "round4-iter-3": {
+      "total_prompt": 1994856,
+      "total_with_recorded_completion": 2080977,
+      "max_prompt_per_call": 28554,
+      "mean_prompt_per_call": 19557,
+      "passes_1_5m": false
+     },
+     "livecost1-iter-1": {
+      "total_prompt": 2652870,
+      "total_with_recorded_completion": 2766147,
+      "max_prompt_per_call": 21662,
+      "mean_prompt_per_call": 17686,
+      "passes_1_5m": false
+     }
     },
-    "round4-iter-3": {
-     "total_prompt": 697718,
-     "total_with_recorded_completion": 783839,
-     "mean_prompt_per_call": 6840,
-     "max_prompt_per_call": 16172,
-     "passes_1_5m": true
-    },
-    "livecost1-iter-1": {
-     "total_prompt": 1170516,
-     "total_with_recorded_completion": 1283793,
-     "mean_prompt_per_call": 7803,
-     "max_prompt_per_call": 12026,
-     "passes_1_5m": true
-    }
-   }
+    "passes_1_5m_all_four": false
+   },
+   "refuted_projection_kept_as_history": {
+    "round4-iter-1": 582338,
+    "round4-iter-2": 1443621,
+    "round4-iter-3": 783839,
+    "livecost1-iter-1": 1283793
+   },
+   "why_refuted": "the helper accumulated a cumulative slice into an already-inflated counter, so the loop broke early and the window actually kept was smaller than the policy names; every byte row below was optimistic,"
   },
   {
    "policy": "keep_last_65536_wire_bytes",
    "kind": "bytes",
    "param": 65536,
-   "projection": {
-    "round4-iter-1": {
-     "total_prompt": 556999,
-     "total_with_recorded_completion": 638631,
-     "mean_prompt_per_call": 8072,
-     "max_prompt_per_call": 12661,
-     "passes_1_5m": true
+   "corrected_projection_exclusive_reading": {
+    "meaning": "the largest whole-step suffix whose byte total is <= B",
+    "projection": {
+     "round4-iter-1": {
+      "total_prompt": 1277032,
+      "total_with_recorded_completion": 1358664,
+      "max_prompt_per_call": 20964,
+      "mean_prompt_per_call": 18508,
+      "passes_1_5m": true
+     },
+     "round4-iter-2": {
+      "total_prompt": 2159557,
+      "total_with_recorded_completion": 2485510,
+      "max_prompt_per_call": 20974,
+      "mean_prompt_per_call": 17276,
+      "passes_1_5m": false
+     },
+     "round4-iter-3": {
+      "total_prompt": 1785276,
+      "total_with_recorded_completion": 1871397,
+      "max_prompt_per_call": 20975,
+      "mean_prompt_per_call": 17503,
+      "passes_1_5m": false
+     },
+     "livecost1-iter-1": {
+      "total_prompt": 3014908,
+      "total_with_recorded_completion": 3128185,
+      "max_prompt_per_call": 26443,
+      "mean_prompt_per_call": 20099,
+      "passes_1_5m": false
+     }
     },
-    "round4-iter-2": {
-     "total_prompt": 1219816,
-     "total_with_recorded_completion": 1545769,
-     "mean_prompt_per_call": 9759,
-     "max_prompt_per_call": 16023,
-     "passes_1_5m": false
+    "passes_1_5m_all_four": false
+   },
+   "corrected_projection_inclusive_reading": {
+    "meaning": "keep adding whole steps until the running byte total reaches B",
+    "projection": {
+     "round4-iter-1": {
+      "total_prompt": 1472988,
+      "total_with_recorded_completion": 1554620,
+      "max_prompt_per_call": 24529,
+      "mean_prompt_per_call": 21348,
+      "passes_1_5m": false
+     },
+     "round4-iter-2": {
+      "total_prompt": 2887584,
+      "total_with_recorded_completion": 3213537,
+      "max_prompt_per_call": 29339,
+      "mean_prompt_per_call": 23101,
+      "passes_1_5m": false
+     },
+     "round4-iter-3": {
+      "total_prompt": 2459629,
+      "total_with_recorded_completion": 2545750,
+      "max_prompt_per_call": 32657,
+      "mean_prompt_per_call": 24114,
+      "passes_1_5m": false
+     },
+     "livecost1-iter-1": {
+      "total_prompt": 3030267,
+      "total_with_recorded_completion": 3143544,
+      "max_prompt_per_call": 26770,
+      "mean_prompt_per_call": 20202,
+      "passes_1_5m": false
+     }
     },
-    "round4-iter-3": {
-     "total_prompt": 759810,
-     "total_with_recorded_completion": 845931,
-     "mean_prompt_per_call": 7449,
-     "max_prompt_per_call": 16823,
-     "passes_1_5m": true
-    },
-    "livecost1-iter-1": {
-     "total_prompt": 1237466,
-     "total_with_recorded_completion": 1350743,
-     "mean_prompt_per_call": 8250,
-     "max_prompt_per_call": 14959,
-     "passes_1_5m": true
-    }
-   }
+    "passes_1_5m_all_four": false
+   },
+   "refuted_projection_kept_as_history": {
+    "round4-iter-1": 638631,
+    "round4-iter-2": 1545769,
+    "round4-iter-3": 845931,
+    "livecost1-iter-1": 1350743
+   },
+   "why_refuted": "the helper accumulated a cumulative slice into an already-inflated counter, so the loop broke early and the window actually kept was smaller than the policy names; every byte row below was optimistic,"
   },
   {
    "policy": "keep_last_131072_wire_bytes",
    "kind": "bytes",
    "param": 131072,
-   "projection": {
-    "round4-iter-1": {
-     "total_prompt": 657921,
-     "total_with_recorded_completion": 739553,
-     "mean_prompt_per_call": 9535,
-     "max_prompt_per_call": 14630,
-     "passes_1_5m": true
+   "corrected_projection_exclusive_reading": {
+    "meaning": "the largest whole-step suffix whose byte total is <= B",
+    "projection": {
+     "round4-iter-1": {
+      "total_prompt": 2176389,
+      "total_with_recorded_completion": 2258021,
+      "max_prompt_per_call": 37745,
+      "mean_prompt_per_call": 31542,
+      "passes_1_5m": false
+     },
+     "round4-iter-2": {
+      "total_prompt": 4053810,
+      "total_with_recorded_completion": 4379763,
+      "max_prompt_per_call": 37793,
+      "mean_prompt_per_call": 32430,
+      "passes_1_5m": false
+     },
+     "round4-iter-3": {
+      "total_prompt": 3253505,
+      "total_with_recorded_completion": 3339626,
+      "max_prompt_per_call": 37799,
+      "mean_prompt_per_call": 31897,
+      "passes_1_5m": false
+     },
+     "livecost1-iter-1": {
+      "total_prompt": 3527720,
+      "total_with_recorded_completion": 3640997,
+      "max_prompt_per_call": 47561,
+      "mean_prompt_per_call": 23518,
+      "passes_1_5m": false
+     }
     },
-    "round4-iter-2": {
-     "total_prompt": 1526774,
-     "total_with_recorded_completion": 1852727,
-     "mean_prompt_per_call": 12214,
-     "max_prompt_per_call": 20217,
-     "passes_1_5m": false
+    "passes_1_5m_all_four": false
+   },
+   "corrected_projection_inclusive_reading": {
+    "meaning": "keep adding whole steps until the running byte total reaches B",
+    "projection": {
+     "round4-iter-1": {
+      "total_prompt": 2339942,
+      "total_with_recorded_completion": 2421574,
+      "max_prompt_per_call": 41591,
+      "mean_prompt_per_call": 33912,
+      "passes_1_5m": false
+     },
+     "round4-iter-2": {
+      "total_prompt": 4655256,
+      "total_with_recorded_completion": 4981209,
+      "max_prompt_per_call": 46032,
+      "mean_prompt_per_call": 37242,
+      "passes_1_5m": false
+     },
+     "round4-iter-3": {
+      "total_prompt": 4151075,
+      "total_with_recorded_completion": 4237196,
+      "max_prompt_per_call": 49596,
+      "mean_prompt_per_call": 40697,
+      "passes_1_5m": false
+     },
+     "livecost1-iter-1": {
+      "total_prompt": 3528630,
+      "total_with_recorded_completion": 3641907,
+      "max_prompt_per_call": 47923,
+      "mean_prompt_per_call": 23524,
+      "passes_1_5m": false
+     }
     },
-    "round4-iter-3": {
-     "total_prompt": 960221,
-     "total_with_recorded_completion": 1046342,
-     "mean_prompt_per_call": 9414,
-     "max_prompt_per_call": 21928,
-     "passes_1_5m": true
-    },
-    "livecost1-iter-1": {
-     "total_prompt": 1417195,
-     "total_with_recorded_completion": 1530472,
-     "mean_prompt_per_call": 9448,
-     "max_prompt_per_call": 16725,
-     "passes_1_5m": false
-    }
-   }
+    "passes_1_5m_all_four": false
+   },
+   "refuted_projection_kept_as_history": {
+    "round4-iter-1": 739553,
+    "round4-iter-2": 1852727,
+    "round4-iter-3": 1046342,
+    "livecost1-iter-1": 1530472
+   },
+   "why_refuted": "the helper accumulated a cumulative slice into an already-inflated counter, so the loop broke early and the window actually kept was smaller than the policy names; every byte row below was optimistic,"
   },
   {
    "policy": "keep_last_262144_wire_bytes",
    "kind": "bytes",
    "param": 262144,
-   "projection": {
-    "round4-iter-1": {
-     "total_prompt": 901093,
-     "total_with_recorded_completion": 982725,
-     "mean_prompt_per_call": 13059,
-     "max_prompt_per_call": 19847,
-     "passes_1_5m": true
+   "corrected_projection_exclusive_reading": {
+    "meaning": "the largest whole-step suffix whose byte total is <= B",
+    "projection": {
+     "round4-iter-1": {
+      "total_prompt": 2540270,
+      "total_with_recorded_completion": 2621902,
+      "max_prompt_per_call": 46997,
+      "mean_prompt_per_call": 36816,
+      "passes_1_5m": false
+     },
+     "round4-iter-2": {
+      "total_prompt": 7114951,
+      "total_with_recorded_completion": 7440904,
+      "max_prompt_per_call": 71418,
+      "mean_prompt_per_call": 56920,
+      "passes_1_5m": false
+     },
+     "round4-iter-3": {
+      "total_prompt": 5070555,
+      "total_with_recorded_completion": 5156676,
+      "max_prompt_per_call": 64902,
+      "mean_prompt_per_call": 49711,
+      "passes_1_5m": false
+     },
+     "livecost1-iter-1": {
+      "total_prompt": 3537844,
+      "total_with_recorded_completion": 3651121,
+      "max_prompt_per_call": 51910,
+      "mean_prompt_per_call": 23586,
+      "passes_1_5m": false
+     }
     },
-    "round4-iter-2": {
-     "total_prompt": 2106295,
-     "total_with_recorded_completion": 2432248,
-     "mean_prompt_per_call": 16850,
-     "max_prompt_per_call": 25420,
-     "passes_1_5m": false
+    "passes_1_5m_all_four": false
+   },
+   "corrected_projection_inclusive_reading": {
+    "meaning": "keep adding whole steps until the running byte total reaches B",
+    "projection": {
+     "round4-iter-1": {
+      "total_prompt": 2540270,
+      "total_with_recorded_completion": 2621902,
+      "max_prompt_per_call": 46997,
+      "mean_prompt_per_call": 36816,
+      "passes_1_5m": false
+     },
+     "round4-iter-2": {
+      "total_prompt": 7687298,
+      "total_with_recorded_completion": 8013251,
+      "max_prompt_per_call": 78196,
+      "mean_prompt_per_call": 61498,
+      "passes_1_5m": false
+     },
+     "round4-iter-3": {
+      "total_prompt": 5070555,
+      "total_with_recorded_completion": 5156676,
+      "max_prompt_per_call": 64902,
+      "mean_prompt_per_call": 49711,
+      "passes_1_5m": false
+     },
+     "livecost1-iter-1": {
+      "total_prompt": 3537844,
+      "total_with_recorded_completion": 3651121,
+      "max_prompt_per_call": 51910,
+      "mean_prompt_per_call": 23586,
+      "passes_1_5m": false
+     }
     },
-    "round4-iter-3": {
-     "total_prompt": 1252495,
-     "total_with_recorded_completion": 1338616,
-     "mean_prompt_per_call": 12279,
-     "max_prompt_per_call": 26449,
-     "passes_1_5m": true
-    },
-    "livecost1-iter-1": {
-     "total_prompt": 1657477,
-     "total_with_recorded_completion": 1770754,
-     "mean_prompt_per_call": 11050,
-     "max_prompt_per_call": 17846,
-     "passes_1_5m": false
-    }
-   }
+    "passes_1_5m_all_four": false
+   },
+   "refuted_projection_kept_as_history": {
+    "round4-iter-1": 982725,
+    "round4-iter-2": 2432248,
+    "round4-iter-3": 1338616,
+    "livecost1-iter-1": 1770754
+   },
+   "why_refuted": "the helper accumulated a cumulative slice into an already-inflated counter, so the loop broke early and the window actually kept was smaller than the policy names; every byte row below was optimistic,"
   },
   {
    "policy": "keep_last_524288_wire_bytes",
    "kind": "bytes",
    "param": 524288,
-   "projection": {
-    "round4-iter-1": {
-     "total_prompt": 1245096,
-     "total_with_recorded_completion": 1326728,
-     "mean_prompt_per_call": 18045,
-     "max_prompt_per_call": 24029,
-     "passes_1_5m": true
+   "corrected_projection_exclusive_reading": {
+    "meaning": "the largest whole-step suffix whose byte total is <= B",
+    "projection": {
+     "round4-iter-1": {
+      "total_prompt": 2540270,
+      "total_with_recorded_completion": 2621902,
+      "max_prompt_per_call": 46997,
+      "mean_prompt_per_call": 36816,
+      "passes_1_5m": false
+     },
+     "round4-iter-2": {
+      "total_prompt": 12037738,
+      "total_with_recorded_completion": 12363691,
+      "max_prompt_per_call": 138736,
+      "mean_prompt_per_call": 96302,
+      "passes_1_5m": false
+     },
+     "round4-iter-3": {
+      "total_prompt": 5070555,
+      "total_with_recorded_completion": 5156676,
+      "max_prompt_per_call": 64902,
+      "mean_prompt_per_call": 49711,
+      "passes_1_5m": false
+     },
+     "livecost1-iter-1": {
+      "total_prompt": 3537844,
+      "total_with_recorded_completion": 3651121,
+      "max_prompt_per_call": 51910,
+      "mean_prompt_per_call": 23586,
+      "passes_1_5m": false
+     }
     },
-    "round4-iter-2": {
-     "total_prompt": 2807304,
-     "total_with_recorded_completion": 3133257,
-     "mean_prompt_per_call": 22458,
-     "max_prompt_per_call": 34495,
-     "passes_1_5m": false
+    "passes_1_5m_all_four": false
+   },
+   "corrected_projection_inclusive_reading": {
+    "meaning": "keep adding whole steps until the running byte total reaches B",
+    "projection": {
+     "round4-iter-1": {
+      "total_prompt": 2540270,
+      "total_with_recorded_completion": 2621902,
+      "max_prompt_per_call": 46997,
+      "mean_prompt_per_call": 36816,
+      "passes_1_5m": false
+     },
+     "round4-iter-2": {
+      "total_prompt": 12367207,
+      "total_with_recorded_completion": 12693160,
+      "max_prompt_per_call": 148899,
+      "mean_prompt_per_call": 98938,
+      "passes_1_5m": false
+     },
+     "round4-iter-3": {
+      "total_prompt": 5070555,
+      "total_with_recorded_completion": 5156676,
+      "max_prompt_per_call": 64902,
+      "mean_prompt_per_call": 49711,
+      "passes_1_5m": false
+     },
+     "livecost1-iter-1": {
+      "total_prompt": 3537844,
+      "total_with_recorded_completion": 3651121,
+      "max_prompt_per_call": 51910,
+      "mean_prompt_per_call": 23586,
+      "passes_1_5m": false
+     }
     },
-    "round4-iter-3": {
-     "total_prompt": 1814476,
-     "total_with_recorded_completion": 1900597,
-     "mean_prompt_per_call": 17789,
-     "max_prompt_per_call": 38791,
-     "passes_1_5m": false
-    },
-    "livecost1-iter-1": {
-     "total_prompt": 1970406,
-     "total_with_recorded_completion": 2083683,
-     "mean_prompt_per_call": 13136,
-     "max_prompt_per_call": 19416,
-     "passes_1_5m": false
-    }
-   }
+    "passes_1_5m_all_four": false
+   },
+   "refuted_projection_kept_as_history": {
+    "round4-iter-1": 1326728,
+    "round4-iter-2": 3133257,
+    "round4-iter-3": 1900597,
+    "livecost1-iter-1": 2083683
+   },
+   "why_refuted": "the helper accumulated a cumulative slice into an already-inflated counter, so the loop broke early and the window actually kept was smaller than the policy names; every byte row below was optimistic,"
   }
  ],
  "passing_band": {
   "primary_calibration": {
    "max_steps_passing_all_four": 4,
-   "max_bytes_passing_all_four": 49152,
    "binding_recording_steps": "round4-iter-2",
-   "note": "see final.json for the full grid; the band edges are the largest values where every recording passes"
+   "max_bytes_passing_all_four_EXCLUSIVE_reading": 13543,
+   "max_bytes_passing_all_four_INCLUSIVE_reading": 8443,
+   "binding_recording_bytes_exclusive": "livecost1-iter-1",
+   "binding_recording_bytes_inclusive": "round4-iter-2",
+   "refuted_value_for_max_bytes_passing_all_four": 49152,
+   "byte_band_correction": "the stated policy is ambiguous at the grain of one step; both readings are reported. Exclusive = the largest whole-step suffix whose byte total is <= B (13,543; live 1,499,796, fails at 13,544 with 1,500,020). Inclusive = keep adding whole steps until the running total reaches B (8,443; iter-2 1,499,039, fails at 8,444 with 1,500,171). The 49,152 this file claimed came from an accumulator that over-counted, so the window it actually kept was smaller than the policy it named.",
+   "note": "the band edges are the largest values where every recording passes; independently re-measured in .spec/bevy/SPIKE-COST-LEVERS.md"
   },
   "sensitivity_ratio_0.323468": {
    "max_steps_passing_all_four": 2,
-   "max_bytes_passing_all_four": 32768
+   "max_bytes_passing_all_four_EXCLUSIVE_reading": 13543,
+   "max_bytes_passing_all_four_INCLUSIVE_reading": 2782,
+   "refuted_value_for_max_bytes_passing_all_four": 32768,
+   "binding_recording_bytes_inclusive": "round4-iter-2",
+   "byte_band_correction": "the sensitivity byte band is 13,543 (exclusive) or 2,782 (inclusive), not 32,768; the exclusive edge is set by livecost1-iter-1 (1,499,796, fails at 13,544 with 1,500,020) and the inclusive edge by round4-iter-2 (1,499,244, fails at 2,783 with 1,509,795)"
   },
   "criterion": "total_tokens (prompt + completion) per Developer role call < 1,500,000",
   "completion_tokens_are_recorded_and_held_fixed": true
  },
  "dependency_edges_successful_writes_only": {
   "round4-iter-1": {
+   "successful_write_events_all_paths": 6,
    "successful_project_write_events": 6,
+   "scratch_write_events": 0,
    "read_or_write_to_write_edges": 6,
    "largest_gaps_steps": [
     {
@@ -720,7 +1091,10 @@
    ]
   },
   "round4-iter-2": {
-   "successful_project_write_events": 23,
+   "successful_write_events_all_paths": 23,
+   "successful_project_write_events": 11,
+   "scratch_write_events": 12,
+   "label_correction": "the 23 this file reported as successful_project_write_events is not project-only: it is 11 project writes (all src/game.rs) plus 12 .hoh/scratch/** writes (dump.py, dump2.py, empty.json, timeline.md, geometry.md, patch.py, final_geom.md, patch2.py..patch5.py, iteration2-summary.md). The old value is kept by the previously-named key as history.",
    "read_or_write_to_write_edges": 11,
    "largest_gaps_steps": [
     {
@@ -758,7 +1132,10 @@
    ]
   },
   "round4-iter-3": {
-   "successful_project_write_events": 19,
+   "successful_write_events_all_paths": 19,
+   "successful_project_write_events": 9,
+   "scratch_write_events": 10,
+   "label_correction": "19 is all-path, not project-only: 9 project writes (1 directive + 1 shell + 7 script-mediated) plus 10 .hoh/scratch/** writes. The old value is kept by the previously-named key as history.",
    "read_or_write_to_write_edges": 9,
    "largest_gaps_steps": [
     {
@@ -796,7 +1173,10 @@
    ]
   },
   "livecost1-iter-1": {
-   "successful_project_write_events": 1,
+   "successful_write_events_all_paths": 1,
+   "successful_project_write_events": 0,
+   "scratch_write_events": 1,
+   "label_correction": "1 is all-path, not project-only: the single detected event is a .hoh/scratch/notes.md write; this recording is folded and 0 project writes are detected. The old value is kept by the previously-named key as history.",
    "read_or_write_to_write_edges": 0,
    "largest_gaps_steps": []
   }
@@ -938,190 +1318,207 @@
     ],
     "round4-iter-3": []
    },
-   "B16384": {
-    "round4-iter-1": [
-     {
-      "file": "src/game.rs",
-      "from": 3,
-      "from_kind": "read",
-      "write": 8,
-      "gap_steps": 5
-     },
-     {
-      "file": "src/contract.rs",
-      "from": 3,
-      "from_kind": "read",
-      "write": 7,
-      "gap_steps": 4
-     },
-     {
-      "file": "src/game.rs",
-      "from": 14,
-      "from_kind": "write",
-      "write": 18,
-      "gap_steps": 4
+    "B13543_exclusive_corrected": {
+     "round4-iter-1": [
+      {
+       "file": "src/game.rs",
+       "from": 3,
+       "from_kind": "read",
+       "write": 8,
+       "gap_steps": 5,
+       "write_kind": "directive"
+      },
+      {
+       "file": "src/contract.rs",
+       "from": 3,
+       "from_kind": "read",
+       "write": 7,
+       "gap_steps": 4,
+       "write_kind": "directive"
+      },
+      {
+       "file": "src/game.rs",
+       "from": 14,
+       "from_kind": "write",
+       "write": 18,
+       "gap_steps": 4,
+       "write_kind": "directive"
+      },
+      {
+       "file": "src/game.rs",
+       "from": 13,
+       "from_kind": "write",
+       "write": 14,
+       "gap_steps": 1,
+       "write_kind": "directive"
+      }
+     ],
+     "round4-iter-2": [
+      {
+       "file": "src/game.rs",
+       "from": 5,
+       "from_kind": "read",
+       "write": 33,
+       "gap_steps": 28,
+       "write_kind": "directive"
+      },
+      {
+       "file": "src/game.rs",
+       "from": 55,
+       "from_kind": "write",
+       "write": 65,
+       "gap_steps": 10,
+       "write_kind": "directive"
+      },
+      {
+       "file": "src/game.rs",
+       "from": 37,
+       "from_kind": "write",
+       "write": 42,
+       "gap_steps": 5,
+       "write_kind": "directive"
+      },
+      {
+       "file": "src/game.rs",
+       "from": 67,
+       "from_kind": "write",
+       "write": 72,
+       "gap_steps": 5,
+       "write_kind": "directive"
+      },
+      {
+       "file": "src/game.rs",
+       "from": 51,
+       "from_kind": "read",
+       "write": 55,
+       "gap_steps": 4,
+       "write_kind": "directive"
+      },
+      {
+       "file": "src/game.rs",
+       "from": 33,
+       "from_kind": "write",
+       "write": 35,
+       "gap_steps": 2,
+       "write_kind": "directive"
+      },
+      {
+       "file": "src/game.rs",
+       "from": 42,
+       "from_kind": "write",
+       "write": 44,
+       "gap_steps": 2,
+       "write_kind": "directive"
+      },
+      {
+       "file": "src/game.rs",
+       "from": 44,
+       "from_kind": "write",
+       "write": 46,
+       "gap_steps": 2,
+       "write_kind": "directive"
+      },
+      {
+       "file": "src/game.rs",
+       "from": 65,
+       "from_kind": "write",
+       "write": 67,
+       "gap_steps": 2,
+       "write_kind": "directive"
+      },
+      {
+       "file": "src/game.rs",
+       "from": 35,
+       "from_kind": "write",
+       "write": 36,
+       "gap_steps": 1,
+       "write_kind": "directive"
+      },
+      {
+       "file": "src/game.rs",
+       "from": 36,
+       "from_kind": "write",
+       "write": 37,
+       "gap_steps": 1,
+       "write_kind": "directive"
+      }
+     ],
+     "round4-iter-3": [
+      {
+       "file": "src/game.rs",
+       "from": 3,
+       "from_kind": "read",
+       "write": 6,
+       "gap_steps": 3,
+       "write_kind": "directive"
+      },
+      {
+       "file": "src/game.rs",
+       "from": 6,
+       "from_kind": "write",
+       "write": 8,
+       "gap_steps": 2,
+       "write_kind": "shell"
+      }
+     ]
+    },
+    "B8443_inclusive_corrected": {
+     "round4-iter-1": [
+      {
+       "file": "src/game.rs",
+       "from": 3,
+       "from_kind": "read",
+       "write": 8,
+       "gap_steps": 5,
+       "write_kind": "directive"
+      },
+      {
+       "file": "src/contract.rs",
+       "from": 3,
+       "from_kind": "read",
+       "write": 7,
+       "gap_steps": 4,
+       "write_kind": "directive"
+      }
+     ],
+     "round4-iter-2": [
+      {
+       "file": "src/game.rs",
+       "from": 5,
+       "from_kind": "read",
+       "write": 33,
+       "gap_steps": 28,
+       "write_kind": "directive"
+      },
+      {
+       "file": "src/game.rs",
+       "from": 55,
+       "from_kind": "write",
+       "write": 65,
+       "gap_steps": 10,
+       "write_kind": "directive"
+      }
+     ],
+     "round4-iter-3": [
+      {
+       "file": "src/game.rs",
+       "from": 3,
+       "from_kind": "read",
+       "write": 6,
+       "gap_steps": 3,
+       "write_kind": "directive"
+      }
+     ]
+    },
+    "B16384_and_B32768_refuted_windows_kept_as_history": {
+     "why": "the rows this file published for B16384/B32768 were produced by the over-counting accumulator, so they are not the policy they name; at the corrected B=13543 exclusive iter-2 drops 11 of 11 edges (the file claimed 6 at B32768) and iter-1 drops 4 of 6",
+     "claim_deleted": {
+      "B16384_iter2": 9,
+      "B32768_iter2": 6,
+      "B16384_iter1": 3,
+      "B32768_iter1": 2
      }
-    ],
-    "round4-iter-2": [
-     {
-      "file": "src/game.rs",
-      "from": 5,
-      "from_kind": "read",
-      "write": 33,
-      "gap_steps": 28
-     },
-     {
-      "file": "src/game.rs",
-      "from": 55,
-      "from_kind": "write",
-      "write": 65,
-      "gap_steps": 10
-     },
-     {
-      "file": "src/game.rs",
-      "from": 37,
-      "from_kind": "write",
-      "write": 42,
-      "gap_steps": 5
-     },
-     {
-      "file": "src/game.rs",
-      "from": 67,
-      "from_kind": "write",
-      "write": 72,
-      "gap_steps": 5
-     },
-     {
-      "file": "src/game.rs",
-      "from": 51,
-      "from_kind": "read",
-      "write": 55,
-      "gap_steps": 4
-     },
-     {
-      "file": "src/game.rs",
-      "from": 33,
-      "from_kind": "write",
-      "write": 35,
-      "gap_steps": 2
-     },
-     {
-      "file": "src/game.rs",
-      "from": 42,
-      "from_kind": "write",
-      "write": 44,
-      "gap_steps": 2
-     },
-     {
-      "file": "src/game.rs",
-      "from": 44,
-      "from_kind": "write",
-      "write": 46,
-      "gap_steps": 2
-     },
-     {
-      "file": "src/game.rs",
-      "from": 65,
-      "from_kind": "write",
-      "write": 67,
-      "gap_steps": 2
-     }
-    ],
-    "round4-iter-3": [
-     {
-      "file": "src/game.rs",
-      "from": 3,
-      "from_kind": "read",
-      "write": 6,
-      "gap_steps": 3
-     },
-     {
-      "file": "src/game.rs",
-      "from": 6,
-      "from_kind": "write",
-      "write": 8,
-      "gap_steps": 2
-     }
-    ]
-   },
-   "B32768": {
-    "round4-iter-1": [
-     {
-      "file": "src/game.rs",
-      "from": 3,
-      "from_kind": "read",
-      "write": 8,
-      "gap_steps": 5
-     },
-     {
-      "file": "src/contract.rs",
-      "from": 3,
-      "from_kind": "read",
-      "write": 7,
-      "gap_steps": 4
-     }
-    ],
-    "round4-iter-2": [
-     {
-      "file": "src/game.rs",
-      "from": 5,
-      "from_kind": "read",
-      "write": 33,
-      "gap_steps": 28
-     },
-     {
-      "file": "src/game.rs",
-      "from": 55,
-      "from_kind": "write",
-      "write": 65,
-      "gap_steps": 10
-     },
-     {
-      "file": "src/game.rs",
-      "from": 37,
-      "from_kind": "write",
-      "write": 42,
-      "gap_steps": 5
-     },
-     {
-      "file": "src/game.rs",
-      "from": 67,
-      "from_kind": "write",
-      "write": 72,
-      "gap_steps": 5
-     },
-     {
-      "file": "src/game.rs",
-      "from": 51,
-      "from_kind": "read",
-      "write": 55,
-      "gap_steps": 4
-     },
-     {
-      "file": "src/game.rs",
-      "from": 65,
-      "from_kind": "write",
-      "write": 67,
-      "gap_steps": 2
-     }
-    ],
-    "round4-iter-3": [
-     {
-      "file": "src/game.rs",
-      "from": 3,
-      "from_kind": "read",
-      "write": 6,
-      "gap_steps": 3
-     },
-     {
-      "file": "src/game.rs",
-      "from": 6,
-      "from_kind": "write",
-      "write": 8,
-      "gap_steps": 2
-     }
-    ]
-   }
+    }
   },
   "the_decisive_case": {
    "recording": "round4-iter-2",
@@ -1143,18 +1540,48 @@
     ],
     "round4-iter-3": []
    },
-   "B32768": {
+   "B13543_exclusive_corrected": {
     "round4-iter-1": [
      "src/game.rs read@3 -> write@8 (gap 5)",
-     "src/contract.rs read@3 -> write@7 (gap 4)"
+     "src/contract.rs read@3 -> write@7 (gap 4)",
+     "src/game.rs write@14 -> write@18 (gap 4)",
+     "src/game.rs write@13 -> write@14 (gap 1)"
     ],
     "round4-iter-2": [
-     "the gap-28 read@5 -> write@33 edge and five more"
+     "src/game.rs read@5 -> write@33 (gap 28)",
+     "src/game.rs write@55 -> write@65 (gap 10)",
+     "src/game.rs write@37 -> write@42 (gap 5)",
+     "src/game.rs write@67 -> write@72 (gap 5)",
+     "src/game.rs read@51 -> write@55 (gap 4)",
+     "src/game.rs write@33 -> write@35 (gap 2)",
+     "src/game.rs write@42 -> write@44 (gap 2)",
+     "src/game.rs write@44 -> write@46 (gap 2)",
+     "src/game.rs write@65 -> write@67 (gap 2)",
+     "src/game.rs write@35 -> write@36 (gap 1)",
+     "src/game.rs write@36 -> write@37 (gap 1)"
     ],
     "round4-iter-3": [
      "src/game.rs read@3 -> write@6 (gap 3)",
      "src/game.rs write@6 -> write@8 (gap 2)"
     ]
+   },
+   "B8443_inclusive_corrected": {
+    "round4-iter-1": [
+     "src/game.rs read@3 -> write@8 (gap 5)",
+     "src/contract.rs read@3 -> write@7 (gap 4)"
+    ],
+    "round4-iter-2": [
+     "src/game.rs read@5 -> write@33 (gap 28)",
+     "src/game.rs write@55 -> write@65 (gap 10)"
+    ],
+    "round4-iter-3": [
+     "src/game.rs read@3 -> write@6 (gap 3)"
+    ]
+   },
+   "B16384_and_B32768_refuted_windows_kept_as_history": {
+    "why": "computed with the over-counting accumulator; not the policy they name",
+    "B16384_round4-iter-2_claim_deleted": "9 dropped edges (the corrected policy at 16,384 bytes drops 11 of 11)",
+    "B32768_round4-iter-2_claim_deleted": "6 dropped edges, 'the gap-28 edge and five more' (kept only as history)"
    }
   }
  },
@@ -1163,6 +1590,24 @@
   "any_bounded_history_policy_projected_to_pass_without_discarding_used_content": false,
   "confidence": "high on the discard finding (the recorded gaps are >= the passing window by construction of the same measurement); medium on the projection (it holds the recorded call sequence fixed and assumes a dropped message is the only change)",
   "single_most_important_thing": "The passing band and the recorded read->edit dependency distance do not overlap: to come under 1.5M the window must keep at most 4 steps (2 under the measured folded token density), while the recorded developer read src/game.rs whole at iter-2 call 5 and rewrote it at call 33 with no other read in between (28 steps), and still had content-relevant reads 5-10 steps before the writes at iter-1 and iter-3. A recency window that passes is exactly a window that discards information the role used."
+ },
+  "correction_record": {
+   "date": "2026-10-06",
+   "what_changed": "the byte-window policy table, passing_band.max_bytes_passing_all_four and the byte side of the sensitivity band were re-measured and corrected; the write-event count columns were relabelled",
+   "byte_band_before": {
+    "primary": 49152,
+    "sensitivity": 32768
+   },
+   "byte_band_after": {
+    "primary_exclusive": 13543,
+    "primary_inclusive": 8443,
+    "sensitivity_exclusive": 13543,
+    "sensitivity_inclusive": 2782
+   },
+   "cause": "the helper accumulated a cumulative slice into an already-inflated counter, so the window actually kept was smaller than the policy names; every byte row was optimistic",
+   "unaffected": "the step policy table and its boundary (N=4 passes by 25,174 tokens on round4-iter-2; N=5 fails at 1,631,524-1,631,527 depending on rounding), the token-per-byte calibration, the reconstructed corpus and the decisive 28-step read->write case",
+   "label_defect": "successful_project_write_events was not project-only: 6/23/19/1 all-path = 6/11/9/0 project + 0/12/10/1 scratch",
+   "re_measured_by": ".spec/bevy/SPIKE-COST-LEVERS.md (independent offline re-measurement)"
  },
  "gate": {
   "command": "cargo test --offline",
@@ -1205,6 +1650,15 @@
 ```
 
 # SPIKE — the bounded-history window, replayed offline over the committed cost corpus
+
+> **Correction, 2026-10-06.** The byte-window half of this report was independently re-measured and is
+> wrong by 3.6x-5.8x: the stated policy passes all four recordings at **B = 13,543 wire bytes**
+> (exclusive) or **8,443** (inclusive), not 49,152, and at **13,543 / 2,782** under the pessimistic
+> ratio, not 32,768. The cause was a byte-window accumulator that over-counted; the refuted values are
+> kept below as labelled history. The **step-window** table, its boundary, the token-per-byte
+> calibration and the 28-step decisive case are unaffected and were reproduced to the token. The
+> write-event column was also mislabelled (it is not project-only). See section 9 and
+> `.spec/bevy/SPIKE-COST-LEVERS.md` for the re-measurement and for the four further cost levers.
 
 **Scope.** Offline arithmetic over files that already exist. No round was run, no model call was made,
 no engine started, no network was used. Nothing under `src/**`, `tests/**`, `evidence/**`, `runs/**`,
@@ -1302,14 +1756,28 @@ Totals per policy (**projected**; `FAIL` = above 1,500,000):
 | `16 steps` | 1,038,817 | 3,337,655 FAIL | 1,448,572 | 1,486,639 | FAIL |
 | `24 steps` | 1,360,646 | 4,546,783 FAIL | 1,887,672 FAIL | 1,738,204 FAIL | FAIL |
 | `32 steps` | 1,670,652 FAIL | 5,705,025 FAIL | 2,305,011 FAIL | 1,975,173 FAIL | FAIL |
-| `8192 B` | 439,638 | 1,049,758 | 620,706 | 1,042,497 | pass |
-| `16384 B` | 475,707 | 1,089,968 | 663,871 | 1,111,180 | pass |
-| `32768 B` | 532,066 | 1,191,593 | 728,995 | 1,214,547 | pass |
-| `49152 B` | 582,338 | 1,443,621 | 783,839 | 1,283,793 | pass |
-| `65536 B` | 638,631 | 1,545,769 FAIL | 845,931 | 1,350,743 | FAIL |
-| `131072 B` | 739,553 | 1,852,727 FAIL | 1,046,342 | 1,530,472 FAIL | FAIL |
-| `262144 B` | 982,725 | 2,432,248 FAIL | 1,338,616 | 1,770,754 FAIL | FAIL |
-| `524288 B` | 1,326,728 | 3,133,257 FAIL | 1,900,597 FAIL | 2,083,683 FAIL | FAIL |
+| `8192 B` | 464,340 | 981,753 | 691,946 | 1,256,360 | pass |
+| `16384 B` | 603,281 | 1,111,346 | 878,538 | 1,618,917 FAIL | FAIL |
+| `32768 B` | 860,602 | 1,474,432 | 1,221,234 | 2,248,681 FAIL | FAIL |
+| `49152 B` | 1,090,473 | 1,971,535 FAIL | 1,532,693 FAIL | 2,744,312 FAIL | FAIL |
+| `65536 B` | 1,358,664 | 2,485,510 FAIL | 1,871,397 FAIL | 3,128,185 FAIL | FAIL |
+| `131072 B` | 2,258,021 FAIL | 4,379,763 FAIL | 3,339,626 FAIL | 3,640,997 FAIL | FAIL |
+| `262144 B` | 2,621,902 FAIL | 7,440,904 FAIL | 5,156,676 FAIL | 3,651,121 FAIL | FAIL |
+| `524288 B` | 2,621,902 FAIL | 12,363,691 FAIL | 5,156,676 FAIL | 3,651,121 FAIL | FAIL |
+
+The rows above are the **exclusive** reading, corrected by re-measurement. Under the **inclusive**
+reading (`keep adding whole steps until the running total reaches B`) the same policies give:
+
+| policy | r4-i1 | r4-i2 | r4-i3 | live | all four |
+|---|---|---|---|---|---|
+| `8192 B` | 568,385 | 1,496,261 | 823,862 | 1,304,352 | pass |
+| `16384 B` | 719,733 | 1,728,633 FAIL | 1,067,276 | 1,662,549 FAIL | FAIL |
+| `32768 B` | 1,033,899 | 2,226,809 FAIL | 1,580,478 FAIL | 2,279,850 FAIL | FAIL |
+| `49152 B` | 1,306,824 | 2,711,968 FAIL | 2,080,977 FAIL | 2,766,147 FAIL | FAIL |
+| `65536 B` | 1,554,620 FAIL | 3,213,537 FAIL | 2,545,750 FAIL | 3,143,544 FAIL | FAIL |
+| `131072 B` | 2,421,574 FAIL | 4,981,209 FAIL | 4,237,196 FAIL | 3,641,907 FAIL | FAIL |
+| `262144 B` | 2,621,902 FAIL | 8,013,251 FAIL | 5,156,676 FAIL | 3,651,121 FAIL | FAIL |
+| `524288 B` | 2,621,902 FAIL | 12,693,160 FAIL | 5,156,676 FAIL | 3,651,121 FAIL | FAIL |
 
 Mean / **max** prompt tokens per model call (**projected**):
 
@@ -1323,22 +1791,30 @@ Mean / **max** prompt tokens per model call (**projected**):
 | `16 steps` | 13,872 / 32,505 | 24,094 / 59,329 | 13,357 / 42,365 | 9,156 / 19,689 |
 | `24 steps` | 18,536 / 38,888 | 33,767 / 75,731 | 17,662 / 44,599 | 10,833 / 21,511 |
 | `32 steps` | 23,029 / 41,905 | 43,033 / 84,057 | 21,754 / 47,240 | 12,413 / 23,344 |
-| `8192 B` | 5,188 / 8,326 | 5,790 / 15,125 | 5,241 / 16,063 | 6,195 / 8,656 |
-| `16384 B` | 5,711 / 8,326 | 6,112 / 15,125 | 5,664 / 16,063 | 6,653 / 8,656 |
-| `32768 B` | 6,528 / 8,846 | 6,925 / 15,125 | 6,303 / 16,063 | 7,342 / 12,026 |
-| `49152 B` | 7,257 / 11,948 | 8,941 / 15,777 | 6,840 / 16,172 | 7,803 / 12,026 |
-| `65536 B` | 8,072 / 12,661 | 9,759 / 16,023 | 7,449 / 16,823 | 8,250 / 14,959 |
-| `131072 B` | 9,535 / 14,630 | 12,214 / 20,217 | 9,414 / 21,928 | 9,448 / 16,725 |
-| `262144 B` | 13,059 / 19,847 | 16,850 / 25,420 | 12,279 / 26,449 | 11,050 / 17,846 |
-| `524288 B` | 18,045 / 24,029 | 22,458 / 34,495 | 17,789 / 38,791 | 13,136 / 19,416 |
+| `8192 B` | 5,546 / 6,258 | 5,246 / 6,261 | 5,939 / 6,264 | 7,621 / 7,894 |
+| `16384 B` | 7,560 / 8,358 | 6,283 / 8,333 | 7,769 / 8,366 | 10,038 / 10,543 |
+| `32768 B` | 11,289 / 12,554 | 9,188 / 12,571 | 11,129 / 12,572 | 14,236 / 15,843 |
+| `49152 B` | 14,621 / 16,743 | 13,165 / 16,779 | 14,182 / 16,774 | 17,540 / 21,139 |
+| `65536 B` | 18,508 / 20,964 | 17,276 / 20,974 | 17,503 / 20,975 | 20,099 / 26,443 |
+| `131072 B` | 31,542 / 37,745 | 32,430 / 37,793 | 31,897 / 37,799 | 23,518 / 47,561 |
+| `262144 B` | 36,816 / 46,997 | 56,920 / 71,418 | 49,711 / 64,902 | 23,586 / 51,910 |
+| `524288 B` | 36,816 / 46,997 | 96,302 / 138,736 | 49,711 / 64,902 | 23,586 / 51,910 |
 
 **The passing band (projected).** Under the primary calibration, the largest window that keeps *all
-four* recorded calls under the criterion is **N = 4 steps** or **B = 49,152 wire bytes**; the binding
-recording is **round4-iter-2** (N=4 -> 1,474,827 total; N=5 -> 1,631,526). Under the pessimistic
-0.323468-everywhere sensitivity it shrinks to **N = 2** or **B = 32,768**, again bound by iter-2
-(N=2 -> 1,378,000; N=3 -> 1,576,000). N = 1 and B = 8 KiB pass everywhere with room to spare (iter-2
-projects to 1,003,504 at N=1). For reference, iter-2's recorded total is **13,091,431** and the live
-call's is **3,651,120**, so a passing window is a ~90 percent cut of the prompt spend.
+four* recorded calls under the criterion is **N = 4 steps** or **B = 13,543 wire bytes** (the
+*exclusive* reading of "until B is reached"; **8,443** under the *inclusive* reading); the binding
+recording is **round4-iter-2** for the step side (N=4 -> 1,474,827 total; N=5 -> 1,631,526) and
+**livecost1-iter-1** (1,499,796; fails at 13,544 with 1,500,020) for the exclusive byte side.
+Under the pessimistic 0.323468-everywhere sensitivity the step band shrinks to **N = 2** and the byte
+band to **B = 13,543 exclusive / 2,782 inclusive**, the latter bound by iter-2 (1,499,244; fails at
+2,783 with 1,509,795). N = 1 and B = 8 KiB pass everywhere with room to spare (iter-2 projects to
+1,003,504 at N=1). For reference, iter-2's recorded total is **13,091,431** and the live call's is
+**3,651,120**, so a passing window is a ~90 percent cut of the prompt spend.
+**[CORRECTED 2026-10-06: this paragraph said `B = 49,152` and `B = 32,768`. Those two values came
+from a byte-window accumulator that over-counted and closed the loop early, so the window it kept was
+smaller than the policy it named; every byte row in this report was optimistic by 3.6x-5.8x. The
+refuted values are kept as labelled history in the machine block and in section 9. The step side of
+this paragraph is unaffected and reproduces to the token.]**
 
 ## 4. What each policy would actually cut (edges measured, consequence projected)
 
@@ -1348,12 +1824,17 @@ most recent earlier message that still carried that file: a read of it, or the w
 it. That pair is the content the role had in hand when it edited the file. A window "drops" the edge
 when that source step is outside the window at the write's call.
 
-| recording | successful project writes | read/write->write edges | largest gap |
-|---|---|---|---|
-| round4-iter-1 | 6 | 6 | src/game.rs read@3 -> write@8, 5 steps |
-| round4-iter-2 | 23 | 11 | src/game.rs read@5 -> write@33, 28 steps |
-| round4-iter-3 | 19 | 9 | src/game.rs read@71 -> write@75, 4 steps |
-| livecost1-iter-1 | 1 | 0 | - |
+| recording | write events, all paths | of which project | of which scratch | read/write->write edges | largest gap |
+|---|---|---|---|---|---|
+| round4-iter-1 | 6 | 6 | 0 | 6 | src/game.rs read@3 -> write@8, 5 steps |
+| round4-iter-2 | 23 | 11 | 12 | 11 | src/game.rs read@5 -> write@33, 28 steps |
+| round4-iter-3 | 19 | 9 | 10 | 9 | src/game.rs read@71 -> write@75, 4 steps |
+| livecost1-iter-1 | 1 | 0 | 1 | 0 | - |
+
+**[CORRECTED 2026-10-06: the second column was headed `successful project writes`, but the detector
+counts every write event and only filters by path for the edges. 23 is 11 project + 12
+`.hoh/scratch/**`; 19 is 9 + 10; 1 is 0 + 1; only iter-1 (6) is all-project. The edge counts and the
+gaps are unaffected and were reproduced independently.]**
 
 **The decisive case (measured).** In round4-iter-2, call 5 runs `type src\game.rs` and the recorded
 observation is the whole **14,902-byte** file. Calls 6-32 contain **no other read of `src/game.rs`** —
@@ -1376,12 +1857,18 @@ Dropped edges at the passing edge (**projected** consequence of the **measured**
 | `N4` | round4-iter-1 | 1 | src/game.rs read@3->8 (5) |
 | `N4` | round4-iter-2 | 4 | src/game.rs read@5->33 (28); src/game.rs write@55->65 (10); src/game.rs write@37->42 (5); src/game.rs write@67->72 (5) |
 | `N4` | round4-iter-3 | 0 | none |
-| `B16384` | round4-iter-1 | 3 | src/game.rs read@3->8 (5); src/contract.rs read@3->7 (4); src/game.rs write@14->18 (4) |
-| `B16384` | round4-iter-2 | 9 | src/game.rs read@5->33 (28); src/game.rs write@55->65 (10); src/game.rs write@37->42 (5); src/game.rs write@67->72 (5) |
-| `B16384` | round4-iter-3 | 2 | src/game.rs read@3->6 (3); src/game.rs write@6->8 (2) |
-| `B32768` | round4-iter-1 | 2 | src/game.rs read@3->8 (5); src/contract.rs read@3->7 (4) |
-| `B32768` | round4-iter-2 | 6 | src/game.rs read@5->33 (28); src/game.rs write@55->65 (10); src/game.rs write@37->42 (5); src/game.rs write@67->72 (5) |
-| `B32768` | round4-iter-3 | 2 | src/game.rs read@3->6 (3); src/game.rs write@6->8 (2) |
+| `B13543_exclusive_corrected` | round4-iter-1 | 4 | src/game.rs read@3->8 (5); src/contract.rs read@3->7 (4); src/game.rs write@14->18 (4); src/game.rs write@13->14 (1) |
+| `B13543_exclusive_corrected` | round4-iter-2 | 11 | src/game.rs read@5->33 (28); src/game.rs write@55->65 (10); src/game.rs write@37->42 (5); src/game.rs write@67->72 (5); src/game.rs read@51->55 (4); src/game.rs write@33->35 (2); src/game.rs write@42->44 (2); src/game.rs write@44->46 (2); src/game.rs write@65->67 (2); src/game.rs write@35->36 (1); src/game.rs write@36->37 (1) |
+| `B13543_exclusive_corrected` | round4-iter-3 | 2 | src/game.rs read@3->6 (3); src/game.rs write@6->8 (2) |
+| `B8443_inclusive_corrected` | round4-iter-1 | 2 | src/game.rs read@3->8 (5); src/contract.rs read@3->7 (4) |
+| `B8443_inclusive_corrected` | round4-iter-2 | 2 | src/game.rs read@5->33 (28); src/game.rs write@55->65 (10) |
+| `B8443_inclusive_corrected` | round4-iter-3 | 1 | src/game.rs read@3->6 (3) |
+
+**[CORRECTED 2026-10-06: the `B16384` / `B32768` rows that stood here (iter-2 claimed 9 and 6
+dropped edges) were computed with the over-counting accumulator, so they were not the policy they
+named. They are kept as labelled history in the machine block. At the corrected passing edges the
+picture is *worse* than the file claimed, never better: at `B = 13,543` exclusive iter-2 drops 11 of
+11 edges and iter-1 drops 4 of 6.]**
 
 The edges that survive at N = 4 are the tight ones (iter-3's 1-step script edits). What is lost is the
 older working set: the file as it was before the incremental edits began.
@@ -1440,3 +1927,47 @@ at the first failing target — on
 full gate then returned the exit-0 numbers above. It is a timing flake of that test under load; both runs
 are reported rather than only the clean one. `git status --porcelain` was empty before the gate and
 before this report was added — this spike changed nothing measurable and committed nothing.
+
+
+## 9. Correction (independent re-measurement, 2026-10-06)
+
+`SPIKE-COST-LEVERS.md` re-measured the byte-window policies with corrected logic and the values this
+file published are refuted. Nothing about the spike's *conclusion* changes: the corrected byte band
+is smaller than the one claimed, so it discards **more** of the content the role used, not less.
+
+**What was wrong.** The byte window counted a step's bytes as the whole slice from that step to the
+current call and added that cumulative figure to a counter that had already been inflated by the
+previous slice, so the loop reached the budget early and kept fewer steps than the policy names. Every
+byte row was therefore optimistic. A faithful implementation gives:
+
+| reading of "until B is reached" | max B passing all four | binding recording | at the edge | first failing B |
+|---|---|---|---|---|
+| exclusive: largest whole-step suffix with byte total <= B | **13,543** | livecost1-iter-1 | 1,499,796 | 13,544 -> 1,500,020 |
+| inclusive: keep adding whole steps until the running total reaches B | **8,443** | round4-iter-2 | 1,499,039 | 8,444 -> 1,500,171 |
+| exclusive, pessimistic ratio 0.323468 on every recording | **13,543** | livecost1-iter-1 | 1,499,796 | 13,544 -> 1,500,020 |
+| inclusive, pessimistic ratio 0.323468 on every recording | **2,782** | round4-iter-2 | 1,499,244 | 2,783 -> 1,509,795 |
+
+The refuted values were **49,152** (primary) and **32,768** (sensitivity). The two readings are not a
+1.6x rounding difference: because the recorded steps are large, the exclusive reading can keep *no*
+step above the budget while the inclusive reading keeps at least one whole step, so they differ in
+which content survives as well as in cost.
+
+**What is unaffected.** The step-window table and its boundary reproduce: N = 4 passes all four
+(round4-iter-1 539,101 / iter-2 1,474,826 / iter-3 752,075 / live 1,077,207 with the ratio rounded to
+0.256686 as the acceptance used, or 539,102 / 1,474,827 / 752,076 / 1,077,207 at full precision) and
+N = 5 fails on iter-2 alone (1,631,524 / 1,631,526 depending on the rounding grain). The
+token-per-byte calibration, the reconstructed corpus totals and the decisive 28-step
+`src/game.rs` read->write gap all reproduce.
+
+**The label defect.** `successful_project_write_events` is **not** project-only. The detector counts
+every write event and only filters by path when it builds the edges. Re-run with a project/scratch
+split, the counts are 6 / 23 / 19 / 1 all-path, of which **6 / 11 / 9 / 0** are project writes and
+**0 / 12 / 10 / 1** are `.hoh/scratch/**` writes. Only iter-1 is all-project.
+
+**The consequence for this report's verdict.** The verdict stands and is strengthened: the corrected
+byte band (13.5 KiB exclusive, 8.4 KiB inclusive) is 3.6x-5.8x smaller than the one this file claimed,
+so a passing byte window drops *more* of the recorded read->write content. At the corrected
+`B = 13,543` exclusive edge, round4-iter-2 loses 11 of its 11 recorded edges and round4-iter-1 loses 4
+of 6. The next decision should read `SPIKE-COST-LEVERS.md`, which measures the four levers this spike
+left out: per-message size bounds, prompt caching, a working set instead of recency, and the
+per-invocation call count.
