@@ -43,8 +43,8 @@
   "gate_input_sha256": {
    "evidence/index.json": "eb88286c638363a7ff64e7aa1bf901159cc68bf0663707c9526f258a9bb03d2f",
    "src/adapter/bevy/prd_surfaces.rs": "6ea1090bf8a11b0cbcd8d0970ba42180ad0e50da08c5211546397a4a6b4bb6f1",
-   ".spec/bevy/CLONE-AND-LIVE-REPORT.md": "889033a5fd8914357886b28f110609dcffad571194e844d03e5db7d3fb44471e",
-   "note": "src/** and tests/** are otherwise exactly as committed at c00716d (git status shows no other tracked change), so these three hashes, with HEAD, fix the whole gate input set. This file's own hash is not pinned and is not a gate input."
+   ".spec/bevy/CLONE-AND-LIVE-REPORT.md": "7c09a7ad95597453441cef6ba2c33cf73f6b00dc71a0d4b6f2fcbde68dbc66bb",
+   "note": "src/** and tests/** are otherwise exactly as committed at c00716d (git status shows no other tracked change), so these three hashes, with HEAD, fix the whole gate input set. This file's own hash is not pinned and is not a gate input. The .spec/bevy/CLONE-AND-LIVE-REPORT.md value above is that path's CURRENT hash; the logs3 run and the f1b9af3 tree used 889033a5fd8914357886b28f110609dcffad571194e844d03e5db7d3fb44471e, and the byte-totals correction authorised by defects RD-1/RD-3 of .spec/bevy/ACCEPTANCE-RECORD.md later changed two measured totals in that path, so the two values differ. No test, build script or gate reads that file, so neither the gate numbers nor the gate input set depend on the change."
   },
   "gate_tree": "the numbers above are from the run logged under F:/hof-rc-work/logs3. The gate was run three times and all three runs report the same numbers (exit 0, 800/0/6/806, 0 warnings, fmt 0 bytes); the first two were superseded because something changed afterwards - first the report file itself, then only the log paths recorded here. Neither is a gate input: grep over src/, tests/ and scripts/ finds no reference to the corrected report, and no test reads it. The three hashes under gate_input_sha256 are the gate inputs that this correction did change, and they are byte-identical between the logs3 run and the delivered tree, so the logs3 numbers are the delivered tree's numbers."
  },
@@ -126,7 +126,7 @@
   {
    "path": ".spec/bevy/CLONE-AND-LIVE-REPORT.md",
    "what": "D-1 prose, D-2 prose and machine block, D-4 machine block and prose, plus the sentences that described the E-2 wording",
-   "committed_as": "aee9c92 (`docs(record): correct the three statements that disagreed with their own artefacts`); HEAD's blob of this path is byte-identical to the delivered working file, sha256 889033a5fd8914357886b28f110609dcffad571194e844d03e5db7d3fb44471e"
+   "committed_as": "aee9c92 (`docs(record): correct the three statements that disagreed with their own artefacts`); the aee9c92/f1b9af3 revision of this path hashed to 889033a5fd8914357886b28f110609dcffad571194e844d03e5db7d3fb44471e and the delivery this report covers was byte-identical to it; the byte-totals correction authorised by defects RD-1/RD-3 of .spec/bevy/ACCEPTANCE-RECORD.md has since changed two measured totals in this path, so the delivered working file now hashes to 7c09a7ad95597453441cef6ba2c33cf73f6b00dc71a0d4b6f2fcbde68dbc66bb"
   },
   {
    "path": "evidence/index.json",
@@ -141,7 +141,7 @@
   {
    "path": ".spec/bevy/RECORD-CORRECTION-REPORT.md",
    "what": "this report",
-   "committed_as": "aee9c92 committed an earlier revision (blob afde67da, sha256 889033a5fd8914357886b28f110609dcffad571194e844d03e5db7d3fb44471e) while this batch was still correcting the log paths and pinning the gate-input hashes; the delivered revision is the only uncommitted path when this report is written, and the dispatcher commits it"
+   "committed_as": "aee9c92 committed an earlier revision (blob afde67da, sha256 cebea19e0f955369a3a7fc8012f785c3f2d8939cde43208e5f7052af98f1d4e3) while this batch was still correcting the log paths and pinning the gate-input hashes; the delivered revision is the only uncommitted path when this report is written, and the dispatcher commits it"
   }
  ],
  "dispatcher_commits": {

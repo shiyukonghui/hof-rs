@@ -162,7 +162,7 @@
     "id": "Q-startup",
     "status": "gap",
     "evidence": "battery steps: play_scene_ready, e3_process_liveness",
-    "reason": "the recorded round-4 pass predates e3_process_liveness, so the harness recorded no step `e3_process_liveness` for it. IMPLEMENTED, PENDING ITS FIRST REAL OBSERVATION: a round that runs the ten-step battery is projected to decide it, but no such round has run and no `raw/e3_process_liveness.json` has ever been produced (defect E-2)."
+    "reason": "the recorded round-4 pass predates e3_process_liveness, so the harness recorded no step `e3_process_liveness` for it. THE STEP HAS SINCE RUN: the follow-up live round `clonefix1` (2026-10-05, recorded under the gitignored `runs/`) ran the ten-step battery in all three iterations, persisted `raw/e3_process_liveness.json` in every one of them and read 15 verified / 0 gap / 4 unobservable of 19, so this gap belongs to the recorded round-4 pass, not to the step's present state. The earlier wording here - IMPLEMENTED, PENDING ITS FIRST REAL OBSERVATION: no such round has run and no `raw/e3_process_liveness.json` has ever been produced (defect E-2) - is falsified by that round (defect RD-3 of `.spec/bevy/ACCEPTANCE-RECORD.md`)."
    },
    {
     "id": "Q-not-required",
@@ -180,7 +180,7 @@
     "id": "B2.1",
     "status": "gap",
     "evidence": "battery steps: e3_process_liveness",
-    "reason": "same as Q-startup: the recorded round predates the step that decides it. IMPLEMENTED, PENDING ITS FIRST REAL OBSERVATION: no round has run the ten-step battery (defect E-2)."
+    "reason": "same as Q-startup: the recorded round predates the step that decides it. The step has since run against a real game in the follow-up live round `clonefix1` (three iterations, 15 verified / 0 gap / 4 unobservable of 19), so this gap is the recorded round's. The earlier wording here - IMPLEMENTED, PENDING ITS FIRST REAL OBSERVATION: no round has run the ten-step battery (defect E-2) - is falsified by that round (defect RD-3)."
    },
    {
     "id": "B2.2",
@@ -235,9 +235,9 @@
    },
    {
     "id": "S1-deterministic-step",
-    "disposition": "IMPLEMENTED, PENDING ITS FIRST REAL OBSERVATION — not by loosening the definition",
+    "disposition": "IMPLEMENTED, UNIT/FAKE-DRIVER TESTED AND SINCE OBSERVED ON A REAL GAME — not by loosening the definition. The earlier disposition here read `PENDING ITS FIRST REAL OBSERVATION`, which the follow-up live round `clonefix1` falsified (defect E-2; defect RD-3 of `.spec/bevy/ACCEPTANCE-RECORD.md`).",
     "what_the_tester_asked_for": "a persisted late-round liveness step under .hoh/deterministic/raw/",
-    "status": "implemented and unit/fake-driver tested; it has never executed against a real game, so no `raw/e3_process_liveness.json` exists yet. A round that runs the ten-step battery is projected to decide the two surfaces below with it.",
+    "status": "implemented and unit/fake-driver tested, and it has since executed against a real game: the follow-up live round `clonefix1` (recorded under the gitignored `runs/`) ran the ten-step battery in all three iterations and persisted `raw/e3_process_liveness.json` in every one of them, observed true. At the time this batch wrote it, no `raw/e3_process_liveness.json` existed and the step had not executed; that observation lives outside `evidence/`, so the committed corpus is unchanged (defect E-2; defect RD-3).",
     "how": "the new tenth battery step `e3_process_liveness` (observation `liveness`) runs LAST: bevy_wait_frames(1) reads the game's own frame counter, bevy_wait_frames(8) asks for eight more, and the step requires the delta to be at least eight. It writes Observation::frames and persists `.hoh/deterministic/raw/e3_process_liveness.json` with the verbatim calls.",
     "why_it_is_a_real_observation_once_it_runs": "it uses the frozen `hof_game::contract::FrameCounter` surface and the existing `bevy_wait_frames` tool: no new contract surface, no new tool, no new configuration. A game whose counter does not move makes the step `ok = false` with the reason.",
     "decides": [
@@ -255,8 +255,8 @@
    },
    {
     "id": "S1-deterministic-step",
-    "status": "implemented, pending its first real observation",
-    "reason": "the e3_process_liveness battery step is implemented and unit/fake-driver tested and is projected to decide Q-startup and B2.1; no round has run the ten-step battery, so no such observation has been produced yet (defect E-2)."
+    "status": "implemented and unit/fake-driver tested, and since observed on a real game (the follow-up live round `clonefix1` persisted `raw/e3_process_liveness.json` in all three of its iterations). The earlier wording here read `implemented, pending its first real observation`, which that round falsified (defect E-2; defect RD-3).",
+    "reason": "the e3_process_liveness battery step is implemented and unit/fake-driver tested, and it has since decided Q-startup and B2.1 in a real round: the follow-up live round `clonefix1` ran the ten-step battery in all three iterations and persisted the raw observation. That observation lives under the gitignored `runs/`, not in the committed `evidence/` corpus. The earlier wording here - that no round had run the ten-step battery and no such observation had been produced yet (defect E-2) - is falsified by that round (defect RD-3)."
    }
   ]
  },
@@ -567,7 +567,7 @@
    "E-4": "FIXED: `evidence/index.json` carries **18** headline entries, not 14 (this report's §5 prose, the machine block's `unverified` list, and §0). The index's own test asserts `headlines.len() >= 15`.",
    "E-5": "FIXED: the `observation.round4.raw_calls` entry no longer says \"one JSON-RPC request per file\". The 57 files are one semantic call each, fanning out into 2 sub-requests (44 files) or 3 (13 files), every sub-request reusing the call's own sequence id; the entry now carries that histogram and marks its `files` path as a directory.",
    "E-6": "FIXED: `gate.counts_at_the_start_tree` (782/0/6/788) is a HISTORICAL measurement at the start commit 05604b9 and is now marked `repo_independent: false`, with the relationship `788 + 18 added - 0 removed = 806`, which is what the named command returns on this tree.",
-   "E-7": "FIXED: `evidence/` as a directory holds **122 files / 4,798,249 bytes**; the corpus the counts refer to is the **118 files / 4,771,139 bytes** the six data groups add up to, deliberately excluding `evidence/index.json`, `evidence/README.md` and the two `evidence/tools/*.py` (**4 files / 27,110 bytes**). Both numbers are now stated as such in this report and in `evidence/README.md`, whose total row said only 118 without naming the exclusion."
+   "E-7": "FIXED: `evidence/` as a directory holds **122 files / 4,798,968 bytes**; the corpus the counts refer to is the **118 files / 4,771,139 bytes** the six data groups add up to, deliberately excluding `evidence/index.json`, `evidence/README.md` and the two `evidence/tools/*.py` (**4 files / 27,829 bytes**). Both numbers are now stated as such in this report and in `evidence/README.md`, whose total row said only 118 without naming the exclusion."
   },
   "not_modified": "REQUIREMENTS.md, PRD.md, DESIGN-OVERVIEW.md, DESIGN-DETAIL.md, the spike reports, the batch reports, ACCEPTANCE-*.md, ROUND-*.md, COST-REPORT.md, config/hoh.yaml",
   "new_dependencies": "none",
@@ -575,7 +575,7 @@
  },
  "provenance_note_on_a_quoted_byte_count": "The task that commissioned this batch quoted the four trajectories at 4,166,773 bytes; the files measure 4,166,273, which is what .spec/bevy/WRITE-ACCOUNTING-REPORT.md already records. The files are the authority and D305 corrects the other figure.",
  "unverified": [
-  "That a clone actually rebuilds and runs the ten-step battery: no engine is reachable offline and this batch ran no round, so `e3_process_liveness` has never executed against a real game. Its unit surface, its fake-driver phase and its persistence path are tested; the live path is not.",
+  "That a clone actually rebuilds and runs the ten-step battery: no engine is reachable offline and this batch ran no round, so at the time of writing `e3_process_liveness` had not executed against a real game and this batch could not verify it. Its unit surface, its fake-driver phase and its persistence path are tested; the live path was not tested here. A later live round has since executed the step (see the E-2 dispositions above), so this item records this batch's own limit, not the step's present state (defect E-2; defect RD-3).",
   "Whether the two record-4 gaps close on a real run: the recorded evidence cannot show it, because the recorded round predates the step.",
   "Whether an iteration-2-shaped Developer call is under the cost target — unchanged from the previous batch, and this batch ran no call.",
   "The lever pairs and the compact_history projections: not re-derived here.",
@@ -609,8 +609,9 @@ PRD. It is now a function of **19 stable ids anchored to the frozen `PRD.md`** �
 harness's own battery evidence, by a frozen invariant recomputed by a named test, or by an explicitly
 named reason why it cannot be decided. Testers can write two claims or twenty and the denominator does
 not move. The two gaps the acceptance left open are now **decided**: `S1-deterministic-step` is
-**implemented and unit/fake-driver tested, pending its first real observation** (`e3_process_liveness`,
-the tenth battery step — no round has run it, so it is a projection and not yet an observation, defect
+**implemented, unit/fake-driver tested and since observed on a real game** (`e3_process_liveness`,
+the tenth battery step — when this batch wrote this it was *pending its first real observation* because
+no round had run it, and the follow-up live round then produced the observation, defect
 E-2), and
 `P3-goal-x` is **named as unobservable within the frozen contract** rather than silently dropped —
 because the thing it asks for would be an eighth reflectable surface, and that is a contract change this
@@ -619,10 +620,10 @@ batch has no authority to make.
 **Criterion (4), reproducibility.** The acceptance measured the recorded evidence at **11,229 files /
 12,775,066,006 bytes / 11.898 GiB, entirely under a gitignored path** (R-2), and the project's own
 criteria include keeping evidence and being reproducible. The whole tree is far too large to commit;
-the parts the conclusions rest on are not. **`evidence/` holds 122 files / 4,798,249 bytes
+the parts the conclusions rest on are not. **`evidence/` holds 122 files / 4,798,968 bytes
 (4.58 MiB)**; the corpus those bytes are counted as is the **118 files / 4,771,139 bytes** the six
 data groups below add up to, which deliberately excludes `evidence/index.json`, `evidence/README.md`
-and the two `evidence/tools/*.py` files (4 files / 27,110 bytes — defect E-7):
+and the two `evidence/tools/*.py` files (4 files / 27,829 bytes — defect E-7):
 the four Developer trajectories the cost analysis reads (4,166,273 bytes, byte-identical to their
 `runs/**` originals), the round-4 workspace-side battery evidence (222,299 bytes), the round's own
 evidence directory including its 57 raw MCP→BRP call files (326,506 bytes), the three iterations'
@@ -721,15 +722,18 @@ actually states is that change, not a relaxation of it. Nothing in the frozen do
 tool was removed, and the residual is published so a reader can disagree with the disposition by
 reading the reason rather than by guessing.
 
-## 4. `S1-deterministic-step`: implemented, pending its first real observation
+## 4. `S1-deterministic-step`: implemented, unit/fake-driver tested, and since observed on a real game
 
 The Tester asked for **a persisted late-round liveness step under `.hoh/deterministic/raw/`**, and the
 recorded round had none: the process being alive at the end of the pass was an assumption.
 
-It is now **implemented and unit/fake-driver tested — but it has never run against a real game**, so
-there is no committed `.hoh/deterministic/raw/e3_process_liveness.json` and no round has ever produced
-one. This section therefore describes code, not a measurement (defect E-2 of the acceptance: the
-batch's earlier wording published this as closed "by a real observation"). The tenth battery step,
+It is now **implemented and unit/fake-driver tested, and it has since run against a real game**: the
+follow-up live round records it in three iterations (15 verified / 0 gap / 4 unobservable of 19, its
+raw observations under the gitignored `runs/`). When this batch wrote this there was no committed
+`.hoh/deterministic/raw/e3_process_liveness.json` and no round had produced one, so this section then
+described code, not a measurement (defect E-2 of the acceptance: the batch's earlier wording published
+this as closed "by a real observation"; defect RD-3 of `.spec/bevy/ACCEPTANCE-RECORD.md`). The tenth
+battery step,
 `e3_process_liveness` (observation name `liveness`, supporting the stable id `Q-startup`), runs
 **last**:
 
@@ -751,7 +755,7 @@ plant P2 shows exactly that shape going red.
 ## 5. What was added for reproducibility, and what it buys
 
 `evidence/` — the corpus is **118 files / 4,771,139 bytes / 4.55 MiB**; the directory as a whole
-holds **122 files / 4,798,249 bytes** because `index.json`, `README.md` and the two `tools/*.py` files
+holds **122 files / 4,798,968 bytes** because `index.json`, `README.md` and the two `tools/*.py` files
 are committed under it too and are deliberately not part of the corpus count (defect E-7):
 
 | group | files | bytes | what |
@@ -762,7 +766,7 @@ are committed under it too and are deliberately not part of the corpus count (de
 | `evidence/observation/round4/iter-{1,2,3}/` | 6 | 53,776 | each iteration's `result.json` and the Tester's `evidence.json` |
 | `evidence/observation/round4/meta.json` | 1 | 2,285 | the round's own meta |
 | **corpus total (the six data groups)** | **118** | **4,771,139** | the corpus `index.json`'s `corpus` field and its test are about |
-| `evidence/index.json`, `evidence/README.md`, `evidence/tools/` (NOT in the corpus) | 4 | 27,110 | the index, the reader's guide and the two tools |
+| `evidence/index.json`, `evidence/README.md`, `evidence/tools/` (NOT in the corpus) | 4 | 27,829 | the index, the reader's guide and the two tools |
 
 `evidence/index.json` carries 18 headline entries, each with its files and its command, and a
 `not_reproducible_from_the_repository` list. The honest boundary is:
@@ -845,8 +849,9 @@ against in P4.
 
 **Worked.** The denominator is now a constant with a test that proves it does not move when the Tester
 changes; every item carries its evidence or its reason; the two open gaps are decided in **code** — one
-implemented (`e3_process_liveness`, unit/fake-driver tested and pending its first real observation, not
-yet closed by one), one named as unobservable with the reason and kept out of the
+implemented (`e3_process_liveness`, unit/fake-driver tested; it was pending its first real observation
+when this batch wrote this, and the follow-up live round has since produced that observation), one named
+as unobservable with the reason and kept out of the
 denominator. The cost analysis now runs from a clone: `tests/write_accounting.rs` prefers
 `evidence/cost/`, and its numbers are the same numbers, because the committed files are byte-identical
 to the recordings. The corrected global band floor is no longer a sentence in a report but a property
@@ -861,12 +866,14 @@ verifiable by this harness — `C5`, `C6`, `Q-scale`, `Q-not-required` — so th
 that is a property of the PRD and of what an in-process observer can see, not a defect to be papered
 over.
 
-**Could not verify.** The new battery step has **never run against a real game**: no engine is
-reachable offline, and this batch was instructed to run no round. Its unit surface, its fake-driver
-phase, its persistence path and its failure shape are tested; the live path is not, and that is the
-one thing about this batch that a green gate does not prove. The disposition is therefore
-**implemented, pending its first real observation**, everywhere it is stated (defect E-2). I also did
-not re-derive the lever pairs
+**Could not verify** *(at the time of this batch)*. The new battery step had **never run against a real
+game**: no engine is reachable offline, and this batch was instructed to run no round. Its unit surface,
+its fake-driver phase, its persistence path and its failure shape are tested; the live path is not, and
+that is the one thing about this batch that a green gate does not prove. The disposition was therefore
+**implemented, pending its first real observation**, everywhere it was stated (defect E-2). A later live
+round has since executed the step and produced the observation, so this paragraph is this batch's own
+historical limit, not the step's present state (defect RD-3 of `.spec/bevy/ACCEPTANCE-RECORD.md`). I also
+did not re-derive the lever pairs
 or the `compact_history` projections, and the corpus cannot be shown complete for a headline nobody
 indexed.
 

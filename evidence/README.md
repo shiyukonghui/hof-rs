@@ -27,7 +27,7 @@ rest on are not. This directory is those parts.
 That total counts the six data groups only. `index.json` (the index), `README.md`
 (this file) and `tools/build_evidence.py` + `tools/keyscan.py` are committed under
 `evidence/` too — **4 more files, not counted above** — so the directory as a whole
-holds **122 files / 4,798,249 bytes**. The repository test that pins
+holds **122 files / 4,798,968 bytes**. The repository test that pins
 `index.json`'s `corpus.files` / `corpus.bytes`
 (`tests/evidence_reproduction.rs::the_evidence_index_names_committed_files_and_commands`)
 defines the corpus as exactly those 118 files, so both numbers are right about
