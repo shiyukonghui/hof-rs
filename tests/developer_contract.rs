@@ -94,9 +94,21 @@ fn the_developer_changes_the_code_first_and_leaves_observation_to_the_tester() {
     }
 }
 
+/// Round-5 repair (defect RA-6): this used to pin `godot-dev.md`, the previous
+/// engine's recipe book, which was still compiled into the binary and injected
+/// into `.hoh/skills/` in every round.  The repository is the harness plus
+/// **this** engine's flow, so the book is gone (`src/prompts/skills/godot-*.md`
+/// removed, `prompts::skills()` returns the two Bevy books) and the same
+/// assertions apply to the book a role really receives.
+///
+/// The coverage is deliberately kept, not deleted: the delivered-form needles
+/// (DR-66 — the syntax the role's `cmd.exe` actually executes), the
+/// minimum-recipe count, and the "a written file is read back" rule all still
+/// have to hold of the Bevy book, or the prompt discipline they enforce has no
+/// subject.
 #[test]
-fn godot_dev_skill_is_a_real_recipe_book() {
-    let dev = skill("godot-dev.md");
+fn the_bevy_dev_skill_is_a_real_recipe_book() {
+    let dev = skill("bevy-dev.md");
 
     // DR-66: the needles are the **delivered** forms, so the recipe book is
     // asserted in the syntax the role's shell actually executes.  The old
@@ -109,31 +121,27 @@ fn godot_dev_skill_is_a_real_recipe_book() {
         &format!("{bin} tools call") as &str,
         "--args-file",
         &artifact,
-        "project_create_script",
-        "project_edit_script",
-        "project_read_script",
-        "CollisionShape2D",
-        "RectangleShape2D",
-        "editor_setup_collision_shape",
-        "Area2D",
-        "Label",
-        "editor_simulate_input_action",
-        // DR-70 ③: the recipe this needle used to require was
-        // `running_game_get_node_property_samples`, i.e. exactly the instruction
-        // the acceptance's D5 kept finding in the delivered skill.  DR-70 ①
-        // publishes the route for the whole round, but the game it names was
-        // started **before** the Developer's edits, so the recipe could not
-        // confirm them.  The needle now requires the editor-side substitute, and
-        // `delivered_materials.rs` pins the *absence* of the game-process
-        // instruction on the Developer's side.  This is a requirement-driven
-        // swap, not a loosened assertion: one concrete tool name left the list
-        // and two concrete requirements (`editor_get_errors`,
-        // `before you changed the code`) entered it.
-        "editor_get_errors",
+        // The project's own build and write path.
+        "cargo build --offline",
+        "HOH_WRITE_FILE src/game.rs",
+        "HOH_READ_FILE",
+        // The frozen contract, in Bevy terms.
+        "hof_game",
+        "src/contract.rs",
+        "#[reflect(Component)]",
+        "register_type",
+        "InputIntent",
+        "FrameCounter",
+        // The audience-aware rule DR-70 ①/DR-71 ③ established: the runtime owns
+        // the session and the game that window covers predates the Developer's
+        // edits.
         "before you changed the code",
-        "non-empty",
+        "do not start a game of your own",
+        // The definition-of-done rule the Developer prompt carries, in this
+        // engine's terms.
+        "never left empty",
     ] {
-        assert!(dev.contains(needle), "godot-dev.md is missing `{needle}`");
+        assert!(dev.contains(needle), "bevy-dev.md is missing `{needle}`");
     }
     if cfg!(windows) {
         assert!(
@@ -142,29 +150,33 @@ fn godot_dev_skill_is_a_real_recipe_book() {
         );
     }
 
-    // At least six numbered recipes.
+    // At least seven numbered recipes, so the book is a book and not a list.
     let recipes = dev.lines().filter(|line| line.starts_with("## ")).count();
     assert!(
-        recipes >= 6,
-        "godot-dev.md must carry at least six recipes, found {recipes}"
+        recipes >= 7,
+        "bevy-dev.md must carry at least seven recipes, found {recipes}"
     );
 
-    // The argument examples use the real snake_case tool parameters.
-    assert!(
-        dev.contains("\"action\""),
-        "editor_simulate_input_action uses `action`"
-    );
-    assert!(
-        dev.contains("\"pressed\""),
-        "editor_simulate_input_action uses `pressed`"
-    );
-    assert!(dev.contains("\"node_path\""), "lookups use `node_path`");
-    assert!(dev.contains("\"properties\""), "monitor uses `properties`");
+    // No previous-engine material may come back with it (RA-6).
+    for old_engine in [
+        "godot",
+        "project_create_script",
+        "project_edit_script",
+        "editor_setup_collision_shape",
+        "editor_simulate_input_action",
+    ] {
+        assert!(
+            !dev.to_lowercase().contains(old_engine),
+            "bevy-dev.md still carries previous-engine material: `{old_engine}`"
+        );
+    }
 }
 
+/// The Tester's book, on the same terms: the battery contract, the relative-path
+/// rule, and the statement that existing source is not evidence.
 #[test]
-fn godot_testing_skill_explains_the_battery_and_relative_paths() {
-    let testing = skill("godot-testing.md");
+fn the_bevy_testing_skill_explains_the_battery_and_relative_paths() {
+    let testing = skill("bevy-testing.md");
     let lower = testing.to_lowercase();
 
     for needle in [
@@ -173,16 +185,25 @@ fn godot_testing_skill_explains_the_battery_and_relative_paths() {
         "relative",
         "ok = false",
         "gap",
+        // The channels this project really has, rather than the removed engine's.
+        "bevy_player_transform",
+        "bevy_grounded",
     ] {
         assert!(
             lower.contains(&needle.to_lowercase()),
-            "godot-testing.md is missing `{needle}`"
+            "bevy-testing.md is missing `{needle}`"
         );
     }
     assert!(
         lower.contains("source") && lower.contains("not"),
-        "godot-testing.md must state that existing source is not verification"
+        "bevy-testing.md must state that existing source is not verification"
     );
+    for old_engine in ["godot", "running_game_", "editor_play_scene"] {
+        assert!(
+            !lower.contains(old_engine),
+            "bevy-testing.md still carries previous-engine material: `{old_engine}`"
+        );
+    }
 }
 
 /// The skills must actually reach the roles.
@@ -202,17 +223,33 @@ async fn skills_are_injected_into_the_role_views() {
 
     for record in &records {
         assert!(
-            record.files.contains_key(".hoh/skills/godot-dev.md"),
+            record.files.contains_key(".hoh/skills/bevy-dev.md"),
             "{:?} view is missing the developer skill",
             record.role
         );
         assert!(
-            record.files.contains_key(".hoh/skills/godot-testing.md"),
+            record.files.contains_key(".hoh/skills/bevy-testing.md"),
             "{:?} view is missing the testing skill",
             record.role
         );
     }
-    let candidate = root.join("runs/run-1/iter-1/candidate/.hoh/skills/godot-dev.md");
+    let candidate = root.join("runs/run-1/iter-1/candidate/.hoh/skills/bevy-dev.md");
     assert!(candidate.is_file());
-    assert!(read(&candidate).contains("editor_setup_collision_shape"));
+    assert!(read(&candidate).contains("HOH_WRITE_FILE src/game.rs"));
+    // Round-5 repair (RA-6): and nothing of the previous engine's book reached
+    // any role's view.  The scope is the skill directory, because the fake
+    // adapter's own candidate is a Godot-shaped fixture (`project.godot`) and the
+    // rule being pinned is about the *skills* this batch removed.
+    for record in &records {
+        for (path, _) in &record.files {
+            if !path.contains("/skills/") {
+                continue;
+            }
+            assert!(
+                !path.contains("godot"),
+                "{:?} view still carries previous-engine material at {path}",
+                record.role
+            );
+        }
+    }
 }

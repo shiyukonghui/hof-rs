@@ -54,7 +54,10 @@ HOH_END_WRITE_FILE
 
 Read it back with `HOH_READ_FILE src/game.rs` (or `type src\game.rs`). Never
 assemble a file with `echo … >> file`, and never write content through
-`bash -c`, a heredoc, or `python -c` — none of those survive this shell.
+`bash -c`, a heredoc, or `python -c` — none of those survive this shell. A file
+you write is **never left empty**: an empty or half-written `src/game.rs` is a
+broken candidate, and a round whose only writes were empty is recorded as a
+failure.
 
 ## 2. The frozen contract, in Bevy terms
 
@@ -166,8 +169,13 @@ and pass that path. The argument names are exactly what
 `.hoh/TOOLS.md` lists — `dir` and `level` for `bevy_inject_move`, `press` for
 `bevy_inject_jump`, `n` for `bevy_wait_frames`.
 
-Reading the state of a game that was started **before your edits** is not
-evidence about your edit; use it only to understand the tools' shapes.
+Reading the state of a game that was started **before you changed the code** is
+not evidence about your edit; use it only to understand the tools' shapes. The
+runtime owns the round's session: **do not start a game of your own** — a second
+boot would replace the session the Tester is meant to reach, and the game it
+started predates your edits, so it can never confirm them. Your launchability
+check is `cargo build --offline`; the harness's own `play_scene_ready` step is
+the boot check.
 
 ## 7. Scratch discipline
 
@@ -180,3 +188,24 @@ type {{HOH_SCRATCH_DIR}}\probe.json
 
 Nothing may be left in the project root: no `_*`, no `tmp_*`, no `*.bak`, no
 `*.tmp`, and never a second `Cargo.toml`.
+
+## 8. When a call comes back empty
+
+A `bevy_*` tool that answers with an empty output means the harness rejected the
+request before the game saw it — almost always a missing or unreadable args
+file. Write the args file first, then call:
+
+```
+{{HOH_HOH_BIN}} tools call bevy_health --args-file {{HOH_ARTIFACT_DIR}}/args/health.json
+```
+
+```
+HOH_WRITE_FILE .hoh/scratch/health.json
+{}
+HOH_END_WRITE_FILE
+```
+
+Then read the call's own message: a contract violation names the type path that
+is not registered, and a transport failure names the endpoint the runtime
+published (`.hoh/PROJECT_MAP.md` and `.hoh/TOOLS.md` carry both). Do not
+hand-roll JSON-RPC, do not probe ports, and do not start a second game.

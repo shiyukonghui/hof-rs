@@ -190,6 +190,54 @@ pub struct Observation {
     pub arc: Option<JumpArc>,
     /// The raw BRP calls that produced this observation, in order.
     pub calls: Vec<CallEvidence>,
+    /// Round-5 repair (defect RA-8): this step is **definitional** — it is
+    /// satisfied by any in-order battery run, so it adds no discriminating power
+    /// on its own.
+    ///
+    /// The acceptance's RA-8 named two such steps: `e3_win_position` ("a transform
+    /// sample at or after the win frame") and `e3_grounded_payload` ("a Grounded
+    /// payload carrying a boolean").  Both verdicts are honest, but counting them
+    /// as two of nine *behavioural* proofs overstates what the battery showed, so
+    /// each one is labelled in its own record and in the report rather than
+    /// silently promoted.
+    #[serde(default)]
+    pub definitional: bool,
+    /// Why it is definitional, when it is.  It travels with the record so a
+    /// reader is told the reason instead of having to reconstruct it from the
+    /// step's name.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub definitional_note: Option<String>,
+}
+
+/// A plain observation: `readings`, an optional `arc`, the calls and the two
+/// definitional fields defaulted.  It exists so the many step constructors do not
+/// each repeat a policy that only two of them override.
+pub fn observation(
+    observed: bool,
+    failure: Option<String>,
+    readings: Vec<Reading>,
+    arc: Option<JumpArc>,
+    calls: Vec<CallEvidence>,
+) -> Observation {
+    Observation {
+        observed,
+        failure,
+        readings,
+        arc,
+        calls,
+        definitional: false,
+        definitional_note: None,
+    }
+}
+
+impl Observation {
+    /// Why this step is definitional, when it is.
+    pub fn definitional_reason(&self) -> Option<&str> {
+        if !self.definitional {
+            return None;
+        }
+        self.definitional_note.as_deref()
+    }
 }
 
 /// The prefix every "this was never observed" reason carries.  It is a constant
@@ -206,6 +254,8 @@ impl Observation {
             readings: Vec::new(),
             arc: None,
             calls,
+            definitional: false,
+            definitional_note: None,
         }
     }
 
@@ -553,13 +603,8 @@ impl<'a> BatteryRun<'a> {
         // readings, so they are part of that observation's evidence.
         self.baseline_calls = calls.clone();
         let failure = grounded_before_takeoff(&grounded_flags).err();
-        self.observations.grounded = Observation {
-            observed: failure.is_none(),
-            failure,
-            readings: grounded_readings,
-            arc: None,
-            calls,
-        };
+        self.observations.grounded =
+            observation(failure.is_none(), failure, grounded_readings, None, calls);
         let _ = transform;
 
         // P5-gate (round-1 write-path batch): the **payload** of a `Grounded`
@@ -593,6 +638,16 @@ impl<'a> BatteryRun<'a> {
             readings: vec![payload],
             arc: None,
             calls: payload_calls,
+            // RA-8: an existence check for a payload shape.  It proves the surface
+            // carries the boolean, which `e3_grounded` also reads; it is labelled
+            // so a reader does not count it as a second behavioural proof.
+            definitional: true,
+            definitional_note: Some(
+                "definitional: an existence check for a payload shape (the `Grounded` document \
+                 carries a boolean `grounded` field). It shows the surface stands on its own, but \
+                 any run in which the field is readable satisfies it"
+                    .to_string(),
+            ),
         };
         Ok(())
     }
@@ -614,13 +669,8 @@ impl<'a> BatteryRun<'a> {
         let _ = self.driver.wait_frames(SETTLE_FRAMES)?;
         calls.extend(self.driver.take_evidence());
         let failure = movement_changed(&before, &after).err();
-        self.observations.movement = Observation {
-            observed: failure.is_none(),
-            failure,
-            readings: vec![before, after],
-            arc: None,
-            calls,
-        };
+        self.observations.movement =
+            observation(failure.is_none(), failure, vec![before, after], None, calls);
         Ok(())
     }
 
@@ -646,13 +696,8 @@ impl<'a> BatteryRun<'a> {
         let _ = self.driver.wait_frames(SETTLE_FRAMES)?;
         calls.extend(self.driver.take_evidence());
         let failure = leftward_movement(&before, &after).err();
-        self.observations.movement_left = Observation {
-            observed: failure.is_none(),
-            failure,
-            readings: vec![before, after],
-            arc: None,
-            calls,
-        };
+        self.observations.movement_left =
+            observation(failure.is_none(), failure, vec![before, after], None, calls);
 
         // ---- P1-release: writing `0` stops it ----
         let mut calls = self.begin();
@@ -661,13 +706,13 @@ impl<'a> BatteryRun<'a> {
         let later = self.driver.read(SemanticKind::PlayerTransform)?;
         calls.extend(self.driver.take_evidence());
         let failure = released_stops(&settled, &later).err();
-        self.observations.movement_release = Observation {
-            observed: failure.is_none(),
+        self.observations.movement_release = observation(
+            failure.is_none(),
             failure,
-            readings: vec![settled, later],
-            arc: None,
+            vec![settled, later],
+            None,
             calls,
-        };
+        );
         Ok(())
     }
 
@@ -781,31 +826,31 @@ impl<'a> BatteryRun<'a> {
         // The same phase reads both surfaces, so both observations keep the same
         // raw calls; the readings are split by surface so a reader can see which
         // call produced which number.
-        self.observations.coins = Observation {
-            observed: coin_failure.is_none(),
-            failure: coin_failure,
-            readings: all_readings
+        self.observations.coins = observation(
+            coin_failure.is_none(),
+            coin_failure,
+            all_readings
                 .iter()
                 .filter(|reading| reading.kind == SemanticKind::CoinCounter)
                 .cloned()
                 .collect(),
-            arc: None,
-            calls: calls.clone(),
-        };
+            None,
+            calls.clone(),
+        );
         // P3-position: the win, located in the world.  It shares the phase's own
         // evidence window, because the transform read that answers it happened
         // inside that window.
         let win_position_calls = calls.clone();
-        self.observations.win = Observation {
-            observed: win_failure.is_none(),
-            failure: win_failure,
-            readings: all_readings
+        self.observations.win = observation(
+            win_failure.is_none(),
+            win_failure,
+            all_readings
                 .into_iter()
                 .filter(|reading| reading.kind == SemanticKind::WinFlag)
                 .collect(),
-            arc: None,
+            None,
             calls,
-        };
+        );
 
         // P3-position: the win, located in the world.
         let (win_position_readings, win_position_failure) =
@@ -841,6 +886,17 @@ impl<'a> BatteryRun<'a> {
             readings: win_position_readings,
             arc: None,
             calls: win_position_calls,
+            // RA-8: this step is satisfied by any in-order battery run — the
+            // transform read that follows the win flag always is at or after the
+            // win frame — so it is labelled rather than counted as one of the
+            // battery's behavioural proofs.
+            definitional: true,
+            definitional_note: Some(
+                "definitional: satisfied by any in-order transform read at or after the win frame; \
+                 it locates the win in the world but does not discriminate between a game that \
+                 implements the win and one that merely flips the flag before the read"
+                    .to_string(),
+            ),
         };
         Ok(())
     }
@@ -926,13 +982,7 @@ impl<'a> BatteryRun<'a> {
                 None => note,
             });
         }
-        self.observations.jump = Observation {
-            observed: failure.is_none(),
-            failure,
-            readings,
-            arc,
-            calls,
-        };
+        self.observations.jump = observation(failure.is_none(), failure, readings, arc, calls);
         Ok(())
     }
 }
@@ -1537,13 +1587,13 @@ mod tests {
 
     #[test]
     fn a_failed_criterion_is_not_an_unobserved_criterion() {
-        let measured = Observation {
-            observed: false,
-            failure: Some("the arc never rises".to_string()),
-            readings: vec![position(1, 0.0, -200.0)],
-            arc: None,
-            calls: Vec::new(),
-        };
+        let measured = observation(
+            false,
+            Some("the arc never rises".to_string()),
+            vec![position(1, 0.0, -200.0)],
+            None,
+            Vec::new(),
+        );
         assert!(measured.was_measured());
         assert!(!measured.was_unobservable());
         let unobserved = Observation::not_observed("the endpoint never answered", Vec::new());
@@ -1795,13 +1845,7 @@ mod tests {
 
     #[test]
     fn the_observation_set_reports_every_gap_and_only_passes_when_all_five_do() {
-        let done = || Observation {
-            observed: true,
-            failure: None,
-            readings: Vec::new(),
-            arc: None,
-            calls: Vec::new(),
-        };
+        let done = || observation(true, None, Vec::new(), None, Vec::new());
         let mut set = E3Observations {
             movement: done(),
             coins: done(),
@@ -1816,13 +1860,13 @@ mod tests {
         };
         assert!(set.passed());
         assert!(set.gaps().is_empty());
-        set.coins = Observation {
-            observed: false,
-            failure: Some("the counter never rose above 0".to_string()),
-            readings: Vec::new(),
-            arc: None,
-            calls: Vec::new(),
-        };
+        set.coins = observation(
+            false,
+            Some("the counter never rose above 0".to_string()),
+            Vec::new(),
+            None,
+            Vec::new(),
+        );
         assert!(!set.passed());
         assert_eq!(set.gaps().len(), 1);
         set.aborted = Some("the game process died".to_string());

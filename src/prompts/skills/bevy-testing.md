@@ -88,7 +88,19 @@ Record what you call in `.hoh/evidence/` if you want it cited: a claim's
 Anything else is a `gap`: an unmet requirement, a regression, or a behaviour
 nobody observed. Gaps need `player_impact` and `recommended_update`.
 
-## 4. The mistake to avoid
+## 4. Scratch discipline
+
+Every temporary, probe or log file goes under the scratch directory, which the
+artifact hash ignores:
+
+```
+type {{HOH_SCRATCH_DIR}}\probe.json
+```
+
+Never leave a probe in the project root: it becomes part of the candidate
+identity and is reported in `artifact_hygiene.suspicious_files`.
+
+## 5. The mistake to avoid
 
 Existing source code is **not** evidence. `src/game.rs` containing a coin
 counter, a win flag and a jump is exactly what a broken game also contains: the

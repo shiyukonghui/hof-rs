@@ -45,9 +45,6 @@ pub enum HofError {
     #[error("adapter error: {0}")]
     Adapter(String),
 
-    #[error("resume_not_implemented")]
-    ResumeNotImplemented,
-
     /// DR-8: `status` asked for a runs directory or run id that does not exist.
     /// A usage error is exit 2; exit 5 is reserved for harness/model failures.
     #[error("run not found: {0}")]
@@ -88,7 +85,6 @@ impl HofError {
             HofError::Config(_)
             | HofError::ModelIdentityViolation { .. }
             | HofError::Contract { .. }
-            | HofError::ResumeNotImplemented
             | HofError::RunNotFound(_)
             | HofError::VersionNotFound(_)
             | HofError::ToolNotPermitted { .. }
@@ -132,7 +128,18 @@ mod tests {
             HofError::contract(ContractViolation::ReadOnlyRoleWroteArtifact).exit_code(),
             2
         );
-        assert_eq!(HofError::ResumeNotImplemented.exit_code(), 2);
+        // Round-5 repair: `ResumeNotImplemented` is gone — `--resume` is
+        // implemented, and the exit code its refusal used to carry (2, a usage
+        // error) is the one its precondition failures carry now.
+        assert_eq!(
+            HofError::Config(
+                "--resume: runs/round4 does not exist, so there is no interrupted round to \
+                 continue"
+                    .into()
+            )
+            .exit_code(),
+            2
+        );
         assert_eq!(HofError::RunNotFound("runs".into()).exit_code(), 2);
         assert_eq!(HofError::VersionNotFound("abc".into()).exit_code(), 2);
         assert_eq!(
@@ -159,10 +166,10 @@ mod tests {
 
     #[test]
     fn anyhow_downcast_finds_the_typed_error() {
-        let error: anyhow::Error = HofError::ResumeNotImplemented.into();
+        let error: anyhow::Error = HofError::RunNotFound("runs/round4".into()).into();
         assert!(matches!(
             as_hof_error(&error),
-            Some(HofError::ResumeNotImplemented)
+            Some(HofError::RunNotFound(_))
         ));
         assert_eq!(exit_code_of(&error), 2);
     }

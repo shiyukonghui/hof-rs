@@ -85,11 +85,11 @@ const SEEDS: &[(&str, &str)] = &[
     (".hoh/PROJECT_MAP.md", "DR-61 previous-round project map\n"),
     (".hoh/SCAFFOLD.md", "DR-61 previous-round scaffold\n"),
     (
-        ".hoh/skills/godot-dev.md",
+        ".hoh/skills/bevy-dev.md",
         "DR-61 previous-round developer skill\n",
     ),
     (
-        ".hoh/skills/godot-testing.md",
+        ".hoh/skills/bevy-testing.md",
         "DR-61 previous-round testing skill\n",
     ),
 ];
@@ -195,6 +195,7 @@ async fn run_round_with(root: &Path, run_id: &str, script: Vec<FakeStep>) -> Vec
         ablation: Ablation::default(),
         force_init: true,
         start_state: hof_rs::runtime::start_state::StartState::as_is(),
+        resume: false,
     };
     hof_rs::runtime::run_loop::run(&orchestrator, &spec, run_id)
         .await

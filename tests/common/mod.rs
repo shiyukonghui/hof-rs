@@ -380,6 +380,11 @@ impl Harness for FakeHarness {
             trajectory_path: inv.trajectory_path.clone(),
             usage,
             duration_ms: step.sleep_ms,
+            // The double runs no provider call, so it folds nothing: `None` is
+            // the honest value and the tests that pin the fold use the real
+            // loop (`harness::compact`).
+            compaction: None,
+            steps: 0,
         })
     }
 }
@@ -882,6 +887,7 @@ async fn run_scenario_inner(
         ablation,
         force_init: true,
         start_state: hof_rs::runtime::start_state::StartState::as_is(),
+        resume: false,
     };
     let result = hof_rs::runtime::run_loop::run(&orchestrator, &spec, "run-1").await;
     (result, observer.records())
@@ -916,6 +922,7 @@ pub async fn run_scenario_with_tools(
         ablation,
         force_init: true,
         start_state: hof_rs::runtime::start_state::StartState::as_is(),
+        resume: false,
     };
     let result = hof_rs::runtime::run_loop::run(&orchestrator, &spec, "run-1").await;
     (result, observer.records())

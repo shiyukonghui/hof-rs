@@ -187,14 +187,19 @@ pub fn binary_matches(expected: &Path, actual: &str) -> bool {
     normalize_windows_path(&expected) == normalize_windows_path(actual)
 }
 
-/// The `pid` of the TCP listener on `port`, preferring a `LISTEN*` state.
+/// The `pid` of the TCP **listener** on `port`, or `None` when the table names
+/// none.
 ///
 /// The table is parsed positionally (`netstat -ano` prints
-/// `proto local foreign state pid`); the state word is only a *tie-breaker*,
-/// because it is localised.
+/// `proto local foreign state pid`), and the state word is required: a row that
+/// is not a `LISTEN*` state names a socket **holder**, not the process that
+/// answers on the port, and returning it would make `answering_pid` "a pid with a
+/// socket on this port" instead of "the pid the OS says listens here" (defect
+/// RA-9 of `.spec/bevy/ACCEPTANCE-ROUNDS.md`).  For an unknown (localised) state
+/// word the honest answer is `None`: this function only reports what it can
+/// recognise as a listener.
 pub fn parse_listener_pid(table: &str, port: u16) -> Option<u32> {
     let suffix = format!(":{port}");
-    let mut candidate = None;
     for line in table.lines() {
         let columns: Vec<&str> = line.split_whitespace().collect();
         if columns.len() < 4 {
@@ -213,9 +218,8 @@ pub fn parse_listener_pid(table: &str, port: u16) -> Option<u32> {
         if listening {
             return Some(pid);
         }
-        candidate.get_or_insert(pid);
     }
-    candidate
+    None
 }
 
 /// The first non-empty line of a command's output (that is what `--version`
@@ -651,14 +655,42 @@ mod tests {
         assert_eq!(parse_listener_pid(table, 9878), Some(999));
         assert_eq!(parse_listener_pid(table, 1), None);
 
-        // A localised state column still yields a pid: the port is the anchor.
-        let localized =
-            "  TCP    127.0.0.1:9877         0.0.0.0:0              ABHOEREN        4321\n";
-        assert_eq!(parse_listener_pid(localized, 9877), Some(4321));
-
         // IPv6 listeners are shaped the same way.
         let v6 = "  TCP    [::1]:9877             [::]:0                 LISTENING       7777\n";
         assert_eq!(parse_listener_pid(v6, 9877), Some(7777));
+    }
+
+    /// Defect RA-9, pinned: a row that is **not** a listener names a socket
+    /// holder, and `answering_pid` must not become "some pid with a socket on this
+    /// port".  The old code kept the first such pid as a fallback and returned it
+    /// when the table held no `LISTEN` row.
+    #[test]
+    fn a_non_listening_holder_of_the_port_is_not_reported_as_the_listener() {
+        // An established connection whose local address ends in the port.
+        let established =
+            "  TCP    127.0.0.1:9877         127.0.0.1:50000        ESTABLISHED     4321\n";
+        assert_eq!(
+            parse_listener_pid(established, 9877),
+            None,
+            "an ESTABLISHED row is a holder, not the listener"
+        );
+        // TIME_WAIT, the shape a just-closed game leaves behind.
+        let time_wait =
+            "  TCP    127.0.0.1:9877         0.0.0.0:0              TIME_WAIT       555\n";
+        assert_eq!(parse_listener_pid(time_wait, 9877), None);
+
+        // A localised state word is not recognisable as a listener, and "I cannot
+        // tell" is `None` rather than the pid.  (The state column is localised on
+        // Windows; a false pid here would silently weaken the one independent
+        // reading `identity` carries.)
+        let localized =
+            "  TCP    127.0.0.1:9877         0.0.0.0:0              ABHOEREN        4321\n";
+        assert_eq!(parse_listener_pid(localized, 9877), None);
+
+        // The listener is still found when it is not the first matching row.
+        let mixed = "  TCP    127.0.0.1:9877         127.0.0.1:50000        ESTABLISHED     4321\n\
+                     \r\n  TCP    127.0.0.1:9877         0.0.0.0:0              LISTENING       8765\n";
+        assert_eq!(parse_listener_pid(mixed, 9877), Some(8765));
     }
 
     #[test]

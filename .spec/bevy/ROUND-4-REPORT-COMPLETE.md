@@ -832,7 +832,7 @@
      "call_ids": [
       8
      ],
-     "proving_reading": "a Grounded payload carrying a boolean at frame 477",
+     "proving_reading": "a Grounded payload carrying a boolean: `hof_game::contract::Grounded {on_ground: true}` at frame 495 (call 8; the earlier draft of this line said 477, which the cited file does not contain - corrected by the round-5 cost batch, defect RA-2 of ACCEPTANCE-ROUNDS.md)",
      "call_files": [
       "0008-bevy_grounded.json"
      ]

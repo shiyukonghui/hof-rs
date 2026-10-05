@@ -525,6 +525,17 @@ pub struct RoundStopReport {
     pub called_at_seconds: u64,
     /// The launch ledger it swept, when one was configured.
     pub ledger: Option<String>,
+    /// Round-5 repair (defect RA-3): how many lines that ledger held when this
+    /// sweep read it.
+    ///
+    /// The defect was a reader's problem, not a fabrication: a **snapshot** of the
+    /// live directory taken 20 s after a battery pass's launch carries the
+    /// `round-stop.json` of the sweep that ran *before* that launch, so the file's
+    /// `recorded` list does not name the pass's own pid — and nothing in the file
+    /// said so.  With the ledger line count and [`Self::sweep_covers_ledger_line`],
+    /// a reader can decide it from the file alone instead of inferring it from
+    /// mtimes.
+    pub ledger_lines_at_sweep: usize,
     /// Where this report was written.
     pub evidence: PathBuf,
     /// Every pid the ledger named, in the order it named them.
@@ -541,6 +552,16 @@ pub struct RoundStopReport {
 }
 
 impl RoundStopReport {
+    /// Is the launch on ledger line `line` (1-based) inside this sweep's window?
+    ///
+    /// It is the question a reader of a snapshotted `round-stop.json` has to answer
+    /// — "does this file describe the pass whose directory I am reading?" — and the
+    /// answer is `line <= ledger_lines_at_sweep`.  A pass launched *after* the
+    /// sweep is not covered, and the file now says so.
+    pub fn sweep_covers_ledger_line(&self, line: usize) -> bool {
+        line > 0 && line <= self.ledger_lines_at_sweep
+    }
+
     /// Is every process this round recorded verified dead?
     ///
     /// It is deliberately about the pids and not about the port: the OS can still

@@ -139,8 +139,8 @@ fn prompts_and_skills_confine_temporary_files_to_the_scratch_dir() {
         }
     }
     for (name, content) in [
-        ("godot-dev.md", delivered_skill("godot-dev.md")),
-        ("godot-testing.md", delivered_skill("godot-testing.md")),
+        ("bevy-dev.md", delivered_skill("bevy-dev.md")),
+        ("bevy-testing.md", delivered_skill("bevy-testing.md")),
     ] {
         assert!(
             content.contains("HOH_SCRATCH_DIR"),

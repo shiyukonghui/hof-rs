@@ -11266,3 +11266,149 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 - 过程错误（我的，记录在案）/ My own process error, recorded: B1 的验收是在实现者**完成消息之前**派发的，
   而实现者随后对报告做了准确性修订 ⇒ 该验收所审为**修订前**版本。与 DR-86 同类错误。规则再次确认：
   **未收到实现者完成消息前不派验收；任何子代理在仓库内工作时，我不碰仓库。**
+
+
+## D298 — the trust batch: identity becomes provable, the endpoint becomes attributable, and the cost driver is measured rather than guessed
+
+- 日期 / Date: 2026-10-05
+- 触发问题 / Trigger: round 2's two batteries were **not** taken from the artifact the round claimed —
+  the readiness probe accepted any process that answered `rpc.discover` on 15702, a stale game held the
+  port, and `launch.json` named only the pid the harness *hoped* for.  Nothing in the record could show
+  it (`.spec/bevy/TRUST-REPORT.md`).  The same batch had to attack the developer's cost and close a
+  credential leak in the tree.
+- 考虑的选项与否决 / Options and rejections:
+  1. 让 readiness 只认「进程名 + 二进制哈希」—— 否决：正在运行的 `hof_game.exe` 无法被打开校验（Windows
+     独占写锁），而哈希比对的是**磁盘上的文件**，不是**应答的那个进程**；round 1/2 的失败正是这个缺口。
+  2. 让 `answering_pid` 直接填 `spawned_pid` —— 否决：那是把"我们希望谁答"再抄一遍；round 3 已证这是同义反复。
+  3. 把 15702 换成随机端口以避免旧进程 —— 否决：端口是 PRD/契约的一部分（角色与电池都按它寻址），
+     换端口只会把"观测到错误的进程"变成"观测不到任何进程"，且不解决"谁在应答"。
+  4. 让 `verified` 依赖 TCP 表可读 —— 否决（当时）：把一项**证明**降级为一次 OS 查询的抛硬币；
+     代价是 `verified` 退化为"每次成功的启动都为真"（本轮招来的 RA-4，已在 D301 修正）。
+- 最终选择 / Decision:
+  **(a) 每次启动生成一个 nonce**（`uuid::Uuid::new_v4()`，**在 spawn 之前**，只经子进程环境变量
+  `HOF_GAME_PROCESS_NONCE` 传递），并把它加进冻结契约（第 8 个可反射面 `hof_game::contract::ProcessNonce`），
+  readiness = `rpc.discover` **且** 回读该 nonce 相等，否则 `LaunchError::IdentityMismatch` 并停掉子进程。
+  **(b) 端口必须先证明无人占用**（`port_is_free` 不设 `SO_REUSEADDR`），占用即 `EndpointBusy` 立即拒绝。
+  **(c) 每次启动把 `{pid, endpoint, nonce, launch_image}` 追加进 `launch-ledger.jsonl`，下一轮启动前
+  按台账逐 pid 收割并**验证死亡**；round 结束再跑一次 sweep（`round-stop.json`）。**（顺序见 D301-c：
+  台账写在 spawn **之后**，因为 pid 在 spawn 之前不存在；nonce 才是 spawn 之前就存在的那个值。）**
+  **(d) 执行的镜像先复制到 `runs/bevy-<round>/launch-image/<uuid>/` 再运行**，让 cargo 能重链构建产物
+  而角色的 `cargo build --offline` 不再撞上运行中文件的写锁，并同时记录 built/executed 两个摘要。
+  **(e) 成本先在**已录制的**轨迹上测量**：prompt token ≈ `4187 + 0.28 × 累计 wire bytes`，即**调用次数 ×
+  逐次累积的上下文**是唯一的成本驱动；system prompt 只占最终 prompt 的约 5%，轨迹里本地 `extra` 字节
+  （949 KB）从不发送。由此新增 `agent.max_repeated_actions=15` 与 `agent.steps_per_artifact=8`。
+  **(f) 凭证只从仓库之外加载**（`--env-from-secret <path>`，路径在仓库内即拒绝），
+  `config/model.secret.env` 从树中移除；round 1 的两份已录制证据仍含密钥，**报告指纹不打印值**，由所有者轮换。
+- 选择理由 / Why: 「观测属于哪个进程」必须是一个**可反驳的命题**，而反驳它最便宜的方式是让被观测者
+  持有一个**只有本次启动知道的值**；UUIDv4 的 122 位随机性让"旧进程恰好答对"不成立，而 OS 的 TCP 表
+  是第二个**互不相干**的读数（可以缺席、可以不一致，因此它是证据而不是装饰）。成本则必须先测量再动手，
+  否则任何"优化"都只是在猜。
+- 预期影响与回滚点 / Impact and rollback: 契约哈希由 `792001e7…` 变为 `c579a742…`（第 8 面），
+  在契约模块、`bevy_adapter_b2` 字面量与三处测试中重钉；`launch.json` 增加 `identity` 对象与
+  `executed_matches_built`。回滚点：契约哈希回到七面版本，`launch-ledger`/`round-stop` 可整目录删除
+  （它们是**记录**，不参与 A_t 哈希）。
+
+
+## D299 — rounds 3 and 4: the progress budget follows the write, the tripwire restarts on it, and the round-4 identity fields are computed
+
+- 日期 / Date: 2026-10-05
+- 触发问题 / Trigger: round 3 的三次 Developer 调用**全部**在恰好 43 步被 `LimitsExceeded` 切断，而同一个
+  prompt 却写着「第一次成功写入即解除闸门」——闸门值在调用开始前被读一次并冻结进 `AgentConfig`，调用内的
+  写入无法解锁（`ROUND-3-REPORT.md` §2）。round 4 的第一次真实运行又暴露第二个单位错误：guard 按**动作**计数，
+  而一次模型响应可带多个动作，于是「prompt 说 43」的调用在第 30 次模型调用就被切掉（`NoEngineeringWrite`，exit 2）。
+  同时 round 3 的 `identity.verified`/`answering_pid` 仍是字面量（见 D298 的 ②）。
+- 考虑的选项与否决 / Options and rejections:
+  1. 把 `AgentConfig.step_limit` 直接设成 gated 的 43，并在 prompt 里只写 43 —— 否决：那是 round 3 的原样重演，
+     而且等于承认「写入不解锁」，与产品承诺相反。
+  2. 让 guard 在**每个动作**执行前检查 `n_calls` —— 否决：一个响应里的多个动作会共用同一个步号，
+    检查点因此比模型调用**更密**，与 prompt 的单位仍然不一致（round-4 首次尝试的实测：30 次调用 / 44 个动作）。
+  3. 用 `max_repeated_actions`（当时是"整调用内同一动作成功次数"）作为唯一的成本闸 —— 否决：它会把**正常的
+     编辑→重建节奏**也计入（round 2 的 iter-2、round 3 的三次调用都是这种节奏），
+     于是计数器在**写出产物时清零**（round-4 修正①）。
+  4. `identity.verified` 继续写成 `true`、`answering_pid` 继续抄 `spawned_pid` —— 否决：round 3 已证这是同义反复，
+     必须**由事实计算**（本轮只做到"非空 nonce"，见 D301-a 的进一步修正）。
+- 最终选择 / Decision:
+  **(a) 闸门在**每一步**现场读、现场执行**：`WriteGuardEnvironment::step_budget_exceeded()` 每次问
+  `effective_step_budget()`；`AgentConfig.step_limit` 只放**平顶** 150；prompt 的三处数字（平顶、当前生效值、
+  wrap-up 起点）由 `state_the_effective_budget` 写一次且各说各的真话。
+  **(b) 一步 = 一次模型调用**：计数发生在 `CountingModel`（模型边界），guard 共享同一个 `StepCounter`；
+  guard 在未共享计数器时**不生效**（宁可不测，也不再用第二个单位测）。
+  **(c) 动作键折叠"不改变动作"的写法**：`cd /d … &&` 前缀、`& echo …=%ERRORLEVEL%` 尾部、
+  `| more/head/tail/find/findstr` 过滤、`2>&1`/`>nul` 重定向；计数在**写出自己申明的产物**时清零。
+  **(d) round-4 的两个 identity 字段改由 `identity_fields(&facts)` 计算**，并把 `verified_rule` 写进记录本身。
+  **(e) round-stop sweep**：round 结束时收割**台账里每一个** pid（不只是当前那个），记录 `still_alive`
+  与 `endpoint_holder`；round 3 退出 0 却留下 pid 54568 持有 15702 的那类事实从此有文件可查。
+- 选择理由 / Why: prompt 里的每个数字都必须等于**执行点实际使用的**数字，否则就是在制造"文档说的"与"代码做的"
+  两套事实——这正是 round 3 的缺陷形态，也是本项目反复付出代价的假绿来源。把计数放在模型调用处，
+  是因为 prompt 的单位就是模型调用；把身份字段改成计算值，是因为**只有独立读数才能反驳结论**。
+- 预期影响与回滚点 / Impact and rollback: `config/hoh.yaml` 新增 `max_repeated_actions`/`steps_per_artifact`
+  两个已测量值；`src/harness/guard.rs` 与 `src/harness/mini.rs` 是执行点；round 4 的三次 Developer 调用
+  （69/125/102 calls，全以 `RepeatedActionError` 结束）是新行为的第一次真实观测。回滚点：两个配置值置 0
+  即回到"平顶 150 + 无重复闸门"的旧行为，`mini::CountingModel` 可退回 `DefaultAgent::run`。
+
+
+## D300 — the cost batch: the prompt is the accumulated history, so the history is folded; the tripwire stops counting productive repeats; and the acceptance's defects are closed or declared
+
+- 日期 / Date: 2026-10-05
+- 触发问题 / Trigger: 独立验收（`.spec/bevy/ACCEPTANCE-ROUNDS.md`）判 round 4 为 `pass_with_defects`，其中
+  **唯一未过**的是成本判据：Developer 三次调用 296 calls / 20,940,837 tokens / 98.6 分钟，per-call 2.63M–13.09M，
+  远高于 1.5M 目标；同时台账列出 RA-1..RA-9 九项缺陷，以及一项「重复动作闸门在**产物已写出之后**的合法工作上
+  恰好 15 次触发」的未验证项。基础设施失败还毁掉了整整一次 ~90 分钟的尝试而无从续跑。
+- 考虑的选项与否决 / Options and rejections:
+  1. 只调 `max_repeated_actions`（例如 15 → 40）—— 否决：那是把"闸门误伤"改小而不是改对；
+     验收已建立的事实是三次调用**都在合法工作**上被切，调大只是把触发点推后，语义仍然错。
+  2. 靠降低 `max_tool_output_bytes`（64 KiB）省 token —— 否决：TRUST 报告已实测代价是**调用次数 × 累积上下文**，
+     单条输出的上限只影响少数几次调用；且下调会截断 Tester 引用的证据。
+  3. 在 trajectory 里"事后压缩"（只改记录、不改发送）—— 否决：账单由**发送**决定，
+     改记录是伪造证据且省不到一分钱。
+  4. 把压缩做成每步都重新总结（模型调用 summarise）—— 否决：离线批次无法产生模型调用，
+     且总结本身要花 token；确定性折叠可以用**已测量的字节数**直接验收。
+  5. `--resume` 做**调用内**续跑（从角色调用的中途继续）—— 否决： harness 没有角色级 checkpoint，
+     Developer 通过写指令**就地**改工作区，调用内不存在一个能把半成品安全交给新调用的点；
+     假装能做等于伪造续跑（见"最终选择 (d)"）。
+- 最终选择 / Decision:
+  **(a) 上下文折叠**（`src/harness/compact.rs`）：system prompt 与 task 永不折叠，**最后 12 条**消息永远原文发送，
+  其余消息把已被消费的载荷折成「摘要 + 首行 + 字节数」，折叠在**发送点**发生且落在 agent 自己的历史上，
+  因此 trajectory 记录的正是被发送的东西（没有第二份隐藏上下文）。开关 `agent.compact_history` /
+  `compact_history_tail`，`false` 即旧行为。**测量方法**：在**已录制**轨迹上按"调用前消息前缀"重放，
+  用提供方自己报告的 `usage.prompt_tokens` 拟合 `tokens = a + r × wire_bytes`（round 4 三次调用 296 个数据点，
+  `r = 0.2553…0.2601`，拟合复现每个调用自身的总额到 0.01% 以内），再把折叠后的 wire bytes 换算成 token；
+  **不运行 round**，不给公式，全部来自记录的数字。结果（tail=12）：iter-1 2,544,563 → 875,647、
+  iter-2 12,765,478 → 2,681,282、iter-3 5,137,090 → 1,663,325，即 per-call 平均约 72,939 → 18,300；
+  折叠后**system prompt（14.8 KB）成为最大单项**（约占折叠后 prompt 的三成）。
+  **(b) 闸门的语义改对**：`max_repeated_actions` 现在只统计**结果字节完全相同**的连续成功
+  （自上次写出申明产物以来）。因此"还在产生新信息的 build/verify 循环"不再触发——round 4 的三次调用在
+  新规则下根本不会触发（实测最大仅 2），而 round 2 那种真正的 grind 仍会被抓（同口径实测 22）。
+  结论照实说：**闸门现在是"无进展"的守卫，不再是成本控制手段**；成本由 (a) 承担。
+  **(c) RA-1..RA-9 逐项处置**（每一项都在 `.spec/bevy/COST-REPORT.md` 里带证据）：RA-1 台账顺序的假声明
+  （代码注释、台账 `note`、两份报告）改为事实；RA-6 旧引擎的两份 prompt（`godot-dev.md` 17,451 B、
+  `godot-testing.md` 5,160 B）**从树中删除**，原读它们的 prompt 纪律测试**改读 Bevy 两份书**（覆盖不减：
+  可执行配方、scratch 写入、受众规则都保留）；RA-2 修正被引用文件的帧号（495，非 477）并把被引文件写进
+  引用文本；RA-3 `round-stop.json` 增加 `ledger_lines_at_sweep` 与 `sweep_covers_ledger_line`，
+  让"这份快照覆盖哪次启动"可由文件本身回答；RA-4 `identity.verified` 改为三个读数的合取
+  （nonce 非空 ∧ `answered_nonce` 等于它（新增字段，readiness 回读值）∧ OS 把 spawned_pid 命名为 listener），
+  并且 `verified_game_endpoint` 不再写死 `Some(true)`；RA-5 PRD 覆盖率行的分母**在行内**说清
+  （"Tester 自己的 claim 数，不是 F1..F17，跨轮不可比"）；RA-8 `e3_win_position` 与 `e3_grounded_payload`
+  在记录里带 `definitional: true` 与理由；RA-9 `parse_listener_pid` 不再回退到非 LISTEN 的持端口者。
+  **(d) `--resume` 的**范围被显式限定**：`result.json` 为 `ok:true` 的迭代**不重跑**（其 usage/gate/version
+  被带进本次 summary），**第一个未完成的迭代从它的起点重跑**；run 目录必须已存在，与 `--fresh-workspace`/
+  `--reset-workspace` 互斥。理由与代价写在 `Orchestrator::resume` 的文档注释与 `RUN-5` 警告里：
+  **不做**调用内续跑，因为不存在安全的续跑点。
+  **(e) `tests/brp_connection_pool.rs` 缺 `cfg!(windows)` 的测试补上守卫**（同级测试本就有），
+  因为它依赖的 abortive close（`SO_LINGER 0`）只在 Windows 设置。
+- 选择理由 / Why: 账单由**发送的字节**决定，所以必须在发送点折叠，并且必须用**已录制的**数字证明折叠有效——
+  离线批次里任何"应该更快"的说法都不算证据。闸门的名字承诺了一件事（"重复=无进展"），
+  代码就必须只做那一件事；名称与实现不一致本身就是缺陷，和 round 3 的"prompt 说 43、执行按 43 冻结"同源。
+  缺陷清单要么修、要么**明确声明不修并给出理由**，不能沉默。
+- 预期影响与回滚点 / Impact and rollback: 影响的执行点是 `harness::{compact,mini,guard}`、`config`、
+  `adapter::{bevy::{launch,mod,project,round,battery},engine}`、`cli{,impl}`、`errors` 与若干测试；
+  新增 `tests/context_compaction.rs`（折叠的 before/after 测量）与 `tests/resume_round.rs`（续跑范围的算术）。
+  回滚点：`compact_history=false` 回到旧行为；`--resume` 只读 run 目录，不改变任何既有记录；
+  被删除的两份 Godot prompt 在 git 历史中可寻（本批次不提交，故也只在工作区中被删）。
+- 明确不修 / Declared, not fixed（详见报告"what I could not verify"与"the single most important thing"）:
+  1. **`--resume` 不能从一次角色调用的中途续跑**，只从该迭代起点重跑；这是能力边界，不是待办。
+  2. **1.5M/call 目标仍未达成**：折叠后三次 Developer 调用合计约 5.22M（per-call 平均约 18.3K），
+     比记录的 20.94M 低约 75%，但单轮总量仍在百万级；下一批要动的是**调用次数**（系统提示与工具面）而不是上下文。
+  3. 旧引擎的**引擎身份**字符串仍留在 `src/adapter/engine.rs`（`ENGINE_KIND_GODOT` 与 doctor 项）：
+     那是路由机制的历史，不是发给角色的 prompt 材料；本轮只删除**交付给角色的旧引擎 prompt**。
+  4. round 4 的报告正文冻结不改，只修正 RA-2 那一行**事实错误**的引用（并在行内注明更正来源）。

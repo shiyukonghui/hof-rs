@@ -62,14 +62,20 @@ fn read_json(path: &Path) -> serde_json::Value {
     serde_json::from_slice(&bytes).unwrap_or_else(|error| panic!("{}: {error}", path.display()))
 }
 
-/// One recorded tool call: the normalised action key, and whether it is a
-/// successful write of the role's declared artifact.
+/// One recorded tool call: the normalised action key, whether it is a
+/// successful write of the role's declared artifact, and a fingerprint of the
+/// result the action produced.
 struct RecordedCall {
     key: String,
     /// A directive write to a path the guard counts as the Developer's artifact.
     /// The rule is the guard's own ([`ArtifactKind::counts`]), not a copy: a test
     /// that decides for itself which writes are progress can prove anything.
     is_artifact_write: bool,
+    /// The bytes the action returned, and the process's own success flag.  The
+    /// round-5 tripwire counts a repetition only when this is **unchanged**, so
+    /// the projection needs it.
+    observation_len: usize,
+    succeeded: bool,
 }
 
 /// Every tool call in a recorded trajectory, in order, paired with the **API
@@ -88,20 +94,34 @@ fn recorded_calls(trajectory: &serde_json::Value) -> (Vec<(usize, RecordedCall)>
     let kind = ArtifactKind::for_role(Role::Developer);
     let mut calls = Vec::new();
     let mut api_index = 0usize;
-    for message in trajectory["messages"]
+    for (position, message) in trajectory["messages"]
         .as_array()
         .cloned()
         .unwrap_or_default()
+        .into_iter()
+        .enumerate()
     {
         if message["extra"]["response"]["usage"].is_null() {
             continue;
         }
         api_index += 1;
-        for call in message["tool_calls"]
+        let actions = message["tool_calls"]
             .as_array()
             .cloned()
-            .unwrap_or_default()
-        {
+            .unwrap_or_default();
+        // The observations that follow this response, one per action, in order.
+        let all = trajectory["messages"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        let mut observations: Vec<String> = Vec::new();
+        for next in all.iter().skip(position + 1) {
+            if next["role"] != "tool" || observations.len() >= actions.len() {
+                break;
+            }
+            observations.push(next["content"].as_str().unwrap_or("").to_string());
+        }
+        for (index, call) in actions.iter().enumerate() {
             let arguments = call["function"]["arguments"]
                 .as_str()
                 .or_else(|| call["arguments"].as_str())
@@ -120,11 +140,19 @@ fn recorded_calls(trajectory: &serde_json::Value) -> (Vec<(usize, RecordedCall)>
                 Directive::Write { path, .. } => kind.counts(&path),
                 _ => false,
             };
+            let observation = observations.get(index).cloned().unwrap_or_default();
+            let succeeded = observation
+                .split_once("<returncode>")
+                .and_then(|(_, rest)| rest.split_once("</returncode>"))
+                .and_then(|(code, _)| code.trim().parse::<i32>().ok())
+                == Some(0);
             calls.push((
                 api_index,
                 RecordedCall {
                     key: repeated_action_key(&command),
                     is_artifact_write,
+                    observation_len: observation.len(),
+                    succeeded,
                 },
             ));
         }
@@ -190,6 +218,44 @@ fn repeats_since_last_write(
     (top_repeats(&best), abort_at)
 }
 
+/// The round-5 tripwire's own count: one action's consecutive successes whose
+/// **result was byte-identical**, since the call last wrote its artifact.
+///
+/// It is the same window as [`repeats_since_last_write`] with the round-5 rule
+/// applied, so the difference between the two columns is exactly what the
+/// semantics change bought.
+fn identical_repeats_since_last_write(
+    calls: &[(usize, RecordedCall)],
+    cap: usize,
+) -> (Vec<(String, usize)>, Option<usize>) {
+    let mut runs: BTreeMap<String, (usize, usize)> = BTreeMap::new();
+    let mut best: BTreeMap<String, usize> = BTreeMap::new();
+    let mut abort_at = None;
+    for (api_index, call) in calls {
+        if call.is_artifact_write {
+            runs.clear();
+            continue;
+        }
+        if !call.succeeded {
+            continue;
+        }
+        let run = runs.entry(call.key.clone()).or_insert((usize::MAX, 0usize));
+        run.1 = if run.0 == call.observation_len {
+            run.1 + 1
+        } else {
+            1
+        };
+        run.0 = call.observation_len;
+        let count = run.1;
+        let entry = best.entry(call.key.clone()).or_insert(0);
+        *entry = (*entry).max(count);
+        if count >= cap && abort_at.is_none() {
+            abort_at = Some(*api_index);
+        }
+    }
+    (top_repeats(&best), abort_at)
+}
+
 /// The same count **without** the restart, so the difference the round-4 repair
 /// makes is a measured number rather than a claim.
 fn repeats_in_the_whole_call(calls: &[(usize, RecordedCall)]) -> Vec<(String, usize)> {
@@ -215,12 +281,17 @@ fn top_repeats(counts: &BTreeMap<String, usize>) -> Vec<(String, usize)> {
 struct Projection {
     tool_calls: usize,
     api_calls: usize,
+    counted_writes: usize,
     observed_prompt_tokens: u64,
     abort_at: Option<usize>,
     capped_prompt_tokens: u64,
     /// The highest count one action reached in any post-write window.
     most_repeated_window: Vec<(String, usize)>,
     most_repeated_whole_call: Vec<(String, usize)>,
+    /// Round-5: the same window counted by **identical results only**.
+    most_identical_window: Vec<(String, usize)>,
+    identical_abort_at: Option<usize>,
+    identical_capped_prompt_tokens: u64,
 }
 
 fn project(path: &Path, cap: usize) -> Projection {
@@ -229,6 +300,8 @@ fn project(path: &Path, cap: usize) -> Projection {
     let usage = prompt_tokens_by_call(&trajectory);
     let observed: u64 = usage.values().sum();
     let (most_repeated_window, abort_at) = repeats_since_last_write(&calls, cap);
+    let (most_identical_window, identical_abort_at) =
+        identical_repeats_since_last_write(&calls, cap);
     let capped: u64 = usage
         .iter()
         .filter(|(index, _)| match abort_at {
@@ -237,14 +310,29 @@ fn project(path: &Path, cap: usize) -> Projection {
         })
         .map(|(_, tokens)| *tokens)
         .sum();
+    let identical_capped: u64 = usage
+        .iter()
+        .filter(|(index, _)| match identical_abort_at {
+            Some(limit) => **index <= limit,
+            None => true,
+        })
+        .map(|(_, tokens)| *tokens)
+        .sum();
     Projection {
         tool_calls: calls.len(),
         api_calls,
+        counted_writes: calls
+            .iter()
+            .filter(|(_, call)| call.is_artifact_write)
+            .count(),
         observed_prompt_tokens: observed,
         abort_at,
         capped_prompt_tokens: capped,
         most_repeated_window,
         most_repeated_whole_call: repeats_in_the_whole_call(&calls),
+        most_identical_window,
+        identical_abort_at,
+        identical_capped_prompt_tokens: identical_capped,
     }
 }
 
@@ -277,15 +365,16 @@ fn the_recorded_round_two_developer_really_repeats_one_action_past_the_cap() {
     );
 }
 
-/// Round-4 repair: the tripwire **fires on the recorded grind** and, with the
-/// corrected counter, fires inside the window that matters — the stretch after
-/// the call's last write.  The projection is arithmetic over the recorded
-/// per-call prompt tokens, not a claim about a real run, and the arithmetic is
-/// printed so the report can quote it.
+/// Round-4 measured the tripwire's window count on the recorded grind; round 5
+/// re-measured the same window under the rule that tripwire now implements (a
+/// repetition is only a repetition when the **result is unchanged**).  Both
+/// numbers are pinned, because the difference between them is the whole reason
+/// the semantics changed: the recorded loop's results kept changing, so what the
+/// old counter called 22 repeats the new one correctly calls a run of measurements.
 ///
-/// What the round-4 repair changed is visible in the two figures: the whole-call
-/// count is larger than the current-window count, and it is the current-window
-/// count that the guard now keeps.
+/// The projection is arithmetic over the recorded per-call prompt tokens, not a
+/// claim about a real run, and the arithmetic is printed so the report can quote
+/// it.
 #[test]
 fn the_repeated_success_tripwire_fires_on_the_recorded_grind() {
     let path =
@@ -293,14 +382,40 @@ fn the_repeated_success_tripwire_fires_on_the_recorded_grind() {
     let projection = project(&path, 15);
     println!(
         "iter-1: api_calls={} tool_calls={} observed_prompt_tokens={} window_max={:?} \
-         whole_max={:?} abort_at={:?} capped_prompt_tokens={}",
+         whole_max={:?} abort_at={:?} capped_prompt_tokens={} identical_max={:?} \
+         identical_abort_at={:?} identical_capped={}",
         projection.api_calls,
         projection.tool_calls,
         projection.observed_prompt_tokens,
         projection.most_repeated_window.first(),
         projection.most_repeated_whole_call.first(),
         projection.abort_at,
-        projection.capped_prompt_tokens
+        projection.capped_prompt_tokens,
+        projection.most_identical_window.first(),
+        projection.identical_abort_at,
+        projection.identical_capped_prompt_tokens,
+    );
+    // Round-5: the same window under the rule the tripwire now implements.  The
+    // recorded loop's results change on every run (`cargo build` prints a
+    // different "Finished in" line), so the honest count of *identical* results is
+    // 2 — and that is why the old rule fired on work that was still producing
+    // something, and why it no longer does.  The curve's two real firing shapes
+    // (a command repeated with one unchanged answer) are pinned by the guard's
+    // own tests, which is where a rule belongs.
+    assert!(
+        projection
+            .most_identical_window
+            .first()
+            .map(|(_, count)| *count)
+            .unwrap_or(0)
+            <= 2,
+        "the recorded grind's results were not byte-identical, so the round-5 counter must not \
+         count them as repetitions: {:?}",
+        projection.most_identical_window
+    );
+    assert!(
+        projection.identical_abort_at.is_none(),
+        "and it must therefore not have aborted that call: {projection:?}"
     );
     assert_eq!(
         projection.api_calls, 150,
@@ -353,6 +468,44 @@ fn the_repeated_success_tripwire_fires_on_the_recorded_grind() {
         fraction * 100.0,
         projection.observed_prompt_tokens,
         projection.capped_prompt_tokens as f64
+    );
+}
+
+/// Round-4's own Developer calls, measured with the repository's key: what the
+/// abort of criterion `C10` actually counted, and whether the repeats it saw
+/// were *identical repeats* (an unproductive loop) or repeats whose result
+/// changed (a build/test cycle that was still producing information).
+#[test]
+fn the_round_four_developer_repeats_are_measured_and_not_assumed() {
+    let mut measured = 0usize;
+    for iteration in ["iter-1", "iter-2", "iter-3"] {
+        let Some(path) = trajectory("round4", iteration) else {
+            continue;
+        };
+        measured += 1;
+        let projection = project(&path, 15);
+        println!(
+            "{iteration}: api_calls={} tool_calls={} writes={} window_max={:?} whole_max={:?} \
+             abort_at={:?} capped={} identical_max={:?} identical_abort_at={:?} identical_capped={}",
+            projection.api_calls,
+            projection.tool_calls,
+            projection.counted_writes,
+            projection.most_repeated_window.first(),
+            projection.most_repeated_whole_call.first(),
+            projection.abort_at,
+            projection.capped_prompt_tokens,
+            projection.most_identical_window.first(),
+            projection.identical_abort_at,
+            projection.identical_capped_prompt_tokens,
+        );
+        assert!(
+            projection.api_calls > 40,
+            "{iteration} is one of the recorded Developer calls: {projection:?}"
+        );
+    }
+    assert_eq!(
+        measured, 3,
+        "the three round-4 Developer calls are the evidence"
     );
 }
 

@@ -196,33 +196,59 @@ async fn the_scratch_discipline_the_prompts_state_really_works() {
 
 /// The same discipline as written in the skills.  The recipes use the variable
 /// inside quotes, so the claim is: the quoted form is what the shell expands.
+///
+/// Round-5 repair (defect RA-6): the book under test is the Bevy one, and the
+/// scratch writer it teaches is the **write directive** — which the guard, not
+/// `cmd.exe`, executes.  The test therefore drives the real
+/// [`hof_rs::harness::guard::WriteGuardEnvironment`] with the exact line the
+/// delivered skill shows, and asserts the file lands under scratch and nowhere
+/// else.  The coverage the old Godot-shaped version had (a scratch writer the
+/// skill teaches really works) is unchanged; only the document and the mechanism
+/// under test are this engine's.
 #[tokio::test]
 async fn the_skill_scratch_writer_runs_and_lands_under_scratch() {
     let (_temp, view) = view_with_scratch();
-    let dev_skill = delivered_skill("godot-dev.md");
+    let dev_skill = delivered_skill("bevy-dev.md");
     let scratch = scratch_var();
 
-    let block = fenced_blocks(&dev_skill)
-        .into_iter()
-        .find(|block| block.contains(&scratch) && block.contains("errors.json"))
-        .unwrap_or_else(|| {
-            panic!("the skill must show a quoted scratch writer using {scratch}:\n{dev_skill}")
-        });
-    // Take only the "good" line; the block also shows a deliberately bad one.
-    let good = block
-        .lines()
-        .find(|line| line.contains(&scratch) && line.contains("errors.json"))
-        .expect("the good example line")
-        .trim();
-
-    let (output, returncode) = run(&view, good).await;
-    assert_eq!(
-        returncode, 0,
-        "the skill's own scratch recipe must run: {good:?}\n{output}"
+    // The skill must name the scratch directory, and must teach the directive.
+    assert!(
+        dev_skill.contains(&scratch),
+        "the skill must name the scratch directory as `{scratch}`"
     );
     assert!(
+        dev_skill.contains("HOH_WRITE_FILE .hoh/scratch/"),
+        "the skill must teach the write directive for scratch files:\n{dev_skill}"
+    );
+
+    let environment = hof_rs::harness::WriteGuardEnvironment::new(
+        Box::new(LocalEnvironment::new(
+            mini_swe_agent::environments::LocalEnvironmentConfig {
+                cwd: view.to_string_lossy().into_owned(),
+                env: role_env(&view)
+                    .into_iter()
+                    .map(|(key, value)| (key, Value::String(value)))
+                    .collect(),
+                timeout: 60,
+            },
+        )),
+        view.clone(),
+        3,
+        0,
+    );
+    let write = "HOH_WRITE_FILE .hoh/scratch/errors.json\n{\n}\nHOH_END_WRITE_FILE";
+    let output = environment
+        .execute(&Action::new(write), None, Some(60))
+        .await
+        .expect("the guard runs the directive itself");
+    assert_eq!(
+        output.returncode, 0,
+        "the directive must succeed: {output:?}"
+    );
+
+    assert!(
         view.join(".hoh/scratch/errors.json").is_file(),
-        "`{good}` must create `.hoh/scratch/errors.json`, not a stray file"
+        "the skill's own scratch recipe must create `.hoh/scratch/errors.json`"
     );
     assert!(
         !view.join("errors.json").exists(),
@@ -234,7 +260,7 @@ async fn the_skill_scratch_writer_runs_and_lands_under_scratch() {
 // ② the recipe-book contract is executable
 // ---------------------------------------------------------------------------
 
-/// `godot-dev.md` is a recipe book: its commands must be runnable in the role's
+/// `bevy-dev.md` is a recipe book: its commands must be runnable in the role's
 /// real shell.
 ///
 /// Static form (kept in `tests/developer_contract.rs`): the delivered text
@@ -244,12 +270,16 @@ async fn the_skill_scratch_writer_runs_and_lands_under_scratch() {
 /// the line is executed in a real `LocalEnvironment`.  The stub records its
 /// argument list, so the marker proves that this command — not a rewritten
 /// copy of it — started the binary.
+///
+/// Round-5 repair (RA-6): the book is the Bevy one; `running_game_*` recipes and
+/// the previous engine's editor verbs are gone, and the recipe that is extracted
+/// is one of this project's `bevy_*` tools.
 #[tokio::test]
 async fn the_recipe_books_first_concrete_command_runs_in_the_role_shell() {
     let (_temp, view) = view_with_scratch();
     let bin = stub_binary(&view);
 
-    let dev_skill = delivered_skill("godot-dev.md");
+    let dev_skill = delivered_skill("bevy-dev.md");
     let (command, tool) = first_concrete_recipe(&dev_skill);
     assert!(
         command.contains(&tool),
@@ -300,7 +330,7 @@ fn first_concrete_recipe(skill: &str) -> (String, String) {
             return (line.to_string(), tool.to_string());
         }
     }
-    panic!("godot-dev.md has no concrete `tools call` recipe");
+    panic!("bevy-dev.md has no concrete `tools call` recipe");
 }
 
 // ---------------------------------------------------------------------------

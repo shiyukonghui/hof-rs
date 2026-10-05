@@ -124,19 +124,30 @@ pub enum FailFast {
         command: String,
         failures: u32,
     },
-    /// Round-2 repair (cost batch): the same action kept **succeeding** in one
-    /// call.  Round 2's Developer ended iteration 1 with about seventy calls of
-    /// one verification loop, every one of them `returncode 0`; the per-action
+    /// Round-2 repair (cost batch), re-defined by the round-5 cost repair: the
+    /// same action kept **succeeding with the same result** in one call, and no
+    /// artifact write happened in between.
+    ///
+    /// Round 2's Developer ended iteration 1 with about seventy calls of one
+    /// verification loop, every one of them `returncode 0`; the per-action
     /// counter could not see it because it only counted failures, and a
     /// *consecutive* counter could not see it either because the loop spelled
-    /// itself with several filters.  The count is therefore the action's successes
-    /// **in one stretch between counted writes** (round-4 repair): a write of the
-    /// declared artifact is progress and restarts it, because counting across one
-    /// cannot tell "this call is not producing" from "this call is editing and
-    /// rebuilding".
+    /// itself with several filters.  Round 4 added the count of successes since
+    /// the last counted write — and that count then fired on **all three** of
+    /// its own Developer calls at exactly 15, always on a `cargo build` whose
+    /// output was 225, 130, 354, … bytes, i.e. on a loop that was still
+    /// producing a new result each time (`COST-REPORT.md` §2, measured).  A cap
+    /// that ends a call which is still learning something is a cap on work, not
+    /// a guard against grind.
+    ///
+    /// The definition is therefore the one the word means: `repeats` successes of
+    /// one action, **every one of them with the same output as the one before
+    /// it**, since the last write of the declared artifact.  An action whose
+    /// result changes is a measurement, not a repetition, and restarts the run.
     RepeatedSuccess {
         command: String,
-        /// How many times this action succeeded in the stretch that tripped it.
+        /// How many times this action succeeded **with the same result** in the
+        /// run that tripped it.
         repeats: u32,
         /// A short fingerprint of the last result, so the abort message says
         /// *what* came back without replaying it.
@@ -193,11 +204,12 @@ impl FailFast {
                 output_digest,
             } => format!(
                 "{FAIL_FAST_MARKER} {REPEATED_ACTION_STATUS}: the same action succeeded {repeats} \
-                 times since this call last wrote the artifact it declares (last output \
-                 {output_digest}) (`agent.max_repeated_actions`, re-read here, at the point of \
-                 enforcement); the action is:\n{}\nIt is not making progress: choose a different \
-                 action, or write the artifact you have and end the call with the completion \
-                 protocol.",
+                 times with the SAME result since this call last wrote the artifact it declares \
+                 (last output {output_digest}) (`agent.max_repeated_actions`, re-read here, at the \
+                 point of enforcement); the action is:\n{}\nIt is not making progress: the result \
+                 is byte-identical every time, so no further run of it can change anything. Choose \
+                 a different action, or write the artifact you have and end the call with the \
+                 completion protocol.",
                 brief(command)
             ),
             FailFast::ArtifactBudget {
@@ -257,30 +269,42 @@ struct GuardState {
     /// Failures per action signature.  A success of the *same* signature clears
     /// it; nothing else does, which is the difference from "consecutive".
     failures: BTreeMap<String, u32>,
-    /// Round-2 repair (cost batch): how many times each action has **succeeded**
-    /// in this call.  Unlike [`GuardState::failures`], this counter is never
-    /// cleared by another action: an action that runs four times early and four
-    /// times late is still eight runs of the same action, which is exactly the
-    /// shape round 2's verification loop had (about seventy calls of one loop,
-    /// spelled with several filters so that no *consecutive* counter saw it).
+    /// Round-2 repair (cost batch), re-defined by the round-5 cost repair.  The
+    /// counter answers "is this call making progress?", so it counts the
+    /// **unproductive** half of a repetition: successes of one action whose
+    /// result is byte-identical to the one before it, since the call last wrote
+    /// the artifact it declares.
     ///
-    /// Round-4 repair: it **is** cleared by a successful write of the role's
-    /// declared artifact.  The counter answers "is this call making progress?",
-    /// and a write is progress; counting across one makes a legitimate
-    /// edit/rebuild cadence (round 2's iteration 2, and all three round-3
-    /// Developer calls) look like the grind this counter exists to catch.  See
-    /// [`WriteGuardEnvironment::record_success`].
-    /// Round-4 repair: the model-call count lives in the shared [`StepCounter`],
-    /// not here.  This struct counts what the environment itself observes — the
-    /// failures and the successes of actions, and whether the artifact was written
-    /// — and deliberately no longer counts "steps": an action is not a step, and
-    /// two units for one number is how the first attempt was mislabelled.
-    successes: BTreeMap<String, u32>,
+    /// Round-4 counted every success of one action in that window, and its own
+    /// round measured what that does (`.spec/bevy/COST-REPORT.md` §2): all three
+    /// Developer calls were aborted at exactly 15 on a `cargo build` whose output
+    /// was 225, then 130, then 354, … bytes — i.e. on a loop that was producing a
+    /// new result every time.  A result that changes is information; a result
+    /// that does not is the definition of the grind.  A counted write clears the
+    /// run (progress restarts the question), and so does a changed result.
+    ///
+    /// The model-call count lives in the shared [`StepCounter`], not here: an
+    /// action is not a step, and two units for one number is how round 4's first
+    /// attempt was mislabelled.
+    successes: BTreeMap<String, RepeatRun>,
     /// The first successful write of a **project** file (not `.hoh/**`, not a
     /// cache) — the artifact the budget is about.
     artifact_written: bool,
     /// A successful write of any file, for the record.
     writes: u64,
+}
+
+/// Round-5 cost repair: how many times one action has succeeded with **the same
+/// result** since the call last wrote its declared artifact.
+///
+/// It is a value so the rule the guard applies can be read off the state in a
+/// test rather than inferred from a `BTreeMap<String, u32>`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RepeatRun {
+    /// A short fingerprint of the last successful result of this action.
+    pub digest: String,
+    /// How many consecutive successes carried exactly this digest.
+    pub repeats: u32,
 }
 
 impl GuardState {
@@ -290,6 +314,28 @@ impl GuardState {
             successes: BTreeMap::new(),
             artifact_written: false,
             writes: 0,
+        }
+    }
+
+    /// Record one successful result of `key` and answer the run it belongs to.
+    ///
+    /// A digest that differs from the previous one starts a new run at 1; the
+    /// same digest extends it.  This is the whole round-5 definition: only a
+    /// result that has already been seen, unchanged, counts as a repetition.
+    fn record_repeat(&mut self, key: String, digest: String) -> RepeatRun {
+        match self.successes.get_mut(&key) {
+            Some(run) if run.digest == digest => {
+                run.repeats += 1;
+                run.clone()
+            }
+            _ => {
+                let run = RepeatRun {
+                    digest: digest.clone(),
+                    repeats: 1,
+                };
+                self.successes.insert(key, run.clone());
+                run
+            }
         }
     }
 }
@@ -709,22 +755,18 @@ impl WriteGuardEnvironment {
         }
         let digest = output_digest(output);
         let key = repeated_action_key(command);
-        let count = {
-            let entry = state.successes.entry(key).or_insert(0u32);
-            *entry += 1;
-            *entry
-        };
-        if count < self.max_repeated_actions {
+        let run = state.record_repeat(key, digest);
+        if run.repeats < self.max_repeated_actions {
             return None;
         }
-        // One action may not run the whole call: the abort names the action, how
-        // many times it ran, and the last result, so the record says what the
-        // grind was.
+        // One action may not run the whole call with one unchanged result: the
+        // abort names the action, how many identical results it produced, and the
+        // last one, so the record says what the grind was.
         state.successes.clear();
         Some(FailFast::RepeatedSuccess {
             command: command.to_string(),
-            repeats: count,
-            output_digest: digest,
+            repeats: run.repeats,
+            output_digest: run.digest,
         })
     }
 
@@ -1087,7 +1129,8 @@ mod tests {
             );
             assert!(message.contains("cargo build --offline"), "{message}");
             assert!(
-                message.contains("succeeded 3 times since this call last wrote"),
+                message
+                    .contains("succeeded 3 times with the SAME result since this call last wrote"),
                 "the abort must say what happened: {message}"
             );
             assert!(
@@ -1484,7 +1527,7 @@ mod tests {
             assert!(
                 error
                     .to_string()
-                    .contains("succeeded 3 times since this call last wrote"),
+                    .contains("succeeded 3 times with the SAME result since this call last wrote"),
                 "{error}"
             );
         });
@@ -1807,6 +1850,129 @@ mod tests {
         });
         std::thread::sleep(Duration::from_millis(1_050));
         assert!(environment.budget_exceeded().is_none());
+    }
+
+    /// A shell whose results are scripted one per run: the tripwire reads
+    /// [`Output::output`], so this is where a test decides whether a repetition
+    /// was productive.
+    struct ScriptedShell {
+        results: std::sync::Mutex<std::collections::VecDeque<String>>,
+        fallback: String,
+    }
+
+    impl ScriptedShell {
+        fn new(results: &[&str]) -> Self {
+            Self {
+                results: std::sync::Mutex::new(results.iter().map(|s| s.to_string()).collect()),
+                fallback: "the same answer as last time".to_string(),
+            }
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl Environment for ScriptedShell {
+        async fn execute(
+            &self,
+            _action: &Action,
+            _cwd: Option<&str>,
+            _timeout: Option<u64>,
+        ) -> MiniResult<Output> {
+            let next = self
+                .results
+                .lock()
+                .ok()
+                .and_then(|mut queue| queue.pop_front())
+                .unwrap_or_else(|| self.fallback.clone());
+            Ok(Output::success(next, 0))
+        }
+        fn get_template_vars(&self) -> Value {
+            Value::Null
+        }
+        fn serialize(&self) -> Value {
+            Value::Null
+        }
+        fn cleanup(&self) -> anyhow::Result<()> {
+            Ok(())
+        }
+    }
+
+    /// Round-5 cost repair — the semantics this batch exists for.  A repeated
+    /// action whose **result changes** is a measurement, not a grind: round 4's
+    /// own three Developer calls were all aborted at exactly 15 on a `cargo build`
+    /// whose output was 225 / 130 / 354 / … bytes, i.e. on work that was still
+    /// producing something, and each of those calls had already written a valid
+    /// artifact.  With a cap of 3, four distinct results must all run.
+    #[test]
+    fn a_repeated_action_whose_result_changes_is_not_unproductive_repetition() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let environment = WriteGuardEnvironment::with_limits(
+            Box::new(ScriptedShell::new(&["one", "two", "three", "four"])),
+            directory.path().to_path_buf(),
+            3,
+            0,
+            ArtifactKind::ProjectFile,
+            3,
+            150,
+            25,
+            8,
+        );
+        futures_lite_block_on(async {
+            for attempt in 1..=4 {
+                environment
+                    .execute(&Action::new("cargo build --offline"), None, None)
+                    .await
+                    .unwrap_or_else(|error| {
+                        panic!("run {attempt} returned a new result and must be allowed: {error}")
+                    });
+            }
+        });
+    }
+
+    /// The other half of the same rule: when the result really does stop
+    /// changing, the counter fires — the grind is still caught.  Three distinct
+    /// results run; from the fourth on every result is the same, and the cap of 3
+    /// is reached on the sixth run of the action.
+    #[test]
+    fn a_repeated_action_whose_result_stops_changing_is_still_aborted() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let environment = WriteGuardEnvironment::with_limits(
+            Box::new(ScriptedShell::new(&["one", "two", "three"])),
+            directory.path().to_path_buf(),
+            3,
+            0,
+            ArtifactKind::ProjectFile,
+            3,
+            150,
+            25,
+            8,
+        );
+        futures_lite_block_on(async {
+            for attempt in 1..=3 {
+                environment
+                    .execute(&Action::new("cargo build --offline"), None, None)
+                    .await
+                    .unwrap_or_else(|error| panic!("run {attempt} is new information: {error}"));
+            }
+            for attempt in 4..=5 {
+                environment
+                    .execute(&Action::new("cargo build --offline"), None, None)
+                    .await
+                    .unwrap_or_else(|error| {
+                        panic!("run {attempt} is only the 2nd/3rd identical result: {error}")
+                    });
+            }
+            let error = environment
+                .execute(&Action::new("cargo build --offline"), None, None)
+                .await
+                .expect_err("the fourth identical result is the abort");
+            let message = error.to_string();
+            assert!(message.contains(FAIL_FAST_MARKER), "{message}");
+            assert!(message.contains(REPEATED_ACTION_STATUS), "{message}");
+            assert!(
+                message.contains("with the SAME result"),
+                "the abort must name the rule it applied: {message}"
+            );
+        });
     }
 
     /// The sentinel is the only channel the status has across mini's opaque

@@ -1,6 +1,6 @@
 //! The concrete harness: one fresh `mini_swe_agent::DefaultAgent` per call.
 //!
-//! Two details are load-bearing and must not be "simplified":
+//! Three details are load-bearing and must not be "simplified":
 //!
 //! 1. `system_template` / `instance_template` are *fixed* placeholders; the
 //!    role text travels as **template variable values**.  Values are never
@@ -9,81 +9,21 @@
 //! 2. `AgentConfig::cost_limit` is taken from limits and the default config
 //!    sets it to `0.0`: mini's own default of `3.0` would abort a local run
 //!    with `LimitsExceeded`.
+//! 3. The loop is [`crate::harness::compact::run_compacting_agent`], not
+//!    `DefaultAgent::run`, because the cost repair folds superseded history
+//!    **between** the steps — see that module for the measurement.
 
 use std::time::Instant;
 
 use mini_swe_agent::environments::{LocalEnvironment, LocalEnvironmentConfig};
 use mini_swe_agent::models::{ApiMode, LlmConnectorModel};
-use mini_swe_agent::{
-    Agent, AgentConfig, AgentError, AgentMode, DefaultAgent, Message, Model, Output,
-};
+use mini_swe_agent::{AgentConfig, AgentError, AgentMode, DefaultAgent};
 use serde_json::Value;
 
+use crate::harness::compact::{run_compacting_agent, CallProgress, CompactPolicy};
 use crate::harness::Harness;
 use crate::runtime::role::{RoleInvocation, RoleOutcome};
 use crate::runtime::usage::extract_usage;
-
-/// Round-4 repair: a model that counts its own calls, so the step budget the
-/// guard enforces is stated in the **same unit the prompt uses**.
-///
-/// mini's `DefaultAgent::check_limits` counts model calls (`n_calls`) and
-/// `AgentConfig.step_limit` is written in that unit.  The guard sits one layer
-/// below, where a single model response can carry several actions, so counting
-/// there measures something else — measured, not assumed: round 4's first attempt
-/// cut a Developer call after 30 model calls because its 30 responses emitted 44
-/// actions.  This wrapper is where the count is taken, and the guard reads the
-/// same counter.
-struct CountingModel {
-    inner: Box<dyn Model>,
-    steps: crate::harness::guard::StepCounter,
-}
-
-impl CountingModel {
-    fn new(inner: Box<dyn Model>, steps: crate::harness::guard::StepCounter) -> Self {
-        Self { inner, steps }
-    }
-}
-
-#[async_trait::async_trait]
-impl Model for CountingModel {
-    fn model_name(&self) -> &str {
-        self.inner.model_name()
-    }
-
-    async fn query(
-        &self,
-        messages: &[Message],
-        kwargs: Option<Value>,
-    ) -> mini_swe_agent::Result<Message> {
-        // The count is taken **before** the call, exactly as mini takes it: a
-        // failed query still consumed a step, so a broken provider cannot make a
-        // call's budget disappear.
-        self.steps.increment();
-        self.inner.query(messages, kwargs).await
-    }
-
-    fn format_message(&self, message: Message) -> mini_swe_agent::Result<Message> {
-        self.inner.format_message(message)
-    }
-
-    fn format_observation_messages(
-        &self,
-        message: &Message,
-        outputs: &[Output],
-        template_vars: &Value,
-    ) -> mini_swe_agent::Result<Vec<Message>> {
-        self.inner
-            .format_observation_messages(message, outputs, template_vars)
-    }
-
-    fn get_template_vars(&self) -> Value {
-        self.inner.get_template_vars()
-    }
-
-    fn serialize(&self) -> Value {
-        self.inner.serialize()
-    }
-}
 
 /// Round-1 write-path batch: what one finished `agent.run` means.
 ///
@@ -140,9 +80,11 @@ impl Harness for MiniHarness {
         let model = LlmConnectorModel::from_value_with_mode(inv.model.clone(), ApiMode::ToolCalls)
             .map_err(|error| anyhow::anyhow!("could not build the model: {error}"))?;
         // Round-4 repair: one step is one **model call**, counted where the calls
-        // are made, and the guard enforces the budget on the same count.
-        let steps = crate::harness::guard::StepCounter::new();
-        let model = CountingModel::new(Box::new(model), steps.clone());
+        // are made, and the guard enforces the budget on the same count.  The
+        // counter lives in the compacting loop's progress because the fold and
+        // the count happen at the same boundary.
+        let progress = CallProgress::default();
+        let steps = progress.steps.clone();
 
         let env_config = LocalEnvironmentConfig {
             cwd: inv.cwd.to_string_lossy().into_owned(),
@@ -230,7 +172,7 @@ impl Harness for MiniHarness {
             })?;
         }
 
-        let mut agent = DefaultAgent::new(Box::new(model), Box::new(environment), config);
+        let agent = DefaultAgent::new(Box::new(model), Box::new(environment), config);
         let task_text = match &inv.retry_context {
             Some(context) => format!("{}\n\n---\n\n{}", inv.task_prompt, context),
             None => inv.task_prompt.clone(),
@@ -238,36 +180,25 @@ impl Harness for MiniHarness {
         let kwargs = serde_json::json!({ "hoh_system_prompt": system_prompt });
 
         let started = Instant::now();
-        let result = agent.run(&task_text, Some(kwargs)).await;
-        let duration_ms = started.elapsed().as_millis() as u64;
-
-        // Round-1 write-path batch: a fail-fast abort is **our** judgement, not
-        // an infrastructure failure.  `agent.run` reports it as
-        // `AgentError::Other` because that is the only channel an environment
-        // has; the status embedded in the message is recovered here and becomes
-        // the call's `exit_status`, so the round result carries a first-class
-        // fact instead of the external agent's string.
-        let fail_fast = match classify_run_result(result) {
-            Ok(status) => status,
-            Err(message) => {
-                return Err(anyhow::anyhow!(
-                    "harness failed for role {} iteration {}: {message}",
+        // Round-5 cost repair: the loop folds superseded history between the
+        // steps and recovers the fail-fast status; `mini`'s own `run` cannot do
+        // either, so the loop is ours (see `harness::compact`).
+        let policy = CompactPolicy {
+            enabled: inv.limits.compact_history,
+            preserve_tail: inv.limits.compact_history_tail as usize,
+        };
+        let outcome = run_compacting_agent(agent, progress, policy, &task_text, Some(kwargs))
+            .await
+            .map_err(|error| {
+                anyhow::anyhow!(
+                    "harness failed for role {} iteration {}: {error}",
                     inv.role.as_str(),
                     inv.iteration
-                ));
-            }
-        };
-
-        let last = agent.messages.last();
-        let exit_status = match fail_fast {
-            Some(status) => status.to_string(),
-            None => last
-                .map(|message| message.exit_status().to_string())
-                .unwrap_or_default(),
-        };
-        let submission = last
-            .map(|message| message.submission().to_string())
-            .unwrap_or_default();
+                )
+            })?;
+        let duration_ms = started.elapsed().as_millis() as u64;
+        let exit_status = outcome.exit_status;
+        let submission = outcome.submission;
 
         // The trajectory is the source of truth for usage (D2/C8).
         let usage = extract_usage(&inv.trajectory_path, inv.role, inv.iteration)?;
@@ -281,6 +212,8 @@ impl Harness for MiniHarness {
             trajectory_path: inv.trajectory_path.clone(),
             usage,
             duration_ms,
+            compaction: Some(outcome.compacted),
+            steps: outcome.steps,
         })
     }
 }

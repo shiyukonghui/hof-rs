@@ -38,4 +38,14 @@ pub struct RoleOutcome {
     pub trajectory_path: PathBuf,
     pub usage: Usage,
     pub duration_ms: u64,
+    /// Round-5 cost repair: what the context fold did to this call.
+    ///
+    /// `None` for a harness that does not fold (the offline test harness and
+    /// any other double), which is the honest value — "no fold was applied" is
+    /// not the same fact as "a fold removed zero bytes".
+    pub compaction: Option<crate::harness::compact::CompactStats>,
+    /// Round-5 cost repair: how many model calls this call made, as the guard
+    /// counted them.  It is the number `step_limit` is written in, so recording
+    /// it makes "the budget bound this call" checkable from the result.
+    pub steps: u64,
 }

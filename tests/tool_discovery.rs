@@ -141,6 +141,7 @@ fn the_run_directory_caches_the_generated_tool_index() {
         ablation: Ablation::default(),
         force_init: true,
         start_state: hof_rs::runtime::start_state::StartState::as_is(),
+        resume: false,
     };
     tokio::runtime::Runtime::new().unwrap().block_on(async {
         hof_rs::runtime::run_loop::run(&orchestrator, &spec, "run-1")

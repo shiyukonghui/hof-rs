@@ -228,6 +228,14 @@ pub struct GameProcess {
     /// Round-2 repair: the per-launch nonce this process was started with, i.e.
     /// the value readiness proved the answering process serves.
     nonce: String,
+    /// Round-5 repair (defect RA-4): **what the wire served back** at readiness.
+    ///
+    /// It is the nonce `world.get_resources` of the contract's `ProcessNonce`
+    /// returned for this launch, recorded verbatim next to the value that was put
+    /// into the child's environment.  Without it, `identity.verified` could only
+    /// say "a launch happened"; with it, the record says *this process answered
+    /// with this nonce*.
+    answered_nonce: Option<String>,
     /// The file that was actually executed (the staged copy when staging is on),
     /// recorded so "which file ran?" is answerable.
     launch_image: PathBuf,
@@ -245,6 +253,12 @@ impl GameProcess {
     /// The per-launch nonce readiness verified against the answering process.
     pub fn nonce(&self) -> &str {
         &self.nonce
+    }
+
+    /// The nonce the endpoint actually served back at readiness, when readiness
+    /// completed.  `None` means the launch never got that far.
+    pub fn answered_nonce(&self) -> Option<&str> {
+        self.answered_nonce.as_deref()
     }
 
     /// The file that was executed (a staged copy, when the round stages).
@@ -445,8 +459,11 @@ pub fn start_game(
         message: error.to_string(),
     })?;
     let pid = child.id();
-    // The pid is on record **before** anything can wait on it: a crash between
-    // here and readiness still leaves the next launch able to find and reap it.
+    // The line is written here, immediately after the spawn, because it carries
+    // the pid and the pid does not exist one line earlier (defect RA-1: the note
+    // used to claim this happened before the spawn, which was never true).  It is
+    // still written before readiness, so a crash between here and the first
+    // successful probe leaves the next launch able to find and reap the pid.
     if let Some(ledger) = config.ledger.as_deref() {
         let _ = append_ledger(
             ledger,
@@ -495,6 +512,7 @@ pub fn start_game(
         asked_to_exit: AtomicBool::new(false),
         termination_grace: config.termination_grace,
         nonce,
+        answered_nonce: None,
         launch_image: launch_image.clone(),
         ledger: config.ledger.clone(),
         reap,
@@ -507,6 +525,8 @@ pub fn start_game(
             // reading attributed to this pass's game.
             match read_process_nonce(&client) {
                 Ok(answered) if Some(&answered) == Some(&process.nonce) => {
+                    // Defect RA-4: the read-back is a fact, so it is recorded.
+                    process.answered_nonce = Some(answered);
                     return Ok(process);
                 }
                 Ok(answered) => {
@@ -681,10 +701,10 @@ pub struct ReapReport {
 /// Reap every pid the ledger records that is still alive.
 ///
 /// The ledger is the round's own record of what **it** launched
-/// (`launch-ledger.jsonl`, one launch per line, written before the spawn), so a
-/// pid in it is a pid this round started: killing it is not "killing a process
-/// by name", it is stopping the round's own previous session.  A pid not in the
-/// ledger is never touched.
+/// (`launch-ledger.jsonl`, one launch per line, written immediately after the
+/// spawn and before readiness), so a pid in it is a pid this round started:
+/// killing it is not "killing a process by name", it is stopping the round's own
+/// previous session.  A pid not in the ledger is never touched.
 pub fn reap_ledger(ledger: &Path) -> ReapReport {
     let mut report = ReapReport::default();
     let Ok(text) = std::fs::read_to_string(ledger) else {
@@ -724,8 +744,17 @@ pub fn reap_ledger(ledger: &Path) -> ReapReport {
     report
 }
 
-/// Append one launch to the ledger, **before** the process is spawned, so a
-/// crash between the spawn and the record cannot hide a live pid.
+/// Append one launch to the ledger.
+///
+/// **The ordering is forced by the data, and the old note claiming otherwise was
+/// wrong** (defect RA-1 of `.spec/bevy/ACCEPTANCE-ROUNDS.md`, now fixed here):
+/// the line carries the child's pid, and `Child::id()` does not exist before
+/// `spawn` returns, so this is written **immediately after the spawn** — before
+/// anything can wait on the child, but not before it exists.  What *is* created
+/// before the spawn is the nonce (`start_game` step 1), which is why the identity
+/// proof survives: a process started earlier cannot know a UUIDv4 this launch
+/// generated and passed only through this child's environment, whatever the
+/// ledger's own line order is.
 pub fn append_ledger(ledger: &Path, entry: &serde_json::Value) -> std::io::Result<()> {
     if let Some(parent) = ledger.parent() {
         std::fs::create_dir_all(parent)?;
@@ -740,9 +769,12 @@ pub fn append_ledger(ledger: &Path, entry: &serde_json::Value) -> std::io::Resul
 }
 
 /// The ledger line for one launch: the facts a later sweep needs to find and
-/// verify the process again.  It is written before the spawn, so it names a pid
-/// that may not exist yet — which is exactly why a sweep treats "not running"
-/// as "nothing to do" rather than as an error.
+/// verify the process again.
+///
+/// It is written **after** the spawn (see [`append_ledger`]) because it can only
+/// exist once the child has a pid; it is written before readiness, so a crash
+/// between the spawn and a successful readiness still leaves the pid on record
+/// for the next launch's sweep to find and reap.
 pub fn ledger_entry(
     pid: u32,
     endpoint: &str,
@@ -759,8 +791,10 @@ pub fn ledger_entry(
             .duration_since(std::time::UNIX_EPOCH)
             .map(|duration| duration.as_secs())
             .unwrap_or(0),
-        "note": "written by the harness before the spawn; a live pid on this line is this round's \
-                 own previous session and is reaped before the next launch",
+        "note": "written by the harness immediately after the spawn (the pid cannot exist before \
+                 it) and before readiness; the nonce on this line was generated before the spawn \
+                 and travels only in this child's environment. A live pid on this line is this \
+                 round's own previous session and is reaped before the next launch",
     })
 }
 
@@ -878,6 +912,7 @@ pub(crate) fn launch_stand_in(script: &Path) -> GameProcess {
         asked_to_exit: AtomicBool::new(false),
         termination_grace: Duration::from_millis(500),
         nonce: String::new(),
+        answered_nonce: None,
         launch_image: script.to_path_buf(),
         ledger: None,
         reap: ReapReport::default(),
@@ -1495,6 +1530,66 @@ mod tests {
             "the reaped process must really be gone (its working directory is free)"
         );
         drop(recorded);
+    }
+
+    /// Defect RA-1, pinned.  The note used to claim the ledger line was written
+    /// **before the spawn**, which cannot be true: the line carries the child's
+    /// pid and the pid does not exist until `spawn` returns.  The proof that the
+    /// ledger is not forgeable rests on the **nonce**, which really is created
+    /// before the spawn and travels only in the child's environment — so the
+    /// record must state that ordering and not the one that was never true.
+    ///
+    /// The test asserts both halves: the nonce a launch generates is fixed before
+    /// any process exists, and the line the harness writes for that pid says
+    /// plainly that it was written after the spawn.
+    #[test]
+    fn the_ledger_line_is_written_after_the_spawn_and_says_so() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let ledger = directory.path().join("launch-ledger.jsonl");
+
+        // 1. Before any process: the nonce, which is the ordering that carries the
+        //    identity proof.
+        let nonce = new_process_nonce();
+        assert!(!nonce.trim().is_empty(), "a launch always carries a nonce");
+
+        // 2. A real child, so the pid in the line really exists.
+        let mut child = std::process::Command::new("cmd")
+            .args(["/C", "ping -n 30 127.0.0.1 >nul"])
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .expect("a stand-in child");
+        let pid = child.id();
+        let entry = ledger_entry(
+            pid,
+            "http://127.0.0.1:15702/",
+            &nonce,
+            Path::new("game.exe"),
+        );
+        append_ledger(&ledger, &entry).expect("the ledger is writable");
+
+        let text = std::fs::read_to_string(&ledger).expect("the ledger");
+        let line: serde_json::Value =
+            serde_json::from_str(text.lines().next().expect("one line")).expect("a JSON line");
+        assert_eq!(line["pid"].as_u64(), Some(pid as u64));
+        assert_eq!(line["nonce"].as_str(), Some(nonce.as_str()));
+        let note = line["note"].as_str().expect("the line's own note");
+        assert!(
+            note.contains("immediately after the spawn"),
+            "the note must state the ordering the code really has: {note}"
+        );
+        assert!(
+            !note.contains("before the spawn;"),
+            "the note must not claim the line predates a pid that cannot exist: {note}"
+        );
+        assert!(
+            note.contains("generated before the spawn"),
+            "and it must still name the value that really is created before the spawn: {note}"
+        );
+
+        let _ = child.kill();
+        let _ = child.wait();
     }
 
     /// The control for the test above: a live process the ledger never named is

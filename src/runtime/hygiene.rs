@@ -1355,7 +1355,7 @@ mod tests {
         // Measured: the round never rewrites this one (it is injected into the
         // views only, `run_loop.rs:498`), so a curated list would leave it behind.
         write(&workspace.join(".hoh/SCAFFOLD.md"), "scaffold\n");
-        write(&workspace.join(".hoh/skills/godot-dev.md"), "skill\n");
+        write(&workspace.join(".hoh/skills/bevy-dev.md"), "skill\n");
     }
 
     /// DR-61: the previous round's whole `.hoh` tree is **moved out of the
@@ -1431,10 +1431,7 @@ mod tests {
         // The sibling a curated list would have left behind is in the quarantine
         // too: the round never rewrites it.
         assert_eq!(preserved("SCAFFOLD.md"), Some(b"scaffold\n".as_slice()));
-        assert_eq!(
-            preserved("skills/godot-dev.md"),
-            Some(b"skill\n".as_slice())
-        );
+        assert_eq!(preserved("skills/bevy-dev.md"), Some(b"skill\n".as_slice()));
 
         // Nothing is left in the cwd to walk: the workspace held only `.hoh`.
         let reached = walk(&workspace);

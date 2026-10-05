@@ -598,8 +598,25 @@ fn build_adapter_kind_with_round(
 }
 
 pub async fn run(args: RunArgs) -> anyhow::Result<i32> {
-    if args.resume {
-        return Err(HofError::ResumeNotImplemented.into());
+    // Round-5 repair: `--resume` is implemented, with the scope stated at the
+    // point of use.  A completed iteration is not re-run; the first incomplete
+    // one runs from its start.  The preconditions are checked here, before
+    // anything is touched.
+    if args.resume && args.fresh_workspace {
+        return Err(HofError::Config(
+            "--resume and --fresh-workspace are mutually exclusive: a fresh workspace discards \
+             exactly the work the resume is meant to keep"
+                .to_string(),
+        )
+        .into());
+    }
+    if args.resume && args.reset_workspace {
+        return Err(HofError::Config(
+            "--resume and --reset-workspace are mutually exclusive: rolling back to A0 discards \
+             the iterations a resume would skip"
+                .to_string(),
+        )
+        .into());
     }
 
     let mut specs = config_specs(&args.config_spec);
@@ -686,9 +703,21 @@ pub async fn run(args: RunArgs) -> anyhow::Result<i32> {
 
     // DR-21: `--reset-workspace` needs this run's existing `A₀` snapshot, so an
     // existing run directory is expected for that mode only.
-    if run_dir.exists() && !args.reset_workspace {
+    //
+    // Round-5 repair: `--resume` is the third mode that expects one, and it
+    // requires it: continuing a round that does not exist is a mistake worth
+    // naming rather than a quiet fresh start under the same id.
+    if args.resume && !run_dir.exists() {
         return Err(HofError::Config(format!(
-            "run directory {} already exists; pass --resume (not implemented in v1)",
+            "--resume: {} does not exist, so there is no interrupted round to continue",
+            run_dir.display()
+        ))
+        .into());
+    }
+    if run_dir.exists() && !args.reset_workspace && !args.resume {
+        return Err(HofError::Config(format!(
+            "run directory {} already exists; pass --resume to continue it (completed iterations \
+             are not re-run) or --reset-workspace to start over from its A0",
             run_dir.display()
         ))
         .into());
@@ -729,6 +758,7 @@ pub async fn run(args: RunArgs) -> anyhow::Result<i32> {
         ablation,
         force_init: args.force_init,
         start_state,
+        resume: args.resume,
     };
 
     // DR-67 (DEF-2): the failed path must **persist what the process reports**.
@@ -769,20 +799,32 @@ pub async fn run(args: RunArgs) -> anyhow::Result<i32> {
 /// DR-39: the end-of-run summary line.  It states the two axes explicitly
 /// because they disagree exactly when it matters: `smoke-t5` finished with
 /// `gate ok` and `0/17` verified.
+///
+/// Defect RA-5 of `.spec/bevy/ACCEPTANCE-ROUNDS.md` (found while auditing the
+/// acceptance's defect list): the derived form used to say only
+/// `(total=derived …)`, which in round 4 produced `prd coverage: 6/8` — a figure
+/// whose denominator is the **Tester's own claim count** and which therefore
+/// cannot be compared with another round's `7/8`.  The line now says what the
+/// denominator is, in the line itself, so the incomparability travels with the
+/// number instead of living in a report's footnote.
 pub fn format_prd_coverage_line(coverage: &crate::model::PrdCoverage) -> String {
     if coverage.total_is_known() {
         format!(
-            "prd coverage: {}/{} verified (harness/gate describe the runtime contract, not the \
-             product)",
+            "prd coverage: {}/{} advertised PRD functional requirement(s) (F1..F17, PRD §3) carry \
+             a verified claim; harness/gate describe the runtime contract, not the product",
             coverage.verified,
             coverage.total()
         )
     } else {
         format!(
-            "prd coverage: {}/{} verified (total=derived from the Tester's claims; harness/gate \
-             describe the runtime contract, not the product)",
+            "prd coverage: {}/{} = the Tester's OWN claim count ({} verified, {} gap), NOT the \
+             PRD's F1..F17 count — the figure is not comparable with another round's, because the \
+             denominator is whatever the Tester wrote; harness/gate describe the runtime contract, \
+             not the product",
             coverage.verified,
-            coverage.total()
+            coverage.total(),
+            coverage.verified,
+            coverage.gap,
         )
     }
 }

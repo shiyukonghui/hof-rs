@@ -454,6 +454,7 @@ async fn run_round_in_still_runs_the_loop() {
         ablation: Ablation::default(),
         force_init: true,
         start_state: hof_rs::runtime::start_state::StartState::as_is(),
+        resume: false,
     };
     let summary = hof_rs::cli_impl::run_round_in(orchestrator, &spec, "run-1")
         .await
@@ -637,6 +638,7 @@ async fn the_real_round_path_persists_a_failing_rounds_verdict() {
         ablation: Ablation::default(),
         force_init: true,
         start_state: hof_rs::runtime::start_state::StartState::as_is(),
+        resume: false,
     };
 
     let error = hof_rs::cli_impl::run_round_and_finalize(orchestrator, &spec, "run-1", &run_dir)

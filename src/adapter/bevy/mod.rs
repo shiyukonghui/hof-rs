@@ -196,6 +196,15 @@ pub struct LaunchFacts {
     /// The pid the OS's own TCP table names as the `LISTEN`er on the endpoint
     /// when readiness finished, when it can be read.
     pub listening_pid: Option<u32>,
+    /// Round-5 repair (defect RA-4): **what the wire served back** when readiness
+    /// read the contract's `ProcessNonce`.
+    ///
+    /// `launch.json` used to have no field carrying the readiness read-back, so
+    /// `verified` could only be a predicate over "a launch happened", which every
+    /// successful launch satisfies.  `verified` is now a statement about three
+    /// recorded readings, and this is the one that says *this process answered
+    /// with this nonce*.
+    pub answered_nonce: Option<String>,
     /// The ledger this launch was written into, when one was configured.
     pub ledger: Option<String>,
     /// The pids a sweep over that ledger reaped before this launch.
@@ -486,18 +495,27 @@ impl BevyAdapter {
     /// the deaths, and write the report where the round's evidence lives.
     ///
     /// This is the layer that does not depend on the round-game slot being right:
-    /// the ledger is written **before every spawn** by `launch::start_game`, for
-    /// the battery's launches and the round-session's alike, so a live pid in it
-    /// is a process this round started no matter which code path started it.  A
-    /// pid the ledger never named is never touched.
+    /// the ledger is written **immediately after every spawn** by
+    /// `launch::start_game` (defect RA-1: after, not before — the line carries the
+    /// pid), for the battery's launches and the round-session's alike, so a live
+    /// pid in it is a process this round started no matter which code path started
+    /// it.  A pid the ledger never named is never touched.
     pub fn reap_round_processes(&self) -> project::RoundStopReport {
         let ledger = self.launch_ledger();
+        // Defect RA-3: the sweep records how much of the ledger it could see, so a
+        // snapshot of this file is self-describing about which launches it covers.
+        let ledger_lines_at_sweep = ledger
+            .as_deref()
+            .and_then(|path| std::fs::read_to_string(path).ok())
+            .map(|text| text.lines().filter(|line| !line.trim().is_empty()).count())
+            .unwrap_or(0);
         let mut report = project::RoundStopReport {
             called_at_seconds: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .map(|duration| duration.as_secs())
                 .unwrap_or(0),
             ledger: ledger.as_ref().map(|path| path.display().to_string()),
+            ledger_lines_at_sweep,
             evidence: self
                 .evidence_root()
                 .join("runs")
@@ -556,14 +574,19 @@ impl BevyAdapter {
         if facts.nonce.trim().is_empty() {
             return None;
         }
+        // Round-5 repair (defect RA-4): the provenance says "launch_verified", so
+        // the value beside it is the computed verdict and not the literal `true`.
+        // The three readings it rests on live in `launch.json`'s `identity`
+        // object; `answering_pid` is recorded as read either way.
+        let identity = crate::adapter::bevy::round::identity_fields(&facts);
         Some(GameEndpointRecord {
             endpoint: self.endpoint.clone(),
             port: crate::tools::endpoint::port_of_endpoint(&self.endpoint),
             source: crate::tools::endpoint::SOURCE_LAUNCH_VERIFIED.to_string(),
             pid: Some(facts.spawned_pid),
             nonce: Some(facts.nonce),
-            answering_pid: facts.listening_pid,
-            verified: Some(true),
+            answering_pid: identity.answering_pid,
+            verified: Some(identity.verified),
         })
     }
 
@@ -933,6 +956,7 @@ impl GameAdapter for BevyAdapter {
             launch_image: process.launch_image().display().to_string(),
             built_binary: binary.display().to_string(),
             listening_pid: process.answering_pid(),
+            answered_nonce: process.answered_nonce().map(str::to_string),
             ledger: process.ledger().map(|ledger| ledger.display().to_string()),
             reaped_pids: process.reap_report().reaped.clone(),
         };
@@ -1179,6 +1203,35 @@ mod tests {
             report.evidence.is_file(),
             "the sweep writes its own evidence: {report:?}"
         );
+        // Defect RA-3: the sweep says how much of the ledger it saw, and the
+        // question a snapshotted reader has — "does this file cover the pass whose
+        // directory I am reading?" — is answerable from the file alone.
+        assert_eq!(
+            report.ledger_lines_at_sweep, 2,
+            "the sweep must record the ledger's own length: {report:?}"
+        );
+        assert!(report.sweep_covers_ledger_line(1));
+        assert!(report.sweep_covers_ledger_line(2));
+        assert!(
+            !report.sweep_covers_ledger_line(3),
+            "a launch appended after this sweep is not inside its window"
+        );
+        // A pass launched after the sweep was written leaves a ledger this file
+        // does not cover: the very shape the snapshot had.
+        launch::append_ledger(
+            &ledger,
+            &launch::ledger_entry(
+                4_000_000_000,
+                &format!("http://127.0.0.1:{}/", brp::fake::refused_port()),
+                "later-pass",
+                &script,
+            ),
+        )
+        .expect("the ledger is writable");
+        assert!(
+            !report.sweep_covers_ledger_line(3),
+            "and a later launch does not silently join a sweep that already ran"
+        );
         // The processes are gone, so their handles can be dropped without a stop.
         drop(first);
         drop(second);
@@ -1243,6 +1296,7 @@ mod tests {
             launch_image: "image".to_string(),
             built_binary: "built".to_string(),
             listening_pid: Some(4242),
+            answered_nonce: Some("5b1d0e2a-0000-4000-8000-000000000000".to_string()),
             ledger: None,
             reaped_pids: vec![17],
         };

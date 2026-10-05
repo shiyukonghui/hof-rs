@@ -139,6 +139,44 @@ pub struct AgentLimits {
     /// a budget its prompt stated as 43 — the round-3 defect in another unit.
     #[serde(default = "default_steps_per_artifact")]
     pub steps_per_artifact: u64,
+    /// Round-5 cost repair: fold **superseded history** out of the model context
+    /// (`harness::compact`).
+    ///
+    /// The cost driver this closes was measured, not guessed: over the three
+    /// recorded round-4 Developer calls the prompt *is* the accumulated history
+    /// (`2,544,563`, `12,765,478` and `5,137,090` prompt tokens for 69, 125 and
+    /// 102 model calls, with a final prompt of `161,566`), and the history is
+    /// dominated by payloads that have already been consumed — a tool call whose
+    /// `arguments` carry the whole of `src/game.rs` (22–32 KB, recorded), and a
+    /// tool result that dumped a file.  `false` is the old behaviour exactly:
+    /// every message is re-sent verbatim.
+    #[serde(default = "default_compact_history")]
+    pub compact_history: bool,
+    /// Round-5 cost repair: how many trailing messages are never folded.
+    ///
+    /// The tail is what the model needs to act coherently — what it just did and
+    /// what came back — so it is always sent verbatim.  12 messages is six
+    /// assistant/tool pairs; the fold only ever touches what lies before it.
+    #[serde(default = "default_compact_history_tail")]
+    pub compact_history_tail: u64,
+}
+
+/// Round-5 cost repair: the fold is on by default, because the measurement it
+/// answers is the recorded spend of every round so far.
+fn default_compact_history() -> bool {
+    true
+}
+
+/// Round-5 cost repair: six verbatim assistant/tool pairs.
+///
+/// The value is a bound on what the *trained* reasoning of a step may see, not a
+/// measured optimum: the projection over the three recorded round-4 Developer
+/// calls is `839K / 2.50M / 1.48M` prompt tokens at a tail of 12 against
+/// `2.54M / 12.77M / 5.14M` recorded, and the report states the whole curve
+/// (0/2/4/6/8/12/16/24/32) so the number can be re-derived rather than trusted.
+pub const DEFAULT_COMPACT_HISTORY_TAIL: usize = 12;
+fn default_compact_history_tail() -> u64 {
+    DEFAULT_COMPACT_HISTORY_TAIL as u64
 }
 
 /// Round-2 repair (cost batch): 15 is **measured** from the recorded evidence,
@@ -216,6 +254,8 @@ impl Default for AgentLimits {
             artifact_write_budget_tokens: default_artifact_write_budget_tokens(),
             max_repeated_actions: default_max_repeated_actions(),
             steps_per_artifact: default_steps_per_artifact(),
+            compact_history: default_compact_history(),
+            compact_history_tail: default_compact_history_tail(),
         }
     }
 }

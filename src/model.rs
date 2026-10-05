@@ -207,13 +207,23 @@ impl PrdCoverage {
             .any(|id| is_prd_functional_id(id))
     }
 
-    /// `prd=<verified>/<total>` with an explicit `(total=derived)` marker when
-    /// the denominator is not the PRD's own count.
+    /// `prd=<verified>/<total>` with an explicit marker when the denominator is
+    /// not the PRD's own count.
+    ///
+    /// Round-5 repair (defect RA-5): the marker says **what** the denominator is
+    /// (`the Tester's claims`), because a bare `(total=derived)` still left a
+    /// reader to work out that `6/8` was not a PRD item count and could not be
+    /// compared with another round's figure.
     pub fn label(&self) -> String {
         if self.total_is_known() {
             format!("prd={}/{}", self.verified, self.total())
         } else {
-            format!("prd={}/{} (total=derived)", self.verified, self.total())
+            format!(
+                "prd={}/{} (total=the Tester's {} claims, not the PRD's F1..F17 count)",
+                self.verified,
+                self.total(),
+                self.verified + self.gap
+            )
         }
     }
 }

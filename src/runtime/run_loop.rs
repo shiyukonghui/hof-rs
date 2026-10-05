@@ -80,6 +80,94 @@ pub const MCP_SCOPE_WARNING: &str =
 /// it out of every role's working directory before any role ran.
 pub const PREVIOUS_EVIDENCE_QUARANTINED: &str = "previous_evidence_quarantined";
 
+/// Round-5 repair: this round continued an interrupted run.
+pub const RESUMED_FROM: &str = "resumed_from_interrupted_round";
+
+/// Round-5 repair: what `--resume` found and what it therefore does.
+///
+/// It is a value so the decision is checkable offline, without a run: the rule
+/// "skip every iteration whose `result.json` says `ok`, re-run the first one that
+/// does not" is arithmetic over the run directory, and a test can build that
+/// directory and assert it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ResumePlan {
+    /// The highest iteration whose `result.json` carries `ok: true`.
+    pub completed: u32,
+    /// The first iteration that will run in this process.  `None` when every
+    /// requested iteration is already complete.
+    pub first_iteration: Option<u32>,
+}
+
+/// Read `runs/<id>/iter-<n>/result.json` and decide where to continue.
+///
+/// A missing, unreadable or `ok: false` result makes that iteration the one to
+/// re-run: an interrupted iteration leaves either no `result.json` at all
+/// (killed mid-flight) or one written by the failure path (`ok: false`), and both
+/// mean the same thing — that iteration did not complete.
+pub fn plan_resume(run_dir: &Path, iterations: u32) -> ResumePlan {
+    let mut completed = 0u32;
+    for iteration in 1..=iterations {
+        let path = run_dir
+            .join(format!("iter-{iteration}"))
+            .join("result.json");
+        let ok = std::fs::read_to_string(&path)
+            .ok()
+            .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+            .and_then(|value| value.get("ok").and_then(serde_json::Value::as_bool))
+            .unwrap_or(false);
+        if ok {
+            completed = iteration;
+        } else {
+            break;
+        }
+    }
+    ResumePlan {
+        completed,
+        first_iteration: (completed < iterations).then_some(completed + 1),
+    }
+}
+
+/// The `RunSummary` a fully-complete resume must end with, read back from the
+/// iteration results it is not going to re-run.
+fn summary_from_completed_iterations(run_dir: &Path, iterations: u32, run_id: &str) -> RunSummary {
+    let mut total = Usage {
+        role: "total".to_string(),
+        ..Usage::default()
+    };
+    let mut final_version_id = None;
+    let mut gate = crate::model::ArtifactGate::not_applicable("no iteration ran");
+    let mut coverage = crate::model::PrdCoverage::default();
+    for iteration in 1..=iterations {
+        let path = run_dir
+            .join(format!("iter-{iteration}"))
+            .join("result.json");
+        let Some(result) = std::fs::read_to_string(&path)
+            .ok()
+            .and_then(|text| serde_json::from_str::<IterResult>(&text).ok())
+        else {
+            continue;
+        };
+        for usage in &result.usage {
+            merge_usage(&mut total, usage);
+        }
+        if let Some(version_id) = &result.version_id {
+            final_version_id = Some(version_id.clone());
+        }
+        gate = result.artifact_gate.clone();
+        coverage = result.prd_coverage.clone();
+    }
+    RunSummary {
+        run_id: run_id.to_string(),
+        iterations_completed: iterations,
+        final_version_id,
+        total_usage: total,
+        ok: true,
+        artifact_gate: gate,
+        prd_coverage: coverage,
+        failure_exit_code: None,
+    }
+}
+
 pub struct Orchestrator {
     pub harness: Box<dyn Harness>,
     pub adapter: Box<dyn ProjectAdapter>,
@@ -90,6 +178,18 @@ pub struct Orchestrator {
     pub force_init: bool,
     /// DR-21: how the workspace was prepared before this run started.
     pub start_state: crate::runtime::start_state::StartState,
+    /// Round-5 repair: continue a round that was interrupted mid-flight
+    /// (`hoh run --resume`).
+    ///
+    /// The scope is stated exactly, because over-claiming here would be the
+    /// round-3 defect in a new place: a **completed** iteration
+    /// (`runs/<id>/iter-<n>/result.json` with `ok: true`) is not re-run and its
+    /// usage, gate and version are carried into this run's summary; the first
+    /// incomplete iteration runs **from its start**, because the harness has no
+    /// role-level checkpoint — a Developer edits the workspace in place through
+    /// the write directive, and there is no safe point inside a call at which the
+    /// partial work could be handed to a fresh call.
+    pub resume: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -829,6 +929,29 @@ async fn run_inner(
     let secrets = crate::runtime::secrets::known_secrets(cfg);
 
     let mut warnings = vec![MCP_SCOPE_WARNING.to_string()];
+    // Round-5 repair: what `--resume` is going to do, decided before anything
+    // runs and recorded in the round's own warnings.
+    let resume_plan = if orchestrator.resume {
+        let plan = plan_resume(&run_dir, cfg.runtime.iterations);
+        append_warning(
+            &run_dir,
+            &format!(
+                "{RESUMED_FROM}: iteration(s) 1..={} already carry a result.json with ok=true and \
+                 are NOT re-run (their usage, gate and version are carried into this run's \
+                 summary); iteration {:?} runs from its start. A call interrupted mid-flight is \
+                 not resumable at a finer grain: the harness has no role-level checkpoint, and a \
+                 Developer edits the workspace in place, so there is no safe point inside a call.",
+                plan.completed, plan.first_iteration
+            ),
+        )?;
+        warnings.push(RESUMED_FROM.to_string());
+        plan
+    } else {
+        ResumePlan {
+            completed: 0,
+            first_iteration: (cfg.runtime.iterations > 0).then_some(1),
+        }
+    };
     if !quarantined.is_empty() {
         warnings.push(PREVIOUS_EVIDENCE_QUARANTINED.to_string());
         for area in &quarantined {
@@ -885,7 +1008,29 @@ async fn run_inner(
     )?;
 
     // A0 is snapshotted before anything else so warm_start=false can restore it.
-    let a0 = store.snapshot_role(&workspace, &excludes, 0, "init", "A0 initial artifact")?;
+    //
+    // Round-5 repair: a **resumed** run does not take a new A0.  The workspace has
+    // already been edited by the iterations this process is not re-running, so a
+    // fresh "initial artifact" would be a false name for a mid-round tree; the
+    // store already holds the real A0 of this run, and `--reset-workspace`
+    // (which is the mode that needs A0) still reads that one.  The resumed run's
+    // own starting point is the workspace as the interrupted round left it, and
+    // every iteration records its own increment against that.
+    let a0 = if orchestrator.resume {
+        store
+            .read_index()?
+            .into_iter()
+            .find(|entry| entry.iteration == 0)
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "--resume: {} holds no A0 (iteration-0) snapshot, so the run it should \
+                     continue is not one this harness wrote",
+                    store.index_path().display()
+                )
+            })?
+    } else {
+        store.snapshot_role(&workspace, &excludes, 0, "init", "A0 initial artifact")?
+    };
 
     let total_text = spec_text(spec)?;
     let mut total_usage = Usage {
@@ -925,9 +1070,45 @@ async fn run_inner(
     // acceptance found that no role process ever overlapped it (D1).
     start_round_game(orchestrator, &workspace, &run_dir).await;
 
+    // Round-5 repair: a resume of a run whose every iteration already completed
+    // has nothing to execute, so it returns the summary read back from those
+    // results rather than an invented one.
+    if orchestrator.resume && resume_plan.first_iteration.is_none() {
+        return Ok(summary_from_completed_iterations(
+            &run_dir,
+            cfg.runtime.iterations,
+            run_id,
+        ));
+    }
+
     for iteration in 1..=cfg.runtime.iterations {
         let iter_dir = run_dir.join(format!("iter-{iteration}"));
         let traj_dir = iter_dir.join("traj");
+        // Round-5 repair: a resumed run does not re-run an iteration that already
+        // completed.  Its result is read back for the usage/gate/version the
+        // summary needs, so "the round continued" costs nothing for the work that
+        // was already paid for.
+        if orchestrator.resume && iteration <= resume_plan.completed {
+            let path = iter_dir.join("result.json");
+            let result: IterResult = serde_json::from_str(&std::fs::read_to_string(&path)?)?;
+            for usage in &result.usage {
+                merge_usage(&mut total_usage, usage);
+            }
+            if let Some(version_id) = &result.version_id {
+                final_version_id = Some(version_id.clone());
+            }
+            last_gate = Some(result.artifact_gate.clone());
+            last_coverage = result.prd_coverage.clone();
+            append_warning(
+                &run_dir,
+                &format!(
+                    "{RESUMED_FROM}: iteration {iteration} is already complete (result.json \
+                     ok=true); it was not re-run. Its work is on the workspace this run started \
+                     from."
+                ),
+            )?;
+            continue;
+        }
         std::fs::create_dir_all(&traj_dir)?;
         std::fs::create_dir_all(iter_dir.join("logs"))?;
 

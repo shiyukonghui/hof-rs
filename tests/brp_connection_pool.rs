@@ -257,8 +257,21 @@ fn a_pooled_connection_to_a_closed_peer_fails_the_next_call() {
 
 /// The repair, pinned at the client level: a client built for the new process
 /// succeeds on its first call, because its pool holds nothing from the old one.
+///
+/// Round-5 repair: this test lacked the `cfg!(windows)` guard its sibling
+/// (`a_pooled_connection_to_a_closed_peer_fails_the_next_call`) has.  The guard is
+/// not a formality — the fixture's abortive close (`SO_LINGER 0`) is only set on
+/// Windows, so on any other platform the peer closes **gracefully** and the second
+/// call simply opens a fresh connection rather than failing on a poisoned pooled
+/// socket.  The stale-client assertion below would then be false for a reason that
+/// has nothing to do with the repair, i.e. it would fail on Linux while the
+/// product is fine.  A test that cannot run must say so, as the sibling does.
 #[test]
 fn a_client_rebuilt_for_the_new_process_succeeds_on_its_first_call() {
+    if !cfg!(windows) {
+        println!("abortive close (SO_LINGER 0) is only set on Windows; nothing was measured");
+        return;
+    }
     let server = KeepAliveThenClose::spawn();
     let stale = BrpClient::new(server.endpoint(), Duration::from_secs(5));
     assert_eq!(read_frames(&stale), Ok(1));

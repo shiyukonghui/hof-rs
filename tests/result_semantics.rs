@@ -255,6 +255,7 @@ async fn a_round_over_a_dead_project_reports_a_closed_gate() {
         ablation: Ablation::default(),
         force_init: true,
         start_state: hof_rs::runtime::start_state::StartState::as_is(),
+        resume: false,
     };
     let summary = hof_rs::runtime::run_loop::run(&orchestrator, &spec, "run-1")
         .await

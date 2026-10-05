@@ -472,6 +472,7 @@ async fn a_role_writing_outside_the_project_is_reported() {
         ablation: Ablation::default(),
         force_init: true,
         start_state: hof_rs::runtime::start_state::StartState::as_is(),
+        resume: false,
     };
     hof_rs::runtime::run_loop::run(&orchestrator, &spec, "run-1")
         .await
@@ -522,6 +523,7 @@ async fn a_round_removes_its_own_root_temporary_and_records_it() {
         ablation: Ablation::default(),
         force_init: true,
         start_state: hof_rs::runtime::start_state::StartState::as_is(),
+        resume: false,
     };
     hof_rs::runtime::run_loop::run(&orchestrator, &spec, "run-1")
         .await

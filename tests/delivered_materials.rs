@@ -1,12 +1,14 @@
 //! DR-70 ③: no delivered text may send a role to a channel it cannot reach.
 //!
 //! The acceptance's D5 found the same contradiction DR-69 had fixed in
-//! `developer.md` still standing in the skill that role is handed:
-//! `src/prompts/skills/godot-dev.md` §5 told the Developer to prove its own work
-//! with `running_game_get_node_property_samples` and required
-//! `samples[*].position.x` to change, and §6 told it to call
+//! `developer.md` still standing in the skill that role is handed: the previous
+//! engine's book told the Developer to prove its own work with
+//! `running_game_get_node_property_samples` and required
+//! `samples[*].position.x` to change, and told it to call
 //! `running_game_get_scene_tree` after `editor_play_scene` — while
-//! `tests/developer_contract.rs` still *required* that string.
+//! `tests/developer_contract.rs` still *required* that string.  Round 5 (defect
+//! RA-6) removed that book entirely; the audience-aware rules it is checked
+//! against survive, now reading the Bevy skill the roles really receive.
 //!
 //! DR-70 ① changes the fact underneath: the round's route is now published for
 //! the whole round, so the Developer **can** reach the game endpoint.  The
@@ -121,13 +123,13 @@ fn imperative_play_scene_sentence(text: &str) -> Option<String> {
 /// Developer's own evidence channel.
 #[test]
 fn no_developer_facing_material_sends_the_role_to_the_game_process() {
-    let skill = delivered_skill("godot-dev.md");
+    let skill = delivered_skill("bevy-dev.md");
     for (label, text) in [
         (
             "developer.md",
             delivered_prompt(hof_rs::prompts::DEVELOPER_PROMPT),
         ),
-        ("godot-dev.md", skill.clone()),
+        ("bevy-dev.md", skill.clone()),
     ] {
         assert!(
             concrete_game_tool(&text).is_none(),
@@ -153,18 +155,19 @@ fn no_developer_facing_material_sends_the_role_to_the_game_process() {
 /// runtime started predates the Developer's edits, so a self-booted game can never
 /// be the Developer's evidence.  The test therefore requires the same prohibition
 /// in both documents, and rejects an imperative mention of the tool on either side.
+///
+/// Round-5 repair (defect RA-6): the skill under test is the Bevy one the roles
+/// are really handed; the previous engine's book is gone.  The ruling itself is
+/// unchanged, and both documents must still carry it verbatim — the *named verb*
+/// replacement check below is what keeps the ruling about a command that can never
+/// be called instead of a command that exists.
 #[test]
 fn the_developer_prompt_and_the_skill_forbid_booting_a_game_the_same_way() {
     let prompt = delivered_prompt(hof_rs::prompts::DEVELOPER_PROMPT);
-    let skill = delivered_skill("godot-dev.md");
+    let skill = delivered_skill("bevy-dev.md");
 
-    for (label, text) in [("developer.md", &prompt), ("godot-dev.md", &skill)] {
+    for (label, text) in [("developer.md", &prompt), ("bevy-dev.md", &skill)] {
         let lower = normalized(text);
-        assert!(
-            lower.contains("editor_play_scene"),
-            "{label} must name the command the ruling is about, or the ruling is invisible:\
-             \n{text}"
-        );
         assert!(
             lower.contains("do not start a game of your own"),
             "{label} must carry the unified ruling verbatim (`do not start a game of your \
@@ -178,6 +181,14 @@ fn the_developer_prompt_and_the_skill_forbid_booting_a_game_the_same_way() {
             );
         }
     }
+    // `developer.md` still names the verb it is prohibiting, from the removed
+    // engine; the Bevy skill does not need to name a verb that is not part of
+    // this project's surface, so the "must name the command" half is pinned only
+    // where the command is named at all.
+    assert!(
+        normalized(&prompt).contains("editor_play_scene"),
+        "developer.md must name the command the ruling is about, or the ruling is invisible"
+    );
 }
 
 /// …and the skill must say *why*, because "do not use it" without a reason is the
@@ -188,20 +199,20 @@ fn the_developer_prompt_and_the_skill_forbid_booting_a_game_the_same_way() {
 /// ordering a boot the skill forbade without any test noticing.
 #[test]
 fn the_developer_skill_explains_why_the_game_process_is_not_its_self_test() {
-    let skill = delivered_skill("godot-dev.md");
+    let skill = delivered_skill("bevy-dev.md");
     let lower = normalized(&skill);
 
     assert!(
         lower.contains("before you changed the code"),
-        "godot-dev.md must state that the round's game predates the Developer's edits"
+        "bevy-dev.md must state that the round's game predates the Developer's edits"
     );
     assert!(
-        lower.contains("editor_get_errors"),
-        "godot-dev.md must give the Developer the editor-side substitute"
+        lower.contains("cargo build --offline"),
+        "bevy-dev.md must give the Developer the launchability check that really exists here"
     );
 
     let prompt = normalized(&delivered_prompt(hof_rs::prompts::DEVELOPER_PROMPT));
-    for (label, text) in [("godot-dev.md", &lower), ("developer.md", &prompt)] {
+    for (label, text) in [("bevy-dev.md", &lower), ("developer.md", &prompt)] {
         assert!(
             !text.contains("tools call editor_play_scene"),
             "{label} must not tell the Developer to boot a second game while the runtime owns \
@@ -212,14 +223,22 @@ fn the_developer_skill_explains_why_the_game_process_is_not_its_self_test() {
 
 /// The non-vacuity half: the Tester's materials keep the game-process recipe.
 /// Nothing here should tempt anyone to "fix" the rule by removing the channel.
+///
+/// Round-5 repair (RA-6): the recipe this checks is this project's own
+/// `bevy_*` surface.  The old form looked for `running_game_<tool>`, a prefix
+/// that never appears in the Bevy book — so after the previous engine's book was
+/// removed the assertion would have been vacuously true.  A needle that cannot
+/// fail is not coverage.
 #[test]
 fn the_tester_facing_materials_still_receive_the_game_process_recipe() {
-    let testing = delivered_skill("godot-testing.md");
-    assert!(
-        concrete_game_tool(&testing).is_some(),
-        "godot-testing.md must keep the game-process evidence recipe: the Tester's window is \
-         exactly what DR-70 ① publishes the route for"
-    );
+    let testing = delivered_skill("bevy-testing.md");
+    for needle in ["bevy_player_transform", "bevy_grounded", "tools call"] {
+        assert!(
+            testing.contains(needle),
+            "bevy-testing.md must keep the game-process evidence recipe (`{needle}`): the \
+             Tester's window is exactly what DR-70 ① publishes the route for"
+        );
+    }
 }
 
 /// `TOOLS.md` is generated from the live schema; it is a catalogue of what a role

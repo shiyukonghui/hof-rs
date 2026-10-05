@@ -130,23 +130,25 @@ const SHELL_TRUTH_POSIX: &str = "[shell]\n\
      {{HOH_HOH_BIN}} tools call bevy_grounded --args-file {{HOH_ARTIFACT_DIR}}/args/grounded.json\n\
      ```\n";
 
-pub const SKILL_GODOT_DEV: &str = include_str!("skills/godot-dev.md");
-pub const SKILL_GODOT_TESTING: &str = include_str!("skills/godot-testing.md");
-/// The Bevy 0.19.1 recipes (DR-96).  The Godot documents are kept because they
-/// are the *previous* engine's materials and the tests that pin their shell
-/// contract still hold; the role prompts point a Bevy round at these two.
 pub const SKILL_BEVY_DEV: &str = include_str!("skills/bevy-dev.md");
 pub const SKILL_BEVY_TESTING: &str = include_str!("skills/bevy-testing.md");
 
 /// `(file name, content)` pairs injected as `.hoh/skills/*.md`.
 ///
+/// Round-5 repair (defect RA-6): the previous engine's two books
+/// (`godot-dev.md`, `godot-testing.md`) are **gone** — this repository is the
+/// harness plus this engine's flow, and a round was handing the roles 22.5 KB of
+/// instructions for an engine that had been removed (measured in
+/// `ROUND-4-REPORT-COMPLETE.md`'s own workspace: `<workspace>/.hoh/skills/`
+/// carried both files at mtime 2026-10-05 12:50, during the reported round).  The
+/// prompt-discipline tests that used to read the old book now read this one, so
+/// the coverage they had — an executable recipe, a scratch writer, the audience
+/// rules — is unchanged; only the document under test is.
+///
 /// The order matters: the shell-contract test extracts the first executable
-/// `tools call` recipe in delivery order, so the previous engine's book stays
-/// first and the Bevy books follow it.
+/// `tools call` recipe in delivery order, so the Developer's book comes first.
 pub fn skills() -> Vec<(&'static str, &'static str)> {
     vec![
-        ("godot-dev.md", SKILL_GODOT_DEV),
-        ("godot-testing.md", SKILL_GODOT_TESTING),
         ("bevy-dev.md", SKILL_BEVY_DEV),
         ("bevy-testing.md", SKILL_BEVY_TESTING),
     ]

@@ -245,6 +245,7 @@ async fn run_round(root: &Path, run_id: &str, script: Vec<FakeStep>) -> Vec<Invo
         ablation: Ablation::default(),
         force_init: true,
         start_state: hof_rs::runtime::start_state::StartState::as_is(),
+        resume: false,
     };
     hof_rs::runtime::run_loop::run(&orchestrator, &spec, run_id)
         .await

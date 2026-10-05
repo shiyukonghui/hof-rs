@@ -62,6 +62,15 @@ pub struct RunArgs {
     /// exists.
     #[arg(long)]
     pub reset_workspace: bool,
+    /// Round-5 repair: continue an interrupted round under the same `--run-id`.
+    ///
+    /// Every iteration whose `runs/<id>/iter-<n>/result.json` carries `ok: true`
+    /// is **not** re-run (its usage, gate and version are carried into the run's
+    /// summary); the first incomplete iteration runs **from its start**, because
+    /// the harness has no role-level checkpoint — a Developer edits the workspace
+    /// in place, so there is no safe point inside a call.  The run directory must
+    /// already exist, and `--fresh-workspace` / `--reset-workspace` are refused
+    /// with it.
     #[arg(long)]
     pub resume: bool,
     /// Round-2 repair (credential batch): read the model secret from this file.

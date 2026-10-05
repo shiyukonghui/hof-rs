@@ -342,7 +342,7 @@ pub fn battery_records(
     };
     for (step_id, prd, name) in E3_STEPS {
         let observation = named(name).expect("a named observation");
-        let observation_text = if observation.observed {
+        let mut observation_text = if observation.observed {
             format!("{step_id}: observed")
         } else {
             format!(
@@ -353,6 +353,16 @@ pub fn battery_records(
                     .unwrap_or_else(|| "not observed".to_string())
             )
         };
+        // Round-5 repair (defect RA-8): a **definitional** step says so in the
+        // record the round writes, not only in the observation it came from.  The
+        // acceptance's point was that two of the nine steps add no discriminating
+        // power; a reader of the round's own records must be able to see that
+        // without reading the battery's internals.
+        if let Some(reason) = observation.definitional_reason() {
+            observation_text.push_str(" [definitional: ");
+            observation_text.push_str(reason);
+            observation_text.push(']');
+        }
         records.push(record(
             step_id,
             vec![(*prd).to_string()],
@@ -505,20 +515,21 @@ pub fn run(adapter: &mut BevyAdapter, workspace: &Path) -> RoundReport {
     // The authority witness: the process that answered, the nonce that proves
     // it, and the pids the ledger sweep reaped before the launch.
     if let Some(facts) = launch_facts.as_ref() {
-        let (answering_pid, verified) = identity_fields(facts);
+        let identity = identity_fields(facts);
         launch_json["identity"] = json!({
             "scheme": "per-launch nonce published by the game as the contract's \
                        `ProcessNonce` resource and read back over BRP",
             "spawned_pid": facts.spawned_pid,
             "nonce": facts.nonce,
+            "answered_nonce": facts.answered_nonce,
             "launch_image": facts.launch_image,
             "built_binary": facts.built_binary,
             "listening_pid": facts.listening_pid,
             "reaped_pids": facts.reaped_pids,
             "ledger": facts.ledger,
-            "answering_pid": answering_pid,
-            "verified": verified,
-            "verified_rule": VERIFIED_RULE,
+            "answering_pid": identity.answering_pid,
+            "verified": identity.verified,
+            "verified_rule": identity.verified_rule,
         });
     } else {
         launch_json["identity"] = json!({
@@ -770,39 +781,73 @@ pub const FOREIGN_PROCESS_STDERR: &str =
     "the game's stderr is not reachable from this process; it is recorded in the round's \
      launch.json by the process that started the game";
 
-/// Round-4 repair: the two `identity` fields that used to be written as
-/// literals, and are computed here instead.
+/// The two `identity` fields that used to be written as literals, computed from
+/// the launch's own recorded facts.
 ///
 /// `ROUND-3-REPORT.md` §1 flagged the pair: `verified` was the constant `true`
 /// and `answering_pid` a **copy of** `spawned_pid`, so both were true whenever an
-/// identity object existed and neither was independent evidence.  They now say
-/// what the round actually has:
+/// identity object existed and neither was independent evidence.
 ///
-/// * `answering_pid` is the operating system's own TCP-table reading of who
-///   `LISTEN`s on the endpoint — the independent witness round 2 did not have at
-///   all, and the one that makes the run-level gate's
-///   `answering_pid == spawned_pid` a check rather than a tautology;
-/// * `verified` is true only when this launch carries a non-empty nonce, i.e.
-///   when readiness proved the answering process served **this** launch's nonce
-///   (a mismatch is `LaunchError::IdentityMismatch` and `start` never returns).
+/// Round 4 computed them and left one gap, which `.spec/bevy/ACCEPTANCE-ROUNDS.md`
+/// filed as RA-4: `verified` was `!nonce.is_empty()`, and every launch that
+/// *returns* carries a nonce, so the field could not distinguish anything —
+/// "computed in form, but true for every successful launch".  Round 5 makes it a
+/// statement about **three recorded readings**, all of them in the same record:
 ///
-/// The two are deliberately different tests, and a round records both so a reader
-/// can tell the proof (the nonce) from the corroboration (the OS reading).  Making
-/// `verified` depend on the TCP table being readable would turn a proof into a
-/// coin toss over an OS query; making `answering_pid` a copy of `spawned_pid`
-/// turns a corroboration into a second copy of the harness's own hope.
-pub fn identity_fields(facts: &LaunchFacts) -> (Option<u32>, bool) {
-    (facts.listening_pid, !facts.nonce.trim().is_empty())
+/// 1. `facts.nonce` — the value generated before the spawn and passed only in
+///    this child's environment;
+/// 2. `facts.answered_nonce` — what the endpoint actually served back when
+///    readiness read the contract's `ProcessNonce` (a reply serving anything else
+///    is `LaunchError::IdentityMismatch`, so a returned launch carries this);
+/// 3. `facts.listening_pid == facts.spawned_pid` — the OS's own TCP table naming
+///    the process this launch started as the listener.
+///
+/// `verified` is true only when all three hold.  That makes it **false** for the
+/// shapes a reader must be able to tell apart: a launch whose nonce never came
+/// back, one whose read-back was a different value, one whose process the OS does
+/// not name as the listener, and one where the TCP table could not be read at
+/// all.  `answering_pid` stays "the OS reading, as read" so a disagreement is
+/// visible rather than hidden.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct IdentityFields {
+    /// The pid the OS TCP table named as the listener, as read.
+    pub answering_pid: Option<u32>,
+    /// Whether all three readings agree.
+    pub verified: bool,
+    /// The exact rule that produced `verified`, so a reader never has to infer it
+    /// from the field's name.
+    pub verified_rule: &'static str,
+}
+
+pub fn identity_fields(facts: &LaunchFacts) -> IdentityFields {
+    let nonce_proved = !facts.nonce.trim().is_empty();
+    let read_back_matches = facts
+        .answered_nonce
+        .as_deref()
+        .map(|answered| !answered.trim().is_empty() && Some(answered) == Some(facts.nonce.as_str()))
+        .unwrap_or(false);
+    let os_names_the_spawned_process =
+        facts.listening_pid.is_some() && facts.listening_pid == Some(facts.spawned_pid);
+    IdentityFields {
+        answering_pid: facts.listening_pid,
+        verified: nonce_proved && read_back_matches && os_names_the_spawned_process,
+        verified_rule: VERIFIED_RULE,
+    }
 }
 
 /// What `identity.verified` means, written into the record so a reader does not
 /// have to infer the rule from the field's name.
 pub const VERIFIED_RULE: &str =
-    "verified is true only when this launch carries the non-empty per-launch nonce that readiness \
-     read back from the game's `hof_game::contract::ProcessNonce` resource; a reply serving any \
-     other nonce is refused and the launch fails, so a returned launch proved it. `answering_pid` \
-     is the separate, independent reading: the pid the OS TCP table names as the listener on the \
-     endpoint, recorded as read (it can be absent, and it can disagree).";
+    "verified is true only when all three of this launch's own readings agree: (1) it carries a \
+     non-empty per-launch nonce, generated before the spawn and passed only in the game's \
+     environment; (2) `answered_nonce` is that same value, i.e. the endpoint served THIS nonce \
+     back when readiness read the contract's `ProcessNonce` (a reply serving any other value is \
+     refused and the launch fails, so a returned launch recorded what it read); and (3) \
+     `listening_pid` equals `spawned_pid`, i.e. the OS's own TCP table names the process this \
+     launch started as the listener on the endpoint. A launch whose read-back was not recorded, \
+     whose read-back differed, whose process the OS does not name as the listener, or whose TCP \
+     table could not be read, is verified false — and the fields that made it false stay in the \
+     record. `answering_pid` is the OS reading as read (it can be absent, and it can disagree).";
 
 /// The default timeout for the MCP server a round talks through.
 pub const SESSION_TIMEOUT: Duration = Duration::from_secs(5);
@@ -985,7 +1030,7 @@ pub fn write_workspace_payloads(workspace: &Path, report: &RoundReport) -> std::
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::adapter::bevy::battery::{JumpArc, Observation};
+    use crate::adapter::bevy::battery::{observation, JumpArc, Observation};
 
     #[test]
     fn the_gate_step_ids_are_the_harnesss() {
@@ -1001,48 +1046,72 @@ mod tests {
         [BUILT_STEP_ID, READY_STEP_ID]
     }
 
-    /// Round-4 repair: the two gate fields round 3 wrote as literals are computed
-    /// here, and the four cases are the ones a reader of `launch.json` has to be
-    /// able to distinguish.  Without this, `verified: true` and
-    /// `answering_pid == spawned_pid` are true by construction and the identity
-    /// gate accepts a copy of the harness's own hope.
+    /// Round-5 repair (defect RA-4): the identity fields are computed, and
+    /// `verified` **discriminates** — it is false for every shape a reader has to
+    /// be able to tell apart from the proved one, not merely for a hand-built
+    /// empty nonce.  Each case below is a launch this harness can really have.
     #[test]
     fn the_identity_fields_are_computed_from_the_facts_not_asserted() {
-        fn facts(nonce: &str, listening: Option<u32>) -> LaunchFacts {
+        fn facts(nonce: &str, answered: Option<&str>, listening: Option<u32>) -> LaunchFacts {
             LaunchFacts {
                 spawned_pid: 4242,
                 nonce: nonce.to_string(),
                 launch_image: "image".to_string(),
                 built_binary: "built".to_string(),
                 listening_pid: listening,
+                answered_nonce: answered.map(str::to_string),
                 ledger: None,
                 reaped_pids: vec![17],
             }
         }
-        assert_eq!(
-            identity_fields(&facts("5b1d0e2a", Some(4242))),
-            (Some(4242), true),
-            "the proved case: a nonce, and the OS naming the spawned pid"
-        );
-        assert_eq!(
-            identity_fields(&facts("5b1d0e2a", Some(17))),
-            (Some(17), true),
-            "the OS reading is recorded **as read**: a disagreement is not hidden, \
-             which is what makes `answering_pid == spawned_pid` a check"
-        );
-        assert_eq!(
-            identity_fields(&facts("5b1d0e2a", None)),
-            (None, true),
-            "an unreadable TCP table leaves the nonce proof intact and says so"
-        );
+        // The proved case: the launch's nonce, that same nonce read back off the
+        // wire, and the OS naming the spawned pid.
+        let proved = identity_fields(&facts("5b1d0e2a", Some("5b1d0e2a"), Some(4242)));
+        assert_eq!(proved.answering_pid, Some(4242));
+        assert!(proved.verified, "all three readings agree: {proved:?}");
         assert!(
-            !identity_fields(&facts("", Some(4242))).1,
-            "with no nonce there is no proof of identity, whatever the OS says"
+            proved.verified_rule.contains("all three"),
+            "the record states the rule it applied: {}",
+            proved.verified_rule
         );
+
+        // The OS disagrees: recorded as read, and `verified` is false — that is
+        // what makes `answering_pid == spawned_pid` a check rather than decoration.
+        let disagreement = identity_fields(&facts("5b1d0e2a", Some("5b1d0e2a"), Some(17)));
+        assert_eq!(
+            disagreement.answering_pid,
+            Some(17),
+            "the OS reading is recorded **as read**: a disagreement is not hidden"
+        );
+        assert!(!disagreement.verified, "a different process listens here");
+
+        // The TCP table could not be read: the record says None, and `verified`
+        // is false rather than resting on the nonce alone.
+        let unreadable = identity_fields(&facts("5b1d0e2a", Some("5b1d0e2a"), None));
+        assert_eq!(unreadable.answering_pid, None);
+        assert!(!unreadable.verified, "no OS reading, no verification");
+
+        // The read-back was a different value (a stale session's nonce).
+        let stale = identity_fields(&facts("5b1d0e2a", Some("the-previous-session"), Some(4242)));
         assert!(
-            !identity_fields(&facts("   ", Some(4242))).1,
-            "and a blank nonce is no nonce"
+            !stale.verified,
+            "a reply serving another nonce is not this launch"
         );
+
+        // The read-back was not recorded at all.
+        let unrecorded = identity_fields(&facts("5b1d0e2a", None, Some(4242)));
+        assert!(
+            !unrecorded.verified,
+            "a proof with no recorded read-back is not a recorded proof"
+        );
+
+        // No nonce, whatever else holds.
+        for nonce in ["", "   "] {
+            assert!(
+                !identity_fields(&facts(nonce, Some("5b1d0e2a"), Some(4242))).verified,
+                "with no nonce there is no proof of identity, whatever the OS says"
+            );
+        }
     }
 
     #[test]
@@ -1107,75 +1176,45 @@ mod tests {
     fn a_gap_and_a_measured_failure_are_both_red_but_say_different_things() {
         let mut observations = E3Observations {
             movement: Observation::not_observed("no player entity", Vec::new()),
-            coins: Observation {
-                observed: false,
-                failure: Some("the coin counter never rose above 0 (last reading 0)".to_string()),
-                readings: Vec::new(),
-                arc: None,
-                calls: Vec::new(),
-            },
-            win: Observation {
-                observed: true,
-                failure: None,
-                readings: Vec::new(),
-                arc: None,
-                calls: Vec::new(),
-            },
-            jump: Observation {
-                observed: false,
-                failure: Some(
+            coins: observation(
+                false,
+                Some("the coin counter never rose above 0 (last reading 0)".to_string()),
+                Vec::new(),
+                None,
+                Vec::new(),
+            ),
+            win: observation(true, None, Vec::new(), None, Vec::new()),
+            jump: observation(
+                false,
+                Some(
                     "the arc never rises (rise=0, fall=4): a monotone fall is not a jump"
                         .to_string(),
                 ),
-                readings: Vec::new(),
-                arc: Some(JumpArc {
+                Vec::new(),
+                Some(JumpArc {
                     peak: -200.0,
                     first: -100.0,
                     rising: 0,
                     falling: 4,
                     samples: Vec::new(),
                 }),
-                calls: Vec::new(),
-            },
-            grounded: Observation {
-                observed: true,
-                failure: None,
-                readings: Vec::new(),
-                arc: None,
-                calls: Vec::new(),
-            },
-            movement_left: Observation {
-                observed: false,
-                failure: Some(
+                Vec::new(),
+            ),
+            grounded: observation(true, None, Vec::new(), None, Vec::new()),
+            movement_left: observation(
+                false,
+                Some(
                     "injecting `move_dir = -1` changed `x` by 8 (from 0 to 8), which is not \
                      leftward motion"
                         .to_string(),
                 ),
-                readings: Vec::new(),
-                arc: None,
-                calls: Vec::new(),
-            },
-            movement_release: Observation {
-                observed: true,
-                failure: None,
-                readings: Vec::new(),
-                arc: None,
-                calls: Vec::new(),
-            },
-            win_position: Observation {
-                observed: true,
-                failure: None,
-                readings: Vec::new(),
-                arc: None,
-                calls: Vec::new(),
-            },
-            grounded_payload: Observation {
-                observed: true,
-                failure: None,
-                readings: Vec::new(),
-                arc: None,
-                calls: Vec::new(),
-            },
+                Vec::new(),
+                None,
+                Vec::new(),
+            ),
+            movement_release: observation(true, None, Vec::new(), None, Vec::new()),
+            win_position: observation(true, None, Vec::new(), None, Vec::new()),
+            grounded_payload: observation(true, None, Vec::new(), None, Vec::new()),
             aborted: None,
         };
         let records = battery_records(
@@ -1225,6 +1264,62 @@ mod tests {
         observations.aborted = Some("the game process died".to_string());
         let aborted = battery_records(true, "built", false, "died", Some(&observations));
         assert!(!RoundReport::evaluate(&aborted).launchable);
+    }
+
+    /// Round-5 repair (defect RA-8): the two definitional steps say so **in the
+    /// round's own record**, so a reader counting behavioural proofs is not misled
+    /// by two steps that any in-order run satisfies.
+    #[test]
+    fn the_definitional_battery_steps_say_so_in_the_rounds_record() {
+        // The same shape the battery builds: every step starts "not observed",
+        // and the two definitional ones carry the label.
+        let blank = || {
+            crate::adapter::bevy::battery::Observation::not_observed(
+                "the battery has not run",
+                Vec::new(),
+            )
+        };
+        let mut observations = E3Observations {
+            movement: blank(),
+            coins: blank(),
+            win: blank(),
+            jump: blank(),
+            grounded: blank(),
+            movement_left: blank(),
+            movement_release: blank(),
+            win_position: blank(),
+            grounded_payload: blank(),
+            aborted: None,
+        };
+        observations.coins = observation(true, None, Vec::new(), None, Vec::new());
+        observations.win_position = crate::adapter::bevy::battery::Observation {
+            definitional: true,
+            definitional_note: Some("definitional: satisfied by any in-order read".to_string()),
+            ..observation(true, None, Vec::new(), None, Vec::new())
+        };
+        let records = battery_records(
+            true,
+            "built",
+            true,
+            "the game answered and the battery ran",
+            Some(&observations),
+        );
+        let by_id = |id: &str| records.iter().find(|record| record.step_id == id).unwrap();
+        let win_position = &by_id("e3_win_position").record.observation;
+        assert!(
+            win_position.contains("[definitional: "),
+            "a definitional step must be labelled in the record the round writes: {win_position}"
+        );
+        assert!(
+            win_position.contains("any in-order read"),
+            "and the label must carry the reason: {win_position}"
+        );
+        // The control: a non-definitional step is not labelled.
+        let coins = &by_id("e3_coin_counter").record.observation;
+        assert!(
+            !coins.contains("[definitional: "),
+            "only the definitional steps carry the label: {coins}"
+        );
     }
 
     #[test]

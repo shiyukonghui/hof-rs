@@ -131,6 +131,11 @@ fn the_prd_total_is_seventeen_when_functional_ids_are_present() {
 }
 
 /// DR-39 ③: `hoh run` must end with one unmistakable line.
+///
+/// Round-5 repair (defect RA-5): the derived form must say what its denominator
+/// **is**.  Round 4 printed `prd coverage: 6/8` and the acceptance could only
+/// establish what the 8 meant by reading the harness source; the line now says it,
+/// including that the figure is not comparable between rounds.
 #[test]
 fn the_run_summary_line_states_the_prd_coverage() {
     let coverage = PrdCoverage {
@@ -141,8 +146,12 @@ fn the_run_summary_line_states_the_prd_coverage() {
     };
     let line = hof_rs::cli_impl::format_prd_coverage_line(&coverage);
     assert!(
-        line.contains("prd coverage: 0/17 verified"),
+        line.contains("prd coverage: 0/17"),
         "the end-of-run summary must be literal: {line}"
+    );
+    assert!(
+        line.contains("F1..F17"),
+        "a known denominator is the PRD's own count and must say so: {line}"
     );
     assert!(
         line.contains("harness") && line.contains("gate"),
@@ -157,7 +166,19 @@ fn the_run_summary_line_states_the_prd_coverage() {
     };
     let line = hof_rs::cli_impl::format_prd_coverage_line(&ad_hoc);
     assert!(
-        line.contains("prd coverage: 2/3 verified") && line.contains("derived"),
-        "an unknown denominator must be labelled: {line}"
+        line.contains("prd coverage: 2/3"),
+        "the ratio is still stated: {line}"
     );
+    for needle in [
+        "OWN claim count",
+        "NOT the PRD's F1..F17 count",
+        "not comparable",
+        "2 verified",
+        "1 gap",
+    ] {
+        assert!(
+            line.contains(needle),
+            "an unknown denominator must be labelled with `{needle}`: {line}"
+        );
+    }
 }
