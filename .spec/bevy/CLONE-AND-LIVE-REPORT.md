@@ -116,8 +116,8 @@
    "id": "E-2",
    "severity": "medium",
    "disposition": "FIXED, then observed for the first time",
-   "change": "every claim that S1-deterministic-step was closed \"by a real observation\" now reads *implemented, pending its first real observation*: .spec/bevy/COVERAGE-EVIDENCE-REPORT.md (machine block and prose), evidence/index.json's coverage.with_the_new_step, and src/adapter/bevy/prd_surfaces.rs::RESIDUALS",
-   "evidence": "before this round no raw/e3_process_liveness.json existed anywhere; this round produced one and the step observed a real advance — live_round.liveness"
+   "change": "every claim that S1-deterministic-step was closed \"by a real observation\" was rewritten to read *implemented, pending its first real observation* in all four places: .spec/bevy/COVERAGE-EVIDENCE-REPORT.md (machine block and prose), evidence/index.json's coverage.with_the_new_step, and src/adapter/bevy/prd_surfaces.rs::RESIDUALS. The record correction that followed the failed acceptance then updated the two of those outside the batch report - evidence/index.json's coverage.with_the_new_step and src/adapter/bevy/prd_surfaces.rs::RESIDUALS - to record the observation; the batch report's own two are left exactly as it wrote them",
+   "evidence": "before this round no raw/e3_process_liveness.json existed anywhere; this round produced one in each of the three passes and the step observed a real advance every time - live_round.liveness is iteration 3's own file and live_round.liveness.attribution_by_pass carries all three"
   },
   {
    "id": "E-3",
@@ -195,6 +195,8 @@
   },
   "identity_gate": {
    "where": "runs/bevy-clonefix1/launch.json, read before any battery verdict",
+   "pass": "iteration 3, the third and final battery pass: this is the launch.json that survived, and runs/bevy-clonefix1/meta.json's segments block names the same pid 57592",
+   "earlier_passes": "launch.json is overwritten by every battery pass, so iterations 1 and 2 keep no answered_nonce and no listening_pid at all. Iteration 1's launch is the ledger line nonce fb53d29e-8fcf-469c-82b8-cd760543212d / pid 51360, which carries neither field and is attributable only by that ledger line and by the pass's own timestamps; asserting a verified identity for it would assert a record that does not exist",
    "raw_fields": {
     "answered_nonce": "ff44b5f7-ed96-43b2-8942-1dec7f6b54b8",
     "answering_pid": 57592,
@@ -887,32 +889,131 @@
    }
   },
   "liveness": {
-   "path": "runs/clonefix1/iter-1/candidate/.hoh/deterministic/raw/e3_process_liveness.json",
+   "path": "runs/clonefix1/iter-3/candidate/.hoh/deterministic/raw/e3_process_liveness.json",
+   "pass": "iteration 3, the pass whose launch survives in runs/bevy-clonefix1/launch.json (ledger pid 57592)",
    "observed": true,
    "failure": null,
    "frames": {
-    "first_frame": 753,
+    "first_frame": 712,
     "requested": 8,
-    "second_frame": 763
+    "second_frame": 722
    },
    "advance": 10,
    "calls": [
     {
-     "seq": 63,
+     "seq": 69,
      "tool": "bevy_wait_frames",
      "requests": 3,
-     "frame": 753,
+     "frame": 712,
      "error": null
     },
     {
-     "seq": 64,
+     "seq": 70,
      "tool": "bevy_wait_frames",
      "requests": 3,
-     "frame": 763,
+     "frame": 722,
      "error": null
     }
    ],
-   "verdict": "the game's own FrameCounter went 753 -> 763 across a wait for 8 frames, so the tenth battery step is ok and Q-startup and B2.1 are decided by a real observation"
+   "verdict": "the game's own FrameCounter went 712 -> 722 across a wait for 8 frames, so the tenth battery step is ok and Q-startup and B2.1 are decided by a real observation",
+   "attribution_by_pass": [
+    {
+     "iteration": "iter-1",
+     "path": "runs/clonefix1/iter-1/candidate/.hoh/deterministic/raw/e3_process_liveness.json",
+     "frames": {
+      "first_frame": 753,
+      "requested": 8,
+      "second_frame": 763
+     },
+     "advance": 10,
+     "calls": [
+      {
+       "seq": 63,
+       "tool": "bevy_wait_frames",
+       "requests": 3,
+       "frame": 753,
+       "error": null
+      },
+      {
+       "seq": 64,
+       "tool": "bevy_wait_frames",
+       "requests": 3,
+       "frame": 763,
+       "error": null
+      }
+     ],
+     "pass_window_ms": [
+      1791206972198,
+      1791206975944
+     ],
+     "ledger_pid": 51360,
+     "ledger_launched_at_seconds": 1791206961
+    },
+    {
+     "iteration": "iter-2",
+     "path": "runs/clonefix1/iter-2/candidate/.hoh/deterministic/raw/e3_process_liveness.json",
+     "frames": {
+      "first_frame": 712,
+      "requested": 8,
+      "second_frame": 722
+     },
+     "advance": 10,
+     "calls": [
+      {
+       "seq": 69,
+       "tool": "bevy_wait_frames",
+       "requests": 3,
+       "frame": 712,
+       "error": null
+      },
+      {
+       "seq": 70,
+       "tool": "bevy_wait_frames",
+       "requests": 3,
+       "frame": 722,
+       "error": null
+      }
+     ],
+     "pass_window_ms": [
+      1791209828774,
+      1791209832740
+     ],
+     "ledger_pid": 45996,
+     "ledger_launched_at_seconds": 1791209819
+    },
+    {
+     "iteration": "iter-3",
+     "path": "runs/clonefix1/iter-3/candidate/.hoh/deterministic/raw/e3_process_liveness.json",
+     "frames": {
+      "first_frame": 712,
+      "requested": 8,
+      "second_frame": 722
+     },
+     "advance": 10,
+     "calls": [
+      {
+       "seq": 69,
+       "tool": "bevy_wait_frames",
+       "requests": 3,
+       "frame": 712,
+       "error": null
+      },
+      {
+       "seq": 70,
+       "tool": "bevy_wait_frames",
+       "requests": 3,
+       "frame": 722,
+       "error": null
+      }
+     ],
+     "pass_window_ms": [
+      1791212656053,
+      1791212660017
+     ],
+     "ledger_pid": 57592,
+     "ledger_launched_at_seconds": 1791212646
+    }
+   ]
   },
   "battery_steps": [
    {
@@ -1055,7 +1156,7 @@
    {
     "step_id": "e3_jump_arc",
     "observed": true,
-    "calls": 22,
+    "calls": 28,
     "raw_call_ids": [
      41,
      42,
@@ -1078,7 +1179,13 @@
      59,
      60,
      61,
-     62
+     62,
+     63,
+     64,
+     65,
+     66,
+     67,
+     68
     ],
     "tools": [
      "bevy_grounded",
@@ -1086,6 +1193,12 @@
      "bevy_inject_jump",
      "bevy_wait_frames",
      "bevy_inject_jump",
+     "bevy_player_transform",
+     "bevy_player_transform",
+     "bevy_player_transform",
+     "bevy_player_transform",
+     "bevy_player_transform",
+     "bevy_player_transform",
      "bevy_player_transform",
      "bevy_player_transform",
      "bevy_player_transform",
@@ -1239,8 +1352,8 @@
     "observed": true,
     "calls": 2,
     "raw_call_ids": [
-     63,
-     64
+     69,
+     70
     ],
     "tools": [
      "bevy_wait_frames",
@@ -1457,8 +1570,9 @@ project outside the repository: `hoh init` exit **0**, `hoh run` exit **0**, thr
 version `1cbd14deef3ff025a52c1e6f93121f78c805024adb6cb690ac6f907297dffcf1`, and
 `result.json.prd_coverage.surfaces` reads **15 verified / 0 gap / 4 unobservable of 19 in every
 iteration**. The tenth battery step `e3_process_liveness` — published by the previous batch as closed
-"by a real observation" that had never been produced — **ran for the first time and observed the game's
-own frame counter go 753 → 763 across a wait for 8 frames**. The cost criterion is still unmet, and now
+"by a real observation" that had never been produced — **ran for the first time — in all three passes
+— and observed the game's own frame counter advance: 753 → 763 in iteration 1 and 712 → 722 in
+iterations 2 and 3, each across a wait for 8 frames**. The cost criterion is still unmet, and now
 measured three more times.
 
 ## 1. E-1: the clone is green, and the pin is what makes it green
@@ -1507,29 +1621,43 @@ port. After the round stopped, the final clone gate passes with 0 failures.
   port 15703 never used. The endpoint was verified free before the launch (`netstat` named no line for
   15702/15703, no `hof_game.exe`, no `hoh.exe`), and no stray had to be killed.
 * **Identity, applied before any battery verdict.** `runs/bevy-clonefix1/launch.json` carries
-  `verified: true`, nonce `fb53d29e-8fcf-469c-82b8-cd760543212d`, `answered_nonce` the same value,
-  `spawned_pid = answering_pid = listening_pid = 51360`, `launch_image`
-  `runs\bevy-clonefix1\launch-image\ee494002-e119-4b38-be2b-89e113fe65e7\hof_game.exe`, and a 7-line
-  launch ledger. The artifact gate (`runs/bevy-clonefix1/gate.json`) is `applicable: true`,
-  `launchable: true`, `reasons: []`.
+  `verified: true`, nonce `ff44b5f7-ed96-43b2-8942-1dec7f6b54b8`, `answered_nonce` the same value,
+  `spawned_pid = answering_pid = listening_pid = 57592`, `launch_image`
+  `runs\bevy-clonefix1\launch-image\eb328de6-7379-4cb4-a965-92563b0b2d41\hof_game.exe`, and a 7-line
+  launch ledger. That surviving launch is **iteration 3, the final battery pass** — the same `pid:
+  57592` that `runs/bevy-clonefix1/meta.json` names for the pass that wrote the readings. `launch.json`
+  is overwritten by every pass, so **no earlier pass keeps an `answered_nonce` or a `listening_pid`**:
+  the ledger's line for iteration 1's pass (`fb53d29e-8fcf-469c-82b8-cd760543212d`, pid 51360) carries
+  neither field, and that pass is attributable only by its own ledger line and timestamps. The artifact
+  gate (`runs/bevy-clonefix1/gate.json`) is `applicable: true`, `launchable: true`, `reasons: []`.
 * **`prd_coverage.surfaces`.** 15 verified / 0 gap / 4 unobservable of 19, identical in all three
   iterations. The four unobservable items are named with reasons, not missing: **C5**, **C6**,
   **Q-scale**, **Q-not-required**. `Q-startup` is verified by `play_scene_ready` **and**
   `e3_process_liveness`; `B2.1` is verified by `e3_process_liveness` alone. The Tester's own,
   non-comparable figure travels beside it (7/1, 6/1, 10/2) and the run line says so in words.
-* **The liveness step, observed.** `.hoh/deterministic/raw/e3_process_liveness.json`:
-  `observed: true`, `failure: null`, `frames {first_frame: 753, requested: 8, second_frame: 763}` — an
-  advance of **10** for a requested 8. Its two raw calls are `bevy_wait_frames(1)` (seq 63, frame 753)
-  and `bevy_wait_frames(8)` (seq 64, frame 763), each fanned out into three `world.get_resources`
-  sub-requests on `hof_game::contract::FrameCounter`. This is the first time the step has ever run
-  against a real game.
+* **The liveness step, observed in every pass.** The verified launch's own pass is **iteration 3**, and
+  its raw file `runs/clonefix1/iter-3/candidate/.hoh/deterministic/raw/e3_process_liveness.json`:
+  `observed: true`, `failure: null`, `frames {first_frame: 712, requested: 8, second_frame: 722}` — an
+  advance of **10** for a requested 8. Its two raw calls are `bevy_wait_frames(1)` (seq 69, frame 712)
+  and `bevy_wait_frames(8)` (seq 70, frame 722), each fanned out into three `world.get_resources`
+  sub-requests on `hof_game::contract::FrameCounter`. The two earlier passes kept **their own** files,
+  and each is attributed to its own launch by the ledger's timestamps: **iteration 1**
+  (`iter-1/.../e3_process_liveness.json`, ledger pid 51360, launched 1791206961, the pass's own calls
+  spanning 1791206972198–1791206975944) observed **753 → 763** with its calls at seq 63/64; and
+  **iteration 2** (`iter-2/.../e3_process_liveness.json`, ledger pid 45996, launched 1791209819, the
+  pass spanning 1791209828774–1791209832740) observed **712 → 722** at seq 69/70. This round is the
+  first time the step has run against a real game at all.
 * **The ten battery steps and their raw call ids** (from
-  `runs/bevy-clonefix1/readings/e3-observations.json`, 64 call files in total):
+  `runs/bevy-clonefix1/readings/e3-observations.json`, 70 call files in total):
   `e3_movement` [9,10,11,12,13]; `e3_coin_counter` [1..7,14..31]; `e3_win_flag` [1..7,14..31];
-  `e3_jump_arc` [41..62]; `e3_grounded` [1..7]; `e3_movement_left` [32..37];
+  `e3_jump_arc` [41..68]; `e3_grounded` [1..7]; `e3_movement_left` [32..37];
   `e3_movement_release` [38,39,40]; `e3_win_position` [1..7,14..31]; `e3_grounded_payload` [8];
-  `e3_process_liveness` **[63,64]** — plus the two gate steps `editor_errors_baseline` and
-  `play_scene_ready`, which carry no semantic call.
+  `e3_process_liveness` **[69,70]** — plus the two gate steps `editor_errors_baseline` and
+  `play_scene_ready`, which carry no semantic call. That file is the **iteration-3** pass, the same
+  pass that wrote `runs/bevy-clonefix1/calls` (70 files, `0063`/`0064` `bevy_player_transform` and
+  `0069`/`0070` `bevy_wait_frames`). Iteration 1's pass is the **64-call** layout instead — its
+  `e3_jump_arc` ends at 62 and its `e3_process_liveness` is at [63,64] — and its call ids belong to
+  that pass alone, not to the ids above.
 * **Increment fingerprints.** A0 `638057ca…` (init) tree digest `272863b4…`, 6 files — byte-identical
   to round 4's A0 because it is the same scaffold; A1 `a6438e80…` tree digest `ca1d17b1…`, 6 files;
   A2 `f4f55f66…`; A3 (final) `1cbd14de…`.
@@ -1554,9 +1682,14 @@ never fired in this round. The round's own line reports 20,581,697 tokens across
 
 ## 4. Defect dispositions, and the disclosure
 
-E-1 fixed (the pin, proven by two red controls and a green clone). E-2 fixed and then *observed*: the
-wording now says *implemented, pending its first real observation* in all four places, and the live
-round produced that observation. E-3 fixed (seven surfaces, not eight; the goal would be an eighth).
+E-1 fixed (the pin, proven by two red controls and a green clone). E-2 fixed and then *observed*:
+when this batch was committed the wording read *implemented, pending its first real observation* in
+all four places, and the live round then produced that observation. This correction therefore updates
+the two committed places outside the batch report that still asserted the step had never run —
+`evidence/index.json`'s `coverage.with_the_new_step` and
+`src/adapter/bevy/prd_surfaces.rs::RESIDUALS` — to record it, and leaves the batch report's own two
+(`.spec/bevy/COVERAGE-EVIDENCE-REPORT.md`) exactly as that batch wrote them. E-3 fixed (seven
+surfaces, not eight; the goal would be an eighth).
 E-4 fixed (18 headlines). E-5 fixed (44 files with 2 sub-requests, 13 with 3; the entry says so and its
 path is marked a directory). E-6 fixed (`repo_independent: false`, 788 + 18 = 806). E-7 fixed
 (122 files / 4,798,249 bytes as a directory; 118 / 4,771,139 as the corpus; the 4 excluded files are

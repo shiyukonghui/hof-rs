@@ -284,15 +284,15 @@ pub const EXPECTED_IDS: &[&str] = &[
 ///   [`SurfaceStatus::Unobservable`] item *outside* the PRD denominator, and it
 ///   is reported as such rather than dropped.
 /// * `S1-deterministic-step` asked for a persisted late-round liveness step under
-///   `.hoh/deterministic/raw/`.  That one **is** observable, and this batch
-///   **implements** it — but it has **never run against a real game**: no round
-///   has run the ten-step battery, so no `raw/e3_process_liveness.json` exists
-///   and the disposition is *implemented, pending its first real observation*,
-///   not "closed by an observation".  The `e3_process_liveness` battery step
-///   reads the game's own frame counter, waits, reads it again, requires the
+///   `.hoh/deterministic/raw/`.  That one **is** observable, and this crate
+///   **implements** it.  It has since **run against a real game**: the live round
+///   `clonefix1` (2026-10-05, its recordings under the gitignored `runs/`) ran the
+///   ten-step battery in all three iterations and persisted
+///   `raw/e3_process_liveness.json` every time, so the disposition is *observed* —
+///   not "pending its first real observation".  The `e3_process_liveness` battery
+///   step reads the game's own frame counter, waits, reads it again, requires the
 ///   frame count to advance by the number asked for, and persists
-///   `raw/e3_process_liveness.json`.  Once it runs, it is what decides
-///   `Q-startup` and `B2.1`.
+///   `raw/e3_process_liveness.json`; it is what decides `Q-startup` and `B2.1`.
 pub const RESIDUALS: &[(&str, &str)] = &[
     (
         "P3-goal-x",
@@ -302,9 +302,14 @@ pub const RESIDUALS: &[(&str, &str)] = &[
     ),
     (
         "S1-deterministic-step",
-        "implemented by the e3_process_liveness battery step, which is projected to decide \
-         Q-startup and B2.1; pending its first real observation, because no round has run the \
-         ten-step battery and no raw/e3_process_liveness.json has ever been produced",
+        "implemented by the e3_process_liveness battery step, which decides Q-startup and B2.1. \
+         OBSERVED, no longer pending: the live round clonefix1 (2026-10-05, its recordings under the \
+         gitignored runs/) ran the ten-step battery in all three iterations and persisted \
+         raw/e3_process_liveness.json in every one of them - frames 753 -> 763 in iteration 1 and \
+         712 -> 722 in iterations 2 and 3, observed true with failure null throughout. The earlier \
+         wording here, which called this pending because no round had run the ten-step battery and no \
+         raw/e3_process_liveness.json had ever been produced, is falsified by that round; the \
+         observation itself is not part of the committed evidence/ corpus",
     ),
 ];
 
