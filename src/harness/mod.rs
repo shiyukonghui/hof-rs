@@ -5,6 +5,7 @@ pub mod compact;
 pub mod directive;
 pub mod guard;
 pub mod mini;
+pub mod write_audit;
 
 pub use cap::{cap_tool_output, CappedEnvironment, CappedOutput};
 pub use compact::{compact_history, CompactPolicy, CompactStats};

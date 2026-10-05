@@ -1,5 +1,12 @@
 # LIVE-COST-REPORT — the live Developer call, the five corrections, and the call-count reduction that was measured and withdrawn
 
+> **Corrected in place.** The independent acceptance `.spec/bevy/ACCEPTANCE-LIVE-COST.md` returned
+> **fail** and found four statements here that were factually wrong (defects A-1, A-2, A-3, A-5) plus a
+> tree that was not the committed one (A-4, closed by commit `b9546f5`). The corrections are made below,
+> only where the statement was wrong, and each one quotes what it said before. The account they rest on
+> now lives in the tree — `src/harness/write_audit.rs`, exercised by `tests/write_accounting.rs` — not
+> in scripts outside it. Full record: `.spec/bevy/WRITE-ACCOUNTING-REPORT.md` and `DECISIONS.md` D303.
+
 ```json
 {
  "schema": "hof-rs / bevy round-6 live cost report",
@@ -74,9 +81,23 @@
    "hoh_read_file_directives": 9,
    "shell_commands": 172,
    "distinct_shell_commands": 166,
-   "last_project_file_change_at_call": 44,
-   "how_that_change_happened": "a PowerShell `Set-Content` on src/main.rs (adding `mod sim_tests;`), invisible to the guard's directive-write counter",
-   "calls_after_it_that_changed_no_project_file": 106,
+   "last_project_file_change_at_call": 95,
+   "corrected_write_profile": {
+    "measured_by": "src/harness/write_audit.rs, exercised by tests/write_accounting.rs::the_live_calls_write_profile_is_the_corrected_one; re-run with `cargo test --offline --test write_accounting`",
+    "project_write_calls": [6, 14, 17, 19, 43, 44, 95],
+    "writes_by_shell_command": [17, 44, 95],
+    "attempted_shell_write_that_failed": {"call": 139, "path": "src\\game.rs", "recorded_returncode": 1, "recorded_output": "Missing closing ')' in expression.", "so": "PowerShell never parsed the command, so src\\game.rs was not changed at call 139; the acceptance could not decide this and said so"},
+    "calls_after_the_last_project_write": 55,
+    "tokens_in_those_calls": 1788003,
+    "share_of_the_call_tokens": 0.4897,
+    "how_the_last_change_happened": "a PowerShell `Set-Content` on src\\game.rs (COIN_A_X, COIN_B_X, GOAL_X, MOVE_SPEED), invisible to the guard's directive-write counter"
+   },
+   "what_this_entry_said_before_the_correction": {
+    "last_project_file_change_at_call": 44,
+    "calls_after_it_that_changed_no_project_file": 106,
+    "why_it_was_wrong": "it counted `HOH_WRITE_FILE` directives only, so every project file a shell command changed was invisible - defect A-3 of .spec/bevy/ACCEPTANCE-LIVE-COST.md. The old '106 calls, 62.7 % of the tokens' is not reproducible from the recorded usage under either basis: calls 45-150 are 79.71 % of the call's total tokens, and the corrected tail (96-150) is 55 calls and 48.97 %.",
+    "fixed_at": "the corrected write profile above; the record of the defect is ACCEPTANCE-LIVE-COST.md A-3 and DECISIONS.md D303"
+   },
    "note": "the shape the round-5 tripwire cannot see: 166 distinct commands, so there is no repeated action to count"
   },
   "the_round_it_belongs_to": {
@@ -117,7 +138,7 @@
   "F-1_arithmetic": {"was": "iter-2 projects to 2,681,282 prompt + 325,953 completion = 3,034,063", "now": "3,007,235", "where": ".spec/bevy/COST-REPORT.md"},
   "F-2_system_prompt_size": {"was": "14,783 bytes of content (14,814 of wire)", "now": "14,522 bytes of content / 14,849 bytes of wire, which the live call reproduces exactly (system_content_bytes 14522, system_wire_bytes 14849); 17.7 % of iter-2's compacted wire bytes and 3,791 of the compacted final call's 25,152 projected prompt tokens (15.1 %)", "where": ".spec/bevy/COST-REPORT.md and .spec/bevy/FIX-REPORT.md"},
   "F-3_over_strong_claim": {"was": "the tail-0 figure is 'an arithmetic lower bound on any context-only policy, so no context-only policy can make it pass'", "now": "the tail-0 figure bounds only the fold's own family (every superseded message replaced by a ~200-300 byte note). A policy that keeps nothing but the system prompt and the task projects to 287,657 / 517,368 / 430,085 prompt tokens (369,289 / 843,321 / 516,206 with completion) for the three recorded calls and WOULD pass. What the batch refuses is that TRADE - a role that no longer sees the history it works from - not an impossibility", "where": ".spec/bevy/FIX-REPORT.md cost block, measured_floor, the new f3_correction block, section 5 and the 'does not pass' paragraph; .spec/bevy/COST-REPORT.md; DECISIONS.md D302 (append-only, so D301's own title and section (e) are superseded there rather than edited)"},
-  "F-4_call_count_arithmetic": {"was": "iter-2 first_60 [1,153,140, 1,479,093], first_70 [1,384,463, 1,710,416], first_80 [1,640,551, 1,966,504], 'roughly 85 for iter-3'", "now": "re-derived pairs iter-2 first_60 [1,152,836, 1,478,789], first_70 [1,385,772, 1,711,725], first_80 [1,643,606, 1,969,559]; iter-3 first_80 [1,180,267, 1,266,388]; 'roughly 85 for iter-3' WITHDRAWN (its own first_80 is already below the target), crossing about 61 calls for iter-2 and about 91 for iter-3", "reproduced_by": "D:/hof-live-work/cost_measure.py and the acceptance's independent F:/hof-acc6-work/composition.py agree exactly", "where": ".spec/bevy/FIX-REPORT.md"},
+  "F-4_call_count_arithmetic": {"was": "iter-2 first_60 [1,153,140, 1,479,093], first_70 [1,384,463, 1,710,416], first_80 [1,640,551, 1,966,504], 'roughly 85 for iter-3'", "now": "re-derived pairs iter-2 first_60 [1,152,836, 1,478,789], first_70 [1,385,772, 1,711,725], first_80 [1,643,606, 1,969,559]; iter-3 first_80 [1,180,267, 1,266,388]; 'roughly 85 for iter-3' WITHDRAWN (its own first_80 is already below the target)", "reproduced_by": "the acceptance's independent F:/hof-acc6-work/composition.py, whose convention these pairs use: [projected prompt over the first N calls, that prompt + the iteration's WHOLE recorded completion]. This batch's own D:/hof-live-work/cost_measure.py uses a DIFFERENT second component (prompt + the completion recorded up to N) and therefore does NOT reproduce these pairs: its iter-2 first_60 is [1,152,836, 1,386,920]. The earlier wording claimed the two agree exactly, which was false - defect A-5 of ACCEPTANCE-LIVE-COST.md. The convention is now stated where the pairs are published (.spec/bevy/FIX-REPORT.md).", "crossing": {"published_convention": {"first_n_at_or_above_the_target": 61, "below_at": [60, 1478789], "above_at": [61, 1502016], "linear_interpolation": 60.9, "iter_3": {"first_n_at_or_above_the_target": 92, "below_at": [91, 1498609], "above_at": [92, 1520424], "linear_interpolation": 91.1}}, "cost_measure_py_convention": {"first_n_at_or_above_the_target": 65, "below_at": [64, 1477946], "above_at": [65, 1504428], "linear_interpolation": 64.8, "iter_3": {"first_n_at_or_above_the_target": 92, "below_at": [91, 1494137], "above_at": [92, 1516330], "linear_interpolation": 91.3}}, "so_61_is": "the curve's own crossing, computed call by call from the same fold and ratio the pairs come from - NOT an interpolation between the 60 and 70 samples, which is what the earlier wording said"}, "where": ".spec/bevy/FIX-REPORT.md"},
   "F-5_stale_not_committed": {"was": "'Nothing was committed, staged or pushed'", "now": "committed as 6290f77 on bevy-core; the sentence was true when written and is stale as a statement about the tree", "where": ".spec/bevy/FIX-REPORT.md (scope field and section 1)"}
  },
  "call_count_reduction": {
@@ -134,22 +155,34 @@
   "distribution": "the implementation is preserved outside the repository at D:/hof-live-work/write-free-budget-WITHDRAWN.patch (45,735 bytes; 753 insertions, 6 deletions across src/harness/guard.rs, src/config.rs, src/harness/mini.rs, config/hoh.yaml, tests/context_compaction.rs). The repository was restored byte-exactly from HEAD blobs (`git show HEAD:<path>`, sha256 compared, `git diff --exit-code` clean for each of the five paths); `git checkout --` was not used.",
   "replay_through_the_shipped_guard": {
    "how": "every recorded model call is fed to the real WriteGuardEnvironment (shipped step_limit 150, wrap_up_steps 25, steps_per_artifact 8, max_write_free_steps 32), a FakeShell standing in for the shell so no recorded command executes, the real write path for the directives, and a shared StepCounter incremented once per call exactly as CountingModel does; the token totals are the provider's own recorded per-call usage. It ran as src/harness/guard.rs::tests::the_write_free_budget_replayed_over_the_recorded_developer_calls before the implementation was withdrawn.",
-   "live_iter_1": {"recorded_calls": 150, "ends_at_call": 76, "total_tokens_at_the_end": 1357530, "ratio_to_criterion": 0.905, "directive_writes_after_the_end": []},
-   "round4_iter_1": {"recorded_calls": 69, "ends_at_call": 51, "recorded_total_tokens_at_the_end": 1790635, "directive_writes_after_the_end": []},
-   "round4_iter_2": {"recorded_calls": 125, "ends_at_call": null, "directive_writes_after_the_end": []},
-   "round4_iter_3": {"recorded_calls": 102, "ends_at_call": 39, "directive_writes_after_the_end": []},
-   "zero_recorded_directive_writes_lost": true
+   "live_iter_1": {"recorded_calls": 150, "ends_at_call": 76, "total_tokens_at_the_end": 1357530, "ratio_to_criterion": 0.905, "directive_writes_after_the_end": [], "project_writes_after_the_end": [95]},
+   "round4_iter_1": {"recorded_calls": 69, "ends_at_call": 51, "recorded_total_tokens_at_the_end": 1790635, "directive_writes_after_the_end": [], "project_writes_after_the_end": []},
+   "round4_iter_2": {"recorded_calls": 125, "ends_at_call": null, "directive_writes_after_the_end": [], "project_writes_after_the_end": []},
+   "round4_iter_3": {"recorded_calls": 102, "ends_at_call": 39, "directive_writes_after_the_end": [50, 70, 73, 74, 80, 84, 86, 90, 93, 97], "project_writes_after_the_end": [75, 81, 85, 87, 91, 94, 98]},
+   "zero_recorded_directive_writes_lost": false,
+   "zero_recorded_project_writes_lost": false,
+   "corrected_by": "src/harness/write_audit.rs + tests/write_accounting.rs::the_withdrawn_budget_at_k_32_cuts_ten_directives_and_seven_project_edits",
+   "what_this_block_said_before_the_correction": {
+    "live_iter_1.directive_writes_after_the_end": [],
+    "round4_iter_3.directive_writes_after_the_end": [],
+    "zero_recorded_directive_writes_lost": true,
+    "why_it_was_wrong": "the value was gathered INSIDE the replay loop, which stops at the abort, so the 'after the end' list could only ever be empty. The report's own section 4 prose ('the rule would have cut genuine repairs') was right and this machine-readable field contradicted it - defect A-1 of ACCEPTANCE-LIVE-COST.md.",
+    "fixed_at": "the corrected lists above; the loop no longer produces them (they are read off the whole recording) and the regression is pinned by the plant P3-the-degenerate-after-lists in .spec/bevy/WRITE-ACCOUNTING-REPORT.md"
+   }
   },
   "the_caveat_that_withdrew_it": {
-   "round4_iter_3": "the rule fires at call 39, in the run that starts at its last visible write (call 6) and reaches the next (call 50) - 43 calls. Inside that run the role edited src/game.rs at calls 8 and 22 with `powershell [IO.File]::ReadAllText` + `[IO.File]::WriteAllText`; the guard sees neither. So 'zero lost writes' is true only of the guard's own signal: the rule would have cut genuine repairs.",
-   "round4_iter_2_variant": "a stricter variant that counted only artifact writes fires at call 105, before calls 107 and 110 run .hoh/scratch/patch4.py and patch5.py, which edit src/game.rs - the same damage by a different route."
+   "round4_iter_3": "the rule fires at call 39, in the run that starts at its last visible write (call 6) and reaches the next (call 50) - 43 calls. Inside that run the role edited src/game.rs at call 8 with `[IO.File]::ReadAllText` + `[IO.File]::WriteAllText` and reported success (the file grew to 42,502 bytes); the guard cannot see it. The earlier wording also named call 22, which is recorded as FAILED (`<returncode>1</returncode>`, `json pattern missing`: the script threw before its write). So 'zero lost writes' is true only of the guard's own signal: the rule would have cut genuine repairs.",
+   "round4_iter_3_after_the_abort": "the seven script-driven edits at calls 75, 81, 85, 87, 91, 94 and 98 are inside the run the rule ends at call 39. Each wrote src/game.rs by running a `.hoh/scratch/tweak{3..9}.ps1` the role had just written; each reported `ok bytes=<growing length>`. None of them appears on the command line that ran it, so neither the guard nor a path-in-command detector sees them - they are read from the recorded script text by src/harness/write_audit.rs.",
+   "round4_iter_2_variant": "a stricter variant that counted only artifact writes fires at call 105, before calls 107 and 110 run .hoh/scratch/patch4.py and patch5.py, which edit src/game.rs - the same damage by a different route. (Call 68's heredoc `python - <<\"PY\"` is recorded as failed: `cmd.exe` answered `<< was unexpected at this time`.)"
   },
-  "why_the_30000_token_window_the_task_expected_does_not_exist": "round-4 iter-3's write-free window is 43 visible-write-free calls (6 -> 50), not 31: the 31 came from counting .hoh scratch writes as artifact progress. The 43 is the binding safety bound.",
+  "why_the_30000_token_window_the_task_expected_does_not_exist": "round-4 iter-3's write-free window is 43 visible-write-free calls (6 -> 50), not 31: the 31 came from counting .hoh scratch writes as artifact progress. The 43 is the binding safety bound. Recomputed from the corrected accounting: the 43 still is the longest window between visible writes, and it is not idle (call 8 really edits src/game.rs); the longest window between PROJECT writes is 66 calls (8 -> 75).",
   "the_two_bands_do_not_overlap": {
    "to_meet_the_criterion": "K <= 37: the live call's last cumulative total under 1,500,000 is call 81 (1,484,934; call 82 is 1,511,382), and the abort call is last_visible_write + K + 1 = 43 + K + 1, so K <= 81 - 44 = 37",
-   "to_cut_no_recorded_work": "K >= 43: round-4 iter-3's 43-call run after its last visible write contains two real src/game.rs edits",
+   "to_cut_no_recorded_work": "K >= 43: round-4 iter-3's 43-call run after its last visible write is not idle - call 8 really edits src/game.rs - so the rule must not fire before call 50. At K = 32 it fires at 39 and cuts ten write directives AND seven real src/game.rs edits. There is no K for which it both fires early enough to pass and cuts nothing.",
+   "what_the_constant_32_was_derived_from": "the withdrawn patch's config/hoh.yaml and src/config.rs doc comments said the longest recorded legitimate stretch is round-4 iter-3's 31 calls, 'its write at call 18, its next at 50', hence 32 = 31 + 1. That derivation is FALSE: iter-3 has no write at call 18 and its longest visible-write-free window is 43 calls (6 -> 50). 32 is eleven calls BELOW the only legitimate window in the evidence, not one above it. The margin is -11, not +1. (Defect A-2 of ACCEPTANCE-LIVE-COST.md; the patch itself lives outside the repository at D:/hof-live-work/write-free-budget-WITHDRAWN.patch and still carries the false comment, so it must not be re-applied without correcting it.)",
+   "recomputed_with_the_corrected_accounting": "the two bounds are unchanged (K <= 37, K >= 43; 37 < 43) and the losing side is worse than this report claimed: at K = 32 the live call also cuts its call-95 src/game.rs write, and round-4 iter-3 also loses the seven script-driven edits at 75..98. Measured by tests/write_accounting.rs::the_two_bands_do_not_overlap and ::the_withdrawn_budget_at_k_32_cuts_ten_directives_and_seven_project_edits.",
    "gap": "37 < 43; the same rule cannot both meet the criterion and leave every recorded call's artifact work intact",
-   "source": "D:/hof-live-work/bands.py, D:/hof-live-logs/bands.txt"
+   "source": "D:/hof-live-work/bands.py, D:/hof-live-logs/bands.txt; re-derived from the corrected accounting by src/harness/write_audit.rs"
   },
   "the_other_context_policy_that_would_pass": {
    "policy": "keep nothing but the system prompt and the task on every call",
@@ -199,10 +232,11 @@
   "Only one Developer call was measured. It is a first-iteration-shaped call on a fresh project; whether an iteration-2-shaped call (round-4 iter-2: 125 calls, 24 writes) now costs under the criterion is not measured and is not claimed.",
   "The tester and the second/third iterations were not run: the harness has no role-selective entry point, so `--iterations 1` ran planner + developer + tester, and the developer measurement is unaffected by the tester's 124 calls / 2,811,555 tokens.",
   "The tree-fingerprint variant of the write-free rule (the only signal that can see shell writes) was not implemented or measured, because no offline replay may execute the recorded shell commands that produced the tree changes; it needs another live round.",
-  "Whether the live call's artifact would have been launchable at the point the withdrawn rule would have ended it (call 76) is not known: the artifact gate recorded launchable=true at call 150, and the last project-file change was call 44, but no gate was evaluated at call 76.",
+  "Whether the live call's artifact would have been launchable at the point the withdrawn rule would have ended it (call 76) is not known: the artifact gate recorded launchable=true at call 150, and the corrected last project-file change is call 95, but no gate was evaluated at call 76.",
   "The two known gitignored historical evidence files under runs/** were not re-fingerprinted; the key scan of this batch covers only the browsable tree, and no key was written into the repository, config/hoh.yaml or runs/**."
  ],
- "single_most_important_thing_next_batch": "Build the write-free budget on a signal that can see shell writes - a fingerprint of the artifact tree - because the guard's directive counter is blind to the writes the roles actually make (the live call edited src/main.rs with PowerShell at call 44, and round-4 iter-3 edited src/game.rs with [IO.File]::WriteAllText at calls 8 and 22). The cost criterion cannot be met by the visible-write signal without cutting real work: meeting it needs K <= 37 and leaving the recorded calls intact needs K >= 43. That signal, not a smaller number, is the next step, and it needs one live round to measure."
+ "single_most_important_thing_next_batch": "Build the write-free budget on a signal that can see shell writes - a fingerprint of the artifact tree - because the guard's directive counter is blind to the writes the roles actually make (the live call edited src/game.rs with PowerShell Set-Content at call 95, the last such change in the call; round-4 iter-3 edited src/game.rs with [IO.File]::WriteAllText at call 8; and calls 75 81 85 87 91 94 98 of that iteration each ran a .hoh/scratch script that rewrote it, so the write is not on the command line at all). The cost criterion cannot be met by the visible-write signal without cutting real work: meeting it needs K <= 37 and leaving the recorded calls intact needs K >= 43. That signal, not a smaller number, is the next step, and it needs one live round to measure. CORRECTED by the round-7 write-accounting batch: the earlier wording named call 44 as the live call's last project write (it is call 95) and calls 8 and 22 in round-4 iter-3 (call 22 is recorded as FAILED; the further edits are the script-driven ones at 75-98).",
+ "corrected_by_a_later_batch": "This report's machine-readable block was corrected in place by the round-7 write-accounting batch, only where the independent acceptance found it factually wrong: A-1 (the replay's degenerate after-lists), A-2 (the constant's derivation), A-3 (the live call's write profile) and A-5 (the lever pairs' provenance and the crossing). The corrections, the tool that measures them and the four plants that pin them are in .spec/bevy/WRITE-ACCOUNTING-REPORT.md; the decision entry is DECISIONS.md D303. The corrections quote what the block said before, so nothing was quietly rewritten."
 }
 ```
 
@@ -253,12 +287,25 @@ Two things the round records that the offline batches could not:
 |---|---|
 | 1–5 | orientation |
 | 6, 14, 17, 19 | `HOH_WRITE_FILE` directives; 17 is `.hoh/scratch/notes.md` (hash-excluded, not artifact progress) |
+| 17 | also a PowerShell `Set-Content` on `src\game.rs` (GOAL_HALF_WIDTH 45 → 25) — a shell write, invisible to the guard |
 | 43 | the last `HOH_WRITE_FILE` directive (`src/sim_tests.rs`) |
-| **44** | **the last change to a project file at all**, made with a PowerShell `Set-Content` on `src/main.rs` — a shell write, invisible to the guard |
-| 45–150 | **106 calls that changed no project file**: re-reading its own sources (`Get-Content`, `type`, `more`, `findstr`), rebuilding, re-checking. 62.7 % of the call's tokens |
+| 44 | a PowerShell `Set-Content` on `src\main.rs` (adding `mod sim_tests;`) — a shell write, invisible to the guard |
+| **95** | **the last change to a project file**: a PowerShell `Set-Content` on `src\game.rs` rewriting `COIN_A_X`, `COIN_B_X`, `GOAL_X` and `MOVE_SPEED`, and `findstr` confirming the new values. Invisible to the guard |
+| 96–150 | **55 calls that changed no project file**: re-reading its own sources (`Get-Content`, `type`, `more`, `findstr`), rebuilding, re-checking. **48.97 % of the call's tokens** (1,788,003 of 3,651,120) |
+| 139 | a PowerShell `Set-Content` on `src\game.rs` that **failed** — `<returncode>1</returncode>`, `Missing closing ')' in expression`. It changed nothing |
+
+> **This table is a correction.** It said "**44** — the last change to a project file at all" and
+> "45–150 — **106 calls that changed no project file** … 62.7 % of the call's tokens". Both were false:
+> the detector behind them counted `HOH_WRITE_FILE` directives only, so a project file changed by a
+> shell command did not exist for it. The truth is call **95** and **55** calls / **48.97 %**. The old
+> 62.7 % is not reproducible from the recorded usage under any basis either (calls 45–150 are 79.71 % of
+> the call's tokens). The account now lives in the tree —
+> `src/harness/write_audit.rs`, exercised by `tests/write_accounting.rs` — instead of in a script
+> outside it. See defect **A-3** of `.spec/bevy/ACCEPTANCE-LIVE-COST.md` and `DECISIONS.md` **D303**.
 
 The grind shape is therefore not "the same action again" (round 4's problem) but "**many different
-actions that change nothing**".
+actions that change nothing**" — with the qualification that it did keep changing `src\game.rs` with
+shell commands until call 95, which the first version of this analysis could not see.
 
 ## 3. The five corrections
 
@@ -280,9 +327,29 @@ All five are applied in place, in the two batch reports, only where they were fa
 * **F-4, re-derived or withdrawn.** The lever pairs now reproduce exactly with the acceptance's own
   method (`iter-2 first_60 [1,152,836, 1,478,789]`, `first_70 [1,385,772, 1,711,725]`,
   `first_80 [1,643,606, 1,969,559]`; `iter-3 first_80 [1,180,267, 1,266,388]`). The claim "roughly 85
-  calls for iter-3" is **withdrawn** — its own first_80 is already *below* the target; the linear
-  crossings are about **61** calls for iter-2 and about **91** for iter-3.
+  calls for iter-3" is **withdrawn** — its own first_80 is already *below* the target.
 * **F-5** the batch is **committed** as `6290f77`; both "nothing was committed" sentences are corrected.
+
+**Corrections made by the following batch (round 7, the write-accounting batch).** Four statements in
+*this* report were still false and are corrected in place above and in the JSON block:
+
+* **A-1 — the replay's "writes after the end" was degenerate.** The value was gathered inside the loop
+  that stops at the abort, so it could only ever be empty. At K = 32 round-4 iter-3 loses **ten** write
+  directives (`50, 70, 73, 74, 80, 84, 86, 90, 93, 97`) and **seven** real `src/game.rs` edits
+  (`75, 81, 85, 87, 91, 94, 98`). The §4 prose below was right; the JSON contradicted it.
+* **A-2 — the constant's derivation was wrong.** `32 = 31 + 1` rests on a 31-call window that does not
+  exist: iter-3's write at call 18 does not exist, and its longest visible-write-free window is **43**
+  calls (6 → 50). The margin is **−11**, not +1. The withdrawn patch on disk still carries the false
+  comment.
+* **A-3 — the live call's write profile was wrong.** Corrected in §2.
+* **A-5 — the lever pairs' provenance was wrong.** The published pairs reproduce the acceptance's
+  independent `composition.py`; this batch's own `cost_measure.py` uses a *different* second component
+  and does **not** reproduce them. The convention is now stated with the pairs, and the published
+  crossing is the curve's own crossing at call **61** (1,478,789 at 60, 1,502,016 at 61), not an
+  interpolation between two samples. On `cost_measure.py`'s stricter basis the crossing is call **65**.
+
+The full account, the tool that measures it and what it cannot decide are in
+`.spec/bevy/WRITE-ACCOUNTING-REPORT.md`; the decision entry is `DECISIONS.md` **D303**.
 
 ## 4. The call-count reduction: implemented, measured, **withdrawn**
 
@@ -300,21 +367,32 @@ recorded command executes, the real write path for directives, a shared `StepCou
 per call exactly as `CountingModel` does), with the provider's own recorded per-call usage as the
 cost. Over **all four recorded Developer calls**:
 
-| recorded call | calls | the rule ends it at | total tokens at the end | vs criterion | recorded directive writes lost |
-|---|---|---|---|---|---|
-| **live-iter-1** | 150 | **call 76** | **1,357,530** | **0.91x — it passes** | **none** |
-| round4-iter-1 | 69 | call 51 | 1,790,635 (recorded, unfolded) | — | none |
-| round4-iter-2 | 125 | never fires | — | — | none |
-| round4-iter-3 | 102 | call 39 | — | — | none |
+| recorded call | calls | the rule ends it at | total tokens at the end | vs criterion | recorded directive writes lost | recorded project writes lost |
+|---|---|---|---|---|---|---|
+| **live-iter-1** | 150 | **call 76** | **1,357,530** | **0.91x — it passes** | none | **1** (call 95) |
+| round4-iter-1 | 69 | call 51 | 1,790,635 (recorded, unfolded) | — | none | none |
+| round4-iter-2 | 125 | never fires | — | — | none | none |
+| round4-iter-3 | 102 | call 39 | 1,604,038 (recorded, unfolded) | — | **ten** (50…97) | **seven** (75, 81, 85, 87, 91, 94, 98) |
+
+> The "recorded directive writes lost" column said **none** everywhere and the JSON carried
+> `zero_recorded_directive_writes_lost: true`. That was defect **A-1** and it is corrected: the value
+> was read inside the replay loop that stops at the abort, so it could only ever be empty. The last
+> column did not exist before, because the detector behind this report could not see a project file
+> changed by a shell command at all.
 
 **The caveat that made me withdraw it, stated loudly.** "Zero lost writes" is true only of the guard's
 own signal, and the guard's signal is blind. Round-4 **iter-3** fires at call 39, inside the run that
 begins at its last visible write (call 6) and reaches the next (call 50) — **43 calls**, not the 31
 the previous analysis assumed (the 31 counted `.hoh` scratch writes as artifact progress). Inside that
-run the role edited `src/game.rs` at **calls 8 and 22** with
-`powershell [IO.File]::ReadAllText` + `[IO.File]::WriteAllText`. The rule would have cut genuine
-repairs. The same is true of the stricter variant that counted only artifact writes: it fires at
-round-4 iter-2's call 105, before calls 107 and 110 run `.hoh/scratch/patch4.py` and `patch5.py`,
+run the role edited `src/game.rs` at **call 8** with
+`powershell [IO.File]::ReadAllText` + `[IO.File]::WriteAllText` and the recording says it succeeded
+(the file grew to 42,502 bytes). The rule would have cut genuine repairs. The earlier wording named
+"calls 8 and 22"; call **22** is recorded as **failed** (`<returncode>1</returncode>`,
+`json pattern missing` — the script threw before its write), so call 8 is the one that proves the point.
+And the run the rule ends at call 39 contains **seven further real edits** (75, 81, 85, 87, 91, 94, 98),
+each made by running a `.hoh/scratch/tweak{3..9}.ps1` the role had just written — never on the command
+line that ran it. The same is true of the stricter variant that counted only artifact writes: it fires
+at round-4 iter-2's call 105, before calls 107 and 110 run `.hoh/scratch/patch4.py` and `patch5.py`,
 which edit `src/game.rs`.
 
 **And the two bands do not overlap.** To meet the criterion the budget must end the live call by call
@@ -377,16 +455,27 @@ no recorded work) do not overlap.
 
 **Could not verify.** Whether an iteration-2-shaped call (24 writes, 125 calls) is now under the
 target — one call was measured, not three. Whether the withdrawn rule's end point would have left a
-launchable artifact (the last project change was call 44 and the abort would have been call 76, but no
-gate was evaluated there). Whether a tree-fingerprint signal reaches the target at all, since no
+launchable artifact (the corrected last project change is call 95 and the abort would have been call 76,
+but no gate was evaluated there). Whether a tree-fingerprint signal reaches the target at all, since no
 offline replay can execute the recorded shell commands that changed the tree. And the tester's and
 round's cost: the tester spent 124 calls / 2,811,555 tokens, but the criterion is stated for the
 Developer call only.
 
-**The single most important thing for the next batch.** Build the write-free budget on a signal that
-can see shell writes — a fingerprint of the artifact tree — because the guard's directive counter is
-blind to the writes the roles actually make (the live call edited `src/main.rs` with PowerShell at call
-44; round-4 iter-3 edited `src/game.rs` with `[IO.File]::WriteAllText` at calls 8 and 22). The
-measurement is in §4: meeting the criterion needs the budget to end the live call by call 81, and
-leaving the recorded calls intact needs it not to fire before round-4 iter-3's call 50 — the signal,
-not a smaller number, is the next step, and it needs one live round to measure.
+**Corrected after this report was accepted as `fail`.** The three figures above that this batch got
+wrong — the abort's write profile (call 44 → 95), the replay's lost-write lists (`[]` → ten directives
+and seven project edits) and the lever provenance — are corrected in place, and the corrected account
+is now measured by code in the tree (`src/harness/write_audit.rs`, `tests/write_accounting.rs`) rather
+than by scripts outside it. See `.spec/bevy/WRITE-ACCOUNTING-REPORT.md`.
+
+**The single most important thing for the next batch (restated after the correction).** The first
+version of this paragraph named the wrong evidence: it said the live call edited `src/main.rs` at call
+44 and round-4 iter-3 edited `src/game.rs` at calls 8 **and 22**. Call 44 is a real edit, but it is not
+the last one (call 95 is), and call 22 **failed**. What survives, and is stronger, is the point itself:
+the guard's directive counter is blind to the writes the roles actually make — a successful PowerShell
+`Set-Content` at call 95, a successful `[IO.File]::WriteAllText` at iter-3's call 8, and **seven**
+script-driven `src/game.rs` edits at calls 75–98 that never appear on the command line that ran them.
+If a later batch ever reconsiders a budget on stopping-writes, it must be built on a signal that sees
+the artifact tree, not on the directive counter; and the two bands (K ≤ 37 to pass, K ≥ 43 to cut
+nothing recorded) still do not overlap. But note what this batch's own decision says: the criterion is
+**not met on the shipped tree**, and the only policy measured to pass is the context-narrowing one this
+project refuses.

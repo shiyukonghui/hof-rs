@@ -293,7 +293,7 @@
    "reproduced_by": "D:/hof-live-work/cost_measure.py (own copy) and F:/hof-acc6-work/composition.py (the acceptance's independent re-implementation) both print these integers from runs/round4/iter-*/traj/developer.attempt1.json; the repository's own fold produced the same tail totals in the acceptance's probe crate (27/27)"
   },
   "call_count_lever": {
-   "what": "projection over the first N recorded model calls of each Developer iteration (tail 12). F-4: the pairs published here before did not reproduce exactly with the disclosed method (up to 3,055 tokens, 0.2%, apart on iter-2 and 771 on iter-1) and the iter-3 conclusion contradicted this block's own first_80. The pairs below are the re-derived ones (my own copy of the method, and the acceptance's independent F:/hof-acc6-work/composition.py, agree exactly); the residual difference from the previous wording is stated rather than hidden.",
+   "what": "projection over the first N recorded model calls of each Developer iteration (tail 12). F-4: the pairs published here before did not reproduce exactly with the disclosed method (up to 3,055 tokens, 0.2%, apart on iter-2 and 771 on iter-1) and the iter-3 conclusion contradicted this block's own first_80. The pairs below are the re-derived ones. A-5 (corrected by the round-7 write-accounting batch): they reproduce the acceptance's independent F:/hof-acc6-work/composition.py EXACTLY, and they do NOT reproduce this batch's own D:/hof-live-work/cost_measure.py, which uses a different second component; the earlier wording claimed both agree exactly and that was false.",
    "iter_2": {
     "first_40": [625352, 951305],
     "first_60": [1152836, 1478789],
@@ -311,8 +311,8 @@
     "first_60": [746465, 828097],
     "full_69": [875647, 957279]
    },
-   "verdict": "the target needs roughly 61 model calls for iter-2 (recorded: 125; linear crossing of this block's own first_60 -> first_70 pair) and roughly 91 for iter-3 (recorded: 102; crossing of first_80 -> first_100). F-4: the earlier 'roughly 85 for iter-3' is WITHDRAWN - it contradicted this block's own first_80, whose total (1,266,388 on the re-derived pair, 1,265,261 on the old one) is already below the target, so a linear crossing cannot be above 80. The substantive conclusion survives: the role must do the same work in about half the round trips, which is a behavioural change no offline batch can justify; capping at 61 would have cut the recorded iter-2 at 49% of its work",
-   "counted_basis": "[projected prompt tokens, projected total tokens = that prompt plus the iteration's whole recorded completion tokens] - the batch's own convention, kept so the pairs are comparable with the tables above. On the stricter basis (each partial prefix carrying only the completion tokens of the calls it contains) the crossings move to about 65 calls for iter-2 and stay about 91 for iter-3."
+   "verdict": "the target needs 61 model calls for iter-2 (recorded: 125) and 92 for iter-3 (recorded: 102). A-5 (corrected by the round-7 write-accounting batch): 61 is the CURVE'S OWN crossing under the published convention, not an interpolation between the first_60 and first_70 samples - call 60 is 1,478,789 and call 61 is 1,502,016, so the first N at or above the target is 61 (interpolated 60.9); for iter-3 call 91 is 1,498,609 and call 92 is 1,520,424, so the first N is 92 (interpolated 91.1). The earlier wording called 61 'a linear crossing of this block's own first_60 -> first_70 pair', which is not how it was obtained. F-4: the earlier 'roughly 85 for iter-3' is WITHDRAWN - it contradicted this block's own first_80, whose total (1,266,388 on the re-derived pair, 1,265,261 on the old one) is already below the target, so a crossing cannot be above 80. The substantive conclusion survives: the role must do the same work in about half the round trips, which is a behavioural change no offline batch can justify; capping at 61 would have cut the recorded iter-2 at 49% of its work",
+   "counted_basis": "[projected prompt tokens, projected total tokens = that prompt plus the iteration's whole recorded completion tokens] - the convention the published pairs and the 61/92 crossings use, now stated here because A-5 found it was not stated where the pairs are published. On the stricter basis (each partial prefix carrying only the completion tokens of the calls it contains, which is what this batch's own D:/hof-live-work/cost_measure.py computes) the first N at or above the target is 65 for iter-2 (call 64 is 1,477,946, call 65 is 1,504,428; interpolated 64.8) and 92 for iter-3 (interpolated 91.3)."
   },
   "further_reduction_found": "none that does not damage the roles' ability to work",
   "measured_alternatives_rejected": [
@@ -628,14 +628,24 @@ the first *N* recorded model calls at tail 12 (prompt, then prompt+completion):
 1,153,140 / 1,479,093, first_70 1,384,463 / 1,710,416, first_80 1,640,551 / 1,966,504, iter-3 first_80
 1,179,140 / 1,265,261 — does not reproduce with the disclosed method; the differences are ≤0.26% on
 iter-2 and 771 tokens on iter-1, and the full-iteration values match exactly. The pairs above are what
-my own copy of the method and the acceptance's independent `F:/hof-acc6-work/composition.py` both
-give, and they are what the correction below is computed from.)
+the acceptance's independent `F:/hof-acc6-work/composition.py` gives, and they are what the correction
+below is computed from. **A-5, corrected by the round-7 write-accounting batch:** the earlier wording
+said "my own copy of the method and the acceptance's independent `composition.py` both give" them. The
+first half is false — this batch's own `D:/hof-live-work/cost_measure.py` computes a different second
+component (prompt + the completion recorded *up to* N) and gives iter-2 first_60 `[1,152,836,
+1,386,920]`. The convention is stated in the `counted_basis` field above and repeated here: the second
+component of every published pair is *the iteration's whole recorded completion*.)
 
-The target therefore needs roughly **61** model calls for iter-2 (recorded 125; crossing of the
-1,478,789 at 60 and the 1,711,725 at 70) and roughly **91** for iter-3 (recorded 102; crossing of the
-1,266,388 at 80 and the 1,702,239 at 100): the Developer would have to do the same work in about half
-the round trips. **F-4: the earlier "roughly 85 for iter-3" is withdrawn** — it contradicted this
-section's own first_80, whose total is already *below* the target, so a linear crossing cannot lie
+The target therefore needs **61** model calls for iter-2 (recorded 125) and **92** for iter-3 (recorded
+102): the Developer would have to do the same work in about half the round trips. **A-5, corrected:**
+the earlier wording said these were "crossings" *interpolated* between the `first_60`/`first_70` and
+`first_80`/`first_100` samples ("roughly 61 … roughly 91"). The published convention's curve crosses at
+a recorded call: call 60 is 1,478,789 and **call 61 is 1,502,016**; call 91 is 1,498,609 and **call 92
+is 1,520,424**. The interpolated values are 60.9 and 91.1. On the *stricter* basis — the one this
+batch's own `cost_measure.py` computes, where a prefix carries only the completion tokens inside it —
+the first call at or above the target is **65** for iter-2 (64 → 1,477,946; 65 → 1,504,428; interpolated
+64.8) and 92 for iter-3. **F-4: the earlier "roughly 85 for iter-3" is withdrawn** — it contradicted
+this section's own first_80, whose total is already *below* the target, so a crossing cannot lie
 above 80. Capping at 61 would have ended the recorded iter-2 at 49 % of its work, and whether a role can
 reach the artifact in that many calls is not an offline question. **Refused, and named as the next
 batch's job.**
