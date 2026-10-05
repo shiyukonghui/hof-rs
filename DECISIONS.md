@@ -11412,3 +11412,104 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
   3. 旧引擎的**引擎身份**字符串仍留在 `src/adapter/engine.rs`（`ENGINE_KIND_GODOT` 与 doctor 项）：
      那是路由机制的历史，不是发给角色的 prompt 材料；本轮只删除**交付给角色的旧引擎 prompt**。
   4. round 4 的报告正文冻结不改，只修正 RA-2 那一行**事实错误**的引用（并在行内注明更正来源）。
+
+
+## D301 — 成本批次的修复批次：`--resume` 的真实语义（恢复 / 拒绝 / 不启动会话）、折叠落在 agent 自己的历史上，以及成本目标为何**无法**由上下文杠杆达成
+
+- 日期 / Date: 2026-10-05
+- 触发问题 / Trigger: 独立验收（`.spec/bevy/ACCEPTANCE-COST.md`）对 round-5 成本批次判 **fail**：
+  ① `--resume` 的**副作用**从未被承认也从未被测试——`quarantine_previous_evidence` 在 resume 分支之前
+  无条件执行，把被续跑这一轮自己的 `.hoh`（scratch、`deterministic/raw/**`）搬进 `runs/<id>/quarantine/`；
+  一次「全部迭代已完成」的 resume 仍然 `start_round_game` 之后才返回（启动并停掉一个什么也不做的游戏会话）；
+  没有任何机制把工作区恢复到被中断迭代的起点（一个死在 `std::fs::write` 里的进程可以留下被截断的源码，
+  而第一次未完成的迭代会把它当作起点采纳）；`RunMeta` 没有项目路径，所以 `--run-id X --project Y`
+  会拿 X 的已完成迭代去续跑 Y 的树。② 折叠**没有**落在 agent 自己的历史上：`CompactedModel::query`
+  折叠的是 `messages.to_vec()` 的副本，而 `DefaultAgent::query` 把**未折叠**的响应推回 `self.messages`
+  （即 `save()` 序列化的那份），于是「trajectory 记录的正是被发送的东西」是假的。③ 若干已声明的事实
+  与树不符（`src/config.rs` 的投影数字、`ROUND-4-REPORT-COMPLETE.md` 的台账顺序、D298 引用的
+  「D301」并不存在、D298(e) 的成本公式与实测不符）。④ **唯一从未通过的目标判据**仍未通过：
+  1,500,000 token/Developer call。
+- 考虑的选项与否决 / Options and rejections:
+  1. `--resume` 只**声明**「不恢复工作区」（验收允许的另一条路）—— 否决：那条路把
+     「从它的起点重跑」这句话继续留给读者去猜工作区是否也是起点；被中断迭代的部分编辑（含截断文件）
+     会被它自己采纳，这正是验收点名的 wrong-state 形态。恢复 + 用重算哈希**验证**恢复是同一句话的可执行版本。
+  2. `--resume` 允许未记录项目路径的旧 run（记为警告继续）—— 否决：不能证明「这个工作区属于这个 run id」
+     就是 AC-7(b) 的漏洞本身；猜一次和一直猜没有区别，所以**拒绝**并说明如何继续（新 run id 或 `--reset-workspace`）。
+  3. `--resume` 继续无条件 quarantine —— 否决：`--resume` 续的是**这一轮**，`.hoh` 里的字节属于这一轮，
+     不是上一轮的「previous evidence」；把它搬走会让即将重跑的迭代看不到它自己刚产生的确定性记录。
+  4. 把 AC-8 的修法选成「改三处文档」—— 否决：账单由**发送**决定，而收据（trajectory）必须能被审计者
+     用来复算；让代码去符合文档（折叠落在存储历史上），而不是让文档去承认收据不再是收据。
+  5. 用**上下文**杠杆（缩短 system prompt、把 `compact_history_tail` 降到 0/6、把折叠地板从 512 降到 64）
+     去够 1.5M —— 否决（有实测）：**没有任何上下文取值能达成目标**。tail=0（完全不保留原文尾部）时
+     iter-2 仍投影 1,873,629 个 prompt token，加上未变的 completion token 是 2,199,582，仍是目标的 1.47×；
+     缩短 system prompt 到 0 也到不了（completion token 本身就有 325,953）。既然 tail 12→0 都换不来判据，
+     降低 tail 只能是「用能力换一个仍然 fail 的数」。
+  6. 用**调用次数**杠杆（把 Developer 的模型调用上限压到 ~60）—— 否决：实测 iter-2 需要 ≤ ~60 次调用才可能
+     低于 1.5M（记录值 125 次）。那是行为变更（角色必须用一半的往返完成同样的工作），离线批次无法证明它
+     不破坏角色；把上限压到 60 会把记录里那次迭代切在 48% 处。这属于「需要一次真实 round 才能决定的决策」，
+     不是本批次可以拍板的优化。
+- 最终选择 / Decision:
+  **(a) `identity.verified` 的进一步修正（D299 选项 4 所指的那一处）**：`verified` = 非空 nonce ∧
+  `answered_nonce` 等于它 ∧ OS 把 `spawned_pid` 命名为 listener（D300 已实现）。本决策补上**诚实性**要求：
+  前两项对**任何可能返回的启动**都是不变量（`launch.rs:502-529` 只有相等那一支会设置 `answered_nonce`，
+  不等即 `LaunchError::IdentityMismatch` 并停掉子进程，因此不存在 LaunchFacts），所以这个字段对真实启动的
+  判别力**只有第三项 OS 读数**——正是 D298 选项 4 当时否决、D299 选项 4 又要求「由事实计算」的那一项。
+  它现在是事实，但它不是「六种都会真实发生的情形」，任何这样的说法都必须撤回。
+  **(b) AC-8：折叠落在 agent 自己的历史上**。循环在**每一步之前**对 `agent.messages` 本体调用
+  `compact_history`；`CountingModel` 只计步、不再折叠副本。因此 `save()` 写出的 trajectory 就是
+  下一次发送的历史（`tests/context_compaction.rs` 的方法与它一致：它在已录制轨迹上重放，不受影响）。
+  **(c) 台账写在 spawn 之后（D298 选项 3 所指的那一处）**：`pid` 在 spawn 之前不存在，所以
+  `launch-ledger.jsonl` 的那一行是**紧随 spawn 之后**追加的；spawn 之前就存在的是 **nonce**。
+  `ROUND-4-REPORT-COMPLETE.md` 的 73/131 行与 `ROUND-3-REPORT.md` 的 140 行是这条错误顺序的最后残留，
+  已按事实更正并在行内注明来源（这是唯一被授权的 round 报告改动）。
+  **(d) `--resume` 的真实语义**（全部由 `tests/resume_round.rs` 驱动一个**真实准备好的被中断 run 目录**，
+  包括通过真实 `run_loop::run` 的那两条）：
+    - **拒绝**工作区身份不可证明的续跑：`RunMeta.project`（新增，`#[serde(default)]`）记录绝对项目路径；
+      `read_run_meta` + `check_resume_project` 在**触碰任何东西之前**执行。不同项目**拒绝**；未记录项目
+      （本字段出现之前的 run）也**拒绝**，并说明替代做法。
+    - **不 quarantine**：`--resume` 续的是这一轮，`.hoh` 是这一轮自己的字节，所以
+      `quarantine_previous_evidence` 在 resume 时被跳过。
+    - **恢复 + 验证**：第一个未完成迭代从其**起点**重跑，而起点被真正恢复——工作区回滚到最后一个
+      **已完成**迭代冻结的 artifact（没有完成迭代时回滚到 A0），`VersionStore::rollback` 会**重新哈希**
+      恢复后的树，因此「恢复失败」是错误而不是安静的错状态；被丢弃的前一状态哈希写进 `warnings.log`。
+      缺快照即拒绝。「不恢复什么」也写明：本轮自己的 `.hoh` scratch/raw 保持原样；调用内的工作不恢复
+      （没有角色级 checkpoint）。
+    - **无事可做即不启动会话**：全部迭代已完成的 resume 在 `start_round_game` **之前**返回；
+      `RoundGameSession` 只在适配器真的返回了一个已发布的 endpoint 记录时置位，`run()` 只拆掉它启动过的东西。
+  **(e) 成本目标：明确声明未达成，并给出「为什么上下文杠杆做不到」的实测下界**（见「考虑的选项与否决」5/6）：
+  tail=0 的投影是 iter-1 699,900 / iter-2 1,873,629 / iter-3 1,430,696 prompt token（记录值
+  2,544,563 / 12,765,478 / 5,137,090）；加上未变的 completion token 是 781,532 / 2,199,582 / 1,516,817。
+  iter-2 需要 ≤ ~60 次模型调用才可能达标（记录 125 次）。目标**只能**靠更少的调用达成，而那是需要在真实
+  round 里测量的行为变更。下一批的第一件事就是它。
+  **(f) 其余验收缺陷**：`src/config.rs` 的投影改成实测值（AC-9）；`COST-REPORT.md` 的 25.5% 改成
+  like-for-like 的 74.47%（prompt）与 72.71%（含未变的 completion）（AC-10）；RA-4 与 RA-7 的处置改成
+  事实（AC-4/AC-5）；`EXAMPLE_PREFERENCE` 改为**交付的** Bevy 工具名（旧引擎名字让它对每个真实 Bevy 角色
+  都渲染出空例子段）（AC-11）；`tests/repeated_action.rs` 用 guard 自己的 `output_digest`（已 `pub`）
+  取代字节长度代理（AC-13）；`config/hoh.yaml` 记录 `compact_history` / `compact_history_tail`（AC-14）。
+  **(g) D298(e) 的成本公式被本决策取代**：`prompt token ≈ 4187 + 0.28 × 累计 wire bytes` 与
+  「system prompt 约占最终 prompt 的 5%」都不符合 round-5 的实测拟合。实测（`tests/context_compaction.rs`
+  对 iter-2 的 125 个数据点做最小二乘）是 `prompt_tokens ≈ -38.28 + 0.255366 × wire_bytes`（残差最大 1,347
+  token，复现该调用总额误差 <0.01%），iter-1/iter-3 的 tokens-per-byte 分别是 0.257120 / 0.260054；
+  system prompt 是 14,814 wire bytes，占 iter-2 最终 prompt 的 14,849/161,566 ≈ 9.2%（折叠后约三成）。
+  `(e)` 里「上下文是唯一成本驱动」的结论仍然成立——那正是本决策 (e) 用来否决上下文杠杆的依据。
+- 选择理由 / Why: 账单由发送的字节决定，所以**收据必须等于发送**（(b)）；「续跑」是对工作区状态的承诺，
+  所以承诺要么被真正恢复并被验证，要么被拒绝，不能靠一句注释（(d)）；身份不可证明时唯一的诚实动作是拒绝
+  （(d)）；一个目标若在**所有**可用杠杆下都达不到，正确的做法是把下界算出来并说明需要换哪一类手段，
+  而不是把 system prompt 削到刚好凑出一个数（(e)）。这三条都是同一个原则：不要让文字比事实更强。
+- 预期影响与回滚点 / Impact and rollback: 执行点是 `runtime::{run_loop, record}`、
+  `harness::{compact, guard}`、`config`、`tools::index`、`cli`、`config/hoh.yaml` 与
+  `tests/{resume_round, repeated_action}`；新增 `resume_project_matches` / `check_resume_project` /
+  `resume_restore_iteration` / `restore_resume_workspace` / `RoundGameSession`。回滚点：
+  `compact_history=false` 回到旧行为；`--resume` 的恢复与身份检查各是一个独立函数，可以单独回退
+  （但两者都不可回退到「静默继续」——那正是验收判 fail 的形态）；`config/hoh.yaml` 的两个新注释块
+  不影响任何代码路径。
+- 明确不修 / Declared, not fixed:
+  1. **1.5M/call 目标仍未达成**，且本决策证明它**无法**由上下文达成（tail=0 仍是 1.87M prompt）；
+     下一个杠杆是调用次数，需要在真实 round 中测量。
+  2. 旧引擎的 **177 工具快照**（`tests/fixtures/mcp/tools_list.json`）仍被 `include_str!` 进二进制：
+     它是 `adapter.kind=mcp` 路径的离线 schema 回退源，仍在使用中，不是残留（`EXAMPLE_PREFERENCE`
+     已改指 Bevy 交付面）。`#[cfg(test)]` 里的旧引擎名字（`src/runtime/policy.rs`、`src/tools/endpoint.rs`）
+     不进任何构建产物。
+  3. `ROUND-3-REPORT.md:140` 与 `ROUND-4-REPORT-COMPLETE.md:73/:131`（以及同段的 `:130`）是唯一被改的
+     round 报告行，全部是台账顺序这一**事实错误**；两份报告的其余正文仍然冻结。
+

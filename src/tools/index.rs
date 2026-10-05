@@ -118,17 +118,34 @@ fn category(tool: &str) -> &'static str {
     "other"
 }
 
-/// The three tools whose complete call is spelled out, in preference order.
+/// The tools whose complete call is spelled out, in preference order.
+///
+/// Round-5 repair (AC-11): this list is the **delivered** tool surface's names.
+/// It used to hold the previous engine's names (`project_get_info`,
+/// `editor_play_scene`, `running_game_get_node_property_samples`, …), which no
+/// Bevy round's schema contains: `render_tools_markdown_for` skips a preference
+/// whose name is not in `schemas`, so the "Complete call examples" section was
+/// **empty** in every real Bevy round — the names cost a section and bought
+/// nothing.  The semantic layer is listed in its frozen contract order; the
+/// generic BRP verbs come after it, so a role that may use both is shown the
+/// observation surface first.
 const EXAMPLE_PREFERENCE: &[&str] = &[
-    "project_get_info",
-    "editor_get_errors",
-    "editor_play_scene",
-    "running_game_get_node_property_samples",
-    "running_game_get_node_properties",
-    "editor_get_collision_info",
-    "project_create_script",
-    "editor_setup_collision_shape",
-    "editor_simulate_input_action",
+    "bevy_player_transform",
+    "bevy_grounded",
+    "bevy_coin_counter",
+    "bevy_win_flag",
+    "bevy_wait_frames",
+    "bevy_inject_move",
+    "bevy_inject_jump",
+    "bevy_health",
+    "rpc.discover",
+    "world.query",
+    "world.get_components",
+    "world.get_resources",
+    "world.list_components",
+    "world.list_resources",
+    "world.list_entities",
+    "registry.schema",
 ];
 
 fn property_type(property: &Value) -> String {
@@ -254,36 +271,58 @@ pub fn render_tools_markdown_for(
             continue;
         };
         examples += 1;
-        markdown.push_str(&format!(
-            "{examples}. `{{{{HOH_HOH_BIN}}}} tools call {preferred} --args-file \
-             {{{{HOH_ARTIFACT_DIR}}}}/args/{preferred}.json`\n\n"
-        ));
-        let mut arguments = serde_json::Map::new();
-        if let Some(properties) = tool
-            .pointer("/inputSchema/properties")
-            .and_then(Value::as_object)
-        {
-            let required: Vec<&str> = tool
-                .pointer("/inputSchema/required")
-                .and_then(Value::as_array)
-                .map(|items| items.iter().filter_map(Value::as_str).collect())
-                .unwrap_or_default();
-            for (name, property) in properties {
-                if required.contains(&name.as_str()) {
-                    arguments.insert(name.clone(), example_value(name, property));
-                }
-            }
+        render_example(&mut markdown, tool, examples);
+    }
+    // AC-11: the preference list names the **delivered** Bevy surface.  A schema
+    // source that does not contain those names — the editor-mediated channel's
+    // offline snapshot, or a future engine's surface — still gets runnable
+    // examples rather than an empty section, by taking the first visible tools
+    // (the list is already sorted by name, so this is deterministic).  The old
+    // engine's names were neither: they matched nothing on a Bevy round *and*
+    // shipped into the binary.
+    if examples == 0 {
+        for tool in visible.iter().take(3) {
+            examples += 1;
+            render_example(&mut markdown, tool, examples);
         }
-        markdown.push_str(&format!(
-            "   `args/{preferred}.json`: `{}`\n\n",
-            serde_json::to_string(&Value::Object(arguments)).unwrap_or_default()
-        ));
     }
     if examples == 0 {
         markdown.push_str("_No example is available for this role._\n");
     }
     // DR-66 ①: one delivery point for every shell-variable form in the document.
     crate::runtime::shell::render_command_vars(&markdown, flavor)
+}
+
+/// One complete-call example: the command line and the arguments file it needs.
+fn render_example(markdown: &mut String, tool: &Value, index: usize) {
+    let name = tool_name(tool);
+    markdown.push_str(&format!(
+        "{index}. `{{{{HOH_HOH_BIN}}}} tools call {name} --args-file \
+         {{{{HOH_ARTIFACT_DIR}}}}/args/{name}.json`\n\n"
+    ));
+    let mut arguments = serde_json::Map::new();
+    if let Some(properties) = tool
+        .pointer("/inputSchema/properties")
+        .and_then(Value::as_object)
+    {
+        let required: Vec<&str> = tool
+            .pointer("/inputSchema/required")
+            .and_then(Value::as_array)
+            .map(|items| items.iter().filter_map(Value::as_str).collect())
+            .unwrap_or_default();
+        for (property_name, property) in properties {
+            if required.contains(&property_name.as_str()) {
+                arguments.insert(
+                    property_name.clone(),
+                    example_value(property_name, property),
+                );
+            }
+        }
+    }
+    markdown.push_str(&format!(
+        "   `args/{name}.json`: `{}`\n\n",
+        serde_json::to_string(&Value::Object(arguments)).unwrap_or_default()
+    ));
 }
 
 #[cfg(test)]
@@ -329,5 +368,39 @@ mod tests {
         assert!(developer.contains("`project_create_script`"));
         assert!(!tester.contains("`project_create_script`"));
         assert!(!planner.contains("`project_get_info`"));
+    }
+
+    /// AC-11: the "Complete call examples" section must name tools the round can
+    /// actually call.  The production preference list used to hold the previous
+    /// engine's names, which no Bevy round's schema contains — so the section was
+    /// empty for every real Bevy role while the constant still shipped those
+    /// names into the binary.
+    #[test]
+    fn the_complete_call_examples_are_the_delivered_bevy_tools() {
+        let list = crate::adapter::mcp::tool_list();
+        let schemas: Vec<Value> = list
+            .get("tools")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        assert!(
+            !schemas.is_empty(),
+            "the Bevy tool list is the surface a Bevy round delivers"
+        );
+        let developer = render_tools_markdown(Role::Developer, &schemas);
+        assert!(
+            developer.contains("tools call bevy_player_transform --args-file"),
+            "a Bevy role must be shown a complete call it can run:\n{developer}"
+        );
+        assert!(
+            !developer.contains("_No example is available for this role._"),
+            "the example section must not be empty for the delivered surface"
+        );
+        for old in ["project_", "editor_", "running_game_", "godot", "scene"] {
+            assert!(
+                !EXAMPLE_PREFERENCE.iter().any(|name| name.contains(old)),
+                "the production example preference still names the previous engine (`{old}`)"
+            );
+        }
     }
 }

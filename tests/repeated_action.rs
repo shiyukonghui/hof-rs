@@ -40,7 +40,8 @@ use std::path::{Path, PathBuf};
 use hof_rs::config::AgentLimits;
 use hof_rs::harness::directive::{self, Directive};
 use hof_rs::harness::guard::{
-    repeated_action_key, ArtifactKind, FAIL_FAST_MARKER, REPEATED_ACTION_STATUS, STEP_BUDGET_STATUS,
+    output_digest, repeated_action_key, ArtifactKind, FAIL_FAST_MARKER, REPEATED_ACTION_STATUS,
+    STEP_BUDGET_STATUS,
 };
 use hof_rs::model::Role;
 
@@ -71,11 +72,25 @@ struct RecordedCall {
     /// The rule is the guard's own ([`ArtifactKind::counts`]), not a copy: a test
     /// that decides for itself which writes are progress can prove anything.
     is_artifact_write: bool,
-    /// The bytes the action returned, and the process's own success flag.  The
-    /// round-5 tripwire counts a repetition only when this is **unchanged**, so
-    /// the projection needs it.
-    observation_len: usize,
+    /// The **guard's own** fingerprint of the result the action produced
+    /// ([`hof_rs::harness::guard::output_digest`] of the observation's
+    /// `<output>` body — the string `record_success` is handed).  The round-5
+    /// tripwire counts a repetition only when this is **unchanged**.
+    ///
+    /// AC-13: this used to be the observation's byte *length*, which counts two
+    /// different results of equal length as identical; the guard does not.
+    observation_digest: String,
     succeeded: bool,
+}
+
+/// The `<output>…</output>` body a tool observation carries, which is the string
+/// the guard digests (`WriteGuardEnvironment` passes `Output::output`, and the
+/// trajectory stores it wrapped).
+fn observation_body(content: &str) -> &str {
+    match (content.find("<output>"), content.rfind("</output>")) {
+        (Some(start), Some(end)) if end > start => &content[start + "<output>".len()..end],
+        _ => content,
+    }
 }
 
 /// Every tool call in a recorded trajectory, in order, paired with the **API
@@ -151,7 +166,7 @@ fn recorded_calls(trajectory: &serde_json::Value) -> (Vec<(usize, RecordedCall)>
                 RecordedCall {
                     key: repeated_action_key(&command),
                     is_artifact_write,
-                    observation_len: observation.len(),
+                    observation_digest: output_digest(observation_body(&observation)),
                     succeeded,
                 },
             ));
@@ -223,12 +238,13 @@ fn repeats_since_last_write(
 ///
 /// It is the same window as [`repeats_since_last_write`] with the round-5 rule
 /// applied, so the difference between the two columns is exactly what the
-/// semantics change bought.
+/// semantics change bought.  The comparison is the guard's own
+/// [`output_digest`] (AC-13), not a byte-length proxy.
 fn identical_repeats_since_last_write(
     calls: &[(usize, RecordedCall)],
     cap: usize,
 ) -> (Vec<(String, usize)>, Option<usize>) {
-    let mut runs: BTreeMap<String, (usize, usize)> = BTreeMap::new();
+    let mut runs: BTreeMap<String, (String, usize)> = BTreeMap::new();
     let mut best: BTreeMap<String, usize> = BTreeMap::new();
     let mut abort_at = None;
     for (api_index, call) in calls {
@@ -239,13 +255,15 @@ fn identical_repeats_since_last_write(
         if !call.succeeded {
             continue;
         }
-        let run = runs.entry(call.key.clone()).or_insert((usize::MAX, 0usize));
-        run.1 = if run.0 == call.observation_len {
+        let run = runs
+            .entry(call.key.clone())
+            .or_insert((String::new(), 0usize));
+        run.1 = if run.0 == call.observation_digest {
             run.1 + 1
         } else {
             1
         };
-        run.0 = call.observation_len;
+        run.0 = call.observation_digest.clone();
         let count = run.1;
         let entry = best.entry(call.key.clone()).or_insert(0);
         *entry = (*entry).max(count);
@@ -630,6 +648,60 @@ fn the_round_three_developer_calls_were_below_the_cap_for_a_measured_reason() {
             "the three round-3 Developer calls are the evidence"
         );
     }
+}
+
+/// AC-13: the round-5 counter compares the guard's **own digest**, not the
+/// observation's byte length.  Two results of equal length but different bytes
+/// are two different results — the proxy this test used before counted them as
+/// one.  The control is written so the length proxy cannot pass it.
+#[test]
+fn the_round_five_counter_compares_the_guards_digest_not_the_length() {
+    let call = |key: &str, observation: &str| {
+        (
+            1usize,
+            RecordedCall {
+                key: key.to_string(),
+                is_artifact_write: false,
+                observation_digest: output_digest(observation_body(observation)),
+                succeeded: true,
+            },
+        )
+    };
+    let wrap = |body: &str| format!("<returncode>0</returncode>\n<output>\n{body}\n</output>\n");
+    let alpha = wrap("alpha");
+    let bravo = wrap("bravo");
+    assert_eq!(
+        alpha.len(),
+        bravo.len(),
+        "the control is only a control at equal byte length"
+    );
+    assert_ne!(
+        output_digest(observation_body(&alpha)),
+        output_digest(observation_body(&bravo)),
+        "equal byte length is not equal content"
+    );
+
+    // Same length, different bytes: two runs of one, so no abort at a cap of 2.
+    let calls = vec![
+        call("cargo build --offline", &alpha),
+        call("cargo build --offline", &bravo),
+    ];
+    let (best, abort) = identical_repeats_since_last_write(&calls, 2);
+    assert_eq!(
+        best.first().map(|(_, count)| *count),
+        Some(1),
+        "different results of equal length must not be counted as a repetition: {best:?}"
+    );
+    assert_eq!(abort, None, "and they must never reach the cap");
+
+    // The same result twice is a repetition, and it aborts at the cap.
+    let calls = vec![
+        call("cargo build --offline", &alpha),
+        call("cargo build --offline", &alpha),
+    ];
+    let (best, abort) = identical_repeats_since_last_write(&calls, 2);
+    assert_eq!(best.first().map(|(_, count)| *count), Some(2), "{best:?}");
+    assert_eq!(abort, Some(1), "the identical run reaches the cap");
 }
 
 /// The two aborts are the runtime's first-class statuses, so a round that ends

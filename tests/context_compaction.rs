@@ -282,3 +282,38 @@ fn the_measured_prompt_tokens_track_the_wire_bytes_the_call_sent() {
         "the fit must reproduce the recorded total to within 1%: {error:.4}"
     );
 }
+
+/// AC-14: the fold is on by default (`src/config.rs`), and every other
+/// behaviour-changing limit in the same `agent` section is documented in
+/// `config/hoh.yaml`.  The two knobs this batch added were the exception: a
+/// reader of the configuration could not see that the fold exists at all.
+#[test]
+fn the_agent_configuration_documents_the_compaction_knobs() {
+    let yaml = std::fs::read_to_string(repo_root().join("config/hoh.yaml"))
+        .expect("config/hoh.yaml is part of the tree");
+    for knob in ["compact_history:", "compact_history_tail:"] {
+        assert!(
+            yaml.contains(knob),
+            "config/hoh.yaml must document `{knob}`: the fold is on by default and a reader of \
+             the configuration has to be able to see it"
+        );
+    }
+}
+
+/// AC-9: `src/config.rs` quoted a projection (`839K / 2.50M / 1.48M`) that this
+/// file's own measurement contradicts.  The doc comment now carries the measured
+/// figures; the test reads the source because that number lives in a comment no
+/// other assertion can reach, which is exactly how it drifted in the first place.
+#[test]
+fn the_documented_projection_is_the_measured_one() {
+    let source = std::fs::read_to_string(repo_root().join("src/config.rs"))
+        .expect("src/config.rs is part of the tree");
+    assert!(
+        source.contains("875,647 / 2,681,282 / 1,663,325"),
+        "src/config.rs must quote the measured projection (`875,647 / 2,681,282 / 1,663,325`)"
+    );
+    assert!(
+        !source.contains("839K"),
+        "the contradicted projection (`839K / 2.50M / 1.48M`) is back in src/config.rs"
+    );
+}

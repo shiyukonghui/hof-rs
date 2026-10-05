@@ -726,6 +726,7 @@ fn meta_with(engine: EngineIdentity, config: Value) -> RunMeta {
         config,
         start_state: hof_rs::runtime::start_state::StartState::as_is(),
         engine,
+        project: std::path::PathBuf::new(),
     }
 }
 

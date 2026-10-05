@@ -171,9 +171,12 @@ fn default_compact_history() -> bool {
 ///
 /// The value is a bound on what the *trained* reasoning of a step may see, not a
 /// measured optimum: the projection over the three recorded round-4 Developer
-/// calls is `839K / 2.50M / 1.48M` prompt tokens at a tail of 12 against
-/// `2.54M / 12.77M / 5.14M` recorded, and the report states the whole curve
-/// (0/2/4/6/8/12/16/24/32) so the number can be re-derived rather than trusted.
+/// calls is `875,647 / 2,681,282 / 1,663,325` **prompt** tokens at a tail of 12
+/// against `2,544,563 / 12,765,478 / 5,137,090` recorded prompt tokens (the
+/// recorded `total_tokens` were `2,626,195 / 13,091,431 / 5,223,211`), and the
+/// report states the whole curve (0/2/4/6/8/12/16/24/32) so the number can be
+/// re-derived rather than trusted.  It is a projection over recorded
+/// trajectories, not a live measurement.
 pub const DEFAULT_COMPACT_HISTORY_TAIL: usize = 12;
 fn default_compact_history_tail() -> u64 {
     DEFAULT_COMPACT_HISTORY_TAIL as u64

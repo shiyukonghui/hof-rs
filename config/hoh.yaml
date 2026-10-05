@@ -88,6 +88,31 @@ agent:
   #   0 表示关闭（回到固定的 150 步）。
   steps_per_artifact: 8
 
+  # ── round-5 cost batch ──────────────────────────────────────────────────
+  # compact_history：把**已被消费**的历史折叠出模型上下文（src/harness/compact.rs）。
+  #   代价的驱动是「调用次数 × 逐次累积的上下文」：round-4 三次 Developer 调用
+  #   （69/125/102 次模型调用）重发了 9.90 MB / 50.01 MB / 19.75 MB 的 wire bytes，
+  #   而对 2,544,563 / 12,765,478 / 5,137,090 个 prompt token 来说，大部分字节是
+  #   **已经用过**的载荷（一次 tool call 的 arguments 装着整个 src/game.rs，一次 tool
+  #   result 把整份文件倒进上下文）。动作既然已经执行过，那份文本就不再被重新发送。
+  #   折叠发生在**发送点**，且落在 agent 自己的历史上（trajectory 记录的正是发送的东西，
+  #   没有第二份隐藏上下文）：system prompt 与 task 永不折叠，最后 compact_history_tail
+  #   条消息永远原文发送，其余每条折成「摘要 + 首行 + 字节数」，并且只在折叠后**更小**时才折。
+  #   false 即旧行为（每条消息原文重发）。
+  #   证据与测量方法：tests/context_compaction.rs（在 runs/round4/** 的已录制轨迹上重放，
+  #   用提供方自己报告的 usage.prompt_tokens 拟合 tokens = a + r × wire_bytes）。
+  compact_history: true
+  # compact_history_tail：尾部**永远原文发送**的消息条数（12 = 6 组 assistant/tool 对）。
+  #   这是「每一步的推理能看见它刚刚做了什么」的下界，不是测量出来的最优值：tail 12 下
+  #   三次 Developer 调用的投影为 875,647 / 2,681,282 / 1,663,325 个 **prompt** token
+  #   （记录值 2,544,563 / 12,765,478 / 5,137,090）。整条曲线（0/2/4/6/8/12/16/24/32）
+  #   写在 .spec/bevy/COST-REPORT.md，可由 tests/context_compaction.rs 重新推导。
+  #   注意：1.5M/call 的 token 目标**没有**被这条杠杆达到。实测的下界（tail 0，即完全不保留
+  #   原文尾部）对 iter-2 仍投影到 1,873,629 个 prompt token——加上未变的 completion token
+  #   是 2,199,582。所以目标只能靠**更少的模型调用**（iter-2 需 ≤ ~60 次，实测 125 次）达成，
+  #   那是行为变更，不是上下文变更；见 FIX-REPORT.md 与 D301。
+  compact_history_tail: 12
+
 runtime:
   iterations: 3
   max_schema_retries: 2

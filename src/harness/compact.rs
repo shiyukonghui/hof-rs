@@ -272,16 +272,24 @@ pub struct CallProgress {
     pub compacted: std::sync::Arc<std::sync::Mutex<CompactStats>>,
 }
 
-/// A model that folds the history before every provider call and counts the
-/// calls, so the guard and the prompt keep agreeing on what a step is.
-struct CompactedModel {
+/// A model that counts the steps one call takes, so the guard and the prompt
+/// keep agreeing on what a step is.
+///
+/// Round-5 repair (AC-8): it does **not** fold.  The fold runs in
+/// [`run_compacting_agent`] on the agent's own `messages`, before each step, so
+/// what the provider is sent and what `save()` records are the same history.
+/// The version this replaces folded a local `messages.to_vec()` and passed that
+/// to the provider, while `DefaultAgent::query` pushed the *unfolded* response
+/// into the stored history — so the trajectory did not record what was sent,
+/// which is the opposite of what this module, `DECISIONS.md` and the cost report
+/// all claim.
+struct CountingModel {
     inner: Box<dyn Model>,
     progress: CallProgress,
-    policy: CompactPolicy,
 }
 
 #[async_trait::async_trait]
-impl Model for CompactedModel {
+impl Model for CountingModel {
     fn model_name(&self) -> &str {
         self.inner.model_name()
     }
@@ -292,14 +300,7 @@ impl Model for CompactedModel {
         kwargs: Option<Value>,
     ) -> mini_swe_agent::Result<Message> {
         self.progress.steps.increment();
-        let mut folded: Vec<Message> = messages.to_vec();
-        let stats = compact_history(&mut folded, self.policy);
-        if stats.folded_anything() {
-            if let Ok(mut total) = self.progress.compacted.lock() {
-                *total = total.merged(stats);
-            }
-        }
-        self.inner.query(&folded, kwargs).await
+        self.inner.query(messages, kwargs).await
     }
 
     fn format_message(&self, message: Message) -> mini_swe_agent::Result<Message> {
@@ -378,10 +379,18 @@ pub struct LoopOutcome {
 
 /// Run one role call under the compacting loop.
 ///
-/// The control flow mirrors `mini_swe_agent::DefaultAgent::run`: save the
-/// trajectory after every step (so a crash still leaves a usable record), stop
-/// on an `exit` message, and turn the harness's own fail-fast abort into a value
-/// rather than an error.
+/// The control flow mirrors `mini_swe_agent::DefaultAgent::run`: fold the
+/// agent's **own** history before each step (AC-8), save the trajectory after
+/// every step (so a crash still leaves a usable record), stop on an `exit`
+/// message, and turn the harness's own fail-fast abort into a value rather than
+/// an error.
+///
+/// The fold is applied to `agent.messages` itself — the `Vec` that
+/// `DefaultAgent::query` hands to the model and that `save()` serialises — so
+/// there is no second, hidden context: the trajectory records exactly what was
+/// sent.  Folding a local copy instead (the previous shape) left the stored
+/// history unfolded and an auditor unable to recompute what the provider was
+/// charged for.
 pub async fn run_compacting_agent(
     mut agent: DefaultAgent,
     progress: CallProgress,
@@ -406,15 +415,25 @@ pub async fn run_compacting_agent(
     ))?;
     agent.add_messages(vec![system, instance]);
     let model = std::mem::replace(&mut agent.model, Box::new(UnusedModel));
-    let model = CompactedModel {
+    let model = CountingModel {
         inner: model,
         progress: progress.clone(),
-        policy,
     };
     agent.model = Box::new(model);
 
     let mut fail_fast = None;
     loop {
+        // AC-8: fold the history this call will send, in the place the call keeps
+        // it, before the step reads it.  `compact_history` never touches the
+        // system prompt, the task or the last `preserve_tail` messages, and it
+        // declines any fold that would not be smaller, so a step it has already
+        // folded is left alone.
+        let stats = compact_history(&mut agent.messages, policy);
+        if stats.folded_anything() {
+            if let Ok(mut total) = progress.compacted.lock() {
+                *total = total.merged(stats);
+            }
+        }
         match agent.step().await {
             Ok(_) => {
                 agent.n_consecutive_format_errors = 0;
@@ -673,5 +692,212 @@ mod tests {
         compact_history(&mut messages, CompactPolicy::default());
         let after: Vec<usize> = messages.iter().map(message_wire_bytes).collect();
         assert_eq!(before, after);
+    }
+
+    // ------------------------------------------------------------------
+    // AC-8: the fold lands on the history the agent stores.
+    //
+    // The claim at the top of this module — "the fold is applied to the agent's
+    // own history, so what is recorded in the trajectory is exactly what was
+    // sent; there is no second, hidden context" — is pinned here by running the
+    // real loop with a stub model and a stub environment: no model, no network,
+    // no engine.  The stub model records every message list it is handed, and the
+    // loop's own `save()` writes the stored history to a real file, so the two can
+    // be compared byte for byte.
+    // ------------------------------------------------------------------
+
+    /// A body that is definitely over `FOLD_FLOOR`, with the marker on a line the
+    /// fold does **not** keep (only the first line survives), so "the raw payload
+    /// is gone" is checkable.
+    const RAW_MARKER: &str = "SECRET-UNFOLDED-PAYLOAD";
+
+    fn raw_observation() -> String {
+        format!("compiling hof_game\n{}\n", RAW_MARKER.repeat(80))
+    }
+
+    /// Hands the loop a scripted action and a big observation, and records every
+    /// message list the provider would have been sent.
+    struct RecordingModel {
+        received: std::sync::Arc<std::sync::Mutex<Vec<Vec<Message>>>>,
+        calls: std::sync::atomic::AtomicUsize,
+    }
+
+    #[async_trait::async_trait]
+    impl Model for RecordingModel {
+        fn model_name(&self) -> &str {
+            "recording-stub"
+        }
+
+        async fn query(
+            &self,
+            messages: &[Message],
+            _kwargs: Option<Value>,
+        ) -> mini_swe_agent::Result<Message> {
+            self.received
+                .lock()
+                .expect("received lock")
+                .push(messages.to_vec());
+            let call = self.calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
+            if call >= 4 {
+                return Ok(Message::exit_message("Submitted", "done", "done"));
+            }
+            let mut message = Message::assistant(format!("step {call}"));
+            message.set_extra("actions", json!([{"command": format!("echo {call}")}]));
+            Ok(message)
+        }
+
+        fn format_observation_messages(
+            &self,
+            _message: &Message,
+            outputs: &[Output],
+            _template_vars: &Value,
+        ) -> mini_swe_agent::Result<Vec<Message>> {
+            // No action ran (an `exit` message), so there is no observation: a
+            // stub that answered here would append a tool message *after* the
+            // exit and the loop would never see it end.
+            if outputs.is_empty() {
+                return Ok(Vec::new());
+            }
+            Ok(vec![tool_message(&raw_observation())])
+        }
+
+        fn get_template_vars(&self) -> Value {
+            json!({})
+        }
+
+        fn serialize(&self) -> Value {
+            // An empty object, not `null`: `DefaultAgent::serialize` merges the
+            // model's and the environment's values over its own object, and
+            // `json_merge` returns the *patch* when it is not an object — a stub
+            // that answered `null` would make the whole trajectory `null`.
+            json!({})
+        }
+    }
+
+    /// A shell that answers nothing with nothing: the loop never runs a command.
+    struct StubEnvironment;
+
+    #[async_trait::async_trait]
+    impl mini_swe_agent::Environment for StubEnvironment {
+        async fn execute(
+            &self,
+            _action: &mini_swe_agent::Action,
+            _cwd: Option<&str>,
+            _timeout: Option<u64>,
+        ) -> mini_swe_agent::Result<Output> {
+            Ok(Output::success("", 0))
+        }
+
+        fn get_template_vars(&self) -> Value {
+            json!({})
+        }
+
+        fn serialize(&self) -> Value {
+            json!({})
+        }
+    }
+
+    fn agent_with(model: RecordingModel, trajectory: &std::path::Path) -> DefaultAgent {
+        let config = mini_swe_agent::AgentConfig {
+            system_template: "stub system prompt".to_string(),
+            instance_template: "stub task".to_string(),
+            step_limit: 0,
+            cost_limit: 0.0,
+            wall_time_limit_seconds: 0,
+            max_consecutive_format_errors: 0,
+            output_path: Some(trajectory.to_path_buf()),
+            mode: mini_swe_agent::AgentMode::Yolo,
+            whitelist_actions: Vec::new(),
+            confirm_exit: false,
+        };
+        DefaultAgent::new(Box::new(model), Box::new(StubEnvironment), config)
+    }
+
+    /// The regression AC-8 names: the trajectory the loop saves **is** the history
+    /// the last provider call was handed, and the raw superseded payload is not in
+    /// it.  Folding a local copy (the pre-repair shape) fails both halves: the file
+    /// keeps the raw bytes and the last call's list no longer matches the stored
+    /// one.
+    #[tokio::test]
+    async fn the_stored_trajectory_is_the_history_that_was_sent() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let trajectory = temp.path().join("traj/developer.attempt1.json");
+        let received = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let model = RecordingModel {
+            received: received.clone(),
+            calls: std::sync::atomic::AtomicUsize::new(0),
+        };
+        let agent = agent_with(model, &trajectory);
+        let outcome = run_compacting_agent(
+            agent,
+            CallProgress::default(),
+            CompactPolicy {
+                enabled: true,
+                preserve_tail: 1,
+            },
+            "stub task",
+            None,
+        )
+        .await
+        .expect("the loop runs");
+        assert_eq!(outcome.exit_status, "Submitted");
+        assert!(
+            outcome.compacted.folded_messages >= 2,
+            "the loop must have folded the superseded observations: {:?}",
+            outcome.compacted
+        );
+
+        let saved = std::fs::read_to_string(&trajectory).expect("the loop saves after every step");
+        let stored: Value = serde_json::from_str(&saved).expect("trajectory json");
+        let stored: Vec<Message> = serde_json::from_value(stored["messages"].clone())
+            .expect("trajectory messages deserialize as the messages that were sent");
+
+        // Four provider calls: three produced an observation, and the last of
+        // those three is inside `preserve_tail = 1`, so exactly one observation
+        // is legitimately still verbatim.  The other two are superseded and must
+        // have been folded in the **stored** history, not merely in a copy.
+        let verbatim: Vec<usize> = stored
+            .iter()
+            .enumerate()
+            .filter(|(_, message)| {
+                message
+                    .content
+                    .as_str()
+                    .is_some_and(|text| text.contains(RAW_MARKER))
+            })
+            .map(|(index, _)| index)
+            .collect();
+        assert_eq!(
+            verbatim.len(),
+            1,
+            "exactly the preserved tail observation may still be verbatim; the stored trajectory \
+             kept {verbatim:?} raw (AC-8: the fold did not land on the agent's own history)"
+        );
+        let folded: usize = stored
+            .iter()
+            .filter(|message| {
+                message
+                    .content
+                    .as_str()
+                    .is_some_and(|text| text.contains("superseded observation folded"))
+            })
+            .count();
+        assert_eq!(
+            folded, 2,
+            "the two superseded observations must carry the fold's own note in the stored history"
+        );
+
+        // The claim being checked, exactly: the last provider call's list and the
+        // prefix of the stored history are the same history.
+        let sent = received.lock().expect("received lock");
+        let last = sent.last().expect("at least one provider call");
+        assert!(stored.len() > last.len(), "the exit message is appended");
+        for (index, message) in last.iter().enumerate() {
+            assert_eq!(
+                message_wire_bytes(&stored[index]),
+                message_wire_bytes(message),
+                "message {index}: the trajectory must record exactly what was sent"
+            );
+        }
     }
 }

@@ -29,6 +29,18 @@ pub struct RunMeta {
     /// fixed shape: an unknown value is `null` plus a reason, never omitted.
     #[serde(default)]
     pub engine: crate::adapter::EngineIdentity,
+    /// Round-5 repair (AC-7b): the project directory this run id belongs to, as
+    /// an absolute path.
+    ///
+    /// Without it nothing tied `--run-id X` to a workspace, so
+    /// `hoh run --resume --run-id X --project Y` continued X against an
+    /// unrelated tree; `run_loop::check_resume_project` now refuses that.  The
+    /// field is `#[serde(default)]` because every `meta.json` written before it
+    /// existed has no project path: an empty value means "unrecorded", and a
+    /// resume of such a run is refused rather than guessed (a resume that cannot
+    /// prove the workspace is the run's own is the wrong-state hazard itself).
+    #[serde(default)]
+    pub project: std::path::PathBuf,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

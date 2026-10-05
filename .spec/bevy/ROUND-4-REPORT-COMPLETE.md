@@ -70,7 +70,7 @@
    "launch_image": "runs\\bevy-round4\\launch-image\\8d228a52-69ad-4b5a-b4c7-20dbee2e839e\\hof_game.exe",
    "launched_at_seconds": 1791177551,
    "nonce": "faf2adda-c698-48ef-a4f5-f51d1da551c6",
-   "note": "written by the harness before the spawn; a live pid on this line is this round's own previous session and is reaped before the next launch",
+   "note": "written by the harness immediately AFTER the spawn (a pid cannot exist before it; the nonce is the value generated before the spawn); corrected from 'before the spawn' per RA-1/AC-1. A live pid on this line is this round's own previous session and is reaped before the next launch",
    "pid": 47624,
    "port": 15702
   },
@@ -127,8 +127,8 @@
    "answering_pid": "the pid the operating system's TCP table names as the listener on 127.0.0.1:15702, recorded as read; it can be absent and it can disagree, and it is independent of the pid the harness spawned",
    "verified": "derived: true only when this launch carries the non-empty per-launch nonce that readiness read back from the game's hof_game::contract::ProcessNonce resource; a reply serving any other nonce is refused and the launch fails",
    "verified_rule_is_recorded_in_the_record_it_self": true,
-   "the_ledger_nonce_is_written_before_the_spawn": true,
-   "so": "identity.nonce is cross-checked against the launch-ledger line for the spawned pid, which the harness wrote BEFORE the spawn; the check cannot be satisfied by copying a field inside launch.json",
+   "the_ledger_nonce_is_written_before_the_spawn": false,
+   "so": "identity.nonce is cross-checked against the launch-ledger line for the spawned pid, which the harness wrote immediately AFTER the spawn (the nonce itself is generated before the spawn and goes into the child's environment); corrected from 'BEFORE the spawn' per RA-1/AC-1, so the ordering half of the original argument no longer holds and only the nonce's pre-spawn generation does",
    "round_3_comparison": "round 3 wrote identity.verified as the literal true and identity.answering_pid as a copy of spawned_pid, so two of its four gate fields were tautological; round 4 computes both"
   }
  },

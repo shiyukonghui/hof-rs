@@ -127,6 +127,153 @@ pub fn plan_resume(run_dir: &Path, iterations: u32) -> ResumePlan {
     }
 }
 
+/// Round-5 repair (AC-6/AC-7): the resume preconditions and the restore, as
+/// functions over the run directory, so every one of them is provable offline.
+///
+/// `plan_resume` decides *what* runs; the three helpers below decide *whether a
+/// resume may touch the tree at all* and *what state the tree is put back into*.
+/// They are separated from `run_inner` because the loop itself needs a model, an
+/// adapter and a round, while these are arithmetic and file I/O — a test builds a
+/// real interrupted run directory and drives them.
+///
+/// Read `runs/<id>/meta.json` back.
+///
+/// Round-5 repair (AC-7b): the resume identity check needs the *recorded* project
+/// path, and `run_inner` overwrites `meta.json` later in the same function, so the
+/// read has to happen first.
+pub fn read_run_meta(run_dir: &Path) -> anyhow::Result<RunMeta> {
+    let path = run_dir.join("meta.json");
+    let text = std::fs::read_to_string(&path).map_err(|error| {
+        anyhow::anyhow!(
+            "--resume: {} could not be read ({error}); a resume must prove which project the run \
+             id belongs to before it touches a workspace",
+            path.display()
+        )
+    })?;
+    serde_json::from_str(&text).map_err(|error| {
+        anyhow::anyhow!(
+            "--resume: {} is not a readable run meta.json ({error})",
+            path.display()
+        )
+    })
+}
+
+/// Round-5 repair (AC-7b): is `workspace` the project the run id belongs to?
+///
+/// Two absolute spellings of a path are the same project; when they differ, the
+/// canonical paths decide, so a symlinked or `..`-containing spelling of the same
+/// directory is still accepted.  An **unrecorded** project (an empty
+/// [`RunMeta::project`], i.e. a run written before the field existed) is never a
+/// match: a resume that cannot prove the workspace is guessing, and guessing is
+/// how `--run-id X --project Y` continued X against Y's tree (AC-7b).
+pub fn resume_project_matches(meta: &RunMeta, workspace: &Path) -> bool {
+    if meta.project.as_os_str().is_empty() {
+        return false;
+    }
+    let recorded = crate::runtime::invoke::absolute_path(&meta.project);
+    let given = crate::runtime::invoke::absolute_path(workspace);
+    if recorded == given {
+        return true;
+    }
+    match (
+        std::fs::canonicalize(&recorded),
+        std::fs::canonicalize(&given),
+    ) {
+        (Ok(a), Ok(b)) => a == b,
+        _ => false,
+    }
+}
+
+/// Round-5 repair (AC-7b): refuse a resume whose workspace is not provably the
+/// run id's own project.
+///
+/// Both refusals are explicit rather than a warning: an unverifiable identity is
+/// the wrong-state hazard itself, and the message says what to do instead.
+pub fn check_resume_project(meta: &RunMeta, run_id: &str, workspace: &Path) -> anyhow::Result<()> {
+    if meta.project.as_os_str().is_empty() {
+        anyhow::bail!(
+            "--resume: runs/{run_id}/meta.json records no project path, so run id `{run_id}` \
+             cannot be proved to belong to any workspace. Continuing anyway is exactly the \
+             `--run-id X --project Y` hazard, so it is refused: start a fresh run id, or use \
+             --reset-workspace on this one."
+        );
+    }
+    if !resume_project_matches(meta, workspace) {
+        anyhow::bail!(
+            "--resume: run id `{run_id}` was created against project {} but the workspace is {}; \
+             a resume must not continue one run against another run's tree. Pass the recorded \
+             project ({}), or start a fresh run id.",
+            meta.project.display(),
+            crate::runtime::invoke::absolute_path(workspace).display(),
+            meta.project.display()
+        );
+    }
+    Ok(())
+}
+
+/// Round-5 repair (AC-7a): which snapshot the workspace must be put back to
+/// before a resume runs anything.
+///
+/// The first incomplete iteration runs "from its start", and its start is the
+/// artifact the last **completed** iteration froze (`A_0` when none completed).
+/// `None` means the resume has nothing to run, and therefore must not touch the
+/// workspace at all.
+pub fn resume_restore_iteration(plan: &ResumePlan) -> Option<u32> {
+    plan.first_iteration.map(|_| plan.completed)
+}
+
+/// What [`restore_resume_workspace`] did, as a value the round can record and a
+/// test can assert.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ResumeRestore {
+    /// The snapshot the workspace was restored to.
+    pub iteration: u32,
+    pub version_id: String,
+    /// The workspace hash *before* the restore, when it differed from
+    /// `version_id`: the interrupted iteration's own partial edits really were
+    /// discarded rather than adopted.  `None` means the tree was already at the
+    /// snapshot.
+    pub discarded: Option<String>,
+}
+
+/// Round-5 repair (AC-7a): restore **and validate** the workspace before the
+/// first incomplete iteration re-runs.
+///
+/// The old behaviour was silent: the iteration re-ran on top of its own partial
+/// edits, including a file truncated by a process killed inside `std::fs::write`,
+/// while the code, the help and the resume warning all said it "runs from its
+/// start".  The restore makes that sentence true of the working tree as well as
+/// of the iteration: the tree is rolled back to `iteration`'s frozen artifact and
+/// [`VersionStore::rollback`] re-hashes it, so a restore that did not land is an
+/// error rather than a quiet wrong state.  A run with no such snapshot is refused
+/// — that run is not one this harness wrote a start state for.
+pub fn restore_resume_workspace(
+    store: &VersionStore,
+    workspace: &Path,
+    excludes: &[String],
+    iteration: u32,
+) -> anyhow::Result<ResumeRestore> {
+    let entry = store
+        .read_index()?
+        .into_iter()
+        .find(|entry| entry.iteration == iteration)
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "--resume: the run holds no A{iteration} snapshot under {}, so the workspace \
+                 cannot be restored to the state the interrupted round was in. Re-running on an \
+                 unproven tree is the wrong-state hazard, so it is refused.",
+                store.root.display()
+            )
+        })?;
+    let before = hash_tree(workspace, excludes)?;
+    store.rollback(workspace, excludes, &entry.version_id)?;
+    Ok(ResumeRestore {
+        iteration,
+        version_id: entry.version_id.clone(),
+        discarded: (before != entry.version_id).then_some(before),
+    })
+}
+
 /// The `RunSummary` a fully-complete resume must end with, read back from the
 /// iteration results it is not going to re-run.
 fn summary_from_completed_iterations(run_dir: &Path, iterations: u32, run_id: &str) -> RunSummary {
@@ -185,10 +332,16 @@ pub struct Orchestrator {
     /// round-3 defect in a new place: a **completed** iteration
     /// (`runs/<id>/iter-<n>/result.json` with `ok: true`) is not re-run and its
     /// usage, gate and version are carried into this run's summary; the first
-    /// incomplete iteration runs **from its start**, because the harness has no
-    /// role-level checkpoint — a Developer edits the workspace in place through
-    /// the write directive, and there is no safe point inside a call at which the
-    /// partial work could be handed to a fresh call.
+    /// incomplete iteration runs **from its start**, and its start is *restored*
+    /// — the project tree is rolled back to the artifact the last completed
+    /// iteration froze (`resume_restore_iteration`, `restore_resume_workspace`,
+    /// with the rollback re-hashing the tree) so the interrupted iteration's own
+    /// partial edits are discarded rather than adopted.  The workspace must be the
+    /// project the run id was created against (`RunMeta::project`), and the
+    /// round's own `.hoh` is not quarantined.  A call interrupted mid-flight is
+    /// still **not** resumable at a finer grain: a Developer edits the workspace
+    /// in place through the write directive, and there is no safe point inside a
+    /// call at which the partial work could be handed to a fresh call.
     pub resume: bool,
 }
 
@@ -810,13 +963,23 @@ fn qa_report_fallback(bundle: &crate::model::EvidenceBundle) -> String {
 /// makes "start failed ⇒ no route" true for *every* adapter, including one whose
 /// own failure path forgets: the channel drops the in-process route and the file
 /// is removed (DR-43's explicit refusal stays what a role sees).
-async fn start_round_game(orchestrator: &Orchestrator, workspace: &Path, run_dir: &Path) {
+async fn start_round_game(
+    orchestrator: &Orchestrator,
+    workspace: &Path,
+    run_dir: &Path,
+    session: &RoundGameSession,
+) {
     match orchestrator
         .adapter
         .start_round_game(workspace, &*orchestrator.tools)
         .await
     {
-        Ok(_) => {}
+        // AC-6: the session really exists only when the adapter returned a
+        // published endpoint record, so only that arm makes `run`'s teardown fire.
+        // `Ok(None)` is the documented "this adapter has no game session to
+        // offer", and `stop_round_game` for it would be a stop of nothing.
+        Ok(Some(_)) => session.record_started(),
+        Ok(None) => {}
         Err(error) => {
             // Idempotent, and deliberately not conditional on what the adapter
             // managed to do before it failed.
@@ -861,21 +1024,53 @@ async fn stop_round_game(orchestrator: &Orchestrator, run_dir: &Path) {
 /// every exit path — the summary, an `Err` from any stage, and the contract-gate
 /// returns — so no role's window falls outside the publish window and no error
 /// path leaves a route behind pointing at a stopped game.
+///
+/// Round-5 repair (AC-6): "on every exit path" means every path that **started** a
+/// session.  [`RoundGameSession`] records whether one really was started, because
+/// a resume with no iteration left (and a resume refused before its first write)
+/// must neither launch nor stop a game.
 pub async fn run(
     orchestrator: &Orchestrator,
     spec: &Spec,
     run_id: &str,
 ) -> anyhow::Result<RunSummary> {
-    let outcome = run_inner(orchestrator, spec, run_id).await;
-    let run_dir = orchestrator.cfg.runtime.runs_dir.join(run_id);
-    stop_round_game(orchestrator, &run_dir).await;
+    let session = RoundGameSession::default();
+    let outcome = run_inner(orchestrator, spec, run_id, &session).await;
+    if session.started() {
+        let run_dir = orchestrator.cfg.runtime.runs_dir.join(run_id);
+        stop_round_game(orchestrator, &run_dir).await;
+    }
     outcome
+}
+
+/// Round-5 repair (AC-6): whether this process started the round's game session.
+///
+/// The teardown in [`run`] reads it, so a resume that executes no iteration starts
+/// no game and — just as importantly — does not call the adapter's
+/// `stop_round_game` for a session that never existed.  The flag is set only after
+/// the adapter reported a successful start, never before.
+#[derive(Debug, Default)]
+pub struct RoundGameSession {
+    started: std::sync::atomic::AtomicBool,
+}
+
+impl RoundGameSession {
+    fn record_started(&self) {
+        self.started
+            .store(true, std::sync::atomic::Ordering::SeqCst);
+    }
+
+    /// Did the adapter report a started session?
+    pub fn started(&self) -> bool {
+        self.started.load(std::sync::atomic::Ordering::SeqCst)
+    }
 }
 
 async fn run_inner(
     orchestrator: &Orchestrator,
     spec: &Spec,
     run_id: &str,
+    session: &RoundGameSession,
 ) -> anyhow::Result<RunSummary> {
     let cfg = &orchestrator.cfg;
 
@@ -883,6 +1078,17 @@ async fn run_inner(
     std::fs::create_dir_all(&run_dir)?;
 
     let workspace = cfg.runtime.workspace.clone();
+
+    // Round-5 repair (AC-7b): the resume identity check comes **before anything is
+    // touched** — before `create_dir_all(&workspace)`, before the adapter's
+    // `initialize`, before the quarantine and before any game session.  The read
+    // must also happen before `write_run_meta` below, which overwrites the
+    // recorded project with this process's.
+    if orchestrator.resume {
+        let recorded = read_run_meta(&run_dir)?;
+        check_resume_project(&recorded, run_id, &workspace)?;
+    }
+
     std::fs::create_dir_all(&workspace)?;
     // DR-70 ①/②: the run's route file is **not inherited**.  Whatever a previous
     // round — or a crash, or a deliberately reused `--run-id` — left at this
@@ -911,7 +1117,19 @@ async fn run_inner(
     // Developer's cwd and outside both view roots (`iter-<n>/{planner-view,candidate}`)
     // — under the DR-49 `.stale-<ts>` name, never deleted.  `.hoh` is excluded
     // from the artifact hash (DR-11), so the move cannot perturb `A_0`/`A_t`.
-    let quarantined = crate::runtime::hygiene::quarantine_previous_evidence(&workspace, &run_dir)?;
+    //
+    // Round-5 repair (AC-6): a **resumed** round does not quarantine anything.
+    // The bytes under `.hoh` belong to *this* round — the very round the resume is
+    // continuing — so moving them aside would hide the interrupted iteration's own
+    // deterministic records and raw evidence from the iteration about to re-run,
+    // while the previous round's bytes are not what is on disk. Quarantine is
+    // "the previous round's evidence" and it is skipped exactly when this process
+    // is continuing this round.
+    let quarantined = if orchestrator.resume {
+        Vec::new()
+    } else {
+        crate::runtime::hygiene::quarantine_previous_evidence(&workspace, &run_dir)?
+    };
 
     // DR-88 ④: the adapter's cache directories are outside the artifact
     // identity (R10 keeps `version_id` stable), which used to make a write
@@ -938,10 +1156,15 @@ async fn run_inner(
             &format!(
                 "{RESUMED_FROM}: iteration(s) 1..={} already carry a result.json with ok=true and \
                  are NOT re-run (their usage, gate and version are carried into this run's \
-                 summary); iteration {:?} runs from its start. A call interrupted mid-flight is \
-                 not resumable at a finer grain: the harness has no role-level checkpoint, and a \
-                 Developer edits the workspace in place, so there is no safe point inside a call.",
-                plan.completed, plan.first_iteration
+                 summary); iteration {:?} runs from its start. Its start is restored: the project \
+                 tree is rolled back to the artifact the last completed iteration froze (A{}) and \
+                 the restore is verified by re-hashing it, so the interrupted iteration's own \
+                 partial edits — including a file truncated by a process killed inside a write — \
+                 are discarded rather than adopted. What is NOT restored: a call interrupted \
+                 mid-flight is not resumable at a finer grain (the harness has no role-level \
+                 checkpoint, and a Developer edits the workspace in place), and this round's own \
+                 `.hoh` scratch/raw evidence is left in place rather than quarantined.",
+                plan.completed, plan.first_iteration, plan.completed
             ),
         )?;
         warnings.push(RESUMED_FROM.to_string());
@@ -990,6 +1213,9 @@ async fn run_inner(
         config: cfg.model.clone(),
         start_state: orchestrator.start_state.clone(),
         engine,
+        // Round-5 repair (AC-7b): the run id is bound to the project it was
+        // created against, so a later `--resume` can refuse a different one.
+        project: crate::runtime::invoke::absolute_path(&workspace),
     };
     write_run_meta(&run_dir, &meta)?;
     append_warning(&run_dir, MCP_SCOPE_WARNING)?;
@@ -1013,9 +1239,9 @@ async fn run_inner(
     // already been edited by the iterations this process is not re-running, so a
     // fresh "initial artifact" would be a false name for a mid-round tree; the
     // store already holds the real A0 of this run, and `--reset-workspace`
-    // (which is the mode that needs A0) still reads that one.  The resumed run's
-    // own starting point is the workspace as the interrupted round left it, and
-    // every iteration records its own increment against that.
+    // (which is the mode that needs A0) still reads that one.  A resumed run's
+    // own starting point is `resume_restore_iteration(&resume_plan)`: the last
+    // completed iteration's frozen artifact, which the next block restores.
     let a0 = if orchestrator.resume {
         store
             .read_index()?
@@ -1031,6 +1257,42 @@ async fn run_inner(
     } else {
         store.snapshot_role(&workspace, &excludes, 0, "init", "A0 initial artifact")?
     };
+
+    // Round-5 repair (AC-7a): restore **and validate** the tree the first
+    // incomplete iteration starts from.
+    //
+    // The old resume re-ran that iteration on top of its own partial edits while
+    // claiming it "runs from its start"; a process killed inside `std::fs::write`
+    // could leave a truncated source that the re-run adopted as its starting
+    // point.  The iteration's start is the artifact the last completed iteration
+    // froze, so the workspace is rolled back to it (and the rollback re-hashes the
+    // tree), and the run says exactly what was discarded.  A resume that has
+    // nothing to run restores nothing: `resume_restore_iteration` is `None` then.
+    if orchestrator.resume {
+        if let Some(target) = resume_restore_iteration(&resume_plan) {
+            let restore = restore_resume_workspace(&store, &workspace, &excludes, target)?;
+            append_warning(
+                &run_dir,
+                &format!(
+                    "{RESUMED_FROM}: restored the workspace to iteration {target}'s frozen artifact \
+                     {} (the rollback re-hashed the tree, so the restore is verified, not assumed){}. \
+                     The interrupted iteration's own partial edits are therefore discarded, not \
+                     adopted, before it re-runs from its start. NOT restored: this round's own \
+                     `.hoh` scratch and raw evidence (they stay in place — they are this round's \
+                     bytes, not a previous round's, so nothing is quarantined), and any work inside \
+                     the interrupted call (there is no role-level checkpoint to resume from).",
+                    restore.version_id,
+                    match &restore.discarded {
+                        Some(before) => format!(
+                            "; the tree had drifted from it (it hashed to {before}, i.e. the \
+                             interrupted iteration really had left partial edits)"
+                        ),
+                        None => "; the tree was already at that artifact".to_string(),
+                    }
+                ),
+            )?;
+        }
+    }
 
     let total_text = spec_text(spec)?;
     let mut total_usage = Usage {
@@ -1063,16 +1325,14 @@ async fn run_inner(
         Some(crate::runtime::invoke::absolute_path(&workspace)),
     );
 
-    // DR-70 ①: the round's game session is started **here**, before the Planner,
-    // so the published route covers the whole window in which the Developer and
-    // the Tester run.  DR-69 published it inside the battery's `editor_play_scene`
-    // step — after the Developer and before the Tester — which is why the
-    // acceptance found that no role process ever overlapped it (D1).
-    start_round_game(orchestrator, &workspace, &run_dir).await;
-
     // Round-5 repair: a resume of a run whose every iteration already completed
     // has nothing to execute, so it returns the summary read back from those
     // results rather than an invented one.
+    //
+    // AC-6: the return is **before** `start_round_game`.  The old order launched
+    // the round's game and then returned, so a fully-complete resume started and
+    // stopped a game process that executed no iteration; `run` no longer calls
+    // `stop_round_game` either, because `session` is never marked started.
     if orchestrator.resume && resume_plan.first_iteration.is_none() {
         return Ok(summary_from_completed_iterations(
             &run_dir,
@@ -1080,6 +1340,13 @@ async fn run_inner(
             run_id,
         ));
     }
+
+    // DR-70 ①: the round's game session is started **here**, before the Planner,
+    // so the published route covers the whole window in which the Developer and
+    // the Tester run.  DR-69 published it inside the battery's `editor_play_scene`
+    // step — after the Developer and before the Tester — which is why the
+    // acceptance found that no role process ever overlapped it (D1).
+    start_round_game(orchestrator, &workspace, &run_dir, session).await;
 
     for iteration in 1..=cfg.runtime.iterations {
         let iter_dir = run_dir.join(format!("iter-{iteration}"));
@@ -1694,7 +1961,7 @@ async fn run_inner(
             // inside the round's window: its game session is started again for
             // it, and stopped again before the second battery pass restarts the
             // game on the repaired candidate.
-            start_round_game(orchestrator, &workspace, &run_dir).await;
+            start_round_game(orchestrator, &workspace, &run_dir, session).await;
             // DR-24: at most ONE targeted repair per iteration.  A false gate
             // is never silently frozen as a success.
             iter_repair_retry_used = true;
@@ -1839,7 +2106,7 @@ async fn run_inner(
         // has withdrawn the route.  The round's session is started again here so
         // the freeze and the Tester run inside a published window that points at
         // a game built from the candidate the battery just measured.
-        start_round_game(orchestrator, &workspace, &run_dir).await;
+        start_round_game(orchestrator, &workspace, &run_dir, session).await;
         if launch_gate.applicable && !launch_gate.launchable {
             // DR-24: the second failure is honest, not fatal — the round still
             // advances, and `result.json.artifact_gate.launchable = false`

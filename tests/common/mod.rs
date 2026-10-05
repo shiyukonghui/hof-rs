@@ -928,6 +928,42 @@ pub async fn run_scenario_with_tools(
     (result, observer.records())
 }
 
+/// Round-5 repair (AC-6/AC-7): the same offline scenario, driven as a
+/// `hoh run --resume` of a run directory the caller has already prepared.
+///
+/// The caller owns the preparation (a `versions/` index with snapshots, the
+/// completed iterations' `result.json`, a `meta.json` whose `project` is the
+/// workspace) because those are the facts a resume reads; this helper only wires
+/// the real [`hof_rs::runtime::run_loop::run`] to them.
+pub async fn run_resume_scenario(
+    root: &Path,
+    iterations: u32,
+    script: Vec<FakeStep>,
+    adapter: FakeAdapter,
+    tools: Arc<dyn ToolChannel>,
+) -> (
+    anyhow::Result<hof_rs::runtime::run_loop::RunSummary>,
+    Vec<InvocationRecord>,
+) {
+    let mut cfg = test_config(root, iterations);
+    cfg.runtime.spec = root.join("spec.md");
+    let spec = write_spec(root);
+    let harness = FakeHarness::new(script);
+    let observer = harness.clone();
+    let orchestrator = hof_rs::runtime::run_loop::Orchestrator {
+        harness: Box::new(harness),
+        adapter: Box::new(adapter),
+        tools,
+        cfg,
+        ablation: hof_rs::model::Ablation::default(),
+        force_init: true,
+        start_state: hof_rs::runtime::start_state::StartState::as_is(),
+        resume: true,
+    };
+    let result = hof_rs::runtime::run_loop::run(&orchestrator, &spec, "run-1").await;
+    (result, observer.records())
+}
+
 /// A one-iteration script for the common case.
 pub fn happy_script() -> Vec<FakeStep> {
     vec![

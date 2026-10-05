@@ -137,7 +137,7 @@
       }
     ],
     "surviving_launch_json_is_pass_03": true,
-    "caveat": "two of the four gate fields are written, not measured: src/adapter/bevy/round.rs sets identity.verified to the literal true and identity.answering_pid to a copy of identity.spawned_pid, so both are tautologically true whenever an identity object exists. The proof that the answering process is the launched one rests on (a) readiness refusing any reply whose ProcessNonce is not this launch's nonce, (b) identity.nonce matching the nonce the harness wrote into launch-ledger.jsonl before the spawn, and (c) the independent OS reading identity.listening_pid; the round-2 defect was exactly the absence of (c)."
+    "caveat": "two of the four gate fields are written, not measured: src/adapter/bevy/round.rs sets identity.verified to the literal true and identity.answering_pid to a copy of identity.spawned_pid, so both are tautologically true whenever an identity object exists. The proof that the answering process is the launched one rests on (a) readiness refusing any reply whose ProcessNonce is not this launch's nonce, (b) identity.nonce matching the nonce the harness generated before the spawn and wrote into launch-ledger.jsonl immediately AFTER it, and (c) the independent OS reading identity.listening_pid; the round-2 defect was exactly the absence of (c). The ledger-ordering wording was corrected here per RA-1/AC-1 (the ledger line is appended after the spawn, because a pid cannot exist before it)."
   },
   "developer_cost": {
     "round_1_reference": {

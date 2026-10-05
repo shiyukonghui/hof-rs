@@ -68,9 +68,16 @@ pub struct RunArgs {
     /// is **not** re-run (its usage, gate and version are carried into the run's
     /// summary); the first incomplete iteration runs **from its start**, because
     /// the harness has no role-level checkpoint — a Developer edits the workspace
-    /// in place, so there is no safe point inside a call.  The run directory must
-    /// already exist, and `--fresh-workspace` / `--reset-workspace` are refused
-    /// with it.
+    /// in place, so there is no safe point inside a call.  "From its start" is
+    /// restored, not assumed: the project tree is rolled back to the artifact the
+    /// last completed iteration froze and the rollback re-hashes it, so the
+    /// interrupted iteration's own partial edits are discarded rather than
+    /// adopted.  The round's own `.hoh` (scratch, deterministic records) is **not**
+    /// quarantined — those bytes belong to this round — and a resume whose every
+    /// iteration already completed starts no game session and re-runs nothing.
+    /// The run directory must already exist, `--project` must be the project the
+    /// run id was created against (recorded in `meta.json`), and
+    /// `--fresh-workspace` / `--reset-workspace` are refused with it.
     #[arg(long)]
     pub resume: bool,
     /// Round-2 repair (credential batch): read the model secret from this file.

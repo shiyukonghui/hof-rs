@@ -342,7 +342,13 @@ impl GuardState {
 
 /// A short, stable fingerprint of a tool result, so "the same result again" is a
 /// value rather than a comparison of unbounded text.
-fn output_digest(output: &str) -> String {
+///
+/// Round-5 repair (AC-13): this is `pub` because the tripwire's own projection
+/// (`tests/repeated_action.rs`) must count repetitions with the guard's **own**
+/// digest rather than a proxy.  It used to compare the observation's byte
+/// *length*, which counts two different results of equal length as identical —
+/// conservative, but not the rule the guard applies.
+pub fn output_digest(output: &str) -> String {
     let bytes = output.as_bytes();
     format!(
         "{} ({} byte(s))",

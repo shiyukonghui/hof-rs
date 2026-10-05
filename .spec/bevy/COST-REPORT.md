@@ -62,9 +62,14 @@ game, no network, no model call. Everything below is code, tests, or arithmetic 
       "per_call_after_tail_12": {"iter_1": 14920, "iter_2": 25152, "iter_3": 23705, "mean": 18300}
     },
     "projected_round": {
-      "measured_developer_before": 20940837,
-      "projected_developer_after": 5219854,
-      "projected_reduction": 0.7507,
+      "ac10_correction": "This block was not like-for-like: the old `before` figure (20,940,837) included completion tokens while the old `after` figure (5,219,854) was prompt-only, so the quoted 25.5% understated the prompt reduction and the three after-figures actually sum to 5,220,254. Both halves are stated like-for-like here.",
+      "measured_developer_prompt_before": 20447131,
+      "projected_developer_prompt_after": 5220254,
+      "projected_prompt_reduction": 0.7447,
+      "completion_tokens_unchanged": 493706,
+      "projected_developer_total_after": 5713960,
+      "measured_developer_total_before": 20940837,
+      "projected_total_reduction": 0.7271,
       "scope_of_the_projection": "the Developer role only: the three recorded Developer calls are the trajectories this batch measured. The round's other roles were not measured and are not claimed."
     },
     "changed": "src/harness/compact.rs (new): fold superseded history at the send point, keep the system prompt, the task and the last compact_history_tail=12 messages verbatim; whose result is what the trajectory records. src/harness/mini.rs: the loop is ours (mini's run cannot fold between steps); step counting moved into the same loop. src/config.rs: compact_history=true, compact_history_tail=12."
@@ -79,15 +84,15 @@ game, no network, no model call. Everything below is code, tests, or arithmetic 
     "pinned_by": ["harness::guard::tests::a_repeated_action_whose_result_changes_is_not_unproductive_repetition", "harness::guard::tests::a_repeated_action_whose_result_stops_changing_is_still_aborted", "harness::guard::tests::the_same_successful_action_repeated_to_its_cap_aborts_the_call", "tests/repeated_action.rs"]
   },
   "defects": [
-    {"id": "criterion-4-cost", "disposition": "partially closed: per-call developer tokens projected 72,939 -> 18,300 and the three recorded calls 20.94M -> 5.22M (25.5% of recorded), all provable offline; the 1.5M-per-call target is NOT reached and no round was run to confirm the projection on a live call."},
+    {"id": "criterion-4-cost", "disposition": "partially closed: projected per-call Developer **prompt** tokens 72,939 -> 18,300 and the three recorded calls 20,447,131 -> 5,220,254 prompt tokens (74.47% of the recorded prompt spend; adding the unchanged completion tokens back gives 5,713,960 against 20,940,837, i.e. 72.71%). AC-10: the earlier '20.94M -> 5.22M (25.5%)' mixed prompt+completion on the before side with prompt-only on the after side. The 1.5M-per-call target is NOT reached (iter-2 projects to 2,681,282 prompt + 325,953 completion = 3,034,063, over 2x the target), and no round was run to confirm the projection on a live call. FIX-REPORT.md §5 measures the floor: even with the verbatim tail removed entirely, iter-2 projects to 1,873,629 prompt tokens."},
     {"id": "unverified-item-tripwire-at-15", "disposition": "fixed: the counter now requires identical results and a write-free window; tested; round 4's three calls would no longer be ended by it."},
     {"id": "RA-1", "disposition": "fixed: the ledger is written after the spawn (a pid cannot exist before it); the append_ledger and ledger_entry docs, the call-site comment, the entry's own `note`, reap_ledger's doc and ROUND-4-REPORT-COMPLETE.md now say so. The nonce really is generated before the spawn and that is stated as the surviving proof. Pinned by adapter::bevy::launch::tests::the_ledger_line_is_written_after_the_spawn_and_says_so."},
     {"id": "RA-2", "disposition": "fixed: the e3_grounded_payload proving_reading in .spec/bevy/ROUND-4-REPORT-COMPLETE.md cited frame 477, which runs/bevy-round4/calls/0008-bevy_grounded.json does not contain; the file's own FrameCounter value is 495 and the line now says 495 and names the file it was read from."},
     {"id": "RA-3", "disposition": "fixed at the source: round-stop.json now carries ledger_lines_at_sweep and a sweep_covers_ledger_line(line) predicate, so a snapshot of the directory can answer 'does this sweep cover my pass's launch' from the file itself (it does not, when the pass launched after the sweep). Pinned by the round-stop sweep test."},
-    {"id": "RA-4", "disposition": "fixed: identity.verified is now the conjunction of (1) a non-empty nonce, (2) the NEW answered_nonce field equalling it (what readiness read back over the wire), and (3) the OS TCP table naming spawned_pid as the listener. verified_game_endpoint no longer writes Some(true). Six cases pinned, each false for a launch that really occurs."},
+    {"id": "RA-4", "disposition": "fixed: identity.verified is now the conjunction of (1) a non-empty nonce, (2) the NEW answered_nonce field equalling it (what readiness read back over the wire), and (3) the OS TCP table naming spawned_pid as the listener. verified_game_endpoint no longer writes Some(true). AC-4 correction: the earlier claim 'six cases pinned, each false for a launch that really occurs' was false. Terms (1) and (2) are invariants of every launch that *returns* — `launch.rs:502-529` sets answered_nonce only on the equality arm, and a mismatch returns LaunchError::IdentityMismatch and stops the child, so no LaunchFacts exists — hence those cases can only be built by hand. The field's discriminating power for a real launch is term (3), the operating-system listening reading, alone (the exact property D298's option 4 rejected and D301 revisits). Pinned: the field is false when the OS listener is another pid or is absent, and the mismatched/absent answered_nonce cases are hand-built and labelled as impossible for a returned launch."},
     {"id": "RA-5", "disposition": "fixed (found while auditing the defect list): the derived PRD-coverage line and PrdCoverage::label now say in the line itself that the denominator is the Tester's own claim count and not F1..F17, and that the figure is not comparable between rounds."},
     {"id": "RA-6", "disposition": "fixed: src/prompts/skills/godot-dev.md (17,451 B) and godot-testing.md (5,160 B) are removed from the tree and from prompts::skills(); they were compiled in and delivered into every round workspace. The prompt-discipline tests that read them now read bevy-dev.md / bevy-testing.md and the Bevy books gained the two sentences those rules check (the audience ruling; a concrete tools-call recipe; a scratch-discipline section), so coverage is kept rather than deleted."},
-    {"id": "RA-7", "disposition": "not reached as a named item - the acceptance's RA-7 could not be located in this batch's copy of ACCEPTANCE-ROUNDS.md with a distinct defect statement; the entries present were RA-1..RA-6 and RA-8..RA-9. Declared, not inferred: no code change was made for it."},
+    {"id": "RA-7", "disposition": "closed, and the earlier disposition was inaccurate: RA-7 ('DECISIONS.md has no round-3 / round-4 entry') IS present at .spec/bevy/ACCEPTANCE-ROUNDS.md:137, which this batch's copy contained all along. It is closed in substance by D299 (the rounds 3-4 entry) and D300 (this batch). AC-5 correction: the previous text said the defect 'could not be located in this batch's copy of ACCEPTANCE-ROUNDS.md', which was false and understated what the batch did."},
     {"id": "RA-8", "disposition": "fixed by labelling: e3_win_position and e3_grounded_payload carry definitional=true plus their reason in the Observation, and the round's own record prints '[definitional: ...]' for them, so a reader counting behavioural proofs is not misled. Pinned by adapter::bevy::round::tests::the_definitional_battery_steps_say_so_in_the_rounds_record."},
     {"id": "RA-9", "disposition": "fixed: parse_listener_pid no longer falls back to the first non-LISTEN row; a localised/unknown state word yields None rather than a pid. Pinned by adapter::engine::tests::a_non_listening_holder_of_the_port_is_not_reported_as_the_listener."},
     {"id": "resume", "disposition": "implemented with a stated scope: an iteration whose result.json says ok:true is not re-run (its usage, gate and version are carried into the summary); the first incomplete iteration runs FROM ITS START. hoh run --resume refuses a missing run directory and is mutually exclusive with --fresh-workspace/--reset-workspace. A call interrupted mid-flight is NOT resumable at a finer grain and the code says why: the harness has no role-level checkpoint and a Developer edits the workspace in place."},
@@ -114,7 +119,7 @@ game, no network, no model call. Everything below is code, tests, or arithmetic 
     "--resume has not continued a real interrupted round: the decision is pinned as arithmetic over a built run directory, and the loop's skip/continue path is not exercised end to end (that needs a run).",
     "The 1.5M-token-per-call target is not reached on this projection (per-call developer mean 18,300; three calls 5.22M). The remaining lever is the call count (system prompt and tool surface), not the context.",
     "Round 4's own report prose is frozen; only the RA-2 citation line was corrected. Whether other prose in ROUND-4-REPORT*.md is stale was not audited.",
-    "The acceptance's RA-7 is named in this batch's prompt but has no distinct entry in the ACCEPTANCE-ROUNDS.md copy read here; no change was made for it."
+    "The acceptance's RA-7 is present at .spec/bevy/ACCEPTANCE-ROUNDS.md:137 and is closed in substance by D299 (rounds 3-4) and D300 (this batch); the earlier 'not located' disposition was wrong (AC-5)."
   ],
   "single_most_important_thing_next_batch": "Re-run the cost measurement on one real Developer call before trusting the projection, and read the trajectory for the two things the fold cannot show offline: whether the role re-derives anything it no longer sees, and the real prompt tokens per call against the projected 18,300. The fold is the only change in this batch whose risk is behavioural rather than mechanical; every other item is pinned by a test that fails when the behaviour is removed."
 }
@@ -159,9 +164,13 @@ one, and that the curve is monotone in the tail.
 161,566 / 66,002 to 14,920 / 25,152 / 23,705, i.e. the final prompt is smaller than the *mean* was
 before — the growth term is what the fold removes.)
 
-Projected developer spend for the three calls: **20,940,837 → 5,219,854 (25.5%)**; the per-call mean
-falls from 72,939 to about 18,300, and the last call's prompt from 161,566 to 25,152. Against the
-recorded 296 calls / 20,940,837 developer tokens / 98.6 minutes, that is a projected ~15.7M developer
+Projected developer spend for the three calls, **prompt to prompt**: 20,447,131 → 5,220,254 (25.53%,
+i.e. a 74.47 % reduction); adding the unchanged completion tokens (493,706) back to the projected
+prompt gives 5,713,960 against the 20,940,837 recorded total, a 72.71 % reduction.  (AC-10: the
+earlier "20,940,837 → 5,219,854 (25.5%)" compared a prompt+completion *before* with a prompt-only
+*after*, and the three after-figures sum to 5,220,254.)  The per-call mean falls from 72,939 to about
+18,300 prompt tokens, and the last call's prompt from 161,566 to 25,152. Against the recorded 296
+calls / 20,940,837 developer tokens / 98.6 minutes, that is a projected saving of ~15.2M developer
 tokens and about 25 minutes of model time **for the Developer role only** — the other roles were not
 measured and are not claimed.
 
@@ -288,11 +297,13 @@ Every one of these is a limit of an offline batch, not a hedge:
    cannot be settled offline.
 3. **`--resume` has not continued a real round.** The skip/re-run decision is pinned; the loop's
    continue path over a real interrupted run is not.
-4. **The 1.5M-token-per-call target is not reached** (projected developer mean 18,300; three calls
-   5.22M). The next lever is the call count — the system prompt and the tool surface — not the context.
+4. **The 1.5M-token-per-call target is not reached** (projected developer mean 18,300 prompt tokens;
+   three calls 5.22M prompt). The remaining lever is the call count, not the context: the context is
+   already near its information floor (with the verbatim tail removed entirely, iter-2 still projects
+   to 1,873,629 prompt tokens). See FIX-REPORT.md §5.
 5. **The frozen round-4 report prose was not audited**, only the one false citation corrected.
-6. **RA-7 has no distinct entry** in the copy of `.spec/bevy/ACCEPTANCE-ROUNDS.md` read here; nothing
-   was changed for it, and it is named rather than guessed at.
+6. **RA-7 is present at `.spec/bevy/ACCEPTANCE-ROUNDS.md:137`** and is closed by D299/D300; the
+   earlier "no distinct entry" disposition was wrong (AC-5).
 
 ## 5. The single most important thing for the next batch
 

@@ -94,6 +94,7 @@ fn meta_json_is_redacted_at_the_sink() {
         // DR-44: the `engine` block is part of `meta.json` and is covered by the
         // same no-secret rule as everything else.
         engine: hof_rs::adapter::EngineIdentity::unavailable("not probed"),
+        project: std::path::PathBuf::new(),
     };
     write_run_meta(&run_dir, &meta).expect("write meta");
 
