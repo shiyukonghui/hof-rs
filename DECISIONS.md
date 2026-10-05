@@ -11742,3 +11742,24 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 - 纪律 / Discipline: **未提交、未推送**；只用 `bevy-core` 分支；**未运行任何 round、Developer 调用、模型调用或引擎**；**未创建、复制或打印任何 API key**；未改代码、测试、`evidence/**`、注册表、battery、liveness 步骤、`.gitattributes` 行尾钉、config 或任何被量数字；未提交任何录制；未使用 `rm -rf`；未使用 `git checkout --`；未构造未展开变量拼出的路径；辅助脚本位于仓库之外 `F:\hof-efd1-work\`；先查磁盘（F: 37 GiB、D: 118 GiB 可用）再构建；构建目录为本批自己的 `D:/hof-efd1-target`，一次只跑一个测试进程。
 - 证据 / Evidence: 见 `.spec/bevy/EFD1-REPORT.md` 与其首个机器块（门禁字面退出码与计数、键名实际出现位置与所用命令、旧/新引证文本、两条弱陈述的处置、改动文件清单）。
 - 预期影响与回滚点 / Impact and rollback: 只改 `.spec/bevy/FD1-REPORT.md`（三处文字）并新增 `.spec/bevy/EFD1-REPORT.md` 与本条目；无代码/测试/语料/目录字节/注册表/battery/liveness/`.gitattributes`/config/成本机制改动，无被量数字变动。回滚即还原该三处文字、删除新报告与本条目。
+
+## D313 — 追加：把会漂移的引证去脆弱化——`.spec/bevy/EFD1-REPORT.md` 的引证改为条目/字段标识与钉住的 revision（ACCEPTANCE-EFD1 的 EFD2-1 与 RF-3 属同一类）
+
+- 日期 / Date: 2026-10-06
+- 触发问题 / Trigger: 独立验收 `.spec/bevy/ACCEPTANCE-EFD1.md` 的缺陷 **EFD2-1**（low）指出：`.spec/bevy/EFD1-REPORT.md` §1 检索表把 `DECISIONS.md` 的键名出现位置归给了错误的条目——把 D311 的行记到 D312 名下，并漏掉 D312 真正含该字符串的两行。同一次验收的风险 **RF-3** 另点名该报告的三处 `HEAD` 相对引证（两个 `numstat_vs_HEAD` 字段与 §2 的一句）：它们的上界 `HEAD` 在派单提交后移动到 `6b66da6` 与再往后的验收提交，故不再字面复现。共同根因不是某处引证写错，而是**把位置表达成会漂移的东西**：只增不改的 `DECISIONS.md` 的行号，与相对移动符号 `HEAD` 的差值。本条目记录对**这一类**的处理，而不是订正那一格的数字。
+- 考虑的选项与否决 / Options and rejections:
+  1. **只把错的那一格的数字改对** —— 否决：派单明确禁止「单纯订正数字」；`DECISIONS.md` 每次追加都会让新数字再漂移一次，同一个缺陷会以同一形状回来。
+  2. **`DECISIONS.md` 的引用改成「行号 + revision」** —— 否决：revision 只回答「读到哪一版」，而只增文件里的行号会随下一次追加移动，行号本身仍是脆弱量。
+  3. **把行号换成条目/字段标识或短引文，并把 revision 相关陈述钉到具名 commit** —— 采纳。
+  4. **只删行号、保留计数** —— 否决：定位能力丢失；按名给出 D311/D312 及其被引的句子更可核验。
+  5. **就地改 D312 最终选择的 (b) 里的 `HEAD`** —— 否决：本文件只可追加（D310 选项 5、D311 选项 5、D312 选项 1 立的规则）；由本条目命名并限定其措辞。
+- 最终选择 / Decision:
+  **(a) EFD2-1：** `.spec/bevy/EFD1-REPORT.md` §1 检索表的 `DECISIONS.md` 行不再给行号，改为按名给出 **D311（其 trigger 与 option 3）与 D312（其 trigger 与 option 3，即订正 D311 的条目）**——失实断言与其被标注的订正，均非该键的引用点。计数 4 保留。修改是逐行替换：该报告仍是 259 行，未增删行，故 `ACCEPTANCE-EFD1.md` 对该报告各行的引用仍落在同一字段与同一表格单元上。
+  **(b) RF-3：** 该报告把相对 `HEAD` 的引证改为钉住的 commit。机器块新增 `batch_committed_as`（`6b66da6`，即承载该批两份改动与这份报告的提交；`head_at_start` 仍是基线 `91629f4`）；`numstat_vs_HEAD` 两处改名为 `numstat_91629f4_to_6b66da6`（值不变：`3 3`、`18 0`）；`verified_myself` 与 §2 的 `git diff --numstat HEAD -- DECISIONS.md` 改为 `git diff --numstat 91629f4 6b66da6 -- DECISIONS.md`（值不变 `18 0`）；`git diff --name-only HEAD against them` 改为以 `head_at_start`/`batch_committed_as` 命名；`HEAD:` 改为 `91629f4:`；`hash_test_attribute_lines_head` 改名为 `hash_test_attribute_lines_head_at_start`（值不变 668）；其余「at HEAD」改为「at `head_at_start` (91629f4)」。
+  **(c) 检索计数的 revision：** `key_name_occurrences` 增加 `measured_against`，写明这些计数取自基于 `head_at_start`（91629f4）、带该批改动、且当时本报告尚未入跟踪的工作树（故 `git grep` 不计它）；在 `batch_committed_as`（6b66da6）同一命令会另计该报告自身（9 次），更晚的 revision 还会另计其后新增的验收记录。§0 与 §1 的同一组计数也加同一限定。本条目不拼出该键名，故 `DECISIONS.md` 的计数在本条目追加后仍是 4。
+  **(d) 指向已关闭批次记录的行号保留：** `FINAL-DOC-REPORT.md` 的 `where`/`change_site`、`HARDENING-REPORT.md` 的键定义行、`FD1-REPORT.md` 的三处、`ACCEPTANCE-FD1.md` 的 pin 行都不动。它们是**已关闭的批次记录**，不是只增文档，且行号与字段名/条目名同时给出；其中 `HARDENING-REPORT.md` 的键定义行是**载荷性**引证——它整行与整文件都被已记录的 sha256 钉住，去掉行号就无法复核该 pin。
+  **(e) D312 最终选择的 (b) 不动：** 其中 `git diff --numstat a80db33 HEAD -- DECISIONS.md` 为空一句由本条目命名并限定——写出时 `HEAD` 是 91629f4，该句对 91629f4 为真，对之后的 `HEAD` 读作 `18 0`。
+- 选择理由 / Why: 文档的权威是产物，位置的权威应是**条目标识**或**被引的字符串本身**，而不是一份只增文件里会漂移的整数；revision 相关的差值应在两端都钉住的 commit 之间表达，才能在任意 checkout 上字面复现。该报告的逐行替换还保住了一条可核验性质：它的行号未变。
+- 纪律 / Discipline: **未提交、未推送**（由上层决策代理提交）；只用 `bevy-core` 分支；**未运行任何 round、Developer 调用、模型调用或引擎**；**未创建、复制或打印任何 API key**；未改代码、测试、`evidence/**`、注册表、battery、liveness 步骤、`.gitattributes` 行尾钉、config 或任何被量数字；未提交任何录制；未删除任何文件（未使用 `rm -rf`）；未使用 `git checkout --`；未构造未展开变量拼出的路径；辅助脚本位于仓库之外 `F:\hof-defrag-work\`；先查磁盘（F: 37 GiB、D: 100 GiB 可用）再构建；构建目录为本批自己的 `D:/hof-defrag-target`，一次只跑一个测试进程。
+- 证据 / Evidence: 见 `.spec/bevy/DEFFRAGILISE-REPORT.md` 与其首个机器块（门禁字面退出码与计数、每一处被改引证的原文/现值/重新推导方式、被保留行号的论证、revision 相关陈述清单、改动文件与行数不变性）。
+- 预期影响与回滚点 / Impact and rollback: 只改 `.spec/bevy/EFD1-REPORT.md`（行内替换，行数不变）并新增 `.spec/bevy/DEFFRAGILISE-REPORT.md` 与本条目；无代码/测试/语料/目录字节/注册表/battery/liveness/`.gitattributes`/config/成本机制改动，无被量数字变动。回滚即还原该报告的引证、删除新报告与本条目。

@@ -3,8 +3,8 @@
  "schema": "hof-rs / bevy EFD-1 single repair: correct the false citation that the JSON key why_they_cannot_be_made_clone_safe is named in FINAL-DOC-REPORT.md's change_site; documents only, no code, test, evidence byte or measured figure changed",
  "produced_at": "2026-10-06",
  "branch": "bevy-core",
- "head_at_start": "91629f44333ec304dff5f611b4c51989830db136",
- "offline": true,
+ "head_at_start": "91629f44333ec304dff5f611b4c51989830db136", "batch_committed_as": "6b66da67b4a95fe77330b791aebfbb4d6a02a53f",
+ "offline": true, "de_fragilised": "2026-10-06 by the DEFFRAGILISE batch: this report's drift-prone citations were replaced with entry/field identifiers and pinned revisions; no line was added or removed and no measured figure changed; see .spec/bevy/DEFFRAGILISE-REPORT.md",
  "defect": {
   "id": "EFD-1",
   "source": ".spec/bevy/ACCEPTANCE-FD1.md, defects[0] (severity low)",
@@ -13,7 +13,7 @@
  },
  "key_name_occurrences": {
   "command": "git grep -c why_they_cannot_be_made_clone_safe",
-  "literal_exit_code": 0,
+  "literal_exit_code": 0, "measured_against": "the working tree based on head_at_start (91629f4) with this batch's edits, this report untracked; at batch_committed_as (6b66da6) the same command additionally counts this report itself, and any later revision additionally counts whatever files are added after it",
   "counts": {
    ".spec/bevy/ACCEPTANCE-FD1.md": 7,
    ".spec/bevy/ACCEPTANCE-FINAL-DOC.md": 6,
@@ -76,7 +76,7 @@
   "no_failed_line": true,
   "tests_removed": 0,
   "hash_test_attribute_lines_worktree": 668,
-  "hash_test_attribute_lines_head": 668,
+  "hash_test_attribute_lines_head_at_start": 668,
   "own_build_dir": "D:/hof-efd1-target",
   "own_build_dir_size": "9.1 GiB",
   "gate_runs": 2,
@@ -84,18 +84,18 @@
   "fresh_build_evidence": "the target directory did not exist before the first run; that fresh run's stderr carried 169 `Compiling` lines and `Finished `test` profile [unoptimized + debuginfo] target(s) in 1m 21s`; D:/hof-efd1-target is 9.1 GiB",
   "free_disk_before_building": "F: 37 GiB free, D: 118 GiB free",
   "no_second_test_process": true,
-  "starting_tree": "the tree this repair started from measured 800 passed / 0 failed / 6 ignored / 806 listed; the delivered tree measures the same"
+  "starting_tree": "the tree this repair started from (head_at_start 91629f4) measured 800 passed / 0 failed / 6 ignored / 806 listed; the delivered tree (batch_committed_as 6b66da6) measures the same"
  },
  "changed_files": [
   {
    "path": ".spec/bevy/FD1-REPORT.md",
    "change": "three in-line citation corrections (why_option_A, decisions_on_non_blocking_items.RF-3_field_title, section 2); no line added or removed",
-   "numstat_vs_HEAD": "3 3"
+   "numstat_91629f4_to_6b66da6": "3 3"
   },
   {
    "path": "DECISIONS.md",
    "change": "D312 appended (18 insertions, 0 deletions), naming and limiting D311 option 3; D311 itself untouched",
-   "numstat_vs_HEAD": "18 0"
+   "numstat_91629f4_to_6b66da6": "18 0"
   },
   {
    "path": ".spec/bevy/EFD1-REPORT.md",
@@ -103,7 +103,7 @@
   }
  ],
  "not_changed": [
-  "src/**, tests/**, config, .gitattributes (the line-ending pin), Cargo.toml, Cargo.lock, evidence/**, scripts/**, .githooks/** (git diff --name-only HEAD against them is empty)",
+  "src/**, tests/**, config, .gitattributes (the line-ending pin), Cargo.toml, Cargo.lock, evidence/**, scripts/**, .githooks/** (git diff --name-only head_at_start batch_committed_as against them is empty)",
   "HARDENING-REPORT.md (including line 156 and its sha256 2893d496...) and FINAL-DOC-REPORT.md (including change_site at line 195)",
   "ACCEPTANCE-FD1.md and ACCEPTANCE-FINAL-DOC.md",
   "every measured figure: corpus 118 / 4,771,139, excluded 4 / 27,829, directory 122 / 4,798,968, the six recordings' 5,917,632 bytes",
@@ -126,10 +126,10 @@
  "verified_myself": [
   "The key's name occurs in FINAL-DOC-REPORT.md exactly once, at line 185 (clone_safety_sentence.where), and change_site at line 195 is `HARDENING-REPORT.md machine line 156, section 0 and section 3`, which contains no such name - established with `git grep -c why_they_cannot_be_made_clone_safe` and `grep -n why_they_cannot_be_made_clone_safe .spec/bevy/FINAL-DOC-REPORT.md`, not read from EFD-1.",
   "The same false claim occurs in a THIRD place, FD1-REPORT.md:139 (decisions_on_non_blocking_items.RF-3_field_title), which neither EFD-1 nor the dispatcher enumerated.",
-  "The three old fragments are present in HEAD:.spec/bevy/FD1-REPORT.md and absent from the worktree file; the three new fragments are present in it (asserted in the generator).",
-  "DECISIONS.md is append-only: the old content is a byte-for-byte prefix of the new file (old 1,342,560 bytes / sha256 31014e76..., new 1,347,590 bytes, +5,030); git diff --numstat HEAD -- DECISIONS.md is `18 0`.",
-  "The gate reproduces exactly: cargo test --offline LITERAL exit 0 with 800 passed / 0 failed / 6 ignored over 60 test result lines, 806 listed, 6 listed ignored (both literal exit 0), cargo fmt --all --check literal exit 0 with 0 bytes on both streams, 0 `warning:` lines, no FAILED, no panic, 668 #[test] lines in worktree and at HEAD, one test process at a time, fresh own build directory.",
-  "No code, test, evidence, registry, battery, liveness, .gitattributes, config, Cargo or scripts path is in the diff; only .spec/bevy/FD1-REPORT.md and DECISIONS.md are modified (plus this new report)."
+  "The three old fragments are present in 91629f4:.spec/bevy/FD1-REPORT.md and absent from the worktree file; the three new fragments are present in it (asserted in the generator).",
+  "DECISIONS.md is append-only: the old content is a byte-for-byte prefix of the new file (at head_at_start 91629f4: 1,342,560 bytes / sha256 31014e76...; at batch_committed_as 6b66da6: 1,347,590 bytes, +5,030); git diff --numstat 91629f4 6b66da6 -- DECISIONS.md is `18 0`.",
+  "The gate reproduces exactly: cargo test --offline LITERAL exit 0 with 800 passed / 0 failed / 6 ignored over 60 test result lines, 806 listed, 6 listed ignored (both literal exit 0), cargo fmt --all --check literal exit 0 with 0 bytes on both streams, 0 `warning:` lines, no FAILED, no panic, 668 #[test] lines in the worktree and at head_at_start (91629f4), one test process at a time, fresh own build directory.",
+  "No code, test, evidence, registry, battery, liveness, .gitattributes, config, Cargo or scripts path is in the batch's diff (head_at_start -> batch_committed_as); only .spec/bevy/FD1-REPORT.md and DECISIONS.md are modified (plus this new report)."
  ],
  "what_this_repair_did_not_do": "No engine, no game, no network, no model call, no round and no Developer call was run. Nothing was written under runs/** and no recording was committed, added, copied or moved. No rm -rf, no wildcard deletion and nothing deleted (free disk was sufficient: F: 37 GiB, D: 118 GiB). No path was built from an unexpanded variable; no git checkout --; no git add, commit, stage or push. Helper scripts live outside the repository under F:/hof-efd1-work/, logs under F:/hof-efd1-logs/, the build under D:/hof-efd1-target. No API key was created, copied or printed.",
  "single_most_important_thing_next_batch": "Do not treat a defect's enumerated list of places as the full set. EFD-1 named why_option_A, section 2 and D311 option 3; the identical false citation also sat in a machine field of the same report (RF-3_field_title, FD1-REPORT.md:139), and a correction scoped to the list would have left a false statement in the report's machine block. Re-derive every citation from the artefacts (git grep -c against the named key), and remember that line 156's recorded sha256 ties any future edit of that line to the FD1-REPORT.md machine block and ACCEPTANCE-FD1.md."
@@ -154,7 +154,7 @@ to finish unless it round-tripped equal.
 ## 0. The repair in one paragraph
 
 EFD-1 is real and I reproduced it from the artefacts rather than from either the batch's or the
-acceptance's wording. `git grep -c why_they_cannot_be_made_clone_safe` gives
+acceptance's wording. `git grep -c why_they_cannot_be_made_clone_safe` gives, measured in the working tree at `head_at_start` (91629f4) with this report untracked:
 `FINAL-DOC-REPORT.md:1`, `ACCEPTANCE-FINAL-DOC.md:6`, `HARDENING-REPORT.md:1` (the key's own
 definition), `FD1-REPORT.md:8`, `ACCEPTANCE-FD1.md:7` and `DECISIONS.md` (4 after this entry); and
 `grep -n why_they_cannot_be_made_clone_safe .spec/bevy/FINAL-DOC-REPORT.md` returns exactly line
@@ -169,7 +169,7 @@ limit it instead.
 
 ## 1. Where the key's name actually occurs (my own search)
 
-`git grep -c why_they_cannot_be_made_clone_safe` (literal exit 0):
+`git grep -c why_they_cannot_be_made_clone_safe` (literal exit 0; measured in the working tree at `head_at_start` 91629f4 with this report untracked, so it is not counted):
 
 | file | occurrences | what they are |
 |---|---|---|
@@ -178,7 +178,7 @@ limit it instead.
 | `.spec/bevy/ACCEPTANCE-FD1.md` | 7 | the acceptance that found EFD-1 |
 | `.spec/bevy/FD1-REPORT.md` | 8 | the report being corrected (its own subject) |
 | `.spec/bevy/HARDENING-REPORT.md` | 1 | line 156, the key's own definition |
-| `DECISIONS.md` | 4 | D311 line 11716, D312 lines 11712/11716 |
+| `DECISIONS.md` | 4 | D311 (its trigger and option 3) and D312 (its trigger and option 3 - the entry that corrects D311): the false claim and its labelled correction, not reference points |
 
 `change_site` is **not** among the reference points. `grep -n why_they_cannot_be_made_clone_safe
 .spec/bevy/FINAL-DOC-REPORT.md` returns only `185:`; `sed -n '195p' .spec/bevy/FINAL-DOC-REPORT.md`
@@ -202,12 +202,12 @@ returns `  "change_site": "HARDENING-REPORT.md machine line 156, section 0 and s
      `change_site` and in the acceptance...*. **New:** *...`clone_safety_sentence.where` (line 185)
      and six times in `ACCEPTANCE-FINAL-DOC.md` (`change_site` does not name it)...*.
 
-  Line numbers are unchanged, so the acceptance's own references to lines 14 and 239-240 still
+  Line numbers are unchanged by the batch (head_at_start -> batch_committed_as), so the acceptance's own references to lines 14 and 239-240 still
   point at the corrected text.
 
 * **`DECISIONS.md` (18 insertions / 0 deletions).** D311 option 3 keeps the false citation
-  verbatim; the file is append-only (`git diff --numstat HEAD -- DECISIONS.md` is `18 0`, and the
-  old content is a byte-for-byte prefix of the new file: 1,342,560 -> 1,347,590 bytes). **D312** is
+  verbatim; the file is append-only (`git diff --numstat 91629f4 6b66da6 -- DECISIONS.md` is `18 0`, and the
+  old content is a byte-for-byte prefix of the new file: 1,342,560 (91629f4) -> 1,347,590 (6b66da6) bytes). **D312** is
   appended and does the correcting: it names D311 option 3's sentence and limits it, records the
   real reference points, states that `RF-3_field_title` is the same false claim, and records the
   disposition of the two weak statements.
@@ -240,7 +240,7 @@ recompiled nothing.
   literal exit 0, **6** listed ignored.
 * `cargo fmt --all --check` -> **literal exit 0** with **0 bytes** on stdout and stderr.
 * **0** `warning:` lines across all four streams; `#[test]` lines **668** in the worktree and
-  **668** at `HEAD` - no test removed.
+  **668** at `head_at_start` (91629f4) - no test removed.
 
 This is identical to the starting measurement (800 / 0 / 6 / 806).
 
