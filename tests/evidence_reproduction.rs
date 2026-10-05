@@ -492,9 +492,26 @@ fn the_evidence_index_names_committed_files_and_commands() {
     }
     assert!(checked >= 20, "every headline file is checked: {checked}");
 
-    // The corpus summary must match the corpus that is really here.
+    // The summary must match the directory that is really here - and the walk
+    // counts **three** figures, not one, because they are three different
+    // numbers about three different things:
+    //
+    //   * the corpus (118 files / 4,771,139 bytes) - the six data groups the
+    //     index's `corpus` block and every cost/observation conclusion rest on;
+    //   * the excluded files (4 files / 27,829 bytes) - `index.json`,
+    //     `README.md` and the two `evidence/tools/*.py`, which the corpus
+    //     deliberately leaves out;
+    //   * the directory (122 files / 4,798,968 bytes) - everything under
+    //     `evidence/`, which is the two added together.
+    //
+    // Before this test asserted all three, the exclusions were silently
+    // `continue`d: a one-byte edit to any non-corpus file under `evidence/`
+    // moved the directory total stated in `evidence/README.md` and the gate
+    // stayed green (risk R-A1 of `.spec/bevy/ACCEPTANCE-TOTALS.md`).
     let mut files = 0u64;
     let mut bytes = 0u64;
+    let mut excluded_files = 0u64;
+    let mut excluded_bytes = 0u64;
     let mut stack = vec![repo_root().join("evidence")];
     while let Some(directory) = stack.pop() {
         for entry in std::fs::read_dir(&directory)
@@ -508,18 +525,25 @@ fn the_evidence_index_names_committed_files_and_commands() {
                 continue;
             }
             let name = entry.file_name().to_string_lossy().into_owned();
+            let size = entry.metadata().map(|meta| meta.len()).unwrap_or(0);
             if path.parent() == Some(Path::new(&repo_root().join("evidence")))
                 && (name == "index.json" || name == "README.md")
             {
+                excluded_files += 1;
+                excluded_bytes += size;
                 continue;
             }
             if name == "build_evidence.py" || name == "keyscan.py" {
+                excluded_files += 1;
+                excluded_bytes += size;
                 continue;
             }
             files += 1;
-            bytes += entry.metadata().map(|meta| meta.len()).unwrap_or(0);
+            bytes += size;
         }
     }
+    let directory_files = files + excluded_files;
+    let directory_bytes = bytes + excluded_bytes;
     assert_eq!(
         index["corpus"]["files"].as_u64(),
         Some(files),
@@ -529,6 +553,48 @@ fn the_evidence_index_names_committed_files_and_commands() {
         index["corpus"]["bytes"].as_u64(),
         Some(bytes),
         "the index's byte count must be the corpus that is here"
+    );
+    // Each of the three figures, named in its own failure message, so a failure
+    // says which one moved rather than only that "a total" is wrong.
+    assert_eq!(
+        (files, bytes),
+        (118, 4_771_139),
+        "the corpus total (the six data groups, i.e. every committed file under `evidence/` \
+         except index.json, README.md and the two evidence/tools/*.py): {files} files / \
+         {bytes} bytes"
+    );
+    assert_eq!(
+        (excluded_files, excluded_bytes),
+        (4, 27_829),
+        "the excluded-files total (index.json + README.md + tools/build_evidence.py + \
+         tools/keyscan.py, which the corpus leaves out): {excluded_files} files / \
+         {excluded_bytes} bytes"
+    );
+    assert_eq!(
+        (directory_files, directory_bytes),
+        (122, 4_798_968),
+        "the directory total (everything under `evidence/`, the corpus plus the excluded \
+         files): {directory_files} files / {directory_bytes} bytes"
+    );
+    assert_eq!(
+        directory_files,
+        files + excluded_files,
+        "the directory total must be the corpus plus the excluded files"
+    );
+    assert_eq!(
+        directory_bytes,
+        bytes + excluded_bytes,
+        "the directory byte total must be the corpus plus the excluded files"
+    );
+    // The directory total is also stated **by hand** in `evidence/README.md`; pin
+    // the statement as well, so the number it prints cannot drift away from the
+    // bytes on disk without the gate noticing.
+    let readme = std::fs::read_to_string(committed("evidence/README.md"))
+        .expect("evidence/README.md is committed and readable");
+    assert!(
+        readme.contains("122 files / 4,798,968 bytes"),
+        "evidence/README.md must state the directory total this test measured \
+         ({directory_files} files / {directory_bytes} bytes)"
     );
     let groups = index["corpus"]["groups"]
         .as_array()

@@ -562,7 +562,7 @@
   "corrections_after_acceptance_evidence": {
    "what": "`.spec/bevy/ACCEPTANCE-EVIDENCE.md` judged this batch fail and listed defects E-1..E-7. Each was corrected against the artefact, not against the prose; the full disposition and the reproductions are in `.spec/bevy/CLONE-AND-LIVE-REPORT.md`.",
    "E-1": "FIXED: `.gitattributes` now pins `evidence/** -text`, the same way it already pinned `.spec/bevy/PRD.md`. Before the pin a fresh `git clone` checked the corpus out as CRLF and two committed tests failed there (exit 101).",
-   "E-2": "FIXED: every claim that `S1-deterministic-step` was closed \"by a real observation\" now reads *implemented, pending its first real observation* — in this report's machine block and prose, in `evidence/index.json`'s `coverage.with_the_new_step`, and in `src/adapter/bevy/prd_surfaces.rs::RESIDUALS`. That is the state of the *committed* evidence; the follow-up live round (`.spec/bevy/CLONE-AND-LIVE-REPORT.md`) then produced the step's first real observation and `result.json.prd_coverage.surfaces` read 15/19 with `Q-startup` and `B2.1` verified.",
+   "E-2": "FIXED: every claim that `S1-deterministic-step` was closed \"by a real observation\" was rewritten to read *implemented, pending its first real observation* — in this report's machine block and prose, in `evidence/index.json`'s `coverage.with_the_new_step`, and in `src/adapter/bevy/prd_surfaces.rs::RESIDUALS`. That was the state of the *committed* evidence when E-2 was fixed; the follow-up live round (`.spec/bevy/CLONE-AND-LIVE-REPORT.md`) then produced the step's first real observation and `result.json.prd_coverage.surfaces` read 15/19 with `Q-startup` and `B2.1` verified. **SUPERSEDED SINCE, history kept:** those four places no longer read *pending its first real observation* — the two outside this report were rewritten to record the observation by the record correction (defect D-3 of `.spec/bevy/ACCEPTANCE-CLONE-LIVE.md`) and this report's own machine block and prose were rewritten the same way by the RD-3 correction (DECISIONS D308), so the literal `E-2` wording survives only as quoted history. The sentence above is what E-2 wrote and is preserved rather than deleted.",
    "E-3": "FIXED: the frozen contract's reflectable semantic surfaces are **seven** (six §3-C2 rows plus the frame counter 附录 B2.1 adds as `第七个可反射语义面`), not eight; adding the goal would be an eighth, not a ninth. Corrected in the machine block, in §3 and in `prd_surfaces.rs`.",
    "E-4": "FIXED: `evidence/index.json` carries **18** headline entries, not 14 (this report's §5 prose, the machine block's `unverified` list, and §0). The index's own test asserts `headlines.len() >= 15`.",
    "E-5": "FIXED: the `observation.round4.raw_calls` entry no longer says \"one JSON-RPC request per file\". The 57 files are one semantic call each, fanning out into 2 sub-requests (44 files) or 3 (13 files), every sub-request reusing the call's own sequence id; the entry now carries that histogram and marks its `files` path as a directory.",
@@ -855,8 +855,11 @@ as unobservable with the reason and kept out of the
 denominator. The cost analysis now runs from a clone: `tests/write_accounting.rs` prefers
 `evidence/cost/`, and its numbers are the same numbers, because the committed files are byte-identical
 to the recordings. The corrected global band floor is no longer a sentence in a report but a property
-of the recording that four plants guard. D-1 is restated where it was wrong, and `DECISIONS.md` is
-still append-only.
+of the recording that four plants guard. D-1 is restated where it was wrong, and `DECISIONS.md` was
+append-only as this batch wrote it. **SUPERSEDED SINCE:** the later RD-1 correction edited one line of
+D306(c) in place under explicit authorisation and appended D308, so `DECISIONS.md` is no longer
+append-only for the whole history even though D308 itself only appends; the present-tense wording is
+kept as this batch's own record and labelled here, not deleted (DECISIONS D308).
 
 **Does not work — and this is the honest headline.** The cost criterion is still **not met**:
 3,651,120 total tokens against 1,500,000, **2.434×**, on the one live Developer call, and the corrected

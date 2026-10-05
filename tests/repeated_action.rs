@@ -578,7 +578,18 @@ fn the_progress_gate_shortens_a_call_that_has_written_nothing() {
 fn the_recorded_engineering_call_defines_the_upper_bound_of_the_cap() {
     let Some(path) = trajectory("round2", "iter-2") else {
         // The evidence directory is gitignored; a machine without it still runs
-        // the gate, and the report says where the figure came from.
+        // the gate, and the report says where the figure came from.  The skip
+        // must say so on stdout rather than pass in silence: this test is one of
+        // the clone-weak ones listed in `.spec/bevy/HARDENING-REPORT.md` (risk
+        // R-A4 of `.spec/bevy/ACCEPTANCE-TOTALS.md`), and in a clone it asserts
+        // nothing.  Saying which recording is missing is what makes that
+        // visible.
+        println!(
+            "skipped: runs/round2/iter-2/traj/developer.attempt1.json is not committed and not in \
+             evidence/cost/, so the recorded engineering call that defines the cap's upper bound is \
+             not on this machine (a clone cannot measure it; see evidence/index.json's \
+             not_reproducible_from_the_repository)"
+        );
         return;
     };
     let projection = project(&path, 15);
@@ -631,6 +642,16 @@ fn the_round_three_developer_calls_were_below_the_cap_for_a_measured_reason() {
     let mut measured = 0usize;
     for iteration in ["iter-1", "iter-2", "iter-3"] {
         let Some(path) = trajectory("round3", iteration) else {
+            // Same clone-weak class as the round-2 tests above: the recording is
+            // not committed, so in a clone this loop measures nothing and the
+            // body below is skipped entirely.  Print which recording is missing
+            // rather than continuing in silence (risk R-A4).
+            println!(
+                "skipped: runs/round3/{iteration}/traj/developer.attempt1.json is not committed \
+                 and not in evidence/cost/, so round 3's {iteration} Developer call is not on this \
+                 machine (a clone cannot measure it; see evidence/index.json's \
+                 not_reproducible_from_the_repository)"
+            );
             continue;
         };
         measured += 1;

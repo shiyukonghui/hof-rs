@@ -43,8 +43,8 @@
   "gate_input_sha256": {
    "evidence/index.json": "eb88286c638363a7ff64e7aa1bf901159cc68bf0663707c9526f258a9bb03d2f",
    "src/adapter/bevy/prd_surfaces.rs": "6ea1090bf8a11b0cbcd8d0970ba42180ad0e50da08c5211546397a4a6b4bb6f1",
-   ".spec/bevy/CLONE-AND-LIVE-REPORT.md": "7c09a7ad95597453441cef6ba2c33cf73f6b00dc71a0d4b6f2fcbde68dbc66bb",
-   "note": "src/** and tests/** are otherwise exactly as committed at c00716d (git status shows no other tracked change), so these three hashes, with HEAD, fix the whole gate input set. This file's own hash is not pinned and is not a gate input. The .spec/bevy/CLONE-AND-LIVE-REPORT.md value above is that path's CURRENT hash; the logs3 run and the f1b9af3 tree used 889033a5fd8914357886b28f110609dcffad571194e844d03e5db7d3fb44471e, and the byte-totals correction authorised by defects RD-1/RD-3 of .spec/bevy/ACCEPTANCE-RECORD.md later changed two measured totals in that path, so the two values differ. No test, build script or gate reads that file, so neither the gate numbers nor the gate input set depend on the change."
+   ".spec/bevy/CLONE-AND-LIVE-REPORT.md": "423036d0b10f44fd00126f3bb4066ef1c6d303d5ceee415d733d619afebc4006",
+   "note": "src/** and tests/** are otherwise exactly as committed at c00716d (git status shows no other tracked change), so these three hashes, with HEAD, fix the whole gate input set. This file's own hash is not pinned and is not a gate input. The .spec/bevy/CLONE-AND-LIVE-REPORT.md value above is that path's CURRENT hash, and it has moved twice: the logs3 run and the f1b9af3 tree used 889033a5fd8914357886b28f110609dcffad571194e844d03e5db7d3fb44471e, the byte-totals correction authorised by defects RD-1/RD-3 of .spec/bevy/ACCEPTANCE-RECORD.md made it 7c09a7ad95597453441cef6ba2c33cf73f6b00dc71a0d4b6f2fcbde68dbc66bb, and the R-A2 cross-reference correction (DECISIONS D309) made it 423036d0b10f44fd00126f3bb4066ef1c6d303d5ceee415d733d619afebc4006 by labelling the two E-2 clauses that this report's C-3/D-3 record had made stale. Each earlier value is kept above and in the notes because it was true of the revision it names. No test, build script or gate reads that file, so neither the gate numbers nor the gate input set depend on any of the three."
   },
   "gate_tree": "the numbers above are from the run logged under F:/hof-rc-work/logs3. The gate was run three times and all three runs report the same numbers (exit 0, 800/0/6/806, 0 warnings, fmt 0 bytes); the first two were superseded because something changed afterwards - first the report file itself, then only the log paths recorded here. Neither is a gate input: grep over src/, tests/ and scripts/ finds no reference to the corrected report, and no test reads it. The three hashes under gate_input_sha256 are the gate inputs that this correction did change, and they are byte-identical between the logs3 run and the delivered tree, so the logs3 numbers are the delivered tree's numbers."
  },
@@ -58,7 +58,7 @@
    "literal_exit_code": 0,
    "passed": 12,
    "failed": 0,
-   "detail": "evidence_reproduction 7 passed / prd_coverage 5 passed; the test that reads the index is `the_evidence_index_names_committed_files_and_commands`, which re-derives the corpus (118 files / 4,771,139 bytes) and checks that every headline file exists. index.json itself is excluded from that corpus count, so the corrected `meaning` string cannot move a byte count."
+   "detail": "evidence_reproduction 7 passed / prd_coverage 5 passed; the test that reads the index is `the_evidence_index_names_committed_files_and_commands`, which re-derives the corpus (118 files / 4,771,139 bytes) and checks that every headline file exists. index.json itself is excluded from that corpus count, so the corrected `meaning` string cannot move the *corpus* byte count; the *directory* total, which does include index.json, is a different figure, stated by hand in `evidence/README.md` and asserted separately by the same test since the R-A1 hardening of DECISIONS D309 (the walk now accumulates the corpus, the excluded-files and the directory totals and fails if any byte under `evidence/` moves without all three agreeing)."
   },
   {
    "changed_file": "src/adapter/bevy/prd_surfaces.rs",
@@ -111,7 +111,7 @@
     "S1-deterministic-step is no longer pending, but it stays listed with its disposition because it is not a PRD surface: it is one of the two ids the round-4 Tester authored that are not surfaces, and the residual list exists to carry such ids with their disposition. Its corrected text says OBSERVED and states that the observation lives under the gitignored runs/, so the committed evidence/ corpus does not itself carry it."
    ],
    "also_corrected": "the report's own E-2 entries in CLONE-AND-LIVE-REPORT.md (the machine block's defects[E-2].change/evidence and section 4's prose) said the wording `now reads *implemented, pending its first real observation*` in all four places; after this correction that is no longer true of the two places outside the batch report, so both were updated to past tense with a pointer to what changed",
-   "deliberately_not_corrected": ".spec/bevy/COVERAGE-EVIDENCE-REPORT.md is a separate committed batch report and this task forbade modifying batch reports; its machine block still carries the pre-round wording while its own disposition section already records the observation. See contradictions_found."
+   "deliberately_not_corrected": ".spec/bevy/COVERAGE-EVIDENCE-REPORT.md is a separate committed batch report and this task forbade modifying batch reports; its machine block carried the pre-round wording while its own disposition section already recorded the observation. **SUPERSEDED:** the RD-3 correction of DECISIONS D308 afterwards rewrote those clauses, so `.spec/bevy/COVERAGE-EVIDENCE-REPORT.md` no longer carries the never-ran wording as a present state; this field is kept as the scope decision that was taken at the time. See contradictions_found."
   },
   {
    "id": "D-4",
@@ -170,9 +170,9 @@
   },
   {
    "id": "C-3",
-   "what": "One committed report still contradicts itself and it is one this batch was forbidden to edit: .spec/bevy/COVERAGE-EVIDENCE-REPORT.md's machine block and several prose sections still say e3_process_liveness is `PENDING ITS FIRST REAL OBSERVATION` and that `no raw/e3_process_liveness.json has ever been produced (defect E-2)`, while the same file's own disposition section (around line 565) already records that the follow-up live round produced the step's first real observation and that the surfaces read 15/19.",
+   "what": "One committed report still contradicts itself and it is one this batch was forbidden to edit: .spec/bevy/COVERAGE-EVIDENCE-REPORT.md's machine block and several prose sections still say e3_process_liveness is `PENDING ITS FIRST REAL OBSERVATION` and that `no raw/e3_process_liveness.json has ever been produced (defect E-2)`, while the same file's own disposition section (around line 565) already records that the follow-up live round produced the step's first real observation and that the surfaces read 15/19. [SUPERSEDED 2026-10-06 by the RD-3 correction, DECISIONS D308 - the clauses described as still saying this were afterwards rewritten, so they no longer do; kept as the state when C-3 was written. See `disposition`.]",
    "how": "grep -n for `pending its first real observation` / `has ever been produced` / `never executed against a real game` over .spec/bevy/COVERAGE-EVIDENCE-REPORT.md.",
-   "disposition": "left untouched, because the task forbids modifying batch reports and the acceptance's D-3 named only evidence/index.json and prd_surfaces.rs::RESIDUALS. Flagged for explicit authorisation - see below."
+   "disposition": "left untouched, because the task forbids modifying batch reports and the acceptance's D-3 named only evidence/index.json and prd_surfaces.rs::RESIDUALS. Flagged for explicit authorisation - see below. **SUPERSEDED:** the authorisation was granted after this batch; the RD-3 correction (DECISIONS D308) rewrote those clauses in `.spec/bevy/COVERAGE-EVIDENCE-REPORT.md`, so the untouched state described above is history rather than the state of the tree."
   },
   {
    "id": "C-4",
@@ -180,7 +180,7 @@
    "how": "git log/rev-parse/rev-parse HEAD:path compared with the file's sha256."
   }
  ],
- "single_most_important_thing_next_batch": "The record now agrees with its artefacts on every point the acceptance named, so the next step is to authorise ONE more correction or to declare C-3 out of scope: `.spec/bevy/COVERAGE-EVIDENCE-REPORT.md` is the only committed statement left that contradicts the round's own artefacts (its machine block still calls e3_process_liveness `pending its first real observation` and says no `raw/e3_process_liveness.json` has ever been produced, while the same file's disposition around line 565 already records the observation). This batch was forbidden to edit batch reports and the acceptance's D-3 did not name that file, so it cannot be closed by a correction of this shape - give it an explicit owner or an explicit exclusion before the next acceptance reads it, or the identical defect will be found again in a file nobody was allowed to fix. (After that, the only open goal criterion is still cost: 2.55-2.60x the 1,500,000-token per-call target, each call ended by agent.step_limit: 150 with the tripwire never firing.)",
+ "single_most_important_thing_next_batch": "The record now agrees with its artefacts on every point the acceptance named, so the next step is to authorise ONE more correction or to declare C-3 out of scope: `.spec/bevy/COVERAGE-EVIDENCE-REPORT.md` is the only committed statement left that contradicts the round's own artefacts (its machine block still calls e3_process_liveness `pending its first real observation` and says no `raw/e3_process_liveness.json` has ever been produced, while the same file's disposition around line 565 already records the observation). This batch was forbidden to edit batch reports and the acceptance's D-3 did not name that file, so it cannot be closed by a correction of this shape - give it an explicit owner or an explicit exclusion before the next acceptance reads it, or the identical defect will be found again in a file nobody was allowed to fix. (After that, the only open goal criterion is still cost: 2.55-2.60x the 1,500,000-token per-call target, each call ended by agent.step_limit: 150 with the tripwire never firing.) [**SUPERSEDED 2026-10-06 by the RD-3 correction, DECISIONS D308:** `.spec/bevy/COVERAGE-EVIDENCE-REPORT.md`'s machine block and prose were rewritten to record the observation, so it is no longer a committed statement that contradicts its own artefacts. This paragraph is kept because it is what this batch's record said at the time and because it is why the authorisation was asked for.]",
  "prose_follows": true
 }
 ```
@@ -339,7 +339,7 @@ registry constant:
   `the_evidence_index_names_committed_files_and_commands`: it re-derives the corpus (118 files /
   4,771,139 bytes), checks every headline file exists and every headline has a command, and checks the
   group bytes add up. `index.json` is deliberately excluded from that corpus scan, so the corrected
-  `meaning` string cannot move a byte count - and the test passes.
+  "meaning" string cannot move a byte count - and the test passes. (The *directory* total does include `index.json`; since the R-A1 hardening of DECISIONS D309 the same test asserts the corpus, the excluded-files and the directory totals separately, so a one-byte edit anywhere under `evidence/` now fails the gate.)
 * `cargo test --offline --lib prd_surfaces` -> **exit 0**, **5 passed / 0 failed**. `prd_surfaces.rs` is
   read by `tests/prd_coverage.rs` and by its own unit tests; the registry itself is unchanged, and no test
   reads `RESIDUALS`.
@@ -369,6 +369,9 @@ Three things the acceptance did not name, all disclosed above:
    and that the surfaces read 15/19. It is a committed batch report, this task forbids modifying batch
    reports, and the acceptance's D-3 named only `evidence/index.json` and `prd_surfaces.rs::RESIDUALS`. It is
    left byte-for-byte as that batch wrote it, and flagged as the next batch's decision.
+   **SUPERSEDED:** the next batch was authorised, and the RD-3 correction (DECISIONS D308) rewrote
+   those clauses; the paragraph above is the history of this batch's scope decision, not the present
+   state of `.spec/bevy/COVERAGE-EVIDENCE-REPORT.md`.
 3. **The report's `working_tree_at_end` field and `changed_files.uncommitted_at_write_time` still describe
    the report as uncommitted.** That was true when the batch wrote them; the dispatcher's `c00716d` made it
    false. Those fields are the batch's own history and I left them as written rather than rewriting

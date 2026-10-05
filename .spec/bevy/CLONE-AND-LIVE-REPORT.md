@@ -116,7 +116,7 @@
    "id": "E-2",
    "severity": "medium",
    "disposition": "FIXED, then observed for the first time",
-   "change": "every claim that S1-deterministic-step was closed \"by a real observation\" was rewritten to read *implemented, pending its first real observation* in all four places: .spec/bevy/COVERAGE-EVIDENCE-REPORT.md (machine block and prose), evidence/index.json's coverage.with_the_new_step, and src/adapter/bevy/prd_surfaces.rs::RESIDUALS. The record correction that followed the failed acceptance then updated the two of those outside the batch report - evidence/index.json's coverage.with_the_new_step and src/adapter/bevy/prd_surfaces.rs::RESIDUALS - to record the observation; the batch report's own two are left exactly as it wrote them",
+   "change": "every claim that S1-deterministic-step was closed \"by a real observation\" was rewritten to read *implemented, pending its first real observation* in all four places: .spec/bevy/COVERAGE-EVIDENCE-REPORT.md (machine block and prose), evidence/index.json's coverage.with_the_new_step, and src/adapter/bevy/prd_surfaces.rs::RESIDUALS. The record correction that followed the failed acceptance then updated the two of those outside the batch report - evidence/index.json's coverage.with_the_new_step and src/adapter/bevy/prd_surfaces.rs::RESIDUALS - to record the observation; the batch report's own two were left exactly as it wrote them by this correction, and were later rewritten the same way by the RD-3 correction (DECISIONS D308), so no place anywhere still reads *pending its first real observation* as a present state. This clause is SUPERSEDED and kept as history: see `.spec/bevy/RECORD-CORRECTION-REPORT.md` C-3 and DECISIONS D308",
    "evidence": "before this round no raw/e3_process_liveness.json existed anywhere; this round produced one in each of the three passes and the step observed a real advance every time - live_round.liveness is iteration 3's own file and live_round.liveness.attribution_by_pass carries all three"
   },
   {
@@ -1684,11 +1684,13 @@ never fired in this round. The round's own line reports 20,581,697 tokens across
 
 E-1 fixed (the pin, proven by two red controls and a green clone). E-2 fixed and then *observed*:
 when this batch was committed the wording read *implemented, pending its first real observation* in
-all four places, and the live round then produced that observation. This correction therefore updates
+all four places, and the live round then produced that observation. This correction therefore updated
 the two committed places outside the batch report that still asserted the step had never run —
 `evidence/index.json`'s `coverage.with_the_new_step` and
-`src/adapter/bevy/prd_surfaces.rs::RESIDUALS` — to record it, and leaves the batch report's own two
-(`.spec/bevy/COVERAGE-EVIDENCE-REPORT.md`) exactly as that batch wrote them. E-3 fixed (seven
+`src/adapter/bevy/prd_surfaces.rs::RESIDUALS` — to record it, and left the batch report's own two
+(`.spec/bevy/COVERAGE-EVIDENCE-REPORT.md`) exactly as that batch wrote them. **SUPERSEDED SINCE:** those
+two were afterwards rewritten to record the observation by the RD-3 correction (DECISIONS D308), so the
+sentence above is the history of this correction's scope, not the state of the committed report. E-3 fixed (seven
 surfaces, not eight; the goal would be an eighth).
 E-4 fixed (18 headlines). E-5 fixed (44 files with 2 sub-requests, 13 with 3; the entry says so and its
 path is marked a directory). E-6 fixed (`repo_independent: false`, 788 + 18 = 806). E-7 fixed
