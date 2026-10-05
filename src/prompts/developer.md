@@ -209,6 +209,5 @@ project is not a partial success, it is no result at all.
 - Do not call `submit`. The Developer has no submitted artifact: the artifact is
   the project itself.
 - Do not write files outside the current working directory.
-- When you are finished, end your run with the completion protocol
-  `COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT` and one sentence describing what you
-  changed and what you observed.
+
+{{completion_protocol}}

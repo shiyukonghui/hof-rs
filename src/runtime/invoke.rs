@@ -145,6 +145,12 @@ pub fn render_prompt(template: &str, iteration: u32) -> String {
 /// cannot drift apart in what they tell a role about its shell.  It is inserted
 /// here, before `{{HOH_*}}` placeholders are resolved, because the section
 /// itself spells the binary as `{{HOH_HOH_BIN}}`.
+///
+/// Retry batch: `{{completion_protocol}}` is the same device for the one
+/// instruction that decides whether a role call ends or retries
+/// ([`crate::prompts::COMPLETION_PROTOCOL`]).  It carries no `{{HOH_*}}`
+/// placeholder, so its position in the chain is not load-bearing; it is kept
+/// beside `{{shell_truth}}` because both are shared sections.
 fn render_prompt_for_shell(
     template: &str,
     iteration: u32,
@@ -153,6 +159,10 @@ fn render_prompt_for_shell(
     template
         .replace("{{iteration}}", &iteration.to_string())
         .replace("{{ plan.md }}", ".hoh/plan.md")
+        .replace(
+            crate::prompts::COMPLETION_PROTOCOL_PLACEHOLDER,
+            crate::prompts::COMPLETION_PROTOCOL,
+        )
         .replace(
             crate::prompts::SHELL_TRUTH_PLACEHOLDER,
             &crate::prompts::shell_truth(flavor),

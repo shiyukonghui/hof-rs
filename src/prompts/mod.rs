@@ -41,6 +41,57 @@ pub const TESTER_PROMPT: &str = include_str!("tester.md");
 /// shell so the same document is executable on both platforms.
 pub const SHELL_TRUTH_PLACEHOLDER: &str = "{{shell_truth}}";
 
+/// The `{{completion_protocol}}` placeholder every role prompt carries.
+///
+/// Retry batch (cost repair, after `SPIKE-COST-LEVERS.md` lever 4).  The three
+/// unfolded Developer recordings paid **34.4 % / 11.6 % / 8.1 %** of their
+/// prompt tokens for format-error retries (`evidence/cost/*.developer.attempt1.json`,
+/// re-measured here from the per-call `usage` blocks: 20 / 10 / 8 turns costing
+/// 876,566 / 1,486,702 / 416,910 tokens), and all 38 retry turns have **one**
+/// shape: `finish_reason == "stop"`, `message.tool_calls == null`, and a
+/// non-empty prose body — the role's own final report, "Iteration 1 complete …
+/// here is what I changed".  29 of the 38 quote
+/// `COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT` verbatim; the other 9 are the same
+/// report without the marker.
+///
+/// That is not model error, it is a prompt defect.  The marker is only an exit
+/// as the **first line of a command's output**
+/// (`mini-swe-agent-rust-mini/rust/src/environments/local.rs:118-128`), and this
+/// harness runs the model in `ApiMode::ToolCalls` (`src/harness/mini.rs`), where
+/// `parse_toolcall_actions` rejects a response with no tool call.  All three
+/// prompts said "end your run with the completion protocol
+/// `COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`" and never said *run this command* —
+/// so a role that obeyed the prompt literally produced exactly the rejected
+/// shape, every time it believed it was finished.
+///
+/// It is one shared section delivered through a placeholder, for the same reason
+/// [`SHELL_TRUTH_PLACEHOLDER`] is: the three role prompts must not drift apart
+/// in the instruction that decides whether their calls end or retry.
+pub const COMPLETION_PROTOCOL_PLACEHOLDER: &str = "{{completion_protocol}}";
+
+/// The completion section as delivered.  Shell-neutral: `echo` and the first
+/// line of its output are the same in `cmd.exe` and `sh`, and
+/// `tests/prompt_shell_contract.rs` lifts this command out of every delivered
+/// prompt and runs it in a real `LocalEnvironment`.
+pub const COMPLETION_PROTOCOL: &str = "[completion]\n\
+     A successful `submit` is not the end of the call, and a reply with no tool call is not a \
+     legal end either: **every response must carry at least one tool call**, and a response with \
+     none is rejected as a format error that costs a whole extra turn. Prose is allowed — but \
+     always *with* a tool call, never on its own.\n\
+     \n\
+     The only legal exit is a command whose **first line of output** is the completion marker \
+     `COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT` and whose exit code is 0. Run it as an ordinary tool \
+     call:\n\
+     \n\
+     ```text\n\
+     echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT\n\
+     ```\n\
+     \n\
+     Writing the marker into a reply instead of running it does **not** end the call: that reply \
+     carries no tool call, so it is exactly the rejected shape above. When your artifact is valid \
+     and you have nothing further to add, put your one-sentence summary in the response that \
+     carries the command, and run the command.\n";
+
 /// The shell-truth section for `flavor`.
 pub fn shell_truth(flavor: ShellFlavor) -> String {
     match flavor {

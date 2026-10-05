@@ -11763,3 +11763,20 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 - 纪律 / Discipline: **未提交、未推送**（由上层决策代理提交）；只用 `bevy-core` 分支；**未运行任何 round、Developer 调用、模型调用或引擎**；**未创建、复制或打印任何 API key**；未改代码、测试、`evidence/**`、注册表、battery、liveness 步骤、`.gitattributes` 行尾钉、config 或任何被量数字；未提交任何录制；未删除任何文件（未使用 `rm -rf`）；未使用 `git checkout --`；未构造未展开变量拼出的路径；辅助脚本位于仓库之外 `F:\hof-defrag-work\`；先查磁盘（F: 37 GiB、D: 100 GiB 可用）再构建；构建目录为本批自己的 `D:/hof-defrag-target`，一次只跑一个测试进程。
 - 证据 / Evidence: 见 `.spec/bevy/DEFFRAGILISE-REPORT.md` 与其首个机器块（门禁字面退出码与计数、每一处被改引证的原文/现值/重新推导方式、被保留行号的论证、revision 相关陈述清单、改动文件与行数不变性）。
 - 预期影响与回滚点 / Impact and rollback: 只改 `.spec/bevy/EFD1-REPORT.md`（行内替换，行数不变）并新增 `.spec/bevy/DEFFRAGILISE-REPORT.md` 与本条目；无代码/测试/语料/目录字节/注册表/battery/liveness/`.gitattributes`/config/成本机制改动，无被量数字变动。回滚即还原该报告的引证、删除新报告与本条目。
+
+## D314 — 追加：格式错误的 retry 是**提示词**缺陷，不是模型错误——把完成协议写成可执行命令（`SPIKE-COST-LEVERS.md` 杠杆 4 的唯一免丢弃项）
+
+- 日期 / Date: 2026-10-06
+- 触发问题 / Trigger: 冻结报告 `.spec/bevy/SPIKE-COST-LEVERS.md` 的杠杆 4 测出：三个未折叠 Developer 录制里，**格式错误 retry 花掉 34.4 % / 11.6 % / 8.1 % 的 prompt tokens**（20 / 10 / 8 次调用，876,566 / 1,486,702 / 416,910），并且是唯一**舍弃代价为零**的杠杆。本条目回答「这些 retry 为何发生、能否从源头消除」，而不是把它当作模型的偶发失误。
+- 考虑的选项与否决 / Options and rejections:
+  1. **修模型不听话（改进提示的措辞但不给可执行形式）** —— 否决：录制显示模型**是照做的**。38 次 retry 中 29 次逐字引用 `COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`，而 4 个录制里**没有任何一条 bash 命令**提到过该标记（0/4），即没有任何角色「运行」过它。缺陷在指令，不在服从。
+  2. **接受这种回复（把只有散文、结尾是标记的回复当作完成）** —— 否决，这是决定性理由：那正是保护流水线的那条校验。38 次里有 9 次**根本不含标记**，一旦「无 tool call 的散文」可以当作动作，任何散文都会变成动作；而且唯一拦截点在外部路径依赖 `F:/RustProjects/mini-swe-agent-rust-mini` 的 `parse_actions` 里，超出本仓库分支纪律。
+  3. **删掉完成协议这句话** —— 否决：`tests/prompt_shell_contract.rs::every_role_prompt_names_the_legal_completion_protocol` 要求三个角色提示都点名协议，删除即是削弱既有测试；而且删掉之后角色**没有任何合法结束方式**，只会继续磨到 fail-fast。
+  4. **把协议的可执行拼法各写三份** —— 否决：`src/prompts/mod.rs` 自己为 `{{shell_truth}}` 写明理由——三个角色提示不得在关键指令上漂移。
+  5. **一个共享段落 + 新占位符 `{{completion_protocol}}`，在 `render_prompt_for_shell`（所有投递路径的唯一汇合点）替换** —— 采纳。
+- 最终选择 / Decision: 新增 `pub const COMPLETION_PROTOCOL_PLACEHOLDER` 与 `pub const COMPLETION_PROTOCOL`（`src/prompts/mod.rs`），在 `render_prompt_for_shell`（`src/runtime/invoke.rs`）替换；`developer.md` 的 `[output-contract]` 第三条、`planner.md` 与 `tester.md` 的 `[completion]` 整段替换为 `{{completion_protocol}}`。该段写明三件事：**(a)** 每个响应必须至少带一个 tool call，散文只能**与**调用同行；**(b)** 唯一合法退出是一条命令，其**输出第一行**是标记且退出码为 0；**(c)** 命令本身，放在围栏块里：`echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`；并额外点明「把标记写进散文而不是运行它，不会结束调用」。**未放宽任何校验**：`parse_toolcall_actions`、格式错误模板、`max_consecutive_format_errors`、guard 与全部 fail-fast 路径均未改动，外部 mini crate 未改。
+- 选择理由 / Why: 标记作为退出，只在 `LocalEnvironment::check_finished`（`environments/local.rs:118-128`）里、作为**命令输出的第一行**成立；而本 harness 以 `ApiMode::ToolCalls` 构建模型（`src/harness/mini.rs`），无 tool call 的回复就是 `AgentError::Format`。三个提示此前只说「用完成协议结束你的运行」，从未说「运行这条命令」，因此一个**字面服从**的角色每次自认完成时，必然产出恰好被拒的形状。修指令是从源头消除，且不牺牲任何检查。
+- 纪律 / Discipline: **未提交、未推送**（由上层决策代理提交）；只用 `bevy-core` 分支；**未运行任何 round、Developer 调用、模型调用或引擎**；**未创建、复制或打印任何 API key**；未改 `evidence/**`、注册表、battery、liveness 步骤、`.gitattributes`、任何冻结文档或任何 config；`DECISIONS.md` 只追加；未写入任何 `runs/**`；未删除任何文件（未使用 `rm -rf`）；未使用 `git checkout --`；未构造未展开变量拼出的路径；辅助脚本位于仓库之外 `F:\retry-fix\`（脚本文件一律经 `write` 落盘，不经 shell 传多行 Python）；先查磁盘（F: 9.1 GiB 可用、已 100 % 占用）再构建，故构建目录为本批自己的 `D:/retry-fix-target`（D: 82 GiB 可用），一次只跑一个测试进程。
+- 证据 / Evidence: 见 `.spec/bevy/RETRY-FIX-REPORT.md` 与其首个机器块（该块由写入后的文件重新解析回来，`PARSED_OK`）：唯一失败形状（`finish_reason: stop` + `tool_calls: null` + 散文，38 例、29 例引用标记）、红/绿字面退出码（101 / 0）、改动与所否决的替代方案、改前改后的 retry 次数与 prompt tokens（20/10/8/0 次，876,566 / 1,486,702 / 416,910 → 0/0/0/0 次与 0 tokens）、门禁字面退出码与计数（802 passed / 0 failed / 6 ignored / 808 listed，fmt 0，0 编译警告；未改动树的基线 800/0/6/806）。
+- 预期影响与回滚点 / Impact and rollback: 改 6 个文件（`src/prompts/mod.rs`、`src/runtime/invoke.rs`、`src/prompts/{developer,planner,tester}.md`、`tests/prompt_shell_contract.rs`）并新增本报告与本条目。行为上，角色的「我完成了」从**被拒的散文**变为**可执行命令**，调用随后以 `exit_status: "Submitted"` 干净结束——这是本改动最大的收益，也是它最大的风险：Developer 提示本来就要求角色自行判断何时完成，把该判断变成可执行，可能让 Developer 调用更早结束、产物更弱。回滚即还原这 6 个文件、删除新报告与本条目。
+

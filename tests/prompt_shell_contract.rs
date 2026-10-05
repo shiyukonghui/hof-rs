@@ -389,11 +389,7 @@ async fn only_a_first_line_completion_protocol_ends_a_role_call() {
 #[test]
 fn every_role_prompt_names_the_legal_completion_protocol() {
     const PROTOCOL: &str = "COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT";
-    for (label, template) in [
-        ("planner.md", prompts::PLANNER_PROMPT),
-        ("tester.md", prompts::TESTER_PROMPT),
-        ("developer.md", prompts::DEVELOPER_PROMPT),
-    ] {
+    for (label, template) in ROLE_PROMPTS.iter().copied() {
         let text = delivered(template);
         assert!(
             text.contains(PROTOCOL),
@@ -403,6 +399,141 @@ fn every_role_prompt_names_the_legal_completion_protocol() {
             text.to_lowercase().contains("completion") || text.to_lowercase().contains("finish"),
             "{label} must say that the protocol is how the call ends"
         );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// ③b the retry shape — the protocol must be *runnable*, not quotable
+// ---------------------------------------------------------------------------
+
+/// The completion marker, spelled once.
+const COMPLETION_MARKER: &str = "COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT";
+
+/// The three role prompts, in the order the harness hands them out.
+const ROLE_PROMPTS: &[(&str, &str)] = &[
+    ("planner.md", prompts::PLANNER_PROMPT),
+    ("tester.md", prompts::TESTER_PROMPT),
+    ("developer.md", prompts::DEVELOPER_PROMPT),
+];
+
+/// Every inline `` `code` `` span in `text`, in order; fenced blocks excluded.
+fn inline_code_spans(text: &str) -> Vec<String> {
+    let mut spans = Vec::new();
+    let mut inside_fence = false;
+    for line in text.lines() {
+        if line.trim_start().starts_with("```") {
+            inside_fence = !inside_fence;
+            continue;
+        }
+        if inside_fence {
+            continue;
+        }
+        let mut rest = line;
+        while let Some(open) = rest.find('`') {
+            let after = &rest[open + 1..];
+            match after.find('`') {
+                Some(close) => {
+                    spans.push(after[..close].to_string());
+                    rest = &after[close + 1..];
+                }
+                None => break,
+            }
+        }
+    }
+    spans
+}
+
+/// The command a role prompt documents as its completion protocol.
+///
+/// A prompt can *name* the marker and still leave the role with no legal way to
+/// use it: the recorded retry shape is exactly an assistant reply whose content
+/// is the completion marker (29 of 38 recorded retry turns quote it) and whose
+/// `tool_calls` is `null`.  The marker is only an exit as the **first line of a
+/// command's output** (`mini-swe-agent-rust-mini/rust/src/environments/local.rs:118-128`),
+/// so the delivered text has to show the command, in a form a test can lift out
+/// and run.
+fn completion_command(label: &str, text: &str) -> String {
+    let mut candidates = fenced_blocks(text);
+    candidates.extend(inline_code_spans(text));
+    for candidate in candidates {
+        let command = candidate.trim();
+        if command.starts_with("echo ") && command.contains(COMPLETION_MARKER) {
+            return command.to_string();
+        }
+    }
+    panic!(
+        "{label} names `{COMPLETION_MARKER}` only in prose: it documents no \
+         executable command whose output starts with the marker.  The recorded \
+         developer trajectories (`evidence/cost/*.developer.attempt1.json`) show \
+         what a role does with that text — it writes the marker into a reply with \
+         no tool call, which `parse_toolcall_actions` rejects as a format error \
+         and which is billed as a whole extra turn.  A prompt must show the \
+         command to run."
+    );
+}
+
+/// The other half of the recorded shape: 9 of the 38 retry turns carry **no**
+/// marker at all — they are a plain "I am finished, here is what I changed"
+/// report.  Rewording the protocol as a command does not reach those; what does
+/// is the explicit output requirement, stated for every role: a response must
+/// carry at least one tool call, prose is only ever legal *with* one.
+#[test]
+fn every_role_prompt_states_that_a_reply_needs_a_tool_call() {
+    for (label, template) in ROLE_PROMPTS.iter().copied() {
+        let text = delivered(template).to_lowercase();
+        assert!(
+            text.contains("at least one tool call"),
+            "{label} does not state the positive output requirement: with no tool \
+             call the reply is rejected as a format error, and the recorded \
+             developer calls paid for that (20/10/8 turns over the three unfolded \
+             recordings)"
+        );
+    }
+}
+
+/// The static half proves the text is liftable; this half **runs it**.  The
+/// command the delivered developer prompt documents, executed in the role's real
+/// `LocalEnvironment`, must produce the `Submitted` flow interrupt — the same
+/// interrupt the harness's own `run_compacting_agent` turns into `exit_status`
+/// `Submitted` and a clean end of the call.
+#[tokio::test]
+async fn the_documented_completion_command_really_ends_a_role_call() {
+    let (_temp, view) = view_with_scratch();
+    for (label, template) in ROLE_PROMPTS.iter().copied() {
+        let text = delivered(template);
+        let command = completion_command(label, &text);
+        let environment =
+            LocalEnvironment::new(mini_swe_agent::environments::LocalEnvironmentConfig {
+                cwd: view.to_string_lossy().into_owned(),
+                env: role_env(&view)
+                    .into_iter()
+                    .map(|(key, value)| (key, Value::String(value)))
+                    .collect(),
+                timeout: 30,
+            });
+        let interrupt = match environment
+            .execute(&Action::new(command.clone()), None, Some(30))
+            .await
+        {
+            Ok(output) => panic!(
+                "{label}: `{command}` must end the call, but it ran to completion with \
+                 returncode {} and output {:?}; the marker has to be the first line of the \
+                 command's output",
+                output.returncode, output.output
+            ),
+            Err(error) => error,
+        };
+        match interrupt {
+            mini_swe_agent::AgentError::Interrupt(flow) => assert_eq!(
+                flow.kind,
+                mini_swe_agent::InterruptKind::Submitted,
+                "{label}: `{command}` must be the *submitted* interrupt"
+            ),
+            other => panic!(
+                "{label}: `{command}` must end the call, got {other:?}; the marker has to be the \
+                 first line of the command's output"
+            ),
+        }
     }
 }
 
