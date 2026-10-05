@@ -39,6 +39,7 @@
   "fmt_output_bytes": 0,
   "build_dir": "D:\\hof-live-target (this batch's own; the repository's own target/ was not used)",
   "no_second_test_process": "tasklist showed no cargo/rustc/hoh before and after (D:/hof-live-logs/gate.procs-before.txt and gate.procs-after.txt are both empty)",
+  "re_run_on_the_final_tree": "the whole gate was run a second time after this report and the D302 append existed, and returned the same literal numbers (exit 0, 766/0/6/772, 58 test-result lines, 0 warnings, fmt exit 0 with 0 bytes, no stray processes)",
   "tests_removed": 0
  },
  "live_developer_call": {
