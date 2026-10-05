@@ -8,6 +8,7 @@
  "report_repaired": ".spec/bevy/EFD1-REPORT.md",
  "report_repaired_was_committed_as": "6b66da67b4a95fe77330b791aebfbb4d6a02a53f",
  "offline": true,
+ "commit_state": "This batch ran no `git add`, commit or push. The dispatcher committed the batch as `c3f6f946ac7b62657c29b85dfb448876ce95625a` (`docs(citations): replace line numbers that drift with identifiers and quoted fragments`), which carries `.spec/bevy/EFD1-REPORT.md`, `DECISIONS.md` and an earlier revision of this report; nothing was pushed (`origin/bevy-core` is still `166212f1fc4f2e520170e19b894b28501a58235d`). The worktree holds one later revision of this report on top of that commit, which renames this report's own two `numstat_worktree_vs_HEAD` fields to `numstat_worktree_vs_263d6f9` and names that commit here.",
  "line_numbers_in_this_report": "Apart from (a) the quotations of removed text inside citations_changed[].said and (b) the counts and gate figures, this report cites no line number of any document: every location it gives is a file name plus a field or entry identifier. That restriction is the point of the batch, so it applies to this report too.",
  "gate": {
   "test_command": "cargo test --offline",
@@ -106,7 +107,7 @@
    "where": "`key_name_occurrences` of EFD1-REPORT.md's machine block, and the same counts restated in section 0 and at the head of section 1",
    "said": "the counts, with no statement of the revision they were measured at",
    "says_now": "the machine field `measured_against` says they were measured in the working tree based on head_at_start (91629f4) with this batch's edits and this report untracked; section 0 and section 1 repeat that qualification",
-   "re_derived": "`git grep -c` at 91629f4 gives FINAL-DOC-REPORT.md 1, ACCEPTANCE-FINAL-DOC.md 6, ACCEPTANCE-FD1.md 7, FD1-REPORT.md 8, HARDENING-REPORT.md 1, DECISIONS.md 2 and no EFD1-REPORT.md; at 6b66da6 it adds EFD1-REPORT.md 9 and DECISIONS.md 4; at the current HEAD it also adds ACCEPTANCE-EFD1.md 4. So the table's DECISIONS.md value of 4 is the post-D312 working-tree value, not the 91629f4 commit value, which is exactly why the revision had to be named."
+   "re_derived": "`git grep -c` at 91629f4 gives FINAL-DOC-REPORT.md 1, ACCEPTANCE-FINAL-DOC.md 6, ACCEPTANCE-FD1.md 7, FD1-REPORT.md 8, HARDENING-REPORT.md 1, DECISIONS.md 2 and no EFD1-REPORT.md; at 6b66da6 it adds EFD1-REPORT.md 9 and DECISIONS.md 4; at 263d6f9 it also adds ACCEPTANCE-EFD1.md 4. So the table's DECISIONS.md value of 4 is the post-D312 working-tree value, not the 91629f4 commit value, which is exactly why the revision had to be named."
   },
   {
    "id": "revision-anchor-and-scope",
@@ -194,7 +195,7 @@
   {
    "path": ".spec/bevy/EFD1-REPORT.md",
    "change": "de-fragilised: the DECISIONS.md table row names D311/D312 instead of line numbers; `batch_committed_as` (6b66da6) names the delivered revision and a `de_fragilised` field records this edit; both `numstat_vs_HEAD` fields became `numstat_91629f4_to_6b66da6`; `HEAD:` became `91629f4:`; every `at HEAD` became `at head_at_start (91629f4)` or the two-commit range; `hash_test_attribute_lines_head` became `hash_test_attribute_lines_head_at_start`; revision scoping was added to the occurrence counts, the starting/delivered tree, the diff sentence and the line-numbers-unchanged sentence",
-   "numstat_worktree_vs_HEAD": "19 19",
+   "numstat_worktree_vs_263d6f9": "19 19",
    "lines_before": 259,
    "lines_after": 259,
    "sha256_before": "88814941e8390777642a603350b1c84e497b87ef413559676f29e302887ff9ac",
@@ -204,7 +205,7 @@
   {
    "path": "DECISIONS.md",
    "change": "D313 appended (21 insertions, 0 deletions), recording this de-fragilisation, naming the real reference points and naming and limiting D312's HEAD-relative parenthetical; D311 and D312 are byte-identical to before",
-   "numstat_worktree_vs_HEAD": "21 0",
+   "numstat_worktree_vs_263d6f9": "21 0",
    "bytes_before": 1347590,
    "bytes_after": 1353845,
    "sha256_before": "e6e136efe0fbd3c08928d8b41a2d9254d907bb8f8ed188d86efa8b8a62035805",
@@ -224,7 +225,7 @@
   "no test removed or added: 668 `#[test]` lines at 91629f4, 6b66da6, 263d6f9 and in the worktree",
   "no recording committed, added, copied or moved; no round, engine, game, network or model call; no API key created, copied or printed",
   "nothing deleted: no `rm -rf`, no wildcard deletion, no path built from an unexpanded variable, no `git checkout --`",
-  "nothing staged, committed or pushed"
+  "nothing staged, committed or pushed by this batch's own work; the dispatcher committed the batch (see `commit_state`)"
  ],
  "pinned_documents_left_alone": [
   "`HARDENING-REPORT.md` was not touched at all: it is pinned by a recorded whole-file sha256 and by a recorded sha256 of the key-definition line (both in `FD1-REPORT.md`'s machine block, the line hash also in `ACCEPTANCE-FD1.md`), so editing it would falsify recorded figures",
@@ -234,13 +235,13 @@
   "no document whose bytes are pinned by a recorded hash was edited; if one had to change, this report would have stopped and said so instead"
  ],
  "verified": [
-  "`git grep -c why_they_cannot_be_made_clone_safe` was re-run at 91629f4, 6b66da6 and the current HEAD, and the ownership of the four DECISIONS.md lines was re-derived from the `## D` headings and the two blocks - not from the acceptance, and not from the previous batch",
+  "`git grep -c why_they_cannot_be_made_clone_safe` was re-run at 91629f4, 6b66da6 and 263d6f9 (the batch's head_at_start), and the ownership of the four DECISIONS.md lines was re-derived from the `## D` headings and the two blocks - not from the acceptance, and not from the previous batch",
   "`git diff --numstat 91629f4 6b66da6` was re-run: `3 3` for FD1-REPORT.md, `18 0` for DECISIONS.md, and no argument needed a corrected value",
   "the append-only property was re-checked by bytes, not by trust: the 91629f4 blob is a byte-prefix of the 6b66da6 blob and of the file now, and D313 is 21 insertions / 0 deletions",
   "`git diff --name-only 91629f4 6b66da6` and the same against the worktree restricted to src/tests/config/.gitattributes/Cargo.*/evidence/scripts/.githooks are empty",
   "the repaired report is 259 lines at 6b66da6 and now, and its worktree diff is `19 19`, so the edit is line-for-line",
-  "the gate was run twice with one test process at a time in this batch's own D:/hof-defrag-target, and both runs gave literal exit 0 and the same counts; free disk was checked before building",
-  "the worktree contains no carriage return in either edited document, and its only tracked changes are the two documents named above"
+  "the gate was run repeatedly with one test process at a time in this batch's own D:/hof-defrag-target, and every run gave literal exit 0 and the same counts, the last one on these exact bytes; free disk was checked before building",
+  "the worktree contains no carriage return in any of the three documents, and the tracked changes against the batch's base (263d6f9) are .spec/bevy/EFD1-REPORT.md, DECISIONS.md and this new report"
  ],
  "unverified": [
   "The measured figures this batch did not touch were not re-measured: the evidence totals, the six recordings' 5,917,632 bytes, the cost figures (2.600x / 2.549x / 2.604x of the per-call target and the `agent.step_limit: 150` behaviour) and the recorded pins are read from the records, not remade here. What is verified is that this batch edited none of them and no document that pins them.",
@@ -266,7 +267,9 @@ it was edited, and the recorded occurrence count did not move.
 Offline: no engine, no game, no network, no model call, no round and no Developer call. No recording was
 committed, added, copied or moved; nothing under `runs/**` was written; **nothing was deleted** (no
 `rm -rf`, no wildcard, no need); no `git checkout --`; no path built from an unexpanded variable; no API
-key created, copied or printed; nothing staged, committed or pushed. Helper scripts live outside the
+key created, copied or printed; nothing staged, committed or pushed by this batch's own work - the
+dispatcher committed the batch as `c3f6f94` while this report was being finalised, and nothing was
+pushed (see the machine block's `commit_state`). Helper scripts live outside the
 repository under `F:/hof-defrag-work/`, logs under `F:/hof-defrag-logs/`, and the build under
 `D:/hof-defrag-target`. The machine block above is `json.dumps(..., indent=1, ensure_ascii=False)` output
 written by `F:/hof-defrag-work/gen_report.py`, which then parsed it back out of the written file and
@@ -288,8 +291,9 @@ log grows, which the numbers could and did.
 
 The same fragility has two more faces in the same report, and RF-3 named them. Two machine fields were
 called `numstat_vs_HEAD`, and section 2 ran `git diff --numstat HEAD -- DECISIONS.md`; both were written
-when `HEAD` was the batch's base and the changes were uncommitted. The dispatcher's commit moved `HEAD`,
-so a reader running the command literally no longer sees the quoted result. Those now name the base
+when `HEAD` was the batch's base and the changes were uncommitted. The commit that delivered that batch
+moved `HEAD` from `91629f4` to `6b66da6`, so a reader running the command literally no longer sees the
+quoted result. Those now name the base
 (`head_at_start`) and the commit that carried the batch (`batch_committed_as`), and the commands are
 two-commit diffs that reproduce on any checkout.
 
@@ -320,11 +324,11 @@ that sentence and limits it, exactly as D312 named D311's.
   (1,342,560 bytes, sha256 `31014e76...`) is a byte-prefix of its blob at `6b66da6` (1,347,590) and of the
   file now (1,353,845); D313 is 21 insertions / 0 deletions, and D311's and D312's bytes are untouched.
 * **No test was removed and the gate is unchanged in shape.** 668 `#[test]` lines at `91629f4`,
-  `6b66da6`, the current `HEAD` and in the worktree; the gate is still 800 passed / 0 failed / 6 ignored
+  `6b66da6`, `263d6f9` and in the worktree; the gate is still 800 passed / 0 failed / 6 ignored
   over 60 `test result:` lines, 806 listed, 6 listed ignored.
-* **Nothing outside the documents moved.** The only tracked files changed in the worktree are
-  `.spec/bevy/EFD1-REPORT.md` and `DECISIONS.md`; the restricted-path diff is empty, and no measured
-  figure in any report was edited.
+* **Nothing outside the documents moved.** Against the batch's base `263d6f9` the only tracked changes
+  are `.spec/bevy/EFD1-REPORT.md`, `DECISIONS.md` and this new report; the restricted-path diff is empty,
+  and no measured figure in any report was edited.
 * **The pinned documents were left alone.** The key-definition line of `HARDENING-REPORT.md` is pinned by
   a recorded line hash and a recorded whole-file hash, so `HARDENING-REPORT.md` was not touched at all;
   `FINAL-DOC-REPORT.md`, `FD1-REPORT.md`, `ACCEPTANCE-FD1.md` and `ACCEPTANCE-FINAL-DOC.md` were not
