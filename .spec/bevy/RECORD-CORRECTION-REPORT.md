@@ -5,7 +5,7 @@
  "branch": "bevy-core",
  "offline": true,
  "head_at_start": "c00716d (`docs(acceptance): record the acceptance that passes decidability and reproducibility and fails only on three sentences`). The batch's deliverable .spec/bevy/CLONE-AND-LIVE-REPORT.md is committed at that HEAD (blob 64a69937, sha256 b2053ad15ca2618a3b3b1829e66ef908fc23c6cf014922b2034f1d282f0cff9f); the working tree was clean when this correction started.",
- "what_this_batch_did": "corrected the record to the artefacts that already existed, and nothing else: no re-run of the round, no new measurement, no engine, no network, no model call, no change to .gitattributes, to the liveness step, to the coverage registry, to the battery, or to any measured number outside D-1/D-2/D-4. Three paths are modified and left uncommitted for the dispatcher; this batch ran no `git add`, `git commit` and no `git push`.",
+ "what_this_batch_did": "corrected the record to the artefacts that already existed, and nothing else: no re-run of the round, no new measurement, no engine, no network, no model call, no change to .gitattributes, to the liveness step, to the coverage registry, to the battery, or to any measured number outside D-1/D-2/D-4. The three corrected files and an earlier revision of this report were committed by the dispatcher as aee9c92 while this batch was still working; the delivered revision of this report is the only uncommitted path, and this batch itself ran no `git add`, `git commit` and no `git push`.",
  "gate": {
   "command": "cargo test --offline",
   "literal_exit_code": 0,
@@ -30,17 +30,23 @@
   "build_dir": "D:/hof-rc-target (this correction's own; one cargo process at a time, no second test process)",
   "free_disk_before_building": "F: 56 G free, D: 198 G free; nothing was deleted and `rm -rf` was not used",
   "logs": [
-   "F:/hof-rc-work/logs2/fmt.out",
-   "F:/hof-rc-work/logs2/fmt.err",
-   "F:/hof-rc-work/logs2/gate.out",
-   "F:/hof-rc-work/logs2/gate.err",
-   "F:/hof-rc-work/logs2/exits.txt",
-   "F:/hof-rc-work/logs2/targeted.out",
-   "F:/hof-rc-work/logs2/libprd.out",
-   "F:/hof-rc-work/logs2/list.out",
-   "F:/hof-rc-work/logs2/ignored.out"
+   "F:/hof-rc-work/logs3/fmt.out",
+   "F:/hof-rc-work/logs3/fmt.err",
+   "F:/hof-rc-work/logs3/gate.out",
+   "F:/hof-rc-work/logs3/gate.err",
+   "F:/hof-rc-work/logs3/exits.txt",
+   "F:/hof-rc-work/logs3/targeted.out",
+   "F:/hof-rc-work/logs3/libprd.out",
+   "F:/hof-rc-work/logs3/list.out",
+   "F:/hof-rc-work/logs3/ignored.out"
   ],
-  "gate_tree": "the numbers above are from the SECOND, frozen-tree run: every edit to CLONE-AND-LIVE-REPORT.md, evidence/index.json, prd_surfaces.rs and this report was finished first and nothing was edited while it ran. The first run (F:/hof-rc-work/logs/) measured the same numbers but is superseded for exactly that reason - no test reads the corrected report, yet a gate is only evidence on a tree that has stopped moving (the acceptance's D-7). Both runs: exit 0, 800/0/6/806, 0 warnings, fmt 0 bytes."
+  "gate_input_sha256": {
+   "evidence/index.json": "eb88286c638363a7ff64e7aa1bf901159cc68bf0663707c9526f258a9bb03d2f",
+   "src/adapter/bevy/prd_surfaces.rs": "6ea1090bf8a11b0cbcd8d0970ba42180ad0e50da08c5211546397a4a6b4bb6f1",
+   ".spec/bevy/CLONE-AND-LIVE-REPORT.md": "889033a5fd8914357886b28f110609dcffad571194e844d03e5db7d3fb44471e",
+   "note": "src/** and tests/** are otherwise exactly as committed at c00716d (git status shows no other tracked change), so these three hashes, with HEAD, fix the whole gate input set. This file's own hash is not pinned and is not a gate input."
+  },
+  "gate_tree": "the numbers above are from the run logged under F:/hof-rc-work/logs3. The gate was run three times and all three runs report the same numbers (exit 0, 800/0/6/806, 0 warnings, fmt 0 bytes); the first two were superseded because something changed afterwards - first the report file itself, then only the log paths recorded here. Neither is a gate input: grep over src/, tests/ and scripts/ finds no reference to the corrected report, and no test reads it. The three hashes under gate_input_sha256 are the gate inputs that this correction did change, and they are byte-identical between the logs3 run and the delivered tree, so the logs3 numbers are the delivered tree's numbers."
  },
  "tests_that_read_the_changed_files": [
   {
@@ -120,24 +126,27 @@
   {
    "path": ".spec/bevy/CLONE-AND-LIVE-REPORT.md",
    "what": "D-1 prose, D-2 prose and machine block, D-4 machine block and prose, plus the sentences that described the E-2 wording",
-   "left_uncommitted_for_dispatcher": true
+   "committed_as": "aee9c92 (`docs(record): correct the three statements that disagreed with their own artefacts`); HEAD's blob of this path is byte-identical to the delivered working file, sha256 889033a5fd8914357886b28f110609dcffad571194e844d03e5db7d3fb44471e"
   },
   {
    "path": "evidence/index.json",
    "what": "D-3: coverage.with_the_new_step.meaning",
-   "left_uncommitted_for_dispatcher": true
+   "committed_as": "aee9c92; HEAD's blob is byte-identical to the delivered working file, sha256 eb88286c638363a7ff64e7aa1bf901159cc68bf0663707c9526f258a9bb03d2f"
   },
   {
    "path": "src/adapter/bevy/prd_surfaces.rs",
    "what": "D-3: the S1-deterministic-step doc comment and the RESIDUALS entry (registry constant PRD_SURFACES untouched)",
-   "left_uncommitted_for_dispatcher": true
+   "committed_as": "aee9c92; HEAD's blob is byte-identical to the delivered working file, sha256 6ea1090bf8a11b0cbcd8d0970ba42180ad0e50da08c5211546397a4a6b4bb6f1"
   },
   {
    "path": ".spec/bevy/RECORD-CORRECTION-REPORT.md",
    "what": "this report",
-   "left_uncommitted_for_dispatcher": true
+   "committed_as": "aee9c92 committed an earlier revision (blob afde67da, sha256 889033a5fd8914357886b28f110609dcffad571194e844d03e5db7d3fb44471e) while this batch was still correcting the log paths and pinning the gate-input hashes; the delivered revision is the only uncommitted path when this report is written, and the dispatcher commits it"
   }
  ],
+ "dispatcher_commits": {
+  "aee9c92": "`docs(record): correct the three statements that disagreed with their own artefacts` - the dispatcher committed all four paths (201 lines changed in CLONE-AND-LIVE-REPORT.md, 2 in evidence/index.json, 27 in prd_surfaces.rs, plus this report) while this batch was still working, so this batch's own deliverable shows the same mid-flight commit the previous one did. This batch ran no `git add`, `git commit` and no `git push`. The three corrected files are byte-identical between HEAD and the delivered tree, so nothing about the gate above depends on the commit timing; only the log-path/hash-pinning revision of this report is newer than aee9c92."
+ },
  "not_touched": [
   ".gitattributes and the `evidence/** -text` pin",
   "the liveness step and its decider (src/adapter/bevy/battery.rs)",
@@ -299,12 +308,18 @@ Free space was checked before building (F: 56 G, D: 198 G; nothing was deleted a
 Build directory `D:/hof-rc-target` is this correction's own, one cargo process ran at a time, and no second
 test process existed at any point.
 
-These numbers are from the **second, frozen-tree run**, and the first one is disclosed: I ran the gate once
-while I was still editing `CLONE-AND-LIVE-REPORT.md`, which is the same moving-artefact mistake the
-acceptance recorded as D-7. No test reads that file, so both runs measured identical numbers - but a gate is
-only evidence on a tree that has stopped moving. Every edit to all four paths was therefore finished first,
-and the gate below was then re-run with nothing changing while it ran. Both runs: exit 0,
-800 / 0 / 6 / 806, 0 warnings, `fmt` 0 bytes.
+These numbers come from the run logged under `F:/hof-rc-work/logs3`, and the two earlier runs are
+disclosed rather than hidden. I first ran the gate while I was still editing `CLONE-AND-LIVE-REPORT.md`,
+which is the same moving-artefact mistake the acceptance recorded as D-7; I ran it again after finishing
+every edit, but then changed only the log paths recorded in this report. All three runs report identical
+numbers, and **neither the report nor its log paths is a gate input**: `grep` over `src/`, `tests/` and
+`scripts/` finds no reference to the corrected report and no test reads it. What the gate does read, and what
+this correction did change, is `evidence/index.json` and `src/adapter/bevy/prd_surfaces.rs` - plus
+`CLONE-AND-LIVE-REPORT.md`, which no test reads either. Those three hashes are pinned in
+`gate.gate_input_sha256` and are byte-identical between the `logs3` run and the delivered tree, and
+`src/**` and `tests/**` carry no other change at all (the only `src/` edit is that one file, and it adds or
+removes no `#[test]`); that is what makes the `logs3` numbers the delivered tree's numbers. I stopped editing
+when this report was regenerated with those paths.
 
 | check | command | literal exit code | result |
 |---|---|---|---|
@@ -359,12 +374,15 @@ Three things the acceptance did not name, all disclosed above:
    false. Those fields are the batch's own history and I left them as written rather than rewriting
    history - the commit is visible in `git log` and in the corrected head note above.
 
-Two smaller notes. `D-7` is settled by construction: I stopped editing when the artefacts were correct, the
-three modified paths plus this report are left for the dispatcher to commit, and no edit was in flight when
-this report was written - but I did not commit or push anything myself, as instructed. And the 7th ledger
-line (`pid 39664`, `launched_at 1791212664`) is still unexplained: it is about four seconds after iteration
-3's pass window ends and it did not overwrite `launch.json`, `meta.json` or `gate.json`. Nothing in this
-correction depends on it, and I did not chase it, exactly as the acceptance's `unverified` list did not.
+Two smaller notes. `D-7` is settled the same way it was for the previous batch, and this batch must disclose
+that the dispatcher did the same thing again: **`aee9c92` committed all four paths while this batch was still
+working**, so the delivered revision of this report is newer than the commit. The three corrected files are
+byte-identical between `HEAD` and the delivered tree (hashes pinned above), so nothing about the gate depends
+on the timing, and the only uncommitted path when this report is written is this report itself - I did not
+commit or push anything, as instructed, and I stopped editing when the artefacts were correct. And the 7th
+ledger line (`pid 39664`, `launched_at 1791212664`) is still unexplained: it is about four seconds after
+iteration 3's pass window ends and it did not overwrite `launch.json`, `meta.json` or `gate.json`. Nothing in
+this correction depends on it, and I did not chase it, exactly as the acceptance's `unverified` list did not.
 
 ## 7. The single most important thing for the next batch
 
