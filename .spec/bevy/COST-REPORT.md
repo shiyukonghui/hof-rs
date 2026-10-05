@@ -46,7 +46,7 @@ game, no network, no model call. Everything below is code, tests, or arithmetic 
       "iter_2_worst_call_residual_tokens": 1347,
       "total_reproduction_error": "<0.01%"
     },
-    "dominated_by": "call count multiplied by accumulated history: 69/125/102 model calls re-sending 9.90 MB / 50.01 MB / 19.75 MB of wire bytes in total, with a final prompt of 46,801 / 161,566 / 66,002 tokens. The system prompt is 14,783 bytes of content (14,814 of wire) - about 9% of iter-2's final prompt, not the dominant term; per-call it is 4,269 of the first call and 14,814 of the 161,566-token last one. After the fold the system prompt is the largest single item left (about a third of the compacted prompt).",
+    "dominated_by": "call count multiplied by accumulated history: 69/125/102 model calls re-sending 9.90 MB / 50.01 MB / 19.75 MB of wire bytes in total, with a final prompt of 46,801 / 161,566 / 66,002 tokens. The system prompt is 14,522 bytes of content (14,849 of wire; F-2: the earlier 14,783/14,814 was wrong) - about 9% of iter-2's final prompt, not the dominant term; per-call it is 4,269 of the first call and 14,849 of the 161,566-token last one. After the fold the system prompt is the largest single *fixed* item left (17.7% of the compacted wire bytes), though the preserved tail (34.1%) and the under-floor band (28.7%) are larger terms made of history.",
     "tail_curve_wire_bytes_iter_2": {
       "sent": 50007767,
       "tail_0": 7339794, "tail_2": 7877330, "tail_4": 8401914, "tail_6": 8933735,
@@ -84,7 +84,7 @@ game, no network, no model call. Everything below is code, tests, or arithmetic 
     "pinned_by": ["harness::guard::tests::a_repeated_action_whose_result_changes_is_not_unproductive_repetition", "harness::guard::tests::a_repeated_action_whose_result_stops_changing_is_still_aborted", "harness::guard::tests::the_same_successful_action_repeated_to_its_cap_aborts_the_call", "tests/repeated_action.rs"]
   },
   "defects": [
-    {"id": "criterion-4-cost", "disposition": "partially closed: projected per-call Developer **prompt** tokens 72,939 -> 18,300 and the three recorded calls 20,447,131 -> 5,220,254 prompt tokens (74.47% of the recorded prompt spend; adding the unchanged completion tokens back gives 5,713,960 against 20,940,837, i.e. 72.71%). AC-10: the earlier '20.94M -> 5.22M (25.5%)' mixed prompt+completion on the before side with prompt-only on the after side. The 1.5M-per-call target is NOT reached (iter-2 projects to 2,681,282 prompt + 325,953 completion = 3,034,063, over 2x the target), and no round was run to confirm the projection on a live call. FIX-REPORT.md §5 measures the floor: even with the verbatim tail removed entirely, iter-2 projects to 1,873,629 prompt tokens."},
+    {"id": "criterion-4-cost", "disposition": "partially closed: projected per-call Developer **prompt** tokens 72,939 -> 18,300 and the three recorded calls 20,447,131 -> 5,220,254 prompt tokens (74.47% of the recorded prompt spend; adding the unchanged completion tokens back gives 5,713,960 against 20,940,837, i.e. 72.71%). AC-10: the earlier '20.94M -> 5.22M (25.5%)' mixed prompt+completion on the before side with prompt-only on the after side. The 1.5M-per-call target is NOT reached (iter-2 projects to 2,681,282 prompt + 325,953 completion = 3,007,235, over 2x the target; F-1: the earlier 3,034,063 was an arithmetic slip - 2,681,282 + 325,953 = 3,007,235, which is what FIX-REPORT and this report's own projected_round block give), and no round was run to confirm the projection on a live call. FIX-REPORT.md §5 measures the fold's own floor: even with the verbatim tail removed entirely, iter-2 projects to 1,873,629 prompt tokens. That floor bounds only the fold's own family (every superseded message replaced by a note); a policy that kept nothing but the system prompt and the task would project to 517,368 prompt + 325,953 completion = 843,321 for iter-2, far below the target - which is the trade the batch refuses, not an impossibility (see F-3 in FIX-REPORT.md §5)."},
     {"id": "unverified-item-tripwire-at-15", "disposition": "fixed: the counter now requires identical results and a write-free window; tested; round 4's three calls would no longer be ended by it."},
     {"id": "RA-1", "disposition": "fixed: the ledger is written after the spawn (a pid cannot exist before it); the append_ledger and ledger_entry docs, the call-site comment, the entry's own `note`, reap_ledger's doc and ROUND-4-REPORT-COMPLETE.md now say so. The nonce really is generated before the spawn and that is stated as the surviving proof. Pinned by adapter::bevy::launch::tests::the_ledger_line_is_written_after_the_spawn_and_says_so."},
     {"id": "RA-2", "disposition": "fixed: the e3_grounded_payload proving_reading in .spec/bevy/ROUND-4-REPORT-COMPLETE.md cited frame 477, which runs/bevy-round4/calls/0008-bevy_grounded.json does not contain; the file's own FrameCounter value is 495 and the line now says 495 and names the file it was read from."},
@@ -117,7 +117,7 @@ game, no network, no model call. Everything below is code, tests, or arithmetic 
     "The projection is arithmetic over recorded trajectories. No round was run, so no live call confirms that the fold produces the projected prompt tokens or that the role still behaves well with 12 verbatim messages.",
     "The model's behaviour under folded history is unmeasured: a role may re-read a file it was told it had already written, because the fold replaces the payload with a digest. The stored evidence (the write result, the digest) is still there, and the file is on disk, but this is a real behavioural risk of the change and it was not testable offline.",
     "--resume has not continued a real interrupted round: the decision is pinned as arithmetic over a built run directory, and the loop's skip/continue path is not exercised end to end (that needs a run).",
-    "The 1.5M-token-per-call target is not reached on this projection (per-call developer mean 18,300; three calls 5.22M). The remaining lever is the call count (system prompt and tool surface), not the context.",
+    "The 1.5M-token-per-call target is not reached on this projection (per-call developer mean 18,300; three calls 5.22M). No *tail value of this fold* reaches it, and the batch's own tail-0 figure bounds only that family: a context-only policy that dropped consumed pairs outright, or kept only the system prompt and the task, would project to 287,657 / 517,368 / 430,085 prompt tokens for the three recorded calls (369,289 / 843,321 / 516,206 with completion) and would pass - what is refused is that trade (the role no longer sees the history it works from), not an impossibility (F-3). The remaining *capability-preserving* lever is the call count.",
     "Round 4's own report prose is frozen; only the RA-2 citation line was corrected. Whether other prose in ROUND-4-REPORT*.md is stale was not audited.",
     "The acceptance's RA-7 is present at .spec/bevy/ACCEPTANCE-ROUNDS.md:137 and is closed in substance by D299 (rounds 3-4) and D300 (this batch); the earlier 'not located' disposition was wrong (AC-5)."
   ],
@@ -174,9 +174,14 @@ calls / 20,940,837 developer tokens / 98.6 minutes, that is a projected saving o
 tokens and about 25 minutes of model time **for the Developer role only** — the other roles were not
 measured and are not claimed.
 
-**What dominates after the fold.** The system prompt: 14,814 wire bytes, unchanged, which is now about
-a third of the compacted final prompt (25,152 projected) instead of about 9%. That is the honest
-reading — the fold removes the history term and leaves the fixed term, which is the next lever.
+**What dominates after the fold.** The system prompt: 14,849 wire bytes (14,522 of content; defect
+**F-2** — the earlier 14,783/14,814 contradicted this report's own composition), unchanged, which is
+17.7 % of the compacted wire bytes and 3,791 of the compacted final call's 25,152 projected prompt
+tokens (15.1 %, at the measured 0.2553 tokens/byte) instead of about 9 %. It is the largest single
+*fixed* term — the one re-sent unchanged on every call — but not the largest term left: the preserved
+tail (34.1 %) and the under-floor band (28.7 %) are bigger, and both are history the fold chose not to
+drop. That is the honest reading, and it is why the remaining lever is the call count rather than the
+fixed prompt.
 
 ### 1.2 The tripwire — `src/harness/guard.rs`
 
@@ -298,9 +303,13 @@ Every one of these is a limit of an offline batch, not a hedge:
 3. **`--resume` has not continued a real round.** The skip/re-run decision is pinned; the loop's
    continue path over a real interrupted run is not.
 4. **The 1.5M-token-per-call target is not reached** (projected developer mean 18,300 prompt tokens;
-   three calls 5.22M prompt). The remaining lever is the call count, not the context: the context is
-   already near its information floor (with the verbatim tail removed entirely, iter-2 still projects
-   to 1,873,629 prompt tokens). See FIX-REPORT.md §5.
+   three calls 5.22M prompt). The remaining capability-preserving lever is the call count, not the
+   context: no tail value of this fold reaches the target (with the verbatim tail removed entirely,
+   iter-2 still projects to 1,873,629 prompt tokens), but the tail-0 figure bounds only the fold's own
+   family — a policy that kept nothing but the system prompt and the task would project to 517,368
+   prompt + 325,953 completion = 843,321 for iter-2 and **would** pass, at the cost of the history the
+   role works from. What is refused is that trade, not an impossibility (defect **F-3**). See
+   FIX-REPORT.md §5.
 5. **The frozen round-4 report prose was not audited**, only the one false citation corrected.
 6. **RA-7 is present at `.spec/bevy/ACCEPTANCE-ROUNDS.md:137`** and is closed by D299/D300; the
    earlier "no distinct entry" disposition was wrong (AC-5).

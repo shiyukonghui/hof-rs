@@ -6,7 +6,7 @@
  "produced_at": "2026-10-05",
  "branch": "bevy-core",
  "round_run_in_this_batch": false,
- "scope": "the required corrections of the independent acceptance .spec/bevy/ACCEPTANCE-COST.md (verdict fail): its defects AC-1..AC-14 and the unmet cost criterion. Nothing was staged, committed or pushed; no key was created, copied or printed; rm -rf was never used and no process was killed.",
+ "scope": "the required corrections of the independent acceptance .spec/bevy/ACCEPTANCE-COST.md (verdict fail): its defects AC-1..AC-14 and the unmet cost criterion. Nothing was committed, staged or pushed at the time; the batch's whole change set, including this report, is now COMMITTED as 6290f77 on branch bevy-core (defect F-5: the statement was true when written and is stale as a statement about the tree). no key was created, copied or printed; rm -rf was never used and no process was killed.",
  "gate": {
   "command": "cargo test --offline",
   "exit_code": 0,
@@ -209,7 +209,7 @@
  },
  "cost": {
   "criterion": "below 1,500,000 tokens per Developer call (total_tokens), the one criterion that has never passed",
-  "verdict": "still not met; and this batch measures that no context lever can meet it. Reasoned refusal, not a shaved number.",
+  "verdict": "still not met, and no value of the tail changes that for THIS fold. What the batch measures is that the fold's own family - every superseded message replaced by a note, tail 12 or 0 - cannot meet it, and that the tail-0 figure is not an arithmetic lower bound on every context-only policy (defect F-3, corrected below). Reasoned refusal of a trade, not a shaved number and not an impossibility.",
   "method": "the same method as the previous batch: for every recorded round-4 Developer model call (296 calls) the message prefix the agent held is reconstructed from runs/round4/iter-*/traj/developer.attempt1.json, the wire size is the four-field subset mini sends, the provider's own usage.prompt_tokens is fitted against it per iteration by least squares, the repository's own compact_history folds the same prefix at tail 12, and the compacted bytes are converted with the fitted ratio. Reproduced independently in Python (F:/hof-fix-work/compose.py over the acceptance's /f/hof-acc5-work/measure.py) and by the repository's own test (F:/hof-fix-logs/ctx-repair.out).",
   "per_developer_call": {
    "iter_1": {
@@ -268,7 +268,7 @@
    "note": "the 128-512 byte band the fold leaves verbatim (28.7% of the compacted bytes) is the largest non-tail term, but the note that identifies a 300-byte payload is itself ~280 bytes, so only ~2.1% of it is recoverable by lowering the floor"
   },
   "measured_floor": {
-   "what": "the same fold with the verbatim tail removed entirely (tail 0), i.e. an arithmetic lower bound on any context-only policy",
+   "what": "the same fold with the verbatim tail removed entirely (tail 0). It bounds the fold's own family only - every superseded message is still replaced by a ~200-300 byte note - NOT every context-only policy (defect F-3; see the correction at the end of this block)",
    "projected_prompt": {
     "iter_1": 699900,
     "iter_2": 1873629,
@@ -279,62 +279,44 @@
     "iter_2": 2199582,
     "iter_3": 1516817
    },
-   "verdict": "iter-2 stays at 1.47x the target and iter-3 at 1.01x, so no tail value can meet the criterion; reducing the tail would trade role capability for a criterion that is still failed"
+   "verdict": "iter-2 stays at 1.47x the target and iter-3 at 1.01x, so no tail value of this fold meets the criterion; reducing the tail would trade role capability for a criterion that is still failed"
+  },
+  "f3_correction": {
+   "defect": "F-3: calling the tail-0 figure 'an arithmetic lower bound on any context-only policy' and concluding that 'no context-only policy can make it pass' was stronger than the measurement.",
+   "why": "the tail-0 computation still replaces every superseded message with a note, so it bounds only the fold's own family. At tail 0 for iter-2 the notes plus the under-floor messages are about 5.2 MB of the 7.34 MB compacted total; the system prompt (1,781,880 bytes) and the task (163,800) are never folded.",
+   "what_a_stronger_policy_projects_to": {
+    "policy": "keep nothing but the system prompt and the task on every call",
+    "projected_prompt": {"iter_1": 287657, "iter_2": 517368, "iter_3": 430085},
+    "projected_total_with_unchanged_completion": {"iter_1": 369289, "iter_2": 843321, "iter_3": 516206},
+    "conclusion": "iter-2 would be 0.56x the target: a context-only policy CAN make it pass. What this batch refuses is the trade - a role that no longer sees the history it works from - and that is what the reports now say instead of asserting an impossibility."
+   },
+   "reproduced_by": "D:/hof-live-work/cost_measure.py (own copy) and F:/hof-acc6-work/composition.py (the acceptance's independent re-implementation) both print these integers from runs/round4/iter-*/traj/developer.attempt1.json; the repository's own fold produced the same tail totals in the acceptance's probe crate (27/27)"
   },
   "call_count_lever": {
-   "what": "projection over the first N recorded model calls of each Developer iteration (tail 12)",
+   "what": "projection over the first N recorded model calls of each Developer iteration (tail 12). F-4: the pairs published here before did not reproduce exactly with the disclosed method (up to 3,055 tokens, 0.2%, apart on iter-2 and 771 on iter-1) and the iter-3 conclusion contradicted this block's own first_80. The pairs below are the re-derived ones (my own copy of the method, and the acceptance's independent F:/hof-acc6-work/composition.py, agree exactly); the residual difference from the previous wording is stated rather than hidden.",
    "iter_2": {
-    "first_40": [
-     627275,
-     953228
-    ],
-    "first_60": [
-     1153140,
-     1479093
-    ],
-    "first_70": [
-     1384463,
-     1710416
-    ],
-    "first_80": [
-     1640551,
-     1966504
-    ],
-    "full_125": [
-     2681282,
-     3007235
-    ]
+    "first_40": [625352, 951305],
+    "first_60": [1152836, 1478789],
+    "first_70": [1385772, 1711725],
+    "first_80": [1643606, 1969559],
+    "first_100": [2054879, 2380832],
+    "full_125": [2681282, 3007235]
    },
    "iter_3": {
-    "first_80": [
-     1179140,
-     1265261
-    ],
-    "first_100": [
-     1615969,
-     1702090
-    ],
-    "full_102": [
-     1663325,
-     1749446
-    ]
+    "first_80": [1180267, 1266388],
+    "first_100": [1616118, 1702239],
+    "full_102": [1663325, 1749446]
    },
    "iter_1": {
-    "first_60": [
-     747236,
-     828868
-    ],
-    "full_69": [
-     875647,
-     957279
-    ]
+    "first_60": [746465, 828097],
+    "full_69": [875647, 957279]
    },
-   "verdict": "the target needs roughly 60 model calls for iter-2 (recorded: 125) and roughly 85 for iter-3 (recorded: 102). That is a behavioural change - the role must do the same work in about half the round trips - and no offline batch can justify it; capping at 60 would have cut the recorded iter-2 at 48% of its work",
-   "pairs_are": "[projected prompt tokens, projected total tokens including the unchanged completion tokens]"
+   "verdict": "the target needs roughly 61 model calls for iter-2 (recorded: 125; linear crossing of this block's own first_60 -> first_70 pair) and roughly 91 for iter-3 (recorded: 102; crossing of first_80 -> first_100). F-4: the earlier 'roughly 85 for iter-3' is WITHDRAWN - it contradicted this block's own first_80, whose total (1,266,388 on the re-derived pair, 1,265,261 on the old one) is already below the target, so a linear crossing cannot be above 80. The substantive conclusion survives: the role must do the same work in about half the round trips, which is a behavioural change no offline batch can justify; capping at 61 would have cut the recorded iter-2 at 49% of its work",
+   "counted_basis": "[projected prompt tokens, projected total tokens = that prompt plus the iteration's whole recorded completion tokens] - the batch's own convention, kept so the pairs are comparable with the tables above. On the stricter basis (each partial prefix carrying only the completion tokens of the calls it contains) the crossings move to about 65 calls for iter-2 and stay about 91 for iter-3."
   },
   "further_reduction_found": "none that does not damage the roles' ability to work",
   "measured_alternatives_rejected": [
-   "shortening the fixed system prompt: it is 14,814 wire bytes re-sent on every call, 17.0% of iter-2's compacted bytes. Removing every character of it (which would remove the role's instructions) still leaves iter-2 above the target once the completion tokens are counted, and it is the one term whose removal is known to damage the role",
+   "shortening the fixed system prompt: it is 14,849 wire bytes (14,522 bytes of content) re-sent on every call, 17.7% of iter-2's compacted wire bytes. Removing every character of it (which would remove the role's instructions) still leaves iter-2 above the target once the completion tokens are counted, and it is the one term whose removal is known to damage the role",
    "lowering compact_history_tail: measured, and pointless - tail 0 (1,873,629 prompt, 2,199,582 total for iter-2) is still above the target, so no tail value passes and every reduced value costs coherence",
    "lowering the fold floor from 512 to 64 with a shortened note while keeping the first line (200 chars) and command (160 chars) exactly as they are: iter-2 2,679,708 -> 2,554,700 in the simulator (-4.66%), still 1.7x the target, and it changes a fold the acceptance passed. Recorded as measured and not taken"
   ],
@@ -505,7 +487,11 @@ what failed is the cost criterion, and what was found defective is the `--resume
 the fold lands on the agent's own history, and a set of statements that do not match the tree. This
 batch is exactly those corrections.
 
-Nothing was committed, staged or pushed. No round, engine, network or model call was run. No key was
+Nothing was committed, staged or pushed **at the time this report was written**; the batch's whole
+change set, including this report, is now committed as `6290f77` on `bevy-core` (defect **F-5** of the
+third acceptance: the sentence was true when written, but as a statement about the tree it had become
+false — corrected here rather than left to contradict the reader's `git log`). No round, engine,
+network or model call was run. No key was
 created, copied or printed. `rm -rf` was never used; no process was killed. All helper scripts and logs
 live outside the repository, in `F:/hof-fix-work` and `F:/hof-fix-logs`; the build directory is
 `F:/hof-fix-target`, this batch's own.
@@ -565,10 +551,14 @@ of every phase is in `F:/hof-fix-logs/plants-<id>.log`.
 | P5 | `src/tools/index.rs` | the example list is the old engine's (AC-11) | exit 0 | exit 101, `the_complete_call_examples_are_the_delivered_bevy_tools` | exit 0 | byte-exact |
 | P6 | `tests/repeated_action.rs` | the projection compares lengths, not the digest (AC-13) | exit 0 | exit 101, `the_round_five_counter_compares_the_guards_digest_not_the_length` | exit 0 | byte-exact |
 
-## 5. The cost target: the arithmetic lower bound, and why nothing here shaves a prompt to meet a number
+## 5. The cost target: the fold's own floor, the trade this batch refuses, and why nothing here shaves a prompt to meet a number
 
 The criterion is *below 1,500,000 `total_tokens` per Developer call*. It still fails, and this batch
-adds the measurement that shows **no context-only policy can make it pass**. All numbers come from the
+adds the measurement that shows **no value of this fold's tail can make it pass** — that is the whole
+of the claim, and defect **F-3** corrects the stronger wording this section used to carry ("no
+context-only policy can make it pass"). The tail-0 figure below still replaces every superseded message
+with a note, so it bounds the fold's own family, not every context-only policy; the correction at the
+end of this section states the policy that *would* pass and why it is refused. All numbers come from the
 same method the previous batch used and the acceptance independently reproduced; the repository's own
 test prints them again (`F:/hof-fix-logs/ctx-repair.out`).
 
@@ -583,13 +573,37 @@ At the shipped policy (`compact_history_tail = 12`):
 
 (the "projected total" adds the iteration's *unchanged* completion tokens: 81,632 / 325,953 / 86,121.)
 
-**The floor.** With the verbatim tail removed entirely (`tail = 0`) the projection is 699,900 /
+**The fold's floor.** With the verbatim tail removed entirely (`tail = 0`) the projection is 699,900 /
 **1,873,629** / 1,430,696 prompt tokens, i.e. **781,532 / 2,199,582 / 1,516,817** including completion.
-iter-2 stays at 1.47x the target and iter-3 at 1.01x. So **every** tail value fails the criterion, and
-lowering the tail can only buy a smaller failure at the cost of the model's view of what it just did.
+iter-2 stays at 1.47x the target and iter-3 at 1.01x. So **every** tail value of this fold fails the
+criterion, and lowering the tail can only buy a smaller failure at the cost of the model's view of what
+it just did.
 
-**The system prompt.** It is 14,814 wire bytes re-sent on every call — 17.0 % of iter-2's *compacted*
-bytes and about a third of the compacted final prompt. Removing it entirely is not a real option (it is
+**F-3 — what that floor does *not* bound.** The tail-0 computation still replaces every superseded
+message with a ~200–300-byte note, so it is a lower bound on the fold's own family, **not** on every
+context-only policy. At tail 0 for iter-2 the notes plus the under-floor messages are about 5.2 MB of
+the 7.34 MB compacted total, and the system prompt (1,781,880 bytes) and the task (163,800) are never
+folded at all. A policy that keeps **nothing but the system prompt and the task** — dropped consumed
+pairs outright — projects to:
+
+| recorded Developer call | projected prompt | projected total (+ unchanged completion) | vs the 1.5M target |
+|---|---|---|---|
+| iter-1 | 287,657 | 369,289 | 0.25x |
+| iter-2 | 517,368 | **843,321** | **0.56x — it passes** |
+| iter-3 | 430,085 | 516,206 | 0.34x |
+
+So a context-only policy **can** make the criterion pass. What this batch refuses, and says it refuses,
+is the **trade**: that policy removes the history in which the role sees what it has already done and
+read. The honest sentence is therefore "no policy that keeps the last 12 messages verbatim and notes
+each folded payload meets the target, and anything aggressive enough to meet it removes history the role
+needs to work" — not "no context-only policy can make it pass".
+
+**The system prompt.** It is **14,522 bytes of content / 14,849 wire bytes** (defect **F-2**: the
+quoted 14,783/14,814 was wrong and the report's own composition refutes it — `system_prompt_bytes`
+1,781,880 over the 120 folded calls is exactly 14,849) re-sent on every call — 17.7 % of iter-2's
+*compacted* wire bytes, and 3,791 of the compacted final call's 25,152 projected prompt tokens
+(15.1 %), by the measured 0.2553 tokens-per-wire-byte ratio. Removing it entirely is not a real option
+(it is
 the role's instructions), and even then iter-2 would stay above the target once the 325,953 completion
 tokens are counted. It is exactly the "shave the prompt to hit a number" move the task describes, and
 it is refused.
@@ -605,14 +619,26 @@ verbatim because they are under its 512-byte floor 3,011,316 (28.7 %), and the p
 **The only lever that reaches the criterion is the call count**, and it is behavioural. Projected over
 the first *N* recorded model calls at tail 12 (prompt, then prompt+completion):
 
-* iter-2: 40 → 627,275 / 953,228; **60 → 1,153,140 / 1,479,093**; 70 → 1,384,463 / 1,710,416;
+* iter-2: 40 → 625,352 / 951,305; **60 → 1,152,836 / 1,478,789**; 70 → 1,385,772 / 1,711,725;
   125 → 2,681,282 / 3,007,235.
-* iter-3: **80 → 1,179,140 / 1,265,261**; 100 → 1,615,969 / 1,702,090; 102 → 1,663,325 / 1,749,446.
+* iter-3: **80 → 1,180,267 / 1,266,388**; 100 → 1,616,118 / 1,702,239; 102 → 1,663,325 / 1,749,446.
+* iter-1: 60 → 746,465 / 828,097; 69 → 875,647 / 957,279.
 
-The target therefore needs roughly **60** model calls for iter-2 (recorded 125) and roughly **85** for
-iter-3 (recorded 102): the Developer would have to do the same work in about half the round trips.
-Capping at 60 would have ended the recorded iter-2 at 48 % of its work, and whether a role can reach the
-artifact in that many calls is not an offline question. **Refused, and named as the next batch's job.**
+(F-4: these are the **re-derived** pairs. The wording published here before — iter-2 first_60
+1,153,140 / 1,479,093, first_70 1,384,463 / 1,710,416, first_80 1,640,551 / 1,966,504, iter-3 first_80
+1,179,140 / 1,265,261 — does not reproduce with the disclosed method; the differences are ≤0.26% on
+iter-2 and 771 tokens on iter-1, and the full-iteration values match exactly. The pairs above are what
+my own copy of the method and the acceptance's independent `F:/hof-acc6-work/composition.py` both
+give, and they are what the correction below is computed from.)
+
+The target therefore needs roughly **61** model calls for iter-2 (recorded 125; crossing of the
+1,478,789 at 60 and the 1,711,725 at 70) and roughly **91** for iter-3 (recorded 102; crossing of the
+1,266,388 at 80 and the 1,702,239 at 100): the Developer would have to do the same work in about half
+the round trips. **F-4: the earlier "roughly 85 for iter-3" is withdrawn** — it contradicted this
+section's own first_80, whose total is already *below* the target, so a linear crossing cannot lie
+above 80. Capping at 61 would have ended the recorded iter-2 at 49 % of its work, and whether a role can
+reach the artifact in that many calls is not an offline question. **Refused, and named as the next
+batch's job.**
 
 ## 6. What works, what does not, what I could not verify
 
@@ -627,8 +653,11 @@ literal exit code and the counts in the JSON block, zero warnings, and a `fmt --
 nothing.
 
 **Does not work / does not pass.** The 1.5M-token-per-Developer-call criterion. This batch could not
-make it pass and argues, with the tail-0 floor, that no context-only change can: the lever is the call
-count, which is a behavioural question the next batch must measure on a real round. The four
+make it pass and measures that no value of *this fold's* tail can (its tail-0 figure bounds the
+fold's own family); it does **not** show that no context-only policy can — a policy that kept only the
+system prompt and the task would project iter-2 to 843,321 total tokens (defect F-3, §5). The
+capability-preserving lever is the call count, which is a behavioural question the next batch must
+measure on a real round. The four
 `--resume` behaviours are proven offline against the offline adapter; a live engine resume is untested.
 
 **Could not verify.** Anything that needs a live call: whether the projected prompt tokens are the
@@ -638,8 +667,8 @@ previous engine's tool names in the 177-tool embedded snapshot are never deliver
 but I could not exercise the mcp channel end to end to prove they are never delivered there either.
 
 **The single most important thing for the next batch.** Run one real Developer call and count its
-**model calls**, not just its tokens. The context is already near its information floor — with no
+**model calls**, not just its tokens. No tail value of this fold reaches the target — with no
 verbatim tail at all, iter-2 still projects to 2,199,582 total tokens against a 1.5M target — so the
-only lever left is the number of round trips (125 recorded, roughly 60 needed). Every other item in
+capability-preserving lever left is the number of round trips (125 recorded, roughly 61 needed). Every other item in
 this batch is pinned by a test that goes red when the behaviour is removed; that one is the only way
 the cost criterion can ever pass.

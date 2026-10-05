@@ -11513,3 +11513,31 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
   3. `ROUND-3-REPORT.md:140` 与 `ROUND-4-REPORT-COMPLETE.md:73/:131`（以及同段的 `:130`）是唯一被改的
      round 报告行，全部是台账顺序这一**事实错误**；两份报告的其余正文仍然冻结。
 
+
+## D302 — 第 6 批（实机成本测量）：把实机 Developer 调用的真实代价钉下来，撤回一个会切断真实产物工作的「调用数削减」，并订正第三份验收点名的五处不实陈述
+
+- 日期 / Date: 2026-10-05
+- 触发问题 / Trigger: 第三份独立验收（`.spec/bevy/ACCEPTANCE-FIX.md`）第三次只挂在同一条判据上——**一次 Developer 调用低于 1,500,000 total_tokens**——并列出 F-1..F-5 五处不实陈述。它同时指出：唯一能判定「当前代码是否真的达标」的事情是**跑一次真实 Developer 调用**。本批次就是这次测量，外加那五处订正。
+- 决定的证据（本批次自己测到的）/ Evidence measured here:
+  1. 实机调用（`runs/livecost1/iter-1`，一个在仓库之外的全新 Bevy 工程，`--iterations 1`）：**150 次模型调用 / prompt 3,537,843 / completion 113,277 / total 3,651,120 / 1,278,222 ms（21.30 min）**，结束状态 `LimitsExceeded`（用满了 `agent.step_limit = 150` 的预算），产物有效（`artifact_valid=true`，gate `launchable=true`），工程树 `src/game.rs`、`src/main.rs` 被改、`src/sim_tests.rs` 新增。**判据 2.43 倍失败。**
+  2. 折叠（fold）确实有效但不够：实机每次调用平均 prompt **23,586** token，而 round-4 iter-1 记录的是 **36,878**（−36.0%）；但实机上下文的 token 密度是 **0.323468 token/wire-byte**，而离线投影用的 round-4 iter-2 拟合是 **0.255366**（+26.7%）。也就是说：**离线投影系统地低估了折叠后文本的代价**，因为折叠后留下的多是短 JSON 备注。
+  3. 调用次数是唯一剩下的杠杆，而且它不是「同一动作重复」：实机 150 次调用里有 172 条 shell 命令、**166 条互不相同**，所以 round-5 的 repeated-action tripwire（只数「同一动作、结果逐字节相同」）根本看不见它。最后一次**改动工程文件**发生在第 **44** 次调用（用 PowerShell `Set-Content` 写的 `src/main.rs`）；第 45–150 次（106 次、占总 token 的 62.7%）没有再改动任何工程文件。
+- 考虑的选项与否决 / Options and rejections:
+  1. **写空闲步数预算（write-free step budget）**：调用写出产物后，若连续 N 次模型调用不再写文件就中止 —— **实现并用出厂 `WriteGuardEnvironment` 在四条已录制轨迹上回放，然后撤回**。回放（K=32，指令写入计）结果：实机在第 **76** 次调用中止、总计 **1,357,530**（目标的 0.91 倍，产物树与第 150 次结束时相同）；round-4 iter-1 在第 51 次中止（记录值 1,790,635，未折叠）、其后无写入。
+  2. 只把「写出自己申明的产物」当进展的版本 —— **否决**：它会在 round-4 **iter-2 第 105 次调用**触发，而该调用第 107、110 次才运行 `.hoh/scratch/patch4.py`、`patch5.py` **真实修改 `src/game.rs`**；这是切断真实修复。
+  3. 把「任意可见写入」（含 `.hoh/scratch` 笔记与脚本）都当进展的版本 —— 更保守，iter-2 不再触发；但在 round-4 **iter-3 第 39 次调用**触发，而该窗口（第 7–49 次）里角色在第 **8、22** 次调用用 `[IO.File]::ReadAllText` + `[IO.File]::WriteAllText` **真实改写了 `src/game.rs`** —— shell 写入 guard 看不见，所以仍然会切断真实工作。
+  4. 让 guard 以**产物树指纹**（文件集/大小/mtime）判断进展 —— 这才是唯一安全的信号，但**本批次内否决**：树的变化是 shell 命令产生的，而回放不得执行 shell 命令，所以这条规则**无法**用已录制证据离线证明；它需要又一次实机轮次。（保留为下一批的第一顺位。）
+  5. 极端上下文政策（只保留 system prompt 与 task，丢掉全部历史）—— 会让判据通过：实机 150 次调用 × (14,849+1,365) wire bytes × 0.323468 ≈ **786,685 prompt + 113,277 completion ≈ 899,962**，约 0.60 倍目标。**否决**：那正是批次已声明的 trade（把「我刚做过什么」全部拿走），实测显示这个角色本来就在反复 `Get-Content`/`type` 重读自己的文件，拿掉历史只会让调用数上升；而且它比「削 system prompt」更伤角色。
+  6. 明知会切断真实产物工作仍默认打开规则 —— **否决**：不能上线一条已被自己的回放证明会切掉 `patch4`/`patch5` 或 iter-3 第 22 次 `WriteAllText` 的规则。
+- 两个区间不相交（本批次的核心结论，全部来自已录制证据）/ The two bands do not overlap:
+  * **达标需要 K ≤ 37**：实机累计 token 在第 **81** 次调用时仍为 1,484,934（第 82 次为 1,511,382），而写空闲预算的中止调用 = 最后一次可见写入 + K + 1 = 43 + K + 1，故 K ≤ 37。
+  * **不切断已录制工作至少需要 K ≥ 43**：round-4 iter-3 的可见写入间隔是第 6 次到第 50 次，共 **43** 次调用，而该区间内第 8、22 次确实改写了 `src/game.rs`。
+  * 37 < 43：**同一个规则不可能既达到判据又不切断已记录的产物工作。** 差 6 次调用。
+- 最终选择 / Decision: **不交付行为变更**。写空闲预算的实现连同其测试已撤回（补丁保存在仓库之外 `D:/hof-live-work/write-free-budget-WITHDRAWN.patch`，含 753 行改动），仓库内本批次只留下：五处订正、实机测量、以及这份 D302 与 `LIVE-COST-REPORT.md` 的结论。**这不是「目标不可达」的空话，而是两个由数字给出的区间不相交。**
+- 订正（本文件只能追加，故在此记录对既有条目的更正）/ Corrections that append-only rules require to be recorded here:
+  * **D300** 末尾写「本批次不提交」——现在已不成立：该批次的整套改动（含其报告）已提交为 `6290f77`（这正是第三份验收的 F-5）。
+  * **D301** 的标题与其 §(e) 断言「成本目标**无法**由上下文杠杆达成」——**过强**（第三份验收的 F-3）：tail-0 的数字只约束「每条被折叠消息仍换成一条备注」这一族；只保留 system prompt 与 task 的政策会投影到 843,321（iter-2）并**通过**。本批次订正为：批次拒绝的是**这笔交易**，不是不可能。同理，D301 引用的系统提示词大小 14,814 是错的：实测 **14,522 字节内容 / 14,849 字节 wire**。
+  * **D301(g)** 的「折叠后约三成」——按实测应说：14,849 wire bytes 占 iter-2 折叠后 wire bytes 的 17.7%，占压缩后末次调用 25,152 个投影 token 中的 3,791（15.1%）。
+- 磁盘 / Disk: F: 两次满盘。本批次先用 Python remove-tree（字面路径、逐条验证为 cargo target 目录、先打印实测大小）删除了七个属于本项目自身努力的可再生 target 目录：`F:\hof-acc-target`（9.08 GiB）、`hof-acc5-target`（9.42 GiB）、`hof-cost-target`（9.57 GiB）、`hof-fix-target`（9.96 GiB）、`hof-r3-target`（8.83 GiB）、`hof-r4-target`（10.09 GiB）、`hof-trust-target`（8.96 GiB），合计 **70,774,713,832 字节 = 65.91 GiB**；F: 由 5.6 G 可用变为 67 G 可用。未使用 `rm -rf`、未使用通配符、未删除任何不是 cargo target 目录的东西。此后所有构建与轮次都在 D:（`D:\hof-live-target`、`D:\hof-live-run`）。
+- 纪律 / Discipline: 未提交、未推送；密钥只从仓库之外的 `D:\hof-live-work\live.env` 经 `--env-from-secret` 读入，未写入仓库内任何文件、未写入 `config/hoh.yaml`、未进入 `runs/**` 证据、报告内以 `sk-…` 记；只使用 `bevy-core` 分支；未使用 `git checkout --`（撤回用 `git show HEAD:<path>` 逐字节写回并校验 sha256 与 `git diff --exit-code`）；进程只按显式 pid 处理；辅助脚本全部位于仓库之外。
+- 预期影响与回滚点 / Impact and rollback: 仓库内本批次没有行为变更，因此没有回滚点；两份被订正的报告可各自 revert；`DECISIONS.md` 只追加。下一批的第一顺位是：把写空闲预算改成以**产物树指纹**判断进展（或等价的、能看见 shell 写入的信号），再用一次实机轮次证明它同时满足两个区间。
