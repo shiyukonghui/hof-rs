@@ -17,3 +17,16 @@ scripts/*.sh -text
 # tree that had been normalised.  Pinned to no conversion: a documented byte
 # contract must survive checkout.
 .spec/bevy/PRD.md -text
+
+# CLONE-EVIDENCE: `evidence/**` is a **byte corpus**, and its byte counts are
+# asserted.  `tests/evidence_reproduction.rs` pins the four committed
+# trajectories at 4,166,273 bytes and requires `evidence/index.json`'s own
+# `corpus.bytes` to equal the bytes really on disk, so a checkout that rewrites
+# LF to CRLF changes the numbers the tests read.  The failed acceptance
+# (`.spec/bevy/ACCEPTANCE-EVIDENCE.md`, E-1) proved it: with this machine's
+# system `core.autocrlf=true` and no rule for `evidence/**`, a fresh `git clone`
+# checked the corpus out as CRLF, `cost.trajectories_total_bytes` became
+# 4,197,568 instead of 4,166,273, and two committed tests failed in the clone
+# (exit 101) while the working tree's own gate stayed green.  This is the same
+# class of byte contract as `PRD.md` above, so it is pinned the same way.
+evidence/** -text

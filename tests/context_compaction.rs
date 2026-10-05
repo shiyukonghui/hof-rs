@@ -2,8 +2,11 @@
 //! fold does to the wire bytes a role call would re-send, call by call.
 //!
 //! This is not a round.  It reads `runs/round4/iter-*/traj/developer.attempt1.json`
-//! (recorded evidence, never written), reconstructs the message list the agent
-//! held before each model call, and runs the repository's own
+//! (recorded evidence, never written) and, when that gitignored recording is
+//! absent — as it is in a clone — the byte-identical committed copy
+//! `evidence/cost/round4-iter-*.developer.attempt1.json`.  It reconstructs the
+//! message list the agent held before each model call, and runs the
+//! repository's own
 //! [`hof_rs::harness::compact::compact_history`] over it.  The provider's own
 //! `usage.prompt_tokens` for each call is printed next to the projection.
 //!
@@ -23,13 +26,27 @@ fn repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
+/// The **committed** corpus is preferred: `evidence/cost/<run>-<iteration>.
+/// developer.attempt1.json` is the same byte sequence the round recorded, added
+/// to the tree by the round-1 PRD-coverage batch so the measurement is
+/// reproducible from a clone.  The gitignored `runs/**` recording is the
+/// fallback for a machine that has it but not the corpus; this mirrors
+/// `tests/write_accounting.rs`.  Without the fallback the whole gate went red in
+/// a fresh clone — `runs/**` is gitignored, so `measured` was 0 and the
+/// `assert_eq!(measured, 3)` below failed on a clean checkout.
 fn trajectory(directory: &str, iteration: &str) -> Option<PathBuf> {
-    let path = repo_root()
+    let committed = repo_root()
+        .join("evidence/cost")
+        .join(format!("{directory}-{iteration}.developer.attempt1.json"));
+    if committed.is_file() {
+        return Some(committed);
+    }
+    let recorded = repo_root()
         .join("runs")
         .join(directory)
         .join(iteration)
         .join("traj/developer.attempt1.json");
-    path.is_file().then_some(path)
+    recorded.is_file().then_some(recorded)
 }
 
 fn read_json(path: &Path) -> serde_json::Value {

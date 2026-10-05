@@ -274,8 +274,9 @@ pub const EXPECTED_IDS: &[&str] = &[
 /// published.
 ///
 /// * `P3-goal-x` asked for the **goal entity's own world position** as
-///   reflectable state.  The frozen contract (§3-C2, and 附录 B2.1) declares
-///   eight surfaces and none of them is a goal; adding one would be a contract
+///   reflectable state.  The frozen contract (§3-C2's six rows, plus the frame
+///   counter 附录 B2.1 adds as `第七个可反射语义面`) declares **seven**
+///   surfaces and none of them is a goal; adding one would be a contract
 ///   change, which this batch has no authority to make.  What the harness can
 ///   observe is the *player's* position at the win frame
 ///   (`e3_win_position`), which locates the win in the world; that is what
@@ -283,21 +284,27 @@ pub const EXPECTED_IDS: &[&str] = &[
 ///   [`SurfaceStatus::Unobservable`] item *outside* the PRD denominator, and it
 ///   is reported as such rather than dropped.
 /// * `S1-deterministic-step` asked for a persisted late-round liveness step under
-///   `.hoh/deterministic/raw/`.  That one **is** observable and **is** closed by
-///   this batch: the `e3_process_liveness` battery step reads the game's own
-///   frame counter, waits, reads it again, requires the frame count to advance by
-///   the number asked for, and persists `raw/e3_process_liveness.json`.  It is
-///   what decides `Q-startup` and `B2.1`.
+///   `.hoh/deterministic/raw/`.  That one **is** observable, and this batch
+///   **implements** it — but it has **never run against a real game**: no round
+///   has run the ten-step battery, so no `raw/e3_process_liveness.json` exists
+///   and the disposition is *implemented, pending its first real observation*,
+///   not "closed by an observation".  The `e3_process_liveness` battery step
+///   reads the game's own frame counter, waits, reads it again, requires the
+///   frame count to advance by the number asked for, and persists
+///   `raw/e3_process_liveness.json`.  Once it runs, it is what decides
+///   `Q-startup` and `B2.1`.
 pub const RESIDUALS: &[(&str, &str)] = &[
     (
         "P3-goal-x",
-        "not a PRD surface: the goal entity's own position is not one of the eight frozen \
-         contract surfaces, and adding a ninth is a contract change. The harness observes the \
+        "not a PRD surface: the goal entity's own position is not one of the seven frozen \
+         contract surfaces, and adding an eighth is a contract change. The harness observes the \
          player's world position at the win frame instead, which is what decides P3",
     ),
     (
         "S1-deterministic-step",
-        "closed by the e3_process_liveness battery step, which decides Q-startup and B2.1",
+        "implemented by the e3_process_liveness battery step, which is projected to decide \
+         Q-startup and B2.1; pending its first real observation, because no round has run the \
+         ten-step battery and no raw/e3_process_liveness.json has ever been produced",
     ),
 ];
 

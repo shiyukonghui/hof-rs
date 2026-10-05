@@ -49,13 +49,29 @@ fn repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
+/// The **committed** corpus is preferred: `evidence/cost/<run>-<iteration>.
+/// developer.attempt1.json` is the same byte sequence the round recorded, added
+/// to the tree by the round-1 PRD-coverage batch so the measurement is
+/// reproducible from a clone.  The gitignored `runs/**` recording is the
+/// fallback, and a recording that is in neither place makes the caller skip with
+/// a printed reason — a fresh clone has no `runs/**`, and a gate that goes red
+/// there proves nothing about the tree.  Only round 4's three Developer calls are
+/// committed (see `evidence/index.json`'s `not_reproducible_from_the_repository`
+/// list); the round-2 and round-3 measurements therefore run on the machine that
+/// recorded them and print that they were skipped anywhere else.
 fn trajectory(directory: &str, iteration: &str) -> Option<PathBuf> {
-    let path = repo_root()
+    let committed = repo_root()
+        .join("evidence/cost")
+        .join(format!("{directory}-{iteration}.developer.attempt1.json"));
+    if committed.is_file() {
+        return Some(committed);
+    }
+    let recorded = repo_root()
         .join("runs")
         .join(directory)
         .join(iteration)
         .join("traj/developer.attempt1.json");
-    path.is_file().then_some(path)
+    recorded.is_file().then_some(recorded)
 }
 
 fn read_json(path: &Path) -> serde_json::Value {
@@ -360,8 +376,14 @@ fn project(path: &Path, cap: usize) -> Projection {
 /// rather than silently passing.
 #[test]
 fn the_recorded_round_two_developer_really_repeats_one_action_past_the_cap() {
-    let path =
-        trajectory("round2", "iter-1").expect("the recorded iteration-1 developer trajectory");
+    let Some(path) = trajectory("round2", "iter-1") else {
+        println!(
+            "skipped: runs/round2/iter-1/traj/developer.attempt1.json is not committed and not in \
+             evidence/cost/, so round 2's recording is not on this machine (a clone cannot measure \
+             it; see evidence/index.json's not_reproducible_from_the_repository)"
+        );
+        return;
+    };
     let projection = project(&path, 15);
     assert!(
         projection.tool_calls > 100,
@@ -395,8 +417,13 @@ fn the_recorded_round_two_developer_really_repeats_one_action_past_the_cap() {
 /// it.
 #[test]
 fn the_repeated_success_tripwire_fires_on_the_recorded_grind() {
-    let path =
-        trajectory("round2", "iter-1").expect("the recorded iteration-1 developer trajectory");
+    let Some(path) = trajectory("round2", "iter-1") else {
+        println!(
+            "skipped: runs/round2/iter-1/traj/developer.attempt1.json is not committed and not in \
+             evidence/cost/, so the recorded grind is not on this machine"
+        );
+        return;
+    };
     let projection = project(&path, 15);
     println!(
         "iter-1: api_calls={} tool_calls={} observed_prompt_tokens={} window_max={:?} \

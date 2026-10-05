@@ -162,7 +162,7 @@
     "id": "Q-startup",
     "status": "gap",
     "evidence": "battery steps: play_scene_ready, e3_process_liveness",
-    "reason": "the recorded round-4 pass predates e3_process_liveness, so the harness recorded no step `e3_process_liveness` for it. CLOSED for any round that runs the ten-step battery."
+    "reason": "the recorded round-4 pass predates e3_process_liveness, so the harness recorded no step `e3_process_liveness` for it. IMPLEMENTED, PENDING ITS FIRST REAL OBSERVATION: a round that runs the ten-step battery is projected to decide it, but no such round has run and no `raw/e3_process_liveness.json` has ever been produced (defect E-2)."
    },
    {
     "id": "Q-not-required",
@@ -180,7 +180,7 @@
     "id": "B2.1",
     "status": "gap",
     "evidence": "battery steps: e3_process_liveness",
-    "reason": "same as Q-startup: the recorded round predates the step that decides it. CLOSED for any round that runs the ten-step battery."
+    "reason": "same as Q-startup: the recorded round predates the step that decides it. IMPLEMENTED, PENDING ITS FIRST REAL OBSERVATION: no round has run the ten-step battery (defect E-2)."
    },
    {
     "id": "B2.2",
@@ -228,18 +228,18 @@
     "disposition": "NAMED, NOT CLOSED — and it is not a PRD surface",
     "what_the_tester_asked_for": "the goal entity's own world position as reflectable state, so that 'the player reached the goal' is checkable beyond the win flag flipping",
     "status": "unobservable within the frozen contract",
-    "why": "the frozen contract (§3-C2, and 附录 B2.1) declares EIGHT reflectable semantic surfaces and none of them is a goal. Adding a ninth is a contract change, which this batch has no authority to make; the PRD and the tool list are not edited here.",
+    "why": "the frozen contract (§3-C2's six rows plus the frame counter 附录 B2.1 adds as `第七个可反射语义面`) declares SEVEN reflectable semantic surfaces and none of them is a goal. Adding an eighth is a contract change, which this batch has no authority to make; the PRD and the tool list are not edited here.",
     "what_the_harness_CAN_show": "the PRD's own P3 IS decided: `e3_win_flag` (won false -> true, one way) plus `e3_win_position` — a player transform sample at or after the win frame, so the win is located in the world. That is the surface P3 names; the residual is the goal's own entity.",
     "published_at": "src/adapter/bevy/prd_surfaces.rs::RESIDUALS, and here",
     "counted_in_the_denominator": false
    },
    {
     "id": "S1-deterministic-step",
-    "disposition": "CLOSED — by a real observation, not by loosening the definition",
+    "disposition": "IMPLEMENTED, PENDING ITS FIRST REAL OBSERVATION — not by loosening the definition",
     "what_the_tester_asked_for": "a persisted late-round liveness step under .hoh/deterministic/raw/",
-    "status": "closed for every round that runs the ten-step battery",
+    "status": "implemented and unit/fake-driver tested; it has never executed against a real game, so no `raw/e3_process_liveness.json` exists yet. A round that runs the ten-step battery is projected to decide the two surfaces below with it.",
     "how": "the new tenth battery step `e3_process_liveness` (observation `liveness`) runs LAST: bevy_wait_frames(1) reads the game's own frame counter, bevy_wait_frames(8) asks for eight more, and the step requires the delta to be at least eight. It writes Observation::frames and persists `.hoh/deterministic/raw/e3_process_liveness.json` with the verbatim calls.",
-    "why_it_is_a_real_observation": "it uses the frozen `hof_game::contract::FrameCounter` surface and the existing `bevy_wait_frames` tool: no new contract surface, no new tool, no new configuration. A game whose counter does not move makes the step `ok = false` with the reason.",
+    "why_it_is_a_real_observation_once_it_runs": "it uses the frozen `hof_game::contract::FrameCounter` surface and the existing `bevy_wait_frames` tool: no new contract surface, no new tool, no new configuration. A game whose counter does not move makes the step `ok = false` with the reason.",
     "decides": [
      "Q-startup",
      "B2.1"
@@ -251,12 +251,12 @@
    {
     "id": "P3-goal-x",
     "status": "unobservable within the frozen contract",
-    "reason": "the goal entity's own position is not one of the eight frozen contract surfaces; adding a ninth is a contract change. The harness observes the player's world position at the win frame instead, which is what decides P3."
+    "reason": "the goal entity's own position is not one of the seven frozen contract surfaces; adding an eighth is a contract change. The harness observes the player's world position at the win frame instead, which is what decides P3."
    },
    {
     "id": "S1-deterministic-step",
-    "status": "closed by e3_process_liveness",
-    "reason": "closed by the e3_process_liveness battery step, which decides Q-startup and B2.1."
+    "status": "implemented, pending its first real observation",
+    "reason": "the e3_process_liveness battery step is implemented and unit/fake-driver tested and is projected to decide Q-startup and B2.1; no round has run the ten-step battery, so no such observation has been produced yet (defect E-2)."
    }
   ]
  },
@@ -554,8 +554,21 @@
    "tests/prd_coverage.rs (the anchor test, the denominator test, the line test)",
    "tests/write_accounting.rs (reads evidence/cost/ first; the D-1 floor test)",
    ".spec/bevy/LIVE-COST-REPORT.md and .spec/bevy/WRITE-ACCOUNTING-REPORT.md (only where factually wrong: the D-1 bound)",
-   "DECISIONS.md (D305 appended only: 1295073 -> 1306821 bytes, the old bytes are a byte prefix of the new file)"
+   "DECISIONS.md (D305 appended only: 1295073 -> 1306821 bytes, the old bytes are a byte prefix of the new file)",
+   ".gitattributes (`evidence/** -text` added after the failed acceptance proved a fresh clone rewrote the corpus to CRLF; defect E-1)",
+   "evidence/index.json and evidence/README.md (corrected against the artefacts for defects E-2 and E-5..E-7)",
+   ".spec/bevy/COVERAGE-EVIDENCE-REPORT.md (this file: the E-2..E-4 and E-7 wordings corrected in the machine block and the prose)"
   ],
+  "corrections_after_acceptance_evidence": {
+   "what": "`.spec/bevy/ACCEPTANCE-EVIDENCE.md` judged this batch fail and listed defects E-1..E-7. Each was corrected against the artefact, not against the prose; the full disposition and the reproductions are in `.spec/bevy/CLONE-AND-LIVE-REPORT.md`.",
+   "E-1": "FIXED: `.gitattributes` now pins `evidence/** -text`, the same way it already pinned `.spec/bevy/PRD.md`. Before the pin a fresh `git clone` checked the corpus out as CRLF and two committed tests failed there (exit 101).",
+   "E-2": "FIXED: every claim that `S1-deterministic-step` was closed \"by a real observation\" now reads *implemented, pending its first real observation* — in this report's machine block and prose, in `evidence/index.json`'s `coverage.with_the_new_step`, and in `src/adapter/bevy/prd_surfaces.rs::RESIDUALS`. That is the state of the *committed* evidence; the follow-up live round (`.spec/bevy/CLONE-AND-LIVE-REPORT.md`) then produced the step's first real observation and `result.json.prd_coverage.surfaces` read 15/19 with `Q-startup` and `B2.1` verified.",
+   "E-3": "FIXED: the frozen contract's reflectable semantic surfaces are **seven** (six §3-C2 rows plus the frame counter 附录 B2.1 adds as `第七个可反射语义面`), not eight; adding the goal would be an eighth, not a ninth. Corrected in the machine block, in §3 and in `prd_surfaces.rs`.",
+   "E-4": "FIXED: `evidence/index.json` carries **18** headline entries, not 14 (this report's §5 prose, the machine block's `unverified` list, and §0). The index's own test asserts `headlines.len() >= 15`.",
+   "E-5": "FIXED: the `observation.round4.raw_calls` entry no longer says \"one JSON-RPC request per file\". The 57 files are one semantic call each, fanning out into 2 sub-requests (44 files) or 3 (13 files), every sub-request reusing the call's own sequence id; the entry now carries that histogram and marks its `files` path as a directory.",
+   "E-6": "FIXED: `gate.counts_at_the_start_tree` (782/0/6/788) is a HISTORICAL measurement at the start commit 05604b9 and is now marked `repo_independent: false`, with the relationship `788 + 18 added - 0 removed = 806`, which is what the named command returns on this tree.",
+   "E-7": "FIXED: `evidence/` as a directory holds **122 files / 4,798,249 bytes**; the corpus the counts refer to is the **118 files / 4,771,139 bytes** the six data groups add up to, deliberately excluding `evidence/index.json`, `evidence/README.md` and the two `evidence/tools/*.py` (**4 files / 27,110 bytes**). Both numbers are now stated as such in this report and in `evidence/README.md`, whose total row said only 118 without naming the exclusion."
+  },
   "not_modified": "REQUIREMENTS.md, PRD.md, DESIGN-OVERVIEW.md, DESIGN-DETAIL.md, the spike reports, the batch reports, ACCEPTANCE-*.md, ROUND-*.md, COST-REPORT.md, config/hoh.yaml",
   "new_dependencies": "none",
   "source_code_behaviour_change": "none that changes a verdict: the surface coverage is published, not enforced; the only new battery work is one eight-frame wait at the end of a pass"
@@ -566,7 +579,7 @@
   "Whether the two record-4 gaps close on a real run: the recorded evidence cannot show it, because the recorded round predates the step.",
   "Whether an iteration-2-shaped Developer call is under the cost target — unchanged from the previous batch, and this batch ran no call.",
   "The lever pairs and the compact_history projections: not re-derived here.",
-  "That the committed corpus is complete for every headline: index.json names a committed file for each of the 14 headlines it lists, and the test proves those files exist, but a headline nobody indexed would not be caught."
+  "That the committed corpus is complete for every headline: index.json names a committed file for each of the 18 headlines it lists, and the test proves those files exist, but a headline nobody indexed would not be caught."
  ],
  "single_most_important_thing_next_batch": "Run ONE live round on this tree and read `result.json.prd_coverage.surfaces`. The figure is now a function of the frozen PRD's own 19 surfaces, the denominator cannot move between rounds, and the only expected gap is the four named unobservable items (C5, C6, Q-scale, Q-not-required). If a live round shows Q-startup or B2.1 red, the liveness step is measuring something real and failing honestly — which is the first time this project would have a PRD coverage figure that can be compared with the next round's. Do NOT treat 15/19 as 'five items short': four of the five are non-requirements or out of the harness's reach BY DESIGN, and they are named so that nobody can mistake them for missing claims."
 }
@@ -596,24 +609,29 @@ PRD. It is now a function of **19 stable ids anchored to the frozen `PRD.md`** �
 harness's own battery evidence, by a frozen invariant recomputed by a named test, or by an explicitly
 named reason why it cannot be decided. Testers can write two claims or twenty and the denominator does
 not move. The two gaps the acceptance left open are now **decided**: `S1-deterministic-step` is
-**closed by a new, real, persisted observation** (`e3_process_liveness`, the tenth battery step), and
+**implemented and unit/fake-driver tested, pending its first real observation** (`e3_process_liveness`,
+the tenth battery step — no round has run it, so it is a projection and not yet an observation, defect
+E-2), and
 `P3-goal-x` is **named as unobservable within the frozen contract** rather than silently dropped —
-because the thing it asks for would be a ninth reflectable surface, and that is a contract change this
+because the thing it asks for would be an eighth reflectable surface, and that is a contract change this
 batch has no authority to make.
 
 **Criterion (4), reproducibility.** The acceptance measured the recorded evidence at **11,229 files /
 12,775,066,006 bytes / 11.898 GiB, entirely under a gitignored path** (R-2), and the project's own
 criteria include keeping evidence and being reproducible. The whole tree is far too large to commit;
-the parts the conclusions rest on are not. **`evidence/` is 118 files / 4,771,139 bytes (4.55 MiB)**:
+the parts the conclusions rest on are not. **`evidence/` holds 122 files / 4,798,249 bytes
+(4.58 MiB)**; the corpus those bytes are counted as is the **118 files / 4,771,139 bytes** the six
+data groups below add up to, which deliberately excludes `evidence/index.json`, `evidence/README.md`
+and the two `evidence/tools/*.py` files (4 files / 27,110 bytes — defect E-7):
 the four Developer trajectories the cost analysis reads (4,166,273 bytes, byte-identical to their
 `runs/**` originals), the round-4 workspace-side battery evidence (222,299 bytes), the round's own
 evidence directory including its 57 raw MCP→BRP call files (326,506 bytes), the three iterations'
 `result.json` + `evidence.json` (53,776 bytes) and the round's `meta.json` (2,285 bytes).
-`evidence/index.json` states, for each of 14 headline numbers, **which committed files reproduce it and
+`evidence/index.json` states, for each of 18 headline numbers, **which committed files reproduce it and
 by what command**, and which conclusions **cannot** be reproduced from the repository. A new test,
 `tests/evidence_reproduction.rs`, re-derives the headlines from the committed files alone;
 `tests/write_accounting.rs` now reads `evidence/cost/` first and only falls back to `runs/**`.
-Nothing key-shaped is committed: every one of the 118 files was scanned with the repository's own
+Nothing key-shaped is committed: every one of the 118 corpus files was scanned with the repository's own
 shape rule and is clean.
 
 ## 1. What I did, and with what
@@ -684,8 +702,8 @@ really differ (`5` vs `8`), and then asserts that both carry the same surface de
 
 The Tester asked for the **goal entity's own world position as reflectable state**, so that "the player
 reached the goal" is checkable beyond the win flag flipping. The frozen contract
-(`PRD.md` §3-C2, and 附录 B2.1 which took it from six surfaces to seven) declares **eight** reflectable
-semantic surfaces, and **none of them is a goal**. Adding a ninth is a contract change — a re-frozen
+(`PRD.md` §3-C2, and 附录 B2.1 which took it from six surfaces to seven) declares **seven** reflectable
+semantic surfaces, and **none of them is a goal**. Adding an eighth is a contract change — a re-frozen
 contract hash, a re-frozen tool list, and the decision process the PRD's freeze rule names. This batch
 has no authority to make that change, so it does not.
 
@@ -703,13 +721,17 @@ actually states is that change, not a relaxation of it. Nothing in the frozen do
 tool was removed, and the residual is published so a reader can disagree with the disposition by
 reading the reason rather than by guessing.
 
-## 4. `S1-deterministic-step`: closed by a real observation
+## 4. `S1-deterministic-step`: implemented, pending its first real observation
 
 The Tester asked for **a persisted late-round liveness step under `.hoh/deterministic/raw/`**, and the
 recorded round had none: the process being alive at the end of the pass was an assumption.
 
-It is now a measurement. The tenth battery step, `e3_process_liveness` (observation name `liveness`,
-supporting the stable id `Q-startup`), runs **last**:
+It is now **implemented and unit/fake-driver tested — but it has never run against a real game**, so
+there is no committed `.hoh/deterministic/raw/e3_process_liveness.json` and no round has ever produced
+one. This section therefore describes code, not a measurement (defect E-2 of the acceptance: the
+batch's earlier wording published this as closed "by a real observation"). The tenth battery step,
+`e3_process_liveness` (observation name `liveness`, supporting the stable id `Q-startup`), runs
+**last**:
 
 1. `bevy_wait_frames(1)` — reads the game's own `hof_game::contract::FrameCounter`;
 2. `bevy_wait_frames(8)` — asks the game for eight more frames;
@@ -728,7 +750,9 @@ plant P2 shows exactly that shape going red.
 
 ## 5. What was added for reproducibility, and what it buys
 
-`evidence/` — **118 files / 4,771,139 bytes / 4.55 MiB**:
+`evidence/` — the corpus is **118 files / 4,771,139 bytes / 4.55 MiB**; the directory as a whole
+holds **122 files / 4,798,249 bytes** because `index.json`, `README.md` and the two `tools/*.py` files
+are committed under it too and are deliberately not part of the corpus count (defect E-7):
 
 | group | files | bytes | what |
 |---|---|---|---|
@@ -737,15 +761,19 @@ plant P2 shows exactly that shape going red.
 | `evidence/observation/round4/round/` | 70 | 326,506 | `runs/bevy-round4/**`: the 57 raw MCP→BRP call files, the readings, the gate, the launch facts, the launch ledger |
 | `evidence/observation/round4/iter-{1,2,3}/` | 6 | 53,776 | each iteration's `result.json` and the Tester's `evidence.json` |
 | `evidence/observation/round4/meta.json` | 1 | 2,285 | the round's own meta |
-| `evidence/index.json`, `evidence/README.md`, `evidence/tools/` | 3 | — | the index, the reader's guide and the two tools |
+| **corpus total (the six data groups)** | **118** | **4,771,139** | the corpus `index.json`'s `corpus` field and its test are about |
+| `evidence/index.json`, `evidence/README.md`, `evidence/tools/` (NOT in the corpus) | 4 | 27,110 | the index, the reader's guide and the two tools |
 
-`evidence/index.json` carries 14 headline entries, each with its files and its command, and a
+`evidence/index.json` carries 18 headline entries, each with its files and its command, and a
 `not_reproducible_from_the_repository` list. The honest boundary is:
 
 * **Reproducible from a clone** — the four trajectories' token totals and ratios; the corrected write
   profiles (directive calls, project calls, failed attempts, the write-free window); the withdrawn
   budget's K = 32 replay on all four recordings; the three band edges including the corrected
   **K ≥ 52**; the raw call files' shape; the Tester's own round-4 figures; and the coverage figure.
+  This requires `.gitattributes` to pin `evidence/** -text` (defect E-1): without that pin a machine
+  whose `core.autocrlf` is true checks the corpus out as CRLF, the byte counts move, and two committed
+  tests fail in the clone while the working tree stays green.
 * **Not reproducible from a clone, and stated** — the provider's per-call usage for any call outside
   the four committed trajectories (and therefore every figure resting on the other rounds and roles);
   byte-level identity of what a successful shell write put on disk; whether the withdrawn budget or a
@@ -816,8 +844,9 @@ against in P4.
 ## 8. What worked, what does not, what I could not verify
 
 **Worked.** The denominator is now a constant with a test that proves it does not move when the Tester
-changes; every item carries its evidence or its reason; the two open gaps are decided — one closed by
-an observation that uses nothing new, one named as unobservable with the reason and kept out of the
+changes; every item carries its evidence or its reason; the two open gaps are decided in **code** — one
+implemented (`e3_process_liveness`, unit/fake-driver tested and pending its first real observation, not
+yet closed by one), one named as unobservable with the reason and kept out of the
 denominator. The cost analysis now runs from a clone: `tests/write_accounting.rs` prefers
 `evidence/cost/`, and its numbers are the same numbers, because the committed files are byte-identical
 to the recordings. The corrected global band floor is no longer a sentence in a report but a property
@@ -835,7 +864,9 @@ over.
 **Could not verify.** The new battery step has **never run against a real game**: no engine is
 reachable offline, and this batch was instructed to run no round. Its unit surface, its fake-driver
 phase, its persistence path and its failure shape are tested; the live path is not, and that is the
-one thing about this batch that a green gate does not prove. I also did not re-derive the lever pairs
+one thing about this batch that a green gate does not prove. The disposition is therefore
+**implemented, pending its first real observation**, everywhere it is stated (defect E-2). I also did
+not re-derive the lever pairs
 or the `compact_history` projections, and the corpus cannot be shown complete for a headline nobody
 indexed.
 
@@ -848,5 +879,5 @@ items**; if `Q-startup` or `B2.1` comes back red, the liveness step is measuring
 failing honestly — which is a better outcome than the assumption it replaced. And do not read `15/19`
 as "five items short": four of the five are non-requirements or beyond an in-process observer's reach
 **by design**, and the registry says so item by item. The fifth, `P3-goal-x`, is the one decision this
-batch deliberately left to a human: closing it means adding a ninth reflectable surface, which is a
+batch deliberately left to a human: closing it means adding an eighth reflectable surface, which is a
 contract change, and that is a decision for whoever owns the frozen PRD — not for a subagent.

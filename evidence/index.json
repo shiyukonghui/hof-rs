@@ -2,7 +2,7 @@
  "schema": "hof-rs / evidence index for the round-1 PRD-coverage batch",
  "branch": "bevy-core",
  "produced_at": "2026-10-05",
- "what_this_is": "For every headline number in .spec/bevy/WRITE-ACCOUNTING-REPORT.md, .spec/bevy/LIVE-COST-REPORT.md, .spec/bevy/ROUND-4-REPORT-COMPLETE.md and .spec/bevy/COVERAGE-EVIDENCE-REPORT.md: the committed files that reproduce it and the command that does it. Every path here is tracked, so a clone can re-derive the numbers without runs/**.",
+ "what_this_is": "For every headline number in .spec/bevy/WRITE-ACCOUNTING-REPORT.md, .spec/bevy/LIVE-COST-REPORT.md, .spec/bevy/ROUND-4-REPORT-COMPLETE.md and .spec/bevy/COVERAGE-EVIDENCE-REPORT.md: the committed files that reproduce it and the command that does it. Every file path here is tracked, so a clone can re-derive the numbers without runs/**; one entry (`observation.round4.raw_calls`) names the committed `calls/` directory rather than its files individually, and all 57 files inside it are tracked.",
  "corpus": {
   "root": "evidence/",
   "files": 118,
@@ -155,7 +155,7 @@
   {
    "id": "coverage.with_the_new_step",
    "value": {"verified": 15, "total": 19, "gap": 0, "unobservable": 4, "decidable": 15},
-   "meaning": "what a round that runs the ten-step battery scores; the four unobservable items are C5, C6, Q-scale, Q-not-required and are named gaps, not missing claims",
+   "meaning": "a CODE PROJECTION, not an observation: what a round that runs the ten-step battery would score, computed by feeding every registered step an ok=true outcome. The four unobservable items are C5, C6, Q-scale, Q-not-required and are named gaps, not missing claims. `e3_process_liveness` is implemented and unit/fake-driver tested but has never executed against a real game, so no committed round has produced this figure (defect E-2).",
    "files": ["src/adapter/bevy/prd_surfaces.rs", "src/adapter/bevy/round.rs"],
    "command": "cargo test --offline --test evidence_reproduction the_full_battery_scores_the_registry",
    "repo_independent": true
@@ -175,8 +175,9 @@
   },
   {
    "id": "observation.round4.raw_calls",
-   "value": {"files": 57},
-   "meaning": "the raw MCP->BRP exchanges behind every E3 observation, one JSON-RPC request per file",
+   "value": {"files": 57, "sub_requests_per_file": {"2": 44, "3": 13}, "widest_file": "0002-bevy_wait_frames.json", "widest_file_ids": [2, 2, 2]},
+   "meaning": "the raw MCP->BRP exchanges behind every E3 observation. Each file is ONE semantic tool call whose BRP sub-requests are separate JSON-RPC exchanges, not one request per file: 44 of the 57 files carry 2 sub-requests and 13 carry 3, and every sub-request of a file reuses that call's own sequence id (which a JSON-RPC batch may not do, so no file is a batch). `requests`/`responses` are arrays inside each file.",
+   "path_kind": "directory (the 57 files inside it are tracked)",
    "files": ["evidence/observation/round4/round/calls"],
    "command": "cargo test --offline --test evidence_reproduction the_committed_raw_calls_are_single_jsonrpc_requests",
    "repo_independent": true
@@ -192,9 +193,11 @@
   {
    "id": "gate.counts_at_the_start_tree",
    "value": {"passed": 782, "failed": 0, "ignored": 6, "listed": 788},
+   "meaning": "a HISTORICAL measurement, not a reproducible one: it is the gate at THIS TREE's start commit 05604b9, before the PRD-coverage batch added 18 tests. The command named here does not return it: on the tree that carries this index the same command lists 806, and 788 + 18 added - 0 removed = 806. `repo_independent` is false because no committed artefact reproduces 788; its only source is the acceptance document that asserts it (defect E-6).",
    "files": [".spec/bevy/ACCEPTANCE-ACCOUNTING.md"],
    "command": "cargo test --offline -- --list",
-   "repo_independent": true
+   "repo_independent": false,
+   "reproducible_relationship": {"listed_now": 806, "added": 18, "removed": 0, "command": "cargo test --offline -- --list"}
   }
  ],
  "not_reproducible_from_the_repository": [
