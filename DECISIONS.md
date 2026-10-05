@@ -11705,3 +11705,22 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 - 纪律 / Discipline: **未提交、未推送**（由上层决策代理提交）；只用 `bevy-core` 分支；**未运行任何 round、Developer 调用、模型调用或引擎**；**未创建、复制或打印任何 API key**；未改任何代码、测试、`evidence/**`、注册表、battery、liveness 步骤、`.gitattributes` 行尾钉或任何被量数字；未使用 `rm -rf`；未使用 `git checkout --`；未构造未展开变量拼出的路径；辅助脚本位于仓库之外 `F:\hof-final-work\`；先查磁盘（F: 37 GiB、D: 154 GiB 可用）再构建；构建目录为本批自己的 `D:/hof-final-target`，一次只跑一个测试进程。
 - 证据 / Evidence: 见 `.spec/bevy/FINAL-DOC-REPORT.md` 与其首个机器块（门禁字面退出码与计数、H-1..H-4 的原文/订正文/亲算值、clone-safety 句的处置、改动文件清单），以及亲算的 pin 复核（`b2053ad1`、`889033a5`、`7c09a7ad`、`423036d0`、`cebea19e`）与 `evidence/` 的三个总数（118/4,771,139、4/27,829、122/4,798,968 均不变）。
 - 预期影响与回滚点 / Impact and rollback: 只改三份批次报告（`RECORD-CORRECTION-REPORT.md`、`HARDENING-REPORT.md`、`TOTALS-CORRECTION-REPORT.md`）、新增 `FINAL-DOC-REPORT.md` 与本条目；无代码/测试/语料/目录字节/注册表/battery/liveness/`.gitattributes`/成本机制改动。回滚即还原这些文档与本条目。
+
+## D311 — 追加：ACCEPTANCE-FINAL-DOC 的 FD-1 订正（机器块 clone-safety 句就地标注），并限定 D309 的「两处已更新」措辞
+
+- 日期 / Date: 2026-10-06
+- 触发问题 / Trigger: 独立验收 `.spec/bevy/ACCEPTANCE-FINAL-DOC.md` 对 H-1..H-4 文档订正批判 **fail**，且只有**一条**缺陷 **FD-1**：`FINAL-DOC-REPORT.md` 自称「三处都已订正」，把 `HARDENING-REPORT.md:156`（`clone_safety.why_they_cannot_be_made_clone_safe`）列为其中之一，但该行与基线 `4a85269` 逐字节相同（两版该行 sha256 均为 `c1508735134bcdf1ef69c95d42087995043da6c8c19a9b6fcab83df50feb6422`，`git diff 4a85269 96acd34 -- .spec/bevy/HARDENING-REPORT.md` 在 156 行无 hunk），并且该字段仍以「五个都无法 clone-safe」收尾、无标注、只给 `evidence/` 一条路径。验收给出两条允许的修法（A：订正 156 行；B：撤回报告的三处说法）；并另记两条不阻塞项：D309 的「两处 pin 已更新为新值」（写出时只动了一处，H-1 之后才对树碰巧为真）与 RF-3（字段名仍断言不可能）。
+- 考虑的选项与否决 / Options and rejections:
+  1. **选项 B：撤回 `FINAL-DOC-REPORT.md` 的三处说法，只改报告** —— 否决：那只去掉「夸大了做了什么」，`HARDENING-REPORT.md:156` 的「不可能」框架仍原样站着，正是 FD-1 指出的两半缺陷之一；机器块又是读者或工具最可能当作摘要的地方。
+  2. **选项 A：就地订正 156 行，保留原文并加 `SUPERSEDED`，写明 RH-4 的替代方案与代价** —— 采纳。
+  3. **同时把 JSON 键名 `why_they_cannot_be_made_clone_safe` 改名** —— 否决：键名被 `FINAL-DOC-REPORT.md`（`where`/`change_site`）与验收报告按名引用；本批不改 `FINAL-DOC-REPORT.md`，改名会让它指向一个不存在的键，制造新的 H-2 类假引用。验收自己把 RF-3 列为「即使 FD-1 修好仍存在」的残留风险，故保留键名、只订正字段内容，并在 `FD1-REPORT.md` 中把 RF-3 记为已知残留风险。
+  4. **删掉旧句而不是标注** —— 否决：沿用 D308/D309/D310 惯例，批次报告是当时状态的历史，保留原文并就地标注取代者。
+  5. **就地改 D309:11686 的「两处…已更新为新值」** —— 否决：本文件只可追加（D310 选项 5 同一处置）；改由本条目命名该句并限定其措辞。
+- 最终选择 / Decision:
+  **(a) FD-1：** 在 `HARDENING-REPORT.md:156` 的字段内保留原句，就地追加 `**[SUPERSEDED 2026-10-06 by the FD-1 correction ... DECISIONS D311 ...]**`：说明该句把范围决定说成了不可能、只对「本批选择怎么做」为真；五个测试是**刻意**留下的 clone 薄弱，不是无法 clone-safe；它们所需的**六份录制**实测共 **5,917,632 字节**，可提交到 `evidence/` 之外（解除 `runs/**` 的忽略，或新增一个受跟踪目录，并让五个测试指向它）而不移动被量的语料（118 / 4,771,139）与目录（122 / 4,798,968）总数；代价是证据预算所有者的一项独立决定——入 `runs/**` 会提交当前被排除的 key 形状材料（`runs/round1`、`runs/round1b`），`evidence/` 之外的目录不受 R-A1 总数守卫覆盖。**未提交任何录制**，不动任何被量数字。（156 行仍是 156 行，字段仍是单行。）
+  **(b) `FINAL-DOC-REPORT.md` 不改：** 选项 A 生效后，其「三处都已订正」的说法对**交付树**为真（对 commit `96acd34` 本身仍不真，FD-1 是其后才补的）；`FD1-REPORT.md` 明确写出这一时间差。
+  **(c) 限定 D309：** 本条追加并命名 D309（`:11686`）的「两处…已更新为新值」——该句写出时只动了 `gate.gate_input_sha256` 一处，是 D309 对自身动作的失实记录；它如今对**树**碰巧为真（H-1 已把第二处也移到 `423036d0…`），不再误导当前值，故**不就地改**，而由本条记录真实历史并限定其措辞。
+- 选择理由 / Why: 文档的权威是产物。选项 A 同时消掉 FD-1 的两半——「声称做了没做的事」与「把范围决定留在机器块里当作定理」；键名改名会制造新假引用，不值得。D309 的处置沿用 D310 选项 5 已立的规则：只可追加、由新条目限定旧条目的措辞。
+- 纪律 / Discipline: **未提交、未推送**（由上层决策代理提交）；只用 `bevy-core` 分支；**未运行任何 round、Developer 调用、模型调用或引擎**；**未创建、复制或打印任何 API key**；未改代码、测试、`evidence/**`、注册表、battery、liveness 步骤、`.gitattributes` 行尾钉或任何被量数字；**未提交任何录制**；未使用 `rm -rf`；未使用 `git checkout --`；未构造未展开变量拼出的路径；辅助脚本位于仓库之外 `F:\hof-fd1-work\`；先查磁盘再构建；构建目录为本批自己的 `D:/hof-fd1-target`，一次只跑一个测试进程。
+- 证据 / Evidence: 见 `.spec/bevy/FD1-REPORT.md` 与其首个机器块（门禁字面退出码与计数、亲算的基线/当前文件 sha256 与 156 行 sha256、`git diff 4a85269 96acd34` 的 hunk 列表与 156 行缺席的证明、订正后的原文、改动文件清单）。
+- 预期影响与回滚点 / Impact and rollback: 只改 `.spec/bevy/HARDENING-REPORT.md`（字段内容，单行）、新增 `.spec/bevy/FD1-REPORT.md` 与本条目；无代码/测试/语料/目录字节/注册表/battery/liveness/`.gitattributes`/成本机制改动，无被量数字变动。回滚即还原该行、删除新报告与本条目。
