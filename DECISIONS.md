@@ -11684,3 +11684,24 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 - 纪律 / Discipline: **未提交、未推送**（由上层决策代理提交）；只用 `bevy-core` 分支；**未运行任何 round、Developer 调用、模型调用或引擎**；**未创建、复制或打印任何 API key**；未修改 `REQUIREMENTS.md`、`PRD.md`、`DESIGN-OVERVIEW.md`、`DESIGN-DETAIL.md` 与 spike 报告；未使用 `git checkout --`；**未使用 `rm -rf`**（本批复制出来的仓库副本用打印+校验的 Python 删除，`F:\hof-hard-work\`）；未构造未展开变量拼出的路径；先查磁盘（F: 47 G 可用）再构建；构建目录为本批自己的 `F:/hof-hard-target`，一次只跑一个测试进程。
 - 证据 / Evidence: 见 `.spec/bevy/HARDENING-REPORT.md` 与其首个机器块（门禁字面退出码与计数、守卫总数的测试与**受控植入**的红/绿证据、被标注或订正的交叉引用清单、clone-safe 与 clone-weak 的逐条判定、改动文件清单）。
 - 预期影响与回滚点 / Impact and rollback: 只改测试（`tests/evidence_reproduction.rs`、`tests/repeated_action.rs`）与文档（三份批次报告、本条、新报告）；无 `src/**` 改动，无语料/目录字节变动，无 `evidence/**` 改动，无 `index.json`、无注册表、无 battery、无 liveness 步骤、无 `.gitattributes`、无成本机制。**已知副作用（按 RD-2 先例处理）**：R-A2 标注改了 `.spec/bevy/CLONE-AND-LIVE-REPORT.md`，它的 sha256 因此从 `7c09a7ad…` 变为 `423036d0…`；`RECORD-CORRECTION-REPORT.md` 里钉它的两处（`gate.gate_input_sha256` 与 `changed_files`）已更新为新值，并把 `889033a5…`、`7c09a7ad…` 作为各自 revision 的历史值保留在原处；没有测试、构建脚本或门禁读该文件，故门禁数字与门禁输入集不受影响。回滚即还原上述文件与本条目。
+
+## D310 — 追加：ACCEPTANCE-HARDENING 的 H-1..H-4 文档订正，与 clone-safety 句的定性（范围决定，不是定理）
+
+- 日期 / Date: 2026-10-06
+- 触发问题 / Trigger: 独立验收 `.spec/bevy/ACCEPTANCE-HARDENING.md` 对 R-A1/R-A2/R-A4 加固批判 **fail**，并且自己指出「只需一处文档订正，代码与测试不用动」。四条缺陷：**H-1**（`RECORD-CORRECTION-REPORT.md:129` 的 `changed_files[0].committed_as` 仍以现在时把 `CLONE-AND-LIVE-REPORT.md` 钉在 `7c09a7ad…`，而该文件自本批 R-A2 标注后是 `423036d0…`，且无 `SUPERSEDED` 标注；`:46` 的 `gate.gate_input_sha256` 已更新，两处只更新了一处）；**H-2**（`HARDENING-REPORT.md` 自称两处 pin 都已更新，实际只更新了一处，本身是新的假陈述）；**H-3**（`TOTALS-CORRECTION-REPORT.md:205/:211/:309-312/:328-331` 的现在时陈述被本批自己的 R-A1 加固改假：`evidence/README.md` 现在被读字节、目录总数现在有测试守）；**H-4**（`RECORD-CORRECTION-REPORT.md:394-395` §7 的 liveness 矛盾句只有二十行前 item 2 里有标注，本句就地无标注）。另有 **RH-4**：「五个 clone 薄弱测试都无法 make clone-safe」是范围决定，不是定理——把所需录制提交到 `evidence/` 之外不会移动被量总数。
+- 考虑的选项与否决 / Options and rejections:
+  1. **只改 H-1 的一处 pin，其余留给下一批** —— 否决：H-2/H-3/H-4 是同一 RD-2 类缺陷，验收已逐条复现并给出 repro，分批修只会让下一次验收再发现同一批句子。
+  2. **把 `:129` 的旧值删掉、只留新值** —— 否决：仓库惯例是保留「当时相信什么、何时被谁取代」；旧值必须留在原处并标注为历史（D308/D309 同一处置）。
+  3. **把 `HARDENING-REPORT.md` 里「两处都已更新」的说法删掉** —— 否决：删掉就看不出这批曾如此声称；按 H-2 要求，保留原句并就地写明实际只更新了一处、以及由哪一批修好。
+  4. **把五个 clone 薄弱测试的录制入仓以变 clone-safe** —— 否决：本任务明令**不得提交任何录制**，且入 `evidence/` 会移动被量总数。改为把该句定性为「刻意的范围决定，不是定理」并写明替代方案与其代价（RH-4）。
+  5. **就地改 D309(c) 的「没有任何一个能诚实地变成 clone-safe」** —— 否决：本文件只可追加；由本条目追加并限定 D309 的措辞。
+- 最终选择 / Decision:
+  **(a) H-1：** 亲算 `sha256sum .spec/bevy/CLONE-AND-LIVE-REPORT.md` 与 `git cat-file -p HEAD:.spec/bevy/CLONE-AND-LIVE-REPORT.md | sha256sum` 均为 `423036d0b10f44fd00126f3bb4066ef1c6d303d5ceee415d733d619afebc4006`（该文件 0 个 CR 字节，两种算法一致），把 `:129` 的现在时 pin 改到该值，并把 aee9c92/f1b9af3 的 `889033a5…`、RD-1/RD-3 订正（D308，commit 92870a7）的 `7c09a7ad…` 保留在原处为带 `[SUPERSEDED]` 的历史。
+  **(b) H-2：** 就地修正 `HARDENING-REPORT.md` 的 `stale_references.consequential_pin`、`changed_files` 与 §2：原文保留，明确指出两处 pin 只有 `gate.gate_input_sha256` 真的动了，`changed_files[0].committed_as` 没有动，并已由 H-1 的订正补上。
+  **(c) H-3：** `TOTALS-CORRECTION-REPORT.md` 四处改为「当时如此」并加 `SUPERSEDED by the R-A1 hardening (DECISIONS D309, commit ef2b0d6)`：现在 `tests/evidence_reproduction.rs:592-598` 会 `std::fs::read_to_string` 读 `evidence/README.md` 的字节并断言其中含 `122 files / 4,798,968 bytes`，且同一 walk 累计并断言语料（118/4,771,139）、被排除（4/27,829）、目录（122/4,798,968）三个数与恒等式，故「只读文件名、不读字节」与「目录总数无人守」都不再成立。
+  **(d) H-4：** 在 §7 的 liveness 句后就地加 `[SUPERSEDED 2026-10-06 by the RD-3 correction, DECISIONS D308]`，说明所请授权已获、该文件已被改写，该句只是当时的真实状态。
+  **(e) RH-4：** 不提交任何录制；把「五个都无法 make clone-safe」改写为「本批刻意留下的 clone 薄弱，是范围决定而非定理」，并写明替代方案（把录制提交到 `evidence/` 之外，并让五个测试指向它）与代价（另一项证据预算决定；入 `runs/**` 会带上当前被排除的 key 形状材料；`evidence/` 外的目录不受 R-A1 总数守卫覆盖）。
+- 选择理由 / Why: 文档的权威是产物。H-1 的 pin 必须真的是它指名那个 revision 的 hash；H-2 的「都更新了」与 `git diff` 相矛盾，正是 RD-2 类；H-3/H-4 的句子记录的是当时的真实状态，按 D308/D309 惯例保留原文、就地标注取代者，不改写历史。RH-4 的定性同理：把范围决定说成定理，会让下一批放弃一个本来可行的选项。
+- 纪律 / Discipline: **未提交、未推送**（由上层决策代理提交）；只用 `bevy-core` 分支；**未运行任何 round、Developer 调用、模型调用或引擎**；**未创建、复制或打印任何 API key**；未改任何代码、测试、`evidence/**`、注册表、battery、liveness 步骤、`.gitattributes` 行尾钉或任何被量数字；未使用 `rm -rf`；未使用 `git checkout --`；未构造未展开变量拼出的路径；辅助脚本位于仓库之外 `F:\hof-final-work\`；先查磁盘（F: 37 GiB、D: 154 GiB 可用）再构建；构建目录为本批自己的 `D:/hof-final-target`，一次只跑一个测试进程。
+- 证据 / Evidence: 见 `.spec/bevy/FINAL-DOC-REPORT.md` 与其首个机器块（门禁字面退出码与计数、H-1..H-4 的原文/订正文/亲算值、clone-safety 句的处置、改动文件清单），以及亲算的 pin 复核（`b2053ad1`、`889033a5`、`7c09a7ad`、`423036d0`、`cebea19e`）与 `evidence/` 的三个总数（118/4,771,139、4/27,829、122/4,798,968 均不变）。
+- 预期影响与回滚点 / Impact and rollback: 只改三份批次报告（`RECORD-CORRECTION-REPORT.md`、`HARDENING-REPORT.md`、`TOTALS-CORRECTION-REPORT.md`）、新增 `FINAL-DOC-REPORT.md` 与本条目；无代码/测试/语料/目录字节/注册表/battery/liveness/`.gitattributes`/成本机制改动。回滚即还原这些文档与本条目。

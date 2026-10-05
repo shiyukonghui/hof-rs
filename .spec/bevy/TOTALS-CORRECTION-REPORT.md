@@ -202,13 +202,13 @@
   ".spec/bevy/ACCEPTANCE-CLONE-LIVE.md, .spec/bevy/ACCEPTANCE-RECORD.md and the other acceptance records"
  ],
  "tests_that_read_the_files_this_batch_edited": {
-  "evidence/README.md": "tests/evidence_reproduction.rs::the_evidence_index_names_committed_files_and_commands walks evidence/ and SKIPS README.md by name (it is not part of the corpus) and reads only its file name, never its bytes; the edit is byte-length-preserving, so even that walk's arithmetic is unchanged. No other test reads it.",
+  "evidence/README.md": "AT THE TIME OF THIS BATCH the only test that walks evidence/ (tests/evidence_reproduction.rs::the_evidence_index_names_committed_files_and_commands) skipped README.md by name (it is not part of the corpus) and read only its file name, never its bytes, so this batch's byte-length-preserving edit was invisible to it and even the walk's arithmetic was unchanged. SUPERSEDED by the R-A1 hardening (DECISIONS D309, commit ef2b0d6): that same test now calls std::fs::read_to_string(committed('evidence/README.md')) and asserts the file's bytes contain 122 files / 4,798,968 bytes (tests/evidence_reproduction.rs:592-598), so the README's stated directory total is guarded and this sentence is no longer the present state. No other test reads it.",
   ".spec/bevy/CLONE-AND-LIVE-REPORT.md": "no test, build script or gate reads it",
   ".spec/bevy/COVERAGE-EVIDENCE-REPORT.md": "no test reads it (tests/write_accounting.rs names it only inside an assertion's panic message text)",
   ".spec/bevy/RECORD-CORRECTION-REPORT.md": "no test reads it",
   "DECISIONS.md": "no test reads it"
  },
- "single_most_important_thing_next_batch": "The directory totals are still hand-stated and guarded by no test, so a one-line edit to any file under evidence/ can falsify them again: derive them in evidence/README.md/index.json and assert them in tests/evidence_reproduction.rs (risk R-5), or the next index edit repeats RD-1. For the immediate acceptance: the old wording that remains in COVERAGE-EVIDENCE-REPORT.md is quoted, labelled history, not a live claim, and the historical cross-references in RECORD-CORRECTION-REPORT.md (C-3, deliberately_not_corrected, section 6 item 2) and CLONE-AND-LIVE-REPORT.md section 4 are superseded by DECISIONS.md D308.",
+ "single_most_important_thing_next_batch": "AT THE TIME THIS BATCH WROTE IT, the directory totals were still hand-stated and guarded by no test, so a one-line edit to any file under evidence/ could falsify them again; the recommendation was to derive them in evidence/README.md/index.json and assert them in tests/evidence_reproduction.rs (risk R-5), or the next index edit would repeat RD-1. SUPERSEDED by the R-A1 hardening (DECISIONS D309, commit ef2b0d6): that recommendation was carried out - the same walk in tests/evidence_reproduction.rs now accumulates and asserts the corpus, the excluded-files and the directory totals, the identity directory = corpus + excluded, and the sentence in evidence/README.md, so any byte change under evidence/ is red. Kept here as what was believed when. For the immediate acceptance: the old wording that remains in COVERAGE-EVIDENCE-REPORT.md is quoted, labelled history, not a live claim, and the historical cross-references in RECORD-CORRECTION-REPORT.md (C-3, deliberately_not_corrected, section 6 item 2) and CLONE-AND-LIVE-REPORT.md section 4 are superseded by DECISIONS.md D308.",
  "prose_follows": true
 }
 ```
@@ -306,12 +306,7 @@ after every edit except this report.
 | warnings | both streams | - | **0** `warning:` lines |
 | tests removed | `git diff -- src tests` | - | **0** `#[test]` attributes changed; 806 listed before and after |
 
-**Which tests read the files I edited.** None of them reads any edited document's bytes. `evidence/README.md` is
-inside `evidence/`, but the one test that walks that directory
-(`tests/evidence_reproduction.rs::the_evidence_index_names_committed_files_and_commands`) **skips `README.md` by
-name** and reads only its file name, never its content; the edit is byte-length-preserving, so even that walk's
-arithmetic is unchanged, and the test that re-derives the corpus (118 / 4,771,139) and the index passes inside
-the gate. `tests/write_accounting.rs` mentions `COVERAGE-EVIDENCE-REPORT.md` only inside an assertion's panic
+**Which tests read the files I edited.** None of them reads any edited document's bytes **at the time this batch wrote this**. `evidence/README.md` is inside `evidence/`, and the one test that walked that directory (`tests/evidence_reproduction.rs::the_evidence_index_names_committed_files_and_commands`) **skipped `README.md` by name** and read only its file name, never its content; this batch's edit is byte-length-preserving, so even that walk's arithmetic was unchanged, and the test that re-derives the corpus (118 / 4,771,139) and the index passed inside the gate. **SUPERSEDED by the R-A1 hardening (DECISIONS D309, commit ef2b0d6):** the same test now reads `evidence/README.md`'s bytes with `std::fs::read_to_string` and asserts they contain `122 files / 4,798,968 bytes` (`tests/evidence_reproduction.rs:592-598`), so the sentences above describe the state this batch found, not the state of the tree. `tests/write_accounting.rs` mentions `COVERAGE-EVIDENCE-REPORT.md` only inside an assertion's panic
 message text. `CLONE-AND-LIVE-REPORT.md`, `COVERAGE-EVIDENCE-REPORT.md`, `RECORD-CORRECTION-REPORT.md`,
 `DECISIONS.md` and this report are read by no test, build script or gate — which is also why a green gate cannot
 catch a mistake in them, and why every figure above was reconciled by hand.
@@ -325,10 +320,7 @@ append-only" is a superseded historical claim, as are the cross-references in `R
 (`C-3`, `deliberately_not_corrected`, `single_most_important_thing_next_batch`, section 6 item 2) and
 `CLONE-AND-LIVE-REPORT.md` section 4 that say the coverage report was left as that batch wrote it. The
 dispatcher's task scoped this batch to the three named corrections, so I did not rewrite those; `DECISIONS.md`
-D308 replaces them. **The single most important thing for the next batch is that the directory totals are still
-hand-stated and guarded by no test: a one-line edit to any file under `evidence/` can falsify them again, and
-this is the second time it has happened. Derive them, or assert them in `tests/evidence_reproduction.rs`, before
-the next acceptance has to find them by hand.**
+D308 replaces them. **The single most important thing for the next batch, as this batch wrote it, was that the directory totals were still hand-stated and guarded by no test: a one-line edit to any file under `evidence/` could falsify them again, and this was the second time it had happened. The recommendation was to derive them, or assert them in `tests/evidence_reproduction.rs`, before the next acceptance had to find them by hand. SUPERSEDED by the R-A1 hardening (DECISIONS D309, commit ef2b0d6): that guard now exists - `tests/evidence_reproduction.rs` accumulates and asserts the corpus, the excluded-files and the directory totals, their arithmetic identity, and `evidence/README.md`'s stated sentence - so this paragraph is kept as what was believed when, not as the present state.**
 
 **The artefact wins where a document disagrees with it** — that is the rule this batch applied to both the byte
 totals and the liveness claim, and it is the rule the next reader should apply to the quoted history above.

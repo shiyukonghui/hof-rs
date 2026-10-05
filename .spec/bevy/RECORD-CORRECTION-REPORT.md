@@ -126,7 +126,7 @@
   {
    "path": ".spec/bevy/CLONE-AND-LIVE-REPORT.md",
    "what": "D-1 prose, D-2 prose and machine block, D-4 machine block and prose, plus the sentences that described the E-2 wording",
-   "committed_as": "aee9c92 (`docs(record): correct the three statements that disagreed with their own artefacts`); the aee9c92/f1b9af3 revision of this path hashed to 889033a5fd8914357886b28f110609dcffad571194e844d03e5db7d3fb44471e and the delivery this report covers was byte-identical to it; the byte-totals correction authorised by defects RD-1/RD-3 of .spec/bevy/ACCEPTANCE-RECORD.md has since changed two measured totals in this path, so the delivered working file now hashes to 7c09a7ad95597453441cef6ba2c33cf73f6b00dc71a0d4b6f2fcbde68dbc66bb"
+   "committed_as": "aee9c92 (`docs(record): correct the three statements that disagreed with their own artefacts`); the aee9c92/f1b9af3 revision of this path hashed to 889033a5fd8914357886b28f110609dcffad571194e844d03e5db7d3fb44471e and the delivery this report covers was byte-identical to it; the byte-totals correction authorised by defects RD-1/RD-3 of .spec/bevy/ACCEPTANCE-RECORD.md has since changed two measured totals in this path, so the delivered working file now hashes to 423036d0b10f44fd00126f3bb4066ef1c6d303d5ceee415d733d619afebc4006. The values this path has carried, each beside the revision it names: aee9c92/f1b9af3 = 889033a5fd8914357886b28f110609dcffad571194e844d03e5db7d3fb44471e [SUPERSEDED]; the RD-1/RD-3 byte-totals correction (DECISIONS D308, commit 92870a7) = 7c09a7ad95597453441cef6ba2c33cf73f6b00dc71a0d4b6f2fcbde68dbc66bb [SUPERSEDED, and this line presented that value as current with no label until defect H-1 of .spec/bevy/ACCEPTANCE-HARDENING.md was corrected]; the R-A2 cross-reference labels (DECISIONS D309, commit ef2b0d6) = 423036d0b10f44fd00126f3bb4066ef1c6d303d5ceee415d733d619afebc4006 [CURRENT]."
   },
   {
    "path": "evidence/index.json",
@@ -393,7 +393,7 @@ this correction depends on it, and I did not chase it, exactly as the acceptance
 on every point the acceptance named, and the mechanisms it verified were not re-litigated. The only
 committed statement left that contradicts the round's own artefacts is inside
 `.spec/bevy/COVERAGE-EVIDENCE-REPORT.md` (item 2 above): it still says the liveness step never ran, while the
-same file already records that it did. This batch could not lawfully edit it, and the acceptance's D-3 did
+same file already records that it did. **[SUPERSEDED 2026-10-06 by the RD-3 correction, DECISIONS D308:** the authorisation asked for here was granted, `.spec/bevy/COVERAGE-EVIDENCE-REPORT.md`'s clauses were afterwards rewritten, and that file no longer says this; the liveness sentence above, and the rest of this section's premise, was true when this section was written and is not the present state.]** This batch could not lawfully edit it, and the acceptance's D-3 did
 not name it, so it will be found again by the next reader unless the dispatcher either gives it an explicit
 owner or explicitly excludes it. After that, the only open goal criterion is still cost - 2.55-2.60x the
 1,500,000-token per-call target, every call ended at `agent.step_limit: 150` with the tripwire never firing.

@@ -106,7 +106,7 @@
     "now": "`cannot move the *corpus* byte count`, with the directory total named as a different figure and pointed at the R-A1 guard added by this batch"
    }
   ],
-  "consequential_pin": "Labelling the two CLONE-AND-LIVE-REPORT.md clauses moved that file's sha256 from `7c09a7ad...` to `423036d0b10f44fd00126f3bb4066ef1c6d303d5ceee415d733d619afebc4006`. That file is pinned in two places in `.spec/bevy/RECORD-CORRECTION-REPORT.md` (gate.gate_input_sha256 and changed_files), so both were updated to the new value and the two earlier values (`889033a5...` for the f1b9af3 revision, `7c09a7ad...` for the post-RD-1 revision) are kept as labelled history beside them - the minimum RD-2-consistent change, and the same shape the previous batch was commended for. No test, build script or gate reads that file, so the gate numbers and gate input set are unaffected."
+  "consequential_pin": "Labelling the two CLONE-AND-LIVE-REPORT.md clauses moved that file's sha256 from `7c09a7ad...` to `423036d0b10f44fd00126f3bb4066ef1c6d303d5ceee415d733d619afebc4006`. That file is pinned in two places in `.spec/bevy/RECORD-CORRECTION-REPORT.md` (gate.gate_input_sha256 and changed_files), **Correction (defect H-2 of `.spec/bevy/ACCEPTANCE-HARDENING.md`): only ONE of the two was actually moved.** `gate.gate_input_sha256` (line 46) was set to `423036d0...` and its note (line 47) rewritten to name all three values; `changed_files[0].committed_as` (line 129) was left unchanged and therefore still presented `7c09a7ad...` in the present tense with no label, which is false of the tree it ships. The original claim in this field - that `both were updated to the new value` - was therefore a fresh false statement of the RD-2 class. The omission is repaired by the follow-up document correction (H-1 of the same acceptance, recorded in `.spec/bevy/FINAL-DOC-REPORT.md`), which moves line 129 to `423036d0...` and keeps `889033a5...` (f1b9af3 revision, labelled SUPERSEDED) and `7c09a7ad...` (post-RD-1 revision, labelled SUPERSEDED) beside it. This field keeps its history rather than deleting it: what this batch records is that it intended the minimum RD-2-consistent change, moved one pin, and wrongly reported both. No test, build script or gate reads that file, so the gate numbers and gate input set are unaffected."
  },
  "clone_safety": {
   "method": "A copy of the 323 tracked files was made outside the repository at `F:/hof-hard-work/clone-control` (`F:/hof-hard-work/copy_tracked.py`); it has no `runs/**`, which is the state a fresh clone is in. `git init -q` was then run inside it so `git check-attr` works. Disclosed harness failure: before that `git init`, the copy's full gate was exit 101 with one failure, `tests/push_gate.rs::the_shell_artifacts_keep_lf_line_endings_and_a_shebang`, because `git check-attr` needs a repository - an artefact of the copy, not a property of a real clone, and it disappeared once the copy was a repository. The copy has since been removed by the verified Python script.",
@@ -176,7 +176,7 @@
   },
   {
    "path": ".spec/bevy/RECORD-CORRECTION-REPORT.md",
-   "change": "R-A2: C-3.what/disposition, deliberately_not_corrected, single_most_important_thing_next_batch, §6 item 2 and the two 'cannot move a byte count' statements labelled or clarified; plus the two CLONE-AND-LIVE-REPORT.md sha256 pins moved to the new value with the old kept as history"
+   "change": "R-A2: C-3.what/disposition, deliberately_not_corrected, single_most_important_thing_next_batch, §6 item 2 and the two 'cannot move a byte count' statements labelled or clarified; plus ONE of the two CLONE-AND-LIVE-REPORT.md sha256 pins moved to the new value with the old kept as history (`gate.gate_input_sha256` was moved; `changed_files[0].committed_as` was NOT - defects H-1/H-2 of .spec/bevy/ACCEPTANCE-HARDENING.md, corrected by the follow-up document correction)"
   },
   {
    "path": "DECISIONS.md",
@@ -220,9 +220,7 @@ plant on a copy outside the repository (one `0x0A` appended to `index.json`, 15,
 exit **101** with `the excluded-files total ... 4 files / 27830 bytes`, and restoring the byte makes it
 green again. Nine statements in three batch reports are labelled `SUPERSEDED` in place with the original
 wording kept. The clone census found **five** clone-weak tests, not the acceptance's three - two of them
-skipped **in silence** - and all five now print which recording is missing; none of the five can honestly
-be made clone-safe, because doing so would require committing the round-1b/round-2/round-3 recordings and
-so moving the measured corpus and directory totals this batch is forbidden to touch.
+skipped **in silence** - and all five now print which recording is missing; none of the five was made clone-safe in this batch. That is a deliberate scope decision rather than a theorem (RH-4 of `.spec/bevy/ACCEPTANCE-HARDENING.md`): the needed recordings could be committed outside `evidence/` without moving the measured totals, at the cost of a separate evidence-budget decision - and, for a `runs/**` path, of committing the key-shaped material the tracked tree currently excludes. Section 3 states the alternative and its cost; the original wording, that none of the five can honestly be made clone-safe, overstated the finding and is superseded.
 
 ## 1. R-A1 - the totals are guarded where they are stated
 
@@ -267,10 +265,7 @@ corrections.
 
 `CLONE-AND-LIVE-REPORT.md:1690-1691` said this correction "leaves the batch report's own two exactly as
 that batch wrote them" - also made false by RD-3. Labelling it changes that file's bytes, and that file is
-pinned by sha256 in **two** places in `RECORD-CORRECTION-REPORT.md`. Leaving the pins alone would have
-planted a fresh RD-2-class false statement, so - following the precedent the previous acceptance called
-correct - both pins now carry the new value `423036d0...` and keep `889033a5...` (the f1b9af3 revision)
-and `7c09a7ad...` (the post-RD-1 revision) as labelled history beside it. No test, build script or gate
+pinned by sha256 in **two** places in `RECORD-CORRECTION-REPORT.md`. Leaving the pins alone would have planted a fresh RD-2-class false statement, so - following the precedent the previous acceptance called correct - the two pins were meant to be moved together to the new value `423036d0...` and to keep `889033a5...` (the f1b9af3 revision) and `7c09a7ad...` (the post-RD-1 revision) as labelled history beside them. **Correction (defect H-2 of `.spec/bevy/ACCEPTANCE-HARDENING.md`): only one was actually moved.** `gate.gate_input_sha256` (`RECORD-CORRECTION-REPORT.md:46`) was set to `423036d0...` and its note at `:47` names all three values; `changed_files[0].committed_as` (`:129`) was left presenting `7c09a7ad...` in the present tense with no label, which is false, and the machine block's `consequential_pin` claimed both were updated - a fresh false statement of the RD-2 class this batch existed to close. The follow-up document correction (H-1, recorded in `.spec/bevy/FINAL-DOC-REPORT.md`) moves `:129` to `423036d0...` and keeps both earlier values there as labelled `SUPERSEDED` history. No test, build script or gate
 reads that file; I grepped `tests/`, `src/` and `scripts/` to confirm it.
 
 The two `cannot move a byte count` statements in `RECORD-CORRECTION-REPORT.md` are true of the **corpus**
@@ -297,12 +292,7 @@ reasons while asserting nothing. (Disclosed harness failure: before the `git ini
 repository`, because `git check-attr` needs a repository. That was my copy's deficiency, not a clone
 defect, and it is not a finding about the tree.)
 
-**None of the five can be made clone-safe here, and the reason is structural, not a choice.** Their
-subject is `runs/round1b`, `runs/round2` and `runs/round3`, which are gitignored and which
-`evidence/index.json` deliberately lists as `not_reproducible_from_the_repository`. Committing them would
-add files under `evidence/` and move the corpus and directory totals - the very figures this batch is
-forbidden to change, and a decision that belongs to the owner of the evidence budget, not to a hardening
-batch. What a clone keeps is the mechanism: `harness::guard`'s tripwire and step-budget unit tests run
+**The five were left clone-weak by a deliberate scope decision, and that decision is not a theorem.** Their subject is `runs/round1b`, `runs/round2` and `runs/round3`, which are gitignored and which `evidence/index.json` deliberately lists as `not_reproducible_from_the_repository`. Committing them under `evidence/` would add files and move the corpus and directory totals - the very figures this batch is forbidden to change, and a decision that belongs to the owner of the evidence budget, not to a hardening batch. But the acceptance's RH-4 is right that this is a scope choice rather than an impossibility: committing the recordings somewhere other than `evidence/` (un-ignoring a `runs/**` path, or a new tracked directory, and pointing the five tests at it) would leave the measured totals untouched. What that alternative costs is real but is a cost, not a barrier: it is a separate decision the owner must take; placing the files under `runs/**` commits the key-shaped material the tracked tree currently excludes (`runs/round1` and `runs/round1b`); and a directory outside `evidence/` would not be covered by the R-A1 totals guard. The original wording here - that none of the five can be made clone-safe here and the reason is structural, not a choice - overstated a scope decision as a fact and is superseded by this paragraph. What a clone keeps is the mechanism: `harness::guard`'s tripwire and step-budget unit tests run
 there, and the round-4 measurement is clone-safe because `evidence/cost/round4-iter-{1,2,3}` is committed -
 `the_round_four_developer_repeats_are_measured_and_not_assumed` asserts `measured == 3` in the clone.
 
