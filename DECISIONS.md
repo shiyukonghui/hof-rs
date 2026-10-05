@@ -11724,3 +11724,21 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 - 纪律 / Discipline: **未提交、未推送**（由上层决策代理提交）；只用 `bevy-core` 分支；**未运行任何 round、Developer 调用、模型调用或引擎**；**未创建、复制或打印任何 API key**；未改代码、测试、`evidence/**`、注册表、battery、liveness 步骤、`.gitattributes` 行尾钉或任何被量数字；**未提交任何录制**；未使用 `rm -rf`；未使用 `git checkout --`；未构造未展开变量拼出的路径；辅助脚本位于仓库之外 `F:\hof-fd1-work\`；先查磁盘再构建；构建目录为本批自己的 `D:/hof-fd1-target`，一次只跑一个测试进程。
 - 证据 / Evidence: 见 `.spec/bevy/FD1-REPORT.md` 与其首个机器块（门禁字面退出码与计数、亲算的基线/当前文件 sha256 与 156 行 sha256、`git diff 4a85269 96acd34` 的 hunk 列表与 156 行缺席的证明、订正后的原文、改动文件清单）。
 - 预期影响与回滚点 / Impact and rollback: 只改 `.spec/bevy/HARDENING-REPORT.md`（字段内容，单行）、新增 `.spec/bevy/FD1-REPORT.md` 与本条目；无代码/测试/语料/目录字节/注册表/battery/liveness/`.gitattributes`/成本机制改动，无被量数字变动。回滚即还原该行、删除新报告与本条目。
+
+## D312 — 追加订正：D311 选项 3 的「按名引用」引证失实（ACCEPTANCE-FD1 缺陷 EFD-1）
+
+- 日期 / Date: 2026-10-06
+- 触发问题 / Trigger: 独立验收 `.spec/bevy/ACCEPTANCE-FD1.md` 的缺陷 **EFD-1**（low）：本文件 D311 选项 3 与 `.spec/bevy/FD1-REPORT.md`（`why_option_A`、`RF-3_field_title`、§2）把「不改键名」的理由写成「键名被 `FINAL-DOC-REPORT.md` 的 `where` **和** `change_site` 按名引用」。亲自复核：`git grep -c why_they_cannot_be_made_clone_safe` 得到 `.spec/bevy/FINAL-DOC-REPORT.md:1`、`.spec/bevy/ACCEPTANCE-FINAL-DOC.md:6`、`.spec/bevy/HARDENING-REPORT.md:1`（键定义本身）、`.spec/bevy/FD1-REPORT.md:8`、`DECISIONS.md:2`；而 `grep -n why_they_cannot_be_made_clone_safe .spec/bevy/FINAL-DOC-REPORT.md` 只有 `:185`（即 `clone_safety_sentence.where`），`:195` 的 `change_site`（值 `HARDENING-REPORT.md machine line 156, section 0 and section 3`）**不含**键名。故「不改键名」的结论仍成立（`where` 与 ACCEPTANCE-FINAL-DOC.md 确实按名引用），失实的是把 `change_site` 也算作引用点。
+- 考虑的选项与否决 / Options and rejections:
+  1. **就地改 D311 选项 3 的句子** —— 否决：本文件只可追加（D310 选项 5、D311 选项 5 同一条规则）；改由本条目命名该句并限定其措辞。
+  2. **给 `FINAL-DOC-REPORT.md` 的 `change_site` 补上键名，使原句变真** —— 否决：那要改本批明确不动的 `FINAL-DOC-REPORT.md`，且是制造引用而非订正引证；验收也把此列为其「较不理想」的备选。
+  3. **借此改名 `why_they_cannot_be_made_clone_safe`** —— 再次否决，理由同 D311 选项 3（`where` 与 `ACCEPTANCE-FINAL-DOC.md` 按名引用）。
+- 最终选择 / Decision:
+  **(a) 就地订正 `FD1-REPORT.md` 三处引证**（`why_option_A`、机器块 `decisions_on_non_blocking_items.RF-3_field_title`、§2 RF-3 段）：只保留真实引用点——`FINAL-DOC-REPORT.md:185`（`clone_safety_sentence.where`）与 `ACCEPTANCE-FINAL-DOC.md`（6 次）——并显式写明 `change_site` 不含键名。三处均为单行内的措辞替换，未增删行，`FD1-REPORT.md` 行号（验收引用的 14、239-240 行）不变。
+  **(b) D311 不动：** D311 选项 3 的字节与 `a80db33`–`91629f4` 一致（`git diff --numstat a80db33 HEAD -- DECISIONS.md` 为空），由本条命名并限定其措辞；「不改键名」的最终决定不受影响。
+  **(c) `RF-3_field_title` 亦属同一失实：** 该处（`FD1-REPORT.md:139`）与 `why_option_A`、§2 是同一句话的三个实例；验收 EFD-1 与其 reproduction 只列了 `why_option_A`/§2 与 D311，故本批一并订正并在 `.spec/bevy/EFD1-REPORT.md` 中单列说明。
+  **(d) 两条弱陈述不动：** `FINAL-DOC-REPORT.md:329`「The alternative's cost is now stated at all three sites」（§0 实际只列三条代价中的两条）与 `HARDENING-REPORT.md:156` SUPERSEDED 标签的加粗跨度（验收 RF-6 所记，与 H-4 标签的加粗跨度不一致）。前者要改本批声明「不改」的 `FINAL-DOC-REPORT.md`，且会使 `FD1-REPORT.md` 机器块的 `not_changed` 句（「FINAL-DOC-REPORT.md itself is unchanged」）失实，属连锁改动；后者会改变 156 行字节，使已记录的 156 行 sha256 `2893d496…`（`FD1-REPORT.md` 机器块与 `ACCEPTANCE-FD1.md:20`）成为假记录。二者都不如第一项那样「同等廉价且可核验」，故按派单要求原样保留并说明原因。
+- 选择理由 / Why: 文档的权威是产物。引证必须指向真正含该字符串的文档：`git grep -c` 给出 1（FINAL-DOC-REPORT.md）与 6（ACCEPTANCE-FINAL-DOC.md），`change_site` 为 0。订正只在文字层，不产生新的引用或改名。
+- 纪律 / Discipline: **未提交、未推送**；只用 `bevy-core` 分支；**未运行任何 round、Developer 调用、模型调用或引擎**；**未创建、复制或打印任何 API key**；未改代码、测试、`evidence/**`、注册表、battery、liveness 步骤、`.gitattributes` 行尾钉、config 或任何被量数字；未提交任何录制；未使用 `rm -rf`；未使用 `git checkout --`；未构造未展开变量拼出的路径；辅助脚本位于仓库之外 `F:\hof-efd1-work\`；先查磁盘（F: 37 GiB、D: 118 GiB 可用）再构建；构建目录为本批自己的 `D:/hof-efd1-target`，一次只跑一个测试进程。
+- 证据 / Evidence: 见 `.spec/bevy/EFD1-REPORT.md` 与其首个机器块（门禁字面退出码与计数、键名实际出现位置与所用命令、旧/新引证文本、两条弱陈述的处置、改动文件清单）。
+- 预期影响与回滚点 / Impact and rollback: 只改 `.spec/bevy/FD1-REPORT.md`（三处文字）并新增 `.spec/bevy/EFD1-REPORT.md` 与本条目；无代码/测试/语料/目录字节/注册表/battery/liveness/`.gitattributes`/config/成本机制改动，无被量数字变动。回滚即还原该三处文字、删除新报告与本条目。
