@@ -6,7 +6,7 @@
  "head_at_start": "b9546f5",
  "head_subject": "docs(acceptance): record the independent acceptance that refutes the zero-lost-writes claim and confirms the cost criterion cannot be met",
  "working_tree_at_start": "CLEAN: the one uncommitted line the round-6 acceptance found (defect A-4 / criterion C22) was committed by b9546f5, which also committed that acceptance document",
- "working_tree_at_end": "MODIFIED AND UNCOMMITTED BY INSTRUCTION: this batch was told not to commit, not to stage and not to push; committing this change set is the delegating agent's action, not this batch's. Nothing here is left uncommitted by accident.",
+ "working_tree_at_end": "COMMITTED: the delegating agent committed this change set as 1aeec7b on bevy-core (`git status --porcelain` empty at that commit). This batch did not run git add/commit/push itself, by instruction; the commit is the delegating agent's. Any later commit of a correction to this file is likewise the delegating agent's, and DECISIONS.md D304 records that D303's own 'not committed' sentence was true when written and is stale as a statement about the tree - the same pattern A-6 found in D302.",
  "verdict": "the cost criterion is NOT met on this tree (2.434x the target on the one live Developer call); the measuring blindness that produced two false statements in the round-6 report is fixed, and the corrected account is now a repository capability",
  "cost_criterion": {
   "text": "total_tokens below 1,500,000 per Developer call (.spec/bevy/ROUND-2-REPORT.md:43)",
@@ -69,7 +69,11 @@
   "fmt_stderr_bytes": 0,
   "warning_lines_stdout_and_stderr": 0,
   "build_dir": "D:\\hof-wacct-target (this batch's own; the repository's own target/ was not used)",
-  "no_second_test_process": "tasklist showed no cargo/rustc/hoh before and after",
+  "no_second_test_process": "tasklist showed no cargo/rustc/hoh before and after THIS batch's own gate run",
+  "confirmation_run": {
+   "counts": "identical: 782 passed / 0 failed / 6 ignored / 788 listed, exit 0, 788 listed names, fmt exit 0 with 0 bytes",
+   "note": "it was run again after the machine-readable block was regenerated; only .md files had changed since the first run, so the code bytes are the same. Its own AFTER process check saw a DIFFERENT agent's cargo/rustc build running on this machine, so that check is not evidence - the first run's clean before/after check is."
+  },
   "round_and_developer_call": "none was run: the criterion is answered from the recorded trajectory, not from a new call"
  },
  "evidence_location": {
@@ -680,6 +684,7 @@
   "file": "DECISIONS.md",
   "id": "D303",
   "appended_bytes": 10382,
+  "superseded_in_part_by": "DECISIONS.md D304 (appended when the delegating agent committed this change set as 1aeec7b): D303's discipline line said the batch was not committed and not pushed, which was true when written and is stale as a statement about the tree - the D302/A-6 pattern, recorded rather than rewritten",
   "append_only_verified": "DECISIONS.md at HEAD is a byte prefix of the current file; D302's own text is intact",
   "states": [
    "the cost criterion is NOT met on the shipped tree (2.434x the target on the one live Developer call)",
@@ -888,9 +893,14 @@ the instrument could not see a shell write, and the live call loses a real proje
   No new dependency: `regex` cannot be added offline (`cargo metadata --offline` after adding it
   reported `attempting to make an HTTP request, but --offline was specified`), so the parsers are
   hand-written scanners over chars.
-* **Committed?** No — **by instruction**. This batch was told not to commit, not to stage and not to
-  push. The change set above is the working tree, and committing it is the delegating agent's action.
-  The tree was **clean** when this batch started, so nothing pre-existing is left dirty.
+* **Committed?** Yes — **by the delegating agent**, as `1aeec7b` on `bevy-core`
+  ("fix(accounting): count shell project writes, correct the false claims, and record that the cost
+  criterion is unmet"), with a clean `git status --porcelain` at that commit. This batch was instructed
+  **not** to commit, stage or push, and did not: no `git add`, no `git commit`, no `git push`, and
+  `bevy-core` is still local-only. The tree was **clean** when this batch started (defect A-4 was closed
+  by `b9546f5`), so nothing pre-existing was left dirty either. `DECISIONS.md` **D304** records that
+  D303's own "not committed" sentence is superseded by this fact — D302's stale counterpart is what
+  defect A-6 found, and this batch would not repeat it.
 
 ## 6. The evidence lives on one disk, and not in the repository
 

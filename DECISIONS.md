@@ -11569,3 +11569,16 @@ vulkan/opengl3/d3d12 三者同样冻结、`force_draw` 无效；而同一二进�
 - 纪律 / Discipline: **未提交、未推送**（本批次改动留在工作区，由上层的决策代理提交）；只使用 `bevy-core` 分支；未使用 `git checkout --`；未使用 `rm -rf`（删除只用 Python 对已打印并核验的字面路径）；进程只按显式 pid 处理；辅助脚本全部位于仓库之外 `F:\hof-acct-work\`；**未运行任何 round、Developer 调用、模型调用或引擎**；未创建、复制或打印任何 API key；构建目录为本批次自己的 `D:\hof-wacct-target`。
 - 证据 / Evidence（全部可由 `cargo test --offline` 复跑）: 门禁字面退出码 **0**、**782 passed / 0 failed / 6 ignored / 788 listed**（59 条 `test result:` 行；相对起始树 766/0/6/772 是**新增 16 个测试、0 个删除**）；`cargo fmt --all --check` 退出 0、stdout 与 stderr 均 **0 字节**；`warning:` 行 **0**。四个受控 plant，每个 green→red→green、逐字节还原（sha256 比对）且 mtime 显式设定：P1 `-NoNewline` 被当成吃值的开关、P2 作用域不再委托 guard、P3 退化的一空列表（A-1 的原形状）、P4 忽略 `<returncode>`；每一个的 red 运行退出 **101**、真的跑了（有 `test result:`）并**点名**预期测试。全部细节见 `.spec/bevy/WRITE-ACCOUNTING-REPORT.md`。
 - 预期影响与回滚点 / Impact and rollback: 新增 `harness::write_audit`（`src/harness/write_audit.rs`）与 `tests/write_accounting.rs`；**没有任何生产调用点**调用它，没有行为变更、没有新配置项，回滚即删除模块与测试。`DECISIONS.md` 只追加。撤回的写空闲预算**仍然不在树里**：无配置键、无 guard 状态位、无生产调用点；它在树里唯一的出现是 `write_audit::replay_directive_step_budget` —— 一个只在测量中使用的离线回放，其存在理由就是证明它不该上线。
+
+
+## D304 — 追加：D303 的「未提交」一句已被事实取代（同一个 A-6 形状，同一条只追加规则）
+
+- 日期 / Date: 2026-10-05
+- 触发问题 / Trigger: D303 的「纪律」行写「**未提交、未推送**」。这在本批次交付时是真的——本批次被明确要求不 commit、不 stage、不 push，也确实没有执行任何 git 写操作。随后**决策代理**把整套改动提交为 **`1aeec7b`**（`bevy-core`，提交信息 `fix(accounting): count shell project writes, correct the false claims, and record that the cost criterion is unmet`，提交后 `git status --porcelain` 为空），因此该句作为对**树**的陈述已不成立。这正是本批次修复的第 6 个缺陷（A-6 / D302）的形状，故按同一条规则处理：**追加说明，不重写 D303**。
+- 最终选择 / Decision:
+  1. 本次改动集（含 D303、`src/harness/write_audit.rs`、`tests/write_accounting.rs`、`.spec/bevy/WRITE-ACCOUNTING-REPORT.md` 与两处报告订正）已由决策代理提交为 **`1aeec7b`**；本批次自身未执行 `git add` / `git commit` / `git push`。
+  2. `.spec/bevy/WRITE-ACCOUNTING-REPORT.md` 的 `working_tree_at_end` 字段与第 5 节已同步为「已提交（`1aeec7b`，由决策代理提交）」——该报告与 `LIVE-COST-REPORT.md`、`FIX-REPORT.md` 不属于只追加文件，事实错误就地订正并保留原文说明。
+  3. **未被推送**：`bevy-core` 仍只存在于本地；远端只有 `origin/master`。
+  4. 后续对本条目自身的提交同样由决策代理执行，提交号不由本批次决定，故此处不预测。
+- 选择理由 / Why: 「一个条目说自己没被提交、而它正在被提交」正是 A-6 点名的形状；只追加地复述事实是同一份纪律对本文件自己的应用。
+- 纪律 / Discipline: 本条目只追加；D303 的原文保持不动；未运行任何 round、Developer 调用、模型调用或引擎；未创建、复制或打印任何 API key。
