@@ -1,7 +1,7 @@
 //! The environment wrapper that makes the write path first-class and the grind
 //! impossible (round-1 write-path batch).
 //!
-//! Three jobs, all at the one boundary where a role's action becomes an
+//! Four jobs, all at the one boundary where a role's action becomes an
 //! observation:
 //!
 //! 1. **The write/read path.**  A command that [`crate::harness::directive`]
@@ -25,6 +25,19 @@
 //!    of the same budget cannot be measured inside the environment — usage is
 //!    known only after the model call returns — so it is enforced by the runtime
 //!    on the recorded attempt; see `crate::runtime::write_failure`.)
+//!
+//! 4. **The write-guaranteed exit** (cost batch, after
+//!    `.spec/bevy/LIVE-COMPLETION-MEASUREMENT.md`).  The role's own completion
+//!    request is refused unless the call has already written the artifact it
+//!    declares; the refusal is an ordinary observation, so the call continues in
+//!    the same history.  This is the positive condition a call bound needs: at
+//!    the measured zero-context floor a 150-call live Developer call costs
+//!    2,077,238 prompt tokens, above the 1,500,000 criterion, so the criterion
+//!    requires an early exit — and the one recorded call that *was* under the
+//!    criterion got there by being cut off with nothing written, which failed the
+//!    round with `NoEngineeringWrite` (exit 2).  See
+//!    [`WriteGuardEnvironment::completion_allowed`] and
+//!    [`completion_refusal_text`].
 //!
 //! An abort is **our own judgement, not the external agent's**: the error
 //! carries [`FAIL_FAST_MARKER`], and `crate::harness::mini` turns it into a
@@ -69,6 +82,44 @@ pub const ARTIFACT_BUDGET_STATUS: &str = "ArtifactBudgetExceeded";
 /// not have.  The runtime treats it as a limit (`runtime::invoke::is_limits_exceeded`
 /// and `runtime::write_failure::is_failure_status` both accept it).
 pub const STEP_BUDGET_STATUS: &str = "StepBudgetExceeded";
+
+/// The marker that legally ends a role call when it is the **first line of a
+/// command's output** with exit code 0
+/// (`mini-swe-agent-rust-mini/rust/src/environments/local.rs:118-128`).
+pub const COMPLETION_MARKER: &str = "COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT";
+
+/// The extra key every **refused** completion request carries, so the fact is
+/// auditable in the trajectory instead of being visible only in prose.
+///
+/// A refusal is an ordinary tool observation (the guard answers the action with
+/// it), so the key travels wherever outputs travel — including
+/// `mini`'s own `format_toolcall_observation_messages`, which merges
+/// `Output::extra` into the observation.
+pub const COMPLETION_REFUSED_KEY: &str = "hoh_exit_refused";
+
+/// The observation a role receives when its own completion request is refused
+/// because the call has not written the artifact it declares.
+///
+/// The write-guaranteed exit (cost batch, after
+/// `.spec/bevy/LIVE-COMPLETION-MEASUREMENT.md`): the round's only sub-criterion
+/// Developer call was cheap because it was aborted with **nothing written**
+/// (`StepBudgetExceeded`, `NoEngineeringWrite`, exit 2), so any call bound tight
+/// enough to meet the token criterion is also tight enough to cut the call
+/// before its artifact exists.  The refusal is the positive half of that: the
+/// request is refused rather than accepted, and the role is told — in the same
+/// call, with the directive in front of it — what must exist first.
+pub fn completion_refusal_text(declared_artifact: &str) -> String {
+    format!(
+        "[hoh: exit refused] your completion command ran and did **not** end this call: this call \
+         has not yet written the artifact it declares — {declared_artifact}. Nothing else changed: \
+         your instructions, your budget, the working directory and every file on disk are exactly \
+         as they were, and the request cost you only the turn it arrived in.\n\n\
+         A call may end with `echo {COMPLETION_MARKER}` only **after** that write exists, so this \
+         request was refused instead of accepted. Write the file now — the whole file, in one \
+         directive — and then run the completion command again:\n\n{}",
+        directive_help()
+    )
+}
 
 /// One call's step count, shared between the model (which makes the steps) and
 /// the guard (which enforces the budget on them).
@@ -565,6 +616,28 @@ impl ArtifactKind {
             ArtifactKind::AnyFile => true,
         }
     }
+
+    /// Must this artifact exist before the role's **own** completion request may
+    /// end the call? (cost batch: the write-guaranteed exit)
+    ///
+    /// Armed only for [`ArtifactKind::ProjectFile`] — the Developer's artifact,
+    /// and the very measurement the round's `NoEngineeringWrite` gate makes.  A
+    /// role whose declared artifact lives under `.hoh/**` by construction (the
+    /// Planner's `.hoh/plan.md`, the Tester's `.hoh/evidence.json`) keeps the
+    /// behaviour it had: neither role was implicated in the measurement this
+    /// repair answers, and the gate takes its scope from the artifact kind, not
+    /// from a role name.
+    pub fn gates_completion(self) -> bool {
+        matches!(self, ArtifactKind::ProjectFile)
+    }
+
+    /// The artifact in the runtime's own words, for the refusal text.
+    pub fn declared_artifact(self) -> &'static str {
+        match self {
+            ArtifactKind::ProjectFile => crate::runtime::write_failure::DECLARED_DEVELOPER,
+            ArtifactKind::AnyFile => "the artifact it declares",
+        }
+    }
 }
 
 /// The environment a role runs against: the real shell plus the two guards.
@@ -838,6 +911,47 @@ impl WriteGuardEnvironment {
         Ok(self.cwd.join(candidate))
     }
 
+    /// Is the role's own completion request allowed to end this call?
+    ///
+    /// Yes exactly when the call has written the artifact it declares, for an
+    /// artifact kind that gates (see [`ArtifactKind::gates_completion`]).  The
+    /// measurement is the guard's own `artifact_written`, the same one the step
+    /// budget and the artifact-write budget already consult — never the agent's
+    /// claim, and never the number of writes.
+    fn completion_allowed(&self) -> bool {
+        !self.artifact_kind.gates_completion() || self.artifact_written()
+    }
+
+    /// Is this error the inner environment's own completion interrupt?
+    ///
+    /// `LocalEnvironment::check_finished` is where the completion marker is read
+    /// (`mini-swe-agent-rust-mini/rust/src/environments/local.rs:118-128`), and it
+    /// is the inner's own method — the guard is handed the interrupt, not the
+    /// output that carried the marker.  Nothing else raises a `Submitted`
+    /// interrupt, so this predicate identifies a completion request however it was
+    /// spelled: an `echo`, a `type` of a file that holds the marker, or anything
+    /// else whose first output line is the marker with exit code 0.
+    fn is_completion_request(error: &mini_swe_agent::AgentError) -> bool {
+        matches!(
+            error,
+            mini_swe_agent::AgentError::Interrupt(interrupt)
+                if interrupt.kind == mini_swe_agent::InterruptKind::Submitted
+        )
+    }
+
+    /// The observation that replaces the call's end when
+    /// [`WriteGuardEnvironment::completion_allowed`] says no.
+    fn completion_refusal(&self) -> Output {
+        let mut output = Output::success(
+            completion_refusal_text(self.artifact_kind.declared_artifact()),
+            1,
+        );
+        output
+            .extra
+            .insert(COMPLETION_REFUSED_KEY.to_string(), json!(true));
+        output
+    }
+
     fn execute_write(&self, path: &str, content: &str) -> Output {
         let resolved = match self.resolve(path) {
             Ok(resolved) => resolved,
@@ -951,7 +1065,28 @@ impl Environment for WriteGuardEnvironment {
             Directive::Shell => {}
         }
 
-        let output = self.inner.execute(action, cwd, timeout).await?;
+        let output = match self.inner.execute(action, cwd, timeout).await {
+            Ok(output) => output,
+            // The write-guaranteed exit (cost batch).  A completion request is
+            // raised as a `Submitted` flow interrupt by the inner environment —
+            // `LocalEnvironment::check_finished` is the only place the marker is
+            // read, and it is the inner's own method, so the guard cannot see the
+            // output that carried it.  What the guard *can* see is the interrupt,
+            // and that is the one place a call's end is decidable at all: the
+            // request is refused unless the call has written the artifact it
+            // declares, and the refusal is returned as an ordinary observation so
+            // the call continues in the same history, in the same call, with a
+            // well-formed tool result for the action mini just ran.
+            //
+            // Everything else — `LimitsExceeded`, `TimeExceeded`, the format
+            // errors and our own fail-fast aborts — is deliberately not caught:
+            // refusing a *budget* would turn a bounded call into an unbounded one
+            // and would hide a real failure from the round.
+            Err(error) if Self::is_completion_request(&error) && !self.completion_allowed() => {
+                return Ok(self.completion_refusal());
+            }
+            Err(other) => return Err(other),
+        };
         if output.returncode == 0 {
             if let Some(fail_fast) = self.record_success(&action.command, &output.output) {
                 return Err(mini_swe_agent::AgentError::other(anyhow::anyhow!(
@@ -2006,5 +2141,259 @@ mod tests {
             fail_fast_status("a command that mentions HOH_FAIL_FAST"),
             None
         );
+    }
+
+    // ------------------------------------------------------------------
+    // The **write-guaranteed exit** (cost batch, after
+    // `.spec/bevy/LIVE-COMPLETION-MEASUREMENT.md`).
+    //
+    // The round that motivated it produced its only sub-criterion Developer call
+    // by having the harness abort it with nothing written: 44 model calls,
+    // 803,027 tokens, `StepBudgetExceeded`, `NoEngineeringWrite`, exit 2.  A call
+    // bound is the only lever that can meet the criterion, and these tests are
+    // what make a bound safe: the role's own completion request may end a call
+    // **only once the artifact the call declares exists**.
+    // ------------------------------------------------------------------
+
+    /// The marker, spelled once (the same string mini's `check_finished` reads).
+    const COMPLETION_COMMAND: &str = "echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT";
+    /// The extra key a refusal carries, so it is auditable in the trajectory.
+    const COMPLETION_REFUSED: &str = "hoh_exit_refused";
+
+    /// The inner environment behaving as mini really does on a completion
+    /// request: a command whose **first output line** is the marker and whose exit
+    /// code is 0 raises `FlowInterrupt::submitted`
+    /// (`mini-swe-agent-rust-mini/rust/src/environments/local.rs:118-128`).  It
+    /// answers `echo <text>` with `<text>` (what the shell would print), so a
+    /// refused request re-executed later is indistinguishable from a fresh one.
+    struct SubmittingShell;
+
+    #[async_trait::async_trait]
+    impl Environment for SubmittingShell {
+        async fn execute(
+            &self,
+            action: &Action,
+            _cwd: Option<&str>,
+            _timeout: Option<u64>,
+        ) -> MiniResult<Output> {
+            let command = action.command.trim();
+            let printed = command.strip_prefix("echo ").unwrap_or(command);
+            let output = Output::success(format!("{printed}\n"), 0);
+            let first = output.output.lines().next().unwrap_or("").trim();
+            if first == "COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT" && output.returncode == 0 {
+                return Err(mini_swe_agent::FlowInterrupt::submitted("done").into());
+            }
+            Ok(output)
+        }
+
+        fn get_template_vars(&self) -> Value {
+            Value::Null
+        }
+
+        fn serialize(&self) -> Value {
+            Value::Null
+        }
+
+        fn cleanup(&self) -> anyhow::Result<()> {
+            Ok(())
+        }
+    }
+
+    fn gating_guard(root: &Path, kind: ArtifactKind) -> WriteGuardEnvironment {
+        guard_over(Box::new(SubmittingShell), root, kind)
+    }
+
+    fn guard_over(
+        shell: Box<dyn Environment>,
+        root: &Path,
+        kind: ArtifactKind,
+    ) -> WriteGuardEnvironment {
+        WriteGuardEnvironment::with_limits(shell, root.to_path_buf(), 3, 0, kind, 0, 150, 25, 8)
+    }
+
+    /// An inner environment that raises the completion interrupt for **any**
+    /// command.  It stands for every route to `Submitted` other than the
+    /// documented `echo`: `type` of a file that holds the marker, a batch file, a
+    /// PowerShell `Write-Output` — anything whose first output line is the marker
+    /// with exit code 0.  A guard that matched the completion command's *text*
+    /// would pass the tests around this one and fail this one.
+    struct AnyCommandSubmits;
+
+    #[async_trait::async_trait]
+    impl Environment for AnyCommandSubmits {
+        async fn execute(
+            &self,
+            _action: &Action,
+            _cwd: Option<&str>,
+            _timeout: Option<u64>,
+        ) -> MiniResult<Output> {
+            Err(mini_swe_agent::FlowInterrupt::submitted("done").into())
+        }
+
+        fn get_template_vars(&self) -> Value {
+            Value::Null
+        }
+
+        fn serialize(&self) -> Value {
+            Value::Null
+        }
+
+        fn cleanup(&self) -> anyhow::Result<()> {
+            Ok(())
+        }
+    }
+
+    /// **The measured failure mode as a unit.**  The Developer ran the completion
+    /// command having written nothing inside the project; the inner environment
+    /// raised `Submitted`; before this repair the call ended there and the round
+    /// died with `NoEngineeringWrite`.  Now it is refused, with the reason and the
+    /// way to fix it.
+    #[test]
+    fn a_completion_request_without_the_artifact_is_refused_not_ended() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let environment = gating_guard(directory.path(), ArtifactKind::ProjectFile);
+        let output = futures_lite_block_on(async {
+            environment
+                .execute(&Action::new(COMPLETION_COMMAND), None, None)
+                .await
+        })
+        .expect("the guard refuses the completion instead of raising the interrupt");
+        assert_ne!(
+            output.returncode, 0,
+            "a refusal is a refusal, not a success: {output:?}"
+        );
+        assert_eq!(
+            output.extra.get(COMPLETION_REFUSED),
+            Some(&json!(true)),
+            "the refusal must be auditable: {output:?}"
+        );
+        assert!(output.output.contains("exit refused"), "{}", output.output);
+        assert!(
+            output.output.contains("has not yet written"),
+            "the refusal must name the missing artifact: {}",
+            output.output
+        );
+        assert!(
+            output.output.contains("HOH_WRITE_FILE"),
+            "the refusal must say how to write it: {}",
+            output.output
+        );
+        assert!(!environment.artifact_written(), "nothing was written");
+    }
+
+    /// The permission half: once the project write exists, the same request is
+    /// the call's end — untouched, unwrapped, exactly as before this repair.
+    #[test]
+    fn a_completion_request_after_a_project_write_is_the_call_end() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let environment = gating_guard(directory.path(), ArtifactKind::ProjectFile);
+        let write = render_write("src/game.rs", "fn main() {}\n");
+        futures_lite_block_on(async {
+            let output = environment
+                .execute(&Action::new(write), None, None)
+                .await
+                .expect("the write directive runs");
+            assert_eq!(output.returncode, 0, "{output:?}");
+            let error = environment
+                .execute(&Action::new(COMPLETION_COMMAND), None, None)
+                .await
+                .expect_err("the completion ends the call once the artifact exists");
+            match error {
+                mini_swe_agent::AgentError::Interrupt(interrupt) => assert_eq!(
+                    interrupt.kind,
+                    mini_swe_agent::InterruptKind::Submitted,
+                    "the completion is the *submitted* interrupt"
+                ),
+                other => panic!("expected a flow interrupt, got {other:?}"),
+            }
+        });
+        assert!(environment.artifact_written());
+    }
+
+    /// A scratch write is not the engineering write here, because it is not one
+    /// anywhere else: `ArtifactKind::counts` excludes `.hoh/**`, and that is the
+    /// same rule the step budget and the round's `NoEngineeringWrite` gate use.
+    #[test]
+    fn a_scratch_write_does_not_earn_the_completion() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let environment = gating_guard(directory.path(), ArtifactKind::ProjectFile);
+        let scratch = render_write(".hoh/scratch/notes.md", "a note\n");
+        futures_lite_block_on(async {
+            let output = environment
+                .execute(&Action::new(scratch), None, None)
+                .await
+                .expect("the scratch directive runs");
+            assert_eq!(output.returncode, 0);
+            let refused = environment
+                .execute(&Action::new(COMPLETION_COMMAND), None, None)
+                .await
+                .expect("a scratch write is not the declared artifact");
+            assert_eq!(
+                refused.extra.get(COMPLETION_REFUSED),
+                Some(&json!(true)),
+                "{refused:?}"
+            );
+        });
+        assert_eq!(environment.writes(), 1, "the write itself happened");
+        assert!(!environment.artifact_written());
+    }
+
+    /// The gate is armed by the artifact kind, not by the role: a role whose
+    /// declared artifact lives under the scratch tree (the Planner's
+    /// `.hoh/plan.md`, the Tester's `.hoh/evidence.json`) keeps the behaviour it
+    /// had, so this repair cannot change two roles the measurement never
+    /// implicated.
+    #[test]
+    fn an_artifact_that_does_not_gate_still_ends_on_its_own_request() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let environment = gating_guard(directory.path(), ArtifactKind::AnyFile);
+        let error = futures_lite_block_on(async {
+            environment
+                .execute(&Action::new(COMPLETION_COMMAND), None, None)
+                .await
+        })
+        .expect_err("a non-gating artifact ends the call as before");
+        match error {
+            mini_swe_agent::AgentError::Interrupt(interrupt) => {
+                assert_eq!(interrupt.kind, mini_swe_agent::InterruptKind::Submitted)
+            }
+            other => panic!("expected a flow interrupt, got {other:?}"),
+        }
+    }
+
+    /// The gate keys on the **interrupt**, not on the completion command's text.
+    ///
+    /// This is what makes the guarantee complete rather than a spelling check: the
+    /// marker is read by the inner environment (`check_finished`), so every route
+    /// to it — the documented `echo`, `type` of a file that holds the marker, a
+    /// batch file, any other command whose first output line is the marker with
+    /// exit code 0 — arrives here as the same `Submitted` interrupt and is refused
+    /// the same way when the artifact is missing.
+    #[test]
+    fn the_gate_refuses_every_route_to_the_completion_interrupt() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let environment = guard_over(
+            Box::new(AnyCommandSubmits),
+            directory.path(),
+            ArtifactKind::ProjectFile,
+        );
+        for command in [
+            "type marker.txt",
+            "cmd /c echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT",
+            "powershell -NoProfile -Command \"Write-Output 'COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT'\"",
+        ] {
+            let output = futures_lite_block_on(async {
+                environment.execute(&Action::new(command), None, None).await
+            })
+            .unwrap_or_else(|error| {
+                panic!("`{command}` must be refused, not accepted: {error}")
+            });
+            assert_eq!(
+                output.extra.get(COMPLETION_REFUSED),
+                Some(&json!(true)),
+                "`{command}`: {output:?}"
+            );
+        }
+        assert!(!environment.artifact_written());
     }
 }
