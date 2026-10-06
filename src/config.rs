@@ -139,6 +139,41 @@ pub struct AgentLimits {
     /// a budget its prompt stated as 43 — the round-3 defect in another unit.
     #[serde(default = "default_steps_per_artifact")]
     pub steps_per_artifact: u64,
+    /// Round-6 cost repair (the **post-write call bound**): the step budget in
+    /// force **once the call has written the artifact it declares**.
+    ///
+    /// The criterion is `agent.artifact_write_budget_tokens` (1,500,000 tokens per
+    /// Developer call).  The zero-context floor for a 150-call live call is
+    /// 2,077,238 (`.spec/bevy/SPIKE-COST-LEVERS.md`, lever 1), so no amount of
+    /// context shrinking reaches it and the call has to *end* earlier.  The
+    /// write-guaranteed exit says when a call may end (only once its counted
+    /// engineering write exists); this number says how long it may then run.
+    ///
+    /// **The value is measured, not chosen.**  A step is a model call and the
+    /// guard's rule is `steps > budget`, so a bound `B` allows exactly `B` calls to
+    /// act and bills one more: the cost of the bound is the prefix sum of the
+    /// recording's own per-call usage over calls `1..=B+1`.  Over the four
+    /// committed Developer recordings and the three live ones, the largest prefix
+    /// still under the criterion is 44 / 40 / 36 / 81 (and 78 / 74 for the two live
+    /// post-fix producing calls), so the binding recording is `round4-iter-3` at
+    /// **36** calls — 1,452,307 tokens (0.968x), against 1,502,443 (1.002x) at 37.
+    /// `B = 35` is therefore the largest bound that brings every recorded Developer
+    /// call under the criterion; `B = 36` misses it by 2,443 tokens.
+    ///
+    /// It is only ever *tighter* than the flat limit, and only ever consulted after
+    /// the write: a call that has not written keeps the unwritten allowance
+    /// (`wrap_up_steps + step_limit / steps_per_artifact` = 43), so the bound cannot
+    /// cut a call before its artifact exists.  A call that writes late (the
+    /// recorded `round4-iter-2` wrote at call 33) is cut only a few calls later —
+    /// the cost of the bound is a weaker artifact, never a failed round, because
+    /// the runtime judges the round on the artifact tree and not on the exit status.
+    ///
+    /// `0` means "no post-write ceiling" (the written budget is the flat
+    /// `step_limit`), which is what a caller that does not name this field gets.
+    /// `steps_per_artifact = 0` disables the whole progress-responsive budget,
+    /// this number included.
+    #[serde(default = "default_post_write_step_limit")]
+    pub post_write_step_limit: u64,
     /// Round-5 cost repair: fold **superseded history** out of the model context
     /// (`harness::compact`).
     ///
@@ -203,6 +238,18 @@ fn default_steps_per_artifact() -> u64 {
     8
 }
 
+/// Round-6 cost repair: `0` is the library default — no post-write ceiling, so a
+/// caller that does not name the field keeps the pre-repair behaviour exactly
+/// (a written call runs under the flat `step_limit`).  The **shipped** value lives
+/// in `config/hoh.yaml` and is 35, derived in
+/// [`AgentLimits::post_write_step_limit`]'s documentation from the recorded
+/// calls: it is the largest bound whose every recorded Developer call stays under
+/// the 1,500,000-token criterion, the binding recording being `round4-iter-3`
+/// (1,452,307 at 36 billed calls, 0.968x; 1,502,443 at 37, 1.002x).
+fn default_post_write_step_limit() -> u64 {
+    0
+}
+
 /// Round-1 write-path batch: three failures of one action is enough to conclude
 /// the action cannot succeed — round 1 repeated its file-writing attempts 140
 /// times.
@@ -257,6 +304,7 @@ impl Default for AgentLimits {
             artifact_write_budget_tokens: default_artifact_write_budget_tokens(),
             max_repeated_actions: default_max_repeated_actions(),
             steps_per_artifact: default_steps_per_artifact(),
+            post_write_step_limit: default_post_write_step_limit(),
             compact_history: default_compact_history(),
             compact_history_tail: default_compact_history_tail(),
         }
@@ -271,16 +319,38 @@ impl AgentLimits {
     /// calls without producing anything.  It is gated to
     /// `wrap_up_steps + step_limit / steps_per_artifact` (and never below
     /// `wrap_up_steps`, so the wrap-up discipline the prompt describes stays
-    /// reachable).  `has_written = true` earns the flat `step_limit`.
+    /// reachable).  `has_written = true` earns [`AgentLimits::written_step_limit`]
+    /// — the post-write bound when one is configured, the flat `step_limit` when
+    /// it is not.
     ///
     /// `steps_per_artifact = 0` disables the gate and returns `step_limit`,
-    /// which is the pre-repair behaviour.
+    /// which is the pre-repair behaviour (and disables the post-write ceiling
+    /// with it: they are one progress-responsive budget).
     pub fn effective_step_limit(&self, has_written: bool) -> u64 {
-        if has_written || self.steps_per_artifact == 0 {
+        if self.steps_per_artifact == 0 {
             return self.step_limit;
+        }
+        if has_written {
+            return self.written_step_limit();
         }
         let per_artifact = (self.step_limit / self.steps_per_artifact).max(1);
         (self.wrap_up_steps + per_artifact).max(self.wrap_up_steps)
+    }
+
+    /// Round-6 cost repair: the budget a call that has **written** the artifact it
+    /// declares runs under.
+    ///
+    /// It is always the *tighter* of the flat ceiling and the configured
+    /// post-write bound, so a bound above `step_limit` can never raise the
+    /// ceiling, and `post_write_step_limit = 0` means "no post-write ceiling".
+    /// Read by [`AgentLimits::effective_step_limit`] and by the guard at every
+    /// step, which is what makes the value the prompt states the value the call is
+    /// held to.
+    pub fn written_step_limit(&self) -> u64 {
+        if self.post_write_step_limit == 0 {
+            return self.step_limit;
+        }
+        self.post_write_step_limit.min(self.step_limit)
     }
 }
 

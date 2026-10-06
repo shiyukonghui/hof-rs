@@ -1,7 +1,7 @@
 //! The environment wrapper that makes the write path first-class and the grind
 //! impossible (round-1 write-path batch).
 //!
-//! Four jobs, all at the one boundary where a role's action becomes an
+//! Five jobs, all at the one boundary where a role's action becomes an
 //! observation:
 //!
 //! 1. **The write/read path.**  A command that [`crate::harness::directive`]
@@ -38,6 +38,18 @@
 //!    round with `NoEngineeringWrite` (exit 2).  See
 //!    [`WriteGuardEnvironment::completion_allowed`] and
 //!    [`completion_refusal_text`].
+//!
+//! 5. **The post-write call bound** (cost batch, round 6).  The write-guaranteed
+//!    exit says *when* a call may end; this says how long it may then run.  Once
+//!    the call has written the artifact it declares, its step budget becomes
+//!    `agent.post_write_step_limit` — 35 in the shipped configuration, measured as
+//!    the largest bound whose every recorded Developer call stays under the
+//!    1,500,000-token criterion (the binding recording, `round4-iter-3`, costs
+//!    1,452,307 by call 36 and 1,502,443 by call 37).  It is only ever consulted
+//!    after the write, so it can never cut a call before its artifact exists; the
+//!    unwritten allowance (43) and the round's `no_engineering_write` gate are
+//!    untouched.  See [`WriteGuardEnvironment::with_post_write_step_limit`] and
+//!    [`crate::config::AgentLimits::written_step_limit`].
 //!
 //! An abort is **our own judgement, not the external agent's**: the error
 //! carries [`FAIL_FAST_MARKER`], and `crate::harness::mini` turns it into a
@@ -275,10 +287,12 @@ impl FailFast {
             ),
             FailFast::StepBudget { steps, budget } => format!(
                 "{FAIL_FAST_MARKER} {STEP_BUDGET_STATUS}: this call has made {steps} model call(s) \
-                 and its live step budget is {budget} (`agent.steps_per_artifact`, re-read here, at \
-                 the point of enforcement). The budget rises the moment the call writes the artifact \
-                 it declares. Write the artifact you already have and end the call with the \
-                 completion protocol, or make progress and continue."
+                 and its live step budget is {budget} (`agent.steps_per_artifact` and \
+                 `agent.post_write_step_limit`, re-read here, at the point of enforcement). The \
+                 budget follows whether this call has written the artifact it declares — it is \
+                 re-read at every step, so a write inside the call changes it immediately, in \
+                 whichever direction the configuration says. Write the artifact you already have \
+                 and end the call with the completion protocol."
             ),
         }
     }
@@ -422,6 +436,13 @@ pub fn output_digest(output: &str) -> String {
 ///   steps" refers to, and mini's own backstop;
 /// * `gated_step_limit` is the budget **in force at this moment**, read from the
 ///   same live source the guard enforces against;
+/// * `written_step_limit` is the budget in force **once the call has written the
+///   artifact it declares** — the post-write bound when one is configured
+///   (`agent.post_write_step_limit`), the flat ceiling when it is not.  Round 6
+///   added it because the post-write bound can be *tighter* than the unwritten
+///   allowance (`43 -> 35` in the shipped configuration), and a note that
+///   promised "the first successful project write raises it to 150" would then be
+///   a lie about the number the guard enforces;
 /// * the rule that moves from one to the other is stated as a rule, because the
 ///   guard re-reads it at every step (see
 ///   [`WriteGuardEnvironment::step_budget_exceeded`]).
@@ -432,6 +453,7 @@ pub fn state_the_effective_budget(
     gated_step_limit: u64,
     flat_step_limit: u64,
     wrap_up_steps: u64,
+    written_step_limit: u64,
 ) -> String {
     if !states_a_budget(prompt) {
         return prompt.to_string();
@@ -443,7 +465,7 @@ pub fn state_the_effective_budget(
              this call should run under, the configuration (`agent.step_limit`) is the place to say \
              so.\n"
         )
-    } else if gated_step_limit >= flat_step_limit {
+    } else if gated_step_limit >= flat_step_limit && written_step_limit >= flat_step_limit {
         format!(
             "\n\n[budget] This call's enforced step budget is {gated_step_limit}, the flat limit in \
              the instructions above; no progress gate is configured for it. The limit is re-read at \
@@ -453,10 +475,10 @@ pub fn state_the_effective_budget(
         format!(
             "\n\n[budget] The flat limit in the instructions above ({flat_step_limit}) is this \
              call's ceiling. Until this call writes the artifact it declares, the budget actually \
-             enforced on it is {gated_step_limit}; the first successful project write raises it to \
-             {flat_step_limit}. That limit is re-read at every step, so the raise takes effect \
-             inside this call. The wrap-up discipline begins {wrap_up_steps} steps before the limit \
-             in force.\n"
+             enforced on it is {gated_step_limit}; once it has written, the budget in force is \
+             {written_step_limit}. Both numbers are re-read at every step, so the change takes \
+             effect inside this call. The wrap-up discipline begins {wrap_up_steps} steps before the \
+             limit in force.\n"
         )
     };
     format!("{prompt}{note}")
@@ -654,6 +676,13 @@ pub struct WriteGuardEnvironment {
     step_limit: u64,
     wrap_up_steps: u64,
     steps_per_artifact: u64,
+    /// Round-6 cost repair (the post-write call bound): the step budget in force
+    /// **once this call has written the artifact it declares**, from
+    /// `agent.post_write_step_limit`.  `0` means "no post-write ceiling" (the
+    /// written budget is the flat `step_limit`), which is what a construction that
+    /// does not name it gets — see
+    /// [`WriteGuardEnvironment::with_post_write_step_limit`].
+    post_write_step_limit: u64,
     artifact_budget: Option<Duration>,
     artifact_kind: ArtifactKind,
     /// Round-4 repair: the **shared model-call counter**.
@@ -729,6 +758,9 @@ impl WriteGuardEnvironment {
             step_limit,
             wrap_up_steps,
             steps_per_artifact,
+            // A construction that does not name the post-write bound keeps the
+            // pre-repair behaviour exactly: a written call gets the flat limit.
+            post_write_step_limit: 0,
             artifact_budget: if artifact_budget_seconds == 0 {
                 None
             } else {
@@ -754,16 +786,51 @@ impl WriteGuardEnvironment {
         self
     }
 
+    /// Round-6 cost repair: bound this call's model calls **after** it has written
+    /// the artifact it declares (`agent.post_write_step_limit`).
+    ///
+    /// The criterion is 1,500,000 tokens per Developer call and the zero-context
+    /// floor for a 150-call call is 2,077,238, so the call has to *end* earlier;
+    /// the write-guaranteed exit says when a call may end, and this says how long
+    /// it may then run.  It is only ever consulted once the write exists, so it
+    /// cannot cut a call before its artifact does, and it is only ever the tighter
+    /// of the flat ceiling and the configured bound.
+    ///
+    /// `0` means "no post-write ceiling" (the written budget is the flat
+    /// `step_limit`), which is the pre-repair behaviour — so a caller that does not
+    /// name it is unaffected.
+    pub fn with_post_write_step_limit(mut self, limit: u64) -> Self {
+        self.post_write_step_limit = limit;
+        self
+    }
+
     /// Round-2 repair (cost batch): the step budget this call may really use,
     /// given whether it has written its artifact yet.
     pub fn effective_step_budget(&self) -> u64 {
-        let limits = crate::config::AgentLimits {
+        self.limits().effective_step_limit(self.artifact_written())
+    }
+
+    /// Round-6 cost repair: the budget this call runs under **once it has written**
+    /// its artifact — the post-write bound when one is configured, the flat
+    /// `step_limit` when it is not.
+    ///
+    /// It is the number the prompt's `[budget]` note states as the written budget
+    /// (`crate::harness::guard::state_the_effective_budget`), so the note and the
+    /// enforcement cannot disagree about it.
+    pub fn written_step_budget(&self) -> u64 {
+        self.limits().written_step_limit()
+    }
+
+    /// The three budget fields as the configuration type that owns the
+    /// arithmetic, so the guard never re-implements the rule.
+    fn limits(&self) -> crate::config::AgentLimits {
+        crate::config::AgentLimits {
             step_limit: self.step_limit,
             wrap_up_steps: self.wrap_up_steps,
             steps_per_artifact: self.steps_per_artifact,
+            post_write_step_limit: self.post_write_step_limit,
             ..crate::config::AgentLimits::default()
-        };
-        limits.effective_step_limit(self.artifact_written())
+        }
     }
 
     /// Round-4 repair: how many steps this call has taken — the **model calls**
@@ -1375,6 +1442,199 @@ mod tests {
         assert_eq!(environment.effective_step_budget(), 150);
     }
 
+    /// Round-6 cost repair (the post-write call bound): the budget a written call
+    /// runs under is the **tighter** of the flat ceiling and
+    /// `agent.post_write_step_limit`, and it is consulted only **once the write
+    /// exists**.  The shipped configuration's numbers are 43 unwritten and 35
+    /// post-write, so a call that has written is now held to 35 of the 150 it used
+    /// to earn — which is the whole point of the bound.
+    #[test]
+    fn the_post_write_bound_applies_only_once_the_call_has_written() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let environment = WriteGuardEnvironment::with_limits(
+            Box::new(FakeShell::new(0)),
+            directory.path().to_path_buf(),
+            3,
+            0,
+            ArtifactKind::ProjectFile,
+            0,
+            150,
+            25,
+            8,
+        )
+        .with_post_write_step_limit(35);
+        assert_eq!(
+            environment.effective_step_budget(),
+            43,
+            "before the write the call keeps the unwritten allowance, whatever the post-write \
+             bound says"
+        );
+        assert_eq!(environment.written_step_budget(), 35);
+        futures_lite_block_on(async {
+            let output = environment
+                .execute(
+                    &Action::new(render_write("src/game.rs", "fn main() {}\n")),
+                    None,
+                    None,
+                )
+                .await
+                .expect("the write succeeds");
+            assert_eq!(output.returncode, 0);
+        });
+        assert!(environment.artifact_written());
+        assert_eq!(
+            environment.effective_step_budget(),
+            35,
+            "once written, the call runs under the post-write bound instead of the flat 150"
+        );
+    }
+
+    /// The bound is **enforced** where every other budget is — at the step, against
+    /// the live value — and the number the refusal names is the post-write one.
+    ///
+    /// The rule is `steps > budget`, so a bound of 35 lets 35 model calls act and
+    /// bills the 36th, exactly as the recorded unwritten allowance of 43 produced
+    /// the 44-call `StepBudgetExceeded` of `runs/completion1/iter-3`.
+    #[test]
+    fn the_post_write_bound_is_enforced_at_the_step_it_names() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let counter = StepCounter::new();
+        let environment = WriteGuardEnvironment::with_limits(
+            Box::new(FakeShell::new(0)),
+            directory.path().to_path_buf(),
+            0,
+            0,
+            ArtifactKind::ProjectFile,
+            0,
+            150,
+            25,
+            8,
+        )
+        .with_post_write_step_limit(35)
+        .sharing_steps(counter.clone());
+
+        futures_lite_block_on(async {
+            counter.increment();
+            environment
+                .execute(
+                    &Action::new(render_write("src/game.rs", "fn main() {}\n")),
+                    None,
+                    None,
+                )
+                .await
+                .expect("the write is inside the unwritten allowance");
+            for call in 2..=35 {
+                counter.increment();
+                environment
+                    .execute(&Action::new(format!("echo call {call}")), None, None)
+                    .await
+                    .unwrap_or_else(|error| {
+                        panic!("call {call} is inside the post-write bound: {error}")
+                    });
+            }
+            counter.increment();
+            let error = environment
+                .execute(&Action::new("echo one call too many"), None, None)
+                .await
+                .expect_err("the call after the post-write bound must be refused");
+            let message = error.to_string();
+            assert!(
+                message.contains(FAIL_FAST_MARKER) && message.contains(STEP_BUDGET_STATUS),
+                "{message}"
+            );
+            assert!(
+                message.contains("live step budget is 35"),
+                "the refusal must name the post-write budget, not the flat 150: {message}"
+            );
+            assert!(message.contains("post_write_step_limit"), "{message}");
+        });
+        assert_eq!(environment.steps(), 36);
+    }
+
+    /// The control: `post_write_step_limit = 0` means "no post-write ceiling", so a
+    /// written call keeps the flat budget.  This is the pre-repair behaviour, which
+    /// is what every construction that does not name the field gets.
+    #[test]
+    fn a_zero_post_write_bound_leaves_the_written_budget_flat() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let environment = WriteGuardEnvironment::with_limits(
+            Box::new(FakeShell::new(0)),
+            directory.path().to_path_buf(),
+            3,
+            0,
+            ArtifactKind::ProjectFile,
+            0,
+            150,
+            25,
+            8,
+        )
+        .with_post_write_step_limit(0);
+        assert_eq!(environment.written_step_budget(), 150);
+        futures_lite_block_on(async {
+            environment
+                .execute(
+                    &Action::new(render_write("src/game.rs", "fn main() {}\n")),
+                    None,
+                    None,
+                )
+                .await
+                .expect("the write succeeds");
+        });
+        assert_eq!(
+            environment.effective_step_budget(),
+            150,
+            "with no post-write ceiling configured, a written call keeps the flat limit"
+        );
+    }
+
+    /// The **unwritten guard is unchanged by this feature**, which is the property
+    /// the round's `no_engineering_write` failure depends on: with the post-write
+    /// bound configured, a call that never writes still runs to the unwritten
+    /// allowance (43 here, the same number the recorded round was cut at) and still
+    /// ends with the harness's own failure status.
+    #[test]
+    fn the_unwritten_guard_is_untouched_by_the_post_write_bound() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let counter = StepCounter::new();
+        let environment = WriteGuardEnvironment::with_limits(
+            Box::new(FakeShell::new(0)),
+            directory.path().to_path_buf(),
+            0,
+            0,
+            ArtifactKind::ProjectFile,
+            0,
+            150,
+            25,
+            8,
+        )
+        .with_post_write_step_limit(35)
+        .sharing_steps(counter.clone());
+
+        futures_lite_block_on(async {
+            for call in 1..=43 {
+                counter.increment();
+                environment
+                    .execute(&Action::new(format!("echo call {call}")), None, None)
+                    .await
+                    .unwrap_or_else(|error| {
+                        panic!("call {call} is inside the unwritten allowance: {error}")
+                    });
+            }
+            counter.increment();
+            let error = environment
+                .execute(&Action::new("echo one call too many"), None, None)
+                .await
+                .expect_err("the call after the unwritten allowance must be refused");
+            let message = error.to_string();
+            assert!(
+                message.contains("live step budget is 43"),
+                "an unwritten call must still be cut at 43, not at the post-write 35: {message}"
+            );
+        });
+        assert_eq!(environment.steps(), 44);
+        assert!(!environment.artifact_written());
+    }
+
     /// Round-4 repair: the prompt grows **one** budget note, it names the ceiling
     /// and the budget in force separately, and it promises only what the guard
     /// re-reads at every step.  Round 3's failing prompt said "the first
@@ -1384,7 +1644,7 @@ mod tests {
     #[test]
     fn the_effective_budget_is_stated_in_the_prompt_exactly_once() {
         let prompt = "You run under a step budget of 150.";
-        let stated = state_the_effective_budget(prompt, 43, 150, 25);
+        let stated = state_the_effective_budget(prompt, 43, 150, 25, 150);
         assert!(
             stated.starts_with(prompt),
             "the prompt is extended, not rewritten"
@@ -1401,13 +1661,44 @@ mod tests {
 
         // A prompt that states no budget grows nothing.
         let silent = "This prompt states no budget.";
-        assert_eq!(state_the_effective_budget(silent, 43, 150, 25), silent);
+        assert_eq!(state_the_effective_budget(silent, 43, 150, 25, 150), silent);
 
         // No gate configured: the two numbers are the same and the note must not
         // promise a raise that cannot happen.
-        let ungated = state_the_effective_budget(prompt, 150, 150, 25);
+        let ungated = state_the_effective_budget(prompt, 150, 150, 25, 150);
         assert!(ungated.contains("enforced step budget is 150"), "{ungated}");
         assert!(!ungated.contains("raises it"), "{ungated}");
+    }
+
+    /// Round-6 cost repair (the post-write call bound): the note must state the
+    /// number the guard will really enforce **after** the write.  The shipped
+    /// configuration's written budget (35) is *tighter* than the unwritten
+    /// allowance (43), so the round-4 wording ("the first successful project write
+    /// raises it to 150") would have been false in the direction that matters:
+    /// the role would have been told a write buys it 150 calls while the guard cut
+    /// it at 36.
+    #[test]
+    fn the_note_states_the_post_write_budget_not_the_flat_one() {
+        let prompt = "You run under a step budget of 150.";
+        let stated = state_the_effective_budget(prompt, 43, 150, 25, 35);
+        assert!(stated.contains("43"), "{stated}");
+        assert!(
+            stated.contains("once it has written, the budget in force is 35"),
+            "the written budget must be stated as the guard enforces it: {stated}"
+        );
+        assert!(
+            !stated.contains("raises it to 150"),
+            "the note may not promise the flat ceiling once a tighter post-write bound exists: \
+             {stated}"
+        );
+        assert!(
+            stated.contains("re-read at every step"),
+            "the note must state the rule the guard really follows: {stated}"
+        );
+        // The flat limit is still named as the ceiling, so the body's "at most N
+        // steps" is not left unexplained.
+        assert!(stated.contains("ceiling"), "{stated}");
+        assert!(stated.contains("150"), "{stated}");
     }
 
     /// Round-4 repair — the defect round 3 measured: the budget is enforced at

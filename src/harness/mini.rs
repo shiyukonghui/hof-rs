@@ -125,7 +125,12 @@ impl Harness for MiniHarness {
         )
         // The counter the model increments: the guard's step number is the
         // prompt's step number, and both are model calls.
-        .sharing_steps(steps);
+        .sharing_steps(steps)
+        // Round-6 cost repair (the post-write call bound): the tighter budget a
+        // call runs under **once it has written** its artifact.  It is wired here,
+        // where every other configured limit is wired, so the number the
+        // configuration states is the number the guard enforces.
+        .with_post_write_step_limit(inv.limits.post_write_step_limit);
         // Round-4 repair: mini's own `step_limit` is the **flat ceiling** — the
         // number the prompt body calls "at most N steps" — and the progress gate
         // is enforced by the guard, at the step, against a value it re-reads every
@@ -138,16 +143,25 @@ impl Harness for MiniHarness {
         } else {
             environment.effective_step_budget().min(flat_step_limit)
         };
+        // Round-6 cost repair: the same treatment for the budget in force after the
+        // write, so the `[budget]` note states both numbers the guard will use.
+        let written_step_limit = if flat_step_limit == 0 {
+            0
+        } else {
+            environment.written_step_budget().min(flat_step_limit)
+        };
         // The prompt's numbers must be the numbers the call is held to: the body's
-        // flat ceiling, and the gated budget that is really in force right now.
-        // The system prompt was already rendered by the caller, so this is a
-        // **narrow numeric substitution** — re-rendering the whole template here
+        // flat ceiling, the gated budget that is really in force right now, and the
+        // budget that is in force once the write exists.  The system prompt was
+        // already rendered by the caller, so this is a **narrow numeric
+        // substitution** — re-rendering the whole template here
         // would apply the shell-variable pass a second time.
         let system_prompt = crate::harness::guard::state_the_effective_budget(
             &inv.system_prompt,
             live_step_limit,
             flat_step_limit,
             inv.limits.wrap_up_steps,
+            written_step_limit,
         );
 
         let config = AgentConfig {

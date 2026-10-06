@@ -87,6 +87,23 @@ agent:
   #   140 次调用只产出一个文件的形状会在几分钟内被中止，而不是耗掉一小时。
   #   0 表示关闭（回到固定的 150 步）。
   steps_per_artifact: 8
+  # post_write_step_limit：**写出产物之后**这次调用还剩多少步的硬上限（post-write call bound）。
+  #   1,500,000 token 的判据算不出来：150 次调用在「上下文全空」时的地板是 2,077,238
+  #   （.spec/bevy/SPIKE-COST-LEVERS.md lever 1），所以只能让调用**更早结束**。
+  #   上一条「写出保证」（write-guaranteed exit）回答「什么时候允许结束」；
+  #   这个数回答「允许之后再跑多长」。
+  #   **这个值是量出来的**：一步 = 一次模型调用，guard 的规则是 steps > budget，
+  #   所以上限 B 恰好放行 B 次调用、再多计费 1 次 —— 代价就是录制里 1..B+1 次调用的
+  #   prefix sum。四条已提交 developer 录制 + 三条 live 录制中，prefix 仍低于判据的最大
+  #   调用数是 44 / 40 / 36 / 81（两次 live 产出调用是 78 / 74），因此**约束项**是
+  #   round4-iter-3 的第 36 次调用：1,452,307 token（0.968x），第 37 次则是
+  #   1,502,443（1.002x）。B = 35 是「让每一条录制调用都在判据之内」的最大值；
+  #   B = 36 就差 2,443 token。比它更小只是更早收尾、产物更弱（见报告里的候选表）。
+  #   它**只在写出之后**生效，而且只会比 step_limit 更紧：没写出的调用仍然拿未写出额度
+  #   （wrap_up_steps + step_limit/steps_per_artifact = 43），所以它永远不可能切在写入之前。
+  #   0 表示关闭（写出后回到固定的 step_limit）；steps_per_artifact: 0 会把整套
+  #   「按进展放行」的预算（含这一项）一起关掉。
+  post_write_step_limit: 35
 
   # ── round-5 cost batch ──────────────────────────────────────────────────
   # compact_history：把**已被消费**的历史折叠出模型上下文（src/harness/compact.rs）。
